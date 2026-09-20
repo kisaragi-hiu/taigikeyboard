@@ -31,8 +31,8 @@ extension KeyboardViewController {
                 "nextWordWordSelected text.len=\(text.count) roman.len=\(roman.count) trigger=\(triggerPrediction)"
             case .nextWordClearForNewComposing:
                 "nextWordClearForNewComposing"
-            case let .phraseLearned(hanji, canonicalTl, syllableCount):
-                "phraseLearned hanji.len=\(hanji.count) tl.len=\(canonicalTl.count) syllables=\(syllableCount)"
+            case let .phraseLearned(hanji, canonicalTl):
+                "phraseLearned hanji.len=\(hanji.count) tl.len=\(canonicalTl.count)"
             }
             return "[COMMIT] fn=execute effect=\(kind)"
         }())

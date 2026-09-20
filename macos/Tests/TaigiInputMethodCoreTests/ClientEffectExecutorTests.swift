@@ -92,7 +92,7 @@ final class ClientEffectExecutorTests: XCTestCase {
             .nextWordUpdateLastSelectedWord(text: "台", roman: "tâi"),
             .nextWordWordSelected(text: "台", roman: "tâi", triggerPrediction: true),
             .nextWordClearForNewComposing,
-            .phraseLearned(hanji: "記起來", canonicalTl: "kì--khí-lâi", syllableCount: 3),
+            .phraseLearned(hanji: "記起來", canonicalTl: "kì--khí-lâi"),
         ]
 
         for effect in unwired {

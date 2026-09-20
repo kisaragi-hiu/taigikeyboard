@@ -229,9 +229,6 @@ message FetchAtPos {
 message LearnedEntry {
   string hanji        = 1;
   string canonical_tl = 2;
-  // How many times the phrase was composed or picked; informational for
-  // the engine today (ranking reads `user_frequency` via `frequency_entries`).
-  uint32 learn_count  = 3;
 }
 
 // v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row marshalled
@@ -524,7 +521,7 @@ message NextWordClearForNewComposing {}
 // Learned phrases (§50) — emitted beside `NextWordWordSelected` on the
 // FINAL continuous commit when the composition was ≥ 2 nailed segments,
 // every segment was a hanji-bearing candidate pick (`CommitContinuous.hanji`
-// present) with a canonical TL, and the summed syllable count is ≤ 6.
+// present) with a canonical TL, and the joined TL is ≤ 6 syllables.
 // `hanji` = the segments' hanji concatenated; `canonical_tl` = the segments'
 // canonical TL joined with `-` (a segment that already starts with the
 // khinsiann `--` keeps it). The platform upserts the pair into its learned
@@ -532,4 +529,4 @@ message NextWordClearForNewComposing {}
 // raw commit of an unpicked tail, an abort, or a backspace-unnailed segment
 // never reaches this effect. Mirrors the nextword `RecordCompoundAssociations`
 // pattern: the engine decides, the platform persists.
-message PhraseLearned { string hanji = 1; string canonical_tl = 2; uint32 syllable_count = 3; }
+message PhraseLearned { string hanji = 1; string canonical_tl = 2; }

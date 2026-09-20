@@ -48,7 +48,6 @@ pub enum Effect {
     PhraseLearned {
         hanji: String,
         canonical_tl: String,
-        syllable_count: u32,
     },
 }
 
@@ -113,7 +112,6 @@ impl Effect {
             effect::Kind::PhraseLearned(payload) => Effect::PhraseLearned {
                 hanji: payload.hanji.clone(),
                 canonical_tl: payload.canonical_tl.clone(),
-                syllable_count: payload.syllable_count,
             },
         })
     }

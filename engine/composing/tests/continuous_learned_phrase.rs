@@ -20,31 +20,23 @@
 //! 記 `ki` + 起來 `khilai`; the dictionary here carries 機/ki, 記/kì, 起來 and
 //! NOT 記起來.
 
-use composing::{Engine, Intent, Phase};
+use composing::{Intent, Phase};
 use protos::engine::effect::Kind;
-use protos::engine::{CustomDictEntry, FetchAtPos, FrequencyEntry, LearnedEntry, PhraseLearned};
+use protos::engine::{ComposingResponse, CustomDictEntry, FetchAtPos, LearnedEntry, PhraseLearned};
 
 mod common;
 use common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config_tl, effect_kinds,
-    empty_association_bin, engine_install_lock, fetch_hanji, install_lexicon, write_temp, Row,
+    empty_association_bin, engine_in_continuous, engine_install_lock, fetch_at_pos_response,
+    fetch_hanji, install_lexicon, selected, write_temp, Row, NOW_MS,
 };
 
 // ---- Learning ---------------------------------------------------------------
 
-fn engine_in_continuous(raw: &str) -> Engine {
-    let mut e = Engine::new();
-    e.apply(
-        Intent::Start {
-            text: raw.to_string(),
-        },
-        &config_tl(),
-    );
-    e.apply(Intent::EnterContinuous, &config_tl());
-    e
-}
+/// One `CommitContinuous`: `(hanji, canonical_tl, consumed_bytes, syllable_count)`.
+type Pick<'a> = (Option<&'a str>, &'a str, usize, u8);
 
-fn pick(hanji: Option<&str>, tl: &str, consumed_bytes: usize, syllable_count: u8) -> Intent {
+fn pick((hanji, tl, consumed_bytes, syllable_count): Pick<'_>) -> Intent {
     Intent::CommitContinuous {
         display_text: hanji.unwrap_or(tl).to_string(),
         canonical_text: hanji.unwrap_or(tl).to_string(),
@@ -55,17 +47,34 @@ fn pick(hanji: Option<&str>, tl: &str, consumed_bytes: usize, syllable_count: u8
     }
 }
 
-fn learned_effect(resp: &protos::engine::ComposingResponse) -> Option<PhraseLearned> {
+fn learned_effect(resp: &ComposingResponse) -> Option<PhraseLearned> {
     resp.effect.iter().find_map(|e| match e.kind.as_ref() {
         Some(Kind::PhraseLearned(p)) => Some(p.clone()),
         _ => None,
     })
 }
 
+/// Apply every pick over `raw` and return what the LAST commit learned.
+fn learn(raw: &str, picks: &[Pick<'_>]) -> Option<PhraseLearned> {
+    let mut e = engine_in_continuous(raw);
+    let mut last = None;
+    for p in picks {
+        last = Some(e.apply(pick(*p), &config_tl()));
+    }
+    learned_effect(last.as_ref().expect("at least one pick"))
+}
+
+fn phrase(hanji: &str, canonical_tl: &str) -> Option<PhraseLearned> {
+    Some(PhraseLearned {
+        hanji: hanji.into(),
+        canonical_tl: canonical_tl.into(),
+    })
+}
+
 #[test]
 fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
     let mut e = engine_in_continuous("kikhilai");
-    let mid = e.apply(pick(Some("記"), "kì", 2, 1), &config_tl());
+    let mid = e.apply(pick((Some("記"), "kì", 2, 1)), &config_tl());
     assert!(
         learned_effect(&mid).is_none(),
         "mid-commit must not learn; got {:?}",
@@ -73,7 +82,7 @@ fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
     );
     assert!(matches!(e.snapshot_state().phase, Phase::Continuous { .. }));
 
-    let fin = e.apply(pick(Some("起來"), "khí-lâi", 6, 2), &config_tl());
+    let fin = e.apply(pick((Some("起來"), "khí-lâi", 6, 2)), &config_tl());
     assert_eq!(
         effect_kinds(&fin.effect),
         vec![
@@ -84,14 +93,7 @@ fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
             "PhraseLearned",
         ]
     );
-    assert_eq!(
-        learned_effect(&fin),
-        Some(PhraseLearned {
-            hanji: "記起來".into(),
-            canonical_tl: "kì-khí-lâi".into(),
-            syllable_count: 3,
-        })
-    );
+    assert_eq!(learned_effect(&fin), phrase("記起來", "kì-khí-lâi"));
     assert!(matches!(e.snapshot_state().phase, Phase::Idle));
 }
 
@@ -99,94 +101,109 @@ fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
 fn khinsiann_segment_keeps_its_double_hyphen() {
     // 記 + --起來: the second piece already opens with the neutral-tone
     // marker, so the join must not add a third hyphen.
-    let mut e = engine_in_continuous("kikhilai");
-    e.apply(pick(Some("記"), "kì", 2, 1), &config_tl());
-    let fin = e.apply(pick(Some("起來"), "--khí-lâi", 6, 2), &config_tl());
     assert_eq!(
-        learned_effect(&fin).map(|p| p.canonical_tl),
-        Some("kì--khí-lâi".to_string())
+        learn(
+            "kikhilai",
+            &[(Some("記"), "kì", 2, 1), (Some("起來"), "--khí-lâi", 6, 2)]
+        ),
+        phrase("記起來", "kì--khí-lâi")
     );
 }
 
 #[test]
 fn three_single_picks_learn_too() {
-    let mut e = engine_in_continuous("kikhilai");
-    e.apply(pick(Some("記"), "kì", 2, 1), &config_tl());
-    e.apply(pick(Some("起"), "khí", 3, 1), &config_tl());
-    let fin = e.apply(pick(Some("來"), "lâi", 3, 1), &config_tl());
     assert_eq!(
-        learned_effect(&fin),
-        Some(PhraseLearned {
-            hanji: "記起來".into(),
-            canonical_tl: "kì-khí-lâi".into(),
-            syllable_count: 3,
-        })
+        learn(
+            "kikhilai",
+            &[
+                (Some("記"), "kì", 2, 1),
+                (Some("起"), "khí", 3, 1),
+                (Some("來"), "lâi", 3, 1)
+            ],
+        ),
+        phrase("記起來", "kì-khí-lâi")
     );
 }
 
 #[test]
 fn single_segment_commit_learns_nothing() {
-    let mut e = engine_in_continuous("khilai");
-    let fin = e.apply(pick(Some("起來"), "khí-lâi", 6, 2), &config_tl());
-    assert!(learned_effect(&fin).is_none());
-    assert!(matches!(e.snapshot_state().phase, Phase::Idle));
+    assert_eq!(learn("khilai", &[(Some("起來"), "khí-lâi", 6, 2)]), None);
 }
 
 #[test]
 fn a_hanji_less_segment_blocks_learning() {
-    // §34 literal / OOV pick in the middle: the platform sends no `hanji`.
-    let mut e = engine_in_continuous("kikhilai");
-    e.apply(pick(None, "kì", 2, 1), &config_tl());
-    let fin = e.apply(pick(Some("起來"), "khí-lâi", 6, 2), &config_tl());
-    assert!(
-        learned_effect(&fin).is_none(),
-        "got {:?}",
-        effect_kinds(&fin.effect)
-    );
-    // Empty hanji is treated as absent, not as a pick.
-    let mut e = engine_in_continuous("kikhilai");
-    e.apply(pick(Some(""), "kì", 2, 1), &config_tl());
-    let fin = e.apply(pick(Some("起來"), "khí-lâi", 6, 2), &config_tl());
-    assert!(learned_effect(&fin).is_none());
+    // §34 literal / OOV pick in the middle: the platform sends no `hanji`;
+    // an empty hanji is stored as absent, not as a pick.
+    for first in [None, Some("")] {
+        assert_eq!(
+            learn(
+                "kikhilai",
+                &[(first, "kì", 2, 1), (Some("起來"), "khí-lâi", 6, 2)]
+            ),
+            None,
+            "first hanji {first:?}"
+        );
+    }
 }
 
 #[test]
 fn missing_canonical_tl_blocks_learning() {
     // Legacy caller / TPS-OOV: `association_tl` empty → no key to learn under.
-    let mut e = engine_in_continuous("kikhilai");
-    e.apply(pick(Some("記"), "", 2, 1), &config_tl());
-    let fin = e.apply(pick(Some("起來"), "khí-lâi", 6, 2), &config_tl());
-    assert!(learned_effect(&fin).is_none());
+    assert_eq!(
+        learn(
+            "kikhilai",
+            &[(Some("記"), "", 2, 1), (Some("起來"), "khí-lâi", 6, 2)]
+        ),
+        None
+    );
 }
 
 #[test]
 fn seven_syllables_is_a_clause_not_a_word() {
-    let raw = "abcdefg";
-    let mut e = engine_in_continuous(raw);
-    for (i, ch) in raw.chars().enumerate() {
-        let hanji = format!("字{i}");
-        let is_last = i + 1 == raw.len();
-        let fin = e.apply(pick(Some(&hanji), &ch.to_string(), 1, 1), &config_tl());
-        if is_last {
-            assert!(learned_effect(&fin).is_none(), "7 syllables must not learn");
-        }
-    }
-    // Six syllables still learn.
-    let raw = "abcdef";
-    let mut e = engine_in_continuous(raw);
-    let mut last = None;
-    for (i, ch) in raw.chars().enumerate() {
-        let hanji = format!("字{i}");
-        last = Some(e.apply(pick(Some(&hanji), &ch.to_string(), 1, 1), &config_tl()));
-    }
-    let learned = learned_effect(last.as_ref().unwrap()).expect("6 syllables learn");
-    assert_eq!(learned.syllable_count, 6);
-    assert_eq!(learned.canonical_tl, "a-b-c-d-e-f");
+    const TL: [&str; 7] = ["a", "b", "c", "d", "e", "f", "g"];
+    const HANJI: [&str; 7] = ["甲", "乙", "丙", "丁", "戊", "己", "庚"];
+    let picks = |n: usize| -> Vec<Pick<'static>> {
+        (0..n).map(|i| (Some(HANJI[i]), TL[i], 1, 1)).collect()
+    };
+    assert_eq!(
+        learn("abcdefg", &picks(7)),
+        None,
+        "7 syllables must not learn"
+    );
+    assert_eq!(
+        learn("abcdef", &picks(6)),
+        phrase("甲乙丙丁戊己", "a-b-c-d-e-f")
+    );
+}
+
+#[test]
+fn syllable_count_comes_from_the_joined_tl_not_the_segment_echo() {
+    // A custom-dictionary pick echoes `syllable_count = 1` whatever its
+    // length; the cap must follow the TL itself.
+    assert_eq!(
+        learn(
+            "abcdefg",
+            &[
+                (Some("甲"), "a", 1, 1),
+                (Some("乙丙丁戊己庚"), "b-c-d-e-f-g", 6, 1)
+            ]
+        ),
+        None
+    );
+}
+
+#[test]
+fn a_multi_word_dictionary_tl_learns_with_its_space() {
+    assert_eq!(
+        learn(
+            "guaiasi",
+            &[(Some("我"), "guá", 3, 1), (Some("也是"), "iā sī", 4, 2)]
+        ),
+        phrase("我也是", "guá-iā sī")
+    );
 }
 
 // ---- Recall -----------------------------------------------------------------
-
-const NOW_MS: i64 = 1_700_000_000_000;
 
 fn fixture_rows() -> Vec<Row> {
     vec![
@@ -228,11 +245,13 @@ fn fixture_rows() -> Vec<Row> {
     ]
 }
 
-fn install(rows: &[Row]) {
+const FIXTURE_SYLLABLES: &[&str] = &["ki1", "ki3", "khi2", "lai5"];
+
+fn install(rows: &[Row], syllables: &[&str]) {
     let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(rows));
     let fst_path = build_dictionary_fst(rows);
     let assoc_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst(&["ki1", "ki3", "khi2", "lai5"]);
+    let syllables_path = build_syllables_fst(syllables);
     install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
 }
 
@@ -240,41 +259,31 @@ fn learned(hanji: &str, canonical_tl: &str) -> LearnedEntry {
     LearnedEntry {
         hanji: hanji.into(),
         canonical_tl: canonical_tl.into(),
-        learn_count: 1,
     }
 }
 
-fn selected(hanji: &str, canonical_tl: &str, count: u32) -> FrequencyEntry {
-    FrequencyEntry {
-        display_text_key: hanji.into(),
-        count,
-        last_used_ms: NOW_MS - 1_000,
-        canonical_tl: canonical_tl.into(),
+fn with_learned(rows: Vec<LearnedEntry>) -> FetchAtPos {
+    FetchAtPos {
+        learned_entries: rows,
+        ..Default::default()
     }
-}
-
-fn hanji_with(raw: &str, mode: &str, fetch: FetchAtPos) -> Vec<String> {
-    fetch_hanji(raw, mode, fetch)
 }
 
 #[test]
 fn learned_phrase_leads_when_the_dictionary_has_no_word_under_the_key() {
     let _lock = engine_install_lock();
-    install(&fixture_rows());
-    let cold = hanji_with("kikhilai", "tl", FetchAtPos::default());
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let cold = fetch_hanji("kikhilai", "tl", FetchAtPos::default());
     assert_eq!(
         cold[0], "機起來",
         "cold start synthesizes the split; got {cold:?}"
     );
     assert!(!cold.contains(&"記起來".to_string()));
 
-    let hanji = hanji_with(
+    let hanji = fetch_hanji(
         "kikhilai",
         "tl",
-        FetchAtPos {
-            learned_entries: vec![learned("記起來", "kì-khí-lâi")],
-            ..Default::default()
-        },
+        with_learned(vec![learned("記起來", "kì-khí-lâi")]),
     );
     assert_eq!(hanji[0], "記起來", "learned phrase leads; got {hanji:?}");
     assert_eq!(
@@ -287,14 +296,11 @@ fn learned_phrase_leads_when_the_dictionary_has_no_word_under_the_key() {
 #[test]
 fn learned_phrase_with_khinsiann_key_matches_the_toneless_buffer() {
     let _lock = engine_install_lock();
-    install(&fixture_rows());
-    let hanji = hanji_with(
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let hanji = fetch_hanji(
         "kikhilai",
         "tl",
-        FetchAtPos {
-            learned_entries: vec![learned("記起來", "kì--khí-lâi")],
-            ..Default::default()
-        },
+        with_learned(vec![learned("記起來", "kì--khí-lâi")]),
     );
     assert_eq!(hanji[0], "記起來", "got {hanji:?}");
 }
@@ -319,28 +325,20 @@ fn learned_phrase_matches_a_poj_typed_buffer() {
             freq: 9000,
         },
     ];
-    let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
-    let fst_path = build_dictionary_fst(&rows);
-    let assoc_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst(&["tshia1", "thau5"]);
-    install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
-
-    let hanji = hanji_with(
+    install(&rows, &["tshia1", "thau5"]);
+    let hanji = fetch_hanji(
         "chhiathau",
         "poj",
-        FetchAtPos {
-            learned_entries: vec![learned("車頭", "tshia-thâu")],
-            ..Default::default()
-        },
+        with_learned(vec![learned("車頭", "tshia-thâu")]),
     );
     assert_eq!(hanji[0], "車頭", "got {hanji:?}");
 }
 
 #[test]
 fn dictionary_homophone_beats_a_learned_row_until_the_user_prefers_it() {
-    // Same key, different word: the dictionary's 機起來-free fixture gains
-    // a real 2-syllable word under `kikhilai`; the learned pair must not
-    // override it (Codex F5), only compete.
+    // Same key, different word: the fixture gains a real 3-syllable word
+    // under `kikhilai`; the learned pair must not override it (Codex F5),
+    // only compete.
     let _lock = engine_install_lock();
     let mut rows = fixture_rows();
     rows.push(Row {
@@ -350,15 +348,12 @@ fn dictionary_homophone_beats_a_learned_row_until_the_user_prefers_it() {
         syll: 3,
         freq: 12,
     });
-    install(&rows);
+    install(&rows, FIXTURE_SYLLABLES);
 
-    let hanji = hanji_with(
+    let hanji = fetch_hanji(
         "kikhilai",
         "tl",
-        FetchAtPos {
-            learned_entries: vec![learned("記起來", "kì-khí-lâi")],
-            ..Default::default()
-        },
+        with_learned(vec![learned("記起來", "kì-khí-lâi")]),
     );
     assert_eq!(
         hanji[0], "機器來",
@@ -371,12 +366,12 @@ fn dictionary_homophone_beats_a_learned_row_until_the_user_prefers_it() {
 
     // One pick of the learned phrase → it leads (user weight is the
     // leading SortKey dimension, same as #69).
-    let hanji = hanji_with(
+    let hanji = fetch_hanji(
         "kikhilai",
         "tl",
         FetchAtPos {
             learned_entries: vec![learned("記起來", "kì-khí-lâi")],
-            frequency_entries: vec![selected("記起來", "kì-khí-lâi", 1)],
+            frequency_entries: vec![selected("記起來", "kì-khí-lâi", 1, 1_000)],
             now_ms: NOW_MS,
             ..Default::default()
         },
@@ -396,14 +391,11 @@ fn learned_pair_the_dictionary_also_carries_is_listed_once_from_the_dictionary()
         syll: 3,
         freq: 12,
     });
-    install(&rows);
-    let hanji = hanji_with(
+    install(&rows, FIXTURE_SYLLABLES);
+    let hanji = fetch_hanji(
         "kikhilai",
         "tl",
-        FetchAtPos {
-            learned_entries: vec![learned("記起來", "kì-khí-lâi")],
-            ..Default::default()
-        },
+        with_learned(vec![learned("記起來", "kì-khí-lâi")]),
     );
     assert_eq!(hanji[0], "記起來", "got {hanji:?}");
     assert_eq!(
@@ -416,8 +408,8 @@ fn learned_pair_the_dictionary_also_carries_is_listed_once_from_the_dictionary()
 #[test]
 fn manual_custom_row_outranks_a_learned_row_under_the_same_key() {
     let _lock = engine_install_lock();
-    install(&fixture_rows());
-    let hanji = hanji_with(
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let hanji = fetch_hanji(
         "kikhilai",
         "tl",
         FetchAtPos {
@@ -442,14 +434,105 @@ fn manual_custom_row_outranks_a_learned_row_under_the_same_key() {
 #[test]
 fn empty_or_half_empty_learned_rows_are_ignored() {
     let _lock = engine_install_lock();
-    install(&fixture_rows());
-    let hanji = hanji_with(
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let hanji = fetch_hanji(
         "kikhilai",
         "tl",
-        FetchAtPos {
-            learned_entries: vec![learned("", "kì-khí-lâi"), learned("記起來", "")],
-            ..Default::default()
-        },
+        with_learned(vec![learned("", "kì-khí-lâi"), learned("記起來", "")]),
     );
     assert_eq!(hanji[0], "機起來", "got {hanji:?}");
+}
+
+#[test]
+fn learned_row_with_a_space_in_its_tl_matches_the_typed_buffer() {
+    let _lock = engine_install_lock();
+    let rows = vec![
+        Row {
+            toneless_key: "gua",
+            hanzi: "我",
+            tl: "guá",
+            syll: 1,
+            freq: 50000,
+        },
+        Row {
+            toneless_key: "ia",
+            hanzi: "也",
+            tl: "iā",
+            syll: 1,
+            freq: 20000,
+        },
+        Row {
+            toneless_key: "i",
+            hanzi: "伊",
+            tl: "i",
+            syll: 1,
+            freq: 40000,
+        },
+        Row {
+            toneless_key: "si",
+            hanzi: "是",
+            tl: "sī",
+            syll: 1,
+            freq: 60000,
+        },
+        Row {
+            toneless_key: "iasi",
+            hanzi: "也是",
+            tl: "iā sī",
+            syll: 2,
+            freq: 3000,
+        },
+    ];
+    install(&rows, &["gua2", "ia7", "i1", "si7", "a1"]);
+
+    let resp = fetch_at_pos_response(
+        &common::config("tl"),
+        "guaiasi",
+        with_learned(vec![learned("我也是", "guá-iā sī")]),
+    );
+    let candidates = resp.continuous.expect("continuous carrier").candidates;
+    let hanji: Vec<&str> = candidates
+        .iter()
+        .filter_map(|c| c.hanji.as_deref())
+        .collect();
+    assert_eq!(hanji[0], "我也是", "got {hanji:?}");
+    let row = candidates
+        .iter()
+        .find(|c| c.hanji.as_deref() == Some("我也是"))
+        .expect("learned row present");
+    assert_eq!(row.syllable_count, 3, "space-separated syllables count");
+}
+
+#[test]
+fn learned_row_answers_the_nasal_oo_alias_key() {
+    // Typing 好玄 as `hoonn…` / `ho͘ⁿ…` produces the alias edge key the
+    // dictionary build indexes beside the canonical `honn…`; a learned row
+    // stored canonically must answer both, like a custom row does.
+    let _lock = engine_install_lock();
+    let rows = vec![
+        Row {
+            toneless_key: "honn",
+            hanzi: "好",
+            tl: "hònn",
+            syll: 1,
+            freq: 9000,
+        },
+        Row {
+            toneless_key: "hian",
+            hanzi: "玄",
+            tl: "hiân",
+            syll: 1,
+            freq: 4000,
+        },
+    ];
+    install(&rows, &["honn3", "hoonn3", "hian5"]);
+
+    for typed in ["honnhian", "hoonnhian"] {
+        let hanji = fetch_hanji(
+            typed,
+            "tl",
+            with_learned(vec![learned("好玄", "hònn-hiân")]),
+        );
+        assert_eq!(hanji[0], "好玄", "typed {typed}; got {hanji:?}");
+    }
 }

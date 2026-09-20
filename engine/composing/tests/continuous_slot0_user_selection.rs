@@ -25,7 +25,7 @@ use protos::engine::{FetchAtPos, FrequencyEntry};
 mod common;
 use common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, empty_association_bin,
-    engine_install_lock, fetch_hanji, install_lexicon, write_temp, Row,
+    engine_install_lock, fetch_hanji, install_lexicon, selected, write_temp, Row, NOW_MS,
 };
 
 const TWO_HOURS_MS: i64 = 2 * 60 * 60 * 1000;
@@ -84,17 +84,6 @@ fn fetch_hanji_with_freq(raw: &str, freq: Vec<FrequencyEntry>, now_ms: i64) -> V
             ..Default::default()
         },
     )
-}
-
-const NOW_MS: i64 = 1_700_000_000_000;
-
-fn selected(hanji: &str, canonical_tl: &str, count: u32, age_ms: i64) -> FrequencyEntry {
-    FrequencyEntry {
-        display_text_key: hanji.into(),
-        count,
-        last_used_ms: NOW_MS - age_ms,
-        canonical_tl: canonical_tl.into(),
-    }
 }
 
 #[test]

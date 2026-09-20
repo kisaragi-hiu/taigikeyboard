@@ -610,10 +610,6 @@ public nonisolated struct Taigi_Engine_LearnedEntry: Sendable {
 
   public var canonicalTl: String = String()
 
-  /// How many times the phrase was composed or picked; informational for
-  /// the engine today (ranking reads `user_frequency` via `frequency_entries`).
-  public var learnCount: UInt32 = 0
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
@@ -1229,7 +1225,7 @@ public nonisolated struct Taigi_Engine_NextWordClearForNewComposing: Sendable {
 /// Learned phrases (§50) — emitted beside `NextWordWordSelected` on the
 /// FINAL continuous commit when the composition was ≥ 2 nailed segments,
 /// every segment was a hanji-bearing candidate pick (`CommitContinuous.hanji`
-/// present) with a canonical TL, and the summed syllable count is ≤ 6.
+/// present) with a canonical TL, and the joined TL is ≤ 6 syllables.
 /// `hanji` = the segments' hanji concatenated; `canonical_tl` = the segments'
 /// canonical TL joined with `-` (a segment that already starts with the
 /// khinsiann `--` keeps it). The platform upserts the pair into its learned
@@ -1245,8 +1241,6 @@ public nonisolated struct Taigi_Engine_PhraseLearned: Sendable {
   public var hanji: String = String()
 
   public var canonicalTl: String = String()
-
-  public var syllableCount: UInt32 = 0
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1979,7 +1973,7 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
 
 nonisolated extension Taigi_Engine_LearnedEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".LearnedEntry"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}hanji\0\u{3}canonical_tl\0\u{3}learn_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}hanji\0\u{3}canonical_tl\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1989,7 +1983,6 @@ nonisolated extension Taigi_Engine_LearnedEntry: SwiftProtobuf.Message, SwiftPro
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.hanji) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.canonicalTl) }()
-      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.learnCount) }()
       default: break
       }
     }
@@ -2002,16 +1995,12 @@ nonisolated extension Taigi_Engine_LearnedEntry: SwiftProtobuf.Message, SwiftPro
     if !self.canonicalTl.isEmpty {
       try visitor.visitSingularStringField(value: self.canonicalTl, fieldNumber: 2)
     }
-    if self.learnCount != 0 {
-      try visitor.visitSingularUInt32Field(value: self.learnCount, fieldNumber: 3)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_LearnedEntry, rhs: Taigi_Engine_LearnedEntry) -> Bool {
     if lhs.hanji != rhs.hanji {return false}
     if lhs.canonicalTl != rhs.canonicalTl {return false}
-    if lhs.learnCount != rhs.learnCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2873,7 +2862,7 @@ nonisolated extension Taigi_Engine_NextWordClearForNewComposing: SwiftProtobuf.M
 
 nonisolated extension Taigi_Engine_PhraseLearned: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhraseLearned"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}hanji\0\u{3}canonical_tl\0\u{3}syllable_count\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}hanji\0\u{3}canonical_tl\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2883,7 +2872,6 @@ nonisolated extension Taigi_Engine_PhraseLearned: SwiftProtobuf.Message, SwiftPr
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.hanji) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.canonicalTl) }()
-      case 3: try { try decoder.decodeSingularUInt32Field(value: &self.syllableCount) }()
       default: break
       }
     }
@@ -2896,16 +2884,12 @@ nonisolated extension Taigi_Engine_PhraseLearned: SwiftProtobuf.Message, SwiftPr
     if !self.canonicalTl.isEmpty {
       try visitor.visitSingularStringField(value: self.canonicalTl, fieldNumber: 2)
     }
-    if self.syllableCount != 0 {
-      try visitor.visitSingularUInt32Field(value: self.syllableCount, fieldNumber: 3)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_PhraseLearned, rhs: Taigi_Engine_PhraseLearned) -> Bool {
     if lhs.hanji != rhs.hanji {return false}
     if lhs.canonicalTl != rhs.canonicalTl {return false}
-    if lhs.syllableCount != rhs.syllableCount {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

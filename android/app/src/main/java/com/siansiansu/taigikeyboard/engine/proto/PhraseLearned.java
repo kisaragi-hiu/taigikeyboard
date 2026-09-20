@@ -10,7 +10,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * Learned phrases (§50) — emitted beside `NextWordWordSelected` on the
  * FINAL continuous commit when the composition was ≥ 2 nailed segments,
  * every segment was a hanji-bearing candidate pick (`CommitContinuous.hanji`
- * present) with a canonical TL, and the summed syllable count is ≤ 6.
+ * present) with a canonical TL, and the joined TL is ≤ 6 syllables.
  * `hanji` = the segments' hanji concatenated; `canonical_tl` = the segments'
  * canonical TL joined with `-` (a segment that already starts with the
  * khinsiann `--` keeps it). The platform upserts the pair into its learned
@@ -126,32 +126,6 @@ public  final class PhraseLearned extends
 
   }
 
-  public static final int SYLLABLE_COUNT_FIELD_NUMBER = 3;
-  private int syllableCount_;
-  /**
-   * <code>uint32 syllable_count = 3;</code>
-   * @return The syllableCount.
-   */
-  @java.lang.Override
-  public int getSyllableCount() {
-    return syllableCount_;
-  }
-  /**
-   * <code>uint32 syllable_count = 3;</code>
-   * @param value The syllableCount to set.
-   */
-  private void setSyllableCount(int value) {
-
-    syllableCount_ = value;
-  }
-  /**
-   * <code>uint32 syllable_count = 3;</code>
-   */
-  private void clearSyllableCount() {
-
-    syllableCount_ = 0;
-  }
-
   public static com.siansiansu.taigikeyboard.engine.proto.PhraseLearned parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -240,7 +214,7 @@ public  final class PhraseLearned extends
    * Learned phrases (§50) — emitted beside `NextWordWordSelected` on the
    * FINAL continuous commit when the composition was ≥ 2 nailed segments,
    * every segment was a hanji-bearing candidate pick (`CommitContinuous.hanji`
-   * present) with a canonical TL, and the summed syllable count is ≤ 6.
+   * present) with a canonical TL, and the joined TL is ≤ 6 syllables.
    * `hanji` = the segments' hanji concatenated; `canonical_tl` = the segments'
    * canonical TL joined with `-` (a segment that already starts with the
    * khinsiann `--` keeps it). The platform upserts the pair into its learned
@@ -361,34 +335,6 @@ public  final class PhraseLearned extends
       return this;
     }
 
-    /**
-     * <code>uint32 syllable_count = 3;</code>
-     * @return The syllableCount.
-     */
-    @java.lang.Override
-    public int getSyllableCount() {
-      return instance.getSyllableCount();
-    }
-    /**
-     * <code>uint32 syllable_count = 3;</code>
-     * @param value The syllableCount to set.
-     * @return This builder for chaining.
-     */
-    public Builder setSyllableCount(int value) {
-      copyOnWrite();
-      instance.setSyllableCount(value);
-      return this;
-    }
-    /**
-     * <code>uint32 syllable_count = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearSyllableCount() {
-      copyOnWrite();
-      instance.clearSyllableCount();
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.PhraseLearned)
   }
   @java.lang.Override
@@ -407,11 +353,10 @@ public  final class PhraseLearned extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "hanji_",
             "canonicalTl_",
-            "syllableCount_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u000b";
+              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

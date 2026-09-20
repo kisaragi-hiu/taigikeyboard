@@ -57,6 +57,19 @@ fn production_artifact(name: &str) -> String {
         .to_string()
 }
 
+/// `;`-separated `a[:b]` pairs from an env var; `b` is `""` when absent.
+fn env_pairs(var: &str) -> Vec<(String, String)> {
+    std::env::var(var)
+        .unwrap_or_default()
+        .split(';')
+        .filter(|s| !s.is_empty())
+        .map(|e| {
+            let (a, b) = e.split_once(':').unwrap_or((e, ""));
+            (a.to_string(), b.to_string())
+        })
+        .collect()
+}
+
 #[test]
 #[ignore = "dev diagnosis harness — run with --ignored against production artifacts"]
 fn dump_continuous_candidates() {
@@ -111,33 +124,22 @@ fn dump_continuous_candidates() {
 
     // DUMP_CUSTOM="kì-khí-lâi:記起來;tâi-gí" — simulated
     // `custom_dictionary.db` rows `roman[:hanji]`.
-    let custom: Vec<protos::engine::CustomDictEntry> = std::env::var("DUMP_CUSTOM")
-        .unwrap_or_default()
-        .split(';')
-        .filter(|s| !s.is_empty())
-        .map(|e| {
-            let (roman, hanji) = e.split_once(':').unwrap_or((e, ""));
-            protos::engine::CustomDictEntry {
-                roman: roman.to_string(),
-                hanji: (!hanji.is_empty()).then(|| hanji.to_string()),
-            }
+    let custom: Vec<protos::engine::CustomDictEntry> = env_pairs("DUMP_CUSTOM")
+        .into_iter()
+        .map(|(roman, hanji)| protos::engine::CustomDictEntry {
+            roman,
+            hanji: (!hanji.is_empty()).then_some(hanji),
         })
         .collect();
 
     // DUMP_LEARNED="記起來:kì--khí-lâi;…" — simulated learned-phrase rows
     // `hanji:canonical_tl` (§50), as the platform would inject them for an
     // exact whole-buffer key match.
-    let learned: Vec<protos::engine::LearnedEntry> = std::env::var("DUMP_LEARNED")
-        .unwrap_or_default()
-        .split(';')
-        .filter(|s| !s.is_empty())
-        .map(|e| {
-            let (hanji, canonical_tl) = e.split_once(':').unwrap_or((e, ""));
-            protos::engine::LearnedEntry {
-                hanji: hanji.to_string(),
-                canonical_tl: canonical_tl.to_string(),
-                learn_count: 1,
-            }
+    let learned: Vec<protos::engine::LearnedEntry> = env_pairs("DUMP_LEARNED")
+        .into_iter()
+        .map(|(hanji, canonical_tl)| protos::engine::LearnedEntry {
+            hanji,
+            canonical_tl,
         })
         .collect();
 

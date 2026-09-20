@@ -18,19 +18,7 @@ use protos::engine::effect::Kind;
 use protos::engine::Effect;
 
 mod common;
-use common::{config_tl, effect_kinds};
-
-fn engine_in_continuous(raw: &str) -> Engine {
-    let mut e = Engine::new();
-    e.apply(
-        Intent::Start {
-            text: raw.to_string(),
-        },
-        &config_tl(),
-    );
-    e.apply(Intent::EnterContinuous, &config_tl());
-    e
-}
+use common::{config_tl, effect_kinds, engine_in_continuous};
 
 fn assert_kinds<'a, K>(effects: &'a [Effect], expected: K)
 where

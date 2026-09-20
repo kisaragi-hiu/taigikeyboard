@@ -768,7 +768,7 @@ fn merge_custom_dedupe_sort(
     // the default rank), so a learned pair that the dictionary also carries
     // is listed once, from the dictionary.
     for entry in ctx.learned {
-        if !ctx.tone_pin.admits_custom(&entry.canonical_tl, ctx.mode) {
+        if !ctx.tone_pin.admits(None, &entry.canonical_tl) {
             continue;
         }
         out.push(learned_entry_to_candidate(
@@ -1152,13 +1152,14 @@ pub fn best_candidate_for_key_with_barriers(
     let filter = Filter::from_enabled_bitmask(ctx.enabled_sources_bitmask);
     let mut best: Option<(SortKey, RawCandidate)> = None;
     let mut span_frequency = 0;
+    // Same `SortKey` order as the span-local list so slot 0 and the list
+    // agree on the edge's word. Every homophone here shares `coverage_kind`
+    // / `consumed_span`, so `raw_len = consumed_span.1` pins `tier` equal
+    // and only the user-weight / score / freq / source dims decide; strict
+    // `<` keeps the first FST rowid on a full tie. `span_frequency` is the
+    // dictionary's own maximum — a learned row carries `frequency = 0`.
     let mut consider = |cand: RawCandidate| {
-        // Same `SortKey` order as the span-local list so slot 0 and the
-        // list agree on the edge's word. Every homophone here shares
-        // `coverage_kind` / `consumed_span`, so `raw_len =
-        // consumed_span.1` pins `tier` equal and only the user-weight /
-        // score / freq / source dims decide; strict `<` keeps the
-        // first FST rowid on a full tie.
+        span_frequency = span_frequency.max(cand.frequency);
         let key = SortKey::new(&cand, consumed_span.1, 0);
         if best.as_ref().is_none_or(|(b, _)| key < *b) {
             best = Some((key, cand));
@@ -1176,18 +1177,14 @@ pub fn best_candidate_for_key_with_barriers(
         consumed_span,
         &filter,
         ctx,
-        |cand| {
-            span_frequency = span_frequency.max(cand.frequency);
-            consider(cand);
-        },
+        &mut consider,
     );
     // Learned phrases (§50) — the caller matched these rows to this edge's
     // key; they join the SAME pick with `frequency = 0` (score 0, default
     // source rank), so a dictionary homophone wins unless the user's
     // `user_frequency` says otherwise, and the learned row is the edge only
     // when the dictionary has nothing under the key. The caller floors the
-    // edge's `span_frequency` for segmentation; this fn reports the
-    // dictionary's own maximum.
+    // edge's `span_frequency` for segmentation.
     for entry in learned {
         consider(learned_entry_to_candidate(
             entry,
@@ -2014,16 +2011,13 @@ fn custom_entry_to_candidate(
     }
 }
 
-/// Learned phrases (§50) — one [`LearnedEntry`] as a candidate at `span`.
-/// Shaped like a `dict.bin` record the dictionary does not carry: `roman`
-/// / `canonical_tl` = the canonical TL (the POJ presentation pass renders
-/// it like any dictionary romanization), `display_text` = the hanji (the
-/// `user_frequency.db` key), `frequency = 0` and `bitmask = 0` with
-/// `is_custom = false` so [`SortKey`] gives it the default source rank —
-/// below every dictionary source and below a manual custom row — and the
+/// Learned phrases (§50) — one [`LearnedEntry`] as a candidate at `span`:
+/// a `dict.bin` record the dictionary does not carry, with no frequency and
+/// no source bits, so [`SortKey`] gives it the default source rank (below
+/// every dictionary source and below a manual custom row) and the
 /// `(roman, hanji, span)` dedupe keeps a dictionary / custom duplicate over
-/// it. `syllable_count` is read off the hyphenated TL (a khinsiann `--`
-/// yields an empty piece, skipped) for the walker's `n_syls` bias.
+/// it. `syllable_count` is read off the TL's separators for the walker's
+/// `n_syls` bias.
 fn learned_entry_to_candidate(
     entry: &LearnedEntry,
     span: ConsumedSpan,
@@ -2031,31 +2025,24 @@ fn learned_entry_to_candidate(
     now_ms: i64,
     coverage_kind: u8,
 ) -> RawCandidate {
-    let syllable_count = entry
-        .canonical_tl
-        .split('-')
-        .filter(|s| !s.is_empty())
+    let syllable_count = phonetics::api::tl_syllables(&entry.canonical_tl)
         .count()
         .clamp(1, u8::MAX as usize) as u8;
-    let user_weight = freq_map
-        .get(&entry.hanji, &entry.canonical_tl)
-        .user_weight(now_ms);
-    RawCandidate {
-        consumed_span: span,
-        syllable_count,
-        display_text: entry.hanji.clone(),
-        roman: entry.canonical_tl.clone(),
-        hanji: Some(entry.hanji.clone()),
-        canonical_tl: entry.canonical_tl.clone(),
-        score: calculate_continuous_score(0, syllable_count),
-        form: FORM_NOTONE,
-        frequency: 0,
-        bitmask: 0,
-        mode: derive_mode(Some(&entry.hanji)),
-        user_weight,
+    record_to_candidate(
+        DictionaryRecord {
+            bitmask: 0,
+            frequency: 0,
+            hanzi: Some(entry.hanji.clone()),
+            tl: entry.canonical_tl.clone(),
+            syllable_count,
+            kautian_subtag: 0,
+        },
+        0,
+        span,
+        freq_map,
+        now_ms,
         coverage_kind,
-        is_custom: false,
-    }
+    )
 }
 
 /// v3.5.8 Phase 9 Item 12 — `(roman, hanji)` dedupe (Codex pre-impl

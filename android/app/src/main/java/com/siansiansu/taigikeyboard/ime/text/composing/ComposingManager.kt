@@ -1053,7 +1053,7 @@ private fun RustEngineBridge.ComposingTransition.Effect.describeKind(): String =
         is RustEngineBridge.ComposingTransition.Effect.NextWordWordSelected -> "NextWordWordSelected trigger=$triggerPrediction"
         RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing -> "NextWordClearForNewComposing"
         is RustEngineBridge.ComposingTransition.Effect.PhraseLearned ->
-            "PhraseLearned hanji.len=${hanji.length} tl.len=${canonicalTl.length} syllables=$syllableCount"
+            "PhraseLearned hanji.len=${hanji.length} tl.len=${canonicalTl.length}"
     }
 
 /**

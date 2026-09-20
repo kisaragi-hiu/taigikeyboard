@@ -33,10 +33,4 @@ public interface PhraseLearnedOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCanonicalTlBytes();
-
-  /**
-   * <code>uint32 syllable_count = 3;</code>
-   * @return The syllableCount.
-   */
-  int getSyllableCount();
 }

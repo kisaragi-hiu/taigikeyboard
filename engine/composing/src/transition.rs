@@ -36,7 +36,7 @@ use protos::engine::{
 /// into one learned `(漢字, canonical-TL)` pair, in syllables. ChiaKey caps
 /// its in-buffer word capture at 6 characters; a Taigi phrase past six
 /// syllables is a clause, not a word.
-pub(crate) const MAX_LEARNED_PHRASE_SYLLABLES: u32 = 6;
+const MAX_LEARNED_PHRASE_SYLLABLES: usize = 6;
 
 /// Apply `intent` against `state`, mutate, return the proto response.
 pub(crate) fn apply(
@@ -1073,19 +1073,19 @@ fn next_word_word_selected(text: String, roman: String, trigger_prediction: bool
 /// a hanji pick or without a canonical TL, or more than
 /// [`MAX_LEARNED_PHRASE_SYLLABLES`] in total. The TL pieces join with `-`;
 /// a piece that already opens with the khinsiann `--` keeps it so
-/// `kì` + `--khí-lâi` reads `kì--khí-lâi`, never `kì---khí-lâi`.
-pub(crate) fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> {
+/// `kì` + `--khí-lâi` reads `kì--khí-lâi`, never `kì---khí-lâi`. The cap
+/// counts the joined TL, not the segments' echoed `syllable_count`: a
+/// custom-dictionary pick reports `1` whatever its length
+/// (`lexicon::custom_entry_to_candidate`).
+fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> {
     if nailed.len() < 2 {
-        return None;
-    }
-    let syllable_count: u32 = nailed.iter().map(|s| u32::from(s.syllable_count)).sum();
-    if syllable_count == 0 || syllable_count > MAX_LEARNED_PHRASE_SYLLABLES {
         return None;
     }
     let mut hanji = String::new();
     let mut canonical_tl = String::new();
     for seg in nailed {
-        let h = seg.hanji.as_deref().filter(|h| !h.is_empty())?;
+        // `commit_continuous` stored an empty hanji as `None` already.
+        let h = seg.hanji.as_deref()?;
         if seg.association_tl.is_empty() {
             return None;
         }
@@ -1095,10 +1095,13 @@ pub(crate) fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> 
         }
         canonical_tl.push_str(&seg.association_tl);
     }
+    let syllable_count = phonetics::api::tl_syllables(&canonical_tl).count();
+    if syllable_count == 0 || syllable_count > MAX_LEARNED_PHRASE_SYLLABLES {
+        return None;
+    }
     Some(PhraseLearned {
         hanji,
         canonical_tl,
-        syllable_count,
     })
 }
 

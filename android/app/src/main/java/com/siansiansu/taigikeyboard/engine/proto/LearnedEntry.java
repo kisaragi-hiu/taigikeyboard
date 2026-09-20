@@ -121,47 +121,6 @@ public  final class LearnedEntry extends
 
   }
 
-  public static final int LEARN_COUNT_FIELD_NUMBER = 3;
-  private int learnCount_;
-  /**
-   * <pre>
-   * How many times the phrase was composed or picked; informational for
-   * the engine today (ranking reads `user_frequency` via `frequency_entries`).
-   * </pre>
-   *
-   * <code>uint32 learn_count = 3;</code>
-   * @return The learnCount.
-   */
-  @java.lang.Override
-  public int getLearnCount() {
-    return learnCount_;
-  }
-  /**
-   * <pre>
-   * How many times the phrase was composed or picked; informational for
-   * the engine today (ranking reads `user_frequency` via `frequency_entries`).
-   * </pre>
-   *
-   * <code>uint32 learn_count = 3;</code>
-   * @param value The learnCount to set.
-   */
-  private void setLearnCount(int value) {
-
-    learnCount_ = value;
-  }
-  /**
-   * <pre>
-   * How many times the phrase was composed or picked; informational for
-   * the engine today (ranking reads `user_frequency` via `frequency_entries`).
-   * </pre>
-   *
-   * <code>uint32 learn_count = 3;</code>
-   */
-  private void clearLearnCount() {
-
-    learnCount_ = 0;
-  }
-
   public static com.siansiansu.taigikeyboard.engine.proto.LearnedEntry parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -366,49 +325,6 @@ public  final class LearnedEntry extends
       return this;
     }
 
-    /**
-     * <pre>
-     * How many times the phrase was composed or picked; informational for
-     * the engine today (ranking reads `user_frequency` via `frequency_entries`).
-     * </pre>
-     *
-     * <code>uint32 learn_count = 3;</code>
-     * @return The learnCount.
-     */
-    @java.lang.Override
-    public int getLearnCount() {
-      return instance.getLearnCount();
-    }
-    /**
-     * <pre>
-     * How many times the phrase was composed or picked; informational for
-     * the engine today (ranking reads `user_frequency` via `frequency_entries`).
-     * </pre>
-     *
-     * <code>uint32 learn_count = 3;</code>
-     * @param value The learnCount to set.
-     * @return This builder for chaining.
-     */
-    public Builder setLearnCount(int value) {
-      copyOnWrite();
-      instance.setLearnCount(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * How many times the phrase was composed or picked; informational for
-     * the engine today (ranking reads `user_frequency` via `frequency_entries`).
-     * </pre>
-     *
-     * <code>uint32 learn_count = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearLearnCount() {
-      copyOnWrite();
-      instance.clearLearnCount();
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.LearnedEntry)
   }
   @java.lang.Override
@@ -427,11 +343,10 @@ public  final class LearnedEntry extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "hanji_",
             "canonicalTl_",
-            "learnCount_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u000b";
+              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

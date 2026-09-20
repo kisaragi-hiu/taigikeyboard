@@ -483,20 +483,45 @@ fn edge_user_weight_delta(
     freq_map.get(display_text, canonical_tl).user_weight(now_ms)
 }
 
-/// Learned phrases (§50) — the walker lattice-edge key for a learned row's
-/// canonical TL, byte-identical to the edge keys
-/// [`crate::shadow::custom_toneless_key`] produces for a custom roman. A
-/// custom roman is stored in the user's own mode, so that fn folds only
-/// POJ→TL; a learned row is always canonical TL, so under POJ input it is
-/// first rendered to POJ display (the same pass Step 5 applies to every
-/// dictionary `roman`) and only then keyed, landing on `poj:` like the
-/// lattice edges built from the typed POJ buffer. TPS input keys Bopomofo
-/// bodies only, so a learned row is never a TPS walker edge (the same
-/// limit a custom row has today).
-pub(crate) fn learned_edge_key(canonical_tl: &str, mode: phonetics::InputMode) -> Option<String> {
+/// v3.5.8 S6 — per-fetch map from a user row's walker edge key to the rows
+/// under it, in `rows` order (the edge pick is first-wins among the
+/// eligible, Codex Q6). `key_of` MUST run the same shadow pipeline the
+/// lattice edge keys run for this fetch's `mode` so a hit is
+/// byte-identical to a `tl:` / `poj:` edge key. Registers the nasal-`oo`
+/// alias beside the canonical key: the dictionary build indexes the `o͘ⁿ`
+/// rendering of the nasal final, but it cannot reach a user row, so typing
+/// 好玄 as `ho͘nnhian` (edge key `tl:hoonnhian`) must still find a row
+/// stored canonically — safe on a fused body because an alias key is
+/// disjoint from every canonical key (`phonetics::nasal_oo_alias_spelling`).
+fn edge_key_map<'a, T>(
+    rows: &'a [T],
+    key_of: impl Fn(&T) -> Option<String>,
+) -> std::collections::HashMap<String, Vec<&'a T>> {
+    let mut map: std::collections::HashMap<String, Vec<&'a T>> =
+        std::collections::HashMap::with_capacity(rows.len());
+    for row in rows {
+        if let Some(key) = key_of(row) {
+            if let Some(alias) = phonetics::nasal_oo_alias_spelling(&key) {
+                map.entry(alias).or_default().push(row);
+            }
+            map.entry(key).or_default().push(row);
+        }
+    }
+    map
+}
+
+/// Learned phrases (§50) — the walker edge key for a learned row's canonical
+/// TL: a multi-word dictionary TL's space (`iā sī`) becomes the hyphen it is
+/// between syllables, under POJ input the TL is rendered to POJ first (the
+/// same face the lattice edges of a typed POJ buffer carry), then the same
+/// [`custom_toneless_key`] pipeline a custom roman goes through. TPS input
+/// keys Bopomofo bodies only, so a learned row is never a TPS walker edge —
+/// the limit a custom row has today.
+fn learned_edge_key(canonical_tl: &str, mode: phonetics::InputMode) -> Option<String> {
+    let hyphenated = canonical_tl.replace(' ', "-");
     let native = match mode {
-        phonetics::InputMode::Poj => phonetics::api::tl_display_to_poj_display(canonical_tl),
-        _ => canonical_tl.to_owned(),
+        phonetics::InputMode::Poj => phonetics::api::tl_display_to_poj_display(&hyphenated),
+        _ => hyphenated,
     };
     custom_toneless_key(&native, mode)
 }
@@ -540,36 +565,12 @@ fn fetch_walker_slot0_inner(
     // makes the contract local — a split-brain (POJ-aware edges,
     // mode-blind custom keys) would silently drop custom matches in
     // POJ mode.
-    let mut custom_map: std::collections::HashMap<String, Vec<&CustomEntry>> =
-        std::collections::HashMap::with_capacity(custom.len());
-    for entry in custom {
-        if let Some(k) = custom_toneless_key(&entry.roman, mode) {
-            // Nasal-`oo` spelling alias — the dictionary build indexes the
-            // `o͘ⁿ` rendering of the nasal final beside the canonical `onn`,
-            // but it cannot reach `custom_dictionary.db`, so a user row gets
-            // the same treatment here: typing 好玄 as `ho͘nnhian` produces the
-            // edge key `tl:hoonnhian`, which must still find a custom entry
-            // stored canonically. Safe on a fused body because an alias key is
-            // disjoint from every canonical key — see
-            // `phonetics::nasal_oo_alias_spelling`.
-            if let Some(alias) = phonetics::nasal_oo_alias_spelling(&k) {
-                custom_map.entry(alias).or_default().push(entry);
-            }
-            custom_map.entry(k).or_default().push(entry);
-        }
-    }
-    // Learned phrases (§50) — same per-fetch key map as `custom_map`, keyed
-    // through [`learned_edge_key`] so the canonical-TL row lands on the
-    // mode's own key family (`tl:` / `poj:`). Consumed by the edge pick
-    // below as a COMPETITOR of the dictionary rows, never as the override
-    // the custom map is (Codex 2026-09-20 F5).
-    let mut learned_map: std::collections::HashMap<String, Vec<&LearnedEntry>> =
-        std::collections::HashMap::with_capacity(learned.len());
-    for entry in learned {
-        if let Some(k) = learned_edge_key(&entry.canonical_tl, mode) {
-            learned_map.entry(k).or_default().push(entry);
-        }
-    }
+    let custom_map = edge_key_map(custom, |entry| custom_toneless_key(&entry.roman, mode));
+    // Learned phrases (§50) — keyed through [`learned_edge_key`] so the
+    // canonical-TL row lands on the mode's own key family. Consumed by the
+    // edge pick below as a COMPETITOR of the dictionary rows, never as the
+    // override the custom map is (Codex 2026-09-20 F5).
+    let learned_map = edge_key_map(learned, |entry| learned_edge_key(&entry.canonical_tl, mode));
     // Codex post-impl S2 P1: suppress the synth when a trailing
     // hyphen leaves the shadow short of the raw buffer (a
     // `(0, raw_len)` synth would mis-commit the pending `-`).
@@ -727,14 +728,11 @@ fn fetch_walker_slot0_inner(
         // word" is the floor, "which word" is the pick).
         let learned_for_edge: Vec<&LearnedEntry> = learned_map
             .get(custom_key.as_str())
-            .map(|entries| {
-                entries
-                    .iter()
-                    .copied()
-                    .filter(|entry| edge_tone_pin.admits_custom(&entry.canonical_tl, mode))
-                    .collect()
-            })
-            .unwrap_or_default();
+            .into_iter()
+            .flatten()
+            .copied()
+            .filter(|entry| edge_tone_pin.admits(None, &entry.canonical_tl))
+            .collect();
         match best_candidate_for_key_with_barriers(
             &dict_key,
             &edge_final_only,

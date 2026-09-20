@@ -33,15 +33,4 @@ public interface LearnedEntryOrBuilder extends
    */
   com.google.protobuf.ByteString
       getCanonicalTlBytes();
-
-  /**
-   * <pre>
-   * How many times the phrase was composed or picked; informational for
-   * the engine today (ranking reads `user_frequency` via `frequency_entries`).
-   * </pre>
-   *
-   * <code>uint32 learn_count = 3;</code>
-   * @return The learnCount.
-   */
-  int getLearnCount();
 }

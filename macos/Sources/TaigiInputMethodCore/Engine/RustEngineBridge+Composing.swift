@@ -401,11 +401,7 @@ extension RustEngineBridge {
         case .nextWordClearForNewComposing:
             return .nextWordClearForNewComposing
         case let .phraseLearned(payload):
-            return .phraseLearned(
-                hanji: payload.hanji,
-                canonicalTl: payload.canonicalTl,
-                syllableCount: Int(payload.syllableCount),
-            )
+            return .phraseLearned(hanji: payload.hanji, canonicalTl: payload.canonicalTl)
         }
     }
 

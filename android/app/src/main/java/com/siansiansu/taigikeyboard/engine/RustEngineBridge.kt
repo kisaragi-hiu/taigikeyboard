@@ -399,7 +399,6 @@ object RustEngineBridge {
             data class PhraseLearned(
                 val hanji: String,
                 val canonicalTl: String,
-                val syllableCount: Int,
             ) : Effect()
         }
 

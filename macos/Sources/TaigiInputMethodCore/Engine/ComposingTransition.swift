@@ -36,7 +36,7 @@ struct ComposingTransition: Equatable, Sendable {
         /// Learned phrases (§50) — the final continuous commit was a sequence
         /// of hanji picks; the platform upserts the `(hanji, canonicalTl)`
         /// pair into its learned store.
-        case phraseLearned(hanji: String, canonicalTl: String, syllableCount: Int)
+        case phraseLearned(hanji: String, canonicalTl: String)
     }
 
     /// The keystrokes as typed, with numeric tones (the engine's search key).

@@ -591,7 +591,6 @@ private fun synthComposing(proto: ComposingResponse): RustEngineBridge.Composing
                 RustEngineBridge.ComposingTransition.Effect.PhraseLearned(
                     hanji = eff.phraseLearned.hanji,
                     canonicalTl = eff.phraseLearned.canonicalTl,
-                    syllableCount = eff.phraseLearned.syllableCount,
                 )
             }
 
