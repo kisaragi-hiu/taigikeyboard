@@ -187,9 +187,9 @@ struct GeneralSettingsView: View {
         .formStyle(.grouped)
     }
 
-    /// Puts the whole pane back to what a fresh install renders with. The
-    /// `@AppStorage` bindings repaint on their own, and `DisplayLanguageStore`
-    /// observes its key, so the pane re-reads in the shipped language too.
+    /// Puts the pane's input settings back to what a fresh install renders
+    /// with; the `@AppStorage` bindings repaint on their own. The display
+    /// language is not touched, so the pane stays in the language it was in.
     private func restoreDefaults() {
         SettingsStore().resetGeneralSettings()
     }

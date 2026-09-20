@@ -412,18 +412,21 @@ mod tests {
     #[test]
     fn reset_general_removes_the_pane_s_keys_and_nothing_else() {
         // trace: 一般 owns the swap, the tone keys and auto-space; the
-        // candidate layout is 外觀's and the update date is bookkeeping —
-        // both survive. Removed, not written: the swap reads its default
-        // (hanji-first) with no key stored.
+        // display language is the user's UI choice, the candidate layout is
+        // 外觀's and the update date is bookkeeping — all three survive.
+        // Removed, not written: the swap reads its default (hanji-first)
+        // with no key stored.
         let mut doc = SettingsDocument::default();
         doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, false);
         doc.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true);
+        doc.set_raw_string(keys::DISPLAY_LANGUAGE.name, "en");
         doc.set_choice(&keys::CANDIDATE_LAYOUT, CandidateLayout::Vertical);
         doc.set_i64(&keys::UPDATE_NEXT_CHECK_MS, 42);
         doc.reset_general();
         assert!(!doc.contains(keys::IS_TRANSLATE_SWAPPED.name));
         assert!(!doc.contains(keys::IS_AUTO_SPACE_ENABLED.name));
         assert!(doc.engine_settings().is_translate_swapped);
+        assert!(doc.contains(keys::DISPLAY_LANGUAGE.name), "display language kept");
         assert!(doc.contains(keys::CANDIDATE_LAYOUT.name), "外觀's key");
         assert!(doc.contains(keys::UPDATE_NEXT_CHECK_MS.name), "bookkeeping");
     }

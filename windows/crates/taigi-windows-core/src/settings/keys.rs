@@ -224,14 +224,15 @@ const _: () = assert!(IS_CANDIDATE_WINDOW_ENABLED.default);
 /// user cleared the row, which is why the two cannot be collapsed.
 pub const CLEARED_COMPOSING_CHORD: &str = "";
 
-/// The keys the 一般 pane's reset removes — every setting the pane draws,
-/// same shape as `DICTIONARY_SOURCE_KEYS`. Not the update bookkeeping, not
-/// the remembered pane (`SettingsStore.swift resetGeneralSettings`).
-pub const GENERAL_KEYS: [&str; 8] = [
+/// The keys the 一般 pane's reset removes — every input setting the pane
+/// draws, same shape as `DICTIONARY_SOURCE_KEYS`. Not the display language
+/// (USER 2026-09-20: the reset must not switch the UI language under the
+/// user), not the update bookkeeping, not the remembered pane
+/// (`SettingsStore.swift resetGeneralSettings`).
+pub const GENERAL_KEYS: [&str; 7] = [
     INPUT_MODE.name,
     TONE_INPUT_SCHEME.name,
     IS_TRANSLATE_SWAPPED.name,
-    DISPLAY_LANGUAGE.name,
     IS_AUTO_SPACE_ENABLED.name,
     IS_CANDIDATE_WINDOW_ENABLED.name,
     IS_LITERAL_ROMAN_CANDIDATE_ENABLED.name,
