@@ -980,11 +980,11 @@
         ]
       },
       "values": {
-        "hanji": "這个計畫目前由我一个人利用上班以外 ê 時間開發佮維護。向望會當一直做落去，予逐个想欲用母語拍字 ê 人，攏有一个好用 ê 家私。",
-        "tailo": "Tsit ê kè-uē bo̍k-tsiân iû guá tsi̍t ê lâng lī-iōng siōng-pan í-guā ê sî-kan khai-huat kah uî-hōo. Ǹg-bāng ē-tàng it-ti̍t tsò lo̍h-khì, hōo ta̍k ê siūnn-beh iōng bó-gí phah-jī ê lâng, lóng ū tsi̍t ê hó-iōng ê ke-si.",
-        "poj": "Chit ê kè-ōe bo̍k-chiân iû goá chi̍t ê lâng lī-iōng siōng-pan í-gōa ê sî-kan khai-hoat kah ûi-hō͘. Ǹg-bāng ē-tàng it-ti̍t chò lo̍h-khì, hō͘ ta̍k ê siūⁿ-beh iōng bó-gí phah-jī ê lâng, lóng ū chi̍t ê hó-iōng ê ke-si.",
-        "en": "This project is developed and maintained by one person, in the hours outside a day job. I hope to keep it going, so that everyone who wants to type in their mother tongue has a tool that works well.",
-        "ja": "このプロジェクトは現在、私一人が本業以外の時間で開発と保守を行っています。これからも続けていき、母語で入力したいすべての人に、使いやすいツールを届けられることを願っています。"
+        "hanji": "這个計畫目前由我一个人利用上班以外 ê 時間開發佮維護。向望會當一直做落去，予逐个想欲用母語拍字 ê 人，攏會當輕鬆用母語拍字。",
+        "tailo": "Tsit ê kè-uē bo̍k-tsiân iû guá tsi̍t ê lâng lī-iōng siōng-pan í-guā ê sî-kan khai-huat kah uî-hōo. Ǹg-bāng ē-tàng it-ti̍t tsò lo̍h-khì, hōo ta̍k ê siūnn-beh iōng bó-gí phah-jī ê lâng, lóng ē-tàng khin-sang iōng bó-gí phah-jī.",
+        "poj": "Chit ê kè-ōe bo̍k-chiân iû goá chi̍t ê lâng lī-iōng siōng-pan í-gōa ê sî-kan khai-hoat kah ûi-hō͘. Ǹg-bāng ē-tàng it-ti̍t chò lo̍h-khì, hō͘ ta̍k ê siūⁿ-beh iōng bó-gí phah-jī ê lâng, lóng ē-tàng khin-sang iōng bó-gí phah-jī.",
+        "en": "This project is developed and maintained by one person, in the hours outside a day job. I hope to keep it going, so that everyone who wants to type in their mother tongue can do so with ease.",
+        "ja": "このプロジェクトは現在、私一人が本業以外の時間で開発と保守を行っています。これからも続けていき、母語で入力したいすべての人が、気軽に母語で入力できることを願っています。"
       }
     },
     "sponsorLink": {
