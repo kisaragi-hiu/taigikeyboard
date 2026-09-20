@@ -190,7 +190,7 @@
     <string name="i18n_settings_outputBothScripts">括號標註</string>
     <string name="i18n_settings_hyphenlessRoman">無連字符</string>
     <string name="i18n_settings_hyphenlessRomanInfo">候選詞佮送出的羅馬字無連字符（tâi-uân → tâiuân），輕聲記號 -- 改用 ·（hōo--guá → hōo·guá）。你家己拍的連字符無影響。</string>
-    <string name="i18n_settings_literalRomanCandidate">顯示當咧拍的字</string>
+    <string name="i18n_settings_literalRomanCandidate">當咧拍的字囥第一个</string>
     <string name="i18n_settings_literalRomanCandidateInfo">候選詞列第一格顯示你拍 ê 羅馬字，點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。</string>
     <string name="i18n_settings_autoCapitalization">自動大本字</string>
     <string name="i18n_settings_autoSpace">自動閬一个縫</string>

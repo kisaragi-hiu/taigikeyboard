@@ -190,7 +190,7 @@
     <string name="i18n_settings_outputBothScripts">Annotate in Brackets</string>
     <string name="i18n_settings_hyphenlessRoman">No Hyphens</string>
     <string name="i18n_settings_hyphenlessRomanInfo">Shows and commits romanization without hyphens between syllables (tâi-uân → tâiuân); the neutral-tone marker -- becomes · (hōo--guá → hōo·guá). Hyphens you type yourself are unaffected.</string>
-    <string name="i18n_settings_literalRomanCandidate">Show What You Are Typing</string>
+    <string name="i18n_settings_literalRomanCandidate">Show Typed Text First</string>
     <string name="i18n_settings_literalRomanCandidateInfo">Shows what you typed in the first slot of the candidate bar; tap it or press Enter to commit. When off, only Enter commits it.</string>
     <string name="i18n_settings_autoCapitalization">Auto-Capitalization</string>
     <string name="i18n_settings_autoSpace">Auto-Space</string>
