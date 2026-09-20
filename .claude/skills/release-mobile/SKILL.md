@@ -116,7 +116,7 @@ Update these surfaces idempotently:
 | File | Purpose |
 | --- | --- |
 | `CHANGELOG.md` | Link to the detailed version changelog |
-| `changelog/<target>.md` | Detailed Shared / iOS / Android / Dictionary record for the mobile train (desktop work lives in `changelog/desktop-v<version>.md`, not here) |
+| `changelog/mobile-<target>.md` | Detailed Shared / iOS / Android / Dictionary record for the mobile train (desktop work lives in `changelog/desktop-v<version>.md`, not here) |
 | `changelog/store/<target>/ios.txt` | Canonical English iOS What's New |
 | `changelog/store/<target>/android.txt` | Canonical English Android What's New |
 
@@ -183,7 +183,7 @@ macOS and Windows are the **desktop train**: one version number shared by the tw
 
 What that means while preparing a mobile release:
 
-- Keep macOS and Windows out of `changelog/<target>.md` entirely: that file is the mobile record, and a desktop change in it describes work its readers cannot install. Desktop work waits for its own `changelog/desktop-v<version>.md`.
+- Keep macOS and Windows out of `changelog/mobile-<target>.md` entirely: that file is the mobile record, and a desktop change in it describes work its readers cannot install. Desktop work waits for its own `changelog/desktop-v<version>.md`.
 - Keep macOS out of `ios.txt` and `android.txt`. `validate_notes` forbids the whole words `macOS` and `Mac` in both, so a leak fails `check` rather than reaching a store listing.
 - `check-versions --train mobile` verifies iOS + Android only. A macOS or Windows version that differs from `<target>` is expected, not a finding.
 

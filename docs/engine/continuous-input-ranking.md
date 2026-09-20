@@ -3,7 +3,7 @@
 > **Type**: Specification (resolved gap record + live ranking pointers)
 > **Keywords**: `Continuous`, `Ranking`, `phrase-priority`, `language-model`, `user_freq_boost`, `taiuantaigi`
 > **Related**: [composing.md](composing.md), [sort.md](sort.md), [binary-format.md](binary-format.md)
-> **Status**: Resolved. The whole-sentence lattice + min-cost walker and user-frequency decay shipped in v3.5.8 (see [`changelog/v3.5.8.md`](../../changelog/v3.5.8.md) § Engine and §8 below). §1–§3 record the pre-fix gap as audited 2026-05-11 during v3.5.8 Phase 9.
+> **Status**: Resolved. The whole-sentence lattice + min-cost walker and user-frequency decay shipped in v3.5.8 (see [`changelog/mobile-v3.5.8.md`](../../changelog/mobile-v3.5.8.md) § Engine and §8 below). §1–§3 record the pre-fix gap as audited 2026-05-11 during v3.5.8 Phase 9.
 > **Live ranking authority**: the module docs of [`engine/lexicon/src/continuous.rs`](../../engine/lexicon/src/continuous.rs) (span-local fetch, `ContinuousFetchCtx`, `SortKey` ordering) and `engine/composing/src/lattice/` (walker cost model). When this document and those module docs disagree, the module docs win.
 
 ---
