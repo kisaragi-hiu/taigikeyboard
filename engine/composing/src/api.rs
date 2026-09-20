@@ -130,6 +130,11 @@ pub struct NailedSegment {
     // which stays the authority for span / unnail mechanics (Codex
     // pre-impl 2026-06-03 SHOULD).
     pub association_tl: String,
+    // Learned phrases (§50) — the chosen `CandidateMessage.hanji`, present
+    // only when the platform picked a hanji-bearing candidate (any output
+    // script). `None` for a hanji-less pick or a legacy caller; the final
+    // commit learns the composition only when every nailed segment has one.
+    pub hanji: Option<String>,
     pub raw_span: (usize, usize),
     pub syllable_count: u8,
 }
@@ -430,6 +435,9 @@ pub enum Intent {
         custom_entries: Vec<protos::engine::CustomDictEntry>,
         enabled_sources_bitmask: u32,
         literal_roman_candidate_disabled: bool,
+        /// Learned phrases (§50) — decoded verbatim from
+        /// `FetchAtPos.learned_entries`; empty = feature off / un-wired.
+        learned_entries: Vec<protos::engine::LearnedEntry>,
     },
     /// Nail a candidate segment in `Phase::Continuous`. The engine takes
     /// `pending[..consumed_bytes]` as the nailed segment's raw text and
@@ -447,6 +455,9 @@ pub enum Intent {
         // NextWord `roman` arg (→ `prev_tl`/`next_tl`); empty → engine
         // falls back to the raw committed slice (legacy / TPS-OOV).
         association_tl: String,
+        // Learned phrases (§50): the picked candidate's hanji, `None` when
+        // the pick carried none (contract on the `CommitContinuous` proto).
+        hanji: Option<String>,
         consumed_bytes: usize,
         syllable_count: u8,
     },
@@ -561,6 +572,7 @@ mod tests {
             canonical_text: display.to_owned(),
             raw_text: display.to_owned(),
             association_tl: display.to_owned(),
+            hanji: None,
             raw_span: (0, display.len()),
             syllable_count: 1,
         }
@@ -575,6 +587,7 @@ mod tests {
             canonical_text: canonical.to_owned(),
             raw_text: display.to_owned(),
             association_tl: canonical.to_owned(),
+            hanji: None,
             raw_span: (0, display.len()),
             syllable_count,
         }

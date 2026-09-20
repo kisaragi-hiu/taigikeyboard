@@ -396,7 +396,8 @@ impl ComposingEffectExecutor for CompositionEditor<'_> {
                 | Effect::ResetAutocompleteContext
                 | Effect::NextWordUpdateLastSelectedWord { .. }
                 | Effect::NextWordWordSelected { .. }
-                | Effect::NextWordClearForNewComposing => Ok(()),
+                | Effect::NextWordClearForNewComposing
+                | Effect::PhraseLearned { .. } => Ok(()),
             }
         };
         self.record(outcome);

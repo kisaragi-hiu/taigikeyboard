@@ -432,6 +432,13 @@ pub fn toneless_reading_key(roman: &str) -> String {
     crate::derivation::derive_notone(roman)
 }
 
+/// The syllables of a canonical TL string — `-` inside a word, ` ` between
+/// the words of a multi-word entry (`iā sī`); an empty piece (the khinsiann
+/// `--`) is not a syllable. The one tokenizer `tps` already keys records by.
+pub fn tl_syllables(canonical_tl: &str) -> impl Iterator<Item = &str> {
+    crate::tps::tl_syllable_tokens(canonical_tl)
+}
+
 /// `keep_tl_finals = true` swaps the spelling fold to
 /// [`normalize_to_tl_keep_tl_finals`] (drops `eng→ing` / `ek→ik`) so a TL
 /// special final survives — used only by `canonical_tl_form` for TL mode. The

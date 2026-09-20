@@ -218,6 +218,9 @@ pub fn fetch_at_pos(
         // `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Composing.swift`
         // `composingFetchAtPos`, which inverts the same setting onto the same field.
         literal_roman_candidate_disabled: !settings.is_literal_roman_candidate_enabled,
+        // Learned phrases (§50): the desktop learned store lands in PR4 of the
+        // round (`docs/roadmap.md` § Learned phrases); empty until then.
+        learned_entries: Vec::new(),
     };
     let response = composing_response(
         composing_request::Method::FetchAtPos(fetch),
@@ -268,6 +271,9 @@ pub fn commit_continuous(
             syllable_count: args.syllable_count,
             canonical_text: args.canonical_text.to_owned(),
             association_tl: args.association_tl.to_owned(),
+            // Learned phrases (§50): sent once the desktop store lands (PR4);
+            // absent = this pick never learns.
+            hanji: None,
         }),
         "composingCommitContinuous",
         generation,

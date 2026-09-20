@@ -131,6 +131,7 @@ fn ctx<'a>(
         freq_map,
         now_ms: 0,
         custom,
+        learned: &[],
         prefix_index,
         dict,
         mode,

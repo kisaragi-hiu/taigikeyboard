@@ -27,7 +27,7 @@ use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
 use protos::engine::{
     AppConfig, ComposingRequest, ComposingResponse, CustomDictEntry, Effect, EnterContinuous,
-    FetchAtPos, Start,
+    FetchAtPos, FrequencyEntry, Start,
 };
 
 pub const SEPARATOR: u8 = 0xFF;
@@ -416,6 +416,33 @@ pub fn config(input_mode: &str) -> AppConfig {
     config_with_display_mode(input_mode, 0)
 }
 
+/// A fresh engine already in `Phase::Continuous` over `raw` (TL config).
+pub fn engine_in_continuous(raw: &str) -> Engine {
+    let mut e = Engine::new();
+    e.apply(
+        composing::Intent::Start {
+            text: raw.to_string(),
+        },
+        &config_tl(),
+    );
+    e.apply(composing::Intent::EnterContinuous, &config_tl());
+    e
+}
+
+/// Wall clock the user-frequency fixtures are anchored on.
+pub const NOW_MS: i64 = 1_700_000_000_000;
+
+/// One `user_frequency.db` row: `hanji` / `canonical_tl` picked `count`
+/// times, last `age_ms` before [`NOW_MS`].
+pub fn selected(hanji: &str, canonical_tl: &str, count: u32, age_ms: i64) -> FrequencyEntry {
+    FrequencyEntry {
+        display_text_key: hanji.into(),
+        count,
+        last_used_ms: NOW_MS - age_ms,
+        canonical_tl: canonical_tl.into(),
+    }
+}
+
 pub fn config_tl() -> AppConfig {
     config("tl")
 }
@@ -435,6 +462,7 @@ pub fn effect_kinds(effects: &[Effect]) -> Vec<&'static str> {
             Kind::NextWordUpdateLastSelectedWord(_) => "NextWordUpdateLastSelectedWord",
             Kind::NextWordWordSelected(_) => "NextWordWordSelected",
             Kind::NextWordClearForNewComposing(_) => "NextWordClearForNewComposing",
+            Kind::PhraseLearned(_) => "PhraseLearned",
         })
         .collect()
 }

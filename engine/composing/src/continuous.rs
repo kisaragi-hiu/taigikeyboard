@@ -85,8 +85,8 @@ use crate::shadow::{
 use lexicon::{
     best_candidate_for_key_with_barriers, derive_mode, fetch_candidates_for_keys_with_barriers,
     fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, CandidateMode,
-    ConsumedSpan, ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, RawCandidate,
-    SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
+    ConsumedSpan, ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, LearnedEntry,
+    RawCandidate, SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use ranking::FrequencyMap;
 
@@ -483,6 +483,49 @@ fn edge_user_weight_delta(
     freq_map.get(display_text, canonical_tl).user_weight(now_ms)
 }
 
+/// v3.5.8 S6 — per-fetch map from a user row's walker edge key to the rows
+/// under it, in `rows` order (the edge pick is first-wins among the
+/// eligible, Codex Q6). `key_of` MUST run the same shadow pipeline the
+/// lattice edge keys run for this fetch's `mode` so a hit is
+/// byte-identical to a `tl:` / `poj:` edge key. Registers the nasal-`oo`
+/// alias beside the canonical key: the dictionary build indexes the `o͘ⁿ`
+/// rendering of the nasal final, but it cannot reach a user row, so typing
+/// 好玄 as `ho͘nnhian` (edge key `tl:hoonnhian`) must still find a row
+/// stored canonically — safe on a fused body because an alias key is
+/// disjoint from every canonical key (`phonetics::nasal_oo_alias_spelling`).
+fn edge_key_map<'a, T>(
+    rows: &'a [T],
+    key_of: impl Fn(&T) -> Option<String>,
+) -> std::collections::HashMap<String, Vec<&'a T>> {
+    let mut map: std::collections::HashMap<String, Vec<&'a T>> =
+        std::collections::HashMap::with_capacity(rows.len());
+    for row in rows {
+        if let Some(key) = key_of(row) {
+            if let Some(alias) = phonetics::nasal_oo_alias_spelling(&key) {
+                map.entry(alias).or_default().push(row);
+            }
+            map.entry(key).or_default().push(row);
+        }
+    }
+    map
+}
+
+/// Learned phrases (§50) — the walker edge key for a learned row's canonical
+/// TL: a multi-word dictionary TL's space (`iā sī`) becomes the hyphen it is
+/// between syllables, under POJ input the TL is rendered to POJ first (the
+/// same face the lattice edges of a typed POJ buffer carry), then the same
+/// [`custom_toneless_key`] pipeline a custom roman goes through. TPS input
+/// keys Bopomofo bodies only, so a learned row is never a TPS walker edge —
+/// the limit a custom row has today.
+fn learned_edge_key(canonical_tl: &str, mode: phonetics::InputMode) -> Option<String> {
+    let hyphenated = canonical_tl.replace(' ', "-");
+    let native = match mode {
+        phonetics::InputMode::Poj => phonetics::api::tl_display_to_poj_display(&hyphenated),
+        _ => hyphenated,
+    };
+    custom_toneless_key(&native, mode)
+}
+
 fn fetch_walker_slot0_inner(
     raw: &str,
     raw_len: u32,
@@ -501,6 +544,7 @@ fn fetch_walker_slot0_inner(
         freq_map,
         now_ms,
         custom,
+        learned,
         mode,
         ..
     } = *ctx;
@@ -521,24 +565,12 @@ fn fetch_walker_slot0_inner(
     // makes the contract local — a split-brain (POJ-aware edges,
     // mode-blind custom keys) would silently drop custom matches in
     // POJ mode.
-    let mut custom_map: std::collections::HashMap<String, Vec<&CustomEntry>> =
-        std::collections::HashMap::with_capacity(custom.len());
-    for entry in custom {
-        if let Some(k) = custom_toneless_key(&entry.roman, mode) {
-            // Nasal-`oo` spelling alias — the dictionary build indexes the
-            // `o͘ⁿ` rendering of the nasal final beside the canonical `onn`,
-            // but it cannot reach `custom_dictionary.db`, so a user row gets
-            // the same treatment here: typing 好玄 as `ho͘nnhian` produces the
-            // edge key `tl:hoonnhian`, which must still find a custom entry
-            // stored canonically. Safe on a fused body because an alias key is
-            // disjoint from every canonical key — see
-            // `phonetics::nasal_oo_alias_spelling`.
-            if let Some(alias) = phonetics::nasal_oo_alias_spelling(&k) {
-                custom_map.entry(alias).or_default().push(entry);
-            }
-            custom_map.entry(k).or_default().push(entry);
-        }
-    }
+    let custom_map = edge_key_map(custom, |entry| custom_toneless_key(&entry.roman, mode));
+    // Learned phrases (§50) — keyed through [`learned_edge_key`] so the
+    // canonical-TL row lands on the mode's own key family. Consumed by the
+    // edge pick below as a COMPETITOR of the dictionary rows, never as the
+    // override the custom map is (Codex 2026-09-20 F5).
+    let learned_map = edge_key_map(learned, |entry| learned_edge_key(&entry.canonical_tl, mode));
     // Codex post-impl S2 P1: suppress the synth when a trailing
     // hyphen leaves the shadow short of the raw buffer (a
     // `(0, raw_len)` synth would mis-commit the pending `-`).
@@ -687,17 +719,37 @@ fn fetch_walker_slot0_inner(
         // toggled off. Custom edges above are unconditional (custom is not
         // a toggleable source); dict edges honour
         // `ctx.enabled_sources_bitmask`.
+        // Learned phrases (§50) — the rows keyed to this edge, filtered by
+        // the same tone pin a custom row answers to. They enter the
+        // dictionary's own `SortKey` pick; when any is present the edge is
+        // priced at least as a `CUSTOM_EFFECTIVE_FREQ` word so the span
+        // the user once composed as one word keeps winning the
+        // segmentation (the #69 span-vs-word decoupling: "is this span a
+        // word" is the floor, "which word" is the pick).
+        let learned_for_edge: Vec<&LearnedEntry> = learned_map
+            .get(custom_key.as_str())
+            .into_iter()
+            .flatten()
+            .copied()
+            .filter(|entry| edge_tone_pin.admits(None, &entry.canonical_tl))
+            .collect();
         match best_candidate_for_key_with_barriers(
             &dict_key,
             &edge_final_only,
             &edge_tone_pin,
             raw_span,
+            &learned_for_edge,
             ctx,
         ) {
             Some(lexicon::EdgeBest {
                 candidate: c,
                 span_frequency,
             }) => {
+                let span_frequency = if learned_for_edge.is_empty() {
+                    span_frequency
+                } else {
+                    span_frequency.max(crate::lattice::CUSTOM_EFFECTIVE_FREQ)
+                };
                 // Word = the user's pick (`SortKey` order). Cost =
                 // `span_frequency` (key max) so a rarer preferred
                 // homophone does not lose the segmentation; the S3
@@ -947,6 +999,7 @@ pub(crate) fn assemble_candidates(
     freq_map: &FrequencyMap,
     now_ms: i64,
     custom: &[CustomEntry],
+    learned: &[LearnedEntry],
     mode: phonetics::InputMode,
     enabled_sources_bitmask: u32,
     hyphenless_roman: bool,
@@ -978,6 +1031,7 @@ pub(crate) fn assemble_candidates(
                 freq_map,
                 now_ms,
                 custom,
+                learned,
                 prefix_index,
                 dict,
                 // v3.5.9 B-4 — thread the active input mode through so

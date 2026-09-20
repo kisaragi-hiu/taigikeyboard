@@ -65,6 +65,7 @@ fn ctx<'a>(
         freq_map,
         now_ms,
         custom,
+        learned: &[],
         prefix_index,
         dict,
         mode: phonetics::InputMode::Tl,
@@ -1808,6 +1809,7 @@ fn best_candidate_for_key_returns_highest_score_on_collision() {
         &[],
         &TonePin::None,
         (0, 6),
+        &[],
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     )
     .expect("key has dict hits");
@@ -1857,6 +1859,7 @@ fn best_candidate_for_key_breaks_score_tie_by_source_rank_like_the_list() {
         &[],
         &TonePin::None,
         (0, 3),
+        &[],
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     )
     .expect("key has dict hits");
@@ -1903,6 +1906,7 @@ fn best_candidate_for_key_prefers_selected_row_but_keeps_span_frequency_of_key()
         &[],
         &TonePin::None,
         (0, 6),
+        &[],
         &ctx(&map, now_ms, &[], &prefix_index, &dict),
     )
     .expect("key has dict hits");
@@ -1937,6 +1941,7 @@ fn best_candidate_for_key_none_when_key_absent() {
             &[],
             &TonePin::None,
             (0, 3),
+            &[],
             &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
         )
         .is_none(),
@@ -2003,6 +2008,7 @@ fn continuous_drops_tl_abbrev_collision_keeps_genuine_toneless() {
         &[],
         &TonePin::None,
         (0, 2),
+        &[],
         &ctx_neutral(&FrequencyMap::new(), &prefix_index, &dict),
     )
     .expect("genuine toneless candidate exists");

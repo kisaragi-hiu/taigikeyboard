@@ -18,19 +18,7 @@ use protos::engine::effect::Kind;
 use protos::engine::Effect;
 
 mod common;
-use common::{config_tl, effect_kinds};
-
-fn engine_in_continuous(raw: &str) -> Engine {
-    let mut e = Engine::new();
-    e.apply(
-        Intent::Start {
-            text: raw.to_string(),
-        },
-        &config_tl(),
-    );
-    e.apply(Intent::EnterContinuous, &config_tl());
-    e
-}
+use common::{config_tl, effect_kinds, engine_in_continuous};
 
 fn assert_kinds<'a, K>(effects: &'a [Effect], expected: K)
 where
@@ -94,6 +82,7 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -146,6 +135,7 @@ fn mid_commit_chains_raw_span_from_previous_segment() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -156,6 +146,7 @@ fn mid_commit_chains_raw_span_from_previous_segment() {
             display_text: "仔".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 1,
             syllable_count: 1,
         },
@@ -180,6 +171,7 @@ fn final_commit_exits_to_idle_emits_word_selected() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -216,6 +208,7 @@ fn commit_continuous_out_of_range_is_noop() {
             display_text: "X".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 99,
             syllable_count: 1,
         },
@@ -245,6 +238,7 @@ fn commit_continuous_at_non_char_boundary_is_noop() {
             display_text: "X".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 1, // mid-codepoint
             syllable_count: 1,
         },
@@ -261,6 +255,7 @@ fn commit_continuous_zero_bytes_is_noop() {
             display_text: "X".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 0,
             syllable_count: 1,
         },
@@ -277,6 +272,7 @@ fn commit_continuous_empty_display_is_noop() {
             display_text: String::new(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -295,6 +291,7 @@ fn reset_continuous_exits_emits_clear_and_nextword_signal() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -346,6 +343,7 @@ fn append_under_continuous_extends_pending_only() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -359,6 +357,7 @@ fn append_under_continuous_extends_pending_only() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -405,6 +404,7 @@ fn replace_last_under_continuous_modifies_pending_only() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -450,6 +450,7 @@ fn delete_backward_under_continuous_pops_nailed_when_pending_empty() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -498,6 +499,7 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -508,6 +510,7 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
             display_text: "仔".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 1,
             syllable_count: 1,
         },
@@ -560,6 +563,7 @@ fn delete_backward_pops_multi_char_display_emits_no_document_deletes() {
             display_text: "珠仔".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 4,
             syllable_count: 2,
         },
@@ -635,6 +639,7 @@ fn query_state_under_continuous_raw_input_pending_only_display_text_whole_compos
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -748,6 +753,7 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
             display_text: "紙".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
         },
@@ -845,6 +851,7 @@ fn full_span_commit_consumes_the_trailing_separator_marker() {
             display_text: "詩".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: raw.len(),
             syllable_count: 1,
         },
@@ -1031,6 +1038,7 @@ fn select_suggestion_under_continuous_with_nailed_prefix_commits_combined() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1069,6 +1077,7 @@ fn commit_preedit_then_insert_external_with_nailed_prefix_combines_all() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1100,6 +1109,7 @@ fn commit_raw_under_continuous_raw_empty_after_unnail_commits_nailed_only() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1192,6 +1202,7 @@ fn nailed_segment_public_fields_round_trip() {
         canonical_text: "珠仔".to_string(),
         raw_text: "tsua".to_string(),
         association_tl: "tsu-á".to_string(),
+        hanji: None,
         raw_span: (0, 4),
         syllable_count: 2,
     };
@@ -1219,6 +1230,7 @@ fn bug1_mid_commit_marks_display_but_nextword_uses_canonical() {
             display_text: "tāi-uân".to_string(), // swapped roman → marked region
             canonical_text: "臺灣".to_string(),  // canonical hanji → NextWord text
             association_tl: "tâi-uân".to_string(), // R2 canonical TL → NextWord roman
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1264,6 +1276,7 @@ fn bug1_final_commit_documents_display_but_word_selected_uses_canonical() {
             display_text: "tāi-uân".to_string(),
             canonical_text: "臺灣".to_string(),
             association_tl: "tâi-uân".to_string(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1294,6 +1307,7 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
             display_text: "tāi-uân".to_string(), // 7 chars
             canonical_text: "臺灣".to_string(),
             association_tl: "tâi-uân".to_string(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },
@@ -1304,6 +1318,7 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
             display_text: "gí".to_string(), // 2 chars
             canonical_text: "語".to_string(),
             association_tl: "gí".to_string(),
+            hanji: None,
             consumed_bytes: 1,
             syllable_count: 1,
         },
@@ -1351,6 +1366,7 @@ fn bug1_empty_canonical_falls_back_to_display_text() {
             display_text: "珠".to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         },

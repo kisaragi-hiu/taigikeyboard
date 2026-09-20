@@ -59,6 +59,7 @@ fn ctx<'a>(
         freq_map,
         now_ms,
         custom: &[],
+        learned: &[],
         prefix_index,
         dict,
         mode: phonetics::InputMode::Tl,

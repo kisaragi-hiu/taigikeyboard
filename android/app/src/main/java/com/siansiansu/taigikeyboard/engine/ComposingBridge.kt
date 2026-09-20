@@ -587,6 +587,13 @@ private fun synthComposing(proto: ComposingResponse): RustEngineBridge.Composing
                 RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing
             }
 
+            eff.hasPhraseLearned() -> {
+                RustEngineBridge.ComposingTransition.Effect.PhraseLearned(
+                    hanji = eff.phraseLearned.hanji,
+                    canonicalTl = eff.phraseLearned.canonicalTl,
+                )
+            }
+
             else -> {
                 null
             }

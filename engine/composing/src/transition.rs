@@ -28,9 +28,15 @@ use protos::engine::AppConfig;
 use protos::engine::{
     ClearPreeditWithoutCommit, CommitTextReplacingPreedit, ComposingResponse,
     DeleteBackwardFromDocument, Effect, NextWordClearForNewComposing,
-    NextWordUpdateLastSelectedWord, NextWordWordSelected, PerformAutocomplete, ResetAutocomplete,
-    ResetAutocompleteContext, UpdatePreedit,
+    NextWordUpdateLastSelectedWord, NextWordWordSelected, PerformAutocomplete, PhraseLearned,
+    ResetAutocomplete, ResetAutocompleteContext, UpdatePreedit,
 };
+
+/// Learned phrases (§50) — the longest composition the final commit turns
+/// into one learned `(漢字, canonical-TL)` pair, in syllables. ChiaKey caps
+/// its in-buffer word capture at 6 characters; a Taigi phrase past six
+/// syllables is a clause, not a word.
+const MAX_LEARNED_PHRASE_SYLLABLES: usize = 6;
 
 /// Apply `intent` against `state`, mutate, return the proto response.
 pub(crate) fn apply(
@@ -96,6 +102,7 @@ pub(crate) fn apply(
             display_text,
             canonical_text,
             association_tl,
+            hanji,
             consumed_bytes,
             syllable_count,
         } => commit_continuous(
@@ -103,6 +110,7 @@ pub(crate) fn apply(
             display_text,
             canonical_text,
             association_tl,
+            hanji,
             consumed_bytes,
             syllable_count,
             config,
@@ -828,6 +836,7 @@ fn commit_continuous(
     display_text: String,
     canonical_text: String,
     association_tl: String,
+    hanji: Option<String>,
     consumed_bytes: usize,
     syllable_count: u8,
     config: &AppConfig,
@@ -862,6 +871,7 @@ fn commit_continuous(
         canonical_text: canonical.clone(),
         raw_text: raw_text.clone(),
         association_tl,
+        hanji: hanji.filter(|h| !h.is_empty()),
         raw_span,
         syllable_count,
     };
@@ -879,6 +889,11 @@ fn commit_continuous(
         let combined = nailed_prefix(&new_nailed, config);
         let mut effects = finalize_effects(combined);
         effects.push(next_word_word_selected(canonical, next_word_roman, true));
+        // Learned phrases (§50): the whole composition, if it was a
+        // sequence of hanji picks, becomes one learned pair.
+        if let Some(learned) = learned_phrase(&new_nailed) {
+            effects.push(phrase_learned(learned));
+        }
         return exit_to_idle(state, effects);
     }
 
@@ -1049,6 +1064,50 @@ fn next_word_word_selected(text: String, roman: String, trigger_prediction: bool
             roman,
             trigger_prediction,
         })),
+    }
+}
+
+/// Learned phrases (§50) — the `(漢字, canonical-TL)` pair a final
+/// continuous commit learns from its nailed segments, or `None` when the
+/// composition is not one: fewer than two segments, any segment without
+/// a hanji pick or without a canonical TL, or more than
+/// [`MAX_LEARNED_PHRASE_SYLLABLES`] in total. The TL pieces join with `-`;
+/// a piece that already opens with the khinsiann `--` keeps it so
+/// `kì` + `--khí-lâi` reads `kì--khí-lâi`, never `kì---khí-lâi`. The cap
+/// counts the joined TL, not the segments' echoed `syllable_count`: a
+/// custom-dictionary pick reports `1` whatever its length
+/// (`lexicon::custom_entry_to_candidate`).
+fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> {
+    if nailed.len() < 2 {
+        return None;
+    }
+    let mut hanji = String::new();
+    let mut canonical_tl = String::new();
+    for seg in nailed {
+        // `commit_continuous` stored an empty hanji as `None` already.
+        let h = seg.hanji.as_deref()?;
+        if seg.association_tl.is_empty() {
+            return None;
+        }
+        hanji.push_str(h);
+        if !canonical_tl.is_empty() && !seg.association_tl.starts_with('-') {
+            canonical_tl.push('-');
+        }
+        canonical_tl.push_str(&seg.association_tl);
+    }
+    let syllable_count = phonetics::api::tl_syllables(&canonical_tl).count();
+    if syllable_count == 0 || syllable_count > MAX_LEARNED_PHRASE_SYLLABLES {
+        return None;
+    }
+    Some(PhraseLearned {
+        hanji,
+        canonical_tl,
+    })
+}
+
+fn phrase_learned(learned: PhraseLearned) -> Effect {
+    Effect {
+        kind: Some(effect::Kind::PhraseLearned(learned)),
     }
 }
 

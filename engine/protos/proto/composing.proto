@@ -210,6 +210,25 @@ message FetchAtPos {
   repeated CustomDictEntry custom_entries  = 4;
   uint32 enabled_sources_bitmask           = 5;
   bool literal_roman_candidate_disabled    = 6;
+  // Learned phrases (§50) — the platform's auto-learned rows whose
+  // whole-buffer key equals the current raw buffer (exact match, not the
+  // prefix search `custom_entries` rides). Kept apart from
+  // `custom_entries` on purpose: a manual custom row overrides the walker
+  // edge unconditionally, a learned row only COMPETES with the dictionary
+  // rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+  // un-wired build → no learned candidates.
+  repeated LearnedEntry learned_entries    = 7;
+}
+
+// One auto-learned phrase (§50): the `(漢字, canonical-TL)` pair the user
+// once composed segment by segment in continuous input and committed
+// (`Effect.phrase_learned`). Both fields are canonical (hanji as committed,
+// TL as the dictionary would spell it, khinsiann `--` kept), so the engine
+// derives the lattice key and the POJ display from `canonical_tl` the way
+// it does for a `dict.bin` record.
+message LearnedEntry {
+  string hanji        = 1;
+  string canonical_tl = 2;
 }
 
 // v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row marshalled
@@ -268,6 +287,16 @@ message CommitContinuous {
   // is the `(hanji, canonical-TL)` pair (Core Principle #7), so this is
   // populated for hanji-present candidates too, NOT only hanji-absent.
   string association_tl = 5;
+  // Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+  // whenever the picked candidate carries hanji regardless of which script
+  // the document received (identity = the `(漢字, canonical-TL)` pair, Core
+  // Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+  // for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+  // and for legacy callers; a composition with any hanji-less segment is
+  // never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+  // F2: hanji is an explicit sidechannel, never inferred from
+  // `canonical_text` vs `association_tl`).
+  optional string hanji = 6;
 }
 
 // v3.5.8 Phase 6 — abort continuous-input. Drops `Phase::Continuous`
@@ -457,6 +486,7 @@ message Effect {
     NextWordUpdateLastSelectedWord next_word_update_last_selected_word  = 8;
     NextWordWordSelected           next_word_word_selected              = 9;
     NextWordClearForNewComposing   next_word_clear_for_new_composing    = 10;
+    PhraseLearned                  phrase_learned                       = 11;
   }
 }
 
@@ -487,3 +517,16 @@ message NextWordWordSelected { string text = 1; string roman = 2; bool trigger_p
 // `ResetContinuous` / `Reset` / empty-buffer `DeleteBackward` exits
 // `Phase::Continuous` without committing.
 message NextWordClearForNewComposing {}
+
+// Learned phrases (§50) — emitted beside `NextWordWordSelected` on the
+// FINAL continuous commit when the composition was ≥ 2 nailed segments,
+// every segment was a hanji-bearing candidate pick (`CommitContinuous.hanji`
+// present) with a canonical TL, and the joined TL is ≤ 6 syllables.
+// `hanji` = the segments' hanji concatenated; `canonical_tl` = the segments'
+// canonical TL joined with `-` (a segment that already starts with the
+// khinsiann `--` keeps it). The platform upserts the pair into its learned
+// store and feeds it back through `FetchAtPos.learned_entries`. An Enter /
+// raw commit of an unpicked tail, an abort, or a backspace-unnailed segment
+// never reaches this effect. Mirrors the nextword `RecordCompoundAssociations`
+// pattern: the engine decides, the platform persists.
+message PhraseLearned { string hanji = 1; string canonical_tl = 2; }
