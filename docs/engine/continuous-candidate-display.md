@@ -3,7 +3,7 @@
 > **Type**: Specification (problem + fix, shipped v3.5.8)
 > **Keywords**: `Continuous`, `Candidate`, `display`, `roman`, `hanji`, `subtitle`, `dual-line`, `wire-schema`, `eliminate-fallback`
 > **Related**: [continuous-input-ranking.md](continuous-input-ranking.md), [composing.md](composing.md), [binary-format.md](binary-format.md), [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-platform-alignment.md)
-> **Status**: §4 dual-line carrier shipped (Items 5–6); §15 fallback retire **COMPLETE** — Items 7–12 closed every engine syllabification gap and **Item 13 (v3.5.8 capstone) retired the platform lexicon fallback** so the Continuous engine is the single candidate source. All in v3.5.8 (USER 2026-05-11: 「v3.5.8 的版本就是連續打字的版本,修復到我滿意為止」). Item 13 = v3.5.8 feature-complete; see [`changelog/v3.5.8.md`](../../changelog/v3.5.8.md).
+> **Status**: §4 dual-line carrier shipped (Items 5–6); §15 fallback retire **COMPLETE** — Items 7–12 closed every engine syllabification gap and **Item 13 (v3.5.8 capstone) retired the platform lexicon fallback** so the Continuous engine is the single candidate source. All in v3.5.8 (USER 2026-05-11: 「v3.5.8 的版本就是連續打字的版本,修復到我滿意為止」). Item 13 = v3.5.8 feature-complete; see [`changelog/mobile-v3.5.8.md`](../../changelog/mobile-v3.5.8.md).
 > **Author**: Dogfood findings 2026-05-11. Source observation = user during v3.5.8 dogfood. §15 added 2026-05-11 (night) per user pivot 「engine 內部處理所有切音節邏輯,fallback 是冗餘」.
 > **Adjacent spec (2026-05-13)**: [`continuous-input-ranking.md`](continuous-input-ranking.md) §10 — Commit Behavior & Display Split. Composing buffer (`rawInput`) vs candidate[0] (segmented) split + Enter / Tap-0 / Tap-N commit dispatch. Grounded in MOE `KeySectionsModel` (§10.1.1). Drafted; co-confirm pending in the same Codex pass as this doc.
 
@@ -604,7 +604,7 @@ Per [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-plat
 
 - **2026-05-11 (day)**: §1-14 display fix drafted from dogfood findings.
 - **2026-05-11 (night)**: §15 added per user pivot — eliminate platform-side lexicon fallback; engine becomes single source of candidates (MOE `tutgInputLine` analog). All work scoped to v3.5.8 (USER 2026-05-11: 「v3.5.8 的版本就是連續打字的版本,修復到我滿意為止」).
-- **Complete (v3.5.8)**: Codex pre-impl consult on §9 + §15.7 done; display fix (§1-14, Items 5–6) and fallback retire (§15, Items 7–13) implemented and shipped — [`changelog/v3.5.8.md`](../../changelog/v3.5.8.md) § Shared / § Engine. Later changes are tracked in commit messages and the module docs of `engine/lexicon/src/continuous.rs` / `engine/composing/src/continuous.rs`, not by retroactive edits here.
+- **Complete (v3.5.8)**: Codex pre-impl consult on §9 + §15.7 done; display fix (§1-14, Items 5–6) and fallback retire (§15, Items 7–13) implemented and shipped — [`changelog/mobile-v3.5.8.md`](../../changelog/mobile-v3.5.8.md) § Shared / § Engine. Later changes are tracked in commit messages and the module docs of `engine/lexicon/src/continuous.rs` / `engine/composing/src/continuous.rs`, not by retroactive edits here.
 
 ---
 

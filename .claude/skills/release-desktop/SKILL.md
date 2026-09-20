@@ -100,7 +100,7 @@ Sort every user-visible change before writing anything:
   either platform should find their own wording of the change under their own
   heading rather than having to read the other platform's section for it.
 - **iOS-only / Android-only** → NOT this release. Mobile work belongs to
-  `changelog/v<version>.md` and the store notes, written by `release-mobile`.
+  `changelog/mobile-v<version>.md` and the store notes, written by `release-mobile`.
 
 Run the `upgrade-check` procedure for `<base-ref> → HEAD`:
 
@@ -269,7 +269,7 @@ a failed job, or when its token has expired. Full procedure and rationale:
 ## Guardrails
 
 - Never edit another version's changelog.
-- Never touch `changelog/v<version>.md` or `changelog/store/**` — that is
+- Never touch `changelog/mobile-v<version>.md` or `changelog/store/**` — that is
   `release-mobile`'s surface, and desktop-only work must never enter a store note.
 - Never publish or un-draft a release, and never push a tag by hand: publishing
   is the manual step this whole flow is shaped around, and it is what creates the

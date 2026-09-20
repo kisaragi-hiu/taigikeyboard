@@ -123,7 +123,7 @@ Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced 
 
 ## Localization Architecture
 
-**Shipped in v3.6.4** (`changelog/v3.6.4.md`): every app-UI string is generated from the shared JSON source. `i18n/*.json` (one namespace per file — `common`, `nav`, `home`, `layout`, `dictionary`, `settings`, `keyboard`, `symbol`, `desktop`) → `make i18n` (`tools/i18n/generate.py`) → typed accessors on each platform:
+**Shipped in v3.6.4** (`changelog/mobile-v3.6.4.md`): every app-UI string is generated from the shared JSON source. `i18n/*.json` (one namespace per file — `common`, `nav`, `home`, `layout`, `dictionary`, `settings`, `keyboard`, `symbol`, `desktop`) → `make i18n` (`tools/i18n/generate.py`) → typed accessors on each platform:
 
 - iOS: `Strings/Generated/{StringKey,GeneratedTaigiStrings,StringResolverFormats}.swift` + `Localizable.xcstrings`; resolved at runtime by `Strings/StringResolver.swift` against `Strings/DisplayLanguageStore.swift`.
 - Android: `i18n/generated/{L10n,StringKey,GeneratedTaigiStrings,StringResolverFormats}.kt`.

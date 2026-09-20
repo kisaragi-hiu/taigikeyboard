@@ -18,7 +18,7 @@
 
 ## Theme Picker (v3.6.2, current state)
 
-Shipped in v3.6.2 (`changelog/v3.6.2.md`) as the 主題 tab of the main app (tab order in [app-ui.md](app-ui.md)).
+Shipped in v3.6.2 (`changelog/mobile-v3.6.2.md`) as the 主題 tab of the main app (tab order in [app-ui.md](app-ui.md)).
 
 ### Built-in catalog
 
