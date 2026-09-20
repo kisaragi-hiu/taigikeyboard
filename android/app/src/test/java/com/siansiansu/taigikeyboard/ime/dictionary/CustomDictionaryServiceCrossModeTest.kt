@@ -12,54 +12,8 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.sql.Connection
-import java.sql.DriverManager
 
 class CustomDictionaryServiceCrossModeTest {
-    private fun openSchema(): Connection {
-        val conn = DriverManager.getConnection("jdbc:sqlite::memory:")
-        conn.createStatement().use { stmt ->
-            stmt.executeUpdate(CustomDictionaryService.CREATE_TABLE_SQL)
-            stmt.executeUpdate(CustomDictionaryService.CREATE_SEARCH_KEY_TABLE_SQL)
-            stmt.executeUpdate(CustomDictionaryService.CREATE_SEARCH_KEY_LOOKUP_INDEX_SQL)
-            stmt.executeUpdate(CustomDictionaryService.CREATE_SEARCH_KEY_ENTRY_INDEX_SQL)
-        }
-        return conn
-    }
-
-    private fun insertEntry(
-        conn: Connection,
-        id: String,
-        roman: String,
-        hanzi: String,
-    ) {
-        conn.prepareStatement(
-            "INSERT INTO custom_dictionary (id, roman, hanzi) VALUES (?, ?, ?)",
-        ).use { ps ->
-            ps.setString(1, id)
-            ps.setString(2, roman)
-            ps.setString(3, hanzi)
-            ps.executeUpdate()
-        }
-    }
-
-    private fun insertSearchKey(
-        conn: Connection,
-        entryId: String,
-        family: String,
-        form: String,
-        key: String,
-    ) {
-        conn.prepareStatement(
-            "INSERT INTO custom_search_key (entry_id, family, form, key) VALUES (?, ?, ?, ?)",
-        ).use { ps ->
-            ps.setString(1, entryId)
-            ps.setString(2, family)
-            ps.setString(3, form)
-            ps.setString(4, key)
-            ps.executeUpdate()
-        }
-    }
-
     /** Run the production `SEARCH_SQL` and return the matched entry ids in order. */
     private fun search(
         conn: Connection,
@@ -90,11 +44,11 @@ class CustomDictionaryServiceCrossModeTest {
      */
     @Test
     fun INVARIANT_CUSTOM_DICT_CROSS_MODE_anyFamilyKeyJoinsToEntry() {
-        openSchema().use { conn ->
-            insertEntry(conn, "e1", "chiah", "食")
-            insertSearchKey(conn, "e1", "tl", "notone", "tsiah")
-            insertSearchKey(conn, "e1", "poj", "notone", "chiah")
-            insertSearchKey(conn, "e1", "tps", "notone", "ㄐㄧㄚㆷ")
+        openCustomDictionarySchema().use { conn ->
+            conn.insertEntry("e1", "chiah", "食")
+            conn.insertSearchKey("e1", "tl", "notone", "tsiah")
+            conn.insertSearchKey("e1", "poj", "notone", "chiah")
+            conn.insertSearchKey("e1", "tps", "notone", "ㄐㄧㄚㆷ")
 
             // TL-family query finds the entry via the tl/notone key.
             assertEquals(listOf("e1"), search(conn, family = "tl", form = "notone", key = "tsiah"))
@@ -113,10 +67,10 @@ class CustomDictionaryServiceCrossModeTest {
      */
     @Test
     fun INVARIANT_CUSTOM_DICT_CROSS_MODE_abbrevFormAlwaysMatched() {
-        openSchema().use { conn ->
-            insertEntry(conn, "e2", "gâu-tsá", "𠢕早")
-            insertSearchKey(conn, "e2", "tl", "notone", "gautsa")
-            insertSearchKey(conn, "e2", "tl", "abbrev", "gs")
+        openCustomDictionarySchema().use { conn ->
+            conn.insertEntry("e2", "gâu-tsá", "𠢕早")
+            conn.insertSearchKey("e2", "tl", "notone", "gautsa")
+            conn.insertSearchKey("e2", "tl", "abbrev", "gs")
 
             // Primary-form (notone) query matches the abbrev row.
             assertEquals(listOf("e2"), search(conn, family = "tl", form = "notone", key = "gs"))
@@ -128,10 +82,10 @@ class CustomDictionaryServiceCrossModeTest {
     /** `LIKE ? || '%'` is a prefix match; `DISTINCT` collapses multi-row joins. */
     @Test
     fun INVARIANT_CUSTOM_DICT_CROSS_MODE_prefixMatchDistinctEntry() {
-        openSchema().use { conn ->
-            insertEntry(conn, "e3", "tâi-gí", "台語")
-            insertSearchKey(conn, "e3", "tl", "notone", "taigi")
-            insertSearchKey(conn, "e3", "tl", "abbrev", "tg")
+        openCustomDictionarySchema().use { conn ->
+            conn.insertEntry("e3", "tâi-gí", "台語")
+            conn.insertSearchKey("e3", "tl", "notone", "taigi")
+            conn.insertSearchKey("e3", "tl", "abbrev", "tg")
 
             // Prefix "tai" matches the notone key; DISTINCT keeps it a single row
             // even though both side rows belong to the same entry.

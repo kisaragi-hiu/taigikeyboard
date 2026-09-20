@@ -96,6 +96,14 @@ interface EngineSettings {
     val toneToggles: ToneToggles
 
     val isCustomDictEnabled: Boolean
+
+    /**
+     * 自動學習新詞 (§50) — learned phrases are recorded and fed back to the
+     * engine only while this is on. Independent of [isCustomDictEnabled].
+     */
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isPhraseLearningEnabled.
+    // Drift causes silent divergence (one platform keeps learning, the other does not).
+    val isPhraseLearningEnabled: Boolean
     val isTpsOrMappedToER: Boolean
 
     // Dictionary toggles (match iOS names)

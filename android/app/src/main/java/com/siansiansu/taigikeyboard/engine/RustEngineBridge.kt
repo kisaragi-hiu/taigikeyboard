@@ -554,6 +554,8 @@ object RustEngineBridge {
     data class CommitContinuousResult(
         val didCommit: Boolean,
         val didFinalCommit: Boolean,
+        /** §50 — the `Effect.PhraseLearned` this final commit carried, if any. */
+        val learnedPhrase: ComposingTransition.Effect.PhraseLearned? = null,
     ) {
         companion object {
             val NOOP = CommitContinuousResult(didCommit = false, didFinalCommit = false)

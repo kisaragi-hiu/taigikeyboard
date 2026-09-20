@@ -26,6 +26,7 @@ class CandidateClickHandler(
     private val prefs: PrefHelper,
     private val taigikeyboard: TaigiKeyboard,
     private val userFreq: UserFrequencyService,
+    private val customDict: com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService,
     private val getCurrentSuggestions: () -> List<TaigiWord>,
     private val getIsTranslateSwapped: () -> Boolean,
     private val getOutputBothScripts: () -> Boolean,
@@ -358,6 +359,9 @@ class CandidateClickHandler(
         // normal candidate commit records. Absent (wire skew / older
         // suggestion) → "" → engine falls back to the raw committed slice.
         val associationTl = info[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
+        // §50 — the pick's hanji (identity, not the committed script): the
+        // engine learns a composition only when every segment carried one.
+        val hanji = selectedWord.hanzi?.takeIf { it.isNotEmpty() }
         val result = composingManager.commitContinuous(
             displayText = textToCommit,
             canonicalText = displayText,
@@ -365,6 +369,7 @@ class CandidateClickHandler(
             consumedBytes = consumedBytes,
             syllableCount = syllableCount,
             ic = ic,
+            hanji = hanji,
         )
 
         logger.debug(TAG) {
@@ -379,6 +384,16 @@ class CandidateClickHandler(
         if (result.didCommit && prefs.frequencyRecordingEnabled) {
             scope.launch {
                 userFreq.recordUsage(displayText, associationTl)
+            }
+        }
+        // §50 — same gate for both learned-store writes: the phrase the
+        // engine just learned, and the touch-on-use bump for a learned row
+        // picked whole (no-op for any other row).
+        val learned = result.learnedPhrase
+        if (result.didCommit && prefs.phraseLearningEnabled && (learned != null || hanji != null)) {
+            scope.launch {
+                learned?.let { customDict.learnPhrase(it.hanji, it.canonicalTl) }
+                if (hanji != null) customDict.touchLearnedPhrase(hanji, associationTl)
             }
         }
 

@@ -91,6 +91,7 @@ fun CustomDictionaryScreen(
 
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val isImporting by viewModel.isImporting.collectAsStateWithLifecycle()
+    val isPhraseLearningEnabled by viewModel.isPhraseLearningEnabled.collectAsStateWithLifecycle()
     val isCustomDictEnabled by viewModel.isCustomDictEnabled.collectAsStateWithLifecycle()
 
     var showEditDialog by remember { mutableStateOf(false) }
@@ -215,6 +216,13 @@ fun CustomDictionaryScreen(
                             checked = isCustomDictEnabled,
                             infoText = L10n.dictionaryCustomDictEnabledInfo,
                             onCheckedChange = { viewModel.setCustomDictEnabled(it) },
+                        )
+                        // §50 自動學習新詞 — learned rows list below with a badge.
+                        SwitchRow(
+                            label = L10n.dictionaryPhraseLearningEnabled,
+                            checked = isPhraseLearningEnabled,
+                            infoText = L10n.dictionaryPhraseLearningEnabledInfo,
+                            onCheckedChange = { viewModel.setPhraseLearningEnabled(it) },
                         )
                     }
                 }
@@ -377,6 +385,10 @@ fun CustomDictionaryScreen(
                                             showEditDialog = true
                                         }.padding(vertical = 12.dp),
                             )
+                            if (entry.isLearned) {
+                                SourceBadge(text = L10n.dictionaryLearnedBadge, style = MaterialTheme.typography.labelSmall)
+                                Spacer(Modifier.width(8.dp))
+                            }
                             IconButton(
                                 onClick = { viewModel.delete(entry.id) },
                             ) {

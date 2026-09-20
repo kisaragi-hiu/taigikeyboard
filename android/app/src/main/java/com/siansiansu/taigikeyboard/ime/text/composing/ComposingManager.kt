@@ -529,7 +529,18 @@ class ComposingManager(
         // buffer, stable across the two FFI calls). `buildCustomEntries`
         // suspends on `Dispatchers.IO` and drops its rows if the state
         // token moved during that await (Codex post-impl 2026-05-15 P2).
-        val customEntries = buildCustomEntries(token, fetch)
+        // One family-native query key serves both user-row sources (one FFI
+        // derive per keystroke); `null` = empty / residue-only buffer.
+        val queryKey = token.rawInput?.takeIf { it.isNotEmpty() }?.let { raw ->
+            CustomDictionaryDerivation.deriveCustomQueryKey(
+                raw,
+                com.siansiansu.taigikeyboard.ime.core.settings.InputMode.fromPrefString(fetch.inputMode),
+            )
+        }
+        val customEntries = buildCustomEntries(token, fetch, queryKey)
+        // §50 — learned phrases keyed to the WHOLE raw buffer (exact, not
+        // prefix), shared by both phases like `customEntries`.
+        val learnedEntries = buildLearnedEntries(token, fetch, queryKey)
 
         // Phase 1: neutral fetch to learn candidate displayText keys.
         val neutral = RustEngineBridge.composingFetchAtPos(
@@ -543,6 +554,7 @@ class ComposingManager(
             literalRomanCandidateDisabled = fetch.literalRomanCandidateDisabled,
             candidateDisplayMode = fetch.candidateDisplayMode,
             hyphenlessRoman = fetch.spacing.hyphenlessRoman,
+            learnedEntries = learnedEntries,
         )
         // Phase-1 FFI failure or empty carrier → "no candidates this frame".
         // Nothing to mirror: a matching-generation fetch echoes the state the
@@ -580,6 +592,7 @@ class ComposingManager(
             literalRomanCandidateDisabled = fetch.literalRomanCandidateDisabled,
             candidateDisplayMode = fetch.candidateDisplayMode,
             hyphenlessRoman = fetch.spacing.hyphenlessRoman,
+            learnedEntries = learnedEntries,
         )
         // Phase-2 FFI failure: the request never reached the engine —
         // degrade to the neutral-ranked phase-1 list instead of dropping
@@ -660,20 +673,14 @@ class ComposingManager(
     private suspend fun buildCustomEntries(
         token: StateToken,
         fetch: ContinuousFetchSettings,
+        // v3.6.1 R3 — the single family-native query key derived from the
+        // raw buffer + settings input mode (`InputMode.fromPrefString`
+        // collapses "tps" → TL; the engine upgrades to the TPS family via
+        // `contains_tps` on the raw input). `null` = no matches.
+        queryKey: com.siansiansu.taigikeyboard.engine.CustomSearchKey?,
     ): List<CustomDictEntry> {
         val service = customDictionaryService ?: return emptyList()
-        val rawInput = token.rawInput
-        if (!fetch.isCustomDictEnabled || rawInput.isNullOrEmpty()) return emptyList()
-        // v3.6.1 R3 — derive the single family-native query key from the raw
-        // buffer + settings input mode. `inputMode` is the platform string
-        // (incl. "tps"); `InputMode.fromPrefString` collapses "tps" → TL and
-        // the engine upgrades to the TPS family via `contains_tps` on the raw
-        // input. `null` key (residue-only input) → no custom matches.
-        val queryKey =
-            CustomDictionaryDerivation.deriveCustomQueryKey(
-                rawInput,
-                com.siansiansu.taigikeyboard.ime.core.settings.InputMode.fromPrefString(fetch.inputMode),
-            ) ?: return emptyList()
+        if (!fetch.isCustomDictEnabled || queryKey == null) return emptyList()
         return try {
             val rows = service.search(family = queryKey.family, form = queryKey.form, key = queryKey.key, limit = 20)
             // v3.5.8 Phase 9 Item 12 — await-race guard (Codex post-impl
@@ -696,6 +703,39 @@ class ComposingManager(
             throw e
         } catch (e: Exception) {
             logger.w(TAG, "[CONTINUOUS] custom dict query failed: ${e.message}", e)
+            emptyList()
+        }
+    }
+
+    /**
+     * §50 — learned phrases whose derived key EQUALS the raw buffer's query
+     * key (`CustomDictionaryService.learnedEntries`), as
+     * `FetchAtPos.learned_entries`; gated by 自動學習新詞, not by 啟用自訂詞庫
+     * (manual rows only). Same await-race guard as [buildCustomEntries].
+     */
+    private suspend fun buildLearnedEntries(
+        token: StateToken,
+        fetch: ContinuousFetchSettings,
+        queryKey: com.siansiansu.taigikeyboard.engine.CustomSearchKey?,
+    ): List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> {
+        val service = customDictionaryService ?: return emptyList()
+        if (!fetch.isPhraseLearningEnabled || queryKey == null) return emptyList()
+        return try {
+            val rows = service.learnedEntries(family = queryKey.family, form = queryKey.form, key = queryKey.key)
+            if (stateToken() != token) {
+                return emptyList()
+            }
+            rows.map { entry ->
+                com.siansiansu.taigikeyboard.engine.proto.LearnedEntry
+                    .newBuilder()
+                    .setHanji(entry.hanzi)
+                    .setCanonicalTl(entry.roman)
+                    .build()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.w(TAG, "[CONTINUOUS] learned phrase query failed: ${e.message}", e)
             emptyList()
         }
     }
@@ -737,6 +777,8 @@ class ComposingManager(
         consumedBytes: Int,
         syllableCount: Int,
         ic: InputConnection,
+        // §50 — the pick's hanji, null for a hanji-less candidate.
+        hanji: String? = null,
     ): RustEngineBridge.CommitContinuousResult {
         logger.tdebug(TAG) {
             "[COMPOSE] fn=commitContinuous displayLen=${displayText.length} canonicalLen=${canonicalText.length} consumedBytes=$consumedBytes syllCount=$syllableCount"
@@ -747,6 +789,7 @@ class ComposingManager(
             displayText = displayText,
             canonicalText = canonicalText,
             associationTl = associationTl,
+            hanji = hanji,
             consumedBytes = consumedBytes,
             syllableCount = syllableCount,
             mode = resolveMode(settings.inputMode),
@@ -772,6 +815,13 @@ class ComposingManager(
         // generation-mismatch race, unchanged guarantee).
         val didCommit = hasCommitText || hasNail
         val didFinalCommit = hasCommitText && !transition.isComposing
+        // §50 — surfaced to the tap handler, which owns the store write
+        // (same seam as 詞頻 / NextWord learning), while the effect itself
+        // still flows through the delegate like every other effect.
+        val learnedPhrase =
+            transition.effects
+                .filterIsInstance<RustEngineBridge.ComposingTransition.Effect.PhraseLearned>()
+                .firstOrNull()
         selfCommitInProgress = true
         try {
             applyTransition(transition, ic)
@@ -781,6 +831,7 @@ class ComposingManager(
         return RustEngineBridge.CommitContinuousResult(
             didCommit = didCommit,
             didFinalCommit = didFinalCommit,
+            learnedPhrase = learnedPhrase,
         )
     }
 
@@ -1014,6 +1065,8 @@ class ComposingManager(
         // 候選詞顯示 — ROMAN_ONLY makes the engine collapse same-roman rows.
         val candidateDisplayMode: com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode,
         val isCustomDictEnabled: Boolean,
+        // §50 自動學習新詞 — gates the learned-row feed (independent of the custom toggle).
+        val isPhraseLearningEnabled: Boolean,
     )
 
     private fun captureFetchSettings(): ContinuousFetchSettings {
@@ -1030,6 +1083,7 @@ class ComposingManager(
             literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
             candidateDisplayMode = settings.candidateDisplayMode,
             isCustomDictEnabled = settings.isCustomDictEnabled,
+            isPhraseLearningEnabled = settings.isPhraseLearningEnabled,
         )
     }
 }

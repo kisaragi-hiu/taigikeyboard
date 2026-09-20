@@ -38,6 +38,15 @@ class CustomDictionaryViewModel(
         prefs.customDictEnabled = enabled
     }
 
+    private val _isPhraseLearningEnabled = MutableStateFlow(prefs.phraseLearningEnabled)
+    val isPhraseLearningEnabled: StateFlow<Boolean> = _isPhraseLearningEnabled.asStateFlow()
+
+    /** §50 自動學習新詞 — learned rows list below with a badge. */
+    fun setPhraseLearningEnabled(enabled: Boolean) {
+        _isPhraseLearningEnabled.value = enabled
+        prefs.phraseLearningEnabled = enabled
+    }
+
     fun load() {
         viewModelScope.launch {
             val all = withContext(Dispatchers.IO) { customDict.fetchAll() }
