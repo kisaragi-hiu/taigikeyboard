@@ -580,18 +580,18 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         )
     }
 
-    /// Puts every setting the 一般 pane owns back to shipped state — the
-    /// romanization, the tone keys, the output script, the display language
-    /// and the four switches. Removed rather than written, like
-    /// `resetAppearanceSettings`, and spelled out like `resetDictionarySources`.
-    /// The update bookkeeping and the remembered pane are not settings of the
-    /// user's and are left alone.
+    /// Puts every input setting the 一般 pane owns back to shipped state — the
+    /// romanization, the tone keys, the output script and the four switches.
+    /// Removed rather than written, like `resetAppearanceSettings`, and
+    /// spelled out like `resetDictionarySources`. The display language stays
+    /// as chosen (USER 2026-09-20: the reset must not switch the UI language
+    /// under the user); the update bookkeeping and the remembered pane are
+    /// not settings of the user's and are left alone too.
     func resetGeneralSettings() {
         removeStoredValues(
             Keys.inputMode.name,
             Keys.toneInputScheme.name,
             Keys.isTranslateSwapped.name,
-            Keys.displayLanguage.name,
             Keys.isAutoSpaceEnabled.name,
             Keys.isCandidateWindowEnabled.name,
             Keys.isLiteralRomanCandidateEnabled.name,

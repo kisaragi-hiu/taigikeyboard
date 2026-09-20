@@ -68,7 +68,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.composingKeyBindings.toneScheme, SettingsStore.Keys.toneInputScheme.defaultValue)
         XCTAssertTrue(store.storedIsTranslateSwapped, "back to hanji-first")
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isTranslateSwapped.name), "removed, not written")
-        XCTAssertEqual(store.displayLanguage, SettingsStore.Keys.displayLanguage.defaultValue)
+        XCTAssertEqual(userDefaults.string(forKey: SettingsStore.Keys.displayLanguage.name), "en", "display language kept")
         XCTAssertEqual(store.isAutoSpaceEnabled, SettingsStore.Keys.isAutoSpaceEnabled.defaultValue)
         XCTAssertEqual(store.isCandidateWindowEnabled, SettingsStore.Keys.isCandidateWindowEnabled.defaultValue)
         XCTAssertTrue(store.current.isLiteralRomanCandidateEnabled)
