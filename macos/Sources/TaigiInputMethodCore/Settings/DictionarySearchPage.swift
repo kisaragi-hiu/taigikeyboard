@@ -119,12 +119,7 @@ struct DictionarySearchResultRow: View {
                 Text(hanzi)
             }
             ForEach(badgeKeys, id: \.self) { key in
-                Text(language.string(key))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+                TagBadge(text: language.string(key))
             }
             Spacer()
             // Absent for the user's own entries, which the two sites have

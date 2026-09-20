@@ -24,13 +24,9 @@ const VISIBLE_RESULT_LIMIT: usize = 5;
 /// `DictionarySearchModel.debounce`.
 const DEBOUNCE: Duration = Duration::from_millis(300);
 const ROW_GAP: f64 = 8.0;
-const BADGE_RADIUS: f64 = 4.0;
 const LOOKUP_GLYPH: &str = "\u{E8A7}";
 const SECONDARY_OPACITY: f64 = 0.65;
 const BADGE_GAP: f64 = 4.0;
-const BADGE_PADDING_X: f64 = 6.0;
-const BADGE_PADDING_Y: f64 = 2.0;
-const BADGE_FONT_SIZE: f64 = 12.0;
 
 /// The lookup a result's menu offers.
 const MOE_ITEM: &str = "moe";
@@ -265,7 +261,7 @@ fn result_row(
     }
     let badges = View::keyed_fragment(
         seen.iter()
-            .map(|key| (format!("{key:?}"), badge(strings.resolve(*key))))
+            .map(|key| (format!("{key:?}"), cards::badge(strings.resolve(*key))))
             .collect::<Vec<_>>(),
     );
     // The URLs travel WITH the callback, not an index into a list a
@@ -329,19 +325,4 @@ fn result_row(
                     .content(lookup),
             )),
     )
-}
-
-fn badge(text: &str) -> View {
-    Border::new()
-        .background(ThemeBrush::CardBackground)
-        .border_brush(ThemeBrush::CardStroke)
-        .border_thickness(Thickness::uniform(1.0))
-        .corner_radius(CornerRadius::uniform(BADGE_RADIUS))
-        .padding(Thickness::xy(BADGE_PADDING_X, BADGE_PADDING_Y))
-        .content(
-            TextBlock::new()
-                .text(text)
-                .font_size(BADGE_FONT_SIZE)
-                .opacity(SECONDARY_OPACITY),
-        )
 }

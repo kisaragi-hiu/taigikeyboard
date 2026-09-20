@@ -3,7 +3,7 @@
 //! because the one manager per process lives behind a mutex a TSF host may
 //! reach from several thread managers (roadmap W3).
 
-use crate::engine::{AssociationPair, CustomEntry, FrequencyRow};
+use crate::engine::{AssociationPair, CustomEntry, FrequencyRow, LearnedPhrase};
 
 /// `user_frequency.db`, as the keystroke path sees it.
 pub trait FrequencySource: Send + Sync {
@@ -18,8 +18,15 @@ pub trait FrequencySource: Send + Sync {
 
 /// `custom_dictionary.db`, as the keystroke path sees it.
 pub trait CustomDictionarySource: Send + Sync {
-    /// The rows whose search key under `family` / `form` starts with `key`.
+    /// The MANUAL rows whose search key under `family` / `form` starts with `key`.
     fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<CustomEntry>;
+    /// The LEARNED rows (§50) whose search key under `family` / `form` EQUALS
+    /// `key` — the whole buffer, never a prefix.
+    fn learned_rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase>;
+    /// Records one `Effect::PhraseLearned`. Best-effort; never logs the words.
+    fn learn_phrase(&self, hanzi: &str, canonical_tl: &str);
+    /// Bumps a learned row the user just picked whole. Best-effort.
+    fn touch_learned_phrase(&self, hanzi: &str, canonical_tl: &str);
 }
 
 /// `user_association.db`'s write side.
@@ -65,6 +72,15 @@ impl<T: CustomDictionarySource + ?Sized> CustomDictionarySource for std::sync::A
     fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<CustomEntry> {
         (**self).rows_matching(family, form, key)
     }
+    fn learned_rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase> {
+        (**self).learned_rows_matching(family, form, key)
+    }
+    fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
+        (**self).learn_phrase(hanzi, canonical_tl);
+    }
+    fn touch_learned_phrase(&self, hanzi: &str, canonical_tl: &str) {
+        (**self).touch_learned_phrase(hanzi, canonical_tl);
+    }
 }
 
 impl<T: AssociationSink + ?Sized> AssociationSink for std::sync::Arc<T> {
@@ -90,6 +106,11 @@ impl CustomDictionarySource for NoStores {
     fn rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<CustomEntry> {
         Vec::new()
     }
+    fn learned_rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<LearnedPhrase> {
+        Vec::new()
+    }
+    fn learn_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
+    fn touch_learned_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
 }
 
 impl AssociationSink for NoStores {

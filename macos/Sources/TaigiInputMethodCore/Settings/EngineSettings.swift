@@ -189,6 +189,13 @@ struct EngineSettings: Equatable, Sendable {
     /// which defaults it ON.
     let isCustomDictEnabled: Bool
 
+    /// 自動學習新詞 (`behavioral-invariants.md` §50): a phrase composed segment
+    /// by segment is recorded and offered next time. Gates learning AND recall;
+    /// independent of `isCustomDictEnabled`, which gates manual rows only.
+    /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift
+    /// `phraseLearningEnabled`, which defaults it ON.
+    let isPhraseLearningEnabled: Bool
+
     /// Which bundled dictionaries the engine may draw candidates from. Reaches
     /// the engine as `FetchAtPos.enabled_sources_bitmask` after the
     /// `compute_filters` op resolves it (`RustEngineBridge+Lexicon.swift`).
@@ -217,6 +224,7 @@ struct EngineSettings: Equatable, Sendable {
             isFrequencyRecordingEnabled: true,
             isAssociationRecordingEnabled: true,
             isCustomDictEnabled: true,
+            isPhraseLearningEnabled: true,
             dictionarySources: .defaults,
         )
     }()

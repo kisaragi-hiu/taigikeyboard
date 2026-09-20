@@ -24,7 +24,7 @@ kautian subcollections (腔調 + 姓名附錄 toggles + 語音差異 詞級擴�
 
 ### Learned phrases — a phrase composed segment by segment becomes a whole-buffer candidate (USER-scoped 2026-09-20)
 
-**Status**: Phase 0 (this section + project memory `project_learned_phrases.md`) on main; PR1–PR4 pending. Dogfood S62 (to be added with PR2).
+**Status**: PR1 engine #109 MERGED `42d4dc5a`, PR2 iOS #110 MERGED `b446d852`, PR3 Android #111 MERGED `3b936e81`, PR4 macOS + Windows in review (2026-09-20). Dogfood S62 pending on all four. Project memory `project_learned_phrases.md`.
 
 USER report (2026-09-20): type `kikhilai`, pick 記 → 起 → 來 one segment at a time; however often this is repeated, the next `kikhilai` never offers 記起來 as one candidate. USER decision 2026-09-20 「ok, plan it」 after the survey below. Scope: all four platforms, engine-led.
 
@@ -56,11 +56,11 @@ Known parity limit carried over from the custom path, not new: under TPS input `
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | roadmap section + project memory | on main 2026-09-20 |
-| PR1 | engine: `CommitContinuous.hanji` + `NailedSegment.hanji`; `Effect.PhraseLearned`; `FetchAtPos.learned_entries` + `LearnedEntry`; walker/span-local treatment (design 4); `candidate_dump` `DUMP_CUSTOM` / `DUMP_LEARNED` harness; tests (`dispatch_continuous.rs`, `continuous_slot0_*`); `behavioral-invariants.md` §50; `make build`; **no-op effect arms + proto regen on all four bridges so every platform still builds** (Windows `manager.rs:471` exhaustive match) | pending |
-| PR2 | iOS: schema v5 + migrator, atomic learn upsert + cap/evict, `learnedEntries(for:)` exact query, effect consumer, touch-on-use, setting + i18n keys, 自動學 badge in `CustomDictionaryView`, backup v3, tests; dogfood S62 | pending |
-| PR3 | Android port of PR2 (DB v9, DataStore key — `doc-lookup.md` gate for the DataStore call) | pending |
-| PR4 | macOS + Windows together (schema 5 each, pane toggle, badge, backup) — one desktop PR per `feedback_fewer_larger_prs_macos` | pending |
+| 0 | roadmap section + project memory | `2e1a5e75` 2026-09-20 |
+| PR1 | engine: `CommitContinuous.hanji` + `NailedSegment.hanji`; `Effect.PhraseLearned`; `FetchAtPos.learned_entries` + `LearnedEntry`; walker/span-local treatment (design 4); `candidate_dump` `DUMP_CUSTOM` / `DUMP_LEARNED`; `continuous_learned_phrase.rs` (18); §50; four bridge arms | MERGED #109 `42d4dc5a` |
+| PR2 | iOS: schema v5 (transactional, checked), learn upsert `RETURNING id` + cap/evict, exact learned query, manual write takes over learned, setting + i18n, 自動學 badge (`TagBadge`), backup v3, 13 tests; S62 | MERGED #110 `b446d852` |
+| PR3 | Android: DB v9, UPDATE-then-INSERT learn pair (3.22), same rules, `SourceBadge`, backup v3, JVM SQL fixture + 4 tests | MERGED #111 `3b936e81` |
+| PR4 | macOS + Windows: idempotent schema columns + partial index, store `learnPhrase` / `learnedRows(matching:)` / touch, manual takeover, quota accounting, pane toggle + badge, `learned_entries` + `hanji` on both bridges, +4 macOS / +6 Windows tests | in review |
 
 #### Best practices alignment
 

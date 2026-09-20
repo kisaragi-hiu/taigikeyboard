@@ -266,6 +266,7 @@ impl SettingsDocument {
             is_frequency_recording_enabled: self.bool(&keys::IS_FREQUENCY_RECORDING_ENABLED),
             is_association_recording_enabled: self.bool(&keys::IS_ASSOCIATION_RECORDING_ENABLED),
             is_custom_dict_enabled: self.bool(&keys::IS_CUSTOM_DICT_ENABLED),
+            is_phrase_learning_enabled: self.bool(&keys::IS_PHRASE_LEARNING_ENABLED),
             dictionary_sources: self.dictionary_sources(),
         }
     }
@@ -591,11 +592,17 @@ mod tests {
     #[test]
     fn hyphenless_roman_reads_the_stored_switch() {
         let mut doc = SettingsDocument::default();
-        assert!(!doc.engine_settings().is_hyphenless_roman_enabled, "ships OFF");
+        assert!(
+            !doc.engine_settings().is_hyphenless_roman_enabled,
+            "ships OFF"
+        );
         doc.set_bool(&keys::IS_HYPHENLESS_ROMAN_ENABLED, true);
         assert!(doc.engine_settings().is_hyphenless_roman_enabled);
         doc.reset_general();
-        assert!(!doc.contains(keys::IS_HYPHENLESS_ROMAN_ENABLED.name), "一般's key");
+        assert!(
+            !doc.contains(keys::IS_HYPHENLESS_ROMAN_ENABLED.name),
+            "一般's key"
+        );
     }
 
     #[test]

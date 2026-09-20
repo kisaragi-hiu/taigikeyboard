@@ -18,7 +18,7 @@ use taigi_windows_core::composing::{
 };
 use taigi_windows_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_windows_core::engine::{
-    self, AssociationPair, ContinuousCandidate, CustomEntry, Effect, FrequencyRow,
+    self, AssociationPair, ContinuousCandidate, CustomEntry, Effect, FrequencyRow, LearnedPhrase,
 };
 use taigi_windows_core::keys::CaretDirection;
 use taigi_windows_core::settings::{
@@ -67,6 +67,8 @@ struct Memory {
     frequency: Mutex<HashMap<(String, String), i64>>,
     associations: Mutex<Vec<AssociationPair>>,
     custom: Mutex<Vec<CustomEntry>>,
+    /// §50 — what the manager asked the store to learn: `(hanzi, canonical_tl)`.
+    learned: Mutex<Vec<(String, String)>>,
     now_ms: Mutex<i64>,
 }
 
@@ -116,6 +118,17 @@ impl CustomDictionarySource for Handle {
             .cloned()
             .collect()
     }
+    fn learned_rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<LearnedPhrase> {
+        Vec::new()
+    }
+    fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
+        self.0
+            .learned
+            .lock()
+            .unwrap()
+            .push((hanzi.to_owned(), canonical_tl.to_owned()));
+    }
+    fn touch_learned_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
 }
 
 impl AssociationSink for Handle {
@@ -918,4 +931,44 @@ fn only_the_claiming_context_can_drive_the_engine_and_handover_starts_idle() {
     coordinator.release(b);
     assert!(coordinator.manager(b).is_none());
     assert_eq!(coordinator.current_owner(), None);
+}
+
+// ---- Learned phrases (§50) ------------------------------------------------
+
+#[test]
+fn a_composition_of_hanji_picks_is_learned_once_the_last_segment_commits() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    // 我 + 來 typed as one buffer and picked one segment at a time.
+    rig.type_text("gualai");
+    let gua = rig.candidate("我");
+    let (outcome, _) = rig.commit(&gua, CandidateScript::Primary);
+    assert_eq!(outcome, CandidateCommitOutcome::Nailed);
+    assert!(
+        rig.memory.learned.lock().unwrap().is_empty(),
+        "a mid-commit learns nothing"
+    );
+    let lai = rig.candidate("來");
+    let (outcome, committed) = rig.commit(&lai, CandidateScript::Primary);
+    assert_eq!(outcome, CandidateCommitOutcome::Finalized);
+    assert_eq!(committed.as_deref(), Some("我來"));
+    assert_eq!(
+        *rig.memory.learned.lock().unwrap(),
+        vec![("我來".to_owned(), "guá-lâi".to_owned())],
+        "the store is asked to learn the joined pair"
+    );
+}
+
+#[test]
+fn learning_is_gated_by_the_setting() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.settings
+        .edit(|doc| doc.set_bool(&keys::IS_PHRASE_LEARNING_ENABLED, false));
+    rig.type_text("gualai");
+    let gua = rig.candidate("我");
+    rig.commit(&gua, CandidateScript::Primary);
+    let lai = rig.candidate("來");
+    rig.commit(&lai, CandidateScript::Primary);
+    assert!(rig.memory.learned.lock().unwrap().is_empty());
 }
