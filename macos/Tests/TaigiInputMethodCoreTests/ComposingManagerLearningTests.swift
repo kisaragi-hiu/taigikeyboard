@@ -359,22 +359,6 @@ final class ComposingManagerLearningTests: XCTestCase {
         XCTAssertEqual(learned.first?.origin, .learned)
     }
 
-    func testLearning_isGatedByTheSetting() throws {
-        let manager = try makeManager(
-            settingsProvider: StubEngineSettingsProvider(phraseLearning: false),
-        )
-        let executor = RecordingEffectExecutor()
-        let key = try queryKey("gualai")
-        let candidates = try compose("gualai", manager, executing: executor)
-        let gua = try XCTUnwrap(candidates.first { $0.hanji == "我" })
-        _ = manager.commitCandidate(gua, executing: executor)
-        guard case let .found(rest) = manager.fetchCandidates() else { return XCTFail("no candidates after 我") }
-        let lai = try XCTUnwrap(rest.first { $0.hanji == "來" })
-        _ = manager.commitCandidate(lai, executing: executor)
-
-        XCTAssertTrue(stores.customDictionary.learnedRows(matching: key).isEmpty)
-    }
-
     /// The key the keystroke path derives for the typed buffer, so the
     /// assertion reads the store the way the ranker does.
     private func queryKey(_ rawInput: String) throws -> CustomSearchKey {

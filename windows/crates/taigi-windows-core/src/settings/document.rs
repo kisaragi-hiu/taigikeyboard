@@ -266,7 +266,6 @@ impl SettingsDocument {
             is_frequency_recording_enabled: self.bool(&keys::IS_FREQUENCY_RECORDING_ENABLED),
             is_association_recording_enabled: self.bool(&keys::IS_ASSOCIATION_RECORDING_ENABLED),
             is_custom_dict_enabled: self.bool(&keys::IS_CUSTOM_DICT_ENABLED),
-            is_phrase_learning_enabled: self.bool(&keys::IS_PHRASE_LEARNING_ENABLED),
             dictionary_sources: self.dictionary_sources(),
         }
     }

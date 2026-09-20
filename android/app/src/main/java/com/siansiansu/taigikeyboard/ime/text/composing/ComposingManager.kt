@@ -710,8 +710,8 @@ class ComposingManager(
     /**
      * §50 — learned phrases whose derived key EQUALS the raw buffer's query
      * key (`CustomDictionaryService.learnedEntries`), as
-     * `FetchAtPos.learned_entries`; gated by 自動學習新詞, not by 啟用自訂詞庫
-     * (manual rows only). Same await-race guard as [buildCustomEntries].
+     * `FetchAtPos.learned_entries`; not gated by 啟用自訂詞庫 (manual rows
+     * only) — learning is always on. Same await-race guard as [buildCustomEntries].
      */
     private suspend fun buildLearnedEntries(
         token: StateToken,
@@ -719,7 +719,7 @@ class ComposingManager(
         queryKey: com.siansiansu.taigikeyboard.engine.CustomSearchKey?,
     ): List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> {
         val service = customDictionaryService ?: return emptyList()
-        if (!fetch.isPhraseLearningEnabled || queryKey == null) return emptyList()
+        if (queryKey == null) return emptyList()
         return try {
             val rows = service.learnedEntries(family = queryKey.family, form = queryKey.form, key = queryKey.key)
             if (stateToken() != token) {
@@ -1065,8 +1065,6 @@ class ComposingManager(
         // 候選詞顯示 — ROMAN_ONLY makes the engine collapse same-roman rows.
         val candidateDisplayMode: com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode,
         val isCustomDictEnabled: Boolean,
-        // §50 自動學習新詞 — gates the learned-row feed (independent of the custom toggle).
-        val isPhraseLearningEnabled: Boolean,
     )
 
     private fun captureFetchSettings(): ContinuousFetchSettings {
@@ -1083,7 +1081,6 @@ class ComposingManager(
             literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
             candidateDisplayMode = settings.candidateDisplayMode,
             isCustomDictEnabled = settings.isCustomDictEnabled,
-            isPhraseLearningEnabled = settings.isPhraseLearningEnabled,
         )
     }
 }

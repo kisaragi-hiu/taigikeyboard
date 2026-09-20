@@ -72,8 +72,6 @@ object PreferenceKeys {
     val FREQUENCY_RECORDING_ENABLED = booleanPreferencesKey("dictionary__frequency_recording_enabled")
     val ASSOCIATION_RECORDING_ENABLED = booleanPreferencesKey("dictionary__association_recording_enabled")
     val CUSTOM_DICT_ENABLED = booleanPreferencesKey("dictionary__custom_dict_enabled")
-    // §50 自動學習新詞 — CROSS-PLATFORM INVARIANT: mirrors iOS `phraseLearningEnabled`.
-    val PHRASE_LEARNING_ENABLED = booleanPreferencesKey("dictionary__phrase_learning_enabled")
     val MOE_DICT_ENABLED = booleanPreferencesKey("dictionary__moe_dict_enabled")
     val NEWWORD_DICT_ENABLED = booleanPreferencesKey("dictionary__newword_dict_enabled")
     val ITAIGI_DICT_ENABLED = booleanPreferencesKey("dictionary__itaigi_dict_enabled")

@@ -84,7 +84,6 @@ class EngineSettingsLiveReadTest {
         var toneToggles: ToneToggles =
             ToneToggles(isDoubleTapOOEnabled = false, isDoubleTapNNEnabled = false),
         var isCustomDictEnabled: Boolean = false,
-        var isPhraseLearningEnabled: Boolean = true,
         var isTpsOrMappedToER: Boolean = false,
         var isMoeDictEnabled: Boolean = false,
         var isNewwordDictEnabled: Boolean = false,
@@ -130,7 +129,6 @@ class EngineSettingsLiveReadTest {
         override val isAssociationRecordingEnabled: Boolean get() = backing.isAssociationRecordingEnabled
         override val toneToggles: ToneToggles get() = backing.toneToggles
         override val isCustomDictEnabled: Boolean get() = backing.isCustomDictEnabled
-        override val isPhraseLearningEnabled: Boolean get() = backing.isPhraseLearningEnabled
         override val isTpsOrMappedToER: Boolean get() = backing.isTpsOrMappedToER
         override val isMoeDictEnabled: Boolean get() = backing.isMoeDictEnabled
         override val isNewwordDictEnabled: Boolean get() = backing.isNewwordDictEnabled

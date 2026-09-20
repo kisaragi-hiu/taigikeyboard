@@ -60,11 +60,6 @@ pub const IS_ASSOCIATION_RECORDING_ENABLED: SettingsKey<bool> = SettingsKey::new
 );
 pub const IS_CUSTOM_DICT_ENABLED: SettingsKey<bool> =
     SettingsKey::new("customDictEnabled", ENGINE_DEFAULTS.is_custom_dict_enabled);
-/// §50 自動學習新詞. The key spelling is iOS's (`phraseLearningEnabled`).
-pub const IS_PHRASE_LEARNING_ENABLED: SettingsKey<bool> = SettingsKey::new(
-    "phraseLearningEnabled",
-    ENGINE_DEFAULTS.is_phrase_learning_enabled,
-);
 
 /// Auto-insert a trailing space after committing a word. Platform-side on
 /// every platform — the engine never reads it. The key spelling is iOS's, and

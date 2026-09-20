@@ -10,7 +10,6 @@ final class CustomDictionaryViewModel: ObservableObject {
     @Published var entries: [CustomDictionaryEntry] = []
     @Published var isLoading = true
     @Published var isCustomDictEnabled: Bool
-    @Published var isPhraseLearningEnabled: Bool
 
     private let service: CustomDictionaryService
     private let settings: SharedSettings
@@ -22,17 +21,11 @@ final class CustomDictionaryViewModel: ObservableObject {
         self.service = service
         self.settings = settings
         isCustomDictEnabled = settings.isCustomDictEnabled
-        isPhraseLearningEnabled = settings.isPhraseLearningEnabled
     }
 
     func setCustomDictEnabled(_ enabled: Bool) {
         isCustomDictEnabled = enabled
         settings.isCustomDictEnabled = enabled
-    }
-
-    func setPhraseLearningEnabled(_ enabled: Bool) {
-        isPhraseLearningEnabled = enabled
-        settings.isPhraseLearningEnabled = enabled
     }
 
     func load() async {

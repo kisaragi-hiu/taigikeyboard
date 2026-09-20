@@ -42,8 +42,6 @@ enum class StringKey(
     DICTIONARY_CUSTOM_DICTIONARY(R.string.i18n_dictionary_customDictionary),
     DICTIONARY_CUSTOM_DICT_ENABLED(R.string.i18n_dictionary_customDictEnabled),
     DICTIONARY_CUSTOM_DICT_ENABLED_INFO(R.string.i18n_dictionary_customDictEnabledInfo),
-    DICTIONARY_PHRASE_LEARNING_ENABLED(R.string.i18n_dictionary_phraseLearningEnabled),
-    DICTIONARY_PHRASE_LEARNING_ENABLED_INFO(R.string.i18n_dictionary_phraseLearningEnabledInfo),
     DICTIONARY_LEARNED_BADGE(R.string.i18n_dictionary_learnedBadge),
     DICTIONARY_DATA_MANAGEMENT(R.string.i18n_dictionary_dataManagement),
     DICTIONARY_VARIANT_DICTIONARY(R.string.i18n_dictionary_variantDictionary),

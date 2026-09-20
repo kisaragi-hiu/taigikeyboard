@@ -190,11 +190,6 @@ pub struct EngineSettings {
     /// `FetchAtPos.custom_entries` goes out empty. CROSS-PLATFORM INVARIANT —
     /// `SharedSettings.swift:51` (ON).
     pub is_custom_dict_enabled: bool,
-    /// 自動學習新詞 (§50): a phrase composed segment by segment is recorded
-    /// and offered next time. Gates learning AND recall; independent of
-    /// `is_custom_dict_enabled`. CROSS-PLATFORM INVARIANT —
-    /// `SharedSettings.swift` `phraseLearningEnabled` (ON).
-    pub is_phrase_learning_enabled: bool,
     pub dictionary_sources: DictionarySourceToggles,
 }
 
@@ -222,7 +217,6 @@ impl EngineSettings {
             is_frequency_recording_enabled: true,
             is_association_recording_enabled: true,
             is_custom_dict_enabled: true,
-            is_phrase_learning_enabled: true,
             dictionary_sources: DictionarySourceToggles::DEFAULT,
         }
     };

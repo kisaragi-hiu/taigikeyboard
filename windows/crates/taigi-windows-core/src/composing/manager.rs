@@ -242,14 +242,12 @@ impl ComposingManager {
         // Resolved once from this one snapshot and handed to both phases.
         let enabled_sources_bitmask = engine::enabled_sources_bitmask(&settings.dictionary_sources);
         // One query key serves both user-row sources (one FFI derive per
-        // keystroke, none with both off); `None` = empty / residue-only buffer.
-        let reads_user_rows =
-            settings.is_custom_dict_enabled || settings.is_phrase_learning_enabled;
-        let query_key = (reads_user_rows && !self.raw_input.is_empty())
+        // keystroke); `None` = empty / residue-only buffer.
+        let query_key = (!self.raw_input.is_empty())
             .then(|| engine::derive_custom_query_key(&self.raw_input, settings.input_mode))
             .flatten();
         let custom_entries = self.custom_dictionary_matches(&settings, query_key.as_ref());
-        let learned_entries = self.learned_phrase_matches(&settings, query_key.as_ref());
+        let learned_entries = self.learned_phrase_matches(query_key.as_ref());
 
         let Some(neutral) = engine::fetch_at_pos(
             &settings,
@@ -327,18 +325,15 @@ impl ComposingManager {
         }
     }
 
-    /// §50 — the learned phrases whose key EQUALS what is being typed, gated
-    /// by 自動學習新詞 (not by the custom-dictionary toggle, which is manual rows').
-    fn learned_phrase_matches(
-        &self,
-        settings: &EngineSettings,
-        key: Option<&CustomSearchKey>,
-    ) -> Vec<LearnedPhrase> {
+    /// §50 — the learned phrases whose key EQUALS what is being typed. Not
+    /// gated by the custom-dictionary toggle (manual rows') — learning is
+    /// always on (USER 2026-09-20: no toggle).
+    fn learned_phrase_matches(&self, key: Option<&CustomSearchKey>) -> Vec<LearnedPhrase> {
         match key {
-            Some(key) if settings.is_phrase_learning_enabled => self
+            Some(key) => self
                 .custom_dictionary
                 .learned_rows_matching(&key.family, &key.form, &key.key),
-            _ => Vec::new(),
+            None => Vec::new(),
         }
     }
 
@@ -456,11 +451,9 @@ impl ComposingManager {
         }
         // §50 touch-on-use: a learned phrase picked as one candidate stays
         // ahead of the eviction line (no-op for any other row).
-        if settings.is_phrase_learning_enabled {
-            if let Some(hanji) = candidate.hanji.as_deref().filter(|h| !h.is_empty()) {
-                self.custom_dictionary
-                    .touch_learned_phrase(hanji, &candidate.canonical_tl);
-            }
+        if let Some(hanji) = candidate.hanji.as_deref().filter(|h| !h.is_empty()) {
+            self.custom_dictionary
+                .touch_learned_phrase(hanji, &candidate.canonical_tl);
         }
     }
 
@@ -505,16 +498,11 @@ impl ComposingManager {
                 // context is exactly what must survive.
                 Effect::NextWordClearForNewComposing => {}
                 // §50 — the engine decided the composition was a phrase; the
-                // store is the custom dictionary's, gated like the other
-                // learning writes here.
+                // store is the custom dictionary's. Always on.
                 Effect::PhraseLearned {
                     hanji,
                     canonical_tl,
-                } => {
-                    if settings.is_phrase_learning_enabled {
-                        self.custom_dictionary.learn_phrase(hanji, canonical_tl);
-                    }
-                }
+                } => self.custom_dictionary.learn_phrase(hanji, canonical_tl),
                 Effect::UpdatePreedit { .. }
                 | Effect::ClearPreeditWithoutCommit
                 | Effect::CommitTextReplacingPreedit(_)
