@@ -25,14 +25,22 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// only clear the cache they created (Task is a struct, no `===`).
     private var _tableCreationGeneration: UInt64 = 0
 
+    /// Learned-row quota (§50); the production default is the
+    /// cross-platform constant, tests lower it to exercise eviction cheaply.
+    private let maxLearnedEntries: Int
+
     // MARK: - Initialization
 
-    init(connectionManager: SQLiteConnectionManager? = nil) {
+    init(
+        connectionManager: SQLiteConnectionManager? = nil,
+        maxLearnedEntries: Int = CustomDictionaryCapacityPolicy.maxLearnedEntries,
+    ) {
         self.connectionManager = connectionManager ?? SQLiteConnectionManager(
             databasePath: { try SharedDatabasePath.resolve(filename: "custom_dictionary.db") },
             queueLabel: "com.siansiansu.taigikeyboard.customdictionary",
             loggerCategory: "CustomDictionaryRepository",
         )
+        self.maxLearnedEntries = maxLearnedEntries
     }
 
     func ensureInitialized() async throws {
@@ -44,10 +52,18 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
     // MARK: - CRUD
 
-    /// Insert or update an entry (upsert by id).
+    /// Insert or update an entry (upsert by id) — the user's own word. §50:
+    /// a manual row for a `(roman, hanzi)` pair a learned row already holds
+    /// TAKES OVER that row (the learned row and its side keys go), so the
+    /// pair is listed once and the rule "manual wins, never the reverse"
+    /// holds for the list editor, the CSV importer and the backup importer
+    /// alike; a learned `entry` written through here becomes manual too
+    /// (editing a learned row adopts it).
     func upsert(_ entry: CustomDictionaryEntry) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
+            let entry = entry.isLearned ? entry.asManual : entry
+            Self.removeLearnedRow(db: db, roman: entry.roman, hanzi: entry.hanzi, except: entry.id)
             // Capacity guard runs in the same `execute` block as the write
             // to avoid a TOCTOU race with concurrent writers.
             try CustomDictionaryCapacityPolicy.guardInsertCapacity(db: db, id: entry.id)
@@ -87,19 +103,16 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             }
             defer { sqlite3_finalize(stmt) }
 
-            var results: [CustomDictionaryEntry] = []
-            while sqlite3_step(stmt) == SQLITE_ROW {
-                if let entry = Self.readEntry(from: stmt) {
-                    results.append(entry)
-                }
-            }
-            return results
+            return Self.readEntries(from: stmt)
         }
     }
 
-    /// Cross-mode prefix search (v3.6.1 R3). Query keys come from
-    /// `CustomDictionaryDerivation.queryKey(for:mode:)`, which is family-native
-    /// to the current input mode, so an entry stored in any mode is found.
+    /// Cross-mode prefix search (v3.6.1 R3) over MANUAL rows. Query keys come
+    /// from `CustomDictionaryDerivation.queryKey(for:mode:)`, which is
+    /// family-native to the current input mode, so an entry stored in any
+    /// mode is found. Learned rows (§50) are excluded — they ride
+    /// `FetchAtPos.learned_entries` through `learnedEntriesSync`, never the
+    /// custom-dictionary override.
     /// - Parameters:
     ///   - family: Search-key family (`tl` / `poj` / `tps`).
     ///   - form: Search-key form (`num` / `notone` / `abbrev`).
@@ -112,7 +125,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         }
     }
 
-    /// Search entries synchronously (for the keyboard extension hot path).
+    /// `search` for the keyboard extension hot path (manual rows only).
     /// Returns `[]` when the DB is not yet connected — callers must accept
     /// empty results on the very first keystroke rather than blocking.
     func searchSync(family: String, form: String, key: String, limit: Int = 50) -> [CustomDictionaryEntry] {
@@ -128,47 +141,54 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
     // MARK: - Learned Phrases (§50)
 
-    /// Learned rows are capped separately from the manual quota; past the
-    /// cap the fewest-composed, then oldest, row goes (ChiaKey's policy).
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/CustomDictionaryService.kt (MAX_LEARNED_ENTRIES). Drift causes silent divergence.
-    static let maxLearnedEntries = 2000
+    /// Largest `learn_count` a row can carry — a backup file is untrusted
+    /// input and the column is bound as `Int32`.
+    static let maxLearnCount = 1_000_000
 
-    /// Record one `Effect.PhraseLearned`: insert the `(hanzi, canonical TL)`
-    /// pair as a learned row or bump its `learn_count`, in one statement on
-    /// the learned-pair unique index. A manual row for the same pair wins —
-    /// the learn is a no-op (never downgraded). Eviction runs in the same
-    /// serialized block as the insert.
-    func learnPhrase(hanzi: String, canonicalTl: String) async throws {
+    /// Record one `Effect.PhraseLearned` (or one backup row, `count` > 1):
+    /// insert the `(hanzi, canonical TL)` pair as a learned row or add
+    /// `count` to its `learn_count`, in one statement on the learned-pair
+    /// unique index. A manual row for the same pair wins — the learn is a
+    /// no-op (never downgraded). Manual check, upsert, side keys and
+    /// eviction run in ONE transaction so another connection (the host app
+    /// editing the list while the extension learns) cannot interleave and
+    /// a crash cannot leave a row without its search keys.
+    func learnPhrase(hanzi: String, canonicalTl: String, count: Int = 1) async throws {
         guard !hanzi.isEmpty, !canonicalTl.isEmpty else { return }
+        let count = min(max(count, 1), Self.maxLearnCount)
+        let cap = maxLearnedEntries
         try await ensureInitialized()
         try await connectionManager.execute { db in
-            if Self.manualRowExists(db: db, roman: canonicalTl, hanzi: hanzi) {
-                return
-            }
-            let entry = CustomDictionaryEntry(
-                roman: canonicalTl,
-                hanzi: hanzi,
-                origin: .learned,
-                learnCount: 1,
-            )
-            var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, Self.learnPhraseSQL, -1, &stmt, nil) == SQLITE_OK else {
-                throw LexiconError.queryPreparationFailed(
-                    "Learn phrase failed: \(String(cString: sqlite3_errmsg(db)))",
+            try sqliteTransaction(db: db) {
+                guard !Self.manualRowExists(db: db, roman: canonicalTl, hanzi: hanzi) else { return }
+                let entry = CustomDictionaryEntry(
+                    roman: canonicalTl,
+                    hanzi: hanzi,
+                    origin: .learned,
+                    learnCount: count,
                 )
-            }
-            defer { sqlite3_finalize(stmt) }
-            Self.bindEntry(stmt, entry)
-            guard sqlite3_step(stmt) == SQLITE_DONE else {
-                throw LexiconError.queryExecutionFailed(
-                    "Learn phrase failed: \(String(cString: sqlite3_errmsg(db)))",
-                )
-            }
-            // A bumped row keeps its id (and its side rows); only a fresh
-            // insert leaves `entry.id` in the table.
-            if CustomDictionaryCapacityPolicy.entryExists(db: db, id: entry.id) {
-                Self.writeSearchKeys(db: db, entryId: entry.id, roman: entry.roman)
-                Self.evictLearnedPastCap(db: db)
+                var stmt: OpaquePointer?
+                guard sqlite3_prepare_v2(db, Self.learnPhraseSQL, -1, &stmt, nil) == SQLITE_OK else {
+                    throw LexiconError.queryPreparationFailed(
+                        "Learn phrase failed: \(String(cString: sqlite3_errmsg(db)))",
+                    )
+                }
+                defer { sqlite3_finalize(stmt) }
+                Self.bindEntry(stmt, entry)
+                // `RETURNING id` answers with the row that took the write —
+                // `entry.id` on a fresh insert, the existing id on a bump —
+                // so the side keys are written for the right row either way
+                // (a bump rewrites identical keys; delete + insert is idempotent).
+                guard sqlite3_step(stmt) == SQLITE_ROW,
+                      let idText = sqlite3_column_text(stmt, 0)
+                else {
+                    throw LexiconError.queryExecutionFailed(
+                        "Learn phrase failed: \(String(cString: sqlite3_errmsg(db)))",
+                    )
+                }
+                let rowId = String(cString: idText)
+                Self.writeSearchKeys(db: db, entryId: rowId, roman: entry.roman)
+                CustomDictionaryCapacityPolicy.evictLearnedPastCap(db: db, cap: cap)
             }
         }
     }
@@ -182,7 +202,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         try await connectionManager.execute { db in
             let sql = """
                 UPDATE \(CustomDictionarySchema.tableName)
-                SET learn_count = learn_count + 1, updated_at = ?
+                SET learn_count = MIN(learn_count + 1, \(Self.maxLearnCount)), updated_at = ?
                 WHERE origin = 1 AND hanzi = ? AND roman = ?;
             """
             var stmt: OpaquePointer?
@@ -198,13 +218,21 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// Learned rows whose derived key EQUALS the query key — the whole typed
     /// buffer, not a prefix — for `FetchAtPos.learned_entries`. Exact so a
     /// learned whole-buffer match can never be truncated out of the prefix
-    /// search's `LIMIT`. Sync for the keyboard hot path; `[]` before the
-    /// connection is open, like `searchSync`.
+    /// search's `LIMIT`; learned-only, the mirror of `search` /
+    /// `searchSync` being manual-only. Sync for the keyboard hot path; `[]`
+    /// before the connection is open, like `searchSync`.
     func learnedEntriesSync(family: String, form: String, key: String, limit: Int = 5) -> [CustomDictionaryEntry] {
         guard connectionManager.isConnected() else { return [] }
         do {
             return try connectionManager.executeSync { db in
-                Self.runLearnedExactSearch(db: db, family: family, form: form, key: key, limit: limit)
+                Self.runSearchKeyJoin(
+                    db: db,
+                    sql: Self.learnedExactSearchSQL,
+                    family: family,
+                    form: form,
+                    key: key,
+                    limit: limit,
+                )
             }
         } catch {
             return []
@@ -241,7 +269,8 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         }
     }
 
-    /// Total entry count.
+    /// MANUAL entry count (the rows under the user's quota); learned rows are
+    /// not included.
     func count() async throws -> Int {
         try await ensureInitialized()
         return try await connectionManager.execute { db in
@@ -287,11 +316,12 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                         continue
                     }
 
+                    Self.removeLearnedRow(db: db, roman: entry.roman, hanzi: entry.hanzi, except: entry.id)
                     var stmt: OpaquePointer?
                     guard sqlite3_prepare_v2(db, Self.upsertEntrySQL, -1, &stmt, nil) == SQLITE_OK else { continue }
                     defer { sqlite3_finalize(stmt) }
 
-                    Self.bindEntry(stmt, entry)
+                    Self.bindEntry(stmt, entry.asManual)
 
                     if sqlite3_step(stmt) == SQLITE_DONE {
                         Self.writeSearchKeys(db: db, entryId: entry.id, roman: entry.roman)
@@ -356,7 +386,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             let new = Task {
                 try await connection.execute { db in
                     try CustomDictionarySchema.ensureTables(db: db)
-                    CustomDictionaryMigrator.runIfNeeded(db: db, logger: logger)
+                    try CustomDictionaryMigrator.runIfNeeded(db: db, logger: logger)
                 }
             }
             _tableCreationTask = new
@@ -397,13 +427,15 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
     /// §50 — the learned-pair index (`WHERE origin = 1`) is the conflict
     /// target, so learning the same pair again is one row with `learn_count
-    /// + 1`, never a duplicate. Bound through `bindEntry` with a learned
-    /// entry (`learn_count = 1`).
+    /// + excluded.learn_count`, never a duplicate. Bound through `bindEntry`
+    /// with a learned entry (`learn_count` = 1 from the engine, the saved
+    /// count from a backup).
     private static let learnPhraseSQL = """
         INSERT INTO \(CustomDictionarySchema.tableName) \(insertColumnsSQL)
         ON CONFLICT(hanzi, roman) WHERE origin = 1 DO UPDATE SET
-            learn_count = learn_count + 1,
-            updated_at = excluded.updated_at;
+            learn_count = MIN(learn_count + excluded.learn_count, \(maxLearnCount)),
+            updated_at = excluded.updated_at
+        RETURNING id;
     """
 
     private static func bindEntry(_ stmt: OpaquePointer?, _ entry: CustomDictionaryEntry) {
@@ -434,87 +466,78 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         return sqlite3_step(stmt) == SQLITE_ROW
     }
 
-    /// Drop learned rows past `maxLearnedEntries`: fewest `learn_count`
-    /// first, then the least recently touched. Side rows go with them.
-    private static func evictLearnedPastCap(db: OpaquePointer) {
-        let learnedCount = (try? sqliteQueryScalarInt(
-            db: db,
-            "SELECT COUNT(*) FROM \(CustomDictionarySchema.tableName) WHERE origin = 1;",
-        )) ?? 0
-        let excess = learnedCount - maxLearnedEntries
-        guard excess > 0 else { return }
-        let victims = """
-            SELECT id FROM \(CustomDictionarySchema.tableName)
-            WHERE origin = 1
-            ORDER BY learn_count ASC, updated_at ASC
-            LIMIT ?;
-        """
+    /// Delete the learned row (and its side keys) for `(roman, hanzi)` unless
+    /// it is `except` itself — the manual write about to land takes it over.
+    private static func removeLearnedRow(db: OpaquePointer, roman: String, hanzi: String, except id: String) {
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, victims, -1, &stmt, nil) == SQLITE_OK else { return }
-        defer { sqlite3_finalize(stmt) }
-        sqlite3_bind_int(stmt, 1, Int32(excess))
-        var ids: [String] = []
+        guard sqlite3_prepare_v2(
+            db,
+            "SELECT id FROM \(CustomDictionarySchema.tableName) WHERE origin = 1 AND roman = ? AND hanzi = ? AND id <> ?;",
+            -1, &stmt, nil,
+        ) == SQLITE_OK else { return }
+        stmt.bindText(1, roman)
+        stmt.bindText(2, hanzi)
+        stmt.bindText(3, id)
+        var learnedIds: [String] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
-            ids.append(String(cString: sqlite3_column_text(stmt, 0)))
+            learnedIds.append(String(cString: sqlite3_column_text(stmt, 0)))
         }
-        for id in ids {
+        sqlite3_finalize(stmt)
+        for learnedId in learnedIds {
             var del: OpaquePointer?
             guard sqlite3_prepare_v2(
                 db,
                 "DELETE FROM \(CustomDictionarySchema.tableName) WHERE id = ?;",
                 -1, &del, nil,
             ) == SQLITE_OK else { continue }
-            del.bindText(1, id)
+            del.bindText(1, learnedId)
             sqlite3_step(del)
             sqlite3_finalize(del)
-            deleteSearchKeys(db: db, entryId: id)
+            deleteSearchKeys(db: db, entryId: learnedId)
         }
     }
 
-    /// §50 exact whole-buffer match over learned rows only (see
-    /// `learnedEntriesSync`). Same join as `runPrefixSearch`, `=` not
-    /// `LIKE`, `origin = 1`.
-    private static func runLearnedExactSearch(
-        db: OpaquePointer,
-        family: String,
-        form: String,
-        key: String,
-        limit: Int,
-    ) -> [CustomDictionaryEntry] {
-        let sql = """
-            SELECT DISTINCT c.id, c.roman, c.hanzi, c.created_at, c.updated_at, c.origin, c.learn_count
-            FROM \(CustomDictionarySchema.tableName) c
-            JOIN \(CustomDictionarySchema.searchKeyTableName) k
-                ON k.\(CustomDictionarySchema.searchKeyEntryIdColumn) = c.id
-            WHERE c.origin = 1
-              AND k.\(CustomDictionarySchema.searchKeyFamilyColumn) = ?
-              AND k.\(CustomDictionarySchema.searchKeyFormColumn) = ?
-              AND k.\(CustomDictionarySchema.searchKeyKeyColumn) = ?
-            ORDER BY c.learn_count DESC, c.updated_at DESC
-            LIMIT ?;
-        """
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
-        defer { sqlite3_finalize(stmt) }
-        stmt.bindText(1, family)
-        stmt.bindText(2, form)
-        stmt.bindText(3, key)
-        sqlite3_bind_int(stmt, 4, Int32(limit))
-        var results: [CustomDictionaryEntry] = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            if let entry = readEntry(from: stmt) {
-                results.append(entry)
-            }
-        }
-        return results
-    }
+    /// `entryColumns` qualified for the side-table join.
+    private static let joinedEntryColumns = entryColumns
+        .split(separator: ",")
+        .map { "c.\($0.trimmingCharacters(in: .whitespaces))" }
+        .joined(separator: ", ")
 
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/CustomDictionaryService.kt (custom_search_key query). Drift causes silent divergence.
     //
-    // `form IN (?, 'abbrev')` lets an abbrev side row satisfy any query in the
-    // same family — preserving the old `notone LIKE ? OR abbrev LIKE ?`
-    // behavior. `DISTINCT` because one entry can match several side rows.
-    // `key` is bound verbatim (engine already normalized + lowercased it).
+    // `origin = 0`: manual rows only (§50) — see `search`. `form IN (?,
+    // 'abbrev')` lets an abbrev side row satisfy any query in the same
+    // family — preserving the old `notone LIKE ? OR abbrev LIKE ?` behavior.
+    // `DISTINCT` because one entry can match several side rows. `key` is
+    // bound verbatim (engine already normalized + lowercased it).
+    private static let prefixSearchSQL = """
+        SELECT DISTINCT \(joinedEntryColumns)
+        FROM \(CustomDictionarySchema.tableName) c
+        JOIN \(CustomDictionarySchema.searchKeyTableName) k
+            ON k.\(CustomDictionarySchema.searchKeyEntryIdColumn) = c.id
+        WHERE c.origin = 0
+          AND k.\(CustomDictionarySchema.searchKeyFamilyColumn) = ?
+          AND k.\(CustomDictionarySchema.searchKeyFormColumn) IN (?, 'abbrev')
+          AND k.\(CustomDictionarySchema.searchKeyKeyColumn) LIKE ? || '%'
+        ORDER BY c.roman
+        LIMIT ?;
+    """
+
+    /// §50 — the learned-only, exact (`=`, not `LIKE`) counterpart of
+    /// `prefixSearchSQL` (see `learnedEntriesSync`).
+    private static let learnedExactSearchSQL = """
+        SELECT \(joinedEntryColumns)
+        FROM \(CustomDictionarySchema.tableName) c
+        JOIN \(CustomDictionarySchema.searchKeyTableName) k
+            ON k.\(CustomDictionarySchema.searchKeyEntryIdColumn) = c.id
+        WHERE c.origin = 1
+          AND k.\(CustomDictionarySchema.searchKeyFamilyColumn) = ?
+          AND k.\(CustomDictionarySchema.searchKeyFormColumn) = ?
+          AND k.\(CustomDictionarySchema.searchKeyKeyColumn) = ?
+        ORDER BY c.learn_count DESC, c.updated_at DESC
+        LIMIT ?;
+    """
+
     private static func runPrefixSearch(
         db: OpaquePointer,
         family: String,
@@ -522,34 +545,26 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         key: String,
         limit: Int,
     ) -> [CustomDictionaryEntry] {
-        let sql = """
-            SELECT DISTINCT c.id, c.roman, c.hanzi, c.created_at, c.updated_at, c.origin, c.learn_count
-            FROM \(CustomDictionarySchema.tableName) c
-            JOIN \(CustomDictionarySchema.searchKeyTableName) k
-                ON k.\(CustomDictionarySchema.searchKeyEntryIdColumn) = c.id
-            WHERE k.\(CustomDictionarySchema.searchKeyFamilyColumn) = ?
-              AND k.\(CustomDictionarySchema.searchKeyFormColumn) IN (?, 'abbrev')
-              AND k.\(CustomDictionarySchema.searchKeyKeyColumn) LIKE ? || '%'
-            ORDER BY c.roman
-            LIMIT ?;
-        """
+        runSearchKeyJoin(db: db, sql: prefixSearchSQL, family: family, form: form, key: key, limit: limit)
+    }
 
+    /// One side-table join with the shared `(family, form, key, limit)` binds.
+    private static func runSearchKeyJoin(
+        db: OpaquePointer,
+        sql: String,
+        family: String,
+        form: String,
+        key: String,
+        limit: Int,
+    ) -> [CustomDictionaryEntry] {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
         defer { sqlite3_finalize(stmt) }
-
         stmt.bindText(1, family)
         stmt.bindText(2, form)
         stmt.bindText(3, key)
         sqlite3_bind_int(stmt, 4, Int32(limit))
-
-        var results: [CustomDictionaryEntry] = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            if let entry = readEntry(from: stmt) {
-                results.append(entry)
-            }
-        }
-        return results
+        return readEntries(from: stmt)
     }
 
     // MARK: - Search-Key Side Table
@@ -596,7 +611,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         defer { sqlite3_finalize(stmt) }
         guard sqlite3_prepare_v2(
             db,
-            "SELECT roman, hanzi FROM \(CustomDictionarySchema.tableName);",
+            "SELECT roman, hanzi FROM \(CustomDictionarySchema.tableName) WHERE origin = 0;",
             -1, &stmt, nil,
         ) == SQLITE_OK else {
             return []
@@ -618,6 +633,17 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         formatter.timeZone = TimeZone(identifier: "UTC")
         return formatter
     }()
+
+    /// Every remaining row of `stmt` through `readEntry`.
+    private static func readEntries(from stmt: OpaquePointer?) -> [CustomDictionaryEntry] {
+        var results: [CustomDictionaryEntry] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let entry = readEntry(from: stmt) {
+                results.append(entry)
+            }
+        }
+        return results
+    }
 
     private static func readEntry(from stmt: OpaquePointer?) -> CustomDictionaryEntry? {
         guard let stmt else { return nil }

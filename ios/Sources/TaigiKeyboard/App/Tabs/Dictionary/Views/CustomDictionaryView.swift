@@ -141,13 +141,7 @@ struct CustomDictionaryView: View {
                                         .font(AppStyle.bodyFont)
                                         .foregroundColor(.primary)
                                     if entry.isLearned {
-                                        Text(lang.string(.dictionaryLearnedBadge))
-                                            .font(AppStyle.captionFont)
-                                            .foregroundColor(.secondary)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(Color.secondary.opacity(0.15))
-                                            .clipShape(Capsule())
+                                        TagBadge(text: lang.string(.dictionaryLearnedBadge))
                                     }
                                     Spacer()
                                     Image(latinSystemName: "chevron.right")

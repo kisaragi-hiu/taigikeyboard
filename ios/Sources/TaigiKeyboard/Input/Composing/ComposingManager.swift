@@ -257,10 +257,15 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // which is stable for this synchronous fetch). The engine
         // synthesizes a full-buffer candidate per entry and dedupes
         // `(roman, hanji)` against the FST hits.
-        let customEntries = buildCustomEntries(rawInput: rawInput, settings: settings)
+        // One family-native query key serves both user-row sources (one FFI
+        // derive per keystroke). `nil` = residue-only / empty buffer.
+        let queryKey = rawInput.isEmpty
+            ? nil
+            : CustomDictionaryDerivation.queryKey(for: rawInput, mode: settings.inputMode)
+        let customEntries = buildCustomEntries(queryKey: queryKey, settings: settings)
         // §50 — learned phrases keyed to the WHOLE raw buffer (exact, not
         // prefix), shared by both phases like `customEntries`.
-        let learnedEntries = buildLearnedEntries(rawInput: rawInput, settings: settings)
+        let learnedEntries = buildLearnedEntries(queryKey: queryKey, settings: settings)
         let spacing = Self.continuousSpacingFlags(settings)
 
         // PR-9.6 — compute the dictionary source-toggle bitmask from the
@@ -420,12 +425,10 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// await — same cold-start tolerance as
     /// `userFrequencyService.isConnected()`.
     private func buildCustomEntries(
-        rawInput: String,
+        queryKey q: CustomSearchKey?,
         settings: EngineSettings,
     ) -> [Taigi_Engine_CustomDictEntry] {
-        guard settings.isCustomDictEnabled, !rawInput.isEmpty,
-              let q = CustomDictionaryDerivation.queryKey(for: rawInput, mode: settings.inputMode)
-        else { return [] }
+        guard settings.isCustomDictEnabled, let q else { return [] }
         let rows = customDictionaryRepository.searchSync(
             family: q.family,
             form: q.form,
@@ -443,16 +446,14 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     }
 
     /// §50 — learned phrases whose derived key EQUALS the raw buffer's query
-    /// key, as `FetchAtPos.learned_entries`. Exact so a learned whole-buffer
-    /// match never falls out of the prefix search's `LIMIT`; gated by
-    /// 自動學習新詞, not by 啟用自訂詞庫 (manual rows only).
+    /// key (`CustomDictionaryRepository.learnedEntriesSync`), as
+    /// `FetchAtPos.learned_entries`; gated by 自動學習新詞, not by 啟用自訂詞庫
+    /// (manual rows only).
     private func buildLearnedEntries(
-        rawInput: String,
+        queryKey q: CustomSearchKey?,
         settings: EngineSettings,
     ) -> [Taigi_Engine_LearnedEntry] {
-        guard settings.isPhraseLearningEnabled, !rawInput.isEmpty,
-              let q = CustomDictionaryDerivation.queryKey(for: rawInput, mode: settings.inputMode)
-        else { return [] }
+        guard settings.isPhraseLearningEnabled, let q else { return [] }
         return customDictionaryRepository.learnedEntriesSync(
             family: q.family,
             form: q.form,

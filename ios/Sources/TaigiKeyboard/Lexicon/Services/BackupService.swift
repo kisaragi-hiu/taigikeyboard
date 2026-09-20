@@ -43,13 +43,6 @@ final class BackupService: @unchecked Sendable {
         /// `nil` → imported as a manual row with no count.
         let origin: Int?
         let learnCount: Int?
-
-        init(roman: String, hanzi: String, origin: Int? = nil, learnCount: Int? = nil) {
-            self.roman = roman
-            self.hanzi = hanzi
-            self.origin = origin
-            self.learnCount = learnCount
-        }
     }
 
     struct FrequencyEntry: Codable {
@@ -148,25 +141,39 @@ final class BackupService: @unchecked Sendable {
 
     // MARK: - Private Import Helpers
 
+    /// §50 — provenance-aware. A manual row in the file is the user's own
+    /// word: skipped only when a manual row for the pair exists; over a
+    /// learned row it lands through `save`, whose repository write takes the
+    /// learned row over (manual wins, never the reverse). A learned row goes
+    /// through the learn path so the learned cap, eviction and the
+    /// manual-wins rule apply exactly as on device. An older file (no
+    /// `origin`) is all manual.
     private func importCustomDictionary(_ entries: [CustomDictEntry]) async throws -> Int {
         let existing = try await customDictionaryService.fetchAll()
-        let existingPairs = Set(existing.map { "\($0.roman)\t\($0.hanzi)" })
+        // Manual over learned when both exist for a pair (the repository
+        // does not let that state persist, but a stale list is cheap to fold).
+        var originByPair: [String: CustomDictionaryEntry.Origin] = [:]
+        for row in existing.sorted(by: { $0.isLearned && !$1.isLearned }) {
+            originByPair["\(row.roman)\t\(row.hanzi)"] = row.origin
+        }
 
         var imported = 0
         for entry in entries {
             let key = "\(entry.roman)\t\(entry.hanzi)"
-            guard !existingPairs.contains(key) else { continue }
-
-            // v3 carries provenance; an older file (or an unknown value) is a
-            // manual row, never a learned one.
             let origin = entry.origin.flatMap(CustomDictionaryEntry.Origin.init(rawValue:)) ?? .manual
-            let newEntry = CustomDictionaryEntry(
-                roman: entry.roman,
-                hanzi: entry.hanzi,
-                origin: origin,
-                learnCount: origin == .learned ? max(entry.learnCount ?? 1, 1) : 0,
-            )
-            try await customDictionaryService.save(newEntry)
+            switch (origin, originByPair[key]) {
+            case (_, .manual), (.learned, .learned):
+                continue
+            case (.learned, nil):
+                try await customDictionaryService.learnPhrase(
+                    hanzi: entry.hanzi,
+                    canonicalTl: entry.roman,
+                    count: entry.learnCount ?? 1,
+                )
+            case (.manual, _):
+                try await customDictionaryService.save(CustomDictionaryEntry(roman: entry.roman, hanzi: entry.hanzi))
+            }
+            originByPair[key] = origin
             imported += 1
         }
         return imported

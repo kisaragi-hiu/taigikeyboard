@@ -311,13 +311,7 @@ struct DictionaryTab: View {
                         .foregroundStyle(.primary)
                 }
                 ForEach(uniqueTagKeys(for: result), id: \.self) { tagKey in
-                    Text(lang.string(tagKey))
-                        .font(AppStyle.captionFont)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(Color(.systemGray5))
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                    TagBadge(text: lang.string(tagKey))
                 }
                 Spacer()
                 Image(latinSystemName: "arrow.up.right")

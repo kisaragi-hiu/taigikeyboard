@@ -18,9 +18,10 @@ import SQLite3
 ///    so every POJ entry containing either was unreachable from the keyboard
 ///    until its keys are re-derived.
 /// 4. (v5) Learned phrases (§50): add the `origin` / `learn_count` columns
-///    (every existing row reads as manual) and the learned-pair unique index.
-///    Derivation did not change, so the O(N) key backfill is skipped for a
-///    v4 database.
+///    (every existing row reads as manual) and the learned-pair unique index,
+///    in one checked transaction with the version stamp — a failed ALTER is
+///    never stamped as v5. Derivation did not change, so the O(N) key
+///    backfill is skipped for a v4 database.
 ///
 /// Runs after `CustomDictionarySchema.ensureTables`; callers must serialize
 /// access (typically via `SQLiteConnectionManager.execute`).
@@ -30,7 +31,7 @@ import SQLite3
 enum CustomDictionaryMigrator {
     /// Apply pending forward migrations. Safe to call repeatedly — fast-path
     /// returns immediately when `PRAGMA user_version` is already current.
-    static func runIfNeeded(db: OpaquePointer, logger: DebugLogger) {
+    static func runIfNeeded(db: OpaquePointer, logger: DebugLogger) throws {
         let currentVersion = sqliteReadUserVersion(db: db)
         guard currentVersion < CustomDictionarySchema.schemaVersion else { return }
 
@@ -41,7 +42,8 @@ enum CustomDictionaryMigrator {
         // version is behind the current derivation (that is what a bump means),
         // so backfilling per branch would only repeat the same work.
         if currentVersion < 1 {
-            addMissingDerivedColumns(db: db)
+            // Pre-v5 arms keep their historical silent-DDL contract.
+            try? addMissingColumns(db: db, columns: CustomDictionarySchema.derivedColumns, declaration: "TEXT DEFAULT ''")
         }
 
         if currentVersion < 2 {
@@ -51,46 +53,39 @@ enum CustomDictionaryMigrator {
             try? CustomDictionarySchema.ensureTables(db: db)
         }
 
-        // v5 — the columns first, then the index that references them; on
-        // an older DB `ensureTables` could not create the index yet.
-        if currentVersion < 5 {
-            addMissingProvenanceColumns(db: db)
-            sqliteExecSimple(db: db, CustomDictionarySchema.learnedPairIndexSQL)
-        }
-
         // Derivation last changed in v4; a v4 database only gains columns.
         if currentVersion < 4 {
             backfillDerivedColumns(db: db)
             backfillSearchKeys(db: db)
         }
 
-        sqliteSetUserVersion(db: db, version: CustomDictionarySchema.schemaVersion)
+        // v5 — columns first, then the index that references them (on an
+        // older DB `ensureTables` could not create it yet), then the stamp,
+        // all in one transaction: a failed ALTER (another process holding the
+        // lock) rolls back unstamped and the next open retries.
+        try sqliteTransaction(db: db) {
+            if currentVersion < 5 {
+                try addMissingColumns(
+                    db: db,
+                    columns: CustomDictionarySchema.provenanceColumns,
+                    declaration: "INTEGER NOT NULL DEFAULT 0",
+                )
+                try sqliteExecChecked(db: db, CustomDictionarySchema.learnedPairIndexSQL)
+            }
+            try sqliteExecChecked(db: db, "PRAGMA user_version = \(CustomDictionarySchema.schemaVersion);")
+        }
     }
 
     // MARK: - Private
 
-    /// Add derived columns via `ALTER TABLE` when missing. The whitelist is
-    /// required because SQLite DDL cannot parameterize column identifiers.
-    private static func addMissingDerivedColumns(db: OpaquePointer) {
-        for column in CustomDictionarySchema.derivedColumns
-            where !CustomDictionarySchema.columnExists(db: db, column: column)
-        {
-            sqliteExecSimple(
+    /// Add `columns` via `ALTER TABLE` when missing. `columns` comes from a
+    /// `CustomDictionarySchema` whitelist because SQLite DDL cannot
+    /// parameterize identifiers; `declaration` is the column type + default.
+    private static func addMissingColumns(db: OpaquePointer, columns: [String], declaration: String) throws {
+        for column in columns where !CustomDictionarySchema.columnExists(db: db, column: column) {
+            try sqliteExecChecked(
                 db: db,
-                "ALTER TABLE \(CustomDictionarySchema.tableName) ADD COLUMN \(column) TEXT DEFAULT '';",
-            )
-        }
-    }
-
-    /// Add the §50 provenance columns via `ALTER TABLE` when missing (same
-    /// whitelist discipline as the derived columns).
-    private static func addMissingProvenanceColumns(db: OpaquePointer) {
-        for column in CustomDictionarySchema.provenanceColumns
-            where !CustomDictionarySchema.columnExists(db: db, column: column)
-        {
-            sqliteExecSimple(
-                db: db,
-                "ALTER TABLE \(CustomDictionarySchema.tableName) ADD COLUMN \(column) INTEGER NOT NULL DEFAULT 0;",
+                "ALTER TABLE \(CustomDictionarySchema.tableName) ADD COLUMN \(column) \(declaration);",
             )
         }
     }

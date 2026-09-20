@@ -5,8 +5,8 @@ import XCTest
 /// Learned phrases (§50) on `custom_dictionary.db`: a learned `(hanzi, roman)`
 /// pair is one row with a `learn_count`, never a duplicate, never a
 /// downgrade of a manual row, found only by an EXACT whole-buffer key, and
-/// evicted fewest-then-oldest past `maxLearnedEntries`. A v4 database gains
-/// the provenance columns on open.
+/// evicted fewest-then-oldest past the learned cap (the v4 → v5 migration
+/// is pinned beside the other migrations in `CustomDictionaryRepositoryCrossModeTests`).
 ///
 /// Exercises the real repository against a temp-file `SQLiteConnectionManager`
 /// (the Android counterpart cannot run SQLite in a JVM test; it pins the
@@ -14,6 +14,9 @@ import XCTest
 final class CustomDictionaryRepositoryLearnedPhraseTests: XCTestCase {
     private var dbPath: String!
     private var repository: CustomDictionaryRepository!
+
+    /// Small learned cap so eviction is a handful of inserts, not 2001.
+    private static let learnedCap = 3
 
     override func setUpWithError() throws {
         try super.setUpWithError()
@@ -25,7 +28,7 @@ final class CustomDictionaryRepositoryLearnedPhraseTests: XCTestCase {
             queueLabel: "test.customdict.learned.\(UUID().uuidString)",
             loggerCategory: "CustomDictionaryRepositoryLearnedPhraseTests",
         )
-        repository = CustomDictionaryRepository(connectionManager: manager)
+        repository = CustomDictionaryRepository(connectionManager: manager, maxLearnedEntries: Self.learnedCap)
     }
 
     override func tearDownWithError() throws {
@@ -77,6 +80,36 @@ final class CustomDictionaryRepositoryLearnedPhraseTests: XCTestCase {
         XCTAssertEqual(all.first?.learnCount, 0)
     }
 
+    /// The manual write primitive takes over a learned row for the pair —
+    /// list editor, CSV import and `.taigi` import all go through it.
+    func test_upsert_takesOverALearnedRowForTheSamePair() async throws {
+        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
+        try await repository.ensureInitialized()
+        try await repository.upsert(CustomDictionaryEntry(roman: "kì--khí-lâi", hanzi: "記起來"))
+
+        let all = try await repository.fetchAll()
+        XCTAssertEqual(all.count, 1, "got \(all)")
+        XCTAssertEqual(all.first?.origin, .manual)
+        XCTAssertTrue(try learnedExact("kikhilai").isEmpty, "the learned row's side keys went with it")
+        // The CSV path obeys the same rule.
+        try await repository.learnPhrase(hanzi: "台語", canonicalTl: "tâi-gí")
+        let imported = try await repository.batchImport([CustomDictionaryEntry(roman: "tâi-gí", hanzi: "台語")])
+        XCTAssertEqual(imported, 1)
+        let taigi = try await repository.fetchAll().filter { $0.hanzi == "台語" }
+        XCTAssertEqual(taigi.map(\.origin), [.manual])
+    }
+
+    /// Editing a learned row in the list adopts it: the same id, now manual.
+    func test_upsert_ofALearnedEntryMakesItManual() async throws {
+        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
+        let learnedFirst = try await learnedRows().first
+        let learned = try XCTUnwrap(learnedFirst)
+        try await repository.upsert(learned)
+        let all = try await repository.fetchAll()
+        XCTAssertEqual(all.map(\.id), [learned.id])
+        XCTAssertEqual(all.first?.origin, .manual)
+    }
+
     func test_learnPhrase_emptyPartsAreIgnored() async throws {
         try await repository.learnPhrase(hanzi: "", canonicalTl: "kì--khí-lâi")
         try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "")
@@ -95,6 +128,27 @@ final class CustomDictionaryRepositoryLearnedPhraseTests: XCTestCase {
         XCTAssertEqual(try learnedExact("ki3khi2lai5").map(\.hanzi), ["記起來"], "exact toned key")
         XCTAssertTrue(try learnedExact("kikhi").isEmpty, "a strict prefix of the phrase must not match")
         XCTAssertTrue(try learnedExact("kikhilaia").isEmpty, "a longer buffer must not match")
+    }
+
+    /// Codex post-impl 2026-09-20 BLOCK: a learned row must never reach
+    /// `custom_entries` (whose walker override is unconditional) — the prefix
+    /// search is manual-only, the exact learned query is learned-only.
+    func test_prefixSearch_excludesLearnedRows() async throws {
+        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
+        try await repository.upsert(CustomDictionaryEntry(roman: "kì-khí", hanzi: "記起"))
+        let q = try XCTUnwrap(CustomDictionaryDerivation.queryKey(for: "kikhi", mode: .tl))
+        let rows = try await repository.search(family: q.family, form: q.form, key: q.key, limit: 20)
+        XCTAssertEqual(rows.map(\.hanzi), ["記起"], "only the manual row rides the prefix search; got \(rows)")
+    }
+
+    func test_learnPhrase_countFromBackupAddsAndClamps() async throws {
+        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi", count: 7)
+        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
+        let afterAdd = try await learnedRows().first?.learnCount
+        XCTAssertEqual(afterAdd, 8)
+        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi", count: Int.max)
+        let clamped = try await learnedRows().first?.learnCount
+        XCTAssertEqual(clamped, CustomDictionaryRepository.maxLearnCount, "an untrusted backup count is clamped")
     }
 
     func test_learnedEntriesSync_skipsManualRows() async throws {
@@ -118,72 +172,24 @@ final class CustomDictionaryRepositoryLearnedPhraseTests: XCTestCase {
     }
 
     func test_evictsFewestComposedThenOldestPastTheLearnedCap() async throws {
-        // Fill to the cap, with one row composed twice so it must survive.
-        let cap = CustomDictionaryRepository.maxLearnedEntries
-        for i in 0 ..< cap {
+        XCTAssertEqual(CustomDictionaryCapacityPolicy.maxLearnedEntries, 2000, "must stay aligned with Android MAX_LEARNED_ENTRIES")
+        // Fill to the cap; 詞0 composed twice must survive; one of the
+        // count-1 rows goes (they share a second-resolution `updated_at`, so
+        // which one is not asserted), and its side keys go with it.
+        for i in 0 ..< Self.learnedCap {
             try await repository.learnPhrase(hanzi: "詞\(i)", canonicalTl: "su-\(i)")
         }
         try await repository.learnPhrase(hanzi: "詞0", canonicalTl: "su-0")
-        // One past the cap evicts exactly one row: a count-1 row, never 詞0.
         try await repository.learnPhrase(hanzi: "新詞", canonicalTl: "sin-su")
 
         let rows = try await learnedRows()
-        XCTAssertEqual(rows.count, cap, "learned rows stay at the cap; got \(rows.count)")
+        XCTAssertEqual(rows.count, Self.learnedCap, "learned rows stay at the cap; got \(rows.map(\.hanzi))")
         XCTAssertTrue(rows.contains { $0.hanzi == "詞0" }, "the twice-composed row survives")
         XCTAssertTrue(rows.contains { $0.hanzi == "新詞" }, "the newest learn is kept")
-    }
-
-    // MARK: - Migration
-
-    /// A v4 database (no provenance columns) opens as v5: every existing row
-    /// reads as manual, and learning works on the same table.
-    func test_v4DatabaseGainsProvenanceColumnsAndKeepsRowsManual() async throws {
-        try seedV4Row(id: "v4-1", roman: "tâi-gí", hanzi: "台語")
-
+        let survivingOnes = rows.filter { $0.hanzi == "詞1" || $0.hanzi == "詞2" }
+        XCTAssertEqual(survivingOnes.count, 1, "exactly one count-1 row is evicted; got \(rows.map(\.hanzi))")
         try await repository.ensureInitialized()
-        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
-
-        let all = try await repository.fetchAll()
-        XCTAssertEqual(all.first { $0.hanzi == "台語" }?.origin, .manual, "pre-v5 rows are the user's")
-        XCTAssertEqual(all.first { $0.hanzi == "記起來" }?.origin, .learned)
-        XCTAssertEqual(try learnedExact("kikhilai").map(\.hanzi), ["記起來"])
-    }
-
-    private func seedV4Row(id: String, roman: String, hanzi: String) throws {
-        var db: OpaquePointer?
-        guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
-            throw XCTSkip("could not open temp sqlite for v4 seed")
-        }
-        defer { sqlite3_close(db) }
-        let ddl = """
-            CREATE TABLE custom_dictionary (
-                id TEXT PRIMARY KEY,
-                roman TEXT NOT NULL,
-                hanzi TEXT NOT NULL,
-                notone TEXT DEFAULT '',
-                abbrev TEXT DEFAULT '',
-                roman_num TEXT DEFAULT '',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            CREATE TABLE custom_search_key (
-                entry_id TEXT NOT NULL,
-                family   TEXT NOT NULL,
-                form     TEXT NOT NULL,
-                key      TEXT NOT NULL
-            );
-            PRAGMA user_version = 4;
-        """
-        XCTAssertEqual(sqlite3_exec(db, ddl, nil, nil, nil), SQLITE_OK)
-        var stmt: OpaquePointer?
-        XCTAssertEqual(
-            sqlite3_prepare_v2(db, "INSERT INTO custom_dictionary (id, roman, hanzi) VALUES (?, ?, ?);", -1, &stmt, nil),
-            SQLITE_OK,
-        )
-        defer { sqlite3_finalize(stmt) }
-        stmt.bindText(1, id)
-        stmt.bindText(2, roman)
-        stmt.bindText(3, hanzi)
-        XCTAssertEqual(sqlite3_step(stmt), SQLITE_DONE)
+        let evicted = survivingOnes.first?.hanzi == "詞1" ? "su2" : "su1"
+        XCTAssertTrue(try learnedExact(evicted).isEmpty, "the evicted row's side keys are gone")
     }
 }

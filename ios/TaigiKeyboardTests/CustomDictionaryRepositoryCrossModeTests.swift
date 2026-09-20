@@ -94,6 +94,23 @@ final class CustomDictionaryRepositoryCrossModeTests: XCTestCase {
         try await assertFinds(input: "chiah", mode: .poj, expectedHanzi: "食")
     }
 
+    /// §50 — a v4 database (no provenance columns) opens as v5: the existing
+    /// row reads as manual, the learned-pair index exists, and learning works
+    /// on the same table.
+    func test_migrationV5_addsProvenanceColumnsAndKeepsRowsManual() async throws {
+        try seedLegacyRow(id: "v4-1", roman: "tâi-gí", hanzi: "台語", userVersion: 4)
+
+        try await repository.ensureInitialized()
+        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
+        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
+
+        let all = try await repository.fetchAll()
+        XCTAssertEqual(all.first { $0.hanzi == "台語" }?.origin, .manual, "pre-v5 rows are the user's")
+        let learned = try XCTUnwrap(all.first { $0.hanzi == "記起來" })
+        XCTAssertEqual(learned.origin, .learned)
+        XCTAssertEqual(learned.learnCount, 2, "the unique index the migration created folds the second learn")
+    }
+
     /// INVARIANT_CUSTOM_DICT_CAPACITY — the 30000-row cap constant is pinned on
     /// both platforms (Android `CustomDictionaryCapacityPolicy.MAX_ENTRIES`), and
     /// the capacity policy tracks row count + bypasses updates of an existing id.

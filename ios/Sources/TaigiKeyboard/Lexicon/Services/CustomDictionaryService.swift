@@ -63,18 +63,34 @@ final class CustomDictionaryService: @unchecked Sendable {
 
     // MARK: - Learned Phrases (§50)
 
-    /// Fire-and-forget write from the keyboard extension's effect path; the
-    /// repository serializes it behind the same queue as every other write.
-    func learnPhrase(hanzi: String, canonicalTl: String) {
-        Task { [repository] in
-            try? await repository.learnPhrase(hanzi: hanzi, canonicalTl: canonicalTl)
+    /// Awaited learn (backup import): `count` is the saved `learn_count`.
+    func learnPhrase(hanzi: String, canonicalTl: String, count: Int = 1) async throws {
+        try await repository.learnPhrase(hanzi: hanzi, canonicalTl: canonicalTl, count: count)
+    }
+
+    /// The keyboard's `Effect.PhraseLearned` — best-effort, off the key path.
+    func recordLearnedPhrase(hanzi: String, canonicalTl: String) {
+        fireAndForget("learnPhrase") { [repository] in
+            try await repository.learnPhrase(hanzi: hanzi, canonicalTl: canonicalTl)
         }
     }
 
-    /// Fire-and-forget bump for a learned row the user just picked whole.
-    func touchLearnedPhrase(hanzi: String, canonicalTl: String) {
-        Task { [repository] in
-            try? await repository.touchLearnedPhrase(hanzi: hanzi, canonicalTl: canonicalTl)
+    /// A learned row the user just picked whole — keeps it ahead of eviction.
+    func recordLearnedPick(hanzi: String, canonicalTl: String) {
+        fireAndForget("touchLearnedPhrase") { [repository] in
+            try await repository.touchLearnedPhrase(hanzi: hanzi, canonicalTl: canonicalTl)
+        }
+    }
+
+    /// The repository serializes the write behind the same queue as every
+    /// other write; a failure is logged, never surfaced.
+    private func fireAndForget(_ op: StaticString, _ body: @escaping @Sendable () async throws -> Void) {
+        Task { [logger] in
+            do {
+                try await body()
+            } catch {
+                logger.debug("[LEARN] \(op) failed: \(error)")
+            }
         }
     }
 

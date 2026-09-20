@@ -75,10 +75,8 @@ extension KeyboardViewController {
             actionHandler?.nextWordController.clearDisplay()
         case let .phraseLearned(hanji, canonicalTl):
             // §50 — the engine decided the composition was a phrase; the
-            // platform owns the store (mirrors the nextword association write).
-            if SharedSettings.shared.isPhraseLearningEnabled {
-                CompositionRoot.customDictionaryService.learnPhrase(hanzi: hanji, canonicalTl: canonicalTl)
-            }
+            // platform owns the store (same routing as the nextword writes).
+            actionHandler?.learnPhrase(hanji: hanji, canonicalTl: canonicalTl)
         }
     }
 
