@@ -847,11 +847,11 @@
         ]
       },
       "values": {
-        "hanji": "漢字/羅馬字模式輸出羅馬字/漢字",
-        "tailo": "Hàn-jī/Lô-má-jī bôo-sik su-tshut Lô-má-jī/Hàn-jī",
-        "poj": "Hàn-jī/Lô-má-jī bô͘-sek su-chhut Lô-má-jī/Hàn-jī",
-        "en": "Hanji/Romanization Mode Outputs Romanization/Hanji",
-        "ja": "漢字/ローマ字モードでローマ字/漢字を出力"
+        "hanji": "輸出對換的文字（漢字↔羅馬字）",
+        "tailo": "Su-tshut tuì-uānn ê bûn-jī (Hàn-jī ↔ Lô-má-jī)",
+        "poj": "Su-chhut tùi-oāⁿ ê bûn-jī (Hàn-jī ↔ Lô-má-jī)",
+        "en": "Output the Other Script (Hanji ↔ Romanization)",
+        "ja": "もう一方の文字で出力（漢字 ↔ ローマ字）"
       }
     },
     "shortcutUnbound": {
