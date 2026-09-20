@@ -33,17 +33,18 @@ use windows::Win32::Graphics::DirectWrite::{
 use windows_numerics::Vector2;
 
 const WINDOW_CLASS: &str = "TaigiKeyboardTelexGuide";
-/// WinUI body / subtitle / caption sizes, so the card reads as a Windows 11
-/// flyout rather than the Mac panel it was ported from (`theme.rs`).
-const TITLE_FONT_SIZE: f32 = 16.0;
-const ROW_FONT_SIZE: f32 = 14.0;
+/// Larger than WinUI body / subtitle: a table the user reads across the room
+/// from the text they are typing, not a one-word notice (USER 2026-09-20).
+/// Mirrors `TelexGuidePanel.titleFontSize` / `rowFontSize`.
+const TITLE_FONT_SIZE: f32 = 22.0;
+const ROW_FONT_SIZE: f32 = 19.0;
 /// The insets and gaps of `TelexGuidePanel.makePanel` / `makeGrid`.
-const PADDING_X: f32 = 22.0;
-const PADDING_TOP: f32 = 16.0;
-const PADDING_BOTTOM: f32 = 14.0;
-const SECTION_GAP: f32 = 10.0;
-const ROW_GAP: f32 = 4.0;
-const COLUMN_GAP: f32 = 18.0;
+const PADDING_X: f32 = 56.0;
+const PADDING_TOP: f32 = 40.0;
+const PADDING_BOTTOM: f32 = 40.0;
+const SECTION_GAP: f32 = 22.0;
+const ROW_GAP: f32 = 6.0;
+const COLUMN_GAP: f32 = 24.0;
 
 /// What the card says: the title and the rows for the romanization in use,
 /// resolved by the caller, who has the display language; this module only
@@ -80,6 +81,8 @@ struct GuideLayout {
     rows: Vec<[Cell; 2]>,
     /// The widest cell of each column, which is where the next column starts.
     column_widths: [f32; 2],
+    /// Both columns plus the gap — what the table is centred by.
+    table_width: f32,
     title_height: f32,
     row_height: f32,
     size: (f32, f32),
@@ -330,6 +333,7 @@ impl GuideLayout {
             title,
             rows,
             column_widths,
+            table_width,
             title_height,
             row_height,
             size: (content_width + 2.0 * PADDING_X, height),
@@ -398,18 +402,21 @@ impl WindowHandler for GuideContent {
                 // SAFETY: drawing on our own target between Begin/EndDraw.
                 unsafe { target.Clear(Some(&theme.background)) };
                 let pen = Pen { target, brush };
+                // Title and table each centred, so the margins read symmetric
+                // on every edge (USER 2026-09-20, `TelexGuidePanel.makePanel`).
                 let mut y = PADDING_TOP;
                 self.draw_cell(
                     &pen,
                     &layout.title,
                     layout.title_height,
-                    (PADDING_X, y),
+                    ((layout.size.0 - layout.title.width) / 2.0, y),
                     theme.text,
                 );
                 y += layout.title_height + SECTION_GAP;
                 let colours = [theme.text, theme.text];
+                let table_x = (layout.size.0 - layout.table_width) / 2.0;
                 for row in &layout.rows {
-                    let mut x = PADDING_X;
+                    let mut x = table_x;
                     for (column, cell) in row.iter().enumerate() {
                         self.draw_cell(&pen, cell, layout.row_height, (x, y), colours[column]);
                         x += layout.column_widths[column] + COLUMN_GAP;
