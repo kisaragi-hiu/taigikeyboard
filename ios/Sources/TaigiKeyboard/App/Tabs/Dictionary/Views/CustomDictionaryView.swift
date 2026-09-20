@@ -48,6 +48,18 @@ struct CustomDictionaryView: View {
                             SettingInfoButton(description: lang.string(.dictionaryCustomDictEnabledInfo))
                         }
                     }
+                    // §50 自動學習新詞 — learned rows list below with a badge.
+                    Toggle(
+                        isOn: Binding(
+                            get: { viewModel.isPhraseLearningEnabled },
+                            set: { viewModel.setPhraseLearningEnabled($0) },
+                        ),
+                    ) {
+                        HStack {
+                            Text(lang.string(.dictionaryPhraseLearningEnabled))
+                            SettingInfoButton(description: lang.string(.dictionaryPhraseLearningEnabledInfo))
+                        }
+                    }
                 }
 
                 // Import/Export
@@ -128,6 +140,9 @@ struct CustomDictionaryView: View {
                                     Text("\(entry.roman) → \(entry.hanzi)")
                                         .font(AppStyle.bodyFont)
                                         .foregroundColor(.primary)
+                                    if entry.isLearned {
+                                        TagBadge(text: lang.string(.dictionaryLearnedBadge))
+                                    }
                                     Spacer()
                                     Image(latinSystemName: "chevron.right")
                                         .font(AppStyle.captionFont)

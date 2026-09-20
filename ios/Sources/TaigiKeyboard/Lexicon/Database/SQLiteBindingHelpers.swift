@@ -39,6 +39,21 @@ func sqliteExecChecked(db: OpaquePointer, _ sql: String) throws {
     }
 }
 
+/// Run `body` inside one `BEGIN IMMEDIATE` transaction: committed when it
+/// returns, rolled back (and rethrown) when it throws. Callers must already
+/// be inside the connection's serialized block.
+func sqliteTransaction(db: OpaquePointer, _ body: () throws -> Void) throws {
+    try sqliteExecChecked(db: db, "BEGIN IMMEDIATE;")
+    do {
+        try body()
+        try sqliteExecChecked(db: db, "COMMIT;")
+    } catch {
+        // Harmless when no transaction is active.
+        try? sqliteExecChecked(db: db, "ROLLBACK;")
+        throw error
+    }
+}
+
 /// Run a single-value query, throwing on failure. The counterpart to the
 /// introspection helpers below for callers — migrations again — where a
 /// question answered `0` / `false` because the query itself failed would

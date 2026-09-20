@@ -287,7 +287,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     private func continuousSidechannels(
         for c: RustEngineBridge.ContinuousCandidate,
     ) -> [String: String] {
-        [
+        var info = [
             "isContinuous": "true",
             "consumedBytes": String(c.consumedSpanEnd),
             "syllableCount": String(c.syllableCount),
@@ -296,5 +296,11 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
             // commitContinuous(associationTl:) for the NextWord write.
             "canonicalTl": c.canonicalTl,
         ]
+        // §50: the pick's hanji → `commitContinuous(hanji:)`; absent for a
+        // hanji-less candidate so the engine never learns a literal / OOV.
+        if let hanji = c.hanji, !hanji.isEmpty {
+            info["hanji"] = hanji
+        }
+        return info
     }
 }

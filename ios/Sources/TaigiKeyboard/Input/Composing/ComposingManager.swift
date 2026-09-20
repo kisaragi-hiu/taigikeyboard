@@ -257,7 +257,15 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // which is stable for this synchronous fetch). The engine
         // synthesizes a full-buffer candidate per entry and dedupes
         // `(roman, hanji)` against the FST hits.
-        let customEntries = buildCustomEntries(rawInput: rawInput, settings: settings)
+        // One family-native query key serves both user-row sources (one FFI
+        // derive per keystroke). `nil` = residue-only / empty buffer.
+        let queryKey = rawInput.isEmpty
+            ? nil
+            : CustomDictionaryDerivation.queryKey(for: rawInput, mode: settings.inputMode)
+        let customEntries = buildCustomEntries(queryKey: queryKey, settings: settings)
+        // §50 — learned phrases keyed to the WHOLE raw buffer (exact, not
+        // prefix), shared by both phases like `customEntries`.
+        let learnedEntries = buildLearnedEntries(queryKey: queryKey, settings: settings)
         let spacing = Self.continuousSpacingFlags(settings)
 
         // PR-9.6 — compute the dictionary source-toggle bitmask from the
@@ -289,6 +297,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             customEntries: customEntries,
             enabledSourcesBitmask: enabledSourcesBitmask,
             literalRomanCandidateDisabled: literalRomanCandidateDisabled,
+            learnedEntries: learnedEntries,
         )
         // Phase-1 FFI failure: do NOT apply the synthesized `.noop` — that
         // would clobber the mirror with false Idle state. Surface as "no
@@ -331,6 +340,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             customEntries: customEntries,
             enabledSourcesBitmask: enabledSourcesBitmask,
             literalRomanCandidateDisabled: literalRomanCandidateDisabled,
+            learnedEntries: learnedEntries,
         )
         // Phase-2 FFI failure: engine state did NOT change since phase-1
         // (the request never reached the engine). Apply phase-1's transition
@@ -415,12 +425,10 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// await — same cold-start tolerance as
     /// `userFrequencyService.isConnected()`.
     private func buildCustomEntries(
-        rawInput: String,
+        queryKey q: CustomSearchKey?,
         settings: EngineSettings,
     ) -> [Taigi_Engine_CustomDictEntry] {
-        guard settings.isCustomDictEnabled, !rawInput.isEmpty,
-              let q = CustomDictionaryDerivation.queryKey(for: rawInput, mode: settings.inputMode)
-        else { return [] }
+        guard settings.isCustomDictEnabled, let q else { return [] }
         let rows = customDictionaryRepository.searchSync(
             family: q.family,
             form: q.form,
@@ -433,6 +441,27 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             if !row.hanzi.isEmpty {
                 entry.hanji = row.hanzi
             }
+            return entry
+        }
+    }
+
+    /// §50 — learned phrases whose derived key EQUALS the raw buffer's query
+    /// key (`CustomDictionaryRepository.learnedEntriesSync`), as
+    /// `FetchAtPos.learned_entries`; gated by 自動學習新詞, not by 啟用自訂詞庫
+    /// (manual rows only).
+    private func buildLearnedEntries(
+        queryKey q: CustomSearchKey?,
+        settings: EngineSettings,
+    ) -> [Taigi_Engine_LearnedEntry] {
+        guard settings.isPhraseLearningEnabled, let q else { return [] }
+        return customDictionaryRepository.learnedEntriesSync(
+            family: q.family,
+            form: q.form,
+            key: q.key,
+        ).map { row in
+            var entry = Taigi_Engine_LearnedEntry()
+            entry.hanji = row.hanzi
+            entry.canonicalTl = row.roman
             return entry
         }
     }
@@ -481,6 +510,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         displayText: String,
         canonicalText: String,
         associationTl: String,
+        hanji: String? = nil,
         consumedBytes: UInt32,
         syllableCount: UInt32,
     ) -> (didCommit: Bool, didFinalCommit: Bool) {
@@ -495,6 +525,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             displayText: displayText,
             canonicalText: canonicalText,
             associationTl: associationTl,
+            hanji: hanji,
             consumedBytes: consumedBytes,
             syllableCount: syllableCount,
             mode: settings.inputMode,

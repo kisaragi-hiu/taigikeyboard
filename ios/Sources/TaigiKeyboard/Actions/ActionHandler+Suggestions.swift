@@ -14,6 +14,15 @@ struct ResolvedCommit {
 }
 
 extension ActionHandler {
+    /// §50 — the engine's `Effect.PhraseLearned`, gated like every other
+    /// learning write here; the store is the custom dictionary's.
+    func learnPhrase(hanji: String, canonicalTl: String) {
+        guard settings.isPhraseLearningEnabled else { return }
+        CompositionRoot.customDictionaryService.recordLearnedPhrase(hanzi: hanji, canonicalTl: canonicalTl)
+    }
+}
+
+extension ActionHandler {
     // MARK: - Suggestion Selection
 
     func handleSuggestionSelection(_ suggestion: AutocompleteSuggestion) {
@@ -144,10 +153,12 @@ extension ActionHandler {
             // a normal candidate commit records. Absent (wire skew / older
             // suggestion) → "" → engine falls back to the raw committed slice.
             let associationTl = suggestion.additionalInfo["canonicalTl"] ?? ""
+            let hanji = suggestion.additionalInfo["hanji"]
             let (didCommit, didFinalCommit) = composingManager.commitContinuous(
                 displayText: docText,
                 canonicalText: displayText,
                 associationTl: associationTl,
+                hanji: hanji,
                 consumedBytes: consumedBytes,
                 syllableCount: syllableCount,
             )
@@ -163,6 +174,11 @@ extension ActionHandler {
             // reading NextWord learns); empty only on wire skew / TPS-OOV.
             if didCommit, settings.isFrequencyRecordingEnabled {
                 CompositionRoot.userFrequencyService.recordUsage(for: displayText, tl: associationTl)
+            }
+            // §50 touch-on-use: a learned phrase picked as one candidate stays
+            // ahead of the learned-row eviction line (no-op for any other row).
+            if didCommit, let hanji, settings.isPhraseLearningEnabled {
+                CompositionRoot.customDictionaryService.recordLearnedPick(hanzi: hanji, canonicalTl: associationTl)
             }
             // Auto-space only on FINAL commit (entire buffer consumed; engine
             // exits Continuous → Idle). Mid-commits keep composing more
