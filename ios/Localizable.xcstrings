@@ -3800,7 +3800,7 @@
       }
     },
     "i18n_symbol_fullWidth": {
-      "comment": "Symbol overlay category tab: full-width punctuation (extension-only).",
+      "comment": "Symbol overlay category tab: full-width punctuation (extension-only). Taiwanese says 全角／半角, not 全形／半形 (USER 2026-09-20).",
       "extractionState": "manual",
       "localizations": {
         "en": {

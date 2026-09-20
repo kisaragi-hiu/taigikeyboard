@@ -47,16 +47,30 @@ pub fn view(
             &bindings,
             ComposingAction::GROUPS[0],
         ),
+        // Shown, not recordable (USER 2026-09-20): the bare slot keys pick a
+        // candidate off the visible page, and which keys they are follows
+        // the 聲調拍法 picker (`ToneInputScheme`) — so the row follows it too.
+        // First of the fixed rows because it is the main way through the
+        // bar; its Shift twin sits with the commit rows below.
+        fixed_row(
+            strings.resolve(StringKey::DesktopShortcutSelectCandidateSlot),
+            slot_keys_label(bindings.slot_key_set()),
+        ),
+        // Shown, not recordable: the fixed navigation tier
+        // (`ComposingKeyIntent::intent`), read before any binding so a user
+        // who has mis-bound everything else still has a way through the
+        // candidates.
+        fixed_row(
+            strings.resolve(StringKey::DesktopShortcutNavigateCandidates),
+            NAVIGATION_KEYS_LABEL.to_owned(),
+        ),
         // Shown, not recordable (USER 2026-09-09): the caret inside the
         // composition rides the host's own word-jump chord, and the
         // classifier reads it before any binding (`ComposingKeyIntent`). With
         // the candidate movers, because moving the caret is what it is.
-        cards::row(
+        fixed_row(
             strings.resolve(StringKey::DesktopShortcutMoveComposingCaret),
-            TextBlock::new()
-                .text(caret_chords_label())
-                .opacity(0.65)
-                .vertical_alignment(VerticalAlignment::Center),
+            caret_chords_label(),
         ),
         // Block two: out of the composition and into the document.
         cards::section_title(strings.resolve(StringKey::DesktopShortcutSectionOutput)),
@@ -67,28 +81,29 @@ pub fn view(
             &bindings,
             ComposingAction::GROUPS[1],
         ),
+        // Shown, not recordable: Escape drops the composition without
+        // writing to the document — the fixed tier's way out beside the two
+        // commit rows above (`ComposingKeyIntent::intent`).
+        fixed_row(
+            strings.resolve(StringKey::DesktopShortcutCancelComposing),
+            CANCEL_KEY_LABEL.to_owned(),
+        ),
         // Shown, not recordable (USER 2026-09-10): Shift on a slot key is
         // the 漢羅 commit aimed at that slot, and the slot keys follow the
         // tone scheme — so the row follows it too, and there is nothing to
         // record. After the commit rows, because it is one.
-        cards::row(
+        fixed_row(
             strings.resolve(StringKey::DesktopActionCommitAlternateScript),
-            TextBlock::new()
-                .text(shifted_slot_keys_label(bindings.slot_key_set()))
-                .opacity(0.65)
-                .vertical_alignment(VerticalAlignment::Center),
+            shifted_slot_keys_label(bindings.slot_key_set()),
         ),
         // Shown, not recordable (USER 2026-09-20): Ctrl on a punctuation key
         // types it in the other width once, whatever the 漢羅 mode would have
         // typed (`ComposingKeyIntent::width_flip_character`). Here because it
         // writes into the document; three sample chords, since the row stands
         // for every key of the map.
-        cards::row(
+        fixed_row(
             strings.resolve(StringKey::DesktopShortcutFlipPunctuationWidth),
-            TextBlock::new()
-                .text(width_flip_chords_label())
-                .opacity(0.65)
-                .vertical_alignment(VerticalAlignment::Center),
+            width_flip_chords_label(),
         ),
         // Block three: the switches, and the windows a key raises. What these
         // have in common is that none of them needs a composition running —
@@ -107,6 +122,27 @@ pub fn view(
         reset_row(strings, ResetScope::Shortcuts, context),
     ))
 }
+
+/// One read-only row: the label, and the fixed keys greyed where a recorder
+/// row shows its field — the greyed text is what tells it from the rows
+/// that record.
+fn fixed_row(label: &str, keys: String) -> View {
+    cards::row(
+        label,
+        TextBlock::new()
+            .text(keys)
+            .opacity(0.65)
+            .vertical_alignment(VerticalAlignment::Center),
+    )
+}
+
+/// The six keys the fixed navigation tier reads, in the keycap legends
+/// Windows prints (`ShortcutSettingsView.swift` `navigationKeysLabel`).
+const NAVIGATION_KEYS_LABEL: &str = "←  →  ↑  ↓  PgUp  PgDn";
+
+/// The cancel key's keycap legend (`ShortcutSettingsView.swift`
+/// `cancelKeyLabel`).
+const CANCEL_KEY_LABEL: &str = "Esc";
 
 /// `Ctrl+←  Ctrl+→`, named by the same modifier labels the recorder rows
 /// use, from the modifier the classifier reads (`ShortcutSettingsView.swift`
@@ -137,18 +173,34 @@ fn width_flip_chords_label() -> String {
         .join("  ")
 }
 
+/// `qwdfzxvy;` under Standard, `123456789` under Telex: every key of the
+/// live slot set, bare, in the recorder rows' own spelling — lowercase
+/// because a bare key shows the character it types
+/// (`ShortcutSettingsView.swift` `slotKeysLabel`).
+fn slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
+    ComposingKeyChord {
+        key: slot_keys_run(slot_keys),
+        modifiers: KeyModifiers::NONE,
+    }
+    .display()
+}
+
 /// `Shift+QWDFZXVY;` under Standard, `Shift+123456789` under Telex: every key
 /// of the live slot set behind ONE Shift, in the recorder rows' own spelling
 /// (`ShortcutSettingsView.swift` `shiftedSlotKeysLabel`).
 fn shifted_slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
-    let keys: String = (0..HorizontalPageLayout::PAGE_SIZE)
-        .map(|slot| slot_keys.label_for_slot(slot))
-        .collect();
     ComposingKeyChord {
-        key: keys,
+        key: slot_keys_run(slot_keys),
         modifiers: KeyModifiers::SHIFT,
     }
     .display()
+}
+
+/// The nine slot keys of `slot_keys` as one run, in page order.
+fn slot_keys_run(slot_keys: CandidateSlotKeySet) -> String {
+    (0..HorizontalPageLayout::PAGE_SIZE)
+        .map(|slot| slot_keys.label_for_slot(slot))
+        .collect()
 }
 
 fn global_rows(

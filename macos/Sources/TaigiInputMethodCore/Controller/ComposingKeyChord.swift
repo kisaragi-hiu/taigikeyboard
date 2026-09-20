@@ -31,24 +31,29 @@ struct ComposingKeyChord: Hashable, Sendable {
     /// different reason: they are the fixed navigation contract
     /// (`ComposingKeyIntent`), so a binding must not be able to shadow them
     /// even WITH a modifier.
-    private static let neverBindable: Set<String> = {
-        let named = [
-            NSLeftArrowFunctionKey, NSRightArrowFunctionKey,
-            NSUpArrowFunctionKey, NSDownArrowFunctionKey,
-            NSPageUpFunctionKey, NSPageDownFunctionKey,
-        ]
-        // `compactMap` rather than a `?? " "` fallback: a scalar that failed to
-        // build would otherwise land in this set as a SPACE, reserving the key
-        // the next-candidate default is on and taking the whole app down on the
-        // `preconditionFailure` in `ComposingAction.defaultChord`. These
-        // constants cannot fail, and this is what happens if that changes.
-        let arrows = named.compactMap(UnicodeScalar.init).map(String.init)
-        return Set(arrows).union([
-            "\u{8}", // Backspace
-            "\u{7F}", // Delete
-            "\u{1B}", // Escape
-        ])
-    }()
+    private static let neverBindable: Set<String> = Set(fixedNavigationKeys).union([
+        "\u{8}", // Backspace
+        "\u{7F}", // Delete
+        cancelKey,
+    ])
+
+    /// The six keys of the fixed navigation contract, in the order the 快速齒
+    /// pane draws them: the arrows, then the paging keys.
+    ///
+    /// `compactMap` rather than a `?? " "` fallback: a scalar that failed to
+    /// build would otherwise land in `neverBindable` as a SPACE, reserving
+    /// the key the next-candidate default is on and taking the whole app down
+    /// on the `preconditionFailure` in `ComposingAction.defaultChord`. These
+    /// constants cannot fail, and this is what happens if that changes.
+    static let fixedNavigationKeys: [String] = [
+        NSLeftArrowFunctionKey, NSRightArrowFunctionKey,
+        NSUpArrowFunctionKey, NSDownArrowFunctionKey,
+        NSPageUpFunctionKey, NSPageDownFunctionKey,
+    ]
+    .compactMap(UnicodeScalar.init).map(String.init)
+
+    /// Escape — the fixed tier's way out of a composition.
+    static let cancelKey = "\u{1B}"
 
     /// Why a key could not be recorded, so the recorder can say so rather than
     /// silently doing nothing.

@@ -489,10 +489,16 @@ enum ShortcutKeyDisplay {
         " ": "Space",
         "\r": "↩",
         "\t": "⇥",
-        // The arrows are never recorded (`ComposingKeyChord` refuses them);
-        // they are drawn for the fixed composing-caret row.
+        // Never recorded (`ComposingKeyChord` refuses them); drawn for the
+        // fixed rows of the 快速齒 pane — the composing caret, the candidate
+        // navigation keys and the cancel key.
         String(UnicodeScalar(NSLeftArrowFunctionKey)!): "←",
         String(UnicodeScalar(NSRightArrowFunctionKey)!): "→",
+        String(UnicodeScalar(NSUpArrowFunctionKey)!): "↑",
+        String(UnicodeScalar(NSDownArrowFunctionKey)!): "↓",
+        String(UnicodeScalar(NSPageUpFunctionKey)!): "⇞",
+        String(UnicodeScalar(NSPageDownFunctionKey)!): "⇟",
+        "\u{1B}": "⎋",
     ]
 
     /// The modifiers come from the shortcut library's own renderer rather than

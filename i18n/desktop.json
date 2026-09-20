@@ -173,7 +173,7 @@
       }
     },
     "shortcutFlipPunctuationWidth": {
-      "comment": "Read-only row after the commit rows on the 快速齒 pane: Ctrl on a punctuation key types it in the other width once (half-width in 漢字 mode, full-width in 羅馬字 mode) without switching the mode (USER 2026-09-20). Fixed like shortcutMoveComposingCaret; the value column lists sample chords (macOS ⌃, ⌃. ⌃;, Windows Ctrl+, Ctrl+. Ctrl+;). Authored whole, like its siblings.",
+      "comment": "Read-only row after the commit rows on the 快速齒 pane: Ctrl on a punctuation key types it in the other width once (half-width in 漢字 mode, full-width in 羅馬字 mode) without switching the mode (USER 2026-09-20). Taiwanese says 全角／半角, not 全形／半形 (USER 2026-09-20). Fixed like shortcutMoveComposingCaret; the value column lists sample chords (macOS ⌃, ⌃. ⌃;, Windows Ctrl+, Ctrl+. Ctrl+;). Authored whole, like its siblings.",
       "scope": {
         "platforms": [
           "macos",
@@ -184,11 +184,68 @@
         ]
       },
       "values": {
-        "hanji": "標點換做全形／半形",
-        "tailo": "Piau-tiám uānn-tsò tsuân-hîng / puànn-hîng",
-        "poj": "Phiau-tiám oāⁿ-chò choân-hêng / pòaⁿ-hêng",
+        "hanji": "標點換做全角／半角",
+        "tailo": "Piau-tiám uānn-tsò tsuân-kak / puànn-kak",
+        "poj": "Phiau-tiám oāⁿ-chò choân-kak / pòaⁿ-kak",
         "en": "Punctuation in the Other Width",
         "ja": "句読点を全角／半角で入力"
+      }
+    },
+    "shortcutSelectCandidateSlot": {
+      "comment": "Read-only row under the candidate movers on the 快速齒 pane: the bare slot keys that pick a candidate straight off the visible page (QWDFZXVY; under Standard, 123456789 under Telex — follows the 聲調拍法 picker on the 一般 pane, so nothing to record). The ⇧ twin of the same keys is the shortcutCommitAlternateScript read-only row (USER 2026-09-20). Authored whole, like its siblings.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "直接選字",
+        "tailo": "Ti̍t-tsiap suán-jī",
+        "poj": "Ti̍t-chiap soán-jī",
+        "en": "Pick a Candidate Directly",
+        "ja": "候補を直接選ぶ"
+      }
+    },
+    "shortcutNavigateCandidates": {
+      "comment": "Read-only row under the slot-key row on the 快速齒 pane: the fixed navigation keys that move the highlight through the candidate window (arrows, Page Up / Page Down); what ↓ does follows the window layout. Fixed tier, no binding can shadow it (USER 2026-09-20). Authored whole, like its siblings.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "徙動選字游標",
+        "tailo": "Suá-tāng suán-jī iû-pio",
+        "poj": "Sóa-tāng soán-jī iû-piau",
+        "en": "Move Through Candidates",
+        "ja": "候補を移動"
+      }
+    },
+    "shortcutCancelComposing": {
+      "comment": "Read-only row after the commit rows on the 快速齒 pane: Escape drops the romanization being typed without writing anything to the document — the third way out beside 確定齒 and 輸出當咧拍的字. Fixed tier, not recordable (USER 2026-09-20: 刪除當咧拍的字). Authored whole, like its siblings.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "刪除當咧拍的字",
+        "tailo": "San-tû tng-teh phah ê jī",
+        "poj": "San-tû tng-teh phah ê jī",
+        "en": "Delete What You Are Typing",
+        "ja": "入力中の文字を削除"
       }
     },
     "telexGuideTone": {
