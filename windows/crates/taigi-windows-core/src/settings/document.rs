@@ -426,7 +426,10 @@ mod tests {
         assert!(!doc.contains(keys::IS_TRANSLATE_SWAPPED.name));
         assert!(!doc.contains(keys::IS_AUTO_SPACE_ENABLED.name));
         assert!(doc.engine_settings().is_translate_swapped);
-        assert!(doc.contains(keys::DISPLAY_LANGUAGE.name), "display language kept");
+        assert!(
+            doc.contains(keys::DISPLAY_LANGUAGE.name),
+            "display language kept"
+        );
         assert!(doc.contains(keys::CANDIDATE_LAYOUT.name), "外觀's key");
         assert!(doc.contains(keys::UPDATE_NEXT_CHECK_MS.name), "bookkeeping");
     }
