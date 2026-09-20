@@ -67,6 +67,8 @@ if [[ "$CONFIGURATION" == "release" ]]; then
     EXPECTED_ARCHITECTURES="arm64,x86_64"
     # One native build per architecture, then `lipo` — not the Swift Build
     # backend's multi-architecture mode, which cannot link this package at all.
+    # Since Swift 6.4 (Xcode 27) `swiftbuild` is the default backend even for a
+    # single `--arch`, so the native one is pinned explicitly.
     # Why, and what it fails with: docs/architecture/macos-release.md
     # § Architectures.
     SLICE_EXECUTABLES=()
@@ -75,7 +77,7 @@ if [[ "$CONFIGURATION" == "release" ]]; then
         # per-architecture, so a differently-spelled query would answer about a
         # different build.
         slice_executable="$(swift build --configuration "$CONFIGURATION" \
-            --arch "$slice_arch" --show-bin-path)/$EXECUTABLE_NAME"
+            --build-system native --arch "$slice_arch" --show-bin-path)/$EXECUTABLE_NAME"
         # Deleting only the final executable forces this run to relink it, while
         # every object and module cache stays. A successful `swift build` means
         # SwiftPM considered the graph up to date — which is not the same as
@@ -83,8 +85,8 @@ if [[ "$CONFIGURATION" == "release" ]]; then
         # architecture and symbol assertions below cannot tell a complete
         # universal binary built from last week's sources from today's.
         rm -f "$slice_executable"
-        swift build --configuration "$CONFIGURATION" --arch "$slice_arch" \
-            --product "$EXECUTABLE_NAME"
+        swift build --configuration "$CONFIGURATION" --build-system native \
+            --arch "$slice_arch" --product "$EXECUTABLE_NAME"
         if [[ ! -x "$slice_executable" ]]; then
             echo "error: $slice_arch build left no executable at $slice_executable" >&2
             exit 1

@@ -19,7 +19,7 @@ architectures:
 | Layer | Shape |
 |---|---|
 | Rust engine | `RustTaigi.xcframework` — **one** `macos` slice, `macos-arm64_x86_64`. Built as two thin archives and `lipo`-ed together: arm64 and x86_64 macOS are the same *platform*, and `xcodebuild -create-xcframework` rejects two libraries that resolve to it ("represent two equivalent library definitions"). |
-| App executable | One `swift build --arch <arch>` per architecture, then `lipo -create`. Deliberately not the Swift Build backend's multi-architecture mode, which SwiftPM documents for universal binaries but which cannot link this package — it drops the `@_cdecl` logger-sink symbols the Rust archive imports and fails for *both* architectures. vChewing builds per-architecture for the same reason. |
+| App executable | One `swift build --arch <arch>` per architecture, then `lipo -create`. Deliberately not the Swift Build backend's multi-architecture mode, which SwiftPM documents for universal binaries but which cannot link this package — it drops the `@_cdecl` logger-sink symbols the Rust archive imports and fails for *both* architectures. Since Swift 6.4 (Xcode 27) that backend is the default even for a single `--arch`, so `bundle-app.sh` passes `--build-system native` explicitly. vChewing builds per-architecture for the same reason. |
 | Installer | `hostArchitectures="arm64,x86_64"` in the generated distribution. |
 
 `engine/rust-toolchain.toml` declares both Apple desktop targets, so the
