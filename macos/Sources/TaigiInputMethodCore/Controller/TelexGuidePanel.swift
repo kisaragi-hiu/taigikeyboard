@@ -141,8 +141,8 @@ final class TelexGuidePanel {
         let stack = NSStackView(views: [title, grid])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 14
-        stack.edgeInsets = NSEdgeInsets(top: 22, left: 30, bottom: 20, right: 30)
+        stack.spacing = 18
+        stack.edgeInsets = NSEdgeInsets(top: 32, left: 44, bottom: 30, right: 44)
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.widthAnchor.constraint(lessThanOrEqualToConstant: maxWidth).isActive = true
         stack.layoutSubtreeIfNeeded()

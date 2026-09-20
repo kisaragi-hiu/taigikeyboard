@@ -39,10 +39,10 @@ const WINDOW_CLASS: &str = "TaigiKeyboardTelexGuide";
 const TITLE_FONT_SIZE: f32 = 22.0;
 const ROW_FONT_SIZE: f32 = 19.0;
 /// The insets and gaps of `TelexGuidePanel.makePanel` / `makeGrid`.
-const PADDING_X: f32 = 30.0;
-const PADDING_TOP: f32 = 22.0;
-const PADDING_BOTTOM: f32 = 20.0;
-const SECTION_GAP: f32 = 14.0;
+const PADDING_X: f32 = 44.0;
+const PADDING_TOP: f32 = 32.0;
+const PADDING_BOTTOM: f32 = 30.0;
+const SECTION_GAP: f32 = 18.0;
 const ROW_GAP: f32 = 6.0;
 const COLUMN_GAP: f32 = 24.0;
 
