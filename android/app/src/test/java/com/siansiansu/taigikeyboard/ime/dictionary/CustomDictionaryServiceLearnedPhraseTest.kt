@@ -12,22 +12,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
 import java.sql.Connection
-import java.sql.DriverManager
 import java.sql.SQLException
 
 class CustomDictionaryServiceLearnedPhraseTest {
-    private fun openSchema(): Connection {
-        val conn = DriverManager.getConnection("jdbc:sqlite::memory:")
-        conn.createStatement().use { stmt ->
-            stmt.executeUpdate(CustomDictionaryService.CREATE_TABLE_SQL)
-            stmt.executeUpdate(CustomDictionaryService.CREATE_LEARNED_PAIR_INDEX_SQL)
-            stmt.executeUpdate(CustomDictionaryService.CREATE_SEARCH_KEY_TABLE_SQL)
-            stmt.executeUpdate(CustomDictionaryService.CREATE_SEARCH_KEY_LOOKUP_INDEX_SQL)
-            stmt.executeUpdate(CustomDictionaryService.CREATE_SEARCH_KEY_ENTRY_INDEX_SQL)
-        }
-        return conn
-    }
-
     /** The service's learn pair: UPDATE, then INSERT only when nothing was bumped. */
     private fun learn(
         conn: Connection,
@@ -57,54 +44,6 @@ class CustomDictionaryServiceLearnedPhraseTest {
         }
     }
 
-    private fun insertManual(
-        conn: Connection,
-        id: String,
-        roman: String,
-        hanzi: String,
-    ) {
-        conn.prepareStatement("INSERT INTO custom_dictionary (id, roman, hanzi) VALUES (?, ?, ?)").use { ps ->
-            ps.setString(1, id)
-            ps.setString(2, roman)
-            ps.setString(3, hanzi)
-            ps.executeUpdate()
-        }
-    }
-
-    private fun insertSearchKey(
-        conn: Connection,
-        entryId: String,
-        family: String,
-        form: String,
-        key: String,
-    ) {
-        conn.prepareStatement("INSERT INTO custom_search_key (entry_id, family, form, key) VALUES (?, ?, ?, ?)").use { ps ->
-            ps.setString(1, entryId)
-            ps.setString(2, family)
-            ps.setString(3, form)
-            ps.setString(4, key)
-            ps.executeUpdate()
-        }
-    }
-
-    private fun ids(
-        conn: Connection,
-        sql: String,
-        vararg args: Any,
-    ): List<String> {
-        val out = mutableListOf<String>()
-        conn.prepareStatement(sql).use { ps ->
-            args.forEachIndexed { i, arg ->
-                when (arg) {
-                    is Int -> ps.setInt(i + 1, arg)
-                    else -> ps.setString(i + 1, arg.toString())
-                }
-            }
-            ps.executeQuery().use { rs -> while (rs.next()) out.add(rs.getString(1)) }
-        }
-        return out
-    }
-
     private fun learnedRows(conn: Connection): List<Pair<String, Int>> {
         val out = mutableListOf<Pair<String, Int>>()
         conn.createStatement().use { st ->
@@ -117,7 +56,7 @@ class CustomDictionaryServiceLearnedPhraseTest {
 
     @Test
     fun learnPair_foldsARepeatIntoOneRowAndClampsTheCount() {
-        openSchema().use { conn ->
+        openCustomDictionarySchema().use { conn ->
             learn(conn, "l1", "記起來", "kì--khí-lâi")
             learn(conn, "l2", "記起來", "kì--khí-lâi")
             assertEquals(listOf("記起來" to 2), learnedRows(conn))
@@ -128,7 +67,7 @@ class CustomDictionaryServiceLearnedPhraseTest {
 
     @Test
     fun learnedPairIndex_rejectsASecondLearnedRowForThePair_butNotAManualOne() {
-        openSchema().use { conn ->
+        openCustomDictionarySchema().use { conn ->
             learn(conn, "l1", "記起來", "kì--khí-lâi")
             assertThrows(SQLException::class.java) {
                 conn.prepareStatement(CustomDictionaryService.LEARN_INSERT_SQL).use { ps ->
@@ -143,39 +82,39 @@ class CustomDictionaryServiceLearnedPhraseTest {
                 }
             }
             // Manual rows keep their duplicate tolerance (partial index).
-            insertManual(conn, "m1", "kì--khí-lâi", "記起來")
-            insertManual(conn, "m2", "kì--khí-lâi", "記起來")
+            conn.insertEntry("m1", "kì--khí-lâi", "記起來")
+            conn.insertEntry("m2", "kì--khí-lâi", "記起來")
         }
     }
 
     @Test
     fun prefixSearchIsManualOnly_exactLearnedSearchIsLearnedOnly() {
-        openSchema().use { conn ->
+        openCustomDictionarySchema().use { conn ->
             learn(conn, "l1", "記起來", "kì--khí-lâi")
-            insertSearchKey(conn, "l1", "tl", "notone", "kikhilai")
-            insertManual(conn, "m1", "kì-khí", "記起")
-            insertSearchKey(conn, "m1", "tl", "notone", "kikhi")
+            conn.insertSearchKey("l1", "tl", "notone", "kikhilai")
+            conn.insertEntry("m1", "kì-khí", "記起")
+            conn.insertSearchKey("m1", "tl", "notone", "kikhi")
 
-            assertEquals(listOf("m1"), ids(conn, CustomDictionaryService.SEARCH_SQL, "tl", "notone", "ki", 20))
-            assertEquals(listOf("l1"), ids(conn, CustomDictionaryService.LEARNED_EXACT_SQL, "tl", "notone", "kikhilai", 5))
-            assertEquals(emptyList<String>(), ids(conn, CustomDictionaryService.LEARNED_EXACT_SQL, "tl", "notone", "kikhi", 5))
-            assertEquals(emptyList<String>(), ids(conn, CustomDictionaryService.LEARNED_EXACT_SQL, "tl", "notone", "ki", 5))
+            assertEquals(listOf("m1"), conn.queryIds(CustomDictionaryService.SEARCH_SQL, "tl", "notone", "ki", 20))
+            assertEquals(listOf("l1"), conn.queryIds(CustomDictionaryService.LEARNED_EXACT_SQL, "tl", "notone", "kikhilai", 5))
+            assertEquals(emptyList<String>(), conn.queryIds(CustomDictionaryService.LEARNED_EXACT_SQL, "tl", "notone", "kikhi", 5))
+            assertEquals(emptyList<String>(), conn.queryIds(CustomDictionaryService.LEARNED_EXACT_SQL, "tl", "notone", "ki", 5))
         }
     }
 
     @Test
     fun evictionPastTheCap_dropsFewestComposedFirst_andSparesTheKeptRow() {
-        openSchema().use { conn ->
+        openCustomDictionarySchema().use { conn ->
             learn(conn, "l1", "詞一", "su-it")
             learn(conn, "l2", "詞二", "su-jī")
             learn(conn, "l2", "詞二", "su-jī")
             learn(conn, "l3", "詞三", "su-sann")
             // cap 2 → one row past the cap once l3 (just written) is set aside;
             // the count-1 row l1 goes, not the count-2 row l2.
-            val victims = ids(conn, CustomDictionaryCapacityPolicy.LEARNED_PAST_CAP_SQL, "l3", 1)
+            val victims = conn.queryIds(CustomDictionaryCapacityPolicy.LEARNED_PAST_CAP_SQL, "l3", 1)
             assertEquals(listOf("l1"), victims)
             // Under the cap → nothing.
-            assertEquals(emptyList<String>(), ids(conn, CustomDictionaryCapacityPolicy.LEARNED_PAST_CAP_SQL, "l3", 5))
+            assertEquals(emptyList<String>(), conn.queryIds(CustomDictionaryCapacityPolicy.LEARNED_PAST_CAP_SQL, "l3", 5))
         }
     }
 }

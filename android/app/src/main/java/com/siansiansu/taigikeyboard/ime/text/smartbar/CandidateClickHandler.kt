@@ -389,12 +389,11 @@ class CandidateClickHandler(
         // §50 — same gate for both learned-store writes: the phrase the
         // engine just learned, and the touch-on-use bump for a learned row
         // picked whole (no-op for any other row).
-        if (result.didCommit && prefs.phraseLearningEnabled) {
-            result.learnedPhrase?.let { (learnedHanji, learnedTl) ->
-                scope.launch { customDict.learnPhrase(learnedHanji, learnedTl) }
-            }
-            if (hanji != null) {
-                scope.launch { customDict.touchLearnedPhrase(hanji, associationTl) }
+        val learned = result.learnedPhrase
+        if (result.didCommit && prefs.phraseLearningEnabled && (learned != null || hanji != null)) {
+            scope.launch {
+                learned?.let { customDict.learnPhrase(it.hanji, it.canonicalTl) }
+                if (hanji != null) customDict.touchLearnedPhrase(hanji, associationTl)
             }
         }
 

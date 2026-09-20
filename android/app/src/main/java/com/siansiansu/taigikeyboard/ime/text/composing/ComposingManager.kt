@@ -822,7 +822,6 @@ class ComposingManager(
             transition.effects
                 .filterIsInstance<RustEngineBridge.ComposingTransition.Effect.PhraseLearned>()
                 .firstOrNull()
-                ?.let { it.hanji to it.canonicalTl }
         selfCommitInProgress = true
         try {
             applyTransition(transition, ic)

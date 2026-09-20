@@ -1,9 +1,10 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.content.Context
-import com.siansiansu.taigikeyboard.engine.pojToTl
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.pojToTl
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService.Entry.Origin
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -141,7 +142,7 @@ class BackupService(
         val existing = customDict.fetchAll()
         // Manual over learned when both exist for a pair (the service does
         // not let that state persist, but a stale list is cheap to fold).
-        val originByPair = mutableMapOf<String, CustomDictionaryService.Entry.Origin>()
+        val originByPair = mutableMapOf<String, Origin>()
         for (row in existing.sortedBy { !it.isLearned }) {
             originByPair["${row.roman}\t${row.hanzi}"] = row.origin
         }
@@ -158,17 +159,16 @@ class BackupService(
             if (roman.isEmpty() || hanzi.isEmpty()) continue
 
             val key = "$roman\t$hanzi"
-            val origin =
-                CustomDictionaryService.Entry.Origin.fromRaw(
-                    if (obj.has("origin")) obj.optInt("origin") else null,
-                )
-            when {
-                originByPair[key] == CustomDictionaryService.Entry.Origin.MANUAL -> continue
-                origin == CustomDictionaryService.Entry.Origin.LEARNED -> {
-                    if (originByPair[key] == CustomDictionaryService.Entry.Origin.LEARNED) continue
-                    customDict.learnPhrase(hanzi, roman, count = obj.optInt("learnCount", 1))
+            val origin = Origin.fromRaw(obj.optInt("origin"))
+            // Same two skip rules as iOS: a manual row on device wins, and a
+            // pair already learned is not learned again.
+            val existing = originByPair[key]
+            if (existing == Origin.MANUAL || existing == origin) continue
+            when (origin) {
+                Origin.LEARNED -> {
+                    if (!customDict.learnPhrase(hanzi, roman, count = obj.optInt("learnCount", 1))) continue
                 }
-                else -> {
+                Origin.MANUAL -> {
                     if (manualRemaining <= 0) break
                     customDict.save(CustomDictionaryService.Entry(roman = roman, hanzi = hanzi))
                     manualRemaining--

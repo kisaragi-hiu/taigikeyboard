@@ -386,18 +386,8 @@ fun CustomDictionaryScreen(
                                         }.padding(vertical = 12.dp),
                             )
                             if (entry.isLearned) {
-                                Text(
-                                    text = L10n.dictionaryLearnedBadge,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    modifier =
-                                        Modifier
-                                            .padding(end = 8.dp)
-                                            .background(
-                                                MaterialTheme.colorScheme.surfaceVariant,
-                                                RoundedCornerShape(4.dp),
-                                            ).padding(horizontal = 5.dp, vertical = 2.dp),
-                                )
+                                SourceBadge(text = L10n.dictionaryLearnedBadge, style = MaterialTheme.typography.labelSmall)
+                                Spacer(Modifier.width(8.dp))
                             }
                             IconButton(
                                 onClick = { viewModel.delete(entry.id) },

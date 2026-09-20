@@ -5,7 +5,6 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.net.Uri
 import androidx.core.database.sqlite.transaction
-import com.siansiansu.taigikeyboard.ime.core.db.bindArgs
 import com.siansiansu.taigikeyboard.ime.core.db.rowCount
 import com.siansiansu.taigikeyboard.ime.core.db.upsert
 import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
@@ -80,9 +79,10 @@ class CustomDictionaryService(
         /**
          * §50 learn pair (`upsert` shape, SQLite 3.22 ceiling — no `ON
          * CONFLICT DO UPDATE`): bump the learned row for the pair, else insert
-         * it. Args: (count, hanzi, roman) for the UPDATE; the INSERT binds
-         * (count, hanzi, roman, id, notone, abbrev, roman_num). The
-         * learned-pair unique index keeps the pair single.
+         * it (the caller decides which after one lookup). Args: (count,
+         * hanzi, roman) for the UPDATE; the INSERT binds (count, hanzi, roman,
+         * id, notone, abbrev, roman_num). The learned-pair unique index keeps
+         * the pair single.
          */
         internal val LEARN_UPDATE_SQL =
             """
@@ -120,7 +120,8 @@ class CustomDictionaryService(
             );
             """.trimIndent()
 
-        private const val ENTRY_COLUMNS = "c.id, c.roman, c.hanzi, c.created_at, c.updated_at, c.origin, c.learn_count"
+        /** The columns [readEntries] expects, in order; unambiguous in the side-table JOINs too. */
+        private const val ENTRY_COLUMNS = "id, roman, hanzi, created_at, updated_at, origin, learn_count"
 
         // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryRepository.swift `prefixSearchSQL`.
         // Drift causes silent divergence. `origin = 0`: manual rows only (§50) —
@@ -242,16 +243,13 @@ class CustomDictionaryService(
         hanzi: String,
         exceptId: String,
     ) {
-        val learnedIds =
-            db
-                .rawQuery(
-                    "SELECT ${Table.ID} FROM ${Table.NAME} WHERE ${Table.ORIGIN} = 1 AND ${Table.ROMAN} = ? AND ${Table.HANZI} = ? AND ${Table.ID} <> ?",
-                    arrayOf(roman, hanzi, exceptId),
-                ).use { cursor -> generateSequence { if (cursor.moveToNext()) cursor.getString(0) else null }.toList() }
-        for (learnedId in learnedIds) {
-            db.delete(Table.NAME, "${Table.ID} = ?", arrayOf(learnedId))
-            db.delete(SearchKeyTable.NAME, "${SearchKeyTable.ENTRY_ID} = ?", arrayOf(learnedId))
-        }
+        val where = "${Table.ORIGIN} = 1 AND ${Table.ROMAN} = ? AND ${Table.HANZI} = ? AND ${Table.ID} <> ?"
+        val args = arrayOf(roman, hanzi, exceptId)
+        db.execSQL(
+            "DELETE FROM ${SearchKeyTable.NAME} WHERE ${SearchKeyTable.ENTRY_ID} IN (SELECT ${Table.ID} FROM ${Table.NAME} WHERE $where)",
+            args,
+        )
+        db.execSQL("DELETE FROM ${Table.NAME} WHERE $where", args)
     }
 
     private suspend fun initialize() {
@@ -285,7 +283,7 @@ class CustomDictionaryService(
             ;
 
             companion object {
-                fun fromRaw(raw: Int?): Origin = entries.firstOrNull { it.raw == raw } ?: MANUAL
+                fun fromRaw(raw: Int): Origin = entries.firstOrNull { it.raw == raw } ?: MANUAL
             }
         }
 
@@ -332,7 +330,7 @@ class CustomDictionaryService(
                 val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
                 db
                     .rawQuery(
-                        "SELECT ${Table.ID}, ${Table.ROMAN}, ${Table.HANZI}, ${Table.CREATED_AT}, ${Table.UPDATED_AT}, ${Table.ORIGIN}, ${Table.LEARN_COUNT} FROM ${Table.NAME} ORDER BY ${Table.UPDATED_AT} DESC",
+                        "SELECT $ENTRY_COLUMNS FROM ${Table.NAME} ORDER BY ${Table.UPDATED_AT} DESC",
                         null,
                     ).use { readEntries(it) }
             } catch (e: Exception) {
@@ -442,49 +440,53 @@ class CustomDictionaryService(
      * — the [LEARN_UPDATE_SQL] / [LEARN_INSERT_SQL] pair on the learned-pair
      * unique index. A manual row for the same pair wins (no-op, never
      * downgraded). Manual check, write, side keys and eviction run in ONE
-     * transaction; the row just written is never evicted.
+     * transaction; the row just written is never evicted. Returns `false`
+     * when the write failed (logged), so the backup importer does not count
+     * a row that never landed.
      */
     suspend fun learnPhrase(
         hanzi: String,
         canonicalTl: String,
         count: Int = 1,
-    ) = withContext(Dispatchers.IO) {
-        if (hanzi.isEmpty() || canonicalTl.isEmpty()) return@withContext
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (hanzi.isEmpty() || canonicalTl.isEmpty()) return@withContext false
         val boundedCount = count.coerceIn(1, MAX_LEARN_COUNT)
         try {
             initialize()
-            val db = dbHelper?.writableDatabase ?: return@withContext
+            val db = dbHelper?.writableDatabase ?: return@withContext false
             db.transaction {
-                if (manualRowExists(this, canonicalTl, hanzi)) return@transaction
-                val entry = Entry(roman = canonicalTl, hanzi = hanzi, origin = Entry.Origin.LEARNED, learnCount = boundedCount)
-                val bumped =
-                    compileStatement(LEARN_UPDATE_SQL).use { update ->
-                        update.bindArgs(boundedCount, hanzi, canonicalTl)
-                        update.executeUpdateDelete()
+                // One lookup decides: a manual row wins, a learned row is
+                // bumped in place (its keys are already there and its count
+                // cannot push past the cap), nothing → a fresh learned row.
+                val existing = rowForPair(this, canonicalTl, hanzi)
+                when (existing?.second) {
+                    Entry.Origin.MANUAL -> return@transaction
+                    Entry.Origin.LEARNED -> {
+                        execSQL(LEARN_UPDATE_SQL, arrayOf<Any>(boundedCount, hanzi, canonicalTl))
+                        return@transaction
                     }
-                val rowId =
-                    if (bumped > 0) {
-                        learnedRowId(this, canonicalTl, hanzi) ?: return@transaction
-                    } else {
-                        compileStatement(LEARN_INSERT_SQL).use { insert ->
-                            insert.bindArgs(
-                                boundedCount,
-                                hanzi,
-                                canonicalTl,
-                                entry.id,
-                                CustomDictionaryDerivation.generateNotone(canonicalTl),
-                                CustomDictionaryDerivation.generateAbbrev(canonicalTl),
-                                CustomDictionaryDerivation.generateRomanNum(canonicalTl),
-                            )
-                            insert.executeInsert()
-                        }
-                        entry.id
-                    }
-                rewriteSearchKeys(this, rowId, canonicalTl)
-                CustomDictionaryCapacityPolicy.evictLearnedPastCap(this, keptId = rowId)
+                    null -> Unit
+                }
+                val id = UUID.randomUUID().toString()
+                execSQL(
+                    LEARN_INSERT_SQL,
+                    arrayOf<Any>(
+                        boundedCount,
+                        hanzi,
+                        canonicalTl,
+                        id,
+                        CustomDictionaryDerivation.generateNotone(canonicalTl),
+                        CustomDictionaryDerivation.generateAbbrev(canonicalTl),
+                        CustomDictionaryDerivation.generateRomanNum(canonicalTl),
+                    ),
+                )
+                rewriteSearchKeys(this, id, canonicalTl)
+                CustomDictionaryCapacityPolicy.evictLearnedPastCap(this, keptId = id)
             }
+            true
         } catch (e: Exception) {
             logger.e(TAG, "[LEARN] Failed", e)
+            false
         }
     }
 
@@ -526,27 +528,17 @@ class CustomDictionaryService(
             }
         }
 
-    private fun manualRowExists(
+    /** `(id, origin)` of the row for the pair — a manual one first when both exist. */
+    private fun rowForPair(
         db: SQLiteDatabase,
         roman: String,
         hanzi: String,
-    ): Boolean =
+    ): Pair<String, Entry.Origin>? =
         db
             .rawQuery(
-                "SELECT 1 FROM ${Table.NAME} WHERE ${Table.ORIGIN} = 0 AND ${Table.ROMAN} = ? AND ${Table.HANZI} = ? LIMIT 1",
+                "SELECT ${Table.ID}, ${Table.ORIGIN} FROM ${Table.NAME} WHERE ${Table.ROMAN} = ? AND ${Table.HANZI} = ? ORDER BY ${Table.ORIGIN} LIMIT 1",
                 arrayOf(roman, hanzi),
-            ).use { it.moveToFirst() }
-
-    private fun learnedRowId(
-        db: SQLiteDatabase,
-        roman: String,
-        hanzi: String,
-    ): String? =
-        db
-            .rawQuery(
-                "SELECT ${Table.ID} FROM ${Table.NAME} WHERE ${Table.ORIGIN} = 1 AND ${Table.ROMAN} = ? AND ${Table.HANZI} = ? LIMIT 1",
-                arrayOf(roman, hanzi),
-            ).use { if (it.moveToFirst()) it.getString(0) else null }
+            ).use { if (it.moveToFirst()) it.getString(0) to Entry.Origin.fromRaw(it.getInt(1)) else null }
 
     // MARK: - Export
 
