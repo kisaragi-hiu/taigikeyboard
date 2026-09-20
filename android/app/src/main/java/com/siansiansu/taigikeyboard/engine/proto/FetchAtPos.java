@@ -102,6 +102,7 @@ public  final class FetchAtPos extends
   private FetchAtPos() {
     frequencyEntries_ = emptyProtobufList();
     customEntries_ = emptyProtobufList();
+    learnedEntries_ = emptyProtobufList();
   }
   public static final int POSITION_FIELD_NUMBER = 1;
   private int position_;
@@ -393,6 +394,210 @@ public  final class FetchAtPos extends
   private void clearLiteralRomanCandidateDisabled() {
 
     literalRomanCandidateDisabled_ = false;
+  }
+
+  public static final int LEARNED_ENTRIES_FIELD_NUMBER = 7;
+  private com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> learnedEntries_;
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> getLearnedEntriesList() {
+    return learnedEntries_;
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.LearnedEntryOrBuilder>
+      getLearnedEntriesOrBuilderList() {
+    return learnedEntries_;
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  @java.lang.Override
+  public int getLearnedEntriesCount() {
+    return learnedEntries_.size();
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.LearnedEntry getLearnedEntries(int index) {
+    return learnedEntries_.get(index);
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  public com.siansiansu.taigikeyboard.engine.proto.LearnedEntryOrBuilder getLearnedEntriesOrBuilder(
+      int index) {
+    return learnedEntries_.get(index);
+  }
+  private void ensureLearnedEntriesIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> tmp = learnedEntries_;
+    if (!tmp.isModifiable()) {
+      learnedEntries_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  private void setLearnedEntries(
+      int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
+    java.util.Objects.requireNonNull(value);
+    ensureLearnedEntriesIsMutable();
+    learnedEntries_.set(index, value);
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  private void addLearnedEntries(com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
+    java.util.Objects.requireNonNull(value);
+    ensureLearnedEntriesIsMutable();
+    learnedEntries_.add(value);
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  private void addLearnedEntries(
+      int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
+    java.util.Objects.requireNonNull(value);
+    ensureLearnedEntriesIsMutable();
+    learnedEntries_.add(index, value);
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  private void addAllLearnedEntries(
+      java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> values) {
+    ensureLearnedEntriesIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, learnedEntries_);
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  private void clearLearnedEntries() {
+    learnedEntries_ = emptyProtobufList();
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  private void removeLearnedEntries(int index) {
+    ensureLearnedEntriesIsMutable();
+    learnedEntries_.remove(index);
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.FetchAtPos parseFrom(
@@ -893,6 +1098,228 @@ public  final class FetchAtPos extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    @java.lang.Override
+    public java.util.List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> getLearnedEntriesList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getLearnedEntriesList());
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    @java.lang.Override
+    public int getLearnedEntriesCount() {
+      return instance.getLearnedEntriesCount();
+    }/**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.LearnedEntry getLearnedEntries(int index) {
+      return instance.getLearnedEntries(index);
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    public Builder setLearnedEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
+      copyOnWrite();
+      instance.setLearnedEntries(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    public Builder setLearnedEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.setLearnedEntries(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    public Builder addLearnedEntries(com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
+      copyOnWrite();
+      instance.addLearnedEntries(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    public Builder addLearnedEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry value) {
+      copyOnWrite();
+      instance.addLearnedEntries(index, value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    public Builder addLearnedEntries(
+        com.siansiansu.taigikeyboard.engine.proto.LearnedEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.addLearnedEntries(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    public Builder addLearnedEntries(
+        int index, com.siansiansu.taigikeyboard.engine.proto.LearnedEntry.Builder builderForValue) {
+      copyOnWrite();
+      instance.addLearnedEntries(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    public Builder addAllLearnedEntries(
+        java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> values) {
+      copyOnWrite();
+      instance.addAllLearnedEntries(values);
+      return this;
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    public Builder clearLearnedEntries() {
+      copyOnWrite();
+      instance.clearLearnedEntries();
+      return this;
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the platform's auto-learned rows whose
+     * whole-buffer key equals the current raw buffer (exact match, not the
+     * prefix search `custom_entries` rides). Kept apart from
+     * `custom_entries` on purpose: a manual custom row overrides the walker
+     * edge unconditionally, a learned row only COMPETES with the dictionary
+     * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+     * un-wired build → no learned candidates.
+     * </pre>
+     *
+     * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+     */
+    public Builder removeLearnedEntries(int index) {
+      copyOnWrite();
+      instance.removeLearnedEntries(index);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.FetchAtPos)
   }
   @java.lang.Override
@@ -917,10 +1344,12 @@ public  final class FetchAtPos extends
             com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry.class,
             "enabledSourcesBitmask_",
             "literalRomanCandidateDisabled_",
+            "learnedEntries_",
+            com.siansiansu.taigikeyboard.engine.proto.LearnedEntry.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0000\u0001\u0006\u0006\u0000\u0002\u0000\u0001\u000b\u0002\u001b" +
-              "\u0003\u0002\u0004\u001b\u0005\u000b\u0006\u0007";
+              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0003\u0000\u0001\u000b\u0002\u001b" +
+              "\u0003\u0002\u0004\u001b\u0005\u000b\u0006\u0007\u0007\u001b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

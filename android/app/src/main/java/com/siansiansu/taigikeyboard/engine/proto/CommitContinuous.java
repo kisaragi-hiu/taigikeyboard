@@ -35,7 +35,9 @@ public  final class CommitContinuous extends
     displayText_ = "";
     canonicalText_ = "";
     associationTl_ = "";
+    hanji_ = "";
   }
+  private int bitField0_;
   public static final int DISPLAY_TEXT_FIELD_NUMBER = 1;
   private java.lang.String displayText_;
   /**
@@ -392,6 +394,133 @@ public  final class CommitContinuous extends
     checkByteStringIsUtf8(value);
     associationTl_ = value.toStringUtf8();
 
+  }
+
+  public static final int HANJI_FIELD_NUMBER = 6;
+  private java.lang.String hanji_;
+  /**
+   * <pre>
+   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+   * whenever the picked candidate carries hanji regardless of which script
+   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+   * and for legacy callers; a composition with any hanji-less segment is
+   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+   * F2: hanji is an explicit sidechannel, never inferred from
+   * `canonical_text` vs `association_tl`).
+   * </pre>
+   *
+   * <code>optional string hanji = 6;</code>
+   * @return Whether the hanji field is set.
+   */
+  @java.lang.Override
+  public boolean hasHanji() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+   * whenever the picked candidate carries hanji regardless of which script
+   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+   * and for legacy callers; a composition with any hanji-less segment is
+   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+   * F2: hanji is an explicit sidechannel, never inferred from
+   * `canonical_text` vs `association_tl`).
+   * </pre>
+   *
+   * <code>optional string hanji = 6;</code>
+   * @return The hanji.
+   */
+  @java.lang.Override
+  public java.lang.String getHanji() {
+    return hanji_;
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+   * whenever the picked candidate carries hanji regardless of which script
+   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+   * and for legacy callers; a composition with any hanji-less segment is
+   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+   * F2: hanji is an explicit sidechannel, never inferred from
+   * `canonical_text` vs `association_tl`).
+   * </pre>
+   *
+   * <code>optional string hanji = 6;</code>
+   * @return The bytes for hanji.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getHanjiBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(hanji_);
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+   * whenever the picked candidate carries hanji regardless of which script
+   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+   * and for legacy callers; a composition with any hanji-less segment is
+   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+   * F2: hanji is an explicit sidechannel, never inferred from
+   * `canonical_text` vs `association_tl`).
+   * </pre>
+   *
+   * <code>optional string hanji = 6;</code>
+   * @param value The hanji to set.
+   */
+  private void setHanji(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+    bitField0_ |= 0x00000001;
+    hanji_ = value;
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+   * whenever the picked candidate carries hanji regardless of which script
+   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+   * and for legacy callers; a composition with any hanji-less segment is
+   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+   * F2: hanji is an explicit sidechannel, never inferred from
+   * `canonical_text` vs `association_tl`).
+   * </pre>
+   *
+   * <code>optional string hanji = 6;</code>
+   */
+  private void clearHanji() {
+    bitField0_ = (bitField0_ & ~0x00000001);
+    hanji_ = getDefaultInstance().getHanji();
+  }
+  /**
+   * <pre>
+   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+   * whenever the picked candidate carries hanji regardless of which script
+   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+   * and for legacy callers; a composition with any hanji-less segment is
+   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+   * F2: hanji is an explicit sidechannel, never inferred from
+   * `canonical_text` vs `association_tl`).
+   * </pre>
+   *
+   * <code>optional string hanji = 6;</code>
+   * @param value The bytes for hanji to set.
+   */
+  private void setHanjiBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    hanji_ = value.toStringUtf8();
+    bitField0_ |= 0x00000001;
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.CommitContinuous parseFrom(
@@ -876,6 +1005,135 @@ public  final class CommitContinuous extends
       return this;
     }
 
+    /**
+     * <pre>
+     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+     * whenever the picked candidate carries hanji regardless of which script
+     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+     * and for legacy callers; a composition with any hanji-less segment is
+     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+     * F2: hanji is an explicit sidechannel, never inferred from
+     * `canonical_text` vs `association_tl`).
+     * </pre>
+     *
+     * <code>optional string hanji = 6;</code>
+     * @return Whether the hanji field is set.
+     */
+    @java.lang.Override
+    public boolean hasHanji() {
+      return instance.hasHanji();
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+     * whenever the picked candidate carries hanji regardless of which script
+     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+     * and for legacy callers; a composition with any hanji-less segment is
+     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+     * F2: hanji is an explicit sidechannel, never inferred from
+     * `canonical_text` vs `association_tl`).
+     * </pre>
+     *
+     * <code>optional string hanji = 6;</code>
+     * @return The hanji.
+     */
+    @java.lang.Override
+    public java.lang.String getHanji() {
+      return instance.getHanji();
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+     * whenever the picked candidate carries hanji regardless of which script
+     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+     * and for legacy callers; a composition with any hanji-less segment is
+     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+     * F2: hanji is an explicit sidechannel, never inferred from
+     * `canonical_text` vs `association_tl`).
+     * </pre>
+     *
+     * <code>optional string hanji = 6;</code>
+     * @return The bytes for hanji.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getHanjiBytes() {
+      return instance.getHanjiBytes();
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+     * whenever the picked candidate carries hanji regardless of which script
+     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+     * and for legacy callers; a composition with any hanji-less segment is
+     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+     * F2: hanji is an explicit sidechannel, never inferred from
+     * `canonical_text` vs `association_tl`).
+     * </pre>
+     *
+     * <code>optional string hanji = 6;</code>
+     * @param value The hanji to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHanji(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setHanji(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+     * whenever the picked candidate carries hanji regardless of which script
+     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+     * and for legacy callers; a composition with any hanji-less segment is
+     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+     * F2: hanji is an explicit sidechannel, never inferred from
+     * `canonical_text` vs `association_tl`).
+     * </pre>
+     *
+     * <code>optional string hanji = 6;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearHanji() {
+      copyOnWrite();
+      instance.clearHanji();
+      return this;
+    }
+    /**
+     * <pre>
+     * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+     * whenever the picked candidate carries hanji regardless of which script
+     * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+     * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+     * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+     * and for legacy callers; a composition with any hanji-less segment is
+     * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+     * F2: hanji is an explicit sidechannel, never inferred from
+     * `canonical_text` vs `association_tl`).
+     * </pre>
+     *
+     * <code>optional string hanji = 6;</code>
+     * @param value The bytes for hanji to set.
+     * @return This builder for chaining.
+     */
+    public Builder setHanjiBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setHanjiBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CommitContinuous)
   }
   @java.lang.Override
@@ -892,15 +1150,17 @@ public  final class CommitContinuous extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "displayText_",
             "consumedBytes_",
             "syllableCount_",
             "canonicalText_",
             "associationTl_",
+            "hanji_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0000\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
-              "\u0003\u000b\u0004\u0208\u0005\u0208";
+              "\u0000\u0006\u0000\u0001\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
+              "\u0003\u000b\u0004\u0208\u0005\u0208\u0006\u1208\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

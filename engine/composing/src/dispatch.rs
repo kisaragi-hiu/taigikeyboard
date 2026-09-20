@@ -26,7 +26,7 @@ use crate::api::{CaretDirection, ComposingError, Engine, Intent, Phase};
 use crate::continuous::{assemble_candidates, retain_first_by_key};
 use crate::shadow::{build_shadow_lattice_with_barriers, left_anchored_keys_and_restrictions};
 use lexicon::{
-    classification::is_hanzi, derive_mode, ConsumedSpan, CustomEntry, RawCandidate,
+    classification::is_hanzi, derive_mode, ConsumedSpan, CustomEntry, LearnedEntry, RawCandidate,
     SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
 };
 use phonetics::contains_tps;
@@ -70,11 +70,13 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             custom_entries: m.custom_entries,
             enabled_sources_bitmask: m.enabled_sources_bitmask,
             literal_roman_candidate_disabled: m.literal_roman_candidate_disabled,
+            learned_entries: m.learned_entries,
         },
         Method::CommitContinuous(m) => Intent::CommitContinuous {
             display_text: m.display_text,
             canonical_text: m.canonical_text,
             association_tl: m.association_tl,
+            hanji: m.hanji,
             consumed_bytes: m.consumed_bytes as usize,
             syllable_count: clamp_syllable_count(m.syllable_count),
         },
@@ -132,12 +134,14 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
             custom_entries,
             enabled_sources_bitmask,
             literal_roman_candidate_disabled,
+            learned_entries,
         } => handle_fetch_at_pos(
             engine,
             *position,
             frequency_entries,
             *now_ms,
             custom_entries,
+            learned_entries,
             *enabled_sources_bitmask,
             *literal_roman_candidate_disabled,
             config,
@@ -170,6 +174,7 @@ fn handle_fetch_at_pos(
     frequency_entries: &[FrequencyEntry],
     now_ms: i64,
     custom_entries: &[CustomDictEntry],
+    learned_entries: &[protos::engine::LearnedEntry],
     enabled_sources_bitmask: u32,
     literal_roman_candidate_disabled: bool,
     config: &AppConfig,
@@ -238,6 +243,9 @@ fn handle_fetch_at_pos(
     // and the `(roman, hanji)` dedupe is a no-op (backward-compatible
     // with builds that never set `FetchAtPos.custom_entries`).
     let custom = build_custom_entries(custom_entries);
+    // Learned phrases (§50) — same proto→domain hoist as `custom` above.
+    // Empty list = feature off / un-wired build → no learned candidates.
+    let learned = build_learned_entries(learned_entries);
     // PR-9.6 — normalise the source-toggle bitmask at the proto→domain
     // boundary: proto3 default `0` means "platform did not wire this"
     // (older / un-wired build) and maps to `u32::MAX` (legacy all-on),
@@ -265,6 +273,7 @@ fn handle_fetch_at_pos(
         &freq_map,
         now_ms,
         &custom,
+        &learned,
         mode,
         enabled_sources_bitmask,
         config.hyphenless_roman,
@@ -501,6 +510,22 @@ fn build_custom_entries(entries: &[CustomDictEntry]) -> Vec<CustomEntry> {
         .map(|e| CustomEntry {
             roman: e.roman.clone(),
             hanji: e.hanji.clone(),
+        })
+        .collect()
+}
+
+/// Learned phrases (§50) — hoist proto-shaped `LearnedEntry[]` into the
+/// domain-typed [`LearnedEntry`] list (mirror of [`build_custom_entries`]).
+/// Both strings are canonical already (hanji as committed, canonical TL as
+/// `Effect.PhraseLearned` emitted it), so nothing is folded here; the
+/// per-mode lattice key is derived at the walker (`learned_edge_key`).
+fn build_learned_entries(entries: &[protos::engine::LearnedEntry]) -> Vec<LearnedEntry> {
+    entries
+        .iter()
+        .filter(|e| !e.hanji.is_empty() && !e.canonical_tl.is_empty())
+        .map(|e| LearnedEntry {
+            hanji: e.hanji.clone(),
+            canonical_tl: e.canonical_tl.clone(),
         })
         .collect()
 }

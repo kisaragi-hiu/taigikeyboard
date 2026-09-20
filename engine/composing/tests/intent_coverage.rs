@@ -437,6 +437,7 @@ fn nail(engine: &mut Engine, display_text: &str, consumed_bytes: usize) {
             display_text: display_text.to_string(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes,
             syllable_count: 1,
         },

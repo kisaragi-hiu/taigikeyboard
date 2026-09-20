@@ -71,7 +71,7 @@ final class ClientEffectExecutor: ComposingEffectExecutor {
             // decode time so the case is visible when that surface lands.
             break
 
-        case .nextWordUpdateLastSelectedWord, .nextWordWordSelected, .nextWordClearForNewComposing:
+        case .nextWordUpdateLastSelectedWord, .nextWordWordSelected, .nextWordClearForNewComposing, .phraseLearned:
             // Never delivered: `ComposingManager` routes the learning
             // handshakes to `NextWordLearner` instead, because they write to a
             // database rather than to this client's document. Kept in the

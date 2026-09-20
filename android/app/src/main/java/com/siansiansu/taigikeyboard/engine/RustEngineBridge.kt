@@ -390,6 +390,17 @@ object RustEngineBridge {
              * distinct `ResetFull` intent.
              */
             object NextWordClearForNewComposing : Effect()
+
+            /**
+             * Learned phrases (§50) — the final continuous commit was a sequence
+             * of hanji picks; the platform upserts the `(hanji, canonicalTl)` pair
+             * into its learned store.
+             */
+            data class PhraseLearned(
+                val hanji: String,
+                val canonicalTl: String,
+                val syllableCount: Int,
+            ) : Effect()
         }
 
         companion object {

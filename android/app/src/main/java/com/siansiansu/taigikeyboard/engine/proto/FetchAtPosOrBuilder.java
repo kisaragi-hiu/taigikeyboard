@@ -61,4 +61,48 @@ public interface FetchAtPosOrBuilder extends
    * @return The literalRomanCandidateDisabled.
    */
   boolean getLiteralRomanCandidateDisabled();
+
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry>
+      getLearnedEntriesList();
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  com.siansiansu.taigikeyboard.engine.proto.LearnedEntry getLearnedEntries(int index);
+  /**
+   * <pre>
+   * Learned phrases (§50) — the platform's auto-learned rows whose
+   * whole-buffer key equals the current raw buffer (exact match, not the
+   * prefix search `custom_entries` rides). Kept apart from
+   * `custom_entries` on purpose: a manual custom row overrides the walker
+   * edge unconditionally, a learned row only COMPETES with the dictionary
+   * rows under the same key (Codex 2026-09-20 F5). Empty = feature off /
+   * un-wired build → no learned candidates.
+   * </pre>
+   *
+   * <code>repeated .taigi.engine.LearnedEntry learned_entries = 7;</code>
+   */
+  int getLearnedEntriesCount();
 }

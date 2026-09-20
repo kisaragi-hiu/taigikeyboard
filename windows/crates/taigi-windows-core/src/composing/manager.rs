@@ -468,6 +468,10 @@ impl ComposingManager {
                 // shows no predictions, so there is nothing to hide and the
                 // context is exactly what must survive.
                 Effect::NextWordClearForNewComposing => {}
+                // Learned phrases (§50): the desktop learned store lands in the
+                // macOS + Windows phase of the round (`docs/roadmap.md`
+                // § Learned phrases, PR4); decoded and dropped until then.
+                Effect::PhraseLearned { .. } => {}
                 Effect::UpdatePreedit { .. }
                 | Effect::ClearPreeditWithoutCommit
                 | Effect::CommitTextReplacingPreedit(_)

@@ -25,8 +25,10 @@
 //! # default sample inputs (tl mode)
 //! cargo test -p composing --test candidate_dump -- --ignored --nocapture
 //! # custom inputs (comma-separated) + mode (tl|poj|tps) + simulated
-//! # user_frequency rows `display:tl:count[:age_ms]`
+//! # user_frequency rows `display:tl:count[:age_ms]`, custom_dictionary
+//! # rows `roman[:hanji]` and learned-phrase rows `hanji:canonical_tl`
 //! DUMP_FREQ="更新:king-sin:1:7200000" \
+//! DUMP_CUSTOM="tâi-gí:台語" DUMP_LEARNED="記起來:kì--khí-lâi" \
 //! DUMP_INPUTS="tai5,tai5gi2,tsua" DUMP_MODE=tl \
 //!   cargo test -p composing --test candidate_dump -- --ignored --nocapture
 //! ```
@@ -107,6 +109,38 @@ fn dump_continuous_candidates() {
         })
         .collect();
 
+    // DUMP_CUSTOM="kì-khí-lâi:記起來;tâi-gí" — simulated
+    // `custom_dictionary.db` rows `roman[:hanji]`.
+    let custom: Vec<protos::engine::CustomDictEntry> = std::env::var("DUMP_CUSTOM")
+        .unwrap_or_default()
+        .split(';')
+        .filter(|s| !s.is_empty())
+        .map(|e| {
+            let (roman, hanji) = e.split_once(':').unwrap_or((e, ""));
+            protos::engine::CustomDictEntry {
+                roman: roman.to_string(),
+                hanji: (!hanji.is_empty()).then(|| hanji.to_string()),
+            }
+        })
+        .collect();
+
+    // DUMP_LEARNED="記起來:kì--khí-lâi;…" — simulated learned-phrase rows
+    // `hanji:canonical_tl` (§50), as the platform would inject them for an
+    // exact whole-buffer key match.
+    let learned: Vec<protos::engine::LearnedEntry> = std::env::var("DUMP_LEARNED")
+        .unwrap_or_default()
+        .split(';')
+        .filter(|s| !s.is_empty())
+        .map(|e| {
+            let (hanji, canonical_tl) = e.split_once(':').unwrap_or((e, ""));
+            protos::engine::LearnedEntry {
+                hanji: hanji.to_string(),
+                canonical_tl: canonical_tl.to_string(),
+                learn_count: 1,
+            }
+        })
+        .collect();
+
     for raw in inputs.split(',').map(str::trim).filter(|s| !s.is_empty()) {
         let resp = fetch_at_pos_response(
             &cfg,
@@ -115,6 +149,8 @@ fn dump_continuous_candidates() {
                 enabled_sources_bitmask: bitmask,
                 frequency_entries: freq.clone(),
                 now_ms,
+                custom_entries: custom.clone(),
+                learned_entries: learned.clone(),
                 ..Default::default()
             },
         );

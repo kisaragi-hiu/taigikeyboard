@@ -31,6 +31,8 @@ extension KeyboardViewController {
                 "nextWordWordSelected text.len=\(text.count) roman.len=\(roman.count) trigger=\(triggerPrediction)"
             case .nextWordClearForNewComposing:
                 "nextWordClearForNewComposing"
+            case let .phraseLearned(hanji, canonicalTl, syllableCount):
+                "phraseLearned hanji.len=\(hanji.count) tl.len=\(canonicalTl.count) syllables=\(syllableCount)"
             }
             return "[COMMIT] fn=execute effect=\(kind)"
         }())
@@ -71,6 +73,11 @@ extension KeyboardViewController {
             // matching `nextwordClearForNewComposing` intent. Do NOT route
             // to `resetAndClearUI()` (that maps to `nextwordResetFull`).
             actionHandler?.nextWordController.clearDisplay()
+        case .phraseLearned:
+            // Learned phrases (§50): the learned store lands in the iOS
+            // phase of the round (`docs/roadmap.md` § Learned phrases, PR2);
+            // until then the effect is decoded and dropped here.
+            break
         }
     }
 

@@ -571,6 +571,11 @@ final class ComposingManager {
                 // exactly what must survive: forwarding it would spend a
                 // round-trip to bump a generation nothing reads.
                 break
+            case .phraseLearned:
+                // Learned phrases (§50): the desktop learned store lands in
+                // the macOS + Windows phase of the round (`docs/roadmap.md`
+                // § Learned phrases, PR4); decoded and dropped until then.
+                break
             // Listed rather than defaulted: an effect added to the engine later
             // has to be classified here, and a `default` would quietly file it
             // under "write it into the user's document".

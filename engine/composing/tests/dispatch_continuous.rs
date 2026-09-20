@@ -52,6 +52,7 @@ fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
+            learned_entries: vec![],
         })),
         &mut engine,
         &config_tl(),
@@ -95,6 +96,7 @@ fn decode_fetch_at_pos_position_nonzero_returns_empty_carrier() {
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
+            learned_entries: vec![],
         })),
         &mut engine,
         &config_tl(),
@@ -141,6 +143,7 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
             // lexicon, which is orthogonal to "lexicon NotInitialized yields no
             // DICT candidates". Doubles as OFF-gate coverage.
             literal_roman_candidate_disabled: true,
+            learned_entries: vec![],
         })),
         &mut engine,
         &config_tl(),
@@ -185,6 +188,7 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
                 custom_entries: vec![],
                 enabled_sources_bitmask: 0,
                 literal_roman_candidate_disabled: disabled,
+                learned_entries: vec![],
             })),
             &mut engine,
             &config_tl(),
@@ -265,6 +269,7 @@ fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
+            learned_entries: vec![],
         })),
         &mut engine,
         &config_tl(),
@@ -313,6 +318,7 @@ fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
             custom_entries: vec![],
             enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
+            learned_entries: vec![],
         })),
         &mut engine,
         &config_tl(),
@@ -352,6 +358,7 @@ fn decode_commit_continuous_mid_commit() {
             display_text: "珠".into(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         })),
@@ -395,6 +402,7 @@ fn decode_commit_continuous_final_commit_exits_to_idle() {
             display_text: "紙".into(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
         })),
@@ -464,6 +472,7 @@ fn fetch_at_pos_decodes_to_position_field() {
         custom_entries: vec![],
         enabled_sources_bitmask: 0,
         literal_roman_candidate_disabled: false,
+        learned_entries: vec![],
     };
 }
 
@@ -518,6 +527,7 @@ fn commit_continuous_response_omits_continuous_carrier() {
             display_text: "珠".into(),
             canonical_text: String::new(),
             association_tl: String::new(),
+            hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
         })),
@@ -641,6 +651,7 @@ fn fetch_at_pos_carries_user_freq_snapshot_through_decode() {
             // user-freq snapshot threading + empty-when-lexicon-absent, and the
             // bare literal candidate (added regardless of lexicon) is noise here.
             literal_roman_candidate_disabled: true,
+            learned_entries: vec![],
         })),
         &mut engine,
         &config_tl(),

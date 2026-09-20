@@ -123,4 +123,57 @@ public interface CommitContinuousOrBuilder extends
    */
   com.google.protobuf.ByteString
       getAssociationTlBytes();
+
+  /**
+   * <pre>
+   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+   * whenever the picked candidate carries hanji regardless of which script
+   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+   * and for legacy callers; a composition with any hanji-less segment is
+   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+   * F2: hanji is an explicit sidechannel, never inferred from
+   * `canonical_text` vs `association_tl`).
+   * </pre>
+   *
+   * <code>optional string hanji = 6;</code>
+   * @return Whether the hanji field is set.
+   */
+  boolean hasHanji();
+  /**
+   * <pre>
+   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+   * whenever the picked candidate carries hanji regardless of which script
+   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+   * and for legacy callers; a composition with any hanji-less segment is
+   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+   * F2: hanji is an explicit sidechannel, never inferred from
+   * `canonical_text` vs `association_tl`).
+   * </pre>
+   *
+   * <code>optional string hanji = 6;</code>
+   * @return The hanji.
+   */
+  java.lang.String getHanji();
+  /**
+   * <pre>
+   * Learned phrases (§50) — the chosen `CandidateMessage.hanji`, sent
+   * whenever the picked candidate carries hanji regardless of which script
+   * the document received (identity = the `(漢字, canonical-TL)` pair, Core
+   * Principle #6; a 漢羅濫 roman cell commits the same candidate). Wire-absent
+   * for a hanji-less pick (§34 literal, OOV synth, roman-only custom row)
+   * and for legacy callers; a composition with any hanji-less segment is
+   * never learned. proto3 `optional` so absent ≠ empty (Codex 2026-09-20
+   * F2: hanji is an explicit sidechannel, never inferred from
+   * `canonical_text` vs `association_tl`).
+   * </pre>
+   *
+   * <code>optional string hanji = 6;</code>
+   * @return The bytes for hanji.
+   */
+  com.google.protobuf.ByteString
+      getHanjiBytes();
 }
