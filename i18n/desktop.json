@@ -228,9 +228,9 @@
         ]
       },
       "values": {
-        "hanji": "連劃",
-        "tailo": "Liân-ue̍h",
-        "poj": "Liân-oe̍h",
+        "hanji": "連字符",
+        "tailo": "Liân-jī-hû",
+        "poj": "Liân-jī-hû",
         "en": "Hyphen",
         "ja": "ハイフン"
       }
