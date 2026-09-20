@@ -17,6 +17,10 @@ import SQLite3
 ///    the raw keyboard buffer carries the ASCII `oo` / `nn` the user types —
 ///    so every POJ entry containing either was unreachable from the keyboard
 ///    until its keys are re-derived.
+/// 4. (v5) Learned phrases (§50): add the `origin` / `learn_count` columns
+///    (every existing row reads as manual) and the learned-pair unique index.
+///    Derivation did not change, so the O(N) key backfill is skipped for a
+///    v4 database.
 ///
 /// Runs after `CustomDictionarySchema.ensureTables`; callers must serialize
 /// access (typically via `SQLiteConnectionManager.execute`).
@@ -47,8 +51,18 @@ enum CustomDictionaryMigrator {
             try? CustomDictionarySchema.ensureTables(db: db)
         }
 
-        backfillDerivedColumns(db: db)
-        backfillSearchKeys(db: db)
+        // v5 — the columns first, then the index that references them; on
+        // an older DB `ensureTables` could not create the index yet.
+        if currentVersion < 5 {
+            addMissingProvenanceColumns(db: db)
+            sqliteExecSimple(db: db, CustomDictionarySchema.learnedPairIndexSQL)
+        }
+
+        // Derivation last changed in v4; a v4 database only gains columns.
+        if currentVersion < 4 {
+            backfillDerivedColumns(db: db)
+            backfillSearchKeys(db: db)
+        }
 
         sqliteSetUserVersion(db: db, version: CustomDictionarySchema.schemaVersion)
     }
@@ -64,6 +78,19 @@ enum CustomDictionaryMigrator {
             sqliteExecSimple(
                 db: db,
                 "ALTER TABLE \(CustomDictionarySchema.tableName) ADD COLUMN \(column) TEXT DEFAULT '';",
+            )
+        }
+    }
+
+    /// Add the §50 provenance columns via `ALTER TABLE` when missing (same
+    /// whitelist discipline as the derived columns).
+    private static func addMissingProvenanceColumns(db: OpaquePointer) {
+        for column in CustomDictionarySchema.provenanceColumns
+            where !CustomDictionarySchema.columnExists(db: db, column: column)
+        {
+            sqliteExecSimple(
+                db: db,
+                "ALTER TABLE \(CustomDictionarySchema.tableName) ADD COLUMN \(column) INTEGER NOT NULL DEFAULT 0;",
             )
         }
     }

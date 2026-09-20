@@ -502,6 +502,10 @@ public extension RustEngineBridge {
         // (proto3-absent sentinel → engine prepends the literal-roman
         // candidate, the pre-toggle always-on behaviour for callers/tests).
         literalRomanCandidateDisabled: Bool = false,
+        // §50 — learned phrases whose whole-buffer key equals the raw buffer
+        // (`CustomDictionaryRepository.learnedEntriesSync`). Default `[]` =
+        // feature off / nothing learned.
+        learnedEntries: [Taigi_Engine_LearnedEntry] = [],
     ) -> ContinuousFetchResult {
         var payload = Taigi_Engine_FetchAtPos()
         payload.position = 0
@@ -510,6 +514,7 @@ public extension RustEngineBridge {
         payload.customEntries = customEntries
         payload.enabledSourcesBitmask = enabledSourcesBitmask
         payload.literalRomanCandidateDisabled = literalRomanCandidateDisabled
+        payload.learnedEntries = learnedEntries
         return composingFetchDispatch(
             method: .fetchAtPos(payload),
             op: "composingFetchAtPos",
@@ -540,6 +545,10 @@ public extension RustEngineBridge {
         displayText: String,
         canonicalText: String,
         associationTl: String,
+        // §50 — the picked candidate's hanji (`ContinuousCandidate.hanji`),
+        // `nil` for a hanji-less pick; the engine learns a composition only
+        // when every segment carried one.
+        hanji: String? = nil,
         consumedBytes: UInt32,
         syllableCount: UInt32,
         mode: InputMode,
@@ -558,6 +567,9 @@ public extension RustEngineBridge {
         // R2: canonical TL of the chosen candidate → NextWord `next_tl` /
         // `prev_tl`. Empty → engine falls back to the raw committed slice.
         payload.associationTl = associationTl
+        if let hanji, !hanji.isEmpty {
+            payload.hanji = hanji
+        }
         payload.consumedBytes = consumedBytes
         payload.syllableCount = syllableCount
         return composingDispatch(

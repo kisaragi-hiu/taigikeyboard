@@ -35,6 +35,9 @@
     <string name="i18n_dictionary_customDictionary">自訂詞庫</string>
     <string name="i18n_dictionary_customDictEnabled">啟用自訂詞庫</string>
     <string name="i18n_dictionary_customDictEnabledInfo">拍開了後，自訂詞會出現佇候選詞內底。</string>
+    <string name="i18n_dictionary_phraseLearningEnabled">自動學習新詞</string>
+    <string name="i18n_dictionary_phraseLearningEnabledInfo">連續拍字的時陣，你一字一字選出來的詞，下擺會直接出現佇候選詞。學著的詞會列佇自訂詞庫，會當刪除。</string>
+    <string name="i18n_dictionary_learnedBadge">自動學</string>
     <string name="i18n_dictionary_dataManagement">使用資料</string>
     <string name="i18n_dictionary_variantDictionary">異用字</string>
     <string name="i18n_dictionary_khiin">在來字</string>

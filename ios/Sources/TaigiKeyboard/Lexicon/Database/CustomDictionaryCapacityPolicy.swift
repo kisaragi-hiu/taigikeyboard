@@ -28,11 +28,16 @@ enum CustomDictionaryCapacityPolicy {
         return sqlite3_step(stmt) == SQLITE_ROW
     }
 
-    /// Current row count. Returns 0 on prepare failure so the caller can
+    /// Current MANUAL row count — learned rows (§50) have their own cap
+    /// (`CustomDictionaryRepository.maxLearnedEntries`) and never eat into
+    /// the user's quota. Returns 0 on prepare failure so the caller can
     /// treat connection problems as "not full" — subsequent writes will
     /// surface the underlying error.
     static func currentEntryCount(db: OpaquePointer) -> Int {
-        (try? sqliteQueryScalarInt(db: db, "SELECT COUNT(*) FROM \(CustomDictionarySchema.tableName);")) ?? 0
+        (try? sqliteQueryScalarInt(
+            db: db,
+            "SELECT COUNT(*) FROM \(CustomDictionarySchema.tableName) WHERE origin = 0;",
+        )) ?? 0
     }
 
     /// Throw if inserting would exceed `maxEntries`. Updating an existing

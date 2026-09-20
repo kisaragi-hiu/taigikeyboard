@@ -73,11 +73,12 @@ extension KeyboardViewController {
             // matching `nextwordClearForNewComposing` intent. Do NOT route
             // to `resetAndClearUI()` (that maps to `nextwordResetFull`).
             actionHandler?.nextWordController.clearDisplay()
-        case .phraseLearned:
-            // Learned phrases (§50): the learned store lands in the iOS
-            // phase of the round (`docs/roadmap.md` § Learned phrases, PR2);
-            // until then the effect is decoded and dropped here.
-            break
+        case let .phraseLearned(hanji, canonicalTl):
+            // §50 — the engine decided the composition was a phrase; the
+            // platform owns the store (mirrors the nextword association write).
+            if SharedSettings.shared.isPhraseLearningEnabled {
+                CompositionRoot.customDictionaryService.learnPhrase(hanzi: hanji, canonicalTl: canonicalTl)
+            }
         }
     }
 

@@ -137,6 +137,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(settings.colorSettings, .default)
         XCTAssertTrue(settings.isLiteralRomanCandidateEnabled, "§34/S22 顯示當咧拍的字 ships ON")
         XCTAssertFalse(settings.isHyphenlessRomanEnabled, "無連字符 ships OFF")
+        XCTAssertTrue(settings.isPhraseLearningEnabled, "§50 自動學習新詞 ships ON")
     }
 
     func test_isFullAccessEnabled_absentReturnsFalse_andStoredTrueReturnsTrue() {

@@ -258,6 +258,9 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // synthesizes a full-buffer candidate per entry and dedupes
         // `(roman, hanji)` against the FST hits.
         let customEntries = buildCustomEntries(rawInput: rawInput, settings: settings)
+        // §50 — learned phrases keyed to the WHOLE raw buffer (exact, not
+        // prefix), shared by both phases like `customEntries`.
+        let learnedEntries = buildLearnedEntries(rawInput: rawInput, settings: settings)
         let spacing = Self.continuousSpacingFlags(settings)
 
         // PR-9.6 — compute the dictionary source-toggle bitmask from the
@@ -289,6 +292,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             customEntries: customEntries,
             enabledSourcesBitmask: enabledSourcesBitmask,
             literalRomanCandidateDisabled: literalRomanCandidateDisabled,
+            learnedEntries: learnedEntries,
         )
         // Phase-1 FFI failure: do NOT apply the synthesized `.noop` — that
         // would clobber the mirror with false Idle state. Surface as "no
@@ -331,6 +335,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             customEntries: customEntries,
             enabledSourcesBitmask: enabledSourcesBitmask,
             literalRomanCandidateDisabled: literalRomanCandidateDisabled,
+            learnedEntries: learnedEntries,
         )
         // Phase-2 FFI failure: engine state did NOT change since phase-1
         // (the request never reached the engine). Apply phase-1's transition
@@ -437,6 +442,29 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         }
     }
 
+    /// §50 — learned phrases whose derived key EQUALS the raw buffer's query
+    /// key, as `FetchAtPos.learned_entries`. Exact so a learned whole-buffer
+    /// match never falls out of the prefix search's `LIMIT`; gated by
+    /// 自動學習新詞, not by 啟用自訂詞庫 (manual rows only).
+    private func buildLearnedEntries(
+        rawInput: String,
+        settings: EngineSettings,
+    ) -> [Taigi_Engine_LearnedEntry] {
+        guard settings.isPhraseLearningEnabled, !rawInput.isEmpty,
+              let q = CustomDictionaryDerivation.queryKey(for: rawInput, mode: settings.inputMode)
+        else { return [] }
+        return customDictionaryRepository.learnedEntriesSync(
+            family: q.family,
+            form: q.form,
+            key: q.key,
+        ).map { row in
+            var entry = Taigi_Engine_LearnedEntry()
+            entry.hanji = row.hanzi
+            entry.canonicalTl = row.roman
+            return entry
+        }
+    }
+
     /// Commit one Continuous candidate. `displayText` / `consumedBytes` /
     /// `syllableCount` MUST come verbatim from a `ContinuousCandidate`
     /// returned by an immediately preceding `fetchContinuousCandidates()`
@@ -481,6 +509,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         displayText: String,
         canonicalText: String,
         associationTl: String,
+        hanji: String? = nil,
         consumedBytes: UInt32,
         syllableCount: UInt32,
     ) -> (didCommit: Bool, didFinalCommit: Bool) {
@@ -495,6 +524,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             displayText: displayText,
             canonicalText: canonicalText,
             associationTl: associationTl,
+            hanji: hanji,
             consumedBytes: consumedBytes,
             syllableCount: syllableCount,
             mode: settings.inputMode,

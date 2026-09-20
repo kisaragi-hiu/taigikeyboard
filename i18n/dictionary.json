@@ -81,6 +81,69 @@
         "ja": "オンにすると、追加した単語が候補に表示されます。"
       }
     },
+    "phraseLearningEnabled": {
+      "comment": "Toggle label (§50): learn a phrase the user composed segment by segment in continuous input and offer it as one candidate next time.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "自動學習新詞",
+        "tailo": "自動學習新詞",
+        "poj": "自動學習新詞",
+        "en": "Learn New Words Automatically",
+        "ja": "新しい語を自動で学習"
+      }
+    },
+    "phraseLearningEnabledInfo": {
+      "comment": "Info-dialog body for the phrase-learning toggle (§50).",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "連續拍字的時陣，你一字一字選出來的詞，下擺會直接出現佇候選詞。學著的詞會列佇自訂詞庫，會當刪除。",
+        "tailo": "連續拍字的時陣，你一字一字選出來的詞，下擺會直接出現佇候選詞。學著的詞會列佇自訂詞庫，會當刪除。",
+        "poj": "連續拍字的時陣，你一字一字選出來的詞，下擺會直接出現佇候選詞。學著的詞會列佇自訂詞庫，會當刪除。",
+        "en": "A word you pick segment by segment while typing continuously is offered as one candidate next time. Learned words are listed in the custom dictionary and can be deleted.",
+        "ja": "連続入力で一文字ずつ選んだ語は、次回からひとつの候補として表示されます。学習した語はカスタム辞書に表示され、削除できます。"
+      }
+    },
+    "learnedBadge": {
+      "comment": "Badge on a custom-dictionary row that was learned automatically (§50), not added by the user.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "自動學",
+        "tailo": "自動學",
+        "poj": "自動學",
+        "en": "Learned",
+        "ja": "学習"
+      }
+    },
     "dataManagement": {
       "comment": "Section title for keyboard-data management (custom words, frequency/association records, backup/import/export).",
       "scope": {

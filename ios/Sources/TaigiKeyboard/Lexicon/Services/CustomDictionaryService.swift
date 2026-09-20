@@ -61,6 +61,23 @@ final class CustomDictionaryService: @unchecked Sendable {
         try await repository.search(family: family, form: form, key: key, limit: limit)
     }
 
+    // MARK: - Learned Phrases (§50)
+
+    /// Fire-and-forget write from the keyboard extension's effect path; the
+    /// repository serializes it behind the same queue as every other write.
+    func learnPhrase(hanzi: String, canonicalTl: String) {
+        Task { [repository] in
+            try? await repository.learnPhrase(hanzi: hanzi, canonicalTl: canonicalTl)
+        }
+    }
+
+    /// Fire-and-forget bump for a learned row the user just picked whole.
+    func touchLearnedPhrase(hanzi: String, canonicalTl: String) {
+        Task { [repository] in
+            try? await repository.touchLearnedPhrase(hanzi: hanzi, canonicalTl: canonicalTl)
+        }
+    }
+
     // MARK: - Export
 
     /// Export all entries as CSV string

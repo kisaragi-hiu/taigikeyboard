@@ -39,6 +39,17 @@ final class BackupService: @unchecked Sendable {
     struct CustomDictEntry: Codable {
         let roman: String
         let hanzi: String
+        /// §50 provenance (backup v3). Optional so a v1 / v2 file decodes
+        /// `nil` → imported as a manual row with no count.
+        let origin: Int?
+        let learnCount: Int?
+
+        init(roman: String, hanzi: String, origin: Int? = nil, learnCount: Int? = nil) {
+            self.roman = roman
+            self.hanzi = hanzi
+            self.origin = origin
+            self.learnCount = learnCount
+        }
     }
 
     struct FrequencyEntry: Codable {
@@ -80,12 +91,17 @@ final class BackupService: @unchecked Sendable {
         ) as? String ?? "1.0"
 
         let backup = BackupData(
-            version: 2,
+            version: 3,
             exportedAt: ISO8601DateFormatter().string(from: Date()),
             platform: "ios",
             appVersion: appVersion,
             customDictionary: customEntries.map {
-                CustomDictEntry(roman: $0.roman, hanzi: $0.hanzi)
+                CustomDictEntry(
+                    roman: $0.roman,
+                    hanzi: $0.hanzi,
+                    origin: $0.origin.rawValue,
+                    learnCount: $0.learnCount,
+                )
             },
             userFrequency: frequencyData.map {
                 FrequencyEntry(word: $0.word, tl: $0.tl, count: $0.count, lastUsed: "")
@@ -141,7 +157,15 @@ final class BackupService: @unchecked Sendable {
             let key = "\(entry.roman)\t\(entry.hanzi)"
             guard !existingPairs.contains(key) else { continue }
 
-            let newEntry = CustomDictionaryEntry(roman: entry.roman, hanzi: entry.hanzi)
+            // v3 carries provenance; an older file (or an unknown value) is a
+            // manual row, never a learned one.
+            let origin = entry.origin.flatMap(CustomDictionaryEntry.Origin.init(rawValue:)) ?? .manual
+            let newEntry = CustomDictionaryEntry(
+                roman: entry.roman,
+                hanzi: entry.hanzi,
+                origin: origin,
+                learnCount: origin == .learned ? max(entry.learnCount ?? 1, 1) : 0,
+            )
             try await customDictionaryService.save(newEntry)
             imported += 1
         }

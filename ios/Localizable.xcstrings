@@ -1711,6 +1711,24 @@
         }
       }
     },
+    "i18n_dictionary_learnedBadge": {
+      "comment": "Badge on a custom-dictionary row that was learned automatically (§50), not added by the user.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learned"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "学習"
+          }
+        }
+      }
+    },
     "i18n_dictionary_lkkDescription": {
       "comment": "Lí Kang-Khioh Foundation Han-Roman dictionary — toggle description in dictionary settings.",
       "extractionState": "manual",
@@ -1905,6 +1923,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "その他の辞書"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_phraseLearningEnabled": {
+      "comment": "Toggle label (§50): learn a phrase the user composed segment by segment in continuous input and offer it as one candidate next time.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learn New Words Automatically"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい語を自動で学習"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_phraseLearningEnabledInfo": {
+      "comment": "Info-dialog body for the phrase-learning toggle (§50).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A word you pick segment by segment while typing continuously is offered as one candidate next time. Learned words are listed in the custom dictionary and can be deleted."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連続入力で一文字ずつ選んだ語は、次回からひとつの候補として表示されます。学習した語はカスタム辞書に表示され、削除できます。"
           }
         }
       }
