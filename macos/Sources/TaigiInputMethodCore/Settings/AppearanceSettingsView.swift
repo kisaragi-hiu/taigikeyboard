@@ -53,7 +53,18 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.desktopCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
                     Text(language.string(.desktopCandidateLayoutVertical)).tag(CandidateLayout.vertical)
                 }
-                // What each cell shows, beside how the cells are arranged: both
+                // The size rows are named steps, not continuous values, so
+                // they are pop-up menus like the rows above rather than
+                // sliders (Apple HIG, Pop-up Buttons: a flat list of mutually
+                // exclusive choices). Window size beside window layout, text
+                // size beside what the cells show — coarse to fine (USER
+                // 2026-09-21).
+                Picker(language.string(.desktopCandidateWindowSize), selection: $candidateWindowSize) {
+                    Text(language.string(.desktopSizeSmall)).tag(CandidateWindowSizeChoice.small)
+                    Text(language.string(.desktopSizeMedium)).tag(CandidateWindowSizeChoice.medium)
+                    Text(language.string(.desktopSizeLarge)).tag(CandidateWindowSizeChoice.large)
+                }
+                // What each cell shows, after the window rows: both
                 // scripts side by side (today's rendering), each script as its
                 // own adjacent cell, or the romanization alone. Bound like the rows around
                 // it — the open bar re-renders on the write
@@ -65,15 +76,6 @@ struct AppearanceSettingsView: View {
                         .tag(CandidateDisplayMode.combined)
                     Text(language.string(.settingsCandidateDisplayModeRomanOnly))
                         .tag(CandidateDisplayMode.romanOnly)
-                }
-                // The two size rows are named steps, not continuous values, so
-                // they are pop-up menus like the rows above rather than
-                // sliders (Apple HIG, Pop-up Buttons: a flat list of mutually
-                // exclusive choices).
-                Picker(language.string(.desktopCandidateWindowSize), selection: $candidateWindowSize) {
-                    Text(language.string(.desktopSizeSmall)).tag(CandidateWindowSizeChoice.small)
-                    Text(language.string(.desktopSizeMedium)).tag(CandidateWindowSizeChoice.medium)
-                    Text(language.string(.desktopSizeLarge)).tag(CandidateWindowSizeChoice.large)
                 }
                 Picker(language.string(.themeCandidateTextSize), selection: $candidateTextSize) {
                     Text(language.string(.desktopSizeSmall)).tag(CandidateTextSizeChoice.small)

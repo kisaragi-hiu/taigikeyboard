@@ -46,12 +46,12 @@ const PANES: [(SettingsPane, PageView); 6] = [
     (SettingsPane::Appearance, pages::appearance::view),
     (SettingsPane::Shortcuts, pages::shortcuts::view),
     (
-        SettingsPane::CustomDictionary,
-        pages::custom_dictionary::view,
-    ),
-    (
         SettingsPane::DictionarySources,
         pages::dictionary_sources::view,
+    ),
+    (
+        SettingsPane::CustomDictionary,
+        pages::custom_dictionary::view,
     ),
     (SettingsPane::FontManagement, pages::font_management::view),
 ];
@@ -866,6 +866,9 @@ mod tests {
             );
             assert!(page_view(pane).is_some(), "{pane:?} has no page");
         }
+        // The sidebar draws `PANES`, so its order has to be `SIDEBAR`'s —
+        // a reorder in one place alone changes nothing on screen.
+        assert_eq!(PANES.map(|(pane, _)| pane), SettingsPane::SIDEBAR);
         assert!(page_view(SettingsPane::DictionarySearch).is_some());
         assert!(
             !PANES

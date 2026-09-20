@@ -23,29 +23,29 @@ use crate::strings::StringKey;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ShortcutAction {
     ToggleRomanization,
+    ToggleTranslateSwapped,
     /// Steps 候選詞顯示 through its picker order (`CandidateDisplayMode::next`).
     CycleCandidateDisplayMode,
-    ToggleTranslateSwapped,
-    /// Opens the symbol picker over the caret. Beside the settings window
-    /// since 2026-09-10 (USER): both rows read 拍開X
-    /// (`ShortcutActions.swift` `ShortcutAction`).
+    /// Opens the symbol picker over the caret.
     ShowSymbolPicker,
-    /// Opens the settings window on whichever pane the user left it on.
-    OpenLastSettingsPane,
-    /// Toggles the floating Telex key table (`ui/telex_guide.rs`). Last on the
-    /// pane (USER 2026-09-10): the row that explains the keyboard rather than
-    /// doing anything to what is being typed.
+    /// Toggles the floating Telex key table (`ui/telex_guide.rs`): explains
+    /// the keyboard rather than changing what it types, but is read while
+    /// typing.
     ShowTelexGuide,
+    /// Opens the settings window on whichever pane the user left it on. Last
+    /// on the pane (USER 2026-09-21, `ShortcutActions.swift`): the one row
+    /// that leaves the typing session.
+    OpenLastSettingsPane,
 }
 
 impl ShortcutAction {
     pub const ALL: [ShortcutAction; 6] = [
         Self::ToggleRomanization,
-        Self::CycleCandidateDisplayMode,
         Self::ToggleTranslateSwapped,
+        Self::CycleCandidateDisplayMode,
         Self::ShowSymbolPicker,
-        Self::OpenLastSettingsPane,
         Self::ShowTelexGuide,
+        Self::OpenLastSettingsPane,
     ];
 
     pub fn raw(self) -> &'static str {
@@ -457,17 +457,18 @@ mod tests {
     fn roster_order_is_the_pane_order() {
         // `ALL` is the global recorder rows top to bottom
         // (`pages/shortcuts.rs`, under the composing rows) and the Mac's
-        // `allCases`: the three switches, then the two 拍開X doorways
-        // together, then the Telex card last (USER 2026-09-10).
+        // `allCases`: the three switches in the 一般 pane's order of what
+        // they switch, then the windows used while typing, the settings
+        // window last (USER 2026-09-21).
         assert_eq!(
             ShortcutAction::ALL,
             [
                 ShortcutAction::ToggleRomanization,
-                ShortcutAction::CycleCandidateDisplayMode,
                 ShortcutAction::ToggleTranslateSwapped,
+                ShortcutAction::CycleCandidateDisplayMode,
                 ShortcutAction::ShowSymbolPicker,
-                ShortcutAction::OpenLastSettingsPane,
                 ShortcutAction::ShowTelexGuide,
+                ShortcutAction::OpenLastSettingsPane,
             ]
         );
         assert_eq!(ShortcutAction::ShowSymbolPicker.raw(), "showSymbolPicker");

@@ -44,18 +44,10 @@ pub fn view(
             |choice| Message::set_choice(choice, &keys::CANDIDATE_LAYOUT),
             context,
         ),
-        // What each cell shows: both scripts, or the romanization alone.
-        choice_row(
-            strings.resolve(StringKey::SettingsCandidateDisplayMode),
-            CandidateDisplayMode::ALL,
-            document.choice(&keys::CANDIDATE_DISPLAY_MODE),
-            true,
-            |choice: CandidateDisplayMode| strings.resolve(choice.label_key()).to_owned(),
-            |choice| Message::set_choice(choice, &keys::CANDIDATE_DISPLAY_MODE),
-            context,
-        ),
-        // The two size rows are named steps, not continuous values: pop-ups
-        // rather than sliders (Apple HIG, Pop-up Buttons).
+        // The size rows are named steps, not continuous values: pop-ups
+        // rather than sliders (Apple HIG, Pop-up Buttons). Window size beside
+        // window layout, text size beside what the cells show — coarse to
+        // fine (USER 2026-09-21, `AppearanceSettingsView.swift`).
         choice_row(
             strings.resolve(StringKey::DesktopCandidateWindowSize),
             CandidateWindowSizeChoice::ALL,
@@ -63,6 +55,17 @@ pub fn view(
             true,
             |choice: CandidateWindowSizeChoice| strings.resolve(choice.label_key()).to_owned(),
             |choice| Message::set_choice(choice, &keys::CANDIDATE_WINDOW_SIZE),
+            context,
+        ),
+        // What each cell shows, after the window rows: both scripts, or the
+        // romanization alone.
+        choice_row(
+            strings.resolve(StringKey::SettingsCandidateDisplayMode),
+            CandidateDisplayMode::ALL,
+            document.choice(&keys::CANDIDATE_DISPLAY_MODE),
+            true,
+            |choice: CandidateDisplayMode| strings.resolve(choice.label_key()).to_owned(),
+            |choice| Message::set_choice(choice, &keys::CANDIDATE_DISPLAY_MODE),
             context,
         ),
         choice_row(

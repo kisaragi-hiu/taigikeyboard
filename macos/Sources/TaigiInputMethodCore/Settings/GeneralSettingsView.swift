@@ -75,12 +75,13 @@ struct GeneralSettingsView: View {
 
     private var settingsForm: some View {
         Form {
-            // One group, no sub-groups (USER 2026-09-18 「不要分組」): the two
-            // script pickers first and together (「輸出輸入可以排在一起」),
-            // then how the syllable is spelled, then what the commit does,
-            // then the window, then the app's language.
+            // One group, no sub-groups (USER 2026-09-18 「不要分組」), in the
+            // order the typing pipeline runs (USER 2026-09-21): what is typed
+            // and how its tones are spelled, then the candidate window and
+            // its content, then what a commit writes and its shape, then the
+            // app's language.
             Section {
-                // A pop-up like the row under it, not a radio group: System
+                // A pop-up like the 輸出文字 row below, not a radio group: System
                 // Settings states a small mutually-exclusive choice with a
                 // pop-up, and two shapes for two adjacent N-of-1 rows read as
                 // a difference that means something. 輸入文字 / 輸出文字 name
@@ -90,6 +91,28 @@ struct GeneralSettingsView: View {
                     Text(language.string(.settingsTlMode)).tag(InputMode.tl)
                     Text(language.string(.settingsPojMode)).tag(InputMode.poj)
                 }
+
+                // Which keys type a tone is a fact about how the syllable is
+                // spelled, not a shortcut (USER 2026-09-08), and the slot
+                // keys follow from it rather than being chosen on the
+                // shortcut pane. Under 輸入文字 because both say what the
+                // user types.
+                Picker(language.string(.settingsToneInputScheme), selection: $toneInputScheme) {
+                    Text(language.string(.settingsToneSchemeStandard)).tag(ToneInputScheme.standard)
+                    Text(language.string(.settingsToneSchemeTelex)).tag(ToneInputScheme.telex)
+                }
+
+                // S33 (USER 2026-09-08): off means no window at all — the
+                // user types romanization and Space / Return write it as
+                // typed. Directly above 顯示當咧拍的字, which describes the
+                // window's content and so reads as its sub-option; that row
+                // stays enabled with the window off (one plain switch, no
+                // greyed-out state to explain).
+                Toggle(language.string(.settingsCandidateWindow), isOn: $isCandidateWindowEnabled)
+
+                // §34/S22. On means candidate slot 0 is the preedit literal,
+                // so Return writes the typed romanization.
+                Toggle(language.string(.settingsLiteralRomanCandidate), isOn: $isLiteralRomanCandidateEnabled)
 
                 // Which script a commit writes (USER 2026-09-18): the same
                 // stored swap the `` ` `` shortcut toggles, so the two never
@@ -108,28 +131,9 @@ struct GeneralSettingsView: View {
                 // output's shape.
                 Toggle(language.string(.settingsHyphenlessRoman), isOn: $isHyphenlessRomanEnabled)
 
-                // Which keys type a tone is a fact about how the syllable is
-                // spelled, not a shortcut (USER 2026-09-08), and the slot
-                // keys follow from it rather than being chosen on the
-                // shortcut pane.
-                Picker(language.string(.settingsToneInputScheme), selection: $toneInputScheme) {
-                    Text(language.string(.settingsToneSchemeStandard)).tag(ToneInputScheme.standard)
-                    Text(language.string(.settingsToneSchemeTelex)).tag(ToneInputScheme.telex)
-                }
-
+                // The space after a commit: the last thing the output stage
+                // does.
                 Toggle(language.string(.settingsAutoSpace), isOn: $isAutoSpaceEnabled)
-
-                // S33 (USER 2026-09-08): off means no window at all — the
-                // user types romanization and Space / Return write it as
-                // typed. Directly above 顯示當咧拍的字, which describes the
-                // window's content and so reads as its sub-option; that row
-                // stays enabled with the window off (one plain switch, no
-                // greyed-out state to explain).
-                Toggle(language.string(.settingsCandidateWindow), isOn: $isCandidateWindowEnabled)
-
-                // §34/S22. On means candidate slot 0 is the preedit literal,
-                // so Return writes the typed romanization.
-                Toggle(language.string(.settingsLiteralRomanCandidate), isOn: $isLiteralRomanCandidateEnabled)
 
                 Picker(language.string(.settingsDisplayLanguage), selection: displayLanguageSelection) {
                     ForEach(DisplayLanguage.selectableLanguages, id: \.self) { option in
