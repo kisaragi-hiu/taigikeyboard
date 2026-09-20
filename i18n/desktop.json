@@ -847,11 +847,11 @@
         ]
       },
       "values": {
-        "hanji": "佇漢字模式輸出羅馬字，倒反嘛會通",
-        "tailo": "Tī Hàn-jī bôo-sik su-tshut Lô-má-jī, tò-píng mā ē-thong",
-        "poj": "Tī Hàn-jī bô͘-sek su-chhut Lô-má-jī, tò-péng mā ē-thong",
-        "en": "Output Romanization in Hanji Mode, and Vice Versa",
-        "ja": "漢字モードではローマ字を出力、逆も同様"
+        "hanji": "漢字/羅馬字模式輸出羅馬字/漢字",
+        "tailo": "Hàn-jī/Lô-má-jī bôo-sik su-tshut Lô-má-jī/Hàn-jī",
+        "poj": "Hàn-jī/Lô-má-jī bô͘-sek su-chhut Lô-má-jī/Hàn-jī",
+        "en": "Hanji/Romanization Mode Outputs Romanization/Hanji",
+        "ja": "漢字/ローマ字モードでローマ字/漢字を出力"
       }
     },
     "shortcutUnbound": {
