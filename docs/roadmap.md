@@ -3,14 +3,14 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `release trains`
 > **Status**: Active
-> **Last updated**: 2026-09-20 (mobile custom theme background round A–D merged, dogfood S54/S55 pending; desktop 3.6.x sections collapsed into `docs/reports/desktop-3.6.x-design-notes.md`; repository-size record retired — rationale + timings in `docs/architecture/build-artifacts.md`; released-versions index through mobile / desktop 3.6.8)
+> **Last updated**: 2026-09-20 (learned phrases — segment-by-segment picks become a whole-buffer candidate — Phase 0 planned, PR1–PR4 pending; mobile custom theme background round A–D merged, dogfood S54/S55 pending; desktop 3.6.x sections collapsed into `docs/reports/desktop-3.6.x-design-notes.md`; repository-size record retired — rationale + timings in `docs/architecture/build-artifacts.md`; released-versions index through mobile / desktop 3.6.8)
 
 ---
 
 ## Summary
 
 - **Forward-looking work items only.** Shipped detail lives in `docs/releases/<version>/plan.md` + `changelog/<version>.md` + Claude auto-memory.
-- **Active**: Telex tone-1/4 keys design (USER 2026-09-11「之後的版本再處理」). Merged desktop 3.6.x items below await dogfood only.
+- **Active**: learned phrases (§ below, PR1–PR4 pending, USER 2026-09-20「ok, plan it」); Telex tone-1/4 keys design (USER 2026-09-11「之後的版本再處理」). Merged desktop 3.6.x items below await dogfood only.
 - **No open deferred TODO**: the keyboard theme picker (the last 2026-06-01 candidate) shipped in v3.6.2; the one design-locked, unscheduled item is 變換後羅馬字 commit (§ Out of scope / deferred).
 - **Release scope / timing / tag is user-gated** per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope].
 
@@ -21,6 +21,65 @@
 kautian subcollections (腔調 + 姓名附錄 toggles + 語音差異 詞級擴展) — 5 phases MERGED, shipped **v3.6.0** (#354-#358).
 
 ---
+
+### Learned phrases — a phrase composed segment by segment becomes a whole-buffer candidate (USER-scoped 2026-09-20)
+
+**Status**: Phase 0 (this section + project memory `project_learned_phrases.md`) on main; PR1–PR4 pending. Dogfood S62 (to be added with PR2).
+
+USER report (2026-09-20): type `kikhilai`, pick 記 → 起 → 來 one segment at a time; however often this is repeated, the next `kikhilai` never offers 記起來 as one candidate. USER decision 2026-09-20 「ok, plan it」 after the survey below. Scope: all four platforms, engine-led.
+
+#### Today (grounded in code)
+
+| Piece | Where | What it does |
+|---|---|---|
+| Learning that exists | `ios/…/Actions/ActionHandler+Suggestions.swift:217`, `android/…/smartbar/CandidateClickHandler.kt:264` → `user_frequency.db`; `engine/nextword/src/decide.rs:303` bigrams | counts each picked (漢字, canonical-TL) word; records prev→next pairs. Nothing joins consecutive picks into a new word. |
+| Why single-char picks cannot fix it | `engine/composing/src/lattice/cost.rs:229` `WALKER_SINGLE_SYLLABLE_USER_DELTA_SCALE = 0.0` | single-syllable user weight is kept out of segmentation on purpose (Codex BLOCK 2026-05-16: 「的」 must not sweep a sentence). |
+| What the engine already knows at final commit | `engine/composing/src/api.rs:36-40` `Phase::Continuous { nailed }`, `api.rs:115-135` `NailedSegment { display_text, canonical_text, raw_text, association_tl, raw_span, syllable_count }`; `transition.rs` `commit_continuous` final branch (`new_pending.is_empty()`) | the whole picked sequence with each segment's canonical TL — the input a phrase learner needs, in one place for all four platforms. |
+| Effect channel | `engine/protos/proto/composing.proto:448-460` (`Effect` oneof, kinds 1–10); consumers iOS `KeyboardViewController+TextInput.swift:30-60`, Android `ComposingDelegate.kt:62`, macOS `ComposingManager.swift:554`, Windows `taigi-windows-core/src/composing/manager.rs:459-474` (exhaustive match) | same shape the nextword `RecordCompoundAssociations` effect uses (`decide.rs:124-129`, iOS `NextWordController.swift:206`). |
+| Custom-dictionary path (the closest existing sibling) | `FetchAtPos.custom_entries` (`composing.proto:210`); walker edge override `engine/composing/src/continuous.rs:629-682` (unconditional, `CUSTOM_EFFECTIVE_FREQ = 2000`); whole-buffer row `engine/lexicon/src/continuous.rs:1898` `custom_entry_to_candidate` (`is_custom = true`, source rank 0); platform search `search(family, form, key, limit 20)` (iOS `ComposingManager.swift` `buildCustomEntries`, Android `ComposingManager.kt`, macOS `ComposingManager.swift:286`, Windows `manager.rs:244`) | verified with production artifacts: a custom row `kì-khí-lâi/記起來` puts 記起來 at the first hanji slot for `kikhilai` with 台日 off (the dictionary row is 台日-only, `SharedSettings.swift:61` default off). |
+| Custom-dictionary storage | iOS `CustomDictionarySchema.swift:58` v4 (`id, roman, hanzi, notone, abbrev, roman_num, created_at, updated_at` + `custom_search_key`), Android `CustomDictionaryService.kt` `DATABASE_VERSION = 8`, macOS `CustomDictionaryStore.swift:54` v4, Windows `custom_dictionary.rs:19` v4; backup `.taigi` v2 (`BackupService.swift:72-90`: custom / frequency / association arrays, custom rows = roman + hanzi only) | one table per platform, same derived-key search on all four. |
+
+#### Design (Codex ANALYSIS-ONLY pre-review 2026-09-20 applied: F1/F6/F7/F8 AGREE, F2 + F5 BLOCK resolved as below, F3/F4 PREFER adopted)
+
+1. **Engine emits, platforms persist.** In `commit_continuous`'s final-commit branch, when the composition has ≥ 2 nailed segments, every segment is a hanji-bearing candidate pick, and the summed `syllable_count` ≤ 6 (ChiaKey's 6-character cap), the engine emits `Effect.PhraseLearned { hanji, canonical_tl, syllable_count }` (oneof kind 11) next to `NextWordWordSelected`. `hanji` = the segments' hanji concatenated; `canonical_tl` = the segments' canonical TL joined with `-` (a segment that already starts with the khinsiann `--` keeps it — no `---`). An Enter / raw commit of an unpicked tail does not learn (the tail was never a pick). Nothing is learned from abort / backspace-unnailed segments because the effect fires only on the final commit.
+2. **Hanji-bearing is explicit, not inferred (Codex F2 BLOCK).** `CommitContinuous` gains `optional string hanji = 6` (the chosen `CandidateMessage.hanji`, wire-absent for hanji-less / literal / OOV picks), stored on `NailedSegment.hanji`. A composition with any hanji-less segment does not learn. This is the same sidechannel discipline as `canonical_text` / `association_tl` (Bug 1 Option A / R2) — the engine never parses the display string to guess.
+3. **Storage = the custom-dictionary table with provenance (Codex F3).** Two columns on every platform: `origin INTEGER NOT NULL DEFAULT 0` (0 manual, 1 learned) and `learn_count INTEGER NOT NULL DEFAULT 0`; a partial unique index on `(hanzi, roman) WHERE origin = 1` so learning is one atomic upsert (`ON CONFLICT … DO UPDATE learn_count = learn_count + 1, updated_at = now`; Android uses the shared 3.22-safe upsert helper from #96). A manual row is never downgraded to learned; learning a pair that exists as a manual row is a no-op. Schema bumps: iOS 5, Android 9, macOS 5, Windows 5. Backup `.taigi` v3 writes `origin` + `learnCount` per custom row; a v2 file imports as manual (missing field → 0). Learned rows list in the existing custom-dictionary UI with a 自動學 badge and the existing delete; export/import go through the existing paths.
+4. **One pick learns; ranking is bounded, never an override (Codex F4 + F5 BLOCK).** Learned rows ride a NEW `FetchAtPos.learned_entries = 7` (`LearnedEntry { hanji, canonical_tl, learn_count }`), not `custom_entries`. Engine treatment mirrors #69's decoupling: (a) at the walker edge whose toneless key equals the learned key, the learned row joins the dict rows in the same `SortKey` pick — `score = calculate_continuous_score(0, 1)` (dict rows out-score it unless user weight says otherwise), source rank **below** dict and custom, `is_custom = false`; (b) `EdgeBest::span_frequency` takes `max(dict, LEARNED_EFFECTIVE_FREQ)` so the whole-buffer edge still wins the segmentation when the dictionary has no word under that key (the 台日-off case); (c) a span-local whole-buffer row like `custom_entry_to_candidate` with the same rank rule. Consequence: a learned 記起來 with 台日 off appears at the first hanji slot after ONE composition; with 台日 on the dictionary row wins the in-edge choice and the pair-key dedupe collapses the duplicate; a mistaken learned phrase never displaces a dictionary word unless the user keeps picking it (user_frequency), and the manual custom dictionary's precedence is untouched.
+5. **Platform query for learned rows is exact, not prefix.** `learnedEntries(for rawInput)` = `origin = 1 AND family/form/key = whole-buffer key` (limit 5), separate from the prefix `search(limit 20)` so a learned whole-buffer match can never be truncated out (Codex risk: search truncation).
+6. **Touch on use (Codex F6).** When a committed candidate's (hanji, canonical-TL) matches a learned row, the platform bumps `learn_count` / `updated_at` in the same place it records `user_frequency` (one indexed UPDATE, no-op otherwise). Learned rows are capped at 2 000 per platform; past the cap, evict lowest `learn_count`, then oldest `updated_at`, inside the same transaction as the insert. Manual rows are never evicted and keep their own capacity accounting.
+7. **Setting 自動學習新詞 (`phraseLearningEnabled`, default ON, all four)** gates both learning and injection; it does not depend on 啟用自訂詞庫 (`customDictEnabled`), which keeps gating manual rows only. Placed directly under 啟用自訂詞庫 in 辭典 settings (mobile) / the custom-dictionary pane (desktop).
+8. **Security / privacy**: learned rows are user text — app-private store, `.taigi` documented sensitive (already), never logged (`security-rules.md`).
+
+Known parity limit carried over from the custom path, not new: under TPS input `custom_toneless_key` accepts only Bopomofo bodies (`shadow.rs` S6 note), so a TL-keyed learned row is a span-local row but not a TPS walker edge — same as today's custom dictionary. POJ input already folds a TL canonical key (verified: custom `kì-khí-lâi` matched `kikhilai` in POJ mode).
+
+#### Phases
+
+| Phase | Scope | Status |
+|---|---|---|
+| 0 | roadmap section + project memory | on main 2026-09-20 |
+| PR1 | engine: `CommitContinuous.hanji` + `NailedSegment.hanji`; `Effect.PhraseLearned`; `FetchAtPos.learned_entries` + `LearnedEntry`; walker/span-local treatment (design 4); `candidate_dump` `DUMP_CUSTOM` / `DUMP_LEARNED` harness; tests (`dispatch_continuous.rs`, `continuous_slot0_*`); `behavioral-invariants.md` §50; `make build`; **no-op effect arms + proto regen on all four bridges so every platform still builds** (Windows `manager.rs:471` exhaustive match) | pending |
+| PR2 | iOS: schema v5 + migrator, atomic learn upsert + cap/evict, `learnedEntries(for:)` exact query, effect consumer, touch-on-use, setting + i18n keys, 自動學 badge in `CustomDictionaryView`, backup v3, tests; dogfood S62 | pending |
+| PR3 | Android port of PR2 (DB v9, DataStore key — `doc-lookup.md` gate for the DataStore call) | pending |
+| PR4 | macOS + Windows together (schema 5 each, pane toggle, badge, backup) — one desktop PR per `feedback_fewer_larger_prs_macos` | pending |
+
+#### Best practices alignment
+
+Per-phase rules: PR1 `round-workflow.md` § Codex sandwich + `code-review-rules.md` §5 (every effect consumer + proto decoder is a caller); PR2–PR4 `cross-platform-alignment.md` §1 (behaviour stated first, above), `i18n.md` (new keys `dictionary.phraseLearningEnabled`, `…Info`, `learnedBadge` — hanji first, tailo/poj copy hanji until USER romanizes, per #107 precedent), `security-rules.md` § Data Storage, `doc-lookup.md` for the Android DataStore key.
+
+| Mainstream pattern | Source | This plan |
+|---|---|---|
+| Learn the whole committed composition as one user-dict entry, fired when the last segment is confirmed | librime `references/librime/src/rime/gear/script_translator.cc:257-282` `ConcatenatePhrases` + `memory.cc:111-124`; `kConfirmed` only at buffer end `engine.cc:263` | design 1 — the engine's final-commit branch is the same trigger; one composition learns |
+| Concatenated conversion inserted as a learned entry only when > 1 segment | mozc `references/mozc/src/prediction/user_history_predictor.cc:2231-2238` | ≥ 2 nailed segments |
+| Manual vocabulary and auto-learned vocabulary kept distinguishable; learned tier below manual | MOE Taigi `docs/references/moe-taigi-reference.md:175-199` (`UserVoc` / `LearnedVoc`, `MAX_LEARNED_*`) | design 3 `origin` column + design 4 source rank below custom |
+| Bounded learning store: evict fewest selections, then least recent; cap phrase length at 6; reject a pair already in the system/user table | ChiaKey `docs/references/chiakey-reference.md` §3 + table row 2 (`addUserUnigram`) | design 6 cap/evict; 6-syllable cap; manual-row no-op |
+| Segmentation priced on the span, word choice priced on the word | this repo #69 `engine/composing/tests/continuous_slot0_user_selection.rs` (`EdgeBest::span_frequency`) | design 4(b) |
+| Engine emits a learning effect, platform owns the store | this repo `engine/nextword/src/decide.rs:124-129` → iOS `NextWordController.swift:206` | design 1 |
+
+**Deliberately not adopted**: rime's `core_word_length` prefix/suffix combinations (learns every sub-phrase; noise); a maturity threshold before a learned row surfaces (MOE `RIPE_*_APPROVALS`) — rejected by Codex F4 because bounded ranking already contains a mistaken phrase and the USER expectation is "picked once, offered next time"; reusing `custom_entries` (unconditional walker override — Codex F5 BLOCK); a separate `learned_phrases` table (second search-key derivation, second backup array, second list UI); ChiaKey's desktop mark-mode 新增詞彙 gesture (no mobile counterpart; manual add already exists in settings); ChiaKey's "pick equals lexicon default → clear override" rule (F8: unnecessary once learned rows compete instead of override; revisit only on a report). YAGNI: a decay column on learned rows (`user_frequency` already decays the ranking once the phrase is picked), context-keyed overrides, a lexicon lookup before learning (F7: the pair-key dedupe already collapses a duplicate of a dictionary word).
+
+#### Dogfood
+
+S62 (to be written with PR2): 台日 off, type `kikhilai`, pick 記 / 起 / 來 (or 記 then 起來), commit; retype `kikhilai` → 記起來 is the first hanji candidate; 辭典 list shows it with 自動學; delete it → gone next fetch; toggle 自動學習新詞 off → neither learns nor offers; `.taigi` export/import round-trips `origin`; a manual custom row with the same pair is untouched. Both mobile platforms, then desktop.
 
 ### Mobile custom theme — one background surface, gradient direction, photo background (USER-scoped 2026-09-19)
 
