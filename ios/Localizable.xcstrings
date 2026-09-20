@@ -1927,42 +1927,6 @@
         }
       }
     },
-    "i18n_dictionary_phraseLearningEnabled": {
-      "comment": "Toggle label (§50): learn a phrase the user composed segment by segment in continuous input and offer it as one candidate next time.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Learn New Words Automatically"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新しい語を自動で学習"
-          }
-        }
-      }
-    },
-    "i18n_dictionary_phraseLearningEnabledInfo": {
-      "comment": "Info-dialog body for the phrase-learning toggle (§50).",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A word you pick segment by segment while typing continuously is offered as one candidate next time. Learned words are listed in the custom dictionary and can be deleted."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "連続入力で一文字ずつ選んだ語は、次回からひとつの候補として表示されます。学習した語はカスタム辞書に表示され、削除できます。"
-          }
-        }
-      }
-    },
     "i18n_dictionary_romanLabel": {
       "comment": "Custom-entry column header and field label: the romanization the user types (拍).",
       "extractionState": "manual",
@@ -3536,19 +3500,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show What You Are Typing"
+            "value": "Show Typed Text First"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "入力中の文字を表示"
+            "value": "入力中の文字を先頭に表示"
           }
         }
       }
     },
     "i18n_settings_literalRomanCandidateInfo": {
-      "comment": "Help text for the 顯示當咧拍的字 toggle.",
+      "comment": "Help text for the 當咧拍的字囥第一个 toggle.",
       "extractionState": "manual",
       "localizations": {
         "en": {
