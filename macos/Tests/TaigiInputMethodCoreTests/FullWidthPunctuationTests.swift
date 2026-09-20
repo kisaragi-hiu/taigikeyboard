@@ -8,6 +8,21 @@ import XCTest
 /// `FullWidthPunctuationControllerTests`
 /// (`testRomanFirstMode_passesPunctuationThrough`).
 final class FullWidthPunctuationTests: XCTestCase {
+    // MARK: - Which width is written
+
+    /// The four cells of the contract: the bare key follows the mode, the
+    /// width-flip chord types the other width — and is always the input
+    /// method's to write, since the host would read the chord as a shortcut.
+    func testDocumentPunctuation_flipTypesTheOtherWidthAndTheBareKeyTheModes() {
+        XCTAssertEqual(FullWidthPunctuation.documentPunctuation(",", isFullWidthMode: true, isWidthFlip: false), "，")
+        XCTAssertEqual(FullWidthPunctuation.documentPunctuation(",", isFullWidthMode: true, isWidthFlip: true), ",")
+        XCTAssertNil(FullWidthPunctuation.documentPunctuation(",", isFullWidthMode: false, isWidthFlip: false))
+        XCTAssertEqual(FullWidthPunctuation.documentPunctuation(",", isFullWidthMode: false, isWidthFlip: true), "，")
+        // A key the map does not carry is the host's under the mode; the
+        // classifier never reports it as a flip.
+        XCTAssertNil(FullWidthPunctuation.documentPunctuation("5", isFullWidthMode: true, isWidthFlip: false))
+    }
+
     // MARK: - The map
 
     func testEveryMappedPair_followsTheMOETable() {

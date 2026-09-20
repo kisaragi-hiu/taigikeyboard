@@ -209,12 +209,10 @@ impl TextService_Impl {
             // Not ours, and nothing to finish — but a character reaching the
             // document outside a composition still ends the next-word
             // context (a full stop typed here is a sentence end).
-            if ComposingKeyIntent::is_document_text(&snapshot) {
-                if let Some(characters) = snapshot.characters.as_deref() {
-                    if let Some(mut coordinator) = runtime.try_coordinator() {
-                        if let Some(manager) = coordinator.manager(token) {
-                            manager.note_character_typed_outside_composition(characters);
-                        }
+            if let Some(typed) = ComposingKeyIntent::document_text(&snapshot) {
+                if let Some(mut coordinator) = runtime.try_coordinator() {
+                    if let Some(manager) = coordinator.manager(token) {
+                        manager.note_character_typed_outside_composition(&typed);
                     }
                 }
             }
@@ -277,35 +275,33 @@ impl TextService_Impl {
         (is_composing, is_showing)
     }
 
-    /// The two pass-through keys this input method consumes: attaching
-    /// punctuation right after an auto space (the swap), and full-width
-    /// punctuation in hanji-first mode. Optimistic — the swap is verified
-    /// against the document only in the session.
+    /// The pass-through keys this input method consumes: attaching
+    /// punctuation right after an auto space (the swap), full-width
+    /// punctuation in hanji-first mode, and the width-flip chord in either
+    /// width. Optimistic — the swap is verified against the document only
+    /// in the session. Mirrors the session's `PassThrough` arm.
     fn pass_through_may_consume(
         &self,
         snapshot: &KeyEventSnapshot,
         settings: &SettingsDocument,
         identity: usize,
     ) -> bool {
-        if !ComposingKeyIntent::is_document_text(snapshot) {
-            return false;
-        }
-        let Some(characters) = snapshot.characters.as_deref() else {
+        let Some(typed) = ComposingKeyIntent::document_text(snapshot) else {
             return false;
         };
+        let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
+        if document_punctuation(settings, &typed, is_width_flip).is_some() {
+            return true;
+        }
         let is_armed = self
             .state
             .borrow_mut()
             .contexts
             .entry_mut(identity)
             .is_some_and(|entry| entry.state.armed_auto_space.is_some());
-        if is_armed
-            && policies::is_attaching_punctuation(characters)
+        is_armed
+            && policies::is_attaching_punctuation(&typed)
             && settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-        {
-            return true;
-        }
-        full_width_mapped(settings, characters).is_some()
     }
 
     /// The session: deferred engine work, ownership handover, password
@@ -1453,7 +1449,9 @@ fn perform_work(
             // map still answers to the output MODE — so 漢字優先 gets
             // `taigi？ `. That approximation is a 全形標點 policy question,
             // left standing (macOS pins the same pair).
-            let document_text = full_width_mapped(settings, text).unwrap_or_else(|| text.clone());
+            let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
+            let document_text =
+                document_punctuation(settings, text, is_width_flip).unwrap_or_else(|| text.clone());
             let gate = auto_space_gate(settings, raw_preedit_wrote_romanization(settings));
             let insert = policies::augment_insert(&document_text, manager.display_text(), gate);
             let committed = manager.commit_composition_then_insert(&insert.text, editor);
@@ -1471,22 +1469,31 @@ fn perform_work(
             KeyOutcome::ToHost
         }
         ComposingKeyIntent::PassThrough => {
-            let Some(characters) = snapshot.characters.as_deref() else {
+            let Some(typed) = ComposingKeyIntent::document_text(snapshot) else {
                 return KeyOutcome::ToHost;
             };
-            if ComposingKeyIntent::is_document_text(snapshot)
-                && swap_auto_space(characters, armed_swap, settings, manager, editor)
-            {
+            // The swap is read before the width for a bare key (the word in
+            // front of the caret is romanization, which keeps Latin marks);
+            // the width-flip chord named its width, so the swap attaches the
+            // glyph the user asked for (`TaigiInputController.swift`).
+            let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
+            let punctuation = document_punctuation(settings, &typed, is_width_flip);
+            let swapping = if is_width_flip {
+                punctuation.as_deref().unwrap_or(&typed)
+            } else {
+                &typed
+            };
+            if swap_auto_space(swapping, armed_swap, settings, manager, editor) {
                 return KeyOutcome::Consumed;
             }
-            if ComposingKeyIntent::is_document_text(snapshot) {
-                if let Some(mapped) = full_width_mapped(settings, characters) {
-                    editor.insert_external(&mapped);
-                    manager.note_character_typed_outside_composition(&mapped);
-                    return KeyOutcome::Consumed;
-                }
-                manager.note_character_typed_outside_composition(characters);
+            // Punctuation this input method writes itself: the host cannot
+            // map a key it types (and would read the chord as a shortcut).
+            if let Some(punctuation) = punctuation {
+                editor.insert_external(&punctuation);
+                manager.note_character_typed_outside_composition(&punctuation);
+                return KeyOutcome::Consumed;
             }
+            manager.note_character_typed_outside_composition(&typed);
             KeyOutcome::ToHost
         }
         ComposingKeyIntent::CommitHighlightedCandidate => {
@@ -1676,14 +1683,20 @@ fn append_auto_space(
     }
 }
 
-/// The full-width form of a typed character when the layouts type full-width
-/// marks — the DERIVED width, so roman-only stays half-width and combined
-/// follows the stored swap the shortcut toggles.
-fn full_width_mapped(settings: &SettingsDocument, text: &str) -> Option<String> {
-    if !settings.engine_settings().is_full_width_punctuation {
-        return None;
-    }
-    policies::full_width_mapped(text)
+/// `policies::document_punctuation` under the DERIVED width, so roman-only
+/// stays half-width and combined follows the stored swap the shortcut
+/// toggles; `is_width_flip` is `width_flip_character`'s verdict on the key
+/// that typed `text`.
+fn document_punctuation(
+    settings: &SettingsDocument,
+    text: &str,
+    is_width_flip: bool,
+) -> Option<String> {
+    policies::document_punctuation(
+        text,
+        settings.engine_settings().is_full_width_punctuation,
+        is_width_flip,
+    )
 }
 
 /// The global action `snapshot` is, if its recorded chord matches.

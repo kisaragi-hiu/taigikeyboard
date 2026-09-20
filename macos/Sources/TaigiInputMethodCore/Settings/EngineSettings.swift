@@ -129,7 +129,7 @@ struct EngineSettings: Equatable, Sendable {
     let isOutputBothScripts: Bool
 
     /// `CandidateDisplayMode.effectiveFullWidthPunctuation(stored:)` — read by
-    /// `TaigiInputController.fullWidthMapped` only.
+    /// `TaigiInputController.documentPunctuation` only.
     let isFullWidthPunctuation: Bool
 
     /// Whether the candidate window shows both scripts or the romanization

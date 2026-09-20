@@ -32,6 +32,13 @@ impl CaretDirection {
 /// `WM_SYSKEYDOWN`, so it is not this.
 pub const CARET_CHORD_MODIFIERS: KeyModifiers = KeyModifiers::CONTROL;
 
+/// The modifier that types a punctuation key in the other width, once — the
+/// 新注音 / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not recordable,
+/// shown read-only on the 快速齒 pane like the caret chord
+/// (`ComposingKeyIntent.swift` `widthFlipModifiers`); the row is drawn from
+/// this same value the classifier compares against.
+pub const WIDTH_FLIP_MODIFIERS: KeyModifiers = KeyModifiers::CONTROL;
+
 /// A move in the candidate window. The six physical keys are handed through
 /// raw because what each does depends on the layout (`↓` pages a horizontal
 /// window and walks a vertical list); `NextCandidate` / `PreviousCandidate`
@@ -201,6 +208,18 @@ impl ComposingKeyIntent {
                 }
             }
         }
+        // Ctrl on a punctuation key types that key in the other width, once
+        // (`width_flip_character`). Below the bindings, so a chord the user
+        // recorded on Ctrl+, still reaches its action; above the host guard,
+        // because this is the one Ctrl chord that is this input method's.
+        // The session decides the width — the intent carries the key as
+        // typed (`ComposingKeyIntent.swift`).
+        if let Some(flipped) = Self::width_flip_character(key) {
+            return Self::composition_or_host(
+                is_composing,
+                Self::CommitThenInsert(flipped.to_string()),
+            );
+        }
         // Tier 5 — Control, Alt and Win chords are the host's shortcuts, mid-
         // composition too: swallowing Ctrl+S would cost the user their save.
         if modifiers.has_host_chord() {
@@ -266,15 +285,49 @@ impl ComposingKeyIntent {
     /// punctuation typed outside a composition can be reported to the engine
     /// as the end of a context — while Escape, Return and the arrows are not.
     pub fn is_document_text(key: &KeyEventSnapshot) -> bool {
+        Self::document_text(key).is_some()
+    }
+
+    /// The text `key` puts into the document, or `None` when it is a key the
+    /// host acts on. The width-flip chord is document text too, and what it
+    /// types is the key under the modifier: under Ctrl the layout types
+    /// nothing for `,` (`characters` is `None`) and Escape for `[`, and the
+    /// key itself is what the user asked for (`ComposingKeyIntent.swift`
+    /// `documentText(of:)`).
+    pub fn document_text(key: &KeyEventSnapshot) -> Option<String> {
+        if let Some(flipped) = Self::width_flip_character(key) {
+            return Some(flipped.to_string());
+        }
         if key.modifiers.has_host_chord() || key.is_named_special_key {
-            return false;
+            return None;
         }
-        match key.characters.as_deref() {
-            Some(characters) if !characters.is_empty() => {
-                characters.chars().all(Self::is_text_scalar)
-            }
-            _ => false,
+        key.characters
+            .as_deref()
+            .filter(|characters| {
+                !characters.is_empty() && characters.chars().all(Self::is_text_scalar)
+            })
+            .map(str::to_owned)
+    }
+
+    /// The punctuation key under a width-flip chord, or `None` when `key` is
+    /// not one: exactly Ctrl among the chording modifiers, Shift allowed
+    /// since it picks the key (Ctrl+Shift+, is Ctrl+<), and the key one the
+    /// full-width policy maps. Read off the unmodified characters because
+    /// Ctrl rewrites what a key types. Which width comes out is the session's
+    /// call: the chord means "the other one", and only the session knows
+    /// which one the mode would have typed (`ComposingKeyIntent.swift`
+    /// `widthFlipCharacter`).
+    pub fn width_flip_character(key: &KeyEventSnapshot) -> Option<char> {
+        let chording = KeyModifiers {
+            shift: false,
+            ..key.modifiers
+        };
+        if chording != WIDTH_FLIP_MODIFIERS || key.is_named_special_key {
+            return None;
         }
+        let unmodified = key.unmodified_characters()?;
+        crate::policies::full_width_mapped(unmodified)?;
+        unmodified.chars().next()
     }
 
     fn composition_or_host(is_composing: bool, when_composing: Self) -> Self {
@@ -339,7 +392,8 @@ impl ComposingKeyIntent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::keys::KeyModifiers;
+    use crate::keys::{ComposingAction, ComposingKeyChord, KeyModifiers};
+    use std::collections::BTreeMap;
 
     fn classify(
         key: &KeyEventSnapshot,
@@ -822,7 +876,14 @@ mod tests {
         for t in ["\u{1B}", "\r", "\u{8}", "\u{7F}", "", "\u{F702}"] {
             assert!(!ComposingKeyIntent::is_document_text(&text(t)), "{t:?}");
         }
+        // `x` rather than `.`: Ctrl+. is the width flip, document text by
+        // design (`width_flip_chord_types_the_mapped_key_in_both_states`).
         for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT, KeyModifiers::WIN] {
+            assert!(!ComposingKeyIntent::is_document_text(
+                &KeyEventSnapshot::text("x", modifiers)
+            ));
+        }
+        for modifiers in [KeyModifiers::ALT, KeyModifiers::WIN] {
             assert!(!ComposingKeyIntent::is_document_text(
                 &KeyEventSnapshot::text(".", modifiers)
             ));
@@ -836,5 +897,87 @@ mod tests {
         assert!(!ComposingKeyIntent::is_document_text(
             &KeyEventSnapshot::default()
         ));
+    }
+
+    #[test]
+    fn width_flip_chord_types_the_mapped_key_in_both_states() {
+        // trace: under Ctrl the layout types nothing for `,` (`characters`
+        // None, `key_translation.rs`) and Escape for `[`; the unmodified
+        // translation is the key. Ctrl+Shift+, keeps Shift → `<`.
+        let comma = KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL);
+        let bracket = KeyEventSnapshot::chord(Some("\u{1B}"), "[", KeyModifiers::CONTROL);
+        let angle =
+            KeyEventSnapshot::chord(None, "<", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
+        for (key, expected) in [(&comma, ","), (&bracket, "["), (&angle, "<")] {
+            assert_eq!(
+                ComposingKeyIntent::width_flip_character(key),
+                expected.chars().next()
+            );
+            assert_eq!(
+                ComposingKeyIntent::document_text(key).as_deref(),
+                Some(expected)
+            );
+            assert_eq!(classify(key, false, false), ComposingKeyIntent::PassThrough);
+            assert_eq!(
+                classify(key, true, true),
+                ComposingKeyIntent::CommitThenInsert(expected.into())
+            );
+        }
+        // Ctrl+[ is the flip, not a cancel: the fixed tier reads Escape only
+        // with no host chord held.
+        assert!(!bracket.is_bare_escape());
+    }
+
+    #[test]
+    fn width_flip_needs_exactly_control_on_a_mapped_key() {
+        // Another host chord beside Ctrl, a key the policy does not map, a
+        // named key, a bare key: all the host's or the ordinary text rule's.
+        let with_alt =
+            KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL.with(KeyModifiers::ALT));
+        let with_win =
+            KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL.with(KeyModifiers::WIN));
+        let letter = KeyEventSnapshot::chord(Some("\u{13}"), "s", KeyModifiers::CONTROL);
+        let hyphen = KeyEventSnapshot::chord(None, "-", KeyModifiers::CONTROL);
+        let quote = KeyEventSnapshot::chord(None, "\"", KeyModifiers::CONTROL);
+        let arrow = KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::CONTROL);
+        for key in [&with_alt, &with_win, &letter, &hyphen, &quote, &arrow] {
+            assert_eq!(
+                ComposingKeyIntent::width_flip_character(key),
+                None,
+                "{key:?}"
+            );
+            assert_eq!(classify(key, false, false), ComposingKeyIntent::PassThrough);
+        }
+        assert_eq!(
+            classify(&letter, true, true),
+            ComposingKeyIntent::CommitThenPassThrough
+        );
+        assert_eq!(ComposingKeyIntent::width_flip_character(&text(",")), None);
+    }
+
+    #[test]
+    fn width_flip_chord_yields_to_a_recorded_binding() {
+        // trace: ComposingKeyIntentTests.swift
+        // `testWidthFlipChord_yieldsToARecordedBinding`.
+        let mut stored = BTreeMap::new();
+        stored.insert(
+            ComposingAction::CommitLiteral,
+            Some(ComposingKeyChord {
+                key: ",".into(),
+                modifiers: KeyModifiers::CONTROL,
+            }),
+        );
+        let recorded = ComposingKeyBindings::resolve(&stored, ToneInputScheme::Standard);
+        let comma = KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL);
+
+        assert_eq!(
+            ComposingKeyIntent::intent(&comma, true, false, &recorded),
+            ComposingKeyIntent::Commit
+        );
+        assert_eq!(
+            classify(&comma, true, false),
+            ComposingKeyIntent::CommitThenInsert(",".into()),
+            "unrecorded, the same chord is the flip"
+        );
     }
 }

@@ -317,6 +317,15 @@ enum ComposingKeyIntent: Equatable {
             }
         }
 
+        // ⌃ on a punctuation key types that key in the other width, once
+        // (`widthFlipCharacter`). Below the bindings, so a chord the user
+        // recorded on ⌃, still reaches its action; above the host guard,
+        // because this is the one ⌃ chord that is this input method's. The
+        // controller decides the width — the intent carries the key as typed.
+        if let flipped = widthFlipCharacter(key) {
+            return isComposing ? .commitThenInsert(String(flipped)) : .passThrough
+        }
+
         // Command, control and option chords are the host's shortcuts. This
         // holds mid-composition too: swallowing ⌘S to keep a composition tidy
         // would cost the user their save.
@@ -383,13 +392,46 @@ enum ComposingKeyIntent: Equatable {
     /// carry the same character, and one of them is a host command that inserts
     /// nothing. The chording modifiers are what tells them apart.
     static func isDocumentText(_ key: KeyEventSnapshot) -> Bool {
+        documentText(of: key) != nil
+    }
+
+    /// The text `key` puts into the document, or nil when it is a key the host
+    /// acts on. The width-flip chord is document text too, and what it types
+    /// is the key under the modifier: `⌃,` arrives with `characters` `,` but
+    /// `⌃[` arrives as Escape, and the bracket is what the user asked for.
+    static func documentText(of key: KeyEventSnapshot) -> String? {
+        if let flipped = widthFlipCharacter(key) {
+            return String(flipped)
+        }
         guard key.modifiers
             .intersection(.deviceIndependentFlagsMask)
             .isDisjoint(with: hostChords)
-        else { return false }
-        guard !key.isNamedSpecialKey else { return false }
-        guard let characters = key.characters, !characters.isEmpty else { return false }
-        return characters.unicodeScalars.allSatisfy(isTextScalar)
+        else { return nil }
+        guard !key.isNamedSpecialKey else { return nil }
+        guard let characters = key.characters, !characters.isEmpty else { return nil }
+        return characters.unicodeScalars.allSatisfy(isTextScalar) ? characters : nil
+    }
+
+    /// The modifier that types a punctuation key in the other width, once —
+    /// the 新注音 / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not
+    /// recordable, shown read-only on the 快速齒 pane like the caret chord.
+    static let widthFlipModifiers: NSEvent.ModifierFlags = [.control]
+
+    /// The punctuation key under a width-flip chord, or nil when `key` is not
+    /// one: exactly ⌃ among the four chording modifiers, ⇧ allowed since it
+    /// picks the key (`⌃⇧,` is `⌃<`), and the key one `FullWidthPunctuation`
+    /// maps. Read off `charactersIgnoringModifiers` because Control rewrites
+    /// what some keys type (`⌃[` arrives as Escape). Which width comes out is
+    /// the controller's call: the chord means "the other one", and only the
+    /// controller knows which one the mode would have typed.
+    static func widthFlipCharacter(_ key: KeyEventSnapshot) -> Character? {
+        let chording = key.modifiers.intersection(chordingModifiers)
+        guard chording.subtracting(.shift) == widthFlipModifiers else { return nil }
+        guard !key.isNamedSpecialKey,
+              let unmodified = key.charactersIgnoringModifiers,
+              FullWidthPunctuation.mapped(unmodified) != nil
+        else { return nil }
+        return unmodified.first
     }
 
     /// A key the host owns. It still ends any composition first, so the host

@@ -14,7 +14,7 @@ use crate::winui::window::{Message, RecorderTarget, ResetScope, SettingsWindow};
 use taigi_windows_core::candidates::HorizontalPageLayout;
 use taigi_windows_core::keys::{
     rejection_message_key, CandidateSlotKeySet, ComposingAction, ComposingKeyBindings,
-    ComposingKeyChord, KeyModifiers, ShortcutAction, CARET_CHORD_MODIFIERS,
+    ComposingKeyChord, KeyModifiers, ShortcutAction, CARET_CHORD_MODIFIERS, WIDTH_FLIP_MODIFIERS,
 };
 use taigi_windows_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
@@ -78,6 +78,18 @@ pub fn view(
                 .opacity(0.65)
                 .vertical_alignment(VerticalAlignment::Center),
         ),
+        // Shown, not recordable (USER 2026-09-20): Ctrl on a punctuation key
+        // types it in the other width once, whatever the 漢羅 mode would have
+        // typed (`ComposingKeyIntent::width_flip_character`). Here because it
+        // writes into the document; three sample chords, since the row stands
+        // for every key of the map.
+        cards::row(
+            strings.resolve(StringKey::DesktopShortcutFlipPunctuationWidth),
+            TextBlock::new()
+                .text(width_flip_chords_label())
+                .opacity(0.65)
+                .vertical_alignment(VerticalAlignment::Center),
+        ),
         // Block three: the switches, and the windows a key raises. What these
         // have in common is that none of them needs a composition running —
         // which is also why they are the roster that holds a chord in the
@@ -106,6 +118,21 @@ fn caret_chords_label() -> String {
                 .chain([arrow.to_owned()])
                 .collect::<Vec<_>>()
                 .join("+")
+        })
+        .join("  ")
+}
+
+/// `Ctrl+,  Ctrl+.  Ctrl+;` — three of the keys the width flip reaches, in
+/// the recorder rows' own spelling (`ShortcutSettingsView.swift`
+/// `widthFlipChordsLabel`).
+fn width_flip_chords_label() -> String {
+    [",", ".", ";"]
+        .map(|key| {
+            ComposingKeyChord {
+                key: key.to_owned(),
+                modifiers: WIDTH_FLIP_MODIFIERS,
+            }
+            .display()
         })
         .join("  ")
 }

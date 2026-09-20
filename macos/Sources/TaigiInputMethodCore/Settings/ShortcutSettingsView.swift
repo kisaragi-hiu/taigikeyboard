@@ -89,6 +89,16 @@ struct ShortcutSettingsView: View {
                     Text(Self.shiftedSlotKeysLabel(bindings.slotKeySet))
                         .foregroundStyle(.secondary)
                 }
+
+                // Shown, not recordable (USER 2026-09-20): ⌃ on a punctuation
+                // key types it in the other width once, whatever the 漢羅
+                // mode would have typed (`ComposingKeyIntent.widthFlipCharacter`).
+                // Here because it writes into the document; three sample
+                // chords, since the row stands for every key of the map.
+                LabeledContent(language.string(.desktopShortcutFlipPunctuationWidth)) {
+                    Text(Self.widthFlipChordsLabel)
+                        .foregroundStyle(.secondary)
+                }
             } header: {
                 Text(language.string(.desktopShortcutSectionOutput))
             }
@@ -135,6 +145,17 @@ struct ShortcutSettingsView: View {
             ShortcutKeyDisplay.text(for: ComposingKeyChord(
                 key: String(UnicodeScalar(arrow)!),
                 modifiers: ComposingKeyIntent.caretChordModifiers,
+            ))
+        }
+        .joined(separator: "  ")
+
+    /// `⌃,  ⌃.  ⌃;` — three of the keys the width flip reaches, drawn by the
+    /// recorder rows' renderer from the modifier the classifier reads.
+    static let widthFlipChordsLabel = [",", ".", ";"]
+        .map { key in
+            ShortcutKeyDisplay.text(for: ComposingKeyChord(
+                key: key,
+                modifiers: ComposingKeyIntent.widthFlipModifiers,
             ))
         }
         .joined(separator: "  ")
