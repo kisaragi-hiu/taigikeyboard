@@ -275,7 +275,7 @@ mod tests {
                 Some("設定\tCtrl+Alt+S"),
                 None,
                 Some("檢查更新"),
-                Some("關於台語齒盤"),
+                Some("關於齒盤"),
             ]
         );
         let ids: Vec<Option<u32>> = rows

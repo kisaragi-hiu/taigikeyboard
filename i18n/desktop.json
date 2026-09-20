@@ -950,7 +950,7 @@
       }
     },
     "aboutIntroProject": {
-      "comment": "關於 page, first line: what the project is. Two short paragraphs in all (USER 2026-09-20 「說明文字太多太長了」). Hanji authored by the USER 2026-09-20; tailo / poj carry the Hanji verbatim until the USER supplies romanized versions.",
+      "comment": "關於 page, first line: what the project is. Two short paragraphs in all (USER 2026-09-20 「說明文字太多太長了」). Hanji authored by the USER 2026-09-20 (revised same day: paid-features + education-groups lines); tailo / poj generated 2026-09-20.",
       "scope": {
         "platforms": [
           "macos",
@@ -961,15 +961,15 @@
         ]
       },
       "values": {
-        "hanji": "台語齒盤是自由、開源 ê 台語拍字家私，永遠免費、無廣告。",
-        "tailo": "台語齒盤是自由、開源 ê 台語拍字家私，永遠免費、無廣告。",
-        "poj": "台語齒盤是自由、開源 ê 台語拍字家私，永遠免費、無廣告。",
-        "en": "TaigiKeyboard is a free, open-source Taiwanese input method — free forever, with no ads.",
-        "ja": "台湾語キーボードは、自由でオープンソースの台湾語入力ツールです。ずっと無料で、広告もありません。"
+        "hanji": "台語齒盤是一个自由、開源 ê 台語拍字家私，永遠免費、無廣告，嘛袂推出付費功能。毋管是一般使用者、先生、學校抑是台語教育團體，攏會當自由使用。希望予逐家用台語、教台語 ê 時，免有額外 ê 負擔。",
+        "tailo": "Tâi-gí Khí-puânn sī tsi̍t ê tsū-iû, khai-guân ê Tâi-gí phah-jī ke-si, íng-uán bián-huì, bô kóng-kò, mā bē tshui-tshut hù-huì kong-lîng. M̄-kuán sī it-puann sú-iōng-tsiá, sian-sinn, ha̍k-hāu ia̍h-sī Tâi-gí kàu-io̍k thuân-thé, lóng ē-tàng tsū-iû sú-iōng. Hi-bāng hōo ta̍k-ke iōng Tâi-gí, kà Tâi-gí ê sî, bián ū gia̍h-guā ê hū-tam.",
+        "poj": "Tâi-gí Khí-pôaⁿ sī chi̍t ê chū-iû, khai-goân ê Tâi-gí phah-jī ke-si, éng-oán bián-hùi, bô kóng-kò, mā bē chhui-chhut hù-hùi kong-lêng. M̄-koán sī it-poaⁿ sú-iōng-chiá, sian-siⁿ, ha̍k-hāu ia̍h-sī Tâi-gí kàu-io̍k thoân-thé, lóng ē-tàng chū-iû sú-iōng. Hi-bāng hō͘ ta̍k-ke iōng Tâi-gí, kà Tâi-gí ê sî, bián ū gia̍h-gōa ê hū-tam.",
+        "en": "TaigiKeyboard is a free, open-source Taiwanese input method — free forever, with no ads and no paid features ever. Everyday users, teachers, schools and Taiwanese-language education groups are all free to use it. The hope is that using and teaching Taiwanese comes with no extra burden.",
+        "ja": "台語齒盤は、自由でオープンソースの台湾語入力ツールです。ずっと無料で、広告もなく、有料機能を出すこともありません。一般の利用者、先生、学校、台湾語教育団体のどなたでも自由に使えます。台湾語を使うとき、教えるときに、余計な負担がないことを願っています。"
       }
     },
     "aboutIntroMaintainer": {
-      "comment": "關於 page, second line: one maintainer, the hope. Hanji authored by the USER 2026-09-20; tailo / poj carry the Hanji verbatim until the USER supplies romanized versions.",
+      "comment": "關於 page, second line: one maintainer, the hope. Hanji authored by the USER 2026-09-20 (revised same day: paid-features + education-groups lines); tailo / poj generated 2026-09-20.",
       "scope": {
         "platforms": [
           "macos",
@@ -980,11 +980,11 @@
         ]
       },
       "values": {
-        "hanji": "這个計畫目前由我一个人利用上班以外 ê 時間開發佮維護，向望台語齒盤會當一直維持落去，予逐个想欲用母語拍字 ê 人，攏有一个好用 ê 家私。",
-        "tailo": "這个計畫目前由我一个人利用上班以外 ê 時間開發佮維護，向望台語齒盤會當一直維持落去，予逐个想欲用母語拍字 ê 人，攏有一个好用 ê 家私。",
-        "poj": "這个計畫目前由我一个人利用上班以外 ê 時間開發佮維護，向望台語齒盤會當一直維持落去，予逐个想欲用母語拍字 ê 人，攏有一个好用 ê 家私。",
-        "en": "This project is developed and maintained by one person, in the hours outside a day job. I hope TaigiKeyboard keeps going, so that everyone who wants to type in their mother tongue has a tool that works well.",
-        "ja": "このプロジェクトは現在、私一人が本業以外の時間で開発と保守を行っています。台湾語キーボードがこれからも続き、母語で入力したいすべての人に、使いやすいツールを届けられることを願っています。"
+        "hanji": "這个計畫目前由我一个人利用上班以外 ê 時間開發佮維護。向望會當一直做落去，予逐个想欲用母語拍字 ê 人，攏有一个好用 ê 家私。",
+        "tailo": "Tsit ê kè-uē bo̍k-tsiân iû guá tsi̍t ê lâng lī-iōng siōng-pan í-guā ê sî-kan khai-huat kah uî-hōo. Ǹg-bāng ē-tàng it-ti̍t tsò lo̍h-khì, hōo ta̍k ê siūnn-beh iōng bó-gí phah-jī ê lâng, lóng ū tsi̍t ê hó-iōng ê ke-si.",
+        "poj": "Chit ê kè-ōe bo̍k-chiân iû goá chi̍t ê lâng lī-iōng siōng-pan í-gōa ê sî-kan khai-hoat kah ûi-hō͘. Ǹg-bāng ē-tàng it-ti̍t chò lo̍h-khì, hō͘ ta̍k ê siūⁿ-beh iōng bó-gí phah-jī ê lâng, lóng ū chi̍t ê hó-iōng ê ke-si.",
+        "en": "This project is developed and maintained by one person, in the hours outside a day job. I hope to keep it going, so that everyone who wants to type in their mother tongue has a tool that works well.",
+        "ja": "このプロジェクトは現在、私一人が本業以外の時間で開発と保守を行っています。これからも続けていき、母語で入力したいすべての人に、使いやすいツールを届けられることを願っています。"
       }
     },
     "sponsorLink": {
@@ -1668,11 +1668,11 @@
         ]
       },
       "values": {
-        "hanji": "關於台語齒盤",
-        "tailo": "Kuan-î Tâi-gí Khí-puânn",
-        "poj": "Koan-î Tâi-gí Khí-pôaⁿ",
-        "en": "About TaigiKeyboard",
-        "ja": "台語齒盤について"
+        "hanji": "關於齒盤",
+        "tailo": "Kuan-î Khí-puânn",
+        "poj": "Koan-î Khí-pôaⁿ",
+        "en": "About the Keyboard",
+        "ja": "齒盤について"
       }
     }
   }
