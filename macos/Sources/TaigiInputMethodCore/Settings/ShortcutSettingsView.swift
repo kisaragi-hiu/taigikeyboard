@@ -52,14 +52,28 @@ struct ShortcutSettingsView: View {
             // (USER 2026-09-09) — so a row cannot move here without moving in
             // the roster itself.
             //
-            // The candidate-slot keys have no row anywhere on this pane: they
+            // The candidate-slot keys have no RECORDER row on this pane: they
             // follow from the 聲調拍法 picker on the 一般 pane
             // (`ToneInputScheme`), so the two halves of the key contract
-            // cannot be set apart.
+            // cannot be set apart. They are shown read-only below.
             Section {
                 ForEach(ComposingAction.groups[0], id: \.self) { action in
                     recorderRow(action)
                 }
+
+                // Shown, not recordable (USER 2026-09-20): the bare slot keys
+                // pick a candidate off the visible page, and which keys they
+                // are follows the 聲調拍法 picker (`ToneInputScheme.slotKeySet`)
+                // — so the row follows it too. First of the fixed rows because
+                // it is the main way through the bar; its ⇧ twin sits with the
+                // commit rows below.
+                fixedRow(.desktopShortcutSelectCandidateSlot, Self.slotKeysLabel(bindings.slotKeySet))
+
+                // Shown, not recordable: the fixed navigation tier
+                // (`ComposingKeyIntent.intent`), read before any binding so a
+                // user who has mis-bound everything else still has a way
+                // through the candidates.
+                fixedRow(.desktopShortcutNavigateCandidates, Self.navigationKeysLabel)
 
                 // Shown, not recordable (USER 2026-09-09): the caret inside the
                 // composition rides the host's own word-jump chord, and the
@@ -67,10 +81,7 @@ struct ShortcutSettingsView: View {
                 // With the candidate movers, because moving the caret is what
                 // it is — the greyed field is what tells it from the rows that
                 // record.
-                LabeledContent(language.string(.desktopShortcutMoveComposingCaret)) {
-                    Text(Self.caretChordsLabel)
-                        .foregroundStyle(.secondary)
-                }
+                fixedRow(.desktopShortcutMoveComposingCaret, Self.caretChordsLabel)
             } header: {
                 Text(language.string(.desktopShortcutSectionCandidateSelection))
             }
@@ -81,24 +92,23 @@ struct ShortcutSettingsView: View {
                     recorderRow(action)
                 }
 
+                // Shown, not recordable: Escape drops the composition without
+                // writing to the document — the fixed tier's way out beside
+                // the two commit rows above (`ComposingKeyIntent.intent`).
+                fixedRow(.desktopShortcutCancelComposing, Self.cancelKeyLabel)
+
                 // Shown, not recordable (USER 2026-09-10): ⇧ on a slot key is
                 // the 漢羅 commit aimed at that slot, and the slot keys follow
                 // the tone scheme — so the row follows it too, and there is
                 // nothing to record. After the commit rows, because it is one.
-                LabeledContent(language.string(.desktopActionCommitAlternateScript)) {
-                    Text(Self.shiftedSlotKeysLabel(bindings.slotKeySet))
-                        .foregroundStyle(.secondary)
-                }
+                fixedRow(.desktopActionCommitAlternateScript, Self.shiftedSlotKeysLabel(bindings.slotKeySet))
 
                 // Shown, not recordable (USER 2026-09-20): ⌃ on a punctuation
                 // key types it in the other width once, whatever the 漢羅
                 // mode would have typed (`ComposingKeyIntent.widthFlipCharacter`).
                 // Here because it writes into the document; three sample
                 // chords, since the row stands for every key of the map.
-                LabeledContent(language.string(.desktopShortcutFlipPunctuationWidth)) {
-                    Text(Self.widthFlipChordsLabel)
-                        .foregroundStyle(.secondary)
-                }
+                fixedRow(.desktopShortcutFlipPunctuationWidth, Self.widthFlipChordsLabel)
             } header: {
                 Text(language.string(.desktopShortcutSectionOutput))
             }
@@ -149,6 +159,15 @@ struct ShortcutSettingsView: View {
         }
         .joined(separator: "  ")
 
+    /// `←  →  ↑  ↓  ⇞  ⇟` — the fixed navigation tier's own key list, drawn
+    /// by the recorder rows' renderer.
+    static let navigationKeysLabel = ComposingKeyChord.fixedNavigationKeys
+        .map { ShortcutKeyDisplay.text(for: ComposingKeyChord(key: $0, modifiers: [])) }
+        .joined(separator: "  ")
+
+    /// `⎋`, drawn by the recorder rows' renderer.
+    static let cancelKeyLabel = ShortcutKeyDisplay.text(for: ComposingKeyChord(key: ComposingKeyChord.cancelKey, modifiers: []))
+
     /// `⌃,  ⌃.  ⌃;` — three of the keys the width flip reaches, drawn by the
     /// recorder rows' renderer from the modifier the classifier reads.
     static let widthFlipChordsLabel = [",", ".", ";"]
@@ -160,6 +179,13 @@ struct ShortcutSettingsView: View {
         }
         .joined(separator: "  ")
 
+    /// `qwdfzxvy;` under Standard, `123456789` under Telex: every key of the
+    /// live slot set, bare, drawn by the recorder rows' renderer — lowercase
+    /// because a bare key shows the character it types (USER 2026-08-22).
+    static func slotKeysLabel(_ keySet: CandidateSlotKeySet) -> String {
+        ShortcutKeyDisplay.text(for: ComposingKeyChord(key: slotKeys(keySet), modifiers: []))
+    }
+
     /// `⇧QWDFZXVY;` under Standard, `⇧123456789` under Telex: every key of the
     /// live slot set behind ONE ⇧, drawn by the recorder rows' renderer.
     ///
@@ -168,10 +194,14 @@ struct ShortcutSettingsView: View {
     /// series a reader could fill in. One ⇧ rather than one per key, because
     /// repeating it nine times says the modifier nine times and the keys once.
     static func shiftedSlotKeysLabel(_ keySet: CandidateSlotKeySet) -> String {
-        let keys = (0 ..< HorizontalPageLayout.pageSize)
+        ShortcutKeyDisplay.text(for: ComposingKeyChord(key: slotKeys(keySet), modifiers: .shift))
+    }
+
+    /// The nine slot keys of `keySet` as one run, in page order.
+    private static func slotKeys(_ keySet: CandidateSlotKeySet) -> String {
+        (0 ..< HorizontalPageLayout.pageSize)
             .map { keySet.label(forSlot: $0) }
             .joined()
-        return ShortcutKeyDisplay.text(for: ComposingKeyChord(key: keys, modifiers: .shift))
     }
 
     /// One global-hotkey row.
@@ -190,6 +220,16 @@ struct ShortcutSettingsView: View {
             ) { key in
                 record(key?.globalShortcut, for: action)
             }
+        }
+    }
+
+    /// One read-only row: the label, and the fixed keys greyed where a
+    /// recorder row shows its field — the greyed text is what tells it from
+    /// the rows that record.
+    private func fixedRow(_ label: StringKey, _ keys: String) -> some View {
+        LabeledContent(language.string(label)) {
+            Text(keys)
+                .foregroundStyle(.secondary)
         }
     }
 
