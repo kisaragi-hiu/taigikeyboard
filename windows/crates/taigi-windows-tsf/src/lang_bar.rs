@@ -40,6 +40,8 @@ use windows::Win32::UI::WindowsAndMessaging::{
 /// nothing" — the one rule a new row has to keep.
 pub const MENU_OPEN_SETTINGS: u32 = 1;
 pub const MENU_CHECK_FOR_UPDATES: u32 = 2;
+/// The 關於 page's one doorway: it has no sidebar row (USER 2026-09-20).
+pub const MENU_ABOUT: u32 = 5;
 /// The global shortcuts the menu stands in for, in row order, each with its
 /// id (USER 2026-09-19: the menu is where a user looks up the chords they
 /// last recorded). One table drives both the drawing and the id → action
@@ -52,7 +54,9 @@ pub const MENU_SHORTCUT_ROWS: [(u32, ShortcutAction); 2] = [
     (3, ShortcutAction::ToggleRomanization),
     (4, ShortcutAction::CycleCandidateDisplayMode),
 ];
-const _: () = assert!(MENU_OPEN_SETTINGS != 0 && MENU_CHECK_FOR_UPDATES != 0);
+const _: () = assert!(MENU_OPEN_SETTINGS != 0 && MENU_CHECK_FOR_UPDATES != 0 && MENU_ABOUT != 0);
+const _: () =
+    assert!(MENU_ABOUT != MENU_SHORTCUT_ROWS[0].0 && MENU_ABOUT != MENU_SHORTCUT_ROWS[1].0);
 const _: () = assert!(MENU_SHORTCUT_ROWS[0].0 != 0 && MENU_SHORTCUT_ROWS[1].0 != 0);
 
 /// The global shortcut a menu id stands for, `None` for the other rows.
@@ -97,7 +101,7 @@ pub fn item_info() -> TF_LANGBARITEMINFO {
 /// the user last recorded on it, tab-separated: a Win32 menu draws what
 /// follows a tab in its accelerator column, which is what `show_popup`
 /// builds. The shortcut rows carry the 快捷鍵 pane's own names; the 設定 row
-/// keeps its one-word menu name. 檢查更新 carries no chord by design.
+/// keeps its one-word menu name. 檢查更新 and 關於 carry no chord by design.
 pub fn menu_rows(
     strings: &StringResolver,
     settings: &SettingsDocument,
@@ -123,6 +127,10 @@ pub fn menu_rows(
         Some((
             MENU_CHECK_FOR_UPDATES,
             strings.resolve(StringKey::DesktopUpdateCheckNow).to_owned(),
+        )),
+        Some((
+            MENU_ABOUT,
+            strings.resolve(StringKey::DesktopAboutTab).to_owned(),
         )),
     ]);
     rows
@@ -250,7 +258,7 @@ mod tests {
 
     #[test]
     fn the_menu_mirrors_the_macos_input_source_menu() {
-        // trace: TaigiInputController.menu() → [shortcuts(2)], [settings], [checkForUpdates];
+        // trace: TaigiInputController.menu() → [shortcuts(2)], [settings], [checkForUpdates, about];
         // the literal oracle is the authored Hanji, as in TaigiInputControllerMenuTests.
         let strings = StringResolver::new(DisplayLanguage::Hanji);
         let rows = menu_rows(&strings, &SettingsDocument::default());
@@ -267,18 +275,23 @@ mod tests {
                 Some("設定\tCtrl+Alt+S"),
                 None,
                 Some("檢查更新"),
+                Some("關於台語齒盤"),
             ]
         );
         let ids: Vec<Option<u32>> = rows
             .iter()
             .map(|row| row.as_ref().map(|(id, _)| *id))
             .collect();
-        assert_eq!(ids, [Some(3), Some(4), None, Some(1), None, Some(2)]);
+        assert_eq!(
+            ids,
+            [Some(3), Some(4), None, Some(1), None, Some(2), Some(5)]
+        );
         for (id, action) in MENU_SHORTCUT_ROWS {
             assert_eq!(shortcut_for_menu_id(id), Some(action));
         }
         assert_eq!(shortcut_for_menu_id(MENU_OPEN_SETTINGS), None);
         assert_eq!(shortcut_for_menu_id(MENU_CHECK_FOR_UPDATES), None);
+        assert_eq!(shortcut_for_menu_id(MENU_ABOUT), None);
         let mut cleared = SettingsDocument::default();
         ShortcutAction::OpenLastSettingsPane.store_in(&mut cleared, None);
         ShortcutAction::ToggleRomanization.store_in(&mut cleared, None);

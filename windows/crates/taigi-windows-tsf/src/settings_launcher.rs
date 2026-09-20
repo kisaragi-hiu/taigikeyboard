@@ -58,6 +58,12 @@ pub fn check_for_updates() {
     );
 }
 
+/// The window on 關於, the pane the sidebar does not list — the menu is its
+/// one doorway (USER 2026-09-20).
+pub fn open_about() {
+    launch(&[PANE_FLAG, SettingsPane::About.raw()], Priority::Inherit);
+}
+
 /// Maps the settings window's WinUI runtime ahead of the first open, in a
 /// process that exits as soon as it has (`taigi-windows-settings::prewarm`
 /// says what that buys).

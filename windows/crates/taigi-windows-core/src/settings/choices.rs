@@ -325,8 +325,9 @@ impl SettingChoice for CandidateFontChoice {
 }
 
 /// The settings window's panes. `SIDEBAR` is what the sidebar lists, in
-/// order; `DictionarySearch` is built but unlisted, exactly as on macOS
-/// (`SettingsSplitView.swift:13-45,121-125`).
+/// order; `DictionarySearch` is built but unlisted, and `About` is listed
+/// nowhere but the input-source menu (USER 2026-09-20), exactly as on macOS
+/// (`SettingsSplitView.swift`, `SettingsPane.sidebar`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SettingsPane {
     General,
@@ -339,6 +340,7 @@ pub enum SettingsPane {
     /// draws IN.
     FontManagement,
     DictionarySearch,
+    About,
 }
 
 impl SettingsPane {
@@ -352,9 +354,10 @@ impl SettingsPane {
         Self::FontManagement,
     ];
 
-    /// The sidebar row label's i18n key (`SettingsSplitView.swift:26-34`).
-    /// `None` for the unlisted search page, which has no row and no title of
-    /// its own on macOS either.
+    /// The sidebar row label's i18n key, and the window title
+    /// (`SettingsSplitView.swift`, `labelKey`). `None` for the unlisted
+    /// search page, which has no row and no title of its own on macOS
+    /// either; 關於 has a title without a row.
     pub fn title_key(self) -> Option<crate::strings::StringKey> {
         use crate::strings::StringKey;
         Some(match self {
@@ -364,6 +367,7 @@ impl SettingsPane {
             Self::CustomDictionary => StringKey::DictionaryCustomDictionary,
             Self::DictionarySources => StringKey::DesktopDictionarySourcesLink,
             Self::FontManagement => StringKey::DesktopFontManagementTab,
+            Self::About => StringKey::DesktopAboutTab,
             Self::DictionarySearch => return None,
         })
     }
@@ -383,6 +387,8 @@ impl SettingsPane {
             // Font, the glyph Windows itself puts on a typeface list —
             // matching the Mac's `textformat`.
             Self::FontManagement => "\u{E8D2}",
+            // Info, matching the Mac's `info.circle`; no row draws it.
+            Self::About => "\u{E946}",
         }
     }
 }
@@ -396,6 +402,7 @@ impl SettingChoice for SettingsPane {
         Self::DictionarySources,
         Self::FontManagement,
         Self::DictionarySearch,
+        Self::About,
     ];
     const DEFAULT: Self = Self::General;
     fn raw(self) -> &'static str {
@@ -407,6 +414,7 @@ impl SettingChoice for SettingsPane {
             Self::DictionarySources => "dictionarySources",
             Self::FontManagement => "fontManagement",
             Self::DictionarySearch => "dictionarySearch",
+            Self::About => "about",
         }
     }
 }
@@ -479,5 +487,18 @@ mod tests {
         assert!(SettingsPane::SIDEBAR
             .iter()
             .all(|pane| pane.title_key().is_some()));
+    }
+
+    /// 關於 is a pane — it persists, it titles the window — but not a row:
+    /// the input-source menu is its one doorway (USER 2026-09-20).
+    #[test]
+    fn about_is_a_pane_with_a_title_but_not_in_the_sidebar() {
+        assert!(SettingsPane::ALL.contains(&SettingsPane::About));
+        assert!(!SettingsPane::SIDEBAR.contains(&SettingsPane::About));
+        assert_eq!(
+            SettingsPane::About.title_key(),
+            Some(crate::strings::StringKey::DesktopAboutTab)
+        );
+        assert_eq!(SettingsPane::from_raw("about"), Some(SettingsPane::About));
     }
 }

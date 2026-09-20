@@ -263,6 +263,68 @@ pub fn action_row(
     )
 }
 
+/// `OpenInNewWindow`, the glyph Windows 11 Settings puts at the right of a
+/// card that opens somewhere outside the app.
+const OPEN_IN_NEW_WINDOW_GLYPH: &str = "\u{E8A7}";
+/// Between a link row's leading mark and its title: the gap a `Label`
+/// leaves on the Mac (`ExternalLinkButton.Metrics.rowSpacing`).
+const LINK_MARK_GAP: f64 = 8.0;
+/// `ButtonPadding`'s horizontal 11, which this pinned `windows-reactor`
+/// cannot change; the row's content adds the rest, so its text starts on
+/// the same line as the card padding above it.
+const BUTTON_PADDING_X: f64 = 11.0;
+const LINK_ROW_INSET: f64 = CARD_PADDING.0 - BUTTON_PADDING_X;
+
+/// Rows that are links, in ONE card — the Mac's grouped section of
+/// `ExternalLinkButton.Style.row`s: a mark at the left, the title, and the
+/// leave-the-app glyph at the right, each row the button. Windows 11
+/// Settings groups its outbound links the same way (the "Related links"
+/// card), so the shape is native on both sides.
+///
+/// Each row is a subtle `Button` rather than a `Border`: the row must take
+/// the click, and subtle is the style that draws nothing until the pointer
+/// lifts a fill under it — the card, not the button, is what the eye sees.
+pub fn link_group(rows: impl IntoViews) -> View {
+    Border::new()
+        .background(ThemeBrush::CardBackground)
+        .border_brush(ThemeBrush::CardStroke)
+        .border_thickness(Thickness::uniform(1.0))
+        .corner_radius(CornerRadius::uniform(CARD_CORNER_RADIUS))
+        .content(StackPanel::new().children(rows))
+}
+
+/// One row of a `link_group`.
+pub fn link_row(mark: impl Into<View>, title: &str, on_click: Callback<()>) -> View {
+    Button::new()
+        .style(ButtonStyle::Subtle)
+        .on_click(on_click)
+        .horizontal_alignment(HorizontalAlignment::Stretch)
+        .horizontal_content_alignment(HorizontalAlignment::Stretch)
+        .min_height(SUB_ROW_MIN_HEIGHT)
+        .automation_name(title)
+        .content(
+            Grid::new()
+                .columns([GridLength::Auto, GridLength::STAR, GridLength::Auto])
+                .column_spacing(LINK_MARK_GAP)
+                .margin(Thickness::xy(LINK_ROW_INSET, 0.0))
+                .children((
+                    Border::new()
+                        .grid_column(0)
+                        .vertical_alignment(VerticalAlignment::Center)
+                        .content(mark),
+                    TextBlock::new()
+                        .text(title)
+                        .vertical_alignment(VerticalAlignment::Center)
+                        .grid_column(1),
+                    FontIcon::new()
+                        .glyph(OPEN_IN_NEW_WINDOW_GLYPH)
+                        .vertical_alignment(VerticalAlignment::Center)
+                        .opacity(0.65)
+                        .grid_column(2),
+                )),
+        )
+}
+
 /// A section's title with a count at the line's right (`{matched} / {total}`).
 pub fn section_title_with_count(text: &str, count: &str) -> View {
     Grid::new()

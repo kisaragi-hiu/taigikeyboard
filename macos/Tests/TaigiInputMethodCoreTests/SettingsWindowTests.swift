@@ -302,7 +302,7 @@ final class SettingsWindowTests: XCTestCase {
 
     /// Raw values are the persistence contract: `@AppStorage` writes them, so
     /// renaming a case silently resets every user to 一般. The order is also
-    /// the sidebar order — the flat list renders `allCases` directly — so
+    /// the sidebar order — the flat list renders `sidebar` directly — so
     /// this doubles as the roster. 詞頻紀錄 / 詞關聯紀錄 / 備份復原 are absent by
     /// decision, not by omission — see `RetiredSettingsCleanup`, which sweeps a
     /// selection left pointing at one of them.
@@ -311,9 +311,18 @@ final class SettingsWindowTests: XCTestCase {
             SettingsPane.allCases.map(\.rawValue),
             [
                 "general", "appearance", "shortcuts", "customDictionary", "dictionarySources",
-                "fontManagement",
+                "fontManagement", "about",
             ],
         )
+    }
+
+    /// 關於 is a pane — it persists, it titles the window — but not a row: the
+    /// input-source menu is its one doorway (USER 2026-09-20).
+    func testAbout_isAPaneButNotInTheSidebar() {
+        XCTAssertTrue(SettingsPane.allCases.contains(.about))
+        XCTAssertFalse(SettingsPane.sidebar.contains(.about))
+        XCTAssertEqual(SettingsPane.sidebar, SettingsPane.allCases.filter { $0 != .about })
+        XCTAssertEqual(SettingsPane.sidebar.first, .general)
     }
 
     /// The other half of the persistence contract: the defaults key the raw
@@ -330,7 +339,7 @@ final class SettingsWindowTests: XCTestCase {
         let hanji = makeStore(.hanji)
         XCTAssertEqual(
             SettingsPane.allCases.map { hanji.string($0.labelKey) },
-            ["一般", "外觀", "快速齒", "自訂詞庫", "辭典管理", "字型管理"],
+            ["一般", "外觀", "快速齒", "自訂詞庫", "辭典管理", "字型管理", "關於台語齒盤"],
         )
 
         let english = makeStore(.english)
@@ -338,7 +347,7 @@ final class SettingsWindowTests: XCTestCase {
             SettingsPane.allCases.map { english.string($0.labelKey) },
             [
                 "General", "Appearance", "Shortcuts", "Custom Dictionary", "Manage Dictionaries",
-                "Manage Typefaces",
+                "Manage Typefaces", "About TaigiKeyboard",
             ],
         )
     }

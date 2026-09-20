@@ -1,7 +1,9 @@
-//! The pages, one module per pane, in the sidebar's order. Each is a
-//! function over the window's state — presentation only, no state of its
-//! own (the guide's rule for a stateless subtree).
+//! The pages, one module per pane, in the sidebar's order, then the two the
+//! sidebar does not list. Each is a function over the window's state —
+//! presentation only, no state of its own (the guide's rule for a stateless
+//! subtree).
 
+pub mod about;
 pub mod appearance;
 pub mod custom_dictionary;
 pub mod dictionary_search;

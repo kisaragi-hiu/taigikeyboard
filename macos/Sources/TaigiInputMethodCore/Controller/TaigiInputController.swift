@@ -467,7 +467,14 @@ public final class TaigiInputController: IMKInputController {
                 label: language.string(.desktopUpdateCheckNow),
                 action: #selector(checkForUpdates(_:)),
             )
-            return [shortcuts, [settings], [checkForUpdates]]
+            // The one doorway to the 關於 page: it has no sidebar row (USER
+            // 2026-09-20), so the menu is where it is found. No chord, as
+            // for 檢查更新.
+            let about = InputSourceMenuRow(
+                label: language.string(.desktopAboutTab),
+                action: #selector(showAbout(_:)),
+            )
+            return [shortcuts, [settings], [checkForUpdates, about]]
         }
         return InputSourceMenuRenderer.menu(groups)
     }
@@ -526,6 +533,14 @@ public final class TaigiInputController: IMKInputController {
             let checker = controller.updateCheckerOverride ?? UpdateChecker.shared
             checker.checkManually()
         }
+    }
+
+    /// The settings window on the 關於 page, the only pane the sidebar does
+    /// not list.
+    @objc
+    private func showAbout(_: Any!) {
+        Self.logger.debug("show about")
+        openSettings(on: .about)
     }
 
     /// The menu's stand-ins for the global chords: each row sends the same

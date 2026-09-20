@@ -16,7 +16,9 @@ use crate::contexts::ContextRegistry;
 use crate::conversion_mode;
 use crate::display_attribute::{self, DisplayAttributeEnumerator};
 use crate::key_translation;
-use crate::lang_bar::{self, LANG_BAR_SINK_COOKIE, MENU_CHECK_FOR_UPDATES, MENU_OPEN_SETTINGS};
+use crate::lang_bar::{
+    self, LANG_BAR_SINK_COOKIE, MENU_ABOUT, MENU_CHECK_FOR_UPDATES, MENU_OPEN_SETTINGS,
+};
 use crate::preserved_keys::{self, PreservedKeys};
 use crate::product_name;
 use crate::runtime::Runtime;
@@ -1083,6 +1085,13 @@ impl ITfLangBarItemButton_Impl for TextService_Impl {
                         self.hide_telex_guide_now();
                         self.hide_symbol_picker_now();
                         settings_launcher::check_for_updates();
+                    }
+                    MENU_ABOUT => {
+                        // The settings window on 關於, the pane the sidebar
+                        // does not list: same doorway.
+                        self.hide_telex_guide_now();
+                        self.hide_symbol_picker_now();
+                        settings_launcher::open_about();
                     }
                     id => match lang_bar::shortcut_for_menu_id(id) {
                         // A shortcut row does what its chord does, through

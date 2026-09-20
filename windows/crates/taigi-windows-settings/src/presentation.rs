@@ -7,8 +7,16 @@ use std::sync::OnceLock;
 use taigi_windows_core::settings::{keys, SettingsDocument, SettingsPane};
 use taigi_windows_core::strings::{DisplayLanguage, StringKey, StringResolver};
 
-/// `GeneralSettingsView.sponsorURL`.
+/// `AboutPage.sponsorURL`.
 pub const SPONSOR_URL: &str = "https://p.ecpay.com.tw/AA663DE";
+/// `AboutPage.websiteURL`.
+pub const WEBSITE_URL: &str = "https://taigikeyboard.tw";
+/// `AboutPage.githubURL`.
+pub const GITHUB_URL: &str = "https://github.com/taigikeyboard";
+/// `AboutPage.discordURL`.
+pub const DISCORD_URL: &str = "https://discord.gg/kXhtQfWvK";
+/// `AboutPage.emailURL`.
+pub const EMAIL_URL: &str = "mailto:info@taigikeyboard.tw";
 
 /// The machine's UI language, read once. Windows requires a sign-out to
 /// change it, so a running window can hold the answer instead of asking

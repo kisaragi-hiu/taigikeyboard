@@ -57,10 +57,13 @@ const PANES: [(SettingsPane, PageView); 6] = [
 ];
 
 /// The page for a pane the sidebar does not list: built, reachable only by
-/// `--pane dictionarySearch`, exactly as on macOS (USER 2026-08-21).
+/// `--pane dictionarySearch` (USER 2026-08-21) and the tray menu's `--pane
+/// about` (USER 2026-09-20), exactly as on macOS.
 fn page_view(pane: SettingsPane) -> Option<PageView> {
-    if pane == SettingsPane::DictionarySearch {
-        return Some(pages::dictionary_search::view);
+    match pane {
+        SettingsPane::DictionarySearch => return Some(pages::dictionary_search::view),
+        SettingsPane::About => return Some(pages::about::view),
+        _ => {}
     }
     PANES
         .iter()

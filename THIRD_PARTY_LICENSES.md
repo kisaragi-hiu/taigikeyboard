@@ -34,11 +34,18 @@ files (`Iansui-Regular`, `jf-openhuninn-2.1`, `GenYoGothic2TW-R`,
 | --- | --- | --- | --- |
 | ISEmojiView | `ios/Vendor/ISEmojiView/` | MIT | © 2015 isaced |
 | androidx material icon path data | `android/app/src/main/java/com/siansiansu/taigikeyboard/ui/components/TaigiIcons.kt` | Apache-2.0 | © 2025 The Android Open Source Project |
+| Font Awesome Free 6.7.2 icon path data (`heart`, `globe`, `github`, `discord`, `envelope`) | `macos/Sources/TaigiInputMethodCore/Settings/FontAwesomeGlyph.swift`, `windows/crates/taigi-windows-settings/src/winui/font_awesome.rs` | CC BY 4.0 | © 2024 Fonticons, Inc. (<https://fontawesome.com/license/free>) |
 | Inno Setup Traditional Chinese messages | `windows/installer/Languages/ChineseTraditional.isl` | Inno Setup licence | Translation by Enfeng Tsao, based on Samuel Lee's 5.5.3+ work; from `jrsoftware/issrc` at tag `is-6_7_3`, where it is an unofficial translation under `Files/Languages/Unofficial/`. Compile-time input to the installer's message table only — the file itself is not shipped. |
 
 `TaigiIcons.kt` carries its own Apache-2.0 header; the path data was extracted
 verbatim from `androidx.compose.material:material-icons-extended` to drop the
 transitive dependency.
+
+The Font Awesome path data draws the 關於 page's sponsor, website, GitHub, Discord
+and email links on macOS and Windows. Both files carry the attribution comment
+Font Awesome ships in its SVGs, which is the credit CC BY 4.0 asks for; the
+paths were rewritten as absolute commands and scaled to a 16-unit height, and
+no Font Awesome font file is bundled.
 
 ## Bundled data (other than the Taiwanese dictionary)
 

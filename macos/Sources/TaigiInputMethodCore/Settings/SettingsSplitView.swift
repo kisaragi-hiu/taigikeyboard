@@ -19,10 +19,16 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     /// Last, under 辭典管理 (USER 2026-09-08). The two 管理 panes end the
     /// sidebar: what the input method draws FROM, then what it draws IN.
     case fontManagement
+    /// Unlisted: the input-source menu's 關於 row opens it, and the sidebar
+    /// shows no row for it (USER 2026-09-20 「不需要出現在設定選單中」).
+    case about
 
     var id: String {
         rawValue
     }
+
+    /// The panes the sidebar lists, top to bottom: every case but 關於.
+    static let sidebar: [SettingsPane] = allCases.filter { $0 != .about }
 
     /// A key rather than a resolved string, so the sidebar re-renders under
     /// the current display language instead of the one it was built in.
@@ -34,9 +40,12 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .customDictionary: .dictionaryCustomDictionary
         case .dictionarySources: .desktopDictionarySourcesLink
         case .fontManagement: .desktopFontManagementTab
+        case .about: .desktopAboutTab
         }
     }
 
+    /// The sidebar row's icon; 關於 has no row, and names the symbol its
+    /// title would carry anywhere else.
     var symbolName: String {
         switch self {
         case .general: "gearshape"
@@ -45,6 +54,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .customDictionary: "character.book.closed"
         case .dictionarySources: "books.vertical"
         case .fontManagement: "textformat"
+        case .about: "info.circle"
         }
     }
 }
@@ -95,20 +105,33 @@ struct SettingsSidebarView: View {
     @Environment(DisplayLanguageStore.self) private var language
 
     /// `@AppStorage` reads a `String`-backed enum directly: an unknown
-    /// persisted raw value falls back to this default on its own, and the
-    /// non-optional `List(selection:)` below rules out deselection — both
-    /// edges the framework owns, not this view.
+    /// persisted raw value falls back to this default on its own — an edge
+    /// the framework owns, not this view.
     @AppStorage(SettingsStore.Keys.selectedSettingsPane.name)
     private var selectedPane = SettingsStore.Keys.selectedSettingsPane.defaultValue
+
+    /// The list's own selection: the stored pane when the list has a row for
+    /// it, nothing when it is 關於. An optional binding says "no row" in the
+    /// list's own vocabulary rather than handing it a tag it cannot find,
+    /// and a `nil` written back (the list clearing itself) leaves the stored
+    /// pane alone — only a row the user picked moves it.
+    private var listSelection: Binding<SettingsPane?> {
+        Binding(
+            get: { SettingsPane.sidebar.contains(selectedPane) ? selectedPane : nil },
+            set: { picked in
+                if let picked { selectedPane = picked }
+            },
+        )
+    }
 
     var body: some View {
         // One flat list, no section headers — the sidebar is short enough
         // to read at a glance, and a group label above the dictionary rows
         // was a heading with nothing to disambiguate (USER 2026-08-18).
-        // `allCases` IS the sidebar order, which mirrors the iOS Tab3
+        // `sidebar` IS the sidebar order, which mirrors the iOS Tab3
         // listing for the dictionary rows.
-        List(selection: $selectedPane) {
-            ForEach(SettingsPane.allCases) { pane in
+        List(selection: listSelection) {
+            ForEach(SettingsPane.sidebar) { pane in
                 Label(language.string(pane.labelKey), systemImage: pane.symbolName)
                     .tag(pane)
             }
@@ -151,6 +174,8 @@ struct SettingsDetailView: View {
             DictionaryTogglesView()
         case .fontManagement:
             FontManagementPage()
+        case .about:
+            AboutPage()
         }
     }
 }

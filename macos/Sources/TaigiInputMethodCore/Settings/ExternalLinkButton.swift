@@ -8,19 +8,18 @@ import SwiftUI
 /// `NSWorkspace.open` answers `false` when nothing could handle the URL, and a
 /// button that silently does nothing is indistinguishable from a broken one.
 struct ExternalLinkButton: View {
-    /// How loudly the link reads.
+    /// How the link reads.
     ///
     /// `.standard` is the settings-row form: the project's `arrow.up.forward.square`
     /// leave-the-app affordance, drawn in the accent colour.
     ///
-    /// `.footer` is the understated inline form for an attribution line. It carries no
-    /// icon, inherits the surrounding footer's type, and draws in the same `.secondary`
-    /// as the text beside it — an icon and an accent colour are what would make a footer
-    /// read as a control rather than as fine print, and the pointer plus the hover lift
-    /// carry the affordance instead.
+    /// `.row(glyph)` is a whole form row: the glyph, the title, and the leave-the-app
+    /// arrow at the trailing edge in the secondary colour — the shape System Settings
+    /// gives a row that opens somewhere else.
+    ///
     enum Style {
         case standard
-        case footer
+        case row(FontAwesomeGlyph)
     }
 
     @Environment(DisplayLanguageStore.self) private var language
@@ -30,7 +29,6 @@ struct ExternalLinkButton: View {
     var style: Style = .standard
 
     @State private var didFail = false
-    @State private var isHovering = false
 
     var body: some View {
         styledButton
@@ -50,22 +48,29 @@ struct ExternalLinkButton: View {
             }
             .buttonStyle(.link)
 
-        case .footer:
+        case let .row(glyph):
             Button(action: open) {
-                Text(language.string(titleKey))
+                HStack(spacing: Metrics.rowSpacing) {
+                    Image(nsImage: glyph.image)
+                        .renderingMode(.template)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: Metrics.rowGlyphSize, height: Metrics.rowGlyphSize)
+                        .foregroundStyle(.secondary)
+                    Text(language.string(titleKey))
+                    Spacer()
+                    Image(systemName: "arrow.up.forward.square")
+                        .foregroundStyle(.secondary)
+                }
+                // The whole row, not only its text, takes the click.
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            // The idle colour restates the `.secondary` the footer line already sets, rather than
-            // inheriting it, because hovering needs a stated colour to lift away from.
-            .foregroundStyle(isHovering ? .primary : .secondary)
-            .onHover { setHovering($0) }
-            // `onHover` promises a callback when the pointer enters or leaves the frame, not when
-            // the view goes away under a still-hovering pointer — which would strand the cursor.
-            .onDisappear { setHovering(false) }
             // `.plain` drops the link role that `.buttonStyle(.link)` carried implicitly, and this
             // is a link rather than a button: it navigates away instead of acting on the window.
             .accessibilityRemoveTraits(.isButton)
             .accessibilityAddTraits(.isLink)
+
         }
     }
 
@@ -76,19 +81,11 @@ struct ExternalLinkButton: View {
         }
     }
 
-    /// Mirrors the pointing-hand cursor `.buttonStyle(.link)` gives for free. `.pointerStyle(.link)`
-    /// would say this natively, but it needs macOS 15 and this target deploys to 14.
-    ///
-    /// Sole owner of this view's place on the shared cursor stack: the state guard keeps every
-    /// `push` paired with exactly one `pop`, so a repeated or late call cannot pop someone else's
-    /// cursor.
-    private func setHovering(_ hovering: Bool) {
-        guard hovering != isHovering else { return }
-        isHovering = hovering
-        if hovering {
-            NSCursor.pointingHand.push()
-        } else {
-            NSCursor.pop()
-        }
+    private enum Metrics {
+        /// Between the glyph and the title in a row: the gap a `Label` leaves.
+        static let rowSpacing: CGFloat = 8
+
+        /// A row's glyph, the size of a sidebar symbol — a mark, not fine print.
+        static let rowGlyphSize: CGFloat = 16
     }
 }

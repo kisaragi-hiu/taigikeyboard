@@ -1,10 +1,9 @@
 //! The 一般 pane: input script, output script, tone keys, auto-space, the
-//! candidate window's two switches, display language; then the update row,
-//! the reset card and the attribution footer. Port of
-//! `GeneralSettingsView.swift`.
+//! candidate window's two switches, display language; then the update row
+//! and the reset card. Port of `GeneralSettingsView.swift`.
 
 use super::{choice_row, reset_row};
-use crate::presentation::{display_language_label, SPONSOR_URL};
+use crate::presentation::display_language_label;
 use crate::updates::INSTALLED_VERSION;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow, SettingsWrite};
@@ -16,13 +15,9 @@ use windows_reactor::*;
 
 /// The spinner beside the 檢查更新 button.
 const SPINNER_SIZE: f64 = 20.0;
-/// Above the footer, so it sits off the last card.
-const FOOTER_TOP_MARGIN: f64 = 24.0;
-/// The footer's own line spacing.
-const FOOTER_SPACING: f64 = 4.0;
-/// The fine print's weight, as opacity — `PrimaryText` at less than full
+/// The update note's weight, as opacity — `PrimaryText` at less than full
 /// is WinUI's secondary text, and it follows the theme.
-const FOOTER_OPACITY: f64 = 0.65;
+const NOTE_OPACITY: f64 = 0.65;
 
 pub fn view(
     window: &SettingsWindow,
@@ -130,7 +125,6 @@ pub fn view(
         // Not on the update row: it holds no setting of the user's to
         // restore.
         reset_row(strings, ResetScope::General, context),
-        footer(strings, context),
     ))
 }
 
@@ -195,7 +189,7 @@ fn update_row(
         Some(key) => TextBlock::new()
             .text(strings.resolve(key))
             .text_wrapping(TextWrapping::Wrap)
-            .opacity(FOOTER_OPACITY)
+            .opacity(NOTE_OPACITY)
             .into(),
         None => View::empty(),
     };
@@ -208,30 +202,4 @@ fn spinner() -> View {
         .width(SPINNER_SIZE)
         .height(SPINNER_SIZE)
         .into()
-}
-
-/// Centred at the foot of the pane rather than inside the form: it is
-/// neither a setting nor a note about one (`sponsorFooter`).
-fn footer(strings: &StringResolver, context: &mut ViewContext<SettingsWindow>) -> View {
-    StackPanel::new()
-        .orientation(Orientation::Horizontal)
-        .spacing(FOOTER_SPACING)
-        .horizontal_alignment(HorizontalAlignment::Center)
-        .margin(Thickness::new(0.0, FOOTER_TOP_MARGIN, 0.0, 0.0))
-        .children((
-            TextBlock::new()
-                .text(strings.resolve(StringKey::DesktopCopyrightLine))
-                .vertical_alignment(VerticalAlignment::Center)
-                .opacity(FOOTER_OPACITY),
-            TextBlock::new()
-                .text("\u{00B7}")
-                .vertical_alignment(VerticalAlignment::Center)
-                .opacity(FOOTER_OPACITY),
-            // Our own open, not the control's `navigate_uri`: a browser
-            // that refuses must be reported, never swallowed
-            // (`ExternalLinkButton.swift:740-744`).
-            HyperlinkButton::new()
-                .on_click(context.callback(|()| Message::OpenUrl(SPONSOR_URL.to_owned())))
-                .content(strings.resolve(StringKey::DesktopSponsorLink)),
-        ))
 }
