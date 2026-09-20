@@ -28,7 +28,7 @@ pub use capacity::LearningCapacity;
 pub use csv::{CustomDictionaryCSV, CustomDictionaryCSVError, UserDataCSV};
 pub use custom_dictionary::{
     CustomDictionaryError, CustomDictionaryIdentity, CustomDictionaryImportResult,
-    CustomDictionaryRow, CustomDictionaryStore, SearchKeyDeriver,
+    CustomDictionaryOrigin, CustomDictionaryRow, CustomDictionaryStore, SearchKeyDeriver,
 };
 pub use database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
 pub use directory::{created, user_data_directory, DirectoryError, APPLICATION_FOLDER_NAME};

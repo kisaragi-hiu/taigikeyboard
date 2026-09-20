@@ -227,6 +227,7 @@ enum TestFixtures {
             isFrequencyRecordingEnabled: frequencyRecording,
             isAssociationRecordingEnabled: associationRecording,
             isCustomDictEnabled: customDict,
+            isPhraseLearningEnabled: true,
             dictionarySources: dictionarySources,
         )
     }

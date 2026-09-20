@@ -17,7 +17,7 @@ use protos::engine::{
     composing_request, request, response, Append, CaretDirection as WireCaretDirection,
     CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw, ComposingRequest,
     ComposingResponse, CustomDictEntry, DeleteBackward, EnterContinuous, FetchAtPos,
-    FrequencyEntry, MoveCaret, Reset, TelexKey,
+    FrequencyEntry, LearnedEntry, MoveCaret, Reset, TelexKey,
 };
 
 use crate::keys::CaretDirection;
@@ -41,6 +41,15 @@ pub struct CustomEntry {
     pub roman: String,
     /// Empty = romanization-only entry; mapped to an ABSENT wire field.
     pub hanzi: String,
+}
+
+/// One auto-learned phrase (§50): the `(漢字, canonical-TL)` pair the user
+/// composed segment by segment. Rides `FetchAtPos.learned_entries`, a
+/// competitor of the dictionary rows — never the override `CustomEntry` is.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LearnedPhrase {
+    pub hanzi: String,
+    pub canonical_tl: String,
 }
 
 /// Appends one typed character to the raw buffer.
@@ -193,6 +202,8 @@ pub struct FetchArgs<'a> {
     /// The user's own dictionary rows matching the raw buffer, columns as
     /// stored — the engine dedupes `(roman, hanji)` and folds to canonical TL.
     pub custom_entries: &'a [CustomEntry],
+    /// §50 — learned phrases whose whole-buffer key equals the raw buffer.
+    pub learned_entries: &'a [LearnedPhrase],
 }
 
 /// Reads the candidates for the current continuous composition.
@@ -210,6 +221,14 @@ pub fn fetch_at_pos(
         frequency_entries: args.frequency_rows.iter().map(frequency_entry).collect(),
         now_ms: args.now_ms,
         custom_entries: args.custom_entries.iter().map(custom_dict_entry).collect(),
+        learned_entries: args
+            .learned_entries
+            .iter()
+            .map(|phrase| LearnedEntry {
+                hanji: phrase.hanzi.clone(),
+                canonical_tl: phrase.canonical_tl.clone(),
+            })
+            .collect(),
         enabled_sources_bitmask: args.enabled_sources_bitmask,
         // §34/S22 — positive platform setting → inverted proto disable gate
         // (the field's own comment carries why), so 顯示當咧拍的字 ON leaves the
@@ -218,9 +237,6 @@ pub fn fetch_at_pos(
         // `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Composing.swift`
         // `composingFetchAtPos`, which inverts the same setting onto the same field.
         literal_roman_candidate_disabled: !settings.is_literal_roman_candidate_enabled,
-        // Learned phrases (§50): the desktop learned store lands in PR4 of the
-        // round (`docs/roadmap.md` § Learned phrases); empty until then.
-        learned_entries: Vec::new(),
     };
     let response = composing_response(
         composing_request::Method::FetchAtPos(fetch),
@@ -252,6 +268,9 @@ pub struct CommitContinuousArgs<'a> {
     /// The identity keys the engine learns from (Core Principle #7).
     pub canonical_text: &'a str,
     pub association_tl: &'a str,
+    /// §50 — the picked candidate's hanji, `None` for a hanji-less pick; the
+    /// engine learns a composition only when every segment carried one.
+    pub hanji: Option<&'a str>,
     pub consumed_bytes: u32,
     pub syllable_count: u32,
 }
@@ -271,9 +290,7 @@ pub fn commit_continuous(
             syllable_count: args.syllable_count,
             canonical_text: args.canonical_text.to_owned(),
             association_tl: args.association_tl.to_owned(),
-            // Learned phrases (§50): sent once the desktop store lands (PR4);
-            // absent = this pick never learns.
-            hanji: None,
+            hanji: args.hanji.filter(|h| !h.is_empty()).map(str::to_owned),
         }),
         "composingCommitContinuous",
         generation,

@@ -724,12 +724,24 @@ pub fn view(
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
     let model = window.custom_dictionary();
-    let enabled_row = cards::switch_row(
-        strings.resolve(StringKey::DictionaryCustomDictEnabled),
-        window.document().bool(&keys::IS_CUSTOM_DICT_ENABLED),
-        true,
-        context.callback(|is_on| WindowMessage::SetSwitch(keys::IS_CUSTOM_DICT_ENABLED, is_on)),
-    );
+    // Two independent gates in one card: manual rows (啟用自訂詞庫) and the
+    // §50 learned rows (自動學習新詞), each its own switch row.
+    let enabled_row = View::fragment((
+        cards::switch_row(
+            strings.resolve(StringKey::DictionaryCustomDictEnabled),
+            window.document().bool(&keys::IS_CUSTOM_DICT_ENABLED),
+            true,
+            context.callback(|is_on| WindowMessage::SetSwitch(keys::IS_CUSTOM_DICT_ENABLED, is_on)),
+        ),
+        cards::switch_row(
+            strings.resolve(StringKey::DictionaryPhraseLearningEnabled),
+            window.document().bool(&keys::IS_PHRASE_LEARNING_ENABLED),
+            true,
+            context.callback(|is_on| {
+                WindowMessage::SetSwitch(keys::IS_PHRASE_LEARNING_ENABLED, is_on)
+            }),
+        ),
+    ));
     // No user-data directory: the stores never opened, and the banner at
     // the top of the window says so — nothing to list, nothing to write.
     if window.is_read_only() {
@@ -802,7 +814,18 @@ fn entry_table(
                                 .text(row.roman.clone())
                                 .opacity(SECONDARY_OPACITY)
                                 .grid_column(0),
-                            TextBlock::new().text(row.hanzi.clone()).grid_column(1),
+                            // §50: a learned row wears its badge after the hanzi.
+                            TextBlock::new()
+                                .text(if row.is_learned() {
+                                    format!(
+                                        "{}  {}",
+                                        row.hanzi,
+                                        strings.resolve(StringKey::DictionaryLearnedBadge)
+                                    )
+                                } else {
+                                    row.hanzi.clone()
+                                })
+                                .grid_column(1),
                         )),
                 ),
             )

@@ -283,13 +283,20 @@ final class ComposingManager {
         // half a composition under each set of rules.
         let enabledSourcesBitmask = RustEngineBridge
             .enabledSourcesBitmask(for: settings.dictionarySources)
-        let customEntries = customDictionaryMatches(settings: settings)
+        // One query key serves both user-row sources (one FFI derive per
+        // keystroke); `nil` = empty / residue-only buffer.
+        let queryKey = rawInput.isEmpty
+            ? nil
+            : RustEngineBridge.deriveCustomQueryKey(input: rawInput, mode: settings.inputMode)
+        let customEntries = customDictionaryMatches(queryKey: queryKey, settings: settings)
+        let learnedEntries = learnedPhraseMatches(queryKey: queryKey, settings: settings)
 
         guard let neutral = RustEngineBridge.composingFetchAtPos(
             settings: settings,
             generation: generation,
             enabledSourcesBitmask: enabledSourcesBitmask,
             customEntries: customEntries,
+            learnedEntries: learnedEntries,
         ) else { return .unavailable }
 
         guard let neutralCandidates = neutral.candidates else {
@@ -311,6 +318,7 @@ final class ComposingManager {
             nowMs: Self.nowMs(),
             enabledSourcesBitmask: enabledSourcesBitmask,
             customEntries: customEntries,
+            learnedEntries: learnedEntries,
         ) else {
             mirror(neutral.transition)
             return .found(neutralCandidates)
@@ -339,15 +347,18 @@ final class ComposingManager {
     /// The user's own dictionary's matches for what is being typed.
     ///
     /// With the setting off nothing is read at all — the gate is on the lookup,
-    /// not on the display, so a disabled custom dictionary costs neither an FFI
-    /// round-trip nor a SQLite read per keystroke.
-    private func customDictionaryMatches(settings: EngineSettings) -> [CustomDictionaryRow] {
-        guard settings.isCustomDictEnabled, !rawInput.isEmpty else { return [] }
-        guard let queryKey = RustEngineBridge.deriveCustomQueryKey(
-            input: rawInput,
-            mode: settings.inputMode,
-        ) else { return [] }
+    /// not on the display, so a disabled custom dictionary costs no SQLite read
+    /// per keystroke.
+    private func customDictionaryMatches(queryKey: CustomSearchKey?, settings: EngineSettings) -> [CustomDictionaryRow] {
+        guard settings.isCustomDictEnabled, let queryKey else { return [] }
         return customDictionaryStore.rows(matching: queryKey)
+    }
+
+    /// §50 — the learned phrases whose key EQUALS what is being typed, gated by
+    /// 自動學習新詞 (not by the custom-dictionary toggle, which is manual rows').
+    private func learnedPhraseMatches(queryKey: CustomSearchKey?, settings: EngineSettings) -> [CustomDictionaryRow] {
+        guard settings.isPhraseLearningEnabled, let queryKey else { return [] }
+        return customDictionaryStore.learnedRows(matching: queryKey)
     }
 
     /// What committing `candidate` would write into the document, under the
@@ -453,6 +464,7 @@ final class ComposingManager {
             documentText: resolved.text,
             canonicalText: candidate.displayText,
             associationTl: candidate.canonicalTl,
+            hanji: candidate.hanji,
             consumedBytes: candidate.consumedSpanEnd,
             syllableCount: candidate.syllableCount,
             settings: settings,
@@ -497,10 +509,16 @@ final class ComposingManager {
         after outcome: CandidateCommitOutcome,
         settings: EngineSettings,
     ) {
-        guard settings.isFrequencyRecordingEnabled else { return }
         switch outcome {
         case .nailed, .finalized:
-            frequencyStore.record(word: candidate.displayText, tl: candidate.canonicalTl)
+            if settings.isFrequencyRecordingEnabled {
+                frequencyStore.record(word: candidate.displayText, tl: candidate.canonicalTl)
+            }
+            // §50 touch-on-use: a learned phrase picked as one candidate stays
+            // ahead of the eviction line (no-op for any other row).
+            if settings.isPhraseLearningEnabled, let hanji = candidate.hanji, !hanji.isEmpty {
+                customDictionaryStore.touchLearnedPhrase(hanzi: hanji, canonicalTl: candidate.canonicalTl)
+            }
         case .ignored, .unavailable:
             break
         }
@@ -571,11 +589,13 @@ final class ComposingManager {
                 // exactly what must survive: forwarding it would spend a
                 // round-trip to bump a generation nothing reads.
                 break
-            case .phraseLearned:
-                // Learned phrases (§50): the desktop learned store lands in
-                // the macOS + Windows phase of the round (`docs/roadmap.md`
-                // § Learned phrases, PR4); decoded and dropped until then.
-                break
+            case let .phraseLearned(hanji, canonicalTl):
+                // §50 — the engine decided the composition was a phrase; the
+                // store is the custom dictionary's, gated like the other
+                // learning writes here.
+                if settings.isPhraseLearningEnabled {
+                    customDictionaryStore.learnPhrase(hanzi: hanji, canonicalTl: canonicalTl)
+                }
             // Listed rather than defaulted: an effect added to the engine later
             // has to be classified here, and a `default` would quietly file it
             // under "write it into the user's document".

@@ -232,6 +232,8 @@ struct CustomDictionaryPage: View {
     @State private var selectedRowID: CustomDictionaryRow.ID?
     @AppStorage(SettingsStore.Keys.isCustomDictEnabled.name)
     private var isCustomDictEnabled = SettingsStore.Keys.isCustomDictEnabled.defaultValue
+    @AppStorage(SettingsStore.Keys.isPhraseLearningEnabled.name)
+    private var isPhraseLearningEnabled = SettingsStore.Keys.isPhraseLearningEnabled.defaultValue
 
     init(stores: UserDataStores) {
         self.stores = stores
@@ -242,6 +244,8 @@ struct CustomDictionaryPage: View {
         Form {
             Section {
                 Toggle(language.string(.dictionaryCustomDictEnabled), isOn: $isCustomDictEnabled)
+                // §50 自動學習新詞 — learned rows list below with a badge.
+                Toggle(language.string(.dictionaryPhraseLearningEnabled), isOn: $isPhraseLearningEnabled)
             }
 
             Section {
@@ -333,7 +337,17 @@ struct CustomDictionaryPage: View {
                     .foregroundStyle(.secondary)
             }
             TableColumn(language.string(.dictionaryHanziLabel)) { row in
-                Text(row.hanzi)
+                HStack {
+                    Text(row.hanzi)
+                    if row.isLearned {
+                        Text(language.string(.dictionaryLearnedBadge))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+                    }
+                }
             }
         }
         .tableStyle(.inset)

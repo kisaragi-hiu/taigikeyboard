@@ -234,6 +234,10 @@ extension RustEngineBridge {
         nowMs: Int64 = 0,
         enabledSourcesBitmask: UInt32 = 0,
         customEntries: [CustomDictionaryRow] = [],
+        // §50 — learned phrases whose whole-buffer key equals the raw buffer
+        // (`CustomDictionaryStore.learnedRows(matching:)`); competitors of
+        // the dictionary rows, never the override `customEntries` are.
+        learnedEntries: [CustomDictionaryRow] = [],
     ) -> ContinuousFetchResult? {
         var fetch = Taigi_Engine_FetchAtPos()
         fetch.position = 0
@@ -247,6 +251,7 @@ extension RustEngineBridge {
         fetch.nowMs = nowMs
         fetch.enabledSourcesBitmask = enabledSourcesBitmask
         fetch.customEntries = customEntries.map(customDictEntry)
+        fetch.learnedEntries = learnedEntries.map(learnedEntry)
 
         guard let response = composingResponse(
             .fetchAtPos(fetch),
@@ -288,6 +293,9 @@ extension RustEngineBridge {
         documentText: String,
         canonicalText: String,
         associationTl: String,
+        // §50 — the picked candidate's hanji, `nil` for a hanji-less pick; the
+        // engine learns a composition only when every segment carried one.
+        hanji: String? = nil,
         consumedBytes: UInt32,
         syllableCount: UInt32,
         settings: EngineSettings,
@@ -297,6 +305,9 @@ extension RustEngineBridge {
         commit.displayText = documentText
         commit.canonicalText = canonicalText
         commit.associationTl = associationTl
+        if let hanji, !hanji.isEmpty {
+            commit.hanji = hanji
+        }
         commit.consumedBytes = consumedBytes
         commit.syllableCount = syllableCount
         return dispatchComposing(
@@ -424,6 +435,13 @@ extension RustEngineBridge {
     /// string: the field is proto3-optional, and the engine reads absence as
     /// "romanization-only entry" while an empty string would be a hanji that
     /// renders as nothing (`composing.proto:215-218`).
+    private static func learnedEntry(_ row: CustomDictionaryRow) -> Taigi_Engine_LearnedEntry {
+        var entry = Taigi_Engine_LearnedEntry()
+        entry.hanji = row.hanzi
+        entry.canonicalTl = row.roman
+        return entry
+    }
+
     private static func customDictEntry(_ row: CustomDictionaryRow) -> Taigi_Engine_CustomDictEntry {
         var entry = Taigi_Engine_CustomDictEntry()
         entry.roman = row.roman

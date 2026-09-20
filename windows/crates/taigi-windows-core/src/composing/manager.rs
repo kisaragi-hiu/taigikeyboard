@@ -17,8 +17,8 @@ use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
 use super::presentation::{leads_with_literal_roman, presentation, PresentedCandidate};
 use super::stores::{Clock, CustomDictionarySource, FrequencySource};
 use crate::engine::{
-    self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, CustomEntry, Effect,
-    FetchArgs, FrequencyRow,
+    self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, CustomEntry,
+    CustomSearchKey, Effect, FetchArgs, FrequencyRow, LearnedPhrase,
 };
 use crate::keys::CaretDirection;
 use crate::settings::{EngineSettings, SettingsProvider};
@@ -241,7 +241,13 @@ impl ComposingManager {
         let generation = self.current_generation;
         // Resolved once from this one snapshot and handed to both phases.
         let enabled_sources_bitmask = engine::enabled_sources_bitmask(&settings.dictionary_sources);
-        let custom_entries = self.custom_dictionary_matches(&settings);
+        // One query key serves both user-row sources (one FFI derive per
+        // keystroke); `None` = empty / residue-only buffer.
+        let query_key = (!self.raw_input.is_empty())
+            .then(|| engine::derive_custom_query_key(&self.raw_input, settings.input_mode))
+            .flatten();
+        let custom_entries = self.custom_dictionary_matches(&settings, query_key.as_ref());
+        let learned_entries = self.learned_phrase_matches(&settings, query_key.as_ref());
 
         let Some(neutral) = engine::fetch_at_pos(
             &settings,
@@ -249,6 +255,7 @@ impl ComposingManager {
             &FetchArgs {
                 enabled_sources_bitmask,
                 custom_entries: &custom_entries,
+                learned_entries: &learned_entries,
                 ..FetchArgs::default()
             },
         ) else {
@@ -277,6 +284,7 @@ impl ComposingManager {
                 now_ms: self.clock.now_ms(),
                 enabled_sources_bitmask,
                 custom_entries: &custom_entries,
+                learned_entries: &learned_entries,
             },
         ) else {
             self.mirror(&neutral.transition);
@@ -303,16 +311,33 @@ impl ComposingManager {
 
     /// The user's own dictionary's matches for what is being typed. With the
     /// setting off nothing is read at all — the gate is on the lookup.
-    fn custom_dictionary_matches(&self, settings: &EngineSettings) -> Vec<CustomEntry> {
-        if !settings.is_custom_dict_enabled || self.raw_input.is_empty() {
-            return Vec::new();
+    fn custom_dictionary_matches(
+        &self,
+        settings: &EngineSettings,
+        key: Option<&CustomSearchKey>,
+    ) -> Vec<CustomEntry> {
+        match key {
+            Some(key) if settings.is_custom_dict_enabled => {
+                self.custom_dictionary
+                    .rows_matching(&key.family, &key.form, &key.key)
+            }
+            _ => Vec::new(),
         }
-        let Some(key) = engine::derive_custom_query_key(&self.raw_input, settings.input_mode)
-        else {
-            return Vec::new();
-        };
-        self.custom_dictionary
-            .rows_matching(&key.family, &key.form, &key.key)
+    }
+
+    /// §50 — the learned phrases whose key EQUALS what is being typed, gated
+    /// by 自動學習新詞 (not by the custom-dictionary toggle, which is manual rows').
+    fn learned_phrase_matches(
+        &self,
+        settings: &EngineSettings,
+        key: Option<&CustomSearchKey>,
+    ) -> Vec<LearnedPhrase> {
+        match key {
+            Some(key) if settings.is_phrase_learning_enabled => self
+                .custom_dictionary
+                .learned_rows_matching(&key.family, &key.form, &key.key),
+            _ => Vec::new(),
+        }
     }
 
     /// What committing `candidate` would write into the document, under the
@@ -372,6 +397,7 @@ impl ComposingManager {
                 document_text: &resolved.text,
                 canonical_text: &candidate.display_text,
                 association_tl: &candidate.canonical_tl,
+                hanji: candidate.hanji.as_deref(),
                 consumed_bytes: candidate.consumed_span_end,
                 syllable_count: candidate.syllable_count,
             },
@@ -416,15 +442,23 @@ impl ComposingManager {
         outcome: CandidateCommitOutcome,
         settings: &EngineSettings,
     ) {
-        if !settings.is_frequency_recording_enabled {
-            return;
-        }
-        if matches!(
+        if !matches!(
             outcome,
             CandidateCommitOutcome::Nailed | CandidateCommitOutcome::Finalized
         ) {
+            return;
+        }
+        if settings.is_frequency_recording_enabled {
             self.frequency
                 .record(&candidate.display_text, &candidate.canonical_tl);
+        }
+        // §50 touch-on-use: a learned phrase picked as one candidate stays
+        // ahead of the eviction line (no-op for any other row).
+        if settings.is_phrase_learning_enabled {
+            if let Some(hanji) = candidate.hanji.as_deref().filter(|h| !h.is_empty()) {
+                self.custom_dictionary
+                    .touch_learned_phrase(hanji, &candidate.canonical_tl);
+            }
         }
     }
 
@@ -468,10 +502,17 @@ impl ComposingManager {
                 // shows no predictions, so there is nothing to hide and the
                 // context is exactly what must survive.
                 Effect::NextWordClearForNewComposing => {}
-                // Learned phrases (§50): the desktop learned store lands in the
-                // macOS + Windows phase of the round (`docs/roadmap.md`
-                // § Learned phrases, PR4); decoded and dropped until then.
-                Effect::PhraseLearned { .. } => {}
+                // §50 — the engine decided the composition was a phrase; the
+                // store is the custom dictionary's, gated like the other
+                // learning writes here.
+                Effect::PhraseLearned {
+                    hanji,
+                    canonical_tl,
+                } => {
+                    if settings.is_phrase_learning_enabled {
+                        self.custom_dictionary.learn_phrase(hanji, canonical_tl);
+                    }
+                }
                 Effect::UpdatePreedit { .. }
                 | Effect::ClearPreeditWithoutCommit
                 | Effect::CommitTextReplacingPreedit(_)
