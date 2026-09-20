@@ -3,14 +3,14 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `release trains`
 > **Status**: Active
-> **Last updated**: 2026-09-20 (learned phrases — segment-by-segment picks become a whole-buffer candidate — Phase 0 planned, PR1–PR4 pending; mobile custom theme background round A–D merged, dogfood S54/S55 pending; desktop 3.6.x sections collapsed into `docs/reports/desktop-3.6.x-design-notes.md`; repository-size record retired — rationale + timings in `docs/architecture/build-artifacts.md`; released-versions index through mobile / desktop 3.6.8)
+> **Last updated**: 2026-09-20 (learned phrases — segment-by-segment picks become a whole-buffer candidate — PR1–PR4 MERGED, dogfood S62 pending on all four; mobile custom theme background round A–D merged, dogfood S54/S55 pending; desktop 3.6.x sections collapsed into `docs/reports/desktop-3.6.x-design-notes.md`; repository-size record retired — rationale + timings in `docs/architecture/build-artifacts.md`; released-versions index through mobile / desktop 3.6.8)
 
 ---
 
 ## Summary
 
 - **Forward-looking work items only.** Shipped detail lives in `docs/releases/<version>/plan.md` + `changelog/<version>.md` + Claude auto-memory.
-- **Active**: learned phrases (§ below, PR1–PR4 pending, USER 2026-09-20「ok, plan it」); Telex tone-1/4 keys design (USER 2026-09-11「之後的版本再處理」). Merged desktop 3.6.x items below await dogfood only.
+- **Active**: learned phrases (§ below, PR1–PR4 MERGED 2026-09-20, dogfood S62 pending); Telex tone-1/4 keys design (USER 2026-09-11「之後的版本再處理」). Merged desktop 3.6.x items below await dogfood only.
 - **No open deferred TODO**: the keyboard theme picker (the last 2026-06-01 candidate) shipped in v3.6.2; the one design-locked, unscheduled item is 變換後羅馬字 commit (§ Out of scope / deferred).
 - **Release scope / timing / tag is user-gated** per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope].
 
@@ -24,7 +24,7 @@ kautian subcollections (腔調 + 姓名附錄 toggles + 語音差異 詞級擴�
 
 ### Learned phrases — a phrase composed segment by segment becomes a whole-buffer candidate (USER-scoped 2026-09-20)
 
-**Status**: PR1 engine #109 MERGED `42d4dc5a`, PR2 iOS #110 MERGED `b446d852`, PR3 Android #111 MERGED `3b936e81`, PR4 macOS + Windows in review (2026-09-20). Dogfood S62 pending on all four. Project memory `project_learned_phrases.md`.
+**Status**: PR1 engine #109 MERGED `42d4dc5a`, PR2 iOS #110 MERGED `b446d852`, PR3 Android #111 MERGED `3b936e81`, PR4 macOS + Windows #112 MERGED `9b6d6afe` (2026-09-20). Dogfood S62 pending on all four. Project memory `project_learned_phrases.md`.
 
 USER report (2026-09-20): type `kikhilai`, pick 記 → 起 → 來 one segment at a time; however often this is repeated, the next `kikhilai` never offers 記起來 as one candidate. USER decision 2026-09-20 「ok, plan it」 after the survey below. Scope: all four platforms, engine-led.
 
@@ -60,7 +60,7 @@ Known parity limit carried over from the custom path, not new: under TPS input `
 | PR1 | engine: `CommitContinuous.hanji` + `NailedSegment.hanji`; `Effect.PhraseLearned`; `FetchAtPos.learned_entries` + `LearnedEntry`; walker/span-local treatment (design 4); `candidate_dump` `DUMP_CUSTOM` / `DUMP_LEARNED`; `continuous_learned_phrase.rs` (18); §50; four bridge arms | MERGED #109 `42d4dc5a` |
 | PR2 | iOS: schema v5 (transactional, checked), learn upsert `RETURNING id` + cap/evict, exact learned query, manual write takes over learned, setting + i18n, 自動學 badge (`TagBadge`), backup v3, 13 tests; S62 | MERGED #110 `b446d852` |
 | PR3 | Android: DB v9, UPDATE-then-INSERT learn pair (3.22), same rules, `SourceBadge`, backup v3, JVM SQL fixture + 4 tests | MERGED #111 `3b936e81` |
-| PR4 | macOS + Windows: idempotent schema columns + partial index, store `learnPhrase` / `learnedRows(matching:)` / touch, manual takeover, quota accounting, pane toggle + badge, `learned_entries` + `hanji` on both bridges, +4 macOS / +6 Windows tests | in review |
+| PR4 | macOS + Windows: idempotent schema columns + partial index, store `learnPhrase` / `learnedRows(matching:)` / touch, manual takeover, quota accounting, pane toggle + badge, `learned_entries` + `hanji` on both bridges, shared badge (`TagBadge` / `cards::badge`), schema ALTER in one immediate transaction + macOS busy timeout, +6 macOS / +6 Windows tests | MERGED #112 `9b6d6afe` |
 
 #### Best practices alignment
 
