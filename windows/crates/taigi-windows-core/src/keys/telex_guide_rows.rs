@@ -115,12 +115,12 @@ mod tests {
     fn meanings_come_from_the_display_language() {
         // trace: Hanji `desktop.telexGuideTone` = "第 {0} 調" (generated.rs),
         // the pair rows feed "1 / 4" and "2 / 8" as the tone;
-        // `telexGuideHyphen` = "連劃".
+        // `telexGuideHyphen` = "連字符".
         let tl = rows(InputMode::Tl);
         assert_eq!(tl[0].meaning, "第 1 / 4 調");
         assert_eq!(tl[1].meaning, "第 2 / 8 調");
         assert_eq!(tl[5].meaning, "第 9 調");
-        assert_eq!(tl[8].meaning, "連劃");
+        assert_eq!(tl[8].meaning, "連字符");
         let en = telex_guide_rows(
             InputMode::Tl,
             &StringResolver::new(DisplayLanguage::English),
