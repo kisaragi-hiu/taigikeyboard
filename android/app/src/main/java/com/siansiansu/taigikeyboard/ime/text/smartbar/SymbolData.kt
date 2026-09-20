@@ -27,7 +27,7 @@ object SymbolData {
     /** Full-width symbols (14 rows x 6 cols) */
     val fullWidthRows: List<List<String>> = listOf(
         listOf("，", "。", "！", "？", "；", "："),
-        listOf("、", "．", "‧", "…", "～", "·"),
+        listOf("·", "、", "．", "‧", "…", "～"),
         listOf("—", "–", "＿", "－", "﹏", "＝"),
         listOf("「", "」", "『", "』", "（", "）"),
         listOf("《", "》", "〈", "〉", "【", "】"),
