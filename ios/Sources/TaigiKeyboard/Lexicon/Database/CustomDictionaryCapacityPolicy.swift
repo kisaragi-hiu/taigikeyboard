@@ -22,13 +22,16 @@ enum CustomDictionaryCapacityPolicy {
     // Drift causes silent divergence.
     static let maxLearnedEntries = 2000
 
-    /// Drop learned rows past `cap` — side keys first, so the subquery still
-    /// resolves against the intact main table. `OFFSET cap` selects exactly
-    /// the rows past the cap (none when under it), so no count is needed.
-    static func evictLearnedPastCap(db: OpaquePointer, cap: Int = maxLearnedEntries) {
+    /// Drop learned rows past `cap`, never `keeping` (the row the caller just
+    /// wrote — the newest learn always survives, whatever its timestamp ties
+    /// with). Side keys first, so the subquery still resolves against the
+    /// intact main table; `OFFSET cap - 1` selects exactly the rows past the
+    /// cap once the kept row is set aside (none when under it). Throws so the
+    /// caller's transaction rolls back rather than commit a half-eviction.
+    static func evictLearnedPastCap(db: OpaquePointer, cap: Int = maxLearnedEntries, keeping keptId: String) throws {
         let pastCap = """
             SELECT id FROM \(CustomDictionarySchema.tableName)
-            WHERE origin = 1
+            WHERE origin = 1 AND id <> ?
             ORDER BY learn_count DESC, updated_at DESC, id
             LIMIT -1 OFFSET ?
         """
@@ -37,20 +40,27 @@ enum CustomDictionaryCapacityPolicy {
             "\(CustomDictionarySchema.tableName) WHERE id IN (\(pastCap))",
         ] {
             var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, "DELETE FROM \(table);", -1, &stmt, nil) == SQLITE_OK else { continue }
-            sqlite3_bind_int(stmt, 1, Int32(cap))
-            sqlite3_step(stmt)
-            sqlite3_finalize(stmt)
+            defer { sqlite3_finalize(stmt) }
+            guard sqlite3_prepare_v2(db, "DELETE FROM \(table);", -1, &stmt, nil) == SQLITE_OK else {
+                throw LexiconError.queryPreparationFailed("Learned eviction: \(String(cString: sqlite3_errmsg(db)))")
+            }
+            stmt.bindText(1, keptId)
+            sqlite3_bind_int(stmt, 2, Int32(max(cap - 1, 0)))
+            guard sqlite3_step(stmt) == SQLITE_DONE else {
+                throw LexiconError.queryExecutionFailed("Learned eviction: \(String(cString: sqlite3_errmsg(db)))")
+            }
         }
     }
 
-    /// True when a row with the given `id` already exists.
+    /// True when a MANUAL row with the given `id` already exists — a learned
+    /// row being adopted under its own id is still a new manual row for the
+    /// quota.
     static func entryExists(db: OpaquePointer, id: String) -> Bool {
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
         guard sqlite3_prepare_v2(
             db,
-            "SELECT 1 FROM \(CustomDictionarySchema.tableName) WHERE id = ? LIMIT 1;",
+            "SELECT 1 FROM \(CustomDictionarySchema.tableName) WHERE id = ? AND origin = 0 LIMIT 1;",
             -1, &stmt, nil,
         ) == SQLITE_OK else {
             return false
@@ -71,7 +81,7 @@ enum CustomDictionaryCapacityPolicy {
     }
 
     /// Throw if inserting would exceed `maxEntries`. Updating an existing
-    /// row (same `id`) is not an insert and bypasses the check.
+    /// MANUAL row (same `id`) is not an insert and bypasses the check.
     /// Must run inside the same transaction as the write to avoid TOCTOU.
     static func guardInsertCapacity(db: OpaquePointer, id: String) throws {
         if entryExists(db: db, id: id) {

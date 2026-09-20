@@ -54,38 +54,45 @@ final class CustomDictionaryRepository: @unchecked Sendable {
 
     /// Insert or update an entry (upsert by id) — the user's own word. §50:
     /// a manual row for a `(roman, hanzi)` pair a learned row already holds
-    /// TAKES OVER that row (the learned row and its side keys go), so the
-    /// pair is listed once and the rule "manual wins, never the reverse"
-    /// holds for the list editor, the CSV importer and the backup importer
-    /// alike; a learned `entry` written through here becomes manual too
-    /// (editing a learned row adopts it).
+    /// TAKES OVER that row (the learned row and its side keys go, after the
+    /// manual write landed), so the pair is listed once and the rule "manual
+    /// wins, never the reverse" holds for the list editor, the CSV importer
+    /// and the backup importer alike; a learned `entry` written through here
+    /// becomes manual too (editing a learned row adopts it — and counts
+    /// against the manual quota like any new manual row). One transaction:
+    /// the guard, the write, the side keys and the takeover commit together
+    /// or not at all.
     func upsert(_ entry: CustomDictionaryEntry) async throws {
         try await ensureInitialized()
         try await connectionManager.execute { db in
-            let entry = entry.isLearned ? entry.asManual : entry
-            Self.removeLearnedRow(db: db, roman: entry.roman, hanzi: entry.hanzi, except: entry.id)
-            // Capacity guard runs in the same `execute` block as the write
-            // to avoid a TOCTOU race with concurrent writers.
-            try CustomDictionaryCapacityPolicy.guardInsertCapacity(db: db, id: entry.id)
-
-            var stmt: OpaquePointer?
-            guard sqlite3_prepare_v2(db, Self.upsertEntrySQL, -1, &stmt, nil) == SQLITE_OK else {
-                throw LexiconError.queryPreparationFailed(
-                    "Upsert failed: \(String(cString: sqlite3_errmsg(db)))",
-                )
+            try sqliteTransaction(db: db) {
+                let entry = entry.asManual
+                // Capacity guard runs in the same transaction as the write
+                // to avoid a TOCTOU race with concurrent writers.
+                try CustomDictionaryCapacityPolicy.guardInsertCapacity(db: db, id: entry.id)
+                try Self.writeManualRow(db: db, entry)
             }
-            defer { sqlite3_finalize(stmt) }
-
-            Self.bindEntry(stmt, entry)
-
-            guard sqlite3_step(stmt) == SQLITE_DONE else {
-                throw LexiconError.queryExecutionFailed(
-                    "Upsert failed: \(String(cString: sqlite3_errmsg(db)))",
-                )
-            }
-
-            Self.writeSearchKeys(db: db, entryId: entry.id, roman: entry.roman)
         }
+    }
+
+    /// The manual write itself: upsert by id, side keys, then the takeover
+    /// of any learned row for the pair. Caller holds the transaction.
+    private static func writeManualRow(db: OpaquePointer, _ entry: CustomDictionaryEntry) throws {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, upsertEntrySQL, -1, &stmt, nil) == SQLITE_OK else {
+            throw LexiconError.queryPreparationFailed(
+                "Upsert failed: \(String(cString: sqlite3_errmsg(db)))",
+            )
+        }
+        bindEntry(stmt, entry)
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw LexiconError.queryExecutionFailed(
+                "Upsert failed: \(String(cString: sqlite3_errmsg(db)))",
+            )
+        }
+        try writeSearchKeys(db: db, entryId: entry.id, roman: entry.roman)
+        try removeLearnedRow(db: db, roman: entry.roman, hanzi: entry.hanzi, except: entry.id)
     }
 
     /// Fetch all entries ordered by updated_at descending.
@@ -187,8 +194,8 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                     )
                 }
                 let rowId = String(cString: idText)
-                Self.writeSearchKeys(db: db, entryId: rowId, roman: entry.roman)
-                CustomDictionaryCapacityPolicy.evictLearnedPastCap(db: db, cap: cap)
+                try Self.writeSearchKeys(db: db, entryId: rowId, roman: entry.roman)
+                try CustomDictionaryCapacityPolicy.evictLearnedPastCap(db: db, cap: cap, keeping: rowId)
             }
         }
     }
@@ -251,7 +258,7 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             stmt.bindText(1, id)
             sqlite3_step(stmt)
 
-            Self.deleteSearchKeys(db: db, entryId: id)
+            try Self.deleteSearchKeys(db: db, entryId: id)
         }
     }
 
@@ -316,18 +323,11 @@ final class CustomDictionaryRepository: @unchecked Sendable {
                         continue
                     }
 
-                    Self.removeLearnedRow(db: db, roman: entry.roman, hanzi: entry.hanzi, except: entry.id)
-                    var stmt: OpaquePointer?
-                    guard sqlite3_prepare_v2(db, Self.upsertEntrySQL, -1, &stmt, nil) == SQLITE_OK else { continue }
-                    defer { sqlite3_finalize(stmt) }
-
-                    Self.bindEntry(stmt, entry.asManual)
-
-                    if sqlite3_step(stmt) == SQLITE_DONE {
-                        Self.writeSearchKeys(db: db, entryId: entry.id, roman: entry.roman)
-                        existingKeys.insert(key)
-                        insertedCount += 1
-                    }
+                    // A row that fails is skipped, its learned twin untouched:
+                    // the takeover runs only after the manual write landed.
+                    guard (try? Self.writeManualRow(db: db, entry)) != nil else { continue }
+                    existingKeys.insert(key)
+                    insertedCount += 1
                 }
 
                 guard sqlite3_exec(db, "COMMIT;", nil, nil, nil) == SQLITE_OK else {
@@ -467,14 +467,17 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     }
 
     /// Delete the learned row (and its side keys) for `(roman, hanzi)` unless
-    /// it is `except` itself — the manual write about to land takes it over.
-    private static func removeLearnedRow(db: OpaquePointer, roman: String, hanzi: String, except id: String) {
+    /// it is `except` itself — the manual write that just landed takes it
+    /// over. Caller holds the transaction.
+    private static func removeLearnedRow(db: OpaquePointer, roman: String, hanzi: String, except id: String) throws {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(
             db,
             "SELECT id FROM \(CustomDictionarySchema.tableName) WHERE origin = 1 AND roman = ? AND hanzi = ? AND id <> ?;",
             -1, &stmt, nil,
-        ) == SQLITE_OK else { return }
+        ) == SQLITE_OK else {
+            throw LexiconError.queryPreparationFailed("Learned takeover: \(String(cString: sqlite3_errmsg(db)))")
+        }
         stmt.bindText(1, roman)
         stmt.bindText(2, hanzi)
         stmt.bindText(3, id)
@@ -484,16 +487,21 @@ final class CustomDictionaryRepository: @unchecked Sendable {
         }
         sqlite3_finalize(stmt)
         for learnedId in learnedIds {
-            var del: OpaquePointer?
-            guard sqlite3_prepare_v2(
-                db,
-                "DELETE FROM \(CustomDictionarySchema.tableName) WHERE id = ?;",
-                -1, &del, nil,
-            ) == SQLITE_OK else { continue }
-            del.bindText(1, learnedId)
-            sqlite3_step(del)
-            sqlite3_finalize(del)
-            deleteSearchKeys(db: db, entryId: learnedId)
+            try sqliteExecBound(db: db, "DELETE FROM \(CustomDictionarySchema.tableName) WHERE id = ?;", learnedId)
+            try deleteSearchKeys(db: db, entryId: learnedId)
+        }
+    }
+
+    /// One bound-text statement, throwing on prepare / step failure.
+    private static func sqliteExecBound(db: OpaquePointer, _ sql: String, _ text: String) throws {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw LexiconError.queryPreparationFailed(String(cString: sqlite3_errmsg(db)))
+        }
+        stmt.bindText(1, text)
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw LexiconError.queryExecutionFailed(String(cString: sqlite3_errmsg(db)))
         }
     }
 
@@ -579,12 +587,16 @@ final class CustomDictionaryRepository: @unchecked Sendable {
     /// insert the full cross-mode bundle from
     /// `CustomDictionaryDerivation.searchKeys(for:)`. Called after every upsert
     /// and batch insert so the side table never drifts from the entry's roman.
-    private static func writeSearchKeys(db: OpaquePointer, entryId: String, roman: String) {
-        deleteSearchKeys(db: db, entryId: entryId)
+    /// Throws so the caller's transaction rolls back instead of committing a
+    /// row without its keys.
+    private static func writeSearchKeys(db: OpaquePointer, entryId: String, roman: String) throws {
+        try deleteSearchKeys(db: db, entryId: entryId)
 
         var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, insertSearchKeySQL, -1, &stmt, nil) == SQLITE_OK else { return }
         defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(db, insertSearchKeySQL, -1, &stmt, nil) == SQLITE_OK else {
+            throw LexiconError.queryPreparationFailed("Search keys: \(String(cString: sqlite3_errmsg(db)))")
+        }
 
         for searchKey in CustomDictionaryDerivation.searchKeys(for: roman) {
             sqlite3_reset(stmt)
@@ -593,17 +605,18 @@ final class CustomDictionaryRepository: @unchecked Sendable {
             stmt.bindText(2, searchKey.family)
             stmt.bindText(3, searchKey.form)
             stmt.bindText(4, searchKey.key)
-            sqlite3_step(stmt)
+            guard sqlite3_step(stmt) == SQLITE_DONE else {
+                throw LexiconError.queryExecutionFailed("Search keys: \(String(cString: sqlite3_errmsg(db)))")
+            }
         }
     }
 
-    private static func deleteSearchKeys(db: OpaquePointer, entryId: String) {
-        let sql = "DELETE FROM \(CustomDictionarySchema.searchKeyTableName) WHERE \(CustomDictionarySchema.searchKeyEntryIdColumn) = ?;"
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
-        defer { sqlite3_finalize(stmt) }
-        stmt.bindText(1, entryId)
-        sqlite3_step(stmt)
+    private static func deleteSearchKeys(db: OpaquePointer, entryId: String) throws {
+        try sqliteExecBound(
+            db: db,
+            "DELETE FROM \(CustomDictionarySchema.searchKeyTableName) WHERE \(CustomDictionarySchema.searchKeyEntryIdColumn) = ?;",
+            entryId,
+        )
     }
 
     private static func existingRomanHanziKeys(db: OpaquePointer) -> Set<String> {

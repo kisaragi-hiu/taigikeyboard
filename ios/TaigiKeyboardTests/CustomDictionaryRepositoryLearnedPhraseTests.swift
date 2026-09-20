@@ -99,15 +99,19 @@ final class CustomDictionaryRepositoryLearnedPhraseTests: XCTestCase {
         XCTAssertEqual(taigi.map(\.origin), [.manual])
     }
 
-    /// Editing a learned row in the list adopts it: the same id, now manual.
+    /// Editing a learned row in the list adopts it: the same id, now manual —
+    /// and it counts against the manual quota like any new manual row.
     func test_upsert_ofALearnedEntryMakesItManual() async throws {
         try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
         let learnedFirst = try await learnedRows().first
         let learned = try XCTUnwrap(learnedFirst)
+        let manualBefore = try await repository.count()
         try await repository.upsert(learned)
         let all = try await repository.fetchAll()
         XCTAssertEqual(all.map(\.id), [learned.id])
         XCTAssertEqual(all.first?.origin, .manual)
+        let manualAfter = try await repository.count()
+        XCTAssertEqual(manualAfter, manualBefore + 1, "adopting a learned row is a manual insert for the quota")
     }
 
     func test_learnPhrase_emptyPartsAreIgnored() async throws {
@@ -173,9 +177,10 @@ final class CustomDictionaryRepositoryLearnedPhraseTests: XCTestCase {
 
     func test_evictsFewestComposedThenOldestPastTheLearnedCap() async throws {
         XCTAssertEqual(CustomDictionaryCapacityPolicy.maxLearnedEntries, 2000, "must stay aligned with Android MAX_LEARNED_ENTRIES")
-        // Fill to the cap; 詞0 composed twice must survive; one of the
-        // count-1 rows goes (they share a second-resolution `updated_at`, so
-        // which one is not asserted), and its side keys go with it.
+        // Fill to the cap; 詞0 composed twice must survive; the row just
+        // written always survives; one of the count-1 rows goes (they share a
+        // second-resolution `updated_at`, so which one is not asserted), and
+        // its side keys go with it.
         for i in 0 ..< Self.learnedCap {
             try await repository.learnPhrase(hanzi: "詞\(i)", canonicalTl: "su-\(i)")
         }
