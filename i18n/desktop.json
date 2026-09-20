@@ -999,11 +999,11 @@
         ]
       },
       "values": {
-        "hanji": "贊助支持",
-        "tailo": "Tsàn-tsōo tsi-tshî",
-        "poj": "Chàn-chō͘ chi-chhî",
-        "en": "Support this project",
-        "ja": "支援する"
+        "hanji": "贊助齒盤維護運作",
+        "tailo": "Tsàn-tsōo Khí-puânn uî-hōo ūn-tsok",
+        "poj": "Chàn-chō͘ Khí-pôaⁿ ûi-hō͘ ūn-chok",
+        "en": "Support the Keyboard's Upkeep",
+        "ja": "齒盤の維持・運営を支援する"
       }
     },
     "websiteLink": {
