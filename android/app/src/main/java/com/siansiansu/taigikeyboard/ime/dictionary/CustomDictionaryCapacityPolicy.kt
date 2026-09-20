@@ -1,7 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import android.database.sqlite.SQLiteDatabase
-import com.siansiansu.taigikeyboard.ime.core.db.rowCount
 
 /**
  * Capacity policy for the custom-dictionary table. Owns the row-count cap
@@ -15,23 +14,58 @@ import com.siansiansu.taigikeyboard.ime.core.db.rowCount
  * boundary can be exercised without inserting 30000 rows.
  */
 internal object CustomDictionaryCapacityPolicy {
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryCapacityPolicy.swift:17 (maxEntries).
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryCapacityPolicy.swift (maxEntries).
     // Drift causes silent divergence.
+    /** Maximum number of MANUAL rows (`origin = 0`). */
     const val MAX_ENTRIES = 30_000
+
+    /**
+     * Maximum number of LEARNED rows (`origin = 1`, §50); past it the
+     * fewest-composed, then least recently touched, row goes so a learn
+     * never fails.
+     */
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryCapacityPolicy.swift (maxLearnedEntries).
+    // Drift causes silent divergence.
+    const val MAX_LEARNED_ENTRIES = 2_000
 
     private const val TABLE_NAME = "custom_dictionary"
 
-    /** Current row count. Returns 0 on query failure (treated as "not full"). */
-    fun currentEntryCount(db: SQLiteDatabase): Int = db.rowCount(TABLE_NAME, fallback = 0)
+    /** MANUAL row count — learned rows have their own quota. 0 on query failure ("not full"). */
+    fun currentEntryCount(db: SQLiteDatabase): Int =
+        db.rawQuery("SELECT COUNT(*) FROM $TABLE_NAME WHERE origin = 0", null).use {
+            if (it.moveToFirst()) it.getInt(0) else 0
+        }
 
-    /** True when a row with the given [id] already exists. */
+    /** True when a MANUAL row with [id] exists — adopting a learned row is a new manual row for the quota. */
     fun entryExists(
         db: SQLiteDatabase,
         id: String,
     ): Boolean =
-        db.rawQuery("SELECT 1 FROM $TABLE_NAME WHERE id = ? LIMIT 1", arrayOf(id)).use {
+        db.rawQuery("SELECT 1 FROM $TABLE_NAME WHERE id = ? AND origin = 0 LIMIT 1", arrayOf(id)).use {
             it.moveToFirst()
         }
+
+    /**
+     * Drop learned rows past [cap], never [keptId] (the row the caller just
+     * wrote). Side keys first, so the subquery still resolves against the
+     * intact main table; `OFFSET cap - 1` selects exactly the rows past the
+     * cap once the kept row is set aside. Caller holds the transaction.
+     */
+    // CROSS-PLATFORM INVARIANT — mirrors ios CustomDictionaryCapacityPolicy.evictLearnedPastCap. Drift causes silent divergence.
+    fun evictLearnedPastCap(
+        db: SQLiteDatabase,
+        keptId: String,
+        cap: Int = MAX_LEARNED_ENTRIES,
+    ) {
+        val args = arrayOf<Any>(keptId, (cap - 1).coerceAtLeast(0))
+        db.execSQL("DELETE FROM custom_search_key WHERE entry_id IN ($LEARNED_PAST_CAP_SQL)", args)
+        db.execSQL("DELETE FROM $TABLE_NAME WHERE id IN ($LEARNED_PAST_CAP_SQL)", args)
+    }
+
+    /** The learned rows past the cap, excluding one kept id — `internal` for the JVM SQL test. */
+    internal const val LEARNED_PAST_CAP_SQL =
+        "SELECT id FROM $TABLE_NAME WHERE origin = 1 AND id <> ? " +
+            "ORDER BY learn_count DESC, updated_at DESC, id LIMIT -1 OFFSET ?"
 
     /**
      * Pure decision: would inserting push past the cap? Updating an existing row

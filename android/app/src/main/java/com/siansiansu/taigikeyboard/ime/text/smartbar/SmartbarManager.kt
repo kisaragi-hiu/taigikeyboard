@@ -147,6 +147,7 @@ class SmartbarManager(
             prefs = prefs,
             taigikeyboard = taigikeyboard,
             userFreq = compositionRoot.userFreq,
+            customDict = compositionRoot.customDict,
             getCurrentSuggestions = { currentSuggestions },
             getIsTranslateSwapped = { cachedIsTranslateSwapped },
             getOutputBothScripts = { cachedOutputBothScripts },

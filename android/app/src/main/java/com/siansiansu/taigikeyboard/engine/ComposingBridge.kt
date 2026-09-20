@@ -333,6 +333,10 @@ fun RustEngineBridge.composingFetchAtPos(
     // 候選詞顯示 — ROMAN_ONLY makes the engine collapse same-roman rows.
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     hyphenlessRoman: Boolean = false,
+    // §50 — learned phrases whose whole-buffer key equals the raw buffer
+    // (`CustomDictionaryService.learnedEntries`). Default empty = feature
+    // off / nothing learned.
+    learnedEntries: List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> = emptyList(),
 ): RustEngineBridge.ContinuousFetchResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
         .newBuilder()
@@ -342,6 +346,7 @@ fun RustEngineBridge.composingFetchAtPos(
         .addAllCustomEntries(customEntries)
         .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
         .setLiteralRomanCandidateDisabled(literalRomanCandidateDisabled)
+        .addAllLearnedEntries(learnedEntries)
         .build()
     return composingFetchDispatch(
         methodSetter = { it.fetchAtPos = payload },
@@ -371,6 +376,10 @@ fun RustEngineBridge.composingCommitContinuous(
     displayText: String,
     canonicalText: String,
     associationTl: String,
+    // §50 — the picked candidate's hanji (`ContinuousCandidate.hanji`), null
+    // for a hanji-less pick; the engine learns a composition only when every
+    // segment carried one.
+    hanji: String? = null,
     consumedBytes: Int,
     syllableCount: Int,
     mode: NormalizeMode,
@@ -388,6 +397,7 @@ fun RustEngineBridge.composingCommitContinuous(
         // R2: canonical TL → NextWord next_tl/prev_tl. Empty → engine
         // falls back to the raw committed slice.
         .setAssociationTl(associationTl)
+        .apply { if (!hanji.isNullOrEmpty()) setHanji(hanji) }
         .setConsumedBytes(consumedBytes)
         .setSyllableCount(syllableCount)
         .build()

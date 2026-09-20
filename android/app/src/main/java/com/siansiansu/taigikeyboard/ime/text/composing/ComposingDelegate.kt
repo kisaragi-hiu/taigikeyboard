@@ -70,9 +70,9 @@ object DefaultComposingDelegate : ComposingDelegate {
             }
 
             is RustEngineBridge.ComposingTransition.Effect.PhraseLearned -> {
-                // Learned phrases (§50): the Android learned store lands in the
-                // Android phase of the round (`docs/roadmap.md` § Learned
-                // phrases, PR3); decoded and dropped until then.
+                // Learned phrases (§50): not a document effect — the tap
+                // handler reads it off `CommitContinuousResult.learnedPhrase`
+                // and writes the store (`CandidateClickHandler`).
                 Unit
             }
         }

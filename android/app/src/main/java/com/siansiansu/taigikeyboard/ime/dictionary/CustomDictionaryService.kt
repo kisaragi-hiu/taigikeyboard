@@ -5,6 +5,7 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.net.Uri
 import androidx.core.database.sqlite.transaction
+import com.siansiansu.taigikeyboard.ime.core.db.bindArgs
 import com.siansiansu.taigikeyboard.ime.core.db.rowCount
 import com.siansiansu.taigikeyboard.ime.core.db.upsert
 import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
@@ -32,7 +33,11 @@ class CustomDictionaryService(
     companion object {
         private const val TAG = "CustomDictionaryService"
         private const val DATABASE_NAME = "custom_dictionary.db"
-        private const val DATABASE_VERSION = 8
+        private const val DATABASE_VERSION = 9
+
+        /** Largest `learn_count` a row can carry — a backup file is untrusted input. */
+        // CROSS-PLATFORM INVARIANT — mirrors ios CustomDictionaryRepository.maxLearnCount.
+        const val MAX_LEARN_COUNT = 1_000_000
 
         /**
          * v3.6.1 R3 cross-mode side-table DDL + indexes + query. `internal` so
@@ -60,15 +65,43 @@ class CustomDictionaryService(
                 ${Table.NOTONE} = ?,
                 ${Table.ABBREV} = ?,
                 ${Table.ROMAN_NUM} = ?,
-                ${Table.UPDATED_AT} = CURRENT_TIMESTAMP
+                ${Table.UPDATED_AT} = CURRENT_TIMESTAMP,
+                ${Table.ORIGIN} = 0,
+                ${Table.LEARN_COUNT} = 0
             WHERE ${Table.ID} = ?
             """.trimIndent()
 
         internal val UPSERT_INSERT_SQL =
             """
-            INSERT OR IGNORE INTO ${Table.NAME} (${Table.ROMAN}, ${Table.HANZI}, ${Table.NOTONE}, ${Table.ABBREV}, ${Table.ROMAN_NUM}, ${Table.ID}, ${Table.CREATED_AT}, ${Table.UPDATED_AT})
-            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            INSERT OR IGNORE INTO ${Table.NAME} (${Table.ROMAN}, ${Table.HANZI}, ${Table.NOTONE}, ${Table.ABBREV}, ${Table.ROMAN_NUM}, ${Table.ID}, ${Table.CREATED_AT}, ${Table.UPDATED_AT}, ${Table.ORIGIN}, ${Table.LEARN_COUNT})
+            VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, 0)
             """.trimIndent()
+
+        /**
+         * §50 learn pair (`upsert` shape, SQLite 3.22 ceiling — no `ON
+         * CONFLICT DO UPDATE`): bump the learned row for the pair, else insert
+         * it. Args: (count, hanzi, roman) for the UPDATE; the INSERT binds
+         * (count, hanzi, roman, id, notone, abbrev, roman_num). The
+         * learned-pair unique index keeps the pair single.
+         */
+        internal val LEARN_UPDATE_SQL =
+            """
+            UPDATE ${Table.NAME}
+            SET ${Table.LEARN_COUNT} = MIN(${Table.LEARN_COUNT} + ?, $MAX_LEARN_COUNT),
+                ${Table.UPDATED_AT} = CURRENT_TIMESTAMP
+            WHERE ${Table.ORIGIN} = 1 AND ${Table.HANZI} = ? AND ${Table.ROMAN} = ?
+            """.trimIndent()
+
+        internal val LEARN_INSERT_SQL =
+            """
+            INSERT INTO ${Table.NAME} (${Table.LEARN_COUNT}, ${Table.HANZI}, ${Table.ROMAN}, ${Table.ID}, ${Table.NOTONE}, ${Table.ABBREV}, ${Table.ROMAN_NUM}, ${Table.CREATED_AT}, ${Table.UPDATED_AT}, ${Table.ORIGIN})
+            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1)
+            """.trimIndent()
+
+        /** One learned row per `(hanzi, roman)`; manual rows keep their duplicate tolerance. */
+        // CROSS-PLATFORM INVARIANT — mirrors ios CustomDictionarySchema.learnedPairIndexSQL.
+        internal const val CREATE_LEARNED_PAIR_INDEX_SQL =
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_learned_pair ON custom_dictionary(hanzi, roman) WHERE origin = 1;"
 
         /** One source for onCreate and the JVM SQL tests. */
         internal val CREATE_TABLE_SQL =
@@ -81,20 +114,39 @@ class CustomDictionaryService(
                 ${Table.ABBREV} TEXT DEFAULT '',
                 ${Table.ROMAN_NUM} TEXT DEFAULT '',
                 ${Table.CREATED_AT} TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                ${Table.UPDATED_AT} TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                ${Table.UPDATED_AT} TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ${Table.ORIGIN} INTEGER NOT NULL DEFAULT 0,
+                ${Table.LEARN_COUNT} INTEGER NOT NULL DEFAULT 0
             );
             """.trimIndent()
 
-        // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryRepository.swift query.
-        // Drift causes silent divergence.
+        private const val ENTRY_COLUMNS = "c.id, c.roman, c.hanzi, c.created_at, c.updated_at, c.origin, c.learn_count"
+
+        // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryRepository.swift `prefixSearchSQL`.
+        // Drift causes silent divergence. `origin = 0`: manual rows only (§50) —
+        // learned rows ride `FetchAtPos.learned_entries` via [LEARNED_EXACT_SQL].
         internal const val SEARCH_SQL =
-            "SELECT DISTINCT c.id, c.roman, c.hanzi, c.created_at, c.updated_at " +
+            "SELECT DISTINCT $ENTRY_COLUMNS " +
                 "FROM custom_dictionary c " +
                 "JOIN custom_search_key k ON k.entry_id = c.id " +
-                "WHERE k.family = ? " +
+                "WHERE c.origin = 0 " +
+                "AND k.family = ? " +
                 "AND k.form IN (?, 'abbrev') " +
                 "AND k.key LIKE ? || '%' " +
                 "ORDER BY c.roman " +
+                "LIMIT ?"
+
+        /** §50 — learned-only, exact (`=`, not `LIKE`) counterpart of [SEARCH_SQL]. */
+        // CROSS-PLATFORM INVARIANT — mirrors ios CustomDictionaryRepository `learnedExactSearchSQL`.
+        internal const val LEARNED_EXACT_SQL =
+            "SELECT $ENTRY_COLUMNS " +
+                "FROM custom_dictionary c " +
+                "JOIN custom_search_key k ON k.entry_id = c.id " +
+                "WHERE c.origin = 1 " +
+                "AND k.family = ? " +
+                "AND k.form = ? " +
+                "AND k.key = ? " +
+                "ORDER BY c.learn_count DESC, c.updated_at DESC " +
                 "LIMIT ?"
 
         /**
@@ -131,6 +183,12 @@ class CustomDictionaryService(
         const val ROMAN_NUM = "roman_num"
         const val CREATED_AT = "created_at"
         const val UPDATED_AT = "updated_at"
+
+        /** §50 provenance: `Entry.Origin` raw value. */
+        const val ORIGIN = "origin"
+
+        /** §50: times a learned row was composed / picked; 0 for a manual row. */
+        const val LEARN_COUNT = "learn_count"
     }
 
     /**
@@ -152,6 +210,15 @@ class CustomDictionaryService(
     private val initMutex = Mutex()
     private var isInitialized = false
 
+    /**
+     * The MANUAL write (§50): upsert by id as the user's own word (`origin`
+     * 0, no count — a learned [entry] written here is adopted), side keys,
+     * then the takeover of any learned row for the same `(roman, hanzi)` so
+     * the pair is listed once and "manual wins, never the reverse" holds for
+     * the list editor, the CSV importer and the backup importer alike. The
+     * takeover runs AFTER the write, so a failed write leaves the learned
+     * row intact. Caller holds the transaction.
+     */
     private fun executeUpsert(
         db: SQLiteDatabase,
         entry: Entry,
@@ -165,6 +232,26 @@ class CustomDictionaryService(
         // The legacy notone/abbrev/roman_num columns above stay written for
         // backcompat / rollback; the side table is the NEW query path.
         rewriteSearchKeys(db, entry.id, entry.roman)
+        removeLearnedRow(db, entry.roman, entry.hanzi, exceptId = entry.id)
+    }
+
+    /** Delete the learned row (and side keys) for the pair, unless it is [exceptId] itself. */
+    private fun removeLearnedRow(
+        db: SQLiteDatabase,
+        roman: String,
+        hanzi: String,
+        exceptId: String,
+    ) {
+        val learnedIds =
+            db
+                .rawQuery(
+                    "SELECT ${Table.ID} FROM ${Table.NAME} WHERE ${Table.ORIGIN} = 1 AND ${Table.ROMAN} = ? AND ${Table.HANZI} = ? AND ${Table.ID} <> ?",
+                    arrayOf(roman, hanzi, exceptId),
+                ).use { cursor -> generateSequence { if (cursor.moveToNext()) cursor.getString(0) else null }.toList() }
+        for (learnedId in learnedIds) {
+            db.delete(Table.NAME, "${Table.ID} = ?", arrayOf(learnedId))
+            db.delete(SearchKeyTable.NAME, "${SearchKeyTable.ENTRY_ID} = ?", arrayOf(learnedId))
+        }
     }
 
     private suspend fun initialize() {
@@ -184,7 +271,26 @@ class CustomDictionaryService(
         val hanzi: String,
         val createdAt: String = "",
         val updatedAt: String = "",
-    )
+        val origin: Origin = Origin.MANUAL,
+        /** Times the phrase was composed or picked; 0 for a manual row. */
+        val learnCount: Int = 0,
+    ) {
+        /** Who wrote the row (§50). The raw values are the wire / backup contract. */
+        // CROSS-PLATFORM INVARIANT — mirrors ios CustomDictionaryEntry.Origin. Drift causes silent divergence.
+        enum class Origin(
+            val raw: Int,
+        ) {
+            MANUAL(0),
+            LEARNED(1),
+            ;
+
+            companion object {
+                fun fromRaw(raw: Int?): Origin = entries.firstOrNull { it.raw == raw } ?: MANUAL
+            }
+        }
+
+        val isLearned: Boolean get() = origin == Origin.LEARNED
+    }
 
     data class ImportResult(
         val imported: Int,
@@ -224,31 +330,35 @@ class CustomDictionaryService(
             try {
                 initialize()
                 val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
-                val cursor =
-                    db.rawQuery(
-                        "SELECT ${Table.ID}, ${Table.ROMAN}, ${Table.HANZI}, ${Table.CREATED_AT}, ${Table.UPDATED_AT} FROM ${Table.NAME} ORDER BY ${Table.UPDATED_AT} DESC",
+                db
+                    .rawQuery(
+                        "SELECT ${Table.ID}, ${Table.ROMAN}, ${Table.HANZI}, ${Table.CREATED_AT}, ${Table.UPDATED_AT}, ${Table.ORIGIN}, ${Table.LEARN_COUNT} FROM ${Table.NAME} ORDER BY ${Table.UPDATED_AT} DESC",
                         null,
-                    )
-                val results = mutableListOf<Entry>()
-                cursor.use {
-                    while (it.moveToNext()) {
-                        results.add(
-                            Entry(
-                                id = it.getString(0),
-                                roman = it.getString(1),
-                                hanzi = it.getString(2),
-                                createdAt = it.getString(3) ?: "",
-                                updatedAt = it.getString(4) ?: "",
-                            ),
-                        )
-                    }
-                }
-                results
+                    ).use { readEntries(it) }
             } catch (e: Exception) {
                 logger.e(TAG, "[FETCH] Failed", e)
                 emptyList()
             }
         }
+
+    /** Every row of a cursor shaped `id, roman, hanzi, created_at, updated_at, origin, learn_count`. */
+    private fun readEntries(cursor: android.database.Cursor): List<Entry> {
+        val results = mutableListOf<Entry>()
+        while (cursor.moveToNext()) {
+            results.add(
+                Entry(
+                    id = cursor.getString(0),
+                    roman = cursor.getString(1),
+                    hanzi = cursor.getString(2),
+                    createdAt = cursor.getString(3) ?: "",
+                    updatedAt = cursor.getString(4) ?: "",
+                    origin = Entry.Origin.fromRaw(cursor.getInt(5)),
+                    learnCount = cursor.getInt(6),
+                ),
+            )
+        }
+        return results
+    }
 
     @Suppress("SqlResolve")
     suspend fun save(entry: Entry) =
@@ -317,31 +427,126 @@ class CustomDictionaryService(
             try {
                 initialize()
                 val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
-                val cursor =
-                    db.rawQuery(
-                        SEARCH_SQL,
-                        arrayOf(family, form, key, limit.toString()),
-                    )
-                val results = mutableListOf<Entry>()
-                cursor.use {
-                    while (it.moveToNext()) {
-                        results.add(
-                            Entry(
-                                id = it.getString(0),
-                                roman = it.getString(1),
-                                hanzi = it.getString(2),
-                                createdAt = it.getString(3) ?: "",
-                                updatedAt = it.getString(4) ?: "",
-                            ),
-                        )
-                    }
-                }
-                results
+                db.rawQuery(SEARCH_SQL, arrayOf(family, form, key, limit.toString())).use { readEntries(it) }
             } catch (e: Exception) {
                 logger.e(TAG, "[SEARCH] Failed", e)
                 emptyList()
             }
         }
+
+    // MARK: - Learned Phrases (§50)
+
+    /**
+     * Record one `Effect.PhraseLearned` (or one backup row, [count] > 1):
+     * bump the learned row for the `(hanzi, canonical TL)` pair or insert it
+     * — the [LEARN_UPDATE_SQL] / [LEARN_INSERT_SQL] pair on the learned-pair
+     * unique index. A manual row for the same pair wins (no-op, never
+     * downgraded). Manual check, write, side keys and eviction run in ONE
+     * transaction; the row just written is never evicted.
+     */
+    suspend fun learnPhrase(
+        hanzi: String,
+        canonicalTl: String,
+        count: Int = 1,
+    ) = withContext(Dispatchers.IO) {
+        if (hanzi.isEmpty() || canonicalTl.isEmpty()) return@withContext
+        val boundedCount = count.coerceIn(1, MAX_LEARN_COUNT)
+        try {
+            initialize()
+            val db = dbHelper?.writableDatabase ?: return@withContext
+            db.transaction {
+                if (manualRowExists(this, canonicalTl, hanzi)) return@transaction
+                val entry = Entry(roman = canonicalTl, hanzi = hanzi, origin = Entry.Origin.LEARNED, learnCount = boundedCount)
+                val bumped =
+                    compileStatement(LEARN_UPDATE_SQL).use { update ->
+                        update.bindArgs(boundedCount, hanzi, canonicalTl)
+                        update.executeUpdateDelete()
+                    }
+                val rowId =
+                    if (bumped > 0) {
+                        learnedRowId(this, canonicalTl, hanzi) ?: return@transaction
+                    } else {
+                        compileStatement(LEARN_INSERT_SQL).use { insert ->
+                            insert.bindArgs(
+                                boundedCount,
+                                hanzi,
+                                canonicalTl,
+                                entry.id,
+                                CustomDictionaryDerivation.generateNotone(canonicalTl),
+                                CustomDictionaryDerivation.generateAbbrev(canonicalTl),
+                                CustomDictionaryDerivation.generateRomanNum(canonicalTl),
+                            )
+                            insert.executeInsert()
+                        }
+                        entry.id
+                    }
+                rewriteSearchKeys(this, rowId, canonicalTl)
+                CustomDictionaryCapacityPolicy.evictLearnedPastCap(this, keptId = rowId)
+            }
+        } catch (e: Exception) {
+            logger.e(TAG, "[LEARN] Failed", e)
+        }
+    }
+
+    /** Bump a learned row the user just picked whole; no-op for a manual row or an unknown pair. */
+    suspend fun touchLearnedPhrase(
+        hanzi: String,
+        canonicalTl: String,
+    ) = withContext(Dispatchers.IO) {
+        if (hanzi.isEmpty() || canonicalTl.isEmpty()) return@withContext
+        try {
+            initialize()
+            val db = dbHelper?.writableDatabase ?: return@withContext
+            db.execSQL(LEARN_UPDATE_SQL, arrayOf<Any>(1, hanzi, canonicalTl))
+        } catch (e: Exception) {
+            logger.e(TAG, "[LEARN] Touch failed", e)
+        }
+    }
+
+    /**
+     * Learned rows whose derived key EQUALS the query key — the whole typed
+     * buffer, not a prefix — for `FetchAtPos.learned_entries`. Exact so a
+     * learned whole-buffer match never falls out of the prefix search's
+     * `LIMIT`; learned-only, the mirror of [search] being manual-only.
+     */
+    suspend fun learnedEntries(
+        family: String,
+        form: String,
+        key: String,
+        limit: Int = 5,
+    ): List<Entry> =
+        withContext(Dispatchers.IO) {
+            try {
+                initialize()
+                val db = dbHelper?.readableDatabase ?: return@withContext emptyList()
+                db.rawQuery(LEARNED_EXACT_SQL, arrayOf(family, form, key, limit.toString())).use { readEntries(it) }
+            } catch (e: Exception) {
+                logger.e(TAG, "[LEARN] Query failed", e)
+                emptyList()
+            }
+        }
+
+    private fun manualRowExists(
+        db: SQLiteDatabase,
+        roman: String,
+        hanzi: String,
+    ): Boolean =
+        db
+            .rawQuery(
+                "SELECT 1 FROM ${Table.NAME} WHERE ${Table.ORIGIN} = 0 AND ${Table.ROMAN} = ? AND ${Table.HANZI} = ? LIMIT 1",
+                arrayOf(roman, hanzi),
+            ).use { it.moveToFirst() }
+
+    private fun learnedRowId(
+        db: SQLiteDatabase,
+        roman: String,
+        hanzi: String,
+    ): String? =
+        db
+            .rawQuery(
+                "SELECT ${Table.ID} FROM ${Table.NAME} WHERE ${Table.ORIGIN} = 1 AND ${Table.ROMAN} = ? AND ${Table.HANZI} = ? LIMIT 1",
+                arrayOf(roman, hanzi),
+            ).use { if (it.moveToFirst()) it.getString(0) else null }
 
     // MARK: - Export
 
@@ -395,7 +600,7 @@ class CustomDictionaryService(
             val existingKeys = mutableSetOf<String>()
             db
                 .rawQuery(
-                    "SELECT ${Table.ROMAN}, ${Table.HANZI} FROM ${Table.NAME}",
+                    "SELECT ${Table.ROMAN}, ${Table.HANZI} FROM ${Table.NAME} WHERE ${Table.ORIGIN} = 0",
                     null,
                 ).use { cursor ->
                     while (cursor.moveToNext()) {
@@ -439,11 +644,11 @@ class CustomDictionaryService(
             ImportResult(importedCount, totalSkipped)
         }
 
-    /** Returns total entry count, or -1 if DB is not open. */
+    /** Returns the MANUAL entry count (the user's quota), or -1 if DB is not open. */
     fun totalCount(): Int {
         return try {
             val db = dbHelper?.readableDatabase ?: return -1
-            db.rowCount(Table.NAME, fallback = -1)
+            CustomDictionaryCapacityPolicy.currentEntryCount(db)
         } catch (_: Exception) {
             -1
         }
@@ -506,6 +711,7 @@ class CustomDictionaryService(
             db.execSQL("CREATE INDEX idx_custom_notone ON ${Table.NAME}(${Table.NOTONE});")
             db.execSQL("CREATE INDEX idx_custom_abbrev ON ${Table.NAME}(${Table.ABBREV});")
             db.execSQL("CREATE INDEX idx_custom_roman_num ON ${Table.NAME}(${Table.ROMAN_NUM});")
+            db.execSQL(CREATE_LEARNED_PAIR_INDEX_SQL)
             createSearchKeyTable(db)
         }
 
@@ -532,6 +738,7 @@ class CustomDictionaryService(
             if (oldVersion < 6) migrateV5ToV6(db)
             if (oldVersion < 7) migrateV6ToV7(db)
             if (oldVersion < 8) migrateV7ToV8(db)
+            if (oldVersion < 9) migrateV8ToV9(db)
             logger.i(TAG, "[UPGRADE] Database upgraded from $oldVersion to $newVersion")
         }
 
@@ -605,6 +812,18 @@ class CustomDictionaryService(
          */
         private fun migrateV7ToV8(db: SQLiteDatabase) {
             regenerateSearchKeys(db)
+        }
+
+        /**
+         * v8 → v9: learned phrases (§50) — provenance columns (every existing
+         * row reads as manual) + the learned-pair unique index. Derivation
+         * unchanged, no key backfill. `SQLiteOpenHelper` runs `onUpgrade`
+         * inside a transaction, so a failed ALTER is never stamped as v9.
+         */
+        private fun migrateV8ToV9(db: SQLiteDatabase) {
+            db.execSQL("ALTER TABLE ${Table.NAME} ADD COLUMN ${Table.ORIGIN} INTEGER NOT NULL DEFAULT 0;")
+            db.execSQL("ALTER TABLE ${Table.NAME} ADD COLUMN ${Table.LEARN_COUNT} INTEGER NOT NULL DEFAULT 0;")
+            db.execSQL(CREATE_LEARNED_PAIR_INDEX_SQL)
         }
 
         private fun regenerateSearchKeys(db: SQLiteDatabase) {
