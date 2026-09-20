@@ -279,6 +279,10 @@ In TL/POJ, Enter should commit the **converted** romanization — multi-syllable
 
 **Gmail report pass (USER 2026-06-29)**: the dogfood-confirmation pass over the then-open Gmail user-report bugs was completed in 2026-08 (memory `MEMORY.md` § Bug reports: batch of 9 closed — 5 fixed, 4 not reproducible). New reports follow `/bug-triage` per incident (Core Principle #4).
 
+### 臺羅模式 — tone key commits without a candidate window (MOE parity)
+
+**Status**: research only, NOT implemented, **low priority** (USER 2026-09-21 「這個功能不緊急也不重要,需求也不多,所以priority比較後面」). Community request: in pure-romanization typing the tone key should write the syllable at once, as the MOE Mac IME's 臺羅模式 does (`tai5` → `tâi`, no Enter, no window). Real on the desktops only — macOS / Windows Space is `.ignored` under 候選詞顯示 = 羅馬字, so every word costs an Enter; mobile Space already commits. Marked text itself stays (rewrite-on-tone rejected). Two options costed — A: desktop Space commits when it has no alternate script (~30 LOC each side); B: a real 臺羅模式 (tone key commits, no window, hand-typed hyphens). Open USER decisions (where the mode lives, tone 1/4 ending, mobile parity) + MOE behaviour still to verify on a Mac. Full write-up: [`reports/2026-09-21-taile-mode-tone-commit.md`](reports/2026-09-21-taile-mode-tone-commit.md).
+
 ## Per-round gates (process invariants, project-wide)
 
 Apply to every coding round regardless of release. Authoritative source: `~/.claude/rules/round-workflow.md`.
