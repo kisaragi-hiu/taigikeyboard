@@ -38,6 +38,7 @@ enum StringKey: String {
     case desktopShortcutShowTelexGuide = "i18n_desktop_shortcutShowTelexGuide"
     case desktopShortcutShowSymbolPicker = "i18n_desktop_shortcutShowSymbolPicker"
     case desktopShortcutMoveComposingCaret = "i18n_desktop_shortcutMoveComposingCaret"
+    case desktopShortcutFlipPunctuationWidth = "i18n_desktop_shortcutFlipPunctuationWidth"
     case desktopTelexGuideTone = "i18n_desktop_telexGuideTone"
     case desktopTelexGuideInitial = "i18n_desktop_telexGuideInitial"
     case desktopTelexGuideHyphen = "i18n_desktop_telexGuideHyphen"

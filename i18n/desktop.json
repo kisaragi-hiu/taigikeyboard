@@ -172,6 +172,25 @@
         "ja": "入力中の文字を修正"
       }
     },
+    "shortcutFlipPunctuationWidth": {
+      "comment": "Read-only row after the commit rows on the 快速齒 pane: Ctrl on a punctuation key types it in the other width once (half-width in 漢字 mode, full-width in 羅馬字 mode) without switching the mode (USER 2026-09-20). Fixed like shortcutMoveComposingCaret; the value column lists sample chords (macOS ⌃, ⌃. ⌃;, Windows Ctrl+, Ctrl+. Ctrl+;). Authored whole, like its siblings.",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "標點換做全形／半形",
+        "tailo": "Piau-tiám uānn-tsò tsuân-hîng / puànn-hîng",
+        "poj": "Phiau-tiám oāⁿ-chò choân-hêng / pòaⁿ-hêng",
+        "en": "Punctuation in the Other Width",
+        "ja": "句読点を全角／半角で入力"
+      }
+    },
     "telexGuideTone": {
       "comment": "Telex guide row meaning for a tone key; {tone} is the tone number (2, 3, 5, 7, 8, 9).",
       "scope": {

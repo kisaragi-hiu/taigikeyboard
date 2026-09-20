@@ -440,7 +440,15 @@ final class ComposingKeyIntentTests: XCTestCase {
     /// nothing, and reporting it as document text would end a learning context
     /// on a keystroke that never reached the document.
     func testIsDocumentText_rejectsAHostChordCarryingAPrintableCharacter() {
+        // `x` under ⌃ rather than `.`: ⌃. is the width flip, document text by
+        // design (`testWidthFlipChord…`).
         for modifier in [NSEvent.ModifierFlags.command, .control, .option] {
+            XCTAssertFalse(
+                ComposingKeyIntent.isDocumentText(textSnapshot("x", modifiers: modifier)),
+                "a chord is a host command however printable its character is",
+            )
+        }
+        for modifier in [NSEvent.ModifierFlags.command, .option] {
             XCTAssertFalse(
                 ComposingKeyIntent.isDocumentText(textSnapshot(".", modifiers: modifier)),
                 "a chord is a host command however printable its character is",
@@ -467,6 +475,90 @@ final class ComposingKeyIntentTests: XCTestCase {
     func testIsDocumentText_rejectsNothingAtAll() {
         XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot(nil)))
         XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot("")))
+    }
+
+    // MARK: - Width flip
+
+    /// ⌃ on a punctuation key types that key in the other width, once. The
+    /// intent carries the key as typed — the controller picks the width — in
+    /// both states, and the key is read under the modifier: `⌃,` arrives as
+    /// `,`, `⌃[` as Escape, `⌃⇧,` as `<`.
+    func testWidthFlipChord_typesTheMappedKeyInBothStates() throws {
+        // trace: AppKit's `charactersIgnoringModifiers` keeps Shift, so ⌃⇧,
+        // reads `<`; Control rewrites `[` to `\u{1B}` in `characters` only.
+        let comma = try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: ",", modifiers: .control, charactersIgnoringModifiers: ",",
+        ))
+        let bracket = try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: "\u{1B}", modifiers: .control, charactersIgnoringModifiers: "[",
+        ))
+        let angle = try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: "<", modifiers: [.control, .shift], charactersIgnoringModifiers: "<",
+        ))
+        for (key, expected) in [(comma, ","), (bracket, "["), (angle, "<")] {
+            XCTAssertEqual(ComposingKeyIntent.widthFlipCharacter(key), expected.first)
+            XCTAssertEqual(ComposingKeyIntent.documentText(of: key), expected)
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(for: key, isComposing: false),
+                .passThrough,
+            )
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(for: key, isComposing: true, isShowingCandidates: true),
+                .commitThenInsert(expected),
+            )
+        }
+        XCTAssertFalse(ComposingKeyIntent.isPlainEscape(bracket), "⌃[ is the flip, not a cancel")
+    }
+
+    /// Exactly ⌃ on a mapped key: another chording modifier beside it, a key
+    /// the policy does not map, a named key, or a bare key is the host's or the
+    /// ordinary text rule's.
+    func testWidthFlipChord_needsExactlyControlOnAMappedKey() throws {
+        let withCommand = try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: ",", modifiers: [.control, .command], charactersIgnoringModifiers: ",",
+        ))
+        let withOption = try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: ",", modifiers: [.control, .option], charactersIgnoringModifiers: ",",
+        ))
+        let letter = try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: "\u{13}", modifiers: .control, charactersIgnoringModifiers: "s",
+        ))
+        let hyphen = try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: "-", modifiers: .control, charactersIgnoringModifiers: "-",
+        ))
+        let quote = try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: "\"", modifiers: .control, charactersIgnoringModifiers: "\"",
+        ))
+        for key in [withCommand, withOption, letter, hyphen, quote] {
+            XCTAssertNil(ComposingKeyIntent.widthFlipCharacter(key), "\(key)")
+            XCTAssertEqual(ComposingKeyIntent.intent(for: key, isComposing: false), .passThrough)
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(for: key, isComposing: true, isShowingCandidates: true),
+                .commitThenPassThrough,
+            )
+        }
+        XCTAssertNil(ComposingKeyIntent.widthFlipCharacter(textSnapshot(",")))
+    }
+
+    /// A chord the user recorded on ⌃, beats the flip: the row describes a
+    /// default gesture, not a reservation (Codex pre-impl, 2026-09-20).
+    func testWidthFlipChord_yieldsToARecordedBinding() throws {
+        let recorded = ComposingKeyBindings(chords: [
+            .commitLiteral: ComposingKeyChord(key: ",", modifiers: .control),
+        ])
+        let comma = try KeyEventSnapshot(TestFixtures.keyDownEvent(
+            characters: ",", modifiers: .control, charactersIgnoringModifiers: ",",
+        ))
+
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(for: comma, isComposing: true, bindings: recorded),
+            .commit,
+        )
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(for: comma, isComposing: true),
+            .commitThenInsert(","),
+            "unrecorded, the same chord is the flip",
+        )
     }
 
     private func textSnapshot(

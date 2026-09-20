@@ -807,7 +807,8 @@ public final class TaigiInputController: IMKInputController {
             // still answers to the output mode — so 漢字 mode + 自動空白 gets
             // `taigi？ `. The full-width map reading the mode rather than the
             // committed string is a separate approximation, untouched here.
-            let documentText = fullWidthMapped(text) ?? text
+            let isWidthFlip = ComposingKeyIntent.widthFlipCharacter(key) != nil
+            let documentText = documentPunctuation(text, isWidthFlip: isWidthFlip) ?? text
             let insert = AutoSpacePolicy.augmentInsert(
                 documentText,
                 afterComposition: manager.displayText,
@@ -842,29 +843,37 @@ public final class TaigiInputController: IMKInputController {
             // Latin text and takes Latin punctuation, whatever the mode would
             // say about a hanji word. Pinned by
             // `AutoSpaceControllerTests.testTheSwapFollowsASpaceTheAlternate…`.
-            if let armedSwap, ComposingKeyIntent.isDocumentText(key), let characters = key.characters,
-               swapAutoSpace(inserting: characters, armedAt: armedSwap, client: client, manager: manager)
+            //
+            // The width-flip chord is the exception to that ordering: the user
+            // named the width, so the swap attaches the glyph they asked for
+            // (`guá ` + `⌃,` in 羅馬字 mode → `guá， `).
+            guard let typed = ComposingKeyIntent.documentText(of: key) else { return false }
+            let isWidthFlip = ComposingKeyIntent.widthFlipCharacter(key) != nil
+            let punctuation = documentPunctuation(typed, isWidthFlip: isWidthFlip)
+            if let armedSwap,
+               swapAutoSpace(
+                   inserting: isWidthFlip ? punctuation ?? typed : typed,
+                   armedAt: armedSwap, client: client, manager: manager,
+               )
             {
                 return true
             }
-            // Full-width punctuation typed outside a composition — the other
+            // Punctuation this input method writes itself — full-width under
+            // the mode, or either width under the flip chord — the other
             // consumed pass-through key. The host cannot map a key it types
-            // itself, so the mapped character is written here instead, and the
-            // engine hears about it the same way it would have below.
-            if ComposingKeyIntent.isDocumentText(key), let characters = key.characters,
-               let mapped = fullWidthMapped(characters)
-            {
-                client.insertText(mapped, replacementRange: ClientEffectExecutor.atInsertionPoint)
-                manager.noteCharacterTypedOutsideComposition(mapped)
+            // itself (and would read the chord as a shortcut), so the
+            // character is written here instead, and the engine hears about it
+            // the same way it would have below.
+            if let punctuation {
+                client.insertText(punctuation, replacementRange: ClientEffectExecutor.atInsertionPoint)
+                manager.noteCharacterTypedOutsideComposition(punctuation)
                 return true
             }
             // The host gets the key either way. Text going into the document
             // without passing through a composition is still context, though:
             // a full stop typed here is what ends the sentence the next-word
             // learning would otherwise carry across.
-            if ComposingKeyIntent.isDocumentText(key), let characters = key.characters {
-                manager.noteCharacterTypedOutsideComposition(characters)
-            }
+            manager.noteCharacterTypedOutsideComposition(typed)
             return false
         case .commitHighlightedCandidate:
             // The window is authoritative for which absolute index its selection
@@ -1330,19 +1339,22 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - Full-width punctuation
 
-    /// The full-width form of the text a punctuation key just typed, or nil
-    /// when the output is roman-first or the key is not one the policy maps —
-    /// the mode is read live, like the auto-space gate below, so a swap
-    /// applies to the very next key.
+    /// `FullWidthPunctuation.documentPunctuation` under the mode as it stands
+    /// NOW — read live, like the auto-space gate below, so a swap applies to
+    /// the very next key. `isWidthFlip` is `ComposingKeyIntent.widthFlipCharacter`'s
+    /// verdict on the key that typed `text`.
     ///
     /// The EFFECTIVE width (`current`), not the stored swap: a romanization-
     /// only display writes romanization, and romanization takes half-width
     /// marks; under 合用 the stored swap still picks the width even though the
     /// candidate projection is forced hanji-first.
     @MainActor
-    private func fullWidthMapped(_ text: String) -> String? {
-        guard settings.current.isFullWidthPunctuation else { return nil }
-        return FullWidthPunctuation.mapped(text)
+    private func documentPunctuation(_ text: String, isWidthFlip: Bool) -> String? {
+        FullWidthPunctuation.documentPunctuation(
+            text,
+            isFullWidthMode: settings.current.isFullWidthPunctuation,
+            isWidthFlip: isWidthFlip,
+        )
     }
 
     // MARK: - Auto-space

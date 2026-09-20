@@ -10,4 +10,4 @@ pub use auto_space::{
     augment_insert, is_attaching_punctuation, is_gate_active, raw_preedit_writes_romanization,
     should_append_space, AugmentedInsert,
 };
-pub use full_width::full_width_mapped;
+pub use full_width::{document_punctuation, full_width_mapped};

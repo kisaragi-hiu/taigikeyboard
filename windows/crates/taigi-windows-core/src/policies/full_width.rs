@@ -2,7 +2,8 @@
 //! output. Port of `FullWidthPunctuation.swift`: applied only while the
 //! 漢羅對調 swap has Hanji coming first (the MOE rule 漢字模式全形, 臺羅模式
 //! 半形); the caller reads the mode, and the auto-space swap is read first
-//! and wins.
+//! and wins. The mode is a default, not a wall: Ctrl on any key of this map
+//! types the other width once (`ComposingKeyIntent::width_flip_character`).
 
 /// The MOE manual's 符號快捷鍵對照表, minus what this input method must keep
 /// half-width: digits (tone markers), the hyphen (syllable separator),
@@ -47,9 +48,45 @@ pub fn full_width_mapped(text: &str) -> Option<String> {
         .map(|(_, full)| full.to_string())
 }
 
+/// The punctuation the input method writes for `text`, or `None` when the
+/// host should write it: the full-width form when the mode types full-width
+/// marks, and under the width-flip chord the OTHER width. A flipped key is
+/// never `None` — the host would read the chord as a shortcut, so even its
+/// half-width form is written by the input method
+/// (`FullWidthPunctuation.swift` `documentPunctuation`).
+pub fn document_punctuation(
+    text: &str,
+    is_full_width_mode: bool,
+    is_width_flip: bool,
+) -> Option<String> {
+    if is_full_width_mode != is_width_flip {
+        return full_width_mapped(text);
+    }
+    is_width_flip.then(|| text.to_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_flip_chord_types_the_other_width_and_the_bare_key_the_modes() {
+        // trace: FullWidthPunctuationTests.swift
+        // `testDocumentPunctuation_flipTypesTheOtherWidthAndTheBareKeyTheModes`.
+        assert_eq!(
+            document_punctuation(",", true, false).as_deref(),
+            Some("，")
+        );
+        assert_eq!(document_punctuation(",", true, true).as_deref(), Some(","));
+        assert_eq!(document_punctuation(",", false, false), None);
+        assert_eq!(
+            document_punctuation(",", false, true).as_deref(),
+            Some("，")
+        );
+        // A key the map does not carry is the host's under the mode; the
+        // classifier never reports it as a flip.
+        assert_eq!(document_punctuation("5", true, false), None);
+    }
 
     #[test]
     fn every_mapped_pair_follows_the_moe_table() {
