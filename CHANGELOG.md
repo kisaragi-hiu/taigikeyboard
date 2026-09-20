@@ -4,6 +4,7 @@ Two release trains, two version numbers (`docs/architecture/manual-release-notes
 
 ## Desktop — macOS + Windows
 
+- [v3.6.9](changelog/desktop-v3.6.9.md)
 - [v3.6.8](changelog/desktop-v3.6.8.md)
 - [v3.6.7](changelog/desktop-v3.6.7.md)
 - [v3.6.6](changelog/desktop-v3.6.6.md) — macOS-only package, cut before the two trains were named apart
