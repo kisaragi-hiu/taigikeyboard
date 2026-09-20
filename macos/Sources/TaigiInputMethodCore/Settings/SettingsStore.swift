@@ -78,10 +78,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "customDictEnabled",
             defaultValue: EngineSettings.defaults.isCustomDictEnabled,
         )
-        static let isPhraseLearningEnabled = SettingsKey(
-            name: "phraseLearningEnabled",
-            defaultValue: EngineSettings.defaults.isPhraseLearningEnabled,
-        )
 
         /// Auto-insert a trailing space after committing a word. Platform-side
         /// on every platform — the engine never reads it — so like
@@ -381,7 +377,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),
             isAssociationRecordingEnabled: bool(Keys.isAssociationRecordingEnabled),
             isCustomDictEnabled: bool(Keys.isCustomDictEnabled),
-            isPhraseLearningEnabled: bool(Keys.isPhraseLearningEnabled),
             dictionarySources: dictionarySources,
         )
     }

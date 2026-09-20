@@ -47,7 +47,7 @@ USER report (2026-09-20): type `kikhilai`, pick 記 → 起 → 來 one segment 
 4. **One pick learns; ranking is bounded, never an override (Codex F4 + F5 BLOCK).** Learned rows ride a NEW `FetchAtPos.learned_entries = 7` (`LearnedEntry { hanji, canonical_tl }` — `learn_count` stays platform-side until an engine reader exists), not `custom_entries`. Engine treatment mirrors #69's decoupling: (a) at the walker edge whose toneless key equals the learned key, the learned row joins the dict rows in the same `SortKey` pick — `score = calculate_continuous_score(0, 1)` (dict rows out-score it unless user weight says otherwise), source rank **below** dict and custom, `is_custom = false`; (b) `EdgeBest::span_frequency` takes `max(dict, LEARNED_EFFECTIVE_FREQ)` so the whole-buffer edge still wins the segmentation when the dictionary has no word under that key (the 台日-off case); (c) a span-local whole-buffer row like `custom_entry_to_candidate` with the same rank rule. Consequence: a learned 記起來 with 台日 off appears at the first hanji slot after ONE composition; with 台日 on the dictionary row wins the in-edge choice and the pair-key dedupe collapses the duplicate; a mistaken learned phrase never displaces a dictionary word unless the user keeps picking it (user_frequency), and the manual custom dictionary's precedence is untouched.
 5. **Platform query for learned rows is exact, not prefix.** `learnedEntries(for rawInput)` = `origin = 1 AND family/form/key = whole-buffer key` (limit 5), separate from the prefix `search(limit 20)` so a learned whole-buffer match can never be truncated out (Codex risk: search truncation).
 6. **Touch on use (Codex F6).** When a committed candidate's (hanji, canonical-TL) matches a learned row, the platform bumps `learn_count` / `updated_at` in the same place it records `user_frequency` (one indexed UPDATE, no-op otherwise). Learned rows are capped at 2 000 per platform; past the cap, evict lowest `learn_count`, then oldest `updated_at`, inside the same transaction as the insert. Manual rows are never evicted and keep their own capacity accounting.
-7. **Setting 自動學習新詞 (`phraseLearningEnabled`, default ON, all four)** gates both learning and injection; it does not depend on 啟用自訂詞庫 (`customDictEnabled`), which keeps gating manual rows only. Placed directly under 啟用自訂詞庫 in 辭典 settings (mobile) / the custom-dictionary pane (desktop).
+7. **No setting — always on** (USER 2026-09-20 「此功能不需要開關，預設都是開啟」; the 自動學習新詞 toggle shipped in PR2–PR4 was removed the same day). Learning and injection do not depend on 啟用自訂詞庫 (`customDictEnabled`), which keeps gating manual rows only. Learned rows are deletable from the custom-dictionary list.
 8. **Security / privacy**: learned rows are user text — app-private store, `.taigi` documented sensitive (already), never logged (`security-rules.md`).
 
 Known parity limit carried over from the custom path, not new: under TPS input `custom_toneless_key` accepts only Bopomofo bodies (`shadow.rs` S6 note), so a TL-keyed learned row is a span-local row but not a TPS walker edge — same as today's custom dictionary. POJ input already folds a TL canonical key (verified: custom `kì-khí-lâi` matched `kikhilai` in POJ mode).
@@ -64,7 +64,7 @@ Known parity limit carried over from the custom path, not new: under TPS input `
 
 #### Best practices alignment
 
-Per-phase rules: PR1 `round-workflow.md` § Codex sandwich + `code-review-rules.md` §5 (every effect consumer + proto decoder is a caller); PR2–PR4 `cross-platform-alignment.md` §1 (behaviour stated first, above), `i18n.md` (new keys `dictionary.phraseLearningEnabled`, `…Info`, `learnedBadge` — hanji first, tailo/poj copy hanji until USER romanizes, per #107 precedent), `security-rules.md` § Data Storage, `doc-lookup.md` for the Android DataStore key.
+Per-phase rules: PR1 `round-workflow.md` § Codex sandwich + `code-review-rules.md` §5 (every effect consumer + proto decoder is a caller); PR2–PR4 `cross-platform-alignment.md` §1 (behaviour stated first, above), `i18n.md` (new key `dictionary.learnedBadge` — hanji first, tailo/poj copy hanji until USER romanizes, per #107 precedent), `security-rules.md` § Data Storage, `doc-lookup.md` for the Android DataStore key.
 
 | Mainstream pattern | Source | This plan |
 |---|---|---|
@@ -79,7 +79,7 @@ Per-phase rules: PR1 `round-workflow.md` § Codex sandwich + `code-review-rules.
 
 #### Dogfood
 
-S62 (to be written with PR2): 台日 off, type `kikhilai`, pick 記 / 起 / 來 (or 記 then 起來), commit; retype `kikhilai` → 記起來 is the first hanji candidate; 辭典 list shows it with 自動學; delete it → gone next fetch; toggle 自動學習新詞 off → neither learns nor offers; `.taigi` export/import round-trips `origin`; a manual custom row with the same pair is untouched. Both mobile platforms, then desktop.
+S62 (to be written with PR2): 台日 off, type `kikhilai`, pick 記 / 起 / 來 (or 記 then 起來), commit; retype `kikhilai` → 記起來 is the first hanji candidate; 辭典 list shows it with 自動學; delete it → gone next fetch; `.taigi` export/import round-trips `origin`; a manual custom row with the same pair is untouched. Both mobile platforms, then desktop.
 
 ### Mobile custom theme — one background surface, gradient direction, photo background (USER-scoped 2026-09-19)
 

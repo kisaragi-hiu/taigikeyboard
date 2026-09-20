@@ -53,7 +53,6 @@ final class SharedSettings {
     private static let isLiteralRomanCandidateEnabledKey: SettingsKey<Bool> = .bool("literalRomanCandidateEnabled", default: true)
     private static let isHyphenlessRomanEnabledKey: SettingsKey<Bool> = .bool("hyphenlessRomanEnabled", default: false)
     private static let isCustomDictEnabledKey: SettingsKey<Bool> = .bool("customDictEnabled", default: true)
-    private static let isPhraseLearningEnabledKey: SettingsKey<Bool> = .bool("phraseLearningEnabled", default: true)
 
     private static let isMoeDictEnabledKey: SettingsKey<Bool> = .bool("moeDictEnabled", default: true)
     private static let isNewwordDictEnabledKey: SettingsKey<Bool> = .bool("newwordDictEnabled", default: true)
@@ -306,15 +305,6 @@ final class SharedSettings {
     var isCustomDictEnabled: Bool {
         get { userDefaults.value(for: Self.isCustomDictEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isCustomDictEnabledKey) }
-    }
-
-    /// 自動學習新詞 (`behavioral-invariants.md` §50): learn a phrase composed
-    /// segment by segment and offer it next time. Gates learning AND recall;
-    /// independent of `isCustomDictEnabled`, which gates manual rows only.
-    // CROSS-PLATFORM INVARIANT — mirrors android PrefHelper.isPhraseLearningEnabled (`keyboard__phrase_learning`). Drift causes silent divergence.
-    var isPhraseLearningEnabled: Bool {
-        get { userDefaults.value(for: Self.isPhraseLearningEnabledKey) }
-        set { userDefaults.set(newValue, for: Self.isPhraseLearningEnabledKey) }
     }
 
     // MARK: - Dictionary Toggles

@@ -462,10 +462,6 @@ class PrefHelper(
 
     var customDictEnabled: Boolean by preference(PreferenceKeys.CUSTOM_DICT_ENABLED, true)
 
-    // §50 自動學習新詞: gates learning AND recall; independent of customDictEnabled.
-    // CROSS-PLATFORM INVARIANT — mirrors ios SharedSettings.isPhraseLearningEnabled (default ON).
-    var phraseLearningEnabled: Boolean by preference(PreferenceKeys.PHRASE_LEARNING_ENABLED, true)
-
     // 教育部臺灣台語常用詞辭典 (kautian)
     var moeDictEnabled: Boolean by preference(PreferenceKeys.MOE_DICT_ENABLED, true)
 
@@ -631,9 +627,6 @@ class PrefHelper(
 
     override val isCustomDictEnabled: Boolean
         get() = customDictEnabled
-
-    override val isPhraseLearningEnabled: Boolean
-        get() = phraseLearningEnabled
 
     override val isTpsOrMappedToER: Boolean
         get() = tpsOrMapsToER
@@ -906,7 +899,6 @@ class PrefHelper(
             prefs[PreferenceKeys.FREQUENCY_RECORDING_ENABLED] = true
             prefs[PreferenceKeys.ASSOCIATION_RECORDING_ENABLED] = true
             prefs[PreferenceKeys.CUSTOM_DICT_ENABLED] = true
-            prefs[PreferenceKeys.PHRASE_LEARNING_ENABLED] = true
             prefs.remove(PreferenceKeys.COLOR_SETTINGS)
             prefs[PreferenceKeys.SELECTED_THEME_ID] = DEFAULT_SELECTED_THEME_ID
 

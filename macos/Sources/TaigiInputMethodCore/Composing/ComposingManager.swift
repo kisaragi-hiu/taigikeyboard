@@ -284,13 +284,12 @@ final class ComposingManager {
         let enabledSourcesBitmask = RustEngineBridge
             .enabledSourcesBitmask(for: settings.dictionarySources)
         // One query key serves both user-row sources (one FFI derive per
-        // keystroke, none with both off); `nil` = empty / residue-only buffer.
-        let readsUserRows = settings.isCustomDictEnabled || settings.isPhraseLearningEnabled
-        let queryKey = readsUserRows && !rawInput.isEmpty
+        // keystroke); `nil` = empty / residue-only buffer.
+        let queryKey = !rawInput.isEmpty
             ? RustEngineBridge.deriveCustomQueryKey(input: rawInput, mode: settings.inputMode)
             : nil
         let customEntries = customDictionaryMatches(queryKey: queryKey, settings: settings)
-        let learnedEntries = learnedPhraseMatches(queryKey: queryKey, settings: settings)
+        let learnedEntries = learnedPhraseMatches(queryKey: queryKey)
 
         guard let neutral = RustEngineBridge.composingFetchAtPos(
             settings: settings,
@@ -355,10 +354,11 @@ final class ComposingManager {
         return customDictionaryStore.rows(matching: queryKey)
     }
 
-    /// §50 — the learned phrases whose key EQUALS what is being typed, gated by
-    /// 自動學習新詞 (not by the custom-dictionary toggle, which is manual rows').
-    private func learnedPhraseMatches(queryKey: CustomSearchKey?, settings: EngineSettings) -> [CustomDictionaryRow] {
-        guard settings.isPhraseLearningEnabled, let queryKey else { return [] }
+    /// §50 — the learned phrases whose key EQUALS what is being typed. Not
+    /// gated by the custom-dictionary toggle (manual rows') — learning is
+    /// always on (USER 2026-09-20: no toggle).
+    private func learnedPhraseMatches(queryKey: CustomSearchKey?) -> [CustomDictionaryRow] {
+        guard let queryKey else { return [] }
         return customDictionaryStore.learnedRows(matching: queryKey)
     }
 
@@ -517,7 +517,7 @@ final class ComposingManager {
             }
             // §50 touch-on-use: a learned phrase picked as one candidate stays
             // ahead of the eviction line (no-op for any other row).
-            if settings.isPhraseLearningEnabled, let hanji = candidate.hanji, !hanji.isEmpty {
+            if let hanji = candidate.hanji, !hanji.isEmpty {
                 customDictionaryStore.touchLearnedPhrase(hanzi: hanji, canonicalTl: candidate.canonicalTl)
             }
         case .ignored, .unavailable:
@@ -592,11 +592,8 @@ final class ComposingManager {
                 break
             case let .phraseLearned(hanji, canonicalTl):
                 // §50 — the engine decided the composition was a phrase; the
-                // store is the custom dictionary's, gated like the other
-                // learning writes here.
-                if settings.isPhraseLearningEnabled {
-                    customDictionaryStore.learnPhrase(hanzi: hanji, canonicalTl: canonicalTl)
-                }
+                // store is the custom dictionary's. Always on.
+                customDictionaryStore.learnPhrase(hanzi: hanji, canonicalTl: canonicalTl)
             // Listed rather than defaulted: an effect added to the engine later
             // has to be classified here, and a `default` would quietly file it
             // under "write it into the user's document".

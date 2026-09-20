@@ -101,7 +101,6 @@ final class SettingsStoreTests: XCTestCase {
                 isFrequencyRecordingEnabled: false,
                 isAssociationRecordingEnabled: false,
                 isCustomDictEnabled: EngineSettings.defaults.isCustomDictEnabled,
-                isPhraseLearningEnabled: EngineSettings.defaults.isPhraseLearningEnabled,
                 dictionarySources: EngineSettings.defaults.dictionarySources,
             ),
         )

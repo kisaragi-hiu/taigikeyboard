@@ -386,11 +386,11 @@ class CandidateClickHandler(
                 userFreq.recordUsage(displayText, associationTl)
             }
         }
-        // §50 — same gate for both learned-store writes: the phrase the
-        // engine just learned, and the touch-on-use bump for a learned row
-        // picked whole (no-op for any other row).
+        // §50 — both learned-store writes: the phrase the engine just
+        // learned, and the touch-on-use bump for a learned row picked whole
+        // (no-op for any other row). Always on (USER 2026-09-20: no toggle).
         val learned = result.learnedPhrase
-        if (result.didCommit && prefs.phraseLearningEnabled && (learned != null || hanji != null)) {
+        if (result.didCommit && (learned != null || hanji != null)) {
             scope.launch {
                 learned?.let { customDict.learnPhrase(it.hanji, it.canonicalTl) }
                 if (hanji != null) customDict.touchLearnedPhrase(hanji, associationTl)

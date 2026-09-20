@@ -53,11 +53,6 @@ protocol EngineSettings {
     var toneToggles: ToneToggles { get }
 
     var isCustomDictEnabled: Bool { get }
-    /// 自動學習新詞 (§50) — learned phrases are recorded and fed back to the
-    /// engine only while this is on. Independent of `isCustomDictEnabled`.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:isPhraseLearningEnabled.
-    // Drift causes silent divergence (one platform keeps learning, the other does not).
-    var isPhraseLearningEnabled: Bool { get }
     // TPS: "or" maps to ㄜ when true, ㄛ when false.
     var isTpsOrMappedToER: Bool { get }
 

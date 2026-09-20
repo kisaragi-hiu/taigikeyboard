@@ -232,8 +232,6 @@ struct CustomDictionaryPage: View {
     @State private var selectedRowID: CustomDictionaryRow.ID?
     @AppStorage(SettingsStore.Keys.isCustomDictEnabled.name)
     private var isCustomDictEnabled = SettingsStore.Keys.isCustomDictEnabled.defaultValue
-    @AppStorage(SettingsStore.Keys.isPhraseLearningEnabled.name)
-    private var isPhraseLearningEnabled = SettingsStore.Keys.isPhraseLearningEnabled.defaultValue
 
     init(stores: UserDataStores) {
         self.stores = stores
@@ -244,8 +242,6 @@ struct CustomDictionaryPage: View {
         Form {
             Section {
                 Toggle(language.string(.dictionaryCustomDictEnabled), isOn: $isCustomDictEnabled)
-                // §50 自動學習新詞 — learned rows list below with a badge.
-                Toggle(language.string(.dictionaryPhraseLearningEnabled), isOn: $isPhraseLearningEnabled)
             }
 
             Section {

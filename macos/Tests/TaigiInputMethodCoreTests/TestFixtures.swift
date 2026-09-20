@@ -212,7 +212,6 @@ enum TestFixtures {
         frequencyRecording: Bool = true,
         associationRecording: Bool = true,
         customDict: Bool = true,
-        phraseLearning: Bool = true,
         dictionarySources: DictionarySourceToggles = .defaults,
     ) -> EngineSettings {
         EngineSettings(
@@ -228,7 +227,6 @@ enum TestFixtures {
             isFrequencyRecordingEnabled: frequencyRecording,
             isAssociationRecordingEnabled: associationRecording,
             isCustomDictEnabled: customDict,
-            isPhraseLearningEnabled: phraseLearning,
             dictionarySources: dictionarySources,
         )
     }
@@ -635,7 +633,6 @@ final class StubEngineSettingsProvider: EngineSettingsProvider {
         frequencyRecording: Bool = true,
         associationRecording: Bool = true,
         customDict: Bool = true,
-        phraseLearning: Bool = true,
         dictionarySources: DictionarySourceToggles = .defaults,
     ) {
         current = TestFixtures.settings(
@@ -646,7 +643,6 @@ final class StubEngineSettingsProvider: EngineSettingsProvider {
             frequencyRecording: frequencyRecording,
             associationRecording: associationRecording,
             customDict: customDict,
-            phraseLearning: phraseLearning,
             dictionarySources: dictionarySources,
         )
     }

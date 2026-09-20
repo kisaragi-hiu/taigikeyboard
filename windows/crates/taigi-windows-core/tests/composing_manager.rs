@@ -958,17 +958,3 @@ fn a_composition_of_hanji_picks_is_learned_once_the_last_segment_commits() {
         "the store is asked to learn the joined pair"
     );
 }
-
-#[test]
-fn learning_is_gated_by_the_setting() {
-    let _lock = engine_lock();
-    let mut rig = rig();
-    rig.settings
-        .edit(|doc| doc.set_bool(&keys::IS_PHRASE_LEARNING_ENABLED, false));
-    rig.type_text("gualai");
-    let gua = rig.candidate("我");
-    rig.commit(&gua, CandidateScript::Primary);
-    let lai = rig.candidate("來");
-    rig.commit(&lai, CandidateScript::Primary);
-    assert!(rig.memory.learned.lock().unwrap().is_empty());
-}

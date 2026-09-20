@@ -265,7 +265,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let customEntries = buildCustomEntries(queryKey: queryKey, settings: settings)
         // §50 — learned phrases keyed to the WHOLE raw buffer (exact, not
         // prefix), shared by both phases like `customEntries`.
-        let learnedEntries = buildLearnedEntries(queryKey: queryKey, settings: settings)
+        let learnedEntries = buildLearnedEntries(queryKey: queryKey)
         let spacing = Self.continuousSpacingFlags(settings)
 
         // PR-9.6 — compute the dictionary source-toggle bitmask from the
@@ -447,13 +447,12 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
 
     /// §50 — learned phrases whose derived key EQUALS the raw buffer's query
     /// key (`CustomDictionaryRepository.learnedEntriesSync`), as
-    /// `FetchAtPos.learned_entries`; gated by 自動學習新詞, not by 啟用自訂詞庫
-    /// (manual rows only).
+    /// `FetchAtPos.learned_entries`; not gated by 啟用自訂詞庫 (manual rows
+    /// only) — learning is always on.
     private func buildLearnedEntries(
         queryKey q: CustomSearchKey?,
-        settings: EngineSettings,
     ) -> [Taigi_Engine_LearnedEntry] {
-        guard settings.isPhraseLearningEnabled, let q else { return [] }
+        guard let q else { return [] }
         return customDictionaryRepository.learnedEntriesSync(
             family: q.family,
             form: q.form,
