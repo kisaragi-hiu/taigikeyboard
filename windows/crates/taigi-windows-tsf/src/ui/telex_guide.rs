@@ -33,17 +33,18 @@ use windows::Win32::Graphics::DirectWrite::{
 use windows_numerics::Vector2;
 
 const WINDOW_CLASS: &str = "TaigiKeyboardTelexGuide";
-/// WinUI body / subtitle / caption sizes, so the card reads as a Windows 11
-/// flyout rather than the Mac panel it was ported from (`theme.rs`).
-const TITLE_FONT_SIZE: f32 = 16.0;
-const ROW_FONT_SIZE: f32 = 14.0;
+/// Larger than WinUI body / subtitle: a table the user reads across the room
+/// from the text they are typing, not a one-word notice (USER 2026-09-20).
+/// Mirrors `TelexGuidePanel.titleFontSize` / `rowFontSize`.
+const TITLE_FONT_SIZE: f32 = 22.0;
+const ROW_FONT_SIZE: f32 = 19.0;
 /// The insets and gaps of `TelexGuidePanel.makePanel` / `makeGrid`.
-const PADDING_X: f32 = 22.0;
-const PADDING_TOP: f32 = 16.0;
-const PADDING_BOTTOM: f32 = 14.0;
-const SECTION_GAP: f32 = 10.0;
-const ROW_GAP: f32 = 4.0;
-const COLUMN_GAP: f32 = 18.0;
+const PADDING_X: f32 = 30.0;
+const PADDING_TOP: f32 = 22.0;
+const PADDING_BOTTOM: f32 = 20.0;
+const SECTION_GAP: f32 = 14.0;
+const ROW_GAP: f32 = 6.0;
+const COLUMN_GAP: f32 = 24.0;
 
 /// What the card says: the title and the rows for the romanization in use,
 /// resolved by the caller, who has the display language; this module only

@@ -61,8 +61,13 @@ final class TelexGuidePanel {
         panel?.isVisible == true
     }
 
+    /// Larger than the mode flash: a table the user reads across the room from
+    /// the text they are typing, not a one-word notice (USER 2026-09-20).
+    private static let titleFontSize: CGFloat = NSFont.systemFontSize + 7
+    private static let rowFontSize: CGFloat = NSFont.systemFontSize + 4
+
     /// The widest the card may grow; past this the meaning column wraps.
-    private static let maxWidth: CGFloat = 520
+    private static let maxWidth: CGFloat = 680
 
     /// Row order is reading order: the tones by number, then the two
     /// consonant keys, then the hyphen. `x` and `v` each carry a pair split
@@ -129,15 +134,15 @@ final class TelexGuidePanel {
     /// chrome as the mode flash.
     private static func makePanel(inputMode: InputMode, language: DisplayLanguageStore) -> NSPanel {
         let title = NSTextField(labelWithString: language.string(.settingsToneSchemeTelex))
-        title.font = .systemFont(ofSize: NSFont.systemFontSize + 2, weight: .semibold)
+        title.font = .systemFont(ofSize: titleFontSize, weight: .semibold)
 
         let grid = makeGrid(inputMode: inputMode, language: language)
 
         let stack = NSStackView(views: [title, grid])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 10
-        stack.edgeInsets = NSEdgeInsets(top: 16, left: 22, bottom: 14, right: 22)
+        stack.spacing = 14
+        stack.edgeInsets = NSEdgeInsets(top: 22, left: 30, bottom: 20, right: 30)
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.widthAnchor.constraint(lessThanOrEqualToConstant: maxWidth).isActive = true
         stack.layoutSubtreeIfNeeded()
@@ -166,17 +171,18 @@ final class TelexGuidePanel {
     /// Key | meaning. The key is monospaced semibold because it is a thing
     /// the user types and the one the eye lands on.
     private static func makeGrid(inputMode: InputMode, language: DisplayLanguageStore) -> NSGridView {
-        let keyFont = NSFont.monospacedSystemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+        let keyFont = NSFont.monospacedSystemFont(ofSize: rowFontSize, weight: .semibold)
 
         let cells = rows.map { row -> [NSView] in
             let key = NSTextField(labelWithString: row.key)
             key.font = keyFont
             let meaning = NSTextField(labelWithString: row.meaningText(inputMode, language))
+            meaning.font = .systemFont(ofSize: rowFontSize)
             return [key, meaning]
         }
         let grid = NSGridView(views: cells)
-        grid.rowSpacing = 4
-        grid.columnSpacing = 18
+        grid.rowSpacing = 6
+        grid.columnSpacing = 24
         grid.translatesAutoresizingMaskIntoConstraints = false
         return grid
     }
