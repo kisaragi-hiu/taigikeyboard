@@ -847,11 +847,11 @@
         ]
       },
       "values": {
-        "hanji": "輸出對換的文字（漢字↔羅馬字）",
-        "tailo": "Su-tshut tuì-uānn ê bûn-jī (Hàn-jī ↔ Lô-má-jī)",
-        "poj": "Su-chhut tùi-oāⁿ ê bûn-jī (Hàn-jī ↔ Lô-má-jī)",
-        "en": "Output the Other Script (Hanji ↔ Romanization)",
-        "ja": "もう一方の文字で出力（漢字 ↔ ローマ字）"
+        "hanji": "輸出對換的文字（漢字/羅馬字）",
+        "tailo": "Su-tshut tuì-uānn ê bûn-jī (Hàn-jī / Lô-má-jī)",
+        "poj": "Su-chhut tùi-oāⁿ ê bûn-jī (Hàn-jī / Lô-má-jī)",
+        "en": "Output the Other Script (Hanji / Romanization)",
+        "ja": "もう一方の文字で出力（漢字／ローマ字）"
       }
     },
     "shortcutUnbound": {
@@ -1233,11 +1233,11 @@
         ]
       },
       "values": {
-        "hanji": "無法度檢查更新",
-        "tailo": "Bô-huat-tōo kiám-tsa king-sin",
-        "poj": "Bô-hoat-tō͘ kiám-cha keng-sin",
-        "en": "Could Not Check for Updates",
-        "ja": "アップデートを確認できませんでした"
+        "hanji": "更新出現問題",
+        "tailo": "King-sin tshut-hiān būn-tê",
+        "poj": "Keng-sin chhut-hiān būn-tê",
+        "en": "Update Problem",
+        "ja": "アップデートに問題が発生しました"
       }
     },
     "updateCheckFailedMessage": {
@@ -1270,7 +1270,7 @@
         ]
       },
       "values": {
-        "hanji": "有新版本的時陣通知你?",
+        "hanji": "有新版本的時陣通知你？",
         "tailo": "Ū sin pán-pún ê sî-tsūn thong-ti lí?",
         "poj": "Ū sin pán-pún ê sî-chūn thong-ti lí?",
         "en": "Get notified about new versions?",
@@ -1460,9 +1460,9 @@
         ]
       },
       "values": {
-        "hanji": "學習紀錄清掉矣",
-        "tailo": "Ha̍k-si̍p kì-lio̍k tshing-tiāu ah",
-        "poj": "Ha̍k-si̍p kì-lio̍k chheng-tiāu ah",
+        "hanji": "學習紀錄刪掉矣",
+        "tailo": "Ha̍k-si̍p kì-lio̍k thâi-tiāu ah",
+        "poj": "Ha̍k-si̍p kì-lio̍k thâi-tiāu ah",
         "en": "Learning Records Cleared",
         "ja": "学習記録を消去しました"
       }
@@ -1479,9 +1479,9 @@
         ]
       },
       "values": {
-        "hanji": "學習紀錄清袂掉",
-        "tailo": "Ha̍k-si̍p kì-lio̍k tshing bē tiāu",
-        "poj": "Ha̍k-si̍p kì-lio̍k chheng bē tiāu",
+        "hanji": "學習紀錄刪袂掉",
+        "tailo": "Ha̍k-si̍p kì-lio̍k thâi bē tiāu",
+        "poj": "Ha̍k-si̍p kì-lio̍k thâi bē tiāu",
         "en": "Could Not Clear Learning Records",
         "ja": "学習記録を消去できませんでした"
       }

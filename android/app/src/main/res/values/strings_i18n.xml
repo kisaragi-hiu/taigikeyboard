@@ -41,7 +41,7 @@
     <string name="i18n_dictionary_khiin">在來字</string>
     <string name="i18n_dictionary_customDictDescription">自訂詞庫使用 CSV 純文字檔案，第 1 欄囥欲拍 ê 羅馬字，第 2 欄囥漢字，毋免囥標題。</string>
     <string name="i18n_dictionary_customDictEmpty">揤 + 符號加入自訂詞</string>
-    <string name="i18n_dictionary_addEntry">增加詞</string>
+    <string name="i18n_dictionary_addEntry">加入詞</string>
     <string name="i18n_dictionary_editEntry">編輯詞</string>
     <string name="i18n_dictionary_romanLabel">拍</string>
     <string name="i18n_dictionary_romanPlaceholder">見本：gâu-tsá</string>

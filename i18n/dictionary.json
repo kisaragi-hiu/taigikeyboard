@@ -217,9 +217,9 @@
         ]
       },
       "values": {
-        "hanji": "增加詞",
-        "tailo": "Tsing-ka sû",
-        "poj": "Cheng-ka sû",
+        "hanji": "加入詞",
+        "tailo": "Ka-ji̍p sû",
+        "poj": "Ka-ji̍p sû",
         "en": "Add Word",
         "ja": "単語を追加"
       }
