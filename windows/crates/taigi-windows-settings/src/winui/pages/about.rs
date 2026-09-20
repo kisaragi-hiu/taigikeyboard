@@ -2,7 +2,7 @@
 //! `AboutPage.swift`.
 //!
 //! What the tray menu's 關於 row opens (USER 2026-09-20): two lines the
-//! USER wrote; the sponsor and the four community links as cards; the attribution line. In
+//! USER wrote; the sponsor and the four community links as rows of one card; the attribution line. In
 //! the same cards as every other pane (USER 2026-09-20 「用頁面式」). No app
 //! icon, no name and no version — the update row on 一般 already says which build
 //! this is.
@@ -42,42 +42,44 @@ pub fn view(
         introduction,
         cards::section_gap(),
         // Every action a row, the sponsor link first (USER 2026-09-20: no
-        // lone button on the page).
-        link_card(
-            strings,
-            context,
-            FontAwesomeGlyph::Heart,
-            StringKey::DesktopSponsorLink,
-            SPONSOR_URL,
-        ),
-        link_card(
-            strings,
-            context,
-            FontAwesomeGlyph::Globe,
-            StringKey::DesktopWebsiteLink,
-            WEBSITE_URL,
-        ),
-        link_card(
-            strings,
-            context,
-            FontAwesomeGlyph::Github,
-            StringKey::DesktopGithubLink,
-            GITHUB_URL,
-        ),
-        link_card(
-            strings,
-            context,
-            FontAwesomeGlyph::Discord,
-            StringKey::DesktopDiscordLink,
-            DISCORD_URL,
-        ),
-        link_card(
-            strings,
-            context,
-            FontAwesomeGlyph::Envelope,
-            StringKey::DesktopEmailLink,
-            EMAIL_URL,
-        ),
+        // lone button on the page); one card, as on the Mac.
+        cards::link_group([
+            link_row(
+                strings,
+                context,
+                FontAwesomeGlyph::Heart,
+                StringKey::DesktopSponsorLink,
+                SPONSOR_URL,
+            ),
+            link_row(
+                strings,
+                context,
+                FontAwesomeGlyph::Globe,
+                StringKey::DesktopWebsiteLink,
+                WEBSITE_URL,
+            ),
+            link_row(
+                strings,
+                context,
+                FontAwesomeGlyph::Github,
+                StringKey::DesktopGithubLink,
+                GITHUB_URL,
+            ),
+            link_row(
+                strings,
+                context,
+                FontAwesomeGlyph::Discord,
+                StringKey::DesktopDiscordLink,
+                DISCORD_URL,
+            ),
+            link_row(
+                strings,
+                context,
+                FontAwesomeGlyph::Envelope,
+                StringKey::DesktopEmailLink,
+                EMAIL_URL,
+            ),
+        ]),
         // Fine print on the ground under the last card: neither a setting
         // nor a link.
         TextBlock::new()
@@ -96,9 +98,9 @@ fn paragraph(text: &str) -> View {
         .into()
 }
 
-/// A card that opens one of the community links, its Font Awesome mark at
-/// the left (`ExternalLinkButton.Style.row`).
-fn link_card(
+/// A row that opens one of the links, its Font Awesome mark at the left
+/// (`ExternalLinkButton.Style.row`).
+fn link_row(
     strings: &StringResolver,
     context: &mut ViewContext<SettingsWindow>,
     glyph: FontAwesomeGlyph,
@@ -113,7 +115,7 @@ fn link_card(
         .stretch(Stretch::Uniform)
         .opacity(SECONDARY_OPACITY)
         .slot(ViewboxSlot::Child, glyph.icon());
-    cards::link_card(
+    cards::link_row(
         mark,
         strings.resolve(title),
         context.callback(move |()| Message::OpenUrl(url.to_owned())),
