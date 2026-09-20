@@ -330,9 +330,10 @@ impl ComposingManager {
     /// always on (USER 2026-09-20: no toggle).
     fn learned_phrase_matches(&self, key: Option<&CustomSearchKey>) -> Vec<LearnedPhrase> {
         match key {
-            Some(key) => self
-                .custom_dictionary
-                .learned_rows_matching(&key.family, &key.form, &key.key),
+            Some(key) => {
+                self.custom_dictionary
+                    .learned_rows_matching(&key.family, &key.form, &key.key)
+            }
             None => Vec::new(),
         }
     }
