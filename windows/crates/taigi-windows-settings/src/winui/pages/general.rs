@@ -25,12 +25,13 @@ pub fn view(
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
     let document = window.document();
-    // One run of cards, no sub-groups (USER 2026-09-18 「不要分組」): the two
-    // script pickers first and together (「輸出輸入可以排在一起」), then how
-    // the syllable is spelled, then what the commit does, then the window,
-    // then the app's language (`GeneralSettingsView.swift`).
+    // One run of cards, no sub-groups (USER 2026-09-18 「不要分組」), in the
+    // order the typing pipeline runs (USER 2026-09-21): what is typed and
+    // how its tones are spelled, then the candidate window and its content,
+    // then what a commit writes and its shape, then the app's language
+    // (`GeneralSettingsView.swift`).
     View::fragment((
-        // A pop-up like the row under it, not a radio group (System
+        // A pop-up like the 輸出文字 row below, not a radio group (System
         // Settings' shape for a small mutually-exclusive choice). 輸入文字 /
         // 輸出文字 name the pair (USER 2026-09-18); mobile keeps 輸入模式,
         // whose picker also holds TPS.
@@ -42,6 +43,40 @@ pub fn view(
             |mode: InputMode| strings.resolve(mode.label_key()).to_owned(),
             |mode| Message::set_choice(mode, &keys::INPUT_MODE),
             context,
+        ),
+        // Which keys type a tone is a fact about how the syllable is
+        // spelled, not a shortcut (USER 2026-09-08), and the slot keys
+        // follow from it rather than being chosen on the shortcut pane.
+        // Under 輸入文字 because both say what the user types.
+        choice_row(
+            strings.resolve(StringKey::SettingsToneInputScheme),
+            ToneInputScheme::ALL,
+            document.choice(&keys::TONE_INPUT_SCHEME),
+            true,
+            |scheme: ToneInputScheme| strings.resolve(scheme.label_key()).to_owned(),
+            |scheme| Message::set_choice(scheme, &keys::TONE_INPUT_SCHEME),
+            context,
+        ),
+        // S33 (USER 2026-09-08): off means no window at all — the user types
+        // romanization and Space / Enter write it as typed. Directly above
+        // 顯示當咧拍的字, which describes the window's content and so reads
+        // as its sub-option; that row stays enabled with the window off (one
+        // plain switch, no greyed-out state to explain).
+        cards::switch_row(
+            strings.resolve(StringKey::SettingsCandidateWindow),
+            document.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED),
+            true,
+            context.callback(|is_on| Message::SetSwitch(keys::IS_CANDIDATE_WINDOW_ENABLED, is_on)),
+        ),
+        // §34/S22. On means candidate slot 0 is the preedit literal, so
+        // Enter writes the typed romanization.
+        cards::switch_row(
+            strings.resolve(StringKey::SettingsLiteralRomanCandidate),
+            document.bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
+            true,
+            context.callback(|is_on| {
+                Message::SetSwitch(keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, is_on)
+            }),
         ),
         // Which script a commit writes (USER 2026-09-18): the same stored
         // swap the backtick shortcut toggles, so the two never disagree.
@@ -72,44 +107,12 @@ pub fn view(
             true,
             context.callback(|is_on| Message::SetSwitch(keys::IS_HYPHENLESS_ROMAN_ENABLED, is_on)),
         ),
-        // Which keys type a tone is a fact about how the syllable is
-        // spelled, not a shortcut (USER 2026-09-08), and the slot keys
-        // follow from it rather than being chosen on the shortcut pane.
-        choice_row(
-            strings.resolve(StringKey::SettingsToneInputScheme),
-            ToneInputScheme::ALL,
-            document.choice(&keys::TONE_INPUT_SCHEME),
-            true,
-            |scheme: ToneInputScheme| strings.resolve(scheme.label_key()).to_owned(),
-            |scheme| Message::set_choice(scheme, &keys::TONE_INPUT_SCHEME),
-            context,
-        ),
+        // The space after a commit: the last thing the output stage does.
         cards::switch_row(
             strings.resolve(StringKey::SettingsAutoSpace),
             document.bool(&keys::IS_AUTO_SPACE_ENABLED),
             true,
             context.callback(|is_on| Message::SetSwitch(keys::IS_AUTO_SPACE_ENABLED, is_on)),
-        ),
-        // S33 (USER 2026-09-08): off means no window at all — the user types
-        // romanization and Space / Enter write it as typed. Directly above
-        // 顯示當咧拍的字, which describes the window's content and so reads
-        // as its sub-option; that row stays enabled with the window off (one
-        // plain switch, no greyed-out state to explain).
-        cards::switch_row(
-            strings.resolve(StringKey::SettingsCandidateWindow),
-            document.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED),
-            true,
-            context.callback(|is_on| Message::SetSwitch(keys::IS_CANDIDATE_WINDOW_ENABLED, is_on)),
-        ),
-        // §34/S22. On means candidate slot 0 is the preedit literal, so
-        // Enter writes the typed romanization.
-        cards::switch_row(
-            strings.resolve(StringKey::SettingsLiteralRomanCandidate),
-            document.bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
-            true,
-            context.callback(|is_on| {
-                Message::SetSwitch(keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, is_on)
-            }),
         ),
         choice_row(
             strings.resolve(StringKey::SettingsDisplayLanguage),

@@ -81,13 +81,6 @@ pub fn view(
             &bindings,
             ComposingAction::GROUPS[1],
         ),
-        // Shown, not recordable: Escape drops the composition without
-        // writing to the document — the fixed tier's way out beside the two
-        // commit rows above (`ComposingKeyIntent::intent`).
-        fixed_row(
-            strings.resolve(StringKey::DesktopShortcutCancelComposing),
-            CANCEL_KEY_LABEL.to_owned(),
-        ),
         // Shown, not recordable (USER 2026-09-10): Shift on a slot key is
         // the 漢羅 commit aimed at that slot, and the slot keys follow the
         // tone scheme — so the row follows it too, and there is nothing to
@@ -104,6 +97,14 @@ pub fn view(
         fixed_row(
             strings.resolve(StringKey::DesktopShortcutFlipPunctuationWidth),
             width_flip_chords_label(),
+        ),
+        // Shown, not recordable: Escape drops the composition without
+        // writing to the document (`ComposingKeyIntent::intent`). Last in
+        // the block (USER 2026-09-21): every row above it writes something;
+        // this is the one way out that writes nothing.
+        fixed_row(
+            strings.resolve(StringKey::DesktopShortcutCancelComposing),
+            CANCEL_KEY_LABEL.to_owned(),
         ),
         // Block three: the switches, and the windows a key raises. What these
         // have in common is that none of them needs a composition running —

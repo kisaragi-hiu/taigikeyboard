@@ -92,11 +92,6 @@ struct ShortcutSettingsView: View {
                     recorderRow(action)
                 }
 
-                // Shown, not recordable: Escape drops the composition without
-                // writing to the document — the fixed tier's way out beside
-                // the two commit rows above (`ComposingKeyIntent.intent`).
-                fixedRow(.desktopShortcutCancelComposing, Self.cancelKeyLabel)
-
                 // Shown, not recordable (USER 2026-09-10): ⇧ on a slot key is
                 // the 漢羅 commit aimed at that slot, and the slot keys follow
                 // the tone scheme — so the row follows it too, and there is
@@ -109,6 +104,12 @@ struct ShortcutSettingsView: View {
                 // Here because it writes into the document; three sample
                 // chords, since the row stands for every key of the map.
                 fixedRow(.desktopShortcutFlipPunctuationWidth, Self.widthFlipChordsLabel)
+
+                // Shown, not recordable: Escape drops the composition without
+                // writing to the document (`ComposingKeyIntent.intent`). Last
+                // in the block (USER 2026-09-21): every row above it writes
+                // something; this is the one way out that writes nothing.
+                fixedRow(.desktopShortcutCancelComposing, Self.cancelKeyLabel)
             } header: {
                 Text(language.string(.desktopShortcutSectionOutput))
             }

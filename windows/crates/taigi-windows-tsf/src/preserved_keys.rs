@@ -42,12 +42,12 @@ const PRESERVED: [(ShortcutAction, GUID); 5] = [
         GUID_PRESERVED_KEY_SYMBOL_PICKER,
     ),
     (
-        ShortcutAction::OpenLastSettingsPane,
-        GUID_PRESERVED_KEY_SETTINGS,
-    ),
-    (
         ShortcutAction::ShowTelexGuide,
         GUID_PRESERVED_KEY_TELEX_GUIDE,
+    ),
+    (
+        ShortcutAction::OpenLastSettingsPane,
+        GUID_PRESERVED_KEY_SETTINGS,
     ),
 ];
 

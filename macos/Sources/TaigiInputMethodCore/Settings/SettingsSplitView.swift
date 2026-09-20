@@ -14,10 +14,12 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     case general
     case appearance
     case shortcuts
-    case customDictionary
+    /// The sources before the user's own words on top of them (USER
+    /// 2026-09-21).
     case dictionarySources
-    /// Last, under 辭典管理 (USER 2026-09-08). The two 管理 panes end the
-    /// sidebar: what the input method draws FROM, then what it draws IN.
+    case customDictionary
+    /// Last (USER 2026-09-08): what the input method draws IN, after what
+    /// it draws FROM.
     case fontManagement
     /// Unlisted: the input-source menu's 關於 row opens it, and the sidebar
     /// shows no row for it (USER 2026-09-20 「不需要出現在設定選單中」).

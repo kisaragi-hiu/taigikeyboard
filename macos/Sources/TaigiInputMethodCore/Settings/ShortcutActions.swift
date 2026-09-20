@@ -119,26 +119,23 @@ extension KeyboardShortcuts.Name {
 /// One user-assignable action. The list is the single source for the recorder
 /// rows, the handler registration, and the enable/disable gate — adding a case
 /// adds the action everywhere at once.
-/// The case order is the row order of the 快速齒 pane, and the pane reads in
-/// the order a user meets these keys: the switches that change what is being
-/// typed, then the two 拍開X doorways together — the symbol picker and the
-/// settings window — and the Telex card last, the row that explains the
-/// keyboard rather than changing what it types (USER 2026-09-10).
+/// The case order is the row order of the 快速齒 pane (USER 2026-09-21): the
+/// three switches in the order the 一般 pane lists what they switch — 輸入文字,
+/// 輸出文字, 候選詞顯示 — then the windows a key raises, the ones used while
+/// typing first and the settings window last.
 enum ShortcutAction: CaseIterable, Sendable {
     case toggleRomanization
+    case toggleTranslateSwapped
     /// Steps the 候選詞顯示 picker one place: 並排 → 合用 → 羅馬字 → 並排.
     case cycleCandidateDisplayMode
-    case toggleTranslateSwapped
-    /// Opens the symbol picker over the caret. Beside the settings window
-    /// since 2026-09-10 (USER): both rows read 拍開X, and a pane that puts
-    /// the two doorways together says what they have in common.
+    /// Opens the symbol picker over the caret.
     case showSymbolPicker
-    /// Opens the settings window on whichever pane the user left it on.
-    case openLastSettingsPane
-    /// Toggles the floating Telex key table. Last on the pane (USER
-    /// 2026-09-10): it is the row that explains the keyboard rather than
-    /// doing anything to what is being typed.
+    /// Toggles the floating Telex key table: explains the keyboard rather
+    /// than changing what it types, but is read while typing.
     case showTelexGuide
+    /// Opens the settings window on whichever pane the user left it on. Last:
+    /// the one row that leaves the typing session.
+    case openLastSettingsPane
 
     var name: KeyboardShortcuts.Name {
         switch self {

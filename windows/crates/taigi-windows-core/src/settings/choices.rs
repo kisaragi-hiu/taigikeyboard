@@ -333,11 +333,12 @@ pub enum SettingsPane {
     General,
     Appearance,
     Shortcuts,
-    CustomDictionary,
+    /// The sources before the user's own words on top of them (USER
+    /// 2026-09-21).
     DictionarySources,
-    /// Last in the sidebar, under 辭典管理 (USER 2026-09-08): the two 管理
-    /// panes end the list — what the input method draws FROM, then what it
-    /// draws IN.
+    CustomDictionary,
+    /// Last in the sidebar (USER 2026-09-08): what the input method draws IN,
+    /// after what it draws FROM.
     FontManagement,
     DictionarySearch,
     About,
@@ -349,8 +350,8 @@ impl SettingsPane {
         Self::General,
         Self::Appearance,
         Self::Shortcuts,
-        Self::CustomDictionary,
         Self::DictionarySources,
+        Self::CustomDictionary,
         Self::FontManagement,
     ];
 
