@@ -429,12 +429,8 @@ extension RustEngineBridge {
         return entry
     }
 
-    /// One custom-dictionary row on the wire.
-    ///
-    /// An empty stored hanji maps to an ABSENT `hanji` rather than an empty
-    /// string: the field is proto3-optional, and the engine reads absence as
-    /// "romanization-only entry" while an empty string would be a hanji that
-    /// renders as nothing (`composing.proto:215-218`).
+    /// One learned row (§50) on the wire — always a hanji, the engine only
+    /// ever learns hanji picks.
     private static func learnedEntry(_ row: CustomDictionaryRow) -> Taigi_Engine_LearnedEntry {
         var entry = Taigi_Engine_LearnedEntry()
         entry.hanji = row.hanzi
@@ -442,6 +438,12 @@ extension RustEngineBridge {
         return entry
     }
 
+    /// One custom-dictionary row on the wire.
+    ///
+    /// An empty stored hanji maps to an ABSENT `hanji` rather than an empty
+    /// string: the field is proto3-optional, and the engine reads absence as
+    /// "romanization-only entry" while an empty string would be a hanji that
+    /// renders as nothing (`composing.proto:215-218`).
     private static func customDictEntry(_ row: CustomDictionaryRow) -> Taigi_Engine_CustomDictEntry {
         var entry = Taigi_Engine_CustomDictEntry()
         entry.roman = row.roman

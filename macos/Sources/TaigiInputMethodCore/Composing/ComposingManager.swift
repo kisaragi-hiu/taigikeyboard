@@ -284,10 +284,11 @@ final class ComposingManager {
         let enabledSourcesBitmask = RustEngineBridge
             .enabledSourcesBitmask(for: settings.dictionarySources)
         // One query key serves both user-row sources (one FFI derive per
-        // keystroke); `nil` = empty / residue-only buffer.
-        let queryKey = rawInput.isEmpty
-            ? nil
-            : RustEngineBridge.deriveCustomQueryKey(input: rawInput, mode: settings.inputMode)
+        // keystroke, none with both off); `nil` = empty / residue-only buffer.
+        let readsUserRows = settings.isCustomDictEnabled || settings.isPhraseLearningEnabled
+        let queryKey = readsUserRows && !rawInput.isEmpty
+            ? RustEngineBridge.deriveCustomQueryKey(input: rawInput, mode: settings.inputMode)
+            : nil
         let customEntries = customDictionaryMatches(queryKey: queryKey, settings: settings)
         let learnedEntries = learnedPhraseMatches(queryKey: queryKey, settings: settings)
 

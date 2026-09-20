@@ -326,6 +326,29 @@ pub fn link_row(mark: impl Into<View>, title: &str, on_click: Callback<()>) -> V
 }
 
 /// A section's title with a count at the line's right (`{matched} / {total}`).
+const BADGE_RADIUS: f64 = 4.0;
+const BADGE_PADDING_X: f64 = 6.0;
+const BADGE_PADDING_Y: f64 = 2.0;
+const BADGE_FONT_SIZE: f64 = 12.0;
+const BADGE_TEXT_OPACITY: f64 = 0.65;
+
+/// A small bordered tag after a row's text — a dictionary source, a learned
+/// row (§50). mirrors macos/.../Settings/TagBadge.swift.
+pub fn badge(text: &str) -> View {
+    Border::new()
+        .background(ThemeBrush::CardBackground)
+        .border_brush(ThemeBrush::CardStroke)
+        .border_thickness(Thickness::uniform(1.0))
+        .corner_radius(CornerRadius::uniform(BADGE_RADIUS))
+        .padding(Thickness::xy(BADGE_PADDING_X, BADGE_PADDING_Y))
+        .content(
+            TextBlock::new()
+                .text(text)
+                .font_size(BADGE_FONT_SIZE)
+                .opacity(BADGE_TEXT_OPACITY),
+        )
+}
+
 pub fn section_title_with_count(text: &str, count: &str) -> View {
     Grid::new()
         .columns([GridLength::STAR, GridLength::Auto])

@@ -70,6 +70,7 @@ impl UserDataStores {
                 directory,
                 Arc::new(taigi_windows_core::engine::derive_custom_search_keys),
                 CustomDictionaryStore::MAX_ENTRIES,
+                CustomDictionaryStore::MAX_LEARNED_ENTRIES,
             )),
         }
     }

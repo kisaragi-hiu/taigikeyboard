@@ -106,13 +106,14 @@ pub struct CustomDictionaryRow {
     pub learn_count: i64,
 }
 
+/// A fresh row id, in the shape the macOS store writes (`UUID().uuidString`).
+fn new_row_id() -> String {
+    uuid::Uuid::new_v4().to_string().to_uppercase()
+}
+
 impl CustomDictionaryRow {
     pub fn new(roman: &str, hanzi: &str) -> Self {
-        Self::with_id(
-            &uuid::Uuid::new_v4().to_string().to_uppercase(),
-            roman,
-            hanzi,
-        )
+        Self::with_id(&new_row_id(), roman, hanzi)
     }
 
     pub fn with_id(id: &str, roman: &str, hanzi: &str) -> Self {
@@ -157,7 +158,8 @@ impl CustomDictionaryStore {
     /// recently touched, row goes so a learn never fails. CROSS-PLATFORM
     /// INVARIANT — mirrors iOS `maxLearnedEntries` / Android `MAX_LEARNED_ENTRIES`.
     pub const MAX_LEARNED_ENTRIES: usize = 2_000;
-    /// Largest `learn_count` a row can carry — a backup file is untrusted input.
+    /// Largest `learn_count` a row can carry: the eviction order needs no
+    /// finer count than this, and the clamp keeps the column bounded.
     pub const MAX_LEARN_COUNT: i64 = 1_000_000;
     /// What the keystroke path is handed — the iOS call site's 20.
     pub const KEYSTROKE_LIMIT: usize = 20;
@@ -174,12 +176,13 @@ impl CustomDictionaryStore {
         ]
     }
 
-    /// `entry_limit` is injectable ONLY so a test can reach the cap without
-    /// writing 30000 rows.
+    /// The two caps are injectable ONLY so a test can reach them without
+    /// writing 30000 / 2000 rows.
     pub fn new(
         directory: PathBuf,
         derive_search_keys: SearchKeyDeriver,
         entry_limit: usize,
+        learned_limit: usize,
     ) -> Self {
         Self {
             database: UserDataDatabase::new(
@@ -190,15 +193,8 @@ impl CustomDictionaryStore {
             ),
             derive_search_keys,
             entry_limit,
-            learned_limit: Self::MAX_LEARNED_ENTRIES,
+            learned_limit,
         }
-    }
-
-    /// Injectable ONLY so a test can reach the learned cap without writing
-    /// 2000 rows.
-    pub fn with_learned_limit(mut self, learned_limit: usize) -> Self {
-        self.learned_limit = learned_limit;
-        self
     }
 
     pub fn is_ready(&self) -> bool {
@@ -269,15 +265,14 @@ impl CustomDictionaryStore {
 
     // Learned phrases (§50)
 
-    /// Records one `Effect::PhraseLearned` (or one backup row, `count` > 1):
-    /// inserts the `(hanzi, canonical TL)` pair as a learned row or adds
-    /// `count` to its `learn_count`, in one statement on the learned-pair
-    /// unique index. A manual row for the same pair wins — the learn is a
-    /// no-op, never a downgrade. Best-effort and off the keystroke path: the
-    /// keys are derived first (an FFI round-trip has no business holding the
-    /// write lock), then the manual check, the upsert, the side keys and the
-    /// eviction share one transaction; the row just written is never evicted.
-    pub fn learn_phrase(&self, hanzi: &str, canonical_tl: &str, count: i64) {
+    /// Records one `Effect::PhraseLearned`: inserts the `(hanzi, canonical TL)`
+    /// pair as a learned row or bumps its `learn_count`, in one statement on
+    /// the learned-pair unique index. A manual row for the same pair wins —
+    /// the learn is a no-op, never a downgrade. Best-effort and off the
+    /// keystroke path. The keys are derived before the write lock is taken
+    /// (an FFI round-trip has no business holding it), and the row just
+    /// written is never the one evicted.
+    pub fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
         if hanzi.is_empty() || canonical_tl.is_empty() {
             return;
         }
@@ -286,7 +281,6 @@ impl CustomDictionaryStore {
         else {
             return;
         };
-        let count = count.clamp(1, Self::MAX_LEARN_COUNT);
         let limit = self.learned_limit;
         let hanzi = hanzi.to_owned();
         let canonical_tl = canonical_tl.to_owned();
@@ -301,17 +295,10 @@ impl CustomDictionaryStore {
                 // keys are written for the right row either way.
                 let row_id: String = connection.query_row(
                     &format!(
-                        "INSERT INTO {TABLE_NAME} (id, roman, hanzi, created_at, updated_at, origin, learn_count)\nVALUES (?, ?, ?, ?, ?, 1, ?)\nON CONFLICT(hanzi, roman) WHERE origin = 1 DO UPDATE SET\n    learn_count = MIN(learn_count + excluded.learn_count, {}),\n    updated_at = excluded.updated_at\nRETURNING id;",
+                        "INSERT INTO {TABLE_NAME} (id, roman, hanzi, created_at, updated_at, origin, learn_count)\nVALUES (?, ?, ?, ?, ?, 1, 1)\nON CONFLICT(hanzi, roman) WHERE origin = 1 DO UPDATE SET\n    learn_count = MIN(learn_count + 1, {}),\n    updated_at = excluded.updated_at\nRETURNING id;",
                         Self::MAX_LEARN_COUNT
                     ),
-                    params![
-                        uuid::Uuid::new_v4().to_string().to_uppercase(),
-                        canonical_tl,
-                        hanzi,
-                        now,
-                        now,
-                        count
-                    ],
+                    params![new_row_id(), canonical_tl, hanzi, now, now],
                     |row| row.get(0),
                 )?;
                 replace_search_keys(connection, &row_id, &search_keys)?;
@@ -418,7 +405,7 @@ impl CustomDictionaryStore {
                     // A learned row adopted under its own id is a new manual
                     // row for the quota (`manual_entry_exists`).
                     if !manual_entry_exists(connection, &row.id)?
-                        && entry_count(connection)? >= limit
+                        && manual_entry_count(connection)? >= limit
                     {
                         return Err(CustomDictionaryError::CapacityReached { limit });
                     }
@@ -571,7 +558,7 @@ impl CustomDictionaryStore {
                 .database
                 .perform::<_, CustomDictionaryError>(move |connection| {
                     immediate_transaction(connection, |connection| {
-                        let mut stored_count = entry_count(connection)?;
+                        let mut stored_count = manual_entry_count(connection)?;
                         let mut written = 0;
                         for (row, search_keys) in &chunk {
                             if stored_count >= limit {
@@ -635,7 +622,7 @@ impl CustomDictionarySource for CustomDictionaryStore {
     }
 
     fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        CustomDictionaryStore::learn_phrase(self, hanzi, canonical_tl, 1);
+        CustomDictionaryStore::learn_phrase(self, hanzi, canonical_tl);
     }
 
     fn touch_learned_phrase(&self, hanzi: &str, canonical_tl: &str) {
@@ -767,8 +754,18 @@ fn entry_romans(connection: &Connection) -> rusqlite::Result<Vec<(String, String
     rows.collect()
 }
 
-/// MANUAL rows only — the user's quota; learned rows have their own.
+/// Every row, manual and learned — what the list pages, the clear reports
+/// and the seed checks.
 fn entry_count(connection: &Connection) -> rusqlite::Result<usize> {
+    let count: i64 =
+        connection.query_row(&format!("SELECT COUNT(*) FROM {TABLE_NAME};"), [], |row| {
+            row.get(0)
+        })?;
+    Ok(count as usize)
+}
+
+/// MANUAL rows only — the user's quota; learned rows (§50) have their own.
+fn manual_entry_count(connection: &Connection) -> rusqlite::Result<usize> {
     let count: i64 = connection.query_row(
         &format!("SELECT COUNT(*) FROM {TABLE_NAME} WHERE origin = 0;"),
         [],
@@ -827,25 +824,31 @@ fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
     // one atomic upsert. Idempotent. CROSS-PLATFORM INVARIANT — mirrors iOS
     // `CustomDictionarySchema` (`provenanceColumns`, `learnedPairIndexSQL`) and
     // Android v9.
-    let present: HashSet<String> = connection
-        .prepare(&format!("PRAGMA table_info({TABLE_NAME});"))?
-        .query_map([], |row| row.get::<_, String>(1))?
-        .collect::<rusqlite::Result<_>>()?;
-    for column in ["origin", "learn_count"] {
-        if !present.contains(column) {
-            connection.execute(
-                &format!(
-                    "ALTER TABLE {TABLE_NAME} ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0;"
-                ),
-                [],
-            )?;
+    // The TIP and the settings exe open the same file, so the check and the
+    // ALTER share one immediate transaction: the second process blocks on
+    // `BEGIN IMMEDIATE` (writer busy timeout) and then reads the column the
+    // first one added, instead of racing it to a "duplicate column" error.
+    immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
+        let present: HashSet<String> = connection
+            .prepare(&format!("PRAGMA table_info({TABLE_NAME});"))?
+            .query_map([], |row| row.get::<_, String>(1))?
+            .collect::<rusqlite::Result<_>>()?;
+        for column in ["origin", "learn_count"] {
+            if !present.contains(column) {
+                connection.execute(
+                    &format!(
+                        "ALTER TABLE {TABLE_NAME} ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0;"
+                    ),
+                    [],
+                )?;
+            }
         }
-    }
-    connection.execute(
-        &format!(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_learned_pair ON {TABLE_NAME}(hanzi, roman) WHERE origin = 1;"
-        ),
-        [],
-    )?;
-    Ok(())
+        connection.execute(
+            &format!(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_learned_pair ON {TABLE_NAME}(hanzi, roman) WHERE origin = 1;"
+            ),
+            [],
+        )?;
+        Ok(())
+    })
 }

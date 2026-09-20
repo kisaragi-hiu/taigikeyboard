@@ -340,12 +340,7 @@ struct CustomDictionaryPage: View {
                 HStack {
                     Text(row.hanzi)
                     if row.isLearned {
-                        Text(language.string(.dictionaryLearnedBadge))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(.quaternary, in: RoundedRectangle(cornerRadius: 4))
+                        TagBadge(text: language.string(.dictionaryLearnedBadge))
                     }
                 }
             }

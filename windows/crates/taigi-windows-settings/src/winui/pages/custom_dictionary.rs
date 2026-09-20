@@ -55,6 +55,7 @@ const TABLE_HEADER_GAP: f64 = 8.0;
 const OVERLAY_RING_SIZE: f64 = 20.0;
 /// WinUI's secondary text, as opacity, so it follows the theme.
 const SECONDARY_OPACITY: f64 = 0.65;
+const BADGE_GAP: f64 = 8.0;
 
 /// Which field of the entry dialog changed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -815,17 +816,21 @@ fn entry_table(
                                 .opacity(SECONDARY_OPACITY)
                                 .grid_column(0),
                             // §50: a learned row wears its badge after the hanzi.
-                            TextBlock::new()
-                                .text(if row.is_learned() {
-                                    format!(
-                                        "{}  {}",
-                                        row.hanzi,
-                                        strings.resolve(StringKey::DictionaryLearnedBadge)
-                                    )
-                                } else {
-                                    row.hanzi.clone()
-                                })
-                                .grid_column(1),
+                            StackPanel::new()
+                                .orientation(Orientation::Horizontal)
+                                .spacing(BADGE_GAP)
+                                .vertical_alignment(VerticalAlignment::Center)
+                                .grid_column(1)
+                                .children((
+                                    TextBlock::new().text(row.hanzi.clone()),
+                                    if row.is_learned() {
+                                        cards::badge(
+                                            strings.resolve(StringKey::DictionaryLearnedBadge),
+                                        )
+                                    } else {
+                                        View::empty()
+                                    },
+                                )),
                         )),
                 ),
             )

@@ -93,8 +93,15 @@ final class SQLiteConnection: @unchecked Sendable {
             }
             throw Failure.open("\(fileURL.lastPathComponent): \(message)")
         }
+        // The IME and the settings app share each file: a write that finds
+        // the other process mid-transaction waits this long before failing,
+        // rather than failing at once. mirrors windows/.../database.rs
+        // `WRITER_BUSY_TIMEOUT`.
+        sqlite3_busy_timeout(opened, Self.busyTimeoutMilliseconds)
         handle = opened
     }
+
+    private static let busyTimeoutMilliseconds: Int32 = 250
 
     /// Runs SQL that takes no parameters and returns no rows. Accepts several
     /// statements separated by `;`, which is what makes it the right call for

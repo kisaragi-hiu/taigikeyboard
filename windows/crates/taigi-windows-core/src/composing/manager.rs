@@ -242,8 +242,10 @@ impl ComposingManager {
         // Resolved once from this one snapshot and handed to both phases.
         let enabled_sources_bitmask = engine::enabled_sources_bitmask(&settings.dictionary_sources);
         // One query key serves both user-row sources (one FFI derive per
-        // keystroke); `None` = empty / residue-only buffer.
-        let query_key = (!self.raw_input.is_empty())
+        // keystroke, none with both off); `None` = empty / residue-only buffer.
+        let reads_user_rows =
+            settings.is_custom_dict_enabled || settings.is_phrase_learning_enabled;
+        let query_key = (reads_user_rows && !self.raw_input.is_empty())
             .then(|| engine::derive_custom_query_key(&self.raw_input, settings.input_mode))
             .flatten();
         let custom_entries = self.custom_dictionary_matches(&settings, query_key.as_ref());

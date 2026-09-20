@@ -66,7 +66,8 @@ final class CustomDictionaryStore: @unchecked Sendable {
     /// `MAX_LEARNED_ENTRIES`.
     static let maxLearnedEntries = 2000
 
-    /// Largest `learn_count` a row can carry — a backup file is untrusted input.
+    /// Largest `learn_count` a row can carry: the eviction order needs no
+    /// finer count than this, and the clamp keeps the column bounded.
     static let maxLearnCount = 1_000_000
 
     /// One transaction per this many accepted rows, so a large import never
@@ -196,20 +197,18 @@ final class CustomDictionaryStore: @unchecked Sendable {
 
     // MARK: - Learned phrases (§50)
 
-    /// Records one `Effect.PhraseLearned` (or one backup row, `count` > 1):
-    /// inserts the `(hanzi, canonical TL)` pair as a learned row or adds
-    /// `count` to its `learn_count`, in one statement on the learned-pair
-    /// unique index. A manual row for the same pair wins — the learn is a
-    /// no-op, never a downgrade. Best-effort and off the keystroke path, like
-    /// the frequency store's `record`: the keys are derived first (an FFI
-    /// round-trip has no business holding the write lock), then the manual
-    /// check, the upsert, the side keys and the eviction share one
-    /// transaction, and the row just written is never the one evicted.
-    func learnPhrase(hanzi: String, canonicalTl: String, count: Int = 1) {
+    /// Records one `Effect.PhraseLearned`: inserts the `(hanzi, canonical TL)`
+    /// pair as a learned row or bumps its `learn_count`, in one statement on
+    /// the learned-pair unique index. A manual row for the same pair wins —
+    /// the learn is a no-op, never a downgrade. Best-effort and off the
+    /// keystroke path, like the frequency store's `record`. The keys are
+    /// derived before the write lock is taken (an FFI round-trip has no
+    /// business holding it), and the row just written is never the one
+    /// evicted.
+    func learnPhrase(hanzi: String, canonicalTl: String) {
         guard !hanzi.isEmpty, !canonicalTl.isEmpty,
               let searchKeys = deriveSearchKeys(canonicalTl), !searchKeys.isEmpty
         else { return }
-        let count = min(max(count, 1), Self.maxLearnCount)
         let limit = learnedLimit
         database.write { connection in
             try connection.withImmediateTransaction {
@@ -221,22 +220,18 @@ final class CustomDictionaryStore: @unchecked Sendable {
                 let rowID = try connection.query(
                     """
                     INSERT INTO \(Self.tableName) (id, roman, hanzi, created_at, updated_at, origin, learn_count)
-                    VALUES (?, ?, ?, ?, ?, 1, ?)
+                    VALUES (?, ?, ?, ?, ?, 1, 1)
                     ON CONFLICT(hanzi, roman) WHERE origin = 1 DO UPDATE SET
-                        learn_count = MIN(learn_count + excluded.learn_count, \(Self.maxLearnCount)),
+                        learn_count = MIN(learn_count + 1, \(Self.maxLearnCount)),
                         updated_at = excluded.updated_at
                     RETURNING id;
                     """,
-                    [
-                        .text(UUID().uuidString),
-                        .text(canonicalTl),
-                        .text(hanzi),
-                        .text(now),
-                        .text(now),
-                        .integer(count),
-                    ],
+                    [.text(UUID().uuidString), .text(canonicalTl), .text(hanzi), .text(now), .text(now)],
                 ) { $0.text(0) }.first
-                guard let rowID else { throw Failure.learnedRowMissing }
+                // The upsert always writes a row; no id back means the
+                // statement did not run, which the transaction has already
+                // failed on.
+                guard let rowID else { return }
                 try Self.replaceSearchKeys(connection, entryID: rowID, searchKeys: searchKeys)
                 try Self.evictLearnedPastCap(connection, cap: limit, keeping: rowID)
             }
@@ -258,10 +253,6 @@ final class CustomDictionaryStore: @unchecked Sendable {
                 [.text(Self.timestampFormatter.string(from: Date())), .text(hanzi), .text(canonicalTl)],
             )
         }
-    }
-
-    private enum Failure: Error {
-        case learnedRowMissing
     }
 
     // MARK: - User-driven writes
@@ -373,7 +364,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
                 // Inside the transaction, so the count cannot go stale between
                 // the check and the insert.
                 if try !Self.manualEntryExists(connection, id: row.id),
-                   try Self.entryCount(connection) >= limit
+                   try Self.manualEntryCount(connection) >= limit
                 {
                     throw CustomDictionaryError.capacityReached(limit: limit)
                 }
@@ -538,7 +529,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
             }
             imported += try await database.perform { connection in
                 try connection.withImmediateTransaction {
-                    var storedCount = try Self.entryCount(connection)
+                    var storedCount = try Self.manualEntryCount(connection)
                     var written = 0
                     for entry in chunk {
                         guard storedCount < limit else { break }
@@ -696,8 +687,14 @@ final class CustomDictionaryStore: @unchecked Sendable {
         }
     }
 
-    /// MANUAL rows only — the user's quota; learned rows have their own.
+    /// Every row, manual and learned — what the list pages, the clear reports
+    /// and the seed checks.
     private static func entryCount(_ connection: SQLiteConnection) throws -> Int {
+        try connection.scalar("SELECT COUNT(*) FROM \(tableName);") ?? 0
+    }
+
+    /// MANUAL rows only — the user's quota; learned rows (§50) have their own.
+    private static func manualEntryCount(_ connection: SQLiteConnection) throws -> Int {
         try connection.scalar("SELECT COUNT(*) FROM \(tableName) WHERE origin = 0;") ?? 0
     }
 
@@ -720,10 +717,8 @@ final class CustomDictionaryStore: @unchecked Sendable {
     /// The columns `decodeRow` expects, in order; `joinedEntryColumns` is the
     /// same list qualified for the side-table join.
     private static let entryColumns = "id, roman, hanzi, created_at, updated_at, origin, learn_count"
-    private static let joinedEntryColumns = entryColumns
-        .split(separator: ",")
-        .map { "entry.\($0.trimmingCharacters(in: .whitespaces))" }
-        .joined(separator: ", ")
+    private static let joinedEntryColumns =
+        "entry.id, entry.roman, entry.hanzi, entry.created_at, entry.updated_at, entry.origin, entry.learn_count"
 
     private static func decodeRow(_ row: SQLiteRowReader) -> CustomDictionaryRow {
         CustomDictionaryRow(
@@ -783,13 +778,20 @@ final class CustomDictionaryStore: @unchecked Sendable {
         // columns are checked before the ALTER, the index is `IF NOT EXISTS`.
         // CROSS-PLATFORM INVARIANT — mirrors iOS `CustomDictionarySchema`
         // (`provenanceColumns`, `learnedPairIndexSQL`) and Android v9.
-        let present = Set(try connection.query("PRAGMA table_info(\(tableName));") { $0.text(1) })
-        for column in ["origin", "learn_count"] where !present.contains(column) {
-            try connection.execute("ALTER TABLE \(tableName) ADD COLUMN \(column) INTEGER NOT NULL DEFAULT 0;")
+        // The IME and the settings app open the same file, so the check and
+        // the ALTER share one immediate transaction: the second process
+        // blocks on `BEGIN IMMEDIATE` (busy timeout) and then reads the
+        // column the first one added, instead of racing it to a "duplicate
+        // column" error.
+        try connection.withImmediateTransaction {
+            let present = Set(try connection.query("PRAGMA table_info(\(tableName));") { $0.text(1) })
+            for column in ["origin", "learn_count"] where !present.contains(column) {
+                try connection.execute("ALTER TABLE \(tableName) ADD COLUMN \(column) INTEGER NOT NULL DEFAULT 0;")
+            }
+            try connection.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_learned_pair ON \(tableName)(hanzi, roman) WHERE origin = 1;",
+            )
         }
-        try connection.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_learned_pair ON \(tableName)(hanzi, roman) WHERE origin = 1;",
-        )
         // The iOS table also carries `notone` / `abbrev` / `roman_num`
         // columns. They are write-only there — the query path has used the
         // side table since schema 2 — so macOS does not create them rather

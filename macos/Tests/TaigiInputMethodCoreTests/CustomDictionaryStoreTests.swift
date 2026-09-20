@@ -16,22 +16,24 @@ private func stubSearchKeys(for roman: String) -> [CustomSearchKey]? {
 }
 
 final class CustomDictionaryStoreTests: XCTestCase {
-    fileprivate func makeStore(
+    private func makeStore(
         deriveSearchKeys: @escaping @Sendable (String) -> [CustomSearchKey]? = {
             stubSearchKeys(for: $0)
         },
         maxEntries: Int = CustomDictionaryStore.maxEntries,
+        learnedLimit: Int = CustomDictionaryStore.maxLearnedEntries,
     ) throws -> CustomDictionaryStore {
         try makeStore(
             at: TestFixtures.scratchDirectory(),
             deriveSearchKeys: deriveSearchKeys,
             maxEntries: maxEntries,
+            learnedLimit: learnedLimit,
         )
     }
 
     /// The same store over a directory the caller names, so one case can put
     /// two stores over one database file.
-    fileprivate func makeStore(
+    private func makeStore(
         at directory: URL,
         deriveSearchKeys: @escaping @Sendable (String) -> [CustomSearchKey]? = {
             stubSearchKeys(for: $0)
@@ -61,11 +63,11 @@ final class CustomDictionaryStoreTests: XCTestCase {
         })
     }
 
-    fileprivate func row(_ roman: String, _ hanzi: String, id: String = UUID().uuidString) -> CustomDictionaryRow {
+    private func row(_ roman: String, _ hanzi: String, id: String = UUID().uuidString) -> CustomDictionaryRow {
         CustomDictionaryRow(id: id, roman: roman, hanzi: hanzi)
     }
 
-    fileprivate func queryKey(_ key: String, family: String = "tl") -> CustomSearchKey {
+    private func queryKey(_ key: String, family: String = "tl") -> CustomSearchKey {
         CustomSearchKey(family: family, form: "notone", key: key)
     }
 
@@ -456,27 +458,22 @@ private final class DerivationRecorder: @unchecked Sendable {
 // MARK: - Learned phrases (§50)
 
 extension CustomDictionaryStoreTests {
-    /// Waits for the store's serialized queue to drain the fire-and-forget
-    /// learn / touch writes before reading them back.
-    private func settle(_ store: CustomDictionaryStore) async throws {
-        _ = try await store.count()
-    }
-
     private func learnedRows(_ store: CustomDictionaryStore) async throws -> [CustomDictionaryRow] {
         try await store.allRows().filter(\.isLearned)
     }
 
     func testLearningAPhraseTwice_isOneRowWithCountTwo_outsideTheManualQuota() async throws {
-        let store = try makeStore()
+        let store = try makeStore(maxEntries: 1)
         store.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
         store.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
-        try await settle(store)
 
         let rows = try await learnedRows(store)
         XCTAssertEqual(rows.map(\.hanzi), ["記起來"])
         XCTAssertEqual(rows.first?.learnCount, 2)
-        let manualCount = try await store.count()
-        XCTAssertEqual(manualCount, 0, "learned rows do not count against the manual quota")
+        let listed = try await store.count()
+        XCTAssertEqual(listed, 1, "the list pages learned rows too")
+        // …but the manual quota (1) is still free: a manual write goes through.
+        try await store.upsert(CustomDictionaryRow(roman: "tâi-gí", hanzi: "台語"))
         // Exact recall, learned-only; the manual prefix search never sees it.
         XCTAssertEqual(store.learnedRows(matching: queryKey("kì--khí-lâi")).map(\.hanzi), ["記起來"])
         XCTAssertTrue(store.rows(matching: queryKey("kì--khí-lâi")).isEmpty)
@@ -487,14 +484,12 @@ extension CustomDictionaryStoreTests {
         // Learn against an existing manual row: no-op.
         try await store.upsert(row("kì--khí-lâi", "記起來"))
         store.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
-        try await settle(store)
         var all = try await store.allRows()
         XCTAssertEqual(all.map(\.origin), [.manual])
 
         // A manual write over a learned row takes it over: one manual row left.
         let another = try makeStore()
         another.learnPhrase(hanzi: "台語", canonicalTl: "tâi-gí")
-        try await settle(another)
         try await another.upsert(row("tâi-gí", "台語"))
         all = try await another.allRows()
         XCTAssertEqual(all.map(\.origin), [.manual], "got \(all)")
@@ -505,7 +500,6 @@ extension CustomDictionaryStoreTests {
         let store = try makeStore(maxEntries: 1)
         try await store.upsert(row("tâi-gí", "台語"))
         store.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
-        try await settle(store)
         let learnedFirst = try await learnedRows(store).first
         let learned = try XCTUnwrap(learnedFirst)
         do {
@@ -517,14 +511,13 @@ extension CustomDictionaryStoreTests {
     }
 
     func testTheLearnedCap_evictsFewestComposedFirst_andSparesTheRowJustWritten() async throws {
-        let store = try makeStore(at: TestFixtures.scratchDirectory(), learnedLimit: 3)
+        let store = try makeStore(learnedLimit: 3)
         for i in 0 ..< 3 {
             store.learnPhrase(hanzi: "詞\(i)", canonicalTl: "su-\(i)")
         }
         store.learnPhrase(hanzi: "詞0", canonicalTl: "su-0")
         store.learnPhrase(hanzi: "新詞", canonicalTl: "sin-su")
         store.touchLearnedPhrase(hanzi: "新詞", canonicalTl: "sin-su")
-        try await settle(store)
 
         let rows = try await learnedRows(store)
         XCTAssertEqual(rows.count, 3, "got \(rows.map(\.hanzi))")
