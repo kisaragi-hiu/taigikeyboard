@@ -100,7 +100,7 @@ public extension TaigiCallouts {
             "(": ["（", "『", "「", "《", "〈"],
             ")": ["）", "』", "」", "》", "〉"],
             // Hyphen
-            "-": ["-", "_", "~", "'", "^", "@", "#", "\""],
+            "-": ["-", "·", "_", "~", "'", "^", "@", "#", "\""],
         ]
     }
 
@@ -108,7 +108,7 @@ public extension TaigiCallouts {
     enum MOE2Callouts {
         static let actions: [String: [String]] = [
             // Hyphen
-            "-": ["-", "_", "~", "'", "^", "@", "#", "\""],
+            "-": ["-", "·", "_", "~", "'", "^", "@", "#", "\""],
             // Comma (full-width)
             "，": ["，", "、", "；", "：", "（", "「"],
             // Comma (half-width)

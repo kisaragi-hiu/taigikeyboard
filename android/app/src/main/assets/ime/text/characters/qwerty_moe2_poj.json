@@ -26,6 +26,7 @@
       { "code":  114, "label": "r" },
       { "code":   45, "label": "-", "popup": [
         { "code":   45, "label": "-" },
+        { "code":  183, "label": "·" },
         { "code":   95, "label": "_" },
         { "code":  126, "label": "~" },
         { "code":   39, "label": "'" },

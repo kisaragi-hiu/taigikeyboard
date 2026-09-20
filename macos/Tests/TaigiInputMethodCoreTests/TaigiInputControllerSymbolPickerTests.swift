@@ -48,7 +48,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         XCTAssertTrue(session.controller.isSymbolPickerOpen)
         let content = try XCTUnwrap(session.picker.shownContent)
         XCTAssertEqual(content.cells.map(\.text), try TestFixtures.shippedSymbolTable().symbols)
-        XCTAssertEqual(content.cells.first?.text, "，", "punctuation leads: the most-typed marks are on the first page")
+        XCTAssertEqual(content.cells.first?.text, "·", "punctuation leads: the khinsiann dot, then the most-typed marks, on the first page")
         XCTAssertEqual(content.slotKeySet, .bareKeys, "the picker is picked with the bar's own keys")
         XCTAssertFalse(content.leadCellIsUnkeyed)
         XCTAssertEqual(session.picker.calls.last, .show(content, caretRect: Self.caretRect))
@@ -87,7 +87,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         try session.pressPickerChord()
         try session.type("q")
 
-        XCTAssertEqual(session.client.documentTextForReads, "ab，")
+        XCTAssertEqual(session.client.documentTextForReads, "ab·")
     }
 
     /// Over a selection nothing is marked: marked text replaces a selection
@@ -109,7 +109,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         try session.pressPickerChord()
         try session.type("q")
 
-        XCTAssertEqual(session.client.documentTextForReads, "，")
+        XCTAssertEqual(session.client.documentTextForReads, "·")
     }
 
     /// The placeholder is the picker's alone: down with the list, and
@@ -222,7 +222,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
         try session.type("w")
 
-        XCTAssertEqual(session.client.insertedTexts, ["。"])
+        XCTAssertEqual(session.client.insertedTexts, ["，"])
         XCTAssertFalse(session.picker.isShowing)
         XCTAssertFalse(session.controller.isSymbolPickerOpen)
     }
@@ -247,7 +247,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         try session.type("\t")
         try session.type("\r")
 
-        XCTAssertEqual(session.client.insertedTexts, ["。"])
+        XCTAssertEqual(session.client.insertedTexts, ["，"])
         XCTAssertFalse(session.picker.isShowing)
     }
 
@@ -323,7 +323,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         XCTAssertTrue(session.picker.isShowing)
 
         try session.type("q")
-        XCTAssertEqual(session.client.insertedTexts, [Self.composition, "，"])
+        XCTAssertEqual(session.client.insertedTexts, [Self.composition, "·"])
     }
 
     /// With no bar to take a highlight from — the candidate window switched
@@ -379,7 +379,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
         try session.press(.rightArrow)
         try session.press(.leftArrow)
-        try session.type("q")
+        try session.type("w")
 
         XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)， ")
     }
@@ -397,7 +397,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
         try session.pressPickerChord()
         try session.pressPickerChord(isARepeat: true)
-        try session.type("q")
+        try session.type("w")
 
         XCTAssertEqual(session.client.documentTextForReads, "\(Self.composition)， ")
     }
@@ -472,16 +472,16 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         let first = try makeSession()
         try first.pressPickerChord()
         try first.type("w")
-        XCTAssertEqual(first.client.insertedTexts, ["。"])
+        XCTAssertEqual(first.client.insertedTexts, ["，"])
 
         let second = try makeSession()
         try second.pressPickerChord()
         let cells = try XCTUnwrap(second.picker.shownContent).cells.map(\.text)
-        XCTAssertEqual(cells, ["。"] + table.filter { $0 != "。" })
+        XCTAssertEqual(cells, ["，"] + table.filter { $0 != "，" })
 
         try second.type("q")
-        XCTAssertEqual(second.client.insertedTexts, ["。"], "the first slot key now picks the recent")
-        XCTAssertEqual(SettingsStore(userDefaults: userDefaults).recentSymbols.symbols, ["。"])
+        XCTAssertEqual(second.client.insertedTexts, ["，"], "the first slot key now picks the recent")
+        XCTAssertEqual(SettingsStore(userDefaults: userDefaults).recentSymbols.symbols, ["，"])
     }
 
     /// Closing, walking and an empty slot record nothing; only a write does.
@@ -504,9 +504,9 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
 
         try session.type("q")
 
-        XCTAssertEqual(session.client.insertedTexts, ["，"])
+        XCTAssertEqual(session.client.insertedTexts, ["·"])
         XCTAssertEqual(
-            SettingsStore(userDefaults: userDefaults).recentSymbols.symbols, ["，", "★"],
+            SettingsStore(userDefaults: userDefaults).recentSymbols.symbols, ["·", "★"],
             "the pick is recorded on top of the other write",
         )
     }
