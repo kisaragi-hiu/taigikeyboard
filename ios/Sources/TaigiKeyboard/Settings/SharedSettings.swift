@@ -48,8 +48,6 @@ final class SharedSettings {
     private static let candidateDisplayModeKey: SettingsKey<CandidateDisplayMode> = .rawRep("candidateDisplayMode", default: .sideBySide)
     private static let isFullAccessEnabledKey: SettingsKey<Bool> = .bool("fullAccessEnabled", default: false)
     private static let isAutoSpaceEnabledKey: SettingsKey<Bool> = .bool("autoSpaceEnabled", default: false)
-    private static let isFrequencyRecordingEnabledKey: SettingsKey<Bool> = .bool("frequencyRecordingEnabled", default: true)
-    private static let isAssociationRecordingEnabledKey: SettingsKey<Bool> = .bool("associationRecordingEnabled", default: true)
     private static let isLiteralRomanCandidateEnabledKey: SettingsKey<Bool> = .bool("literalRomanCandidateEnabled", default: true)
     private static let isHyphenlessRomanEnabledKey: SettingsKey<Bool> = .bool("hyphenlessRomanEnabled", default: false)
     private static let isCustomDictEnabledKey: SettingsKey<Bool> = .bool("customDictEnabled", default: true)
@@ -267,21 +265,13 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isOutputBothScriptsKey) }
     }
 
-    // MARK: - Frequency Recording (default: on)
+    // MARK: - Association Recording (always on)
 
-    // Feeds the user_frequency.db ranking weight.
-    var isFrequencyRecordingEnabled: Bool {
-        get { userDefaults.value(for: Self.isFrequencyRecordingEnabledKey) }
-        set { userDefaults.set(newValue, for: Self.isFrequencyRecordingEnabledKey) }
-    }
-
-    // MARK: - Association Recording (default: on)
-
-    // Feeds NextWord suggestions.
-    var isAssociationRecordingEnabled: Bool {
-        get { userDefaults.value(for: Self.isAssociationRecordingEnabledKey) }
-        set { userDefaults.set(newValue, for: Self.isAssociationRecordingEnabledKey) }
-    }
+    // Feeds NextWord suggestions. The 詞頻紀錄 / 詞關聯紀錄 pages and their
+    // toggles left the mobile UI on 2026-09-22 (desktop retired them earlier);
+    // the engine carrier still takes the flag, so it is pinned on here and a
+    // stale `associationRecordingEnabled` default is never read.
+    var isAssociationRecordingEnabled: Bool { true }
 
     // MARK: - Literal-Roman Candidate (§34/S22, default: on)
 

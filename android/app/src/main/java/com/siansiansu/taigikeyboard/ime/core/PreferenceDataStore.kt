@@ -69,8 +69,6 @@ object PreferenceKeys {
 
     // Dictionary toggles. VARIANT = 異用字, KHIIN = 在來字,
     // LKK = LKK漢羅合用建議用字, DEV = 開發者補充辭典.
-    val FREQUENCY_RECORDING_ENABLED = booleanPreferencesKey("dictionary__frequency_recording_enabled")
-    val ASSOCIATION_RECORDING_ENABLED = booleanPreferencesKey("dictionary__association_recording_enabled")
     val CUSTOM_DICT_ENABLED = booleanPreferencesKey("dictionary__custom_dict_enabled")
     val MOE_DICT_ENABLED = booleanPreferencesKey("dictionary__moe_dict_enabled")
     val NEWWORD_DICT_ENABLED = booleanPreferencesKey("dictionary__newword_dict_enabled")

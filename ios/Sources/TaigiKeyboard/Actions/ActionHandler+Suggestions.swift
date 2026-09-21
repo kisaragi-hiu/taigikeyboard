@@ -171,7 +171,7 @@ extension ActionHandler {
             // 一字多音 keep separate frequency buckets. `associationTl` is
             // the canonical-TL sidechannel already extracted above (the same
             // reading NextWord learns); empty only on wire skew / TPS-OOV.
-            if didCommit, settings.isFrequencyRecordingEnabled {
+            if didCommit {
                 CompositionRoot.userFrequencyService.recordUsage(for: displayText, tl: associationTl)
             }
             // §50 touch-on-use: a learned phrase picked as one candidate stays
@@ -228,9 +228,7 @@ extension ActionHandler {
             // sidechannel; empty (legacy bucket) for a NextWord prediction
             // that carries no canonical TL.
             let canonicalTl = suggestion.additionalInfo["canonicalTl"] ?? ""
-            if settings.isFrequencyRecordingEnabled {
-                CompositionRoot.userFrequencyService.recordUsage(for: displayText, tl: canonicalTl)
-            }
+            CompositionRoot.userFrequencyService.recordUsage(for: displayText, tl: canonicalTl)
 
             logger.debug("[SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")
             logger.debug("[SELECT] parsed roman='\(roman)' hanzi='\(hanzi ?? "nil")' displayText='\(displayText)'")

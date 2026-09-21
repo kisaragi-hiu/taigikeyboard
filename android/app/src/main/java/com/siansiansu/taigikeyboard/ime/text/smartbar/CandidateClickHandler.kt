@@ -139,10 +139,8 @@ class CandidateClickHandler(
             // metadata sidechannel keeps 一字多音 in separate buckets; "" only
             // on wire skew / TPS-OOV / English rows.
             val canonicalTl = selectedWord.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
-            if (prefs.frequencyRecordingEnabled) {
-                scope.launch {
-                    userFreq.recordUsage(selectedWord.displayText, canonicalTl)
-                }
+            scope.launch {
+                userFreq.recordUsage(selectedWord.displayText, canonicalTl)
             }
 
             // NextWord learns the canonical reading, not the rendered `roman`
@@ -260,10 +258,8 @@ class CandidateClickHandler(
         // R5 pair-key (#7): canonical-TL reading from the metadata
         // sidechannel; "" only on wire skew / TPS-OOV / English rows.
         val canonicalTl = word.additionalInfo[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
-        if (prefs.frequencyRecordingEnabled) {
-            scope.launch {
-                userFreq.recordUsage(word.displayText, canonicalTl)
-            }
+        scope.launch {
+            userFreq.recordUsage(word.displayText, canonicalTl)
         }
 
         // NextWord learns the canonical reading (§49) — see the strip path above.
@@ -381,7 +377,7 @@ class CandidateClickHandler(
         // so we'd be polluting UserFrequencyService with non-events.
         // R5 pair-key (#7): reuse the `associationTl` canonical-TL sidechannel
         // already resolved above (same reading NextWord learns).
-        if (result.didCommit && prefs.frequencyRecordingEnabled) {
+        if (result.didCommit) {
             scope.launch {
                 userFreq.recordUsage(displayText, associationTl)
             }

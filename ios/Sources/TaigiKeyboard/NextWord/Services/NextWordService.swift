@@ -27,8 +27,7 @@ final class NextWordService: @unchecked Sendable {
 
     // MARK: - Public Types
 
-    /// A user association row. The UI (DictionaryTab AssociationDataView) depends on this public
-    /// type; it stays a facade-owned struct so an external `Identifiable` extension can be added.
+    /// A user association row, the unit `BackupService` exports and imports.
     struct AssociationEntry {
         let prevWord: String
         let prevTl: String

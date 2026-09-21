@@ -116,18 +116,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_TOO_MANY_ENTRIES)
     val dictionaryImportExportTitle: String
         @Composable get() = stringRes(StringKey.DICTIONARY_IMPORT_EXPORT_TITLE)
-    val dictionaryFrequencyExportCSV: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_EXPORT_C_S_V)
-    val dictionaryFrequencyImportCSV: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_IMPORT_C_S_V)
-    val dictionaryFrequencyDescription: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_DESCRIPTION)
-    val dictionaryAssociationExportCSV: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_EXPORT_C_S_V)
-    val dictionaryAssociationImportCSV: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_IMPORT_C_S_V)
-    val dictionaryAssociationDescription: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_DESCRIPTION)
     val dictionaryMoeSectionTitle: String
         @Composable get() = stringRes(StringKey.DICTIONARY_MOE_SECTION_TITLE)
     val dictionaryOtherSectionTitle: String
@@ -168,32 +156,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_LOOKUP_CHHOE)
     val dictionaryLookupMoe: String
         @Composable get() = stringRes(StringKey.DICTIONARY_LOOKUP_MOE)
-    val dictionaryFrequencyManagement: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_MANAGEMENT)
-    val dictionaryFrequencyRecordingEnabled: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_RECORDING_ENABLED)
-    val dictionaryFrequencyRecordingEnabledInfo: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_RECORDING_ENABLED_INFO)
-    val dictionaryAssociationManagement: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_MANAGEMENT)
-    val dictionaryAssociationRecordingEnabled: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_RECORDING_ENABLED)
-    val dictionaryAssociationRecordingEnabledInfo: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_RECORDING_ENABLED_INFO)
-    val dictionaryFrequencyPrivacyWarning: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_FREQUENCY_PRIVACY_WARNING)
-    val dictionaryClearAllFrequency: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_ALL_FREQUENCY)
-    val dictionaryAssociationPrivacyWarning: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_ASSOCIATION_PRIVACY_WARNING)
-    val dictionaryClearAllAssociation: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_ALL_ASSOCIATION)
-    val dictionaryClearFrequencyMessage: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_FREQUENCY_MESSAGE)
-    val dictionaryClearAssociationMessage: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_ASSOCIATION_MESSAGE)
-    val dictionaryNoData: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_NO_DATA)
     val dictionaryFilterHint: String
         @Composable get() = stringRes(StringKey.DICTIONARY_FILTER_HINT)
     val dictionaryBackupRestore: String

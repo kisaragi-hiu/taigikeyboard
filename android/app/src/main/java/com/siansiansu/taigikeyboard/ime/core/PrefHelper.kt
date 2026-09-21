@@ -456,10 +456,6 @@ class PrefHelper(
     // TPS settings
     var tpsOrMapsToER: Boolean by preference(PreferenceKeys.TPS_OR_MAPS_TO_ER, true)
 
-    var frequencyRecordingEnabled: Boolean by preference(PreferenceKeys.FREQUENCY_RECORDING_ENABLED, true)
-
-    var associationRecordingEnabled: Boolean by preference(PreferenceKeys.ASSOCIATION_RECORDING_ENABLED, true)
-
     var customDictEnabled: Boolean by preference(PreferenceKeys.CUSTOM_DICT_ENABLED, true)
 
     // 教育部臺灣台語常用詞辭典 (kautian)
@@ -619,8 +615,11 @@ class PrefHelper(
     override val isHyphenlessRomanEnabled: Boolean
         get() = !isTpsLayout && storedHyphenlessRomanEnabled
 
+    // The 詞頻紀錄 / 詞關聯紀錄 pages and their toggles left the mobile UI on
+    // 2026-09-22 (desktop retired them earlier); the engine carrier still takes
+    // the flag, so it is pinned on here and a stale stored value is never read.
     override val isAssociationRecordingEnabled: Boolean
-        get() = associationRecordingEnabled
+        get() = true
 
     override val toneToggles: ToneToggles
         get() = ToneToggles(enableDoubleTapOO, enableDoubleTapNN)
@@ -896,8 +895,6 @@ class PrefHelper(
             prefs[PreferenceKeys.GLOBE_KEY_ENABLED] = true
             prefs[PreferenceKeys.SOUND_FEEDBACK_ENABLED] = true
             prefs[PreferenceKeys.VIBRATION_FEEDBACK_ENABLED] = true
-            prefs[PreferenceKeys.FREQUENCY_RECORDING_ENABLED] = true
-            prefs[PreferenceKeys.ASSOCIATION_RECORDING_ENABLED] = true
             prefs[PreferenceKeys.CUSTOM_DICT_ENABLED] = true
             prefs.remove(PreferenceKeys.COLOR_SETTINGS)
             prefs[PreferenceKeys.SELECTED_THEME_ID] = DEFAULT_SELECTED_THEME_ID
