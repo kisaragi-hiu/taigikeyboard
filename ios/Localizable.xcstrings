@@ -1711,24 +1711,6 @@
         }
       }
     },
-    "i18n_dictionary_learnedBadge": {
-      "comment": "Badge on a custom-dictionary row that was learned automatically (§50), not added by the user.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Learned"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "学習"
-          }
-        }
-      }
-    },
     "i18n_dictionary_lkkDescription": {
       "comment": "Lí Kang-Khioh Foundation Han-Roman dictionary — toggle description in dictionary settings.",
       "extractionState": "manual",

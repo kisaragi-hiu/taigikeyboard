@@ -74,8 +74,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICT_ENABLED)
     val dictionaryCustomDictEnabledInfo: String
         @Composable get() = stringRes(StringKey.DICTIONARY_CUSTOM_DICT_ENABLED_INFO)
-    val dictionaryLearnedBadge: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_LEARNED_BADGE)
     val dictionaryDataManagement: String
         @Composable get() = stringRes(StringKey.DICTIONARY_DATA_MANAGEMENT)
     val dictionaryVariantDictionary: String

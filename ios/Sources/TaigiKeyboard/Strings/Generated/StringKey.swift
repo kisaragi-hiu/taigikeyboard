@@ -34,7 +34,6 @@ enum StringKey: String {
     case dictionaryCustomDictionary = "i18n_dictionary_customDictionary"
     case dictionaryCustomDictEnabled = "i18n_dictionary_customDictEnabled"
     case dictionaryCustomDictEnabledInfo = "i18n_dictionary_customDictEnabledInfo"
-    case dictionaryLearnedBadge = "i18n_dictionary_learnedBadge"
     case dictionaryDataManagement = "i18n_dictionary_dataManagement"
     case dictionaryVariantDictionary = "i18n_dictionary_variantDictionary"
     case dictionaryKhiin = "i18n_dictionary_khiin"

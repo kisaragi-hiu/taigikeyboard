@@ -35,7 +35,6 @@
     <string name="i18n_dictionary_customDictionary">カスタム辞書</string>
     <string name="i18n_dictionary_customDictEnabled">カスタム辞書を有効にする</string>
     <string name="i18n_dictionary_customDictEnabledInfo">オンにすると、追加した単語が候補に表示されます。</string>
-    <string name="i18n_dictionary_learnedBadge">学習</string>
     <string name="i18n_dictionary_dataManagement">キーボードデータ</string>
     <string name="i18n_dictionary_variantDictionary">異体字</string>
     <string name="i18n_dictionary_khiin">在来字</string>
