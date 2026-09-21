@@ -413,7 +413,7 @@ private fun ThemeCardMenu(actions: List<ThemeCardAction>) {
     }
 }
 
-// The leading card on the custom shelf: a neutral panel with a centered "+" tile.
+// The leading card on the custom shelf: a neutral panel with a centered "+" glyph.
 @Composable
 private fun CreateNewThemeCard(onClick: () -> Unit) {
     Column(
@@ -431,21 +431,12 @@ private fun CreateNewThemeCard(onClick: () -> Unit) {
                         .aspectRatio(THEME_PREVIEW_ASPECT),
                 contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier =
-                        Modifier
-                            .size(84.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.surface),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = L10n.themeCreateNewTheme,
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = L10n.themeCreateNewTheme,
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
 

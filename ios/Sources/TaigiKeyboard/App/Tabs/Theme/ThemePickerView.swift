@@ -173,13 +173,12 @@ private struct ThemeShelf<Content: View>: View {
 // MARK: - Create New card
 
 /// The leading card on the Custom Themes shelf: a gray panel with a centered
-/// white "+" tile. Tapping opens the theme editor for a new theme.
+/// "+" glyph. Tapping opens the theme editor for a new theme.
 private struct CreateNewThemeCard: View {
     let onTap: () -> Void
 
     @Environment(DisplayLanguageStore.self) private var lang
 
-    private let plusTileSize: CGFloat = 84
     private let plusGlyphSize: CGFloat = 28
 
     var body: some View {
@@ -193,16 +192,11 @@ private struct CreateNewThemeCard: View {
                             RoundedRectangle(cornerRadius: AppStyle.previewCornerRadius)
                                 .fill(Color(.systemGray4))
 
-                            RoundedRectangle(cornerRadius: AppStyle.smallCornerRadius)
-                                .fill(Color(.systemBackground))
-                                .frame(width: plusTileSize, height: plusTileSize)
-                                .overlay(
-                                    Image(latinSystemName: "plus")
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(width: plusGlyphSize, height: plusGlyphSize)
-                                        .foregroundColor(.primary),
-                                )
+                            Image(latinSystemName: "plus")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: plusGlyphSize, height: plusGlyphSize)
+                                .foregroundColor(.primary)
                         },
                     )
                     .frame(width: ThemeCardMetrics.width)
