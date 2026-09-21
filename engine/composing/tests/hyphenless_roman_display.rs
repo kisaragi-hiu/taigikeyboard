@@ -12,8 +12,9 @@ use protos::engine::{AppConfig, CustomDictEntry, FetchAtPos};
 
 mod common;
 use common::{
-    build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config, empty_association_bin,
-    engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp, Row,
+    build_dictionary_fst, build_syllables_fst, build_tkdb_v3, cell_with_hanji, config,
+    empty_association_bin, engine_install_lock, fetch_cells, install_lexicon, write_temp, Cell,
+    Row,
 };
 
 fn fixture_rows() -> Vec<Row> {
@@ -86,10 +87,6 @@ fn install_fixture() {
     install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
 }
 
-/// One candidate as the platform sees it: `(hanji, roman, display_text,
-/// canonical_tl)`.
-type Cell = (Option<String>, String, String, String);
-
 fn fetch(raw: &str, input_mode: &str, hyphenless: bool, custom: Vec<CustomDictEntry>) -> Vec<Cell> {
     let cfg = AppConfig {
         hyphenless_roman: hyphenless,
@@ -99,22 +96,7 @@ fn fetch(raw: &str, input_mode: &str, hyphenless: bool, custom: Vec<CustomDictEn
         custom_entries: custom,
         ..Default::default()
     };
-    fetch_at_pos_response(&cfg, raw, fetch)
-        .continuous
-        .map(|c| {
-            c.candidates
-                .into_iter()
-                .map(|cand| (cand.hanji, cand.roman, cand.display_text, cand.canonical_tl))
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn cell_with_hanji<'a>(cells: &'a [Cell], hanji: &str) -> &'a Cell {
-    cells
-        .iter()
-        .find(|c| c.0.as_deref() == Some(hanji))
-        .unwrap_or_else(|| panic!("no candidate with hanji {hanji}; got {cells:?}"))
+    fetch_cells(&cfg, raw, fetch)
 }
 
 #[test]

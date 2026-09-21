@@ -114,6 +114,11 @@ pub(crate) struct WalkerSlot0 {
     /// computed ONCE here from the synth `roman` (the single point that
     /// knows the fold rule) so the seam reads it instead of re-folding.
     pub canonical_tl: String,
+    /// The wire roman: `roman` re-joined with the separators the user
+    /// typed ([`join_typed_separators`]). `roman` itself stays the space
+    /// join the promotion gate and `canonical_tl` read, so the
+    /// `(hanji, canonical_tl)` identity never forks on a typed separator.
+    pub typed_roman: String,
     pub mode: CandidateMode,
     pub user_weight: f64,
     pub coverage_kind: u8,
@@ -181,6 +186,48 @@ fn raw_segment_letter_case(raw_seg: &str) -> phonetics::case_transform::LetterCa
 /// is a non-issue (Codex pre-impl 2026-05-18).
 fn recase_roman(roman: &str, raw_seg: &str, mode: phonetics::InputMode) -> String {
     phonetics::case_transform::raise_case(roman, raw_segment_letter_case(raw_seg), mode)
+}
+
+/// §10.2 typed-separator join (USER 2026-09-21): `parts` joined with the
+/// ASCII `-` run the user typed in `raw` right after each segment (`-`
+/// 連字, `--` 輕聲), a space where nothing was typed. TL / POJ only — a TPS
+/// buffer has no typed-hyphen policy. Only a run on a segment boundary is
+/// kept: a `-` inside one dictionary edge or greedy syllable is that
+/// segment's to render (`ki-khi-lai` → the record's own `kì--khí-lâi`).
+///
+/// `segs` are shadow spans; `shadow_to_raw_end[e]` is the raw byte right
+/// after the segment's last raw char (tone digit / combining mark
+/// included), where the run starts. The run is scanned forward from there
+/// rather than sliced up to the next segment: a folded `o͘` / NFD tone maps
+/// several shadow bytes onto one raw end, so the next segment's start is
+/// not a usable raw offset.
+fn join_typed_separators(
+    parts: &[String],
+    segs: &[(usize, usize)],
+    raw: &str,
+    shadow_to_raw_end: &[usize],
+    mode: phonetics::InputMode,
+) -> String {
+    if !matches!(mode, phonetics::InputMode::Tl | phonetics::InputMode::Poj) {
+        return parts.join(" ");
+    }
+    let mut out = String::with_capacity(raw.len());
+    for (i, part) in parts.iter().enumerate() {
+        if i > 0 {
+            let start = shadow_to_raw_end[segs[i - 1].1];
+            let run = raw.as_bytes()[start..]
+                .iter()
+                .take_while(|&&b| b == b'-')
+                .count();
+            out.push_str(if run > 0 {
+                &raw[start..start + run]
+            } else {
+                " "
+            });
+        }
+        out.push_str(part);
+    }
+    out
 }
 
 /// [`recase_roman`] over a whole batch that shares one raw segment. The
@@ -854,8 +901,8 @@ fn fetch_walker_slot0_inner(
     // synthesized reading, not an edge the user typed a case intent
     // for; greedy-longest segments are independent of `path.edges`.
     let any_dict = path.choices.iter().any(|c| c.dict_hit);
-    let (roman, syllable_count) = if any_dict {
-        let r = path
+    let (parts, segs, syllable_count) = if any_dict {
+        let parts = path
             .edges
             .iter()
             .zip(path.choices.iter())
@@ -865,28 +912,26 @@ fn fetch_walker_slot0_inner(
                     None => c.roman.clone(),
                 },
             )
-            .collect::<Vec<_>>()
-            .join(" ");
+            .collect::<Vec<_>>();
         let s = path
             .choices
             .iter()
             .map(|c| u32::from(c.syllable_count))
             .sum::<u32>()
             .min(u32::from(u8::MAX)) as u8;
-        (r, s)
+        (parts, path.edges, s)
     } else {
         match greedy_longest_syllabification(shadow, inv, mode) {
             Some(segs) if !segs.is_empty() => {
                 // v3.5.9 D / C-3b — mode-aware tone strip. TPS no-dict
                 // synth strips Bopomofo tone marks per syllable; TL/POJ
                 // keep the byte-identical ASCII-digit drop.
-                let r = segs
+                let parts = segs
                     .iter()
                     .map(|&(s, e)| strip_tones_for_mode(&shadow[s..e], mode))
-                    .collect::<Vec<_>>()
-                    .join(" ");
+                    .collect::<Vec<_>>();
                 let s = segs.len().min(u8::MAX as usize) as u8;
-                (r, s)
+                (parts, segs, s)
             }
             // Cannot cleanly syllabify the buffer → leave the
             // span-local list untouched (pre-S2 behavior, mirrors
@@ -894,6 +939,8 @@ fn fetch_walker_slot0_inner(
             _ => return None,
         }
     };
+    let roman = parts.join(" ");
+    let typed_roman = join_typed_separators(&parts, &segs, raw, shadow_to_raw_end, mode);
     let all_hanji = path.choices.iter().all(|c| c.hanji.is_some());
     let hanji: Option<String> = if all_hanji {
         Some(
@@ -953,6 +1000,7 @@ fn fetch_walker_slot0_inner(
         roman,
         hanji,
         canonical_tl,
+        typed_roman,
         mode: candidate_mode,
         user_weight,
         coverage_kind: COVERAGE_KIND_FULL,
@@ -1189,7 +1237,7 @@ pub(crate) fn assemble_candidates(
                             consumed_span: slot0.consumed_span,
                             syllable_count: slot0.syllable_count,
                             display_text: slot0.display_text,
-                            roman: slot0.roman,
+                            roman: slot0.typed_roman,
                             hanji: slot0.hanji,
                             canonical_tl: slot0.canonical_tl,
                             // D3 honest conversion: wire `score`
@@ -1229,10 +1277,13 @@ pub(crate) fn assemble_candidates(
                         // drop the synth. Gates:
                         // * `coverage_kind == COVERAGE_KIND_FULL` + same
                         //   `consumed_span` → a real whole-buffer dict word.
-                        // * `x.roman != slot0_cand.roman` → only the
+                        // * `x.roman != slot0.roman` → only the
                         //   separator-mismatch case; identical-form readings
                         //   (也是 `iā sī` synth == dict) keep the synth
                         //   verbatim so slot-0 metadata is unchanged there.
+                        //   Compared on the synth's space join, not the
+                        //   typed join `slot0_cand.roman` carries, so
+                        //   `hoo--gua` still promotes to 予我 `hōo--guá`.
                         // * `roman_reading_eq` → `hōo guá` matches
                         //   `hōo--guá` (予我) but NOT `hōo-guā` (戶外,
                         //   tone 7 ≠ tone 2) — respects Core Principle #7
@@ -1248,8 +1299,8 @@ pub(crate) fn assemble_candidates(
                                 x.coverage_kind == COVERAGE_KIND_FULL
                                     && x.consumed_span == slot0_cand.consumed_span
                                     && x.hanji == slot0_cand.hanji
-                                    && x.roman != slot0_cand.roman
-                                    && roman_reading_eq(&x.roman, &slot0_cand.roman)
+                                    && x.roman != slot0.roman
+                                    && roman_reading_eq(&x.roman, &slot0.roman)
                             })
                         };
                         // Slot 0 is either the promoted canonical dict row
@@ -1485,6 +1536,56 @@ mod tests {
     // by `composing::shadow`'s tests plus the integration suite
     // (`engine/composing/tests/build_keys_tps.rs` covers the new
     // mode-aware TPS key emission against an inline `tps:` inventory).
+
+    // ----- typed word separator (USER 2026-09-21) -----
+
+    use phonetics::InputMode;
+
+    fn typed_join(raw: &str, segs: &[(usize, usize)], mode: InputMode) -> String {
+        use crate::shadow::build_hyphen_shadow;
+        let (shadow, map) = build_hyphen_shadow(raw);
+        let parts: Vec<String> = segs
+            .iter()
+            .map(|&(s, e)| shadow[s..e].to_string())
+            .collect();
+        join_typed_separators(&parts, segs, raw, &map, mode)
+    }
+
+    #[test]
+    fn join_typed_separators_keeps_the_typed_run_and_defaults_to_space() {
+        let segs = [(0, 3), (3, 5)];
+        assert_eq!(typed_join("goasi", &segs, InputMode::Tl), "goa si");
+        assert_eq!(typed_join("goa-si", &segs, InputMode::Tl), "goa-si");
+        assert_eq!(typed_join("goa--si", &segs, InputMode::Tl), "goa--si");
+        assert_eq!(typed_join("goa--si", &segs, InputMode::Poj), "goa--si");
+        // Leading / trailing hyphens are not between segments.
+        assert_eq!(typed_join("-goa-si-", &segs, InputMode::Tl), "goa-si");
+        // A hyphen inside one segment is that segment's to render.
+        assert_eq!(typed_join("go-asi", &[(0, 5)], InputMode::Tl), "goasi");
+        assert_eq!(
+            typed_join("go-a-si", &[(0, 3), (3, 5)], InputMode::Tl),
+            "goa-si"
+        );
+    }
+
+    #[test]
+    fn join_typed_separators_scans_from_the_raw_end_of_a_folded_segment() {
+        // `o͘` (o + U+0358) folds to two shadow bytes `oo` that both map to
+        // the raw end after the combining mark; the typed run starts there.
+        let raw = "o\u{0358}--a";
+        let map = vec![0, 3, 3, 6];
+        let parts = ["oo".to_string(), "a".to_string()];
+        assert_eq!(
+            join_typed_separators(&parts, &[(0, 2), (2, 3)], raw, &map, InputMode::Tl),
+            "oo--a"
+        );
+    }
+
+    #[test]
+    fn join_typed_separators_is_a_space_join_under_tps() {
+        let segs = [(0, 3), (3, 5)];
+        assert_eq!(typed_join("goa-si", &segs, InputMode::Tps), "goa si");
+    }
 
     // ----- `hoogua` bug — slot-0 separator-insensitive reading match -----
 

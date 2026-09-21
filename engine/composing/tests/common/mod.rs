@@ -531,3 +531,30 @@ pub fn fetch_hanji(raw: &str, input_mode: &str, fetch: FetchAtPos) -> Vec<String
         })
         .unwrap_or_default()
 }
+
+/// One candidate as the platform sees it: `(hanji, roman, display_text,
+/// canonical_tl)` — the rendered cell plus the identity sidechannels it
+/// commits.
+pub type Cell = (Option<String>, String, String, String);
+
+/// [`fetch_at_pos_response`] reduced to [`Cell`]s in display order (the §34
+/// literal included, at index 0).
+pub fn fetch_cells(config: &AppConfig, raw: &str, fetch: FetchAtPos) -> Vec<Cell> {
+    fetch_at_pos_response(config, raw, fetch)
+        .continuous
+        .map(|c| {
+            c.candidates
+                .into_iter()
+                .map(|cand| (cand.hanji, cand.roman, cand.display_text, cand.canonical_tl))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The first cell carrying `hanji`; panics with the whole list when none does.
+pub fn cell_with_hanji<'a>(cells: &'a [Cell], hanji: &str) -> &'a Cell {
+    cells
+        .iter()
+        .find(|c| c.0.as_deref() == Some(hanji))
+        .unwrap_or_else(|| panic!("no candidate with hanji {hanji}; got {cells:?}"))
+}
