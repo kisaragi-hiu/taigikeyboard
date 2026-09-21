@@ -24,7 +24,9 @@
 
 use crate::api::{CaretDirection, ComposingError, Engine, Intent, Phase};
 use crate::continuous::{assemble_candidates, retain_first_by_key};
-use crate::shadow::{build_shadow_lattice_with_barriers, left_anchored_keys_and_restrictions};
+use crate::shadow::{
+    build_shadow_lattice_with_barriers, left_anchored_keys_and_restrictions, ShadowLattice,
+};
 use lexicon::{
     classification::is_hanzi, derive_mode, ConsumedSpan, CustomEntry, LearnedEntry, RawCandidate,
     SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
@@ -475,12 +477,17 @@ pub fn build_keys_tl_with_inventory(
 ) -> Vec<(ConsumedSpan, String)> {
     // Barriers are discarded so the pre-§35 base key sets stay
     // byte-identical (the §35 alternates are the other seam's job).
-    let (shadow, shadow_to_raw_end, lattice, _barriers) =
-        build_shadow_lattice_with_barriers(raw, inv, mode);
+    let ShadowLattice {
+        shadow,
+        shadow_to_raw_end,
+        lattice,
+        ..
+    } = build_shadow_lattice_with_barriers(raw, inv, mode);
     // v3.5.9 B-2 — `mode` makes the emitted key prefix match the inventory
     // family the shadow lattice was built against; `inv` drives longest-match
     // prefix suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`).
-    left_anchored_keys_and_restrictions(&shadow, &shadow_to_raw_end, &lattice, inv, mode, &[]).keys
+    left_anchored_keys_and_restrictions(&shadow, &shadow_to_raw_end, &lattice, inv, mode, &[], &[])
+        .keys
 }
 
 /// v3.5.8 Phase 9 Item 12 — hoist proto-shaped `CustomDictEntry[]`

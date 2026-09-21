@@ -33,6 +33,14 @@ fn fixture_rows() -> Vec<Row> {
             syll: 1,
             freq: 600,
         },
+        // A plain-`-` compound over the report's first two syllables.
+        Row {
+            toneless_key: "jimkhi",
+            hanzi: "忍氣",
+            tl: "jím-khì",
+            syll: 2,
+            freq: 400,
+        },
         Row {
             toneless_key: "khi",
             hanzi: "去",
@@ -117,16 +125,20 @@ fn hanji_of(cells: &[Cell]) -> Vec<&str> {
 fn typed_hyphen_drops_the_readings_that_do_not_end_a_syllable_there() {
     let _lock = engine_install_lock();
     install_fixture();
-    for (raw, synth) in [("khi--ah", "khì--ah"), ("khi-ah", "khì-ah")] {
+    for (raw, synth, khinsiann_word) in [("khi--ah", "khì--ah", true), ("khi-ah", "khì-ah", false)]
+    {
         let cells = fetch(raw, "tl", FetchAtPos::default());
         let hanji = hanji_of(&cells);
         assert!(
             !hanji.contains(&"隙") && !hanji.contains(&"屐"),
             "{raw}: one-syllable readings of `khiah` must not surface; got {cells:?}"
         );
-        assert!(
+        // 去啊 `khì--ah` ends a syllable at `khi` AND separates with `--`:
+        // offered under the typed `--`, not under a plain `-` (kind).
+        assert_eq!(
             hanji.contains(&"去啊"),
-            "{raw}: 去啊 `khì--ah` ends a syllable at `khi`; got {cells:?}"
+            khinsiann_word,
+            "{raw}: 去啊 follows the typed kind; got {cells:?}"
         );
         assert!(
             hanji.contains(&"去"),
@@ -136,6 +148,25 @@ fn typed_hyphen_drops_the_readings_that_do_not_end_a_syllable_there() {
         assert_eq!(cells[1].0.as_deref(), Some("去矣"), "{raw}: got {cells:?}");
         assert_eq!(cells[1].1, synth, "{raw}: the typed run renders");
     }
+}
+
+#[test]
+fn typed_run_kind_selects_between_a_compound_and_a_khinsiann_reading() {
+    // `jim-khi` is the 連字 compound 忍氣 `jím-khì`; `jim--khi` is not — the
+    // typed `--` asks for a khinsiann boundary the compound does not have,
+    // so the walker builds 忍 + 去 with the typed join instead.
+    let _lock = engine_install_lock();
+    install_fixture();
+    let cells = fetch("jim-khi", "tl", FetchAtPos::default());
+    assert_eq!(cells[1].0.as_deref(), Some("忍氣"), "got {cells:?}");
+    assert_eq!(cells[1].1, "jím-khì");
+    let cells = fetch("jim--khi", "tl", FetchAtPos::default());
+    assert!(
+        !hanji_of(&cells).contains(&"忍氣"),
+        "a plain compound never answers a typed `--`; got {cells:?}"
+    );
+    assert_eq!(cells[1].0.as_deref(), Some("忍去"), "got {cells:?}");
+    assert_eq!(cells[1].1, "jím--khì", "the typed run renders");
 }
 
 #[test]
@@ -277,6 +308,38 @@ fn custom_and_capitalised_readings_answer_to_the_boundary_too() {
         !hanji.contains(&"隙"),
         "custom `Khiah` crosses the boundary; got {cells:?}"
     );
+}
+
+#[test]
+fn a_custom_reading_opening_with_a_double_hyphen_needs_a_typed_double_hyphen() {
+    // Codex post-impl 2026-09-22 P2: a custom 矣 stored as `--ah` is a
+    // khinsiann reading from its first letter; under a plain `-` it must not
+    // become the walker's second word (`khì---ah`), under `--` it is, with
+    // the run rendered once.
+    let _lock = engine_install_lock();
+    install_fixture();
+    let custom = FetchAtPos {
+        custom_entries: vec![CustomDictEntry {
+            roman: "--ah".into(),
+            hanji: Some("矣".into()),
+            ..Default::default()
+        }],
+        ..Default::default()
+    };
+    let cells = fetch("khi-ah", "tl", custom.clone());
+    assert!(
+        !cells.iter().any(|c| c.1.contains("---")),
+        "a plain `-` never stacks onto the custom `--ah`; got {cells:?}"
+    );
+    let cells = fetch("khi--ah", "tl", custom);
+    assert!(
+        !cells.iter().any(|c| c.1.contains("---")),
+        "the typed `--` is never stacked onto the custom `--ah`; got {cells:?}"
+    );
+    // The whole-buffer dictionary word 去啊 still takes slot 0 (the
+    // existing promotion); the reading it and the custom row share renders
+    // the run once.
+    assert_eq!(cells[1].1, "khì--ah", "got {cells:?}");
 }
 
 #[test]

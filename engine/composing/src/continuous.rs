@@ -219,7 +219,11 @@ fn join_typed_separators(
                 .iter()
                 .take_while(|&&b| b == b'-')
                 .count();
-            out.push_str(if run > 0 {
+            // A part that opens with its own `-` (a custom `--ah` row)
+            // carries the boundary; the typed run is not stacked on it.
+            out.push_str(if part.starts_with('-') {
+                ""
+            } else if run > 0 {
                 &raw[start..start + run]
             } else {
                 " "
@@ -585,6 +589,7 @@ fn fetch_walker_slot0_inner(
         shadow_to_raw_end,
         lattice,
         barriers,
+        khinsiann,
         ..
     } = continuous_keys;
     let ContinuousFetchCtx {
@@ -669,7 +674,7 @@ fn fetch_walker_slot0_inner(
             key: dict_key,
             final_only: edge_final_only,
             tone_pin: edge_tone_pin,
-        } = crate::shadow::span_key(shadow, start, end, mode, barriers)?;
+        } = crate::shadow::span_key(shadow, start, end, mode, barriers, khinsiann)?;
         // Custom override matching stays tone-INSENSITIVE: `custom_map` is
         // keyed by `custom_toneless_key` (toneless), so it is queried with
         // the toneless key — a custom word is a specific user entry, matched
@@ -1584,6 +1589,17 @@ mod tests {
         assert_eq!(
             typed_join("go-a-si", &[(0, 3), (3, 5)], InputMode::Tl),
             "goa-si"
+        );
+    }
+
+    #[test]
+    fn join_typed_separators_never_stacks_on_a_part_that_opens_with_a_hyphen() {
+        let parts = vec!["khì".to_owned(), "--ah".to_owned()];
+        let raw = "khi--ah";
+        let (_, map) = crate::shadow::build_hyphen_shadow(raw);
+        assert_eq!(
+            join_typed_separators(&parts, &[(0, 3), (3, 5)], raw, &map, InputMode::Tl),
+            "khì--ah"
         );
     }
 

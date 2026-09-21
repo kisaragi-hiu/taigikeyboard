@@ -100,16 +100,25 @@ fn typed_separator_never_overrides_a_dictionary_word() {
     let _lock = engine_install_lock();
     install_fixture();
     // The untyped `hoogua` promotion is pinned by `continuous_slot0_dict_roman`.
-    for raw in ["hoo-gua", "hoo--gua"] {
-        let cells = fetch(raw, "tl", false);
-        let cell = cell_with_hanji(&cells, "予我");
-        assert_eq!(cell.1, "hōo--guá", "{raw}: the record's own khinsiann form");
-        assert_eq!(cell.3, "hōo--guá", "{raw}: the record's identity");
-        assert!(
-            !cells.iter().any(|c| c.1 == "hōo guá" || c.1 == "hōo-guá"),
-            "{raw}: no synth join beside the dictionary word; got {cells:?}"
-        );
-    }
+    // §52: the typed `--` is the khinsiann 予我 carries, so the word (and its
+    // own form) wins; a plain `-` is a different boundary kind and the word
+    // is not offered under it — the typed join stands.
+    let cells = fetch("hoo--gua", "tl", false);
+    let cell = cell_with_hanji(&cells, "予我");
+    assert_eq!(cell.1, "hōo--guá", "the record's own khinsiann form");
+    assert_eq!(cell.3, "hōo--guá", "the record's identity");
+    assert!(
+        !cells.iter().any(|c| c.1 == "hōo guá" || c.1 == "hōo-guá"),
+        "no synth join beside the dictionary word; got {cells:?}"
+    );
+    let cells = fetch("hoo-gua", "tl", false);
+    assert!(
+        !cells.iter().any(|c| c.3 == "hōo--guá"),
+        "a plain `-` never reads the khinsiann record; got {cells:?}"
+    );
+    // The walker's 予 + 我 keeps the pair's hanji with the typed join.
+    assert_eq!(cells[1].0.as_deref(), Some("予我"), "got {cells:?}");
+    assert_eq!(cells[1].1, "hōo-guá", "the typed join; got {cells:?}");
 }
 
 #[test]
