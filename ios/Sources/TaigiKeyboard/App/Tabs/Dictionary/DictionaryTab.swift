@@ -81,12 +81,6 @@ struct DictionaryTab: View {
                     NavigationLink(destination: CustomDictionaryView()) {
                         Text(lang.string(.dictionaryCustomDictionary))
                     }
-                    NavigationLink(destination: FrequencyDataView()) {
-                        Text(lang.string(.dictionaryFrequencyManagement))
-                    }
-                    NavigationLink(destination: AssociationDataView()) {
-                        Text(lang.string(.dictionaryAssociationManagement))
-                    }
                     NavigationLink(destination: DataManagementView()) {
                         Text(lang.string(.dictionaryBackupRestore))
                     }

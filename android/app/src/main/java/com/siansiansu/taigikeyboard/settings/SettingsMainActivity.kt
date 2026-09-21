@@ -150,12 +150,6 @@ class SettingsMainActivity : AppCompatActivity() {
                                     onCustomDictionary = {
                                         startActivity(CustomDictionaryActivity.createIntent(this))
                                     },
-                                    onNavigateToFrequency = {
-                                        startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_FREQUENCY))
-                                    },
-                                    onNavigateToAssociation = {
-                                        startActivity(FrequentWordsActivity.createIntent(this, FrequentWordsActivity.TYPE_ASSOCIATION))
-                                    },
                                     onBackupRestore = {
                                         startActivity(DataManagementActivity.createIntent(this))
                                     },

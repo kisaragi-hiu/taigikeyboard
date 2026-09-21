@@ -352,7 +352,6 @@ class NextWordHandler(
 
     private fun recordAssociationAsync(pair: RustEngineBridge.NextWordAssociationPair) {
         scope.launch {
-            if (!settingsProvider.current.isAssociationRecordingEnabled) return@launch
             nextWord.recordAssociation(
                 prev = pair.prev,
                 prevTl = pair.prevTl,
@@ -365,12 +364,11 @@ class NextWordHandler(
 
     /**
      * Loop sequentially in one coroutine to avoid races on the SQLite
-     * UNIQUE constraint `(prev_word, next_word, next_tl)`.
+     * UNIQUE constraint `(prev_word, prev_tl, next_word, next_tl)`.
      */
     private fun recordCompoundAssociationsAsync(pairs: List<RustEngineBridge.NextWordAssociationPair>) {
         if (pairs.isEmpty()) return
         scope.launch {
-            if (!settingsProvider.current.isAssociationRecordingEnabled) return@launch
             for (pair in pairs) {
                 nextWord.recordAssociation(
                     prev = pair.prev,

@@ -201,8 +201,8 @@ final class NextWordController {
         }
     }
 
-    /// Loop sequentially to avoid races on the SQLite UNIQUE constraint that
-    /// protects `(prev_word, next_word)`.
+    /// Loop sequentially to avoid races on the SQLite UNIQUE constraint
+    /// `(prev_word, prev_tl, next_word, next_tl)`.
     private func recordCompoundAssociations(_ pairs: [RustEngineBridge.NextWordAssociationPair]) {
         Task { [nextWordService] in
             for pair in pairs {

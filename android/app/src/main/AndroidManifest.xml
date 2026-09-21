@@ -107,13 +107,6 @@
             android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
             android:exported="false"/>
 
-        <!-- Frequent Words Activity (Frequency data) -->
-        <activity
-            android:name="com.siansiansu.taigikeyboard.settings.FrequentWordsActivity"
-            android:theme="@style/SettingsTheme"
-            android:parentActivityName="com.siansiansu.taigikeyboard.settings.SettingsMainActivity"
-            android:exported="false"/>
-
         <!-- Setup Guide Activity -->
         <activity
             android:name="com.siansiansu.taigikeyboard.settings.SetupGuideActivity"

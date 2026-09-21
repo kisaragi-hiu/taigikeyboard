@@ -359,7 +359,8 @@ final class SettingsKeyTests: XCTestCase {
         defaults.set(true, forKey: "isTranslateSwapped")
         defaults.set(true, forKey: "outputBothScripts")
         defaults.set(true, forKey: "autoSpaceEnabled")
-        defaults.set(false, forKey: "frequencyRecordingEnabled")
+        // Retired 2026-09-22: no page sets it any more, so a stale stored
+        // `false` must not switch association learning off.
         defaults.set(false, forKey: "associationRecordingEnabled")
         defaults.set(false, forKey: "customDictEnabled")
         defaults.set(false, forKey: "moeDictEnabled")
@@ -400,8 +401,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertTrue(settings.isTranslateSwapped)
         XCTAssertTrue(settings.isOutputBothScripts)
         XCTAssertTrue(settings.isAutoSpaceEnabled)
-        XCTAssertFalse(settings.isFrequencyRecordingEnabled)
-        XCTAssertFalse(settings.isAssociationRecordingEnabled)
+        XCTAssertTrue(settings.isAssociationRecordingEnabled)
         XCTAssertFalse(settings.isCustomDictEnabled)
         XCTAssertFalse(settings.isMoeDictEnabled)
         XCTAssertFalse(settings.isNewwordDictEnabled)

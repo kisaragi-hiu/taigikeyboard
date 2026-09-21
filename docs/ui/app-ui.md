@@ -113,11 +113,9 @@ The Dictionary tab expanded from basic dictionary settings to full data manageme
 | Sub-screen | iOS | Android | Description |
 |------------|-----|---------|-------------|
 | Custom Dictionary | `CustomDictionaryView.swift` | `CustomDictionaryScreen.kt` | CRUD, import/export |
-| Frequency Data | `FrequencyDataView.swift` | `FrequencyDataScreen.kt` | View/clear user frequency |
-| Association Data | `AssociationDataView.swift` | `AssociationDataScreen.kt` | View/clear next-word data |
 | Data Management | `DataManagementView.swift` | `DataManagementScreen.kt` | Backup/restore |
 
-Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced by these production views.
+Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced by these production views. The 詞頻紀錄 / 詞關聯紀錄 viewer pages (list, recording toggle, CSV import/export, clear) were removed 2026-09-22 to declutter the tab; both records stay always on and travel only through the `.taigi` backup.
 
 ---
 
