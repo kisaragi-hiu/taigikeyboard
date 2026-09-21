@@ -235,9 +235,9 @@ extension RustEngineBridge {
         enabledSourcesBitmask: UInt32 = 0,
         customEntries: [CustomDictionaryRow] = [],
         // §50 — learned phrases whose whole-buffer key equals the raw buffer
-        // (`CustomDictionaryStore.learnedRows(matching:)`); competitors of
-        // the dictionary rows, never the override `customEntries` are.
-        learnedEntries: [CustomDictionaryRow] = [],
+        // (`LearnedPhraseStore.rows(matching:)`); competitors of the
+        // dictionary rows, never the override `customEntries` are.
+        learnedEntries: [LearnedPhraseRow] = [],
     ) -> ContinuousFetchResult? {
         var fetch = Taigi_Engine_FetchAtPos()
         fetch.position = 0
@@ -431,10 +431,10 @@ extension RustEngineBridge {
 
     /// One learned row (§50) on the wire — always a hanji, the engine only
     /// ever learns hanji picks.
-    private static func learnedEntry(_ row: CustomDictionaryRow) -> Taigi_Engine_LearnedEntry {
+    private static func learnedEntry(_ row: LearnedPhraseRow) -> Taigi_Engine_LearnedEntry {
         var entry = Taigi_Engine_LearnedEntry()
         entry.hanji = row.hanzi
-        entry.canonicalTl = row.roman
+        entry.canonicalTl = row.canonicalTl
         return entry
     }
 

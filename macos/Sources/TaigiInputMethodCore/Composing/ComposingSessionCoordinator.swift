@@ -48,6 +48,7 @@ final class ComposingSessionCoordinator {
             settingsProvider: SettingsStore(),
             frequencyStore: shippedStores.frequency,
             customDictionaryStore: shippedStores.customDictionary,
+            learnedPhraseStore: shippedStores.learnedPhrases,
             nextWordLearner: NextWordLearner(store: shippedStores.association),
         ),
         learningStores: shippedStores,

@@ -3,14 +3,17 @@
 //! {LearningStore,LearningCapacity,CustomDictionaryStore}Tests.swift`.
 
 use std::sync::{Arc, Mutex};
-use taigi_windows_core::composing::{AssociationSink, CustomDictionarySource, FrequencySource};
+use taigi_windows_core::composing::{
+    AssociationSink, CustomDictionarySource, FrequencySource, LearnedPhraseSource,
+};
 use taigi_windows_core::engine::{
     derive_custom_query_key, derive_custom_search_keys, AssociationPair, CustomSearchKey,
 };
 use taigi_windows_core::settings::InputMode;
 use taigi_windows_storage::{
-    CustomDictionaryError, CustomDictionaryRow, CustomDictionaryStore, LearningCapacity,
-    SearchKeyDeriver, UserAssociationStore, UserDataStores, UserFrequencyStore,
+    CustomDictionaryError, CustomDictionaryRow, CustomDictionaryStore, LearnedPhraseRow,
+    LearnedPhraseStore, LearningCapacity, SearchKeyDeriver, UserAssociationStore, UserDataStores,
+    UserFrequencyStore,
 };
 
 fn scratch() -> tempfile::TempDir {
@@ -51,26 +54,7 @@ fn custom_store(
     deriver: SearchKeyDeriver,
     limit: usize,
 ) -> CustomDictionaryStore {
-    custom_store_with_learned_limit(
-        directory,
-        deriver,
-        limit,
-        CustomDictionaryStore::MAX_LEARNED_ENTRIES,
-    )
-}
-
-fn custom_store_with_learned_limit(
-    directory: &tempfile::TempDir,
-    deriver: SearchKeyDeriver,
-    limit: usize,
-    learned_limit: usize,
-) -> CustomDictionaryStore {
-    let store = CustomDictionaryStore::new(
-        directory.path().to_path_buf(),
-        deriver,
-        limit,
-        learned_limit,
-    );
+    let store = CustomDictionaryStore::new(directory.path().to_path_buf(), deriver, limit);
     store.open_blocking();
     store
 }
@@ -534,7 +518,6 @@ fn a_store_that_is_not_open_answers_no_rows_rather_than_waiting() {
         directory.path().to_path_buf(),
         stub_deriver(""),
         CustomDictionaryStore::MAX_ENTRIES,
-        CustomDictionaryStore::MAX_LEARNED_ENTRIES,
     );
     assert!(store.rows_matching(&query_key("gua", "tl"), 20).is_empty());
     assert!(store.count().is_err());
@@ -614,12 +597,144 @@ fn clearing_one_learning_store_leaves_the_others_alone() {
     stores.frequency.open_blocking();
     stores.association.open_blocking();
     stores.custom_dictionary.open_blocking();
+    stores.learned_phrases.open_blocking();
     stores.frequency.record("字", "ji");
     stores.association.record(&[pair("字", "ji", "典", "tian")]);
     stores.custom_dictionary.seed_if_empty().unwrap();
+    stores.learned_phrases.learn_phrase("記起來", "kì--khí-lâi");
     assert_eq!(stores.association.delete_all().unwrap(), 1);
     assert_eq!(stores.frequency.all_rows().unwrap().len(), 1);
     assert_eq!(stores.custom_dictionary.count().unwrap(), 2);
+    assert_eq!(stores.learned_phrases.all_rows().unwrap().len(), 1);
+}
+
+// ---- Learned phrases (§50) — `learned_phrases.db` --------------------------
+
+fn learned_store(directory: &tempfile::TempDir, limit: usize) -> LearnedPhraseStore {
+    let store = LearnedPhraseStore::new(
+        directory.path().to_path_buf(),
+        Arc::new(derive_custom_search_keys),
+        limit,
+    );
+    store.open_blocking();
+    assert!(store.is_ready());
+    store
+}
+
+fn learned_matches(store: &LearnedPhraseStore, input: &str, mode: InputMode) -> Vec<String> {
+    // Learning is queued behind the writer; `all_rows` is the barrier.
+    store.all_rows();
+    let key = derive_custom_query_key(input, mode).expect("query key");
+    LearnedPhraseSource::rows_matching(store, &key.family, &key.form, &key.key)
+        .into_iter()
+        .map(|row| row.hanzi)
+        .collect()
+}
+
+#[test]
+fn learning_the_same_pair_twice_is_one_row_with_count_two_found_by_the_whole_buffer_only() {
+    let directory = scratch();
+    let store = learned_store(&directory, LearnedPhraseStore::MAX_ENTRIES);
+    store.learn_phrase("記起來", "kì--khí-lâi");
+    store.learn_phrase("記起來", "kì--khí-lâi");
+    store.learn_phrase("", "kì--khí-lâi");
+    store.learn_phrase("記起來", "");
+    assert_eq!(
+        store.all_rows().unwrap(),
+        vec![LearnedPhraseRow {
+            hanzi: "記起來".into(),
+            canonical_tl: "kì--khí-lâi".into(),
+            learn_count: 2,
+        }]
+    );
+    assert_eq!(learned_matches(&store, "kikhilai", InputMode::Tl), ["記起來"]);
+    assert_eq!(learned_matches(&store, "ki3khi2lai5", InputMode::Tl), ["記起來"]);
+    assert_eq!(learned_matches(&store, "kikhilai", InputMode::Poj), ["記起來"]);
+    assert!(learned_matches(&store, "kikhi", InputMode::Tl).is_empty(), "a prefix must not match");
+    assert!(learned_matches(&store, "kikhilaia", InputMode::Tl).is_empty(), "a longer buffer must not match");
+}
+
+#[test]
+fn touching_bumps_a_known_pair_and_ignores_an_unknown_one_most_composed_first() {
+    let directory = scratch();
+    let store = learned_store(&directory, LearnedPhraseStore::MAX_ENTRIES);
+    store.learn_phrase("機起來", "ki-khí-lâi");
+    store.learn_phrase("記起來", "kì--khí-lâi");
+    store.touch_phrase("記起來", "kì--khí-lâi");
+    store.touch_phrase("台語", "tâi-gí");
+    assert_eq!(
+        store.all_rows().unwrap().iter().map(|row| (row.hanzi.as_str(), row.learn_count)).collect::<Vec<_>>(),
+        [("記起來", 2), ("機起來", 1)]
+    );
+    assert_eq!(learned_matches(&store, "kikhilai", InputMode::Tl), ["記起來", "機起來"]);
+}
+
+#[test]
+fn learning_past_the_cap_evicts_the_fewest_composed_row_and_its_keys_never_the_newest() {
+    let directory = scratch();
+    let store = learned_store(&directory, 3);
+    for i in 0..3 {
+        store.learn_phrase(&format!("詞{i}"), &format!("su-{i}"));
+    }
+    store.learn_phrase("詞0", "su-0");
+    store.learn_phrase("新詞", "sin-su");
+    let rows = store.all_rows().unwrap();
+    let hanzi: Vec<&str> = rows.iter().map(|row| row.hanzi.as_str()).collect();
+    assert_eq!(rows.len(), 3, "rows stay at the cap; got {hanzi:?}");
+    assert!(hanzi.contains(&"詞0"), "the twice-composed row survives");
+    assert!(hanzi.contains(&"新詞"), "the newest learn is kept");
+    let evicted = if hanzi.contains(&"詞1") { "su2" } else { "su1" };
+    assert!(learned_matches(&store, evicted, InputMode::Tl).is_empty(), "the evicted row's keys are gone");
+}
+
+#[test]
+fn wiping_learned_phrases_clears_rows_and_keys_and_the_store_learns_again() {
+    let directory = scratch();
+    let store = learned_store(&directory, LearnedPhraseStore::MAX_ENTRIES);
+    store.learn_phrase("記起來", "kì--khí-lâi");
+    assert_eq!(store.delete_all().unwrap(), 1);
+    assert!(store.all_rows().unwrap().is_empty());
+    assert!(learned_matches(&store, "kikhilai", InputMode::Tl).is_empty());
+    store.learn_phrase("記起來", "kì--khí-lâi");
+    assert_eq!(learned_matches(&store, "kikhilai", InputMode::Tl), ["記起來"]);
+}
+
+#[test]
+fn a_custom_dictionary_that_reached_the_parked_learned_shape_keeps_only_its_manual_rows() {
+    let directory = scratch();
+    {
+        let connection =
+            rusqlite::Connection::open(directory.path().join("custom_dictionary.db")).unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE custom_dictionary (id TEXT PRIMARY KEY, roman TEXT NOT NULL, hanzi TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, origin INTEGER NOT NULL DEFAULT 0, learn_count INTEGER NOT NULL DEFAULT 0);
+                 CREATE TABLE custom_search_key (entry_id TEXT NOT NULL, family TEXT NOT NULL, form TEXT NOT NULL, key TEXT NOT NULL);
+                 CREATE UNIQUE INDEX idx_custom_learned_pair ON custom_dictionary(hanzi, roman) WHERE origin = 1;
+                 INSERT INTO custom_dictionary (id, roman, hanzi) VALUES ('m1', 'tâi-gí', '台語');
+                 INSERT INTO custom_search_key VALUES ('m1', 'tl', 'notone', 'taigi');
+                 INSERT INTO custom_dictionary (id, roman, hanzi, origin, learn_count) VALUES ('l1', 'kì--khí-lâi', '記起來', 1, 3);
+                 INSERT INTO custom_search_key VALUES ('l1', 'tl', 'notone', 'kikhilai');
+                 PRAGMA user_version = 4;",
+            )
+            .unwrap();
+    }
+    let store = custom_store(&directory, stub_deriver(""), CustomDictionaryStore::MAX_ENTRIES);
+    assert_eq!(hanzi_of(&store.all_rows().unwrap()), ["台語"]);
+    assert!(store.rows_matching(&query_key("kikhilai", "tl"), 20).is_empty(), "the learned row's keys went with it");
+    assert_eq!(hanzi_of(&store.rows_matching(&query_key("taigi", "tl"), 20)), ["台語"]);
+    let connection =
+        rusqlite::Connection::open(directory.path().join("custom_dictionary.db")).unwrap();
+    let columns: Vec<String> = connection
+        .prepare("PRAGMA table_info(custom_dictionary);")
+        .unwrap()
+        .query_map([], |row| row.get(1))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert!(
+        !columns.iter().any(|c| c == "origin" || c == "learn_count"),
+        "the columns are dropped; got {columns:?}"
+    );
 }
 
 #[test]
@@ -757,160 +872,4 @@ fn perform_from_inside_the_worker_is_refused_rather_than_deadlocking() {
         1,
         "queued behind the open, not dropped"
     );
-}
-
-// ---- Learned phrases (§50) ------------------------------------------------
-
-/// The learn and touch writes are fire-and-forget; `count()` runs after them
-/// on the store's single worker, so returning from it means they landed.
-fn settle(store: &CustomDictionaryStore) {
-    let _ = store.count().unwrap();
-}
-
-fn learned_rows(store: &CustomDictionaryStore) -> Vec<CustomDictionaryRow> {
-    store
-        .all_rows()
-        .unwrap()
-        .into_iter()
-        .filter(|row| row.is_learned())
-        .collect()
-}
-
-#[test]
-fn learning_a_phrase_twice_is_one_row_with_count_two_outside_the_manual_quota() {
-    // trace: CustomDictionaryStoreTests.swift (§50) + iOS
-    // CustomDictionaryRepositoryLearnedPhraseTests.
-    let directory = scratch();
-    let store = custom_store(&directory, stub_deriver(""), 1);
-    store.learn_phrase("記起來", "kì--khí-lâi");
-    store.learn_phrase("記起來", "kì--khí-lâi");
-    settle(&store);
-
-    let rows = learned_rows(&store);
-    assert_eq!(hanzi_of(&rows), ["記起來"]);
-    assert_eq!(rows[0].learn_count, 2);
-    assert_eq!(store.count().unwrap(), 1, "the list pages learned rows too");
-    // …but the manual quota (1) is still free: a manual write goes through.
-    store
-        .upsert(&CustomDictionaryRow::new("tâi-gí", "台語"))
-        .unwrap();
-    // Exact recall, learned-only; the manual prefix search never sees it.
-    assert_eq!(
-        hanzi_of(&store.learned_rows_matching(&query_key("kì--khí-lâi", "tl"), 5)),
-        ["記起來"]
-    );
-    assert!(store
-        .rows_matching(&query_key("kì--khí-lâi", "tl"), 20)
-        .is_empty());
-    let via_trait =
-        CustomDictionarySource::learned_rows_matching(&store, "tl", "notone", "kì--khí-lâi");
-    assert_eq!(via_trait[0].canonical_tl, "kì--khí-lâi");
-}
-
-#[test]
-fn a_manual_row_wins_over_a_learned_one_both_ways() {
-    let directory = scratch();
-    let store = custom_store(
-        &directory,
-        stub_deriver(""),
-        CustomDictionaryStore::MAX_ENTRIES,
-    );
-    // Learn against an existing manual row: no-op.
-    store
-        .upsert(&CustomDictionaryRow::new("kì--khí-lâi", "記起來"))
-        .unwrap();
-    store.learn_phrase("記起來", "kì--khí-lâi");
-    settle(&store);
-    let all = store.all_rows().unwrap();
-    assert_eq!(all.len(), 1);
-    assert!(!all[0].is_learned());
-
-    // A manual write over a learned row takes it over: one manual row left,
-    // its learned keys gone. The CSV path obeys the same rule.
-    store.learn_phrase("台語", "tâi-gí");
-    settle(&store);
-    store
-        .upsert(&CustomDictionaryRow::new("tâi-gí", "台語"))
-        .unwrap();
-    let taigi: Vec<_> = store
-        .all_rows()
-        .unwrap()
-        .into_iter()
-        .filter(|r| r.hanzi == "台語")
-        .collect();
-    assert_eq!(taigi.len(), 1);
-    assert!(!taigi[0].is_learned());
-    assert!(store
-        .learned_rows_matching(&query_key("tâi-gí", "tl"), 5)
-        .is_empty());
-
-    store.learn_phrase("好玄", "hònn-hiân");
-    settle(&store);
-    let imported = store
-        .batch_import(&[CustomDictionaryRow::new("hònn-hiân", "好玄")])
-        .unwrap();
-    assert_eq!(imported.imported, 1);
-    let honn: Vec<_> = store
-        .all_rows()
-        .unwrap()
-        .into_iter()
-        .filter(|r| r.hanzi == "好玄")
-        .collect();
-    assert_eq!(honn.len(), 1);
-    assert!(!honn[0].is_learned());
-}
-
-#[test]
-fn editing_a_learned_row_adopts_it_and_counts_against_the_manual_quota() {
-    let directory = scratch();
-    let store = custom_store(&directory, stub_deriver(""), 1);
-    store
-        .upsert(&CustomDictionaryRow::new("tâi-gí", "台語"))
-        .unwrap();
-    store.learn_phrase("記起來", "kì--khí-lâi");
-    settle(&store);
-    let learned = learned_rows(&store).remove(0);
-    assert!(matches!(
-        store.upsert(&learned),
-        Err(CustomDictionaryError::CapacityReached { limit: 1 })
-    ));
-}
-
-#[test]
-fn the_learned_cap_evicts_fewest_composed_first_and_spares_the_row_just_written() {
-    let directory = scratch();
-    let store = custom_store_with_learned_limit(
-        &directory,
-        stub_deriver(""),
-        CustomDictionaryStore::MAX_ENTRIES,
-        3,
-    );
-    for i in 0..3 {
-        store.learn_phrase(&format!("詞{i}"), &format!("su-{i}"));
-    }
-    store.learn_phrase("詞0", "su-0");
-    store.learn_phrase("新詞", "sin-su");
-    store.touch_learned_phrase("新詞", "sin-su");
-    settle(&store);
-
-    let rows = learned_rows(&store);
-    assert_eq!(rows.len(), 3, "got {:?}", hanzi_of(&rows));
-    assert!(
-        rows.iter().any(|r| r.hanzi == "詞0"),
-        "the twice-composed row survives"
-    );
-    let newest = rows
-        .iter()
-        .find(|r| r.hanzi == "新詞")
-        .expect("the newest learn survives");
-    assert_eq!(newest.learn_count, 2, "and was touched");
-    // An older learned row's keys went with it: only 3 exact matches remain.
-    let remaining = (0..3)
-        .filter(|i| {
-            !store
-                .learned_rows_matching(&query_key(&format!("su-{i}"), "tl"), 5)
-                .is_empty()
-        })
-        .count();
-    assert_eq!(remaining, 2);
 }

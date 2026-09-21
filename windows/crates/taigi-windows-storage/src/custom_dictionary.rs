@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
 use taigi_windows_core::composing::CustomDictionarySource;
-use taigi_windows_core::engine::{CustomEntry, CustomSearchKey, LearnedPhrase};
+use taigi_windows_core::engine::{CustomEntry, CustomSearchKey};
 
 const TABLE_NAME: &str = "custom_dictionary";
 const SEARCH_KEY_TABLE_NAME: &str = "custom_search_key";
@@ -71,27 +71,6 @@ pub struct CustomDictionaryIdentity {
 /// and the 漢字 it stands for, which may be empty. Timestamps are the stored
 /// `yyyy-MM-dd HH:mm:ss` UTC text. CROSS-PLATFORM INVARIANT — the stored
 /// shape mirrors iOS `CustomDictionaryEntry.swift:11-31` and Android's table.
-/// Who wrote a row (`behavioral-invariants.md` §50); the raw values are the
-/// stored `origin` column and the backup contract. CROSS-PLATFORM INVARIANT —
-/// mirrors iOS `CustomDictionaryEntry.Origin` and Android `Entry.Origin`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CustomDictionaryOrigin {
-    /// Added or imported by the user.
-    Manual = 0,
-    /// Learned from a segment-by-segment continuous composition.
-    Learned = 1,
-}
-
-impl CustomDictionaryOrigin {
-    fn from_raw(raw: i64) -> Self {
-        if raw == 1 {
-            Self::Learned
-        } else {
-            Self::Manual
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CustomDictionaryRow {
     /// Stable across edits so the side table can be replaced rather than
@@ -101,19 +80,15 @@ pub struct CustomDictionaryRow {
     pub hanzi: String,
     pub created_at: String,
     pub updated_at: String,
-    pub origin: CustomDictionaryOrigin,
-    /// Times the phrase was composed or picked; `0` for a manual row.
-    pub learn_count: i64,
-}
-
-/// A fresh row id, in the shape the macOS store writes (`UUID().uuidString`).
-fn new_row_id() -> String {
-    uuid::Uuid::new_v4().to_string().to_uppercase()
 }
 
 impl CustomDictionaryRow {
     pub fn new(roman: &str, hanzi: &str) -> Self {
-        Self::with_id(&new_row_id(), roman, hanzi)
+        Self::with_id(
+            &uuid::Uuid::new_v4().to_string().to_uppercase(),
+            roman,
+            hanzi,
+        )
     }
 
     pub fn with_id(id: &str, roman: &str, hanzi: &str) -> Self {
@@ -124,13 +99,7 @@ impl CustomDictionaryRow {
             hanzi: hanzi.to_owned(),
             created_at: now.clone(),
             updated_at: now,
-            origin: CustomDictionaryOrigin::Manual,
-            learn_count: 0,
         }
-    }
-
-    pub fn is_learned(&self) -> bool {
-        self.origin == CustomDictionaryOrigin::Learned
     }
 
     pub fn identity(&self) -> CustomDictionaryIdentity {
@@ -147,24 +116,14 @@ pub struct CustomDictionaryStore {
     database: UserDataDatabase,
     derive_search_keys: SearchKeyDeriver,
     entry_limit: usize,
-    learned_limit: usize,
 }
 
 impl CustomDictionaryStore {
-    /// The MANUAL quota. CROSS-PLATFORM INVARIANT — mirrors iOS
-    /// `CustomDictionaryCapacityPolicy.swift` `maxEntries` and Android `MAX_ENTRIES`.
+    /// CROSS-PLATFORM INVARIANT — mirrors iOS
+    /// `CustomDictionaryCapacityPolicy.swift:18` and Android `MAX_ENTRIES`.
     pub const MAX_ENTRIES: usize = 30_000;
-    /// The LEARNED quota (§50): past it the fewest-composed, then least
-    /// recently touched, row goes so a learn never fails. CROSS-PLATFORM
-    /// INVARIANT — mirrors iOS `maxLearnedEntries` / Android `MAX_LEARNED_ENTRIES`.
-    pub const MAX_LEARNED_ENTRIES: usize = 2_000;
-    /// Largest `learn_count` a row can carry: the eviction order needs no
-    /// finer count than this, and the clamp keeps the column bounded.
-    pub const MAX_LEARN_COUNT: i64 = 1_000_000;
     /// What the keystroke path is handed — the iOS call site's 20.
     pub const KEYSTROKE_LIMIT: usize = 20;
-    /// Learned rows per fetch (exact whole-buffer match; homophone phrases).
-    pub const LEARNED_KEYSTROKE_LIMIT: usize = 5;
 
     /// What a fresh install can find before the user has added anything.
     /// Ids included, so the same word is the same row on every platform
@@ -176,13 +135,12 @@ impl CustomDictionaryStore {
         ]
     }
 
-    /// The two caps are injectable ONLY so a test can reach them without
-    /// writing 30000 / 2000 rows.
+    /// `entry_limit` is injectable ONLY so a test can reach the cap without
+    /// writing 30000 rows.
     pub fn new(
         directory: PathBuf,
         derive_search_keys: SearchKeyDeriver,
         entry_limit: usize,
-        learned_limit: usize,
     ) -> Self {
         Self {
             database: UserDataDatabase::new(
@@ -193,7 +151,6 @@ impl CustomDictionaryStore {
             ),
             derive_search_keys,
             entry_limit,
-            learned_limit,
         }
     }
 
@@ -222,13 +179,10 @@ impl CustomDictionaryStore {
         query_key: &CustomSearchKey,
         limit: usize,
     ) -> Vec<CustomDictionaryRow> {
-        // `entry.origin = 0`: manual rows only (§50) — learned rows ride
-        // `FetchAtPos.learned_entries` via `learned_rows_matching`, never
-        // the custom-dictionary override.
         self.database
             .read(|connection| {
                 let mut statement = connection.prepare_cached(&format!(
-                    "SELECT DISTINCT {JOINED_ENTRY_COLUMNS}\nFROM {TABLE_NAME} AS entry\nJOIN {SEARCH_KEY_TABLE_NAME} AS search_key ON search_key.entry_id = entry.id\nWHERE entry.origin = 0\n  AND search_key.family = ?\n  AND search_key.form IN (?, 'abbrev')\n  AND search_key.key LIKE ? || '%'\nORDER BY entry.roman\nLIMIT ?;"
+                    "SELECT DISTINCT entry.id, entry.roman, entry.hanzi, entry.created_at, entry.updated_at\nFROM {TABLE_NAME} AS entry\nJOIN {SEARCH_KEY_TABLE_NAME} AS search_key ON search_key.entry_id = entry.id\nWHERE search_key.family = ?\n  AND search_key.form IN (?, 'abbrev')\n  AND search_key.key LIKE ? || '%'\nORDER BY entry.roman\nLIMIT ?;"
                 ))?;
                 let rows = statement.query_map(
                     params![query_key.family, query_key.form, query_key.key, limit as i64],
@@ -237,95 +191,6 @@ impl CustomDictionaryStore {
                 rows.collect()
             })
             .unwrap_or_default()
-    }
-
-    /// The LEARNED entries whose derived key EQUALS `query_key` — the whole
-    /// typed buffer, not a prefix — for `FetchAtPos.learned_entries` (§50).
-    /// Exact so a learned whole-buffer match never falls out of the prefix
-    /// search's `LIMIT`. CROSS-PLATFORM INVARIANT — mirrors iOS
-    /// `learnedExactSearchSQL` / Android `LEARNED_EXACT_SQL`.
-    pub fn learned_rows_matching(
-        &self,
-        query_key: &CustomSearchKey,
-        limit: usize,
-    ) -> Vec<CustomDictionaryRow> {
-        self.database
-            .read(|connection| {
-                let mut statement = connection.prepare_cached(&format!(
-                    "SELECT {JOINED_ENTRY_COLUMNS}\nFROM {TABLE_NAME} AS entry\nJOIN {SEARCH_KEY_TABLE_NAME} AS search_key ON search_key.entry_id = entry.id\nWHERE entry.origin = 1\n  AND search_key.family = ?\n  AND search_key.form = ?\n  AND search_key.key = ?\nORDER BY entry.learn_count DESC, entry.updated_at DESC\nLIMIT ?;"
-                ))?;
-                let rows = statement.query_map(
-                    params![query_key.family, query_key.form, query_key.key, limit as i64],
-                    decode_row,
-                )?;
-                rows.collect()
-            })
-            .unwrap_or_default()
-    }
-
-    // Learned phrases (§50)
-
-    /// Records one `Effect::PhraseLearned`: inserts the `(hanzi, canonical TL)`
-    /// pair as a learned row or bumps its `learn_count`, in one statement on
-    /// the learned-pair unique index. A manual row for the same pair wins —
-    /// the learn is a no-op, never a downgrade. Best-effort and off the
-    /// keystroke path. The keys are derived before the write lock is taken
-    /// (an FFI round-trip has no business holding it), and the row just
-    /// written is never the one evicted.
-    pub fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        if hanzi.is_empty() || canonical_tl.is_empty() {
-            return;
-        }
-        let Some(search_keys) =
-            (self.derive_search_keys)(canonical_tl).filter(|keys| !keys.is_empty())
-        else {
-            return;
-        };
-        let limit = self.learned_limit;
-        let hanzi = hanzi.to_owned();
-        let canonical_tl = canonical_tl.to_owned();
-        self.database.write(move |connection| {
-            immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
-                if manual_row_exists(connection, &canonical_tl, &hanzi)? {
-                    return Ok(());
-                }
-                let now = utc_timestamp_now();
-                // `RETURNING id` answers with the row that took the write — the
-                // fresh id on an insert, the existing id on a bump — so the side
-                // keys are written for the right row either way.
-                let row_id: String = connection.query_row(
-                    &format!(
-                        "INSERT INTO {TABLE_NAME} (id, roman, hanzi, created_at, updated_at, origin, learn_count)\nVALUES (?, ?, ?, ?, ?, 1, 1)\nON CONFLICT(hanzi, roman) WHERE origin = 1 DO UPDATE SET\n    learn_count = MIN(learn_count + 1, {}),\n    updated_at = excluded.updated_at\nRETURNING id;",
-                        Self::MAX_LEARN_COUNT
-                    ),
-                    params![new_row_id(), canonical_tl, hanzi, now, now],
-                    |row| row.get(0),
-                )?;
-                replace_search_keys(connection, &row_id, &search_keys)?;
-                evict_learned_past_cap(connection, limit, &row_id)
-            })
-        });
-    }
-
-    /// Bumps a learned row the user just committed as one candidate, so a
-    /// phrase that is used stays ahead of the eviction line. No-op for a
-    /// manual row or an unknown pair.
-    pub fn touch_learned_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        if hanzi.is_empty() || canonical_tl.is_empty() {
-            return;
-        }
-        let hanzi = hanzi.to_owned();
-        let canonical_tl = canonical_tl.to_owned();
-        self.database.write(move |connection| {
-            connection.execute(
-                &format!(
-                    "UPDATE {TABLE_NAME}\nSET learn_count = MIN(learn_count + 1, {}), updated_at = ?\nWHERE origin = 1 AND hanzi = ? AND roman = ?;",
-                    Self::MAX_LEARN_COUNT
-                ),
-                params![utc_timestamp_now(), hanzi, canonical_tl],
-            )?;
-            Ok(())
-        });
     }
 
     // User-driven writes
@@ -333,14 +198,13 @@ impl CustomDictionaryStore {
     /// Every entry, newest edit first — the order the settings list shows.
     /// Unbounded, for the export.
     pub fn all_rows(&self) -> Result<Vec<CustomDictionaryRow>, CustomDictionaryError> {
-        self.database
-            .perform::<_, CustomDictionaryError>(|connection| {
-                let mut statement = connection.prepare(&format!(
-                    "SELECT {ENTRY_COLUMNS}\nFROM {TABLE_NAME}\nORDER BY updated_at DESC;"
-                ))?;
-                let rows = statement.query_map([], decode_row)?;
-                Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
-            })
+        self.database.perform::<_, CustomDictionaryError>(|connection| {
+            let mut statement = connection.prepare(&format!(
+                "SELECT id, roman, hanzi, created_at, updated_at\nFROM {TABLE_NAME}\nORDER BY updated_at DESC;"
+            ))?;
+            let rows = statement.query_map([], decode_row)?;
+            Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
+        })
     }
 
     /// A page of entries for the settings list, newest edit first. The
@@ -356,14 +220,14 @@ impl CustomDictionaryStore {
         self.database.perform::<_, CustomDictionaryError>(move |connection| {
             if trimmed.is_empty() {
                 let mut statement = connection.prepare(&format!(
-                    "SELECT {ENTRY_COLUMNS}\nFROM {TABLE_NAME}\nORDER BY updated_at DESC\nLIMIT ? OFFSET ?;"
+                    "SELECT id, roman, hanzi, created_at, updated_at\nFROM {TABLE_NAME}\nORDER BY updated_at DESC\nLIMIT ? OFFSET ?;"
                 ))?;
                 let rows = statement.query_map(params![limit as i64, offset as i64], decode_row)?;
                 return Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?);
             }
             let pattern = format!("%{}%", escaped_for_like(&trimmed));
             let mut statement = connection.prepare(&format!(
-                "SELECT {ENTRY_COLUMNS}\nFROM {TABLE_NAME}\nWHERE roman LIKE ? ESCAPE '\\' OR hanzi LIKE ? ESCAPE '\\'\nORDER BY updated_at DESC\nLIMIT ? OFFSET ?;"
+                "SELECT id, roman, hanzi, created_at, updated_at\nFROM {TABLE_NAME}\nWHERE roman LIKE ? ESCAPE '\\' OR hanzi LIKE ? ESCAPE '\\'\nORDER BY updated_at DESC\nLIMIT ? OFFSET ?;"
             ))?;
             let rows = statement.query_map(params![pattern, pattern, limit as i64, offset as i64], decode_row)?;
             Ok(rows.collect::<rusqlite::Result<Vec<_>>>()?)
@@ -402,11 +266,7 @@ impl CustomDictionaryStore {
         self.database
             .perform::<_, CustomDictionaryError>(move |connection| {
                 immediate_transaction(connection, |connection| {
-                    // A learned row adopted under its own id is a new manual
-                    // row for the quota (`manual_entry_exists`).
-                    if !manual_entry_exists(connection, &row.id)?
-                        && manual_entry_count(connection)? >= limit
-                    {
+                    if !entry_exists(connection, &row.id)? && entry_count(connection)? >= limit {
                         return Err(CustomDictionaryError::CapacityReached { limit });
                     }
                     write_row(connection, &row, &search_keys)
@@ -558,13 +418,13 @@ impl CustomDictionaryStore {
                 .database
                 .perform::<_, CustomDictionaryError>(move |connection| {
                     immediate_transaction(connection, |connection| {
-                        let mut stored_count = manual_entry_count(connection)?;
+                        let mut stored_count = entry_count(connection)?;
                         let mut written = 0;
                         for (row, search_keys) in &chunk {
                             if stored_count >= limit {
                                 break;
                             }
-                            if manual_row_exists(connection, &row.roman, &row.hanzi)? {
+                            if row_exists(connection, &row.identity())? {
                                 continue;
                             }
                             write_row(connection, row, search_keys)?;
@@ -605,29 +465,6 @@ impl CustomDictionarySource for CustomDictionaryStore {
             })
             .collect()
     }
-
-    fn learned_rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase> {
-        let query = CustomSearchKey {
-            family: family.to_owned(),
-            form: form.to_owned(),
-            key: key.to_owned(),
-        };
-        CustomDictionaryStore::learned_rows_matching(self, &query, Self::LEARNED_KEYSTROKE_LIMIT)
-            .into_iter()
-            .map(|row| LearnedPhrase {
-                hanzi: row.hanzi,
-                canonical_tl: row.roman,
-            })
-            .collect()
-    }
-
-    fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        CustomDictionaryStore::learn_phrase(self, hanzi, canonical_tl);
-    }
-
-    fn touch_learned_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        CustomDictionaryStore::touch_learned_phrase(self, hanzi, canonical_tl);
-    }
 }
 
 /// `%` / `_` / `\` in user text, made literal for a `LIKE … ESCAPE '\'`.
@@ -637,29 +474,22 @@ fn escaped_for_like(text: &str) -> String {
         .replace('_', "\\_")
 }
 
-/// The columns `decode_row` expects, in order; `JOINED_ENTRY_COLUMNS` is the
-/// same list qualified for the side-table join.
-const ENTRY_COLUMNS: &str = "id, roman, hanzi, created_at, updated_at, origin, learn_count";
-const JOINED_ENTRY_COLUMNS: &str = "entry.id, entry.roman, entry.hanzi, entry.created_at, entry.updated_at, entry.origin, entry.learn_count";
-
-fn manual_row_exists(connection: &Connection, roman: &str, hanzi: &str) -> rusqlite::Result<bool> {
+fn row_exists(
+    connection: &Connection,
+    identity: &CustomDictionaryIdentity,
+) -> rusqlite::Result<bool> {
     connection
         .query_row(
-            &format!(
-                "SELECT 1 FROM {TABLE_NAME} WHERE origin = 0 AND roman = ? AND hanzi = ? LIMIT 1;"
-            ),
-            params![roman, hanzi],
+            &format!("SELECT 1 FROM {TABLE_NAME} WHERE roman = ? AND hanzi = ? LIMIT 1;"),
+            params![identity.roman, identity.hanzi],
             |_| Ok(()),
         )
         .optional()
         .map(|found| found.is_some())
 }
 
-/// The MANUAL write (§50): the entry as the user's own word (`origin` 0, no
-/// count — a learned `row` written here is adopted), its search keys, then
-/// the takeover of any learned row for the same pair — after the write, so a
-/// failed write leaves the learned row intact. Must be called inside a
-/// transaction.
+/// The entry and its search keys, written together. Must be called inside
+/// a transaction.
 fn write_row(
     connection: &Connection,
     row: &CustomDictionaryRow,
@@ -667,69 +497,20 @@ fn write_row(
 ) -> Result<(), CustomDictionaryError> {
     connection.execute(
         &format!(
-            "INSERT INTO {TABLE_NAME} (id, roman, hanzi, created_at, updated_at, origin, learn_count)\nVALUES (?, ?, ?, ?, ?, 0, 0)\nON CONFLICT(id) DO UPDATE SET\n    roman = excluded.roman,\n    hanzi = excluded.hanzi,\n    updated_at = excluded.updated_at,\n    origin = 0,\n    learn_count = 0;"
+            "INSERT INTO {TABLE_NAME} (id, roman, hanzi, created_at, updated_at)\nVALUES (?, ?, ?, ?, ?)\nON CONFLICT(id) DO UPDATE SET\n    roman = excluded.roman,\n    hanzi = excluded.hanzi,\n    updated_at = excluded.updated_at;"
         ),
         params![row.id, row.roman, row.hanzi, row.created_at, row.updated_at],
     )?;
     // Replace rather than add: an edited roman must not stay findable under
     // the keys of the roman it replaced.
-    replace_search_keys(connection, &row.id, search_keys)?;
-    remove_learned_row(connection, &row.roman, &row.hanzi, &row.id)?;
-    Ok(())
-}
-
-/// Deletes the learned row (and its side keys) for `(roman, hanzi)` unless
-/// it is `except_id` itself — the manual write that just landed takes it over.
-fn remove_learned_row(
-    connection: &Connection,
-    roman: &str,
-    hanzi: &str,
-    except_id: &str,
-) -> rusqlite::Result<()> {
-    let learned = format!(
-        "SELECT id FROM {TABLE_NAME} WHERE origin = 1 AND roman = ? AND hanzi = ? AND id <> ?"
-    );
-    connection.execute(
-        &format!("DELETE FROM {SEARCH_KEY_TABLE_NAME} WHERE entry_id IN ({learned});"),
-        params![roman, hanzi, except_id],
-    )?;
-    connection.execute(
-        &format!("DELETE FROM {TABLE_NAME} WHERE id IN ({learned});"),
-        params![roman, hanzi, except_id],
-    )?;
-    Ok(())
-}
-
-/// Drops learned rows past `cap`, never `kept_id` (the row just written).
-/// Side keys first, so the subquery still resolves against the intact main
-/// table; `OFFSET cap - 1` selects exactly the rows past the cap once the
-/// kept row is set aside. CROSS-PLATFORM INVARIANT — mirrors iOS
-/// `evictLearnedPastCap` / Android `LEARNED_PAST_CAP_SQL`.
-fn evict_learned_past_cap(
-    connection: &Connection,
-    cap: usize,
-    kept_id: &str,
-) -> rusqlite::Result<()> {
-    let past_cap = format!(
-        "SELECT id FROM {TABLE_NAME} WHERE origin = 1 AND id <> ? ORDER BY learn_count DESC, updated_at DESC, id LIMIT -1 OFFSET ?"
-    );
-    let offset = cap.saturating_sub(1) as i64;
-    connection.execute(
-        &format!("DELETE FROM {SEARCH_KEY_TABLE_NAME} WHERE entry_id IN ({past_cap});"),
-        params![kept_id, offset],
-    )?;
-    connection.execute(
-        &format!("DELETE FROM {TABLE_NAME} WHERE id IN ({past_cap});"),
-        params![kept_id, offset],
-    )?;
-    Ok(())
+    replace_search_keys(connection, &row.id, search_keys)
 }
 
 fn replace_search_keys(
     connection: &Connection,
     entry_id: &str,
     search_keys: &[CustomSearchKey],
-) -> rusqlite::Result<()> {
+) -> Result<(), CustomDictionaryError> {
     delete_search_keys(connection, entry_id)?;
     for search_key in search_keys {
         connection.execute(
@@ -754,37 +535,12 @@ fn entry_romans(connection: &Connection) -> rusqlite::Result<Vec<(String, String
     rows.collect()
 }
 
-/// Every row, manual and learned — what the list pages, the clear reports
-/// and the seed checks.
 fn entry_count(connection: &Connection) -> rusqlite::Result<usize> {
     let count: i64 =
         connection.query_row(&format!("SELECT COUNT(*) FROM {TABLE_NAME};"), [], |row| {
             row.get(0)
         })?;
     Ok(count as usize)
-}
-
-/// MANUAL rows only — the user's quota; learned rows (§50) have their own.
-fn manual_entry_count(connection: &Connection) -> rusqlite::Result<usize> {
-    let count: i64 = connection.query_row(
-        &format!("SELECT COUNT(*) FROM {TABLE_NAME} WHERE origin = 0;"),
-        [],
-        |row| row.get(0),
-    )?;
-    Ok(count as usize)
-}
-
-/// A MANUAL row with this id — a learned row being adopted under its own id
-/// is still a new manual row for the quota.
-fn manual_entry_exists(connection: &Connection, id: &str) -> rusqlite::Result<bool> {
-    connection
-        .query_row(
-            &format!("SELECT 1 FROM {TABLE_NAME} WHERE id = ? AND origin = 0 LIMIT 1;"),
-            params![id],
-            |_| Ok(()),
-        )
-        .optional()
-        .map(|found| found.is_some())
 }
 
 fn entry_exists(connection: &Connection, id: &str) -> rusqlite::Result<bool> {
@@ -805,8 +561,6 @@ fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<CustomDictionaryRow> 
         hanzi: row.get(2)?,
         created_at: row.get(3)?,
         updated_at: row.get(4)?,
-        origin: CustomDictionaryOrigin::from_raw(row.get(5)?),
-        learn_count: row.get(6)?,
     })
 }
 
@@ -818,37 +572,32 @@ fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
     connection.execute_batch(&format!(
         "CREATE TABLE IF NOT EXISTS {TABLE_NAME} (\n    id TEXT PRIMARY KEY,\n    roman TEXT NOT NULL,\n    hanzi TEXT NOT NULL,\n    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\nCREATE INDEX IF NOT EXISTS idx_custom_roman ON {TABLE_NAME}(roman);\nCREATE TABLE IF NOT EXISTS {SEARCH_KEY_TABLE_NAME} (\n    entry_id TEXT NOT NULL,\n    family   TEXT NOT NULL,\n    form     TEXT NOT NULL,\n    key      TEXT NOT NULL\n);\nCREATE INDEX IF NOT EXISTS idx_csk_lookup ON {SEARCH_KEY_TABLE_NAME}(family, form, key);\nCREATE INDEX IF NOT EXISTS idx_csk_entry ON {SEARCH_KEY_TABLE_NAME}(entry_id);"
     ))?;
-    // §50 provenance: `origin` (`CustomDictionaryOrigin`) and `learn_count`,
-    // added by `ALTER` on a database created before them (every existing row
-    // reads as manual), then the learned-pair unique index that makes learning
-    // one atomic upsert. Idempotent. CROSS-PLATFORM INVARIANT — mirrors iOS
-    // `CustomDictionarySchema` (`provenanceColumns`, `learnedPairIndexSQL`) and
-    // Android v9.
-    // The TIP and the settings exe open the same file, so the check and the
-    // ALTER share one immediate transaction: the second process blocks on
-    // `BEGIN IMMEDIATE` (writer busy timeout) and then reads the column the
-    // first one added, instead of racing it to a "duplicate column" error.
+    drop_learned_rows_if_present(connection)
+}
+
+/// The §50 leftovers of the unreleased 2026-09-20 shape (learned phrases
+/// parked in this table under `origin` / `learn_count` + a partial unique
+/// index; they live in `learned_phrases.db` since 2026-09-21): the index
+/// goes, the rows the column marked as learned go with their side keys,
+/// then the two columns themselves (bundled SQLite has `DROP COLUMN`; the
+/// phones' does not, so there the columns stay inert) — after which the
+/// gate is false and this is a read-only pragma on every later open. A
+/// database that never had the shape (every released one) runs nothing but
+/// that pragma. The branch is one immediate transaction, as the IME and the
+/// settings app open the same file; every statement in it is idempotent, so
+/// two processes both taking it is harmless.
+/// mirrors macos/.../Storage/CustomDictionaryStore.swift `dropLearnedRowsIfPresent`.
+fn drop_learned_rows_if_present(connection: &Connection) -> rusqlite::Result<()> {
+    let has_origin = connection
+        .prepare(&format!("PRAGMA table_info({TABLE_NAME});"))?
+        .query_map([], |row| row.get::<_, String>(1))?
+        .any(|column| column.is_ok_and(|name| name == "origin"));
+    if !has_origin {
+        return Ok(());
+    }
     immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
-        let present: HashSet<String> = connection
-            .prepare(&format!("PRAGMA table_info({TABLE_NAME});"))?
-            .query_map([], |row| row.get::<_, String>(1))?
-            .collect::<rusqlite::Result<_>>()?;
-        for column in ["origin", "learn_count"] {
-            if !present.contains(column) {
-                connection.execute(
-                    &format!(
-                        "ALTER TABLE {TABLE_NAME} ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0;"
-                    ),
-                    [],
-                )?;
-            }
-        }
-        connection.execute(
-            &format!(
-                "CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_learned_pair ON {TABLE_NAME}(hanzi, roman) WHERE origin = 1;"
-            ),
-            [],
-        )?;
-        Ok(())
+        connection.execute_batch(&format!(
+            "DROP INDEX IF EXISTS idx_custom_learned_pair;\nDELETE FROM {SEARCH_KEY_TABLE_NAME} WHERE entry_id IN (SELECT id FROM {TABLE_NAME} WHERE origin = 1);\nDELETE FROM {TABLE_NAME} WHERE origin = 1;\nALTER TABLE {TABLE_NAME} DROP COLUMN learn_count;\nALTER TABLE {TABLE_NAME} DROP COLUMN origin;"
+        ))
     })
 }

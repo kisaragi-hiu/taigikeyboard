@@ -285,6 +285,7 @@ mod tests {
             Arc::new(StaticSettingsProvider::new(document)),
             Box::new(NoStores),
             Box::new(NoStores),
+            Box::new(NoStores),
             NextWordLearner::new(Box::new(NoStores), Box::new(SystemClock)),
             Box::new(SystemClock),
             1,
@@ -297,6 +298,7 @@ mod tests {
         document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, enabled);
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
+            Box::new(NoStores),
             Box::new(NoStores),
             Box::new(NoStores),
             NextWordLearner::new(Box::new(NoStores), Box::new(SystemClock)),

@@ -55,7 +55,6 @@ const TABLE_HEADER_GAP: f64 = 8.0;
 const OVERLAY_RING_SIZE: f64 = 20.0;
 /// WinUI's secondary text, as opacity, so it follows the theme.
 const SECONDARY_OPACITY: f64 = 0.65;
-const BADGE_GAP: f64 = 8.0;
 
 /// Which field of the entry dialog changed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -662,9 +661,9 @@ fn import(
     );
 }
 
-/// Deletes both learning tables — two calls, two files, no transaction
-/// that could span them; the second is attempted even when the first
-/// fails, and the alert reports rather than claims.
+/// Deletes the three learning tables — three calls, three files, no
+/// transaction that could span them; each is attempted even when an
+/// earlier one fails, and the alert reports rather than claims.
 fn clear_learning_records(
     model: &mut CustomDictionaryModel,
     stores: &UserDataStores,
@@ -672,6 +671,7 @@ fn clear_learning_records(
 ) {
     let frequency = Arc::clone(&stores.frequency);
     let association = Arc::clone(&stores.association);
+    let learned_phrases = Arc::clone(&stores.learned_phrases);
     begin_job(
         model,
         context,
@@ -683,6 +683,9 @@ fn clear_learning_records(
             }
             if let Err(error) = association.delete_all() {
                 failures.push(format!("user_association: {error}"));
+            }
+            if let Err(error) = learned_phrases.delete_all() {
+                failures.push(format!("learned_phrases: {error}"));
             }
             let message = if failures.is_empty() {
                 PageMessage::Done(StringKey::DesktopClearLearningRecordsDone)
@@ -803,22 +806,7 @@ fn entry_table(
                                 .text(row.roman.clone())
                                 .opacity(SECONDARY_OPACITY)
                                 .grid_column(0),
-                            // §50: a learned row wears its badge after the hanzi.
-                            StackPanel::new()
-                                .orientation(Orientation::Horizontal)
-                                .spacing(BADGE_GAP)
-                                .vertical_alignment(VerticalAlignment::Center)
-                                .grid_column(1)
-                                .children((
-                                    TextBlock::new().text(row.hanzi.clone()),
-                                    if row.is_learned() {
-                                        cards::badge(
-                                            strings.resolve(StringKey::DictionaryLearnedBadge),
-                                        )
-                                    } else {
-                                        View::empty()
-                                    },
-                                )),
+                            TextBlock::new().text(row.hanzi.clone()).grid_column(1),
                         )),
                 ),
             )

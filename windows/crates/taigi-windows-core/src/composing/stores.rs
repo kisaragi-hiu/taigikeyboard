@@ -18,15 +18,20 @@ pub trait FrequencySource: Send + Sync {
 
 /// `custom_dictionary.db`, as the keystroke path sees it.
 pub trait CustomDictionarySource: Send + Sync {
-    /// The MANUAL rows whose search key under `family` / `form` starts with `key`.
+    /// The rows whose search key under `family` / `form` starts with `key`.
     fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<CustomEntry>;
-    /// The LEARNED rows (§50) whose search key under `family` / `form` EQUALS
-    /// `key` — the whole buffer, never a prefix.
-    fn learned_rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase>;
+}
+
+/// `learned_phrases.db` (§50), as the keystroke path sees it — learning
+/// data, not the user's dictionary (USER 2026-09-21).
+pub trait LearnedPhraseSource: Send + Sync {
+    /// The phrases whose search key under `family` / `form` EQUALS `key` —
+    /// the whole buffer, never a prefix.
+    fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase>;
     /// Records one `Effect::PhraseLearned`. Best-effort; never logs the words.
     fn learn_phrase(&self, hanzi: &str, canonical_tl: &str);
-    /// Bumps a learned row the user just picked whole. Best-effort.
-    fn touch_learned_phrase(&self, hanzi: &str, canonical_tl: &str);
+    /// Bumps a phrase the user just picked whole. Best-effort.
+    fn touch_phrase(&self, hanzi: &str, canonical_tl: &str);
 }
 
 /// `user_association.db`'s write side.
@@ -72,14 +77,17 @@ impl<T: CustomDictionarySource + ?Sized> CustomDictionarySource for std::sync::A
     fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<CustomEntry> {
         (**self).rows_matching(family, form, key)
     }
-    fn learned_rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase> {
-        (**self).learned_rows_matching(family, form, key)
+}
+
+impl<T: LearnedPhraseSource + ?Sized> LearnedPhraseSource for std::sync::Arc<T> {
+    fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase> {
+        (**self).rows_matching(family, form, key)
     }
     fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
         (**self).learn_phrase(hanzi, canonical_tl);
     }
-    fn touch_learned_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        (**self).touch_learned_phrase(hanzi, canonical_tl);
+    fn touch_phrase(&self, hanzi: &str, canonical_tl: &str) {
+        (**self).touch_phrase(hanzi, canonical_tl);
     }
 }
 
@@ -106,11 +114,14 @@ impl CustomDictionarySource for NoStores {
     fn rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<CustomEntry> {
         Vec::new()
     }
-    fn learned_rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<LearnedPhrase> {
+}
+
+impl LearnedPhraseSource for NoStores {
+    fn rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<LearnedPhrase> {
         Vec::new()
     }
     fn learn_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
-    fn touch_learned_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
+    fn touch_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
 }
 
 impl AssociationSink for NoStores {
