@@ -81,27 +81,6 @@
         "ja": "オンにすると、追加した単語が候補に表示されます。"
       }
     },
-    "learnedBadge": {
-      "comment": "Badge on a custom-dictionary row that was learned automatically (§50), not added by the user.",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios",
-          "macos",
-          "windows"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "自動學",
-        "tailo": "自動學",
-        "poj": "自動學",
-        "en": "Learned",
-        "ja": "学習"
-      }
-    },
     "dataManagement": {
       "comment": "Section title for keyboard-data management (custom words, frequency/association records, backup/import/export).",
       "scope": {

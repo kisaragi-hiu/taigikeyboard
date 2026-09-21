@@ -118,7 +118,6 @@ enum StringKey: String {
     case desktopAboutTab = "i18n_desktop_aboutTab"
     case dictionaryCustomDictionary = "i18n_dictionary_customDictionary"
     case dictionaryCustomDictEnabled = "i18n_dictionary_customDictEnabled"
-    case dictionaryLearnedBadge = "i18n_dictionary_learnedBadge"
     case dictionaryVariantDictionary = "i18n_dictionary_variantDictionary"
     case dictionaryKhiin = "i18n_dictionary_khiin"
     case dictionaryCustomDictEmpty = "i18n_dictionary_customDictEmpty"
