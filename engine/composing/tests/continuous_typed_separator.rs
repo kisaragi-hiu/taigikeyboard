@@ -15,13 +15,20 @@
 //! same shape but 予我/hōo--guá exists as a word; `lai` is a syllable with
 //! no dictionary row (the all-OOV branch).
 
-use protos::engine::{AppConfig, FetchAtPos};
+use composing::api::Engine;
+use composing::dispatch;
+use protos::engine::composing_request::Method;
+use protos::engine::effect::Kind;
+use protos::engine::{
+    AppConfig, CandidateMessage, CommitContinuous, CommitRaw, ComposingResponse, DeleteBackward,
+    EnterContinuous, FetchAtPos, Start,
+};
 
 mod common;
 use common::{
-    build_dictionary_fst, build_syllables_fst, build_tkdb_v3, cell_with_hanji, config,
-    empty_association_bin, engine_install_lock, fetch_cells, install_lexicon, write_temp, Cell,
-    Row,
+    build_dictionary_fst, build_syllables_fst, build_tkdb_v3, cell_with_hanji, commit_text, config,
+    empty_association_bin, engine_install_lock, fetch_cells, install_lexicon, req, write_temp,
+    Cell, Row,
 };
 
 fn fixture_rows() -> Vec<Row> {
@@ -57,13 +64,16 @@ fn fixture_rows() -> Vec<Row> {
     ]
 }
 
-fn install_fixture() {
-    let rows = fixture_rows();
-    let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
-    let fst_path = build_dictionary_fst(&rows);
+fn install_rows(rows: &[Row], syllables: &[&str]) {
+    let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(rows));
+    let fst_path = build_dictionary_fst(rows);
     let assoc_path = write_temp("association.bin", &empty_association_bin());
-    let syllables_path = build_syllables_fst(&["hoo7", "gua2", "si7", "lai5"]);
+    let syllables_path = build_syllables_fst(syllables);
     install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
+}
+
+fn install_fixture() {
+    install_rows(&fixture_rows(), &["hoo7", "gua2", "si7", "lai5"]);
 }
 
 fn fetch(raw: &str, input_mode: &str, hyphenless: bool) -> Vec<Cell> {
@@ -158,4 +168,216 @@ fn typed_separator_follows_the_hyphenless_setting() {
     let cells = fetch("gua-si", "tl", true);
     assert_eq!(cell_with_hanji(&cells, "我是").1, "guásī");
     assert_eq!(cells[0].1, "gua-si", "the literal keeps the typed hyphen");
+}
+
+// ---- Segment-by-segment commit keeps the typed run (USER 2026-09-22) ----
+// `tng--lai` → pick 轉 → pick 來 committed `tńg-lâi`: the run folded into
+// 來's `raw_text` and the nailed-prefix join never read it (the compound
+// oracle then supplied its own `-`). Fixture: 轉/tńg + 來/lâi singles and
+// 轉來/tńg--lâi as the compound the oracle finds.
+
+fn tng_lai_rows() -> Vec<Row> {
+    vec![
+        Row {
+            toneless_key: "tng",
+            hanzi: "轉",
+            tl: "tńg",
+            syll: 1,
+            freq: 50_000,
+        },
+        Row {
+            toneless_key: "lai",
+            hanzi: "來",
+            tl: "lâi",
+            syll: 1,
+            freq: 60_000,
+        },
+        Row {
+            toneless_key: "tnglai",
+            hanzi: "轉來",
+            tl: "tńg--lâi",
+            syll: 2,
+            freq: 3_000,
+        },
+    ]
+}
+
+fn install_tng_lai() {
+    install_rows(&tng_lai_rows(), &["tng2", "lai5"]);
+}
+
+fn started(raw: &str, cfg: &AppConfig) -> Engine {
+    let mut engine = Engine::new();
+    for method in [
+        Method::Start(Start { text: raw.into() }),
+        Method::EnterContinuous(EnterContinuous {}),
+    ] {
+        dispatch::handle(&req(method), &mut engine, cfg).expect("setup");
+    }
+    engine
+}
+
+/// The single-syllable candidate for `hanji`, as the strip lists it.
+fn single(engine: &mut Engine, cfg: &AppConfig, hanji: &str) -> CandidateMessage {
+    let resp = dispatch::handle(&req(Method::FetchAtPos(FetchAtPos::default())), engine, cfg)
+        .expect("FetchAtPos");
+    let cands = resp.continuous.expect("continuous").candidates;
+    cands
+        .iter()
+        .find(|c| c.hanji.as_deref() == Some(hanji) && c.syllable_count == 1)
+        .cloned()
+        .unwrap_or_else(|| panic!("no single {hanji}; got {cands:?}"))
+}
+
+/// `CommitContinuous` the way a platform tap sends it: `display_text` is
+/// the candidate's roman under 羅馬字 output, its hanji under 漢字 output.
+fn pick(engine: &mut Engine, cfg: &AppConfig, hanji: &str) -> ComposingResponse {
+    let c = single(engine, cfg, hanji);
+    let display_text = if cfg.is_translate_swapped {
+        c.display_text.clone()
+    } else {
+        c.roman.clone()
+    };
+    dispatch::handle(
+        &req(Method::CommitContinuous(CommitContinuous {
+            display_text,
+            canonical_text: c.display_text.clone(),
+            association_tl: c.canonical_tl.clone(),
+            hanji: c.hanji.clone(),
+            consumed_bytes: c.consumed_span_end,
+            syllable_count: c.syllable_count,
+        })),
+        engine,
+        cfg,
+    )
+    .expect("CommitContinuous")
+}
+
+fn preedit(resp: &ComposingResponse) -> Option<String> {
+    resp.effect.iter().find_map(|e| match e.kind.as_ref() {
+        Some(Kind::UpdatePreedit(p)) => Some(p.display.clone()),
+        _ => None,
+    })
+}
+
+fn roman_cfg(hyphenless: bool) -> AppConfig {
+    AppConfig {
+        is_translate_swapped: false,
+        hyphenless_roman: hyphenless,
+        ..config("tl")
+    }
+}
+
+#[test]
+fn two_picks_commit_the_typed_run_between_them() {
+    let _lock = engine_install_lock();
+    install_tng_lai();
+    for (raw, mid, fin) in [
+        ("tng--lai", "tńg--lai", "tńg--lâi"),
+        ("tng-lai", "tńg-lai", "tńg-lâi"),
+        // Nothing typed: the word space as before (the test lexicon has no
+        // hanji prefix index, so the compound oracle is off here; the
+        // oracle's own `-` is pinned in `api.rs` unit tests).
+        ("tnglai", "tńg lai", "tńg lâi"),
+    ] {
+        let cfg = roman_cfg(false);
+        let mut engine = started(raw, &cfg);
+        let first = pick(&mut engine, &cfg, "轉");
+        assert_eq!(
+            preedit(&first).as_deref(),
+            Some(mid),
+            "{raw}: preedit after 轉"
+        );
+        let second = pick(&mut engine, &cfg, "來");
+        assert_eq!(
+            commit_text(&second).as_deref(),
+            Some(fin),
+            "{raw}: committed"
+        );
+    }
+}
+
+#[test]
+fn two_picks_under_hyphenless_render_the_run_as_a_dot() {
+    let _lock = engine_install_lock();
+    install_tng_lai();
+    for (raw, fin) in [
+        ("tng--lai", "tńg·lâi"),
+        ("tng-lai", "tńglâi"),
+        ("tnglai", "tńg lâi"),
+    ] {
+        let cfg = roman_cfg(true);
+        let mut engine = started(raw, &cfg);
+        pick(&mut engine, &cfg, "轉");
+        let second = pick(&mut engine, &cfg, "來");
+        assert_eq!(commit_text(&second).as_deref(), Some(fin), "{raw}");
+    }
+}
+
+#[test]
+fn two_picks_under_hanji_output_carry_no_separator() {
+    let _lock = engine_install_lock();
+    install_tng_lai();
+    let cfg = AppConfig {
+        is_translate_swapped: true,
+        ..config("tl")
+    };
+    let mut engine = started("tng--lai", &cfg);
+    let first = pick(&mut engine, &cfg, "轉");
+    assert_eq!(preedit(&first).as_deref(), Some("轉--lai"));
+    let second = pick(&mut engine, &cfg, "來");
+    assert_eq!(commit_text(&second).as_deref(), Some("轉來"));
+}
+
+#[test]
+fn enter_after_the_first_pick_commits_the_typed_tail_as_is() {
+    let _lock = engine_install_lock();
+    install_tng_lai();
+    let cfg = roman_cfg(false);
+    let mut engine = started("tng--lai", &cfg);
+    pick(&mut engine, &cfg, "轉");
+    let resp = dispatch::handle(&req(Method::CommitRaw(CommitRaw {})), &mut engine, &cfg)
+        .expect("CommitRaw");
+    assert_eq!(commit_text(&resp).as_deref(), Some("tńg--lai"));
+}
+
+#[test]
+fn unnail_restores_the_run_and_a_repick_keeps_it() {
+    // 轉 + 來 nailed over `tng--lai-khi`, pending `-khi`; delete the tail,
+    // then one more backspace pops 來 and its raw `--lai` comes back as the
+    // pending tail with its run — repicking 來 commits `tńg--lâi`.
+    let _lock = engine_install_lock();
+    let mut rows = tng_lai_rows();
+    rows.push(Row {
+        toneless_key: "khi",
+        hanzi: "去",
+        tl: "khì",
+        syll: 1,
+        freq: 40_000,
+    });
+    install_rows(&rows, &["tng2", "lai5", "khi3"]);
+
+    let cfg = roman_cfg(false);
+    let mut engine = started("tng--lai-khi", &cfg);
+    pick(&mut engine, &cfg, "轉");
+    let mid = pick(&mut engine, &cfg, "來");
+    assert_eq!(preedit(&mid).as_deref(), Some("tńg--lâi-khi"));
+    let mut last = None;
+    for _ in 0..5 {
+        last = Some(
+            dispatch::handle(
+                &req(Method::DeleteBackward(DeleteBackward {})),
+                &mut engine,
+                &cfg,
+            )
+            .expect("DeleteBackward"),
+        );
+    }
+    assert_eq!(
+        preedit(last.as_ref().unwrap()).as_deref(),
+        Some("tńg--lai"),
+        "來 popped, its raw run back in the tail"
+    );
+    let fin = pick(&mut engine, &cfg, "來");
+    assert_eq!(commit_text(&fin).as_deref(), Some("tńg--lâi"));
 }

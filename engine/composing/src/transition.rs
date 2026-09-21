@@ -1067,14 +1067,30 @@ fn next_word_word_selected(text: String, roman: String, trigger_prediction: bool
     }
 }
 
+/// Learned phrases (§50) — the joiner a segment's canonical TL takes in
+/// front of it: the `-` run the user typed before the segment, which folds
+/// into that segment's own raw prefix (picking 我 over `goa` in `goa--si`
+/// leaves `--si` as the next segment's `raw_text`). Two or more is the
+/// khinsiann `--`, one is the 連字 `-`, and nothing typed is no signal, so
+/// the phrase learns as one word. The dictionary cannot cover every phrase
+/// and the user manages the separator (USER 2026-09-22).
+fn learned_joiner(raw_text: &str) -> &'static str {
+    if crate::api::typed_separator_run(raw_text).len() >= 2 {
+        "--"
+    } else {
+        "-"
+    }
+}
+
 /// Learned phrases (§50) — the `(漢字, canonical-TL)` pair a final
 /// continuous commit learns from its nailed segments, or `None` when the
 /// composition is not one: fewer than two segments, any segment without
 /// a hanji pick or without a canonical TL, or more than
-/// [`MAX_LEARNED_PHRASE_SYLLABLES`] in total. The TL pieces join with `-`;
-/// a piece that already opens with the khinsiann `--` keeps it so
-/// `kì` + `--khí-lâi` reads `kì--khí-lâi`, never `kì---khí-lâi`. The cap
-/// counts the joined TL, not the segments' echoed `syllable_count`: a
+/// [`MAX_LEARNED_PHRASE_SYLLABLES`] in total. The TL pieces join with the
+/// separator the user typed ([`learned_joiner`]); a piece that already
+/// opens with the khinsiann `--` keeps its dictionary form so `kì` +
+/// `--khí-lâi` reads `kì--khí-lâi`, never `kì---khí-lâi`. The cap counts
+/// the joined TL, not the segments' echoed `syllable_count`: a
 /// custom-dictionary pick reports `1` whatever its length
 /// (`lexicon::custom_entry_to_candidate`).
 fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> {
@@ -1091,7 +1107,7 @@ fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> {
         }
         hanji.push_str(h);
         if !canonical_tl.is_empty() && !seg.association_tl.starts_with('-') {
-            canonical_tl.push('-');
+            canonical_tl.push_str(learned_joiner(&seg.raw_text));
         }
         canonical_tl.push_str(&seg.association_tl);
     }

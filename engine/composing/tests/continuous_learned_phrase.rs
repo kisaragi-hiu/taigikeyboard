@@ -20,15 +20,20 @@
 //! 記 `ki` + 起來 `khilai`; the dictionary here carries 機/ki, 記/kì, 起來 and
 //! NOT 記起來.
 
-use composing::{Intent, Phase};
+use composing::api::Engine;
+use composing::{dispatch, Intent, Phase};
+use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
-use protos::engine::{ComposingResponse, CustomDictEntry, FetchAtPos, LearnedEntry, PhraseLearned};
+use protos::engine::{
+    CandidateMessage, CommitContinuous, ComposingResponse, CustomDictEntry, EnterContinuous,
+    FetchAtPos, LearnedEntry, PhraseLearned, Start,
+};
 
 mod common;
 use common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config_tl, effect_kinds,
     empty_association_bin, engine_in_continuous, engine_install_lock, fetch_at_pos_response,
-    fetch_hanji, install_lexicon, selected, write_temp, Row, NOW_MS,
+    fetch_cells, fetch_hanji, install_lexicon, req, selected, write_temp, Cell, Row, NOW_MS,
 };
 
 // ---- Learning ---------------------------------------------------------------
@@ -55,7 +60,11 @@ fn learned_effect(resp: &ComposingResponse) -> Option<PhraseLearned> {
 }
 
 /// Apply every pick over `raw` and return what the LAST commit learned.
+/// A commit renders the nailed prefix through the lexicon's compound
+/// oracle, so the lock keeps a parallel recall test from swapping the
+/// installed lexicon under it.
 fn learn(raw: &str, picks: &[Pick<'_>]) -> Option<PhraseLearned> {
+    let _lock = engine_install_lock();
     let mut e = engine_in_continuous(raw);
     let mut last = None;
     for p in picks {
@@ -73,6 +82,7 @@ fn phrase(hanji: &str, canonical_tl: &str) -> Option<PhraseLearned> {
 
 #[test]
 fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
+    let _lock = engine_install_lock();
     let mut e = engine_in_continuous("kikhilai");
     let mid = e.apply(pick((Some("記"), "kì", 2, 1)), &config_tl());
     assert!(
@@ -108,6 +118,107 @@ fn khinsiann_segment_keeps_its_double_hyphen() {
         ),
         phrase("記起來", "kì--khí-lâi")
     );
+}
+
+#[test]
+fn typed_separator_before_a_segment_is_the_joiner() {
+    // The `-` run the user typed folds into the NEXT segment's raw
+    // prefix (記 over `ki` leaves `--khilai` pending), so it is read there:
+    // `--` learns the khinsiann, `-` the 連字, nothing the 連字 default.
+    for (raw, consumed, tl) in [
+        ("ki--khilai", 8, "kì--khí-lâi"),
+        ("ki-khilai", 7, "kì-khí-lâi"),
+        ("kikhilai", 6, "kì-khí-lâi"),
+        // A longer run is still the khinsiann marker, never stored verbatim.
+        ("ki---khilai", 9, "kì--khí-lâi"),
+    ] {
+        assert_eq!(
+            learn(
+                raw,
+                &[
+                    (Some("記"), "kì", 2, 1),
+                    (Some("起來"), "khí-lâi", consumed, 2)
+                ]
+            ),
+            phrase("記起來", tl),
+            "raw {raw:?}"
+        );
+    }
+}
+
+#[test]
+fn dictionary_khinsiann_piece_wins_over_the_typed_separator() {
+    // The segment's own dictionary form already opens with `--`; the
+    // typed `-` is not stacked on it (mirrors the walker's dictionary-
+    // owned-edge rule).
+    assert_eq!(
+        learn(
+            "ki-khilai",
+            &[(Some("記"), "kì", 2, 1), (Some("起來"), "--khí-lâi", 7, 2)]
+        ),
+        phrase("記起來", "kì--khí-lâi")
+    );
+}
+
+/// `CommitContinuous` for the candidate the platform would pick: its own
+/// `consumed_span_end` as `consumed_bytes`, every sidechannel echoed.
+fn commit(cand: &CandidateMessage) -> Method {
+    Method::CommitContinuous(CommitContinuous {
+        display_text: cand.display_text.clone(),
+        canonical_text: cand.display_text.clone(),
+        association_tl: cand.canonical_tl.clone(),
+        hanji: cand.hanji.clone(),
+        consumed_bytes: cand.consumed_span_end,
+        syllable_count: cand.syllable_count,
+    })
+}
+
+fn fetch_candidate(engine: &mut Engine, hanji: &str) -> CandidateMessage {
+    let resp = dispatch::handle(
+        &req(Method::FetchAtPos(FetchAtPos::default())),
+        engine,
+        &config_tl(),
+    )
+    .expect("FetchAtPos");
+    let cands = resp.continuous.expect("continuous carrier").candidates;
+    cands
+        .iter()
+        .find(|c| c.hanji.as_deref() == Some(hanji))
+        .cloned()
+        .unwrap_or_else(|| panic!("no candidate {hanji}; got {cands:?}"))
+}
+
+#[test]
+fn typed_khinsiann_survives_the_real_fetch_and_commit_path() {
+    // End to end: the `--` typed between `ki` and `khilai` stays in the
+    // pending buffer when 記 is picked (its span ends before the run) and
+    // is consumed with 起來 (the run folds into that span), so the final
+    // commit learns `kì--khí-lâi`.
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let cfg = config_tl();
+    let mut engine = Engine::new();
+    for method in [
+        Method::Start(Start {
+            text: "ki--khilai".into(),
+        }),
+        Method::EnterContinuous(EnterContinuous {}),
+    ] {
+        dispatch::handle(&req(method), &mut engine, &cfg).expect("setup");
+    }
+
+    let ki = fetch_candidate(&mut engine, "記");
+    assert_eq!(ki.consumed_span_end, 2, "記 ends before the typed run");
+    let mid = dispatch::handle(&req(commit(&ki)), &mut engine, &cfg).expect("mid-commit");
+    assert!(learned_effect(&mid).is_none());
+
+    let khilai = fetch_candidate(&mut engine, "起來");
+    assert_eq!(
+        khilai.consumed_span_end, 8,
+        "the run folds into 起來's span"
+    );
+    let fin = dispatch::handle(&req(commit(&khilai)), &mut engine, &cfg).expect("final commit");
+    assert_eq!(learned_effect(&fin), phrase("記起來", "kì--khí-lâi"));
 }
 
 #[test]
@@ -305,6 +416,72 @@ fn learned_phrase_with_khinsiann_key_matches_the_toneless_buffer() {
     assert_eq!(hanji[0], "記起來", "got {hanji:?}");
 }
 
+/// The romanizations listed for `hanji`, in display order.
+fn readings_for<'a>(cells: &'a [Cell], hanji: &str) -> Vec<&'a str> {
+    cells
+        .iter()
+        .filter(|c| c.0.as_deref() == Some(hanji))
+        .map(|c| c.1.as_str())
+        .collect()
+}
+
+#[test]
+fn learned_rows_differing_only_in_separator_collapse_to_the_first() {
+    // `UNIQUE(hanzi, roman)` keeps a slip and its correction as two rows;
+    // the platform lists them `learn_count DESC, updated_at DESC`, and only
+    // that first row surfaces — whichever separator it carries.
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    for order in [["kì--khí-lâi", "kì-khí-lâi"], ["kì-khí-lâi", "kì--khí-lâi"]] {
+        let rows = order.iter().map(|tl| learned("記起來", tl)).collect();
+        let cells = fetch_cells(&config_tl(), "kikhilai", with_learned(rows));
+        let readings = readings_for(&cells, "記起來");
+        assert_eq!(readings, vec![order[0]], "rows {order:?}; got {cells:?}");
+    }
+}
+
+#[test]
+fn learned_rows_differing_in_tone_are_different_words() {
+    // Separator folding is tone-preserving: 記起來/kì vs 機起來/ki are two
+    // readings of the same hanji (Core Principle #6), both listed.
+    let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    let cells = fetch_cells(
+        &config_tl(),
+        "kikhilai",
+        with_learned(vec![
+            learned("記起來", "kì-khí-lâi"),
+            learned("記起來", "ki-khí-lâi"),
+        ]),
+    );
+    let readings = readings_for(&cells, "記起來");
+    assert_eq!(readings, vec!["kì-khí-lâi", "ki-khí-lâi"], "got {cells:?}");
+}
+
+#[test]
+fn learned_rows_differing_in_space_vs_hyphen_collapse_too() {
+    // No `-` typed either way: 我 + 也是 learns `guá-iā sī` (the dictionary's
+    // multi-word space), 我 + 也 + 是 learns `guá-iā-sī`. Same reading, so
+    // an install that holds both rows now lists 我也是 once (Codex 2026-09-22
+    // post-impl F1: this is the one recall change a user who never types
+    // `-` can see).
+    let _lock = engine_install_lock();
+    install(&guaiasi_rows(), &["gua2", "ia7", "i1", "si7", "a1"]);
+    let cells = fetch_cells(
+        &config_tl(),
+        "guaiasi",
+        with_learned(vec![
+            learned("我也是", "guá-iā-sī"),
+            learned("我也是", "guá-iā sī"),
+        ]),
+    );
+    assert_eq!(
+        readings_for(&cells, "我也是"),
+        vec!["guá-iā-sī"],
+        "got {cells:?}"
+    );
+}
+
 #[test]
 fn learned_phrase_matches_a_poj_typed_buffer() {
     // The learned row is canonical TL; the POJ user types the POJ spelling.
@@ -443,10 +620,8 @@ fn empty_or_half_empty_learned_rows_are_ignored() {
     assert_eq!(hanji[0], "機起來", "got {hanji:?}");
 }
 
-#[test]
-fn learned_row_with_a_space_in_its_tl_matches_the_typed_buffer() {
-    let _lock = engine_install_lock();
-    let rows = vec![
+fn guaiasi_rows() -> Vec<Row> {
+    vec![
         Row {
             toneless_key: "gua",
             hanzi: "我",
@@ -482,8 +657,13 @@ fn learned_row_with_a_space_in_its_tl_matches_the_typed_buffer() {
             syll: 2,
             freq: 3000,
         },
-    ];
-    install(&rows, &["gua2", "ia7", "i1", "si7", "a1"]);
+    ]
+}
+
+#[test]
+fn learned_row_with_a_space_in_its_tl_matches_the_typed_buffer() {
+    let _lock = engine_install_lock();
+    install(&guaiasi_rows(), &["gua2", "ia7", "i1", "si7", "a1"]);
 
     let resp = fetch_at_pos_response(
         &common::config("tl"),

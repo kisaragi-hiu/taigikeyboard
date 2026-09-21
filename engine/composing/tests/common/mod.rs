@@ -447,6 +447,14 @@ pub fn config_tl() -> AppConfig {
     config("tl")
 }
 
+/// The document text a response commits (`CommitTextReplacingPreedit`).
+pub fn commit_text(resp: &ComposingResponse) -> Option<String> {
+    resp.effect.iter().find_map(|e| match e.kind.as_ref() {
+        Some(Kind::CommitTextReplacingPreedit(c)) => Some(c.text.clone()),
+        _ => None,
+    })
+}
+
 /// The ordered effect kinds of a response, by proto message name.
 pub fn effect_kinds(effects: &[Effect]) -> Vec<&'static str> {
     effects

@@ -215,15 +215,8 @@ fn join_typed_separators(
     for (i, part) in parts.iter().enumerate() {
         if i > 0 {
             let start = shadow_to_raw_end[segs[i - 1].1];
-            let run = raw.as_bytes()[start..]
-                .iter()
-                .take_while(|&&b| b == b'-')
-                .count();
-            out.push_str(if run > 0 {
-                &raw[start..start + run]
-            } else {
-                " "
-            });
+            let run = crate::api::typed_separator_run(&raw[start..]);
+            out.push_str(if run.is_empty() { " " } else { run });
         }
         out.push_str(part);
     }
@@ -360,11 +353,13 @@ fn retain_absent_from(existing: &[RawCandidate], batch: &mut Vec<RawCandidate>) 
 /// * `roman_reading_eq("hōo guá", "hōo-guā")` → `false` (戶外: guā tone 7
 ///   ≠ guá tone 2 — a different word per Core Principle #7).
 ///
-/// Used only by the slot-0 promote at [`assemble_candidates`] Step 4 to
+/// Used by the slot-0 promote at [`assemble_candidates`] Step 4 to
 /// recognize when the walker's space-joined synth is a malformed
 /// rendering of an existing full-span dict word, so the dict word's
-/// canonical separator form can take slot 0 instead.
-fn roman_reading_eq(a: &str, b: &str) -> bool {
+/// canonical separator form can take slot 0 instead, and by
+/// `dispatch::build_learned_entries` to fold the same learned pair stored
+/// under two typed separators.
+pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
     fn is_kept(c: &char) -> bool {
         *c != ' ' && *c != '-'
     }
