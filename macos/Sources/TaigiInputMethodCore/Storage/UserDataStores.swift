@@ -18,11 +18,14 @@ final class UserDataStores: Sendable {
     let frequency: UserFrequencyStore
     let association: UserAssociationStore
     let customDictionary: CustomDictionaryStore
+    /// §50 learned phrases — learning data, in its own file like the two above.
+    let learnedPhrases: LearnedPhraseStore
 
     init(directory: @escaping @Sendable () throws -> URL) {
         frequency = UserFrequencyStore(directory: directory)
         association = UserAssociationStore(directory: directory)
         customDictionary = CustomDictionaryStore(directory: directory)
+        learnedPhrases = LearnedPhraseStore(directory: directory)
     }
 
     /// Opens all of them, off the calling thread. Safe to call more than once —
@@ -31,5 +34,6 @@ final class UserDataStores: Sendable {
         frequency.open()
         association.open()
         customDictionary.open()
+        learnedPhrases.open()
     }
 }

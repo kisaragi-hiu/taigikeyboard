@@ -21,13 +21,11 @@ final class CustomDictionaryStoreTests: XCTestCase {
             stubSearchKeys(for: $0)
         },
         maxEntries: Int = CustomDictionaryStore.maxEntries,
-        learnedLimit: Int = CustomDictionaryStore.maxLearnedEntries,
     ) throws -> CustomDictionaryStore {
         try makeStore(
             at: TestFixtures.scratchDirectory(),
             deriveSearchKeys: deriveSearchKeys,
             maxEntries: maxEntries,
-            learnedLimit: learnedLimit,
         )
     }
 
@@ -39,13 +37,11 @@ final class CustomDictionaryStoreTests: XCTestCase {
             stubSearchKeys(for: $0)
         },
         maxEntries: Int = CustomDictionaryStore.maxEntries,
-        learnedLimit: Int = CustomDictionaryStore.maxLearnedEntries,
     ) throws -> CustomDictionaryStore {
         let store = CustomDictionaryStore(
             directory: { directory },
             deriveSearchKeys: deriveSearchKeys,
             entryLimit: maxEntries,
-            learnedLimit: learnedLimit,
         )
         store.open()
         XCTAssertTrue(
@@ -414,6 +410,40 @@ final class CustomDictionaryStoreTests: XCTestCase {
         connection.userVersion = version
     }
 
+    /// §50 (USER 2026-09-21): a database that reached the unreleased shape
+    /// with learned phrases parked in this table opens with only its manual
+    /// rows — the learned row and its keys gone, the partial index dropped.
+    func testADatabaseThatReachedTheParkedLearnedShape_keepsOnlyItsManualRows() async throws {
+        let directory = try TestFixtures.scratchDirectory()
+        let connection = SQLiteConnection()
+        try connection.open(at: directory.appendingPathComponent("custom_dictionary.db"))
+        try connection.execute(
+            """
+            CREATE TABLE custom_dictionary (id TEXT PRIMARY KEY, roman TEXT NOT NULL, hanzi TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, origin INTEGER NOT NULL DEFAULT 0, learn_count INTEGER NOT NULL DEFAULT 0);
+            CREATE TABLE custom_search_key (entry_id TEXT NOT NULL, family TEXT NOT NULL, form TEXT NOT NULL, key TEXT NOT NULL);
+            CREATE UNIQUE INDEX idx_custom_learned_pair ON custom_dictionary(hanzi, roman) WHERE origin = 1;
+            INSERT INTO custom_dictionary (id, roman, hanzi) VALUES ('m1', 'tâi-gí', '台語');
+            INSERT INTO custom_search_key VALUES ('m1', 'tl', 'notone', 'taigi');
+            INSERT INTO custom_dictionary (id, roman, hanzi, origin, learn_count) VALUES ('l1', 'kì--khí-lâi', '記起來', 1, 3);
+            INSERT INTO custom_search_key VALUES ('l1', 'tl', 'notone', 'kikhilai');
+            PRAGMA user_version = 4;
+            """,
+        )
+
+        let store = try makeStore(at: directory)
+
+        let all = try await store.allRows()
+        XCTAssertEqual(all.map(\.hanzi), ["台語"])
+        XCTAssertTrue(store.rows(matching: queryKey("kikhilai")).isEmpty, "the learned row's keys went with it")
+        XCTAssertEqual(store.rows(matching: queryKey("taigi")).map(\.hanzi), ["台語"])
+        let indexes = try connection.query(
+            "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_custom_learned_pair';",
+        ) { $0.text(0) }
+        XCTAssertTrue(indexes.isEmpty, "the partial index is dropped")
+        let columns = try connection.query("PRAGMA table_info(custom_dictionary);") { $0.text(1) }
+        XCTAssertFalse(columns.contains("origin") || columns.contains("learn_count"), "the columns are dropped; got \(columns)")
+    }
+
     // MARK: - Not open
 
     /// The keystroke path answers empty rather than waiting, exactly as the
@@ -452,76 +482,5 @@ private final class DerivationRecorder: @unchecked Sendable {
 
     func record(_ roman: String) {
         lock.withLock { stored.append(roman) }
-    }
-}
-
-// MARK: - Learned phrases (§50)
-
-extension CustomDictionaryStoreTests {
-    private func learnedRows(_ store: CustomDictionaryStore) async throws -> [CustomDictionaryRow] {
-        try await store.allRows().filter(\.isLearned)
-    }
-
-    func testLearningAPhraseTwice_isOneRowWithCountTwo_outsideTheManualQuota() async throws {
-        let store = try makeStore(maxEntries: 1)
-        store.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
-        store.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
-
-        let rows = try await learnedRows(store)
-        XCTAssertEqual(rows.map(\.hanzi), ["記起來"])
-        XCTAssertEqual(rows.first?.learnCount, 2)
-        let listed = try await store.count()
-        XCTAssertEqual(listed, 1, "the list pages learned rows too")
-        // …but the manual quota (1) is still free: a manual write goes through.
-        try await store.upsert(CustomDictionaryRow(roman: "tâi-gí", hanzi: "台語"))
-        // Exact recall, learned-only; the manual prefix search never sees it.
-        XCTAssertEqual(store.learnedRows(matching: queryKey("kì--khí-lâi")).map(\.hanzi), ["記起來"])
-        XCTAssertTrue(store.rows(matching: queryKey("kì--khí-lâi")).isEmpty)
-    }
-
-    func testAManualRow_winsOverALearnedOne_bothWays() async throws {
-        let store = try makeStore()
-        // Learn against an existing manual row: no-op.
-        try await store.upsert(row("kì--khí-lâi", "記起來"))
-        store.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
-        var all = try await store.allRows()
-        XCTAssertEqual(all.map(\.origin), [.manual])
-
-        // A manual write over a learned row takes it over: one manual row left.
-        let another = try makeStore()
-        another.learnPhrase(hanzi: "台語", canonicalTl: "tâi-gí")
-        try await another.upsert(row("tâi-gí", "台語"))
-        all = try await another.allRows()
-        XCTAssertEqual(all.map(\.origin), [.manual], "got \(all)")
-        XCTAssertTrue(another.learnedRows(matching: queryKey("tâi-gí")).isEmpty, "the learned keys went with the row")
-    }
-
-    func testEditingALearnedRow_adoptsItAndCountsAgainstTheManualQuota() async throws {
-        let store = try makeStore(maxEntries: 1)
-        try await store.upsert(row("tâi-gí", "台語"))
-        store.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
-        let learnedFirst = try await learnedRows(store).first
-        let learned = try XCTUnwrap(learnedFirst)
-        do {
-            try await store.upsert(learned)
-            XCTFail("adopting a learned row is a manual insert and must hit the manual cap")
-        } catch CustomDictionaryError.capacityReached {
-            // expected
-        }
-    }
-
-    func testTheLearnedCap_evictsFewestComposedFirst_andSparesTheRowJustWritten() async throws {
-        let store = try makeStore(learnedLimit: 3)
-        for i in 0 ..< 3 {
-            store.learnPhrase(hanzi: "詞\(i)", canonicalTl: "su-\(i)")
-        }
-        store.learnPhrase(hanzi: "詞0", canonicalTl: "su-0")
-        store.learnPhrase(hanzi: "新詞", canonicalTl: "sin-su")
-        store.touchLearnedPhrase(hanzi: "新詞", canonicalTl: "sin-su")
-
-        let rows = try await learnedRows(store)
-        XCTAssertEqual(rows.count, 3, "got \(rows.map(\.hanzi))")
-        XCTAssertTrue(rows.contains { $0.hanzi == "詞0" }, "the twice-composed row survives")
-        XCTAssertEqual(rows.first { $0.hanzi == "新詞" }?.learnCount, 2, "the newest learn survives and was touched")
     }
 }

@@ -12,8 +12,17 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use taigi_windows_core::composing::{
     AssociationSink, ComposingManager, ComposingSessionCoordinator, CustomDictionarySource,
-    FrequencySource, NextWordLearner, NoStores, SystemClock,
+    FrequencySource, LearnedPhraseSource, NextWordLearner, NoStores, SystemClock,
 };
+
+/// The four seams the composing manager reads and writes through — the real
+/// stores, or `NoStores` in an AppContainer host that cannot reach `%APPDATA%`.
+type StoreSeams = (
+    Box<dyn FrequencySource>,
+    Box<dyn CustomDictionarySource>,
+    Box<dyn LearnedPhraseSource>,
+    Box<dyn AssociationSink>,
+);
 use taigi_windows_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_windows_core::engine::{lexicon_install, LexiconInstallStats};
 use taigi_windows_core::keys::ShortcutConflicts;
@@ -139,23 +148,26 @@ impl Runtime {
         self.coordinator.get_or_init(|| {
             let settings: Arc<dyn taigi_windows_core::settings::SettingsProvider> =
                 Arc::clone(&self.settings) as _;
-            let (frequency, custom, association): (
-                Box<dyn FrequencySource>,
-                Box<dyn CustomDictionarySource>,
-                Box<dyn AssociationSink>,
-            ) = match &self.stores {
+            let (frequency, custom, learned, association): StoreSeams = match &self.stores {
                 Some(stores) => (
                     Box::new(Arc::clone(&stores.frequency)),
                     Box::new(Arc::clone(&stores.custom_dictionary)),
+                    Box::new(Arc::clone(&stores.learned_phrases)),
                     Box::new(Arc::clone(&stores.association)),
                 ),
-                None => (Box::new(NoStores), Box::new(NoStores), Box::new(NoStores)),
+                None => (
+                    Box::new(NoStores),
+                    Box::new(NoStores),
+                    Box::new(NoStores),
+                    Box::new(NoStores),
+                ),
             };
             let learner = NextWordLearner::new(association, Box::new(SystemClock));
             let manager = ComposingManager::new(
                 settings,
                 frequency,
                 custom,
+                learned,
                 learner,
                 Box::new(SystemClock),
                 1,

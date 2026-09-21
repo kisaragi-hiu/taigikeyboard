@@ -14,7 +14,7 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use taigi_windows_core::composing::{
     AssociationSink, CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript, Clock,
     ComposingEffectExecutor, ComposingManager, ComposingSessionCoordinator, ContextToken,
-    CustomDictionarySource, FrequencySource, NextWordLearner,
+    CustomDictionarySource, FrequencySource, LearnedPhraseSource, NextWordLearner,
 };
 use taigi_windows_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_windows_core::engine::{
@@ -118,7 +118,10 @@ impl CustomDictionarySource for Handle {
             .cloned()
             .collect()
     }
-    fn learned_rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<LearnedPhrase> {
+}
+
+impl LearnedPhraseSource for Handle {
+    fn rows_matching(&self, _family: &str, _form: &str, _key: &str) -> Vec<LearnedPhrase> {
         Vec::new()
     }
     fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
@@ -128,7 +131,7 @@ impl CustomDictionarySource for Handle {
             .unwrap()
             .push((hanzi.to_owned(), canonical_tl.to_owned()));
     }
-    fn touch_learned_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
+    fn touch_phrase(&self, _hanzi: &str, _canonical_tl: &str) {}
 }
 
 impl AssociationSink for Handle {
@@ -192,6 +195,7 @@ fn rig() -> Rig {
     let settings = MutableSettings::default();
     let manager = ComposingManager::new(
         Arc::new(settings.clone()),
+        Box::new(handle.clone()),
         Box::new(handle.clone()),
         Box::new(handle.clone()),
         NextWordLearner::new(Box::new(handle.clone()), Box::new(handle.clone())),

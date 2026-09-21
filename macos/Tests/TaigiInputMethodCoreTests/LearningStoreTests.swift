@@ -178,7 +178,7 @@ final class LearningStoreTests: XCTestCase {
         untilCountIs expected: Int,
         timeout: TimeInterval = 5,
     ) throws -> [FrequencyRow] {
-        try waitFor(untilCountIs: expected, timeout: timeout) {
+        try TestFixtures.waitFor(untilCountIs: expected, timeout: timeout) {
             stores.frequency.rows(forWords: words)
         }
     }
@@ -187,24 +187,8 @@ final class LearningStoreTests: XCTestCase {
         untilCountIs expected: Int,
         timeout: TimeInterval = 5,
     ) throws -> [AssociationRow] {
-        try waitFor(untilCountIs: expected, timeout: timeout) {
+        try TestFixtures.waitFor(untilCountIs: expected, timeout: timeout) {
             stores.association.allRows()
         }
-    }
-
-    private func waitFor<Row>(
-        untilCountIs expected: Int,
-        timeout: TimeInterval,
-        _ read: () -> [Row]?,
-    ) throws -> [Row] {
-        let arrived = TestFixtures.spinRunLoop(
-            until: { read()?.count == expected },
-            timeout: timeout,
-        )
-        guard arrived else {
-            XCTFail("the store never reported \(expected) rows within \(timeout)s")
-            return []
-        }
-        return try XCTUnwrap(read())
     }
 }

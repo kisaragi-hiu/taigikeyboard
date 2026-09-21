@@ -1,6 +1,7 @@
-//! What the input method keeps on disk for the user: the three learning
-//! databases (`user_frequency.db`, `user_association.db`,
-//! `custom_dictionary.db`) and `settings.json`, under `%APPDATA%\TaigiKeyboard`.
+//! What the input method keeps on disk for the user: the learning
+//! databases (`user_frequency.db`, `user_association.db`, `learned_phrases.db`),
+//! the user's own `custom_dictionary.db` and `settings.json`, under
+//! `%APPDATA%\TaigiKeyboard`.
 //!
 //! Port of `macos/Sources/TaigiInputMethodCore/Storage/` over rusqlite. The
 //! SQL is byte-identical to the macOS stores (which mirror iOS / Android), so
@@ -20,6 +21,7 @@ mod database;
 mod directory;
 mod font_library;
 mod frequency;
+mod learned_phrases;
 mod settings_file;
 mod timestamp;
 
@@ -28,7 +30,7 @@ pub use capacity::LearningCapacity;
 pub use csv::{CustomDictionaryCSV, CustomDictionaryCSVError, UserDataCSV};
 pub use custom_dictionary::{
     CustomDictionaryError, CustomDictionaryIdentity, CustomDictionaryImportResult,
-    CustomDictionaryOrigin, CustomDictionaryRow, CustomDictionaryStore, SearchKeyDeriver,
+    CustomDictionaryRow, CustomDictionaryStore, SearchKeyDeriver,
 };
 pub use database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
 pub use directory::{created, user_data_directory, DirectoryError, APPLICATION_FOLDER_NAME};
@@ -37,6 +39,7 @@ pub use font_library::{
     ALLOWED_EXTENSIONS, FONTS_FOLDER_NAME, MAX_FILE_SIZE,
 };
 pub use frequency::UserFrequencyStore;
+pub use learned_phrases::{LearnedPhraseRow, LearnedPhraseStore};
 pub use settings_file::{LiveSettings, SettingsFileError, SettingsFileStore};
 pub use timestamp::utc_timestamp_now;
 
@@ -51,12 +54,15 @@ pub struct UserDataStores {
     pub frequency: Arc<UserFrequencyStore>,
     pub association: Arc<UserAssociationStore>,
     pub custom_dictionary: Arc<CustomDictionaryStore>,
+    pub learned_phrases: Arc<LearnedPhraseStore>,
 }
 
 impl UserDataStores {
     /// Stores over `directory`, using the engine's own search-key derivation
     /// for the custom dictionary. Nothing is opened yet.
     pub fn new(directory: PathBuf) -> Self {
+        let derive_search_keys: SearchKeyDeriver =
+            Arc::new(taigi_windows_core::engine::derive_custom_search_keys);
         Self {
             frequency: Arc::new(UserFrequencyStore::new(
                 directory.clone(),
@@ -67,10 +73,14 @@ impl UserDataStores {
                 UserAssociationStore::shipped_capacity(),
             )),
             custom_dictionary: Arc::new(CustomDictionaryStore::new(
-                directory,
-                Arc::new(taigi_windows_core::engine::derive_custom_search_keys),
+                directory.clone(),
+                Arc::clone(&derive_search_keys),
                 CustomDictionaryStore::MAX_ENTRIES,
-                CustomDictionaryStore::MAX_LEARNED_ENTRIES,
+            )),
+            learned_phrases: Arc::new(LearnedPhraseStore::new(
+                directory,
+                derive_search_keys,
+                LearnedPhraseStore::MAX_ENTRIES,
             )),
         }
     }
@@ -81,5 +91,6 @@ impl UserDataStores {
         self.frequency.open();
         self.association.open();
         self.custom_dictionary.open();
+        self.learned_phrases.open();
     }
 }

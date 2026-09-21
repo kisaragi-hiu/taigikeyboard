@@ -282,16 +282,16 @@ struct CustomDictionaryPage: View {
         .userDataPageChrome(activity: model.activity, message: $model.message)
     }
 
-    /// Deletes both learning tables.
+    /// Deletes the three learning tables.
     ///
-    /// Two calls rather than one transaction: they are separate database files,
-    /// so there is no transaction that could span them. The second is attempted
-    /// even when the first fails — a store that cannot be reached is no reason
-    /// to leave the other one full — and the alert reports the failure rather
-    /// than claiming the records are gone.
+    /// Three calls rather than one transaction: they are separate database
+    /// files, so there is no transaction that could span them. Each is
+    /// attempted even when an earlier one fails — a store that cannot be
+    /// reached is no reason to leave the others full — and the alert reports
+    /// the failure rather than claiming the records are gone.
     ///
     /// The diagnostic names its table, because a bare SQLite string cannot say
-    /// which of the two could not be emptied.
+    /// which of the three could not be emptied.
     ///
     /// Reported through the page's own message channel rather than an alert of
     /// its own: two `.alert` modifiers on one chain do not stack, and this was
@@ -310,6 +310,11 @@ struct CustomDictionaryPage: View {
             _ = try await stores.association.deleteAll()
         } catch {
             failures.append("user_association: \(error)")
+        }
+        do {
+            _ = try await stores.learnedPhrases.deleteAll()
+        } catch {
+            failures.append("learned_phrases: \(error)")
         }
         model.message = failures.isEmpty
             ? .done(.desktopClearLearningRecordsDone)
@@ -333,12 +338,7 @@ struct CustomDictionaryPage: View {
                     .foregroundStyle(.secondary)
             }
             TableColumn(language.string(.dictionaryHanziLabel)) { row in
-                HStack {
-                    Text(row.hanzi)
-                    if row.isLearned {
-                        TagBadge(text: language.string(.dictionaryLearnedBadge))
-                    }
-                }
+                Text(row.hanzi)
             }
         }
         .tableStyle(.inset)

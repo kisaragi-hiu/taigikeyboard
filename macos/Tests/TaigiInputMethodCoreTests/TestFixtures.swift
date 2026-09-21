@@ -265,7 +265,7 @@ enum TestFixtures {
         let opened = spinRunLoop(
             until: {
                 stores.frequency.isReady && stores.association.isReady
-                    && stores.customDictionary.isReady
+                    && stores.customDictionary.isReady && stores.learnedPhrases.isReady
             },
             timeout: timeout,
         )
@@ -310,6 +310,23 @@ enum TestFixtures {
         return true
     }
 
+    /// The rows `read` answers once it answers `expected` of them — a store
+    /// write is queued, and this is how a case sees it land.
+    static func waitFor<Row>(
+        untilCountIs expected: Int,
+        timeout: TimeInterval = 5,
+        file: StaticString = #filePath,
+        line: UInt = #line,
+        _ read: () -> [Row]?,
+    ) throws -> [Row] {
+        let arrived = spinRunLoop(until: { read()?.count == expected }, timeout: timeout)
+        guard arrived else {
+            XCTFail("the store never reported \(expected) rows within \(timeout)s", file: file, line: line)
+            return []
+        }
+        return try XCTUnwrap(read(), file: file, line: line)
+    }
+
     /// A manager wired to scratch stores unless a case supplies its own.
     ///
     /// The production initializer takes no defaults on purpose — the shipped
@@ -327,6 +344,7 @@ enum TestFixtures {
             settingsProvider: settingsProvider,
             frequencyStore: stores.frequency,
             customDictionaryStore: stores.customDictionary,
+            learnedPhraseStore: stores.learnedPhrases,
             nextWordLearner: NextWordLearner(store: stores.association),
             startingGeneration: startingGeneration,
         )

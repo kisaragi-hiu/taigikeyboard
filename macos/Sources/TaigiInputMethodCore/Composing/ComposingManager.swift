@@ -37,6 +37,7 @@ final class ComposingManager {
     private let settingsProvider: EngineSettingsProvider
     private let frequencyStore: UserFrequencyStore
     private let customDictionaryStore: CustomDictionaryStore
+    private let learnedPhraseStore: LearnedPhraseStore
     private let nextWordLearner: NextWordLearner
     private static let logger = DebugLogger(category: "ComposingManager")
 
@@ -60,12 +61,14 @@ final class ComposingManager {
         settingsProvider: EngineSettingsProvider,
         frequencyStore: UserFrequencyStore,
         customDictionaryStore: CustomDictionaryStore,
+        learnedPhraseStore: LearnedPhraseStore,
         nextWordLearner: NextWordLearner,
         startingGeneration: UInt64 = 1,
     ) {
         self.settingsProvider = settingsProvider
         self.frequencyStore = frequencyStore
         self.customDictionaryStore = customDictionaryStore
+        self.learnedPhraseStore = learnedPhraseStore
         self.nextWordLearner = nextWordLearner
         currentGeneration = startingGeneration
     }
@@ -357,9 +360,9 @@ final class ComposingManager {
     /// §50 — the learned phrases whose key EQUALS what is being typed. Not
     /// gated by the custom-dictionary toggle (manual rows') — learning is
     /// always on (USER 2026-09-20: no toggle).
-    private func learnedPhraseMatches(queryKey: CustomSearchKey?) -> [CustomDictionaryRow] {
+    private func learnedPhraseMatches(queryKey: CustomSearchKey?) -> [LearnedPhraseRow] {
         guard let queryKey else { return [] }
-        return customDictionaryStore.learnedRows(matching: queryKey)
+        return learnedPhraseStore.rows(matching: queryKey)
     }
 
     /// What committing `candidate` would write into the document, under the
@@ -518,7 +521,7 @@ final class ComposingManager {
             // §50 touch-on-use: a learned phrase picked as one candidate stays
             // ahead of the eviction line (no-op for any other row).
             if let hanji = candidate.hanji, !hanji.isEmpty {
-                customDictionaryStore.touchLearnedPhrase(hanzi: hanji, canonicalTl: candidate.canonicalTl)
+                learnedPhraseStore.touchPhrase(hanzi: hanji, canonicalTl: candidate.canonicalTl)
             }
         case .ignored, .unavailable:
             break
@@ -591,9 +594,9 @@ final class ComposingManager {
                 // round-trip to bump a generation nothing reads.
                 break
             case let .phraseLearned(hanji, canonicalTl):
-                // §50 — the engine decided the composition was a phrase; the
-                // store is the custom dictionary's. Always on.
-                customDictionaryStore.learnPhrase(hanzi: hanji, canonicalTl: canonicalTl)
+                // §50 — the engine decided the composition was a phrase;
+                // into `learned_phrases.db`. Always on.
+                learnedPhraseStore.learnPhrase(hanzi: hanji, canonicalTl: canonicalTl)
             // Listed rather than defaulted: an effect added to the engine later
             // has to be classified here, and a `default` would quietly file it
             // under "write it into the user's document".

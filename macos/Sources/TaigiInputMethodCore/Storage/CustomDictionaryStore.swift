@@ -53,22 +53,11 @@ final class CustomDictionaryStore: @unchecked Sendable {
     /// rebuilds every entry's keys once.
     private static let schemaVersion: Int32 = 4
 
-    /// The MANUAL quota (`origin = 0`).
     /// CROSS-PLATFORM INVARIANT — mirrors
-    /// ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryCapacityPolicy.swift
+    /// ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryCapacityPolicy.swift:18
     /// and the Android `CustomDictionaryCapacityPolicy.MAX_ENTRIES`.
     /// Drift changes how many words the same `.taigi` backup restores.
     static let maxEntries = 30000
-
-    /// The LEARNED quota (`origin = 1`, §50): past it the fewest-composed, then
-    /// least recently touched, row goes so a learn never fails.
-    /// CROSS-PLATFORM INVARIANT — mirrors iOS `maxLearnedEntries` and Android
-    /// `MAX_LEARNED_ENTRIES`.
-    static let maxLearnedEntries = 2000
-
-    /// Largest `learn_count` a row can carry: the eviction order needs no
-    /// finer count than this, and the clamp keeps the column bounded.
-    static let maxLearnCount = 1_000_000
 
     /// One transaction per this many accepted rows, so a large import never
     /// holds the write lock for its whole run.
@@ -87,11 +76,10 @@ final class CustomDictionaryStore: @unchecked Sendable {
     private let database: UserDataDatabase
     private let deriveSearchKeys: @Sendable (String) -> [CustomSearchKey]?
 
-    /// The caps this instance enforces. Injectable ONLY so a test can reach a
-    /// limit without writing thousands of rows; the shipped values are the
-    /// cross-platform constants above.
+    /// The cap this instance enforces. Injectable ONLY so a test can reach the
+    /// limit without writing 30000 rows; the shipped value is the
+    /// cross-platform constant above.
     private let entryLimit: Int
-    private let learnedLimit: Int
 
     /// - Parameter deriveSearchKeys: how a stored roman becomes the keys it is
     ///   findable under. Injected so a test can drive the store without the
@@ -103,7 +91,6 @@ final class CustomDictionaryStore: @unchecked Sendable {
             RustEngineBridge.deriveCustomSearchKeys(roman: $0)
         },
         entryLimit: Int = CustomDictionaryStore.maxEntries,
-        learnedLimit: Int = CustomDictionaryStore.maxLearnedEntries,
     ) {
         database = UserDataDatabase(
             fileName: "custom_dictionary.db",
@@ -113,7 +100,6 @@ final class CustomDictionaryStore: @unchecked Sendable {
         )
         self.deriveSearchKeys = deriveSearchKeys
         self.entryLimit = entryLimit
-        self.learnedLimit = learnedLimit
     }
 
     var isReady: Bool {
@@ -126,14 +112,12 @@ final class CustomDictionaryStore: @unchecked Sendable {
 
     // MARK: - Keystroke path
 
-    /// The MANUAL entries matching `queryKey`, for the composition being typed.
+    /// The entries matching `queryKey`, for the composition being typed.
     ///
     /// Synchronous and best-effort: a store that is not open yet answers `[]`
     /// rather than making the keystroke wait, exactly as the frequency store
     /// does. `limit` matches the iOS call site rather than its repository
-    /// default — 20 is what the engine is handed. Learned rows (§50) are
-    /// excluded — they ride `FetchAtPos.learned_entries` through
-    /// `learnedRows(matching:)`, never the custom-dictionary override.
+    /// default — 20 is what the engine is handed.
     func rows(matching queryKey: CustomSearchKey, limit: Int = 20) -> [CustomDictionaryRow] {
         database.read { connection in
             // `form IN (?, 'abbrev')` lets an abbreviation row satisfy a query
@@ -141,14 +125,13 @@ final class CustomDictionaryStore: @unchecked Sendable {
             // side rows that all match. `key` is bound verbatim — the engine
             // has already normalised and lowercased it.
             // CROSS-PLATFORM INVARIANT — mirrors
-            // ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryRepository.swift `prefixSearchSQL`.
+            // ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryRepository.swift:332-367.
             try connection.query(
                 """
-                SELECT DISTINCT \(Self.joinedEntryColumns)
+                SELECT DISTINCT entry.id, entry.roman, entry.hanzi, entry.created_at, entry.updated_at
                 FROM \(Self.tableName) AS entry
                 JOIN \(Self.searchKeyTableName) AS search_key ON search_key.entry_id = entry.id
-                WHERE entry.origin = 0
-                  AND search_key.family = ?
+                WHERE search_key.family = ?
                   AND search_key.form IN (?, 'abbrev')
                   AND search_key.key LIKE ? || '%'
                 ORDER BY entry.roman
@@ -165,96 +148,6 @@ final class CustomDictionaryStore: @unchecked Sendable {
         } ?? []
     }
 
-    /// The LEARNED entries whose derived key EQUALS `queryKey` — the whole
-    /// typed buffer, not a prefix — for `FetchAtPos.learned_entries` (§50).
-    /// Exact so a learned whole-buffer match can never fall out of the prefix
-    /// search's `LIMIT`; the mirror of `rows(matching:)` being manual-only.
-    /// CROSS-PLATFORM INVARIANT — mirrors iOS `learnedExactSearchSQL`.
-    func learnedRows(matching queryKey: CustomSearchKey, limit: Int = 5) -> [CustomDictionaryRow] {
-        database.read { connection in
-            try connection.query(
-                """
-                SELECT \(Self.joinedEntryColumns)
-                FROM \(Self.tableName) AS entry
-                JOIN \(Self.searchKeyTableName) AS search_key ON search_key.entry_id = entry.id
-                WHERE entry.origin = 1
-                  AND search_key.family = ?
-                  AND search_key.form = ?
-                  AND search_key.key = ?
-                ORDER BY entry.learn_count DESC, entry.updated_at DESC
-                LIMIT ?;
-                """,
-                [
-                    .text(queryKey.family),
-                    .text(queryKey.form),
-                    .text(queryKey.key),
-                    .integer(limit),
-                ],
-                decoding: Self.decodeRow,
-            )
-        } ?? []
-    }
-
-    // MARK: - Learned phrases (§50)
-
-    /// Records one `Effect.PhraseLearned`: inserts the `(hanzi, canonical TL)`
-    /// pair as a learned row or bumps its `learn_count`, in one statement on
-    /// the learned-pair unique index. A manual row for the same pair wins —
-    /// the learn is a no-op, never a downgrade. Best-effort and off the
-    /// keystroke path, like the frequency store's `record`. The keys are
-    /// derived before the write lock is taken (an FFI round-trip has no
-    /// business holding it), and the row just written is never the one
-    /// evicted.
-    func learnPhrase(hanzi: String, canonicalTl: String) {
-        guard !hanzi.isEmpty, !canonicalTl.isEmpty,
-              let searchKeys = deriveSearchKeys(canonicalTl), !searchKeys.isEmpty
-        else { return }
-        let limit = learnedLimit
-        database.write { connection in
-            try connection.withImmediateTransaction {
-                guard try !Self.manualRowExists(connection, roman: canonicalTl, hanzi: hanzi) else { return }
-                let now = Self.timestampFormatter.string(from: Date())
-                // `RETURNING id` answers with the row that took the write — the
-                // fresh id on an insert, the existing id on a bump — so the
-                // side keys are written for the right row either way.
-                let rowID = try connection.query(
-                    """
-                    INSERT INTO \(Self.tableName) (id, roman, hanzi, created_at, updated_at, origin, learn_count)
-                    VALUES (?, ?, ?, ?, ?, 1, 1)
-                    ON CONFLICT(hanzi, roman) WHERE origin = 1 DO UPDATE SET
-                        learn_count = MIN(learn_count + 1, \(Self.maxLearnCount)),
-                        updated_at = excluded.updated_at
-                    RETURNING id;
-                    """,
-                    [.text(UUID().uuidString), .text(canonicalTl), .text(hanzi), .text(now), .text(now)],
-                ) { $0.text(0) }.first
-                // The upsert always writes a row; no id back means the
-                // statement did not run, which the transaction has already
-                // failed on.
-                guard let rowID else { return }
-                try Self.replaceSearchKeys(connection, entryID: rowID, searchKeys: searchKeys)
-                try Self.evictLearnedPastCap(connection, cap: limit, keeping: rowID)
-            }
-        }
-    }
-
-    /// Bumps a learned row the user just committed as one candidate, so a
-    /// phrase that is used stays ahead of the eviction line. No-op for a
-    /// manual row or an unknown pair.
-    func touchLearnedPhrase(hanzi: String, canonicalTl: String) {
-        guard !hanzi.isEmpty, !canonicalTl.isEmpty else { return }
-        database.write { connection in
-            try connection.run(
-                """
-                UPDATE \(Self.tableName)
-                SET learn_count = MIN(learn_count + 1, \(Self.maxLearnCount)), updated_at = ?
-                WHERE origin = 1 AND hanzi = ? AND roman = ?;
-                """,
-                [.text(Self.timestampFormatter.string(from: Date())), .text(hanzi), .text(canonicalTl)],
-            )
-        }
-    }
-
     // MARK: - User-driven writes
 
     /// Every entry, newest edit first — the order the settings list shows them
@@ -263,7 +156,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
         try await database.perform { connection in
             try connection.query(
                 """
-                SELECT \(Self.entryColumns)
+                SELECT id, roman, hanzi, created_at, updated_at
                 FROM \(Self.tableName)
                 ORDER BY updated_at DESC;
                 """,
@@ -283,7 +176,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
             guard !trimmed.isEmpty else {
                 return try connection.query(
                     """
-                    SELECT \(Self.entryColumns)
+                    SELECT id, roman, hanzi, created_at, updated_at
                     FROM \(Self.tableName)
                     ORDER BY updated_at DESC
                     LIMIT ? OFFSET ?;
@@ -298,7 +191,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
             let pattern = "%\(SQLiteConnection.escapedForLike(trimmed))%"
             return try connection.query(
                 """
-                SELECT \(Self.entryColumns)
+                SELECT id, roman, hanzi, created_at, updated_at
                 FROM \(Self.tableName)
                 WHERE roman LIKE ? ESCAPE '\\' OR hanzi LIKE ? ESCAPE '\\'
                 ORDER BY updated_at DESC
@@ -349,13 +242,6 @@ final class CustomDictionaryStore: @unchecked Sendable {
     /// round-trip has no business holding a write lock, and a derivation that
     /// fails must leave the database untouched rather than roll a transaction
     /// back.
-    ///
-    /// §50: a manual row for a `(roman, hanzi)` pair a learned row already holds
-    /// TAKES OVER that row (the learned row and its keys go, after the manual
-    /// write landed), so the pair is listed once and "manual wins, never the
-    /// reverse" holds for the list editor and the CSV importer alike; a learned
-    /// `row` written through here becomes manual (editing a learned row adopts
-    /// it — and counts against the manual quota like any new manual row).
     func upsert(_ row: CustomDictionaryRow) async throws {
         let searchKeys = try derivedKeys(for: row.roman)
         let limit = entryLimit
@@ -363,8 +249,8 @@ final class CustomDictionaryStore: @unchecked Sendable {
             try connection.withImmediateTransaction {
                 // Inside the transaction, so the count cannot go stale between
                 // the check and the insert.
-                if try !Self.manualEntryExists(connection, id: row.id),
-                   try Self.manualEntryCount(connection) >= limit
+                if try !Self.entryExists(connection, id: row.id),
+                   try Self.entryCount(connection) >= limit
                 {
                     throw CustomDictionaryError.capacityReached(limit: limit)
                 }
@@ -378,7 +264,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
     func delete(id: String) async throws -> Bool {
         try await database.perform { connection in
             try connection.withImmediateTransaction {
-                let existed = try Self.rowExists(connection, id: id)
+                let existed = try Self.entryExists(connection, id: id)
                 try connection.run(
                     "DELETE FROM \(Self.tableName) WHERE id = ?;",
                     [.text(id)],
@@ -529,13 +415,11 @@ final class CustomDictionaryStore: @unchecked Sendable {
             }
             imported += try await database.perform { connection in
                 try connection.withImmediateTransaction {
-                    var storedCount = try Self.manualEntryCount(connection)
+                    var storedCount = try Self.entryCount(connection)
                     var written = 0
                     for entry in chunk {
                         guard storedCount < limit else { break }
-                        guard try !Self.manualRowExists(
-                            connection, roman: entry.row.identity.roman, hanzi: entry.row.identity.hanzi,
-                        ) else {
+                        guard try !Self.rowExists(connection, identity: entry.row.identity) else {
                             continue
                         }
                         try Self.writeRow(
@@ -555,6 +439,33 @@ final class CustomDictionaryStore: @unchecked Sendable {
 
     // MARK: - Private
 
+    /// The §50 leftovers of the unreleased 2026-09-20 shape (learned phrases
+    /// parked in this table under `origin` / `learn_count` + a partial unique
+    /// index; they live in `learned_phrases.db` since 2026-09-21): the index
+    /// goes, the rows the column marked as learned go with their side keys,
+    /// then the two columns themselves (macOS 14's SQLite has `DROP COLUMN`;
+    /// the phones' does not, so there the columns stay inert) — after which
+    /// the gate is false and this is a read-only pragma on every later open.
+    /// A database that never had the shape (every released one) runs nothing
+    /// but that pragma. The branch is one immediate transaction, as the IME
+    /// and the settings app open the same file; every statement in it is
+    /// idempotent, so two processes both taking it is harmless.
+    private static func dropLearnedRowsIfPresent(_ connection: SQLiteConnection) throws {
+        let columns = try connection.query("PRAGMA table_info(\(tableName));") { $0.text(1) }
+        guard columns.contains("origin") else { return }
+        try connection.withImmediateTransaction {
+            try connection.execute(
+                """
+                DROP INDEX IF EXISTS idx_custom_learned_pair;
+                DELETE FROM \(searchKeyTableName) WHERE entry_id IN (SELECT id FROM \(tableName) WHERE origin = 1);
+                DELETE FROM \(tableName) WHERE origin = 1;
+                ALTER TABLE \(tableName) DROP COLUMN learn_count;
+                ALTER TABLE \(tableName) DROP COLUMN origin;
+                """,
+            )
+        }
+    }
+
     private func derivedKeys(for roman: String) throws -> [CustomSearchKey] {
         guard let keys = deriveSearchKeys(roman), !keys.isEmpty else {
             throw CustomDictionaryError.searchKeyDerivationFailed(roman: roman)
@@ -562,23 +473,19 @@ final class CustomDictionaryStore: @unchecked Sendable {
         return keys
     }
 
-    private static func manualRowExists(
+    private static func rowExists(
         _ connection: SQLiteConnection,
-        roman: String,
-        hanzi: String,
+        identity: CustomDictionaryIdentity,
     ) throws -> Bool {
         try connection.scalar(
-            "SELECT 1 FROM \(tableName) WHERE origin = 0 AND roman = ? AND hanzi = ? LIMIT 1;",
-            [.text(roman), .text(hanzi)],
+            "SELECT 1 FROM \(tableName) WHERE roman = ? AND hanzi = ? LIMIT 1;",
+            [.text(identity.roman), .text(identity.hanzi)],
         ) != nil
     }
 
-    /// The MANUAL write: the entry as the user's own word (`origin` 0, no
-    /// count), its search keys, then the takeover of any learned row for the
-    /// same pair — after the write, so a failed write leaves the learned row
-    /// intact. Must be called inside a transaction: a row whose side keys did
-    /// not land is invisible to the keyboard while looking present in the
-    /// settings list.
+    /// The entry and its search keys, written together. Must be called inside a
+    /// transaction: a row whose side keys did not land is invisible to the
+    /// keyboard while looking present in the settings list.
     private static func writeRow(
         _ connection: SQLiteConnection,
         row: CustomDictionaryRow,
@@ -586,14 +493,12 @@ final class CustomDictionaryStore: @unchecked Sendable {
     ) throws {
         try connection.run(
             """
-            INSERT INTO \(tableName) (id, roman, hanzi, created_at, updated_at, origin, learn_count)
-            VALUES (?, ?, ?, ?, ?, 0, 0)
+            INSERT INTO \(tableName) (id, roman, hanzi, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 roman = excluded.roman,
                 hanzi = excluded.hanzi,
-                updated_at = excluded.updated_at,
-                origin = 0,
-                learn_count = 0;
+                updated_at = excluded.updated_at;
             """,
             [
                 .text(row.id),
@@ -606,43 +511,6 @@ final class CustomDictionaryStore: @unchecked Sendable {
         // Replace rather than add: an edited roman must not stay findable
         // under the keys of the roman it replaced.
         try replaceSearchKeys(connection, entryID: row.id, searchKeys: searchKeys)
-        try removeLearnedRow(connection, roman: row.roman, hanzi: row.hanzi, except: row.id)
-    }
-
-    /// Deletes the learned row (and its side keys) for `(roman, hanzi)` unless
-    /// it is `except` itself — the manual write that just landed takes it over.
-    private static func removeLearnedRow(
-        _ connection: SQLiteConnection,
-        roman: String,
-        hanzi: String,
-        except id: String,
-    ) throws {
-        let learned = "SELECT id FROM \(tableName) WHERE origin = 1 AND roman = ? AND hanzi = ? AND id <> ?"
-        let bindings: [SQLiteBinding] = [.text(roman), .text(hanzi), .text(id)]
-        try connection.run("DELETE FROM \(searchKeyTableName) WHERE entry_id IN (\(learned));", bindings)
-        try connection.run("DELETE FROM \(tableName) WHERE id IN (\(learned));", bindings)
-    }
-
-    /// Drops learned rows past `cap`, never `keptID` (the row just written).
-    /// Side keys first, so the subquery still resolves against the intact main
-    /// table; `OFFSET cap - 1` selects exactly the rows past the cap once the
-    /// kept row is set aside.
-    /// CROSS-PLATFORM INVARIANT — mirrors iOS `evictLearnedPastCap` / Android
-    /// `LEARNED_PAST_CAP_SQL`.
-    private static func evictLearnedPastCap(
-        _ connection: SQLiteConnection,
-        cap: Int,
-        keeping keptID: String,
-    ) throws {
-        let pastCap = """
-            SELECT id FROM \(tableName)
-            WHERE origin = 1 AND id <> ?
-            ORDER BY learn_count DESC, updated_at DESC, id
-            LIMIT -1 OFFSET ?
-        """
-        let bindings: [SQLiteBinding] = [.text(keptID), .integer(max(cap - 1, 0))]
-        try connection.run("DELETE FROM \(searchKeyTableName) WHERE entry_id IN (\(pastCap));", bindings)
-        try connection.run("DELETE FROM \(tableName) WHERE id IN (\(pastCap));", bindings)
     }
 
     /// One entry's side-table rows, swapped for the ones passed in. Must be
@@ -687,38 +555,16 @@ final class CustomDictionaryStore: @unchecked Sendable {
         }
     }
 
-    /// Every row, manual and learned — what the list pages, the clear reports
-    /// and the seed checks.
     private static func entryCount(_ connection: SQLiteConnection) throws -> Int {
         try connection.scalar("SELECT COUNT(*) FROM \(tableName);") ?? 0
     }
 
-    /// MANUAL rows only — the user's quota; learned rows (§50) have their own.
-    private static func manualEntryCount(_ connection: SQLiteConnection) throws -> Int {
-        try connection.scalar("SELECT COUNT(*) FROM \(tableName) WHERE origin = 0;") ?? 0
-    }
-
-    /// A MANUAL row with this id — a learned row being adopted under its own
-    /// id is still a new manual row for the quota.
-    private static func manualEntryExists(_ connection: SQLiteConnection, id: String) throws -> Bool {
-        try connection.scalar(
-            "SELECT 1 FROM \(tableName) WHERE id = ? AND origin = 0 LIMIT 1;",
-            [.text(id)],
-        ) != nil
-    }
-
-    private static func rowExists(_ connection: SQLiteConnection, id: String) throws -> Bool {
+    private static func entryExists(_ connection: SQLiteConnection, id: String) throws -> Bool {
         try connection.scalar(
             "SELECT 1 FROM \(tableName) WHERE id = ? LIMIT 1;",
             [.text(id)],
         ) != nil
     }
-
-    /// The columns `decodeRow` expects, in order; `joinedEntryColumns` is the
-    /// same list qualified for the side-table join.
-    private static let entryColumns = "id, roman, hanzi, created_at, updated_at, origin, learn_count"
-    private static let joinedEntryColumns =
-        "entry.id, entry.roman, entry.hanzi, entry.created_at, entry.updated_at, entry.origin, entry.learn_count"
 
     private static func decodeRow(_ row: SQLiteRowReader) -> CustomDictionaryRow {
         CustomDictionaryRow(
@@ -727,8 +573,6 @@ final class CustomDictionaryStore: @unchecked Sendable {
             hanzi: row.text(2),
             createdAt: timestampFormatter.date(from: row.text(3)) ?? Date(),
             updatedAt: timestampFormatter.date(from: row.text(4)) ?? Date(),
-            origin: CustomDictionaryRow.Origin(rawValue: row.integer(5)) ?? .manual,
-            learnCount: row.integer(6),
         )
     }
 
@@ -771,27 +615,7 @@ final class CustomDictionaryStore: @unchecked Sendable {
             CREATE INDEX IF NOT EXISTS idx_csk_entry ON \(searchKeyTableName)(entry_id);
             """,
         )
-        // §50 provenance: `origin` (`CustomDictionaryRow.Origin`) and
-        // `learn_count`. Added by `ALTER` on a database created before them
-        // (every existing row reads as manual), then the learned-pair unique
-        // index that makes learning one atomic upsert. Idempotent: the
-        // columns are checked before the ALTER, the index is `IF NOT EXISTS`.
-        // CROSS-PLATFORM INVARIANT — mirrors iOS `CustomDictionarySchema`
-        // (`provenanceColumns`, `learnedPairIndexSQL`) and Android v9.
-        // The IME and the settings app open the same file, so the check and
-        // the ALTER share one immediate transaction: the second process
-        // blocks on `BEGIN IMMEDIATE` (busy timeout) and then reads the
-        // column the first one added, instead of racing it to a "duplicate
-        // column" error.
-        try connection.withImmediateTransaction {
-            let present = Set(try connection.query("PRAGMA table_info(\(tableName));") { $0.text(1) })
-            for column in ["origin", "learn_count"] where !present.contains(column) {
-                try connection.execute("ALTER TABLE \(tableName) ADD COLUMN \(column) INTEGER NOT NULL DEFAULT 0;")
-            }
-            try connection.execute(
-                "CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_learned_pair ON \(tableName)(hanzi, roman) WHERE origin = 1;",
-            )
-        }
+        try dropLearnedRowsIfPresent(connection)
         // The iOS table also carries `notone` / `abbrev` / `roman_num`
         // columns. They are write-only there — the query path has used the
         // side table since schema 2 — so macOS does not create them rather

@@ -334,7 +334,7 @@ final class ComposingManagerLearningTests: XCTestCase {
 
     /// 我 + 來 typed as one buffer and picked one segment at a time: the
     /// mid-commit learns nothing, the last one hands the joined pair to the
-    /// custom-dictionary store, and the store recalls it under the buffer's
+    /// learned-phrase store, and the store recalls it under the buffer's
     /// key. mirrors windows/.../tests/composing_manager.rs (§50).
     func testACompositionOfHanjiPicks_isLearnedOnceTheLastSegmentCommits() throws {
         let manager = try makeManager()
@@ -344,7 +344,7 @@ final class ComposingManagerLearningTests: XCTestCase {
         let gua = try XCTUnwrap(candidates.first { $0.hanji == "我" }, "no 我 offered for 'gualai'")
         XCTAssertEqual(manager.commitCandidate(gua, executing: executor).outcome, .nailed)
         XCTAssertTrue(
-            stores.customDictionary.learnedRows(matching: key).isEmpty,
+            stores.learnedPhrases.rows(matching: key).isEmpty,
             "a mid-commit learns nothing",
         )
 
@@ -354,9 +354,12 @@ final class ComposingManagerLearningTests: XCTestCase {
 
         // Learned as the hanji pair even though the document got the roman
         // rendering — identity is `(hanji, canonical TL)`, not what was written.
-        let learned = stores.customDictionary.learnedRows(matching: key)
+        let learned = stores.learnedPhrases.rows(matching: key)
         XCTAssertEqual(learned.map(\.hanzi), ["我來"], "the store learned the joined pair under the buffer's key")
-        XCTAssertEqual(learned.first?.origin, .learned)
+        XCTAssertTrue(
+            stores.customDictionary.rows(matching: key).isEmpty,
+            "the custom dictionary is untouched — learned phrases are learning data, not the user's words",
+        )
     }
 
     /// The key the keystroke path derives for the typed buffer, so the

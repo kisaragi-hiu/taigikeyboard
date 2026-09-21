@@ -15,7 +15,7 @@ use super::document_text::{
 use super::learner::NextWordLearner;
 use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
 use super::presentation::{leads_with_literal_roman, presentation, PresentedCandidate};
-use super::stores::{Clock, CustomDictionarySource, FrequencySource};
+use super::stores::{Clock, CustomDictionarySource, FrequencySource, LearnedPhraseSource};
 use crate::engine::{
     self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, CustomEntry,
     CustomSearchKey, Effect, FetchArgs, FrequencyRow, LearnedPhrase,
@@ -42,6 +42,7 @@ pub struct ComposingManager {
     settings: Arc<dyn SettingsProvider>,
     frequency: Box<dyn FrequencySource>,
     custom_dictionary: Box<dyn CustomDictionarySource>,
+    learned_phrases: Box<dyn LearnedPhraseSource>,
     learner: NextWordLearner,
     clock: Box<dyn Clock>,
     /// Unique across everything that talks to the engine in this process:
@@ -59,6 +60,7 @@ impl ComposingManager {
         settings: Arc<dyn SettingsProvider>,
         frequency: Box<dyn FrequencySource>,
         custom_dictionary: Box<dyn CustomDictionarySource>,
+        learned_phrases: Box<dyn LearnedPhraseSource>,
         learner: NextWordLearner,
         clock: Box<dyn Clock>,
         starting_generation: u64,
@@ -70,6 +72,7 @@ impl ComposingManager {
             settings,
             frequency,
             custom_dictionary,
+            learned_phrases,
             learner,
             clock,
             current_generation: starting_generation,
@@ -330,10 +333,9 @@ impl ComposingManager {
     /// always on (USER 2026-09-20: no toggle).
     fn learned_phrase_matches(&self, key: Option<&CustomSearchKey>) -> Vec<LearnedPhrase> {
         match key {
-            Some(key) => {
-                self.custom_dictionary
-                    .learned_rows_matching(&key.family, &key.form, &key.key)
-            }
+            Some(key) => self
+                .learned_phrases
+                .rows_matching(&key.family, &key.form, &key.key),
             None => Vec::new(),
         }
     }
@@ -453,8 +455,8 @@ impl ComposingManager {
         // §50 touch-on-use: a learned phrase picked as one candidate stays
         // ahead of the eviction line (no-op for any other row).
         if let Some(hanji) = candidate.hanji.as_deref().filter(|h| !h.is_empty()) {
-            self.custom_dictionary
-                .touch_learned_phrase(hanji, &candidate.canonical_tl);
+            self.learned_phrases
+                .touch_phrase(hanji, &candidate.canonical_tl);
         }
     }
 
@@ -498,12 +500,12 @@ impl ComposingManager {
                 // shows no predictions, so there is nothing to hide and the
                 // context is exactly what must survive.
                 Effect::NextWordClearForNewComposing => {}
-                // §50 — the engine decided the composition was a phrase; the
-                // store is the custom dictionary's. Always on.
+                // §50 — the engine decided the composition was a phrase;
+                // into `learned_phrases.db`. Always on.
                 Effect::PhraseLearned {
                     hanji,
                     canonical_tl,
-                } => self.custom_dictionary.learn_phrase(hanji, canonical_tl),
+                } => self.learned_phrases.learn_phrase(hanji, canonical_tl),
                 Effect::UpdatePreedit { .. }
                 | Effect::ClearPreeditWithoutCommit
                 | Effect::CommitTextReplacingPreedit(_)

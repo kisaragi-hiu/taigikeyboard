@@ -30,17 +30,6 @@ struct CustomDictionaryIdentity: Hashable, Sendable {
 }
 
 struct CustomDictionaryRow: Equatable, Sendable, Identifiable {
-    /// Who wrote the row (`behavioral-invariants.md` §50). Stored as the
-    /// `origin` INTEGER column; the raw values are the backup contract.
-    /// CROSS-PLATFORM INVARIANT — mirrors
-    /// ios/Sources/TaigiKeyboard/Lexicon/Models/CustomDictionaryEntry.swift `Origin`.
-    enum Origin: Int, Sendable {
-        /// Added or imported by the user.
-        case manual = 0
-        /// Learned from a segment-by-segment continuous composition.
-        case learned = 1
-    }
-
     /// Stable across edits so the side table of search keys can be replaced
     /// rather than accumulated. A UUID rather than the `(roman, hanzi)` pair
     /// because editing either column must keep the row's identity.
@@ -49,9 +38,6 @@ struct CustomDictionaryRow: Equatable, Sendable, Identifiable {
     var hanzi: String
     let createdAt: Date
     var updatedAt: Date
-    let origin: Origin
-    /// Times the phrase was composed or picked; `0` for a manual row.
-    let learnCount: Int
 
     /// What an import compares this row against. Not the `id`: a file has no
     /// ids, so "already there" can only mean the same word spelled the same
@@ -66,17 +52,11 @@ struct CustomDictionaryRow: Equatable, Sendable, Identifiable {
         hanzi: String,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
-        origin: Origin = .manual,
-        learnCount: Int = 0,
     ) {
         self.id = id
         self.roman = roman
         self.hanzi = hanzi
         self.createdAt = createdAt
         self.updatedAt = updatedAt
-        self.origin = origin
-        self.learnCount = learnCount
     }
-
-    var isLearned: Bool { origin == .learned }
 }
