@@ -361,6 +361,9 @@ class TextInputManager(
             // iOS `ComposingManager(customDictionaryRepository:
             // CompositionRoot.customDictionaryRepository)`.
             customDictionaryService = taigikeyboard.compositionRoot.customDict,
+            // §50 `learned_phrases.db` — mirrors iOS
+            // `ComposingManager(learnedPhraseRepository:)`.
+            learnedPhraseService = taigikeyboard.compositionRoot.learnedPhrases,
         )
 
     override fun onFinishInputView(finishingInput: Boolean) {

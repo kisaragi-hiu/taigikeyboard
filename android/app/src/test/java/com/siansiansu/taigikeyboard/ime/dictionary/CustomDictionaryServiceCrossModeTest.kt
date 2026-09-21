@@ -79,6 +79,34 @@ class CustomDictionaryServiceCrossModeTest {
         }
     }
 
+    /**
+     * §50 (USER 2026-09-21) — the v9 → v10 arm on the dev-only v9 shape: the
+     * learned row and its side keys go, the manual row and its keys stay, the
+     * partial index is dropped. (A released v8 DB never runs the arm — the
+     * `oldVersion == 9` gate in `onUpgrade`; its table has no `origin`.)
+     */
+    @Test
+    fun migrationV9ToV10_dropsLearnedRowsAndKeepsManualRows() {
+        openDevV9CustomDictionarySchema().use { conn ->
+            conn.insertEntry("m1", "tâi-gí", "台語")
+            conn.insertSearchKey("m1", "tl", "notone", "taigi")
+            conn.createStatement().use { st ->
+                st.executeUpdate("INSERT INTO custom_dictionary (id, roman, hanzi, origin, learn_count) VALUES ('l1', 'kì--khí-lâi', '記起來', 1, 3)")
+            }
+            conn.insertSearchKey("l1", "tl", "notone", "kikhilai")
+
+            conn.createStatement().use { st -> CustomDictionaryService.MIGRATE_V9_TO_V10_SQL.forEach(st::executeUpdate) }
+
+            assertEquals(listOf("m1"), conn.queryIds("SELECT id FROM custom_dictionary ORDER BY id"))
+            assertEquals(listOf("m1"), conn.queryIds("SELECT entry_id FROM custom_search_key ORDER BY entry_id"))
+            assertEquals(
+                emptyList<String>(),
+                conn.queryIds("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_custom_learned_pair'"),
+            )
+            assertEquals(listOf("m1"), search(conn, family = "tl", form = "notone", key = "taigi"))
+        }
+    }
+
     /** `LIKE ? || '%'` is a prefix match; `DISTINCT` collapses multi-row joins. */
     @Test
     fun INVARIANT_CUSTOM_DICT_CROSS_MODE_prefixMatchDistinctEntry() {

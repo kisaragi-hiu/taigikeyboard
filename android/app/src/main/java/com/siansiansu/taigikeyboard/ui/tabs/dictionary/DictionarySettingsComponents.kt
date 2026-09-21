@@ -27,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -320,22 +319,16 @@ internal fun DictionaryRowWithDescription(
     }
 }
 
-/**
- * Small grey tag beside a list row's text — dictionary source tags and the
- * §50 自動學 badge share it.
- */
+/** Small grey tag beside a list row's text — the dictionary source tags. */
 @Composable
-fun SourceBadge(
-    text: String,
-    style: TextStyle = MaterialTheme.typography.labelLarge,
-) {
+fun SourceBadge(text: String) {
     Surface(
         shape = RoundedCornerShape(4.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
     ) {
         Text(
             text = text,
-            style = style,
+            style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
         )

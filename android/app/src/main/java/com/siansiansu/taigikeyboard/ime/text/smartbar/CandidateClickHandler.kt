@@ -26,7 +26,7 @@ class CandidateClickHandler(
     private val prefs: PrefHelper,
     private val taigikeyboard: TaigiKeyboard,
     private val userFreq: UserFrequencyService,
-    private val customDict: com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService,
+    private val learnedPhrases: com.siansiansu.taigikeyboard.ime.dictionary.LearnedPhraseService,
     private val getCurrentSuggestions: () -> List<TaigiWord>,
     private val getIsTranslateSwapped: () -> Boolean,
     private val getOutputBothScripts: () -> Boolean,
@@ -392,8 +392,8 @@ class CandidateClickHandler(
         val learned = result.learnedPhrase
         if (result.didCommit && (learned != null || hanji != null)) {
             scope.launch {
-                learned?.let { customDict.learnPhrase(it.hanji, it.canonicalTl) }
-                if (hanji != null) customDict.touchLearnedPhrase(hanji, associationTl)
+                learned?.let { learnedPhrases.learnPhrase(it.hanji, it.canonicalTl) }
+                if (hanji != null) learnedPhrases.touchPhrase(hanji, associationTl)
             }
         }
 

@@ -36,6 +36,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryDerivation
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
+import com.siansiansu.taigikeyboard.ime.dictionary.LearnedPhraseService
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -93,6 +94,8 @@ class ComposingManager(
      * `ComposingManager.swift` `customDictionaryRepository`.
      */
     private val customDictionaryService: CustomDictionaryService? = null,
+    /** §50 `learned_phrases.db` for `FetchAtPos.learned_entries`; `null` = none (tests / Preview). */
+    private val learnedPhraseService: LearnedPhraseService? = null,
 ) {
     // Engine-mirror state: 4 MutableStateFlow, public read-only StateFlow surface; sync getters read `.value`.
     // CROSS-PLATFORM PAIR — mirrors iOS `ComposingManager.swift` @Observable mirror.
@@ -540,7 +543,7 @@ class ComposingManager(
         val customEntries = buildCustomEntries(token, fetch, queryKey)
         // §50 — learned phrases keyed to the WHOLE raw buffer (exact, not
         // prefix), shared by both phases like `customEntries`.
-        val learnedEntries = buildLearnedEntries(token, fetch, queryKey)
+        val learnedEntries = buildLearnedEntries(token, queryKey)
 
         // Phase 1: neutral fetch to learn candidate displayText keys.
         val neutral = RustEngineBridge.composingFetchAtPos(
@@ -709,27 +712,26 @@ class ComposingManager(
 
     /**
      * §50 — learned phrases whose derived key EQUALS the raw buffer's query
-     * key (`CustomDictionaryService.learnedEntries`), as
-     * `FetchAtPos.learned_entries`; not gated by 啟用自訂詞庫 (manual rows
-     * only) — learning is always on. Same await-race guard as [buildCustomEntries].
+     * key (`LearnedPhraseService.matches`), as `FetchAtPos.learned_entries`;
+     * not gated by 啟用自訂詞庫 (manual rows only) — learning is always on.
+     * Same await-race guard as [buildCustomEntries].
      */
     private suspend fun buildLearnedEntries(
         token: StateToken,
-        fetch: ContinuousFetchSettings,
         queryKey: com.siansiansu.taigikeyboard.engine.CustomSearchKey?,
     ): List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> {
-        val service = customDictionaryService ?: return emptyList()
+        val service = learnedPhraseService ?: return emptyList()
         if (queryKey == null) return emptyList()
         return try {
-            val rows = service.learnedEntries(family = queryKey.family, form = queryKey.form, key = queryKey.key)
+            val rows = service.matches(family = queryKey.family, form = queryKey.form, key = queryKey.key)
             if (stateToken() != token) {
                 return emptyList()
             }
-            rows.map { entry ->
+            rows.map { phrase ->
                 com.siansiansu.taigikeyboard.engine.proto.LearnedEntry
                     .newBuilder()
-                    .setHanji(entry.hanzi)
-                    .setCanonicalTl(entry.roman)
+                    .setHanji(phrase.hanzi)
+                    .setCanonicalTl(phrase.canonicalTl)
                     .build()
             }
         } catch (e: CancellationException) {
