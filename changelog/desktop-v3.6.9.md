@@ -1,7 +1,9 @@
 # desktop v3.6.9
 
 The settings-and-engine release. The keyboard now learns the phrases you build
-segment by segment and offers them whole next time; 漢字 is the default output on
+segment by segment and offers them whole next time, and the `-` / `--` you type
+between syllables is honoured as typed — in the document, in what it learns and
+in how it reads the buffer; 漢字 is the default output on
 a fresh install, with a 輸出文字 picker to flip it; a 無連字符 switch drops the
 dictionary's hyphens from romanization; Telex gains keys for tones 1 and 4;
 `Ctrl` with a punctuation key types the other width once; the symbol picker
@@ -17,10 +19,19 @@ Windows have all of it.
 
 - **Learned phrases.** Composing a phrase from two or more picks — 記 → 起 → 來 on
   `kikhilai` — teaches the keyboard that whole phrase; the next `kikhilai`
-  offers 記起來 as one candidate. Always on; learned rows share the 自訂詞庫 table
-  with a 學 badge, cap 2000, and a manual entry for the same pair always wins.
-  On first launch an existing 自訂詞庫 database gains the two provenance columns
-  and rebuilds its search keys once. (#109, #112, #113)
+  offers 記起來 as one candidate. Always on, no list and no badge: learned
+  phrases live in their own store beside the frequency and association records
+  (cap 2000, a 自訂詞庫 entry for the same pair always wins) and are wiped by
+  清除學習紀錄 with them; the 自訂詞庫 is untouched. On first launch an existing
+  自訂詞庫 database only rebuilds its search keys once. (#109, #112, #113, #127)
+- **Separators are yours.** The `-` or `--` you type between two picks reaches
+  the document as typed — `tng--lai`, 轉, 來 → `tńg--lâi`, no longer `tńg-lâi` —
+  and the learned phrase remembers it. A typed `-` is a syllable boundary:
+  `khi--ah` never reads 隙 `khiah`, so after 撏 in `jim--khi--ah` the strip leads
+  with 去. And the kind counts: `--` asks for a 輕聲 word (`jim--khi` offers 任 + 去,
+  not 忍氣 `jím-khì`; `hoo--gua` → 予我 `hōo--guá`), `-` for a plain one (`hoo-gua`
+  → 予 + 我 `hōo-guá`). What the walker builds also keeps your separator: `goa--si`
+  → `gô-á--sī`, `goasi` → `gô-á sī` as before. (#129, #131, #133)
 - **Telex `x` and `v` cover tones 1 / 4 and 2 / 8.** Under the Telex scheme `x`
   writes tone 1 on an open syllable and tone 4 on a stop coda (`p t k h`); `v`
   writes 2 / 8 the same way. The Telex 說明 card lists both rows, and the card
@@ -116,11 +127,20 @@ Windows have all of it.
 
 - **Learned phrases.** Composing a phrase from two or more picks — 記 → 起 → 來 on
   `kikhilai` — teaches the keyboard that whole phrase; the next `kikhilai`
-  offers 記起來 as one candidate. Always on; learned rows share the 自訂詞庫 table
-  with a 學 badge, cap 2000, and a manual entry for the same pair always wins.
-  On first launch an existing 自訂詞庫 database under `%APPDATA%\TaigiKeyboard`
-  gains the two provenance columns and rebuilds its search keys once. (#109,
-  #112, #113)
+  offers 記起來 as one candidate. Always on, no list and no badge: learned
+  phrases live in their own `learned_phrases.db` under `%APPDATA%\TaigiKeyboard`
+  beside the frequency and association records (cap 2000, a 自訂詞庫 entry for
+  the same pair always wins) and are wiped by 清除學習紀錄 with them; the 自訂詞庫
+  is untouched. On first launch an existing 自訂詞庫 database only rebuilds its
+  search keys once. (#109, #112, #113, #127)
+- **Separators are yours.** The `-` or `--` you type between two picks reaches
+  the document as typed — `tng--lai`, 轉, 來 → `tńg--lâi`, no longer `tńg-lâi` —
+  and the learned phrase remembers it. A typed `-` is a syllable boundary:
+  `khi--ah` never reads 隙 `khiah`, so after 撏 in `jim--khi--ah` the strip leads
+  with 去. And the kind counts: `--` asks for a 輕聲 word (`jim--khi` offers 任 + 去,
+  not 忍氣 `jím-khì`; `hoo--gua` → 予我 `hōo--guá`), `-` for a plain one (`hoo-gua`
+  → 予 + 我 `hōo-guá`). What the walker builds also keeps your separator: `goa--si`
+  → `gô-á--sī`, `goasi` → `gô-á sī` as before. (#129, #131, #133)
 - **Telex `x` and `v` cover tones 1 / 4 and 2 / 8.** Under the Telex scheme `x`
   writes tone 1 on an open syllable and tone 4 on a stop coda (`p t k h`); `v`
   writes 2 / 8 the same way. The Telex 說明 card lists both rows, and the card
