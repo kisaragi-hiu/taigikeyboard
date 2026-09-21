@@ -10,14 +10,7 @@ use protos::engine::{
 };
 
 mod common;
-use common::{config_tl, req};
-
-fn commit_text(resp: &protos::engine::ComposingResponse) -> Option<String> {
-    resp.effect.iter().find_map(|e| match e.kind.as_ref()? {
-        protos::engine::effect::Kind::CommitTextReplacingPreedit(c) => Some(c.text.clone()),
-        _ => None,
-    })
-}
+use common::{commit_text, config_tl, req};
 
 // §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — a leading `--` typed from
 // Idle is a document literal, NOT composing input (MOE-style). Production sends

@@ -23,7 +23,7 @@
 //! `build_keys_tps` `tl:`-folded path is retired).
 
 use crate::api::{CaretDirection, ComposingError, Engine, Intent, Phase};
-use crate::continuous::{assemble_candidates, retain_first_by_key};
+use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq};
 use crate::shadow::{
     build_shadow_lattice_with_barriers, left_anchored_keys_and_restrictions, ShadowLattice,
 };
@@ -524,17 +524,32 @@ fn build_custom_entries(entries: &[CustomDictEntry]) -> Vec<CustomEntry> {
 /// Learned phrases (§50) — hoist proto-shaped `LearnedEntry[]` into the
 /// domain-typed [`LearnedEntry`] list (mirror of [`build_custom_entries`]).
 /// Both strings are canonical already (hanji as committed, canonical TL as
-/// `Effect.PhraseLearned` emitted it), so nothing is folded here; the
-/// per-mode lattice key is derived at the walker (`learned_edge_key`).
+/// `Effect.PhraseLearned` emitted it) and stay as stored; the per-mode
+/// lattice key is derived at the walker (`learned_edge_key`).
+///
+/// The same pair learned under two typed separators (`guá-sī` / `guá--sī`)
+/// is two platform rows under `UNIQUE(hanzi, roman)`; only the first in
+/// platform order (`learn_count DESC, updated_at DESC` — the form the user
+/// composed most, then most recently) is kept, so a corrected separator
+/// wins over the slip and one slip never displaces a settled phrase.
 fn build_learned_entries(entries: &[protos::engine::LearnedEntry]) -> Vec<LearnedEntry> {
-    entries
+    let mut out: Vec<LearnedEntry> = Vec::with_capacity(entries.len());
+    for e in entries
         .iter()
         .filter(|e| !e.hanji.is_empty() && !e.canonical_tl.is_empty())
-        .map(|e| LearnedEntry {
+    {
+        let same_reading = out.iter().any(|kept| {
+            kept.hanji == e.hanji && roman_reading_eq(&kept.canonical_tl, &e.canonical_tl)
+        });
+        if same_reading {
+            continue;
+        }
+        out.push(LearnedEntry {
             hanji: e.hanji.clone(),
             canonical_tl: e.canonical_tl.clone(),
-        })
-        .collect()
+        });
+    }
+    out
 }
 
 fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
