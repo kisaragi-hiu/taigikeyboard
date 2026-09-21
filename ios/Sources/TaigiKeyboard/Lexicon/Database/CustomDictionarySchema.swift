@@ -30,25 +30,17 @@ enum CustomDictionarySchema {
     /// spelling unit per syllable (`ph` / `th` / `kh` / `tsh` whole,
     /// `behavioral-invariants.md` §46); the side table is re-derived, the
     /// legacy `abbrev` column keeps its first-letter face.
-    /// v5 (2026-09-20): learned phrases (§50) — provenance columns `origin`
-    /// / `learn_count` + the partial unique index that makes learning one
-    /// atomic upsert. Derivation unchanged, so v4 → v5 adds columns only.
-    static let schemaVersion = 5
+    /// v5 (2026-09-20, never released) parked learned phrases (§50) in this
+    /// table under `origin` / `learn_count` + a partial unique index;
+    /// v6 (2026-09-21) moves them to their own `learned_phrases.db`
+    /// (`LearnedPhraseSchema`) — the migrator drops that index and the
+    /// learned rows; the two inert columns stay on a DB that reached v5
+    /// (nothing reads them, no released build ever wrote them).
+    static let schemaVersion = 6
 
     /// Derived column names backed by `CustomDictionaryDerivation`.
     /// Single source of truth for the `ALTER TABLE` migrator.
     static let derivedColumns = ["notone", "abbrev", "roman_num"]
-
-    /// Provenance columns (§50): `origin` = `CustomDictionaryEntry.Origin`
-    /// raw value, `learn_count` = times a learned row was composed / picked.
-    /// INTEGER NOT NULL DEFAULT 0 so every pre-v5 row reads as manual.
-    static let provenanceColumns = ["origin", "learn_count"]
-
-    /// One learned row per `(hanzi, roman)` pair; manual rows keep today's
-    /// duplicate tolerance. Created by both `ensureTables` (fresh DB) and
-    /// the v5 migrator (after the columns exist on an older DB).
-    static let learnedPairIndexSQL =
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_custom_learned_pair ON \(tableName)(hanzi, roman) WHERE origin = 1;"
 
     /// Create the primary table + side table + all indexes. Idempotent via
     /// `IF NOT EXISTS`.
@@ -77,9 +69,7 @@ enum CustomDictionarySchema {
                 abbrev TEXT DEFAULT '',
                 roman_num TEXT DEFAULT '',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                origin INTEGER NOT NULL DEFAULT 0,
-                learn_count INTEGER NOT NULL DEFAULT 0
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """
         var stmt: OpaquePointer?
@@ -98,7 +88,6 @@ enum CustomDictionarySchema {
             "CREATE INDEX IF NOT EXISTS idx_custom_notone ON \(tableName)(notone);",
             "CREATE INDEX IF NOT EXISTS idx_custom_abbrev ON \(tableName)(abbrev);",
             "CREATE INDEX IF NOT EXISTS idx_custom_roman_num ON \(tableName)(roman_num);",
-            learnedPairIndexSQL,
         ] {
             sqliteExecSimple(db: db, sql)
         }

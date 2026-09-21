@@ -39,10 +39,12 @@ final class BackupService: @unchecked Sendable {
     struct CustomDictEntry: Codable {
         let roman: String
         let hanzi: String
-        /// §50 provenance (backup v3). Optional so a v1 / v2 file decodes
-        /// `nil` → imported as a manual row with no count.
-        let origin: Int?
-        let learnCount: Int?
+        /// Read-only compat: the unreleased v3 format (2026-09-20) tagged
+        /// learned phrases with `origin = 1`; such rows are skipped on import
+        /// (learned phrases live in `learned_phrases.db` and never travel in
+        /// a backup — USER 2026-09-21). Never written: `nil` encodes as an
+        /// absent key, so an export stays the v2 shape.
+        var origin: Int? = nil
     }
 
     struct FrequencyEntry: Codable {
@@ -84,17 +86,12 @@ final class BackupService: @unchecked Sendable {
         ) as? String ?? "1.0"
 
         let backup = BackupData(
-            version: 3,
+            version: 2,
             exportedAt: ISO8601DateFormatter().string(from: Date()),
             platform: "ios",
             appVersion: appVersion,
             customDictionary: customEntries.map {
-                CustomDictEntry(
-                    roman: $0.roman,
-                    hanzi: $0.hanzi,
-                    origin: $0.origin.rawValue,
-                    learnCount: $0.learnCount,
-                )
+                CustomDictEntry(roman: $0.roman, hanzi: $0.hanzi)
             },
             userFrequency: frequencyData.map {
                 FrequencyEntry(word: $0.word, tl: $0.tl, count: $0.count, lastUsed: "")
@@ -141,42 +138,14 @@ final class BackupService: @unchecked Sendable {
 
     // MARK: - Private Import Helpers
 
-    /// §50 — provenance-aware. A manual row in the file is the user's own
-    /// word: skipped only when a manual row for the pair exists; over a
-    /// learned row it lands through `save`, whose repository write takes the
-    /// learned row over (manual wins, never the reverse). A learned row goes
-    /// through the learn path so the learned cap, eviction and the
-    /// manual-wins rule apply exactly as on device. An older file (no
-    /// `origin`) is all manual.
+    /// The CSV importer's batch path: dedupes against the device and within
+    /// the file, one transaction per 500 rows, capacity checked once.
     private func importCustomDictionary(_ entries: [CustomDictEntry]) async throws -> Int {
-        let existing = try await customDictionaryService.fetchAll()
-        // Manual over learned when both exist for a pair (the repository
-        // does not let that state persist, but a stale list is cheap to fold).
-        var originByPair: [String: CustomDictionaryEntry.Origin] = [:]
-        for row in existing.sorted(by: { $0.isLearned && !$1.isLearned }) {
-            originByPair["\(row.roman)\t\(row.hanzi)"] = row.origin
-        }
-
-        var imported = 0
-        for entry in entries {
-            let key = "\(entry.roman)\t\(entry.hanzi)"
-            let origin = entry.origin.flatMap(CustomDictionaryEntry.Origin.init(rawValue:)) ?? .manual
-            switch (origin, originByPair[key]) {
-            case (_, .manual), (.learned, .learned):
-                continue
-            case (.learned, nil):
-                try await customDictionaryService.learnPhrase(
-                    hanzi: entry.hanzi,
-                    canonicalTl: entry.roman,
-                    count: entry.learnCount ?? 1,
-                )
-            case (.manual, _):
-                try await customDictionaryService.save(CustomDictionaryEntry(roman: entry.roman, hanzi: entry.hanzi))
-            }
-            originByPair[key] = origin
-            imported += 1
-        }
-        return imported
+        let manualEntries = entries
+            .filter { $0.origin != 1 }
+            .map { CustomDictionaryEntry(roman: $0.roman, hanzi: $0.hanzi) }
+        guard !manualEntries.isEmpty else { return 0 }
+        return try await customDictionaryService.batchImport(manualEntries)
     }
 
     private func importFrequency(_ entries: [FrequencyEntry]) async -> Int {

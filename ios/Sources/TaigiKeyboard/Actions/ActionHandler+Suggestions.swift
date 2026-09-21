@@ -14,10 +14,10 @@ struct ResolvedCommit {
 }
 
 extension ActionHandler {
-    /// §50 — the engine's `Effect.PhraseLearned`; the store is the custom
-    /// dictionary's. Always on (USER 2026-09-20: no toggle).
+    /// §50 — the engine's `Effect.PhraseLearned`, into `learned_phrases.db`.
+    /// Always on (USER 2026-09-20: no toggle).
     func learnPhrase(hanji: String, canonicalTl: String) {
-        CompositionRoot.customDictionaryService.recordLearnedPhrase(hanzi: hanji, canonicalTl: canonicalTl)
+        CompositionRoot.learnedPhraseService.recordLearnedPhrase(hanzi: hanji, canonicalTl: canonicalTl)
     }
 }
 
@@ -177,7 +177,7 @@ extension ActionHandler {
             // §50 touch-on-use: a learned phrase picked as one candidate stays
             // ahead of the learned-row eviction line (no-op for any other row).
             if didCommit, let hanji {
-                CompositionRoot.customDictionaryService.recordLearnedPick(hanzi: hanji, canonicalTl: associationTl)
+                CompositionRoot.learnedPhraseService.recordLearnedPick(hanzi: hanji, canonicalTl: associationTl)
             }
             // Auto-space only on FINAL commit (entire buffer consumed; engine
             // exits Continuous → Idle). Mid-commits keep composing more

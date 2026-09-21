@@ -5,7 +5,7 @@ import KeyboardKit
 ///
 /// Two surfaces, intentionally separate:
 /// - `resetAll()` — pure settings reset (SharedSettings + KeyboardKit defaults).
-/// - `resetAllUserData()` — destructive: wipes user frequency and next-word DBs.
+/// - `resetAllUserData()` — destructive: wipes user frequency, next-word and learned-phrase data.
 ///
 /// `SharedSettings.resetToDefaults()` can't touch the KeyboardKit store
 /// directly without importing KeyboardKit in the (soon-to-be engine-only)
@@ -28,9 +28,9 @@ enum SettingsResetCoordinator {
         resetKeyboardKitDefaults()
     }
 
-    /// Delete user-owned databases (frequency + next-word association).
-    /// Each deletion is attempted independently; failures are logged, never thrown,
-    /// so a partial failure still clears what it can.
+    /// Delete user-owned learning data (frequency + next-word association +
+    /// learned phrases). Each deletion is attempted independently; failures
+    /// are logged, never thrown, so a partial failure still clears what it can.
     static func resetAllUserData() {
         do {
             try CompositionRoot.userFrequencyRepository.deleteDatabase()
@@ -42,5 +42,6 @@ enum SettingsResetCoordinator {
         } catch {
             logger.error("Failed to delete association database: \(error)")
         }
+        CompositionRoot.learnedPhraseService.deleteAll()
     }
 }
