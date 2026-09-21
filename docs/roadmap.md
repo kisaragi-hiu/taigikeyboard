@@ -3,14 +3,14 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `release trains`
 > **Status**: Active
-> **Last updated**: 2026-09-20 (learned phrases — segment-by-segment picks become a whole-buffer candidate — PR1–PR4 MERGED, dogfood S62 pending on all four; mobile custom theme background round A–D merged, dogfood S54/S55 pending; desktop 3.6.x sections collapsed into `docs/reports/desktop-3.6.x-design-notes.md`; repository-size record retired — rationale + timings in `docs/architecture/build-artifacts.md`; released-versions index through mobile / desktop 3.6.8)
+> **Last updated**: 2026-09-21 (learned phrases move to their own store — PR-A/B/C pending; 2026-09-20 learned phrases PR1–PR4 MERGED; mobile custom theme background round A–D merged, dogfood S54/S55 pending; desktop 3.6.x sections collapsed into `docs/reports/desktop-3.6.x-design-notes.md`; repository-size record retired — rationale + timings in `docs/architecture/build-artifacts.md`; released-versions index through mobile / desktop 3.6.8)
 
 ---
 
 ## Summary
 
 - **Forward-looking work items only.** Shipped detail lives in `docs/releases/<version>/plan.md` + `changelog/mobile-<version>.md` + Claude auto-memory.
-- **Active**: learned phrases (§ below, PR1–PR4 MERGED 2026-09-20, dogfood S62 pending); Telex tone-1/4 keys design (USER 2026-09-11「之後的版本再處理」). Merged desktop 3.6.x items below await dogfood only.
+- **Active**: learned phrases own store (§ below, PR-A/B/C pending 2026-09-21; PR1–PR4 MERGED 2026-09-20); Telex tone-1/4 keys design (USER 2026-09-11「之後的版本再處理」). Merged desktop 3.6.x items below await dogfood only.
 - **No open deferred TODO**: the keyboard theme picker (the last 2026-06-01 candidate) shipped in v3.6.2; the one design-locked, unscheduled item is 變換後羅馬字 commit (§ Out of scope / deferred).
 - **Release scope / timing / tag is user-gated** per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope].
 
@@ -24,7 +24,26 @@ kautian subcollections (腔調 + 姓名附錄 toggles + 語音差異 詞級擴�
 
 ### Learned phrases — a phrase composed segment by segment becomes a whole-buffer candidate (USER-scoped 2026-09-20)
 
-**Status**: PR1 engine #109 MERGED `42d4dc5a`, PR2 iOS #110 MERGED `b446d852`, PR3 Android #111 MERGED `3b936e81`, PR4 macOS + Windows #112 MERGED `9b6d6afe` (2026-09-20). Dogfood S62 pending on all four. Project memory `project_learned_phrases.md`.
+**Status**: PR1 engine #109 MERGED `42d4dc5a`, PR2 iOS #110 MERGED `b446d852`, PR3 Android #111 MERGED `3b936e81`, PR4 macOS + Windows #112 MERGED `9b6d6afe` (2026-09-20); #113 removed the toggle. **Follow-up round 2026-09-21 — own store** (§ below): PR-A iOS, PR-B Android, PR-C macOS + Windows PENDING. Dogfood S62 pending on all four (rewritten for the own store). Project memory `project_learned_phrases.md`.
+
+#### Own store, not the custom dictionary (USER-scoped 2026-09-21)
+
+USER 2026-09-21: 「自動學習的紀錄是放在自訂詞庫嗎？…我不建議，因為這會讓使用者自訂詞庫搞混」 → separate the two; 「1.不需要UI 2.不帶」 = no list UI for learned phrases, the `.taigi` backup does not carry them. Reverses design 3 above and the "deliberately not adopted: a separate `learned_phrases` table" line (its two costs — a second backup array and a second list UI — no longer exist). Nothing in #109–#113 has shipped (mobile 3.6.8 predates it, desktop 3.6.9 is an unpublished draft), so the schema v5 / DB v9 shape is a dev-only migration step. Codex ANALYSIS-ONLY pre-review 2026-09-21: D1–D7 CONFIRM with revisions applied below.
+
+1. **Own DB file, own store, every platform**: `learned_phrases.db` — iOS `LearnedPhraseRepository` + `LearnedPhraseSchema` (`Lexicon/Database`), Android `LearnedPhraseService` (`SQLiteOpenHelper` v1), macOS `LearnedPhraseStore` on `UserDataDatabase` (added to `UserDataStores`), Windows `taigi-windows-storage/src/learned_phrases.rs`. Precedent: `macos/…/Storage/UserDataStores.swift:8` — separate files so one kind of data can be deleted without the others. Tables: `learned_phrases(id INTEGER PRIMARY KEY, roman TEXT NOT NULL, hanzi TEXT NOT NULL, learn_count INTEGER NOT NULL DEFAULT 1, updated_at TEXT NOT NULL, UNIQUE(hanzi, roman))` + `learned_search_key(phrase_id INTEGER NOT NULL, family TEXT NOT NULL, form TEXT NOT NULL, key TEXT NOT NULL)` with `(family, form, key)` and `(phrase_id)` indexes. Keys come from the same engine derivation the custom dictionary uses (`deriveCustomSearchKeys`), written once on first insert (a row's roman never changes); the exact whole-buffer query, the 2 000 cap, fewest-then-oldest eviction (never the row just written), touch-on-use and the `learn_count` clamp keep their #110–#112 semantics against the new table. Android keeps the 3.22-safe UPDATE-then-INSERT pair.
+2. **No cross-store rule.** No manual-row check at learn time, no takeover on a manual write: the engine already ranks a custom row above a learned one (custom takes the walker edge unconditionally, learned only competes) and the `(roman, hanji, span)` pair-key dedupe keeps the custom duplicate. Consequences accepted: a learned duplicate of a manual pair holds one of the 2 000 slots and one of the 5 per-fetch rows; deleting the manual row leaves the learned one offered.
+3. **Custom dictionary back to the pre-§50 contract**: no `Origin` / `learn_count` / `isLearned` / badge / `origin =` filters / takeover / learned eviction; count, search, list and CSV cover every row again. Fresh `CREATE TABLE` has no provenance columns. Schema bump — iOS 6, Android 10, macOS 6, Windows 6 — with one checked transaction: `DROP INDEX IF EXISTS idx_custom_learned_pair`, delete the side keys of `origin = 1` rows, delete the rows, stamp the version. The inert columns stay on the dev DBs that reached v5 / v9 (Android's SQLite 3.22 has no `DROP COLUMN`; no released build ever wrote them).
+4. **Backup `.taigi` back to v2** (custom rows = roman + hanzi). Reader keeps `version >= 1`; a dev v3 file's `origin = 1` rows are skipped in the parser (never turned into visible manual rows), `learnCount` ignored. Learned phrases are never exported or imported.
+5. **Lifecycle = learning data.** No list UI, no badge (`i18n/dictionary.json` `learnedBadge` deleted with the last platform PR, per `i18n.md`). The wipe joins the existing learning-data clears — mobile `SettingsResetCoordinator.resetAllUserData`, desktop 清除學習紀錄 (`CustomDictionaryPage.deleteLearningRecords`, Windows `clear_learning_records`) — three stores, each attempted independently. The new store clears by `DELETE` inside the open connection (never by unlinking a file another process may hold — `sqlite.org/howtocorrupt.html`).
+6. **Engine unchanged**; platform call sites keep their shape (`ComposingManager` builds `learned_entries`, the effect handler routes `PhraseLearned`, touch-on-use) against the new store. Windows: the learning methods leave `CustomDictionarySource` for a `LearnedPhraseSource` trait (manager injection, `Arc` forwarding, `NoStores`, mocks, runtime). iOS: the new repository warms up beside `custom_dictionary.db` in `KeyboardViewController+Setup` so sync reads answer after a relaunch; one more `SQLiteConnectionManager` (`cache_size` is an on-demand ceiling — a 2 000-row file stays small).
+
+| Phase | Scope | Status |
+|---|---|---|
+| 0 | roadmap + §50 + S62 + project memory | this commit |
+| PR-A | iOS: `LearnedPhraseRepository` / `LearnedPhraseSchema` / service wiring, custom dictionary v6 + model / badge / backup revert, reset wiring, tests | PENDING |
+| PR-B | Android: `LearnedPhraseService`, custom dictionary DB v10 revert, `SourceBadge` gone, backup revert, reset wiring, JVM SQL fixture | PENDING |
+| PR-C | macOS + Windows: `LearnedPhraseStore` / `learned_phrases.rs`, custom stores v6 revert, badge gone, 清除學習紀錄 covers three stores, i18n key deleted, tests | PENDING |
+
 
 USER report (2026-09-20): type `kikhilai`, pick 記 → 起 → 來 one segment at a time; however often this is repeated, the next `kikhilai` never offers 記起來 as one candidate. USER decision 2026-09-20 「ok, plan it」 after the survey below. Scope: all four platforms, engine-led.
 
@@ -79,7 +98,7 @@ Per-phase rules: PR1 `round-workflow.md` § Codex sandwich + `code-review-rules.
 
 #### Dogfood
 
-S62 (to be written with PR2): 台日 off, type `kikhilai`, pick 記 / 起 / 來 (or 記 then 起來), commit; retype `kikhilai` → 記起來 is the first hanji candidate; 辭典 list shows it with 自動學; delete it → gone next fetch; `.taigi` export/import round-trips `origin`; a manual custom row with the same pair is untouched. Both mobile platforms, then desktop.
+S62 (rewritten 2026-09-21 for the own store): 台日 off, type `kikhilai`, pick 記 / 起 / 來 (or 記 then 起來), commit; retype `kikhilai` → 記起來 is the first hanji candidate; 自訂詞庫 does NOT list it (no row, no badge, count unchanged, CSV / `.taigi` export unchanged); 清除學習紀錄 (desktop) / 恢復預設 user-data reset (mobile) → the next `kikhilai` is back to 機起來; a manual custom row with the same pair is untouched. Both mobile platforms, then desktop.
 
 ### Mobile custom theme — one background surface, gradient direction, photo background (USER-scoped 2026-09-19)
 
