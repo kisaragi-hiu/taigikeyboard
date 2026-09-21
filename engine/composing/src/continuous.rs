@@ -360,11 +360,13 @@ fn retain_absent_from(existing: &[RawCandidate], batch: &mut Vec<RawCandidate>) 
 /// * `roman_reading_eq("hōo guá", "hōo-guā")` → `false` (戶外: guā tone 7
 ///   ≠ guá tone 2 — a different word per Core Principle #7).
 ///
-/// Used only by the slot-0 promote at [`assemble_candidates`] Step 4 to
+/// Used by the slot-0 promote at [`assemble_candidates`] Step 4 to
 /// recognize when the walker's space-joined synth is a malformed
 /// rendering of an existing full-span dict word, so the dict word's
-/// canonical separator form can take slot 0 instead.
-fn roman_reading_eq(a: &str, b: &str) -> bool {
+/// canonical separator form can take slot 0 instead, and by
+/// `dispatch::build_learned_entries` to fold the same learned pair stored
+/// under two typed separators.
+pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
     fn is_kept(c: &char) -> bool {
         *c != ' ' && *c != '-'
     }
