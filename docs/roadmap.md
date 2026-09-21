@@ -10,7 +10,7 @@
 ## Summary
 
 - **Forward-looking work items only.** Shipped detail lives in `docs/releases/<version>/plan.md` + `changelog/mobile-<version>.md` + Claude auto-memory.
-- **Active**: learned phrases own store (§ below, PR-A/B/C pending 2026-09-21; PR1–PR4 MERGED 2026-09-20); Telex tone-1/4 keys design (USER 2026-09-11「之後的版本再處理」). Merged desktop 3.6.x items below await dogfood only.
+- **Active**: learned phrases own store (§ below, PR-A–D MERGED 2026-09-21, dogfood S62 pending); Telex tone-1/4 keys design (USER 2026-09-11「之後的版本再處理」). Merged desktop 3.6.x items below await dogfood only.
 - **No open deferred TODO**: the keyboard theme picker (the last 2026-06-01 candidate) shipped in v3.6.2; the one design-locked, unscheduled item is 變換後羅馬字 commit (§ Out of scope / deferred).
 - **Release scope / timing / tag is user-gated** per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope].
 
@@ -24,7 +24,7 @@ kautian subcollections (腔調 + 姓名附錄 toggles + 語音差異 詞級擴�
 
 ### Learned phrases — a phrase composed segment by segment becomes a whole-buffer candidate (USER-scoped 2026-09-20)
 
-**Status**: PR1 engine #109 MERGED `42d4dc5a`, PR2 iOS #110 MERGED `b446d852`, PR3 Android #111 MERGED `3b936e81`, PR4 macOS + Windows #112 MERGED `9b6d6afe` (2026-09-20); #113 removed the toggle. **Follow-up round 2026-09-21 — own store** (§ below): PR-A iOS, PR-B Android, PR-C macOS + Windows PENDING. Dogfood S62 pending on all four (rewritten for the own store). Project memory `project_learned_phrases.md`.
+**Status**: PR1 engine #109 MERGED `42d4dc5a`, PR2 iOS #110 MERGED `b446d852`, PR3 Android #111 MERGED `3b936e81`, PR4 macOS + Windows #112 MERGED `9b6d6afe` (2026-09-20); #113 removed the toggle. **Follow-up round 2026-09-21 — own store** (§ below): PR-A iOS #125 `bf786a5a`, PR-B Android #126 `9eddf5f3`, PR-C macOS + Windows #127 `96eb2c79`, PR-D i18n #128 — ALL MERGED 2026-09-21. Dogfood S62 pending on all four (rewritten for the own store). Project memory `project_learned_phrases.md`.
 
 #### Own store, not the custom dictionary (USER-scoped 2026-09-21)
 
@@ -40,10 +40,10 @@ USER 2026-09-21: 「自動學習的紀錄是放在自訂詞庫嗎？…我不建
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | roadmap + §50 + S62 + project memory | this commit |
-| PR-A | iOS: `LearnedPhraseRepository` / `LearnedPhraseSchema` / service wiring, custom dictionary v6 + model / badge / backup revert, reset wiring, tests | PENDING |
-| PR-B | Android: `LearnedPhraseService`, custom dictionary DB v10 revert, `SourceBadge` gone, backup revert, reset wiring, JVM SQL fixture | PENDING |
-| PR-C | macOS + Windows: `LearnedPhraseStore` / `learned_phrases.rs`, `LearnedPhraseSource` trait, custom stores' column-gated cleanup, badge gone, 清除學習紀錄 covers three stores, tests | PENDING |
-| PR-D | delete `dictionary.learnedBadge` + `make i18n` on all four, after A/B/C merge | PENDING |
+| PR-A | iOS: `LearnedPhraseRepository` / `LearnedPhraseSchema` / service wiring, custom dictionary v6 + model / badge / backup revert, reset wiring, tests | MERGED #125 `bf786a5a` |
+| PR-B | Android: `LearnedPhraseService`, custom dictionary DB v10 revert, `SourceBadge` gone, backup revert, reset wiring, JVM SQL fixture | MERGED #126 `9eddf5f3` |
+| PR-C | macOS + Windows: `LearnedPhraseStore` / `learned_phrases.rs`, `LearnedPhraseSource` trait, custom stores' column-gated cleanup, badge gone, 清除學習紀錄 covers three stores, tests | MERGED #127 `96eb2c79` |
+| PR-D | delete `dictionary.learnedBadge` + `make i18n` on all four, after A/B/C merge | MERGED #128 |
 
 
 USER report (2026-09-20): type `kikhilai`, pick 記 → 起 → 來 one segment at a time; however often this is repeated, the next `kikhilai` never offers 記起來 as one candidate. USER decision 2026-09-20 「ok, plan it」 after the survey below. Scope: all four platforms, engine-led.
