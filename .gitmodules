@@ -1,3 +1,6 @@
 [submodule "taigi-converter"]
 	path = taigi-converter
 	url = https://github.com/taigikeyboard/taigi-converter.git
+[submodule "corpus/taigi-typing"]
+	path = corpus/taigi-typing
+	url = https://github.com/luke871016/taigi_typing.git
