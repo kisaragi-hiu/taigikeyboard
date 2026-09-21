@@ -135,28 +135,14 @@ extension KeyboardViewController {
         //    `LexiconService` fallback that lazy-opened this DB but only kept
         //    the user-freq warmup, so custom-dict candidates silently vanished
         //    from the keyboard (behavioral-invariants.md §26).
+        //    §50 learned_phrases.db joins for the same reason: its per-keystroke
+        //    read is synchronous and answers `[]` until the connection is open.
         let userFrequencyService = CompositionRoot.userFrequencyService
-        Task {
-            do {
-                try await userFrequencyService.ensureInitialized()
-                setupLogger.info("[INIT] User frequency DB warmed")
-            } catch {
-                setupLogger.warning(
-                    "[INIT] User frequency DB warmup failed: \(error.localizedDescription)",
-                )
-            }
-        }
         let customDictionaryRepository = CompositionRoot.customDictionaryRepository
-        Task {
-            do {
-                try await customDictionaryRepository.ensureInitialized()
-                setupLogger.info("[INIT] Custom dictionary DB warmed")
-            } catch {
-                setupLogger.warning(
-                    "[INIT] Custom dictionary DB warmup failed: \(error.localizedDescription)",
-                )
-            }
-        }
+        let learnedPhraseService = CompositionRoot.learnedPhraseService
+        warmDatabase("User frequency") { try await userFrequencyService.ensureInitialized() }
+        warmDatabase("Custom dictionary") { try await customDictionaryRepository.ensureInitialized() }
+        warmDatabase("Learned phrases") { try await learnedPhraseService.ensureInitialized() }
 
         // 6. Initialize tracking vars so syncSettings() doesn't false-trigger on first call
         lastInputMode = keyboardSettings.inputMode
@@ -164,6 +150,19 @@ extension KeyboardViewController {
         lastResolvedKeyHeightScale = keyboardSettings
             .resolvedAppearance(for: state.keyboardContext.colorScheme).keyHeightScale
         lastCandidateDisplayMode = state.keyboardContext.candidateDisplayMode
+    }
+
+    /// One fire-and-forget open + schema pass per user-data DB; a failure is
+    /// logged (observability, Codex PR #265 r3216760651 post-impl R5), never surfaced.
+    private func warmDatabase(_ name: StaticString, _ open: @escaping @Sendable () async throws -> Void) {
+        Task {
+            do {
+                try await open()
+                setupLogger.info("[INIT] \(name) DB warmed")
+            } catch {
+                setupLogger.warning("[INIT] \(name) DB warmup failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     /// Called at initial setup and from syncSettings() when input mode changes.

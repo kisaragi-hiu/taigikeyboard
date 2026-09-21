@@ -15,6 +15,7 @@ enum CompositionRoot {
 
     static let userFrequencyRepository: UserFrequencyRepository = .init()
     static let customDictionaryRepository: CustomDictionaryRepository = .init()
+    static let learnedPhraseRepository: LearnedPhraseRepository = .init()
 
     // MARK: - Leaf services
 
@@ -23,6 +24,9 @@ enum CompositionRoot {
     )
     static let customDictionaryService: CustomDictionaryService = .init(
         repository: customDictionaryRepository,
+    )
+    static let learnedPhraseService: LearnedPhraseService = .init(
+        repository: learnedPhraseRepository,
     )
     static let nextWordService: NextWordService = .init(
         settingsProvider: SharedSettings.shared,

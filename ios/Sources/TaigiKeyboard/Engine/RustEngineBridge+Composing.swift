@@ -503,7 +503,7 @@ public extension RustEngineBridge {
         // candidate, the pre-toggle always-on behaviour for callers/tests).
         literalRomanCandidateDisabled: Bool = false,
         // §50 — learned phrases whose whole-buffer key equals the raw buffer
-        // (`CustomDictionaryRepository.learnedEntriesSync`). Default `[]` =
+        // (`LearnedPhraseRepository.matchesSync`). Default `[]` =
         // feature off / nothing learned.
         learnedEntries: [Taigi_Engine_LearnedEntry] = [],
     ) -> ContinuousFetchResult {

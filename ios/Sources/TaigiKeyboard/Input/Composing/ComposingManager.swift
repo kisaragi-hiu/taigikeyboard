@@ -70,6 +70,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     // `fetchContinuousCandidates` contract is unchanged. DB stays
     // native (`feedback_user_data_sqlite_stays_native`).
     private let customDictionaryRepository: CustomDictionaryRepository
+    private let learnedPhraseRepository: LearnedPhraseRepository
     private let logger = DebugLogger(category: "ComposingManager")
 
     // MARK: - Init
@@ -79,10 +80,12 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         userFrequencyService: UserFrequencyService = CompositionRoot.userFrequencyService,
         customDictionaryRepository: CustomDictionaryRepository = CompositionRoot
             .customDictionaryRepository,
+        learnedPhraseRepository: LearnedPhraseRepository = CompositionRoot.learnedPhraseRepository,
     ) {
         self.settingsProvider = settingsProvider
         self.userFrequencyService = userFrequencyService
         self.customDictionaryRepository = customDictionaryRepository
+        self.learnedPhraseRepository = learnedPhraseRepository
     }
 
     func setContextSink(_ sink: ComposingContextSink) {
@@ -446,21 +449,21 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     }
 
     /// §50 — learned phrases whose derived key EQUALS the raw buffer's query
-    /// key (`CustomDictionaryRepository.learnedEntriesSync`), as
+    /// key (`LearnedPhraseRepository.matchesSync`), as
     /// `FetchAtPos.learned_entries`; not gated by 啟用自訂詞庫 (manual rows
     /// only) — learning is always on.
     private func buildLearnedEntries(
         queryKey q: CustomSearchKey?,
     ) -> [Taigi_Engine_LearnedEntry] {
         guard let q else { return [] }
-        return customDictionaryRepository.learnedEntriesSync(
+        return learnedPhraseRepository.matchesSync(
             family: q.family,
             form: q.form,
             key: q.key,
-        ).map { row in
+        ).map { phrase in
             var entry = Taigi_Engine_LearnedEntry()
-            entry.hanji = row.hanzi
-            entry.canonicalTl = row.roman
+            entry.hanji = phrase.hanzi
+            entry.canonicalTl = phrase.canonicalTl
             return entry
         }
     }

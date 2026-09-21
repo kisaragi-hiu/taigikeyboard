@@ -128,9 +128,6 @@ struct CustomDictionaryView: View {
                                     Text("\(entry.roman) → \(entry.hanzi)")
                                         .font(AppStyle.bodyFont)
                                         .foregroundColor(.primary)
-                                    if entry.isLearned {
-                                        TagBadge(text: lang.string(.dictionaryLearnedBadge))
-                                    }
                                     Spacer()
                                     Image(latinSystemName: "chevron.right")
                                         .font(AppStyle.captionFont)

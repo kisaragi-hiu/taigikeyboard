@@ -94,21 +94,84 @@ final class CustomDictionaryRepositoryCrossModeTests: XCTestCase {
         try await assertFinds(input: "chiah", mode: .poj, expectedHanzi: "食")
     }
 
-    /// §50 — a v4 database (no provenance columns) opens as v5: the existing
-    /// row reads as manual, the learned-pair index exists, and learning works
-    /// on the same table.
-    func test_migrationV5_addsProvenanceColumnsAndKeepsRowsManual() async throws {
-        try seedLegacyRow(id: "v4-1", roman: "tâi-gí", hanzi: "台語", userVersion: 4)
+    /// A released v4 database (no provenance columns, keys current) opens as
+    /// v6 with nothing but the version stamp changed: the row is still found
+    /// through its existing side keys.
+    func test_migrationV6_fromReleasedV4KeepsRowsSearchable() async throws {
+        try seedLegacyRow(
+            id: "v4-1", roman: "tâi-gí", hanzi: "台語", userVersion: 4,
+            staleKeys: [(family: "tl", form: "notone", key: "taigi")],
+        )
 
         try await repository.ensureInitialized()
-        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
-        try await repository.learnPhrase(hanzi: "記起來", canonicalTl: "kì--khí-lâi")
+
+        try await assertFinds(input: "taigi", mode: .tl, expectedHanzi: "台語")
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(dbPath, &db), SQLITE_OK)
+        defer { sqlite3_close(db) }
+        XCTAssertEqual(try sqliteQueryScalarInt(db: db!, "PRAGMA user_version;"), CustomDictionarySchema.schemaVersion)
+        XCTAssertFalse(sqliteColumnExists(db: db!, table: "custom_dictionary", column: "origin"), "v6 adds no provenance column")
+    }
+
+    /// §50 (USER 2026-09-21) — a dev DB that reached the unreleased v5 shape
+    /// (provenance columns, learned-pair index, learned rows) opens as v6
+    /// with its manual rows intact, the learned rows and their side keys
+    /// gone, and the index dropped; a fresh v6 DB has no provenance columns.
+    func test_migrationV6_dropsLearnedRowsAndKeepsManualRows() async throws {
+        try seedDevV5Database()
+
+        try await repository.ensureInitialized()
 
         let all = try await repository.fetchAll()
-        XCTAssertEqual(all.first { $0.hanzi == "台語" }?.origin, .manual, "pre-v5 rows are the user's")
-        let learned = try XCTUnwrap(all.first { $0.hanzi == "記起來" })
-        XCTAssertEqual(learned.origin, .learned)
-        XCTAssertEqual(learned.learnCount, 2, "the unique index the migration created folds the second learn")
+        XCTAssertEqual(all.map(\.hanzi), ["台語"], "only the manual row survives; got \(all)")
+        let q = try XCTUnwrap(CustomDictionaryDerivation.queryKey(for: "kikhilai", mode: .tl))
+        let rows = try await repository.search(family: q.family, form: q.form, key: q.key, limit: 20)
+        XCTAssertTrue(rows.isEmpty, "the learned row's side keys went with it; got \(rows)")
+
+        var db: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(dbPath, &db), SQLITE_OK)
+        defer { sqlite3_close(db) }
+        XCTAssertEqual(try sqliteQueryScalarInt(db: db!, "PRAGMA user_version;"), CustomDictionarySchema.schemaVersion)
+        XCTAssertEqual(
+            try sqliteQueryScalarInt(db: db!, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_custom_learned_pair';"),
+            0,
+            "the learned-pair index is dropped",
+        )
+        XCTAssertEqual(
+            try sqliteQueryScalarInt(db: db!, "SELECT COUNT(*) FROM custom_search_key WHERE entry_id = 'learned-1';"),
+            0,
+            "the learned row's side keys are deleted, not orphaned",
+        )
+        XCTAssertEqual(
+            try sqliteQueryScalarInt(db: db!, "SELECT COUNT(*) FROM custom_search_key WHERE entry_id = 'manual-1';"),
+            1,
+            "the manual row's side keys are untouched",
+        )
+    }
+
+    /// The dev-only v5 shape (#110, never released): the v4 tables plus
+    /// `origin` / `learn_count`, the partial learned-pair index, one manual
+    /// row and one learned row with side keys for both.
+    private func seedDevV5Database() throws {
+        try seedLegacyRow(
+            id: "manual-1", roman: "tâi-gí", hanzi: "台語", userVersion: 5,
+            staleKeys: [(family: "tl", form: "notone", key: "taigi")],
+        )
+        var db: OpaquePointer?
+        guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
+            throw XCTSkip("could not open temp sqlite for v5 seed")
+        }
+        defer { sqlite3_close(db) }
+        let sql = """
+            ALTER TABLE custom_dictionary ADD COLUMN origin INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE custom_dictionary ADD COLUMN learn_count INTEGER NOT NULL DEFAULT 0;
+            CREATE UNIQUE INDEX idx_custom_learned_pair ON custom_dictionary(hanzi, roman) WHERE origin = 1;
+            INSERT INTO custom_dictionary (id, roman, hanzi, origin, learn_count)
+                VALUES ('learned-1', 'kì--khí-lâi', '記起來', 1, 3);
+            INSERT INTO custom_search_key (entry_id, family, form, key)
+                VALUES ('learned-1', 'tl', 'notone', 'kikhilai');
+        """
+        XCTAssertEqual(sqlite3_exec(db, sql, nil, nil, nil), SQLITE_OK, String(cString: sqlite3_errmsg(db)))
     }
 
     /// INVARIANT_CUSTOM_DICT_CAPACITY — the 30000-row cap constant is pinned on
