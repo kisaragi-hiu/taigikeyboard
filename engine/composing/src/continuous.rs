@@ -737,10 +737,15 @@ fn fetch_walker_slot0_inner(
             // carries no syllable model — this mirrors what the
             // dict path reads off `DictionaryRecord.syllable_count`
             // for the same span and feeds the khiin `n_syls` bias.
-            let syllable_count = greedy_longest_syllabification(&shadow[start..end], inv, mode)
-                .map(|segs| segs.len())
-                .unwrap_or(1)
-                .clamp(1, u8::MAX as usize) as u8;
+            let syllable_count = greedy_longest_syllabification(
+                &shadow[start..end],
+                inv,
+                mode,
+                &crate::shadow::oov_reading_barriers(barriers, start, end, mode),
+            )
+            .map(|segs| segs.len())
+            .unwrap_or(1)
+            .clamp(1, u8::MAX as usize) as u8;
             return Some(crate::lattice::EdgeChoice {
                 roman: entry.roman.clone(),
                 hanji: entry.hanji.clone(),
@@ -851,9 +856,18 @@ fn fetch_walker_slot0_inner(
             // broken, fail-closed by dropping the edge — the buffer
             // is still spanned via finer edges.
             None => {
+                // §52: an OOV reading is the span's letters as one blob,
+                // so an edge crossing a typed `-` would render `a-i` as
+                // `ai`. Drop it — the single-syllable edges either side
+                // still span the buffer and take the typed join.
+                let oov_barriers = crate::shadow::oov_reading_barriers(barriers, start, end, mode);
+                if oov_barriers.iter().any(|&b| b < end - start) {
+                    return None;
+                }
                 let toneless_len = toneless.chars().count();
-                let syllable_count = span_min_syllable_count(&shadow[start..end], inv, mode)?
-                    .clamp(1, u8::MAX as usize) as u8;
+                let syllable_count =
+                    span_min_syllable_count(&shadow[start..end], inv, mode, &oov_barriers)?
+                        .clamp(1, u8::MAX as usize) as u8;
                 Some(crate::lattice::EdgeChoice {
                     roman: toneless,
                     hanji: None,
@@ -921,7 +935,12 @@ fn fetch_walker_slot0_inner(
             .min(u32::from(u8::MAX)) as u8;
         (parts, path.edges, s)
     } else {
-        match greedy_longest_syllabification(shadow, inv, mode) {
+        match greedy_longest_syllabification(
+            shadow,
+            inv,
+            mode,
+            &crate::shadow::oov_reading_barriers(barriers, 0, shadow.len(), mode),
+        ) {
             Some(segs) if !segs.is_empty() => {
                 // v3.5.9 D / C-3b — mode-aware tone strip. TPS no-dict
                 // synth strips Bopomofo tone marks per syllable; TL/POJ

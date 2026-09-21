@@ -58,7 +58,14 @@ pub fn valid_span_endings(
     if max_syllables == 0 || pos >= input.len() || !input.is_char_boundary(pos) {
         return Vec::new();
     }
-    valid_span_endings_lowered(&input.to_ascii_lowercase(), pos, inv, mode, max_syllables)
+    valid_span_endings_lowered(
+        &input.to_ascii_lowercase(),
+        pos,
+        inv,
+        mode,
+        max_syllables,
+        &[],
+    )
 }
 
 /// Pre-lowered variant of [`valid_span_endings`]: the caller has
@@ -77,6 +84,7 @@ pub(crate) fn valid_span_endings_lowered(
     inv: &SyllableInventory,
     mode: InputMode,
     max_syllables: usize,
+    barriers: &[usize],
 ) -> Vec<usize> {
     if max_syllables == 0 || pos >= lowered.len() || !lowered.is_char_boundary(pos) {
         return Vec::new();
@@ -94,6 +102,12 @@ pub(crate) fn valid_span_endings_lowered(
         let upper = (cur + MAX_SYLLABLE_BYTES).min(lowered.len());
         for end in (cur + 1)..=upper {
             if !lowered.is_char_boundary(end) {
+                continue;
+            }
+            // §52 — a typed 連字 / 輕聲 hyphen is an explicit syllable
+            // boundary: no single syllable crosses it (`khi|ah` is never
+            // `khiah`). Chains still meet AT a barrier, as in TPS.
+            if super::crosses_barrier(barriers, cur, end) {
                 continue;
             }
             if inv.contains_in(mode, &lowered[cur..end])

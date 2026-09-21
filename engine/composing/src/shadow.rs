@@ -9,7 +9,7 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::lattice::{build_lattice_with_barriers, Lattice};
 use crate::syllabifier::tl::is_tl_tone_digit;
-use crate::syllabifier::valid_span_endings_lowered;
+use crate::syllabifier::valid_span_endings_lowered_with_barriers;
 
 /// v3.5.9 B-2 — map `mode` to its FST key family prefix. The tagged-single-FST
 /// (`syllables.fst` + `dictionary.fst`) carries `tl:` / `poj:` / `tps:`
@@ -228,18 +228,24 @@ pub(crate) fn build_shadow_lattice_with_barriers(
     lattice_from_canonical_with_barriers(&canonical, &canonical_to_raw_end, inv, mode)
 }
 
-/// [`lattice_from_canonical`] plus the merged barrier set: every shadow
-/// byte offset where a user separator (TPS space) or 連字 hyphen was
-/// stripped. Barriers gate the §35 ambiguity expansion — a single
-/// syllable may not cross one, and the glyph before one is Final-only —
-/// and the TPS syllabifier receives them so an expanded probe cannot
-/// fuse across the user's explicit boundary.
-fn lattice_from_canonical_with_barriers(
-    canonical: &str,
-    canonical_to_raw_end: &[usize],
-    inv: &SyllableInventory,
-    mode: InputMode,
-) -> (String, Vec<usize>, Lattice, Vec<usize>) {
+/// The separator layers of a canonical shadow: the 連字 hyphen strip, the
+/// TPS space strip, and their barriers merged into final-shadow
+/// coordinates. One body for the lattice pipeline and the whole-buffer
+/// key (`fused_shadow_with_barriers`) so a typed `-` pins both the same
+/// way (§52).
+struct SeparatorLayers {
+    /// hyphenless byte → canonical byte.
+    hyphenless_to_canonical: Vec<usize>,
+    shadow: String,
+    /// shadow byte → hyphenless byte.
+    shadow_to_hyphenless: Vec<usize>,
+    /// Hyphen + space barriers, shadow coordinates, sorted.
+    barriers: Vec<usize>,
+    /// The TPS space barriers alone — the §41 whole-buffer pin signal.
+    space_barriers: Vec<usize>,
+}
+
+fn separator_layers(canonical: &str, mode: InputMode) -> SeparatorLayers {
     let (hyphenless, hyphenless_to_canonical, hyphen_barriers) =
         strip_char_shadow_with_barriers(canonical, '-');
     // TPS-only — the ASCII space is the keyboard's tone-1 / syllable
@@ -252,17 +258,12 @@ fn lattice_from_canonical_with_barriers(
     // word boundary). See `build_separator_shadow`.
     let (shadow, shadow_to_hyphenless, space_barriers) =
         build_separator_shadow_with_barriers(&hyphenless, mode);
-    // Compose the three offset maps: shadow → hyphenless → canonical → raw.
-    let shadow_to_raw_end: Vec<usize> = shadow_to_hyphenless
-        .iter()
-        .map(|&hyphenless_idx| canonical_to_raw_end[hyphenless_to_canonical[hyphenless_idx]])
-        .collect();
     // Merge the two barrier layers into final-shadow coordinates. Hyphen
     // barriers are hyphenless offsets; project them through the separator
     // strip (count the shadow bytes whose hyphenless source is below the
     // barrier — equivalently, find the shadow offset whose map value first
     // reaches the barrier).
-    let mut barriers: Vec<usize> = space_barriers;
+    let mut barriers: Vec<usize> = space_barriers.clone();
     for hyphen_barrier in hyphen_barriers {
         // The projected shadow offset is the LAST map index whose consumed
         // hyphenless prefix still fits under the barrier — i.e. how many
@@ -281,6 +282,39 @@ fn lattice_from_canonical_with_barriers(
         }
     }
     barriers.sort_unstable();
+    SeparatorLayers {
+        hyphenless_to_canonical,
+        shadow,
+        shadow_to_hyphenless,
+        barriers,
+        space_barriers,
+    }
+}
+
+/// [`lattice_from_canonical`] plus the merged barrier set: every shadow
+/// byte offset where a user separator (TPS space) or 連字 hyphen was
+/// stripped. Barriers gate the §35 ambiguity expansion — a single
+/// syllable may not cross one, and the glyph before one is Final-only —
+/// and the TPS syllabifier receives them so an expanded probe cannot
+/// fuse across the user's explicit boundary.
+fn lattice_from_canonical_with_barriers(
+    canonical: &str,
+    canonical_to_raw_end: &[usize],
+    inv: &SyllableInventory,
+    mode: InputMode,
+) -> (String, Vec<usize>, Lattice, Vec<usize>) {
+    let SeparatorLayers {
+        hyphenless_to_canonical,
+        shadow,
+        shadow_to_hyphenless,
+        barriers,
+        ..
+    } = separator_layers(canonical, mode);
+    // Compose the three offset maps: shadow → hyphenless → canonical → raw.
+    let shadow_to_raw_end: Vec<usize> = shadow_to_hyphenless
+        .iter()
+        .map(|&hyphenless_idx| canonical_to_raw_end[hyphenless_to_canonical[hyphenless_idx]])
+        .collect();
     // §41 — consume a TRAILING separator marker into the full-span end.
     //
     // `strip_char_shadow_with_barriers` only records map entries for the
@@ -547,11 +581,14 @@ fn remainder_has_closed_syllable(
     barriers: &[usize],
 ) -> bool {
     let remainder = &shadow[end..];
+    let barrier_after_end = || barriers.iter().any(|&b| b > end);
     match mode {
-        InputMode::Tl | InputMode::Poj => remainder.bytes().any(is_tl_tone_digit),
-        InputMode::Tps => {
-            remainder.chars().any(phonetics::is_tps_tone_mark) || barriers.iter().any(|&b| b > end)
+        // §52: a typed `-` past `end` closes the syllable before it the
+        // way a tone digit does (`iah-` can no longer grow past `h`).
+        InputMode::Tl | InputMode::Poj => {
+            remainder.bytes().any(is_tl_tone_digit) || barrier_after_end()
         }
+        InputMode::Tps => remainder.chars().any(phonetics::is_tps_tone_mark) || barrier_after_end(),
         InputMode::English => false,
     }
 }
@@ -599,29 +636,55 @@ pub(crate) fn span_key(
         return None;
     }
     let prefix = mode_key_prefix(mode);
-    let span_barriers: Vec<usize> = barriers
-        .iter()
-        .filter(|&&b| b > start && b <= end)
-        .map(|&b| b - start)
-        .collect();
-    let tone_pin = span_tone_pin(span, &body, end, mode, barriers);
+    let span_barriers = span_local_barriers(barriers, start, end);
+    let final_only = key_final_only_offsets(span, &body, mode, &span_barriers, prefix.len() + 1);
     Some(SpanKey {
         key: format!("{prefix}:{body}"),
-        final_only: key_final_only_offsets(span, &body, mode, &span_barriers, prefix.len() + 1),
-        tone_pin,
+        final_only,
+        tone_pin: span_tone_pin(span, &body, end, mode, barriers, span_barriers),
     })
 }
 
-/// The post-lookup tone constraint for `span` (whose lookup body is
-/// `body`), one rule per mode family:
-/// - **TL / POJ**: a span carrying at least one ASCII tone digit pins
-///   the tones it typed — [`TonePin::TypedTones`] over the hyphenless
-///   span verbatim (`teng5sek`). The lookup body is toneless for a
-///   partial-tone span (there is no partial-tone FST family, §17 case 3)
-///   and verbatim for a fully-toned one (§17 case 1); the pin re-applies
-///   the typed digits after the lookup either way, and is what keeps a
-///   toneless-matched custom entry honest for a fully-toned span. A span
-///   with no digit stays unpinned — the "show all tones" affordance.
+/// [`span_local_barriers`] for the OOV synth readings
+/// ([`greedy_longest_syllabification`] / [`span_min_syllable_count`]),
+/// under the `typed_hyphen_is_boundary` policy (§52).
+pub(crate) fn oov_reading_barriers(
+    barriers: &[usize],
+    start: usize,
+    end: usize,
+    mode: InputMode,
+) -> Vec<usize> {
+    if crate::syllabifier::typed_hyphen_is_boundary(mode) {
+        span_local_barriers(barriers, start, end)
+    } else {
+        Vec::new()
+    }
+}
+
+/// The barriers strictly inside or at the end of `shadow[start..end]`,
+/// shifted to span coordinates — the boundary in front of a span belongs
+/// to the span before it, so a barrier AT `start` is dropped.
+fn span_local_barriers(barriers: &[usize], start: usize, end: usize) -> Vec<usize> {
+    barriers
+        .iter()
+        .filter(|&&b| b > start && b <= end)
+        .map(|&b| b - start)
+        .collect()
+}
+
+/// The post-lookup constraint for `span` (whose lookup body is `body`),
+/// one rule per mode family:
+/// - **TL / POJ**: a span carrying at least one ASCII tone digit or a
+///   typed `-` boundary pins what it typed — [`TonePin::TypedTones`]
+///   over the hyphenless span verbatim (`teng5sek`) plus the boundary
+///   offsets (`span_barriers`, §52: a reading must end a syllable on
+///   every one, so `khi|ah` drops 隙 `khiah`). The lookup body is
+///   toneless for a partial-tone span (there is no partial-tone FST
+///   family, §17 case 3) and verbatim for a fully-toned one (§17 case
+///   1); the pin re-applies the typed digits after the lookup either
+///   way, and is what keeps a toneless-matched custom entry honest for a
+///   fully-toned span. A span with neither stays unpinned — the "show
+///   all tones" affordance.
 /// - **TPS**: [`span_end_pins_unmarked_tone`] → [`TonePin::TpsSpaceEnd`]
 ///   over the toneless body (§41).
 /// - **English**: never pinned — a digit there is not a tone.
@@ -631,12 +694,16 @@ pub(crate) fn span_tone_pin(
     span_end: usize,
     mode: InputMode,
     barriers: &[usize],
+    span_barriers: Vec<usize>,
 ) -> TonePin {
     match mode {
-        InputMode::Tl | InputMode::Poj if span.bytes().any(|b| b.is_ascii_digit()) => {
+        InputMode::Tl | InputMode::Poj
+            if span.bytes().any(|b| b.is_ascii_digit()) || !span_barriers.is_empty() =>
+        {
             TonePin::TypedTones {
                 mode,
                 typed: span.to_owned(),
+                boundaries: span_barriers,
             }
         }
         InputMode::Tps if span_end_pins_unmarked_tone(span, span_end, mode, barriers) => {
@@ -773,6 +840,7 @@ pub(crate) fn greedy_longest_syllabification(
     shadow: &str,
     inv: &SyllableInventory,
     mode: InputMode,
+    barriers: &[usize],
 ) -> Option<Vec<(usize, usize)>> {
     let lowered = shadow.to_ascii_lowercase();
     let mut segs: Vec<(usize, usize)> = Vec::new();
@@ -786,7 +854,7 @@ pub(crate) fn greedy_longest_syllabification(
         // walks the `poj:` family — both produce shadow-aligned offsets
         // because the inventory family's syllable boundaries match the
         // shadow form.
-        let end = valid_span_endings_lowered(&lowered, pos, inv, mode, 1)
+        let end = valid_span_endings_lowered_with_barriers(&lowered, pos, inv, mode, 1, barriers)
             .into_iter()
             .max()?;
         segs.push((pos, end));
@@ -835,6 +903,7 @@ pub(crate) fn span_min_syllable_count(
     shadow_span: &str,
     inv: &SyllableInventory,
     mode: InputMode,
+    barriers: &[usize],
 ) -> Option<usize> {
     let lowered = shadow_span.to_ascii_lowercase();
     let end = lowered.len();
@@ -860,7 +929,7 @@ pub(crate) fn span_min_syllable_count(
         if pos == end {
             return Some(hops);
         }
-        for nxt in valid_span_endings_lowered(&lowered, pos, inv, mode, 1) {
+        for nxt in valid_span_endings_lowered_with_barriers(&lowered, pos, inv, mode, 1, barriers) {
             if nxt > pos && nxt <= end && !dist.contains_key(&nxt) {
                 dist.insert(nxt, hops + 1);
                 queue.push_back(nxt);
@@ -897,6 +966,7 @@ pub(crate) fn span_min_syllable_count(
 /// - `"tai-"`    → shadow `"tai"`,    map `[0, 1, 2, 3]`
 /// - `"goa--si"` → shadow `"goasi"`,  map `[0, 1, 2, 3, 6, 7]`
 /// - `"---"`     → shadow `""`,       map `[0]`
+#[cfg(test)]
 pub(crate) fn build_hyphen_shadow(raw: &str) -> (String, Vec<usize>) {
     strip_char_shadow(raw, '-')
 }
@@ -908,6 +978,7 @@ pub(crate) fn build_hyphen_shadow(raw: &str) -> (String, Vec<usize>) {
 /// the `k`-th output byte. `map[0] = 0`; `map.len() == output.len() + 1`.
 /// The two callers differ only in which char they strip (`-` vs ` `) and
 /// in their mode gating; the loop body is identical, so it lives here.
+#[cfg(test)]
 fn strip_char_shadow(input: &str, skip: char) -> (String, Vec<usize>) {
     let (shadow, map, _) = strip_char_shadow_with_barriers(input, skip);
     (shadow, map)
@@ -1009,18 +1080,20 @@ fn fused_shadow(raw: &str, mode: InputMode) -> String {
     fused_shadow_with_barriers(raw, mode).0
 }
 
-/// [`fused_shadow`] plus the stripped-space barriers (shadow
-/// coordinates) the TPS separator pass leaves behind — the §41 pin
-/// signal for a whole-buffer key. Hyphen barriers are not returned: they
-/// gate the §35 ambiguity expansion, which the whole-buffer callers
-/// discard, and never pin a tone.
+/// [`fused_shadow`] plus the barriers (shadow coordinates) a whole-buffer
+/// key pins on: for TL / POJ the typed `-` boundaries (§52, the custom /
+/// learned / partial-prefix pin); for TPS the stripped-space barriers
+/// alone — the §41 pin signal — never a typed hyphen, which there only
+/// gates the §35 ambiguity expansion the whole-buffer callers discard.
 fn fused_shadow_with_barriers(raw: &str, mode: InputMode) -> (String, Vec<usize>) {
     let lower = raw.to_ascii_lowercase();
     let (canonical, _) = canonicalize_poj_shadow(&lower, mode);
-    let (hyphenless, _) = build_hyphen_shadow(&canonical);
-    // TPS-only space strip; no-op for TL/POJ/English and space-free input.
-    let (shadow, _, barriers) = build_separator_shadow_with_barriers(&hyphenless, mode);
-    (shadow, barriers)
+    let layers = separator_layers(&canonical, mode);
+    let barriers = match mode {
+        InputMode::Tps => layers.space_barriers,
+        InputMode::Tl | InputMode::Poj | InputMode::English => layers.barriers,
+    };
+    (layers.shadow, barriers)
 }
 
 /// v3.5.8 S6 (Codex pre-impl S6 Q2, 2026-05-17, BLOCK condition) —
@@ -1602,6 +1675,20 @@ mod tests {
     }
 
     #[test]
+    fn whole_buffer_pin_ignores_a_typed_hyphen_under_tps() {
+        // A TPS buffer closed by `-` is not closed by the keyboard space:
+        // the §41 pin stays off (Codex post-impl 2026-09-22 P2).
+        assert_eq!(
+            whole_buffer_tone_pin("ㄒㄧ-", InputMode::Tps),
+            TonePin::None
+        );
+        assert_eq!(
+            whole_buffer_tone_pin("ㄒㄧ ", InputMode::Tps),
+            TonePin::TpsSpaceEnd("ㄒㄧ".to_owned())
+        );
+    }
+
+    #[test]
     fn whole_buffer_pin_is_none_for_a_space_only_buffer() {
         assert_eq!(whole_buffer_tone_pin(" ", InputMode::Tps), TonePin::None);
         assert_eq!(whole_buffer_tone_pin("", InputMode::Tps), TonePin::None);
@@ -1614,9 +1701,15 @@ mod tests {
     // toneless-matched custom entries honest for the fully-toned case.
     #[test]
     fn whole_buffer_pin_carries_typed_tones_for_tl_poj() {
+        // §52: the typed `-` after `teng5` is a boundary too (offset 5,
+        // past the digit) — exactly what Codex predicted would flip.
         assert_eq!(
             whole_buffer_tone_pin("teng5-sek", InputMode::Poj),
-            typed_tones(InputMode::Poj, "teng5sek")
+            TonePin::TypedTones {
+                mode: InputMode::Poj,
+                typed: "teng5sek".to_owned(),
+                boundaries: vec![5],
+            }
         );
         assert_eq!(
             whole_buffer_tone_pin("Teng5sek4", InputMode::Tl),
@@ -1630,6 +1723,7 @@ mod tests {
         TonePin::TypedTones {
             mode,
             typed: typed.to_owned(),
+            boundaries: Vec::new(),
         }
     }
 
@@ -2707,6 +2801,106 @@ mod tests {
         SyllableInventory::open(&path).expect("open inventory")
     }
 
+    // ---- §52 typed `-` is a syllable boundary (USER 2026-09-22) ----
+    // Inventory mirrors production around `khi|ah`: every strict prefix
+    // of `khiah` that is itself a syllable (`khi`, `khia`) is present, so
+    // the greedy reading has something wrong to prefer.
+
+    fn khiah_inventory() -> SyllableInventory {
+        build_inventory(&["khi3", "khia7", "khiah4", "ah4", "a1", "i1"])
+    }
+
+    #[test]
+    fn typed_hyphen_barrier_blocks_a_single_syllable_from_crossing_it() {
+        use crate::syllabifier::valid_span_endings_lowered_with_barriers as endings;
+        let inv = khiah_inventory();
+        // One syllable from 0: only `khi` may end before the barrier.
+        assert_eq!(endings("khiah", 0, &inv, InputMode::Tl, 1, &[3]), vec![3]);
+        // Two syllables: chains still meet AT the barrier (`khi`+`a`,
+        // `khi`+`ah`) — only the crossing single is gone.
+        assert_eq!(
+            endings("khiah", 0, &inv, InputMode::Tl, 2, &[3]),
+            vec![3, 4, 5]
+        );
+        // No barrier: byte-identical to before (`khi`, `khia`, `khiah`).
+        assert_eq!(
+            endings("khiah", 0, &inv, InputMode::Tl, 1, &[]),
+            vec![3, 4, 5]
+        );
+        // English never honours one.
+        assert_eq!(
+            endings("khiah", 0, &inv, InputMode::English, 1, &[3]),
+            vec![3, 4, 5]
+        );
+    }
+
+    #[test]
+    fn oov_readings_split_on_a_typed_hyphen_in_tl_poj_only() {
+        let inv = khiah_inventory();
+        assert_eq!(
+            greedy_longest_syllabification("khiah", &inv, InputMode::Tl, &[3]),
+            Some(vec![(0, 3), (3, 5)])
+        );
+        assert_eq!(
+            greedy_longest_syllabification("khiah", &inv, InputMode::Tl, &[]),
+            Some(vec![(0, 5)])
+        );
+        assert_eq!(
+            span_min_syllable_count("khiah", &inv, InputMode::Tl, &[3]),
+            Some(2)
+        );
+        assert_eq!(
+            span_min_syllable_count("khiah", &inv, InputMode::Tl, &[]),
+            Some(1)
+        );
+        // Span-local shift, and the mode gate: TPS / English get none.
+        assert_eq!(
+            oov_reading_barriers(&[3, 5], 2, 5, InputMode::Tl),
+            vec![1, 3]
+        );
+        assert_eq!(
+            oov_reading_barriers(&[3, 5], 0, 5, InputMode::Poj),
+            vec![3, 5]
+        );
+        assert!(oov_reading_barriers(&[3], 0, 5, InputMode::Tps).is_empty());
+        assert!(oov_reading_barriers(&[3], 0, 5, InputMode::English).is_empty());
+    }
+
+    #[test]
+    fn span_key_pins_typed_boundaries_for_a_hyphenated_tl_poj_span() {
+        let boundary = |mode, typed: &str, boundaries: Vec<usize>| TonePin::TypedTones {
+            mode,
+            typed: typed.to_owned(),
+            boundaries,
+        };
+        // trace: shadow `khiah`, barrier at 3 → span (0,5) carries it.
+        let k = span_key("khiah", 0, 5, InputMode::Tl, &[3]).expect("body");
+        assert_eq!(k.key, "tl:khiah");
+        assert_eq!(k.tone_pin, boundary(InputMode::Tl, "khiah", vec![3]));
+        // Digits and a boundary together: offsets count the typed digit.
+        let k = span_key("khi3ah", 0, 6, InputMode::Tl, &[4]).expect("body");
+        assert_eq!(k.tone_pin, boundary(InputMode::Tl, "khi3ah", vec![4]));
+        // POJ reads the same shape.
+        let k = span_key("khiah", 0, 5, InputMode::Poj, &[3]).expect("body");
+        assert_eq!(k.tone_pin, boundary(InputMode::Poj, "khiah", vec![3]));
+        // The barrier at a span's own start belongs to the span before it.
+        let k = span_key("khiah", 3, 5, InputMode::Tl, &[3]).expect("body");
+        assert_eq!(k.tone_pin, TonePin::None);
+        // No barrier, no digit → unpinned as before; English never pins.
+        assert_eq!(
+            span_key("khiah", 0, 5, InputMode::Tl, &[])
+                .unwrap()
+                .tone_pin,
+            TonePin::None
+        );
+        assert_eq!(
+            span_key("khiah", 0, 5, InputMode::English, &[3])
+                .unwrap()
+                .tone_pin,
+            TonePin::None
+        );
+    }
+
     #[test]
     fn greedy_longest_syllabification_taiuantai_reads_tai_uan_tai() {
         // The documented no-dict carve-out expectation: `taiuantai`
@@ -2715,7 +2909,7 @@ mod tests {
         // sub-syllable over-split `ta i u an ta i` (literal
         // max-syllable-count) and NOT the min-cost fewest-edge blob.
         let inv = build_inventory(&["tai1", "uan1", "ta1", "i1", "u1", "an1"]);
-        let segs = greedy_longest_syllabification("taiuantai", &inv, InputMode::Tl)
+        let segs = greedy_longest_syllabification("taiuantai", &inv, InputMode::Tl, &[])
             .expect("buffer is fully syllabifiable");
         assert_eq!(segs, vec![(0, 3), (3, 6), (6, 9)]);
         let roman = segs
@@ -2732,7 +2926,7 @@ mod tests {
         // caller suppresses the slot-0 synth and leaves the span-local
         // list untouched (pre-S2 behavior).
         let inv = build_inventory(&["tai1"]);
-        assert!(greedy_longest_syllabification("taix", &inv, InputMode::Tl).is_none());
+        assert!(greedy_longest_syllabification("taix", &inv, InputMode::Tl, &[]).is_none());
     }
 
     #[test]
@@ -2743,13 +2937,13 @@ mod tests {
         // POJ-mode probing succeeds — proves the mode parameter selects
         // the right family end-to-end.
         let inv = build_poj_inventory(&["chiah4", "goa2"]);
-        let segs = greedy_longest_syllabification("chiahgoa", &inv, InputMode::Poj)
+        let segs = greedy_longest_syllabification("chiahgoa", &inv, InputMode::Poj, &[])
             .expect("POJ shadow must syllabify against `poj:` family");
         assert_eq!(segs, vec![(0, 5), (5, 8)]);
         // TL mode against the same inventory finds nothing — the `tl:`
         // family is empty, so the very first step has no valid ending.
         assert!(
-            greedy_longest_syllabification("chiahgoa", &inv, InputMode::Tl).is_none(),
+            greedy_longest_syllabification("chiahgoa", &inv, InputMode::Tl, &[]).is_none(),
             "TL mode must NOT see `poj:`-only inventory entries"
         );
     }
@@ -2762,15 +2956,21 @@ mod tests {
         let inv = build_inventory(&["tai1", "uan1", "ta1"]);
         // Whole span is itself one valid syllable → 1 (correct, not a
         // collapse).
-        assert_eq!(span_min_syllable_count("tai", &inv, InputMode::Tl), Some(1));
+        assert_eq!(
+            span_min_syllable_count("tai", &inv, InputMode::Tl, &[]),
+            Some(1)
+        );
         // `taiuanta` = tai|uan|ta → 3 (the synth syllable-sum metadata).
         assert_eq!(
-            span_min_syllable_count("taiuanta", &inv, InputMode::Tl),
+            span_min_syllable_count("taiuanta", &inv, InputMode::Tl, &[]),
             Some(3)
         );
         // Not single-syllable-reachable → None (caller fail-closes).
-        assert_eq!(span_min_syllable_count("taix", &inv, InputMode::Tl), None);
-        assert_eq!(span_min_syllable_count("", &inv, InputMode::Tl), None);
+        assert_eq!(
+            span_min_syllable_count("taix", &inv, InputMode::Tl, &[]),
+            None
+        );
+        assert_eq!(span_min_syllable_count("", &inv, InputMode::Tl, &[]), None);
     }
 
     #[test]
@@ -2784,11 +2984,11 @@ mod tests {
         //   non-greedy `ta` then `nia` spans it → real count = 2.
         let inv = build_inventory(&["ta1", "tan1", "nia1"]);
         assert!(
-            greedy_longest_syllabification("tania", &inv, InputMode::Tl).is_none(),
+            greedy_longest_syllabification("tania", &inv, InputMode::Tl, &[]).is_none(),
             "precondition: greedy-longest must dead-end on this span"
         );
         assert_eq!(
-            span_min_syllable_count("tania", &inv, InputMode::Tl),
+            span_min_syllable_count("tania", &inv, InputMode::Tl, &[]),
             Some(2),
             "min-hop walk must recover the real 2-syllable count, not collapse to 1"
         );
@@ -2801,11 +3001,11 @@ mod tests {
         // TL-mode probe must return None.
         let inv = build_poj_inventory(&["chiah4", "goa2"]);
         assert_eq!(
-            span_min_syllable_count("chiahgoa", &inv, InputMode::Poj),
+            span_min_syllable_count("chiahgoa", &inv, InputMode::Poj, &[]),
             Some(2),
         );
         assert_eq!(
-            span_min_syllable_count("chiahgoa", &inv, InputMode::Tl),
+            span_min_syllable_count("chiahgoa", &inv, InputMode::Tl, &[]),
             None,
             "TL mode must NOT see `poj:`-only entries"
         );

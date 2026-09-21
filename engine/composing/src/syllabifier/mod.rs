@@ -40,39 +40,13 @@ pub mod tps;
 use lexicon::SyllableInventory;
 use phonetics::InputMode;
 
-/// v3.5.9 D / C-3b — unified mode-aware syllabifier entry point.
-///
-/// Dispatches `valid_span_endings_lowered` to the family-correct scanner:
-/// - `Tl | Poj | English` → [`tl::valid_span_endings_lowered`]
-///   (BFS over the `tl:` / `poj:` family).
-/// - `Tps` → [`tps::valid_span_endings_lowered`] (BFS over the `tps:`
-///   family — same inv-driven shape as TL post-fix 2026-05-27, replacing
-///   the legacy structural pre-scan that could not segment medial-led
-///   second syllables).
-///
-/// All callers downstream of [`crate::lattice::build_lattice`] (lattice
-/// BFS, walker greedy / min-syllable derivations) route through here so
-/// the syllabification family stays tied to the same `mode` parameter
-/// that drives `composing::shadow::mode_key_prefix` and the emitted
-/// `<prefix>:<toneless>` FST key — one mode parameter, one family, no
-/// drift.
-pub(crate) fn valid_span_endings_lowered(
-    lowered: &str,
-    pos: usize,
-    inv: &SyllableInventory,
-    mode: InputMode,
-    max_syllables: usize,
-) -> Vec<usize> {
-    valid_span_endings_lowered_with_barriers(lowered, pos, inv, mode, max_syllables, &[])
-}
-
-/// [`valid_span_endings_lowered`] plus the stripped-separator barriers
-/// (§35): the TPS scanner refuses any single-syllable link that crosses
-/// a barrier and expands ambiguity families otherwise. The TL scanner
-/// ignores barriers entirely — TL / POJ / English never strip a
-/// separator, callers always pass an empty slice, and the TL primitive
-/// is untouched (§18 fix-location: the shared TL path stays
-/// byte-identical).
+/// The family-correct scanner for `mode`, with the stripped-separator
+/// barriers: no single-syllable link crosses one in either family. TPS (§35) also
+/// expands ambiguity families and marks the glyph before a barrier
+/// Final-only; TL / POJ (§52) only refuse the crossing — a typed `-` is
+/// the user's syllable boundary (`khi--ah` is never read `khiah`);
+/// English ignores them. An empty slice leaves every scanner
+/// byte-identical to its barrier-free form.
 pub(crate) fn valid_span_endings_lowered_with_barriers(
     lowered: &str,
     pos: usize,
@@ -86,7 +60,28 @@ pub(crate) fn valid_span_endings_lowered_with_barriers(
             tps::valid_span_endings_lowered(lowered, pos, inv, mode, max_syllables, barriers)
         }
         InputMode::Tl | InputMode::Poj | InputMode::English => {
-            tl::valid_span_endings_lowered(lowered, pos, inv, mode, max_syllables)
+            let barriers = if typed_hyphen_is_boundary(mode) {
+                barriers
+            } else {
+                &[]
+            };
+            tl::valid_span_endings_lowered(lowered, pos, inv, mode, max_syllables, barriers)
         }
     }
+}
+
+/// A barrier strictly inside `cur..end`: the one cut no single syllable
+/// may span in either family (TPS §35 part (a), TL / POJ §52). Chains
+/// still meet AT a barrier.
+pub(super) fn crosses_barrier(barriers: &[usize], cur: usize, end: usize) -> bool {
+    barriers.iter().any(|&b| cur < b && b < end)
+}
+
+/// §52 policy, authored once: TL / POJ read a typed `-` as a syllable
+/// boundary (scanner, OOV readings, lookup pin); TPS has its own §35
+/// barrier contract in its scanner and keeps its OOV readings blind;
+/// English never pins a boundary, so a one-layer split would surface
+/// nothing.
+pub(crate) fn typed_hyphen_is_boundary(mode: InputMode) -> bool {
+    matches!(mode, InputMode::Tl | InputMode::Poj)
 }
