@@ -66,17 +66,19 @@ internal fun SQLiteStatement.bindArgs(vararg args: Any?) {
  *
  * The caller holds the transaction so no other writer can slip between the
  * two statements — the same thread-safety the single UPSERT statement had.
+ *
+ * Returns the inserted rowid, or `-1` when the UPDATE matched (nothing was
+ * inserted) — for a caller that hangs side rows off a fresh row only.
  */
 internal fun upsert(
     update: SQLiteStatement,
     insert: SQLiteStatement,
     vararg args: Any?,
-) {
+): Long {
     update.bindArgs(*args)
-    if (update.executeUpdateDelete() == 0) {
-        insert.bindArgs(*args)
-        insert.executeInsert()
-    }
+    if (update.executeUpdateDelete() > 0) return -1L
+    insert.bindArgs(*args)
+    return insert.executeInsert()
 }
 
 /** [upsert] for a one-off write; batch loops compile the pair once instead. */
@@ -84,9 +86,9 @@ internal fun SQLiteDatabase.upsert(
     updateSql: String,
     insertSql: String,
     vararg args: Any?,
-) {
+): Long {
     check(inTransaction()) { "upsert needs the caller's transaction" }
-    compileStatement(updateSql).use { update ->
+    return compileStatement(updateSql).use { update ->
         compileStatement(insertSql).use { insert -> upsert(update, insert, *args) }
     }
 }

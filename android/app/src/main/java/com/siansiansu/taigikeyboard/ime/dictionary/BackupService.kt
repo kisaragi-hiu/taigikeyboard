@@ -4,7 +4,6 @@ import android.content.Context
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.pojToTl
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService.Entry.Origin
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -48,7 +47,7 @@ class BackupService(
 
             val json =
                 JSONObject().apply {
-                    put("version", 3)
+                    put("version", 2)
                     put(
                         "exportedAt",
                         java.text
@@ -68,9 +67,6 @@ class BackupService(
                                     JSONObject().apply {
                                         put("roman", entry.roman)
                                         put("hanzi", entry.hanzi)
-                                        // §50 provenance (backup v3).
-                                        put("origin", entry.origin.raw)
-                                        put("learnCount", entry.learnCount)
                                     },
                                 )
                             }
@@ -130,51 +126,32 @@ class BackupService(
         }
 
     /**
-     * §50 — provenance-aware. A manual row in the file is the user's own
-     * word: skipped only when a manual row for the pair exists; over a
-     * learned row it lands through `save`, whose write takes the learned
-     * row over (manual wins, never the reverse). A learned row goes through
-     * the learn path so the learned cap, eviction and the manual-wins rule
-     * apply exactly as on device. An older file (no `origin`) is all manual.
+     * Rows tagged `origin = 1` — the unreleased v3 format (2026-09-20) —
+     * are skipped: learned phrases live in `learned_phrases.db` and never
+     * travel in a backup (USER 2026-09-21). Pairs on device plus the ones
+     * this file already landed dedupe, so a pair repeated inside the file
+     * is one row.
      */
     private suspend fun importCustomDictionary(array: JSONArray?): Int {
         array ?: return 0
         val existing = customDict.fetchAll()
-        // Manual over learned when both exist for a pair (the service does
-        // not let that state persist, but a stale list is cheap to fold).
-        val originByPair = mutableMapOf<String, Origin>()
-        for (row in existing.sortedBy { !it.isLearned }) {
-            originByPair["${row.roman}\t${row.hanzi}"] = row.origin
-        }
+        val seenPairs = existing.map { "${it.roman}\t${it.hanzi}" }.toMutableSet()
 
-        // Respect the manual row cap: grandfather existing entries, stop at the
-        // limit. save() swallows the over-cap throw, so without this the
-        // reported count would over-count rows that were never written.
-        var manualRemaining = CustomDictionaryCapacityPolicy.remainingCapacity(existing.count { !it.isLearned })
+        // Respect the row cap: grandfather existing entries, stop at the limit.
+        // save() swallows the over-cap throw, so without this the reported count
+        // would over-count rows that were never written. Mirrors importFromFile.
+        val remaining = CustomDictionaryCapacityPolicy.remainingCapacity(existing.size)
         var imported = 0
         for (i in 0 until array.length()) {
+            if (imported >= remaining) break
             val obj = array.getJSONObject(i)
             val roman = obj.optString("roman", "")
             val hanzi = obj.optString("hanzi", "")
-            if (roman.isEmpty() || hanzi.isEmpty()) continue
+            if (roman.isEmpty() || hanzi.isEmpty() || obj.optInt("origin") == 1) continue
 
-            val key = "$roman\t$hanzi"
-            val origin = Origin.fromRaw(obj.optInt("origin"))
-            // Same two skip rules as iOS: a manual row on device wins, and a
-            // pair already learned is not learned again.
-            val existing = originByPair[key]
-            if (existing == Origin.MANUAL || existing == origin) continue
-            when (origin) {
-                Origin.LEARNED -> {
-                    if (!customDict.learnPhrase(hanzi, roman, count = obj.optInt("learnCount", 1))) continue
-                }
-                Origin.MANUAL -> {
-                    if (manualRemaining <= 0) break
-                    customDict.save(CustomDictionaryService.Entry(roman = roman, hanzi = hanzi))
-                    manualRemaining--
-                }
-            }
-            originByPair[key] = origin
+            if (!seenPairs.add("$roman\t$hanzi")) continue
+
+            customDict.save(CustomDictionaryService.Entry(roman = roman, hanzi = hanzi))
             imported++
         }
         return imported

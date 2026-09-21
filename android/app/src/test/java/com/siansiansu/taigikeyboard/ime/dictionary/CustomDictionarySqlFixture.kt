@@ -6,12 +6,11 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 import java.sql.Connection
 import java.sql.DriverManager
 
-/** The schema `DatabaseHelper.onCreate` produces: main table, learned-pair index, side table + indexes. */
+/** The schema `DatabaseHelper.onCreate` produces: main table, side table + indexes. */
 internal fun openCustomDictionarySchema(): Connection {
     val conn = DriverManager.getConnection("jdbc:sqlite::memory:")
     conn.createStatement().use { stmt ->
         stmt.executeUpdate(CustomDictionaryService.CREATE_TABLE_SQL)
-        stmt.executeUpdate(CustomDictionaryService.CREATE_LEARNED_PAIR_INDEX_SQL)
         stmt.executeUpdate(CustomDictionaryService.CREATE_SEARCH_KEY_TABLE_SQL)
         stmt.executeUpdate(CustomDictionaryService.CREATE_SEARCH_KEY_LOOKUP_INDEX_SQL)
         stmt.executeUpdate(CustomDictionaryService.CREATE_SEARCH_KEY_ENTRY_INDEX_SQL)
@@ -19,7 +18,20 @@ internal fun openCustomDictionarySchema(): Connection {
     return conn
 }
 
-/** A manual row (`origin` defaults to 0). */
+/**
+ * The dev-only v9 shape (#111, never released): the v8 tables plus
+ * `origin` / `learn_count` and the partial learned-pair index — what the
+ * v9 → v10 arm has to clean.
+ */
+internal fun openDevV9CustomDictionarySchema(): Connection =
+    openCustomDictionarySchema().also { conn ->
+        conn.createStatement().use { stmt ->
+            stmt.executeUpdate("ALTER TABLE custom_dictionary ADD COLUMN origin INTEGER NOT NULL DEFAULT 0")
+            stmt.executeUpdate("ALTER TABLE custom_dictionary ADD COLUMN learn_count INTEGER NOT NULL DEFAULT 0")
+            stmt.executeUpdate("CREATE UNIQUE INDEX idx_custom_learned_pair ON custom_dictionary(hanzi, roman) WHERE origin = 1")
+        }
+    }
+
 internal fun Connection.insertEntry(
     id: String,
     roman: String,

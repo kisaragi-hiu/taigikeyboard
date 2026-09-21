@@ -8,7 +8,8 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 // Two surfaces, intentionally separate, mirroring
 // ios/Sources/TaigiKeyboard/Settings/SettingsResetCoordinator.swift:
 // - resetAll(prefs): pure settings reset.
-// - resetAllUserData(root): destructive — wipes user frequency and next-word DBs.
+// - resetAllUserData(root): destructive — wipes user frequency, next-word and
+//   learned-phrase data.
 //
 // Android divergence from iOS (deferred parity): iOS wraps each destructive
 // deletion in its own do/try/catch with per-op logging, so a partial failure
@@ -24,5 +25,6 @@ object SettingsResetCoordinator {
     suspend fun resetAllUserData(root: CompositionRoot) {
         root.userFreq.deleteDatabase()
         root.nextWord.clearAllAssociations()
+        root.learnedPhrases.deleteAll()
     }
 }

@@ -11,6 +11,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.AndroidLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.dictionary.BackupService
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
+import com.siansiansu.taigikeyboard.ime.dictionary.LearnedPhraseService
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.dictionary.NextWordService
 import com.siansiansu.taigikeyboard.ime.text.composing.UserFrequencyService
@@ -36,6 +37,7 @@ class CompositionRoot private constructor(
 ) {
     val logger: LoggerBackend = AndroidLoggerBackend()
     val customDict: CustomDictionaryService = CustomDictionaryService(appContext, logger)
+    val learnedPhrases: LearnedPhraseService = LearnedPhraseService(appContext, logger)
     val userFreq: UserFrequencyService = UserFrequencyService(appContext, logger)
     val nextWord: NextWordService = NextWordService(appContext, logger)
     val lexicon: LexiconService = LexiconService(appContext, logger)

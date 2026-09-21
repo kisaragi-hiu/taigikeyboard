@@ -377,10 +377,6 @@ fun CustomDictionaryScreen(
                                             showEditDialog = true
                                         }.padding(vertical = 12.dp),
                             )
-                            if (entry.isLearned) {
-                                SourceBadge(text = L10n.dictionaryLearnedBadge, style = MaterialTheme.typography.labelSmall)
-                                Spacer(Modifier.width(8.dp))
-                            }
                             IconButton(
                                 onClick = { viewModel.delete(entry.id) },
                             ) {

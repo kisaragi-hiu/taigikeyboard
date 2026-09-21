@@ -334,7 +334,7 @@ fun RustEngineBridge.composingFetchAtPos(
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     hyphenlessRoman: Boolean = false,
     // §50 — learned phrases whose whole-buffer key equals the raw buffer
-    // (`CustomDictionaryService.learnedEntries`). Default empty = feature
+    // (`LearnedPhraseService.matches`). Default empty = feature
     // off / nothing learned.
     learnedEntries: List<com.siansiansu.taigikeyboard.engine.proto.LearnedEntry> = emptyList(),
 ): RustEngineBridge.ContinuousFetchResult {
