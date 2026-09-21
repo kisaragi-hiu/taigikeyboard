@@ -425,11 +425,27 @@ pub enum TonePin {
     /// coda) and drops 等式 `téng-sek` / 中式 `teng-sek`. Also set for a
     /// fully-toned span (`teng5sek4`): the verbatim toned key already
     /// filters the dictionary hits there, but custom entries are matched
-    /// toneless and need the pin.
+    /// toneless and need the pin. §52 — `boundaries` are the byte offsets
+    /// into `typed` where the user typed a `-`: a reading must end a
+    /// syllable on every one, so `khi|ah` keeps 去啊 `khì--ah` and drops
+    /// 隙 `khiah`. A span with a boundary but no digit is pinned too.
     TypedTones {
         mode: phonetics::InputMode,
         typed: String,
+        boundaries: Vec<TypedBoundary>,
     },
+}
+
+/// §52 — one `-` run the user typed inside a span: where it sits in the
+/// typed body, and whether it was the khinsiann `--` (two or more) rather
+/// than a plain 連字 `-`. A reading must end a syllable there AND, when
+/// another of its syllables follows, separate the two the same way: a
+/// typed `--` keeps 去啊 `khì--ah` and drops 忍氣 `jím-khì`-shaped words;
+/// a typed `-` does the reverse (a dictionary space counts as plain).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TypedBoundary {
+    pub at: usize,
+    pub khinsiann: bool,
 }
 
 impl TonePin {
@@ -447,9 +463,11 @@ impl TonePin {
             TonePin::TpsSpaceEnd(body) => {
                 reading_passes_space_pin(matched_key.unwrap_or(body), reading)
             }
-            TonePin::TypedTones { mode, typed } => {
-                reading_passes_typed_tones(*mode, typed, reading)
-            }
+            TonePin::TypedTones {
+                mode,
+                typed,
+                boundaries,
+            } => reading_passes_typed_tones(*mode, typed, boundaries, reading),
         }
     }
 
@@ -491,7 +509,12 @@ impl TonePin {
 /// matches, so a misalignment means the tone digits cannot be placed,
 /// and letting such a reading through would let a wrong-tone word past
 /// the pin on the strength of an alias spelling.
-fn reading_passes_typed_tones(mode: phonetics::InputMode, typed: &str, reading: &str) -> bool {
+fn reading_passes_typed_tones(
+    mode: phonetics::InputMode,
+    typed: &str,
+    boundaries: &[TypedBoundary],
+    reading: &str,
+) -> bool {
     let (face, ends) = match mode {
         phonetics::InputMode::Poj => phonetics::poj_num_syllable_ends_from_tl(reading),
         phonetics::InputMode::Tl => phonetics::tl_num_syllable_ends_from_tl(reading),
@@ -499,9 +522,36 @@ fn reading_passes_typed_tones(mode: phonetics::InputMode, typed: &str, reading: 
         // TPS tones are marks, English digits are not tones.
         phonetics::InputMode::Tps | phonetics::InputMode::English => return true,
     };
+    // §52 — every typed `-` must land on a syllable end of the reading:
+    // the `cursor` positions after each fully consumed syllable (its
+    // typed digit included) are the only places a boundary may sit — and
+    // where the reading goes on, its own separator there must be the
+    // same kind (`--` vs `-` / space). The last syllable's end carries no
+    // kind: a trailing typed `--` constrains the NEXT word, not this one.
+    let khinsiann_before = if boundaries.is_empty() {
+        Vec::new()
+    } else {
+        phonetics::tl_syllable_khinsiann_flags(reading)
+    };
+    let mut syllable_ends: Vec<(usize, Option<bool>)> = Vec::with_capacity(boundaries.len());
+    // A boundary at 0 is the run typed right before the span: only a
+    // reading that itself opens with `--` (a custom `--ah`) reads it, and
+    // then the run must be `--` too; every other reading starts after the
+    // previous word's boundary and ignores it.
+    let opens_khinsiann = khinsiann_before.first().copied().unwrap_or(false);
+    let boundaries_met = |syllable_ends: &[(usize, Option<bool>)]| {
+        boundaries.iter().all(|b| {
+            if b.at == 0 {
+                return !opens_khinsiann || b.khinsiann;
+            }
+            syllable_ends
+                .iter()
+                .any(|&(at, kind)| at == b.at && kind.is_none_or(|k| k == b.khinsiann))
+        })
+    };
     let mut cursor = 0usize;
     let mut start = 0usize;
-    for end in ends {
+    for (index, end) in ends.into_iter().enumerate() {
         let end = end as usize;
         let Some(syllable) = face.get(start..end) else {
             return false;
@@ -514,15 +564,24 @@ fn reading_passes_typed_tones(mode: phonetics::InputMode, typed: &str, reading: 
         let face_tone = syllable[letters.len()..].chars().next();
         let alias = phonetics::nasal_oo_alias_spelling(letters);
         let rest = &typed[cursor..];
-        let consumed = if rest.starts_with(letters) {
+        // Case-blind: `typed` is the lowercased shadow, a custom or learned
+        // reading may keep its capital (`Khì--ah`).
+        let consumed = if starts_with_ignore_ascii_case(rest, letters) {
             letters.len()
-        } else if let Some(alias) = alias.as_deref().filter(|alias| rest.starts_with(alias)) {
+        } else if let Some(alias) = alias
+            .as_deref()
+            .filter(|alias| starts_with_ignore_ascii_case(rest, alias))
+        {
             alias.len()
-        } else if letters.starts_with(rest) || alias.is_some_and(|alias| alias.starts_with(rest)) {
+        } else if starts_with_ignore_ascii_case(letters, rest)
+            || alias.is_some_and(|alias| starts_with_ignore_ascii_case(&alias, rest))
+        {
             // Typed text ends inside this syllable (its boundary, or
             // mid-syllable on the partial-prefix path): every typed digit
-            // so far was honored.
-            return true;
+            // so far was honored, and a boundary inside the unfinished
+            // syllable is not on any end (`tai-` + `tâin` fails, `tâi-uân`
+            // passes on the end of `tâi`).
+            return boundaries_met(&syllable_ends);
         } else {
             return false;
         };
@@ -533,8 +592,15 @@ fn reading_passes_typed_tones(mode: phonetics::InputMode, typed: &str, reading: 
             }
             cursor += 1;
         }
+        syllable_ends.push((cursor, khinsiann_before.get(index + 1).copied()));
     }
-    cursor == typed.len()
+    cursor == typed.len() && boundaries_met(&syllable_ends)
+}
+
+fn starts_with_ignore_ascii_case(haystack: &str, prefix: &str) -> bool {
+    haystack
+        .get(..prefix.len())
+        .is_some_and(|head| head.eq_ignore_ascii_case(prefix))
 }
 
 /// Span aliases for [`fetch_candidates_for_keys_with_barriers`]: `(start_byte, end_byte)`
@@ -3310,8 +3376,12 @@ mod nasal_oo_alias_face_tests {
 
 #[cfg(test)]
 mod typed_tone_pin_tests {
-    use super::{reading_passes_typed_tones as passes, TonePin};
-    use phonetics::InputMode::{Poj, Tl};
+    use super::{reading_passes_typed_tones, TonePin, TypedBoundary};
+    use phonetics::InputMode::{self, Poj, Tl};
+
+    fn passes(mode: InputMode, typed: &str, reading: &str) -> bool {
+        reading_passes_typed_tones(mode, typed, &[], reading)
+    }
 
     // §17 case 3 — the reported shape. Faces via `poj_num_syllable_ends_from_tl`:
     // trace: 程式 tîng-sik → POJ têng-sek → `teng5sek4` ends [5, 9];
@@ -3399,12 +3469,102 @@ mod typed_tone_pin_tests {
         assert!(passes(Tl, "ho5onn", "hô-onn"));
     }
 
+    // ---- §52 typed `-` boundaries (USER 2026-09-22) ----
+    fn passes_boundaries(
+        mode: InputMode,
+        typed: &str,
+        boundaries: &[usize],
+        reading: &str,
+    ) -> bool {
+        let plain: Vec<(usize, bool)> = boundaries.iter().map(|&at| (at, false)).collect();
+        passes_kinds(mode, typed, &plain, reading)
+    }
+
+    fn passes_kinds(
+        mode: InputMode,
+        typed: &str,
+        boundaries: &[(usize, bool)],
+        reading: &str,
+    ) -> bool {
+        let boundaries: Vec<TypedBoundary> = boundaries
+            .iter()
+            .map(|&(at, khinsiann)| TypedBoundary { at, khinsiann })
+            .collect();
+        reading_passes_typed_tones(mode, typed, &boundaries, reading)
+    }
+
+    // The kind of the typed run must match the reading's own separator at
+    // that boundary; a plain `-` and a dictionary space are the same kind.
+    #[test]
+    fn typed_boundary_kind_must_match_the_readings_separator() {
+        assert!(passes_kinds(Tl, "khiah", &[(3, true)], "khì--ah"));
+        assert!(!passes_kinds(Tl, "khiah", &[(3, false)], "khì--ah"));
+        assert!(passes_kinds(Tl, "jimkhi", &[(3, false)], "jím-khì"));
+        assert!(!passes_kinds(Tl, "jimkhi", &[(3, true)], "jím-khì"));
+        assert!(passes_kinds(Tl, "iasi", &[(2, false)], "iā sī"));
+        assert!(!passes_kinds(Tl, "iasi", &[(2, true)], "iā sī"));
+        // A trailing `--` constrains the next word, not this reading.
+        assert!(passes_kinds(Tl, "tai", &[(3, true)], "tâi"));
+        assert!(passes_kinds(Tl, "tai", &[(3, false)], "tâi"));
+        // …but a reading that continues past it must continue the same way.
+        assert!(passes_kinds(Tl, "tai", &[(3, true)], "tâi--uân"));
+        assert!(!passes_kinds(Tl, "tai", &[(3, true)], "tâi-uân"));
+        // The run typed right before the span (`at: 0`): read only by a
+        // reading that opens with `--` itself (a custom `--ah` row).
+        assert!(passes_kinds(Tl, "ah", &[(0, true)], "--ah"));
+        assert!(!passes_kinds(Tl, "ah", &[(0, false)], "--ah"));
+        assert!(passes_kinds(Tl, "ah", &[(0, true)], "ah"));
+        assert!(passes_kinds(Tl, "ah", &[(0, false)], "ah"));
+    }
+
+    // trace: typed `khiah` with `-` after `khi` → boundary 3.
+    //   去啊 khì--ah → `khi3ah4` ends [4, 7]; `khi` consumed → cursor 3 ✓.
+    //   隙 khiah → `khiah4` one syllable; letters `khiah` run past 3 ✗.
+    //   齒仔 khí-á → `khi2a2`; `khi` ✓ then `a` leaves `h` unconsumed ✗.
+    #[test]
+    fn typed_boundary_must_land_on_a_syllable_end_of_the_reading() {
+        assert!(passes_kinds(Tl, "khiah", &[(3, true)], "khì--ah"));
+        assert!(passes_boundaries(Tl, "khiah", &[3], "khì-ah"));
+        assert!(!passes_boundaries(Tl, "khiah", &[3], "khiah"));
+        assert!(!passes_boundaries(Tl, "khiah", &[3], "khia̍h"));
+        assert!(!passes_boundaries(Tl, "khiah", &[3], "khí-á"));
+        // Same reading, no boundary typed: everything still passes.
+        assert!(passes_boundaries(Tl, "khiah", &[], "khiah"));
+        assert!(passes_kinds(Poj, "khiah", &[(3, true)], "khì--ah"));
+    }
+
+    // A typed digit sits before the boundary: `khi3` + `-` + `ah` → 4.
+    #[test]
+    fn typed_boundary_and_typed_tone_are_both_required() {
+        assert!(passes_kinds(Tl, "khi3ah", &[(4, true)], "khì--ah"));
+        assert!(!passes_kinds(Tl, "khi3ah", &[(4, true)], "khí--ah"));
+        assert!(!passes_boundaries(Tl, "khi3ah", &[4], "khiah"));
+    }
+
+    // Trailing `-` (`tai-`): the boundary is the span end; a reading whose
+    // first syllable is exactly `tai` may continue (custom / learned rows
+    // are matched on the typed prefix), one that runs past it may not.
+    #[test]
+    fn trailing_boundary_closes_the_syllable_the_user_typed() {
+        assert!(passes_boundaries(Tl, "tai", &[3], "tâi"));
+        assert!(passes_boundaries(Tl, "tai", &[3], "tâi-uân"));
+        assert!(!passes_boundaries(Tl, "tai", &[3], "tâin"));
+    }
+
+    // `typed` is the lowercased shadow; a custom reading keeps its capital.
+    #[test]
+    fn boundary_check_reads_case_blind() {
+        assert!(passes_kinds(Tl, "khiah", &[(3, true)], "Khì--ah"));
+        assert!(!passes_boundaries(Tl, "khiah", &[3], "Khiah"));
+    }
+
     #[test]
     fn admits_dispatches_per_variant() {
         assert!(TonePin::None.admits(None, "tíng-sik"));
         let typed = TonePin::TypedTones {
             mode: Poj,
             typed: "teng5sek".to_owned(),
+            boundaries: Vec::new(),
         };
         assert!(typed.admits(Some("poj:tengsek"), "tîng-sik"));
         assert!(!typed.admits(Some("poj:tengsek"), "tíng-sik"));

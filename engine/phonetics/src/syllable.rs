@@ -38,6 +38,40 @@ pub fn poj_num_syllable_ends_from_tl(record_tl: &str) -> (String, Vec<u32>) {
     )
 }
 
+/// For each syllable of a record reading (the tokens of
+/// [`crate::tps::tl_syllable_tokens`], in order), whether the separator
+/// in front of it is the khinsiann `--` (`kì--khí-lâi` → `[false, true,
+/// false]`). A single `-` or a space is a plain boundary; the first
+/// syllable is preceded by nothing unless the reading itself opens with
+/// `--` (`--ah`).
+pub fn tl_syllable_khinsiann_flags(record_tl: &str) -> Vec<bool> {
+    let mut flags = Vec::new();
+    let mut in_token = false;
+    let mut hyphen_run = 0usize;
+    // One token per [`crate::tps::tl_syllable_tokens`] token, by the same
+    // separator set, so the flags index the tokens one to one.
+    for ch in record_tl.chars() {
+        match ch {
+            '-' => {
+                hyphen_run += 1;
+                in_token = false;
+            }
+            c if crate::tps::TL_SYLLABLE_SEPARATORS.contains(&c) => {
+                hyphen_run = 0;
+                in_token = false;
+            }
+            _ => {
+                if !in_token {
+                    flags.push(hyphen_run >= 2);
+                    in_token = true;
+                }
+                hyphen_run = 0;
+            }
+        }
+    }
+    flags
+}
+
 /// Which spelling a `*_num` column carries for a syllable.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum SpellingForm {
@@ -817,5 +851,22 @@ mod tests {
             assert_eq!(tl_form, expected_tl, "TL canonical of {input}");
             assert_ne!(poj_form, tl_form, "POJ/TL must differ for {input}");
         }
+    }
+}
+
+#[cfg(test)]
+mod khinsiann_flag_tests {
+    use super::tl_syllable_khinsiann_flags;
+
+    #[test]
+    fn flags_mark_the_syllable_after_a_double_hyphen() {
+        assert_eq!(
+            tl_syllable_khinsiann_flags("kì--khí-lâi"),
+            vec![false, true, false]
+        );
+        assert_eq!(tl_syllable_khinsiann_flags("iā sī"), vec![false, false]);
+        assert_eq!(tl_syllable_khinsiann_flags("--ah"), vec![true]);
+        assert_eq!(tl_syllable_khinsiann_flags("khiah"), vec![false]);
+        assert!(tl_syllable_khinsiann_flags("").is_empty());
     }
 }

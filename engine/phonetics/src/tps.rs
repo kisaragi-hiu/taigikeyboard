@@ -398,8 +398,16 @@ fn tps_notone_collecting(record_tl: &str, mut ends: Option<&mut Vec<u32>>) -> St
 /// hyphen, space, tab) and drops the empty runs a 輕聲 `--` produces.
 /// Single source for every per-token TPS derivation below.
 pub(crate) fn tl_syllable_tokens(record_tl: &str) -> impl Iterator<Item = &str> {
-    record_tl.split(['-', ' ', '\t']).filter(|t| !t.is_empty())
+    record_tl
+        .split(TL_SYLLABLE_SEPARATORS)
+        .filter(|t| !t.is_empty())
 }
+
+/// The three separators the build pipeline treats as syllable boundaries
+/// in a record reading — one definition for the tokenizer above and the
+/// khinsiann-flag walk (`crate::syllable::tl_syllable_khinsiann_flags`),
+/// so the two can never disagree on what a boundary is.
+pub(crate) const TL_SYLLABLE_SEPARATORS: [char; 3] = ['-', ' ', '\t'];
 
 /// One numeric-tone TL token → its fused TPS notone surface.
 ///

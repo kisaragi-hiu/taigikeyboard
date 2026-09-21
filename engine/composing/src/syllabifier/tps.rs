@@ -110,7 +110,7 @@ pub(crate) fn valid_span_endings_lowered(
             // it (`cur < barrier < end`). Chains may still span it link
             // by link, which is exactly the §31 soft-separator behavior
             // (`ㄍㄠ`␣`ㄉㄞ` → 交代 via two links meeting AT the barrier).
-            if barriers.iter().any(|&b| cur < b && b < end) {
+            if super::crosses_barrier(barriers, cur, end) {
                 continue;
             }
             // §35 ambiguity expansion: the probe accepts any reading of

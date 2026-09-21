@@ -216,7 +216,15 @@ fn join_typed_separators(
         if i > 0 {
             let start = shadow_to_raw_end[segs[i - 1].1];
             let run = crate::api::typed_separator_run(&raw[start..]);
-            out.push_str(if run.is_empty() { " " } else { run });
+            // A part that opens with its own `-` (a custom `--ah` row)
+            // carries the boundary; the typed run is not stacked on it.
+            out.push_str(if part.starts_with('-') {
+                ""
+            } else if run.is_empty() {
+                " "
+            } else {
+                run
+            });
         }
         out.push_str(part);
     }
@@ -580,6 +588,7 @@ fn fetch_walker_slot0_inner(
         shadow_to_raw_end,
         lattice,
         barriers,
+        khinsiann,
         ..
     } = continuous_keys;
     let ContinuousFetchCtx {
@@ -664,7 +673,7 @@ fn fetch_walker_slot0_inner(
             key: dict_key,
             final_only: edge_final_only,
             tone_pin: edge_tone_pin,
-        } = crate::shadow::span_key(shadow, start, end, mode, barriers)?;
+        } = crate::shadow::span_key(shadow, start, end, mode, barriers, khinsiann)?;
         // Custom override matching stays tone-INSENSITIVE: `custom_map` is
         // keyed by `custom_toneless_key` (toneless), so it is queried with
         // the toneless key — a custom word is a specific user entry, matched
@@ -732,10 +741,15 @@ fn fetch_walker_slot0_inner(
             // carries no syllable model — this mirrors what the
             // dict path reads off `DictionaryRecord.syllable_count`
             // for the same span and feeds the khiin `n_syls` bias.
-            let syllable_count = greedy_longest_syllabification(&shadow[start..end], inv, mode)
-                .map(|segs| segs.len())
-                .unwrap_or(1)
-                .clamp(1, u8::MAX as usize) as u8;
+            let syllable_count = greedy_longest_syllabification(
+                &shadow[start..end],
+                inv,
+                mode,
+                &crate::shadow::oov_reading_barriers(barriers, start, end, mode),
+            )
+            .map(|segs| segs.len())
+            .unwrap_or(1)
+            .clamp(1, u8::MAX as usize) as u8;
             return Some(crate::lattice::EdgeChoice {
                 roman: entry.roman.clone(),
                 hanji: entry.hanji.clone(),
@@ -846,9 +860,18 @@ fn fetch_walker_slot0_inner(
             // broken, fail-closed by dropping the edge — the buffer
             // is still spanned via finer edges.
             None => {
+                // §52: an OOV reading is the span's letters as one blob,
+                // so an edge crossing a typed `-` would render `a-i` as
+                // `ai`. Drop it — the single-syllable edges either side
+                // still span the buffer and take the typed join.
+                let oov_barriers = crate::shadow::oov_reading_barriers(barriers, start, end, mode);
+                if oov_barriers.iter().any(|&b| b < end - start) {
+                    return None;
+                }
                 let toneless_len = toneless.chars().count();
-                let syllable_count = span_min_syllable_count(&shadow[start..end], inv, mode)?
-                    .clamp(1, u8::MAX as usize) as u8;
+                let syllable_count =
+                    span_min_syllable_count(&shadow[start..end], inv, mode, &oov_barriers)?
+                        .clamp(1, u8::MAX as usize) as u8;
                 Some(crate::lattice::EdgeChoice {
                     roman: toneless,
                     hanji: None,
@@ -916,7 +939,12 @@ fn fetch_walker_slot0_inner(
             .min(u32::from(u8::MAX)) as u8;
         (parts, path.edges, s)
     } else {
-        match greedy_longest_syllabification(shadow, inv, mode) {
+        match greedy_longest_syllabification(
+            shadow,
+            inv,
+            mode,
+            &crate::shadow::oov_reading_barriers(barriers, 0, shadow.len(), mode),
+        ) {
             Some(segs) if !segs.is_empty() => {
                 // v3.5.9 D / C-3b — mode-aware tone strip. TPS no-dict
                 // synth strips Bopomofo tone marks per syllable; TL/POJ
@@ -1560,6 +1588,17 @@ mod tests {
         assert_eq!(
             typed_join("go-a-si", &[(0, 3), (3, 5)], InputMode::Tl),
             "goa-si"
+        );
+    }
+
+    #[test]
+    fn join_typed_separators_never_stacks_on_a_part_that_opens_with_a_hyphen() {
+        let parts = vec!["khì".to_owned(), "--ah".to_owned()];
+        let raw = "khi--ah";
+        let (_, map) = crate::shadow::build_hyphen_shadow(raw);
+        assert_eq!(
+            join_typed_separators(&parts, &[(0, 3), (3, 5)], raw, &map, InputMode::Tl),
+            "khì--ah"
         );
     }
 

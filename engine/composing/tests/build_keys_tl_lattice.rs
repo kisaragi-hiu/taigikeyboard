@@ -188,6 +188,29 @@ fn closed_dead_end_prefix_is_not_rescued_by_its_phrase_reading() {
 }
 
 #[test]
+fn typed_hyphen_after_the_remainder_closes_the_dead_end_too() {
+    // §52 — `iah-`: the same shape as `iah8`, closed by the typed `-`
+    // instead of a tone digit. `ia` (end 2) still parses as `i`+`a`, but
+    // nothing leaves end 2 and the `-` after `h` says the syllable is
+    // finished, so `ia` is a closed dead end again.
+    // `build_continuous_keys_with_inventory` is the barrier-carrying seam
+    // (`build_keys_tl_with_inventory` discards barriers by design).
+    let inv = build_inventory(&["i1", "ia1", "iah4", "iah8", "a1", "ah4", "ah8"]);
+    let keys = build_continuous_keys_with_inventory("iah-", &inv, phonetics::InputMode::Tl);
+    assert_eq!(
+        mapped(&keys),
+        vec![((0, 3), "tl:iah")],
+        "closed dead-end `ia` must be suppressed when a typed `-` closes the remainder",
+    );
+    // Control: without the `-` the remainder `h` is still an open tail.
+    let keys = build_continuous_keys_with_inventory("iah", &inv, phonetics::InputMode::Tl);
+    assert!(
+        mapped(&keys).iter().any(|(_, k)| *k == "tl:ia"),
+        "got {keys:?}"
+    );
+}
+
+#[test]
 fn phrase_reachable_prefix_survives_while_the_remainder_is_open() {
     // Guard (d) negative controls — both halves of "closed dead end" are
     // required, so the mid-typing affordance is untouched:
