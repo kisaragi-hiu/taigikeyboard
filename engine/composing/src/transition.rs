@@ -1075,7 +1075,7 @@ fn next_word_word_selected(text: String, roman: String, trigger_prediction: bool
 /// the phrase learns as one word. The dictionary cannot cover every phrase
 /// and the user manages the separator (USER 2026-09-22).
 fn learned_joiner(raw_text: &str) -> &'static str {
-    if raw_text.starts_with("--") {
+    if crate::api::typed_separator_run(raw_text).len() >= 2 {
         "--"
     } else {
         "-"

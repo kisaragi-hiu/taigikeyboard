@@ -215,15 +215,8 @@ fn join_typed_separators(
     for (i, part) in parts.iter().enumerate() {
         if i > 0 {
             let start = shadow_to_raw_end[segs[i - 1].1];
-            let run = raw.as_bytes()[start..]
-                .iter()
-                .take_while(|&&b| b == b'-')
-                .count();
-            out.push_str(if run > 0 {
-                &raw[start..start + run]
-            } else {
-                " "
-            });
+            let run = crate::api::typed_separator_run(&raw[start..]);
+            out.push_str(if run.is_empty() { " " } else { run });
         }
         out.push_str(part);
     }

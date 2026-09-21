@@ -8,7 +8,7 @@ use composing::{Engine, Intent};
 use protos::engine::{effect::Kind as EffectKind, ComposingResponse};
 
 mod common;
-use common::config_tl;
+use common::{commit_text, config_tl};
 
 fn raw_input(resp: &ComposingResponse) -> &str {
     resp.preedit
@@ -35,13 +35,6 @@ fn effect_kinds(resp: &ComposingResponse) -> Vec<&'static str> {
             EffectKind::PhraseLearned(_) => "phraseLearned",
         })
         .collect()
-}
-
-fn commit_text(resp: &ComposingResponse) -> Option<String> {
-    resp.effect.iter().find_map(|e| match e.kind.as_ref() {
-        Some(EffectKind::CommitTextReplacingPreedit(c)) => Some(c.text.clone()),
-        _ => None,
-    })
 }
 
 // ---- Initial state ----
