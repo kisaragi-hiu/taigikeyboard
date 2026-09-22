@@ -9,14 +9,13 @@ import com.siansiansu.taigikeyboard.engine.proto.ComposingResponse
 import com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
-import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
+import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 
 // region Composing slice (12 ops)
 
 fun RustEngineBridge.composingStart(
     text: String,
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Start
@@ -27,14 +26,13 @@ fun RustEngineBridge.composingStart(
         methodSetter = { it.start = payload },
         op = "composingStart",
         generation = generation,
-        config = RustEngineBridge.appConfig(mode, toggles),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 
 fun RustEngineBridge.composingAppend(
     ch: String,
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Append
@@ -45,14 +43,13 @@ fun RustEngineBridge.composingAppend(
         methodSetter = { it.append = payload },
         op = "composingAppend",
         generation = generation,
-        config = RustEngineBridge.appConfig(mode, toggles),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 
 // Separator hyphen distinguishes raw "tai-uan" from "taiuan", which changes the candidate trie key.
 fun RustEngineBridge.composingAppendHyphen(
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.AppendHyphen
@@ -62,14 +59,13 @@ fun RustEngineBridge.composingAppendHyphen(
         methodSetter = { it.appendHyphen = payload },
         op = "composingAppendHyphen",
         generation = generation,
-        config = RustEngineBridge.appConfig(mode, toggles),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 
 fun RustEngineBridge.composingReplaceLast(
     replacement: String,
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ReplaceLast
@@ -80,14 +76,13 @@ fun RustEngineBridge.composingReplaceLast(
         methodSetter = { it.replaceLast = payload },
         op = "composingReplaceLast",
         generation = generation,
-        config = RustEngineBridge.appConfig(mode, toggles),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 
 // Engine owns the delete-to-empty → Idle transition and the 1-char delete path that must not eat document text.
 fun RustEngineBridge.composingDeleteBackward(
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.DeleteBackward
@@ -97,14 +92,13 @@ fun RustEngineBridge.composingDeleteBackward(
         methodSetter = { it.deleteBackward = payload },
         op = "composingDeleteBackward",
         generation = generation,
-        config = RustEngineBridge.appConfig(mode, toggles),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 
 // Commits the derived display string, e.g. raw "ho2" commits as "hó".
 fun RustEngineBridge.composingCommitDerived(
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.CommitDerived
@@ -114,29 +108,16 @@ fun RustEngineBridge.composingCommitDerived(
         methodSetter = { it.commitDerived = payload },
         op = "composingCommitDerived",
         generation = generation,
-        config = RustEngineBridge.appConfig(mode, toggles),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 
-// Dispatched by phase: the Composing arm commits literal keystrokes ("ho2"), the Continuous arm commits
-// derived_display(pending) ("hó") — which is why the Continuous side needs mode + toggles.
-// v3.5.8 §10.2 platform pass: under `Phase::Continuous`, `CommitRaw`
-// routes to `commit_raw_continuous` which renders the whole
-// composition via `combined_display(nailed, raw, config)` — so the
-// continuous spacing flags ride here. Composing-arm `CommitRaw`
-// ignores them. Defaults = v3.5.7 roman-first so contract tests stay
-// behavior-identical; EVERY production Continuous call site MUST pass
-// explicit live values via `ComposingManager.continuousSpacingFlags`
-// (the sole production caller does — verified) or hanji-first
-// silently regresses.
+// Under `Phase::Continuous` the engine commits the whole composition
+// (`combined_display(nailed, pending, config)`), not the literal keystrokes;
+// the composing arm commits `raw` verbatim.
 fun RustEngineBridge.composingCommitRaw(
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
-    effectiveSwapped: Boolean = false,
-    outputBothScripts: Boolean = false,
-    candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    hyphenlessRoman: Boolean = false,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.CommitRaw
         .newBuilder()
@@ -145,28 +126,16 @@ fun RustEngineBridge.composingCommitRaw(
         methodSetter = { it.commitRaw = payload },
         op = "composingCommitRaw",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts, candidateDisplayMode, hyphenlessRoman),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 
-// v3.5.8 §10.2 platform pass: under `Phase::Continuous`,
-// `SelectSuggestion` routes to `select_suggestion_under_continuous`
-// which prepends `nailed_prefix(nailed, config)` — so the continuous
-// spacing flags must ride here (previously `config = null` →
-// `AppConfig::default()` → spacing always ON → hanji-first spurious
-// spaces). The composing-arm `select_suggestion` ignores `config`
-// entirely (commits `text` verbatim), so this is a no-op there.
-// Defaults = v3.5.7 roman-first; the sole production caller
-// (`ComposingManager.selectSuggestion`) passes explicit live values.
+// Under `Phase::Continuous` the engine prepends `nailed_prefix(nailed, config)`
+// to `text`; the composing arm commits `text` verbatim.
 fun RustEngineBridge.composingSelectSuggestion(
     text: String,
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
-    effectiveSwapped: Boolean = false,
-    outputBothScripts: Boolean = false,
-    candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    hyphenlessRoman: Boolean = false,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion
         .newBuilder()
@@ -176,30 +145,17 @@ fun RustEngineBridge.composingSelectSuggestion(
         methodSetter = { it.selectSuggestion = payload },
         op = "composingSelectSuggestion",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts, candidateDisplayMode, hyphenlessRoman),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 
 // Commits the preedit and inserts the external string (space / Enter / punctuation) atomically, to avoid flicker.
-// v3.5.8 §10.2 platform pass: under `Phase::Continuous` (e.g. emoji
-// tap mid-continuous) this routes to
-// `commit_preedit_then_insert_external_under_continuous` which
-// renders the nailed prefix via `combined_display(nailed, raw,
-// config)` — so the continuous spacing flags ride here too. (Not in
-// the 2026-05-18 enumerated 4 ops, but the same class of Continuous
-// nailed-rendering path: excluding it would re-create the exact
-// hanji-first spurious-space regression the narrowed plumb
-// minimizes — see continuous-input-ranking.md §10.2.) Defaults =
-// v3.5.7 roman-first; production callers pass explicit live values.
+// E.g. an emoji tap mid-composition: the engine commits the rendered
+// composition first, then inserts `text`.
 fun RustEngineBridge.composingCommitPreeditThenInsertExternal(
     text: String,
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
-    effectiveSwapped: Boolean = false,
-    outputBothScripts: Boolean = false,
-    candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    hyphenlessRoman: Boolean = false,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto
         .CommitPreeditThenInsertExternal
@@ -210,7 +166,7 @@ fun RustEngineBridge.composingCommitPreeditThenInsertExternal(
         methodSetter = { it.commitPreeditThenInsertExternal = payload },
         op = "composingCommitPreeditThenInsertExternal",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts, candidateDisplayMode, hyphenlessRoman),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 
@@ -267,8 +223,7 @@ fun RustEngineBridge.composingQueryState(generation: Long): RustEngineBridge.Com
  * display goes through `derived_display(raw, config)`.
  */
 fun RustEngineBridge.composingEnterContinuous(
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.EnterContinuous
@@ -278,7 +233,7 @@ fun RustEngineBridge.composingEnterContinuous(
         methodSetter = { it.enterContinuous = payload },
         op = "composingEnterContinuous",
         generation = generation,
-        config = RustEngineBridge.appConfig(mode, toggles),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 
@@ -306,22 +261,16 @@ fun RustEngineBridge.composingEnterContinuous(
  * synthesizes a full-buffer candidate per entry and dedupes
  * `(roman, hanji)` against the FST hits (custom wins the
  * collision). Mirrors iOS `RustEngineBridge.composingFetchAtPos`.
- *
- * v3.5.8 §10.2 platform pass: the FetchAtPos snapshot renders the
- * combined marked region (`combined_display`) and per-segment recased
- * candidates, so it needs the continuous spacing flags to match the
- * commit-time rendering. Defaults = v3.5.7 roman-first; production
- * callers pass explicit live values via continuousSpacingFlags.
  */
 fun RustEngineBridge.composingFetchAtPos(
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    // Built once by the caller (`RustEngineBridge.continuousAppConfig`) so the
+    // two fetch phases and the SQLite hops between them render under one
+    // snapshot of the live settings.
+    config: AppConfig,
     generation: Long,
     frequencyEntries: List<FrequencyEntry> = emptyList(),
     nowMs: Long = 0L,
     customEntries: List<CustomDictEntry> = emptyList(),
-    effectiveSwapped: Boolean = false,
-    outputBothScripts: Boolean = false,
     // PR-9.6 — dictionary source-toggle bitmask (same one Tab3 browse
     // sends). Default `0u` = proto3-absent sentinel → engine all-on,
     // preserving pre-PR-9.6 behaviour for callers (incl. tests).
@@ -330,9 +279,6 @@ fun RustEngineBridge.composingFetchAtPos(
     // (proto3-absent sentinel → engine prepends the literal-roman
     // candidate, the pre-toggle always-on behaviour for callers/tests).
     literalRomanCandidateDisabled: Boolean = false,
-    // 候選詞顯示 — ROMAN_ONLY makes the engine collapse same-roman rows.
-    candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    hyphenlessRoman: Boolean = false,
     // §50 — learned phrases whose whole-buffer key equals the raw buffer
     // (`LearnedPhraseService.matches`). Default empty = feature
     // off / nothing learned.
@@ -352,7 +298,7 @@ fun RustEngineBridge.composingFetchAtPos(
         methodSetter = { it.fetchAtPos = payload },
         op = "composingFetchAtPos",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts, candidateDisplayMode, hyphenlessRoman),
+        config = config,
     )
 }
 
@@ -364,13 +310,6 @@ fun RustEngineBridge.composingFetchAtPos(
  * mis-aligns the committed segment. `consumedBytes >= pending.utf8.size`
  * triggers a final commit (exit to Idle). Programmer-error inputs collapse
  * to noop on the engine side.
- *
- * v3.5.8 §10.2 platform pass: the repro path. Mid-commit renders
- * `combined_display(nailed, pending, config)`; final-commit renders
- * `nailed_prefix(nailed, config)` — both need the spacing flags so
- * segments join with the right (roman: space / hanji-first: none /
- * both-scripts: space) word boundary. Defaults = v3.5.7 roman-first;
- * production callers pass explicit live values.
  */
 fun RustEngineBridge.composingCommitContinuous(
     displayText: String,
@@ -382,13 +321,8 @@ fun RustEngineBridge.composingCommitContinuous(
     hanji: String? = null,
     consumedBytes: Int,
     syllableCount: Int,
-    mode: NormalizeMode,
-    toggles: PojMarkerOptionsCarrier,
+    settings: EngineSettings,
     generation: Long,
-    effectiveSwapped: Boolean = false,
-    outputBothScripts: Boolean = false,
-    candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    hyphenlessRoman: Boolean = false,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.CommitContinuous
         .newBuilder()
@@ -405,7 +339,7 @@ fun RustEngineBridge.composingCommitContinuous(
         methodSetter = { it.commitContinuous = payload },
         op = "composingCommitContinuous",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(mode, toggles, effectiveSwapped, outputBothScripts, candidateDisplayMode, hyphenlessRoman),
+        config = RustEngineBridge.continuousAppConfig(settings),
     )
 }
 

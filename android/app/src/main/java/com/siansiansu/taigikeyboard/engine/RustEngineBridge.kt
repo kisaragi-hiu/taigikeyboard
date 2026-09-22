@@ -894,34 +894,39 @@ object RustEngineBridge {
      * (`hit (彼)` — space wanted); `is_translate_swapped` is `true` for
      * both, so the second flag is required.
      *
-     * Applied ONLY at the Continuous-phase entry points that render the
-     * nailed prefix — `commit_continuous`, `commit_raw_continuous`,
-     * `select_suggestion_under_continuous`,
-     * `commit_preedit_then_insert_external_under_continuous`, and the
-     * FetchAtPos snapshot — so the hanji-first regression surface stays
-     * minimal (continuous-input-ranking.md §10.2; platform pass decided
-     * 2026-05-18). All other composing methods keep the flag-free base
-     * [appConfig].
+     * Every composing op that renders the composition sends it — under
+     * Model B that is every mutation and every snapshot, not only the
+     * commits: `Append` / `DeleteBackward` after a nail re-render the
+     * nailed prefix through `combined_display(nailed, raw, config)` too,
+     * so a nail and the keystroke after it must agree on the prefix
+     * (the 2026-05-18 "commit entry points only" split left 漢字優先
+     * showing `台 gi` while typing after `台`; desktop closed the same
+     * drift in #31, S37). Only `Reset` / `SetSelectedCandidateIndex` /
+     * `QueryState`, which carry no config, stay outside.
      *
      * CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift continuousAppConfig.
      * Drift causes silent divergence (hanji-first spurious word-boundary spaces).
      */
-    internal fun continuousAppConfig(
-        mode: NormalizeMode,
-        toggles: PojMarkerOptionsCarrier,
-        effectiveSwapped: Boolean,
-        outputBothScripts: Boolean,
-        candidateDisplayMode: CandidateDisplayMode,
-        hyphenlessRoman: Boolean,
-    ): AppConfig =
-        appConfig(mode, toggles)
+    internal fun continuousAppConfig(settings: EngineSettings): AppConfig =
+        appConfig(resolveMode(settings.inputMode), PojMarkerOptionsCarrier.from(settings.pojMarkerOptions))
             .toBuilder()
-            .setIsTranslateSwapped(effectiveSwapped)
-            .setOutputBothScripts(outputBothScripts)
-            .setCandidateDisplayMode(candidateDisplayMode.toProto())
-            // Proto field 10 — 無連字符; the caller already folded TPS to `false`.
-            .setHyphenlessRoman(hyphenlessRoman)
+            // TPS is a layout, not an engine mode: the engine sees `"tl"` /
+            // `"poj"`, so its own `input_mode == "tps"` branch never fires and
+            // the swap is folded here, once, at the settings seam.
+            .setIsTranslateSwapped(settings.isTranslateSwapped || settings.inputMode == "tps")
+            .setOutputBothScripts(settings.isOutputBothScripts)
+            .setCandidateDisplayMode(settings.candidateDisplayMode.toProto())
+            // Proto field 10 — 無連字符; already TPS-folded by `PrefHelper.isHyphenlessRomanEnabled` (§49).
+            .setHyphenlessRoman(settings.isHyphenlessRomanEnabled)
             .build()
+
+    /** The engine has no TPS mode; a TPS layout composes under its underlying romanization. */
+    internal fun resolveMode(inputMode: String): NormalizeMode =
+        when (inputMode) {
+            "poj" -> NormalizeMode.POJ
+            "english" -> NormalizeMode.ENGLISH
+            else -> NormalizeMode.TL
+        }
 
     private const val LEVEL_ERROR = 0
     private const val LEVEL_WARN = 1
@@ -948,7 +953,16 @@ data class PojMarkerOptionsCarrier(
     val isDoubleTapOoEnabled: Boolean,
     val isDoubleTapNnEnabled: Boolean,
     val isNasalMarkerUppercaseEnabled: Boolean,
-)
+) {
+    companion object {
+        fun from(options: com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions): PojMarkerOptionsCarrier =
+            PojMarkerOptionsCarrier(
+                isDoubleTapOoEnabled = options.isDoubleTapOOEnabled,
+                isDoubleTapNnEnabled = options.isDoubleTapNNEnabled,
+                isNasalMarkerUppercaseEnabled = options.isNasalMarkerUppercaseEnabled,
+            )
+    }
+}
 
 /**
  * `AppConfig.candidate_display_mode` (field 9). The engine collapses

@@ -195,10 +195,9 @@ public extension RustEngineBridge {
 
     // MARK: Composing slice (12 ops)
 
-    static func composingStart(
+    internal static func composingStart(
         _ text: String,
-        mode: InputMode,
-        toggles: PojMarkerOptions,
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_Start()
@@ -207,14 +206,13 @@ public extension RustEngineBridge {
             method: .start(payload),
             op: "composingStart",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles),
+            config: continuousAppConfig(settings),
         )
     }
 
-    static func composingAppend(
+    internal static func composingAppend(
         _ char: String,
-        mode: InputMode,
-        toggles: PojMarkerOptions,
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_Append()
@@ -223,27 +221,25 @@ public extension RustEngineBridge {
             method: .append(payload),
             op: "composingAppend",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles),
+            config: continuousAppConfig(settings),
         )
     }
 
-    static func composingAppendHyphen(
-        mode: InputMode,
-        toggles: PojMarkerOptions,
+    internal static func composingAppendHyphen(
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
             method: .appendHyphen(Taigi_Engine_AppendHyphen()),
             op: "composingAppendHyphen",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles),
+            config: continuousAppConfig(settings),
         )
     }
 
-    static func composingReplaceLast(
+    internal static func composingReplaceLast(
         _ replacement: String,
-        mode: InputMode,
-        toggles: PojMarkerOptions,
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_ReplaceLast()
@@ -252,94 +248,54 @@ public extension RustEngineBridge {
             method: .replaceLast(payload),
             op: "composingReplaceLast",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles),
+            config: continuousAppConfig(settings),
         )
     }
 
-    static func composingDeleteBackward(
-        mode: InputMode,
-        toggles: PojMarkerOptions,
+    internal static func composingDeleteBackward(
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
             method: .deleteBackward(Taigi_Engine_DeleteBackward()),
             op: "composingDeleteBackward",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles),
+            config: continuousAppConfig(settings),
         )
     }
 
-    static func composingCommitDerived(
-        mode: InputMode,
-        toggles: PojMarkerOptions,
+    internal static func composingCommitDerived(
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
             method: .commitDerived(Taigi_Engine_CommitDerived()),
             op: "composingCommitDerived",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles),
+            config: continuousAppConfig(settings),
         )
     }
 
-    // v3.5.8 Phase 9 Item 3: `Intent::CommitRaw` under `Phase::Continuous`
-    // commits `derived_display(pending, config)` rather than literal
-    // keystrokes, so the engine needs the live `AppConfig` (input mode +
-    // tone toggles) to render POJ doubletap / nasal-marker / tone marks
-    // correctly. Composing-arm behavior is unchanged; the carrier is
-    // ignored there.
-    // v3.5.8 §10.2 platform pass: under `Phase::Continuous`, `CommitRaw`
-    // routes to `commit_raw_continuous` which renders the whole
-    // composition via `combined_display(nailed, raw, config)` — so the
-    // continuous spacing flags ride here. Composing-arm `CommitRaw`
-    // ignores them (base config behavior unchanged).
-    // `effectiveSwapped` / `outputBothScripts` default to the v3.5.7
-    // roman-first behavior (no swap, no both-scripts) so contract tests
-    // and any non-continuous caller stay behavior-identical; EVERY
-    // production Continuous call site MUST pass explicit live values via
-    // `ComposingManager.continuousSpacingFlags` (the sole production
-    // caller does — verified) or hanji-first silently regresses.
-    static func composingCommitRaw(
-        mode: InputMode,
-        toggles: PojMarkerOptions,
-        effectiveSwapped: Bool = false,
-        outputBothScripts: Bool = false,
-        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        hyphenlessRoman: Bool = false,
+    // Under `Phase::Continuous` the engine commits the whole composition
+    // (`combined_display(nailed, pending, config)`), not the literal
+    // keystrokes; the composing arm commits `raw` verbatim.
+    internal static func composingCommitRaw(
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
             method: .commitRaw(Taigi_Engine_CommitRaw()),
             op: "composingCommitRaw",
             generation: generation,
-            config: continuousAppConfig(
-                mode: mode,
-                toggles: toggles,
-                effectiveSwapped: effectiveSwapped,
-                outputBothScripts: outputBothScripts,
-                candidateDisplayMode: candidateDisplayMode,
-                hyphenlessRoman: hyphenlessRoman,
-            ),
+            config: continuousAppConfig(settings),
         )
     }
 
-    // v3.5.8 §10.2 platform pass: under `Phase::Continuous`,
-    // `SelectSuggestion` routes to `select_suggestion_under_continuous`
-    // which prepends `nailed_prefix(nailed, config)` — so the continuous
-    // spacing flags must ride here (previously `config: nil` →
-    // `AppConfig::default()` → spacing always ON → hanji-first spurious
-    // spaces). The composing-arm `select_suggestion` ignores `config`
-    // entirely (commits `text` verbatim), so this is a no-op there.
-    // Defaults: v3.5.7 roman-first; production Continuous callers MUST
-    // pass explicit `continuousSpacingFlags` values (see composingCommitRaw note).
-    static func composingSelectSuggestion(
+    // Under `Phase::Continuous` the engine prepends `nailed_prefix(nailed,
+    // config)` to `text`; the composing arm commits `text` verbatim.
+    internal static func composingSelectSuggestion(
         _ text: String,
-        mode: InputMode,
-        toggles: PojMarkerOptions,
-        effectiveSwapped: Bool = false,
-        outputBothScripts: Bool = false,
-        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        hyphenlessRoman: Bool = false,
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_SelectSuggestion()
@@ -348,37 +304,15 @@ public extension RustEngineBridge {
             method: .selectSuggestion(payload),
             op: "composingSelectSuggestion",
             generation: generation,
-            config: continuousAppConfig(
-                mode: mode,
-                toggles: toggles,
-                effectiveSwapped: effectiveSwapped,
-                outputBothScripts: outputBothScripts,
-                candidateDisplayMode: candidateDisplayMode,
-                hyphenlessRoman: hyphenlessRoman,
-            ),
+            config: continuousAppConfig(settings),
         )
     }
 
-    // v3.5.8 §10.2 platform pass: under `Phase::Continuous`,
-    // `CommitPreeditThenInsertExternal` (e.g. emoji tap mid-continuous)
-    // routes to `commit_preedit_then_insert_external_under_continuous`
-    // which renders the nailed prefix via
-    // `combined_display(nailed, raw, config)` — so the continuous spacing
-    // flags ride here too. (Not in the 2026-05-18 enumerated 4 ops, but
-    // the same class of Continuous nailed-rendering path: excluding it
-    // would re-create the exact hanji-first spurious-space regression the
-    // narrowed plumb minimizes — see continuous-input-ranking.md §10.2.)
-    // The composing-arm path uses base spacing behavior as before.
-    // Defaults: v3.5.7 roman-first; production Continuous callers MUST
-    // pass explicit `continuousSpacingFlags` values (see composingCommitRaw note).
-    static func composingCommitPreeditThenInsertExternal(
+    // E.g. an emoji tap mid-composition: the engine commits the rendered
+    // composition first, then inserts `text`.
+    internal static func composingCommitPreeditThenInsertExternal(
         _ text: String,
-        mode: InputMode,
-        toggles: PojMarkerOptions,
-        effectiveSwapped: Bool = false,
-        outputBothScripts: Bool = false,
-        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        hyphenlessRoman: Bool = false,
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_CommitPreeditThenInsertExternal()
@@ -387,14 +321,7 @@ public extension RustEngineBridge {
             method: .commitPreeditThenInsertExternal(payload),
             op: "composingCommitPreeditThenInsertExternal",
             generation: generation,
-            config: continuousAppConfig(
-                mode: mode,
-                toggles: toggles,
-                effectiveSwapped: effectiveSwapped,
-                outputBothScripts: outputBothScripts,
-                candidateDisplayMode: candidateDisplayMode,
-                hyphenlessRoman: hyphenlessRoman,
-            ),
+            config: continuousAppConfig(settings),
         )
     }
 
@@ -437,16 +364,15 @@ public extension RustEngineBridge {
     /// `Append` populated. Engine no-ops on Idle / already-Continuous / empty
     /// `Composing.raw`. AppConfig is required because the snapshot's preedit
     /// display goes through `derived_display(raw, config)`.
-    static func composingEnterContinuous(
-        mode: InputMode,
-        toggles: PojMarkerOptions,
+    internal static func composingEnterContinuous(
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
             method: .enterContinuous(Taigi_Engine_EnterContinuous()),
             op: "composingEnterContinuous",
             generation: generation,
-            config: appConfig(mode: mode, toggles: toggles),
+            config: continuousAppConfig(settings),
         )
     }
 
@@ -477,19 +403,8 @@ public extension RustEngineBridge {
     /// raw on the lattice / dedupe axis and folds it to canonical TL
     /// only when synthesizing the `user_frequency.db` commit key,
     /// keeping that key mode-invariant across TL/POJ.
-    // v3.5.8 §10.2 platform pass: the FetchAtPos snapshot renders the
-    // combined marked region (`combined_display`) and per-segment recased
-    // candidates, so it needs the continuous spacing flags to match the
-    // commit-time rendering.
-    // Defaults: v3.5.7 roman-first; production Continuous callers MUST
-    // pass explicit `continuousSpacingFlags` values (see composingCommitRaw note).
-    static func composingFetchAtPos(
-        mode: InputMode,
-        toggles: PojMarkerOptions,
-        effectiveSwapped: Bool = false,
-        outputBothScripts: Bool = false,
-        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        hyphenlessRoman: Bool = false,
+    internal static func composingFetchAtPos(
+        settings: EngineSettings,
         generation: UInt64,
         frequencyEntries: [Taigi_Engine_FrequencyEntry] = [],
         nowMs: Int64 = 0,
@@ -519,14 +434,7 @@ public extension RustEngineBridge {
             method: .fetchAtPos(payload),
             op: "composingFetchAtPos",
             generation: generation,
-            config: continuousAppConfig(
-                mode: mode,
-                toggles: toggles,
-                effectiveSwapped: effectiveSwapped,
-                outputBothScripts: outputBothScripts,
-                candidateDisplayMode: candidateDisplayMode,
-                hyphenlessRoman: hyphenlessRoman,
-            ),
+            config: continuousAppConfig(settings),
         )
     }
 
@@ -536,12 +444,7 @@ public extension RustEngineBridge {
     /// sending mismatched values mis-aligns the committed segment.
     /// `consumedBytes >= pending.utf8.count` triggers a final commit (exit
     /// to Idle). Programmer-error inputs collapse to noop on the engine side.
-    // v3.5.8 §10.2 platform pass: the repro path. Mid-commit renders
-    // `combined_display(nailed, pending, config)`; final-commit renders
-    // `nailed_prefix(nailed, config)` — both need the spacing flags so
-    // segments join with the right (roman: space / hanji-first: none /
-    // both-scripts: space) word boundary.
-    static func composingCommitContinuous(
+    internal static func composingCommitContinuous(
         displayText: String,
         canonicalText: String,
         associationTl: String,
@@ -551,14 +454,7 @@ public extension RustEngineBridge {
         hanji: String? = nil,
         consumedBytes: UInt32,
         syllableCount: UInt32,
-        mode: InputMode,
-        toggles: PojMarkerOptions,
-        // Defaults: v3.5.7 roman-first; production Continuous callers MUST
-        // pass explicit `continuousSpacingFlags` values (see composingCommitRaw note).
-        effectiveSwapped: Bool = false,
-        outputBothScripts: Bool = false,
-        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        hyphenlessRoman: Bool = false,
+        settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_CommitContinuous()
@@ -576,14 +472,7 @@ public extension RustEngineBridge {
             method: .commitContinuous(payload),
             op: "composingCommitContinuous",
             generation: generation,
-            config: continuousAppConfig(
-                mode: mode,
-                toggles: toggles,
-                effectiveSwapped: effectiveSwapped,
-                outputBothScripts: outputBothScripts,
-                candidateDisplayMode: candidateDisplayMode,
-                hyphenlessRoman: hyphenlessRoman,
-            ),
+            config: continuousAppConfig(settings),
         )
     }
 
@@ -616,31 +505,29 @@ public extension RustEngineBridge {
     /// both-scripts (`hit (彼)` — space wanted); `is_translate_swapped`
     /// is `true` for both, so the second flag is required.
     ///
-    /// Applied ONLY at the Continuous-phase entry points that render the
-    /// nailed prefix — `commit_continuous`, `commit_raw_continuous`,
-    /// `select_suggestion_under_continuous`,
-    /// `commit_preedit_then_insert_external_under_continuous`, and the
-    /// FetchAtPos snapshot — so the hanji-first regression surface stays
-    /// minimal (continuous-input-ranking.md §10.2; platform pass decided
-    /// 2026-05-18). All other composing methods keep the flag-free base
-    /// `appConfig`.
+    /// Every composing op that renders the composition sends it — under
+    /// Model B that is every mutation and every snapshot, not only the
+    /// commits: `Append` / `DeleteBackward` after a nail re-render the
+    /// nailed prefix through `combined_display(nailed, raw, config)` too,
+    /// so a nail and the keystroke after it must agree on the prefix
+    /// (the 2026-05-18 "commit entry points only" split left 漢字優先
+    /// showing `台 gi` while typing after `台`; desktop closed the same
+    /// drift in #31, S37). Only `Reset` / `SetSelectedCandidateIndex` /
+    /// `QueryState`, which carry no config, stay outside.
     // `candidateDisplayMode` (proto field 9) travels with the pair: under 羅馬字 the callers already
     // pass the DERIVED `(false, false)` pair, and FetchAtPos uses the mode to collapse same-roman rows.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt continuousAppConfig.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
-    private static func continuousAppConfig(
-        mode: InputMode,
-        toggles: PojMarkerOptions,
-        effectiveSwapped: Bool,
-        outputBothScripts: Bool,
-        candidateDisplayMode: CandidateDisplayMode,
-        hyphenlessRoman: Bool,
-    ) -> Taigi_Engine_AppConfig {
-        var cfg = appConfig(mode: mode, toggles: toggles)
-        cfg.candidateDisplayMode = candidateDisplayMode.engineValue
-        cfg.hyphenlessRoman = hyphenlessRoman
-        cfg.isTranslateSwapped = effectiveSwapped
-        cfg.outputBothScripts = outputBothScripts
+    private static func continuousAppConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
+        var cfg = appConfig(mode: settings.inputMode, toggles: settings.pojMarkerOptions)
+        cfg.candidateDisplayMode = settings.candidateDisplayMode.engineValue
+        // Already TPS-folded by `SharedSettings.isHyphenlessRomanEnabled` (§49).
+        cfg.hyphenlessRoman = settings.isHyphenlessRomanEnabled
+        // TPS is a layout, not an engine mode: the engine sees `"tl"` /
+        // `"poj"`, so its own `input_mode == "tps"` branch never fires and the
+        // swap is folded here, once, at the settings seam.
+        cfg.isTranslateSwapped = settings.isTranslateSwapped || settings.inputMode == .tps
+        cfg.outputBothScripts = settings.isOutputBothScripts
         return cfg
     }
 

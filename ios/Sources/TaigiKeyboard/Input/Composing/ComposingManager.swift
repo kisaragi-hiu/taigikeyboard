@@ -106,8 +106,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingStart(
             text,
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
+            settings: settings,
             generation: currentGeneration,
         ))
         promoteToContinuousIfEligible(settings: settings)
@@ -118,8 +117,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingAppend(
             char,
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
+            settings: settings,
             generation: currentGeneration,
         ))
         promoteToContinuousIfEligible(settings: settings)
@@ -130,8 +128,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         logger.debug("[COMPOSE] fn=appendHyphen")
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingAppendHyphen(
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
+            settings: settings,
             generation: currentGeneration,
         ))
         promoteToContinuousIfEligible(settings: settings)
@@ -143,36 +140,13 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingReplaceLast(
             replacement,
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
+            settings: settings,
             generation: currentGeneration,
         ))
         promoteToContinuousIfEligible(settings: settings)
     }
 
     // MARK: - v3.5.8 Phase 7B — Continuous-input adapters
-
-    /// The v3.5.8 §10.2 word-boundary-spacing flags the engine's
-    /// `continuous_word_space` predicate needs, derived from live
-    /// settings. Single source of the platform-side `effectiveSwapped`
-    /// combine so all Continuous entry points agree (mis-set → silent
-    /// hanji-first spurious spaces). `effectiveSwapped` folds TPS into
-    /// the swap signal because the engine receives TPS as `"tl"`/`"poj"`
-    /// `input_mode` (its own `input_mode == "tps"` branch never fires
-    /// from the platform).
-    /// `hyphenlessRoman` (無連字符, §49) rides along already TPS-folded by
-    /// `SharedSettings.isHyphenlessRomanEnabled`.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/ComposingManager.kt continuousSpacingFlags.
-    // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
-    private static func continuousSpacingFlags(
-        _ settings: EngineSettings,
-    ) -> (effectiveSwapped: Bool, outputBothScripts: Bool, hyphenlessRoman: Bool) {
-        (
-            effectiveSwapped: settings.isTranslateSwapped || settings.inputMode == .tps,
-            outputBothScripts: settings.isOutputBothScripts,
-            hyphenlessRoman: settings.isHyphenlessRomanEnabled,
-        )
-    }
 
     /// Synchronous Continuous-mode promotion fired immediately after each
     /// raw-input mutation (`startComposing` / `appendCharacter` / `appendHyphen`
@@ -188,8 +162,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// heuristics.
     private func promoteToContinuousIfEligible(settings: EngineSettings) {
         let transition = RustEngineBridge.composingEnterContinuous(
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
+            settings: settings,
             generation: currentGeneration,
         )
         // EnterContinuous emits zero effects (transition.rs:514). The mirror
@@ -269,7 +242,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // §50 — learned phrases keyed to the WHOLE raw buffer (exact, not
         // prefix), shared by both phases like `customEntries`.
         let learnedEntries = buildLearnedEntries(queryKey: queryKey)
-        let spacing = Self.continuousSpacingFlags(settings)
 
         // PR-9.6 — compute the dictionary source-toggle bitmask from the
         // SAME settings snapshot + SAME `compute_filters` bridge the Tab3
@@ -290,12 +262,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
 
         // Phase 1: neutral fetch to learn candidate displayText keys.
         let neutral = RustEngineBridge.composingFetchAtPos(
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
-            effectiveSwapped: spacing.effectiveSwapped,
-            outputBothScripts: spacing.outputBothScripts,
-            candidateDisplayMode: settings.candidateDisplayMode,
-            hyphenlessRoman: spacing.hyphenlessRoman,
+            settings: settings,
             generation: generation,
             customEntries: customEntries,
             enabledSourcesBitmask: enabledSourcesBitmask,
@@ -331,12 +298,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         )
         let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
         let boosted = RustEngineBridge.composingFetchAtPos(
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
-            effectiveSwapped: spacing.effectiveSwapped,
-            outputBothScripts: spacing.outputBothScripts,
-            candidateDisplayMode: settings.candidateDisplayMode,
-            hyphenlessRoman: spacing.hyphenlessRoman,
+            settings: settings,
             generation: generation,
             frequencyEntries: entries,
             nowMs: nowMs,
@@ -522,7 +484,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
                 + "consumedBytes=\(consumedBytes) syllCount=\(syllableCount)",
         )
         let settings = settingsProvider.current
-        let spacing = Self.continuousSpacingFlags(settings)
         let transition = RustEngineBridge.composingCommitContinuous(
             displayText: displayText,
             canonicalText: canonicalText,
@@ -530,12 +491,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             hanji: hanji,
             consumedBytes: consumedBytes,
             syllableCount: syllableCount,
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
-            effectiveSwapped: spacing.effectiveSwapped,
-            outputBothScripts: spacing.outputBothScripts,
-            candidateDisplayMode: settings.candidateDisplayMode,
-            hyphenlessRoman: spacing.hyphenlessRoman,
+            settings: settings,
             generation: currentGeneration,
         )
         // Inspect transition BEFORE dispatching effects so we can return an
@@ -583,8 +539,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         logger.debug("[COMPOSE] fn=deleteBackward")
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingDeleteBackward(
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
+            settings: settings,
             generation: currentGeneration,
         ))
     }
@@ -609,20 +564,13 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let settings = settingsProvider.current
         guard !composingText.isEmpty else {
             applyAsSelfCommit(RustEngineBridge.composingCommitDerived(
-                mode: settings.inputMode,
-                toggles: settings.pojMarkerOptions,
+                settings: settings,
                 generation: currentGeneration,
             ))
             return
         }
-        let spacing = Self.continuousSpacingFlags(settings)
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
-            effectiveSwapped: spacing.effectiveSwapped,
-            outputBothScripts: spacing.outputBothScripts,
-            candidateDisplayMode: settings.candidateDisplayMode,
-            hyphenlessRoman: spacing.hyphenlessRoman,
+            settings: settings,
             generation: currentGeneration,
         ))
     }
@@ -638,33 +586,18 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // The Phase 7B SelectSuggestion bypass is no longer needed; the
         // engine owns the per-phase routing.
         let settings = settingsProvider.current
-        let spacing = Self.continuousSpacingFlags(settings)
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
-            effectiveSwapped: spacing.effectiveSwapped,
-            outputBothScripts: spacing.outputBothScripts,
-            candidateDisplayMode: settings.candidateDisplayMode,
-            hyphenlessRoman: spacing.hyphenlessRoman,
+            settings: settings,
             generation: currentGeneration,
         ))
     }
 
     public func selectSuggestion(text: String) {
         logger.debug("[COMPOSE] fn=selectSuggestion len=\(text.count)")
-        // §10.2 platform pass: under Continuous this routes to
-        // `select_suggestion_under_continuous` (prepends `nailed_prefix`),
-        // so pass the live spacing flags instead of the old nil config.
         let settings = settingsProvider.current
-        let spacing = Self.continuousSpacingFlags(settings)
         applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(
             text,
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
-            effectiveSwapped: spacing.effectiveSwapped,
-            outputBothScripts: spacing.outputBothScripts,
-            candidateDisplayMode: settings.candidateDisplayMode,
-            hyphenlessRoman: spacing.hyphenlessRoman,
+            settings: settings,
             generation: currentGeneration,
         ))
     }
@@ -672,15 +605,9 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     public func commitPreeditThenInsertExternal(_ text: String) {
         logger.debug("[COMPOSE] fn=commitPreeditThenInsertExternal len=\(text.count)")
         let settings = settingsProvider.current
-        let spacing = Self.continuousSpacingFlags(settings)
         applyAsSelfCommit(RustEngineBridge.composingCommitPreeditThenInsertExternal(
             text,
-            mode: settings.inputMode,
-            toggles: settings.pojMarkerOptions,
-            effectiveSwapped: spacing.effectiveSwapped,
-            outputBothScripts: spacing.outputBothScripts,
-            candidateDisplayMode: settings.candidateDisplayMode,
-            hyphenlessRoman: spacing.hyphenlessRoman,
+            settings: settings,
             generation: currentGeneration,
         ))
     }
