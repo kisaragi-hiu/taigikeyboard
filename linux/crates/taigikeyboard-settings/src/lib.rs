@@ -57,7 +57,7 @@ pub fn run() -> gtk::glib::ExitCode {
                 // The stores follow the settings: no user directory, no
                 // learning data either (the banner says so).
                 let stores = if writer.is_read_only() {
-                    None
+                    Err("HOME / XDG_DATA_HOME".to_owned())
                 } else {
                     user_data::open_at_launch()
                 };

@@ -11,7 +11,7 @@ pub mod dictionary_sources;
 pub mod general;
 pub mod shortcuts;
 
-use crate::window::{SettingsWindow, Shell};
+use crate::window::{JobSlot, SettingsWindow, Shell};
 use adw::prelude::*;
 use std::any::Any;
 use std::cell::Cell;
@@ -71,6 +71,7 @@ pub struct PageContext<'a> {
     pub document: &'a SettingsDocument,
     /// `None` in a read-only launch: the pages over user data show why.
     pub stores: Option<&'a UserDataStores>,
+    pub job_slot: JobSlot,
     suppress: Rc<Cell<bool>>,
     refreshers: Vec<Refresher>,
     retained: Vec<Rc<dyn Any>>,
@@ -82,12 +83,14 @@ impl<'a> PageContext<'a> {
         strings: &'a StringResolver,
         document: &'a SettingsDocument,
         stores: Option<&'a UserDataStores>,
+        job_slot: &JobSlot,
     ) -> Self {
         Self {
             shell: Shell(Rc::downgrade(window)),
             strings,
             document,
             stores,
+            job_slot: job_slot.clone(),
             suppress: Rc::new(Cell::new(false)),
             refreshers: Vec::new(),
             retained: Vec::new(),
@@ -266,8 +269,9 @@ pub fn build(
     strings: &StringResolver,
     document: &SettingsDocument,
     stores: Option<&UserDataStores>,
+    job_slot: &JobSlot,
 ) -> Page {
-    let context = PageContext::new(window, strings, document, stores);
+    let context = PageContext::new(window, strings, document, stores, job_slot);
     let widget = adw::PreferencesPage::new();
     // Explicit per pane: a pane added to `BUILT` without a page is a
     // mistake to hear about, not a 一般 page under the wrong title.

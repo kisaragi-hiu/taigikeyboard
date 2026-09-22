@@ -35,8 +35,13 @@ pub struct SettingsWindow {
     window: adw::ApplicationWindow,
     writer: RefCell<SettingsWriter>,
     /// Held open for the window's life: the 自訂詞庫 and 辭典搜尋 pages
-    /// read it. `None` in a read-only launch.
+    /// read it. `None` when the data directory could not be had — the
+    /// banner says so (`data_failure`).
     stores: Option<UserDataStores>,
+    data_failure: Option<String>,
+    /// The user-data pages' one work slot, owned HERE so a page rebuild (a
+    /// display language change) cannot free a slot a job still holds.
+    job_slot: JobSlot,
     toasts: adw::ToastOverlay,
     sidebar: gtk::ListBox,
     /// The content page: its title is what the header bar draws
@@ -63,8 +68,12 @@ impl SettingsWindow {
     pub fn build(
         application: &adw::Application,
         writer: SettingsWriter,
-        stores: Option<UserDataStores>,
+        stores: Result<UserDataStores, String>,
     ) -> Rc<Self> {
+        let (stores, data_failure) = match stores {
+            Ok(stores) => (Some(stores), None),
+            Err(detail) => (None, Some(detail)),
+        };
         let sidebar = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::Single)
             .css_classes(["navigation-sidebar"])
@@ -116,6 +125,8 @@ impl SettingsWindow {
             window,
             writer: RefCell::new(writer),
             stores,
+            data_failure,
+            job_slot: JobSlot::default(),
             toasts,
             sidebar,
             content_page,
@@ -163,6 +174,10 @@ impl SettingsWindow {
 
     pub fn stores(&self) -> Option<&UserDataStores> {
         self.stores.as_ref()
+    }
+
+    pub fn job_slot(&self) -> &JobSlot {
+        &self.job_slot
     }
 
     /// A transient notice: what a page has to tell the user after a job
@@ -399,7 +414,14 @@ impl SettingsWindow {
         }
         let mut pages = Vec::new();
         for pane in pages::BUILT {
-            let page = pages::build(pane, self, &strings, &document, self.stores.as_ref());
+            let page = pages::build(
+                pane,
+                self,
+                &strings,
+                &document,
+                self.stores.as_ref(),
+                &self.job_slot,
+            );
             self.stack.add_named(&page.widget, Some(pane.raw()));
             pages.push(page);
         }
@@ -420,14 +442,22 @@ impl SettingsWindow {
     fn apply_chrome(&self) {
         let writer = self.writer.borrow();
         let strings = writer.strings();
-        match writer.write_failure() {
-            // One banner for both: no user directory reads as the write
-            // that would fail, with the missing variable as the detail.
-            Some(detail) => {
-                self.banner.set_title(&format!(
-                    "{} — {detail}",
-                    strings.resolve(StringKey::DesktopSettingsWriteFailed)
-                ));
+        // One banner: the settings file first (nothing writes), else the
+        // user data (the pages over it show only their switch).
+        let notice = match (writer.write_failure(), &self.data_failure) {
+            (Some(detail), _) => Some(format!(
+                "{} — {detail}",
+                strings.resolve(StringKey::DesktopSettingsWriteFailed)
+            )),
+            (None, Some(detail)) => Some(format!(
+                "{} — {detail}",
+                strings.resolve(StringKey::DesktopCustomDictReadFailed)
+            )),
+            (None, None) => None,
+        };
+        match notice {
+            Some(text) => {
+                self.banner.set_title(&text);
                 self.banner.set_revealed(true);
             }
             None => self.banner.set_revealed(false),
@@ -477,6 +507,45 @@ impl SettingsWindow {
     /// The page widget shown for `pane`, if the stack holds one.
     pub fn page_widget(&self, pane: SettingsPane) -> Option<gtk::Widget> {
         self.stack.child_by_name(pane.raw())
+    }
+}
+
+/// The one work slot the user-data pages share (`Some` = the generation
+/// of the job holding it). Refused, not queued: a queued delete would name
+/// a row the list may no longer show. Lives in the window, outside any
+/// page, so a rebuilt page finds the slot still taken by the job the old
+/// page started.
+#[derive(Clone, Default)]
+pub struct JobSlot {
+    holder: Rc<Cell<Option<u64>>>,
+    next: Rc<Cell<u64>>,
+}
+
+impl JobSlot {
+    /// Takes the slot; `None` when something holds it.
+    pub fn take(&self) -> Option<u64> {
+        if self.holder.get().is_some() {
+            return None;
+        }
+        let generation = self.next.get().wrapping_add(1);
+        self.next.set(generation);
+        self.holder.set(Some(generation));
+        Some(generation)
+    }
+
+    pub fn is_held_by(&self, generation: u64) -> bool {
+        self.holder.get() == Some(generation)
+    }
+
+    pub fn is_taken(&self) -> bool {
+        self.holder.get().is_some()
+    }
+
+    /// Frees the slot if `generation` holds it.
+    pub fn release(&self, generation: u64) {
+        if self.holder.get() == Some(generation) {
+            self.holder.set(None);
+        }
     }
 }
 

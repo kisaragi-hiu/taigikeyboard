@@ -18,10 +18,10 @@
 use super::PageContext;
 use crate::jobs;
 use crate::presentation::PageMessage;
-use crate::window::Shell;
+use crate::window::{JobSlot, Shell};
 use adw::prelude::*;
 use gtk::{gio, glib};
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
@@ -97,10 +97,25 @@ struct State {
     /// The row the list has selected, by ID — never by index, which moves
     /// under a reload.
     selected_id: Option<String>,
-    /// The page's one work slot: `Some` while a write runs.
+    /// The job this page started and still waits on (the slot itself is
+    /// the window's, `JobSlot`).
     job_generation: Option<u64>,
-    next_job_generation: u64,
     is_busy_shown: bool,
+}
+
+/// What `render` draws, taken from the state and released before any
+/// widget is touched: a widget's own signal (a programmatic `select_row`)
+/// must never find the state still borrowed.
+struct Drawn {
+    rows: Vec<(String, String)>,
+    selected_index: Option<usize>,
+    count: String,
+    empty: Option<StringKey>,
+    page_label: String,
+    has_previous: bool,
+    has_next: bool,
+    is_busy: bool,
+    has_selection: bool,
 }
 
 impl State {
@@ -110,10 +125,6 @@ impl State {
 
     fn page_count(&self) -> usize {
         Self::page_count_for(self.match_count)
-    }
-
-    fn is_working(&self) -> bool {
-        self.job_generation.is_some()
     }
 
     fn selected_row(&self) -> Option<&CustomDictionaryRow> {
@@ -169,8 +180,12 @@ pub struct CustomDictionaryPage {
     frequency: Arc<UserFrequencyStore>,
     association: Arc<UserAssociationStore>,
     learned_phrases: Arc<LearnedPhraseStore>,
+    job_slot: JobSlot,
     state: RefCell<State>,
     widgets: Widgets,
+    /// Set while `render` selects a row, so the list's own handler does not
+    /// read it back as the user's choice.
+    is_rendering: Cell<bool>,
 }
 
 pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {
@@ -245,9 +260,15 @@ impl CustomDictionaryPage {
         verbs.append(&delete);
         let spacer = gtk::Box::builder().hexpand(true).build();
         verbs.append(&spacer);
-        let previous = icon_button("go-previous-symbolic", "");
+        let previous = icon_button(
+            "go-previous-symbolic",
+            strings.resolve(StringKey::CommonPagePrevious),
+        );
         let page_label = gtk::Label::new(None);
-        let next = icon_button("go-next-symbolic", "");
+        let next = icon_button(
+            "go-next-symbolic",
+            strings.resolve(StringKey::CommonPageNext),
+        );
         verbs.append(&previous);
         verbs.append(&page_label);
         verbs.append(&next);
@@ -298,7 +319,9 @@ impl CustomDictionaryPage {
             frequency: Arc::clone(&stores.frequency),
             association: Arc::clone(&stores.association),
             learned_phrases: Arc::clone(&stores.learned_phrases),
+            job_slot: context.job_slot.clone(),
             state: RefCell::new(State::default()),
+            is_rendering: Cell::new(false),
             widgets: Widgets {
                 entries,
                 filter,
@@ -327,7 +350,11 @@ impl CustomDictionaryPage {
         clear: &gtk::Button,
     ) {
         let weak = Rc::downgrade(self);
-        self.widgets.filter.connect_search_changed(move |entry| {
+        // `changed`, not `search-changed`: the latter is GTK's own 150 ms
+        // delay, and a load answered inside it would land under text the
+        // box no longer shows. The generation moves at the keystroke; the
+        // one settle is ours.
+        self.widgets.filter.connect_changed(move |entry| {
             if let Some(page) = weak.upgrade() {
                 page.filter_changed(entry.text().to_string());
             }
@@ -335,6 +362,9 @@ impl CustomDictionaryPage {
         let weak = Rc::downgrade(self);
         self.widgets.list.connect_row_selected(move |_, row| {
             let Some(page) = weak.upgrade() else { return };
+            if page.is_rendering.get() {
+                return;
+            }
             // A cleared selection is not acted on: single-select gives the
             // user no way to clear one, so the row the user chose stays.
             let Some(row) = row else { return };
@@ -529,30 +559,26 @@ impl CustomDictionaryPage {
         );
     }
 
-    /// Takes the page's one work slot for `job`, or does nothing because
-    /// something else holds it (the macOS model: refused, not queued).
+    /// Takes the window's one work slot for `job`, or does nothing because
+    /// something else holds it (the macOS model: refused, not queued). The
+    /// slot and the notice outlive this page: a page rebuilt under a
+    /// running job (a display language change) finds the slot taken, and
+    /// the outcome still reaches the user as a toast.
     fn begin_job(self: &Rc<Self>, job: impl FnOnce() -> JobOutcome + Send + 'static) {
-        let generation = {
-            let mut state = self.state.borrow_mut();
-            if state.is_working() {
-                return;
-            }
-            state.next_job_generation = state.next_job_generation.wrapping_add(1);
-            state.job_generation = Some(state.next_job_generation);
-            state.is_busy_shown = false;
-            state.next_job_generation
+        let Some(generation) = self.job_slot.take() else {
+            return;
         };
+        {
+            let mut state = self.state.borrow_mut();
+            state.job_generation = Some(generation);
+            state.is_busy_shown = false;
+        }
         let weak = Rc::downgrade(self);
+        let slot = self.job_slot.clone();
+        let shell = self.shell.clone();
+        let strings = self.strings;
         jobs::spawn(job, move |outcome| {
-            let Some(page) = weak.upgrade() else { return };
-            if page.state.borrow().job_generation != Some(generation) {
-                return;
-            }
-            {
-                let mut state = page.state.borrow_mut();
-                state.job_generation = None;
-                state.is_busy_shown = false;
-            }
+            slot.release(generation);
             let outcome = outcome.unwrap_or_else(|| JobOutcome {
                 message: Some(PageMessage::failure(
                     StringKey::DesktopCustomDictWriteFailed,
@@ -561,7 +587,19 @@ impl CustomDictionaryPage {
                 is_reload_wanted: true,
             });
             if let Some(message) = outcome.message {
-                page.report(message);
+                shell.toast(
+                    &message.title(&strings),
+                    message.detail(&strings).as_deref(),
+                );
+            }
+            let Some(page) = weak.upgrade() else { return };
+            if page.state.borrow().job_generation != Some(generation) {
+                return;
+            }
+            {
+                let mut state = page.state.borrow_mut();
+                state.job_generation = None;
+                state.is_busy_shown = false;
             }
             if outcome.is_reload_wanted {
                 page.load();
@@ -612,10 +650,12 @@ impl CustomDictionaryPage {
         let roman = adw::EntryRow::builder()
             .title(strings.resolve(StringKey::DictionaryRomanLabel))
             .text(&original.roman)
+            .use_markup(false)
             .build();
         let hanzi = adw::EntryRow::builder()
             .title(strings.resolve(StringKey::DictionaryHanziLabel))
             .text(&original.hanzi)
+            .use_markup(false)
             .build();
         fields.append(&roman);
         fields.append(&hanzi);
@@ -626,9 +666,13 @@ impl CustomDictionaryPage {
         dialog.set_default_response(Some("save"));
         dialog.set_close_response("cancel");
         dialog.set_response_enabled("save", !original.roman.trim().is_empty());
-        let dialog_for_text = dialog.clone();
+        // Weak: the dialog holds the row, and a row holding the dialog back
+        // would keep both alive after the dialog closed.
+        let dialog_weak = dialog.downgrade();
         roman.connect_changed(move |entry| {
-            dialog_for_text.set_response_enabled("save", !entry.text().trim().is_empty());
+            if let Some(dialog) = dialog_weak.upgrade() {
+                dialog.set_response_enabled("save", !entry.text().trim().is_empty());
+            }
         });
         let weak = Rc::downgrade(self);
         let (roman_field, hanzi_field) = (roman.clone(), hanzi.clone());
@@ -657,7 +701,7 @@ impl CustomDictionaryPage {
     /// destructive one; Escape, the close button and a dismissal all leave
     /// the store alone.
     fn ask(self: &Rc<Self>, confirm: Confirm) {
-        if self.state.borrow().is_working() {
+        if self.job_slot.is_taken() {
             return;
         }
         let strings = self.strings;
@@ -726,7 +770,7 @@ impl CustomDictionaryPage {
     }
 
     fn export(self: &Rc<Self>) {
-        if self.state.borrow().is_working() {
+        if self.job_slot.is_taken() {
             return;
         }
         let dialog = gtk::FileDialog::new();
@@ -739,10 +783,10 @@ impl CustomDictionaryPage {
             self.shell.window().as_ref(),
             gio::Cancellable::NONE,
             move |result| {
-                let (Some(page), Ok(file)) = (weak.upgrade(), result) else {
+                let Some(page) = weak.upgrade() else { return };
+                let Some(path) = page.chosen_path(result, StringKey::CommonExportFailed) else {
                     return;
                 };
-                let Some(path) = file.path() else { return };
                 // The WHOLE dictionary, not the page or the filter's matches.
                 let store = Arc::clone(&page.store);
                 page.begin_job(move || {
@@ -764,7 +808,7 @@ impl CustomDictionaryPage {
     }
 
     fn import(self: &Rc<Self>) {
-        if self.state.borrow().is_working() {
+        if self.job_slot.is_taken() {
             return;
         }
         let dialog = gtk::FileDialog::new();
@@ -773,10 +817,10 @@ impl CustomDictionaryPage {
             self.shell.window().as_ref(),
             gio::Cancellable::NONE,
             move |result| {
-                let (Some(page), Ok(file)) = (weak.upgrade(), result) else {
+                let Some(page) = weak.upgrade() else { return };
+                let Some(path) = page.chosen_path(result, StringKey::CommonImportFailed) else {
                     return;
                 };
-                let Some(path) = file.path() else { return };
                 let store = Arc::clone(&page.store);
                 page.begin_job(move || {
                     let decoded =
@@ -803,6 +847,29 @@ impl CustomDictionaryPage {
         );
     }
 
+    /// The file the chooser answered: a dismissal is nothing, any other
+    /// refusal — and a file with no local path — is said as `failure`.
+    fn chosen_path(
+        &self,
+        result: Result<gio::File, glib::Error>,
+        failure: StringKey,
+    ) -> Option<std::path::PathBuf> {
+        match result {
+            Ok(file) => match file.path() {
+                Some(path) => Some(path),
+                None => {
+                    self.report(PageMessage::failure(failure, "not a local file"));
+                    None
+                }
+            },
+            Err(error) if error.matches(gtk::DialogError::Dismissed) => None,
+            Err(error) => {
+                self.report(PageMessage::failure(failure, error));
+                None
+            }
+        }
+    }
+
     fn report(&self, message: PageMessage) {
         self.shell.toast(
             &message.title(&self.strings),
@@ -811,61 +878,92 @@ impl CustomDictionaryPage {
     }
 
     /// The state, drawn: the rows, the count, the empty sentence, the
-    /// verbs, the pager, the busy spinner.
+    /// verbs, the pager, the busy spinner. The state is read into `Drawn`
+    /// and released first: `select_row` fires the list's handler
+    /// synchronously.
     fn render(&self) {
-        let state = self.state.borrow();
+        let drawn = {
+            let state = self.state.borrow();
+            Drawn {
+                rows: state
+                    .rows
+                    .iter()
+                    .map(|row| (row.roman.clone(), row.hanzi.clone()))
+                    .collect(),
+                selected_index: state
+                    .selected_id
+                    .as_deref()
+                    .and_then(|id| state.rows.iter().position(|row| row.id == id)),
+                count: state.count_label(),
+                empty: state.empty_state_key(),
+                page_label: format!("{} / {}", state.page + 1, state.page_count()),
+                has_previous: state.page > 0,
+                has_next: state.page + 1 < state.page_count(),
+                is_busy: state.is_busy_shown,
+                has_selection: state.selected_row().is_some(),
+            }
+        };
         let widgets = &self.widgets;
-        widgets.entries.set_description(Some(&state.count_label()));
-        widgets.list.remove_all();
-        for row in &state.rows {
+        widgets.entries.set_description(Some(&drawn.count));
+        remove_rows(&widgets.list);
+        for (roman, hanzi) in &drawn.rows {
+            // User text, never markup.
             let item = adw::ActionRow::builder()
-                .title(if row.hanzi.is_empty() {
-                    &row.roman
-                } else {
-                    &row.hanzi
-                })
-                .subtitle(if row.hanzi.is_empty() { "" } else { &row.roman })
+                .title(if hanzi.is_empty() { roman } else { hanzi })
+                .subtitle(if hanzi.is_empty() { "" } else { roman })
+                .use_markup(false)
                 .build();
             widgets.list.append(&item);
         }
-        if let Some(index) = state
-            .selected_id
-            .as_deref()
-            .and_then(|id| state.rows.iter().position(|row| row.id == id))
-        {
-            widgets
+        self.is_rendering.set(true);
+        match drawn.selected_index {
+            Some(index) => widgets
                 .list
-                .select_row(widgets.list.row_at_index(index as i32).as_ref());
+                .select_row(widgets.list.row_at_index(index as i32).as_ref()),
+            None => widgets.list.unselect_all(),
         }
-        match state.empty_state_key() {
+        self.is_rendering.set(false);
+        match drawn.empty {
             Some(key) => {
                 widgets.empty.set_label(self.strings.resolve(key));
                 widgets.empty.set_visible(true);
             }
             None => widgets.empty.set_visible(false),
         }
+        widgets.page_label.set_label(&drawn.page_label);
+        let is_enabled = !drawn.is_busy;
         widgets
-            .page_label
-            .set_label(&format!("{} / {}", state.page + 1, state.page_count()));
-        let is_enabled = !state.is_busy_shown;
-        widgets.previous.set_sensitive(is_enabled && state.page > 0);
-        widgets
-            .next
-            .set_sensitive(is_enabled && state.page + 1 < state.page_count());
-        widgets.busy.set_visible(state.is_busy_shown);
-        widgets.busy.set_spinning(state.is_busy_shown);
+            .previous
+            .set_sensitive(is_enabled && drawn.has_previous);
+        widgets.next.set_sensitive(is_enabled && drawn.has_next);
+        widgets.busy.set_visible(drawn.is_busy);
+        widgets.busy.set_spinning(drawn.is_busy);
         for control in &widgets.controls {
             control.set_sensitive(is_enabled);
         }
-        drop(state);
-        self.render_verbs();
+        widgets
+            .edit
+            .set_sensitive(is_enabled && drawn.has_selection);
+        widgets
+            .delete
+            .set_sensitive(is_enabled && drawn.has_selection);
     }
 
     fn render_verbs(&self) {
-        let state = self.state.borrow();
-        let is_enabled = !state.is_busy_shown && state.selected_row().is_some();
-        self.widgets.edit.set_sensitive(is_enabled);
-        self.widgets.delete.set_sensitive(is_enabled);
+        let (is_busy, has_selection) = {
+            let state = self.state.borrow();
+            (state.is_busy_shown, state.selected_row().is_some())
+        };
+        self.widgets.edit.set_sensitive(!is_busy && has_selection);
+        self.widgets.delete.set_sensitive(!is_busy && has_selection);
+    }
+}
+
+/// Removes the rows and nothing else: `remove_all` would take the
+/// placeholder with them.
+pub(crate) fn remove_rows(list: &gtk::ListBox) {
+    while let Some(row) = list.row_at_index(0) {
+        list.remove(&row);
     }
 }
 
@@ -911,14 +1009,25 @@ fn local_date() -> String {
 }
 
 /// `Data.write(to:options:.atomic)`: the file appears whole or not at all,
-/// and a failed export never damages the one it would have replaced.
+/// and a failed export never damages the one it would have replaced. The
+/// temporary file is created exclusively in the target's directory (no
+/// name to collide with, no symlink to follow) and removed with its handle
+/// if the write fails.
 fn write_atomically(path: &std::path::Path, contents: String) -> Result<(), String> {
-    let temporary = path.with_extension(format!("csv.{}.tmp", std::process::id()));
-    std::fs::write(&temporary, contents).map_err(|error| error.to_string())?;
-    std::fs::rename(&temporary, path).map_err(|error| {
-        std::fs::remove_file(&temporary).ok();
-        error.to_string()
-    })
+    use std::io::Write;
+    let directory = path.parent().ok_or_else(|| "no directory".to_owned())?;
+    let mut temporary = tempfile::Builder::new()
+        .prefix(".taigi-export-")
+        .suffix(".tmp")
+        .tempfile_in(directory)
+        .map_err(|error| error.to_string())?;
+    temporary
+        .write_all(contents.as_bytes())
+        .map_err(|error| error.to_string())?;
+    temporary
+        .persist(path)
+        .map(|_| ())
+        .map_err(|error| error.error.to_string())
 }
 
 #[cfg(test)]

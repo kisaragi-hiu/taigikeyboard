@@ -28,9 +28,11 @@ const VISIBLE_RESULT_LIMIT: usize = 5;
 /// `DictionarySearchModel.debounce`.
 const DEBOUNCE: Duration = Duration::from_millis(300);
 
-/// Whether the dictionaries are in this process yet; only the first query
-/// pays for loading them, and the load is the process's, not a page's.
-static LEXICON_LOADED: OnceLock<bool> = OnceLock::new();
+/// Set once the dictionaries are in this process: only the first query
+/// pays for loading them, the load is the process's, not a page's — and
+/// only a SUCCESS is remembered, so a dictionary file fixed after a failed
+/// load is read on the next query.
+static LEXICON_LOADED: OnceLock<()> = OnceLock::new();
 
 #[derive(Default)]
 struct State {
@@ -95,8 +97,10 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         results,
         empty,
     });
+    // `changed`, not `search-changed` (GTK's own 150 ms delay): the
+    // generation moves at the keystroke, the one debounce is ours.
     let weak = Rc::downgrade(&this);
-    query.connect_search_changed(move |entry| {
+    query.connect_changed(move |entry| {
         if let Some(page) = weak.upgrade() {
             page.query_changed(entry.text().to_string());
         }
@@ -157,7 +161,8 @@ impl DictionarySearchPage {
         let weak = Rc::downgrade(self);
         jobs::spawn(
             move || {
-                let is_loaded = *LEXICON_LOADED.get_or_init(load_lexicon);
+                let is_loaded = LEXICON_LOADED.get().is_some()
+                    || (load_lexicon() && LEXICON_LOADED.set(()).is_ok());
                 is_loaded.then(|| search(&query, &settings, &store))
             },
             move |outcome| {
@@ -188,7 +193,7 @@ impl DictionarySearchPage {
 
     fn render(&self) {
         let state = self.state.borrow();
-        self.results.remove_all();
+        super::custom_dictionary::remove_rows(&self.results);
         for result in state.results.iter().take(VISIBLE_RESULT_LIMIT) {
             self.results.append(&self.result_row(result));
         }
@@ -201,20 +206,25 @@ impl DictionarySearchPage {
     /// subtitle (one per distinct word — the three supplements share one),
     /// and the two lookups as buttons.
     fn result_row(&self, result: &DictionarySearchResult) -> adw::ActionRow {
-        let mut badges: Vec<&str> = Vec::new();
+        // One badge per distinct word (by key: the three supplements share
+        // one).
+        let mut keys: Vec<StringKey> = Vec::new();
         for source in &result.sources {
-            let badge = self.strings.resolve(source.badge_key());
-            if !badges.contains(&badge) {
-                badges.push(badge);
+            let key = source.badge_key();
+            if !keys.contains(&key) {
+                keys.push(key);
             }
         }
+        let badges: Vec<&str> = keys.iter().map(|key| self.strings.resolve(*key)).collect();
         let title = match &result.hanzi {
             Some(hanzi) => format!("{}  {hanzi}", result.roman),
             None => result.roman.clone(),
         };
+        // Dictionary and user text, never markup.
         let row = adw::ActionRow::builder()
             .title(title)
             .subtitle(badges.join(" · "))
+            .use_markup(false)
             .build();
         for (url, label) in [
             (result.moe_url(), StringKey::DictionaryLookupMoe),

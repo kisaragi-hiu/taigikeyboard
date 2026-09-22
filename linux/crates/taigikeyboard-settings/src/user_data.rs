@@ -8,15 +8,15 @@ use std::sync::Arc;
 use taigi_desktop_storage::{created, UserDataStores};
 use taigi_linux_platform::UserDirectories;
 
-pub fn open_at_launch() -> Option<UserDataStores> {
-    let directories = UserDirectories::resolve()?;
-    let directory = match created(directories.data) {
-        Ok(directory) => directory,
-        Err(error) => {
-            log::error!("user_data.no_data_directory error={error}");
-            return None;
-        }
-    };
+/// `Err` carries what the window says: the data directory could not be
+/// created, or there is no user directory at all.
+pub fn open_at_launch() -> Result<UserDataStores, String> {
+    let directories =
+        UserDirectories::resolve().ok_or_else(|| "HOME / XDG_DATA_HOME".to_owned())?;
+    let directory = created(directories.data).map_err(|error| {
+        log::error!("user_data.no_data_directory error={error}");
+        error.to_string()
+    })?;
     let stores = UserDataStores::new(directory);
     stores.open();
     let custom_dictionary = Arc::clone(&stores.custom_dictionary);
@@ -31,5 +31,5 @@ pub fn open_at_launch() -> Option<UserDataStores> {
             }
         })
         .ok();
-    Some(stores)
+    Ok(stores)
 }
