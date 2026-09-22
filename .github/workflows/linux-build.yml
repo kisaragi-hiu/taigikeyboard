@@ -49,7 +49,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            ibus dbus-daemon libgtk-4-dev libadwaita-1-dev pkg-config
+            ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev pkg-config
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
@@ -101,19 +101,19 @@ jobs:
           export XDG_DATA_HOME="$RUNNER_TEMP/xdg-data"
           export RUST_LOG=debug
           mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
-          dbus-run-session -- bash -c '
+          xvfb-run -a dbus-run-session -- bash -c '
             set -euxo pipefail
-            export DISPLAY=:99
-            ibus-daemon --daemonize --verbose --panel disable --address "unix:abstract=taigi-smoke" 2> "$RUNNER_TEMP/ibus-daemon.log" || true
-            # ibus-daemon writes its socket file after start; give it a moment.
-            for i in $(seq 1 20); do ibus list-engine > /dev/null 2>&1 && break; sleep 0.5; done
+            ibus-daemon --verbose --panel disable > "$RUNNER_TEMP/ibus-daemon.log" 2>&1 &
+            DAEMON=$!
+            # The daemon writes its socket file once its bus is up.
+            for i in $(seq 1 40); do ibus list-engine > /dev/null 2>&1 && break; sleep 0.5; done
             ibus list-engine | tee "$RUNNER_TEMP/engines.txt"
             grep -q taigikeyboard "$RUNNER_TEMP/engines.txt"
             ibus engine taigikeyboard
-            sleep 1
+            sleep 2
             ibus engine | tee "$RUNNER_TEMP/current.txt"
             grep -q taigikeyboard "$RUNNER_TEMP/current.txt"
-            ibus exit || true
+            kill "$DAEMON" || true
           '
 
       - name: Show daemon log on failure
