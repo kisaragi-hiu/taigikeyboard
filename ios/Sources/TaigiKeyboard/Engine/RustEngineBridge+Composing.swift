@@ -198,7 +198,7 @@ public extension RustEngineBridge {
     static func composingStart(
         _ text: String,
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_Start()
@@ -214,7 +214,7 @@ public extension RustEngineBridge {
     static func composingAppend(
         _ char: String,
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_Append()
@@ -229,7 +229,7 @@ public extension RustEngineBridge {
 
     static func composingAppendHyphen(
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
@@ -243,7 +243,7 @@ public extension RustEngineBridge {
     static func composingReplaceLast(
         _ replacement: String,
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         generation: UInt64,
     ) -> ComposingTransition {
         var payload = Taigi_Engine_ReplaceLast()
@@ -258,7 +258,7 @@ public extension RustEngineBridge {
 
     static func composingDeleteBackward(
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
@@ -271,7 +271,7 @@ public extension RustEngineBridge {
 
     static func composingCommitDerived(
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
@@ -301,7 +301,7 @@ public extension RustEngineBridge {
     // caller does — verified) or hanji-first silently regresses.
     static func composingCommitRaw(
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         effectiveSwapped: Bool = false,
         outputBothScripts: Bool = false,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
@@ -335,7 +335,7 @@ public extension RustEngineBridge {
     static func composingSelectSuggestion(
         _ text: String,
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         effectiveSwapped: Bool = false,
         outputBothScripts: Bool = false,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
@@ -374,7 +374,7 @@ public extension RustEngineBridge {
     static func composingCommitPreeditThenInsertExternal(
         _ text: String,
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         effectiveSwapped: Bool = false,
         outputBothScripts: Bool = false,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
@@ -439,7 +439,7 @@ public extension RustEngineBridge {
     /// display goes through `derived_display(raw, config)`.
     static func composingEnterContinuous(
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         generation: UInt64,
     ) -> ComposingTransition {
         composingDispatch(
@@ -485,7 +485,7 @@ public extension RustEngineBridge {
     // pass explicit `continuousSpacingFlags` values (see composingCommitRaw note).
     static func composingFetchAtPos(
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         effectiveSwapped: Bool = false,
         outputBothScripts: Bool = false,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
@@ -552,7 +552,7 @@ public extension RustEngineBridge {
         consumedBytes: UInt32,
         syllableCount: UInt32,
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         // Defaults: v3.5.7 roman-first; production Continuous callers MUST
         // pass explicit `continuousSpacingFlags` values (see composingCommitRaw note).
         effectiveSwapped: Bool = false,
@@ -630,7 +630,7 @@ public extension RustEngineBridge {
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
     private static func continuousAppConfig(
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
         effectiveSwapped: Bool,
         outputBothScripts: Bool,
         candidateDisplayMode: CandidateDisplayMode,

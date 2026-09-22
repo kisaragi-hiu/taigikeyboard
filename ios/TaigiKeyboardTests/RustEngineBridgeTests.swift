@@ -29,11 +29,20 @@ final class RustEngineBridgeTests: XCTestCase {
     // MARK: - Phonetics core (8 ops)
 
     func test_op_normalizeTone_TL() {
-        let toggles = ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
+        let toggles = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false, isNasalMarkerUppercaseEnabled: true)
         XCTAssertEqual(
             RustEngineBridge.normalizeTone("gua2", mode: .tl, toggles: toggles),
             "guá",
         )
+    }
+
+    /// ⁿ大本字 (§53) crosses the bridge inverted: ON = wire default (`SIÂᴺ`),
+    /// OFF = `force_lowercase_nasal_marker` (`SIÂⁿ`).
+    func test_op_normalizeTone_POJ_nasalMarkerFollowsTheSwitch() {
+        let uppercase = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: true, isNasalMarkerUppercaseEnabled: true)
+        XCTAssertEqual(RustEngineBridge.normalizeTone("SIANN5", mode: .poj, toggles: uppercase), "SI\u{C2}\u{1D3A}")
+        let lowercase = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: true, isNasalMarkerUppercaseEnabled: false)
+        XCTAssertEqual(RustEngineBridge.normalizeTone("SIANN5", mode: .poj, toggles: lowercase), "SI\u{C2}\u{207F}")
     }
 
     func test_op_stripTone_returnsBareAndToneTuple() {

@@ -107,6 +107,13 @@ pub fn view(
             true,
             context.callback(|is_on| Message::SetSwitch(keys::IS_HYPHENLESS_ROMAN_ENABLED, is_on)),
         ),
+        // ⁿ大本字 (§53): the other switch that shapes the output's romanization.
+        cards::switch_row(
+            strings.resolve(StringKey::SettingsNasalMarkerUppercase),
+            document.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
+            true,
+            context.callback(|is_on| Message::SetSwitch(keys::IS_NASAL_MARKER_UPPERCASE_ENABLED, is_on)),
+        ),
         // The space after a commit: the last thing the output stage does.
         cards::switch_row(
             strings.resolve(StringKey::SettingsAutoSpace),

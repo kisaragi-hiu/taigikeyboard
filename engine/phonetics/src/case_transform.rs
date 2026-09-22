@@ -16,6 +16,8 @@
 //! `Method::NormalizeTone` in-band). The function keeps its existing
 //! contract; `case_adjust.rs` is removed in this slice.
 
+use std::borrow::Cow;
+
 use crate::api::InputMode;
 use crate::case_tables::{lower_to_upper, upper_to_lower};
 
@@ -266,6 +268,31 @@ pub fn adjust_nasal_marker_case(text: &str) -> String {
     result
 }
 
+/// ⁿ大本字 (`behavioral-invariants.md` §53): the marker follows the preceding
+/// letter's case ([`adjust_nasal_marker_case`]), or with `force_lowercase`
+/// (`AppConfig.force_lowercase_nasal_marker`, the switch OFF) it is always
+/// `ⁿ` ([`lowercase_nasal_markers`]). Borrowed when nothing would change.
+pub fn apply_nasal_marker_case(text: &str, force_lowercase: bool) -> Cow<'_, str> {
+    let rewrites = if force_lowercase {
+        text.contains(NASAL_UPPER)
+    } else {
+        text.contains(NASAL_LOWER) || text.contains(NASAL_UPPER)
+    };
+    if !rewrites {
+        return Cow::Borrowed(text);
+    }
+    Cow::Owned(if force_lowercase {
+        lowercase_nasal_markers(text)
+    } else {
+        adjust_nasal_marker_case(text)
+    })
+}
+
+/// Every `ᴺ` U+1D3A written as `ⁿ` U+207F; the letters keep their case.
+pub fn lowercase_nasal_markers(text: &str) -> String {
+    text.replace(NASAL_UPPER, "\u{207F}")
+}
+
 // =========================================================================
 // Internal helpers (mirror SuggestionCaseTransformer private funcs)
 // =========================================================================
@@ -362,6 +389,19 @@ mod tests {
     use super::*;
 
     // -----------------------------------------------------------------
+    #[test]
+    fn apply_nasal_marker_case_follows_the_switch_and_borrows_when_unchanged() {
+        assert_eq!(apply_nasal_marker_case("SI\u{c2}\u{1d3a}", true), "SI\u{c2}\u{207f}");
+        assert_eq!(
+            apply_nasal_marker_case("SI\u{c2}\u{1d3a}-Si\u{e2}\u{207f}", true),
+            "SI\u{c2}\u{207f}-Si\u{e2}\u{207f}"
+        );
+        assert_eq!(apply_nasal_marker_case("SI\u{c2}\u{207f}", false), "SI\u{c2}\u{1d3a}");
+        // Nothing to rewrite: no allocation either way.
+        assert!(matches!(apply_nasal_marker_case("T\u{c2}I-G\u{cd}", false), Cow::Borrowed(_)));
+        assert!(matches!(apply_nasal_marker_case("si\u{e2}\u{207f}", true), Cow::Borrowed(_)));
+    }
+
     // adjust_nasal_marker_case — moved from case_adjust.rs verbatim
     // -----------------------------------------------------------------
 

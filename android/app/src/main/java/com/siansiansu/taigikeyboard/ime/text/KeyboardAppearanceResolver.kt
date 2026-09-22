@@ -43,6 +43,7 @@ internal class KeyboardAppearanceResolver(
             inputMode = prefs.inputMode,
             caps = capsStateManager.caps,
             capsLock = capsStateManager.capsLock,
+            isNasalMarkerUppercaseEnabled = prefs.isNasalMarkerUppercaseEnabled,
             isComposing = isComposingProvider(),
             isFullWidthPunctuation = fullWidthPunctuationProvider(),
             imeOptions = taigikeyboard.currentInputEditorInfo?.imeOptions ?: 0,

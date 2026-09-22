@@ -487,6 +487,7 @@ class SmartbarManager(
                 caps = caps,
                 capsLock = capsLock,
                 inputMode = inputMode,
+                isNasalMarkerUppercaseEnabled = prefs.isNasalMarkerUppercaseEnabled,
             )
 
         logger.debug(TAG) { "[CASE] caps=$caps, capsLock=$capsLock, composingText='$composingText'" }

@@ -184,6 +184,8 @@
     <string name="i18n_settings_vibrationFeedback">震動反應</string>
     <string name="i18n_settings_doubleTapOO">連紲拍 oo → o͘</string>
     <string name="i18n_settings_doubleTapNN">連紲拍 nn → ⁿ</string>
+    <string name="i18n_settings_nasalMarkerUppercase">大本字時 ⁿ 轉做 ᴺ</string>
+    <string name="i18n_settings_nasalMarkerUppercaseInfo">拍大本字的時陣，鼻音記號 ⁿ 嘛寫做大本字 ᴺ（SIÂᴺ）。關掉了後永遠寫小本字 ⁿ（SIÂⁿ）。</string>
     <string name="i18n_settings_tpsOrMapsToER">or 對應 ㄜ</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">開啟時 or 顯示做 ㄜ，關閉時顯示做 ㄛ。袂影響揣詞結果。</string>
     <string name="i18n_settings_resetSettings">恢復設定佮使用紀錄</string>

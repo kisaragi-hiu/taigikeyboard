@@ -27,6 +27,7 @@ extension ActionHandler {
             char,
             letterCase: currentCase.asLetterCase,
             mode: settings.inputMode,
+            isNasalMarkerUppercaseEnabled: settings.isNasalMarkerUppercaseEnabled,
         )
 
         // TPS key-level adjustments via pure pipeline (returns adjusted char +

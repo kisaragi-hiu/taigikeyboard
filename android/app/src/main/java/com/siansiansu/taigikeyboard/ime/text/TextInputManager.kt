@@ -417,7 +417,7 @@ class TextInputManager(
     override fun onInputModeChanged(newInputMode: String) {
         if (logger.isDebugEnabled) logger.i(TAG, "onInputModeChanged($newInputMode)")
 
-        // ComposingManager reads inputMode + toneToggles per dispatch
+        // ComposingManager reads inputMode + pojMarkerOptions per dispatch
         // via EngineSettingsProvider.current (live read) — no direct
         // field mutation needed.
 

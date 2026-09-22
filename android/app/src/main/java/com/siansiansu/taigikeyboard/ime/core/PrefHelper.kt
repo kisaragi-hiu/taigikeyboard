@@ -16,7 +16,7 @@ import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
-import com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles
+import com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -351,6 +351,13 @@ class PrefHelper(
 
     var enableDoubleTapNN: Boolean by preference(PreferenceKeys.ENABLE_DOUBLE_TAP_NN, true)
 
+    // ⁿ大本字 (§53): the POJ nasal marker follows the case of the letters before
+    // it (`SIÂᴺ`); off, always `ⁿ`. Reaches the engine through `pojMarkerOptions`
+    // (inverted as `AppConfig.force_lowercase_nasal_marker`) and the case ops.
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:isNasalMarkerUppercaseEnabled (ON).
+    // Drift causes silent divergence (one platform writes ᴺ after a capital, the other ⁿ).
+    var isNasalMarkerUppercaseEnabled: Boolean by preference(PreferenceKeys.NASAL_MARKER_UPPERCASE, true)
+
     var autoCapitalizationEnabled: Boolean by preference(PreferenceKeys.AUTO_CAPITALIZATION_ENABLED, true)
 
     var isAutoSpaceEnabled: Boolean by preference(PreferenceKeys.AUTO_SPACE_ENABLED, false)
@@ -621,8 +628,8 @@ class PrefHelper(
     override val isAssociationRecordingEnabled: Boolean
         get() = true
 
-    override val toneToggles: ToneToggles
-        get() = ToneToggles(enableDoubleTapOO, enableDoubleTapNN)
+    override val pojMarkerOptions: PojMarkerOptions
+        get() = PojMarkerOptions(enableDoubleTapOO, enableDoubleTapNN, isNasalMarkerUppercaseEnabled)
 
     override val isCustomDictEnabled: Boolean
         get() = customDictEnabled

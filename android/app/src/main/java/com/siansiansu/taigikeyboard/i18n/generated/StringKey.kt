@@ -191,6 +191,8 @@ enum class StringKey(
     SETTINGS_VIBRATION_FEEDBACK(R.string.i18n_settings_vibrationFeedback),
     SETTINGS_DOUBLE_TAP_O_O(R.string.i18n_settings_doubleTapOO),
     SETTINGS_DOUBLE_TAP_N_N(R.string.i18n_settings_doubleTapNN),
+    SETTINGS_NASAL_MARKER_UPPERCASE(R.string.i18n_settings_nasalMarkerUppercase),
+    SETTINGS_NASAL_MARKER_UPPERCASE_INFO(R.string.i18n_settings_nasalMarkerUppercaseInfo),
     SETTINGS_TPS_OR_MAPS_TO_E_R(R.string.i18n_settings_tpsOrMapsToER),
     SETTINGS_TPS_OR_MAPS_TO_E_R_INFO(R.string.i18n_settings_tpsOrMapsToERInfo),
     SETTINGS_RESET_SETTINGS(R.string.i18n_settings_resetSettings),

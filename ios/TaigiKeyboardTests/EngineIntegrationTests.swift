@@ -38,7 +38,7 @@ final class EngineIntegrationTests: XCTestCase {
     // MARK: - B. Tone Mark Round-Trip (POJ mode cross-component)
 
     func testToneMarkRoundTrip_pojMode() {
-        let toggles = ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
+        let toggles = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false, isNasalMarkerUppercaseEnabled: true)
         let marked = RustEngineBridge.normalizeTone("ka2", mode: .poj, toggles: toggles)
         XCTAssertEqual(marked, "k\u{00E1}") // ká (same for simple vowel)
 

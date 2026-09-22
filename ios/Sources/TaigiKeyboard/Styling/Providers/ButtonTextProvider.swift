@@ -159,11 +159,12 @@ final class ButtonTextProvider {
             return "，"
         }
 
-        // "nn" key shows nasal marker ⁿ/ᴺ in POJ mode
+        // "nn" key shows nasal marker ⁿ/ᴺ in POJ mode — ᴺ only while ⁿ大本字
+        // is on (§53), the same rule the engine applies to what the key composes.
         // In TL mode, display as literal "nn" (falls through to case transform)
         if char == "nn", settings.inputMode == .poj {
-            return keyboardContext.keyboardCase == .lowercased
-                ? "\u{207F}" : "\u{1D3A}" // ⁿ / ᴺ
+            let isUppercase = keyboardContext.keyboardCase != .lowercased && settings.isNasalMarkerUppercaseEnabled
+            return isUppercase ? "\u{1D3A}" : "\u{207F}" // ᴺ / ⁿ
         }
 
         switch keyboardContext.keyboardCase {

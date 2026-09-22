@@ -35,7 +35,7 @@ class RustEngineBridgeTest {
         RustEngineBridge.resetDiagnosticsForTesting()
     }
 
-    private fun togglesOff() = ToneTogglesCarrier(false, false)
+    private fun togglesOff() = PojMarkerOptionsCarrier(false, false, isNasalMarkerUppercaseEnabled = true)
 
     // region Phonetics core (8 ops)
 

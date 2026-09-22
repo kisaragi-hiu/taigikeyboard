@@ -48,9 +48,10 @@ protocol EngineSettings {
     // Drift causes silent divergence (one platform still shows hyphens).
     var isHyphenlessRomanEnabled: Bool { get }
 
-    /// POJ preprocessing toggles bundled as a live-read value so
-    /// `ComposingState` / `ToneConverter` can stay Foundation-pure.
-    var toneToggles: ToneToggles { get }
+    /// The POJ marker options (double-tap folds + ⁿ大本字, §53) bundled as a
+    /// live-read value so `ComposingState` / `ToneConverter` can stay
+    /// Foundation-pure.
+    var pojMarkerOptions: PojMarkerOptions { get }
 
     var isCustomDictEnabled: Bool { get }
     // TPS: "or" maps to ㄜ when true, ㄛ when false.

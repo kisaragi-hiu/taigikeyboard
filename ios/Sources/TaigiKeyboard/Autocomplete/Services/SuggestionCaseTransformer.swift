@@ -12,6 +12,7 @@ enum SuggestionCaseTransformer {
         composingText: String,
         keyboardCase: Keyboard.KeyboardCase,
         inputMode: InputMode,
+        isNasalMarkerUppercaseEnabled: Bool,
     ) -> [AutocompleteSuggestion] {
         suggestions.map { suggestion in
             transformSuggestion(
@@ -19,6 +20,7 @@ enum SuggestionCaseTransformer {
                 composingText: composingText,
                 keyboardCase: keyboardCase,
                 inputMode: inputMode,
+                isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
             )
         }
     }
@@ -28,6 +30,7 @@ enum SuggestionCaseTransformer {
         composingText: String,
         keyboardCase: Keyboard.KeyboardCase,
         inputMode: InputMode,
+        isNasalMarkerUppercaseEnabled: Bool,
     ) -> AutocompleteSuggestion {
         // Skip rules — match Android `id < 0 && id != -2` numeric markers
         // via iOS's `additionalInfo` flag-based equivalent.
@@ -54,6 +57,7 @@ enum SuggestionCaseTransformer {
             composing: composingText,
             letterCase: keyboardCase.asLetterCase,
             mode: inputMode,
+            isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
         )
 
         return AutocompleteSuggestion(

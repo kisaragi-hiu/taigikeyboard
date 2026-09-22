@@ -91,10 +91,13 @@ pub(super) fn record_failure(op: &str, message: &str) {
 /// `ⁿ` keys, a hardware keyboard has not, so switching the fold off would
 /// leave both graphemes untypable in POJ (`RustEngineBridge.swift:161-175`).
 ///
-/// `candidate_display_mode` and `hyphenless_roman` ride on the BASE config:
-/// the engine collapses same-roman rows under roman-only, and shapes the
-/// romanization hyphenless (§49), in both the candidate fetch and the
-/// next-word filter, and the two derived configs below inherit them.
+/// `candidate_display_mode`, `hyphenless_roman` and
+/// `force_lowercase_nasal_marker` ride on the BASE config: the engine
+/// collapses same-roman rows under roman-only, shapes the romanization
+/// hyphenless (§49) and cases the nasal marker (§53) in the preedit, the
+/// candidate fetch and the next-word filter, and the two derived configs
+/// below inherit them. The nasal switch is inverted on the wire (proto
+/// default = the marker follows the case).
 pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
     AppConfig {
         input_mode: settings.input_mode.wire().to_owned(),
@@ -103,6 +106,7 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         platform_id: Platform::Windows as i32,
         candidate_display_mode: settings.candidate_display_mode.wire() as i32,
         hyphenless_roman: settings.is_hyphenless_roman_enabled,
+        force_lowercase_nasal_marker: !settings.is_nasal_marker_uppercase_enabled,
         ..Default::default()
     }
 }
@@ -200,6 +204,20 @@ mod tests {
         assert!(app_config(&settings).hyphenless_roman);
         assert!(continuous_app_config(&settings).hyphenless_roman);
         assert!(nextword_config(&settings).hyphenless_roman);
+    }
+
+    #[test]
+    fn nasal_marker_uppercase_off_forces_the_lowercase_marker_through_the_base_config() {
+        assert!(
+            !app_config(&EngineSettings::default()).force_lowercase_nasal_marker,
+            "ships ON = wire default"
+        );
+        let settings = EngineSettings {
+            is_nasal_marker_uppercase_enabled: false,
+            ..EngineSettings::default()
+        };
+        assert!(app_config(&settings).force_lowercase_nasal_marker);
+        assert!(continuous_app_config(&settings).force_lowercase_nasal_marker);
     }
 
     #[test]

@@ -74,6 +74,7 @@ final class ThemePreviewEnvironment: KeyboardEnvironment {
             keyboardLayoutType: base.keyboardLayoutType,
             isTranslateSwapped: base.isTranslateSwapped,
             isTpsOrMappedToER: base.isTpsOrMappedToER,
+            isNasalMarkerUppercaseEnabled: base.isNasalMarkerUppercaseEnabled,
             keyFontSizeScale: CGFloat(appearance.keyFontSizeScale),
             keyCornerRadius: CGFloat(appearance.keyCornerRadius),
             colorSettings: appearance.colors,

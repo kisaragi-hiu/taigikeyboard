@@ -90,10 +90,11 @@ interface EngineSettings {
     val isHyphenlessRomanEnabled: Boolean
 
     /**
-     * POJ preprocessing toggles bundled as a live-read value so
-     * `ComposingState` / `ToneConverter` can stay Kotlin-stdlib-pure.
+     * The POJ marker options (double-tap folds + ⁿ大本字, §53) bundled as a
+     * live-read value so `ComposingState` / `ToneConverter` can stay
+     * Kotlin-stdlib-pure.
      */
-    val toneToggles: ToneToggles
+    val pojMarkerOptions: PojMarkerOptions
 
     val isCustomDictEnabled: Boolean
 

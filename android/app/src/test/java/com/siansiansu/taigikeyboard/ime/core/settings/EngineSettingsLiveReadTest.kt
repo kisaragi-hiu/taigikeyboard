@@ -81,8 +81,12 @@ class EngineSettingsLiveReadTest {
         var isLiteralRomanCandidateEnabled: Boolean = true,
         var isHyphenlessRomanEnabled: Boolean = false,
         var isAssociationRecordingEnabled: Boolean = false,
-        var toneToggles: ToneToggles =
-            ToneToggles(isDoubleTapOOEnabled = false, isDoubleTapNNEnabled = false),
+        var pojMarkerOptions: PojMarkerOptions =
+            PojMarkerOptions(
+                isDoubleTapOOEnabled = false,
+                isDoubleTapNNEnabled = false,
+                isNasalMarkerUppercaseEnabled = true,
+            ),
         var isCustomDictEnabled: Boolean = false,
         var isTpsOrMappedToER: Boolean = false,
         var isMoeDictEnabled: Boolean = false,
@@ -127,7 +131,7 @@ class EngineSettingsLiveReadTest {
         override val isLiteralRomanCandidateEnabled: Boolean get() = backing.isLiteralRomanCandidateEnabled
         override val isHyphenlessRomanEnabled: Boolean get() = backing.isHyphenlessRomanEnabled
         override val isAssociationRecordingEnabled: Boolean get() = backing.isAssociationRecordingEnabled
-        override val toneToggles: ToneToggles get() = backing.toneToggles
+        override val pojMarkerOptions: PojMarkerOptions get() = backing.pojMarkerOptions
         override val isCustomDictEnabled: Boolean get() = backing.isCustomDictEnabled
         override val isTpsOrMappedToER: Boolean get() = backing.isTpsOrMappedToER
         override val isMoeDictEnabled: Boolean get() = backing.isMoeDictEnabled

@@ -15,6 +15,7 @@ struct SettingsTab: View {
     @State private var autoSpaceEnabled: Bool
     @State private var isDoubleTapOOEnabled: Bool
     @State private var isDoubleTapNNEnabled: Bool
+    @State private var isNasalMarkerUppercaseEnabled: Bool
     @State private var candidateDisplayMode: CandidateDisplayMode
     @State private var isOutputBothScripts: Bool
     @State private var literalRomanCandidateEnabled: Bool
@@ -54,6 +55,7 @@ struct SettingsTab: View {
         _autoSpaceEnabled = State(initialValue: settings.isAutoSpaceEnabled)
         _isDoubleTapOOEnabled = State(initialValue: settings.isDoubleTapOOEnabled)
         _isDoubleTapNNEnabled = State(initialValue: settings.isDoubleTapNNEnabled)
+        _isNasalMarkerUppercaseEnabled = State(initialValue: settings.isNasalMarkerUppercaseEnabled)
         _candidateDisplayMode = State(initialValue: settings.candidateDisplayMode)
         // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under 羅馬字.
         _isOutputBothScripts = State(initialValue: settings.storedIsOutputBothScripts)
@@ -247,6 +249,17 @@ struct SettingsTab: View {
                         .onChange(of: isDoubleTapNNEnabled) { _, newValue in
                             settings.isDoubleTapNNEnabled = newValue
                         }
+
+                    // ⁿ大本字 (§53) — the case rule of the marker the row above composes.
+                    Toggle(isOn: $isNasalMarkerUppercaseEnabled) {
+                        HStack {
+                            Text(lang.string(.settingsNasalMarkerUppercase))
+                            SettingInfoButton(description: lang.string(.settingsNasalMarkerUppercaseInfo))
+                        }
+                    }
+                    .onChange(of: isNasalMarkerUppercaseEnabled) { _, newValue in
+                        settings.isNasalMarkerUppercaseEnabled = newValue
+                    }
                 } header: {
                     Text(lang.string(.settingsPojMode))
                         .font(AppStyle.sectionHeaderFont)
@@ -362,6 +375,7 @@ struct SettingsTab: View {
         autoSpaceEnabled = settings.isAutoSpaceEnabled
         isDoubleTapOOEnabled = settings.isDoubleTapOOEnabled
         isDoubleTapNNEnabled = settings.isDoubleTapNNEnabled
+        isNasalMarkerUppercaseEnabled = settings.isNasalMarkerUppercaseEnabled
         candidateDisplayMode = settings.candidateDisplayMode
         isOutputBothScripts = settings.storedIsOutputBothScripts
         isTpsOrMappedToER = settings.isTpsOrMappedToER

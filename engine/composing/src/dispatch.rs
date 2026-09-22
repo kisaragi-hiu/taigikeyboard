@@ -279,6 +279,7 @@ fn handle_fetch_at_pos(
         mode,
         enabled_sources_bitmask,
         config.hyphenless_roman,
+        config.force_lowercase_nasal_marker,
     );
     // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): whenever composing
     // in TL/POJ — tone or no tone — surface the current composing result
@@ -735,6 +736,7 @@ mod tests {
             output_both_scripts: false,
             candidate_display_mode: 0,
             hyphenless_roman: false,
+            force_lowercase_nasal_marker: false,
         }
     }
 

@@ -107,6 +107,7 @@ fn tl_config() -> AppConfig {
         output_both_scripts: false,
         candidate_display_mode: 0,
         hyphenless_roman: false,
+        force_lowercase_nasal_marker: false,
     }
 }
 
@@ -122,6 +123,7 @@ fn poj_config(oo: bool, nn: bool) -> AppConfig {
         output_both_scripts: false,
         candidate_display_mode: 0,
         hyphenless_roman: false,
+        force_lowercase_nasal_marker: false,
     }
 }
 

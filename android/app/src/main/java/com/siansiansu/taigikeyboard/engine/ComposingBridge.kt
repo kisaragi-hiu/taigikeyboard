@@ -16,7 +16,7 @@ import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 fun RustEngineBridge.composingStart(
     text: String,
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Start
@@ -34,7 +34,7 @@ fun RustEngineBridge.composingStart(
 fun RustEngineBridge.composingAppend(
     ch: String,
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Append
@@ -52,7 +52,7 @@ fun RustEngineBridge.composingAppend(
 // Separator hyphen distinguishes raw "tai-uan" from "taiuan", which changes the candidate trie key.
 fun RustEngineBridge.composingAppendHyphen(
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.AppendHyphen
@@ -69,7 +69,7 @@ fun RustEngineBridge.composingAppendHyphen(
 fun RustEngineBridge.composingReplaceLast(
     replacement: String,
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ReplaceLast
@@ -87,7 +87,7 @@ fun RustEngineBridge.composingReplaceLast(
 // Engine owns the delete-to-empty → Idle transition and the 1-char delete path that must not eat document text.
 fun RustEngineBridge.composingDeleteBackward(
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.DeleteBackward
@@ -104,7 +104,7 @@ fun RustEngineBridge.composingDeleteBackward(
 // Commits the derived display string, e.g. raw "ho2" commits as "hó".
 fun RustEngineBridge.composingCommitDerived(
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.CommitDerived
@@ -131,7 +131,7 @@ fun RustEngineBridge.composingCommitDerived(
 // silently regresses.
 fun RustEngineBridge.composingCommitRaw(
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
     effectiveSwapped: Boolean = false,
     outputBothScripts: Boolean = false,
@@ -161,7 +161,7 @@ fun RustEngineBridge.composingCommitRaw(
 fun RustEngineBridge.composingSelectSuggestion(
     text: String,
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
     effectiveSwapped: Boolean = false,
     outputBothScripts: Boolean = false,
@@ -194,7 +194,7 @@ fun RustEngineBridge.composingSelectSuggestion(
 fun RustEngineBridge.composingCommitPreeditThenInsertExternal(
     text: String,
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
     effectiveSwapped: Boolean = false,
     outputBothScripts: Boolean = false,
@@ -268,7 +268,7 @@ fun RustEngineBridge.composingQueryState(generation: Long): RustEngineBridge.Com
  */
 fun RustEngineBridge.composingEnterContinuous(
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
     val payload = com.siansiansu.taigikeyboard.engine.proto.EnterContinuous
@@ -315,7 +315,7 @@ fun RustEngineBridge.composingEnterContinuous(
  */
 fun RustEngineBridge.composingFetchAtPos(
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
     frequencyEntries: List<FrequencyEntry> = emptyList(),
     nowMs: Long = 0L,
@@ -383,7 +383,7 @@ fun RustEngineBridge.composingCommitContinuous(
     consumedBytes: Int,
     syllableCount: Int,
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
     generation: Long,
     effectiveSwapped: Boolean = false,
     outputBothScripts: Boolean = false,

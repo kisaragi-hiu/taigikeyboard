@@ -39,8 +39,8 @@ import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCa
  * never escapes into the IME keystroke path), one [recordFailure] sink.
  * Slices keep only their own payload check.
  *
- * Per Codex v2 §7: `normalizeTone` requires `ToneToggles` mandatory
- * parameter — no `ToneToggles(true, true)` silent default.
+ * Per Codex v2 §7: `normalizeTone` requires `PojMarkerOptions` mandatory
+ * parameter — no `PojMarkerOptions(true, true, true)` silent default.
  *
  * Per Codex v2 §8 + v3 §7 + v4 §5: error visibility is hardened. Failures
  * increment a counter and append a structured [DiagnosticsEntry] to a
@@ -858,13 +858,14 @@ object RustEngineBridge {
     }
 
     /**
-     * Phonetics / composing base [AppConfig] — input mode + POJ doubletap
-     * toggles. `internal` so sibling impl objects share one canonical
-     * factory (no per-slice drift).
+     * Phonetics / composing base [AppConfig] — input mode + the POJ marker
+     * options (doubletap folds, ⁿ大本字 inverted on the wire as
+     * `force_lowercase_nasal_marker`, §53). `internal` so sibling impl
+     * objects share one canonical factory (no per-slice drift).
      */
     internal fun appConfig(
         mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
+        toggles: PojMarkerOptionsCarrier,
     ): AppConfig =
         AppConfig
             .newBuilder()
@@ -876,6 +877,7 @@ object RustEngineBridge {
                 },
             ).setOoDoubletapEnabled(toggles.isDoubleTapOoEnabled)
             .setNnDoubletapEnabled(toggles.isDoubleTapNnEnabled)
+            .setForceLowercaseNasalMarker(!toggles.isNasalMarkerUppercaseEnabled)
             .build()
 
     /**
@@ -906,7 +908,7 @@ object RustEngineBridge {
      */
     internal fun continuousAppConfig(
         mode: NormalizeMode,
-        toggles: ToneTogglesCarrier,
+        toggles: PojMarkerOptionsCarrier,
         effectiveSwapped: Boolean,
         outputBothScripts: Boolean,
         candidateDisplayMode: CandidateDisplayMode,
@@ -938,13 +940,14 @@ object RustEngineBridge {
 enum class NormalizeMode { POJ, TL, ENGLISH }
 
 /**
- * Carrier for the two POJ doubletap preprocessing toggles. Caller (e.g.
- * ComposingManager) MUST construct this from live settings per Codex v2 §7
- * — no default value at the wrapper level.
+ * Carrier for the POJ marker options (the two doubletap folds + ⁿ大本字).
+ * Caller (e.g. ComposingManager) MUST construct this from live settings per
+ * Codex v2 §7 — no default value at the wrapper level.
  */
-data class ToneTogglesCarrier(
+data class PojMarkerOptionsCarrier(
     val isDoubleTapOoEnabled: Boolean,
     val isDoubleTapNnEnabled: Boolean,
+    val isNasalMarkerUppercaseEnabled: Boolean,
 )
 
 /**

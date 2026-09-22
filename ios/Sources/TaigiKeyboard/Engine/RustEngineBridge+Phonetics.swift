@@ -17,13 +17,13 @@ import SwiftProtobuf
 public extension RustEngineBridge {
     // MARK: Phonetics core (8 ops)
 
-    /// `Method::NormalizeTone` — input + AppConfig.input_mode + ToneToggles →
-    /// tone-marked string. Caller MUST supply `ToneToggles`; engine reads
+    /// `Method::NormalizeTone` — input + AppConfig.input_mode + PojMarkerOptions →
+    /// tone-marked string. Caller MUST supply `PojMarkerOptions`; engine reads
     /// them per request (live-read invariant).
     static func normalizeTone(
         _ input: String,
         mode: InputMode,
-        toggles: ToneToggles,
+        toggles: PojMarkerOptions,
     ) -> String {
         var payload = Taigi_Engine_NormalizeTone()
         payload.input = input

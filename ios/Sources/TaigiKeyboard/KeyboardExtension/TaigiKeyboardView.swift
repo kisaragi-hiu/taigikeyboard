@@ -98,6 +98,7 @@ struct TaigiKeyboardView: View {
             composingText: composingManager.composingText,
             keyboardCase: keyboardContext.keyboardCase,
             inputMode: p.settings.inputMode,
+            isNasalMarkerUppercaseEnabled: p.settings.isNasalMarkerUppercaseEnabled,
         )
         let isTranslateSwapped = keyboardContext.isTranslateSwapped
         // Read beside the swap on the same live path: both come from SharedSettings via the

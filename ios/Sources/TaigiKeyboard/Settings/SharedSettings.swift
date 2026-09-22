@@ -39,6 +39,8 @@ final class SharedSettings {
 
     private static let isDoubleTapOOEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapOO", default: true)
     private static let isDoubleTapNNEnabledKey: SettingsKey<Bool> = .bool("enableDoubleTapNN", default: true)
+    /// ⁿ大本字 ships ON on all four platforms (USER 2026-09-22).
+    private static let isNasalMarkerUppercaseEnabledKey: SettingsKey<Bool> = .bool("nasalMarkerUppercaseEnabled", default: true)
     /// Hanji-first out of the box (USER 2026-09-18): the hanji is the title,
     /// the romanization the subtitle, and a commit writes the hanji. Same
     /// default on Android, macOS and Windows.
@@ -141,7 +143,7 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.displayLanguageKey) }
     }
 
-    // Consumed by ToneConverter via ToneToggles.
+    // Consumed by ToneConverter via PojMarkerOptions.
     var isDoubleTapOOEnabled: Bool {
         get { userDefaults.value(for: Self.isDoubleTapOOEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isDoubleTapOOEnabledKey) }
@@ -150,6 +152,17 @@ final class SharedSettings {
     var isDoubleTapNNEnabled: Bool {
         get { userDefaults.value(for: Self.isDoubleTapNNEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isDoubleTapNNEnabledKey) }
+    }
+
+    /// ⁿ大本字 (§53): the POJ nasal marker follows the case of the letters
+    /// before it (`SIÂᴺ`); off, always `ⁿ`. Reaches the engine through
+    /// `pojMarkerOptions` (inverted as `AppConfig.force_lowercase_nasal_marker`)
+    /// and the case ops; the `nn` key label reads it off `SettingsSnapshot`.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/PrefHelper.kt:isNasalMarkerUppercaseEnabled (ON).
+    // Drift causes silent divergence (one platform writes ᴺ after a capital, the other ⁿ).
+    var isNasalMarkerUppercaseEnabled: Bool {
+        get { userDefaults.value(for: Self.isNasalMarkerUppercaseEnabledKey) }
+        set { userDefaults.set(newValue, for: Self.isNasalMarkerUppercaseEnabledKey) }
     }
 
     /// Raw stored swap flag — the ONLY read-write API. Settings UI, the 文/A
@@ -609,6 +622,7 @@ final class SharedSettings {
             keyboardLayoutType: keyboardLayoutType,
             isTranslateSwapped: isTranslateSwapped,
             isTpsOrMappedToER: isTpsOrMappedToER,
+            isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
             keyFontSizeScale: appearance.keyFontSizeScale,
             keyCornerRadius: appearance.keyCornerRadius,
             colorSettings: appearance.colors,
@@ -624,6 +638,7 @@ final class SharedSettings {
         inputMode = .tl
         isDoubleTapOOEnabled = true
         isDoubleTapNNEnabled = true
+        isNasalMarkerUppercaseEnabled = true
         storedIsTranslateSwapped = true
         storedIsOutputBothScripts = false
         candidateDisplayMode = .sideBySide
@@ -701,12 +716,13 @@ extension SharedSettings: EngineSettings {
         )
     }
 
-    /// Live-reads the two underlying booleans per call, matching the
+    /// Live-reads the three underlying booleans per call, matching the
     /// `EngineSettingsProvider.current` live-read contract.
-    var toneToggles: ToneToggles {
-        ToneToggles(
+    var pojMarkerOptions: PojMarkerOptions {
+        PojMarkerOptions(
             isDoubleTapOOEnabled: isDoubleTapOOEnabled,
             isDoubleTapNNEnabled: isDoubleTapNNEnabled,
+            isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
         )
     }
 

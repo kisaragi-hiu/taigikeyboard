@@ -4,9 +4,9 @@ import SwiftProtobuf
 // MARK: - RustEngineBridge Case-Transform surface
 
 /// Case-transform extension for `RustEngineBridge`. Single FFI hop per
-/// per-char or per-word case operation. Mode is forwarded via envelope
-/// `AppConfig.input_mode`; no `ToneToggles` needed (case-transform is
-/// independent of POJ doubletap preprocessing).
+/// per-char or per-word case operation. Mode and ⁿ大本字 (§53) are forwarded
+/// via the envelope `AppConfig`; the double-tap folds are not (case-transform
+/// is independent of POJ preprocessing).
 ///
 /// Suggestion skip rules (`additionalInfo["isComposingText"]` /
 /// `additionalInfo["isNextWord"]`) stay on the platform side — only
@@ -27,28 +27,28 @@ public extension RustEngineBridge {
     /// Uppercase a single char/grapheme using mode-aware tone tables. For
     /// multi-character inputs only the first letter is uppercased.
     /// Replaces `ToneUtilities.uppercaseToneLetter`.
-    static func uppercaseToneChar(_ input: String, mode: InputMode) -> String {
+    static func uppercaseToneChar(_ input: String, mode: InputMode, isNasalMarkerUppercaseEnabled: Bool) -> String {
         var payload = Taigi_Engine_UppercaseToneChar()
         payload.input = input
-        return caseStringDispatch(method: .uppercaseToneChar(payload), op: "uppercaseToneChar", mode: mode, fallback: input)
+        return caseStringDispatch(method: .uppercaseToneChar(payload), op: "uppercaseToneChar", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: input)
     }
 
     /// Uppercase ALL characters in `input` using mode-aware tone tables.
     /// Used by Caps Lock paths. Replaces a separate Android API
     /// (`ToneUtilities.fullUppercaseToneLetter`) and the iOS pattern of
     /// passing a multi-char string into `uppercaseToneLetter`.
-    static func fullUppercaseToneString(_ input: String, mode: InputMode) -> String {
+    static func fullUppercaseToneString(_ input: String, mode: InputMode, isNasalMarkerUppercaseEnabled: Bool) -> String {
         var payload = Taigi_Engine_FullUppercaseToneString()
         payload.input = input
-        return caseStringDispatch(method: .fullUppercaseToneString(payload), op: "fullUppercaseToneString", mode: mode, fallback: input)
+        return caseStringDispatch(method: .fullUppercaseToneString(payload), op: "fullUppercaseToneString", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: input)
     }
 
     /// Lowercase a single char/grapheme using mode-aware tone tables.
     /// Replaces `ToneUtilities.lowercaseToneLetter`.
-    static func lowercaseToneChar(_ input: String, mode: InputMode) -> String {
+    static func lowercaseToneChar(_ input: String, mode: InputMode, isNasalMarkerUppercaseEnabled: Bool) -> String {
         var payload = Taigi_Engine_LowercaseToneChar()
         payload.input = input
-        return caseStringDispatch(method: .lowercaseToneChar(payload), op: "lowercaseToneChar", mode: mode, fallback: input)
+        return caseStringDispatch(method: .lowercaseToneChar(payload), op: "lowercaseToneChar", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: input)
     }
 
     // MARK: - Per-string compound transforms
@@ -59,11 +59,12 @@ public extension RustEngineBridge {
         _ text: String,
         letterCase: CaseTransformLetterCase,
         mode: InputMode,
+        isNasalMarkerUppercaseEnabled: Bool,
     ) -> String {
         var payload = Taigi_Engine_TransformInputCase()
         payload.text = text
         payload.letterCase = Taigi_Engine_LetterCase(rawValue: Int(letterCase.rawValue)) ?? .unspecified
-        return caseStringDispatch(method: .transformInputCase(payload), op: "transformInputCase", mode: mode, fallback: text)
+        return caseStringDispatch(method: .transformInputCase(payload), op: "transformInputCase", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: text)
     }
 
     /// Capitalize candidate first letter when `autoCapEnabled` and `input`
@@ -74,12 +75,13 @@ public extension RustEngineBridge {
         basedOn input: String,
         autoCapEnabled: Bool,
         mode: InputMode,
+        isNasalMarkerUppercaseEnabled: Bool,
     ) -> String {
         var payload = Taigi_Engine_CapitalizeCandidate()
         payload.text = text
         payload.input = input
         payload.autoCapEnabled = autoCapEnabled
-        return caseStringDispatch(method: .capitalizeCandidate(payload), op: "capitalizeCandidate", mode: mode, fallback: text)
+        return caseStringDispatch(method: .capitalizeCandidate(payload), op: "capitalizeCandidate", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: text)
     }
 
     /// Per-suggestion case transformation. Output is post-processed via
@@ -90,12 +92,19 @@ public extension RustEngineBridge {
         composing: String,
         letterCase: CaseTransformLetterCase,
         mode: InputMode,
+        isNasalMarkerUppercaseEnabled: Bool,
     ) -> String {
         var payload = Taigi_Engine_TransformSuggestion()
         payload.originalText = original
         payload.composingText = composing
         payload.letterCase = Taigi_Engine_LetterCase(rawValue: Int(letterCase.rawValue)) ?? .unspecified
-        return caseStringDispatch(method: .transformSuggestion(payload), op: "transformSuggestionCase", mode: mode, fallback: original)
+        return caseStringDispatch(
+            method: .transformSuggestion(payload),
+            op: "transformSuggestionCase",
+            mode: mode,
+            isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
+            fallback: original,
+        )
     }
 
     // MARK: - Private dispatch helper
@@ -107,9 +116,15 @@ public extension RustEngineBridge {
         method: Taigi_Engine_CaseRequest.OneOf_Method,
         op: String,
         mode: InputMode,
+        isNasalMarkerUppercaseEnabled: Bool,
         fallback: String,
     ) -> String {
-        guard let resp = caseDispatch(method: method, op: op, mode: mode) else {
+        guard let resp = caseDispatch(
+            method: method,
+            op: op,
+            mode: mode,
+            isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
+        ) else {
             return fallback
         }
         guard case let .stringResult(r)? = resp.result else {
@@ -119,14 +134,14 @@ public extension RustEngineBridge {
         return r.output
     }
 
-    /// Case-transform dispatch — single FFI hop per word/char. Mode is
-    /// carried via envelope `AppConfig.input_mode` (engine reads it for
-    /// tone-table lookup). No `ToneToggles` needed: case-transform is
-    /// independent of POJ doubletap preprocessing.
+    /// Case-transform dispatch — single FFI hop per word/char. Mode and
+    /// ⁿ大本字 are carried via the envelope `AppConfig`; the double-tap
+    /// folds are not, case-transform is independent of POJ preprocessing.
     private static func caseDispatch(
         method: Taigi_Engine_CaseRequest.OneOf_Method,
         op: String,
         mode: InputMode,
+        isNasalMarkerUppercaseEnabled: Bool,
     ) -> Taigi_Engine_CaseResponse? {
         var caseReq = Taigi_Engine_CaseRequest()
         caseReq.method = method
@@ -135,11 +150,15 @@ public extension RustEngineBridge {
         request.id = nextRequestID()
         request.payload = .caseTransform(caseReq)
         // Case-transform is independent of POJ doubletap preprocessing —
-        // pass an explicit "all-off" snapshot so the engine `AppConfig`
+        // pass an explicit folds-off snapshot so the engine `AppConfig`
         // doesn't accidentally pick up unrelated state.
         request.configSnapshot = appConfig(
             mode: mode,
-            toggles: ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false),
+            toggles: PojMarkerOptions(
+                isDoubleTapOOEnabled: false,
+                isDoubleTapNNEnabled: false,
+                isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
+            ),
         )
 
         guard let response = send(request, op: op) else { return nil }

@@ -120,6 +120,7 @@ fun KeyboardPreviewPanel(
             inputMode = previewInputMode,
             caps = false,
             capsLock = false,
+            isNasalMarkerUppercaseEnabled = true,
             isComposing = false,
             // The shipped state: hanji-first, full-width, 文/A unlit.
             isFullWidthPunctuation = true,

@@ -19,9 +19,10 @@ object SuggestionCaseTransformer {
         caps: Boolean,
         capsLock: Boolean,
         inputMode: InputMode,
+        isNasalMarkerUppercaseEnabled: Boolean,
     ): List<TaigiWord> =
         suggestions.map { word ->
-            transformWord(word, composingText, caps, capsLock, inputMode)
+            transformWord(word, composingText, caps, capsLock, inputMode, isNasalMarkerUppercaseEnabled)
         }
 
     private fun transformWord(
@@ -30,6 +31,7 @@ object SuggestionCaseTransformer {
         caps: Boolean,
         capsLock: Boolean,
         inputMode: InputMode,
+        isNasalMarkerUppercaseEnabled: Boolean,
     ): TaigiWord {
         // v3.5.8 §10.2 Opt 2A: Continuous candidates are already cased
         // per-segment from the user's own raw input by the engine
@@ -56,6 +58,7 @@ object SuggestionCaseTransformer {
             composing = composingText,
             letterCase = RustEngineBridge.LetterCase.from(caps = caps, capsLock = capsLock),
             mode = inputMode,
+            isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         )
         return word.copy(roman = transformedRoman)
     }

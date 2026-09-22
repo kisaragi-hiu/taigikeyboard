@@ -26,6 +26,18 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * platform sends `false` under a TPS layout (the engine sees TPS as
  * `"tl"` / `"poj"` and the platform re-splits `roman` on `-` for bopomofo),
  * exactly as it folds TPS into `is_translate_swapped`.
+ *
+ * 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ大本字 OFF, USER): the
+ * POJ nasal marker is always written as `ⁿ` U+207F, never as its capital
+ * `ᴺ` U+1D3A, whatever the case of the letters before it (Caps Lock
+ * `SIANN5` → `SIÂⁿ`, not `SIÂᴺ`). Inverted sentinel: proto3 default
+ * `false` = the marker follows the preceding letter's case (PR #102), so
+ * un-wired builds are unaffected. Rendering only —
+ * `phonetics::api::apply_nasal_marker_case` runs on the preedit
+ * (`normalize_tone`), the POJ candidate `roman` (`composing::continuous`
+ * Step 5) and the case-transform ops (`dispatch::case`); identity keys
+ * already fold both glyphs to `nn`. Next-word predictions need no seam:
+ * their POJ render title-cases and never writes the capital marker.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AppConfig}
@@ -376,6 +388,32 @@ public  final class AppConfig extends
     hyphenlessRoman_ = false;
   }
 
+  public static final int FORCE_LOWERCASE_NASAL_MARKER_FIELD_NUMBER = 11;
+  private boolean forceLowercaseNasalMarker_;
+  /**
+   * <code>bool force_lowercase_nasal_marker = 11;</code>
+   * @return The forceLowercaseNasalMarker.
+   */
+  @java.lang.Override
+  public boolean getForceLowercaseNasalMarker() {
+    return forceLowercaseNasalMarker_;
+  }
+  /**
+   * <code>bool force_lowercase_nasal_marker = 11;</code>
+   * @param value The forceLowercaseNasalMarker to set.
+   */
+  private void setForceLowercaseNasalMarker(boolean value) {
+
+    forceLowercaseNasalMarker_ = value;
+  }
+  /**
+   * <code>bool force_lowercase_nasal_marker = 11;</code>
+   */
+  private void clearForceLowercaseNasalMarker() {
+
+    forceLowercaseNasalMarker_ = false;
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.AppConfig parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -480,6 +518,18 @@ public  final class AppConfig extends
    * platform sends `false` under a TPS layout (the engine sees TPS as
    * `"tl"` / `"poj"` and the platform re-splits `roman` on `-` for bopomofo),
    * exactly as it folds TPS into `is_translate_swapped`.
+   *
+   * 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ大本字 OFF, USER): the
+   * POJ nasal marker is always written as `ⁿ` U+207F, never as its capital
+   * `ᴺ` U+1D3A, whatever the case of the letters before it (Caps Lock
+   * `SIANN5` → `SIÂⁿ`, not `SIÂᴺ`). Inverted sentinel: proto3 default
+   * `false` = the marker follows the preceding letter's case (PR #102), so
+   * un-wired builds are unaffected. Rendering only —
+   * `phonetics::api::apply_nasal_marker_case` runs on the preedit
+   * (`normalize_tone`), the POJ candidate `roman` (`composing::continuous`
+   * Step 5) and the case-transform ops (`dispatch::case`); identity keys
+   * already fold both glyphs to `nn`. Next-word predictions need no seam:
+   * their POJ render title-cases and never writes the capital marker.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AppConfig}
@@ -855,6 +905,34 @@ public  final class AppConfig extends
       return this;
     }
 
+    /**
+     * <code>bool force_lowercase_nasal_marker = 11;</code>
+     * @return The forceLowercaseNasalMarker.
+     */
+    @java.lang.Override
+    public boolean getForceLowercaseNasalMarker() {
+      return instance.getForceLowercaseNasalMarker();
+    }
+    /**
+     * <code>bool force_lowercase_nasal_marker = 11;</code>
+     * @param value The forceLowercaseNasalMarker to set.
+     * @return This builder for chaining.
+     */
+    public Builder setForceLowercaseNasalMarker(boolean value) {
+      copyOnWrite();
+      instance.setForceLowercaseNasalMarker(value);
+      return this;
+    }
+    /**
+     * <code>bool force_lowercase_nasal_marker = 11;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearForceLowercaseNasalMarker() {
+      copyOnWrite();
+      instance.clearForceLowercaseNasalMarker();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AppConfig)
   }
   @java.lang.Override
@@ -881,10 +959,12 @@ public  final class AppConfig extends
             "outputBothScripts_",
             "candidateDisplayMode_",
             "hyphenlessRoman_",
+            "forceLowercaseNasalMarker_",
           };
           java.lang.String info =
-              "\u0000\n\u0000\u0000\u0001\n\n\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003\u0007" +
-              "\u0004\u0007\u0005\u0007\u0006\u0007\u0007\f\b\u0007\t\f\n\u0007";
+              "\u0000\u000b\u0000\u0000\u0001\u000b\u000b\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0007\u0004\u0007\u0005\u0007\u0006\u0007\u0007\f\b\u0007\t\f\n\u0007\u000b" +
+              "\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
