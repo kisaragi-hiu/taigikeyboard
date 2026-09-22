@@ -1675,6 +1675,7 @@ dependencies = [
  "taigi-desktop-core",
  "taigi-desktop-storage",
  "taigi-linux-platform",
+ "tempfile",
 ]
 
 [[package]]

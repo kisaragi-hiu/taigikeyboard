@@ -74,9 +74,11 @@ jobs:
         working-directory: linux
         run: cargo clippy --workspace --all-targets -- -D warnings
 
+      # Under xvfb: the settings crate's pane-mount test needs a display and
+      # skips itself without one.
       - name: cargo test (linux workspace)
         working-directory: linux
-        run: cargo test --workspace
+        run: xvfb-run -a cargo test --workspace
 
       - name: cargo build --release (IBus engine + FFI static library)
         working-directory: linux

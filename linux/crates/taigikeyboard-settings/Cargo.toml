@@ -8,6 +8,10 @@ license.workspace = true
 repository.workspace = true
 publish.workspace = true
 
+[lib]
+name = "taigikeyboard_settings"
+path = "src/lib.rs"
+
 [[bin]]
 name = "taigikeyboard-settings"
 path = "src/main.rs"
@@ -21,5 +25,15 @@ adw.workspace = true
 log.workspace = true
 env_logger.workspace = true
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true
+
+# GTK on macOS must be initialised on the main thread, which the default
+# test harness never runs a test on: the pane-mount test brings its own
+# `main`.
+[[test]]
+name = "panes"
+harness = false
