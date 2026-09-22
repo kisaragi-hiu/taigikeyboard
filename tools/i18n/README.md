@@ -51,7 +51,7 @@ Staleness is guarded automatically, not by a manual make target:
 
 ## Generated artifacts (Windows)
 
-- `windows/crates/taigi-windows-core/src/strings/generated.rs` — one Rust module: `StringKey` enum,
+- `desktop/crates/taigi-desktop-core/src/strings/generated.rs` — one Rust module: `StringKey` enum,
   a per-language `fn hanji(key)` … `fn en(key)` table for **all five** production languages, and one
   typed `StringResolver` method per format key. The hand-written `strings/mod.rs` beside it owns
   `DisplayLanguage`, `StringResolver` and the `{N}` positional formatter the generated methods call.

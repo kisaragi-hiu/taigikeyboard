@@ -15,8 +15,8 @@
 
 use super::list_selection::recorded::{insertion_parents, selections};
 use super::window::{SettingsWindow, SettingsWindowInput};
-use taigi_windows_core::settings::{keys, SettingChoice, SettingsPane};
-use taigi_windows_storage::{LiveSettings, SettingsFileStore, UserDataStores};
+use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
+use taigi_desktop_storage::{LiveSettings, SettingsFileStore, UserDataStores};
 use tempfile::TempDir;
 use windows_reactor::{Pump, RecordingRuntime, View};
 

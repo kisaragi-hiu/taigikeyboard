@@ -20,8 +20,8 @@ mod work;
 use cli::LaunchOptions;
 use presentation::strings_for;
 use std::process::ExitCode;
-use taigi_windows_core::settings::SettingsPane;
-use taigi_windows_storage::{user_data_directory, LiveSettings, SettingsFileStore};
+use taigi_desktop_core::settings::SettingsPane;
+use taigi_desktop_storage::{user_data_directory, LiveSettings, SettingsFileStore};
 
 /// The per-session mutex that makes the window single-instance.
 const SINGLE_INSTANCE_NAME: &str = "Local\\TaigiKeyboardSettings";
@@ -60,7 +60,7 @@ fn main() -> ExitCode {
     let live = LiveSettings::new(SettingsFileStore::new(&directory));
     let document = live.refresh_if_changed();
     let pane: SettingsPane = launch.pane.unwrap_or_else(|| {
-        document.choice(&taigi_windows_core::settings::keys::SELECTED_SETTINGS_PANE)
+        document.choice(&taigi_desktop_core::settings::keys::SELECTED_SETTINGS_PANE)
     });
     drop(document);
     open_window(live, directory, pane, is_read_only, launch.check_now)

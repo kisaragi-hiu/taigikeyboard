@@ -11,7 +11,7 @@ use crate::presentation::{DISCORD_URL, EMAIL_URL, GITHUB_URL, SPONSOR_URL, WEBSI
 use crate::winui::cards;
 use crate::winui::font_awesome::FontAwesomeGlyph;
 use crate::winui::window::{Message, SettingsWindow};
-use taigi_windows_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
 /// `CaptionTextBlockStyle`'s size, the attribution's fine print.

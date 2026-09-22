@@ -20,7 +20,7 @@
 //! recorder is NOT allowed a weaker copy (roadmap W17).
 
 use crate::os_out_buffer;
-use taigi_windows_core::keys::{
+use taigi_desktop_core::keys::{
     KeyEventSnapshot, KeyModifiers, NavigationKey, RecordedPress, LEFT_SHIFT_SCAN_CODE,
     RIGHT_SHIFT_SCAN_CODE,
 };
@@ -67,7 +67,7 @@ pub fn is_modifier_key(virtual_key: u16) -> bool {
 
 /// Whether a modifier OTHER than the Shift key identified by `scan_code` is
 /// already held. Asked as a Shift press could arm the 中/英 tap
-/// ([`taigi_windows_core::keys::ShiftTapTracker`]): Ctrl+Shift is the OS's own
+/// ([`taigi_desktop_core::keys::ShiftTapTracker`]): Ctrl+Shift is the OS's own
 /// keyboard-layout switch, and holding one Shift while tapping the other is a
 /// chord too — neither may switch our mode.
 ///
@@ -277,7 +277,7 @@ pub fn recorded_press(virtual_key: u16, scan_code: u32, is_repeat: bool) -> Opti
 #[cfg(test)]
 mod tests {
     use super::*;
-    use taigi_windows_core::keys::{ChordRejection, ComposingKeyChord, KeyModifiers};
+    use taigi_desktop_core::keys::{ChordRejection, ComposingKeyChord, KeyModifiers};
 
     /// Every key the recorder cannot name by what it types must still be
     /// refused as RESERVED, never as "no key" — the message the user reads.

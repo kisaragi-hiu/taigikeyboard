@@ -136,7 +136,7 @@ class ValidateTest(unittest.TestCase):
 
     def test_bad_scope_rejected(self):
         with self.assertRaises(ValueError):
-            self._validate({"k": {"scope": {"platforms": ["linux"], "surfaces": ["host"]}, "values": {"hanji": "字"}}})
+            self._validate({"k": {"scope": {"platforms": ["freebsd"], "surfaces": ["host"]}, "values": {"hanji": "字"}}})
 
     def test_halfwidth_comma_in_hanji_rejected(self):
         with self.assertRaisesRegex(ValueError, "full-width comma"):
@@ -560,7 +560,7 @@ class PlaceholderTypeTest(unittest.TestCase):
 
 
 def _all_platform_key(values: dict, placeholders: dict | None = None) -> dict:
-    entry = {"scope": {"platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host"]}, "values": values}
+    entry = {"scope": {"platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host"]}, "values": values}
     if placeholders is not None:
         entry["placeholders"] = placeholders
     return entry
@@ -642,8 +642,8 @@ class MacOSEmitTest(unittest.TestCase):
     _outputs = staticmethod(_build_probe_outputs)
 
     def test_valid_platforms_roster(self):
-        # The scope vocabulary is the platform roster; a fourth platform must be added here first.
-        self.assertEqual(i18n_lib.VALID_PLATFORMS, {"ios", "android", "macos", "windows"})
+        # The scope vocabulary is the platform roster; a sixth platform must be added here first.
+        self.assertEqual(i18n_lib.VALID_PLATFORMS, {"ios", "android", "macos", "windows", "linux"})
 
     def test_map_carries_every_production_language(self):
         # The whole point of the macOS shape: en/ja resolve from the generated map too, because the
@@ -974,7 +974,7 @@ class ProductionContentTests(unittest.TestCase):
 class WindowsEmitTest(unittest.TestCase):
     _outputs = staticmethod(_build_probe_outputs)
 
-    def _windows_key(self, values, platforms=("android", "ios", "macos", "windows")):
+    def _windows_key(self, values, platforms=("android", "ios", "macos", "windows", "linux")):
         return {"scope": {"platforms": list(platforms), "surfaces": ["host"]}, "values": values}
 
     def test_rust_module_carries_every_production_language(self):

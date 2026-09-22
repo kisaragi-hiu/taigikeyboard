@@ -1,5 +1,6 @@
 //! Pins the `.rc` rendering the two Windows build scripts share
-//! (`windows/build-support/resource.rs`) on the host: a build script has no
+//! (`windows/build-support/resource.rs`) on the host, from the one Windows crate
+//! every host can test: a build script has no
 //! test target of its own, and a wrong `LANGUAGE` split or string escape would
 //! only surface as a mis-named input method on a Windows machine.
 

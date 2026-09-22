@@ -12,11 +12,11 @@ use crate::winui::cards;
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use std::sync::Arc;
 use std::time::Duration;
-use taigi_windows_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
-use taigi_windows_core::engine::lexicon_install;
-use taigi_windows_core::settings::SettingsDocument;
-use taigi_windows_core::strings::{StringKey, StringResolver};
-use taigi_windows_storage::UserDataStores;
+use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
+use taigi_desktop_core::engine::lexicon_install;
+use taigi_desktop_core::settings::SettingsDocument;
+use taigi_desktop_core::strings::{StringKey, StringResolver};
+use taigi_desktop_storage::UserDataStores;
 use windows_reactor::*;
 
 /// `DictionarySearchModel.visibleResultLimit`.

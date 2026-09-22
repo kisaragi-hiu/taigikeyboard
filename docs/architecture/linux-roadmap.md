@@ -19,7 +19,7 @@ Three consequences shape every decision below:
 1. **macOS stays the behaviour oracle; Windows is the code oracle.** Every observable
    desktop behaviour (key table, modes, auto-space, full-width punctuation, settings keys
    and defaults, storage schemas, CSV, shortcuts) already exists twice — as Swift in
-   `macos/` and as host-testable Rust in `windows/crates/taigi-windows-core` +
+   `macos/` and as host-testable Rust in `desktop/crates/taigi-desktop-core` +
    `-storage`. Linux reuses the Rust verbatim (§ L2); only the shell is new. Deltas are
    named with the Windows five-way classification (**identical semantics** ·
    **platform-adapted presentation** · **unsupported host capability** ·

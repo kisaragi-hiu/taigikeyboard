@@ -1,0 +1,7 @@
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
+profile = "minimal"
+# No cross targets: these crates are checked for the Windows and Linux targets
+# through the shell workspaces that link them (`make windows-check`,
+# `make linux-check`); here they build and test natively on the host.

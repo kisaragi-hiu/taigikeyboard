@@ -6,7 +6,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -25,7 +26,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -44,7 +46,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -63,7 +66,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -82,7 +86,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -101,7 +106,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -120,7 +126,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -139,7 +146,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -158,7 +166,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -177,7 +186,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -196,7 +206,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -215,7 +226,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -234,7 +246,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -253,7 +266,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -275,7 +289,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -297,7 +312,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -442,7 +458,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -461,7 +478,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -480,7 +498,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -499,7 +518,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -517,7 +537,8 @@
       "comment": "Banner title in the settings window when settings.json could not be written (the control snaps back).",
       "scope": {
         "platforms": [
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -536,7 +557,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -555,7 +577,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -574,7 +597,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -593,7 +617,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -612,7 +637,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -631,7 +657,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -650,7 +677,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -669,7 +697,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -688,7 +717,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -707,7 +737,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -726,7 +757,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -745,7 +777,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -764,7 +797,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -783,7 +817,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -802,7 +837,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -821,7 +857,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -840,7 +877,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -859,7 +897,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -878,7 +917,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -897,7 +937,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -916,7 +957,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -935,7 +977,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -954,7 +997,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -973,7 +1017,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -992,7 +1037,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1011,7 +1057,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1030,7 +1077,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1049,7 +1097,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1068,7 +1117,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1087,7 +1137,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1106,7 +1157,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1125,7 +1177,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1144,7 +1197,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1163,7 +1217,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1182,7 +1237,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1204,7 +1260,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1223,7 +1280,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1245,7 +1303,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1264,7 +1323,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1283,7 +1343,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1302,7 +1363,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1321,7 +1383,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1376,7 +1439,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1434,7 +1498,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1453,7 +1518,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1472,7 +1538,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1491,7 +1558,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1510,7 +1578,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1529,7 +1598,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1548,7 +1618,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1642,7 +1713,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1661,7 +1733,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1680,7 +1753,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1699,7 +1773,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1718,7 +1793,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -1737,7 +1813,8 @@
       "scope": {
         "platforms": [
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"

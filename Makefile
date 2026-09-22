@@ -10,7 +10,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt lint hooks scan-secrets scan-secrets-full \
         i18n i18n-test \
         macos-release desktop-release desktop-announce version-mobile version-desktop \
-        windows-check windows-release \
+        windows-check windows-release desktop-check \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -112,6 +112,11 @@ macos-release:
 # behaviour is the dogfood run-book's (docs/architecture/windows-roadmap.md W13).
 windows-check:
 	$(MAKE) -C windows check
+
+# The desktop-shared crates (`desktop/`: the pure Rust Windows and Linux both
+# link): native tests + clippy + fmt + i18n check, any host.
+desktop-check:
+	$(MAKE) -C desktop check
 
 # Stage BOTH desktop installers on this version's draft release: the package
 # here, the installer on the Windows box over ssh (scripts/stage-desktop.sh).
@@ -237,6 +242,7 @@ help:
 	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
 	@echo "  make desktop-release    Stage both desktop installers on the draft (Mac + the box over ssh)"
 	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"
+	@echo "  make desktop-check      Native gate for the desktop-shared crates (desktop/)"
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
 	@echo "  make windows-release    Build + package + stage the installer on the draft (on Windows)"
 	@echo "                          — add RELEASE_FLAGS=--skip-sign until a certificate exists"

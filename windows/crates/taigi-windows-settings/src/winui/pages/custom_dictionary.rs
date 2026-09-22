@@ -26,9 +26,9 @@ use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
-use taigi_windows_core::settings::keys;
-use taigi_windows_core::strings::{StringKey, StringResolver};
-use taigi_windows_storage::{
+use taigi_desktop_core::settings::keys;
+use taigi_desktop_core::strings::{StringKey, StringResolver};
+use taigi_desktop_storage::{
     utc_timestamp_now, CustomDictionaryCSV, CustomDictionaryCSVError, CustomDictionaryRow,
     CustomDictionaryStore, UserDataStores,
 };
@@ -498,7 +498,7 @@ fn load(
                 } else {
                     store.count()?
                 };
-                Ok::<_, taigi_windows_storage::CustomDictionaryError>(LoadOutcome::Loaded {
+                Ok::<_, taigi_desktop_storage::CustomDictionaryError>(LoadOutcome::Loaded {
                     page,
                     rows,
                     match_count,

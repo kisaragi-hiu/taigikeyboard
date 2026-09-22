@@ -8,7 +8,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -29,7 +30,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -50,7 +52,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host",
@@ -72,7 +75,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -93,7 +97,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host",
@@ -115,7 +120,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host",
@@ -137,7 +143,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host",
@@ -215,7 +222,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -256,7 +264,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host",
@@ -314,7 +323,8 @@
         "platforms": [
           "android",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -335,7 +345,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -356,7 +367,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -377,7 +389,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -398,7 +411,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -419,7 +433,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -440,7 +455,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -461,7 +477,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -482,7 +499,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -503,7 +521,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -524,7 +543,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -545,7 +565,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -566,7 +587,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -587,7 +609,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -608,7 +631,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"
@@ -629,7 +653,8 @@
           "android",
           "ios",
           "macos",
-          "windows"
+          "windows",
+          "linux"
         ],
         "surfaces": [
           "host"

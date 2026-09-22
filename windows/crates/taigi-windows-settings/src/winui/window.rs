@@ -21,16 +21,16 @@ use crate::winui::pages::font_management::FontManagementModel;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
-use taigi_windows_core::keys::{
+use taigi_desktop_core::keys::{
     evaluate_press, ChordRejection, ComposingAction, ComposingKeyChord, RecordedPress,
     RecorderOutcome, RecorderTier, ShortcutAction, ShortcutConflicts,
 };
-use taigi_windows_core::settings::{
+use taigi_desktop_core::settings::{
     keys, AppearanceMode, SettingChoice, SettingsDocument, SettingsKey, SettingsPane,
 };
-use taigi_windows_core::strings::{DisplayLanguage, StringKey, StringResolver};
+use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
+use taigi_desktop_storage::{LiveSettings, UserDataStores};
 use taigi_windows_platform::keyboard_hook::{Delivery, KeyboardHook};
-use taigi_windows_storage::{LiveSettings, UserDataStores};
 use taigi_windows_update::checker;
 use windows_reactor::*;
 
@@ -792,8 +792,8 @@ impl Component for SettingsWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use taigi_windows_core::keys::ComposingKeyBindings;
-    use taigi_windows_core::settings::CandidateLayout;
+    use taigi_desktop_core::keys::ComposingKeyBindings;
+    use taigi_desktop_core::settings::CandidateLayout;
 
     #[test]
     fn a_resolved_write_stores_exactly_what_the_typed_setter_would() {
@@ -820,7 +820,7 @@ mod tests {
         // row empties (`ShortcutConflicts`).
         let chord = ComposingKeyChord::make(
             Some("k"),
-            taigi_windows_core::keys::KeyModifiers {
+            taigi_desktop_core::keys::KeyModifiers {
                 control: true,
                 ..Default::default()
             },

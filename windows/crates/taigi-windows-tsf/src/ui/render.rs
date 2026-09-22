@@ -10,8 +10,8 @@ use crate::wide::{to_wide, to_wide_nul};
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use taigi_windows_core::candidates::{FontSpec, TextMeasurer};
-use taigi_windows_core::settings::{
+use taigi_desktop_core::candidates::{FontSpec, TextMeasurer};
+use taigi_desktop_core::settings::{
     CandidateFontChoice, CandidateFontSelection, CustomFontId, InstalledFontId, SettingChoice,
 };
 use windows::core::{Interface, Result, BOOL, PCWSTR};
@@ -292,7 +292,7 @@ impl RenderFactory {
         }
         let mut cached = self.fonts_directory.borrow_mut();
         let directory = cached
-            .get_or_insert_with(|| taigi_windows_storage::fonts_directory().ok())
+            .get_or_insert_with(|| taigi_desktop_storage::fonts_directory().ok())
             .as_ref()?;
         Some(directory.join(component))
     }
@@ -446,7 +446,7 @@ struct LoadedCustomFont {
 /// re-read every byte: the last write time and the length.
 ///
 /// A detector, not proof — a replacement that preserved both would slip past.
-/// Imports never overwrite (`taigi_windows_storage::copy_in` suffixes a name
+/// Imports never overwrite (`taigi_desktop_storage::copy_in` suffixes a name
 /// already taken), so the only way to arrange that is by hand, in Explorer.
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct FileFingerprint {

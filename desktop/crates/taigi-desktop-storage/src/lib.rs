@@ -1,7 +1,8 @@
 //! What the input method keeps on disk for the user: the learning
 //! databases (`user_frequency.db`, `user_association.db`, `learned_phrases.db`),
-//! the user's own `custom_dictionary.db` and `settings.json`, under
-//! `%APPDATA%\TaigiKeyboard`.
+//! the user's own `custom_dictionary.db` and `settings.json`, in the
+//! directory each desktop platform hands in (`%APPDATA%\TaigiKeyboard` on
+//! Windows, the XDG config / data directories on Linux).
 //!
 //! Port of `macos/Sources/TaigiInputMethodCore/Storage/` over rusqlite. The
 //! SQL is byte-identical to the macOS stores (which mirror iOS / Android), so
@@ -62,7 +63,7 @@ impl UserDataStores {
     /// for the custom dictionary. Nothing is opened yet.
     pub fn new(directory: PathBuf) -> Self {
         let derive_search_keys: SearchKeyDeriver =
-            Arc::new(taigi_windows_core::engine::derive_custom_search_keys);
+            Arc::new(taigi_desktop_core::engine::derive_custom_search_keys);
         Self {
             frequency: Arc::new(UserFrequencyStore::new(
                 directory.clone(),

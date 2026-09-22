@@ -28,19 +28,19 @@ use crate::ui::telex_guide::TelexGuideContent;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::MutexGuard;
-use taigi_windows_core::composing::CandidateCellContent;
-use taigi_windows_core::composing::{
+use taigi_desktop_core::composing::CandidateCellContent;
+use taigi_desktop_core::composing::{
     CandidateCommitOutcome, CandidateListChange, CandidateSource, ComposingManager,
     ComposingSessionCoordinator, ContextToken, ResolvedCommit,
 };
-use taigi_windows_core::keys::{
+use taigi_desktop_core::keys::{
     telex_guide_rows, CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent,
     KeyEventSnapshot, ShortcutAction, SymbolPickerIntent,
 };
-use taigi_windows_core::policies;
-use taigi_windows_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
-use taigi_windows_core::strings::{StringKey, StringResolver};
-use taigi_windows_core::symbols::SymbolTable;
+use taigi_desktop_core::policies;
+use taigi_desktop_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
+use taigi_desktop_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::symbols::SymbolTable;
 use windows::core::{Interface, BOOL};
 use windows::Win32::Foundation::{E_UNEXPECTED, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::UI::TextServices::{
@@ -1261,7 +1261,7 @@ impl TextService_Impl {
 /// row than a `show` of the same list would.
 fn window_content(
     source: &CandidateSource,
-    slot_key_set: taigi_windows_core::keys::CandidateSlotKeySet,
+    slot_key_set: taigi_desktop_core::keys::CandidateSlotKeySet,
 ) -> CandidateWindowContent {
     CandidateWindowContent {
         cells: source.cells(),
@@ -1290,7 +1290,7 @@ enum SurfaceAction {
 struct Surface {
     presenter: Option<Rc<RefCell<CandidatePresenter>>>,
     token: ContextToken,
-    slot_key_set: taigi_windows_core::keys::CandidateSlotKeySet,
+    slot_key_set: taigi_desktop_core::keys::CandidateSlotKeySet,
     actions: RefCell<Vec<SurfaceAction>>,
 }
 

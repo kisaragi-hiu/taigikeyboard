@@ -7,8 +7,8 @@
 use super::reset_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
-use taigi_windows_core::settings::{keys, SettingsKey};
-use taigi_windows_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::settings::{keys, SettingsKey};
+use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
 /// The 教典 subcollections, in `DictionaryTogglesView`'s order.
