@@ -216,7 +216,7 @@ void State::showCandidates(const TaigiReply *reply, size_t index) {
 // Engine
 // ---------------------------------------------------------------------------
 
-Engine::TaigiEngine(Instance *instance)
+Engine::Engine(Instance *instance)
     : instance_(instance),
       factory_([this](InputContext &ic) { return new State(this, ic); }) {
     runtime_ = taigi_runtime_new();
@@ -275,4 +275,4 @@ AddonInstance *EngineFactory::create(AddonManager *manager) {
 
 } // namespace fcitx::taigi
 
-FCITX_ADDON_FACTORY_V2(taigikeyboard, fcitx::taigi::EngineFactory)
+FCITX_ADDON_FACTORY(fcitx::taigi::EngineFactory)

@@ -22,7 +22,7 @@ CROSS_CARGO := $(shell command -v cargo-zigbuild >/dev/null 2>&1 && echo "cargo 
 PREFIX ?= /usr
 DESTDIR ?=
 
-.PHONY: help i18n-check test lint check-target check fmt build build-fcitx5 install install-fcitx5 uninstall component clean
+.PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component clean
 
 help:
 	@echo "Linux input method — dev loop"
@@ -31,6 +31,7 @@ help:
 	@echo "  make test          - Native tests for the workspace"
 	@echo "  make lint          - clippy -D warnings, all targets, native"
 	@echo "  make check-target  - Build the engine for $(LINUX_TARGET) (cargo zigbuild on macOS)"
+	@echo "  make check-cpp     - Syntax-check the Fcitx5 addon against ../references/fcitx5 headers (macOS host; skipped when the clone is absent)"
 	@echo "  make i18n-check    - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt           - cargo fmt"
 	@echo "  make build         - (Linux) cargo build --release (IBus engine + the FFI static library)"
@@ -56,8 +57,26 @@ lint:
 check-target:
 	$(CROSS_CARGO) -p taigikeyboard-ibus -p taigi-linux-ffi --target $(LINUX_TARGET)
 
-check: test lint check-target
+check: test lint check-target check-cpp
 	cargo fmt -- --check
+
+# The addon's C++ cannot link on the Mac, but it can be parsed: clang in
+# -fsyntax-only mode over the fcitx5 headers of the version Ubuntu 24.04
+# ships (`git clone --depth 1 --branch 5.1.7 https://github.com/fcitx/fcitx5
+# ../references/fcitx5`; gitignored). The three `*_export.h` CMake would
+# generate are stubbed. Catches what CI catches five minutes later —
+# a typo, a macro absent from 5.1.7 — never a link or runtime fault.
+FCITX5_HEADERS := ../references/fcitx5/src/lib
+FCITX5_STUBS := target/fcitx5-stubs
+check-cpp:
+	@if [ ! -d "$(FCITX5_HEADERS)" ]; then echo "check-cpp: no ../references/fcitx5 clone, skipped"; exit 0; fi; \
+	mkdir -p $(FCITX5_STUBS); \
+	for m in FCITXCORE FCITXUTILS FCITXCONFIG; do \
+	  f=$(FCITX5_STUBS)/$$(echo $$m | tr A-Z a-z)_export.h; \
+	  printf '#pragma once\n#define %s_EXPORT\n#define %s_DEPRECATED\n#define %s_DEPRECATED_EXPORT\n#define %s_NO_EXPORT\n' $$m $$m $$m $$m > $$f; \
+	done; \
+	clang++ -std=c++17 -fsyntax-only -Wall -Wextra -DFCITX_GETTEXT_DOMAIN='"fcitx5-taigikeyboard"' -DTAIGIKEYBOARD_VERSION='"0"' \
+	  -I $(FCITX5_HEADERS) -I $(FCITX5_STUBS) -I crates/taigi-linux-ffi/include fcitx5/src/engine.cpp && echo "check-cpp: ok"
 
 # Plain `cargo fmt`, never `--all`: `--all` also formats path dependencies,
 # i.e. the engine and desktop crates.
