@@ -212,7 +212,13 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   字型 (and the 字型管理 pane); `候選窗排列` and `候選字顯示方式` stay. The candidate window
   switch (`candidateWindowEnabled`) maps to "no lookup table" — identical semantics.
   `Effect::DeleteBackwardFromDocument` is a no-op as on macOS / Windows (the preedit is
-  never in the document). The Telex guide (Windows draws a card, macOS a panel) is shown
+  never in the document). Two more named divergences the panel forces: the §34 literal
+  cell, keyless on macOS / Windows (`lead_cell_is_unkeyed`), takes the first slot key —
+  the panel labels every position of every page the same way; and a 合用 cell's other
+  script (`CandidateCellContent::annotation`) is drawn after the text in the same cell,
+  not as a second line. The auto-space swap (§23) needs the client's surrounding text
+  (`IBUS_CAP_SURROUNDING_TEXT` → `DeleteSurroundingText`); a client without it gets
+  the mark after the space, as typed (logged, named). The Telex guide (Windows draws a card, macOS a panel) is shown
   as a lookup table of guide rows with no labels and a non-visible cursor, taken down by
   the first key; the symbol picker (`toggle_symbol_picker`) is a lookup table of the
   symbols with the slot-key labels and the category name as auxiliary text — both
@@ -300,10 +306,10 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 - **L12 Verification without a Linux machine.** Per PR, `make linux-check` from the repo
   root: `cargo test` for `desktop/` (native, the moved crates' existing tests),
   `cargo clippy --workspace --all-targets -- -D warnings` for `linux/` natively on the Mac
-  (`zbus` and gtk4-rs both build on macOS; libadwaita from Homebrew), `cargo check
-  --target x86_64-unknown-linux-gnu -p taigikeyboard-ibus -p taigi-linux-platform`
-  (the engine binary and its platform crate for the shipping target — no linker needed,
-  no GTK), `cargo fmt -- --check`, and the i18n check. CI (`linux-build.yml`, also on
+  (`zbus` and gtk4-rs both build on macOS; libadwaita from Homebrew), a REAL cross build
+  of the engine binary for `x86_64-unknown-linux-gnu` through `cargo zigbuild` (zig ships
+  the C toolchain the bundled SQLite's build script needs — plain `cargo check` stops
+  there; `brew install zig cargo-zigbuild`), `cargo fmt -- --check`, and the i18n check. CI (`linux-build.yml`, also on
   pull requests touching `linux/**` or `desktop/**`) adds what the Mac cannot: a real
   `x86_64-unknown-linux-gnu` build of both binaries with the distro's GTK, `cargo test`
   of the whole `linux/` workspace, `cargo-deb`, and a **daemon smoke**: `dbus-run-session`
@@ -354,7 +360,7 @@ PR0 (quota, 2026-09-22); each later PR records its own verdict here.
 | PR0 | Admin | this roadmap + `.claude/rules/linux-guidelines.md` + docs index + memory topic | this PR |
 | PR1 | Proto | `PLATFORM_LINUX = 5` in `envelope.proto` + committed platform stubs regenerated (mechanical, its own PR as W12) | pending |
 | PR2 | Crate move | `desktop/` workspace: `taigi-desktop-core` + `taigi-desktop-storage` moved + renamed; `windows/` re-pointed; `windows/Makefile` rosters; `tools/i18n/generate.py` output path + `linux` in `VALID_PLATFORMS` with every `windows`-scoped key also scoped `linux`; `tools/release_notes.py` version files; root `Makefile` `desktop-check` / `linux-check`; docs + rules references; `make windows-check` green | pending |
-| PR3 | Engine I — wire | `linux/` workspace + toolchain; `taigi-linux-platform` (XDG paths, prefix, key translation, launcher, open URL; host stubs none needed); `taigikeyboard-ibus`: bus address + connection, factory, engine object with the full key path (snapshot → intent → manager inside the runtime lock → preedit / commit / lookup table), focus + reset + destroy lifecycle, wire types with signature tests; component XML template; `linux/Makefile`; `linux-build.yml` with the daemon smoke | pending |
+| PR3 | Engine I — wire | `linux/` workspace + toolchain; `taigi-linux-platform` (XDG paths, prefix, key translation, launcher, open URL; host stubs none needed); `taigikeyboard-ibus`: bus address + connection, factory, engine object with the full key path (snapshot → intent → manager inside the runtime lock → preedit / commit / lookup table), focus + reset + destroy lifecycle, wire types with signature tests; component XML template; `linux/Makefile`; `linux-build.yml` with the daemon smoke | this PR — Codex skipped (quota) |
 | PR4 | Engine II — chrome | properties menu (§ L6), settings live reload (§ L9), global chords + toggle latch, symbol picker + Telex guide as lookup tables, auto-space / full-width policies wired, candidate navigation from the panel (`PageUp` … `CandidateClicked`), `run-engine` dev target | pending |
 | PR5 | Settings I | `taigikeyboard-settings`: `adw` shell (sidebar, pane routing, `--pane`, single instance, display language, live tick), 一般, 外觀 (Linux row set), 關於 | pending |
 | PR6 | Settings II | 快捷鍵 (recorder over `EventControllerKey`, both registries, conflicts, slot-key-set picker), 詞庫來源 (教典 subcollections in an `adw::ExpanderRow`) | pending |

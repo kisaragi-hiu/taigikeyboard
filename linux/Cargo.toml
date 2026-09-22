@@ -1,0 +1,51 @@
+# Linux input method — its own Cargo workspace, like `windows/`: the shells
+# that need an OS surface (D-Bus, GTK) live here; everything pure is in
+# `../desktop` (shared with Windows) and `../engine` (shared with every
+# platform), consumed by path.
+#
+# Version is the desktop release train's (macOS + Windows + Linux share one
+# number), written by the repo-root `make version-desktop x.y.z`.
+# Design record: docs/architecture/linux-roadmap.md.
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/taigi-linux-platform",
+    "crates/taigikeyboard-ibus",
+]
+
+[workspace.package]
+version = "3.6.9"
+edition = "2021"
+rust-version = "1.95"
+license = "Apache-2.0"
+repository = "https://github.com/taigikeyboard/taigikeyboard"
+publish = false
+
+[workspace.dependencies]
+dispatch = { path = "../engine/dispatch" }
+protos = { path = "../engine/protos" }
+taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
+taigi-desktop-storage = { path = "../desktop/crates/taigi-desktop-storage" }
+taigi-linux-platform = { path = "crates/taigi-linux-platform" }
+log = "0.4"
+env_logger = "0.11"
+thiserror = "2"
+serde_json = "1"
+# The D-Bus stack: pure Rust, no libdbus / libibus (roadmap L1). Default
+# features = the `async-io` executor; no tokio in this process.
+zbus = "5"
+# X11 keysym constants + keysym → char (the values IBus hands an engine).
+xkeysym = "0.2"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+panic = "unwind"

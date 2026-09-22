@@ -13,8 +13,9 @@ record: `docs/architecture/linux-roadmap.md`.
 - The platform was written blind (USER 2026-09-22), like Windows. Every PR passes
   `make linux-check` on the macOS host: `cargo test` in `desktop/` (native), `cargo clippy
   --workspace --all-targets -- -D warnings` in `linux/` (native: `zbus` + gtk4-rs + libadwaita
-  from Homebrew), `cargo check --target x86_64-unknown-linux-gnu` for the engine + platform
-  crates, `cargo fmt -- --check`, the i18n check. The CI job (`linux-build.yml`) adds the real
+  from Homebrew), a real cross build of the engine for `x86_64-unknown-linux-gnu` via `cargo zigbuild`
+  (`brew install zig cargo-zigbuild`; plain `cargo check` stops at the bundled SQLite's C build),
+  `cargo fmt -- --check`, the i18n check. The CI job (`linux-build.yml`) adds the real
   Linux build, the daemon smoke and `cargo-deb`. These gates prove compilation and the wire's
   first contract, not behaviour — behaviour is the dogfood run-book's job. Never claim "works
   on Linux".
