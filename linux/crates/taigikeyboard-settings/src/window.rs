@@ -30,6 +30,10 @@ pub struct SettingsWindow {
     window: adw::ApplicationWindow,
     writer: RefCell<SettingsWriter>,
     sidebar: gtk::ListBox,
+    /// The content page: its title is what the header bar draws
+    /// (libadwaita 1.5 `adw-header-bar.c` reads the enclosing
+    /// `NavigationPage`, never the window title).
+    content_page: adw::NavigationPage,
     stack: gtk::Stack,
     banner: adw::Banner,
     pages: RefCell<Vec<Page>>,
@@ -70,9 +74,13 @@ impl SettingsWindow {
         content_view.add_top_bar(&adw::HeaderBar::new());
         content_view.set_content(Some(&content_box));
 
+        let sidebar_title = crate::presentation::strings_for(writer.document())
+            .resolve(StringKey::HomeAppHeaderTitle)
+            .to_owned();
+        let content_page = adw::NavigationPage::new(&content_view, "");
         let split = adw::NavigationSplitView::builder()
-            .sidebar(&adw::NavigationPage::new(&sidebar_view, ""))
-            .content(&adw::NavigationPage::new(&content_view, ""))
+            .sidebar(&adw::NavigationPage::new(&sidebar_view, &sidebar_title))
+            .content(&content_page)
             .min_sidebar_width(SIDEBAR_WIDTH)
             .max_sidebar_width(SIDEBAR_WIDTH)
             .build();
@@ -88,6 +96,7 @@ impl SettingsWindow {
             window,
             writer: RefCell::new(writer),
             sidebar,
+            content_page,
             stack,
             banner,
             pages: RefCell::new(Vec::new()),
@@ -131,16 +140,35 @@ impl SettingsWindow {
         &self.window
     }
 
-    /// Opens (or re-activates) the window on `pane`.
+    /// Opens (or re-activates) the window on `pane`. A `--pane` is a
+    /// selection like a sidebar click and is remembered the same way
+    /// (Windows `select_pane`); an unlisted page (關於) is shown, not stored.
     pub fn show(self: &Rc<Self>, pane: SettingsPane) {
-        self.show_pane(pane);
+        let pane = self.show_pane(pane);
+        if SIDEBAR.contains(&pane)
+            && self
+                .writer
+                .borrow()
+                .document()
+                .choice(&keys::SELECTED_SETTINGS_PANE)
+                != pane
+        {
+            self.update(|document| document.set_choice(&keys::SELECTED_SETTINGS_PANE, pane));
+        }
         self.window.present();
     }
 
-    /// One settings write from a row, then every row follows the file.
+    /// The pane on screen.
+    pub fn current_pane(&self) -> SettingsPane {
+        self.current.get()
+    }
+
+    /// One settings write from a row, then every row follows the file —
+    /// the same path an outside change takes (`tick`), so a display
+    /// language picked here rebuilds the pages too.
     pub fn update(self: &Rc<Self>, mutate: impl FnOnce(&mut SettingsDocument)) {
         self.writer.borrow_mut().update(mutate);
-        self.refresh_pages();
+        self.follow_document();
     }
 
     /// Opens `url` in the browser; a launcher that refused is logged and
@@ -167,7 +195,16 @@ impl SettingsWindow {
         );
     }
 
-    fn show_pane(&self, pane: SettingsPane) {
+    /// Puts `pane` on screen; a pane this crate has no page for (字型管理,
+    /// a stored value from another desktop) lands on 一般, as on Windows.
+    /// Answers the pane shown.
+    pub fn show_pane(&self, pane: SettingsPane) -> SettingsPane {
+        let pane = if pages::BUILT.contains(&pane) {
+            pane
+        } else {
+            log::warn!("pane.not_built pane={} — showing general", pane.raw());
+            SettingsPane::General
+        };
         self.current.set(pane);
         self.stack.set_visible_child_name(pane.raw());
         self.is_selecting.set(true);
@@ -179,7 +216,10 @@ impl SettingsWindow {
         }
         self.is_selecting.set(false);
         let strings = self.writer.borrow().strings();
-        self.window.set_title(Some(&pane_title(&strings, pane)));
+        let title = pane_title(&strings, pane);
+        self.content_page.set_title(&title);
+        self.window.set_title(Some(&title));
+        pane
     }
 
     /// The pages and the sidebar rows, in the built language.
@@ -245,19 +285,41 @@ impl SettingsWindow {
         adw::StyleManager::default().set_color_scheme(scheme);
     }
 
-    /// The 1 s beat: the file re-read; a display language that changed
-    /// rebuilds every page, any other change refreshes the rows.
-    fn tick(self: &Rc<Self>) {
-        let changed = self.writer.borrow_mut().refresh();
-        if !changed {
-            return;
+    /// The 1 s beat: the file re-read, and the window follows it.
+    pub fn tick(self: &Rc<Self>) {
+        if self.writer.borrow_mut().refresh() {
+            self.follow_document();
         }
+    }
+
+    /// The window follows the document as it now stands: a display
+    /// language that changed rebuilds every page, anything else refreshes
+    /// the rows.
+    fn follow_document(self: &Rc<Self>) {
         let language = crate::presentation::display_language_of(self.writer.borrow().document());
         if language != self.built_language.get() {
             self.built_language.set(language);
             self.build_pages();
         }
         self.refresh_pages();
+    }
+
+    /// The sidebar's row titles, top to bottom (for the tests).
+    pub fn sidebar_titles(&self) -> Vec<String> {
+        let mut titles = Vec::new();
+        let mut index = 0;
+        while let Some(row) = self.sidebar.row_at_index(index) {
+            if let Ok(row) = row.downcast::<adw::ActionRow>() {
+                titles.push(row.title().to_string());
+            }
+            index += 1;
+        }
+        titles
+    }
+
+    /// The page widget shown for `pane`, if the stack holds one.
+    pub fn page_widget(&self, pane: SettingsPane) -> Option<gtk::Widget> {
+        self.stack.child_by_name(pane.raw())
     }
 }
 

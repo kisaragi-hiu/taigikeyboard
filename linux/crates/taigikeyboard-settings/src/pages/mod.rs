@@ -25,7 +25,6 @@ pub const BUILT: [SettingsPane; 3] = [
 type Refresher = Box<dyn Fn(&SettingsDocument)>;
 
 pub struct Page {
-    pub pane: SettingsPane,
     pub widget: adw::PreferencesPage,
     refreshers: Vec<Refresher>,
     /// Set while `refresh` runs, so a row's notify handler does not write
@@ -67,9 +66,8 @@ impl<'a> PageContext<'a> {
         }
     }
 
-    fn finish(self, pane: SettingsPane, widget: adw::PreferencesPage) -> Page {
+    fn finish(self, widget: adw::PreferencesPage) -> Page {
         Page {
-            pane,
             widget,
             refreshers: self.refreshers,
             suppress: self.suppress,
@@ -204,12 +202,6 @@ impl<'a> PageContext<'a> {
         group.add(&row);
     }
 
-    /// Whether a refresh is setting the rows right now (for a handler that
-    /// is not one of the shapes above).
-    pub fn is_refreshing(&self) -> Rc<Cell<bool>> {
-        Rc::clone(&self.suppress)
-    }
-
     /// A refresher for a row the shapes above do not cover.
     pub fn on_refresh(&mut self, refresher: impl Fn(&SettingsDocument) + 'static) {
         self.refreshers.push(Box::new(refresher));
@@ -225,10 +217,13 @@ pub fn build(
 ) -> Page {
     let context = PageContext::new(window, strings, document);
     let widget = adw::PreferencesPage::new();
+    // Explicit per pane: a pane added to `BUILT` without a page is a
+    // mistake to hear about, not a 一般 page under the wrong title.
     let context = match pane {
+        SettingsPane::General => general::build(context, &widget),
         SettingsPane::Appearance => appearance::build(context, &widget),
         SettingsPane::About => about::build(context, &widget),
-        _ => general::build(context, &widget),
+        other => unreachable!("{other:?} is not in pages::BUILT"),
     };
-    context.finish(pane, widget)
+    context.finish(widget)
 }

@@ -78,6 +78,9 @@ jobs:
       # skips itself without one.
       - name: cargo test (linux workspace)
         working-directory: linux
+        env:
+          # The pane-mount test must run here, never skip: a display exists.
+          TAIGI_REQUIRE_DISPLAY: "1"
         run: xvfb-run -a cargo test --workspace
 
       - name: cargo build --release (IBus engine + FFI static library)

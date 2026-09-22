@@ -9,7 +9,6 @@ pub mod writer;
 
 use adw::prelude::*;
 use cli::LaunchOptions;
-use gtk::gio;
 use std::cell::RefCell;
 use std::rc::Rc;
 use taigi_desktop_core::settings::{keys, SettingsPane};
@@ -36,8 +35,10 @@ pub fn run() -> gtk::glib::ExitCode {
         let launch = match LaunchOptions::parse(arguments) {
             Ok(launch) => launch,
             Err(error) => {
+                // To the CALLER's stderr: a second launch's command line is
+                // handled in the first process.
                 log::error!("cli.refused error={error}");
-                eprintln!("taigikeyboard-settings: {error}");
+                command_line.printerr_literal(&format!("taigikeyboard-settings: {error}\n"));
                 return gtk::glib::ExitCode::from(2);
             }
         };

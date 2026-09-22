@@ -2,8 +2,8 @@
 //! atomic edit (lock, load, mutate, save) through the same store the engine
 //! writes, then this copy follows the file. Port of the Windows
 //! `settings_writer.rs`; the read-only mode is the same named rule (roadmap
-//! W2 / L7): no per-user directory ⇒ defaults shown, every write refused
-//! with a banner, never a file the engine would not read.
+//! W2 / L7): no per-user directory ⇒ the shipped defaults, held in memory
+//! and never a file, every write refused with a banner.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -17,42 +17,52 @@ use taigi_linux_platform::UserDirectories;
 /// as live (roadmap L9).
 pub const REFRESH_INTERVAL: Duration = Duration::from_secs(1);
 
-/// What the banner says when there is no `$HOME` / `$XDG_CONFIG_HOME`: the
-/// missing variable's name is the whole diagnosis.
-const READ_ONLY_DETAIL: &str = "XDG_CONFIG_HOME";
+/// What the banner says when there is no user directory at all: the
+/// variables the XDG lookup wanted.
+const NO_DIRECTORIES_DETAIL: &str = "HOME / XDG_CONFIG_HOME";
 
 pub struct SettingsWriter {
-    live: LiveSettings,
-    is_read_only: bool,
+    /// `None` in read-only mode: nothing on disk is read or tracked.
+    live: Option<LiveSettings>,
     document: Arc<SettingsDocument>,
     write_failure: Option<String>,
 }
 
 impl SettingsWriter {
-    /// Over the user's configuration directory, or read-only over a
-    /// temporary one when there is none.
+    /// Over the user's configuration directory, or read-only when there is
+    /// none or it cannot be created — with the real reason as the banner's
+    /// detail.
     pub fn at_launch() -> Self {
-        let directory = UserDirectories::resolve().and_then(|directories| {
-            created(directories.config)
-                .map_err(|error| {
-                    log::error!("settings.no_config_directory error={error}");
-                })
-                .ok()
-        });
-        match directory {
-            Some(directory) => Self::new(SettingsFileStore::new(&directory), false),
-            None => Self::new(SettingsFileStore::new(&std::env::temp_dir()), true),
+        let Some(directories) = UserDirectories::resolve() else {
+            log::error!("settings.no_user_directories");
+            return Self::read_only(NO_DIRECTORIES_DETAIL.to_owned());
+        };
+        match created(directories.config) {
+            Ok(directory) => Self::new(SettingsFileStore::new(&directory)),
+            Err(error) => {
+                log::error!("settings.no_config_directory error={error}");
+                Self::read_only(error.to_string())
+            }
         }
     }
 
-    pub fn new(store: SettingsFileStore, is_read_only: bool) -> Self {
+    pub fn new(store: SettingsFileStore) -> Self {
         let live = LiveSettings::new(store);
         let document = live.refresh_if_changed();
         Self {
-            live,
-            is_read_only,
+            live: Some(live),
             document,
-            write_failure: is_read_only.then(|| READ_ONLY_DETAIL.to_owned()),
+            write_failure: None,
+        }
+    }
+
+    /// The shipped defaults, refusing every write; `detail` is what the
+    /// banner shows after the message.
+    pub fn read_only(detail: String) -> Self {
+        Self {
+            live: None,
+            document: Arc::new(SettingsDocument::default()),
+            write_failure: Some(detail),
         }
     }
 
@@ -65,7 +75,7 @@ impl SettingsWriter {
     }
 
     pub fn is_read_only(&self) -> bool {
-        self.is_read_only
+        self.live.is_none()
     }
 
     /// The last write that failed, shown as a banner until a write
@@ -78,7 +88,10 @@ impl SettingsWriter {
     /// — the engine's own write for a chord or a menu row — shows without
     /// a restart. Answers whether the document changed.
     pub fn refresh(&mut self) -> bool {
-        let document = self.live.refresh_if_changed();
+        let Some(live) = &self.live else {
+            return false;
+        };
+        let document = live.refresh_if_changed();
         let changed = !Arc::ptr_eq(&document, &self.document);
         self.document = document;
         changed
@@ -88,10 +101,10 @@ impl SettingsWriter {
     /// reported, not swallowed; a read-only window refuses without touching
     /// its banner.
     pub fn update(&mut self, mutate: impl FnOnce(&mut SettingsDocument)) {
-        if self.is_read_only {
+        let Some(live) = &self.live else {
             return;
-        }
-        match self.live.store().update(mutate) {
+        };
+        match live.store().update(mutate) {
             Ok(_) => self.write_failure = None,
             Err(error) => {
                 log::error!("settings.update_failed error={error}");

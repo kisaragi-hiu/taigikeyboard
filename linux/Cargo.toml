@@ -46,6 +46,9 @@ xkeysym = "0.2"
 # what Ubuntu 24.04 (GTK 4.14, libadwaita 1.5) and Homebrew provide.
 gtk = { package = "gtk4", version = "0.11", features = ["v4_12"] }
 adw = { package = "libadwaita", version = "0.9", features = ["v1_5"] }
+# GLib 2.80 (Ubuntu 24.04): `ApplicationCommandLine::printerr_literal`, the
+# way a refused second launch reaches the CALLER's stderr.
+gio = { version = "0.22", features = ["v2_80"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
