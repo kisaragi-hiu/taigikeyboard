@@ -103,7 +103,9 @@ jobs:
           mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
           xvfb-run -a dbus-run-session -- bash -c '
             set -euxo pipefail
-            ibus-daemon --verbose --panel disable > "$RUNNER_TEMP/ibus-daemon.log" 2>&1 &
+            # No config module on a runner (no dconf / memconf): `--config disable`
+            # keeps the daemon up; `--panel disable` likewise.
+            ibus-daemon --verbose --panel disable --config disable > "$RUNNER_TEMP/ibus-daemon.log" 2>&1 &
             DAEMON=$!
             # The daemon writes its socket file once its bus is up.
             for i in $(seq 1 40); do ibus list-engine > /dev/null 2>&1 && break; sleep 0.5; done
