@@ -13,6 +13,8 @@
 # The repo-root `make linux-check` forwards here.
 
 export PATH := $(HOME)/.cargo/bin:$(PATH)
+# bash, not sh: the `deb` recipe uses `set -o pipefail` (dash has none).
+SHELL := /bin/bash
 
 LINUX_TARGET := x86_64-unknown-linux-gnu
 # `cargo zigbuild` cross-links the engine from macOS; on a Linux host plain
