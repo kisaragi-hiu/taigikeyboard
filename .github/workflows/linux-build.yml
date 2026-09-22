@@ -106,7 +106,7 @@ jobs:
         run: |
           set -euxo pipefail
           PREFIX="$RUNNER_TEMP/prefix"
-          make install PREFIX="$PREFIX" DESTDIR="" 2>&1 | tail -3
+          make install PREFIX="$PREFIX" DESTDIR=""
           test -f "$PREFIX/share/fcitx5/addon/taigikeyboard.conf"
           export IBUS_COMPONENT_PATH="$PREFIX/share/ibus/component"
           export TAIGIKEYBOARD_DATA_DIR="$GITHUB_WORKSPACE"
