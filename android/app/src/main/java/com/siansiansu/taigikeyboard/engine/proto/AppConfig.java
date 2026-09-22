@@ -28,16 +28,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * exactly as it folds TPS into `is_translate_swapped`.
  *
  * 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ大本字 OFF, USER): the
- * POJ nasal marker is always written as `ⁿ` U+207F, never as its capital
- * `ᴺ` U+1D3A, whatever the case of the letters before it (Caps Lock
- * `SIANN5` → `SIÂⁿ`, not `SIÂᴺ`). Inverted sentinel: proto3 default
- * `false` = the marker follows the preceding letter's case (PR #102), so
- * un-wired builds are unaffected. Rendering only —
- * `phonetics::api::apply_nasal_marker_case` runs on the preedit
- * (`normalize_tone`), the POJ candidate `roman` (`composing::continuous`
- * Step 5) and the case-transform ops (`dispatch::case`); identity keys
- * already fold both glyphs to `nn`. Next-word predictions need no seam:
- * their POJ render title-cases and never writes the capital marker.
+ * POJ nasal marker is always `ⁿ` U+207F, never `ᴺ` U+1D3A (Caps Lock
+ * `SIANN5` → `SIÂⁿ`). Inverted so the proto default keeps PR #102 (the
+ * marker follows the preceding letter's case). Rendering only
+ * (`phonetics::case_transform::apply_nasal_marker_case`, §53); identity
+ * keys already fold both glyphs to `nn`.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AppConfig}
@@ -520,16 +515,11 @@ public  final class AppConfig extends
    * exactly as it folds TPS into `is_translate_swapped`.
    *
    * 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ大本字 OFF, USER): the
-   * POJ nasal marker is always written as `ⁿ` U+207F, never as its capital
-   * `ᴺ` U+1D3A, whatever the case of the letters before it (Caps Lock
-   * `SIANN5` → `SIÂⁿ`, not `SIÂᴺ`). Inverted sentinel: proto3 default
-   * `false` = the marker follows the preceding letter's case (PR #102), so
-   * un-wired builds are unaffected. Rendering only —
-   * `phonetics::api::apply_nasal_marker_case` runs on the preedit
-   * (`normalize_tone`), the POJ candidate `roman` (`composing::continuous`
-   * Step 5) and the case-transform ops (`dispatch::case`); identity keys
-   * already fold both glyphs to `nn`. Next-word predictions need no seam:
-   * their POJ render title-cases and never writes the capital marker.
+   * POJ nasal marker is always `ⁿ` U+207F, never `ᴺ` U+1D3A (Caps Lock
+   * `SIANN5` → `SIÂⁿ`). Inverted so the proto default keeps PR #102 (the
+   * marker follows the preceding letter's case). Rendering only
+   * (`phonetics::case_transform::apply_nasal_marker_case`, §53); identity
+   * keys already fold both glyphs to `nn`.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AppConfig}

@@ -11,7 +11,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * shape — minimal in D9.1, expands per slice. Engine NEVER caches; live-read
  * per call per behavioral-invariants.md §11. Platform wrappers MUST pass
  * current values per request (e.g. iOS `RustEngineBridge.normalizeTone(input,
- * toggles: ToneToggles)` requires `ToneToggles` parameter, no default).
+ * toggles: PojMarkerOptions)` requires the `PojMarkerOptions` parameter, no
+ * default).
  *
  * D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
  * preprocessing (oo→o͘, nn→ⁿ) read by `Method::NormalizeTone`.
