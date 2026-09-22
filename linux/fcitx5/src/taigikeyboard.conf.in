@@ -1,0 +1,7 @@
+[InputMethod]
+Name=台語齒盤
+Icon=taigikeyboard
+Label=台
+LangCode=nan
+Addon=taigikeyboard
+Configurable=False

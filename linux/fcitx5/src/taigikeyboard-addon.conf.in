@@ -1,0 +1,12 @@
+[Addon]
+Name=台語齒盤
+Comment=Taigi Keyboard (Tâi-gí TL / POJ) for Fcitx5
+Category=InputMethod
+Version=@PROJECT_VERSION@
+Library=export:libtaigikeyboard
+Type=SharedLibrary
+OnDemand=True
+Configurable=False
+
+[Addon/Dependencies]
+0=core:@REQUIRED_FCITX_VERSION@

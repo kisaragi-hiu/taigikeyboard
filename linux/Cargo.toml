@@ -11,6 +11,8 @@
 resolver = "2"
 members = [
     "crates/taigi-linux-platform",
+    "crates/taigi-linux-core",
+    "crates/taigi-linux-ffi",
     "crates/taigikeyboard-ibus",
 ]
 
@@ -28,6 +30,7 @@ protos = { path = "../engine/protos" }
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 taigi-desktop-storage = { path = "../desktop/crates/taigi-desktop-storage" }
 taigi-linux-platform = { path = "crates/taigi-linux-platform" }
+taigi-linux-core = { path = "crates/taigi-linux-core" }
 log = "0.4"
 env_logger = "0.11"
 thiserror = "2"

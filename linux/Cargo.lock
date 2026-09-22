@@ -1196,6 +1196,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "taigi-linux-core"
+version = "3.6.9"
+dependencies = [
+ "log",
+ "taigi-desktop-core",
+ "taigi-desktop-storage",
+ "taigi-linux-platform",
+]
+
+[[package]]
+name = "taigi-linux-ffi"
+version = "3.6.9"
+dependencies = [
+ "env_logger",
+ "log",
+ "taigi-desktop-core",
+ "taigi-linux-core",
+ "taigi-linux-platform",
+]
+
+[[package]]
 name = "taigi-linux-platform"
 version = "3.6.9"
 dependencies = [
@@ -1213,6 +1234,7 @@ dependencies = [
  "log",
  "taigi-desktop-core",
  "taigi-desktop-storage",
+ "taigi-linux-core",
  "taigi-linux-platform",
  "thiserror",
  "zbus",

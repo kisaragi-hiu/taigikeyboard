@@ -1,6 +1,6 @@
 [package]
-name = "taigikeyboard-ibus"
-description = "The IBus shell: org.freedesktop.IBus.Factory + Engine over D-Bus, replaying taigi-linux-core"
+name = "taigi-linux-core"
+description = "The framework-independent half of the Linux input method: runtime (settings, stores, lexicon, coordinator), the key path, the effect model both shells replay, the candidate page model"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -8,19 +8,11 @@ license.workspace = true
 repository.workspace = true
 publish.workspace = true
 
-[[bin]]
-name = "ibus-engine-taigikeyboard"
-path = "src/main.rs"
-
 [dependencies]
 taigi-desktop-core.workspace = true
 taigi-desktop-storage.workspace = true
 taigi-linux-platform.workspace = true
-taigi-linux-core.workspace = true
-zbus.workspace = true
 log.workspace = true
-env_logger.workspace = true
-thiserror.workspace = true
 
 [lints]
 workspace = true

@@ -9,14 +9,14 @@
 //! composition, which is worse than one key dropped. Signals are emitted
 //! AFTER the key's work, never under the engine lock (`session`).
 
-use crate::executor::{Emit, LookupTableContent};
-use crate::runtime::Runtime;
-use crate::session::{self, EngineState};
 use crate::wire::{self, LookupTable, Orientation};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::Arc;
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::CandidateNavigation;
+use taigi_linux_core::Runtime;
+use taigi_linux_core::{session, EngineState};
+use taigi_linux_core::{Emit, LookupTableContent};
 use taigi_linux_platform::{snapshot, RawKeyEvent};
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedObjectPath, Value};

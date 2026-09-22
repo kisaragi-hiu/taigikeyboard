@@ -49,7 +49,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev pkg-config
+            ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev pkg-config \
+            fcitx5 fcitx5-modules-dev extra-cmake-modules cmake ninja-build
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
@@ -77,9 +78,20 @@ jobs:
         working-directory: linux
         run: cargo test --workspace
 
-      - name: cargo build --release (engine)
+      - name: cargo build --release (IBus engine + FFI static library)
         working-directory: linux
-        run: cargo build --release -p taigikeyboard-ibus
+        run: cargo build --release -p taigikeyboard-ibus -p taigi-linux-ffi
+
+      # The Fcitx5 addon: the only place it compiles before a Linux VM does.
+      - name: cmake (Fcitx5 addon)
+        working-directory: linux
+        run: |
+          cmake -S fcitx5 -B target/fcitx5-build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DTAIGI_FFI_LIB="$PWD/target/release/libtaigi_linux_ffi.a"
+          cmake --build target/fcitx5-build
+          test -f target/fcitx5-build/bin/taigikeyboard.so || test -f target/fcitx5-build/src/taigikeyboard.so
+          nm -D --defined-only $(find target/fcitx5-build -name taigikeyboard.so | head -1) | grep -q fcitx_addon_factory_instance
 
       - name: cargo fmt --check
         working-directory: linux
@@ -94,7 +106,8 @@ jobs:
         run: |
           set -euxo pipefail
           PREFIX="$RUNNER_TEMP/prefix"
-          make install PREFIX="$PREFIX" DESTDIR="" 2>&1 | tail -3
+          make install PREFIX="$PREFIX" DESTDIR=""
+          test -f "$PREFIX/share/fcitx5/addon/taigikeyboard.conf"
           export IBUS_COMPONENT_PATH="$PREFIX/share/ibus/component"
           export TAIGIKEYBOARD_DATA_DIR="$GITHUB_WORKSPACE"
           export XDG_CONFIG_HOME="$RUNNER_TEMP/xdg-config"

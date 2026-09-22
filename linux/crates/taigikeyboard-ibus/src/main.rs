@@ -7,11 +7,7 @@
 
 mod bus;
 mod engine;
-mod executor;
 mod factory;
-mod runtime;
-mod selection;
-mod session;
 mod wire;
 
 use std::process::ExitCode;
@@ -53,7 +49,7 @@ fn main() -> ExitCode {
 }
 
 async fn serve(address: &str) -> zbus::Result<()> {
-    let runtime = Arc::new(runtime::Runtime::probe());
+    let runtime = Arc::new(taigi_linux_core::Runtime::probe());
     let connection = zbus::connection::Builder::address(address)?
         .serve_at(factory::FACTORY_PATH, factory::Factory::new(runtime))?
         .name(BUS_NAME)?
