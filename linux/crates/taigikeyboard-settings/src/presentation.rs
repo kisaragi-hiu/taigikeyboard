@@ -47,3 +47,42 @@ pub fn display_language_label(language: DisplayLanguage, strings: &StringResolve
         str::to_owned,
     )
 }
+
+/// What a page reports after a job (`UserDataPageChrome.swift:19-52`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PageMessage {
+    Failure { title: StringKey, detail: String },
+    Done(StringKey),
+    NotUtf8,
+    Imported { imported: usize, skipped: usize },
+}
+
+impl PageMessage {
+    pub fn failure(title: StringKey, error: impl std::fmt::Display) -> Self {
+        Self::Failure {
+            title,
+            detail: error.to_string(),
+        }
+    }
+
+    pub fn title(&self, strings: &StringResolver) -> String {
+        let key = match self {
+            Self::Failure { title, .. } => *title,
+            Self::Done(key) => *key,
+            Self::NotUtf8 => StringKey::CommonImportFailed,
+            Self::Imported { .. } => StringKey::DesktopImportComplete,
+        };
+        strings.resolve(key).to_owned()
+    }
+
+    pub fn detail(&self, strings: &StringResolver) -> Option<String> {
+        match self {
+            Self::Failure { detail, .. } => Some(detail.clone()),
+            Self::Done(_) => None,
+            Self::NotUtf8 => Some(strings.resolve(StringKey::DesktopNotUTF8Detail).to_owned()),
+            Self::Imported { imported, skipped } => {
+                Some(strings.format(StringKey::DictionaryImportResult, &[imported, skipped]))
+            }
+        }
+    }
+}

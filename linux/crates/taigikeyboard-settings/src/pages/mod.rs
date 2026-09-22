@@ -5,24 +5,30 @@
 
 pub mod about;
 pub mod appearance;
+pub mod custom_dictionary;
+pub mod dictionary_search;
 pub mod dictionary_sources;
 pub mod general;
 pub mod shortcuts;
 
-use crate::window::{SettingsWindow, Shell};
+use crate::window::{JobSlot, SettingsWindow, Shell};
 use adw::prelude::*;
+use std::any::Any;
 use std::cell::Cell;
 use std::rc::Rc;
 use taigi_desktop_core::settings::{SettingChoice, SettingsDocument, SettingsKey, SettingsPane};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
+use taigi_desktop_storage::UserDataStores;
 
-/// The panes this crate draws today, listed or not; PR8 adds 自訂詞庫 and
-/// 辭典搜尋.
-pub const BUILT: [SettingsPane; 5] = [
+/// The panes this crate draws, listed or not (辭典搜尋 and 關於 have no
+/// sidebar row, as on the other desktops).
+pub const BUILT: [SettingsPane; 7] = [
     SettingsPane::General,
     SettingsPane::Appearance,
     SettingsPane::Shortcuts,
     SettingsPane::DictionarySources,
+    SettingsPane::CustomDictionary,
+    SettingsPane::DictionarySearch,
     SettingsPane::About,
 ];
 
@@ -32,12 +38,23 @@ type Refresher = Box<dyn Fn(&SettingsDocument)>;
 pub struct Page {
     pub widget: adw::PreferencesPage,
     refreshers: Vec<Refresher>,
+    /// A page's own state object (自訂詞庫, 辭典搜尋), kept for the page's
+    /// life; its widgets hold it weakly.
+    retained: Vec<Rc<dyn Any>>,
     /// Set while `refresh` runs, so a row's notify handler does not write
     /// the value it was just given.
     suppress: Rc<Cell<bool>>,
 }
 
 impl Page {
+    /// The page's retained state object of type `T`, if it has one (the
+    /// tests drive 自訂詞庫 through it).
+    pub fn state<T: 'static>(&self) -> Option<Rc<T>> {
+        self.retained
+            .iter()
+            .find_map(|state| Rc::clone(state).downcast::<T>().ok())
+    }
+
     pub fn refresh(&self, document: &SettingsDocument) {
         self.suppress.set(true);
         for refresher in &self.refreshers {
@@ -52,8 +69,12 @@ pub struct PageContext<'a> {
     pub shell: Shell,
     pub strings: &'a StringResolver,
     pub document: &'a SettingsDocument,
+    /// `None` in a read-only launch: the pages over user data show why.
+    pub stores: Option<&'a UserDataStores>,
+    pub job_slot: JobSlot,
     suppress: Rc<Cell<bool>>,
     refreshers: Vec<Refresher>,
+    retained: Vec<Rc<dyn Any>>,
 }
 
 impl<'a> PageContext<'a> {
@@ -61,13 +82,18 @@ impl<'a> PageContext<'a> {
         window: &Rc<SettingsWindow>,
         strings: &'a StringResolver,
         document: &'a SettingsDocument,
+        stores: Option<&'a UserDataStores>,
+        job_slot: &JobSlot,
     ) -> Self {
         Self {
             shell: Shell(Rc::downgrade(window)),
             strings,
             document,
+            stores,
+            job_slot: job_slot.clone(),
             suppress: Rc::new(Cell::new(false)),
             refreshers: Vec::new(),
+            retained: Vec::new(),
         }
     }
 
@@ -75,8 +101,14 @@ impl<'a> PageContext<'a> {
         Page {
             widget,
             refreshers: self.refreshers,
+            retained: self.retained,
             suppress: self.suppress,
         }
+    }
+
+    /// Keeps `state` alive with the page (its widgets hold it weakly).
+    pub fn retain(&mut self, state: Rc<dyn Any>) {
+        self.retained.push(state);
     }
 
     /// A switch row bound to a boolean key.
@@ -236,8 +268,10 @@ pub fn build(
     window: &Rc<SettingsWindow>,
     strings: &StringResolver,
     document: &SettingsDocument,
+    stores: Option<&UserDataStores>,
+    job_slot: &JobSlot,
 ) -> Page {
-    let context = PageContext::new(window, strings, document);
+    let context = PageContext::new(window, strings, document, stores, job_slot);
     let widget = adw::PreferencesPage::new();
     // Explicit per pane: a pane added to `BUILT` without a page is a
     // mistake to hear about, not a 一般 page under the wrong title.
@@ -246,6 +280,8 @@ pub fn build(
         SettingsPane::Appearance => appearance::build(context, &widget),
         SettingsPane::Shortcuts => shortcuts::build(context, &widget),
         SettingsPane::DictionarySources => dictionary_sources::build(context, &widget),
+        SettingsPane::CustomDictionary => custom_dictionary::build(context, &widget),
+        SettingsPane::DictionarySearch => dictionary_search::build(context, &widget),
         SettingsPane::About => about::build(context, &widget),
         other => unreachable!("{other:?} is not in pages::BUILT"),
     };
