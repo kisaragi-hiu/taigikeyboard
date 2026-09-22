@@ -26,7 +26,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     /// with a clean phase regardless of prior test residue.
     private static var nextEnvelopeGen: UInt64 = 200_000
     private var envelopeGen: UInt64 = 0
-    private let toggles = ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
+    private let toggles = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false, isNasalMarkerUppercaseEnabled: true)
 
     override func setUp() {
         super.setUp()

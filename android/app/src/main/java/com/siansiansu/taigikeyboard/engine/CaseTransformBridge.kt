@@ -1,8 +1,8 @@
 // Case-transform ops — extensions on RustEngineBridge that delegate char/string case handling
 // (including POJ/TL tone-mark case mapping) to Rust `phonetics::case_transform`; iOS counterpart is
 // `RustEngineBridge+CaseTransform.swift`. Single FFI hop per per-char or per-word case operation.
-// Mode is forwarded via envelope `AppConfig.input_mode`; case-transform is independent of POJ
-// doubletap preprocessing so the toggles fields are left at default. Suggestion skip rules
+// Mode and ⁿ大本字 (§53) are forwarded via the envelope `AppConfig`; case-transform is independent
+// of POJ doubletap preprocessing so the fold fields are left off. Suggestion skip rules
 // (`id < 0 && id != -2` and `id == 0`) stay platform-side — only transform-eligible items reach
 // `transformSuggestion(...)`. The `LetterCase` indicator lives on `RustEngineBridge.LetterCase`.
 
@@ -30,12 +30,14 @@ private const val TAG = "CaseTransformBridge"
 fun RustEngineBridge.uppercaseToneChar(
     input: String,
     mode: InputMode,
+    isNasalMarkerUppercaseEnabled: Boolean,
 ): String {
     val payload = UppercaseToneChar.newBuilder().setInput(input).build()
     return caseStringDispatch(
         CaseRequest.newBuilder().setUppercaseToneChar(payload).build(),
         op = "uppercaseToneChar",
         mode = mode,
+        isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         fallback = input,
     )
 }
@@ -47,12 +49,14 @@ fun RustEngineBridge.uppercaseToneChar(
 fun RustEngineBridge.fullUppercaseToneString(
     input: String,
     mode: InputMode,
+    isNasalMarkerUppercaseEnabled: Boolean,
 ): String {
     val payload = FullUppercaseToneString.newBuilder().setInput(input).build()
     return caseStringDispatch(
         CaseRequest.newBuilder().setFullUppercaseToneString(payload).build(),
         op = "fullUppercaseToneString",
         mode = mode,
+        isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         fallback = input,
     )
 }
@@ -64,12 +68,14 @@ fun RustEngineBridge.fullUppercaseToneString(
 fun RustEngineBridge.lowercaseToneChar(
     input: String,
     mode: InputMode,
+    isNasalMarkerUppercaseEnabled: Boolean,
 ): String {
     val payload = LowercaseToneChar.newBuilder().setInput(input).build()
     return caseStringDispatch(
         CaseRequest.newBuilder().setLowercaseToneChar(payload).build(),
         op = "lowercaseToneChar",
         mode = mode,
+        isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         fallback = input,
     )
 }
@@ -85,6 +91,7 @@ fun RustEngineBridge.transformInputCase(
     text: String,
     letterCase: RustEngineBridge.LetterCase,
     mode: InputMode,
+    isNasalMarkerUppercaseEnabled: Boolean,
 ): String {
     val payload = TransformInputCase
         .newBuilder()
@@ -95,13 +102,15 @@ fun RustEngineBridge.transformInputCase(
         CaseRequest.newBuilder().setTransformInputCase(payload).build(),
         op = "transformInputCase",
         mode = mode,
+        isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         fallback = text,
     )
 }
 
 /**
  * Per-suggestion case transformation. Output is post-processed via
- * engine-side `adjust_nasal_marker_case` (no separate FFI hop needed).
+ * engine-side `adjust_nasal_marker_case` (no separate FFI hop needed), or
+ * always-lowercase `ⁿ` when ⁿ大本字 is off (§53).
  * CapsLock uppercases everything; otherwise the candidate is split at the composing length —
  * typed portion matches the typed case, remaining portion is title- or lower-cased.
  */
@@ -110,6 +119,7 @@ fun RustEngineBridge.transformSuggestion(
     composing: String,
     letterCase: RustEngineBridge.LetterCase,
     mode: InputMode,
+    isNasalMarkerUppercaseEnabled: Boolean,
 ): String {
     val payload = TransformSuggestion
         .newBuilder()
@@ -121,6 +131,7 @@ fun RustEngineBridge.transformSuggestion(
         CaseRequest.newBuilder().setTransformSuggestion(payload).build(),
         op = "transformSuggestion",
         mode = mode,
+        isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         fallback = original,
     )
 }
@@ -133,9 +144,10 @@ private fun caseStringDispatch(
     caseRequest: CaseRequest,
     op: String,
     mode: InputMode,
+    isNasalMarkerUppercaseEnabled: Boolean,
     fallback: String,
 ): String {
-    val resp = caseDispatch(caseRequest, op, mode) ?: return fallback
+    val resp = caseDispatch(caseRequest, op, mode, isNasalMarkerUppercaseEnabled) ?: return fallback
     if (!resp.hasStringResult()) {
         RustEngineBridge.backend.w(TAG, "[$op] missing string_result")
         return fallback
@@ -147,23 +159,31 @@ private fun caseDispatch(
     caseRequest: CaseRequest,
     op: String,
     mode: InputMode,
+    isNasalMarkerUppercaseEnabled: Boolean,
 ): CaseResponse? {
     val response = RustEngineBridge.dispatch(op) {
-        setConfigSnapshot(caseAppConfig(mode))
+        setConfigSnapshot(caseAppConfig(mode, isNasalMarkerUppercaseEnabled))
         setCaseTransform(caseRequest)
     } ?: return null
     return if (response.hasCaseTransform()) response.caseTransform else null
 }
 
-private fun caseAppConfig(mode: InputMode): AppConfig =
-    AppConfig
-        .newBuilder()
-        .setInputMode(
-            when (mode) {
-                InputMode.POJ -> "poj"
-                InputMode.TL -> "tl"
-                InputMode.ENGLISH -> "english"
-            },
-        ).build()
+// The one canonical factory, folds off: case-transform never preprocesses `oo` / `nn`.
+private fun caseAppConfig(
+    mode: InputMode,
+    isNasalMarkerUppercaseEnabled: Boolean,
+): AppConfig =
+    RustEngineBridge.appConfig(
+        mode = when (mode) {
+            InputMode.POJ -> NormalizeMode.POJ
+            InputMode.TL -> NormalizeMode.TL
+            InputMode.ENGLISH -> NormalizeMode.ENGLISH
+        },
+        toggles = PojMarkerOptionsCarrier(
+            isDoubleTapOoEnabled = false,
+            isDoubleTapNnEnabled = false,
+            isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
+        ),
+    )
 
 // endregion

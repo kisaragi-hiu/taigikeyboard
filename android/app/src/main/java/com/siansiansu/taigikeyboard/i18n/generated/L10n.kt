@@ -368,6 +368,10 @@ object L10n {
         @Composable get() = stringRes(StringKey.SETTINGS_DOUBLE_TAP_O_O)
     val settingsDoubleTapNN: String
         @Composable get() = stringRes(StringKey.SETTINGS_DOUBLE_TAP_N_N)
+    val settingsNasalMarkerUppercase: String
+        @Composable get() = stringRes(StringKey.SETTINGS_NASAL_MARKER_UPPERCASE)
+    val settingsNasalMarkerUppercaseInfo: String
+        @Composable get() = stringRes(StringKey.SETTINGS_NASAL_MARKER_UPPERCASE_INFO)
     val settingsTpsOrMapsToER: String
         @Composable get() = stringRes(StringKey.SETTINGS_TPS_OR_MAPS_TO_E_R)
     val settingsTpsOrMapsToERInfo: String

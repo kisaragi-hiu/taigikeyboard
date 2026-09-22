@@ -3169,6 +3169,42 @@
         }
       }
     },
+    "i18n_settings_nasalMarkerUppercase": {
+      "comment": "Toggle label: the POJ nasal marker follows the case of the letters before it (SIÂᴺ); off, it is always ⁿ (SIÂⁿ). Default ON. All four platforms, host settings only.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uppercase ⁿ"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ⁿ の大文字"
+          }
+        }
+      }
+    },
+    "i18n_settings_nasalMarkerUppercaseInfo": {
+      "comment": "Help text for the ⁿ 大本字 toggle (mobile host app).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you type in capitals, the nasal marker ⁿ is written as its capital ᴺ (SIÂᴺ). Off, it is always ⁿ (SIÂⁿ)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大文字で入力すると鼻音記号 ⁿ も大文字の ᴺ になります（SIÂᴺ）。オフにすると常に ⁿ になります（SIÂⁿ）。"
+          }
+        }
+      }
+    },
     "i18n_settings_openApp": {
       "comment": "Keyboard-overlay button linking to the host app's full settings screen.",
       "extractionState": "manual",

@@ -184,6 +184,8 @@
     <string name="i18n_settings_vibrationFeedback">Vibration</string>
     <string name="i18n_settings_doubleTapOO">Double-tap oo → o͘</string>
     <string name="i18n_settings_doubleTapNN">Double-tap nn → ⁿ</string>
+    <string name="i18n_settings_nasalMarkerUppercase">Uppercase ⁿ</string>
+    <string name="i18n_settings_nasalMarkerUppercaseInfo">When you type in capitals, the nasal marker ⁿ is written as its capital ᴺ (SIÂᴺ). Off, it is always ⁿ (SIÂⁿ).</string>
     <string name="i18n_settings_tpsOrMapsToER">Map or → ㄜ</string>
     <string name="i18n_settings_tpsOrMapsToERInfo">When on, \'or\' appears as ㄜ; when off, as ㄛ. Search results are unaffected.</string>
     <string name="i18n_settings_resetSettings">Reset Settings and Usage Records</string>

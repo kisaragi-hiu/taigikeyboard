@@ -66,6 +66,10 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "hyphenlessRomanEnabled",
             defaultValue: EngineSettings.defaults.isHyphenlessRomanEnabled,
         )
+        static let isNasalMarkerUppercaseEnabled = SettingsKey(
+            name: "nasalMarkerUppercaseEnabled",
+            defaultValue: EngineSettings.defaults.isNasalMarkerUppercaseEnabled,
+        )
         static let isFrequencyRecordingEnabled = SettingsKey(
             name: "frequencyRecordingEnabled",
             defaultValue: EngineSettings.defaults.isFrequencyRecordingEnabled,
@@ -374,6 +378,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             candidateDisplayMode: displayMode,
             isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
             isHyphenlessRomanEnabled: bool(Keys.isHyphenlessRomanEnabled),
+            isNasalMarkerUppercaseEnabled: bool(Keys.isNasalMarkerUppercaseEnabled),
             isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),
             isAssociationRecordingEnabled: bool(Keys.isAssociationRecordingEnabled),
             isCustomDictEnabled: bool(Keys.isCustomDictEnabled),
@@ -596,6 +601,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             Keys.isCandidateWindowEnabled.name,
             Keys.isLiteralRomanCandidateEnabled.name,
             Keys.isHyphenlessRomanEnabled.name,
+            Keys.isNasalMarkerUppercaseEnabled.name,
         )
     }
 

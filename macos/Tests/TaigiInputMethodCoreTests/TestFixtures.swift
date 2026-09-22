@@ -224,6 +224,7 @@ enum TestFixtures {
             // setting with `withSetting`, which is the path production reads.
             isLiteralRomanCandidateEnabled: true,
             isHyphenlessRomanEnabled: false,
+            isNasalMarkerUppercaseEnabled: true,
             isFrequencyRecordingEnabled: frequencyRecording,
             isAssociationRecordingEnabled: associationRecording,
             isCustomDictEnabled: customDict,

@@ -68,6 +68,7 @@ internal fun KeyContent(
     inputMode: String,
     caps: Boolean,
     capsLock: Boolean,
+    isNasalMarkerUppercaseEnabled: Boolean,
     isComposing: Boolean,
     isFullWidthPunctuation: Boolean,
     imeOptions: Int,
@@ -143,6 +144,7 @@ internal fun KeyContent(
             inputMode,
             caps,
             capsLock,
+            isNasalMarkerUppercaseEnabled,
             isComposing,
             isFullWidthPunctuation,
             imeOptions,
@@ -156,6 +158,7 @@ internal fun KeyContent(
                 inputMode = inputMode,
                 caps = caps,
                 capsLock = capsLock,
+                isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
                 isComposing = isComposing,
                 isFullWidthPunctuation = isFullWidthPunctuation,
                 imeOptions = imeOptions,
@@ -422,6 +425,7 @@ private fun resolveKeyVisual(
     inputMode: String,
     caps: Boolean,
     capsLock: Boolean,
+    isNasalMarkerUppercaseEnabled: Boolean,
     isComposing: Boolean,
     isFullWidthPunctuation: Boolean,
     imeOptions: Int,
@@ -433,7 +437,7 @@ private fun resolveKeyVisual(
     if ((data.type == KeyType.CHARACTER && data.code != KeyCode.SPACE) ||
         data.type == KeyType.NUMERIC
     ) {
-        return KeyVisual.Label(computeKeyLetter(data, inputMode, caps, capsLock))
+        return KeyVisual.Label(computeKeyLetter(data, inputMode, caps, capsLock, isNasalMarkerUppercaseEnabled))
     }
 
     return when (data.code) {
@@ -552,6 +556,7 @@ internal fun computeKeyLetter(
     inputMode: String,
     caps: Boolean,
     capsLock: Boolean,
+    isNasalMarkerUppercaseEnabled: Boolean,
 ): String {
     if (data.code == KeyCode.URI_COMPONENT_TLD) {
         return if (caps) {
@@ -566,10 +571,17 @@ internal fun computeKeyLetter(
         data.code.toChar().toString()
     }
     if (baseLabel == "˙") return "·"
-    if (baseLabel == "nn" && inputMode == "poj") {
-        return if (caps) "ᴺ" else "ⁿ"
-    }
-    return KeyLabelCaseCache.getOrCompute(baseLabel, InputMode.fromPrefString(inputMode), caps, capsLock)
+    // The POJ `nn` key shows the marker it composes; its case (`ᴺ` under caps
+    // only while ⁿ大本字 is on, §53) is the engine's rule, applied below like
+    // the literal `ⁿ` long-press cell's.
+    val label = if (baseLabel == "nn" && inputMode == "poj") "ⁿ" else baseLabel
+    return KeyLabelCaseCache.getOrCompute(
+        label,
+        InputMode.fromPrefString(inputMode),
+        caps,
+        capsLock,
+        isNasalMarkerUppercaseEnabled,
+    )
 }
 
 /** Resolved drop-shadow geometry for a key. */

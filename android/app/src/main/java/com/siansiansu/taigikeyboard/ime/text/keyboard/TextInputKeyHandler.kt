@@ -506,6 +506,7 @@ internal class TextInputKeyHandler(
             text = baseText,
             letterCase = RustEngineBridge.LetterCase.from(caps = caps, capsLock = capsLock),
             mode = inputMode,
+            isNasalMarkerUppercaseEnabled = prefs.isNasalMarkerUppercaseEnabled,
         )
 
         // TPS layout: context-aware character adjustments via CharacterInputPipeline

@@ -4,7 +4,7 @@
 //! `.claude/rules/rust-best-practices.md §3a`; this module never decodes a
 //! top-level `taigi.engine.Request` or owns a panic boundary.
 
-use crate::case_transform::{adjust_nasal_marker_case, match_case};
+use crate::case_transform::{apply_nasal_marker_case, match_case};
 use crate::poj::to_poj;
 use crate::syllable::{
     is_stop_tone, normalize_to_tl, normalize_to_tl_keep_tl_finals, split_initial_final,
@@ -157,11 +157,15 @@ fn convert_nasal_double_n(input: &str) -> String {
 /// Full normalize-tone chain: parse mode → POJ doubletap preprocessing →
 /// tone-mark application → nasal-marker case adjustment. The `Method::NormalizeTone`
 /// dispatch arm and `composing::derived` both call this directly. Plan §3.2a.
+///
+/// The last step is [`apply_nasal_marker_case`] — a rewrite, not a skip:
+/// `to_tone_marks` → `convert_syllable` → `match_case` already writes `ᴺ`
+/// after a capital.
 pub fn normalize_tone(input: &str, config: &AppConfig) -> String {
     let mode = parse_input_mode(&config.input_mode);
     let preprocessed = preprocess_for_normalize_tone(input, mode, config);
     let tone_marked = to_tone_marks(&preprocessed, mode);
-    adjust_nasal_marker_case(&tone_marked)
+    apply_nasal_marker_case(&tone_marked, config.force_lowercase_nasal_marker).into_owned()
 }
 
 /// `true` if the text contains TPS (Taiwanese Phonetic Symbols / Zhuyin)

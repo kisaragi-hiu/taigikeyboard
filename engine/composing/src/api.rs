@@ -647,6 +647,7 @@ mod tests {
             output_both_scripts: both,
             candidate_display_mode: 0,
             hyphenless_roman: false,
+            force_lowercase_nasal_marker: false,
         }
     }
 

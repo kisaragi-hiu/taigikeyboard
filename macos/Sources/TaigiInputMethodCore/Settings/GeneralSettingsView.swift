@@ -57,6 +57,8 @@ struct GeneralSettingsView: View {
 
     @AppStorage(SettingsStore.Keys.isHyphenlessRomanEnabled.name)
     private var isHyphenlessRomanEnabled = SettingsStore.Keys.isHyphenlessRomanEnabled.defaultValue
+    @AppStorage(SettingsStore.Keys.isNasalMarkerUppercaseEnabled.name)
+    private var isNasalMarkerUppercaseEnabled = SettingsStore.Keys.isNasalMarkerUppercaseEnabled.defaultValue
 
     /// Whether the system is currently refusing our notices. Re-read when this
     /// app comes back to the front rather than observed: nothing fires when the
@@ -130,6 +132,10 @@ struct GeneralSettingsView: View {
                 // 無連字符 (§49), directly under 輸出文字 — it describes that
                 // output's shape.
                 Toggle(language.string(.settingsHyphenlessRoman), isOn: $isHyphenlessRomanEnabled)
+
+                // ⁿ大本字 (§53): the other switch that shapes the output's
+                // romanization.
+                Toggle(language.string(.settingsNasalMarkerUppercase), isOn: $isNasalMarkerUppercaseEnabled)
 
                 // The space after a commit: the last thing the output stage
                 // does.

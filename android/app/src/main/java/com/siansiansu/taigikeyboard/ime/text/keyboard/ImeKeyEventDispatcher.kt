@@ -59,7 +59,8 @@ internal class ImeKeyEventDispatcher(
         val inputMode = prefs.inputMode
         val caps = capsStateManager.caps
         val capsLock = capsStateManager.capsLock
-        val computedLabel = computeKeyLetter(bounds.data, inputMode, caps, capsLock)
+        val isNasalMarkerUppercaseEnabled = prefs.isNasalMarkerUppercaseEnabled
+        val computedLabel = computeKeyLetter(bounds.data, inputMode, caps, capsLock, isNasalMarkerUppercaseEnabled)
         // TPS glyph keys get their own glyph prepended to the long-press popup
         // so the base letter stays selectable (base-first; parity with iOS
         // Callouts.TPSCallouts.calloutChars). Applied at anchor resolution, not
@@ -74,7 +75,7 @@ internal class ImeKeyEventDispatcher(
             lazyOf(emptyList())
         } else {
             lazy(LazyThreadSafetyMode.NONE) {
-                buildPopupCells(anchorData, inputMode, caps, capsLock, taigikeyboard.resources)
+                buildPopupCells(anchorData, inputMode, caps, capsLock, isNasalMarkerUppercaseEnabled, taigikeyboard.resources)
             }
         }
 

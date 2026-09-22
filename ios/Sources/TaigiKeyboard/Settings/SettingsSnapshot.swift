@@ -9,6 +9,8 @@ struct SettingsSnapshot {
     let keyboardLayoutType: KeyboardLayoutType
     let isTranslateSwapped: Bool
     let isTpsOrMappedToER: Bool
+    /// ⁿ大本字 (§53): the `nn` key label and the suggestion case transform read it.
+    let isNasalMarkerUppercaseEnabled: Bool
     let keyFontSizeScale: CGFloat
     let keyCornerRadius: CGFloat
     let colorSettings: KeyboardColorSettings

@@ -179,6 +179,7 @@ enum StringKey: String {
     case settingsToneSchemeStandard = "i18n_settings_toneSchemeStandard"
     case settingsToneSchemeTelex = "i18n_settings_toneSchemeTelex"
     case settingsAutoSpace = "i18n_settings_autoSpace"
+    case settingsNasalMarkerUppercase = "i18n_settings_nasalMarkerUppercase"
     case themeCustomFont = "i18n_theme_customFont"
     case themeCandidateTextSize = "i18n_theme_candidateTextSize"
     case themeEditorResetAll = "i18n_theme_editorResetAll"

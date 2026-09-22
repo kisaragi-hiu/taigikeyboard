@@ -196,6 +196,16 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "連紲拍 nn → ⁿ", "tailo": "Liân-suà phah nn -> ⁿ", "poj": "Liân-sòa phah nn -> ⁿ", "en": "Double-tap nn → ⁿ", "ja": "nn を続けて入力 → ⁿ" }
     },
+    "nasalMarkerUppercase": {
+      "comment": "Toggle label: the POJ nasal marker follows the case of the letters before it (SIÂᴺ); off, it is always ⁿ (SIÂⁿ). Default ON. All four platforms, host settings only.",
+      "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host"] },
+      "values": { "hanji": "ⁿ 大本字", "tailo": "ⁿ tuā-pún-jī", "poj": "ⁿ tōa-pún-jī", "en": "Uppercase ⁿ", "ja": "ⁿ の大文字" }
+    },
+    "nasalMarkerUppercaseInfo": {
+      "comment": "Help text for the ⁿ 大本字 toggle (mobile host app).",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "拍大本字的時陣，鼻音記號 ⁿ 嘛寫做大本字 ᴺ（SIÂᴺ）。關掉了後永遠寫小本字 ⁿ（SIÂⁿ）。", "tailo": "Phah tuā-pún-jī ê sî-tsūn, phīnn-im kì-hō ⁿ mā siá tsò tuā-pún-jī ᴺ (SIÂᴺ). Kuainn tiāu liáu-āu íng-uán siá sió-pún-jī ⁿ (SIÂⁿ).", "poj": "Phah tōa-pún-jī ê sî-chūn, phīⁿ-im kì-hō ⁿ mā siá chò tōa-pún-jī ᴺ (SIÂᴺ). Koaiⁿ tiāu liáu-āu éng-oán siá sió-pún-jī ⁿ (SIÂⁿ).", "en": "When you type in capitals, the nasal marker ⁿ is written as its capital ᴺ (SIÂᴺ). Off, it is always ⁿ (SIÂⁿ).", "ja": "大文字で入力すると鼻音記号 ⁿ も大文字の ᴺ になります（SIÂᴺ）。オフにすると常に ⁿ になります（SIÂⁿ）。" }
+    },
     "tpsOrMapsToER": {
       "comment": "Toggle label: render TL 'or' final as TPS ㄜ.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },

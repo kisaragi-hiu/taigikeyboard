@@ -107,7 +107,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         apply(RustEngineBridge.composingStart(
             text,
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             generation: currentGeneration,
         ))
         promoteToContinuousIfEligible(settings: settings)
@@ -119,7 +119,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         apply(RustEngineBridge.composingAppend(
             char,
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             generation: currentGeneration,
         ))
         promoteToContinuousIfEligible(settings: settings)
@@ -131,7 +131,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingAppendHyphen(
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             generation: currentGeneration,
         ))
         promoteToContinuousIfEligible(settings: settings)
@@ -144,7 +144,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         apply(RustEngineBridge.composingReplaceLast(
             replacement,
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             generation: currentGeneration,
         ))
         promoteToContinuousIfEligible(settings: settings)
@@ -189,7 +189,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     private func promoteToContinuousIfEligible(settings: EngineSettings) {
         let transition = RustEngineBridge.composingEnterContinuous(
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             generation: currentGeneration,
         )
         // EnterContinuous emits zero effects (transition.rs:514). The mirror
@@ -291,7 +291,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // Phase 1: neutral fetch to learn candidate displayText keys.
         let neutral = RustEngineBridge.composingFetchAtPos(
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
             candidateDisplayMode: settings.candidateDisplayMode,
@@ -332,7 +332,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let nowMs = Int64(Date().timeIntervalSince1970 * 1000)
         let boosted = RustEngineBridge.composingFetchAtPos(
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
             candidateDisplayMode: settings.candidateDisplayMode,
@@ -531,7 +531,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             consumedBytes: consumedBytes,
             syllableCount: syllableCount,
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
             candidateDisplayMode: settings.candidateDisplayMode,
@@ -584,7 +584,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let settings = settingsProvider.current
         apply(RustEngineBridge.composingDeleteBackward(
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             generation: currentGeneration,
         ))
     }
@@ -610,7 +610,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         guard !composingText.isEmpty else {
             applyAsSelfCommit(RustEngineBridge.composingCommitDerived(
                 mode: settings.inputMode,
-                toggles: settings.toneToggles,
+                toggles: settings.pojMarkerOptions,
                 generation: currentGeneration,
             ))
             return
@@ -618,7 +618,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let spacing = Self.continuousSpacingFlags(settings)
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
             candidateDisplayMode: settings.candidateDisplayMode,
@@ -641,7 +641,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         let spacing = Self.continuousSpacingFlags(settings)
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
             candidateDisplayMode: settings.candidateDisplayMode,
@@ -660,7 +660,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(
             text,
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
             candidateDisplayMode: settings.candidateDisplayMode,
@@ -676,7 +676,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         applyAsSelfCommit(RustEngineBridge.composingCommitPreeditThenInsertExternal(
             text,
             mode: settings.inputMode,
-            toggles: settings.toneToggles,
+            toggles: settings.pojMarkerOptions,
             effectiveSwapped: spacing.effectiveSwapped,
             outputBothScripts: spacing.outputBothScripts,
             candidateDisplayMode: settings.candidateDisplayMode,

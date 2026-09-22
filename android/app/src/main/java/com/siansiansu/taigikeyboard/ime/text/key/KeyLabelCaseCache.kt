@@ -16,7 +16,7 @@ import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
  * switches, that's O(thousands) of hops per minute of typing.
  *
  * This object is a process-wide LRU keyed on
- * `(baseLabel, mode, caps, capsLock)`. The cache:
+ * `(baseLabel, mode, caps, capsLock, isNasalMarkerUppercaseEnabled)`. The cache:
  *   - holds at most ~256 entries (≈ 4 visible keysets × ~16 keys × 4
  *     case-state combos — generous slack)
  *   - evicts least-recently-used on insert past cap (LinkedHashMap
@@ -38,6 +38,7 @@ internal object KeyLabelCaseCache {
         val mode: InputMode,
         val caps: Boolean,
         val capsLock: Boolean,
+        val isNasalMarkerUppercaseEnabled: Boolean,
     )
 
     // LinkedHashMap(initialCapacity, loadFactor, accessOrder) — accessOrder=true gives LRU semantics.
@@ -56,14 +57,15 @@ internal object KeyLabelCaseCache {
         mode: InputMode,
         caps: Boolean,
         capsLock: Boolean,
+        isNasalMarkerUppercaseEnabled: Boolean,
     ): String {
-        val key = Key(baseLabel, mode, caps, capsLock)
+        val key = Key(baseLabel, mode, caps, capsLock, isNasalMarkerUppercaseEnabled)
         cache[key]?.let { return it }
 
         val computed = when {
-            capsLock -> RustEngineBridge.fullUppercaseToneString(baseLabel, mode)
-            caps -> RustEngineBridge.uppercaseToneChar(baseLabel, mode)
-            else -> RustEngineBridge.lowercaseToneChar(baseLabel, mode)
+            capsLock -> RustEngineBridge.fullUppercaseToneString(baseLabel, mode, isNasalMarkerUppercaseEnabled)
+            caps -> RustEngineBridge.uppercaseToneChar(baseLabel, mode, isNasalMarkerUppercaseEnabled)
+            else -> RustEngineBridge.lowercaseToneChar(baseLabel, mode, isNasalMarkerUppercaseEnabled)
         }
         cache[key] = computed
         return computed

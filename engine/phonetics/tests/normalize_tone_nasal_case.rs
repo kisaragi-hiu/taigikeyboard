@@ -163,3 +163,40 @@ fn normalize_tone_tl_keeps_every_typed_capital() {
         assert_eq!(normalize(input, tl()), expected, "input {input:?}");
     }
 }
+
+// -------------------------------------------------------------------------
+// ⁿ大本字 OFF (`AppConfig.force_lowercase_nasal_marker`, USER 2026-09-22, §53):
+// the marker is always `ⁿ`, whatever the case of the letters before it.
+// -------------------------------------------------------------------------
+
+fn poj_doubletap_lowercase_nasal() -> AppConfig {
+    AppConfig {
+        force_lowercase_nasal_marker: true,
+        ..poj_doubletap()
+    }
+}
+
+#[test]
+fn normalize_tone_force_lowercase_nasal_marker_keeps_the_marker_lowercase_after_a_capital() {
+    // trace: "SIANN5" → "SIÂᴺ" by default (`match_case` writes ᴺ after Â);
+    // the flag folds that one glyph back and leaves every letter's case.
+    let cases = [
+        ("SIANN5", "SI\u{c2}\u{207f}"),
+        ("SIAnn5", "SI\u{c2}\u{207f}"),
+        ("Siann5", "Si\u{e2}\u{207f}"),
+        ("siann5", "si\u{e2}\u{207f}"),
+        ("HOONN2", "H\u{d3}\u{358}\u{207f}"),
+        ("ANN2-ann2", "\u{c1}\u{207f}-\u{e1}\u{207f}"),
+        // A typed capital marker is lowered too.
+        ("SIA\u{1d3a}5", "SI\u{c2}\u{207f}"),
+        // No marker: identical to the default.
+        ("TAI5-OAN5", "T\u{c2}I-O\u{c2}N"),
+    ];
+    for (input, expected) in cases {
+        assert_eq!(
+            normalize(input, poj_doubletap_lowercase_nasal()),
+            expected,
+            "input {input:?}"
+        );
+    }
+}

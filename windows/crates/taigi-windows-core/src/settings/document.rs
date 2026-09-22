@@ -263,6 +263,8 @@ impl SettingsDocument {
             is_literal_roman_candidate_enabled: self
                 .bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
             is_hyphenless_roman_enabled: self.bool(&keys::IS_HYPHENLESS_ROMAN_ENABLED),
+            is_nasal_marker_uppercase_enabled: self
+                .bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
             is_frequency_recording_enabled: self.bool(&keys::IS_FREQUENCY_RECORDING_ENABLED),
             is_association_recording_enabled: self.bool(&keys::IS_ASSOCIATION_RECORDING_ENABLED),
             is_custom_dict_enabled: self.bool(&keys::IS_CUSTOM_DICT_ENABLED),
@@ -606,6 +608,22 @@ mod tests {
         doc.reset_general();
         assert!(
             !doc.contains(keys::IS_HYPHENLESS_ROMAN_ENABLED.name),
+            "一般's key"
+        );
+    }
+
+    #[test]
+    fn nasal_marker_uppercase_reads_the_stored_switch() {
+        let mut doc = SettingsDocument::default();
+        assert!(
+            doc.engine_settings().is_nasal_marker_uppercase_enabled,
+            "ships ON"
+        );
+        doc.set_bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED, false);
+        assert!(!doc.engine_settings().is_nasal_marker_uppercase_enabled);
+        doc.reset_general();
+        assert!(
+            !doc.contains(keys::IS_NASAL_MARKER_UPPERCASE_ENABLED.name),
             "一般's key"
         );
     }

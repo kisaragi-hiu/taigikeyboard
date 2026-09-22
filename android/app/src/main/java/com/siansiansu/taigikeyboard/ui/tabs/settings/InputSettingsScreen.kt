@@ -91,6 +91,7 @@ fun InputSettingsScreen(
     var autoSpace by remember(resetCounter) { mutableStateOf(prefs.isAutoSpaceEnabled) }
     var doubleOO by remember(resetCounter) { mutableStateOf(prefs.enableDoubleTapOO) }
     var doubleNN by remember(resetCounter) { mutableStateOf(prefs.enableDoubleTapNN) }
+    var nasalMarkerUppercase by remember(resetCounter) { mutableStateOf(prefs.isNasalMarkerUppercaseEnabled) }
     var toolbarAutoCollapse by remember(resetCounter) { mutableStateOf(prefs.isToolbarAutoCollapse) }
     var isGlobeKeyEnabled by remember(resetCounter) { mutableStateOf(prefs.isGlobeKeyEnabled) }
     var soundFeedback by remember(resetCounter) { mutableStateOf(prefs.isSoundFeedbackEnabled) }
@@ -334,6 +335,17 @@ fun InputSettingsScreen(
                         onCheckedChange = {
                             doubleNN = it
                             prefs.enableDoubleTapNN = it
+                        },
+                    )
+                    SettingsDivider()
+                    // ⁿ大本字 (§53) — the case rule of the marker the row above composes.
+                    SwitchRow(
+                        label = L10n.settingsNasalMarkerUppercase,
+                        checked = nasalMarkerUppercase,
+                        infoText = L10n.settingsNasalMarkerUppercaseInfo,
+                        onCheckedChange = {
+                            nasalMarkerUppercase = it
+                            prefs.isNasalMarkerUppercaseEnabled = it
                         },
                     )
                 }

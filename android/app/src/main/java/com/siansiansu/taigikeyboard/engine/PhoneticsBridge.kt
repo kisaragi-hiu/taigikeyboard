@@ -37,14 +37,14 @@ import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 // region Phonetics core (8 ops)
 
 /**
- * `Method::NormalizeTone` — input + AppConfig.input_mode + ToneToggles →
+ * `Method::NormalizeTone` — input + AppConfig.input_mode + PojMarkerOptions →
  * tone-marked string. `mode` and `toggles` are mandatory (no default)
  * to enforce the live-read invariant per Codex v2 §7.
  */
 fun RustEngineBridge.normalizeTone(
     input: String,
     mode: NormalizeMode,
-    toggles: ToneTogglesCarrier,
+    toggles: PojMarkerOptionsCarrier,
 ): String {
     val payload = NormalizeTone.newBuilder().setInput(input).build()
     return stringDispatch(

@@ -161,6 +161,15 @@ struct EngineSettings: Equatable, Sendable {
     /// `hyphenlessRomanEnabled` in android/…/ime/core/PrefHelper.kt, both OFF.
     let isHyphenlessRomanEnabled: Bool
 
+    /// ⁿ大本字 (`behavioral-invariants.md` §53) — the POJ nasal marker follows
+    /// the case of the letters before it (`SIÂᴺ`); off, it is always `ⁿ`.
+    /// Sent inverted as `AppConfig.force_lowercase_nasal_marker` on the base
+    /// config.
+    /// CROSS-PLATFORM INVARIANT — mirrors `isNasalMarkerUppercaseEnabled` in
+    /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift and
+    /// `nasalMarkerUppercaseEnabled` in android/…/ime/core/PrefHelper.kt, all ON.
+    let isNasalMarkerUppercaseEnabled: Bool
+
     /// Whether committing a candidate counts towards its ranking next time.
     /// Read on the write path only — the boost itself is always applied to
     /// whatever counts have been learned, so turning this off freezes the
@@ -214,6 +223,7 @@ struct EngineSettings: Equatable, Sendable {
             candidateDisplayMode: mode,
             isLiteralRomanCandidateEnabled: true,
             isHyphenlessRomanEnabled: false,
+            isNasalMarkerUppercaseEnabled: true,
             isFrequencyRecordingEnabled: true,
             isAssociationRecordingEnabled: true,
             isCustomDictEnabled: true,

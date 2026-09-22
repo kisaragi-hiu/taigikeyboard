@@ -179,6 +179,13 @@ pub struct EngineSettings {
     /// (`macos/.../EngineSettings.swift`, `ios/.../SharedSettings.swift`) and
     /// `hyphenlessRomanEnabled` (`android/.../PrefHelper.kt`), all OFF.
     pub is_hyphenless_roman_enabled: bool,
+    /// ⁿ大本字 (`behavioral-invariants.md` §53) — the POJ nasal marker follows
+    /// the case of the letters before it (`SIÂᴺ`); off, always `ⁿ`. Sent
+    /// inverted as `AppConfig.force_lowercase_nasal_marker` on the base config.
+    /// CROSS-PLATFORM INVARIANT — mirrors `isNasalMarkerUppercaseEnabled`
+    /// (`macos/.../EngineSettings.swift`, `ios/.../SharedSettings.swift`) and
+    /// `nasalMarkerUppercaseEnabled` (`android/.../PrefHelper.kt`), all ON.
+    pub is_nasal_marker_uppercase_enabled: bool,
     /// Read on the write path only; the boost always applies to whatever was
     /// learned. CROSS-PLATFORM INVARIANT — `SharedSettings.swift:48` (ON).
     pub is_frequency_recording_enabled: bool,
@@ -214,6 +221,7 @@ impl EngineSettings {
             candidate_display_mode: MODE,
             is_literal_roman_candidate_enabled: true,
             is_hyphenless_roman_enabled: false,
+            is_nasal_marker_uppercase_enabled: true,
             is_frequency_recording_enabled: true,
             is_association_recording_enabled: true,
             is_custom_dict_enabled: true,

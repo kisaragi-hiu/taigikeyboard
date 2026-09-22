@@ -137,6 +137,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(settings.colorSettings, .default)
         XCTAssertTrue(settings.isLiteralRomanCandidateEnabled, "§34/S22 顯示當咧拍的字 ships ON")
         XCTAssertFalse(settings.isHyphenlessRomanEnabled, "無連字符 ships OFF")
+        XCTAssertTrue(settings.isNasalMarkerUppercaseEnabled, "ⁿ大本字 ships ON")
     }
 
     func test_isFullAccessEnabled_absentReturnsFalse_andStoredTrueReturnsTrue() {
@@ -204,6 +205,7 @@ final class SettingsKeyTests: XCTestCase {
         // Flip every Bool to the opposite of its descriptor default.
         settings.isDoubleTapOOEnabled = false
         settings.isDoubleTapNNEnabled = false
+        settings.isNasalMarkerUppercaseEnabled = false
         settings.storedIsTranslateSwapped = true
         settings.storedIsOutputBothScripts = true
         settings.isAutoSpaceEnabled = true
@@ -253,6 +255,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(settings.displayLanguage, DisplayLanguage.defaultTag)
         XCTAssertTrue(settings.isDoubleTapOOEnabled)
         XCTAssertTrue(settings.isDoubleTapNNEnabled)
+        XCTAssertTrue(settings.isNasalMarkerUppercaseEnabled)
         XCTAssertTrue(settings.isTranslateSwapped, "reset lands on the hanji-first default")
         XCTAssertFalse(settings.isOutputBothScripts)
         XCTAssertFalse(settings.isAutoSpaceEnabled)
@@ -356,6 +359,7 @@ final class SettingsKeyTests: XCTestCase {
         // Bool fields — write opposite of descriptor default via raw key.
         defaults.set(false, forKey: "enableDoubleTapOO")
         defaults.set(false, forKey: "enableDoubleTapNN")
+        defaults.set(false, forKey: "nasalMarkerUppercaseEnabled")
         defaults.set(true, forKey: "isTranslateSwapped")
         defaults.set(true, forKey: "outputBothScripts")
         defaults.set(true, forKey: "autoSpaceEnabled")
@@ -398,6 +402,7 @@ final class SettingsKeyTests: XCTestCase {
         // Facade reads through the descriptors.
         XCTAssertFalse(settings.isDoubleTapOOEnabled)
         XCTAssertFalse(settings.isDoubleTapNNEnabled)
+        XCTAssertFalse(settings.isNasalMarkerUppercaseEnabled)
         XCTAssertTrue(settings.isTranslateSwapped)
         XCTAssertTrue(settings.isOutputBothScripts)
         XCTAssertTrue(settings.isAutoSpaceEnabled)

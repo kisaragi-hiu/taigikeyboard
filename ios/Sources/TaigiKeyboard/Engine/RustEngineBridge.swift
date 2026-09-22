@@ -192,7 +192,7 @@ public enum RustEngineBridge {
     /// Proto field 9 (`candidateDisplayMode`) is set by the two builders whose
     /// requests the engine reads it on — `continuousAppConfig` and
     /// `nextwordConfig` — not here (mirrors Android).
-    static func appConfig(mode: InputMode, toggles: ToneToggles) -> Taigi_Engine_AppConfig {
+    static func appConfig(mode: InputMode, toggles: PojMarkerOptions) -> Taigi_Engine_AppConfig {
         var cfg = Taigi_Engine_AppConfig()
         switch mode {
         case .poj: cfg.inputMode = "poj"
@@ -202,6 +202,8 @@ public enum RustEngineBridge {
         }
         cfg.ooDoubletapEnabled = toggles.isDoubleTapOOEnabled
         cfg.nnDoubletapEnabled = toggles.isDoubleTapNNEnabled
+        // Inverted on the wire (proto default = the marker follows the case, §53).
+        cfg.forceLowercaseNasalMarker = !toggles.isNasalMarkerUppercaseEnabled
         return cfg
     }
 }

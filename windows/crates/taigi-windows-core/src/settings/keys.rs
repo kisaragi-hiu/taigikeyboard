@@ -50,6 +50,10 @@ pub const IS_HYPHENLESS_ROMAN_ENABLED: SettingsKey<bool> = SettingsKey::new(
     "hyphenlessRomanEnabled",
     ENGINE_DEFAULTS.is_hyphenless_roman_enabled,
 );
+pub const IS_NASAL_MARKER_UPPERCASE_ENABLED: SettingsKey<bool> = SettingsKey::new(
+    "nasalMarkerUppercaseEnabled",
+    ENGINE_DEFAULTS.is_nasal_marker_uppercase_enabled,
+);
 pub const IS_FREQUENCY_RECORDING_ENABLED: SettingsKey<bool> = SettingsKey::new(
     "frequencyRecordingEnabled",
     ENGINE_DEFAULTS.is_frequency_recording_enabled,
@@ -229,7 +233,7 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 /// (USER 2026-09-20: the reset must not switch the UI language under the
 /// user), not the update bookkeeping, not the remembered pane
 /// (`SettingsStore.swift resetGeneralSettings`).
-pub const GENERAL_KEYS: [&str; 7] = [
+pub const GENERAL_KEYS: [&str; 8] = [
     INPUT_MODE.name,
     TONE_INPUT_SCHEME.name,
     IS_TRANSLATE_SWAPPED.name,
@@ -237,6 +241,7 @@ pub const GENERAL_KEYS: [&str; 7] = [
     IS_CANDIDATE_WINDOW_ENABLED.name,
     IS_LITERAL_ROMAN_CANDIDATE_ENABLED.name,
     IS_HYPHENLESS_ROMAN_ENABLED.name,
+    IS_NASAL_MARKER_UPPERCASE_ENABLED.name,
 ];
 
 /// The keys the 外觀 pane's reset removes (`SettingsStore.swift:457-465`).

@@ -91,4 +91,10 @@ public interface AppConfigOrBuilder extends
    * @return The hyphenlessRoman.
    */
   boolean getHyphenlessRoman();
+
+  /**
+   * <code>bool force_lowercase_nasal_marker = 11;</code>
+   * @return The forceLowercaseNasalMarker.
+   */
+  boolean getForceLowercaseNasalMarker();
 }

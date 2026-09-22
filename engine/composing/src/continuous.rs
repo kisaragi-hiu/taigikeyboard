@@ -1074,6 +1074,7 @@ pub(crate) fn assemble_candidates(
     mode: phonetics::InputMode,
     enabled_sources_bitmask: u32,
     hyphenless_roman: bool,
+    force_lowercase_nasal_marker: bool,
 ) -> Vec<RawCandidate> {
     let raw_len = raw.len() as u32;
     // Whole-buffer tone pin (§17 typed digits / §41 space-closed TPS
@@ -1520,6 +1521,19 @@ pub(crate) fn assemble_candidates(
                 if cand.roman.contains('-') {
                     cand.roman = phonetics::api::hyphenless_display(&cand.roman);
                 }
+            }
+        }
+        // ⁿ大本字 (§53) — same seam, same field: the one nasal-marker case
+        // rule the preedit follows (`normalize_tone`), triggered by the
+        // marker, not the mode. `raise_case` leaves the marker as stored,
+        // so without this a Caps Lock strip read `SIAⁿ` under a `SIAᴺ`
+        // preedit.
+        for cand in &mut candidates {
+            if let std::borrow::Cow::Owned(roman) = phonetics::case_transform::apply_nasal_marker_case(
+                &cand.roman,
+                force_lowercase_nasal_marker,
+            ) {
+                cand.roman = roman;
             }
         }
         if mode == phonetics::InputMode::Poj || hyphenless_roman {

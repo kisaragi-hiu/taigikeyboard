@@ -182,6 +182,9 @@ enum RustEngineBridge {
         // Base config for the same reason: the candidate fetch and the next-word
         // filter both shape their romanization by it (§49).
         config.hyphenlessRoman = settings.isHyphenlessRomanEnabled
+        // Inverted on the wire (proto default = the marker follows the case,
+        // §53); base config for the preedit, the candidates and the case ops.
+        config.forceLowercaseNasalMarker = !settings.isNasalMarkerUppercaseEnabled
         return config
     }
 

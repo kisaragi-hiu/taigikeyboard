@@ -18,6 +18,7 @@ internal fun buildPopupCells(
     inputMode: String,
     caps: Boolean,
     capsLock: Boolean,
+    isNasalMarkerUppercaseEnabled: Boolean,
     resources: Resources,
 ): List<PopupCell> =
     data.popup.map { popupKeyData ->
@@ -43,7 +44,7 @@ internal fun buildPopupCells(
                 useCustomTypeface = false,
             )
             else -> PopupCell(
-                label = computeKeyLetter(popupKeyData, inputMode, caps, capsLock),
+                label = computeKeyLetter(popupKeyData, inputMode, caps, capsLock, isNasalMarkerUppercaseEnabled),
                 icon = null,
                 textScale = if (popupKeyData.code == KeyCode.URI_COMPONENT_TLD) 0.6f else 1.0f,
                 useCustomTypeface = true,

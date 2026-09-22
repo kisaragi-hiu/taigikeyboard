@@ -59,6 +59,7 @@ final class SettingsStoreTests: XCTestCase {
         userDefaults.set(false, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isHyphenlessRomanEnabled.name)
+        userDefaults.set(false, forKey: SettingsStore.Keys.isNasalMarkerUppercaseEnabled.name)
         userDefaults.set(CandidateLayout.horizontal.rawValue, forKey: SettingsStore.Keys.candidateLayout.name)
         userDefaults.set("1.0.0", forKey: SettingsStore.Keys.updateLastNotifiedVersion.name)
 
@@ -73,6 +74,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.isCandidateWindowEnabled, SettingsStore.Keys.isCandidateWindowEnabled.defaultValue)
         XCTAssertTrue(store.current.isLiteralRomanCandidateEnabled)
         XCTAssertFalse(store.current.isHyphenlessRomanEnabled)
+        XCTAssertTrue(store.current.isNasalMarkerUppercaseEnabled)
         XCTAssertEqual(store.candidateLayout, .horizontal, "外觀's key")
         XCTAssertEqual(store.updateLastNotifiedVersion, "1.0.0", "bookkeeping")
     }
@@ -87,6 +89,7 @@ final class SettingsStoreTests: XCTestCase {
         // has to keep winning: someone who turned 顯示當咧拍的字 off stays off.
         userDefaults.set(false, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isHyphenlessRomanEnabled.name)
+        userDefaults.set(false, forKey: SettingsStore.Keys.isNasalMarkerUppercaseEnabled.name)
 
         XCTAssertEqual(
             makeStore().current,
@@ -98,6 +101,7 @@ final class SettingsStoreTests: XCTestCase {
                 candidateDisplayMode: .sideBySide,
                 isLiteralRomanCandidateEnabled: false,
                 isHyphenlessRomanEnabled: true,
+                isNasalMarkerUppercaseEnabled: false,
                 isFrequencyRecordingEnabled: false,
                 isAssociationRecordingEnabled: false,
                 isCustomDictEnabled: EngineSettings.defaults.isCustomDictEnabled,

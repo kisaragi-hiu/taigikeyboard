@@ -59,6 +59,7 @@ object PreferenceKeys {
     // Taigi-specific keys
     val ENABLE_DOUBLE_TAP_OO = booleanPreferencesKey("taigi__enable_double_tap_oo")
     val ENABLE_DOUBLE_TAP_NN = booleanPreferencesKey("taigi__enable_double_tap_nn")
+    val NASAL_MARKER_UPPERCASE = booleanPreferencesKey("taigi__nasal_marker_uppercase")
     val AUTO_CAPITALIZATION_ENABLED = booleanPreferencesKey("taigi__auto_capitalization_enabled")
     val AUTO_SPACE_ENABLED = booleanPreferencesKey("taigi__auto_space_enabled")
     val FONT_TYPE = stringPreferencesKey("taigi__font_type")

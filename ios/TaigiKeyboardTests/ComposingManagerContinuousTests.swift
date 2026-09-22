@@ -35,7 +35,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
 
     private var manager: ComposingManager!
     private var spy: DelegateSpy!
-    private let toggles = ToneToggles(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false)
+    private let toggles = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false, isNasalMarkerUppercaseEnabled: true)
 
     override class func setUp() {
         super.setUp()

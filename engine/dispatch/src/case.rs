@@ -39,6 +39,13 @@ pub(crate) fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseRe
             mode,
         ),
     };
+    // ⁿ大本字 OFF (§53): the raise-only ops write `ᴺ` after a capital; fold
+    // it back so the platform never receives the capital marker.
+    let output = if config.force_lowercase_nasal_marker {
+        phonetics::case_transform::lowercase_nasal_markers(&output)
+    } else {
+        output
+    };
 
     Some(CaseResponse {
         result: Some(protos::engine::case_response::Result::StringResult(
@@ -150,6 +157,34 @@ mod tests {
         };
         let resp = handle(&req, &config_for("poj")).expect("response present");
         assert_eq!(unwrap_string(resp), "TÂI-GÍ");
+    }
+
+    #[test]
+    fn dispatch_force_lowercase_nasal_marker_folds_the_capital_marker_on_every_op() {
+        // ⁿ大本字 OFF (§53): Caps Lock over a POJ nasal suggestion.
+        let suggestion = CaseRequest {
+            method: Some(Method::TransformSuggestion(TransformSuggestion {
+                original_text: "sia\u{207f}".to_string(),
+                composing_text: "si".to_string(),
+                letter_case: protos::engine::LetterCase::CapsLocked as i32,
+            })),
+        };
+        let default = handle(&suggestion, &config_for("poj")).expect("response present");
+        assert_eq!(unwrap_string(default), "SIA\u{1d3a}");
+        let lowercase = AppConfig {
+            force_lowercase_nasal_marker: true,
+            ..config_for("poj")
+        };
+        let resp = handle(&suggestion, &lowercase).expect("response present");
+        assert_eq!(unwrap_string(resp), "SIA\u{207f}");
+
+        let marker_key = CaseRequest {
+            method: Some(Method::UppercaseToneChar(UppercaseToneChar {
+                input: "\u{207f}".to_string(),
+            })),
+        };
+        let resp = handle(&marker_key, &lowercase).expect("response present");
+        assert_eq!(unwrap_string(resp), "\u{207f}");
     }
 
     #[test]

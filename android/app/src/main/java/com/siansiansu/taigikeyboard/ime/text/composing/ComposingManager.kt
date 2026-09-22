@@ -27,7 +27,7 @@ import com.siansiansu.taigikeyboard.engine.dictionaryFilters
 import com.siansiansu.taigikeyboard.engine.NormalizeMode
 import kotlinx.coroutines.CancellationException
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
-import com.siansiansu.taigikeyboard.engine.ToneTogglesCarrier
+import com.siansiansu.taigikeyboard.engine.PojMarkerOptionsCarrier
 import com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
@@ -204,7 +204,7 @@ class ComposingManager(
             RustEngineBridge.composingStart(
                 char,
                 mode,
-                carrier(settings.toneToggles),
+                carrier(settings.pojMarkerOptions),
                 generation,
             ),
             ic,
@@ -223,7 +223,7 @@ class ComposingManager(
             RustEngineBridge.composingAppend(
                 char,
                 resolveMode(settings.inputMode),
-                carrier(settings.toneToggles),
+                carrier(settings.pojMarkerOptions),
                 generation,
             ),
             ic,
@@ -238,7 +238,7 @@ class ComposingManager(
         applyTransition(
             RustEngineBridge.composingAppendHyphen(
                 resolveMode(settings.inputMode),
-                carrier(settings.toneToggles),
+                carrier(settings.pojMarkerOptions),
                 generation,
             ),
             ic,
@@ -257,7 +257,7 @@ class ComposingManager(
             RustEngineBridge.composingReplaceLast(
                 replacement,
                 resolveMode(settings.inputMode),
-                carrier(settings.toneToggles),
+                carrier(settings.pojMarkerOptions),
                 generation,
             ),
             ic,
@@ -293,7 +293,7 @@ class ComposingManager(
         applyTransition(
             RustEngineBridge.composingDeleteBackward(
                 resolveMode(settings.inputMode),
-                carrier(settings.toneToggles),
+                carrier(settings.pojMarkerOptions),
                 currentGeneration,
             ),
             ic,
@@ -323,7 +323,7 @@ class ComposingManager(
             applyAsSelfCommit(
                 RustEngineBridge.composingCommitDerived(
                     resolveMode(settings.inputMode),
-                    carrier(settings.toneToggles),
+                    carrier(settings.pojMarkerOptions),
                     currentGeneration,
                 ),
                 ic,
@@ -334,7 +334,7 @@ class ComposingManager(
         applyAsSelfCommit(
             RustEngineBridge.composingCommitRaw(
                 resolveMode(settings.inputMode),
-                carrier(settings.toneToggles),
+                carrier(settings.pojMarkerOptions),
                 currentGeneration,
                 effectiveSwapped = spacing.effectiveSwapped,
                 outputBothScripts = spacing.outputBothScripts,
@@ -360,7 +360,7 @@ class ComposingManager(
         applyAsSelfCommit(
             RustEngineBridge.composingCommitRaw(
                 resolveMode(settings.inputMode),
-                carrier(settings.toneToggles),
+                carrier(settings.pojMarkerOptions),
                 currentGeneration,
                 effectiveSwapped = spacing.effectiveSwapped,
                 outputBothScripts = spacing.outputBothScripts,
@@ -385,7 +385,7 @@ class ComposingManager(
             RustEngineBridge.composingSelectSuggestion(
                 suggestion,
                 resolveMode(settings.inputMode),
-                carrier(settings.toneToggles),
+                carrier(settings.pojMarkerOptions),
                 currentGeneration,
                 effectiveSwapped = spacing.effectiveSwapped,
                 outputBothScripts = spacing.outputBothScripts,
@@ -407,7 +407,7 @@ class ComposingManager(
             RustEngineBridge.composingCommitPreeditThenInsertExternal(
                 text,
                 resolveMode(settings.inputMode),
-                carrier(settings.toneToggles),
+                carrier(settings.pojMarkerOptions),
                 currentGeneration,
                 effectiveSwapped = spacing.effectiveSwapped,
                 outputBothScripts = spacing.outputBothScripts,
@@ -449,7 +449,7 @@ class ComposingManager(
         if (_rawInput.value.isEmpty()) return
         val transition = RustEngineBridge.composingEnterContinuous(
             resolveMode(settings.inputMode),
-            carrier(settings.toneToggles),
+            carrier(settings.pojMarkerOptions),
             generation,
         )
         // EnterContinuous emits zero effects; applyTransition still runs to
@@ -795,7 +795,7 @@ class ComposingManager(
             consumedBytes = consumedBytes,
             syllableCount = syllableCount,
             mode = resolveMode(settings.inputMode),
-            toggles = carrier(settings.toneToggles),
+            toggles = carrier(settings.pojMarkerOptions),
             generation = currentGeneration,
             effectiveSwapped = spacing.effectiveSwapped,
             outputBothScripts = spacing.outputBothScripts,
@@ -1010,10 +1010,11 @@ class ComposingManager(
             else -> NormalizeMode.TL
         }
 
-    private fun carrier(toggles: com.siansiansu.taigikeyboard.ime.core.settings.ToneToggles): ToneTogglesCarrier =
-        ToneTogglesCarrier(
+    private fun carrier(toggles: com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions): PojMarkerOptionsCarrier =
+        PojMarkerOptionsCarrier(
             isDoubleTapOoEnabled = toggles.isDoubleTapOOEnabled,
             isDoubleTapNnEnabled = toggles.isDoubleTapNNEnabled,
+            isNasalMarkerUppercaseEnabled = toggles.isNasalMarkerUppercaseEnabled,
         )
 
     /**
@@ -1055,7 +1056,7 @@ class ComposingManager(
     private class ContinuousFetchSettings(
         val inputMode: String,
         val mode: NormalizeMode,
-        val toggles: ToneTogglesCarrier,
+        val toggles: PojMarkerOptionsCarrier,
         val spacing: ContinuousSpacingFlags,
         // PR-9.6 — same dictionary source-toggle bitmask + same
         // `dictionaryFilters` bridge the Tab3 browse path uses, so keyboard
@@ -1075,7 +1076,7 @@ class ComposingManager(
         return ContinuousFetchSettings(
             inputMode = inputMode,
             mode = resolveMode(inputMode),
-            toggles = carrier(settings.toneToggles),
+            toggles = carrier(settings.pojMarkerOptions),
             spacing = continuousSpacingFlags(settings),
             enabledSourcesBitmask = RustEngineBridge.dictionaryFilters(
                 RustEngineBridge.DictionaryToggles.from(settings),

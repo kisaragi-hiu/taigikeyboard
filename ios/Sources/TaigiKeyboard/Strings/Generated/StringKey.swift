@@ -183,6 +183,8 @@ enum StringKey: String {
     case settingsVibrationFeedback = "i18n_settings_vibrationFeedback"
     case settingsDoubleTapOO = "i18n_settings_doubleTapOO"
     case settingsDoubleTapNN = "i18n_settings_doubleTapNN"
+    case settingsNasalMarkerUppercase = "i18n_settings_nasalMarkerUppercase"
+    case settingsNasalMarkerUppercaseInfo = "i18n_settings_nasalMarkerUppercaseInfo"
     case settingsTpsOrMapsToER = "i18n_settings_tpsOrMapsToER"
     case settingsTpsOrMapsToERInfo = "i18n_settings_tpsOrMapsToERInfo"
     case settingsResetSettings = "i18n_settings_resetSettings"
