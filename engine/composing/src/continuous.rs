@@ -254,23 +254,35 @@ fn recase_all(candidates: &mut [RawCandidate], raw_seg: &str, mode: phonetics::I
 /// (gate at `assemble_candidates`); the signature is POJ-only so the
 /// gate cannot drift to silent identity-on-misuse.
 ///
-/// The TL→POJ rewriter only title-cases (it checks `first.is_uppercase()`
-/// then stops), so a CapsLocked candidate (`HOO`) would otherwise collapse
-/// to title case (`Ho͘`); the raise-only `raise_case` with the detected
-/// `LetterCase` and `InputMode::Poj` restores it (`HO͘`) — the same
-/// helper `recase_roman` already trusts for POJ diacritics (Codex
-/// pre-impl 2026-05-19 BLOCK). Case detection reads the (already-recased)
-/// roman's own alpha chars via [`raw_segment_letter_case`]; the rewriter
-/// title-cases per hyphen sub-token and never invents a capital, so the
-/// restore is exact for mixed casing too. Presentation only — never feed
-/// `display_text` (the canonical commit / `user_frequency.db` key) here.
+/// The TL→POJ rewriter only title-cases each `-` / space token (it checks
+/// `first.is_uppercase()` then stops), so the letters after the first are
+/// re-raised here per token with `match_case` — the same raise-only,
+/// letter-by-letter rule `convert_syllable` uses for the preedit. Per
+/// token, never whole-string: the rewriter can change a token's letter
+/// count (`nn` → `ⁿ`, `oo` → `o͘`), so the alignment restarts at every
+/// separator; and a whole-string `LetterCase` read the POJ nasal marker
+/// (`ⁿ`, alphabetic and lowercase) as "not all caps", collapsing a Caps
+/// Lock custom `KENG-LÂM SU-Īⁿ` to `Keng-Lâm Su-Īⁿ` and a mixed `KENG-lâm`
+/// to `Keng-lâm` (retro Codex review of #89, 2026-09-22). Presentation
+/// only — never feed `display_text` (the canonical commit /
+/// `user_frequency.db` key) here.
 fn recase_tl_as_poj_display(roman: &str) -> String {
-    use phonetics::case_transform::LetterCase;
     let poj = phonetics::api::tl_display_to_poj_display(roman);
-    match raw_segment_letter_case(roman) {
-        LetterCase::Lowercased => poj,
-        case => phonetics::case_transform::raise_case(&poj, case, phonetics::InputMode::Poj),
+    let mut out = String::with_capacity(poj.len());
+    // The rewriter keeps every `-` / space, so both strings split into the
+    // same tokens; `split_inclusive` carries the separator (a non-letter,
+    // passed through by `match_case`) at the end of each piece.
+    for (source, target) in roman
+        .split_inclusive(['-', ' '])
+        .zip(poj.split_inclusive(['-', ' ']))
+    {
+        out.push_str(&phonetics::case_transform::match_case(
+            target,
+            source,
+            phonetics::InputMode::Poj,
+        ));
     }
+    out
 }
 
 /// v3.5.8 — collapse continuous candidates that became identical only
@@ -1745,16 +1757,15 @@ mod tests {
         // Sentence-start capital (the `Hittui → Hit` segment class).
         assert_eq!(recase_tl_as_poj_display("Goo"), "Go\u{0358}");
         // CapsLock — the Codex pre-impl BLOCK: `tl_display_to_poj_display`
-        // only title-cases, so without the `raise_case` restore an
+        // only title-cases, so without the per-token re-raise an
         // all-caps candidate would collapse to `Go͘`. Pin
         // the all-caps form survives.
         assert_eq!(recase_tl_as_poj_display("OO"), "O\u{0358}");
-        // `nn` under CapsLock: the base letters go all-caps while the
-        // POJ nasal `ⁿ` (U+207F) is preserved as-is (correct POJ — no
-        // uppercase nasal hook). Without the case restore this would
-        // collapse to title case `Sa\u{207f}`, the exact BLOCK
-        // regression; pin the all-caps form survives.
-        assert_eq!(recase_tl_as_poj_display("SANN"), "SA\u{207f}");
+        // `nn` under CapsLock: the base letters go all-caps and the POJ
+        // nasal marker follows its letter (`match_case` writes `ᴺ` after a
+        // capital, as the preedit's `convert_syllable` does); the §53
+        // switch pass later in step 5 owns the marker's final case.
+        assert_eq!(recase_tl_as_poj_display("SANN"), "SA\u{1d3a}");
     }
 
     #[test]
@@ -1957,5 +1968,29 @@ mod tests {
         );
         // POJ display round-trip must not lower the stored `Su` either.
         assert_eq!(recase_tl_as_poj_display("Keng-lâm Su-īⁿ"), "Keng-lâm Su-īⁿ");
+    }
+
+    #[test]
+    fn recase_tl_as_poj_display_keeps_caps_lock_and_mixed_case_per_token() {
+        // Retro Codex review of #89 (2026-09-22): the stored `ⁿ` is an
+        // alphabetic lowercase char, so a whole-string case read called the
+        // Caps Lock custom entry "title case" and lowered every token.
+        // trace: rewriter → "Keng-Lâm Su-Īⁿ", per-token match_case against
+        // "KENG-LÂM SU-Īⁿ" re-raises every letter; the stored `ⁿ` is a
+        // lowercase source letter, so it stays as stored (raise-only) and
+        // the §53 switch pass later in step 5 writes `ᴺ` after the capital.
+        assert_eq!(recase_tl_as_poj_display("KENG-LÂM SU-Īⁿ"), "KENG-LÂM SU-Īⁿ");
+        // Mixed case inside one entry: each token keeps its own capitals.
+        assert_eq!(recase_tl_as_poj_display("KENG-lâm"), "KENG-lâm");
+        // A TL row whose token shrinks (`NN` → `ⁿ`) still aligns per token.
+        assert_eq!(
+            recase_tl_as_poj_display("KENG-LÂM SU-ĪNN"),
+            "KENG-LÂM SU-Īᴺ"
+        );
+        // Negative control: lowercase stays lowercase.
+        assert_eq!(
+            recase_tl_as_poj_display("keng-lâm su-īnn"),
+            "keng-lâm su-īⁿ"
+        );
     }
 }
