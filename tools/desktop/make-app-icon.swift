@@ -1,7 +1,7 @@
-// Generates the desktop app icon — macos/App/AppIcon.icns and
-// windows/resources/TaigiKeyboard.ico — from one 台 outline, so the two
-// desktop platforms cannot drift apart. Run it by hand after changing
-// anything below:
+// Generates the desktop app icon — macos/App/AppIcon.icns,
+// windows/resources/TaigiKeyboard.ico and the Linux hicolor PNG set under
+// linux/data/icons — from one 台 outline, so the three desktop platforms
+// cannot drift apart. Run it by hand after changing anything below:
 //
 //     swift tools/desktop/make-app-icon.swift
 //     swift tools/desktop/make-app-icon.swift --check   (verify, write nothing)
@@ -63,6 +63,10 @@ let iconsetMembers: [(name: String, pixels: Int)] = [
 /// tray, title bar and menus, 24 upward for the taskbar across DPI settings,
 /// and 256 as the largest an .ico can carry.
 let windowsSizes = [16, 20, 24, 32, 40, 48, 64, 96, 256]
+/// The freedesktop hicolor sizes a desktop looks an application icon up at
+/// (`linux/data/icons/hicolor/<size>x<size>/apps/taigikeyboard.png`): the
+/// settings window's own icon and the input method's in the panel menus.
+let linuxSizes = [16, 22, 24, 32, 48, 64, 128, 256]
 
 // MARK: - Paths
 
@@ -73,6 +77,9 @@ let repositoryRoot = URL(fileURLWithPath: #filePath)
 let icnsURL = repositoryRoot.appendingPathComponent("macos/App/AppIcon.icns")
 let icoURL = repositoryRoot.appendingPathComponent("windows/resources/TaigiKeyboard.ico")
 let icoPacker = repositoryRoot.appendingPathComponent("tools/windows/make-ico.py")
+func linuxIconURL(_ size: Int) -> URL {
+    repositoryRoot.appendingPathComponent("linux/data/icons/hicolor/\(size)x\(size)/apps/taigikeyboard.png")
+}
 
 let isCheckOnly = CommandLine.arguments.contains("--check")
 
@@ -238,6 +245,14 @@ for member in iconsetMembers {
     do { try png.write(to: url) } catch { fail("could not write \(url.path): \(error)") }
 }
 
+var linuxPages: [(staged: URL, committed: URL)] = []
+for size in linuxSizes {
+    let png = render(pixels: size, outline: outline)
+    let url = staging.appendingPathComponent("linux-\(size).png")
+    do { try png.write(to: url) } catch { fail("could not write \(url.path): \(error)") }
+    linuxPages.append((url, linuxIconURL(size)))
+}
+
 var windowsPages: [String] = []
 for size in windowsSizes {
     let png = render(pixels: size, outline: outline)
@@ -264,17 +279,26 @@ guard run("/usr/bin/env", ["python3", icoPacker.path, stagedIco.path] + windowsP
 if isCheckOnly {
     let sameIcns = (try? Data(contentsOf: stagedIcns)) == (try? Data(contentsOf: icnsURL))
     let sameIco = (try? Data(contentsOf: stagedIco)) == (try? Data(contentsOf: icoURL))
+    let sameLinux = linuxPages.allSatisfy { (try? Data(contentsOf: $0.staged)) == (try? Data(contentsOf: $0.committed)) }
     print("AppIcon.icns        \(sameIcns ? "up to date" : "STALE")")
     print("TaigiKeyboard.ico   \(sameIco ? "up to date" : "STALE")")
-    exit(sameIcns && sameIco ? 0 : 1)
+    print("linux hicolor PNGs  \(sameLinux ? "up to date" : "STALE")")
+    exit(sameIcns && sameIco && sameLinux ? 0 : 1)
 }
 
-for (staged, committed) in [(stagedIcns, icnsURL), (stagedIco, icoURL)] {
+for (staged, committed) in [(stagedIcns, icnsURL), (stagedIco, icoURL)] + linuxPages.map { ($0.staged, $0.committed) } {
     do {
-        _ = try FileManager.default.replaceItemAt(committed, withItemAt: staged)
+        try FileManager.default.createDirectory(
+            at: committed.deletingLastPathComponent(), withIntermediateDirectories: true)
+        if FileManager.default.fileExists(atPath: committed.path) {
+            _ = try FileManager.default.replaceItemAt(committed, withItemAt: staged)
+        } else {
+            try FileManager.default.copyItem(at: staged, to: committed)
+        }
     } catch {
         fail("could not replace \(committed.path): \(error)")
     }
 }
 print("wrote \(icnsURL.path)")
 print("wrote \(icoURL.path)")
+print("wrote \(linuxPages.count) linux hicolor PNGs")

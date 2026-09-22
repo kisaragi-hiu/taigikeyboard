@@ -125,11 +125,12 @@ desktop-check:
 linux-check:
 	$(MAKE) -C linux check
 
-# Stage BOTH desktop installers on this version's draft release: the package
-# here, the installer on the Windows box over ssh (scripts/stage-desktop.sh).
-# The two builds cannot share a machine, so this drives the second rather than
-# pretending they are one build. Both or neither: a draft holding installers
-# from two commits is not something a tag can describe. Nothing it does reaches
+# Stage the THREE desktop installers on this version's draft release: the
+# package here, the Windows installer and the Linux .deb on GitHub-hosted
+# runners (scripts/stage-desktop.sh). The builds cannot share a machine, so
+# this drives the others rather than pretending they are one build. All or
+# none: a draft holding installers from two commits is not something a tag
+# can describe. Nothing it does reaches
 # a user — publishing the draft stays a person's, and that publish announces the
 # release itself.
 desktop-release:

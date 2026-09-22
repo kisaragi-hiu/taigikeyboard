@@ -8,8 +8,15 @@ name: Linux build
 # first byte-level contract. Nothing here publishes; the release half
 # (a `.deb` on the desktop draft) lands with the packaging PR.
 #
+# On a release publish (the `desktop-<version>` tag) and on a dispatch from
+# `scripts/stage-desktop.sh`, the run also packs the `.deb` and attaches it
+# to the draft — the Linux half of a desktop release, the way
+# `windows-build.yml` is the Windows half.
+#
 # Budget: ~4 min warm, ~10 min cold (dependency compile + apt).
 on:
+  release:
+    types: [published]
   pull_request:
     paths:
       - 'linux/**'
@@ -26,7 +33,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # Attaching the package to the draft release is a write; the run's own
+  # GITHUB_TOKEN can do it inside this repository.
+  contents: write
 
 concurrency:
   group: linux-build-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
@@ -135,6 +144,64 @@ jobs:
             grep -q taigikeyboard "$RUNNER_TEMP/current.txt"
             kill "$DAEMON" || true
           '
+
+      # The package, from the same install layout the smoke used, then read
+      # back: a `.deb` that lists the addon, the engine, the window, the
+      # registration files and the dictionaries.
+      - name: Build the .deb
+        working-directory: linux
+        run: |
+          set -euo pipefail
+          make deb
+          dpkg-deb --contents target/taigikeyboard_*_amd64.deb | tee "$RUNNER_TEMP/deb-contents.txt"
+          for path in usr/libexec/ibus-engine-taigikeyboard usr/bin/taigikeyboard-settings \
+                      fcitx5/taigikeyboard.so usr/share/fcitx5/addon/taigikeyboard.conf \
+                      usr/share/fcitx5/inputmethod/taigikeyboard.conf usr/share/ibus/component/taigikeyboard.xml \
+                      usr/share/taigikeyboard/dictionaries/dictionary.fst usr/share/applications/tw.taigikeyboard.Settings.desktop \
+                      usr/share/icons/hicolor/48x48/apps/taigikeyboard.png; do
+            grep -q "$path" "$RUNNER_TEMP/deb-contents.txt" || { echo "::error::$path missing from the .deb"; exit 1; }
+          done
+          cd target && sha256sum taigikeyboard_*_amd64.deb | tee SHA256SUMS
+
+      - name: Upload the .deb
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-deb
+          path: |
+            linux/target/taigikeyboard_*_amd64.deb
+            linux/target/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+
+      # The release half: only a dispatch from `main` (stage-desktop.sh) or a
+      # `desktop-<version>` publish attaches; a PR run never reaches a draft.
+      - name: Attach the .deb to the draft release
+        if: >-
+          github.repository == 'taigikeyboard/taigikeyboard' &&
+          ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+           (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'desktop-')))
+        working-directory: linux
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
+          tag="desktop-$version"
+          state="$(gh release view "$tag" --json isDraft --jq '.isDraft|tostring' 2>&1)" || {
+              echo "no release $tag: $state" >&2
+              echo "The macOS half stages first and creates the draft." >&2
+              exit 1
+          }
+          if [ "${{ github.event_name }}" = workflow_dispatch ] && [ "$state" != true ]; then
+              echo "$tag is already published — an asset added now would be public with no test" >&2
+              exit 1
+          fi
+          cd target
+          package="taigikeyboard_${version}_amd64.deb"
+          [ -f "$package" ] || { echo "no $package in $(pwd)" >&2; exit 1; }
+          printf '%s  %s\n' "$(sha256sum "$package" | cut -d' ' -f1)" "$package" > "$package.sha256"
+          gh release upload "$tag" "$package" "$package.sha256" --repo "$GITHUB_REPOSITORY" --clobber
+          echo "attached $package to $tag (built from $GITHUB_SHA)"
 
       - name: Show daemon log on failure
         if: failure()

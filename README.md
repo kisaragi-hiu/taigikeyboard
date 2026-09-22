@@ -1,6 +1,6 @@
 # TaigiKeyboard 台語齒盤
 
-A Taiwanese input method for iOS, Android, macOS, and Windows. Romanization input in POJ, TL and TPS, Hanji, tone marks, autocomplete, and cross-system Romanization conversion.
+A Taiwanese input method for iOS, Android, macOS, Windows, and Linux. Romanization input in POJ, TL and TPS, Hanji, tone marks, autocomplete, and cross-system Romanization conversion.
 
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
 ![Android 11+](https://img.shields.io/badge/Android-11%2B-green)
@@ -13,7 +13,7 @@ Taiwanese is spoken by millions of people, but typing support is still fragmente
 
 There are already several Taiwanese input methods available, but they usually focus on a specific platform, romanization system, or input style.
 
-This project tries to provide a more consistent experience across iOS, Android, macOS, and Windows. It supports Taiwanese Romanization, Pe̍h-ōe-jī, and Taiwanese Phonetic Symbols, as well as Hanji and mixed Hanji and Romanization input. It also supports continuous multi-syllable typing, so users do not need to enter words one syllable at a time.
+This project tries to provide a more consistent experience across iOS, Android, macOS, Windows, and Linux. It supports Taiwanese Romanization, Pe̍h-ōe-jī, and Taiwanese Phonetic Symbols, as well as Hanji and mixed Hanji and Romanization input. It also supports continuous multi-syllable typing, so users do not need to enter words one syllable at a time.
 
 ## Download
 
@@ -22,6 +22,7 @@ This project tries to provide a more consistent experience across iOS, Android, 
 | iOS / iPadOS | [App Store](https://apps.apple.com/app/id6751871806) |
 | Android | [Google Play](https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard) |
 | macOS / Windows | [taigikeyboard.tw](https://taigikeyboard.tw) |
+| Linux (`.deb`, Fcitx5 or IBus) | [GitHub releases](https://github.com/taigikeyboard/taigikeyboard/releases) |
 
 ## Features
 
@@ -34,7 +35,7 @@ This project tries to provide a more consistent experience across iOS, Android, 
 
 ## Architecture
 
-All four platforms share a Rust core. Algorithms for phonetics, composing, lexicon, ranking, next-word and dispatch live in `engine/`. Platform code is thin glue: Swift on iOS and macOS via swift-bridge, Kotlin on Android via JNI, Rust all the way down on Windows. Protobuf carries payloads across the FFI boundary.
+All five platforms share a Rust core. Algorithms for phonetics, composing, lexicon, ranking, next-word and dispatch live in `engine/`. Platform code is thin glue: Swift on iOS and macOS via swift-bridge, Kotlin on Android via JNI, Rust all the way down on Windows, and on Linux a C++ Fcitx5 addon over a Rust C ABI beside a pure-Rust IBus engine. Protobuf carries payloads across the FFI boundary.
 
 | Path | Stack |
 | --- | --- |
@@ -43,6 +44,8 @@ All four platforms share a Rust core. Algorithms for phonetics, composing, lexic
 | `android/` | Kotlin + Jetpack Compose UI; FlorisBoard-derived view hierarchy |
 | `macos/` | Swift + InputMethodKit; SwiftPM |
 | `windows/` | Rust + Text Services Framework; Inno Setup installer |
+| `linux/` | Fcitx5 addon (C++ over a Rust C ABI) + IBus engine (Rust, zbus) + GTK 4 / libadwaita settings; `.deb` |
+| `desktop/` | The pure Rust crates Windows and Linux share (settings model, composing orchestration, storage) |
 | `dictionary/` | Source data + FST/mmap build pipeline |
 | `taigi-converter/` | Canonical TL/POJ/TPS converter, a git submodule |
 

@@ -21,8 +21,9 @@ CROSS_CARGO := $(shell command -v cargo-zigbuild >/dev/null 2>&1 && echo "cargo 
 # Where `make install` puts things; a package build passes DESTDIR.
 PREFIX ?= /usr
 DESTDIR ?=
+VERSION := $(shell grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
 
-.PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component run-engine run-settings clean
+.PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component deb run-engine run-settings clean
 
 help:
 	@echo "Linux input method — dev loop"
@@ -38,6 +39,7 @@ help:
 	@echo "  make build-fcitx5  - (Linux) the Fcitx5 addon: cmake over the FFI static library (needs fcitx5-modules-dev, extra-cmake-modules)"
 	@echo "  make install       - (Linux) install both shells + dictionaries into PREFIX=$(PREFIX) (DESTDIR honoured)"
 	@echo "  make uninstall     - (Linux) remove what install put there; user data stays"
+	@echo "  make deb           - (Linux) build target/taigikeyboard_<version>_amd64.deb from the install layout (dpkg-deb)"
 	@echo "  make run-engine    - (Linux) run the IBus engine from this tree against a running ibus-daemon (RUST_LOG=debug, repo dictionaries)"
 	@echo "  make run-settings  - Open the settings window from this tree (macOS host too: GTK + libadwaita from Homebrew); PANE=about picks a pane"
 
@@ -99,7 +101,7 @@ build-fcitx5: build
 
 # The component XML with this PREFIX rendered in (`<exec>` / `<setup>`).
 component: data/taigikeyboard.xml.in
-	sed -e 's#@PREFIX@#$(PREFIX)#g' -e 's#@VERSION@#$(shell grep -m1 '^version' Cargo.toml | cut -d'"' -f2)#g' $< > target/taigikeyboard.xml
+	sed -e 's#@PREFIX@#$(PREFIX)#g' -e 's#@VERSION@#$(VERSION)#g' $< > target/taigikeyboard.xml
 
 # The install layout the engine resolves at runtime
 # (`taigi-linux-platform::paths::InstallLayout`); the PREFIX must match the
@@ -110,6 +112,10 @@ install: build component install-fcitx5
 	install -Dm644 target/taigikeyboard.xml $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	install -d $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries
 	install -m644 ../dictionaries/dictionary.fst ../dictionaries/dictionary.bin ../dictionaries/association.bin ../dictionaries/syllables.fst $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries/
+	install -Dm644 data/tw.taigikeyboard.Settings.desktop $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
+	for size in 16 22 24 32 48 64 128 256; do \
+	  install -Dm644 data/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png; \
+	done
 	@echo "installed under $(DESTDIR)$(PREFIX); restart fcitx5 (fcitx5 -r) and/or ibus (ibus restart)"
 
 # The addon's .so + its two .conf files, through CMake's own install rules.
@@ -123,7 +129,24 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/share/fcitx5/inputmethod/taigikeyboard.conf $(DESTDIR)$(PREFIX)/share/fcitx5/addon/taigikeyboard.conf
 	rm -f $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	rm -rf $(DESTDIR)$(PREFIX)/share/taigikeyboard
+	rm -f $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
+	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/*/apps/taigikeyboard.png
 	@echo "removed; ~/.config/taigikeyboard and ~/.local/share/taigikeyboard are kept"
+
+# The Debian package (roadmap L11): `make install` into a staging root — the
+# ONE install layout, so the package and a source install cannot drift —
+# plus the control file, packed by dpkg-deb. No cargo-deb: it would carry a
+# second copy of the asset list. Only ever built with PREFIX=/usr.
+DEB_ROOT := target/deb/root
+DEB_FILE := target/taigikeyboard_$(VERSION)_amd64.deb
+deb:
+	rm -rf target/deb
+	$(MAKE) install PREFIX=/usr DESTDIR=$(CURDIR)/$(DEB_ROOT)
+	install -d $(DEB_ROOT)/DEBIAN
+	sed -e 's#@VERSION@#$(VERSION)#g' packaging/control.in > $(DEB_ROOT)/DEBIAN/control
+	dpkg-deb --build --root-owner-group $(DEB_ROOT) $(DEB_FILE)
+	dpkg-deb --info $(DEB_FILE)
+	@echo "built $(DEB_FILE)"
 
 # The dev loop on a Linux box with ibus-daemon up: the engine from this tree,
 # reading the repo's dictionaries, logging every key. `ibus engine
