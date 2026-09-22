@@ -2,7 +2,7 @@
 
 > **Type**: Planning (design record + PR table; becomes Reference once shipped)
 > **Keywords**: `linux`, `IBus`, `D-Bus`, `zbus`, `GTK4`, `libadwaita`, `desktop`, `engine reuse`, `macOS parity`, `Windows parity`
-> **Status**: in flight — PR0 (this document) 2026-09-22. Authored WITHOUT a Linux machine, the way the Windows platform was (`windows-roadmap.md` § W13); verified on the macOS host + a GitHub-hosted Ubuntu runner, dogfooded later.
+> **Status**: in flight — PR0 2026-09-22; **2026-09-23 USER decision: Fcitx5 is the primary frontend, the IBus engine (PR3) is kept as the second** (「選項 1，Fcitx5 主、IBus 保留，go」) — a Linux VM for dogfood exists from here on, which removes the one reason IBus was chosen first (§ L1). Authored WITHOUT a Linux machine, the way the Windows platform was (`windows-roadmap.md` § W13); verified on the macOS host + a GitHub-hosted Ubuntu runner, dogfooded later.
 > **Session memory**: project memory `project_linux_ime.md` (Claude auto-memory)
 > **Siblings**: `macos-roadmap.md` (behaviour oracle), `windows-roadmap.md` (the blind-authoring precedent and the crates this platform reuses)
 
@@ -42,6 +42,12 @@ the sources cited, and are flagged `Codex: skipped (quota)` in the PR table. A l
 retro review is welcome and its verdicts belong in this document.
 
 ## Architecture
+
+Revised 2026-09-23 (Fcitx5 primary): everything below the shells is shared. The Fcitx5 shell
+is `linux/fcitx5/taigikeyboard.so` (C++ `InputMethodEngineV3` over the `taigi-linux-ffi` C ABI
+over `taigi-linux-core`); the IBus shell is `ibus-engine-taigikeyboard` (zbus over the same
+`taigi-linux-core`). The diagram keeps the IBus process as drawn for PR3; the Fcitx5 addon
+replaces its top box with `fcitx5` (in-process addon, `keyEvent` → FFI → `Emit`s → input panel).
 
 ```
 Application (GTK / Qt / Chromium / Electron / terminal) ── IBus client module (im-module / Wayland text-input)
@@ -91,10 +97,48 @@ Citations: `windows/…` and `macos/…` are this repository at PR0; `ibus src/*
 github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 `serialize` functions were read, not remembered).
 
-- **L1 Framework = IBus, engine in pure Rust over D-Bus (`zbus` 5).** No `libibus`, no
-  GObject, no C toolchain on the host — the same reason Windows is Rust throughout
-  (`windows-roadmap.md` W1): the engine binary must be host-checkable and compile from
-  a macOS machine. IBus is GNOME's default framework and the one Ubuntu / Fedora /
+- **L1 Frameworks = Fcitx5 (primary) + IBus (second), one Rust core, two thin shells.**
+  **Revised 2026-09-23** (USER: 「我認為使用Fcitx5比較好，我可以安裝linux vm測試」 → 「選項 1，
+  Fcitx5 主、IBus 保留，go」). The original choice of IBus first had ONE real reason: no Linux
+  machine, so only a pure-D-Bus engine could be compiled and checked from the Mac; with a
+  VM that reason is gone, and Fcitx5 is where Taiwanese / CJK Linux users are (fcitx5-chewing,
+  fcitx5-rime, KDE's default), has the most complete Wayland story, draws its own themed
+  candidate panel, and offers real global hotkeys. Mainstream engines ship both (`ibus-rime`
+  + `fcitx5-rime`, `ibus-mozc` + `fcitx5-mozc`, `ibus-chewing` + `fcitx5-chewing`), which
+  is the shape adopted:
+  - **`taigi-linux-core`** (Rust lib, pure): the framework-independent half of what PR3 wrote
+    inside the IBus crate — `Runtime` (settings, stores, lexicon, coordinator), the key path
+    (`session.rs`: snapshot → intent → manager → `Emit`s), the `Emit` effect model
+    (preedit / commit / delete-surrounding / lookup table), `LookupSelection`. Both shells
+    replay the same `Emit` list; nothing composes in a shell.
+  - **`taigi-linux-ffi`** (Rust `staticlib`, the ONE Linux crate allowed `unsafe`, `// SAFETY:`
+    per call as `rust-ffi-safety.md` §3): a C ABI over `taigi-linux-core` — opaque runtime /
+    engine handles, `taigi_engine_key(keysym, keycode, states) → reply`, accessor functions
+    over the reply's emits (kind, text, caret, table rows / labels / cursor / orientation), a
+    hand-written `taigikeyboard.h` pinned by a test that compiles it. `catch_unwind` at every
+    entry (`docs/engine/ffi-safety.md` §2), never a panic across the boundary.
+  - **`linux/fcitx5/`** — the Fcitx5 addon, C++ (the framework's addons are in-process C++;
+    there is no Rust binding worth pinning): `FCITX_ADDON_FACTORY_V2`, an
+    `InputMethodEngineV3` whose `keyEvent` hands `rawKey().sym()` / keycode / states to the
+    FFI and replays the reply — `inputPanel().setClientPreedit(Text)` with
+    `TextFormatFlag::Underline` + `setCursor`, `commitString`, `deleteSurroundingText`, a
+    `CommonCandidateList` (`setPageSize`, `setLayoutHint`, `setSelectionKey`, `setGlobalCursorIndex`,
+    `CandidateWord::select` = highlight + commit through the FFI) — then `updatePreedit()` +
+    `updateUserInterface(InputPanel)`; `reset` / `deactivate` end the session; `activate`
+    refreshes the status area (menu actions, § L6); `subModeLabelImpl` = the mode letter.
+    Built by CMake against `Fcitx5Core` (`add_fcitx5_addon`, `fcitx5-rime`
+    `src/CMakeLists.txt` verbatim shape), installed to `${libdir}/fcitx5/taigikeyboard.so` +
+    `${datadir}/fcitx5/{inputmethod,addon}/taigikeyboard.conf`. **Not host-buildable** — the
+    VM and the Ubuntu CI job (`fcitx5-modules-dev`, `extra-cmake-modules`) own it; the Mac
+    gates the Rust half (`taigi-linux-core` tests, `taigi-linux-ffi` cross build via zig).
+  - **`taigikeyboard-ibus`** stays as PR3 built it, rebased onto `taigi-linux-core`: the D-Bus
+    wire (`bus`, `wire`, `factory`, `engine`) is all that remains in it. GNOME users get it
+    from the same package.
+  The IBus wire facts below stay authoritative for that shell. What the two shells must
+  agree on is the `Emit` contract, so every divergence between them is a shell bug, not a
+  design choice.
+  **The IBus shell (PR3, as built)**: engine in pure Rust over D-Bus (`zbus` 5) — no `libibus`,
+  no GObject, no C toolchain on the host. IBus is GNOME's default framework and the one Ubuntu / Fedora /
   Debian desktops ship enabled; mainstream CJK IMEs ship an IBus engine first (rime
   `ibus-rime`, mozc `ibus-mozc`, libchewing `ibus-chewing`). What the wire needs was
   taken from the ibus source:
@@ -148,10 +192,9 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
     `<setup>${prefix}/bin/taigikeyboard-settings</setup>`, `<rank>0</rank>`). `ibus-daemon`
     reads the directory at start (or after `ibus write-cache`), spawns the exec on demand,
     and the daemon — not the engine — owns activation, so no `RegisterComponent` call.
-  **Fcitx5 is not in this slice** (named, no version): its engines are in-process C++
-  addons that cannot be compiled from this host; the split between `taigikeyboard-ibus`
-  (wire) and `taigi-linux-platform` + `taigi-desktop-core` (everything else) is the seam
-  an Fcitx5 shell would plug into. **Risk (blind)**: the exact `a{sv}` attachment shape
+  (Superseded 2026-09-23: the "Fcitx5 not in this slice" line that stood here — the seam it
+  named, `taigikeyboard-ibus` (wire) over `taigi-linux-platform` + `taigi-desktop-core`, is
+  exactly the `taigi-linux-core` split above.) **Risk (blind)**: the exact `a{sv}` attachment shape
   and the `v`-wrapping of nested serialisables are the two places a byte-level mistake
   would show only on a real daemon; both are pinned by unit tests against the signature
   strings `(sa{sv}sv)` etc. and by the CI smoke (§ L12).
@@ -193,7 +236,9 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   builds the crate natively, so a pane can be opened on the Mac for a visual smoke before
   any Linux dogfood — the gate WinUI never had. Window: `default_size(760, 560)`, frame
   not persisted (same named divergence as Windows W17).
-- **L4 Candidates = the daemon's lookup table (platform-adapted presentation).** IBus
+- **L4 Candidates = the framework's panel (platform-adapted presentation).** On Fcitx5 the
+  `CommonCandidateList` in the input panel (classic UI / kimpanel, themed by the user), on IBus
+  the daemon's lookup table — both fed from the same `Emit::LookupTable`. IBus
   clients do not expose a caret rectangle to a process that owns no window, Wayland
   forbids self-positioned popups without layer-shell, and every IBus engine (rime, mozc,
   chewing, anthy) lets the panel draw. So: `UpdateLookupTable` with the
@@ -241,12 +286,16 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   (`taigi-desktop-core::keys::ComposingKeyIntent`) is used unchanged. **Global chords**:
   `openLastSettingsPane` Ctrl+Alt+S, `toggleRomanization` Ctrl+Alt+C, `toggleTranslateSwapped`
   bare `` ` `` — the Windows roster verbatim (macOS ⌃⌘ under ⌘→Ctrl / ⌃→Alt; USER
-  2026-08-31 「快捷鍵邏輯必須與 macOS 一致」), matched in `ProcessKeyEvent` while this engine is
-  the active one — IBus has no preserved-key registry, so the chords live exactly as
-  long as the Windows fallback path's do. **No Shift-tap 中/英 mode** (Windows W5b): IBus
+  2026-08-31 「快捷鍵邏輯必須與 macOS 一致」), matched in the key path while this engine is
+  the active one — IBus has no preserved-key registry, so there the chords live exactly as
+  long as the Windows fallback path's do; the Fcitx5 addon matches them in `keyEvent` the
+  same way (one classifier, two shells), and may later also register them as Fcitx5 hotkeys. **No Shift-tap 中/英 mode** (Windows W5b): IBus
   switches engines (Super+Space) the way macOS switches input sources, which is why the
   Mac has no mode of its own either; every key in English is another engine's.
-- **L6 Panel menu = engine properties.** `RegisterProperties` on `Enable` with a
+- **L6 Panel menu = status-area actions (Fcitx5) / engine properties (IBus).** On Fcitx5:
+  `SimpleAction`s registered with `userInterfaceManager()` and added to the input context's
+  `statusArea()` under `StatusGroup::InputMethod` on `activate` (`fcitx5-rime` `refreshStatusArea`),
+  the mode letter through `subModeLabelImpl`. On IBus: `RegisterProperties` on `Enable` with a
   `PROP_TYPE_MENU` root whose `symbol` is `台` (the panel indicator letter — IBus shows an
   engine's symbol in the top bar) and whose sub-properties mirror the Mac's input-source
   menu row for row (`InputSourceMenuRenderer.swift`, `TaigiInputController.swift:372-`):
@@ -294,7 +343,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   `tw.taigikeyboard.Settings.desktop` entry + icon, and prints the `ibus restart`
   reminder; `uninstall` reverses it and keeps `$XDG_*/taigikeyboard`. A `.deb` is built by
   `cargo-deb` from `[package.metadata.deb]` on the engine crate (both binaries, assets,
-  `Depends: ibus, libgtk-4-1, libadwaita-1-0`) — on the GitHub-hosted Ubuntu runner
+  `Depends: fcitx5 | ibus, libgtk-4-1, libadwaita-1-0` (both shells in one package, as `fcitx5-chewing` + `ibus-chewing` come from one source)) — on the GitHub-hosted Ubuntu runner
   (`.github/workflows/linux-build.yml`, mirror of `windows-build.yml`: `workflow_dispatch`
   + `release: published`, attaches the `.deb` + SHA-256 to the same `desktop-<version>`
   draft; `scripts/stage-desktop.sh` dispatches it beside the Windows run). No signing
@@ -311,8 +360,9 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   the C toolchain the bundled SQLite's build script needs — plain `cargo check` stops
   there; `brew install zig cargo-zigbuild`), `cargo fmt -- --check`, and the i18n check. CI (`linux-build.yml`, also on
   pull requests touching `linux/**` or `desktop/**`) adds what the Mac cannot: a real
-  `x86_64-unknown-linux-gnu` build of both binaries with the distro's GTK, `cargo test`
-  of the whole `linux/` workspace, `cargo-deb`, and a **daemon smoke**: `dbus-run-session`
+  `x86_64-unknown-linux-gnu` build of both binaries with the distro's GTK, the **Fcitx5 addon
+  built with CMake against `fcitx5-modules-dev`** (the only place it compiles before the VM),
+  `cargo test` of the whole `linux/` workspace, `cargo-deb`, and an **IBus daemon smoke**: `dbus-run-session`
   → `ibus-daemon --daemonize --panel disable` with the component XML installed into a
   temporary `IBUS_COMPONENT_PATH`, then `ibus list-engine | grep taigikeyboard` and
   `ibus engine taigikeyboard` — proof that the daemon can spawn the engine and complete
@@ -361,14 +411,15 @@ PR0 (quota, 2026-09-22); each later PR records its own verdict here.
 | PR1 | Proto | `PLATFORM_LINUX = 5` in `envelope.proto` + committed platform stubs regenerated (mechanical, its own PR as W12) | pending |
 | PR2 | Crate move | `desktop/` workspace: `taigi-desktop-core` + `taigi-desktop-storage` moved + renamed; `windows/` re-pointed; `windows/Makefile` rosters; `tools/i18n/generate.py` output path + `linux` in `VALID_PLATFORMS` with every `windows`-scoped key also scoped `linux`; `tools/release_notes.py` version files; root `Makefile` `desktop-check` / `linux-check`; docs + rules references; `make windows-check` green | pending |
 | PR3 | Engine I — wire | `linux/` workspace + toolchain; `taigi-linux-platform` (XDG paths, prefix, key translation, launcher, open URL; host stubs none needed); `taigikeyboard-ibus`: bus address + connection, factory, engine object with the full key path (snapshot → intent → manager inside the runtime lock → preedit / commit / lookup table), focus + reset + destroy lifecycle, wire types with signature tests; component XML template; `linux/Makefile`; `linux-build.yml` with the daemon smoke | this PR — Codex skipped (quota) |
-| PR4 | Engine II — chrome | properties menu (§ L6), settings live reload (§ L9), global chords + toggle latch, symbol picker + Telex guide as lookup tables, auto-space / full-width policies wired, candidate navigation from the panel (`PageUp` … `CandidateClicked`), `run-engine` dev target | pending |
-| PR5 | Settings I | `taigikeyboard-settings`: `adw` shell (sidebar, pane routing, `--pane`, single instance, display language, live tick), 一般, 外觀 (Linux row set), 關於 | pending |
-| PR6 | Settings II | 快捷鍵 (recorder over `EventControllerKey`, both registries, conflicts, slot-key-set picker), 詞庫來源 (教典 subcollections in an `adw::ExpanderRow`) | pending |
-| PR7 | Settings III | 自訂詞庫 (`ColumnView` table, paging, CRUD dialog, CSV via `FileDialog`, delete all, clear learning — background work on a `gio` task with the 400 ms busy card), unlisted 辭典搜尋 + external lookup URLs; headless pane-mount test | pending |
-| PR8 | Packaging + release | `make -C linux install / uninstall`, `.desktop` + icon (`tools/desktop/make-app-icon.swift` PNG set), `cargo-deb` metadata, CI `.deb` artifact on release publish, `scripts/stage-desktop.sh` dispatch, `docs/architecture/linux-release.md`, `desktop-release.md` + `system-overview.md` + README rows, `S74` dogfood item | pending |
+| PR4 | Fcitx5 shell | `taigi-linux-core` extracted from the IBus crate (runtime, session, executor `Emit`, selection; IBus crate rebased on it); `taigi-linux-ffi` staticlib + `taigikeyboard.h` C ABI with a header-compiles test; `linux/fcitx5/` CMake addon (`InputMethodEngineV3`, client preedit, `CommonCandidateList`, commit, delete-surrounding, reset / deactivate, addon + inputmethod `.conf`); `linux/Makefile` `build-fcitx5` / install into `${libdir}/fcitx5`; CI builds the addon | pending — Codex skipped (quota) |
+| PR5 | Chrome, both shells | status-area actions (Fcitx5) / properties menu (IBus) per § L6, settings live reload (§ L9), global chords + toggle latch, symbol picker + Telex guide as candidate lists, mode label (`subModeLabelImpl` / property symbol), `run-engine` dev target | pending |
+| PR6 | Settings I | `taigikeyboard-settings`: `adw` shell (sidebar, pane routing, `--pane`, single instance, display language, live tick), 一般, 外觀 (Linux row set), 關於 | pending |
+| PR7 | Settings II | 快捷鍵 (recorder over `EventControllerKey`, both registries, conflicts, slot-key-set picker), 詞庫來源 (教典 subcollections in an `adw::ExpanderRow`) | pending |
+| PR8 | Settings III | 自訂詞庫 (`ColumnView` table, paging, CRUD dialog, CSV via `FileDialog`, delete all, clear learning — background work on a `gio` task with the 400 ms busy card), unlisted 辭典搜尋 + external lookup URLs; headless pane-mount test | pending |
+| PR9 | Packaging + release | `make -C linux install / uninstall` (both shells), `.desktop` + icon (`tools/desktop/make-app-icon.swift` PNG set), `cargo-deb` metadata, CI `.deb` artifact on release publish, `scripts/stage-desktop.sh` dispatch, `docs/architecture/linux-release.md`, `desktop-release.md` + `system-overview.md` + README rows, `S74` dogfood item (VM: KDE Plasma + Fcitx5 first, then GNOME + IBus) | pending |
 
-Dependencies: PR1 → PR2 → PR3 → PR4; PR2 → PR5 → PR6 → PR7; PR8 last. PR3/PR4 and
-PR5–PR7 are parallelisable after PR2.
+Dependencies: PR1 → PR2 → PR3 → PR4 → PR5; PR2 → PR6 → PR7 → PR8; PR9 last. PR4/PR5 and
+PR6–PR8 are parallelisable after PR3.
 
 ## Shared-surface coordination register
 
@@ -396,8 +447,7 @@ PR5–PR7 are parallelisable after PR2.
 
 **Deliberately not adopted**: an own GTK candidate popup (unpositionable under Wayland;
 no IBus engine does it); libibus FFI bindings (C toolchain on the host, GObject
-ownership across FFI, and nothing the D-Bus surface lacks); Fcitx5 addon in this slice
-(C++, not host-buildable); Qt settings window (second toolkit; the IBus panel is GTK);
+ownership across FFI, and nothing the D-Bus surface lacks); (2026-09-22 only) Fcitx5 addon — reversed 2026-09-23, see L1; Qt settings window (second toolkit; the IBus panel is GTK);
 in-app update download (§ L10); Flatpak (cannot host an IBus engine); a `linux/` crate
 that depends on `../windows/crates/…` (wrong shape, § L2). **YAGNI**: surrounding-text
 capability (nothing in the key table reads the document); handwriting methods answer
