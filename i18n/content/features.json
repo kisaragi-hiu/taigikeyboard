@@ -229,7 +229,7 @@
         "android": "ic_translate"
       },
       "summary": {
-        "hanji": "「括號標註」予漢字佮羅馬字做伙輸出。「自動閬一个縫」佇漢羅合用 ê 時陣自動處理空格。",
+        "hanji": "「括號標註」予漢字佮羅馬字做伙輸出。「自動閬一格」佇漢羅合用 ê 時陣自動處理空格。",
         "tailo": "\"Kuat-hō phiau-tsù\" hōo hàn-jī kah lô-má-jī tsò-hué su-tshut.\"tsū-tōng làng tsi̍t ê phāng\" tī hàn-lô ha̍h-īng ê sî-sūn tsū-tōng tshú-lí khang-keh.",
         "poj": "\"Koat-hō phiau-chù\" hō͘ hàn-jī kah lô-má-jī chò-hóe su-chhut.\"chū-tōng làng chi̍t ê phāng\" tī hàn-lô ha̍h-ēng ê sî-sūn chū-tōng chhú-lí khang-keh.",
         "en": "“Bracket annotation” outputs the Hanji and romanization together. “Auto-space” handles spacing automatically when mixing Hanji and romanization.",
@@ -281,7 +281,7 @@
         },
         {
           "text": {
-            "hanji": "寫漢羅合用文 ê 時陣，使用「漢 / 羅」揤鈕隨時切換，配合「自動閬一个縫」開關，羅馬字 ê 空格縫嘛會自動處理，免家己加空格。",
+            "hanji": "寫漢羅合用文 ê 時陣，使用「漢 / 羅」揤鈕隨時切換，配合「自動閬一格」開關，羅馬字 ê 空格縫嘛會自動處理，免家己加空格。",
             "tailo": "Siá hàn-lô ha̍h-īng bûn ê sî-sūn, sú-iōng\"hàn / lô\" tshi̍h-liú suî-sî tshiat-uānn, phuè-ha̍p\"tsū-tōng làng tsi̍t ê phāng\" khai-kuan, lô-má-jī ê khang-keh phāng mā ē tsū-tōng tshú-lí, bián ka-kī ka khang-keh.",
             "poj": "Siá hàn-lô ha̍h-ēng bûn ê sî-sūn, sú-iōng\"hàn / lô\" chhi̍h-liú sûi-sî chhiat-ōaⁿ, phòe-ha̍p\"chū-tōng làng chi̍t ê phāng\" khai-koan, lô-má-jī ê khang-keh phāng mā ē chū-tōng chhú-lí, bián ka-kī ka khang-keh.",
             "en": "When writing mixed Hanji-romanization text, use the “漢 / 羅” button to switch anytime, and with the “Auto-space” toggle the spacing around romanization is handled automatically, so you don't have to add spaces yourself.",
@@ -458,7 +458,7 @@
         },
         {
           "text": {
-            "hanji": "拍羅馬字時，空格縫佮連劃愛家己揤。若「自動閬一个縫」開關有切開，空格縫會自動加，免家己加。",
+            "hanji": "拍羅馬字時，空格縫佮連劃愛家己揤。若「自動閬一格」開關有切開，空格縫會自動加，免家己加。",
             "tailo": "Phah lô-má-jī sî, khang-keh phāng kah liân-ue̍h ài ka-kī tshi̍h. Nā\"tsū-tōng làng tsi̍t ê phāng\" khai-kuan ū tshiat-khui, khang-keh phāng ē tsū-tōng ka, bián ka-kī ka.",
             "poj": "Phah lô-má-jī sî, khang-keh phāng kah liân-oe̍h ài ka-kī chhi̍h. Nā\"chū-tōng làng chi̍t ê phāng\" khai-koan ū chhiat-khui, khang-keh phāng ē chū-tōng ka, bián ka-kī ka.",
             "en": "When typing romanization, you have to enter spaces and hyphens yourself. If the “Auto-space” toggle is on, spaces are added automatically, so you don't have to.",

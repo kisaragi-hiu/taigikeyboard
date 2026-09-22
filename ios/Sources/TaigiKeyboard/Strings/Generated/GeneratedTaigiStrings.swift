@@ -173,7 +173,7 @@ enum GeneratedTaigiStrings {
         .settingsLiteralRomanCandidate: "當咧拍的字囥第一个",
         .settingsLiteralRomanCandidateInfo: "候選詞列第一格顯示你拍 ê 羅馬字，點揤抑是揤 Enter 送出。關閉了後干焦會當用 Enter 送出。",
         .settingsAutoCapitalization: "自動大本字",
-        .settingsAutoSpace: "自動閬一个縫",
+        .settingsAutoSpace: "自動閬一格",
         .settingsKeyboardSectionTitle: "齒盤設定",
         .settingsToolbarAutoCollapse: "選字後自動收合工具列",
         .settingsToolbarAutoCollapseInfo: "選字了後工具列會自動合起來，予齒盤面頂空間較大。",

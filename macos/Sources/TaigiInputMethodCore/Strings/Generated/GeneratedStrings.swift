@@ -180,7 +180,7 @@ enum GeneratedStrings {
         .settingsToneInputScheme: "聲調拍法",
         .settingsToneSchemeStandard: "數字調",
         .settingsToneSchemeTelex: "Telex",
-        .settingsAutoSpace: "自動閬一个縫",
+        .settingsAutoSpace: "自動閬一格",
         .settingsNasalMarkerUppercase: "大本字時 ⁿ 轉做 ᴺ",
         .themeCustomFont: "字型設定",
         .themeCandidateTextSize: "候選詞大細",
