@@ -54,6 +54,7 @@ User-writable state stays **native SQLite on each platform** (`status=wont_migra
 | Android | `android/` `TaigiKeyboard : LifecycleInputMethodService` | `RustEngineBridge.kt` + `<Area>Bridge.kt` → `android-jni` | Compose smartbar | Compose activities | `gradlew :app:testDebugUnitTest` |
 | macOS | `macos/` SwiftPM `TaigiInputMethodCore` (`TaigiInputController : IMKInputController`) | `RustEngineBridge+<Area>.swift` → `swift-ffi` (universal xcframework) | native `NSPanel` candidate window (roadmap D11) | SwiftUI settings window | `make -C macos test` / `install` |
 | Windows | `windows/crates/taigi-windows-tsf` (COM TIP) over `taigi-desktop-core` / `-storage` / `-platform` / `-settings` / `-update` | `taigi-desktop-core::engine` → `dispatch` (path dep, no FFI) | DirectWrite candidate window (`tsf/src/ui/`) | WinUI 3 settings window | `make windows-check` (host) + box build (`windows-release.md`) |
+| Linux | `linux/crates/taigikeyboard-ibus` (IBus engine over D-Bus, `zbus`) over `taigi-desktop-core` / `-storage` + `taigi-linux-platform` | `taigi-desktop-core::engine` → `dispatch` (path dep, no FFI) | the IBus daemon's lookup table (`UpdateLookupTable`) | GTK 4 + libadwaita settings window (`taigikeyboard-settings`, in flight) | `make linux-check` (host) + `linux-build.yml` (Ubuntu runner, ibus smoke) |
 
 ---
 

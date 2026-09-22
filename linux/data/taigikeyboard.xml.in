@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The IBus component registration for Taigi Keyboard. Installed as
+  @PREFIX@/share/ibus/component/taigikeyboard.xml (linux/Makefile renders
+  @PREFIX@ and @VERSION@); ibus-daemon reads the directory at start and
+  spawns <exec> on demand. Design record: docs/architecture/linux-roadmap.md L1.
+-->
+<component>
+  <name>org.freedesktop.IBus.TaigiKeyboard</name>
+  <description>Taigi Keyboard input method engine</description>
+  <exec>@PREFIX@/libexec/ibus-engine-taigikeyboard --ibus</exec>
+  <version>@VERSION@</version>
+  <author>Taigi Keyboard</author>
+  <license>Apache-2.0</license>
+  <homepage>https://taigikeyboard.tw</homepage>
+  <textdomain>taigikeyboard</textdomain>
+  <engines>
+    <engine>
+      <name>taigikeyboard</name>
+      <language>nan</language>
+      <license>Apache-2.0</license>
+      <author>Taigi Keyboard</author>
+      <icon>taigikeyboard</icon>
+      <layout>us</layout>
+      <longname>台語齒盤</longname>
+      <description>Taiwanese (Tâi-gí) — TL / POJ romanization, Hanji candidates</description>
+      <symbol>台</symbol>
+      <rank>0</rank>
+      <setup>@PREFIX@/bin/taigikeyboard-settings</setup>
+    </engine>
+  </engines>
+</component>

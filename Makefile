@@ -10,7 +10,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt lint hooks scan-secrets scan-secrets-full \
         i18n i18n-test \
         macos-release desktop-release desktop-announce version-mobile version-desktop \
-        windows-check windows-release desktop-check \
+        windows-check windows-release desktop-check linux-check \
         update-submodules
 
 # Default — regenerate platform proto, full clean, rebuild iOS xcframework
@@ -117,6 +117,13 @@ windows-check:
 # link): native tests + clippy + fmt + i18n check, any host.
 desktop-check:
 	$(MAKE) -C desktop check
+
+# The Linux input method's host gate (docs/architecture/linux-roadmap.md L12):
+# native tests + clippy for `linux/` (zbus + GTK build on macOS), a cross
+# build of the engine for x86_64-unknown-linux-gnu via cargo-zigbuild, fmt,
+# i18n check. Compilation proof only; behaviour is the dogfood run-book's.
+linux-check:
+	$(MAKE) -C linux check
 
 # Stage BOTH desktop installers on this version's draft release: the package
 # here, the installer on the Windows box over ssh (scripts/stage-desktop.sh).
@@ -243,6 +250,7 @@ help:
 	@echo "  make desktop-release    Stage both desktop installers on the draft (Mac + the box over ssh)"
 	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"
 	@echo "  make desktop-check      Native gate for the desktop-shared crates (desktop/)"
+	@echo "  make linux-check        Host-side compile + test gate for the Linux input method"
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
 	@echo "  make windows-release    Build + package + stage the installer on the draft (on Windows)"
 	@echo "                          — add RELEASE_FLAGS=--skip-sign until a certificate exists"

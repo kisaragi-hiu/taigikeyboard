@@ -4,8 +4,8 @@ paths: ["linux/**", "desktop/**"]
 
 # Linux Project Guidelines
 
-Mandatory rules for the Linux input method (`linux/`: IBus engine + settings window in Rust
-over `desktop/` + the shared engine). Read before modifying Linux or `desktop/` code. Design
+Mandatory rules for the Linux input method (`linux/`: Fcitx5 addon (primary, C++ over a Rust C ABI)
++ IBus engine (second, pure Rust) + settings window, over `desktop/` + the shared engine). Read before modifying Linux or `desktop/` code. Design
 record: `docs/architecture/linux-roadmap.md`.
 
 ## Authored without a Linux machine
@@ -13,8 +13,9 @@ record: `docs/architecture/linux-roadmap.md`.
 - The platform was written blind (USER 2026-09-22), like Windows. Every PR passes
   `make linux-check` on the macOS host: `cargo test` in `desktop/` (native), `cargo clippy
   --workspace --all-targets -- -D warnings` in `linux/` (native: `zbus` + gtk4-rs + libadwaita
-  from Homebrew), `cargo check --target x86_64-unknown-linux-gnu` for the engine + platform
-  crates, `cargo fmt -- --check`, the i18n check. The CI job (`linux-build.yml`) adds the real
+  from Homebrew), a real cross build of the engine for `x86_64-unknown-linux-gnu` via `cargo zigbuild`
+  (`brew install zig cargo-zigbuild`; plain `cargo check` stops at the bundled SQLite's C build),
+  `cargo fmt -- --check`, the i18n check. The CI job (`linux-build.yml`) adds the real
   Linux build, the daemon smoke and `cargo-deb`. These gates prove compilation and the wire's
   first contract, not behaviour — behaviour is the dogfood run-book's job. Never claim "works
   on Linux".
@@ -45,8 +46,14 @@ record: `docs/architecture/linux-roadmap.md`.
   touches the candidate window only after the edit session returned.
 - Every D-Bus method body runs under `catch_unwind`; a panic answers `false` / `()` and logs.
   The daemon respawns a dead engine and the user loses the composition.
-- No `libibus`, no GObject, no C dependency in `linux/`: the crates must build on the macOS host
-  and cross-check for `x86_64-unknown-linux-gnu`.
+- No `libibus`, no GObject, no C dependency in the Rust crates of `linux/`: they must build on the
+  macOS host and cross-build for `x86_64-unknown-linux-gnu`. The ONE crate allowed `unsafe` is
+  `taigi-linux-ffi` (the C ABI the Fcitx5 addon calls), one `// SAFETY:` line per call,
+  `catch_unwind` at every exported function. The Fcitx5 addon itself (`linux/fcitx5/`, C++) is
+  built only in the VM and on the Ubuntu CI job; it composes nothing — every effect comes back
+  from the FFI as the same `Emit` list the IBus shell replays (roadmap L1, 2026-09-23).
+- Two shells, one contract: a behaviour that differs between the Fcitx5 and IBus shells is a shell
+  bug. Fix it in `taigi-linux-core`, never in one shell.
 
 ## Settings window (GTK 4 + libadwaita)
 
