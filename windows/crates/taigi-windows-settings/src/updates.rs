@@ -13,7 +13,7 @@ use crate::settings_writer::SettingsWriter;
 use crate::work::PendingWork;
 use std::path::PathBuf;
 use std::sync::Arc;
-use taigi_windows_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_windows_update::{
     checker, toast, Admission, HttpTransport, Outcome, UpdateInstallation, UpdateManifest,
 };
@@ -93,7 +93,7 @@ pub struct UpdateState {
 /// such folder ⇒ no in-app install (never a roaming stage).
 pub fn local_data_directory() -> Option<PathBuf> {
     std::env::var_os("LOCALAPPDATA")
-        .map(|local| PathBuf::from(local).join(taigi_windows_storage::APPLICATION_FOLDER_NAME))
+        .map(|local| PathBuf::from(local).join(taigi_desktop_storage::APPLICATION_FOLDER_NAME))
 }
 
 pub fn now_ms() -> i64 {
@@ -272,7 +272,7 @@ pub fn open_download_page(manifest: &UpdateManifest) -> Option<PageMessage> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use taigi_windows_storage::{LiveSettings, SettingsFileStore};
+    use taigi_desktop_storage::{LiveSettings, SettingsFileStore};
 
     fn writer(directory: &std::path::Path) -> SettingsWriter {
         SettingsWriter::new(
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn the_manual_alert_names_the_version_and_offers_the_right_first_button() {
-        let strings = StringResolver::new(taigi_windows_core::strings::DisplayLanguage::Hanji);
+        let strings = StringResolver::new(taigi_desktop_core::strings::DisplayLanguage::Hanji);
         let available = ManualOutcome {
             outcome: Outcome::UpdateAvailable(manifest()),
             installs_in_app: false,

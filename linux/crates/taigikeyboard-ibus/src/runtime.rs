@@ -1,0 +1,249 @@
+//! The per-process state every engine object shares: the live settings, the
+//! user-data stores, the engine's lexicon, and the one composing
+//! coordinator (roadmap L13). Port of `taigi-windows-tsf::runtime`, with
+//! the XDG directories in place of `%APPDATA%` and no AppContainer
+//! degradation — a Linux session without a home directory has no user to
+//! learn from, and the stores then run as `NoStores` the same way.
+//!
+//! Lazy by contract: `probe` only resolves paths and reads the settings
+//! file; the stores open and the lexicon loads on the first key an engine
+//! CONSUMES (`prepare_for_first_key`), never at `CreateEngine`.
+
+use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
+use taigi_desktop_core::composing::{
+    AssociationSink, ComposingManager, ComposingSessionCoordinator, ContextToken,
+    CustomDictionarySource, FrequencySource, LearnedPhraseSource, NextWordLearner, NoStores,
+    SystemClock,
+};
+use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
+use taigi_desktop_core::engine::{lexicon_install, LexiconInstallStats};
+use taigi_desktop_core::keys::ShortcutConflicts;
+use taigi_desktop_core::settings::{SettingsDocument, SettingsProvider, StaticSettingsProvider};
+use taigi_desktop_storage::{created, LiveSettings, SettingsFileStore, UserDataStores};
+use taigi_linux_platform::{dictionaries_directory, UserDirectories};
+
+type StoreSeams = (
+    Box<dyn FrequencySource>,
+    Box<dyn CustomDictionarySource>,
+    Box<dyn LearnedPhraseSource>,
+    Box<dyn AssociationSink>,
+);
+
+pub struct Runtime {
+    pub settings: Arc<dyn SettingsProvider + Send + Sync>,
+    settings_store: Option<SettingsFileStore>,
+    stores: Option<UserDataStores>,
+    dictionaries: PathBuf,
+    first_key: OnceLock<FirstKeySetup>,
+    /// The one composing engine driver per process, keyed by context token
+    /// (one per engine object). Held for the length of one key, never
+    /// across a signal emission.
+    coordinator: OnceLock<Mutex<ComposingSessionCoordinator>>,
+    next_token: AtomicUsize,
+}
+
+/// What the first handled key set up, kept so later keys skip it.
+#[derive(Clone, Copy, Debug)]
+pub struct FirstKeySetup {
+    pub lexicon: Option<LexiconInstallStats>,
+}
+
+impl Runtime {
+    /// Resolves the user's directories and reads the settings file. Nothing
+    /// else is touched.
+    pub fn probe() -> Self {
+        let directories = UserDirectories::resolve();
+        let config = directories
+            .as_ref()
+            .and_then(|d| match created(d.config.clone()) {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    log::warn!("runtime.no_config_directory error={error} — shipped defaults");
+                    None
+                }
+            });
+        let data = directories
+            .as_ref()
+            .and_then(|d| match created(d.data.clone()) {
+                Ok(path) => Some(path),
+                Err(error) => {
+                    log::warn!("runtime.no_data_directory error={error} — no learning");
+                    None
+                }
+            });
+        if directories.is_none() {
+            log::warn!("runtime.no_user_directories — HOME unset; shipped defaults, no learning");
+        }
+        let settings_store = config
+            .as_ref()
+            .map(|directory| SettingsFileStore::new(directory));
+        let settings: Arc<dyn SettingsProvider + Send + Sync> = match &settings_store {
+            Some(store) => Arc::new(LiveSettings::new(store.clone())),
+            None => Arc::new(StaticSettingsProvider::new(SettingsDocument::default())),
+        };
+        let stores = data.map(UserDataStores::new);
+        let dictionaries = dictionaries_directory();
+        log::info!(
+            "runtime.probe settings={} learning={} dictionaries={}",
+            settings_store.is_some(),
+            stores.is_some(),
+            dictionaries.display()
+        );
+        Self {
+            settings,
+            settings_store,
+            stores,
+            dictionaries,
+            first_key: OnceLock::new(),
+            coordinator: OnceLock::new(),
+            next_token: AtomicUsize::new(1),
+        }
+    }
+
+    /// A fresh token for a new engine object — a counter, never an address
+    /// (`ComposingSessionCoordinator` header).
+    pub fn allocate_token(&self) -> ContextToken {
+        ContextToken(self.next_token.fetch_add(1, Ordering::Relaxed))
+    }
+
+    /// The coordinator only if a key has already built it — for lifecycle
+    /// callbacks that must not bring the engine up (focus loss, destroy).
+    pub fn coordinator_if_built(&self) -> Option<&Mutex<ComposingSessionCoordinator>> {
+        self.coordinator.get()
+    }
+
+    /// The coordinator, locked. Every D-Bus method on the engine runs in
+    /// order on one executor (`spawn = false`), so the lock is never
+    /// contended by a re-entrant call; a poisoned lock is recovered because
+    /// a panic inside one key must not end the engine for the session.
+    pub fn lock_coordinator(&self) -> MutexGuard<'_, ComposingSessionCoordinator> {
+        self.coordinator()
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    /// The coordinator, built on first use over the stores this process
+    /// has (`NoStores` where it has none). `prepare_for_first_key` must
+    /// have run.
+    pub fn coordinator(&self) -> &Mutex<ComposingSessionCoordinator> {
+        self.coordinator.get_or_init(|| {
+            let settings: Arc<dyn SettingsProvider> = Arc::clone(&self.settings) as _;
+            let (frequency, custom, learned, association): StoreSeams = match &self.stores {
+                Some(stores) => (
+                    Box::new(Arc::clone(&stores.frequency)),
+                    Box::new(Arc::clone(&stores.custom_dictionary)),
+                    Box::new(Arc::clone(&stores.learned_phrases)),
+                    Box::new(Arc::clone(&stores.association)),
+                ),
+                None => (
+                    Box::new(NoStores),
+                    Box::new(NoStores),
+                    Box::new(NoStores),
+                    Box::new(NoStores),
+                ),
+            };
+            let learner = NextWordLearner::new(association, Box::new(SystemClock));
+            let manager = ComposingManager::new(
+                settings,
+                frequency,
+                custom,
+                learned,
+                learner,
+                Box::new(SystemClock),
+                1,
+            );
+            Mutex::new(ComposingSessionCoordinator::new(manager))
+        })
+    }
+
+    /// Everything the first CONSUMED key needs, once per process: the
+    /// lexicon installed from the dictionaries directory, the stores
+    /// opened (seed + key re-derivation behind the open, as on macOS
+    /// `openUserDataStores`), the shortcut registries reconciled. Idempotent.
+    pub fn prepare_for_first_key(&self) -> &FirstKeySetup {
+        self.first_key.get_or_init(|| {
+            let lexicon = self.install_lexicon();
+            if let Some(stores) = &self.stores {
+                stores.open();
+                let custom_dictionary = Arc::clone(&stores.custom_dictionary);
+                std::thread::Builder::new()
+                    .name("taigi-custom-dictionary-launch".into())
+                    .spawn(move || {
+                        if let Err(error) = custom_dictionary.rederive_search_keys_if_needed() {
+                            log::error!("custom_dictionary.rederive_failed error={error}");
+                        }
+                        if let Err(error) = custom_dictionary.seed_if_empty() {
+                            log::error!("custom_dictionary.seed_failed error={error}");
+                        }
+                    })
+                    .ok();
+            }
+            self.reconcile_shortcuts();
+            FirstKeySetup { lexicon }
+        })
+    }
+
+    /// Loads the dictionary data the package installed. Failures are logged
+    /// and left alone: an engine with no lexicon types romanization and
+    /// suggests nothing.
+    fn install_lexicon(&self) -> Option<LexiconInstallStats> {
+        let artifacts = match DictionaryArtifacts::locate(&self.dictionaries) {
+            Ok(artifacts) => artifacts,
+            Err(error) => {
+                log::error!(
+                    "lexicon.not_installed directory={} error={error}",
+                    self.dictionaries.display()
+                );
+                return None;
+            }
+        };
+        let stats = lexicon_install(&artifacts, dictionary_version());
+        match &stats {
+            Some(stats) => log::info!(
+                "lexicon.installed records={} prefix_entries={} version={}",
+                stats.dictionary_record_count,
+                stats.prefix_index_entry_count,
+                dictionary_version()
+            ),
+            None => log::error!("lexicon.install_returned_nothing"),
+        }
+        stats
+    }
+
+    /// The launch-time pass over both shortcut registries; writes only when
+    /// something changed.
+    fn reconcile_shortcuts(&self) {
+        let Some(store) = &self.settings_store else {
+            return;
+        };
+        if let Err(error) = store.update(ShortcutConflicts::resolve_across_registries) {
+            log::error!("shortcuts.reconcile_failed error={error}");
+        }
+    }
+}
+
+/// The dictionary stamp: the desktop train's version in the macOS bundle
+/// shape (`taigi-windows-tsf::runtime::dictionary_version`).
+pub fn dictionary_version() -> u32 {
+    taigi_desktop_core::dictionary_artifacts::dictionary_version(env!("CARGO_PKG_VERSION"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_stamp_is_this_crate_version_in_the_macos_bundle_shape() {
+        let mut parts = env!("CARGO_PKG_VERSION")
+            .split('.')
+            .map(|part| part.parse::<u32>().expect("numeric"));
+        let (major, minor, patch) = (
+            parts.next().unwrap(),
+            parts.next().unwrap(),
+            parts.next().unwrap(),
+        );
+        assert_eq!(dictionary_version(), major * 10_000 + minor * 100 + patch);
+    }
+}

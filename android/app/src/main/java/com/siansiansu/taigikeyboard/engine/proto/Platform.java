@@ -46,6 +46,10 @@ public enum Platform
    * <code>PLATFORM_WINDOWS = 4;</code>
    */
   PLATFORM_WINDOWS(4),
+  /**
+   * <code>PLATFORM_LINUX = 5;</code>
+   */
+  PLATFORM_LINUX(5),
   UNRECOGNIZED(-1),
   ;
 
@@ -69,6 +73,10 @@ public enum Platform
    * <code>PLATFORM_WINDOWS = 4;</code>
    */
   public static final int PLATFORM_WINDOWS_VALUE = 4;
+  /**
+   * <code>PLATFORM_LINUX = 5;</code>
+   */
+  public static final int PLATFORM_LINUX_VALUE = 5;
 
 
   @java.lang.Override
@@ -96,6 +104,7 @@ public enum Platform
       case 2: return PLATFORM_ANDROID;
       case 3: return PLATFORM_MACOS;
       case 4: return PLATFORM_WINDOWS;
+      case 5: return PLATFORM_LINUX;
       default: return null;
     }
   }

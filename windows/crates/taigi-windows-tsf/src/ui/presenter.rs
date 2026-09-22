@@ -18,9 +18,9 @@ use super::window::{PopupWindow, WindowHandler, WindowRef};
 use crate::text_service::TextService;
 use std::cell::RefCell;
 use std::rc::{Rc, Weak};
-use taigi_windows_core::composing::ContextToken;
-use taigi_windows_core::keys::CandidateNavigation;
-use taigi_windows_core::settings::SettingsDocument;
+use taigi_desktop_core::composing::ContextToken;
+use taigi_desktop_core::keys::CandidateNavigation;
+use taigi_desktop_core::settings::SettingsDocument;
 use windows::core::Interface;
 use windows::Win32::Foundation::RECT;
 use windows::Win32::UI::TextServices::{

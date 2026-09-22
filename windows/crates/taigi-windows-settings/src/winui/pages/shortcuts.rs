@@ -11,12 +11,12 @@
 use super::reset_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, RecorderTarget, ResetScope, SettingsWindow};
-use taigi_windows_core::candidates::HorizontalPageLayout;
-use taigi_windows_core::keys::{
+use taigi_desktop_core::candidates::HorizontalPageLayout;
+use taigi_desktop_core::keys::{
     rejection_message_key, CandidateSlotKeySet, ComposingAction, ComposingKeyBindings,
     ComposingKeyChord, KeyModifiers, ShortcutAction, CARET_CHORD_MODIFIERS, WIDTH_FLIP_MODIFIERS,
 };
-use taigi_windows_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
 /// Upstream's width for the same control (`RecorderCocoa`), so the rows do

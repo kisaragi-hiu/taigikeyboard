@@ -17,10 +17,10 @@ use super::theme::{SystemTheme, Theme};
 use super::window::{monitor_at, MonitorArea, PopupWindow, WindowHandler, WindowRef, BASE_DPI};
 use std::cell::RefCell;
 use std::rc::Rc;
-use taigi_windows_core::candidates::{FontSpec, TextMeasurer};
-use taigi_windows_core::composing::ContextToken;
-use taigi_windows_core::keys::TelexGuideRow;
-use taigi_windows_core::settings::{AppearanceMode, CandidateFontChoice, CandidateFontSelection};
+use taigi_desktop_core::candidates::{FontSpec, TextMeasurer};
+use taigi_desktop_core::composing::ContextToken;
+use taigi_desktop_core::keys::TelexGuideRow;
+use taigi_desktop_core::settings::{AppearanceMode, CandidateFontChoice, CandidateFontSelection};
 use windows::Win32::Foundation::{POINT, RECT};
 use windows::Win32::Graphics::Direct2D::Common::{D2D1_COLOR_F, D2D_SIZE_U};
 use windows::Win32::Graphics::Direct2D::{

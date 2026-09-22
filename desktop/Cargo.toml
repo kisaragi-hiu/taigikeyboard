@@ -1,0 +1,55 @@
+# The desktop-shared crates — the pure Rust the Windows (`windows/`) and Linux
+# (`linux/`) input methods both consume by path, the way every platform consumes
+# `engine/`. Its own workspace because a path dependency must find its own
+# root for `version.workspace` / `[lints] workspace = true`; deliberately NOT a
+# member of `engine/` (that workspace pins Apple / Android targets and is the
+# engine's dependency-direction boundary) nor of either shell workspace (each
+# would then own crates the other links).
+#
+# Version = the desktop release train's (macOS + Windows + Linux share one
+# number); `make version-desktop x.y.z` at the repo root writes it here
+# alongside `windows/Cargo.toml`, the source of truth.
+# Design record: docs/architecture/linux-roadmap.md L2 (the move),
+# docs/architecture/windows-roadmap.md W1 (the split by dependency class).
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/taigi-desktop-core",
+    "crates/taigi-desktop-storage",
+]
+
+[workspace.package]
+version = "3.6.9"
+edition = "2021"
+rust-version = "1.95"
+license = "Apache-2.0"
+repository = "https://github.com/taigikeyboard/taigikeyboard"
+publish = false
+
+[workspace.dependencies]
+# Engine crates, by path. `dispatch` is the one entry point a desktop shell
+# calls; `protos` gives the prost types the envelope is built from.
+dispatch = { path = "../engine/dispatch" }
+protos = { path = "../engine/protos" }
+prost = "0.14"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+# `bundled` compiles SQLite in: no system library to find on a user's machine,
+# one version everywhere, and the same WAL / UPSERT capability floor on every
+# desktop the input method runs on.
+rusqlite = { version = "0.40", features = ["bundled"] }
+uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
+
+taigi-desktop-core = { path = "crates/taigi-desktop-core" }
+
+[workspace.lints.rust]
+# Both crates are pure by contract; the shells that need `unsafe` live in
+# their own workspaces and override it there with a JUSTIFICATION.
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

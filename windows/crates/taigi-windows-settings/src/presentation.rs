@@ -4,8 +4,8 @@
 //! today, the WinUI one from roadmap W17 — so neither owns them.
 
 use std::sync::OnceLock;
-use taigi_windows_core::settings::{keys, SettingsDocument, SettingsPane};
-use taigi_windows_core::strings::{DisplayLanguage, StringKey, StringResolver};
+use taigi_desktop_core::settings::{keys, SettingsDocument, SettingsPane};
+use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 
 /// `AboutPage.sponsorURL`.
 pub const SPONSOR_URL: &str = "https://p.ecpay.com.tw/AA663DE";

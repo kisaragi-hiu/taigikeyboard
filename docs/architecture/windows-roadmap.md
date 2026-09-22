@@ -48,13 +48,13 @@ Host app (Notepad / Word / Chrome / …) — one process each, possibly several 
 │  CandidateWindow (Win32 popup, Direct2D + DirectWrite, 3 layouts) + UI-less        │
 │    ITfCandidateListUIElement contract · ModeFlash                                  │
 ├────────────────────────────────────────────────────────────────────────────────────┤
-│ taigi-windows-core   (pure, host-testable, unsafe_code = forbid, NO C deps)        │
+│ taigi-desktop-core   (pure, host-testable, unsafe_code = forbid, NO C deps)        │
 │  ComposingSessionCoordinator (per process, keyed by context token) →               │
 │  ComposingManager port (3-phase apply) · ComposingKeyIntent (7-tier table) ·       │
 │  candidate models (layouts / metrics<TextMeasurer> / positioning) · AutoSpace ·    │
 │  FullWidthPunctuation · shortcuts model · settings MODEL + revision · NextWord      │
 │  learner · engine bridge (prost envelope → dispatch::process_request) · i18n       │
-│ taigi-windows-storage (rusqlite: freq v2 / assoc v6 / custom v3 · settings.json   │
+│ taigi-desktop-storage (rusqlite: freq v2 / assoc v6 / custom v3 · settings.json   │
 │  file store · CSV)          taigi-windows-update (manifest · download · Authenticode)│
 ├────────────────────────────────────────────────────────────────────────────────────┤
 │ engine/ crates by path (dispatch, protos, composing, lexicon, phonetics, nextword)  │
@@ -87,9 +87,9 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   `Request` — the identical envelope contract `engine/swift-ffi/src/lib.rs:41-54` and
   `macos/.../Engine/RustEngineBridge.swift:97-142` speak. **Codex: CONFIRM WITH
   CHANGES — split the shell-independent code by dependency class**, so the host-native
-  test and MSVC-check promises hold: `taigi-windows-core` (pure models, composing
+  test and MSVC-check promises hold: `taigi-desktop-core` (pure models, composing
   orchestration, proto bridge, candidate geometry, shortcut semantics, settings model;
-  `unsafe_code = forbid`, no C deps), `taigi-windows-storage` (rusqlite stores,
+  `unsafe_code = forbid`, no C deps), `taigi-desktop-storage` (rusqlite stores,
   settings file store, CSV), `taigi-windows-update` (manifest, download, Authenticode),
   `taigi-windows-tsf` (cdylib `TaigiKeyboard.dll`, `unsafe` with `// SAFETY:` per
   `rust-ffi-safety.md` §3), `taigi-windows-settings` (bin `TaigiKeyboardSettings.exe`).
@@ -209,7 +209,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   composition (the auto-space swap, full-width punctuation, the bare 漢羅 key), while the global
   Ctrl+Alt chords keep working. Ported from 新酷音 (`references/PIME/python/input_methods/
   chewing/chewing_ime.py:701-737`, default on at `chewing_config.py:70`); recognition is pure
-  (`taigi-windows-core` `keys/shift_tap.rs`), auto-repeat is rejected by `lParam` bit 30, and the
+  (`taigi-desktop-core` `keys/shift_tap.rs`), auto-repeat is rejected by `lParam` bit 30, and the
   clock is `GetTickCount64` — NOT `GetMessageTime`, whose value is the last message this thread
   pulled off its queue and need not be the key a COM sink was handed (Codex F3). `OnTestKeyUp`
   answers TRUE for the eligible release, which is what asks TSF for the delivery; `OnKeyUp` runs
@@ -321,7 +321,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   mid-composition follows the macOS live-read invariant §11 (`SettingsStore.swift:18-33`)
   item by item (romanization dismisses candidates, script swap re-renders, etc.).
 - **W11 i18n** — `"windows"` joins `VALID_PLATFORMS`; a Rust emitter writes
-  `windows/crates/taigi-windows-core/src/strings/generated.rs` (`StringKey` enum +
+  `desktop/crates/taigi-desktop-core/src/strings/generated.rs` (`StringKey` enum +
   `resolve(key, lang)` with Hanji → raw-value fallback mirroring
   `StringResolver.swift:25-46`, format keys as functions). **Codex F10 + Core
   Principle #6 (direction-first): the `macos` namespace is renamed `desktop`** —
@@ -383,7 +383,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   `ThemeBrush::{CardBackground, CardStroke, Accent, …}`). Chosen over C# WinUI 3 (a
   fourth language, .NET on the box, SQLite/engine over FFI/IPC) and raw WinUI through
   `windows-bindgen` (XAML bootstrap, event tokens and tree diff by hand): zero FFI —
-  `taigi-windows-core/-storage/-update/-platform` are called directly. **Risk
+  `taigi-desktop-core/-storage/-update/-platform` are called directly. **Risk
   register**: git dependency pinned to the spike-proven commit
   `dc720b3674c46ceb82d758ed20959977b32e60a9` (crates.io holds only `0.0.0`
   placeholders); rust-version 1.95; API 3 months old — a bump is its own round on the
@@ -545,9 +545,9 @@ diff) and the W13 gates. Order revised per Codex F12.
 | PR0 | Admin | this roadmap + memory topic + `.claude/rules/windows-guidelines.md` + docs index | direct-to-main |
 | PR1a | Proto | `PLATFORM_WINDOWS` + `make build` regen (mechanical) | **Merged** #623 (`b7090482`) |
 | PR1b | i18n + tooling | `macos` → `desktop` namespace rename; `windows` platform + Rust emitter; `release_notes.py` Windows version writer/check; root Makefile `windows-check` / `windows-release` | **Merged** #624 (`d1fc40a5`) |
-| PR2 | Scaffold + core composing | `windows/` workspace + toolchain; `taigi-windows-core`: settings model + revision, engine bridge (envelope, AppConfig, generation, lexicon install, logger), `ComposingSessionCoordinator` keyed by context token, ComposingManager port (3-phase apply, effects, fetch protocol, commit outcomes), `ComposingKeyIntent` 7-tier table + `KeyEventSnapshot`; engine round-trip tests against `ios/Resources/Dictionaries`. **Locks**: word identity `(漢字, canonical TL)`, context ownership + handover, engine generation rules, effect ordering + failure semantics, settings revision | **Merged** #625 (`e4367ef6`) + #626 (`e557297a`) |
+| PR2 | Scaffold + core composing | `windows/` workspace + toolchain; `taigi-desktop-core`: settings model + revision, engine bridge (envelope, AppConfig, generation, lexicon install, logger), `ComposingSessionCoordinator` keyed by context token, ComposingManager port (3-phase apply, effects, fetch protocol, commit outcomes), `ComposingKeyIntent` 7-tier table + `KeyEventSnapshot`; engine round-trip tests against `ios/Resources/Dictionaries`. **Locks**: word identity `(漢字, canonical TL)`, context ownership + handover, engine generation rules, effect ordering + failure semantics, settings revision | **Merged** #625 (`e4367ef6`) + #626 (`e557297a`) |
 | PR3 | Core candidates | `CandidateMetrics<TextMeasurer>`, `HorizontalPageLayout`, `VerticalLayout`, `ExpandedGridLayout`, positioning, index labels, cell content, document text; macOS oracle numbers as tests | **Merged** #627 (`94b702cb`) |
-| PR4 | Storage + policies | `taigi-windows-storage`: rusqlite stores (freq v2 / assoc v6 / custom v3, byte-identical SQL, WAL + bounded busy handling, migration under `BEGIN IMMEDIATE`), `LearningCapacity`, CSV codec, seeds, settings file store (atomic replace); core: `AutoSpacePolicy` + attaching set, `FullWidthPunctuation`, `NextWordLearner`, shortcuts model (chords, registries, conflicts, recorder gate) | **Merged** #628 (`ff52af09`) |
+| PR4 | Storage + policies | `taigi-desktop-storage`: rusqlite stores (freq v2 / assoc v6 / custom v3, byte-identical SQL, WAL + bounded busy handling, migration under `BEGIN IMMEDIATE`), `LearningCapacity`, CSV codec, seeds, settings file store (atomic replace); core: `AutoSpacePolicy` + attaching set, `FullWidthPunctuation`, `NextWordLearner`, shortcuts model (chords, registries, conflicts, recorder gate) | **Merged** #628 (`ff52af09`) |
 | PR5a | TSF lifecycle | COM exports + class factory + symmetric registration + GUIDs; `TextService` activate/deactivate; thread-mgr / thread-focus sinks; context identity; lang-bar button + menu; settings reload; spawn settings exe; **smoke TIP that composes nothing** | **Merged** #629 (`b9361e72`) |
 | PR5b | TSF composing | key sink → snapshot → intent → manager inside sync edit sessions; composition start/update/commit per context; display attribute; preserved keys; password/read-only gating; handover | **Merged** #630 (`78514a8e`) |
 | PR6 | TSF UI | candidate window (D2D/DWrite renderer, 3 layouts, DPI scope, theme, mouse, private fonts, caret positioning + fallbacks, device loss) + UI-less `ITfCandidateListUIElement` contract; mode flash panel; unfold animation | **Merged** #631 (`7f481296`) |

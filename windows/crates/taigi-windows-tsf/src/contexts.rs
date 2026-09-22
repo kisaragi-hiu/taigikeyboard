@@ -11,7 +11,7 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
-use taigi_windows_core::composing::{CandidateSource, ContextToken};
+use taigi_desktop_core::composing::{CandidateSource, ContextToken};
 use windows::core::{IUnknown, Interface};
 use windows::Win32::UI::TextServices::{ITfComposition, ITfContext, ITfRange};
 

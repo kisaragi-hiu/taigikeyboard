@@ -26,13 +26,13 @@ use super::super::window::{Message as WindowMessage, SettingsWindow};
 use crate::presentation::PageMessage;
 use crate::settings_writer::SettingsWriter;
 use crate::winui::file_dialog;
-use taigi_windows_core::settings::{
+use taigi_desktop_core::settings::{
     set_stored_font_selection, stored_font_selection, CandidateFontChoice, SettingChoice,
     StoredFontSelection,
 };
-use taigi_windows_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::strings::{StringKey, StringResolver};
+use taigi_desktop_storage as storage;
 use taigi_windows_platform::font_file;
-use taigi_windows_storage as storage;
 use unicode_normalization::UnicodeNormalization;
 use windows_reactor::*;
 
@@ -595,7 +595,7 @@ mod tests {
     }
 
     fn strings() -> StringResolver {
-        StringResolver::new(taigi_windows_core::strings::DisplayLanguage::English)
+        StringResolver::new(taigi_desktop_core::strings::DisplayLanguage::English)
     }
 
     /// Every row of `model`, as the list would show them with no search.

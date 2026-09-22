@@ -3,7 +3,7 @@
 //! `taigi_windows_platform::key_translation` (roadmap W5) so the settings
 //! window's shortcut recorder reads a key exactly as this classifier does.
 
-use taigi_windows_core::keys::KeyEventSnapshot;
+use taigi_desktop_core::keys::KeyEventSnapshot;
 use windows::Win32::Foundation::{LPARAM, WPARAM};
 
 pub use taigi_windows_platform::key_translation::is_other_modifier_held_at_shift_press;

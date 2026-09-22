@@ -32,7 +32,7 @@ GENERATED_MAP_LANGUAGES = ("tailo", "poj")
 # or let a shipped one render incomplete.
 PRODUCTION_LANGUAGES = ("hanji", "en", "ja", "tailo", "poj")
 
-VALID_PLATFORMS = {"ios", "android", "macos", "windows"}
+VALID_PLATFORMS = {"ios", "android", "macos", "windows", "linux"}
 VALID_SURFACES = {"host", "extension"}
 VALID_VALUE_LANGUAGES = {"hanji", "tailo", "poj", "ja", "en"}
 
@@ -66,12 +66,13 @@ XCSTRINGS_SOURCE_LANGUAGE = "en"
 MACOS_STRINGS_DIR = "macos/Sources/TaigiInputMethodCore/Strings"
 MACOS_GEN_DIR = f"{MACOS_STRINGS_DIR}/Generated"
 
-# Windows output location. The input method is a Rust workspace (`windows/`), so its strings are a
-# generated Rust module compiled straight into `taigi-windows-core`. Like macOS, ALL FIVE production
+# Desktop Rust output location. The Windows and Linux input methods share the `desktop/` Rust
+# workspace, so their strings are one generated Rust module compiled straight into
+# `taigi-desktop-core` (every key scoped `windows` and/or `linux`). Like macOS, ALL FIVE production
 # languages are generated maps — there is no resource bundle. The hand-written `strings/mod.rs`
 # next to it owns `DisplayLanguage`, `StringResolver` and the positional formatter the generated
 # functions call; only this file is ever regenerated.
-WINDOWS_STRINGS_DIR = "windows/crates/taigi-windows-core/src/strings"
+WINDOWS_STRINGS_DIR = "desktop/crates/taigi-desktop-core/src/strings"
 WINDOWS_GEN_FILE = f"{WINDOWS_STRINGS_DIR}/generated.rs"
 
 # The Windows installer's own strings (roadmap W8). Inno Setup speaks per-language `[CustomMessages]`
@@ -122,7 +123,7 @@ MACOS_BUNDLE_NAME_PLIST_KEYS = ("CFBundleDisplayName", "CFBundleName")
 # language falls through Windows' own resource search order (neutral → en-US), so `en` doubles as
 # the untranslated fallback the way `CFBundleName` does on the Mac. Emitted as a Rust `include!` the
 # build scripts render (`windows/build-support/resource.rs`) — a build script cannot depend on a
-# workspace crate, so the generated strings cannot live in `taigi-windows-core`.
+# workspace crate, so the generated strings cannot live in `taigi-desktop-core`.
 WINDOWS_PRODUCT_NAME_FILE = "windows/build-support/product_name_strings.rs"
 WINDOWS_PRODUCT_NAME_LANGIDS = {"en": 0x0409, "ja": 0x0411, "hanji": 0x0404}
 
@@ -216,7 +217,7 @@ PLACEHOLDER_TYPES = {
 }
 
 # Value-language key -> Rust `DisplayLanguage` variant, and the variant that maps nothing.
-# MIRROR: must equal the variants in windows/crates/taigi-windows-core/src/strings/mod.rs.
+# MIRROR: must equal the variants in desktop/crates/taigi-desktop-core/src/strings/mod.rs.
 RUST_LANGUAGE_VARIANTS = {"hanji": "Hanji", "tailo": "Tailo", "poj": "Poj", "ja": "Japanese", "en": "English"}
 RUST_SYSTEM_VARIANT = "System"
 RUST_MAP_LANGUAGES = tuple((lang, RUST_LANGUAGE_VARIANTS[lang]) for lang in PRODUCTION_LANGUAGES)
@@ -1296,14 +1297,19 @@ def build_outputs(repo_root: Path, *, enforce_production_completeness: bool = Fa
         macos_entries, plural_fallback_source="the generated map"
     )
 
-    # Windows artifacts cover only windows-scoped keys — one generated Rust module, every production
-    # language a map, exactly the macOS shape in another language. An empty scope is legal Rust (an
-    # empty enum) but would leave the input method with no strings, so it is refused like the Swift
-    # platforms are.
+    # The desktop Rust module covers every key scoped `windows` or `linux` (the two share one crate,
+    # so one `StringKey` enum) — every production language a map, exactly the macOS shape in another
+    # language. An empty scope is legal Rust (an empty enum) but would leave an input method with no
+    # strings, so each platform is refused like the Swift platforms are.
     windows_entries = [item for item in all_entries if "windows" in item[2]["scope"]["platforms"]]
+    linux_entries = [item for item in all_entries if "linux" in item[2]["scope"]["platforms"]]
     if enforce_production_completeness:
         validate_platform_has_keys(windows_entries, "windows")
-    outputs[WINDOWS_GEN_FILE] = _emit_rust_strings(windows_entries)
+        validate_platform_has_keys(linux_entries, "linux")
+    desktop_rust_entries = [
+        item for item in all_entries if {"windows", "linux"} & set(item[2]["scope"]["platforms"])
+    ]
+    outputs[WINDOWS_GEN_FILE] = _emit_rust_strings(desktop_rust_entries)
     installer_entries = [item for item in windows_entries if item[1].startswith(WINDOWS_INSTALLER_KEY_PREFIX)]
     if installer_entries:
         outputs[WINDOWS_INSTALLER_MESSAGES_FILE] = _emit_inno_messages(installer_entries)

@@ -19,15 +19,15 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::time::Instant;
-use taigi_windows_core::candidates::{
+use taigi_desktop_core::candidates::{
     panel_frame, CandidateCellArrangement, CandidateIndexLabel, CandidateMetrics,
     ExpandableDisplayMode, ExpandableGeometryInput, ExpandableListModel, ExpandableModeChange,
     HorizontalListModel, HorizontalPageLayout, Point, Rect, ScrollerStyle, Size,
     VerticalLayoutInput, VerticalListModel, MAX_DISPLAY_CANDIDATES,
 };
-use taigi_windows_core::composing::CandidateCellContent;
-use taigi_windows_core::keys::{CandidateNavigation, CandidateSlotKeySet};
-use taigi_windows_core::settings::{
+use taigi_desktop_core::composing::CandidateCellContent;
+use taigi_desktop_core::keys::{CandidateNavigation, CandidateSlotKeySet};
+use taigi_desktop_core::settings::{
     keys, stored_font_selection, AppearanceMode, CandidateFontSelection, CandidateLayout,
     CandidateTextSizeChoice, CandidateWindowSizeChoice, SettingsDocument, StoredFontSelection,
 };
@@ -733,7 +733,7 @@ impl CandidateWindow {
         index: usize,
         part: CellPart,
         text: &str,
-        font: taigi_windows_core::candidates::FontSpec,
+        font: taigi_desktop_core::candidates::FontSpec,
         width: f32,
         height: f32,
     ) -> Option<IDWriteTextLayout> {
@@ -1006,7 +1006,7 @@ impl CandidateWindow {
         index: usize,
         part: CellPart,
         text: &str,
-        font: taigi_windows_core::candidates::FontSpec,
+        font: taigi_desktop_core::candidates::FontSpec,
         area: Rect,
         color: D2D1_COLOR_F,
     ) {

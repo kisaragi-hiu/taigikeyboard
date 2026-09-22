@@ -16,8 +16,8 @@ use crate::guids::{
     GUID_PRESERVED_KEY_SETTINGS, GUID_PRESERVED_KEY_SYMBOL_PICKER, GUID_PRESERVED_KEY_TELEX_GUIDE,
 };
 use crate::wide::to_wide_nul;
-use taigi_windows_core::keys::{ComposingKeyChord, ShortcutAction};
-use taigi_windows_core::settings::SettingsDocument;
+use taigi_desktop_core::keys::{ComposingKeyChord, ShortcutAction};
+use taigi_desktop_core::settings::SettingsDocument;
 use windows::core::GUID;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyboardLayout, VkKeyScanExW, MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN,

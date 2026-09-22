@@ -1,0 +1,125 @@
+name: Linux build
+
+# The Linux input method on a real Linux: what the maintainer's Mac cannot
+# prove (docs/architecture/linux-roadmap.md L12). Builds both workspaces the
+# engine links, runs the Linux workspace's tests, and smokes the engine
+# against a real ibus-daemon — the daemon must be able to spawn the binary
+# from the component XML and complete `CreateEngine`, which is the wire's
+# first byte-level contract. Nothing here publishes; the release half
+# (a `.deb` on the desktop draft) lands with the packaging PR.
+#
+# Budget: ~4 min warm, ~10 min cold (dependency compile + apt).
+on:
+  pull_request:
+    paths:
+      - 'linux/**'
+      - 'desktop/**'
+      - 'engine/**'
+      - 'dictionaries/**'
+      - '.github/workflows/linux-build.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'linux/**'
+      - 'desktop/**'
+      - '.github/workflows/linux-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-build-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Same pin as engine.yml: engine/protos/build.rs shells out to protoc.
+  PROTOC_VERSION: 36.1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: build + test + ibus smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev pkg-config
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          curl -sSL -o /tmp/protoc.zip \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          sudo unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+          protoc --version
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy --no-self-update
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            linux -> target
+            desktop -> target
+
+      - name: cargo clippy (linux workspace)
+        working-directory: linux
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: cargo test (linux workspace)
+        working-directory: linux
+        run: cargo test --workspace
+
+      - name: cargo build --release (engine)
+        working-directory: linux
+        run: cargo build --release -p taigikeyboard-ibus
+
+      - name: cargo fmt --check
+        working-directory: linux
+        run: cargo fmt -- --check
+
+      # The daemon smoke: install the engine into a throwaway prefix, point
+      # ibus-daemon at that component directory, and ask it to list and
+      # select the engine. `ibus engine taigikeyboard` returns only once the
+      # daemon has spawned the binary and CreateEngine has answered.
+      - name: ibus-daemon smoke
+        working-directory: linux
+        run: |
+          set -euxo pipefail
+          PREFIX="$RUNNER_TEMP/prefix"
+          make install PREFIX="$PREFIX" DESTDIR="" 2>&1 | tail -3
+          export IBUS_COMPONENT_PATH="$PREFIX/share/ibus/component"
+          export TAIGIKEYBOARD_DATA_DIR="$GITHUB_WORKSPACE"
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/xdg-config"
+          export XDG_DATA_HOME="$RUNNER_TEMP/xdg-data"
+          export RUST_LOG=debug
+          mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
+          xvfb-run -a dbus-run-session -- bash -c '
+            set -euxo pipefail
+            # No config module on a runner (no dconf / memconf): `--config disable`
+            # keeps the daemon up; `--panel disable` likewise.
+            ibus-daemon --verbose --panel disable --config disable > "$RUNNER_TEMP/ibus-daemon.log" 2>&1 &
+            DAEMON=$!
+            # The daemon writes its socket file once its bus is up.
+            for i in $(seq 1 40); do ibus list-engine > /dev/null 2>&1 && break; sleep 0.5; done
+            ibus list-engine | tee "$RUNNER_TEMP/engines.txt"
+            grep -q taigikeyboard "$RUNNER_TEMP/engines.txt"
+            ibus engine taigikeyboard
+            sleep 2
+            ibus engine | tee "$RUNNER_TEMP/current.txt"
+            grep -q taigikeyboard "$RUNNER_TEMP/current.txt"
+            kill "$DAEMON" || true
+          '
+
+      - name: Show daemon log on failure
+        if: failure()
+        run: |
+          cat "$RUNNER_TEMP/ibus-daemon.log" 2>/dev/null || true
+          ls -la "$RUNNER_TEMP" || true

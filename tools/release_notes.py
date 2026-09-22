@@ -62,12 +62,17 @@ ANDROID_GRADLE_FILE = "android/app/build.gradle.kts"
 IOS_PROJECT_FILE = "ios/TaigiKeyboard.xcodeproj/project.pbxproj"
 MACOS_INFO_PLIST_FILE = "macos/App/Info.plist"
 WINDOWS_CARGO_FILE = "windows/Cargo.toml"
+# The desktop train's other Cargo workspaces: the crates Windows and Linux share
+# (`desktop/`) carry the same number so a crate never reports a version its
+# installer does not (docs/architecture/linux-roadmap.md L2 / L11).
+DESKTOP_SHARED_CARGO_FILE = "desktop/Cargo.toml"
+DESKTOP_CARGO_FILES = (WINDOWS_CARGO_FILE, DESKTOP_SHARED_CARGO_FILE)
 # Which files a train owns. A version write touches exactly one train's files
 # and leaves the other train's alone (USER 2026-08-29: mobile and desktop are
 # numbered separately so each can ship on its own cadence).
 TRAIN_FILES = {
     "mobile": (ANDROID_GRADLE_FILE, IOS_PROJECT_FILE),
-    "desktop": (MACOS_INFO_PLIST_FILE, WINDOWS_CARGO_FILE),
+    "desktop": (MACOS_INFO_PLIST_FILE, *DESKTOP_CARGO_FILES),
 }
 TRAIN_CHOICES = tuple(TRAIN_FILES)
 # Each shipping iOS target carries a Debug and a Release build-settings block, so
@@ -244,24 +249,31 @@ def _replaced_value(match: re.Match[str], source: str, new_value: str) -> str:
     return source[: match.start("value")] + new_value + source[match.end("value") :]
 
 
-def parse_windows_version(cargo_source: str) -> str:
+def parse_workspace_version(cargo_source: str, cargo_file: str = WINDOWS_CARGO_FILE) -> str:
     return _sole_match(
         WINDOWS_WORKSPACE_VERSION_PATTERN,
         cargo_source,
-        f"[workspace.package] version in {WINDOWS_CARGO_FILE}",
+        f"[workspace.package] version in {cargo_file}",
     ).group("value")
 
 
-def render_windows_cargo(cargo_source: str, version: str) -> str:
+def render_workspace_cargo(
+    cargo_source: str, version: str, cargo_file: str = WINDOWS_CARGO_FILE
+) -> str:
     return _replaced_value(
         _sole_match(
             WINDOWS_WORKSPACE_VERSION_PATTERN,
             cargo_source,
-            f"[workspace.package] version in {WINDOWS_CARGO_FILE}",
+            f"[workspace.package] version in {cargo_file}",
         ),
         cargo_source,
         version,
     )
+
+
+# The Windows workspace is the desktop train's source of truth; the names stay.
+parse_windows_version = parse_workspace_version
+render_windows_cargo = render_workspace_cargo
 
 
 def parse_android_version_name(gradle_source: str) -> str:
@@ -361,16 +373,17 @@ def check_mobile_versions_in_sources(
 def check_desktop_versions_in_sources(
     macos_plist: dict,
     macos_plist_path: Path,
-    windows_cargo_source: str,
+    cargo_sources: dict[str, str],
     version: str,
 ) -> None:
-    """Hold the two already-loaded desktop project files to one version."""
+    """Hold the already-loaded desktop project files to one version."""
     check_macos_plist_values(macos_plist, version, macos_plist_path)
-    windows_version = parse_windows_version(windows_cargo_source)
-    if windows_version != version:
-        raise ReleaseNotesError(
-            f"Windows workspace version is {windows_version}; expected {version}"
-        )
+    for cargo_file in DESKTOP_CARGO_FILES:
+        workspace_version = parse_workspace_version(cargo_sources[cargo_file], cargo_file)
+        if workspace_version != version:
+            raise ReleaseNotesError(
+                f"{cargo_file} workspace version is {workspace_version}; expected {version}"
+            )
 
 
 def check_project_versions(repo_root: Path, version: str, train: str) -> None:
@@ -387,7 +400,7 @@ def check_project_versions(repo_root: Path, version: str, train: str) -> None:
         check_desktop_versions_in_sources(
             macos_plist,
             macos_plist_path,
-            read_text_file(repo_root, WINDOWS_CARGO_FILE),
+            {cargo_file: read_text_file(repo_root, cargo_file) for cargo_file in DESKTOP_CARGO_FILES},
             version,
         )
         return
@@ -633,18 +646,25 @@ def set_project_versions(
         _require_xml_plist(plist_source)
         current_macos = _plist_value(plist_source, "CFBundleShortVersionString")
         current_macos_build = _plist_value(plist_source, "CFBundleVersion")
-        current_windows = parse_windows_version(sources[WINDOWS_CARGO_FILE])
-        current_versions = (current_macos, current_windows)
+        current_workspaces = {
+            cargo_file: parse_workspace_version(sources[cargo_file], cargo_file)
+            for cargo_file in DESKTOP_CARGO_FILES
+        }
+        current_versions = (current_macos, *current_workspaces.values())
         candidates = {
             MACOS_INFO_PLIST_FILE: render_macos_plist(plist_source, version),
-            WINDOWS_CARGO_FILE: render_windows_cargo(
-                sources[WINDOWS_CARGO_FILE], version
-            ),
+            **{
+                cargo_file: render_workspace_cargo(sources[cargo_file], version, cargo_file)
+                for cargo_file in DESKTOP_CARGO_FILES
+            },
         }
         changes = (
             f"macOS: CFBundleShortVersionString {current_macos} -> {version}, "
             f"CFBundleVersion {current_macos_build} -> {macos_build_version(version)}",
-            f"Windows: workspace version {current_windows} -> {version}",
+            *(
+                f"{cargo_file}: workspace version {current} -> {version}"
+                for cargo_file, current in current_workspaces.items()
+            ),
         )
 
     # A train's number never goes backwards: the stores refuse a lower mobile
@@ -669,7 +689,7 @@ def set_project_versions(
                 candidates[MACOS_INFO_PLIST_FILE].encode("utf-8"), macos_plist_path
             ),
             macos_plist_path,
-            candidates[WINDOWS_CARGO_FILE],
+            {cargo_file: candidates[cargo_file] for cargo_file in DESKTOP_CARGO_FILES},
             version,
         )
 

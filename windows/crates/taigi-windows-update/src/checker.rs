@@ -6,7 +6,7 @@
 
 use crate::manifest::{DottedVersion, UpdateManifest};
 use crate::transport::ManifestFetcher;
-use taigi_windows_core::settings::{keys, SettingsDocument};
+use taigi_desktop_core::settings::{keys, SettingsDocument};
 
 /// `UpdateChecker.checkInterval`: daily.
 pub const CHECK_INTERVAL_MS: i64 = 24 * 60 * 60 * 1000;

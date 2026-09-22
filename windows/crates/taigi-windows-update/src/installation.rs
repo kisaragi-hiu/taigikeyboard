@@ -11,7 +11,7 @@ use crate::transport::PackageDownloader;
 use crate::verify::Admission;
 use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc};
-use taigi_windows_core::strings::StringKey;
+use taigi_desktop_core::strings::StringKey;
 
 /// The staging folder, under the per-user local (non-roaming) data.
 const STAGING_FOLDER: &str = "Updates";

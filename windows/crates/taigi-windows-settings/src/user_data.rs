@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use taigi_windows_storage::UserDataStores;
+use taigi_desktop_storage::UserDataStores;
 
 /// The stores, opened unless the window is read-only (no `%APPDATA%`: it
 /// shows the defaults and writes nothing, so it opens nothing either).

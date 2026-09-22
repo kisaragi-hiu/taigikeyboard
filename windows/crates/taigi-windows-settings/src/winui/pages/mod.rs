@@ -14,7 +14,7 @@ pub mod shortcuts;
 
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
-use taigi_windows_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
 /// A pane's 恢復預設設定 card, after a gap: its own section at the end,

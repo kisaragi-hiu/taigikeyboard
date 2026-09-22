@@ -18,7 +18,7 @@
 //! is tested on the macOS host; the `#[cfg(windows)]` half below is the
 //! API calls and the thread-local that holds them.
 
-use taigi_windows_core::keys::RecordedPress;
+use taigi_desktop_core::keys::RecordedPress;
 
 /// What the window did with a press the hook offered it. The callback
 /// cannot block, so the answer decides on the spot whether the key is

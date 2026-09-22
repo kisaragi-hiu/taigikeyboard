@@ -1005,7 +1005,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "taigi-windows-core"
+name = "taigi-desktop-core"
 version = "3.6.9"
 dependencies = [
  "dispatch",
@@ -1018,12 +1018,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "taigi-desktop-storage"
+version = "3.6.9"
+dependencies = [
+ "log",
+ "rusqlite",
+ "serde_json",
+ "taigi-desktop-core",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
 name = "taigi-windows-platform"
 version = "3.6.9"
 dependencies = [
  "log",
  "raw-window-handle",
- "taigi-windows-core",
+ "taigi-desktop-core",
  "thiserror",
  "windows",
  "windows-sys",
@@ -1036,9 +1048,9 @@ dependencies = [
  "log",
  "raw-window-handle",
  "rfd",
- "taigi-windows-core",
+ "taigi-desktop-core",
+ "taigi-desktop-storage",
  "taigi-windows-platform",
- "taigi-windows-storage",
  "taigi-windows-update",
  "tempfile",
  "unicode-normalization",
@@ -1047,26 +1059,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "taigi-windows-storage"
-version = "3.6.9"
-dependencies = [
- "log",
- "rusqlite",
- "serde_json",
- "taigi-windows-core",
- "tempfile",
- "thiserror",
- "uuid",
-]
-
-[[package]]
 name = "taigi-windows-tsf"
 version = "3.6.9"
 dependencies = [
  "log",
- "taigi-windows-core",
+ "taigi-desktop-core",
+ "taigi-desktop-storage",
  "taigi-windows-platform",
- "taigi-windows-storage",
  "windows",
  "windows-core 0.62.2",
  "windows-numerics 0.3.1",
@@ -1080,7 +1079,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "taigi-windows-core",
+ "taigi-desktop-core",
  "taigi-windows-platform",
  "tempfile",
  "thiserror",

@@ -50,6 +50,7 @@ enum Platform {
   PLATFORM_ANDROID     = 2;
   PLATFORM_MACOS       = 3;
   PLATFORM_WINDOWS     = 4;
+  PLATFORM_LINUX       = 5;
 }
 
 // Per-request live snapshot. iOS EngineSettings / Android EngineSettings

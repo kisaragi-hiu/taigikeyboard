@@ -10,9 +10,9 @@ use super::theme::{SystemTheme, Theme};
 use super::window::{monitor_at, PopupWindow, WindowHandler, WindowRef, BASE_DPI};
 use std::cell::RefCell;
 use std::rc::Rc;
-use taigi_windows_core::candidates::FontSpec;
-use taigi_windows_core::composing::ContextToken;
-use taigi_windows_core::settings::{AppearanceMode, CandidateFontChoice, CandidateFontSelection};
+use taigi_desktop_core::candidates::FontSpec;
+use taigi_desktop_core::composing::ContextToken;
+use taigi_desktop_core::settings::{AppearanceMode, CandidateFontChoice, CandidateFontSelection};
 use windows::Win32::Foundation::{POINT, RECT};
 use windows::Win32::Graphics::Direct2D::Common::D2D_SIZE_U;
 use windows_numerics::Vector2;
@@ -73,7 +73,7 @@ impl ModeFlash {
             let measurer = super::render::DWriteMeasurer {
                 factory: &content.factory,
             };
-            use taigi_windows_core::candidates::TextMeasurer;
+            use taigi_desktop_core::candidates::TextMeasurer;
             let font = FlashContent::font();
             let width = measurer.width(text, font) + 2.0 * PADDING_X;
             let height = measurer.line_height(font) + 2.0 * PADDING_Y;

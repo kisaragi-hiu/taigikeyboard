@@ -14,6 +14,8 @@ on:
       - 'engine/**'
       - 'windows/**/*.rs'
       - 'windows/Cargo.*'
+      - 'desktop/**/*.rs'
+      - 'desktop/Cargo.*'
       - 'dictionary/output/dictionary.csv'
       - 'dictionaries/**'
       - '.github/workflows/engine.yml'
@@ -23,6 +25,8 @@ on:
       - 'engine/**'
       - 'windows/**/*.rs'
       - 'windows/Cargo.*'
+      - 'desktop/**/*.rs'
+      - 'desktop/Cargo.*'
       - 'dictionary/output/dictionary.csv'
       - 'dictionaries/**'
       - '.github/workflows/engine.yml'
@@ -90,8 +94,15 @@ jobs:
 
       # Both workspaces, one formatter. Windows crates are checked here rather
       # than compiled: rustfmt reads source, so it needs no Windows target.
-      - name: cargo fmt --check (engine + windows)
+      # The desktop-shared crates: pure, so their tests run here natively, on the
+      # same runner and cache (the shells' cross checks stay on the maintainer's
+      # Mac and the release runners).
+      - name: cargo test (desktop-shared crates)
+        run: cargo test --workspace --manifest-path desktop/Cargo.toml
+
+      - name: cargo fmt --check (engine + windows + desktop)
         run: |
           set -euo pipefail
           cargo fmt --all --check --manifest-path engine/Cargo.toml
           cargo fmt --all --check --manifest-path windows/Cargo.toml
+          cargo fmt --all --check --manifest-path desktop/Cargo.toml

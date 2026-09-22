@@ -10,7 +10,7 @@
 use crate::module::install_directory;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
-use taigi_windows_core::composing::{
+use taigi_desktop_core::composing::{
     AssociationSink, ComposingManager, ComposingSessionCoordinator, CustomDictionarySource,
     FrequencySource, LearnedPhraseSource, NextWordLearner, NoStores, SystemClock,
 };
@@ -23,14 +23,14 @@ type StoreSeams = (
     Box<dyn LearnedPhraseSource>,
     Box<dyn AssociationSink>,
 );
-use taigi_windows_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_windows_core::engine::{lexicon_install, LexiconInstallStats};
-use taigi_windows_core::keys::ShortcutConflicts;
-use taigi_windows_core::settings::{
+use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
+use taigi_desktop_core::engine::{lexicon_install, LexiconInstallStats};
+use taigi_desktop_core::keys::ShortcutConflicts;
+use taigi_desktop_core::settings::{
     keys, SettingsDocument, SettingsProvider, StaticSettingsProvider,
 };
-use taigi_windows_core::strings::{DisplayLanguage, StringResolver};
-use taigi_windows_storage::{user_data_directory, LiveSettings, SettingsFileStore, UserDataStores};
+use taigi_desktop_core::strings::{DisplayLanguage, StringResolver};
+use taigi_desktop_storage::{user_data_directory, LiveSettings, SettingsFileStore, UserDataStores};
 
 /// What this host process may touch, probed ONCE and logged once (Codex W2:
 /// an AppContainer host cannot read `%APPDATA%`; the TIP then runs on
@@ -146,7 +146,7 @@ impl Runtime {
     /// (`NoStores` where it has none). `prepare_for_first_key` must have run.
     pub fn coordinator(&self) -> &Mutex<ComposingSessionCoordinator> {
         self.coordinator.get_or_init(|| {
-            let settings: Arc<dyn taigi_windows_core::settings::SettingsProvider> =
+            let settings: Arc<dyn taigi_desktop_core::settings::SettingsProvider> =
                 Arc::clone(&self.settings) as _;
             let (frequency, custom, learned, association): StoreSeams = match &self.stores {
                 Some(stores) => (
@@ -258,7 +258,7 @@ impl Runtime {
 }
 
 pub fn dictionary_version() -> u32 {
-    taigi_windows_core::dictionary_artifacts::dictionary_version(env!("CARGO_PKG_VERSION"))
+    taigi_desktop_core::dictionary_artifacts::dictionary_version(env!("CARGO_PKG_VERSION"))
 }
 
 #[cfg(test)]
