@@ -1,6 +1,7 @@
 //! Syllable parsing — ported from `taigi-converter/src/phonetics.js`.
 
 use crate::tables::{COMBINING_TO_TONE_NUM, TL_FINALS, TL_INITIALS};
+use crate::InputMode;
 use unicode_normalization::UnicodeNormalization;
 
 /// Strip the tone mark from `text`, returning `(bare NFC text, tone digit)`.
@@ -70,6 +71,101 @@ pub fn tl_syllable_khinsiann_flags(record_tl: &str) -> Vec<bool> {
         }
     }
     flags
+}
+
+/// The alignment of a reading's syllables with a typed body
+/// ([`typed_syllable_walk`]): `ends[k]` is the typed offset right after
+/// syllable `k` (its typed digit included); `typed_consumed` is whether
+/// the typed text was used up — exactly at a syllable end, or inside the
+/// syllable after the last one in `ends` (the partial-prefix path).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TypedSyllableWalk {
+    pub ends: Vec<usize>,
+    pub typed_consumed: bool,
+}
+
+/// Walk `reading`'s numeric-tone face on `mode` — the same
+/// [`tl_num_syllable_ends_from_tl`] / [`poj_num_syllable_ends_from_tl`]
+/// reconstruction, so the syllable boundaries are the build pipeline's —
+/// syllable by syllable against `typed`, the lowercased typed body with
+/// its ASCII tone digits (`teng5sek`): the syllable's letters must be the
+/// next thing typed, then a typed digit right after them must equal the
+/// face's tone; no digit there leaves that syllable unconstrained. The
+/// typed text ending inside a syllable ends the walk with everything so
+/// far honored.
+///
+/// Fail-closed everywhere else: a syllable whose letters are NOT the
+/// next thing typed — after the one alias the build indexes beside the
+/// canonical spelling (nasal `onn` ↔ `oonn`, [`nasal_oo_alias_spelling`],
+/// tried per syllable on both the full and the mid-syllable match) — a
+/// face the typed text runs past, a face that does not slice into
+/// letter-bearing syllables, or a typed digit that disagrees with the
+/// face, all return `None`; letting such a reading through would let a
+/// wrong-tone word past the §17 pin on the strength of an alias spelling.
+/// ASCII-case-blind: a custom or learned reading may keep its capital
+/// (`Khì--ah`). TPS / English never walk (their digits are not tones).
+pub fn typed_syllable_walk(
+    mode: InputMode,
+    typed: &str,
+    reading: &str,
+) -> Option<TypedSyllableWalk> {
+    let (face, ends) = match mode {
+        InputMode::Poj => poj_num_syllable_ends_from_tl(reading),
+        InputMode::Tl => tl_num_syllable_ends_from_tl(reading),
+        InputMode::Tps | InputMode::English => return None,
+    };
+    let mut syllable_ends: Vec<usize> = Vec::with_capacity(ends.len());
+    let mut cursor = 0usize;
+    let mut start = 0usize;
+    for end in ends {
+        let end = end as usize;
+        let syllable = face.get(start..end)?;
+        start = end;
+        let letters = syllable.trim_end_matches(|c: char| c.is_ascii_digit());
+        if letters.is_empty() {
+            return None;
+        }
+        let face_tone = syllable[letters.len()..].chars().next();
+        let alias = nasal_oo_alias_spelling(letters);
+        let rest = &typed[cursor..];
+        let consumed = if starts_with_ignore_ascii_case(rest, letters) {
+            letters.len()
+        } else if let Some(alias) = alias
+            .as_deref()
+            .filter(|alias| starts_with_ignore_ascii_case(rest, alias))
+        {
+            alias.len()
+        } else if starts_with_ignore_ascii_case(letters, rest)
+            || alias.is_some_and(|alias| starts_with_ignore_ascii_case(&alias, rest))
+        {
+            // Typed text ends inside this syllable (its boundary, or
+            // mid-syllable on the partial-prefix path).
+            return Some(TypedSyllableWalk {
+                ends: syllable_ends,
+                typed_consumed: true,
+            });
+        } else {
+            return None;
+        };
+        cursor += consumed;
+        if let Some(typed_tone) = typed[cursor..].chars().next().filter(char::is_ascii_digit) {
+            if Some(typed_tone) != face_tone {
+                return None;
+            }
+            cursor += 1;
+        }
+        syllable_ends.push(cursor);
+    }
+    Some(TypedSyllableWalk {
+        ends: syllable_ends,
+        typed_consumed: cursor == typed.len(),
+    })
+}
+
+fn starts_with_ignore_ascii_case(haystack: &str, prefix: &str) -> bool {
+    haystack
+        .get(..prefix.len())
+        .is_some_and(|head| head.eq_ignore_ascii_case(prefix))
 }
 
 /// Which spelling a `*_num` column carries for a syllable.

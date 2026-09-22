@@ -1,14 +1,15 @@
-//! Typed word separator in the continuous-input best reading (USER
-//! 2026-09-21). The walker's slot-0 synth joins its segments with the
-//! separator the user typed between them — `-` 連字 or `--` 輕聲 — and with
-//! a space only where nothing was typed. What is dictionary-owned stays
-//! dictionary-owned: a `-` inside one dictionary word, and a whole-buffer
-//! reading that IS a dictionary word (`hoo-gua` → 予我 `hōo--guá`, the
-//! `continuous_slot0_dict_roman` promotion), keep the record's own form.
+//! Typed word separator in the continuous-input romanization (USER
+//! 2026-09-21, 2026-09-22). The separator at every typed boundary is the
+//! one the user typed — `-` 連字 or `--` 輕聲 — whether the boundary falls
+//! between two walker segments or inside one dictionary word whose record
+//! stores a space (§55); a space stays only where nothing was typed. The
+//! kind of the typed run still decides which words are offered (§52:
+//! `hoo--gua` reads 予我 `hōo--guá`, `hoo-gua` does not).
 //!
-//! The typed join is presentation only: `canonical_tl` / `display_text`
-//! (the `(hanji, canonical_tl)` identity) read the space join, so the same
-//! phrase typed three ways keys `user_frequency.db` once.
+//! The typed separator is presentation only: `canonical_tl` /
+//! `display_text` (the `(hanji, canonical_tl)` identity) keep the record's
+//! or the space-joined form, so the same phrase typed three ways keys
+//! `user_frequency.db` once.
 //!
 //! Fixture: 我/guá + 是/sī are high-freq singles with no `guasi` word, so
 //! the walker path is the genuine two-word split; 予/hōo + 我/guá share the
@@ -106,13 +107,14 @@ fn typed_separator_joins_the_two_word_reading() {
 }
 
 #[test]
-fn typed_separator_never_overrides_a_dictionary_word() {
+fn typed_separator_kind_selects_the_dictionary_word() {
     let _lock = engine_install_lock();
     install_fixture();
     // The untyped `hoogua` promotion is pinned by `continuous_slot0_dict_roman`.
-    // §52: the typed `--` is the khinsiann 予我 carries, so the word (and its
-    // own form) wins; a plain `-` is a different boundary kind and the word
-    // is not offered under it — the typed join stands.
+    // §52: the typed `--` is the khinsiann 予我 carries, so the word wins
+    // (and §55 has nothing to rewrite — typed and stored agree); a plain
+    // `-` is a different boundary kind and the word is not offered under
+    // it — the typed join stands.
     let cells = fetch("hoo--gua", "tl", false);
     let cell = cell_with_hanji(&cells, "予我");
     assert_eq!(cell.1, "hōo--guá", "the record's own khinsiann form");
@@ -177,6 +179,75 @@ fn typed_separator_follows_the_hyphenless_setting() {
     let cells = fetch("gua-si", "tl", true);
     assert_eq!(cell_with_hanji(&cells, "我是").1, "guásī");
     assert_eq!(cells[0].1, "gua-si", "the literal keeps the typed hyphen");
+}
+
+// ---- A typed `-` inside a dictionary word (USER 2026-09-22, §55) ----
+// `pang-tang-lai` read 放重利 as the record stores it, `pàng tāng-lāi`
+// (a 教典 phrase with a space); the user typed the hyphen, so the rendered
+// separator is the hyphen. Fixture: 放/pàng + 重利/tāng-lāi singles and the
+// phrase 放重利/`pàng tāng-lāi`, so the whole buffer is one dictionary edge.
+
+fn pang_tang_lai_rows() -> Vec<Row> {
+    vec![
+        Row {
+            toneless_key: "pang",
+            hanzi: "放",
+            tl: "pàng",
+            syll: 1,
+            freq: 80_000,
+        },
+        Row {
+            toneless_key: "tanglai",
+            hanzi: "重利",
+            tl: "tāng-lāi",
+            syll: 2,
+            freq: 25,
+        },
+        Row {
+            toneless_key: "pangtanglai",
+            hanzi: "放重利",
+            tl: "pàng tāng-lāi",
+            syll: 3,
+            freq: 16,
+        },
+    ]
+}
+
+#[test]
+fn typed_hyphen_replaces_the_records_space() {
+    let _lock = engine_install_lock();
+    install_rows(&pang_tang_lai_rows(), &["pang3", "tang7", "lai7"]);
+    for (raw, roman) in [
+        ("pangtanglai", "pàng tāng-lāi"),
+        ("pang-tang-lai", "pàng-tāng-lāi"),
+        ("pang3-tang7-lai", "pàng-tāng-lāi"),
+        ("PANG-TANG-LAI", "PÀNG-TĀNG-LĀI"),
+        // `--` is not the record's kind: the walker builds 放 + 重利 and
+        // the typed run is its join.
+        ("pang--tang-lai", "pàng--tāng-lāi"),
+    ] {
+        let cells = fetch(raw, "tl", false);
+        let cell = cell_with_hanji(&cells, "放重利");
+        assert_eq!(cell.1, roman, "{raw}: rendered roman; got {cells:?}");
+        assert_eq!(
+            cell.3.to_lowercase(),
+            "pàng tāng-lāi",
+            "{raw}: canonical_tl (identity) keeps the record's space"
+        );
+        assert_eq!(
+            cells
+                .iter()
+                .filter(|c| c.0.as_deref() == Some("放重利"))
+                .count(),
+            1,
+            "{raw}: one 放重利 cell; got {cells:?}"
+        );
+    }
+    let cells = fetch("pang-tang-lai", "poj", false);
+    assert_eq!(cell_with_hanji(&cells, "放重利").1, "pàng-tāng-lāi");
+    // 無連字符 drops the typed `-` like any other (§49).
+    let cells = fetch("pang-tang-lai", "tl", true);
+    assert_eq!(cell_with_hanji(&cells, "放重利").1, "pàngtānglāi");
 }
 
 // ---- Segment-by-segment commit keeps the typed run (USER 2026-09-22) ----
