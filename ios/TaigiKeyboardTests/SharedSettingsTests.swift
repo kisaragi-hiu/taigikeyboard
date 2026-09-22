@@ -265,7 +265,7 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertEqual(settings.resolvedAppearance(for: .light).colors, expected.colors(for: .light))
         XCTAssertEqual(settings.resolvedAppearance(for: .dark).colors, expected.colors(for: .dark))
         XCTAssertNotNil(settings.resolvedAppearance(for: .light).colors.backgroundGradient,
-                      "standardBlue routes through the catalog with a gradient palette")
+                        "standardBlue routes through the catalog with a gradient palette")
     }
 
     // MARK: - Snapshot shadow gate (v3.6.2 PR-B — three-state shadow)

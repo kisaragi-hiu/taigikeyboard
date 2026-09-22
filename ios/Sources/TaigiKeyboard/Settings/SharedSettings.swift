@@ -284,7 +284,9 @@ final class SharedSettings {
     // toggles left the mobile UI on 2026-09-22 (desktop retired them earlier);
     // the engine carrier still takes the flag, so it is pinned on here and a
     // stale `associationRecordingEnabled` default is never read.
-    var isAssociationRecordingEnabled: Bool { true }
+    var isAssociationRecordingEnabled: Bool {
+        true
+    }
 
     // MARK: - Literal-Roman Candidate (§34/S22, default: on)
 

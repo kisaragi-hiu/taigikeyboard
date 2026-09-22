@@ -647,11 +647,26 @@ fn learning_the_same_pair_twice_is_one_row_with_count_two_found_by_the_whole_buf
             learn_count: 2,
         }]
     );
-    assert_eq!(learned_matches(&store, "kikhilai", InputMode::Tl), ["記起來"]);
-    assert_eq!(learned_matches(&store, "ki3khi2lai5", InputMode::Tl), ["記起來"]);
-    assert_eq!(learned_matches(&store, "kikhilai", InputMode::Poj), ["記起來"]);
-    assert!(learned_matches(&store, "kikhi", InputMode::Tl).is_empty(), "a prefix must not match");
-    assert!(learned_matches(&store, "kikhilaia", InputMode::Tl).is_empty(), "a longer buffer must not match");
+    assert_eq!(
+        learned_matches(&store, "kikhilai", InputMode::Tl),
+        ["記起來"]
+    );
+    assert_eq!(
+        learned_matches(&store, "ki3khi2lai5", InputMode::Tl),
+        ["記起來"]
+    );
+    assert_eq!(
+        learned_matches(&store, "kikhilai", InputMode::Poj),
+        ["記起來"]
+    );
+    assert!(
+        learned_matches(&store, "kikhi", InputMode::Tl).is_empty(),
+        "a prefix must not match"
+    );
+    assert!(
+        learned_matches(&store, "kikhilaia", InputMode::Tl).is_empty(),
+        "a longer buffer must not match"
+    );
 }
 
 #[test]
@@ -663,10 +678,18 @@ fn touching_bumps_a_known_pair_and_ignores_an_unknown_one_most_composed_first() 
     store.touch_phrase("記起來", "kì--khí-lâi");
     store.touch_phrase("台語", "tâi-gí");
     assert_eq!(
-        store.all_rows().unwrap().iter().map(|row| (row.hanzi.as_str(), row.learn_count)).collect::<Vec<_>>(),
+        store
+            .all_rows()
+            .unwrap()
+            .iter()
+            .map(|row| (row.hanzi.as_str(), row.learn_count))
+            .collect::<Vec<_>>(),
         [("記起來", 2), ("機起來", 1)]
     );
-    assert_eq!(learned_matches(&store, "kikhilai", InputMode::Tl), ["記起來", "機起來"]);
+    assert_eq!(
+        learned_matches(&store, "kikhilai", InputMode::Tl),
+        ["記起來", "機起來"]
+    );
 }
 
 #[test]
@@ -683,8 +706,15 @@ fn learning_past_the_cap_evicts_the_fewest_composed_row_and_its_keys_never_the_n
     assert_eq!(rows.len(), 3, "rows stay at the cap; got {hanzi:?}");
     assert!(hanzi.contains(&"詞0"), "the twice-composed row survives");
     assert!(hanzi.contains(&"新詞"), "the newest learn is kept");
-    let evicted = if hanzi.contains(&"詞1") { "su2" } else { "su1" };
-    assert!(learned_matches(&store, evicted, InputMode::Tl).is_empty(), "the evicted row's keys are gone");
+    let evicted = if hanzi.contains(&"詞1") {
+        "su2"
+    } else {
+        "su1"
+    };
+    assert!(
+        learned_matches(&store, evicted, InputMode::Tl).is_empty(),
+        "the evicted row's keys are gone"
+    );
 }
 
 #[test]
@@ -696,7 +726,10 @@ fn wiping_learned_phrases_clears_rows_and_keys_and_the_store_learns_again() {
     assert!(store.all_rows().unwrap().is_empty());
     assert!(learned_matches(&store, "kikhilai", InputMode::Tl).is_empty());
     store.learn_phrase("記起來", "kì--khí-lâi");
-    assert_eq!(learned_matches(&store, "kikhilai", InputMode::Tl), ["記起來"]);
+    assert_eq!(
+        learned_matches(&store, "kikhilai", InputMode::Tl),
+        ["記起來"]
+    );
 }
 
 #[test]
@@ -718,10 +751,22 @@ fn a_custom_dictionary_that_reached_the_parked_learned_shape_keeps_only_its_manu
             )
             .unwrap();
     }
-    let store = custom_store(&directory, stub_deriver(""), CustomDictionaryStore::MAX_ENTRIES);
+    let store = custom_store(
+        &directory,
+        stub_deriver(""),
+        CustomDictionaryStore::MAX_ENTRIES,
+    );
     assert_eq!(hanzi_of(&store.all_rows().unwrap()), ["台語"]);
-    assert!(store.rows_matching(&query_key("kikhilai", "tl"), 20).is_empty(), "the learned row's keys went with it");
-    assert_eq!(hanzi_of(&store.rows_matching(&query_key("taigi", "tl"), 20)), ["台語"]);
+    assert!(
+        store
+            .rows_matching(&query_key("kikhilai", "tl"), 20)
+            .is_empty(),
+        "the learned row's keys went with it"
+    );
+    assert_eq!(
+        hanzi_of(&store.rows_matching(&query_key("taigi", "tl"), 20)),
+        ["台語"]
+    );
     let connection =
         rusqlite::Connection::open(directory.path().join("custom_dictionary.db")).unwrap();
     let columns: Vec<String> = connection

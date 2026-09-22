@@ -134,7 +134,11 @@ impl LearnedPhraseStore {
     /// buffer, not a prefix — for `FetchAtPos.learned_entries`, most composed
     /// first. Empty when the store cannot answer right now. CROSS-PLATFORM
     /// INVARIANT — mirrors iOS `exactMatchSQL` / Android `EXACT_MATCH_SQL`.
-    pub fn rows_matching(&self, query_key: &CustomSearchKey, limit: usize) -> Vec<LearnedPhraseRow> {
+    pub fn rows_matching(
+        &self,
+        query_key: &CustomSearchKey,
+        limit: usize,
+    ) -> Vec<LearnedPhraseRow> {
         self.database
             .read(|connection| {
                 // Cached: the one statement the keystroke path runs here.
@@ -242,7 +246,9 @@ fn write_search_keys(
 /// INVARIANT — mirrors iOS `evictPastCap` / Android `PAST_CAP_SQL`.
 fn evict_past_cap(connection: &Connection, cap: usize, kept_id: i64) -> rusqlite::Result<()> {
     let count: i64 =
-        connection.query_row(&format!("SELECT COUNT(*) FROM {TABLE_NAME};"), [], |row| row.get(0))?;
+        connection.query_row(&format!("SELECT COUNT(*) FROM {TABLE_NAME};"), [], |row| {
+            row.get(0)
+        })?;
     if count <= cap as i64 {
         return Ok(());
     }

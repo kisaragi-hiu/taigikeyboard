@@ -70,7 +70,6 @@ struct ExternalLinkButton: View {
             // is a link rather than a button: it navigates away instead of acting on the window.
             .accessibilityRemoveTraits(.isButton)
             .accessibilityAddTraits(.isLink)
-
         }
     }
 

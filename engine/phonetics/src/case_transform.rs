@@ -391,15 +391,27 @@ mod tests {
     // -----------------------------------------------------------------
     #[test]
     fn apply_nasal_marker_case_follows_the_switch_and_borrows_when_unchanged() {
-        assert_eq!(apply_nasal_marker_case("SI\u{c2}\u{1d3a}", true), "SI\u{c2}\u{207f}");
+        assert_eq!(
+            apply_nasal_marker_case("SI\u{c2}\u{1d3a}", true),
+            "SI\u{c2}\u{207f}"
+        );
         assert_eq!(
             apply_nasal_marker_case("SI\u{c2}\u{1d3a}-Si\u{e2}\u{207f}", true),
             "SI\u{c2}\u{207f}-Si\u{e2}\u{207f}"
         );
-        assert_eq!(apply_nasal_marker_case("SI\u{c2}\u{207f}", false), "SI\u{c2}\u{1d3a}");
+        assert_eq!(
+            apply_nasal_marker_case("SI\u{c2}\u{207f}", false),
+            "SI\u{c2}\u{1d3a}"
+        );
         // Nothing to rewrite: no allocation either way.
-        assert!(matches!(apply_nasal_marker_case("T\u{c2}I-G\u{cd}", false), Cow::Borrowed(_)));
-        assert!(matches!(apply_nasal_marker_case("si\u{e2}\u{207f}", true), Cow::Borrowed(_)));
+        assert!(matches!(
+            apply_nasal_marker_case("T\u{c2}I-G\u{cd}", false),
+            Cow::Borrowed(_)
+        ));
+        assert!(matches!(
+            apply_nasal_marker_case("si\u{e2}\u{207f}", true),
+            Cow::Borrowed(_)
+        ));
     }
 
     // adjust_nasal_marker_case — moved from case_adjust.rs verbatim

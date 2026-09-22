@@ -22,6 +22,6 @@ pub use manager::{ComposingEffectExecutor, ComposingManager};
 pub use outcomes::{CandidateCommitOutcome, CandidateFetchOutcome, CandidateListChange};
 pub use presentation::{CandidateSource, PresentedCandidate};
 pub use stores::{
-    AssociationSink, Clock, CustomDictionarySource, FrequencySource, LearnedPhraseSource,
-    NoStores, SystemClock,
+    AssociationSink, Clock, CustomDictionarySource, FrequencySource, LearnedPhraseSource, NoStores,
+    SystemClock,
 };
