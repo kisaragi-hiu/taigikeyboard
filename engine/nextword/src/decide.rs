@@ -658,6 +658,7 @@ mod tests {
             Platform::Android,
             Platform::Macos,
             Platform::Windows,
+            Platform::Linux,
         ] {
             let mut state = PersistedState::default();
             let result = apply(
@@ -744,6 +745,19 @@ mod tests {
             e.kind,
             Some(next_word_effect::Kind::CancelContextTimeout(_))
         )));
+    }
+
+    #[test]
+    fn linux_platform_id_passes_validation() {
+        // trace: `PLATFORM_LINUX = 5` decodes to `Platform::Linux`; same gate
+        // as the Windows case below.
+        let mut state = PersistedState::default();
+        assert!(apply(
+            &mut state,
+            Intent::SetIsShowing { is_showing: false },
+            &config(Platform::Linux, true, false),
+        )
+        .is_ok());
     }
 
     #[test]
