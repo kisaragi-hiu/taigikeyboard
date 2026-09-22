@@ -112,7 +112,9 @@ pub fn view(
             strings.resolve(StringKey::SettingsNasalMarkerUppercase),
             document.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
             true,
-            context.callback(|is_on| Message::SetSwitch(keys::IS_NASAL_MARKER_UPPERCASE_ENABLED, is_on)),
+            context.callback(|is_on| {
+                Message::SetSwitch(keys::IS_NASAL_MARKER_UPPERCASE_ENABLED, is_on)
+            }),
         ),
         // The space after a commit: the last thing the output stage does.
         cards::switch_row(
