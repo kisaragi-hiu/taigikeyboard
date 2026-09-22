@@ -59,12 +59,17 @@ fn learned_effect(resp: &ComposingResponse) -> Option<PhraseLearned> {
     })
 }
 
-/// Apply every pick over `raw` and return what the LAST commit learned.
-/// A commit renders the nailed prefix through the lexicon's compound
-/// oracle, so the lock keeps a parallel recall test from swapping the
-/// installed lexicon under it.
+/// Apply every pick over `raw` and return what the LAST commit learned,
+/// against the fixture lexicon: the commit and the learned reading both
+/// group words through its compound oracle (起來 is a word, 記起 is not).
 fn learn(raw: &str, picks: &[Pick<'_>]) -> Option<PhraseLearned> {
     let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
+    learn_installed(raw, picks)
+}
+
+/// [`learn`] against the lexicon the caller installed under the lock.
+fn learn_installed(raw: &str, picks: &[Pick<'_>]) -> Option<PhraseLearned> {
     let mut e = engine_in_continuous(raw);
     let mut last = None;
     for p in picks {
@@ -83,6 +88,7 @@ fn phrase(hanji: &str, canonical_tl: &str) -> Option<PhraseLearned> {
 #[test]
 fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
     let _lock = engine_install_lock();
+    install(&fixture_rows(), FIXTURE_SYLLABLES);
     let mut e = engine_in_continuous("kikhilai");
     let mid = e.apply(pick((Some("記"), "kì", 2, 1)), &config_tl());
     assert!(
@@ -103,8 +109,56 @@ fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
             "PhraseLearned",
         ]
     );
-    assert_eq!(learned_effect(&fin), phrase("記起來", "kì-khí-lâi"));
+    // Two words, as the commit renders them: 記 + the dictionary word 起來.
+    assert_eq!(learned_effect(&fin), phrase("記起來", "kì khí-lâi"));
     assert!(matches!(e.snapshot_state().phase, Phase::Idle));
+}
+
+#[test]
+fn only_a_dictionary_compound_run_learns_its_hyphens() {
+    // USER 2026-09-23: `tsotsintshutkhau` picked 做 → 進 → 出 → 口 learned
+    // `tsò-tsìn-tshut-kháu`, but 做 and 進出口 are two words.
+    // trace: longest_compound_run from 做: 做進出口 / 做進出 / 做進 not in
+    // the fixture → 1, space; from 進: 進出口 (n = 3) is → `tsìn-tshut-kháu`.
+    let rows = [
+        ("tso", "做", "tsò", 1, 5000),
+        ("tsin", "進", "tsìn", 1, 3000),
+        ("tshut", "出", "tshut", 1, 8000),
+        ("khau", "口", "kháu", 1, 4000),
+        ("tsintshutkhau", "進出口", "tsìn-tshut-kháu", 3, 100),
+    ]
+    .map(|(toneless_key, hanzi, tl, syll, freq)| Row {
+        toneless_key,
+        hanzi,
+        tl,
+        syll,
+        freq,
+    });
+    let _lock = engine_install_lock();
+    install(&rows, &["tso3", "tsin3", "tshut4", "khau2"]);
+    assert_eq!(
+        learn_installed(
+            "tsotsintshutkhau",
+            &[
+                (Some("做"), "tsò", 3, 1),
+                (Some("進"), "tsìn", 4, 1),
+                (Some("出"), "tshut", 5, 1),
+                (Some("口"), "kháu", 4, 1),
+            ],
+        ),
+        phrase("做進出口", "tsò tsìn-tshut-kháu")
+    );
+    // Picked as two words, the same reading.
+    assert_eq!(
+        learn_installed(
+            "tsotsintshutkhau",
+            &[
+                (Some("做"), "tsò", 3, 1),
+                (Some("進出口"), "tsìn-tshut-kháu", 13, 3),
+            ],
+        ),
+        phrase("做進出口", "tsò tsìn-tshut-kháu")
+    );
 }
 
 #[test]
@@ -124,11 +178,11 @@ fn khinsiann_segment_keeps_its_double_hyphen() {
 fn typed_separator_before_a_segment_is_the_joiner() {
     // The `-` run the user typed folds into the NEXT segment's raw
     // prefix (記 over `ki` leaves `--khilai` pending), so it is read there:
-    // `--` learns the khinsiann, `-` the 連字, nothing the 連字 default.
+    // `--` learns the khinsiann, `-` the 連字, nothing the word space.
     for (raw, consumed, tl) in [
         ("ki--khilai", 8, "kì--khí-lâi"),
         ("ki-khilai", 7, "kì-khí-lâi"),
-        ("kikhilai", 6, "kì-khí-lâi"),
+        ("kikhilai", 6, "kì khí-lâi"),
         // A longer run is still the khinsiann marker, never stored verbatim.
         ("ki---khilai", 9, "kì--khí-lâi"),
     ] {
@@ -232,7 +286,8 @@ fn three_single_picks_learn_too() {
                 (Some("來"), "lâi", 3, 1)
             ],
         ),
-        phrase("記起來", "kì-khí-lâi")
+        // trace: 記起來 / 記起 not in the fixture → space; 起來 is → `-`.
+        phrase("記起來", "kì khí-lâi")
     );
 }
 
@@ -283,7 +338,7 @@ fn seven_syllables_is_a_clause_not_a_word() {
     );
     assert_eq!(
         learn("abcdef", &picks(6)),
-        phrase("甲乙丙丁戊己", "a-b-c-d-e-f")
+        phrase("甲乙丙丁戊己", "a b c d e f")
     );
 }
 
@@ -310,7 +365,7 @@ fn a_multi_word_dictionary_tl_learns_with_its_space() {
             "guaiasi",
             &[(Some("我"), "guá", 3, 1), (Some("也是"), "iā sī", 4, 2)]
         ),
-        phrase("我也是", "guá-iā sī")
+        phrase("我也是", "guá iā sī")
     );
 }
 

@@ -355,10 +355,9 @@ fn two_picks_commit_the_typed_run_between_them() {
     for (raw, mid, fin) in [
         ("tng--lai", "tńg--lai", "tńg--lâi"),
         ("tng-lai", "tńg-lai", "tńg-lâi"),
-        // Nothing typed: the word space as before (the test lexicon has no
-        // hanji prefix index, so the compound oracle is off here; the
-        // oracle's own `-` is pinned in `api.rs` unit tests).
-        ("tnglai", "tńg lai", "tńg lâi"),
+        // Nothing typed: 轉來 is a dictionary compound, so the oracle's
+        // own `-` joins the two picks (the pending tail keeps the space).
+        ("tnglai", "tńg lai", "tńg-lâi"),
     ] {
         let cfg = roman_cfg(false);
         let mut engine = started(raw, &cfg);
@@ -384,7 +383,8 @@ fn two_picks_under_hyphenless_render_the_run_as_a_dot() {
     for (raw, fin) in [
         ("tng--lai", "tńg·lâi"),
         ("tng-lai", "tńglâi"),
-        ("tnglai", "tńg lâi"),
+        // The oracle's joiner is the hyphen 無連字符 drops.
+        ("tnglai", "tńglâi"),
     ] {
         let cfg = roman_cfg(true);
         let mut engine = started(raw, &cfg);

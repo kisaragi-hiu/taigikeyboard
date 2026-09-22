@@ -1067,29 +1067,16 @@ fn next_word_word_selected(text: String, roman: String, trigger_prediction: bool
     }
 }
 
-/// Learned phrases (§50) — the joiner a segment's canonical TL takes in
-/// front of it: the `-` run the user typed before the segment, which folds
-/// into that segment's own raw prefix (picking 我 over `goa` in `goa--si`
-/// leaves `--si` as the next segment's `raw_text`). Two or more is the
-/// khinsiann `--`, one is the 連字 `-`, and nothing typed is no signal, so
-/// the phrase learns as one word. The dictionary cannot cover every phrase
-/// and the user manages the separator (USER 2026-09-22).
-fn learned_joiner(raw_text: &str) -> &'static str {
-    if crate::api::typed_separator_run(raw_text).len() >= 2 {
-        "--"
-    } else {
-        "-"
-    }
-}
-
 /// Learned phrases (§50) — the `(漢字, canonical-TL)` pair a final
 /// continuous commit learns from its nailed segments, or `None` when the
 /// composition is not one: fewer than two segments, any segment without
 /// a hanji pick or without a canonical TL, or more than
-/// [`MAX_LEARNED_PHRASE_SYLLABLES`] in total. The TL pieces join with the
-/// separator the user typed ([`learned_joiner`]); a piece that already
-/// opens with the khinsiann `--` keeps its dictionary form so `kì` +
-/// `--khí-lâi` reads `kì--khí-lâi`, never `kì---khí-lâi`. The cap counts
+/// [`MAX_LEARNED_PHRASE_SYLLABLES`] in total. The TL pieces join under
+/// the commit's word boundaries ([`crate::api::learned_reading`]): a
+/// dictionary compound with `-`, separate words with a space, and the
+/// separator the user typed wins — by kind only ([`canonical_separators`];
+/// the dictionary cannot cover every phrase and the user manages the
+/// separator, USER 2026-09-22). The cap counts
 /// the joined TL, not the segments' echoed `syllable_count`: a
 /// custom-dictionary pick reports `1` whatever its length
 /// (`lexicon::custom_entry_to_candidate`).
@@ -1098,7 +1085,6 @@ fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> {
         return None;
     }
     let mut hanji = String::new();
-    let mut canonical_tl = String::new();
     for seg in nailed {
         // `commit_continuous` stored an empty hanji as `None` already.
         let h = seg.hanji.as_deref()?;
@@ -1106,11 +1092,8 @@ fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> {
             return None;
         }
         hanji.push_str(h);
-        if !canonical_tl.is_empty() && !seg.association_tl.starts_with('-') {
-            canonical_tl.push_str(learned_joiner(&seg.raw_text));
-        }
-        canonical_tl.push_str(&seg.association_tl);
     }
+    let canonical_tl = canonical_separators(&crate::api::learned_reading(nailed));
     let syllable_count = phonetics::api::tl_syllables(&canonical_tl).count();
     if syllable_count == 0 || syllable_count > MAX_LEARNED_PHRASE_SYLLABLES {
         return None;
@@ -1119,6 +1102,30 @@ fn learned_phrase(nailed: &[NailedSegment]) -> Option<PhraseLearned> {
         hanji,
         canonical_tl,
     })
+}
+
+/// The canonical separators a learned TL stores: a `-` run of three or
+/// more is the khinsiann `--` (`---` → `--`), and the khinsiann marker
+/// binds to the word before it, so the word space in front of a
+/// dictionary khinsiann piece drops (`kì --khí-lâi` → `kì--khí-lâi`).
+fn canonical_separators(tl: &str) -> String {
+    let mut out = String::with_capacity(tl.len());
+    let mut run = 0;
+    for c in tl.chars() {
+        if c == '-' {
+            if run == 0 && out.ends_with(' ') {
+                out.pop();
+            }
+            run += 1;
+            if run <= 2 {
+                out.push(c);
+            }
+        } else {
+            run = 0;
+            out.push(c);
+        }
+    }
+    out
 }
 
 fn phrase_learned(learned: PhraseLearned) -> Effect {

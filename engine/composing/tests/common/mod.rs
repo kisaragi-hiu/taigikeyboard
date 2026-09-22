@@ -137,13 +137,18 @@ pub fn fst_entry(family: &[u8], body: &str, rowid: u32) -> Vec<u8> {
 /// `dictionary.fst` with the toneless `tl:` family, the `poj:` family
 /// (derived per row via `derive_poj_notone`) and the `tps:` family plus its
 /// er↔or variant, and for multi-syllable rows the `<family>-abbrev:` acronym
-/// key — the same chain as `create_fst.py`. Only the whole-buffer
-/// abbreviation lookup (§46) reads the acronym family.
+/// key, plus the `hanzi:` family — the same chain as `create_fst.py`. Only
+/// the whole-buffer abbreviation lookup (§46) reads the acronym family; the
+/// nailed-join compound oracle (`lexicon::compound_hanji_exists`) reads
+/// `hanzi:`.
 pub fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
     let mut entries: Vec<Vec<u8>> = Vec::with_capacity(rows.len());
     for (idx, row) in rows.iter().enumerate() {
         let rowid = (idx + 1) as u32;
         entries.push(fst_entry(b"tl:", row.toneless_key, rowid));
+        if !row.hanzi.is_empty() {
+            entries.push(fst_entry(b"hanzi:", row.hanzi, rowid));
+        }
         if let Some(poj_notone) = derive_poj_notone(row.tl) {
             entries.push(fst_entry(b"poj:", &poj_notone, rowid));
         }
