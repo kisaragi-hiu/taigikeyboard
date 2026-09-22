@@ -72,6 +72,8 @@ struct ThemePickerView: View {
             }
             .padding(.vertical, AppStyle.horizontalPadding)
         }
+        // Matches the Form-backed tabs (systemGroupedBackground); a bare ScrollView defaults to systemBackground.
+        .background(Color(.systemGroupedBackground))
         .navigationTitle(lang.string(TabType.theme.titleKey))
         // Any CRUD bump of themeRevision reloads the list; onAppear covers popping back to this page.
         .onAppear(perform: reloadUserThemes)
