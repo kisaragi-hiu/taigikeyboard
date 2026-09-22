@@ -4,6 +4,7 @@
 pub mod cli;
 pub mod pages;
 pub mod presentation;
+pub mod recorder;
 pub mod window;
 pub mod writer;
 
@@ -69,5 +70,10 @@ pub fn run() -> gtk::glib::ExitCode {
 
 /// The panes the sidebar lists on Linux, in order: the Mac's roster minus
 /// 字型管理 (the panel draws with the desktop's font, roadmap L4), and —
-/// until their PRs land — minus 快捷鍵 / 詞庫來源 / 自訂詞庫 (PR7, PR8).
-pub const SIDEBAR: [SettingsPane; 2] = [SettingsPane::General, SettingsPane::Appearance];
+/// until its PR lands — minus 自訂詞庫 (PR8).
+pub const SIDEBAR: [SettingsPane; 4] = [
+    SettingsPane::General,
+    SettingsPane::Appearance,
+    SettingsPane::Shortcuts,
+    SettingsPane::DictionarySources,
+];

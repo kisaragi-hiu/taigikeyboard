@@ -14,10 +14,12 @@
 use adw::prelude::*;
 use std::process::ExitCode;
 use std::rc::Rc;
+use taigi_desktop_core::keys::{KeyModifiers, ShortcutAction};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::SettingsFileStore;
 use taigikeyboard_settings::pages::BUILT;
+use taigikeyboard_settings::recorder::RecorderTarget;
 use taigikeyboard_settings::window::SettingsWindow;
 use taigikeyboard_settings::writer::SettingsWriter;
 use taigikeyboard_settings::SIDEBAR;
@@ -51,6 +53,8 @@ fn main() -> ExitCode {
     a_language_picked_here_rebuilds_the_sidebar(&window);
     an_unbuilt_pane_lands_on_general(&window);
     a_reset_keeps_the_display_language(&window);
+    a_recorded_press_binds_the_row(&window);
+    the_kautian_expander_switch_writes_its_key(&window);
     the_read_only_window_writes_nothing(&application);
     eprintln!("panes: ok");
     ExitCode::SUCCESS
@@ -162,6 +166,62 @@ fn a_reset_keeps_the_display_language(window: &Rc<SettingsWindow>) {
         document.set_string(&keys::DISPLAY_LANGUAGE, DisplayLanguage::System.tag())
     });
     eprintln!("panes: reset keeps the language");
+}
+
+/// trace: recording on 顯示 Telex 表 (default Ctrl+Alt+/); a bare `a`
+/// (keysym 0x61, no modifiers) is refused and recording continues; then
+/// Ctrl+Alt+K (0x6b, CONTROL 1<<2 | MOD1 1<<3) is recorded and stored as
+/// the row's chord; the × then clears it to "".
+fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
+    let target = RecorderTarget::Global(ShortcutAction::ShowTelexGuide);
+    window.start_recording(target);
+    assert_eq!(window.recording().0, Some(target));
+    window.record_press(0x61, 38, 0);
+    assert_eq!(
+        window.recording().0,
+        Some(target),
+        "a bare letter is refused"
+    );
+    assert!(window.recording().1.is_some());
+    window.record_press(0x6b, 45, (1 << 2) | (1 << 3));
+    assert_eq!(window.recording().0, None);
+    let chord = ShortcutAction::ShowTelexGuide
+        .chord_in(window.writer().borrow().document())
+        .expect("the row is bound");
+    assert_eq!(chord.key, "k");
+    assert_eq!(
+        chord.modifiers,
+        KeyModifiers::CONTROL.with(KeyModifiers::ALT)
+    );
+    window.clear_shortcut(target);
+    assert!(ShortcutAction::ShowTelexGuide
+        .chord_in(window.writer().borrow().document())
+        .is_none());
+    window.update(taigi_desktop_core::settings::SettingsDocument::reset_global_shortcuts);
+    eprintln!("panes: recorder binds and clears");
+}
+
+/// trace: the 教典 row is the one `adw::ExpanderRow` on 詞庫來源; its
+/// enable switch is `IS_KAUTIAN_ENABLED` (default true).
+fn the_kautian_expander_switch_writes_its_key(window: &Rc<SettingsWindow>) {
+    let page = window
+        .page_widget(SettingsPane::DictionarySources)
+        .expect("dictionary sources");
+    let kautian = find_first::<adw::ExpanderRow>(&page).expect("the 教典 expander");
+    assert!(kautian.enables_expansion());
+    kautian.set_enable_expansion(false);
+    assert!(!window
+        .writer()
+        .borrow()
+        .document()
+        .bool(&keys::IS_KAUTIAN_ENABLED));
+    kautian.set_enable_expansion(true);
+    assert!(window
+        .writer()
+        .borrow()
+        .document()
+        .bool(&keys::IS_KAUTIAN_ENABLED));
+    eprintln!("panes: kautian expander round-trips");
 }
 
 fn the_read_only_window_writes_nothing(application: &adw::Application) {
