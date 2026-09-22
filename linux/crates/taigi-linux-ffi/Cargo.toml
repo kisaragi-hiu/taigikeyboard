@@ -1,0 +1,30 @@
+[package]
+name = "taigi-linux-ffi"
+description = "The C ABI the Fcitx5 addon calls: opaque runtime / engine handles, one key in, a reply of effects out (taigi-linux-core over a C boundary)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+name = "taigi_linux_ffi"
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+taigi-linux-core.workspace = true
+taigi-linux-platform.workspace = true
+taigi-desktop-core.workspace = true
+log.workspace = true
+env_logger.workspace = true
+
+[lints.rust]
+# JUSTIFICATION: the exported functions ARE the C boundary — each `unsafe`
+# block is one pointer dereference with a `// SAFETY:` line naming the
+# contract `include/taigikeyboard.h` states. Every other Linux crate keeps
+# the workspace's `forbid`.
+unsafe_code = "allow"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }

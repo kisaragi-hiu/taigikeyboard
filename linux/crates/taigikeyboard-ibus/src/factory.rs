@@ -5,9 +5,9 @@
 //! `src/ibusfactory.c`, `ibus_factory_real_create_engine`).
 
 use crate::engine::{Engine, Service};
-use crate::runtime::Runtime;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use taigi_linux_core::Runtime;
 use zbus::zvariant::OwnedObjectPath;
 use zbus::{fdo, interface, ObjectServer};
 

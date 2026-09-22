@@ -22,7 +22,7 @@ CROSS_CARGO := $(shell command -v cargo-zigbuild >/dev/null 2>&1 && echo "cargo 
 PREFIX ?= /usr
 DESTDIR ?=
 
-.PHONY: help i18n-check test lint check-target check fmt build install uninstall component clean
+.PHONY: help i18n-check test lint check-target check fmt build build-fcitx5 install install-fcitx5 uninstall component clean
 
 help:
 	@echo "Linux input method — dev loop"
@@ -33,8 +33,9 @@ help:
 	@echo "  make check-target  - Build the engine for $(LINUX_TARGET) (cargo zigbuild on macOS)"
 	@echo "  make i18n-check    - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt           - cargo fmt"
-	@echo "  make build         - (Linux) cargo build --release"
-	@echo "  make install       - (Linux) install into PREFIX=$(PREFIX) (DESTDIR honoured), then \`ibus restart\`"
+	@echo "  make build         - (Linux) cargo build --release (IBus engine + the FFI static library)"
+	@echo "  make build-fcitx5  - (Linux) the Fcitx5 addon: cmake over the FFI static library (needs fcitx5-modules-dev, extra-cmake-modules)"
+	@echo "  make install       - (Linux) install both shells + dictionaries into PREFIX=$(PREFIX) (DESTDIR honoured)"
 	@echo "  make uninstall     - (Linux) remove what install put there; user data stays"
 
 # The generated strings live in the desktop-shared crate; a stale copy would
@@ -49,11 +50,11 @@ test: i18n-check
 lint:
 	cargo clippy --workspace --all-targets -- -D warnings
 
-# The engine and its platform crate for the shipping target. A real build,
-# not `cargo check`: the bundled SQLite's build script compiles C for the
-# target, which needs a C toolchain for it — zig's, on macOS.
+# The IBus engine and the FFI static library for the shipping target. A real
+# build, not `cargo check`: the bundled SQLite's build script compiles C for
+# the target, which needs a C toolchain for it — zig's, on macOS.
 check-target:
-	$(CROSS_CARGO) -p taigikeyboard-ibus --target $(LINUX_TARGET)
+	$(CROSS_CARGO) -p taigikeyboard-ibus -p taigi-linux-ffi --target $(LINUX_TARGET)
 
 check: test lint check-target
 	cargo fmt -- --check
@@ -66,6 +67,15 @@ fmt:
 build:
 	cargo build --release
 
+# The Fcitx5 addon (linux/fcitx5/): CMake against Fcitx5Core, over the static
+# library `build` produced. PREFIX must match the binaries' TAIGIKEYBOARD_PREFIX.
+FCITX5_BUILD_DIR := target/fcitx5-build
+build-fcitx5: build
+	cmake -S fcitx5 -B $(FCITX5_BUILD_DIR) -DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_INSTALL_PREFIX=$(PREFIX) \
+		-DTAIGI_FFI_LIB=$(CURDIR)/target/release/libtaigi_linux_ffi.a
+	cmake --build $(FCITX5_BUILD_DIR) --parallel
+
 # The component XML with this PREFIX rendered in (`<exec>` / `<setup>`).
 component: data/taigikeyboard.xml.in
 	sed -e 's#@PREFIX@#$(PREFIX)#g' -e 's#@VERSION@#$(shell grep -m1 '^version' Cargo.toml | cut -d'"' -f2)#g' $< > target/taigikeyboard.xml
@@ -73,15 +83,21 @@ component: data/taigikeyboard.xml.in
 # The install layout the engine resolves at runtime
 # (`taigi-linux-platform::paths::InstallLayout`); the PREFIX must match the
 # one the binaries were built with (`TAIGIKEYBOARD_PREFIX`, default /usr).
-install: build component
+install: build component install-fcitx5
 	install -Dm755 target/release/ibus-engine-taigikeyboard $(DESTDIR)$(PREFIX)/libexec/ibus-engine-taigikeyboard
 	install -Dm644 target/taigikeyboard.xml $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	install -d $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries
 	install -m644 ../dictionaries/dictionary.fst ../dictionaries/dictionary.bin ../dictionaries/association.bin ../dictionaries/syllables.fst $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries/
-	@echo "installed under $(DESTDIR)$(PREFIX); run: ibus restart (or ibus write-cache; ibus restart)"
+	@echo "installed under $(DESTDIR)$(PREFIX); restart fcitx5 (fcitx5 -r) and/or ibus (ibus restart)"
+
+# The addon's .so + its two .conf files, through CMake's own install rules.
+install-fcitx5: build-fcitx5
+	DESTDIR=$(DESTDIR) cmake --install $(FCITX5_BUILD_DIR)
 
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/libexec/ibus-engine-taigikeyboard
+	rm -f $(DESTDIR)$(PREFIX)/lib/fcitx5/taigikeyboard.so $(DESTDIR)$(PREFIX)/lib/*/fcitx5/taigikeyboard.so
+	rm -f $(DESTDIR)$(PREFIX)/share/fcitx5/inputmethod/taigikeyboard.conf $(DESTDIR)$(PREFIX)/share/fcitx5/addon/taigikeyboard.conf
 	rm -f $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	rm -rf $(DESTDIR)$(PREFIX)/share/taigikeyboard
 	@echo "removed; ~/.config/taigikeyboard and ~/.local/share/taigikeyboard are kept"
