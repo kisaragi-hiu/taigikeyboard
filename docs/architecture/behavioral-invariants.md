@@ -1290,7 +1290,7 @@ USER 2026-09-22 (observed, TL continuous input): typing `jim--khi--ah` for 撏�
 
 **Tests**: `engine/composing/src/shadow.rs` (`typed_hyphen_barrier_*`, `oov_readings_split_*`, `span_key_pins_typed_boundaries_*`, `whole_buffer_pin_carries_typed_tones_for_tl_poj`), `engine/phonetics/src/syllable.rs` (`khinsiann_flag_tests`), `engine/lexicon/src/continuous.rs` (`typed_boundary_*`, `typed_boundary_kind_*`, `trailing_boundary_*`, `boundary_check_reads_case_blind`), `engine/composing/tests/continuous_typed_separator.rs` (`hoo--gua` vs `hoo-gua`), `engine/composing/tests/continuous_typed_boundary.rs` (production-shaped `khi` / `khia` / `khiah` fixture: readings dropped / kept, `khiah` control, 忍氣 vs 忍 + 去 by kind, pending `--khi--ah` after a pick, mixed dictionary + OOV, capitalised custom, POJ), `engine/composing/tests/build_keys_tl_lattice.rs` (`iah-`). Offline: `DUMP_INPUTS="khi--ah" cargo test -p composing --test candidate_dump -- --ignored --nocapture`.
 
-## §53 — ⁿ大本字 decides the case of the POJ nasal marker, everywhere the user reads it
+## §53 — 「大本字時 ⁿ 轉做 ᴺ」 decides the case of the POJ nasal marker, everywhere the user reads it
 
 ### `INVARIANT_NASAL_MARKER_CASE_FOLLOWS_THE_SWITCH`
 

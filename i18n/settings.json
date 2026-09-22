@@ -199,7 +199,7 @@
     "nasalMarkerUppercase": {
       "comment": "Toggle label: the POJ nasal marker follows the case of the letters before it (SIÂᴺ); off, it is always ⁿ (SIÂⁿ). Default ON. All four platforms, host settings only.",
       "scope": { "platforms": ["android", "ios", "macos", "windows"], "surfaces": ["host"] },
-      "values": { "hanji": "ⁿ 大本字", "tailo": "ⁿ tuā-pún-jī", "poj": "ⁿ tōa-pún-jī", "en": "Uppercase ⁿ", "ja": "ⁿ の大文字" }
+      "values": { "hanji": "大本字時 ⁿ 轉做 ᴺ", "tailo": "Tuā-pún-jī sî ⁿ tsuán tsò ᴺ", "poj": "Tōa-pún-jī sî ⁿ choán chò ᴺ", "en": "ⁿ becomes ᴺ in capitals", "ja": "大文字では ⁿ を ᴺ に" }
     },
     "nasalMarkerUppercaseInfo": {
       "comment": "Help text for the ⁿ 大本字 toggle (mobile host app).",

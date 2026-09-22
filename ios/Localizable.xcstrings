@@ -3176,13 +3176,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uppercase ⁿ"
+            "value": "ⁿ becomes ᴺ in capitals"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ⁿ の大文字"
+            "value": "大文字では ⁿ を ᴺ に"
           }
         }
       }
