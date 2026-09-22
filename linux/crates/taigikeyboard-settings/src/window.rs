@@ -23,6 +23,7 @@ use taigi_desktop_core::settings::{
     keys, AppearanceMode, SettingChoice, SettingsDocument, SettingsPane,
 };
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey};
+use taigi_desktop_storage::UserDataStores;
 use taigi_linux_platform::{snapshot, RawKeyEvent};
 
 /// `SettingsPaneLayout` in `SettingsSplitView.swift`: sidebar 215 + detail 545.
@@ -33,6 +34,10 @@ const INITIAL_HEIGHT: i32 = 560;
 pub struct SettingsWindow {
     window: adw::ApplicationWindow,
     writer: RefCell<SettingsWriter>,
+    /// Held open for the window's life: the 自訂詞庫 and 辭典搜尋 pages
+    /// read it. `None` in a read-only launch.
+    stores: Option<UserDataStores>,
+    toasts: adw::ToastOverlay,
     sidebar: gtk::ListBox,
     /// The content page: its title is what the header bar draws
     /// (libadwaita 1.5 `adw-header-bar.c` reads the enclosing
@@ -55,7 +60,11 @@ pub struct SettingsWindow {
 }
 
 impl SettingsWindow {
-    pub fn build(application: &adw::Application, writer: SettingsWriter) -> Rc<Self> {
+    pub fn build(
+        application: &adw::Application,
+        writer: SettingsWriter,
+        stores: Option<UserDataStores>,
+    ) -> Rc<Self> {
         let sidebar = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::Single)
             .css_classes(["navigation-sidebar"])
@@ -69,6 +78,9 @@ impl SettingsWindow {
         let content_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
         content_box.append(&banner);
         content_box.append(&stack);
+        // Transient notices (a job's outcome) as toasts over the content.
+        let toasts = adw::ToastOverlay::new();
+        toasts.set_child(Some(&content_box));
 
         let sidebar_view = adw::ToolbarView::new();
         sidebar_view.add_top_bar(&adw::HeaderBar::new());
@@ -80,7 +92,7 @@ impl SettingsWindow {
         ));
         let content_view = adw::ToolbarView::new();
         content_view.add_top_bar(&adw::HeaderBar::new());
-        content_view.set_content(Some(&content_box));
+        content_view.set_content(Some(&toasts));
 
         let sidebar_title = crate::presentation::strings_for(writer.document())
             .resolve(StringKey::HomeAppHeaderTitle)
@@ -103,6 +115,8 @@ impl SettingsWindow {
         let shell = Rc::new(Self {
             window,
             writer: RefCell::new(writer),
+            stores,
+            toasts,
             sidebar,
             content_page,
             stack,
@@ -145,6 +159,20 @@ impl SettingsWindow {
 
     pub fn writer(&self) -> &RefCell<SettingsWriter> {
         &self.writer
+    }
+
+    pub fn stores(&self) -> Option<&UserDataStores> {
+        self.stores.as_ref()
+    }
+
+    /// A transient notice: what a page has to tell the user after a job
+    /// (`UserDataPageChrome.swift:19-52`), as a toast.
+    pub fn toast(&self, title: &str, detail: Option<&str>) {
+        let text = match detail {
+            Some(detail) => format!("{title} — {detail}"),
+            None => title.to_owned(),
+        };
+        self.toasts.add_toast(adw::Toast::new(&text));
     }
 
     /// The row recording right now and why its last press was refused.
@@ -371,7 +399,7 @@ impl SettingsWindow {
         }
         let mut pages = Vec::new();
         for pane in pages::BUILT {
-            let page = pages::build(pane, self, &strings, &document);
+            let page = pages::build(pane, self, &strings, &document, self.stores.as_ref());
             self.stack.add_named(&page.widget, Some(pane.raw()));
             pages.push(page);
         }
@@ -486,5 +514,15 @@ impl Shell {
         if let Some(shell) = self.0.upgrade() {
             shell.clear_shortcut(target);
         }
+    }
+
+    pub fn toast(&self, title: &str, detail: Option<&str>) {
+        if let Some(shell) = self.0.upgrade() {
+            shell.toast(title, detail);
+        }
+    }
+
+    pub fn window(&self) -> Option<adw::ApplicationWindow> {
+        self.0.upgrade().map(|shell| shell.window().clone())
     }
 }

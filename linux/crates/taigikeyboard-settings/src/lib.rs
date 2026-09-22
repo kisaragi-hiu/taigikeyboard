@@ -2,9 +2,12 @@
 //! pages without a running application (roadmap L12).
 
 pub mod cli;
+pub mod jobs;
 pub mod pages;
 pub mod presentation;
 pub mod recorder;
+pub mod search;
+pub mod user_data;
 pub mod window;
 pub mod writer;
 
@@ -50,7 +53,15 @@ pub fn run() -> gtk::glib::ExitCode {
         let shell = match existing {
             Some(shell) => shell,
             None => {
-                let shell = SettingsWindow::build(application, writer::SettingsWriter::at_launch());
+                let writer = writer::SettingsWriter::at_launch();
+                // The stores follow the settings: no user directory, no
+                // learning data either (the banner says so).
+                let stores = if writer.is_read_only() {
+                    None
+                } else {
+                    user_data::open_at_launch()
+                };
+                let shell = SettingsWindow::build(application, writer, stores);
                 *window.borrow_mut() = Some(Rc::clone(&shell));
                 shell
             }
@@ -69,11 +80,11 @@ pub fn run() -> gtk::glib::ExitCode {
 }
 
 /// The panes the sidebar lists on Linux, in order: the Mac's roster minus
-/// 字型管理 (the panel draws with the desktop's font, roadmap L4), and —
-/// until its PR lands — minus 自訂詞庫 (PR8).
-pub const SIDEBAR: [SettingsPane; 4] = [
+/// 字型管理 (the panel draws with the desktop's font, roadmap L4).
+pub const SIDEBAR: [SettingsPane; 5] = [
     SettingsPane::General,
     SettingsPane::Appearance,
     SettingsPane::Shortcuts,
     SettingsPane::DictionarySources,
+    SettingsPane::CustomDictionary,
 ];

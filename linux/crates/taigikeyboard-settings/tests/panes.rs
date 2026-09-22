@@ -47,7 +47,13 @@ fn main() -> ExitCode {
 
     let directory = tempfile::tempdir().expect("a temp directory");
     let store = SettingsFileStore::new(directory.path());
-    let window = SettingsWindow::build(&application, SettingsWriter::new(store.clone()));
+    let stores = taigi_desktop_storage::UserDataStores::new(directory.path().to_path_buf());
+    stores.open();
+    let window = SettingsWindow::build(
+        &application,
+        SettingsWriter::new(store.clone()),
+        Some(stores),
+    );
 
     every_built_pane_is_in_the_stack(&window);
     a_switch_row_writes_its_key(&window);
@@ -57,6 +63,7 @@ fn main() -> ExitCode {
     a_reset_keeps_the_display_language(&window);
     a_recorded_press_binds_the_row(&window);
     the_kautian_expander_switch_writes_its_key(&window);
+    the_custom_dictionary_lists_what_the_store_holds(&window);
     the_read_only_window_writes_nothing(&application);
     eprintln!("panes: ok");
     ExitCode::SUCCESS
@@ -265,8 +272,72 @@ fn the_kautian_expander_switch_writes_its_key(window: &Rc<SettingsWindow>) {
     eprintln!("panes: kautian expander round-trips");
 }
 
+/// trace: two rows upserted into the store; the page's reload runs off the
+/// UI thread and lands on the main context — pumped here until it does —
+/// and the list then shows both.
+fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>) {
+    let stores = window.stores().expect("stores");
+    stores.custom_dictionary.open_blocking();
+    stores
+        .custom_dictionary
+        .upsert(&taigi_desktop_storage::CustomDictionaryRow::new(
+            "tsia̍h-pn̄g",
+            "食飯",
+        ))
+        .expect("upsert");
+    stores
+        .custom_dictionary
+        .upsert(&taigi_desktop_storage::CustomDictionaryRow::new(
+            "lim-tê", "啉茶",
+        ))
+        .expect("upsert");
+    let document = window.writer().borrow().document().clone();
+    let strings = window.writer().borrow().strings();
+    let page = taigikeyboard_settings::pages::build(
+        SettingsPane::CustomDictionary,
+        window,
+        &strings,
+        &document,
+        Some(stores),
+    );
+    let dictionary = page
+        .state::<taigikeyboard_settings::pages::custom_dictionary::CustomDictionaryPage>()
+        .expect("the page retains its state");
+    dictionary.reload();
+    let context = gtk::glib::MainContext::default();
+    let started = std::time::Instant::now();
+    while dictionary.shown_row_count() < 2 && started.elapsed() < std::time::Duration::from_secs(10)
+    {
+        context.iteration(true);
+    }
+    assert_eq!(
+        dictionary.shown_row_count(),
+        2,
+        "the load landed on the main context"
+    );
+    // The entries list: a `PreferencesGroup` keeps a `boxed-list` of its
+    // own for each set of rows, so the one with the two entries is ours.
+    let entries = find_all::<gtk::ListBox>(page.widget.upcast_ref())
+        .into_iter()
+        .find(|list| list.row_at_index(1).is_some() && list.row_at_index(2).is_none());
+    assert!(entries.is_some(), "a list with exactly the two entries");
+    let search = taigikeyboard_settings::pages::build(
+        SettingsPane::DictionarySearch,
+        window,
+        &strings,
+        &document,
+        Some(stores),
+    );
+    assert!(find_first::<gtk::SearchEntry>(search.widget.upcast_ref()).is_some());
+    eprintln!("panes: custom dictionary lists the store; search page mounts");
+}
+
 fn the_read_only_window_writes_nothing(application: &adw::Application) {
-    let window = SettingsWindow::build(application, SettingsWriter::read_only("test".to_owned()));
+    let window = SettingsWindow::build(
+        application,
+        SettingsWriter::read_only("test".to_owned()),
+        None,
+    );
     assert!(window.writer().borrow().is_read_only());
     window.update(|document| document.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true));
     assert!(!window
