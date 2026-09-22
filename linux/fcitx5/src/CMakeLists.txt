@@ -21,7 +21,11 @@ install(TARGETS taigikeyboard DESTINATION "${CMAKE_INSTALL_LIBDIR}/fcitx5")
 
 configure_file(taigikeyboard.conf.in taigikeyboard.conf @ONLY)
 configure_file(taigikeyboard-addon.conf.in taigikeyboard-addon.conf @ONLY)
+# Under the install prefix, not FCITX_INSTALL_PKGDATADIR: that one is fcitx5's
+# own /usr/share/fcitx5 whatever CMAKE_INSTALL_PREFIX says, so a staged
+# install (DESTDIR-less, another prefix — the CI smoke) would write to /usr.
+# The two are the same path for PREFIX=/usr, the packaged case.
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/taigikeyboard.conf"
-        DESTINATION "${FCITX_INSTALL_PKGDATADIR}/inputmethod" COMPONENT config)
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/fcitx5/inputmethod" COMPONENT config)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/taigikeyboard-addon.conf" RENAME taigikeyboard.conf
-        DESTINATION "${FCITX_INSTALL_PKGDATADIR}/addon" COMPONENT config)
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/fcitx5/addon" COMPONENT config)
