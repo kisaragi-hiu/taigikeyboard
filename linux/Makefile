@@ -149,10 +149,14 @@ deb:
 	rm -rf target/deb
 	$(MAKE) install PREFIX=/usr DESTDIR=$(CURDIR)/$(DEB_ROOT)
 	install -d $(DEB_ROOT)/DEBIAN target/deb/debian
-	sed -e 's#@VERSION@#$(VERSION)#g' -e 's#@SHLIBS@##' packaging/control.in > target/deb/debian/control
-	cd target/deb && dpkg-shlibdeps -O \
+	# dpkg-shlibdeps wants a SOURCE-style debian/control beside what it scans
+	# (a Source stanza, then the package); the shipped control is the binary
+	# one, so a minimal source control lives in packaging/.
+	cp packaging/shlibdeps-control target/deb/debian/control
+	set -o pipefail; cd target/deb && dpkg-shlibdeps -O \
 	  root/usr/bin/taigikeyboard-settings root/usr/libexec/ibus-engine-taigikeyboard root/usr/lib/*/fcitx5/libtaigikeyboard.so \
 	  | sed -e 's/^shlibs:Depends=//' > shlibs.txt
+	test -s target/deb/shlibs.txt
 	sed -e 's#@VERSION@#$(VERSION)#g' -e "s#@SHLIBS@#$$(cat target/deb/shlibs.txt)#" packaging/control.in > $(DEB_ROOT)/DEBIAN/control
 	dpkg-deb --build --root-owner-group $(DEB_ROOT) $(DEB_FILE)
 	dpkg-deb --info $(DEB_FILE)
