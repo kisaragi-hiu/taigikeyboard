@@ -16,8 +16,8 @@ use std::ptr;
 use std::sync::Arc;
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::CandidateNavigation;
-use taigi_linux_core::{session, Emit, EngineState, LookupTableContent, Runtime};
-use taigi_linux_platform::{snapshot, RawKeyEvent};
+use taigi_linux_core::{chrome, session, Emit, EngineState, LookupTableContent, MenuItem, Runtime};
+use taigi_linux_platform::RawKeyEvent;
 
 /// One process-wide runtime (settings, stores, lexicon, coordinator).
 pub struct TaigiRuntime {
@@ -51,8 +51,21 @@ struct ReplyTable {
     candidates: Vec<CString>,
     labels: Vec<CString>,
     cursor: u32,
+    cursor_visible: bool,
     page_size: u32,
     vertical: bool,
+}
+
+/// The panel menu rows, resolved in the display language of the moment.
+pub struct TaigiMenu {
+    items: Vec<MenuEntry>,
+}
+
+struct MenuEntry {
+    separator: bool,
+    id: CString,
+    title: CString,
+    detail: CString,
 }
 
 /// `TAIGI_EMIT_*` in the header — the same numbers.
@@ -62,6 +75,8 @@ pub const EMIT_COMMIT: u32 = 3;
 pub const EMIT_DELETE_SURROUNDING: u32 = 4;
 pub const EMIT_LOOKUP_TABLE: u32 = 5;
 pub const EMIT_HIDE_LOOKUP_TABLE: u32 = 6;
+pub const EMIT_MODE_CHANGED: u32 = 7;
+pub const EMIT_ANNOUNCE_MODE: u32 = 8;
 
 /// `TAIGI_NAVIGATE_*` in the header.
 pub const NAVIGATE_PREVIOUS: u32 = 0;
@@ -109,6 +124,8 @@ fn reply_emit(emit: Emit) -> ReplyEmit {
             reply.table = Some(reply_table(content));
         }
         Emit::HideLookupTable => reply.kind = EMIT_HIDE_LOOKUP_TABLE,
+        Emit::ModeChanged => reply.kind = EMIT_MODE_CHANGED,
+        Emit::AnnounceMode => reply.kind = EMIT_ANNOUNCE_MODE,
     }
     reply
 }
@@ -118,6 +135,7 @@ fn reply_table(content: LookupTableContent) -> ReplyTable {
         candidates: content.candidates.iter().map(|c| c_string(c)).collect(),
         labels: content.labels.iter().map(|l| c_string(l)).collect(),
         cursor: content.cursor,
+        cursor_visible: content.cursor_visible,
         page_size: content.page_size,
         vertical: content.vertical,
     }
@@ -175,6 +193,129 @@ pub unsafe extern "C" fn taigi_runtime_free(runtime: *mut TaigiRuntime) {
     }
     // SAFETY: the header's contract — a pointer this crate boxed, freed once.
     drop(unsafe { Box::from_raw(runtime) });
+}
+
+/// # Safety
+/// `runtime` is a live runtime. The string is freed with `taigi_string_free`.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_runtime_mode_label(runtime: *const TaigiRuntime) -> *mut c_char {
+    if runtime.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: non-null and, by contract, a live runtime.
+    let runtime = unsafe { &*runtime };
+    guarded("taigi_runtime_mode_label", ptr::null_mut(), || {
+        c_string(&chrome::mode_label(&runtime.inner)).into_raw()
+    })
+}
+
+/// # Safety
+/// `text` came from this crate (`taigi_runtime_mode_label`) and is freed once.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_string_free(text: *mut c_char) {
+    if text.is_null() {
+        return;
+    }
+    // SAFETY: the header's contract — a `CString` this crate handed out.
+    drop(unsafe { CString::from_raw(text) });
+}
+
+/// # Safety
+/// `runtime` is a live runtime. The menu is freed with `taigi_menu_free`.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_runtime_menu(runtime: *const TaigiRuntime) -> *mut TaigiMenu {
+    if runtime.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: non-null and, by contract, a live runtime.
+    let runtime = unsafe { &*runtime };
+    guarded("taigi_runtime_menu", ptr::null_mut(), || {
+        let items = chrome::menu_items(&runtime.inner)
+            .into_iter()
+            .map(|item| match item {
+                MenuItem::Separator => MenuEntry {
+                    separator: true,
+                    id: CString::default(),
+                    title: CString::default(),
+                    detail: CString::default(),
+                },
+                MenuItem::Action { id, title, detail } => MenuEntry {
+                    separator: false,
+                    id: c_string(id),
+                    title: c_string(&title),
+                    detail: c_string(detail.as_deref().unwrap_or("")),
+                },
+            })
+            .collect();
+        Box::into_raw(Box::new(TaigiMenu { items }))
+    })
+}
+
+/// # Safety
+/// `menu` is a live menu or null.
+unsafe fn menu_entry<'a>(menu: *const TaigiMenu, index: usize) -> Option<&'a MenuEntry> {
+    if menu.is_null() {
+        return None;
+    }
+    // SAFETY: non-null and, by contract, a live menu the caller owns.
+    unsafe { &*menu }.items.get(index)
+}
+
+/// # Safety
+/// `menu` is a live menu or null.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_menu_count(menu: *const TaigiMenu) -> usize {
+    if menu.is_null() {
+        return 0;
+    }
+    // SAFETY: non-null and, by contract, a live menu the caller owns.
+    unsafe { &*menu }.items.len()
+}
+
+/// # Safety
+/// `menu` is a live menu or null.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_menu_is_separator(menu: *const TaigiMenu, index: usize) -> bool {
+    // SAFETY: forwarded contract.
+    unsafe { menu_entry(menu, index) }.is_some_and(|entry| entry.separator)
+}
+
+/// # Safety
+/// `menu` is a live menu or null.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_menu_id(menu: *const TaigiMenu, index: usize) -> *const c_char {
+    static EMPTY: &CStr = c"";
+    // SAFETY: forwarded contract.
+    unsafe { menu_entry(menu, index) }.map_or(EMPTY.as_ptr(), |entry| entry.id.as_ptr())
+}
+
+/// # Safety
+/// `menu` is a live menu or null.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_menu_title(menu: *const TaigiMenu, index: usize) -> *const c_char {
+    static EMPTY: &CStr = c"";
+    // SAFETY: forwarded contract.
+    unsafe { menu_entry(menu, index) }.map_or(EMPTY.as_ptr(), |entry| entry.title.as_ptr())
+}
+
+/// # Safety
+/// `menu` is a live menu or null.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_menu_detail(menu: *const TaigiMenu, index: usize) -> *const c_char {
+    static EMPTY: &CStr = c"";
+    // SAFETY: forwarded contract.
+    unsafe { menu_entry(menu, index) }.map_or(EMPTY.as_ptr(), |entry| entry.detail.as_ptr())
+}
+
+/// # Safety
+/// `menu` came from `taigi_runtime_menu` and is freed once (null is ignored).
+#[no_mangle]
+pub unsafe extern "C" fn taigi_menu_free(menu: *mut TaigiMenu) {
+    if menu.is_null() {
+        return;
+    }
+    // SAFETY: the header's contract — a pointer this crate boxed, freed once.
+    drop(unsafe { Box::from_raw(menu) });
 }
 
 // ---------------------------------------------------------------------------
@@ -245,16 +386,38 @@ pub unsafe extern "C" fn taigi_engine_key(
     // SAFETY: non-null and, by contract, a live engine the caller owns.
     let engine = unsafe { &mut *engine };
     guarded("taigi_engine_key", ptr::null_mut(), || {
-        let Some(snapshot) = snapshot(RawKeyEvent {
-            keyval: keysym,
-            keycode,
-            state: states,
-        }) else {
-            return reply_from(false, Vec::new());
-        };
-        let reply =
-            session::process_key(&engine.runtime, engine.token, &mut engine.state, &snapshot);
+        let reply = session::process_raw_key(
+            &engine.runtime,
+            engine.token,
+            &mut engine.state,
+            RawKeyEvent {
+                keyval: keysym,
+                keycode,
+                state: states,
+            },
+        );
         reply_from(reply.handled, reply.emits)
+    })
+}
+
+/// # Safety
+/// `engine` is a live engine; `id` is a NUL-terminated string from
+/// `taigi_menu_id`.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_engine_menu_activate(
+    engine: *mut TaigiEngine,
+    id: *const c_char,
+) -> *mut TaigiReply {
+    if engine.is_null() || id.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: non-null and, by contract, a live engine the caller owns.
+    let engine = unsafe { &mut *engine };
+    // SAFETY: non-null and, by contract, NUL-terminated.
+    let id = unsafe { CStr::from_ptr(id) }.to_string_lossy().into_owned();
+    guarded("taigi_engine_menu_activate", ptr::null_mut(), || {
+        let emits = chrome::activate_menu(&engine.runtime, engine.token, &mut engine.state, &id);
+        reply_from(true, emits)
     })
 }
 
@@ -462,6 +625,19 @@ pub unsafe extern "C" fn taigi_reply_table_cursor(reply: *const TaigiReply, inde
     unsafe { emit_at(reply, index) }
         .and_then(|emit| emit.table.as_ref())
         .map_or(0, |table| table.cursor)
+}
+
+/// # Safety
+/// `reply` is a live reply or null.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_reply_table_cursor_visible(
+    reply: *const TaigiReply,
+    index: usize,
+) -> bool {
+    // SAFETY: forwarded contract.
+    unsafe { emit_at(reply, index) }
+        .and_then(|emit| emit.table.as_ref())
+        .is_some_and(|table| table.cursor_visible)
 }
 
 /// # Safety

@@ -22,7 +22,7 @@ CROSS_CARGO := $(shell command -v cargo-zigbuild >/dev/null 2>&1 && echo "cargo 
 PREFIX ?= /usr
 DESTDIR ?=
 
-.PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component clean
+.PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component run-engine clean
 
 help:
 	@echo "Linux input method — dev loop"
@@ -38,6 +38,7 @@ help:
 	@echo "  make build-fcitx5  - (Linux) the Fcitx5 addon: cmake over the FFI static library (needs fcitx5-modules-dev, extra-cmake-modules)"
 	@echo "  make install       - (Linux) install both shells + dictionaries into PREFIX=$(PREFIX) (DESTDIR honoured)"
 	@echo "  make uninstall     - (Linux) remove what install put there; user data stays"
+	@echo "  make run-engine    - (Linux) run the IBus engine from this tree against a running ibus-daemon (RUST_LOG=debug, repo dictionaries)"
 
 # The generated strings live in the desktop-shared crate; a stale copy would
 # compile strings that no longer match their source. Same gate the macOS,
@@ -120,6 +121,13 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	rm -rf $(DESTDIR)$(PREFIX)/share/taigikeyboard
 	@echo "removed; ~/.config/taigikeyboard and ~/.local/share/taigikeyboard are kept"
+
+# The dev loop on a Linux box with ibus-daemon up: the engine from this tree,
+# reading the repo's dictionaries, logging every key. `ibus engine
+# taigikeyboard` from another terminal selects it (the component XML must
+# already be installed once so the daemon knows the name).
+run-engine:
+	TAIGIKEYBOARD_DATA_DIR=$(CURDIR)/.. RUST_LOG=debug cargo run -p taigikeyboard-ibus -- --ibus
 
 clean:
 	cargo clean

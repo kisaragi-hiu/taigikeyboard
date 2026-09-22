@@ -126,9 +126,10 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
     `CandidateWord::select` = highlight + commit through the FFI) — then `updatePreedit()` +
     `updateUserInterface(InputPanel)`; `reset` / `deactivate` end the session; `activate`
     refreshes the status area (menu actions, § L6); `subModeLabelImpl` = the mode letter.
-    Built by CMake against `Fcitx5Core` (`add_fcitx5_addon`, `fcitx5-rime`
-    `src/CMakeLists.txt` verbatim shape), installed to `${libdir}/fcitx5/taigikeyboard.so` +
-    `${datadir}/fcitx5/{inputmethod,addon}/taigikeyboard.conf`. **Not host-buildable** — the
+    Built by CMake against `Fcitx5Core` (the pre-5.1.12 `add_library(MODULE)` + empty
+    `PREFIX` shape of `fcitx5-rime` 5.1.8 `src/CMakeLists.txt` — Ubuntu 24.04 ships fcitx5
+    5.1.7, which has neither `add_fcitx5_addon` nor `FCITX_ADDON_FACTORY_V2`), installed to
+    `${libdir}/fcitx5/taigikeyboard.so` + `${datadir}/fcitx5/{inputmethod,addon}/taigikeyboard.conf`. **Not host-buildable** — the
     VM and the Ubuntu CI job (`fcitx5-modules-dev`, `extra-cmake-modules`) own it; the Mac
     gates the Rust half (`taigi-linux-core` tests, `taigi-linux-ffi` cross build via zig).
   - **`taigikeyboard-ibus`** stays as PR3 built it, rebased onto `taigi-linux-core`: the D-Bus
@@ -295,15 +296,27 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 - **L6 Panel menu = status-area actions (Fcitx5) / engine properties (IBus).** On Fcitx5:
   `SimpleAction`s registered with `userInterfaceManager()` and added to the input context's
   `statusArea()` under `StatusGroup::InputMethod` on `activate` (`fcitx5-rime` `refreshStatusArea`),
-  the mode letter through `subModeLabelImpl`. On IBus: `RegisterProperties` on `Enable` with a
-  `PROP_TYPE_MENU` root whose `symbol` is `台` (the panel indicator letter — IBus shows an
-  engine's symbol in the top bar) and whose sub-properties mirror the Mac's input-source
-  menu row for row (`InputSourceMenuRenderer.swift`, `TaigiInputController.swift:372-`):
-  the two switch rows under their 快捷鍵-pane names showing the recorded chord, a
-  separator, 設定 (`PropertyActivate` → spawn the settings window on the last pane) and
-  關於 (settings window on the 關於 pane). No 檢查更新 row (§ L10). Titles are resolved
-  from `taigi-desktop-core::strings` in the display language, re-registered when the
-  settings document changes.
+  the mode label through `subModeLabelImpl`. On IBus: `RegisterProperties` on `Enable` and
+  on every `FocusIn` with a `PROP_TYPE_MENU` root whose `symbol` is the mode label (the
+  panel indicator text — IBus shows an engine's symbol in the top bar) and whose
+  sub-properties mirror the Mac's input-source menu row for row
+  (`InputSourceMenuRenderer.swift`, `TaigiInputController.swift:372-`): the two switch rows
+  under their 快捷鍵-pane names with the recorded chord in the tooltip, a separator, 設定
+  (`PropertyActivate` → spawn the settings window on the last pane), a separator, 關於
+  (settings window on the 關於 pane). No 檢查更新 row (§ L10). Titles are resolved from
+  `taigi-desktop-core::strings` in the display language each time the rows are built
+  (PR5, `chrome::menu_items`; one list, both shells). **Mode label** (PR5,
+  `chrome::mode_label`) = `<romanization> · <candidate display mode>` (`台羅 · 漢字優先`),
+  the two states the chords switch; a switch emits `Emit::ModeLabel` (the shell re-reads it)
+  and `Emit::AnnounceMode` — Fcitx5 `Instance::showInputMethodInformation`, the
+  framework's own timed "input method + sub-mode" notice, stands in for the HUD flash;
+  IBus has no equivalent and only the symbol changes (named divergence). GNOME Shell reads
+  an IBus engine's indicator text from the property whose key is `InputMode`, and only a
+  `symbol` of one or two characters (`js/ui/status/keyboard.js`, GNOME 46 — Codex review
+  2026-09-23): the menu root's key is therefore `InputMode`, its `symbol`
+  `chrome::mode_symbol` (`台羅` / `白話`), its `label` the full `mode_label`. The same
+  panel fills an empty label list with `1…9, 0` (`ibusCandidatePopup.js`), so the IBus shell
+  sends one space per position for the label-less Telex guide.
 - **L7 Data locations (XDG).** `settings.json` under `$XDG_CONFIG_HOME/taigikeyboard/`
   (`~/.config/taigikeyboard/`), the four databases under `$XDG_DATA_HOME/taigikeyboard/`
   (`~/.local/share/taigikeyboard/`); named divergence from Windows' single
@@ -410,9 +423,9 @@ PR0 (quota, 2026-09-22); each later PR records its own verdict here.
 | PR0 | Admin | this roadmap + `.claude/rules/linux-guidelines.md` + docs index + memory topic | this PR |
 | PR1 | Proto | `PLATFORM_LINUX = 5` in `envelope.proto` + committed platform stubs regenerated (mechanical, its own PR as W12) | pending |
 | PR2 | Crate move | `desktop/` workspace: `taigi-desktop-core` + `taigi-desktop-storage` moved + renamed; `windows/` re-pointed; `windows/Makefile` rosters; `tools/i18n/generate.py` output path + `linux` in `VALID_PLATFORMS` with every `windows`-scoped key also scoped `linux`; `tools/release_notes.py` version files; root `Makefile` `desktop-check` / `linux-check`; docs + rules references; `make windows-check` green | pending |
-| PR3 | Engine I — wire | `linux/` workspace + toolchain; `taigi-linux-platform` (XDG paths, prefix, key translation, launcher, open URL; host stubs none needed); `taigikeyboard-ibus`: bus address + connection, factory, engine object with the full key path (snapshot → intent → manager inside the runtime lock → preedit / commit / lookup table), focus + reset + destroy lifecycle, wire types with signature tests; component XML template; `linux/Makefile`; `linux-build.yml` with the daemon smoke | this PR — Codex skipped (quota) |
-| PR4 | Fcitx5 shell | `taigi-linux-core` extracted from the IBus crate (runtime, session, executor `Emit`, selection; IBus crate rebased on it); `taigi-linux-ffi` staticlib + `taigikeyboard.h` C ABI with a header-compiles test; `linux/fcitx5/` CMake addon (`InputMethodEngineV3`, client preedit, `CommonCandidateList`, commit, delete-surrounding, reset / deactivate, addon + inputmethod `.conf`); `linux/Makefile` `build-fcitx5` / install into `${libdir}/fcitx5`; CI builds the addon | this PR — Codex skipped (quota) |
-| PR5 | Chrome, both shells | status-area actions (Fcitx5) / properties menu (IBus) per § L6, settings live reload (§ L9), global chords + toggle latch, symbol picker + Telex guide as candidate lists, mode label (`subModeLabelImpl` / property symbol), `run-engine` dev target | pending |
+| PR3 | Engine I — wire | `linux/` workspace + toolchain; `taigi-linux-platform` (XDG paths, prefix, key translation, launcher, open URL; host stubs none needed); `taigikeyboard-ibus`: bus address + connection, factory, engine object with the full key path (snapshot → intent → manager inside the runtime lock → preedit / commit / lookup table), focus + reset + destroy lifecycle, wire types with signature tests; component XML template; `linux/Makefile`; `linux-build.yml` with the daemon smoke | MERGED #143 `28b3e4f6` 2026-09-23 — Codex skipped (quota) |
+| PR4 | Fcitx5 shell | `taigi-linux-core` extracted from the IBus crate (runtime, session, executor `Emit`, selection; IBus crate rebased on it); `taigi-linux-ffi` staticlib + `taigikeyboard.h` C ABI with a header-compiles test; `linux/fcitx5/` CMake addon (`InputMethodEngineV3`, client preedit, `CommonCandidateList`, commit, delete-surrounding, reset / deactivate, addon + inputmethod `.conf`); `linux/Makefile` `build-fcitx5` / install into `${libdir}/fcitx5`; CI builds the addon | MERGED #144 `68dfc6b3` 2026-09-23 — Codex skipped (quota); CI facts: Ubuntu 24.04 ships fcitx5 **5.1.7** — no `add_fcitx5_addon` (5.1.12+) and no `FCITX_ADDON_FACTORY_V2`, so the addon uses `add_library(MODULE)` + `FCITX_ADDON_FACTORY`; the `.conf` files install under `${CMAKE_INSTALL_DATADIR}/fcitx5` (`FCITX_INSTALL_PKGDATADIR` is always `/usr/share/fcitx5`); `make -C linux check-cpp` syntax-checks the C++ on the Mac over a `references/fcitx5` 5.1.7 clone |
+| PR5 | Chrome, both shells | status-area actions (Fcitx5) / properties menu (IBus) per § L6, settings live reload (§ L9), global chords + toggle latch, symbol picker + Telex guide as candidate lists, mode label (`subModeLabelImpl` / property symbol), `run-engine` dev target | #147 (branch `feat/linux-chrome`) — `chrome.rs` in `taigi-linux-core`: chords + latch, Telex guide and symbol picker as lookup tables, `menu_items` / `mode_label` / `mode_symbol` / `Emit::ModeChanged` + `AnnounceMode`; Fcitx5 status-area `SimpleAction`s + `subMode` / `subModeLabelImpl` + `showInputMethodInformation`, panel paging routed through the core (`CandidateListImpl`); IBus `RegisterProperties` root `InputMode` + `PropertyActivate`; live reload was already `LiveSettings::current()` (L9). Codex post-impl **FIX → applied** (panel page desync, guide vs. panel scroll, GNOME `InputMode` symbol, guide labels on IBus, Fcitx5 `subMode`) |
 | PR6 | Settings I | `taigikeyboard-settings`: `adw` shell (sidebar, pane routing, `--pane`, single instance, display language, live tick), 一般, 外觀 (Linux row set), 關於 | pending |
 | PR7 | Settings II | 快捷鍵 (recorder over `EventControllerKey`, both registries, conflicts, slot-key-set picker), 詞庫來源 (教典 subcollections in an `adw::ExpanderRow`) | pending |
 | PR8 | Settings III | 自訂詞庫 (`ColumnView` table, paging, CRUD dialog, CSV via `FileDialog`, delete all, clear learning — background work on a `gio` task with the 400 ms busy card), unlisted 辭典搜尋 + external lookup URLs; headless pane-mount test | pending |

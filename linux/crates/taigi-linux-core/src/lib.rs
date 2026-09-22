@@ -9,15 +9,19 @@
 //! Counterpart of `taigi-windows-tsf`'s `runtime` + `session`, minus the
 //! COM.
 
+pub mod chrome;
 pub mod executor;
 pub mod runtime;
 pub mod selection;
 pub mod session;
 
+pub use chrome::{
+    activate_menu, menu_items, mode_label, mode_symbol, MenuItem, MENU_ABOUT, MENU_SETTINGS,
+};
 pub use executor::{Emit, LookupTableContent};
 pub use runtime::{dictionary_version, FirstKeySetup, Runtime};
 pub use selection::LookupSelection;
 pub use session::{
-    click_from_panel, end_session, navigate_from_panel, process_key, EngineState, KeyReply,
-    CAP_SURROUNDING_TEXT,
+    click_from_panel, end_session, navigate_from_panel, process_key, process_raw_key, EngineState,
+    KeyReply, CAP_SURROUNDING_TEXT,
 };

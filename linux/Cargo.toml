@@ -14,6 +14,7 @@ members = [
     "crates/taigi-linux-core",
     "crates/taigi-linux-ffi",
     "crates/taigikeyboard-ibus",
+    "crates/taigikeyboard-settings",
 ]
 
 [workspace.package]
@@ -25,6 +26,7 @@ repository = "https://github.com/taigikeyboard/taigikeyboard"
 publish = false
 
 [workspace.dependencies]
+tempfile = "3"
 dispatch = { path = "../engine/dispatch" }
 protos = { path = "../engine/protos" }
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
@@ -40,6 +42,10 @@ serde_json = "1"
 zbus = "5"
 # X11 keysym constants + keysym → char (the values IBus hands an engine).
 xkeysym = "0.2"
+# The settings window's toolkit (roadmap L3): GTK 4 + libadwaita, pinned to
+# what Ubuntu 24.04 (GTK 4.14, libadwaita 1.5) and Homebrew provide.
+gtk = { package = "gtk4", version = "0.11", features = ["v4_12"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_5"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
