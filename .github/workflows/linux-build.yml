@@ -15,6 +15,9 @@ name: Linux build
 #
 # Budget: ~4 min warm, ~10 min cold (dependency compile + apt).
 on:
+  # A publish rebuilds for provenance and keeps the artifact; it never
+  # touches the published assets (`desktop-release.md`: what was tested is
+  # what ships).
   release:
     types: [published]
   pull_request:
@@ -31,11 +34,15 @@ on:
       - 'desktop/**'
       - '.github/workflows/linux-build.yml'
   workflow_dispatch:
+    inputs:
+      source_sha:
+        description: The commit stage-desktop.sh staged; the attach step refuses any other
+        required: false
+        type: string
 
+# Every job reads; only `attach` writes (its own block below).
 permissions:
-  # Attaching the package to the draft release is a write; the run's own
-  # GITHUB_TOKEN can do it inside this repository.
-  contents: write
+  contents: read
 
 concurrency:
   group: linux-build-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
@@ -50,6 +57,10 @@ jobs:
   build:
     name: build + test + ibus smoke
     runs-on: ubuntu-24.04
+    # Only the desktop train: a mobile publish has no Linux package in it.
+    if: >-
+      github.event_name != 'release' ||
+      startsWith(github.event.release.tag_name, 'desktop-')
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -59,7 +70,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev pkg-config \
-            fcitx5 fcitx5-modules-dev extra-cmake-modules cmake ninja-build
+            fcitx5 fcitx5-modules-dev extra-cmake-modules cmake ninja-build dpkg-dev desktop-file-utils
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
@@ -104,8 +115,8 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=/usr \
             -DTAIGI_FFI_LIB="$PWD/target/release/libtaigi_linux_ffi.a"
           cmake --build target/fcitx5-build
-          test -f target/fcitx5-build/bin/taigikeyboard.so || test -f target/fcitx5-build/src/taigikeyboard.so
-          nm -D --defined-only $(find target/fcitx5-build -name taigikeyboard.so | head -1) | grep -q fcitx_addon_factory_instance
+          test -f target/fcitx5-build/src/libtaigikeyboard.so
+          nm -D --defined-only target/fcitx5-build/src/libtaigikeyboard.so | grep -q fcitx_addon_factory_instance
 
       - name: cargo fmt --check
         working-directory: linux
@@ -122,6 +133,12 @@ jobs:
           PREFIX="$RUNNER_TEMP/prefix"
           make install PREFIX="$PREFIX" DESTDIR=""
           test -f "$PREFIX/share/fcitx5/addon/taigikeyboard.conf"
+          # The addon file the loader will look for (5.1.7 addonloader.cpp:
+          # `Library=export:libX` → `libX.so`) must be the one installed.
+          library="$(sed -n 's/^Library=export:\(.*\)$/\1/p' "$PREFIX/share/fcitx5/addon/taigikeyboard.conf")"
+          test -n "$library"
+          ls "$PREFIX"/lib/fcitx5/"$library".so "$PREFIX"/lib/*/fcitx5/"$library".so 2>/dev/null | grep -q . || { echo "::error::no $library.so under $PREFIX/lib — the addon .conf and the CMake target disagree"; exit 1; }
+          desktop-file-validate "$PREFIX/share/applications/tw.taigikeyboard.Settings.desktop"
           export IBUS_COMPONENT_PATH="$PREFIX/share/ibus/component"
           export TAIGIKEYBOARD_DATA_DIR="$GITHUB_WORKSPACE"
           export XDG_CONFIG_HOME="$RUNNER_TEMP/xdg-config"
@@ -155,7 +172,7 @@ jobs:
           make deb
           dpkg-deb --contents target/taigikeyboard_*_amd64.deb | tee "$RUNNER_TEMP/deb-contents.txt"
           for path in usr/libexec/ibus-engine-taigikeyboard usr/bin/taigikeyboard-settings \
-                      fcitx5/taigikeyboard.so usr/share/fcitx5/addon/taigikeyboard.conf \
+                      fcitx5/libtaigikeyboard.so usr/share/fcitx5/addon/taigikeyboard.conf \
                       usr/share/fcitx5/inputmethod/taigikeyboard.conf usr/share/ibus/component/taigikeyboard.xml \
                       usr/share/taigikeyboard/dictionaries/dictionary.fst usr/share/applications/tw.taigikeyboard.Settings.desktop \
                       usr/share/icons/hicolor/48x48/apps/taigikeyboard.png; do
@@ -173,18 +190,49 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # The release half: only a dispatch from `main` (stage-desktop.sh) or a
-      # `desktop-<version>` publish attaches; a PR run never reaches a draft.
+      - name: Show daemon log on failure
+        if: failure()
+        run: |
+          cat "$RUNNER_TEMP/ibus-daemon.log" 2>/dev/null || true
+          ls -la "$RUNNER_TEMP" || true
+
+  # The release half: only a dispatch from `main` by `stage-desktop.sh`
+  # attaches, onto a DRAFT, never over an asset already there — what the
+  # maintainer tests on the draft is what a publish ships. The only job
+  # that can write.
+  attach:
+    name: attach to the draft
+    needs: build
+    if: >-
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-deb
+          path: linux/target
+
       - name: Attach the .deb to the draft release
-        if: >-
-          github.repository == 'taigikeyboard/taigikeyboard' &&
-          ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-           (github.event_name == 'release' && startsWith(github.event.release.tag_name, 'desktop-')))
         working-directory: linux
         env:
           GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
         run: |
           set -euo pipefail
+          # The commit the staging run meant, not whatever main points at
+          # by the time this run started: main can move while the Windows
+          # half is waited on.
+          if [ -n "$SOURCE_SHA" ] && [ "$SOURCE_SHA" != "$GITHUB_SHA" ]; then
+              echo "::error::this run built $GITHUB_SHA but the staging run staged $SOURCE_SHA — main moved; re-run stage-desktop.sh"
+              exit 1
+          fi
           version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
           tag="desktop-$version"
           state="$(gh release view "$tag" --json isDraft --jq '.isDraft|tostring' 2>&1)" || {
@@ -192,19 +240,13 @@ jobs:
               echo "The macOS half stages first and creates the draft." >&2
               exit 1
           }
-          if [ "${{ github.event_name }}" = workflow_dispatch ] && [ "$state" != true ]; then
+          [ "$state" = true ] || {
               echo "$tag is already published — an asset added now would be public with no test" >&2
               exit 1
-          fi
+          }
           cd target
           package="taigikeyboard_${version}_amd64.deb"
           [ -f "$package" ] || { echo "no $package in $(pwd)" >&2; exit 1; }
           printf '%s  %s\n' "$(sha256sum "$package" | cut -d' ' -f1)" "$package" > "$package.sha256"
-          gh release upload "$tag" "$package" "$package.sha256" --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$tag" "$package" "$package.sha256" --repo "$GITHUB_REPOSITORY"
           echo "attached $package to $tag (built from $GITHUB_SHA)"
-
-      - name: Show daemon log on failure
-        if: failure()
-        run: |
-          cat "$RUNNER_TEMP/ibus-daemon.log" 2>/dev/null || true
-          ls -la "$RUNNER_TEMP" || true

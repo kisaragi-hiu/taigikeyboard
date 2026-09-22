@@ -103,10 +103,11 @@ git -C "$REPOSITORY_DIR" fetch --quiet origin main
 # from this commit and started after the dispatch is looked up.
 dispatch_and_wait() {
     local workflow="$1" what="$2" run_id="" dispatched_at
+    shift 2
     echo ""
     echo "==> $what — GitHub-hosted runner"
     dispatched_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    gh workflow run "$workflow" --repo "$RELEASE_REPOSITORY" --ref main ||
+    gh workflow run "$workflow" --repo "$RELEASE_REPOSITORY" --ref main "$@" ||
         fail "cannot dispatch the $what build"
     echo "  waiting for the run to appear"
     for _ in $(seq 1 30); do
@@ -124,7 +125,9 @@ dispatch_and_wait() {
 }
 
 dispatch_and_wait windows-build.yml Windows
-dispatch_and_wait linux-build.yml Linux
+# The commit travels with the dispatch: main can move while the Windows
+# run is waited on, and the Linux attach step refuses any other commit.
+dispatch_and_wait linux-build.yml Linux -f "source_sha=$SOURCE_COMMIT"
 
 # The draft's own page, from the API: a draft has no tag, so its URL is not the
 # `releases/tag/<tag>` address a published release has. It is where the

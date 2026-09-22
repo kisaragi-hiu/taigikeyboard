@@ -5,7 +5,7 @@ Maintainer: Taigi Keyboard <info@taigikeyboard.tw>
 Section: utils
 Priority: optional
 Homepage: https://taigikeyboard.tw
-Depends: fcitx5 | ibus, libgtk-4-1, libadwaita-1-0, libc6
+Depends: fcitx5 | ibus, @SHLIBS@
 Description: Taiwanese (Tâi-gí) input method — Fcitx5 addon and IBus engine
  台語齒盤: TL / POJ romanization in, Hanji and romanization candidates out,
  continuous multi-syllable typing, over the same engine as the iOS, Android,

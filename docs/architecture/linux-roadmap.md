@@ -44,7 +44,7 @@ retro review is welcome and its verdicts belong in this document.
 ## Architecture
 
 Revised 2026-09-23 (Fcitx5 primary): everything below the shells is shared. The Fcitx5 shell
-is `linux/fcitx5/taigikeyboard.so` (C++ `InputMethodEngineV3` over the `taigi-linux-ffi` C ABI
+is `linux/fcitx5/libtaigikeyboard.so` (C++ `InputMethodEngineV3` over the `taigi-linux-ffi` C ABI
 over `taigi-linux-core`); the IBus shell is `ibus-engine-taigikeyboard` (zbus over the same
 `taigi-linux-core`). The diagram keeps the IBus process as drawn for PR3; the Fcitx5 addon
 replaces its top box with `fcitx5` (in-process addon, `keyEvent` → FFI → `Emit`s → input panel).
@@ -129,7 +129,8 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
     Built by CMake against `Fcitx5Core` (the pre-5.1.12 `add_library(MODULE)` + empty
     `PREFIX` shape of `fcitx5-rime` 5.1.8 `src/CMakeLists.txt` — Ubuntu 24.04 ships fcitx5
     5.1.7, which has neither `add_fcitx5_addon` nor `FCITX_ADDON_FACTORY_V2`), installed to
-    `${libdir}/fcitx5/taigikeyboard.so` + `${datadir}/fcitx5/{inputmethod,addon}/taigikeyboard.conf`. **Not host-buildable** — the
+    `${libdir}/fcitx5/libtaigikeyboard.so` (the loader resolves `Library=export:libtaigikeyboard`
+    to that name) + `${datadir}/fcitx5/{inputmethod,addon}/taigikeyboard.conf`. **Not host-buildable** — the
     VM and the Ubuntu CI job (`fcitx5-modules-dev`, `extra-cmake-modules`) own it; the Mac
     gates the Rust half (`taigi-linux-core` tests, `taigi-linux-ffi` cross build via zig).
   - **`taigikeyboard-ibus`** stays as PR3 built it, rebased onto `taigi-linux-core`: the D-Bus
@@ -354,12 +355,15 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 - **L11 Packaging + release.** `make -C linux install PREFIX=/usr DESTDIR=` installs the two
   binaries, the component XML (rendered with the prefix), the dictionaries, a
   `tw.taigikeyboard.Settings.desktop` entry + icon, and prints the `ibus restart`
-  reminder; `uninstall` reverses it and keeps `$XDG_*/taigikeyboard`. A `.deb` is built by
-  `cargo-deb` from `[package.metadata.deb]` on the engine crate (both binaries, assets,
-  `Depends: fcitx5 | ibus, libgtk-4-1, libadwaita-1-0` (both shells in one package, as `fcitx5-chewing` + `ibus-chewing` come from one source)) — on the GitHub-hosted Ubuntu runner
-  (`.github/workflows/linux-build.yml`, mirror of `windows-build.yml`: `workflow_dispatch`
-  + `release: published`, attaches the `.deb` + SHA-256 to the same `desktop-<version>`
-  draft; `scripts/stage-desktop.sh` dispatches it beside the Windows run). No signing
+  reminder; `uninstall` reverses it and keeps `$XDG_*/taigikeyboard`. A `.deb` is packed by
+  `dpkg-deb` over that same install layout (`make -C linux deb`: `make install DESTDIR`,
+  `packaging/control.in`, `Depends` from `dpkg-shlibdeps` + `fcitx5 | ibus`; both shells in
+  one package, as `fcitx5-chewing` + `ibus-chewing` come from one source; revised 2026-09-23
+  from the `cargo-deb` plan — a second asset list would drift from `make install`) — on the
+  GitHub-hosted Ubuntu runner (`.github/workflows/linux-build.yml`, mirror of
+  `windows-build.yml`: built on every PR; a `main` `workflow_dispatch` from
+  `scripts/stage-desktop.sh` attaches the `.deb` + SHA-256 to the `desktop-<version>` DRAFT,
+  never over an existing asset and never on a publish — `linux-release.md`). No signing
   (no Linux-side equivalent of Authenticode / notarization is expected of a `.deb`
   downloaded from a project page; apt-repository signing is outside this slice). Version
   source of truth stays `windows/Cargo.toml`; `make version-desktop x.y.z` moves
@@ -375,7 +379,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   pull requests touching `linux/**` or `desktop/**`) adds what the Mac cannot: a real
   `x86_64-unknown-linux-gnu` build of both binaries with the distro's GTK, the **Fcitx5 addon
   built with CMake against `fcitx5-modules-dev`** (the only place it compiles before the VM),
-  `cargo test` of the whole `linux/` workspace, `cargo-deb`, and an **IBus daemon smoke**: `dbus-run-session`
+  `cargo test` of the whole `linux/` workspace, the `.deb` (`make deb`, contents asserted), and an **IBus daemon smoke**: `dbus-run-session`
   → `ibus-daemon --daemonize --panel disable` with the component XML installed into a
   temporary `IBUS_COMPONENT_PATH`, then `ibus list-engine | grep taigikeyboard` and
   `ibus engine taigikeyboard` — proof that the daemon can spawn the engine and complete

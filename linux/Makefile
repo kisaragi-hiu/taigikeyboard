@@ -114,7 +114,7 @@ install: build component install-fcitx5
 	install -m644 ../dictionaries/dictionary.fst ../dictionaries/dictionary.bin ../dictionaries/association.bin ../dictionaries/syllables.fst $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries/
 	install -Dm644 data/tw.taigikeyboard.Settings.desktop $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
 	for size in 16 22 24 32 48 64 128 256; do \
-	  install -Dm644 data/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png; \
+	  install -Dm644 data/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png || exit 1; \
 	done
 	@echo "installed under $(DESTDIR)$(PREFIX); restart fcitx5 (fcitx5 -r) and/or ibus (ibus restart)"
 
@@ -125,7 +125,7 @@ install-fcitx5: build-fcitx5
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/libexec/ibus-engine-taigikeyboard
 	rm -f $(DESTDIR)$(PREFIX)/bin/taigikeyboard-settings
-	rm -f $(DESTDIR)$(PREFIX)/lib/fcitx5/taigikeyboard.so $(DESTDIR)$(PREFIX)/lib/*/fcitx5/taigikeyboard.so
+	rm -f $(DESTDIR)$(PREFIX)/lib/fcitx5/libtaigikeyboard.so $(DESTDIR)$(PREFIX)/lib/*/fcitx5/libtaigikeyboard.so
 	rm -f $(DESTDIR)$(PREFIX)/share/fcitx5/inputmethod/taigikeyboard.conf $(DESTDIR)$(PREFIX)/share/fcitx5/addon/taigikeyboard.conf
 	rm -f $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	rm -rf $(DESTDIR)$(PREFIX)/share/taigikeyboard
@@ -137,13 +137,23 @@ uninstall:
 # ONE install layout, so the package and a source install cannot drift —
 # plus the control file, packed by dpkg-deb. No cargo-deb: it would carry a
 # second copy of the asset list. Only ever built with PREFIX=/usr.
+#
+# `Depends` is what the binaries actually link, versioned, from
+# dpkg-shlibdeps over the three ELF files (dpkg-dev) — an unversioned list
+# would let an older distribution install a package whose GLib / libadwaita
+# symbols it lacks — plus the framework alternative the control template
+# names (`fcitx5 | ibus`).
 DEB_ROOT := target/deb/root
 DEB_FILE := target/taigikeyboard_$(VERSION)_amd64.deb
 deb:
 	rm -rf target/deb
 	$(MAKE) install PREFIX=/usr DESTDIR=$(CURDIR)/$(DEB_ROOT)
-	install -d $(DEB_ROOT)/DEBIAN
-	sed -e 's#@VERSION@#$(VERSION)#g' packaging/control.in > $(DEB_ROOT)/DEBIAN/control
+	install -d $(DEB_ROOT)/DEBIAN target/deb/debian
+	sed -e 's#@VERSION@#$(VERSION)#g' -e 's#@SHLIBS@##' packaging/control.in > target/deb/debian/control
+	cd target/deb && dpkg-shlibdeps -O \
+	  root/usr/bin/taigikeyboard-settings root/usr/libexec/ibus-engine-taigikeyboard root/usr/lib/*/fcitx5/libtaigikeyboard.so \
+	  | sed -e 's/^shlibs:Depends=//' > shlibs.txt
+	sed -e 's#@VERSION@#$(VERSION)#g' -e "s#@SHLIBS@#$$(cat target/deb/shlibs.txt)#" packaging/control.in > $(DEB_ROOT)/DEBIAN/control
 	dpkg-deb --build --root-owner-group $(DEB_ROOT) $(DEB_FILE)
 	dpkg-deb --info $(DEB_FILE)
 	@echo "built $(DEB_FILE)"

@@ -53,6 +53,9 @@ pub fn run() -> gtk::glib::ExitCode {
         let shell = match existing {
             Some(shell) => shell,
             None => {
+                // The window's own icon: the hicolor `taigikeyboard`, not one
+                // named after the application id (which is not installed).
+                gtk::Window::set_default_icon_name("taigikeyboard");
                 let writer = writer::SettingsWriter::at_launch();
                 // The stores follow the settings: no user directory, no
                 // learning data either (the banner says so).
