@@ -95,6 +95,17 @@ pub fn mode_label(runtime: &Runtime) -> String {
     )
 }
 
+/// The indicator text for a panel that draws at most two characters: GNOME
+/// Shell shows an IBus engine's `InputMode` property symbol in the top bar
+/// only when it is one or two characters long (`js/ui/status/keyboard.js`,
+/// GNOME 46). The romanization alone, as two hanji.
+pub fn mode_symbol(runtime: &Runtime) -> &'static str {
+    match runtime.settings.current().choice(&keys::INPUT_MODE) {
+        InputMode::Poj => "白話",
+        _ => "台羅",
+    }
+}
+
 /// A menu row was activated (`PropertyActivate` / `SimpleAction::Activated`).
 pub fn activate_menu(
     runtime: &Runtime,
@@ -168,7 +179,7 @@ pub fn perform_global(
             state.clear_list();
             let settings = runtime.settings.current();
             session::present_table(state, &settings, &bindings, &mut emits);
-            emits.push(Emit::ModeLabel(mode_label(runtime)));
+            emits.push(Emit::ModeChanged);
             emits.push(Emit::AnnounceMode);
         }
         ShortcutAction::ToggleTranslateSwapped => {
@@ -204,7 +215,7 @@ pub fn perform_global(
             let settings = runtime.settings.current();
             represent_open_list(runtime, token, state, &settings, true);
             session::present_table(state, &settings, &bindings, &mut emits);
-            emits.push(Emit::ModeLabel(mode_label(runtime)));
+            emits.push(Emit::ModeChanged);
             emits.push(Emit::AnnounceMode);
         }
         ShortcutAction::ShowTelexGuide => {
@@ -377,7 +388,9 @@ pub(crate) fn pick_symbol(
     state.armed_auto_space = recorder.armed_swap;
     let mut emits = recorder.emits;
     session::present_table(state, settings, bindings, &mut emits);
-    // Recorded AFTER the write, so the symbol does not wait on the disk.
+    // The recents write is on the key path (the shell replays the commit
+    // after this returns); a store that cannot be written still got its
+    // symbol, the failure is only logged.
     runtime.update_settings("record_recent_symbol", |document| {
         document.note_recent_symbol(&symbol);
     });
@@ -522,9 +535,7 @@ mod tests {
         let emits = activate_menu(&runtime, ContextToken(1), &mut engine, "toggleRomanization");
         let after: InputMode = runtime.settings.current().choice(&keys::INPUT_MODE);
         assert_ne!(before.raw(), after.raw());
-        assert_eq!(
-            emits,
-            vec![Emit::ModeLabel(mode_label(&runtime)), Emit::AnnounceMode]
-        );
+        assert_eq!(emits, vec![Emit::ModeChanged, Emit::AnnounceMode]);
+        assert_eq!(mode_symbol(&runtime).chars().count(), 2);
     }
 }

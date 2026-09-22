@@ -56,6 +56,24 @@ private:
     uint32_t position_;
 };
 
+/* The list with its paging and cursor moves routed through the core: the
+ * panel's page arrows and scroll call `prev` / `next` / `prevCandidate` /
+ * `nextCandidate` on the list itself, and a page turned only here would
+ * leave the core's page — the one the slot keys and clicks index — behind.
+ * Each call answers a fresh reply that rebuilds the list on the right page. */
+class CandidateListImpl final : public CommonCandidateList {
+public:
+    explicit CandidateListImpl(State *state) : state_(state) {}
+
+    void prev() override { state_->navigate(TAIGI_NAVIGATE_PAGE_UP); }
+    void next() override { state_->navigate(TAIGI_NAVIGATE_PAGE_DOWN); }
+    void prevCandidate() override { state_->navigate(TAIGI_NAVIGATE_PREVIOUS); }
+    void nextCandidate() override { state_->navigate(TAIGI_NAVIGATE_NEXT); }
+
+private:
+    State *state_;
+};
+
 } // namespace
 
 // ---------------------------------------------------------------------------
@@ -177,7 +195,7 @@ void State::replay(TaigiReply *reply) {
             panel.setCandidateList(nullptr);
             panelChanged = true;
             break;
-        case TAIGI_EMIT_MODE_LABEL:
+        case TAIGI_EMIT_MODE_CHANGED:
             /* The label is re-read through subModeLabelImpl; the status
              * area redraws it. */
             ic_.updateUserInterface(UserInterfaceComponent::StatusArea);
@@ -206,7 +224,7 @@ void State::replay(TaigiReply *reply) {
  * cursor moves from the panel go back through the core (`navigate`), so
  * the list is rebuilt from the next reply rather than paged locally. */
 void State::showCandidates(const TaigiReply *reply, size_t index) {
-    auto list = std::make_unique<CommonCandidateList>();
+    auto list = std::make_unique<CandidateListImpl>(this);
     const size_t rows = taigi_reply_table_count(reply, index);
     const size_t labels = taigi_reply_table_label_count(reply, index);
     const uint32_t pageSize = taigi_reply_table_page_size(reply, index);
@@ -233,9 +251,17 @@ void State::showCandidates(const TaigiReply *reply, size_t index) {
             this, static_cast<uint32_t>(row % (pageSize == 0 ? 1 : pageSize)),
             Text(taigi_reply_table_candidate(reply, index, row))));
     }
-    list->setGlobalCursorIndex(taigi_reply_table_cursor_visible(reply, index)
-                                   ? static_cast<int>(taigi_reply_table_cursor(reply, index))
-                                   : -1);
+    /* The page is the highlight's: setGlobalCursorIndex alone leaves the
+     * list on page 0. */
+    if (taigi_reply_table_cursor_visible(reply, index)) {
+        const uint32_t cursor = taigi_reply_table_cursor(reply, index);
+        if (pageSize > 0 && rows > 0) {
+            list->setPage(static_cast<int>(cursor / pageSize));
+        }
+        list->setGlobalCursorIndex(static_cast<int>(cursor));
+    } else {
+        list->setGlobalCursorIndex(-1);
+    }
     ic_.inputPanel().setCandidateList(std::move(list));
 }
 
@@ -357,6 +383,10 @@ std::string Engine::subModeLabelImpl(const InputMethodEntry & /*entry*/, InputCo
     std::string text(label);
     taigi_string_free(label);
     return text;
+}
+
+std::string Engine::subMode(const InputMethodEntry &entry, InputContext &ic) {
+    return subModeLabelImpl(entry, ic);
 }
 
 AddonInstance *EngineFactory::create(AddonManager *manager) {

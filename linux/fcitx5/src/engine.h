@@ -65,6 +65,11 @@ public:
     void deactivate(const InputMethodEntry &entry, InputContextEvent &event) override;
     void keyEvent(const InputMethodEntry &entry, KeyEvent &keyEvent) override;
     void reset(const InputMethodEntry &entry, InputContextEvent &event) override;
+    /* Both the compact and the full "input method information" notices
+     * read the mode (`Instance::showInputMethodInformation`, 5.1.7
+     * instance.cpp:394: `subMode()` when CompactInputMethodInformation is
+     * off, `subModeLabel()` otherwise). */
+    std::string subMode(const InputMethodEntry &entry, InputContext &ic) override;
     std::string subModeLabelImpl(const InputMethodEntry &entry, InputContext &ic) override;
 
     State *state(InputContext *ic) { return ic->propertyFor(&factory_); }

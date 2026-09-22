@@ -42,7 +42,7 @@ enum {
     TAIGI_EMIT_DELETE_SURROUNDING = 4, /* delete_offset / delete_count, before the caret */
     TAIGI_EMIT_LOOKUP_TABLE = 5,       /* the candidate list (table accessors) */
     TAIGI_EMIT_HIDE_LOOKUP_TABLE = 6,  /* the candidate list goes away */
-    TAIGI_EMIT_MODE_LABEL = 7,         /* text = the new mode label (re-read subModeLabel) */
+    TAIGI_EMIT_MODE_CHANGED = 7,       /* the mode label changed: re-read taigi_runtime_mode_label */
     TAIGI_EMIT_ANNOUNCE_MODE = 8       /* show the mode briefly (showInputMethodInformation) */
 };
 

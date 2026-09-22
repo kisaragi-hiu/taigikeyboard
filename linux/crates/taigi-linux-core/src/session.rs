@@ -7,8 +7,10 @@
 //! anchors itself), the handover commit (the daemon's `FocusOut` reached
 //! the previous engine first and committed its preedit).
 //!
-//! Everything here runs under the coordinator lock and emits nothing; the
-//! caller replays [`KeyReply::emits`] after the lock is dropped.
+//! The engine's work runs under the coordinator lock (`run_key`) and emits
+//! nothing; the chrome above it (`chrome`) takes the lock only where it
+//! needs the engine. The caller replays [`KeyReply::emits`] after every
+//! lock is dropped.
 
 use crate::chrome;
 use crate::executor::{Emit, LookupTableContent, Recorder};
@@ -284,7 +286,7 @@ pub fn process_key(
         token,
         state,
         snapshot,
-        KeyWork::Compose(intent),
+        intent,
         &settings,
         &bindings,
     );
@@ -361,7 +363,7 @@ pub(crate) fn commit_for_picker(
         token,
         state,
         &KeyEventSnapshot::default(),
-        KeyWork::Compose(intent),
+        intent,
         settings,
         bindings,
     )
@@ -389,6 +391,11 @@ pub fn navigate_from_panel(
 ) -> Vec<Emit> {
     let settings = runtime.settings.current();
     let bindings = ComposingKeyBindings::from_document(&settings);
+    // The guide is one page with no highlight; a panel scroll over it must
+    // not move the list it covers.
+    if state.telex_guide_shown {
+        return Vec::new();
+    }
     if let Some(picker) = &mut state.symbol_picker {
         picker.selection.navigate(direction);
         let mut emits = Vec::new();
@@ -404,7 +411,7 @@ pub fn navigate_from_panel(
         token,
         state,
         &KeyEventSnapshot::default(),
-        KeyWork::Compose(ComposingKeyIntent::Navigate(direction)),
+        ComposingKeyIntent::Navigate(direction),
         &settings,
         &bindings,
     )
@@ -435,17 +442,13 @@ pub fn click_from_panel(runtime: &Runtime, state: &mut EngineState, position: us
     emits
 }
 
-enum KeyWork {
-    Compose(ComposingKeyIntent),
-}
-
 /// The Windows `run_key` + `perform_work`, against the recorder.
 fn run_key(
     coordinator: &mut ComposingSessionCoordinator,
     token: ContextToken,
     state: &mut EngineState,
     snapshot: &KeyEventSnapshot,
-    work: KeyWork,
+    intent: ComposingKeyIntent,
     settings: &SettingsDocument,
     bindings: &ComposingKeyBindings,
 ) -> KeyReply {
@@ -466,7 +469,6 @@ fn run_key(
         );
     }
     let manager = coordinator.claim(token);
-    let KeyWork::Compose(intent) = work;
     let handled = match &intent {
         ComposingKeyIntent::Input(text) => {
             manager.append(text, &mut recorder);

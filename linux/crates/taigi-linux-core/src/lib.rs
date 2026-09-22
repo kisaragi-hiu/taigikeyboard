@@ -15,7 +15,9 @@ pub mod runtime;
 pub mod selection;
 pub mod session;
 
-pub use chrome::{activate_menu, menu_items, mode_label, MenuItem, MENU_ABOUT, MENU_SETTINGS};
+pub use chrome::{
+    activate_menu, menu_items, mode_label, mode_symbol, MenuItem, MENU_ABOUT, MENU_SETTINGS,
+};
 pub use executor::{Emit, LookupTableContent};
 pub use runtime::{dictionary_version, FirstKeySetup, Runtime};
 pub use selection::LookupSelection;

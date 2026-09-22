@@ -27,8 +27,11 @@ use zbus::{interface, Connection};
 const PREEDIT_MODE_COMMIT: u32 = 1;
 
 /// The panel menu's root property (roadmap L6): its `symbol` is what the
-/// panel indicator shows for this engine, its sub-properties the rows.
-const MENU_ROOT_KEY: &str = "taigikeyboard";
+/// panel indicator shows for this engine, its sub-properties the rows. The
+/// key is the one GNOME Shell reads the indicator text from
+/// (`js/ui/status/keyboard.js`, GNOME 46: only `InputMode`, and only a
+/// symbol of one or two characters).
+const MENU_ROOT_KEY: &str = "InputMode";
 
 pub struct Engine {
     runtime: Arc<Runtime>,
@@ -82,7 +85,7 @@ impl Engine {
                 Emit::HideLookupTable => {
                     Self::update_lookup_table(emitter, empty_table_value(), false).await
                 }
-                Emit::ModeLabel(_) => {
+                Emit::ModeChanged => {
                     Self::update_property(emitter, menu_root_value(&self.runtime)).await
                 }
                 // NAMED DIVERGENCE (roadmap L4): the daemon has no HUD; the
@@ -131,6 +134,17 @@ impl Engine {
 }
 
 fn table_value(content: &LookupTableContent) -> Value<'static> {
+    // A table with no labels (the Telex guide): the panel fills an empty
+    // label list — and empty strings — with its own `1…9, 0` (GNOME 46
+    // `ibusCandidatePopup.js` `setCandidates`), so a label-less table
+    // sends one space per page position instead.
+    let blank_labels: Vec<String>;
+    let labels = if content.labels.is_empty() {
+        blank_labels = vec![" ".to_owned(); content.page_size as usize];
+        &blank_labels
+    } else {
+        &content.labels
+    };
     LookupTable {
         page_size: content.page_size,
         cursor_pos: content.cursor,
@@ -142,7 +156,7 @@ fn table_value(content: &LookupTableContent) -> Value<'static> {
             Orientation::Horizontal
         },
         candidates: &content.candidates,
-        labels: &content.labels,
+        labels,
     }
     .to_value()
 }
@@ -183,7 +197,7 @@ fn menu_root_value(runtime: &Runtime) -> Value<'static> {
         kind: PropType::Menu,
         label: &label,
         tooltip: "",
-        symbol: &label,
+        symbol: chrome::mode_symbol(runtime),
         sub_props,
     }
     .to_value()

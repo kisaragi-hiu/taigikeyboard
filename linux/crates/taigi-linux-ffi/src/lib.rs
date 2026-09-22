@@ -75,7 +75,7 @@ pub const EMIT_COMMIT: u32 = 3;
 pub const EMIT_DELETE_SURROUNDING: u32 = 4;
 pub const EMIT_LOOKUP_TABLE: u32 = 5;
 pub const EMIT_HIDE_LOOKUP_TABLE: u32 = 6;
-pub const EMIT_MODE_LABEL: u32 = 7;
+pub const EMIT_MODE_CHANGED: u32 = 7;
 pub const EMIT_ANNOUNCE_MODE: u32 = 8;
 
 /// `TAIGI_NAVIGATE_*` in the header.
@@ -124,10 +124,7 @@ fn reply_emit(emit: Emit) -> ReplyEmit {
             reply.table = Some(reply_table(content));
         }
         Emit::HideLookupTable => reply.kind = EMIT_HIDE_LOOKUP_TABLE,
-        Emit::ModeLabel(label) => {
-            reply.kind = EMIT_MODE_LABEL;
-            reply.text = c_string(&label);
-        }
+        Emit::ModeChanged => reply.kind = EMIT_MODE_CHANGED,
         Emit::AnnounceMode => reply.kind = EMIT_ANNOUNCE_MODE,
     }
     reply
