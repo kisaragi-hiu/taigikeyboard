@@ -80,7 +80,9 @@ public final class TaigiInputController: IMKInputController {
 
     /// Whether the symbol picker is up for this session.
     @MainActor
-    var isSymbolPickerOpen: Bool { !symbolPickerCells.isEmpty }
+    var isSymbolPickerOpen: Bool {
+        !symbolPickerCells.isEmpty
+    }
 
     /// Whether the open picker put its placeholder into the client
     /// (`presentSymbolPicker`) — it does not over a selection — so

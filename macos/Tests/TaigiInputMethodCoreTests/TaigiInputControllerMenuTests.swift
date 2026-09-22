@@ -105,7 +105,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         let titles = try menu().items.map(\.title)
 
         for action in [ShortcutAction.toggleTranslateSwapped, .showSymbolPicker, .showTelexGuide] {
-            XCTAssertFalse(titles.contains(action.label(try language())), "\(action)")
+            XCTAssertFalse(try titles.contains(action.label(language())), "\(action)")
         }
     }
 

@@ -1529,10 +1529,12 @@ pub(crate) fn assemble_candidates(
         // so without this a Caps Lock strip read `SIAⁿ` under a `SIAᴺ`
         // preedit.
         for cand in &mut candidates {
-            if let std::borrow::Cow::Owned(roman) = phonetics::case_transform::apply_nasal_marker_case(
-                &cand.roman,
-                force_lowercase_nasal_marker,
-            ) {
+            if let std::borrow::Cow::Owned(roman) =
+                phonetics::case_transform::apply_nasal_marker_case(
+                    &cand.roman,
+                    force_lowercase_nasal_marker,
+                )
+            {
                 cand.roman = roman;
             }
         }

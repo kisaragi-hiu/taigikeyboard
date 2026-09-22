@@ -121,7 +121,9 @@ struct SettingsSidebarView: View {
         Binding(
             get: { SettingsPane.sidebar.contains(selectedPane) ? selectedPane : nil },
             set: { picked in
-                if let picked { selectedPane = picked }
+                if let picked {
+                    selectedPane = picked
+                }
             },
         )
     }
