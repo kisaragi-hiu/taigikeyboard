@@ -96,7 +96,7 @@ impl<'a> PageContext<'a> {
         add: impl FnOnce(&adw::SwitchRow),
         title: StringKey,
         key: SettingsKey<bool>,
-    ) -> adw::SwitchRow {
+    ) {
         let row = adw::SwitchRow::builder()
             .title(self.strings.resolve(title))
             .active(self.document.bool(&key))
@@ -111,14 +111,12 @@ impl<'a> PageContext<'a> {
             shell.update(|document| document.set_bool(&key, is_on));
         });
         add(&row);
-        let refreshed = row.clone();
         self.refreshers.push(Box::new(move |document| {
             let value = document.bool(&key);
-            if refreshed.is_active() != value {
-                refreshed.set_active(value);
+            if row.is_active() != value {
+                row.set_active(value);
             }
         }));
-        row
     }
 
     /// The flag a refresh raises while it sets the rows, for a handler

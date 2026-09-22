@@ -144,7 +144,7 @@ fn recorder_row(
     row.add_suffix(&controls);
     row.set_activatable_widget(Some(&field));
     let shell = context.shell.clone();
-    field.connect_clicked(move |_| shell.start_recording(target));
+    field.connect_clicked(move |button| shell.start_recording(target, Some(button.upcast_ref())));
     let shell = context.shell.clone();
     clear.connect_clicked(move |_| shell.clear_shortcut(target));
     group.add(&row);

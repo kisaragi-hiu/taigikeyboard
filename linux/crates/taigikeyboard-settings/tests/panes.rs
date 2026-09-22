@@ -14,7 +14,9 @@
 use adw::prelude::*;
 use std::process::ExitCode;
 use std::rc::Rc;
-use taigi_desktop_core::keys::{KeyModifiers, ShortcutAction};
+use taigi_desktop_core::keys::{
+    ComposingAction, ComposingKeyBindings, KeyModifiers, ShortcutAction,
+};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::SettingsFileStore;
@@ -169,12 +171,14 @@ fn a_reset_keeps_the_display_language(window: &Rc<SettingsWindow>) {
 }
 
 /// trace: recording on 顯示 Telex 表 (default Ctrl+Alt+/); a bare `a`
-/// (keysym 0x61, no modifiers) is refused and recording continues; then
-/// Ctrl+Alt+K (0x6b, CONTROL 1<<2 | MOD1 1<<3) is recorded and stored as
-/// the row's chord; the × then clears it to "".
+/// (keysym 0x61, keycode 38, no modifiers) is refused and recording
+/// continues; a pane switch or any other row's write ends it; then
+/// Ctrl+Alt+K (0x6b, keycode 45, CONTROL 1<<2 | MOD1 1<<3) is recorded and
+/// stored as the row's chord; the × clears it; a composing row recorded on
+/// a global default empties that global row (last writer wins).
 fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
     let target = RecorderTarget::Global(ShortcutAction::ShowTelexGuide);
-    window.start_recording(target);
+    window.start_recording(target, None);
     assert_eq!(window.recording().0, Some(target));
     window.record_press(0x61, 38, 0);
     assert_eq!(
@@ -183,6 +187,20 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
         "a bare letter is refused"
     );
     assert!(window.recording().1.is_some());
+    window.show(SettingsPane::Appearance);
+    assert_eq!(
+        window.recording().0,
+        None,
+        "a pane switch ends the recording"
+    );
+    window.start_recording(target, None);
+    window.update(|document| document.set_bool(&keys::IS_AUTO_SPACE_ENABLED, false));
+    assert_eq!(
+        window.recording().0,
+        None,
+        "another write ends the recording"
+    );
+    window.start_recording(target, None);
     window.record_press(0x6b, 45, (1 << 2) | (1 << 3));
     assert_eq!(window.recording().0, None);
     let chord = ShortcutAction::ShowTelexGuide
@@ -197,8 +215,31 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
     assert!(ShortcutAction::ShowTelexGuide
         .chord_in(window.writer().borrow().document())
         .is_none());
-    window.update(taigi_desktop_core::settings::SettingsDocument::reset_global_shortcuts);
-    eprintln!("panes: recorder binds and clears");
+    let composing = RecorderTarget::Composing(ComposingAction::NextCandidate);
+    window.start_recording(composing, None);
+    window.record_press(0x63, 54, (1 << 2) | (1 << 3));
+    {
+        let writer = window.writer();
+        let document = writer.borrow();
+        let bindings = ComposingKeyBindings::from_document(document.document());
+        assert_eq!(
+            bindings
+                .chord(ComposingAction::NextCandidate)
+                .map(|c| c.key.clone()),
+            Some("c".to_owned())
+        );
+        assert!(
+            ShortcutAction::ToggleRomanization
+                .chord_in(document.document())
+                .is_none(),
+            "the global row that held Ctrl+Alt+C is emptied"
+        );
+    }
+    window.update(|document| {
+        document.reset_composing_shortcuts();
+        document.reset_global_shortcuts();
+    });
+    eprintln!("panes: recorder binds, clears, resolves across registries");
 }
 
 /// trace: the 教典 row is the one `adw::ExpanderRow` on 詞庫來源; its

@@ -49,6 +49,9 @@ pub struct SettingsWindow {
     is_selecting: Cell<bool>,
     current: Cell<SettingsPane>,
     recorder: RefCell<Recorder>,
+    /// The field button whose row records: focus moving anywhere else ends
+    /// the recording (the Mac's field losing first responder).
+    recording_field: RefCell<Option<gtk::Widget>>,
 }
 
 impl SettingsWindow {
@@ -109,6 +112,7 @@ impl SettingsWindow {
             is_selecting: Cell::new(false),
             current: Cell::new(SettingsPane::General),
             recorder: RefCell::new(Recorder::default()),
+            recording_field: RefCell::new(None),
         });
         shell.build_pages();
         shell.apply_chrome();
@@ -150,17 +154,27 @@ impl SettingsWindow {
     }
 
     /// A field was clicked: it records (a row already recording is replaced;
-    /// the same row clicked again stops).
-    pub fn start_recording(self: &Rc<Self>, target: RecorderTarget) {
+    /// the same row clicked again stops). `field` is the button, so focus
+    /// leaving it ends the recording.
+    pub fn start_recording(self: &Rc<Self>, target: RecorderTarget, field: Option<&gtk::Widget>) {
         {
             let mut recorder = self.recorder.borrow_mut();
             if recorder.is_recording(target) {
                 recorder.stop();
+                *self.recording_field.borrow_mut() = None;
             } else {
                 recorder.start(target);
+                *self.recording_field.borrow_mut() = field.cloned();
             }
         }
         self.refresh_pages();
+    }
+
+    /// Ends a recording, whatever ended it (a pane switch, another row's
+    /// write, focus leaving the field). Answers whether one was running.
+    fn stop_recording(&self) -> bool {
+        *self.recording_field.borrow_mut() = None;
+        self.recorder.borrow_mut().stop()
     }
 
     /// A row's ×: the chord goes, the row shows 未設定.
@@ -179,27 +193,35 @@ impl SettingsWindow {
             let Some(shell) = weak.upgrade() else {
                 return glib::Propagation::Proceed;
             };
-            if shell.recorder.borrow().target.is_none() {
+            if !shell.recorder.borrow().swallows(keycode) {
                 return glib::Propagation::Proceed;
             }
             shell.record_press(key.into_glib(), keycode, state.bits());
             glib::Propagation::Stop
         });
         let weak = Rc::downgrade(self);
-        controller.connect_key_released(move |_, key, keycode, _| {
+        controller.connect_key_released(move |_, _, keycode, _| {
             if let Some(shell) = weak.upgrade() {
-                shell
-                    .recorder
-                    .borrow_mut()
-                    .release(key.into_glib(), keycode);
+                shell.recorder.borrow_mut().release(keycode);
             }
         });
         self.window.add_controller(controller);
+        // Focus leaving the field — a click on any other control, the
+        // window losing focus — ends the recording.
+        let weak = Rc::downgrade(self);
+        self.window.connect_focus_widget_notify(move |window| {
+            let Some(shell) = weak.upgrade() else { return };
+            let field = shell.recording_field.borrow().clone();
+            let Some(field) = field else { return };
+            if GtkWindowExt::focus(window).as_ref() != Some(&field) {
+                shell.stop_recording();
+                shell.refresh_pages();
+            }
+        });
         let weak = Rc::downgrade(self);
         self.window.connect_is_active_notify(move |window| {
             let Some(shell) = weak.upgrade() else { return };
-            if !window.is_active() && shell.recorder.borrow().target.is_some() {
-                shell.recorder.borrow_mut().stop();
+            if !window.is_active() && shell.stop_recording() {
                 shell.refresh_pages();
             }
         });
@@ -225,9 +247,10 @@ impl SettingsWindow {
             key_code: snapshot.key_code,
             is_repeat: false,
         };
-        let recorded = self.recorder.borrow_mut().press(keyval, keycode, press);
+        let recorded = self.recorder.borrow_mut().press(keycode, press);
         match recorded {
             Recorded::Store(target, chord) => {
+                *self.recording_field.borrow_mut() = None;
                 self.update(|document| target.store(document, Some(&chord)));
             }
             Recorded::Nothing => self.refresh_pages(),
@@ -242,6 +265,9 @@ impl SettingsWindow {
     /// selection like a sidebar click and is remembered the same way
     /// (Windows `select_pane`); an unlisted page (關於) is shown, not stored.
     pub fn show(self: &Rc<Self>, pane: SettingsPane) {
+        if self.stop_recording() {
+            self.refresh_pages();
+        }
         let pane = self.show_pane(pane);
         if SIDEBAR.contains(&pane)
             && self
@@ -265,6 +291,10 @@ impl SettingsWindow {
     /// the same path an outside change takes (`tick`), so a display
     /// language picked here rebuilds the pages too.
     pub fn update(self: &Rc<Self>, mutate: impl FnOnce(&mut SettingsDocument)) {
+        // Any write ends a recording: the row it would have written is not
+        // the one the user just touched (the recorder's own store has
+        // already stopped it).
+        self.stop_recording();
         self.writer.borrow_mut().update(mutate);
         self.follow_document();
     }
@@ -322,6 +352,7 @@ impl SettingsWindow {
 
     /// The pages and the sidebar rows, in the built language.
     fn build_pages(self: &Rc<Self>) {
+        self.stop_recording();
         while let Some(child) = self.stack.first_child() {
             self.stack.remove(&child);
         }
@@ -349,7 +380,7 @@ impl SettingsWindow {
     }
 
     /// Every row follows the document (and the recorder) as it is now.
-    pub fn refresh_pages(self: &Rc<Self>) {
+    fn refresh_pages(self: &Rc<Self>) {
         let document = self.writer.borrow().document().clone();
         for page in self.pages.borrow().iter() {
             page.refresh(&document);
@@ -445,9 +476,9 @@ impl Shell {
             .map_or((None, None), |shell| shell.recording())
     }
 
-    pub fn start_recording(&self, target: RecorderTarget) {
+    pub fn start_recording(&self, target: RecorderTarget, field: Option<&gtk::Widget>) {
         if let Some(shell) = self.0.upgrade() {
-            shell.start_recording(target);
+            shell.start_recording(target, field);
         }
     }
 

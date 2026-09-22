@@ -5,6 +5,7 @@
 //! (`window.rs`), so a recording field sees every key before any widget
 //! does — the GTK counterpart of the Windows keyboard hook, with no hook.
 
+use std::collections::HashSet;
 use taigi_desktop_core::keys::{
     evaluate_press, ChordRejection, ComposingAction, ComposingKeyChord, RecordedPress,
     RecorderOutcome, RecorderTier, ShortcutAction, ShortcutConflicts,
@@ -57,9 +58,14 @@ impl RecorderTarget {
 pub struct Recorder {
     pub target: Option<RecorderTarget>,
     pub rejection: Option<ChordRejection>,
-    /// The key held down, so a repeat (a press with no release between) is
-    /// dropped as `evaluate_press` asks.
-    held: Option<(u32, u32)>,
+    /// The physical keys held down (keycodes — the keysym of a repeat can
+    /// change when a modifier joins it), so a repeat is dropped as
+    /// `evaluate_press` asks, and a key the recorder consumed stays
+    /// swallowed until its release even after the recording ended: a held
+    /// Tab must not walk the form, a held Enter must not press the field
+    /// again. GTK repeats presses without a release between them on both
+    /// X11 (detectable autorepeat) and Wayland.
+    held: HashSet<u32>,
 }
 
 /// What the window does after a press.
@@ -75,27 +81,33 @@ impl Recorder {
     pub fn start(&mut self, target: RecorderTarget) {
         self.target = Some(target);
         self.rejection = None;
-        self.held = None;
     }
 
-    pub fn stop(&mut self) {
+    /// Ends the recording; the keys still held stay owed their release.
+    pub fn stop(&mut self) -> bool {
+        let was_recording = self.target.is_some();
         self.target = None;
         self.rejection = None;
-        self.held = None;
+        was_recording
     }
 
     pub fn is_recording(&self, target: RecorderTarget) -> bool {
         self.target == Some(target)
     }
 
-    /// One press (keyval, keycode, the recorded snapshot fields), judged by
-    /// the shared decision — the same one the Mac and Windows ask.
-    pub fn press(&mut self, keyval: u32, keycode: u32, mut press: RecordedPress) -> Recorded {
+    /// Whether a press of `keycode` is the recorder's: every press while a
+    /// row records, and the repeats of a key it consumed until released.
+    pub fn swallows(&self, keycode: u32) -> bool {
+        self.target.is_some() || self.held.contains(&keycode)
+    }
+
+    /// One press (its keycode, the recorded snapshot fields), judged by the
+    /// shared decision — the same one the Mac and Windows ask.
+    pub fn press(&mut self, keycode: u32, mut press: RecordedPress) -> Recorded {
+        press.is_repeat = !self.held.insert(keycode);
         let Some(target) = self.target else {
             return Recorded::Nothing;
         };
-        press.is_repeat = self.held == Some((keyval, keycode));
-        self.held = Some((keyval, keycode));
         match evaluate_press(target.tier(), &press) {
             RecorderOutcome::Recorded(chord) => {
                 self.stop();
@@ -114,10 +126,8 @@ impl Recorder {
         }
     }
 
-    pub fn release(&mut self, keyval: u32, keycode: u32) {
-        if self.held == Some((keyval, keycode)) {
-            self.held = None;
-        }
+    pub fn release(&mut self, keycode: u32) {
+        self.held.remove(&keycode);
     }
 }
 
@@ -136,32 +146,54 @@ mod tests {
     }
 
     #[test]
-    fn a_held_key_repeats_until_released_and_a_chord_ends_the_recording() {
-        // trace: Ctrl+Alt+K on a global row → Recorded; the same press again
-        // with no release → is_repeat → Ignored (Nothing, still recording).
+    fn a_chord_ends_the_recording_and_its_key_stays_swallowed_until_released() {
+        // trace: Ctrl+Alt+K (keycode 45) on a global row → Recorded, stop;
+        // the held K's repeats are still the recorder's until the release.
         let mut recorder = Recorder::default();
         let target = RecorderTarget::Global(ShortcutAction::ShowTelexGuide);
         recorder.start(target);
         let chord = KeyModifiers::CONTROL.with(KeyModifiers::ALT);
         assert!(matches!(
-            recorder.press(0x6b, 45, press("k", chord)),
+            recorder.press(45, press("k", chord)),
             Recorded::Store(t, _) if t == target
         ));
         assert!(recorder.target.is_none());
+        assert!(
+            recorder.swallows(45),
+            "the held key is still owed a release"
+        );
+        assert!(!recorder.swallows(46));
+        assert_eq!(recorder.press(45, press("k", chord)), Recorded::Nothing);
+        recorder.release(45);
+        assert!(!recorder.swallows(45));
+    }
+
+    #[test]
+    fn a_repeat_is_the_keycode_not_the_keysym_and_escape_blurs() {
+        // trace: a held `a` (keycode 38) is refused; Shift joining it makes
+        // the repeat arrive as `A` — same keycode, still a repeat, never a
+        // fresh Shift+A recording. Escape ends the recording, keeps the row.
+        let mut recorder = Recorder::default();
+        let target = RecorderTarget::Global(ShortcutAction::ShowTelexGuide);
         recorder.start(target);
-        assert!(matches!(
-            recorder.press(0x61, 38, press("a", KeyModifiers::NONE)),
-            Recorded::Nothing
-        ));
-        assert!(recorder.rejection.is_some(), "a bare letter is refused");
         assert_eq!(
-            recorder.press(0x61, 38, press("a", KeyModifiers::NONE)),
+            recorder.press(38, press("a", KeyModifiers::NONE)),
             Recorded::Nothing
         );
-        recorder.release(0x61, 38);
+        assert!(recorder.rejection.is_some(), "a bare letter is refused");
+        recorder.rejection = None;
+        assert_eq!(
+            recorder.press(38, press("a", KeyModifiers::SHIFT)),
+            Recorded::Nothing
+        );
+        assert!(
+            recorder.rejection.is_none(),
+            "a repeat is ignored, not judged"
+        );
+        recorder.release(38);
         assert!(recorder.is_recording(target));
         assert_eq!(
-            recorder.press(0xff1b, 9, press("\u{1B}", KeyModifiers::NONE)),
+            recorder.press(9, press("\u{1B}", KeyModifiers::NONE)),
             Recorded::Nothing
         );
         assert!(!recorder.is_recording(target), "Escape blurs");
