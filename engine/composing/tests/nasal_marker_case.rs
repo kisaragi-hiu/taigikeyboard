@@ -122,6 +122,30 @@ fn caps_lock_default_writes_the_capital_nasal_marker() {
 }
 
 #[test]
+fn caps_lock_keeps_a_custom_entry_with_a_nasal_marker_all_caps_in_poj_mode() {
+    let _lock = engine_install_lock();
+    install_fixture();
+    // Retro Codex review of #89 (2026-09-22): the stored `ⁿ` is an
+    // alphabetic lowercase char, so the whole-string case read behind the
+    // POJ render called the raised row "title case" and lowered it to
+    // `Sia-Sia` … per token now. trace: custom "sia-siaⁿ" → `recase_all`
+    // raises to "SIA-SIAⁿ" → POJ render title-cases "Sia-Siaⁿ" → per-token
+    // `match_case` re-raises "SIA-SIAⁿ" → §53 pass → "SIA-SIAᴺ".
+    let custom = vec![CustomDictEntry {
+        roman: "sia-sia\u{207f}".into(),
+        hanji: Some("聲聲".into()),
+    }];
+    let cells = fetch_with_custom("SIASIANN", "poj", false, custom.clone());
+    assert_eq!(cell_with_hanji(&cells, "聲聲").1, "SIA-SIA\u{1d3a}");
+    // Forced lowercase marker: the letters still keep Caps Lock.
+    let cells = fetch_with_custom("SIASIANN", "poj", true, custom.clone());
+    assert_eq!(cell_with_hanji(&cells, "聲聲").1, "SIA-SIA\u{207f}");
+    // Negative control: lowercase typing leaves the row as stored.
+    let cells = fetch_with_custom("siasiann", "poj", false, custom);
+    assert_eq!(cell_with_hanji(&cells, "聲聲").1, "sia-sia\u{207f}");
+}
+
+#[test]
 fn force_lowercase_nasal_marker_renders_the_literal_and_every_candidate_with_a_lowercase_marker() {
     let _lock = engine_install_lock();
     install_fixture();
