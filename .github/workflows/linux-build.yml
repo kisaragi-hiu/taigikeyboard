@@ -137,7 +137,12 @@ jobs:
           # `Library=export:libX` → `libX.so`) must be the one installed.
           library="$(sed -n 's/^Library=export:\(.*\)$/\1/p' "$PREFIX/share/fcitx5/addon/taigikeyboard.conf")"
           test -n "$library"
-          ls "$PREFIX"/lib/fcitx5/"$library".so "$PREFIX"/lib/*/fcitx5/"$library".so 2>/dev/null | grep -q . || { echo "::error::no $library.so under $PREFIX/lib — the addon .conf and the CMake target disagree"; exit 1; }
+          found=""
+          for candidate in "$PREFIX"/lib/fcitx5/"$library".so "$PREFIX"/lib/*/fcitx5/"$library".so; do
+            [ -f "$candidate" ] && found="$candidate"
+          done
+          [ -n "$found" ] || { echo "::error::no $library.so under $PREFIX/lib — the addon .conf and the CMake target disagree"; exit 1; }
+          echo "addon file: $found"
           desktop-file-validate "$PREFIX/share/applications/tw.taigikeyboard.Settings.desktop"
           export IBUS_COMPONENT_PATH="$PREFIX/share/ibus/component"
           export TAIGIKEYBOARD_DATA_DIR="$GITHUB_WORKSPACE"
