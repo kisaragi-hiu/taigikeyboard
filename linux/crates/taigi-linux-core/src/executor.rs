@@ -28,6 +28,14 @@ pub enum Emit {
     LookupTable(LookupTableContent),
     /// `UpdateLookupTable(<empty>, visible = false)`.
     HideLookupTable,
+    /// The mode label beside the input method's icon changed
+    /// (`chrome::mode_label`): Fcitx5 re-reads `subModeLabelImpl`, IBus gets
+    /// `UpdateProperty` with the new symbol.
+    ModeLabel(String),
+    /// Show the mode briefly — the macOS / Windows HUD flash after a
+    /// switch. Fcitx5 `showInputMethodInformation`; IBus has no equivalent
+    /// and only the label changes (NAMED DIVERGENCE, roadmap L4).
+    AnnounceMode,
 }
 
 /// What the panel draws: the cells as strings, the per-position labels, the

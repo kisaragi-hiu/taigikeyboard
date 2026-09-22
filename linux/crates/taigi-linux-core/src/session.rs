@@ -10,6 +10,7 @@
 //! Everything here runs under the coordinator lock and emits nothing; the
 //! caller replays [`KeyReply::emits`] after the lock is dropped.
 
+use crate::chrome;
 use crate::executor::{Emit, LookupTableContent, Recorder};
 use crate::runtime::Runtime;
 use crate::selection::LookupSelection;
@@ -19,16 +20,27 @@ use taigi_desktop_core::composing::{
 };
 use taigi_desktop_core::keys::{
     CandidateNavigation, CandidateSlotKeySet, ComposingKeyBindings, ComposingKeyIntent,
-    KeyEventSnapshot,
+    KeyEventSnapshot, ShortcutAction, SymbolPickerIntent,
 };
 use taigi_desktop_core::policies;
 use taigi_desktop_core::settings::{keys, CandidateLayout, SettingsDocument};
+use taigi_linux_platform::key_translation::state::RELEASE;
+use taigi_linux_platform::{snapshot, RawKeyEvent};
 
 /// `IBUS_CAP_SURROUNDING_TEXT` (ibus `src/ibustypes.h:124`).
 pub const CAP_SURROUNDING_TEXT: u32 = 1 << 5;
 
 /// The slot keys a page holds — nine on both sets (`BARE_KEY_ROW`, `1`–`9`).
-const PAGE_SIZE: usize = CandidateSlotKeySet::BARE_KEY_ROW.len();
+pub(crate) const PAGE_SIZE: usize = CandidateSlotKeySet::BARE_KEY_ROW.len();
+
+/// The symbol picker while it is up: the symbols in pick order (recents
+/// first) and the highlight over them (roadmap L4: a lookup table, not a
+/// window of its own).
+#[derive(Debug)]
+pub struct SymbolPicker {
+    pub symbols: Vec<String>,
+    pub selection: LookupSelection,
+}
 
 /// What one engine object remembers between keys.
 #[derive(Debug)]
@@ -43,6 +55,15 @@ pub struct EngineState {
     pub capabilities: u32,
     /// Whether the daemon currently shows a lookup table of ours.
     pub is_table_shown: bool,
+    /// A toggle chord held down: auto-repeat is invisible on the wire, so
+    /// the chord is latched until any other key or a release arrives
+    /// (Windows `release_toggle_chord_on_other_key`).
+    pub latched_chord: Option<ShortcutAction>,
+    /// The Telex guide is up (as a lookup table) — the first key takes it
+    /// down (`chrome::perform_global`).
+    pub telex_guide_shown: bool,
+    /// The symbol picker is up; every key is its first.
+    pub symbol_picker: Option<SymbolPicker>,
 }
 
 impl Default for EngineState {
@@ -53,6 +74,9 @@ impl Default for EngineState {
             armed_auto_space: false,
             capabilities: 0,
             is_table_shown: false,
+            latched_chord: None,
+            telex_guide_shown: false,
+            symbol_picker: None,
         }
     }
 }
@@ -62,7 +86,7 @@ impl EngineState {
         self.capabilities & CAP_SURROUNDING_TEXT != 0
     }
 
-    fn clear_list(&mut self) {
+    pub(crate) fn clear_list(&mut self) {
         self.candidates.clear();
         self.selection = LookupSelection::new(0, PAGE_SIZE);
     }
@@ -76,8 +100,32 @@ pub struct KeyReply {
     pub emits: Vec<Emit>,
 }
 
+/// A key as the framework hands it — keysym, keycode, modifier mask with
+/// the release bit. Releases and bare modifier presses are answered
+/// unhandled; a release also unlatches a held toggle chord.
+pub fn process_raw_key(
+    runtime: &Runtime,
+    token: ContextToken,
+    state: &mut EngineState,
+    raw: RawKeyEvent,
+) -> KeyReply {
+    let unhandled = KeyReply {
+        handled: false,
+        emits: Vec::new(),
+    };
+    if raw.state & RELEASE != 0 {
+        state.latched_chord = None;
+        return unhandled;
+    }
+    match snapshot(raw) {
+        Some(snapshot) => process_key(runtime, token, state, &snapshot),
+        None => unhandled,
+    }
+}
+
 /// The classifier's answer plus everything the key does — the Windows
-/// `key_down` for one context.
+/// `key_down` for one context: the global chords and the two overlays
+/// first, then the composing contract.
 pub fn process_key(
     runtime: &Runtime,
     token: ContextToken,
@@ -86,6 +134,105 @@ pub fn process_key(
 ) -> KeyReply {
     let settings = runtime.settings.current();
     let mut emits = Vec::new();
+    let bindings = ComposingKeyBindings::from_document(&settings);
+    let global_action = global_action_for(snapshot, &settings);
+    // A held toggle chord repeats on the wire as presses with no release
+    // between them; the repeats are consumed without firing again.
+    if let Some(latched) = state.latched_chord {
+        if global_action == Some(latched) {
+            return KeyReply {
+                handled: true,
+                emits,
+            };
+        }
+        state.latched_chord = None;
+    }
+    // The Telex guide goes down on the first key after it came up, before
+    // that key is read: it is a card to glance at, not a mode
+    // (`TaigiInputController.handle`). Not on the global chords, so the
+    // toggle chord is not "any key". A plain Escape is swallowed — the user
+    // mid-word who checked the table keeps the composition and its list.
+    if global_action.is_none() && state.telex_guide_shown {
+        state.telex_guide_shown = false;
+        present_table(state, &settings, &bindings, &mut emits);
+        if snapshot.is_bare_escape() {
+            return KeyReply {
+                handled: true,
+                emits,
+            };
+        }
+    }
+    // The global chords, before the classifier — the Carbon hotkey's
+    // position on the Mac, and like it independent of whether a
+    // composition is running.
+    if let Some(action) = global_action {
+        if action.fires_once_per_press() {
+            state.latched_chord = Some(action);
+        }
+        emits.append(&mut chrome::perform_global(runtime, token, state, action));
+        return KeyReply {
+            handled: true,
+            emits,
+        };
+    }
+    // With the picker up, every key is the picker's first — read before the
+    // composing contract so the slot keys and the arrows reach it rather
+    // than a list that is not showing. A key the picker has no use for
+    // takes it down and goes on below.
+    if state.symbol_picker.is_some() {
+        match SymbolPickerIntent::intent(snapshot, &bindings) {
+            SymbolPickerIntent::Close => {
+                state.symbol_picker = None;
+                present_table(state, &settings, &bindings, &mut emits);
+                return KeyReply {
+                    handled: true,
+                    emits,
+                };
+            }
+            SymbolPickerIntent::Navigate(direction) => {
+                if let Some(picker) = &mut state.symbol_picker {
+                    picker.selection.navigate(direction);
+                }
+                present_table(state, &settings, &bindings, &mut emits);
+                return KeyReply {
+                    handled: true,
+                    emits,
+                };
+            }
+            SymbolPickerIntent::PickSlot(slot) => {
+                // An empty slot on a short last page is consumed all the
+                // same: the key is the picker's while it is up.
+                let index = state
+                    .symbol_picker
+                    .as_ref()
+                    .and_then(|picker| picker.selection.candidate_index_for_key_slot(slot));
+                emits.append(&mut chrome::pick_symbol(
+                    runtime, token, state, &settings, &bindings, index,
+                ));
+                return KeyReply {
+                    handled: true,
+                    emits,
+                };
+            }
+            SymbolPickerIntent::Confirm => {
+                let index = state
+                    .symbol_picker
+                    .as_ref()
+                    .and_then(|picker| picker.selection.selected_index());
+                emits.append(&mut chrome::pick_symbol(
+                    runtime, token, state, &settings, &bindings, index,
+                ));
+                return KeyReply {
+                    handled: true,
+                    emits,
+                };
+            }
+            SymbolPickerIntent::CloseAndPassThrough => {
+                state.symbol_picker = None;
+                present_table(state, &settings, &bindings, &mut emits);
+            }
+        }
+    }
     // A list the user switched off since the last key comes down HERE,
     // before the key is read (`TaigiInputController.handle`): a Return
     // classified against a list still up would pick a candidate the user
@@ -95,16 +242,7 @@ pub fn process_key(
         emits.push(Emit::HideLookupTable);
         state.is_table_shown = false;
     }
-    let bindings = ComposingKeyBindings::from_document(&settings);
-    let is_composing = runtime
-        .coordinator_if_built()
-        .and_then(|coordinator| {
-            coordinator
-                .try_lock()
-                .ok()
-                .and_then(|guard| guard.manager_ref(token).map(ComposingManager::is_composing))
-        })
-        .unwrap_or(false);
+    let is_composing = self::is_composing(runtime, token);
     let is_showing_candidates = !state.candidates.is_empty();
     let intent =
         ComposingKeyIntent::intent(snapshot, is_composing, is_showing_candidates, &bindings);
@@ -182,7 +320,63 @@ pub fn end_session(runtime: &Runtime, token: ContextToken, state: &mut EngineSta
     }
     state.clear_list();
     state.armed_auto_space = false;
+    state.telex_guide_shown = false;
+    state.symbol_picker = None;
+    state.latched_chord = None;
     emits
+}
+
+/// Whether `token`'s engine is mid-composition, read without bringing the
+/// runtime up and without waiting on a held lock.
+pub(crate) fn is_composing(runtime: &Runtime, token: ContextToken) -> bool {
+    runtime
+        .coordinator_if_built()
+        .and_then(|coordinator| {
+            coordinator
+                .try_lock()
+                .ok()
+                .and_then(|guard| guard.manager_ref(token).map(ComposingManager::is_composing))
+        })
+        .unwrap_or(false)
+}
+
+/// The commit the picker chord runs before it opens: what is highlighted
+/// when a list shows, the composition as typed otherwise.
+pub(crate) fn commit_for_picker(
+    runtime: &Runtime,
+    token: ContextToken,
+    state: &mut EngineState,
+    settings: &SettingsDocument,
+    bindings: &ComposingKeyBindings,
+) -> KeyReply {
+    let intent = if state.candidates.is_empty() {
+        ComposingKeyIntent::Commit
+    } else {
+        ComposingKeyIntent::CommitHighlightedCandidate
+    };
+    runtime.prepare_for_first_key();
+    let mut coordinator = runtime.lock_coordinator();
+    run_key(
+        &mut coordinator,
+        token,
+        state,
+        &KeyEventSnapshot::default(),
+        KeyWork::Compose(intent),
+        settings,
+        bindings,
+    )
+}
+
+/// The global action `snapshot` is, if its recorded chord matches.
+fn global_action_for(
+    snapshot: &KeyEventSnapshot,
+    settings: &SettingsDocument,
+) -> Option<ShortcutAction> {
+    ShortcutAction::ALL.into_iter().find(|action| {
+        action
+            .chord_in(settings)
+            .is_some_and(|chord| chord.matches(snapshot))
+    })
 }
 
 /// A panel navigation (`PageUp` … `CursorDown`): the same intents the keys
@@ -193,11 +387,17 @@ pub fn navigate_from_panel(
     state: &mut EngineState,
     direction: CandidateNavigation,
 ) -> Vec<Emit> {
+    let settings = runtime.settings.current();
+    let bindings = ComposingKeyBindings::from_document(&settings);
+    if let Some(picker) = &mut state.symbol_picker {
+        picker.selection.navigate(direction);
+        let mut emits = Vec::new();
+        present_table(state, &settings, &bindings, &mut emits);
+        return emits;
+    }
     if state.candidates.is_empty() {
         return Vec::new();
     }
-    let settings = runtime.settings.current();
-    let bindings = ComposingKeyBindings::from_document(&settings);
     let mut coordinator = runtime.lock_coordinator();
     run_key(
         &mut coordinator,
@@ -214,17 +414,25 @@ pub fn navigate_from_panel(
 /// A click on the `position`-th cell of the current page: selects, never
 /// commits (`CandidateItemView.swift:47-48`, identical semantics).
 pub fn click_from_panel(runtime: &Runtime, state: &mut EngineState, position: usize) -> Vec<Emit> {
-    let Some(index) = state.selection.candidate_index_on_page(position) else {
-        return Vec::new();
-    };
-    state.selection.select(index);
     let settings = runtime.settings.current();
     let bindings = ComposingKeyBindings::from_document(&settings);
-    vec![Emit::LookupTable(table_content(
-        state,
-        &settings,
-        bindings.slot_key_set(),
-    ))]
+    if state.telex_guide_shown {
+        return Vec::new();
+    }
+    if let Some(picker) = &mut state.symbol_picker {
+        let Some(index) = picker.selection.candidate_index_on_page(position) else {
+            return Vec::new();
+        };
+        picker.selection.select(index);
+    } else {
+        let Some(index) = state.selection.candidate_index_on_page(position) else {
+            return Vec::new();
+        };
+        state.selection.select(index);
+    }
+    let mut emits = Vec::new();
+    present_table(state, &settings, &bindings, &mut emits);
+    emits
 }
 
 enum KeyWork {
@@ -259,7 +467,6 @@ fn run_key(
     }
     let manager = coordinator.claim(token);
     let KeyWork::Compose(intent) = work;
-    let slot_key_set = bindings.slot_key_set();
     let handled = match &intent {
         ComposingKeyIntent::Input(text) => {
             manager.append(text, &mut recorder);
@@ -385,19 +592,28 @@ fn run_key(
     };
     state.armed_auto_space = recorder.armed_swap;
     let mut emits = recorder.emits;
-    present_list(state, settings, slot_key_set, &mut emits);
+    present_table(state, settings, bindings, &mut emits);
     KeyReply { handled, emits }
 }
 
-/// The lookup table as the list now stands — shown, updated in place, or
-/// taken down. Appended after the composing signals so the preedit the
-/// list describes is already on screen.
-fn present_list(
+/// The lookup table as things now stand — the symbol picker while it is
+/// up, else the candidate list: shown, updated in place, or taken down.
+/// Appended after the composing signals so the preedit the list describes
+/// is already on screen. The Telex guide is emitted by its toggle alone.
+pub(crate) fn present_table(
     state: &mut EngineState,
     settings: &SettingsDocument,
-    slot_key_set: CandidateSlotKeySet,
+    bindings: &ComposingKeyBindings,
     emits: &mut Vec<Emit>,
 ) {
+    if let Some(picker) = &state.symbol_picker {
+        emits.push(Emit::LookupTable(chrome::symbol_picker_table(
+            picker, settings, bindings,
+        )));
+        state.is_table_shown = true;
+        return;
+    }
+    let slot_key_set = bindings.slot_key_set();
     if state.candidates.is_empty() {
         if state.is_table_shown {
             emits.push(Emit::HideLookupTable);
@@ -472,7 +688,7 @@ fn pass_through_may_consume(
 
 /// Re-reads the candidates for the composition as it now stands; with the
 /// 候選窗 setting off nothing is fetched, not merely not shown.
-fn refresh_candidates(
+pub(crate) fn refresh_candidates(
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
     state: &mut EngineState,
@@ -523,7 +739,7 @@ fn commit_candidate(
 }
 
 /// The §23 swap for `text` about to be written outside a composition.
-fn swap_auto_space(
+pub(crate) fn swap_auto_space(
     text: &str,
     armed_swap: bool,
     settings: &SettingsDocument,

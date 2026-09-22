@@ -20,9 +20,12 @@ use taigi_desktop_core::composing::{
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{lexicon_install, LexiconInstallStats};
 use taigi_desktop_core::keys::ShortcutConflicts;
-use taigi_desktop_core::settings::{SettingsDocument, SettingsProvider, StaticSettingsProvider};
+use taigi_desktop_core::settings::{
+    keys, SettingsDocument, SettingsProvider, StaticSettingsProvider,
+};
+use taigi_desktop_core::strings::{DisplayLanguage, StringResolver};
 use taigi_desktop_storage::{created, LiveSettings, SettingsFileStore, UserDataStores};
-use taigi_linux_platform::{dictionaries_directory, UserDirectories};
+use taigi_linux_platform::{dictionaries_directory, system_locale, UserDirectories};
 
 type StoreSeams = (
     Box<dyn FrequencySource>,
@@ -54,7 +57,12 @@ impl Runtime {
     /// Resolves the user's directories and reads the settings file. Nothing
     /// else is touched.
     pub fn probe() -> Self {
-        let directories = UserDirectories::resolve();
+        Self::from_directories(UserDirectories::resolve(), dictionaries_directory())
+    }
+
+    /// `probe` over explicit directories — what a test builds over a
+    /// temporary tree.
+    pub fn from_directories(directories: Option<UserDirectories>, dictionaries: PathBuf) -> Self {
         let config = directories
             .as_ref()
             .and_then(|d| match created(d.config.clone()) {
@@ -84,7 +92,6 @@ impl Runtime {
             None => Arc::new(StaticSettingsProvider::new(SettingsDocument::default())),
         };
         let stores = data.map(UserDataStores::new);
-        let dictionaries = dictionaries_directory();
         log::info!(
             "runtime.probe settings={} learning={} dictionaries={}",
             settings_store.is_some(),
@@ -210,6 +217,34 @@ impl Runtime {
             None => log::error!("lexicon.install_returned_nothing"),
         }
         stats
+    }
+
+    /// One write to `settings.json` from the key path — under the file's
+    /// lock, on the document as it is now, so a write from the settings
+    /// window is not lost (`taigi-windows-tsf::runtime::update_settings`).
+    /// `what` names the write in the log. Answers whether there was a store
+    /// to write to; a write that failed is logged and still answers true,
+    /// since what the chord does next does not depend on the disk.
+    pub fn update_settings(&self, what: &str, mutate: impl FnOnce(&mut SettingsDocument)) -> bool {
+        let Some(store) = &self.settings_store else {
+            log::warn!("settings.no_store what={what}");
+            return false;
+        };
+        if let Err(error) = store.update(mutate) {
+            log::error!("settings.update_failed what={what} error={error}");
+        }
+        true
+    }
+
+    /// The language the UI strings are drawn in: the setting, or the
+    /// machine's when it says `system`.
+    pub fn display_language(&self) -> DisplayLanguage {
+        let tag = self.settings.current().string(&keys::DISPLAY_LANGUAGE);
+        DisplayLanguage::from_tag(&tag).effective(&system_locale())
+    }
+
+    pub fn strings(&self) -> StringResolver {
+        StringResolver::new(self.display_language())
     }
 
     /// The launch-time pass over both shortcut registries; writes only when

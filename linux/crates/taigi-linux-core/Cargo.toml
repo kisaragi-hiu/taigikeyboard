@@ -14,5 +14,8 @@ taigi-desktop-storage.workspace = true
 taigi-linux-platform.workspace = true
 log.workspace = true
 
+[dev-dependencies]
+tempfile.workspace = true
+
 [lints]
 workspace = true

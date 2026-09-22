@@ -141,9 +141,85 @@ impl LookupTable<'_> {
     }
 }
 
+/// `IBusPropType` (ibus `src/ibusproperty.h:79-88`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PropType {
+    Normal = 0,
+    Menu = 3,
+    Separator = 4,
+}
+
+/// `IBusProperty` = `("IBusProperty", a{sv}, s key, u type, v label, s icon,
+/// v tooltip, b sensitive, b visible, u state, v sub_props, v symbol)`
+/// (`src/ibusproperty.c`, `ibus_property_serialize`). `label`, `tooltip`
+/// and `symbol` are `IBusText`s; `sub_props` is an `IBusPropList`.
+pub struct Property<'a> {
+    pub key: &'a str,
+    pub kind: PropType,
+    pub label: &'a str,
+    /// The accelerator column: ibus draws the tooltip on hover, which is
+    /// where the recorded chord goes.
+    pub tooltip: &'a str,
+    /// The panel's indicator text for a menu root (the mode label).
+    pub symbol: &'a str,
+    pub sub_props: Vec<Value<'static>>,
+}
+
+impl Property<'_> {
+    pub fn to_value(&self) -> Value<'static> {
+        Value::Structure(built(
+            serializable("IBusProperty")
+                .add_field(self.key.to_owned())
+                .add_field(self.kind as u32)
+                .append_field(boxed(plain_text(self.label)))
+                .add_field(String::new())
+                .append_field(boxed(plain_text(self.tooltip)))
+                .add_field(true)
+                .add_field(true)
+                .add_field(0u32)
+                .append_field(boxed(prop_list(self.sub_props.clone())))
+                .append_field(boxed(plain_text(self.symbol))),
+        ))
+    }
+}
+
+/// `IBusPropList` = `("IBusPropList", a{sv}, av)` (`src/ibusproplist.c`).
+pub fn prop_list(properties: Vec<Value<'static>>) -> Value<'static> {
+    Value::Structure(built(
+        serializable("IBusPropList").append_field(variant_array(properties)),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn property_and_prop_list_have_the_ibus_signatures() {
+        // trace: `ibus_property_serialize` appends s u v s v b b u v v after
+        // the serialisable prefix.
+        let row = Property {
+            key: "settings",
+            kind: PropType::Normal,
+            label: "設定",
+            tooltip: "Ctrl+Alt+S",
+            symbol: "",
+            sub_props: Vec::new(),
+        }
+        .to_value();
+        assert_eq!(signature_of(&row), "(sa{sv}suvsvbbuvv)");
+        let root = Property {
+            key: "taigikeyboard",
+            kind: PropType::Menu,
+            label: "台語齒盤",
+            tooltip: "",
+            symbol: "台",
+            sub_props: vec![row],
+        }
+        .to_value();
+        assert_eq!(signature_of(&root), "(sa{sv}suvsvbbuvv)");
+        assert_eq!(signature_of(&prop_list(vec![root])), "(sa{sv}av)");
+    }
 
     fn signature_of(value: &Value<'_>) -> String {
         value.value_signature().to_string()

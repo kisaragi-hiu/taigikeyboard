@@ -13,8 +13,11 @@
 #include <fcitx/candidatelist.h>
 #include <fcitx/event.h>
 #include <fcitx/inputpanel.h>
+#include <fcitx/statusarea.h>
 #include <fcitx/text.h>
 #include <fcitx/userinterface.h>
+#include <fcitx/userinterfacemanager.h>
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <vector>
@@ -117,6 +120,13 @@ void State::click(uint32_t position) {
     replay(taigi_engine_click(handle_, position));
 }
 
+void State::menuActivate(const std::string &id) {
+    if (!handle_) {
+        return;
+    }
+    replay(taigi_engine_menu_activate(handle_, id.c_str()));
+}
+
 /* The reply, entry by entry, onto the input context; one UI update at the
  * end (fcitx5-rime `updateUI`). */
 void State::replay(TaigiReply *reply) {
@@ -167,6 +177,16 @@ void State::replay(TaigiReply *reply) {
             panel.setCandidateList(nullptr);
             panelChanged = true;
             break;
+        case TAIGI_EMIT_MODE_LABEL:
+            /* The label is re-read through subModeLabelImpl; the status
+             * area redraws it. */
+            ic_.updateUserInterface(UserInterfaceComponent::StatusArea);
+            break;
+        case TAIGI_EMIT_ANNOUNCE_MODE:
+            /* The mode flash of the other desktops: the framework's own
+             * "input method + sub-mode" notice, timed by it. */
+            engine_->instance()->showInputMethodInformation(&ic_);
+            break;
         default:
             TAIGI_ERROR() << "unknown reply kind " << taigi_reply_kind(reply, i);
             break;
@@ -190,10 +210,15 @@ void State::showCandidates(const TaigiReply *reply, size_t index) {
     const size_t rows = taigi_reply_table_count(reply, index);
     const size_t labels = taigi_reply_table_label_count(reply, index);
     const uint32_t pageSize = taigi_reply_table_page_size(reply, index);
+    /* A table with no labels (the Telex guide) still needs one label per
+     * page position: the panel indexes the vector by row. */
     std::vector<std::string> labelTexts;
-    labelTexts.reserve(labels);
+    labelTexts.reserve(labels > 0 ? labels : pageSize);
     for (size_t position = 0; position < labels; ++position) {
         labelTexts.emplace_back(std::string(taigi_reply_table_label(reply, index, position)) + " ");
+    }
+    for (size_t position = labels; position < pageSize; ++position) {
+        labelTexts.emplace_back("");
     }
     list->setLabels(labelTexts);
     list->setPageSize(static_cast<int>(pageSize));
@@ -208,7 +233,9 @@ void State::showCandidates(const TaigiReply *reply, size_t index) {
             this, static_cast<uint32_t>(row % (pageSize == 0 ? 1 : pageSize)),
             Text(taigi_reply_table_candidate(reply, index, row))));
     }
-    list->setGlobalCursorIndex(static_cast<int>(taigi_reply_table_cursor(reply, index)));
+    list->setGlobalCursorIndex(taigi_reply_table_cursor_visible(reply, index)
+                                   ? static_cast<int>(taigi_reply_table_cursor(reply, index))
+                                   : -1);
     ic_.inputPanel().setCandidateList(std::move(list));
 }
 
@@ -225,19 +252,76 @@ Engine::Engine(Instance *instance)
     }
     TAIGI_DEBUG() << "taigikeyboard " << taigi_version() << " loaded";
     instance_->inputContextManager().registerProperty("taigikeyboardState", &factory_);
+    buildMenu();
 }
 
 Engine::~Engine() {
     /* Every state (and its engine handle) goes with the property registration;
      * the runtime is freed last, as the header requires. */
+    for (auto &row : menu_) {
+        instance_->userInterfaceManager().unregisterAction(&row->action);
+    }
+    menu_.clear();
     factory_.unregister();
     taigi_runtime_free(runtime_);
 }
 
+/* One action per row, registered under a stable name; the titles are
+ * filled by refreshMenu. Separators are rows too (`setSeparator`). */
+void Engine::buildMenu() {
+    TaigiMenu *menu = taigi_runtime_menu(runtime_);
+    if (!menu) {
+        return;
+    }
+    const size_t count = taigi_menu_count(menu);
+    for (size_t i = 0; i < count; ++i) {
+        auto row = std::make_unique<MenuRow>();
+        if (taigi_menu_is_separator(menu, i)) {
+            row->action.setSeparator(true);
+        } else {
+            row->id = taigi_menu_id(menu, i);
+            const std::string id = row->id;
+            row->action.connect<SimpleAction::Activated>([this, id](InputContext *ic) {
+                if (auto *s = state(ic)) {
+                    s->menuActivate(id);
+                }
+            });
+        }
+        instance_->userInterfaceManager().registerAction("taigikeyboard-menu-" + std::to_string(i),
+                                                         &row->action);
+        menu_.push_back(std::move(row));
+    }
+    taigi_menu_free(menu);
+}
+
+/* The rows re-titled from the core (display language, recorded chords) and
+ * placed in the context's status area. */
+void Engine::refreshMenu(InputContext &ic) {
+    TaigiMenu *menu = taigi_runtime_menu(runtime_);
+    if (menu) {
+        const size_t count = std::min(taigi_menu_count(menu), menu_.size());
+        for (size_t i = 0; i < count; ++i) {
+            if (menu_[i]->action.isSeparator()) {
+                continue;
+            }
+            menu_[i]->action.setShortText(taigi_menu_title(menu, i));
+            menu_[i]->action.setLongText(taigi_menu_detail(menu, i));
+        }
+        taigi_menu_free(menu);
+    }
+    auto &statusArea = ic.statusArea();
+    statusArea.clearGroup(StatusGroup::InputMethod);
+    for (auto &row : menu_) {
+        statusArea.addAction(StatusGroup::InputMethod, &row->action);
+    }
+}
+
 void Engine::activate(const InputMethodEntry & /*entry*/, InputContextEvent &event) {
-    if (auto *s = state(event.inputContext())) {
+    auto *ic = event.inputContext();
+    if (auto *s = state(ic)) {
         s->syncCapabilities();
     }
+    refreshMenu(*ic);
 }
 
 void Engine::deactivate(const InputMethodEntry &entry, InputContextEvent &event) {
@@ -264,9 +348,15 @@ void Engine::reset(const InputMethodEntry & /*entry*/, InputContextEvent &event)
 }
 
 std::string Engine::subModeLabelImpl(const InputMethodEntry & /*entry*/, InputContext & /*ic*/) {
-    /* The mode letter the panel shows beside the icon; the romanization /
-     * script state follows in the chrome PR (roadmap L6). */
-    return "台";
+    /* The romanization and the display mode beside the icon (roadmap L6);
+     * the mode flash of the other desktops announces the same text. */
+    char *label = taigi_runtime_mode_label(runtime_);
+    if (!label) {
+        return {};
+    }
+    std::string text(label);
+    taigi_string_free(label);
+    return text;
 }
 
 AddonInstance *EngineFactory::create(AddonManager *manager) {

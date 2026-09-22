@@ -12,6 +12,7 @@
 #ifndef TAIGIKEYBOARD_FCITX5_ENGINE_H
 #define TAIGIKEYBOARD_FCITX5_ENGINE_H
 
+#include <fcitx/action.h>
 #include <fcitx/addonfactory.h>
 #include <fcitx/addoninstance.h>
 #include <fcitx/addonmanager.h>
@@ -21,6 +22,7 @@
 #include <fcitx/instance.h>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "taigikeyboard.h"
 
@@ -39,6 +41,7 @@ public:
     void endSession();
     void navigate(uint32_t direction);
     void click(uint32_t position);
+    void menuActivate(const std::string &id);
     void syncCapabilities();
 
 private:
@@ -67,9 +70,21 @@ public:
     State *state(InputContext *ic) { return ic->propertyFor(&factory_); }
 
 private:
+    /* The status-area rows (roadmap L6): one SimpleAction per menu row the
+     * core lists, registered once, re-titled on every activate so a display
+     * language or a chord recorded in the settings window shows on the next
+     * focus (fcitx5-rime `refreshStatusArea`). */
+    void buildMenu();
+    void refreshMenu(InputContext &ic);
+
     Instance *instance_;
     ::TaigiRuntime *runtime_ = nullptr;
     FactoryFor<State> factory_;
+    struct MenuRow {
+        std::string id;
+        SimpleAction action;
+    };
+    std::vector<std::unique_ptr<MenuRow>> menu_;
 };
 
 class EngineFactory final : public AddonFactory {

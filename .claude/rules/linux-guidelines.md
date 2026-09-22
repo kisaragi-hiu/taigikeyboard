@@ -31,7 +31,7 @@ record: `docs/architecture/linux-roadmap.md`.
 - Serialised shapes come from the ibus source, never from memory: `IBusText`
   `("IBusText", a{sv}, s, v)`, `IBusAttrList` `("IBusAttrList", a{sv}, av)`, `IBusAttribute`
   `("IBusAttribute", a{sv}, uuuu)`, `IBusLookupTable` `("IBusLookupTable", a{sv}, uubbiavav)`,
-  `IBusProperty` `("IBusProperty", a{sv}, susvsbbuvv)`, `IBusPropList` `("IBusPropList",
+  `IBusProperty` `("IBusProperty", a{sv}, suvsvbbuvv)`, `IBusPropList` `("IBusPropList",
   a{sv}, av)`. Every nested serialisable is wrapped in a `v`. Each wire type has a unit test
   asserting its `zvariant` signature string — a field added or reordered fails there, not on a
   user's daemon.

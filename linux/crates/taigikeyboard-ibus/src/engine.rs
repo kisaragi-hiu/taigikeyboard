@@ -9,15 +9,15 @@
 //! composition, which is worse than one key dropped. Signals are emitted
 //! AFTER the key's work, never under the engine lock (`session`).
 
-use crate::wire::{self, LookupTable, Orientation};
+use crate::wire::{self, LookupTable, Orientation, PropType, Property};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::Arc;
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::CandidateNavigation;
-use taigi_linux_core::Runtime;
+use taigi_linux_core::{chrome, MenuItem, Runtime};
 use taigi_linux_core::{session, EngineState};
 use taigi_linux_core::{Emit, LookupTableContent};
-use taigi_linux_platform::{snapshot, RawKeyEvent};
+use taigi_linux_platform::RawKeyEvent;
 use zbus::object_server::SignalEmitter;
 use zbus::zvariant::{OwnedObjectPath, Value};
 use zbus::{interface, Connection};
@@ -25,6 +25,10 @@ use zbus::{interface, Connection};
 /// `IBUS_ENGINE_PREEDIT_COMMIT` (ibus `src/ibustypes.h:139`): a focus loss
 /// commits what is typed, as the Mac's `commitComposition` does.
 const PREEDIT_MODE_COMMIT: u32 = 1;
+
+/// The panel menu's root property (roadmap L6): its `symbol` is what the
+/// panel indicator shows for this engine, its sub-properties the rows.
+const MENU_ROOT_KEY: &str = "taigikeyboard";
 
 pub struct Engine {
     runtime: Arc<Runtime>,
@@ -78,6 +82,12 @@ impl Engine {
                 Emit::HideLookupTable => {
                     Self::update_lookup_table(emitter, empty_table_value(), false).await
                 }
+                Emit::ModeLabel(_) => {
+                    Self::update_property(emitter, menu_root_value(&self.runtime)).await
+                }
+                // NAMED DIVERGENCE (roadmap L4): the daemon has no HUD; the
+                // indicator's symbol is the only notice.
+                Emit::AnnounceMode => Ok(()),
             };
             if let Err(error) = sent {
                 log::error!("engine.signal_failed token={:?} error={error}", self.token);
@@ -90,6 +100,16 @@ impl Engine {
             session::end_session(&engine.runtime, engine.token, &mut engine.state)
         });
         self.replay(emitter, emits).await;
+    }
+
+    /// `RegisterProperties` with the menu as it stands — on `Enable`, and
+    /// again on every `FocusIn` so a display language or a chord recorded
+    /// in the settings window shows on the next focus.
+    async fn register_menu(&self, emitter: &SignalEmitter<'_>) {
+        let props = wire::prop_list(vec![menu_root_value(&self.runtime)]);
+        if let Err(error) = Self::register_properties(emitter, props).await {
+            log::error!("engine.register_properties_failed error={error}");
+        }
     }
 
     async fn navigate(
@@ -127,6 +147,48 @@ fn table_value(content: &LookupTableContent) -> Value<'static> {
     .to_value()
 }
 
+/// The menu root: a `PROP_TYPE_MENU` whose symbol is the mode label and
+/// whose sub-properties mirror `chrome::menu_items` row for row — the
+/// recorded chord rides in the tooltip, the one text column the panel
+/// draws beside a row.
+fn menu_root_value(runtime: &Runtime) -> Value<'static> {
+    let label = chrome::mode_label(runtime);
+    let rows = chrome::menu_items(runtime);
+    let sub_props = rows
+        .iter()
+        .enumerate()
+        .map(|(index, item)| match item {
+            MenuItem::Separator => Property {
+                key: &format!("separator-{index}"),
+                kind: PropType::Separator,
+                label: "",
+                tooltip: "",
+                symbol: "",
+                sub_props: Vec::new(),
+            }
+            .to_value(),
+            MenuItem::Action { id, title, detail } => Property {
+                key: id,
+                kind: PropType::Normal,
+                label: title,
+                tooltip: detail.as_deref().unwrap_or(""),
+                symbol: "",
+                sub_props: Vec::new(),
+            }
+            .to_value(),
+        })
+        .collect();
+    Property {
+        key: MENU_ROOT_KEY,
+        kind: PropType::Menu,
+        label: &label,
+        tooltip: "",
+        symbol: &label,
+        sub_props,
+    }
+    .to_value()
+}
+
 fn empty_table_value() -> Value<'static> {
     LookupTable {
         page_size: 9,
@@ -151,19 +213,16 @@ impl Engine {
         state: u32,
         #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
     ) -> bool {
-        let Some(snapshot) = snapshot(RawKeyEvent {
-            keyval,
-            keycode,
-            state,
-        }) else {
-            return false;
-        };
         let reply = self.guarded("ProcessKeyEvent", None, |engine| {
-            Some(session::process_key(
+            Some(session::process_raw_key(
                 &engine.runtime,
                 engine.token,
                 &mut engine.state,
-                &snapshot,
+                RawKeyEvent {
+                    keyval,
+                    keycode,
+                    state,
+                },
             ))
         });
         let Some(reply) = reply else {
@@ -184,8 +243,20 @@ impl Engine {
         self.state.capabilities = caps;
     }
 
-    async fn property_activate(&self, name: String, state: u32) {
+    async fn property_activate(
+        &mut self,
+        name: String,
+        state: u32,
+        #[zbus(signal_emitter)] emitter: SignalEmitter<'_>,
+    ) {
         log::debug!("engine.property_activate name={name} state={state}");
+        if name == MENU_ROOT_KEY || name.starts_with("separator-") {
+            return;
+        }
+        let emits = self.guarded("PropertyActivate", Vec::new(), |engine| {
+            chrome::activate_menu(&engine.runtime, engine.token, &mut engine.state, &name)
+        });
+        self.replay(&emitter, emits).await;
     }
 
     async fn property_show(&self, _name: String) {}
@@ -205,8 +276,9 @@ impl Engine {
         self.replay(&emitter, emits).await;
     }
 
-    async fn focus_in(&self) {
+    async fn focus_in(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         log::debug!("engine.focus_in token={:?}", self.token);
+        self.register_menu(&emitter).await;
     }
 
     async fn focus_in_id(&self, _object_path: String, _client: String) {}
@@ -228,8 +300,9 @@ impl Engine {
         self.end_session("Reset", &emitter).await;
     }
 
-    async fn enable(&self) {
+    async fn enable(&self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
         log::debug!("engine.enable token={:?}", self.token);
+        self.register_menu(&emitter).await;
     }
 
     async fn disable(&mut self, #[zbus(signal_emitter)] emitter: SignalEmitter<'_>) {
