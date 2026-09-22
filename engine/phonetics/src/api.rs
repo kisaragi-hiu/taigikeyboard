@@ -339,6 +339,74 @@ pub fn tl_display_to_poj_display(text: &str) -> String {
     rewrite_display(text, System::Poj, false)
 }
 
+/// §55 — `roman` with the separator at every typed boundary replaced by
+/// the `-` run the user typed there. `runs` are `(typed offset, run
+/// length)` pairs (`(4, 1)` for a `-`, `(7, 2)` for a `--`), `typed` the
+/// lowercased typed body the offsets index into, `reading` the canonical
+/// TL the walk aligns ([`crate::typed_syllable_walk`]). `roman` is
+/// `reading` under a separator-preserving transform — recased, or a
+/// custom entry's native POJ form — so it is tokenized by the same
+/// separators as the reading's syllables and rewritten by index rather
+/// than walked itself. A boundary that is not a syllable end of the
+/// reading, or ends its last syllable, changes nothing; a reading that
+/// runs past the typed body (a partial-prefix extension) is rewritten on
+/// the syllables the typed body covers. `None` when nothing changed or
+/// the reading does not align with the typed body (an abbreviation body,
+/// a TPS / English buffer).
+pub fn render_typed_separators(
+    mode: InputMode,
+    typed: &str,
+    runs: &[(usize, usize)],
+    reading: &str,
+    roman: &str,
+) -> Option<String> {
+    let walk = crate::typed_syllable_walk(mode, typed, reading)?;
+    // Token byte ranges of `roman` — the `split` + drop-empty rule of
+    // `tl_syllable_tokens`, so the count matches the walk's syllables.
+    // Every separator is one ASCII byte.
+    let mut tokens: Vec<std::ops::Range<usize>> = Vec::with_capacity(walk.ends.len());
+    let mut offset = 0;
+    for piece in roman.split(crate::tps::TL_SYLLABLE_SEPARATORS) {
+        if !piece.is_empty() {
+            tokens.push(offset..offset + piece.len());
+        }
+        offset += piece.len() + 1;
+    }
+    // The walk stops where the typed text ends, so a partial-prefix row
+    // (`tāi-gi̍k` under `taigi`) aligns only its leading syllables.
+    debug_assert!(tokens.len() >= walk.ends.len(), "{roman:?} vs {reading:?}");
+    if tokens.len() < walk.ends.len() {
+        return None;
+    }
+    // The separator after token `k`, and the typed run that replaces it.
+    let separator_after =
+        |k: usize| tokens[k].end..tokens.get(k + 1).map_or(roman.len(), |t| t.start);
+    let typed_run = |k: usize| {
+        (k + 1 < tokens.len())
+            .then(|| runs.iter().find(|&&(at, _)| Some(&at) == walk.ends.get(k)))
+            .flatten()
+            .map(|&(_, run)| run)
+    };
+    let changes = (0..tokens.len()).any(|k| {
+        typed_run(k).is_some_and(|run| {
+            let stored = &roman[separator_after(k)];
+            stored.len() != run || stored.bytes().any(|b| b != b'-')
+        })
+    });
+    if !changes {
+        return None;
+    }
+    let mut out = String::with_capacity(roman.len());
+    for k in 0..tokens.len() {
+        out.push_str(&roman[tokens[k].clone()]);
+        match typed_run(k) {
+            Some(run) => out.extend(std::iter::repeat_n('-', run)),
+            None => out.push_str(&roman[separator_after(k)]),
+        }
+    }
+    Some(out)
+}
+
 /// 無連字符 (`AppConfig.hyphenless_roman`, `behavioral-invariants.md` §49)
 /// — the rendered form of a dictionary-supplied romanization with the
 /// inter-syllable `-` dropped and the 輕聲 marker `--` written as
@@ -686,5 +754,107 @@ mod tests {
             toneless_reading_key("oo")
         );
         assert_eq!(toneless_reading_key("kiaⁿ"), toneless_reading_key("kiann"));
+    }
+}
+
+#[cfg(test)]
+mod render_typed_separators_tests {
+    use super::render_typed_separators;
+    use crate::InputMode::{self, Poj, Tl};
+
+    fn render(
+        mode: InputMode,
+        typed: &str,
+        runs: &[(usize, usize)],
+        roman: &str,
+    ) -> Option<String> {
+        render_typed_separators(mode, typed, runs, roman, roman)
+    }
+
+    // §55 — the reported shape: 放重利 stores a space, the user typed `-`.
+    // trace: face `pang3tang7lai7`; typed `pangtanglai` → syllable ends
+    // [4, 8, 11]; runs at 4 and 8 → tokens `pàng` | `tāng` | `lāi`,
+    // separators ` ` and `-` → `-` and `-`.
+    #[test]
+    fn typed_hyphen_replaces_a_records_space() {
+        for (typed, runs) in [
+            ("pangtanglai", &[(4, 1), (8, 1)][..]),
+            // Only the boundary the user typed is rewritten.
+            ("pangtanglai", &[(4, 1)][..]),
+            // The digits sit in the typed body; the runs index past them.
+            ("pang3tang7lai", &[(5, 1), (10, 1)][..]),
+            // A partial-prefix row: the typed body ends inside `lāi`.
+            ("pangtangl", &[(4, 1)][..]),
+        ] {
+            assert_eq!(
+                render(Tl, typed, runs, "pàng tāng-lāi").as_deref(),
+                Some("pàng-tāng-lāi"),
+                "{typed} {runs:?}"
+            );
+        }
+    }
+
+    // The roman may be recased or POJ-rendered; the walk reads the
+    // canonical TL and the tokens come from the roman.
+    #[test]
+    fn rewrites_the_roman_by_the_readings_syllables() {
+        assert_eq!(
+            render_typed_separators(
+                Tl,
+                "pangtanglai",
+                &[(4, 1)],
+                "pàng tāng-lāi",
+                "PÀNG TĀNG-LĀI"
+            )
+            .as_deref(),
+            Some("PÀNG-TĀNG-LĀI")
+        );
+        // POJ mode walks the POJ face (`góa` ← `guá`) of the TL reading.
+        assert_eq!(
+            render(Poj, "goasi", &[(3, 2)], "guá sī").as_deref(),
+            Some("guá--sī")
+        );
+    }
+
+    // The walker's space join between two edges takes the typed run; a
+    // part that opens with its own `--` (custom `--ah`, joined ` --ah`)
+    // has its whole separator run replaced, never doubled.
+    #[test]
+    fn walker_space_join_takes_the_typed_run_without_doubling() {
+        assert_eq!(
+            render(Tl, "guasi", &[(3, 2)], "guá sī").as_deref(),
+            Some("guá--sī")
+        );
+        assert_eq!(
+            render(Tl, "khiah", &[(3, 2)], "khì --ah").as_deref(),
+            Some("khì--ah")
+        );
+        // The run is verbatim (`---` stays `---`, §51).
+        assert_eq!(
+            render(Tl, "guasi", &[(3, 3)], "guá sī").as_deref(),
+            Some("guá---sī")
+        );
+    }
+
+    // Nothing to rewrite → `None`: typed and stored already agree, the
+    // boundary is the reading's last syllable end (a trailing `tai-`) or
+    // no syllable end at all, the reading ends before the boundary, or
+    // the typed body is not the reading's (an abbreviation).
+    #[test]
+    fn leaves_the_roman_alone_when_nothing_changes() {
+        for (typed, runs, roman) in [
+            ("taigi", &[(3, 1)][..], "tâi-gí"),
+            ("hoogua", &[(3, 2)][..], "hōo--guá"),
+            ("tai", &[(3, 1)][..], "tâi"),
+            ("khiah", &[(2, 1)][..], "khiah"),
+            ("pangtanglai", &[(8, 1)][..], "pàng"),
+            ("ptl", &[(1, 1)][..], "pàng tāng-lāi"),
+        ] {
+            assert_eq!(
+                render(Tl, typed, runs, roman),
+                None,
+                "{typed} {runs:?} {roman}"
+            );
+        }
     }
 }

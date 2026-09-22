@@ -483,124 +483,43 @@ impl TonePin {
     }
 }
 
-/// §17 case 3 — does `reading` carry the tones in `typed` (the
-/// hyphenless typed body with its ASCII digits, `teng5sek`), read on
-/// `mode`'s numeric-tone face?
-///
-/// Walks the reading's numeric-tone face — the same
-/// `phonetics::tl_num_syllable_ends_from_tl` /
-/// `poj_num_syllable_ends_from_tl` reconstruction [`SyllableReach`]
-/// measures on, so the syllable boundaries are the build pipeline's —
-/// syllable by syllable against the typed text: the syllable's letters
-/// must be the next thing typed, then a typed digit right after them
-/// must equal the face's tone; no digit there leaves that syllable
-/// unconstrained. The typed text ending inside a syllable (at its
-/// boundary, or mid-syllable on the partial-prefix path) ends the walk
-/// with everything so far honored, so the same walk serves the exact and
-/// the prefix paths.
-///
-/// Fail-closed everywhere else: a syllable whose letters are NOT the
-/// next thing typed — after the one alias the build indexes beside the
-/// canonical spelling (nasal `onn` ↔ `oonn`,
-/// `phonetics::nasal_oo_alias_spelling`, tried per syllable on both the
-/// full and the mid-syllable match) — a face the typed text runs past,
-/// or a face that does not slice into letter-bearing syllables, all
-/// REJECT. The toneless guards already established the spelling
-/// matches, so a misalignment means the tone digits cannot be placed,
-/// and letting such a reading through would let a wrong-tone word past
-/// the pin on the strength of an alias spelling.
+/// §17 case 3 + §52: [`phonetics::typed_syllable_walk`] must consume the typed body
+/// (`teng5sek` against 程式 `têng-sek`: `teng` + `5` matches, `sek` is
+/// free), and every typed boundary must be a syllable end of the reading
+/// with the same separator kind — `--` vs `-` / space
+/// (`phonetics::tl_syllable_khinsiann_flags`; a dictionary space counts
+/// as plain). The last syllable's end carries no kind: a trailing typed
+/// `--` constrains the NEXT word, not this one. A boundary at 0 is the
+/// run typed right before the span: only a reading that itself opens with
+/// `--` (a custom `--ah`) reads it, and then the run must be `--` too.
 fn reading_passes_typed_tones(
     mode: phonetics::InputMode,
     typed: &str,
     boundaries: &[TypedBoundary],
     reading: &str,
 ) -> bool {
-    let (face, ends) = match mode {
-        phonetics::InputMode::Poj => phonetics::poj_num_syllable_ends_from_tl(reading),
-        phonetics::InputMode::Tl => phonetics::tl_num_syllable_ends_from_tl(reading),
-        // Never built for these modes (`composing::shadow::span_tone_pin`):
-        // TPS tones are marks, English digits are not tones.
-        phonetics::InputMode::Tps | phonetics::InputMode::English => return true,
+    let Some(walk) =
+        phonetics::typed_syllable_walk(mode, typed, reading).filter(|w| w.typed_consumed)
+    else {
+        return false;
     };
-    // §52 — every typed `-` must land on a syllable end of the reading:
-    // the `cursor` positions after each fully consumed syllable (its
-    // typed digit included) are the only places a boundary may sit — and
-    // where the reading goes on, its own separator there must be the
-    // same kind (`--` vs `-` / space). The last syllable's end carries no
-    // kind: a trailing typed `--` constrains the NEXT word, not this one.
     let khinsiann_before = if boundaries.is_empty() {
         Vec::new()
     } else {
         phonetics::tl_syllable_khinsiann_flags(reading)
     };
-    let mut syllable_ends: Vec<(usize, Option<bool>)> = Vec::with_capacity(boundaries.len());
-    // A boundary at 0 is the run typed right before the span: only a
-    // reading that itself opens with `--` (a custom `--ah`) reads it, and
-    // then the run must be `--` too; every other reading starts after the
-    // previous word's boundary and ignores it.
     let opens_khinsiann = khinsiann_before.first().copied().unwrap_or(false);
-    let boundaries_met = |syllable_ends: &[(usize, Option<bool>)]| {
-        boundaries.iter().all(|b| {
-            if b.at == 0 {
-                return !opens_khinsiann || b.khinsiann;
-            }
-            syllable_ends
-                .iter()
-                .any(|&(at, kind)| at == b.at && kind.is_none_or(|k| k == b.khinsiann))
+    boundaries.iter().all(|b| {
+        if b.at == 0 {
+            return !opens_khinsiann || b.khinsiann;
+        }
+        walk.ends.iter().enumerate().any(|(index, &at)| {
+            at == b.at
+                && khinsiann_before
+                    .get(index + 1)
+                    .is_none_or(|&k| k == b.khinsiann)
         })
-    };
-    let mut cursor = 0usize;
-    let mut start = 0usize;
-    for (index, end) in ends.into_iter().enumerate() {
-        let end = end as usize;
-        let Some(syllable) = face.get(start..end) else {
-            return false;
-        };
-        start = end;
-        let letters = syllable.trim_end_matches(|c: char| c.is_ascii_digit());
-        if letters.is_empty() {
-            return false;
-        }
-        let face_tone = syllable[letters.len()..].chars().next();
-        let alias = phonetics::nasal_oo_alias_spelling(letters);
-        let rest = &typed[cursor..];
-        // Case-blind: `typed` is the lowercased shadow, a custom or learned
-        // reading may keep its capital (`Khì--ah`).
-        let consumed = if starts_with_ignore_ascii_case(rest, letters) {
-            letters.len()
-        } else if let Some(alias) = alias
-            .as_deref()
-            .filter(|alias| starts_with_ignore_ascii_case(rest, alias))
-        {
-            alias.len()
-        } else if starts_with_ignore_ascii_case(letters, rest)
-            || alias.is_some_and(|alias| starts_with_ignore_ascii_case(&alias, rest))
-        {
-            // Typed text ends inside this syllable (its boundary, or
-            // mid-syllable on the partial-prefix path): every typed digit
-            // so far was honored, and a boundary inside the unfinished
-            // syllable is not on any end (`tai-` + `tâin` fails, `tâi-uân`
-            // passes on the end of `tâi`).
-            return boundaries_met(&syllable_ends);
-        } else {
-            return false;
-        };
-        cursor += consumed;
-        if let Some(typed_tone) = typed[cursor..].chars().next().filter(char::is_ascii_digit) {
-            if Some(typed_tone) != face_tone {
-                return false;
-            }
-            cursor += 1;
-        }
-        syllable_ends.push((cursor, khinsiann_before.get(index + 1).copied()));
-    }
-    cursor == typed.len() && boundaries_met(&syllable_ends)
-}
-
-fn starts_with_ignore_ascii_case(haystack: &str, prefix: &str) -> bool {
-    haystack
-        .get(..prefix.len())
-        .is_some_and(|head| head.eq_ignore_ascii_case(prefix))
+    })
 }
 
 /// Span aliases for [`fetch_candidates_for_keys_with_barriers`]: `(start_byte, end_byte)`

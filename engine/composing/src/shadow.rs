@@ -212,8 +212,9 @@ pub(crate) struct ShadowLattice {
     pub lattice: Lattice,
     /// Stripped-separator / 連字 barriers (§35).
     pub barriers: Vec<usize>,
-    /// The barriers typed as `--` (§52).
-    pub khinsiann: Vec<usize>,
+    /// The typed `-` runs among them, `(shadow offset, run length)` (§52 kind,
+    /// §55 rendering).
+    pub hyphen_runs: Vec<(usize, usize)>,
 }
 
 /// Run the canonicalize → hyphen-shadow → (TPS-only) space-strip
@@ -255,9 +256,10 @@ struct SeparatorLayers {
     barriers: Vec<usize>,
     /// The TPS space barriers alone — the §41 whole-buffer pin signal.
     space_barriers: Vec<usize>,
-    /// The hyphen barriers typed as a `--` run (two or more) — the
-    /// khinsiann boundaries the §52 pin tells from a plain `-`.
-    khinsiann: Vec<usize>,
+    /// The hyphen barriers with their run length, `(shadow offset, run)`:
+    /// two or more is the khinsiann `--` the §52 pin tells from a plain
+    /// `-`, and the run is what §55 renders at the boundary.
+    hyphen_runs: Vec<(usize, usize)>,
 }
 
 fn separator_layers(canonical: &str, mode: InputMode) -> SeparatorLayers {
@@ -279,7 +281,7 @@ fn separator_layers(canonical: &str, mode: InputMode) -> SeparatorLayers {
     // barrier — equivalently, find the shadow offset whose map value first
     // reaches the barrier).
     let mut barriers: Vec<usize> = space_barriers.clone();
-    let mut khinsiann: Vec<usize> = Vec::new();
+    let mut hyphen_runs: Vec<(usize, usize)> = Vec::new();
     for (hyphen_barrier, run) in hyphen_barriers {
         // The projected shadow offset is the LAST map index whose consumed
         // hyphenless prefix still fits under the barrier — i.e. how many
@@ -296,8 +298,8 @@ fn separator_layers(canonical: &str, mode: InputMode) -> SeparatorLayers {
         if !barriers.contains(&projected) {
             barriers.push(projected);
         }
-        if run >= 2 && !khinsiann.contains(&projected) {
-            khinsiann.push(projected);
+        if !hyphen_runs.iter().any(|&(at, _)| at == projected) {
+            hyphen_runs.push((projected, run));
         }
     }
     barriers.sort_unstable();
@@ -307,7 +309,7 @@ fn separator_layers(canonical: &str, mode: InputMode) -> SeparatorLayers {
         shadow_to_hyphenless,
         barriers,
         space_barriers,
-        khinsiann,
+        hyphen_runs,
     }
 }
 
@@ -328,7 +330,7 @@ fn lattice_from_canonical_with_barriers(
         shadow,
         shadow_to_hyphenless,
         barriers,
-        khinsiann,
+        hyphen_runs,
         ..
     } = separator_layers(canonical, mode);
     // Compose the three offset maps: shadow → hyphenless → canonical → raw.
@@ -376,7 +378,7 @@ fn lattice_from_canonical_with_barriers(
         shadow_to_raw_end,
         lattice,
         barriers,
-        khinsiann,
+        hyphen_runs,
     }
 }
 
@@ -397,13 +399,15 @@ fn lattice_from_canonical_with_barriers(
 /// - the base triple feeds the whole-sentence walker, which resolves
 ///   its edge keys through the same expanded lookup.
 /// - `barriers` (shadow coordinates) let the walker compute the same
-///   per-edge restriction for interior edges; `khinsiann` is their `--`
-///   subset (§52), read by [`span_key`] for the boundary kinds.
+///   per-edge restriction for interior edges; `hyphen_runs` are the typed
+///   `-` runs among them, read by [`span_key`] for the boundary kinds
+///   (§52) and by the §55 render for what to write there.
 ///
 /// Single source for `continuous::assemble_candidates` and the
 /// `dispatch::build_continuous_keys_with_inventory` test seam, so the
-/// two cannot drift. Empty `final_only` / `barriers` for TL / POJ /
-/// English — their pipeline strips nothing.
+/// two cannot drift. Empty `final_only` for TL / POJ / English — their
+/// pipeline strips no ambiguity glyph; `barriers` there are the typed
+/// hyphens (§52).
 pub(crate) struct ContinuousKeys {
     pub keys: Vec<(ConsumedSpan, String)>,
     pub final_only: Vec<Vec<usize>>,
@@ -417,8 +421,8 @@ pub(crate) struct ContinuousKeys {
     pub shadow_to_raw_end: Vec<usize>,
     pub lattice: Lattice,
     pub barriers: Vec<usize>,
-    /// The barriers typed as `--` (§52), shadow coordinates.
-    pub khinsiann: Vec<usize>,
+    /// The typed `-` runs among them, `(shadow offset, run length)`.
+    pub hyphen_runs: Vec<(usize, usize)>,
 }
 
 /// The three parallel per-key vectors [`left_anchored_keys_and_restrictions`]
@@ -440,7 +444,7 @@ pub(crate) fn build_continuous_keys(
         shadow_to_raw_end,
         lattice,
         barriers,
-        khinsiann,
+        hyphen_runs,
         ..
     } = build_shadow_lattice_with_barriers(raw, inv, mode);
     let LeftAnchoredKeys {
@@ -454,7 +458,7 @@ pub(crate) fn build_continuous_keys(
         inv,
         mode,
         &barriers,
-        &khinsiann,
+        &hyphen_runs,
     );
     ContinuousKeys {
         keys,
@@ -464,7 +468,7 @@ pub(crate) fn build_continuous_keys(
         shadow_to_raw_end,
         lattice,
         barriers,
-        khinsiann,
+        hyphen_runs,
     }
 }
 
@@ -502,7 +506,7 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     inv: &SyllableInventory,
     mode: InputMode,
     barriers: &[usize],
-    khinsiann: &[usize],
+    hyphen_runs: &[(usize, usize)],
 ) -> LeftAnchoredKeys {
     // v3.5.9 B-2 — `mode` selects the FST key family the emitted keys are
     // namespaced into ([`span_key`]). The lattice itself was already built
@@ -590,7 +594,7 @@ pub(crate) fn left_anchored_keys_and_restrictions(
             key,
             final_only,
             tone_pin,
-        }) = span_key(shadow, 0, end, mode, barriers, khinsiann)
+        }) = span_key(shadow, 0, end, mode, barriers, hyphen_runs)
         else {
             continue;
         };
@@ -668,7 +672,7 @@ pub(crate) fn span_key(
     end: usize,
     mode: InputMode,
     barriers: &[usize],
-    khinsiann: &[usize],
+    hyphen_runs: &[(usize, usize)],
 ) -> Option<SpanKey> {
     let span = &shadow[start..end];
     let body = fst_body_for_span(span, mode);
@@ -687,7 +691,7 @@ pub(crate) fn span_key(
         .chain(span_barriers.iter().map(|b| b + start))
         .map(|at| TypedBoundary {
             at: at - start,
-            khinsiann: khinsiann.contains(&at),
+            khinsiann: hyphen_runs.iter().any(|&(b, run)| b == at && run >= 2),
         })
         .collect();
     Some(SpanKey {
@@ -791,8 +795,8 @@ pub(crate) fn whole_buffer_tone_pin(raw: &str, mode: InputMode) -> TonePin {
 /// `None` when the tone-ruled body is empty (empty / digit-only /
 /// bare-tone-mark / space-only buffer).
 fn whole_buffer_span_key(raw: &str, mode: InputMode) -> Option<SpanKey> {
-    let (shadow, barriers, khinsiann) = fused_shadow_with_barriers(raw, mode);
-    span_key(&shadow, 0, shadow.len(), mode, &barriers, &khinsiann)
+    let (shadow, barriers, hyphen_runs) = fused_shadow_with_barriers(raw, mode);
+    span_key(&shadow, 0, shadow.len(), mode, &barriers, &hyphen_runs)
 }
 
 /// A3 (§41) — true when the span ending at `span_end` (shadow
@@ -1143,19 +1147,24 @@ fn fused_shadow(raw: &str, mode: InputMode) -> String {
 }
 
 /// [`fused_shadow`] plus the barriers (shadow coordinates) a whole-buffer
-/// key pins on, and the `--` subset of them: for TL / POJ the typed `-` boundaries (§52, the custom /
+/// key pins on, and the typed `-` runs among them: for TL / POJ the typed `-` boundaries (§52, the custom /
 /// learned / partial-prefix pin); for TPS the stripped-space barriers
 /// alone — the §41 pin signal — never a typed hyphen, which there only
 /// gates the §35 ambiguity expansion the whole-buffer callers discard.
-fn fused_shadow_with_barriers(raw: &str, mode: InputMode) -> (String, Vec<usize>, Vec<usize>) {
+fn fused_shadow_with_barriers(
+    raw: &str,
+    mode: InputMode,
+) -> (String, Vec<usize>, Vec<(usize, usize)>) {
     let lower = raw.to_ascii_lowercase();
     let (canonical, _) = canonicalize_poj_shadow(&lower, mode);
     let layers = separator_layers(&canonical, mode);
-    let (barriers, khinsiann) = match mode {
+    let (barriers, hyphen_runs) = match mode {
         InputMode::Tps => (layers.space_barriers, Vec::new()),
-        InputMode::Tl | InputMode::Poj | InputMode::English => (layers.barriers, layers.khinsiann),
+        InputMode::Tl | InputMode::Poj | InputMode::English => {
+            (layers.barriers, layers.hyphen_runs)
+        }
     };
-    (layers.shadow, barriers, khinsiann)
+    (layers.shadow, barriers, hyphen_runs)
 }
 
 /// v3.5.8 S6 (Codex pre-impl S6 Q2, 2026-05-17, BLOCK condition) —
@@ -2982,7 +2991,7 @@ mod tests {
         assert_eq!(k.tone_pin, boundary(InputMode::Poj, "khiah", vec![3]));
         // The barrier at a span's own start is carried as `at: 0` with its
         // kind — read only by a reading that opens with `--` itself.
-        let k = span_key("khiah", 3, 5, InputMode::Tl, &[3], &[3]).expect("body");
+        let k = span_key("khiah", 3, 5, InputMode::Tl, &[3], &[(3, 2)]).expect("body");
         assert_eq!(
             k.tone_pin,
             boundary_kinds(InputMode::Tl, "ah", vec![(0, true)])
@@ -2993,7 +3002,7 @@ mod tests {
             boundary_kinds(InputMode::Tl, "ah", vec![(0, false)])
         );
         // …and the `--` subset marks an interior boundary's kind.
-        let k = span_key("khiah", 0, 5, InputMode::Tl, &[3], &[3]).expect("body");
+        let k = span_key("khiah", 0, 5, InputMode::Tl, &[3], &[(3, 2)]).expect("body");
         assert_eq!(
             k.tone_pin,
             boundary_kinds(InputMode::Tl, "khiah", vec![(3, true)])
