@@ -554,7 +554,7 @@ fn hanji(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsToneInputScheme => "聲調拍法",
         StringKey::SettingsToneSchemeStandard => "數字調",
         StringKey::SettingsToneSchemeTelex => "Telex",
-        StringKey::SettingsAutoSpace => "自動閬一个縫",
+        StringKey::SettingsAutoSpace => "自動閬一格",
         StringKey::SettingsNasalMarkerUppercase => "大本字時 ⁿ 轉做 ᴺ",
         StringKey::ThemeCustomFont => "字型設定",
         StringKey::ThemeCandidateTextSize => "候選詞大細",
