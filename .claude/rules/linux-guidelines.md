@@ -16,7 +16,7 @@ record: `docs/architecture/linux-roadmap.md`.
   from Homebrew), a real cross build of the engine for `x86_64-unknown-linux-gnu` via `cargo zigbuild`
   (`brew install zig cargo-zigbuild`; plain `cargo check` stops at the bundled SQLite's C build),
   `cargo fmt -- --check`, the i18n check. The CI job (`linux-build.yml`) adds the real
-  Linux build, the daemon smoke and `cargo-deb`. These gates prove compilation and the wire's
+  Linux build, the daemon smoke and the `.deb` (`make deb`). These gates prove compilation and the wire's
   first contract, not behaviour — behaviour is the dogfood run-book's job. Never claim "works
   on Linux".
 - Put logic in `taigi-desktop-core` (`unsafe_code = forbid`, host-testable, shared with

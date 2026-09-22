@@ -44,7 +44,7 @@ retro review is welcome and its verdicts belong in this document.
 ## Architecture
 
 Revised 2026-09-23 (Fcitx5 primary): everything below the shells is shared. The Fcitx5 shell
-is `linux/fcitx5/taigikeyboard.so` (C++ `InputMethodEngineV3` over the `taigi-linux-ffi` C ABI
+is `linux/fcitx5/libtaigikeyboard.so` (C++ `InputMethodEngineV3` over the `taigi-linux-ffi` C ABI
 over `taigi-linux-core`); the IBus shell is `ibus-engine-taigikeyboard` (zbus over the same
 `taigi-linux-core`). The diagram keeps the IBus process as drawn for PR3; the Fcitx5 addon
 replaces its top box with `fcitx5` (in-process addon, `keyEvent` → FFI → `Emit`s → input panel).
@@ -129,7 +129,8 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
     Built by CMake against `Fcitx5Core` (the pre-5.1.12 `add_library(MODULE)` + empty
     `PREFIX` shape of `fcitx5-rime` 5.1.8 `src/CMakeLists.txt` — Ubuntu 24.04 ships fcitx5
     5.1.7, which has neither `add_fcitx5_addon` nor `FCITX_ADDON_FACTORY_V2`), installed to
-    `${libdir}/fcitx5/taigikeyboard.so` + `${datadir}/fcitx5/{inputmethod,addon}/taigikeyboard.conf`. **Not host-buildable** — the
+    `${libdir}/fcitx5/libtaigikeyboard.so` (the loader resolves `Library=export:libtaigikeyboard`
+    to that name) + `${datadir}/fcitx5/{inputmethod,addon}/taigikeyboard.conf`. **Not host-buildable** — the
     VM and the Ubuntu CI job (`fcitx5-modules-dev`, `extra-cmake-modules`) own it; the Mac
     gates the Rust half (`taigi-linux-core` tests, `taigi-linux-ffi` cross build via zig).
   - **`taigikeyboard-ibus`** stays as PR3 built it, rebased onto `taigi-linux-core`: the D-Bus
@@ -354,12 +355,15 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 - **L11 Packaging + release.** `make -C linux install PREFIX=/usr DESTDIR=` installs the two
   binaries, the component XML (rendered with the prefix), the dictionaries, a
   `tw.taigikeyboard.Settings.desktop` entry + icon, and prints the `ibus restart`
-  reminder; `uninstall` reverses it and keeps `$XDG_*/taigikeyboard`. A `.deb` is built by
-  `cargo-deb` from `[package.metadata.deb]` on the engine crate (both binaries, assets,
-  `Depends: fcitx5 | ibus, libgtk-4-1, libadwaita-1-0` (both shells in one package, as `fcitx5-chewing` + `ibus-chewing` come from one source)) — on the GitHub-hosted Ubuntu runner
-  (`.github/workflows/linux-build.yml`, mirror of `windows-build.yml`: `workflow_dispatch`
-  + `release: published`, attaches the `.deb` + SHA-256 to the same `desktop-<version>`
-  draft; `scripts/stage-desktop.sh` dispatches it beside the Windows run). No signing
+  reminder; `uninstall` reverses it and keeps `$XDG_*/taigikeyboard`. A `.deb` is packed by
+  `dpkg-deb` over that same install layout (`make -C linux deb`: `make install DESTDIR`,
+  `packaging/control.in`, `Depends` from `dpkg-shlibdeps` + `fcitx5 | ibus`; both shells in
+  one package, as `fcitx5-chewing` + `ibus-chewing` come from one source; revised 2026-09-23
+  from the `cargo-deb` plan — a second asset list would drift from `make install`) — on the
+  GitHub-hosted Ubuntu runner (`.github/workflows/linux-build.yml`, mirror of
+  `windows-build.yml`: built on every PR; a `main` `workflow_dispatch` from
+  `scripts/stage-desktop.sh` attaches the `.deb` + SHA-256 to the `desktop-<version>` DRAFT,
+  never over an existing asset and never on a publish — `linux-release.md`). No signing
   (no Linux-side equivalent of Authenticode / notarization is expected of a `.deb`
   downloaded from a project page; apt-repository signing is outside this slice). Version
   source of truth stays `windows/Cargo.toml`; `make version-desktop x.y.z` moves
@@ -375,7 +379,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   pull requests touching `linux/**` or `desktop/**`) adds what the Mac cannot: a real
   `x86_64-unknown-linux-gnu` build of both binaries with the distro's GTK, the **Fcitx5 addon
   built with CMake against `fcitx5-modules-dev`** (the only place it compiles before the VM),
-  `cargo test` of the whole `linux/` workspace, `cargo-deb`, and an **IBus daemon smoke**: `dbus-run-session`
+  `cargo test` of the whole `linux/` workspace, the `.deb` (`make deb`, contents asserted), and an **IBus daemon smoke**: `dbus-run-session`
   → `ibus-daemon --daemonize --panel disable` with the component XML installed into a
   temporary `IBUS_COMPONENT_PATH`, then `ibus list-engine | grep taigikeyboard` and
   `ibus engine taigikeyboard` — proof that the daemon can spawn the engine and complete
@@ -431,7 +435,7 @@ PR0 (quota, 2026-09-22); each later PR records its own verdict here.
 | PR6 | Settings I | `taigikeyboard-settings`: `adw` shell (sidebar, pane routing, `--pane`, single instance, display language, live tick), 一般, 外觀 (Linux row set), 關於 | this PR (branch `feat/linux-settings-shell`) — crate `taigikeyboard-settings` (lib + bin): `adw::Application` `tw.taigikeyboard.Settings` with `HANDLES_COMMAND_LINE` (second launch re-activates on `--pane`), `NavigationSplitView` sidebar + `gtk::Stack` of `adw::PreferencesPage`s, write-failure / read-only `adw::Banner`, 1 s `glib::timeout_add_local` live tick (a display-language change rebuilds the pages), `StyleManager` colour scheme from 外觀; 一般 (Linux row set + version / 去下載 row, no update check) / 外觀 (mode · 候選窗排列 · 候選詞顯示) / 關於; Windows-only flags refused by name; `tests/panes.rs` (`harness = false`; mounts the whole window, then: every built pane in the stack, a switch row writes its key, an outside write is adopted on the tick without a revision bump, a language picked in the window rebuilds the sidebar, an unbuilt `--pane` lands on 一般, the read-only window writes nothing, reset keeps the language; skips without a display unless `TAIGI_REQUIRE_DISPLAY` — set on CI under xvfb); `make -C linux run-settings` opens the window on the Mac. Codex post-impl **FIX → applied** (local write follows the same rebuild path as an outside one; unbuilt panes route to 一般 and `--pane` is remembered; read-only = in-memory defaults, never a temp file; the content `NavigationPage` title is what the header bar draws (libadwaita 1.5); refused flags print to the caller's stderr via `printerr_literal` (gio `v2_80`)) |
 | PR7 | Settings II | 快捷鍵 (recorder over `EventControllerKey`, both registries, conflicts, slot-key-set picker), 詞庫來源 (教典 subcollections in an `adw::ExpanderRow`) | MERGED #149 2026-09-23 — 快速齒 (recorder over a capture-phase `EventControllerKey`, keycode latch, recording ends on pane switch / other write / focus loss) + 詞庫來源 (教典 `ExpanderRow`); Codex FIX applied |
 | PR8 | Settings III | 自訂詞庫 (`ColumnView` table, paging, CRUD dialog, CSV via `FileDialog`, delete all, clear learning — background work on a `gio` task with the 400 ms busy card), unlisted 辭典搜尋 + external lookup URLs; headless pane-mount test | this PR (branch `feat/linux-settings-userdata`) — 自訂詞庫: `PreferencesGroup` of the enabled switch; entries group with `SearchEntry` filter (200 ms settle), a `boxed-list` of `ActionRow`s (hanji title, romanization subtitle; NAMED DIVERGENCE: rows, not two columns), + ✎ − and the pager, `adw::AlertDialog` entry sheet (two `EntryRow`s, 儲存 enabled only with a romanization) and confirmations (destructive response), CSV via `gtk::FileDialog`, delete all, 清除學習紀錄 — every store call through `jobs::spawn` (`gio::spawn_blocking` → main context), newest load wins by generation, one work slot, busy spinner after 400 ms; outcomes as `adw::Toast`s. 辭典搜尋 (unlisted): `search.rs` copied verbatim from the Windows crate, 300 ms debounce, five hits with badge subtitles and 教典 / ChhoeTaigi buttons, lexicon loaded once per process from `dictionaries_directory()`. `user_data::open_at_launch` under `$XDG_DATA_HOME`. Pane test: the list shows what the store holds (load pumped through the main context), a selected row survives a reload, markup-looking text shows as typed, search page mounts. Codex post-impl **FIX → applied**: `render` reads the state into a snapshot and releases it before touching widgets (a programmatic `select_row` re-enters the list handler), the handler is suppressed while rendering; the one work slot is the WINDOW's (`JobSlot`) so a page rebuilt under a running job cannot start a second, and the outcome reaches the user as a toast even after the rebuild; generations move on `changed` (not GTK's 150 ms `search-changed`); a data-directory failure is said in the banner; only a successful lexicon load is remembered; the entry dialog is held weakly by its row; `use_markup(false)` on every row of user / dictionary text; rows are removed one by one (`remove_all` would take the placeholder); chooser errors other than a dismissal are reported; the export temp file is created exclusively in the target directory (`tempfile`) |
-| PR9 | Packaging + release | `make -C linux install / uninstall` (both shells), `.desktop` + icon (`tools/desktop/make-app-icon.swift` PNG set), `cargo-deb` metadata, CI `.deb` artifact on release publish, `scripts/stage-desktop.sh` dispatch, `docs/architecture/linux-release.md`, `desktop-release.md` + `system-overview.md` + README rows, `S74` dogfood item (VM: KDE Plasma + Fcitx5 first, then GNOME + IBus) | pending |
+| PR9 | Packaging + release | `make -C linux install / uninstall` (both shells), `.desktop` + icon (`tools/desktop/make-app-icon.swift` PNG set), `cargo-deb` metadata, CI `.deb` artifact on release publish, `scripts/stage-desktop.sh` dispatch, `docs/architecture/linux-release.md`, `desktop-release.md` + `system-overview.md` + README rows, `S74` dogfood item (VM: KDE Plasma + Fcitx5 first, then GNOME + IBus) | this PR (branch `feat/linux-packaging`) — `make -C linux deb` packs the ONE install layout (`make install DESTDIR=…`) with `dpkg-deb` + `packaging/control.in` (no cargo-deb: a second asset list would drift); `tw.taigikeyboard.Settings.desktop` + hicolor icons from `tools/desktop/make-app-icon.swift` (Linux PNG set added beside the .icns / .ico); `linux-build.yml` builds + inspects the `.deb` on every PR, attaches it to the `desktop-<version>` draft on a `main` dispatch or a publish; `scripts/stage-desktop.sh` dispatches both hosted runs; docs `linux-release.md` + `desktop-release.md` / `system-overview.md` / `README.md` rows; S74 |
 
 Dependencies: PR1 → PR2 → PR3 → PR4 → PR5; PR2 → PR6 → PR7 → PR8; PR9 last. PR4/PR5 and
 PR6–PR8 are parallelisable after PR3.

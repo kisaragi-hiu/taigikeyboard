@@ -12,10 +12,12 @@ table: `docs/architecture/linux-roadmap.md`.
 | `crates/taigi-linux-platform` | lib, pure, host-testable | XDG paths + install prefix, IBus key event → `KeyEventSnapshot`, settings launcher, session locale. |
 | `crates/taigi-linux-core` | lib, pure | The framework-independent half: runtime (settings, stores, lexicon, coordinator), the key path over the shared `ComposingManager`, the `Emit` effect list both shells replay, the candidate page model. |
 | `crates/taigi-linux-ffi` | staticlib (the one `unsafe` crate) | The C ABI (`include/taigikeyboard.h`) the Fcitx5 addon calls: opaque runtime / engine handles, a key in, a reply of effects out. |
-| `fcitx5/` | C++ addon `taigikeyboard.so` (CMake) | The Fcitx5 shell: `InputMethodEngineV3` over the C ABI — client preedit, commit, candidate list, status area. Built only on Linux (`make build-fcitx5`) and in CI. |
+| `fcitx5/` | C++ addon `libtaigikeyboard.so` (CMake) | The Fcitx5 shell: `InputMethodEngineV3` over the C ABI — client preedit, commit, candidate list, status area. Built only on Linux (`make build-fcitx5`) and in CI. |
 | `crates/taigikeyboard-ibus` | bin `ibus-engine-taigikeyboard` | The IBus shell: bus discovery, `org.freedesktop.IBus.Factory` + `Engine` objects (zbus), hand-serialised IBus wire types, replaying `taigi-linux-core`. |
-| `crates/taigikeyboard-settings` (PR5–PR7) | bin `taigikeyboard-settings` | The settings window: 一般 / 外觀 / 快捷鍵 / 詞庫來源 / 自訂詞庫 / 關於 (+ unlisted 辭典搜尋). |
+| `crates/taigikeyboard-settings` | lib + bin `taigikeyboard-settings` | The settings window (GTK 4 + libadwaita): 一般 / 外觀 / 快速齒 / 詞庫來源 / 自訂詞庫 / 關於 (+ unlisted 辭典搜尋); `tests/panes.rs` mounts the whole window. |
 | `data/taigikeyboard.xml.in` | component XML | What ibus-daemon reads to know the engine exists (`make component` renders the prefix). |
+| `data/tw.taigikeyboard.Settings.desktop`, `data/icons/` | launcher entry + hicolor icons | The settings window in the app grid; the icons are generated with the other desktops' by `tools/desktop/make-app-icon.swift`. |
+| `packaging/control.in` | Debian control | `make deb` packs the install layout with dpkg-deb (`docs/architecture/linux-release.md`). |
 
 Behaviour oracle is the macOS input method (`../macos`); the Rust it runs
 on is the Windows port (`../windows`, `../desktop`). Deltas are named in the
@@ -40,8 +42,9 @@ and an `ibus-daemon` smoke; the dogfood run-book in the roadmap owns the rest.
 
 ```sh
 make build                       # cargo build --release
-sudo make install PREFIX=/usr    # both shells, their registration files, dictionaries
+sudo make install PREFIX=/usr    # both shells, their registration files, dictionaries, the settings launcher
 fcitx5 -r                        # and/or: ibus restart
+make deb                         # or: the .deb, from the same install layout (target/taigikeyboard_<version>_amd64.deb)
 ```
 
 Then add 台語齒盤 (language `nan`) in `fcitx5-configtool` (Fcitx5) or the desktop's input-source settings (IBus).

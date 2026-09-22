@@ -1,0 +1,13 @@
+Package: taigikeyboard
+Version: @VERSION@
+Architecture: amd64
+Maintainer: Taigi Keyboard <info@taigikeyboard.tw>
+Section: utils
+Priority: optional
+Homepage: https://taigikeyboard.tw
+Depends: fcitx5 | ibus, @SHLIBS@
+Description: Taiwanese (Tâi-gí) input method — Fcitx5 addon and IBus engine
+ 台語齒盤: TL / POJ romanization in, Hanji and romanization candidates out,
+ continuous multi-syllable typing, over the same engine as the iOS, Android,
+ macOS and Windows keyboards. Ships the Fcitx5 addon (primary), the IBus
+ engine, the dictionaries and a GTK 4 / libadwaita settings window.
