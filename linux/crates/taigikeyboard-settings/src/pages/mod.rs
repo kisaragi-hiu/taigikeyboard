@@ -5,7 +5,9 @@
 
 pub mod about;
 pub mod appearance;
+pub mod dictionary_sources;
 pub mod general;
+pub mod shortcuts;
 
 use crate::window::{SettingsWindow, Shell};
 use adw::prelude::*;
@@ -14,10 +16,13 @@ use std::rc::Rc;
 use taigi_desktop_core::settings::{SettingChoice, SettingsDocument, SettingsKey, SettingsPane};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 
-/// The panes this crate draws today, listed or not; PR7 / PR8 add theirs.
-pub const BUILT: [SettingsPane; 3] = [
+/// The panes this crate draws today, listed or not; PR8 adds 自訂詞庫 and
+/// 辭典搜尋.
+pub const BUILT: [SettingsPane; 5] = [
     SettingsPane::General,
     SettingsPane::Appearance,
+    SettingsPane::Shortcuts,
+    SettingsPane::DictionarySources,
     SettingsPane::About,
 ];
 
@@ -81,6 +86,17 @@ impl<'a> PageContext<'a> {
         title: StringKey,
         key: SettingsKey<bool>,
     ) {
+        self.switch_row_in(|row| group.add(row), title, key);
+    }
+
+    /// A switch row bound to a boolean key, placed by `add` — in a group,
+    /// or inside an expander row's own list.
+    pub fn switch_row_in(
+        &mut self,
+        add: impl FnOnce(&adw::SwitchRow),
+        title: StringKey,
+        key: SettingsKey<bool>,
+    ) {
         let row = adw::SwitchRow::builder()
             .title(self.strings.resolve(title))
             .active(self.document.bool(&key))
@@ -94,13 +110,19 @@ impl<'a> PageContext<'a> {
             let is_on = row.is_active();
             shell.update(|document| document.set_bool(&key, is_on));
         });
-        group.add(&row);
+        add(&row);
         self.refreshers.push(Box::new(move |document| {
             let value = document.bool(&key);
             if row.is_active() != value {
                 row.set_active(value);
             }
         }));
+    }
+
+    /// The flag a refresh raises while it sets the rows, for a handler
+    /// that is not one of the shapes above (the 教典 expander's switch).
+    pub fn refreshing_flag(&self) -> Rc<Cell<bool>> {
+        Rc::clone(&self.suppress)
     }
 
     /// A combo row over a `SettingChoice` roster, bound to its key.
@@ -222,6 +244,8 @@ pub fn build(
     let context = match pane {
         SettingsPane::General => general::build(context, &widget),
         SettingsPane::Appearance => appearance::build(context, &widget),
+        SettingsPane::Shortcuts => shortcuts::build(context, &widget),
+        SettingsPane::DictionarySources => dictionary_sources::build(context, &widget),
         SettingsPane::About => about::build(context, &widget),
         other => unreachable!("{other:?} is not in pages::BUILT"),
     };
