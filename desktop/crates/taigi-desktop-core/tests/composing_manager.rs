@@ -958,7 +958,8 @@ fn a_composition_of_hanji_picks_is_learned_once_the_last_segment_commits() {
     assert_eq!(committed.as_deref(), Some("我來"));
     assert_eq!(
         *rig.memory.learned.lock().unwrap(),
-        vec![("我來".to_owned(), "guá-lâi".to_owned())],
+        // 我來 is no dictionary word: the two picks learn as two words (§50).
+        vec![("我來".to_owned(), "guá lâi".to_owned())],
         "the store is asked to learn the joined pair"
     );
 }
