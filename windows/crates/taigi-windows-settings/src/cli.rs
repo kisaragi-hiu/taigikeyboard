@@ -2,10 +2,10 @@
 //! one contract for both sides): which pane to open on, whether to run an
 //! update check with the window up, or headless.
 
-use taigi_windows_core::settings::launch::{
+use taigi_desktop_core::settings::launch::{
     CHECK_NOW_FLAG, CHECK_UPDATES_FLAG, PANE_FLAG, PREWARM_FLAG,
 };
-use taigi_windows_core::settings::{SettingChoice, SettingsPane};
+use taigi_desktop_core::settings::{SettingChoice, SettingsPane};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct LaunchOptions {

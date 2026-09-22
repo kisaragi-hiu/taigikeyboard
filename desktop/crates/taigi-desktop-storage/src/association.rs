@@ -5,8 +5,8 @@ use crate::capacity::LearningCapacity;
 use crate::database::{immediate_transaction, UserDataDatabase, UserDataDatabaseError};
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
-use taigi_windows_core::composing::AssociationSink;
-use taigi_windows_core::engine::AssociationPair;
+use taigi_desktop_core::composing::AssociationSink;
+use taigi_desktop_core::engine::AssociationPair;
 
 const TABLE_NAME: &str = "user_association";
 /// CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordSchema.schemaVersion` and

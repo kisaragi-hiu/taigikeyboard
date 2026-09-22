@@ -31,8 +31,8 @@ use crate::ui::telex_guide::TelexGuide;
 use std::cell::RefCell;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
-use taigi_windows_core::composing::ContextToken;
-use taigi_windows_core::keys::{LanguageMode, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE};
+use taigi_desktop_core::composing::ContextToken;
+use taigi_desktop_core::keys::{LanguageMode, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE};
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
@@ -627,7 +627,7 @@ impl TextService_Impl {
     /// Cheap when it did not (one comparison); COM only when it did.
     pub(crate) fn sync_preserved_keys(
         &self,
-        settings: &taigi_windows_core::settings::SettingsDocument,
+        settings: &taigi_desktop_core::settings::SettingsDocument,
     ) {
         let already_current =
             self.state.borrow().preserved_keys.revision == Some(settings.revision);

@@ -2,7 +2,7 @@
 //! and the engine-facing snapshot derived from them.
 //!
 //! Persistence itself (the `settings.json` file, its atomic replace and the
-//! mtime/revision reload) lives in `taigi-windows-storage`; this module owns
+//! mtime/revision reload) lives in `taigi-desktop-storage`; this module owns
 //! the SHAPE of the document so the TIP and the settings window agree on it.
 //! Key spellings are the iOS ones, as on macOS
 //! (`macos/Sources/TaigiInputMethodCore/Settings/SettingsStore.swift:36-50`),

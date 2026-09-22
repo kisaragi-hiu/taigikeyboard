@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, SystemTime};
-use taigi_windows_core::settings::{SettingsDocument, SettingsProvider};
+use taigi_desktop_core::settings::{SettingsDocument, SettingsProvider};
 
 #[derive(Debug, thiserror::Error)]
 pub enum SettingsFileError {
@@ -302,7 +302,7 @@ impl SettingsProvider for LiveSettings {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use taigi_windows_core::settings::keys;
+    use taigi_desktop_core::settings::keys;
 
     #[test]
     fn a_missing_file_is_the_defaults_and_a_save_round_trips() {

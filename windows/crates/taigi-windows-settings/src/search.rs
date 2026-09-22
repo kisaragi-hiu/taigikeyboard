@@ -3,13 +3,13 @@
 //! order. Port of `DictionarySearchService.swift`.
 
 use std::sync::Arc;
-use taigi_windows_core::engine::{
+use taigi_desktop_core::engine::{
     chhoe_url, derive_custom_query_key, dictionary_filters, is_hanzi, moe_url, search_by_hanzi,
     search_with_sources, tl_to_poj, DictionarySource, LexiconRow,
     ALL_SOURCES_ENABLED_SEARCH_BITMASK,
 };
-use taigi_windows_core::settings::{keys, InputMode, SettingsDocument};
-use taigi_windows_storage::CustomDictionaryStore;
+use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument};
+use taigi_desktop_storage::CustomDictionaryStore;
 
 /// `DictionarySearchService.resultLimit`.
 pub const RESULT_LIMIT: u32 = 20;

@@ -20,9 +20,9 @@ use crate::module::instance;
 use crate::product_name;
 use crate::ui::window;
 use crate::wide::{fill_fixed, to_wide_nul};
-use taigi_windows_core::keys::{LanguageMode, ShortcutAction};
-use taigi_windows_core::settings::SettingsDocument;
-use taigi_windows_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::keys::{LanguageMode, ShortcutAction};
+use taigi_desktop_core::settings::SettingsDocument;
+use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows::core::{Result, PCWSTR};
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetActiveWindow, GetFocus};
@@ -254,7 +254,7 @@ pub fn owned_icon() -> Result<HICON> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use taigi_windows_core::strings::DisplayLanguage;
+    use taigi_desktop_core::strings::DisplayLanguage;
 
     #[test]
     fn the_menu_mirrors_the_macos_input_source_menu() {

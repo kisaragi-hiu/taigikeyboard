@@ -16,7 +16,7 @@
 //! host drive the mode from outside; nothing we ship does that, and the sink
 //! is a second source of truth to keep in step (Codex F7, 2026-09-04).
 
-use taigi_windows_core::keys::LanguageMode;
+use taigi_desktop_core::keys::LanguageMode;
 use windows::core::Interface;
 use windows::Win32::System::Variant::{VARIANT, VT_I4};
 use windows::Win32::UI::TextServices::{

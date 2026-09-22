@@ -303,7 +303,7 @@ PLIST_FIXTURE = """<?xml version="1.0" encoding="UTF-8"?>
 
 CARGO_FIXTURE = """[workspace]
 resolver = "2"
-members = ["crates/taigi-windows-core"]
+members = ["crates/taigi-desktop-core"]
 
 [workspace.package]
 version = "3.6.6"
@@ -316,11 +316,25 @@ egui = "=0.31.1"
 """
 
 
+DESKTOP_SHARED_CARGO_FIXTURE = """[workspace]
+resolver = "2"
+members = ["crates/taigi-desktop-core", "crates/taigi-desktop-storage"]
+
+[workspace.package]
+version = "3.6.6"
+edition = "2021"
+
+[workspace.dependencies]
+rusqlite = { version = "0.40", features = ["bundled"] }
+"""
+
+
 PROJECT_FILES = (
     release_notes.ANDROID_GRADLE_FILE,
     release_notes.IOS_PROJECT_FILE,
     release_notes.MACOS_INFO_PLIST_FILE,
     release_notes.WINDOWS_CARGO_FILE,
+    release_notes.DESKTOP_SHARED_CARGO_FILE,
 )
 
 
@@ -337,8 +351,11 @@ class ProjectVersionWriterTests(unittest.TestCase):
         pbxproj: str = PBXPROJ_FIXTURE,
         plist: str = PLIST_FIXTURE,
         cargo: str = CARGO_FIXTURE,
+        desktop_cargo: str = DESKTOP_SHARED_CARGO_FIXTURE,
     ) -> None:
-        for relative_path, content in zip(PROJECT_FILES, (gradle, pbxproj, plist, cargo)):
+        for relative_path, content in zip(
+            PROJECT_FILES, (gradle, pbxproj, plist, cargo, desktop_cargo)
+        ):
             path = self.repo_root / relative_path
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8", newline="")
@@ -404,7 +421,8 @@ class ProjectVersionWriterTests(unittest.TestCase):
             (
                 "macOS: CFBundleShortVersionString 3.6.6 -> 3.7.0, "
                 "CFBundleVersion 30606 -> 30700",
-                "Windows: workspace version 3.6.6 -> 3.7.0",
+                "windows/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
+                "desktop/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
             ),
         )
 

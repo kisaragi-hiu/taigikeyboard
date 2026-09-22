@@ -24,7 +24,7 @@ pub enum StoredFontSelection {
     BuiltIn(CandidateFontChoice),
     /// The library file name the user selected. Untrusted: it is read out of a
     /// document anything can write, so every consumer treats it as one path
-    /// COMPONENT (`taigi_windows_storage::remove_stored`).
+    /// COMPONENT (`taigi_desktop_storage::remove_stored`).
     Custom(String),
     /// The OS-installed family the user selected, by the name the OS reports.
     /// Untrusted the same way: it reaches DirectWrite as a name to look up,

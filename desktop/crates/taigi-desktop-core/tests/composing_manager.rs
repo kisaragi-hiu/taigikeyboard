@@ -11,17 +11,17 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
-use taigi_windows_core::composing::{
+use taigi_desktop_core::composing::{
     AssociationSink, CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript, Clock,
     ComposingEffectExecutor, ComposingManager, ComposingSessionCoordinator, ContextToken,
     CustomDictionarySource, FrequencySource, LearnedPhraseSource, NextWordLearner,
 };
-use taigi_windows_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_windows_core::engine::{
+use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
+use taigi_desktop_core::engine::{
     self, AssociationPair, ContinuousCandidate, CustomEntry, Effect, FrequencyRow, LearnedPhrase,
 };
-use taigi_windows_core::keys::CaretDirection;
-use taigi_windows_core::settings::{
+use taigi_desktop_core::keys::CaretDirection;
+use taigi_desktop_core::settings::{
     keys, CandidateDisplayMode, SettingsDocument, SettingsProvider,
 };
 

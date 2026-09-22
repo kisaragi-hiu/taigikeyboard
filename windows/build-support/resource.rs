@@ -151,7 +151,7 @@ END
 /// ids a LANGID packs (`primary | sub << 10`). The script is written UTF-8
 /// (`#pragma code_page(65001)` above) so the CJK names survive rc.exe,
 /// llvm-rc and windres alike; `"` is doubled and `\` escaped, the `.rc`
-/// string rules. Pure, and `pub` so `taigi-windows-core/tests/resource_script.rs`
+/// string rules. Pure, and `pub` so `taigi-desktop-core/tests/resource_script.rs`
 /// can pin the rendering on the host.
 pub fn product_name_string_tables() -> String {
     string_tables(PRODUCT_NAMES, PRODUCT_NAME_STRING_ID)

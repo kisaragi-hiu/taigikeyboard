@@ -8,7 +8,7 @@
 //! needs no scroller of its own, and every row is reachable by paging.
 
 use super::window::{Message as WindowMessage, SettingsWindow};
-use taigi_windows_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
 /// The whole bar. `page` is zero-based and shown one-based; `is_enabled` gates

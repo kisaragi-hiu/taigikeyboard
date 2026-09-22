@@ -5,9 +5,9 @@
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::Duration;
-use taigi_windows_core::settings::SettingsDocument;
-use taigi_windows_core::strings::StringResolver;
-use taigi_windows_storage::LiveSettings;
+use taigi_desktop_core::settings::SettingsDocument;
+use taigi_desktop_core::strings::StringResolver;
+use taigi_desktop_storage::LiveSettings;
 
 /// How long an idle window waits before reading the file again: one `stat`
 /// a second is nothing, and a chord's effect showing within a second reads

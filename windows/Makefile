@@ -22,9 +22,12 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 # `windows` bindings, which do not build for a macOS host at all: its unit
 # tests are type-checked by `check-gnu` (`--all-targets`) and RUN only on a
 # Windows machine (`cargo test -p taigi-windows-tsf`). Both rosters grow with
-# the workspace; they name what exists today.
-MSVC_CHECKABLE := -p taigi-windows-core -p taigi-windows-platform -p taigi-windows-update
-HOST_TESTABLE  := -p taigi-windows-core -p taigi-windows-storage -p taigi-windows-platform -p taigi-windows-update -p taigi-windows-settings
+# the workspace; they name what exists today. The shared `taigi-desktop-core`
+# / `-storage` crates are tested in their own workspace (`make -C desktop
+# test`); `check-gnu` still compiles them for the Windows target through the
+# graph.
+MSVC_CHECKABLE := -p taigi-windows-platform -p taigi-windows-update
+HOST_TESTABLE  := -p taigi-windows-platform -p taigi-windows-update -p taigi-windows-settings
 
 help:
 	@echo "Windows input method — dev loop"
@@ -44,9 +47,10 @@ help:
 	@echo "  make release     - (Windows) build, package with Inno Setup and publish (scripts/release-app.sh);"
 	@echo "                     pass RELEASE_FLAGS=--skip-sign — no certificate, unsigned is the channel"
 
-# The Rust under crates/taigi-windows-core/src/strings/generated.rs is written
-# by the repo-root `make i18n`; a stale copy would compile strings that no
-# longer match their source. Same gate the macOS Makefile runs.
+# The generated strings (`desktop/crates/taigi-desktop-core/src/strings/
+# generated.rs`) and this workspace's `installer/Messages.iss` are written by
+# the repo-root `make i18n`; a stale copy would compile strings that no longer
+# match their source. Same gate the macOS and desktop Makefiles run.
 i18n-check:
 	python3 ../tools/i18n/check.py
 

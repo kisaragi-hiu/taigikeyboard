@@ -14,7 +14,7 @@ use crate::wide::to_wide_nul;
 use std::cell::RefCell;
 use std::ffi::c_void;
 use std::rc::Rc;
-use taigi_windows_core::composing::ContextToken;
+use taigi_desktop_core::composing::ContextToken;
 use windows::core::{Result, BOOL, PCWSTR};
 use windows::Win32::Foundation::{
     GetLastError, ERROR_CLASS_ALREADY_EXISTS, HWND, LPARAM, LRESULT, POINT, RECT, WPARAM,

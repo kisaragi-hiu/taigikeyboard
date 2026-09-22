@@ -7,9 +7,9 @@ use crate::presentation::display_language_label;
 use crate::updates::INSTALLED_VERSION;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow, SettingsWrite};
-use taigi_windows_core::keys::ToneInputScheme;
-use taigi_windows_core::settings::{keys, InputMode, SettingChoice};
-use taigi_windows_core::strings::{DisplayLanguage, StringKey, StringResolver};
+use taigi_desktop_core::keys::ToneInputScheme;
+use taigi_desktop_core::settings::{keys, InputMode, SettingChoice};
+use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_windows_update::checker;
 use windows_reactor::*;
 

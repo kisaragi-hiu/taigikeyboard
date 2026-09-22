@@ -8,8 +8,8 @@ use rusqlite::{params, Connection, OptionalExtension};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 use std::sync::Arc;
-use taigi_windows_core::composing::CustomDictionarySource;
-use taigi_windows_core::engine::{CustomEntry, CustomSearchKey};
+use taigi_desktop_core::composing::CustomDictionarySource;
+use taigi_desktop_core::engine::{CustomEntry, CustomSearchKey};
 
 const TABLE_NAME: &str = "custom_dictionary";
 const SEARCH_KEY_TABLE_NAME: &str = "custom_search_key";

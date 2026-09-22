@@ -3,14 +3,14 @@
 //! {LearningStore,LearningCapacity,CustomDictionaryStore}Tests.swift`.
 
 use std::sync::{Arc, Mutex};
-use taigi_windows_core::composing::{
+use taigi_desktop_core::composing::{
     AssociationSink, CustomDictionarySource, FrequencySource, LearnedPhraseSource,
 };
-use taigi_windows_core::engine::{
+use taigi_desktop_core::engine::{
     derive_custom_query_key, derive_custom_search_keys, AssociationPair, CustomSearchKey,
 };
-use taigi_windows_core::settings::InputMode;
-use taigi_windows_storage::{
+use taigi_desktop_core::settings::InputMode;
+use taigi_desktop_storage::{
     CustomDictionaryError, CustomDictionaryRow, CustomDictionaryStore, LearnedPhraseRow,
     LearnedPhraseStore, LearningCapacity, SearchKeyDeriver, UserAssociationStore, UserDataStores,
     UserFrequencyStore,
@@ -879,7 +879,7 @@ fn perform_from_inside_the_worker_is_refused_rather_than_deadlocking() {
     // trace: Codex PR4 BLOCK — a job that re-enters `perform` would wait for
     // a barrier the worker can never reach.
     let directory = scratch();
-    let database = taigi_windows_storage::UserDataDatabase::new(
+    let database = taigi_desktop_storage::UserDataDatabase::new(
         "probe.db",
         "Probe",
         directory.path().to_path_buf(),
@@ -887,15 +887,15 @@ fn perform_from_inside_the_worker_is_refused_rather_than_deadlocking() {
     );
     database.open_blocking();
     let outcome: Result<
-        Result<(), taigi_windows_storage::UserDataDatabaseError>,
-        taigi_windows_storage::UserDataDatabaseError,
+        Result<(), taigi_desktop_storage::UserDataDatabaseError>,
+        taigi_desktop_storage::UserDataDatabaseError,
     > = database.perform(|_| Ok(Ok(())));
     assert!(outcome.is_ok());
     let handle = std::sync::Arc::new(database);
     let inner = std::sync::Arc::clone(&handle);
     let (tx, rx) = std::sync::mpsc::channel();
     handle.write(move |_| {
-        let nested: Result<(), taigi_windows_storage::UserDataDatabaseError> =
+        let nested: Result<(), taigi_desktop_storage::UserDataDatabaseError> =
             inner.perform(|_| Ok(()));
         tx.send(nested.is_err()).ok();
         Ok(())

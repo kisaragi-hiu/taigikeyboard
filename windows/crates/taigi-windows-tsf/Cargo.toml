@@ -1,6 +1,6 @@
 [package]
 name = "taigi-windows-tsf"
-description = "The Text Services Framework text service (TaigiKeyboard.dll): COM shell over taigi-windows-core"
+description = "The Text Services Framework text service (TaigiKeyboard.dll): COM shell over taigi-desktop-core"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -14,9 +14,9 @@ name = "TaigiKeyboard"
 crate-type = ["cdylib"]
 
 [dependencies]
-taigi-windows-core.workspace = true
+taigi-desktop-core.workspace = true
 windows-numerics.workspace = true
-taigi-windows-storage.workspace = true
+taigi-desktop-storage.workspace = true
 taigi-windows-platform.workspace = true
 log.workspace = true
 windows-core.workspace = true

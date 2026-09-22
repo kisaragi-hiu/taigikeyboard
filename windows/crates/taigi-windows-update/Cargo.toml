@@ -9,7 +9,7 @@ repository.workspace = true
 publish.workspace = true
 
 [dependencies]
-taigi-windows-core.workspace = true
+taigi-desktop-core.workspace = true
 taigi-windows-platform.workspace = true
 log.workspace = true
 thiserror.workspace = true

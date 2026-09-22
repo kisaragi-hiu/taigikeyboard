@@ -8,10 +8,10 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use taigi_windows_core::settings::launch::{
+use taigi_desktop_core::settings::launch::{
     CHECK_NOW_FLAG, PANE_FLAG, PREWARM_FLAG, SETTINGS_EXE_NAME,
 };
-use taigi_windows_core::settings::{SettingChoice, SettingsPane};
+use taigi_desktop_core::settings::{SettingChoice, SettingsPane};
 use windows::Win32::System::Threading::BELOW_NORMAL_PRIORITY_CLASS;
 
 /// The claim that keeps the many hosts this DLL is loaded into from each

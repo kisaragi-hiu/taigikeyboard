@@ -10,12 +10,14 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 ## Authored without a Windows machine
 
 - The platform was written blind (USER 2026-08-29). Every PR passes `make windows-check` on the
-  macOS host: `cargo test -p taigi-windows-core` (native), `cargo clippy --workspace --all-targets
+  macOS host: `cargo test -p taigi-desktop-core` (native), `cargo clippy --workspace --all-targets
   --target x86_64-pc-windows-gnu -- -D warnings` (full graph incl. rusqlite via mingw-w64), and
   `cargo check --target x86_64-pc-windows-msvc` for the non-C crates. These gates prove compilation,
   not behaviour — behaviour is the dogfood run-book's job. Never claim "works on Windows".
-- Put logic in `taigi-windows-core` (`unsafe_code = forbid`, host-testable) whenever it does not
-  need a Win32 handle. `taigi-windows-tsf` and `taigi-windows-settings` are thin shells.
+- Put logic in `taigi-desktop-core` (`unsafe_code = forbid`, host-testable, in the `desktop/`
+  workspace SHARED WITH LINUX since 2026-09-22 — `linux-roadmap.md` L2) whenever it does not need a
+  Win32 handle. `taigi-windows-tsf` and `taigi-windows-settings` are thin shells. A change under
+  `desktop/` runs `make -C desktop test` AND `make windows-check`.
 - Pin UI-framework versions to what has actually run on the Windows box: `windows-reactor` is a
   git dependency pinned to a commit SHA (W17; crates.io has only placeholders) — bump only in its
   own round, built and smoke-run on the box. The settings crate's real gate is `make check-box`

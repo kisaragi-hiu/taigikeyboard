@@ -11,11 +11,11 @@
 
 use super::{choice_row, reset_row};
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
-use taigi_windows_core::settings::{
+use taigi_desktop_core::settings::{
     keys, AppearanceMode, CandidateDisplayMode, CandidateLayout, CandidateTextSizeChoice,
     CandidateWindowSizeChoice, SettingChoice,
 };
-use taigi_windows_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
 pub fn view(

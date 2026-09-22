@@ -9,7 +9,7 @@
 
 ## Summary
 
-Three read-only binary assets live in the dictionary bundle and are mmap-loaded by the shared Rust `engine/lexicon` readers on all four platforms — iOS, Android, macOS (`macos/Sources/TaigiInputMethodCore/Engine/DictionaryArtifacts.swift`) and Windows (`windows/crates/taigi-windows-core/src/dictionary_artifacts.rs`, which also validates `syllables.fst`):
+Three read-only binary assets live in the dictionary bundle and are mmap-loaded by the shared Rust `engine/lexicon` readers on all four platforms — iOS, Android, macOS (`macos/Sources/TaigiInputMethodCore/Engine/DictionaryArtifacts.swift`) and Windows (`desktop/crates/taigi-desktop-core/src/dictionary_artifacts.rs`, which also validates `syllables.fst`):
 
 | File | Magic | Purpose | Size |
 |---|---|---|---|

@@ -15,7 +15,7 @@
 //! the caller until Windows says they changed (`WM_SETTINGCHANGE` /
 //! `WM_THEMECHANGED` / `WM_DWMCOLORIZATIONCOLORCHANGED`) — not per keystroke.
 
-use taigi_windows_core::settings::AppearanceMode;
+use taigi_desktop_core::settings::AppearanceMode;
 use taigi_windows_platform::{HighContrastColors, Rgb};
 use windows::Win32::Graphics::Direct2D::Common::D2D1_COLOR_F;
 

@@ -11,11 +11,11 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
-use taigi_windows_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_windows_core::engine::{
+use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
+use taigi_desktop_core::engine::{
     self, CommitContinuousArgs, CustomEntry, Effect, FetchArgs, FrequencyRow,
 };
-use taigi_windows_core::settings::{EngineSettings, InputMode};
+use taigi_desktop_core::settings::{EngineSettings, InputMode};
 
 fn dictionaries_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../dictionaries")
