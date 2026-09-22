@@ -185,9 +185,9 @@ public enum RustEngineBridge {
 
     /// Shared `AppConfig` builder. `internal` because three extension
     /// files (`+Phonetics`, `+Composing`, `+CaseTransform`) build their
-    /// envelopes on top of it. Continuous-rendering callers wrap this
-    /// with `continuousAppConfig` (private to `+Composing.swift`) to
-    /// add the §10.2 word-boundary spacing flags.
+    /// envelopes on top of it. Every composing op wraps it with
+    /// `continuousAppConfig(settings)` (private to `+Composing.swift`),
+    /// which adds the §10.2 word-boundary spacing flags.
     ///
     /// Proto field 9 (`candidateDisplayMode`) is set by the two builders whose
     /// requests the engine reads it on — `continuousAppConfig` and

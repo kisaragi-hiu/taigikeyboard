@@ -24,10 +24,8 @@ import com.siansiansu.taigikeyboard.engine.composingResetContinuous
 import com.siansiansu.taigikeyboard.engine.composingSelectSuggestion
 import com.siansiansu.taigikeyboard.engine.composingStart
 import com.siansiansu.taigikeyboard.engine.dictionaryFilters
-import com.siansiansu.taigikeyboard.engine.NormalizeMode
 import kotlinx.coroutines.CancellationException
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
-import com.siansiansu.taigikeyboard.engine.PojMarkerOptionsCarrier
 import com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
@@ -185,7 +183,6 @@ class ComposingManager(
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=startComposing char='$char'" }
         val settings = settingsProvider.current
-        val mode = resolveMode(settings.inputMode)
         // Snapshot generation BEFORE the dispatch so the tail-call promote
         // shares the same value. `applyTransition` may synchronously re-enter
         // via `onUpdateSelection` → `bumpGeneration` on hosts that fire
@@ -203,8 +200,7 @@ class ComposingManager(
         applyTransition(
             RustEngineBridge.composingStart(
                 char,
-                mode,
-                carrier(settings.pojMarkerOptions),
+                settings,
                 generation,
             ),
             ic,
@@ -222,8 +218,7 @@ class ComposingManager(
         applyTransition(
             RustEngineBridge.composingAppend(
                 char,
-                resolveMode(settings.inputMode),
-                carrier(settings.pojMarkerOptions),
+                settings,
                 generation,
             ),
             ic,
@@ -237,8 +232,7 @@ class ComposingManager(
         val generation = currentGeneration
         applyTransition(
             RustEngineBridge.composingAppendHyphen(
-                resolveMode(settings.inputMode),
-                carrier(settings.pojMarkerOptions),
+                settings,
                 generation,
             ),
             ic,
@@ -256,8 +250,7 @@ class ComposingManager(
         applyTransition(
             RustEngineBridge.composingReplaceLast(
                 replacement,
-                resolveMode(settings.inputMode),
-                carrier(settings.pojMarkerOptions),
+                settings,
                 generation,
             ),
             ic,
@@ -292,8 +285,7 @@ class ComposingManager(
         val settings = settingsProvider.current
         applyTransition(
             RustEngineBridge.composingDeleteBackward(
-                resolveMode(settings.inputMode),
-                carrier(settings.pojMarkerOptions),
+                settings,
                 currentGeneration,
             ),
             ic,
@@ -322,24 +314,17 @@ class ComposingManager(
         if (getComposingText().orEmpty().isEmpty()) {
             applyAsSelfCommit(
                 RustEngineBridge.composingCommitDerived(
-                    resolveMode(settings.inputMode),
-                    carrier(settings.pojMarkerOptions),
+                    settings,
                     currentGeneration,
                 ),
                 ic,
             )
             return
         }
-        val spacing = continuousSpacingFlags(settings)
         applyAsSelfCommit(
             RustEngineBridge.composingCommitRaw(
-                resolveMode(settings.inputMode),
-                carrier(settings.pojMarkerOptions),
+                settings,
                 currentGeneration,
-                effectiveSwapped = spacing.effectiveSwapped,
-                outputBothScripts = spacing.outputBothScripts,
-                candidateDisplayMode = settings.candidateDisplayMode,
-                hyphenlessRoman = spacing.hyphenlessRoman,
             ),
             ic,
         )
@@ -356,16 +341,10 @@ class ComposingManager(
         // routing. See
         // engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*.
         val settings = settingsProvider.current
-        val spacing = continuousSpacingFlags(settings)
         applyAsSelfCommit(
             RustEngineBridge.composingCommitRaw(
-                resolveMode(settings.inputMode),
-                carrier(settings.pojMarkerOptions),
+                settings,
                 currentGeneration,
-                effectiveSwapped = spacing.effectiveSwapped,
-                outputBothScripts = spacing.outputBothScripts,
-                candidateDisplayMode = settings.candidateDisplayMode,
-                hyphenlessRoman = spacing.hyphenlessRoman,
             ),
             ic,
         )
@@ -376,21 +355,12 @@ class ComposingManager(
         ic: InputConnection,
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=selectSuggestion len=${suggestion.length}" }
-        // §10.2 platform pass: under Continuous this routes to
-        // `select_suggestion_under_continuous` (prepends `nailed_prefix`),
-        // so pass the live spacing flags instead of the old null config.
         val settings = settingsProvider.current
-        val spacing = continuousSpacingFlags(settings)
         applyAsSelfCommit(
             RustEngineBridge.composingSelectSuggestion(
                 suggestion,
-                resolveMode(settings.inputMode),
-                carrier(settings.pojMarkerOptions),
+                settings,
                 currentGeneration,
-                effectiveSwapped = spacing.effectiveSwapped,
-                outputBothScripts = spacing.outputBothScripts,
-                candidateDisplayMode = settings.candidateDisplayMode,
-                hyphenlessRoman = spacing.hyphenlessRoman,
             ),
             ic,
         )
@@ -402,17 +372,11 @@ class ComposingManager(
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=commitPreeditThenInsertExternal len=${text.length}" }
         val settings = settingsProvider.current
-        val spacing = continuousSpacingFlags(settings)
         applyAsSelfCommit(
             RustEngineBridge.composingCommitPreeditThenInsertExternal(
                 text,
-                resolveMode(settings.inputMode),
-                carrier(settings.pojMarkerOptions),
+                settings,
                 currentGeneration,
-                effectiveSwapped = spacing.effectiveSwapped,
-                outputBothScripts = spacing.outputBothScripts,
-                candidateDisplayMode = settings.candidateDisplayMode,
-                hyphenlessRoman = spacing.hyphenlessRoman,
             ),
             ic,
         )
@@ -448,8 +412,7 @@ class ComposingManager(
     ) {
         if (_rawInput.value.isEmpty()) return
         val transition = RustEngineBridge.composingEnterContinuous(
-            resolveMode(settings.inputMode),
-            carrier(settings.pojMarkerOptions),
+            settings,
             generation,
         )
         // EnterContinuous emits zero effects; applyTransition still runs to
@@ -547,16 +510,11 @@ class ComposingManager(
 
         // Phase 1: neutral fetch to learn candidate displayText keys.
         val neutral = RustEngineBridge.composingFetchAtPos(
-            mode = fetch.mode,
-            toggles = fetch.toggles,
+            config = fetch.config,
             generation = token.generation,
             customEntries = customEntries,
-            effectiveSwapped = fetch.spacing.effectiveSwapped,
-            outputBothScripts = fetch.spacing.outputBothScripts,
             enabledSourcesBitmask = fetch.enabledSourcesBitmask,
             literalRomanCandidateDisabled = fetch.literalRomanCandidateDisabled,
-            candidateDisplayMode = fetch.candidateDisplayMode,
-            hyphenlessRoman = fetch.spacing.hyphenlessRoman,
             learnedEntries = learnedEntries,
         )
         // Phase-1 FFI failure or empty carrier → "no candidates this frame".
@@ -583,18 +541,13 @@ class ComposingManager(
         val entries = buildFrequencyEntries(neutralCandidates, userFreq)
         val nowMs = System.currentTimeMillis()
         val boosted = RustEngineBridge.composingFetchAtPos(
-            mode = fetch.mode,
-            toggles = fetch.toggles,
+            config = fetch.config,
             generation = token.generation,
             frequencyEntries = entries,
             nowMs = nowMs,
             customEntries = customEntries,
-            effectiveSwapped = fetch.spacing.effectiveSwapped,
-            outputBothScripts = fetch.spacing.outputBothScripts,
             enabledSourcesBitmask = fetch.enabledSourcesBitmask,
             literalRomanCandidateDisabled = fetch.literalRomanCandidateDisabled,
-            candidateDisplayMode = fetch.candidateDisplayMode,
-            hyphenlessRoman = fetch.spacing.hyphenlessRoman,
             learnedEntries = learnedEntries,
         )
         // Phase-2 FFI failure: the request never reached the engine —
@@ -786,7 +739,6 @@ class ComposingManager(
             "[COMPOSE] fn=commitContinuous displayLen=${displayText.length} canonicalLen=${canonicalText.length} consumedBytes=$consumedBytes syllCount=$syllableCount"
         }
         val settings = settingsProvider.current
-        val spacing = continuousSpacingFlags(settings)
         val transition = RustEngineBridge.composingCommitContinuous(
             displayText = displayText,
             canonicalText = canonicalText,
@@ -794,13 +746,8 @@ class ComposingManager(
             hanji = hanji,
             consumedBytes = consumedBytes,
             syllableCount = syllableCount,
-            mode = resolveMode(settings.inputMode),
-            toggles = carrier(settings.pojMarkerOptions),
+            settings = settings,
             generation = currentGeneration,
-            effectiveSwapped = spacing.effectiveSwapped,
-            outputBothScripts = spacing.outputBothScripts,
-            candidateDisplayMode = settings.candidateDisplayMode,
-            hyphenlessRoman = spacing.hyphenlessRoman,
         )
         // Inspect transition BEFORE dispatching effects so we return an
         // effect-backed signal. `applyAsSelfCommit` body inlined (3 lines)
@@ -1003,50 +950,6 @@ class ComposingManager(
         }
     }
 
-    private fun resolveMode(raw: String): NormalizeMode =
-        when (raw) {
-            "poj" -> NormalizeMode.POJ
-            "english" -> NormalizeMode.ENGLISH
-            else -> NormalizeMode.TL
-        }
-
-    private fun carrier(toggles: com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions): PojMarkerOptionsCarrier =
-        PojMarkerOptionsCarrier(
-            isDoubleTapOoEnabled = toggles.isDoubleTapOOEnabled,
-            isDoubleTapNnEnabled = toggles.isDoubleTapNNEnabled,
-            isNasalMarkerUppercaseEnabled = toggles.isNasalMarkerUppercaseEnabled,
-        )
-
-    /**
-     * The v3.5.8 §10.2 word-boundary-spacing flags the engine's
-     * `continuous_word_space` predicate needs, derived from live
-     * settings. Single source of the platform-side `effectiveSwapped`
-     * combine so all Continuous entry points agree (mis-set → silent
-     * hanji-first spurious spaces). `effectiveSwapped` folds TPS into the
-     * swap signal because the engine receives TPS as `"tl"`/`"poj"`
-     * `input_mode` (its own `input_mode == "tps"` branch never fires
-     * from the platform). [EngineSettings.inputMode] is the raw string
-     * (`"tps"` representable) per the documented Android divergence.
-     * `hyphenlessRoman` (無連字符, §49) rides along already TPS-folded by
-     * `PrefHelper.isHyphenlessRomanEnabled`.
-     */
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Input/Composing/ComposingManager.swift continuousSpacingFlags.
-    // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
-    private fun continuousSpacingFlags(
-        settings: com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings,
-    ): ContinuousSpacingFlags =
-        ContinuousSpacingFlags(
-            effectiveSwapped = settings.isTranslateSwapped || settings.inputMode == "tps",
-            outputBothScripts = settings.isOutputBothScripts,
-            hyphenlessRoman = settings.isHyphenlessRomanEnabled,
-        )
-
-    private data class ContinuousSpacingFlags(
-        val effectiveSwapped: Boolean,
-        val outputBothScripts: Boolean,
-        val hyphenlessRoman: Boolean,
-    )
-
     /**
      * Immutable per-fetch settings snapshot. `EngineSettingsProvider.current`
      * is a live view (every getter re-reads the prefs cache), so both fetch
@@ -1055,9 +958,8 @@ class ComposingManager(
      */
     private class ContinuousFetchSettings(
         val inputMode: String,
-        val mode: NormalizeMode,
-        val toggles: PojMarkerOptionsCarrier,
-        val spacing: ContinuousSpacingFlags,
+        // The rendering config both fetch phases send (`continuousAppConfig`).
+        val config: com.siansiansu.taigikeyboard.engine.proto.AppConfig,
         // PR-9.6 — same dictionary source-toggle bitmask + same
         // `dictionaryFilters` bridge the Tab3 browse path uses, so keyboard
         // candidates honour the 12 source toggles + kautian subcollection
@@ -1065,8 +967,6 @@ class ComposingManager(
         val enabledSourcesBitmask: UInt,
         // §34/S22 — invert of the 顯示當咧拍的字 setting (engine wire flag).
         val literalRomanCandidateDisabled: Boolean,
-        // 候選詞顯示 — ROMAN_ONLY makes the engine collapse same-roman rows.
-        val candidateDisplayMode: com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode,
         val isCustomDictEnabled: Boolean,
     )
 
@@ -1075,14 +975,11 @@ class ComposingManager(
         val inputMode = settings.inputMode
         return ContinuousFetchSettings(
             inputMode = inputMode,
-            mode = resolveMode(inputMode),
-            toggles = carrier(settings.pojMarkerOptions),
-            spacing = continuousSpacingFlags(settings),
+            config = RustEngineBridge.continuousAppConfig(settings),
             enabledSourcesBitmask = RustEngineBridge.dictionaryFilters(
                 RustEngineBridge.DictionaryToggles.from(settings),
             ).dictionaryFilterBitmask,
             literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
-            candidateDisplayMode = settings.candidateDisplayMode,
             isCustomDictEnabled = settings.isCustomDictEnabled,
         )
     }

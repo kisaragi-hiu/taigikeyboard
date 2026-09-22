@@ -35,7 +35,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
 
     private var manager: ComposingManager!
     private var spy: DelegateSpy!
-    private let toggles = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false, isNasalMarkerUppercaseEnabled: true)
+    private let settings = StubEngineSettings()
 
     override class func setUp() {
         super.setUp()
@@ -72,8 +72,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         manager.appendCharacter("a")
 
         let result = RustEngineBridge.composingFetchAtPos(
-            mode: .tl,
-            toggles: toggles,
+            settings: settings,
             generation: 1, // ComposingManager's default currentGeneration
         )
         XCTAssertNotNil(
@@ -86,8 +85,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         manager.startComposing(with: "tsua")
 
         let result = RustEngineBridge.composingFetchAtPos(
-            mode: .tl,
-            toggles: toggles,
+            settings: settings,
             generation: 1,
         )
         XCTAssertNotNil(
@@ -101,8 +99,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         manager.appendHyphen()
 
         let result = RustEngineBridge.composingFetchAtPos(
-            mode: .tl,
-            toggles: toggles,
+            settings: settings,
             generation: 1,
         )
         XCTAssertNotNil(
@@ -116,8 +113,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         manager.replaceLastCharacter(with: "c")
 
         let result = RustEngineBridge.composingFetchAtPos(
-            mode: .tl,
-            toggles: toggles,
+            settings: settings,
             generation: 1,
         )
         XCTAssertNotNil(

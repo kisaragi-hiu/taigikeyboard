@@ -752,7 +752,7 @@ extension SharedSettings: EngineSettings {
     /// Effective 無連字符 — never under a TPS layout: the engine receives TPS as
     /// `"tl"` / `"poj"` and the strip would break the platform's `-` re-split of
     /// the candidate roman for bopomofo (`tlDisplayToTPS`). Same fold, same seam
-    /// as `effectiveSwapped` in `ComposingManager.continuousSpacingFlags`.
+    /// as the swap fold in `RustEngineBridge.continuousAppConfig`.
     // CROSS-PLATFORM INVARIANT — mirrors android PrefHelper.isHyphenlessRomanEnabled (!isTpsLayout && …).
     var isHyphenlessRomanEnabled: Bool {
         inputMode != .tps && storedIsHyphenlessRomanEnabled

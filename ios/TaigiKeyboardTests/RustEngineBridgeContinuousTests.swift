@@ -26,7 +26,8 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     /// with a clean phase regardless of prior test residue.
     private static var nextEnvelopeGen: UInt64 = 200_000
     private var envelopeGen: UInt64 = 0
-    private let toggles = PojMarkerOptions(isDoubleTapOOEnabled: false, isDoubleTapNNEnabled: false, isNasalMarkerUppercaseEnabled: true)
+    private let settings = StubEngineSettings()
+    private let hanjiFirst = StubEngineSettings(isTranslateSwapped: true)
 
     override func setUp() {
         super.setUp()
@@ -38,10 +39,10 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
     func testEnterContinuous_FromComposing_PreservesRawAndStaysComposing() {
         _ = RustEngineBridge.composingStart(
-            "tsua", mode: .tl, toggles: toggles, generation: envelopeGen,
+            "tsua", settings: settings, generation: envelopeGen,
         )
         let enter = RustEngineBridge.composingEnterContinuous(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         XCTAssertTrue(enter.isComposing)
         XCTAssertEqual(enter.rawInput, "tsua")
@@ -51,7 +52,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
     func testEnterContinuous_FromIdle_NoOp() {
         let enter = RustEngineBridge.composingEnterContinuous(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         XCTAssertFalse(enter.isComposing)
         XCTAssertEqual(enter.rawInput, "")
@@ -63,7 +64,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     func testFetchAtPos_FromIdle_CandidatesIsNil() {
         // Phase::Idle → engine returns snapshot without `continuous` carrier.
         let result = RustEngineBridge.composingFetchAtPos(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         XCTAssertNil(result.candidates, "Idle phase must yield nil candidates (carrier absent)")
         XCTAssertFalse(result.transition.isComposing)
@@ -77,12 +78,12 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
     func testFetchAtPos_FromComposing_NotYetContinuous_CandidatesIsNil() {
         _ = RustEngineBridge.composingStart(
-            "tsua", mode: .tl, toggles: toggles, generation: envelopeGen,
+            "tsua", settings: settings, generation: envelopeGen,
         )
         // Composing phase is NOT Continuous — handle_fetch_at_pos returns
         // snapshot without continuous carrier.
         let result = RustEngineBridge.composingFetchAtPos(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         XCTAssertNil(result.candidates, "Composing phase must yield nil candidates")
         XCTAssertTrue(result.transition.isComposing)
@@ -98,13 +99,13 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         // inventory. Unit tests do not install lexicon, so the carrier is
         // present-but-empty (the tri-state distinction we want to lock).
         _ = RustEngineBridge.composingStart(
-            "tsua", mode: .tl, toggles: toggles, generation: envelopeGen,
+            "tsua", settings: settings, generation: envelopeGen,
         )
         _ = RustEngineBridge.composingEnterContinuous(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         let result = RustEngineBridge.composingFetchAtPos(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         XCTAssertNotNil(
             result.candidates,
@@ -125,10 +126,10 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
     func testResetContinuous_FromContinuous_EmitsNextWordClearForNewComposing() {
         _ = RustEngineBridge.composingStart(
-            "tsua", mode: .tl, toggles: toggles, generation: envelopeGen,
+            "tsua", settings: settings, generation: envelopeGen,
         )
         _ = RustEngineBridge.composingEnterContinuous(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         let reset = RustEngineBridge.composingResetContinuous(generation: envelopeGen)
         XCTAssertFalse(reset.isComposing, "ResetContinuous must exit to Idle")
@@ -148,10 +149,10 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
     func testCommitContinuous_FullConsume_EmitsNextWordWordSelected() {
         _ = RustEngineBridge.composingStart(
-            "tai", mode: .tl, toggles: toggles, generation: envelopeGen,
+            "tai", settings: settings, generation: envelopeGen,
         )
         _ = RustEngineBridge.composingEnterContinuous(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         // consumed_bytes = "tai".utf8.count → final commit
         let commit = RustEngineBridge.composingCommitContinuous(
@@ -160,8 +161,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             associationTl: "tâi",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
-            mode: .tl,
-            toggles: toggles,
+            settings: settings,
             generation: envelopeGen,
         )
         let selectedRoman: String? = commit.effects.lazy.compactMap { effect -> String? in
@@ -191,10 +191,10 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         // emits NextWordUpdateLastSelectedWord (NOT WordSelected) in this
         // path because the user is composing a sentence, not finalizing.
         _ = RustEngineBridge.composingStart(
-            "taibak", mode: .tl, toggles: toggles, generation: envelopeGen,
+            "taibak", settings: settings, generation: envelopeGen,
         )
         _ = RustEngineBridge.composingEnterContinuous(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         let commit = RustEngineBridge.composingCommitContinuous(
             displayText: "台",
@@ -202,8 +202,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             associationTl: "tâi",
             consumedBytes: UInt32("tai".utf8.count),
             syllableCount: 1,
-            mode: .tl,
-            toggles: toggles,
+            settings: settings,
             generation: envelopeGen,
         )
         XCTAssertTrue(commit.isComposing, "Mid-commit must stay in Continuous phase")
@@ -220,6 +219,39 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         )
     }
 
+    // MARK: - Spacing flags ride every rendering op
+
+    /// The keystroke after a nail re-renders the nailed prefix from the
+    /// request's own settings, so every op builds its config from the same
+    /// snapshot. Under 漢字優先 (`isTranslateSwapped`, no both-scripts) the
+    /// prefix has no word-boundary space: `台` + `bak` reads `台bak`, never
+    /// `台 bak` (desktop #31 / S37).
+    func testAppendAfterNail_HanjiFirst_KeepsPrefixUnspaced() {
+        _ = RustEngineBridge.composingStart(
+            "taibak", settings: hanjiFirst, generation: envelopeGen,
+        )
+        _ = RustEngineBridge.composingEnterContinuous(
+            settings: hanjiFirst, generation: envelopeGen,
+        )
+        _ = RustEngineBridge.composingCommitContinuous(
+            displayText: "台",
+            canonicalText: "台",
+            associationTl: "tâi",
+            consumedBytes: UInt32("tai".utf8.count),
+            syllableCount: 1,
+            settings: hanjiFirst,
+            generation: envelopeGen,
+        )
+        let append = RustEngineBridge.composingAppend(
+            "k", settings: hanjiFirst, generation: envelopeGen,
+        )
+        XCTAssertEqual(append.displayText, "台bakk", "hanji-first Append must not insert a word-boundary space")
+        let delete = RustEngineBridge.composingDeleteBackward(
+            settings: hanjiFirst, generation: envelopeGen,
+        )
+        XCTAssertEqual(delete.displayText, "台bak", "hanji-first DeleteBackward must not insert a word-boundary space")
+    }
+
     // MARK: - Effect mapping completeness (no nil drops)
 
     /// Phase 7A removed the three `nil` returns at the bottom of
@@ -228,10 +260,10 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     /// confirming none are silently dropped.
     func testNextWordEffects_AreNeverDroppedToNil() {
         _ = RustEngineBridge.composingStart(
-            "tai", mode: .tl, toggles: toggles, generation: envelopeGen,
+            "tai", settings: settings, generation: envelopeGen,
         )
         _ = RustEngineBridge.composingEnterContinuous(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         let reset = RustEngineBridge.composingResetContinuous(generation: envelopeGen)
         // Pre-Phase-7A this would silently filter NextWord effects out.
@@ -257,14 +289,14 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
     func testFetchAtPos_DoesNotMutateBuffer() {
         _ = RustEngineBridge.composingStart(
-            "tsua", mode: .tl, toggles: toggles, generation: envelopeGen,
+            "tsua", settings: settings, generation: envelopeGen,
         )
         _ = RustEngineBridge.composingEnterContinuous(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         let before = RustEngineBridge.composingQueryState(generation: envelopeGen)
         _ = RustEngineBridge.composingFetchAtPos(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         let after = RustEngineBridge.composingQueryState(generation: envelopeGen)
         XCTAssertEqual(before.rawInput, after.rawInput, "rawInput must not change across FetchAtPos")
@@ -309,10 +341,10 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     /// this test does NOT re-assert ranking math.
     func testFetchAtPos_AcceptsFrequencyEntriesAndNowMs() {
         _ = RustEngineBridge.composingStart(
-            "tsua", mode: .tl, toggles: toggles, generation: envelopeGen,
+            "tsua", settings: settings, generation: envelopeGen,
         )
         _ = RustEngineBridge.composingEnterContinuous(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
 
         var entry = Taigi_Engine_FrequencyEntry()
@@ -321,8 +353,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         entry.lastUsedMs = 1_700_000_000_000
 
         let result = RustEngineBridge.composingFetchAtPos(
-            mode: .tl,
-            toggles: toggles,
+            settings: settings,
             generation: envelopeGen,
             frequencyEntries: [entry],
             nowMs: 1_700_000_001_000,
@@ -354,14 +385,14 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     /// `[]` / `0` defaults (which the platform 7B call sites rely on).
     func testFetchAtPos_DefaultParameters_PreserveNeutralBehavior() {
         _ = RustEngineBridge.composingStart(
-            "tsua", mode: .tl, toggles: toggles, generation: envelopeGen,
+            "tsua", settings: settings, generation: envelopeGen,
         )
         _ = RustEngineBridge.composingEnterContinuous(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
 
         let result = RustEngineBridge.composingFetchAtPos(
-            mode: .tl, toggles: toggles, generation: envelopeGen,
+            settings: settings, generation: envelopeGen,
         )
         XCTAssertNotNil(result.candidates, "Default-parameter call must still reach Continuous")
         XCTAssertTrue(result.transition.effects.isEmpty)
