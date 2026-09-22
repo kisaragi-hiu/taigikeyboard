@@ -1669,12 +1669,14 @@ name = "taigikeyboard-settings"
 version = "3.6.9"
 dependencies = [
  "env_logger",
+ "gio",
  "gtk4",
  "libadwaita",
  "log",
  "taigi-desktop-core",
  "taigi-desktop-storage",
  "taigi-linux-platform",
+ "tempfile",
 ]
 
 [[package]]

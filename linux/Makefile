@@ -22,7 +22,7 @@ CROSS_CARGO := $(shell command -v cargo-zigbuild >/dev/null 2>&1 && echo "cargo 
 PREFIX ?= /usr
 DESTDIR ?=
 
-.PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component run-engine clean
+.PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component run-engine run-settings clean
 
 help:
 	@echo "Linux input method — dev loop"
@@ -39,6 +39,7 @@ help:
 	@echo "  make install       - (Linux) install both shells + dictionaries into PREFIX=$(PREFIX) (DESTDIR honoured)"
 	@echo "  make uninstall     - (Linux) remove what install put there; user data stays"
 	@echo "  make run-engine    - (Linux) run the IBus engine from this tree against a running ibus-daemon (RUST_LOG=debug, repo dictionaries)"
+	@echo "  make run-settings  - Open the settings window from this tree (macOS host too: GTK + libadwaita from Homebrew); PANE=about picks a pane"
 
 # The generated strings live in the desktop-shared crate; a stale copy would
 # compile strings that no longer match their source. Same gate the macOS,
@@ -105,6 +106,7 @@ component: data/taigikeyboard.xml.in
 # one the binaries were built with (`TAIGIKEYBOARD_PREFIX`, default /usr).
 install: build component install-fcitx5
 	install -Dm755 target/release/ibus-engine-taigikeyboard $(DESTDIR)$(PREFIX)/libexec/ibus-engine-taigikeyboard
+	install -Dm755 target/release/taigikeyboard-settings $(DESTDIR)$(PREFIX)/bin/taigikeyboard-settings
 	install -Dm644 target/taigikeyboard.xml $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	install -d $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries
 	install -m644 ../dictionaries/dictionary.fst ../dictionaries/dictionary.bin ../dictionaries/association.bin ../dictionaries/syllables.fst $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries/
@@ -116,6 +118,7 @@ install-fcitx5: build-fcitx5
 
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/libexec/ibus-engine-taigikeyboard
+	rm -f $(DESTDIR)$(PREFIX)/bin/taigikeyboard-settings
 	rm -f $(DESTDIR)$(PREFIX)/lib/fcitx5/taigikeyboard.so $(DESTDIR)$(PREFIX)/lib/*/fcitx5/taigikeyboard.so
 	rm -f $(DESTDIR)$(PREFIX)/share/fcitx5/inputmethod/taigikeyboard.conf $(DESTDIR)$(PREFIX)/share/fcitx5/addon/taigikeyboard.conf
 	rm -f $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
@@ -128,6 +131,12 @@ uninstall:
 # already be installed once so the daemon knows the name).
 run-engine:
 	TAIGIKEYBOARD_DATA_DIR=$(CURDIR)/.. RUST_LOG=debug cargo run -p taigikeyboard-ibus -- --ibus
+
+# The settings window from this tree — the visual smoke the Windows window
+# never had on the host (roadmap L3). Writes the real ~/.config/taigikeyboard/settings.json.
+PANE ?=
+run-settings:
+	RUST_LOG=debug cargo run -p taigikeyboard-settings -- $(if $(PANE),--pane $(PANE),)
 
 clean:
 	cargo clean
