@@ -53,6 +53,7 @@
 | `architecture/desktop-release.md` | How a desktop version reaches a user: staged on a draft, tested, published by hand, announced automatically | Active |
 | `architecture/macos-release.md` | macOS Developer ID signing, notarization, and what only a Mac asserts about its `.pkg` | Active |
 | `architecture/windows-roadmap.md` | Windows desktop IME (TSF in Rust over the shared engine, macOS UX parity) — design W1–W17, PR table, reference alignment, dogfood run-book; shipped desktop v3.6.7/v3.6.8 | Reference |
+| `architecture/linux-roadmap.md` | Linux desktop IME (IBus engine in pure Rust over D-Bus + GTK 4 / libadwaita settings window over the shared `desktop/` crates) — design L1–L13, PR table, named divergences, dogfood run-book | Planning |
 | `architecture/windows-release.md` | Windows installer (Inno Setup), Authenticode signing, and web-distributed installer workflow | Active |
 | `architecture/ios-exemplar.md` | Cross-platform architectural pattern (layers, DI, live-read settings, markers) + §9 Android deviations | Reference |
 
