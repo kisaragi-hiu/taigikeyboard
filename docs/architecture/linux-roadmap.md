@@ -230,9 +230,9 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   `gtk::ColumnView` over a `gio::ListStore`, CSV import / export through
   `gtk::FileDialog`, the shortcut recorder a `gtk::EventControllerKey` on the focused row
   (GTK delivers key events to the app — no hook, unlike WinUI). Adwaita follows the
-  system light / dark (`adw::StyleManager`), so the 外觀 mode row keeps its three
-  options and maps to `ColorScheme::{Default, ForceLight, ForceDark}` — identical
-  semantics for the window; the candidate panel's colours are the daemon's (§ L4). Qt /
+  system light / dark (`adw::StyleManager` default) as every GNOME app does; the 外觀
+  mode row is **not shown** on Linux — it would restyle only this window, while the
+  candidate panel's colours are the daemon's (§ L4). Qt /
   KDE parity is **not in this slice**: one toolkit, and IBus's own panel is GTK. The
   window is host-checkable AND host-runnable: `brew install gtk4 libadwaita` on the Mac
   builds the crate natively, so a pane can be opened on the Mac for a visual smoke before
@@ -256,7 +256,9 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   (`CandidateItemView.swift:47-48` — identical semantics); `PageUp` / `PageDown` /
   `CursorUp` / `CursorDown` from the panel run the same `CandidateNavigation` intents the
   keys do. 外觀 rows that the panel owns are **not shown** on Linux: 候選字大小, 候選窗大小,
-  字型 (and the 字型管理 pane); `候選窗排列` and `候選字顯示方式` stay. The candidate window
+  字型 (and the 字型管理 pane), and the window's 外觀 mode (§ L3); `候選窗排列` offers only
+  橫 / 直 (a stored expandable reads as 直, the key is never rewritten) and
+  `候選字顯示方式` stays. The candidate window
   switch (`candidateWindowEnabled`) maps to "no lookup table" — identical semantics.
   `Effect::DeleteBackwardFromDocument` is a no-op as on macOS / Windows (the preedit is
   never in the document). Two more named divergences the panel forces: the §34 literal
