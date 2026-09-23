@@ -103,7 +103,7 @@ pub enum CandidateSizeChoice {
 }
 
 impl CandidateSizeChoice {
-    /// The step's name beside the slider.
+    /// The step's name in the size pop-up.
     pub fn label_key(self) -> crate::strings::StringKey {
         use crate::strings::StringKey;
         match self {

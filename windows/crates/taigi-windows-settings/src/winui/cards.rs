@@ -31,8 +31,6 @@ const CONTROL_GAP: f64 = 16.0;
 pub const CARD_SPACING: f64 = 4.0;
 /// A pop-up's width, so the pickers line up down the pane.
 const PICKER_WIDTH: f64 = 220.0;
-/// Between a step slider's track and the step's name.
-const STEP_NAME_GAP: f64 = 12.0;
 /// Between two groups of cards; Settings draws no rule between them. The
 /// stack's own spacing is already there, so the spacer carries the rest.
 const SECTION_GAP: f64 = 16.0 - CARD_SPACING;
@@ -201,55 +199,6 @@ pub fn choice_row(
             .selected_index(selected)
             .on_selection_changed(on_change)
             .width(PICKER_WIDTH),
-    )
-}
-
-/// One setting chosen along named steps: a slider that snaps to each step
-/// (`SnapsTo` defaults to `StepValues`), then the current step's name. The
-/// pair is as wide as a pop-up, so the controls line up down the pane.
-///
-/// The name cell stacks every name and shows only the current one, so it is
-/// always the widest name wide and the track does not move as the name
-/// changes. The track has no header of its own (the card's header is it), so
-/// the header and the step name are its automation name — Narrator would
-/// otherwise read the bare position.
-pub fn step_slider_row(
-    header: &str,
-    step_names: &[String],
-    selected: usize,
-    on_change: Callback<f64>,
-) -> View {
-    let last = step_names.len().saturating_sub(1);
-    let current = step_names.get(selected).map_or("", String::as_str);
-    let names = step_names.iter().enumerate().map(|(index, name)| {
-        KeyedView::new(
-            index,
-            TextBlock::new()
-                .text(name.as_str())
-                .opacity(if index == selected { 1.0 } else { 0.0 }),
-        )
-    });
-    row(
-        header,
-        Grid::new()
-            .columns([GridLength::STAR, GridLength::Auto])
-            .column_spacing(STEP_NAME_GAP)
-            .width(PICKER_WIDTH)
-            .children((
-                Slider::new()
-                    .minimum(0.0)
-                    .maximum(last as f64)
-                    .step_frequency(1.0)
-                    .value(selected as f64)
-                    .on_value_changed(on_change)
-                    .automation_name(format!("{header} {current}"))
-                    .vertical_alignment(VerticalAlignment::Center)
-                    .grid_column(0),
-                Grid::new()
-                    .grid_column(1)
-                    .vertical_alignment(VerticalAlignment::Center)
-                    .keyed_children(names),
-            )),
     )
 }
 

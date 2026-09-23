@@ -773,7 +773,7 @@
       }
     },
     "candidateWindowSize": {
-      "comment": "Slider label: the candidate window's one size knob — the text, the gaps and the air around them scale together (USER 2026-09-23).",
+      "comment": "Picker label: the candidate window's one size knob — the text, the gaps and the air around them scale together (USER 2026-09-23).",
       "scope": {
         "platforms": [
           "macos",
@@ -793,7 +793,7 @@
       }
     },
     "sizeExtraSmall": {
-      "comment": "Size-slider step name: the smallest step (USER 2026-09-23).",
+      "comment": "Size-picker value: the smallest step (USER 2026-09-23).",
       "scope": {
         "platforms": [
           "macos",
@@ -813,7 +813,7 @@
       }
     },
     "sizeSmall": {
-      "comment": "Size-slider step name: the second-smallest step.",
+      "comment": "Size-picker value: the second-smallest step.",
       "scope": {
         "platforms": [
           "macos",
@@ -833,7 +833,7 @@
       }
     },
     "sizeMedium": {
-      "comment": "Size-slider step name: the default, middle step, named Standard (USER 2026-08-21).",
+      "comment": "Size-picker value: the default, middle step, named Standard (USER 2026-08-21).",
       "scope": {
         "platforms": [
           "macos",
@@ -853,7 +853,7 @@
       }
     },
     "sizeLarge": {
-      "comment": "Size-slider step name: the second-largest step.",
+      "comment": "Size-picker value: the second-largest step.",
       "scope": {
         "platforms": [
           "macos",
@@ -873,7 +873,7 @@
       }
     },
     "sizeExtraLarge": {
-      "comment": "Size-slider step name: the largest step (USER 2026-09-23).",
+      "comment": "Size-picker value: the largest step (USER 2026-09-23).",
       "scope": {
         "platforms": [
           "macos",

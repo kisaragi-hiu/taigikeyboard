@@ -1,6 +1,6 @@
 //! The 外觀 pane: the window's light / dark mode, then the candidate
-//! window's own rows — layout, the size slider, what each cell shows — and
-//! the reset card.
+//! window's own pickers — layout, size, what each cell shows — and the
+//! reset card.
 //! The TYPEFACE is not here: it moved to 字型管理 (`font_management`), where
 //! the bundled roster and the user's own typefaces are one list. Port of `AppearanceSettingsView.swift`. The values are
 //! read live by the DLL's window on every show, so a change here applies
@@ -10,7 +10,7 @@
 //! Settings itself uses for "Choose your mode" — and, since 2026-09-02, what
 //! the Mac draws too.
 
-use super::{choice_row, reset_row, step_slider_row};
+use super::{choice_row, reset_row};
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_desktop_core::settings::{
     keys, AppearanceMode, CandidateDisplayMode, CandidateLayout, CandidateSizeChoice, SettingChoice,
@@ -44,15 +44,16 @@ pub fn view(
             |choice| Message::set_choice(choice, &keys::CANDIDATE_LAYOUT),
             context,
         ),
-        // One slider sizes the whole window — text and air together — along
+        // One pop-up sizes the whole window — text and air together — over
         // five named steps, beside the window layout it sizes (USER
         // 2026-09-23, `AppearanceSettingsView.swift`).
-        step_slider_row(
+        choice_row(
             strings.resolve(StringKey::DesktopCandidateWindowSize),
             CandidateSizeChoice::ALL,
             document.choice(&keys::CANDIDATE_SIZE),
+            true,
             |step: CandidateSizeChoice| strings.resolve(step.label_key()).to_owned(),
-            |step| Message::set_choice(Some(step), &keys::CANDIDATE_SIZE),
+            |step| Message::set_choice(step, &keys::CANDIDATE_SIZE),
             context,
         ),
         // What each cell shows, after the window rows: both scripts, or the

@@ -44,7 +44,7 @@ enum CandidateSizeChoice: String, CaseIterable, Sendable {
         }
     }
 
-    /// The step's name beside the slider.
+    /// The step's name in the size pop-up.
     var labelKey: StringKey {
         switch self {
         case .extraSmall: .desktopSizeExtraSmall

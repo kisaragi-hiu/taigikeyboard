@@ -64,31 +64,3 @@ pub fn choice_row<T: Copy + PartialEq + 'static>(
         }),
     )
 }
-
-/// A slider over a roster of ordered steps, shaped like `choice_row`: the
-/// labels in the roster's order, the stored value's step selected, and the
-/// step the thumb lands on handed to `to_message`. The position rounds and
-/// clamps to the roster, so no position the slider reports can miss a step.
-pub fn step_slider_row<T: Copy + PartialEq + 'static>(
-    header: &str,
-    roster: &'static [T],
-    current: T,
-    label: impl Fn(T) -> String,
-    to_message: impl Fn(T) -> Message + 'static,
-    context: &mut ViewContext<SettingsWindow>,
-) -> View {
-    let labels: Vec<String> = roster.iter().map(|step| label(*step)).collect();
-    let selected = roster.iter().position(|step| *step == current).unwrap_or(0);
-    let last = roster.len().saturating_sub(1);
-    cards::step_slider_row(
-        header,
-        &labels,
-        selected,
-        context.callback(move |position: f64| {
-            // Clamped to 0..=last before the cast, so the cast cannot truncate.
-            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            let index = position.round().clamp(0.0, last as f64) as usize;
-            to_message(roster[index])
-        }),
-    )
-}
