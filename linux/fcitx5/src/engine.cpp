@@ -105,6 +105,9 @@ void State::keyEvent(KeyEvent &event) {
     if (!handle_) {
         return;
     }
+    // Read per key, not on activate: a browser moves focus between a text
+    // and a password field inside one input context, flipping only the flag.
+    taigi_engine_set_password_field(handle_, ic_.capabilityFlags().test(CapabilityFlag::Password));
     TaigiReply *reply = taigi_engine_key(handle_, event.rawKey().sym(), event.rawKey().code(),
                                          statesFor(event));
     if (!reply) {
