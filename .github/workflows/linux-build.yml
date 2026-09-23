@@ -8,18 +8,12 @@ name: Linux build
 # first byte-level contract. Nothing here publishes; the release half
 # (a `.deb` on the desktop draft) lands with the packaging PR.
 #
-# On a release publish (the `desktop-<version>` tag) and on a dispatch from
-# `scripts/stage-desktop.sh`, the run also packs the `.deb` and attaches it
-# to the draft — the Linux half of a desktop release, the way
-# `windows-build.yml` is the Windows half.
+# The run also packs the `.deb` and keeps it as a workflow artifact
+# (`linux-deb`). It is NOT wired into the desktop release flow yet (USER
+# 2026-09-23: 「先不用串release」): nothing here touches a draft or a tag.
 #
 # Budget: ~4 min warm, ~10 min cold (dependency compile + apt).
 on:
-  # A publish rebuilds for provenance and keeps the artifact; it never
-  # touches the published assets (`desktop-release.md`: what was tested is
-  # what ships).
-  release:
-    types: [published]
   pull_request:
     paths:
       - 'linux/**'
@@ -34,13 +28,7 @@ on:
       - 'desktop/**'
       - '.github/workflows/linux-build.yml'
   workflow_dispatch:
-    inputs:
-      source_sha:
-        description: The commit stage-desktop.sh staged; the attach step refuses any other
-        required: false
-        type: string
 
-# Every job reads; only `attach` writes (its own block below).
 permissions:
   contents: read
 
@@ -57,10 +45,6 @@ jobs:
   build:
     name: build + test + ibus smoke
     runs-on: ubuntu-24.04
-    # Only the desktop train: a mobile publish has no Linux package in it.
-    if: >-
-      github.event_name != 'release' ||
-      startsWith(github.event.release.tag_name, 'desktop-')
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -201,57 +185,3 @@ jobs:
           cat "$RUNNER_TEMP/ibus-daemon.log" 2>/dev/null || true
           ls -la "$RUNNER_TEMP" || true
 
-  # The release half: only a dispatch from `main` by `stage-desktop.sh`
-  # attaches, onto a DRAFT, never over an asset already there — what the
-  # maintainer tests on the draft is what a publish ships. The only job
-  # that can write.
-  attach:
-    name: attach to the draft
-    needs: build
-    if: >-
-      github.repository == 'taigikeyboard/taigikeyboard' &&
-      github.event_name == 'workflow_dispatch' &&
-      github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: linux-deb
-          path: linux/target
-
-      - name: Attach the .deb to the draft release
-        working-directory: linux
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_SHA: ${{ inputs.source_sha }}
-        run: |
-          set -euo pipefail
-          # The commit the staging run meant, not whatever main points at
-          # by the time this run started: main can move while the Windows
-          # half is waited on.
-          if [ -n "$SOURCE_SHA" ] && [ "$SOURCE_SHA" != "$GITHUB_SHA" ]; then
-              echo "::error::this run built $GITHUB_SHA but the staging run staged $SOURCE_SHA — main moved; re-run stage-desktop.sh"
-              exit 1
-          fi
-          version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
-          tag="desktop-$version"
-          state="$(gh release view "$tag" --json isDraft --jq '.isDraft|tostring' 2>&1)" || {
-              echo "no release $tag: $state" >&2
-              echo "The macOS half stages first and creates the draft." >&2
-              exit 1
-          }
-          [ "$state" = true ] || {
-              echo "$tag is already published — an asset added now would be public with no test" >&2
-              exit 1
-          }
-          cd target
-          package="taigikeyboard_${version}_amd64.deb"
-          [ -f "$package" ] || { echo "no $package in $(pwd)" >&2; exit 1; }
-          printf '%s  %s\n' "$(sha256sum "$package" | cut -d' ' -f1)" "$package" > "$package.sha256"
-          gh release upload "$tag" "$package" "$package.sha256" --repo "$GITHUB_REPOSITORY"
-          echo "attached $package to $tag (built from $GITHUB_SHA)"

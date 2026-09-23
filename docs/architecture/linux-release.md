@@ -11,9 +11,9 @@ is and how it is built.
 
 ## The artifact
 
-`taigikeyboard_<version>_amd64.deb`, plus `taigikeyboard_<version>_amd64.deb.sha256`,
-attached to the `desktop-<version>` draft beside the macOS `.pkg` and the
-Windows `.exe`. One package holds both shells, the way `fcitx5-chewing` and
+`taigikeyboard_<version>_amd64.deb` (today: the CI artifact `linux-deb`; when
+wired into the release flow, attached to the `desktop-<version>` draft beside
+the macOS `.pkg` and the Windows `.exe`). One package holds both shells, the way `fcitx5-chewing` and
 `ibus-chewing` come from one source:
 
 | Path | What |
@@ -56,28 +56,18 @@ The Fcitx5 addon is C++ over the Rust C ABI and compiles only on Linux
 That is why the package is built on the GitHub-hosted runner, never on the
 maintainer's Mac.
 
-## Staging and publishing
+## Staging and publishing — not wired yet
 
-`.github/workflows/linux-build.yml` is the Linux half of a desktop release,
-the way `windows-build.yml` is the Windows half:
-
-- On every pull request touching `linux/**` / `desktop/**` / `engine/**` it
-  builds the package and keeps it as a workflow artifact (`linux-deb`), checks
-  the expected paths are inside it, that the addon file is the one the
-  `.conf` names, and the desktop entry (`desktop-file-validate`). Nothing
-  reaches a draft; the build job can only read.
-- `scripts/stage-desktop.sh` (`make desktop-release`) dispatches it on `main`
-  after the Windows run, with the staged commit as `source_sha`, and waits;
-  the `attach` job (the only one that can write) refuses any other commit,
-  refuses a published release, and uploads the `.deb` and its `.sha256` to
-  the `desktop-<version>` draft the macOS half created — never over an asset
-  already there. A dispatch from any other ref never attaches.
-- A `desktop-<version>` **publish** rebuilds for provenance and keeps the
-  artifact; the published assets stay what the maintainer tested.
-
-Publishing stays a person's (`desktop-release.md`). No signing: a `.deb`
-downloaded from the project page is verified by its `.sha256`, as the unsigned
-Windows channel is; an apt repository with its own key is outside this slice.
+USER 2026-09-23: 「先不用串release」. The package is built on every CI run
+(`.github/workflows/linux-build.yml`: the `.deb` from the install layout,
+its contents, the addon file name the `.conf` names, the desktop entry —
+kept as the workflow artifact `linux-deb`) and by `make -C linux deb` on a
+Linux machine. Nothing attaches it to a `desktop-<version>` draft, and
+`scripts/stage-desktop.sh` stages the macOS and Windows halves only. When the
+USER wires it in, the shape is the Windows one: a dispatch from `main` by
+`stage-desktop.sh` (carrying the staged commit) attaches to the DRAFT, never
+over an existing asset and never on a publish, from a job that alone can
+write.
 
 ## No in-app update
 

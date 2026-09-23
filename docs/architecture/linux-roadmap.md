@@ -415,8 +415,10 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 | Update check | Sparkle-style in-app | scheduled task + in-app | none; version + download link | unsupported host capability (deliberate) |
 | Data dir | `~/Library/Application Support/<bundle>` | `%APPDATA%\TaigiKeyboard` | XDG config + data split | platform-adapted |
 | Settings frame persisted | yes | no | no | named divergence |
-| 教典 off: its eleven 腔口 rows | shown, greyed | shown, greyed | collapsed under the `adw::ExpanderRow` (its enable switch IS the toggle), choices kept | platform-adapted presentation |
-| Sidebar icons | yes | yes | none | named divergence |
+| 教典 off: its eleven 腔口 rows | shown, greyed | shown, greyed | shown, greyed (USER 2026-09-23: mirror the other desktops; the expander of PR7 reverted) | identical semantics |
+| Sidebar icons | SF Symbols | Fluent | Adwaita symbolic (`preferences-system`, `applications-graphics`, `input-keyboard`, `emblem-documents`, `x-office-address-book`) | identical semantics |
+| 自訂詞庫 table | two columns 羅馬字 / 漢字, double-click edits | two columns, ✎ edits | two columns, double-click or ✎ edits | identical semantics |
+| Release flow | `make desktop-release` stages | same draft | `.deb` built as a CI artifact only — not in the flow yet (USER 2026-09-23 「先不用串release」) | USER-gated |
 
 ## Phase / PR table
 

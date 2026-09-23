@@ -1,6 +1,6 @@
 # Desktop release — one draft, two machines, published by hand
 
-How a desktop version (macOS + Windows + Linux, one shared number) gets from a commit to
+How a desktop version (macOS + Windows, one shared number; Linux shares the number but is not in this flow yet — `linux-release.md`) gets from a commit to
 a user. The platform-specific halves are `macos-release.md` (certificates,
 notarization, the package) and `windows-release.md` (signing status, the
 installer, the box); everything below is shared by both, and is the single
@@ -13,8 +13,8 @@ A desktop release happens in two halves with a manual test between them, and
 
 | | Runs | Does |
 |---|---|---|
-| Stage all | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and `linux-build.yml` and waits: GitHub-hosted runners build the `.exe` and the `.deb` from the same commit and attach them to the same draft. All three or none, onto a draft it re-creates each run (`scripts/stage-desktop.sh`; the Linux half: `linux-release.md`) |
-| **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the three assets, install, use them |
+| Stage both | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and waits: a GitHub-hosted runner builds the `.exe` from the same commit and attaches it to the same draft. Both halves or neither, onto a draft it re-creates each run (`scripts/stage-desktop.sh`) |
+| **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download both assets, install, use them |
 | **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
 | Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves both downloads are anonymously reachable, writes both `_data/*_release.json`, waits for the live appcasts. `make desktop-announce` is the same script, for a re-run |
 
@@ -25,9 +25,8 @@ staged, so re-staging never has to be untangled by hand; a release that has
 already been **published** is the exception and stops the run.
 
 Beside each installer goes a `.sha256` of what was staged. On the unsigned
-Windows channel — and the Linux `.deb`, which is not signed either — it is what a
-user can check a manual download against, and it is what `windows-release.md`
-and `linux-release.md` promise every release publishes.
+Windows channel it is what a user can check a manual download against, and it is
+what `windows-release.md` promises every release publishes.
 
 The release goes in **this** repository; only the website's own data goes to
 `taigikeyboard/taigikeyboard.github.io`:
@@ -134,5 +133,5 @@ job, so a release is never blocked on it.
 | The announcement, run by the publish | `scripts/announce-release.sh` + `.github/workflows/announce-release.yml` |
 | What only a Mac can say about the package | `macos/scripts/publish-release.sh` |
 | What only Windows can say about the installer | `windows/scripts/publish-release.sh` |
-| The Linux package and its attach step | `linux/Makefile` (`deb`), `.github/workflows/linux-build.yml`, `linux-release.md` |
+| The Linux package (built, not yet staged) | `linux/Makefile` (`deb`), `.github/workflows/linux-build.yml`, `linux-release.md` |
 | The manifest wire formats | `macos/updates/README.md`, `windows/updates/README.md` |
