@@ -1,8 +1,13 @@
-//! An IBus key event as the desktop core's [`KeyEventSnapshot`] (roadmap L5).
+//! A Linux key event as the desktop core's [`KeyEventSnapshot`] (roadmap L5).
 //!
-//! IBus hands an engine `(keyval, keycode, state)`: the X11 keysym the
-//! layout produced for the press (already shifted / Caps-Locked — `A` for
-//! Shift+a), the hardware keycode, and the modifier mask. The Windows
+//! Both frameworks hand an engine `(keysym, keycode, state)`: the X11 keysym
+//! the layout produced for the press (already shifted / Caps-Locked — `A`
+//! for Shift+a), the hardware keycode, and the modifier mask. The keycode
+//! differs on the wire: Fcitx5 carries the X keycode (evdev + 8), IBus the
+//! evdev code itself (ibus `client/gtk2/ibusimcontext.c` sends
+//! `keycode - 8`; Fcitx5's own IBus frontend adds the 8 back,
+//! `ibusfrontend.cpp:397`). [`RawKeyEvent`] holds the X keycode;
+//! [`RawKeyEvent::from_ibus`] converts at the IBus boundary. The Windows
 //! counterpart (`taigi-windows-platform::key_translation::snapshot`) has to
 //! ask the layout twice to get the characters with and without the chording
 //! modifiers; here the keysym is the answer to both questions, because X
@@ -28,12 +33,33 @@ pub mod state {
     pub const RELEASE: u32 = 1 << 30;
 }
 
-/// The three numbers IBus delivers with `ProcessKeyEvent`.
+/// X keycode = evdev code + 8, on every X server and Wayland compositor.
+const EVDEV_TO_X_KEYCODE: u32 = 8;
+
+/// A key as the framework delivers it, with the keycode in X terms.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RawKeyEvent {
     pub keyval: u32,
+    /// The X keycode (Fcitx5 `Key::code()`), never the evdev code.
     pub keycode: u32,
     pub state: u32,
+}
+
+impl RawKeyEvent {
+    /// The three numbers of IBus `ProcessKeyEvent`, whose keycode is the
+    /// evdev code. A client that sends no keycode (0) keeps none.
+    pub fn from_ibus(keyval: u32, evdev_keycode: u32, state: u32) -> Self {
+        let keycode = if evdev_keycode == 0 {
+            0
+        } else {
+            evdev_keycode + EVDEV_TO_X_KEYCODE
+        };
+        Self {
+            keyval,
+            keycode,
+            state,
+        }
+    }
 }
 
 /// The modifier mask, decoded.
@@ -164,9 +190,8 @@ fn is_named_special_keysym(keysym: Keysym) -> bool {
 /// virtual-key codes the shared chord and slot-key tables are written in
 /// (`chord.rs` `NUMBER_ROW_KEY_CODES` / `SEMICOLON_KEY_CODE`): the tables
 /// tell Shift+3 apart from a typed `#` by the KEY, which on Linux is the
-/// hardware keycode. X keycodes are evdev codes + 8 on every X server and
-/// Wayland compositor IBus supports (`KEY_1` = 2 → 10); other keys carry
-/// no code, as nothing reads one.
+/// hardware keycode — the X keycode, evdev + 8 (`KEY_1` = 2 → 10); other
+/// keys carry no code, as nothing reads one.
 fn virtual_key_code(keycode: u32) -> Option<u16> {
     match keycode {
         10..=18 => Some(0x31 + (keycode - 10) as u16),
@@ -299,6 +324,19 @@ mod tests {
             Some(0xBA)
         );
         assert_eq!(press(key::q, 24, 0).unwrap().key_code, None);
+    }
+
+    #[test]
+    fn an_ibus_keycode_is_the_evdev_code_and_gains_eight() {
+        // trace: IBus Shift+3 arrives as evdev KEY_3 = 4 → X keycode 12 →
+        // VK `3`; evdev KEY_V = 47 must not read as the `;` key (X 47).
+        let hash = snapshot(RawKeyEvent::from_ibus(key::numbersign, 4, state::SHIFT)).unwrap();
+        assert_eq!(hash.key_code, Some(0x33));
+        let v = snapshot(RawKeyEvent::from_ibus(key::V, 47, state::SHIFT)).unwrap();
+        assert_eq!(v.key_code, None);
+        let colon = snapshot(RawKeyEvent::from_ibus(key::colon, 39, state::SHIFT)).unwrap();
+        assert_eq!(colon.key_code, Some(0xBA));
+        assert_eq!(RawKeyEvent::from_ibus(key::a, 0, 0).keycode, 0);
     }
 
     #[test]

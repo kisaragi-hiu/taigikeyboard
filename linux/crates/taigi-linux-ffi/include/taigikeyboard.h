@@ -42,7 +42,7 @@ enum {
     TAIGI_EMIT_DELETE_SURROUNDING = 4, /* delete_offset / delete_count, before the caret */
     TAIGI_EMIT_LOOKUP_TABLE = 5,       /* the candidate list (table accessors) */
     TAIGI_EMIT_HIDE_LOOKUP_TABLE = 6,  /* the candidate list goes away */
-    TAIGI_EMIT_MODE_CHANGED = 7,       /* the mode label changed: re-read taigi_runtime_mode_label */
+    TAIGI_EMIT_MODE_CHANGED = 7,       /* the mode changed: re-read taigi_runtime_mode_label / _symbol */
     TAIGI_EMIT_ANNOUNCE_MODE = 8       /* show the mode briefly (showInputMethodInformation) */
 };
 
@@ -77,6 +77,13 @@ void taigi_runtime_free(TaigiRuntime *runtime);
 /* The mode label beside the icon ("台羅 · 漢字優先"); freed with
  * taigi_string_free. Null on a panic. */
 char *taigi_runtime_mode_label(const TaigiRuntime *runtime);
+/* The short form for a tray / panel indicator ("台羅" / "白話") — the
+ * symbol the IBus shell shows; freed with taigi_string_free. Null on a
+ * panic. */
+char *taigi_runtime_mode_symbol(const TaigiRuntime *runtime);
+/* Opens the settings window where the user left it (the framework's
+ * configure button). false when the binary could not be started. */
+bool taigi_open_settings(void);
 void taigi_string_free(char *text);
 /* The panel menu rows in the display language of the moment: separators
  * and actions with an id (for taigi_engine_menu_activate), a title and a
@@ -100,8 +107,9 @@ void taigi_engine_set_password_field(TaigiEngine *engine, bool is_password);
  * + 8), modifier mask. `taigi_reply_handled` says whether the key was
  * consumed; the entries say what to render either way. */
 TaigiReply *taigi_engine_key(TaigiEngine *engine, uint32_t keysym, uint32_t keycode, uint32_t states);
-/* Focus loss / reset / switch away: the framework has already committed or
- * dropped the preedit; the engine forgets the composition. */
+/* Focus loss / reset / switch away: what was on screen is already written
+ * (by the framework on focus loss, the client on reset, the shell on a
+ * switch); the engine forgets the composition. */
 TaigiReply *taigi_engine_end_session(TaigiEngine *engine);
 /* A page / cursor step from the panel (TAIGI_NAVIGATE_*). */
 TaigiReply *taigi_engine_navigate(TaigiEngine *engine, uint32_t direction);

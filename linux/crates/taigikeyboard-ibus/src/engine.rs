@@ -238,11 +238,7 @@ impl Engine {
                 &engine.runtime,
                 engine.token,
                 &mut engine.state,
-                RawKeyEvent {
-                    keyval,
-                    keycode,
-                    state,
-                },
+                RawKeyEvent::from_ibus(keyval, keycode, state),
             ))
         });
         let Some(reply) = reply else {

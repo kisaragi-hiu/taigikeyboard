@@ -124,8 +124,16 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
     `TextFormatFlag::Underline` + `setCursor`, `commitString`, `deleteSurroundingText`, a
     `CommonCandidateList` (`setPageSize`, `setLayoutHint`, `setSelectionKey`, `setGlobalCursorIndex`,
     `CandidateWord::select` = highlight + commit through the FFI) — then `updatePreedit()` +
-    `updateUserInterface(InputPanel)`; `reset` / `deactivate` end the session; `activate`
-    refreshes the status area (menu actions, § L6); `subModeLabelImpl` = the mode letter.
+    `updateUserInterface(InputPanel)`; `reset` / `deactivate` end the session. What is on
+    screen is written first wherever IBus writes it under `PREEDIT_COMMIT`: Fcitx5 writes the
+    client preedit on focus loss (5.1.7 `instance.cpp:1037`) and fcitx5-gtk before a Reset
+    (`fcitx_im_context_reset`), so the shell writes it only on a switch to another input
+    method (`deactivate` with `InputContextSwitchInputMethod` — ibus
+    `bus_input_context_unset_engine`); `activate` refreshes the status area (menu actions, § L6);
+    `subModeLabelImpl` = the mode symbol, `subMode` = the full mode label (§ L6); the
+    field's capability and password flags are read per key. `Configurable=True` with one
+    `SubConfigOption` whose `setSubConfig` opens the settings window — the configure button
+    of `fcitx5-configtool` / the KDE page, as the IBus component's `<setup>` is GNOME's.
     Built by CMake against `Fcitx5Core` (the pre-5.1.12 `add_library(MODULE)` + empty
     `PREFIX` shape of `fcitx5-rime` 5.1.8 `src/CMakeLists.txt` — Ubuntu 24.04 ships fcitx5
     5.1.7, which has neither `add_fcitx5_addon` nor `FCITX_ADDON_FACTORY_V2`), installed to
@@ -276,7 +284,10 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   no HUD: the mode is published through the engine's panel property symbol / label
   instead (§ L6) — named divergence.
 - **L5 Keys.** `KeyEventSnapshot` is built in `taigi-linux-platform::key_translation`
-  from `(keyval, keycode, state)`: `characters` = the keysym's Unicode scalar
+  from `(keyval, keycode, state)`, the keycode in X terms (evdev + 8): Fcitx5 hands the X
+  keycode (`Key::code()`), IBus the evdev code (ibus `client/gtk2/ibusimcontext.c` sends
+  `keycode - 8`), converted at the wire by `RawKeyEvent::from_ibus`. `characters` = the
+  keysym's Unicode scalar
   (`xkeysym::Keysym::key_char`), `charactersIgnoringModifiers` = the same keysym read as
   if Control were up (IBus hands the keysym the layout produced, so a Ctrl chord's
   keysym is already the letter), `shift` / `ctrl` / `alt` / `win(super)` from the mask
@@ -299,7 +310,8 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 - **L6 Panel menu = status-area actions (Fcitx5) / engine properties (IBus).** On Fcitx5:
   `SimpleAction`s registered with `userInterfaceManager()` and added to the input context's
   `statusArea()` under `StatusGroup::InputMethod` on `activate` (`fcitx5-rime` `refreshStatusArea`),
-  the mode label through `subModeLabelImpl`. On IBus: `RegisterProperties` on `Enable` and
+  the mode symbol (`chrome::mode_symbol`, what the tray / kimpanel text and the compact
+  notice read) through `subModeLabelImpl`, the full mode label through `subMode`. On IBus: `RegisterProperties` on `Enable` and
   on every `FocusIn` with a `PROP_TYPE_MENU` root whose `symbol` is the mode label (the
   panel indicator text — IBus shows an engine's symbol in the top bar) and whose
   sub-properties mirror the Mac's input-source menu row for row

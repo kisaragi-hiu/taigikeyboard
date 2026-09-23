@@ -1,6 +1,6 @@
 //! The few Linux-specific pieces the IBus engine and the settings window
 //! share, all pure (no D-Bus, no GTK): where the user's data lives (XDG),
-//! where the install put the dictionaries, how an IBus key event becomes the
+//! where the install put the dictionaries, how a framework key event becomes the
 //! desktop core's [`taigi_desktop_core::keys::KeyEventSnapshot`], how the
 //! engine opens the settings window, and which language the UI draws in.
 //!
