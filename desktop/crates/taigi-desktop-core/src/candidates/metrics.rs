@@ -1,13 +1,11 @@
 //! Every point value the candidate window's geometry is built from, resolved
-//! once from the two size choices and the typeface. Port of
+//! once from the size choice and the typeface. Port of
 //! `CandidateMetrics.swift`; the AppKit measurements go through the
 //! [`TextMeasurer`] the renderer supplies (DirectWrite in PR6, a stub in tests).
 
 use super::index_label::CandidateIndexLabel;
 use crate::composing::CandidateCellContent;
-use crate::settings::{
-    CandidateFontChoice, CandidateFontSelection, CandidateTextSizeChoice, CandidateWindowSizeChoice,
-};
+use crate::settings::{CandidateFontChoice, CandidateFontSelection, CandidateSizeChoice};
 
 /// Where a cell puts the candidate's second script (`CandidateCellArrangement.swift`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -53,12 +51,21 @@ const BASE_TAHOE_SEPARATOR_INSET: f32 = 8.0;
 const STACKED_CONTAINER_CORNER_RADIUS: f32 = 16.0;
 const INLINE_HIGHLIGHT_INSET: f32 = 2.0;
 const STACKED_HIGHLIGHT_INSET: f32 = 4.0;
+/// How much of the reference air the window keeps: the paddings are the base
+/// values times this, times the text scale, so the air grows and shrinks with
+/// the glyphs at one fixed ratio (USER 2026-09-23).
+///
+/// NAMED DIVERGENCE from `CandidateMetrics.swift`'s `chromeRatio` 0.7 (USER
+/// 2026-09-01, first real-Windows dogfood): the point values are read as DIPs
+/// here and as points on the Mac, so the same number lands differently
+/// against the platform's own chrome, and the window carried too much air on
+/// Windows. Each platform's ratio is its tightest step of the former
+/// window-size ladder (Mac 0.7 / 0.85 / 1.0, Windows 0.6 / 0.72 / 0.85).
+const CHROME_RATIO: f32 = 0.6;
 
 /// The metrics, resolved. Immutable: a size change rebuilds the window.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CandidateMetrics {
-    text_size: CandidateTextSizeChoice,
-    window_size: CandidateWindowSizeChoice,
     font_selection: CandidateFontSelection,
     cell_arrangement: CandidateCellArrangement,
     candidate_font_size: f32,
@@ -90,19 +97,18 @@ pub struct CandidateMetrics {
 }
 
 impl CandidateMetrics {
-    /// Resolves every value. Scaled values round to whole points; the text
-    /// choice scales the fonts and the text-anchored gaps, the window choice
-    /// scales the paddings.
+    /// Resolves every value. Scaled values round to whole points; the size
+    /// choice scales the fonts, the text-anchored gaps and — through
+    /// `CHROME_RATIO` — the paddings, all by the same text scale.
     pub fn resolve(
-        text_size: CandidateTextSizeChoice,
-        window_size: CandidateWindowSizeChoice,
+        size: CandidateSizeChoice,
         font_selection: CandidateFontSelection,
         cell_arrangement: CandidateCellArrangement,
         measurer: &dyn TextMeasurer,
     ) -> Self {
-        let candidate_font_size = text_size.font_size();
+        let candidate_font_size = size.font_size();
         let text_scale = candidate_font_size / BASE_CANDIDATE_FONT_SIZE;
-        let chrome_scale = window_size.scale();
+        let chrome_scale = CHROME_RATIO * text_scale;
         let annotation_font_size = (BASE_ANNOTATION_FONT_SIZE * text_scale).round();
         let index_font_size = (BASE_INDEX_FONT_SIZE * text_scale).round();
         let stacked_line_gap = (BASE_STACKED_LINE_GAP * text_scale).round();
@@ -151,8 +157,6 @@ impl CandidateMetrics {
         let primary_column_floor =
             candidate_font_size.max(measurer.width("永", candidate_font).ceil());
         Self {
-            text_size,
-            window_size,
             font_selection,
             cell_arrangement,
             candidate_font_size,
@@ -198,14 +202,6 @@ impl CandidateMetrics {
 
     // Read-only: a size change rebuilds the window (`resolve`), so no two
     // values here can disagree.
-    pub fn text_size(&self) -> CandidateTextSizeChoice {
-        self.text_size
-    }
-
-    pub fn window_size(&self) -> CandidateWindowSizeChoice {
-        self.window_size
-    }
-
     pub fn font_selection(&self) -> CandidateFontSelection {
         self.font_selection
     }
@@ -420,13 +416,11 @@ pub(crate) mod test_support {
     }
 
     pub fn metrics(
-        text: CandidateTextSizeChoice,
-        window: CandidateWindowSizeChoice,
+        size: CandidateSizeChoice,
         arrangement: CandidateCellArrangement,
     ) -> CandidateMetrics {
         CandidateMetrics::resolve(
-            text,
-            window,
+            size,
             CandidateFontSelection::default(),
             arrangement,
             &EmMeasurer,
@@ -440,106 +434,100 @@ mod tests {
     use super::*;
     use crate::settings::{CandidateFontChoice, CustomFontId, SettingChoice};
     use CandidateCellArrangement::{Inline, Stacked};
-    use CandidateTextSizeChoice as T;
-    use CandidateWindowSizeChoice as W;
+    use CandidateSizeChoice as S;
 
     #[test]
-    fn small_small_and_medium_medium_resolve_the_traced_values() {
-        // The text values follow the macOS trace (CandidateMetricsTests.swift:23-50);
-        // the chrome values follow the tighter Windows ladder (`CandidateWindowSizeChoice::scale`).
-        // trace: small — 9*0.6=5.4→5, 12*0.6=7.2→7, 8*0.6=4.8→5, item 16+7=23;
-        // medium — 14*1.25=17.5→18, 7*1.25=8.75→9, 9*0.72=6.48→6, 12*0.72=8.64→9,
-        // item 20+9=29.
-        let m = metrics(T::Small, W::Small, Inline);
+    fn every_step_resolves_the_traced_values() {
+        // The text values follow the macOS trace (CandidateMetricsTests.swift);
+        // the chrome is the tighter Windows ratio (`CHROME_RATIO` 0.6) times
+        // the text scale. trace, scale = size / 16, chrome = 0.6 * scale:
+        // 13 — scale .8125: ann 11.375→11, gap 5.6875→6, h 9*.4875=4.39→4,
+        //      v 12*.4875=5.85→6, tahoe 8*.4875=3.9→4, item 13+6=19;
+        // 15 — scale .9375: ann 13.125→13, gap 6.5625→7, h 5.06→5, v 6.75→7,
+        //      tahoe 4.5→5, item 22;
+        // 17 — scale 1.0625: ann 14.875→15, gap 7.4375→7, h 5.74→6, v 7.65→8,
+        //      tahoe 5.1→5, item 25;
+        // 20 — scale 1.25: ann 17.5→18, gap 8.75→9, h 6.75→7, v 9, tahoe 6,
+        //      item 29;
+        // 23 — scale 1.4375: ann 20.125→20, gap 10.06→10, h 7.76→8,
+        //      v 10.35→10, tahoe 6.9→7, item 33.
+        let resolved: Vec<_> = S::ALL
+            .iter()
+            .map(|size| {
+                let m = metrics(*size, Inline);
+                (
+                    m.candidate_font_size(),
+                    m.annotation_font_size(),
+                    m.candidate_annotation_gap(),
+                    m.horizontal_padding(),
+                    m.vertical_padding(),
+                    m.tahoe_separator_inset(),
+                    m.item_height(),
+                )
+            })
+            .collect();
         assert_eq!(
-            (
-                m.candidate_font_size(),
-                m.annotation_font_size(),
-                m.candidate_annotation_gap(),
-                m.horizontal_padding(),
-                m.vertical_padding(),
-                m.tahoe_separator_inset(),
-                m.item_height()
-            ),
-            (16.0, 14.0, 7.0, 5.0, 7.0, 5.0, 23.0)
+            resolved,
+            [
+                (13.0, 11.0, 6.0, 4.0, 6.0, 4.0, 19.0),
+                (15.0, 13.0, 7.0, 5.0, 7.0, 5.0, 22.0),
+                (17.0, 15.0, 7.0, 6.0, 8.0, 5.0, 25.0),
+                (20.0, 18.0, 9.0, 7.0, 9.0, 6.0, 29.0),
+                (23.0, 20.0, 10.0, 8.0, 10.0, 7.0, 33.0),
+            ]
         );
-        assert_eq!(m.scaled_symbol_metric(11.0), 11.0);
-        assert_eq!(m.scaled_symbol_metric(8.0), 8.0);
-        let m = metrics(T::Medium, W::Medium, Inline);
-        assert_eq!(
-            (
-                m.candidate_font_size(),
-                m.annotation_font_size(),
-                m.candidate_annotation_gap(),
-                m.horizontal_padding(),
-                m.vertical_padding(),
-                m.item_height()
-            ),
-            (20.0, 18.0, 9.0, 6.0, 9.0, 29.0)
-        );
+        // The symbol scaler is anchored at the 16 pt reference.
+        let m = metrics(S::Large, Inline);
+        assert_eq!(m.scaled_symbol_metric(8.0), 10.0);
     }
 
     #[test]
-    fn knobs_are_independent_and_every_pair_is_distinct_and_whole() {
-        let mut seen = Vec::new();
-        for text in T::ALL {
-            for window in W::ALL {
-                let m = metrics(*text, *window, Inline);
-                for value in [
-                    m.annotation_font_size(),
-                    m.candidate_annotation_gap(),
-                    m.index_font_size(),
-                    m.index_candidate_gap(),
-                    m.horizontal_padding(),
-                    m.vertical_padding(),
-                    m.stacked_line_gap(),
-                    m.tahoe_separator_inset(),
-                ] {
-                    assert_eq!(value, value.round(), "{text:?}/{window:?}: {value}");
-                }
-                assert!(
-                    !seen.contains(&m),
-                    "{text:?}/{window:?} duplicates an earlier pair"
-                );
-                seen.push(m);
+    fn every_step_is_whole_distinct_and_larger_than_the_last() {
+        let mut previous: Option<CandidateMetrics> = None;
+        for size in S::ALL {
+            let m = metrics(*size, Inline);
+            for value in [
+                m.annotation_font_size(),
+                m.candidate_annotation_gap(),
+                m.index_font_size(),
+                m.index_candidate_gap(),
+                m.horizontal_padding(),
+                m.vertical_padding(),
+                m.stacked_line_gap(),
+                m.tahoe_separator_inset(),
+            ] {
+                assert_eq!(value, value.round(), "{size:?}: {value}");
             }
+            if let Some(previous) = previous {
+                // One knob: the text AND the air grow with every step.
+                assert!(m.candidate_font_size() > previous.candidate_font_size());
+                assert!(m.item_height() > previous.item_height(), "{size:?}");
+                assert!(m.horizontal_padding() >= previous.horizontal_padding());
+                assert!(m.vertical_padding() >= previous.vertical_padding());
+            }
+            previous = Some(m);
         }
-        let text_moves = metrics(T::Large, W::Medium, Inline);
-        let base = metrics(T::Medium, W::Medium, Inline);
-        assert_ne!(text_moves.annotation_font_size, base.annotation_font_size);
-        assert_eq!(
-            text_moves.horizontal_padding, base.horizontal_padding,
-            "text knob leaves chrome alone"
-        );
-        let window_moves = metrics(T::Medium, W::Large, Inline);
-        assert_eq!(
-            window_moves.annotation_font_size, base.annotation_font_size,
-            "window knob leaves text alone"
-        );
-        assert_ne!(window_moves.horizontal_padding, base.horizontal_padding);
     }
 
     #[test]
     fn corner_geometry_matches_macos() {
         // trace: CandidateMetricsTests.swift:132-203.
-        let inline = metrics(T::Medium, W::Medium, Inline);
+        let inline = metrics(S::Standard, Inline);
         assert_eq!(
             inline.tahoe_container_corner_radius(),
             inline.item_height / 2.0
         );
         assert_eq!(inline.tahoe_highlight_inset(), 2.0);
-        for text in T::ALL {
-            for window in W::ALL {
-                let stacked = metrics(*text, *window, Stacked);
-                assert_eq!(stacked.tahoe_container_corner_radius(), 16.0);
-                assert_eq!(stacked.tahoe_highlight_inset(), 4.0);
-                assert_eq!(stacked.tahoe_highlight_corner_radius(), 12.0);
-                assert!(
-                    16.0 < stacked.item_height() / 2.0,
-                    "{text:?}/{window:?} {}",
-                    stacked.item_height()
-                );
-            }
+        for size in S::ALL {
+            let stacked = metrics(*size, Stacked);
+            assert_eq!(stacked.tahoe_container_corner_radius(), 16.0);
+            assert_eq!(stacked.tahoe_highlight_inset(), 4.0);
+            assert_eq!(stacked.tahoe_highlight_corner_radius(), 12.0);
+            assert!(
+                16.0 < stacked.item_height() / 2.0,
+                "{size:?} {}",
+                stacked.item_height()
+            );
         }
         assert_eq!(CandidateMetrics::corner_radius(16.0, 200.0, 57.0), 16.0);
         assert_eq!(CandidateMetrics::corner_radius(16.0, 10.0, 57.0), 5.0);
@@ -548,46 +536,40 @@ mod tests {
 
     #[test]
     fn stacked_content_without_annotations_is_one_line_tall() {
-        // trace: Medium/Medium — inline item 20+9=29; stacked resolve =
-        // ceil(24+22+3+9)=58 (gap 2*1.25=2.5→3). No annotated cell → 29
-        // (the inline height); any annotated cell → 58; Inline is 29 either
-        // way and measures no stacked lines; the variant round-trips back
-        // to the resolved box.
-        for text in T::ALL {
-            for window in W::ALL {
-                let stacked = metrics(*text, *window, Stacked);
-                let inline = metrics(*text, *window, Inline);
-                let single = stacked.for_content(false);
-                assert_eq!(
-                    single.item_height(),
-                    inline.item_height(),
-                    "{text:?}/{window:?}"
-                );
-                assert_eq!(
-                    single.stacked_line_heights(),
-                    stacked.stacked_line_heights()
-                );
-                assert!(stacked.stacked_line_heights().is_some());
-                assert!(inline.stacked_line_heights().is_none());
-                assert_eq!(stacked.for_content(true), stacked);
-                assert_eq!(single.for_content(true), stacked, "round-trips");
-                assert_eq!(single.for_content(false), single, "idempotent");
-                assert_eq!(
-                    inline.for_content(false).item_height(),
-                    inline.item_height()
-                );
-                assert_eq!(inline.for_content(true).item_height(), inline.item_height());
-            }
+        // trace: Standard — inline item 17+8=25; stacked resolve =
+        // ceil(21+18+2+8)=49 (lines ceil(17*1.2)=21 / ceil(15*1.2)=18, gap
+        // 2*1.0625=2.125→2). No annotated cell → 25 (the inline height); any
+        // annotated cell → 49; Inline is 25 either way and measures no
+        // stacked lines; the variant round-trips back to the resolved box.
+        for size in S::ALL {
+            let stacked = metrics(*size, Stacked);
+            let inline = metrics(*size, Inline);
+            let single = stacked.for_content(false);
+            assert_eq!(single.item_height(), inline.item_height(), "{size:?}");
+            assert_eq!(
+                single.stacked_line_heights(),
+                stacked.stacked_line_heights()
+            );
+            assert!(stacked.stacked_line_heights().is_some());
+            assert!(inline.stacked_line_heights().is_none());
+            assert_eq!(stacked.for_content(true), stacked);
+            assert_eq!(single.for_content(true), stacked, "round-trips");
+            assert_eq!(single.for_content(false), single, "idempotent");
+            assert_eq!(
+                inline.for_content(false).item_height(),
+                inline.item_height()
+            );
+            assert_eq!(inline.for_content(true).item_height(), inline.item_height());
         }
-        let stacked = metrics(T::Medium, W::Medium, Stacked);
-        assert_eq!(stacked.item_height(), 58.0);
-        assert_eq!(stacked.for_content(false).item_height(), 29.0);
+        let stacked = metrics(S::Standard, Stacked);
+        assert_eq!(stacked.item_height(), 49.0);
+        assert_eq!(stacked.for_content(false).item_height(), 25.0);
     }
 
     #[test]
     fn width_arithmetic_matches_macos() {
         // trace: CandidateMetricsTests.swift:220-353.
-        let m = metrics(T::Medium, W::Medium, Inline);
+        let m = metrics(S::Standard, Inline);
         let measurer = EmMeasurer;
         assert_eq!(m.measure_annotation(None, &measurer), None);
         assert_eq!(m.measure_annotation(Some(""), &measurer), None);
@@ -623,7 +605,7 @@ mod tests {
             m.candidate_font_size()
         );
 
-        let stacked = metrics(T::Medium, W::Medium, Stacked);
+        let stacked = metrics(S::Standard, Stacked);
         let wide_annotation = CandidateCellContent::new("tâi", Some("台語齒盤".into()));
         let stacked_width = stacked.measure_width(&wide_annotation, &measurer);
         assert_eq!(
@@ -649,10 +631,7 @@ mod tests {
             CandidateCellContent::new("永", None),
             CandidateCellContent::new("永", Some("".into())),
         ];
-        for m in [
-            metrics(T::Medium, W::Medium, Inline),
-            metrics(T::Medium, W::Medium, Stacked),
-        ] {
+        for m in [metrics(S::Standard, Inline), metrics(S::Standard, Stacked)] {
             for cell in &cells {
                 let primary = m.measure_primary_width(&cell.text, &measurer);
                 let annotation = m.measure_annotation(cell.annotation.as_deref(), &measurer);
@@ -678,8 +657,7 @@ mod tests {
         use CandidateCellArrangement::Inline;
         let measurer = EmMeasurer;
         let bundled = CandidateMetrics::resolve(
-            CandidateTextSizeChoice::Medium,
-            CandidateWindowSizeChoice::Medium,
+            CandidateSizeChoice::Standard,
             CandidateFontSelection::BuiltIn(CandidateFontChoice::Iansui),
             Inline,
             &measurer,
@@ -690,8 +668,7 @@ mod tests {
         );
 
         let custom = CandidateMetrics::resolve(
-            CandidateTextSizeChoice::Medium,
-            CandidateWindowSizeChoice::Medium,
+            CandidateSizeChoice::Standard,
             CandidateFontSelection::Custom(CustomFontId(1)),
             Inline,
             &measurer,

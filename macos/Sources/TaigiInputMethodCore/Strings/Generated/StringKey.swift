@@ -68,9 +68,11 @@ enum StringKey: String {
     case desktopCandidateAppearanceLight = "i18n_desktop_candidateAppearanceLight"
     case desktopCandidateAppearanceDark = "i18n_desktop_candidateAppearanceDark"
     case desktopCandidateWindowSize = "i18n_desktop_candidateWindowSize"
+    case desktopSizeExtraSmall = "i18n_desktop_sizeExtraSmall"
     case desktopSizeSmall = "i18n_desktop_sizeSmall"
     case desktopSizeMedium = "i18n_desktop_sizeMedium"
     case desktopSizeLarge = "i18n_desktop_sizeLarge"
+    case desktopSizeExtraLarge = "i18n_desktop_sizeExtraLarge"
     case desktopShortcutsTab = "i18n_desktop_shortcutsTab"
     case desktopActionNextCandidate = "i18n_desktop_actionNextCandidate"
     case desktopActionPreviousCandidate = "i18n_desktop_actionPreviousCandidate"
@@ -181,6 +183,5 @@ enum StringKey: String {
     case settingsAutoSpace = "i18n_settings_autoSpace"
     case settingsNasalMarkerUppercase = "i18n_settings_nasalMarkerUppercase"
     case themeCustomFont = "i18n_theme_customFont"
-    case themeCandidateTextSize = "i18n_theme_candidateTextSize"
     case themeEditorResetAll = "i18n_theme_editorResetAll"
 }

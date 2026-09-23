@@ -282,8 +282,10 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
   `ExpandedGridLayout`, `CandidatePanelPositioning`, `ScreenLookup`) is
   value-typed and unit-tested; AppKit layout / scroll / animation are
   dogfood-gated. Presentation keys (`candidateLayout`,
-  `candidateAppearanceMode`, `candidateWindowSize`, `candidateTextSize`,
-  `fontType`) sit beside the store's macOS-only keys, not in `EngineSettings`.
+  `candidateAppearanceMode`, `candidateTextSize`, `fontType`) sit beside the
+  store's macOS-only keys, not in `EngineSettings`. Since 2026-09-23
+  `candidateTextSize` is the window's one size knob and `candidateWindowSize`
+  is retired (S75).
   One private-API carve-out survives, guarded by `responds(to:)`: upstream's
   `_adaptiveAppearance` KVC on `NSGlassEffectView`. The
   `candidateWindowStyle` override PR3 shipped was removed (asymmetric below

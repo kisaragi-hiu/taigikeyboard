@@ -17,8 +17,7 @@
 //! fresh install types with, so the cross-platform alignment has one home.
 
 use super::choices::{
-    AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateTextSizeChoice,
-    CandidateWindowSizeChoice, SettingsPane,
+    AppearanceMode, CandidateFontChoice, CandidateLayout, CandidateSizeChoice, SettingsPane,
 };
 use super::document::SettingsKey;
 use super::engine_settings::{
@@ -169,10 +168,17 @@ pub const CANDIDATE_LAYOUT: SettingsKey<CandidateLayout> =
     SettingsKey::new("candidateLayout", CandidateLayout::Expandable);
 pub const APPEARANCE_MODE: SettingsKey<AppearanceMode> =
     SettingsKey::new("candidateAppearanceMode", AppearanceMode::Auto);
-pub const CANDIDATE_TEXT_SIZE: SettingsKey<CandidateTextSizeChoice> =
-    SettingsKey::new("candidateTextSize", CandidateTextSizeChoice::Medium);
-pub const CANDIDATE_WINDOW_SIZE: SettingsKey<CandidateWindowSizeChoice> =
-    SettingsKey::new("candidateWindowSize", CandidateWindowSizeChoice::Medium);
+/// The candidate window's one size knob. The stored name keeps the spelling
+/// from when it sized the text alone, so a size chosen then carries over
+/// (`CandidateSizeChoice::from_raw`).
+pub const CANDIDATE_SIZE: SettingsKey<CandidateSizeChoice> =
+    SettingsKey::new("candidateTextSize", CandidateSizeChoice::Standard);
+// RETIRED 2026-09-23 (USER): `candidateWindowSize` (`small` / `medium` /
+// `large`), the separate knob for the air around the text. The air now scales
+// with the text at one fixed ratio (`CandidateMetrics::resolve`). The spelling
+// is permanently reserved: a stored value still sits in existing
+// `settings.json` files (Windows has no retired-key sweep), so a future
+// padding knob must use a NEW key rather than inherit those values.
 pub const FONT_TYPE: SettingsKey<CandidateFontChoice> =
     SettingsKey::new("fontType", CandidateFontChoice::System);
 
@@ -245,12 +251,11 @@ pub const GENERAL_KEYS: [&str; 8] = [
 ];
 
 /// The keys the 外觀 pane's reset removes (`SettingsStore.swift:457-465`).
-pub const APPEARANCE_KEYS: [&str; 5] = [
+pub const APPEARANCE_KEYS: [&str; 4] = [
     APPEARANCE_MODE.name,
     CANDIDATE_LAYOUT.name,
     CANDIDATE_DISPLAY_MODE.name,
-    CANDIDATE_WINDOW_SIZE.name,
-    CANDIDATE_TEXT_SIZE.name,
+    CANDIDATE_SIZE.name,
 ];
 
 /// The 13 source toggles + 11 subcollection toggles the 詞庫來源 pane's reset

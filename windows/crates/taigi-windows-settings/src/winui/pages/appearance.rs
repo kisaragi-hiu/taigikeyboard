@@ -1,5 +1,6 @@
 //! The 外觀 pane: the window's light / dark mode, then the candidate
-//! window's own pickers — layout, the two size steps — and the reset card.
+//! window's own rows — layout, the size slider, what each cell shows — and
+//! the reset card.
 //! The TYPEFACE is not here: it moved to 字型管理 (`font_management`), where
 //! the bundled roster and the user's own typefaces are one list. Port of `AppearanceSettingsView.swift`. The values are
 //! read live by the DLL's window on every show, so a change here applies
@@ -9,11 +10,10 @@
 //! Settings itself uses for "Choose your mode" — and, since 2026-09-02, what
 //! the Mac draws too.
 
-use super::{choice_row, reset_row};
+use super::{choice_row, reset_row, step_slider_row};
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_desktop_core::settings::{
-    keys, AppearanceMode, CandidateDisplayMode, CandidateLayout, CandidateTextSizeChoice,
-    CandidateWindowSizeChoice, SettingChoice,
+    keys, AppearanceMode, CandidateDisplayMode, CandidateLayout, CandidateSizeChoice, SettingChoice,
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
@@ -44,17 +44,15 @@ pub fn view(
             |choice| Message::set_choice(choice, &keys::CANDIDATE_LAYOUT),
             context,
         ),
-        // The size rows are named steps, not continuous values: pop-ups
-        // rather than sliders (Apple HIG, Pop-up Buttons). Window size beside
-        // window layout, text size beside what the cells show — coarse to
-        // fine (USER 2026-09-21, `AppearanceSettingsView.swift`).
-        choice_row(
+        // One slider sizes the whole window — text and air together — along
+        // five named steps, beside the window layout it sizes (USER
+        // 2026-09-23, `AppearanceSettingsView.swift`).
+        step_slider_row(
             strings.resolve(StringKey::DesktopCandidateWindowSize),
-            CandidateWindowSizeChoice::ALL,
-            document.choice(&keys::CANDIDATE_WINDOW_SIZE),
-            true,
-            |choice: CandidateWindowSizeChoice| strings.resolve(choice.label_key()).to_owned(),
-            |choice| Message::set_choice(choice, &keys::CANDIDATE_WINDOW_SIZE),
+            CandidateSizeChoice::ALL,
+            document.choice(&keys::CANDIDATE_SIZE),
+            |step: CandidateSizeChoice| strings.resolve(step.label_key()).to_owned(),
+            |step| Message::set_choice(Some(step), &keys::CANDIDATE_SIZE),
             context,
         ),
         // What each cell shows, after the window rows: both scripts, or the
@@ -66,15 +64,6 @@ pub fn view(
             true,
             |choice: CandidateDisplayMode| strings.resolve(choice.label_key()).to_owned(),
             |choice| Message::set_choice(choice, &keys::CANDIDATE_DISPLAY_MODE),
-            context,
-        ),
-        choice_row(
-            strings.resolve(StringKey::ThemeCandidateTextSize),
-            CandidateTextSizeChoice::ALL,
-            document.choice(&keys::CANDIDATE_TEXT_SIZE),
-            true,
-            |choice: CandidateTextSizeChoice| strings.resolve(choice.label_key()).to_owned(),
-            |choice| Message::set_choice(choice, &keys::CANDIDATE_TEXT_SIZE),
             context,
         ),
         reset_row(strings, ResetScope::Appearance, context),

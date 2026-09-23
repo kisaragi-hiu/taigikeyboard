@@ -64,9 +64,11 @@ pub enum StringKey {
     DesktopCandidateAppearanceLight,
     DesktopCandidateAppearanceDark,
     DesktopCandidateWindowSize,
+    DesktopSizeExtraSmall,
     DesktopSizeSmall,
     DesktopSizeMedium,
     DesktopSizeLarge,
+    DesktopSizeExtraLarge,
     DesktopShortcutsTab,
     DesktopActionNextCandidate,
     DesktopActionPreviousCandidate,
@@ -181,7 +183,6 @@ pub enum StringKey {
     SettingsAutoSpace,
     SettingsNasalMarkerUppercase,
     ThemeCustomFont,
-    ThemeCandidateTextSize,
     ThemeEditorResetAll,
 }
 
@@ -246,9 +247,11 @@ impl StringKey {
             Self::DesktopCandidateAppearanceLight => "i18n_desktop_candidateAppearanceLight",
             Self::DesktopCandidateAppearanceDark => "i18n_desktop_candidateAppearanceDark",
             Self::DesktopCandidateWindowSize => "i18n_desktop_candidateWindowSize",
+            Self::DesktopSizeExtraSmall => "i18n_desktop_sizeExtraSmall",
             Self::DesktopSizeSmall => "i18n_desktop_sizeSmall",
             Self::DesktopSizeMedium => "i18n_desktop_sizeMedium",
             Self::DesktopSizeLarge => "i18n_desktop_sizeLarge",
+            Self::DesktopSizeExtraLarge => "i18n_desktop_sizeExtraLarge",
             Self::DesktopShortcutsTab => "i18n_desktop_shortcutsTab",
             Self::DesktopActionNextCandidate => "i18n_desktop_actionNextCandidate",
             Self::DesktopActionPreviousCandidate => "i18n_desktop_actionPreviousCandidate",
@@ -363,7 +366,6 @@ impl StringKey {
             Self::SettingsAutoSpace => "i18n_settings_autoSpace",
             Self::SettingsNasalMarkerUppercase => "i18n_settings_nasalMarkerUppercase",
             Self::ThemeCustomFont => "i18n_theme_customFont",
-            Self::ThemeCandidateTextSize => "i18n_theme_candidateTextSize",
             Self::ThemeEditorResetAll => "i18n_theme_editorResetAll",
         }
     }
@@ -440,9 +442,11 @@ fn hanji(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopCandidateAppearanceLight => "淺色",
         StringKey::DesktopCandidateAppearanceDark => "深色",
         StringKey::DesktopCandidateWindowSize => "選字窗大細",
+        StringKey::DesktopSizeExtraSmall => "上細",
         StringKey::DesktopSizeSmall => "細",
         StringKey::DesktopSizeMedium => "標準",
         StringKey::DesktopSizeLarge => "大",
+        StringKey::DesktopSizeExtraLarge => "上大",
         StringKey::DesktopShortcutsTab => "快速齒",
         StringKey::DesktopActionNextCandidate => "後一个字",
         StringKey::DesktopActionPreviousCandidate => "頂一个字",
@@ -557,7 +561,6 @@ fn hanji(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsAutoSpace => "自動閬一格",
         StringKey::SettingsNasalMarkerUppercase => "大本字時 ⁿ 轉做 ᴺ",
         StringKey::ThemeCustomFont => "字型設定",
-        StringKey::ThemeCandidateTextSize => "候選詞大細",
         StringKey::ThemeEditorResetAll => "恢復預設設定",
     })
 }
@@ -622,9 +625,11 @@ fn en(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopCandidateAppearanceLight => "Light",
         StringKey::DesktopCandidateAppearanceDark => "Dark",
         StringKey::DesktopCandidateWindowSize => "Candidate Window Size",
+        StringKey::DesktopSizeExtraSmall => "Extra Small",
         StringKey::DesktopSizeSmall => "Small",
         StringKey::DesktopSizeMedium => "Standard",
         StringKey::DesktopSizeLarge => "Large",
+        StringKey::DesktopSizeExtraLarge => "Extra Large",
         StringKey::DesktopShortcutsTab => "Shortcuts",
         StringKey::DesktopActionNextCandidate => "Next Candidate",
         StringKey::DesktopActionPreviousCandidate => "Previous Candidate",
@@ -739,7 +744,6 @@ fn en(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsAutoSpace => "Auto-Space",
         StringKey::SettingsNasalMarkerUppercase => "ⁿ becomes ᴺ in capitals",
         StringKey::ThemeCustomFont => "Font",
-        StringKey::ThemeCandidateTextSize => "Candidate Text Size",
         StringKey::ThemeEditorResetAll => "Reset to Defaults",
     })
 }
@@ -804,9 +808,11 @@ fn ja(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopCandidateAppearanceLight => "ライト",
         StringKey::DesktopCandidateAppearanceDark => "ダーク",
         StringKey::DesktopCandidateWindowSize => "候補ウィンドウの大きさ",
+        StringKey::DesktopSizeExtraSmall => "特小",
         StringKey::DesktopSizeSmall => "小",
         StringKey::DesktopSizeMedium => "標準",
         StringKey::DesktopSizeLarge => "大",
+        StringKey::DesktopSizeExtraLarge => "特大",
         StringKey::DesktopShortcutsTab => "ショートカット",
         StringKey::DesktopActionNextCandidate => "次の候補",
         StringKey::DesktopActionPreviousCandidate => "前の候補",
@@ -921,7 +927,6 @@ fn ja(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsAutoSpace => "自動スペース",
         StringKey::SettingsNasalMarkerUppercase => "大文字では ⁿ を ᴺ に",
         StringKey::ThemeCustomFont => "フォント",
-        StringKey::ThemeCandidateTextSize => "候補の文字の大きさ",
         StringKey::ThemeEditorResetAll => "既定値に戻す",
     })
 }
@@ -986,9 +991,11 @@ fn tailo(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopCandidateAppearanceLight => "Tshián-sik",
         StringKey::DesktopCandidateAppearanceDark => "Tshim-sik",
         StringKey::DesktopCandidateWindowSize => "Suán-jī-thang tuā-sè",
+        StringKey::DesktopSizeExtraSmall => "Siōng sè",
         StringKey::DesktopSizeSmall => "Sè",
         StringKey::DesktopSizeMedium => "Piau-tsún",
         StringKey::DesktopSizeLarge => "Tuā",
+        StringKey::DesktopSizeExtraLarge => "Siōng tuā",
         StringKey::DesktopShortcutsTab => "Khuài-sok khí",
         StringKey::DesktopActionNextCandidate => "Āu tsi̍t ê jī",
         StringKey::DesktopActionPreviousCandidate => "Tíng tsi̍t ê jī",
@@ -1103,7 +1110,6 @@ fn tailo(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsAutoSpace => "Tsū-tōng làng tsi̍t ê phāng",
         StringKey::SettingsNasalMarkerUppercase => "Tuā-pún-jī sî ⁿ tsuán tsò ᴺ",
         StringKey::ThemeCustomFont => "Jī-hîng siat-tīng",
-        StringKey::ThemeCandidateTextSize => "Hāu-suán sû tuā-sè",
         StringKey::ThemeEditorResetAll => "Hue-ho̍k ī-siat siat-tīng",
     })
 }
@@ -1168,9 +1174,11 @@ fn poj(key: StringKey) -> Option<&'static str> {
         StringKey::DesktopCandidateAppearanceLight => "Chhián-sek",
         StringKey::DesktopCandidateAppearanceDark => "Chhim-sek",
         StringKey::DesktopCandidateWindowSize => "Soán-jī-thang tōa-sè",
+        StringKey::DesktopSizeExtraSmall => "Siōng sè",
         StringKey::DesktopSizeSmall => "Sè",
         StringKey::DesktopSizeMedium => "Piau-chún",
         StringKey::DesktopSizeLarge => "Tōa",
+        StringKey::DesktopSizeExtraLarge => "Siōng tōa",
         StringKey::DesktopShortcutsTab => "Khoài-sok khí",
         StringKey::DesktopActionNextCandidate => "Āu chi̍t ê jī",
         StringKey::DesktopActionPreviousCandidate => "Téng chi̍t ê jī",
@@ -1285,7 +1293,6 @@ fn poj(key: StringKey) -> Option<&'static str> {
         StringKey::SettingsAutoSpace => "Chū-tōng làng chi̍t ê phāng",
         StringKey::SettingsNasalMarkerUppercase => "Tōa-pún-jī sî ⁿ choán chò ᴺ",
         StringKey::ThemeCustomFont => "Jī-hêng siat-tēng",
-        StringKey::ThemeCandidateTextSize => "Hāu-soán sû tōa-sè",
         StringKey::ThemeEditorResetAll => "Hoe-ho̍k ī-siat siat-tēng",
     })
 }

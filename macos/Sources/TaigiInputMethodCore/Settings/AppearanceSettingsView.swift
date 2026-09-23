@@ -3,10 +3,10 @@
 import SwiftUI
 
 /// The 外觀 pane of the settings window: an 外觀 pop-up of light/dark/auto,
-/// then the candidate window's own pickers — layout, what each cell shows and
-/// the two size steps. Every row is the same pop-up menu in one group, so the
-/// pane reads as one list rather than a drawn selector fenced off above a
-/// stack of menus (USER 2026-09-02).
+/// then the candidate window's own rows — layout, the size slider and what
+/// each cell shows. Every row sits in one group, so the pane reads as one
+/// list rather than a drawn selector fenced off above a stack of menus
+/// (USER 2026-09-02).
 ///
 /// Three rows are deliberately absent, each argued where it lives: no
 /// accent-colour swatch (see `CandidateAccentColor`), no chrome-generation
@@ -28,11 +28,8 @@ struct AppearanceSettingsView: View {
     @AppStorage(SettingsStore.Keys.candidateLayout.name)
     private var candidateLayout = SettingsStore.Keys.candidateLayout.defaultValue
 
-    @AppStorage(SettingsStore.Keys.candidateWindowSize.name)
-    private var candidateWindowSize = SettingsStore.Keys.candidateWindowSize.defaultValue
-
-    @AppStorage(SettingsStore.Keys.candidateTextSize.name)
-    private var candidateTextSize = SettingsStore.Keys.candidateTextSize.defaultValue
+    @AppStorage(SettingsStore.Keys.candidateSize.name)
+    private var candidateSize = SettingsStore.Keys.candidateSize.defaultValue
 
     @AppStorage(SettingsStore.Keys.candidateDisplayMode.name)
     private var candidateDisplayMode = SettingsStore.Keys.candidateDisplayMode.defaultValue
@@ -53,17 +50,15 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.desktopCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
                     Text(language.string(.desktopCandidateLayoutVertical)).tag(CandidateLayout.vertical)
                 }
-                // The size rows are named steps, not continuous values, so
-                // they are pop-up menus like the rows above rather than
-                // sliders (Apple HIG, Pop-up Buttons: a flat list of mutually
-                // exclusive choices). Window size beside window layout, text
-                // size beside what the cells show — coarse to fine (USER
-                // 2026-09-21).
-                Picker(language.string(.desktopCandidateWindowSize), selection: $candidateWindowSize) {
-                    Text(language.string(.desktopSizeSmall)).tag(CandidateWindowSizeChoice.small)
-                    Text(language.string(.desktopSizeMedium)).tag(CandidateWindowSizeChoice.medium)
-                    Text(language.string(.desktopSizeLarge)).tag(CandidateWindowSizeChoice.large)
-                }
+                // One slider sizes the whole window — text and air together —
+                // along five named steps, beside the window layout it sizes
+                // (USER 2026-09-23: a slider, not a pop-up; the steps are
+                // ordered small to large, which a track shows at a glance).
+                CandidateSizeSlider(
+                    title: language.string(.desktopCandidateWindowSize),
+                    size: $candidateSize,
+                    stepName: { language.string($0.labelKey) },
+                )
                 // What each cell shows, after the window rows: both
                 // scripts side by side (today's rendering), each script as its
                 // own adjacent cell, or the romanization alone. Bound like the rows around
@@ -76,11 +71,6 @@ struct AppearanceSettingsView: View {
                         .tag(CandidateDisplayMode.combined)
                     Text(language.string(.settingsCandidateDisplayModeRomanOnly))
                         .tag(CandidateDisplayMode.romanOnly)
-                }
-                Picker(language.string(.themeCandidateTextSize), selection: $candidateTextSize) {
-                    Text(language.string(.desktopSizeSmall)).tag(CandidateTextSizeChoice.small)
-                    Text(language.string(.desktopSizeMedium)).tag(CandidateTextSizeChoice.medium)
-                    Text(language.string(.desktopSizeLarge)).tag(CandidateTextSizeChoice.large)
                 }
             }
 
@@ -101,5 +91,52 @@ struct AppearanceSettingsView: View {
     /// to the default it was declared with.
     private func restoreDefaults() {
         SettingsStore().resetAppearanceSettings()
+    }
+}
+
+/// The size row: a slider that snaps to the five steps, then the current
+/// step's name. The name slot stacks every name and shows only the current
+/// one, so it is always the widest name wide and the track does not move as
+/// the name changes.
+private struct CandidateSizeSlider: View {
+    let title: String
+    @Binding var size: CandidateSizeChoice
+    let stepName: (CandidateSizeChoice) -> String
+
+    private static let steps = CandidateSizeChoice.allCases
+
+    /// The slider's position, `0` = the smallest step.
+    private var position: Binding<Double> {
+        Binding(
+            get: { Double(Self.steps.firstIndex(of: size) ?? 0) },
+            set: { newValue in
+                // Clamped while still a `Double`: converting a NaN, an
+                // infinity or an out-of-range value to `Int` would trap.
+                let last = Double(Self.steps.count - 1)
+                let index = newValue.isNaN ? 0 : Int(min(max(newValue, 0), last).rounded())
+                // A drag reports every movement; only a new step is a write.
+                if Self.steps[index] != size {
+                    size = Self.steps[index]
+                }
+            },
+        )
+    }
+
+    var body: some View {
+        LabeledContent(title) {
+            HStack(spacing: 12) {
+                Slider(value: position, in: 0 ... Double(Self.steps.count - 1), step: 1) {
+                    Text(title)
+                }
+                .labelsHidden()
+                .accessibilityValue(stepName(size))
+                ZStack(alignment: .leading) {
+                    ForEach(Self.steps, id: \.self) { step in
+                        Text(stepName(step)).opacity(step == size ? 1 : 0)
+                    }
+                }
+                .accessibilityHidden(true)
+            }
+        }
     }
 }

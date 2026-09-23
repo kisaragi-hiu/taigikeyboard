@@ -773,7 +773,7 @@
       }
     },
     "candidateWindowSize": {
-      "comment": "Picker label: how much air the candidate window puts around its text.",
+      "comment": "Slider label: the candidate window's one size knob — the text, the gaps and the air around them scale together (USER 2026-09-23).",
       "scope": {
         "platforms": [
           "macos",
@@ -792,8 +792,28 @@
         "ja": "候補ウィンドウの大きさ"
       }
     },
+    "sizeExtraSmall": {
+      "comment": "Size-slider step name: the smallest step (USER 2026-09-23).",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "上細",
+        "tailo": "Siōng sè",
+        "poj": "Siōng sè",
+        "en": "Extra Small",
+        "ja": "特小"
+      }
+    },
     "sizeSmall": {
-      "comment": "Picker value shared by the candidate window-size and text-size rows: the smallest step.",
+      "comment": "Size-slider step name: the second-smallest step.",
       "scope": {
         "platforms": [
           "macos",
@@ -813,7 +833,7 @@
       }
     },
     "sizeMedium": {
-      "comment": "Picker value shared by the candidate window-size and text-size rows: the default step, named Standard (USER 2026-08-21).",
+      "comment": "Size-slider step name: the default, middle step, named Standard (USER 2026-08-21).",
       "scope": {
         "platforms": [
           "macos",
@@ -833,7 +853,7 @@
       }
     },
     "sizeLarge": {
-      "comment": "Picker value shared by the candidate window-size and text-size rows: the larger step.",
+      "comment": "Size-slider step name: the second-largest step.",
       "scope": {
         "platforms": [
           "macos",
@@ -850,6 +870,26 @@
         "poj": "Tōa",
         "en": "Large",
         "ja": "大"
+      }
+    },
+    "sizeExtraLarge": {
+      "comment": "Size-slider step name: the largest step (USER 2026-09-23).",
+      "scope": {
+        "platforms": [
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "上大",
+        "tailo": "Siōng tuā",
+        "poj": "Siōng tōa",
+        "en": "Extra Large",
+        "ja": "特大"
       }
     },
     "shortcutsTab": {

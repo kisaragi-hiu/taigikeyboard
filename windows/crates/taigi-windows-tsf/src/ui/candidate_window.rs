@@ -29,7 +29,7 @@ use taigi_desktop_core::composing::CandidateCellContent;
 use taigi_desktop_core::keys::{CandidateNavigation, CandidateSlotKeySet};
 use taigi_desktop_core::settings::{
     keys, stored_font_selection, AppearanceMode, CandidateFontSelection, CandidateLayout,
-    CandidateTextSizeChoice, CandidateWindowSizeChoice, SettingsDocument, StoredFontSelection,
+    CandidateSizeChoice, SettingsDocument, StoredFontSelection,
 };
 use windows::Win32::Foundation::{POINT, RECT};
 use windows::Win32::Graphics::Direct2D::Common::{D2D1_COLOR_F, D2D_RECT_F, D2D_SIZE_U};
@@ -306,8 +306,7 @@ impl CandidateWindow {
             factory: &self.factory,
         };
         let metrics = CandidateMetrics::resolve(
-            settings.choice::<CandidateTextSizeChoice>(&keys::CANDIDATE_TEXT_SIZE),
-            settings.choice::<CandidateWindowSizeChoice>(&keys::CANDIDATE_WINDOW_SIZE),
+            settings.choice::<CandidateSizeChoice>(&keys::CANDIDATE_SIZE),
             self.font_selection(settings),
             layout.cell_arrangement(),
             &measurer,

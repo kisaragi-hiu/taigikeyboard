@@ -70,9 +70,11 @@ enum GeneratedStrings {
         .desktopCandidateAppearanceLight: "淺色",
         .desktopCandidateAppearanceDark: "深色",
         .desktopCandidateWindowSize: "選字窗大細",
+        .desktopSizeExtraSmall: "上細",
         .desktopSizeSmall: "細",
         .desktopSizeMedium: "標準",
         .desktopSizeLarge: "大",
+        .desktopSizeExtraLarge: "上大",
         .desktopShortcutsTab: "快速齒",
         .desktopActionNextCandidate: "後一个字",
         .desktopActionPreviousCandidate: "頂一个字",
@@ -183,7 +185,6 @@ enum GeneratedStrings {
         .settingsAutoSpace: "自動閬一格",
         .settingsNasalMarkerUppercase: "大本字時 ⁿ 轉做 ᴺ",
         .themeCustomFont: "字型設定",
-        .themeCandidateTextSize: "候選詞大細",
         .themeEditorResetAll: "恢復預設設定",
     ]
     private static let english: [StringKey: String] = [
@@ -253,9 +254,11 @@ enum GeneratedStrings {
         .desktopCandidateAppearanceLight: "Light",
         .desktopCandidateAppearanceDark: "Dark",
         .desktopCandidateWindowSize: "Candidate Window Size",
+        .desktopSizeExtraSmall: "Extra Small",
         .desktopSizeSmall: "Small",
         .desktopSizeMedium: "Standard",
         .desktopSizeLarge: "Large",
+        .desktopSizeExtraLarge: "Extra Large",
         .desktopShortcutsTab: "Shortcuts",
         .desktopActionNextCandidate: "Next Candidate",
         .desktopActionPreviousCandidate: "Previous Candidate",
@@ -366,7 +369,6 @@ enum GeneratedStrings {
         .settingsAutoSpace: "Auto-Space",
         .settingsNasalMarkerUppercase: "ⁿ becomes ᴺ in capitals",
         .themeCustomFont: "Font",
-        .themeCandidateTextSize: "Candidate Text Size",
         .themeEditorResetAll: "Reset to Defaults",
     ]
     private static let japanese: [StringKey: String] = [
@@ -436,9 +438,11 @@ enum GeneratedStrings {
         .desktopCandidateAppearanceLight: "ライト",
         .desktopCandidateAppearanceDark: "ダーク",
         .desktopCandidateWindowSize: "候補ウィンドウの大きさ",
+        .desktopSizeExtraSmall: "特小",
         .desktopSizeSmall: "小",
         .desktopSizeMedium: "標準",
         .desktopSizeLarge: "大",
+        .desktopSizeExtraLarge: "特大",
         .desktopShortcutsTab: "ショートカット",
         .desktopActionNextCandidate: "次の候補",
         .desktopActionPreviousCandidate: "前の候補",
@@ -549,7 +553,6 @@ enum GeneratedStrings {
         .settingsAutoSpace: "自動スペース",
         .settingsNasalMarkerUppercase: "大文字では ⁿ を ᴺ に",
         .themeCustomFont: "フォント",
-        .themeCandidateTextSize: "候補の文字の大きさ",
         .themeEditorResetAll: "既定値に戻す",
     ]
     private static let tailo: [StringKey: String] = [
@@ -619,9 +622,11 @@ enum GeneratedStrings {
         .desktopCandidateAppearanceLight: "Tshián-sik",
         .desktopCandidateAppearanceDark: "Tshim-sik",
         .desktopCandidateWindowSize: "Suán-jī-thang tuā-sè",
+        .desktopSizeExtraSmall: "Siōng sè",
         .desktopSizeSmall: "Sè",
         .desktopSizeMedium: "Piau-tsún",
         .desktopSizeLarge: "Tuā",
+        .desktopSizeExtraLarge: "Siōng tuā",
         .desktopShortcutsTab: "Khuài-sok khí",
         .desktopActionNextCandidate: "Āu tsi̍t ê jī",
         .desktopActionPreviousCandidate: "Tíng tsi̍t ê jī",
@@ -732,7 +737,6 @@ enum GeneratedStrings {
         .settingsAutoSpace: "Tsū-tōng làng tsi̍t ê phāng",
         .settingsNasalMarkerUppercase: "Tuā-pún-jī sî ⁿ tsuán tsò ᴺ",
         .themeCustomFont: "Jī-hîng siat-tīng",
-        .themeCandidateTextSize: "Hāu-suán sû tuā-sè",
         .themeEditorResetAll: "Hue-ho̍k ī-siat siat-tīng",
     ]
     private static let poj: [StringKey: String] = [
@@ -802,9 +806,11 @@ enum GeneratedStrings {
         .desktopCandidateAppearanceLight: "Chhián-sek",
         .desktopCandidateAppearanceDark: "Chhim-sek",
         .desktopCandidateWindowSize: "Soán-jī-thang tōa-sè",
+        .desktopSizeExtraSmall: "Siōng sè",
         .desktopSizeSmall: "Sè",
         .desktopSizeMedium: "Piau-chún",
         .desktopSizeLarge: "Tōa",
+        .desktopSizeExtraLarge: "Siōng tōa",
         .desktopShortcutsTab: "Khoài-sok khí",
         .desktopActionNextCandidate: "Āu chi̍t ê jī",
         .desktopActionPreviousCandidate: "Téng chi̍t ê jī",
@@ -915,7 +921,6 @@ enum GeneratedStrings {
         .settingsAutoSpace: "Chū-tōng làng chi̍t ê phāng",
         .settingsNasalMarkerUppercase: "Tōa-pún-jī sî ⁿ choán chò ᴺ",
         .themeCustomFont: "Jī-hêng siat-tēng",
-        .themeCandidateTextSize: "Hāu-soán sû tōa-sè",
         .themeEditorResetAll: "Hoe-ho̍k ī-siat siat-tēng",
     ]
 

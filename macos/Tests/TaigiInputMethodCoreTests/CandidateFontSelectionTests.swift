@@ -24,14 +24,14 @@ final class CandidateFontSelectionTests: XCTestCase {
     /// first font's cells after the user picked the second.
     func testMetrics_differBetweenTwoCustomFonts_soThePanelsRebuild() {
         let first = CandidateMetrics(
-            textSize: .medium, windowSize: .medium, fontSelection: .custom(customFont("one.ttf")),
+            size: .standard, fontSelection: .custom(customFont("one.ttf")),
         )
         let second = CandidateMetrics(
-            textSize: .medium, windowSize: .medium, fontSelection: .custom(customFont("two.ttf")),
+            size: .standard, fontSelection: .custom(customFont("two.ttf")),
         )
 
         XCTAssertNotEqual(first, second)
-        XCTAssertNotEqual(first, CandidateMetrics(textSize: .medium, windowSize: .medium))
+        XCTAssertNotEqual(first, CandidateMetrics(size: .standard))
     }
 
     /// An unresolvable face falls back to the system font, like the bundled
@@ -49,7 +49,7 @@ final class CandidateFontSelectionTests: XCTestCase {
     /// bundled arithmetic is left exactly as it shipped.
     func testInlineHeight_isMeasuredForACustomFace_andUnchangedForABundledOne() {
         let bundled = CandidateMetrics(
-            textSize: .medium, windowSize: .medium, fontSelection: .builtIn(.iansui),
+            size: .standard, fontSelection: .builtIn(.iansui),
         )
         XCTAssertEqual(bundled.itemHeight, bundled.candidateFontSize + bundled.verticalPadding)
 
@@ -57,7 +57,7 @@ final class CandidateFontSelectionTests: XCTestCase {
         // font — whose line box at 20pt is taller than 20pt. What the case
         // pins is that the custom branch MEASURES rather than assuming.
         let custom = CandidateMetrics(
-            textSize: .medium, windowSize: .medium, fontSelection: .custom(customFont("one.ttf")),
+            size: .standard, fontSelection: .custom(customFont("one.ttf")),
         )
         XCTAssertGreaterThan(custom.itemHeight, custom.candidateFontSize + custom.verticalPadding)
     }
@@ -108,7 +108,7 @@ final class CandidateFontSelectionTests: XCTestCase {
     func testInlineHeight_isMeasuredForAnInstalledFace() throws {
         let family = try TestFixtures.anyInstalledFamily()
         let metrics = CandidateMetrics(
-            textSize: .medium, windowSize: .medium, fontSelection: .installed(family: family),
+            size: .standard, fontSelection: .installed(family: family),
         )
 
         XCTAssertTrue(metrics.fontSelection.requiresLineBoxMeasurement)

@@ -1,55 +1,63 @@
-// How big the candidate window renders: the two size choices, resolved to points.
+// How big the candidate window renders: the size choice, resolved to points.
 
 import AppKit
 
-/// The candidate text size a user can choose — resolved to the candidate
-/// font's point size. `small` is the 16pt the window originally rendered at;
-/// the ladder above it was raised a step (USER 2026-08-21: bigger text, less
-/// whitespace — the window should spend its points on the glyphs).
+/// How big the candidate window renders — one knob for the whole window: the
+/// text, the gaps and the air around them all scale off the candidate font
+/// size (USER 2026-09-23, which merged the separate text-size and window-size
+/// pickers and made the default a step smaller).
 ///
-/// `String` raw values so the choice persists through `UserDefaults` and
-/// `@AppStorage`; an unknown stored value reads back as the default.
-enum CandidateTextSizeChoice: String, CaseIterable, Sendable {
-    case small
-    case medium
-    case large
+/// The raw value is the point size, so a stored step never collides with the
+/// spellings the two-knob ladder wrote under the same key; those three read as
+/// the step nearest the size they rendered (`init(rawValue:)`). An unknown
+/// stored value reads back as the default (`SettingsStore.choice`).
+enum CandidateSizeChoice: String, CaseIterable, Sendable {
+    case extraSmall = "13"
+    case small = "15"
+    case standard = "17"
+    case large = "20"
+    case extraLarge = "23"
 
-    /// The candidate column's font size. The annotation font and the gaps
-    /// scale off this — see `CandidateMetrics`. Three steps, not four: the
-    /// 特大 tier was dropped (USER 2026-08-21); an install that stored it
-    /// reads back as the default (`SettingsStore.choice`).
-    var candidateFontSize: CGFloat {
-        switch self {
-        case .small: 16
-        case .medium: 20
-        case .large: 23
+    /// The current spellings, plus the text-size ladder's before the merge:
+    /// 16pt → 15, 20 → 20, 23 → 23 (USER 2026-09-23). A never-touched
+    /// install has no key and takes the new default.
+    init?(rawValue: String) {
+        switch rawValue {
+        case "small": self = .small
+        case "medium": self = .large
+        case "large": self = .extraLarge
+        default:
+            guard let step = Self.allCases.first(where: { $0.rawValue == rawValue }) else { return nil }
+            self = step
         }
     }
-}
 
-/// The candidate window's chrome size — resolved to a multiplier over the
-/// cell paddings. Independent of the text choice: this knob is how much air
-/// the window puts around the text, not how big the text is.
-///
-/// The whole ladder sits at or below upstream's paddings: MacishType's
-/// original air is the LARGE end, and the default is tighter than it
-/// (USER 2026-08-21: the window left too much whitespace around the text).
-enum CandidateWindowSizeChoice: String, CaseIterable, Sendable {
-    case small
-    case medium
-    case large
-
-    var chromeScale: CGFloat {
+    /// The candidate column's font size. The annotation font, the gaps and
+    /// the paddings scale off this — see `CandidateMetrics`.
+    var candidateFontSize: CGFloat {
         switch self {
-        case .small: 0.7
-        case .medium: 0.85
-        case .large: 1.0
+        case .extraSmall: 13
+        case .small: 15
+        case .standard: 17
+        case .large: 20
+        case .extraLarge: 23
+        }
+    }
+
+    /// The step's name beside the slider.
+    var labelKey: StringKey {
+        switch self {
+        case .extraSmall: .desktopSizeExtraSmall
+        case .small: .desktopSizeSmall
+        case .standard: .desktopSizeMedium
+        case .large: .desktopSizeLarge
+        case .extraLarge: .desktopSizeExtraLarge
         }
     }
 }
 
 /// Every point value the candidate window's geometry is built from, resolved
-/// once from the two size choices — plus the typeface they are measured in.
+/// once from the size choice — plus the typeface it is measured in.
 ///
 /// Upstream MacishType scales one mutable set of static metrics off a single
 /// font size (`MacishCandidateItemView.updateFontSize`,
@@ -60,15 +68,15 @@ enum CandidateWindowSizeChoice: String, CaseIterable, Sendable {
 /// change rebuilds the panels (`CandidatePanel.panel(for:)`) rather than
 /// mutating metrics under views that would not follow.
 ///
-/// Base values are upstream's at 16pt. The text choice scales the fonts and
-/// the inter-column gap — text-anchored distances; the window choice scales
-/// the paddings — the air around the text. Scaled values round to whole
-/// points the way upstream rounds, so cell arithmetic stays crisp.
+/// Base values are upstream's at 16pt. The size choice scales the fonts, the
+/// text-anchored gaps and — through `chromeRatio` — the paddings, all by one
+/// text scale, so the air grows and shrinks with the glyphs. Scaled values
+/// round to whole points the way upstream rounds, so cell arithmetic stays
+/// crisp.
 struct CandidateMetrics: Equatable, Sendable {
     /// What this value was resolved from, kept so a layout can ask for the
     /// same sizes under a different cell arrangement.
-    let textSize: CandidateTextSizeChoice
-    let windowSize: CandidateWindowSizeChoice
+    let size: CandidateSizeChoice
     /// The typeface both scripts render in — one of the bundled roster, or one
     /// the user added (`CandidateFontSelection`). Not a point value like the
     /// rest of this type, but it belongs here for the two reasons the sizes do:
@@ -112,7 +120,7 @@ struct CandidateMetrics: Equatable, Sendable {
     /// are fixed here, and the layouts read this once per cell they place.
     let itemHeight: CGFloat
     /// How far Tahoe pulls a hairline in from the window's rounded edge, so
-    /// the separator does not touch the curve. A chrome-scaled visual constant,
+    /// the separator does not touch the curve. A padding-scaled visual constant,
     /// not a function of the radius it clears — the same value also shortens
     /// the chevron's and the page arrow's separators, split across both ends
     /// (`CandidateChevronView`, `CandidatePageArrowView`), which no radius
@@ -145,15 +153,14 @@ struct CandidateMetrics: Equatable, Sendable {
     /// Upstream takes `itemHeight / 2` unconditionally
     /// (`MacishBasePanel.swift`), which reads as macOS 26's capsule because
     /// every upstream cell is one line ~30pt tall — the size range the system
-    /// itself capsules (large controls). A stacked cell is two lines and runs
-    /// 45-65pt across the size ladder, where the same formula draws a stadium
+    /// itself capsules (large controls). A stacked cell is two lines tall at
+    /// every step of the size ladder, where the same formula draws a stadium
     /// that dwarfs the text inside it (USER 2026-08-25, real device).
     ///
-    /// Fixed rather than scaled by either knob: the chrome knob is how much
-    /// air the window keeps, and the text knob how big the glyphs are —
-    /// neither is a licence to change the container's shape language, and a
-    /// radius that moved with them would round the window differently at every
-    /// setting.
+    /// Fixed rather than scaled by the size choice: how big the window is
+    /// drawn is no licence to change the container's shape language, and a
+    /// radius that moved with it would round the window differently at every
+    /// step.
     var tahoeContainerCornerRadius: CGFloat {
         switch cellArrangement {
         case .inline: itemHeight / 2
@@ -223,26 +230,32 @@ struct CandidateMetrics: Equatable, Sendable {
     /// worth (`MacishCandidateItemView.swift`).
     private static let inlineHighlightInset: CGFloat = 2
     private static let stackedHighlightInset: CGFloat = 4
+    /// How much of upstream's air the window keeps: the paddings are the base
+    /// values times this, times the text scale (USER 2026-09-23). The
+    /// tightest step of the former window-size ladder (0.7 / 0.85 / 1.0) —
+    /// the window left too much whitespace around the text (USER 2026-08-21).
+    /// Windows keeps a tighter ratio, a named divergence
+    /// (`taigi-desktop-core` `candidates/metrics.rs` `CHROME_RATIO`).
+    private static let chromeRatio: CGFloat = 0.7
 
     init(
-        textSize: CandidateTextSizeChoice,
-        windowSize: CandidateWindowSizeChoice,
+        size: CandidateSizeChoice,
         fontSelection: CandidateFontSelection = .default,
         cellArrangement: CandidateCellArrangement = .inline,
     ) {
-        let textScale = textSize.candidateFontSize / Self.baseCandidateFontSize
-        self.textSize = textSize
-        self.windowSize = windowSize
+        let textScale = size.candidateFontSize / Self.baseCandidateFontSize
+        let chromeScale = Self.chromeRatio * textScale
+        self.size = size
         self.fontSelection = fontSelection
-        candidateFontSize = textSize.candidateFontSize
+        candidateFontSize = size.candidateFontSize
         annotationFontSize = (Self.baseAnnotationFontSize * textScale).rounded()
         candidateAnnotationGap = (Self.baseCandidateAnnotationGap * textScale).rounded()
         indexFontSize = (Self.baseIndexFontSize * textScale).rounded()
         indexCandidateGap = (Self.baseIndexCandidateGap * textScale).rounded()
         stackedLineGap = (Self.baseStackedLineGap * textScale).rounded()
-        horizontalPadding = (Self.baseHorizontalPadding * windowSize.chromeScale).rounded()
-        verticalPadding = (Self.baseVerticalPadding * windowSize.chromeScale).rounded()
-        tahoeSeparatorInset = (Self.baseTahoeSeparatorInset * windowSize.chromeScale).rounded()
+        horizontalPadding = (Self.baseHorizontalPadding * chromeScale).rounded()
+        verticalPadding = (Self.baseVerticalPadding * chromeScale).rounded()
+        tahoeSeparatorInset = (Self.baseTahoeSeparatorInset * chromeScale).rounded()
         self.cellArrangement = cellArrangement
         switch cellArrangement {
         case .inline:
@@ -270,8 +283,7 @@ struct CandidateMetrics: Equatable, Sendable {
     /// differently.
     func arranged(_ arrangement: CandidateCellArrangement) -> CandidateMetrics {
         CandidateMetrics(
-            textSize: textSize,
-            windowSize: windowSize,
+            size: size,
             fontSelection: fontSelection,
             cellArrangement: arrangement,
         )
