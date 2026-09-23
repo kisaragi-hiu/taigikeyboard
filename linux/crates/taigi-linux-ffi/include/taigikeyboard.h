@@ -92,6 +92,9 @@ void taigi_menu_free(TaigiMenu *menu);
 TaigiEngine *taigi_engine_new(const TaigiRuntime *runtime);
 void taigi_engine_free(TaigiEngine *engine);
 void taigi_engine_set_capabilities(TaigiEngine *engine, uint32_t caps);
+/* The focused field hides what is typed (CapabilityFlag::Password): keys
+ * pass through uncomposed, nothing is learned. */
+void taigi_engine_set_password_field(TaigiEngine *engine, bool is_password);
 
 /* One key press or release: X11 keysym, hardware keycode (X keycode = evdev
  * + 8), modifier mask. `taigi_reply_handled` says whether the key was

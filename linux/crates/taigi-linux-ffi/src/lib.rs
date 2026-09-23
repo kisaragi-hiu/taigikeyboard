@@ -372,6 +372,21 @@ pub unsafe extern "C" fn taigi_engine_set_capabilities(engine: *mut TaigiEngine,
 }
 
 /// # Safety
+/// `engine` is a live engine.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_engine_set_password_field(
+    engine: *mut TaigiEngine,
+    is_password: bool,
+) {
+    if engine.is_null() {
+        return;
+    }
+    // SAFETY: non-null and, by contract, a live engine the caller owns.
+    let engine = unsafe { &mut *engine };
+    engine.state.is_password_field = is_password;
+}
+
+/// # Safety
 /// `engine` is a live engine. The reply must be freed with `taigi_reply_free`.
 #[no_mangle]
 pub unsafe extern "C" fn taigi_engine_key(

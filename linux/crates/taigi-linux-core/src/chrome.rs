@@ -41,8 +41,10 @@ pub enum MenuItem {
 }
 
 /// The rows, in the Mac's order (`TaigiInputController.menu()`, the
-/// Windows `menu_rows`): the two switch rows under their 快捷鍵-pane names,
-/// 設定, then 關於. No 檢查更新 (roadmap L10).
+/// Windows `menu_rows`): the two switch rows under their 快捷鍵-pane names —
+/// romanization and candidate display mode, the Windows
+/// `MENU_SHORTCUT_ROWS`; not the 漢羅對調 swap, whose bare-backtick default
+/// the Mac's menu can never print — 設定, then 關於. No 檢查更新 (roadmap L10).
 pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
     let strings = runtime.strings();
     let settings = runtime.settings.current();
@@ -58,9 +60,9 @@ pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
             ShortcutAction::ToggleRomanization.label_key(),
         ),
         row(
-            ShortcutAction::ToggleTranslateSwapped.raw(),
-            ShortcutAction::ToggleTranslateSwapped,
-            ShortcutAction::ToggleTranslateSwapped.label_key(),
+            ShortcutAction::CycleCandidateDisplayMode.raw(),
+            ShortcutAction::CycleCandidateDisplayMode,
+            ShortcutAction::CycleCandidateDisplayMode.label_key(),
         ),
         MenuItem::Separator,
         row(
@@ -307,6 +309,11 @@ fn toggle_symbol_picker(
         session::present_table(state, settings, bindings, emits);
         return;
     }
+    // The picker writes into the document and learns the pick — neither
+    // belongs in a password field (the key path's gate, `process_key`).
+    if state.is_password_field {
+        return;
+    }
     let Some(table) = SymbolTable::bundled() else {
         return;
     };
@@ -522,7 +529,7 @@ mod tests {
             ids,
             [
                 "toggleRomanization",
-                "toggleTranslateSwapped",
+                ShortcutAction::CycleCandidateDisplayMode.raw(),
                 "-",
                 MENU_SETTINGS,
                 "-",
@@ -537,5 +544,80 @@ mod tests {
         assert_ne!(before.raw(), after.raw());
         assert_eq!(emits, vec![Emit::ModeChanged, Emit::AnnounceMode]);
         assert_eq!(mode_symbol(&runtime).chars().count(), 2);
+
+        // The second row cycles the candidate display mode (Windows
+        // `MENU_SHORTCUT_ROWS`), which the label's second half names.
+        let label_before = mode_label(&runtime);
+        let emits = activate_menu(
+            &runtime,
+            ContextToken(1),
+            &mut engine,
+            ShortcutAction::CycleCandidateDisplayMode.raw(),
+        );
+        assert_eq!(emits, vec![Emit::ModeChanged, Emit::AnnounceMode]);
+        assert_ne!(mode_label(&runtime), label_before);
+    }
+
+    #[test]
+    fn a_password_field_passes_letters_through_but_keeps_the_chords() {
+        // trace: `a` (0x61) in a text field = a composing key, consumed; in a
+        // password field = unhandled, no emits (Windows `run_key` ToHost).
+        // Ctrl+Alt+/ still brings the Telex guide up there.
+        const LETTER_A: u32 = 0x61;
+        let (_directory, runtime) = runtime();
+        let mut engine = EngineState::default();
+        let key = |engine: &mut EngineState, keysym: u32| {
+            process_raw_key(
+                &runtime,
+                ContextToken(1),
+                engine,
+                RawKeyEvent {
+                    keyval: keysym,
+                    keycode: 0,
+                    state: 0,
+                },
+            )
+        };
+        engine.is_password_field = true;
+        engine.armed_auto_space = true;
+        let reply = key(&mut engine, LETTER_A);
+        assert!(!reply.handled);
+        assert!(reply.emits.is_empty());
+        assert!(!engine.armed_auto_space);
+        // The picker writes into the document: it stays down here.
+        perform_global(
+            &runtime,
+            ContextToken(1),
+            &mut engine,
+            ShortcutAction::ShowSymbolPicker,
+        );
+        assert!(engine.symbol_picker.is_none());
+        assert!(!session::is_composing(&runtime, ContextToken(1)));
+        press(&runtime, &mut engine, SLASH, CTRL_ALT);
+        assert!(engine.telex_guide_shown);
+
+        let mut control = EngineState::default();
+        assert!(key(&mut control, LETTER_A).handled);
+        let mut picker_control = EngineState::default();
+        perform_global(
+            &runtime,
+            ContextToken(2),
+            &mut picker_control,
+            ShortcutAction::ShowSymbolPicker,
+        );
+        assert!(picker_control.symbol_picker.is_some());
+        // The field turns into a password field under the open picker: Enter
+        // reaches the app, the picker goes down unpicked, nothing commits.
+        picker_control.is_password_field = true;
+        let reply = key(&mut picker_control, RETURN);
+        assert!(!reply.handled);
+        assert!(picker_control.symbol_picker.is_none());
+        assert!(!reply
+            .emits
+            .iter()
+            .any(|emit| matches!(emit, Emit::Commit(_) | Emit::DeleteSurrounding { .. })));
+        // And back to a text field: composing resumes.
+        picker_control.is_password_field = false;
+        assert!(key(&mut picker_control, LETTER_A).handled);
     }
 }

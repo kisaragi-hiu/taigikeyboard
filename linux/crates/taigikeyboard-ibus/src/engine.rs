@@ -26,6 +26,12 @@ use zbus::{interface, Connection};
 /// commits what is typed, as the Mac's `commitComposition` does.
 const PREEDIT_MODE_COMMIT: u32 = 1;
 
+/// `IBUS_INPUT_PURPOSE_PASSWORD` / `_PIN` (ibus `src/ibustypes.h`,
+/// `IBusInputPurpose` = 8 / 9): both hide what is typed. PIN counts because
+/// Fcitx5 maps it to `Password | Digit` (`ibusfrontend.cpp`), and the two
+/// shells must agree.
+const HIDDEN_INPUT_PURPOSES: [u32; 2] = [8, 9];
+
 /// The panel menu's root property (roadmap L6): its `symbol` is what the
 /// panel indicator shows for this engine, its sub-properties the rows. The
 /// key is the one GNOME Shell reads the indicator text from
@@ -349,9 +355,13 @@ impl Engine {
 
     async fn panel_extension_register_keys(&self, _data: Value<'_>) {}
 
-    /// `(uu)` — the client's input purpose and hints; unused.
+    /// `(uu)` — the client's input purpose and hints. Only the purpose is
+    /// read: `IBUS_INPUT_PURPOSE_PASSWORD` / `_PIN` turn composing off in the field.
     #[zbus(property)]
-    async fn set_content_type(&self, _content_type: (u32, u32)) {}
+    async fn set_content_type(&mut self, content_type: (u32, u32)) {
+        let (purpose, _hints) = content_type;
+        self.state.is_password_field = HIDDEN_INPUT_PURPOSES.contains(&purpose);
+    }
 
     /// `false`: the daemon uses the plain `FocusIn` / `FocusOut` pair.
     #[zbus(property)]

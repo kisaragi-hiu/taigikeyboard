@@ -55,6 +55,11 @@ pub struct EngineState {
     pub armed_auto_space: bool,
     /// The client's `SetCapabilities` mask.
     pub capabilities: u32,
+    /// The focused field hides what is typed (IBus content purpose
+    /// `PASSWORD` / `PIN`, Fcitx5 `CapabilityFlag::Password`): nothing
+    /// composes and nothing is learned there — the Windows
+    /// `is_password_field` gate.
+    pub is_password_field: bool,
     /// Whether the daemon currently shows a lookup table of ours.
     pub is_table_shown: bool,
     /// A toggle chord held down: auto-repeat is invisible on the wire, so
@@ -75,6 +80,7 @@ impl Default for EngineState {
             selection: LookupSelection::new(0, PAGE_SIZE),
             armed_auto_space: false,
             capabilities: 0,
+            is_password_field: false,
             is_table_shown: false,
             latched_chord: None,
             telex_guide_shown: false,
@@ -174,6 +180,21 @@ pub fn process_key(
         emits.append(&mut chrome::perform_global(runtime, token, state, action));
         return KeyReply {
             handled: true,
+            emits,
+        };
+    }
+    // A password field gets every key untouched — composing a secret would
+    // show it in the preedit and teach it to the stores. The global chords
+    // above still run, as on Windows (`run_key` answers ToHost there). A
+    // picker left up from before the field changed goes down unpicked, and
+    // the auto-space promise is spent: its swap would delete in this field.
+    if state.is_password_field {
+        state.armed_auto_space = false;
+        if state.symbol_picker.take().is_some() {
+            present_table(state, &settings, &bindings, &mut emits);
+        }
+        return KeyReply {
+            handled: false,
             emits,
         };
     }

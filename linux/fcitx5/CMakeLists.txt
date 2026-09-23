@@ -11,7 +11,18 @@
 # `make -C linux build-fcitx5` does exactly this.
 
 cmake_minimum_required(VERSION 3.16)
-project(fcitx5-taigikeyboard VERSION 3.6.9 LANGUAGES CXX)
+# The version is the linux/ workspace's, which `make version-desktop` writes
+# (tools/release_notes.py) — never a second copy here to fall behind.
+set(TAIGI_CARGO_TOML "${CMAKE_CURRENT_SOURCE_DIR}/../Cargo.toml")
+# A version bump re-runs the configure step of an existing build directory.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${TAIGI_CARGO_TOML}")
+file(STRINGS "${TAIGI_CARGO_TOML}" TAIGI_VERSION_LINE
+     REGEX "^version = \"[0-9]+\\.[0-9]+\\.[0-9]+\"$" LIMIT_COUNT 1)
+string(REGEX REPLACE "^version = \"([0-9.]+)\"$" "\\1" TAIGI_VERSION "${TAIGI_VERSION_LINE}")
+if(NOT TAIGI_VERSION)
+    message(FATAL_ERROR "no `version = \"x.y.z\"` line in ${TAIGI_CARGO_TOML}")
+endif()
+project(fcitx5-taigikeyboard VERSION ${TAIGI_VERSION} LANGUAGES CXX)
 
 set(REQUIRED_FCITX_VERSION 5.1.0)
 
