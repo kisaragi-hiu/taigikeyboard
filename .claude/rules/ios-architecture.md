@@ -36,10 +36,9 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 │  Adapter Layer        (explicit *Adapter.swift files that    │
 │                        translate between Engine value types  │
 │                        and KeyboardKit / Platform types)     │
-│  Examples (post-refactor):                                   │
-│   - KeyboardKitSuggestionAdapter (EnginePrediction ↔         │
-│     Autocomplete.Suggestion)                                 │
-│   - LetterCaseAdapter (Keyboard.KeyboardCase ↔ LetterCase)   │
+│  Example:                                                    │
+│   - KeyboardCaseAdapter (Actions/: Keyboard.KeyboardCase     │
+│     ↔ RustEngineBridge.CaseTransformLetterCase)              │
 │  Imports: KeyboardKit, Engine                                │
 └──────────────────────────────────────────────────────────────┘
                              │
@@ -65,14 +64,14 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 | `Input/`                   | Engine   | Incl. `Composing/` — must be KK-free (see §3)     |
 | `Lexicon/`                 | Engine   | DB repos allowed (Foundation + SQLite3 C API). `LexiconService`, `NextWordService`, `DictionaryRepository` all inject `EngineSettingsProvider`. |
 | `NextWord/`                | Engine   |                                                   |
-| `Autocomplete/Services/`   | Mixed    | `TaigiAutocompleteService.swift` and `EnglishAutocompleteService.swift` inherit `KeyboardKit.AutocompleteService` — unavoidable KK adapter boundary. `AutocompleteProviders.swift` and `AutocompleteContextBooster` (moved to `NextWord/`) are engine-pure. Treat subclass files as Platform-in-Engine-folder. |
+| `Autocomplete/Services/`   | Mixed    | `TaigiAutocompleteService.swift` and `EnglishAutocompleteService.swift` inherit `KeyboardKit.AutocompleteService` — unavoidable KK adapter boundary. `AutocompleteProviders.swift` is engine-pure. Treat subclass files as Platform-in-Engine-folder. |
 | `Settings/` (non-UI parts) | Engine   | `EngineSettings`, `EngineSettingsProvider`, etc.  |
 | `Settings/` (UI parts)     | Platform | `KeyboardColorSettings` (UIColor), `CodableColor` |
 | `Actions/`                 | Platform | Hosts KK adapters: `ActionHandler*`, `KeyboardCaseAdapter`, `KeyboardContext+Composing`, `KeyboardContext+Translate` |
 | `KeyboardExtension/`       | Platform | Extension target host: `KeyboardViewController`, `Info.plist`, `FontRegistration`, `zh-Hant.lproj` |
 | `Callouts/`                | Platform |                                                   |
 | `Emojis/`, `Layout/`       | Platform |                                                   |
-| `Overlays/`                | Platform | Except `CandidateRowLayoutEngine` (Engine)        |
+| `Overlays/`                | Platform |                                                   |
 | `Styling/`                 | Platform |                                                   |
 | `App/`                     | App      | Host app, tabs, settings UI                       |
 | `Strings/`                 | App      | `Strings/Generated/` (codegen from `i18n/*.json` via `make i18n`) + `DisplayLanguageStore` / `StringResolver` / `DisplayLanguage` runtime resolvers |
@@ -83,17 +82,18 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 
 ### Engine layer
 
-- **MUST** `import Foundation` and nothing else from Apple frameworks.
-- **MUST NOT** `import KeyboardKit`, `UIKit`, `SwiftUI`, `Combine`.
-- **MUST NOT** reference global singletons outside the layer (no `SharedSettings.shared`, no `KeyboardSettings.store`, no `DictionaryRepository.shared` from pure-logic code).
-- **MUST NOT** reach into `FileManager`, App Group container paths, or network directly. Data is injected by callers.
-- **MAY** use SQLite3 C API through `SQLiteConnectionManager` — SQLite is a build dep, not a platform framework.
+Engine-layer files import Foundation only (plus SwiftProtobuf in `Engine/`) so the layer stays KeyboardKit-free and unit-testable:
+
+- No `KeyboardKit`, `UIKit`, `SwiftUI`, `Combine` imports.
+- No global singletons from outside the layer (no `SharedSettings.shared`, `KeyboardSettings.store`, `DictionaryRepository.shared` in pure-logic code) — dependencies are injected so tests can stub them.
+- No direct `FileManager`, App Group container paths, or network — callers inject the data.
+- SQLite3 C API through `SQLiteConnectionManager` is allowed — SQLite is a build dep, not a platform framework.
 
 ### Adapter layer
 
 - Adapters live in **named files** whose sole responsibility is translation between Engine value types and Platform/KK types.
-- File name pattern: `<Domain>Adapter.swift` (e.g., `KeyboardKitSuggestionAdapter.swift`) or `<FromType>To<ToType>.swift`.
-- Adapters **MAY** `import KeyboardKit`. They **MUST NOT** contain business logic — pure translation only.
+- File name pattern: `<Domain>Adapter.swift` (e.g., `Actions/KeyboardCaseAdapter.swift`) or `<FromType>To<ToType>.swift`.
+- Adapters may `import KeyboardKit` and hold translation only — business logic in an adapter would couple it to KeyboardKit.
 
 ### Platform layer
 
@@ -103,7 +103,7 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 ### App layer
 
 - Free to import anything the host app needs.
-- **MUST NOT** reach into Engine-layer types by bypassing the service layer (e.g., Tab views must not call `DictionaryRepository.shared` directly — go through `LexiconService`).
+- Reaches Engine-layer types through the service layer only (e.g., Tab views call `LexiconService`, not `DictionaryRepository.shared`).
 
 ---
 

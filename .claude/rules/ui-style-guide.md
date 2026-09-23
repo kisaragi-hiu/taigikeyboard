@@ -35,7 +35,7 @@ When adding or modifying UI, check this guide first. Do not introduce new size/c
 
 - Primary: **JF Open Huninn** (jf-openhuninn-2.1)
 - Android: `HuninnFontFamily` via Material 3 Typography (`ui/theme/Theme.kt`)
-- iOS: `KeyboardModels.Fonts.openHuninnFontName` via UINavigationBarAppearance + `.environment`
+- iOS: `KeyboardFonts.openHuninnFontName` via UINavigationBarAppearance + `.environment`
 
 ## Colors (Semantic)
 
@@ -136,18 +136,16 @@ Rationale: Android follows platform-default Material 3; iOS keeps its native gre
 ### iOS
 
 **Typography & Colors** → `App/Components/AppStyle.swift`
-- `AppStyle.sectionHeaderFont` (18pt Open Huninn), `AppStyle.bodyFont` (17pt), `AppStyle.captionFont` (17pt)
-- `AppStyle.sectionHeaderColor` (.secondary), `AppStyle.primaryColor`, `AppStyle.secondaryColor`
+- `AppStyle.sectionHeaderFont` (18pt Open Huninn), `AppStyle.bodyFont` (17pt), `AppStyle.captionFont` (17pt); `AppStyle.appFont(size:)` for other sizes
 - `AppStyle.accentBlue` (.accentColor), `AppStyle.warningOrange` (.orange)
-- `SectionHeader(text:)` shared view
 
 ## Rules
 
-1. **New row items**: Use `style = MaterialTheme.typography.bodyLarge` (Android) / `appFont(.body)` (iOS). Never use inline `.sp` for row labels.
-2. **New section headers**: Use `SectionHeader(text:)` composable/view, or `style = MaterialTheme.typography.titleMedium` with onSurfaceVariant color.
+1. **New row items**: Use `style = MaterialTheme.typography.bodyLarge` (Android) / `AppStyle.bodyFont` (iOS). Never use inline `.sp` for row labels.
+2. **New section headers**: Use the `SectionHeader(text)` composable or `style = MaterialTheme.typography.titleMedium` with onSurfaceVariant color (Android) / `AppStyle.sectionHeaderFont` (iOS).
 3. **New icons**: Leading 24dp/pt, trailing `AppStyle.trailingChevronSize` (Android). Use `MaterialTheme.colorScheme.primary` (Android) / `.accentColor` (iOS) for leading icons.
 4. **New sub-pages**: Use TopAppBar (Android) / .inline title mode (iOS).
-5. **Never hardcode font sizes**: Use `MaterialTheme.typography.*` (Android) or `appFont(.style)` (iOS). No inline `.sp` in screen files. **Exception:** functional drawing values inside Canvas-based components (color picker spectrum, slider thumbs) may use raw values.
+5. **Never hardcode font sizes**: Use `MaterialTheme.typography.*` (Android) or `AppStyle.*Font` / `AppStyle.appFont(size:)` (iOS). No inline `.sp` in screen files. **Exception:** functional drawing values inside Canvas-based components (color picker spectrum, slider thumbs) may use raw values.
 6. **Never hardcode colors**: Use `MaterialTheme.colorScheme.*` or `AppStyle.*` (Android) / semantic colors (iOS). **Exception:** Canvas drawing colors (`Color.White`/`Black`/`Gray`).
 7. **New settings rows**: Reuse existing row components (Android) or Form patterns (iOS). Don't create one-off row layouts.
 8. **Cross-platform alignment**: When adding a feature to one platform, check this guide to ensure the other platform's equivalent uses matching values.

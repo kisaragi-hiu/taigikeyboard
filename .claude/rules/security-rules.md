@@ -11,8 +11,8 @@ All logging must be guarded so that **no log output appears in production/releas
 
 | Platform | Guard | Example |
 |----------|-------|---------|
-| iOS | `DebugLogger` wrapper | `logger.debug("[SEARCH] query='\(query)'")`|
-| Android | `if (BuildConfig.DEBUG)` | `if (BuildConfig.DEBUG) Log.d(TAG, "[SEARCH] query='$input'")` |
+| iOS / macOS | `DebugLogger` wrapper | `logger.debug("[SEARCH] query='\(query)'")`|
+| Android | `LoggerBackend` (`AndroidLoggerBackend` gates every level on `BuildConfig.DEBUG`) | `logger.d(TAG, "[SEARCH] query='$input'")` |
 
 ### iOS specifics
 
@@ -23,10 +23,9 @@ All logging must be guarded so that **no log output appears in production/releas
 
 ### Android specifics
 
-- ProGuard (`proguard-rules.pro`) strips `Log.d/v/i/w/e` via `-assumenosideeffects` as a secondary defense
-- Do NOT rely solely on ProGuard — always add `if (BuildConfig.DEBUG)` as the primary guard
-- For multiple consecutive Log calls, group in a single `if (BuildConfig.DEBUG) { ... }` block
-- Ensure `import com.siansiansu.taigikeyboard.BuildConfig` is present when using the guard
+- Log through the injected `LoggerBackend` (`ime/core/logging/`); only `AndroidLoggerBackend` imports `android.util.Log`, and it gates all levels on `BuildConfig.DEBUG`
+- Hot paths: check `logger.isDebugEnabled` (or the inline `logger.debug(TAG) { ... }` extension) so the message string is never built in release
+- ProGuard (`proguard-rules.pro`) strips `Log.d/v/i/w/e` via `-assumenosideeffects` as a secondary defense only
 
 ### What must never be logged (even in debug)
 

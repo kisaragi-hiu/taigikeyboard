@@ -51,12 +51,12 @@ Governs every PR that touches a file marked `Shared-Core Candidate` (the residua
 
 Any change touching a shared-core-candidate file must:
 
-1. Accept only **immutable value inputs** OR inject services through interfaces **already declared** in the shared-core contract (e.g. `EngineSettings`, `LoggerBackend`, `NextWordPredictor` on Android; `EngineSettingsProvider`, `LoggerBackend` on iOS). Legitimate immutable-context structs, DTO mappers, and batching objects are permitted; they are not banned as "stateful" merely because they carry multiple fields.
+1. Accept only **immutable value inputs** OR inject services through interfaces **already declared** in the shared-core contract (e.g. `EngineSettings`, `LoggerBackend` on Android; `EngineSettingsProvider`, `LoggerBackend` on iOS). Legitimate immutable-context structs, DTO mappers, and batching objects are permitted; they are not banned as "stateful" merely because they carry multiple fields.
 2. Introduce **no new** platform / framework singleton reads inside candidate code. Explicitly forbidden: `SharedSettings.shared`, any `*.shared`, `Application.getInstance()`, `BuildConfig.*`, `android.util.Log`, `OSLog`, `KeyboardKit.*`, `androidx.*`, `UIKit`/`SwiftUI`/`Combine`, `kotlinx.coroutines.*`. See `.claude/rules/ios-shared-core-candidates.md` §1 (iOS-specific platform bans — `SharedSettings.shared`, `*.shared`, `UIKit`, `SwiftUI`, `KeyboardKit`, `Combine`, `OSLog`, `@MainActor`) and `.claude/rules/android-guidelines.md` §1 (Android-specific — `android.*`, `androidx.*`, `kotlinx.coroutines.*`, `java.util.concurrent.*`) for the authoritative per-platform enforcement lists. The list above is the merged set enforced at code review; items like `BuildConfig.*` and `Application.getInstance()` extend the per-platform lists because they surfaced in real violations.
 3. **Mirror any new heuristic or tunable constant** on the other platform in the same PR, with a `CROSS-PLATFORM INVARIANT` comment citing `<mirror file>:<line>`. §3a drift-detection still applies.
 4. Pass **Codex + `/simplify` pre-implementation review** for any change introducing a new stateful dependency into a candidate file. Pure refactors, constant-tweak bug fixes, and fixes without new state are exempt from the pre-impl review (post-draft review still applies per `~/.claude/rules/round-workflow.md` Codex sandwich). The Codex pass checks correctness + FFI-safety intent; the `/simplify` pass (Claude Code official skill) checks reuse, quality, and dead-code before implementation lands. Run both in parallel per `~/.claude/rules/claude-workflow.md` §Subagent Usage.
 
-A PR in violation is rejected at review regardless of whether the fix itself is correct. Correct fixes that violate this constraint are rebased to comply — the constraint is the rule, not a recommendation.
+A PR in violation is rejected at review regardless of whether the fix itself is correct. Correct fixes that violate this constraint are rebased to comply.
 
 ## 2. Android mirrors the iOS exemplar
 
@@ -74,7 +74,7 @@ When the same logical behavior requires different code on each platform — plat
 
 Silent divergence is the failure mode this rule exists to prevent.
 
-**Intentional-divergence example (key-press feedback, PR #444)**: the in-app sound/vibration toggle gates feedback on both platforms, but the OS-master interaction differs — Android drives a direct `Vibrator` that bypasses the OS touch-haptic gate (`HAPTIC_FEEDBACK_ENABLED`), while iOS has no app-side bypass of the System Haptics master, so app-ON + System-Haptics-OFF → no vibration on iOS is expected, not a bug. Classified **intentional** (platform-imposed). Full contract: `docs/architecture/behavioral-invariants.md` §36 `INVARIANT_KEYPRESS_FEEDBACK_APP_TOGGLE_GATE`.
+**Intentional-divergence example (key-press feedback, old #444)**: the in-app sound/vibration toggle gates feedback on both platforms, but the OS-master interaction differs — Android drives a direct `Vibrator` that bypasses the OS touch-haptic gate (`HAPTIC_FEEDBACK_ENABLED`), while iOS has no app-side bypass of the System Haptics master, so app-ON + System-Haptics-OFF → no vibration on iOS is expected, not a bug. Classified **intentional** (platform-imposed). Full contract: `docs/architecture/behavioral-invariants.md` §36 `INVARIANT_KEYPRESS_FEEDBACK_APP_TOGGLE_GATE`.
 
 ### 3a. Cross-platform invariants — constants, tests, docs update together
 
@@ -97,7 +97,7 @@ Before writing any "iOS does X, Android does Y" sentence in an audit / invariant
 
 Treat matching comments as authoritative signal that the original author intended parity — divergence in observable behavior is then a **bug**, not a design decision. When using an Explore agent for a summary read, explicitly ask the agent to report any `// matches …` comments in the flagged files.
 
-Incident (PR #141): an audit claimed `DictionaryBinaryReader.kt` treated both `hanzi` and `tl` as required; the file had `// matches iOS` comments beside that code, and two read passes missed them.
+Incident (old #141): an audit claimed `DictionaryBinaryReader.kt` treated both `hanzi` and `tl` as required; the file had `// matches iOS` comments beside that code, and two read passes missed them.
 
 ## 4. Out of scope for this rule
 
@@ -113,7 +113,7 @@ The Rust shared-core does **not** own any of the following — they stay in Swif
 
 - **Candidate UI navigation, layout semantics, or styling**. The engine returns neutral candidate values + preedit segments; navigation ownership (focus, page scroll, selection) is platform-side. Matches `khiin-rs/protos/src/command.proto:114`, which leaves candidate display to the client app.
 - **Platform text-region types**. The engine never sees `NSRange`, `ExtractedText`, `TextPosition`, `UITextDocumentProxy`, `InputConnection`, `EditorInfo`, or any SwiftUI / UIKit / Compose view type. Proto message envelopes carry only `String`, numeric types, and engine-defined value types.
-- **KeyboardKit / FlorisBoard bindings**. These stay in Swift / Kotlin forever. Their shape may be aligned across platforms as a "shared-core-adjacent" executor layer (the platform engine executor described in `docs/architecture/ios-exemplar.md:32` layer diagram and elaborated in §Platform executor contract around line 196–200), but the types themselves are never ported to Rust.
+- **KeyboardKit / FlorisBoard bindings**. These stay in Swift / Kotlin forever. Their shape may be aligned across platforms as a "shared-core-adjacent" executor layer (the Platform engine executor box in `docs/architecture/ios-exemplar.md` §1), but the types themselves are never ported to Rust.
 - **DB asset-copy and path resolution**. The engine receives an open file handle or filesystem path; it does not touch `Bundle.main`, `context.filesDir`, or `AssetManager`. Asset-copy mechanics, update-in-place policy, and stamp-file versioning stay platform-side (see `docs/architecture/data-artifacts-portability.md` §7 for Android specifics).
 
-These are hard non-goals, not preferences. A proposal to "just push this one UI helper into Rust" is rejected on sight; the boundary is the boundary.
+These are hard non-goals, not preferences.

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-**Taigi Keyboard** — cross-platform Taiwanese input method: iOS (Swift + KeyboardKit), Android (Kotlin + FlorisBoard), macOS (IMKit), Windows (TSF, Rust) over a shared Rust engine. POJ/TL/TPS romanization, Hanji, tone variation, autocomplete, continuous input.
+**Taigi Keyboard** — cross-platform Taiwanese input method: iOS (Swift + KeyboardKit), Android (Kotlin + FlorisBoard), macOS (IMKit), Windows (TSF, Rust), Linux (Fcitx5 + IBus, Rust) over a shared Rust engine. POJ/TL/TPS romanization, Hanji, tone variation, autocomplete, continuous input.
 
 Rule layers:
 - **Cross-project process rules** — `~/.claude/rules/` (from the [`configurations`](https://github.com/siansiansu/configurations) dotfiles repo; run its `setup.sh` on a fresh machine).
@@ -9,8 +9,9 @@ Rule layers:
 ## Project Structure
 
 ```
-android/  ios/  macos/  windows/   # platform apps
+android/  ios/  macos/  windows/  linux/   # platform apps
 engine/            # Shared Rust engine — Cargo workspace, FFI to every platform
+desktop/           # Rust crates shared by Windows + Linux (taigi-desktop-core / -storage)
 dictionary/        # Dictionary sources + build pipeline + output artifacts
 docs/              # engine/, architecture/, ui/, references/, reports/, roadmap.md
 knowledge/         # Taiwanese phonetics reference (TL/POJ/TPS)
@@ -18,6 +19,7 @@ taigi-converter/   # Canonical TL↔POJ↔TPS converter (git submodule)
 corpus/            # Real Taiwanese text for manual-test sentences (taigi-typing submodule) — never a build input
 changelog/         # Per-release changelogs — edit only at release time
 references/        # Cloned external IME repos (gitignored)
+taigi-emojis/      # Emoji data generator (own CLAUDE.md)
 ```
 
 ## Core Principles
@@ -51,6 +53,7 @@ Path-scoped rules load themselves; these do not:
 | Android | `android/gradlew -p android :app:assembleDebug` | `android/gradlew -p android :app:testDebugUnitTest` |
 | macOS | `make -C macos build` (`install` before dogfood) | `make -C macos test` |
 | Windows | `make windows-check` (host gate; TSF DLL builds only on the Windows box — `docs/architecture/windows-release.md`) | included |
+| Linux | `make linux-check` (host gate; `.deb` via `make -C linux deb` — `docs/architecture/linux-release.md`) | included |
 | taigi-converter | — | `npm test` in `taigi-converter/` |
 
 **Bootstrap**: clone with `--recurse-submodules`, then `make build` once per machine — generates the xcframeworks, `jniLibs/*.so` and platform protos the app builds link (not committed).

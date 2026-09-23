@@ -15,7 +15,7 @@ Mandatory rules before any platform impl → Rust engine swap, new Rust slice, `
 Every Rust slice must satisfy ALL four:
 
 1. **High cohesion, low coupling.** Each crate owns ONE engine concern; dependencies flow one-way down the layer graph (`rust-best-practices.md` §1a) — a domain crate may depend on lower domain/leaf crates (`composing→lexicon/ranking/phonetics`, `lexicon→mmap-host/ranking/phonetics`) plus `protos` for the RPC façade, but **never** upward on `dispatch`/FFI. Cross-module deps minimal and explicit.
-2. **Rust idioms.** Typed `thiserror` errors, `prost` proto, sync-only, no `panic!`/`unwrap()`/`expect()` on unvalidated input (use `Result` for recoverable paths). `unsafe_code = "forbid"` on domain crates — `unsafe` is confined to the FFI crates plus the documented `mmap-host` carve-out. Canonical detail: `rust-best-practices.md` §2 (errors) / §3 (crate+type choices) / §8 (non-goals, incl. no `once_cell::sync::Lazy` globals in engine/phonetics) + `rust-ffi-safety.md` §1 (`Mutex<Engine>` guard) / §3 (`unsafe`).
+2. **Rust idioms.** Typed `thiserror` errors, `prost` proto, sync-only, no `panic!`/`unwrap()`/`expect()` on unvalidated input (use `Result` for recoverable paths). `unsafe_code = "forbid"` on domain crates — `unsafe` is confined to the FFI crates plus the documented `mmap-host` carve-out. Canonical detail: `rust-best-practices.md` §2 (errors) / §3 (crate+type choices) / §8 (non-goals, incl. mutable process state only in `handle.rs` singletons; immutable `Lazy` tables OK) + `rust-ffi-safety.md` §1 (`Mutex<Engine>` guard) / §3 (`unsafe`).
 3. **Single responsibility naming.** File name = role (`trie.rs` not `util.rs`); function name = action verb (`lookup_prefix` not `process`); variable name = content (`row_ids` not `result`). One file / function / variable = one thing.
 4. **Idiomatic file organization.** Defer to Rust convention: tests live inline via `#[cfg(test)] mod tests { }`. Files split by sub-concern (cohesion-driven), NOT by line count. **No hard LOC cap** (revised 2026-05-07). Use length as a smell signal — "does this file actually own one concern?" — not a blocker. A 650-LOC file with one concern + cohesive tests reads better than 2 files with `#[path]` indirection.
 
@@ -49,7 +49,7 @@ Procedure for each swap:
 3. Cross-check iOS vs Android side-by-side — divergence is a strong tell that one swap dropped something.
 4. Add regression-prone modules (`stripTone+NFD`, exhaustive mode `when`/`switch`, per-token vowel overrides, multi-syllable joiner) to the Codex pre-impl prompt explicitly.
 
-Incident: D9.4 PR #186 had 4 post-merge regressions, all the same root cause — focus on "route X through bridge" lost track of "what wraps X". Symbol grep found 0 hits but dropped preprocessing wasn't a symbol reference.
+Incident: D9.4 old #186 had 4 post-merge regressions, all the same root cause — focus on "route X through bridge" lost track of "what wraps X". Symbol grep found 0 hits but dropped preprocessing wasn't a symbol reference.
 
 ## 4. Proto generation: triple-touch on new .proto
 
@@ -61,11 +61,9 @@ When adding a new `.proto` file under `engine/protos/proto/`, update ALL THREE:
 
 `engine/scripts/gen-macos-protos.sh` globs `proto/*.proto` and runs as part of `make build`, so the macOS tree needs neither an edit nor a separate command — only the commit of its regenerated output.
 
-**`protoc` upgrades are a coupled change.** The committed Java gencode carries the compiler version in its header, and the Android runtime pin must match it (`libprotoc 35.1` ↔ `com.google.protobuf:protobuf-javalite:4.35.1` in `android/app/build.gradle.kts`). A local `protoc` upgrade therefore silently rewrites all ~269 `.java` files on the next `make build`, and that output will not compile against an older pinned runtime. Bump the runtime + commit the full regeneration in the same PR, and re-run the Android debug / unit-test / release-R8 gates. The compiler itself is NOT pinned by the repo (it comes from `brew install protobuf`) — check `protoc --version` against a generated file's `Protobuf Java Version:` header before assuming a dirty `android/` tree is someone else's change.
+**`protoc` upgrades are a coupled change.** The javalite pin in `android/app/build.gradle.kts` (`com.google.protobuf:protobuf-javalite:4.X.Y` ⇔ `libprotoc X.Y`) must match the `Protobuf Java Version:` header of the committed gencode. `engine/scripts/gen-platform-protos.sh` checks this and **skips** platform proto regeneration (Swift + Java) with a loud warning on a local-`protoc` mismatch (`make build` still completes — xcframework / jniLibs do not involve protoc). So a changed `.proto` on a drifted machine leaves the bindings **silently stale**: install the matching `protoc` (not pinned by the repo; `brew install protobuf`), or set `TAIGI_ALLOW_PROTOC_DRIFT=1` and bump the javalite pin + commit the full regeneration in the same PR, then re-run the Android debug / unit-test / release-R8 gates.
 
-**A gate now enforces this** (`engine/scripts/gen-platform-protos.sh`, 2026-09-04): it reads the `protobuf-javalite` pin from `android/app/build.gradle.kts` (javalite `4.X.Y` ⇔ `libprotoc X.Y`), cross-checks the committed gencode header against that pin, and on a local-`protoc` mismatch **skips** regeneration with a loud warning instead of rewriting ~260 `.java` files. `make build` still completes — xcframework / jniLibs do not involve protoc. Two consequences: (a) a dirty `android/**/proto/**` tree can no longer appear by accident; (b) **if you changed a `.proto` on a drifted machine the bindings are silently stale** — install the matching compiler, or set `TAIGI_ALLOW_PROTOC_DRIFT=1` and bump the javalite pin in the same commit. Incident that produced it: local `libprotoc 27.5` vs committed gencode `4.36.0`, caught mid-PR when `make build` downgraded every generated file.
-
-Without this, bridge code references generated types that don't exist; the build silently breaks until next ad-hoc regen. Incident: PR #205 case-transform slice — Codex post-impl caught it as a BLOCK; the fix added `case.proto` and re-emitted ~140 `.java` files (most no-op trailing whitespace; semantic diff was envelope + new case files only).
+Without this, bridge code references generated types that don't exist; the build silently breaks until next ad-hoc regen. Incident: old #205 case-transform slice — Codex post-impl caught it as a BLOCK; the fix added `case.proto` and re-emitted ~140 `.java` files (most no-op trailing whitespace; semantic diff was envelope + new case files only).
 
 ## 5. Path G — delete platform mirrors when slice migrates
 
@@ -91,6 +89,7 @@ Do NOT propose moving user-writable SQLite to Rust shared core:
 - `user_association.db` (NextWord user-learned bigrams)
 - `user_frequency.db` (per-word selection frequency)
 - `custom_dictionary.db` (user-added entries)
+- `learned_phrases.db` (engine-learned phrases from consecutive picks)
 
 User-write data volume is small + non-urgent; platform-native SQLite integrates with Android backup APIs, iOS App Group / iCloud KeyValueStore, encryption hooks, debugger tooling. Cross-platform schema parity is already maintained at the service layer. Revisit ONLY if a concrete cross-platform schema-evolution need appears (e.g. shared backup format requiring identical serialization).
 

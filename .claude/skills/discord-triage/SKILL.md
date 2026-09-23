@@ -109,7 +109,7 @@ Post link = `https://discord.com/channels/<guild>/<post id>` (guild from the mes
 - **A** (post body): `<summary sentence>\n\nReported in #general: <message link>`
 - **B** (reply under #general message): `Tracked in #issues: <post link>`
 - **C** (fixed reply in post): `Fixed in v<version>.` — desktop versions say `desktop v3.6.8`,
-  mobile `mobile v0.8`, matching `changelog/` file names.
+  mobile `mobile v3.6.8`, matching `changelog/` file names.
 
 After the run: rewrite `triage.md` with a `result` column (post ID or error) and print the
 counts. Write `state.json` `{"last_seen": "<newest message id of the scan>"}` — the next `scan`

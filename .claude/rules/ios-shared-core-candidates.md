@@ -36,7 +36,7 @@ Files that are engine-layer but **do not** qualify should begin with a one-line 
 
 `migration-inventory.csv` rows with `status=wont_migrate` enumerate the exclusions (Lexicon Database/* SQLite, Services/* glue, KeyboardKit wrappers, URL builders, App-Group / FileManager paths). Per-criterion enforcement is documented in §1 above; running the original verification greps against `Foundation`-only candidate files still applies but the candidate set is the live `native_keep` filter on the CSV.
 
-Matches inside `///` doc comments of a candidate file are informational, not violations (e.g., `CandidateProcessor` documents that it does *not* use `SharedSettings.shared`; `EnginePrediction` documents that it does *not* `import KeyboardKit`).
+Matches inside `///` doc comments of a candidate file are informational, not violations (e.g., a doc comment stating the file does *not* use `SharedSettings.shared`).
 
 ## 5. References
 

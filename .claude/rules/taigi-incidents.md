@@ -22,7 +22,7 @@ Project-specific imperative rules distilled from past incidents. The dated narra
 ## Planning (`~/.claude/rules/planning.md`)
 
 - Read the module's entry point (`api.rs` / `dispatch.rs`) before proposing integration; `engine/nextword` only filters / scores what the platform feeds, it fetches nothing.
-- Cite best practices from `docs/references/mainstream-ime-comparison.md` first. Proven cites: `references/khiin-rs/khiin/src/buffer_mgr.rs` (commit-and-resegment), `references/librime/src/rime/...` (segment status state machine), `references/aiongtaigi-sushi` / `references/florisboard` (IME window / inset).
+- Cite best practices from `docs/references/mainstream-ime-comparison.md` first. Proven cites: `references/khiin-rs/khiin/src/buffer/buffer_mgr.rs` (commit-and-resegment), `references/librime/src/rime/...` (segment status state machine), `references/aiongtaigi-sushi` / `references/florisboard` (IME window / inset).
 
 ## Phonetics (`.claude/rules/phonetics.md`, CLAUDE.md Core Principle #3)
 

@@ -23,7 +23,7 @@ Files marked `// region Shared-Core Candidate` must satisfy ALL criteria below. 
 3. No clock reads — caller supplies `nowMs: Long` at call boundaries. No `System.currentTimeMillis()`, `SystemClock.*`, `Instant.now()`.
 4. No I/O — no SQLite, no File, no SharedPreferences, no DataStore.
 5. No coroutines or `Dispatchers.*`. Executor / async lives in the platform wrapper.
-6. No logging inside candidate logic. If a candidate must emit a diagnostic, it accepts a `LoggerBackend` interface (the Android equivalent of iOS `Logging/LoggerBackend.swift`) via constructor/function parameter. The `LoggerBackend` interface itself is shared-core; concrete `AndroidLogLoggerBackend` lives in platform code and wraps `android.util.Log`. Candidates never call `android.util.Log` directly.
+6. No logging inside candidate logic. If a candidate must emit a diagnostic, it accepts a `LoggerBackend` interface (the Android equivalent of iOS `Logging/LoggerBackend.swift`) via constructor/function parameter. The `LoggerBackend` interface itself is shared-core; concrete `AndroidLoggerBackend` lives in platform code and wraps `android.util.Log`. Candidates never call `android.util.Log` directly.
 
 ### File header marker
 
@@ -53,11 +53,11 @@ The **policy** (constants + tests + docs update together, comment format, `INVAR
 
 - Comment syntax in Kotlin:
   ```kotlin
-  // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/NextWord/NextWordScorer.swift:<line>.
+  // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:<line>.
   // Drift causes silent divergence.
   ```
-- Surfaces carrying the marker on Android: NextWord scoring constants (`NextWordScorer.kt`), CandidateProcessor recency window + score caps (`CandidateProcessor.kt`), NextWord timing constants (`NextWordEngine.kt`), TaigiUnicode preprocessing codepoints (`TaigiUnicode.kt`), Association + Dictionary binary-reader layouts (`AssociationBinaryReader.kt` / `DictionaryBinaryReader.kt`). Authoritative list = `grep -rl 'CROSS-PLATFORM INVARIANT' android/`.
-- Async pipelines that may produce stale results use a monotonic generation counter. Late callbacks drop on generation mismatch. Matches the iOS `NextWordController.currentGeneration` pattern.
+- Surfaces carrying the marker on Android: authoritative list = `grep -rl 'CROSS-PLATFORM INVARIANT' android/`.
+- Async pipelines that may produce stale results use a monotonic generation counter. Late callbacks drop on generation mismatch. Matches the iOS `NextWordController` envelope-generation pattern (`bumpEnvelopeGeneration()`).
 
 ## 3. Kotlin idioms `[B]`
 
@@ -107,7 +107,7 @@ Generic Kotlin idioms (`val` over `var`, sealed hierarchies, data classes, corou
 - `PrefHelper` is the authoritative settings facade. DataStore is the storage; Flow subscriptions are the live-push channel.
 - For engine-facing reads, implement `EngineSettings` with `get()` properties that re-read `PrefHelper.cachedPrefs` on each access. **Never** snapshot via `val x = prefs.getX()` in the initializer — subsequent DataStore updates would be invisible until object re-creation. See `docs/architecture/ios-exemplar.md` §3 Android-live-read warning for the verbatim anti-pattern.
 - Cross-process / cross-lifecycle settings updates (IME extension ↔ host app) travel via DataStore Flow collection in `TaigiKeyboard.onCreate`, not via a notification broadcast.
-- SharedPreferences → DataStore migration runs once in `TaigiKeyboard.onCreate`. Do not add new SharedPreferences writes in new code.
+- SharedPreferences → DataStore migration runs once in `TaigiKeyboardApplication.onCreate`. Do not add new SharedPreferences writes in new code.
 
 ## 7. Nullability + errors `[B]` `[R]`
 
@@ -124,8 +124,6 @@ When a receiver class already exposes a member function `fun X(...)`, a top-leve
 - More generally: when adding an inline extension with lazy evaluation semantics alongside an eager member, the extension needs a different name. A compile check after definition is faster than guessing.
 - Same caveat applies to extension properties shadowing member properties.
 
-Incident: A1 follow-up on PR #145 — extension `fun LoggerBackend.d(tag, msg: () -> String)` shadowed member `fun d(tag, msg: String)`; build failed across 33 call-sites with `Function0<String> but String was expected`. Renaming to `debug` fixed it.
-
 ## 8a. SQLite capability baseline = the version `minSdk` bundles `[A]`
 
 Android's SQLite ships **with the OS**, not with the app (`android.database.sqlite.*` — the project uses no bundled driver). So the usable SQL dialect is fixed by `minSdk`: unsupported syntax fails at `prepare` time as a runtime `SQLiteException`, on a device the CI never runs on, and every user-data write site catches-and-logs so it fails silently in release. The JVM unit test `SqliteDialectCeilingTest` (`android/app/src/test/.../ime/core/db/`) scans every `src/main` string literal for the constructs listed below — the two lists are maintained together. It catches the listed syntax, not every 3.22 incompatibility; the pair test below runs the production SQL on the JVM's newer SQLite, so device dogfood on Android 9 remains the only true parse check.
@@ -139,15 +137,15 @@ Android's SQLite ships **with the OS**, not with the app (`android.database.sqli
 
 **Unavailable** at 3.22: `ON CONFLICT … DO UPDATE` (UPSERT, 3.24) · window functions — `ROW_NUMBER`, `OVER()`, `PARTITION BY` (3.25) · `RENAME COLUMN` (3.25) · `NULLS FIRST/LAST`, `FILTER` (3.30) · generated columns (3.31) · `IIF()` (3.32) · `RETURNING`, `DROP COLUMN`, `MATERIALIZED` (3.35) · `STRICT` tables (3.37).
 
-**Upsert pattern**: `upsert(update, insert, args)` in `ime/core/db/SqliteMaintenance.kt` — `UPDATE … WHERE <unique key>`, then `INSERT OR IGNORE …` only when the UPDATE matched no row; the caller holds the transaction (`db.transaction {}`). Both statements bind one arg tuple, so write the INSERT column list in the UPDATE's bind order. Equivalent to UPSERT given the UNIQUE / PRIMARY KEY on the key; the UPDATE keeps `created_at` and the rowid. `SqliteUpsertPairTest` pins the semantics on the production DDL + pair strings. Sites: `NextWordService`, `UserFrequencyService`, `CustomDictionaryService.executeUpsert`.
+**Upsert pattern**: `upsert(update, insert, args)` in `ime/core/db/SqliteMaintenance.kt` — `UPDATE … WHERE <unique key>`, then `INSERT OR IGNORE …` only when the UPDATE matched no row; the caller holds the transaction (`db.transaction {}`). Both statements bind one arg tuple, so write the INSERT column list in the UPDATE's bind order. Equivalent to UPSERT given the UNIQUE / PRIMARY KEY on the key; the UPDATE keeps `created_at` and the rowid. `SqliteUpsertPairTest` pins the semantics on the production DDL + pair strings. Sites: `NextWordService`, `UserFrequencyService`, `CustomDictionaryService.executeUpsert`, `LearnedPhraseService`.
 
 Before using SQL syntax you are not certain of, check its version against [SQLite's release history](https://www.sqlite.org/changes.html) and the table above. Raising `minSdk` raises the ceiling — update this section and the test in the same PR.
 
-**Incident** (2026-08-17): `minSdk` was 28 while all three user-data DBs (`user_association`, `user_frequency`, `custom_dictionary`) used UPSERT at every write. On Android 9/10 those statements were a syntax error, so learning silently never worked there — no crash, no release log, no bug report. Surfaced only while auditing R2's own SQL for 3.22 compatibility. First resolved by raising `minSdk` to 30 (#532); reverted to 28 on 2026-09-19 after an Android 9 user could no longer install — the five UPSERTs became UPDATE + INSERT OR IGNORE pairs and the dialect test above became the gate.
+Keep `minSdk` at 28: Android 9 users must stay able to install, so UPSERT stays unavailable.
 
 ## 9. Gradle files editable by Claude `[B]`
 
-`android/build.gradle`, `android/app/build.gradle.kts`, `android/settings.gradle`, and other Android Gradle scripts are **editable by Claude directly** (lifted 2026-05-09 — CLAUDE.md rule 4 previously grouped gradle with pbxproj, but gradle edits are routine: plugin wiring, dep bumps, lint config).
+`android/build.gradle`, `android/app/build.gradle.kts`, `android/settings.gradle`, and other Android Gradle scripts are **editable by Claude directly** — gradle edits are routine (plugin wiring, dep bumps, lint config).
 
 - ✅ Edit gradle files directly.
 - ❌ Still off-limits: `*.xcodeproj/`, `*.pbxproj/`, iOS xcconfig (see `.claude/rules/ios-guidelines.md`).

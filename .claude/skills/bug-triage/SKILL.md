@@ -16,14 +16,14 @@ Read + label Taigi Keyboard user bug reports in Gmail. Backed by `gmail_cli.py` 
 
 ## Labels (CJK house style — do NOT change the query syntax)
 
-Label taxonomy is all-CJK type names, hierarchical `parent/child[/leaf]` (matches the whole Gmail account — e.g. `銀行/中國信託/登入通知`). English is reserved for proper-noun brands only. The dev subtree was CJK-aligned 2026-06-29:
+Label taxonomy is all-CJK type names, hierarchical `parent/child[/leaf]` (matches the whole Gmail account — e.g. `銀行/中國信託/登入通知`). English is reserved for proper-noun brands only:
 
 - Unfixed user reports: `label:"開發/問題回報"` — quoted + hierarchical. An unquoted `label:開發-問題回報` **fails** (Gmail reads `-`/spaces oddly); always quote.
 - Fixed reports: `label:"開發/問題回報/已修復"` — ONLY when a merged fix exists.
 - Not reproducible: `label:"開發/問題回報/無法重現"` — the symptom could not be reproduced on the current build (no fix was made). USER rule 2026-08-20: NOT-repro is never 已修復.
 - Feature requests: `label:"開發/功能建議"`.
 - List query = `label:"開發/問題回報" -label:"開發/問題回報/已修復" -label:"開發/功能建議" -label:"開發/問題回報/無法重現"` (open bug queue = reported, not fixed, not a feature, not closed as unreproducible).
-- Gmail filter (2026-09-18): `to:info@taigikeyboard.tw` + `subject:("台語齒盤" OR "Taigi Keyboard" OR TaigiKeyboard)` → `開發/問題回報` + star. Before that the filter was `to:` only and swept ECPay / 藍新 payment mail into the label; the helper still keyword-skips such mail as a defensive guard and reports the skipped count. User mail with a hand-written subject lacking the product name (~3/yr) is NOT auto-labelled — label it by hand from the inbox.
+- Gmail filter: `to:info@taigikeyboard.tw` + `subject:("台語齒盤" OR "Taigi Keyboard" OR TaigiKeyboard)` → `開發/問題回報` + star. Payment mail (ECPay / 藍新) can still reach the label; the helper keyword-skips it as a defensive guard and reports the skipped count. User mail with a hand-written subject lacking the product name (~3/yr) is NOT auto-labelled — label it by hand from the inbox.
 - Filter edits need scope `gmail.settings.basic` (separate consent; the triage token is `gmail.modify` only). Gmail filters are immutable: create new + delete old.
 
 ## Commands
@@ -71,8 +71,7 @@ reporters by initials in anything committed.
 
 **Also cross-check the reported version against the changelog** before calling an item "already
 fixed": if the fix PR shipped in a release **older than** the reported version, the reporter
-already had it and the item is live, not a dogfood leftover. (2026-08-19: this refuted the
-"already fixed" premise on two backlog items.)
+already had it and the item is live, not a dogfood leftover.
 
 ## Triage flow
 

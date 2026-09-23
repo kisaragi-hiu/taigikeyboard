@@ -58,6 +58,6 @@ Change the schema only with a matching update to both platform loaders + the tes
 - **Distribution**: this pipeline is tracked directly in the app repository. Apps read
   `taigi-emojis/dist/emoji.json`; iOS bundles it into the keyboard extension, Android into
   `assets/`.
-- **Cross-platform parity**: the json is the shared contract. iOS native SwiftUI view and
-  Android Compose view must derive categories, ordering, variations, and search from this
+- **Cross-platform parity**: the json is the shared contract. iOS (vendored `ISEmojiView` fed via `customEmojis`)
+  and Android Compose view must derive categories, ordering, variations, and search from this
   file — no platform-side hardcoded emoji lists.

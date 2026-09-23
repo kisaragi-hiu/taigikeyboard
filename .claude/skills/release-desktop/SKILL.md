@@ -49,17 +49,7 @@ Derive the release base unless one was passed:
 git describe --tags --abbrev=0 --match 'desktop-*' HEAD
 ```
 
-Desktop releases cut before 2026-09-09 were tagged on the website repository
-(`macos-v…` / `windows-v…`), not here. With no `desktop-*` tag, fall back to
-the commit that set the current version:
-
-```bash
-git log --format='%h %ad %s' --date=short -S'<target>' -- macos/App/Info.plist | tail -1
-```
-
-That bump is the proxy for where the previous release shipped from, and it is a
-proxy — anything merged between that release and the bump falls outside the
-range. Say so when using it, and prefer an explicit `<base-ref>`.
+No `desktop-*` tag reachable from `HEAD` → stop and ask for `<base-ref>`.
 
 Then, before any edit:
 
@@ -131,11 +121,8 @@ Two desktop-specific upgrade checks on top of it:
 
 ## 3. Rebuild release artifacts
 
-**The skill runs these itself.** `CLAUDE.md` § Build & Test reserves builds for
-the user mid-round; a release is a named exception, like post-PR verification —
-the whole point of this step is that the artifact being shipped was built from
-the commit being released, and asking the user to remember it is what the
-conditional version already got wrong.
+**The skill runs these itself** — the artifact shipped must be built from the
+commit being released.
 
 **Always**, not only when the range touched them. The engine binaries a platform
 links are generated and gitignored (`macos/RustEngine/RustTaigi.xcframework/`,

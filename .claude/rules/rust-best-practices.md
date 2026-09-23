@@ -25,7 +25,7 @@ Cargo workspace with one crate per concern. Models khiin-rs (`references/khiin-r
 
 ## 1a. Crate layering & dependency direction `[R]` `[A]`
 
-The §1 sketch is the original khiin-rs-modeled target. The workspace has since split the stateful `engine/` crate into discrete domain crates. Current runtime crates — dependency edges flow **one way, top → bottom** (the offline `build-helpers/fst-builder` producer sits outside this runtime graph):
+Current runtime crates — dependency edges flow **one way, top → bottom** (the offline `build-helpers/fst-builder` producer sits outside this runtime graph):
 
 ```
 ┌─ adapters ─────────────────────────────────────────────────┐
@@ -73,7 +73,7 @@ A visual copy of this graph plus the per-keystroke request lane lives in `docs/a
       InternalPanic(String),
   }
   ```
-- **`anyhow` is forbidden in library crates** (`phonetics`, `engine`, `protos`). Allowed in build scripts only.
+- **`anyhow` is forbidden in every workspace library crate**. Allowed in build scripts only.
 - **`Result<T, EngineError>` throughout internal APIs.** Encode into `Response.ErrorCode` only at the FFI edge (see `.claude/rules/rust-ffi-safety.md` § FFI boundary discipline).
 - **No `panic!` / `unwrap()` / `expect()` on unvalidated input.** `unwrap()` on a `Mutex::lock()` result is acceptable (poison is a programmer error, not a data path); briefly explain with `// JUSTIFICATION:` when non-obvious. `SAFETY:` comments are reserved for `unsafe` blocks per `.claude/rules/rust-ffi-safety.md` §3 — a safe `Mutex::lock().unwrap()` does not take one.
 - **`?` is allowed and idiomatic inside the `catch_unwind` closure** (which returns `Result<Vec<u8>, EngineError>`). What is banned is propagating a `Result` out of the FFI function itself — the outer `extern fn` must return protobuf bytes or a null sentinel, never a Rust `Result` or `Option`. Encode errors into `Response.ErrorCode` at the seam between closure and extern fn.
@@ -86,7 +86,7 @@ Pinned choices (deviations require written justification):
 |---|---|---|
 | Protobuf codegen | **`prost` + `prost-build`** | Modern, zero-copy-friendly, integrates with tonic. Rejects older `rust-protobuf` that khiin-rs uses. |
 | SQLite driver | **`rusqlite` with `bundled` feature** | Cross-platform consistent; matches khiin-rs (validated). |
-| Trie / prefix lookup | **`fst` crate** | Pure-Rust, mmap-friendly (iOS extension memory budget), replaces JNI-bound MARISA. Decision pinned in Phase IV-B Lexicon slice. |
+| Trie / prefix lookup | **`fst` crate** | Pure-Rust, mmap-friendly (iOS extension memory budget), replaces JNI-bound MARISA. |
 | JNI wrapper | **`jni` crate** | Idiomatic safe wrapper; rejects hand-rolled `extern` fns per khiin-rs style. |
 | Swift-bridge | **`swift-bridge` crate** | Matches khiin-rs; proven on iOS + macOS. |
 | Logging | **`log` crate** + per-platform adapter | Standard Rust idiom. |
@@ -101,25 +101,15 @@ Type-shape preferences that cross FFI:
 
 ## 4. Cross-compile + build tooling `[A]`
 
-- **`cargo-make` + `Makefile.toml`** as the build orchestrator. Matches khiin-rs pattern (validated across 4 platforms). Tasks at minimum: `build-db`, `build-droid`, `build-swift`.
-- **Android**: `cargo-ndk` for multi-ABI builds (`arm64-v8a` mandatory; `x86_64` for emulator testing only — khiin-rs documents a known `x86_64` NDK crash in `android/README.md`, acceptable for emulator work).
+- **Root `Makefile`** orchestrates (`make build` / `dict` / `fmt` / `lint`). `engine/Makefile.toml` holds the cargo-make tasks (`build-swift`, `build-droid`, `ci`).
+- **Android**: `cargo-ndk` for multi-ABI builds (ships `arm64-v8a` only; add another ABI to `engine/rust-toolchain.toml` only when it ships).
 - **iOS / macOS**: `cargo build --target aarch64-apple-ios` + simulator targets; packaged as xcframework via `swift-bridge` generator.
-- **Rustup targets** pinned in `rust-toolchain.toml`:
-  ```toml
-  [toolchain]
-  channel = "stable"
-  components = ["rustfmt", "clippy"]
-  targets = [
-      "aarch64-linux-android", "armv7-linux-androideabi", "x86_64-linux-android",
-      "aarch64-apple-ios", "aarch64-apple-ios-sim", "x86_64-apple-ios",
-  ]
-  ```
+- **Rustup targets** pinned in `engine/rust-toolchain.toml` (shipped ABIs only; reasons in its comments).
 
 ## 5. Testing strategy `[R]` `[A]`
 
-- **Unit tests**: `#[cfg(test)] mod tests` alongside source files. Pure logic (`phonetics`, `engine`) targets ≥ 80% line coverage.
-- **Integration tests**: `engine/tests/` exercises the engine through its public API with protobuf messages, no FFI.
-- **FFI roundtrip tests**: `android-jni/tests/` + `swift-ffi/tests/` exercise FFI entry points for panic safety, Drop, thread serialization, malformed-bytes handling. Required for D9 POC acceptance.
+- **Unit tests**: `#[cfg(test)] mod tests` alongside source files.
+- **Integration tests**: `engine/<crate>/tests/` exercise each crate through its public API with protobuf messages, no FFI.
 - **Invariant tests**: every `INVARIANT_*` label from `docs/architecture/behavioral-invariants.md` has a matching Rust test. Drift between platform tests and Rust tests = regression.
 - **`cargo test --workspace`** must pass in CI before any PR merges.
 - **Property tests** (`proptest`) for phonetics round-trip invariants (TL↔POJ↔TPS) — complements hand-written invariant tests.
@@ -127,20 +117,18 @@ Type-shape preferences that cross FFI:
 ## 6. Rust version policy `[A]`
 
 - **Stable channel only.** No nightly features, no `#![feature(...)]`.
-- **MSRV pinned at Rust 1.86** in root `Cargo.toml` (`rust-version = "1.86"`). Rationale: 1.85 (Feb 2025) stabilises edition2024 and 1.86 (Apr 2025) is the next stable. Bumped during Phase III D9.2 because `cargo-ndk` 4.x requires 1.86 and the dev-tool gap is not worth carrying a 3.5.x sidegrade for. Earlier pins (1.75 → 1.85 in D9.1) similarly bumped to clear active-tooling gaps. Bumping MSRV further remains a PR-level decision with CI verification.
+- **MSRV 1.86** (`rust-version` in root `Cargo.toml`); bumping is a PR-level decision with CI verification.
 - **No experimental features** (`async fn` in traits — stable since 1.75 — OK; GATs in traits OK; const generics full — OK; edition2024 — OK on 1.85+).
-- **`rustfmt` default config**, no deviations. Apply with `make fmt`; check without writing via `cd engine && cargo fmt --all -- --check` (§7 is judgment-gated, not mandatory).
+- **`rustfmt` default config**, no deviations. Apply with `make fmt`; check without writing via `cd engine && cargo fmt --all -- --check` (CI gates it per §7).
 - **`clippy` with `-D warnings`** available via `make lint` (runs clippy + Kotlin spotlessCheck). Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
 
-## 7. Pre-commit gate + supply chain `[A]`
+## 7. CI gate + supply chain `[A]`
 
-This project runs the Rust gate **locally**, not via GitHub Actions. Mirrors `~/.claude/rules/round-workflow.md` "Build & changelog" for `./gradlew` / `xcodebuild`: the user runs build/test, AI does not. The user decides per-round whether the full canonical gate runs, a subset runs, or no gate runs.
+CI (`.github/workflows/engine.yml`) runs `cargo test --workspace` and `cargo fmt --check` on every PR touching `engine/`; `.github/workflows/security.yml` runs `cargo-audit` + `cargo-deny` on PRs touching Cargo manifests / lockfiles and weekly. Post-PR verification follows CLAUDE.md § Build & Test. `make lint` (clippy `-D warnings`) runs on demand.
 
-- **No mandatory canonical 4-cmd pre-PR gate.** USER explicitly retains judgment per-round on whether to run `cargo fmt --all -- --check` / `cargo check --workspace --locked` / `cargo clippy --workspace --all-targets -- -D warnings` / `cargo test --workspace`, in part or in whole. AI does not run these as a fixed gate; AI may surface findings if it noticed something concrete, but never as "you must run the gate now". Rationale: the gate as a mandatory step adds significant wall-clock cost that is wasted on most rounds (docs / single-crate refactor / mechanical rename). Judgment-based use catches what matters; reflexive use does not.
-- The full four commands above remain the **canonical recipe** when USER does decide to run a full check — kept as a documented bare-cargo form so it is reproducible.
 - `make`-target shortcuts available for round-internal iteration (fast paths) AND canonical form (full paths). See root `Makefile help` for the current target list.
-- **`cargo-audit`** scans against the RustSec advisory DB on demand — optional, install via `cargo install cargo-audit --locked`.
-- **`cargo-deny check`** enforces dependency policy via `engine/deny.toml`: license allow-list (MIT / Apache-2.0 / BSD / ISC / Unicode-DFS-2016 / Unicode-3.0 / Zlib), `multiple-versions = warn`, `unknown-git = deny`, `unknown-registry = deny`. Optional, install via `cargo install cargo-deny --locked`.
+- **`cargo-audit`** scans against the RustSec advisory DB (CI `security.yml`; locally, install via `cargo install cargo-audit --locked`).
+- **`cargo-deny check`** enforces dependency policy via `engine/deny.toml`: license allow-list (MIT / Apache-2.0 / BSD / ISC / Unicode-DFS-2016 / Unicode-3.0 / Zlib), `multiple-versions = warn`, `unknown-git = deny`, `unknown-registry = deny`. Runs in CI `security.yml`; locally, install via `cargo install cargo-deny --locked`.
 - **FFI integration tests** are run on representative Android emulator + iOS simulator targets when relevant to the round (D9 gate onward) — user-gated, no CI matrix, no fixed schedule.
 - **Supply chain**: no git dependencies in `Cargo.toml`. Patches go through explicit `[patch.crates-io]` with version pins and written justification.
 
@@ -149,8 +137,8 @@ This project runs the Rust gate **locally**, not via GitHub Actions. Mirrors `~/
 Codifying `.claude/rules/cross-platform-alignment.md` §4.1 in Rust terms:
 
 - **No async runtime** (`tokio`, `async-std`, `smol`). Engine is synchronous. Platform wrappers handle threading.
-- **No global state in Rust.** No `lazy_static!` / `once_cell::sync::Lazy` in engine or phonetics crates. Engine lifetime is platform-managed.
-- **No Rust-side UI in `engine/`.** No GTK / Tauri / egui. The `engine/` workspace ships engine + phonetics + CLI only. The Windows frontend (`windows/` workspace: TSF DLL `taigi-windows-tsf` + WinUI 3 settings window via `windows-reactor`) is Rust by necessity but a separate workspace governed by `windows-guidelines.md`; iOS / Android / macOS frontends stay in Swift / Kotlin.
+- **No stray global state.** Process-wide engine state lives only in each stateful domain crate's `handle.rs` singleton behind a `Mutex` / `RwLock`. Immutable lookup tables may use `once_cell::sync::Lazy`. No other mutable globals.
+- **No Rust-side UI in `engine/`.** No GTK / Tauri / egui. The `engine/` workspace ships engine + phonetics + CLI only. The Windows (`windows/`: TSF DLL + WinUI 3 settings) and Linux (`linux/`: IBus engine + GTK settings in Rust, Fcitx5 addon in C++ over `taigi-linux-ffi`) frontends live in separate Cargo workspaces governed by `windows-guidelines.md` / `linux-guidelines.md`; iOS / Android / macOS frontends stay in Swift / Kotlin.
 - **No web-target builds** (`wasm32-*`). Future consideration, not a current deliverable.
 - **No FFI-crossing types from `std::sync` beyond `Arc<Mutex<...>>`.** Channels, condvars, parking_lot stay Rust-internal.
 - **No `Send`-ing `Rc<...>` / `RefCell<...>`.** Interior mutability across FFI is rejected — use `Mutex` if shared, plain ownership if not.

@@ -35,15 +35,18 @@ Read each file at both refs with `git show <ref>:<path>`; for code that may move
 
 ### 1. SQLite user-data schema versions
 
-These three DBs persist on-device and migrate forward via `PRAGMA user_version`. The iOS and Android constants are paired (must stay aligned).
+These four DBs persist on-device and migrate forward via `PRAGMA user_version`. A bump on one platform needs a matching migration on the other; the numbers need not be equal.
 
 | DB | Android constant | iOS constant |
 |---|---|---|
 | 自訂詞 custom dict | `ime/dictionary/CustomDictionaryService.kt` `DATABASE_VERSION` | `Lexicon/Database/CustomDictionarySchema.swift` `schemaVersion` |
 | 詞關聯 association | `ime/dictionary/NextWordService.kt` `DATABASE_VERSION` | `NextWord/Repository/NextWordSchema.swift` `schemaVersion` |
 | 詞頻 frequency | `ime/text/composing/UserFrequencyService.kt` `DATABASE_VERSION` | `Lexicon/Database/UserFrequencySchema.swift` `pairKeySchemaVersion` |
+| 自造詞 learned phrases | `ime/dictionary/LearnedPhraseService.kt` `DATABASE_VERSION` | `Lexicon/Database/LearnedPhraseSchema.swift` `schemaVersion` |
 
 For each: compare the constant at `<base>` vs `<target>`.
+
+Desktop train: compare `SCHEMA_VERSION` in `desktop/crates/taigi-desktop-storage/src/*.rs` (Windows + Linux) and `schemaVersion` in `macos/Sources/TaigiInputMethodCore/Storage/*Store.swift`; same forward-only / non-destructive rules.
 
 - **Unchanged** → no migration runs on upgrade (the `current >= target → return` guard short-circuits). SAFE.
 - **Bumped** → a migration MUST exist and be:
@@ -54,7 +57,7 @@ For each: compare the constant at `<base>` vs `<target>`.
 
 ### 2. `.taigi` backup format
 
-`android/.../ime/dictionary/BackupService.kt` — `put("version", N)` (write version) + `require(version >= M)` (accept floor). iOS counterpart in the App-layer backup/restore code.
+`android/.../ime/dictionary/BackupService.kt` — `put("version", N)` (write version) + `require(version >= M)` (accept floor). iOS counterpart: `ios/Sources/TaigiKeyboard/Lexicon/Services/BackupService.swift`.
 
 - Write version bumped but accept-floor unchanged → new app still reads old backups. SAFE for the upgrade path (the cross-device concern — old app reading a *new* backup — is a separate downgrade case; note it but it is not an upgrade blocker).
 - **Accept-floor raised** (`>= M` with M increased) → a user's existing/exported backup at an older version now **rejects on import** → BLOCKING for restore.
@@ -80,13 +83,13 @@ iOS `Settings/SharedSettings.swift` (`SettingsKey` definitions + `resetToDefault
 
 ### 5. Removed / renamed bundled assets
 
-`git diff <base>..<target> --diff-filter=D --name-only -- 'android/app/src/main/assets/**' 'ios/Sources/**/Assets.xcassets/**' 'ios/Resources/**' 'macos/Resources/**' 'windows/resources/**' 'dictionaries/**'`.
+`git diff <base>..<target> --diff-filter=D --name-only -- 'android/app/src/main/assets/**' 'ios/Sources/**/Assets.xcassets/**' 'ios/Resources/**' 'macos/App/**' 'windows/resources/**' 'dictionaries/**'`.
 
 For each deleted asset, ask: **does any persisted user state reference it by an unstable handle?**
 
 - Recents / favorites stored by **stable value** (emoji codepoint string, canonical TL) → a removed item just stops appearing; no crash. SAFE / minor BEHAVIOR-CHANGE.
 - Persisted state stored by **index / row-id / resource-name into the old asset set** → removing an item shifts indices → wrong data or crash → BLOCKING. (Emoji recents on both platforms key by emoji string → SAFE. Verify before clearing.)
-- A drawable referenced via `getIdentifier()` and stripped by resource-shrink → check `keep.xml` (see `project_android_release_resource_shrink.md`).
+- A drawable referenced via `getIdentifier()` and stripped by resource-shrink → check `android/app/src/main/res/raw/com_siansiansu_taigikeyboard_keep.xml` (resolver `ui/components/DrawableResourceResolver.kt`).
 
 ### 6. Bundled binary format versions
 
@@ -123,7 +126,7 @@ Emit a markdown report:
 
 Rules:
 - Every row cites `file:line` + the old→new value. No claim without evidence.
-- A SAFE result for a whole area still gets one row ("schema: all 6 unchanged → no migration runs").
+- A SAFE result for a whole area still gets one row ("schema: all unchanged → no migration runs").
 - BEHAVIOR-CHANGE findings are cross-checked against the target changelog file (`changelog/mobile-v<version>.md` / `changelog/desktop-v<version>.md`); flag any that are missing from the changelog.
 - Never assign release scope (in/out of vX) — that is user-gated (`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope). Report compat facts only.
 - This skill does not fix anything. If a BLOCKING finding needs a code change, that is a separate user-gated bugfix round (Core Principle #4).
@@ -132,4 +135,4 @@ Rules:
 
 - Refs can be tags (`v3.6.2`), branches, or SHAs. `git show <ref>:<path>` reads a file at a ref without checkout.
 - If `<base-ref>` is not an ancestor of `<target-ref>`, say so — a non-linear comparison may miss reverts.
-- The file paths above are the canonical surface as of v3.6.3. If a future refactor moves a schema/settings file, update this list in the same PR that moves it.
+- A path above missing at `<target>` → locate the moved file by its constant name and report the stale path as a finding.

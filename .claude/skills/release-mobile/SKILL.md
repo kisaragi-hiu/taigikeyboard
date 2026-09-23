@@ -1,6 +1,6 @@
 ---
 name: release-mobile
-description: Prepare a MOBILE release (iOS + Android, one shared version) on main - rebuild generated artifacts, update the detailed changelog, write concise English iOS and Android What's New text, validate, commit, push, and tag the release commit `mobile-<version>`. Use when preparing a version for manual App Store Connect or Google Play release. Never uploads builds or submits a store release. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-mobile x.y.z`); an optional argument only overrides the release base. Mobile train only; the desktop train (macOS + Windows) is `release-desktop`.
+description: Prepare a MOBILE release (iOS + Android, one shared version) on main - rebuild generated artifacts, update the detailed changelog, write concise English iOS and Android What's New text, validate, commit, push, and tag the release commit `mobile-<version>`. Use when preparing a version for manual App Store Connect or Google Play release. Never uploads builds or submits a store release. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-mobile x.y.z`); an optional argument only overrides the release base. Mobile train only; the desktop train (macOS + Windows + Linux) is `release-desktop`.
 ---
 
 # Release Mobile
@@ -83,11 +83,8 @@ Run the `upgrade-check` procedure for `<base-tag> → HEAD`:
 
 ## 3. Rebuild release artifacts
 
-**The skill runs these itself.** `CLAUDE.md` § Build & Test reserves builds for
-the user mid-round; a release is a named exception, like post-PR verification —
-the whole point of this step is that the artifact being shipped was built from
-the commit being released, and asking the user to remember it is what the
-conditional version already got wrong.
+**The skill runs these itself** — the artifact shipped must be built from the
+commit being released.
 
 **Always**, not only when the range touched them. The engine binaries iOS and
 Android link are generated and gitignored, so a clean tree says nothing about
@@ -179,18 +176,18 @@ The user pastes iOS text into App Store Connect and Android text into the chosen
 
 ## Desktop train
 
-macOS and Windows are the **desktop train**: one version number shared by the two, moved by `make version-desktop x.y.z`, independent of the mobile number this skill prepares. It has its own skill (`release-desktop`), its own record (`changelog/desktop-v<version>.md`), and its own publish scripts. This skill never writes that file, runs those scripts, or publishes anything for desktop.
+macOS, Windows and Linux are the **desktop train**: one version number shared by the three, moved by `make version-desktop x.y.z`, independent of the mobile number this skill prepares. It has its own skill (`release-desktop`), its own record (`changelog/desktop-v<version>.md`), and its own publish scripts. This skill never writes that file, runs those scripts, or publishes anything for desktop.
 
 What that means while preparing a mobile release:
 
-- Keep macOS and Windows out of `changelog/mobile-<target>.md` entirely: that file is the mobile record, and a desktop change in it describes work its readers cannot install. Desktop work waits for its own `changelog/desktop-v<version>.md`.
+- Keep macOS, Windows and Linux out of `changelog/mobile-<target>.md` entirely: that file is the mobile record, and a desktop change in it describes work its readers cannot install. Desktop work waits for its own `changelog/desktop-v<version>.md`.
 - Keep macOS out of `ios.txt` and `android.txt`. `validate_notes` forbids the whole words `macOS` and `Mac` in both, so a leak fails `check` rather than reaching a store listing.
-- `check-versions --train mobile` verifies iOS + Android only. A macOS or Windows version that differs from `<target>` is expected, not a finding.
+- `check-versions --train mobile` verifies iOS + Android only. A macOS, Windows or Linux version that differs from `<target>` is expected, not a finding.
 
 ## Guardrails
 
 - Never edit another version's changelog or store-note files.
-- Never touch `changelog/desktop-v<version>.md`, `macos/`, or `windows/` — that is `release-desktop`'s surface.
+- Never touch `changelog/desktop-v<version>.md`, `macos/`, `windows/`, `linux/`, or `desktop/` — that is `release-desktop`'s surface.
 - Never hand-edit the generated target history entry.
 - Tag only the release commit made in § 6, only as `mobile-<version>`, and never move or delete an existing tag.
 - Never request, store, or use signing certificates, keystores, API keys, or store credentials.

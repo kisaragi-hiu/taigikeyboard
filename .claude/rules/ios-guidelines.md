@@ -63,7 +63,7 @@ Refactors that delete Swift files under a synced-group directory: Xcode auto-rem
 - New file at `Sources/TaigiKeyboard/` ROOT level (siblings to synced groups need manual add).
 - New top-level directory under `Sources/TaigiKeyboard/` — Xcode does NOT auto-promote a new dir to a synced group; user must "Add Files…" or "Convert to Synchronized Group".
 - Binary references (e.g. `ios/RustEngine/RustTaigi.xcframework`) — not synced.
-- `Info.plist`, entitlements, signing, build settings, scheme — always pbxproj-level, always user. **One exception, and it is still user-run**: `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` are written by `make version-mobile x.y.z`, which sets the same version on Android in the same pass (the mobile train; macOS + Windows are the separately numbered desktop train) and pins the build number to 1 (App Store Connect numbers a version's uploads itself) (`tools/release_notes.py set-versions --train mobile`). AI still never edits pbxproj — name that command as the user's action item instead of asking for a hand edit in Xcode, because a hand edit desyncs the two mobile platforms until `check-versions` catches it.
+- `Info.plist`, entitlements, signing, build settings, scheme — always pbxproj-level, always user. **One exception, and it is still user-run**: `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` are written by `make version-mobile x.y.z`, which sets the same version on Android in the same pass (the mobile train; macOS + Windows + Linux are the separately numbered desktop train) and pins the build number to 1 (App Store Connect numbers a version's uploads itself) (`tools/release_notes.py set-versions --train mobile`). AI still never edits pbxproj — name that command as the user's action item instead of asking for a hand edit in Xcode, because a hand edit desyncs the two mobile platforms until `check-versions` catches it.
 - Adding the same file to a SECOND target — synced group governs the primary target only.
 
 ### Folder renames break synced-group registration — audit drift
@@ -88,4 +88,4 @@ for d in ios/Sources/TaigiKeyboard/*/; do
 done
 ```
 
-If drift exists: alert the user. They drag the new folder into Project Navigator as *Create folder references* and delete the orphan group. AI never edits pbxproj directly. (Incident: PR #213 renamed `Common/ → Logging/` on disk without updating pbxproj; build silently broke at `Engine/RustEngineBridge.swift:281` "Cannot find 'LoggerFactory' in scope".)
+If drift exists: alert the user. They drag the new folder into Project Navigator as *Create folder references* and delete the orphan group. AI never edits pbxproj directly. (Incident: old #213 renamed `Common/ → Logging/` on disk without updating pbxproj; build silently broke at `Engine/RustEngineBridge.swift:281` "Cannot find 'LoggerFactory' in scope".)

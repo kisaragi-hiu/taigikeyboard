@@ -17,25 +17,9 @@ Engine-layer code **MUST NOT** read `SharedSettings.shared` directly. It reads f
 
 ## 2. Definition
 
-```swift
-// Settings/EngineSettings.swift (Foundation-only)
-public protocol EngineSettings {
-    var inputMode: InputMode { get }
-    var isAutoSpaceEnabled: Bool { get }
-    var isOutputBothScripts: Bool { get }
-    var isAssociationRecordingEnabled: Bool { get }
-    var isAutoCap: Bool { get }
-    // ... add as needed, never everything
-}
+Both protocols are Foundation-only: `Settings/EngineSettings.swift` (the engine-facing setting properties) and `Settings/EngineSettingsProvider.swift` (`var current: EngineSettings { get }`). Read those files for the live property list.
 
-// Settings/EngineSettingsProvider.swift (Foundation-only)
-public protocol EngineSettingsProvider: AnyObject {
-    var current: EngineSettings { get }
-    func addChangeListener(_ listener: @escaping () -> Void) -> AnyObject  // token for removal
-}
-```
-
-`SharedSettings.shared` conforms to `EngineSettingsProvider`. Its `current` returns a `SettingsSnapshot` (value type) captured at the moment of access. `addChangeListener` hooks into the existing `UserDefaults.didChangeNotification` plumbing.
+`SharedSettings.shared` conforms and returns `self` from `current`, so each property access re-reads `UserDefaults`.
 
 ## 3. Why provider, not snapshot
 

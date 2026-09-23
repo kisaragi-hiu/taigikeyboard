@@ -128,7 +128,7 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 
 ## Data + settings
 
-- `%APPDATA%\TaigiKeyboard\` for `settings.json` + the three user DBs; the install dir for
+- `%APPDATA%\TaigiKeyboard\` for `settings.json` + the four user DBs (incl. `learned_phrases.db`); the install dir for
   dictionaries and fonts, resolved from the DLL's module path. No registry-stored settings.
 - SQLite schemas are byte-identical to the macOS `CREATE TABLE` text; multi-process access uses
   WAL + `busy_timeout`. Writes are best-effort (AppContainer hosts cannot write).
@@ -157,5 +157,5 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   updater's package check reads them; keep the `build-support/resource.rs` block and the `.iss`
   `VersionInfo*` directives in step.
 - Version source of truth = `windows/Cargo.toml` `[workspace.package] version`, written only by
-  `make version-desktop x.y.z` (the desktop train — macOS + Windows share one number;
+  `make version-desktop x.y.z` (the desktop train — macOS + Windows + Linux share one number;
   iOS + Android are the separately numbered mobile train).

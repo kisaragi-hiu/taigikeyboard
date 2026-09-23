@@ -40,6 +40,7 @@ Principle #3.
 
 ## Versioning
 
-`MAX_EMOJI_VERSION` (in `scripts/generate.py`) and the `Makefile` `CLDR_TAG` are pinned
-together and documented in `data/SOURCES.md`. Raising the pin is a deliberate change:
-`make fetch` → bump both → `make build` → review diff. Release scope/timing is user-gated.
+The pins are documented in `data/SOURCES.md`. Bump `UNICODE_EMOJI_VERSION` + `CLDR_TAG`
+(Makefile) and `MAX_EMOJI_VERSION` + `CLDR_VERSION` (generate.py) together → `make fetch` →
+`make build` → review diff. Full procedure: `fetch-emoji` skill. Release scope/timing is
+user-gated.

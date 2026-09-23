@@ -19,9 +19,9 @@ Mandatory reading before ANY TL / POJ / TPS schema work, FST key-family design, 
 
 Project `CLAUDE.md` Core Principle #3 ("Phonetics = authoritative-source-only") binds this.
 
-## Word identity = (漢字, 羅馬字) pair (Core Principle #7)
+## Word identity = (漢字, 羅馬字) pair (Core Principle #6)
 
-A Taiwanese word is identified by the **(Hanji, canonical-TL) combination**, never by either field alone — 一字多音 (`重/tîng` ≠ `重/tāng`) and homophones make both fields necessary. Any key / dedup / group / lookup / accent-or-variant substitution over Taiwanese entries MUST use the `(hanzi, tl)` pair (project-wide: `lexicon`, `ranking`, dictionary `merge`/`merge_csv`/`cleanup`, accent generation). POJ/TPS are alternate renderings of the same TL and add no new identity. Full statement + rationale: project `CLAUDE.md` Core Principle #7.
+A Taiwanese word is identified by the **(Hanji, canonical-TL) combination**, never by either field alone — 一字多音 (`重/tîng` ≠ `重/tāng`) and homophones make both fields necessary. Any key / dedup / group / lookup / accent-or-variant substitution over Taiwanese entries MUST use the `(hanzi, tl)` pair (project-wide: `lexicon`, `ranking`, dictionary `merge`/`merge_csv`/`cleanup`, accent generation). POJ/TPS are alternate renderings of the same TL and add no new identity. Full statement + rationale: project `CLAUDE.md` Core Principle #6.
 
 ## Required reading (in order)
 
@@ -60,10 +60,6 @@ When auditing phonetic tables (`TL_INITIALS`, `TL_FINALS`, `TONE_NUM_TO_COMBININ
 - **"No test covers" alone is not evidence.** Tests cover sample cases, not the full phonetic surface.
 - **"No dictionary word uses it" alone is not evidence.** Dictionaries grow; the parser must already accept the syllable when a future word lands.
 - For drift triage: default to "(a) canonical missing" before reversing iOS/Android.
-
-**Why**: 2026-04-26. Auditing taigi-converter `iri/erk/eeh` drift, I scanned the 1151 dictionary syllables, found no `*-iri / *-erk / *-eeh`, and proposed removing them everywhere. User corrected: "iri/erk/eeh 這個有意義，是特殊字尾". They're legitimate special/dialectal finals per §3.2.6.
-
-**Why (TPS)**: 2026-05-20 三索引 round. I proposed a TPS schema with `tps_num = digit-tone` and listed `Zhuyin (bopomofo) tps_num = ㄏㄛ2ㄙㄝ3` as an `AskUserQuestion` option. USER rejected twice: (1) "TPS 有自己的聲調表示方法,不是用數字輸入"; (2) "TPS 不是 bopomofo,TPS 和 bopomofo 是不同的系統". I hadn't read §5 Tones or `tps.rs::ZHUYIN_TONES` — the answer was already in the reference.
 
 ## Anti-patterns
 

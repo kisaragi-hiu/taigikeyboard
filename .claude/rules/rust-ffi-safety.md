@@ -21,8 +21,8 @@ Mandatory rules for the Rust ↔ platform boundary: FFI surface, domain↔proto 
 Policy lives here; the technical spec is `docs/engine/ffi-safety.md`. Enforcement:
 
 - **`std::panic::catch_unwind` wraps every FFI function body.** A panic → encoded `EngineError::InternalPanic(msg)` → protobuf `Response.error_code` → platform recovers. Unwind across FFI is undefined behavior in both JNI and C ABI.
-- **Engine is guarded by `Mutex<Engine>`**. Engine state is `Send + !Sync`; the mutex serializes concurrent native calls. `Arc<Mutex<Engine>>` only if the handle is shared across platform threads (usually not needed — one engine per IME session).
-- **Drop discipline**: every opaque handle exposes an explicit `shutdown(handle)` FFI. Rust side implements `Drop` with the same teardown path. Platform side (Kotlin `use {}` / Swift `deinit`) must call `shutdown`. Two khiin-rs failure modes this rule blocks: (a) Kotlin `EngineManager.kt:48` declares `external fun shutdown(enginePtr: Long)` with no matching Rust `extern fn` in `android/rust/src/lib.rs` — Kotlin link succeeds but runtime call panics; (b) `swift/bridge/src/lib.rs:33-35` defines `EngineBridge { engine_ptr: *mut c_void }` with zero `Drop` impl anywhere in the file — the boxed `Engine` leaks on app teardown.
+- **Engine is guarded by `Mutex<Engine>`**. Engine state is `Send + !Sync`; the mutex serializes concurrent native calls. `Arc<Mutex<Engine>>` only if the handle is shared across platform threads (usually not needed — one engine per process).
+- **Drop discipline** (applies once a handle crosses the FFI — see §4): every opaque handle exposes an explicit `shutdown(handle)` FFI. Rust side implements `Drop` with the same teardown path. Platform side (Kotlin `use {}` / Swift `deinit`) must call `shutdown`. Two khiin-rs failure modes this rule blocks: (a) Kotlin `EngineManager.kt:48` declares `external fun shutdown(enginePtr: Long)` with no matching Rust `extern fn` in `android/rust/src/lib.rs` — Kotlin link succeeds but runtime call panics; (b) `swift/bridge/src/lib.rs:33-35` defines `EngineBridge { engine_ptr: *mut c_void }` with zero `Drop` impl anywhere in the file — the boxed `Engine` leaks on app teardown.
 - **Error sentinels travel in protobuf**: every FFI return is either a valid protobuf byte buffer carrying `Response.ErrorCode`, or an out-of-band failure (null bytes / negative length) that means "engine is sick, restart this IME session". Never leak Rust error types across the ABI.
 - **Logging bridge**: the `log` crate is the only logging API candidate code sees. Platform adapter (`OSLog` on iOS, `android.util.Log` on Android) is registered once at engine init via `log::set_logger`. Candidate code never imports `OSLog`, `android.util.Log`, or any platform log API.
 
@@ -59,17 +59,19 @@ mod syllable;
 
 **What this rule excludes.** Native-Rust input/output structs that mirror proto messages, `From<NativeFoo> for protos::engine::Foo` impls, separate per-op entry points in dispatch (`dispatch::process_phonetics`, `dispatch::process_ranking`, …) — all banned. They show up in candidate refactors and they are always extra work for no end-user benefit.
 
-**When this rule may be revisited.** If a future slice needs to expose a domain API that takes / returns Rust-native types because the public Rust crate has consumers outside the IME (e.g. someone embeds `phonetics` in a non-IME tool). Until that happens, Pattern A holds.
+**When this rule may be revisited.** If a future slice needs to expose a domain API that takes / returns Rust-native types because the public Rust crate has consumers outside the IME (e.g. someone embeds `phonetics` in a non-IME tool). Until that happens, this rule holds.
 
 ## 3. `unsafe` discipline `[S]`
 
 - **Every `unsafe` block carries a `// SAFETY:` comment** explaining the invariant that makes the operation sound. The khiin-rs unsafe deref at `references/khiin-rs/swift/bridge/src/lib.rs:52` has no SAFETY note — this pattern is rejected at review.
 - **`unsafe` blocks are confined to FFI marshaling.** No domain logic inside `unsafe`. Target: `unsafe` block contents ≤ 3 lines.
 - **No `transmute` unless absolutely required** — prefer `as` casts, `From`/`Into`, or `#[repr(C)]` layout-compatible structs.
-- **No raw pointer dereferences outside FFI crates.** `phonetics` and `engine` are `#![forbid(unsafe_code)]` at the crate root; only `android-jni` and `swift-ffi` may contain `unsafe`.
+- **No raw pointer dereferences outside FFI crates.** Domain crates inherit the workspace `unsafe_code = "forbid"` lint. Only `android-jni`, `swift-ffi` and the documented `mmap-host` carve-out may contain `unsafe`.
 - **Every new `unsafe` block requires Codex pre-implementation review** per `.claude/rules/cross-platform-alignment.md` §1c.
 
 ## 4. Opaque handle pattern `[S]` `[R]`
+
+Today no handle crosses the FFI: engine state is a per-process singleton inside the domain crates (`handle.rs`, `Mutex<Engine>` / `RwLock`), and the FFI surface is `process_request_bytes` plus logger registration. Use the pattern below only if a handle is introduced.
 
 For engines owned on one side of the FFI boundary:
 
@@ -107,7 +109,7 @@ Both extern fns wrap their bodies in `catch_unwind` per §1. Every `unsafe` bloc
 ## 5. Enforcement hooks `[A]`
 
 - **Spec docs**: `docs/engine/ffi-safety.md` and `docs/engine/rust-core-proto.md` cite this rules file. Rule deviations in those docs require `// JUSTIFICATION:` prose in-line.
-- **Every Rust FFI PR** is reviewed against §§1–4 here plus the `.claude/rules/cross-platform-alignment.md` §1c shared-core-candidate equivalence constraint, then through the standard Codex + `/simplify` pre-impl / Codex post-impl sandwich (mechanics in `~/.claude/rules/round-workflow.md` § Codex review sandwich; run Codex + `/simplify` in parallel per `~/.claude/rules/claude-workflow.md` § Subagent Usage). New `unsafe` blocks (§3) and D9-POC-class FFI code always take the full sandwich; deviations land only with written rationale.
+- **Every Rust FFI PR** is reviewed against §§1–4 here plus the `.claude/rules/cross-platform-alignment.md` §1c shared-core-candidate equivalence constraint, then through the standard Codex + `/simplify` pre-impl / Codex post-impl sandwich (mechanics in `~/.claude/rules/round-workflow.md` § Codex review sandwich; run Codex + `/simplify` in parallel per `~/.claude/rules/claude-workflow.md` § Subagent Usage). New `unsafe` blocks (§3) always take the full sandwich; deviations land only with written rationale.
 
 ## 6. References
 
