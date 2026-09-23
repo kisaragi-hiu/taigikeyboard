@@ -4,7 +4,7 @@
 
 Rule layers:
 - **Cross-project process rules** — `~/.claude/rules/` (from the [`configurations`](https://github.com/siansiansu/configurations) dotfiles repo; run its `setup.sh` on a fresh machine).
-- **Project rules** — `.claude/rules/`; most auto-load via `paths:` glob when a matching file is read. Always-on: `security-rules.md`, `doc-lookup.md`, `taigi-incidents.md`.
+- **Project rules** — `.claude/rules/`; most auto-load via `paths:` glob when a matching file is read. Always-on: `doc-lookup.md`, `taigi-incidents.md`.
 
 ## Project Structure
 

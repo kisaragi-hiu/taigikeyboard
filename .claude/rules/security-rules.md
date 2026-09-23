@@ -1,3 +1,7 @@
+---
+paths: ["ios/**", "android/**", "macos/**", "windows/**", "linux/**", "desktop/**", "engine/**"]
+---
+
 # Security Rules (Cross-Platform)
 
 Security and privacy rules for every platform.
