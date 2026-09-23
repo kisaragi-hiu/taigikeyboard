@@ -17,7 +17,7 @@ use std::sync::Arc;
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::CandidateNavigation;
 use taigi_linux_core::{chrome, session, Emit, EngineState, LookupTableContent, MenuItem, Runtime};
-use taigi_linux_platform::RawKeyEvent;
+use taigi_linux_platform::{open_settings, RawKeyEvent};
 
 /// One process-wide runtime (settings, stores, lexicon, coordinator).
 pub struct TaigiRuntime {
@@ -210,7 +210,28 @@ pub unsafe extern "C" fn taigi_runtime_mode_label(runtime: *const TaigiRuntime) 
 }
 
 /// # Safety
-/// `text` came from this crate (`taigi_runtime_mode_label`) and is freed once.
+/// `runtime` is a live runtime. The string is freed with `taigi_string_free`.
+#[no_mangle]
+pub unsafe extern "C" fn taigi_runtime_mode_symbol(runtime: *const TaigiRuntime) -> *mut c_char {
+    if runtime.is_null() {
+        return ptr::null_mut();
+    }
+    // SAFETY: non-null and, by contract, a live runtime.
+    let runtime = unsafe { &*runtime };
+    guarded("taigi_runtime_mode_symbol", ptr::null_mut(), || {
+        c_string(chrome::mode_symbol(&runtime.inner)).into_raw()
+    })
+}
+
+/// Opens the settings window where the user left it — the framework's own
+/// configure button (Fcitx5 `setSubConfig`), beside the 設定 menu row.
+#[no_mangle]
+pub extern "C" fn taigi_open_settings() -> bool {
+    guarded("taigi_open_settings", false, || open_settings(None))
+}
+
+/// # Safety
+/// `text` came from this crate (`taigi_runtime_mode_label` / `_mode_symbol`) and is freed once.
 #[no_mangle]
 pub unsafe extern "C" fn taigi_string_free(text: *mut c_char) {
     if text.is_null() {

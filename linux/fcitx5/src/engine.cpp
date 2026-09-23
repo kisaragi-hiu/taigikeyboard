@@ -42,6 +42,19 @@ uint32_t statesFor(const KeyEvent &event) {
     return states;
 }
 
+/* A string the library allocated, copied and freed. */
+std::string takeString(char *text) {
+    if (!text) {
+        return {};
+    }
+    std::string copy(text);
+    taigi_string_free(text);
+    return copy;
+}
+
+/* The sub-config the configure row names. */
+constexpr char kSettingsSubConfig[] = "settings";
+
 /* A candidate the panel shows: selecting it (a click) only highlights, as
  * on macOS and Windows; the commit stays a key's. */
 class CandidateWordImpl final : public CandidateWord {
@@ -85,29 +98,25 @@ State::State(Engine *engine, InputContext &ic) : engine_(engine), ic_(ic) {
     if (!handle_) {
         TAIGI_ERROR() << "taigi_engine_new answered null";
     }
-    syncCapabilities();
 }
 
 State::~State() { taigi_engine_free(handle_); }
 
-void State::syncCapabilities() {
-    if (!handle_) {
-        return;
-    }
-    uint32_t caps = 0;
-    if (ic_.capabilityFlags().test(CapabilityFlag::SurroundingText)) {
-        caps |= TAIGI_CAP_SURROUNDING_TEXT;
-    }
-    taigi_engine_set_capabilities(handle_, caps);
+/* The field's flags, read per key rather than on activate: a browser moves
+ * focus between fields inside one input context, flipping only the flags —
+ * where IBus re-sends SetCapabilities / ContentType. */
+void State::syncFieldFlags() {
+    const auto flags = ic_.capabilityFlags();
+    taigi_engine_set_capabilities(
+        handle_, flags.test(CapabilityFlag::SurroundingText) ? TAIGI_CAP_SURROUNDING_TEXT : 0);
+    taigi_engine_set_password_field(handle_, flags.test(CapabilityFlag::Password));
 }
 
 void State::keyEvent(KeyEvent &event) {
     if (!handle_) {
         return;
     }
-    // Read per key, not on activate: a browser moves focus between a text
-    // and a password field inside one input context, flipping only the flag.
-    taigi_engine_set_password_field(handle_, ic_.capabilityFlags().test(CapabilityFlag::Password));
+    syncFieldFlags();
     TaigiReply *reply = taigi_engine_key(handle_, event.rawKey().sym(), event.rawKey().code(),
                                          statesFor(event));
     if (!reply) {
@@ -272,6 +281,10 @@ void State::showCandidates(const TaigiReply *reply, size_t index) {
 // Engine
 // ---------------------------------------------------------------------------
 
+SettingsConfig::SettingsConfig(std::string title)
+    : settings_(this, "Settings", std::move(title),
+                std::string("fcitx://config/addon/taigikeyboard/") + kSettingsSubConfig) {}
+
 Engine::Engine(Instance *instance)
     : instance_(instance),
       factory_([this](InputContext &ic) { return new State(this, ic); }) {
@@ -296,7 +309,8 @@ Engine::~Engine() {
 }
 
 /* One action per row, registered under a stable name; the titles are
- * filled by refreshMenu. Separators are rows too (`setSeparator`). */
+ * filled by refreshMenu. Separators are rows too (`setSeparator`). The
+ * configure row takes the 設定 row's title. */
 void Engine::buildMenu() {
     TaigiMenu *menu = taigi_runtime_menu(runtime_);
     if (!menu) {
@@ -309,6 +323,9 @@ void Engine::buildMenu() {
             row->action.setSeparator(true);
         } else {
             row->id = taigi_menu_id(menu, i);
+            if (row->id == kSettingsSubConfig) {
+                config_ = std::make_unique<SettingsConfig>(taigi_menu_title(menu, i));
+            }
             const std::string id = row->id;
             row->action.connect<SimpleAction::Activated>([this, id](InputContext *ic) {
                 if (auto *s = state(ic)) {
@@ -346,17 +363,23 @@ void Engine::refreshMenu(InputContext &ic) {
 }
 
 void Engine::activate(const InputMethodEntry & /*entry*/, InputContextEvent &event) {
-    auto *ic = event.inputContext();
-    if (auto *s = state(ic)) {
-        s->syncCapabilities();
-    }
-    refreshMenu(*ic);
+    refreshMenu(*event.inputContext());
 }
 
 void Engine::deactivate(const InputMethodEntry &entry, InputContextEvent &event) {
-    /* Switching away commits nothing extra: the framework has already
-     * committed the client preedit (the platform-wide focus-loss rule, L4);
-     * the engine forgets the composition. */
+    /* A switch to another input method writes what is on screen, as the IBus
+     * daemon does when it unsets an engine (bus/inputcontext.c
+     * `bus_input_context_unset_engine` → `clear_preedit_text(TRUE)` under
+     * PREEDIT_COMMIT). Focus loss needs nothing here: Fcitx5 has written the
+     * client preedit already (5.1.7 instance.cpp:1037), as fcitx5-gtk does
+     * itself before a Reset (`fcitx_im_context_reset`). */
+    if (event.type() == EventType::InputContextSwitchInputMethod) {
+        auto *ic = event.inputContext();
+        const auto commit = ic->inputPanel().clientPreedit().toStringForCommit();
+        if (!commit.empty()) {
+            ic->commitString(commit);
+        }
+    }
     reset(entry, event);
 }
 
@@ -376,20 +399,22 @@ void Engine::reset(const InputMethodEntry & /*entry*/, InputContextEvent &event)
     ic->updateUserInterface(UserInterfaceComponent::InputPanel);
 }
 
+/* The tray / kimpanel text (`Instance::inputMethodLabel`) and the compact
+ * notice: the short symbol the IBus shell shows (roadmap L6). */
 std::string Engine::subModeLabelImpl(const InputMethodEntry & /*entry*/, InputContext & /*ic*/) {
-    /* The romanization and the display mode beside the icon (roadmap L6);
-     * the mode flash of the other desktops announces the same text. */
-    char *label = taigi_runtime_mode_label(runtime_);
-    if (!label) {
-        return {};
-    }
-    std::string text(label);
-    taigi_string_free(label);
-    return text;
+    return takeString(taigi_runtime_mode_symbol(runtime_));
 }
 
-std::string Engine::subMode(const InputMethodEntry &entry, InputContext &ic) {
-    return subModeLabelImpl(entry, ic);
+/* The full notice: the romanization and the display mode, the text the
+ * mode flash of the other desktops announces. */
+std::string Engine::subMode(const InputMethodEntry & /*entry*/, InputContext & /*ic*/) {
+    return takeString(taigi_runtime_mode_label(runtime_));
+}
+
+void Engine::setSubConfig(const std::string &path, const RawConfig & /*config*/) {
+    if (path == kSettingsSubConfig && !taigi_open_settings()) {
+        TAIGI_ERROR() << "the settings window could not be started";
+    }
 }
 
 AddonInstance *EngineFactory::create(AddonManager *manager) {

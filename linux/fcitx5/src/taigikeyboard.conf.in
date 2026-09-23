@@ -4,4 +4,4 @@ Icon=taigikeyboard
 Label=台
 LangCode=nan
 Addon=taigikeyboard
-Configurable=False
+Configurable=True
