@@ -15,11 +15,12 @@
 #   1. refuse while the release is still a draft — a manifest naming a draft
 #      points every installed copy at a download that does not exist
 #   2. for each platform's installer on the release: download it anonymously and
-#      hash it — the digest the Windows manifest publishes has to be the one the
-#      URL actually serves
-#   3. write both platforms' `_data/*_release.json` into the website repository
+#      hash it — the digest the Windows manifest and the Linux site data publish
+#      has to be the one the URL actually serves
+#   3. write every platform's `_data/*_release.json` into the website repository
 #      in one commit
-#   4. wait until each live appcast serves what was written
+#   4. wait until each live appcast serves what was written (macOS, Windows —
+#      Linux has no appcast)
 #
 # It runs anywhere with `gh`, `curl` and `python3` — everything it needs is on
 # the release. Re-running it after a failure is the intended recovery.
@@ -92,7 +93,7 @@ print("\n".join(asset["name"] for asset in release["assets"]))')
 # Per platform: the download the website is about to name has to work.
 # ---------------------------------------------------------------------------
 
-# A desktop release usually carries both installers, but one platform can lag,
+# A desktop release usually carries every installer, but one platform can lag,
 # and announcing the platform that is there beats making it wait.
 announced_platforms=()
 
@@ -132,9 +133,10 @@ fetch_platform_asset() {
     announced_platforms+=("$platform")
 }
 
-# The site data the website renders its appcast from. `sha256` is Windows-only:
-# an unsigned installer has nothing else to be held against, while a package
-# carries Apple's own signature, so it is dropped when no digest is passed.
+# The site data the website renders its appcast and download buttons from.
+# `sha256` is for the unsigned channels (Windows, Linux): an unsigned download
+# has nothing else to be held against, while a package carries Apple's own
+# signature, so it is dropped when no digest is passed.
 site_release_json() {
     python3 -c '
 import json, sys
@@ -166,8 +168,13 @@ if fetch_platform_asset Windows "$WINDOWS_ASSET"; then
     )
 fi
 
+# No manifest to wait for: nothing installed polls for a `.deb`.
+if fetch_platform_asset Linux "$LINUX_ASSET"; then
+    site_files+=("$LINUX_SITE_PATH" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
+fi
+
 [[ ${#site_files[@]} -gt 0 ]] ||
-    fail "$DESKTOP_TAG carries neither $MACOS_ASSET nor $WINDOWS_ASSET — there is nothing to announce"
+    fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET — there is nothing to announce"
 
 # ---------------------------------------------------------------------------
 # Only now announce it. A manifest published before its download is reachable

@@ -6,10 +6,11 @@
 # `release_sha256` alone. Why the release lives here rather than on the website
 # repository: `docs/architecture/macos-release.md` § Publishing the package.
 #
-# One desktop version is ONE release, tagged `desktop-<version>`, holding both
-# platforms' installers. The two are built on two machines at two times — the
-# package on a Mac once Apple has notarized it, the installer on a Windows box —
-# so whichever runs first creates the release and the other attaches its asset.
+# One desktop version is ONE release, tagged `desktop-<version>`, holding every
+# platform's installer. They are built on different machines at different
+# times — the package on a Mac once Apple has notarized it, the installer and
+# the `.deb` on hosted runners — so the Mac creates the release and the others
+# attach their assets.
 #
 # That release is a DRAFT until a person publishes it. A draft has no public
 # asset URL and no git tag, so nothing here reaches a user: the maintainer
@@ -42,6 +43,9 @@ RELEASE_TITLE="Taigi Keyboard Desktop $SHORT_VERSION"
 # rather than as an error. A throwaway build appends its qualifier to the stem.
 MACOS_ASSET="TaigiKeyboard-$SHORT_VERSION.pkg"
 WINDOWS_ASSET="TaigiKeyboard-$SHORT_VERSION.exe"
+# Debian's own file-name convention (name_version_arch.deb), which is what
+# `linux/Makefile`'s `deb` target writes.
+LINUX_ASSET="taigikeyboard_${SHORT_VERSION}_amd64.deb"
 
 # A file's SHA-256 as lowercase hex, on either host: macOS ships `shasum`, Git
 # Bash on the Windows box ships `sha256sum`. It is what the Windows manifest

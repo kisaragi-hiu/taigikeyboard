@@ -22,7 +22,7 @@ Two version numbers, moving independently (USER 2026-08-29):
 | Train | Platforms | Version files | Detailed record | Announces itself through |
 | --- | --- | --- | --- | --- |
 | **mobile** | iOS + Android | Android `versionName`, iOS shipping targets' `MARKETING_VERSION` | `changelog/mobile-vMAJOR.MINOR.PATCH.md` | App Store / Google Play What's New (`changelog/store/vMAJOR.MINOR.PATCH/{ios,android}.txt`) |
-| **desktop** | macOS + Windows | both macOS plist keys, `windows/Cargo.toml` `[workspace.package] version` | `changelog/desktop-vMAJOR.MINOR.PATCH.md` | one GitHub release in this repository, tagged `desktop-MAJOR.MINOR.PATCH`, holding both platforms' installers, whose body is that whole file. Each platform stages its own asset on it as a **draft** (`scripts/lib/desktop-release.sh`); a person tests and publishes it, and `make desktop-announce` then tells the website and every installed copy (`scripts/announce-release.sh`) |
+| **desktop** | macOS + Windows + Linux | both macOS plist keys, the `[workspace.package] version` of `windows/Cargo.toml`, `desktop/Cargo.toml` and `linux/Cargo.toml` | `changelog/desktop-vMAJOR.MINOR.PATCH.md` | one GitHub release in this repository, tagged `desktop-MAJOR.MINOR.PATCH`, holding every platform's installer, whose body is that whole file. Each platform stages its own asset on it as a **draft** (`scripts/lib/desktop-release.sh`); a person tests and publishes it, and `make desktop-announce` then tells the website and every installed copy (`scripts/announce-release.sh`) |
 
 Within a train the platforms cannot drift apart — `set-versions` writes both files or neither, and `check-versions` holds both to one number. Across trains nothing is compared: a mobile 3.6.7 and a desktop 3.7.0 are two unrelated facts, and the same number appearing in both is a coincidence, not a link. A train therefore never skips a number because the other train used it: after desktop 3.6.7 the next mobile release is still whatever follows the last *mobile* number. (Mobile 3.6.8 skipped 3.6.6–3.6.7 in 2026-09; that was a one-off, not the rule.) The repository's `vMAJOR.MINOR.PATCH` git tags are the mobile train's (`dictionary/build/version_snapshot.py` reads them); a desktop release is one GitHub release in this repository, tagged `desktop-MAJOR.MINOR.PATCH`, carrying both platforms' installers (releases cut before 2026-09-09 are tagged `macos-v…` / `windows-v…` on the website repository, which is where they were published from while this repository was private).
 
@@ -38,7 +38,7 @@ One command per train writes that train's version into both of its project files
 
 ```bash
 make version-mobile MAJOR.MINOR.PATCH    # iOS + Android
-make version-desktop MAJOR.MINOR.PATCH   # macOS + Windows
+make version-desktop MAJOR.MINOR.PATCH   # macOS + Windows + Linux
 ```
 
 One train per invocation. Neither build number is a maintainer's problem: the iOS `CURRENT_PROJECT_VERSION` is pinned to 1 because App Store Connect numbers a marketing version's uploads itself, Android's `versionCode` is epoch minutes, and the macOS `CFBundleVersion` derives from the desktop version.

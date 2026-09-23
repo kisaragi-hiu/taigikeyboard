@@ -1,9 +1,10 @@
-# Desktop release — one draft, two machines, published by hand
+# Desktop release — one draft, three builds, published by hand
 
-How a desktop version (macOS + Windows, one shared number; Linux shares the number but is not in this flow yet — `linux-release.md`) gets from a commit to
+How a desktop version (macOS + Windows + Linux, one shared number) gets from a commit to
 a user. The platform-specific halves are `macos-release.md` (certificates,
-notarization, the package) and `windows-release.md` (signing status, the
-installer, the box); everything below is shared by both, and is the single
+notarization, the package), `windows-release.md` (signing status, the
+installer, the box) and `linux-release.md` (the `.deb`); everything below is
+shared by all three, and is the single
 description of the flow — the platform documents link here rather than repeat it.
 
 ## The flow
@@ -13,10 +14,10 @@ A desktop release happens in two halves with a manual test between them, and
 
 | | Runs | Does |
 |---|---|---|
-| Stage both | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and waits: a GitHub-hosted runner builds the `.exe` from the same commit and attaches it to the same draft. Both halves or neither, onto a draft it re-creates each run (`scripts/stage-desktop.sh`) |
-| **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download both assets, install, use them |
+| Stage all | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and `linux-build.yml` together and waits for both: GitHub-hosted runners build the `.exe` and the `.deb` from the same commit and attach them to the same draft. All three or none, onto a draft it re-creates each run (`scripts/stage-desktop.sh`; the Linux half: `linux-release.md`) |
+| **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the three assets, install, use them |
 | **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
-| Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves both downloads are anonymously reachable, writes both `_data/*_release.json`, waits for the live appcasts. `make desktop-announce` is the same script, for a re-run |
+| Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves each download is anonymously reachable, writes every `_data/*_release.json` in one commit, waits for the live macOS and Windows appcasts (Linux has none). `make desktop-announce` is the same script, for a re-run |
 
 Staging creates no tag — publishing does — and a draft has no public asset URL,
 so no user, no search engine and no installed copy can reach what is staged. A
@@ -25,8 +26,9 @@ staged, so re-staging never has to be untangled by hand; a release that has
 already been **published** is the exception and stops the run.
 
 Beside each installer goes a `.sha256` of what was staged. On the unsigned
-Windows channel it is what a user can check a manual download against, and it is
-what `windows-release.md` promises every release publishes.
+Windows channel — and the Linux `.deb`, which is not signed either — it is what a
+user can check a manual download against, and it is what `windows-release.md`
+and `linux-release.md` promise every release publishes.
 
 The release goes in **this** repository; only the website's own data goes to
 `taigikeyboard/taigikeyboard.github.io`:
@@ -34,7 +36,7 @@ The release goes in **this** repository; only the website's own data goes to
 | What | Where | Why there |
 |---|---|---|
 | Each installer and its `.sha256` | assets on the GitHub release `desktop-<version>` **in this repository**, both platforms on one release | One desktop version is one release, beside the source it was built from: the tag names that commit, the notes are that commit's changelog. Releases lived on the website repository while this one was private and nothing served from it was anonymously reachable; it has been public since 2026-09-07. Release assets live outside git either way, so they cost no repository its size or bandwidth allowance. |
-| `_data/{macos,windows}_release.json` | committed site data in the website repository — written only by the announcement, both in one commit | The landing page's macOS download button reads it and links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and this repository's last release may be a Windows installer. |
+| `_data/{macos,windows,linux}_release.json` | committed site data in the website repository — written only by the announcement, all in one commit | The landing page's macOS download button reads it and links straight at the package, so its URL carries the version. Keeping it as data the release flow writes is what stops the page hard-coding a version, and what keeps the button off `/releases/latest` — that alias is repository-wide, and this repository's last release may be a Windows installer. |
 | `appcast/{macos,windows}.json` | **rendered** from that data by the site's own build, served from `https://taigikeyboard.tw/appcast/` | Every installed copy has its URL baked in (`UpdateChecker.publishedURL`, `manifest::PUBLISHED_URL`) and expects a fixed shape, so the manifest stays a static file on the project's own domain rather than anything GitHub serves. Rendered rather than written because two files meant two commits, and two Pages runs seconds apart deploy their own trees: see *One published fact, one committed file* in `macos/updates/README.md` for the day the manifest sat a release behind. |
 
 Each platform's `publish-release.sh` owns only what that OS can assert about its
@@ -83,11 +85,12 @@ own artifact; everything above it is shared (see *Where it all lives* below).
    credentials at all** — `curl -q --netrc-file /dev/null` is what guarantees
    that; an authenticated check cannot tell a public URL from a private one,
    which is how the first version of this shipped pointing at a private
-   repository — and hashed. That hash is what the Windows manifest publishes, so
-   the digest it names is one the URL was observed serving.
-3. Both platforms' data files are written to the website in **one** commit, so
-   the two cannot race each other's Pages deployment.
-4. Each live appcast is polled until it serves this version **and** its package
+   repository — and hashed. That hash is what the Windows manifest and the
+   Linux site data publish, so the digest each names is one the URL was
+   observed serving.
+3. Every platform's data file is written to the website in **one** commit, so
+   they cannot race each other's Pages deployment.
+4. Each live appcast (macOS, Windows) is polled until it serves this version **and** its package
    URL (and on Windows the digest). Both fields, not just the version, because a
    render that dropped `packageURL` still reads as a valid update and would
    quietly cost every install the in-app download. The poll is also the only
@@ -133,5 +136,5 @@ job, so a release is never blocked on it.
 | The announcement, run by the publish | `scripts/announce-release.sh` + `.github/workflows/announce-release.yml` |
 | What only a Mac can say about the package | `macos/scripts/publish-release.sh` |
 | What only Windows can say about the installer | `windows/scripts/publish-release.sh` |
-| The Linux package (built, not yet staged) | `linux/Makefile` (`deb`), `.github/workflows/linux-build.yml`, `linux-release.md` |
+| The Linux package and its attach step | `linux/Makefile` (`deb`), `.github/workflows/linux-build.yml`, `linux-release.md` |
 | The manifest wire formats | `macos/updates/README.md`, `windows/updates/README.md` |
