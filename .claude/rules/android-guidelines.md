@@ -165,4 +165,4 @@ Before using SQL syntax you are not certain of, check its version against [SQLit
 - Naming + comment rules (cross-platform): `~/.claude/rules/ai-friendly-code.md`.
 - Security: `.claude/rules/security-rules.md` (logging guards, SQL binding, Android exported-component rules).
 - UI style: `.claude/rules/ui-style-guide.md`.
-- Claude Opus 4.7 workflow tuning: `~/.claude/rules/claude-workflow.md`.
+- Session workflow tuning: `~/.claude/rules/claude-workflow.md`.

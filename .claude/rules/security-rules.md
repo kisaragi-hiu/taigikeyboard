@@ -1,6 +1,6 @@
 # Security Rules (Cross-Platform)
 
-Mandatory rules for security and privacy. Both platforms MUST follow these rules.
+Security and privacy rules for every platform.
 When adding or modifying code, check this guide first.
 
 ## Logging

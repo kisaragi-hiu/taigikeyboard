@@ -5,7 +5,7 @@ model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
 
-You are reviewing refactored code in a cross-platform Taiwanese keyboard project (iOS Swift + Android Kotlin).
+You are reviewing refactored code in a cross-platform Taiwanese keyboard project: shared Rust engine (`engine/`) plus iOS (Swift), Android (Kotlin), macOS (Swift), Windows (Rust TSF) and Linux (Fcitx5 C++ / IBus Rust) shells.
 
 ## Context
 

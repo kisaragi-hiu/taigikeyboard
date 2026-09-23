@@ -17,8 +17,7 @@ You are a specialist in Taiwanese phonetics for a keyboard input method project.
 
 - This project implements a Taiwanese IME supporting three romanization systems: TL, POJ, and TPS
 - `taigi-converter/` (git submodule) is the canonical reference for all conversion logic
-- iOS implementation: `ios/Sources/TaigiKeyboard/Input/Tone/` and related files
-- Android implementation: `android/app/src/main/java/com/siansiansu/taigikeyboard/ime/`
+- Implementation: shared Rust engine `engine/phonetics/` (tables in `engine/phonetics/src/tables.rs`), reached by every platform over FFI
 - Specs: `docs/engine/tone.md`, `docs/engine/tps.md`, `docs/engine/composing.md`
 
 ## Your job
