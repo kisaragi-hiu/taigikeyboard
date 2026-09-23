@@ -56,7 +56,14 @@ Windows have all of it.
   after the `ia̍h` words. (#67, #71, #97)
 - **Capitals survive tone placement.** Caps Lock `SIANN5` writes `SIÂᴺ` rather
   than `Siâⁿ`, and a 自訂詞 stored as `Keng-lâm Su-īⁿ` keeps its capitals when
-  reached through `klsi`. (#102, #89)
+  reached through `klsi` — in Caps Lock it reads `KENG-LÂM SU-Īᴺ`, every
+  syllable raised. A new 一般 switch, 大本字時 ⁿ 轉做 ᴺ (on by default), turns the
+  capital `ᴺ` off for those who prefer `SIÂⁿ`. (#102, #89, #134, #138)
+- **A typed separator holds inside a dictionary word.** `pang-tang-lai` → 放重利
+  writes `pàng-tāng-lāi`, not the dictionary's `pàng tāng-lāi`. (#139)
+- **Learned phrases keep word boundaries.** Picking 做 → 進出口 on
+  `tsotsintshutkhau` learns `tsò tsìn-tshut-kháu`, two words, not one
+  hyphenated run. (#145)
 - **Abbreviations look up the whole buffer.** `ss` reaches 鎖匙; aspirated
   initials count as one unit, so `phthk` reaches a 披頭巾 custom word; words with
   no initial (`âng-enn-á`) abbreviate too. (#82)
@@ -161,7 +168,14 @@ Windows have all of it.
   after the `ia̍h` words. (#67, #71, #97)
 - **Capitals survive tone placement.** Caps Lock `SIANN5` writes `SIÂᴺ` rather
   than `Siâⁿ`, and a 自訂詞 stored as `Keng-lâm Su-īⁿ` keeps its capitals when
-  reached through `klsi`. (#102, #89)
+  reached through `klsi` — in Caps Lock it reads `KENG-LÂM SU-Īᴺ`, every
+  syllable raised. A new 一般 switch, 大本字時 ⁿ 轉做 ᴺ (on by default), turns the
+  capital `ᴺ` off for those who prefer `SIÂⁿ`. (#102, #89, #134, #138)
+- **A typed separator holds inside a dictionary word.** `pang-tang-lai` → 放重利
+  writes `pàng-tāng-lāi`, not the dictionary's `pàng tāng-lāi`. (#139)
+- **Learned phrases keep word boundaries.** Picking 做 → 進出口 on
+  `tsotsintshutkhau` learns `tsò tsìn-tshut-kháu`, two words, not one
+  hyphenated run. (#145)
 - **Abbreviations look up the whole buffer.** `ss` reaches 鎖匙; aspirated
   initials count as one unit, so `phthk` reaches a 披頭巾 custom word; words with
   no initial (`âng-enn-á`) abbreviate too. (#82)
