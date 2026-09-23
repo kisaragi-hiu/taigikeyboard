@@ -12,7 +12,7 @@
 #   scripts/sync-references.sh librime KeSi # sync only the named dirs
 #
 # Per-repo behaviour:
-#   missing            -> clone (mozc: shallow; keyboardkit9.9.0: pinned tag)
+#   missing            -> clone (mozc: shallow; keyboardkit9.9.0, fcitx5: pinned tag)
 #   exists, clean      -> git pull --ff-only (shallow: fetch+reset; pinned:
 #                         fetch tags only, checkout stays on the pin)
 #   exists, dirty      -> skipped with DIRTY (never clobbers local edits)
@@ -59,6 +59,10 @@ REPOS=(
   "azooKey_emoji_dictionary_storage|git@github.com:azooKey/azooKey_emoji_dictionary_storage.git|"
   "KeyKey41-Eten-Tribute|git@github.com:whyren0324/KeyKey41-Eten-Tribute.git|"
   "ChiaKey|git@github.com:chiakich/ChiaKey.git|"
+  "hazkey|git@github.com:7ka-Hiira/hazkey.git|"
+  # Pinned to the fcitx5 Ubuntu 24.04 ships; `make -C linux check-cpp`
+  # syntax-checks the addon against these headers.
+  "fcitx5|git@github.com:fcitx/fcitx5.git|pin:5.1.7:git@github.com:fcitx/fcitx5.git"
   # The offline authority for KeyboardKit (.claude/rules/doc-lookup.md): a
   # published DocC archive, but a real git repo — clone it like any other.
   "KeyboardKit-Documentation|git@github.com:KeyboardKit/KeyboardKit-Documentation.git|"

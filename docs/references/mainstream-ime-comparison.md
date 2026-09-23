@@ -2,8 +2,8 @@
 
 > **Type**: Reference index
 > **Purpose**: Centralised cross-reference of every mainstream IME / keyboard repo cloned under `references/`, plus a few external projects worth knowing. Read this **before** writing a `最佳實踐對齊` section in a plan, before designing a new engine slice, or before asserting "Project X already does Y".
-> **Status**: Authoritative as of 2026-08-20. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
-> **Getting the clones**: `references/` is gitignored — run `scripts/sync-references.sh` to clone the whole roster (taigikeyboard-org forks preferred, upstream otherwise; `mozc` shallow, `keyboardkit9.9.0` tag-pinned) and fast-forward existing clones. Keep that script's roster in sync with this file.
+> **Status**: Authoritative as of 2026-09-24. Update when adding a new repo under `references/` or when an existing deep-dive doc lands in `docs/references/`.
+> **Getting the clones**: `references/` is gitignored — run `scripts/sync-references.sh` to clone the whole roster (taigikeyboard-org forks preferred, upstream otherwise; `mozc` shallow, `keyboardkit9.9.0` + `fcitx5` tag-pinned) and fast-forward existing clones. Keep that script's roster in sync with this file.
 > **Related deep-dives**:
 > - [`azookey-reference.md`](./azookey-reference.md) — azooKey iOS UI / CustardKit / action model
 > - [`khiin-reference.md`](./khiin-reference.md) — khiin-rs DP segmentation + bigram + dual-trie
@@ -56,6 +56,9 @@
 | 25 | `Tekkon/` | Swift | Cross (SPM) | Phonabet composer | n/a | n/a | n/a | 🔑 **Incremental keystroke → syllable state machine** (ㄅㄆㄇ + multiple keyboard layouts + pinyin trie) | LGPL-3.0-or-later + custom Section-7 exception | Upstream of the Tekkon vendored in #23/#24. **The closest structural analogue to our TPS composing** — same "is this key the previous syllable's coda or the next syllable's onset" ambiguity we hit in #392/#394/#553. `13c4e7a` (2026-08-09) |
 | 26 | `ChiaKey/` | Obj-C++ / C++ | macOS (IMK) | Full IME (Mandarin, Yahoo! KeyKey revival) | Manjusri bigram `Graph::walk` over SQLite | unigram + bigram log-prob + learned overrides | 🔑 Capped `LearningStore` (fewest-selections-then-LRU eviction, corpus-measured capacities) + context-keyed → generalized overrides | Bopomofo (`Formosa`) | BSD-style (Yahoo! 2012 + Chiaki.C 2026) | Engine is legacy; the value is **around** it: versioned lexicon release contract (manifest + cross-origin `SHA256SUMS` + atomic symlink + runtime-settled prune/rollback), `Runtime`/`Engine` host-neutral facade with commit ack, XPC-free IME↔helper coordination, updater team-pin + `spctl` chain, beta/stable release workflow. **Deep-dive**: `chiakey-reference.md`. `89aebc8c` (2026-09-18) |
 | 27 | `KeyKey/` | C++ / Obj-C++ / C++-CLI | macOS (IMK + legacy TSM) + **Windows (IMM32)** | Full IME (Mandarin, Yahoo! KeyKey 1.1.2528 source drop, 2012) | Manjusri bigram `Graph` walk (ancestor of #26) | unigram + bigram log-prob | user phrase DB (`BPMFUserPhraseHelper`), import/export over RPC | Bopomofo (`Formosa`) | New BSD (Yahoo! 2012); OpenVanilla parts MIT | Frozen 2012 ancestor of #26; unique parts are the **Windows IMM32 loader** = thin `BaseIME` DLL ↔ `BaseIMEServer.exe` over MS-RPC (`BIServerRPCInterface.idl` — `BISHandleKey` returns composition / reading / candidate page / action verb in one call; server owns all UI; `ServerShooter` restart-for-DB-update), the full **Takao distribution pipeline** (`DatabaseCooker` Makefiles, `Manjusri/Tools/*.rb` corpus → LM), extra OpenVanilla modules (`OVAFHomophoneLookup`, `OVOFHanConvert`, `YKAFOneKey`, `OVIMTibetan`…). Corpus data itself is absent (README pointers only). `81e05f0` (2012-12-04) |
+| 28 | `KeyKey41-Eten-Tribute/` | C++ (CMake) | **Windows (TSF)** | Full IME (Mandarin, KeyKey-style on McBopomofo) | McBopomofo **Gramambular 2** (vendored, `src/Server/Engine/gramambular2/`) | McBopomofoLM unigram + UserOverrideModel | `UserPhrasesLM` + user-phrase files watched and hot-reloaded by the server | Bopomofo (Eten 41-key + standard layouts) | MIT | **Modern TSF client ↔ server split**: thin `McBopomofoTIP_v2.dll` per host ↔ one `McBopomofoServer.exe` over Named Pipe; server owns engine + settings + candidate / tooltip HWNDs; client routes between TSF UIElement and server popup. x64 + real x86/WOW64 TIPs in one WiX MSI. Closest living peer of our Windows TSF DLL. `82a721e` (2026-08-28) |
+| 29 | `fcitx5/` | C++ | Linux (Fcitx5 framework) | IME framework | n/a (engine-defined) | n/a | n/a | n/a | LGPL-2.1-or-later | **Headers our Fcitx5 addon compiles against** (`linux/fcitx5/`): `InputMethodEngineV2/V3`, `CommonCandidateList`, `InputPanel`, `SurroundingText`, `FCITX_ADDON_FACTORY`. Shallow clone pinned at **5.1.7** = Ubuntu 24.04 package; `make -C linux check-cpp` syntax-checks against it. `8274ece` (2024-01-16) |
+| 30 | `hazkey/` | C++ + Swift | Linux (Fcitx5 addon) | Full IME (Japanese, azooKey engine) | azooKey `KanaKanjiConverterModule` (#1) | azooKey + optional Zenzai neural LM (llama.cpp) | azooKey learning data, `SaveLearningData` over IPC | Kana (azooKey `ComposingText`) | MIT | **Fcitx5 addon ↔ out-of-process Swift engine server** over a Unix socket with **protobuf** envelopes (`protocol/*.proto`), `flock` + PID lock file single-instance server, Qt settings app talking to the same server. Only open Fcitx5 IME in our set; contrast with our in-process `taigi-linux-ffi` staticlib. `23c78b1` (2026-02-28) |
 
 ---
 
@@ -110,6 +113,8 @@ If you are working on… → read these in order.
 5. **`PIME/` multi-backend host** — `backends.json` + `PIMETextService/` + `PIMELauncher/`. One TSF shell ↔ N engines (python/node/go) over JSON IPC; runs McBopomofoWeb as a node backend. The "one shell, many engines, stable IPC boundary" concept (#19). Transport (process fork + IPC) does **not** transfer to a sandboxed mobile keyboard — only the shell/engine separation does.
 6. **`ChiaKey/ChiaKey-Source/Frameworks/ChiaKeyCore/`** (#26) — in-process desktop facade: one `Runtime` per process holding a recursive mutex, one `Engine` per text field, snapshot state + `acknowledgeCommit()` handshake + `contextPicks` aligned with candidates, C ABI. Shaped for TSF / Fcitx after evaluating both. See `chiakey-reference.md` §2.
 7. **`KeyKey/YahooKeyKey-Source-1.1.2528/Loaders/Windows-IMM/`** (#27) — the 2012 Windows answer to the same split, one generation before #18/#19: per-host-process `BaseIME` IMM32 DLL (`BaseIME/IMEClient.cpp`) does nothing but forward keys; a single `BaseIMEServer.exe` owns the OpenVanilla loader, all databases and every UI window (status bar, input buffer, candidate panel — `BIServerRPCInterface.idl`: `BISHandleKey` returns committed / composition / reading / candidate-page / `actionVerb` strings in one round trip; `BISActivate` / `BISDeactivate` hand residue text back to the client). Server restart for DB update is a separate `ServerShooter.exe`. Contrast with our in-process Rust TSF DLL: read when a host-crash-isolation or single-engine-process argument comes up on Windows.
+8. **`KeyKey41-Eten-Tribute/docs/system-architecture.md` + `candidate-ui-routing.md` + `ipc-protocol.md`** (#28) — the same split as #27 rebuilt on TSF in 2026: `src/Client/McBopomofoTIP.cpp` (key sink, `StateEditSession`, caret probe) ↔ Named Pipe (`src/Common/Ipc.h` `KeyEventPayload` → `StateUpdatePayload`) ↔ `src/Server/InputController.cpp` + `KeyHandler.cpp`. The client still owns the TSF `CCandidateListUIElement` path and picks it or the server popup per host. Read when a Windows candidate-UI-in-UIElement-hosts or crash-isolation question comes up.
+9. **`hazkey/fcitx5-hazkey/src/hazkey_server_connector.cpp` + `hazkey-server/Sources/hazkey-server/processManager.swift`** (#30) — Linux version of the out-of-process argument: Fcitx5 addon connects over `AF_UNIX` and lazily reconnects; server single-instances itself with `flock` + a PID / version lock file and kills a stale older server. `protocol/base.proto` `RequestEnvelope` / `ResponseEnvelope` is a compact command surface (input char, cursor, delete, candidates, config). Contrast with our in-process Fcitx5 addon over `taigi-linux-ffi`.
 
 ### Dictionary distribution / desktop release & update
 
@@ -506,6 +511,52 @@ If you are working on… → read these in order.
 - **License**: New BSD (Yahoo! Inc. 2012) at the root; OpenVanilla-derived files carry the MIT header; `CTGradient` CC-BY-2.5; `sqlite-cerod-see` is commercial and must not be copied. Read and cite freely; vendoring would need the notices carried.
 - **Deep-dive**: none — #26 [`chiakey-reference.md`](./chiakey-reference.md) covers the shared engine; open a `keykey-reference.md` only if a Windows slice needs >500 LOC of the RPC loader read through.
 
+### 28. KeyKey 41 — Eten Tribute Edition — `references/KeyKey41-Eten-Tribute/`
+
+- **What**: `whyren0324/KeyKey41-Eten-Tribute`, a Windows 11 Bopomofo IME that recreates the Yahoo! KeyKey workflow (#27) on TSF, built on the McBopomofo engine (#11, sources still named `McBopomofo*` / "Win-McBopomofo"). C++ / CMake, ~44k LOC under `src/` (`Client` TIP DLL, `Server` exe, `Common` IPC, `ConfigApp`), vendored OpenCC, WiX MSI (`installer/installer.wxs`, `build_msi.ps1`). `0.9.4-beta.1`, `82a721e` (2026-08-28), 6 commits, unsigned MSI.
+- **Why we care**: the only **current TSF** IME in our set besides PIME (#19), and the one with the best-written architecture docs (`docs/*.md`). It is the 2026 answer to #27's IMM32 split: thin TIP DLL per host process, one server exe owning engine, settings, user-phrase hot reload and the candidate / tooltip HWNDs. Its candidate-UI routing (TSF UIElement for hosts that draw their own list vs server popup) and x64 + x86/WOW64 dual-TIP packaging are both Windows problems we own.
+- **Where to look**:
+  - `docs/system-architecture.md`, `docs/server-client-state-mapping.md`, `docs/input-state-transitions.md` — component split + state machine
+  - `docs/candidate-ui-routing.md` + `src/Client/TsfUiElement.cpp` + `src/Server/CandidateWindow.cpp` — UIElement vs popup decision, caret anchor from the client
+  - `docs/ipc-protocol.md` + `src/Common/Ipc.h` / `NamedPipe.cpp` — `KeyEventPayload` / `SelectCandidatePayload` / `StateUpdatePayload`
+  - `src/Client/McBopomofoTIP.cpp`, `StateEditSession.cpp`, `DisplayAttributeInfo.cpp`, `LangBarButton.cpp` — TSF surface
+  - `src/Server/InputController.cpp` + `KeyHandler.cpp` — candidate paging / selection vs input logic layers
+  - `docs/windows-compatibility-release-checklist.md`, `docs/installer.md`, `installer/installer.wxs` — per-app compatibility checklist, MSI with both TIP architectures
+- **Inspiration takeaways**: (1) `windows-compatibility-release-checklist.md` as a template for our Windows host dogfood matrix; (2) UIElement-vs-popup routing when a host (full-screen games, UWP) wants to draw candidates itself; (3) client-side caret / range geometry probe sent with each key; (4) one MSI registering x64 and x86 TIPs.
+- **Deliberately not adopted**: out-of-process server + Named Pipe (our engine is in-process Rust; same argument as #18/#19/#27), INI settings file + ConfigApp reload notify, Bopomofo tables (Core Principle #3).
+- **License**: MIT ("The McBopomofo Authors"); vendored OpenCC is Apache-2.0. The README disclaims any Yahoo! affiliation.
+- **Deep-dive**: none.
+
+### 29. Fcitx5 — `references/fcitx5/`
+
+- **What**: the Linux input-method framework our primary Linux shell plugs into (`linux/fcitx5/`, `docs/architecture/linux-roadmap.md` PR4). Shallow clone detached at tag **5.1.7** (`8274ece`, 2024-01-16) — the version Ubuntu 24.04 ships, so its headers match what CI and the dogfood VMs build against. Frontends for XIM, Wayland `text-input`, DBus and the IBus protocol (`src/frontend/`).
+- **Why we care**: the API contract, not an engine. `make -C linux check-cpp` syntax-checks our addon against `src/lib` on the Mac host (`linux/Makefile:75`). The 5.1.7 pin is why the addon uses `add_library(MODULE)` + `FCITX_ADDON_FACTORY` rather than `add_fcitx5_addon` / `FCITX_ADDON_FACTORY_V2` (5.1.12+).
+- **Where to look**:
+  - `src/lib/fcitx/inputmethodengine.h` — `InputMethodEngine` → `V2` (sub-mode icon/label) → `V3` (invoke action) → `V4`
+  - `src/lib/fcitx/candidatelist.h` — `CommonCandidateList`, paging, cursor, layout hint
+  - `src/lib/fcitx/inputpanel.h` + `inputcontext.h` + `surroundingtext.h` — preedit, client preedit, commit, delete-surrounding
+  - `src/lib/fcitx/addonfactory.h` — addon entry point
+  - `src/im/keyboard/` — the built-in keyboard engine, smallest complete engine example
+- **Deliberately not adopted**: bumping the pin past 5.1.7 (would break the Ubuntu 24.04 package build), Fcitx5 config UI for engine settings (we ship our own GTK 4 settings window).
+- **License**: LGPL-2.1-or-later. Headers are linked against, never vendored.
+- **Deep-dive**: none — `docs/architecture/linux-roadmap.md` records the integration facts.
+
+### 30. hazkey — `references/hazkey/`
+
+- **What**: `7ka-Hiira/hazkey` (fcitx5-hazkey), a Japanese Fcitx5 IME that runs azooKey's `KanaKanjiConverterModule` (#1) on Linux. Four parts: `fcitx5-hazkey/` (C++ addon, `InputMethodEngineV2`), `hazkey-server/` (Swift 6.1 executable, optional Zenzai neural LM over llama.cpp), `protocol/` (proto3 LITE), `hazkey-settings/` (Qt). ~3.7k LOC addon + server. `23c78b1` (2026-02-28), active; AUR + `.deb` releases.
+- **Why we care**: the only open Fcitx5 IME in our set, and an out-of-process design with a portable engine written for another OS — the same position as our Rust engine behind `taigi-linux-ffi`. The addon is thin (preedit / candidate / state), the server owns conversion and learning, the settings app talks to the server rather than to a config file.
+- **Where to look**:
+  - `protocol/base.proto` + `commands.proto` + `config.proto` — `RequestEnvelope` / `ResponseEnvelope` command surface
+  - `fcitx5-hazkey/src/hazkey_engine.cpp`, `hazkey_state.cpp`, `hazkey_preedit.cpp`, `hazkey_candidate.cpp` — Fcitx5 engine side
+  - `fcitx5-hazkey/src/hazkey_server_connector.cpp` — `AF_UNIX` socket, lazy reconnect
+  - `hazkey-server/Sources/hazkey-server/processManager.swift` — `flock` + PID / version lock file, kill stale older server
+  - `hazkey-server/Sources/hazkey-server/state.swift` + `composingTextWrapper.swift` — composing / conversion state on the server side
+  - `.github/workflows/build.yml` — CMake + SwiftPM build on Linux CI
+- **Inspiration takeaways**: (1) addon file split (engine / state / preedit / candidate) as a sanity check on `linux/fcitx5/`; (2) versioned lock file so an upgraded package replaces a still-running old engine; (3) settings app ↔ running engine live reload path.
+- **Deliberately not adopted**: out-of-process server (our addon links the engine in-process, `linux-roadmap.md` PR4), Qt settings (we use GTK 4 / libadwaita), neural LM.
+- **License**: MIT (Nanaka Hiira 2024).
+- **Deep-dive**: none.
+
 ### Cloned but out-of-engine-scope (not IME engines)
 
 Four repos under `references/` are **not IME engines** and are intentionally absent from the matrix/cards above. Listed here so a future session does not re-explore them looking for engine patterns:
@@ -514,10 +565,6 @@ Four repos under `references/` are **not IME engines** and are intentionally abs
 - **`KeSi/`** (`826e787`, 2025-12-16, MIT) — `i3thuan5/KeSi`, a **Tâi-bûn NLP toolkit** (Python) by 意傳科技: 斷詞, 輕聲標註, Unicode NFC + 教育部造字碼 normalisation, 漢羅↔全羅. Not an IME. Relevance: **phonetics / dictionary** tooling (see `memory/project_kesi_deprecated.md`), not the engine comparison — read `knowledge/taigi-phonetics-reference.md` + `taigi-converter/` first per CLAUDE.md Core Principle #3.
 - **`azooKey_emoji_dictionary_storage/`** (`467c33a`, 2026-04-25) — azooKey's **emoji dictionary data** repo (Python generators + `EmojiDictionary` tables, per-Unicode-version regeneration). Data, not an engine. Relevance: emoji-palette entry sourcing, sibling of card #1.
 - **`Taigi-Input-method-dictionary-supplement/`** (`ada348a`, 2026-01-14) — 建中's CSV supplement tables for the MOE 教育部臺灣台語輸入法 (一府五院 / 行政區 / 數字·時間·日期 / 台·臺 / 菜市仔名 / …). **Dictionary data, not an engine** — the dev-supplement source behind PR #368/#369 (see `memory/project_dev_supplement_dict.md`). Relevance: **dictionary entries** to fold into our build, gated by CLAUDE.md Core Principle #3 + #7 `(漢字, 羅馬字)` identity — not an algorithm reference.
-
-### Cloned, not yet catalogued
-
-- **`KeyKey41-Eten-Tribute/`** (`82a721e`, 2026-08-28, MIT) — `whyren0324/KeyKey41-Eten-Tribute`, a Traditional-Chinese **Bopomofo IME for Windows 11 built on TSF** (Eten 41-key + standard layouts, C++/CMake, MSI installer). In engine scope and directly comparable to our own Windows TSF text service — it has no card or matrix row yet; write one before citing it in a 最佳實踐對齊 section.
 
 ---
 
@@ -544,10 +591,10 @@ Worth knowing about; clone on demand when a specific question arises.
 - Umbrella project, McBopomofo's home. Hosts McBopomofo, OpenVanilla framework (older), and several utility IMEs.
 - McBopomofo (already covered above) is the most-maintained module.
 
-### fcitx5 / ibus — input method *frameworks*, not engines
+### fcitx5 — now cloned → see card #29; ibus — https://github.com/ibus/ibus
 
-- Both are framework hosts; engines (rime, mozc, libchewing, anthy) plug into them.
-- Read when: questioning Linux integration patterns. Not relevant for iOS/Android-focused Taigi Keyboard.
+- **fcitx5** is cloned under `references/fcitx5/` (pinned 5.1.7). See **per-repo card #29** + matrix row 29; this entry is kept only as a redirect.
+- **ibus** is not cloned. Our IBus engine (`taigi-linux-core`, zbus) talks to the IBus D-Bus interface directly; clone ibus only if that protocol needs reading beyond its published docs.
 
 ---
 
@@ -584,5 +631,7 @@ For Phase II+ (cross-platform alignment), read:
 - **2026-09-19** — Cloned and indexed **ChiaKey** (`89aebc8c`, BSD-style, macOS Obj-C++ IMK revival of Yahoo! KeyKey / OpenVanilla) as card/row #26 at USER request. Deep-dive `chiakey-reference.md` written on the same day (engine judged legacy; value = lexicon release contract, `Runtime`/`Engine` facade, bounded learning store, XPC-free coordination, updater trust chain, release workflow, gold-set harness). New topic section "Dictionary distribution / desktop release & update"; entries added under "User adaptation" and "Native-engine embedding". Roster line added to `scripts/sync-references.sh` (upstream, no org fork).
 
 - **2026-09-19** — Cloned and indexed **KeyKey** (`81e05f0`, 2012-12-04, New BSD, the Yahoo! KeyKey 1.1.2528 source drop that #26 ChiaKey revives; org fork `taigikeyboard/KeyKey`) as card/row #27 at USER request. Index-only: engine is #26's ancestor, so no deep-dive; unique value recorded = Windows IMM32 thin-DLL ↔ `BaseIMEServer.exe` MS-RPC loader (`BIServerRPCInterface.idl`) and the Takao `DatabaseCooker` corpus → LM → installer pipeline. Topic-index entries added under "Native-engine embedding" (#7) and "Dictionary distribution" (#6). Corpus data is absent from the repo (README pointers only). Roster line added to `scripts/sync-references.sh` (org fork).
+
+- **2026-09-24** — Index audit: 3 of 34 clones were uncatalogued. Indexed as cards/rows #28–30: **KeyKey41-Eten-Tribute** (`82a721e`, MIT, Windows TSF Bopomofo IME on McBopomofo, TIP DLL ↔ Named Pipe ↔ server exe; moved out of the removed "Cloned, not yet catalogued" section), **fcitx5** (`8274ece` = tag 5.1.7, LGPL-2.1, the framework headers `make -C linux check-cpp` compiles against; external pointer turned into a redirect), **hazkey** (`23c78b1`, MIT, Fcitx5 addon ↔ Swift azooKey server over Unix socket + protobuf). Topic-index entries under "Native-engine embedding" (#8, #9). Roster lines for `fcitx5` (pinned 5.1.7) + `hazkey` added to `scripts/sync-references.sh`. Index-only (no deep-dives). All 34 repos under `references/` now catalogued.
 
 When adding a new repo under `references/`, append a card here and a row in the TL;DR matrix; if the repo is deep enough to warrant its own deep-dive (>500 LOC of read-through), create `docs/references/<repo>-reference.md` and link both ways.
