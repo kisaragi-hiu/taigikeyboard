@@ -19,9 +19,7 @@ use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
 use taigi_desktop_core::keys::{ChordRejection, RecordedPress};
-use taigi_desktop_core::settings::{
-    keys, AppearanceMode, SettingChoice, SettingsDocument, SettingsPane,
-};
+use taigi_desktop_core::settings::{keys, SettingChoice, SettingsDocument, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey};
 use taigi_desktop_storage::UserDataStores;
 use taigi_linux_platform::{snapshot, RawKeyEvent};
@@ -441,7 +439,7 @@ impl SettingsWindow {
         self.apply_chrome();
     }
 
-    /// The banner and the colour scheme, from the document.
+    /// The banner, from the document.
     fn apply_chrome(&self) {
         let writer = self.writer.borrow();
         let strings = writer.strings();
@@ -465,14 +463,6 @@ impl SettingsWindow {
             }
             None => self.banner.set_revealed(false),
         }
-        // Adwaita follows the system light / dark; the 外觀 row maps onto it
-        // (roadmap L3 — identical semantics for the window).
-        let scheme = match writer.document().choice(&keys::APPEARANCE_MODE) {
-            AppearanceMode::Light => adw::ColorScheme::ForceLight,
-            AppearanceMode::Dark => adw::ColorScheme::ForceDark,
-            AppearanceMode::Auto => adw::ColorScheme::Default,
-        };
-        adw::StyleManager::default().set_color_scheme(scheme);
     }
 
     /// The 1 s beat: the file re-read, and the window follows it.
