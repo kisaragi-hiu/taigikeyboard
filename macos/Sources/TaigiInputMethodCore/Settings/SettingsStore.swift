@@ -269,21 +269,21 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             defaultValue: AppearanceMode.auto,
         )
 
-        /// How big the candidate text renders. Presentation-only like
-        /// `candidateLayout`. The default is one step above the size the
-        /// window originally rendered at (USER 2026-08-21) — `small`
-        /// reproduces the original exactly.
-        static let candidateTextSize = SettingsKey(
+        /// How big the candidate window renders — text and air together.
+        /// Presentation-only like `candidateLayout`. The stored name keeps
+        /// the spelling from when it sized the text alone, so a size chosen
+        /// then carries over (`CandidateSizeChoice.init(rawValue:)`). The
+        /// default is a step smaller than the two-knob ladder's (USER
+        /// 2026-09-23).
+        ///
+        /// RETIRED 2026-09-23 (USER): `candidateWindowSize`, the separate
+        /// knob for the air around the text — the air now scales with the
+        /// text (`CandidateMetrics.chromeRatio`). A stored value is left in
+        /// place and read by nothing; the spelling stays reserved, so a future
+        /// padding knob takes a NEW key rather than inherit it.
+        static let candidateSize = SettingsKey(
             name: "candidateTextSize",
-            defaultValue: CandidateTextSizeChoice.medium,
-        )
-
-        /// How much air the candidate window puts around its text, as a
-        /// multiplier over the cell paddings. Default enlarged like
-        /// `candidateTextSize`.
-        static let candidateWindowSize = SettingsKey(
-            name: "candidateWindowSize",
-            defaultValue: CandidateWindowSizeChoice.medium,
+            defaultValue: CandidateSizeChoice.standard,
         )
 
         /// Which typeface the candidate window draws in. The key spelling is
@@ -444,14 +444,9 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         choice(Keys.appearanceMode)
     }
 
-    /// The candidate text size.
-    var candidateTextSize: CandidateTextSizeChoice {
-        choice(Keys.candidateTextSize)
-    }
-
-    /// The candidate window's chrome size.
-    var candidateWindowSize: CandidateWindowSizeChoice {
-        choice(Keys.candidateWindowSize)
+    /// How big the candidate window renders.
+    var candidateSize: CandidateSizeChoice {
+        choice(Keys.candidateSize)
     }
 
     /// The typeface selection as stored, decoded from its three keys.
@@ -492,14 +487,13 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         }
     }
 
-    /// The metrics the candidate window renders at. The one place the three
+    /// The metrics the candidate window renders at. The one place the two
     /// presentation choices are resolved together, so no caller has to know
-    /// that the window is drawn from three settings rather than one.
+    /// that the window is drawn from two settings rather than one.
     @MainActor
     var candidateMetrics: CandidateMetrics {
         CandidateMetrics(
-            textSize: candidateTextSize,
-            windowSize: candidateWindowSize,
+            size: candidateSize,
             fontSelection: candidateFontSelection,
         )
     }
@@ -580,8 +574,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             Keys.appearanceMode.name,
             Keys.candidateLayout.name,
             Keys.candidateDisplayMode.name,
-            Keys.candidateWindowSize.name,
-            Keys.candidateTextSize.name,
+            Keys.candidateSize.name,
         )
     }
 

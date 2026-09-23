@@ -1,105 +1,98 @@
-// What the two size choices resolve to, and the cell arithmetic built on them.
+// What the size choice resolves to, and the cell arithmetic built on it.
 
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The candidate window's size metrics: the ladders, the scaling, and the
+/// The candidate window's size metrics: the ladder, the scaling, and the
 /// width arithmetic every layout packs and aligns by.
 final class CandidateMetricsTests: XCTestCase {
-    /// The smallest pair of choices — no longer the port's original geometry:
-    /// the whitespace rebalance put the whole chrome ladder at or below
-    /// upstream's air (USER 2026-08-21).
-    private let originalMetrics = CandidateMetrics(textSize: .small, windowSize: .small)
     private let defaultMetrics = TestFixtures.defaultCandidateMetrics
 
-    // MARK: - Ladders
+    // MARK: - Ladder
 
-    /// The smallest tier, pinned literally. The 16pt reference font survives
-    /// (the symbol scaler's identity anchor); the paddings sit BELOW the
-    /// port's originals since the whitespace rebalance.
+    /// Every step, pinned literally. One knob scales the text AND the air:
+    /// the paddings are upstream's times `chromeRatio` 0.7 times the text
+    /// scale, so the window keeps one proportion at every size.
     ///
-    /// trace: chrome 0.7 → h 9*0.7=6.3→6, v 12*0.7=8.4→8, tahoe 8*0.7=5.6→6;
-    /// itemHeight 16+8=24.
-    func testSmallestChoices_resolveToTheirLiterals() {
-        XCTAssertEqual(originalMetrics.candidateFontSize, 16)
-        XCTAssertEqual(originalMetrics.annotationFontSize, 14)
-        XCTAssertEqual(originalMetrics.candidateAnnotationGap, 7)
-        XCTAssertEqual(originalMetrics.horizontalPadding, 6)
-        XCTAssertEqual(originalMetrics.verticalPadding, 8)
-        XCTAssertEqual(originalMetrics.tahoeSeparatorInset, 6)
-        XCTAssertEqual(originalMetrics.itemHeight, 24)
-        // At the reference font the symbol scaler is the identity, so the
-        // chevron and page arrows keep the point sizes the port shipped with.
-        XCTAssertEqual(originalMetrics.scaledSymbolMetric(11), 11)
-        XCTAssertEqual(originalMetrics.scaledSymbolMetric(8), 8)
+    /// trace, scale = size / 16, chrome = 0.7 * scale:
+    /// 13 — ann 14*.8125=11.4→11, gap 7*.8125=5.7→6, h 9*.56875=5.1→5,
+    ///      v 12*.56875=6.8→7, tahoe 8*.56875=4.55→5, item 13+7=20;
+    /// 15 — ann 13.1→13, gap 6.6→7, h 5.9→6, v 7.9→8, tahoe 5.25→5, item 23;
+    /// 17 — ann 14.9→15, gap 7.4→7, h 6.7→7, v 8.9→9, tahoe 5.95→6, item 26;
+    /// 20 — ann 17.5→18, gap 8.75→9, h 7.9→8, v 10.5→11, tahoe 7, item 31;
+    /// 23 — ann 20.1→20, gap 10.1→10, h 9.06→9, v 12.1→12, tahoe 8.05→8,
+    ///      item 35.
+    func testEveryStep_resolvesToItsTracedValues() {
+        let resolved = CandidateSizeChoice.allCases.map { size in
+            let metrics = CandidateMetrics(size: size)
+            return [
+                metrics.candidateFontSize, metrics.annotationFontSize, metrics.candidateAnnotationGap,
+                metrics.horizontalPadding, metrics.verticalPadding, metrics.tahoeSeparatorInset,
+                metrics.itemHeight,
+            ]
+        }
+
+        XCTAssertEqual(resolved, [
+            [13, 11, 6, 5, 7, 5, 20],
+            [15, 13, 7, 6, 8, 5, 23],
+            [17, 15, 7, 7, 9, 6, 26],
+            [20, 18, 9, 8, 11, 7, 31],
+            [23, 20, 10, 9, 12, 8, 35],
+        ])
     }
 
-    /// The default spends its points on the glyphs (USER 2026-08-21: bigger
-    /// text, less whitespace): the font is well above the 16pt reference while
-    /// the paddings sit below upstream's 9/12 originals.
-    ///
-    /// trace: 中/中 → font 20, ann 14*1.25=17.5→18, gap 7*1.25=8.75→9;
-    /// chrome 0.85 → h 9*0.85=7.65→8, v 12*0.85=10.2→10; itemHeight 30.
-    func testDefaultChoices_areTextForward() {
-        XCTAssertEqual(defaultMetrics.candidateFontSize, 20)
-        XCTAssertEqual(defaultMetrics.annotationFontSize, 18)
-        XCTAssertEqual(defaultMetrics.candidateAnnotationGap, 9)
-        XCTAssertEqual(defaultMetrics.horizontalPadding, 8)
-        XCTAssertEqual(defaultMetrics.verticalPadding, 10)
-        XCTAssertEqual(defaultMetrics.itemHeight, 30)
+    /// A fresh install renders at 標準 — a step smaller than the two-knob
+    /// ladder's default of 20pt text in a 30pt row (USER 2026-09-23: the
+    /// standard size was still too big).
+    func testDefault_isTheStandardStep() {
+        XCTAssertEqual(defaultMetrics.size, .standard)
+        XCTAssertEqual(defaultMetrics.candidateFontSize, 17)
+        XCTAssertEqual(defaultMetrics.itemHeight, 26)
     }
 
-    /// The ladders are declared smallest-first, which is the order the pickers
-    /// list them in. The largest chrome step is upstream MacishType's original
-    /// air — nothing renders roomier than the port did.
-    func testLadders_riseWithEveryStep() {
-        XCTAssertEqual(CandidateTextSizeChoice.allCases.map(\.candidateFontSize), [16, 20, 23])
-        XCTAssertEqual(CandidateWindowSizeChoice.allCases.map(\.chromeScale), [0.7, 0.85, 1.0])
+    /// The ladder is declared smallest-first, which is the order the slider
+    /// runs in.
+    func testLadder_risesWithEveryStep() {
+        XCTAssertEqual(CandidateSizeChoice.allCases.map(\.candidateFontSize), [13, 15, 17, 20, 23])
     }
 
-    // MARK: - Which knob owns which metric
-
-    /// The text knob owns the fonts and the gap between the two scripts; the
-    /// paddings are the window knob's. Mixing them would make one knob move
-    /// the other's geometry.
-    func testTextChoice_scalesTheFontsAndTheGapButNotThePaddings() {
-        let larger = CandidateMetrics(textSize: .large, windowSize: .small)
-
-        XCTAssertGreaterThan(larger.candidateFontSize, originalMetrics.candidateFontSize)
-        XCTAssertGreaterThan(larger.annotationFontSize, originalMetrics.annotationFontSize)
-        XCTAssertGreaterThan(larger.candidateAnnotationGap, originalMetrics.candidateAnnotationGap)
-        XCTAssertGreaterThan(larger.scaledSymbolMetric(11), originalMetrics.scaledSymbolMetric(11))
-        XCTAssertEqual(larger.horizontalPadding, originalMetrics.horizontalPadding)
-        XCTAssertEqual(larger.verticalPadding, originalMetrics.verticalPadding)
-        XCTAssertEqual(larger.tahoeSeparatorInset, originalMetrics.tahoeSeparatorInset)
+    /// The symbol scaler is anchored at the 16pt reference, which no step
+    /// sits on any more: the chevron and page arrows scale with the text.
+    func testSymbolMetrics_scaleWithTheText() {
+        XCTAssertEqual(CandidateMetrics(size: .large).scaledSymbolMetric(8), 10)
+        XCTAssertEqual(CandidateMetrics(size: .extraSmall).scaledSymbolMetric(8), 7)
     }
 
-    func testWindowChoice_scalesThePaddingsButNotTheFonts() {
-        let larger = CandidateMetrics(textSize: .small, windowSize: .large)
+    // MARK: - One knob
 
-        XCTAssertGreaterThan(larger.horizontalPadding, originalMetrics.horizontalPadding)
-        XCTAssertGreaterThan(larger.verticalPadding, originalMetrics.verticalPadding)
-        XCTAssertGreaterThan(larger.tahoeSeparatorInset, originalMetrics.tahoeSeparatorInset)
-        XCTAssertEqual(larger.candidateFontSize, originalMetrics.candidateFontSize)
-        XCTAssertEqual(larger.annotationFontSize, originalMetrics.annotationFontSize)
-        XCTAssertEqual(larger.candidateAnnotationGap, originalMetrics.candidateAnnotationGap)
-        XCTAssertEqual(larger.scaledSymbolMetric(11), originalMetrics.scaledSymbolMetric(11))
+    /// Every step moves the text and the air together — no step may grow one
+    /// while shrinking the other, and none may collide with its neighbour.
+    func testEachStep_growsTheTextAndTheAirTogether() {
+        for (smaller, larger) in zip(CandidateSizeChoice.allCases, CandidateSizeChoice.allCases.dropFirst()) {
+            let small = CandidateMetrics(size: smaller)
+            let large = CandidateMetrics(size: larger)
+            let label = "\(smaller) → \(larger)"
+
+            XCTAssertGreaterThan(large.candidateFontSize, small.candidateFontSize, label)
+            XCTAssertGreaterThanOrEqual(large.annotationFontSize, small.annotationFontSize, label)
+            XCTAssertGreaterThanOrEqual(large.horizontalPadding, small.horizontalPadding, label)
+            XCTAssertGreaterThanOrEqual(large.verticalPadding, small.verticalPadding, label)
+            XCTAssertGreaterThan(large.itemHeight, small.itemHeight, label)
+        }
     }
 
     /// Scaled values land on whole points, the way upstream rounds them
     /// (`MacishCandidateItemView.updateFontSize`) — a fractional padding would
     /// put every cell edge on a half pixel.
     func testScaledValues_areWholePoints() {
-        for textSize in CandidateTextSizeChoice.allCases {
-            for windowSize in CandidateWindowSizeChoice.allCases {
-                let metrics = CandidateMetrics(textSize: textSize, windowSize: windowSize)
-                for value in [
-                    metrics.annotationFontSize, metrics.candidateAnnotationGap,
-                    metrics.horizontalPadding, metrics.verticalPadding, metrics.tahoeSeparatorInset,
-                    metrics.scaledSymbolMetric(11), metrics.scaledSymbolMetric(8),
-                ] {
-                    XCTAssertEqual(value, value.rounded(), "\(textSize)/\(windowSize) is fractional")
-                }
+        for size in CandidateSizeChoice.allCases {
+            let metrics = CandidateMetrics(size: size)
+            for value in [
+                metrics.annotationFontSize, metrics.candidateAnnotationGap,
+                metrics.horizontalPadding, metrics.verticalPadding, metrics.tahoeSeparatorInset,
+                metrics.scaledSymbolMetric(11), metrics.scaledSymbolMetric(8),
+            ] {
+                XCTAssertEqual(value, value.rounded(), "\(size) is fractional")
             }
         }
     }
@@ -108,17 +101,14 @@ final class CandidateMetricsTests: XCTestCase {
 
     /// `CandidatePanel` decides whether to rebuild every cached panel by
     /// comparing the metrics it built them at against the current ones, so
-    /// each pair of choices must resolve to its own value: two choices that
-    /// compared equal would leave a panel rendering at the size the user just
-    /// moved away from.
-    func testEveryChoicePair_resolvesToDistinctMetrics() {
-        var seen: [CandidateMetrics] = []
-        for textSize in CandidateTextSizeChoice.allCases {
-            for windowSize in CandidateWindowSizeChoice.allCases {
-                let metrics = CandidateMetrics(textSize: textSize, windowSize: windowSize)
-                XCTAssertFalse(seen.contains(metrics), "\(textSize)/\(windowSize) collides")
-                seen.append(metrics)
-            }
+    /// each step must resolve to its own value: two steps that compared equal
+    /// would leave a panel rendering at the size the user just moved away from.
+    func testEveryStep_resolvesToDistinctMetrics() {
+        let resolved = CandidateSizeChoice.allCases.map { CandidateMetrics(size: $0) }
+
+        XCTAssertEqual(Set(resolved.map(\.itemHeight)).count, resolved.count)
+        for (index, metrics) in resolved.enumerated() {
+            XCTAssertFalse(resolved[..<index].contains(metrics), "\(metrics.size) collides")
         }
     }
 
@@ -151,11 +141,11 @@ final class CandidateMetricsTests: XCTestCase {
 
     // MARK: - Tahoe shape policy
 
-    /// A window of one-line cells keeps upstream's capsule: at 24-35pt those
+    /// A window of one-line cells keeps upstream's capsule: at 20-35pt those
     /// cells are the size range macOS itself capsules, and the selection sits
     /// a hairline inside it.
     ///
-    /// trace: 中/中 inline → itemHeight 30, container 15, inset 2, highlight 13.
+    /// trace: 標準 inline → itemHeight 26, container 13, inset 2, highlight 11.
     func testInlineArrangement_keepsTheCapsuleAndItsHairlineInset() {
         let inline = defaultMetrics.arranged(.inline)
 
@@ -165,47 +155,38 @@ final class CandidateMetricsTests: XCTestCase {
 
     /// A window of two-line cells rounds to a fixed rectangle instead: the
     /// capsule formula reads as a stadium once a cell is twice a control tall
-    /// (USER 2026-08-25). The shape is the arrangement's, not the knobs':
-    /// neither how big the text is nor how much air the window keeps may round
-    /// it differently.
+    /// (USER 2026-08-25). The shape is the arrangement's, not the size's: how
+    /// big the window is drawn may not round it differently.
     ///
-    /// trace: 中/中 stacked → itemHeight 57, container 16, inset 4, highlight 12.
-    func testStackedArrangement_roundsToAFixedRectangleAtEveryChoicePair() {
-        for textSize in CandidateTextSizeChoice.allCases {
-            for windowSize in CandidateWindowSizeChoice.allCases {
-                let metrics = CandidateMetrics(
-                    textSize: textSize, windowSize: windowSize, cellArrangement: .stacked,
-                )
-                let label = "\(textSize)/\(windowSize)"
+    /// trace: container 16, inset 4, highlight 12 at every step.
+    func testStackedArrangement_roundsToAFixedRectangleAtEveryStep() {
+        for size in CandidateSizeChoice.allCases {
+            let metrics = CandidateMetrics(size: size, cellArrangement: .stacked)
+            let label = "\(size)"
 
-                XCTAssertEqual(metrics.tahoeContainerCornerRadius, 16, label)
-                XCTAssertEqual(metrics.tahoeHighlightInset, 4, label)
-                XCTAssertEqual(metrics.tahoeHighlightCornerRadius, 12, label)
-                XCTAssertLessThan(
-                    metrics.tahoeContainerCornerRadius, metrics.itemHeight / 2,
-                    "\(label): a stacked cell that still resolved to a capsule would not have "
-                        + "been fixed",
-                )
-            }
+            XCTAssertEqual(metrics.tahoeContainerCornerRadius, 16, label)
+            XCTAssertEqual(metrics.tahoeHighlightInset, 4, label)
+            XCTAssertEqual(metrics.tahoeHighlightCornerRadius, 12, label)
+            XCTAssertLessThan(
+                metrics.tahoeContainerCornerRadius, metrics.itemHeight / 2,
+                "\(label): a stacked cell that still resolved to a capsule would not have "
+                    + "been fixed",
+            )
         }
     }
 
     /// macOS 26 asks nested shapes to be concentric — the inner radius is the
     /// outer one less the padding between them.
     func testHighlightRadius_isTheContainersLessTheInsetEverywhere() {
-        for textSize in CandidateTextSizeChoice.allCases {
-            for windowSize in CandidateWindowSizeChoice.allCases {
-                for arrangement in [CandidateCellArrangement.inline, .stacked] {
-                    let metrics = CandidateMetrics(
-                        textSize: textSize, windowSize: windowSize, cellArrangement: arrangement,
-                    )
+        for size in CandidateSizeChoice.allCases {
+            for arrangement in [CandidateCellArrangement.inline, .stacked] {
+                let metrics = CandidateMetrics(size: size, cellArrangement: arrangement)
 
-                    XCTAssertEqual(
-                        metrics.tahoeContainerCornerRadius - metrics.tahoeHighlightCornerRadius,
-                        metrics.tahoeHighlightInset,
-                        "\(textSize)/\(windowSize)/\(arrangement)",
-                    )
-                }
+                XCTAssertEqual(
+                    metrics.tahoeContainerCornerRadius - metrics.tahoeHighlightCornerRadius,
+                    metrics.tahoeHighlightInset,
+                    "\(size)/\(arrangement)",
+                )
             }
         }
     }
@@ -282,48 +263,40 @@ final class CandidateMetricsTests: XCTestCase {
     /// the narrowest cell there is — one full-width glyph, no annotation.
     @MainActor
     func testBaseWidth_isTheNarrowestPrimaryOnlyCell() {
-        for textSize in CandidateTextSizeChoice.allCases {
-            let metrics = CandidateMetrics(textSize: textSize, windowSize: .medium)
+        for size in CandidateSizeChoice.allCases {
+            let metrics = CandidateMetrics(size: size)
 
             XCTAssertEqual(
                 metrics.baseWidth,
                 metrics.measureWidth(CandidateCellContent(text: "永", annotation: nil)),
                 accuracy: 0.01,
-                "\(textSize)",
+                "\(size)",
             )
         }
     }
 
     /// The one-glyph floor is measured at the candidate font, so it has to
-    /// grow with the text choice — a floor cached across sizes would leave a
-    /// large window packing columns sized for a small one.
+    /// grow with the size — a floor cached across sizes would leave a large
+    /// window packing columns sized for a small one.
     @MainActor
-    func testBaseWidth_growsWithBothChoices() {
-        let original = originalMetrics.baseWidth
+    func testBaseWidth_growsWithTheSize() {
+        let widths = CandidateSizeChoice.allCases.map { CandidateMetrics(size: $0).baseWidth }
 
-        XCTAssertGreaterThan(
-            CandidateMetrics(textSize: .large, windowSize: .small).baseWidth, original,
-        )
-        XCTAssertGreaterThan(
-            CandidateMetrics(textSize: .small, windowSize: .large).baseWidth, original,
-        )
+        XCTAssertEqual(widths, widths.sorted())
+        XCTAssertEqual(Set(widths).count, widths.count)
     }
 
-    /// The digit hint scales with the TEXT choice, like the other
-    /// text-anchored distances — a hint that stayed 10pt beside 23pt
-    /// candidates would read as a speck.
+    /// The digit hint scales with the size, like the other text-anchored
+    /// distances — a hint that stayed 10pt beside 23pt candidates would read
+    /// as a speck. At the smallest step it is upstream's own 8pt.
     @MainActor
-    func testIndexColumn_scalesWithTheTextChoiceAndNotTheChrome() {
-        let small = CandidateMetrics(textSize: .small, windowSize: .medium)
-        let large = CandidateMetrics(textSize: .large, windowSize: .medium)
+    func testIndexColumn_scalesWithTheSize() {
+        let small = CandidateMetrics(size: .small)
+        let large = CandidateMetrics(size: .extraLarge)
 
         XCTAssertGreaterThan(large.indexFontSize, small.indexFontSize)
         XCTAssertGreaterThan(large.indexWidth, small.indexWidth)
-        XCTAssertEqual(
-            CandidateMetrics(textSize: .small, windowSize: .large).indexFontSize,
-            small.indexFontSize,
-            "the chrome knob is air around the text, not the size of it",
-        )
+        XCTAssertEqual(CandidateMetrics(size: .extraSmall).indexFontSize, 8)
         // The slot holds the WIDEST form the key can take — `⌥9`, not `9` —
         // so the column keeps one width as the live key changes.
         let widest = CandidateIndexLabel.widestLabelForms

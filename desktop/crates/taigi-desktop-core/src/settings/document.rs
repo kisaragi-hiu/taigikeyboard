@@ -411,6 +411,51 @@ mod tests {
     }
 
     #[test]
+    fn candidate_size_reads_the_one_knob_and_the_two_knob_spellings() {
+        use crate::settings::CandidateSizeChoice;
+        // Never touched → the new default; the text ladder's old spellings
+        // → the nearest step; the retired window knob changes nothing; a
+        // read writes nothing; the 外觀 reset removes the key.
+        let mut doc = SettingsDocument::default();
+        assert_eq!(
+            doc.choice(&keys::CANDIDATE_SIZE),
+            CandidateSizeChoice::Standard
+        );
+        for (stored, expected) in [
+            ("small", CandidateSizeChoice::Small),
+            ("medium", CandidateSizeChoice::Large),
+            ("large", CandidateSizeChoice::ExtraLarge),
+            ("13", CandidateSizeChoice::ExtraSmall),
+            ("23", CandidateSizeChoice::ExtraLarge),
+            ("gigantic", CandidateSizeChoice::Standard),
+        ] {
+            doc.set_raw_string(keys::CANDIDATE_SIZE.name, stored);
+            assert_eq!(doc.choice(&keys::CANDIDATE_SIZE), expected, "{stored}");
+        }
+        doc.set_bool(&SettingsKey::new(keys::CANDIDATE_SIZE.name, false), true);
+        assert_eq!(
+            doc.choice(&keys::CANDIDATE_SIZE),
+            CandidateSizeChoice::Standard,
+            "a non-string value reads as the default"
+        );
+        doc.set_raw_string("candidateWindowSize", "large");
+        doc.set_raw_string(keys::CANDIDATE_SIZE.name, "medium");
+        let revision = doc.revision;
+        assert_eq!(
+            doc.choice(&keys::CANDIDATE_SIZE),
+            CandidateSizeChoice::Large
+        );
+        assert_eq!(doc.revision, revision, "reading migrates nothing");
+        assert_eq!(doc.raw_string(keys::CANDIDATE_SIZE.name), Some("medium"));
+        doc.reset_appearance();
+        assert!(!doc.contains(keys::CANDIDATE_SIZE.name));
+        assert_eq!(
+            doc.choice(&keys::CANDIDATE_SIZE),
+            CandidateSizeChoice::Standard
+        );
+    }
+
+    #[test]
     fn reset_general_removes_the_pane_s_keys_and_nothing_else() {
         // trace: 一般 owns the swap, the tone keys and auto-space; the
         // display language is the user's UI choice, the candidate layout is

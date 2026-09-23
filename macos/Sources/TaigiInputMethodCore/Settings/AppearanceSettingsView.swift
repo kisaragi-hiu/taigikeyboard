@@ -3,10 +3,10 @@
 import SwiftUI
 
 /// The 外觀 pane of the settings window: an 外觀 pop-up of light/dark/auto,
-/// then the candidate window's own pickers — layout, what each cell shows and
-/// the two size steps. Every row is the same pop-up menu in one group, so the
-/// pane reads as one list rather than a drawn selector fenced off above a
-/// stack of menus (USER 2026-09-02).
+/// then the candidate window's own pickers — layout, size and what each cell
+/// shows. Every row is the same pop-up menu in one group, so the pane reads
+/// as one list rather than a drawn selector fenced off above a stack of menus
+/// (USER 2026-09-02).
 ///
 /// Three rows are deliberately absent, each argued where it lives: no
 /// accent-colour swatch (see `CandidateAccentColor`), no chrome-generation
@@ -28,11 +28,8 @@ struct AppearanceSettingsView: View {
     @AppStorage(SettingsStore.Keys.candidateLayout.name)
     private var candidateLayout = SettingsStore.Keys.candidateLayout.defaultValue
 
-    @AppStorage(SettingsStore.Keys.candidateWindowSize.name)
-    private var candidateWindowSize = SettingsStore.Keys.candidateWindowSize.defaultValue
-
-    @AppStorage(SettingsStore.Keys.candidateTextSize.name)
-    private var candidateTextSize = SettingsStore.Keys.candidateTextSize.defaultValue
+    @AppStorage(SettingsStore.Keys.candidateSize.name)
+    private var candidateSize = SettingsStore.Keys.candidateSize.defaultValue
 
     @AppStorage(SettingsStore.Keys.candidateDisplayMode.name)
     private var candidateDisplayMode = SettingsStore.Keys.candidateDisplayMode.defaultValue
@@ -53,16 +50,14 @@ struct AppearanceSettingsView: View {
                     Text(language.string(.desktopCandidateLayoutHorizontal)).tag(CandidateLayout.horizontal)
                     Text(language.string(.desktopCandidateLayoutVertical)).tag(CandidateLayout.vertical)
                 }
-                // The size rows are named steps, not continuous values, so
-                // they are pop-up menus like the rows above rather than
-                // sliders (Apple HIG, Pop-up Buttons: a flat list of mutually
-                // exclusive choices). Window size beside window layout, text
-                // size beside what the cells show — coarse to fine (USER
-                // 2026-09-21).
-                Picker(language.string(.desktopCandidateWindowSize), selection: $candidateWindowSize) {
-                    Text(language.string(.desktopSizeSmall)).tag(CandidateWindowSizeChoice.small)
-                    Text(language.string(.desktopSizeMedium)).tag(CandidateWindowSizeChoice.medium)
-                    Text(language.string(.desktopSizeLarge)).tag(CandidateWindowSizeChoice.large)
+                // One pop-up sizes the whole window — text and air together —
+                // over five named steps, beside the window layout it sizes
+                // (USER 2026-09-23: one knob, five steps; a pop-up like the
+                // rows around it, not a slider).
+                Picker(language.string(.desktopCandidateWindowSize), selection: $candidateSize) {
+                    ForEach(CandidateSizeChoice.allCases, id: \.self) { size in
+                        Text(language.string(size.labelKey)).tag(size)
+                    }
                 }
                 // What each cell shows, after the window rows: both
                 // scripts side by side (today's rendering), each script as its
@@ -76,11 +71,6 @@ struct AppearanceSettingsView: View {
                         .tag(CandidateDisplayMode.combined)
                     Text(language.string(.settingsCandidateDisplayModeRomanOnly))
                         .tag(CandidateDisplayMode.romanOnly)
-                }
-                Picker(language.string(.themeCandidateTextSize), selection: $candidateTextSize) {
-                    Text(language.string(.desktopSizeSmall)).tag(CandidateTextSizeChoice.small)
-                    Text(language.string(.desktopSizeMedium)).tag(CandidateTextSizeChoice.medium)
-                    Text(language.string(.desktopSizeLarge)).tag(CandidateTextSizeChoice.large)
                 }
             }
 

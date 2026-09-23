@@ -326,11 +326,7 @@ final class SettingsStoreTests: XCTestCase {
         let store = makeStore()
         userDefaults.set(AppearanceMode.dark.rawValue, forKey: SettingsStore.Keys.appearanceMode.name)
         userDefaults.set(CandidateLayout.horizontal.rawValue, forKey: SettingsStore.Keys.candidateLayout.name)
-        userDefaults.set(
-            CandidateWindowSizeChoice.large.rawValue,
-            forKey: SettingsStore.Keys.candidateWindowSize.name,
-        )
-        userDefaults.set(CandidateTextSizeChoice.small.rawValue, forKey: SettingsStore.Keys.candidateTextSize.name)
+        userDefaults.set(CandidateSizeChoice.small.rawValue, forKey: SettingsStore.Keys.candidateSize.name)
         userDefaults.set(
             CandidateDisplayMode.romanOnly.rawValue,
             forKey: SettingsStore.Keys.candidateDisplayMode.name,
@@ -341,8 +337,8 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.appearanceMode, SettingsStore.Keys.appearanceMode.defaultValue)
         XCTAssertEqual(store.candidateLayout, SettingsStore.Keys.candidateLayout.defaultValue)
         XCTAssertEqual(store.candidateDisplayMode, SettingsStore.Keys.candidateDisplayMode.defaultValue)
-        XCTAssertEqual(store.candidateWindowSize, SettingsStore.Keys.candidateWindowSize.defaultValue)
-        XCTAssertEqual(store.candidateTextSize, SettingsStore.Keys.candidateTextSize.defaultValue)
+        XCTAssertEqual(store.candidateSize, SettingsStore.Keys.candidateSize.defaultValue)
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.candidateSize.name), "removed, not written")
     }
 
     /// The typeface is 字型管理's, not 外觀's: a pane's reset restores the rows
@@ -405,48 +401,60 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(makeStore().appearanceMode, .auto, "unknown values fall back to 自動")
     }
 
-    /// The two size rows default one step above the metrics the window
-    /// originally rendered at (USER 2026-08-21), so an install that never
-    /// touched them gets the larger window — 細 is the way back.
+    /// One size knob, defaulting to 標準 — a step smaller than the two-knob
+    /// ladder's 20pt default (USER 2026-09-23), so an install that never
+    /// touched the size gets the smaller window.
     @MainActor
-    func testCandidateSizes_withNothingStored_areTheEnlargedDefaults() {
+    func testCandidateSize_withNothingStored_isTheStandardStep() {
         let store = makeStore()
 
-        XCTAssertEqual(store.candidateTextSize, .medium)
-        XCTAssertEqual(store.candidateWindowSize, .medium)
-        XCTAssertEqual(
-            store.candidateMetrics,
-            CandidateMetrics(textSize: .medium, windowSize: .medium),
-        )
+        XCTAssertEqual(store.candidateSize, .standard)
+        XCTAssertEqual(store.candidateMetrics, CandidateMetrics(size: .standard))
     }
 
-    func testCandidateSizes_readWhatTheSizePickersWrite() {
-        userDefaults.set(
-            CandidateTextSizeChoice.large.rawValue,
-            forKey: SettingsStore.Keys.candidateTextSize.name,
-        )
-        userDefaults.set(
-            CandidateWindowSizeChoice.small.rawValue,
-            forKey: SettingsStore.Keys.candidateWindowSize.name,
-        )
-        XCTAssertEqual(makeStore().candidateTextSize, .large)
-        XCTAssertEqual(makeStore().candidateWindowSize, .small)
+    func testCandidateSize_readsEveryStepTheSliderWrites() {
+        for size in CandidateSizeChoice.allCases {
+            userDefaults.set(size.rawValue, forKey: SettingsStore.Keys.candidateSize.name)
+
+            XCTAssertEqual(makeStore().candidateSize, size)
+        }
     }
 
-    /// The 特大 tier was removed (USER 2026-08-21): an install that stored it
-    /// reads back as the default rather than crashing or pinning a ghost size.
-    func testCandidateTextSize_storedRetiredExtraLarge_fallsBackToTheDefault() {
-        userDefaults.set("extraLarge", forKey: SettingsStore.Keys.candidateTextSize.name)
+    /// The key keeps the text-size ladder's spelling, so a size chosen before
+    /// the merge carries over as the nearest step: 16pt → 15, 20 → 20,
+    /// 23 → 23 (USER 2026-09-23). Reading it migrates nothing.
+    func testCandidateSize_readsTheTwoKnobSpellingsAsTheNearestStep() {
+        for (stored, expected) in [
+            ("small", CandidateSizeChoice.small),
+            ("medium", .large),
+            ("large", .extraLarge),
+        ] {
+            userDefaults.set(stored, forKey: SettingsStore.Keys.candidateSize.name)
 
-        XCTAssertEqual(makeStore().candidateTextSize, .medium)
+            XCTAssertEqual(makeStore().candidateSize, expected, stored)
+            XCTAssertEqual(userDefaults.string(forKey: SettingsStore.Keys.candidateSize.name), stored)
+        }
     }
 
-    func testCandidateSizes_withUnknownStoredValues_fallBackToTheDefaults() {
-        userDefaults.set("gigantic", forKey: SettingsStore.Keys.candidateTextSize.name)
-        userDefaults.set("gigantic", forKey: SettingsStore.Keys.candidateWindowSize.name)
+    /// The retired window-size knob is read by nothing: a stored value neither
+    /// sizes the window nor stands in for a missing size.
+    @MainActor
+    func testCandidateSize_ignoresTheRetiredWindowSizeKey() {
+        userDefaults.set("large", forKey: "candidateWindowSize")
 
-        XCTAssertEqual(makeStore().candidateTextSize, .medium)
-        XCTAssertEqual(makeStore().candidateWindowSize, .medium)
+        XCTAssertEqual(makeStore().candidateSize, .standard)
+        XCTAssertEqual(makeStore().candidateMetrics, CandidateMetrics(size: .standard))
+    }
+
+    /// The 特大 tier was removed (USER 2026-08-21) before this ladder existed:
+    /// an install that stored it reads back as the default rather than
+    /// crashing or pinning a ghost size.
+    func testCandidateSize_withUnknownStoredValues_fallsBackToTheDefault() {
+        for stored in ["extraLarge", "gigantic", "16"] {
+            userDefaults.set(stored, forKey: SettingsStore.Keys.candidateSize.name)
+
+            XCTAssertEqual(makeStore().candidateSize, .standard, stored)
+        }
     }
 
     /// A fresh Mac renders in the system font (USER 2026-08-23) — the key

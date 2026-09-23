@@ -88,94 +88,78 @@ impl SettingChoice for AppearanceMode {
     }
 }
 
-/// How big the candidate text renders. The point sizes are the macOS ladder
-/// (`CandidateMetrics.swift:21-27`); medium is one step above the size the
-/// window originally rendered at (USER 2026-08-21).
+/// How big the candidate window renders — one knob for the whole window: the
+/// text, the gaps and the air around them all scale off the candidate font
+/// size (USER 2026-09-23, which merged the separate text-size and window-size
+/// pickers and made the default a step smaller). The point sizes are the
+/// macOS ladder (`CandidateMetrics.swift` `CandidateSizeChoice`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum CandidateTextSizeChoice {
+pub enum CandidateSizeChoice {
+    ExtraSmall,
     Small,
-    Medium,
+    Standard,
     Large,
+    ExtraLarge,
 }
 
-impl CandidateTextSizeChoice {
-    /// The three named steps share the window-size row's words (`AppearanceSettingsView.swift:268-277`).
+impl CandidateSizeChoice {
+    /// The step's name in the size pop-up.
     pub fn label_key(self) -> crate::strings::StringKey {
         use crate::strings::StringKey;
         match self {
+            Self::ExtraSmall => StringKey::DesktopSizeExtraSmall,
             Self::Small => StringKey::DesktopSizeSmall,
-            Self::Medium => StringKey::DesktopSizeMedium,
+            Self::Standard => StringKey::DesktopSizeMedium,
             Self::Large => StringKey::DesktopSizeLarge,
+            Self::ExtraLarge => StringKey::DesktopSizeExtraLarge,
         }
     }
 
     /// Candidate font size in points.
-    /// CROSS-PLATFORM INVARIANT — mirrors `macos/.../Candidates/CandidateMetrics.swift:21-27`.
+    /// CROSS-PLATFORM INVARIANT — mirrors `macos/.../Candidates/CandidateMetrics.swift`
+    /// `CandidateSizeChoice.candidateFontSize`.
     pub fn font_size(self) -> f32 {
         match self {
-            Self::Small => 16.0,
-            Self::Medium => 20.0,
-            Self::Large => 23.0,
+            Self::ExtraSmall => 13.0,
+            Self::Small => 15.0,
+            Self::Standard => 17.0,
+            Self::Large => 20.0,
+            Self::ExtraLarge => 23.0,
         }
     }
 }
 
-impl SettingChoice for CandidateTextSizeChoice {
-    const ALL: &'static [Self] = &[Self::Small, Self::Medium, Self::Large];
-    const DEFAULT: Self = Self::Medium;
+impl SettingChoice for CandidateSizeChoice {
+    const ALL: &'static [Self] = &[
+        Self::ExtraSmall,
+        Self::Small,
+        Self::Standard,
+        Self::Large,
+        Self::ExtraLarge,
+    ];
+    const DEFAULT: Self = Self::Standard;
+    /// The point size, so the stored value never collides with the spellings
+    /// the two-knob ladder wrote under the same key (`from_raw`).
     fn raw(self) -> &'static str {
         match self {
-            Self::Small => "small",
-            Self::Medium => "medium",
-            Self::Large => "large",
-        }
-    }
-}
-
-/// How much air the candidate window puts around its text, as a multiplier
-/// over the cell paddings (`CandidateMetrics.swift:42-48`).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub enum CandidateWindowSizeChoice {
-    Small,
-    Medium,
-    Large,
-}
-
-impl CandidateWindowSizeChoice {
-    /// The picker row's i18n key (`AppearanceSettingsView.swift:268-272`).
-    pub fn label_key(self) -> crate::strings::StringKey {
-        use crate::strings::StringKey;
-        match self {
-            Self::Small => StringKey::DesktopSizeSmall,
-            Self::Medium => StringKey::DesktopSizeMedium,
-            Self::Large => StringKey::DesktopSizeLarge,
+            Self::ExtraSmall => "13",
+            Self::Small => "15",
+            Self::Standard => "17",
+            Self::Large => "20",
+            Self::ExtraLarge => "23",
         }
     }
 
-    /// NAMED DIVERGENCE from `macos/.../Candidates/CandidateMetrics.swift:42-48`
-    /// (USER 2026-09-01, first real-Windows dogfood): every step of the Windows
-    /// ladder is one notch tighter than the Mac's `0.7 / 0.85 / 1.0`. The point
-    /// values are read as DIPs here and as points on the Mac, so the same
-    /// number lands differently against the platform's own chrome; the window
-    /// carried too much air on Windows. The text ladder is untouched — this is
-    /// the chrome knob, and the two stay independent.
-    pub fn scale(self) -> f32 {
-        match self {
-            Self::Small => 0.6,
-            Self::Medium => 0.72,
-            Self::Large => 0.85,
-        }
-    }
-}
-
-impl SettingChoice for CandidateWindowSizeChoice {
-    const ALL: &'static [Self] = &[Self::Small, Self::Medium, Self::Large];
-    const DEFAULT: Self = Self::Medium;
-    fn raw(self) -> &'static str {
-        match self {
-            Self::Small => "small",
-            Self::Medium => "medium",
-            Self::Large => "large",
+    /// The current spellings, plus the three the text-size ladder stored
+    /// before the merge, each read as the step nearest the size it rendered:
+    /// 16 pt → 15, 20 → 20, 23 → 23 (USER 2026-09-23). A never-touched
+    /// install has no key and takes the new default.
+    fn from_raw(raw: &str) -> Option<Self> {
+        match raw {
+            "small" => Some(Self::Small),
+            "medium" => Some(Self::Large),
+            "large" => Some(Self::ExtraLarge),
+            _ => Self::ALL.iter().copied().find(|step| step.raw() == raw),
         }
     }
 }
@@ -451,32 +435,40 @@ mod tests {
         round_trips::<CandidateLayout>();
         round_trips::<crate::settings::CandidateDisplayMode>();
         round_trips::<AppearanceMode>();
-        round_trips::<CandidateTextSizeChoice>();
-        round_trips::<CandidateWindowSizeChoice>();
+        round_trips::<CandidateSizeChoice>();
         round_trips::<CandidateFontChoice>();
         round_trips::<SettingsPane>();
     }
 
     #[test]
-    fn the_text_ladder_matches_macos_and_the_chrome_ladder_is_a_notch_tighter() {
-        // trace: CandidateMetricsTests.swift:55-58 pins [16, 20, 23] and
-        // [0.7, 0.85, 1.0]. The text ladder is shared; the chrome ladder is the
-        // named divergence (USER 2026-09-01) — each step one notch tighter, and
-        // the whole ladder still under the Mac's, never over it.
-        let sizes: Vec<f32> = CandidateTextSizeChoice::ALL
+    fn the_size_ladder_matches_macos_and_climbs() {
+        // trace: CandidateMetricsTests.swift pins [13, 15, 17, 20, 23].
+        let sizes: Vec<f32> = CandidateSizeChoice::ALL
             .iter()
             .map(|c| c.font_size())
             .collect();
-        assert_eq!(sizes, [16.0, 20.0, 23.0]);
-        let scales: Vec<f32> = CandidateWindowSizeChoice::ALL
-            .iter()
-            .map(|c| c.scale())
-            .collect();
-        assert_eq!(scales, [0.6, 0.72, 0.85]);
-        assert!(
-            scales.windows(2).all(|pair| pair[0] < pair[1]),
-            "the ladder still climbs"
+        assert_eq!(sizes, [13.0, 15.0, 17.0, 20.0, 23.0]);
+        assert_eq!(CandidateSizeChoice::DEFAULT.font_size(), 17.0);
+    }
+
+    #[test]
+    fn the_two_knob_spellings_read_as_the_nearest_step() {
+        // trace: old text ladder small 16 / medium 20 / large 23 → 15 / 20 / 23
+        // (USER 2026-09-23). `extraLarge` (特大, retired 2026-08-21) was
+        // never a spelling of this ladder and stays unknown.
+        assert_eq!(
+            CandidateSizeChoice::from_raw("small"),
+            Some(CandidateSizeChoice::Small)
         );
+        assert_eq!(
+            CandidateSizeChoice::from_raw("medium"),
+            Some(CandidateSizeChoice::Large)
+        );
+        assert_eq!(
+            CandidateSizeChoice::from_raw("large"),
+            Some(CandidateSizeChoice::ExtraLarge)
+        );
+        assert_eq!(CandidateSizeChoice::from_raw("extraLarge"), None);
     }
 
     #[test]

@@ -22,22 +22,22 @@ final class CandidateStackedCellTests: XCTestCase {
     }
 
     func testStackedWidth_isTheWiderScriptNotBothTogether() {
-        for textSize in CandidateTextSizeChoice.allCases {
-            let inline = CandidateMetrics(textSize: textSize, windowSize: .medium)
+        for size in CandidateSizeChoice.allCases {
+            let inline = CandidateMetrics(size: size)
             let stacked = inline.arranged(.stacked)
 
             XCTAssertGreaterThanOrEqual(
                 stacked.measureWidth(Self.cell),
                 2 * stacked.horizontalPadding + stacked.annotationTextWidth(Self.cell.annotation),
-                "\(textSize): the wider line is the romanization here, and it must fit",
+                "\(size): the wider line is the romanization here, and it must fit",
             )
             XCTAssertLessThan(
                 stacked.measureWidth(Self.cell), inline.measureWidth(Self.cell),
-                "\(textSize): stacking is what buys the row its extra candidates",
+                "\(size): stacking is what buys the row its extra candidates",
             )
             XCTAssertGreaterThan(
                 stacked.itemHeight, inline.itemHeight,
-                "\(textSize): and costs the row a second line's height",
+                "\(size): and costs the row a second line's height",
             )
         }
     }
@@ -74,7 +74,7 @@ final class CandidateStackedCellTests: XCTestCase {
         ]
         for choice in CandidateFontChoice.allCases {
             let metrics = CandidateMetrics(
-                textSize: .medium, windowSize: .medium, fontSelection: .builtIn(choice),
+                size: .standard, fontSelection: .builtIn(choice),
                 cellArrangement: .stacked,
             )
             for content in contents {
@@ -193,42 +193,38 @@ final class CandidateStackedCellTests: XCTestCase {
     /// script to align with). `testStackedOneScriptCell_centresItsSingleLine`
     /// pins the centring itself.
     func testStackedCell_keepsBothLinesInsideItsFrameAtEverySize() {
-        for textSize in CandidateTextSizeChoice.allCases {
-            for windowSize in CandidateWindowSizeChoice.allCases {
-                for content in [Self.cell, CandidateCellContent(text: "候", annotation: nil)] {
-                    let metrics = CandidateMetrics(
-                        textSize: textSize, windowSize: windowSize, cellArrangement: .stacked,
-                    )
-                    let view = CandidateItemView(style: .sequoia, metrics: metrics)
-                    view.configure(content)
-                    view.frame = NSRect(
-                        x: 0, y: 0,
-                        width: metrics.measureWidth(content), height: metrics.itemHeight,
-                    )
-                    view.layoutSubtreeIfNeeded()
+        for size in CandidateSizeChoice.allCases {
+            for content in [Self.cell, CandidateCellContent(text: "候", annotation: nil)] {
+                let metrics = CandidateMetrics(size: size, cellArrangement: .stacked)
+                let view = CandidateItemView(style: .sequoia, metrics: metrics)
+                view.configure(content)
+                view.frame = NSRect(
+                    x: 0, y: 0,
+                    width: metrics.measureWidth(content), height: metrics.itemHeight,
+                )
+                view.layoutSubtreeIfNeeded()
 
-                    let labels = view.subviews.compactMap { $0 as? NSTextField }
-                    XCTAssertEqual(
-                        labels.count, 3, "a stacked cell draws the digit and both scripts",
-                    )
-                    for label in labels {
-                        XCTAssertTrue(
-                            view.bounds.contains(label.frame),
-                            "\(textSize)/\(windowSize): \(label.stringValue) at \(label.frame) "
-                                + "must fit the cell's \(view.bounds)",
-                        )
-                    }
-                    // Indices 1 and 2: the digit hint is the cell's FIRST text
-                    // field, and it shares neither line — the two scripts are
-                    // the pair this asserts about. Only a cell that HAS both
-                    // draws two lines: the one-script cell gives the empty
-                    // line's height back and centres the line it carries.
-                    guard content.annotation != nil else { continue }
-                    XCTAssertNotEqual(
-                        labels[1].frame.minY, labels[2].frame.minY,
-                        "\(textSize)/\(windowSize): the two scripts sit on separate lines",
+                let labels = view.subviews.compactMap { $0 as? NSTextField }
+                XCTAssertEqual(
+                    labels.count, 3, "a stacked cell draws the digit and both scripts",
+                )
+                for label in labels {
+                    XCTAssertTrue(
+                        view.bounds.contains(label.frame),
+                        "\(size): \(label.stringValue) at \(label.frame) "
+                            + "must fit the cell's \(view.bounds)",
                     )
                 }
+                // Indices 1 and 2: the digit hint is the cell's FIRST text
+                // field, and it shares neither line — the two scripts are
+                // the pair this asserts about. Only a cell that HAS both
+                // draws two lines: the one-script cell gives the empty
+                // line's height back and centres the line it carries.
+                guard content.annotation != nil else { continue }
+                XCTAssertNotEqual(
+                    labels[1].frame.minY, labels[2].frame.minY,
+                    "\(size): the two scripts sit on separate lines",
+                )
             }
         }
     }

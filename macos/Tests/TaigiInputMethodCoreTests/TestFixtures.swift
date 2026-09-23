@@ -24,8 +24,7 @@ enum TestFixtures {
     /// suite exercising a cell or its measurement should use, unless the case
     /// is specifically about a non-default size.
     static let defaultCandidateMetrics = CandidateMetrics(
-        textSize: SettingsStore.Keys.candidateTextSize.defaultValue,
-        windowSize: SettingsStore.Keys.candidateWindowSize.defaultValue,
+        size: SettingsStore.Keys.candidateSize.defaultValue,
         fontSelection: .builtIn(SettingsStore.Keys.fontType.defaultValue),
     )
 
