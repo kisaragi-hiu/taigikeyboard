@@ -2,7 +2,7 @@
 
 Two release trains, two version numbers (`docs/architecture/manual-release-notes.md` § Two release trains).
 
-## Desktop — macOS + Windows
+## Desktop — macOS + Windows + Linux
 
 - [v3.6.9](changelog/desktop-v3.6.9.md)
 - [v3.6.8](changelog/desktop-v3.6.8.md)

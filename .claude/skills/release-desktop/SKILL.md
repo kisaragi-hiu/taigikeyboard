@@ -1,11 +1,11 @@
 ---
 name: release-desktop
-description: Prepare a DESKTOP release (macOS + Windows, one shared version) on main - rebuild generated artifacts, set the desktop version, write the `### macOS` and `### Windows` sections of `changelog/desktop-v<version>.md`, link it from CHANGELOG.md, validate, commit, and push. Then stages BOTH installers on a draft release nobody can reach: builds, signs and notarizes the package here and dispatches CI for the Windows installer (`make desktop-release`). Stops before publishing — publishing the draft is the maintainer's one manual step, and it announces the release itself. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-desktop x.y.z`); an optional argument only overrides the release base. Desktop train only; the mobile train (iOS + Android) is `release-mobile`.
+description: Prepare a DESKTOP release (macOS + Windows + Linux, one shared version) on main - rebuild generated artifacts, set the desktop version, write the `### macOS`, `### Windows` and `### Linux` sections of `changelog/desktop-v<version>.md`, link it from CHANGELOG.md, validate, commit, and push. Then stages ALL THREE installers on a draft release nobody can reach: builds, signs and notarizes the package here and dispatches CI for the Windows installer and the Linux .deb (`make desktop-release`). Stops before publishing — publishing the draft is the maintainer's one manual step, and it announces the release itself. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-desktop x.y.z`); an optional argument only overrides the release base. Desktop train only; the mobile train (iOS + Android) is `release-mobile`.
 ---
 
 # Release Desktop
 
-The desktop train is macOS + Windows, sharing one version, moved by
+The desktop train is macOS + Windows + Linux, sharing one version, moved by
 `make version-desktop x.y.z`, unrelated to the mobile number. The mobile train
 has its own skill (`release-mobile`); a release never mixes the two.
 
@@ -17,7 +17,7 @@ One optional argument, `<base-ref>`, overrides the derived release base.
 Example: `/release-desktop desktop-3.6.7`
 
 This skill takes a release as far as it can go without a person: it rebuilds,
-writes the changelog, commits, and stages **both** installers on a draft release
+writes the changelog, commits, and stages **all three** installers on a draft release
 nobody can reach. It stops there. Publishing that draft is the maintainer's,
 because it is the decision the draft exists to protect — and publishing
 announces the release itself.
@@ -34,10 +34,12 @@ Derive `<target>` from the tree, never from an argument:
 python3 tools/release_notes.py check-versions --train desktop --version <target>
 ```
 
-That check is what proves `windows/Cargo.toml` and both macOS plist keys carry
-the same number, so a half-applied bump stops here instead of shipping two
-desktop platforms on different versions. When they disagree, run
-`make version-desktop <target>` — it writes all three in one pass, or none.
+That check is what proves `windows/Cargo.toml`, `desktop/Cargo.toml`,
+`linux/Cargo.toml` and both macOS plist keys carry the same number, so a
+half-applied bump stops here instead of shipping desktop platforms on different
+versions. When they disagree, run `make version-desktop <target>` — it writes
+every file in one pass, or none, then refreshes each desktop `Cargo.lock`'s
+own member versions (commit them with the bump).
 Unlike the iOS `.pbxproj`, these files are not user-owned, so the skill may run
 that itself.
 
@@ -93,12 +95,16 @@ Sort every user-visible change before writing anything:
 
 - **macOS-only** → the `### macOS` section.
 - **Windows-only** → the `### Windows` section.
-- **Shared** (engine, dictionary, a behavior landing on both desktop platforms)
-  → describe it in **both** sections, each in that platform's own terms
-  (its own shortcut spelling: `⌃⌘H` on macOS, `Ctrl+Alt+H` on Windows). Both
-  platforms share one release page carrying the whole file, so a reader on
-  either platform should find their own wording of the change under their own
-  heading rather than having to read the other platform's section for it.
+- **Linux-only** → the `### Linux` section.
+- **Shared** (engine, dictionary, a behavior landing on several desktop
+  platforms) → describe it in **each affected platform's** section, in that
+  platform's own terms (its own shortcut spelling: `⌃⌘H` on macOS,
+  `Ctrl+Alt+H` on Windows and Linux). A change that touches `desktop/` or
+  `windows/` shared code but not Linux's shell path (or the reverse) goes only
+  where a user can see it. All platforms share one release page carrying the
+  whole file, so a reader on any platform should find their own wording of the
+  change under their own heading. A Linux section with nothing new says so in
+  one line rather than being left out.
 - **iOS-only / Android-only** → NOT this release. Mobile work belongs to
   `changelog/mobile-v<version>.md` and the store notes, written by `release-mobile`.
 
@@ -111,13 +117,17 @@ Run the `upgrade-check` procedure for `<base-ref> → HEAD`:
 
 Two desktop-specific upgrade checks on top of it:
 
-- **User data.** macOS and Windows share the SQLite schemas under the per-user
-  data directory (`%APPDATA%\TaigiKeyboard` on Windows). A schema change ships
-  to both at once; say what an existing install sees on first launch.
+- **User data.** The three desktops share the SQLite schemas under the
+  per-user data directory (`%APPDATA%\TaigiKeyboard` on Windows,
+  `~/.local/share/taigikeyboard` + `~/.config/taigikeyboard/settings.json` on
+  Linux). A schema change ships to all at once; say what an existing install
+  sees on first launch.
 - **Installed-file set.** A dictionary, font, or Windows App Runtime file that
   moved or was removed changes what the installer stages. `windows/scripts/release-app.sh`
   stages `Dictionaries\` and `Fonts\` from the repository root, and its
-  preflight fails on an empty one.
+  preflight fails on an empty one. The `.deb` takes its file set from
+  `make -C linux install` (`docs/architecture/linux-release.md` § The artifact),
+  and `linux-build.yml` fails when an expected path is missing from it.
 
 ## 3. Rebuild release artifacts
 
@@ -155,8 +165,8 @@ tree.
 
 | File | Purpose |
 | --- | --- |
-| `changelog/desktop-v<target>.md` | The desktop record: a lead paragraph, then `### macOS` and `### Windows` |
-| `CHANGELOG.md` | Link to it, at the top of the `## Desktop — macOS + Windows` list (newest first) |
+| `changelog/desktop-v<target>.md` | The desktop record: a lead paragraph, then `### macOS`, `### Windows` and `### Linux` |
+| `CHANGELOG.md` | Link to it, at the top of the `## Desktop — macOS + Windows + Linux` list (newest first) |
 
 Shape of `changelog/desktop-v<target>.md` — this whole file becomes the release
 body, so it is what users read on the release page:
@@ -173,6 +183,10 @@ body, so it is what users read on the release page:
 - **<Short claim.>** <What a user sees, and why it changed.> (#PR)
 
 ### Windows
+
+#### <same shape>
+
+### Linux
 
 #### <same shape>
 ```
@@ -202,7 +216,7 @@ python3 tools/release_notes_test.py
 git diff --check
 ```
 
-Then read both sections back against the release range: every PR in the range
+Then read every section back against the release range: every PR in the range
 that changed user-visible desktop behavior appears in at least one section, and
 every claim in a section is traceable to a commit in the range.
 
@@ -216,11 +230,11 @@ git commit -m "desktop v<target>: release prep + changelog"
 git push origin main
 ```
 
-Report the commit SHA, the release range, and both rendered sections. Ask the
+Report the commit SHA, the release range, and every rendered section. Ask the
 maintainer to read the changelog back before staging: deterministic validation
 cannot tell whether a sentence describes the behavior that shipped.
 
-## 7. Stage both installers
+## 7. Stage all three installers
 
 ```bash
 make desktop-release
@@ -229,17 +243,19 @@ make desktop-release
 `scripts/stage-desktop.sh` runs `make macos-release` here — build, sign,
 notarize, package, put the `.pkg` and its `.sha256` on the **draft**
 `desktop-<target>` — then dispatches `.github/workflows/windows-build.yml` and
-waits for it: a GitHub-hosted runner builds the installer from the same commit
-and attaches it to the same draft. The maintainer's Windows box is not in the
-release path.
+`.github/workflows/linux-build.yml` (with the staged commit as `source_sha`)
+together and waits for both: GitHub-hosted runners build the installer and the `.deb` from
+the same commit and attach them, each with its `.sha256`, to the same draft.
+The maintainer's Windows box is not in the release path.
 
 A draft has no tag and no public asset URL: nothing here reaches a user, and
 nothing is announced. The tag appears when the draft is published.
 
-Both halves or neither: there is no way to stage one. An existing draft for
-this version is deleted first, so a re-run is a fresh build of both from one
-commit — which is what the tag on the published release will describe. If the
-box is off or its half fails, fix that and run the whole thing again.
+All three or none: there is no way to stage one. An existing draft for
+this version is deleted first, so a re-run is a fresh build of every half from
+one commit — which is what the tag on the published release will describe. If a
+half fails, or `main` moved while a half was waited on, fix that and run the
+whole thing again.
 
 Report the draft URL.
 
@@ -247,20 +263,27 @@ Report the draft URL.
 
 **Test what was staged, then publish it** — on the draft's own page, which step
 7 printed. A draft is visible in the web UI to anyone who can write this
-repository: the two assets are download links there, and **Publish release** is a
+repository: the three installers are download links there, and **Publish release** is a
 button on the same page. This is the decision the draft exists to protect, so the
 skill never presses it.
 
-Install both, run the dogfood checklist items this release touches, then publish.
+Install each (the `.deb` on the Linux VM, S74), run the dogfood checklist items
+this release touches, then publish.
 (The same two steps from a terminal, if that is closer to hand:
 `gh release download desktop-<target> --repo taigikeyboard/taigikeyboard --dir ~/Downloads`
 and `gh release edit desktop-<target> --repo taigikeyboard/taigikeyboard --draft=false`.)
 
-Publishing creates the tag and fires two workflows:
-`.github/workflows/announce-release.yml`, which proves both downloads are
-anonymously reachable, writes both `_data/*_release.json` to the website in one
-commit and waits for the live appcasts; and `.github/workflows/windows-build.yml`,
-a GitHub-hosted rebuild for SignPath provenance that publishes nothing.
+Publishing creates the tag and fires three workflows:
+`.github/workflows/announce-release.yml`, which proves every download is
+anonymously reachable, writes every `_data/*_release.json` to the website in one
+commit and waits for the live macOS and Windows appcasts (Linux has none);
+`.github/workflows/windows-build.yml`, a GitHub-hosted rebuild for SignPath
+provenance; and `.github/workflows/linux-build.yml`, the same rebuild for the
+`.deb`. The two rebuilds publish nothing.
+
+The website's Linux button stays hidden until `enable_linux_download` is `true`
+in the website's `_config.yml` — that switch is the maintainer's, like the
+publish. It hides the button, not the `.deb`, which is public once published.
 
 `make desktop-announce` runs the same announcement by hand — for a re-run after
 a failed job, or when its token has expired. Full procedure and rationale:

@@ -125,14 +125,13 @@ desktop-check:
 linux-check:
 	$(MAKE) -C linux check
 
-# Stage BOTH desktop installers on this version's draft release: the package
-# here, the Windows installer on a GitHub-hosted runner (scripts/stage-desktop.sh).
-# The two builds cannot share a machine, so this drives the second rather than
-# pretending they are one build. Both or neither: a draft holding installers
-# from two commits is not something a tag can describe. (Linux's .deb is not
-# in the flow yet — USER 2026-09-23.) Nothing it does reaches
-# a user — publishing the draft stays a person's, and that publish announces the
-# release itself.
+# Stage the THREE desktop installers on this version's draft release: the
+# package here, the Windows installer and the Linux .deb on GitHub-hosted
+# runners (scripts/stage-desktop.sh). The builds cannot share a machine, so
+# this drives the others rather than pretending they are one build. All or
+# none: a draft holding installers from two commits is not something a tag
+# can describe. Nothing it does reaches a user — publishing the draft stays a
+# person's, and that publish announces the release itself.
 desktop-release:
 	bash scripts/stage-desktop.sh
 
@@ -158,8 +157,8 @@ windows-release:
 	bash windows/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
 # Set a release train's marketing version. Two trains, two numbers: mobile
-# (iOS + Android share one) and desktop (macOS + Windows share one), moving
-# independently:
+# (iOS + Android share one) and desktop (macOS + Windows + Linux share one),
+# moving independently:
 #
 #   make version-mobile 3.6.7
 #   make version-desktop 3.7.0
@@ -248,7 +247,7 @@ help:
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
-	@echo "  make desktop-release    Stage both desktop installers on the draft (Mac + the box over ssh)"
+	@echo "  make desktop-release    Stage all three desktop installers on the draft (Mac + hosted runners)"
 	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"
 	@echo "  make desktop-check      Native gate for the desktop-shared crates (desktop/)"
 	@echo "  make linux-check        Host-side compile + test gate for the Linux input method"
@@ -256,7 +255,7 @@ help:
 	@echo "  make windows-release    Build + package + stage the installer on the draft (on Windows)"
 	@echo "                          — add RELEASE_FLAGS=--skip-sign until a certificate exists"
 	@echo "  make version-mobile 3.6.7   Set the mobile train's version (iOS + Android)"
-	@echo "  make version-desktop 3.7.0  Set the desktop train's version (macOS + Windows)"
+	@echo "  make version-desktop 3.7.0  Set the desktop train's version (macOS + Windows + Linux)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"

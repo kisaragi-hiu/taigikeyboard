@@ -329,12 +329,26 @@ rusqlite = { version = "0.40", features = ["bundled"] }
 """
 
 
+LINUX_CARGO_FIXTURE = """[workspace]
+resolver = "2"
+members = ["crates/taigi-linux-core"]
+
+[workspace.package]
+version = "3.6.6"
+edition = "2024"
+
+[workspace.dependencies]
+zbus = { version = "5", default-features = false }
+"""
+
+
 PROJECT_FILES = (
     release_notes.ANDROID_GRADLE_FILE,
     release_notes.IOS_PROJECT_FILE,
     release_notes.MACOS_INFO_PLIST_FILE,
     release_notes.WINDOWS_CARGO_FILE,
     release_notes.DESKTOP_SHARED_CARGO_FILE,
+    release_notes.LINUX_CARGO_FILE,
 )
 
 
@@ -352,9 +366,10 @@ class ProjectVersionWriterTests(unittest.TestCase):
         plist: str = PLIST_FIXTURE,
         cargo: str = CARGO_FIXTURE,
         desktop_cargo: str = DESKTOP_SHARED_CARGO_FIXTURE,
+        linux_cargo: str = LINUX_CARGO_FIXTURE,
     ) -> None:
         for relative_path, content in zip(
-            PROJECT_FILES, (gradle, pbxproj, plist, cargo, desktop_cargo)
+            PROJECT_FILES, (gradle, pbxproj, plist, cargo, desktop_cargo, linux_cargo)
         ):
             path = self.repo_root / relative_path
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -412,7 +427,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
             ),
         )
 
-    def test_writes_the_desktop_trains_version_to_both_desktop_platforms(self) -> None:
+    def test_writes_the_desktop_trains_version_to_every_desktop_platform(self) -> None:
         changes = release_notes.set_project_versions(self.repo_root, "3.7.0", "desktop")
 
         release_notes.check_project_versions(self.repo_root, "3.7.0", "desktop")
@@ -423,8 +438,21 @@ class ProjectVersionWriterTests(unittest.TestCase):
                 "CFBundleVersion 30606 -> 30700",
                 "windows/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
                 "desktop/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
+                "linux/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
             ),
         )
+
+    def test_check_refuses_a_linux_workspace_on_another_version(self) -> None:
+        # The `.deb` is named from linux/Cargo.toml: a Linux workspace left
+        # behind would stage last release's package name under this tag.
+        self.write_tree(
+            linux_cargo=LINUX_CARGO_FIXTURE.replace('version = "3.6.6"', 'version = "3.6.5"')
+        )
+
+        with self.assertRaisesRegex(
+            release_notes.ReleaseNotesError, "linux/Cargo.toml workspace version is 3.6.5"
+        ):
+            release_notes.check_project_versions(self.repo_root, "3.6.6", "desktop")
 
     def test_a_train_bump_leaves_the_other_trains_files_alone(self) -> None:
         # The two trains are numbered independently: a mobile release must not

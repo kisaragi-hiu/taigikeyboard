@@ -12,6 +12,7 @@ import os
 import plistlib
 import re
 import stat
+import subprocess
 import sys
 import tempfile
 from collections.abc import Iterable
@@ -64,9 +65,11 @@ MACOS_INFO_PLIST_FILE = "macos/App/Info.plist"
 WINDOWS_CARGO_FILE = "windows/Cargo.toml"
 # The desktop train's other Cargo workspaces: the crates Windows and Linux share
 # (`desktop/`) carry the same number so a crate never reports a version its
-# installer does not (docs/architecture/linux-roadmap.md L2 / L11).
+# installer does not (docs/architecture/linux-roadmap.md L2 / L11), and
+# `linux/` names the `.deb` and its control `Version` (`linux/Makefile`).
 DESKTOP_SHARED_CARGO_FILE = "desktop/Cargo.toml"
-DESKTOP_CARGO_FILES = (WINDOWS_CARGO_FILE, DESKTOP_SHARED_CARGO_FILE)
+LINUX_CARGO_FILE = "linux/Cargo.toml"
+DESKTOP_CARGO_FILES = (WINDOWS_CARGO_FILE, DESKTOP_SHARED_CARGO_FILE, LINUX_CARGO_FILE)
 # Which files a train owns. A version write touches exactly one train's files
 # and leaves the other train's alone (USER 2026-08-29: mobile and desktop are
 # numbered separately so each can ship on its own cadence).
@@ -758,6 +761,22 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def refresh_desktop_lockfiles(repo_root: Path) -> None:
+    """Rewrite each desktop workspace's own member versions in its Cargo.lock.
+
+    `--workspace` leaves every third-party pin alone. Without it the release
+    commit carries stale member versions, and the first hosted build rewrites
+    the lockfile — which its "changed nothing tracked" check refuses.
+    """
+    for cargo_file in DESKTOP_CARGO_FILES:
+        result = subprocess.run(
+            ["cargo", "update", "--workspace", "--quiet", "--manifest-path", str(repo_root / cargo_file)],
+            check=False,
+        )
+        if result.returncode != 0:
+            raise ReleaseNotesError(f"cargo update --workspace failed for {cargo_file}")
+
+
 def main() -> int:
     args = _parse_args()
     try:
@@ -772,6 +791,8 @@ def main() -> int:
                 repo_root, version, args.train, allow_downgrade=args.allow_downgrade
             ):
                 print(change)
+            if args.train == "desktop":
+                refresh_desktop_lockfiles(repo_root)
         else:
             print(load_notes(repo_root, version, args.platform).store_text)
     except ReleaseNotesError as error:

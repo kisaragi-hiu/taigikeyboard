@@ -11,9 +11,9 @@ is and how it is built.
 
 ## The artifact
 
-`taigikeyboard_<version>_amd64.deb` (today: the CI artifact `linux-deb`; when
-wired into the release flow, attached to the `desktop-<version>` draft beside
-the macOS `.pkg` and the Windows `.exe`). One package holds both shells, the way `fcitx5-chewing` and
+`taigikeyboard_<version>_amd64.deb`, plus `taigikeyboard_<version>_amd64.deb.sha256`,
+attached to the `desktop-<version>` draft beside the macOS `.pkg` and the
+Windows `.exe`. One package holds both shells, the way `fcitx5-chewing` and
 `ibus-chewing` come from one source:
 
 | Path | What |
@@ -42,7 +42,8 @@ User data is never in the package: `~/.config/taigikeyboard/settings.json` and
    layout, so the package and a source install cannot drift (both shells,
    the registration files, the dictionaries, the desktop entry, the icons).
 2. `packaging/control.in` rendered with the version from `linux/Cargo.toml`
-   (moved by `make version-desktop x.y.z` with the other two desktops) and
+   (moved by `make version-desktop x.y.z` with the other two desktops, and
+   held to their number by `release_notes.py check-versions --train desktop`) and
    the `Depends` `dpkg-shlibdeps` computes over the settings window, the IBus
    engine and the Fcitx5 addon.
 3. `dpkg-deb --build --root-owner-group`. No `cargo-deb`: it would carry a
@@ -56,26 +57,46 @@ The Fcitx5 addon is C++ over the Rust C ABI and compiles only on Linux
 That is why the package is built on the GitHub-hosted runner, never on the
 maintainer's Mac.
 
-## Staging and publishing — not wired yet
+## Staging and publishing
 
-USER 2026-09-23: 「先不用串release」. The package is built on every CI run
-(`.github/workflows/linux-build.yml`: the `.deb` from the install layout,
-its contents, the addon file name the `.conf` names, the desktop entry —
-kept as the workflow artifact `linux-deb`) and by `make -C linux deb` on a
-Linux machine. Nothing attaches it to a `desktop-<version>` draft, and
-`scripts/stage-desktop.sh` stages the macOS and Windows halves only. When the
-USER wires it in, the shape is the Windows one: a dispatch from `main` by
-`stage-desktop.sh` (carrying the staged commit) attaches to the DRAFT, never
-over an existing asset and never on a publish, from a job that alone can
-write.
+`.github/workflows/linux-build.yml` is the Linux half of a desktop release,
+the way `windows-build.yml` is the Windows half:
+
+- On every pull request touching `linux/**` / `desktop/**` / `engine/**` it
+  builds the package and keeps it as a workflow artifact (`linux-deb`), checks
+  the expected paths are inside it, that the addon file is the one the
+  `.conf` names, and the desktop entry (`desktop-file-validate`). Nothing
+  reaches a draft; the build job can only read.
+- `scripts/stage-desktop.sh` (`make desktop-release`) dispatches it on `main`
+  beside the Windows run, with the staged commit as `source_sha`, and waits;
+  the `attach` job (the only one that can write) runs only with a
+  `source_sha`, refuses any commit but that one, refuses a published release
+  or a draft targeting another commit, and uploads the `.deb` and its
+  `.sha256` to the `desktop-<version>` draft the macOS half created — never
+  over an asset already there. A dispatch from any other ref, or without
+  `source_sha`, only builds. The build job also checks the package's control
+  `Version` / `Architecture` and that the build rewrote nothing tracked
+  (`Cargo.lock` included — `make version-desktop` refreshes the members'
+  versions in it).
+- A `desktop-<version>` **publish** rebuilds for provenance and keeps the
+  artifact; the published assets stay what the maintainer tested.
+
+Publishing stays a person's (`desktop-release.md`). No signing: a `.deb`
+downloaded from the project page is verified by its `.sha256`, as the unsigned
+Windows channel is; an apt repository with its own key is outside this slice.
 
 ## No in-app update
 
 Linux packages are updated by the package manager (`linux-roadmap.md` L10).
 The 一般 pane shows the running version and a 去下載 link to taigikeyboard.tw;
 the `update*` settings keys stay unwritten and `taigi-windows-update` is not
-linked. The announcement (`scripts/announce-release.sh`) writes no Linux site
-data yet — the landing page's Linux download is the release page itself.
+linked. The announcement (`scripts/announce-release.sh`) still writes
+`_data/linux_release.json` (version, download URL, `sha256`, release page) in
+the same website commit as the other two — the landing page's Linux button
+and its checksum read it — but there is no appcast and nothing to poll. The
+website shows that button only while its `enable_linux_download` is `true`;
+that switch hides the entry point, not the asset, which is public the moment
+the release is published.
 
 ## Installing by hand
 

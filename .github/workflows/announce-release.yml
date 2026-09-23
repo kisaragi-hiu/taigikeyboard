@@ -5,9 +5,9 @@ name: Announce desktop release
 # `make macos-release` / `make windows-release` stage each platform's installer
 # on a DRAFT release that no user can reach. You download it, test it, and press
 # Publish. That publish fires this: it proves each installer downloads
-# anonymously, then writes the website data `appcast/{macos,windows}.json` is
-# rendered from, and waits until the live appcasts serve it. Nothing else is
-# left to do by hand.
+# anonymously, then writes the website data `appcast/{macos,windows}.json` and
+# the download buttons (Linux included) are rendered from, and waits until the
+# live appcasts serve it. Nothing else is left to do by hand.
 #
 # `make desktop-announce` runs the identical script locally — for a re-run after
 # a failure here, or when the token below has expired.

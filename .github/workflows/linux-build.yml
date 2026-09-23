@@ -5,15 +5,20 @@ name: Linux build
 # engine links, runs the Linux workspace's tests, and smokes the engine
 # against a real ibus-daemon — the daemon must be able to spawn the binary
 # from the component XML and complete `CreateEngine`, which is the wire's
-# first byte-level contract. Nothing here publishes; the release half
-# (a `.deb` on the desktop draft) lands with the packaging PR.
+# first byte-level contract. Every run also packs the `.deb` and keeps it as
+# the workflow artifact `linux-deb`.
 #
-# The run also packs the `.deb` and keeps it as a workflow artifact
-# (`linux-deb`). It is NOT wired into the desktop release flow yet (USER
-# 2026-09-23: 「先不用串release」): nothing here touches a draft or a tag.
+# On a dispatch from `scripts/stage-desktop.sh` the run attaches the `.deb`
+# to the `desktop-<version>` draft — the Linux half of a desktop release, the
+# way `windows-build.yml` is the Windows half (docs/architecture/linux-release.md).
 #
 # Budget: ~4 min warm, ~10 min cold (dependency compile + apt).
 on:
+  # A publish rebuilds for provenance and keeps the artifact; it never
+  # touches the published assets (`desktop-release.md`: what was tested is
+  # what ships).
+  release:
+    types: [published]
   pull_request:
     paths:
       - 'linux/**'
@@ -28,7 +33,13 @@ on:
       - 'desktop/**'
       - '.github/workflows/linux-build.yml'
   workflow_dispatch:
+    inputs:
+      source_sha:
+        description: The commit stage-desktop.sh staged; attach runs only when it is set and matches
+        required: false
+        type: string
 
+# Every job reads; only `attach` writes (its own block below).
 permissions:
   contents: read
 
@@ -45,6 +56,10 @@ jobs:
   build:
     name: build + test + ibus smoke
     runs-on: ubuntu-24.04
+    # Only the desktop train: a mobile publish has no Linux package in it.
+    if: >-
+      github.event_name != 'release' ||
+      startsWith(github.event.release.tag_name, 'desktop-')
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -167,7 +182,26 @@ jobs:
                       usr/share/icons/hicolor/48x48/apps/taigikeyboard.png; do
             grep -q "$path" "$RUNNER_TEMP/deb-contents.txt" || { echo "::error::$path missing from the .deb"; exit 1; }
           done
+          # The control fields, not only the file name: the package a user
+          # installs has to say the version the release is tagged with.
+          version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
+          package="target/taigikeyboard_${version}_amd64.deb"
+          [ "$(dpkg-deb -f "$package" Version)" = "$version" ] || { echo "::error::$package control Version is not $version"; exit 1; }
+          [ "$(dpkg-deb -f "$package" Architecture)" = amd64 ] || { echo "::error::$package control Architecture is not amd64"; exit 1; }
           cd target && sha256sum taigikeyboard_*_amd64.deb | tee SHA256SUMS
+
+      # Nothing here passes --locked, so a resolution that rewrote
+      # linux/Cargo.lock would pass unnoticed — and the package would no
+      # longer correspond to the commit it claims (windows-build.yml, same step).
+      - name: Verify the build changed nothing tracked
+        run: |
+          set -euo pipefail
+          status="$(git status --porcelain --ignore-submodules=none)"
+          if [ -n "$status" ]; then
+            echo "$status" >&2
+            echo "::error::the build modified tracked files — the package no longer matches ${{ github.sha }}"
+            exit 1
+          fi
 
       - name: Upload the .deb
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -185,3 +219,66 @@ jobs:
           cat "$RUNNER_TEMP/ibus-daemon.log" 2>/dev/null || true
           ls -la "$RUNNER_TEMP" || true
 
+  # The release half: only a dispatch from `main` by `stage-desktop.sh`,
+  # carrying the commit it staged, attaches — onto a DRAFT targeting that
+  # commit, never over an asset already there. What the maintainer tests on
+  # the draft is what a publish ships. The only job that can write.
+  attach:
+    name: attach to the draft
+    needs: build
+    if: >-
+      github.repository == 'taigikeyboard/taigikeyboard' &&
+      github.event_name == 'workflow_dispatch' &&
+      github.ref == 'refs/heads/main' &&
+      inputs.source_sha != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-deb
+          path: linux/target
+
+      - name: Attach the .deb to the draft release
+        working-directory: linux
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          # The commit the staging run meant, not whatever main points at by
+          # the time this run started: main can move while the Windows half
+          # is waited on.
+          [ "$SOURCE_SHA" = "$GITHUB_SHA" ] || {
+              echo "::error::this run built $GITHUB_SHA but the staging run staged $SOURCE_SHA — main moved; re-run stage-desktop.sh"
+              exit 1
+          }
+          version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
+          tag="desktop-$version"
+          # The draft is the macOS half's, created on the staged commit. A
+          # published release means the staging order was broken; a draft on
+          # another commit is another staging run's.
+          state="$(gh release view "$tag" --json isDraft,targetCommitish \
+              --jq '"\(.isDraft) \(.targetCommitish)"' 2>&1)" || {
+              echo "no release $tag: $state" >&2
+              echo "The macOS half stages first and creates the draft." >&2
+              exit 1
+          }
+          read -r is_draft target <<< "$state"
+          [ "$is_draft" = true ] || {
+              echo "$tag is already published — an asset added now would be public with no test" >&2
+              exit 1
+          }
+          [ "$target" = "$GITHUB_SHA" ] || {
+              echo "::error::the $tag draft targets $target, not $GITHUB_SHA — another staging run owns it"
+              exit 1
+          }
+          cd target
+          package="taigikeyboard_${version}_amd64.deb"
+          sha256sum "$package" > "$package.sha256"
+          gh release upload "$tag" "$package" "$package.sha256" --repo "$GITHUB_REPOSITORY"
+          echo "attached $package to $tag (built from $GITHUB_SHA)"
