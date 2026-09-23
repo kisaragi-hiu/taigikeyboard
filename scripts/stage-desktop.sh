@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Stage the three desktop installers on this version's draft release: the
-# package built here, the Windows installer and the Linux .deb built on
-# GitHub-hosted runners.
+# Stage both desktop installers on this version's draft release: the package
+# built here, the installer built on a GitHub-hosted runner. (The Linux .deb
+# is not in the release flow yet — USER 2026-09-23 「先不用串release」; CI
+# keeps it as an artifact, `docs/architecture/linux-release.md`.)
 #
 # Usage: stage-desktop.sh   (no options — a release is both halves or neither)
 #
@@ -56,7 +57,6 @@ RELEASE_REPOSITORY="taigikeyboard/taigikeyboard"
 # that reports success and attaches nothing is exactly what happened the first
 # time this script drove a second machine.
 WINDOWS_ASSET_NAME="TaigiKeyboard-$DESKTOP_VERSION.exe"
-LINUX_ASSET_NAME="taigikeyboard_${DESKTOP_VERSION}_amd64.deb"
 
 echo "==> Staging $DESKTOP_TAG from ${SOURCE_COMMIT:0:7}"
 
@@ -83,13 +83,12 @@ echo ""
 echo "==> macOS — build, sign, notarize, stage (this Mac)"
 make -C "$REPOSITORY_DIR" macos-release
 
-# The installer and the package are built by `.github/workflows/windows-build.yml`
-# and `linux-build.yml` on GitHub-hosted runners, not on the maintainer's box.
-# That box is a development machine: its dev TIP is registered from the build
-# tree, so a release build has to link over a DLL something still has mapped,
-# and its App Control policy blocks freshly built binaries outright. Both are
-# properties of that machine rather than of the release, and a clean runner has
-# neither; the Linux half has no machine of its own at all.
+# The installer is built by `.github/workflows/windows-build.yml` on a
+# GitHub-hosted Windows runner, not on the maintainer's box. That box is a
+# development machine: its dev TIP is registered from the build tree, so a
+# release build has to link over a DLL something still has mapped, and its App
+# Control policy blocks freshly built binaries outright. Both are properties of
+# that machine rather than of the release, and a clean runner has neither.
 #
 # workflow_dispatch takes a branch or tag, never a bare SHA, so the commit being
 # staged has to be what `main` points at — which it is, since the release prep
@@ -125,9 +124,6 @@ dispatch_and_wait() {
 }
 
 dispatch_and_wait windows-build.yml Windows
-# The commit travels with the dispatch: main can move while the Windows
-# run is waited on, and the Linux attach step refuses any other commit.
-dispatch_and_wait linux-build.yml Linux -f "source_sha=$SOURCE_COMMIT"
 
 # The draft's own page, from the API: a draft has no tag, so its URL is not the
 # `releases/tag/<tag>` address a published release has. It is where the
@@ -135,17 +131,15 @@ dispatch_and_wait linux-build.yml Linux -f "source_sha=$SOURCE_COMMIT"
 draft_json="$(gh release view "$DESKTOP_TAG" \
     --repo taigikeyboard/taigikeyboard --json url,assets 2> /dev/null || true)"
 DRAFT_URL="$(printf '%s' "$draft_json" | python3 -c 'import json,sys; print(json.load(sys.stdin)["url"])' 2> /dev/null || true)"
-for asset in "$WINDOWS_ASSET_NAME" "$LINUX_ASSET_NAME"; do
-    printf '%s' "$draft_json" |
-        python3 -c 'import json,sys; sys.exit(0 if sys.argv[1] in [a["name"] for a in json.load(sys.stdin)["assets"]] else 1)' \
-            "$asset" 2> /dev/null ||
-        fail "a hosted run reported success but $asset is not on the draft — read its log above, then run this again"
-done
+printf '%s' "$draft_json" |
+    python3 -c 'import json,sys; sys.exit(0 if sys.argv[1] in [a["name"] for a in json.load(sys.stdin)["assets"]] else 1)' \
+        "$WINDOWS_ASSET_NAME" 2> /dev/null ||
+    fail "the Windows run reported success but $WINDOWS_ASSET_NAME is not on the draft — read its log above, then run this again"
 
 echo ""
-echo "✓ all three installers staged on the draft for ${SOURCE_COMMIT:0:7}"
+echo "✓ both installers staged on the draft for ${SOURCE_COMMIT:0:7}"
 echo ""
-echo "  Open the draft, download the three assets, install and test them:"
+echo "  Open the draft, download both assets, install and test them:"
 echo "    ${DRAFT_URL:-https://github.com/taigikeyboard/taigikeyboard/releases}"
 echo ""
 echo "  When they pass, press \"Publish release\" on that page. That is the whole"

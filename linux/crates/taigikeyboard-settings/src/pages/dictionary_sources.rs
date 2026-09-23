@@ -1,14 +1,18 @@
 //! The 詞庫來源 pane: which dictionaries the engine draws from, in three
 //! groups — 教育部, the others, the supplements — with 教典's eleven
-//! subcollections under it in an `adw::ExpanderRow` whose own switch is
-//! 教典's (roadmap PR7; port of `DictionaryTogglesView.swift` and the
-//! Windows `dictionary_sources.rs`). Every toggle is read live by the
-//! engine bridge on the next fetch.
+//! subcollections stepped in under it, always visible and greyed while 教典
+//! is off (the Mac's and Windows' shape; roadmap PR7; port of
+//! `DictionaryTogglesView.swift` and the Windows `dictionary_sources.rs`).
+//! Every toggle is read live by the engine bridge on the next fetch.
 
 use super::PageContext;
 use adw::prelude::*;
 use taigi_desktop_core::settings::{keys, SettingsDocument, SettingsKey};
 use taigi_desktop_core::strings::StringKey;
+
+/// How far a 腔口 row steps in under 教典 (`DictionaryTogglesView.swift`'s
+/// indent).
+const SUBCOLLECTION_INDENT: i32 = 20;
 
 /// The 教典 subcollections, in `DictionaryTogglesView`'s order.
 const KAUTIAN_SUBCOLLECTIONS: [(SettingsKey<bool>, StringKey); 11] = [
@@ -90,34 +94,27 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
                 .resolve(StringKey::DictionaryMoeSectionTitle),
         )
         .build();
-    // 教典 and its eleven subcollections in one expander: the expander's own
-    // switch is the source's toggle, the rows inside are the 腔口. Off
-    // collapses them without clearing them — the choices come back with it
+    // 教典 first, its eleven 腔口 stepped in under it: disabled, not cleared,
+    // while 教典 is off — the choices come back with it
     // (`DictionaryTogglesView.swift` indents the same eleven under the same
-    // master toggle).
-    let kautian = adw::ExpanderRow::builder()
-        .title(context.strings.resolve(StringKey::CommonMoeDict))
-        .show_enable_switch(true)
-        .enable_expansion(context.document.bool(&keys::IS_KAUTIAN_ENABLED))
-        .build();
-    let shell = context.shell.clone();
-    let suppress = context.refreshing_flag();
-    kautian.connect_enable_expansion_notify(move |row| {
-        if suppress.get() {
-            return;
-        }
-        let is_on = row.enables_expansion();
-        shell.update(|document| document.set_bool(&keys::IS_KAUTIAN_ENABLED, is_on));
-    });
+    // master toggle; the Windows card greys them the same way).
+    context.switch_row(&moe, StringKey::CommonMoeDict, keys::IS_KAUTIAN_ENABLED);
+    let is_kautian_enabled = context.document.bool(&keys::IS_KAUTIAN_ENABLED);
+    let mut subcollections = Vec::new();
     for (key, label) in KAUTIAN_SUBCOLLECTIONS {
-        context.switch_row_in(|row| kautian.add_row(row), label, key);
+        let row = context.switch_row_in(|row| moe.add(row), label, key);
+        row.add_prefix(
+            &gtk::Box::builder()
+                .width_request(SUBCOLLECTION_INDENT)
+                .build(),
+        );
+        row.set_sensitive(is_kautian_enabled);
+        subcollections.push(row);
     }
-    moe.add(&kautian);
-    let refreshed = kautian.clone();
     context.on_refresh(move |document: &SettingsDocument| {
         let is_on = document.bool(&keys::IS_KAUTIAN_ENABLED);
-        if refreshed.enables_expansion() != is_on {
-            refreshed.set_enable_expansion(is_on);
+        for row in &subcollections {
+            row.set_sensitive(is_on);
         }
     });
     for (key, label) in MOE_OTHERS {

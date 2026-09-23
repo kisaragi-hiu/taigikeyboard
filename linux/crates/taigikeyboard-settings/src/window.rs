@@ -6,7 +6,7 @@
 //! rebuilt only when the display language changes.
 //!
 //! Named divergences from the Mac, all deliberate: the window frame is
-//! not persisted; the 外觀 mode is a combo row; no sidebar icons.
+//! not persisted; the 外觀 mode is a combo row.
 
 use crate::pages::{self, Page};
 use crate::presentation::pane_title;
@@ -410,6 +410,9 @@ impl SettingsWindow {
             let row = adw::ActionRow::builder()
                 .title(pane_title(&strings, pane))
                 .build();
+            // `icon-name` on a row is deprecated since libadwaita 1.3; the
+            // prefix image is the current shape.
+            row.add_prefix(&gtk::Image::from_icon_name(sidebar_icon(pane)));
             self.sidebar.append(&row);
         }
         let mut pages = Vec::new();
@@ -507,6 +510,24 @@ impl SettingsWindow {
     /// The page widget shown for `pane`, if the stack holds one.
     pub fn page_widget(&self, pane: SettingsPane) -> Option<gtk::Widget> {
         self.stack.child_by_name(pane.raw())
+    }
+}
+
+/// The sidebar row's icon (`SettingsSplitView.swift` `symbolName`, in
+/// Adwaita 46's symbolic set — every name checked against the theme
+/// Ubuntu 24.04 ships): gearshape → preferences-system, paintpalette →
+/// applications-graphics, keyboard → input-keyboard, books.vertical →
+/// emblem-documents, character.book.closed → x-office-address-book.
+fn sidebar_icon(pane: SettingsPane) -> &'static str {
+    match pane {
+        SettingsPane::General => "preferences-system-symbolic",
+        SettingsPane::Appearance => "applications-graphics-symbolic",
+        SettingsPane::Shortcuts => "input-keyboard-symbolic",
+        SettingsPane::DictionarySources => "emblem-documents-symbolic",
+        SettingsPane::CustomDictionary => "x-office-address-book-symbolic",
+        SettingsPane::FontManagement => "preferences-desktop-font-symbolic",
+        SettingsPane::DictionarySearch => "edit-find-symbolic",
+        SettingsPane::About => "help-about-symbolic",
     }
 }
 

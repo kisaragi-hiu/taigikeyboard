@@ -246,27 +246,33 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
     eprintln!("panes: recorder binds, clears, resolves across registries");
 }
 
-/// trace: the 教典 row is the one `adw::ExpanderRow` on 詞庫來源; its
-/// enable switch is `IS_KAUTIAN_ENABLED` (default true).
+/// trace: the 教典 row is the first switch on 詞庫來源 (`IS_KAUTIAN_ENABLED`,
+/// default true); the eleven 腔口 rows after it grey out while it is off
+/// and come back, still set, when it is on.
 fn the_kautian_expander_switch_writes_its_key(window: &Rc<SettingsWindow>) {
     let page = window
         .page_widget(SettingsPane::DictionarySources)
         .expect("dictionary sources");
-    let kautian = find_first::<adw::ExpanderRow>(&page).expect("the 教典 expander");
-    assert!(kautian.enables_expansion());
-    kautian.set_enable_expansion(false);
+    let switches = find_all::<adw::SwitchRow>(&page);
+    let kautian = &switches[0];
+    let lukang = &switches[1];
+    assert!(kautian.is_active() && lukang.is_sensitive());
+    kautian.set_active(false);
     assert!(!window
         .writer()
         .borrow()
         .document()
         .bool(&keys::IS_KAUTIAN_ENABLED));
-    kautian.set_enable_expansion(true);
+    assert!(!lukang.is_sensitive(), "the 腔口 rows grey out");
+    assert!(lukang.is_active(), "…and keep their setting");
+    kautian.set_active(true);
     assert!(window
         .writer()
         .borrow()
         .document()
         .bool(&keys::IS_KAUTIAN_ENABLED));
-    eprintln!("panes: kautian expander round-trips");
+    assert!(lukang.is_sensitive());
+    eprintln!("panes: kautian switch greys its subcollections");
 }
 
 /// trace: two rows upserted into the store; the page's reload runs off the
@@ -332,9 +338,9 @@ fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>)
         .expect("upsert");
     dictionary.reload();
     pump_until(|| dictionary.shown_row_count() == 3);
-    assert!(find_all::<adw::ActionRow>(page.widget.upcast_ref())
+    assert!(find_all::<gtk::Label>(page.widget.upcast_ref())
         .iter()
-        .any(|row| row.title() == "A&B <b>"));
+        .any(|label| label.label() == "A&B <b>"));
     let search = taigikeyboard_settings::pages::build(
         SettingsPane::DictionarySearch,
         window,

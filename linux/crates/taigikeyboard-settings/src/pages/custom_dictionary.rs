@@ -10,10 +10,10 @@
 //! share the page's one work slot (refused, not queued — a queued delete
 //! would name a row the list may no longer show).
 //!
-//! Named divergences: the table is an `adw`-styled list of rows (hanji as
-//! the title, romanization as the subtitle) rather than two columns; the
-//! Mac's double-click-to-edit and right-click menu are the ✎ button over
-//! the selection; the empty list says so in words.
+//! The table is the Mac's: two columns, 羅馬字 then 漢字, under a header,
+//! a double-click (or Enter) on a row edits it, the ✎ button over the
+//! selection is the keyboard-reachable way (the Windows shape). The empty
+//! list says so in words.
 
 use super::PageContext;
 use crate::jobs;
@@ -169,6 +169,7 @@ struct Widgets {
     next: gtk::Button,
     page_label: gtk::Label,
     busy: gtk::Spinner,
+    busy_box: gtk::Box,
     /// Everything a running job turns off.
     controls: Vec<gtk::Widget>,
 }
@@ -218,14 +219,39 @@ impl CustomDictionaryPage {
         let entries = adw::PreferencesGroup::builder()
             .title(strings.resolve(StringKey::DesktopEntriesSection))
             .build();
+        // The job's name beside a spinner, once it has run long enough to
+        // say so (`busy_overlay` on Windows, the overlay card on the Mac).
         let busy = gtk::Spinner::new();
-        busy.set_visible(false);
-        entries.set_header_suffix(Some(&busy));
+        let busy_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        busy_box.append(&busy);
+        busy_box.append(&gtk::Label::new(Some(
+            strings.resolve(StringKey::DesktopProgressWorking),
+        )));
+        busy_box.set_visible(false);
+        entries.set_header_suffix(Some(&busy_box));
         let filter = gtk::SearchEntry::new();
         filter.set_placeholder_text(Some(
             strings.resolve(StringKey::DictionarySearchPlaceholder),
         ));
         entries.add(&filter);
+        // The column names over the list (`DictionaryRomanLabel`,
+        // `DictionaryHanziLabel`), in the rows' own two-column grid.
+        let header = two_columns(
+            &gtk::Label::builder()
+                .label(strings.resolve(StringKey::DictionaryRomanLabel))
+                .xalign(0.0)
+                .css_classes(["heading"])
+                .build(),
+            &gtk::Label::builder()
+                .label(strings.resolve(StringKey::DictionaryHanziLabel))
+                .xalign(0.0)
+                .css_classes(["heading"])
+                .build(),
+        );
+        header.set_margin_start(TABLE_INSET);
+        header.set_margin_end(TABLE_INSET);
+        header.set_margin_bottom(6);
+        entries.add(&header);
         let list = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::Single)
             .css_classes(["boxed-list"])
@@ -333,6 +359,7 @@ impl CustomDictionaryPage {
                 next,
                 page_label,
                 busy,
+                busy_box,
                 controls,
             },
         });
@@ -377,6 +404,18 @@ impl CustomDictionaryPage {
             if id.is_some() {
                 page.state.borrow_mut().selected_id = id;
                 page.render_verbs();
+            }
+        });
+        // A double-click (or Enter) on a row edits it, as on the Mac.
+        let weak = Rc::downgrade(self);
+        self.widgets.list.connect_row_activated(move |_, row| {
+            let Some(page) = weak.upgrade() else { return };
+            if page.job_slot.is_taken() {
+                return;
+            }
+            let target = page.state.borrow().rows.get(row.index() as usize).cloned();
+            if let Some(target) = target {
+                page.entry_dialog(target);
             }
         });
         let weak = Rc::downgrade(self);
@@ -907,13 +946,27 @@ impl CustomDictionaryPage {
         widgets.entries.set_description(Some(&drawn.count));
         remove_rows(&widgets.list);
         for (roman, hanzi) in &drawn.rows {
-            // User text, never markup.
-            let item = adw::ActionRow::builder()
-                .title(if hanzi.is_empty() { roman } else { hanzi })
-                .subtitle(if hanzi.is_empty() { "" } else { roman })
-                .use_markup(false)
-                .build();
-            widgets.list.append(&item);
+            // Two columns, 羅馬字 then 漢字 (the Mac's table). Plain labels:
+            // user text, never markup.
+            let cells = two_columns(
+                &gtk::Label::builder()
+                    .label(roman)
+                    .xalign(0.0)
+                    .ellipsize(gtk::pango::EllipsizeMode::End)
+                    .build(),
+                &gtk::Label::builder()
+                    .label(hanzi)
+                    .xalign(0.0)
+                    .ellipsize(gtk::pango::EllipsizeMode::End)
+                    .build(),
+            );
+            cells.set_margin_start(TABLE_INSET);
+            cells.set_margin_end(TABLE_INSET);
+            cells.set_margin_top(ROW_INSET);
+            cells.set_margin_bottom(ROW_INSET);
+            widgets
+                .list
+                .append(&gtk::ListBoxRow::builder().child(&cells).build());
         }
         self.is_rendering.set(true);
         match drawn.selected_index {
@@ -936,7 +989,7 @@ impl CustomDictionaryPage {
             .previous
             .set_sensitive(is_enabled && drawn.has_previous);
         widgets.next.set_sensitive(is_enabled && drawn.has_next);
-        widgets.busy.set_visible(drawn.is_busy);
+        widgets.busy_box.set_visible(drawn.is_busy);
         widgets.busy.set_spinning(drawn.is_busy);
         for control in &widgets.controls {
             control.set_sensitive(is_enabled);
@@ -965,6 +1018,23 @@ pub(crate) fn remove_rows(list: &gtk::ListBox) {
     while let Some(row) = list.row_at_index(0) {
         list.remove(&row);
     }
+}
+
+/// The table's horizontal inset and a row's vertical one, the list's own
+/// row metrics (`adw::ActionRow`).
+const TABLE_INSET: i32 = 12;
+const ROW_INSET: i32 = 8;
+
+/// Two equal columns side by side (`Metrics.tableColumns` on the Mac).
+fn two_columns(left: &impl IsA<gtk::Widget>, right: &impl IsA<gtk::Widget>) -> gtk::Box {
+    let columns = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .homogeneous(true)
+        .spacing(12)
+        .build();
+    columns.append(left);
+    columns.append(right);
+    columns
 }
 
 fn icon_button(icon: &str, tooltip: &str) -> gtk::Button {
