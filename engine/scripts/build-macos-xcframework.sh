@@ -22,6 +22,7 @@ ENGINE_DIR="$REPO_ROOT/engine"
 # Header/modulemap layout + Swift wrapper patching are shared with the iOS
 # build; both platforms link the same swift-ffi crate.
 source "$SCRIPT_DIR/lib/swift-bridge-artifacts.sh"
+source "$SCRIPT_DIR/lib/e2e-trace-guard.sh"
 # Staging dir is macOS-specific so a concurrent iOS build (target/d9.2-out)
 # cannot race this script's `rm -rf`.
 OUT_DIR="$ENGINE_DIR/target/macos-out"
@@ -71,6 +72,7 @@ done
 # universal slice is `macos-arm64_x86_64`, and there is still exactly one.
 DEVICE_LIB="$OUT_DIR/$LIB_NAME"
 lipo -create "${THIN_LIBS[@]}" -output "$DEVICE_LIB"
+e2e_trace_assert_absent "$DEVICE_LIB"
 
 # Same argv as the build above, so cargo resolves the OUT_DIR of the exact
 # fingerprint that produced the archive for $BRIDGE_TRIPLE. The generated header,

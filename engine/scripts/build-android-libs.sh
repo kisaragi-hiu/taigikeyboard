@@ -30,6 +30,7 @@ fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ENGINE_DIR="$REPO_ROOT/engine"
+source "$REPO_ROOT/engine/scripts/lib/e2e-trace-guard.sh"
 JNI_LIBS_ROOT="$REPO_ROOT/android/app/src/main/jniLibs"
 ABIS=(arm64-v8a armeabi-v7a)
 
@@ -70,6 +71,8 @@ for abi in "${ABIS[@]}"; do
         echo "error: expected $so_path to exist" >&2
         exit 1
     fi
+
+    e2e_trace_assert_absent "$so_path"
 
     symbol_present=0
     if nm -D "$so_path" 2>/dev/null | grep -q 'panicForTest'; then

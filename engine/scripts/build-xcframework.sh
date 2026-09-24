@@ -24,6 +24,7 @@ ENGINE_DIR="$REPO_ROOT/engine"
 # Header/modulemap layout + Swift wrapper patching are shared with the macOS
 # build; both platforms link the same swift-ffi crate.
 source "$SCRIPT_DIR/lib/swift-bridge-artifacts.sh"
+source "$SCRIPT_DIR/lib/e2e-trace-guard.sh"
 OUT_DIR="$ENGINE_DIR/target/d9.2-out"
 FRAMEWORK_NAME="RustTaigi"
 LIB_NAME="librust_taigi.a"
@@ -53,6 +54,7 @@ lipo -create \
     -output "$SIM_LIB"
 
 DEVICE_LIB="$ENGINE_DIR/target/aarch64-apple-ios/release/$LIB_NAME"
+e2e_trace_assert_absent "$DEVICE_LIB" "$SIM_LIB"
 
 # Same argv as the device build above, so cargo resolves the OUT_DIR of the
 # exact fingerprint that produced $DEVICE_LIB (release vs panic-injector).

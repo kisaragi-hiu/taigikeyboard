@@ -24,6 +24,8 @@ crate-type = ["staticlib"]
 # Release builds omit this feature; the post-build `nm` check in
 # `engine/scripts/build-xcframework.sh` asserts the symbol is absent.
 panic-injector = []
+# Test-build-only engine trace — docs/architecture/e2e-trace-schema.md.
+e2e-trace = ["dispatch/e2e-trace"]
 
 [dependencies]
 dispatch = { workspace = true }

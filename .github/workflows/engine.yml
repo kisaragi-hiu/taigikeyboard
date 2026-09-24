@@ -97,6 +97,10 @@ jobs:
       # The desktop-shared crates: pure, so their tests run here natively, on the
       # same runner and cache (the shells' cross checks stay on the maintainer's
       # Mac and the release runners).
+      - name: cargo test (dispatch, e2e-trace on)
+        working-directory: engine
+        run: cargo test -p dispatch --features e2e-trace
+
       - name: cargo test (desktop-shared crates)
         run: cargo test --workspace --manifest-path desktop/Cargo.toml
 
@@ -106,3 +110,54 @@ jobs:
           cargo fmt --all --check --manifest-path engine/Cargo.toml
           cargo fmt --all --check --manifest-path windows/Cargo.toml
           cargo fmt --all --check --manifest-path desktop/Cargo.toml
+
+  # docs/architecture/e2e-trace-schema.md § Test mode only.
+  e2e-trace-guard:
+    name: e2e trace stays out of release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      RUSTUP_TOOLCHAIN: stable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+
+      - name: Install the toolchain (host target only)
+        run: rustup toolchain install stable --profile minimal --no-self-update
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: engine
+
+      - name: shipped feature graph has no e2e-trace
+        working-directory: engine
+        run: |
+          set -euo pipefail
+          # Every shipped crate that links `dispatch`; the desktop
+          # workspaces add theirs in their own e2e PRs.
+          for crate in swift-ffi android-jni; do
+            if cargo tree -e features -i dispatch -p "$crate" | grep -q 'dispatch feature "e2e-trace"'; then
+              echo "::error::$crate enables dispatch/e2e-trace by default"; exit 1
+            fi
+          done
+          # Positive control: the grep sees the feature when it IS on.
+          cargo tree -e features -i dispatch -p android-jni --features e2e-trace | grep -q 'dispatch feature "e2e-trace"'
+
+      - name: release build carries the marker only when traced
+        working-directory: engine
+        run: |
+          set -euo pipefail
+          source scripts/lib/e2e-trace-guard.sh
+          # One target dir: only dispatch + android-jni rebuild between the two.
+          cargo build --release -p android-jni
+          e2e_trace_assert_absent target/release/librust_taigi.so
+          cargo build --release -p android-jni --features e2e-trace
+          e2e_trace_assert_present target/release/librust_taigi.so

@@ -19,6 +19,8 @@ use prost::Message;
 use protos::engine::{request, response, ErrorCode, Request, Response};
 
 mod case;
+#[cfg(feature = "e2e-trace")]
+pub mod trace;
 
 /// Maximum accepted size of an FFI request byte buffer. Phonetics inputs
 /// from the IME are kilobytes at worst; 2 MB is generous slack for proto
@@ -27,14 +29,37 @@ mod case;
 /// rejection so the cap stays in lock-step across both FFI seams.
 pub const MAX_REQUEST_BYTES: usize = 2 * 1024 * 1024;
 
+/// The FFI adapters' pre-dispatch size gate: true when a request of `len`
+/// bytes must be refused with `FAIL_INVARIANT`. Owning the check here keeps
+/// the refusal traced (`adapter_reject`) for every adapter in test builds.
+#[must_use]
+pub fn is_request_too_large(len: usize) -> bool {
+    let too_large = len > MAX_REQUEST_BYTES;
+    #[cfg(feature = "e2e-trace")]
+    if too_large {
+        trace::adapter_reject("oversize", len);
+    }
+    too_large
+}
+
 /// Decode `bytes` as a `Request`, dispatch by payload variant, encode the
 /// resulting `Response`. Always returns a valid encoded `Response` —
 /// never panics across the seam.
 #[must_use]
 pub fn process_request(bytes: &[u8]) -> Vec<u8> {
-    let result = catch_unwind(AssertUnwindSafe(|| encode(&run(bytes))));
+    #[cfg(feature = "e2e-trace")]
+    let started = std::time::Instant::now();
+    let result = catch_unwind(AssertUnwindSafe(|| {
+        let response = run(bytes);
+        let encoded = encode(&response);
+        #[cfg(feature = "e2e-trace")]
+        trace::request(bytes, &response, encoded.len(), started);
+        encoded
+    }));
     result.unwrap_or_else(|_| {
         log::error!("engine dispatch panicked");
+        #[cfg(feature = "e2e-trace")]
+        trace::panic(bytes, started);
         encode(&error_response(0, ErrorCode::FailInternal, 0))
     })
 }

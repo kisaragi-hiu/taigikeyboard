@@ -10,7 +10,7 @@
 //! `jbyteArray` BEFORE copying into a Rust `Vec<u8>`, so an oversized payload
 //! is rejected without the matching allocation.
 
-use dispatch::{encode_error, log_level_to_byte, MAX_REQUEST_BYTES};
+use dispatch::{encode_error, log_level_to_byte};
 use jni::objects::{Global, JByteArray, JClass, JObject, JStaticMethodID, JValue};
 use jni::signature::{MethodSignature, Primitive, ReturnType};
 use jni::strings::JNIStr;
@@ -50,7 +50,7 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
                 Ok(l) => l,
                 Err(_) => return encode_error_to_jarray(env, ErrorCode::FailParse),
             };
-            if len > MAX_REQUEST_BYTES {
+            if dispatch::is_request_too_large(len) {
                 // JUSTIFICATION: mapped to FAIL_INVARIANT (not FAIL_PARSE) —
                 // bytes may be wire-valid; the engine invariant violated is
                 // "request size ≤ MAX_REQUEST_BYTES". Adding FAIL_SIZE would
@@ -168,6 +168,27 @@ pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge
             encode_error_via_fresh_attach(&mut unowned, ErrorCode::FailInternal)
         }
     }
+}
+
+/// `external fun e2eTraceOpen(path: String): Boolean` — opens the
+/// test-build-only engine trace. Exported only with the `e2e-trace` feature
+/// (the Android `e2e` build type's `.so`); release `.so` files have neither
+/// the symbol nor the trace code (marker grep in `build-android-libs.sh`).
+#[cfg(feature = "e2e-trace")]
+#[no_mangle]
+pub extern "system" fn Java_com_siansiansu_taigikeyboard_engine_RustEngineBridge_e2eTraceOpen<
+    'local,
+>(
+    mut unowned: EnvUnowned<'local>,
+    _class: JClass<'local>,
+    path: jni::objects::JString<'local>,
+) -> jni::sys::jboolean {
+    let outcome = unowned
+        .with_env(|env| -> jni::errors::Result<bool> {
+            Ok(dispatch::trace::open(&path.try_to_string(env)?))
+        })
+        .into_outcome();
+    matches!(outcome, Outcome::Ok(true))
 }
 
 // MARK: - Logger glue
