@@ -89,10 +89,18 @@ jobs:
       - name: Drive every scenario (Fcitx5, then IBus)
         run: |
           set -euo pipefail
-          for framework in fcitx5 ibus; do
+          xvfb-run -a dbus-run-session -- python3 tools/e2e/linux/driver.py \
+            --framework fcitx5 --prefix "$RUNNER_TEMP/prefix" --out "$RUNNER_TEMP/run"
+          # Fedora: ibus-daemon never lists the test engine (only the system
+          # xkb engines) — root cause open, USER 2026-09-24 skip + its own
+          # round. Recorded as `skipped` so the report still shows it.
+          if [ "${{ matrix.distro }}" = fedora ]; then
+            python3 tools/e2e/linux/driver.py --framework ibus --out "$RUNNER_TEMP/run" \
+              --skip "Fedora: ibus-daemon does not list the test engine (open issue)"
+          else
             xvfb-run -a dbus-run-session -- python3 tools/e2e/linux/driver.py \
-              --framework "$framework" --prefix "$RUNNER_TEMP/prefix" --out "$RUNNER_TEMP/run"
-          done
+              --framework ibus --prefix "$RUNNER_TEMP/prefix" --out "$RUNNER_TEMP/run"
+          fi
 
       - name: Analyze
         run: python3 tools/e2e/analyze.py --run "$RUNNER_TEMP/run"
