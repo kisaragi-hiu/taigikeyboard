@@ -1,0 +1,6 @@
+{
+  "_comment": "Engine time per request in microseconds (trace engine_request.dur_us), keyed platform -> op; '*' matches any, the most specific entry wins. Starting values from the <50 ms keystroke budget (.claude/rules/rust-best-practices.md §3); each platform PR calibrates its own from real runs — never loosen one to hide a regression.",
+  "engine_request_us": {
+    "*": { "*": { "p95": 20000, "max": 50000 } }
+  }
+}

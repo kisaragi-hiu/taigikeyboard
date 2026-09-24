@@ -124,7 +124,7 @@ PR1/PR2 of the first draft were over the 500-LOC cap (Codex) — split below.
 |---|---|---|
 | 0 | this roadmap + project memory + `docs/README.md` row | this commit |
 | PR1 | engine `e2e-trace` feature threaded through every FFI crate, dispatch events, `e2e_trace_open`, marker string, traced-artifact build paths, release-graph absence check in `engine.yml`, `e2e-trace-schema.md` | In progress — `feat/e2e-trace-engine` |
-| PR2 | `e2e/scenarios` intent format + 3 seed scenarios, `tools/e2e/analyze.py` (stdlib) + tests, report format | Pending |
+| PR2 | `e2e/scenarios` intent format + 3 seed scenarios, `tools/e2e/analyze.py` (stdlib) + tests, report format | In progress — `feat/e2e-analyzer` |
 | PR3 | Linux: release zero-log, Fcitx5 + IBus platform events, container driver (one distro, both frameworks), `make e2e PLATFORM=linux`, `/e2e` skill | Pending |
 | PR4 | Linux: CI matrix Ubuntu 24.04 / Debian 13 / Fedora 44 / Arch × {Fcitx5, IBus} from each distro's own package | Pending |
 | PR5 | macOS: `-DE2E_TRACE` events, CGEvent driver + host app | Pending |

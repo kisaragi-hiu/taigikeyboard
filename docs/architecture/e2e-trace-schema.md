@@ -1,8 +1,8 @@
 # E2E Trace Schema
 
-> **Type**: Reference (contract between the test-build trace writers, the drivers and `tools/e2e/analyze.py`)
+> **Type**: Reference (contract between the test-build trace writers, the scenarios, the drivers and `tools/e2e/analyze.py`)
 > **Keywords**: `e2e`, `trace`, `JSON Lines`, `test mode`, `schema_version`, `TAIGI_E2E_TRACE_V1`
-> **Status**: Active — schema version 1 (engine layer, PR1 of `e2e-testing-roadmap.md`); platform-layer events are added by the platform PRs
+> **Status**: Active — schema version 1 (engine layer PR1, scenarios + analyzer PR2 of `e2e-testing-roadmap.md`); platform-layer events are added by the platform PRs
 > **Siblings**: `e2e-testing-roadmap.md` (design D1/D2, PR table)
 
 ---
@@ -73,6 +73,31 @@ A panic caught at the dispatch boundary: `domain`, `method_tag`, `req_bytes`. Th
 
 A request an FFI adapter refused before dispatch: `reason` (`oversize`), `req_bytes`.
 
-## Planned (platform PRs)
+### `candidates` — platform layer
 
-Platform-layer events — key injected / received, preedit, candidate list as `(漢字, canonical-TL)`, commit, text observed by the host, memory sample, key-geometry manifest — are specified here by the PR that first writes them (roadmap § Trace schema).
+The candidate list the IME shows, written by the platform after each fetch: `items` = `[{"hanji": …, "tl": …}]` in display order, identity per CLAUDE.md Core Principle #6. The analyzer's "first hanji candidate" is the first item whose `hanji` holds a CJK character (the §34 literal slot is skipped). First writer: the Linux PR.
+
+### Planned (platform PRs)
+
+Key injected / received, preedit, commit, text observed by the host, memory sample, key-geometry manifest — specified here by the PR that first writes them (roadmap § Trace schema).
+
+## Scenarios
+
+`e2e/scenarios/<id>.json`, shared by every driver; the file name is the `id`. Expectations come from an authoritative source (a USER-quoted dogfood item, `knowledge/`), named in `source` — never from a run's output.
+
+| Key | Meaning |
+|---|---|
+| `id`, `source` | identity; where the expectation comes from |
+| `settings` | intent-level settings (`romanization`, `continuous_input`, `output`); each driver maps them to its platform's store |
+| `steps` | `text` (type these characters), `key` (a platform-neutral name: `enter`, `space`, `backspace`, `escape`, `0`–`9`; each driver translates it), `pick` (select the candidate with this `hanji` + `tl`). A driver maps each step to real input — hardware keys or taps — and never sets text directly |
+| `expect.committed` | the exact text the host field holds at the end |
+| `expect.first_hanji_candidate` | `{hanji, tl}` of the first hanji candidate in the last `candidates` event |
+
+## Run layout (driver → analyzer)
+
+```
+<run-dir>/<platform>/<scenario-id>/result.json   {"status": "ran" | "skipped" | "error", "reason": …, "observed_text": …}
+<run-dir>/<platform>/<scenario-id>/*.jsonl       every trace file the scenario produced (engine + platform processes)
+```
+
+`python3 tools/e2e/analyze.py --run <run-dir> [--baseline <earlier report.json>]` writes `report.md` (read by the agent) and `report.json` (baseline for the next run). Scenario status: `passed` / `failed` (expectation mismatch) / `skipped` (driver could not run, e.g. Windows box off — USER 2026-09-24) / `error`. Findings: `bug` (engine error / panic / adapter reject), `perf` (over `e2e/budgets.json` — platform → op, `*` wildcards, most specific wins — or p95 ≥ 1.5× and +2 ms vs baseline), `trace` (missing or wrong header, unparsable line), `unverified` (an expectation whose events the platform does not write yet). Exit 1 on any failed / error scenario or bug / perf / trace finding.
