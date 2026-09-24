@@ -15,7 +15,7 @@ paths:
 
 # Phonetics Rules
 
-Mandatory reading before ANY TL / POJ / TPS schema work, FST key-family design, column design, encoding choice, canonical-form decision, or "is X dead code" audit of phonetic tables.
+Read before any TL / POJ / TPS schema work, FST key-family design, column design, encoding choice, canonical-form decision, or "is X dead code" audit of phonetic tables.
 
 Project `CLAUDE.md` Core Principle #3 ("Phonetics = authoritative-source-only") binds this.
 
@@ -33,7 +33,7 @@ A Taiwanese word is identified by the **(Hanji, canonical-TL) combination**, nev
 2. **`engine/phonetics/src/<system>.rs`** — source-of-truth lookup table for each system. e.g. `tps.rs` defines `ZHUYIN_INITIALS / ZHUYIN_VOWELS / ZHUYIN_TONES / ZHUYIN_TONES_ENCODE_SAFE`.
 3. **`knowledge/tps-auto-correct-rules.md`** — if touching TPS (palatalization, nasal, coda-position rules).
 4. **`taigi-converter/src/`** — canonical TL ↔ POJ ↔ TPS converter (git submodule). Plus `dictionary/common/taigi_bridge.py` for the Node-IPC bridge.
-5. **THEN, finally**, `AskUserQuestion` — only for user-decision forks (product strategy / naming preference / scope). Do NOT ask questions whose answer is in the reference.
+5. `AskUserQuestion` only for user-decision forks (product strategy / naming preference / scope); the reference answers phonetic facts.
 
 ## Key TPS facts (often-misremembered)
 

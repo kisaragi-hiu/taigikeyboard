@@ -1,6 +1,6 @@
 ---
 name: release-mobile
-description: Prepare a MOBILE release (iOS + Android, one shared version) on main - rebuild generated artifacts, update the detailed changelog, write concise English iOS and Android What's New text, validate, commit, push, and tag the release commit `mobile-<version>`. Use when preparing a version for manual App Store Connect or Google Play release. Never uploads builds or submits a store release. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-mobile x.y.z`); an optional argument only overrides the release base. Mobile train only; the desktop train (macOS + Windows + Linux) is `release-desktop`.
+description: Prepare a MOBILE release (iOS + Android, one shared version) of the version already in the tree - changelog, store What's New text, rebuild, commit, tag `mobile-<version>`; never uploads or submits. Optional arg: a release base. Desktop train (macOS + Windows + Linux) is `release-desktop`.
 ---
 
 # Release Mobile

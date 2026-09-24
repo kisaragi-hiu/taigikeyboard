@@ -93,7 +93,7 @@ When adding or modifying UI, check this guide first. Do not introduce new size/c
 | Touch target | M3 default 48dp min (no `LocalMinimumInteractiveComponentSize` override) | system |
 | Component | bare `Switch(checked, onCheckedChange)` inside `SwitchRow` / dictionary toggle rows | `Toggle` |
 
-Rationale: Android follows platform-default Material 3; iOS keeps its native green toggle. Earlier Android builds emulated the iOS green via `AppStyle.switchColors()` — removed so Android toggles look native.
+Rationale: Android follows platform-default Material 3; iOS keeps its native green toggle. Do not emulate one platform's toggle colors on the other.
 
 ### Cards
 
@@ -170,6 +170,6 @@ Reference implementation: `ExternalLinkButton.Style.footer` (macOS, `Settings/Ex
 Separate features by **usage frequency**, not by data relationship. Frequently-edited content goes on its own page; less-frequently-accessed management features group into a separate management page.
 
 - 自訂詞庫 (custom dictionary editing) = frequent edit → own page.
-- 詞頻 / 詞關聯 / 備份 (frequency / association / backup) = rare access → grouped management page.
+- 備份 / 還原 (backup / restore) = rare access → separate management page.
 
 Mixing them creates confusion about a page's purpose. When reorganizing settings or management UIs, group by how often the user interacts with each feature, not by which data table they live in.

@@ -1,6 +1,6 @@
 ---
 name: release-desktop
-description: Prepare a DESKTOP release (macOS + Windows + Linux, one shared version) on main - rebuild generated artifacts, set the desktop version, write the `### macOS`, `### Windows` and `### Linux` sections of `changelog/desktop-v<version>.md`, link it from CHANGELOG.md, validate, commit, and push. Then stages ALL THREE installers on a draft release nobody can reach: builds, signs and notarizes the package here and dispatches CI for the Windows installer and the Linux .deb (`make desktop-release`), or ONE platform's installers for a patch release (`make desktop-patch PLATFORM=<platform>`, when a platform argument is passed). Stops before publishing — publishing the draft is the maintainer's one manual step, and it announces the release itself. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-desktop x.y.z`); optional arguments only pick a patch platform (`macos` / `windows` / `linux`) or override the release base. Desktop train only; the mobile train (iOS + Android) is `release-mobile`.
+description: Prepare a DESKTOP release (macOS + Windows + Linux, one shared version) of the version already in the tree - changelog, rebuild, commit, and stage the installers on an unpublished draft; stops before publishing. Optional args: a patch platform (`macos` / `windows` / `linux`) or a release base. Mobile train (iOS + Android) is `release-mobile`.
 ---
 
 # Release Desktop

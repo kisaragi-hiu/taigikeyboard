@@ -118,7 +118,6 @@ Type-shape preferences that cross FFI:
 
 - **Stable channel only.** No nightly features, no `#![feature(...)]`.
 - **MSRV 1.86** (`rust-version` in root `Cargo.toml`); bumping is a PR-level decision with CI verification.
-- **No experimental features** (`async fn` in traits — stable since 1.75 — OK; GATs in traits OK; const generics full — OK; edition2024 — OK on 1.85+).
 - **`rustfmt` default config**, no deviations. Apply with `make fmt`; check without writing via `cd engine && cargo fmt --all -- --check` (CI gates it per §7).
 - **`clippy` with `-D warnings`** — CI gates it (`engine.yml`, engine + desktop workspaces); run locally with `make lint` (clippy + Kotlin spotlessCheck). Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
 

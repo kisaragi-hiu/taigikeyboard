@@ -54,7 +54,7 @@ Any change touching a shared-core-candidate file must:
 1. Accept only **immutable value inputs** OR inject services through interfaces **already declared** in the shared-core contract (e.g. `EngineSettings`, `LoggerBackend` on Android; `EngineSettingsProvider`, `LoggerBackend` on iOS). Legitimate immutable-context structs, DTO mappers, and batching objects are permitted; they are not banned as "stateful" merely because they carry multiple fields.
 2. Introduce **no new** platform / framework singleton reads inside candidate code. Explicitly forbidden: `SharedSettings.shared`, any `*.shared`, `Application.getInstance()`, `BuildConfig.*`, `android.util.Log`, `OSLog`, `KeyboardKit.*`, `androidx.*`, `UIKit`/`SwiftUI`/`Combine`, `kotlinx.coroutines.*`. See `.claude/rules/ios-shared-core-candidates.md` §1 (iOS-specific platform bans — `SharedSettings.shared`, `*.shared`, `UIKit`, `SwiftUI`, `KeyboardKit`, `Combine`, `OSLog`, `@MainActor`) and `.claude/rules/android-guidelines.md` §1 (Android-specific — `android.*`, `androidx.*`, `kotlinx.coroutines.*`, `java.util.concurrent.*`) for the authoritative per-platform enforcement lists. The list above is the merged set enforced at code review; items like `BuildConfig.*` and `Application.getInstance()` extend the per-platform lists because they surfaced in real violations.
 3. **Mirror any new heuristic or tunable constant** on the other platform in the same PR, with a `CROSS-PLATFORM INVARIANT` comment citing `<mirror file>:<line>`. §3a drift-detection still applies.
-4. Pass **Codex + `/simplify` pre-implementation review** for any change introducing a new stateful dependency into a candidate file. Pure refactors, constant-tweak bug fixes, and fixes without new state are exempt from the pre-impl review (post-draft review still applies per `~/.claude/rules/round-workflow.md` Codex sandwich). The Codex pass checks correctness + FFI-safety intent; the `/simplify` pass (Claude Code official skill) checks reuse, quality, and dead-code before implementation lands. Run both in parallel per `~/.claude/rules/claude-workflow.md` §Subagent Usage.
+4. Pass **Codex + `/simplify` pre-implementation review** for any change introducing a new stateful dependency into a candidate file. Pure refactors, constant-tweak bug fixes, and fixes without new state are exempt from the pre-impl review (post-draft review still applies per `~/.claude/rules/round-workflow.md` Codex sandwich). The Codex pass checks correctness + FFI-safety intent; the `/simplify` pass checks reuse, quality, and dead-code before implementation lands. Run both in parallel per `~/.claude/rules/claude-workflow.md` §Subagent Usage.
 
 A PR in violation is rejected at review regardless of whether the fix itself is correct. Correct fixes that violate this constraint are rebased to comply.
 
@@ -96,8 +96,6 @@ Before writing any "iOS does X, Android does Y" sentence in an audit / invariant
 - `// mirrors iOS` / `// mirrors Android`
 
 Treat matching comments as authoritative signal that the original author intended parity — divergence in observable behavior is then a **bug**, not a design decision. When using an Explore agent for a summary read, explicitly ask the agent to report any `// matches …` comments in the flagged files.
-
-Incident (old #141): an audit claimed `DictionaryBinaryReader.kt` treated both `hanzi` and `tl` as required; the file had `// matches iOS` comments beside that code, and two read passes missed them.
 
 ## 4. Out of scope for this rule
 

@@ -24,7 +24,6 @@ KeyboardKit 10+ is closed-source, so its API comes from docs, not source. Look i
 
 ## Architecture Notes
 
-- **Separate SwiftUI View from Controller** — Views must not directly hold Controller references (also Memory Management rule 1)
 - **SQLite layer**: `SQLiteConnectionManager` handles connection, queue, and initialization. Repositories use raw `sqlite3_*` C API inside `connectionManager.execute { db in }` closures — this verbosity is inherent to the C API, don't add wrapper abstractions
 - **Shared constant**: `SQLiteConnectionManager.sqliteTransient` replaces inline `unsafeBitCast(-1, to: sqlite3_destructor_type.self)` — use it for all `sqlite3_bind_text` calls
 
@@ -36,7 +35,7 @@ KeyboardKit 10+ is closed-source, so its API comes from docs, not source. Look i
 
 ## Test Conventions
 
-- Tests must be simple, effective, and non-redundant — no duplicate coverage across files
+- No duplicate coverage across test files
 - All conversion-related tests (TPS, TL, POJ, tone marks) use `./taigi-converter` (git submodule) as canonical reference implementation
 - When tests fail, verify against reference behavior before changing production code
 - Assertion messages must be descriptive enough to copy-paste for debugging
@@ -85,4 +84,4 @@ for d in ios/Sources/TaigiKeyboard/*/; do
 done
 ```
 
-If drift exists: alert the user. They drag the new folder into Project Navigator as *Create folder references* and delete the orphan group. AI never edits pbxproj directly. (Incident: old #213 renamed `Common/ → Logging/` on disk without updating pbxproj; build silently broke at `Engine/RustEngineBridge.swift:281` "Cannot find 'LoggerFactory' in scope".)
+If drift exists: alert the user. They drag the new folder into Project Navigator as *Create folder references* and delete the orphan group. AI never edits pbxproj directly. Symptom of undetected drift: `xcodebuild` fails with "Cannot find '<Type>' in scope" for types defined under the renamed folder.

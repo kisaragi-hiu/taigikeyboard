@@ -42,8 +42,8 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   into a PROCESS FAIL-FAST with no message anywhere but Windows Error Reporting. Group the
   children in a panel (`StackPanel::keyed_children` to keep their identity); `SlotView::collection`
   only works on slots the reactor marks as collections, which `ExpanderSlot::Content` is not.
-  Shipped twice in W17 and found only on the device. `cards::frame` now stacks what it is given
-  so that one card helper cannot fail this way again, and every pane is mounted headlessly by
+  The compile gates cannot see it. `cards::frame` stacks what it is given
+  so that one card helper cannot fail this way, and every pane is mounted headlessly by
   `winui::pane_planning` against the reactor's `RecordingRuntime` — **a new pane belongs in that
   test.** The net reaches each pane's LAUNCH state only: a subtree behind user state (a dialog,
   a busy overlay, a search result row) is `View::empty()` there and is still dogfood-only.
@@ -53,9 +53,8 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   `DWrite.dll` (`0xc0000005`), in the HOST process, with nothing of ours on the stack.
   `font_file::load` therefore takes the caller's factory: the TIP passes its own
   `RenderFactory::dwrite`, the same one every text format is made on and the one the bundled
-  roster already uses. Measured headlessly on the box 2026-09-11 — collection built by a
-  throwaway isolated factory: AV at `GetMetrics`; same factory kept alive, or the caller's
-  factory used: fine. Typing in any host with a custom typeface selected killed the host.
+  roster already uses. A violation kills whichever host the user is typing in once a custom
+  typeface is selected.
   Corollary: **field order is drop order** — a struct holding both a factory and things built
   from it declares the factory LAST (`RenderFactory`, `CandidateWindow`).
 
@@ -63,9 +62,8 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   node's PROPERTIES before its children, so `ListView::selected_index` reaches XAML ahead of the
   items of the same render; an index the native list does not number yet is `E_INVALIDARG`, and
   reactor turns a failed native command into `std::process::abort()` — a silent `0xc0000409` with
-  no panic and nothing in the log but Windows Error Reporting. It killed the settings window the
-  first time a user added a custom typeface (2026-09-11), five bundled rows on screen and index 5
-  asked for. Every dynamic list goes through `winui::list_selection`: the render that changes the
+  no panic and nothing in the log but Windows Error Reporting (e.g. five rows on screen, the render
+  adding a sixth, index 5 selected). Every dynamic list goes through `winui::list_selection`: the render that changes the
   rows draws no selection, an effect reports the rows once the native commands applied, and the
   render after that carries the index — which also means a selection EVENT is resolved through the
   rows XAML holds (`SettledRows::key_at`), never through the model's newer ones. The effect's
@@ -118,10 +116,8 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   `com_out_buffer` (COM methods) — never the `windows` crate's `&mut [T]` wrapper.** Those
   wrappers hand the OS `core::mem::transmute(slice.as_ptr())`, a READ-ONLY provenance; writing
   through it is UB, and an optimized build folds the caller's reads of the buffer back to its
-  initializer. That is how every keyboard modifier came to read as "not held" in release builds
-  (2026-09-04, real device — `os_out_buffer`'s module doc carries the measurement, and the two
-  found earlier by reasoning, `ToUnicodeEx`'s output buffer and `IEnumGUID::Next`, had not
-  misbehaved yet). Invisible to every gate the project runs: it does not reproduce in debug,
+  initializer — e.g. every keyboard modifier reads as "not held" in release builds
+  (`os_out_buffer`'s module doc carries the measurement). Invisible to every gate the project runs: it does not reproduce in debug,
   `check-gnu` / `check-msvc` are compile gates, and the host tests cannot reach a Win32 handle.
   `windows/clippy.toml` denies the wrappers already wrapped; add the next one there as it is
   wrapped (the enabled feature set holds ~138 more of the same shape).

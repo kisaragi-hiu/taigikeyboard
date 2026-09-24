@@ -64,9 +64,8 @@ The **policy** (constants + tests + docs update together, comment format, `INVAR
 Generic Kotlin idioms (`val` over `var`, sealed hierarchies, data classes, coroutines) live in the global `~/.claude/rules/kotlin.md`; this section keeps only the project-specific ones.
 
 - Follow the [Android Keyboard Design Guidelines](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method) for IME components.
-- Prefer `requireNotNull(x)` / `checkNotNull(x)` / `x ?: error("…")` over `!!`.
 - `enum class` for pure enums with no associated state (sealed hierarchies and data classes: global `kotlin.md`).
-- Avoid `!!`, `lateinit` on public API (private `lateinit` OK inside lifecycle-bound classes).
+- No `lateinit` on public API (private `lateinit` OK inside lifecycle-bound classes). `!!`: §7.
 
 ## 4. Android lifecycle + DI `[B]` `[A]`
 

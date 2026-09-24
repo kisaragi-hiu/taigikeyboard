@@ -9,7 +9,7 @@ Cross-project process rules (workflow, planning, review, naming, docs, Python) a
 ## Project Overview
 
 **taigi-emojis** — the single emoji source of truth for the Taigi keyboard (iOS + Android).
-Replaces the emoji data bundled with iOS's vendored `ISEmojiView` and Android's inline `root.txt`. A Python generator
+A Python generator
 merges pinned Unicode + CLDR data with a hand overlay of 台語/華語 search keywords and emits one
 `dist/emoji.json` both platforms consume directly from this repository.
 
@@ -57,7 +57,7 @@ own native model; there are no shared Swift/Kotlin modules. Schema: `.claude/rul
 - **iOS**: bundles `dist/emoji.json` as a keyboard-extension resource; a slim `Codable` decodes it
   and feeds the vendored ISEmojiView via `customEmojis`.
 - **Android**: `assets.srcDir` mounts `dist/`; Moshi decodes `emoji.json` into the existing
-  `EmojiKeyData`/`EmojiSet`/`EmojiCategory` (replaced `root.txt`).
+  `EmojiKeyData`/`EmojiSet`/`EmojiCategory`.
 - **Both**: an app-side glyph filter drops emoji the OS font can't render — test the whole grapheme
   cluster (iOS CoreText, Android `PaintCompat.hasGlyph`), not per-scalar.
 

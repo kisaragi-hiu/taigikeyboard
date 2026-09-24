@@ -67,7 +67,6 @@ mod syllable;
 - **`unsafe` blocks are confined to FFI marshaling.** No domain logic inside `unsafe`. Target: `unsafe` block contents ≤ 3 lines.
 - **No `transmute` unless absolutely required** — prefer `as` casts, `From`/`Into`, or `#[repr(C)]` layout-compatible structs.
 - **No raw pointer dereferences outside FFI crates.** Domain crates inherit the workspace `unsafe_code = "forbid"` lint. Only `android-jni`, `swift-ffi` and the documented `mmap-host` carve-out may contain `unsafe`.
-- **Every new `unsafe` block requires Codex pre-implementation review** per `.claude/rules/cross-platform-alignment.md` §1c.
 
 ## 4. Opaque handle pattern `[S]` `[R]`
 
