@@ -184,6 +184,10 @@ class Session:
             wait_until(self.fcitx5_owns_its_name, STARTUP_TIMEOUT_S, "fcitx5 to own org.fcitx.Fcitx5")
         else:
             self.spawn(["ibus-daemon", "--replace", "--panel", "disable", "--config", "disable"])
+            # Only once our daemon wrote its address: an `ibus` call before
+            # that finds no bus, falls back to D-Bus activation and starts a
+            # second daemon with the system's component path (Fedora).
+            wait_until(self.ibus_wrote_its_address, STARTUP_TIMEOUT_S, "ibus-daemon to write its address")
             try:
                 wait_until(self.ibus_lists_engine, STARTUP_TIMEOUT_S, "ibus-daemon listing the engine")
             except ScenarioError as timeout:
@@ -199,6 +203,9 @@ class Session:
             raise ScenarioError("the host window never mapped")
         self.run(["xdotool", "windowfocus", "--sync", window[0]])
         wait_until(self.activate, STARTUP_TIMEOUT_S, "the input method to be active on the focused field")
+
+    def ibus_wrote_its_address(self) -> bool:
+        return any((self.work / "config" / "ibus" / "bus").glob("*"))
 
     def ibus_lists_engine(self) -> bool:
         listing = self.run(["ibus", "list-engine"])
