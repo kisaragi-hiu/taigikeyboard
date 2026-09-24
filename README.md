@@ -3,8 +3,10 @@
 A Taiwanese input method for iOS, Android, macOS, Windows, and Linux. Romanization input in POJ, TL and TPS, Hanji, tone marks, autocomplete, and cross-system Romanization conversion.
 
 ![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
-![Android 11+](https://img.shields.io/badge/Android-11%2B-green)
+![Android 9+](https://img.shields.io/badge/Android-9%2B-green)
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-lightgrey)
+![Windows 10+](https://img.shields.io/badge/Windows-10%2B-blue)
+![Linux Fcitx5 | IBus](https://img.shields.io/badge/Linux-Fcitx5%20%7C%20IBus-orange)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue)](LICENSE)
 
 ## Why
@@ -22,7 +24,7 @@ This project tries to provide a more consistent experience across iOS, Android, 
 | iOS / iPadOS | [App Store](https://apps.apple.com/app/id6751871806) |
 | Android | [Google Play](https://play.google.com/store/apps/details?id=com.siansiansu.taigikeyboard) |
 | macOS / Windows | [taigikeyboard.tw](https://taigikeyboard.tw) |
-| Linux (`.deb`, Fcitx5 or IBus) | [GitHub releases](https://github.com/taigikeyboard/taigikeyboard/releases) |
+| Linux (`.deb`, `.rpm`, Arch package; Fcitx5 or IBus) | [GitHub releases](https://github.com/taigikeyboard/taigikeyboard/releases) |
 
 ## Features
 
@@ -44,13 +46,31 @@ All five platforms share a Rust core. Algorithms for phonetics, composing, lexic
 | `android/` | Kotlin + Jetpack Compose UI; FlorisBoard-derived view hierarchy |
 | `macos/` | Swift + InputMethodKit; SwiftPM |
 | `windows/` | Rust + Text Services Framework; Inno Setup installer |
-| `linux/` | Fcitx5 addon (C++ over a Rust C ABI) + IBus engine (Rust, zbus) + GTK 4 / libadwaita settings; `.deb` |
+| `linux/` | Fcitx5 addon (C++ over a Rust C ABI) + IBus engine (Rust, zbus) + GTK 4 / libadwaita settings; `.deb` / `.rpm` / Arch |
 | `desktop/` | The pure Rust crates Windows and Linux share (settings model, composing orchestration, storage) |
-| `dictionary/` | Source data + FST/mmap build pipeline |
+| `dictionary/` | Source data + FST/mmap build pipeline (Python) |
+| `dictionaries/` | The built dictionary artifacts every platform packages (`.bin`, `.fst`), written by `make dict` |
 | `taigi-converter/` | Canonical TL/POJ/TPS converter, a git submodule |
+
+Supporting directories:
+
+| Path | Contents |
+| --- | --- |
+| `i18n/` | UI string sources; `make i18n` generates each platform's resources from them |
+| `fonts/` | Bundled fonts (OFL-1.1) |
+| `symbols/` | The desktop symbol picker's table |
+| `taigi-emojis/` | Emoji data generator (its own uv project) |
+| `knowledge/` | TL / POJ / TPS phonetics reference — the source of truth for romanization rules |
+| `docs/` | Architecture, engine and UI docs, reports, roadmap |
+| `e2e/`, `tools/e2e/` | End-to-end scenarios and budgets; the drivers and analyzer |
+| `tools/` | Developer tools: i18n codegen, release notes, desktop icon and Windows helpers |
+| `scripts/` | Release, announcement, secret-scan and reference-sync scripts |
+| `changelog/` | Per-release changelogs (`CHANGELOG.md` is the index) |
+| `corpus/` | Real Taiwanese sentences for manual testing, a git submodule; never a build input |
 
 ## Documentation
 
+- [`docs/BUILDING.md`](docs/BUILDING.md): prerequisites, and how to build and test each platform
 - `docs/README.md`: engine, UI, architecture index
 - `knowledge/taigi-phonetics-reference.md`: TL/POJ/TPS cross-reference
 - `.claude/rules/`: per-platform style guides, security rules, AI workflow
@@ -62,7 +82,7 @@ Source code is released under the [Apache License, Version 2.0](LICENSE).
 
 **The dictionary data is not.** Each of the fourteen sources keeps its own
 terms — CC0, CC BY, CC BY-SA, CC BY-ND, CC BY-NC-SA, 開放政府資料授權條款, and
-a few still unverified. Two carry NonCommercial terms, and because the compiled
+a few still unverified. One (`taijit`) carries a NonCommercial term, and because the compiled
 dictionary shipped inside every application package merges all sources into one
 inseparable index, **that compiled dictionary must be treated as
 non-commercial**. See [`dictionary/LICENSE`](dictionary/LICENSE) for the

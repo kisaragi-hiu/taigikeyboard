@@ -1,7 +1,7 @@
 # Contributing
 
 Taigi Keyboard is a Taiwanese input method for iOS, Android,
-macOS, and Windows, built on a shared Rust engine.
+macOS, Windows, and Linux, built on a shared Rust engine.
 
 Write to the project in Taiwanese, Mandarin, or English — whichever you are
 most comfortable in. Code, comments, and documentation stay in English.
@@ -30,17 +30,17 @@ description of this repository's layout, conventions, and per-platform rules,
 and the per-platform style guides in `.claude/rules/` are the real style
 guides.
 
-Behaviour that four platforms must agree on is specified in
+Behaviour that the platforms must agree on is specified in
 [`docs/architecture/behavioral-invariants.md`](docs/architecture/behavioral-invariants.md).
-A change to shared behaviour is a change to all four platforms, or it is a
-regression on three of them.
+A change to shared behaviour is a change to every platform that has it, or it
+is a regression on the others.
 
 ## Build and test
 
-The `Makefile` at the repository root is the canonical entry point; the
-per-platform build and test invocations are tabulated in
-[`CLAUDE.md`](CLAUDE.md) § Build & Test. Those are kept current — do not
-work from a copy of them pasted anywhere else.
+Start with [`docs/BUILDING.md`](docs/BUILDING.md): prerequisites, a pinned
+tool list (`mise.toml`), and the build and test command for each platform.
+The `Makefile` at the repository root is the canonical entry point; `make help`
+lists its targets.
 
 One thing worth knowing before you run anything: **if your change touches
 `engine/` or `dictionary/`, regenerate the platform artifacts before testing

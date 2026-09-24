@@ -101,8 +101,8 @@ Type-shape preferences that cross FFI:
 
 ## 4. Cross-compile + build tooling `[A]`
 
-- **Root `Makefile`** orchestrates (`make build` / `dict` / `fmt` / `lint`). `engine/Makefile.toml` holds the cargo-make tasks (`build-swift`, `build-droid`, `ci`).
-- **Android**: `cargo-ndk` for multi-ABI builds (ships `arm64-v8a` only; add another ABI to `engine/rust-toolchain.toml` only when it ships).
+- **Root `Makefile`** orchestrates (`make build` / `dict` / `fmt` / `lint`); the per-platform native builds are `engine/scripts/build-*.sh`. Contributor steps: `docs/BUILDING.md`.
+- **Android**: `cargo-ndk` for multi-ABI builds (ships `arm64-v8a` + `armeabi-v7a`; add another ABI to `engine/rust-toolchain.toml` only when it ships).
 - **iOS / macOS**: `cargo build --target aarch64-apple-ios` + simulator targets; packaged as xcframework via `swift-bridge` generator.
 - **Rustup targets** pinned in `engine/rust-toolchain.toml` (shipped ABIs only; reasons in its comments).
 
