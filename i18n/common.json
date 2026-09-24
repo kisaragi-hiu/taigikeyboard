@@ -113,6 +113,25 @@
         "ja": "設定"
       }
     },
+    "settingsLong": {
+      "comment": "Settings label that mentions what is being configured, to help distinguish from other settings menu items that an IME system like fcitx5 might add.",
+      "scope": {
+        "platforms": [
+          "linux"
+        ],
+        "surfaces": [
+          "host",
+          "extension"
+        ]
+      },
+      "values": {
+        "hanji": "設定台語齒盤",
+        "tailo": "Siat-tīng Tâi-gí Khí-puânn",
+        "poj": "Siat-tēng Tâi-gí Khí-pôaⁿ",
+        "en": "Configure Taigi Keyboard",
+        "ja": "台湾語キーボード設定"
+      }
+    },
     "pagePrevious": {
       "comment": "Previous page of candidates: mobile candidate-overlay page-up a11y label, desktop shortcut row + user-data list pager. Merged 2026-09-20 from keyboard.pageUp / desktop.actionPageBackward.",
       "scope": {

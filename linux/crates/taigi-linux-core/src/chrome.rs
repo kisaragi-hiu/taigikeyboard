@@ -68,7 +68,7 @@ pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
         row(
             MENU_SETTINGS,
             ShortcutAction::OpenLastSettingsPane,
-            StringKey::CommonSettings,
+            StringKey::CommonSettingsLong,
         ),
         MenuItem::Separator,
         MenuItem::Action {
