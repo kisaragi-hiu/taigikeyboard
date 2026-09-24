@@ -2,8 +2,8 @@
 //! regression net for the pages (roadmap L12, the Windows `pane_planning`):
 //! every built pane is in the stack; a row's switch writes its key; an
 //! outside write shows on the next tick without bumping the revision; a
-//! display language picked in the window rebuilds the sidebar; an unbuilt
-//! `--pane` lands on 一般; the read-only window writes nothing; a reset
+//! display language picked in the window rebuilds the sidebar; 字型管理 is
+//! listed and 關於 is not; the read-only window writes nothing; a reset
 //! keeps the display language.
 //!
 //! Needs a display: GTK cannot initialise without one, so the test skips
@@ -20,7 +20,7 @@ use taigi_desktop_core::keys::{
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::SettingsFileStore;
-use taigikeyboard_settings::pages::BUILT;
+
 use taigikeyboard_settings::recorder::RecorderTarget;
 use taigikeyboard_settings::window::SettingsWindow;
 use taigikeyboard_settings::writer::SettingsWriter;
@@ -56,7 +56,7 @@ fn main() -> ExitCode {
     a_switch_row_writes_its_key(&window);
     an_outside_write_shows_on_the_next_tick(&window, &store);
     a_language_picked_here_rebuilds_the_sidebar(&window);
-    an_unbuilt_pane_lands_on_general(&window);
+    the_font_pane_is_listed_and_about_is_not(&window);
     a_reset_keeps_the_display_language(&window);
     a_recorded_press_binds_the_row(&window);
     the_kautian_expander_switch_writes_its_key(&window);
@@ -67,7 +67,7 @@ fn main() -> ExitCode {
 }
 
 fn every_built_pane_is_in_the_stack(window: &Rc<SettingsWindow>) {
-    for pane in BUILT {
+    for pane in SettingsPane::ALL.iter().copied() {
         let page = window
             .page_widget(pane)
             .unwrap_or_else(|| panic!("{pane:?} is not in the stack"));
@@ -78,7 +78,7 @@ fn every_built_pane_is_in_the_stack(window: &Rc<SettingsWindow>) {
         assert_eq!(window.show_pane(pane), pane);
     }
     assert_eq!(window.sidebar_titles().len(), SIDEBAR.len());
-    eprintln!("panes: {} panes in the stack", BUILT.len());
+    eprintln!("panes: {} panes in the stack", SettingsPane::ALL.len());
 }
 
 /// trace: 一般's first switch row is 候選窗 (`IS_CANDIDATE_WINDOW_ENABLED`,
@@ -142,14 +142,18 @@ fn a_language_picked_here_rebuilds_the_sidebar(window: &Rc<SettingsWindow>) {
     eprintln!("panes: language rebuild");
 }
 
-fn an_unbuilt_pane_lands_on_general(window: &Rc<SettingsWindow>) {
+/// 字型管理 is listed on Linux (it once routed to 一般, unbuilt); 關於 is
+/// shown without a sidebar row.
+fn the_font_pane_is_listed_and_about_is_not(window: &Rc<SettingsWindow>) {
+    assert!(SIDEBAR.contains(&SettingsPane::FontManagement));
     assert_eq!(
         window.show_pane(SettingsPane::FontManagement),
-        SettingsPane::General
+        SettingsPane::FontManagement
     );
-    assert_eq!(window.current_pane(), SettingsPane::General);
+    assert_eq!(window.current_pane(), SettingsPane::FontManagement);
+    assert!(!SIDEBAR.contains(&SettingsPane::About));
     assert_eq!(window.show_pane(SettingsPane::About), SettingsPane::About);
-    eprintln!("panes: unbuilt pane routed");
+    eprintln!("panes: font pane listed");
 }
 
 /// trace: reset_general puts auto-space back to false and keeps the

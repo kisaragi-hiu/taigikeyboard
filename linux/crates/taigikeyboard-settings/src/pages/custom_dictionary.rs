@@ -15,7 +15,7 @@
 //! selection is the keyboard-reachable way (the Windows shape). The empty
 //! list says so in words.
 
-use super::PageContext;
+use super::{icon_button, remove_rows, PageContext};
 use crate::jobs;
 use crate::presentation::PageMessage;
 use crate::window::{JobSlot, Shell};
@@ -626,10 +626,7 @@ impl CustomDictionaryPage {
                 is_reload_wanted: true,
             });
             if let Some(message) = outcome.message {
-                shell.toast(
-                    &message.title(&strings),
-                    message.detail(&strings).as_deref(),
-                );
+                shell.report(&message, &strings);
             }
             let Some(page) = weak.upgrade() else { return };
             if page.state.borrow().job_generation != Some(generation) {
@@ -893,27 +890,14 @@ impl CustomDictionaryPage {
         result: Result<gio::File, glib::Error>,
         failure: StringKey,
     ) -> Option<std::path::PathBuf> {
-        match result {
-            Ok(file) => match file.path() {
-                Some(path) => Some(path),
-                None => {
-                    self.report(PageMessage::failure(failure, "not a local file"));
-                    None
-                }
-            },
-            Err(error) if error.matches(gtk::DialogError::Dismissed) => None,
-            Err(error) => {
-                self.report(PageMessage::failure(failure, error));
-                None
-            }
-        }
+        super::chosen_path(result).unwrap_or_else(|error| {
+            self.report(PageMessage::failure(failure, error));
+            None
+        })
     }
 
     fn report(&self, message: PageMessage) {
-        self.shell.toast(
-            &message.title(&self.strings),
-            message.detail(&self.strings).as_deref(),
-        );
+        self.shell.report(&message, &self.strings);
     }
 
     /// The state, drawn: the rows, the count, the empty sentence, the
@@ -1012,14 +996,6 @@ impl CustomDictionaryPage {
     }
 }
 
-/// Removes the rows and nothing else: `remove_all` would take the
-/// placeholder with them.
-pub(crate) fn remove_rows(list: &gtk::ListBox) {
-    while let Some(row) = list.row_at_index(0) {
-        list.remove(&row);
-    }
-}
-
 /// The table's horizontal inset and a row's vertical one, the list's own
 /// row metrics (`adw::ActionRow`).
 const TABLE_INSET: i32 = 12;
@@ -1035,14 +1011,6 @@ fn two_columns(left: &impl IsA<gtk::Widget>, right: &impl IsA<gtk::Widget>) -> g
     columns.append(left);
     columns.append(right);
     columns
-}
-
-fn icon_button(icon: &str, tooltip: &str) -> gtk::Button {
-    let button = gtk::Button::from_icon_name(icon);
-    if !tooltip.is_empty() {
-        button.set_tooltip_text(Some(tooltip));
-    }
-    button
 }
 
 /// An activatable row that runs a command (import, export).
