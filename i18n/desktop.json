@@ -1867,6 +1867,24 @@
         "en": "About the Keyboard",
         "ja": "齒盤について"
       }
+    },
+    "menuSettings": {
+      "comment": "Linux input-method menu row that opens the settings window. Names the keyboard because Fcitx5 lists its own 輸入法設定 in the same menu (Mozc: 「Mozc 設定」); wording from a Discord report 2026-09-24.",
+      "scope": {
+        "platforms": [
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "台語齒盤設定",
+        "tailo": "Tâi-gí Khí-puânn Siat-tīng",
+        "poj": "Tâi-gí Khí-pôaⁿ Siat-tēng",
+        "en": "Taigi Keyboard Settings",
+        "ja": "台湾語キーボードの設定"
+      }
     }
   }
 }
