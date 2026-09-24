@@ -86,7 +86,7 @@ Written through `dispatch::trace::event` (same file, same clock as the engine ev
 | `candidates` | `items` = `[{"hanji", "tl", "canonical_tl"}]`, display order: `hanji` (`""` for a romanization-only cell), `tl` = the reading as displayed, `canonical_tl` = identity (CLAUDE.md Core Principle #6) | `Emit::LookupTable` for the candidate list (the symbol picker is not traced) |
 | `session_end` | `source` | the daemon ended the composition (focus out, reset, disable) |
 
-The analyzer's "first hanji candidate" is the first `candidates` item whose `hanji` holds a CJK character (the §34 literal slot is skipped) and compares its `hanji` + `tl`.
+The analyzer's "first hanji candidate" is the first `candidates` item whose `hanji` holds a CJK character (the §34 literal slot is skipped) and compares its displayed `tl`, plus its `hanji` when the scenario names one (`analyze.matches_cell`).
 
 Still planned, specified by the PR that first writes them: memory sample, key-geometry manifest (mobile).
 
@@ -98,9 +98,9 @@ Still planned, specified by the PR that first writes them: memory sample, key-ge
 |---|---|
 | `id`, `source` | identity; where the expectation comes from |
 | `settings` | intent-level settings (`romanization`, `continuous_input`, `output`); each driver maps them to its platform's store |
-| `steps` | `text` (type these characters), `key` (a platform-neutral name: `enter`, `space`, `backspace`, `escape`, `0`–`9`; each driver translates it), `pick` (select the candidate with this `hanji` + `tl`). A driver maps each step to real input — hardware keys or taps — and never sets text directly |
+| `steps` | `text` (type these characters), `key` (a platform-neutral name: `enter`, `space`, `backspace`, `escape`, `0`–`9`; each driver translates it), `pick` (select the hanji candidate showing this `tl`, and this `hanji` when given). A driver maps each step to real input — hardware keys or taps — and never sets text directly |
 | `expect.committed` | the exact text the host field holds at the end |
-| `expect.first_hanji_candidate` | `{hanji, tl}` of the first hanji candidate in the last `candidates` event |
+| `expect.first_hanji_candidate` | `{tl[, hanji]}` of the first hanji candidate in the last `candidates` event — `hanji` only when the source names one (never taken from a run) |
 
 ## Run layout (driver → analyzer)
 
@@ -108,5 +108,7 @@ Still planned, specified by the PR that first writes them: memory sample, key-ge
 <run-dir>/<platform>/<scenario-id>/result.json   {"status": "ran" | "skipped" | "error", "reason": …, "observed_text": …}
 <run-dir>/<platform>/<scenario-id>/*.jsonl       every trace file the scenario produced (engine + platform processes)
 ```
+
+`<platform>` is the driver's name for what it drove: `linux-fcitx5`, `linux-ibus` (one directory per framework). Entry point: `make e2e PLATFORM=<platform>` (runs `tools/e2e/<platform>/run.sh`, then the analyzer; skill `/e2e`).
 
 `python3 tools/e2e/analyze.py --run <run-dir> [--baseline <earlier report.json>]` writes `report.md` (read by the agent) and `report.json` (baseline for the next run). Scenario status: `passed` / `failed` (expectation mismatch) / `skipped` (driver could not run, e.g. Windows box off — USER 2026-09-24) / `error`. Findings: `bug` (engine error / panic / adapter reject), `perf` (over `e2e/budgets.json` — platform → op, `*` wildcards, most specific wins — or p95 ≥ 1.5× and +2 ms vs baseline), `trace` (missing or wrong header, unparsable line), `unverified` (an expectation whose events the platform does not write yet). Exit 1 on any failed / error scenario or bug / perf / trace finding.

@@ -1,0 +1,92 @@
+name: Linux e2e
+
+# The end-to-end run on a real Linux (docs/architecture/e2e-testing-roadmap.md,
+# PR3b): the test-mode build (`make -C linux install E2E=1`) installed into a
+# private prefix, every e2e/scenarios/*.json typed through xdotool into a
+# GTK entry via Fcitx5 and via IBus under Xvfb, then tools/e2e/analyze.py.
+# The run directory (traces + report.md) is kept as the `linux-e2e` artifact.
+#
+# USER 2026-09-24: runs on PRs touching linux/, engine/ or e2e/, plus dispatch;
+# desktop/, dictionaries/ and tools/e2e/ are what those builds read too.
+on:
+  pull_request:
+    paths:
+      - 'linux/**'
+      - 'desktop/**'
+      - 'engine/**'
+      - 'dictionaries/**'
+      - 'e2e/**'
+      - 'tools/e2e/**'
+      - '.github/workflows/linux-e2e.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-e2e-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  PROTOC_VERSION: "36.1"
+
+jobs:
+  e2e:
+    name: scenarios through Fcitx5 + IBus
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build + e2e dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ibus ibus-gtk3 dbus-daemon dbus-x11 xvfb xauth xdotool \
+            python3-gi gir1.2-gtk-3.0 fcitx5 fcitx5-frontend-gtk3 \
+            libgtk-4-dev libadwaita-1-dev pkg-config \
+            fcitx5-modules-dev extra-cmake-modules cmake ninja-build
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          curl -sSL -o /tmp/protoc.zip \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          sudo unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Same workspaces as linux-build.yml, so the two jobs share a cache.
+          workspaces: |
+            linux -> target
+            desktop -> target
+
+      - name: Build + install the test-mode IME into a private prefix
+        run: make -C linux install E2E=1 PREFIX="$RUNNER_TEMP/prefix"
+
+      - name: Drive every scenario (Fcitx5, then IBus)
+        run: |
+          set -euo pipefail
+          for framework in fcitx5 ibus; do
+            xvfb-run -a dbus-run-session -- python3 tools/e2e/linux/driver.py \
+              --framework "$framework" --prefix "$RUNNER_TEMP/prefix" --out "$RUNNER_TEMP/run"
+          done
+
+      - name: Analyze
+        run: python3 tools/e2e/analyze.py --run "$RUNNER_TEMP/run"
+
+      - name: Report
+        if: always()
+        run: cat "$RUNNER_TEMP/run/report.md" >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Keep the run
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-e2e
+          path: ${{ runner.temp }}/run
+          if-no-files-found: ignore
