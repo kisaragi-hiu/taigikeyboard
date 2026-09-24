@@ -15,6 +15,7 @@ mod engine_settings;
 mod font_selection;
 pub mod keys;
 pub mod launch;
+pub mod update_schedule;
 
 pub use choices::{
     AppearanceMode, CandidateFontChoice, CandidateFontSelection, CandidateLayout,

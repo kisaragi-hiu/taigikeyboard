@@ -62,6 +62,7 @@ windows-numerics = "0.3"
 # consumes the same two; docs/architecture/linux-roadmap.md L2).
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 taigi-desktop-storage = { path = "../desktop/crates/taigi-desktop-storage" }
+taigi-desktop-update = { path = "../desktop/crates/taigi-desktop-update" }
 taigi-windows-tsf = { path = "crates/taigi-windows-tsf" }
 taigi-windows-platform = { path = "crates/taigi-windows-platform" }
 taigi-windows-update = { path = "crates/taigi-windows-update" }

@@ -5,8 +5,10 @@ The Windows input method checks for updates by fetching one static JSON file:
     https://taigikeyboard.tw/appcast/windows.json
 
 It is the macOS manifest's twin (`macos/updates/README.md`), same wire format,
-read by `windows/crates/taigi-windows-update`. `version` is compared against
-the running settings exe's version (the workspace's); when the manifest is
+read by `desktop/crates/taigi-desktop-update` (the check, shared with Linux)
+and acted on by `windows/crates/taigi-windows-update` (download + install).
+`version` is compared against the running settings exe's version (the
+workspace's); when the manifest is
 strictly newer, the 一般 pane offers the update: the copy downloads
 `packageURL` itself, verifies it, and — on a second press — opens the
 installer. Where it cannot (a manifest without a `packageURL` or without its

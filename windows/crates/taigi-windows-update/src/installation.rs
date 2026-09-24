@@ -6,12 +6,11 @@
 //! downloaded package has to prove is `verify::Admission`'s business, not
 //! this module's.
 
-use crate::manifest::{PublishedPackage, UpdateManifest};
-use crate::transport::PackageDownloader;
 use crate::verify::Admission;
 use std::path::{Path, PathBuf};
 use std::sync::{mpsc, Arc};
 use taigi_desktop_core::strings::StringKey;
+use taigi_desktop_update::{PackageDownloader, PublishedPackage, UpdateManifest};
 
 /// The staging folder, under the per-user local (non-roaming) data.
 const STAGING_FOLDER: &str = "Updates";
@@ -348,7 +347,7 @@ mod tests {
     }
 
     use super::*;
-    use crate::transport::FetchError;
+    use taigi_desktop_update::FetchError;
 
     struct Refusing;
 

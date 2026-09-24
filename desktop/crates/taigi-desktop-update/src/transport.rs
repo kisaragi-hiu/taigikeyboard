@@ -4,7 +4,7 @@
 //! `UpdatePackageDownload.run`: HTTPS only, 200 only, a size ceiling on
 //! both bodies, timeouts a stalled server cannot stretch.
 
-use crate::manifest::{ManifestError, UpdateManifest, MAXIMUM_MANIFEST_BYTES, PUBLISHED_URL};
+use crate::manifest::{ManifestError, UpdateManifest, MAXIMUM_MANIFEST_BYTES};
 use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
@@ -36,8 +36,12 @@ pub trait PackageDownloader: Send + Sync {
 
 /// `ureq` with the macOS session's timeouts: 5 s to connect and 15 s in all
 /// for the manifest; 30 s to connect and 20 minutes in all for a package.
-#[derive(Clone, Copy, Debug, Default)]
-pub struct HttpTransport;
+#[derive(Clone, Copy, Debug)]
+pub struct HttpTransport {
+    /// The platform's published manifest — its own `PUBLISHED_URL`
+    /// (`taigi_windows_update::PUBLISHED_URL` on Windows).
+    pub manifest_url: &'static str,
+}
 
 impl HttpTransport {
     /// The system TLS stack (schannel on Windows) with the SYSTEM roots:
@@ -78,7 +82,7 @@ impl ManifestFetcher for HttpTransport {
     fn fetch_published(&self) -> Result<UpdateManifest, FetchError> {
         let agent = Self::agent(Duration::from_secs(5), Duration::from_secs(15));
         let mut response = agent
-            .get(PUBLISHED_URL)
+            .get(self.manifest_url)
             .call()
             .map_err(|error| FetchError::Transport(error.to_string()))?;
         if !Self::is_acceptable(&response) {

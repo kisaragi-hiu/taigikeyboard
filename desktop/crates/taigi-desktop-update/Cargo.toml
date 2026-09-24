@@ -1,0 +1,23 @@
+[package]
+name = "taigi-desktop-update"
+description = "The desktop update check shared by the Windows and Linux settings windows: manifest, check outcome, HTTPS transport — port of the macOS UpdateChecker"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+# The one desktop-shared crate that touches the network. Only the settings
+# binaries link it; the input-method processes read the schedule from
+# `taigi-desktop-core` and never load a TLS stack.
+[dependencies]
+taigi-desktop-core.workspace = true
+log.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ureq.workspace = true
+
+[lints]
+workspace = true

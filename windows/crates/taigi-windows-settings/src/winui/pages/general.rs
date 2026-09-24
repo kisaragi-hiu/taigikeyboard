@@ -10,7 +10,7 @@ use crate::winui::window::{Message, ResetScope, SettingsWindow, SettingsWrite};
 use taigi_desktop_core::keys::ToneInputScheme;
 use taigi_desktop_core::settings::{keys, InputMode, SettingChoice};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
-use taigi_windows_update::checker;
+use taigi_desktop_update::checker;
 use windows_reactor::*;
 
 /// The spinner beside the 檢查更新 button.

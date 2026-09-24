@@ -1,6 +1,6 @@
 [package]
 name = "taigi-windows-update"
-description = "Update check, download, verification and the two-stage install offer — port of the macOS UpdateChecker / UpdateInstallation / UpdatePackageVerifier"
+description = "Windows update download, verification, toast and the two-stage install offer — port of the macOS UpdateInstallation / UpdatePackageVerifier over taigi-desktop-update"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -10,23 +10,11 @@ publish.workspace = true
 
 [dependencies]
 taigi-desktop-core.workspace = true
+taigi-desktop-update.workspace = true
 taigi-windows-platform.workspace = true
 log.workspace = true
-thiserror.workspace = true
-serde.workspace = true
-serde_json.workspace = true
 sha2.workspace = true
 uuid.workspace = true
-# HTTPS through the system TLS stack (schannel on Windows; the macOS host's
-# Security framework for the native tests). `transport.rs` selects
-# `TlsProvider::NativeTls`, and ureq gates that on `cfg!(feature =
-# "native-tls")` (`ureq-3/src/tls/mod.rs`) — a compile-time check against the
-# umbrella feature, not the `native-tls-no-default` subset it is built from.
-# Naming the subset alone builds fine and then panics on the first https
-# request. No bundled root store reaches the connector regardless: the roots
-# the umbrella adds are only read by the `RootCerts::WebPki` arm, and
-# `transport.rs` asks for `RootCerts::PlatformVerifier` (the OS store).
-ureq = { version = "3", default-features = false, features = ["native-tls"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { workspace = true, features = [
