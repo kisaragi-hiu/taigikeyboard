@@ -161,4 +161,4 @@ USER 2026-09-24: 「Ios我晚點加、windows如果關機就skip，其他go」
 
 1. iOS: the USER adds an XCUITest target in Xcode later; PR8 waits for it.
 2. Windows: the driver probes the box first; powered off, unreachable or locked console → the run reports `skipped` with the reason, never a failure.
-3. Linux CI matrix: runs on PRs touching `linux/`, `engine/` or `e2e/`, plus `workflow_dispatch`.
+3. Linux CI matrix: runs on PRs touching `linux/`, `engine/` or `e2e/`, plus `workflow_dispatch`. Superseded USER 2026-09-25 「全部都改成排程執行」: no PR trigger; full matrix nightly 19:00 UTC + `workflow_dispatch` only.
