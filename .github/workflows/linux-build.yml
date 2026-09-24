@@ -438,7 +438,10 @@ jobs:
             fcitx5 --verbose="*=5" > "'"$log"'" 2>&1 &
             call() { dbus-send --session --print-reply --dest=org.fcitx.Fcitx5 /controller "org.fcitx.Fcitx.Controller1.$@"; }
             for i in $(seq 1 40); do call AvailableInputMethods > /dev/null 2>&1 && break; sleep 0.5; done
-            call AvailableInputMethods | grep -q "\"taigikeyboard\""
+            # Captured, not piped into grep -q: an early grep exit would
+            # SIGPIPE dbus-send and pipefail would fail the step.
+            ims="$(call AvailableInputMethods)"
+            grep -q "\"taigikeyboard\"" <<< "$ims"
             call GetConfig string:fcitx://config/addon/taigikeyboard > /dev/null
             sleep 1
             grep -q "Loaded addon taigikeyboard" "'"$log"'"
