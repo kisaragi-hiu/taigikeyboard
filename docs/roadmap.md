@@ -22,6 +22,56 @@ kautian subcollections (腔調 + 姓名附錄 toggles + 語音差異 詞級擴�
 
 ---
 
+### Linux update check + identical desktop menus (USER-scoped 2026-09-24)
+
+**Status**: Phase 0 (this section + project memory `project_linux_update_check.md`) in progress. Branch `feat/linux-update-check`.
+
+USER 2026-09-24: 「下一個round安排linux檢查更新」; 「我希望macos,windows,linux的選單內容都一致,包含i18n」. Round-start decisions (USER 2026-09-24): manual check **and** automatic notification; check logic lifted into a shared `desktop/` crate; one `appcast/linux.json` naming only the download page; widen 台語齒盤設定 to macOS + Windows this round. Reverses `docs/architecture/linux-roadmap.md` L10, whose premise ("packages are updated by the package manager") is false: `.deb` / `.rpm` / Arch packages ship only as GitHub release assets (no apt repository, COPR or AUR).
+
+#### Today (grounded in code)
+
+- Windows `windows/crates/taigi-windows-update`: `manifest.rs` (wire format, `DottedVersion`, `PUBLISHED_URL` :12), `checker.rs` (`Outcome`, 24 h `CHECK_INTERVAL_MS`, `is_due`, `stamp_next_check`, `record`, `claim_announcement`), `transport.rs` (ureq 3 native-tls, reads `PUBLISHED_URL` :81) have no Windows API; `installation.rs` / `verify.rs` (Authenticode, `unsafe`) / `toast.rs` (WinRT) are Windows-only. Callers: `taigi-windows-settings` `updates.rs:17`, `main.rs:101-150` (headless `--check-updates`: `is_due` on a plain load, then a separate stamp — two racing launches both fetch), `winui/window.rs:34`, `winui/pages/general.rs:13`, `winui/pane_planning.rs:23`.
+- macOS `UpdateChecker.swift` (`appcast/macos.json`; 30 s after launch + 24 h timer, `AppDelegate.swift:121-128`; `NSAlert` manual, `UNUserNotification` automatic, notified-version recorded only after the notification is posted, :350-359).
+- Linux: no check. `taigikeyboard-settings/src/pages/general.rs:98-121` = 目前版本 row + 去下載; `cli.rs:44` refuses `--check-now` / `--check-updates`; `lib.rs:26-86` is a single-instance `adw::Application` (`HANDLES_COMMAND_LINE`, id `tw.taigikeyboard.Settings`); `jobs.rs:8` = `gio::spawn_blocking` helper; `chrome.rs::menu_items` = 2 switch rows | 台語齒盤設定 | 關於齒盤; `taigi-linux-platform/src/launcher.rs:39` `spawn_detached` drops the `Child` unreaped.
+- Shared: `taigi-desktop-core::settings::keys` `UPDATE_NEXT_CHECK_MS` / `UPDATE_LAST_NOTIFIED_VERSION` / `UPDATE_PENDING_MANIFEST` (:140-151, unwritten on Linux); `settings::launch` `CHECK_NOW_FLAG` / `CHECK_UPDATES_FLAG`. Every `desktop.update*` string is already scoped `linux`.
+- Site: `scripts/announce-release.sh:171-182` writes `_data/linux_release.json` (+ rpm, arch) but no appcast; `wait_for_manifest` polls macOS + Windows only (:194-197; URLs `scripts/lib/release-site.sh:22-23`).
+- Menus: Windows `lang_bar.rs:104-136` and Linux `chrome.rs:49-81` build the same row list twice; macOS `TaigiInputController.swift:440-479` a third time. macOS + Windows label the settings row `CommonSettings` (設定), Linux `desktop.menuSettings` (台語齒盤設定, linux-only scope, #172).
+
+#### Design (Codex ANALYSIS-ONLY pre-review + `/simplify` 2026-09-24 applied)
+
+- **Schedule in core, network in its own crate.** `taigi-desktop-core::update` = the pure schedule over the update keys: `CHECK_INTERVAL_MS`, `is_due`, `stamp_next_check`, new `claim_due_check` (due test + stamp in one `store.update` closure; the loser exits — closes the two-launch race on both desktops, and IBus + Fcitx5 activating together). New `desktop/crates/taigi-desktop-update` = `manifest` + `checker` + `transport` + `ManualOutcome::alert_text` + the headless sequence (claim → check → record → claim announcement → `Option<UpdateManifest>` to announce). Only the settings binaries link it, so ureq never reaches the IBus engine or the Fcitx5 addon `.so`. The manifest URL is a field of `HttpTransport`, one const per caller crate. No re-export shim: the ~6 Windows imports are rewritten.
+- **Linux manual check**: `taigikeyboard-settings` `updates.rs` = check → deliver → `ManualOutcome` only (download-page offer; no install stage), fetched through `jobs::spawn`, answered in an `adw::AlertDialog` (pattern `pages/custom_dictionary.rs:738-771`); the version row gains 檢查更新 and the pending state (有新版本 {version} · 去下載). `--check-now` accepted; menu row 檢查更新 → `launcher::check_for_updates()` (`--pane general --check-now`, Windows `settings_launcher.rs:54-59`).
+- **Linux automatic check**: `chrome` asks on activation (IBus `Enable` / `FocusIn`, Fcitx5 `activate` already rebuild the menu through `chrome`, so no new FFI) against an `AtomicI64` next-check on `Runtime` (loaded once; bumped +24 h before the spawn, so a binary that fails to start is not respawned per focus), spawning `taigikeyboard-settings --check-updates` through `taigi-linux-platform` — the precedent `chrome.rs:21` `open_settings`. Spawned children are reaped on a thread. The headless path branches inside `connect_command_line`, never builds a window, posts a `gio::Notification` (default action opens 一般), holds the app until the notification is handed off. `tw.taigikeyboard.Settings.desktop` gains `DBusActivatable=true` plus a D-Bus service file so a click after the sender exited still reaches the app.
+- **TLS**: ureq native-tls on Linux too (OS trust store, distro security updates; same provider as Windows). Cost stated: OpenSSL headers in the Linux build containers, `.rpm` / PKGBUILD build deps; runtime `libssl` resolved by `dpkg-shlibdeps` / rpm auto-requires.
+- **Menus identical**: one ordered row list in `taigi-desktop-core` (`MenuCommand` = shortcut action | settings | check updates | about, with its `StringKey`); Windows and Linux map it to their ids, macOS keeps its Swift twin guarded by a unit test listing the same keys. `desktop.menuSettings` scope widened to macOS + Windows; `common.json` `CommonSettings` comment updated.
+
+#### Phases
+
+| # | PR | Type | Content | Status |
+|---|---|---|---|---|
+| 0 | admin | docs | this section + project memory | In progress |
+| 1 | `refactor(desktop): lift update check out of the Windows crate` | Refactor — Windows behavior freeze (wire parsing, Failed → keep pending, stamp-before-fetch, pending cleared on UpToDate, once-per-version toast) | core `update` schedule + `taigi-desktop-update` crate; `taigi-windows-update` keeps install / verify / toast; imports rewritten | Pending |
+| 2 | site `taigikeyboard.github.io` | Feature (site) | `appcast/linux.json` rendered from `_data/linux_release.json` (the `.deb`'s data file): `version` + `downloadPageURL`, no package. Must be live before phase 3 merges | Pending |
+| 3 | `feat(linux): check for updates from the menu and 一般 pane` | Feature | Linux manual check (above); `announce-release.sh` `LINUX_MANIFEST_URL` + `wait_for_manifest`; docs: `linux-roadmap.md` L10, `linux-release.md` § No in-app update, `desktop-release.md` | Pending |
+| 4 | `feat(desktop): one menu row list on three desktops` | Feature (i18n + 3 platforms) | shared row list; macOS + Windows settings row → 台語齒盤設定; Swift test | Pending |
+| 5 | `feat(linux): automatic update check with a notification` | Feature | headless `--check-updates` + `claim_due_check`, engine trigger, reaping, `gio::Notification`, D-Bus activation files | Pending |
+
+#### Best practices alignment
+
+| 主流做法 | 來源 | 本 plan 對應 phase |
+|---|---|---|
+| Static appcast polled on a schedule, notify once per version, manual check from the app menu | macOS `UpdateChecker.swift:192-395` (Sparkle model); Windows W9 `taigi-windows-update/src/checker.rs` | 1, 3, 5 |
+| Pure logic in shared crates, OS handles in the shell | `.claude/rules/linux-guidelines.md`, `windows-guidelines.md`; `desktop/Cargo.toml` header (L2 / W1 split by dependency class) | 1 |
+| Clickable notification from a process that exits: `GApplication` + `DBusActivatable` | Gio `Notification` / `Application.send_notification` docs | 5 |
+
+**Deliberately not adopted**: in-app download + install on Linux (`.deb` / `.rpm` need root; three formats); per-format manifests (no in-app install to use a package URL — YAGNI); a systemd user timer (packaging change for what the always-running engine already sees); rustls (would diverge from the Windows provider for one binary); the menu list generated into Swift (five rows — a test is cheaper). **Departure from mainstream**: distro IBus engines (`ibus-rime`, `ibus-mozc`) do not check for updates because a repository updates them; this project ships no repository, so L10's precedent does not apply.
+
+#### Dogfood
+
+New `Sn` on both Linux VMs (KDE + Fcitx5, GNOME + IBus): menu 檢查更新 → dialog; 一般 pane pending row; an older installed build gets one notification after activation and none on the next focus; menus identical on three desktops.
+
+---
+
 ### Learned phrases — a phrase composed segment by segment becomes a whole-buffer candidate (USER-scoped 2026-09-20)
 
 **Status**: PR1 engine #109 MERGED `42d4dc5a`, PR2 iOS #110 MERGED `b446d852`, PR3 Android #111 MERGED `3b936e81`, PR4 macOS + Windows #112 MERGED `9b6d6afe` (2026-09-20); #113 removed the toggle. **Follow-up round 2026-09-21 — own store** (§ below): PR-A iOS #125 `bf786a5a`, PR-B Android #126 `9eddf5f3`, PR-C macOS + Windows #127 `96eb2c79`, PR-D i18n #128 — ALL MERGED 2026-09-21. Dogfood S62 pending on all four (rewritten for the own store). Project memory `project_learned_phrases.md`.
