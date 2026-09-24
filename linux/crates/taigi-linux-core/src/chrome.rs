@@ -44,7 +44,7 @@ pub enum MenuItem {
 /// Windows `menu_rows`): the two switch rows under their 快捷鍵-pane names —
 /// romanization and candidate display mode, the Windows
 /// `MENU_SHORTCUT_ROWS`; not the 漢羅對調 swap, whose bare-backtick default
-/// the Mac's menu can never print — 設定台語齒盤 (Fcitx5 lists its own 輸入法設定
+/// the Mac's menu can never print — 台語齒盤設定 (Fcitx5 lists its own 輸入法設定
 /// in the same menu), then 關於. No 檢查更新 (roadmap L10).
 pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
     let strings = runtime.strings();

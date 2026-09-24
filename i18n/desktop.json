@@ -1879,9 +1879,9 @@
         ]
       },
       "values": {
-        "hanji": "設定台語齒盤",
-        "tailo": "Siat-tīng Tâi-gí Khí-puânn",
-        "poj": "Siat-tēng Tâi-gí Khí-pôaⁿ",
+        "hanji": "台語齒盤設定",
+        "tailo": "Tâi-gí Khí-puânn Siat-tīng",
+        "poj": "Tâi-gí Khí-pôaⁿ Siat-tēng",
         "en": "Taigi Keyboard Settings",
         "ja": "台湾語キーボードの設定"
       }
