@@ -364,9 +364,16 @@ impl SettingsWindow {
         );
     }
 
-    /// Puts `pane` on screen (every pane has a page: `pages::build` matches
-    /// them all). Answers the pane shown.
+    /// Puts `pane` on screen; a pane this crate has no page for (字型管理,
+    /// a stored value from another desktop) lands on 一般, as on Windows.
+    /// Answers the pane shown.
     pub fn show_pane(&self, pane: SettingsPane) -> SettingsPane {
+        let pane = if pages::BUILT.contains(&pane) {
+            pane
+        } else {
+            log::warn!("pane.not_built pane={} — showing general", pane.raw());
+            SettingsPane::General
+        };
         self.current.set(pane);
         self.stack.set_visible_child_name(pane.raw());
         self.is_selecting.set(true);
@@ -407,7 +414,7 @@ impl SettingsWindow {
             self.sidebar.append(&row);
         }
         let mut pages = Vec::new();
-        for pane in SettingsPane::ALL.iter().copied() {
+        for pane in pages::BUILT {
             let page = pages::build(
                 pane,
                 self,

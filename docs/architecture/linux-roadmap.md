@@ -264,16 +264,16 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   (`CandidateItemView.swift:47-48` — identical semantics); `PageUp` / `PageDown` /
   `CursorUp` / `CursorDown` from the panel run the same `CandidateNavigation` intents the
   keys do. 外觀 rows that the panel owns are **not shown** on Linux: 候選字大小, 候選窗大小,
-  字型, and the window's 外觀 mode (§ L3). The 字型管理 pane IS shown (USER 2026-09-24
-  「維持字型管理頁面,for linux,加上簡短說明」), with a different job: it lists the bundled
-  typefaces the package installs and the ones the user adds, as fontconfig FALLBACKS
-  (`𧉟` U+2725F has no glyph in Noto CJK; all four bundled faces have it), not a
-  selection; the panel's font is the framework's (Fcitx5 classic UI › 字體). No note over
-  the list (USER 2026-09-24 「把說明文字都拿掉,keep page clean」). `+` copies the file into `$XDG_DATA_HOME/fonts/taigikeyboard`, has
-  `fc-query` read the copy, and takes it back out when fontconfig cannot read it or
-  `fc-list` (read before the copy) already has one of its families — the Windows pane's
-  `take_in` (`linux/crates/taigikeyboard-settings/src/fonts.rs`); the job runs in the
-  window's shared work slot. A running process sees a change after it restarts. `候選窗排列` offers only
+  字型, and the window's 外觀 mode (§ L3). The 字型管理 pane is **not shown** either
+  (USER 2026-09-24 「for linux,拿掉字型管理頁面」, after a report that picking a typeface
+  there left the panel unchanged): the panel's font is the framework's — Fcitx5
+  › 附加元件 › 經典使用者介面 › 字體 (`classicui.conf` `Font=`), IBus › 偏好設定 › 使用自訂字型
+  under `ibus-ui-gtk3`, and nothing per input method under GNOME Shell, whose IBus popup
+  reads no font setting (GNOME 46 `ibusCandidatePopup.js`; `custom-font` verified to have
+  no effect on the Ubuntu 24.04 VM). The bundled typefaces install as system fonts (L7),
+  so they are in those pickers, and a user adds a typeface the system way
+  (`~/.local/share/fonts`). A stored / launched `fontManagement` pane lands on 一般.
+  `候選窗排列` offers only
   橫 / 直 (a stored expandable reads as 直, the key is never rewritten) and
   `候選字顯示方式` stays. The candidate window
   switch (`candidateWindowEnabled`) maps to "no lookup table" — identical semantics.
@@ -354,9 +354,8 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   `TAIGIKEYBOARD_PREFIX` (default `/usr`); `TAIGIKEYBOARD_DATA_DIR` at runtime overrides
   it for a development tree (`make -C linux run-engine`). The four bundled typefaces go to
   `${prefix}/share/fonts/{truetype,opentype}/taigikeyboard/` as system-wide fallbacks
-  (L4); the panel still draws in the desktop's font. The typefaces a user adds in 字型管理
-  go to `$XDG_DATA_HOME/fonts/taigikeyboard/` — fontconfig scans it, every program of
-  that user can fall back to them.
+  (`𧉟` U+2725F has no glyph in Noto CJK; all four bundled faces have it) and as
+  choices in the framework's font picker (L4); the panel draws in the font picked there.
 - **L8 Settings launcher.** The engine spawns `${prefix}/bin/taigikeyboard-settings` with
   the shared `taigi-desktop-core::settings::launch` contract (`--pane <raw>`; `--check-now`
   / `--check-updates` / `--prewarm` are Windows-only and rejected on Linux with a readable
@@ -433,7 +432,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 |---|---|---|---|---|
 | Candidate window | own `NSPanel`, 3 layouts | own D2D popup, 3 layouts | daemon lookup table, orientation from layout | platform-adapted presentation |
 | 外觀 rows 候選字大小 / 候選窗大小 / 字型 | yes | yes | hidden (panel-owned) | unsupported host capability |
-| 字型管理 pane | selects the candidate typeface | selects the candidate typeface | installs fallback typefaces, selects nothing | unsupported host capability |
+| 字型管理 pane | selects the candidate typeface | selects the candidate typeface | hidden (panel-owned; font set in Fcitx5 / IBus) | unsupported host capability |
 | Focus loss mid-composition | client commits | text stays as host left it | daemon commits (`PREEDIT_COMMIT`) | platform-adapted |
 | 中/英 Shift tap | none (OS switches sources) | yes | none (IBus switches engines) | identical to macOS |
 | Global chords | Carbon hotkeys, session-scoped | preserved keys + fallback | matched in `ProcessKeyEvent` while active | identical semantics |

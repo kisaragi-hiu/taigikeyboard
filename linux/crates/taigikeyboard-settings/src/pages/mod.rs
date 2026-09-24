@@ -8,7 +8,6 @@ pub mod appearance;
 pub mod custom_dictionary;
 pub mod dictionary_search;
 pub mod dictionary_sources;
-pub mod font_management;
 pub mod general;
 pub mod shortcuts;
 
@@ -20,6 +19,18 @@ use std::rc::Rc;
 use taigi_desktop_core::settings::{SettingChoice, SettingsDocument, SettingsKey, SettingsPane};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_storage::UserDataStores;
+
+/// The panes this crate draws, listed or not (辭典搜尋 and 關於 have no
+/// sidebar row, as on the other desktops).
+pub const BUILT: [SettingsPane; 7] = [
+    SettingsPane::General,
+    SettingsPane::Appearance,
+    SettingsPane::Shortcuts,
+    SettingsPane::DictionarySources,
+    SettingsPane::CustomDictionary,
+    SettingsPane::DictionarySearch,
+    SettingsPane::About,
+];
 
 /// A refresher: one row following the document.
 type Refresher = Box<dyn Fn(&SettingsDocument)>;
@@ -264,17 +275,17 @@ pub fn build(
 ) -> Page {
     let context = PageContext::new(window, strings, document, stores, job_slot);
     let widget = adw::PreferencesPage::new();
-    // Exhaustive: a pane added to `SettingsPane` fails to compile here
-    // until it has a page, rather than showing 一般 under the wrong title.
+    // Explicit per pane: a pane added to `BUILT` without a page is a
+    // mistake to hear about, not a 一般 page under the wrong title.
     let context = match pane {
         SettingsPane::General => general::build(context, &widget),
         SettingsPane::Appearance => appearance::build(context, &widget),
         SettingsPane::Shortcuts => shortcuts::build(context, &widget),
         SettingsPane::DictionarySources => dictionary_sources::build(context, &widget),
         SettingsPane::CustomDictionary => custom_dictionary::build(context, &widget),
-        SettingsPane::FontManagement => font_management::build(context, &widget),
         SettingsPane::DictionarySearch => dictionary_search::build(context, &widget),
         SettingsPane::About => about::build(context, &widget),
+        other => unreachable!("{other:?} is not in pages::BUILT"),
     };
     context.finish(widget)
 }

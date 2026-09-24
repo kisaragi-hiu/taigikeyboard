@@ -31,18 +31,13 @@ pub fn install_prefix() -> &'static str {
     option_env!("TAIGIKEYBOARD_PREFIX").unwrap_or("/usr")
 }
 
-/// The per-user directories, resolved but not yet created.
+/// The two per-user directories, resolved but not yet created.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct UserDirectories {
     /// `settings.json`.
     pub config: PathBuf,
     /// The learning databases and the custom dictionary.
     pub data: PathBuf,
-    /// The typefaces the user added in 字型管理: under the per-user font
-    /// directory fontconfig scans (`$XDG_DATA_HOME/fonts`), so every
-    /// application of this user — the framework's panel included — can fall
-    /// back to them. Not under `data`, which fontconfig never reads.
-    pub fonts: PathBuf,
 }
 
 impl UserDirectories {
@@ -61,7 +56,6 @@ impl UserDirectories {
         Some(Self {
             config: config.join(APPLICATION_DIRECTORY_NAME),
             data: data.join(APPLICATION_DIRECTORY_NAME),
-            fonts: data.join("fonts").join(APPLICATION_DIRECTORY_NAME),
         })
     }
 }
@@ -123,23 +117,6 @@ impl InstallLayout {
     /// artifacts (`DictionaryArtifacts::FILE_NAMES`).
     pub fn dictionaries_directory(&self) -> PathBuf {
         self.share_directory().join("dictionaries")
-    }
-
-    /// Where the installed copy of a bundled typeface file is:
-    /// `<prefix>/share/fonts/{truetype,opentype}/taigikeyboard/<file>`, the
-    /// Debian font-policy split by format — fontconfig scans both.
-    pub fn bundled_font_file(&self, file_name: &str) -> PathBuf {
-        let format_directory = if file_name.ends_with(".otf") {
-            "opentype"
-        } else {
-            "truetype"
-        };
-        self.prefix
-            .join("share")
-            .join("fonts")
-            .join(format_directory)
-            .join(APPLICATION_DIRECTORY_NAME)
-            .join(file_name)
     }
 
     /// `<prefix>/bin/taigikeyboard-settings`.
@@ -205,7 +182,6 @@ mod tests {
         .unwrap();
         assert_eq!(directories.config, PathBuf::from("/cfg/taigikeyboard"));
         assert_eq!(directories.data, PathBuf::from("/dat/taigikeyboard"));
-        assert_eq!(directories.fonts, PathBuf::from("/dat/fonts/taigikeyboard"));
     }
 
     #[test]
@@ -223,10 +199,6 @@ mod tests {
         assert_eq!(
             directories.data,
             PathBuf::from("/home/u/.local/share/taigikeyboard")
-        );
-        assert_eq!(
-            directories.fonts,
-            PathBuf::from("/home/u/.local/share/fonts/taigikeyboard")
         );
     }
 
@@ -250,14 +222,6 @@ mod tests {
         assert_eq!(
             layout.engine_binary(),
             PathBuf::from("/usr/local/libexec/ibus-engine-taigikeyboard")
-        );
-        assert_eq!(
-            layout.bundled_font_file("iansui_regular.ttf"),
-            PathBuf::from("/usr/local/share/fonts/truetype/taigikeyboard/iansui_regular.ttf")
-        );
-        assert_eq!(
-            layout.bundled_font_file("genyomin2tw_r.otf"),
-            PathBuf::from("/usr/local/share/fonts/opentype/taigikeyboard/genyomin2tw_r.otf")
         );
     }
 
