@@ -134,7 +134,8 @@ def wait_until(predicate, timeout_s: float, what: str) -> None:
 class Session:
     """One scenario: a fresh XDG tree, framework, host window and trace."""
 
-    def __init__(self, framework: str, prefix: Path, scenario: dict, work: Path) -> None:
+    def __init__(self, framework: str, prefix: Path, scenario: dict, work: Path, env: dict[str, str] | None = None) -> None:
+        """`env` replaces the Xvfb session's environment built here."""
         self.framework = framework
         self.work = work
         self.trace = work / "data" / TRACE_RELATIVE_PATH
@@ -149,7 +150,7 @@ class Session:
             json.dumps(settings_document(scenario.get("settings", {}))), encoding="utf-8"
         )
         module = "fcitx" if framework == "fcitx5" else "ibus"
-        self.env = {
+        self.env = env or {
             **os.environ,
             **prefix_environment(prefix),
             "HOME": str(work),
@@ -165,9 +166,9 @@ class Session:
     def run(self, command: list[str], **kwargs) -> subprocess.CompletedProcess:
         return subprocess.run(command, env=self.env, capture_output=True, text=True, timeout=STARTUP_TIMEOUT_S, check=False, **kwargs)
 
-    def spawn(self, command: list[str]) -> subprocess.Popen:
+    def spawn(self, command: list[str], env: dict[str, str] | None = None) -> subprocess.Popen:
         log = self.framework_log.open("a", encoding="utf-8")
-        process = subprocess.Popen(command, env=self.env, stdout=log, stderr=subprocess.STDOUT)
+        process = subprocess.Popen(command, env=env or self.env, stdout=log, stderr=subprocess.STDOUT)
         self.processes.append(process)
         return process
 
@@ -244,6 +245,9 @@ class Session:
             self.send_key("Tab")
         self.send_key("enter")
 
+    def checkpoint(self, step_index: int) -> None:
+        """After each step; the desktop driver keeps a screenshot here."""
+
     def finish(self) -> str:
         self.settle()
         self.host.send_signal(signal.SIGUSR1)
@@ -260,23 +264,26 @@ class Session:
                     process.kill()
 
 
-def drive(framework: str, prefix: Path, scenario: dict, out: Path) -> dict:
+def drive(new_session, scenario: dict, out: Path) -> dict:
+    """One scenario through `new_session(work, out)` — a `Session` (or a
+    subclass) over a fresh work directory."""
     out.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="taigi-e2e-") as temporary:
         work = Path(temporary)
         try:
-            session = Session(framework, prefix, scenario, work)
+            session = new_session(work, out)
         except UnsupportedScenario as reason:
             return {"status": "skipped", "reason": str(reason)}
         try:
             session.start()
-            for step in scenario.get("steps", []):
+            for index, step in enumerate(scenario.get("steps", [])):
                 if step["type"] == "text":
                     session.send_text(step["value"])
                 elif step["type"] == "key":
                     session.send_key(step["value"])
                 elif step["type"] == "pick":
                     session.pick(step)
+                session.checkpoint(index)
             result = {"status": "ran", "observed_text": session.finish()}
         except (ScenarioError, subprocess.SubprocessError, OSError) as error:
             result = {"status": "error", "reason": str(error)}
@@ -300,19 +307,34 @@ def main(argv: list[str] | None = None) -> int:
     if not args.skip and args.prefix is None:
         parser.error("--prefix is required unless --skip")
 
-    platform = f"linux-{args.framework}"
-    for scenario_id, scenario in analyze.load_scenarios(args.scenarios).items():
-        if args.only and scenario_id != args.only:
+    if args.skip:
+        run_scenarios(f"linux-{args.framework}", args.scenarios, args.only, args.out, skip=args.skip)
+        return 0
+    prefix = args.prefix.resolve()
+    run_scenarios(
+        f"linux-{args.framework}", args.scenarios, args.only, args.out,
+        drive_one=lambda scenario, out: drive(
+            lambda work, _out: Session(args.framework, prefix, scenario, work), scenario, out
+        ),
+    )
+    return 0
+
+
+def run_scenarios(platform: str, scenarios: Path, only: str | None, out_root: Path, drive_one=None, skip: str | None = None) -> None:
+    """Write <out_root>/<platform>/<scenario>/result.json for every scenario
+    (just `only` when given): `drive_one(scenario, out)`, or `skipped` with
+    the `skip` reason."""
+    for scenario_id, scenario in analyze.load_scenarios(scenarios).items():
+        if only and scenario_id != only:
             continue
-        out = args.out / platform / scenario_id
-        if args.skip:
+        out = out_root / platform / scenario_id
+        if skip:
             out.mkdir(parents=True, exist_ok=True)
-            result = {"status": "skipped", "reason": args.skip}
+            result = {"status": "skipped", "reason": skip}
         else:
-            result = drive(args.framework, args.prefix.resolve(), scenario, out)
+            result = drive_one(scenario, out)
         (out / "result.json").write_text(json.dumps(result, ensure_ascii=False), encoding="utf-8")
         print(f"{platform} {scenario_id}: {result['status']} {result.get('reason', result.get('observed_text', ''))}")
-    return 0
 
 
 if __name__ == "__main__":

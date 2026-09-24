@@ -1,6 +1,11 @@
 {
   "_comment": "Engine time per request in microseconds (trace engine_request.dur_us), keyed platform -> op; '*' matches any, the most specific entry wins. Starting values from the <50 ms keystroke budget (.claude/rules/rust-best-practices.md §3); each platform PR calibrates its own from real runs — never loosen one to hide a regression.",
   "engine_request_us": {
-    "*": { "*": { "p95": 20000, "max": 50000 } }
+    "*": { "*": { "p95": 20000, "max": 50000 } },
+    "_linux-kde-fcitx5": "VirtualBox on the win box runs in NEM mode (VBS holds VT-x): every op 5-30x the UTM guest. Calibrated 2026-09-24 from the first run (fetch_at_pos p95 46.5 ms / max 92.7 ms, derive_custom_search_keys p95 26.1 ms) with ~2x headroom.",
+    "linux-kde-fcitx5": {
+      "*": { "p95": 50000, "max": 100000 },
+      "composing.fetch_at_pos": { "p95": 100000, "max": 200000 }
+    }
   }
 }

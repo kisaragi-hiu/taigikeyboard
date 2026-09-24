@@ -109,6 +109,6 @@ Still planned, specified by the PR that first writes them: memory sample, key-ge
 <run-dir>/<platform>/<scenario-id>/*.jsonl       every trace file the scenario produced (engine + platform processes)
 ```
 
-`<platform>` is the driver's name for what it drove: `linux-fcitx5`, `linux-ibus` (one directory per framework). Entry point: `make e2e PLATFORM=<platform>` (runs `tools/e2e/<platform>/run.sh`, then the analyzer; skill `/e2e`).
+`<platform>` is the driver's name for what it drove: `linux-fcitx5`, `linux-ibus` (Xvfb, one directory per framework), `linux-gnome-ibus`, `linux-kde-fcitx5` (real desktop sessions; each scenario dir also holds `shot-<step>.png`, or `shot-<step>.missing` with the reason, as evidence the analyzer ignores). Entry point: `make e2e PLATFORM=<platform>` (runs `tools/e2e/<platform>/run.sh`, then the analyzer; skill `/e2e`).
 
 `python3 tools/e2e/analyze.py --run <run-dir> [--baseline <earlier report.json>]` writes `report.md` (read by the agent) and `report.json` (baseline for the next run). Scenario status: `passed` / `failed` (expectation mismatch) / `skipped` (driver could not run, e.g. Windows box off — USER 2026-09-24) / `error`. Findings: `bug` (engine error / panic / adapter reject), `perf` (over `e2e/budgets.json` — platform → op, `*` wildcards, most specific wins — or p95 ≥ 1.5× and +2 ms vs baseline), `trace` (missing or wrong header, unparsable line), `unverified` (an expectation whose events the platform does not write yet). Exit 1 on any failed / error scenario or bug / perf / trace finding.
