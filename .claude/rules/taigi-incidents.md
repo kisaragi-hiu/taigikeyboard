@@ -27,3 +27,7 @@ Project-specific imperative rules distilled from past incidents. The dated narra
 ## Phonetics (`.claude/rules/phonetics.md`, CLAUDE.md Core Principle #3)
 
 - **Authoritative-source-only**: never remove or infer a TL / POJ / TPS rule from dictionary or test absence. `iri` / `erk` / `eeh` are dialectal finals (`knowledge/taigi-phonetics-reference.md` §3.2.6). TPS has its own tone marks (`engine/phonetics/src/tps.rs::ZHUYIN_TONES`) — not digit tones, not bopomofo.
+
+## Privacy (public repository since 2026-09-07)
+
+- **Account-bound tooling stays private**: skills or scripts tied to a personal account (mailbox triage, chat-server triage, OAuth clients, runtime state) live in the maintainer's private dotfiles repo, never under `.claude/`. A doc never spells out a personal address or an account / project / server ID — "a former work address", "the maintainer's author email". `personal-email` (`.gitleaks.toml`) and the private denylist (`scripts/private-denylist-scan.sh`) gate commits; neither sees PR bodies or issues, so check those by hand. History is not rewritten (USER 2026-09-24: 「不改寫歷史,但我希望未來可以避免類似的事情發生」).

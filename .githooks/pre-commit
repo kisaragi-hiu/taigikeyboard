@@ -1,22 +1,21 @@
 #!/usr/bin/env bash
-# Blocks a commit that stages a credential. Activated per clone by `make hooks`,
-# which sets core.hooksPath; a clone that never runs it commits with no gate, and
-# `--no-verify` skips it. There is no CI net behind it — the repository's only
-# workflow builds Windows release tags — so this hook is the only gate.
+# Blocks a commit that stages a credential or a personal identifier. Activated per
+# clone by `make hooks`, which sets core.hooksPath; a clone that never runs it
+# commits with no local gate, and `--no-verify` skips it. The credential scan also
+# runs in CI (.github/workflows/secrets.yml); the personal-identifier check cannot,
+# because its list is private (scripts/private-denylist-scan.sh).
 #
-# The scan itself is scripts/gitleaks-scan.sh, shared with `make scan-secrets`,
+# The credential scan is scripts/gitleaks-scan.sh, shared with `make scan-secrets`,
 # so the entry points cannot drift apart.
 set -uo pipefail
 
 REPOSITORY_DIR="$(git rev-parse --show-toplevel)"
+status=0
 
 if ! command -v gitleaks >/dev/null 2>&1; then
-  echo "pre-commit: gitleaks not installed — staged changes were NOT scanned." >&2
+  echo "pre-commit: gitleaks not installed — staged changes were NOT scanned for credentials." >&2
   echo "  brew install gitleaks" >&2
-  exit 0
-fi
-
-if ! "$REPOSITORY_DIR/scripts/gitleaks-scan.sh" --staged; then
+elif ! "$REPOSITORY_DIR/scripts/gitleaks-scan.sh" --staged; then
   cat >&2 <<'MSG'
 
 pre-commit: if that was a finding, it is shown redacted above.
@@ -24,7 +23,13 @@ pre-commit: if that was a finding, it is shown redacted above.
   false positive -> add its fingerprint to .gitleaksignore, with a comment saying
                     what the value actually is
   real secret    -> unstage it, rotate the credential, and keep it out of the tree
+  email address  -> describe the person or role instead; a public project address
+                    belongs in the personal-email allowlist in .gitleaks.toml
 
 MSG
-  exit 1
+  status=1
 fi
+
+"$REPOSITORY_DIR/scripts/private-denylist-scan.sh" --staged || status=1
+
+exit "$status"

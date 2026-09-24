@@ -7,7 +7,7 @@ DICT := dictionary
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
 .PHONY: build test test-crate doc dict dogfood e2e help \
-        fmt lint hooks scan-secrets scan-secrets-full \
+        fmt lint hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         macos-release desktop-release desktop-patch desktop-announce version-mobile version-desktop \
         windows-check windows-release desktop-check linux-check \
@@ -251,6 +251,13 @@ scan-secrets:
 scan-secrets-full:
 	./scripts/gitleaks-scan.sh --full
 
+# Scan every tracked text file for the personal identifiers in the maintainer's
+# private denylist (see scripts/private-denylist-scan.sh; the pre-commit hook runs
+# the same list over staged additions). Binaries and untracked files are not read.
+# Without the list it checks nothing and passes.
+scan-private:
+	./scripts/private-denylist-scan.sh --tree
+
 # Pull the latest remote-default-branch commit for the taigi-converter submodule
 # into the working tree. Submodules always record a pinned SHA, so review + commit
 # the gitlink bump afterwards.
@@ -286,6 +293,7 @@ help:
 	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"
 	@echo "  make scan-secrets       Scan for credentials since the last clean full scan"
 	@echo "  make scan-secrets-full  Rescan the whole history and re-baseline .gitleaks-scanned"
+	@echo "  make scan-private       Scan tracked files against the maintainer's private denylist"
 	@echo ""
 	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
 	@echo "  make lint               cargo clippy + spotlessCheck (Android Lint disabled)"
