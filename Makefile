@@ -270,6 +270,7 @@ help:
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make e2e PLATFORM=linux End-to-end run on the Linux VM (test-mode build) + analyzer report"
+	@echo "  make e2e PLATFORM=linux-desktop  Same, inside both Linux VMs' real desktop sessions (GNOME+IBus, KDE+Fcitx5)"
 	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
 	@echo "  make desktop-release    Stage all three desktop installers on the draft (Mac + hosted runners)"
 	@echo "  make desktop-patch PLATFORM=linux  Stage ONE platform's patch release on its own draft"
