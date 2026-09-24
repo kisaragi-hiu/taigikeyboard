@@ -17,6 +17,8 @@ WINDOWS_SITE_PATH="_data/windows_release.json"
 # Linux has site data but no manifest: a `.deb` is not updated in place
 # (docs/architecture/linux-release.md § No in-app update).
 LINUX_SITE_PATH="_data/linux_release.json"
+LINUX_RPM_SITE_PATH="_data/linux_rpm_release.json"
+LINUX_ARCH_SITE_PATH="_data/linux_arch_release.json"
 MACOS_MANIFEST_URL="https://taigikeyboard.tw/appcast/macos.json"
 WINDOWS_MANIFEST_URL="https://taigikeyboard.tw/appcast/windows.json"
 

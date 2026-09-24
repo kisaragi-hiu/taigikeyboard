@@ -1,0 +1,49 @@
+# The Fedora package (`make -C linux rpm`): the same staged `make install`
+# root the `.deb` packs, never a second build inside rpmbuild — one install
+# layout for every format. `@VERSION@` / `@STAGEROOT@` are rendered by the
+# Makefile. Runtime `Requires` for the linked libraries come from rpm's own
+# ELF scan (the dpkg-shlibdeps of this format); only the framework alternative
+# and fontconfig (the 字型管理 pane runs fc-query / fc-list / fc-cache) are named.
+Name:           taigikeyboard
+Version:        @VERSION@
+# No %{?dist}: the asset name the release scripts look for is fixed
+# (`scripts/lib/desktop-release.sh` LINUX_RPM_ASSET).
+Release:        1
+Summary:        Taiwanese (Tâi-gí) input method — Fcitx5 addon and IBus engine
+License:        Apache-2.0 AND OFL-1.1
+URL:            https://taigikeyboard.tw
+ExclusiveArch:  x86_64
+Requires:       (fcitx5 or ibus)
+Requires:       fontconfig
+
+# Prebuilt binaries, already stripped (`strip = true` in the release
+# profile): nothing for a debuginfo subpackage to hold.
+%global debug_package %{nil}
+
+%description
+台語齒盤: TL / POJ romanization in, Hanji and romanization candidates out,
+continuous multi-syllable typing, over the same engine as the iOS, Android,
+macOS and Windows keyboards. Ships the Fcitx5 addon (primary), the IBus
+engine, the dictionaries, four Han typefaces (SIL OFL) as fontconfig
+fallbacks and a GTK 4 / libadwaita settings window.
+
+%install
+cp -a @STAGEROOT@/. %{buildroot}/
+
+%files
+%{_bindir}/taigikeyboard-settings
+%{_libexecdir}/ibus-engine-taigikeyboard
+%{_libdir}/fcitx5/libtaigikeyboard.so
+%{_datadir}/fcitx5/addon/taigikeyboard.conf
+%{_datadir}/fcitx5/inputmethod/taigikeyboard.conf
+%{_datadir}/ibus/component/taigikeyboard.xml
+%{_datadir}/taigikeyboard/
+%{_datadir}/applications/tw.taigikeyboard.Settings.desktop
+%{_datadir}/icons/hicolor/*/apps/taigikeyboard.png
+# Fedora's base packages own neither parent: without these a removal would
+# leave them behind unowned.
+%dir %{_datadir}/fonts/truetype
+%dir %{_datadir}/fonts/opentype
+%{_datadir}/fonts/truetype/taigikeyboard/
+%{_datadir}/fonts/opentype/taigikeyboard/
+%{_docdir}/taigikeyboard/

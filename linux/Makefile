@@ -25,7 +25,7 @@ PREFIX ?= /usr
 DESTDIR ?=
 VERSION := $(shell grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
 
-.PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component deb run-engine run-settings clean
+.PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component deb rpm arch run-engine run-settings clean
 
 help:
 	@echo "Linux input method — dev loop"
@@ -42,6 +42,8 @@ help:
 	@echo "  make install       - (Linux) install both shells + dictionaries into PREFIX=$(PREFIX) (DESTDIR honoured)"
 	@echo "  make uninstall     - (Linux) remove what install put there; user data stays"
 	@echo "  make deb           - (Linux) build target/taigikeyboard_<version>_amd64.deb from the install layout (dpkg-deb)"
+	@echo "  make rpm           - (Fedora) build target/taigikeyboard-<version>-1.x86_64.rpm from the install layout (rpmbuild)"
+	@echo "  make arch          - (Arch, non-root) build target/taigikeyboard-<version>-1-x86_64.pkg.tar.zst from the install layout (makepkg)"
 	@echo "  make run-engine    - (Linux) run the IBus engine from this tree against a running ibus-daemon (RUST_LOG=debug, repo dictionaries)"
 	@echo "  make run-settings  - Open the settings window from this tree (macOS host too: GTK + libadwaita from Homebrew); PANE=about picks a pane"
 
@@ -175,6 +177,37 @@ deb:
 	dpkg-deb --build --root-owner-group $(DEB_ROOT) $(DEB_FILE)
 	dpkg-deb --info $(DEB_FILE)
 	@echo "built $(DEB_FILE)"
+
+# Stage the one install layout under $(1)/root and render template $(2) into
+# $(3) with the version and that root — shared by `rpm` and `arch`.
+define stage_and_render
+	rm -rf $(1)
+	$(MAKE) install PREFIX=/usr DESTDIR=$(CURDIR)/$(1)/root
+	sed -e 's#@VERSION@#$(VERSION)#g' -e 's#@STAGEROOT@#$(CURDIR)/$(1)/root#g' $(2) > $(3)
+endef
+
+# The Fedora package: the same staged install, packed by rpmbuild from
+# packaging/taigikeyboard.spec.in (rpm's ELF scan writes the library Requires,
+# as dpkg-shlibdeps does for the .deb). Run on Fedora (the CI container).
+RPM_DIR := target/rpm
+RPM_FILE := target/taigikeyboard-$(VERSION)-1.x86_64.rpm
+rpm:
+	$(call stage_and_render,$(RPM_DIR),packaging/taigikeyboard.spec.in,$(RPM_DIR)/taigikeyboard.spec)
+	rpmbuild -bb --define "_topdir $(CURDIR)/$(RPM_DIR)" $(RPM_DIR)/taigikeyboard.spec
+	cp $(RPM_DIR)/RPMS/x86_64/taigikeyboard-$(VERSION)-1.x86_64.rpm $(RPM_FILE)
+	rpm -qip $(RPM_FILE)
+	@echo "built $(RPM_FILE)"
+
+# The Arch package: the same staged install, packed by makepkg from
+# packaging/PKGBUILD.in. Run on Arch as a non-root user (makepkg refuses root).
+ARCH_DIR := target/arch
+ARCH_FILE := target/taigikeyboard-$(VERSION)-1-x86_64.pkg.tar.zst
+arch:
+	$(call stage_and_render,$(ARCH_DIR),packaging/PKGBUILD.in,$(ARCH_DIR)/PKGBUILD)
+	cd $(ARCH_DIR) && PKGDEST=$(CURDIR)/target PKGEXT=.pkg.tar.zst makepkg --force --nodeps
+	test -f $(ARCH_FILE)
+	pacman -Qip $(ARCH_FILE)
+	@echo "built $(ARCH_FILE)"
 
 # The dev loop on a Linux box with ibus-daemon up: the engine from this tree,
 # reading the repo's dictionaries, logging every key. `ibus engine

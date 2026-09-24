@@ -5,10 +5,12 @@ name: Linux build
 # engine links, runs the Linux workspace's tests, and smokes the engine
 # against a real ibus-daemon — the daemon must be able to spawn the binary
 # from the component XML and complete `CreateEngine`, which is the wire's
-# first byte-level contract. Every run also packs the `.deb` and keeps it as
-# the workflow artifact `linux-deb`.
+# first byte-level contract. Every run also packs the three packages — the
+# `.deb` here, the Fedora `.rpm` and the Arch `.pkg.tar.zst` in their own
+# distribution containers — and keeps them as the workflow artifacts
+# `linux-deb` / `linux-rpm` / `linux-arch`.
 #
-# On a dispatch from `scripts/stage-desktop.sh` the run attaches the `.deb`
+# On a dispatch from `scripts/stage-desktop.sh` the run attaches the packages
 # to the `desktop-<version>` draft — the Linux half of a desktop release, the
 # way `windows-build.yml` is the Windows half (docs/architecture/linux-release.md).
 #
@@ -219,13 +221,163 @@ jobs:
           cat "$RUNNER_TEMP/ibus-daemon.log" 2>/dev/null || true
           ls -la "$RUNNER_TEMP" || true
 
+  # The Fedora package: the same `make install` layout packed by rpmbuild, in
+  # the distribution's own container so rpm's ELF scan writes Fedora's
+  # library Requires. `install-check` installs it into a clean container.
+  rpm:
+    name: Fedora .rpm
+    runs-on: ubuntu-24.04
+    container: fedora:44
+    if: >-
+      github.event_name != 'release' ||
+      startsWith(github.event.release.tag_name, 'desktop-')
+    timeout-minutes: 40
+    steps:
+      - name: Install build dependencies
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            git gcc gcc-c++ make cmake ninja-build extra-cmake-modules fcitx5-devel \
+            gtk4-devel libadwaita-devel pkgconf-pkg-config rpm-build unzip findutils
+
+      - uses: actions/checkout@v4
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          curl -sSL -o /tmp/protoc.zip \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+
+      - name: Install Rust toolchain
+        run: |
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: fedora
+          workspaces: linux -> target
+
+      - name: Build the .rpm
+        run: make -C linux rpm
+
+      - name: Checksum
+        run: cd linux/target && sha256sum taigikeyboard-*.x86_64.rpm | tee SHA256SUMS-rpm
+
+      - name: Upload the .rpm
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-rpm
+          path: |
+            linux/target/taigikeyboard-*.x86_64.rpm
+            linux/target/SHA256SUMS-rpm
+          if-no-files-found: error
+          retention-days: 14
+
+  # The Arch package: the same layout packed by makepkg, which refuses to run
+  # as root — so the build runs as an unprivileged user.
+  arch:
+    name: Arch .pkg.tar.zst
+    runs-on: ubuntu-24.04
+    container: archlinux:latest
+    if: >-
+      github.event_name != 'release' ||
+      startsWith(github.event.release.tag_name, 'desktop-')
+    timeout-minutes: 40
+    steps:
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            base-devel git cmake ninja extra-cmake-modules fcitx5 gtk4 libadwaita pkgconf unzip rustup
+
+      - uses: actions/checkout@v4
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          curl -sSL -o /tmp/protoc.zip \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+
+      - name: Build the package (unprivileged)
+        run: |
+          set -euo pipefail
+          useradd -m builder
+          chown -R builder "$GITHUB_WORKSPACE"
+          sudo -u builder bash -c 'set -euo pipefail; rustup default stable; make -C linux arch'
+
+      - name: Checksum
+        run: cd linux/target && sha256sum taigikeyboard-*-x86_64.pkg.tar.zst | tee SHA256SUMS-arch
+
+      - name: Upload the package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: linux-arch
+          path: |
+            linux/target/taigikeyboard-*-x86_64.pkg.tar.zst
+            linux/target/SHA256SUMS-arch
+          if-no-files-found: error
+          retention-days: 14
+
+  # Each package installed into a FRESH container of its distribution — no
+  # build dependency present to hide a missing runtime one — then every file
+  # the shells need is where the frameworks look, and every library the three
+  # ELF files link resolves. Behaviour on a desktop session is S74's.
+  install-check:
+    name: install check (${{ matrix.distro }})
+    needs: [rpm, arch]
+    runs-on: ubuntu-24.04
+    container: ${{ matrix.image }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: fedora
+            image: fedora:44
+            artifact: linux-rpm
+            install: dnf install -y ./taigikeyboard-*.x86_64.rpm
+            addon: /usr/lib64/fcitx5/libtaigikeyboard.so
+          - distro: arch
+            image: archlinux:latest
+            artifact: linux-arch
+            install: pacman -Syu --noconfirm && pacman -U --noconfirm ./taigikeyboard-*-x86_64.pkg.tar.zst
+            addon: /usr/lib/fcitx5/libtaigikeyboard.so
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+
+      - name: Install the package
+        run: ${{ matrix.install }}
+
+      - name: Files in place, every linked library resolved
+        shell: bash
+        env:
+          ADDON: ${{ matrix.addon }}
+        run: |
+          set -eu
+          for path in /usr/libexec/ibus-engine-taigikeyboard /usr/bin/taigikeyboard-settings "$ADDON" \
+                      /usr/share/fcitx5/addon/taigikeyboard.conf /usr/share/fcitx5/inputmethod/taigikeyboard.conf \
+                      /usr/share/ibus/component/taigikeyboard.xml /usr/share/taigikeyboard/dictionaries/dictionary.fst \
+                      /usr/share/applications/tw.taigikeyboard.Settings.desktop; do
+            test -e "$path" || { echo "::error::$path missing after install"; exit 1; }
+          done
+          for elf in /usr/libexec/ibus-engine-taigikeyboard /usr/bin/taigikeyboard-settings "$ADDON"; do
+            # ldd itself must succeed: a failure (bad ELF) would otherwise
+            # read as "nothing missing".
+            libs="$(ldd "$elf" 2>&1)" || { echo "$libs"; echo "::error::ldd failed on $elf"; exit 1; }
+            if grep 'not found' <<< "$libs"; then
+              echo "::error::$elf links a library the package does not pull in"
+              exit 1
+            fi
+          done
+
   # The release half: only a dispatch from `main` by `stage-desktop.sh`,
   # carrying the commit it staged, attaches — onto a DRAFT targeting that
   # commit, never over an asset already there. What the maintainer tests on
   # the draft is what a publish ships. The only job that can write.
   attach:
     name: attach to the draft
-    needs: build
+    needs: [build, rpm, arch, install-check]
     if: >-
       github.repository == 'taigikeyboard/taigikeyboard' &&
       github.event_name == 'workflow_dispatch' &&
@@ -240,10 +392,11 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: linux-deb
+          pattern: linux-*
+          merge-multiple: true
           path: linux/target
 
-      - name: Attach the .deb to the draft release
+      - name: Attach the three packages to the draft release
         working-directory: linux
         env:
           GH_TOKEN: ${{ github.token }}
@@ -278,7 +431,12 @@ jobs:
               exit 1
           }
           cd target
-          package="taigikeyboard_${version}_amd64.deb"
-          sha256sum "$package" > "$package.sha256"
-          gh release upload "$tag" "$package" "$package.sha256" --repo "$GITHUB_REPOSITORY"
-          echo "attached $package to $tag (built from $GITHUB_SHA)"
+          # The names scripts/lib/desktop-release.sh looks for (LINUX_*_ASSET).
+          for package in "taigikeyboard_${version}_amd64.deb" \
+                         "taigikeyboard-${version}-1.x86_64.rpm" \
+                         "taigikeyboard-${version}-1-x86_64.pkg.tar.zst"; do
+            test -f "$package" || { echo "::error::$package was not built"; exit 1; }
+            sha256sum "$package" > "$package.sha256"
+            gh release upload "$tag" "$package" "$package.sha256" --repo "$GITHUB_REPOSITORY"
+            echo "attached $package to $tag (built from $GITHUB_SHA)"
+          done

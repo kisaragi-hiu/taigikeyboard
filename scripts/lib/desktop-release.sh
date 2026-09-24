@@ -43,9 +43,13 @@ RELEASE_TITLE="Taigi Keyboard Desktop $SHORT_VERSION"
 # rather than as an error. A throwaway build appends its qualifier to the stem.
 MACOS_ASSET="TaigiKeyboard-$SHORT_VERSION.pkg"
 WINDOWS_ASSET="TaigiKeyboard-$SHORT_VERSION.exe"
-# Debian's own file-name convention (name_version_arch.deb), which is what
-# `linux/Makefile`'s `deb` target writes.
+# Each Linux format in its own distribution's file-name convention, which is
+# what `linux/Makefile`'s `deb` / `rpm` / `arch` targets write: Debian
+# (name_version_arch.deb), Fedora (name-version-release.arch.rpm), Arch
+# (name-version-rel-arch.pkg.tar.zst).
 LINUX_ASSET="taigikeyboard_${SHORT_VERSION}_amd64.deb"
+LINUX_RPM_ASSET="taigikeyboard-${SHORT_VERSION}-1.x86_64.rpm"
+LINUX_ARCH_ASSET="taigikeyboard-${SHORT_VERSION}-1-x86_64.pkg.tar.zst"
 
 # A file's SHA-256 as lowercase hex, on either host: macOS ships `shasum`, Git
 # Bash on the Windows box ships `sha256sum`. It is what the Windows manifest
