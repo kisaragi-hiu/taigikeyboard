@@ -390,6 +390,11 @@ jobs:
       # spawned the binary and CreateEngine answered.
       - name: IBus spawns the engine
         shell: bash
+        # No X server: the display name only names the bus address file both
+        # the daemon and the engine resolve (~/.config/ibus/bus/<id>-unix-<n>);
+        # `--panel disable` keeps the daemon off the display.
+        env:
+          DISPLAY: ":0"
         run: |
           set -euxo pipefail
           export XDG_CONFIG_HOME="$RUNNER_TEMP/xdg-config" XDG_DATA_HOME="$RUNNER_TEMP/xdg-data"
