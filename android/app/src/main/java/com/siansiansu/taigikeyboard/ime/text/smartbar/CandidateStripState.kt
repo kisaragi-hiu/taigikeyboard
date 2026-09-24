@@ -64,6 +64,10 @@ data class CandidateCellText(
 val CandidateCellText.showsSubtitle: Boolean
     get() = !subtitle.isNullOrEmpty() && subtitle != title
 
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift displayTitle / displaySubtitle
+// and the desktop PresentedCandidate one-script cells. Drift causes silent divergence
+// (one platform shows a subtitle under roman-only, or still renders the superseded one-label 濫 cell).
+
 /**
  * Arm order — hanji-less rows are roman regardless of mode; TPS precedes
  * ROMAN_ONLY / COMBINED so TPS ignores the setting; COMBINED renders ONE
@@ -74,9 +78,6 @@ val CandidateCellText.showsSubtitle: Boolean
  * swap decides the lead otherwise. `displayRoman` is already TPS-converted
  * by the caller when relevant.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift displayTitle / displaySubtitle
-// and the desktop PresentedCandidate one-script cells. Drift causes silent divergence
-// (one platform shows a subtitle under roman-only, or still renders the superseded one-label 濫 cell).
 fun candidateCellText(
     hanzi: String?,
     displayRoman: String,

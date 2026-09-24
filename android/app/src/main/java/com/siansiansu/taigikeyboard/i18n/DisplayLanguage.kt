@@ -78,8 +78,7 @@ enum class DisplayLanguage(
      * concrete authored language via [resolveAutomatic]; every other case is itself. [deviceLanguageSubtag]
      * is the lowercased device-OS language subtag (e.g. "ja", "zh", "en"), injected by the caller.
      */
-    fun effectiveLanguage(deviceLanguageSubtag: String): DisplayLanguage =
-        if (this == SYSTEM) resolveAutomatic(deviceLanguageSubtag) else this
+    fun effectiveLanguage(deviceLanguageSubtag: String): DisplayLanguage = if (this == SYSTEM) resolveAutomatic(deviceLanguageSubtag) else this
 
     companion object {
         // Default selection before the user ever picks a language: SYSTEM (Automatic), so a fresh install
@@ -121,7 +120,6 @@ enum class DisplayLanguage(
          * Maps a persisted tag to a selectable language. Unknown or removed tags resolve to [HANJI];
          * "system" is selectable, so it round-trips to [SYSTEM].
          */
-        fun fromTag(tag: String): DisplayLanguage =
-            entries.firstOrNull { it.tag == tag } ?: HANJI
+        fun fromTag(tag: String): DisplayLanguage = entries.firstOrNull { it.tag == tag } ?: HANJI
     }
 }

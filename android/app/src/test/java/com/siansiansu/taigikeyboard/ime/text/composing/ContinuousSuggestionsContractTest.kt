@@ -36,7 +36,6 @@ import org.junit.Test
  * tests await Robolectric / mockk infra.
  */
 class ContinuousSuggestionsContractTest {
-
     /**
      * v3.5.8 Phase 9 Item 5 — builds a [RustEngineBridge.ContinuousCandidate]
      * with default `roman`/`hanji` matching the test fixture's `displayText`.
@@ -57,18 +56,19 @@ class ContinuousSuggestionsContractTest {
         roman: String? = null,
         hanji: String? = null,
         canonicalTl: String? = null,
-    ): RustEngineBridge.ContinuousCandidate = RustEngineBridge.ContinuousCandidate(
-        consumedSpanStart = consumedSpanStart,
-        consumedSpanEnd = consumedSpanEnd,
-        syllableCount = syllableCount,
-        displayText = displayText,
-        score = score,
-        form = form,
-        mode = mode,
-        roman = roman ?: displayText,
-        hanji = hanji,
-        canonicalTl = canonicalTl ?: roman ?: displayText,
-    )
+    ): RustEngineBridge.ContinuousCandidate =
+        RustEngineBridge.ContinuousCandidate(
+            consumedSpanStart = consumedSpanStart,
+            consumedSpanEnd = consumedSpanEnd,
+            syllableCount = syllableCount,
+            displayText = displayText,
+            score = score,
+            form = form,
+            mode = mode,
+            roman = roman ?: displayText,
+            hanji = hanji,
+            canonicalTl = canonicalTl ?: roman ?: displayText,
+        )
 
     @Test
     fun `slot 0 is candidate top with isContinuous flag, no composing cell`() {
@@ -411,7 +411,8 @@ class ContinuousSuggestionsContractTest {
      */
     @Test
     fun `CandidateMessage roman field round-trips through wire`() {
-        val msg = CandidateMessage.newBuilder()
+        val msg = CandidateMessage
+            .newBuilder()
             .setRoman("tâi-uân")
             .build()
         val bytes = msg.toByteArray()

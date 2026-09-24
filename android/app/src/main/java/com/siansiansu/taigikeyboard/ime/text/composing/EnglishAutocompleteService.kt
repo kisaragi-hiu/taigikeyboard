@@ -65,17 +65,18 @@ class EnglishAutocompleteService(
         }
     }
 
-    private fun loadMatcher(): EnglishWordMatcher? = try {
-        val entries = context.assets.open(ASSET_NAME).bufferedReader().use { reader ->
-            EnglishWordMatcher.parseEntries(reader.lineSequence())
+    private fun loadMatcher(): EnglishWordMatcher? =
+        try {
+            val entries = context.assets.open(ASSET_NAME).bufferedReader().use { reader ->
+                EnglishWordMatcher.parseEntries(reader.lineSequence())
+            }
+            logger.debug(TAG) { "[LOAD] english_freq.txt → ${entries.size} entries" }
+            EnglishWordMatcher(entries)
+        } catch (e: Exception) {
+            loadFailed = true
+            logger.e(TAG, "[LOAD] failed to load $ASSET_NAME — English suggestions disabled", e)
+            null
         }
-        logger.debug(TAG) { "[LOAD] english_freq.txt → ${entries.size} entries" }
-        EnglishWordMatcher(entries)
-    } catch (e: Exception) {
-        loadFailed = true
-        logger.e(TAG, "[LOAD] failed to load $ASSET_NAME — English suggestions disabled", e)
-        null
-    }
 
     // Separators are whitespace and `.,!?;:` — apostrophe and hyphen do not split, so `don't` stays one token.
     private fun extractCurrentWord(text: String): String {

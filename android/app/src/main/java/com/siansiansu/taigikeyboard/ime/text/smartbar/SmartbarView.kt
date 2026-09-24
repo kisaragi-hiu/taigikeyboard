@@ -215,8 +215,7 @@ class SmartbarView : LinearLayout {
     }
 
     // Chrome icon tint: the active light-only theme's role, else the night-aware attr.
-    private fun resolvedChromeIconTint(): Int =
-        chromeForegroundTint ?: getColorFromAttr(context, R.attr.smartbar_fgColor)
+    private fun resolvedChromeIconTint(): Int = chromeForegroundTint ?: getColorFromAttr(context, R.attr.smartbar_fgColor)
 
     companion object {
         private val TOOLBAR_ICON_BUTTON_IDS =

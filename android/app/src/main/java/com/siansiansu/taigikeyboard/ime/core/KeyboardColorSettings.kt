@@ -11,7 +11,13 @@ import kotlin.math.max
 import kotlin.math.sin
 
 /** A point in the unit square of a painted surface (0..1 on both axes; y down). */
-data class UnitPoint(val x: Float, val y: Float)
+data class UnitPoint(
+    val x: Float,
+    val y: Float,
+)
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeGradient
+// (stops + angle, same degree convention and unit-point math). Drift causes silent divergence.
 
 /**
  * A linear keyboard-background gradient: >=2 ARGB [stops] from start to end plus
@@ -23,8 +29,6 @@ data class UnitPoint(val x: Float, val y: Float)
  * every gradient a render site sees is renderable. Decode is forward-compatible:
  * an `angle` absent from old JSON reads as [DEFAULT_ANGLE].
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeGradient
-// (stops + angle, same degree convention and unit-point math). Drift causes silent divergence.
 data class ThemeGradient(
     val stops: List<Int>,
     val angle: Float = DEFAULT_ANGLE,
@@ -71,7 +75,10 @@ data class ThemeGradient(
          * Inverse of [direction]: the angle of a screen-space vector, in `-180..180` (callers
          * wrap it into `0 until 360` as they see fit).
          */
-        fun degrees(dx: Float, dy: Float): Float = Math.toDegrees(atan2(dx.toDouble(), -dy.toDouble())).toFloat()
+        fun degrees(
+            dx: Float,
+            dy: Float,
+        ): Float = Math.toDegrees(atan2(dx.toDouble(), -dy.toDouble())).toFloat()
 
         /** How far the end stop is lifted toward white in [seeded]. */
         private const val SEED_LIGHTEN_FACTOR = 0.45
@@ -93,10 +100,21 @@ data class ThemeGradient(
 }
 
 /** A direction in surface space (x right, y down). */
-data class SurfaceVector(val dx: Float, val dy: Float)
+data class SurfaceVector(
+    val dx: Float,
+    val dy: Float,
+)
 
 /** A rectangle in surface pixels (top-left origin). */
-data class SurfaceRect(val left: Float, val top: Float, val width: Float, val height: Float)
+data class SurfaceRect(
+    val left: Float,
+    val top: Float,
+    val width: Float,
+    val height: Float,
+)
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeImageBackground.
+// Drift causes silent divergence.
 
 /**
  * A photo as the keyboard surface: [file] is the JPEG's name inside the app-private
@@ -105,8 +123,6 @@ data class SurfaceRect(val left: Float, val top: Float, val width: Float, val he
  * (USER 2026-09-19 「圖片彩度不能太搶眼」). The overlay is white when the key text is dark
  * and black otherwise.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeImageBackground.
-// Drift causes silent divergence.
 data class ThemeImageBackground(
     val file: String,
     /** Opacity of the tone overlay, within [DIM_MIN]..[DIM_MAX] (the editor slider range). */
@@ -130,7 +146,11 @@ data class ThemeImageBackground(
          * (aspect fill, centred) — the photo's drawn frame over the whole keyboard, from
          * which a panel shows its slice.
          */
-        fun coverRect(imageWidth: Float, imageHeight: Float, bounds: SurfaceRect): SurfaceRect {
+        fun coverRect(
+            imageWidth: Float,
+            imageHeight: Float,
+            bounds: SurfaceRect,
+        ): SurfaceRect {
             if (imageWidth <= 0f || imageHeight <= 0f) return bounds
             val scale = max(bounds.width / imageWidth, bounds.height / imageHeight)
             val width = imageWidth * scale
@@ -152,6 +172,9 @@ data class ThemeImageBackground(
     }
 }
 
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeBackground
+// (same `type` discriminator and field names; iOS stores the colour as an RGBA object). Drift causes silent divergence.
+
 /**
  * What paints the keyboard surface — one field, mutually exclusive cases. The
  * candidate bar is the same surface: a solid background colours both, a gradient
@@ -163,17 +186,23 @@ data class ThemeImageBackground(
  * JSON: `{"type":"solid","color":argb}` / `{"type":"gradient","stops":[…],"angle":180}` /
  * `{"type":"image","file":"<uuid>.jpg","dim":0.35}`.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeBackground
-// (same `type` discriminator and field names; iOS stores the colour as an RGBA object). Drift causes silent divergence.
 sealed class ThemeBackground {
-    data class Solid(val color: Int) : ThemeBackground()
+    data class Solid(
+        val color: Int,
+    ) : ThemeBackground()
 
-    data class Gradient(val gradient: ThemeGradient) : ThemeBackground()
+    data class Gradient(
+        val gradient: ThemeGradient,
+    ) : ThemeBackground()
 
-    data class Image(val image: ThemeImageBackground) : ThemeBackground()
+    data class Image(
+        val image: ThemeImageBackground,
+    ) : ThemeBackground()
 
     /** The JSON discriminator, also the editor's 純色 / 漸層 / 照片 segmented choice. */
-    enum class Kind(val jsonValue: String) {
+    enum class Kind(
+        val jsonValue: String,
+    ) {
         SOLID("solid"),
         GRADIENT("gradient"),
         IMAGE("image"),
@@ -327,14 +356,15 @@ fun isDarkArgb(argb: Int): Boolean {
     return 0.299 * r + 0.587 * g + 0.114 * b < 0.5
 }
 
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift UserThemeSeed.
+// Drift = a new custom theme starts from different colors per platform.
+
 /**
  * The concrete light palette every user theme starts from, so a user theme never
  * carries a null (scheme-following) role and renders identically in light and dark
  * mode (USER 2026-09-19). Background is the light keyboard grey; the special key
  * fill is the iOS light dark-button grey.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift UserThemeSeed.
-// Drift = a new custom theme starts from different colors per platform.
 object UserThemeSeed {
     const val SOLID_COLOR = 0xFFD4D5DD.toInt()
     val BACKGROUND: ThemeBackground = ThemeBackground.Solid(SOLID_COLOR)
@@ -368,7 +398,10 @@ const val CANDIDATE_PRESSED_DEEPEN_FACTOR = 0.65
  * lifted by `c + (255 - c) * factor`, truncated toward zero (alpha forced 0xFF). Used to derive the
  * candidate first-candidate highlight — a light tint of a gradient theme's first stop.
  */
-fun lightenedArgb(argb: Int, factor: Double): Int {
+fun lightenedArgb(
+    argb: Int,
+    factor: Double,
+): Int {
     fun lift(c: Int): Int = c + ((255 - c) * factor).toInt()
     val r = lift(argb shr 16 and 0xFF)
     val g = lift(argb shr 8 and 0xFF)
@@ -381,7 +414,10 @@ fun lightenedArgb(argb: Int, factor: Double): Int {
  * multiplied and truncated toward zero (alpha forced 0xFF). Used to derive the candidate pressed
  * tint from a gradient theme's first stop.
  */
-fun deepenedArgb(argb: Int, factor: Double): Int {
+fun deepenedArgb(
+    argb: Int,
+    factor: Double,
+): Int {
     val r = ((argb shr 16 and 0xFF) * factor).toInt()
     val g = ((argb shr 8 and 0xFF) * factor).toInt()
     val b = ((argb and 0xFF) * factor).toInt()

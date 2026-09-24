@@ -7,9 +7,9 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.core.database.sqlite.transaction
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.assocLookup
 import com.siansiansu.taigikeyboard.engine.dictionaryFilters
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.db.rowCount
 import com.siansiansu.taigikeyboard.ime.core.db.upsert
 import com.siansiansu.taigikeyboard.ime.core.db.vacuumBestEffort
@@ -52,6 +52,7 @@ class NextWordService(
     companion object {
         private const val TAG = "NextWordService"
         private const val USER_DB_NAME = "user_association.db"
+
         // CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordSchema.schemaVersion`
         // and macOS `UserAssociationStore.schemaVersion`. Drift causes silent
         // divergence. v6: UNIQUE widened to carry `prev_tl`.
@@ -517,11 +518,11 @@ class NextWordService(
     // User DB — Schema, Indexes, Migrations
     // ------------------------------------------------------------------ //
 
-    /// The v6 table. The UNIQUE key carries `prev_tl` because a Taiwanese word
-    /// is the `(漢字, canonical TL)` pair (CLAUDE.md Core Principle #7) on the
-    /// bigram's PREVIOUS side as well as its next: 重/tîng → 複 and 重/tāng → 複
-    /// are two observations, not one. CROSS-PLATFORM INVARIANT — mirrors
-    /// ios/…/NextWord/Repository/NextWordSchema.swift `createTables`.
+    // / The v6 table. The UNIQUE key carries `prev_tl` because a Taiwanese word
+    // / is the `(漢字, canonical TL)` pair (CLAUDE.md Core Principle #7) on the
+    // / bigram's PREVIOUS side as well as its next: 重/tîng → 複 and 重/tāng → 複
+    // / are two observations, not one. CROSS-PLATFORM INVARIANT — mirrors
+    // / ios/…/NextWord/Repository/NextWordSchema.swift `createTables`.
     private fun createUserAssocTable(db: SQLiteDatabase) = db.execSQL(userAssocTableSql("user_association"))
 
     private fun createUserAssocIndexes(db: SQLiteDatabase) {

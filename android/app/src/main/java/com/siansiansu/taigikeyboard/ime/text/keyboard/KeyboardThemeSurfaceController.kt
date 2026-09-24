@@ -8,11 +8,11 @@ import android.graphics.drawable.PaintDrawable
 import android.graphics.drawable.ShapeDrawable
 import android.view.ViewGroup
 import com.siansiansu.taigikeyboard.R
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.InputView
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.ThemeBackground
 import com.siansiansu.taigikeyboard.ime.core.ThemeGradient
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.ThemeSurface
 import com.siansiansu.taigikeyboard.ime.core.UserThemeSeed
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarView
@@ -53,7 +53,10 @@ internal class KeyboardThemeSurfaceController(
             is ThemeBackground.Gradient -> gradientDrawable(background.gradient)
             is ThemeBackground.Image ->
                 // A missing photo file paints the seed grey so the keyboard never renders see-through.
-                CompositionRoot.shared(inputView.context).themeImages.bitmap(background.image.file)
+                CompositionRoot
+                    .shared(inputView.context)
+                    .themeImages
+                    .bitmap(background.image.file)
                     ?.let { ThemeImageDrawable(it, background.image.dim, surface.dimsTowardWhite) }
                     ?: ColorDrawable(UserThemeSeed.SOLID_COLOR)
         }
@@ -65,10 +68,14 @@ internal class KeyboardThemeSurfaceController(
      */
     private fun gradientDrawable(gradient: ThemeGradient): Drawable =
         PaintDrawable().apply {
-            shape = android.graphics.drawable.shapes.RectShape()
+            shape = android.graphics.drawable.shapes
+                .RectShape()
             shaderFactory =
                 object : ShapeDrawable.ShaderFactory() {
-                    override fun resize(width: Int, height: Int): Shader {
+                    override fun resize(
+                        width: Int,
+                        height: Int,
+                    ): Shader {
                         val (start, end) = gradient.unitPoints()
                         return LinearGradient(
                             start.x * width,

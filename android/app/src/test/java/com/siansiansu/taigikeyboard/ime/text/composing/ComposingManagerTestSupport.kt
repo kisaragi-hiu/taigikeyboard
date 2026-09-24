@@ -11,5 +11,4 @@ internal object UnusedSettingsProvider : EngineSettingsProvider {
         get() = error("JVM test path must not read settings")
 }
 
-internal fun composingManagerForTest(delegate: ComposingDelegate = DefaultComposingDelegate) =
-    ComposingManager(settingsProvider = UnusedSettingsProvider, delegate = delegate)
+internal fun composingManagerForTest(delegate: ComposingDelegate = DefaultComposingDelegate) = ComposingManager(settingsProvider = UnusedSettingsProvider, delegate = delegate)

@@ -568,8 +568,7 @@ class PrefHelper(
      * call. NOT for the per-keystroke render path: P2 routes that through
      * KeyboardAppearanceResolver's string-equality parse cache instead.
      */
-    fun resolvedAppearance(isDark: Boolean): ThemeAppearance =
-        ThemeResolver.resolved(selectedThemeId, isDark, legacyAppearance, loadUserThemes())
+    fun resolvedAppearance(isDark: Boolean): ThemeAppearance = ThemeResolver.resolved(selectedThemeId, isDark, legacyAppearance, loadUserThemes())
 
     var variantEnabled: Boolean by preference(PreferenceKeys.VARIANT_DICT_ENABLED, false)
 

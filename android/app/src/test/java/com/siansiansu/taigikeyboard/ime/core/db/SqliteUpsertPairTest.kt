@@ -76,7 +76,11 @@ class SqliteUpsertPairTest {
                 db.upsert(
                     NextWordService.BATCH_IMPORT_ASSOCIATION_UPDATE_SQL,
                     NextWordService.BATCH_IMPORT_ASSOCIATION_INSERT_SQL,
-                    count, "重", "tîng", "複", "hok",
+                    count,
+                    "重",
+                    "tîng",
+                    "複",
+                    "hok",
                 )
             import(5) // absent → inserted with 5
             import(3) // present → MAX(5, 3) = 5
@@ -103,8 +107,7 @@ class SqliteUpsertPairTest {
     @Test
     fun `frequency batch import merges by max count`() {
         open(freqDdl).use { db ->
-            fun import(count: Long) =
-                db.upsert(UserFrequencyService.BATCH_IMPORT_UPDATE_SQL, UserFrequencyService.BATCH_IMPORT_INSERT_SQL, count, "重", "tîng")
+            fun import(count: Long) = db.upsert(UserFrequencyService.BATCH_IMPORT_UPDATE_SQL, UserFrequencyService.BATCH_IMPORT_INSERT_SQL, count, "重", "tîng")
             import(5)
             import(3)
             assertEquals(listOf<Any?>(1, 5), db.row("SELECT id, count FROM user_frequency"))
@@ -118,8 +121,7 @@ class SqliteUpsertPairTest {
     @Test
     fun `custom entry upsert replaces fields by id and keeps created_at`() {
         open(CustomDictionaryService.CREATE_TABLE_SQL).use { db ->
-            fun upsert(roman: String) =
-                db.upsert(CustomDictionaryService.UPSERT_UPDATE_SQL, CustomDictionaryService.UPSERT_INSERT_SQL, roman, "台語", "notone", "abbrev", "num", "id-1")
+            fun upsert(roman: String) = db.upsert(CustomDictionaryService.UPSERT_UPDATE_SQL, CustomDictionaryService.UPSERT_INSERT_SQL, roman, "台語", "notone", "abbrev", "num", "id-1")
             upsert("tâi-gí")
             // Pin old timestamps so the second write is observable.
             db.exec("UPDATE custom_dictionary SET created_at = '2000-01-01 00:00:00', updated_at = '2000-01-01 00:00:00'")

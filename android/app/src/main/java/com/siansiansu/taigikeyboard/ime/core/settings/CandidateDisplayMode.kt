@@ -25,6 +25,9 @@ enum class CandidateDisplayMode(
     COMBINED("combined"),
     ;
 
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped derivation.
+    // Drift causes silent divergence (one platform commits roman under 漢羅濫, or hanji under roman-only).
+
     /**
      * Effective `isTranslateSwapped` under this mode. COMBINED forces `true`
      * — the pair is a compatibility projection of "cell leads with hanji,
@@ -32,17 +35,16 @@ enum class CandidateDisplayMode(
      * ROMAN_ONLY forces `false`. Neither touches storage, so returning to
      * SIDE_BY_SIDE restores the user's stored choice.
      */
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped derivation.
-    // Drift causes silent divergence (one platform commits roman under 漢羅濫, or hanji under roman-only).
     fun effectiveTranslateSwapped(stored: Boolean): Boolean = this == COMBINED || (stored && showsHanji)
+
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isOutputBothScripts derivation.
+    // Drift causes silent divergence (spurious bracket annotation under roman-only).
 
     /**
      * Effective `outputBothScripts` under this mode. Only ROMAN_ONLY
      * suppresses it; COMBINED keeps the stored value (bracket form becomes
      * `漢字 (羅馬字)`, same as today's swapped mode).
      */
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isOutputBothScripts derivation.
-    // Drift causes silent divergence (spurious bracket annotation under roman-only).
     fun effectiveOutputBothScripts(stored: Boolean): Boolean = stored && showsHanji
 
     /** Whether the cell shows any hanji — false only for [ROMAN_ONLY]; also gates the 括號標註 toggle's enabled state. */

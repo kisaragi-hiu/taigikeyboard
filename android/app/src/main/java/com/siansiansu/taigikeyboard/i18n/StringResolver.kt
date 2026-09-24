@@ -134,8 +134,7 @@ fun buildStringResolver(
  * for class-load data sources and Activity callbacks resolving outside a Composition. Reads the warmed
  * PrefHelper cache synchronously, so it reflects the language selected at call time.
  */
-fun Context.currentStringResolver(): StringResolver =
-    buildStringResolver(this, DisplayLanguage.fromTag(PrefHelper(this).displayLanguageTag))
+fun Context.currentStringResolver(): StringResolver = buildStringResolver(this, DisplayLanguage.fromTag(PrefHelper(this).displayLanguageTag))
 
 /**
  * The EFFECTIVE display language — the concrete authored language whose strings render now (SYSTEM is

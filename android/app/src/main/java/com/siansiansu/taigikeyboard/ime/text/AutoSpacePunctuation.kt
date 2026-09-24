@@ -25,9 +25,25 @@ object AutoSpacePunctuation {
     // attaching them would corrupt `guá "…"` into `guá" …`.
     private val ATTACHING: Set<Char> =
         setOf(
-            '。', '！', '？', '.', '!', '?',
-            '，', ',', '、', '；', ';', '：', ':',
-            ')', '）', ']', '】', '」', '』',
+            '。',
+            '！',
+            '？',
+            '.',
+            '!',
+            '?',
+            '，',
+            ',',
+            '、',
+            '；',
+            ';',
+            '：',
+            ':',
+            ')',
+            '）',
+            ']',
+            '】',
+            '」',
+            '』',
         )
 
     /** True when [text] is a single attaching-punctuation character. */

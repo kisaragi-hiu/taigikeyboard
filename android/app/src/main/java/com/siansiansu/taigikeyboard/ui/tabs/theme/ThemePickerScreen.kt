@@ -66,9 +66,9 @@ import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.BuiltInTheme
 import com.siansiansu.taigikeyboard.ime.core.BuiltInThemes
+import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.ThemeAppearance
-import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.ThemeId
 import com.siansiansu.taigikeyboard.ime.core.UserTheme
 import com.siansiansu.taigikeyboard.ime.core.UserThemeSeed

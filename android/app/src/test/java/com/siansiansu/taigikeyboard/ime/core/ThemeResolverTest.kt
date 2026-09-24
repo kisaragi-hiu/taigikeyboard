@@ -18,8 +18,10 @@ class ThemeResolverTest {
         shadow: Float = 0f,
     ): ThemeAppearance = ThemeAppearance.DEFAULT.copy(colors = colors, keyShadowIntensity = shadow)
 
-    private fun userTheme(id: String, appearance: ThemeAppearance): UserTheme =
-        UserTheme(id = id, name = "T", appearance = appearance, createdAt = 0L, updatedAt = 0L)
+    private fun userTheme(
+        id: String,
+        appearance: ThemeAppearance,
+    ): UserTheme = UserTheme(id = id, name = "T", appearance = appearance, createdAt = 0L, updatedAt = 0L)
 
     @Test
     fun resolved_default_returnsLegacyAppearance() {

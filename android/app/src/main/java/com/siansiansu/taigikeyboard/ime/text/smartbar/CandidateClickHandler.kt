@@ -170,14 +170,15 @@ class CandidateClickHandler(
         effectiveSwapped: Boolean,
         outputBothScripts: Boolean,
     ): ResolvedCommit {
-        word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT]?.let { cellScript ->
-            resolveMarkedCellCommit(
-                cellScript = cellScript,
-                roman = word.roman,
-                hanzi = word.hanzi,
-                outputBothScripts = outputBothScripts,
-            )
-        }?.let { return it }
+        word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT]
+            ?.let { cellScript ->
+                resolveMarkedCellCommit(
+                    cellScript = cellScript,
+                    roman = word.roman,
+                    hanzi = word.hanzi,
+                    outputBothScripts = outputBothScripts,
+                )
+            }?.let { return it }
         val bracketRoman =
             if (isTPSLayout) RustEngineBridge.tlDisplayToTps(word.roman, prefs.tpsOrMapsToER) else word.roman
         return resolveUnmarkedCommit(
@@ -429,6 +430,10 @@ private fun bracketedCommit(
     roman: String,
 ): String = "$hanzi ($roman)"
 
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
+// `formatOutputText` and macos/.../CandidateDocumentText.swift `resolved`. Drift causes
+// silent divergence (a missing or stray auto-space after a swapped-mode commit).
+
 /**
  * Document text + auto-space verdict for an UNMARKED commit — the three
  * sites that build the string from the candidate's own `(roman, hanzi)`
@@ -444,9 +449,6 @@ private fun bracketedCommit(
  * `bracketRoman` is the 括號標註 rendering of `roman` (TPS-converted in a
  * TPS layout); the bare `roman` is what a roman-led commit writes.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
-// `formatOutputText` and macos/.../CandidateDocumentText.swift `resolved`. Drift causes
-// silent divergence (a missing or stray auto-space after a swapped-mode commit).
 internal fun resolveUnmarkedCommit(
     roman: String,
     bracketRoman: String,
@@ -497,17 +499,22 @@ internal fun appendAutoSpaceIfEarned(
     taigikeyboard.armAutoSpaceSwap()
 }
 
+// CROSS-PLATFORM INVARIANT — one name on all four platforms: ios
+// `ActionHandler.rawPreeditWritesRomanization`, macOS/Windows
+// `AutoSpacePolicy.rawPreeditWritesRomanization(inputMode:)` /
+// `policies::raw_preedit_writes_romanization`.
+
 /**
  * Whether the layout in use composes romanization — TL and POJ do, TPS
  * composes Bopomofo, which takes no word spacing. The verdict for every commit
  * that writes the composition AS TYPED (Enter on the raw input), which does
  * not go through a candidate's rendering.
  */
-// CROSS-PLATFORM INVARIANT — one name on all four platforms: ios
-// `ActionHandler.rawPreeditWritesRomanization`, macOS/Windows
-// `AutoSpacePolicy.rawPreeditWritesRomanization(inputMode:)` /
-// `policies::raw_preedit_writes_romanization`.
 internal fun rawPreeditWritesRomanization(isTPSLayout: Boolean): Boolean = !isTPSLayout
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
+// `shouldAppendAutoSpace`. Drift causes silent divergence (one platform spacing after a
+// hyphen continuation).
 
 /**
  * Whether to insert the trailing auto-space: the setting is on, the commit
@@ -515,14 +522,14 @@ internal fun rawPreeditWritesRomanization(isTPSLayout: Boolean): Boolean = !isTP
  * hyphen continuation (a mid-word 連字 keeps composing). The Continuous
  * caller still owns the final-commit gate.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
-// `shouldAppendAutoSpace`. Drift causes silent divergence (one platform spacing after a
-// hyphen continuation).
 internal fun shouldAppendAutoSpace(
     isAutoSpaceEnabled: Boolean,
     wroteRomanization: Boolean,
     committedText: String,
 ): Boolean = isAutoSpaceEnabled && wroteRomanization && !committedText.endsWith("-")
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Keyboard/ActionHandler+Suggestions.swift marked-cell commit resolve
+// and the desktop `.alternate` commit rule. Drift causes silent divergence (a bracketed roman-cell commit, or a missing auto-space).
 
 /**
  * Document text + auto-space verdict for a 漢羅濫
@@ -535,8 +542,6 @@ internal fun shouldAppendAutoSpace(
  * Top-level pure function so the contract is unit-testable without
  * collaborators.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Keyboard/ActionHandler+Suggestions.swift marked-cell commit resolve
-// and the desktop `.alternate` commit rule. Drift causes silent divergence (a bracketed roman-cell commit, or a missing auto-space).
 internal fun resolveMarkedCellCommit(
     cellScript: String,
     roman: String,
@@ -558,13 +563,14 @@ internal fun resolveMarkedCellCommit(
         else -> null
     }
 
+// CROSS-PLATFORM INVARIANT — mirrors ios `ActionHandler.ResolvedCommit`,
+// macos `CandidateDocumentText.ResolvedCommit`, windows
+// `composing::document_text::ResolvedCommit`.
+
 /**
  * What one commit writes into the document, and whether that string carries
  * romanization — the single input the auto-space gate reads.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios `ActionHandler.ResolvedCommit`,
-// macos `CandidateDocumentText.ResolvedCommit`, windows
-// `composing::document_text::ResolvedCommit`.
 internal data class ResolvedCommit(
     val text: String,
     val wroteRomanization: Boolean,

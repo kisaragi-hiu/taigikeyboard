@@ -25,9 +25,13 @@ import kotlin.math.abs
  * Pure Kotlin stdlib — no Android, no I/O, no clock. The platform wrapper
  * ([EnglishAutocompleteService]) owns asset loading and lifecycle.
  */
-class EnglishWordMatcher(entries: List<WordEntry>) {
-
-    data class WordEntry(val word: String, val frequency: Long)
+class EnglishWordMatcher(
+    entries: List<WordEntry>,
+) {
+    data class WordEntry(
+        val word: String,
+        val frequency: Long,
+    )
 
     // Word-sorted index for prefix binary search; frequency kept parallel for ranking.
     private val sortedWords: List<String>
@@ -43,7 +47,10 @@ class EnglishWordMatcher(entries: List<WordEntry>) {
      * Returns up to [maxResults] suggestions for [token], re-cased to match it.
      * Empty when the token is blank or nothing matches.
      */
-    fun suggest(token: String, maxResults: Int): List<String> {
+    fun suggest(
+        token: String,
+        maxResults: Int,
+    ): List<String> {
         if (token.isEmpty() || maxResults <= 0) return emptyList()
         val lower = token.lowercase()
 
@@ -115,7 +122,10 @@ class EnglishWordMatcher(entries: List<WordEntry>) {
         return lo
     }
 
-    private fun applyCasing(candidate: String, token: String): String {
+    private fun applyCasing(
+        candidate: String,
+        token: String,
+    ): String {
         if (token.isEmpty()) return candidate
         if (token.length > 1 && token.all { it.isUpperCase() }) return candidate.uppercase()
         if (token[0].isUpperCase()) return candidate.replaceFirstChar { it.uppercaseChar() }

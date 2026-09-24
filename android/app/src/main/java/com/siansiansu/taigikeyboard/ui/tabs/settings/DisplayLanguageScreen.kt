@@ -38,8 +38,7 @@ import com.siansiansu.taigikeyboard.ui.theme.AppStyle
 // renders its endonym (own script, language-invariant). Shared by the picker rows and the settings-row
 // trailing value so the SYSTEM special-case lives in one place.
 @Composable
-fun displayLanguageLabel(language: DisplayLanguage): String =
-    if (language == DisplayLanguage.SYSTEM) L10n.settingsDisplayLanguageAutomatic else language.endonym
+fun displayLanguageLabel(language: DisplayLanguage): String = if (language == DisplayLanguage.SYSTEM) L10n.settingsDisplayLanguageAutomatic else language.endonym
 
 // Rows use selectable(role = RadioButton) so the selected state is announced by TalkBack — the
 // checkmark is decorative (contentDescription = null) and must not be read twice. Labels come from
@@ -90,8 +89,7 @@ fun DisplayLanguageScreen(
                                     selected = isSelected,
                                     role = Role.RadioButton,
                                     onClick = { onLanguageSelected(language) },
-                                )
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                                ).padding(horizontal = 20.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(

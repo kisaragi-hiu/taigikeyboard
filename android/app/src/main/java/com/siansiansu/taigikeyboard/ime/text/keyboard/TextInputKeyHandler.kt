@@ -13,10 +13,10 @@ import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
-import com.siansiansu.taigikeyboard.engine.isTpsToneMark
-import com.siansiansu.taigikeyboard.engine.transformInputCase
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.isTpsToneMark
+import com.siansiansu.taigikeyboard.engine.transformInputCase
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
@@ -584,6 +584,9 @@ internal class TextInputKeyHandler(
         }
     }
 
+    // CROSS-PLATFORM INVARIANT — mirrors iOS
+    // ActionHandler.insertNonComposingCharacter. Drift causes silent divergence.
+
     /**
      * Commit a non-composing character (punctuation / symbol), applying the
      * auto-space "smart punctuation" swap: when auto-space is active and the
@@ -591,9 +594,10 @@ internal class TextInputKeyHandler(
      * punctuation deletes that space and re-inserts it AFTER the punctuation
      * (`guá ` + `?` → `guá? `, never `guá ?`).
      */
-    // CROSS-PLATFORM INVARIANT — mirrors iOS
-    // ActionHandler.insertNonComposingCharacter. Drift causes silent divergence.
-    private fun commitNonComposingCharacter(ic: InputConnection, char: String) {
+    private fun commitNonComposingCharacter(
+        ic: InputConnection,
+        char: String,
+    ) {
         // No-selection guard: with an active selection the preceding space is
         // text before the selection, not an auto-space; the punctuation must
         // replace the selection normally (Codex P2).
@@ -611,7 +615,6 @@ internal class TextInputKeyHandler(
         }
         ic.commitText(char, 1)
     }
-
 }
 
 /**
@@ -653,7 +656,9 @@ internal sealed interface BackspaceDeletion {
     object CodePoint : BackspaceDeletion
 
     // Rich editor: delete the last grapheme cluster ([length] UTF-16 units).
-    data class Grapheme(val length: Int) : BackspaceDeletion
+    data class Grapheme(
+        val length: Int,
+    ) : BackspaceDeletion
 }
 
 /**

@@ -38,6 +38,7 @@ class UserFrequencyService(
     companion object {
         private const val TAG = "UserFrequencyService"
         private const val DATABASE_NAME = "user_frequency.db"
+
         // v3.6.1 R5: bumped 1 → 2 for the `(word, tl)` pair-key migration
         // (Core Principle #7). `onUpgrade` rebuilds the table.
         private const val DATABASE_VERSION = 2
@@ -99,6 +100,7 @@ class UserFrequencyService(
         const val NAME = "user_frequency"
         const val ID = "id"
         const val WORD = "word"
+
         // R5 (#7): canonical-TL reading. The identity is `(word, tl)`, so
         // 一字多音 (重/tîng vs 重/tāng) keep separate rows. `tl == ''` is the
         // legacy fallback bucket (pre-R5 rows / old-backup import).

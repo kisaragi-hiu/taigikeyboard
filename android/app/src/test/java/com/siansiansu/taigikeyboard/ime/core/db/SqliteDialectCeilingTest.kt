@@ -40,12 +40,12 @@ class SqliteDialectCeilingTest {
             mainKotlinSources(root)
                 .flatMap { file ->
                     stringLiteral.findAll(file.readText()).flatMap { literal ->
-                        forbidden.asSequence()
+                        forbidden
+                            .asSequence()
                             .filter { (_, regex) -> regex.containsMatchIn(literal.value) }
                             .map { (name, _) -> "${file.relativeTo(root)}: $name" }
                     }
-                }
-                .toList()
+                }.toList()
 
         assertEquals(
             "SQL syntax above the SQLite 3.22 ceiling (minSdk 28); see android-guidelines.md §8a",

@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
+import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.core.UserTheme
 import com.siansiansu.taigikeyboard.ime.core.UserThemeStore

@@ -5,9 +5,9 @@
 
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
-import android.content.Context
 import android.graphics.Paint
 import android.util.TypedValue
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -48,29 +48,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
-import com.siansiansu.taigikeyboard.engine.tlDisplayToTps
-import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.annotation.DrawableRes
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.tlDisplayToTps
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR
-import com.siansiansu.taigikeyboard.ime.core.ThemeSurface
-import com.siansiansu.taigikeyboard.ime.core.themeBackground
 import com.siansiansu.taigikeyboard.ime.core.CANDIDATE_PRESSED_DEEPEN_FACTOR
+import com.siansiansu.taigikeyboard.ime.core.ThemeSurface
 import com.siansiansu.taigikeyboard.ime.core.deepenedArgb
 import com.siansiansu.taigikeyboard.ime.core.lightenedArgb
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
+import com.siansiansu.taigikeyboard.ime.core.themeBackground
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.text.font.Typeface as ComposeTypeface
 
 private const val ITEMS_PER_PAGE = 20
 private const val PRIMARY_TEXT_SIZE_SP = 21f
@@ -526,7 +525,11 @@ private fun rememberCandidateOverlayColors(
     return remember(refreshKey, context, surface, candidateTextColor) {
         // Gradient themes tint first-candidate + pressed with the theme hue (deepened top stop),
         // matching the strip; flat themes keep the neutral key_bgColor / semiTransparentColor attrs.
-        val gradientTop = surface?.background?.asGradient?.stops?.first()
+        val gradientTop = surface
+            ?.background
+            ?.asGradient
+            ?.stops
+            ?.first()
         // Role-first foreground (mirrors the strip): a light-only theme's fixed
         // candidateTextColor keeps text/control glyphs dark on a light gradient in
         // system dark mode; null (adaptive default) falls back to the night attrs.

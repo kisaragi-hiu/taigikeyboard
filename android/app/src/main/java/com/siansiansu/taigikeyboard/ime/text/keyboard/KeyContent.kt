@@ -37,9 +37,9 @@ import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
-import com.siansiansu.taigikeyboard.ime.text.key.isTpsGlyphWithPopup
 import com.siansiansu.taigikeyboard.ime.text.key.KeyLabelCaseCache
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
+import com.siansiansu.taigikeyboard.ime.text.key.isTpsGlyphWithPopup
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 import java.util.Locale
 import kotlin.math.min
@@ -120,8 +120,7 @@ internal fun KeyContent(
                     color = Color.Black
                 }
             }
-        }
-        .background(Color(backgroundArgb), shape)
+        }.background(Color(backgroundArgb), shape)
     // Border follows the theme keyTextColor role first (falling back to the
     // adaptive keyFg), so the 框線 outline stays visible on a light-only gradient in
     // dark mode — same role-first rule the key glyph/label uses (mirrors iOS).

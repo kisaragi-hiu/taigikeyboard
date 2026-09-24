@@ -15,5 +15,4 @@ data class KeyData(
  * classify "TPS glyph key" identically; each site supplies its own
  * TPS-active check.
  */
-internal fun KeyData.isTpsGlyphWithPopup(): Boolean =
-    type == KeyType.CHARACTER && code == 0 && popup.isNotEmpty()
+internal fun KeyData.isTpsGlyphWithPopup(): Boolean = type == KeyType.CHARACTER && code == 0 && popup.isNotEmpty()

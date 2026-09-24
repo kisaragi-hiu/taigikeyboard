@@ -65,7 +65,10 @@ fun Modifier.themeBackground(
                         onDrawBehind { drawRect(brush) }
                     }
                 is ThemeBackground.Image ->
-                    CompositionRoot.shared(context).themeImages.bitmap(background.image.file)
+                    CompositionRoot
+                        .shared(context)
+                        .themeImages
+                        .bitmap(background.image.file)
                         ?.let { Modifier.themePhoto(it, background.image.dim, surface.dimsTowardWhite, topInsetPx) }
                         // A missing photo file paints the seed grey so the keyboard never renders see-through.
                         ?: Modifier.background(Color(UserThemeSeed.SOLID_COLOR))

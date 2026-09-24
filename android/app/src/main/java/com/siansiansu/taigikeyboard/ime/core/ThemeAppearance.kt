@@ -75,7 +75,6 @@ data class ThemeAppearance(
             )
         }
 
-        private fun JSONObject.optFloatOrNull(key: String): Float? =
-            if (has(key) && !isNull(key)) getDouble(key).toFloat() else null
+        private fun JSONObject.optFloatOrNull(key: String): Float? = if (has(key) && !isNull(key)) getDouble(key).toFloat() else null
     }
 }

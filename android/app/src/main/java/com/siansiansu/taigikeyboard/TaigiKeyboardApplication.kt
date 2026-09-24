@@ -1,8 +1,8 @@
 package com.siansiansu.taigikeyboard
 
 import android.app.Application
-import com.siansiansu.taigikeyboard.engine.lexiconInstall
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.lexiconInstall
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionaryConstants

@@ -184,8 +184,7 @@ fun RustEngineBridge.dictionaryFilters(toggles: RustEngineBridge.DictionaryToggl
                 .setAccentTaichung(toggles.kautianSubcoll.taichung)
                 .setNameAppendix(toggles.kautianSubcoll.nameAppendix)
                 .build(),
-        )
-        .build()
+        ).build()
     val payload = DictionaryFiltersRequest
         .newBuilder()
         .setToggles(protoToggles)
@@ -296,8 +295,16 @@ internal fun encodeKautianSubcollWire(toggles: RustEngineBridge.DictionaryToggle
     val sub = toggles.kautianSubcoll
     // Accent order MUST match config.yaml `dialect_columns` (subtag bit = 1 + index).
     val accents = listOf(
-        sub.lukang, sub.sansia, sub.taipak, sub.gilan, sub.tainan,
-        sub.kaohsiung, sub.kinmen, sub.makung, sub.sintik, sub.taichung,
+        sub.lukang,
+        sub.sansia,
+        sub.taipak,
+        sub.gilan,
+        sub.tainan,
+        sub.kaohsiung,
+        sub.kinmen,
+        sub.makung,
+        sub.sintik,
+        sub.taichung,
     )
     var subtag = 1 shl KAUTIAN_SUBTAG_MAIN_BIT // main always on when master on
     accents.forEachIndexed { index, enabled ->

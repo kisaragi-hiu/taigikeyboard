@@ -5,7 +5,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -30,7 +29,10 @@ class BuiltInThemesTest {
 
     @Test
     fun standardHead_isDefaultSentinel() {
-        val head = BuiltInThemes.families.first().themes.first()
+        val head = BuiltInThemes.families
+            .first()
+            .themes
+            .first()
         assertEquals(ThemeId.DEFAULT, head.id)
         assertEquals(StringKey.THEME_PALETTE_DEFAULT, head.displayNameKey)
     }

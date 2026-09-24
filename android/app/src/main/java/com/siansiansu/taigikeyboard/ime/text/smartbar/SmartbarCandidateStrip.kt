@@ -40,9 +40,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.engine.tlDisplayToTps
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.tlDisplayToTps
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import androidx.compose.ui.text.font.Typeface as ComposeTypeface

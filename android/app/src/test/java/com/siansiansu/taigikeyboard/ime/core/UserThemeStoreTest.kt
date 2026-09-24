@@ -19,7 +19,10 @@ class UserThemeStoreTest {
 
     // A fully seeded theme (what the editor saves), with a blue solid background so it
     // differs from the seed and survives load()'s seeding untouched.
-    private fun theme(name: String = "T", shadow: Float = 0f): UserTheme {
+    private fun theme(
+        name: String = "T",
+        shadow: Float = 0f,
+    ): UserTheme {
         val colors = UserThemeSeed.colors.copy(background = ThemeBackground.Solid(0xFF0000FF.toInt()))
         val appearance = ThemeAppearance.USER_THEME_SEED.copy(colors = colors, keyShadowIntensity = shadow)
         return UserTheme(UUID.randomUUID().toString(), name, appearance, createdAt = 0L, updatedAt = 0L)

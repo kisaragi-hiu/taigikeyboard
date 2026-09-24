@@ -16,9 +16,9 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-import com.siansiansu.taigikeyboard.ime.core.ThemeSurface
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.core.ThemeSurface
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord

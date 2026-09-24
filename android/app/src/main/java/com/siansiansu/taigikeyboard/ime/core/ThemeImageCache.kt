@@ -19,7 +19,10 @@ class ThemeImageCache(
 ) {
     private val cache =
         object : LruCache<String, Bitmap>(TOTAL_BYTES_LIMIT) {
-            override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
+            override fun sizeOf(
+                key: String,
+                value: Bitmap,
+            ): Int = value.byteCount
         }
 
     /** The decoded photo, or null when the file is missing / undecodable. */
@@ -38,7 +41,11 @@ class ThemeImageCache(
     fun sweep(themes: List<UserTheme>) {
         val referenced = themes.referencedPhotoFiles()
         store.sweep(referenced)
-        cache.snapshot().keys.filter { it !in referenced }.forEach { cache.remove(it) }
+        cache
+            .snapshot()
+            .keys
+            .filter { it !in referenced }
+            .forEach { cache.remove(it) }
     }
 
     companion object {
