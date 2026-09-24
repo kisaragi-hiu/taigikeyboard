@@ -145,6 +145,7 @@ class Session:
         self.keys_sent = 0
         self.processes: list[subprocess.Popen] = []
         self.host: subprocess.Popen | None = None
+        self.last_ibus_listing = ""
         (work / "config" / "taigikeyboard").mkdir(parents=True)
         (work / "config" / "taigikeyboard" / "settings.json").write_text(
             json.dumps(settings_document(scenario.get("settings", {}))), encoding="utf-8"
@@ -183,11 +184,10 @@ class Session:
             wait_until(self.fcitx5_owns_its_name, STARTUP_TIMEOUT_S, "fcitx5 to own org.fcitx.Fcitx5")
         else:
             self.spawn(["ibus-daemon", "--replace", "--panel", "disable", "--config", "disable"])
-            wait_until(
-                lambda: INPUT_METHOD_NAME in self.run(["ibus", "list-engine"]).stdout,
-                STARTUP_TIMEOUT_S,
-                "ibus-daemon listing the engine",
-            )
+            try:
+                wait_until(self.ibus_lists_engine, STARTUP_TIMEOUT_S, "ibus-daemon listing the engine")
+            except ScenarioError as timeout:
+                raise ScenarioError(f"{timeout}; last `ibus list-engine`: {self.last_ibus_listing!r}") from None
         self.host = subprocess.Popen([sys.executable, str(HOST_SCRIPT), str(self.host_out)], env=self.env)
         self.processes.append(self.host)
         search = self.run(["xdotool", "search", "--sync", "--name", "e2ehost"])
@@ -196,6 +196,14 @@ class Session:
             raise ScenarioError("the host window never mapped")
         self.run(["xdotool", "windowfocus", "--sync", window[0]])
         wait_until(self.activate, STARTUP_TIMEOUT_S, "the input method to be active on the focused field")
+
+    def ibus_lists_engine(self) -> bool:
+        listing = self.run(["ibus", "list-engine"])
+        if INPUT_METHOD_NAME in listing.stdout:
+            return True
+        # Kept for the timeout's reason: why the daemon never listed it.
+        self.last_ibus_listing = (listing.stdout + listing.stderr).strip()[-400:]
+        return False
 
     def fcitx5_owns_its_name(self) -> bool:
         owner = self.run([
