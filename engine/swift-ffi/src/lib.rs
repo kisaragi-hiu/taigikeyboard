@@ -6,7 +6,7 @@
 //! plan v3 §B3 so an oversized payload returns `FAIL_INVARIANT` instead of
 //! allocating without bound.
 
-use dispatch::{encode_error, log_level_to_byte, MAX_REQUEST_BYTES};
+use dispatch::{encode_error, log_level_to_byte};
 use protos::engine::ErrorCode;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::sync::{Mutex, Once, OnceLock};
@@ -29,6 +29,12 @@ use std::sync::{Mutex, Once, OnceLock};
 // benign FAIL_INVARIANT response rather than panicking. Production app code
 // never references this symbol; the test target does.
 //
+// `e2e_trace_open`: opens the test-build-only engine trace at `path`.
+// Always in the bridge (swift-bridge cannot cfg bridge items, as with
+// `panic_for_test`); without the `e2e-trace` feature its definition just
+// returns false and the library holds no trace code. Only `E2E_TRACE` Swift
+// builds call it.
+//
 // `SwiftLoggerSink`: Swift class registered through `install_logger_sink`
 // that receives every `log::Record`. The Swift side maps `level` to the
 // `LoggerBackend` protocol method (`error`, `warning`, `info`, `debug`).
@@ -39,6 +45,7 @@ mod ffi {
         fn install_logger_sink(sink: SwiftLoggerSink);
         fn set_log_level(level: u8);
         fn panic_for_test() -> Vec<u8>;
+        fn e2e_trace_open(path: String) -> bool;
     }
 
     extern "Swift" {
@@ -49,7 +56,7 @@ mod ffi {
 
 fn process_request_bytes(bytes: &[u8]) -> Vec<u8> {
     catch_unwind(AssertUnwindSafe(|| {
-        if bytes.len() > MAX_REQUEST_BYTES {
+        if dispatch::is_request_too_large(bytes.len()) {
             // JUSTIFICATION: mapped to FAIL_INVARIANT (not FAIL_PARSE) — bytes
             // may be wire-valid; the engine invariant violated is "request
             // size ≤ MAX_REQUEST_BYTES". Adding FAIL_SIZE would renumber proto
@@ -123,6 +130,16 @@ fn panic_for_test() -> Vec<u8> {
         }
     }))
     .unwrap_or_else(|_| encode_error(0, ErrorCode::FailInternal, 0))
+}
+
+#[cfg(feature = "e2e-trace")]
+fn e2e_trace_open(path: String) -> bool {
+    catch_unwind(AssertUnwindSafe(|| dispatch::trace::open(&path))).unwrap_or(false)
+}
+
+#[cfg(not(feature = "e2e-trace"))]
+fn e2e_trace_open(_path: String) -> bool {
+    false
 }
 
 // -- Logger glue ---------------------------------------------------------
