@@ -69,7 +69,9 @@ object BuiltInThemes {
      * only the key rendering differs. [idPrefix] keeps 經典 on the legacy
      * `standard*` ids.
      */
-    private enum class KeyStyle(val idPrefix: String) {
+    private enum class KeyStyle(
+        val idPrefix: String,
+    ) {
         CLASSIC("standard"), // filled keys (white over a gradient, adaptive for 預設)
         FRAMED("framed"), // transparent keys + outline border
         CLEAN("clean"), // transparent keys, no border
@@ -155,7 +157,10 @@ object BuiltInThemes {
      * fully adaptive (null); framed / clean 預設 carry only transparent key fills so
      * the adaptive background/text still show through and adapt to dark mode.
      */
-    private fun colorsFor(base: BaseColor, style: KeyStyle): KeyboardColorSettings? {
+    private fun colorsFor(
+        base: BaseColor,
+        style: KeyStyle,
+    ): KeyboardColorSettings? {
         base.gradient?.let { (top, bottom) ->
             val keyText = if (base.isDarkPalette) DARK_KEY_TEXT else LIGHT_KEY_TEXT
             val neutralFill = if (base.isDarkPalette) DARK_KEY_FILL else LIGHT_KEY_FILL
@@ -175,7 +180,13 @@ object BuiltInThemes {
      * the whole surface — the candidate bar is transparent over it. light/dark themes
      * pass their own keyText/neutralFill.
      */
-    private fun gradientColors(top: Int, bottom: Int, keyText: Int, neutralFill: Int, transparentKeys: Boolean): KeyboardColorSettings {
+    private fun gradientColors(
+        top: Int,
+        bottom: Int,
+        keyText: Int,
+        neutralFill: Int,
+        transparentKeys: Boolean,
+    ): KeyboardColorSettings {
         val fill = if (transparentKeys) TRANSPARENT_KEY_FILL else argb(neutralFill)
         return KeyboardColorSettings(
             background = ThemeBackground.Gradient(ThemeGradient(listOf(argb(top), argb(bottom)))),

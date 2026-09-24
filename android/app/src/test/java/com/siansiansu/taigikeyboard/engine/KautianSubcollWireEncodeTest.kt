@@ -38,8 +38,17 @@ class KautianSubcollWireEncodeTest {
         taichung: Boolean = false,
         nameAppendix: Boolean = false,
     ) = DictionaryToggles.KautianSubcoll(
-        lukang, sansia, taipak, gilan, tainan,
-        kaohsiung, kinmen, makung, sintik, taichung, nameAppendix,
+        lukang,
+        sansia,
+        taipak,
+        gilan,
+        tainan,
+        kaohsiung,
+        kinmen,
+        makung,
+        sintik,
+        taichung,
+        nameAppendix,
     )
 
     private fun toggles(
@@ -62,11 +71,20 @@ class KautianSubcollWireEncodeTest {
         kautianSubcoll = sub,
     )
 
-    private fun allSubcollOn() = subcoll(
-        lukang = true, sansia = true, taipak = true, gilan = true, tainan = true,
-        kaohsiung = true, kinmen = true, makung = true, sintik = true, taichung = true,
-        nameAppendix = true,
-    )
+    private fun allSubcollOn() =
+        subcoll(
+            lukang = true,
+            sansia = true,
+            taipak = true,
+            gilan = true,
+            tainan = true,
+            kaohsiung = true,
+            kinmen = true,
+            makung = true,
+            sintik = true,
+            taichung = true,
+            nameAppendix = true,
+        )
 
     /** master off ⇒ no high bits (kautian rows drop via the source-OR anyway). */
     @Test

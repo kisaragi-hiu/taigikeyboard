@@ -58,8 +58,7 @@ private fun emojiStringToCodePoints(emoji: String): List<Int> {
     return codePoints
 }
 
-private fun EmojiJsonEmoji.toKeyData(glyph: String): EmojiKeyData =
-    EmojiKeyData(emojiStringToCodePoints(glyph), name, name, keywords)
+private fun EmojiJsonEmoji.toKeyData(glyph: String): EmojiKeyData = EmojiKeyData(emojiStringToCodePoints(glyph), name, name, keywords)
 
 /**
  * Loads the bundled `emoji.json` (taigi-emojis) into an [EmojiLayoutDataMap].

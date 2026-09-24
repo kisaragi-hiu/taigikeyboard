@@ -15,6 +15,7 @@ private const val SIL_OPEN_FONT_LICENSE = "SIL Open Font License"
 private const val SIL_OPEN_FONT_LICENSE_11 = "SIL Open Font License 1.1"
 private const val CC_BY_ND_3_TW_LICENSE = "CC BY-ND 3.0 TW"
 private const val CC_BY_4_LICENSE = "CC BY 4.0"
+
 // NTCRI publishes no licence for the glossary text; its only statement covers the images.
 private const val CC_BY_NC_ND_IMAGES_LICENSE = "CC BY-NC-ND (images only)"
 private const val CC0_LICENSE = "CC0"

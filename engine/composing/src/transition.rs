@@ -831,6 +831,7 @@ fn commit_preedit_then_insert_external_under_continuous(
 // a mid-commit emits NO `CommitTextReplacingPreedit` — it only re-renders
 // the combined marked region; the single literal document write happens at
 // final-commit (whole composition) or via Enter (`commit_raw_continuous`).
+#[allow(clippy::too_many_arguments)]
 fn commit_continuous(
     state: &mut EngineState,
     display_text: String,

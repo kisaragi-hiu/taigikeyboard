@@ -1,7 +1,8 @@
 name: Engine
 
-# The shared Rust engine, gated on every change to it: tests, then formatting
-# for both Cargo workspaces. Ubuntu only — the engine has no platform code, and
+# The shared Rust engine, gated on every change to it: tests, clippy, then
+# formatting for the engine, Windows and desktop-shared workspaces (Linux gates
+# its own in linux-build.yml). Ubuntu only — the engine has no platform code, and
 # the platform builds that link it (Xcode, Gradle, SwiftPM, the TSF DLL) stay on
 # the maintainer's machines and the release runners; each needs a toolchain that
 # would cost more runner time than the tests it would run.
@@ -71,7 +72,7 @@ jobs:
       - name: Install the toolchain (host target only)
         run: |
           set -euo pipefail
-          rustup toolchain install stable --profile minimal --component rustfmt --no-self-update
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy --no-self-update
           cargo --version && rustc --version && protoc --version
 
       # Cached across runs by Cargo.lock hash. The workspace's own crates are
@@ -103,6 +104,15 @@ jobs:
 
       - name: cargo test (desktop-shared crates)
         run: cargo test --workspace --manifest-path desktop/Cargo.toml
+
+      # Same gate as `make lint`. The Windows workspace is not linted here: its
+      # crates need the Windows targets (`make windows-check` on a host with
+      # mingw-w64, the MSVC build in windows-build.yml).
+      - name: cargo clippy -D warnings (engine + desktop)
+        run: |
+          set -euo pipefail
+          cargo clippy --manifest-path engine/Cargo.toml --workspace --all-targets --locked -- -D warnings
+          cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
 
       - name: cargo fmt --check (engine + windows + desktop)
         run: |

@@ -5,7 +5,11 @@ import org.json.JSONObject
 
 /** The theme-photo file names the saved themes still reference — what a sweep keeps. */
 fun List<UserTheme>.referencedPhotoFiles(): Set<String> =
-    mapNotNullTo(mutableSetOf()) { it.appearance.colors.background?.asImage?.file }
+    mapNotNullTo(mutableSetOf()) {
+        it.appearance.colors.background
+            ?.asImage
+            ?.file
+    }
 
 /**
  * A user-created, named, persisted keyboard theme: id + name + the full

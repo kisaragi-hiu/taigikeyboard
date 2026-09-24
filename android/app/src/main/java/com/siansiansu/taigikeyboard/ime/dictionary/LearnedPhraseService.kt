@@ -38,16 +38,18 @@ class LearnedPhraseService(
         private const val DATABASE_NAME = "learned_phrases.db"
         private const val DATABASE_VERSION = 1
 
+        // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Database/LearnedPhraseRepository.swift (maxEntries).
+        // Drift causes silent divergence.
+
         /**
          * Learned rows kept; past it the fewest-composed, then least recently
          * touched, row goes (ChiaKey's policy) so a learn never fails.
          */
-        // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Lexicon/Database/LearnedPhraseRepository.swift (maxEntries).
-        // Drift causes silent divergence.
         const val MAX_ENTRIES = 2_000
 
-        /** Largest `learn_count` a row can carry. */
         // CROSS-PLATFORM INVARIANT — mirrors ios LearnedPhraseRepository.maxLearnCount.
+
+        /** Largest `learn_count` a row can carry. */
         const val MAX_LEARN_COUNT = 1_000_000
 
         /** Learned rows per fetch (exact whole-buffer match; homophone phrases). */
@@ -85,8 +87,9 @@ class LearnedPhraseService(
         internal const val INSERT_SEARCH_KEY_SQL =
             "INSERT OR IGNORE INTO learned_search_key (phrase_id, family, form, key) VALUES (?, ?, ?, ?)"
 
-        /** Exact (`=`, not `LIKE`) whole-buffer match, most composed first. */
         // CROSS-PLATFORM INVARIANT — mirrors ios LearnedPhraseRepository `exactMatchSQL`. Drift causes silent divergence.
+
+        /** Exact (`=`, not `LIKE`) whole-buffer match, most composed first. */
         internal const val EXACT_MATCH_SQL =
             "SELECT p.hanzi, p.roman, p.learn_count " +
                 "FROM learned_phrases p " +
@@ -95,12 +98,13 @@ class LearnedPhraseService(
                 "ORDER BY p.learn_count DESC, p.updated_at DESC " +
                 "LIMIT ?"
 
+        // CROSS-PLATFORM INVARIANT — mirrors ios LearnedPhraseRepository.evictPastCap. Drift causes silent divergence.
+
         /**
          * The rows past the cap, excluding one kept id — never the row just
          * written, whatever its timestamp ties with; `OFFSET cap - 1`
          * selects exactly the rows past the cap once it is set aside.
          */
-        // CROSS-PLATFORM INVARIANT — mirrors ios LearnedPhraseRepository.evictPastCap. Drift causes silent divergence.
         internal const val PAST_CAP_SQL =
             "SELECT id FROM learned_phrases WHERE id <> ? " +
                 "ORDER BY learn_count DESC, updated_at DESC, id LIMIT -1 OFFSET ?"

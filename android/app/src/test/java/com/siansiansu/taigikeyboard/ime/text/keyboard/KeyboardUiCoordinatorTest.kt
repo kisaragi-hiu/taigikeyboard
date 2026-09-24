@@ -32,7 +32,6 @@ import org.junit.Test
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class KeyboardUiCoordinatorTest {
-
     private fun newCoordinator(scope: CoroutineScope): KeyboardUiCoordinator =
         KeyboardUiCoordinator(
             scope = scope,
@@ -44,49 +43,52 @@ class KeyboardUiCoordinatorTest {
         )
 
     @Test
-    fun `publishKeyVariation skips emission when value is unchanged`() = runTest(UnconfinedTestDispatcher()) {
-        val coordinator = newCoordinator(this)
-        coordinator.publishKeyVariation(KeyVariation.PASSWORD)
-        val first = coordinator.keyboardUi.value
-        coordinator.publishKeyVariation(KeyVariation.PASSWORD)
-        val second = coordinator.keyboardUi.value
-        assertSame("equal keyVariation must collapse to the same state ref", first, second)
-        assertEquals(KeyVariation.PASSWORD, second.keyVariation)
-    }
+    fun `publishKeyVariation skips emission when value is unchanged`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val coordinator = newCoordinator(this)
+            coordinator.publishKeyVariation(KeyVariation.PASSWORD)
+            val first = coordinator.keyboardUi.value
+            coordinator.publishKeyVariation(KeyVariation.PASSWORD)
+            val second = coordinator.keyboardUi.value
+            assertSame("equal keyVariation must collapse to the same state ref", first, second)
+            assertEquals(KeyVariation.PASSWORD, second.keyVariation)
+        }
 
     @Test
-    fun `publishKeyVariation emits when value changes`() = runTest(UnconfinedTestDispatcher()) {
-        val coordinator = newCoordinator(this)
-        coordinator.publishKeyVariation(KeyVariation.NORMAL)
-        val first = coordinator.keyboardUi.value
-        coordinator.publishKeyVariation(KeyVariation.PASSWORD)
-        val second = coordinator.keyboardUi.value
-        assertNotSame(first, second)
-        assertEquals(KeyVariation.NORMAL, first.keyVariation)
-        assertEquals(KeyVariation.PASSWORD, second.keyVariation)
-    }
+    fun `publishKeyVariation emits when value changes`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val coordinator = newCoordinator(this)
+            coordinator.publishKeyVariation(KeyVariation.NORMAL)
+            val first = coordinator.keyboardUi.value
+            coordinator.publishKeyVariation(KeyVariation.PASSWORD)
+            val second = coordinator.keyboardUi.value
+            assertNotSame(first, second)
+            assertEquals(KeyVariation.NORMAL, first.keyVariation)
+            assertEquals(KeyVariation.PASSWORD, second.keyVariation)
+        }
 
     @Test
-    fun `publishActiveMode skips emission when mode is unchanged`() = runTest(UnconfinedTestDispatcher()) {
-        val coordinator = newCoordinator(this)
-        coordinator.publishActiveMode(KeyboardMode.SYMBOLS)
-        val first = coordinator.keyboardUi.value
-        coordinator.publishActiveMode(KeyboardMode.SYMBOLS)
-        val second = coordinator.keyboardUi.value
-        assertSame("equal activeMode must collapse to the same state ref", first, second)
-        assertEquals(KeyboardMode.SYMBOLS, second.activeMode)
-    }
+    fun `publishActiveMode skips emission when mode is unchanged`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val coordinator = newCoordinator(this)
+            coordinator.publishActiveMode(KeyboardMode.SYMBOLS)
+            val first = coordinator.keyboardUi.value
+            coordinator.publishActiveMode(KeyboardMode.SYMBOLS)
+            val second = coordinator.keyboardUi.value
+            assertSame("equal activeMode must collapse to the same state ref", first, second)
+            assertEquals(KeyboardMode.SYMBOLS, second.activeMode)
+        }
 
     @Test
-    fun `publishActiveMode emits when mode changes`() = runTest(UnconfinedTestDispatcher()) {
-        val coordinator = newCoordinator(this)
-        coordinator.publishActiveMode(KeyboardMode.NUMERIC)
-        val first = coordinator.keyboardUi.value
-        coordinator.publishActiveMode(KeyboardMode.PHONE)
-        val second = coordinator.keyboardUi.value
-        assertNotSame(first, second)
-        assertEquals(KeyboardMode.NUMERIC, first.activeMode)
-        assertEquals(KeyboardMode.PHONE, second.activeMode)
-    }
-
+    fun `publishActiveMode emits when mode changes`() =
+        runTest(UnconfinedTestDispatcher()) {
+            val coordinator = newCoordinator(this)
+            coordinator.publishActiveMode(KeyboardMode.NUMERIC)
+            val first = coordinator.keyboardUi.value
+            coordinator.publishActiveMode(KeyboardMode.PHONE)
+            val second = coordinator.keyboardUi.value
+            assertNotSame(first, second)
+            assertEquals(KeyboardMode.NUMERIC, first.activeMode)
+            assertEquals(KeyboardMode.PHONE, second.activeMode)
+        }
 }

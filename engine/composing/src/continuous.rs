@@ -1029,6 +1029,7 @@ fn fetch_walker_slot0_inner(
 /// browse path (12 sources + variant + khiin + kautian subcollection).
 /// Output is the unwrapped `Vec<RawCandidate>` the caller maps to
 /// `CandidateMessage` via `raw_to_proto_candidate`.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn assemble_candidates(
     raw: &str,
     freq_map: &FrequencyMap,

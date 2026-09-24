@@ -47,8 +47,7 @@ class CompositionRoot private constructor(
     val themeImages: ThemeImageCache = ThemeImageCache(ThemeImageStore.forApp(appContext))
 
     /** The user-theme store over [prefs], with the photo sweep wired as its mutation hook. */
-    fun userThemeStore(prefs: PrefHelper): UserThemeStore =
-        UserThemeStore(read = { prefs.userThemes }, write = { prefs.userThemes = it }, onMutated = themeImages::sweep)
+    fun userThemeStore(prefs: PrefHelper): UserThemeStore = UserThemeStore(read = { prefs.userThemes }, write = { prefs.userThemes = it }, onMutated = themeImages::sweep)
 
     /**
      * Lexicon engine readiness gate. Completed by

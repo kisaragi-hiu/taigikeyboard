@@ -337,8 +337,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     }
 
     /** Builds a [StringResolver] for the display-language [tag] (defaults to the persisted selection). */
-    private fun displayLanguageResolver(tag: String = prefs.displayLanguageTag): StringResolver =
-        buildStringResolver(this, DisplayLanguage.fromTag(tag))
+    private fun displayLanguageResolver(tag: String = prefs.displayLanguageTag): StringResolver = buildStringResolver(this, DisplayLanguage.fromTag(tag))
 
     override fun onDestroy() {
         compositionRoot.logger.i(TAG, "onDestroy()")

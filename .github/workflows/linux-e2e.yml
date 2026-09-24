@@ -44,8 +44,7 @@ jobs:
     steps:
       # Before the deps: a container without git gets the tree through the
       # REST API, which is all the build needs.
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install build + e2e dependencies
         run: bash tools/e2e/linux/ci-deps.sh ${{ matrix.distro }}
 
@@ -65,7 +64,7 @@ jobs:
           fi
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: e2e-${{ matrix.distro }}
           workspaces: |
@@ -101,7 +100,7 @@ jobs:
 
       - name: Keep the run
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: linux-e2e-${{ matrix.distro }}
           path: ${{ runner.temp }}/run

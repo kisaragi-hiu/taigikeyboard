@@ -80,6 +80,7 @@ class SmartbarManager(
     private var cachedIsTranslateSwapped: Boolean = false
     private var cachedIsFullWidthPunctuation: Boolean = false
     private var cachedOutputBothScripts: Boolean = false
+
     // Compose-side render state. Subsystems that read `currentSuggestions` /
     // `hasCandidates` continue to do so directly; this flow drives only the
     // candidate strip + English 3-col rendering.

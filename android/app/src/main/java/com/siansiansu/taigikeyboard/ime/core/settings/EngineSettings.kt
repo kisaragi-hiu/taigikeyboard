@@ -37,14 +37,15 @@ interface EngineSettings {
      */
     val isAutoCap: Boolean
 
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:candidateDisplayMode.
+    // Drift causes silent divergence (one platform collapses same-roman candidates, the other does not).
+
     /**
      * Candidate cell rendering mode (漢羅對應 / 羅馬字 / 漢羅濫). Under
      * [CandidateDisplayMode.ROMAN_ONLY] the two script flags below read
      * `false` regardless of their stored values; under
      * [CandidateDisplayMode.COMBINED] `isTranslateSwapped` reads `true`.
      */
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:candidateDisplayMode.
-    // Drift causes silent divergence (one platform collapses same-roman candidates, the other does not).
     val candidateDisplayMode: CandidateDisplayMode
 
     /**
@@ -56,6 +57,9 @@ interface EngineSettings {
      */
     val isTranslateSwapped: Boolean
 
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isOutputBothScripts.
+    // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
+
     /**
      * EFFECTIVE output-both-scripts ("both-scripts"): stored flag AND mode
      * != roman-only. The continuous-input §10.2 word-boundary-spacing
@@ -63,11 +67,12 @@ interface EngineSettings {
      * from both-scripts (`hit (彼)` — space wanted); [isTranslateSwapped]
      * is `true` for both.
      */
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isOutputBothScripts.
-    // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
     val isOutputBothScripts: Boolean
 
     val isAssociationRecordingEnabled: Boolean
+
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isLiteralRomanCandidateEnabled.
+    // Drift causes silent divergence (one platform shows the §34 candidate, the other does not).
 
     /**
      * Literal-roman candidate toggle (§34/S22). When on (default), TL/POJ
@@ -77,16 +82,15 @@ interface EngineSettings {
      * `FetchAtPos.literalRomanCandidateDisabled`. Gates ONLY that forced
      * prepend, not naturally-produced roman candidates.
      */
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isLiteralRomanCandidateEnabled.
-    // Drift causes silent divergence (one platform shows the §34 candidate, the other does not).
     val isLiteralRomanCandidateEnabled: Boolean
+
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isHyphenlessRomanEnabled.
+    // Drift causes silent divergence (one platform still shows hyphens).
 
     /**
      * 無連字符 (`behavioral-invariants.md` §49), EFFECTIVE: the stored switch
      * with TPS folded off. Forwarded verbatim as `AppConfig.hyphenless_roman`.
      */
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isHyphenlessRomanEnabled.
-    // Drift causes silent divergence (one platform still shows hyphens).
     val isHyphenlessRomanEnabled: Boolean
 
     /**

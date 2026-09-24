@@ -27,51 +27,53 @@ import org.junit.Test
  * after Item 13), so no Robolectric / mockk infra is required.
  */
 class TaigiAutocompleteServiceTest {
-
     private fun cand(
         consumedSpanEnd: Int,
         displayText: String,
         syllableCount: Int = 1,
-    ): RustEngineBridge.ContinuousCandidate = RustEngineBridge.ContinuousCandidate(
-        consumedSpanStart = 0,
-        consumedSpanEnd = consumedSpanEnd,
-        syllableCount = syllableCount,
-        displayText = displayText,
-        score = 1.0f,
-        form = 1,
-        mode = RustEngineBridge.CandidateMode.HANT,
-        roman = displayText,
-        hanji = null,
-        canonicalTl = displayText,
-    )
+    ): RustEngineBridge.ContinuousCandidate =
+        RustEngineBridge.ContinuousCandidate(
+            consumedSpanStart = 0,
+            consumedSpanEnd = consumedSpanEnd,
+            syllableCount = syllableCount,
+            displayText = displayText,
+            score = 1.0f,
+            form = 1,
+            mode = RustEngineBridge.CandidateMode.HANT,
+            roman = displayText,
+            hanji = null,
+            canonicalTl = displayText,
+        )
 
     @Test
-    fun `empty engine yields empty strip - no lexicon branch, no slot-0 cell`() = runTest {
-        val service = TaigiAutocompleteService(
-            logger = NullLoggerBackend,
-            continuousFetcher = { emptyList() },
-        )
-        val result = service.autocomplete(rawInput = "gua", displayText = "gua")
-        assertTrue(
-            "empty engine -> empty strip (no lexicon fallback, no slot-0 cell)",
-            result.isEmpty(),
-        )
-    }
+    fun `empty engine yields empty strip - no lexicon branch, no slot-0 cell`() =
+        runTest {
+            val service = TaigiAutocompleteService(
+                logger = NullLoggerBackend,
+                continuousFetcher = { emptyList() },
+            )
+            val result = service.autocomplete(rawInput = "gua", displayText = "gua")
+            assertTrue(
+                "empty engine -> empty strip (no lexicon fallback, no slot-0 cell)",
+                result.isEmpty(),
+            )
+        }
 
     @Test
-    fun `engine candidates pass through single-source with no composing cell`() = runTest {
-        val service = TaigiAutocompleteService(
-            logger = NullLoggerBackend,
-            continuousFetcher = { listOf(cand(consumedSpanEnd = 3, displayText = "guá")) },
-        )
-        val result = service.autocomplete(rawInput = "gua", displayText = "gua")
-        assertEquals("engine candidates pass through 1:1", 1, result.size)
-        assertEquals("true", result[0].additionalInfo[MetadataKeys.IS_CONTINUOUS])
-        assertNull(
-            "no slot-0 composing-text cell on the single-source path",
-            result[0].additionalInfo[MetadataKeys.IS_COMPOSING_TEXT],
-        )
-    }
+    fun `engine candidates pass through single-source with no composing cell`() =
+        runTest {
+            val service = TaigiAutocompleteService(
+                logger = NullLoggerBackend,
+                continuousFetcher = { listOf(cand(consumedSpanEnd = 3, displayText = "guá")) },
+            )
+            val result = service.autocomplete(rawInput = "gua", displayText = "gua")
+            assertEquals("engine candidates pass through 1:1", 1, result.size)
+            assertEquals("true", result[0].additionalInfo[MetadataKeys.IS_CONTINUOUS])
+            assertNull(
+                "no slot-0 composing-text cell on the single-source path",
+                result[0].additionalInfo[MetadataKeys.IS_COMPOSING_TEXT],
+            )
+        }
 
     /**
      * §42 濫 split gate: 漢羅濫 + non-TPS splits, everything else does not.
@@ -96,37 +98,39 @@ class TaigiAutocompleteServiceTest {
      * flipping 候選詞顯示 takes effect on the very next keystroke.
      */
     @Test
-    fun `split provider is re-read on every fetch`() = runTest {
-        var splitCombinedCells = false
-        val service = TaigiAutocompleteService(
-            logger = NullLoggerBackend,
-            continuousFetcher = {
-                listOf(cand(consumedSpanEnd = 5, displayText = "tâi-gí").copy(hanji = "台語"))
-            },
-            splitCombinedCellsProvider = { splitCombinedCells },
-        )
+    fun `split provider is re-read on every fetch`() =
+        runTest {
+            var splitCombinedCells = false
+            val service = TaigiAutocompleteService(
+                logger = NullLoggerBackend,
+                continuousFetcher = {
+                    listOf(cand(consumedSpanEnd = 5, displayText = "tâi-gí").copy(hanji = "台語"))
+                },
+                splitCombinedCellsProvider = { splitCombinedCells },
+            )
 
-        val unsplit = service.autocomplete(rawInput = "taigi", displayText = "taigi")
-        assertEquals("split OFF → one un-split cell", 1, unsplit.size)
-        assertNull(unsplit[0].additionalInfo[MetadataKeys.CELL_SCRIPT])
+            val unsplit = service.autocomplete(rawInput = "taigi", displayText = "taigi")
+            assertEquals("split OFF → one un-split cell", 1, unsplit.size)
+            assertNull(unsplit[0].additionalInfo[MetadataKeys.CELL_SCRIPT])
 
-        splitCombinedCells = true
-        val split = service.autocomplete(rawInput = "taigi", displayText = "taigi")
-        assertEquals("split ON on the NEXT fetch → 漢字 cell + 羅馬字 cell", 2, split.size)
-        assertEquals(MetadataKeys.CELL_SCRIPT_HANJI, split[0].additionalInfo[MetadataKeys.CELL_SCRIPT])
-        assertEquals(MetadataKeys.CELL_SCRIPT_ROMAN, split[1].additionalInfo[MetadataKeys.CELL_SCRIPT])
+            splitCombinedCells = true
+            val split = service.autocomplete(rawInput = "taigi", displayText = "taigi")
+            assertEquals("split ON on the NEXT fetch → 漢字 cell + 羅馬字 cell", 2, split.size)
+            assertEquals(MetadataKeys.CELL_SCRIPT_HANJI, split[0].additionalInfo[MetadataKeys.CELL_SCRIPT])
+            assertEquals(MetadataKeys.CELL_SCRIPT_ROMAN, split[1].additionalInfo[MetadataKeys.CELL_SCRIPT])
 
-        splitCombinedCells = false
-        assertEquals("switching back un-splits immediately", 1, service.autocomplete("taigi", "taigi").size)
-    }
+            splitCombinedCells = false
+            assertEquals("switching back un-splits immediately", 1, service.autocomplete("taigi", "taigi").size)
+        }
 
     @Test
-    fun `empty rawInput or displayText short-circuits to empty`() = runTest {
-        val service = TaigiAutocompleteService(
-            logger = NullLoggerBackend,
-            continuousFetcher = { error("fetcher must not be called when guard trips") },
-        )
-        assertTrue(service.autocomplete(rawInput = "", displayText = "gua").isEmpty())
-        assertTrue(service.autocomplete(rawInput = "gua", displayText = "").isEmpty())
-    }
+    fun `empty rawInput or displayText short-circuits to empty`() =
+        runTest {
+            val service = TaigiAutocompleteService(
+                logger = NullLoggerBackend,
+                continuousFetcher = { error("fetcher must not be called when guard trips") },
+            )
+            assertTrue(service.autocomplete(rawInput = "", displayText = "gua").isEmpty())
+            assertTrue(service.autocomplete(rawInput = "gua", displayText = "").isEmpty())
+        }
 }

@@ -13,7 +13,10 @@ import org.junit.Test
  * their own glyph; the `，` punctuation key (code 65292) does not.
  */
 class TpsPopupWithBaseGlyphTest {
-    private fun tpsGlyphKey(label: String, vararg popup: KeyData) = KeyData(
+    private fun tpsGlyphKey(
+        label: String,
+        vararg popup: KeyData,
+    ) = KeyData(
         code = 0,
         label = label,
         popup = popup.toMutableList(),

@@ -7,12 +7,12 @@ import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.InputConnection
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge.ComposingTransition.Effect
-import java.lang.reflect.Proxy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.lang.reflect.Proxy
 
 class ComposingManagerHostReconciliationTest {
     /**
@@ -71,8 +71,10 @@ class ComposingManagerHostReconciliationTest {
         )
 
     /** Puts a fresh manager into composing state with [display] written to a matching host. */
-    private fun composing(display: String, delegate: ComposingDelegate = DefaultComposingDelegate) =
-        composingManagerForTest(delegate).also { it.applyTransition(preedit(display), FakeHost(display).ic) }
+    private fun composing(
+        display: String,
+        delegate: ComposingDelegate = DefaultComposingDelegate,
+    ) = composingManagerForTest(delegate).also { it.applyTransition(preedit(display), FakeHost(display).ic) }
 
     @Test
     fun reconcile_whenIdle_keepsWithoutReadingHost() {

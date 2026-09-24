@@ -32,6 +32,7 @@ class CustomDictionaryService(
     companion object {
         private const val TAG = "CustomDictionaryService"
         private const val DATABASE_NAME = "custom_dictionary.db"
+
         // v9 (2026-09-20, never released) parked learned phrases (§50) here
         // under `origin` / `learn_count` + a partial unique index; v10
         // (2026-09-21) moves them to `learned_phrases.db` (`LearnedPhraseService`)
@@ -317,6 +318,8 @@ class CustomDictionaryService(
             }
         }
 
+    // SQL is the `SEARCH_SQL` companion constant (shared with the JVM test).
+
     /**
      * Cross-mode prefix search (v3.6.1 R3). Joins `custom_search_key` by the
      * current input's [family]; matches the primary [form] OR `abbrev` rows by
@@ -328,7 +331,6 @@ class CustomDictionaryService(
      * @param form `num` / `notone` — the query key's primary form (`abbrev` is always also matched).
      * @param key Family-native prefix (bound verbatim).
      */
-    // SQL is the `SEARCH_SQL` companion constant (shared with the JVM test).
     suspend fun search(
         family: String,
         form: String,

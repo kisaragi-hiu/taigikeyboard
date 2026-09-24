@@ -29,8 +29,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.siansiansu.taigikeyboard.ime.core.themeBackground
 import com.siansiansu.taigikeyboard.i18n.stringRes
+import com.siansiansu.taigikeyboard.ime.core.themeBackground
 
 private val SymbolCategoryValues = SymbolCategory.entries
 private val SymbolCellMinHeight = 40.dp

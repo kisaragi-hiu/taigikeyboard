@@ -81,7 +81,11 @@ class ThemeImageStore(
         fun forApp(context: Context): ThemeImageStore = ThemeImageStore(File(context.filesDir, DIRECTORY_NAME))
 
         /** The decode target so the longer edge is at most [maxLongEdge] (never upscaled), aspect kept. */
-        fun targetSize(width: Int, height: Int, maxLongEdge: Int): Pair<Int, Int> {
+        fun targetSize(
+            width: Int,
+            height: Int,
+            maxLongEdge: Int,
+        ): Pair<Int, Int> {
             val longEdge = max(width, height)
             if (longEdge <= maxLongEdge) return width to height
             val scale = maxLongEdge.toFloat() / longEdge

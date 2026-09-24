@@ -34,14 +34,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.content.FeatureContentLoader
-import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.LocalDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.LocalSelectedDisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.LocalStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
 import com.siansiansu.taigikeyboard.ui.components.ContentCopy
@@ -101,8 +99,7 @@ fun InputSettingsScreen(
     val features = remember { FeatureContentLoader.loadFeatures(context) }
     val displayLanguageForSummary = LocalDisplayLanguage.current
 
-    fun featureSummary(featureId: String): String? =
-        features.firstOrNull { it.id == featureId }?.summary?.resolve(displayLanguageForSummary)
+    fun featureSummary(featureId: String): String? = features.firstOrNull { it.id == featureId }?.summary?.resolve(displayLanguageForSummary)
 
     if (showDisplayLanguagePicker) {
         DisplayLanguageScreen(

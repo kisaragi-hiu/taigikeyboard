@@ -289,7 +289,6 @@ fn custom_and_capitalised_readings_answer_to_the_boundary_too() {
     let custom = |roman: &str, hanji: &str| CustomDictEntry {
         roman: roman.into(),
         hanji: Some(hanji.into()),
-        ..Default::default()
     };
     let cells = fetch(
         "khi--ah",
@@ -322,7 +321,6 @@ fn a_custom_reading_opening_with_a_double_hyphen_needs_a_typed_double_hyphen() {
         custom_entries: vec![CustomDictEntry {
             roman: "--ah".into(),
             hanji: Some("矣".into()),
-            ..Default::default()
         }],
         ..Default::default()
     };

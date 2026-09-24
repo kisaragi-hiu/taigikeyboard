@@ -1,8 +1,8 @@
 package com.siansiansu.taigikeyboard.ime.text.key
 
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.fullUppercaseToneString
 import com.siansiansu.taigikeyboard.engine.lowercaseToneChar
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.uppercaseToneChar
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 

@@ -102,8 +102,7 @@ internal class KeyboardUiCoordinator(
     /** CLIPBOARD carries no layout to fetch; an already-cached mode needs no
      *  recompute. Shared skip guard for both the async [ensureLayoutLoaded] and
      *  the synchronous [ensureLayoutLoadedNow] so the two stay in lockstep. */
-    private fun isLayoutLoadNeeded(mode: KeyboardMode): Boolean =
-        mode != KeyboardMode.CLIPBOARD && !_keyboardUi.value.layouts.containsKey(mode)
+    private fun isLayoutLoadNeeded(mode: KeyboardMode): Boolean = mode != KeyboardMode.CLIPBOARD && !_keyboardUi.value.layouts.containsKey(mode)
 
     /**
      * Loads [KeyboardLayoutData] for [mode] off the main thread, then publishes
@@ -190,7 +189,8 @@ internal class KeyboardUiCoordinator(
     fun reloadAllLayoutsInBackground() {
         scope.launch {
             val isFullWidthPunctuation = fullWidthPunctuationProvider()
-            val modes = _keyboardUi.value.layouts.keys.toList()
+            val modes = _keyboardUi.value.layouts.keys
+                .toList()
             for (mode in modes) {
                 if (mode != activeKeyboardMode) {
                     val computed = withContext(Dispatchers.IO) {
@@ -241,7 +241,10 @@ internal class KeyboardUiCoordinator(
         }
     }
 
-    private fun publishLayout(mode: KeyboardMode, data: KeyboardLayoutData) {
+    private fun publishLayout(
+        mode: KeyboardMode,
+        data: KeyboardLayoutData,
+    ) {
         _keyboardUi.update { current ->
             if (current.layouts[mode] == data) {
                 current

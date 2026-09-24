@@ -32,14 +32,16 @@ class LocalizedContentTextTest {
     fun INVARIANT_resolve_unauthoredLanguage_fallsBackToHanji() {
         // The C1 behavior-freeze guarantee: today every key is Hanji-only, so every effective
         // language renders Hanji until C2 authoring fills the other languages.
-        for (language in
-            listOf(
-                DisplayLanguage.HANJI,
-                DisplayLanguage.TAILO,
-                DisplayLanguage.POJ,
-                DisplayLanguage.JAPANESE,
-                DisplayLanguage.ENGLISH,
-            )) {
+        for (
+        language in
+        listOf(
+            DisplayLanguage.HANJI,
+            DisplayLanguage.TAILO,
+            DisplayLanguage.POJ,
+            DisplayLanguage.JAPANESE,
+            DisplayLanguage.ENGLISH,
+        )
+        ) {
             assertEquals("unauthored $language must fall back to hanji", "漢", hanjiOnly.resolve(language))
         }
     }

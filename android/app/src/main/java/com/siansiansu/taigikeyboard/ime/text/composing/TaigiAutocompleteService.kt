@@ -68,6 +68,10 @@ class TaigiAutocompleteService(
     }
 }
 
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift
+// `shouldSplitCombinedCells`. Drift causes silent divergence (one platform still splitting
+// under TPS, or not splitting under 漢羅濫).
+
 /**
  * Whether the candidate strip renders 漢羅濫 split cells: the picker is set to
  * [CandidateDisplayMode.COMBINED] and the layout is not TPS (TPS is hanji-first
@@ -75,13 +79,13 @@ class TaigiAutocompleteService(
  * so a settings change takes effect on the next keystroke
  * (android-guidelines §6 live-read rule).
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift
-// `shouldSplitCombinedCells`. Drift causes silent divergence (one platform still splitting
-// under TPS, or not splitting under 漢羅濫).
 internal fun shouldSplitCombinedCells(
     candidateDisplayMode: CandidateDisplayMode,
     isTpsLayout: Boolean,
 ): Boolean = candidateDisplayMode == CandidateDisplayMode.COMBINED && !isTpsLayout
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift buildContinuousSuggestions
+// and the desktop PresentedCandidate split. Drift causes silent divergence (one platform still renders the superseded one-label 濫 cell).
 
 /**
  * Wrap a list of engine [RustEngineBridge.ContinuousCandidate] into the
@@ -127,8 +131,7 @@ internal fun shouldSplitCombinedCells(
  *
  * Top-level so the contract is unit-testable without instantiating
  * collaborators.
- */
-/**
+ *
  * 漢羅濫 split (`behavioral-invariants.md` §42 second exception, desktop
  * shipped first in #666): when [splitCombinedCells] is `true`, a
  * hanji-bearing candidate emits TWO adjacent one-script cells — a 漢字 cell
@@ -147,8 +150,6 @@ internal fun shouldSplitCombinedCells(
  * mode ([splitCombinedCells] `false`, the default) emits exactly the
  * pre-split shape — 並排's subtitle tells 重/tîng from 重/tāng.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift buildContinuousSuggestions
-// and the desktop PresentedCandidate split. Drift causes silent divergence (one platform still renders the superseded one-label 濫 cell).
 internal fun buildContinuousSuggestionsForCandidates(
     candidates: List<RustEngineBridge.ContinuousCandidate>,
     splitCombinedCells: Boolean = false,
@@ -183,6 +184,9 @@ internal fun buildContinuousSuggestionsForCandidates(
     }
 }
 
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift splitIntoSingleScriptCells
+// and the desktop PresentedCandidate split. Drift causes silent divergence (cell order or dedupe survivor differs on one platform).
+
 /**
  * The 漢羅濫 split (§42): each item becomes a 漢字 cell (when [hanziOf] is
  * non-empty) then a 羅馬字 cell (when [romanOf] is non-null), each script
@@ -192,8 +196,6 @@ internal fun buildContinuousSuggestionsForCandidates(
  * for `(item, cellScript, ordinal)`; the Continuous and NextWord builders
  * differ only in that constructor.
  */
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift splitIntoSingleScriptCells
-// and the desktop PresentedCandidate split. Drift causes silent divergence (cell order or dedupe survivor differs on one platform).
 internal fun <T> splitIntoSingleScriptCells(
     items: List<T>,
     hanziOf: (T) -> String?,

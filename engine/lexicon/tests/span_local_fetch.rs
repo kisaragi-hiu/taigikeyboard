@@ -1321,7 +1321,7 @@ fn partial_prefix_output_caps_at_output_cap() {
             // (`taa`, `tab`, …, `tcz`).
             // Vowel as 2nd char so every key reads as a plausible full
             // reading (this test exercises the OUTPUT cap).
-            let vowels = [b'a', b'e', b'i', b'o', b'u'];
+            let vowels = *b"aeiou";
             let hi = vowels[(i / 26) % vowels.len()] as char;
             let lo = (b'a' + (i % 26) as u8) as char;
             Row {

@@ -9,6 +9,7 @@ package com.siansiansu.taigikeyboard.ime.text.composing
 
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
+import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.composingAppend
 import com.siansiansu.taigikeyboard.engine.composingAppendHyphen
 import com.siansiansu.taigikeyboard.engine.composingCommitContinuous
@@ -24,8 +25,6 @@ import com.siansiansu.taigikeyboard.engine.composingResetContinuous
 import com.siansiansu.taigikeyboard.engine.composingSelectSuggestion
 import com.siansiansu.taigikeyboard.engine.composingStart
 import com.siansiansu.taigikeyboard.engine.dictionaryFilters
-import kotlinx.coroutines.CancellationException
-import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.proto.CustomDictEntry
 import com.siansiansu.taigikeyboard.engine.proto.FrequencyEntry
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
@@ -35,10 +34,11 @@ import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryDerivation
 import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryService
 import com.siansiansu.taigikeyboard.ime.dictionary.LearnedPhraseService
-import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Android platform wrapper around the Rust shared-core composing engine
@@ -125,7 +125,10 @@ class ComposingManager(
      * input-context generation. Two tokens compare equal iff a result fetched
      * under one is still valid to publish under the other.
      */
-    data class StateToken(val rawInput: String?, val generation: Long)
+    data class StateToken(
+        val rawInput: String?,
+        val generation: Long,
+    )
 
     fun stateToken(): StateToken = StateToken(getRawInput(), currentGeneration)
 
@@ -144,8 +147,7 @@ class ComposingManager(
 
     fun getRawInput(): String? = if (_isComposing.value) _rawInput.value else null
 
-    fun getComposingText(): String? =
-        if (_isComposing.value) _displayText.value.ifEmpty { _rawInput.value } else null
+    fun getComposingText(): String? = if (_isComposing.value) _displayText.value.ifEmpty { _rawInput.value } else null
 
     /**
      * Bump on real input-context change. Engine drops state silently on the
@@ -500,7 +502,8 @@ class ComposingManager(
         val queryKey = token.rawInput?.takeIf { it.isNotEmpty() }?.let { raw ->
             CustomDictionaryDerivation.deriveCustomQueryKey(
                 raw,
-                com.siansiansu.taigikeyboard.ime.core.settings.InputMode.fromPrefString(fetch.inputMode),
+                com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+                    .fromPrefString(fetch.inputMode),
             )
         }
         val customEntries = buildCustomEntries(token, fetch, queryKey)
@@ -695,6 +698,11 @@ class ComposingManager(
         }
     }
 
+    // v3.5.8 Phase 9 Bug 1 (Option A): `displayText` is the swap/TPS/both-
+    // scripts-formatted DOCUMENT string (caller mirrors the legacy lexicon
+    // formatter); `canonicalText` is the canonical key (`hanji ?? roman`)
+    // routed to NextWord so association learning stays mode-independent.
+
     /**
      * Commit one Continuous candidate. `displayText` / `consumedBytes` /
      * `syllableCount` MUST come verbatim from a [RustEngineBridge.ContinuousCandidate]
@@ -721,10 +729,6 @@ class ComposingManager(
      * `NextWordUpdateLastSelectedWord` (the per-segment nail signal); a
      * noop emits neither.
      */
-    // v3.5.8 Phase 9 Bug 1 (Option A): `displayText` is the swap/TPS/both-
-    // scripts-formatted DOCUMENT string (caller mirrors the legacy lexicon
-    // formatter); `canonicalText` is the canonical key (`hanji ?? roman`)
-    // routed to NextWord so association learning stays mode-independent.
     fun commitContinuous(
         displayText: String,
         canonicalText: String,
@@ -976,9 +980,10 @@ class ComposingManager(
         return ContinuousFetchSettings(
             inputMode = inputMode,
             config = RustEngineBridge.continuousAppConfig(settings),
-            enabledSourcesBitmask = RustEngineBridge.dictionaryFilters(
-                RustEngineBridge.DictionaryToggles.from(settings),
-            ).dictionaryFilterBitmask,
+            enabledSourcesBitmask = RustEngineBridge
+                .dictionaryFilters(
+                    RustEngineBridge.DictionaryToggles.from(settings),
+                ).dictionaryFilterBitmask,
             literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
             isCustomDictEnabled = settings.isCustomDictEnabled,
         )

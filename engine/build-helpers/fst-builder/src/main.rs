@@ -40,7 +40,7 @@ fn main() -> ExitCode {
             Ok(stats) => {
                 eprintln!(
                     "[fst-builder] built {} (entries={}, distinct_keys={})",
-                    &args[1], stats.entries, stats.distinct_keys
+                    args[1], stats.entries, stats.distinct_keys
                 );
                 ExitCode::SUCCESS
             }

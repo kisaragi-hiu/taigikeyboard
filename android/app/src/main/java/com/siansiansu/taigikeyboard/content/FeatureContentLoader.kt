@@ -76,8 +76,7 @@ object FeatureContentLoader {
     // Returns the authored value (incl. an explicit empty string) or null when the key is absent/JSON
     // null. NOT optString — optString collapses absent and "" to "", losing the unauthored signal a
     // language fallback needs. Extension form mirrors the JSONObject.optIntOrNull / optFloatOrNull idiom.
-    private fun JSONObject.optStringOrNull(key: String): String? =
-        if (has(key) && !isNull(key)) getString(key) else null
+    private fun JSONObject.optStringOrNull(key: String): String? = if (has(key) && !isNull(key)) getString(key) else null
 
     private fun parseIcon(obj: JSONObject): PlatformIcon =
         PlatformIcon(

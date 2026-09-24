@@ -6,21 +6,21 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class EnglishWordMatcherTest {
-
     // Small deterministic fixture — NOT the bundled asset. Frequencies chosen so
     // prefix ranking (help > hello > held) is unambiguous.
-    private fun fixtureMatcher(): EnglishWordMatcher = EnglishWordMatcher(
-        listOf(
-            EnglishWordMatcher.WordEntry("the", 1000),
-            EnglishWordMatcher.WordEntry("help", 800),
-            EnglishWordMatcher.WordEntry("hello", 500),
-            EnglishWordMatcher.WordEntry("held", 300),
-            EnglishWordMatcher.WordEntry("world", 700),
-            EnglishWordMatcher.WordEntry("receive", 600),
-            EnglishWordMatcher.WordEntry("test", 900),
-            EnglishWordMatcher.WordEntry("testing", 200),
-        ),
-    )
+    private fun fixtureMatcher(): EnglishWordMatcher =
+        EnglishWordMatcher(
+            listOf(
+                EnglishWordMatcher.WordEntry("the", 1000),
+                EnglishWordMatcher.WordEntry("help", 800),
+                EnglishWordMatcher.WordEntry("hello", 500),
+                EnglishWordMatcher.WordEntry("held", 300),
+                EnglishWordMatcher.WordEntry("world", 700),
+                EnglishWordMatcher.WordEntry("receive", 600),
+                EnglishWordMatcher.WordEntry("test", 900),
+                EnglishWordMatcher.WordEntry("testing", 200),
+            ),
+        )
 
     @Test
     fun suggest_prefix_returnsCompletionsRankedByFrequency() {
@@ -138,9 +138,9 @@ class EnglishWordMatcherTest {
             sequenceOf(
                 "the\t1000",
                 "help\t800",
-                "noTabHere",      // no tab → skipped
-                "bad\tNaN",       // non-numeric frequency → skipped
-                "\t500",          // empty word (tab at index 0) → skipped
+                "noTabHere", // no tab → skipped
+                "bad\tNaN", // non-numeric frequency → skipped
+                "\t500", // empty word (tab at index 0) → skipped
             ),
         )
         assertEquals(2, entries.size)
