@@ -1,0 +1,11 @@
+{
+  "id": "s69-khi-ah",
+  "source": "dogfood-checklist.md S69 (USER 2026-09-22); 教典 #5655 「錢就予伊撏去矣。」",
+  "settings": { "romanization": "tl", "continuous_input": true },
+  "steps": [
+    { "type": "text", "value": "khi--ah" }
+  ],
+  "expect": {
+    "first_hanji_candidate": { "hanji": "去矣", "tl": "khì--ah" }
+  }
+}

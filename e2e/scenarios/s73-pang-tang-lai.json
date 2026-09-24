@@ -1,0 +1,13 @@
+{
+  "id": "s73-pang-tang-lai",
+  "source": "dogfood-checklist.md S73 (USER 2026-09-22); 教典 #5517 「伊是專門咧放重利的。」",
+  "settings": { "romanization": "tl", "continuous_input": true, "output": "roman" },
+  "steps": [
+    { "type": "text", "value": "pang-tang-lai" },
+    { "type": "pick", "hanji": "放重利", "tl": "pàng-tāng-lāi" }
+  ],
+  "expect": {
+    "first_hanji_candidate": { "hanji": "放重利", "tl": "pàng-tāng-lāi" },
+    "committed": "pàng-tāng-lāi"
+  }
+}

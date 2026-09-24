@@ -1,7 +1,8 @@
 name: Checks
 
 # The gates that need no compiler: generated i18n artifacts are current, the
-# i18n codegen's own tests pass, and Swift formatting matches .swiftformat.
+# i18n codegen's own tests pass, Swift formatting matches .swiftformat, and
+# the e2e analyzer's tests pass over the committed scenarios.
 # Everything here reads files; the whole job is well under a minute.
 #
 # Swift is linted here on Linux rather than on a macOS runner because
@@ -17,6 +18,9 @@ on:
       - 'ios/.swift-version'
       - 'macos/**/*.swift'
       - '.swiftformat'
+      - 'e2e/**'
+      - 'tools/e2e/**'
+      - 'engine/protos/proto/**'
       - '.github/workflows/checks.yml'
   push:
     branches: [main]
@@ -28,6 +32,9 @@ on:
       - 'ios/.swift-version'
       - 'macos/**/*.swift'
       - '.swiftformat'
+      - 'e2e/**'
+      - 'tools/e2e/**'
+      - 'engine/protos/proto/**'
       - '.github/workflows/checks.yml'
 
 permissions:
@@ -44,6 +51,17 @@ env:
   SWIFTFORMAT_SHA256: b4a3cbb8c852a0baaf9adf853e221ff1dabf921a3d8957a602e0bda3af8470f1
 
 jobs:
+  e2e-analyzer:
+    name: e2e analyzer tests + scenarios
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Analyzer unit tests (also validate e2e/scenarios)
+        working-directory: tools/e2e
+        run: python3 -m unittest analyze_test
+
   i18n:
     name: i18n generated + codegen tests
     runs-on: ubuntu-24.04
