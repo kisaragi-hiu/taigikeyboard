@@ -6,7 +6,8 @@ name: Linux e2e
 # GTK entry via Fcitx5 and via IBus under Xvfb, then tools/e2e/analyze.py.
 # The run directory (traces + report.md) is kept as the `linux-e2e` artifact.
 #
-# USER 2026-09-24: runs on PRs touching linux/, engine/ or e2e/, plus dispatch.
+# USER 2026-09-24: runs on PRs touching linux/, engine/ or e2e/, plus dispatch;
+# desktop/, dictionaries/ and tools/e2e/ are what those builds read too.
 on:
   pull_request:
     paths:
@@ -59,7 +60,10 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: linux -> target
+          # Same workspaces as linux-build.yml, so the two jobs share a cache.
+          workspaces: |
+            linux -> target
+            desktop -> target
 
       - name: Build + install the test-mode IME into a private prefix
         run: make -C linux install E2E=1 PREFIX="$RUNNER_TEMP/prefix"

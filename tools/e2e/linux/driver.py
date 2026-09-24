@@ -99,21 +99,27 @@ def fcitx5_profile() -> str:
     )
 
 
-def read_events(trace: Path) -> list[dict]:
-    """Complete lines only — the IME may be mid-write."""
-    if not trace.exists():
-        return []
-    events = []
-    for line in trace.read_text(encoding="utf-8").splitlines():
-        try:
-            events.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue
-    return events
+class TraceReader:
+    """The live trace, read incrementally: each call parses only the lines
+    appended since the last one, and never a half-written last line."""
 
+    def __init__(self, path: Path) -> None:
+        self.path = path
+        self.offset = 0
+        self.events: list[dict] = []
 
-def pressed_key_count(events: list[dict]) -> int:
-    return sum(1 for e in events if e.get("event") == "key" and not e.get("state", 0) & RELEASE_MASK)
+    def refresh(self) -> list[dict]:
+        if self.path.exists():
+            with self.path.open("rb") as trace:
+                trace.seek(self.offset)
+                chunk = trace.read()
+            complete = chunk[: chunk.rfind(b"\n") + 1]
+            self.offset += len(complete)
+            self.events += [json.loads(line) for line in complete.decode("utf-8").splitlines() if line]
+        return self.events
+
+    def pressed_key_count(self) -> int:
+        return sum(1 for e in self.refresh() if e.get("event") == "key" and not e.get("state", 0) & RELEASE_MASK)
 
 
 def wait_until(predicate, timeout_s: float, what: str) -> None:
@@ -134,8 +140,10 @@ class Session:
         self.trace = work / "data" / TRACE_RELATIVE_PATH
         self.host_out = work / "host-text.txt"
         self.framework_log = work / "framework.log"
+        self.reader = TraceReader(self.trace)
         self.keys_sent = 0
         self.processes: list[subprocess.Popen] = []
+        self.host: subprocess.Popen | None = None
         (work / "config" / "taigikeyboard").mkdir(parents=True)
         (work / "config" / "taigikeyboard" / "settings.json").write_text(
             json.dumps(settings_document(scenario.get("settings", {}))), encoding="utf-8"
@@ -205,7 +213,7 @@ class Session:
 
     def settle(self) -> None:
         wait_until(
-            lambda: pressed_key_count(read_events(self.trace)) >= self.keys_sent,
+            lambda: self.reader.pressed_key_count() >= self.keys_sent,
             KEYS_SETTLE_TIMEOUT_S,
             f"the IME to answer {self.keys_sent} keys",
         )
@@ -214,7 +222,7 @@ class Session:
         """Tab to the cell showing (hanji, tl), then Enter
         (`confirmHighlighted`, desktop keys/action.rs)."""
         self.settle()
-        lists = [e for e in read_events(self.trace) if e.get("event") == "candidates"]
+        lists = [e for e in self.reader.refresh() if e.get("event") == "candidates"]
         if not lists:
             raise ScenarioError("no candidate list to pick from")
         items = lists[-1].get("items", [])
@@ -273,12 +281,14 @@ def drive(framework: str, prefix: Path, scenario: dict, out: Path) -> dict:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--framework", choices=("fcitx5", "ibus"), required=True)
-    parser.add_argument("--prefix", type=Path, required=True, help="where `make install E2E=1 PREFIX=` put the test-mode build")
+    parser.add_argument("--prefix", type=Path, help="where `make install E2E=1 PREFIX=` put the test-mode build")
     parser.add_argument("--out", type=Path, required=True, help="run dir; results go to <out>/linux-<framework>/")
     parser.add_argument("--scenarios", type=Path, default=analyze.REPO_ROOT / "e2e" / "scenarios")
     parser.add_argument("--only", help="run just this scenario id")
     parser.add_argument("--skip", metavar="REASON", help="drive nothing; record every scenario as skipped")
     args = parser.parse_args(argv)
+    if not args.skip and args.prefix is None:
+        parser.error("--prefix is required unless --skip")
 
     platform = f"linux-{args.framework}"
     for scenario_id, scenario in analyze.load_scenarios(args.scenarios).items():

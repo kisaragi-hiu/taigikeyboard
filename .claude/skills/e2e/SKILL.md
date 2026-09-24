@@ -20,7 +20,7 @@ make e2e PLATFORM=linux E2E_RUN=e2e/runs/<name>           # named run dir (defau
 | `linux` | the macOS UTM guest (`TAIGI_E2E_LINUX_HOST`, default `binhian@192.168.64.2`): test-mode build into `~/taigi-e2e/prefix`, never the VM's own install. CI twin: `.github/workflows/linux-e2e.yml` | available |
 | others | their roadmap PRs (macOS PR5, Windows PR6, Android PR7, iOS PR8) | not yet |
 
-The Linux VM is unreachable → every scenario is `skipped` with the reason (not a failure). The first run compiles the release engine inside the VM (slow); later runs are incremental. One scenario only: run the driver on the VM with `--only <id>` (see `tools/e2e/linux/run.sh` for the exact command).
+The Linux VM is unreachable → every scenario is `skipped` with the reason (not a failure). The first run compiles the release engine inside the VM (slow); later runs are incremental. One scenario only: `make e2e PLATFORM=linux E2E_ONLY=<scenario-id>`.
 
 To compare against an earlier run: `python3 tools/e2e/analyze.py --run <new> --baseline <old>/report.json`.
 

@@ -105,11 +105,16 @@ dogfood:
 # End-to-end run (docs/architecture/e2e-testing-roadmap.md): drive PLATFORM's
 # test-mode build through every e2e/scenarios/*.json, then analyze. Report:
 # $(E2E_RUN)/report.md; exit 1 on a failed scenario or a bug / perf finding.
-E2E_RUN ?= $(CURDIR)/e2e/runs/$(shell date +%Y%m%d-%H%M%S)
+# E2E_ONLY=<scenario-id> runs one scenario.
+# `:=` inside ifndef: the timestamp is taken once, so the driver and the
+# analyzer see the same directory.
+ifndef E2E_RUN
+E2E_RUN := $(CURDIR)/e2e/runs/$(shell date +%Y%m%d-%H%M%S)
+endif
 e2e:
 	@test -n "$(PLATFORM)" && test -x tools/e2e/$(PLATFORM)/run.sh \
 	  || { echo "usage: make e2e PLATFORM=<platform with tools/e2e/<platform>/run.sh>" >&2; exit 1; }
-	tools/e2e/$(PLATFORM)/run.sh "$(E2E_RUN)"
+	tools/e2e/$(PLATFORM)/run.sh "$(E2E_RUN)" $(E2E_ONLY)
 	python3 tools/e2e/analyze.py --run "$(E2E_RUN)"
 
 macos-release:
