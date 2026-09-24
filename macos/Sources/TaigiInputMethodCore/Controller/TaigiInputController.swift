@@ -455,10 +455,13 @@ public final class TaigiInputController: IMKInputController {
             // from 2026-08-21 until then: each carried its own ⌃⇧ chord, and
             // once those were retired the five rows were five names for one
             // window. What is left is the window itself, opening wherever the
-            // user left it — naming the panes is the sidebar's job.
+            // user left it — naming the panes is the sidebar's job. Named
+            // 台語齒盤設定, as on Windows and Linux (USER 2026-09-24: the three
+            // desktops' menus identical, i18n included; the shared row list is
+            // `taigi_desktop_core::keys::MENU`).
             let settings = shortcutRow(
                 .openLastSettingsPane,
-                label: language.string(.commonSettings),
+                label: language.string(.desktopMenuSettings),
                 selector: #selector(showPreferences(_:)),
             )
             // No chord, by design: an on-demand check is a command a user

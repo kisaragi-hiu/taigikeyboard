@@ -71,8 +71,9 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// somewhere to be: the check, and the 關於 page the sidebar does not list
     /// (USER 2026-09-19: the menu is where a user looks up the chords they
     /// last recorded; USER 2026-09-20: 關於 lives only here). Each shortcut
-    /// row carries the 快捷鍵 pane's own name for it; the doorway keeps its
-    /// one-word menu name. No composing key appears here; the menu stopped
+    /// row carries the 快捷鍵 pane's own name for it; the doorway is
+    /// 台語齒盤設定. The same rows as Windows and Linux: this literal is the one
+    /// `taigi_desktop_core::keys::input_method_menu` asserts. No composing key appears here; the menu stopped
     /// being that roster when the agent proved unable to display one without
     /// also dispatching it.
     func testMenu_isTheGlobalShortcutsThenTheSettingsDoorwayThenCheckForUpdatesAndAbout() throws {
@@ -81,7 +82,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         // The literal oracle for this surface: the copy is the authored Hanji.
         XCTAssertEqual(
             items.map(\.title),
-            ["切換台羅/白話字", "切換候選詞顯示", "", "設定", "", "檢查更新", "關於齒盤"],
+            ["切換台羅/白話字", "切換候選詞顯示", "", "台語齒盤設定", "", "檢查更新", "關於齒盤"],
         )
         XCTAssertEqual(items.filter(\.isSeparatorItem).count, 2)
         XCTAssertFalse(try XCTUnwrap(items.first).isSeparatorItem)
@@ -265,7 +266,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
 
         let row = try item(action: Self.openSettings, in: menu())
 
-        XCTAssertEqual(row.title, "設定")
+        XCTAssertEqual(row.title, "台語齒盤設定")
         XCTAssertEqual(row.keyEquivalent, "")
         XCTAssertEqual(row.keyEquivalentModifierMask, [])
     }
@@ -315,11 +316,11 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// The menu is rebuilt on every draw, which is what lets it follow a language change with no
     /// refresh wiring of its own.
     func testMenu_redrawnAfterALanguageChange_readsInTheNewLanguage() throws {
-        XCTAssertEqual(try item(action: Self.openSettings, in: menu()).title, "設定")
+        XCTAssertEqual(try item(action: Self.openSettings, in: menu()).title, "台語齒盤設定")
 
         try XCTUnwrap(controller.displayLanguageOverride).setLanguage(.english)
 
-        XCTAssertEqual(try item(action: Self.openSettings, in: menu()).title, "Settings")
+        XCTAssertEqual(try item(action: Self.openSettings, in: menu()).title, "Taigi Keyboard Settings")
     }
 
     /// ⌘, belongs to the application being typed into. A key equivalent claimed

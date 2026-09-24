@@ -16,9 +16,7 @@ use crate::contexts::ContextRegistry;
 use crate::conversion_mode;
 use crate::display_attribute::{self, DisplayAttributeEnumerator};
 use crate::key_translation;
-use crate::lang_bar::{
-    self, LANG_BAR_SINK_COOKIE, MENU_ABOUT, MENU_CHECK_FOR_UPDATES, MENU_OPEN_SETTINGS,
-};
+use crate::lang_bar::{self, LANG_BAR_SINK_COOKIE};
 use crate::preserved_keys::{self, PreservedKeys};
 use crate::product_name;
 use crate::runtime::Runtime;
@@ -32,7 +30,9 @@ use std::cell::RefCell;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
 use taigi_desktop_core::composing::ContextToken;
-use taigi_desktop_core::keys::{LanguageMode, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE};
+use taigi_desktop_core::keys::{
+    LanguageMode, MenuCommand, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE,
+};
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
@@ -1067,10 +1067,11 @@ impl ITfLangBarItemButton_Impl for TextService_Impl {
     fn OnClick(&self, _click: TfLBIClick, pt: &POINT, _prcarea: *const RECT) -> Result<()> {
         guarded("ITfLangBarItemButton::OnClick", || {
             let runtime = Runtime::shared();
-            let rows = lang_bar::menu_rows(&runtime.strings(), &runtime.settings.current());
+            let rows = lang_bar::popup_rows(&runtime.strings(), &runtime.settings.current());
             if let Some(id) = lang_bar::show_popup(&rows, *pt) {
-                match id {
-                    MENU_OPEN_SETTINGS => {
+                match lang_bar::menu_command(id) {
+                    None => log::warn!("tsf.menu_unknown_id id={id}"),
+                    Some(MenuCommand::OpenSettings) => {
                         // The guide and the picker come down first, whoever
                         // raised them: this path never reaches the session,
                         // and the settings window taking focus is not
@@ -1080,33 +1081,30 @@ impl ITfLangBarItemButton_Impl for TextService_Impl {
                         self.hide_symbol_picker_now();
                         settings_launcher::open_settings();
                     }
-                    MENU_CHECK_FOR_UPDATES => {
+                    Some(MenuCommand::CheckForUpdates) => {
                         // Also the settings window (on 一般): same doorway.
                         self.hide_telex_guide_now();
                         self.hide_symbol_picker_now();
                         settings_launcher::check_for_updates();
                     }
-                    MENU_ABOUT => {
+                    Some(MenuCommand::About) => {
                         // The settings window on 關於, the pane the sidebar
                         // does not list: same doorway.
                         self.hide_telex_guide_now();
                         self.hide_symbol_picker_now();
                         settings_launcher::open_about();
                     }
-                    id => match lang_bar::shortcut_for_menu_id(id) {
-                        // A shortcut row does what its chord does, through
-                        // the same doorway (`perform_global`), against the
-                        // context focused NOW — resolved after the popup's
-                        // modal loop, not before it — so the open list of
-                        // that context is the one re-presented. No focused
-                        // context is the `OnPreservedKey` case: identity 0,
-                        // the switches still flip.
-                        Some(action) => {
-                            let identity = self.focused_context_identity();
-                            self.perform_global(action, identity);
-                        }
-                        None => log::warn!("tsf.menu_unknown_id id={id}"),
-                    },
+                    // A shortcut row does what its chord does, through the
+                    // same doorway (`perform_global`), against the context
+                    // focused NOW — resolved after the popup's modal loop,
+                    // not before it — so the open list of that context is
+                    // the one re-presented. No focused context is the
+                    // `OnPreservedKey` case: identity 0, the switches still
+                    // flip.
+                    Some(MenuCommand::Shortcut(action)) => {
+                        let identity = self.focused_context_identity();
+                        self.perform_global(action, identity);
+                    }
                 }
                 self.notify_lang_bar();
             }

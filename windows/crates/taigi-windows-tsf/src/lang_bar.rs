@@ -1,6 +1,7 @@
-//! The tray button and its menu — the macOS input-source menu, exactly:
-//! the two global shortcuts a click can stand in for / separator / 設定 /
-//! separator / 檢查更新 (`TaigiInputController.menu()`; roadmap W6). The button sits in the standard input-mode slot
+//! The tray button and its menu — the rows every desktop shares
+//! (`taigi_desktop_core::keys::MENU`, the macOS `TaigiInputController.menu()`):
+//! the two global shortcuts a click can stand in for / separator /
+//! 台語齒盤設定 / separator / 檢查更新, 關於齒盤 (roadmap W6). The button sits in the standard input-mode slot
 //! (`GUID_LBI_INPUTMODE`, rakukan `language_bar.rs:21-23`).
 //!
 //! The menu is DRAWN HERE, from `OnClick`, rather than declared through
@@ -20,9 +21,9 @@ use crate::module::instance;
 use crate::product_name;
 use crate::ui::window;
 use crate::wide::{fill_fixed, to_wide_nul};
-use taigi_desktop_core::keys::{LanguageMode, ShortcutAction};
+use taigi_desktop_core::keys::{menu_rows, LanguageMode, MenuCommand, MENU};
 use taigi_desktop_core::settings::SettingsDocument;
-use taigi_desktop_core::strings::{StringKey, StringResolver};
+use taigi_desktop_core::strings::StringResolver;
 use windows::core::{Result, PCWSTR};
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetActiveWindow, GetFocus};
@@ -35,37 +36,22 @@ use windows::Win32::UI::WindowsAndMessaging::{
     TPM_NONOTIFY, TPM_RETURNCMD,
 };
 
-/// Menu command ids `show_popup` answers with. `TPM_RETURNCMD` spells a
-/// dismissed menu as 0, so an id of 0 would read as "the user chose
-/// nothing" — the one rule a new row has to keep.
-pub const MENU_OPEN_SETTINGS: u32 = 1;
-pub const MENU_CHECK_FOR_UPDATES: u32 = 2;
-/// The 關於 page's one doorway: it has no sidebar row (USER 2026-09-20).
-pub const MENU_ABOUT: u32 = 5;
-/// The global shortcuts the menu stands in for, in row order, each with its
-/// id (USER 2026-09-19: the menu is where a user looks up the chords they
-/// last recorded). One table drives both the drawing and the id → action
-/// lookup, so no row can print one action and fire another. Not the 漢羅對調
-/// swap — its default is the bare backtick, which the Mac's menu can never
-/// print (`TaigiInputController.menu()`) — not the symbol picker, which
-/// needs the caret a click has no hold of (`needs_key_context`) — and not the
-/// Telex guide (USER 2026-09-20: 「極少人使用」).
-pub const MENU_SHORTCUT_ROWS: [(u32, ShortcutAction); 2] = [
-    (3, ShortcutAction::ToggleRomanization),
-    (4, ShortcutAction::CycleCandidateDisplayMode),
-];
-const _: () = assert!(MENU_OPEN_SETTINGS != 0 && MENU_CHECK_FOR_UPDATES != 0 && MENU_ABOUT != 0);
-const _: () =
-    assert!(MENU_ABOUT != MENU_SHORTCUT_ROWS[0].0 && MENU_ABOUT != MENU_SHORTCUT_ROWS[1].0);
-const _: () = assert!(MENU_SHORTCUT_ROWS[0].0 != 0 && MENU_SHORTCUT_ROWS[1].0 != 0);
-
-/// The global shortcut a menu id stands for, `None` for the other rows.
-pub fn shortcut_for_menu_id(id: u32) -> Option<ShortcutAction> {
-    MENU_SHORTCUT_ROWS
-        .iter()
-        .find(|(row_id, _)| *row_id == id)
-        .map(|(_, action)| *action)
+/// A popup row's command id is its position in the shared list, from 1:
+/// `TPM_RETURNCMD` spells a dismissed menu as 0, so no row may be 0. Never
+/// stored — `show_popup` answers with it and [`menu_command`] reads it
+/// straight back, so every row of `keys::MENU` has one and none can print one
+/// command and fire another.
+fn popup_id(index: usize) -> u32 {
+    u32::try_from(index + 1).unwrap_or(u32::MAX)
 }
+
+/// The command a popup id stands for; `None` for 0 (dismissed) or a
+/// separator.
+pub fn menu_command(id: u32) -> Option<MenuCommand> {
+    let index = usize::try_from(id).ok()?.checked_sub(1)?;
+    MENU.get(index).copied().flatten()
+}
+
 /// The one cookie `ITfSource::AdviseSink` hands out for the lang-bar sink.
 pub const LANG_BAR_SINK_COOKIE: u32 = 0x5461_6967;
 /// The DLL icon resource the installer build adds (PR10); index 1.
@@ -97,43 +83,26 @@ pub fn item_info() -> TF_LANGBARITEMINFO {
 }
 
 /// The rows, in order, as (id, label) — `None` is a separator. Pure, so the
-/// menu is testable without a live menu. Every shortcut row prints the chord
-/// the user last recorded on it, tab-separated: a Win32 menu draws what
-/// follows a tab in its accelerator column, which is what `show_popup`
-/// builds. The shortcut rows carry the 快捷鍵 pane's own names; the 設定 row
-/// keeps its one-word menu name. 檢查更新 and 關於 carry no chord by design.
-pub fn menu_rows(
+/// menu is testable without a live menu. A row with a recorded chord prints
+/// it tab-separated: a Win32 menu draws what follows a tab in its
+/// accelerator column, which is what `show_popup` builds.
+pub fn popup_rows(
     strings: &StringResolver,
     settings: &SettingsDocument,
 ) -> Vec<Option<(u32, String)>> {
-    let shortcut_label = |action: ShortcutAction, name: StringKey| match action.chord_in(settings) {
-        Some(chord) => format!("{}\t{}", strings.resolve(name), chord.display()),
-        None => strings.resolve(name).to_owned(),
-    };
-    let mut rows: Vec<Option<(u32, String)>> = MENU_SHORTCUT_ROWS
-        .iter()
-        .map(|(id, action)| Some((*id, shortcut_label(*action, action.label_key()))))
-        .collect();
-    rows.extend([
-        None,
-        Some((
-            MENU_OPEN_SETTINGS,
-            shortcut_label(
-                ShortcutAction::OpenLastSettingsPane,
-                StringKey::CommonSettings,
-            ),
-        )),
-        None,
-        Some((
-            MENU_CHECK_FOR_UPDATES,
-            strings.resolve(StringKey::DesktopUpdateCheckNow).to_owned(),
-        )),
-        Some((
-            MENU_ABOUT,
-            strings.resolve(StringKey::DesktopAboutTab).to_owned(),
-        )),
-    ]);
-    rows
+    menu_rows(strings, settings)
+        .into_iter()
+        .enumerate()
+        .map(|(index, row)| {
+            row.map(|row| {
+                let label = match row.chord {
+                    Some(chord) => format!("{}\t{chord}", row.title),
+                    None => row.title,
+                };
+                (popup_id(index), label)
+            })
+        })
+        .collect()
 }
 
 /// The window a popup is owned by: the focused window of the calling
@@ -254,50 +223,36 @@ pub fn owned_icon() -> Result<HICON> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use taigi_desktop_core::keys::ShortcutAction;
     use taigi_desktop_core::strings::DisplayLanguage;
 
     #[test]
-    fn the_menu_mirrors_the_macos_input_source_menu() {
-        // trace: TaigiInputController.menu() → [shortcuts(2)], [settings], [checkForUpdates, about];
-        // the literal oracle is the authored Hanji, as in TaigiInputControllerMenuTests.
+    fn every_row_prints_its_chord_after_a_tab_and_its_id_reads_back() {
+        // trace: keys::MENU rows (the shared literal is asserted in
+        // taigi-desktop-core); here only what Windows adds — the tab join
+        // and the id → command round trip.
         let strings = StringResolver::new(DisplayLanguage::Hanji);
-        let rows = menu_rows(&strings, &SettingsDocument::default());
-        let labels: Vec<Option<&str>> = rows
-            .iter()
-            .map(|row| row.as_ref().map(|(_, label)| label.as_str()))
-            .collect();
+        let rows = popup_rows(&strings, &SettingsDocument::default());
+        assert_eq!(rows.len(), MENU.len());
         assert_eq!(
-            labels,
-            [
-                Some("切換台羅/白話字\tCtrl+Alt+C"),
-                Some("切換候選詞顯示\tCtrl+Alt+H"),
-                None,
-                Some("設定\tCtrl+Alt+S"),
-                None,
-                Some("檢查更新"),
-                Some("關於齒盤"),
-            ]
+            rows[0].as_ref().map(|(_, label)| label.as_str()),
+            Some("切換台羅/白話字\tCtrl+Alt+C")
         );
-        let ids: Vec<Option<u32>> = rows
-            .iter()
-            .map(|row| row.as_ref().map(|(id, _)| *id))
-            .collect();
-        assert_eq!(
-            ids,
-            [Some(3), Some(4), None, Some(1), None, Some(2), Some(5)]
-        );
-        for (id, action) in MENU_SHORTCUT_ROWS {
-            assert_eq!(shortcut_for_menu_id(id), Some(action));
+        for (row, command) in rows.iter().zip(MENU) {
+            match (row, command) {
+                (Some((id, _)), Some(command)) => {
+                    assert_ne!(*id, 0);
+                    assert_eq!(menu_command(*id), Some(command));
+                }
+                (None, None) => {}
+                _ => panic!("a separator drawn where a row belongs, or the reverse"),
+            }
         }
-        assert_eq!(shortcut_for_menu_id(MENU_OPEN_SETTINGS), None);
-        assert_eq!(shortcut_for_menu_id(MENU_CHECK_FOR_UPDATES), None);
-        assert_eq!(shortcut_for_menu_id(MENU_ABOUT), None);
+        assert_eq!(menu_command(0), None, "a dismissed popup");
         let mut cleared = SettingsDocument::default();
-        ShortcutAction::OpenLastSettingsPane.store_in(&mut cleared, None);
         ShortcutAction::ToggleRomanization.store_in(&mut cleared, None);
-        let rows = menu_rows(&strings, &cleared);
+        let rows = popup_rows(&strings, &cleared);
         assert_eq!(rows[0].as_ref().unwrap().1, "切換台羅/白話字");
-        assert_eq!(rows[3].as_ref().unwrap().1, "設定");
         // A plain tray button, whose click reaches `OnClick`. A
         // `TF_LBI_STYLE_BTN_MENU` here shows no menu at all in the
         // Windows 8+ taskbar input indicator (module header).

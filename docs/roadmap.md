@@ -24,7 +24,7 @@ kautian subcollections (腔調 + 姓名附錄 toggles + 語音差異 詞級擴�
 
 ### Linux update check + identical desktop menus (USER-scoped 2026-09-24)
 
-**Status**: Phase 0 `bfc79a53`, phase 1 #175, phase 2 site #20 MERGED; phase 3 in progress (`feat/linux-manual-update-check`). Project memory `project_linux_update_check.md`.
+**Status**: Phase 0 `bfc79a53`, phase 1 #175, phase 2 site #20 MERGED; phase 3 #176 MERGED; phase 4 in progress (`feat/desktop-menu-parity`). Project memory `project_linux_update_check.md`.
 
 USER 2026-09-24: 「下一個round安排linux檢查更新」; 「我希望macos,windows,linux的選單內容都一致,包含i18n」. Round-start decisions (USER 2026-09-24): manual check **and** automatic notification; check logic lifted into a shared `desktop/` crate; one `appcast/linux.json` naming only the download page; widen 台語齒盤設定 to macOS + Windows this round. Reverses `docs/architecture/linux-roadmap.md` L10, whose premise ("packages are updated by the package manager") is false: `.deb` / `.rpm` / Arch packages ship only as GitHub release assets (no apt repository, COPR or AUR).
 
@@ -52,8 +52,8 @@ USER 2026-09-24: 「下一個round安排linux檢查更新」; 「我希望macos,
 | 0 | admin | docs | this section + project memory | Merged `bfc79a53` |
 | 1 | `refactor(desktop): lift update check out of the Windows crate` | Refactor — Windows behavior freeze (wire parsing, Failed → keep pending, stamp-before-fetch, pending cleared on UpToDate, once-per-version toast) | core `settings::update_schedule` + `taigi-desktop-update` crate; `taigi-windows-update` keeps install / verify / toast; imports rewritten | Merged #175 `53e06406` |
 | 2 | site `taigikeyboard.github.io` | Feature (site) | `appcast/linux.json` rendered from `_data/linux_release.json` (the `.deb`'s data file): `version` + `downloadPageURL`, no package. Must be live before phase 3 merges | Merged site #20 `eba0930`, live 2026-09-25 |
-| 3 | `feat(linux): check for updates from the menu and 一般 pane` | Feature | Linux manual check (above); `announce-release.sh` `LINUX_MANIFEST_URL` + `wait_for_manifest`; docs: `linux-roadmap.md` L10, `linux-release.md` § Update check, `desktop-release.md`; OpenSSL build deps (CI, e2e, PKGBUILD) | In progress |
-| 4 | `feat(desktop): one menu row list on three desktops` | Feature (i18n + 3 platforms) | shared row list; macOS + Windows settings row → 台語齒盤設定; Swift test | Pending |
+| 3 | `feat(linux): check for updates from the menu and 一般 pane` | Feature | Linux manual check (above); `announce-release.sh` `LINUX_MANIFEST_URL` + `wait_for_manifest`; docs: `linux-roadmap.md` L10, `linux-release.md` § Update check, `desktop-release.md`; OpenSSL build deps (CI, e2e, PKGBUILD) | Merged #176 `63667771` |
+| 4 | `feat(desktop): one menu row list on three desktops` | Feature (i18n + 3 platforms) | `taigi_desktop_core::keys::MENU` (Windows `lang_bar::menu_rows` + Linux `chrome::menu_items` map it); macOS settings row → `.desktopMenuSettings`, menu tests assert the same literal; `desktop.menuSettings` scoped to all 3 desktops, `common.settings` back to mobile only; Windows popup ids = row position, both shells dispatch on `MenuCommand` | In progress |
 | 5 | `feat(linux): automatic update check with a notification` | Feature | headless `--check-updates` + `claim_due_check`, engine trigger, reaping, `gio::Notification`, D-Bus activation files | Pending |
 
 #### Best practices alignment
@@ -301,7 +301,7 @@ Audit outcome, rejected alternatives (do not re-propose) and gate note: [`docs/r
 ### Desktop input-source menu — global shortcut rows (USER-scoped 2026-09-19)
 
 **Status**: MERGED 2026-09-20 — #100 `f763d8bf` (macOS + Windows in one PR). Dogfood pending: S59 (both platforms).
-The menu-bar / tray menu lists the two global shortcuts a click can stand in for (切換台羅/白話字 · 切換候選詞顯示), each printing the chord the 快速齒 pane holds for it, then 設定, then 檢查更新. Labels reuse the pane's i18n keys (USER 2026-09-19: no new strings). Excluded on purpose: 切換漢字/羅馬字模式 (bare-backtick default — a macOS menu key equivalent is dispatched by the text-input menu agent system-wide, so a bare key there is a key the user can no longer type; the rule generalises: a row re-recorded onto a bare key prints no chord) 拍開符號選單 (needs the caret a click has no hold of) and 拍開 Telex 說明 (USER 2026-09-20: 「極少人使用」). Windows resolves the focused context after the popup closes (`ITfThreadMgr::GetFocus` → `GetTop`) so the click re-presents that context's open list.
+The menu-bar / tray menu lists the two global shortcuts a click can stand in for (切換台羅/白話字 · 切換候選詞顯示), each printing the chord the 快速齒 pane holds for it, then 設定 (台語齒盤設定 since 2026-09-25, one row list on three desktops — § Linux update check phase 4), then 檢查更新. Labels reuse the pane's i18n keys (USER 2026-09-19: no new strings). Excluded on purpose: 切換漢字/羅馬字模式 (bare-backtick default — a macOS menu key equivalent is dispatched by the text-input menu agent system-wide, so a bare key there is a key the user can no longer type; the rule generalises: a row re-recorded onto a bare key prints no chord) 拍開符號選單 (needs the caret a click has no hold of) and 拍開 Telex 說明 (USER 2026-09-20: 「極少人使用」). Windows resolves the focused context after the popup closes (`ITfThreadMgr::GetFocus` → `GetTop`) so the click re-presents that context's open list.
 
 ---
 

@@ -10,6 +10,7 @@
 mod action;
 mod bindings;
 mod chord;
+mod input_method_menu;
 mod intent;
 mod language_mode;
 mod recorder;
@@ -24,6 +25,7 @@ mod tone_input_scheme;
 pub use action::ComposingAction;
 pub use bindings::ComposingKeyBindings;
 pub use chord::{ChordRejection, ComposingKeyChord};
+pub use input_method_menu::{menu_rows, MenuCommand, MenuRow, MENU};
 pub use intent::{
     CandidateNavigation, CaretDirection, ComposingKeyIntent, CARET_CHORD_MODIFIERS,
     WIDTH_FLIP_MODIFIERS,
