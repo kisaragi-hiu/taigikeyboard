@@ -138,7 +138,7 @@ install: build component install-fcitx5
 	done
 	# The bundled typefaces (the ones macOS and Windows ship), as fontconfig
 	# fallbacks for the Han characters the desktop's fonts lack (roadmap L4),
-	# split by format the Debian way (`InstallLayout::bundled_font_file`).
+	# split by format the Debian way; users pick them in Fcitx5 / IBus (L7).
 	install -Dm644 -t $(DESTDIR)$(PREFIX)/share/fonts/truetype/taigikeyboard ../fonts/font/*.ttf
 	install -Dm644 -t $(DESTDIR)$(PREFIX)/share/fonts/opentype/taigikeyboard ../fonts/font/*.otf
 	install -Dm644 ../fonts/OFL-1.1.txt $(DESTDIR)$(PREFIX)/share/doc/taigikeyboard/fonts-OFL-1.1.txt

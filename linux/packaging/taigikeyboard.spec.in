@@ -3,7 +3,7 @@
 # layout for every format. `@VERSION@` / `@STAGEROOT@` are rendered by the
 # Makefile. Runtime `Requires` for the linked libraries come from rpm's own
 # ELF scan (the dpkg-shlibdeps of this format); only the framework alternative
-# and fontconfig (the 字型管理 pane runs fc-query / fc-list / fc-cache) are named.
+# and fontconfig (it caches the bundled typefaces) are named.
 Name:           taigikeyboard
 Version:        @VERSION@
 # No %{?dist}: the asset name the release scripts look for is fixed

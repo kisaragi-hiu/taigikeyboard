@@ -62,7 +62,6 @@ pub(crate) fn temporary_runtime() -> (tempfile::TempDir, Runtime) {
         Some(UserDirectories {
             config: directory.path().join("config"),
             data: directory.path().join("data"),
-            fonts: directory.path().join("fonts"),
         }),
         directory.path().join("no-dictionaries"),
     );
