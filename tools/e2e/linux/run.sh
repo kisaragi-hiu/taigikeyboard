@@ -32,9 +32,12 @@ ssh "$HOST" mkdir -p "$REMOTE/src"
 (cd "$REPO_ROOT" && rsync -a --delete --relative --exclude 'target/' --exclude '.git' --exclude 'e2e/runs/' \
     engine desktop linux dictionaries i18n fonts symbols tools e2e "$HOST:$REMOTE/src/")
 
-ssh "$HOST" bash -s -- "$ONLY" "${FRAMEWORKS[@]}" <<EOF
+# ssh joins its arguments into one command line, so an empty one would
+# vanish: `-` stands for "every scenario".
+ssh "$HOST" bash -s -- "${ONLY:--}" "${FRAMEWORKS[@]}" <<EOF
 set -euo pipefail
 only="\$1"; shift
+[ "\$only" = - ] && only=
 source "\$HOME/.cargo/env"
 cd "\$HOME/$REMOTE"
 rm -rf run prefix

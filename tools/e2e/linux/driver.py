@@ -176,7 +176,10 @@ class Session:
             (self.work / "config" / "fcitx5").mkdir(parents=True)
             (self.work / "config" / "fcitx5" / "profile").write_text(fcitx5_profile(), encoding="utf-8")
             self.spawn(["fcitx5", "--replace"])
-            wait_until(lambda: self.run(["fcitx5-remote"]).returncode == 0, STARTUP_TIMEOUT_S, "fcitx5 on the bus")
+            # Only NameHasOwner until our fcitx5 owns the name: any call to
+            # the unowned name makes dbus-daemon auto-start a second fcitx5
+            # with the daemon's environment, not this scenario's.
+            wait_until(self.fcitx5_owns_its_name, STARTUP_TIMEOUT_S, "fcitx5 to own org.fcitx.Fcitx5")
         else:
             self.spawn(["ibus-daemon", "--replace", "--panel", "disable", "--config", "disable"])
             wait_until(
@@ -192,6 +195,13 @@ class Session:
             raise ScenarioError("the host window never mapped")
         self.run(["xdotool", "windowfocus", "--sync", window[0]])
         wait_until(self.activate, STARTUP_TIMEOUT_S, "the input method to be active on the focused field")
+
+    def fcitx5_owns_its_name(self) -> bool:
+        owner = self.run([
+            "dbus-send", "--session", "--print-reply", "--dest=org.freedesktop.DBus", "/",
+            "org.freedesktop.DBus.NameHasOwner", "string:org.fcitx.Fcitx5",
+        ])
+        return "boolean true" in owner.stdout
 
     def activate(self) -> bool:
         """Switch the focused field to this IME and confirm it took: the
