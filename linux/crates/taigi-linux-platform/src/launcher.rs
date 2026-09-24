@@ -6,7 +6,8 @@
 use crate::paths::settings_binary;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use taigi_desktop_core::settings::launch::PANE_FLAG;
+use taigi_desktop_core::settings::launch::{CHECK_NOW_FLAG, PANE_FLAG};
+use taigi_desktop_core::settings::{SettingChoice, SettingsPane};
 
 /// Spawns the settings window, on `pane` (the persisted raw spelling of a
 /// `SettingsPane`) or wherever the user left it. Detached: no pipe, no wait —
@@ -18,10 +19,28 @@ pub fn open_settings(pane: Option<&str>) -> bool {
 }
 
 pub fn open_settings_at(binary: &Path, pane: Option<&str>) -> bool {
-    let mut command = Command::new(binary);
-    if let Some(pane) = pane {
-        command.arg(PANE_FLAG).arg(pane);
+    match pane {
+        Some(pane) => spawn_settings(binary, &[PANE_FLAG, pane]),
+        None => spawn_settings(binary, &[]),
     }
+}
+
+/// The menu's 檢查更新: the window on 一般, running the manual check there
+/// (Windows `settings_launcher::check_for_updates`).
+pub fn check_for_updates() -> bool {
+    check_for_updates_at(&settings_binary())
+}
+
+pub fn check_for_updates_at(binary: &Path) -> bool {
+    spawn_settings(
+        binary,
+        &[PANE_FLAG, SettingsPane::General.raw(), CHECK_NOW_FLAG],
+    )
+}
+
+fn spawn_settings(binary: &Path, arguments: &[&str]) -> bool {
+    let mut command = Command::new(binary);
+    command.args(arguments);
     spawn_detached(command, "settings")
 }
 
@@ -61,5 +80,8 @@ mod tests {
             Path::new("/nonexistent/taigikeyboard-settings"),
             Some("general")
         ));
+        assert!(!check_for_updates_at(Path::new(
+            "/nonexistent/taigikeyboard-settings"
+        )));
     }
 }
