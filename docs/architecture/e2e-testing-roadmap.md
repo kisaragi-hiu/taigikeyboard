@@ -128,9 +128,9 @@ PR1/PR2 of the first draft were over the 500-LOC cap (Codex) — split below.
 | PR3 | Linux: release zero-log, Fcitx5 + IBus platform events, container driver (one distro, both frameworks), `make e2e PLATFORM=linux`, `/e2e` skill | Pending |
 | PR4 | Linux: CI matrix Ubuntu 24.04 / Debian 13 / Fedora 44 / Arch × {Fcitx5, IBus} from each distro's own package | Pending |
 | PR5 | macOS: `-DE2E_TRACE` events, CGEvent driver + host app | Pending |
-| PR6 | Windows: TSF events, `/IT` interactive-session `SendInput` driver over `ssh win` | Pending (unlocked session) |
+| PR6 | Windows: TSF events, `/IT` interactive-session `SendInput` driver over `ssh win`; skip when box off / locked | Pending |
 | PR7 | Android: `e2e` build type, geometry manifest, adb tap driver, e2e AVD | Pending |
-| PR8 | iOS: `E2E_TRACE` events in the extension, geometry manifest, simulator driver | Pending (S-A decision) |
+| PR8 | iOS: `E2E_TRACE` events in the extension, geometry manifest, XCUITest driver | Pending (USER adds UI test target) |
 
 Each platform PR adds its row to `/e2e` and its budgets; PR sizes 200–500 LOC.
 
@@ -152,8 +152,10 @@ Rules: `~/.claude/rules/planning.md` (roadmap + memory, grounded, PR sizing); `d
 - **Third-party test frameworks with a service** (Appium server, Detox) — one driver script per platform is smaller than an Appium stack for six key-injection paths.
 - **`tracing` crate** — the engine uses `log` everywhere; one JSONL writer behind a feature is smaller than a subscriber stack.
 
-## Open questions (USER)
+## USER decisions (2026-09-24)
 
-1. iOS tap injection: add an XCUITest target in Xcode (Apple-supported; USER-only project edit) or install `idb`?
-2. Windows box: keep the console unlocked during e2e runs (lock policy is the USER's machine setting)?
-3. Linux CI matrix cadence: 8 hosted jobs on every PR touching `linux/` or `engine/`, or nightly + on demand?
+USER 2026-09-24: 「Ios我晚點加、windows如果關機就skip，其他go」
+
+1. iOS: the USER adds an XCUITest target in Xcode later; PR8 waits for it.
+2. Windows: the driver probes the box first; powered off, unreachable or locked console → the run reports `skipped` with the reason, never a failure.
+3. Linux CI matrix: runs on PRs touching `linux/`, `engine/` or `e2e/`, plus `workflow_dispatch`.
