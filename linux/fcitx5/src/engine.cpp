@@ -254,10 +254,9 @@ void State::showCandidates(const TaigiReply *reply, size_t index) {
     list->setPageSize(static_cast<int>(pageSize));
     list->setLayoutHint(taigi_reply_table_vertical(reply, index) ? CandidateLayoutHint::Vertical
                                                                   : CandidateLayoutHint::Horizontal);
-    /* The panel's own selection keys are switched off: a slot key reaches
-     * the core through keyEvent, which is what keeps Shift+slot (the other
-     * script) and the Digits set working the same way on every platform. */
-    list->setSelectionKey(KeyList());
+    /* No setSelectionKey: in fcitx5 it only rewrites the labels (both calls
+     * fill the same vector), so an empty KeyList would blank the slot keys
+     * set above. Slot keys reach the core through keyEvent regardless. */
     for (size_t row = 0; row < rows; ++row) {
         list->append(std::make_unique<CandidateWordImpl>(
             this, static_cast<uint32_t>(row % (pageSize == 0 ? 1 : pageSize)),
