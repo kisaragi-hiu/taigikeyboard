@@ -168,13 +168,19 @@ if fetch_platform_asset Windows "$WINDOWS_ASSET"; then
     )
 fi
 
-# No manifest to wait for: nothing installed polls for a `.deb`.
+# No manifest to wait for: nothing installed polls for a Linux package.
 if fetch_platform_asset Linux "$LINUX_ASSET"; then
     site_files+=("$LINUX_SITE_PATH" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
 fi
+if fetch_platform_asset Fedora "$LINUX_RPM_ASSET"; then
+    site_files+=("$LINUX_RPM_SITE_PATH" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
+fi
+if fetch_platform_asset Arch "$LINUX_ARCH_ASSET"; then
+    site_files+=("$LINUX_ARCH_SITE_PATH" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
+fi
 
 [[ ${#site_files[@]} -gt 0 ]] ||
-    fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET — there is nothing to announce"
+    fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET, $LINUX_RPM_ASSET, $LINUX_ARCH_ASSET — there is nothing to announce"
 
 # ---------------------------------------------------------------------------
 # Only now announce it. A manifest published before its download is reachable

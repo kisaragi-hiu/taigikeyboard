@@ -1,4 +1,4 @@
-# Linux release — a `.deb` on the desktop draft, distro-managed after that
+# Linux release — `.deb` / `.rpm` / Arch packages on the desktop draft, distro-managed after that
 
 > **Type**: Reference (living)
 > **Keywords**: `linux`, `release`, `deb`, `dpkg-deb`, `Fcitx5`, `IBus`, `desktop train`
@@ -9,11 +9,30 @@ release `desktop-<version>` for all three desktops, tested and published by a
 person — is `desktop-release.md`; this file is only what the Linux artifact
 is and how it is built.
 
-## The artifact
+## The artifacts
 
-`taigikeyboard_<version>_amd64.deb`, plus `taigikeyboard_<version>_amd64.deb.sha256`,
-attached to the `desktop-<version>` draft beside the macOS `.pkg` and the
-Windows `.exe`. One package holds both shells, the way `fcitx5-chewing` and
+Three x86_64 packages, each with its `.sha256`, attached to the
+`desktop-<version>` draft beside the macOS `.pkg` and the Windows `.exe`:
+
+| Asset | For | Built on |
+|---|---|---|
+| `taigikeyboard_<version>_amd64.deb` | Ubuntu 24.04+ / Debian 13+ / Mint 22+ / Pop!_OS 24.04+ | `ubuntu-24.04` runner |
+| `taigikeyboard-<version>-1.x86_64.rpm` | Fedora 44+ | `fedora:44` container |
+| `taigikeyboard-<version>-1-x86_64.pkg.tar.zst` | Arch Linux and its rolling derivatives (`pacman -U`) | `archlinux:latest` container |
+
+The floor is the settings window's GTK 4.12 / libadwaita 1.5: Ubuntu 22.04 and
+Debian 12 ship older ones and are not targeted. Flatpak / Snap / AppImage are
+not offered — an IME's addon and engine have to be registered with the host's
+Fcitx5 / IBus, which a sandboxed or self-contained bundle cannot do. No AUR
+entry: that needs a maintainer account and is a separate decision.
+
+All three are packed from the SAME staged `make install PREFIX=/usr` root —
+no second build inside rpmbuild or makepkg. The Fcitx5 addon lands in each
+distribution's own library dir through CMake's `GNUInstallDirs`
+(`lib/x86_64-linux-gnu`, `lib64`, `lib`); every other path is identical.
+`/usr/libexec` on Arch departs from its packaging guideline (`/usr/lib`),
+accepted to keep one layout; the component XML names the absolute path.
+One package holds both shells, the way `fcitx5-chewing` and
 `ibus-chewing` come from one source:
 
 | Path | What |
@@ -58,6 +77,23 @@ The Fcitx5 addon is C++ over the Rust C ABI and compiles only on Linux
 That is why the package is built on the GitHub-hosted runner, never on the
 maintainer's Mac.
 
+### The Fedora and Arch packages
+
+- `make -C linux rpm` (on Fedora): `packaging/taigikeyboard.spec.in` copies the
+  staged root into the buildroot; rpm's ELF scan writes the library
+  `Requires` (the dpkg-shlibdeps of this format) beside `(fcitx5 or ibus)` and
+  `fontconfig`. No `%{?dist}` in `Release`, so the asset name is fixed.
+- `make -C linux arch` (on Arch, non-root — makepkg refuses root):
+  `packaging/PKGBUILD.in` copies the staged root into `$pkgdir`. pacman has no
+  alternative dependencies, so `fcitx5` is required (the addon links
+  `libFcitx5Core`) and `ibus` is optional. Arch is rolling: a package built
+  against one Fcitx5 may need a rebuild after its ABI moves.
+
+CI installs each into a FRESH container of its distribution (`install-check`)
+and asserts the files are in place and every linked library resolves — no
+build dependency around to hide a missing runtime one. That is packaging
+proof only; typing on a real desktop is S74.
+
 ## Staging and publishing
 
 `.github/workflows/linux-build.yml` is the Linux half of a desktop release,
@@ -92,9 +128,12 @@ Linux packages are updated by the package manager (`linux-roadmap.md` L10).
 The 一般 pane shows the running version and a 去下載 link to taigikeyboard.tw;
 the `update*` settings keys stay unwritten and `taigi-windows-update` is not
 linked. The announcement (`scripts/announce-release.sh`) still writes
-`_data/linux_release.json` (version, download URL, `sha256`, release page) in
-the same website commit as the other two — the landing page's Linux button
-and its checksum read it — but there is no appcast and nothing to poll. The
+`_data/linux_release.json`, `_data/linux_rpm_release.json` and
+`_data/linux_arch_release.json` (version, download URL, `sha256`, release page)
+in the same website commit as the other two — the landing page's Linux
+buttons read them — but there is no appcast and nothing to poll. A release
+missing one format leaves that file on its previous version, so the site
+splits the Linux button into three only when all three name the same tag. The
 website shows that button only while its `enable_linux_download` is `true`;
 that switch hides the entry point, not the asset, which is public the moment
 the release is published.
@@ -102,10 +141,13 @@ the release is published.
 ## Installing by hand
 
 ```sh
-sudo apt install ./taigikeyboard_<version>_amd64.deb
+sudo apt install ./taigikeyboard_<version>_amd64.deb             # Ubuntu / Debian
+sudo dnf install ./taigikeyboard-<version>-1.x86_64.rpm          # Fedora
+sudo pacman -U ./taigikeyboard-<version>-1-x86_64.pkg.tar.zst    # Arch
 fcitx5 -r            # or: ibus restart
 ```
 
 Then add 台語齒盤 in `fcitx5-configtool` (Fcitx5) or the desktop's input-source
 settings (IBus). First-machine acceptance is the dogfood run-book in
-`linux-roadmap.md` and `dogfood-checklist.md` S74. Uninstall: `sudo apt remove taigikeyboard`.
+`linux-roadmap.md` and `dogfood-checklist.md` S74. Uninstall: `sudo apt remove taigikeyboard`
+(`sudo dnf remove taigikeyboard`, `sudo pacman -R taigikeyboard`).

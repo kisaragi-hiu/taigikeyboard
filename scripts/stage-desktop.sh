@@ -140,7 +140,7 @@ DRAFT_URL="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json 
 # reports success and attaches nothing is exactly what happened the first time
 # this script drove a second machine.
 _read_staged_asset_names || fail "the draft $DESKTOP_TAG is gone — run this again"
-for asset in "$MACOS_ASSET" "$WINDOWS_ASSET" "$LINUX_ASSET"; do
+for asset in "$MACOS_ASSET" "$WINDOWS_ASSET" "$LINUX_ASSET" "$LINUX_RPM_ASSET" "$LINUX_ARCH_ASSET"; do
     for name in "$asset" "$asset.sha256"; do
         grep -qxF "$name" <<< "$STAGED_ASSET_NAMES" ||
             fail "every half reported success but $name is not on the draft — read the logs above, then run this again"
@@ -148,9 +148,9 @@ for asset in "$MACOS_ASSET" "$WINDOWS_ASSET" "$LINUX_ASSET"; do
 done
 
 echo ""
-echo "✓ all three installers staged on the draft for ${SOURCE_COMMIT:0:7}"
+echo "✓ every installer (macOS, Windows, Linux .deb / .rpm / Arch) staged on the draft for ${SOURCE_COMMIT:0:7}"
 echo ""
-echo "  Open the draft, download the three assets, install and test them:"
+echo "  Open the draft, download the assets, install and test them:"
 echo "    $DRAFT_URL"
 echo ""
 echo "  When they pass, press \"Publish release\" on that page. That is the whole"
