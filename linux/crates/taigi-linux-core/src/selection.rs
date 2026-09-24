@@ -4,9 +4,11 @@
 //! this is the part of `HorizontalListModel` that decides rather than
 //! measures — with no widths, a "page" is a fixed run of cells.
 //!
-//! `Down` / `PageDown` step a page, `Right` / `Next` a cell, exactly as
-//! `HorizontalPageLayout::target` reads the six directions; a step past
-//! either end is refused (the highlight stays), as on the Mac.
+//! Horizontal: `Down` / `PageDown` step a page, `Right` / `Next` a cell,
+//! exactly as `HorizontalPageLayout::target` reads the six directions.
+//! Vertical: the arrows turn, as in `VerticalListModel::navigate` — `Up` /
+//! `Down` step a cell, `Left` / `Right` a page. A step past either end is
+//! refused (the highlight stays), as on the Mac.
 
 use taigi_desktop_core::keys::CandidateNavigation;
 
@@ -62,13 +64,31 @@ impl LookupSelection {
         }
     }
 
-    /// Answers whether the highlight moved.
-    pub fn navigate(&mut self, direction: CandidateNavigation) -> bool {
+    /// Answers whether the highlight moved. `vertical` = the panel draws the
+    /// list as a column.
+    pub fn navigate(&mut self, direction: CandidateNavigation, vertical: bool) -> bool {
+        let direction = if vertical {
+            Self::column_direction(direction)
+        } else {
+            direction
+        };
         let Some(target) = self.target(direction) else {
             return false;
         };
         self.selected = target;
         true
+    }
+
+    /// A column has no cell beside a cell, so the horizontal arrows page
+    /// and the vertical ones step a cell.
+    fn column_direction(direction: CandidateNavigation) -> CandidateNavigation {
+        match direction {
+            CandidateNavigation::Up => CandidateNavigation::PreviousCandidate,
+            CandidateNavigation::Down => CandidateNavigation::NextCandidate,
+            CandidateNavigation::Left => CandidateNavigation::PageUp,
+            CandidateNavigation::Right => CandidateNavigation::PageDown,
+            other => other,
+        }
     }
 
     fn target(&self, direction: CandidateNavigation) -> Option<usize> {
@@ -104,19 +124,39 @@ mod tests {
         // trace: 20 cells, 9 per page → pages [0..9), [9..18), [18..20).
         let mut selection = LookupSelection::new(20, 9);
         assert_eq!(selection.selected_index(), Some(0));
-        assert!(!selection.navigate(CandidateNavigation::Left));
-        assert!(selection.navigate(CandidateNavigation::Right));
+        assert!(!selection.navigate(CandidateNavigation::Left, false));
+        assert!(selection.navigate(CandidateNavigation::Right, false));
         assert_eq!(selection.selected_index(), Some(1));
-        assert!(selection.navigate(CandidateNavigation::PageDown));
+        assert!(selection.navigate(CandidateNavigation::PageDown, false));
         assert_eq!(selection.selected_index(), Some(10));
         assert_eq!(selection.current_page(), 1);
-        assert!(selection.navigate(CandidateNavigation::Down));
+        assert!(selection.navigate(CandidateNavigation::Down, false));
         // Past the last page's short end: clamped to the last cell.
         assert_eq!(selection.selected_index(), Some(19));
-        assert!(!selection.navigate(CandidateNavigation::PageDown));
-        assert!(selection.navigate(CandidateNavigation::Up));
+        assert!(!selection.navigate(CandidateNavigation::PageDown, false));
+        assert!(selection.navigate(CandidateNavigation::Up, false));
         assert_eq!(selection.selected_index(), Some(10));
-        assert!(selection.navigate(CandidateNavigation::PreviousCandidate));
+        assert!(selection.navigate(CandidateNavigation::PreviousCandidate, false));
+        assert_eq!(selection.selected_index(), Some(9));
+    }
+
+    #[test]
+    fn a_column_steps_cells_on_up_down_and_pages_on_left_right() {
+        // trace: 20 cells, 9 per page, vertical → Up/Down = cell, Left/Right = page.
+        let mut selection = LookupSelection::new(20, 9);
+        assert!(!selection.navigate(CandidateNavigation::Up, true));
+        assert!(selection.navigate(CandidateNavigation::Down, true));
+        assert_eq!(selection.selected_index(), Some(1));
+        assert!(selection.navigate(CandidateNavigation::Right, true));
+        assert_eq!(selection.selected_index(), Some(10));
+        assert_eq!(selection.current_page(), 1);
+        assert!(selection.navigate(CandidateNavigation::Up, true));
+        assert_eq!(selection.selected_index(), Some(9));
+        assert!(selection.navigate(CandidateNavigation::Left, true));
+        assert_eq!(selection.selected_index(), Some(0));
+        assert!(!selection.navigate(CandidateNavigation::Left, true));
+        // The panel's own buttons read the same either way.
+        assert!(selection.navigate(CandidateNavigation::PageDown, true));
         assert_eq!(selection.selected_index(), Some(9));
     }
 
@@ -136,7 +176,7 @@ mod tests {
     fn an_empty_list_has_no_selection_and_moves_nowhere() {
         let mut selection = LookupSelection::new(0, 9);
         assert_eq!(selection.selected_index(), None);
-        assert!(!selection.navigate(CandidateNavigation::Right));
+        assert!(!selection.navigate(CandidateNavigation::Right, false));
         assert_eq!(selection.candidate_index_for_key_slot(0), None);
     }
 }
