@@ -2,8 +2,8 @@
 //! typefaces with `+` / `−` under it — over a different job. The framework
 //! draws the candidate window, so nothing here is SELECTED: the list is what
 //! this install puts in fontconfig's reach (the bundled typefaces the package
-//! installed, then the ones the user added), a selected row is only what `−`
-//! acts on, and the note over the list says so. No installed-families
+//! installed, then the ones the user added), and a selected row is only what
+//! `−` acts on — so the bundled rows are not selectable. No installed-families
 //! section, search box or pager: the other desktops need them to choose
 //! among a few hundred OS families; here there is nothing to choose.
 
@@ -56,9 +56,8 @@ pub struct FontManagementPage {
 impl FontManagementPage {
     fn new(context: &PageContext<'_>, page: &adw::PreferencesPage) -> Rc<Self> {
         let strings = *context.strings;
-        let group = adw::PreferencesGroup::builder()
-            .description(strings.resolve(StringKey::DesktopFontManagementLinuxNote))
-            .build();
+        // No note over the list (USER 2026-09-24 「把說明文字都拿掉,keep page clean」).
+        let group = adw::PreferencesGroup::new();
         let list = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::Single)
             .css_classes(["boxed-list"])

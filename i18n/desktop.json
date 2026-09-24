@@ -1828,24 +1828,6 @@
         "ja": "削除できませんでした"
       }
     },
-    "fontManagementLinuxNote": {
-      "comment": "Linux 字型管理 pane: note over the typeface list. The framework (Fcitx5 / GNOME Shell) draws the candidate window, so the pane installs typefaces as fontconfig fallbacks instead of choosing one; a running program sees a change only after it restarts. The quoted menu path is Fcitx5's own zh_TW / ja label.",
-      "scope": {
-        "platforms": [
-          "linux"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "選字窗是 Fcitx5 抑是 GNOME 畫的，字型綴系統設定。下跤的字型會安裝佇這台電腦，替系統字型補無的漢字；加入抑是刪除了後，愛重開程式抑是登出閣登入才有效。Fcitx5 會當佇「附加元件 › 經典使用者介面」揀字型。",
-        "tailo": "Suán-jī-thang sī Fcitx5 ah-sī GNOME uē--ê, jī-hîng tuè hē-thóng siat-tīng. Ē-kha ê jī-hîng ē an-tsong tī tsit tâi tiān-náu, thè hē-thóng jī-hîng póo bô ê hàn-jī; ka-ji̍p ah-sī san-tî liáu-āu, ài tîng-khui thîng-sik ah-sī ting-tshut koh ting-ji̍p tsiah iú-hāu. Fcitx5 ē-tàng tī「附加元件 › 經典使用者介面」kíng jī-hîng.",
-        "poj": "Soán-jī-thang sī Fcitx5 ah-sī GNOME ōe--ê, jī-hêng tòe hē-thóng siat-tēng. Ē-kha ê jī-hêng ē an-chong tī chit tâi tiān-náu, thè hē-thóng jī-hêng pó͘ bô ê hàn-jī; ka-ji̍p ah-sī san-tî liáu-āu, ài têng-khui thêng-sek ah-sī teng-chhut koh teng-ji̍p chiah iú-hāu. Fcitx5 ē-tàng tī「附加元件 › 經典使用者介面」kéng jī-hêng.",
-        "en": "Fcitx5 or GNOME draws the candidate window in the system's font. The typefaces below are installed on this computer to fill in Han characters the system fonts lack; after adding or deleting one, restart the program, or sign out and back in. In Fcitx5, the font is chosen under Addons › Classic User Interface.",
-        "ja": "候補ウィンドウは Fcitx5 または GNOME がシステムのフォントで表示します。下のフォントはこのコンピュータにインストールされ、システムのフォントにない漢字を補います。追加・削除した後は、アプリを再起動するか、ログアウトして再ログインしてください。Fcitx5 では「アドオン › クラシックユーザーインターフェース」でフォントを選べます。"
-      }
-    },
     "fontManagementTab": {
       "comment": "Settings sidebar row + pane title: the pane where the candidate window's typeface is chosen and the user's own typefaces are added and removed.",
       "scope": {

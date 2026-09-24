@@ -268,8 +268,8 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   「維持字型管理頁面,for linux,加上簡短說明」), with a different job: it lists the bundled
   typefaces the package installs and the ones the user adds, as fontconfig FALLBACKS
   (`𧉟` U+2725F has no glyph in Noto CJK; all four bundled faces have it), not a
-  selection — a note over the list says the panel's font is the framework's (Fcitx5
-  classic UI › 字體). `+` copies the file into `$XDG_DATA_HOME/fonts/taigikeyboard`, has
+  selection; the panel's font is the framework's (Fcitx5 classic UI › 字體). No note over
+  the list (USER 2026-09-24 「把說明文字都拿掉,keep page clean」). `+` copies the file into `$XDG_DATA_HOME/fonts/taigikeyboard`, has
   `fc-query` read the copy, and takes it back out when fontconfig cannot read it or
   `fc-list` (read before the copy) already has one of its families — the Windows pane's
   `take_in` (`linux/crates/taigikeyboard-settings/src/fonts.rs`); the job runs in the
@@ -433,7 +433,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 |---|---|---|---|---|
 | Candidate window | own `NSPanel`, 3 layouts | own D2D popup, 3 layouts | daemon lookup table, orientation from layout | platform-adapted presentation |
 | 外觀 rows 候選字大小 / 候選窗大小 / 字型 | yes | yes | hidden (panel-owned) | unsupported host capability |
-| 字型管理 pane | selects the candidate typeface | selects the candidate typeface | installs fallback typefaces, selects nothing (note over the list) | unsupported host capability |
+| 字型管理 pane | selects the candidate typeface | selects the candidate typeface | installs fallback typefaces, selects nothing | unsupported host capability |
 | Focus loss mid-composition | client commits | text stays as host left it | daemon commits (`PREEDIT_COMMIT`) | platform-adapted |
 | 中/英 Shift tap | none (OS switches sources) | yes | none (IBus switches engines) | identical to macOS |
 | Global chords | Carbon hotkeys, session-scoped | preserved keys + fallback | matched in `ProcessKeyEvent` while active | identical semantics |
