@@ -53,10 +53,28 @@ pub struct FirstKeySetup {
     pub lexicon: Option<LexiconInstallStats>,
 }
 
+/// A runtime over a temporary XDG tree with no dictionaries: settings are
+/// live (a file), learning stores exist, the lexicon is absent.
+#[cfg(test)]
+pub(crate) fn temporary_runtime() -> (tempfile::TempDir, Runtime) {
+    let directory = tempfile::tempdir().expect("tempdir");
+    let runtime = Runtime::from_directories(
+        Some(UserDirectories {
+            config: directory.path().join("config"),
+            data: directory.path().join("data"),
+            fonts: directory.path().join("fonts"),
+        }),
+        directory.path().join("no-dictionaries"),
+    );
+    (directory, runtime)
+}
+
 impl Runtime {
     /// Resolves the user's directories and reads the settings file. Nothing
     /// else is touched.
     pub fn probe() -> Self {
+        #[cfg(feature = "e2e-trace")]
+        crate::trace::open();
         Self::from_directories(UserDirectories::resolve(), dictionaries_directory())
     }
 

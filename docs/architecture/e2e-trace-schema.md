@@ -27,7 +27,8 @@ The platform resolves a path inside its own sandbox and calls, from test-build c
 |---|---|
 | iOS / macOS | `e2e_trace_open(path)` (swift-bridge; returns false in a build without the feature) |
 | Android | `RustEngineBridge.e2eTraceOpen(path)` (JNI symbol exported only with the feature) |
-| Windows / Linux | `dispatch::trace::open(path)` through the desktop crates (their PRs) |
+| Linux | `taigi-linux-core` opens `$XDG_DATA_HOME/taigikeyboard/e2e-trace.jsonl` in `Runtime::probe` (features `taigi-linux-ffi/e2e-trace`, `taigikeyboard-ibus/e2e-trace`; `make -C linux build E2E=1`) |
+| Windows | `dispatch::trace::open(path)` through the desktop crates (its PR) |
 
 The file is append-created; each `open` writes a `trace_open` line and restarts `t_us` at 0.
 
@@ -73,13 +74,21 @@ A panic caught at the dispatch boundary: `domain`, `method_tag`, `req_bytes`. Th
 
 A request an FFI adapter refused before dispatch: `reason` (`oversize`), `req_bytes`.
 
-### `candidates` — platform layer
+## Platform-layer events
 
-The candidate list the IME shows, written by the platform after each fetch: `items` = `[{"hanji": …, "tl": …}]` in display order, identity per CLAUDE.md Core Principle #6. The analyzer's "first hanji candidate" is the first item whose `hanji` holds a CJK character (the §34 literal slot is skipped). First writer: the Linux PR.
+Written through `dispatch::trace::event` (same file, same clock as the engine events; string values escaped by `dispatch::trace::JsonStr`). Linux writes them from `taigi-linux-core::trace`, the one path both shells share (`process_raw_key`), so Fcitx5 and IBus trace identically.
 
-### Planned (platform PRs)
+| Event | Fields | Linux source |
+|---|---|---|
+| `key` | `keyval` (X keysym), `state` (modifier mask), `handled` | every key the framework hands in |
+| `preedit` | `text` (`""` = cleared) | `Emit::Preedit` / `Emit::ClearPreedit` |
+| `commit` | `text` | `Emit::Commit` — what the IME asked the client to insert; the host's own read-back is the driver's `observed_text` |
+| `candidates` | `items` = `[{"hanji", "tl", "canonical_tl"}]`, display order: `hanji` (`""` for a romanization-only cell), `tl` = the reading as displayed, `canonical_tl` = identity (CLAUDE.md Core Principle #6) | `Emit::LookupTable` for the candidate list (the symbol picker is not traced) |
+| `session_end` | `source` | the daemon ended the composition (focus out, reset, disable) |
 
-Key injected / received, preedit, commit, text observed by the host, memory sample, key-geometry manifest — specified here by the PR that first writes them (roadmap § Trace schema).
+The analyzer's "first hanji candidate" is the first `candidates` item whose `hanji` holds a CJK character (the §34 literal slot is skipped) and compares its `hanji` + `tl`.
+
+Still planned, specified by the PR that first writes them: memory sample, key-geometry manifest (mobile).
 
 ## Scenarios
 

@@ -12,6 +12,9 @@ publish.workspace = true
 taigi-desktop-core.workspace = true
 xkeysym.workspace = true
 log.workspace = true
+# Used only by debug builds (`install_debug_logger`); Cargo cannot make a
+# dependency conditional on `debug_assertions`, so release links it unused.
+env_logger.workspace = true
 thiserror.workspace = true
 
 [lints]

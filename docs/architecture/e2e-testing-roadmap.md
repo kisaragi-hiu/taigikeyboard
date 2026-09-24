@@ -83,7 +83,7 @@ The trace file lives in the platform's app sandbox (iOS extension container or A
 
 | Platform | Device | Key injection | Read-back | Where it runs |
 |---|---|---|---|---|
-| Linux Fcitx5 / IBus | distro container: Xvfb + dbus + `fcitx5` or `ibus-daemon` + a small GTK text client | `xdotool key` (X11 keysyms) | client writes its buffer to a file on exit | GitHub-hosted matrix: Ubuntu 24.04, Debian 13, Fedora 44, Arch × {Fcitx5, IBus}, installing the **distro package** built in the same run |
+| Linux Fcitx5 / IBus | distro container: Xvfb + dbus + `fcitx5` or `ibus-daemon` + a small GTK text client | `xdotool key` (X11 keysyms) | client writes its buffer to a file on exit | GitHub-hosted matrix: Ubuntu 24.04, Debian 13, Fedora 44, Arch × {Fcitx5, IBus}, building the test-mode binaries (`make install E2E=1`) inside each distribution's container, against its own toolchain and libraries — never a shipped package, which carries no trace |
 | Linux desktop sessions | existing VMs (VirtualBox KDE, UTM GNOME) | `VBoxManage keyboardputscancode` / uinput `vt.sh` | `zenity --entry` | local, optional — smoke only; containers carry the matrix |
 | macOS | this Mac, test-build IME installed to `~/Library/Input Methods` | CGEvent from a small Swift driver into a test host window | host writes its text view to a file | local only (needs one-time Accessibility grant) |
 | Windows | `ssh win` box | `SendInput` from a driver launched **in the interactive session** (scheduled task `/IT`), not the ssh session 0 | host writes its edit control to a file | local box |
@@ -123,10 +123,11 @@ PR1/PR2 of the first draft were over the 500-LOC cap (Codex) — split below.
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | this roadmap + project memory + `docs/README.md` row | this commit |
-| PR1 | engine `e2e-trace` feature threaded through every FFI crate, dispatch events, `e2e_trace_open`, marker string, traced-artifact build paths, release-graph absence check in `engine.yml`, `e2e-trace-schema.md` | In progress — `feat/e2e-trace-engine` |
-| PR2 | `e2e/scenarios` intent format + 3 seed scenarios, `tools/e2e/analyze.py` (stdlib) + tests, report format | In progress — `feat/e2e-analyzer` |
-| PR3 | Linux: release zero-log, Fcitx5 + IBus platform events, container driver (one distro, both frameworks), `make e2e PLATFORM=linux`, `/e2e` skill | Pending |
-| PR4 | Linux: CI matrix Ubuntu 24.04 / Debian 13 / Fedora 44 / Arch × {Fcitx5, IBus} from each distro's own package | Pending |
+| PR1 | engine `e2e-trace` feature threaded through every FFI crate, dispatch events, `e2e_trace_open`, marker string, traced-artifact build paths, release-graph absence check in `engine.yml`, `e2e-trace-schema.md` | Merged #162 `18a20c80` 2026-09-24 |
+| PR2 | `e2e/scenarios` intent format + 3 seed scenarios, `tools/e2e/analyze.py` (stdlib) + tests, report format | Merged #163 `5fc7b825` 2026-09-24 |
+| PR3a | Linux: release zero-log (`taigi_linux_platform::install_debug_logger`, Fcitx5 `NDEBUG` macros), `e2e-trace` through `taigi-linux-core` / `-ffi` / `-ibus`, platform events (`key` / `preedit` / `commit` / `candidates` / `session_end`), `make build E2E=1` + package refusal + release guard | In progress — `feat/e2e-linux-trace` |
+| PR3b | Linux: container driver (one distro, both frameworks), `make e2e PLATFORM=linux`, `/e2e` skill | Pending |
+| PR4 | Linux: CI matrix Ubuntu 24.04 / Debian 13 / Fedora 44 / Arch × {Fcitx5, IBus}, each container building `make install E2E=1` from source against its own libraries (packages are never traced — PR3a; the shipped packages keep their `install-check` job) | Pending |
 | PR5 | macOS: `-DE2E_TRACE` events, CGEvent driver + host app | Pending |
 | PR6 | Windows: TSF events, `/IT` interactive-session `SendInput` driver over `ssh win`; skip when box off / locked | Pending |
 | PR7 | Android: `e2e` build type, geometry manifest, adb tap driver, e2e AVD | Pending |

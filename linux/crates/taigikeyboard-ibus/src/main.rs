@@ -17,7 +17,7 @@ use std::sync::Arc;
 const BUS_NAME: &str = "org.freedesktop.IBus.TaigiKeyboard";
 
 fn main() -> ExitCode {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    taigi_linux_platform::install_debug_logger();
     // `--ibus` is the daemon's convention for "started by ibus-daemon";
     // there is no other way to run this binary, so the flag is accepted and
     // nothing else is parsed.

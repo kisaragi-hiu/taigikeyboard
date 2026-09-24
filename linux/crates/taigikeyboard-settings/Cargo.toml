@@ -24,7 +24,6 @@ gtk.workspace = true
 adw.workspace = true
 gio.workspace = true
 log.workspace = true
-env_logger.workspace = true
 # The export's temporary file: created exclusively in the target directory.
 tempfile.workspace = true
 

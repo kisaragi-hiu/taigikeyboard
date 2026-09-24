@@ -104,6 +104,12 @@ jobs:
           TAIGI_REQUIRE_DISPLAY: "1"
         run: xvfb-run -a cargo test --workspace
 
+      # The test-mode trace (docs/architecture/e2e-trace-schema.md); release
+      # packages prove it absent in `make build` (e2e-trace-guard.sh).
+      - name: cargo test (platform trace, e2e-trace on)
+        working-directory: linux
+        run: cargo test -p taigi-linux-core --features e2e-trace
+
       - name: cargo build --release (IBus engine + FFI static library)
         working-directory: linux
         run: cargo build --release -p taigikeyboard-ibus -p taigi-linux-ffi
@@ -437,7 +443,11 @@ jobs:
             set -euxo pipefail
             fcitx5 --verbose="*=5" > "'"$log"'" 2>&1 &
             call() { dbus-send --session --print-reply --dest=org.fcitx.Fcitx5 /controller "org.fcitx.Fcitx.Controller1.$@"; }
-            for i in $(seq 1 40); do call AvailableInputMethods > /dev/null 2>&1 && break; sleep 0.5; done
+            # Wait for THIS fcitx5 to own its name before any call: a call to
+            # an unowned name makes dbus-daemon auto-start a second fcitx5
+            # (its log goes to the step, not $log), and the grep below races.
+            owned() { dbus-send --session --print-reply --dest=org.freedesktop.DBus / org.freedesktop.DBus.NameHasOwner string:org.fcitx.Fcitx5 | grep -q "boolean true"; }
+            for i in $(seq 1 40); do owned && break; sleep 0.5; done
             # Captured, not piped into grep -q: an early grep exit would
             # SIGPIPE dbus-send and pipefail would fail the step.
             ims="$(call AvailableInputMethods)"
