@@ -1,0 +1,85 @@
+name: Bug report（問題回報）
+description: Something typed wrong, crashed, or looked wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write in Taiwanese, Mandarin, or English — whichever is easiest for you.
+        台語、華語或英文都可以。
+
+        For an input-method bug the exact keystrokes are the whole report:
+        `tai5 gi2` then Space is useful, "tones are wrong" is not.
+
+        Security problems go to [a private report](https://github.com/taigikeyboard/taigikeyboard/security/advisories/new), not here.
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform（平台）
+      options:
+        - iPhone
+        - iPad
+        - Android
+        - macOS
+        - Windows
+        - Linux — Fcitx5
+        - Linux — IBus
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Taigi Keyboard version（版本）
+      description: Shown in the app's settings, or on the store / release page.
+      placeholder: e.g. 3.6.10
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Device and OS version（裝置與系統版本）
+      placeholder: e.g. iPhone 15, iOS 18.5 / Pixel 8, Android 15 / Ubuntu 24.04
+    validations:
+      required: true
+  - type: dropdown
+    id: romanization
+    attributes:
+      label: Input system（輸入法）
+      options:
+        - TL（臺羅）
+        - POJ（白話字）
+        - TPS（臺灣方音符號）
+        - Not about typing（與打字無關）
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: App you were typing in（在哪個 app 打字）
+      placeholder: e.g. Notes, LINE, Chrome, Word
+  - type: textarea
+    id: keystrokes
+    attributes:
+      label: What you typed, key by key（按鍵順序）
+      description: Every key, including Space, Backspace and candidate taps.
+      placeholder: |
+        t a i 5 g i 2, then Space
+        tap the 2nd candidate
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What appeared（實際結果）
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected（預期結果）
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots or anything else（截圖或其他）

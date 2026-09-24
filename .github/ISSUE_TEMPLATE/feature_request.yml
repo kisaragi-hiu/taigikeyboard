@@ -1,0 +1,37 @@
+name: Feature request（功能建議）
+description: Something the keyboard should do but does not.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write in Taiwanese, Mandarin, or English. 台語、華語或英文都可以。
+        Describe the problem first — the best fix may differ from the first idea.
+  - type: checkboxes
+    id: platforms
+    attributes:
+      label: Platforms（平台）
+      options:
+        - label: iPhone / iPad
+        - label: Android
+        - label: macOS
+        - label: Windows
+        - label: Linux
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?（想做什麼）
+      description: The situation and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?（建議做法）
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: Other keyboards that do this（其他輸入法的做法）
+      description: Optional — another input method that already works this way.

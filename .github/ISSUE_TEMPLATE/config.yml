@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Discord — questions and discussion（問題討論）
+    url: https://discord.gg/kXhtQfWvK
+    about: Usage questions and ideas that are not yet a concrete bug or request.
+  - name: Security vulnerability（安全漏洞）
+    url: https://github.com/taigikeyboard/taigikeyboard/security/advisories/new
+    about: Report privately — please do not open a public issue.
+  - name: Download and user guide（下載與說明）
+    url: https://taigikeyboard.tw
+    about: Store links, installers and how to add the keyboard.
