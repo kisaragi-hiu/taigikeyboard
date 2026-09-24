@@ -326,8 +326,9 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   sub-properties mirror the Mac's input-source menu row for row
   (`InputSourceMenuRenderer.swift`, `TaigiInputController.swift:372-`): the two switch rows
   under their 快捷鍵-pane names with the recorded chord in the tooltip, a separator, 設定
-  (`PropertyActivate` → spawn the settings window on the last pane), a separator, 關於
-  (settings window on the 關於 pane). No 檢查更新 row (§ L10). Titles are resolved from
+  (`PropertyActivate` → spawn the settings window on the last pane), a separator, 檢查更新
+  (settings window on 一般 with `--check-now`, § L10), 關於 (settings window on the 關於
+  pane). Titles are resolved from
   `taigi-desktop-core::strings` in the display language each time the rows are built
   (PR5, `chrome::menu_items`; one list, both shells). **Mode label** (PR5,
   `chrome::mode_label`) = `<romanization> · <candidate display mode>` (`台羅 · 漢字優先`),
@@ -370,13 +371,17 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   follows macOS invariant §11 item by item. The settings window re-reads on a 1 s
   `glib::timeout_add_local` tick while open (the Windows tick), so the recorder's
   conflict pass and the engine's chords agree.
-- **L10 Update check: none in-app (unsupported host capability, deliberately).** Linux
-  packages are updated by the package manager, and no mainstream IBus engine checks for
-  updates itself. The 一般 pane shows the running version and a 下載頁 link
-  (`gtk::UriLauncher`); the `update*` settings keys stay reserved and unwritten;
-  `taigi-windows-update` is not linked. The appcast / `_data/*_release.json` machinery is
-  untouched — the announce workflow gains a Linux asset only when § L11's package is
-  staged on the draft.
+- **L10 Update check: the other desktops' check, download page only (reversed
+  2026-09-24).** The original "the package manager updates it" premise was false: the
+  `.deb` / `.rpm` / Arch packages ship only as GitHub release assets (no apt repository,
+  COPR or AUR), so nothing ever told a Linux user about a new version (USER 2026-09-24:
+  「下一個round安排linux檢查更新」). The settings window runs the shared
+  `taigi-desktop-update` check against `appcast/linux.json` (rendered from the `.deb`'s
+  `_data/linux_release.json`: version + release page, no package): the 一般 pane's version
+  row carries 檢查更新 (or the known update and 去下載), the panel menu's 檢查更新 spawns
+  `--pane general --check-now`, the answer is an `adw::AlertDialog`. No in-app install —
+  a package needs root and three formats share one release. Automatic daily check +
+  notification: `docs/roadmap.md` § Linux update check, phase 5.
 - **L11 Packaging + release.** `make -C linux install PREFIX=/usr DESTDIR=` installs the two
   binaries, the component XML (rendered with the prefix), the dictionaries, a
   `tw.taigikeyboard.Settings.desktop` entry + icon, and prints the `ibus restart`
@@ -444,7 +449,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
 | 教典 off: its eleven 腔口 rows | shown, greyed | shown, greyed | shown, greyed (USER 2026-09-23: mirror the other desktops; the expander of PR7 reverted) | identical semantics |
 | Sidebar icons | SF Symbols | Fluent | Adwaita symbolic (`preferences-system`, `applications-graphics`, `input-keyboard`, `emblem-documents`, `x-office-address-book`) | identical semantics |
 | 自訂詞庫 table | two columns 羅馬字 / 漢字, double-click edits | two columns, ✎ edits | two columns, double-click or ✎ edits | identical semantics |
-| Release flow | `make desktop-release` stages the `.pkg` | the `.exe` on the same draft | the `.deb` on the same draft (`linux-build.yml` `attach`); announce writes `_data/linux_release.json`, no appcast | identical semantics |
+| Release flow | `make desktop-release` stages the `.pkg` | the `.exe` on the same draft | the `.deb` on the same draft (`linux-build.yml` `attach`); announce writes `_data/linux_release.json`, which renders `appcast/linux.json` (§ L10) | identical semantics |
 
 ## Phase / PR table
 
@@ -488,14 +493,14 @@ PR6–PR8 are parallelisable after PR3.
 | Shell-independent core tested natively, thin platform shells | `windows-roadmap.md` W1 (Codex CONFIRM), `references/ChiaKey` `ChiaKeyCore` facade | L2, L13 |
 | Blind authoring gated by cross-target checks + hosted runner | `windows-roadmap.md` W13 + `project_windows_hosted_build` | L12 |
 | XDG base directories for config vs data | freedesktop basedir spec; `ibus` itself (`g_get_user_config_dir()` for its bus file, `src/ibusshare.c:195`) | L7 |
-| Distro-managed updates, no in-app updater | `ibus-rime`, `ibus-mozc`, `ibus-chewing` packaging | L10 |
+| Update check against a static appcast, download page as the action | macOS `UpdateChecker.swift`, Windows W9 (`taigi-desktop-update`); distro IBus engines skip it only because a repository updates them | L10 |
 | libadwaita preference widgets for an IME's settings | GNOME Settings, `ibus-setup` (GTK), `ibus-anthy` setup dialog | L3 |
 | Lazy engine init on first consumed key | rakukan `factory.rs:413-419`; Windows `Runtime::prepare_for_first_key` | L13 |
 
 **Deliberately not adopted**: an own GTK candidate popup (unpositionable under Wayland;
 no IBus engine does it); libibus FFI bindings (C toolchain on the host, GObject
 ownership across FFI, and nothing the D-Bus surface lacks); (2026-09-22 only) Fcitx5 addon — reversed 2026-09-23, see L1; Qt settings window (second toolkit; the IBus panel is GTK);
-in-app update download (§ L10); Flatpak (cannot host an IBus engine); a `linux/` crate
+in-app update download / install (§ L10: root, three formats); Flatpak (cannot host an IBus engine); a `linux/` crate
 that depends on `../windows/crates/…` (wrong shape, § L2). **YAGNI**: surrounding-text
 capability (nothing in the key table reads the document); handwriting methods answer
 `()`; `ForwardKeyEvent` is unused (a key the engine does not consume is answered `false`

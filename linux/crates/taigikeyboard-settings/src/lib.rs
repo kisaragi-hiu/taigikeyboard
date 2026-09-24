@@ -7,6 +7,7 @@ pub mod pages;
 pub mod presentation;
 pub mod recorder;
 pub mod search;
+pub mod updates;
 pub mod user_data;
 pub mod window;
 pub mod writer;
@@ -77,6 +78,11 @@ pub fn run() -> gtk::glib::ExitCode {
                 .choice(&keys::SELECTED_SETTINGS_PANE)
         });
         shell.show(pane);
+        // The panel menu's 檢查更新 (`launcher::check_for_updates`): the
+        // window on 一般, then the manual check and its alert over it.
+        if launch.check_now {
+            updates::check_manually(&shell);
+        }
         gtk::glib::ExitCode::SUCCESS
     });
     application.run()

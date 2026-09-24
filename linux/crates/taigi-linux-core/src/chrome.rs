@@ -19,10 +19,12 @@ use taigi_desktop_core::keys::{telex_guide_rows, ComposingKeyBindings, ShortcutA
 use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument};
 use taigi_desktop_core::strings::StringKey;
 use taigi_desktop_core::symbols::SymbolTable;
-use taigi_linux_platform::open_settings;
+use taigi_linux_platform::{check_for_updates, open_settings};
 
 /// The menu row that opens the settings window on the last pane.
 pub const MENU_SETTINGS: &str = "settings";
+/// The menu row that runs the manual update check in the settings window.
+pub const MENU_CHECK_UPDATES: &str = "check-updates";
 /// The menu row that opens the settings window on 關於.
 pub const MENU_ABOUT: &str = "about";
 
@@ -45,7 +47,7 @@ pub enum MenuItem {
 /// romanization and candidate display mode, the Windows
 /// `MENU_SHORTCUT_ROWS`; not the 漢羅對調 swap, whose bare-backtick default
 /// the Mac's menu can never print — 台語齒盤設定 (Fcitx5 lists its own 輸入法設定
-/// in the same menu), then 關於. No 檢查更新 (roadmap L10).
+/// in the same menu), then 檢查更新 and 關於 (roadmap L10).
 pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
     let strings = runtime.strings();
     let settings = runtime.settings.current();
@@ -72,6 +74,11 @@ pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
             StringKey::DesktopMenuSettings,
         ),
         MenuItem::Separator,
+        MenuItem::Action {
+            id: MENU_CHECK_UPDATES,
+            title: strings.resolve(StringKey::DesktopUpdateCheckNow).to_owned(),
+            detail: None,
+        },
         MenuItem::Action {
             id: MENU_ABOUT,
             title: strings.resolve(StringKey::DesktopAboutTab).to_owned(),
@@ -119,6 +126,10 @@ pub fn activate_menu(
     match id {
         MENU_SETTINGS => {
             perform_global(runtime, token, state, ShortcutAction::OpenLastSettingsPane)
+        }
+        MENU_CHECK_UPDATES => {
+            check_for_updates();
+            Vec::new()
         }
         MENU_ABOUT => {
             open_settings(Some("about"));
@@ -524,6 +535,7 @@ mod tests {
                 "-",
                 MENU_SETTINGS,
                 "-",
+                MENU_CHECK_UPDATES,
                 MENU_ABOUT
             ]
         );

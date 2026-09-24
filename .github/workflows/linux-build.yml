@@ -70,7 +70,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev pkg-config \
+            ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev libssl-dev pkg-config \
             fcitx5 fcitx5-modules-dev extra-cmake-modules cmake ninja-build dpkg-dev desktop-file-utils
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
@@ -243,7 +243,7 @@ jobs:
         run: |
           dnf install -y --setopt=install_weak_deps=False \
             git gcc gcc-c++ make cmake ninja-build extra-cmake-modules fcitx5-devel \
-            gtk4-devel libadwaita-devel pkgconf-pkg-config rpm-build unzip findutils
+            gtk4-devel libadwaita-devel openssl-devel pkgconf-pkg-config rpm-build unzip findutils
 
       - uses: actions/checkout@v4
 
@@ -293,7 +293,7 @@ jobs:
       - name: Install build dependencies
         run: |
           pacman -Syu --noconfirm --needed \
-            base-devel git cmake ninja extra-cmake-modules fcitx5 gtk4 libadwaita pkgconf unzip rustup
+            base-devel git cmake ninja extra-cmake-modules fcitx5 gtk4 libadwaita openssl pkgconf unzip rustup
 
       - uses: actions/checkout@v4
 
