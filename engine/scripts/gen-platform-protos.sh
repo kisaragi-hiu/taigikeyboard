@@ -9,8 +9,21 @@
 #
 # Prerequisites (install once, locally):
 #   brew install protobuf swift-protobuf
+#
+# `--java-only` is CI's freshness check (.github/workflows/checks.yml): Java
+# bindings only, so no protoc-gen-swift, and a protoc that does not match the
+# pinned runtime is an ERROR there, not the skip-with-warning below — a check
+# that skipped itself would report stale bindings as fresh.
 
 set -euo pipefail
+
+JAVA_ONLY=0
+if [[ "${1:-}" == "--java-only" ]]; then
+    JAVA_ONLY=1
+elif [[ $# -gt 0 ]]; then
+    echo "usage: $0 [--java-only]" >&2
+    exit 2
+fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PROTO_DIR="$REPO_ROOT/engine/protos/proto"
@@ -22,7 +35,7 @@ if ! command -v protoc >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! command -v protoc-gen-swift >/dev/null 2>&1; then
+if [[ "$JAVA_ONLY" == 0 ]] && ! command -v protoc-gen-swift >/dev/null 2>&1; then
     echo "error: protoc-gen-swift not found. Install via: brew install swift-protobuf" >&2
     exit 1
 fi
@@ -61,6 +74,11 @@ if [[ -f "$sample_java" ]]; then
     fi
 fi
 
+if [[ "$JAVA_ONLY" == 1 && "$actual_protoc" != "$required_protoc" ]]; then
+    echo "error: --java-only needs libprotoc $required_protoc (protobuf-javalite:$runtime_pin); found $actual_protoc." >&2
+    exit 1
+fi
+
 if [[ "$actual_protoc" != "$required_protoc" && "${TAIGI_ALLOW_PROTOC_DRIFT:-0}" != "1" ]]; then
     # Skip rather than abort. The committed output already matches the pin (the
     # cross-check above proved it), so regenerating can only damage it, while
@@ -93,7 +111,7 @@ mkdir -p "$SWIFT_OUT" "$JAVA_OUT"
 
 # Swift output: --swift_opt=Visibility=Public so the bridge module can import
 # the generated types.
-protoc \
+[[ "$JAVA_ONLY" == 1 ]] || protoc \
     --proto_path="$PROTO_DIR" \
     --swift_out="$SWIFT_OUT" \
     --swift_opt=Visibility=Public \
@@ -128,5 +146,5 @@ for f in "$JAVA_PROTO_DIR"/*.java; do
 done
 
 echo "generated:"
-ls -1 "$SWIFT_OUT"
+[[ "$JAVA_ONLY" == 1 ]] || ls -1 "$SWIFT_OUT"
 ls -1 "$JAVA_OUT/com/siansiansu/taigikeyboard/engine/proto"

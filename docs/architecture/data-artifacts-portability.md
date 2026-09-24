@@ -92,7 +92,7 @@ Read-only next-word bigram/phrase table. Sibling to `dictionary.bin` with a dist
 
 - **Producer**: `dictionary/build/create_association_bin.py`.
 - **Header (20 bytes)**: magic `"TKWA"` (4) · `version: u32` (currently `1`) · `key_count: u32` · `entry_count: u32` · `build_ts: u32`.
-- **Cohesion contract**: `build_ts` **must match** `dictionary.bin`. The build pipeline shares `.build_ts` between the two writers (`dictionary/build/create_dictionary_bin.py` and `dictionary/build/create_association_bin.py`). Readers on both platforms expose `buildTimestamp`.
+- **Cohesion contract**: `build_ts` **must match** `dictionary.bin`. Both writers (`dictionary/build/create_dictionary_bin.py` and `dictionary/build/create_association_bin.py`) fill it with `build.common.build_id()` — the CRC-32 of the `output/dictionary.csv` they are both built from — so one build always matches and an unchanged dictionary rebuilds byte-identical. Readers on both platforms expose `buildTimestamp`.
 - **Key offset table**: `key_count × u32` absolute offsets.
 - **Key entry**: `prev_word_len: u8 · prev_word: utf8 · entry_offset: u32 · entry_count: u16`. Keys sorted by UTF-8 byte order for binary search.
 - **Entry**: `bitmask: u16 · count: u32 · next_word_len: u8 · next_tl_len: u8 · next_word: utf8 · next_tl: utf8`.
@@ -261,7 +261,7 @@ Dictionary updates today: `dictionary.fst` + `dictionary.bin` + `association.bin
 
 **Invariants the delivery mechanism must preserve**:
 
-1. The two binary artifacts with a header (`dictionary.bin`, `association.bin`) carry a matching `build_ts` — enforced by the shared `.build_ts` file in the build pipeline.
+1. The two binary artifacts with a header (`dictionary.bin`, `association.bin`) carry a matching `build_ts` — both are the CRC-32 of the same `output/dictionary.csv` (`dictionary/build/common.py::build_id`).
 2. `dictionary.fst` has **no timestamp or version in its bytes** — the format is a raw Burntsushi fst. Today the three artifacts' cohesion relies entirely on the build script producing all three in the same run; readers cannot detect a stale fst paired with fresh bins (see `binary-format.md` §5.1 no-checksum acknowledgement).
 3. User-writable SQLite databases (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`) are per-install and must not be shipped as read-only assets. They stay native (`status=wont_migrate`) per `feedback_user_data_sqlite_stays_native`.
 4. Schema migrations run on first open after an app update; the delivery mechanism does not modify these files directly.
