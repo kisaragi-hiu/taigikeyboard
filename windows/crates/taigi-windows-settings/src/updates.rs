@@ -13,10 +13,10 @@ use crate::settings_writer::SettingsWriter;
 use crate::work::PendingWork;
 use std::path::PathBuf;
 use std::sync::Arc;
+use taigi_desktop_core::settings::update_schedule;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-use taigi_windows_update::{
-    checker, toast, Admission, HttpTransport, Outcome, UpdateInstallation, UpdateManifest,
-};
+use taigi_desktop_update::{checker, HttpTransport, Outcome, UpdateManifest};
+use taigi_windows_update::{toast, Admission, UpdateInstallation, PUBLISHED_URL};
 
 /// The running build's version (`AppVersion.installed`).
 pub const INSTALLED_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -104,7 +104,9 @@ pub fn now_ms() -> i64 {
 
 impl UpdateState {
     pub fn new() -> Self {
-        let transport = Arc::new(HttpTransport);
+        let transport = Arc::new(HttpTransport {
+            manifest_url: PUBLISHED_URL,
+        });
         let installation = UpdateInstallation::new(
             transport.clone(),
             Arc::new(Admission::of_running_copy()),
@@ -125,7 +127,7 @@ impl UpdateState {
 
     /// The daily check, when it is due (`checkAutomatically`).
     pub fn check_if_due(&mut self, settings: &mut SettingsWriter) {
-        if checker::is_due(settings.document(), now_ms()) {
+        if update_schedule::is_due(settings.document(), now_ms()) {
             self.start_check(settings, false);
         }
     }
@@ -143,7 +145,7 @@ impl UpdateState {
             return;
         }
         self.is_manual = is_manual;
-        settings.update(|document| checker::stamp_next_check(document, now_ms()));
+        settings.update(|document| update_schedule::stamp_next_check(document, now_ms()));
         let transport = Arc::clone(&self.transport);
         self.check = Some(PendingWork::spawn_quiet(move || {
             checker::check(&*transport, INSTALLED_VERSION)

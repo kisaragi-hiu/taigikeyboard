@@ -99,7 +99,8 @@ fn open_window(
 /// window. Due ⇒ fetch, record the outcome the way the window would, and
 /// toast a version not announced before.
 fn headless_check() {
-    use taigi_windows_update::checker;
+    use taigi_desktop_core::settings::update_schedule;
+    use taigi_desktop_update::checker;
     let Ok(directory) = user_data_directory() else {
         return;
     };
@@ -108,17 +109,19 @@ fn headless_check() {
         return;
     };
     let now = updates::now_ms();
-    if !checker::is_due(&document, now) {
+    if !update_schedule::is_due(&document, now) {
         return;
     }
     if store
-        .update(|document| checker::stamp_next_check(document, now))
+        .update(|document| update_schedule::stamp_next_check(document, now))
         .is_err()
     {
         return;
     }
     let outcome = checker::check(
-        &taigi_windows_update::HttpTransport,
+        &taigi_desktop_update::HttpTransport {
+            manifest_url: taigi_windows_update::PUBLISHED_URL,
+        },
         updates::INSTALLED_VERSION,
     );
     let Ok(document) = store.update(|document| checker::record(document, &outcome)) else {

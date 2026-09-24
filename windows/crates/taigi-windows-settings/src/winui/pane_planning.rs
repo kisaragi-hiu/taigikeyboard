@@ -20,9 +20,9 @@ use taigi_desktop_storage::{LiveSettings, SettingsFileStore, UserDataStores};
 use tempfile::TempDir;
 use windows_reactor::{Pump, RecordingRuntime, View};
 
-/// Far enough ahead that `checker::is_due` says no: a writable launch runs
-/// the overdue update check in `create`, and a test must not reach the
-/// network.
+/// Far enough ahead that `update_schedule::is_due` says no: a writable
+/// launch runs the overdue update check in `create`, and a test must not
+/// reach the network.
 const NEVER_DUE_MS: i64 = i64::MAX;
 
 /// One settings directory for every mount below: they all want the same

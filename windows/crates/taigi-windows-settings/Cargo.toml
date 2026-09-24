@@ -15,6 +15,7 @@ path = "src/main.rs"
 [dependencies]
 taigi-desktop-core.workspace = true
 taigi-desktop-storage.workspace = true
+taigi-desktop-update.workspace = true
 taigi-windows-platform.workspace = true
 taigi-windows-update.workspace = true
 rfd.workspace = true

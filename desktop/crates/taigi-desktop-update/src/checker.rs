@@ -1,31 +1,17 @@
 //! What a check concludes and what it leaves in `settings.json`, as pure
-//! decisions over the document. Port of `UpdateChecker` — the schedule
-//! (`updateNextCheckMs`, stamped BEFORE the fetch so a hanging server does
-//! not re-check every launch), the pending manifest, the once-per-version
-//! announcement gate.
+//! decisions over the document. Port of `UpdateChecker` — the pending
+//! manifest and the once-per-version announcement gate. The schedule
+//! (`updateNextCheckMs`) is `taigi_desktop_core::settings::update_schedule`.
 
 use crate::manifest::{DottedVersion, UpdateManifest};
 use crate::transport::ManifestFetcher;
 use taigi_desktop_core::settings::{keys, SettingsDocument};
-
-/// `UpdateChecker.checkInterval`: daily.
-pub const CHECK_INTERVAL_MS: i64 = 24 * 60 * 60 * 1000;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Outcome {
     UpdateAvailable(UpdateManifest),
     UpToDate,
     Failed,
-}
-
-/// Whether the daily check is due (`checkAutomatically`'s guard).
-pub fn is_due(document: &SettingsDocument, now_ms: i64) -> bool {
-    now_ms >= document.i64(&keys::UPDATE_NEXT_CHECK_MS)
-}
-
-/// Stamped before the fetch, whatever it answers.
-pub fn stamp_next_check(document: &mut SettingsDocument, now_ms: i64) {
-    document.set_i64(&keys::UPDATE_NEXT_CHECK_MS, now_ms + CHECK_INTERVAL_MS);
 }
 
 /// Fetches and classifies. A manifest that cannot be read is a failed
@@ -165,12 +151,8 @@ mod tests {
     }
 
     #[test]
-    fn the_schedule_is_stamped_before_the_fetch_and_the_pending_manifest_round_trips() {
+    fn the_pending_manifest_round_trips() {
         let mut document = SettingsDocument::default();
-        assert!(is_due(&document, 0));
-        stamp_next_check(&mut document, 1_000);
-        assert!(!is_due(&document, 1_000 + CHECK_INTERVAL_MS - 1));
-        assert!(is_due(&document, 1_000 + CHECK_INTERVAL_MS));
         record(&mut document, &Outcome::UpdateAvailable(manifest("3.7.0")));
         assert_eq!(pending_update(&document, "3.6.6"), Some(manifest("3.7.0")));
         // Upgraded past it: stale, and reported as none.

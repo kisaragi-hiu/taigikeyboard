@@ -30,8 +30,8 @@ use taigi_desktop_core::settings::{
 };
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::{LiveSettings, UserDataStores};
+use taigi_desktop_update::checker;
 use taigi_windows_platform::keyboard_hook::{Delivery, KeyboardHook};
-use taigi_windows_update::checker;
 use windows_reactor::*;
 
 /// A pane's form, over the window's state. Stateless presentation — the

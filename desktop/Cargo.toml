@@ -17,6 +17,7 @@ resolver = "2"
 members = [
     "crates/taigi-desktop-core",
     "crates/taigi-desktop-storage",
+    "crates/taigi-desktop-update",
 ]
 
 [workspace.package]
@@ -43,11 +44,22 @@ thiserror = "2"
 rusqlite = { version = "0.40", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 tempfile = "3"
+# HTTPS through the system TLS stack (schannel on Windows; the macOS host's
+# Security framework for the native tests). `transport.rs` selects
+# `TlsProvider::NativeTls`, and ureq gates that on `cfg!(feature =
+# "native-tls")` (`ureq-3/src/tls/mod.rs`) — a compile-time check against the
+# umbrella feature, not the `native-tls-no-default` subset it is built from.
+# Naming the subset alone builds fine and then panics on the first https
+# request. No bundled root store reaches the connector regardless: the roots
+# the umbrella adds are only read by the `RootCerts::WebPki` arm, and
+# `transport.rs` asks for `RootCerts::PlatformVerifier` (the OS store).
+ureq = { version = "3", default-features = false, features = ["native-tls"] }
 
 taigi-desktop-core = { path = "crates/taigi-desktop-core" }
+taigi-desktop-update = { path = "crates/taigi-desktop-update" }
 
 [workspace.lints.rust]
-# Both crates are pure by contract; the shells that need `unsafe` live in
+# Every crate is safe Rust by contract; the shells that need `unsafe` live in
 # their own workspaces and override it there with a JUSTIFICATION.
 unsafe_code = "forbid"
 

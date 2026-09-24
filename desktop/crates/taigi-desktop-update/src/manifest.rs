@@ -3,13 +3,10 @@
 //! wire format is `windows/updates/README.md` § Wire format — the macOS
 //! manifest's twin but for the file name and ONE added field,
 //! `packageSHA256`, which the Mac has no use for: it pins a downloaded
-//! package by its Developer ID signature.
+//! package by its Developer ID signature. Where each platform's manifest
+//! is published is that platform's constant, handed to `HttpTransport`.
 
 use serde::{Deserialize, Serialize};
-
-/// Compiled into every shipped build; old installs request it forever, so
-/// it stays on a domain the project controls (`macos/updates/README.md`).
-pub const PUBLISHED_URL: &str = "https://taigikeyboard.tw/appcast/windows.json";
 
 /// A manifest is a few hundred bytes; anything past this is not one.
 pub const MAXIMUM_MANIFEST_BYTES: u64 = 64 * 1024;
@@ -66,7 +63,7 @@ struct Wire {
 
 /// A SHA-256 as it is published: 64 hex digits, taken case-insensitively and
 /// kept lowercase so a comparison is a string comparison.
-pub(crate) fn normalized_sha256(digest: &str) -> Option<String> {
+pub fn normalized_sha256(digest: &str) -> Option<String> {
     let digest = digest.trim();
     (digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit()))
         .then(|| digest.to_ascii_lowercase())

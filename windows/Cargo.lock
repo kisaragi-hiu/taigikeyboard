@@ -1030,6 +1030,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "taigi-desktop-update"
+version = "3.6.10"
+dependencies = [
+ "log",
+ "serde",
+ "serde_json",
+ "taigi-desktop-core",
+ "thiserror",
+ "ureq",
+]
+
+[[package]]
 name = "taigi-windows-platform"
 version = "3.6.10"
 dependencies = [
@@ -1050,6 +1062,7 @@ dependencies = [
  "rfd",
  "taigi-desktop-core",
  "taigi-desktop-storage",
+ "taigi-desktop-update",
  "taigi-windows-platform",
  "taigi-windows-update",
  "tempfile",
@@ -1076,14 +1089,11 @@ name = "taigi-windows-update"
 version = "3.6.10"
 dependencies = [
  "log",
- "serde",
- "serde_json",
  "sha2",
  "taigi-desktop-core",
+ "taigi-desktop-update",
  "taigi-windows-platform",
  "tempfile",
- "thiserror",
- "ureq",
  "uuid",
  "windows",
 ]

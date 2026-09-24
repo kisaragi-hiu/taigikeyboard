@@ -109,7 +109,7 @@ impl Admission {
         })?;
         // `normalized_sha256` owns what a published digest looks like (64
         // hex, case-insensitive), so a malformed expectation cannot match.
-        if crate::manifest::normalized_sha256(expected_sha256) != Some(digest) {
+        if taigi_desktop_update::manifest::normalized_sha256(expected_sha256) != Some(digest) {
             return Err(Rejection::HashMismatch);
         }
         match &self.identity {
@@ -180,8 +180,8 @@ fn verify(package: &Path, expected: &PackageIdentity, version: &str) -> Result<(
     let (product_name, declared_version) =
         win::version_info(package).map_err(|_| Rejection::Unreadable)?;
     let same_version = match (
-        crate::manifest::DottedVersion::parse(&declared_version),
-        crate::manifest::DottedVersion::parse(version),
+        taigi_desktop_update::DottedVersion::parse(&declared_version),
+        taigi_desktop_update::DottedVersion::parse(version),
     ) {
         (Some(declared), Some(wanted)) => declared == wanted,
         _ => false,

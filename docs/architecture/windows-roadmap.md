@@ -90,7 +90,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   test and MSVC-check promises hold: `taigi-desktop-core` (pure models, composing
   orchestration, proto bridge, candidate geometry, shortcut semantics, settings model;
   `unsafe_code = forbid`, no C deps), `taigi-desktop-storage` (rusqlite stores,
-  settings file store, CSV), `taigi-windows-update` (manifest, download, Authenticode),
+  settings file store, CSV), `taigi-windows-update` (download, Authenticode, toast; the manifest + check moved to `desktop/crates/taigi-desktop-update` on 2026-09-24 for Linux),
   `taigi-windows-tsf` (cdylib `TaigiKeyboard.dll`, `unsafe` with `// SAFETY:` per
   `rust-ffi-safety.md` §3), `taigi-windows-settings` (bin `TaigiKeyboardSettings.exe`).
   Every ABI entry (COM method, exported fn) is a `catch_unwind` boundary; no `RefCell`

@@ -1,5 +1,5 @@
 # Dev loop for the desktop-shared crates (`taigi-desktop-core`,
-# `taigi-desktop-storage`): the pure Rust the Windows and Linux input methods
+# `taigi-desktop-storage`, `taigi-desktop-update`): the pure Rust the Windows and Linux input methods
 # both link. Everything here runs natively on any host — no cross target, no
 # OS handle. The shells' own gates (`make windows-check`, `make linux-check`)
 # compile these crates for their targets through the graph.
@@ -14,7 +14,7 @@ help:
 	@echo "Desktop-shared crates — dev loop"
 	@echo ""
 	@echo "  make check       - The gate: i18n check + native tests + clippy + fmt --check"
-	@echo "  make test        - Native tests for both crates"
+	@echo "  make test        - Native tests for every crate"
 	@echo "  make lint        - clippy -D warnings, all targets"
 	@echo "  make i18n-check  - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt         - cargo fmt"
