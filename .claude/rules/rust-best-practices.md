@@ -120,11 +120,11 @@ Type-shape preferences that cross FFI:
 - **MSRV 1.86** (`rust-version` in root `Cargo.toml`); bumping is a PR-level decision with CI verification.
 - **No experimental features** (`async fn` in traits — stable since 1.75 — OK; GATs in traits OK; const generics full — OK; edition2024 — OK on 1.85+).
 - **`rustfmt` default config**, no deviations. Apply with `make fmt`; check without writing via `cd engine && cargo fmt --all -- --check` (CI gates it per §7).
-- **`clippy` with `-D warnings`** available via `make lint` (runs clippy + Kotlin spotlessCheck). Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
+- **`clippy` with `-D warnings`** — CI gates it (`engine.yml`, engine + desktop workspaces); run locally with `make lint` (clippy + Kotlin spotlessCheck). Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
 
 ## 7. CI gate + supply chain `[A]`
 
-CI (`.github/workflows/engine.yml`) runs `cargo test --workspace` and `cargo fmt --check` on every PR touching `engine/`; `.github/workflows/security.yml` runs `cargo-audit` + `cargo-deny` on PRs touching Cargo manifests / lockfiles and weekly. Post-PR verification follows CLAUDE.md § Build & Test. `make lint` (clippy `-D warnings`) runs on demand.
+CI (`.github/workflows/engine.yml`) runs `cargo test --workspace`, `cargo fmt --check` and `cargo clippy -D warnings` on every PR touching `engine/`; `.github/workflows/security.yml` runs `cargo-audit` over all four Cargo workspaces + `cargo-deny` over the engine on PRs touching Cargo manifests / lockfiles and weekly. Post-PR verification follows CLAUDE.md § Build & Test.
 
 - `make`-target shortcuts available for round-internal iteration (fast paths) AND canonical form (full paths). See root `Makefile help` for the current target list.
 - **`cargo-audit`** scans against the RustSec advisory DB (CI `security.yml`; locally, install via `cargo install cargo-audit --locked`).

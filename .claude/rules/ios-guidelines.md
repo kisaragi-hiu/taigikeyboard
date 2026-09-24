@@ -13,10 +13,7 @@ Mandatory rules for iOS development. Read before modifying iOS code.
 
 ## KeyboardKit
 
-- **Must consult KeyboardKit documentation before implementation**
-- **KeyboardKit 10+ is closed-source** — cannot view source code directly
-- Local docs: `./references/KeyboardKit-Documentation/`
-- Online docs: https://keyboardkit.github.io/KeyboardKitDocs/
+KeyboardKit 10+ is closed-source, so its API comes from docs, not source. Look it up per `.claude/rules/doc-lookup.md` (Context7 first, then `references/KeyboardKit-Documentation/`).
 
 ## Memory Management
 

@@ -19,7 +19,7 @@ make e2e PLATFORM=linux E2E_RUN=e2e/runs/<name>           # named run dir (defau
 |---|---|---|
 | `linux` | the macOS UTM guest (`TAIGI_E2E_LINUX_HOST`, default `binhian@192.168.64.2`): test-mode build into `~/taigi-e2e/prefix`, never the VM's own install. CI twin: `.github/workflows/linux-e2e.yml` | available |
 | `linux-desktop` | the REAL logged-in session of both dogfood VMs — UTM GNOME Wayland + IBus (`linux-gnome-ibus`) and the `win` box's VirtualBox KDE X11 + Fcitx5 (`linux-kde-fcitx5`). The session's own framework is pointed at the test build and restored afterwards (`tools/e2e/linux/desktop.py --restore` undoes an interrupted run); keys from a uinput keyboard; `shot-<step>.png` per step in each scenario dir — evidence, never asserted. Powered-off VM → started; unreachable / locked → `skipped` | available |
-| others | their roadmap PRs (macOS PR5, Windows PR6, Android PR7, iOS PR8) | not yet |
+| macOS / Windows / Android / iOS | no driver — tested by hand (`e2e-testing-roadmap.md` § PRs) | not planned |
 
 The Linux VM is unreachable → every scenario is `skipped` with the reason (not a failure). The first run compiles the release engine inside the VM (slow); later runs are incremental. One scenario only: `make e2e PLATFORM=linux E2E_ONLY=<scenario-id>`.
 

@@ -66,14 +66,6 @@ Generic Kotlin idioms (`val` over `var`, sealed hierarchies, data classes, corou
 - Follow the [Android Keyboard Design Guidelines](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method) for IME components.
 - Prefer `requireNotNull(x)` / `checkNotNull(x)` / `x ?: error("…")` over `!!`.
 - `enum class` for pure enums with no associated state (sealed hierarchies and data classes: global `kotlin.md`).
-- Scope functions have distinct roles:
-  - `let` — null-safe chaining or transforming a non-null reference into a different shape.
-  - `apply` — configuring a receiver (builder style), returns the receiver.
-  - `also` — side effect on the receiver, returns the receiver.
-  - `run` — executing a block with the receiver as `this`, returns the block result.
-  - `with` — same as `run` but with an explicit first argument.
-- Single-expression functions where the body is a single expression.
-- Trailing lambda syntax when the last parameter is a lambda.
 - Avoid `!!`, `lateinit` on public API (private `lateinit` OK inside lifecycle-bound classes).
 
 ## 4. Android lifecycle + DI `[B]` `[A]`
