@@ -2,7 +2,7 @@ name: Engine
 
 # The shared Rust engine, gated on every change to it: tests, clippy, then
 # formatting for the engine, Windows and desktop-shared workspaces (Linux gates
-# its own in linux-build.yml). Ubuntu only — the engine has no platform code, and
+# its own in linux-build.yml, nightly — `make linux-check` before a Linux PR). Ubuntu only — the engine has no platform code, and
 # the platform builds that link it (Xcode, Gradle, SwiftPM, the TSF DLL) stay on
 # the maintainer's machines and the release runners; each needs a toolchain that
 # would cost more runner time than the tests it would run.
