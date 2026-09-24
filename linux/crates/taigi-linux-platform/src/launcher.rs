@@ -6,7 +6,7 @@
 use crate::paths::settings_binary;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use taigi_desktop_core::settings::launch::{CHECK_NOW_FLAG, PANE_FLAG};
+use taigi_desktop_core::settings::launch::{CHECK_NOW_FLAG, CHECK_UPDATES_FLAG, PANE_FLAG};
 use taigi_desktop_core::settings::{SettingChoice, SettingsPane};
 
 /// Spawns the settings window, on `pane` (the persisted raw spelling of a
@@ -38,6 +38,13 @@ pub fn check_for_updates_at(binary: &Path) -> bool {
     )
 }
 
+/// The automatic daily check (roadmap L10): the settings binary with no
+/// window, `--check-updates` — it claims the due window, fetches, and posts
+/// a desktop notification for a version not announced before.
+pub fn check_for_updates_in_background() -> bool {
+    spawn_settings(&settings_binary(), &[CHECK_UPDATES_FLAG])
+}
+
 fn spawn_settings(binary: &Path, arguments: &[&str]) -> bool {
     let mut command = Command::new(binary);
     command.args(arguments);
@@ -59,7 +66,22 @@ fn spawn_detached(mut command: Command, what: &str) -> bool {
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     match command.spawn() {
-        Ok(_child) => true,
+        Ok(mut child) => {
+            // Reaped on its own thread, for every launch (the settings
+            // window and `xdg-open` too, which were left unreaped before the
+            // daily check): the engine and the Fcitx5 daemon live for the
+            // whole session, and a child never waited on stays a zombie
+            // until they exit.
+            let reaped = std::thread::Builder::new()
+                .name("taigi-reap".to_owned())
+                .spawn(move || {
+                    let _ = child.wait();
+                });
+            if let Err(error) = reaped {
+                log::warn!("launch.{what}_unreaped error={error}");
+            }
+            true
+        }
         Err(error) => {
             log::error!(
                 "launch.{what}_failed program={:?} error={error}",

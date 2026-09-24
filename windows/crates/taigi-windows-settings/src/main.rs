@@ -96,59 +96,37 @@ fn open_window(
 }
 
 /// `--check-updates`: the scheduled task's daily check (roadmap W9) — no
-/// window. Due ⇒ fetch, record the outcome the way the window would, and
-/// toast a version not announced before.
+/// window. The shared sequence (`run_scheduled_check`: claim the due
+/// window, fetch, record, claim the announcement), then the window's side
+/// effects without a window: a package staged for another version goes, and
+/// a version this launch won the announcement for is toasted.
 fn headless_check() {
-    use taigi_desktop_core::settings::update_schedule;
-    use taigi_desktop_update::checker;
+    use taigi_desktop_update::{run_scheduled_check, HttpTransport, Outcome};
     let Ok(directory) = user_data_directory() else {
         return;
     };
     let store = SettingsFileStore::new(&directory);
-    let Ok(document) = store.load() else {
-        return;
+    let transport = HttpTransport {
+        manifest_url: taigi_windows_update::PUBLISHED_URL,
     };
-    let now = updates::now_ms();
-    if !update_schedule::is_due(&document, now) {
-        return;
-    }
-    if store
-        .update(|document| update_schedule::stamp_next_check(document, now))
-        .is_err()
-    {
-        return;
-    }
-    let outcome = checker::check(
-        &taigi_desktop_update::HttpTransport {
-            manifest_url: taigi_windows_update::PUBLISHED_URL,
-        },
+    let Some(ran) = run_scheduled_check(
+        |mutate| store.update(|document| mutate(document)).ok(),
+        &transport,
         updates::INSTALLED_VERSION,
-    );
-    let Ok(document) = store.update(|document| checker::record(document, &outcome)) else {
+        updates::now_ms(),
+    ) else {
         return;
     };
-    // The window's side effects, without a window: a package staged for
-    // another version goes; the announcement is claimed under the lock.
-    let keep = match &outcome {
-        checker::Outcome::UpdateAvailable(manifest) => Some(manifest.version.as_str()),
-        checker::Outcome::UpToDate => None,
-        checker::Outcome::Failed => return,
+    let keep = match &ran.outcome {
+        Outcome::UpdateAvailable(manifest) => Some(manifest.version.as_str()),
+        Outcome::UpToDate => None,
+        Outcome::Failed => return,
     };
     if let Some(local) = updates::local_data_directory() {
         let staging = taigi_windows_update::installation::staging_directory(&local);
         taigi_windows_update::installation::remove_staged_packages_other_than(&staging, keep);
     }
-    if let checker::Outcome::UpdateAvailable(manifest) = &outcome {
-        let version = manifest.version.clone();
-        let mut claimed = false;
-        if store
-            .update(|document| claimed = checker::claim_announcement(document, &version))
-            .is_err()
-        {
-            return;
-        }
-        if claimed {
-            updates::post_toast(&strings_for(&document), manifest);
-        }
+    if let Some(manifest) = &ran.announce {
+        updates::post_toast(&strings_for(&ran.document), manifest);
     }
 }

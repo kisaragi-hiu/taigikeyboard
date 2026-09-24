@@ -15,6 +15,8 @@ pub struct LaunchOptions {
     pub pane: Option<SettingsPane>,
     /// `--check-now`: the panel menu's 檢查更新.
     pub check_now: bool,
+    /// `--check-updates`: the engine's daily spawn — no window.
+    pub check_updates: bool,
 }
 
 /// A flag this platform has no behaviour for.
@@ -25,7 +27,7 @@ impl fmt::Display for UnsupportedFlag {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "`{}` is not supported on Linux; only `{PANE_FLAG} <pane>` and `{CHECK_NOW_FLAG}` are accepted",
+            "`{}` is not supported on Linux; only `{PANE_FLAG} <pane>`, `{CHECK_NOW_FLAG}` and `{CHECK_UPDATES_FLAG}` are accepted",
             self.0
         )
     }
@@ -45,7 +47,8 @@ impl LaunchOptions {
                         .and_then(|raw| SettingsPane::from_raw(&raw));
                 }
                 CHECK_NOW_FLAG => options.check_now = true,
-                CHECK_UPDATES_FLAG | PREWARM_FLAG => {
+                CHECK_UPDATES_FLAG => options.check_updates = true,
+                PREWARM_FLAG => {
                     return Err(UnsupportedFlag(argument));
                 }
                 other => log::warn!("cli.unknown_argument argument={other}"),
@@ -86,10 +89,18 @@ mod tests {
     }
 
     #[test]
-    fn the_flags_without_linux_behaviour_are_refused_by_name() {
-        let error = parse(&["--check-updates"]).unwrap_err();
-        assert_eq!(error, UnsupportedFlag("--check-updates".into()));
-        assert!(error.to_string().contains("--check-updates"));
-        assert!(parse(&["--prewarm"]).is_err());
+    fn the_background_check_is_its_own_launch() {
+        // trace: launcher::check_for_updates_in_background() spawns
+        // `--check-updates`.
+        let options = parse(&["--check-updates"]).unwrap();
+        assert!(options.check_updates);
+        assert!(!options.check_now);
+    }
+
+    #[test]
+    fn the_flag_without_linux_behaviour_is_refused_by_name() {
+        let error = parse(&["--prewarm"]).unwrap_err();
+        assert_eq!(error, UnsupportedFlag("--prewarm".into()));
+        assert!(error.to_string().contains("--prewarm"));
     }
 }

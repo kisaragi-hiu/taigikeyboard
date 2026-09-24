@@ -381,8 +381,17 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   `_data/linux_release.json`: version + release page, no package): the 一般 pane's version
   row carries 檢查更新 (or the known update and 去下載), the panel menu's 檢查更新 spawns
   `--pane general --check-now`, the answer is an `adw::AlertDialog`. No in-app install —
-  a package needs root and three formats share one release. Automatic daily check +
-  notification: `docs/roadmap.md` § Linux update check, phase 5.
+  a package needs root and three formats share one release. **Automatic daily check**:
+  Linux has no scheduled task, so the engine — the one process alive all session — asks on
+  every activation (IBus `Enable` / `FocusIn`, Fcitx5 `activate` → `taigi_runtime_activated`)
+  against an in-memory next-check time (`taigi-linux-core::update_trigger`, read from
+  `updateNextCheckMs` once) and, when due, spawns `taigikeyboard-settings --check-updates`
+  (children reaped on a thread). The child runs the shared `run_scheduled_check` (claim the
+  due window under the settings lock — one fetch when both shells activate — fetch, record,
+  claim the version's announcement) and posts one `gio::Notification` per version; its
+  click is the `app.show-updates` action, reached by D-Bus activation through the installed
+  `share/dbus-1/services/tw.taigikeyboard.Settings.service` after the sender exited. The
+  engine never links the network stack; the e2e test build never spawns the check.
 - **L11 Packaging + release.** `make -C linux install PREFIX=/usr DESTDIR=` installs the two
   binaries, the component XML (rendered with the prefix), the dictionaries, a
   `tw.taigikeyboard.Settings.desktop` entry + icon, and prints the `ibus restart`

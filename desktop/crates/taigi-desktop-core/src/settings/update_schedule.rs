@@ -19,6 +19,19 @@ pub fn stamp_next_check(document: &mut SettingsDocument, now_ms: i64) {
     document.set_i64(&keys::UPDATE_NEXT_CHECK_MS, now_ms + CHECK_INTERVAL_MS);
 }
 
+/// The due test and the stamp as one step: run INSIDE one locked
+/// `settings.json` update, it is the claim that lets exactly one of two
+/// launches racing for the same due window fetch (the Windows scheduled
+/// task and a window opening; the IBus engine and the Fcitx5 addon both
+/// activating). Answers whether the caller won.
+pub fn claim_due_check(document: &mut SettingsDocument, now_ms: i64) -> bool {
+    if !is_due(document, now_ms) {
+        return false;
+    }
+    stamp_next_check(document, now_ms);
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -30,5 +43,16 @@ mod tests {
         stamp_next_check(&mut document, 1_000);
         assert!(!is_due(&document, 1_000 + CHECK_INTERVAL_MS - 1));
         assert!(is_due(&document, 1_000 + CHECK_INTERVAL_MS));
+    }
+
+    #[test]
+    fn one_claim_per_due_window() {
+        let mut document = SettingsDocument::default();
+        assert!(claim_due_check(&mut document, 1_000));
+        assert!(
+            !claim_due_check(&mut document, 1_001),
+            "the second launch loses"
+        );
+        assert!(claim_due_check(&mut document, 1_000 + CHECK_INTERVAL_MS));
     }
 }

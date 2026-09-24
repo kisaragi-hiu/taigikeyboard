@@ -70,9 +70,19 @@ impl UpdateState {
     }
 
     /// The daily check, when it is due (`checkAutomatically`).
+    /// The due test and the stamp are one locked write
+    /// (`claim_due_check`), so this window and the scheduled task racing
+    /// for the same due window fetch once.
     pub fn check_if_due(&mut self, settings: &mut SettingsWriter) {
-        if update_schedule::is_due(settings.document(), now_ms()) {
-            self.start_check(settings, false);
+        if self.check.is_some() {
+            return;
+        }
+        let now = now_ms();
+        let mut claimed = false;
+        settings.update(|document| claimed = update_schedule::claim_due_check(document, now));
+        if claimed {
+            self.is_manual = false;
+            self.fetch();
         }
     }
 
@@ -90,6 +100,10 @@ impl UpdateState {
         }
         self.is_manual = is_manual;
         settings.update(|document| update_schedule::stamp_next_check(document, now_ms()));
+        self.fetch();
+    }
+
+    fn fetch(&mut self) {
         let transport = Arc::clone(&self.transport);
         self.check = Some(PendingWork::spawn_quiet(move || {
             checker::check(&*transport, INSTALLED_VERSION)

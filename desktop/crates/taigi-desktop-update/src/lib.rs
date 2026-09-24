@@ -12,9 +12,11 @@
 pub mod checker;
 pub mod manifest;
 pub mod manual;
+pub mod scheduled;
 pub mod transport;
 
 pub use checker::Outcome;
 pub use manifest::{DottedVersion, ManifestError, PublishedPackage, UpdateManifest};
 pub use manual::ManualOutcome;
+pub use scheduled::{run_scheduled_check, ScheduledCheck};
 pub use transport::{FetchError, HttpTransport, ManifestFetcher, PackageDownloader};
