@@ -2,7 +2,7 @@
 
 > **Type**: Planning (design record + PR table; becomes Reference once shipped)
 > **Keywords**: `e2e`, `test mode`, `trace`, `simulator`, `emulator`, `VM`, `container`, `scenario`, `perf`, `Xvfb`, `xdotool`, `UiAutomator`
-> **Status**: Linux live (PR1–PR3b merged 2026-09-24: `make e2e PLATFORM=linux`, CI `linux-e2e.yml`, skill `/e2e`); PR4–PR8 pending. Phase 0 plan written 2026-09-24; Codex ANALYSIS-ONLY pre-review 2026-09-24 = REVISE (revisions applied below); spikes S-A–S-D run 2026-09-24 (§ Spikes — results).
+> **Status**: Linux live (PR1–PR3b merged 2026-09-24: `make e2e PLATFORM=linux`, CI `linux-e2e.yml`, skill `/e2e`); PR3c + PR4–PR8 pending; real-desktop-session goal added 2026-09-24 (§ Goal 5). Phase 0 plan written 2026-09-24; Codex ANALYSIS-ONLY pre-review 2026-09-24 = REVISE (revisions applied below); spikes S-A–S-D run 2026-09-24 (§ Spikes — results).
 > **Session memory**: project memory `project_e2e_test_system.md` (Claude auto-memory)
 
 ---
@@ -15,6 +15,7 @@ USER 2026-09-24: 「我需要一個end-to-end的自動化測試系統,能夠讓A
 2. The test build writes a **structured trace** (JSON Lines). An analyzer turns trace + expectations into a report: wrong commit, engine errors / panics, latency per operation, memory.
 3. **The trace exists only in test builds.** Release artifacts contain no trace code and write no trace file — enforced by build-script and CI checks (marker string + feature graph), not by a runtime switch. The one exception is swift-bridge's always-present `e2e_trace_open` stub, which returns false (bridge items cannot be cfg-gated, same as `panic_for_test`).
 4. Every platform: iOS, Android, macOS, Windows, Linux (Fcitx5 + IBus) on every packaged distribution (`.deb` Ubuntu / Debian, `.rpm` Fedora, `.pkg.tar.zst` Arch).
+5. **Real desktop sessions beside CI.** USER 2026-09-24: 「除了CI上執行的e2e以外,我希望能夠真實在linux VM,macos,windows開啟模擬器測試」. The headless Xvfb run (CI + `make e2e PLATFORM=linux`) stays; the desktop drivers type into the logged-in session of: both Linux VMs (UTM GNOME Wayland + IBus, VirtualBox KDE X11 + Fcitx5), this Mac (PR5), the `ssh win` box (PR6). USER decisions 2026-09-24: macOS runs on this Mac (keyboard focus taken for the run, one-time Accessibility grant); both Linux VMs; a screenshot per checkpoint is kept as evidence in the run dir, never asserted on; Windows locked or off → `skipped`.
 
 ## Today (grounded in code)
 
@@ -84,9 +85,9 @@ The trace file lives in the platform's app sandbox (iOS extension container or A
 | Platform | Device | Key injection | Read-back | Where it runs |
 |---|---|---|---|---|
 | Linux Fcitx5 / IBus | distro container: Xvfb + dbus + `fcitx5` or `ibus-daemon` + a small GTK text client | `xdotool key` (X11 keysyms) | client writes its buffer to a file on exit | GitHub-hosted matrix: Ubuntu 24.04, Debian 13, Fedora 44, Arch × {Fcitx5, IBus}, building the test-mode binaries (`make install E2E=1`) inside each distribution's container, against its own toolchain and libraries — never a shipped package, which carries no trace |
-| Linux desktop sessions | existing VMs (VirtualBox KDE, UTM GNOME) | `VBoxManage keyboardputscancode` / uinput `vt.sh` | `zenity --entry` | local, optional — smoke only; containers carry the matrix |
-| macOS | this Mac, test-build IME installed to `~/Library/Input Methods` | CGEvent from a small Swift driver into a test host window | host writes its text view to a file | local only (needs one-time Accessibility grant) |
-| Windows | `ssh win` box | `SendInput` from a driver launched **in the interactive session** (scheduled task `/IT`), not the ssh session 0 | host writes its edit control to a file | local box |
+| Linux desktop sessions (PR3c) | existing VMs: UTM GNOME (Wayland, IBus), VirtualBox KDE (X11, Fcitx5; gdm autologin needed) | in-guest uinput (python3-evdev, one virtual keyboard — works under Wayland and X11 alike, one driver for both VMs; `ydotool` 0.1.8 misparses key names) | small GTK host window in the session writes its buffer on exit (`zenity --entry` proven) | local; screenshots per checkpoint (`gnome-screenshot` / `spectacle`) as evidence only; containers carry the distro matrix |
+| macOS | this Mac, test-build IME installed to `~/Library/Input Methods` | CGEvent from a small Swift driver into a test host window | host writes its text view to a file | local only (needs one-time Accessibility grant; takes keyboard focus for the run); `screencapture` per checkpoint as evidence |
+| Windows | `ssh win` box | `SendInput` from a driver launched **in the interactive session** (scheduled task `/IT`), not the ssh session 0 | host writes its edit control to a file | local box; locked / off → `skipped`; screenshot per checkpoint as evidence |
 | Android | emulator (dedicated e2e AVD, ≥4 GB RAM) | test build writes a **key-geometry manifest** (each laid-out key's rect) to the trace; driver taps those points with `adb shell input tap` — the real `MotionEvent` path through `KeyTouchCoordinator` | host test activity in the e2e APK writes its `EditText` | local; CI later if cheap |
 | iOS | simulator iPhone 17 | per S-A: XCUITest coordinate taps (needs a UI test target the USER adds in Xcode) or `idb`; key points from the same geometry manifest | containing app, `E2E_TRACE`-only text field made first responder on launch | local |
 
@@ -127,6 +128,7 @@ PR1/PR2 of the first draft were over the 500-LOC cap (Codex) — split below.
 | PR2 | `e2e/scenarios` intent format + 3 seed scenarios, `tools/e2e/analyze.py` (stdlib) + tests, report format | Merged #163 `5fc7b825` 2026-09-24 |
 | PR3a | Linux: release zero-log (`taigi_linux_platform::install_debug_logger`, Fcitx5 `NDEBUG` macros), `e2e-trace` through `taigi-linux-core` / `-ffi` / `-ibus`, platform events (`key` / `preedit` / `commit` / `candidates` / `session_end`), `make build E2E=1` + package refusal + release guard | Merged #165 `34ae8d27` 2026-09-24 |
 | PR3b | Linux: driver `tools/e2e/linux/driver.py` (Xvfb + D-Bus + Fcitx5 / IBus + GTK 3 host + xdotool, test-mode build in a private prefix), `make e2e PLATFORM=linux` → UTM VM (`tools/e2e/linux/run.sh`), CI `linux-e2e.yml` (Ubuntu 24.04 runner), `/e2e` skill | Merged #166 `26c03a34` 2026-09-24 (VM + CI 6/6 PASS) |
+| PR3c | Linux desktop sessions: `make e2e PLATFORM=linux-desktop` drives both VMs' logged-in sessions (uinput driver, session host window, per-checkpoint screenshots); open fork for the pre-impl review — how the session's own `ibus-daemon` / `fcitx5` picks up the test-mode build without replacing the VM's install (component / addon path + restart vs install-and-restore) | Pending |
 | PR4 | Linux: CI matrix Ubuntu 24.04 / Debian 13 / Fedora 44 / Arch × {Fcitx5, IBus}, each container building `make install E2E=1` from source against its own libraries (packages are never traced — PR3a; the shipped packages keep their `install-check` job) | Pending |
 | PR5 | macOS: `-DE2E_TRACE` events, CGEvent driver + host app | Pending |
 | PR6 | Windows: TSF events, `/IT` interactive-session `SendInput` driver over `ssh win`; skip when box off / locked | Pending |
