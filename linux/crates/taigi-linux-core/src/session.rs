@@ -214,7 +214,9 @@ pub fn process_key(
             }
             SymbolPickerIntent::Navigate(direction) => {
                 if let Some(picker) = &mut state.symbol_picker {
-                    picker.selection.navigate(direction);
+                    picker
+                        .selection
+                        .navigate(direction, is_vertical_layout(&settings));
                 }
                 present_table(state, &settings, &bindings, &mut emits);
                 return KeyReply {
@@ -418,7 +420,9 @@ pub fn navigate_from_panel(
         return Vec::new();
     }
     if let Some(picker) = &mut state.symbol_picker {
-        picker.selection.navigate(direction);
+        picker
+            .selection
+            .navigate(direction, is_vertical_layout(&settings));
         let mut emits = Vec::new();
         present_table(state, &settings, &bindings, &mut emits);
         return emits;
@@ -603,7 +607,9 @@ fn run_key(
             true
         }
         ComposingKeyIntent::Navigate(direction) => {
-            state.selection.navigate(*direction);
+            state
+                .selection
+                .navigate(*direction, is_vertical_layout(settings));
             true
         }
         ComposingKeyIntent::MoveCaret(direction) => {
@@ -676,15 +682,20 @@ fn table_content(
     let labels = (0..PAGE_SIZE)
         .map(|slot| slot_key_set.label_for_slot(slot))
         .collect();
-    let vertical = settings.choice(&keys::CANDIDATE_LAYOUT) != CandidateLayout::Horizontal;
     LookupTableContent {
         candidates,
         labels,
         cursor: state.selection.selected_index().unwrap_or(0) as u32,
         cursor_visible: true,
         page_size: PAGE_SIZE as u32,
-        vertical,
+        vertical: is_vertical_layout(settings),
     }
+}
+
+/// Whether the panel draws the list as a column — what it is told to draw
+/// and how the arrows read, from the one setting.
+pub(crate) fn is_vertical_layout(settings: &SettingsDocument) -> bool {
+    settings.choice(&keys::CANDIDATE_LAYOUT) != CandidateLayout::Horizontal
 }
 
 /// The pass-through keys this input method consumes: attaching

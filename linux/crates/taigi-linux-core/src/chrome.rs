@@ -16,7 +16,7 @@ use crate::selection::LookupSelection;
 use crate::session::{self, EngineState, SymbolPicker, PAGE_SIZE};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::{telex_guide_rows, ComposingKeyBindings, ShortcutAction};
-use taigi_desktop_core::settings::{keys, CandidateLayout, InputMode, SettingsDocument};
+use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument};
 use taigi_desktop_core::strings::StringKey;
 use taigi_desktop_core::symbols::SymbolTable;
 use taigi_linux_platform::open_settings;
@@ -351,7 +351,7 @@ pub(crate) fn symbol_picker_table(
         cursor: picker.selection.selected_index().unwrap_or(0) as u32,
         cursor_visible: true,
         page_size: PAGE_SIZE as u32,
-        vertical: settings.choice(&keys::CANDIDATE_LAYOUT) != CandidateLayout::Horizontal,
+        vertical: session::is_vertical_layout(settings),
     }
 }
 
