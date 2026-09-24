@@ -1595,7 +1595,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-desktop-core"
-version = "3.6.9"
+version = "3.6.10"
 dependencies = [
  "dispatch",
  "log",
@@ -1608,7 +1608,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-desktop-storage"
-version = "3.6.9"
+version = "3.6.10"
 dependencies = [
  "log",
  "rusqlite",
@@ -1620,7 +1620,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-linux-core"
-version = "3.6.9"
+version = "3.6.10"
 dependencies = [
  "dispatch",
  "log",
@@ -1633,7 +1633,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-linux-ffi"
-version = "3.6.9"
+version = "3.6.10"
 dependencies = [
  "log",
  "taigi-desktop-core",
@@ -1643,7 +1643,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-linux-platform"
-version = "3.6.9"
+version = "3.6.10"
 dependencies = [
  "env_logger",
  "log",
@@ -1654,7 +1654,7 @@ dependencies = [
 
 [[package]]
 name = "taigikeyboard-ibus"
-version = "3.6.9"
+version = "3.6.10"
 dependencies = [
  "log",
  "taigi-desktop-core",
@@ -1667,7 +1667,7 @@ dependencies = [
 
 [[package]]
 name = "taigikeyboard-settings"
-version = "3.6.9"
+version = "3.6.10"
 dependencies = [
  "gio",
  "gtk4",

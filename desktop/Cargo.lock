@@ -663,7 +663,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-desktop-core"
-version = "3.6.9"
+version = "3.6.10"
 dependencies = [
  "dispatch",
  "log",
@@ -676,7 +676,7 @@ dependencies = [
 
 [[package]]
 name = "taigi-desktop-storage"
-version = "3.6.9"
+version = "3.6.10"
 dependencies = [
  "log",
  "rusqlite",
