@@ -169,15 +169,16 @@ if fetch_platform_asset Windows "$WINDOWS_ASSET"; then
 fi
 
 # No manifest to wait for: nothing installed polls for a Linux package.
-if fetch_platform_asset Linux "$LINUX_ASSET"; then
-    site_files+=("$LINUX_SITE_PATH" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
-fi
-if fetch_platform_asset Fedora "$LINUX_RPM_ASSET"; then
-    site_files+=("$LINUX_RPM_SITE_PATH" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
-fi
-if fetch_platform_asset Arch "$LINUX_ARCH_ASSET"; then
-    site_files+=("$LINUX_ARCH_SITE_PATH" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
-fi
+# One triple per format: platform label, asset name, site data path.
+for linux_format in \
+    "Linux|$LINUX_ASSET|$LINUX_SITE_PATH" \
+    "Fedora|$LINUX_RPM_ASSET|$LINUX_RPM_SITE_PATH" \
+    "Arch|$LINUX_ARCH_ASSET|$LINUX_ARCH_SITE_PATH"; do
+    IFS='|' read -r label asset site_path <<< "$linux_format"
+    if fetch_platform_asset "$label" "$asset"; then
+        site_files+=("$site_path" "$(site_release_json "$ASSET_URL" "$ASSET_SHA256")")
+    fi
+done
 
 [[ ${#site_files[@]} -gt 0 ]] ||
     fail "$DESKTOP_TAG carries none of $MACOS_ASSET, $WINDOWS_ASSET, $LINUX_ASSET, $LINUX_RPM_ASSET, $LINUX_ARCH_ASSET — there is nothing to announce"

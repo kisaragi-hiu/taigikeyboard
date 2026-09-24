@@ -178,16 +178,21 @@ deb:
 	dpkg-deb --info $(DEB_FILE)
 	@echo "built $(DEB_FILE)"
 
+# Stage the one install layout under $(1)/root and render template $(2) into
+# $(3) with the version and that root — shared by `rpm` and `arch`.
+define stage_and_render
+	rm -rf $(1)
+	$(MAKE) install PREFIX=/usr DESTDIR=$(CURDIR)/$(1)/root
+	sed -e 's#@VERSION@#$(VERSION)#g' -e 's#@STAGEROOT@#$(CURDIR)/$(1)/root#g' $(2) > $(3)
+endef
+
 # The Fedora package: the same staged install, packed by rpmbuild from
 # packaging/taigikeyboard.spec.in (rpm's ELF scan writes the library Requires,
 # as dpkg-shlibdeps does for the .deb). Run on Fedora (the CI container).
 RPM_DIR := target/rpm
 RPM_FILE := target/taigikeyboard-$(VERSION)-1.x86_64.rpm
 rpm:
-	rm -rf $(RPM_DIR)
-	$(MAKE) install PREFIX=/usr DESTDIR=$(CURDIR)/$(RPM_DIR)/root
-	sed -e 's#@VERSION@#$(VERSION)#g' -e 's#@STAGEROOT@#$(CURDIR)/$(RPM_DIR)/root#g' \
-	  packaging/taigikeyboard.spec.in > $(RPM_DIR)/taigikeyboard.spec
+	$(call stage_and_render,$(RPM_DIR),packaging/taigikeyboard.spec.in,$(RPM_DIR)/taigikeyboard.spec)
 	rpmbuild -bb --define "_topdir $(CURDIR)/$(RPM_DIR)" $(RPM_DIR)/taigikeyboard.spec
 	cp $(RPM_DIR)/RPMS/x86_64/taigikeyboard-$(VERSION)-1.x86_64.rpm $(RPM_FILE)
 	rpm -qip $(RPM_FILE)
@@ -198,10 +203,7 @@ rpm:
 ARCH_DIR := target/arch
 ARCH_FILE := target/taigikeyboard-$(VERSION)-1-x86_64.pkg.tar.zst
 arch:
-	rm -rf $(ARCH_DIR)
-	$(MAKE) install PREFIX=/usr DESTDIR=$(CURDIR)/$(ARCH_DIR)/root
-	sed -e 's#@VERSION@#$(VERSION)#g' -e 's#@STAGEROOT@#$(CURDIR)/$(ARCH_DIR)/root#g' \
-	  packaging/PKGBUILD.in > $(ARCH_DIR)/PKGBUILD
+	$(call stage_and_render,$(ARCH_DIR),packaging/PKGBUILD.in,$(ARCH_DIR)/PKGBUILD)
 	cd $(ARCH_DIR) && PKGDEST=$(CURDIR)/target PKGEXT=.pkg.tar.zst makepkg --force --nodeps
 	test -f $(ARCH_FILE)
 	pacman -Qip $(ARCH_FILE)
