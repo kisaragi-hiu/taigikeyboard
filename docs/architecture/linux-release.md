@@ -89,10 +89,14 @@ maintainer's Mac.
   `libFcitx5Core`) and `ibus` is optional. Arch is rolling: a package built
   against one Fcitx5 may need a rebuild after its ABI moves.
 
-CI installs each into a FRESH container of its distribution (`install-check`)
-and asserts the files are in place and every linked library resolves — no
-build dependency around to hide a missing runtime one. That is packaging
-proof only; typing on a real desktop is S74.
+CI installs each of the three into a FRESH container of its distribution
+(`install-check`, one matrix, the same checks for every format — no build
+dependency around to hide a missing runtime one): files in place, every
+linked library resolved, `ibus-daemon` spawning the engine from the installed
+component, Fcitx5 listing the input method and loading the addon (it is
+`OnDemand`; the check asks for it over D-Bus `GetConfig`), fontconfig listing
+the bundled typefaces and an existing hicolor icon cache naming the icon.
+That is packaging proof only; typing on a real desktop is S74.
 
 ## Staging and publishing
 

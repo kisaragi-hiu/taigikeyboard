@@ -318,35 +318,49 @@ jobs:
           retention-days: 14
 
   # Each package installed into a FRESH container of its distribution — no
-  # build dependency present to hide a missing runtime one — then every file
-  # the shells need is where the frameworks look, and every library the three
-  # ELF files link resolves. Behaviour on a desktop session is S74's.
+  # build dependency present to hide a missing runtime one — and every
+  # package held to the SAME checks, so the three formats are proven equally:
+  # files in place, every linked library resolved, the IBus daemon spawning
+  # the engine, Fcitx5 loading the addon, and the desktop caches (icon,
+  # fontconfig) holding what the package installed. Behaviour on a desktop
+  # session is S74's.
   install-check:
     name: install check (${{ matrix.distro }})
-    needs: [rpm, arch]
+    needs: [build, rpm, arch]
     runs-on: ubuntu-24.04
     container: ${{ matrix.image }}
-    timeout-minutes: 15
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         include:
+          - distro: ubuntu
+            image: ubuntu:24.04
+            artifact: linux-deb
+            install: >-
+              apt-get update &&
+              DEBIAN_FRONTEND=noninteractive apt-get install -y ./taigikeyboard_*_amd64.deb
+              fcitx5 ibus dbus-daemon dbus-bin
+            addon: /usr/lib/x86_64-linux-gnu/fcitx5/libtaigikeyboard.so
           - distro: fedora
             image: fedora:44
             artifact: linux-rpm
-            install: dnf install -y ./taigikeyboard-*.x86_64.rpm
+            install: dnf install -y ./taigikeyboard-*.x86_64.rpm fcitx5 ibus dbus-daemon dbus-tools
             addon: /usr/lib64/fcitx5/libtaigikeyboard.so
           - distro: arch
             image: archlinux:latest
             artifact: linux-arch
-            install: pacman -Syu --noconfirm && pacman -U --noconfirm ./taigikeyboard-*-x86_64.pkg.tar.zst
+            install: >-
+              pacman -Syu --noconfirm &&
+              pacman -U --noconfirm ./taigikeyboard-*-x86_64.pkg.tar.zst &&
+              pacman -S --noconfirm --needed ibus dbus
             addon: /usr/lib/fcitx5/libtaigikeyboard.so
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.artifact }}
 
-      - name: Install the package
+      - name: Install the package (+ both frameworks and the D-Bus tools)
         run: ${{ matrix.install }}
 
       - name: Files in place, every linked library resolved
@@ -370,6 +384,64 @@ jobs:
               exit 1
             fi
           done
+
+      # The build job's daemon smoke, against the INSTALLED component: the
+      # daemon lists the engine and `ibus engine` returns only once it has
+      # spawned the binary and CreateEngine answered.
+      - name: IBus spawns the engine
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/xdg-config" XDG_DATA_HOME="$RUNNER_TEMP/xdg-data"
+          mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
+          dbus-run-session -- bash -c '
+            set -euxo pipefail
+            ibus-daemon --verbose --panel disable --config disable > "$RUNNER_TEMP/ibus-daemon.log" 2>&1 &
+            for i in $(seq 1 40); do ibus list-engine > /dev/null 2>&1 && break; sleep 0.5; done
+            ibus list-engine | grep -q taigikeyboard
+            ibus engine taigikeyboard
+            sleep 2
+            ibus engine | grep -q taigikeyboard
+          ' || { cat "$RUNNER_TEMP/ibus-daemon.log"; exit 1; }
+
+      # The addon is OnDemand: fcitx5 lists the input method from its .conf,
+      # and loads the library only when asked for it. GetConfig on the addon
+      # URI loads it (fcitx5 dbusmodule.cpp `getConfig` → addonManager().addon(
+      # name, true)); addonmanager.cpp logs "Loaded addon <name>" on success.
+      - name: Fcitx5 lists the input method and loads the addon
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export XDG_CONFIG_HOME="$RUNNER_TEMP/xdg-config" XDG_DATA_HOME="$RUNNER_TEMP/xdg-data"
+          mkdir -p "$XDG_CONFIG_HOME" "$XDG_DATA_HOME"
+          log="$RUNNER_TEMP/fcitx5.log"
+          dbus-run-session -- bash -c '
+            set -euxo pipefail
+            fcitx5 --verbose="*=5" > "'"$log"'" 2>&1 &
+            call() { dbus-send --session --print-reply --dest=org.fcitx.Fcitx5 /controller "org.fcitx.Fcitx.Controller1.$@"; }
+            for i in $(seq 1 40); do call AvailableInputMethods > /dev/null 2>&1 && break; sleep 0.5; done
+            call AvailableInputMethods | grep -q "\"taigikeyboard\""
+            call GetConfig string:fcitx://config/addon/taigikeyboard > /dev/null
+            sleep 1
+            grep -q "Loaded addon taigikeyboard" "'"$log"'"
+          ' || { cat "$log"; echo "::error::fcitx5 did not load the taigikeyboard addon"; exit 1; }
+
+      # What each distribution's own hooks (dpkg / rpm file triggers, pacman
+      # hooks) must have done: fontconfig knows the bundled typefaces, and an
+      # existing hicolor icon cache lists the icon. No cache at all is fine —
+      # GTK then scans the directories itself.
+      - name: Desktop caches hold the installed icon and fonts
+        shell: bash
+        run: |
+          set -euo pipefail
+          fc-list | grep -i taigikeyboard || { echo "::error::fontconfig does not list the bundled typefaces"; exit 1; }
+          cache=/usr/share/icons/hicolor/icon-theme.cache
+          if [ -f "$cache" ]; then
+            grep -q taigikeyboard "$cache" || { echo "::error::$cache exists but lacks the taigikeyboard icon — no hook refreshed it"; exit 1; }
+            echo "icon cache refreshed"
+          else
+            echo "no hicolor icon cache on this system; GTK scans the directories"
+          fi
 
   # The release half: only a dispatch from `main` by `stage-desktop.sh`,
   # carrying the commit it staged, attaches — onto a DRAFT targeting that
