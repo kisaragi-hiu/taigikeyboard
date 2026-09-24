@@ -1,6 +1,6 @@
 ---
 name: release-desktop
-description: Prepare a DESKTOP release (macOS + Windows + Linux, one shared version) on main - rebuild generated artifacts, set the desktop version, write the `### macOS`, `### Windows` and `### Linux` sections of `changelog/desktop-v<version>.md`, link it from CHANGELOG.md, validate, commit, and push. Then stages ALL THREE installers on a draft release nobody can reach: builds, signs and notarizes the package here and dispatches CI for the Windows installer and the Linux .deb (`make desktop-release`). Stops before publishing — publishing the draft is the maintainer's one manual step, and it announces the release itself. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-desktop x.y.z`); an optional argument only overrides the release base. Desktop train only; the mobile train (iOS + Android) is `release-mobile`.
+description: Prepare a DESKTOP release (macOS + Windows + Linux, one shared version) on main - rebuild generated artifacts, set the desktop version, write the `### macOS`, `### Windows` and `### Linux` sections of `changelog/desktop-v<version>.md`, link it from CHANGELOG.md, validate, commit, and push. Then stages ALL THREE installers on a draft release nobody can reach: builds, signs and notarizes the package here and dispatches CI for the Windows installer and the Linux .deb (`make desktop-release`), or ONE platform's installers for a patch release (`make desktop-patch PLATFORM=<platform>`, when a platform argument is passed). Stops before publishing — publishing the draft is the maintainer's one manual step, and it announces the release itself. Takes no version argument - it releases the version already in the tree (set beforehand with `make version-desktop x.y.z`); optional arguments only pick a patch platform (`macos` / `windows` / `linux`) or override the release base. Desktop train only; the mobile train (iOS + Android) is `release-mobile`.
 ---
 
 # Release Desktop
@@ -13,8 +13,18 @@ Run from `main`. Takes no version: **`<target>` is whatever version the tree
 already carries** — the maintainer sets it with `make version-desktop x.y.z`
 before invoking. Example: `/release-desktop`
 
-One optional argument, `<base-ref>`, overrides the derived release base.
-Example: `/release-desktop desktop-3.6.7`
+Optional arguments, in any order:
+
+- `<platform>` — `macos`, `windows` or `linux`: a **patch release** of that
+  platform alone. Example: `/release-desktop linux`
+- `<base-ref>` — overrides the derived release base.
+  Example: `/release-desktop desktop-3.6.7`
+
+**Full release vs patch** (USER 2026-09-24): a full release bumps the minor
+number and ships every platform (3.7.0, 3.8.0); a patch bumps the third number
+and ships only the platform it fixes (3.7.1 macOS, 3.7.2 Windows — one shared
+counter, one version per patch). Rationale and the announce side:
+`docs/architecture/desktop-release.md` § Version numbers.
 
 This skill takes a release as far as it can go without a person: it rebuilds,
 writes the changelog, commits, and stages **all three** installers on a draft release
@@ -55,6 +65,9 @@ Then, before any edit:
 
 - Require `<target>` to match `MAJOR.MINOR.PATCH`, and
   `changelog/desktop-v<target>.md` to be absent or not yet published.
+- Kind check: a `<platform>` argument with a `.0` target, or no `<platform>`
+  with a non-`.0` target, breaks the numbering convention — name the mismatch
+  and ask before continuing (the version is the maintainer's call).
 - Report open PRs and ask before continuing if any exist.
 - **State the derived version and range — `preparing desktop <target>, range
   <base>..HEAD, N commits` — and wait for the user to confirm.** Nothing is
@@ -77,6 +90,10 @@ git log <base-ref>..HEAD --oneline
 git diff <base-ref>..HEAD --stat --name-status
 git log <base-ref>..HEAD --format="%s%n%b%n---"
 ```
+
+For a patch, the changelog covers only what reaches that platform: its own tree
+(`macos/`, `windows/`, `linux/`) plus the shared `desktop/`, `engine/` and
+`dictionary/` changes its build picks up.
 
 Trace user-visible behavior by platform. Do not infer release scope from commit
 subjects alone.
@@ -180,6 +197,9 @@ body, so it is what users read on the release page:
 
 Rules:
 
+- A patch's file has the lead paragraph and ONLY its platform's `###` section;
+  the release page shows what this version ships, and the other platforms ship
+  nothing in it.
 - The file must be **committed** before either platform publishes: the release
   body is read out of the tagged commit, not the working tree, and a version
   with no changelog in that commit fails the publish outright.
@@ -238,11 +258,23 @@ The maintainer's Windows box is not in the release path.
 A draft has no tag and no public asset URL: nothing here reaches a user, and
 nothing is announced. The tag appears when the draft is published.
 
-All three or none: there is no way to stage one. An existing draft for
+A full release is all three or none — no half of one is ever staged. An existing draft for
 this version is deleted first, so a re-run is a fresh build of every half from
 one commit — which is what the tag on the published release will describe. If a
 half fails, or `main` moved while a half was waited on, fix that and run the
 whole thing again.
+
+For a **patch**, stage only its platform:
+
+```bash
+make desktop-patch PLATFORM=<platform>
+```
+
+Same script, same clean draft from one commit, with one platform's installers
+(Linux: the `.deb`, `.rpm` and Arch package together). Without macOS the script
+creates the empty draft itself before dispatching, since the hosted attach
+steps only join one. Publishing announces only that platform; the others keep
+offering the version they have.
 
 Report the draft URL.
 

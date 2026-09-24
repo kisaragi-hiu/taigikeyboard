@@ -515,13 +515,13 @@ jobs:
           }
           version="$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)"
           tag="desktop-$version"
-          # The draft is the macOS half's, created on the staged commit. A
+          # The draft is stage-desktop.sh's, created on the staged commit. A
           # published release means the staging order was broken; a draft on
           # another commit is another staging run's.
           state="$(gh release view "$tag" --json isDraft,targetCommitish \
               --jq '"\(.isDraft) \(.targetCommitish)"' 2>&1)" || {
               echo "no release $tag: $state" >&2
-              echo "The macOS half stages first and creates the draft." >&2
+              echo "stage-desktop.sh creates the draft before dispatching this run." >&2
               exit 1
           }
           read -r is_draft target <<< "$state"
