@@ -7,7 +7,8 @@
 
 ## Summary
 
-- Cross-platform reference for iOS / Android / macOS / Windows implementation alignment — start at `architecture/system-overview.md`
+- New contributor: build and test setup is in `BUILDING.md`
+- Cross-platform reference for iOS / Android / macOS / Windows / Linux implementation alignment — start at `architecture/system-overview.md`
 - Quick reference for Claude Code, bullet-point style, concise
 
 ---
@@ -118,6 +119,7 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 | File | Description | Status |
 |------|-------------|--------|
 | `go-public-checklist.md` | Go-public audit record — repository PUBLIC since 2026-09-07 (flip record, GitHub scanning state), re-run procedure per section, dictionary-licence position still open | Reference |
+| `BUILDING.md` | Contributor build guide: host matrix, prerequisites (`mise.toml`), build + test command per platform, stale-artifact rule, troubleshooting | Active |
 | `roadmap.md` | Forward-looking work items, released-versions index (mobile + desktop trains), closed phases | Active |
 | `CODE_SIGNING_POLICY.md` | Code-signing policy for released binaries (SignPath Foundation requirement) | Active |
 

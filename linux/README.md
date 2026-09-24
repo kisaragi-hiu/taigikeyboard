@@ -38,6 +38,29 @@ compiles; they do not prove behaviour. The CI job
 (`.github/workflows/linux-build.yml`) adds a real Ubuntu build, the test run
 and an `ibus-daemon` smoke; the dogfood run-book in the roadmap owns the rest.
 
+## System packages
+
+Build dependencies, as the CI jobs in `.github/workflows/linux-build.yml`
+install them (plus Rust from rustup and protoc 36.0 — `mise install` at the
+repository root):
+
+```sh
+# Ubuntu / Debian
+sudo apt-get install ibus dbus-daemon xvfb libgtk-4-dev libadwaita-1-dev pkg-config \
+  fcitx5 fcitx5-modules-dev extra-cmake-modules cmake ninja-build dpkg-dev desktop-file-utils
+
+# Fedora
+sudo dnf install git gcc gcc-c++ make cmake ninja-build extra-cmake-modules fcitx5-devel \
+  gtk4-devel libadwaita-devel pkgconf-pkg-config rpm-build unzip findutils
+
+# Arch
+sudo pacman -S --needed base-devel git cmake ninja extra-cmake-modules fcitx5 gtk4 \
+  libadwaita pkgconf unzip rustup
+```
+
+`xvfb`, `dbus-daemon` and `ibus` are only for the smoke tests; `dpkg-dev`,
+`rpm-build` are only for packaging.
+
 ## On a Linux machine
 
 ```sh

@@ -4,7 +4,8 @@
 # this public repository cannot list without publishing them.
 #
 # The list lives outside the repository, in the maintainer's private dotfiles:
-# $TAIGI_PRIVATE_DENYLIST, default ~/.config/taigikeyboard/private-denylist.txt.
+# $TAIGI_PRIVATE_DENYLIST, default ~/.config/taigikeyboard-maintainer/private-denylist.txt
+# (not ~/.config/taigikeyboard/, which is the Linux input method's settings directory).
 # One fixed string per line, matched case-insensitively; `#` comments and blank
 # lines are ignored. No list, nothing to check — a contributor's clone exits 0.
 #
@@ -20,7 +21,7 @@
 # commits keep whatever they already published.
 set -uo pipefail
 
-LIST="${TAIGI_PRIVATE_DENYLIST:-$HOME/.config/taigikeyboard/private-denylist.txt}"
+LIST="${TAIGI_PRIVATE_DENYLIST:-$HOME/.config/taigikeyboard-maintainer/private-denylist.txt}"
 [ -f "$LIST" ] || exit 0
 
 cd "$(git rev-parse --show-toplevel)" || exit 1

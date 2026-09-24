@@ -5,11 +5,12 @@ profile = "minimal"
 # JUSTIFICATION: shipped-ABI scope. Apple targets cover the iOS device +
 # simulator triples and both macOS architectures — the desktop IME ships one
 # universal `.pkg` (`docs/architecture/macos-release.md`), so `x86_64-apple-darwin`
-# is a shipped ABI, not a convenience. Android ships arm64 only. Deliberately
-# omitted: the armv7 / x86_64 Android targets from
-# `.claude/rules/rust-best-practices.md` §6 (the user does not ship those ABIs —
-# matched by the arm64-v8a-only `abiFilters` in android/app/build.gradle.kts).
-# Re-add when expanding to emulator dev or 32-bit Android.
+# is a shipped ABI, not a convenience. Android ships arm64-v8a + armeabi-v7a
+# (`abiFilters` in android/app/build.gradle.kts, the ABI list in
+# engine/scripts/build-android-libs.sh — armv7 returned in v3.5.7 for 32-bit ARM
+# devices). Deliberately omitted: the x86 / x86_64 Android targets (no emulator
+# ABI ships; build-android-libs.sh refuses an x86 `abiFilters` entry). Engine-only
+# work on Linux or Windows can skip every cross target with RUSTUP_TOOLCHAIN=stable.
 targets = [
     "aarch64-apple-ios",
     "aarch64-apple-ios-sim",
@@ -17,4 +18,5 @@ targets = [
     "aarch64-apple-darwin",
     "x86_64-apple-darwin",
     "aarch64-linux-android",
+    "armv7-linux-androideabi",
 ]

@@ -19,7 +19,9 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 # generated artefact, so no platform can go stale behind an engine change.
 # macOS ships no release yet; it is built here anyway to keep that invariant
 # (USER 2026-08-15: 「我覺得可以併入到 make build,只是現階段不 release」).
-# Requires `brew install protobuf swift-protobuf` for the proto step.
+# macOS only, with every toolchain in docs/BUILDING.md (protoc 36.0 via
+# `mise install`, `brew install swift-protobuf`); one platform's own build is
+# its script under engine/scripts/.
 build:
 	@echo "==> [1/6] Regenerating platform proto (Swift + Java)"
 	bash $(ENGINE)/scripts/gen-platform-protos.sh
@@ -88,20 +90,6 @@ i18n-test:
 dogfood:
 	python3 $(DICT)/tools/gen_dogfood.py
 
-# Cut a macOS release: build, sign, notarize, and stage the package on this
-# version's DRAFT desktop release. The only entry point for one — `macos/Makefile`
-# is the dev loop and stops at `bundle`. Nothing here reaches a user: the draft
-# has no tag and no public download, and `make desktop-announce` is what
-# announces the release a person publishes after testing it.
-#
-# `--publish` is baked in because staging IS the point of this target, and
-# `--force` because re-cutting the same version is the normal case: a release is
-# tested by running this flow, and the local package from the previous attempt
-# must not be what stops the next one.
-#
-# The two throwaway builds contradict publishing and so are refused here by
-# design; run the script directly for those. Prerequisites and the one-time
-# Developer ID setup: docs/architecture/macos-release.md.
 # End-to-end run (docs/architecture/e2e-testing-roadmap.md): drive PLATFORM's
 # test-mode build through every e2e/scenarios/*.json, then analyze. Report:
 # $(E2E_RUN)/report.md; exit 1 on a failed scenario or a bug / perf finding.
@@ -117,6 +105,20 @@ e2e:
 	tools/e2e/$(PLATFORM)/run.sh "$(E2E_RUN)" $(E2E_ONLY)
 	python3 tools/e2e/analyze.py --run "$(E2E_RUN)"
 
+# Cut a macOS release: build, sign, notarize, and stage the package on this
+# version's DRAFT desktop release. The only entry point for one — `macos/Makefile`
+# is the dev loop and stops at `bundle`. Nothing here reaches a user: the draft
+# has no tag and no public download, and `make desktop-announce` is what
+# announces the release a person publishes after testing it.
+#
+# `--publish` is baked in because staging IS the point of this target, and
+# `--force` because re-cutting the same version is the normal case: a release is
+# tested by running this flow, and the local package from the previous attempt
+# must not be what stops the next one.
+#
+# The two throwaway builds contradict publishing and so are refused here by
+# design; run the script directly for those. Prerequisites and the one-time
+# Developer ID setup: docs/architecture/macos-release.md.
 macos-release:
 	bash macos/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
@@ -268,7 +270,7 @@ update-submodules:
 	@git submodule status
 
 help:
-	@echo "  make build              Full Rust rebuild: proto regen + iOS + Android + macOS (no tests)"
+	@echo "  make build              Full Rust rebuild: proto regen + iOS + Android + macOS (no tests; macOS host)"
 	@echo "  make test               cargo test --workspace (canonical, includes doctests)"
 	@echo "  make test-crate         cargo test -p \$$CRATE (touched-target round workflow)"
 	@echo "  make doc                Build rustdoc HTML for engine workspace and open in browser"

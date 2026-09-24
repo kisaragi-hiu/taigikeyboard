@@ -1,0 +1,21 @@
+# Tools the build needs, pinned where the build or CI checks the exact version —
+# `mise install` from the root.
+# See docs/BUILDING.md. Rust is not here: each workspace's rust-toolchain.toml
+# pins its own channel and targets.
+
+[tools]
+# Must equal the libprotoc that emits the pinned protobuf-javalite runtime
+# (android/app/build.gradle.kts: 4.36.0 <-> 36.0). engine/scripts/gen-platform-protos.sh
+# skips binding regeneration on any other version. CI installs 36.1 for the Rust
+# (prost) builds only, which accept either.
+protoc = "36.0"
+# Recorded in .gitleaks-scanned; an incremental scan refuses any other version.
+gitleaks = "8.30.1"
+# The version .github/workflows/checks.yml lints with.
+swiftformat = "0.63.0"
+# taigi-emojis is a uv project.
+uv = "latest"
+
+# Deliberately not pinned: python (>= 3.13) and node (>= 22). Nothing checks an
+# exact version, and a pin here would shadow the interpreter a contributor
+# already installed the dictionary pipeline's packages into.

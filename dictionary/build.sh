@@ -10,7 +10,7 @@
 #   6. verify_poj_integrity   - fail-fast POJ invariant gate
 #   7. version_snapshot       - drop summary + word-keys.tsv diff vs previous release tag
 #   8. verify_known_keys      - fst fixture check (known keys such as poj:chi2)
-#   9. deploy                 - copy into the Android/iOS projects (incl. syllables.fst)
+#   9. deploy                 - copy into dictionaries/, which every platform packages (incl. syllables.fst)
 #
 # RELEASE_VERSION=vX.Y.Z (or $1) sets step 7's diff base to the newest tag strictly below it;
 # unset compares against the newest release tag. Step 7 writes the committed
@@ -70,7 +70,7 @@ fi
 step "Step 8/9: Verifying known fst keys..."
 python3 -m tools.verify_known_keys
 
-step "Step 9/9: Deploying to Android/iOS..."
+step "Step 9/9: Deploying to dictionaries/..."
 bash "$BUILD_DIR/deploy.sh"
 
 echo ""
