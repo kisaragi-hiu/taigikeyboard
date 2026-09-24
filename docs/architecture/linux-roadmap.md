@@ -122,7 +122,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
     `InputMethodEngineV3` whose `keyEvent` hands `rawKey().sym()` / keycode / states to the
     FFI and replays the reply — `inputPanel().setClientPreedit(Text)` with
     `TextFormatFlag::Underline` + `setCursor`, `commitString`, `deleteSurroundingText`, a
-    `CommonCandidateList` (`setPageSize`, `setLayoutHint`, `setSelectionKey`, `setGlobalCursorIndex`,
+    `CommonCandidateList` (`setLabels`, `setPageSize`, `setLayoutHint`, `setGlobalCursorIndex`,
     `CandidateWord::select` = highlight + commit through the FFI) — then `updatePreedit()` +
     `updateUserInterface(InputPanel)`; `reset` / `deactivate` end the session. What is on
     screen is written first wherever IBus writes it under `PREEDIT_COMMIT`: Fcitx5 writes the
