@@ -1,10 +1,13 @@
 name: Linux e2e
 
 # The end-to-end run on a real Linux (docs/architecture/e2e-testing-roadmap.md,
-# PR3b): the test-mode build (`make -C linux install E2E=1`) installed into a
-# private prefix, every e2e/scenarios/*.json typed through xdotool into a
-# GTK entry via Fcitx5 and via IBus under Xvfb, then tools/e2e/analyze.py.
-# The run directory (traces + report.md) is kept as the `linux-e2e` artifact.
+# PR3b + PR4): in each distribution's own container, the test-mode build
+# (`make -C linux install E2E=1`) compiled against THAT distribution's
+# libraries and installed into a private prefix, every e2e/scenarios/*.json
+# typed through xdotool into a GTK entry via Fcitx5 and via IBus under Xvfb,
+# then tools/e2e/analyze.py. Each run directory (traces + report.md) is kept
+# as the `linux-e2e-<distro>` artifact. The shipped packages are never traced
+# (PR3a); their own install check lives in linux-build.yml.
 #
 # USER 2026-09-24: runs on PRs touching linux/, engine/ or e2e/, plus dispatch;
 # desktop/, dictionaries/ and tools/e2e/ are what those builds read too.
@@ -32,35 +35,78 @@ env:
 
 jobs:
   e2e:
-    name: scenarios through Fcitx5 + IBus
+    name: scenarios through Fcitx5 + IBus (${{ matrix.distro }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    container: ${{ matrix.image }}
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        # Build + e2e dependencies per distribution: the linux/ build (Rust
+        # links GTK 4 / libadwaita, the Fcitx5 addon needs its headers), then
+        # what the driver runs (Xvfb, xdotool, a GTK 3 entry through python
+        # gi, both frameworks with their GTK 3 input modules, a D-Bus session).
+        include:
+          - distro: ubuntu
+            image: ubuntu:24.04
+            install: >-
+              apt-get update &&
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
+              ca-certificates curl git unzip build-essential
+              ibus ibus-gtk3 dbus-daemon dbus-x11 xvfb xauth xdotool
+              python3 python3-gi gir1.2-gtk-3.0 fcitx5 fcitx5-frontend-gtk3
+              libgtk-4-dev libadwaita-1-dev pkg-config
+              fcitx5-modules-dev extra-cmake-modules cmake ninja-build
+          - distro: debian
+            image: debian:13
+            install: >-
+              apt-get update &&
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
+              ca-certificates curl git unzip build-essential
+              ibus ibus-gtk3 dbus-daemon dbus-x11 xvfb xauth xdotool
+              python3 python3-gi gir1.2-gtk-3.0 fcitx5 fcitx5-frontend-gtk3
+              libgtk-4-dev libadwaita-1-dev pkg-config
+              fcitx5-modules-dev extra-cmake-modules cmake ninja-build
+          - distro: fedora
+            image: fedora:44
+            install: >-
+              dnf install -y --setopt=install_weak_deps=False
+              git gcc gcc-c++ make cmake ninja-build extra-cmake-modules fcitx5-devel
+              gtk4-devel libadwaita-devel pkgconf-pkg-config unzip findutils which
+              fcitx5 fcitx5-gtk3 ibus ibus-gtk3 dbus-daemon dbus-tools
+              xorg-x11-server-Xvfb xorg-x11-xauth xdotool python3 python3-gobject gtk3
+          - distro: arch
+            image: archlinux:latest
+            install: >-
+              pacman -Syu --noconfirm --needed
+              base-devel git cmake ninja extra-cmake-modules fcitx5 fcitx5-gtk ibus
+              gtk3 gtk4 libadwaita pkgconf unzip rustup
+              dbus xorg-server-xvfb xorg-xauth xdotool python python-gobject
     steps:
-      - uses: actions/checkout@v4
-
       - name: Install build + e2e dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            ibus ibus-gtk3 dbus-daemon dbus-x11 xvfb xauth xdotool \
-            python3-gi gir1.2-gtk-3.0 fcitx5 fcitx5-frontend-gtk3 \
-            libgtk-4-dev libadwaita-1-dev pkg-config \
-            fcitx5-modules-dev extra-cmake-modules cmake ninja-build
+        run: ${{ matrix.install }}
+
+      - uses: actions/checkout@v4
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
           curl -sSL -o /tmp/protoc.zip \
             "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          sudo unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+          unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
 
+      # Arch ships rustup as a package; everywhere else it comes from rustup.rs.
       - name: Install Rust toolchain
         run: |
-          rustup toolchain install stable --profile minimal --no-self-update
-          rustup default stable
+          if command -v rustup >/dev/null; then
+            rustup default stable
+          else
+            curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+          fi
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - uses: Swatinem/rust-cache@v2
         with:
-          # Same workspaces as linux-build.yml, so the two jobs share a cache.
+          key: e2e-${{ matrix.distro }}
           workspaces: |
             linux -> target
             desktop -> target
@@ -81,12 +127,13 @@ jobs:
 
       - name: Report
         if: always()
-        run: cat "$RUNNER_TEMP/run/report.md" >> "$GITHUB_STEP_SUMMARY" || true
+        run: |
+          { echo "### ${{ matrix.distro }}"; cat "$RUNNER_TEMP/run/report.md"; } >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: Keep the run
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: linux-e2e
+          name: linux-e2e-${{ matrix.distro }}
           path: ${{ runner.temp }}/run
           if-no-files-found: ignore
