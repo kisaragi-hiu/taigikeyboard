@@ -1,7 +1,7 @@
 name: Linux e2e
 
 # The end-to-end run on a real Linux (docs/architecture/e2e-testing-roadmap.md,
-# PR3b + PR4): in each distribution's own container, the test-mode build
+# PR3b + PR4): in a distribution's own container, the test-mode build
 # (`make -C linux install E2E=1`) compiled against THAT distribution's
 # libraries and installed into a private prefix, every e2e/scenarios/*.json
 # typed through xdotool into a GTK entry via Fcitx5 and via IBus under Xvfb,
@@ -11,6 +11,9 @@ name: Linux e2e
 #
 # USER 2026-09-24: runs on PRs touching linux/, engine/ or e2e/, plus dispatch;
 # desktop/, dictionaries/ and tools/e2e/ are what those builds read too.
+# Pull requests run Ubuntu only, so a PR waits for one job; the whole
+# distribution matrix runs nightly (USER 2026-09-24: 台灣凌晨 3:00 = 19:00
+# UTC) and on demand. A scheduled failure mails whoever last edited the cron.
 on:
   pull_request:
     paths:
@@ -21,6 +24,8 @@ on:
       - 'e2e/**'
       - 'tools/e2e/**'
       - '.github/workflows/linux-e2e.yml'
+  schedule:
+    - cron: '0 19 * * *'
   workflow_dispatch:
 
 permissions:
@@ -37,56 +42,23 @@ jobs:
   e2e:
     name: scenarios through Fcitx5 + IBus (${{ matrix.distro }})
     runs-on: ubuntu-24.04
-    container: ${{ matrix.image }}
+    container: ${{ fromJSON('{"ubuntu":"ubuntu:24.04","debian":"debian:13","fedora":"fedora:44","arch":"archlinux:latest"}')[matrix.distro] }}
     timeout-minutes: 50
     strategy:
       fail-fast: false
       matrix:
-        # Build + e2e dependencies per distribution: the linux/ build (Rust
-        # links GTK 4 / libadwaita, the Fcitx5 addon needs its headers), then
-        # what the driver runs (Xvfb, xdotool, a GTK 3 entry through python
-        # gi, both frameworks with their GTK 3 input modules, a D-Bus session).
-        include:
-          - distro: ubuntu
-            image: ubuntu:24.04
-            install: >-
-              apt-get update &&
-              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
-              ca-certificates curl git unzip build-essential
-              ibus ibus-gtk3 dbus-daemon dbus-x11 xvfb xauth xdotool
-              python3 python3-gi gir1.2-gtk-3.0 fcitx5 fcitx5-frontend-gtk3
-              libgtk-4-dev libadwaita-1-dev pkg-config
-              fcitx5-modules-dev extra-cmake-modules cmake ninja-build
-          - distro: debian
-            image: debian:13
-            install: >-
-              apt-get update &&
-              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends
-              ca-certificates curl git unzip build-essential
-              ibus ibus-gtk3 dbus-daemon dbus-x11 xvfb xauth xdotool
-              python3 python3-gi gir1.2-gtk-3.0 fcitx5 fcitx5-frontend-gtk3
-              libgtk-4-dev libadwaita-1-dev pkg-config
-              fcitx5-modules-dev extra-cmake-modules cmake ninja-build
-          - distro: fedora
-            image: fedora:44
-            install: >-
-              dnf install -y --setopt=install_weak_deps=False
-              git gcc gcc-c++ make cmake ninja-build extra-cmake-modules fcitx5-devel
-              gtk4-devel libadwaita-devel pkgconf-pkg-config unzip findutils which
-              fcitx5 fcitx5-gtk3 ibus ibus-gtk3 dbus-daemon dbus-tools
-              xorg-x11-server-Xvfb xorg-x11-xauth xdotool python3 python3-gobject gtk3
-          - distro: arch
-            image: archlinux:latest
-            install: >-
-              pacman -Syu --noconfirm --needed
-              base-devel git cmake ninja extra-cmake-modules fcitx5 fcitx5-gtk ibus
-              gtk3 gtk4 libadwaita pkgconf unzip rustup
-              dbus xorg-server-xvfb xorg-xauth xdotool python python-gobject
+        distro: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu"]' || '["ubuntu","debian","fedora","arch"]') }}
+    # A container's default `sh` is dash on Ubuntu, which has no pipefail.
+    defaults:
+      run:
+        shell: bash
     steps:
-      - name: Install build + e2e dependencies
-        run: ${{ matrix.install }}
-
+      # Before the deps: a container without git gets the tree through the
+      # REST API, which is all the build needs.
       - uses: actions/checkout@v4
+
+      - name: Install build + e2e dependencies
+        run: bash tools/e2e/linux/ci-deps.sh ${{ matrix.distro }}
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |

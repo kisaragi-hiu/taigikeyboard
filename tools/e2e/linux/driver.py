@@ -187,6 +187,9 @@ class Session:
             try:
                 wait_until(self.ibus_lists_engine, STARTUP_TIMEOUT_S, "ibus-daemon listing the engine")
             except ScenarioError as timeout:
+                # What the daemon's registry actually loaded, for the log.
+                with self.framework_log.open("a", encoding="utf-8") as log:
+                    log.write(self.run(["ibus", "read-cache"]).stdout)
                 raise ScenarioError(f"{timeout}; last `ibus list-engine`: {self.last_ibus_listing!r}") from None
         self.host = subprocess.Popen([sys.executable, str(HOST_SCRIPT), str(self.host_out)], env=self.env)
         self.processes.append(self.host)
