@@ -145,6 +145,13 @@ website shows that button only while its `enable_linux_download` is `true`;
 that switch hides the entry point, not the asset, which is public the moment
 the release is published.
 
+Nothing installed polls on a timer: the input method, on the first activation
+past the day's due time, spawns `taigikeyboard-settings --check-updates`, which
+checks with no window and posts one desktop notification per version
+(`linux-roadmap.md` L10). The package ships the settings binary's D-Bus service
+file (`share/dbus-1/services/tw.taigikeyboard.Settings.service`) so the
+notification's click opens the window after that process has exited.
+
 ## Installing by hand
 
 ```sh

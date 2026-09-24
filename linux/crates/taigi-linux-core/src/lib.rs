@@ -16,6 +16,7 @@ pub mod selection;
 pub mod session;
 #[cfg(feature = "e2e-trace")]
 mod trace;
+pub mod update_trigger;
 
 pub use chrome::{
     activate_menu, menu_items, mode_label, mode_symbol, MenuItem, MENU_ABOUT, MENU_CHECK_UPDATES,

@@ -187,7 +187,8 @@ jobs:
                       fcitx5/libtaigikeyboard.so usr/share/fcitx5/addon/taigikeyboard.conf \
                       usr/share/fcitx5/inputmethod/taigikeyboard.conf usr/share/ibus/component/taigikeyboard.xml \
                       usr/share/taigikeyboard/dictionaries/dictionary.fst usr/share/applications/tw.taigikeyboard.Settings.desktop \
-                      usr/share/icons/hicolor/48x48/apps/taigikeyboard.png; do
+                      usr/share/icons/hicolor/48x48/apps/taigikeyboard.png \
+                      usr/share/dbus-1/services/tw.taigikeyboard.Settings.service; do
             grep -q "$path" "$RUNNER_TEMP/deb-contents.txt" || { echo "::error::$path missing from the .deb"; exit 1; }
           done
           # The control fields, not only the file name: the package a user
@@ -392,7 +393,8 @@ jobs:
           for path in /usr/libexec/ibus-engine-taigikeyboard /usr/bin/taigikeyboard-settings "$ADDON" \
                       /usr/share/fcitx5/addon/taigikeyboard.conf /usr/share/fcitx5/inputmethod/taigikeyboard.conf \
                       /usr/share/ibus/component/taigikeyboard.xml /usr/share/taigikeyboard/dictionaries/dictionary.fst \
-                      /usr/share/applications/tw.taigikeyboard.Settings.desktop; do
+                      /usr/share/applications/tw.taigikeyboard.Settings.desktop \
+                      /usr/share/dbus-1/services/tw.taigikeyboard.Settings.service; do
             test -e "$path" || { echo "::error::$path missing after install"; exit 1; }
           done
           for elf in /usr/libexec/ibus-engine-taigikeyboard /usr/bin/taigikeyboard-settings "$ADDON"; do

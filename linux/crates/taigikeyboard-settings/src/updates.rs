@@ -1,24 +1,35 @@
-//! The window's side of updates (roadmap L10): the manual check — the 一般
-//! pane's 檢查更新 button and `--check-now` from the panel menu — run off
-//! the UI thread, recorded in `settings.json` the way the other desktops
-//! record it, answered in an alert. The decisions are `taigi-desktop-update`'s;
+//! The settings binary's side of updates (roadmap L10): the manual check —
+//! the 一般 pane's 檢查更新 button and `--check-now` from the panel menu —
+//! answered in an alert, and the automatic daily check — `--check-updates`,
+//! spawned by the engine — answered with a desktop notification once per
+//! version. Both run off the UI thread and record in `settings.json` the way
+//! the other desktops record it. The decisions are `taigi-desktop-update`'s;
 //! Linux only ever offers the download page (a package needs root, and
 //! three formats share one release), so there is no install stage.
 
 use crate::jobs;
+use crate::presentation::strings_for;
 use crate::window::SettingsWindow;
+use crate::writer::settings_store;
 use adw::prelude::*;
 use std::rc::Rc;
 use taigi_desktop_core::composing::{Clock, SystemClock};
-use taigi_desktop_core::settings::update_schedule;
+use taigi_desktop_core::settings::{update_schedule, SettingsDocument};
 use taigi_desktop_core::strings::StringKey;
-use taigi_desktop_update::{checker, HttpTransport, ManualOutcome, Outcome};
+use taigi_desktop_update::{
+    checker, run_scheduled_check, HttpTransport, ManualOutcome, Outcome, UpdateManifest,
+};
 
 /// Where the Linux manifest is published (the site's `appcast/linux.json`,
 /// rendered from the .deb's release data). Compiled into every shipped
 /// build; old installs request it forever, so it stays on a domain the
 /// project controls.
 pub const PUBLISHED_URL: &str = "https://taigikeyboard.tw/appcast/linux.json";
+
+/// The application action a desktop notification opens: the window on 一般,
+/// where the known update's row is (`notify`). Reached through D-Bus
+/// activation when the process that posted it has exited.
+pub(crate) const SHOW_UPDATES_ACTION: &str = "show-updates";
 
 /// The running build's version (`AppVersion.installed`).
 pub const INSTALLED_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -106,4 +117,52 @@ fn present(shell: &Rc<SettingsWindow>, manual: ManualOutcome) {
         shell.open_url(&manifest.download_page_url);
     });
     dialog.present(Some(shell.window()));
+}
+
+/// `--check-updates`: the daily check with no window. The application is
+/// held until the check has answered (and a notification, if any, is handed
+/// to the desktop), then released — the process ends unless a window is
+/// open in it.
+pub fn check_in_background(application: &adw::Application) {
+    let Ok(store) = settings_store() else {
+        return;
+    };
+    let hold = application.hold();
+    let application = application.clone();
+    jobs::spawn(
+        move || {
+            let transport = HttpTransport {
+                manifest_url: PUBLISHED_URL,
+            };
+            run_scheduled_check(
+                |mutate| store.update(|document| mutate(document)).ok(),
+                &transport,
+                INSTALLED_VERSION,
+                SystemClock.now_ms(),
+            )
+        },
+        move |ran| {
+            if let Some(Some(ran)) = ran {
+                if let Some(manifest) = &ran.announce {
+                    notify(&application, &ran.document, manifest);
+                }
+            }
+            drop(hold);
+        },
+    );
+}
+
+/// The one notice per version (`UpdateAnnouncement.post`): 有新版本 and the
+/// version; clicking it opens the window on 一般, where the known update's
+/// row offers 去下載.
+fn notify(application: &adw::Application, document: &SettingsDocument, manifest: &UpdateManifest) {
+    let strings = strings_for(document);
+    let notification =
+        gio::Notification::new(strings.resolve(StringKey::DesktopUpdateAvailableTitle));
+    notification.set_body(Some(&strings.format(
+        StringKey::DesktopUpdateAvailableMessage,
+        &[&manifest.version],
+    )));
+    notification.set_default_action(&format!("app.{SHOW_UPDATES_ACTION}"));
+    application.send_notification(Some("update-available"), &notification);
 }
