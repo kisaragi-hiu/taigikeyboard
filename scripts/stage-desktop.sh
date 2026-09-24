@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Stage the three desktop installers on this version's draft release: the
-# package built here, the Windows installer and the Linux .deb built on
+# Stage the desktop installers on this version's draft release: the package
+# built here, the Windows installer and the Linux packages built on
 # GitHub-hosted runners.
 #
-# Usage: stage-desktop.sh   (no options — a release is every half or none)
+# Usage: stage-desktop.sh              a full release — every platform
+#        stage-desktop.sh <platform>   a patch release — macos | windows | linux
 #
 # The builds cannot share a machine — one needs Xcode and a Developer ID, one
 # MSVC and Inno Setup, one a Linux with the Fcitx5 headers — so this runs the
@@ -18,10 +19,14 @@
 # 「我希望重複release的過程是原子性的,每一次都從新的開始建置」;
 # 2026-09-11 — 「我不希望有--skip-macos或是skip-windows,我希望一次就是兩個一起建立」).
 #
-# There is deliberately no way to stage one half. The escapes existed for a
-# machine that was off or a half that failed, and both were how a draft ended up
-# holding two installers built from different commits — the exact thing the
-# tag is supposed to describe. Re-running the whole thing is the recovery.
+# A PATCH release is its own version holding ONE platform's installers (USER
+# 2026-09-24 — 「讓各自的desktop版本可以單獨上patch,而不用從頭執行release
+# pipeline」): 3.7.0 ships every platform, 3.7.1 only the platform it fixes.
+# That is not a way to stage one half of a release — the old escapes that
+# stranded a draft with installers from two commits stay gone. The draft still
+# starts clean and everything on it is built from one commit; it just names
+# fewer platforms, and announcing leaves the others' downloads and update
+# manifests on the version they have.
 #
 
 set -euo pipefail
@@ -33,10 +38,18 @@ fail() {
 
 REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-[[ $# -eq 0 ]] || {
-    echo "error: stage-desktop.sh takes no arguments" >&2
-    echo "A release is every installer from one commit; there is no part of one." >&2
-    exit 2
+case "$#:${1:-}" in
+    0:) PLATFORMS=(macos windows linux) ;;
+    1:macos | 1:windows | 1:linux) PLATFORMS=("$1") ;;
+    *)
+        echo "usage: stage-desktop.sh [macos|windows|linux]" >&2
+        echo "No argument stages a full release; one platform stages a patch release of it alone." >&2
+        exit 2
+        ;;
+esac
+
+stages() {
+    [[ " ${PLATFORMS[*]} " == *" $1 "* ]]
 }
 
 SOURCE_COMMIT="$(git -C "$REPOSITORY_DIR" rev-parse HEAD)"
@@ -55,7 +68,7 @@ SHORT_VERSION=""
 # shellcheck source=lib/desktop-release.sh
 source "$REPOSITORY_DIR/scripts/lib/desktop-release.sh"
 
-echo "==> Staging $DESKTOP_TAG from ${SOURCE_COMMIT:0:7}"
+echo "==> Staging $DESKTOP_TAG (${PLATFORMS[*]}) from ${SOURCE_COMMIT:0:7}"
 
 # A draft for this version is the previous attempt; it goes, so this run builds
 # both halves from one commit. A PUBLISHED release cannot be re-cut — its
@@ -76,9 +89,11 @@ case "$existing_state" in
         ;;
 esac
 
-echo ""
-echo "==> macOS — build, sign, notarize, stage (this Mac)"
-make -C "$REPOSITORY_DIR" macos-release
+if stages macos; then
+    echo ""
+    echo "==> macOS — build, sign, notarize, stage (this Mac)"
+    make -C "$REPOSITORY_DIR" macos-release
+fi
 
 # The installer and the package are built by `.github/workflows/windows-build.yml`
 # and `linux-build.yml` on clean GitHub-hosted runners, never on the
@@ -123,13 +138,25 @@ wait_for() {
         fail "the $what build failed — its log is at the URL above; fix it and run this again, which re-stages every half"
 }
 
-echo ""
-echo "==> Windows + Linux — GitHub-hosted runners, in parallel"
-windows_run="$(dispatch windows-build.yml Windows)"
+# The hosted attach steps join a draft and never create one; without the
+# macOS half, the draft is made here, on this commit, before they run.
+if ! stages macos; then
+    echo ""
+    desktop_release_preflight
+    ensure_desktop_draft
+fi
+
+windows_run=""
+linux_run=""
+if stages windows || stages linux; then
+    echo ""
+    echo "==> Hosted runners — dispatched together, waited on in turn"
+fi
+stages windows && windows_run="$(dispatch windows-build.yml Windows)"
 # The commit travels with the dispatch: the Linux attach job refuses any other.
-linux_run="$(dispatch linux-build.yml Linux -f "source_sha=$SOURCE_COMMIT")"
-wait_for "$windows_run" Windows
-wait_for "$linux_run" Linux
+stages linux && linux_run="$(dispatch linux-build.yml Linux -f "source_sha=$SOURCE_COMMIT")"
+[[ -z "$windows_run" ]] || wait_for "$windows_run" Windows
+[[ -z "$linux_run" ]] || wait_for "$linux_run" Linux
 
 # The draft's own page, from the API: a draft has no tag, so its URL is not the
 # `releases/tag/<tag>` address a published release has. It is where the
@@ -140,7 +167,11 @@ DRAFT_URL="$(gh release view "$DESKTOP_TAG" --repo "$RELEASE_REPOSITORY" --json 
 # reports success and attaches nothing is exactly what happened the first time
 # this script drove a second machine.
 _read_staged_asset_names || fail "the draft $DESKTOP_TAG is gone — run this again"
-for asset in "$MACOS_ASSET" "$WINDOWS_ASSET" "$LINUX_ASSET" "$LINUX_RPM_ASSET" "$LINUX_ARCH_ASSET"; do
+expected_assets=()
+stages macos && expected_assets+=("$MACOS_ASSET")
+stages windows && expected_assets+=("$WINDOWS_ASSET")
+stages linux && expected_assets+=("$LINUX_ASSET" "$LINUX_RPM_ASSET" "$LINUX_ARCH_ASSET")
+for asset in "${expected_assets[@]}"; do
     for name in "$asset" "$asset.sha256"; do
         grep -qxF "$name" <<< "$STAGED_ASSET_NAMES" ||
             fail "every half reported success but $name is not on the draft — read the logs above, then run this again"
@@ -148,7 +179,7 @@ for asset in "$MACOS_ASSET" "$WINDOWS_ASSET" "$LINUX_ASSET" "$LINUX_RPM_ASSET" "
 done
 
 echo ""
-echo "✓ every installer (macOS, Windows, Linux .deb / .rpm / Arch) staged on the draft for ${SOURCE_COMMIT:0:7}"
+echo "✓ ${expected_assets[*]} staged on the draft for ${SOURCE_COMMIT:0:7}"
 echo ""
 echo "  Open the draft, download the assets, install and test them:"
 echo "    $DRAFT_URL"

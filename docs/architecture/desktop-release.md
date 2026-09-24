@@ -15,9 +15,23 @@ A desktop release happens in two halves with a manual test between them, and
 | | Runs | Does |
 |---|---|---|
 | Stage all | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and `linux-build.yml` together and waits for both: GitHub-hosted runners build the `.exe` and the `.deb` from the same commit and attach them to the same draft. All three or none, onto a draft it re-creates each run (`scripts/stage-desktop.sh`; the Linux half: `linux-release.md`) |
+| Stage a patch | `make desktop-patch PLATFORM=macos\|windows\|linux` (this Mac) | The same run for ONE platform: its installers only, on a draft of their own version. Without macOS, the script creates the empty draft on this commit first, since the hosted attach steps only join one |
 | **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the three assets, install, use them |
 | **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
 | Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves each download is anonymously reachable, writes every `_data/*_release.json` in one commit, waits for the live macOS and Windows appcasts (Linux has none). `make desktop-announce` is the same script, for a re-run |
+
+### Version numbers: full releases and patches
+
+A **full release** bumps the minor number and stages every platform: 3.7.0,
+3.8.0. A **patch** bumps the third number and stages only the platform it fixes:
+3.7.1 macOS, 3.7.2 Windows (USER 2026-09-24). The patch counter is shared, so each
+patch is one version, one tag, one draft; a platform skips the numbers it did not
+ship (Windows goes 3.7.0 → 3.7.2) and its update check only compares, so the gap is
+harmless. Announcing a patch writes only its platform's `_data` / appcast, so the
+others keep offering the version they have. The next full release lines every
+platform up again. Its changelog `changelog/desktop-v<version>.md` has only the
+patched platform's section. Minor and patch each stop at 99 — macOS's
+`CFBundleVersion` is `MAJOR*10000+MINOR*100+PATCH` (`tools/release_notes.py`).
 
 Staging creates no tag — publishing does — and a draft has no public asset URL,
 so no user, no search engine and no installed copy can reach what is staged. A

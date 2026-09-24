@@ -225,13 +225,13 @@ jobs:
           ' windows/Cargo.toml)"
           tag="desktop-$version"
 
-          # The draft is the macOS half's; this run joins it. A published
-          # release means the staging order was broken — an asset added to it
-          # would be public with no test — and no release at all means the Mac
-          # has not staged yet.
+          # The draft is stage-desktop.sh's (the macOS half, or the script
+          # itself for a patch); this run joins it. A published release means
+          # the staging order was broken — an asset added to it would be public
+          # with no test — and no release at all means nothing staged yet.
           state="$(gh release view "$tag" --json isDraft --jq '.isDraft|tostring' 2>&1)" || {
               echo "no release $tag: $state" >&2
-              echo "The macOS half stages first and creates the draft." >&2
+              echo "stage-desktop.sh creates the draft before dispatching this run." >&2
               exit 1
           }
           [ "$state" = true ] || {

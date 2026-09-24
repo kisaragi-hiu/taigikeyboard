@@ -147,29 +147,9 @@ stage_desktop_asset() {
     receipt="$RELEASE_TEMP_DIR/$asset_name.sha256"
     printf '%s  %s\n' "$local_sha256" "$asset_name" > "$receipt"
 
-    _align_release_with_commit
+    ensure_desktop_draft
 
-    # Called directly, not in a command substitution: `fail` inside one exits
-    # only the subshell, so a network error would have gone on to create a
-    # second release. "No release" and "a release holding nothing yet" are also
-    # different states — the second must not take the create path.
-    local release_exists=true
-    _read_staged_asset_names || release_exists=false
-
-    if [[ "$release_exists" == false ]]; then
-        echo "==> Creating draft release $DESKTOP_TAG in $RELEASE_REPOSITORY"
-        # --draft: no tag, no public download, nothing announced. --target is
-        # what the tag will name when a person publishes it — a full SHA, never
-        # a branch, so the tag cannot end up on whatever main has moved to by
-        # then.
-        gh release create "$DESKTOP_TAG" \
-            --repo "$RELEASE_REPOSITORY" \
-            --draft \
-            --target "$DESKTOP_SOURCE_COMMIT" \
-            --title "$RELEASE_TITLE" \
-            --notes-file "$DESKTOP_NOTES_FILE" \
-            "$asset_path" "$receipt"
-    elif grep -qxF "$asset_name" <<< "$STAGED_ASSET_NAMES"; then
+    if grep -qxF "$asset_name" <<< "$STAGED_ASSET_NAMES"; then
         echo "==> $asset_name is already on $DESKTOP_TAG — verifying it"
         # The receipt may be missing if a previous run died between the two
         # uploads; upload it only when it is not there, so a staged digest is
@@ -177,13 +157,39 @@ stage_desktop_asset() {
         grep -qxF "$asset_name.sha256" <<< "$STAGED_ASSET_NAMES" ||
             gh release upload "$DESKTOP_TAG" "$receipt" --repo "$RELEASE_REPOSITORY"
     else
-        echo "==> Draft $DESKTOP_TAG exists — attaching $asset_name to it"
+        echo "==> Attaching $asset_name to the draft $DESKTOP_TAG"
         # No --clobber anywhere in this flow: it deletes before it uploads, so a
         # failure part-way leaves nothing where an asset used to be.
         gh release upload "$DESKTOP_TAG" "$asset_path" "$receipt" --repo "$RELEASE_REPOSITORY"
     fi
 
     _verify_staged_asset "$asset_name" "$local_sha256"
+}
+
+# This version's draft on the commit being staged, created empty when no
+# platform has staged yet — the macOS half on a full release, `stage-desktop.sh`
+# itself before a hosted-only patch, whose CI attach steps join a draft and
+# never create one. Leaves STAGED_ASSET_NAMES set.
+ensure_desktop_draft() {
+    _align_release_with_commit
+    # Called directly, not in a command substitution: `fail` inside one exits
+    # only the subshell, so a network error would have gone on to create a
+    # second release. "No release" and "a release holding nothing yet" are also
+    # different states — the second must not take the create path.
+    _read_staged_asset_names && return 0
+
+    echo "==> Creating draft release $DESKTOP_TAG in $RELEASE_REPOSITORY"
+    # --draft: no tag, no public download, nothing announced. --target is what
+    # the tag will name when a person publishes it — a full SHA, never a branch,
+    # so the tag cannot end up on whatever main has moved to by then.
+    gh release create "$DESKTOP_TAG" \
+        --repo "$RELEASE_REPOSITORY" \
+        --draft \
+        --target "$DESKTOP_SOURCE_COMMIT" \
+        --title "$RELEASE_TITLE" \
+        --notes-file "$DESKTOP_NOTES_FILE" > /dev/null ||
+        fail "cannot create the draft $DESKTOP_TAG"
+    STAGED_ASSET_NAMES=""
 }
 
 # Sets STAGED_ASSET_NAMES to the names already on the draft, one per line, and

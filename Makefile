@@ -9,7 +9,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: build test test-crate doc dict dogfood e2e help \
         fmt lint hooks scan-secrets scan-secrets-full \
         i18n i18n-test \
-        macos-release desktop-release desktop-announce version-mobile version-desktop \
+        macos-release desktop-release desktop-patch desktop-announce version-mobile version-desktop \
         windows-check windows-release desktop-check linux-check \
         update-submodules
 
@@ -145,10 +145,18 @@ linux-check:
 # runners (scripts/stage-desktop.sh). The builds cannot share a machine, so
 # this drives the others rather than pretending they are one build. All or
 # none: a draft holding installers from two commits is not something a tag
-# can describe. Nothing it does reaches a user — publishing the draft stays a
-# person's, and that publish announces the release itself.
+# can describe (a patch is a smaller release, not a half: desktop-patch).
+# Nothing it does reaches a user — publishing the draft stays a person's, and
+# that publish announces the release itself.
 desktop-release:
 	bash scripts/stage-desktop.sh
+
+# A patch release of ONE platform (PLATFORM=macos|windows|linux): its own
+# version, holding only that platform's installers; announcing it leaves the
+# other platforms on the version they have (docs/architecture/desktop-release.md).
+desktop-patch:
+	@test -n "$(PLATFORM)" || { echo "usage: make desktop-patch PLATFORM=macos|windows|linux" >&2; exit 2; }
+	bash scripts/stage-desktop.sh $(PLATFORM)
 
 # Announce a desktop release a person has already published: prove both
 # installers download anonymously, point the website at them, wait for the live
@@ -264,6 +272,7 @@ help:
 	@echo "  make e2e PLATFORM=linux End-to-end run on the Linux VM (test-mode build) + analyzer report"
 	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
 	@echo "  make desktop-release    Stage all three desktop installers on the draft (Mac + hosted runners)"
+	@echo "  make desktop-patch PLATFORM=linux  Stage ONE platform's patch release on its own draft"
 	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"
 	@echo "  make desktop-check      Native gate for the desktop-shared crates (desktop/)"
 	@echo "  make linux-check        Host-side compile + test gate for the Linux input method"
