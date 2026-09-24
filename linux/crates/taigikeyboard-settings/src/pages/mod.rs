@@ -8,6 +8,7 @@ pub mod appearance;
 pub mod custom_dictionary;
 pub mod dictionary_search;
 pub mod dictionary_sources;
+pub mod font_management;
 pub mod general;
 pub mod shortcuts;
 
@@ -19,18 +20,6 @@ use std::rc::Rc;
 use taigi_desktop_core::settings::{SettingChoice, SettingsDocument, SettingsKey, SettingsPane};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_storage::UserDataStores;
-
-/// The panes this crate draws, listed or not (辭典搜尋 and 關於 have no
-/// sidebar row, as on the other desktops).
-pub const BUILT: [SettingsPane; 7] = [
-    SettingsPane::General,
-    SettingsPane::Appearance,
-    SettingsPane::Shortcuts,
-    SettingsPane::DictionarySources,
-    SettingsPane::CustomDictionary,
-    SettingsPane::DictionarySearch,
-    SettingsPane::About,
-];
 
 /// A refresher: one row following the document.
 type Refresher = Box<dyn Fn(&SettingsDocument)>;
@@ -275,17 +264,48 @@ pub fn build(
 ) -> Page {
     let context = PageContext::new(window, strings, document, stores, job_slot);
     let widget = adw::PreferencesPage::new();
-    // Explicit per pane: a pane added to `BUILT` without a page is a
-    // mistake to hear about, not a 一般 page under the wrong title.
+    // Exhaustive: a pane added to `SettingsPane` fails to compile here
+    // until it has a page, rather than showing 一般 under the wrong title.
     let context = match pane {
         SettingsPane::General => general::build(context, &widget),
         SettingsPane::Appearance => appearance::build(context, &widget),
         SettingsPane::Shortcuts => shortcuts::build(context, &widget),
         SettingsPane::DictionarySources => dictionary_sources::build(context, &widget),
         SettingsPane::CustomDictionary => custom_dictionary::build(context, &widget),
+        SettingsPane::FontManagement => font_management::build(context, &widget),
         SettingsPane::DictionarySearch => dictionary_search::build(context, &widget),
         SettingsPane::About => about::build(context, &widget),
-        other => unreachable!("{other:?} is not in pages::BUILT"),
     };
     context.finish(widget)
+}
+
+/// Removes the rows and nothing else: `remove_all` would take the
+/// placeholder with them.
+pub(crate) fn remove_rows(list: &gtk::ListBox) {
+    while let Some(row) = list.row_at_index(0) {
+        list.remove(&row);
+    }
+}
+
+pub(crate) fn icon_button(icon: &str, tooltip: &str) -> gtk::Button {
+    let button = gtk::Button::from_icon_name(icon);
+    if !tooltip.is_empty() {
+        button.set_tooltip_text(Some(tooltip));
+    }
+    button
+}
+
+/// The file a chooser answered: `Ok(None)` for a dismissal, `Err` for any
+/// other refusal and for a file with no local path.
+pub(crate) fn chosen_path(
+    result: Result<gtk::gio::File, gtk::glib::Error>,
+) -> Result<Option<std::path::PathBuf>, String> {
+    match result {
+        Ok(file) => file
+            .path()
+            .map(Some)
+            .ok_or_else(|| "not a local file".to_owned()),
+        Err(error) if error.matches(gtk::DialogError::Dismissed) => Ok(None),
+        Err(error) => Err(error.to_string()),
+    }
 }

@@ -9,7 +9,7 @@
 //! not persisted; the 外觀 mode is a combo row.
 
 use crate::pages::{self, Page};
-use crate::presentation::pane_title;
+use crate::presentation::{pane_title, PageMessage};
 use crate::recorder::{Recorded, Recorder, RecorderTarget};
 use crate::writer::{SettingsWriter, REFRESH_INTERVAL};
 use crate::SIDEBAR;
@@ -20,7 +20,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
 use taigi_desktop_core::keys::{ChordRejection, RecordedPress};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsDocument, SettingsPane};
-use taigi_desktop_core::strings::{DisplayLanguage, StringKey};
+use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::UserDataStores;
 use taigi_linux_platform::{snapshot, RawKeyEvent};
 
@@ -364,16 +364,9 @@ impl SettingsWindow {
         );
     }
 
-    /// Puts `pane` on screen; a pane this crate has no page for (字型管理,
-    /// a stored value from another desktop) lands on 一般, as on Windows.
-    /// Answers the pane shown.
+    /// Puts `pane` on screen (every pane has a page: `pages::build` matches
+    /// them all). Answers the pane shown.
     pub fn show_pane(&self, pane: SettingsPane) -> SettingsPane {
-        let pane = if pages::BUILT.contains(&pane) {
-            pane
-        } else {
-            log::warn!("pane.not_built pane={} — showing general", pane.raw());
-            SettingsPane::General
-        };
         self.current.set(pane);
         self.stack.set_visible_child_name(pane.raw());
         self.is_selecting.set(true);
@@ -414,7 +407,7 @@ impl SettingsWindow {
             self.sidebar.append(&row);
         }
         let mut pages = Vec::new();
-        for pane in pages::BUILT {
+        for pane in SettingsPane::ALL.iter().copied() {
             let page = pages::build(
                 pane,
                 self,
@@ -600,6 +593,11 @@ impl Shell {
         if let Some(shell) = self.0.upgrade() {
             shell.toast(title, detail);
         }
+    }
+
+    /// What a page has to say after a job, as a toast.
+    pub fn report(&self, message: &PageMessage, strings: &StringResolver) {
+        self.toast(&message.title(strings), message.detail(strings).as_deref());
     }
 
     pub fn window(&self) -> Option<adw::ApplicationWindow> {

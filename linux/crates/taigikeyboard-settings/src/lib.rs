@@ -2,6 +2,7 @@
 //! pages without a running application (roadmap L12).
 
 pub mod cli;
+pub mod fonts;
 pub mod jobs;
 pub mod pages;
 pub mod presentation;
@@ -82,12 +83,14 @@ pub fn run() -> gtk::glib::ExitCode {
     application.run()
 }
 
-/// The panes the sidebar lists on Linux, in order: the Mac's roster minus
-/// 字型管理 (the panel draws with the desktop's font, roadmap L4).
-pub const SIDEBAR: [SettingsPane; 5] = [
+/// The panes the sidebar lists on Linux, in order: the Mac's roster. 字型管理
+/// installs fallback typefaces rather than choosing one — the panel draws
+/// with the desktop's font (roadmap L4).
+pub const SIDEBAR: [SettingsPane; 6] = [
     SettingsPane::General,
     SettingsPane::Appearance,
     SettingsPane::Shortcuts,
     SettingsPane::DictionarySources,
     SettingsPane::CustomDictionary,
+    SettingsPane::FontManagement,
 ];

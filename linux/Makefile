@@ -118,6 +118,15 @@ install: build component install-fcitx5
 	for size in 16 22 24 32 48 64 128 256; do \
 	  install -Dm644 data/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png || exit 1; \
 	done
+	# The bundled typefaces (the ones macOS and Windows ship), as fontconfig
+	# fallbacks for the Han characters the desktop's fonts lack (roadmap L4),
+	# split by format the Debian way (`InstallLayout::bundled_font_file`).
+	install -Dm644 -t $(DESTDIR)$(PREFIX)/share/fonts/truetype/taigikeyboard ../fonts/font/*.ttf
+	install -Dm644 -t $(DESTDIR)$(PREFIX)/share/fonts/opentype/taigikeyboard ../fonts/font/*.otf
+	install -Dm644 ../fonts/OFL-1.1.txt $(DESTDIR)$(PREFIX)/share/doc/taigikeyboard/fonts-OFL-1.1.txt
+	# A package gets its cache rebuilt by fontconfig's dpkg trigger; a direct
+	# install into the live system rebuilds it here. Never for a staging root.
+	$(if $(DESTDIR),,-fc-cache $(PREFIX)/share/fonts)
 	@echo "installed under $(DESTDIR)$(PREFIX); restart fcitx5 (fcitx5 -r) and/or ibus (ibus restart)"
 
 # The addon's .so + its two .conf files, through CMake's own install rules.
@@ -133,7 +142,10 @@ uninstall:
 	rm -rf $(DESTDIR)$(PREFIX)/share/taigikeyboard
 	rm -f $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
 	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/*/apps/taigikeyboard.png
-	@echo "removed; ~/.config/taigikeyboard and ~/.local/share/taigikeyboard are kept"
+	rm -rf $(DESTDIR)$(PREFIX)/share/fonts/truetype/taigikeyboard $(DESTDIR)$(PREFIX)/share/fonts/opentype/taigikeyboard
+	rm -rf $(DESTDIR)$(PREFIX)/share/doc/taigikeyboard
+	$(if $(DESTDIR),,-fc-cache $(PREFIX)/share/fonts)
+	@echo "removed; ~/.config/taigikeyboard, ~/.local/share/taigikeyboard and ~/.local/share/fonts/taigikeyboard are kept"
 
 # The Debian package (roadmap L11): `make install` into a staging root — the
 # ONE install layout, so the package and a source install cannot drift —

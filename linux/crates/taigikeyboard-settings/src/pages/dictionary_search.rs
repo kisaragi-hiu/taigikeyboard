@@ -185,15 +185,12 @@ impl DictionarySearchPage {
 
     fn report(&self, detail: &str) {
         let message = PageMessage::failure(StringKey::DesktopCustomDictReadFailed, detail);
-        self.shell.toast(
-            &message.title(&self.strings),
-            message.detail(&self.strings).as_deref(),
-        );
+        self.shell.report(&message, &self.strings);
     }
 
     fn render(&self) {
         let state = self.state.borrow();
-        super::custom_dictionary::remove_rows(&self.results);
+        super::remove_rows(&self.results);
         for result in state.results.iter().take(VISIBLE_RESULT_LIMIT) {
             self.results.append(&self.result_row(result));
         }

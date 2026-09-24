@@ -22,8 +22,9 @@ Windows `.exe`. One package holds both shells, the way `fcitx5-chewing` and
 | `/usr/libexec/ibus-engine-taigikeyboard` + `/usr/share/ibus/component/taigikeyboard.xml` | The IBus engine (second) and its component registration |
 | `/usr/bin/taigikeyboard-settings` + `/usr/share/applications/tw.taigikeyboard.Settings.desktop` + `/usr/share/icons/hicolor/*/apps/taigikeyboard.png` | The GTK 4 / libadwaita settings window, its launcher entry and icon |
 | `/usr/share/taigikeyboard/dictionaries/*` | The dictionary artifacts the engine reads at first key |
+| `/usr/share/fonts/{truetype,opentype}/taigikeyboard/*` + `/usr/share/doc/taigikeyboard/fonts-OFL-1.1.txt` | The four bundled typefaces (the macOS / Windows set) as fontconfig fallbacks; fontconfig's dpkg trigger rebuilds the cache (roadmap L4) |
 
-`Depends: fcitx5 | ibus` plus what the three binaries link, versioned, from
+`Depends: fcitx5 | ibus, fontconfig` (the 字型管理 pane runs `fc-query` / `fc-list` / `fc-cache`) plus what the three binaries link, versioned, from
 `dpkg-shlibdeps` at pack time (`linux/packaging/control.in`, `@SHLIBS@`) — GTK
 4.14, libadwaita 1.5, GLib 2.80 on Ubuntu 24.04, the runner that builds it.
 Built and checked in CI on Ubuntu 24.04 (compile, `ibus-daemon` smoke, the
