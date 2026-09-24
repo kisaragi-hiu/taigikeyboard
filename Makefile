@@ -6,7 +6,7 @@ DICT := dictionary
 # `cargo: command not found` if zsh doesn't `source ~/.cargo/env`.
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: build test test-crate doc dict dogfood help \
+.PHONY: build test test-crate doc dict dogfood e2e help \
         fmt lint hooks scan-secrets scan-secrets-full \
         i18n i18n-test \
         macos-release desktop-release desktop-announce version-mobile version-desktop \
@@ -102,6 +102,16 @@ dogfood:
 # The two throwaway builds contradict publishing and so are refused here by
 # design; run the script directly for those. Prerequisites and the one-time
 # Developer ID setup: docs/architecture/macos-release.md.
+# End-to-end run (docs/architecture/e2e-testing-roadmap.md): drive PLATFORM's
+# test-mode build through every e2e/scenarios/*.json, then analyze. Report:
+# $(E2E_RUN)/report.md; exit 1 on a failed scenario or a bug / perf finding.
+E2E_RUN ?= $(CURDIR)/e2e/runs/$(shell date +%Y%m%d-%H%M%S)
+e2e:
+	@test -n "$(PLATFORM)" && test -x tools/e2e/$(PLATFORM)/run.sh \
+	  || { echo "usage: make e2e PLATFORM=<platform with tools/e2e/<platform>/run.sh>" >&2; exit 1; }
+	tools/e2e/$(PLATFORM)/run.sh "$(E2E_RUN)"
+	python3 tools/e2e/analyze.py --run "$(E2E_RUN)"
+
 macos-release:
 	bash macos/scripts/release-app.sh --force --publish $(RELEASE_FLAGS)
 
@@ -246,6 +256,7 @@ help:
 	@echo "  make i18n               Regenerate app-UI i18n native resources from i18n/*.json"
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
+	@echo "  make e2e PLATFORM=linux End-to-end run on the Linux VM (test-mode build) + analyzer report"
 	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
 	@echo "  make desktop-release    Stage all three desktop installers on the draft (Mac + hosted runners)"
 	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"

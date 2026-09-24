@@ -150,3 +150,6 @@ linux/target/
 # and it must be ignored for the same reason: the script refuses a dirty tree,
 # so its own output would make the next release un-cuttable.
 windows/.build/
+
+# e2e run output (make e2e): traces + reports, never committed
+/e2e/runs/

@@ -89,9 +89,9 @@ def load_scenarios(scenarios_dir: Path) -> dict[str, dict]:
 def load_method_names(proto_dir: Path) -> dict[tuple[str, int], str]:
     """(domain, method tag) → `oneof method` field name, parsed from the .proto files."""
     names: dict[tuple[str, int], str] = {}
-    message_re = re.compile(r"^message (\w+) \{(.*?)^\}", re.S | re.M)
-    oneof_re = re.compile(r"oneof method \{(.*?)\}", re.S)
-    field_re = re.compile(r"^\s*\w+\s+(\w+)\s*=\s*(\d+);", re.M)
+    message_re = re.compile(r"^message (\w+) \{(.*?)^\}", re.DOTALL | re.MULTILINE)
+    oneof_re = re.compile(r"oneof method \{(.*?)\}", re.DOTALL)
+    field_re = re.compile(r"^\s*\w+\s+(\w+)\s*=\s*(\d+);", re.MULTILINE)
     for proto in sorted(proto_dir.glob("*.proto")):
         for message, body in message_re.findall(proto.read_text(encoding="utf-8")):
             oneof = oneof_re.search(body)
