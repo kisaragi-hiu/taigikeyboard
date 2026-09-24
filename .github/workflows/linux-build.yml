@@ -350,6 +350,7 @@ jobs:
         run: ${{ matrix.install }}
 
       - name: Files in place, every linked library resolved
+        shell: bash
         env:
           ADDON: ${{ matrix.addon }}
         run: |
@@ -361,7 +362,10 @@ jobs:
             test -e "$path" || { echo "::error::$path missing after install"; exit 1; }
           done
           for elf in /usr/libexec/ibus-engine-taigikeyboard /usr/bin/taigikeyboard-settings "$ADDON"; do
-            if ldd "$elf" | grep 'not found'; then
+            # ldd itself must succeed: a failure (bad ELF) would otherwise
+            # read as "nothing missing".
+            libs="$(ldd "$elf" 2>&1)" || { echo "$libs"; echo "::error::ldd failed on $elf"; exit 1; }
+            if grep 'not found' <<< "$libs"; then
               echo "::error::$elf links a library the package does not pull in"
               exit 1
             fi
