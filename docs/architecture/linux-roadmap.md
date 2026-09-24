@@ -415,8 +415,8 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   (`zbus` and gtk4-rs both build on macOS; libadwaita from Homebrew), a REAL cross build
   of the engine binary for `x86_64-unknown-linux-gnu` through `cargo zigbuild` (zig ships
   the C toolchain the bundled SQLite's build script needs — plain `cargo check` stops
-  there; `brew install zig cargo-zigbuild`), `cargo fmt -- --check`, and the i18n check. CI (`linux-build.yml`, also on
-  pull requests touching `linux/**` or `desktop/**`) adds what the Mac cannot: a real
+  there; `brew install zig cargo-zigbuild`), `cargo fmt -- --check`, and the i18n check. CI (`linux-build.yml`, nightly
+  and on dispatch since 2026-09-25) adds what the Mac cannot: a real
   `x86_64-unknown-linux-gnu` build of both binaries with the distro's GTK, the **Fcitx5 addon
   built with CMake against `fcitx5-modules-dev`** (the only place it compiles before the VM),
   `cargo test` of the whole `linux/` workspace, the `.deb` (`make deb`, contents asserted), and an **IBus daemon smoke**: `dbus-run-session`

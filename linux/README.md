@@ -35,7 +35,8 @@ first use). `zbus` and gtk4-rs both build natively on the Mac, so every crate
 is clippy-checked here; `make check-target` cross-builds the engine binary
 for the shipping target through `cargo zigbuild`. These gates prove the code
 compiles; they do not prove behaviour. The CI job
-(`.github/workflows/linux-build.yml`) adds a real Ubuntu build, the test run
+(`.github/workflows/linux-build.yml`, nightly and on manual dispatch — not per
+pull request) adds a real Ubuntu build, the test run
 and an `ibus-daemon` smoke; the dogfood run-book in the roadmap owns the rest.
 
 ## System packages

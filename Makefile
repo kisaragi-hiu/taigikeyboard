@@ -244,7 +244,8 @@ version-mobile version-desktop:
 #   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat (version: mise.toml)
 #   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle.kts
 #           (spotlessCheck doubles as ktlint).
-# CI runs the same checks: engine.yml, checks.yml, android.yml, linux-build.yml.
+# CI runs the same checks: engine.yml, checks.yml, android.yml on pull requests;
+# linux-build.yml nightly.
 RUST_WORKSPACES := engine desktop windows linux
 
 fmt:
