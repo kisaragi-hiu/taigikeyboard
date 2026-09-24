@@ -42,4 +42,4 @@ Open `<run>/report.md`. Order of attention:
 
 ## 4. Add a scenario
 
-`e2e/scenarios/<id>.json` — `id` = file name, a `source`, intent-level `settings`, `steps` (`text` / `key` with neutral names `enter` `space` `backspace` `escape` `0`–`9` / `pick` by `hanji` + `tl`), `expect` (`committed`, `first_hanji_candidate`). Take sentences from `corpus/README.md` (the `/dogfood` skill greps it). `python3 -m unittest analyze_test` in `tools/e2e/` validates every scenario file.
+`e2e/scenarios/<id>.json` — `id` = file name, a `source`, intent-level `settings`, `steps` (`text` / `key` with neutral names `enter` `space` `backspace` `escape` `0`–`9` / `pick` by `tl` [+ `hanji`]), `expect` (`committed`, `first_hanji_candidate` `{tl[, hanji]}` — name a hanji only when the source does). Take sentences from `corpus/README.md` (the `/dogfood` skill greps it). `python3 -m unittest analyze_test` in `tools/e2e/` validates every scenario file.

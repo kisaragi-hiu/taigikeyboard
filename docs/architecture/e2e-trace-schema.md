@@ -86,7 +86,7 @@ Written through `dispatch::trace::event` (same file, same clock as the engine ev
 | `candidates` | `items` = `[{"hanji", "tl", "canonical_tl"}]`, display order: `hanji` (`""` for a romanization-only cell), `tl` = the reading as displayed, `canonical_tl` = identity (CLAUDE.md Core Principle #6) | `Emit::LookupTable` for the candidate list (the symbol picker is not traced) |
 | `session_end` | `source` | the daemon ended the composition (focus out, reset, disable) |
 
-The analyzer's "first hanji candidate" is the first `candidates` item whose `hanji` holds a CJK character (the §34 literal slot is skipped) and compares its `hanji` + `tl`.
+The analyzer's "first hanji candidate" is the first `candidates` item whose `hanji` holds a CJK character (the §34 literal slot is skipped) and compares its displayed `tl`, plus its `hanji` when the scenario names one (`analyze.matches_cell`).
 
 Still planned, specified by the PR that first writes them: memory sample, key-geometry manifest (mobile).
 
@@ -98,9 +98,9 @@ Still planned, specified by the PR that first writes them: memory sample, key-ge
 |---|---|
 | `id`, `source` | identity; where the expectation comes from |
 | `settings` | intent-level settings (`romanization`, `continuous_input`, `output`); each driver maps them to its platform's store |
-| `steps` | `text` (type these characters), `key` (a platform-neutral name: `enter`, `space`, `backspace`, `escape`, `0`–`9`; each driver translates it), `pick` (select the candidate with this `hanji` + `tl`). A driver maps each step to real input — hardware keys or taps — and never sets text directly |
+| `steps` | `text` (type these characters), `key` (a platform-neutral name: `enter`, `space`, `backspace`, `escape`, `0`–`9`; each driver translates it), `pick` (select the hanji candidate showing this `tl`, and this `hanji` when given). A driver maps each step to real input — hardware keys or taps — and never sets text directly |
 | `expect.committed` | the exact text the host field holds at the end |
-| `expect.first_hanji_candidate` | `{hanji, tl}` of the first hanji candidate in the last `candidates` event |
+| `expect.first_hanji_candidate` | `{tl[, hanji]}` of the first hanji candidate in the last `candidates` event — `hanji` only when the source names one (never taken from a run) |
 
 ## Run layout (driver → analyzer)
 

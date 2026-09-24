@@ -228,18 +228,18 @@ class Session:
             f"the IME to answer {self.keys_sent} keys",
         )
 
-    def pick(self, hanji: str, tl: str) -> None:
-        """Tab to the cell showing (hanji, tl), then Enter
+    def pick(self, wanted: dict) -> None:
+        """Tab to the cell `analyze.matches_cell` accepts, then Enter
         (`confirmHighlighted`, desktop keys/action.rs)."""
         self.settle()
         lists = [e for e in self.reader.refresh() if e.get("event") == "candidates"]
         if not lists:
             raise ScenarioError("no candidate list to pick from")
         items = lists[-1].get("items", [])
-        index = next((i for i, c in enumerate(items) if (c.get("hanji"), c.get("tl")) == (hanji, tl)), None)
+        index = next((i for i, c in enumerate(items) if analyze.matches_cell(c, wanted)), None)
         if index is None:
             offered = [(c.get("hanji"), c.get("tl")) for c in items[:6]]
-            raise ScenarioError(f"({hanji}, {tl}) not offered; first cells {offered}")
+            raise ScenarioError(f"{wanted.get('hanji', '(any hanji)')} {wanted['tl']} not offered; first cells {offered}")
         for _ in range(index):
             self.send_key("Tab")
         self.send_key("enter")
@@ -276,7 +276,7 @@ def drive(framework: str, prefix: Path, scenario: dict, out: Path) -> dict:
                 elif step["type"] == "key":
                     session.send_key(step["value"])
                 elif step["type"] == "pick":
-                    session.pick(step["hanji"], step["tl"])
+                    session.pick(step)
             result = {"status": "ran", "observed_text": session.finish()}
         except (ScenarioError, subprocess.SubprocessError, OSError) as error:
             result = {"status": "error", "reason": str(error)}

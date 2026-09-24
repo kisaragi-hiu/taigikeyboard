@@ -154,6 +154,15 @@ def is_hanji(text: str) -> bool:
     return any("㐀" <= ch <= "鿿" or "\U00020000" <= ch <= "\U0003134f" for ch in text)
 
 
+def matches_cell(cell: dict, wanted: dict) -> bool:
+    """A candidate cell against a scenario's `{tl[, hanji]}`: the displayed
+    reading always; the hanji when the scenario names one (its source may
+    give only the reading), else any hanji cell."""
+    if cell.get("tl") != wanted["tl"] or not is_hanji(cell.get("hanji", "")):
+        return False
+    return "hanji" not in wanted or cell.get("hanji") == wanted["hanji"]
+
+
 def check_expectations(scenario: dict, observed_text: str, events: list[dict]) -> tuple[list[str], list[str]]:
     """(failures, unverifiable) for the scenario's `expect` block."""
     failures: list[str] = []
@@ -168,7 +177,7 @@ def check_expectations(scenario: dict, observed_text: str, events: list[dict]) -
             unverifiable.append("first_hanji_candidate: no `candidates` event in the trace")
         else:
             first = next((c for c in last_list.get("items", []) if is_hanji(c.get("hanji", ""))), None)
-            if first is None or (first.get("hanji"), first.get("tl")) != (wanted["hanji"], wanted["tl"]):
+            if first is None or not matches_cell(first, wanted):
                 failures.append(f"first hanji candidate {first!r}, expected {wanted!r}")
     return failures, unverifiable
 

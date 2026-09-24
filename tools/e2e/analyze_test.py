@@ -133,6 +133,18 @@ class AnalyzeTests(unittest.TestCase):
         self.assertIn("隙", report.outcomes[0].detail)
 
 
+class MatchesCellTests(unittest.TestCase):
+    def test_reading_only_matches_any_hanji_cell_with_that_reading(self) -> None:
+        wanted = {"tl": "tâi-gí-sī-kái"}
+        self.assertTrue(analyze.matches_cell({"hanji": "台語是解", "tl": "tâi-gí-sī-kái"}, wanted))
+        # The §34 literal slot carries no hanji and never matches.
+        self.assertFalse(analyze.matches_cell({"hanji": "", "tl": "tâi-gí-sī-kái"}, wanted))
+
+    def test_named_hanji_must_match_too(self) -> None:
+        wanted = {"hanji": "鵝仔是", "tl": "gô-á-sī"}
+        self.assertFalse(analyze.matches_cell({"hanji": "餓仔是", "tl": "gô-á-sī"}, wanted))
+
+
 class ScenarioFileTests(unittest.TestCase):
     def test_repo_scenarios_are_well_formed(self) -> None:
         scenarios = analyze.load_scenarios(analyze.REPO_ROOT / "e2e" / "scenarios")

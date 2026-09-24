@@ -26,7 +26,9 @@ if ! ssh -o ConnectTimeout=5 -o BatchMode=yes "$HOST" true 2>/dev/null; then
     exit 0
 fi
 
-ssh "$HOST" mkdir -p "$REMOTE/src"
+# macOS openrsync ignores --delete under --relative: clear the small trees
+# whose deletions matter (a removed scenario must not keep running).
+ssh "$HOST" "mkdir -p $REMOTE/src && rm -rf $REMOTE/src/e2e $REMOTE/src/tools"
 # Only what `make -C linux install` reads; `target/` stays on the VM so the
 # next run builds incrementally.
 (cd "$REPO_ROOT" && rsync -a --delete --relative --exclude 'target/' --exclude '.git' --exclude 'e2e/runs/' \
