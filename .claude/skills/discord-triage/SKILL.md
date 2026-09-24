@@ -12,6 +12,8 @@ Turn #general chat into tracked #issues forum posts. Backed by the `discord` MCP
 
 Tag `done` = closed marker (Discord forums have no open/closed filter; USER 2026-09-18 chose
 tag filtering): every close adds `done`, every reopen removes it. Tag `drop` = USER-only.
+Tag `discussion` = the USER handles the post directly (USER 2026-09-24): never audit, reply to,
+retag or close it, and never emit a row for it.
 
 **Never write to Discord in `scan`. Only `apply` writes, and only rows the USER approved.**
 
@@ -62,7 +64,7 @@ themselves (token is theirs), then restart the session.
    `apply` can write it to `state.json`.
 
    **Open-post audit (every scan, USER 2026-09-18)**: for every non-archived #issues post from
-   `list_posts(issues)` **not tagged `done`** (skip those without `read_post`; USER
+   `list_posts(issues)` **not tagged `done` or `discussion`** (skip those without `read_post`; USER
    2026-09-18), `read_post` for the body and decide whether it is already fixed:
    - grep `changelog/*.md` for the symptom → hit = released: `fixed in` = that file's version.
    - no changelog hit → `git log --oneline main --grep=<keyword>` + project memory
