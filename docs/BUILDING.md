@@ -48,10 +48,11 @@ mise install        # protoc, gitleaks, swiftformat, uv
 Without [mise](https://mise.jdx.dev), install the same versions by hand. The
 one that matters is **protoc 36.0**: it must match `protobuf-javalite` in
 `android/app/build.gradle.kts` (javalite `4.36.0` is emitted by libprotoc
-`36.0`). With any other protoc, `make build` skips the Java / Swift binding
-regeneration and prints `protoc version drift — SKIPPING platform proto
-regeneration`. The committed bindings stay valid, so the rest of the build
-still runs; you only need 36.0 to change a `.proto` file.
+`36.0`). With any other protoc, `make protos` skips the Android Java and iOS
+Swift binding regeneration and prints `protoc version drift — SKIPPING platform
+proto regeneration` (the macOS Swift bindings are still regenerated). The
+committed bindings stay valid, so the rest of the build still runs; you only
+need 36.0 to change a `.proto` file.
 
 Per platform, on top of that:
 
@@ -80,9 +81,9 @@ make hooks          # pre-commit: gitleaks + personal-data checks on staged chan
 | Platform | Build | Test |
 | --- | --- | --- |
 | Engine | `cargo build --workspace --manifest-path engine/Cargo.toml` | `make test` (`cargo test --workspace` in `engine/`) |
-| Android | native libraries: `bash engine/scripts/build-android-libs.sh`; app: `android/gradlew -p android :app:assembleDebug` | `android/gradlew -p android :app:testDebugUnitTest` |
-| iOS | `bash engine/scripts/build-xcframework.sh`, then open `ios/TaigiKeyboard.xcodeproj` and build the keyboard extension | `xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests -destination 'platform=iOS Simulator,name=<an installed iPhone simulator>' test` |
-| macOS | `bash engine/scripts/build-macos-xcframework.sh`, then `make -C macos build` | `make -C macos test` |
+| Android | native libraries: `make android-libs`; app: `android/gradlew -p android :app:assembleDebug` | `android/gradlew -p android :app:testDebugUnitTest` |
+| iOS | `make ios-libs`, then open `ios/TaigiKeyboard.xcodeproj` and build the keyboard extension | `xcodebuild -project ios/TaigiKeyboard.xcodeproj -scheme TaigiKeyboardTests -destination 'platform=iOS Simulator,name=<an installed iPhone simulator>' test` |
+| macOS | `make macos-libs`, then `make -C macos build` | `make -C macos test` |
 | Windows | on Windows: [`architecture/windows-release.md`](architecture/windows-release.md); elsewhere: `make windows-check` | included in `make windows-check` |
 | Linux | on Linux: `make -C linux build` (packages: `make -C linux deb`); on macOS: `make linux-check` | included in `make linux-check` |
 | Desktop-shared crates | `make desktop-check` | included |
@@ -91,10 +92,9 @@ make hooks          # pre-commit: gitleaks + personal-data checks on staged chan
 
 Notes:
 
-- `make build` runs every generator and native build at once — platform
-  bindings, the iOS and macOS xcframeworks, the Android libraries — so it needs
-  macOS with all of the tools above. On one platform, run that platform's
-  script from the table instead.
+- `make build` runs `make protos`, `ios-libs`, `android-libs` and `macos-libs`
+  in that order, so it needs macOS with every tool above. On one platform, run
+  only that platform's target from the table.
 - The Android JVM unit tests do not load the native library, so
   `:app:testDebugUnitTest` runs without it; installing or running the app does
   need it. The Swift and Java protobuf bindings are committed, so only a
@@ -115,7 +115,8 @@ against the old engine and pass for the wrong reason:
 
 | Your change touches | Run before platform tests |
 | --- | --- |
-| `engine/` (Rust, `.proto`, `Cargo.toml`) | the platform's native build from § 4 (`make build` on macOS does all of them) |
+| `engine/` (Rust, `Cargo.toml`) | the platform's native build from § 4 (`make ios-libs` / `android-libs` / `macos-libs`; `make build` on macOS does all of them) |
+| a `.proto` file | `make protos` first (protoc 36.0), then as above |
 | `dictionary/` | `make dict`, then as above |
 | platform-only Swift / Kotlin, docs | nothing |
 

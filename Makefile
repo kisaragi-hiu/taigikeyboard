@@ -6,37 +6,58 @@ DICT := dictionary
 # `cargo: command not found` if zsh doesn't `source ~/.cargo/env`.
 export PATH := $(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: build test test-crate doc dict dogfood e2e help \
+# A bare `make` prints the target list; it used to run `build`, which needs macOS
+# with every toolchain installed (docs/BUILDING.md).
+.DEFAULT_GOAL := help
+
+.PHONY: build protos ios-libs android-libs macos-libs test test-crate doc dict dogfood e2e help \
         fmt lint hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         macos-release desktop-release desktop-patch desktop-announce version-mobile version-desktop \
         windows-check windows-release desktop-check linux-check \
         update-submodules
 
-# Default — regenerate platform proto, full clean, rebuild iOS xcframework
-# + Android jniLibs + macOS xcframework. Build ONLY — does NOT run tests
-# (use `make test`). The only build entry point: it refreshes EVERY committed
-# generated artefact, so no platform can go stale behind an engine change.
-# macOS ships no release yet; it is built here anyway to keep that invariant
-# (USER 2026-08-15: 「我覺得可以併入到 make build,只是現階段不 release」).
-# macOS only, with every toolchain in docs/BUILDING.md (protoc 36.0 via
-# `mise install`, `brew install swift-protobuf`); one platform's own build is
-# its script under engine/scripts/.
+# Every generated artefact at once — platform bindings, then the iOS xcframework,
+# the Android jniLibs and the macOS xcframework. Build ONLY — does NOT run tests
+# (use `make test`). Refreshing all of them together is what keeps no platform
+# stale behind an engine change; macOS is built here although it has its own
+# release flow (USER 2026-08-15: 「我覺得可以併入到 make build,只是現階段不 release」).
+# macOS only, with every toolchain in docs/BUILDING.md. The steps run in this
+# order, one after another (sub-makes, so `-j` cannot reorder them): the bindings
+# must be regenerated before any native build compiles the protos crate.
 build:
-	@echo "==> [1/6] Regenerating platform proto (Swift + Java)"
-	bash $(ENGINE)/scripts/gen-platform-protos.sh
-	@echo "==> [2/6] Regenerating macOS proto (Swift)"
-	bash $(ENGINE)/scripts/gen-macos-protos.sh
-	@echo "==> [3/6] Cleaning protos build cache"
-	cd $(ENGINE) && cargo clean -p protos
-	@echo "==> [4/6] Building iOS xcframework"
-	cd $(ENGINE) && bash scripts/build-xcframework.sh
-	@echo "==> [5/6] Building Android jniLibs"
-	cd $(ENGINE) && bash scripts/build-android-libs.sh
-	@echo "==> [6/6] Building macOS xcframework"
-	cd $(ENGINE) && bash scripts/build-macos-xcframework.sh
+	$(MAKE) --no-print-directory protos
+	$(MAKE) --no-print-directory ios-libs
+	$(MAKE) --no-print-directory android-libs
+	$(MAKE) --no-print-directory macos-libs
 	@echo ""
 	@echo "✓ build complete — Xcode: Clean Build Folder ⇧⌘K → Build"
+
+# Regenerate the committed Swift (iOS + macOS) and Java protobuf bindings from
+# engine/protos/proto/, then drop the protos crate's build cache so the next
+# native build recompiles it. Needs protoc 36.0 and protoc-gen-swift; with any
+# other protoc the binding step is skipped with a warning (gen-platform-protos.sh).
+protos:
+	@echo "==> Regenerating platform proto (Swift + Java)"
+	bash $(ENGINE)/scripts/gen-platform-protos.sh
+	@echo "==> Regenerating macOS proto (Swift)"
+	bash $(ENGINE)/scripts/gen-macos-protos.sh
+	@echo "==> Cleaning protos build cache"
+	cd $(ENGINE) && cargo clean -p protos
+
+# One platform's engine binary — what that platform links. Each needs only its
+# own toolchain (docs/BUILDING.md § 2), so a single-platform contributor runs one.
+ios-libs:
+	@echo "==> Building iOS xcframework"
+	cd $(ENGINE) && bash scripts/build-xcframework.sh
+
+android-libs:
+	@echo "==> Building Android jniLibs"
+	cd $(ENGINE) && bash scripts/build-android-libs.sh
+
+macos-libs:
+	@echo "==> Building macOS xcframework"
+	cd $(ENGINE) && bash scripts/build-macos-xcframework.sh
 
 test:
 	cd $(ENGINE) && cargo test --workspace
@@ -57,7 +78,8 @@ doc:
 	cd $(ENGINE) && cargo doc --no-deps --workspace --document-private-items --exclude android-jni --open
 
 # Full dictionary regeneration: per-source pipeline (run.sh) then aggregate
-# merge + bin + fst + audit + deploy to Android/iOS (build.sh).
+# merge + bin + fst + audit + deploy to dictionaries/, which every platform
+# packages (build.sh).
 # The submodule check is here as well as in dictionary/common/taigi_bridge.py
 # because they answer different questions. This one fails in milliseconds before
 # a ~10-minute run starts, for the one entry point people actually type; the
@@ -270,33 +292,42 @@ update-submodules:
 	@git submodule status
 
 help:
-	@echo "  make build              Full Rust rebuild: proto regen + iOS + Android + macOS (no tests; macOS host)"
-	@echo "  make test               cargo test --workspace (canonical, includes doctests)"
-	@echo "  make test-crate         cargo test -p \$$CRATE (touched-target round workflow)"
-	@echo "  make doc                Build rustdoc HTML for engine workspace and open in browser"
-	@echo "  make dict               Full dictionary regen + deploy to all four platforms"
+	@echo "Build and test (commands per platform: docs/BUILDING.md)"
+	@echo "  make test               cargo test --workspace (engine, includes doctests)"
+	@echo "  make test-crate CRATE=<name>  cargo test for one engine crate"
+	@echo "  make doc                Build rustdoc HTML for the engine workspace and open it"
+	@echo "  make protos             Regenerate the committed Swift + Java protobuf bindings (protoc 36.0)"
+	@echo "  make ios-libs           Engine xcframework for iOS (macOS host)"
+	@echo "  make android-libs       Engine jniLibs for Android (cargo-ndk + NDK)"
+	@echo "  make macos-libs         Engine xcframework for the macOS input method (macOS host)"
+	@echo "  make build              All four above, in order (macOS host, every toolchain; no tests)"
+	@echo "  make desktop-check      Native gate for the desktop-shared crates (desktop/)"
+	@echo "  make linux-check        Host-side compile + test gate for the Linux input method"
+	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
+	@echo ""
+	@echo "Data and content"
+	@echo "  make dict               Full dictionary regeneration into dictionaries/ (needs taigi-converter)"
 	@echo "  make i18n               Regenerate app-UI i18n native resources from i18n/*.json"
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"
 	@echo "  make e2e PLATFORM=linux End-to-end run on the Linux VM (test-mode build) + analyzer report"
 	@echo "  make e2e PLATFORM=linux-desktop  Same, inside both Linux VMs' real desktop sessions (GNOME+IBus, KDE+Fcitx5)"
-	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
-	@echo "  make desktop-release    Stage all three desktop installers on the draft (Mac + hosted runners)"
-	@echo "  make desktop-patch PLATFORM=linux  Stage ONE platform's patch release on its own draft"
-	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"
-	@echo "  make desktop-check      Native gate for the desktop-shared crates (desktop/)"
-	@echo "  make linux-check        Host-side compile + test gate for the Linux input method"
-	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
-	@echo "  make windows-release    Build + package + stage the installer on the draft (on Windows)"
-	@echo "                          — add RELEASE_FLAGS=--skip-sign until a certificate exists"
-	@echo "  make version-mobile 3.6.7   Set the mobile train's version (iOS + Android)"
-	@echo "  make version-desktop 3.7.0  Set the desktop train's version (macOS + Windows + Linux)"
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
+	@echo "Quality and hooks"
+	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
+	@echo "  make lint               cargo clippy + spotlessCheck (Android Lint disabled)"
 	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"
 	@echo "  make scan-secrets       Scan for credentials since the last clean full scan"
 	@echo "  make scan-secrets-full  Rescan the whole history and re-baseline .gitleaks-scanned"
 	@echo "  make scan-private       Scan tracked files against the maintainer's private denylist"
 	@echo ""
-	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
-	@echo "  make lint               cargo clippy + spotlessCheck (Android Lint disabled)"
+	@echo "Maintainer releases"
+	@echo "  make version-mobile 3.6.7   Set the mobile train's version (iOS + Android)"
+	@echo "  make version-desktop 3.7.0  Set the desktop train's version (macOS + Windows + Linux)"
+	@echo "  make macos-release      Sign + notarize + stage the package on the draft release"
+	@echo "  make windows-release    Build + package + stage the installer on the draft (on Windows)"
+	@echo "                          — add RELEASE_FLAGS=--skip-sign until a certificate exists"
+	@echo "  make desktop-release    Stage all three desktop installers on the draft (Mac + hosted runners)"
+	@echo "  make desktop-patch PLATFORM=linux  Stage ONE platform's patch release on its own draft"
+	@echo "  make desktop-announce   Announce a published desktop release (website + appcasts)"
