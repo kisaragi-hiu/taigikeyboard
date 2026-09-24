@@ -64,8 +64,7 @@ jobs:
       startsWith(github.event.release.tag_name, 'desktop-')
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -85,7 +84,7 @@ jobs:
           rustup toolchain install stable --profile minimal --component rustfmt,clippy --no-self-update
           rustup default stable
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           workspaces: |
             linux -> target
@@ -246,8 +245,7 @@ jobs:
             git gcc gcc-c++ make cmake ninja-build extra-cmake-modules fcitx5-devel \
             gtk4-devel libadwaita-devel openssl-devel pkgconf-pkg-config rpm-build unzip findutils
 
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
           curl -sSL -o /tmp/protoc.zip \
@@ -259,7 +257,7 @@ jobs:
           curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
           key: fedora
           workspaces: linux -> target
@@ -296,8 +294,7 @@ jobs:
           pacman -Syu --noconfirm --needed \
             base-devel git cmake ninja extra-cmake-modules fcitx5 gtk4 libadwaita openssl pkgconf unzip rustup
 
-      - uses: actions/checkout@v4
-
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
           curl -sSL -o /tmp/protoc.zip \
@@ -365,7 +362,7 @@ jobs:
               pacman -S --noconfirm --needed ibus dbus xorg-server-xvfb xorg-setxkbmap
             addon: /usr/lib/fcitx5/libtaigikeyboard.so
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: ${{ matrix.artifact }}
 
@@ -493,9 +490,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: linux-*
           merge-multiple: true

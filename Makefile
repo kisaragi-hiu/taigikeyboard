@@ -237,18 +237,27 @@ version-mobile version-desktop:
 # ---------------------------------------------------------------------------
 # Formatting & lint — apply across all stacks (`fmt`) or check (`lint`).
 # ---------------------------------------------------------------------------
-#   Rust    rustfmt (fmt) + clippy -D warnings (lint)
-#   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat. Install: brew install swiftformat
-#   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle (spotlessCheck doubles as ktlint).
-# To check Rust formatting without writing: `cd engine && cargo fmt --all -- --check`.
+#   Rust    rustfmt over all four workspaces (fmt); clippy -D warnings over the
+#           engine and desktop-shared crates (lint). The Windows and Linux
+#           workspaces are linted by `make windows-check` / `make linux-check`,
+#           which need their cross targets.
+#   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat (version: mise.toml)
+#   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle.kts
+#           (spotlessCheck doubles as ktlint).
+# CI runs the same checks: engine.yml, checks.yml, android.yml, linux-build.yml.
+RUST_WORKSPACES := engine desktop windows linux
 
 fmt:
-	cd $(ENGINE) && cargo fmt --all
+	for ws in $(RUST_WORKSPACES); do cargo fmt --all --manifest-path $$ws/Cargo.toml || exit 1; done
 	swiftformat ios macos
 	cd android && ./gradlew spotlessApply
 
 lint:
-	cd $(ENGINE) && cargo clippy --workspace --all-targets --locked -- -D warnings
+	for ws in $(RUST_WORKSPACES); do cargo fmt --all --check --manifest-path $$ws/Cargo.toml || exit 1; done
+	cargo clippy --manifest-path $(ENGINE)/Cargo.toml --workspace --all-targets --locked -- -D warnings
+	cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
+	swiftformat --lint ios   # one directory per call: `--lint ios macos` reads macos as --lint's value
+	swiftformat --lint macos
 	cd android && ./gradlew spotlessCheck
 
 # Point git at the repo's tracked hooks. Per clone, not per checkout — core.hooksPath
@@ -315,8 +324,8 @@ help:
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "Quality and hooks"
-	@echo "  make fmt                Apply formatting across Rust + Swift + Kotlin"
-	@echo "  make lint               cargo clippy + spotlessCheck (Android Lint disabled)"
+	@echo "  make fmt                Apply formatting: rustfmt (4 workspaces) + SwiftFormat + Spotless"
+	@echo "  make lint               Check it: rustfmt + clippy (engine, desktop) + SwiftFormat + Spotless"
 	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"
 	@echo "  make scan-secrets       Scan for credentials since the last clean full scan"
 	@echo "  make scan-secrets-full  Rescan the whole history and re-baseline .gitleaks-scanned"

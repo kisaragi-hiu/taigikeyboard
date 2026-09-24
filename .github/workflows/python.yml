@@ -1,0 +1,70 @@
+name: Python tools
+
+# The Python that builds the dictionary and cuts releases, gated on changes to
+# it: the dictionary pipeline's unit tests (several drive taigi-converter
+# through Node, so that submodule is checked out) and the release-notes and
+# Windows icon tools. Nothing is built; ~1 min.
+on:
+  pull_request:
+    paths:
+      - 'dictionary/**/*.py'
+      - 'dictionary/requirements.txt'
+      - 'taigi-converter'
+      - 'tools/*.py'
+      - 'tools/windows/**'
+      - '.github/workflows/python.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'dictionary/**/*.py'
+      - 'dictionary/requirements.txt'
+      - 'taigi-converter'
+      - 'tools/*.py'
+      - 'tools/windows/**'
+      - '.github/workflows/python.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: dictionary + release tools
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Only the converter: corpus/ is manual-test text, never a build input.
+      - name: Check out taigi-converter
+        run: git submodule update --init taigi-converter
+
+      # docs/BUILDING.md: Python 3.13+ (taigi-emojis requires it), Node 22+
+      # (taigi-converter's engines field).
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: dictionary/requirements.txt
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: python -m pip install -r dictionary/requirements.txt pytest
+
+      # The tests import the pipeline as top-level packages (`build`, `common`),
+      # so they run from inside dictionary/.
+      - name: Dictionary pipeline tests
+        working-directory: dictionary
+        run: python -m pytest tests -q
+
+      - name: Release-notes tool tests
+        run: python tools/release_notes_test.py
+
+      - name: Windows icon tool tests
+        run: python -m pytest tools/windows/tests -q

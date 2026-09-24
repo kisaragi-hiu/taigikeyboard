@@ -90,6 +90,9 @@ make hooks          # pre-commit: gitleaks + personal-data checks on staged chan
 | Dictionary | `make dict` | `python3 -m pytest tests`, run inside `dictionary/` (needs the `taigi-converter` submodule) |
 | taigi-converter | — | `npm test` in `taigi-converter/` |
 
+Before opening a pull request, run `make lint` — rustfmt, clippy, SwiftFormat and
+Spotless, the same checks CI runs (`make fmt` applies the formatters).
+
 Notes:
 
 - `make build` runs `make protos`, `ios-libs`, `android-libs` and `macos-libs`
