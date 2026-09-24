@@ -9,21 +9,11 @@ name: Linux e2e
 # as the `linux-e2e-<distro>` artifact. The shipped packages are never traced
 # (PR3a); their own install check lives in linux-build.yml.
 #
-# USER 2026-09-24: runs on PRs touching linux/, engine/ or e2e/, plus dispatch;
-# desktop/, dictionaries/ and tools/e2e/ are what those builds read too.
-# Pull requests run Ubuntu only, so a PR waits for one job; the whole
-# distribution matrix runs nightly (USER 2026-09-24: 台灣凌晨 3:00 = 19:00
-# UTC) and on demand. A scheduled failure mails whoever last edited the cron.
+# USER 2026-09-25: schedule only (「全部都改成排程執行」) — no pull_request
+# trigger. The whole distribution matrix runs nightly (USER 2026-09-24:
+# 台灣凌晨 3:00 = 19:00 UTC) and on demand. A scheduled failure mails whoever
+# last edited the cron.
 on:
-  pull_request:
-    paths:
-      - 'linux/**'
-      - 'desktop/**'
-      - 'engine/**'
-      - 'dictionaries/**'
-      - 'e2e/**'
-      - 'tools/e2e/**'
-      - '.github/workflows/linux-e2e.yml'
   schedule:
     - cron: '0 19 * * *'
   workflow_dispatch:
@@ -32,8 +22,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: linux-e2e-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: linux-e2e-${{ github.event_name }}-${{ github.sha }}
 
 env:
   PROTOC_VERSION: "36.1"
@@ -47,7 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        distro: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu"]' || '["ubuntu","debian","fedora","arch"]') }}
+        distro: [ubuntu, debian, fedora, arch]
     # A container's default `sh` is dash on Ubuntu, which has no pipefail.
     defaults:
       run:
