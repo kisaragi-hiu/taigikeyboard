@@ -73,7 +73,7 @@ private. Verified on the new one with a clean mirror clone:
 | whole-object sweep for its path | 0 hits |
 | the three commits, by SHA, through the API | 404 / 404 / 404 |
 
-A second rewrite the same day replaced a work email (`alex.su@btse.com`, author
+A second rewrite the same day replaced a former work address (author
 and committer on 14 commits from 2025-11/12) with the maintainer's own, and the
 placeholder author name `--get-all` with a real one. Every commit's tree was
 compared before and after: all 1222 identical, so no file content changed.
@@ -266,8 +266,8 @@ repository the same day:
 | Wiki | disabled |
 | Actions runs | 3, all Dependabot dependency-graph updates, not workflow runs |
 
-What does become public and is worth knowing: the author email
-`minsiansu@gmail.com` on 1222 commits, and the 26 tracked files under `.claude/`
+What does become public and is worth knowing: the maintainer's personal
+author email on 1222 commits, and the 26 tracked files under `.claude/`
 — agent-facing prose that becomes public documentation.
 
 Also confirm the top of `README.md` states plainly that Apache-2.0 covers the

@@ -57,3 +57,9 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 - **2026-04-26 `iri/erk/eeh`** — proposed removing finals absent from the dictionary. USER: "iri/erk/eeh 這個有意義,是特殊字尾". They are dialectal finals per `knowledge/taigi-phonetics-reference.md` §3.2.6.
 - **2026-05-20 TPS schema** — proposed `tps_num = digit-tone` and a "bopomofo" option. USER: "TPS 有自己的聲調表示方法,不是用數字輸入" / "TPS 不是 bopomofo". Answer was in `knowledge/taigi-phonetics-reference.md` §5 + `engine/phonetics/src/tps.rs::ZHUYIN_TONES`.
+
+## Privacy (`.claude/rules/taigi-incidents.md` § Privacy)
+
+### Personal identifiers in the public tree
+
+- **2026-09-24 privacy scrub** — an open-source readiness audit (`docs/reports/2026-09-24-open-source-readiness-and-layout.md`) found, 17 days after the repository went public, a former work address written out in `docs/go-public-checklist.md` (the very address the 2026-09-07 history rewrite had removed from commit metadata), the Gmail-triage skill's Google Cloud project ID and personal mailbox label layout, and the Discord-triage skill's server and channel IDs plus a runtime `state.json` committed on every run. gitleaks passed all of them: none is a credential. USER: 「Go Round 0,不改寫歷史,但我希望未來可以避免類似的事情發生」. The tree was scrubbed and both skills moved to the private dotfiles repo; prevention = the `personal-email` gitleaks rule (pre-commit + CI) and a private-denylist pre-commit check for identifiers that cannot be listed publicly. Older commits still carry the values.

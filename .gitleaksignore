@@ -29,3 +29,27 @@ be5c4e47388373c178185a5393ae98732e6580e8:android/app/src/main/java/com/siansians
 be5c4e47388373c178185a5393ae98732e6580e8:android/app/src/main/java/com/siansiansu/taigikeyboard/settings/Tab1Fragment.kt:generic-api-key:172
 be5c4e47388373c178185a5393ae98732e6580e8:android/app/src/main/java/com/siansiansu/taigikeyboard/settings/Tab1Fragment.kt:generic-api-key:179
 c61c55580dc9202b61f28d927854f9a18fdd848a:臺灣方音符號.html:generic-api-key:6
+
+# personal-email rule (added 2026-09-24), full-history rescan: 13 findings, all in
+# commits already public and not rewritten (USER 2026-09-24: no history rewrite).
+# Reviewed against the matched content, local part masked:
+#
+#   docs/go-public-checklist.md 65 / 254 — a former work address and the
+#   maintainer's personal author address; both redacted from the tree 2026-09-24.
+#   rules/round-workflow.md 37 — the maintainer's own address in an authorship rule.
+#   spec/rime-config*.md — librime author credit copied from a RIME schema header.
+#   iTaigi raw CSV rows 297-298 (three historical paths) — a contributor column in
+#   the upstream public ChhoeTaigi dataset; the raw file is no longer tracked.
+9075b82d3e629aefde7f43a40ff4c1194c2a3c2c:docs/go-public-checklist.md:personal-email:65
+9075b82d3e629aefde7f43a40ff4c1194c2a3c2c:docs/go-public-checklist.md:personal-email:254
+1b6064eca1267c1a5cfba838745eec68e768a6d5:rules/round-workflow.md:personal-email:37
+d61f784e57521eb86b21f43188ea8b131f6e8885:dictionaryv2/3_iTaigi華台對照典/data/01_raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv:personal-email:297
+d61f784e57521eb86b21f43188ea8b131f6e8885:dictionaryv2/3_iTaigi華台對照典/data/01_raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv:personal-email:298
+a9d59c4133355d4f234b66f1f699780be3732940:spec/rime-config.md:personal-email:42
+a9d59c4133355d4f234b66f1f699780be3732940:spec/rime-config-detail.md:personal-email:28
+2101ffd6575c1ccf23936308bf6500fde9761529:dictionary2/3_iTaigi華台對照典/data/01_raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv:personal-email:297
+2101ffd6575c1ccf23936308bf6500fde9761529:dictionary2/3_iTaigi華台對照典/data/01_raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv:personal-email:298
+88518c37ae486c4cbc619d4a17b3ddea6707ad20:dictionary/raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv:personal-email:297
+88518c37ae486c4cbc619d4a17b3ddea6707ad20:dictionary/raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv:personal-email:298
+749161db121c4c8415e19ada9597827618275f67:dictionary/raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv:personal-email:297
+749161db121c4c8415e19ada9597827618275f67:dictionary/raw/ChhoeTaigi_iTaigiHoataiTuichiautian.csv:personal-email:298

@@ -64,6 +64,12 @@ do not run `make hooks` while another checkout of this repository is mid-task.
 pass; `.gitleaks-scanned` explains when that recording stops being valid and has
 to be redone with `make scan-secrets-full`.
 
+Personal data is treated like a credential. Do not put an email address, an
+account / project / server ID, or a private mailbox or chat layout into any
+tracked file, commit message or pull request — describe the person or role
+instead. gitleaks' `personal-email` rule catches addresses; tooling bound to a
+personal account belongs outside this repository, not under `.claude/`.
+
 ## Phonetics
 
 Never infer a TL / POJ / TPS rule. Read

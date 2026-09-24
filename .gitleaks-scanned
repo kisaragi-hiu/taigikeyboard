@@ -33,6 +33,9 @@
 # Full-history rescan, 1328 commits, 977 MB, no leaks. The watermark is main's
 # tip rather than the branch head that ran the scan — a squash-merged branch's
 # commits vanish with the branch, and a watermark must stay resolvable.
-commit=1a76ba80f9ffd2297643af9ecd1f075d5bbc7954
-date=2026-09-12
+# Refreshed 2026-09-24: .gitleaks.toml gained the personal-email rule. Full-history
+# rescan, 1706 commits, 1.05 GB; its 13 historical findings were reviewed and
+# dismissed in .gitleaksignore. Watermark = main's tip at scan time.
+commit=9b06586c887f3ef43192a103dec3a597e0437a5d
+date=2026-09-24
 gitleaks=8.30.1

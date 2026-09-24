@@ -50,3 +50,27 @@ id = "generic-api-key"
   description = "generated localization key declarations"
   regexTarget = "line"
   regexes = ['''^\s*(?:case\s+)?\w*[Kk]ey\s*=\s*"i18n_\w+",?\s*$''']
+
+# Email addresses. Not a credential, but a personal address in a public tree is a
+# leak all the same (2026-09-24: a former work address sat in a doc). Aimed at
+# precision, not at validating every address: the TLD list is the set this
+# repository has actually seen, which keeps `name@3x.png`, `this@Foo.bar` and
+# `Func@shell32.dll` out. Extend it when a new TLD shows up.
+[[rules]]
+id = "personal-email"
+description = "Email address in a tracked file — describe the person or role instead"
+regex = '''[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.(?:com|net|org|tw|io|dev|me|edu|gov|cn|jp|hk|app|co|info|ai|xyz|us|uk)\b'''
+keywords = ["@"]
+
+  # Public project addresses and placeholders. Whole-match anchored, per the rule
+  # at the top of this file.
+  [[rules.allowlists]]
+  description = "public project addresses and placeholders"
+  regexTarget = "match"
+  regexes = ['''^(?:info@taigikeyboard\.tw|git@github\.com|noreply@anthropic\.com|[A-Za-z0-9._+-]+@users\.noreply\.github\.com|[A-Za-z0-9._+-]+@example\.(?:com|org|net))$''']
+
+  # Upstream Inno Setup translation files credit their translators by address in
+  # the header, as shipped by jrsoftware; the files are vendored unchanged.
+  [[rules.allowlists]]
+  description = "vendored Inno Setup translator credits"
+  paths = ['''^windows/installer/Languages/.*\.isl$''']
