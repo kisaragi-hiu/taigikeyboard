@@ -410,21 +410,10 @@ mod tests {
     use crate::session::process_raw_key;
     use taigi_desktop_core::settings::SettingChoice;
     use taigi_linux_platform::key_translation::state;
-    use taigi_linux_platform::{RawKeyEvent, UserDirectories};
+    use taigi_linux_platform::RawKeyEvent;
 
-    /// A runtime over a temporary XDG tree with no dictionaries: settings
-    /// are live (a file), learning stores exist, the lexicon is absent.
     fn runtime() -> (tempfile::TempDir, Runtime) {
-        let directory = tempfile::tempdir().expect("tempdir");
-        let runtime = Runtime::from_directories(
-            Some(UserDirectories {
-                config: directory.path().join("config"),
-                data: directory.path().join("data"),
-                fonts: directory.path().join("fonts"),
-            }),
-            directory.path().join("no-dictionaries"),
-        );
-        (directory, runtime)
+        crate::runtime::temporary_runtime()
     }
 
     fn press(runtime: &Runtime, state: &mut EngineState, keysym: u32, mask: u32) -> Vec<Emit> {

@@ -25,8 +25,17 @@
 namespace fcitx::taigi {
 
 FCITX_DEFINE_LOG_CATEGORY(taigi_log, "taigikeyboard");
+/* No log leaves a release build (`security-rules.md`; the Rust side installs
+ * no logger either, `taigi_linux_platform::install_debug_logger`). CMake's
+ * Release type defines NDEBUG; `while (false)` keeps the streamed operands
+ * type-checked and compiles them away. */
+#ifdef NDEBUG
+#define TAIGI_DEBUG() while (false) FCITX_LOGC(taigi_log, Debug)
+#define TAIGI_ERROR() while (false) FCITX_LOGC(taigi_log, Error)
+#else
 #define TAIGI_DEBUG() FCITX_LOGC(taigi_log, Debug)
 #define TAIGI_ERROR() FCITX_LOGC(taigi_log, Error)
+#endif
 
 namespace {
 

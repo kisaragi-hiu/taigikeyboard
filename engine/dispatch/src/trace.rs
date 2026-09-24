@@ -112,6 +112,47 @@ pub(crate) fn adapter_reject(reason: &'static str, req_bytes: usize) {
     );
 }
 
+/// Whether a trace file is open — lets a platform skip building an event
+/// it would only drop.
+pub fn is_open() -> bool {
+    IS_OPEN.load(Ordering::Acquire)
+}
+
+/// A platform-layer event (key, preedit, candidates, commit — schema doc
+/// § platform layer) in the same file and clock as the engine's. `fields`
+/// is the rest of the JSON object, rendered by the caller; wrap every
+/// string value in [`JsonStr`].
+pub fn event(kind: &'static str, fields: std::fmt::Arguments<'_>) {
+    if !IS_OPEN.load(Ordering::Acquire) {
+        return;
+    }
+    emit(Instant::now(), format_args!(r#""event":"{kind}",{fields}"#));
+}
+
+/// A string as a quoted JSON value, escaped per RFC 8259 §7.
+pub struct JsonStr<'a>(pub &'a str);
+
+impl std::fmt::Display for JsonStr<'_> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use std::fmt::Write as _;
+        formatter.write_char('"')?;
+        for ch in self.0.chars() {
+            match ch {
+                '"' => formatter.write_str("\\\"")?,
+                '\\' => formatter.write_str("\\\\")?,
+                '\n' => formatter.write_str("\\n")?,
+                '\r' => formatter.write_str("\\r")?,
+                '\t' => formatter.write_str("\\t")?,
+                control if u32::from(control) < 0x20 => {
+                    write!(formatter, "\\u{:04x}", u32::from(control))?
+                }
+                other => formatter.write_char(other)?,
+            }
+        }
+        formatter.write_char('"')
+    }
+}
+
 /// Writes one line: the common prefix (`t_us` since `open`, `pid`, `tid`)
 /// then `fields`. No-op until `open` succeeds.
 fn emit(at: Instant, fields: std::fmt::Arguments<'_>) {
@@ -215,6 +256,12 @@ mod tests {
         }
         .encode_to_vec();
         assert_eq!(classify(&bytes), ("composing", 11));
+    }
+
+    #[test]
+    fn json_str_escapes_quotes_backslashes_and_controls() {
+        let rendered = JsonStr("a\"b\\c\nd\u{1}台").to_string();
+        assert_eq!(rendered, r#""a\"b\\c\nd\u0001台""#);
     }
 
     #[test]

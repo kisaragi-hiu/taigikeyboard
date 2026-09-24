@@ -12,6 +12,10 @@ publish.workspace = true
 name = "ibus-engine-taigikeyboard"
 path = "src/main.rs"
 
+[features]
+# Test-build-only trace — docs/architecture/e2e-trace-schema.md.
+e2e-trace = ["taigi-linux-core/e2e-trace"]
+
 [dependencies]
 taigi-desktop-core.workspace = true
 taigi-desktop-storage.workspace = true
@@ -19,7 +23,6 @@ taigi-linux-platform.workspace = true
 taigi-linux-core.workspace = true
 zbus.workspace = true
 log.workspace = true
-env_logger.workspace = true
 thiserror.workspace = true
 
 [lints]

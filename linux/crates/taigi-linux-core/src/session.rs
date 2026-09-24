@@ -117,6 +117,18 @@ pub fn process_raw_key(
     state: &mut EngineState,
     raw: RawKeyEvent,
 ) -> KeyReply {
+    let reply = answer_raw_key(runtime, token, state, raw);
+    #[cfg(feature = "e2e-trace")]
+    crate::trace::key(raw, &reply, state);
+    reply
+}
+
+fn answer_raw_key(
+    runtime: &Runtime,
+    token: ContextToken,
+    state: &mut EngineState,
+    raw: RawKeyEvent,
+) -> KeyReply {
     let unhandled = KeyReply {
         handled: false,
         emits: Vec::new(),
@@ -325,6 +337,8 @@ pub fn process_key(
 /// down. The token's ownership is released so the next context claims a
 /// fresh session.
 pub fn end_session(runtime: &Runtime, token: ContextToken, state: &mut EngineState) -> Vec<Emit> {
+    #[cfg(feature = "e2e-trace")]
+    crate::trace::session_end();
     let mut emits = Vec::new();
     if let Some(coordinator) = runtime.coordinator_if_built() {
         let mut coordinator = coordinator

@@ -24,6 +24,16 @@ CROSS_CARGO := $(shell command -v cargo-zigbuild >/dev/null 2>&1 && echo "cargo 
 PREFIX ?= /usr
 DESTDIR ?=
 VERSION := $(shell grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+# E2E=1 builds the test-mode binaries: engine + platform trace on
+# (docs/architecture/e2e-trace-schema.md). They are never packaged — deb /
+# rpm / arch refuse E2E=1, and a plain `build` proves the trace absent.
+# `make install E2E=1` stays allowed: the e2e driver installs the test-mode
+# build into its own throwaway container.
+E2E ?=
+E2E_TRACE_GUARD := ../engine/scripts/lib/e2e-trace-guard.sh
+define refuse_e2e
+	@if [ "$(E2E)" = 1 ]; then echo "error: E2E=1 binaries are never packaged" >&2; exit 1; fi
+endef
 
 .PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component deb rpm arch run-engine run-settings clean
 
@@ -37,7 +47,7 @@ help:
 	@echo "  make check-cpp     - Syntax-check the Fcitx5 addon against ../references/fcitx5 headers (macOS host; skipped when the clone is absent)"
 	@echo "  make i18n-check    - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt           - cargo fmt"
-	@echo "  make build         - (Linux) cargo build --release (IBus engine + the FFI static library)"
+	@echo "  make build         - (Linux) cargo build --release (IBus engine + the FFI static library); E2E=1 = test-mode trace build"
 	@echo "  make build-fcitx5  - (Linux) the Fcitx5 addon: cmake over the FFI static library (needs fcitx5-modules-dev, extra-cmake-modules)"
 	@echo "  make install       - (Linux) install both shells + dictionaries into PREFIX=$(PREFIX) (DESTDIR honoured)"
 	@echo "  make uninstall     - (Linux) remove what install put there; user data stays"
@@ -92,7 +102,13 @@ fmt:
 	cargo fmt
 
 build:
+ifeq ($(E2E),1)
+	cargo build --release --features taigi-linux-ffi/e2e-trace --features taigikeyboard-ibus/e2e-trace
+	source $(E2E_TRACE_GUARD) && e2e_trace_assert_present target/release/libtaigi_linux_ffi.a target/release/ibus-engine-taigikeyboard
+else
 	cargo build --release
+	source $(E2E_TRACE_GUARD) && e2e_trace_assert_absent target/release/libtaigi_linux_ffi.a target/release/ibus-engine-taigikeyboard
+endif
 
 # The Fcitx5 addon (linux/fcitx5/): CMake against Fcitx5Core, over the static
 # library `build` produced. PREFIX must match the binaries' TAIGIKEYBOARD_PREFIX.
@@ -162,6 +178,7 @@ uninstall:
 DEB_ROOT := target/deb/root
 DEB_FILE := target/taigikeyboard_$(VERSION)_amd64.deb
 deb:
+	$(refuse_e2e)
 	rm -rf target/deb
 	$(MAKE) install PREFIX=/usr DESTDIR=$(CURDIR)/$(DEB_ROOT)
 	install -d $(DEB_ROOT)/DEBIAN target/deb/debian
@@ -192,6 +209,7 @@ endef
 RPM_DIR := target/rpm
 RPM_FILE := target/taigikeyboard-$(VERSION)-1.x86_64.rpm
 rpm:
+	$(refuse_e2e)
 	$(call stage_and_render,$(RPM_DIR),packaging/taigikeyboard.spec.in,$(RPM_DIR)/taigikeyboard.spec)
 	rpmbuild -bb --define "_topdir $(CURDIR)/$(RPM_DIR)" $(RPM_DIR)/taigikeyboard.spec
 	cp $(RPM_DIR)/RPMS/x86_64/taigikeyboard-$(VERSION)-1.x86_64.rpm $(RPM_FILE)
@@ -203,6 +221,7 @@ rpm:
 ARCH_DIR := target/arch
 ARCH_FILE := target/taigikeyboard-$(VERSION)-1-x86_64.pkg.tar.zst
 arch:
+	$(refuse_e2e)
 	$(call stage_and_render,$(ARCH_DIR),packaging/PKGBUILD.in,$(ARCH_DIR)/PKGBUILD)
 	cd $(ARCH_DIR) && PKGDEST=$(CURDIR)/target PKGEXT=.pkg.tar.zst makepkg --force --nodeps
 	test -f $(ARCH_FILE)

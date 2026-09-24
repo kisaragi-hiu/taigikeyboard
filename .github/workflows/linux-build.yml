@@ -104,6 +104,12 @@ jobs:
           TAIGI_REQUIRE_DISPLAY: "1"
         run: xvfb-run -a cargo test --workspace
 
+      # The test-mode trace (docs/architecture/e2e-trace-schema.md); release
+      # packages prove it absent in `make build` (e2e-trace-guard.sh).
+      - name: cargo test (platform trace, e2e-trace on)
+        working-directory: linux
+        run: cargo test -p taigi-linux-core --features e2e-trace
+
       - name: cargo build --release (IBus engine + FFI static library)
         working-directory: linux
         run: cargo build --release -p taigikeyboard-ibus -p taigi-linux-ffi

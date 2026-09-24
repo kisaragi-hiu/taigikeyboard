@@ -13,9 +13,15 @@ taigi-desktop-core.workspace = true
 taigi-desktop-storage.workspace = true
 taigi-linux-platform.workspace = true
 log.workspace = true
+dispatch = { workspace = true, optional = true }
+
+[features]
+# Test-build-only trace — docs/architecture/e2e-trace-schema.md.
+e2e-trace = ["dep:dispatch", "dispatch/e2e-trace"]
 
 [dev-dependencies]
 tempfile.workspace = true
+serde_json.workspace = true
 
 [lints]
 workspace = true

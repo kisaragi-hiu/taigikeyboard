@@ -20,3 +20,16 @@ pub use paths::{
     config_directory, data_directory, dictionaries_directory, install_prefix, settings_binary,
     InstallLayout, UserDirectories,
 };
+
+/// A debug-build logger to stderr (`RUST_LOG`, default `info`) — what the
+/// dev loop (`make run-engine`) reads. Release builds install nothing: no
+/// log leaves a release build (`security-rules.md`; Windows twin
+/// `taigi-windows-platform::install_debug_logger`).
+#[cfg(debug_assertions)]
+pub fn install_debug_logger() {
+    let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .try_init();
+}
+
+#[cfg(not(debug_assertions))]
+pub fn install_debug_logger() {}

@@ -1622,7 +1622,9 @@ dependencies = [
 name = "taigi-linux-core"
 version = "3.6.9"
 dependencies = [
+ "dispatch",
  "log",
+ "serde_json",
  "taigi-desktop-core",
  "taigi-desktop-storage",
  "taigi-linux-platform",
@@ -1633,7 +1635,6 @@ dependencies = [
 name = "taigi-linux-ffi"
 version = "3.6.9"
 dependencies = [
- "env_logger",
  "log",
  "taigi-desktop-core",
  "taigi-linux-core",
@@ -1644,6 +1645,7 @@ dependencies = [
 name = "taigi-linux-platform"
 version = "3.6.9"
 dependencies = [
+ "env_logger",
  "log",
  "taigi-desktop-core",
  "thiserror",
@@ -1654,7 +1656,6 @@ dependencies = [
 name = "taigikeyboard-ibus"
 version = "3.6.9"
 dependencies = [
- "env_logger",
  "log",
  "taigi-desktop-core",
  "taigi-desktop-storage",
@@ -1668,7 +1669,6 @@ dependencies = [
 name = "taigikeyboard-settings"
 version = "3.6.9"
 dependencies = [
- "env_logger",
  "gio",
  "gtk4",
  "libadwaita",

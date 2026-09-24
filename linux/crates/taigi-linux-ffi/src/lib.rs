@@ -163,8 +163,7 @@ fn guarded<T>(what: &str, fallback: T, work: impl FnOnce() -> T) -> T {
 // Runtime
 // ---------------------------------------------------------------------------
 
-/// Initialises logging (`RUST_LOG`, default `info`) once and answers the
-/// crate version; the first call the addon makes.
+/// Answers the crate version; the first call the addon makes.
 #[no_mangle]
 pub extern "C" fn taigi_version() -> *const c_char {
     const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "\0");
@@ -174,8 +173,7 @@ pub extern "C" fn taigi_version() -> *const c_char {
 #[no_mangle]
 pub extern "C" fn taigi_runtime_new() -> *mut TaigiRuntime {
     guarded("taigi_runtime_new", ptr::null_mut(), || {
-        let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-            .try_init();
+        taigi_linux_platform::install_debug_logger();
         log::info!("ffi.runtime_new version={}", env!("CARGO_PKG_VERSION"));
         Box::into_raw(Box::new(TaigiRuntime {
             inner: Arc::new(Runtime::probe()),

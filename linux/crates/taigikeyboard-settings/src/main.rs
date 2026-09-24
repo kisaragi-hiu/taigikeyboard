@@ -5,6 +5,6 @@
 //! engine live-reads (roadmap L3 / L8 / L9).
 
 fn main() -> gtk::glib::ExitCode {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    taigi_linux_platform::install_debug_logger();
     taigikeyboard_settings::run()
 }
