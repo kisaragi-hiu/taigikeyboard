@@ -170,6 +170,7 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
 /// [`crate::continuous::assemble_candidates`]; this fn does the
 /// phase/hanzi/position guards, the proto→domain hoists, and the wire
 /// encoding around it.
+#[allow(clippy::too_many_arguments)]
 fn handle_fetch_at_pos(
     engine: &Engine,
     position: u32,

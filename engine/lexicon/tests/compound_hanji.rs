@@ -4,8 +4,8 @@
 //! (`composing::api::nailed_prefix`) uses to decide whether a contiguous
 //! run of manually-nailed single-syllable segments reconstructs a known
 //! n-syllable compound (查某 → `tsa-bóo`, 紅尾冬 → `Âng-bóe-tang`) and
-//! therefore renders its internal boundaries as hyphens. Synthetic FST
-//! + dict.bin so the contract does not depend on shipped dictionary
+//! therefore renders its internal boundaries as hyphens. Synthetic FST +
+//! dict.bin so the contract does not depend on shipped dictionary
 //! data.
 //!
 //! v3.5.9 extended the v3.5.8 §10.2 Option A bigram-only oracle to

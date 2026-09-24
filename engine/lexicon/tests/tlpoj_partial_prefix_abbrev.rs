@@ -1,6 +1,6 @@
 //! Regression: TL/POJ continuous partial-prefix must surface single-char
-//! readings for a single-initial input (e.g. `s`), not only the `sa`-family
-//! + multi-syllable phrases (surfaced 2026-06-16 while building the
+//! readings for a single-initial input (e.g. `s`), not only the `sa`-family +
+//! multi-syllable phrases (surfaced 2026-06-16 while building the
 //! cross-mode parity test: typing `s` in TL/POJ buried 是/sī, the highest-
 //! freq `s` word, behind a wall of `tl:sb`-keyed 2-syllable phrases).
 //!

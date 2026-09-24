@@ -29,8 +29,8 @@
 //!   (S22 excludes TPS). Disabled via `literal_roman_candidate_disabled` AND
 //!   `hanji.is_some()` filter, so it never enters the set.
 //! - Candidate ORDER differs between modes (ranking) → compare SETs.
-//! - Only COMPLETE single syllables are compared (`consumed_span == (0, len)`
-//!   + `syllable_count == 1`), excluding Step-4b multi-syllable extensions —
+//! - Only COMPLETE single syllables are compared (`consumed_span == (0, len)` +
+//!   `syllable_count == 1`), excluding Step-4b multi-syllable extensions —
 //!   those are a different (ranking-capped) path, not this invariant.
 //! - Sampling excludes tone-1 words (TPS tone-1 has no mark → toneless →
 //!   superset) and `tps_notone_var` (er↔or dialect) words to shrink the

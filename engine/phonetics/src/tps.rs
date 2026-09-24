@@ -88,9 +88,7 @@ pub fn is_tps_vowel_material(c: char) -> bool {
     if matches!(c, '\u{31ac}' | '\u{3123}' | '\u{31ad}') {
         return false;
     }
-    ZHUYIN_VOWELS
-        .iter()
-        .any(|(_, glyph)| glyph.chars().next() == Some(c))
+    ZHUYIN_VOWELS.iter().any(|(_, glyph)| glyph.starts_with(c))
 }
 
 pub(crate) const ZHUYIN_TONES: &[(&str, &str)] = &[
