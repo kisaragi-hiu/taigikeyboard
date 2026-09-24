@@ -325,12 +325,13 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   panel indicator text — IBus shows an engine's symbol in the top bar) and whose
   sub-properties mirror the Mac's input-source menu row for row
   (`InputSourceMenuRenderer.swift`, `TaigiInputController.swift:372-`): the two switch rows
-  under their 快捷鍵-pane names with the recorded chord in the tooltip, a separator, 設定
+  under their 快捷鍵-pane names with the recorded chord in the tooltip, a separator, 台語齒盤設定
   (`PropertyActivate` → spawn the settings window on the last pane), a separator, 檢查更新
   (settings window on 一般 with `--check-now`, § L10), 關於 (settings window on the 關於
   pane). Titles are resolved from
   `taigi-desktop-core::strings` in the display language each time the rows are built
-  (PR5, `chrome::menu_items`; one list, both shells). **Mode label** (PR5,
+  (PR5, `chrome::menu_items`; one list, both shells — since 2026-09-25 the rows themselves
+  are `taigi_desktop_core::keys::MENU`, shared with Windows and held equal to the Mac's by test). **Mode label** (PR5,
   `chrome::mode_label`) = `<romanization> · <candidate display mode>` (`台羅 · 漢字優先`),
   the two states the chords switch; a switch emits `Emit::ModeLabel` (the shell re-reads it)
   and `Emit::AnnounceMode` — Fcitx5 `Instance::showInputMethodInformation`, the

@@ -15,7 +15,9 @@ use crate::runtime::Runtime;
 use crate::selection::LookupSelection;
 use crate::session::{self, EngineState, SymbolPicker, PAGE_SIZE};
 use taigi_desktop_core::composing::ContextToken;
-use taigi_desktop_core::keys::{telex_guide_rows, ComposingKeyBindings, ShortcutAction};
+use taigi_desktop_core::keys::{
+    menu_rows, telex_guide_rows, ComposingKeyBindings, MenuCommand, ShortcutAction, MENU,
+};
 use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument};
 use taigi_desktop_core::strings::StringKey;
 use taigi_desktop_core::symbols::SymbolTable;
@@ -42,49 +44,33 @@ pub enum MenuItem {
     Separator,
 }
 
-/// The rows, in the Mac's order (`TaigiInputController.menu()`, the
-/// Windows `menu_rows`): the two switch rows under their 快捷鍵-pane names —
-/// romanization and candidate display mode, the Windows
-/// `MENU_SHORTCUT_ROWS`; not the 漢羅對調 swap, whose bare-backtick default
-/// the Mac's menu can never print — 台語齒盤設定 (Fcitx5 lists its own 輸入法設定
-/// in the same menu), then 檢查更新 and 關於 (roadmap L10).
+/// The rows every desktop shares (`taigi_desktop_core::keys::MENU`: the
+/// two switches, 台語齒盤設定 — Fcitx5 lists its own 輸入法設定 in the same
+/// menu — then 檢查更新 and 關於), each with its Linux id.
 pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
-    let strings = runtime.strings();
     let settings = runtime.settings.current();
-    let row = |id: &'static str, action: ShortcutAction, title: StringKey| MenuItem::Action {
-        id,
-        title: strings.resolve(title).to_owned(),
-        detail: action.chord_in(&settings).map(|chord| chord.display()),
-    };
-    vec![
-        row(
-            ShortcutAction::ToggleRomanization.raw(),
-            ShortcutAction::ToggleRomanization,
-            ShortcutAction::ToggleRomanization.label_key(),
-        ),
-        row(
-            ShortcutAction::CycleCandidateDisplayMode.raw(),
-            ShortcutAction::CycleCandidateDisplayMode,
-            ShortcutAction::CycleCandidateDisplayMode.label_key(),
-        ),
-        MenuItem::Separator,
-        row(
-            MENU_SETTINGS,
-            ShortcutAction::OpenLastSettingsPane,
-            StringKey::DesktopMenuSettings,
-        ),
-        MenuItem::Separator,
-        MenuItem::Action {
-            id: MENU_CHECK_UPDATES,
-            title: strings.resolve(StringKey::DesktopUpdateCheckNow).to_owned(),
-            detail: None,
-        },
-        MenuItem::Action {
-            id: MENU_ABOUT,
-            title: strings.resolve(StringKey::DesktopAboutTab).to_owned(),
-            detail: None,
-        },
-    ]
+    menu_rows(&runtime.strings(), &settings)
+        .into_iter()
+        .map(|row| match row {
+            Some(row) => MenuItem::Action {
+                id: menu_id(row.command),
+                title: row.title,
+                detail: row.chord,
+            },
+            None => MenuItem::Separator,
+        })
+        .collect()
+}
+
+/// A command's row id — what `activate_menu` takes back. A shortcut row is
+/// its action's persisted raw spelling.
+fn menu_id(command: MenuCommand) -> &'static str {
+    match command {
+        MenuCommand::Shortcut(action) => action.raw(),
+        MenuCommand::OpenSettings => MENU_SETTINGS,
+        MenuCommand::CheckForUpdates => MENU_CHECK_UPDATES,
+        MenuCommand::About => MENU_ABOUT,
+    }
 }
 
 /// The label the panel shows beside the icon: the romanization and the
@@ -123,28 +109,27 @@ pub fn activate_menu(
     state: &mut EngineState,
     id: &str,
 ) -> Vec<Emit> {
-    match id {
-        MENU_SETTINGS => {
+    let command = MENU
+        .into_iter()
+        .flatten()
+        .find(|command| menu_id(*command) == id);
+    match command {
+        Some(MenuCommand::Shortcut(action)) => perform_global(runtime, token, state, action),
+        Some(MenuCommand::OpenSettings) => {
             perform_global(runtime, token, state, ShortcutAction::OpenLastSettingsPane)
         }
-        MENU_CHECK_UPDATES => {
+        Some(MenuCommand::CheckForUpdates) => {
             check_for_updates();
             Vec::new()
         }
-        MENU_ABOUT => {
+        Some(MenuCommand::About) => {
             open_settings(Some("about"));
             Vec::new()
         }
-        other => match ShortcutAction::ALL
-            .into_iter()
-            .find(|action| action.raw() == other)
-        {
-            Some(action) => perform_global(runtime, token, state, action),
-            None => {
-                log::warn!("menu.unknown_row id={other}");
-                Vec::new()
-            }
-        },
+        None => {
+            log::warn!("menu.unknown_row id={id}");
+            Vec::new()
+        }
     }
 }
 
@@ -518,7 +503,7 @@ mod tests {
     }
 
     #[test]
-    fn the_menu_mirrors_the_mac_rows_and_a_row_switches_the_romanization() {
+    fn the_menu_is_the_shared_rows_and_a_row_switches_the_romanization() {
         let (_directory, runtime) = runtime();
         let ids: Vec<&str> = menu_items(&runtime)
             .iter()
@@ -548,8 +533,8 @@ mod tests {
         assert_eq!(emits, vec![Emit::ModeChanged, Emit::AnnounceMode]);
         assert_eq!(mode_symbol(&runtime).chars().count(), 2);
 
-        // The second row cycles the candidate display mode (Windows
-        // `MENU_SHORTCUT_ROWS`), which the label's second half names.
+        // The second row cycles the candidate display mode (`keys::MENU`),
+        // which the label's second half names.
         let label_before = mode_label(&runtime);
         let emits = activate_menu(
             &runtime,

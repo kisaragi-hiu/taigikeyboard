@@ -1869,9 +1869,11 @@
       }
     },
     "menuSettings": {
-      "comment": "Linux input-method menu row that opens the settings window. Names the keyboard because Fcitx5 lists its own 輸入法設定 in the same menu (Mozc: 「Mozc 設定」); wording from a Discord report 2026-09-24.",
+      "comment": "Input-method menu row that opens the settings window, on all three desktops (USER 2026-09-24: menus identical incl. i18n). Names the keyboard because Fcitx5 lists its own 輸入法設定 in the same menu (Mozc: 「Mozc 設定」); wording from a Discord report 2026-09-24.",
       "scope": {
         "platforms": [
+          "macos",
+          "windows",
           "linux"
         ],
         "surfaces": [
