@@ -340,12 +340,14 @@ jobs:
             install: >-
               apt-get update &&
               DEBIAN_FRONTEND=noninteractive apt-get install -y ./taigikeyboard_*_amd64.deb
-              fcitx5 ibus dbus-daemon dbus-bin
+              fcitx5 ibus dbus-daemon dbus-bin xvfb x11-xkb-utils
             addon: /usr/lib/x86_64-linux-gnu/fcitx5/libtaigikeyboard.so
           - distro: fedora
             image: fedora:44
             artifact: linux-rpm
-            install: dnf install -y ./taigikeyboard-*.x86_64.rpm fcitx5 ibus dbus-daemon dbus-tools
+            install: >-
+              dnf install -y ./taigikeyboard-*.x86_64.rpm fcitx5 ibus dbus-daemon dbus-tools
+              xorg-x11-server-Xvfb setxkbmap
             addon: /usr/lib64/fcitx5/libtaigikeyboard.so
           - distro: arch
             image: archlinux:latest
@@ -353,15 +355,27 @@ jobs:
             install: >-
               pacman -Syu --noconfirm &&
               pacman -U --noconfirm ./taigikeyboard-*-x86_64.pkg.tar.zst &&
-              pacman -S --noconfirm --needed ibus dbus
+              pacman -S --noconfirm --needed ibus dbus xorg-server-xvfb xorg-setxkbmap
             addon: /usr/lib/fcitx5/libtaigikeyboard.so
     steps:
       - uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.artifact }}
 
-      - name: Install the package (+ both frameworks and the D-Bus tools)
+      - name: Install the package (+ both frameworks, D-Bus tools, a virtual display)
         run: ${{ matrix.install }}
+
+      # What every desktop has and a bare container lacks: a machine id (IBus
+      # names its bus address file after it) and a display (`ibus engine`
+      # runs setxkbmap on it). Xvfb stays up for the later steps.
+      - name: Machine id + virtual display
+        shell: bash
+        run: |
+          set -eu
+          [ -s /etc/machine-id ] || tr -d - < /proc/sys/kernel/random/uuid > /etc/machine-id
+          Xvfb :99 -nolisten tcp > "$RUNNER_TEMP/xvfb.log" 2>&1 &
+          for i in $(seq 1 20); do [ -e /tmp/.X11-unix/X99 ] && break; sleep 0.5; done
+          [ -e /tmp/.X11-unix/X99 ] || { cat "$RUNNER_TEMP/xvfb.log"; exit 1; }
 
       - name: Files in place, every linked library resolved
         shell: bash
@@ -390,11 +404,8 @@ jobs:
       # spawned the binary and CreateEngine answered.
       - name: IBus spawns the engine
         shell: bash
-        # No X server: the display name only names the bus address file both
-        # the daemon and the engine resolve (~/.config/ibus/bus/<id>-unix-<n>);
-        # `--panel disable` keeps the daemon off the display.
         env:
-          DISPLAY: ":0"
+          DISPLAY: ":99"
         run: |
           set -euxo pipefail
           export XDG_CONFIG_HOME="$RUNNER_TEMP/xdg-config" XDG_DATA_HOME="$RUNNER_TEMP/xdg-data"
@@ -415,6 +426,8 @@ jobs:
       # name, true)); addonmanager.cpp logs "Loaded addon <name>" on success.
       - name: Fcitx5 lists the input method and loads the addon
         shell: bash
+        env:
+          DISPLAY: ":99"
         run: |
           set -euxo pipefail
           export XDG_CONFIG_HOME="$RUNNER_TEMP/xdg-config" XDG_DATA_HOME="$RUNNER_TEMP/xdg-data"
