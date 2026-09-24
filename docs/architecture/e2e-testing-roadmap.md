@@ -2,7 +2,7 @@
 
 > **Type**: Planning (design record + PR table; becomes Reference once shipped)
 > **Keywords**: `e2e`, `test mode`, `trace`, `simulator`, `emulator`, `VM`, `container`, `scenario`, `perf`, `Xvfb`, `xdotool`, `UiAutomator`
-> **Status**: Phase 0 — plan written 2026-09-24; Codex ANALYSIS-ONLY pre-review 2026-09-24 = REVISE (revisions applied below); spikes S-A–S-D run 2026-09-24 (§ Spikes — results).
+> **Status**: Linux live (PR1–PR3b merged 2026-09-24: `make e2e PLATFORM=linux`, CI `linux-e2e.yml`, skill `/e2e`); PR4–PR8 pending. Phase 0 plan written 2026-09-24; Codex ANALYSIS-ONLY pre-review 2026-09-24 = REVISE (revisions applied below); spikes S-A–S-D run 2026-09-24 (§ Spikes — results).
 > **Session memory**: project memory `project_e2e_test_system.md` (Claude auto-memory)
 
 ---
@@ -125,8 +125,8 @@ PR1/PR2 of the first draft were over the 500-LOC cap (Codex) — split below.
 | 0 | this roadmap + project memory + `docs/README.md` row | this commit |
 | PR1 | engine `e2e-trace` feature threaded through every FFI crate, dispatch events, `e2e_trace_open`, marker string, traced-artifact build paths, release-graph absence check in `engine.yml`, `e2e-trace-schema.md` | Merged #162 `18a20c80` 2026-09-24 |
 | PR2 | `e2e/scenarios` intent format + 3 seed scenarios, `tools/e2e/analyze.py` (stdlib) + tests, report format | Merged #163 `5fc7b825` 2026-09-24 |
-| PR3a | Linux: release zero-log (`taigi_linux_platform::install_debug_logger`, Fcitx5 `NDEBUG` macros), `e2e-trace` through `taigi-linux-core` / `-ffi` / `-ibus`, platform events (`key` / `preedit` / `commit` / `candidates` / `session_end`), `make build E2E=1` + package refusal + release guard | In progress — `feat/e2e-linux-trace` |
-| PR3b | Linux: driver `tools/e2e/linux/driver.py` (Xvfb + D-Bus + Fcitx5 / IBus + GTK 3 host + xdotool, test-mode build in a private prefix), `make e2e PLATFORM=linux` → UTM VM (`tools/e2e/linux/run.sh`), CI `linux-e2e.yml` (Ubuntu 24.04 runner), `/e2e` skill | In progress — `feat/e2e-linux-driver` |
+| PR3a | Linux: release zero-log (`taigi_linux_platform::install_debug_logger`, Fcitx5 `NDEBUG` macros), `e2e-trace` through `taigi-linux-core` / `-ffi` / `-ibus`, platform events (`key` / `preedit` / `commit` / `candidates` / `session_end`), `make build E2E=1` + package refusal + release guard | Merged #165 `34ae8d27` 2026-09-24 |
+| PR3b | Linux: driver `tools/e2e/linux/driver.py` (Xvfb + D-Bus + Fcitx5 / IBus + GTK 3 host + xdotool, test-mode build in a private prefix), `make e2e PLATFORM=linux` → UTM VM (`tools/e2e/linux/run.sh`), CI `linux-e2e.yml` (Ubuntu 24.04 runner), `/e2e` skill | Merged #166 `26c03a34` 2026-09-24 (VM + CI 6/6 PASS) |
 | PR4 | Linux: CI matrix Ubuntu 24.04 / Debian 13 / Fedora 44 / Arch × {Fcitx5, IBus}, each container building `make install E2E=1` from source against its own libraries (packages are never traced — PR3a; the shipped packages keep their `install-check` job) | Pending |
 | PR5 | macOS: `-DE2E_TRACE` events, CGEvent driver + host app | Pending |
 | PR6 | Windows: TSF events, `/IT` interactive-session `SendInput` driver over `ssh win`; skip when box off / locked | Pending |
