@@ -6,7 +6,7 @@ output/version_diff.txt
 # workspace, then `build/deploy.sh` copies them to the repo-root `dictionaries/`,
 # which is where they are committed and where every platform packages them from.
 # Tracking both copies is what let four platform directories drift apart.
-# `output/dictionary.csv`, `output/corpus_total_freq.txt` and `output/.build_ts`
+# `output/dictionary.csv` and `output/corpus_total_freq.txt`
 # stay tracked — they are pipeline inputs to the dictionary tools, not shipped.
 output/dictionary.fst
 output/dictionary.bin

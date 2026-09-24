@@ -8,3 +8,24 @@
 *.fst -text
 *.ttf -text
 *.otf -text
+
+# Generated files, committed so every platform builds without the generator.
+# `linguist-generated` collapses them in pull-request diffs and keeps them out of
+# the language statistics. Regenerate, never hand-edit:
+#   protobuf bindings  make protos         (checked in CI: checks.yml `protos`)
+#   i18n resources     make i18n           (checked in CI: checks.yml `i18n`)
+#   dictionary         make dict
+android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/** linguist-generated
+ios/Sources/TaigiKeyboard/Engine/Generated/** linguist-generated
+macos/Sources/TaigiInputMethodCore/Engine/Generated/** linguist-generated
+android/app/src/main/java/com/siansiansu/taigikeyboard/i18n/generated/** linguist-generated
+android/app/src/main/res/values*/strings_i18n.xml linguist-generated
+ios/Sources/TaigiKeyboard/Strings/Generated/** linguist-generated
+macos/Sources/TaigiInputMethodCore/Strings/Generated/** linguist-generated
+macos/App/*.lproj/InfoPlist.strings linguist-generated
+ios/Localizable.xcstrings linguist-generated
+desktop/crates/taigi-desktop-core/src/strings/generated.rs linguist-generated
+windows/build-support/product_name_strings.rs linguist-generated
+windows/installer/Messages.iss linguist-generated
+dictionaries/** linguist-generated
+dictionary/output/** linguist-generated

@@ -12,7 +12,7 @@ Binary 格式（little-endian）：
     version:     u32      1
     key_count:   u32      unique prev_word count
     entry_count: u32      total entry count
-    build_ts:    u32      Unix timestamp (must match dictionary.bin)
+    build_ts:    u32      build id, same as dictionary.bin (common.build_id)
 
   Key offset table (key_count × u32):
     Absolute byte offset from file start to each key entry
@@ -44,7 +44,7 @@ import struct
 import sys
 
 from build.associations import AssociationEntry, compute_associations
-from build.common import LOG_DIR, OUTPUT_DIR, read_shared_build_timestamp
+from build.common import LOG_DIR, OUTPUT_DIR, build_id
 from common.logging_utils import log_header, setup_logging
 from common.source_bits import ASSOC_SOURCE_COLUMNS
 
@@ -91,8 +91,8 @@ def build(logger):
         logger.error(f"CSV not found: {CSV_FILE}")
         sys.exit(1)
 
-    build_ts = read_shared_build_timestamp()
-    logger.info(f"Build timestamp: {build_ts}")
+    build_ts = build_id()
+    logger.info(f"Build id: {build_ts}")
 
     grouped = compute_associations(CSV_FILE)
 

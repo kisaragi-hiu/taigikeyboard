@@ -21,6 +21,9 @@ on:
       - 'e2e/**'
       - 'tools/e2e/**'
       - 'engine/protos/proto/**'
+      - 'engine/scripts/gen-platform-protos.sh'
+      - 'android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/**'
+      - 'android/app/build.gradle.kts'
       - '.github/workflows/checks.yml'
   push:
     branches: [main]
@@ -35,6 +38,9 @@ on:
       - 'e2e/**'
       - 'tools/e2e/**'
       - 'engine/protos/proto/**'
+      - 'engine/scripts/gen-platform-protos.sh'
+      - 'android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/**'
+      - 'android/app/build.gradle.kts'
       - '.github/workflows/checks.yml'
 
 permissions:
@@ -49,6 +55,11 @@ env:
   # so an unpinned lint would disagree with `swiftformat ios macos` locally.
   SWIFTFORMAT_VERSION: 0.63.0
   SWIFTFORMAT_SHA256: b4a3cbb8c852a0baaf9adf853e221ff1dabf921a3d8957a602e0bda3af8470f1
+  # The Java bindings' compiler — must equal the protobuf-javalite pin
+  # (android/app/build.gradle.kts), which gen-platform-protos.sh --java-only
+  # enforces. Not engine.yml's 36.1: that one only feeds prost.
+  PROTOC_JAVA_VERSION: "36.0"
+  PROTOC_JAVA_SHA256: bc8211ce760bd43ee21ddc145d6d9dbaeeabae205267a79d9054a240e367d4b4
 
 jobs:
   e2e-analyzer:
@@ -105,3 +116,56 @@ jobs:
           set -euo pipefail
           swiftformat --lint ios
           swiftformat --lint macos
+
+  # The committed protobuf bindings match engine/protos/proto/. Java is
+  # regenerated and compared — the same .proto drives Java and Swift, so a
+  # forgotten `make protos` shows here. protoc-gen-swift has no Linux binary, so
+  # Swift is checked structurally: one .pb.swift per .proto, and the iOS and
+  # macOS copies identical (both come from the same generator and options).
+  protos:
+    name: protobuf bindings current
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install protoc ${{ env.PROTOC_JAVA_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_JAVA_VERSION}/protoc-${PROTOC_JAVA_VERSION}-linux-x86_64.zip"
+          echo "${PROTOC_JAVA_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+
+      # Emptied first, so a binding whose .proto was deleted shows as a deletion.
+      - name: Java bindings are current
+        run: |
+          set -euo pipefail
+          java_dir=android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto
+          rm -rf "$java_dir"
+          bash engine/scripts/gen-platform-protos.sh --java-only
+          if [ -n "$(git status --porcelain -- "$java_dir")" ]; then
+            git status --short -- "$java_dir"
+            echo "::error::Java protobuf bindings are stale — run \`make protos\` (protoc 36.0) and commit the result."
+            exit 1
+          fi
+
+      - name: Swift bindings cover every .proto
+        run: |
+          set -euo pipefail
+          ios=ios/Sources/TaigiKeyboard/Engine/Generated
+          mac=macos/Sources/TaigiInputMethodCore/Engine/Generated
+          protos=$(cd engine/protos/proto && ls *.proto | sed 's/\.proto$//' | sort)
+          swift=$(cd "$ios" && ls *.pb.swift | sed 's/\.pb\.swift$//' | sort)
+          if [ "$protos" != "$swift" ]; then
+            diff <(echo "$protos") <(echo "$swift") || true
+            echo "::error::$ios needs exactly one .pb.swift per .proto — run \`make protos\`."
+            exit 1
+          fi
+          if ! diff -r "$ios" "$mac" >/dev/null; then
+            diff -rq "$ios" "$mac" || true
+            echo "::error::iOS and macOS Swift bindings differ — run \`make protos\` to regenerate both."
+            exit 1
+          fi
+

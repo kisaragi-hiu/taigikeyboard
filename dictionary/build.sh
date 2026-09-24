@@ -3,10 +3,10 @@
 # Dictionary build entry point — every run is a full rebuild + deploy.
 # Pipeline:
 #   1. merge_csv              - merge source CSVs (drop stats -> .build_stats.json)
-#   2. create_dictionary_bin  - dictionary.bin (binary mmap) + shared build_ts
+#   2. create_dictionary_bin  - dictionary.bin (binary mmap)
 #   3. create_fst             - dictionary.fst prefix index (tl:/poj:/tps:/hanzi:)
 #   4. create_syllables_fst   - syllables.fst inventory (tl:/poj:/tps: tagged single FST)
-#   5. create_association_bin - association.bin (binary mmap), reusing build_ts
+#   5. create_association_bin - association.bin (binary mmap)
 #   6. verify_poj_integrity   - fail-fast POJ invariant gate
 #   7. version_snapshot       - drop summary + word-keys.tsv diff vs previous release tag
 #   8. verify_known_keys      - fst fixture check (known keys such as poj:chi2)

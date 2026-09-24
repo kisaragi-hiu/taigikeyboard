@@ -11,7 +11,7 @@ Binary 格式（version 3,little-endian）：
     magic:    4 bytes  "TKDB"
     version:  u32      3
     count:    u32      record count
-    build_ts: u32      Unix timestamp
+    build_ts: u32      build id — CRC-32 of output/dictionary.csv (common.build_id)
 
   Offset table (count × 4 bytes):
     offsets[0..N-1]: u32  absolute byte offset from file start to record
@@ -51,7 +51,7 @@ import struct
 import sys
 from pathlib import Path
 
-from build.common import LOG_DIR, OUTPUT_DIR, start_new_build_timestamp
+from build.common import LOG_DIR, OUTPUT_DIR, build_id
 from build.dictionary_records import DictionaryRecord, load_dictionary_records
 from common.logging_utils import log_header, setup_logging
 from common.source_bits import DICT_BIN_COLUMNS, KAUTIAN_SUBTAG_USED_MASK
@@ -171,8 +171,8 @@ def build(logger):
         logger.error(f"CSV not found: {CSV_FILE}")
         sys.exit(1)
 
-    build_ts = start_new_build_timestamp()
-    logger.info(f"Build timestamp: {build_ts}")
+    build_ts = build_id()
+    logger.info(f"Build id: {build_ts}")
 
     records = load_dictionary_records(CSV_FILE)
     count = len(records)

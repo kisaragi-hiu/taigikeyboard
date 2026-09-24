@@ -34,7 +34,7 @@ All formats use **little-endian** integers and **strict UTF-8** strings. The Rus
 |   "TKDB"                4 bytes                   |
 |   version (u32 LE)      4 bytes  (currently 3)    |
 |   record_count (u32 LE) 4 bytes                   |
-|   build_ts (u32 LE)     4 bytes  (unix epoch)     |
+|   build_ts (u32 LE)     4 bytes  (build id)       |
 +---------------------------------------------------+
 | Offset table                                      |
 |   record_count × u32 LE                           |
@@ -375,9 +375,9 @@ The Python build pipeline lives at `dictionary/build/`. Steps relevant to the fo
 | `merge_csv.py` | `dictionary.csv` | merged per-source CSVs + khiin/dev/lkk supplements |
 | `dictionary_records.py` | (in-memory) | filtered records + rowid 1..N — shared by `create_dictionary_bin` + `create_fst` |
 | `associations.py` | (in-memory) | bigram + char-to-phrase generator — shared by `create_association_bin` |
-| `create_dictionary_bin.py` | `dictionary.bin` | TKDB format per §1; writes shared `.build_ts` |
+| `create_dictionary_bin.py` | `dictionary.bin` | TKDB format per §1; `build_ts` = `common.build_id()` (CRC-32 of `dictionary.csv`) |
 | `create_fst.py` | `dictionary.fst` | shells to `engine/build-helpers/fst-builder` (Rust) for fst encoding |
-| `create_association_bin.py` | `association.bin` | TKWA format per §2; reads shared `.build_ts` |
+| `create_association_bin.py` | `association.bin` | TKWA format per §2; same `build_ts` as `dictionary.bin` |
 | `verify_poj_integrity.py` | (exit code) | fatal gate: halts build if `poj`/derived ≠ `convert_tl_to_poj(tl)` |
 | `version_snapshot.py` | drop/diff summary (stdout + `output/version_diff.txt`) | build-drop + `(hanzi, tl)` diff vs previous release tag's `dictionary.csv` (read via `git show`; no file stored) |
 | `deploy.sh` | bundles into platform asset directories | iOS bundle + Android assets |
