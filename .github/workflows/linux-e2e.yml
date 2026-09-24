@@ -1,13 +1,19 @@
 name: Linux e2e
 
 # The end-to-end run on a real Linux (docs/architecture/e2e-testing-roadmap.md,
-# PR3b): the test-mode build (`make -C linux install E2E=1`) installed into a
-# private prefix, every e2e/scenarios/*.json typed through xdotool into a
-# GTK entry via Fcitx5 and via IBus under Xvfb, then tools/e2e/analyze.py.
-# The run directory (traces + report.md) is kept as the `linux-e2e` artifact.
+# PR3b + PR4): in a distribution's own container, the test-mode build
+# (`make -C linux install E2E=1`) compiled against THAT distribution's
+# libraries and installed into a private prefix, every e2e/scenarios/*.json
+# typed through xdotool into a GTK entry via Fcitx5 and via IBus under Xvfb,
+# then tools/e2e/analyze.py. Each run directory (traces + report.md) is kept
+# as the `linux-e2e-<distro>` artifact. The shipped packages are never traced
+# (PR3a); their own install check lives in linux-build.yml.
 #
 # USER 2026-09-24: runs on PRs touching linux/, engine/ or e2e/, plus dispatch;
 # desktop/, dictionaries/ and tools/e2e/ are what those builds read too.
+# Pull requests run Ubuntu only, so a PR waits for one job; the whole
+# distribution matrix runs nightly (USER 2026-09-24: 台灣凌晨 3:00 = 19:00
+# UTC) and on demand. A scheduled failure mails whoever last edited the cron.
 on:
   pull_request:
     paths:
@@ -18,6 +24,8 @@ on:
       - 'e2e/**'
       - 'tools/e2e/**'
       - '.github/workflows/linux-e2e.yml'
+  schedule:
+    - cron: '0 19 * * *'
   workflow_dispatch:
 
 permissions:
@@ -32,35 +40,45 @@ env:
 
 jobs:
   e2e:
-    name: scenarios through Fcitx5 + IBus
+    name: scenarios through Fcitx5 + IBus (${{ matrix.distro }})
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    container: ${{ fromJSON('{"ubuntu":"ubuntu:24.04","debian":"debian:13","fedora":"fedora:44","arch":"archlinux:latest"}')[matrix.distro] }}
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        distro: ${{ fromJSON(github.event_name == 'pull_request' && '["ubuntu"]' || '["ubuntu","debian","fedora","arch"]') }}
+    # A container's default `sh` is dash on Ubuntu, which has no pipefail.
+    defaults:
+      run:
+        shell: bash
     steps:
+      # Before the deps: a container without git gets the tree through the
+      # REST API, which is all the build needs.
       - uses: actions/checkout@v4
 
       - name: Install build + e2e dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            ibus ibus-gtk3 dbus-daemon dbus-x11 xvfb xauth xdotool \
-            python3-gi gir1.2-gtk-3.0 fcitx5 fcitx5-frontend-gtk3 \
-            libgtk-4-dev libadwaita-1-dev pkg-config \
-            fcitx5-modules-dev extra-cmake-modules cmake ninja-build
+        run: bash tools/e2e/linux/ci-deps.sh ${{ matrix.distro }}
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
           curl -sSL -o /tmp/protoc.zip \
             "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          sudo unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+          unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
 
+      # Arch ships rustup as a package; everywhere else it comes from rustup.rs.
       - name: Install Rust toolchain
         run: |
-          rustup toolchain install stable --profile minimal --no-self-update
-          rustup default stable
+          if command -v rustup >/dev/null; then
+            rustup default stable
+          else
+            curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+          fi
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - uses: Swatinem/rust-cache@v2
         with:
-          # Same workspaces as linux-build.yml, so the two jobs share a cache.
+          key: e2e-${{ matrix.distro }}
           workspaces: |
             linux -> target
             desktop -> target
@@ -71,22 +89,31 @@ jobs:
       - name: Drive every scenario (Fcitx5, then IBus)
         run: |
           set -euo pipefail
-          for framework in fcitx5 ibus; do
+          xvfb-run -a dbus-run-session -- python3 tools/e2e/linux/driver.py \
+            --framework fcitx5 --prefix "$RUNNER_TEMP/prefix" --out "$RUNNER_TEMP/run"
+          # Fedora: ibus-daemon never lists the test engine (only the system
+          # xkb engines) — root cause open, USER 2026-09-24 skip + its own
+          # round. Recorded as `skipped` so the report still shows it.
+          if [ "${{ matrix.distro }}" = fedora ]; then
+            python3 tools/e2e/linux/driver.py --framework ibus --out "$RUNNER_TEMP/run" \
+              --skip "Fedora: ibus-daemon does not list the test engine (open issue)"
+          else
             xvfb-run -a dbus-run-session -- python3 tools/e2e/linux/driver.py \
-              --framework "$framework" --prefix "$RUNNER_TEMP/prefix" --out "$RUNNER_TEMP/run"
-          done
+              --framework ibus --prefix "$RUNNER_TEMP/prefix" --out "$RUNNER_TEMP/run"
+          fi
 
       - name: Analyze
         run: python3 tools/e2e/analyze.py --run "$RUNNER_TEMP/run"
 
       - name: Report
         if: always()
-        run: cat "$RUNNER_TEMP/run/report.md" >> "$GITHUB_STEP_SUMMARY" || true
+        run: |
+          { echo "### ${{ matrix.distro }}"; cat "$RUNNER_TEMP/run/report.md"; } >> "$GITHUB_STEP_SUMMARY" || true
 
       - name: Keep the run
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: linux-e2e
+          name: linux-e2e-${{ matrix.distro }}
           path: ${{ runner.temp }}/run
           if-no-files-found: ignore
