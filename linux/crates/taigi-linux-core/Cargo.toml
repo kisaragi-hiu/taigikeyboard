@@ -18,6 +18,8 @@ dispatch = { workspace = true, optional = true }
 [features]
 # Test-build-only trace — docs/architecture/e2e-trace-schema.md.
 e2e-trace = ["dep:dispatch", "dispatch/e2e-trace"]
+# Compile out all Linux update-check entry points.
+disable-updates = []
 
 [dev-dependencies]
 tempfile.workspace = true

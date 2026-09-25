@@ -7,11 +7,13 @@
 
 use super::PageContext;
 use crate::presentation::display_language_label;
+#[cfg(not(feature = "disable-updates"))]
 use crate::updates::INSTALLED_VERSION;
 use adw::prelude::*;
 use taigi_desktop_core::keys::ToneInputScheme;
 use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SettingsDocument};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey};
+#[cfg(not(feature = "disable-updates"))]
 use taigi_desktop_update::checker;
 
 /// The 輸出 pop-up's roster: the stored swap as the two scripts it picks
@@ -98,9 +100,12 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     );
     page.add(&group);
 
-    let version_group = adw::PreferencesGroup::new();
-    version_group.add(&update_row(&mut context));
-    page.add(&version_group);
+    #[cfg(not(feature = "disable-updates"))]
+    {
+        let version_group = adw::PreferencesGroup::new();
+        version_group.add(&update_row(&mut context));
+        page.add(&version_group);
+    }
 
     // Keeps the display language (#118: a reset must not switch the UI
     // language) — `reset_general`'s own rule.
@@ -127,6 +132,7 @@ fn output_script_label(is_hanji: bool) -> StringKey {
 /// button is the user's next move — 去下載 to the manifest's page (no
 /// in-app install on Linux), else 檢查更新, insensitive with a spinner while
 /// a check is in flight.
+#[cfg(not(feature = "disable-updates"))]
 fn update_row(context: &mut PageContext<'_>) -> adw::ActionRow {
     let row = adw::ActionRow::new();
     let button = gtk::Button::builder().valign(gtk::Align::Center).build();

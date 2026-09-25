@@ -37,6 +37,10 @@ endef
 
 .PHONY: help i18n-check test lint check-target check check-cpp fmt build build-fcitx5 install install-fcitx5 uninstall component deb rpm arch run-engine run-settings clean
 
+# DISABLE_UPDATES=1 to leave out update checking from the installed build so
+# package manager-updated builds will not send unactionable or extreaneous nags
+UPDATE_FEATURES := $(if $(filter 1,$(DISABLE_UPDATES)),--features taigi-linux-core/disable-updates --features taigikeyboard-settings/disable-updates)
+
 help:
 	@echo "Linux input method — dev loop"
 	@echo ""
@@ -47,7 +51,9 @@ help:
 	@echo "  make check-cpp     - Syntax-check the Fcitx5 addon against ../references/fcitx5 headers (macOS host; skipped when the clone is absent)"
 	@echo "  make i18n-check    - Fail if the generated i18n Rust is stale"
 	@echo "  make fmt           - cargo fmt"
-	@echo "  make build         - (Linux) cargo build --release (IBus engine + the FFI static library); E2E=1 = test-mode trace build"
+	@echo "  make build         - (Linux) cargo build --release (IBus engine + the FFI static library)"
+	@echo "                       E2E=1 = test-mode trace build;"
+	@echo "                       DISABLE_UPDATES=1 = omit update checking for managed builds"
 	@echo "  make build-fcitx5  - (Linux) the Fcitx5 addon: cmake over the FFI static library (needs fcitx5-modules-dev, extra-cmake-modules)"
 	@echo "  make install       - (Linux) install both shells + dictionaries into PREFIX=$(PREFIX) (DESTDIR honoured)"
 	@echo "  make uninstall     - (Linux) remove what install put there; user data stays"
@@ -103,10 +109,10 @@ fmt:
 
 build:
 ifeq ($(E2E),1)
-	cargo build --release --features taigi-linux-ffi/e2e-trace --features taigikeyboard-ibus/e2e-trace
+	cargo build --release --features taigi-linux-ffi/e2e-trace --features taigikeyboard-ibus/e2e-trace $(UPDATE_FEATURES)
 	source $(E2E_TRACE_GUARD) && e2e_trace_assert_present target/release/libtaigi_linux_ffi.a target/release/ibus-engine-taigikeyboard
 else
-	cargo build --release
+	cargo build --release $(UPDATE_FEATURES)
 	source $(E2E_TRACE_GUARD) && e2e_trace_assert_absent target/release/libtaigi_linux_ffi.a target/release/ibus-engine-taigikeyboard
 endif
 

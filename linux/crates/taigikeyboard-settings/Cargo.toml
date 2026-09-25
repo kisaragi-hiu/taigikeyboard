@@ -28,6 +28,9 @@ log.workspace = true
 # The export's temporary file: created exclusively in the target directory.
 tempfile.workspace = true
 
+[features]
+disable-updates = []
+
 [lints]
 workspace = true
 

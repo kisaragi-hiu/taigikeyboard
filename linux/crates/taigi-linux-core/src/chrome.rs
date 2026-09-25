@@ -51,6 +51,16 @@ pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
     let settings = runtime.settings.current();
     menu_rows(&runtime.strings(), &settings)
         .into_iter()
+        .filter(|row| {
+            #[cfg(feature = "disable-updates")]
+            if row
+                .as_ref()
+                .is_some_and(|row| row.command == MenuCommand::CheckForUpdates)
+            {
+                return false;
+            }
+            true
+        })
         .map(|row| match row {
             Some(row) => MenuItem::Action {
                 id: menu_id(row.command),
@@ -119,6 +129,12 @@ pub fn activate_menu(
             perform_global(runtime, token, state, ShortcutAction::OpenLastSettingsPane)
         }
         Some(MenuCommand::CheckForUpdates) => {
+            #[cfg(feature = "disable-updates")]
+            {
+                log::warn!("menu.update_check_disabled");
+                return Vec::new();
+            }
+            #[cfg(not(feature = "disable-updates"))]
             check_for_updates();
             Vec::new()
         }

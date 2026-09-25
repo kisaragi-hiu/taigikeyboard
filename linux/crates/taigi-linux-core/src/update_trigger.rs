@@ -63,7 +63,7 @@ fn fire_if_due(
 /// Never in the e2e test build: a scenario run must not reach the network
 /// or put a second process beside the one it measures.
 pub fn on_activate(runtime: &Runtime) {
-    if cfg!(feature = "e2e-trace") {
+    if cfg!(any(feature = "e2e-trace", feature = "disable-updates")) {
         return;
     }
     let fired = fire_if_due(

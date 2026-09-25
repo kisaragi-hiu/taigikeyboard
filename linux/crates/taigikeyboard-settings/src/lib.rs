@@ -54,6 +54,7 @@ pub fn run() -> gtk::glib::ExitCode {
         // The engine's daily spawn: no window, the check and at most one
         // notification, then the process ends (unless a window is open).
         if launch.check_updates {
+            #[cfg(not(feature = "disable-updates"))]
             updates::check_in_background(application);
             return gtk::glib::ExitCode::SUCCESS;
         }
@@ -61,6 +62,7 @@ pub fn run() -> gtk::glib::ExitCode {
         // The panel menu's 檢查更新 (`launcher::check_for_updates`): the
         // window on 一般, then the manual check and its alert over it.
         if launch.check_now {
+            #[cfg(not(feature = "disable-updates"))]
             updates::check_manually(&shell);
         }
         gtk::glib::ExitCode::SUCCESS
