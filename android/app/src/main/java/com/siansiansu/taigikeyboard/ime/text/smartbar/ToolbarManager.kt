@@ -240,7 +240,7 @@ class ToolbarManager(
     private fun showOneHandedMenu() {
         val overlay = oneHandedMenuOverlayViewProvider() ?: return
         hideOtherPanels(keep = overlay)
-        overlay.show(prefs.oneHandedMode)
+        overlay.show(prefs.oneHandedMode, getKeyboardHeight())
     }
 
     /** Hides the candidate overlay and every toolbar panel except [keep], which is about to open. */
