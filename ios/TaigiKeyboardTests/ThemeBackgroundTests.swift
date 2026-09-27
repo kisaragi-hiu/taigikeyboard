@@ -394,4 +394,42 @@ final class ThemeBackgroundTests: XCTestCase {
         XCTAssertEqual(colors.normalKeyFillColor, CodableColor(hex: 0x445566))
         XCTAssertEqual(colors.specialKeyFillColor, CodableColor(hex: 0x445566))
     }
+
+    // MARK: - Candidate highlight
+
+    // trace: pick 0x336699 → highlight = pick; pressed = deepened ×0.65 per byte, truncated:
+    // 0x33=51→33=0x21, 0x66=102→66=0x42, 0x99=153→99=0x63 → 0x214263
+    func testCandidateTints_customHighlightWins() throws {
+        var colors = UserThemeSeed.colors
+        colors.background = .gradient(gradient(angle: 180))
+        colors.candidateHighlightColor = CodableColor(hex: 0x336699)
+        let tints = try XCTUnwrap(colors.candidateTints)
+        XCTAssertEqual(tints.highlight, CodableColor(hex: 0x336699))
+        XCTAssertEqual(tints.pressed, CodableColor(hex: 0x214263))
+    }
+
+    // trace: nil highlight = auto → the seed's fixed key fill (white) as before
+    func testCandidateTints_nilHighlight_followsKeyFill() throws {
+        let tints = try XCTUnwrap(UserThemeSeed.colors.candidateTints)
+        XCTAssertNil(UserThemeSeed.colors.candidateHighlightColor)
+        XCTAssertEqual(tints.highlight, UserThemeSeed.keyFill)
+    }
+
+    // trace: seeding keeps nil (auto) and a set pick verbatim
+    func testSeededForUserTheme_keepsCandidateHighlight() {
+        XCTAssertNil(KeyboardColorSettings().seededForUserTheme().candidateHighlightColor)
+        var colors = KeyboardColorSettings()
+        colors.candidateHighlightColor = CodableColor(hex: 0x336699)
+        XCTAssertEqual(colors.seededForUserTheme().candidateHighlightColor, CodableColor(hex: 0x336699))
+    }
+
+    // trace: a set pick round-trips; JSON without the key (older build) decodes to nil (auto)
+    func testRoundTrip_candidateHighlight() throws {
+        var colors = UserThemeSeed.colors
+        colors.candidateHighlightColor = CodableColor(hex: 0x336699)
+        let data = try JSONEncoder().encode(colors)
+        XCTAssertEqual(try JSONDecoder().decode(KeyboardColorSettings.self, from: data), colors)
+        XCTAssertFalse(try XCTUnwrap(String(data: JSONEncoder().encode(UserThemeSeed.colors), encoding: .utf8)).contains("candidateHighlightColor"))
+        XCTAssertNil(try decode("{}").candidateHighlightColor)
+    }
 }

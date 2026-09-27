@@ -3961,6 +3961,24 @@
         }
       }
     },
+    "i18n_theme_colorCandidateHighlight": {
+      "comment": "Theme editor color-row label: the background of the highlighted (first / selected) candidate box. Untouched = follows the key fill or gradient.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Candidate Highlight"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "候補の選択枠"
+          }
+        }
+      }
+    },
     "i18n_theme_colorCandidateText": {
       "comment": "Theme editor color-row label: the candidate text color.",
       "extractionState": "manual",

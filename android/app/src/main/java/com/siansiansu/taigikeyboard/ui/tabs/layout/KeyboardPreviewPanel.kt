@@ -258,6 +258,8 @@ private fun CandidatePreviewRow(
     val bgColor = if (colorSettings.background != null) Color.Transparent else defaultBgColor
     val textColor = colorSettings.candidateTextColor?.let { Color(it) } ?: defaultTextColor
     val effectiveSubtitleColor = colorSettings.candidateTextColor?.let { Color(it) } ?: subtitleColor
+    // Same tint the strip paints (SmartbarManager → candidateTints).
+    val themedFirstCandidateBgColor = colorSettings.candidateTints?.first?.let { Color(it) } ?: firstCandidateBgColor
 
     val titleSizeSp = 19.sp * candidateTextSizeScale
     val subtitleSizeSp = titleSizeSp * 0.70f
@@ -288,8 +290,8 @@ private fun CandidatePreviewRow(
         ) {
             sampleCandidates.forEachIndexed { index, candidate ->
                 // First candidate has keycap-color background — matches the production candidate
-                // strip's first-candidate hint (key_bgColor); see behavioral-invariants.md §19.
-                val itemBg = if (index == 0) firstCandidateBgColor else Color.Transparent
+                // strip's first-candidate hint (theme tint, else key_bgColor); see behavioral-invariants.md §19.
+                val itemBg = if (index == 0) themedFirstCandidateBgColor else Color.Transparent
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier =

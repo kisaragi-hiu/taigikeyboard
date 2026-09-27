@@ -249,6 +249,7 @@
     <string name="i18n_theme_colorKeyText">揤鈕文字</string>
     <string name="i18n_theme_colorKeyFill">揤鈕色水</string>
     <string name="i18n_theme_colorCandidateText">候選詞文字</string>
+    <string name="i18n_theme_colorCandidateHighlight">候選詞框色水</string>
     <string name="i18n_theme_keyHeight">齒盤懸度</string>
     <string name="i18n_theme_keyFontSize">揤鈕字大細</string>
     <string name="i18n_theme_candidateTextSize">候選詞大細</string>

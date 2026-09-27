@@ -33,7 +33,8 @@ final class UserThemeStore {
 
     /// Loads all persisted themes; returns `[]` when absent or corrupt. Every theme's
     /// `nil` color roles are filled from `UserThemeSeed` so a theme saved before the
-    /// seed existed is scheme-invariant too (no migration write).
+    /// seed existed is scheme-invariant too (no migration write); the candidate
+    /// highlight keeps its nil (auto).
     func load() -> [UserTheme] {
         guard let fileURL, let data = try? Data(contentsOf: fileURL) else { return [] }
         let themes = (try? JSONDecoder().decode([UserTheme].self, from: data)) ?? []

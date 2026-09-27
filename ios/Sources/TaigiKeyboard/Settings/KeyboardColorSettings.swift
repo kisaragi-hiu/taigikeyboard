@@ -356,6 +356,10 @@ struct KeyboardColorSettings: Equatable {
     /// Fill for Shift / Backspace / Enter and other special keys.
     var specialKeyFillColor: CodableColor?
     var candidateTextColor: CodableColor?
+    /// User-picked candidate highlight (the first-candidate selection box). nil = auto:
+    /// derived from the gradient / key fill in `candidateTints`. Unlike the other roles a
+    /// user theme keeps it nil until customized — nil is palette-derived, not scheme-following.
+    var candidateHighlightColor: CodableColor?
 
     static let `default` = KeyboardColorSettings()
 
@@ -386,11 +390,16 @@ struct KeyboardColorSettings: Equatable {
         return fill
     }
 
-    /// Candidate first-candidate highlight + pressed tints. A gradient derives both from its
-    /// first stop (highlight lightened, pressed deepened); otherwise a fixed palette uses its
+    /// Candidate first-candidate highlight + pressed tints. A user-picked
+    /// `candidateHighlightColor` wins (pressed = it deepened). Otherwise a gradient derives both
+    /// from its first stop (highlight lightened, pressed deepened), and a fixed palette uses its
     /// key fill as the highlight and the deepened fill as pressed. nil = adaptive neutral
     /// fallback in `CandidateView.ItemStyle.resolvedBackgroundColor`.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt candidateTints.
     var candidateTints: (highlight: CodableColor, pressed: CodableColor)? {
+        if let custom = candidateHighlightColor {
+            return (custom, custom.deepened(by: Self.candidatePressedDeepenFactor))
+        }
         if let top = backgroundGradient?.stops.first {
             return (top.lightened(towardWhite: Self.candidateHighlightLightenFactor), top.deepened(by: Self.candidatePressedDeepenFactor))
         }
@@ -439,7 +448,7 @@ extension KeyboardColorSettings: Codable {
     /// `candidateBackgroundColor` is dropped — the candidate bar is the keyboard
     /// surface now (USER 2026-09-19). Encoding writes only the current keys.
     private enum CodingKeys: String, CodingKey {
-        case background, keyTextColor, normalKeyFillColor, specialKeyFillColor, candidateTextColor
+        case background, keyTextColor, normalKeyFillColor, specialKeyFillColor, candidateTextColor, candidateHighlightColor
         case legacyBackgroundColor = "backgroundColor"
         case legacyBackgroundGradient = "backgroundGradient"
     }
@@ -450,6 +459,7 @@ extension KeyboardColorSettings: Codable {
         normalKeyFillColor = try container.decodeIfPresent(CodableColor.self, forKey: .normalKeyFillColor)
         specialKeyFillColor = try container.decodeIfPresent(CodableColor.self, forKey: .specialKeyFillColor)
         candidateTextColor = try container.decodeIfPresent(CodableColor.self, forKey: .candidateTextColor)
+        candidateHighlightColor = try container.decodeIfPresent(CodableColor.self, forKey: .candidateHighlightColor)
         // `try?`: a background `type` this build does not know (written by a newer build),
         // or a legacy gradient with too few stops, degrades to the next fallback instead
         // of failing the whole theme list.
@@ -471,6 +481,7 @@ extension KeyboardColorSettings: Codable {
         try container.encodeIfPresent(normalKeyFillColor, forKey: .normalKeyFillColor)
         try container.encodeIfPresent(specialKeyFillColor, forKey: .specialKeyFillColor)
         try container.encodeIfPresent(candidateTextColor, forKey: .candidateTextColor)
+        try container.encodeIfPresent(candidateHighlightColor, forKey: .candidateHighlightColor)
     }
 }
 
@@ -480,6 +491,7 @@ extension KeyboardColorSettings: Codable {
 /// carries a `nil` (scheme-following) role and renders identically in light and
 /// dark mode (USER 2026-09-19). Background is the light keyboard grey; the key
 /// fill is white (USER 2026-09-25) and shared by letter and special keys.
+/// `candidateHighlightColor` stays nil (auto, derived from the palette) — see `candidateTints`.
 // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt UserThemeSeed
 // Drift = a new custom theme starts from different colors per platform.
 enum UserThemeSeed {
@@ -497,7 +509,7 @@ enum UserThemeSeed {
         candidateTextColor: candidateText,
     )
 
-    /// The seed value of one role (every role is set in `colors`).
+    /// The seed value of one role (every role but the auto `candidateHighlightColor` is set in `colors`).
     static func color(_ role: KeyPath<KeyboardColorSettings, CodableColor?>) -> CodableColor {
         colors[keyPath: role]!
     }
@@ -507,12 +519,13 @@ extension KeyboardColorSettings {
     /// Fills every `nil` role from `UserThemeSeed` and folds the special key fill into
     /// the letter fill (`keyFillColor`). Applied when user themes are loaded, so themes
     /// saved before the seed or the single key fill existed match the editor without a
-    /// migration write.
+    /// migration write. `candidateHighlightColor` passes through as-is: its nil means auto.
     func seededForUserTheme() -> KeyboardColorSettings {
         var seeded = KeyboardColorSettings(
             background: background ?? UserThemeSeed.background,
             keyTextColor: keyTextColor ?? UserThemeSeed.keyText,
             candidateTextColor: candidateTextColor ?? UserThemeSeed.candidateText,
+            candidateHighlightColor: candidateHighlightColor,
         )
         seeded.keyFillColor = normalKeyFillColor ?? UserThemeSeed.keyFill
         return seeded

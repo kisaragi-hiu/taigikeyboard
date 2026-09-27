@@ -161,6 +161,11 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "候選詞文字", "tailo": "Hāu-suán sû bûn-jī", "poj": "Hāu-soán sû bûn-jī", "en": "Candidate Text", "ja": "候補の文字" }
     },
+    "colorCandidateHighlight": {
+      "comment": "Theme editor color-row label: the background of the highlighted (first / selected) candidate box. Untouched = follows the key fill or gradient.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "values": { "hanji": "候選詞框色水", "tailo": "Hāu-suán sû khing sik-tsuí", "poj": "Hāu-soán sû kheng sek-chúi", "en": "Candidate Highlight", "ja": "候補の選択枠" }
+    },
     "keyHeight": {
       "comment": "Theme editor slider label: keyboard height scale.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

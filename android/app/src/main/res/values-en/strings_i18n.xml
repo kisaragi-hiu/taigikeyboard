@@ -249,6 +249,7 @@
     <string name="i18n_theme_colorKeyText">Key Text</string>
     <string name="i18n_theme_colorKeyFill">Key Fill</string>
     <string name="i18n_theme_colorCandidateText">Candidate Text</string>
+    <string name="i18n_theme_colorCandidateHighlight">Candidate Highlight</string>
     <string name="i18n_theme_keyHeight">Keyboard Height</string>
     <string name="i18n_theme_keyFontSize">Key Font Size</string>
     <string name="i18n_theme_candidateTextSize">Candidate Text Size</string>

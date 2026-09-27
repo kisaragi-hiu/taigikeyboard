@@ -498,6 +498,8 @@ object L10n {
         @Composable get() = stringRes(StringKey.THEME_COLOR_KEY_FILL)
     val themeColorCandidateText: String
         @Composable get() = stringRes(StringKey.THEME_COLOR_CANDIDATE_TEXT)
+    val themeColorCandidateHighlight: String
+        @Composable get() = stringRes(StringKey.THEME_COLOR_CANDIDATE_HIGHLIGHT)
     val themeKeyHeight: String
         @Composable get() = stringRes(StringKey.THEME_KEY_HEIGHT)
     val themeKeyFontSize: String

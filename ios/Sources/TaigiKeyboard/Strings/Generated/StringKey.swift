@@ -245,6 +245,7 @@ enum StringKey: String {
     case themeColorKeyText = "i18n_theme_colorKeyText"
     case themeColorKeyFill = "i18n_theme_colorKeyFill"
     case themeColorCandidateText = "i18n_theme_colorCandidateText"
+    case themeColorCandidateHighlight = "i18n_theme_colorCandidateHighlight"
     case themeKeyHeight = "i18n_theme_keyHeight"
     case themeKeyFontSize = "i18n_theme_keyFontSize"
     case themeCandidateTextSize = "i18n_theme_candidateTextSize"
