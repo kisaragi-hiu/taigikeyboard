@@ -21,6 +21,8 @@ class EmojiPopView: UIView {
 
     var currentEmoji: String = ""
     var emojiArray: [String] = []
+    // TaigiKeyboard: local patch — host theme fill / border, read on every `setupUI`; nil = white.
+    var colors: EmojiViewColors?
 
     // MARK: - Private variables
 
@@ -126,8 +128,8 @@ extension EmojiPopView {
         // border
         let borderLayer = CAShapeLayer()
         borderLayer.path = path
-        borderLayer.strokeColor = UIColor(white: 0.8, alpha: 1).cgColor
-        borderLayer.fillColor = UIColor.white.cgColor
+        borderLayer.strokeColor = (colors?.popupBorder ?? UIColor(white: 0.8, alpha: 1)).cgColor
+        borderLayer.fillColor = (colors?.popupFill ?? UIColor.white).cgColor
         borderLayer.lineWidth = 1
         layer.addSublayer(borderLayer)
 
@@ -138,7 +140,7 @@ extension EmojiPopView {
         // content layer
         let contentLayer = CALayer()
         contentLayer.frame = bounds
-        contentLayer.backgroundColor = UIColor.white.cgColor
+        contentLayer.backgroundColor = (colors?.popupFill ?? UIColor.white).cgColor
         contentLayer.mask = maskLayer
         layer.addSublayer(contentLayer)
 

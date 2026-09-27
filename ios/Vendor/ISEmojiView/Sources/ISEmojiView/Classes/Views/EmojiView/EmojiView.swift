@@ -70,6 +70,16 @@ public final class EmojiView: UIView {
 
     public weak var delegate: EmojiViewDelegate?
 
+    // TaigiKeyboard: local patch — host theme colors for the chrome (category bar, popup).
+    // Settable at any time so a live theme change repaints; nil = vendored defaults.
+    public var colors: EmojiViewColors? {
+        didSet {
+            guard colors != oldValue else { return }
+            categoriesBottomView?.colors = colors
+            emojiCollectionView?.colors = colors
+        }
+    }
+
     // MARK: - Private variables
 
     private weak var bottomContainerView: UIView?
@@ -217,6 +227,7 @@ extension EmojiView {
     private func setupEmojiCollectionView() {
         let emojiCollectionView = EmojiCollectionView.loadFromNib(emojis: emojis)
         emojiCollectionView.isShowPopPreview = keyboardSettings?.isShowPopPreview ?? isShowPopPreview
+        emojiCollectionView.colors = colors // TaigiKeyboard: local patch
         emojiCollectionView.delegate = self
         emojiCollectionView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(emojiCollectionView)
@@ -261,6 +272,7 @@ extension EmojiView {
                 needToShowDeleteButton: needToShowDeleteButton,
             )
             bottomView.delegate = self
+            bottomView.colors = colors // TaigiKeyboard: local patch
             categoriesBottomView = bottomView
 
             _bottomView = bottomView

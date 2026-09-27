@@ -123,12 +123,12 @@ A user theme renders **light-only**: iOS `ThemeId.forcedColorScheme` / Android `
 
 | Source role | Elements |
 |---|---|
-| Key fill | key long-press popup, one-handed menu background, emoji long-press popup, settings-panel switch off-track |
+| Key fill | key long-press popup, one-handed menu background, emoji long-press popup, Android settings-panel switch off-track (iOS keeps the native Toggle: SwiftUI exposes no off-track color, `.claude/rules/ui-style-guide.md` § Switch) |
 | Key pressed fill (`pressedKeyFill`: dark → lightened 0.25, light → deepened 0.8, translucent → unchanged) | key pressed state, key long-press popup selected cell (USER 2026-09-27), Android translate-key active fill, Android emoji ABC / delete pressed |
 | Key text | popup / one-handed menu text, emoji category icons + ABC label + delete glyph, Android emoji tab-row divider |
 | Candidate text | expanded-grid lines, strip expand-toggle divider, English strip dividers, symbol-panel tab-row divider, toolbar icons |
 | Candidate highlight (pressed = highlight deepened, `candidateTints` pressed) | first-candidate box; pressed: candidate cells, expanded-overlay control buttons, Android toolbar buttons |
-| Background luminance | Android navigation-bar icon light / dark |
+| Surface tone (`ThemeSurface.dimsTowardWhite`: dark key text ⇒ light palette) | Android navigation-bar icon light / dark (any themed surface, built-in included) |
 
 **Tier 3 — fixed (not themed):** shadows, scrims, photo dim tone; selected-state accent blue + white (mode chip, symbol tab, one-handed selected cell, switch on-track, Open App link); Android caps-lock orange (must not be overridden by key text); layout preview images; system popup menus.
 

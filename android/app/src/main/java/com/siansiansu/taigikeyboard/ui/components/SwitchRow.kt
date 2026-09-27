@@ -11,6 +11,8 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchColors
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -33,6 +35,8 @@ fun SwitchRow(
     fontFamily: FontFamily? = null,
     infoText: String? = null,
     enabled: Boolean = true,
+    /** Switch colors; null = Material 3 defaults (the app). The keyboard overlay passes theme colors. */
+    switchColors: SwitchColors? = null,
 ) {
     // Disabled rows dim label + icon (M3 disabled-content alpha) and drop the row's toggle target.
     val contentAlpha = if (enabled) 1f else DISABLED_CONTENT_ALPHA
@@ -85,6 +89,7 @@ fun SwitchRow(
             checked = checked,
             onCheckedChange = null,
             enabled = enabled,
+            colors = switchColors ?: SwitchDefaults.colors(),
         )
     }
 }

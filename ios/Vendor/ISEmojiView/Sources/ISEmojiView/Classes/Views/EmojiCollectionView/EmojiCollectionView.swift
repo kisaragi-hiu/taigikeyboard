@@ -36,6 +36,13 @@ class EmojiCollectionView: UIView {
     /// long press to pop preview effect like iOS10 system emoji keyboard, Default is true
     var isShowPopPreview = true
 
+    // TaigiKeyboard: local patch — forwarded to the long-press popup.
+    var colors: EmojiViewColors? {
+        didSet {
+            emojiPopView.colors = colors
+        }
+    }
+
     var emojis: [EmojiCategory]! {
         didSet {
             collectionView.reloadData()

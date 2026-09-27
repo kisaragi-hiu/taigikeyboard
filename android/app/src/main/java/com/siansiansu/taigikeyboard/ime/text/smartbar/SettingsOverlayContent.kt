@@ -21,6 +21,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -102,6 +103,9 @@ fun SettingsOverlayContent(
     // (the keyboard theme owns these, not the M3 app palette). Matches symbol / layout overlays.
     val appearance = rememberKeyboardOverlayAppearance(prefs, refreshTrigger)
     val labelColor = appearance.foreground
+    // Unchecked track = the theme key fill (checked keeps the M3 accent, a fixed state color).
+    // Divergence: iOS keeps the native Toggle — SwiftUI exposes no off-track color (ui-style-guide.md).
+    val switchColors = appearance.keyFill?.let { SwitchDefaults.colors(uncheckedTrackColor = it) }
 
     // Panel sits below the smartbar; offset the gradient by it so the slice stays continuous.
     val topInsetPx = rememberSmartbarInsetPx()
@@ -140,6 +144,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
         SwitchRow(
             label = L10n.settingsLiteralRomanCandidate,
@@ -151,6 +156,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
         SwitchRow(
             label = L10n.settingsAutoCapitalization,
@@ -162,6 +168,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
         SwitchRow(
             label = L10n.settingsAutoSpace,
@@ -173,6 +180,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
         SwitchRow(
             label = L10n.settingsToolbarAutoCollapse,
@@ -184,6 +192,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
         SwitchRow(
             label = L10n.settingsGlobeKey,
@@ -195,6 +204,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
 
         // Feedback settings
@@ -208,6 +218,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
         SwitchRow(
             label = L10n.settingsVibrationFeedback,
@@ -219,6 +230,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
 
         // POJ settings
@@ -232,6 +244,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
         SwitchRow(
             label = L10n.settingsDoubleTapNN,
@@ -243,6 +256,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
 
         // TPS settings
@@ -256,6 +270,7 @@ fun SettingsOverlayContent(
             },
             labelColor = labelColor,
             fontFamily = fontFamily,
+            switchColors = switchColors,
         )
 
         Spacer(Modifier.height(16.dp))

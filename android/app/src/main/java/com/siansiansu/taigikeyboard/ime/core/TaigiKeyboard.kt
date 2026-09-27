@@ -322,10 +322,20 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         return true
     }
 
+    // Last applied theme surface, so an input-view rebuild re-tints the navigation bar with it
+    // instead of flashing the night-mode tint until the next theme apply.
+    private var navigationBarSurface: ThemeSurface? = null
+
+    /** Re-tints the navigation-bar icons for the applied theme surface (null = follow night mode). */
+    fun updateNavigationBar(surface: ThemeSurface?) {
+        navigationBarSurface = surface
+        getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this, surface) }
+    }
+
     /** Rebuilds the input view for the current render mode (night flip or forced-light flip). */
     private fun rebuildInputView() {
         // Navigation bar color must update before the input view is rebuilt.
-        getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this) }
+        getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this, navigationBarSurface) }
         onCreateInputView()?.let { setInputView(it) }
     }
 
@@ -350,7 +360,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         mediaInputManager.onCreateInputView()
 
         // InputMethodService needs getWindow().getWindow() to reach the real Window.
-        getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this) }
+        getWindow().getWindow()?.let { navbarManager.updateNavigationBar(it, this, navigationBarSurface) }
 
         // Compose host shell — inner subtrees migrate to native Compose
         // incrementally while the legacy InputView remains the keyboard body.

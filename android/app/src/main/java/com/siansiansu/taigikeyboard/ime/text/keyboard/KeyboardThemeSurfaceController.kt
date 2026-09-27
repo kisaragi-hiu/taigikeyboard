@@ -1,12 +1,14 @@
 package com.siansiansu.taigikeyboard.ime.text.keyboard
 
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Shader
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.PaintDrawable
 import android.graphics.drawable.ShapeDrawable
+import android.graphics.drawable.StateListDrawable
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageButton
@@ -14,12 +16,14 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.InputView
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
+import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.ThemeBackground
 import com.siansiansu.taigikeyboard.ime.core.ThemeGradient
 import com.siansiansu.taigikeyboard.ime.core.ThemeImageBackground
 import com.siansiansu.taigikeyboard.ime.core.ThemeImageVariant
 import com.siansiansu.taigikeyboard.ime.core.ThemeSurface
 import com.siansiansu.taigikeyboard.ime.core.UserThemeSeed
+import com.siansiansu.taigikeyboard.ime.core.pressedKeyFillArgb
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarView
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -65,7 +69,9 @@ internal class KeyboardThemeSurfaceController(
             setSurfaceDrawable { surface?.let { drawable(it) } }
         }
         inputView.findViewById<SmartbarView>(R.id.smartbar)?.applyThemeSurface(colors)
-        applyMediaBarForeground(colors)
+        applyMediaBarColors(colors)
+        // IME-only: the input view's context is the TaigiKeyboard service.
+        (inputView.context as? TaigiKeyboard)?.updateNavigationBar(surface)
     }
 
     /** Paints each surface target with its own drawable instance (bounds are per view). */
@@ -75,16 +81,33 @@ internal class KeyboardThemeSurfaceController(
 
     /**
      * The emoji panel's bottom bar (ABC + backspace) takes the key text color on a themed surface,
-     * else the colors its layout declares (captured on first apply).
+     * else the colors its layout declares (captured on first apply). Pressed / focused take the
+     * pressed key fill on a fixed key palette, else the layout's `button_transparent_bg_on_press`.
      */
-    private fun applyMediaBarForeground(colors: KeyboardColorSettings) {
+    private fun applyMediaBarColors(colors: KeyboardColorSettings) {
         val abc = inputView.findViewById<Button>(R.id.media_input_switch_to_text_input_button) ?: return
         val backspace = inputView.findViewById<ImageButton>(R.id.media_input_backspace_button) ?: return
         val defaults = mediaBarDefaults ?: (abc.textColors to backspace.imageTintList).also { mediaBarDefaults = it }
         val foreground = colors.keyTextColor?.takeIf { colors.surface != null }?.let { ColorStateList.valueOf(it) }
         abc.setTextColor(foreground ?: defaults.first)
         backspace.imageTintList = foreground ?: defaults.second
+        val pressedFill = colors.fixedKeyFill?.takeIf { colors.surface != null }?.let(::pressedKeyFillArgb)
+        for (button in listOf(abc, backspace)) {
+            if (pressedFill == null) {
+                button.setBackgroundResource(R.drawable.button_transparent_bg_on_press)
+            } else {
+                button.background = pressedOnlyBackground(pressedFill)
+            }
+        }
     }
+
+    // Code twin of `button_transparent_bg_on_press.xml` with the pressed / focused fill swapped.
+    private fun pressedOnlyBackground(pressedFill: Int): StateListDrawable =
+        StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_pressed), ColorDrawable(pressedFill))
+            addState(intArrayOf(android.R.attr.state_focused), ColorDrawable(pressedFill))
+            addState(intArrayOf(), ColorDrawable(Color.TRANSPARENT))
+        }
 
     private fun drawable(surface: ThemeSurface): Drawable =
         when (val background = surface.background) {

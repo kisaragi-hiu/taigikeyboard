@@ -197,7 +197,8 @@ private fun IconContent(
     // sets it to a fixed dark color so the glyph stays readable in system dark mode;
     // the adaptive default theme leaves it null and falls back to the night-aware
     // `visual.tintArgb` (keyEnterFg for enter, keyFg otherwise).
-    val effectiveTint = colors.keyTextColor?.let { Color(it) } ?: Color(visual.tintArgb)
+    val effectiveTint =
+        if (visual.isStateAccent) Color(visual.tintArgb) else colors.keyTextColor?.let { Color(it) } ?: Color(visual.tintArgb)
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -376,6 +377,8 @@ private sealed interface KeyVisual {
         /** Fallback tint when the theme leaves `keyTextColor` null — `keyEnterFg`
          *  for the enter key, `keyFg` otherwise. `keyTextColor` overrides both. */
         val tintArgb: Int,
+        /** A fixed state color (the caps-lock accent) that `keyTextColor` must not override. */
+        val isStateAccent: Boolean = false,
     ) : KeyVisual
 }
 
@@ -517,7 +520,9 @@ private fun resolveShiftVisual(
         caps -> R.drawable.ic_keyboard_capslock to themeColors.keyFg
         else -> R.drawable.ic_keyboard_arrow_up to themeColors.keyFg
     }
-    return KeyVisual.Icon(drawable, tint)
+    // Caps lock and one-shot caps share the glyph; only the accent tells them apart, so it
+    // survives a theme key text color (fixed tier, docs/ui/theme.md § Custom Theme Color Roles).
+    return KeyVisual.Icon(drawable, tint, isStateAccent = caps && capsLock)
 }
 
 private fun resolveSpaceVisual(
@@ -630,8 +635,9 @@ private fun resolveBackgroundColor(
     // `applyAppearance` finishes, overriding any custom fill). Lit for the
     // non-default since hanji-first became the default (USER 2026-09-18): a
     // key lit on a fresh install reads as a mode the user never chose.
+    // A custom fill lights the key with its derived pressed fill instead of the fixed grey.
     if (data.code == KeyCode.TRANSLATE && !isFullWidthPunctuation) {
-        return themeColors.keyBgActive
+        return customFill?.let(::pressedKeyFillArgb) ?: themeColors.keyBgActive
     }
     // A pressed key takes the derived pressed fill; a translucent fill stays as-is.
     if (customFill != null) return (if (pressed) pressedKeyFillArgb(customFill) else null) ?: customFill

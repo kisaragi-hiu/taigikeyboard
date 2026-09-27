@@ -42,6 +42,11 @@ struct CandidateTheme: Equatable {
     // CROSS-PLATFORM INVARIANT — mirrors android .../smartbar/CandidateOverlayContent.kt CandidateOverlayColors.divider.
     let gridLineColor: Color?
 
+    /// Emoji keyboard chrome colors of a fixed-palette theme; nil (adaptive) keeps ISEmojiView's
+    /// defaults. Carried here so the emoji view reads the theme from the same environment value
+    /// as its surface.
+    let emojiChrome: EmojiChromeColors?
+
     // MARK: - Factory
 
     /// Derive a theme from user-adjustable settings.
@@ -76,6 +81,7 @@ struct CandidateTheme: Equatable {
             firstCandidateHighlightColor: tints?.highlight.color,
             pressedCandidateColor: tints?.pressed.color,
             gridLineColor: customTextColor,
+            emojiChrome: EmojiChromeColors.resolved(from: colorSettings),
         )
     }
 
@@ -91,5 +97,6 @@ struct CandidateTheme: Equatable {
         firstCandidateHighlightColor: nil,
         pressedCandidateColor: nil,
         gridLineColor: nil,
+        emojiChrome: nil,
     )
 }
