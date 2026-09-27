@@ -7,9 +7,9 @@ Brings every mobile keyboard element under the custom-theme color tiers in `docs
 | Phase | Items | Platforms | Target role | Status |
 |---|---|---|---|---|
 | P0 | This roadmap + tier table + memory | docs | — | Merged |
-| — | Grid lines + strip expand-toggle divider (#252) | iOS + Android | candidate text | PR open |
-| — | One-handed menu background / text (#254) | Android | key fill / key text | PR open |
-| P1 | A — key pressed state | iOS + Android | key fill deepened | Pending |
+| — | Grid lines + strip expand-toggle divider (#252) | iOS + Android | candidate text | Merged `14fbc135` |
+| — | One-handed menu background / text (folded into #252) | Android | key fill / key text | Merged `14fbc135` |
+| P1 | A — key pressed state (#252) | iOS + Android | key fill: dark lightened / light deepened | Merged `14fbc135` |
 | P2 | B popup selected cell · C expanded-overlay control pressed · F toolbar pressed | iOS + Android (F Android) | candidate highlight | Pending |
 | P3 | E — English autocorrect highlight (parity: Android gains it) | iOS + Android | candidate highlight + candidate text | Pending |
 | P4 | D English strip dividers · I tab-row dividers | iOS + Android (I Android) | candidate text | Pending |
