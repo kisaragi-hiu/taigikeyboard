@@ -208,6 +208,32 @@ final class ThemeEditorViewModel: ObservableObject {
         appearance = next
     }
 
+    // MARK: - Candidate highlight (nil = auto)
+
+    /// The candidate highlight row. Shows the effective highlight — the user pick, else
+    /// the one derived from the gradient / key fill — so an untouched row tracks the palette.
+    var candidateHighlightBinding: Binding<Color> {
+        Binding(
+            get: { (self.appearance.colors.candidateTints?.highlight ?? UserThemeSeed.keyFill).color },
+            set: { newColor in
+                var next = self.appearance
+                next.colors.candidateHighlightColor = CodableColor(newColor)
+                self.appearance = next
+            },
+        )
+    }
+
+    var isCandidateHighlightCustomized: Bool {
+        appearance.colors.candidateHighlightColor != nil
+    }
+
+    /// Back to auto (derived from the palette), not to a seed color.
+    func resetCandidateHighlight() {
+        var next = appearance
+        next.colors.candidateHighlightColor = nil
+        appearance = next
+    }
+
     /// Resets the whole draft appearance to the user-theme seed. Draft-only: the name
     /// is kept, nothing is persisted, and the applied theme stays untouched until
     /// `save()`. `ThemeAppearance` is a value type, so this cannot leak to the live theme.

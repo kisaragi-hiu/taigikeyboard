@@ -376,7 +376,7 @@ fun ThemeEditorScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Candidates: text color + size (the bar shares the background surface).
+                // Candidates: text + highlight color, then size (the bar shares the background surface).
                 SectionHeader(L10n.themeCandidateSection)
                 SettingsCard {
                     Column(modifier = Modifier.padding(24.dp)) {
@@ -385,6 +385,17 @@ fun ThemeEditorScreen(
                             currentColor = draft.colors.candidateTextColor,
                             seedColor = UserThemeSeed.CANDIDATE_TEXT,
                             onColorChange = { v -> updateColors { it.copy(candidateTextColor = v) } },
+                            onPickerOpen = { colorPickerTarget = it },
+                        )
+                        SettingsDivider(Modifier.padding(vertical = 8.dp))
+                        // Shows the effective highlight (user pick, else derived from the gradient /
+                        // key fill); reset returns to auto (null), not to a seed color.
+                        ColorSettingRow(
+                            labelKey = StringKey.THEME_COLOR_CANDIDATE_HIGHLIGHT,
+                            currentColor = draft.colors.candidateTints?.first ?: UserThemeSeed.KEY_FILL,
+                            onColorSelected = { v -> updateColors { it.copy(candidateHighlightColor = v) } },
+                            onReset =
+                                if (draft.colors.candidateHighlightColor != null) ({ updateColors { it.copy(candidateHighlightColor = null) } }) else null,
                             onPickerOpen = { colorPickerTarget = it },
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))

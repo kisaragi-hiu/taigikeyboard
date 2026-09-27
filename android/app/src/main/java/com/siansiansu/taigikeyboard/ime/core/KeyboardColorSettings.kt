@@ -308,6 +308,12 @@ data class KeyboardColorSettings(
     val normalKeyFillColor: Int? = null,
     val specialKeyFillColor: Int? = null,
     val candidateTextColor: Int? = null,
+    /**
+     * User-picked candidate highlight (the first-candidate selection box). null = auto:
+     * derived from the gradient / key fill in [candidateTints]. Unlike the other roles a
+     * user theme keeps it null until customized — null is palette-derived, not scheme-following.
+     */
+    val candidateHighlightColor: Int? = null,
 ) {
     /**
      * The background gradient, or null for a solid / photo / adaptive background. Single
@@ -339,13 +345,15 @@ data class KeyboardColorSettings(
 
     /**
      * Candidate first-candidate highlight + pressed tints (`first` = highlight, `second` =
-     * pressed). A gradient derives both from its first stop (highlight lightened, pressed
-     * deepened); otherwise a fixed palette uses its key fill as the highlight and the deepened
-     * fill as pressed. null = adaptive `key_bgColor` / `semiTransparentColor` attrs.
-     * Mirrors iOS `candidateTints`.
+     * pressed). A user-picked [candidateHighlightColor] wins (pressed = it deepened). Otherwise
+     * a gradient derives both from its first stop (highlight lightened, pressed deepened), and
+     * a fixed palette uses its key fill as the highlight and the deepened fill as pressed.
+     * null = adaptive `key_bgColor` / `semiTransparentColor` attrs.
+     * CROSS-PLATFORM INVARIANT — mirrors iOS `candidateTints`.
      */
     val candidateTints: Pair<Int, Int>?
         get() {
+            candidateHighlightColor?.let { return it to deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR) }
             backgroundGradient?.stops?.first()?.let {
                 return lightenedArgb(it, CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR) to
                     deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR)
@@ -363,13 +371,15 @@ data class KeyboardColorSettings(
      * Fills every null role from [UserThemeSeed] and folds the special key fill into
      * the letter fill ([withKeyFill]). Applied when a user theme is decoded
      * ([UserTheme.fromJson]), so themes saved before the seed or the single key fill
-     * existed match the editor without a migration write.
+     * existed match the editor without a migration write. [candidateHighlightColor] passes
+     * through as-is: its null means auto.
      */
     fun seededForUserTheme(): KeyboardColorSettings =
         KeyboardColorSettings(
             background = background ?: UserThemeSeed.BACKGROUND,
             keyTextColor = keyTextColor ?: UserThemeSeed.KEY_TEXT,
             candidateTextColor = candidateTextColor ?: UserThemeSeed.CANDIDATE_TEXT,
+            candidateHighlightColor = candidateHighlightColor,
         ).withKeyFill(normalKeyFillColor ?: UserThemeSeed.KEY_FILL)
 
     /** The JSON object form. [toJson] is the string serialization; nested users (e.g. [ThemeAppearance]) embed this directly. */
@@ -380,6 +390,7 @@ data class KeyboardColorSettings(
         normalKeyFillColor?.let { json.put("normalKeyFillColor", it) }
         specialKeyFillColor?.let { json.put("specialKeyFillColor", it) }
         candidateTextColor?.let { json.put("candidateTextColor", it) }
+        candidateHighlightColor?.let { json.put("candidateHighlightColor", it) }
         return json
     }
 
@@ -412,6 +423,7 @@ data class KeyboardColorSettings(
                 normalKeyFillColor = obj.optIntOrNull("normalKeyFillColor"),
                 specialKeyFillColor = obj.optIntOrNull("specialKeyFillColor"),
                 candidateTextColor = obj.optIntOrNull("candidateTextColor"),
+                candidateHighlightColor = obj.optIntOrNull("candidateHighlightColor"),
             )
     }
 }
@@ -437,6 +449,7 @@ fun isDarkArgb(argb: Int): Boolean {
  * carries a null (scheme-following) role and renders identically in light and dark
  * mode (USER 2026-09-19). Background is the light keyboard grey; the key fill is
  * white (USER 2026-09-25) and shared by letter and special keys.
+ * `candidateHighlightColor` stays null (auto, derived from the palette) — see `candidateTints`.
  */
 object UserThemeSeed {
     const val SOLID_COLOR = 0xFFD4D5DD.toInt()

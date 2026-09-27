@@ -9,7 +9,7 @@ import SwiftUI
 ///
 /// Three sections, one per visual surface (USER 2026-09-19): **Background** (type
 /// Solid / Gradient / Photo and its rows — the keyboard and the candidate bar share this
-/// one surface), **Keys** (fills, text, shape, size), **Candidate Bar** (text color + size),
+/// one surface), **Keys** (fills, text, shape, size), **Candidate Bar** (text + highlight color, size),
 /// then Reset to Defaults. Font is a global setting, not part of a theme, so the editor
 /// has no font control. The photo comes from `PhotosPicker` (no library permission
 /// needed) and is stored through `SharedSettings.saveThemeImage`.
@@ -86,9 +86,14 @@ struct ThemeEditorView: View {
                               ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
                 }
 
-                // Candidates: text color + size (the bar shares the background surface).
+                // Candidates: text + highlight color, then size (the bar shares the background surface).
                 Section(header: Text(lang.string(.themeCandidateSection))) {
                     colorRow(lang.string(.themeColorCandidateText), \.candidateTextColor)
+                    ThemeColorRow(
+                        label: lang.string(.themeColorCandidateHighlight),
+                        color: viewModel.candidateHighlightBinding,
+                        onReset: viewModel.isCandidateHighlightCustomized ? { viewModel.resetCandidateHighlight() } : nil,
+                    )
                     sliderRow(lang.string(.themeCandidateTextSize), \.candidateTextSizeScale,
                               ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
                 }

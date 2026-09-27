@@ -270,6 +270,46 @@ class ThemeBackgroundTest {
 
     // endregion
 
+    // region Candidate highlight
+
+    // Pick 0x336699 -> highlight = pick; pressed = deepened x0.65 per byte, truncated:
+    // 0x33=51->33=0x21, 0x66=102->66=0x42, 0x99=153->99=0x63 -> 0x214263.
+    @Test
+    fun candidateTints_customHighlightWins() {
+        val colors =
+            UserThemeSeed.colors.copy(
+                background = ThemeBackground.Gradient(gradient(180f)),
+                candidateHighlightColor = 0xFF336699.toInt(),
+            )
+        assertEquals(0xFF336699.toInt() to 0xFF214263.toInt(), colors.candidateTints)
+    }
+
+    // Null highlight = auto -> the seed's fixed key fill (white) as before.
+    @Test
+    fun candidateTints_nullHighlight_followsKeyFill() {
+        assertNull(UserThemeSeed.colors.candidateHighlightColor)
+        assertEquals(UserThemeSeed.KEY_FILL, UserThemeSeed.colors.candidateTints?.first)
+    }
+
+    // Seeding keeps null (auto) and a set pick verbatim.
+    @Test
+    fun seededForUserTheme_keepsCandidateHighlight() {
+        assertNull(KeyboardColorSettings().seededForUserTheme().candidateHighlightColor)
+        val colors = KeyboardColorSettings(candidateHighlightColor = 0xFF336699.toInt())
+        assertEquals(0xFF336699.toInt(), colors.seededForUserTheme().candidateHighlightColor)
+    }
+
+    // A set pick round-trips; JSON without the key (older build) decodes to null (auto).
+    @Test
+    fun roundTrip_candidateHighlight() {
+        val colors = UserThemeSeed.colors.copy(candidateHighlightColor = 0xFF336699.toInt())
+        assertEquals(colors, KeyboardColorSettings.fromJson(colors.toJson()))
+        assertFalse(UserThemeSeed.colors.toJson().contains("candidateHighlightColor"))
+        assertNull(decode("{}").candidateHighlightColor)
+    }
+
+    // endregion
+
     private companion object {
         const val CENTRE = ThemeImageBackground.DEFAULT_FOCUS
         const val NO_ZOOM = ThemeImageBackground.DEFAULT_ZOOM

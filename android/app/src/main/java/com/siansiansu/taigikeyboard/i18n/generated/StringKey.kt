@@ -256,6 +256,7 @@ enum class StringKey(
     THEME_COLOR_KEY_TEXT(R.string.i18n_theme_colorKeyText),
     THEME_COLOR_KEY_FILL(R.string.i18n_theme_colorKeyFill),
     THEME_COLOR_CANDIDATE_TEXT(R.string.i18n_theme_colorCandidateText),
+    THEME_COLOR_CANDIDATE_HIGHLIGHT(R.string.i18n_theme_colorCandidateHighlight),
     THEME_KEY_HEIGHT(R.string.i18n_theme_keyHeight),
     THEME_KEY_FONT_SIZE(R.string.i18n_theme_keyFontSize),
     THEME_CANDIDATE_TEXT_SIZE(R.string.i18n_theme_candidateTextSize),
