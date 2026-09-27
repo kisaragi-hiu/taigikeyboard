@@ -234,6 +234,27 @@ final class ThemeEditorViewModel: ObservableObject {
         appearance = next
     }
 
+    // MARK: - Key style
+
+    /// The last Filled draft, so leaving Filled for Outlined / Borderless and coming back restores
+    /// its key fill, shadow and border. Recorded on leaving Filled; a theme opened see-through
+    /// comes back to the seed's.
+    private var filledKeys: ThemeAppearance = .userThemeSeed
+
+    /// Segmented Filled / Outlined / Borderless choice, derived from the draft (`keyStyle`).
+    var keyStyleBinding: Binding<ThemeKeyStyle> {
+        Binding(
+            get: { self.appearance.keyStyle },
+            set: { style in
+                guard style != self.appearance.keyStyle else { return }
+                if self.appearance.keyStyle == .classic {
+                    self.filledKeys = self.appearance
+                }
+                self.appearance = self.appearance.withKeyStyle(style, filledKeys: self.filledKeys)
+            },
+        )
+    }
+
     /// Resets the whole draft appearance to the user-theme seed. Draft-only: the name
     /// is kept, nothing is persisted, and the applied theme stays untouched until
     /// `save()`. `ThemeAppearance` is a value type, so this cannot leak to the live theme.

@@ -370,7 +370,8 @@ data class KeyboardColorSettings(
     /**
      * Candidate first-candidate highlight + pressed tints (`first` = highlight, `second` =
      * pressed). A user-picked [candidateHighlightColor] wins (pressed = it deepened). Otherwise
-     * a gradient derives both from its first stop (highlight lightened, pressed deepened), and
+     * a gradient derives both from its first stop (highlight lightened, pressed deepened)
+     * — as does a solid surface under see-through keys (which have no fill to use), and
      * a fixed palette uses its key fill as the highlight and the deepened fill as pressed.
      * null = adaptive `key_bgColor` / `semiTransparentColor` attrs.
      * CROSS-PLATFORM INVARIANT — mirrors iOS `candidateTints`.
@@ -378,7 +379,8 @@ data class KeyboardColorSettings(
     val candidateTints: Pair<Int, Int>?
         get() {
             candidateHighlightColor?.let { return it to deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR) }
-            backgroundGradient?.stops?.first()?.let {
+            val seeThroughSolid = (background as? ThemeBackground.Solid)?.color?.takeIf { hasTransparentKeys }
+            (backgroundGradient?.stops?.first() ?: seeThroughSolid)?.let {
                 return lightenedArgb(it, CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR) to
                     deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR)
             }

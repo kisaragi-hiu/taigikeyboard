@@ -25,6 +25,44 @@ data class ThemeAppearance(
     val keyCornerRadius: Float = DEFAULT_KEY_CORNER_RADIUS,
     val keyBorderWidth: Float = DEFAULT_KEY_BORDER_WIDTH,
 ) {
+    /**
+     * The key style this appearance renders: see-through keys (a clear key fill) are Outlined
+     * with a border and Borderless without; any visible fill is Filled, border or not.
+     * Mirrors iOS ThemeAppearance.keyStyle.
+     */
+    val keyStyle: ThemeKeyStyle
+        get() =
+            when {
+                !colors.hasTransparentKeys -> ThemeKeyStyle.CLASSIC
+                keyBorderWidth > 0f -> ThemeKeyStyle.FRAMED
+                else -> ThemeKeyStyle.CLEAN
+            }
+
+    /**
+     * This appearance switched to [style]. Filled restores the key fill, shadow and border of
+     * [filledKeys] (the editor's last Filled draft); Outlined / Borderless clear the key fill and
+     * shadow, Outlined drawing the built-in outline and Borderless none.
+     * CROSS-PLATFORM INVARIANT — mirrors iOS ThemeAppearance.withKeyStyle.
+     */
+    fun withKeyStyle(
+        style: ThemeKeyStyle,
+        filledKeys: ThemeAppearance,
+    ): ThemeAppearance =
+        when (style) {
+            ThemeKeyStyle.CLASSIC ->
+                copy(
+                    colors = colors.withKeyFill(filledKeys.colors.normalKeyFillColor ?: UserThemeSeed.KEY_FILL),
+                    keyShadowIntensity = filledKeys.keyShadowIntensity,
+                    keyBorderWidth = filledKeys.keyBorderWidth,
+                )
+            ThemeKeyStyle.FRAMED, ThemeKeyStyle.CLEAN ->
+                copy(
+                    colors = colors.withKeyFill(ThemeKeyStyle.TRANSPARENT_KEY_FILL),
+                    keyShadowIntensity = 0f,
+                    keyBorderWidth = if (style.isBordered) ThemeKeyStyle.OUTLINED_BORDER_WIDTH else 0f,
+                )
+        }
+
     fun toJson(): JSONObject =
         JSONObject().apply {
             put("colors", colors.toJsonObject())
@@ -76,5 +114,32 @@ data class ThemeAppearance(
         }
 
         private fun JSONObject.optFloatOrNull(key: String): Float? = if (has(key) && !isNull(key)) getDouble(key).toFloat() else null
+    }
+}
+
+/**
+ * The key-style axis shared by the built-in families and the user-theme editor: Filled keys,
+ * Outlined (see-through keys + outline) or Borderless (see-through keys, no outline). Not
+ * stored — a clear key fill plus the border width encode it ([ThemeAppearance.keyStyle]).
+ * CROSS-PLATFORM INVARIANT — mirrors iOS ThemeKeyStyle.
+ */
+enum class ThemeKeyStyle {
+    CLASSIC, // filled keys
+    FRAMED, // transparent keys + outline border
+    CLEAN, // transparent keys, no border
+    ;
+
+    /** Keys are transparent (background shows through) for framed / clean. */
+    val hasTransparentKeys: Boolean get() = this != CLASSIC
+
+    /** Only the framed style draws the key outline. */
+    val isBordered: Boolean get() = this == FRAMED
+
+    companion object {
+        /** The see-through key fill — the keyboard background shows through. */
+        const val TRANSPARENT_KEY_FILL = 0x00000000
+
+        // CROSS-PLATFORM INVARIANT — mirrors iOS ThemeKeyStyle.outlinedBorderWidth. Drift causes silent divergence.
+        const val OUTLINED_BORDER_WIDTH = 1.0f
     }
 }

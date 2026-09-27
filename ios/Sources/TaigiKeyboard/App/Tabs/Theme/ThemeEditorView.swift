@@ -73,16 +73,32 @@ struct ThemeEditorView: View {
                     }
                 }
 
-                // Keys: fill + text, then shape, then size.
+                // Keys: style, fill + text, then shape, then size. Outlined / Borderless keys are
+                // see-through, so they hide the fill and shadow rows; Borderless also the border.
                 Section(header: Text(lang.string(.themeColorKeySection))) {
-                    colorRow(lang.string(.themeColorKeyFill), \.keyFillColor)
+                    Picker("", selection: viewModel.keyStyleBinding) {
+                        Text(lang.string(.themeFamilyClassic)).tag(ThemeKeyStyle.classic)
+                        Text(lang.string(.themeFamilyFramed)).tag(ThemeKeyStyle.framed)
+                        Text(lang.string(.themeFamilyClean)).tag(ThemeKeyStyle.clean)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+
+                    let keyStyle = viewModel.appearance.keyStyle
+                    if !keyStyle.hasTransparentKeys {
+                        colorRow(lang.string(.themeColorKeyFill), \.keyFillColor)
+                    }
                     colorRow(lang.string(.themeColorKeyText), \.keyTextColor)
                     sliderRow(lang.string(.themeKeyCornerRadius), \.keyCornerRadius,
                               ThemeSliderRanges.radius, ThemeSliderRanges.radiusStep)
-                    sliderRow(lang.string(.themeKeyBorderWidth), \.keyBorderWidth,
-                              ThemeSliderRanges.borderWidth, ThemeSliderRanges.borderWidthStep)
-                    sliderRow(lang.string(.themeKeyShadow), \.keyShadowIntensity,
-                              ThemeSliderRanges.shadow, ThemeSliderRanges.shadowStep)
+                    if keyStyle != .clean {
+                        sliderRow(lang.string(.themeKeyBorderWidth), \.keyBorderWidth,
+                                  ThemeSliderRanges.borderWidth, ThemeSliderRanges.borderWidthStep)
+                    }
+                    if !keyStyle.hasTransparentKeys {
+                        sliderRow(lang.string(.themeKeyShadow), \.keyShadowIntensity,
+                                  ThemeSliderRanges.shadow, ThemeSliderRanges.shadowStep)
+                    }
                     sliderRow(lang.string(.themeKeyHeight), \.keyHeightScale,
                               ThemeSliderRanges.scale, ThemeSliderRanges.scaleStep)
                     sliderRow(lang.string(.themeKeyFontSize), \.keyFontSizeScale,

@@ -34,35 +34,6 @@ enum BuiltInThemes {
         all.first { $0.id == id }
     }
 
-    // MARK: - Key style
-
-    /// The per-family key-style axis. All three families share one set of colors;
-    /// only the key rendering differs.
-    private enum KeyStyle {
-        case classic // filled keys (white over a gradient, adaptive for Default)
-        case framed // transparent keys + outline border
-        case clean // transparent keys, no border
-
-        /// Keys are transparent (background shows through) for framed / clean.
-        var hasTransparentKeys: Bool {
-            self != .classic
-        }
-
-        /// Only the framed family draws the key outline.
-        var isBordered: Bool {
-            self == .framed
-        }
-
-        /// id prefix per family — Filled keeps the legacy `standard*` ids.
-        var idPrefix: String {
-            switch self {
-            case .classic: "standard"
-            case .framed: "framed"
-            case .clean: "clean"
-            }
-        }
-    }
-
     // MARK: - Shared colors
 
     /// One of the 7 shared color identities. `gradient == nil` is the adaptive
@@ -99,10 +70,6 @@ enum BuiltInThemes {
     private static let darkKeyFill: UInt32 = 0x313244 // Catppuccin Mocha Surface0
     private static let darkKeyText: UInt32 = 0xCDD6F4 // Catppuccin Mocha Text
 
-    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/BuiltInThemes.kt OUTLINED_KEY_BORDER_WIDTH.
-    // Drift causes silent divergence.
-    private static let outlinedKeyBorderWidth: Double = 1.0
-
     // MARK: - Builders
 
     /// Builds the 7 themes for one key-style family. The Filled head keeps the
@@ -111,7 +78,7 @@ enum BuiltInThemes {
     /// slot (`dark` nil); a dark theme (Catppuccin) builds into the `dark` slot
     /// (`light` nil) — mirror-symmetric. Preview slots mirror the family id prefix;
     /// missing assets fall back to a neutral placeholder until screenshots ship.
-    private static func familyThemes(_ style: KeyStyle) -> [BuiltInTheme] {
+    private static func familyThemes(_ style: ThemeKeyStyle) -> [BuiltInTheme] {
         baseColors.map { base in
             let isDefault = base.gradient == nil
             let suffix = base.key.prefix(1).uppercased() + base.key.dropFirst()
@@ -128,7 +95,7 @@ enum BuiltInThemes {
                 light: base.isDarkPalette ? nil : scheme,
                 dark: base.isDarkPalette ? scheme : nil,
                 previewImageName: previewName,
-                keyBorderWidth: style.isBordered ? outlinedKeyBorderWidth : nil,
+                keyBorderWidth: style.isBordered ? ThemeKeyStyle.outlinedBorderWidth : nil,
             )
         }
     }
@@ -136,7 +103,7 @@ enum BuiltInThemes {
     /// Resolves the color palette for one (color, key-style) pair. Filled Default stays
     /// fully adaptive (`nil`); framed / clean Default carry only transparent key fills
     /// so the adaptive background/text still show through and adapt to dark mode.
-    private static func colors(for base: BaseColor, style: KeyStyle) -> KeyboardColorSettings? {
+    private static func colors(for base: BaseColor, style: ThemeKeyStyle) -> KeyboardColorSettings? {
         if let gradient = base.gradient {
             let keyText = base.isDarkPalette ? darkKeyText : lightKeyText
             let neutralFill = base.isDarkPalette ? darkKeyFill : lightKeyFill
@@ -168,5 +135,16 @@ enum BuiltInThemes {
             colors.specialKeyFillColor = fill
         }
         return colors
+    }
+}
+
+/// id prefix per key-style family — Filled keeps the legacy `standard*` ids.
+private extension ThemeKeyStyle {
+    var idPrefix: String {
+        switch self {
+        case .classic: "standard"
+        case .framed: "framed"
+        case .clean: "clean"
+        }
     }
 }

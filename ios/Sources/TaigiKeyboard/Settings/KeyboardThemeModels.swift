@@ -111,6 +111,58 @@ struct ThemeAppearance: Codable, Equatable {
         appearance.colors = UserThemeSeed.colors
         return appearance
     }()
+
+    /// The key style this appearance renders: see-through keys (a clear key fill) are Outlined
+    /// with a border and Borderless without; any visible fill is Filled, border or not.
+    var keyStyle: ThemeKeyStyle {
+        guard colors.hasTransparentKeys else { return .classic }
+        return keyBorderWidth > 0 ? .framed : .clean
+    }
+
+    /// This appearance switched to `style`. Filled restores the key fill, shadow and border of
+    /// `filledKeys` (the editor's last Filled draft); Outlined / Borderless clear the key fill and
+    /// shadow, Outlined drawing the built-in outline and Borderless none.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/ThemeAppearance.kt withKeyStyle.
+    func withKeyStyle(_ style: ThemeKeyStyle, filledKeys: ThemeAppearance) -> ThemeAppearance {
+        var next = self
+        switch style {
+        case .classic:
+            next.colors.keyFillColor = filledKeys.colors.keyFillColor
+            next.keyShadowIntensity = filledKeys.keyShadowIntensity
+            next.keyBorderWidth = filledKeys.keyBorderWidth
+        case .framed, .clean:
+            next.colors.keyFillColor = CodableColor(.clear)
+            next.keyShadowIntensity = 0
+            next.keyBorderWidth = style.isBordered ? ThemeKeyStyle.outlinedBorderWidth : 0
+        }
+        return next
+    }
+}
+
+// MARK: - Key style
+
+/// The key-style axis shared by the built-in families and the user-theme editor: Filled keys,
+/// Outlined (see-through keys + outline) or Borderless (see-through keys, no outline). Not
+/// stored — a clear key fill plus the border width encode it (`ThemeAppearance.keyStyle`).
+// CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/ThemeAppearance.kt ThemeKeyStyle.
+enum ThemeKeyStyle: CaseIterable {
+    case classic // filled keys
+    case framed // transparent keys + outline border
+    case clean // transparent keys, no border
+
+    /// Keys are transparent (background shows through) for framed / clean.
+    var hasTransparentKeys: Bool {
+        self != .classic
+    }
+
+    /// Only the framed style draws the key outline.
+    var isBordered: Bool {
+        self == .framed
+    }
+
+    /// The outline width of the framed style.
+    // CROSS-PLATFORM INVARIANT — mirrors android ThemeKeyStyle.OUTLINED_BORDER_WIDTH. Drift causes silent divergence.
+    static let outlinedBorderWidth: Double = 1.0
 }
 
 // Decode lives in an extension so the struct keeps its synthesized memberwise init.
