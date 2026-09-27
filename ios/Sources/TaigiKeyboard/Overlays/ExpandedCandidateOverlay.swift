@@ -105,8 +105,7 @@ struct ExpandedCandidateOverlay: View {
                         candidateRow(rowItems: rowItems, contentHasSubtitles: contentHasSubtitles)
 
                         if rowIndex < rows.count - 1 {
-                            Divider()
-                                .background(CandidateViewModels.Colors.separatorColor.opacity(0.3))
+                            rowDivider
                                 .padding(.leading, 8)
                                 .padding(.trailing, 68)
                         }
@@ -116,6 +115,18 @@ struct ExpandedCandidateOverlay: View {
             }
             .padding(.top, 6)
             .padding(.bottom, 8)
+        }
+    }
+
+    /// Line between grid rows: the theme's candidate text color when set (matches
+    /// `FixedColumnDivider`), else the system divider.
+    @ViewBuilder
+    private var rowDivider: some View {
+        if let lineColor = theme.gridLineColor {
+            Divider().overlay(lineColor)
+        } else {
+            Divider()
+                .background(CandidateViewModels.Colors.separatorColor.opacity(0.3))
         }
     }
 

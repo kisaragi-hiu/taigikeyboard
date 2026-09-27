@@ -221,7 +221,8 @@ fun CandidateOverlayContent(
 
         // Faint divider between the grid lane and the control panel. The legacy XML used the framework
         // `?android:attr/dividerVertical` drawable at alpha 0.5; semiTransparentColor (#20…) is a
-        // deliberate close approximation (avoids loading a framework drawable into Compose).
+        // deliberate close approximation (avoids loading a framework drawable into Compose). A theme
+        // candidateTextColor overrides it (see [CandidateOverlayColors.divider]).
         Box(
             modifier =
                 Modifier
@@ -229,7 +230,7 @@ fun CandidateOverlayContent(
                     .padding(top = 6.dp, end = ControlPanelWidth, bottom = 8.dp)
                     .width(1.dp)
                     .fillMaxHeight()
-                    .background(colors.pressed),
+                    .background(colors.divider),
         )
 
         ControlPanel(
@@ -316,7 +317,7 @@ private fun CandidateRow(
                         .fillMaxWidth()
                         .padding(start = DividerStartInset, end = DividerEndInset)
                         .height(1.dp)
-                        .background(colors.pressed),
+                        .background(colors.divider),
             )
         }
     }
@@ -509,6 +510,12 @@ private data class CandidateOverlayColors(
     val subtitle: Color,
     val firstCandidateBackground: Color,
     val pressed: Color,
+    /**
+     * Grid divider lines: the theme's candidateTextColor at full opacity (white text → white
+     * grid), else the faint [pressed] tint.
+     * CROSS-PLATFORM INVARIANT — mirrors iOS `CandidateTheme.gridLineColor`.
+     */
+    val divider: Color,
     val controlTint: Color,
     val buttonPressed: Color,
 )
@@ -533,6 +540,7 @@ private fun rememberCandidateOverlayColors(
             // Shared with the strip (SmartbarManager.currentDisplay → candidateTints).
             firstCandidateBackground = Color(firstCandidateColor),
             pressed = Color(pressedColor),
+            divider = roleFg ?: Color(pressedColor),
             controlTint = roleFg ?: Color(getColorFromAttr(context, R.attr.smartbar_fgColor)),
             buttonPressed = Color(getColorFromAttr(context, R.attr.overlay_button_bgColorPressed)),
         )

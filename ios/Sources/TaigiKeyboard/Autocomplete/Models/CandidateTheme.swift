@@ -36,6 +36,12 @@ struct CandidateTheme: Equatable {
     let firstCandidateHighlightColor: Color?
     let pressedCandidateColor: Color?
 
+    /// Expanded candidate grid divider lines. A theme's `candidateTextColor` paints them at
+    /// full opacity (white text → white grid); nil for an adaptive theme — the grid keeps
+    /// the system separator.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../smartbar/CandidateOverlayContent.kt CandidateOverlayColors.divider.
+    let gridLineColor: Color?
+
     // MARK: - Factory
 
     /// Derive a theme from user-adjustable settings.
@@ -69,6 +75,7 @@ struct CandidateTheme: Equatable {
             surface: colorSettings.surface,
             firstCandidateHighlightColor: tints?.highlight.color,
             pressedCandidateColor: tints?.pressed.color,
+            gridLineColor: customTextColor,
         )
     }
 
@@ -83,5 +90,6 @@ struct CandidateTheme: Equatable {
         surface: nil,
         firstCandidateHighlightColor: nil,
         pressedCandidateColor: nil,
+        gridLineColor: nil,
     )
 }

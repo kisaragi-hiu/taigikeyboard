@@ -34,6 +34,8 @@ struct ExpandedCandidateControlButton: View {
 
 /// Vertical and horizontal divider lines for the right-side control panel area
 struct FixedColumnDivider: View {
+    @Environment(\.candidateTheme) private var theme
+
     var body: some View {
         GeometryReader { geometry in
             let cellHeight: CGFloat = 58
@@ -49,7 +51,7 @@ struct FixedColumnDivider: View {
                     y += cellHeight
                 }
             }
-            .stroke(CandidateViewModels.Colors.separatorColor, lineWidth: 0.5)
+            .stroke(theme.gridLineColor ?? CandidateViewModels.Colors.separatorColor, lineWidth: 0.5)
         }
         .frame(width: 60)
     }
