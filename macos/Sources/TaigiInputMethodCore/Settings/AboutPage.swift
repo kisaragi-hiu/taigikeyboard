@@ -3,7 +3,7 @@
 import SwiftUI
 
 /// What the input-source menu's About row opens (USER 2026-09-20): two lines the
-/// USER wrote; the sponsor and the four community links as rows; the
+/// USER wrote; the sponsor and the seven community links as rows; the
 /// attribution line.
 ///
 /// A grouped `Form` like every other pane (USER 2026-09-20: "make it a page"), so the
@@ -35,6 +35,9 @@ struct AboutPage: View {
                 ExternalLinkButton(titleKey: .homeWebsiteLink, url: Self.websiteURL, style: .row(.globe))
                 ExternalLinkButton(titleKey: .homeGithubLink, url: Self.githubURL, style: .row(.github))
                 ExternalLinkButton(titleKey: .homeDiscordLink, url: Self.discordURL, style: .row(.discord))
+                ExternalLinkButton(titleKey: .homeFacebookLink, url: Self.facebookURL, style: .row(.facebook))
+                ExternalLinkButton(titleKey: .homeInstagramLink, url: Self.instagramURL, style: .row(.instagram))
+                ExternalLinkButton(titleKey: .homeThreadsLink, url: Self.threadsURL, style: .row(.threads))
                 ExternalLinkButton(titleKey: .homeEmailLink, url: Self.emailURL, style: .row(.envelope))
             } footer: {
                 Text(language.string(.homeCopyrightLine))
@@ -48,6 +51,9 @@ struct AboutPage: View {
     private static let websiteURL = URL(string: "https://taigikeyboard.tw")
     private static let githubURL = URL(string: "https://github.com/taigikeyboard")
     private static let discordURL = URL(string: "https://discord.gg/kXhtQfWvK")
+    private static let facebookURL = URL(string: "https://www.facebook.com/profile.php?id=61589036184924")
+    private static let instagramURL = URL(string: "https://www.instagram.com/taigikeyboardtw/")
+    private static let threadsURL = URL(string: "https://www.threads.com/@siansiansu")
     private static let emailURL = URL(string: "mailto:info@taigikeyboard.tw")
     private static let sponsorURL = URL(string: "https://p.ecpay.com.tw/AA663DE")
 

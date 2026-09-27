@@ -250,6 +250,12 @@ object L10n {
         @Composable get() = stringRes(StringKey.HOME_GITHUB_LINK)
     val homeDiscordLink: String
         @Composable get() = stringRes(StringKey.HOME_DISCORD_LINK)
+    val homeFacebookLink: String
+        @Composable get() = stringRes(StringKey.HOME_FACEBOOK_LINK)
+    val homeInstagramLink: String
+        @Composable get() = stringRes(StringKey.HOME_INSTAGRAM_LINK)
+    val homeThreadsLink: String
+        @Composable get() = stringRes(StringKey.HOME_THREADS_LINK)
     val homeEmailLink: String
         @Composable get() = stringRes(StringKey.HOME_EMAIL_LINK)
     val homeCopyrightLine: String

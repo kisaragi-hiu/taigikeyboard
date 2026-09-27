@@ -15,6 +15,12 @@ pub const WEBSITE_URL: &str = "https://taigikeyboard.tw";
 pub const GITHUB_URL: &str = "https://github.com/taigikeyboard";
 /// `AboutPage.discordURL`.
 pub const DISCORD_URL: &str = "https://discord.gg/kXhtQfWvK";
+/// `AboutPage.facebookURL`.
+pub const FACEBOOK_URL: &str = "https://www.facebook.com/profile.php?id=61589036184924";
+/// `AboutPage.instagramURL`.
+pub const INSTAGRAM_URL: &str = "https://www.instagram.com/taigikeyboardtw/";
+/// `AboutPage.threadsURL`.
+pub const THREADS_URL: &str = "https://www.threads.com/@siansiansu";
 /// `AboutPage.emailURL`.
 pub const EMAIL_URL: &str = "mailto:info@taigikeyboard.tw";
 
