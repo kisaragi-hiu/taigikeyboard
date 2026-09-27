@@ -212,6 +212,12 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_STTI_TAG)
     val dictionaryLkkTag: String
         @Composable get() = stringRes(StringKey.DICTIONARY_LKK_TAG)
+    val dictionaryClearLearningRecords: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS)
+    val dictionaryClearLearningRecordsDone: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_DONE)
+    val dictionaryClearLearningRecordsFailed: String
+        @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_FAILED)
     val homeAppHeaderTitle: String
         @Composable get() = stringRes(StringKey.HOME_APP_HEADER_TITLE)
     val homeSetupKeyboard: String

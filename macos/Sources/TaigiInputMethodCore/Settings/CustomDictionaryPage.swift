@@ -223,9 +223,9 @@ final class CustomDictionaryPageModel {
     func clearLearningRecords() async {
         do {
             try await run { try $0.clearLearningRecords() }
-            message = .done(.desktopClearLearningRecordsDone)
+            message = .done(.dictionaryClearLearningRecordsDone)
         } catch {
-            message = .failure(.desktopClearLearningRecordsFailed, error)
+            message = .failure(.dictionaryClearLearningRecordsFailed, error)
         }
     }
 
@@ -286,7 +286,7 @@ struct CustomDictionaryPage: View {
             )
 
             Section {
-                WideActionRow(titleKey: .desktopClearLearningRecords, role: .destructive) {
+                WideActionRow(titleKey: .dictionaryClearLearningRecords, role: .destructive) {
                     Task { await model.clearLearningRecords() }
                 }
             }

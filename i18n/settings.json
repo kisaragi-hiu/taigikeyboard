@@ -233,7 +233,7 @@
     },
     "resetFailed": {
       "comment": "Toast shown when resetting settings fails.",
-      "scope": { "platforms": ["android"], "surfaces": ["host"] },
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "恢復設定失敗，請重試", "tailo": "Hue-ho̍k siat-tīng sit-pāi, tshiánn tîng-tshì", "poj": "Hoe-ho̍k siat-tēng sit-pāi, chhiáⁿ tîng-chhì", "en": "Failed to reset settings. Please try again.", "ja": "設定のリセットに失敗しました。もう一度お試しください。" }
     },
     "noEmailApp": {

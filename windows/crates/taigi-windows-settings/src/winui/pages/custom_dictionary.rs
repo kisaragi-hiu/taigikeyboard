@@ -79,7 +79,7 @@ impl Confirm {
     fn title_key(self) -> StringKey {
         match self {
             Self::DeleteAll => StringKey::DictionaryDeleteAll,
-            Self::ClearLearningRecords => StringKey::DesktopClearLearningRecords,
+            Self::ClearLearningRecords => StringKey::DictionaryClearLearningRecords,
         }
     }
 
@@ -688,10 +688,10 @@ fn clear_learning_records(
                 failures.push(format!("learned_phrases: {error}"));
             }
             let message = if failures.is_empty() {
-                PageMessage::Done(StringKey::DesktopClearLearningRecordsDone)
+                PageMessage::Done(StringKey::DictionaryClearLearningRecordsDone)
             } else {
                 PageMessage::Failure {
-                    title: StringKey::DesktopClearLearningRecordsFailed,
+                    title: StringKey::DictionaryClearLearningRecordsFailed,
                     detail: failures.join("\n"),
                 }
             };
@@ -769,7 +769,7 @@ pub fn view(
         ),
         cards::section_gap(),
         cards::action_row(
-            strings.resolve(StringKey::DesktopClearLearningRecords),
+            strings.resolve(StringKey::DictionaryClearLearningRecords),
             strings.resolve(StringKey::CommonDelete),
             true,
             is_enabled,
@@ -1130,7 +1130,7 @@ mod tests {
         );
         assert_eq!(
             Confirm::ClearLearningRecords.title_key(),
-            StringKey::DesktopClearLearningRecords
+            StringKey::DictionaryClearLearningRecords
         );
         assert_eq!(Confirm::ClearLearningRecords.message_key(), None);
     }

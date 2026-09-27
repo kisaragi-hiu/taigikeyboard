@@ -1562,6 +1562,72 @@
         "en": "Han-Roman",
         "ja": "漢羅併用"
       }
+    },
+    "clearLearningRecords": {
+      "comment": "Destructive row at the bottom of the Custom Dictionary page: deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. macOS acts on click (USER 2026-08-25); the other platforms confirm first, with this as the dialog title.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "刪除學習紀錄",
+        "tailo": "San-tû ha̍k-si̍p kì-lio̍k",
+        "poj": "San-tû ha̍k-si̍p kì-lio̍k",
+        "en": "Delete Learning Records",
+        "ja": "学習記録を削除"
+      }
+    },
+    "clearLearningRecordsDone": {
+      "comment": "Alert title after the Delete Learning Records row finishes.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "學習紀錄刪掉矣",
+        "tailo": "Ha̍k-si̍p kì-lio̍k thâi-tiāu ah",
+        "poj": "Ha̍k-si̍p kì-lio̍k thâi-tiāu ah",
+        "en": "Learning Records Cleared",
+        "ja": "学習記録を消去しました"
+      }
+    },
+    "clearLearningRecordsFailed": {
+      "comment": "Alert title when Delete Learning Records could not empty a table. The store's own diagnostic follows as the body.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "學習紀錄刪袂掉",
+        "tailo": "Ha̍k-si̍p kì-lio̍k thâi bē tiāu",
+        "poj": "Ha̍k-si̍p kì-lio̍k thâi bē tiāu",
+        "en": "Could Not Clear Learning Records",
+        "ja": "学習記録を消去できませんでした"
+      }
     }
   }
 }

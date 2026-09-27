@@ -577,6 +577,60 @@
         }
       }
     },
+    "i18n_dictionary_clearLearningRecords": {
+      "comment": "Destructive row at the bottom of the Custom Dictionary page: deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. macOS acts on click (USER 2026-08-25); the other platforms confirm first, with this as the dialog title.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Learning Records"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "学習記録を削除"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_clearLearningRecordsDone": {
+      "comment": "Alert title after the Delete Learning Records row finishes.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learning Records Cleared"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "学習記録を消去しました"
+          }
+        }
+      }
+    },
+    "i18n_dictionary_clearLearningRecordsFailed": {
+      "comment": "Alert title when Delete Learning Records could not empty a table. The store's own diagnostic follows as the body.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could Not Clear Learning Records"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "学習記録を消去できませんでした"
+          }
+        }
+      }
+    },
     "i18n_dictionary_customDictDescription": {
       "comment": "Description of the custom-dictionary CSV format (column layout).",
       "extractionState": "manual",
@@ -3507,6 +3561,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "リセット"
+          }
+        }
+      }
+    },
+    "i18n_settings_resetFailed": {
+      "comment": "Toast shown when resetting settings fails.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to reset settings. Please try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定のリセットに失敗しました。もう一度お試しください。"
           }
         }
       }

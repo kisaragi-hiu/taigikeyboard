@@ -53,7 +53,7 @@ impl Confirm {
     fn title_key(self) -> StringKey {
         match self {
             Self::DeleteAll => StringKey::DictionaryDeleteAll,
-            Self::ClearLearningRecords => StringKey::DesktopClearLearningRecords,
+            Self::ClearLearningRecords => StringKey::DictionaryClearLearningRecords,
         }
     }
 
@@ -325,7 +325,7 @@ impl CustomDictionaryPage {
         let clear_group = adw::PreferencesGroup::new();
         let clear = destructive_row(
             &clear_group,
-            strings.resolve(StringKey::DesktopClearLearningRecords),
+            strings.resolve(StringKey::DictionaryClearLearningRecords),
             strings.resolve(StringKey::CommonDelete),
         );
         page.add(&clear_group);
@@ -790,10 +790,10 @@ impl CustomDictionaryPage {
                 failures.push(format!("learned_phrases: {error}"));
             }
             let message = if failures.is_empty() {
-                PageMessage::Done(StringKey::DesktopClearLearningRecordsDone)
+                PageMessage::Done(StringKey::DictionaryClearLearningRecordsDone)
             } else {
                 PageMessage::Failure {
-                    title: StringKey::DesktopClearLearningRecordsFailed,
+                    title: StringKey::DictionaryClearLearningRecordsFailed,
                     detail: failures.join("\n"),
                 }
             };

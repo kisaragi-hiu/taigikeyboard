@@ -106,6 +106,9 @@
     <string name="i18n_dictionary_kunggeTag">工藝辭典</string>
     <string name="i18n_dictionary_sttiTag">學科術語</string>
     <string name="i18n_dictionary_lkkTag">漢羅合用</string>
+    <string name="i18n_dictionary_clearLearningRecords">刪除學習紀錄</string>
+    <string name="i18n_dictionary_clearLearningRecordsDone">學習紀錄刪掉矣</string>
+    <string name="i18n_dictionary_clearLearningRecordsFailed">學習紀錄刪袂掉</string>
     <string name="i18n_home_appHeaderTitle">台語齒盤</string>
     <string name="i18n_home_setupKeyboard">齒盤愛拍開才會當使用</string>
     <string name="i18n_home_typingGuide">拍字說明</string>
