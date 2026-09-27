@@ -189,7 +189,11 @@ fun EnglishCandidateStrip(
                 onClick = { onEnglishCandidateClick(slot) },
             )
             if (slot < 2) {
-                EnglishDivider(color = Color(display.themePressedHighlightColor))
+                // Theme candidate text at full opacity, like the expanded-grid lines.
+                // CROSS-PLATFORM INVARIANT — mirrors iOS CandidateSuggestionsRow englishCandidateToolbarStyle separator.
+                EnglishDivider(
+                    color = display.candidateTextColor?.let { Color(it) } ?: Color(display.themePressedHighlightColor),
+                )
             }
         }
     }

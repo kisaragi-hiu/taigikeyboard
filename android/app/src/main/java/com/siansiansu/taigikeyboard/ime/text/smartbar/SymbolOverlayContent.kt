@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
@@ -78,6 +80,8 @@ fun SymbolOverlayContent(
                     color = appearance.accent,
                 )
             },
+            // Theme candidate text like the expanded-grid lines; adaptive keeps the M3 default divider.
+            divider = { HorizontalDivider(color = appearance.lineColor ?: DividerDefaults.color) },
         ) {
             SymbolCategoryValues.forEachIndexed { index, category ->
                 Tab(

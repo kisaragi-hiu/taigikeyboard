@@ -125,8 +125,8 @@ A user theme renders **light-only**: iOS `ThemeId.forcedColorScheme` / Android `
 |---|---|
 | Key fill | key long-press popup, one-handed menu background, emoji long-press popup, settings-panel switch off-track |
 | Key pressed fill (`pressedKeyFill`: dark → lightened 0.25, light → deepened 0.8, translucent → unchanged) | key pressed state, key long-press popup selected cell (USER 2026-09-27), Android translate-key active fill, Android emoji ABC / delete pressed |
-| Key text | popup / one-handed menu text, emoji category icons + ABC label + delete glyph |
-| Candidate text | expanded-grid lines, strip expand-toggle divider, English strip dividers, symbol / emoji tab-row divider, toolbar icons |
+| Key text | popup / one-handed menu text, emoji category icons + ABC label + delete glyph, Android emoji tab-row divider |
+| Candidate text | expanded-grid lines, strip expand-toggle divider, English strip dividers, symbol-panel tab-row divider, toolbar icons |
 | Candidate highlight (pressed = highlight deepened, `candidateTints` pressed) | first-candidate box; pressed: candidate cells, expanded-overlay control buttons, Android toolbar buttons |
 | Background luminance | Android navigation-bar icon light / dark |
 
