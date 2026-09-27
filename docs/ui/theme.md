@@ -34,7 +34,7 @@ Colours per family: Default (adaptive, follows light/dark), five light-only soft
 
 ### Custom themes
 
-`Create New…` on the custom shelf opens the editor (`App/Tabs/Theme/ThemeEditorView.swift` + `ThemeEditorViewModel.swift`; Android `ui/tabs/theme/ThemeEditorScreen.kt` hosted by `settings/ThemeEditorActivity.kt`). A custom theme captures one `ThemeAppearance` bundle (`Settings/KeyboardThemeModels.swift`, Android `ime/core/ThemeAppearance.kt`): the background surface + four role colours (`KeyboardColorSettings`), the five size scalars, and `keyShadowIntensity`. Up to `UserThemeStore.maxUserThemes = 5` (`Settings/UserThemeStore.swift`; Android `ime/core/UserThemeStore.kt` `MAX_USER_THEMES`). A live keyboard preview (`KeyboardPreviewPanel.swift` / `ThemePreviewEnvironment.swift`) is pinned in the editor.
+`Create New…` on the custom shelf opens the editor (`App/Tabs/Theme/ThemeEditorView.swift` + `ThemeEditorViewModel.swift`; Android `ui/tabs/theme/ThemeEditorScreen.kt` hosted by `settings/ThemeEditorActivity.kt`). A custom theme captures one `ThemeAppearance` bundle (`Settings/KeyboardThemeModels.swift`, Android `ime/core/ThemeAppearance.kt`): the background surface + five role colours (`KeyboardColorSettings`), the five size scalars, and `keyShadowIntensity`. Up to `UserThemeStore.maxUserThemes = 5` (`Settings/UserThemeStore.swift`; Android `ime/core/UserThemeStore.kt` `MAX_USER_THEMES`). A live keyboard preview (`KeyboardPreviewPanel.swift` / `ThemePreviewEnvironment.swift`) is pinned in the editor.
 
 **Editor order** (USER 2026-09-19, three sections = three surfaces; both platforms): **Background** — segmented Solid / Gradient / Photo, then the solid colour row, or the Start Color / End Color rows (no Direction row — the direction is the pointer on the pinned preview), or the Choose Photo / Change Photo picker row + a Fade slider · **Keys** — Key Fill · Key Text · Key Corner Radius · Key Border Width · Key Shadow · Keyboard Height · Key Font Size · **Candidate Bar** — Candidate Text · Candidate Text Size · Reset to Defaults · pinned preview. The candidate bar has no colour of its own: it is the same surface as the keyboard.
 
@@ -111,6 +111,26 @@ Slider range 0…4 in 0.5 steps (`App/Tabs/Theme/ThemeControlRows.swift` `ThemeS
 | Normal key fill color | RGBA | seed `0xFFFFFF` (user theme); adaptive (`default` buffer) |
 | Special key fill color | RGBA | = normal key fill (user theme); adaptive (`default` buffer) |
 | Candidate text color | RGBA | seed `0x000000` (user theme); adaptive (`default` buffer) |
+| Candidate highlight color | RGBA | `nil` = auto (gradient first stop lightened, else key fill; `candidateTints`) |
+
+### Custom Theme Color Roles (USER 2026-09-27)
+
+A user theme renders **light-only**: iOS `ThemeId.forcedColorScheme` / Android `TaigiKeyboard.syncForcedLight` pin the keyboard to light, so no element follows system dark mode. Every keyboard element falls in exactly one tier: USER-adjustable, derived from a USER role, or fixed. No element may paint a system / attr / asset color that ignores the roles. Rollout: `docs/architecture/theme-color-roles-roadmap.md`.
+
+**Tier 1 — USER-adjustable (the five roles above; no new roles):** background, key fill, key text, candidate text, candidate highlight.
+
+**Tier 2 — derived (follows a role, never set on its own):**
+
+| Source role | Elements |
+|---|---|
+| Key fill | key long-press popup, one-handed menu background, emoji long-press popup, settings-panel switch off-track |
+| Key fill deepened | key pressed state, Android translate-key active fill, Android emoji ABC / delete pressed |
+| Key text | popup / one-handed menu text, emoji category icons + ABC label + delete glyph |
+| Candidate text | expanded-grid lines, strip expand-toggle divider, English strip dividers, symbol / emoji tab-row divider, toolbar icons |
+| Candidate highlight | first-candidate box, popup selected cell, expanded-overlay control pressed, Android toolbar pressed, English autocorrect highlight (both platforms) |
+| Background luminance | Android navigation-bar icon light / dark |
+
+**Tier 3 — fixed (not themed):** shadows, scrims, photo dim tone; selected-state accent blue + white (mode chip, symbol tab, one-handed selected cell, switch on-track, Open App link); Android caps-lock orange (must not be overridden by key text); layout preview images; system popup menus.
 
 ### Font Options (global setting — Settings tab, not per theme)
 - System default
