@@ -258,6 +258,10 @@ private fun CandidatePreviewRow(
     val bgColor = if (colorSettings.background != null) Color.Transparent else defaultBgColor
     val textColor = colorSettings.candidateTextColor?.let { Color(it) } ?: defaultTextColor
     val effectiveSubtitleColor = colorSettings.candidateTextColor?.let { Color(it) } ?: subtitleColor
+    // Same chrome tint the live strip paints (SmartbarView.applyChromeForeground): the "+" toggle,
+    // expand chevron and full-opacity divider follow candidateTextColor, else the night-aware attr.
+    val chromeTint = colorSettings.candidateTextColor?.let { Color(it) } ?: iconTint
+    val dividerColor = colorSettings.candidateTextColor?.let { Color(it) } ?: iconTint.copy(alpha = 0.3f)
     // Same tint the strip paints (SmartbarManager → candidateTints).
     val themedFirstCandidateBgColor = colorSettings.candidateTints?.first?.let { Color(it) } ?: firstCandidateBgColor
 
@@ -280,7 +284,7 @@ private fun CandidatePreviewRow(
                     .width(36.dp)
                     .padding(start = 2.dp)
                     .padding(6.dp),
-            tint = iconTint,
+            tint = chromeTint,
         )
 
         Row(
@@ -327,7 +331,7 @@ private fun CandidatePreviewRow(
                 Modifier
                     .width(1.dp)
                     .height(32.dp)
-                    .background(iconTint.copy(alpha = 0.3f)),
+                    .background(dividerColor),
         )
 
         Icon(
@@ -338,7 +342,7 @@ private fun CandidatePreviewRow(
                     .width(48.dp)
                     .padding(end = 4.dp)
                     .padding(2.dp),
-            tint = iconTint,
+            tint = chromeTint,
         )
     }
 }
