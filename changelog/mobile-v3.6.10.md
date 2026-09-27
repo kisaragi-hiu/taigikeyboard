@@ -35,6 +35,20 @@ to v3.6.10.
   row for every key, white by default. A saved theme whose function keys were a
   different colour now draws them in its letter-key colour. The theme card
   shows only the background, with the selection checkmark. (#209, #210, #132)
+- **Custom themes: key style.** A segmented row in the editor's Keys section
+  picks Filled (素色) · Outlined · Borderless. Outlined and Borderless draw
+  see-through keys (Outlined keeps a thin border); their long-press callouts
+  take the theme background, in light and dark. Switching back to Filled
+  restores the last fill, shadow and border. A saved theme with see-through
+  keys over a solid background now takes its candidate highlight and pressed
+  tint from that background. (#259, #262)
+- **Custom themes: Candidate Highlight.** A new Candidate Bar row sets the
+  colour behind the highlighted candidate; its pressed state is derived from
+  it. Reset returns it to automatic (derived from the background or key fill,
+  as before). (#250)
+- **Delete Learning Records.** A destructive row at the bottom of the 自訂詞庫
+  page clears word frequency, word association and learned phrases in one go
+  after a confirmation; custom words are kept. (#261)
 - **Learned phrases.** Composing a phrase from two or more picks — 記 → 起 → 來 on
   `kikhilai` — teaches the keyboard that whole phrase; the next `kikhilai`
   offers 記起來 as one candidate. Always on, with no list and no badge. Learned
@@ -54,8 +68,8 @@ to v3.6.10.
 - **大本字時 ⁿ 轉做 ᴺ.** In capitals the nasal marker is written `ᴺ` (`SIÂᴺ`);
   switch it off for `SIÂⁿ`. On by default. (#134, #138)
 - **About page.** Home → 關於齒盤 carries the desktop About text — an
-  introduction in 漢字 with TL / POJ — plus website, GitHub, Discord and email
-  links. (#213)
+  introduction in 漢字 with TL / POJ — plus website, GitHub, Discord, Facebook,
+  Instagram, Threads and email links. (#213)
 
 #### Bug Fixes
 
@@ -89,6 +103,12 @@ to v3.6.10.
   light and dark: long-press callouts, candidate highlights, separators and the
   emoji panel no longer turn dark, and the emoji panel takes the theme's
   background. Built-in themes still follow the system. (#240, #242)
+- **Custom themes colour the whole keyboard.** Keys under a custom key fill
+  show a pressed state again; the long-press popup's selected cell, the
+  expanded candidate grid lines, the strip's expand-toggle divider, the English
+  suggestion dividers, the expanded-overlay control buttons and the one-handed
+  callout follow the theme instead of fixed system greys. (#252, #255, #257,
+  #258)
 
 #### Changes
 
@@ -105,6 +125,9 @@ to v3.6.10.
   update the engine takes over the existing files in place (a one-time copy is
   kept beside them) and rebuilds the 自訂詞庫 search keys once. Existing backups
   restore as before. (#219–#237)
+- **Keyboard settings menu.** The rows of the toolbar settings menu show their
+  label only, without a leading icon; the app's Settings tab keeps its icons.
+  (#256)
 - **Home tab.** The in-app version history and the 網站紹介 link are removed; the
   About page replaces 關於開發者. (#101, #213, #216)
 - **Labels.** 顯示當咧拍的字 → 當咧拍的字囥第一个; 自動空白 → 自動閬一格; theme
@@ -122,6 +145,12 @@ to v3.6.10.
 #### Bug Fixes
 
 - The theme page background matches the other grouped tabs. (#135)
+- The theme editor leaves more room to scroll past its sliders, and the pinned
+  preview collapses with a chevron bar. (#260)
+- The emoji panel's icons, ABC and delete buttons, selected circle and popup
+  follow the custom theme. (#258)
+- A failed settings reset now shows an error instead of failing silently.
+  (#261)
 
 ### Android
 
@@ -136,6 +165,14 @@ to v3.6.10.
 - **Next-word predictions after a supplementary-plane 漢字.** Committing 𣍐 or 𫔘
   showed no bundled prediction because the lookup key was half a character; it
   is now the whole character (𣍐 → 使). (#195)
+- **One-handed callout opens reliably.** Long-pressing the toolbar keyboard
+  button could hide the keyboard instead of showing the callout, and the
+  keyboard stayed hidden until the app restarted. (#253)
+- **Custom-theme details.** The translate key's active state, emoji-panel
+  pressed buttons, the settings-menu switch tracks, symbol and emoji tab-row
+  dividers and the navigation-bar icons follow the theme; Caps Lock stays
+  distinguishable from Shift under a custom key text colour; the theme preview's
+  "+" and chevron follow the candidate text colour. (#258, #263)
 
 ### Dictionary
 
