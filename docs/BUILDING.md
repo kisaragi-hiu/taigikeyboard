@@ -26,7 +26,9 @@ git clone --recurse-submodules --filter=blob:none \
 - `--recurse-submodules` fills `taigi-converter/` (the canonical TL / POJ / TPS
   converter, needed by `make dict`) and `corpus/taigi-typing/` (real sentences
   for manual testing; never a build input). Cloned without it:
-  `git submodule update --init taigi-converter`.
+  `git submodule update --init taigi-converter`. The large
+  `corpus/taigi-corpus/` submodule stays empty unless fetched explicitly
+  (`corpus/README.md`).
 
 ## 2. Install the tools
 

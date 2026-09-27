@@ -1,9 +1,12 @@
 # corpus
 
-Real Taiwanese text for manual testing. Nothing here feeds a build, a
-dictionary artifact, or an automated test — the corpus is where dogfood
-sentences come from, so an `Sn` item can cite a sentence a person actually
-wrote instead of one made up for the test.
+Real Taiwanese text. Nothing here feeds a build, a dictionary artifact, or an
+automated test yet.
+
+- `taigi-typing/` — where dogfood sentences come from, so an `Sn` item can
+  cite a sentence a person actually wrote instead of one made up for the test.
+- `taigi-corpus/` — the normalized multi-source corpus kept for future
+  language-model work (next-word bigram tables and similar).
 
 ## `taigi-typing/` (submodule)
 
@@ -36,3 +39,19 @@ keystrokes, the pick sequence, the expected result, and the `dic_url`.
 
 Bootstrap: `git submodule update --init corpus/taigi-typing` (or clone with
 `--recurse-submodules`).
+
+## `taigi-corpus/` (submodule, opt-in)
+
+[taigikeyboard/taigi-corpus](https://github.com/taigikeyboard/taigi-corpus) —
+a pipeline that ingests 18 Taiwanese sources (dictionaries, example sentences,
+news, prose) into normalized JSONL with per-document metadata. Its own README
+covers the sources, `data/normalized/manifest.json`, and `corpus export` for
+filtered training views.
+
+About 670 MB checked out, so `.gitmodules` sets `update = none`: a
+`--recurse-submodules` clone or `git submodule update --init --recursive`
+leaves it empty. Fetch it explicitly:
+
+```sh
+git submodule update --init --checkout corpus/taigi-corpus
+```

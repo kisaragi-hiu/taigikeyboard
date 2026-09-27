@@ -4,3 +4,7 @@
 [submodule "corpus/taigi-typing"]
 	path = corpus/taigi-typing
 	url = https://github.com/luke871016/taigi_typing.git
+[submodule "corpus/taigi-corpus"]
+	path = corpus/taigi-corpus
+	url = https://github.com/taigikeyboard/taigi-corpus.git
+	update = none
