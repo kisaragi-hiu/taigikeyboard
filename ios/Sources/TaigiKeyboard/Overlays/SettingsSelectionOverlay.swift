@@ -84,32 +84,32 @@ struct SettingsSelectionOverlay: View {
                 VStack(alignment: .leading, spacing: 2) {
                     // General settings
                     candidateDisplayModeRow
-                    settingsToggle(lang.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts, icon: SettingsIcons.isOutputBothScripts) {
+                    settingsToggle(lang.string(.settingsOutputBothScripts), isOn: $isOutputBothScripts) {
                         SharedSettings.shared.storedIsOutputBothScripts = $0
                     }
                     // Annotate in Brackets is meaningless without hanji; stored value stays untouched.
                     .disabled(!candidateDisplayMode.showsHanji)
-                    settingsToggle(lang.string(.settingsLiteralRomanCandidate), isOn: $literalRomanCandidateEnabled, icon: SettingsIcons.literalRomanCandidate) {
+                    settingsToggle(lang.string(.settingsLiteralRomanCandidate), isOn: $literalRomanCandidateEnabled) {
                         SharedSettings.shared.isLiteralRomanCandidateEnabled = $0
                     }
-                    settingsToggle(lang.string(.settingsAutoCapitalization), isOn: $autoCapitalizationEnabled, icon: SettingsIcons.autoCapitalization) {
+                    settingsToggle(lang.string(.settingsAutoCapitalization), isOn: $autoCapitalizationEnabled) {
                         KeyboardSettings.store.set($0, forKey: Self.autoCapKey)
                     }
-                    settingsToggle(lang.string(.settingsAutoSpace), isOn: $autoSpaceEnabled, icon: SettingsIcons.autoSpace) {
+                    settingsToggle(lang.string(.settingsAutoSpace), isOn: $autoSpaceEnabled) {
                         SharedSettings.shared.isAutoSpaceEnabled = $0
                     }
-                    settingsToggle(lang.string(.settingsToolbarAutoCollapse), isOn: $toolbarAutoCollapse, icon: SettingsIcons.toolbar) {
+                    settingsToggle(lang.string(.settingsToolbarAutoCollapse), isOn: $toolbarAutoCollapse) {
                         SharedSettings.shared.isToolbarAutoCollapse = $0
                     }
-                    settingsToggle(lang.string(.settingsGlobeKey), isOn: $isGlobeKeyEnabled, icon: SettingsIcons.globeKey) {
+                    settingsToggle(lang.string(.settingsGlobeKey), isOn: $isGlobeKeyEnabled) {
                         SharedSettings.shared.isGlobeKeyEnabled = $0
                     }
 
                     // Feedback settings
-                    settingsToggle(lang.string(.settingsSoundFeedback), isOn: $isAudioFeedbackEnabled, icon: SettingsIcons.soundFeedback) {
+                    settingsToggle(lang.string(.settingsSoundFeedback), isOn: $isAudioFeedbackEnabled) {
                         KeyboardSettings.store.set($0, forKey: Self.audioFeedbackKey)
                     }
-                    settingsToggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled, icon: SettingsIcons.vibrationFeedback) {
+                    settingsToggle(lang.string(.settingsVibrationFeedback), isOn: $isHapticFeedbackEnabled) {
                         KeyboardSettings.store.set($0, forKey: Self.hapticFeedbackKey)
                     }
 
@@ -157,11 +157,11 @@ struct SettingsSelectionOverlay: View {
 
     // MARK: - Components
 
-    /// Menu-picker row shaped like the toggles (icon + label left, current value right).
+    /// Menu-picker row shaped like the toggles (label left, current value right).
     /// Three values do not fit as segments beside the label at keyboard width.
     private var candidateDisplayModeRow: some View {
         HStack(spacing: 8) {
-            settingsRowLabel(lang.string(.settingsCandidateDisplayMode), icon: SettingsIcons.candidateDisplayMode)
+            Text(lang.string(.settingsCandidateDisplayMode))
             Spacer()
             Picker(lang.string(.settingsCandidateDisplayMode), selection: $candidateDisplayMode) {
                 ForEach(CandidateDisplayMode.allCases, id: \.self) { mode in
@@ -183,29 +183,13 @@ struct SettingsSelectionOverlay: View {
         }
     }
 
-    /// Icon + label leading block shared by the toggles and the picker row.
-    @ViewBuilder
-    private func settingsRowLabel(_ label: String, icon: String?) -> some View {
-        if let icon {
-            HStack(spacing: 8) {
-                Image(latinSystemName: icon)
-                    .font(.system(size: 16))
-                    .frame(width: 20)
-                Text(label)
-            }
-        } else {
-            Text(label)
-        }
-    }
-
     private func settingsToggle(
         _ label: String,
         isOn: Binding<Bool>,
-        icon: String? = nil,
         onChange: @escaping (Bool) -> Void,
     ) -> some View {
         Toggle(isOn: isOn) {
-            settingsRowLabel(label, icon: icon)
+            Text(label)
         }
         .font(KeyboardFonts.globalFont(size: 15))
         .foregroundColor(theme.primaryTextColor)
