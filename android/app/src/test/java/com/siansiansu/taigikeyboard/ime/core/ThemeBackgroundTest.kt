@@ -5,6 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -315,6 +316,31 @@ class ThemeBackgroundTest {
         assertEquals(0xFFCCCCCC.toInt(), pressedKeyFillArgb(WHITE))
         assertEquals(0xFF3F3F3F.toInt(), pressedKeyFillArgb(BLACK))
         assertNull(pressedKeyFillArgb(0x80FFFFFF.toInt()))
+    }
+
+    // trace: see-through keys show the background → gradient midpoint per byte:
+    //   Sakura (E6C2D0, EADCE2) → (E6+EA)/2=E8, (C2+DC)/2=CF, (D0+E2)/2=D9 → FFE8CFD9;
+    //   Catppuccin (1E1E2E, 181825) → 1B, 1B, 29 → FF1B1B29. Opaque fill → the fill itself;
+    //   see-through keys without a background (Outlined / Borderless Default) → null.
+    @Test
+    fun calloutFill_transparentKeysTakeBackground_opaqueKeepFill() {
+        fun outlined(
+            top: Int,
+            bottom: Int,
+        ) = KeyboardColorSettings(
+            background = ThemeBackground.Gradient(ThemeGradient(listOf(top, bottom))),
+            keyTextColor = BLACK,
+            normalKeyFillColor = 0,
+            specialKeyFillColor = 0,
+        )
+        assertEquals(0xFFE8CFD9.toInt(), outlined(0xFFE6C2D0.toInt(), 0xFFEADCE2.toInt()).calloutFill)
+        assertEquals(0xFF1B1B29.toInt(), outlined(0xFF1E1E2E.toInt(), 0xFF181825.toInt()).calloutFill)
+        assertEquals(WHITE, UserThemeSeed.colors.calloutFill)
+
+        val framedDefault = KeyboardColorSettings(normalKeyFillColor = 0, specialKeyFillColor = 0)
+        assertTrue(framedDefault.hasTransparentKeys)
+        assertNull(framedDefault.calloutFill)
+        assertFalse(KeyboardColorSettings().hasTransparentKeys)
     }
 
     // endregion
