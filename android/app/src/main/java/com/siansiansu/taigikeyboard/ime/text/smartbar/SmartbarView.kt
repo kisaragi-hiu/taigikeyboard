@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.util.AttributeSet
+import android.util.TypedValue
 import android.view.View
 import android.widget.Button
 import android.widget.ImageButton
@@ -77,6 +78,7 @@ class SmartbarView : LinearLayout {
         dividerView = findViewById(R.id.candidate_divider)
 
         applyExpandButtonTint()
+        applyDividerColor()
 
         numberRowView = findViewById(R.id.number_row)
 
@@ -161,6 +163,7 @@ class SmartbarView : LinearLayout {
         val iconTint = ColorStateList.valueOf(iconFg)
         toolbarToggleButton?.imageTintList = iconTint
         expandToggleButton?.imageTintList = iconTint
+        applyDividerColor()
 
         val buttonTint = ColorStateList.valueOf(buttonFg)
         for (id in TOOLBAR_ICON_BUTTON_IDS) {
@@ -212,6 +215,23 @@ class SmartbarView : LinearLayout {
 
     private fun applyExpandButtonTint() {
         expandToggleButton?.imageTintList = ColorStateList.valueOf(resolvedChromeIconTint())
+    }
+
+    /**
+     * Expand-toggle divider: the theme's candidateTextColor at full opacity (matches the
+     * expanded grid lines), else the framework `?android:attr/dividerVertical` from the layout.
+     * CROSS-PLATFORM INVARIANT — mirrors iOS `CandidateSuggestionsRow.separator`.
+     */
+    private fun applyDividerColor() {
+        val divider = dividerView ?: return
+        val tint = chromeForegroundTint
+        if (tint != null) {
+            divider.setBackgroundColor(tint)
+        } else {
+            val typedValue = TypedValue()
+            context.theme.resolveAttribute(android.R.attr.dividerVertical, typedValue, true)
+            divider.setBackgroundResource(typedValue.resourceId)
+        }
     }
 
     // Chrome icon tint: the active light-only theme's role, else the night-aware attr.

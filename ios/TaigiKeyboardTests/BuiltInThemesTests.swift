@@ -226,6 +226,18 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertNil(flatTheme.pressedCandidateColor, "flat theme must leave pressed tint nil")
     }
 
+    // trace: gridLineColor = candidateTextColor (full opacity) when set; adaptive default → nil (system separator)
+    func testCandidateTheme_gridLineColorFollowsCandidateText() {
+        var colors = UserThemeSeed.colors
+        colors.candidateTextColor = CodableColor(hex: 0xFFFFFF)
+        let themed = CandidateTheme.resolved(candidateTextSizeScale: 1, colorSettings: colors, screenSizeClass: .phoneCompact)
+        XCTAssertEqual(themed.gridLineColor, CodableColor(hex: 0xFFFFFF).color)
+        XCTAssertEqual(themed.gridLineColor, themed.primaryTextColor)
+
+        let adaptive = CandidateTheme.resolved(candidateTextSizeScale: 1, colorSettings: .default, screenSizeClass: .phoneCompact)
+        XCTAssertNil(adaptive.gridLineColor)
+    }
+
     // trace: user-theme seed = solid D4D5DD surface, key text 000000, key fill FFFFFF →
     //   fixedKeyFill FFFFFF; no gradient → tints (FFFFFF, FFFFFF deepened ×0.65:
     //   255×0.65 = 165.75 → 165 = A5) = (FFFFFF, A5A5A5). Scheme-free, so dark mode matches light.

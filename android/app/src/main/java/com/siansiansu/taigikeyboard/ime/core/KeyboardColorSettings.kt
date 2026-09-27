@@ -478,6 +478,27 @@ object UserThemeSeed {
 const val CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR = 0.5
 const val CANDIDATE_PRESSED_DEEPEN_FACTOR = 0.65
 
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift
+// keyPressedLightenFactor / keyPressedDeepenFactor / CodableColor.pressedKeyFill. Drift causes silent divergence.
+// A dark key fill is lightened toward white, a light fill deepened toward black, so black and white
+// fills both show press feedback.
+const val KEY_PRESSED_LIGHTEN_FACTOR = 0.25
+const val KEY_PRESSED_DEEPEN_FACTOR = 0.8
+
+/**
+ * The pressed state of a custom key fill: lightened when dark, deepened when light. null for a
+ * translucent fill (a clear / outlined key keeps its fill when pressed — the derived color is
+ * opaque and would paint a visible key).
+ */
+fun pressedKeyFillArgb(argb: Int): Int? {
+    if (argb ushr 24 != 0xFF) return null
+    return if (isDarkArgb(argb)) {
+        lightenedArgb(argb, KEY_PRESSED_LIGHTEN_FACTOR)
+    } else {
+        deepenedArgb(argb, KEY_PRESSED_DEEPEN_FACTOR)
+    }
+}
+
 /**
  * Returns an opaque ARGB color lightened toward white by [factor]: each 0-255 RGB component is
  * lifted by `c + (255 - c) * factor`, truncated toward zero (alpha forced 0xFF). Used to derive the

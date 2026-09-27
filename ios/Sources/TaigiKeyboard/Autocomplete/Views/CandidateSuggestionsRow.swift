@@ -116,9 +116,12 @@ struct CandidateSuggestionsRow: View {
         .frame(maxHeight: .infinity)
     }
 
+    /// Divider before the expand chevron: the theme's candidate text color when set (matches
+    /// the expanded grid lines), else the system separator.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../smartbar/SmartbarView.kt applyDividerColor.
     private var separator: some View {
         Rectangle()
-            .fill(CandidateViewModels.Colors.separatorColor)
+            .fill(theme.gridLineColor ?? CandidateViewModels.Colors.separatorColor)
             .frame(width: 1.0, height: 32)
             .offset(y: 7)
     }
