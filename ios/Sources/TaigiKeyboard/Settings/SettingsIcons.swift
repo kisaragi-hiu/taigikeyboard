@@ -3,12 +3,6 @@
 import Foundation
 
 enum SettingsIcons {
-    static let candidateDisplayMode = "character.textbox"
-    static let isOutputBothScripts = "character.book.closed"
-    // §34/S22 Show Typed Text First row.
-    static let literalRomanCandidate = "abc"
-    static let autoCapitalization = "textformat.size"
-    static let autoSpace = "space"
     static let toolbar = "menubar.rectangle"
     static let globeKey = "globe"
     static let soundFeedback = "speaker.wave.2"

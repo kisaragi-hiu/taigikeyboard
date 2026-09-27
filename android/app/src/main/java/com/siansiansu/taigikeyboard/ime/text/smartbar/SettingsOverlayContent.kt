@@ -41,7 +41,6 @@ import com.siansiansu.taigikeyboard.i18n.stringRes
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.themeBackground
-import com.siansiansu.taigikeyboard.ui.components.SettingsIcons
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
 import com.siansiansu.taigikeyboard.ui.tabs.settings.candidateDisplayModeDisplayName
 import com.siansiansu.taigikeyboard.ui.tabs.settings.candidateDisplayModeOptions
@@ -53,7 +52,7 @@ import kotlinx.coroutines.launch
  * Compose content for the keyboard settings overlay.
  *
  * Renders the same settings as InputSettingsScreen (Settings tab) but styled
- * for the keyboard overlay context. Uses shared SwitchRow and SettingsIcons.
+ * for the keyboard overlay context. Uses shared SwitchRow.
  */
 @Composable
 fun SettingsOverlayContent(
@@ -103,7 +102,6 @@ fun SettingsOverlayContent(
     // (the keyboard theme owns these, not the M3 app palette). Matches symbol / layout overlays.
     val appearance = rememberKeyboardOverlayAppearance(prefs, refreshTrigger)
     val labelColor = appearance.foreground
-    val iconTint = appearance.foreground
 
     // Panel sits below the smartbar; offset the gradient by it so the slice stays continuous.
     val topInsetPx = rememberSmartbarInsetPx()
@@ -127,7 +125,6 @@ fun SettingsOverlayContent(
                     autoDismissIfNeeded()
                 }
             },
-            iconTint = iconTint,
             labelColor = labelColor,
             accent = appearance.accent,
             fontFamily = fontFamily,
@@ -135,8 +132,6 @@ fun SettingsOverlayContent(
         SwitchRow(
             label = L10n.settingsOutputBothScripts,
             checked = outputBoth,
-            icon = SettingsIcons.outputBothScripts,
-            iconTint = iconTint,
             enabled = candidateDisplayMode.showsHanji,
             onCheckedChange = {
                 outputBoth = it
@@ -149,8 +144,6 @@ fun SettingsOverlayContent(
         SwitchRow(
             label = L10n.settingsLiteralRomanCandidate,
             checked = literalRomanCandidate,
-            icon = SettingsIcons.literalRomanCandidate,
-            iconTint = iconTint,
             onCheckedChange = {
                 literalRomanCandidate = it
                 prefs.literalRomanCandidateEnabled = it
@@ -162,8 +155,6 @@ fun SettingsOverlayContent(
         SwitchRow(
             label = L10n.settingsAutoCapitalization,
             checked = autoCap,
-            icon = SettingsIcons.autoCapitalization,
-            iconTint = iconTint,
             onCheckedChange = {
                 autoCap = it
                 prefs.autoCapitalizationEnabled = it
@@ -175,8 +166,6 @@ fun SettingsOverlayContent(
         SwitchRow(
             label = L10n.settingsAutoSpace,
             checked = autoSpace,
-            icon = SettingsIcons.autoSpace,
-            iconTint = iconTint,
             onCheckedChange = {
                 autoSpace = it
                 prefs.isAutoSpaceEnabled = it
@@ -188,8 +177,6 @@ fun SettingsOverlayContent(
         SwitchRow(
             label = L10n.settingsToolbarAutoCollapse,
             checked = toolbarAutoCollapse,
-            icon = SettingsIcons.toolbar,
-            iconTint = iconTint,
             onCheckedChange = {
                 toolbarAutoCollapse = it
                 prefs.isToolbarAutoCollapse = it
@@ -201,8 +188,6 @@ fun SettingsOverlayContent(
         SwitchRow(
             label = L10n.settingsGlobeKey,
             checked = isGlobeKeyEnabled,
-            icon = SettingsIcons.globe,
-            iconTint = iconTint,
             onCheckedChange = {
                 isGlobeKeyEnabled = it
                 prefs.isGlobeKeyEnabled = it
@@ -216,8 +201,6 @@ fun SettingsOverlayContent(
         SwitchRow(
             label = L10n.settingsSoundFeedback,
             checked = soundFeedback,
-            icon = SettingsIcons.sound,
-            iconTint = iconTint,
             onCheckedChange = {
                 soundFeedback = it
                 prefs.isSoundFeedbackEnabled = it
@@ -229,8 +212,6 @@ fun SettingsOverlayContent(
         SwitchRow(
             label = L10n.settingsVibrationFeedback,
             checked = vibrationFeedback,
-            icon = SettingsIcons.vibration,
-            iconTint = iconTint,
             onCheckedChange = {
                 vibrationFeedback = it
                 prefs.isVibrationFeedbackEnabled = it
@@ -296,14 +277,13 @@ fun SettingsOverlayContent(
     }
 }
 
-// Candidate Display dropdown row — same icon / label / padding shape as the SwitchRow siblings; the trailing
+// Candidate Display dropdown row — same label / padding shape as the SwitchRow siblings; the trailing
 // slot shows the current value + a drop-down arrow and opens a DropdownMenu of the three modes
 // (three segments no longer fit beside the label at keyboard width with en / ja strings).
 @Composable
 private fun CandidateDisplayModeRow(
     selected: CandidateDisplayMode,
     onSelected: (CandidateDisplayMode) -> Unit,
-    iconTint: Color,
     labelColor: Color,
     accent: Color,
     fontFamily: FontFamily,
@@ -317,13 +297,6 @@ private fun CandidateDisplayModeRow(
                 .padding(horizontal = 20.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = SettingsIcons.candidateDisplayMode,
-            contentDescription = null,
-            modifier = Modifier.size(24.dp),
-            tint = iconTint,
-        )
-        Spacer(Modifier.width(12.dp))
         Text(
             text = L10n.settingsCandidateDisplayMode,
             modifier = Modifier.weight(1f),
