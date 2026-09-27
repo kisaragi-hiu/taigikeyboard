@@ -452,4 +452,16 @@ final class ThemeBackgroundTests: XCTestCase {
         let adaptive = KeyboardCalloutStyle.standard.themed(by: .default)
         XCTAssertEqual(adaptive.selectedBackgroundColor, KeyboardCalloutStyle.standard.selectedBackgroundColor)
     }
+
+    // trace: seed fixedKeyFill FFFFFF + keyText 000000 → chrome text 000000, fill FFFFFF,
+    //   selected-category circle = pressedKeyFill CCCCCC; adaptive default (no fixedKeyFill) → nil,
+    //   so ISEmojiView keeps its vendored greys.
+    func testEmojiChromeColors_seedUsesKeyRoles_adaptiveNil() throws {
+        let chrome = try XCTUnwrap(EmojiChromeColors.resolved(from: UserThemeSeed.colors))
+        XCTAssertEqual(chrome.keyText, CodableColor(hex: 0x000000))
+        XCTAssertEqual(chrome.keyFill, CodableColor(hex: 0xFFFFFF))
+        XCTAssertEqual(chrome.selectionFill, CodableColor(hex: 0xCCCCCC))
+
+        XCTAssertNil(EmojiChromeColors.resolved(from: .default))
+    }
 }

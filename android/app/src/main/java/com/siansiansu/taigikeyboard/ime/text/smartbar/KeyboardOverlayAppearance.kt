@@ -40,6 +40,8 @@ data class KeyboardOverlayAppearance(
     val accent: Color,
     val calloutFill: Color,
     val calloutForeground: Color,
+    /** The fixed key fill (with key text), or null for a palette without one. */
+    val keyFill: Color?,
     /** Theme candidate text for panel divider lines at full opacity; null (adaptive) keeps the default divider. */
     val lineColor: Color?,
 )
@@ -76,6 +78,7 @@ fun rememberKeyboardOverlayAppearance(
             accent = chrome.accent,
             calloutFill = keyPalette?.first ?: chrome.background,
             calloutForeground = keyPalette?.second ?: foreground,
+            keyFill = keyPalette?.first,
             lineColor = colors.candidateTextColor?.let { Color(it) },
         )
     }

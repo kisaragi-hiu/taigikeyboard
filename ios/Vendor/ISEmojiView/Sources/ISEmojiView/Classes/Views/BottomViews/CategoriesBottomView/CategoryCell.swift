@@ -11,13 +11,32 @@ import UIKit
 private let HighlightedBackgroundViewSize = CGFloat(30)
 private let ImageActiveTintColor = UIColor(red: 95 / 255, green: 94 / 255, blue: 95 / 255, alpha: 1)
 private let ImageNonActiveTintColor = UIColor(red: 161 / 255, green: 165 / 255, blue: 172 / 255, alpha: 1)
+private let HighlightedBackgroundColor = UIColor(red: 201 / 255, green: 206 / 255, blue: 214 / 255, alpha: 1)
 
 class CategoryCell: UICollectionViewCell {
+    // MARK: - Internal variables
+
+    // TaigiKeyboard: local patch — host theme colors; nil keeps the constants above.
+    var colors: EmojiViewColors? {
+        didSet {
+            highlightedBackgroundView.backgroundColor = colors?.selectionFill ?? HighlightedBackgroundColor
+            emojiImageView.tintColor = highlightedBackgroundView.isHidden ? inactiveTintColor : activeTintColor
+        }
+    }
+
+    private var activeTintColor: UIColor {
+        colors?.foreground ?? ImageActiveTintColor
+    }
+
+    private var inactiveTintColor: UIColor {
+        colors?.dimmedForeground ?? ImageNonActiveTintColor
+    }
+
     // MARK: - Private variables
 
     private var highlightedBackgroundView: UIView = {
         let view = UIView()
-        view.backgroundColor = UIColor(red: 201 / 255, green: 206 / 255, blue: 214 / 255, alpha: 1)
+        view.backgroundColor = HighlightedBackgroundColor
         view.isHidden = true
         return view
     }()
@@ -44,14 +63,14 @@ class CategoryCell: UICollectionViewCell {
     override var isHighlighted: Bool {
         didSet {
             highlightedBackgroundView.isHidden = !isHighlighted
-            emojiImageView.tintColor = isHighlighted ? ImageActiveTintColor : ImageNonActiveTintColor
+            emojiImageView.tintColor = isHighlighted ? activeTintColor : inactiveTintColor
         }
     }
 
     override var isSelected: Bool {
         didSet {
             highlightedBackgroundView.isHidden = !isSelected
-            emojiImageView.tintColor = isSelected ? ImageActiveTintColor : ImageNonActiveTintColor
+            emojiImageView.tintColor = isSelected ? activeTintColor : inactiveTintColor
         }
     }
 

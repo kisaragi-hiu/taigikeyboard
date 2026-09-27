@@ -15,11 +15,17 @@ private const val TAG = "NavigationBarManager"
 class NavigationBarManager {
     private fun isDarkMode(context: Context): Boolean = isKeyboardNightMode(context)
 
+    /**
+     * @param surface the active custom surface, or null for the adaptive default. A custom theme
+     *   renders forced-light, so night mode says nothing about it; its palette tone decides
+     *   instead (dark key text ⇒ light palette ⇒ dark icons).
+     */
     fun updateNavigationBar(
         window: Window,
         context: Context,
+        surface: ThemeSurface? = null,
     ) {
-        val isDark = isDarkMode(context)
+        val isDark = surface?.let { !it.dimsTowardWhite } ?: isDarkMode(context)
         val logger = CompositionRoot.shared(context).logger
 
         logger.debug(TAG) { "=== Updating Navigation Bar ===" }

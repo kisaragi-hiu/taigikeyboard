@@ -41,13 +41,20 @@ final class CategoriesBottomView: UIView {
         }
     }
 
+    // TaigiKeyboard: local patch — host theme colors for the category icons, "ABC" title
+    // and delete icon; nil restores the xib / asset defaults.
+    var colors: EmojiViewColors? {
+        didSet {
+            applyColors()
+        }
+    }
+
     // MARK: - IBOutlets
 
     @IBOutlet private weak var changeKeyboardButton: UIButton!
     @IBOutlet private weak var deleteButton: UIButton! {
         didSet {
-            let image = UIImage(named: "ic_emojiDelete", in: Bundle.podBundle, compatibleWith: nil)
-            deleteButton.setImage(image, for: .normal)
+            deleteButton.setImage(deleteImage, for: .normal)
         }
     }
 
@@ -56,6 +63,13 @@ final class CategoriesBottomView: UIView {
             collectionView.register(CategoryCell.self, forCellWithReuseIdentifier: "CategoryCell")
         }
     }
+
+    // TaigiKeyboard: local patch — kept so `applyColors` can restore the unthemed look.
+    private let deleteImage = UIImage(named: "ic_emojiDelete", in: Bundle.podBundle, compatibleWith: nil)
+    private lazy var defaultAbcTitleColors = (
+        normal: changeKeyboardButton.titleColor(for: .normal),
+        highlighted: changeKeyboardButton.titleColor(for: .highlighted),
+    )
 
     @IBOutlet private var collectionViewToSuperViewLeadingConstraint: NSLayoutConstraint!
 
@@ -155,6 +169,7 @@ extension CategoriesBottomView: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "CategoryCell", for: indexPath) as! CategoryCell
         cell.setEmojiCategory(categories[indexPath.item])
+        cell.colors = colors // TaigiKeyboard: local patch
         return cell
     }
 }
@@ -170,6 +185,15 @@ extension CategoriesBottomView: UICollectionViewDelegate {
 // MARK: - Private functions
 
 extension CategoriesBottomView {
+    // TaigiKeyboard: local patch — the category row never scrolls, so the visible cells are all of them.
+    private func applyColors() {
+        changeKeyboardButton.setTitleColor(colors?.foreground ?? defaultAbcTitleColors.normal, for: .normal)
+        changeKeyboardButton.setTitleColor(colors?.dimmedForeground ?? defaultAbcTitleColors.highlighted, for: .highlighted)
+        deleteButton.setImage(colors == nil ? deleteImage : deleteImage?.withRenderingMode(.alwaysTemplate), for: .normal)
+        deleteButton.tintColor = colors?.foreground
+        collectionView.visibleCells.forEach { ($0 as? CategoryCell)?.colors = colors }
+    }
+
     private func selectFirstCell() {
         let indexPath = IndexPath(item: 0, section: 0)
         collectionView.selectItem(at: indexPath, animated: true, scrollPosition: .centeredHorizontally)
