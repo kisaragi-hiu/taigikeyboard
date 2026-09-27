@@ -50,6 +50,11 @@ struct ThemeSliderRow: View {
     let defaultValue: Double
     let onChanged: (Double) -> Void
 
+    /// Extra row padding above and below the slider: a swipe that starts on the slider can
+    /// fail to scroll the editor, so each row keeps a slider-free strip to start one from
+    /// (USER 2026-09-28: the gap under the photo dim slider was too thin to scroll from).
+    private static let scrollStripHeight: CGFloat = 8
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -71,6 +76,7 @@ struct ThemeSliderRow: View {
                     onChanged(newValue)
                 }
         }
+        .padding(.vertical, Self.scrollStripHeight)
     }
 }
 

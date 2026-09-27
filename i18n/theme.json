@@ -126,6 +126,16 @@
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
       "values": { "hanji": "放大", "tailo": "Hòng-tuā", "poj": "Hòng-tōa", "en": "Zoom", "ja": "拡大" }
     },
+    "previewExpand": {
+      "comment": "Theme editor: VoiceOver label of the chevron that expands the collapsed live keyboard preview pinned at the bottom. 預覽 = ī-lám (dictionary).",
+      "scope": { "platforms": ["ios"], "surfaces": ["host"] },
+      "values": { "hanji": "展開預覽", "tailo": "Tián-khui ī-lám", "poj": "Tián-khui ī-lám", "en": "Expand Preview", "ja": "プレビューを展開" }
+    },
+    "previewCollapse": {
+      "comment": "Theme editor: VoiceOver label of the chevron that collapses the live keyboard preview pinned at the bottom (frees room to scroll the settings). 預覽 = ī-lám (dictionary).",
+      "scope": { "platforms": ["ios"], "surfaces": ["host"] },
+      "values": { "hanji": "收合預覽", "tailo": "Siu-ha̍p ī-lám", "poj": "Siu-ha̍p ī-lám", "en": "Collapse Preview", "ja": "プレビューを折りたたむ" }
+    },
     "gradientDirection": {
       "comment": "Gradient direction: the VoiceOver / TalkBack label of the drag pointer over the theme editor preview (no visible row on either platform).",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },

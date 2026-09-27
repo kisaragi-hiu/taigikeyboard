@@ -4644,6 +4644,42 @@
           }
         }
       }
+    },
+    "i18n_theme_previewCollapse": {
+      "comment": "Theme editor: VoiceOver label of the chevron that collapses the live keyboard preview pinned at the bottom (frees room to scroll the settings). 預覽 = ī-lám (dictionary).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapse Preview"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューを折りたたむ"
+          }
+        }
+      }
+    },
+    "i18n_theme_previewExpand": {
+      "comment": "Theme editor: VoiceOver label of the chevron that expands the collapsed live keyboard preview pinned at the bottom. 預覽 = ī-lám (dictionary).",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expand Preview"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューを展開"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
