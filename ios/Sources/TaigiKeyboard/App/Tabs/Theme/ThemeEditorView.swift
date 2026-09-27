@@ -26,6 +26,9 @@ struct ThemeEditorView: View {
     @State private var showsNameAlert = false
     @State private var pendingName = ""
     @State private var pickedPhoto: PhotosPickerItem?
+    /// The pinned preview folds away so the settings get the whole screen to scroll in
+    /// (USER 2026-09-28: the short list above the preview was hard to scroll).
+    @State private var isPreviewCollapsed = false
 
     init(editing: UserTheme? = nil) {
         _viewModel = StateObject(wrappedValue: ThemeEditorViewModel(editing: editing))
@@ -118,34 +121,9 @@ struct ThemeEditorView: View {
             // preview doubles as the direction control (drag to set the angle); while
             // it is a photo, as the position control (drag to move, pinch to zoom the photo; a
             // gesture hint shows until the first touch).
-            KeyboardPreviewPanel(
-                appearance: viewModel.appearance,
-                appliesThemeShadow: true,
-                // A user theme renders light whatever the system appearance, as on the keyboard.
-                colorScheme: .light,
-            )
-            .overlay {
-                if viewModel.backgroundKind == .gradient {
-                    GradientDirectionOverlay(
-                        label: lang.string(.themeGradientDirection),
-                        angle: viewModel.gradientAngleBinding,
-                    )
-                } else if let photo = viewModel.photoBinding {
-                    ThemePhotoImage(file: photo.wrappedValue.file, variant: .full) { image in
-                        PhotoPositionOverlay(
-                            label: lang.string(.themePhotoPosition),
-                            moveHint: lang.string(.themePhotoHintMove),
-                            zoomHint: lang.string(.themePhotoHintZoom),
-                            imageSize: image.size,
-                            photo: photo,
-                        )
-                    } placeholder: {
-                        // A real view, not EmptyView: inside `.overlay` an empty body yields no
-                        // node, so ThemePhotoImage's `.task` never starts and the drag overlay
-                        // stayed missing after a pick until an unrelated edit re-rendered it.
-                        Color.clear
-                    }
-                }
+            previewToggle
+            if !isPreviewCollapsed {
+                preview
             }
         }
         .navigationTitle(viewModel.isEditing ? lang.string(.themeEditorTitleEdit) : lang.string(.themeEditorTitleNew))
@@ -214,6 +192,55 @@ struct ThemeEditorView: View {
             color: viewModel.colorBinding(keyPath),
             onReset: viewModel.isColorCustomized(keyPath) ? { viewModel.resetColor(keyPath) } : nil,
         )
+    }
+
+    /// Folds the pinned preview away (or back), freeing the screen for the settings list.
+    private var previewToggle: some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.2)) { isPreviewCollapsed.toggle() }
+        } label: {
+            Image(latinSystemName: isPreviewCollapsed ? "chevron.up" : "chevron.down")
+                .font(AppStyle.captionFont)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, minHeight: 32)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(Color(.systemGroupedBackground))
+        .accessibilityLabel(lang.string(isPreviewCollapsed ? .themePreviewExpand : .themePreviewCollapse))
+    }
+
+    /// The live draft preview with its gradient-direction / photo-position gesture overlay.
+    private var preview: some View {
+        KeyboardPreviewPanel(
+            appearance: viewModel.appearance,
+            appliesThemeShadow: true,
+            // A user theme renders light whatever the system appearance, as on the keyboard.
+            colorScheme: .light,
+        )
+        .overlay {
+            if viewModel.backgroundKind == .gradient {
+                GradientDirectionOverlay(
+                    label: lang.string(.themeGradientDirection),
+                    angle: viewModel.gradientAngleBinding,
+                )
+            } else if let photo = viewModel.photoBinding {
+                ThemePhotoImage(file: photo.wrappedValue.file, variant: .full) { image in
+                    PhotoPositionOverlay(
+                        label: lang.string(.themePhotoPosition),
+                        moveHint: lang.string(.themePhotoHintMove),
+                        zoomHint: lang.string(.themePhotoHintZoom),
+                        imageSize: image.size,
+                        photo: photo,
+                    )
+                } placeholder: {
+                    // A real view, not EmptyView: inside `.overlay` an empty body yields no
+                    // node, so ThemePhotoImage's `.task` never starts and the drag overlay
+                    // stayed missing after a pick until an unrelated edit re-rendered it.
+                    Color.clear
+                }
+            }
+        }
     }
 
     private func sliderRow(
