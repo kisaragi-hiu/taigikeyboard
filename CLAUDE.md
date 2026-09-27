@@ -16,7 +16,7 @@ dictionary/        # Dictionary sources + build pipeline + output artifacts
 docs/              # engine/, architecture/, ui/, references/, reports/, roadmap.md
 knowledge/         # Taiwanese phonetics reference (TL/POJ/TPS)
 taigi-converter/   # Canonical TL↔POJ↔TPS converter (git submodule)
-corpus/            # Real Taiwanese text for manual-test sentences (taigi-typing submodule) — never a build input
+corpus/            # Real Taiwanese text — taigi-typing (manual-test sentences) + taigi-corpus (opt-in, future LM data); never a build input
 changelog/         # Per-release changelogs — edit only at release time
 references/        # Cloned external IME repos (gitignored)
 taigi-emojis/      # Emoji data generator (own CLAUDE.md)
