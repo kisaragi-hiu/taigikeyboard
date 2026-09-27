@@ -2467,6 +2467,24 @@
         }
       }
     },
+    "i18n_home_threadsLink": {
+      "comment": "About page: title + accessibility name of the Threads link row. A product name — same in every language.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Threads"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Threads"
+          }
+        }
+      }
+    },
     "i18n_home_typingGuide": {
       "comment": "Home section header above the typing-guide feature list.",
       "extractionState": "manual",

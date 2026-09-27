@@ -1,12 +1,13 @@
 //! The About page: what the project is and where to find it. Port of
 //! `AboutPage.swift` / the Windows `about.rs`: two paragraphs, the sponsor
-//! and the six community links as rows of one group, the attribution
+//! and the seven community links as rows of one group, the attribution
 //! line. No app icon, no name and no version — the General pane's version row
 //! already says which build this is.
 
 use super::PageContext;
 use crate::presentation::{
-    DISCORD_URL, EMAIL_URL, FACEBOOK_URL, GITHUB_URL, INSTAGRAM_URL, SPONSOR_URL, WEBSITE_URL,
+    DISCORD_URL, EMAIL_URL, FACEBOOK_URL, GITHUB_URL, INSTAGRAM_URL, SPONSOR_URL, THREADS_URL,
+    WEBSITE_URL,
 };
 use adw::prelude::*;
 use taigi_desktop_core::strings::StringKey;
@@ -38,6 +39,7 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         (StringKey::HomeDiscordLink, DISCORD_URL),
         (StringKey::HomeFacebookLink, FACEBOOK_URL),
         (StringKey::HomeInstagramLink, INSTAGRAM_URL),
+        (StringKey::HomeThreadsLink, THREADS_URL),
         (StringKey::HomeEmailLink, EMAIL_URL),
     ] {
         let title = context.strings.resolve(key).to_owned();

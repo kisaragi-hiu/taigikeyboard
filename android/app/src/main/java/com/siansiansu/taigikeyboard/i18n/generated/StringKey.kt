@@ -134,6 +134,7 @@ enum class StringKey(
     HOME_DISCORD_LINK(R.string.i18n_home_discordLink),
     HOME_FACEBOOK_LINK(R.string.i18n_home_facebookLink),
     HOME_INSTAGRAM_LINK(R.string.i18n_home_instagramLink),
+    HOME_THREADS_LINK(R.string.i18n_home_threadsLink),
     HOME_EMAIL_LINK(R.string.i18n_home_emailLink),
     HOME_COPYRIGHT_LINE(R.string.i18n_home_copyrightLine),
     HOME_PRIVACY_POLICY(R.string.i18n_home_privacyPolicy),

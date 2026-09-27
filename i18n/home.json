@@ -427,6 +427,28 @@
         "ja": "Instagram"
       }
     },
+    "threadsLink": {
+      "comment": "About page: title + accessibility name of the Threads link row. A product name — same in every language.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Threads",
+        "tailo": "Threads",
+        "poj": "Threads",
+        "en": "Threads",
+        "ja": "Threads"
+      }
+    },
     "emailLink": {
       "comment": "About page footer: tooltip + accessibility name of the email icon link. The address itself — same in every language.",
       "scope": {

@@ -126,6 +126,7 @@ enum StringKey: String {
     case homeDiscordLink = "i18n_home_discordLink"
     case homeFacebookLink = "i18n_home_facebookLink"
     case homeInstagramLink = "i18n_home_instagramLink"
+    case homeThreadsLink = "i18n_home_threadsLink"
     case homeEmailLink = "i18n_home_emailLink"
     case homeCopyrightLine = "i18n_home_copyrightLine"
     case homePrivacyPolicy = "i18n_home_privacyPolicy"

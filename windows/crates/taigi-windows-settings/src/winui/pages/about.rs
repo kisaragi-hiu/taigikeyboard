@@ -2,13 +2,14 @@
 //! `AboutPage.swift`.
 //!
 //! What the tray menu's About row opens (USER 2026-09-20): two lines the
-//! USER wrote; the sponsor and the six community links as rows of one card; the attribution line. In
+//! USER wrote; the sponsor and the seven community links as rows of one card; the attribution line. In
 //! the same cards as every other pane (USER 2026-09-20: "make it a page"). No app
 //! icon, no name and no version — the update row on General already says which build
 //! this is.
 
 use crate::presentation::{
-    DISCORD_URL, EMAIL_URL, FACEBOOK_URL, GITHUB_URL, INSTAGRAM_URL, SPONSOR_URL, WEBSITE_URL,
+    DISCORD_URL, EMAIL_URL, FACEBOOK_URL, GITHUB_URL, INSTAGRAM_URL, SPONSOR_URL, THREADS_URL,
+    WEBSITE_URL,
 };
 use crate::winui::cards;
 use crate::winui::font_awesome::FontAwesomeGlyph;
@@ -87,6 +88,13 @@ pub fn view(
                 FontAwesomeGlyph::Instagram,
                 StringKey::HomeInstagramLink,
                 INSTAGRAM_URL,
+            ),
+            link_row(
+                strings,
+                context,
+                FontAwesomeGlyph::Threads,
+                StringKey::HomeThreadsLink,
+                THREADS_URL,
             ),
             link_row(
                 strings,

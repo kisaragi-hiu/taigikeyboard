@@ -126,6 +126,7 @@ private val aboutLinks =
         Triple(StringKey.HOME_DISCORD_LINK, R.drawable.ic_discord, "https://discord.gg/kXhtQfWvK"),
         Triple(StringKey.HOME_FACEBOOK_LINK, R.drawable.ic_facebook, "https://www.facebook.com/profile.php?id=61589036184924"),
         Triple(StringKey.HOME_INSTAGRAM_LINK, R.drawable.ic_instagram, "https://www.instagram.com/taigikeyboardtw/"),
+        Triple(StringKey.HOME_THREADS_LINK, R.drawable.ic_threads, "https://www.threads.com/@siansiansu"),
         Triple(StringKey.HOME_EMAIL_LINK, R.drawable.ic_email, "mailto:info@taigikeyboard.tw"),
     )
 
