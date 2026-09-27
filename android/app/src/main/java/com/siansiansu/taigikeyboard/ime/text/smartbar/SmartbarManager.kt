@@ -467,6 +467,8 @@ class SmartbarManager(
 
     fun onFinishInputView() {
         clearCandidates()
+        // The callout is transient: one left open would reopen with the next input view.
+        oneHandedMenuOverlayView?.hide()
     }
 
     fun updateCandidates(suggestions: List<TaigiWord>) {

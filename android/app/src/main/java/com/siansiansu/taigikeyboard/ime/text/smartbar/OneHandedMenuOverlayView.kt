@@ -103,7 +103,17 @@ class OneHandedMenuOverlayView : FrameLayout {
         composeView = null
     }
 
-    fun show(mode: OneHandedMode) {
+    /**
+     * @param keyboardHeight Total input view height (smartbar + keyboard). The cover is pinned
+     * to it: left `match_parent` inside the `wrap_content` input view, it measures to the whole
+     * IME window, the IME inset grows to full screen and the host editor hides the keyboard.
+     */
+    fun show(
+        mode: OneHandedMode,
+        keyboardHeight: Int,
+    ) {
+        if (keyboardHeight <= 0) return
+        layoutParams = layoutParams.apply { height = keyboardHeight }
         currentMode.value = mode
         refreshTrigger.intValue++
         visibility = VISIBLE
