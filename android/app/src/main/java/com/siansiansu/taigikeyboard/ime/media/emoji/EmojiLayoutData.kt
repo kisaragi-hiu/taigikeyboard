@@ -1,7 +1,7 @@
 
 package com.siansiansu.taigikeyboard.ime.media.emoji
 
-// Loads the shared emoji set (taigi-emojis dist/emoji.json) into the IME's emoji-palette model
+// Loads the shared emoji set (emoji/dist/emoji.json) into the IME's emoji-palette model
 import android.content.Context
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -14,13 +14,13 @@ import java.util.Locale
 
 private const val TAG = "EmojiLayoutData"
 
-// Bundled by Gradle: android/app sourceSets mounts the in-repo taigi-emojis/dist dir as an
+// Bundled by Gradle: android/app sourceSets mounts the in-repo emoji/dist dir as an
 // assets source, so dist/emoji.json lands at the assets root. Single source of truth.
 private const val EMOJI_JSON_ASSET = "emoji.json"
 
 typealias EmojiLayoutDataMap = EnumMap<EmojiCategory, MutableList<EmojiSet>>
 
-// Moshi DTOs mirroring taigi-emojis dist/emoji.json (schema frozen by that repo's output-contract +
+// Moshi DTOs mirroring emoji/dist/emoji.json (schema frozen by emoji/.claude/rules/output-contract.md +
 // drift test). Only the fields this IME consumes are declared; Moshi ignores the rest (cp, subgroup,
 // version, keywordsByLocale).
 private data class EmojiJsonRoot(
@@ -61,7 +61,7 @@ private fun emojiStringToCodePoints(emoji: String): List<Int> {
 private fun EmojiJsonEmoji.toKeyData(glyph: String): EmojiKeyData = EmojiKeyData(emojiStringToCodePoints(glyph), name, name, keywords)
 
 /**
- * Loads the bundled `emoji.json` (taigi-emojis) into an [EmojiLayoutDataMap].
+ * Loads the bundled `emoji.json` (emoji/dist) into an [EmojiLayoutDataMap].
  *
  * Category ids in the JSON (`smileys_emotion`, `people_body`, …) map 1:1 to [EmojiCategory]
  * once upper-cased. Each emoji becomes an [EmojiSet] of `[base] + variations`; entries whose

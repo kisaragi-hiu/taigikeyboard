@@ -13,7 +13,7 @@ protoc = "36.2"
 gitleaks = "8.30.1"
 # The version .github/workflows/checks.yml lints with.
 swiftformat = "0.63.0"
-# taigi-emojis is a uv project.
+# emoji/ is a uv project.
 uv = "latest"
 
 # Deliberately not pinned: python (>= 3.13) and node (>= 22). Nothing checks an

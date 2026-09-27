@@ -1,6 +1,6 @@
 ---
 name: deps
-description: Evaluate which third-party dependencies can be upgraded — Rust crates (engine / desktop / windows / linux workspaces), Android Gradle deps + plugins + wrapper, Swift packages (macOS + iOS), Python (dictionary pipeline, taigi-emojis), mise tools, open Dependabot PRs/alerts. Classifies every candidate SAFE / REVIEW / MAJOR / BLOCKED / USER-ONLY against the repo's standing pins and proposes PR groupings. Use when asked "what can we upgrade", "check outdated packages", "dependency audit". Read-only — never edits manifests or lockfiles, never builds, branches or opens a round. Args: scope `rust` | `android` | `apple` | `python` | `tools` | `all` (default all). App-version upgrade compatibility is /upgrade-check.
+description: Evaluate which third-party dependencies can be upgraded — Rust crates (engine / desktop / windows / linux workspaces), Android Gradle deps + plugins + wrapper, Swift packages (macOS + iOS), Python (dictionary pipeline, emoji/), mise tools, open Dependabot PRs/alerts. Classifies every candidate SAFE / REVIEW / MAJOR / BLOCKED / USER-ONLY against the repo's standing pins and proposes PR groupings. Use when asked "what can we upgrade", "check outdated packages", "dependency audit". Read-only — never edits manifests or lockfiles, never builds, branches or opens a round. Args: scope `rust` | `android` | `apple` | `python` | `tools` | `all` (default all). App-version upgrade compatibility is /upgrade-check.
 disable-model-invocation: false
 ---
 
@@ -74,7 +74,7 @@ Each tracked `Cargo.lock` is its own workspace: `git ls-files '*Cargo.lock'` (en
 ### python
 
 1. `dictionary/requirements.txt` (exact `==` pins): `curl -s https://pypi.org/pypi/<pkg>/json | jq -r .info.version`. A bump means `make dict` + `make build` + the Python CI (`.github/workflows/python.yml`) — REVIEW at minimum.
-2. `taigi-emojis`: `uv tree --outdated --depth 1 --directory taigi-emojis`.
+2. `emoji/`: `uv tree --outdated --depth 1 --directory emoji`.
 
 ### tools
 

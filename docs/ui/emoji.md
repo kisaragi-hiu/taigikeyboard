@@ -1,14 +1,14 @@
 # Emoji Keyboard
 
 > **Type**: Feature
-> **Keywords**: `emoji`, `ISEmojiView`, `skin-tone`, `taigi-emojis`, `media-input`
+> **Keywords**: `emoji`, `ISEmojiView`, `skin-tone`, `media-input`
 > **Related**: ../architecture/behavioral-invariants.md (§13 atomic external insert), ../architecture/data-artifacts-portability.md, system-overview.md
 
 ---
 
 ## Summary
 
-- Full emoji palette on both platforms, backed by the in-repo `taigi-emojis` data pipeline (`dist/emoji.json`, Unicode Emoji 17.0 / CLDR 48, 1889 emoji, 9 categories).
+- Full emoji palette on both platforms, backed by the in-repo `emoji` data pipeline (`dist/emoji.json`, Unicode Emoji 17.0 / CLDR 48, 1889 emoji, 9 categories).
 - **Intentional UI divergence**: iOS uses the vendored third-party `ISEmojiView` (UIKit); Android uses a custom Jetpack Compose palette. This is recorded per `.claude/rules/cross-platform-alignment.md` §3, not a parity bug.
 - Both insert emoji through the engine's atomic preedit-commit path (`ComposingManager.commitPreeditThenInsertExternal`) — the one strict parity point.
 
@@ -21,7 +21,7 @@
 | File | Responsibility |
 |------|----------------|
 | `Emojis/EmojiService.swift` | Wraps vendored `ISEmojiView`; configures `KeyboardSettings`, bridges `EmojiViewDelegate` → `EmojiServiceDelegate`; exposes `emojiKeyboardView` via `UIViewRepresentable` |
-| `Emojis/TaigiEmojiData.swift` | Loads bundled `emoji.json`, maps taigi-emojis categories → ISEmojiView `[EmojiCategory]`, CoreText glyph-filters. Single source, no fallback |
+| `Emojis/TaigiEmojiData.swift` | Loads bundled `emoji.json`, maps `emoji/` categories → ISEmojiView `[EmojiCategory]`, CoreText glyph-filters. Single source, no fallback |
 | `KeyboardExtension/KeyboardViewController+EmojiDelegate.swift` | `EmojiServiceDelegate`: emoji insert (atomic), switch-to-alphabetic, dismiss, backspace |
 | `Layout/KeyDef.swift` / `LayoutConverter.swift` | `.emoji` key def → KeyboardKit `.keyboardType(.emojis)` |
 | `Vendor/ISEmojiView/` | Vendored third-party emoji UI (category bar, grid, skin-tone pop-preview, recents) |
@@ -64,14 +64,14 @@ The atomic-insert routing is `INVARIANT_composing_external_insert_commits_preedi
 
 ---
 
-## Data — `taigi-emojis/dist/emoji.json`
+## Data — `emoji/dist/emoji.json`
 
-In-repo data pipeline (no shared Swift/Kotlin module); each platform reads `dist/emoji.json` into its own native model and glyph-filters the whole grapheme cluster at load. Schema is frozen by `taigi-emojis/.claude/rules/output-contract.md` + a drift-guard test; version-pin bumps are user-gated.
+In-repo data pipeline (no shared Swift/Kotlin module); each platform reads `dist/emoji.json` into its own native model and glyph-filters the whole grapheme cluster at load. Schema is frozen by `emoji/.claude/rules/output-contract.md` + a drift-guard test; version-pin bumps are user-gated.
 
 - Top level: `{ meta, categories[] }`. `meta` = `{ emojiVersion: "E17.0", cldrVersion: "48", count: 1889, generator }`.
 - 9 categories in order: `smileys_emotion, people_body, animals_nature, food_drink, travel_places, activities, objects, symbols, flags`.
 - Each emoji: `{ base, cp, name, subgroup, version, variations[], keywords[], keywordsByLocale }`. iOS decodes only `id`/`base`/`variations`; Android decodes `id`/`base`/`name`/`variations`/`keywords`.
-- iOS bundles the file as a keyboard-extension resource (missing file → `assertionFailure`, no fallback). Android mounts `../taigi-emojis/dist` as an assets srcDir (`app/build.gradle.kts`), so `emoji.json` lands at the assets root; a parse failure logs and returns an empty map.
+- iOS bundles the file as a keyboard-extension resource (missing file → `assertionFailure`, no fallback). Android mounts `../emoji/dist` as an assets srcDir (`app/build.gradle.kts`), so `emoji.json` lands at the assets root; a parse failure logs and returns an empty map.
 
 **Skin tones (Android `EmojiSkinTone`)**: DEFAULT (0x0), LIGHT (1F3FB), MEDIUM_LIGHT (1F3FC), MEDIUM (1F3FD), MEDIUM_DARK (1F3FE), DARK (1F3FF) — Fitzpatrick modifiers.
 
@@ -80,12 +80,12 @@ In-repo data pipeline (no shared Swift/Kotlin module); each platform reads `dist
 - iOS recents count: 30 (`EmojiService.swift`); ISEmojiView cap `MaxCountOfRecentsEmojis = 50`.
 - Android grid: 7 columns, 240.dp grid height, 35.sp emoji font, variations popup 6/row.
 - Android emoji-toggle keycode: `SWITCH_TO_MEDIA_CONTEXT = -213`.
-- Data pipeline: `taigi-emojis/`, consumed as `dist/emoji.json`.
+- Data pipeline: `emoji/`, consumed as `dist/emoji.json`.
 
 ---
 
 ## See also
 
-- `taigi-emojis/README.md` + `taigi-emojis/CLAUDE.md` + `taigi-emojis/.claude/rules/output-contract.md` (data-pipeline ownership + JSON schema).
+- `emoji/README.md` + `emoji/CLAUDE.md` + `emoji/.claude/rules/output-contract.md` (data-pipeline ownership + JSON schema).
 - `behavioral-invariants.md` §13 (atomic external insert), popup-hide invariants.
 - `ui/callouts.md` (the long-press popup mechanism the emoji skin-tone variations reuse on Android).

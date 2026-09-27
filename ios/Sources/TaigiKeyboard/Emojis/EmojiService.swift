@@ -22,7 +22,7 @@ final class EmojiService: NSObject {
         keyboardSettings.isShowPopPreview = true
         keyboardSettings.needToShowDeleteButton = true
         keyboardSettings.updateRecentEmojiImmediately = true
-        // Single source of truth: shared taigi-emojis dist/emoji.json. TaigiEmojiData
+        // Single source of truth: shared emoji/dist/emoji.json. TaigiEmojiData
         // asserts on load failure rather than falling back to a plist (no redundant fallback).
         keyboardSettings.customEmojis = TaigiEmojiData.loadISEmojiCategories()
 

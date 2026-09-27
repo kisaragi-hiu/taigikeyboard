@@ -8,7 +8,7 @@ Change the schema only with a matching update to both platform loaders + the tes
 ```jsonc
 {
   "meta": { "emojiVersion": "E17.0", "cldrVersion": "48", "count": 1889,
-            "generator": "taigi-emojis/scripts/generate.py" },
+            "generator": "emoji/scripts/generate.py" },
   "categories": [
     {
       "id": "smileys_emotion",          // stable id; see GROUP_TO_CATEGORY in generate.py
@@ -56,7 +56,7 @@ Change the schema only with a matching update to both platform loaders + the tes
   - iOS: check the full string renders (e.g. `CTFontGetGlyphsForCharacters` over the
     cluster / a `String`-renders helper), not per `UnicodeScalar`.
 - **Distribution**: this pipeline is tracked directly in the app repository. Apps read
-  `taigi-emojis/dist/emoji.json`; iOS bundles it into the keyboard extension, Android into
+  `emoji/dist/emoji.json`; iOS bundles it into the keyboard extension, Android into
   `assets/`.
 - **Cross-platform parity**: the json is the shared contract. iOS (vendored `ISEmojiView` fed via `customEmojis`)
   and Android Compose view must derive categories, ordering, variations, and search from this

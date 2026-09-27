@@ -102,7 +102,7 @@
 		F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TaigiKeyboardExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F34AE2922EEE7CE000859124 /* TaigiKeyboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaigiKeyboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F361A8A32F8578E500682CC6 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogger.swift; path = Sources/TaigiKeyboard/DebugLogger.swift; sourceTree = "<group>"; };
-		F37672962FDF06B5007F0CF7 /* emoji.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = emoji.json; path = "../taigi-emojis/dist/emoji.json"; sourceTree = SOURCE_ROOT; };
+		F37672962FDF06B5007F0CF7 /* emoji.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = emoji.json; path = ../emoji/dist/emoji.json; sourceTree = SOURCE_ROOT; };
 		F39D1D532F9E8E550053D307 /* RustTaigi.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = RustTaigi.xcframework; path = RustEngine/RustTaigi.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 

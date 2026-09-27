@@ -8,7 +8,7 @@ Cross-project process rules (workflow, planning, review, naming, docs, Python) a
 
 ## Project Overview
 
-**taigi-emojis** — the single emoji source of truth for TaigiKeyboard (iOS + Android).
+**emoji/** — the single emoji source of truth for TaigiKeyboard (iOS + Android).
 A Python generator
 merges pinned Unicode + CLDR data with a hand overlay of 台語/華語 search keywords and emits one
 `dist/emoji.json` both platforms consume directly from this repository.

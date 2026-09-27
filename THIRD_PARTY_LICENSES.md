@@ -61,11 +61,11 @@ Books Ngram + SCOWL. Regenerate with `android/tools/build_english_freq.py`.
 | Component | Licence |
 | --- | --- |
 | `taigi-converter/` (git submodule) | MIT © 2026 TaigiKeyboard |
-| `taigi-emojis/` | MIT © 2026 TaigiKeyboard |
+| `emoji/` | MIT © 2026 TaigiKeyboard |
 
-`taigi-emojis` embeds pinned snapshots of Unicode `emoji-test.txt` and CLDR
+`emoji/` embeds pinned snapshots of Unicode `emoji-test.txt` and CLDR
 annotation XML under the **Unicode License** (OSI-approved as `Unicode-3.0`).
-Provenance is recorded in `taigi-emojis/data/SOURCES.md`.
+Provenance is recorded in `emoji/data/SOURCES.md`.
 
 `taigi-converter` ships `jf-openhuninn-2.1.ttf` for its web demo; same OFL-1.1
 terms as above.
