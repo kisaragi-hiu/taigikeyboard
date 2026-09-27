@@ -333,8 +333,8 @@ data class KeyboardColorSettings(
     /**
      * The key fill of a fixed-palette theme: a custom surface, a visible (non-transparent)
      * key fill and a concrete key text color — every user theme and the Filled gradient
-     * built-ins. Key popups and the non-gradient candidate states paint from it so a light
-     * palette stays light in system dark mode. null = adaptive (Default families,
+     * built-ins. The non-gradient candidate states paint from it (key popups via [calloutFill])
+     * so a light palette stays light in system dark mode. null = adaptive (Default families,
      * transparent-key gradients) → keep the night-qualified attrs.
      *
      * CROSS-PLATFORM INVARIANT — mirrors iOS KeyboardColorSettings.fixedKeyFill.
@@ -342,6 +342,30 @@ data class KeyboardColorSettings(
      */
     val fixedKeyFill: Int?
         get() = normalKeyFillColor?.takeIf { background != null && keyTextColor != null && it ushr 24 != 0 }
+
+    /** Whether the keys are see-through (Outlined / Borderless families): a key fill set to clear. */
+    val hasTransparentKeys: Boolean
+        get() = normalKeyFillColor?.let { it ushr 24 == 0 } ?: false
+
+    /**
+     * The key popup fill: [fixedKeyFill], or — for see-through keys over a solid / gradient
+     * surface — the color the keys show, i.e. the background (a gradient's per-channel midpoint,
+     * since the key rows span it). null = no theme color: opaque adaptive keys keep the popup
+     * attrs; see-through keys over the adaptive background paint `?keyboard_bgColor` (USER
+     * 2026-09-28: Outlined / Borderless callouts match the key background in light and dark mode).
+     *
+     * CROSS-PLATFORM INVARIANT — mirrors iOS KeyboardColorSettings.calloutFill.
+     */
+    val calloutFill: Int?
+        get() {
+            fixedKeyFill?.let { return it }
+            if (!hasTransparentKeys || keyTextColor == null) return null
+            return when (val surface = background) {
+                is ThemeBackground.Solid -> surface.color
+                is ThemeBackground.Gradient -> midpointArgb(surface.gradient.stops.first(), surface.gradient.stops.last())
+                is ThemeBackground.Image, null -> null
+            }
+        }
 
     /**
      * Candidate first-candidate highlight + pressed tints (`first` = highlight, `second` =
@@ -484,6 +508,18 @@ const val CANDIDATE_PRESSED_DEEPEN_FACTOR = 0.65
 // fills both show press feedback.
 const val KEY_PRESSED_LIGHTEN_FACTOR = 0.25
 const val KEY_PRESSED_DEEPEN_FACTOR = 0.8
+
+/**
+ * Opaque per-channel midpoint of [first] and [second]: each 0-255 byte `(a + b) / 2`, truncated.
+ * Mirrors iOS `CodableColor.midpoint(with:)` byte-for-byte.
+ */
+fun midpointArgb(
+    first: Int,
+    second: Int,
+): Int {
+    fun mid(shift: Int): Int = ((first shr shift and 0xFF) + (second shr shift and 0xFF)) / 2
+    return (0xFF shl 24) or (mid(16) shl 16) or (mid(8) shl 8) or mid(0)
+}
 
 /**
  * The pressed state of a custom key fill: lightened when dark, deepened when light. null for a

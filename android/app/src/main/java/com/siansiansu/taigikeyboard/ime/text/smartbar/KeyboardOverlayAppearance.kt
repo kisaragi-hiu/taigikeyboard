@@ -30,8 +30,8 @@ import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
  * candidate overlay that spans the full keyboard.
  *
  * [calloutFill] / [calloutForeground] paint a popup that floats over the keys (the one-handed
- * menu): a fixed key palette uses its key fill + key text, like the key long-press popup;
- * otherwise the panel [solidBackground] / [foreground].
+ * menu): the theme callout fill (key fill, or the background see-through keys show) + key text,
+ * like the key long-press popup; otherwise the panel [solidBackground] / [foreground].
  */
 data class KeyboardOverlayAppearance(
     val solidBackground: Color,
@@ -67,18 +67,18 @@ fun rememberKeyboardOverlayAppearance(
         val colors = cache.resolve(isKeyboardNightMode(context)).colors
         val foreground = colors.candidateTextColor?.let { Color(it) } ?: chrome.foreground
         // CROSS-PLATFORM INVARIANT — mirrors iOS Callouts/KeyboardCalloutStyle+Taigi.swift themed(by:):
-        // key fill + key text together, or neither.
-        val keyFill = colors.fixedKeyFill
+        // callout fill + key text together, or neither.
         val keyText = colors.keyTextColor
-        val keyPalette = if (keyFill != null && keyText != null) Color(keyFill) to Color(keyText) else null
+        val calloutPalette = colors.calloutFill?.let { fill -> keyText?.let { Color(fill) to Color(it) } }
+        val keyFill = colors.fixedKeyFill?.let { Color(it) }
         KeyboardOverlayAppearance(
             solidBackground = chrome.background,
             surface = colors.surface,
             foreground = foreground,
             accent = chrome.accent,
-            calloutFill = keyPalette?.first ?: chrome.background,
-            calloutForeground = keyPalette?.second ?: foreground,
-            keyFill = keyPalette?.first,
+            calloutFill = calloutPalette?.first ?: chrome.background,
+            calloutForeground = calloutPalette?.second ?: foreground,
+            keyFill = keyFill,
             lineColor = colors.candidateTextColor?.let { Color(it) },
         )
     }

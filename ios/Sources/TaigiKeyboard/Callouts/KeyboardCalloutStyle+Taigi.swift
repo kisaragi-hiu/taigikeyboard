@@ -18,14 +18,20 @@ extension KeyboardCalloutStyle {
         )
     }
 
-    /// Paints the callout from a fixed-palette theme's key fill + key text, so a light
-    /// palette's callout stays light in system dark mode (KeyboardKit's default
-    /// `.keyboardButtonBackground` / `.primary` follow the system appearance). Adaptive
-    /// themes (`fixedKeyFill` nil) keep KeyboardKit's colors. The selected action item takes
-    /// the pressed key fill (a hovered variant is a pressed key) with the key text.
-    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/popup/KeyPopupManager.kt extBgColorActiveArgb.
+    /// Paints the callout from the theme's `calloutFill` (the key fill, or the background a
+    /// see-through key shows) + key text, so a light palette's callout stays light in system
+    /// dark mode (KeyboardKit's default `.keyboardButtonBackground` / `.primary` follow the
+    /// system appearance). See-through keys over the adaptive background take the adaptive
+    /// keyboard background; other adaptive themes keep KeyboardKit's colors. The selected
+    /// action item takes the pressed fill (a hovered variant is a pressed key) with the key text.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/popup/KeyPopupManager.kt resolveDisplayParams.
     func themed(by colors: KeyboardColorSettings) -> KeyboardCalloutStyle {
-        guard let fill = colors.fixedKeyFill, let text = colors.keyTextColor else { return self }
+        guard let fill = colors.calloutFill, let text = colors.keyTextColor else {
+            guard colors.hasTransparentKeys else { return self }
+            var style = self
+            style.backgroundColor = .keyboardBackground
+            return style
+        }
         var style = self
         style.backgroundColor = fill.color
         style.foregroundColor = text.color

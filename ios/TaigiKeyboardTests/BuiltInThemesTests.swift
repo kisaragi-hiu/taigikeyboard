@@ -238,6 +238,25 @@ final class BuiltInThemesTests: XCTestCase {
         XCTAssertNil(adaptive.gridLineColor)
     }
 
+    // trace: see-through keys (framed / clean) show the background → gradient midpoint per byte:
+    //   Sakura (E6C2D0, EADCE2) → (E6+EA)/2=E8, (C2+DC)/2=CF, (D0+E2)/2=D9 → E8CFD9;
+    //   Catppuccin (1E1E2E, 181825) → 1B1B29. Filled → key fill FFFFFF. framed / clean Default
+    //   (clear keys, adaptive background) → nil, and the callout paints the keyboard background.
+    func testCalloutFill_transparentKeysTakeBackground() throws {
+        let framedPink = try XCTUnwrap(BuiltInThemes.theme(id: "framedPink")?.colors(for: .light))
+        XCTAssertEqual(framedPink.calloutFill, CodableColor(hex: 0xE8CFD9))
+        let cleanCatppuccin = try XCTUnwrap(BuiltInThemes.theme(id: "cleanCatppuccin")?.colors(for: .dark))
+        XCTAssertEqual(cleanCatppuccin.calloutFill, CodableColor(hex: 0x1B1B29))
+        let standardPink = try XCTUnwrap(BuiltInThemes.theme(id: "standardPink")?.colors(for: .light))
+        XCTAssertEqual(standardPink.calloutFill, CodableColor(hex: 0xFFFFFF))
+
+        let framedDefault = try XCTUnwrap(BuiltInThemes.theme(id: "framedDefault")?.colors(for: .dark))
+        XCTAssertTrue(framedDefault.hasTransparentKeys)
+        XCTAssertNil(framedDefault.calloutFill)
+        XCTAssertEqual(KeyboardCalloutStyle.standard.themed(by: framedDefault).backgroundColor, Color.keyboardBackground)
+        XCTAssertEqual(KeyboardCalloutStyle.standard.themed(by: .default).backgroundColor, KeyboardCalloutStyle.standard.backgroundColor)
+    }
+
     // trace: user-theme seed = solid D4D5DD surface, key text 000000, key fill FFFFFF →
     //   fixedKeyFill FFFFFF; no gradient → tints (FFFFFF, FFFFFF deepened ×0.65:
     //   255×0.65 = 165.75 → 165 = A5) = (FFFFFF, A5A5A5). Scheme-free, so dark mode matches light.

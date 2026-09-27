@@ -207,39 +207,45 @@ class KeyPopupManager(
         val config = ime.resources.configuration
         val isNightMode = isKeyboardNightMode(ime)
         val colors = themeCache.resolve(isNightMode).colors
-        val fixedKeyFill = colors.fixedKeyFill
+        val calloutFill = colors.calloutFill
         val key = DisplayKey(
             isNightMode = isNightMode,
-            fixedKeyFill = fixedKeyFill,
-            // Read only under a fixed fill (the gate guarantees it is non-null there).
-            fixedKeyText = fixedKeyFill?.let { colors.keyTextColor },
+            calloutFill = calloutFill,
+            // Read only under a callout fill (the gate guarantees it is non-null there).
+            calloutText = calloutFill?.let { colors.keyTextColor },
+            hasTransparentKeys = colors.hasTransparentKeys,
             fontType = ime.prefs.fontType,
             densityDpi = config.densityDpi,
             fontScale = config.fontScale,
         )
         val cached = cachedDisplay
         if (cached != null && key == cachedDisplayKey) return cached
-        return resolveDisplayParams(key.fixedKeyFill, key.fixedKeyText).also {
+        return resolveDisplayParams(key.calloutFill, key.calloutText, key.hasTransparentKeys).also {
             cachedDisplayKey = key
             cachedDisplay = it
         }
     }
 
+    // CROSS-PLATFORM INVARIANT — mirrors iOS KeyboardCalloutStyle.themed(by:): the theme callout fill +
+    // key text; see-through keys over the adaptive background take `?keyboard_bgColor`.
     private fun resolveDisplayParams(
-        fixedKeyFill: Int?,
-        fixedKeyText: Int?,
+        calloutFill: Int?,
+        calloutText: Int?,
+        hasTransparentKeys: Boolean,
     ): PopupDisplayParams {
         val res = ime.resources
         val density = res.displayMetrics.density
         val prefs: PrefHelper = ime.prefs
         return PopupDisplayParams(
-            fgColorArgb = fixedKeyText ?: getColorFromAttr(ime, R.attr.key_popup_fgColor),
-            bgColorArgb = fixedKeyFill ?: getColorFromAttr(ime, R.attr.key_popup_bgColor),
+            fgColorArgb = calloutText ?: getColorFromAttr(ime, R.attr.key_popup_fgColor),
+            bgColorArgb =
+                calloutFill
+                    ?: getColorFromAttr(ime, if (hasTransparentKeys) R.attr.keyboard_bgColor else R.attr.key_popup_bgColor),
             extBgColorArgb = getColorFromAttr(ime, R.attr.key_popup_extended_bgColor),
             // Selected variant = the pressed key fill (a hovered variant is a pressed key).
             // CROSS-PLATFORM INVARIANT — mirrors iOS KeyboardCalloutStyle.themed(by:) selectedBackgroundColor.
             extBgColorActiveArgb =
-                fixedKeyFill?.let(::pressedKeyFillArgb)
+                calloutFill?.let(::pressedKeyFillArgb)
                     ?: getColorFromAttr(ime, R.attr.key_popup_extended_bgColorActive),
             shadowColorArgb = getColorFromAttr(ime, R.attr.key_popup_extended_shadowColor),
             cornerRadiusPx = res.getDimension(R.dimen.key_borderRadius),
@@ -499,8 +505,9 @@ class KeyPopupManager(
      *  and the popup dimens have no qualifier variants, so neither needs a key field. */
     private data class DisplayKey(
         val isNightMode: Boolean,
-        val fixedKeyFill: Int?,
-        val fixedKeyText: Int?,
+        val calloutFill: Int?,
+        val calloutText: Int?,
+        val hasTransparentKeys: Boolean,
         val fontType: String,
         val densityDpi: Int,
         val fontScale: Float,

@@ -380,14 +380,40 @@ struct KeyboardColorSettings: Equatable {
 
     /// The key fill of a fixed-palette theme: a custom surface, a visible (non-transparent)
     /// key fill and a concrete key text color — every user theme and the Filled gradient
-    /// built-ins. Callouts and the non-gradient candidate states paint from it so a light
-    /// palette stays light in system dark mode. nil = adaptive (Default families,
+    /// built-ins. The non-gradient candidate states paint from it (callouts via `calloutFill`)
+    /// so a light palette stays light in system dark mode. nil = adaptive (Default families,
     /// transparent-key gradients) → keep the system colors.
     // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt fixedKeyFill.
     // Drift = callout / candidate colors differ per platform under the same theme.
     var fixedKeyFill: CodableColor? {
         guard background != nil, keyTextColor != nil, let fill = keyFillColor, fill.alpha > 0 else { return nil }
         return fill
+    }
+
+    /// Whether the keys are see-through (Outlined / Borderless families): a key fill set to clear.
+    var hasTransparentKeys: Bool {
+        keyFillColor.map { $0.alpha == 0 } ?? false
+    }
+
+    /// The callout (key popup) fill: the fixed key fill, or — for see-through keys over a
+    /// solid / gradient surface — the color the keys show, i.e. the background (a gradient's
+    /// per-channel midpoint, since the key rows span it). nil = no theme color: opaque adaptive
+    /// keys keep the platform callout colors; see-through keys over the adaptive background
+    /// paint the adaptive keyboard background (USER 2026-09-28: Outlined / Borderless callouts
+    /// match the key background in light and dark mode).
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt calloutFill.
+    var calloutFill: CodableColor? {
+        if let fill = fixedKeyFill {
+            return fill
+        }
+        guard hasTransparentKeys, keyTextColor != nil else { return nil }
+        switch background {
+        case let .solid(color): return color
+        case let .gradient(gradient):
+            guard let top = gradient.stops.first, let bottom = gradient.stops.last else { return nil }
+            return top.midpoint(with: bottom)
+        case .image, nil: return nil
+        }
     }
 
     /// Candidate first-candidate highlight + pressed tints. A user-picked
@@ -540,6 +566,18 @@ extension KeyboardColorSettings {
 }
 
 extension CodableColor {
+    /// Opaque per-channel midpoint with `other`: each 0-255 byte `(a + b) / 2`, truncated —
+    /// byte-identical to Android `midpointArgb`.
+    func midpoint(with other: CodableColor) -> CodableColor {
+        func byte(_ component: Double) -> UInt32 {
+            UInt32((component * 255).rounded())
+        }
+        let midRed = (byte(red) + byte(other.red)) / 2
+        let midGreen = (byte(green) + byte(other.green)) / 2
+        let midBlue = (byte(blue) + byte(other.blue)) / 2
+        return CodableColor(hex: (midRed << 16) | (midGreen << 8) | midBlue)
+    }
+
     /// The pressed state of a custom key fill: lightened when dark, deepened when light.
     /// nil for a translucent fill (a clear / outlined key keeps its fill when pressed — the
     /// derived color is opaque and would paint a visible key).

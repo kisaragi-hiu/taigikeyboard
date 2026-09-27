@@ -123,7 +123,8 @@ A user theme renders **light-only**: iOS `ThemeId.forcedColorScheme` / Android `
 
 | Source role | Elements |
 |---|---|
-| Key fill | key long-press popup, one-handed menu background, emoji long-press popup, Android settings-panel switch off-track (iOS keeps the native Toggle: SwiftUI exposes no off-track color, `.claude/rules/ui-style-guide.md` § Switch) |
+| Callout fill (`calloutFill`: key fill; see-through keys over a solid / gradient → the background, gradient = per-byte midpoint; see-through keys over the adaptive background → adaptive keyboard background — USER 2026-09-28, light and dark mode) | key long-press popup + input callout, one-handed menu background |
+| Key fill | emoji long-press popup, Android settings-panel switch off-track (iOS keeps the native Toggle: SwiftUI exposes no off-track color, `.claude/rules/ui-style-guide.md` § Switch) |
 | Key pressed fill (`pressedKeyFill`: dark → lightened 0.25, light → deepened 0.8, translucent → unchanged) | key pressed state, key long-press popup selected cell (USER 2026-09-27), Android translate-key active fill, Android emoji ABC / delete pressed |
 | Key text | popup / one-handed menu text, emoji category icons + ABC label + delete glyph, Android emoji tab-row divider |
 | Candidate text | expanded-grid lines, strip expand-toggle divider, English strip dividers, symbol-panel tab-row divider, toolbar icons |
