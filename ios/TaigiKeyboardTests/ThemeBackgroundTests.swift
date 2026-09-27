@@ -1,3 +1,4 @@
+import KeyboardKit
 import SwiftUI
 @testable import TaigiKeyboard
 import XCTest
@@ -439,5 +440,16 @@ final class ThemeBackgroundTests: XCTestCase {
         XCTAssertEqual(CodableColor(hex: 0xFFFFFF).pressedKeyFill, CodableColor(hex: 0xCCCCCC))
         XCTAssertEqual(CodableColor(hex: 0x000000).pressedKeyFill, CodableColor(hex: 0x3F3F3F))
         XCTAssertNil(CodableColor(Color.white.opacity(0.5)).pressedKeyFill)
+    }
+
+    // trace: seed key fill FFFFFF → selected = pressedKeyFill CCCCCC, text = seed key text 000000;
+    //   adaptive default (no fixedKeyFill) keeps KeyboardKit's selected colors.
+    func testCalloutStyleThemed_selectedItemUsesPressedKeyFill() {
+        let themed = KeyboardCalloutStyle.standard.themed(by: UserThemeSeed.colors)
+        XCTAssertEqual(themed.selectedBackgroundColor, CodableColor(hex: 0xCCCCCC).color)
+        XCTAssertEqual(themed.selectedForegroundColor, CodableColor(hex: 0x000000).color)
+
+        let adaptive = KeyboardCalloutStyle.standard.themed(by: .default)
+        XCTAssertEqual(adaptive.selectedBackgroundColor, KeyboardCalloutStyle.standard.selectedBackgroundColor)
     }
 }

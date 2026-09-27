@@ -19,6 +19,7 @@ import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
 import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
+import com.siansiansu.taigikeyboard.ime.core.pressedKeyFillArgb
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.AnchorSide
@@ -235,7 +236,11 @@ class KeyPopupManager(
             fgColorArgb = fixedKeyText ?: getColorFromAttr(ime, R.attr.key_popup_fgColor),
             bgColorArgb = fixedKeyFill ?: getColorFromAttr(ime, R.attr.key_popup_bgColor),
             extBgColorArgb = getColorFromAttr(ime, R.attr.key_popup_extended_bgColor),
-            extBgColorActiveArgb = getColorFromAttr(ime, R.attr.key_popup_extended_bgColorActive),
+            // Selected variant = the pressed key fill (a hovered variant is a pressed key).
+            // CROSS-PLATFORM INVARIANT — mirrors iOS KeyboardCalloutStyle.themed(by:) selectedBackgroundColor.
+            extBgColorActiveArgb =
+                fixedKeyFill?.let(::pressedKeyFillArgb)
+                    ?: getColorFromAttr(ime, R.attr.key_popup_extended_bgColorActive),
             shadowColorArgb = getColorFromAttr(ime, R.attr.key_popup_extended_shadowColor),
             cornerRadiusPx = res.getDimension(R.dimen.key_borderRadius),
             keyHeightPx = res.getDimension(R.dimen.key_height).toInt(),

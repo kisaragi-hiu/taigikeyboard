@@ -67,6 +67,10 @@ class CandidateOverlayView : FrameLayout {
     private val firstCandidateColorState = mutableIntStateOf(0)
     private val pressedColorState = mutableIntStateOf(0)
 
+    // Themed pressed tint for the control buttons (ARGB), or null for the adaptive default
+    // (`?overlay_button_bgColorPressed`).
+    private val controlPressedColorState = mutableStateOf<Int?>(null)
+
     // Bumped on each show() only: re-arms click protection + resets scroll/page (NOT on updateSuggestions).
     private val resetTrigger = mutableIntStateOf(0)
 
@@ -134,6 +138,7 @@ class CandidateOverlayView : FrameLayout {
                         candidateTextColor = candidateTextColorState.value,
                         firstCandidateColor = firstCandidateColorState.intValue,
                         pressedColor = pressedColorState.intValue,
+                        controlPressedColor = controlPressedColorState.value,
                         onSuggestionSelected = { word, index -> onSuggestionSelected?.invoke(word, index) },
                         onCollapse = {
                             hide()
@@ -161,6 +166,7 @@ class CandidateOverlayView : FrameLayout {
      * @param candidateTextColor resolved theme candidate text color (ARGB), or null for the adaptive default
      * @param firstCandidateColor resolved first-candidate cell background (ARGB)
      * @param pressedColor resolved pressed cell background (ARGB)
+     * @param controlPressedColor themed pressed tint for the control buttons (ARGB), or null for the adaptive default
      */
     fun show(
         suggestions: List<TaigiWord>,
@@ -169,6 +175,7 @@ class CandidateOverlayView : FrameLayout {
         candidateTextColor: Int?,
         firstCandidateColor: Int,
         pressedColor: Int,
+        controlPressedColor: Int?,
     ) {
         if (isShowing) return
         if (suggestions.isEmpty()) return
@@ -181,6 +188,7 @@ class CandidateOverlayView : FrameLayout {
         candidateTextColorState.value = candidateTextColor
         firstCandidateColorState.intValue = firstCandidateColor
         pressedColorState.intValue = pressedColor
+        controlPressedColorState.value = controlPressedColor
 
         if (keyboardHeight > 0) {
             layoutParams = (layoutParams as? FrameLayout.LayoutParams)?.apply {

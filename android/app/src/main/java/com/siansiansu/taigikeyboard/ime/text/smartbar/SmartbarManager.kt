@@ -674,6 +674,7 @@ class SmartbarManager(
             colorSettings.candidateTextColor,
             display.themeKeyBgColor,
             display.themePressedHighlightColor,
+            colorSettings.candidateTints?.second,
         )
     }
 
