@@ -125,6 +125,8 @@ private fun ThemedEmojiColors(
                 onSurface = foreground ?: base.onSurface,
                 onSurfaceVariant = foreground ?: base.onSurfaceVariant,
                 primary = foreground ?: base.primary,
+                // Category tab-row divider (PrimaryTabRow default HorizontalDivider = outlineVariant).
+                outlineVariant = foreground ?: base.outlineVariant,
                 surfaceVariant = colors.fixedKeyFill?.let { Color(it) } ?: base.surfaceVariant,
             ),
         typography = MaterialTheme.typography,
