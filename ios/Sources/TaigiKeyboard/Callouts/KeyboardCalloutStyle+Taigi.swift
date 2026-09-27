@@ -21,12 +21,18 @@ extension KeyboardCalloutStyle {
     /// Paints the callout from a fixed-palette theme's key fill + key text, so a light
     /// palette's callout stays light in system dark mode (KeyboardKit's default
     /// `.keyboardButtonBackground` / `.primary` follow the system appearance). Adaptive
-    /// themes (`fixedKeyFill` nil) keep KeyboardKit's colors.
+    /// themes (`fixedKeyFill` nil) keep KeyboardKit's colors. The selected action item takes
+    /// the pressed key fill (a hovered variant is a pressed key) with the key text.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/popup/KeyPopupManager.kt extBgColorActiveArgb.
     func themed(by colors: KeyboardColorSettings) -> KeyboardCalloutStyle {
         guard let fill = colors.fixedKeyFill, let text = colors.keyTextColor else { return self }
         var style = self
         style.backgroundColor = fill.color
         style.foregroundColor = text.color
+        if let selected = fill.pressedKeyFill {
+            style.selectedBackgroundColor = selected.color
+            style.selectedForegroundColor = text.color
+        }
         return style
     }
 }

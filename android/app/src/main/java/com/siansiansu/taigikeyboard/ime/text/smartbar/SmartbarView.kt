@@ -5,6 +5,8 @@ package com.siansiansu.taigikeyboard.ime.text.smartbar
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
@@ -146,6 +148,41 @@ class SmartbarView : LinearLayout {
         expandToggleButton?.setBackgroundColor(chromeBg)
 
         applyChromeForeground(colors.candidateTextColor)
+        applyToolbarButtonBackgrounds(colors.candidateTints?.second)
+    }
+
+    /**
+     * Toolbar icon / mode buttons: a themed palette presses with the candidate pressed tint (same
+     * as the strip's pressed cells); the selected mode keeps the accent; null (adaptive default)
+     * restores the `smartbar_button_background` selector.
+     * CROSS-PLATFORM INVARIANT — mirrors iOS ExpandedCandidateControlButton (pressedCandidateColor).
+     */
+    private fun applyToolbarButtonBackgrounds(pressedTint: Int?) {
+        for (id in TOOLBAR_ICON_BUTTON_IDS + TOOLBAR_MODE_BUTTON_IDS) {
+            val button = findViewById<View>(id) ?: continue
+            if (pressedTint == null) {
+                button.setBackgroundResource(R.drawable.smartbar_button_background)
+            } else {
+                button.background = themedToolbarButtonBackground(pressedTint)
+            }
+        }
+    }
+
+    // Code twin of `smartbar_button_background.xml` with the pressed / focused fill swapped.
+    private fun themedToolbarButtonBackground(pressedTint: Int): StateListDrawable {
+        val radius = TOOLBAR_BUTTON_CORNER_DP * resources.displayMetrics.density
+
+        fun rounded(color: Int) =
+            GradientDrawable().apply {
+                cornerRadius = radius
+                setColor(color)
+            }
+        return StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_selected), rounded(getColorFromAttr(context, R.attr.smartbar_accentColor)))
+            addState(intArrayOf(android.R.attr.state_pressed), rounded(pressedTint))
+            addState(intArrayOf(android.R.attr.state_focused), rounded(pressedTint))
+            addState(intArrayOf(), rounded(Color.TRANSPARENT))
+        }
     }
 
     /**
@@ -238,6 +275,9 @@ class SmartbarView : LinearLayout {
     private fun resolvedChromeIconTint(): Int = chromeForegroundTint ?: getColorFromAttr(context, R.attr.smartbar_fgColor)
 
     companion object {
+        // Matches the 8dp corners of smartbar_button_background.xml.
+        private const val TOOLBAR_BUTTON_CORNER_DP = 8f
+
         private val TOOLBAR_ICON_BUTTON_IDS =
             intArrayOf(
                 R.id.toolbar_symbol_button,

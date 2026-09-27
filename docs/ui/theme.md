@@ -124,10 +124,10 @@ A user theme renders **light-only**: iOS `ThemeId.forcedColorScheme` / Android `
 | Source role | Elements |
 |---|---|
 | Key fill | key long-press popup, one-handed menu background, emoji long-press popup, settings-panel switch off-track |
-| Key fill deepened | key pressed state, Android translate-key active fill, Android emoji ABC / delete pressed |
+| Key pressed fill (`pressedKeyFill`: dark → lightened 0.25, light → deepened 0.8, translucent → unchanged) | key pressed state, key long-press popup selected cell (USER 2026-09-27), Android translate-key active fill, Android emoji ABC / delete pressed |
 | Key text | popup / one-handed menu text, emoji category icons + ABC label + delete glyph |
 | Candidate text | expanded-grid lines, strip expand-toggle divider, English strip dividers, symbol / emoji tab-row divider, toolbar icons |
-| Candidate highlight | first-candidate box, popup selected cell, expanded-overlay control pressed, Android toolbar pressed, English autocorrect highlight (both platforms) |
+| Candidate highlight (pressed = highlight deepened, `candidateTints` pressed) | first-candidate box; pressed: candidate cells, expanded-overlay control buttons, Android toolbar buttons; English autocorrect highlight (both platforms) |
 | Background luminance | Android navigation-bar icon light / dark |
 
 **Tier 3 — fixed (not themed):** shadows, scrims, photo dim tone; selected-state accent blue + white (mode chip, symbol tab, one-handed selected cell, switch on-track, Open App link); Android caps-lock orange (must not be overridden by key text); layout preview images; system popup menus.

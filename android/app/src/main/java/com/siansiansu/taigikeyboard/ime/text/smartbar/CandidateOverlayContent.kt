@@ -119,6 +119,7 @@ fun CandidateOverlayContent(
     candidateTextColor: Int?,
     firstCandidateColor: Int,
     pressedColor: Int,
+    controlPressedColor: Int?,
     onSuggestionSelected: (TaigiWord, Int) -> Unit,
     onCollapse: () -> Unit,
     onTranslateToggle: () -> Unit,
@@ -126,7 +127,7 @@ fun CandidateOverlayContent(
 ) {
     val context = LocalContext.current
     val fontScale = LocalConfiguration.current.fontScale
-    val colors = rememberCandidateOverlayColors(resetKey, candidateTextColor, firstCandidateColor, pressedColor)
+    val colors = rememberCandidateOverlayColors(resetKey, candidateTextColor, firstCandidateColor, pressedColor, controlPressedColor)
     val fontFamily = remember(typeface) { FontFamily(ComposeTypeface(typeface)) }
 
     // Click protection re-arms on every show() (resetKey bump); updateSuggestions must NOT re-arm.
@@ -526,9 +527,10 @@ private fun rememberCandidateOverlayColors(
     candidateTextColor: Int?,
     firstCandidateColor: Int,
     pressedColor: Int,
+    controlPressedColor: Int?,
 ): CandidateOverlayColors {
     val context = LocalContext.current
-    return remember(refreshKey, context, candidateTextColor, firstCandidateColor, pressedColor) {
+    return remember(refreshKey, context, candidateTextColor, firstCandidateColor, pressedColor, controlPressedColor) {
         // Role-first foreground (mirrors the strip): a light-only theme's fixed
         // candidateTextColor keeps text/control glyphs dark on a light gradient in
         // system dark mode; null (adaptive default) falls back to the night attrs.
@@ -542,7 +544,8 @@ private fun rememberCandidateOverlayColors(
             pressed = Color(pressedColor),
             divider = roleFg ?: Color(pressedColor),
             controlTint = roleFg ?: Color(getColorFromAttr(context, R.attr.smartbar_fgColor)),
-            buttonPressed = Color(getColorFromAttr(context, R.attr.overlay_button_bgColorPressed)),
+            // CROSS-PLATFORM INVARIANT — mirrors iOS ExpandedCandidateControlButton (pressedCandidateColor).
+            buttonPressed = Color(controlPressedColor ?: getColorFromAttr(context, R.attr.overlay_button_bgColorPressed)),
         )
     }
 }
