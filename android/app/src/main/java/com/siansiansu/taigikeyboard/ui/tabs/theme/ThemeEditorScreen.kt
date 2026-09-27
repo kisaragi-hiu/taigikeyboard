@@ -71,6 +71,7 @@ import com.siansiansu.taigikeyboard.ime.core.ThemeBackground
 import com.siansiansu.taigikeyboard.ime.core.ThemeGradient
 import com.siansiansu.taigikeyboard.ime.core.ThemeImageBackground
 import com.siansiansu.taigikeyboard.ime.core.ThemeImageVariant
+import com.siansiansu.taigikeyboard.ime.core.ThemeKeyStyle
 import com.siansiansu.taigikeyboard.ime.core.UserTheme
 import com.siansiansu.taigikeyboard.ime.core.UserThemeSeed
 import com.siansiansu.taigikeyboard.ime.core.rememberThemePhoto
@@ -152,6 +153,11 @@ fun ThemeEditorScreen(
     // the surface changing (the draft keeps its solid / gradient until a photo lands).
     // Mirrors iOS ThemeEditorViewModel.backgroundKind.
     var selectedKind by rememberSaveable { mutableStateOf(background.kind) }
+    // The last Filled draft, so leaving Filled for Outlined / Borderless and coming back restores
+    // its key fill, shadow and border. Recorded on leaving Filled; a theme opened see-through comes
+    // back to the seed's. Mirrors iOS ThemeEditorViewModel.filledKeys.
+    var filledKeys by rememberSaveable(stateSaver = appearanceSaver) { mutableStateOf(ThemeAppearance.USER_THEME_SEED) }
+    val keyStyle = draft.keyStyle
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -302,18 +308,30 @@ fun ThemeEditorScreen(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Keys: fill + text, then shape, then size.
+                // Keys: style, fill + text, then shape, then size. Outlined / Borderless keys are
+                // see-through, so they hide the fill and shadow rows; Borderless also the border.
                 SectionHeader(L10n.themeColorKeySection)
                 SettingsCard {
                     Column(modifier = Modifier.padding(24.dp)) {
-                        RoleColorRow(
-                            labelKey = StringKey.THEME_COLOR_KEY_FILL,
-                            currentColor = draft.colors.normalKeyFillColor,
-                            seedColor = UserThemeSeed.KEY_FILL,
-                            onColorChange = { v -> updateColors { it.withKeyFill(v) } },
-                            onPickerOpen = { colorPickerTarget = it },
+                        KeyStyleRow(
+                            style = keyStyle,
+                            onStyleChange = { style ->
+                                if (style == keyStyle) return@KeyStyleRow
+                                if (keyStyle == ThemeKeyStyle.CLASSIC) filledKeys = draft
+                                draft = draft.withKeyStyle(style, filledKeys)
+                            },
                         )
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
+                        if (!keyStyle.hasTransparentKeys) {
+                            RoleColorRow(
+                                labelKey = StringKey.THEME_COLOR_KEY_FILL,
+                                currentColor = draft.colors.normalKeyFillColor,
+                                seedColor = UserThemeSeed.KEY_FILL,
+                                onColorChange = { v -> updateColors { it.withKeyFill(v) } },
+                                onPickerOpen = { colorPickerTarget = it },
+                            )
+                            SettingsDivider(Modifier.padding(vertical = 8.dp))
+                        }
                         RoleColorRow(
                             labelKey = StringKey.THEME_COLOR_KEY_TEXT,
                             currentColor = draft.colors.keyTextColor,
@@ -331,26 +349,30 @@ fun ThemeEditorScreen(
                             defaultValue = ThemeAppearance.DEFAULT_KEY_CORNER_RADIUS,
                             onValueChange = { if (it != draft.keyCornerRadius) draft = draft.copy(keyCornerRadius = it) },
                         )
-                        SettingsDivider(Modifier.padding(vertical = 8.dp))
-                        SliderRow(
-                            label = L10n.themeKeyBorderWidth,
-                            value = draft.keyBorderWidth,
-                            valueFrom = 0f,
-                            valueTo = BORDER_WIDTH_MAX,
-                            stepSize = BORDER_WIDTH_STEP,
-                            defaultValue = ThemeAppearance.DEFAULT_KEY_BORDER_WIDTH,
-                            onValueChange = { if (it != draft.keyBorderWidth) draft = draft.copy(keyBorderWidth = it) },
-                        )
-                        SettingsDivider(Modifier.padding(vertical = 8.dp))
-                        SliderRow(
-                            label = L10n.themeKeyShadow,
-                            value = draft.keyShadowIntensity,
-                            valueFrom = 0f,
-                            valueTo = SHADOW_MAX,
-                            stepSize = SHADOW_STEP,
-                            defaultValue = ThemeAppearance.DEFAULT_KEY_SHADOW_INTENSITY,
-                            onValueChange = { if (it != draft.keyShadowIntensity) draft = draft.copy(keyShadowIntensity = it) },
-                        )
+                        if (keyStyle != ThemeKeyStyle.CLEAN) {
+                            SettingsDivider(Modifier.padding(vertical = 8.dp))
+                            SliderRow(
+                                label = L10n.themeKeyBorderWidth,
+                                value = draft.keyBorderWidth,
+                                valueFrom = 0f,
+                                valueTo = BORDER_WIDTH_MAX,
+                                stepSize = BORDER_WIDTH_STEP,
+                                defaultValue = ThemeAppearance.DEFAULT_KEY_BORDER_WIDTH,
+                                onValueChange = { if (it != draft.keyBorderWidth) draft = draft.copy(keyBorderWidth = it) },
+                            )
+                        }
+                        if (!keyStyle.hasTransparentKeys) {
+                            SettingsDivider(Modifier.padding(vertical = 8.dp))
+                            SliderRow(
+                                label = L10n.themeKeyShadow,
+                                value = draft.keyShadowIntensity,
+                                valueFrom = 0f,
+                                valueTo = SHADOW_MAX,
+                                stepSize = SHADOW_STEP,
+                                defaultValue = ThemeAppearance.DEFAULT_KEY_SHADOW_INTENSITY,
+                                onValueChange = { if (it != draft.keyShadowIntensity) draft = draft.copy(keyShadowIntensity = it) },
+                            )
+                        }
                         SettingsDivider(Modifier.padding(vertical = 8.dp))
                         SliderRow(
                             label = L10n.themeKeyHeight,
@@ -556,6 +578,28 @@ private fun BackgroundKindRow(
             },
         selectedIndex = kinds.indexOf(kind),
         onSelect = { onKindChange(kinds[it]) },
+    )
+}
+
+// The Filled / Outlined / Borderless key-style choice; labels reuse the built-in family names.
+// Mirrors the iOS ThemeEditorView key-style Picker.
+@Composable
+private fun KeyStyleRow(
+    style: ThemeKeyStyle,
+    onStyleChange: (ThemeKeyStyle) -> Unit,
+) {
+    val styles = ThemeKeyStyle.entries
+    SegmentedChoiceRow(
+        labels =
+            styles.map {
+                when (it) {
+                    ThemeKeyStyle.CLASSIC -> L10n.themeFamilyClassic
+                    ThemeKeyStyle.FRAMED -> L10n.themeFamilyFramed
+                    ThemeKeyStyle.CLEAN -> L10n.themeFamilyClean
+                }
+            },
+        selectedIndex = styles.indexOf(style),
+        onSelect = { onStyleChange(styles[it]) },
     )
 }
 

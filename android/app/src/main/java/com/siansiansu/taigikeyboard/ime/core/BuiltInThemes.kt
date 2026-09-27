@@ -52,9 +52,9 @@ object BuiltInThemes {
     // `baseColors` would still be null. iOS gets this for free (`static let` is lazy).
     val families: List<BuiltInThemeFamily> by lazy {
         listOf(
-            BuiltInThemeFamily(StringKey.THEME_FAMILY_CLASSIC, familyThemes(KeyStyle.CLASSIC)),
-            BuiltInThemeFamily(StringKey.THEME_FAMILY_FRAMED, familyThemes(KeyStyle.FRAMED)),
-            BuiltInThemeFamily(StringKey.THEME_FAMILY_CLEAN, familyThemes(KeyStyle.CLEAN)),
+            BuiltInThemeFamily(StringKey.THEME_FAMILY_CLASSIC, familyThemes(ThemeKeyStyle.CLASSIC)),
+            BuiltInThemeFamily(StringKey.THEME_FAMILY_FRAMED, familyThemes(ThemeKeyStyle.FRAMED)),
+            BuiltInThemeFamily(StringKey.THEME_FAMILY_CLEAN, familyThemes(ThemeKeyStyle.CLEAN)),
         )
     }
 
@@ -64,22 +64,14 @@ object BuiltInThemes {
     /** Looks up a built-in by id; null when [id] is not a built-in. */
     fun theme(id: String): BuiltInTheme? = all.firstOrNull { it.id == id }
 
-    /**
-     * The per-family key-style axis. All three families share one set of colors;
-     * only the key rendering differs. [idPrefix] keeps Filled on the legacy
-     * `standard*` ids.
-     */
-    private enum class KeyStyle(
-        val idPrefix: String,
-    ) {
-        CLASSIC("standard"), // filled keys (white over a gradient, adaptive for Default)
-        FRAMED("framed"), // transparent keys + outline border
-        CLEAN("clean"), // transparent keys, no border
-        ;
-
-        val hasTransparentKeys: Boolean get() = this != CLASSIC
-        val isBordered: Boolean get() = this == FRAMED
-    }
+    /** id prefix per key-style family — Filled keeps the legacy `standard*` ids. */
+    private val ThemeKeyStyle.idPrefix: String
+        get() =
+            when (this) {
+                ThemeKeyStyle.CLASSIC -> "standard"
+                ThemeKeyStyle.FRAMED -> "framed"
+                ThemeKeyStyle.CLEAN -> "clean"
+            }
 
     /**
      * One of the 7 shared color identities. [gradient] == null is the adaptive Default
@@ -114,13 +106,6 @@ object BuiltInThemes {
     private const val DARK_KEY_FILL = 0x313244 // Catppuccin Mocha Surface0
     private const val DARK_KEY_TEXT = 0xCDD6F4 // Catppuccin Mocha Text
 
-    // Transparent fill for the Outlined / Borderless families — the keyboard background shows through.
-    private const val TRANSPARENT_KEY_FILL = 0x00000000
-
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/BuiltInThemes.swift outlinedKeyBorderWidth.
-    // Drift causes silent divergence.
-    private const val OUTLINED_KEY_BORDER_WIDTH = 1.0f
-
     /**
      * Builds the 7 themes for one key-style family. The Filled head keeps the
      * [ThemeId.DEFAULT] sentinel (so reset shows it selected); framed / clean use
@@ -129,14 +114,14 @@ object BuiltInThemes {
      * null) — mirror-symmetric. Preview slots mirror the family id prefix; missing
      * assets fall back to a neutral placeholder until screenshots ship.
      */
-    private fun familyThemes(style: KeyStyle): List<BuiltInTheme> =
+    private fun familyThemes(style: ThemeKeyStyle): List<BuiltInTheme> =
         baseColors.map { base ->
             val isDefault = base.gradient == null
             val suffix = base.key.replaceFirstChar { it.uppercase() }
             val id =
                 when {
                     !isDefault -> "${style.idPrefix}$suffix"
-                    style == KeyStyle.CLASSIC -> ThemeId.DEFAULT
+                    style == ThemeKeyStyle.CLASSIC -> ThemeId.DEFAULT
                     else -> "${style.idPrefix}Default"
                 }
             val previewName =
@@ -148,7 +133,7 @@ object BuiltInThemes {
                 light = if (base.isDarkPalette) null else scheme,
                 dark = if (base.isDarkPalette) scheme else null,
                 previewImageName = previewName,
-                keyBorderWidth = if (style.isBordered) OUTLINED_KEY_BORDER_WIDTH else null,
+                keyBorderWidth = if (style.isBordered) ThemeKeyStyle.OUTLINED_BORDER_WIDTH else null,
             )
         }
 
@@ -159,7 +144,7 @@ object BuiltInThemes {
      */
     private fun colorsFor(
         base: BaseColor,
-        style: KeyStyle,
+        style: ThemeKeyStyle,
     ): KeyboardColorSettings? {
         base.gradient?.let { (top, bottom) ->
             val keyText = if (base.isDarkPalette) DARK_KEY_TEXT else LIGHT_KEY_TEXT
@@ -168,8 +153,8 @@ object BuiltInThemes {
         }
         if (!style.hasTransparentKeys) return null // Filled Default stays adaptive
         return KeyboardColorSettings(
-            normalKeyFillColor = TRANSPARENT_KEY_FILL,
-            specialKeyFillColor = TRANSPARENT_KEY_FILL,
+            normalKeyFillColor = ThemeKeyStyle.TRANSPARENT_KEY_FILL,
+            specialKeyFillColor = ThemeKeyStyle.TRANSPARENT_KEY_FILL,
         )
     }
 
@@ -187,7 +172,7 @@ object BuiltInThemes {
         neutralFill: Int,
         transparentKeys: Boolean,
     ): KeyboardColorSettings {
-        val fill = if (transparentKeys) TRANSPARENT_KEY_FILL else argb(neutralFill)
+        val fill = if (transparentKeys) ThemeKeyStyle.TRANSPARENT_KEY_FILL else argb(neutralFill)
         return KeyboardColorSettings(
             background = ThemeBackground.Gradient(ThemeGradient(listOf(argb(top), argb(bottom)))),
             keyTextColor = argb(keyText),

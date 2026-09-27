@@ -418,7 +418,8 @@ struct KeyboardColorSettings: Equatable {
 
     /// Candidate first-candidate highlight + pressed tints. A user-picked
     /// `candidateHighlightColor` wins (pressed = it deepened). Otherwise a gradient derives both
-    /// from its first stop (highlight lightened, pressed deepened), and a fixed palette uses its
+    /// from its first stop (highlight lightened, pressed deepened) — as does a solid surface under
+    /// see-through keys (which have no fill to use), and a fixed palette uses its
     /// key fill as the highlight and the deepened fill as pressed. nil = adaptive neutral
     /// fallback in `CandidateView.ItemStyle.resolvedBackgroundColor`.
     // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt candidateTints.
@@ -426,8 +427,8 @@ struct KeyboardColorSettings: Equatable {
         if let custom = candidateHighlightColor {
             return (custom, custom.deepened(by: Self.candidatePressedDeepenFactor))
         }
-        if let top = backgroundGradient?.stops.first {
-            return (top.lightened(towardWhite: Self.candidateHighlightLightenFactor), top.deepened(by: Self.candidatePressedDeepenFactor))
+        if let base = backgroundGradient?.stops.first ?? (hasTransparentKeys ? solidBackgroundColor : nil) {
+            return (base.lightened(towardWhite: Self.candidateHighlightLightenFactor), base.deepened(by: Self.candidatePressedDeepenFactor))
         }
         guard let fill = fixedKeyFill else { return nil }
         return (fill, fill.deepened(by: Self.candidatePressedDeepenFactor))

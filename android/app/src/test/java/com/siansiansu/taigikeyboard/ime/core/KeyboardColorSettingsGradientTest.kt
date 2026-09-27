@@ -84,4 +84,55 @@ class KeyboardColorSettingsGradientTest {
             ).withKeyFill(0x00000000)
         assertNull(clearOnGradient.fixedKeyFill)
     }
+
+    // trace: seed D4D5DD solid under clear keys → no fill to use, so the solid surface seeds the
+    //   tints like a gradient's first stop: lightened ×0.5 (212+21, 213+21, 221+17) = E9EAEE,
+    //   deepened ×0.65 (137, 138, 143) = 898A8F. A photo under clear keys stays adaptive (null). Mirrors iOS.
+    @Test
+    fun candidateTints_seeThroughKeysOverSolid_deriveFromSurface() {
+        val seed = ThemeAppearance.USER_THEME_SEED
+        val clear = seed.withKeyStyle(ThemeKeyStyle.CLEAN, seed).colors
+        assertEquals(0xFFE9EAEE.toInt() to 0xFF898A8F.toInt(), clear.candidateTints)
+
+        val photo = clear.copy(background = ThemeBackground.Image(ThemeImageBackground("photo.jpg", 0f)))
+        assertNull(photo.candidateTints)
+    }
+
+    // trace: a visible fill is Filled whatever the border (a legacy bordered theme stays Filled);
+    //   clear fill + border > 0 = Outlined, clear fill + border 0 = Borderless. Mirrors iOS.
+    @Test
+    fun keyStyle_derivesFromFillAndBorder() {
+        val seed = ThemeAppearance.USER_THEME_SEED
+        assertEquals(ThemeKeyStyle.CLASSIC, seed.keyStyle)
+        val bordered = seed.copy(keyBorderWidth = 2f)
+        assertEquals(ThemeKeyStyle.CLASSIC, bordered.keyStyle)
+        val clearBordered = bordered.copy(colors = bordered.colors.withKeyFill(ThemeKeyStyle.TRANSPARENT_KEY_FILL))
+        assertEquals(ThemeKeyStyle.FRAMED, clearBordered.keyStyle)
+        assertEquals(ThemeKeyStyle.CLEAN, clearBordered.copy(keyBorderWidth = 0f).keyStyle)
+    }
+
+    // trace: Outlined = clear fill, border 1.0, shadow 0; Borderless = clear fill, border 0,
+    //   shadow 0; back to Filled restores the remembered fill 336699 / shadow 2 / border 0.5. Mirrors iOS.
+    @Test
+    fun withKeyStyle_switchesAndRestoresFilledKeys() {
+        val filled =
+            ThemeAppearance.USER_THEME_SEED.copy(
+                colors = UserThemeSeed.colors.withKeyFill(0xFF336699.toInt()),
+                keyShadowIntensity = 2f,
+                keyBorderWidth = 0.5f,
+            )
+
+        val outlined = filled.withKeyStyle(ThemeKeyStyle.FRAMED, filled)
+        assertEquals(ThemeKeyStyle.FRAMED, outlined.keyStyle)
+        assertEquals(ThemeKeyStyle.TRANSPARENT_KEY_FILL, outlined.colors.normalKeyFillColor)
+        assertEquals(ThemeKeyStyle.TRANSPARENT_KEY_FILL, outlined.colors.specialKeyFillColor)
+        assertEquals(ThemeKeyStyle.OUTLINED_BORDER_WIDTH, outlined.keyBorderWidth)
+        assertEquals(0f, outlined.keyShadowIntensity)
+
+        val borderless = outlined.withKeyStyle(ThemeKeyStyle.CLEAN, filled)
+        assertEquals(ThemeKeyStyle.CLEAN, borderless.keyStyle)
+        assertEquals(0f, borderless.keyBorderWidth)
+
+        assertEquals(filled, borderless.withKeyStyle(ThemeKeyStyle.CLASSIC, filled))
+    }
 }

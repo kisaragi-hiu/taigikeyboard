@@ -464,4 +464,55 @@ final class ThemeBackgroundTests: XCTestCase {
 
         XCTAssertNil(EmojiChromeColors.resolved(from: .default))
     }
+
+    // MARK: - Key style
+
+    // trace: seed D4D5DD solid under clear keys → no fill to use, so the solid surface seeds the
+    //   tints like a gradient's first stop: lightened ×0.5 (212+21, 213+21, 221+17) = E9EAEE,
+    //   deepened ×0.65 (137, 138, 143) = 898A8F. A photo under clear keys stays adaptive (nil).
+    func testCandidateTints_seeThroughKeysOverSolid_deriveFromSurface() throws {
+        let clear = ThemeAppearance.userThemeSeed.withKeyStyle(.clean, filledKeys: .userThemeSeed).colors
+        let tints = try XCTUnwrap(clear.candidateTints)
+        XCTAssertEqual(tints.highlight, CodableColor(hex: 0xE9EAEE))
+        XCTAssertEqual(tints.pressed, CodableColor(hex: 0x898A8F))
+
+        var photo = clear
+        photo.background = .image(ThemeImageBackground(file: "photo.jpg", dim: 0))
+        XCTAssertNil(photo.candidateTints)
+    }
+
+    // trace: a visible fill is Filled whatever the border (a legacy bordered theme stays Filled);
+    //   clear fill + border > 0 = Outlined, clear fill + border 0 = Borderless.
+    func testKeyStyle_derivesFromFillAndBorder() {
+        var appearance = ThemeAppearance.userThemeSeed
+        XCTAssertEqual(appearance.keyStyle, .classic)
+        appearance.keyBorderWidth = 2
+        XCTAssertEqual(appearance.keyStyle, .classic)
+        appearance.colors.keyFillColor = CodableColor(.clear)
+        XCTAssertEqual(appearance.keyStyle, .framed)
+        appearance.keyBorderWidth = 0
+        XCTAssertEqual(appearance.keyStyle, .clean)
+    }
+
+    // trace: Outlined = clear fill, border 1.0, shadow 0; Borderless = clear fill, border 0,
+    //   shadow 0; back to Filled restores the remembered fill 336699 / shadow 2 / border 0.5.
+    func testWithKeyStyle_switchesAndRestoresFilledKeys() {
+        var filled = ThemeAppearance.userThemeSeed
+        filled.colors.keyFillColor = CodableColor(hex: 0x336699)
+        filled.keyShadowIntensity = 2
+        filled.keyBorderWidth = 0.5
+
+        let outlined = filled.withKeyStyle(.framed, filledKeys: filled)
+        XCTAssertEqual(outlined.keyStyle, .framed)
+        XCTAssertEqual(outlined.colors.normalKeyFillColor?.alpha, 0)
+        XCTAssertEqual(outlined.colors.specialKeyFillColor?.alpha, 0)
+        XCTAssertEqual(outlined.keyBorderWidth, ThemeKeyStyle.outlinedBorderWidth)
+        XCTAssertEqual(outlined.keyShadowIntensity, 0)
+
+        let borderless = outlined.withKeyStyle(.clean, filledKeys: filled)
+        XCTAssertEqual(borderless.keyStyle, .clean)
+        XCTAssertEqual(borderless.keyBorderWidth, 0)
+
+        XCTAssertEqual(borderless.withKeyStyle(.classic, filledKeys: filled), filled)
+    }
 }
