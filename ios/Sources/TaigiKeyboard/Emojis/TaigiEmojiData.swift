@@ -3,7 +3,7 @@ import CoreText
 import Foundation
 import ISEmojiView
 
-// Loads the bundled taigi-emojis emoji set and adapts it to ISEmojiView's [EmojiCategory] model.
+// Loads the bundled emoji/dist emoji set and adapts it to ISEmojiView's [EmojiCategory] model.
 enum TaigiEmojiData {
     // Slim Decodable shape — only the fields the emoji keyboard renders. emoji.json also carries
     // keywords / keywordsByLocale / cp / name / subgroup / version; ISEmojiView has no search, so
@@ -25,7 +25,7 @@ enum TaigiEmojiData {
     private static let resourceName = "emoji"
     private static let resourceExtension = "json"
 
-    // ISEmojiView's category order + the taigi-emojis category ids that feed each. taigi-emojis
+    // ISEmojiView's category order + the emoji/ category ids that feed each. emoji/
     // splits smileys_emotion + people_body; ISEmojiView merges both into .smileysAndPeople, so they
     // concatenate (smileys first). The remaining seven map 1:1. Order matches ISEmojiView's own
     // EmojiLoader.availableCategories so the category bar looks identical to the previous build.

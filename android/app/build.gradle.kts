@@ -76,10 +76,10 @@ android {
         }
     }
 
-    // Bundle the shared emoji set straight from the in-repo taigi-emojis data pipeline.
-    // $rootDir = android/ ; the data lives at the repo root → ../taigi-emojis/dist/emoji.json
+    // Bundle the shared emoji set straight from the in-repo emoji/ data pipeline.
+    // $rootDir = android/ ; the data lives at the repo root → ../emoji/dist/emoji.json
     // lands at the assets root. Single source of truth, no copied file to drift.
-    sourceSets["main"].assets.srcDir(file("$rootDir/../taigi-emojis/dist"))
+    sourceSets["main"].assets.srcDir(file("$rootDir/../emoji/dist"))
 
     // The typefaces, from the repo-root directory the other three platforms
     // package out of too. Their names are Android resource names precisely so

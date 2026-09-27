@@ -71,7 +71,7 @@
 | `ui/device.md` | Device adaptation for iPhone and iPad | Active |
 | `ui/app-ui.md` | Main App UI structure (tabs, settings) | Active |
 | `ui/theme.md` | Theme & styling (colors, fonts, user customization) | Active |
-| `ui/emoji.md` | Emoji keyboard (ISEmojiView iOS / Compose Android, taigi-emojis data) | Active |
+| `ui/emoji.md` | Emoji keyboard (ISEmojiView iOS / Compose Android, `emoji/` data) | Active |
 | `ui/callouts.md` | Long-press callouts + tone-variation menus (engine map + platform popups) | Active |
 
 ### `references/` — External IME Research (7)

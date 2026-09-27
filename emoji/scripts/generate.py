@@ -377,7 +377,7 @@ def build_json(emojis: list[Emoji]) -> dict:
             "emojiVersion": MAX_EMOJI_VERSION,
             "cldrVersion": CLDR_VERSION,
             "count": count,
-            "generator": "taigi-emojis/scripts/generate.py",
+            "generator": "emoji/scripts/generate.py",
         },
         "categories": categories,
     }

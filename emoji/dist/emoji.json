@@ -3,7 +3,7 @@
     "emojiVersion": "E17.0",
     "cldrVersion": "48",
     "count": 1889,
-    "generator": "taigi-emojis/scripts/generate.py"
+    "generator": "emoji/scripts/generate.py"
   },
   "categories": [
     {

@@ -19,7 +19,7 @@ taigi-converter/   # Canonical TL↔POJ↔TPS converter (git submodule)
 corpus/            # Real Taiwanese text — taigi-typing (manual-test sentences) + taigi-corpus (opt-in, future LM data); never a build input
 changelog/         # Per-release changelogs — edit only at release time
 references/        # Cloned external IME repos (gitignored)
-taigi-emojis/      # Emoji data generator (own CLAUDE.md)
+emoji/             # Emoji data generator (own CLAUDE.md)
 ```
 
 ## Core Principles

@@ -1,4 +1,4 @@
-# taigi-emojis
+# emoji
 
 Single emoji source of truth for the [TaigiKeyboard](https://github.com/taigikeyboard)
 (iOS + Android). A Python generator merges pinned Unicode + CLDR data with a hand overlay
@@ -58,7 +58,3 @@ Both apps read `dist/emoji.json` directly and decode it into their own native mo
 platform modules, no platform-side hardcoded emoji lists. This pipeline is tracked directly in the
 TaigiKeyboard repository; each app glyph-filters emoji its OS font cannot render at load (test the
 whole grapheme cluster, not per-scalar).
-
-The original standalone [taigi-emojis repository](https://github.com/taigikeyboard/taigi-emojis)
-remains available for history and reference. It is not automatically synchronized with this in-repo
-copy; new TaigiKeyboard emoji changes are authored here.
