@@ -66,9 +66,9 @@ final class UserDataPageDoneMessageTests: XCTestCase {
     private let hanji = StringResolver(.hanji)
 
     func testADoneMessage_hasATitleAndNoBody() {
-        let message = UserDataPageMessage.done(.desktopClearLearningRecordsDone)
+        let message = UserDataPageMessage.done(.dictionaryClearLearningRecordsDone)
 
-        XCTAssertEqual(message.title(hanji), hanji.resolve(.desktopClearLearningRecordsDone))
+        XCTAssertEqual(message.title(hanji), hanji.resolve(.dictionaryClearLearningRecordsDone))
         XCTAssertNil(message.detail(hanji))
     }
 
@@ -76,7 +76,7 @@ final class UserDataPageDoneMessageTests: XCTestCase {
     /// every message answers.
     func testAFailureMessage_stillCarriesItsDiagnostic() {
         let message = UserDataPageMessage.failure(
-            .desktopClearLearningRecordsFailed, diagnostic: "disk I/O error",
+            .dictionaryClearLearningRecordsFailed, diagnostic: "disk I/O error",
         )
 
         XCTAssertEqual(message.detail(hanji), "disk I/O error")

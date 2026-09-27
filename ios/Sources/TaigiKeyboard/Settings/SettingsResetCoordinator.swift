@@ -31,14 +31,14 @@ enum SettingsResetCoordinator {
     /// Empty user-owned learning data (frequency + next-word association +
     /// learned phrases) in place — the engine's stores (roadmap P7b). The
     /// engine attempts every store even when one fails, so a partial failure
-    /// still clears what it can; failures are logged, never thrown.
-    static func resetAllUserData() {
-        Task {
-            do {
-                try await CompositionRoot.userData.clearLearningRecords()
-            } catch {
-                logger.error("Failed to clear learning records: \(error)")
-            }
+    /// still clears what it can; one that could not be emptied is logged and
+    /// thrown for the caller to report.
+    static func resetAllUserData() async throws {
+        do {
+            try await CompositionRoot.userData.clearLearningRecords()
+        } catch {
+            logger.error("Failed to clear learning records: \(error)")
+            throw error
         }
     }
 }

@@ -24,6 +24,7 @@ struct SettingsTab: View {
     @State private var toolbarAutoCollapse: Bool
     @State private var isGlobeKeyEnabled: Bool
     @State private var showResetSettingsAlert = false
+    @State private var showResetFailedAlert = false
     @State private var diagnosticCopied = false
     @State private var diagnosticText = ""
     @Environment(\.openURL) private var openURL
@@ -350,6 +351,9 @@ struct SettingsTab: View {
         } message: {
             Text(lang.string(.settingsResetSettingsMessage))
         }
+        .alert(lang.string(.settingsResetFailed), isPresented: $showResetFailedAlert) {
+            Button(lang.string(.commonOk), role: .cancel) {}
+        }
     }
 
     // MARK: - Feature Summary Lookup
@@ -364,7 +368,13 @@ struct SettingsTab: View {
 
     private func resetAllSettings() {
         SettingsResetCoordinator.resetAll()
-        SettingsResetCoordinator.resetAllUserData()
+        Task {
+            do {
+                try await SettingsResetCoordinator.resetAllUserData()
+            } catch {
+                showResetFailedAlert = true
+            }
+        }
 
         // Sync local state
         selectedInputMode = settings.inputMode

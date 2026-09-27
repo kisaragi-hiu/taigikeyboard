@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 @Composable
 fun ConfirmationDialog(
     title: String,
-    message: String,
+    message: String?,
     confirmLabel: String,
     dismissLabel: String,
     onConfirm: () -> Unit,
@@ -17,7 +17,7 @@ fun ConfirmationDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
-        text = { Text(message) },
+        text = message?.let { { Text(it) } },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(confirmLabel)

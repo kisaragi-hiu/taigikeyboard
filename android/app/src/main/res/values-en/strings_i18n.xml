@@ -106,6 +106,9 @@
     <string name="i18n_dictionary_kunggeTag">Craft Glossary</string>
     <string name="i18n_dictionary_sttiTag">Academic Terms</string>
     <string name="i18n_dictionary_lkkTag">Han-Roman</string>
+    <string name="i18n_dictionary_clearLearningRecords">Delete Learning Records</string>
+    <string name="i18n_dictionary_clearLearningRecordsDone">Learning Records Cleared</string>
+    <string name="i18n_dictionary_clearLearningRecordsFailed">Could Not Clear Learning Records</string>
     <string name="i18n_home_appHeaderTitle">TaigiKeyboard</string>
     <string name="i18n_home_setupKeyboard">Enable the keyboard to start using it</string>
     <string name="i18n_home_typingGuide">Typing Guide</string>
