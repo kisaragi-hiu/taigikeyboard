@@ -308,6 +308,15 @@ class ThemeBackgroundTest {
         assertNull(decode("{}").candidateHighlightColor)
     }
 
+    // trace: white → light → deepen ×0.8: 255×0.8 = 204 = CC → FFCCCCCC;
+    //   black → dark → lighten 0.25: 0 + ⌊255×0.25⌋ = 63 = 3F → FF3F3F3F; translucent → null.
+    @Test
+    fun pressedKeyFill_lightDeepens_darkLightens_translucentNull() {
+        assertEquals(0xFFCCCCCC.toInt(), pressedKeyFillArgb(WHITE))
+        assertEquals(0xFF3F3F3F.toInt(), pressedKeyFillArgb(BLACK))
+        assertNull(pressedKeyFillArgb(0x80FFFFFF.toInt()))
+    }
+
     // endregion
 
     private companion object {

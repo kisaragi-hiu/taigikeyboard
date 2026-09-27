@@ -34,6 +34,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
+import com.siansiansu.taigikeyboard.ime.core.pressedKeyFillArgb
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
@@ -90,10 +91,8 @@ internal fun KeyContent(
     val customFill = if (isSpecial) colors.specialKeyFillColor else colors.normalKeyFillColor
 
     // Background tint resolution mirrors `applyAppearance` +
-    // `updateKeyPressedBackground` + `setBackgroundTintList`. Custom fill
-    // replaces BOTH pressed and unpressed — matches legacy where a single
-    // `ColorStateList.valueOf(...)` tints all selector states equally
-    // (pressed feedback is intentionally lost for tinted keys).
+    // `updateKeyPressedBackground` + `setBackgroundTintList`. A custom fill
+    // replaces the theme fill; pressed derives from it (`pressedKeyFillArgb`).
     val backgroundArgb = resolveBackgroundColor(
         themeColors = themeColors,
         data = data,
@@ -634,10 +633,8 @@ private fun resolveBackgroundColor(
     if (data.code == KeyCode.TRANSLATE && !isFullWidthPunctuation) {
         return themeColors.keyBgActive
     }
-    // Custom fill replaces both pressed and unpressed (legacy
-    // `backgroundTintList = ColorStateList.valueOf(it)` drops pressed
-    // visual feedback for tinted keys — preserved 1:1 here).
-    if (customFill != null) return customFill
+    // A pressed key takes the derived pressed fill; a translucent fill stays as-is.
+    if (customFill != null) return (if (pressed) pressedKeyFillArgb(customFill) else null) ?: customFill
 
     return when {
         data.code == KeyCode.ENTER ->

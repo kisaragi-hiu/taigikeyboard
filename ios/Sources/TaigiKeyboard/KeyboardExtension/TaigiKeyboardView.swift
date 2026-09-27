@@ -422,21 +422,21 @@ struct TaigiKeyboardView: View {
             // ButtonKey renders .background(style.background) on top of
             // .background(style.backgroundColor), so we must set both to
             // ensure the custom color shows regardless of which layer the
-            // standard style populates.
-            switch params.action {
+            // standard style populates. A pressed key takes the derived pressed fill
+            // (KK API: Keyboard.ButtonStyleBuilderParams.isPressed).
+            let customFill: CodableColor? = switch params.action {
             case .backspace, .shift, .nextKeyboard, .keyboardType, .dismissKeyboard, .settings,
                  .primary, .custom:
-                if let fill = colors.specialKeyFillColor?.color {
-                    style.backgroundColor = fill
-                    style.background = .color(fill)
-                }
+                colors.specialKeyFillColor
             case .character, .space:
-                if let fill = colors.normalKeyFillColor?.color {
-                    style.backgroundColor = fill
-                    style.background = .color(fill)
-                }
+                colors.normalKeyFillColor
             default:
-                break
+                nil
+            }
+            if let customFill {
+                let fill = ((params.isPressed ? customFill.pressedKeyFill : nil) ?? customFill).color
+                style.backgroundColor = fill
+                style.background = .color(fill)
             }
             return style
         }

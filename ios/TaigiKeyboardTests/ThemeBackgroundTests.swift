@@ -432,4 +432,12 @@ final class ThemeBackgroundTests: XCTestCase {
         XCTAssertFalse(try XCTUnwrap(String(data: JSONEncoder().encode(UserThemeSeed.colors), encoding: .utf8)).contains("candidateHighlightColor"))
         XCTAssertNil(try decode("{}").candidateHighlightColor)
     }
+
+    // trace: white → light → deepen ×0.8: 255×0.8 = 204 = CC → CCCCCC;
+    //   black → dark → lighten 0.25: 0 + ⌊255×0.25⌋ = 63 = 3F → 3F3F3F; translucent → nil.
+    func testPressedKeyFill_lightDeepens_darkLightens_translucentNil() {
+        XCTAssertEqual(CodableColor(hex: 0xFFFFFF).pressedKeyFill, CodableColor(hex: 0xCCCCCC))
+        XCTAssertEqual(CodableColor(hex: 0x000000).pressedKeyFill, CodableColor(hex: 0x3F3F3F))
+        XCTAssertNil(CodableColor(Color.white.opacity(0.5)).pressedKeyFill)
+    }
 }

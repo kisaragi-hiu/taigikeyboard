@@ -430,6 +430,13 @@ struct KeyboardColorSettings: Equatable {
     // CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR / CANDIDATE_PRESSED_DEEPEN_FACTOR. Drift causes silent divergence.
     static let candidateHighlightLightenFactor: Double = 0.5
     static let candidatePressedDeepenFactor: Double = 0.65
+
+    /// Pressed-key fill factors: a dark fill is lightened toward white, a light fill deepened
+    /// toward black, so black and white fills both show press feedback.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/KeyboardColorSettings.kt
+    // KEY_PRESSED_LIGHTEN_FACTOR / KEY_PRESSED_DEEPEN_FACTOR / pressedKeyFillArgb. Drift causes silent divergence.
+    static let keyPressedLightenFactor: Double = 0.25
+    static let keyPressedDeepenFactor: Double = 0.8
 }
 
 /// A custom keyboard surface together with the tone its photo overlay takes — resolved once
@@ -533,6 +540,16 @@ extension KeyboardColorSettings {
 }
 
 extension CodableColor {
+    /// The pressed state of a custom key fill: lightened when dark, deepened when light.
+    /// nil for a translucent fill (a clear / outlined key keeps its fill when pressed — the
+    /// derived color is opaque and would paint a visible key).
+    var pressedKeyFill: CodableColor? {
+        guard alpha >= 1 else { return nil }
+        return isDark
+            ? lightened(towardWhite: KeyboardColorSettings.keyPressedLightenFactor)
+            : deepened(by: KeyboardColorSettings.keyPressedDeepenFactor)
+    }
+
     /// Returns an opaque variant lightened toward white by `factor`: each 0-255 RGB
     /// component is lifted by `component + (255 - component) * factor`, truncated
     /// toward zero. Used to derive the candidate first-candidate highlight — a light
