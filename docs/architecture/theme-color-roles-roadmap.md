@@ -10,7 +10,7 @@ Brings every mobile keyboard element under the custom-theme color tiers in `docs
 | — | Grid lines + strip expand-toggle divider (#252) | iOS + Android | candidate text | Merged `14fbc135` |
 | — | One-handed menu background / text (folded into #252) | Android | key fill / key text | Merged `14fbc135` |
 | P1 | A — key pressed state (#252) | iOS + Android | key fill: dark lightened / light deepened | Merged `14fbc135` |
-| P2 | B popup selected cell · C expanded-overlay control pressed · F toolbar pressed | iOS + Android (F Android) | B key pressed fill (USER 2026-09-27); C / F candidate pressed tint | In progress |
+| P2 | B popup selected cell · C expanded-overlay control pressed · F toolbar pressed | iOS + Android (F Android) | B key pressed fill (USER 2026-09-27); C / F candidate pressed tint | Merged `5fabb929` (#255) |
 | P3 | E — English autocorrect highlight (parity: Android gains it) | iOS + Android | candidate highlight + candidate text | Pending |
 | P4 | D English strip dividers · I tab-row dividers | iOS + Android (I Android) | candidate text | Pending |
 | P5 | G translate-key active · H caps-lock distinguishable · J emoji ABC / delete pressed · M nav-bar icons | Android | key fill deepened / fixed accent / background luminance | Pending |
