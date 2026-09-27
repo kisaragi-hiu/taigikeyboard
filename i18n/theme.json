@@ -19,7 +19,7 @@
     "familyClassic": {
       "comment": "Built-in theme key-style family header: filled keys.",
       "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
-      "values": { "hanji": "填色", "tailo": "Thiām-sik", "poj": "Thiam-sek", "en": "Filled", "ja": "塗りつぶし" }
+      "values": { "hanji": "素色", "tailo": "Sòo-sik", "poj": "Sò͘-sek", "en": "Filled", "ja": "塗りつぶし" }
     },
     "familyFramed": {
       "comment": "Built-in theme key-style family header: transparent keys with an outline border.",
