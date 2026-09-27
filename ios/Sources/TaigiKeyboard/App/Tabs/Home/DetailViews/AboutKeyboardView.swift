@@ -20,6 +20,8 @@ struct AboutKeyboardView: View {
                 link(.homeWebsiteLink, url: Self.websiteURL, icon: Image(systemName: "globe"))
                 link(.homeGithubLink, url: Self.githubURL, icon: Image("brand_github"))
                 link(.homeDiscordLink, url: Self.discordURL, icon: Image("brand_discord"))
+                link(.homeFacebookLink, url: Self.facebookURL, icon: Image("brand_facebook"))
+                link(.homeInstagramLink, url: Self.instagramURL, icon: Image("brand_instagram"))
                 link(.homeEmailLink, url: Self.emailURL, icon: Image(systemName: "envelope"))
             } footer: {
                 Text(lang.string(.homeCopyrightLine))
@@ -51,5 +53,7 @@ struct AboutKeyboardView: View {
     private static let websiteURL = URL(string: "https://taigikeyboard.tw")!
     private static let githubURL = URL(string: "https://github.com/taigikeyboard")!
     private static let discordURL = URL(string: "https://discord.gg/kXhtQfWvK")!
+    private static let facebookURL = URL(string: "https://www.facebook.com/profile.php?id=61589036184924")!
+    private static let instagramURL = URL(string: "https://www.instagram.com/taigikeyboardtw/")!
     private static let emailURL = URL(string: "mailto:info@taigikeyboard.tw")!
 }

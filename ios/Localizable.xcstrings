@@ -2053,6 +2053,24 @@
         }
       }
     },
+    "i18n_home_facebookLink": {
+      "comment": "About page: title + accessibility name of the Facebook link row. A product name — same in every language.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Facebook"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Facebook"
+          }
+        }
+      }
+    },
     "i18n_home_githubLink": {
       "comment": "About page footer: tooltip + accessibility name of the GitHub icon link. A product name — same in every language.",
       "extractionState": "manual",
@@ -2085,6 +2103,24 @@
           "stringUnit": {
             "state": "translated",
             "value": "© iTaigi"
+          }
+        }
+      }
+    },
+    "i18n_home_instagramLink": {
+      "comment": "About page: title + accessibility name of the Instagram link row. A product name — same in every language.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instagram"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instagram"
           }
         }
       }

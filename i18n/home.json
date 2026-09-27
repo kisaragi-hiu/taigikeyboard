@@ -383,6 +383,50 @@
         "ja": "Discord"
       }
     },
+    "facebookLink": {
+      "comment": "About page: title + accessibility name of the Facebook link row. A product name — same in every language.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Facebook",
+        "tailo": "Facebook",
+        "poj": "Facebook",
+        "en": "Facebook",
+        "ja": "Facebook"
+      }
+    },
+    "instagramLink": {
+      "comment": "About page: title + accessibility name of the Instagram link row. A product name — same in every language.",
+      "scope": {
+        "platforms": [
+          "android",
+          "ios",
+          "macos",
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "Instagram",
+        "tailo": "Instagram",
+        "poj": "Instagram",
+        "en": "Instagram",
+        "ja": "Instagram"
+      }
+    },
     "emailLink": {
       "comment": "About page footer: tooltip + accessibility name of the email icon link. The address itself — same in every language.",
       "scope": {
