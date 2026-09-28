@@ -490,6 +490,11 @@ pub(crate) fn snapshot_path(path: &Path) -> PathBuf {
 /// exists: the first finished copy wins and is never overwritten — not even
 /// by a later copy taken after the winner already migrated the file — and a
 /// half-written file never carries the final name.
+///
+/// Android publishes by rename instead: its SELinux policy denies an app
+/// `link` on its own files (`avc: denied { link } … app_data_file`), and the
+/// keyboard and the app share one process there, so the `exists` check above
+/// has no second publisher to race.
 fn snapshot_before_takeover(
     connection: &Connection,
     path: &Path,
@@ -503,6 +508,9 @@ fn snapshot_before_takeover(
     let partial = PathBuf::from(partial);
     std::fs::remove_file(&partial).ok();
     connection.execute("VACUUM INTO ?1;", [partial.to_string_lossy()])?;
+    #[cfg(target_os = "android")]
+    let published = std::fs::rename(&partial, &snapshot).map_err(Into::into);
+    #[cfg(not(target_os = "android"))]
     let published = match std::fs::hard_link(&partial, &snapshot) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => Ok(()),
