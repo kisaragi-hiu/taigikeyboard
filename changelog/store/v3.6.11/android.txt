@@ -1,0 +1,2 @@
+Fixed: after updating, custom words disappeared and custom dictionary import and export failed. Your words are back.
+New: The theme editor preview can be collapsed.
