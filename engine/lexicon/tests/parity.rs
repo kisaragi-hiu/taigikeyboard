@@ -19,7 +19,7 @@ use lexicon::search::{self, SearchInputMode, SearchInputType, SearchParams};
 use lexicon::LexiconError;
 
 mod common;
-use common::{build_tkdb_v3, write_temp};
+use common::{build_tkdb_v3, build_tkwa, write_temp};
 
 const SEPARATOR: u8 = 0xFF;
 
@@ -328,7 +328,7 @@ fn tps_er_or_dual_emit_both_glyphs_hit_same_rowid() {
 /// returns the entry, mask missing the entry's source returns nothing.
 #[test]
 fn invariant_lex_assoc_bitmask_filter_honored() {
-    let assoc_bytes = synth_association_bin_with_one_entry("好", "伊", "i1", 100, 0x0001);
+    let assoc_bytes = build_tkwa(2, &[("好", &[(0x0001, 100, "伊", "i1")])]);
     let assoc_path = write_temp("assoc-bitmask-filter.bin", &assoc_bytes);
     let reader = AssociationReader::open(&assoc_path).expect("synth assoc opens");
 
@@ -563,61 +563,7 @@ fn build_minimal_install_fixture(prefix: &str) -> (PathBuf, PathBuf, PathBuf) {
 }
 
 fn synth_association_bin() -> Vec<u8> {
-    // Empty association.bin: TKWA + version 1 + 0 keys + 0 entries + 0 ts
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKWA");
-    out.extend_from_slice(&1u32.to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes()); // key_count
-    out.extend_from_slice(&0u32.to_le_bytes()); // entry_count
-    out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
-    out
-}
-
-/// TKWA fixture with exactly one prev_word that holds one entry.
-/// Useful for bitmask-filter regression tests (assoc filter is 1-layer
-/// and only honors the low 9 bits of the source bitmask).
-fn synth_association_bin_with_one_entry(
-    prev_word: &str,
-    next_word: &str,
-    next_tl: &str,
-    count: u32,
-    bitmask: u16,
-) -> Vec<u8> {
-    let prev_bytes = prev_word.as_bytes();
-    let nw_bytes = next_word.as_bytes();
-    let nt_bytes = next_tl.as_bytes();
-    assert!(prev_bytes.len() <= u8::MAX as usize, "prev_word too long");
-    assert!(nw_bytes.len() <= u8::MAX as usize, "next_word too long");
-    assert!(nt_bytes.len() <= u8::MAX as usize, "next_tl too long");
-
-    let header_size = 20usize;
-    let key_table_size = 4usize; // 1 key × u32 offset
-    let key_size = 1 + prev_bytes.len() + 4 + 2; // len + bytes + entry_offset + entry_count
-    let entry_offset = (header_size + key_table_size + key_size) as u32;
-    let key_offset = (header_size + key_table_size) as u32;
-
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKWA");
-    out.extend_from_slice(&1u32.to_le_bytes()); // version
-    out.extend_from_slice(&1u32.to_le_bytes()); // key_count
-    out.extend_from_slice(&1u32.to_le_bytes()); // entry_count
-    out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
-
-    out.extend_from_slice(&key_offset.to_le_bytes());
-
-    out.push(prev_bytes.len() as u8);
-    out.extend_from_slice(prev_bytes);
-    out.extend_from_slice(&entry_offset.to_le_bytes());
-    out.extend_from_slice(&1u16.to_le_bytes()); // entry_count for this key
-
-    out.extend_from_slice(&bitmask.to_le_bytes());
-    out.extend_from_slice(&count.to_le_bytes());
-    out.push(nw_bytes.len() as u8);
-    out.push(nt_bytes.len() as u8);
-    out.extend_from_slice(nw_bytes);
-    out.extend_from_slice(nt_bytes);
-
-    out
+    build_tkwa(2, &[])
 }
 
 // --- with_state readers do not serialize against each other -------------------

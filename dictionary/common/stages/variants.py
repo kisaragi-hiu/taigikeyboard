@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from common.variants import read_variant_rows
 from pipeline.context import PipelineContext
 
 
@@ -121,23 +122,12 @@ def _load_variants_map(
         ctx.logger.warning(f"Variants file not found: {path}")
         return variants_map, is_variant_set
 
-    df = pd.read_csv(path)
-    ctx.logger.info(f"Loaded variants: {len(df)} records")
-    for _, row in df.iterrows():
-        hanzi = str(row["hanzi"]).strip()
-        variant = str(row["variant"]).strip()
-        tl_field = str(row["tl"]).strip()
-        if not hanzi or not variant or not tl_field:
-            continue
-        for tl in tl_field.split("/"):
-            tl = tl.strip().lower()
-            if not tl:
-                continue
-            key = (hanzi, tl)
-            variants_map.setdefault(key, [])
-            if variant not in variants_map[key]:
-                variants_map[key].append(variant)
-            is_variant_set.add((variant, tl))
+    for hanzi, variant, tl in read_variant_rows(path):
+        key = (hanzi, tl)
+        variants_map.setdefault(key, [])
+        if variant not in variants_map[key]:
+            variants_map[key].append(variant)
+        is_variant_set.add((variant, tl))
 
     ctx.logger.info(f"Variants map: {len(variants_map)} unique (hanzi, tl) pairs")
     ctx.logger.info(f"Is-variant set: {len(is_variant_set)} unique (variant, tl) pairs")
@@ -152,19 +142,9 @@ def _load_variant_entries(
         ctx.logger.warning(f"Variants file not found: {path}")
         return entries
 
-    df = pd.read_csv(path)
-    ctx.logger.info(f"Loaded variants: {len(df)} records")
-    for _, row in df.iterrows():
-        variant = str(row["variant"]).strip()
-        tl_field = str(row["tl"]).strip()
-        if not variant or not tl_field:
-            continue
-        for tl in tl_field.split("/"):
-            tl = tl.strip().lower()
-            if not tl:
-                continue
-            syllables = tuple(tl.replace("--", "-").split("-"))
-            entries.append((variant, syllables))
+    for _hanzi, variant, tl in read_variant_rows(path):
+        syllables = tuple(tl.replace("--", "-").split("-"))
+        entries.append((variant, syllables))
 
     ctx.logger.info(f"Variant entries: {len(entries)}")
     return entries

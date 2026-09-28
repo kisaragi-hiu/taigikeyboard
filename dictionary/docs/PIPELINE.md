@@ -75,7 +75,10 @@ sources/<cat>/<key>/                         output/dictionary.csv
 `build.sh`). Post-v3.5.6 part 2 the SQLite intermediates (`dictionary.db`,
 `trie.db`, `word_association.csv`) are gone — every binary writer reads
 `dictionary.csv` directly via `build/dictionary_records.py` and
-`build/associations.py`. Step naming follows the script filename:
+`build/associations.py`; `create_association_bin` also reads the committed
+`shared/data/word_bigrams.tsv` (corpus word pairs, built by hand with
+`build/corpus_bigrams.py`) and `supplementary/variants/data/variants.csv`
+(variant hanji folded to the 教典 form). Step naming follows the script filename:
 `merge_csv` → `create_dictionary_bin` → `create_fst` →
 `create_association_bin` → `audit` → `deploy`.
 

@@ -43,6 +43,7 @@ from pathlib import Path
 from build.common import BASE_DIR, MERGED_CSV
 from build.dictionary_records import load_dictionary_records
 from common.abbrev import remove_diacritics
+from common.cjk import is_cjk
 from common.logging_utils import setup_logging
 from common.taigi_bridge import convert_poj_to_tl_strict, to_tone_number_ascii
 
@@ -62,9 +63,6 @@ MIN_PAIR_COUNT = 2
 # bylines, scripture headers) and are not counted again.
 SENTENCE_CAP = 3
 
-# Same ranges as dictionary_records / the engine; P3 unifies the CJK test when it
-# merges this output with associations.py (which stops at Ext F).
-CJK = re.compile(r"[㐀-䶿一-鿿豈-﫿\U00020000-\U0003134f]")
 SENTENCE_END = "。！？!?"
 PUNCTUATION = SENTENCE_END + "，,、；;：:「」『』（）()《》〈〉…—“”\"'‘’‧·．."
 ROMAN_LETTER = re.compile(r"[A-Za-zÀ-ɏḀ-ỿⁿ]")
@@ -168,7 +166,7 @@ def hanlo_units(line: str) -> list[tuple[str, str]]:
         run, kind = "", ""
 
     for ch in line:
-        if CJK.match(ch):
+        if is_cjk(ch):
             flush()
             units.append(("c", ch))
         elif ch in SENTENCE_END:

@@ -1,39 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Build association.bin from dictionary.csv
+Build association.bin (TKWA v2) from dictionary.csv + word_bigrams.tsv
 
-Input: output/dictionary.csv
-Output: output/association.bin
+Inputs:  output/dictionary.csv
+         shared/data/word_bigrams.tsv          (corpus word pairs, P2 output)
+         supplementary/variants/data/variants.csv
+Output:  output/association.bin
 
-Binary format (little-endian):
-  Header (20 bytes):
-    magic:       4 bytes  "TKWA"
-    version:     u32      1
-    key_count:   u32      unique prev_word count
-    entry_count: u32      total entry count
-    build_ts:    u32      build id, same as dictionary.bin (common.build_id)
-
-  Key offset table (key_count × u32):
-    Absolute byte offset from file start to each key entry
-
-  Key section (sorted by prev_word UTF-8 bytes):
-    Each key:
-      prev_word_len: u8    UTF-8 byte count
-      prev_word:     [u8]  UTF-8 bytes
-      entry_offset:  u32   absolute byte offset to first entry
-      entry_count:   u16   number of entries for this key
-
-  Entry section (sorted by count DESC within each key group, NO tiebreaker —
-  Codex pre-impl review Q6: adding a tiebreaker would drift the SHA256
-  baseline against pre-refactor builds):
-    Each entry:
-      bitmask:       u16   9-bit source flags (kautian..khpoo)
-      count:         u32   association count
-      next_word_len: u8    UTF-8 byte count
-      next_tl_len:   u8    UTF-8 byte count
-      next_word:     [u8]  UTF-8 bytes
-      next_tl:       [u8]  UTF-8 bytes
+Layout, key namespaces (character keys / `hanji\x01tl` word keys / `$`) and
+the sort rules: docs/engine/binary-format.md §2. Character groups keep NO
+count tiebreaker (Codex pre-impl review Q6: one would drift the SHA256
+baseline against pre-refactor builds); word groups break ties on
+next_word / next_tl bytes. `build_ts` = common.build_id(), same as dictionary.bin.
 
 Usage:
   python3 create_association_bin.py            # build the binary
@@ -43,17 +22,22 @@ Usage:
 import struct
 import sys
 
-from build.associations import AssociationEntry, compute_associations
-from build.common import LOG_DIR, OUTPUT_DIR, build_id
+from build.associations import (
+    AssociationEntry,
+    compute_associations,
+    compute_word_associations,
+)
+from build.common import BASE_DIR, LOG_DIR, OUTPUT_DIR, build_id
 from common.logging_utils import log_header, setup_logging
 from common.source_bits import ASSOC_SOURCE_COLUMNS
 
 CSV_FILE = OUTPUT_DIR / "dictionary.csv"
+BIGRAMS_TSV = BASE_DIR / "shared" / "data" / "word_bigrams.tsv"
 OUTPUT_FILE = OUTPUT_DIR / "association.bin"
 SCRIPT_NAME = "create_association_bin"
 
 MAGIC = b"TKWA"
-VERSION = 1
+VERSION = 2
 
 
 def encode_assoc_bitmask(entry: AssociationEntry) -> int:
@@ -86,6 +70,16 @@ def encode_entry(entry: AssociationEntry) -> bytes:
     )
 
 
+def compute_grouped() -> dict[str, list[AssociationEntry]]:
+    """Both namespaces in one dict; character keys and word keys never collide
+    (a character key is one CJK char, a word key contains `\x01`, `$` is neither)."""
+    grouped = compute_associations(CSV_FILE)
+    words = compute_word_associations(BIGRAMS_TSV, CSV_FILE)
+    assert not grouped.keys() & words.keys(), "character / word key namespaces overlap"
+    grouped.update(words)
+    return grouped
+
+
 def build(logger):
     if not CSV_FILE.exists():
         logger.error(f"CSV not found: {CSV_FILE}")
@@ -94,10 +88,10 @@ def build(logger):
     build_ts = build_id()
     logger.info(f"Build id: {build_ts}")
 
-    grouped = compute_associations(CSV_FILE)
+    grouped = compute_grouped()
 
     # Outer sort: prev_word UTF-8 bytes ascending. Inner sort already done
-    # in compute_associations (count DESC stable).
+    # per namespace (count DESC).
     all_keys = sorted(grouped.keys(), key=lambda s: s.encode("utf-8"))
 
     total_entries = sum(len(grouped[k]) for k in all_keys)
@@ -116,6 +110,7 @@ def build(logger):
     key_entries_data = []
     for key in all_keys:
         key_bytes = key.encode("utf-8")
+        assert len(key_bytes) <= 0xFF, f"key too long for u8 length: {key!r}"
         key_entries_data.append((key_bytes, len(encoded_groups[key])))
 
     key_section_size = sum(1 + len(kb) + 4 + 2 for kb, _ in key_entries_data)
@@ -157,13 +152,13 @@ def build(logger):
     logger.info(f"    Keys:    {key_count}")
     logger.info(f"    Entries: {total_entries}")
 
-    return key_count, total_entries
+    return grouped
 
 
-def verify(logger):
-    """Verify association.bin against compute_associations (round-trip check)."""
+def verify(logger, grouped: dict[str, list[AssociationEntry]]):
+    """Verify association.bin against the in-memory groups (round-trip check)."""
     logger.info(f"\n{'=' * 50}")
-    logger.info("Verifying association.bin against dictionary.csv...")
+    logger.info("Verifying association.bin against dictionary.csv + word_bigrams.tsv...")
     logger.info(f"{'=' * 50}")
 
     data = OUTPUT_FILE.read_bytes()
@@ -182,8 +177,6 @@ def verify(logger):
     for i in range(key_count):
         offset = struct.unpack_from("<I", data, header_size + i * 4)[0]
         key_offsets.append(offset)
-
-    grouped = compute_associations(CSV_FILE)
 
     errors = 0
     verified_entries = 0
@@ -240,10 +233,10 @@ def main():
     logger = setup_logging(SCRIPT_NAME, log_dir=LOG_DIR)
     log_header(logger, SCRIPT_NAME, CSV_FILE, OUTPUT_FILE)
 
-    build(logger)
+    grouped = build(logger)
 
     if "--verify" in sys.argv:
-        verify(logger)
+        verify(logger, grouped)
 
     logger.info("\nDone!")
 

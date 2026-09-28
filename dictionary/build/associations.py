@@ -17,17 +17,45 @@ association.bin SHA256, see Codex pre-impl review Q6).
 
 from __future__ import annotations
 
+import csv
+import logging
 import re
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
 
+from build.dictionary_records import load_dictionary_records
+from common.cjk import is_cjk
 from common.source_bits import ASSOC_SOURCE_COLUMNS
+from common.variants import VARIANTS_CSV, read_variant_rows
 
 MIN_WORD_LEN = 2
 MAX_WORD_LEN = 5         # 2-5 char hanzi entries seed associations
 MAX_NEXT_WORD_LEN = 3    # phrase associations cap next_word at 3 chars
+
+# --- word namespace (association.bin v2, bigram LM roadmap P3) ---------------
+# Key = `prev_hanji + WORD_KEY_SEPARATOR + prev_tl` (display TL, as the
+# dictionary and the user store carry it); sentence start = the literal `$`.
+# Mirrors `engine/lexicon/src/association_reader.rs` (`word_key`, `START_KEY`).
+WORD_KEY_SEPARATOR = "\x01"
+START_KEY = "$"
+WORD_TOP_K = 30
+WORD_MIN_COUNT = 2
+# Per-source multipliers over the raw `word_bigrams.tsv` columns (USER
+# 2026-09-28): Bible phrasing dominated some keys (`$→耶穌`), everything else
+# counts once.
+SOURCE_WEIGHTS = {"taigi_bible_nt": 0.5}
+# `variants.csv` has no 個/个 row (6676637c: the classifier is deliberately not
+# marked a 的 variant); the corpus writes the POJ-era 個 for 22k pairs.
+EXTRA_VARIANT_FOLDS = {("個", "ê"): "个"}
+
+log = logging.getLogger(__name__)
+
+
+def word_key(hanji: str, tl: str) -> str:
+    return hanji + WORD_KEY_SEPARATOR + tl
 
 
 @dataclass(frozen=True)
@@ -42,16 +70,6 @@ class AssociationEntry:
         return dict(self.sources)
 
 
-def _is_cjk(char: str) -> bool:
-    code = ord(char)
-    return (
-        0x4E00 <= code <= 0x9FFF
-        or 0x3400 <= code <= 0x4DBF
-        or 0x20000 <= code <= 0x2CEAF
-        or 0xF900 <= code <= 0xFAFF
-    )
-
-
 def _split_tl_syllables(tl) -> list[str]:
     if tl is None or pd.isna(tl):
         return []
@@ -62,7 +80,7 @@ def _generate_bigrams(
     hanzi: str, tl: str, frequency: int, sources: dict[str, int],
 ) -> list[dict]:
     tl_parts = _split_tl_syllables(tl)
-    hanzi_chars = [c for c in hanzi if _is_cjk(c)]
+    hanzi_chars = [c for c in hanzi if is_cjk(c)]
 
     if len(hanzi_chars) < 2:
         return []
@@ -86,7 +104,7 @@ def _generate_phrase_associations(
     hanzi: str, tl: str, frequency: int, sources: dict[str, int],
 ) -> list[dict]:
     tl_parts = _split_tl_syllables(tl)
-    hanzi_chars = [c for c in hanzi if _is_cjk(c)]
+    hanzi_chars = [c for c in hanzi if is_cjk(c)]
 
     if len(hanzi_chars) < 3:
         return []
@@ -199,3 +217,105 @@ def compute_associations(
         grouped[prev].sort(key=lambda e: e.count, reverse=True)
 
     return grouped
+
+
+# --------------------------------------------------------------- word pairs
+def load_variant_folds(variants_csv: Path = VARIANTS_CSV) -> dict[tuple[str, str], str]:
+    """`(variant hanji, tl)` → 教典 recommended hanji, whole-word match only.
+
+    A `(variant, tl)` that `variants.csv` maps to more than one recommended
+    form (青/tshenn → 生 or 腥) is ambiguous and is not folded. Folding is one
+    hop: 到/kah → 甲 stops there even though 甲/kah → 佮 exists (two words
+    sharing one `(hanji, tl)` row — the chain would merge them).
+    """
+    targets: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for hanzi, variant, tl in read_variant_rows(variants_csv):
+        targets[(variant, tl)].add(hanzi)
+    folds = {key: next(iter(hanzi)) for key, hanzi in targets.items() if len(hanzi) == 1}
+    folds.update(EXTRA_VARIANT_FOLDS)
+    return folds
+
+
+def weighted_count(counts_by_source: dict[str, int]) -> int:
+    """Σ weight × per-source count, rounded half-up (never banker's rounding)."""
+    total = sum(SOURCE_WEIGHTS.get(source, 1.0) * count for source, count in counts_by_source.items())
+    return int(total + 0.5)
+
+
+def compute_word_associations(
+    bigrams_tsv: Path,
+    dictionary_csv: Path,
+    variants_csv: Path = VARIANTS_CSV,
+) -> dict[str, list[AssociationEntry]]:
+    """`word_bigrams.tsv` → {word key or `$`: [entries, count DESC, top-K]}.
+
+    Both words of a pair are folded to their recommended hanji so variant
+    spellings merge; the next word must be a dictionary `(hanzi, tl)` row
+    (its source flags become the entry bitmask, so the source toggles keep
+    filtering). Counts are the weighted sums; `WORD_MIN_COUNT` applies after
+    weighting and merging.
+    """
+    folds = load_variant_folds(variants_csv)
+    sources_by_word: dict[tuple[str, str], dict[str, int]] = {}
+    for record in load_dictionary_records(dictionary_csv):
+        if record.hanzi is not None:
+            flags = record.source_dict()
+            sources_by_word[(record.hanzi, record.tl)] = {
+                col: int(flags[col]) for col in ASSOC_SOURCE_COLUMNS
+            }
+    # 34 `variants.csv` targets (毋好, 啉水, 袂使 …) are not dictionary rows;
+    # the variant itself is one, so such a word stays unfolded.
+    usable_folds = {
+        (variant, tl): target
+        for (variant, tl), target in folds.items()
+        if (target, tl) in sources_by_word
+    }
+    unfoldable = sorted(
+        f"{variant}/{tl}→{target}"
+        for (variant, tl), target in folds.items()
+        if (variant, tl) in sources_by_word and (variant, tl) not in usable_folds
+    )
+    if unfoldable:
+        log.info("word associations: %d fold targets missing from dictionary.csv, kept as written: %s",
+                 len(unfoldable), " ".join(unfoldable))
+
+    def fold(hanji: str, tl: str) -> tuple[str, str]:
+        return usable_folds.get((hanji, tl), hanji), tl
+
+    accum: dict[tuple[str, tuple[str, str]], int] = defaultdict(int)
+    dropped = 0
+    with bigrams_tsv.open(encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f, delimiter="\t")
+        source_columns = [col for col in reader.fieldnames if col not in
+                          ("prev_hanji", "prev_tl", "next_hanji", "next_tl", "count")]
+        for row in reader:
+            following = fold(row["next_hanji"], row["next_tl"])
+            if following not in sources_by_word:
+                dropped += 1
+                continue
+            if row["prev_hanji"] == START_KEY:
+                key = START_KEY
+            else:
+                key = word_key(*fold(row["prev_hanji"], row["prev_tl"]))
+            accum[(key, following)] += weighted_count({col: int(row[col]) for col in source_columns})
+    if dropped:
+        log.info("word associations: %d rows whose next word is not a dictionary row dropped", dropped)
+
+    by_key: dict[str, list[AssociationEntry]] = defaultdict(list)
+    for (key, (next_word, next_tl)), count in accum.items():
+        if count < WORD_MIN_COUNT:
+            continue
+        if count > 0xFFFF_FFFF:
+            raise ValueError(f"count {count} for {key!r}→{next_word} exceeds u32")
+        flags = sources_by_word[(next_word, next_tl)]
+        by_key[key].append(AssociationEntry(
+            prev_word=key,
+            next_word=next_word,
+            next_tl=next_tl,
+            count=count,
+            sources=tuple((col, flags[col]) for col in ASSOC_SOURCE_COLUMNS),
+        ))
+    def rank(entry: AssociationEntry) -> tuple:
+        return (-entry.count, entry.next_word.encode("utf-8"), entry.next_tl.encode("utf-8"))
+
+    return {key: sorted(entries, key=rank)[:WORD_TOP_K] for key, entries in by_key.items()}

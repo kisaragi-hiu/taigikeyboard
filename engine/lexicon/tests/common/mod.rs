@@ -30,6 +30,53 @@ pub struct DictRow<'a> {
     pub tl: &'a str,
 }
 
+/// One TKWA entry: `(bitmask, count, next_word, next_tl)`.
+pub type AssocEntry<'a> = (u16, u32, &'a str, &'a str);
+
+/// Build a TKWA byte sequence: `version`, then `keys` in the order given
+/// (the caller sorts them by raw UTF-8 bytes — the reader binary-searches).
+pub fn build_tkwa(version: u32, keys: &[(&str, &[AssocEntry<'_>])]) -> Vec<u8> {
+    const HEADER: usize = 20;
+    let key_section_start = HEADER + keys.len() * 4;
+    let key_sizes: Vec<usize> = keys.iter().map(|(key, _)| 1 + key.len() + 4 + 2).collect();
+    let entry_section_start = key_section_start + key_sizes.iter().sum::<usize>();
+    let entry_size = |(_, _, nw, nt): &AssocEntry<'_>| 8 + nw.len() + nt.len();
+
+    let mut out = Vec::new();
+    out.extend_from_slice(b"TKWA");
+    out.extend_from_slice(&version.to_le_bytes());
+    out.extend_from_slice(&(keys.len() as u32).to_le_bytes());
+    let entry_count: usize = keys.iter().map(|(_, entries)| entries.len()).sum();
+    out.extend_from_slice(&(entry_count as u32).to_le_bytes());
+    out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
+
+    let mut key_offset = key_section_start;
+    for size in &key_sizes {
+        out.extend_from_slice(&(key_offset as u32).to_le_bytes());
+        key_offset += size;
+    }
+    let mut entry_offset = entry_section_start;
+    for (key, entries) in keys {
+        assert!(key.len() <= u8::MAX as usize, "key too long");
+        out.push(key.len() as u8);
+        out.extend_from_slice(key.as_bytes());
+        out.extend_from_slice(&(entry_offset as u32).to_le_bytes());
+        out.extend_from_slice(&(entries.len() as u16).to_le_bytes());
+        entry_offset += entries.iter().map(entry_size).sum::<usize>();
+    }
+    for (_, entries) in keys {
+        for (bitmask, count, next_word, next_tl) in *entries {
+            out.extend_from_slice(&bitmask.to_le_bytes());
+            out.extend_from_slice(&count.to_le_bytes());
+            out.push(next_word.len() as u8);
+            out.push(next_tl.len() as u8);
+            out.extend_from_slice(next_word.as_bytes());
+            out.extend_from_slice(next_tl.as_bytes());
+        }
+    }
+    out
+}
+
 /// Build a TKDB byte sequence with the given `magic`, `version`, and rows.
 /// The caller is responsible for picking a `version` that matches the
 /// row layout (v2 → `syllable_count = Some(_)`; v3 → also
