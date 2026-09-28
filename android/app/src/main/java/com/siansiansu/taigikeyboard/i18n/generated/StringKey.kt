@@ -252,6 +252,8 @@ enum class StringKey(
     THEME_PHOTO_POSITION(R.string.i18n_theme_photoPosition),
     THEME_PHOTO_HINT_MOVE(R.string.i18n_theme_photoHintMove),
     THEME_PHOTO_HINT_ZOOM(R.string.i18n_theme_photoHintZoom),
+    THEME_PREVIEW_EXPAND(R.string.i18n_theme_previewExpand),
+    THEME_PREVIEW_COLLAPSE(R.string.i18n_theme_previewCollapse),
     THEME_GRADIENT_DIRECTION(R.string.i18n_theme_gradientDirection),
     THEME_COLOR_KEY_SECTION(R.string.i18n_theme_colorKeySection),
     THEME_CANDIDATE_SECTION(R.string.i18n_theme_candidateSection),

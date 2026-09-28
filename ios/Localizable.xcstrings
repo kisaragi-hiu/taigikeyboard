@@ -4736,7 +4736,7 @@
       }
     },
     "i18n_theme_previewCollapse" : {
-      "comment" : "Theme editor: VoiceOver label of the chevron that collapses the live keyboard preview pinned at the bottom (frees room to scroll the settings). 預覽 = ī-lám (dictionary).",
+      "comment" : "Theme editor: VoiceOver / TalkBack label of the chevron that collapses the live keyboard preview pinned at the bottom (frees room to scroll the settings). 預覽 = ī-lám (dictionary).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -4754,7 +4754,7 @@
       }
     },
     "i18n_theme_previewExpand" : {
-      "comment" : "Theme editor: VoiceOver label of the chevron that expands the collapsed live keyboard preview pinned at the bottom. 預覽 = ī-lám (dictionary).",
+      "comment" : "Theme editor: VoiceOver / TalkBack label of the chevron that expands the collapsed live keyboard preview pinned at the bottom. 預覽 = ī-lám (dictionary).",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {

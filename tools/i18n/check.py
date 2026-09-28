@@ -30,7 +30,8 @@ def _xcstrings_is_stale(expected: str, actual_bytes: bytes) -> bool:
         wanted = json.loads(expected)
     except (json.JSONDecodeError, UnicodeDecodeError):
         return True
-    if actual.get("sourceLanguage") != wanted.get("sourceLanguage") or actual.get("version") != wanted.get("version"):
+    # `version` is Xcode's catalog-format stamp (it bumps 1.0 → 1.1 on rewrite), not generator content.
+    if actual.get("sourceLanguage") != wanted.get("sourceLanguage"):
         return True
     actual_strings = actual.get("strings", {})
     return any(actual_strings.get(key) != payload for key, payload in wanted.get("strings", {}).items())
