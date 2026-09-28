@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from .cjk import is_cjk
+
 BASE_DEFAULT_FREQUENCY = 50
 
 
@@ -66,12 +68,7 @@ def _load_khiin_frequency(freq_path: Path, conv_path: Path) -> dict[tuple[str, s
         for row in csv.DictReader(f):
             inp = row["input"]
             output = row["output"]
-            has_hanzi = any(
-                "一" <= c <= "鿿"
-                or "㐀" <= c <= "䶿"
-                or ord(c) > 0x20000
-                for c in output
-            )
+            has_hanzi = any(is_cjk(c) for c in output)
             if has_hanzi:
                 all_hanzi.setdefault(inp, set()).add(output)
 

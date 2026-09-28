@@ -379,11 +379,11 @@ pub fn build_syllables_fst_tps(rows: &[Row]) -> PathBuf {
     )
 }
 
-/// Empty `association.bin` — `TKWA` + version 1 + 0 keys/entries/ts.
+/// Empty `association.bin` — `TKWA` + version 2 + 0 keys/entries/ts.
 pub fn empty_association_bin() -> Vec<u8> {
     let mut out = Vec::new();
     out.extend_from_slice(b"TKWA");
-    out.extend_from_slice(&1u32.to_le_bytes());
+    out.extend_from_slice(&2u32.to_le_bytes());
     out.extend_from_slice(&0u32.to_le_bytes()); // key_count
     out.extend_from_slice(&0u32.to_le_bytes()); // entry_count
     out.extend_from_slice(&0u32.to_le_bytes()); // build_ts

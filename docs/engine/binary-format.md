@@ -105,7 +105,7 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 +---------------------------------------------------+
 | Header (20 bytes)                                 |
 |   "TKWA"                4 bytes                   |
-|   version (u32 LE)      4 bytes  (currently 1)    |
+|   version (u32 LE)      4 bytes  (currently 2)    |
 |   key_count (u32 LE)    4 bytes                   |
 |   entry_count (u32 LE)  4 bytes  (informational)  |
 |   build_ts (u32 LE)     4 bytes                   |
@@ -114,7 +114,7 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 |   key_count × u32 LE                              |
 |   absolute byte offset to each key entry          |
 +---------------------------------------------------+
-| Key section (sorted by prev_word UTF-8 ascending) |
+| Key section (sorted by raw prev_word UTF-8 bytes) |
 |   For each key:                                   |
 |     prev_word_len  u8                             |
 |     prev_word      prev_word_len bytes UTF-8      |
@@ -133,6 +133,18 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 |     next_tl        next_tl_len bytes UTF-8        |
 +---------------------------------------------------+
 ```
+
+### 2.1a Key namespaces (v2)
+
+One byte-sorted key section holds two kinds of key; the reader needs no special casing because `\u{1}` never occurs inside a hanji or TL string and `$` is not CJK, so the namespaces cannot collide:
+
+| Key | Built by | Entries | `count` |
+|---|---|---|---|
+| one hanji (v1 shape) | `build/associations.py::compute_associations` | intra-word pairs from 2–5-character dictionary words (`dictionary.csv`) | dictionary frequency |
+| `hanji\u{1}tl` — display-form TL, `\u{1}` separator (`association_reader::word_key`) | `build/associations.py::compute_word_associations` | corpus continuations (`shared/data/word_bigrams.tsv`, P2 of the bigram LM roadmap), variant hanji folded to the 教典 form via `variants.csv`, top 30 per key, weighted count ≥ 2 | weighted corpus pair count (`taigi_bible_nt` × 0.5, others × 1) |
+| `$` (`association_reader::START_KEY`) | same | sentence openers | same |
+
+`bitmask` is the source flags of the **next** word's dictionary row in every namespace, so `AssocFilter` (§4.3) filters all three alike. v1 files (character keys only) are rejected by the reader with a `v1→v2` rebuild hint — the two artifacts ship in lockstep (`docs/architecture/bigram-lm-roadmap.md` § D3).
 
 ### 2.2 Lookup
 
@@ -157,7 +169,7 @@ The byte-wise comparison is critical: any sort order divergence between build sc
 |---|---|
 | File ≥ 20 bytes | `open` returns `Err(LexiconError::InvalidBinary)` |
 | Magic == `TKWA` | `open` returns `Err(LexiconError::InvalidBinary)` |
-| Version == 1 | `open` returns `Err(LexiconError::InvalidBinary)` |
+| Version == 2 | `open` returns `Err(LexiconError::InvalidBinary)` (v1 → message carries the `v1→v2` rebuild hint) |
 | File ≥ `header + key_count × 4` | `open` returns `Err(LexiconError::InvalidBinary)` |
 | `key_offset < buffer.len()` | binary search treats key as < target |
 | `key_start + key_len ≤ buffer.len()` | binary search treats key as < target |
@@ -374,7 +386,7 @@ The Python build pipeline lives at `dictionary/build/`. Steps relevant to the fo
 |---|---|---|
 | `merge_csv.py` | `dictionary.csv` | merged per-source CSVs + khiin/dev/lkk supplements |
 | `dictionary_records.py` | (in-memory) | filtered records + rowid 1..N — shared by `create_dictionary_bin` + `create_fst` |
-| `associations.py` | (in-memory) | bigram + char-to-phrase generator — shared by `create_association_bin` |
+| `associations.py` | (in-memory) | character-key generator from `dictionary.csv` + word-key generator from `shared/data/word_bigrams.tsv` — shared by `create_association_bin` |
 | `create_dictionary_bin.py` | `dictionary.bin` | TKDB format per §1; `build_ts` = `common.build_id()` (CRC-32 of `dictionary.csv`) |
 | `create_fst.py` | `dictionary.fst` | shells to `engine/build-helpers/fst-builder` (Rust) for fst encoding |
 | `create_association_bin.py` | `association.bin` | TKWA format per §2; same `build_ts` as `dictionary.bin` |
@@ -389,7 +401,7 @@ The build pipeline must:
 3. Emit fst via `engine/build-helpers/fst-builder` — keys carry the family prefix (`tl:` / `poj:` / `tps:` / `*-abbrev:` / `hanzi:`) and the value packs rowid in the low 32 bits.
 4. Use bit positions exactly per §4.
 5. Set magic bytes per §1, §2.
-6. Use version `3` for `dictionary.bin` (v2 added per-record `syllable_count`; v3 added per-record `kautian_subtag`) and version `1` for `association.bin`.
+6. Use version `3` for `dictionary.bin` (v2 added per-record `syllable_count`; v3 added per-record `kautian_subtag`) and version `2` for `association.bin` (v2 added the word-key namespace, §2.1a).
 7. Include every key form (TL / POJ / TPS num + no-tone under the phonetic family, each abbreviation under its `*-abbrev:` family) plus `hanzi:` keys for reverse lookup.
 
 ---
@@ -400,7 +412,7 @@ The build pipeline must:
 |---|---|
 | `dictionary.bin` (content count) | iOS `DictionaryContentTests` (no Android counterpart) |
 | `dictionary.bin` (parser) | Rust `engine/lexicon/tests/parity.rs` |
-| `association.bin` | Rust `engine/lexicon/tests/parity.rs` |
+| `association.bin` | Rust `engine/lexicon/tests/parity.rs` (filter), `tests/association_v2.rs` (namespaces, v1 rejection) |
 | `dictionary.fst` | Rust `engine/lexicon/tests/parity.rs` (round-trip a sentinel key set) |
 | Bitmask filter | Rust `engine/lexicon::dictionary_reader` unit tests + integration via `parity.rs` |
 

@@ -1,20 +1,17 @@
 //! `AssociationReader` — TKWA bundled-bigram mmap reader.
 //!
-//! Binary format (little-endian; mirrors iOS / Android readers byte-for-byte):
-//!     Header: "TKWA" (4) || version u32 || key_count u32 || entry_count u32
-//!             || build_ts u32   (20 bytes)
-//!     Key offset table: key_count × u32 (absolute byte offset to each key)
-//!     Key section (sorted by prev_word UTF-8):
-//!         each: prev_word_len u8 || prev_word || entry_offset u32 ||
-//!               entry_count u16
-//!     Entry section (sorted by count DESC per group):
-//!         each: bitmask u16 || count u32 || nw_len u8 || nt_len u8 ||
-//!               next_word || next_tl
+//! Layout (20-byte header, key offset table, key section sorted by raw
+//! prev_word UTF-8 bytes, entry section): `docs/engine/binary-format.md` §2.
+//! Version 2 holds two key namespaces in that one key section (§2.1a):
+//! character keys (one hanji, intra-word pairs) and word keys — `hanji\u{1}tl`
+//! built by [`word_key`] plus the literal [`START_KEY`] for sentence start.
+//! `\u{1}` never occurs inside a hanji or a TL string and `$` is not CJK, so
+//! the namespaces cannot collide and the raw-byte binary search needs no
+//! special casing.
 //!
-//! Lookup is binary search by raw UTF-8 prev_word bytes (key section is
-//! UTF-8-sorted). 1-layer source filter, deliberately different from
-//! DictionaryReader's 3-layer filter (no variant/khiin/dev bits in
-//! association entries) — see `docs/engine/binary-format.md` §4.3.
+//! 1-layer source filter, deliberately different from DictionaryReader's
+//! 3-layer filter (no variant/khiin/dev bits in association entries) — see
+//! `docs/engine/binary-format.md` §4.3.
 
 use std::cmp::Ordering;
 
@@ -24,7 +21,21 @@ use crate::error::LexiconError;
 
 const MAGIC: &[u8; 4] = b"TKWA";
 const HEADER_SIZE: usize = 20;
-const SUPPORTED_VERSION: u32 = 1;
+const SUPPORTED_VERSION: u32 = 2;
+/// Separator inside a word key: `hanji\u{1}tl`.
+pub const WORD_KEY_SEPARATOR: char = '\u{1}';
+/// Key whose entries are sentence openers.
+pub const START_KEY: &str = "$";
+
+/// The word-namespace key for a committed word, as the writer encodes it
+/// (`dictionary/build/associations.py`): display-form TL, no normalisation.
+pub fn word_key(hanji: &str, tl: &str) -> String {
+    let mut key = String::with_capacity(hanji.len() + 1 + tl.len());
+    key.push_str(hanji);
+    key.push(WORD_KEY_SEPARATOR);
+    key.push_str(tl);
+    key
+}
 
 #[derive(Debug, Clone)]
 pub struct AssociationEntry {
@@ -71,9 +82,18 @@ impl AssociationReader {
         }
         let version = u32::from_le_bytes(bytes[4..8].try_into().expect("4 bytes"));
         if version != SUPPORTED_VERSION {
-            return Err(LexiconError::InvalidBinary(format!(
-                "association.bin: unsupported version {version}"
-            )));
+            let detail = if version == 1 {
+                format!(
+                    "association.bin: unsupported version 1 (expected {SUPPORTED_VERSION}; \
+                     v1→v2 added the word-key namespace — rebuild via `make dict` then \
+                     redeploy artifacts in lockstep)"
+                )
+            } else {
+                format!(
+                    "association.bin: unsupported version {version} (expected {SUPPORTED_VERSION})"
+                )
+            };
+            return Err(LexiconError::InvalidBinary(detail));
         }
         let key_count = u32::from_le_bytes(bytes[8..12].try_into().expect("4 bytes"));
         let build_timestamp = u32::from_le_bytes(bytes[16..20].try_into().expect("4 bytes"));
