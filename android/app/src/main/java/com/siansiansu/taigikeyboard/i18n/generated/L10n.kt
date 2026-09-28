@@ -490,6 +490,10 @@ object L10n {
         @Composable get() = stringRes(StringKey.THEME_PHOTO_HINT_MOVE)
     val themePhotoHintZoom: String
         @Composable get() = stringRes(StringKey.THEME_PHOTO_HINT_ZOOM)
+    val themePreviewExpand: String
+        @Composable get() = stringRes(StringKey.THEME_PREVIEW_EXPAND)
+    val themePreviewCollapse: String
+        @Composable get() = stringRes(StringKey.THEME_PREVIEW_COLLAPSE)
     val themeGradientDirection: String
         @Composable get() = stringRes(StringKey.THEME_GRADIENT_DIRECTION)
     val themeColorKeySection: String

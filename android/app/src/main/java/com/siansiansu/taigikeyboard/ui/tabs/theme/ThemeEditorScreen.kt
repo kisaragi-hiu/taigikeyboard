@@ -6,6 +6,10 @@ import android.view.HapticFeedbackConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +30,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -111,6 +117,10 @@ private const val SHADOW_MAX = 4f
 private const val SHADOW_STEP = 1f
 
 private val PHOTO_THUMBNAIL_SIZE = 44.dp
+private val PREVIEW_TOGGLE_MIN_HEIGHT = 32.dp
+
+// Mirrors iOS ThemeEditorView previewToggle `.easeInOut(duration: 0.2)`.
+private const val PREVIEW_TOGGLE_ANIMATION_MS = 200
 
 // Saver so the draft survives Activity recreation (rotation / process death).
 private val appearanceSaver: Saver<ThemeAppearance, String> =
@@ -137,6 +147,9 @@ fun ThemeEditorScreen(
     var showNameDialog by rememberSaveable { mutableStateOf(false) }
     var showCapDialog by rememberSaveable { mutableStateOf(false) }
     var colorPickerTarget by remember { mutableStateOf<ColorPickerTarget?>(null) }
+    // The pinned preview folds away so the settings get the whole screen to scroll in
+    // (USER 2026-09-28). Mirrors iOS ThemeEditorView.isPreviewCollapsed.
+    var isPreviewCollapsed by rememberSaveable { mutableStateOf(false) }
 
     val currentLayoutType by prefs
         .observeKeyboardLayoutType()
@@ -452,46 +465,56 @@ fun ThemeEditorScreen(
             }
 
             HorizontalDivider()
+            PreviewToggle(
+                isCollapsed = isPreviewCollapsed,
+                onToggle = { isPreviewCollapsed = !isPreviewCollapsed },
+            )
             // While the background is a gradient the preview doubles as the direction
             // control (drag to set the angle); while it is a photo, as the position
             // control (drag to move, pinch to zoom the photo; a gesture hint shows
             // until the first touch).
-            Box {
-                KeyboardPreviewPanel(
-                    prefs = prefs,
-                    layoutType = currentLayoutType,
-                    colorSettings = draft.colors,
-                    candidateTextSizeScale = draft.candidateTextSizeScale,
-                    keyHeightScale = draft.keyHeightScale,
-                    keyFontSizeScale = draft.keyFontSizeScale,
-                    keyCornerRadius = draft.keyCornerRadius,
-                    keyBorderWidth = draft.keyBorderWidth,
-                    fontType = prefs.fontType,
-                    keyShadowIntensity = draft.keyShadowIntensity,
-                )
-                (background as? ThemeBackground.Gradient)?.let { gradientBackground ->
-                    val gradient = gradientBackground.gradient
-                    GradientDirectionOverlay(
-                        label = L10n.themeGradientDirection,
-                        angle = gradient.angle,
-                        // Remembered per gradient so the overlay skips recomposition (and its
-                        // redraw) when unrelated controls change.
-                        onAngleChange = remember(gradient) { { angle: Float -> setBackground(ThemeBackground.Gradient(gradient.copy(angle = angle))) } },
-                        modifier = Modifier.matchParentSize(),
+            AnimatedVisibility(
+                visible = !isPreviewCollapsed,
+                enter = expandVertically(tween(PREVIEW_TOGGLE_ANIMATION_MS)),
+                exit = shrinkVertically(tween(PREVIEW_TOGGLE_ANIMATION_MS)),
+            ) {
+                Box {
+                    KeyboardPreviewPanel(
+                        prefs = prefs,
+                        layoutType = currentLayoutType,
+                        colorSettings = draft.colors,
+                        candidateTextSizeScale = draft.candidateTextSizeScale,
+                        keyHeightScale = draft.keyHeightScale,
+                        keyFontSizeScale = draft.keyFontSizeScale,
+                        keyCornerRadius = draft.keyCornerRadius,
+                        keyBorderWidth = draft.keyBorderWidth,
+                        fontType = prefs.fontType,
+                        keyShadowIntensity = draft.keyShadowIntensity,
                     )
-                }
-                (background as? ThemeBackground.Image)?.image?.let { photo ->
-                    rememberThemePhoto(photo.file, ThemeImageVariant.FULL)?.let { bitmap ->
-                        PhotoPositionOverlay(
-                            label = L10n.themePhotoPosition,
-                            moveHint = L10n.themePhotoHintMove,
-                            zoomHint = L10n.themePhotoHintZoom,
-                            imageWidth = bitmap.width,
-                            imageHeight = bitmap.height,
-                            photo = photo,
-                            onPhotoChange = { setBackground(ThemeBackground.Image(it)) },
+                    (background as? ThemeBackground.Gradient)?.let { gradientBackground ->
+                        val gradient = gradientBackground.gradient
+                        GradientDirectionOverlay(
+                            label = L10n.themeGradientDirection,
+                            angle = gradient.angle,
+                            // Remembered per gradient so the overlay skips recomposition (and its
+                            // redraw) when unrelated controls change.
+                            onAngleChange = remember(gradient) { { angle: Float -> setBackground(ThemeBackground.Gradient(gradient.copy(angle = angle))) } },
                             modifier = Modifier.matchParentSize(),
                         )
+                    }
+                    (background as? ThemeBackground.Image)?.image?.let { photo ->
+                        rememberThemePhoto(photo.file, ThemeImageVariant.FULL)?.let { bitmap ->
+                            PhotoPositionOverlay(
+                                label = L10n.themePhotoPosition,
+                                moveHint = L10n.themePhotoHintMove,
+                                zoomHint = L10n.themePhotoHintZoom,
+                                imageWidth = bitmap.width,
+                                imageHeight = bitmap.height,
+                                photo = photo,
+                                onPhotoChange = { setBackground(ThemeBackground.Image(it)) },
+                                modifier = Modifier.matchParentSize(),
+                            )
+                        }
                     }
                 }
             }
@@ -529,6 +552,30 @@ fun ThemeEditorScreen(
                 },
             )
         }
+    }
+}
+
+// Folds the pinned preview away (or back), freeing the screen for the settings list.
+// Mirrors iOS ThemeEditorView.previewToggle.
+@Composable
+private fun PreviewToggle(
+    isCollapsed: Boolean,
+    onToggle: () -> Unit,
+) {
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = PREVIEW_TOGGLE_MIN_HEIGHT)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .clickable(onClick = onToggle),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = if (isCollapsed) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown,
+            contentDescription = if (isCollapsed) L10n.themePreviewExpand else L10n.themePreviewCollapse,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

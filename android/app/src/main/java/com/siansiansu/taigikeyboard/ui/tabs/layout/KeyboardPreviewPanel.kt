@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
@@ -53,9 +54,12 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.isLandscape
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
+import com.siansiansu.taigikeyboard.ime.theme.withNightModeOff
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
-// Live keyboard preview panel with candidate bar for appearance settings
+// Live keyboard preview panel with candidate bar for the user-theme editor. Always rendered light:
+// a user theme ignores system night mode, as on the keyboard (TaigiKeyboard.syncForcedLight).
+// Mirrors iOS KeyboardPreviewPanel `colorScheme: .light`.
 
 @Composable
 fun KeyboardPreviewPanel(
@@ -72,7 +76,7 @@ fun KeyboardPreviewPanel(
     // saved key look. The Layout-tab appearance editor omits it (it has no shadow
     // control) and stays flat.
     keyShadowIntensity: Float = ThemeAppearance.DEFAULT_KEY_SHADOW_INTENSITY,
-) {
+) = ForcedLightConfiguration {
     // The theme surface (solid / gradient / photo) is painted once behind candidate row + keys, as
     // the IME paints it on `text_input_content`; both children stay transparent over it.
     val isDarkTheme = isSystemInDarkTheme()
@@ -222,6 +226,21 @@ private val sampleCandidates =
         SampleCandidate("kú-nî", "久年"),
         SampleCandidate("gîm-á", "砛仔"),
     )
+
+// Renders [content] under a night-mode-off configuration so theme attrs and isSystemInDarkTheme()
+// resolve light (LocalResources derives from LocalContext).
+@Composable
+private fun ForcedLightConfiguration(content: @Composable () -> Unit) {
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val lightConfiguration = remember(configuration) { configuration.withNightModeOff() }
+    val lightContext = remember(context, lightConfiguration) { context.createConfigurationContext(lightConfiguration) }
+    CompositionLocalProvider(
+        LocalContext provides lightContext,
+        LocalConfiguration provides lightConfiguration,
+        content = content,
+    )
+}
 
 private fun resolveKeyboardThemeColor(
     context: Context,

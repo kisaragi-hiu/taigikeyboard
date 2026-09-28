@@ -34,6 +34,7 @@ import com.siansiansu.taigikeyboard.ime.text.TextInputManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
+import com.siansiansu.taigikeyboard.ime.theme.withNightModeOff
 import com.siansiansu.taigikeyboard.settings.SettingsMainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -306,13 +307,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
     override fun getTheme(): Resources.Theme = forcedLightContext?.theme ?: super.getTheme()
 
-    private fun lightContext(config: Configuration): Context {
-        val light =
-            Configuration(config).apply {
-                uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_NO
-            }
-        return ContextThemeWrapper(createConfigurationContext(light), R.style.KeyboardTheme)
-    }
+    private fun lightContext(config: Configuration): Context = ContextThemeWrapper(createConfigurationContext(config.withNightModeOff()), R.style.KeyboardTheme)
 
     /** Syncs [forcedLightContext] with the selected theme; true when the render mode flipped. */
     private fun syncForcedLight(): Boolean {

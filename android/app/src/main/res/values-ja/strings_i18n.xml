@@ -245,6 +245,8 @@
     <string name="i18n_theme_photoPosition">位置</string>
     <string name="i18n_theme_photoHintMove">移動</string>
     <string name="i18n_theme_photoHintZoom">拡大</string>
+    <string name="i18n_theme_previewExpand">プレビューを展開</string>
+    <string name="i18n_theme_previewCollapse">プレビューを折りたたむ</string>
     <string name="i18n_theme_gradientDirection">方向</string>
     <string name="i18n_theme_colorKeySection">キー</string>
     <string name="i18n_theme_candidateSection">候補バー</string>
