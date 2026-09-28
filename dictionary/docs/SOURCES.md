@@ -116,6 +116,26 @@ current-at-release values when cutting a dictionary refresh.
 - `char_freq_merged.txt` — character-frequency corpus driving the
   `frequency` stage. Provenance: merged user corpus (TBD).
 - `khiin_frequency.csv` — frequency values supplementing Khiin IME coverage.
+- `romanized_readings.tsv` — reading (`tl_num`) → hanji for the words that
+  Han-Lo sources write in romanization (`kap`, `tī`, `hō͘`, …), so they do not
+  break the bigram chain. 47 rows, hand-curated 2026-09-28: each hanji is the
+  form the 教典 example sentences use for that reading (checked against
+  `knowledge/taigi-phonetics-reference.md` and `output/dictionary.csv`; where
+  the dictionary lists several accepted spellings — 𪜶/怹, 共/給, 閣/擱, 欲/卜,
+  咧/塊, 毋/呣, 袂/𣍐, 這/即, 你/汝, 蹛/滯 — the 教典 examples use only the
+  first). `ê` is deliberately absent (的 or 个 by context). Loaded by
+  `build/corpus_bigrams.py`, which refuses a row that is not a dictionary word.
+- `word_bigrams.tsv` / `word_unigrams.tsv` — cross-word `(hanji, TL)` pair and
+  word counts from the aligned Taiwanese corpora (`corpus/taigi-corpus`
+  sources icorpus_hanji, moe_kautian 例句, sinpak_900leku, kok4hau7,
+  taigi_bible_nt, kipsupin_2009, nmtl_dadwt, khinhoan_pojbh, plus the
+  `mapped` articles of `corpus/taigi-typing`, whose text is never committed).
+  Raw counts per source in the `sources` column; `$` = sentence start; pairs
+  seen fewer than 2 times are dropped. Regenerate with
+  `PYTHONPATH=. python3 -m build.corpus_bigrams` after
+  `git submodule update --init --checkout corpus/taigi-corpus`. Not a
+  `build.sh` step; consumed by the association.bin v2 writer (bigram LM
+  roadmap P3). Method and numbers: `docs/reports/2026-09-28-bigram-corpus-spike.md`.
   Provenance: Khiin project (<https://github.com/khiin-pjh/khiin>),
   date TBD.
 - `khiin_conversions.csv` — tone-conversion pairs from the Khiin project

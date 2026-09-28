@@ -32,6 +32,8 @@ dictionary/
 ├── shared/data/               # Shared reference files consumed by build + frequency stage
 │   ├── char_freq_merged.txt   # Character-frequency table
 │   ├── khiin_frequency.csv    # Khiin frequency supplement
+│   ├── word_bigrams.tsv       # Corpus cross-word pair counts (build/corpus_bigrams.py)
+│   ├── word_unigrams.tsv      # Corpus word counts (same run)
 │   └── khiin_conversions.csv  # Khiin conversion table
 │
 ├── output/                    # Generated build artefacts
