@@ -1,0 +1,248 @@
+# Bigram Language Model — Roadmap
+
+> **Type**: Planning (plan only — no implementation yet)
+> **Keywords**: `bigram`, `language model`, `next-word`, `association.bin`, `taigi-corpus`, `lattice`, `walker`, `prediction`
+> **Status**: PLAN ONLY (USER 2026-09-28: "I am not implementing this for now, write the plan only"). No round open, no branch, no release scope implied.
+> **Session memory**: project memory `project_bigram_lm.md` (Claude auto-memory)
+> **Continues**: `docs/reports/2026-09-24-mobile-smart-suggestions-brainstorm.md` §6 (bigram addendum, 2026-09-28); techniques numbered **1–11** below are that report's §2 numbering
+> **Last updated**: 2026-09-28
+
+---
+
+## Summary
+
+- **Goal**: replace today's *dictionary-word-completion* next-word table (intra-word character pairs, `台→灣`) with a **cross-word bigram model** built from running Taiwanese text, and later let the same data re-rank composing candidates by the previous word. Today no sentence-level data exists anywhere in the **bundled** build (brainstorm §1 gap #8); the only cross-word signal is the user's own `user_association` store, empty at install.
+- **Review state**: Codex ANALYSIS-ONLY pass 2026-09-28 (`codex-cli 0.157.1`, default model) → "PLAN NEEDS REVISION", nine findings, all applied below and marked `(Codex Qn)`. Top three: D5 cross-handle state API, D6 identity as a proof obligation, scoring semantics for corpus counts.
+- **Data**: `corpus/taigi-corpus` (opt-in submodule, 18 sources, 352k documents) — **unfinished** (USER 2026-09-28); § Corpus expansion lists ten more sources found on 2026-09-28, four of them pre-aligned hanji + romanization (iCorpus 漢字版 83k sentences, TGB 35k, 教育部字詞頻 2009 53k segments, three Bible translations) and the 意傳 aligner that produced them. USER 2026-09-28: licences are ignored — the IME is non-profit and the text is used only to improve prediction, never redistributed as text. This supersedes the "licensed corpus" prerequisite in brainstorm §2 row 8 and the §5.2 licence question.
+- **Shape**: read-only alignment spike → offline pair-count build (checked-in TSV, like `char_freq_merged.txt`) → `association.bin` v2 (word-keyed entries + `$` sentence start, char-keyed entries kept for backspace) → engine next-word adopts the word key → composing re-rank by previous word → (gated) bigram term in the lattice walker.
+- **Two tracks, different risk** (brainstorm §6): the next-word track is contained inside `engine/nextword` + `engine/dispatch/src/predict.rs`; the composing track changes whole-sentence segmentation and needs `/code-review` + golden re-checks.
+- **Not a schedule**: release scope, timing and the order in which phases open are USER-gated (`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope).
+
+---
+
+## Today (grounded in code, 2026-09-28)
+
+| Stage | Model | Where | Consequence |
+|---|---|---|---|
+| Whole-sentence segmentation | **Unigram**: `cost = ln(1/p)`, `p = (1+freq)/13 056 588`, length / syllable bias, user discount; every edge priced alone | `engine/composing/src/lattice/cost.rs:403-430` (`edge_cost`), `walker.rs:129-200` (`walk_best`) | The walker keeps **one best node per offset** and the closure picks **one candidate per span** (`engine/composing/src/continuous.rs:593-760`: custom → learned → `best_candidate_for_key_with_barriers` → single `EdgeBest`). A bigram term needs state `(offset, word)` and per-span top-N — a walker change, not a cost tweak |
+| Candidate sort | Unigram `freq × syllable bias`, user weight as a leading dimension | `engine/ranking/src/score.rs:295`, `engine/lexicon/src/continuous/sort_key.rs` (`sort_by_sort_key`, called at `continuous/mod.rs:1218`) | No previous-word input reaches the sort |
+| Next-word bundled data | Character pairs inside 2–5-char dictionary words + first char → rest; count = summed word frequency; key = one hanji | `dictionary/build/associations.py:24-30,61-186`; format `dictionary/build/create_association_bin.py` (TKWA v1, 20-byte header, key = UTF-8 string, entry = bitmask u16 + count u32 + next_word + next_tl) | 3.3 MB, 5 662 keys, 184 430 entries; no running-text signal |
+| Next-word lookup | Engine builds the key from the committed word's **last character** and over-fetches ×2 before the source filter | `engine/dispatch/src/predict.rs:20-70` (`filter_request`, `bundled_rows`); reader `engine/lexicon/src/association_reader.rs` (mmap via `mmap-host`) | 食飯 is looked up as 飯; heteronyms share a key (gap #2) |
+| Next-word scoring / merge | dict = `count × 1.0`; user = `count × 50 × max(decay, floor) + 300`; merged by `(hanzi, tl)` | `engine/nextword/src/scorer.rs:43-95`, `filter.rs:29-70` | Constants pinned by `behavioral-invariants.md` §7 / §8 |
+| Next-word context | One previous word (`last_selected_word` + `last_selected_roman`); reset on `。！？.!?`, 30 s idle, `ResetFull`; pair recorded only if the previous commit was < 10 s ago | `engine/nextword/src/decide.rs:21-30,76-140` | No sentence-start prediction (gap #4); clause punctuation neither resets nor records (gap #10) |
+| Continuous mid-segment commit | `UpdateLastSelectedWord` only → compound pairs, never `prev→this` | `engine/composing/src/transition.rs:451-457,878`, `nextword/src/decide.rs` | A→B never learned (gap #6, verified 2026-09-24) |
+| User bigrams | `user_association(prev_word, prev_tl, next_word, next_tl, count, last_used)` v6, cap 50 000 | `engine/userdata/src/association.rs:13,260` | Already a **word-keyed** bigram store — the bundled side is what lags |
+| Composing ↔ next-word state | Two separate process singletons routed by `dispatch` (`engine/dispatch/src/lib.rs:116-164`; `nextword/src/handle.rs:27-44`, `composing/src/handle.rs:31-50`); each has its own mutex + generation check; **no cross-handle read path exists today** (`predict.rs` composes `nextword` + `lexicon`, never `composing`) | — | The composing track needs a new engine-side snapshot API (D5), not a proto field — a design gap, not a present capability (Codex 2026-09-28 Q3/Q9) |
+| Artifact install surface | `LexiconPaths { fst, dictionary_bin, association_bin, syllables_fst }` (`engine/lexicon/src/paths.rs`), `InstallRequest` fields 1–5 (`engine/protos/proto/lexicon.proto:62-75`), callers on iOS app + extension, Android, macOS, desktop (`dictionary_artifacts.rs`) | — | A **new** artifact file costs 5 platform install sites + `deploy.sh` + bundle lists; a **new version of `association.bin`** costs none of that |
+
+Sizes today (`dictionaries/`): `dictionary.fst` 15 MB, `dictionary.bin` 5.2 MB, `association.bin` 3.3 MB, all mmapped read-only — a larger `association.bin` costs disk, not the iOS 64 MB extension budget.
+
+---
+
+## Data — `corpus/taigi-corpus` (read-only survey 2026-09-28)
+
+The corpus repository deliberately does **no** tokenization, no romanization normalization and no hanji↔romanization word alignment (its `CLAUDE.md` principle 4; `normalize()` = NFC + whitespace only). Records are `{id, text, metadata{…, script, parallel_poj, parallel_zh}}`; alignment is **line N of `text` ↔ line N of `parallel_poj`**, at sentence or paragraph level. Older ChhoeTaigi lines omit `parallel_*` entirely. Everything below is what a bigram build must do itself.
+
+### Sources usable for (漢字, TL) word pairs
+
+| Source | Pairs | Romanization | Alignment | Notes |
+|---|---|---|---|---|
+| `moe_kautian` example sentences | 17 906 `例:` lines (11 408 full sentences) | TL diacritic | hanji chars = TL syllables in 17 894 / 17 906 (~100 %) | Best quality. Same 教典 sentences as `corpus/taigi-typing/exampleSentences.js` (7 787) |
+| `sinpak_900leku` | 821 sentences | TL diacritic | 765 / 821 (93 %) | TL has dropped-letter corruption (`In -tsu--á`, `tī ia ts un-ûn`) — drop mismatching lines |
+| `kok4hau7` | 1 197 lines | TL **numeric** | 872 / 1 197 (73 %) | Missing spaces (`lai5sio1-pue5`), `[辶@日]` glyph placeholders |
+| `nmtl_dadwt` | 64 281 paragraph pairs (~1.84 M tokens) | POJ numeric | paragraph level; hanlo side mixes romanized words (`ti7`, `e5`) | Largest running-prose pair set; needs POJ→TL + sentence split + hanlo-aware alignment |
+| `khinhoan_pojbh` | 38 166 paragraph pairs (~1.5 M tokens) | POJ diacritic (`o͘`, `ⁿ`) | paragraph level; hanji modernized vs POJ (`个`↔`ê`) | Tag `parallel-status:aligned`; same treatment as nmtl |
+
+### Sources without pairs
+
+| Source | What it has | Possible use |
+|---|---|---|
+| `chhoetaigi_taihoa` 91 k, `itaigi` 20 k, `kam` 24 k, `taijit` 70 k (解說 / 例句), `sitbut`, `tsbp`, `ungian` HL 3 810 docs (28 M chars) | hanji / hanlo, **no reading in the record** (`_compose_entry` keeps only the first non-empty of `HanLoTaibunPoj` / `PojUnicode`) | Reading assignment through our own dictionary (max-match over `dictionary.csv`, reading = dictionary TL; heteronyms = highest-frequency reading or skip) — Phase 7, lower confidence |
+| `icorpus` 83 k sentence pairs, `ungian` POJ 1 397 docs, `embree`, `maryknoll`, `pehoe` | POJ only (icorpus pairs with **Mandarin**) | TL-side-only bigrams; useful for romanized-commit prediction, not for `(漢字, TL)` keys |
+| `pts_taigitv`, `kanggesu`, `moe_kautian` headwords | hanji + TL, single term | no cross-word context |
+
+### Conventions the aligner must honour
+
+- TL/POJ side: hyphen joins syllables inside a word, space separates words, `--` (khin-siann) attaches to the **preceding** word (`ì-kiàn--liáu-liáu`, `kàu--ah`) — same shape as the dictionary's canonical TL (`it--lâi`, 2 234 rows in `dictionary.csv` carry `--`). Punctuation stays attached (`lâi,`) and must be stripped.
+- Hanji side: no spaces, unsegmented; hanlo sides mix romanized words.
+- Romanization forms per source: TL diacritic (moe, sinpak, pts, kanggesu), TL numeric (kok4hau7), POJ diacritic (khinhoan, embree, maryknoll, pehoe), POJ numeric (icorpus, nmtl, ungian POJ, inline in hanlo). Conversion = `taigi-converter/` (canonical, Core Principle #3) → `engine/phonetics` canonical TL; never a hand-rolled table.
+- `corpus export --text-only` drops `parallel_poj`; a paired export must read `data/normalized/*.jsonl` directly. There is no n-gram tooling anywhere in that repo.
+
+### Corpus expansion (web survey 2026-09-28)
+
+USER 2026-09-28: `taigi-corpus` is unfinished; fetch more corpora / search for more Taiwanese text. Candidates found, ranked by value for `(漢字, TL)` cross-word pairs. None is ingested yet; sizes are as published, re-measured in P1b.
+
+| # | Source | Pairs / size | Scripts | Alignment | Licence (ignored per USER, recorded for provenance) | Notes |
+|---|---|---|---|---|---|---|
+| 1 | **iCorpus 漢字版** — [`Taiwanese-Corpus/icorpus_ka1_han3-ji7`](https://github.com/Taiwanese-Corpus/icorpus_ka1_han3-ji7) | the same 83 544 news sentences as `icorpus`, now with hanji + romanization (2008-11 → 2014-03 subset) | hanji + POJ (+ Mandarin) | dictionary auto-tagging then **manual correction**, normalized 2014; YAML per sentence | CC BY 4.0 | Largest clean running-text pair set. `taigi-corpus` ingested only the POJ↔Mandarin original — upgrade that source |
+| 2 | **台文通訊 / TGB newsletter** — [`sih4sing5hong5/huan1-ik8_gian2-kiu3`](https://github.com/sih4sing5hong5/huan1-ik8_gian2-kiu3) (`處理TGB` / `對齊TGB`) | 35 017 sentences | hanlo + POJ + Mandarin | sentence-aligned (hue7jip8 list) | — | `taigi-corpus` `tsbp` has 88 hanlo docs only. Archive 1991–2006 also at [taibunthongsin.taigi.info](https://taibunthongsin.taigi.info/) |
+| 3 | **教育部字詞頻調查 2009** — [`Taiwanese-Corpus/Ungian_2009_KIPsupin`](https://github.com/Taiwanese-Corpus/Ungian_2009_KIPsupin) | 59 300 segments, 53 593 aligned | hanlo + POJ | segment-aligned, JSON converted from DOC tables | — | Sibling of the ingested `ungian_guliau_supin` (2005); not in `taigi-corpus` |
+| 4 | **台語聖經 三版** — [`Taiwanese-Corpus/…_taiwanese-bible`](https://github.com/Taiwanese-Corpus/Pakhelke-1916_KoTan-1975_hiantaiekpun-2008_taiwanese-bible); source [taigi.fhl.net](https://taigi.fhl.net/list.html) (巴克禮 / 紅皮 / 全民 全羅 + 漢羅 + Ruby) | three full translations, verse tables | hanji + POJ | verse-aligned (fixed DOC tables → JSON) | — | Big, but 1916 register and biblical vocabulary — ingest at a lower source weight, report its share separately |
+| 5 | **hue7jip8 pre-aligned versions** of sources `taigi-corpus` holds at paragraph level — [`Taiwanese-Corpus/hue7jip8`](https://github.com/Taiwanese-Corpus/hue7jip8) lists nmtl 62 246 aligned segments, khinhoan 31 195, ungian-2005 128 505 | — | hanlo / POJ | already **segment-aligned** (漢羅 + 全羅 pairs) in the Taiwanese-Corpus repos | MIT (loader) | Re-ingest from these instead of re-aligning paragraphs ourselves |
+| 6 | **教典例句 tabular** — [`sarahwei/Taiwanese-Minnan-Example-Sentences`](https://huggingface.co/datasets/sarahwei/Taiwanese-Minnan-Example-Sentences), [`g0v/moedict-data-twblg`](https://github.com/g0v/moedict-data-twblg) | 15 708 rows / 13 835 sentences | hanji + TL + Mandarin | sentence, clean columns | CC BY-NC-SA 4.0 / CC BY-ND 3.0 TW | Same sentences as `moe_kautian` examples but without the `例:` line parsing |
+| 7 | **台灣媠聲 SuíSiann** — [suisiann-dataset.ithuan.tw](https://suisiann-dataset.ithuan.tw/) | 3 467 clips (~4 h 44 m) | hanji + TL (tone-marked) | CSV: file, source, hanji, TL, seconds | CC BY-SA 4.0 + TTS-only restriction | Small, very clean, modern prose (2015 articles) |
+| 8 | **教育部分級詞彙例句** (hue7jip8 "MOE Vocabulary Leveling", API) | 61 354 sentences | hanji + POJ | sentence | — | Locate the API / dump in hue7jip8's loader before counting on it |
+| 9 | **TAT — Taiwanese Across Taiwan** — [FSW](https://sites.google.com/speech.ntut.edu.tw/fsw/home/tat-corpus) | large speech corpus with hanlo + TL + POJ transcripts | hanlo + TL | utterance | ACLCLP application + agreement | Application needed (USER action) — not a fetchable download |
+| 10 | Hanji-only text: [Common Voice nan-tw / `irvin/cc0-sentences`](https://github.com/irvin/cc0-sentences) (26 393 CC0 sentences, zh-TW + nan-TW), [`adi-gov-tw/Taiwan-Tongues-ASR-CE-dataset-hokkien`](https://huggingface.co/datasets/adi-gov-tw/Taiwan-Tongues-ASR-CE-dataset-hokkien) (31 805 utterance transcripts, romanization only in parentheses on proper nouns), [NAER 臺灣台語語料庫](https://tggl.naer.edu.tw/) (search UI, no dump) | — | hanji | none | CC0 / other | Same class as `taihoa` etc. — usable only through P7 reading assignment |
+| ✗ | [`lianghsun/tw-hokkien-seed-text`](https://huggingface.co/datasets/lianghsun/tw-hokkien-seed-text) — 3 M LLM-generated hanji sentences | 271 MB | hanji | none | CC BY 4.0 | Synthetic; the maintainers note character choices and naturalness fall short of real text — excluded (brainstorm §6: LLM text = model bias) |
+| ✗ | [`lbh0830/TW-Hokkien-LLM`](https://github.com/lbh0830/TW-Hokkien-LLM) 78 MB monolingual POJ / hanlo / hanzi | — | mixed, unpaired | none | — | Not aligned; its parallel sets (`iCorpus-100`, `TAIDE-14-tasks`) are evaluation-sized |
+
+**Tooling found**: [意傳 臺灣言語工具 `tai5-uan5_gian5-gi2_kang1-ku7`](https://github.com/i3thuan5/tai5-uan5_gian5-gi2_kang1-ku7) (`pip install tai5-uan5_gian5-gi2_kang1-ku7`, CPAL licence, 2 750 commits) has the exact primitive D2 needs: `拆文分析器.建立句物件(漢字, 台羅)` pairs a hanji sentence with its romanization, **detects character/syllable count mismatches**, and yields word objects (`網出詞物件()`) and character objects (`篩出字物件()`) each carrying 型 (hanji) + 音 (reading); it also converts TL ↔ POJ, tone marks ↔ numerals. `hue7jip8` (MIT, Django loaders, Python 3.4/3.5 era, last release 2019) loads every Taiwanese-Corpus repo into such sentence objects. Both are the same author's stack the Taiwanese-Corpus repos were built with, so their segment boundaries match those repos' data.
+
+---
+
+## Design
+
+### D1 — Model: word bigrams over `(漢字, canonical-TL)` tokens
+
+- Token identity = `(hanji, canonical TL)` (Core Principle #6). Two files of counts: `c(w₁, w₂)` across a **word boundary** and `c(w₁)` (unigram, from the same running text — distinct from the dictionary `frequency` column, which is a lexicon weight, not a corpus count).
+- Sentence boundary = `。！？.!?` + line end → emits a `$ → w` pair (librime-predict's start-of-sentence key). Clause punctuation `，、；：` breaks the chain but emits nothing (matches today's next-word context rule for `，`; revisit under gap #10).
+- A token that is **not** a dictionary `(hanji, tl)` row breaks the chain (no pair across it). Rationale: a next-word suggestion must be a word the engine can commit with its reading; librime-predict likewise keeps only lexicon words. OOV rate per source is a spike output.
+- **Scoring — next-word track**: order within one key by `count`, top-K per key, min count 2 (librime-predict `make_predict_data` pruning). No smoothing needed: the list is per-key. **Source priority (Codex Q7)**: `behavioral-invariants.md` §8 today guarantees "user > dict" only at *equal count* (`score_dict = count`, user = `50 × count × decay + 300`), and corpus pair counts are unbounded, so a frequent bundled pair could still outrank a user pair (brainstorm gap #9 already shows `台→灣 2137` beating a user pair learned ~37 times). D4 therefore makes the rule explicit: **bundled score is capped** at a named constant below `LEARNING_BONUS` (`DICT_SCORE_CAP`, e.g. 250 < 300), so every user row outranks every bundled row and bundled rows keep their corpus order among themselves. That is a stated change to §8 (from "equal count" to "always"), listed under Open decisions 5; no other scorer constant moves.
+- **Scoring — composing track**: a **bonus-only** transition term so that absence of data changes nothing: `t(w₁, w₂) = −λ · ln(1 + c(w₁,w₂) / c(w₁))` for a seen pair (≤ 0, one named constant λ), **exactly 0** for an unseen pair. Unseen pairs therefore pay today's `edge_cost` and nothing else — this is what makes the D6 identity provable (Codex Q4). Absolute discounting / Kneser-Ney is deliberately not adopted at this size (see § Deliberately not adopted); ChiaKey ships ARPA log10 probabilities with backoff weights, khiin's bigram table is schema only.
+
+### D2 — Build location: this repository, checked-in intermediate
+
+- **Corpus intake stays in `taigi-corpus`** (its job: ingest, normalize, manifest): the sources in § Corpus expansion rows 1–8 become new `sources/<id>` extractors there, with `parallel_poj` carrying the romanization line-for-line as today. Rows 1, 3, 4, 5 replace or upgrade sources it already holds (`icorpus`, `ungian`, `nmtl`, `khinhoan`, `tsbp`) with the pre-aligned Taiwanese-Corpus versions, so paragraph-level re-alignment on our side disappears for them.
+- **Alignment + counting live in this repository**, `dictionary/build/corpus_bigrams.py` (reads `corpus/taigi-corpus/data/normalized/*.jsonl`, `dictionary/output/dictionary.csv` for the token whitelist). The corpus repo's "no tokenization" principle keeps it out of that repo. **Reuse before writing** (Codex Q5 + web survey): P1 first runs 意傳's `拆文分析器.建立句物件(漢字, 台羅)` over each source and measures its mismatch detection against a hand-written character-per-syllable pass; if the library's word objects are good enough, `corpus_bigrams.py` is a thin driver over it (build-time Python dependency only, never shipped — its CPAL licence therefore stays outside the app). Romanization form conversion still goes through `taigi-converter` (Core Principle #3) or the library's `轉音` only after a P1 equivalence check against `taigi-converter` on the test vectors in `taigi-converter/`.
+- Output = `dictionary/shared/data/word_bigrams.tsv` (`prev_hanji, prev_tl, next_hanji, next_tl, count`) + `word_unigrams.tsv`, **committed**, regenerated on demand when the opt-in submodule is checked out (same pattern as `char_freq_merged.txt` / `khiin_frequency.csv`, `docs/SOURCES.md` gets a provenance row). `make dict` then works on every machine without the 670 MB submodule, and `association.bin` stays reproducible (its SHA-256 baseline is a build gate today).
+- Alignment algorithm — "1 hanji = 1 syllable" is a **hypothesis P1 measures per source, not a blanket rule** (Codex Q5):
+  1. Split the paragraph pair into sentences on shared punctuation; keep a sentence only when both sides split into the same count.
+  2. TL side: normalize form through `taigi-converter` (POJ diacritic / numeric, `o͘`, `ⁿ`, TL numeric → canonical TL, never a hand-rolled table); split on spaces; strip punctuation; `--` stays inside the preceding word before any syllable is counted.
+  3. Hanji side: assign characters to TL words by syllable count; a hanlo run of Latin letters is an **anchor** that must equal its TL word verbatim (after the same normalization), otherwise the sentence is dropped. Sentence dropped when the totals differ. Modernized-character sources (khinhoan `个` ↔ `ê`) are expected to fail this more often — P1 reports the drop rate per source and ten hand-checked survivors per source before P2 fixes anything.
+  4. Whitelist each `(hanji, tl)` against `dictionary.csv`; chain breaks at an OOV token.
+  5. Count pairs and unigrams; write TSVs sorted, deterministic.
+- Per-source weight: 1.0 for the five paired sources; hanji-only sources (Phase 7) enter through dictionary max-match with reading assignment and a lower weight — a separate, optional phase, never mixed into Phase 2's numbers.
+
+### D3 — Artifact: `association.bin` **v2**, not a new file
+
+- Same TKWA container, `version = 2`, same offset table and entry encoding. Two key namespaces in one sorted key section:
+  - **word keys** `hanji\u{1}tl` (both fields, canonical TL, `\u{1}` separator so keys still sort as raw UTF-8 bytes per `binary-format.md` §6 rule 1) and the literal `$` start key — corpus bigrams (D1);
+  - **character keys** (v1 shape, one hanji) — kept unchanged for the backspace path (`decide_backspace` predicts from the last grapheme, `decide.rs:141-155`; `INVARIANT_NEXTWORD_LOOKUP_KEY_LAST_GRAPHEME` §24) and as the backoff when a word key is absent.
+- Entry `bitmask` keeps its meaning (source flags of the **next** word's dictionary rows, so the existing source-toggle filter `AssocFilter` keeps working); `count` = corpus pair count for word keys.
+- Reader: `AssociationReader::open` accepts v2 (today it rejects anything but v1, `association_reader.rs:25-27`); `lookup(key)` unchanged (binary search over raw UTF-8 byte-sorted keys, `association_reader.rs:99-118,131-154`, so `\u{1}` and `$` need no special casing as long as the writer sorts by encoded bytes — Codex Q1 confirmed). `binary-format.md` §2 documents the two namespaces; the SHA-256 baseline is re-cut in the same PR as a reviewed, intentional artifact change (the gate otherwise catches accidental drift only).
+- Why not a new `bigram.bin` (a trade-off, not "automatically worse" — Codex Q1): five artifact destinations counted — iOS app + extension (`DictionaryArtifacts.swift:28`), Android (`TaigiKeyboardApplication.kt:67`), macOS, desktop (`dictionary_artifacts.rs:32`, `linux/Makefile:164`) — plus `InstallRequest` field, `LexiconPaths`, `deploy.sh:20`, for no functional gain over a versioned container. Why not SQLite (khiin / ChiaKey): the engine's bundled read path is mmap + binary search everywhere; user data is the only SQLite.
+- Projected size: unknown until the spike (top-K 30 × distinct prev words; word keys are longer than char keys). Budget statement, not a target: stays mmapped, so it does not count against the iOS extension's 64 MB.
+
+### D4 — Engine next-word adopts the word key (technique 8 + 1 + gap #4)
+
+- `predict.rs::filter_request`: key = `(predict.word, canonical TL of predict.roman)` → word-key lookup; **backoff** to the last-grapheme character key only when the word key returns nothing. This is the n-gram model's own backoff order (word → character), one-directional and stated here as such — not the `planning.md` "A fails → fallback B" anti-pattern (B is not an alternate implementation of A; it is the lower-order model).
+- `PredictNext.word` / `.roman` already carry both fields (`QueryPredictions` effect, `decide.rs:120-130`); POJ display is converted to TL before storage (`decide.rs:96-99`). **Empty roman → character key** in every case, not only backspace: `WordSelected` can arrive with an empty roman (hanji-only commits), and `UpdateLastSelectedWord` updates context without emitting a query (`decide.rs:215-249`) (Codex Q2).
+- Sentence start: both phones already send `ResetFull` for sentence-end punctuation (Android `NextWordController.kt:170-179`, iOS `NextWordController.swift:103`) and the engine answers with `reset_and_clear_predictions` (`decide.rs:188-212`). New: that reset effect also emits `QueryPredictions { word: "$", roman: "" }` so the strip shows sentence-openers (`我 / 你 / 伊 / 這`) — **no new platform trigger** (Codex Q2 confirmed). Visibility still depends on the open Space decision (§ Open decisions 1): after a Space commit the platforms hide predictions by design (Model B §10.3), and Space is not a sentence end.
+- Record the lost continuous pairs (technique 2, gap #6): the mid-segment `UpdateLastSelectedWord` path gains the `prev → this` association the final-commit path already records (`decide_word_selected`, `decide.rs:96-110`), under the same 10 s window. User bigrams then accumulate on every commit style, which is what makes the ChiaKey-style learned layer matter.
+- Scoring: `DICT_SCORE_CAP` added (D1), `behavioral-invariants.md` §8 restated from "equal count" to "always", §7 untouched; §24 gains `INVARIANT_NEXTWORD_WORD_KEY_BACKOFF` naming the order; both labels registered in `tools/invariant_labels.py`.
+
+### D5 — Composing re-rank by previous word (technique 7, sort layer first)
+
+- **New engine-side API, no proto field** (Codex Q3 — today there is no cross-handle read): `nextword::EngineHandle::context_snapshot(now_ms) -> Option<PrevWord { hanji, tl, generation }>`, which takes the `nextword` mutex, applies the same 30 s rule as `decide` (`last_selection_time_ms`), clones three fields and **releases the lock before returning**. `dispatch` calls it in `handle_composing` before taking the composing lock — lock order is `nextword` → released → `composing`, never nested, so no ordering cycle with `nextword`'s `nextword → last_generation` order (`nextword/src/handle.rs:46-84`). The snapshot is advisory: a stale snapshot only affects candidate order, and the composing generation check (`composing/src/handle.rs:79-99`) still governs the response. `dispatch/src/user_data.rs:464-500` (user-data path through `handle_composing`) gets the same call so both entry points see the same `prev`. Desktop builds link `nextword` already (`engine/dispatch/Cargo.toml:17`) — same code on all five platforms.
+- The fetch passes `prev: Option<(hanji, tl)>` into the lexicon fetch alongside today's `now_ms` / bitmask fields.
+- Sort layer (`sort_by_sort_key`): among candidates for the **same span**, a candidate with a bigram hit `prev → cand` moves ahead of unigram order, by a bounded rank bonus (one named constant, cited to khiin `bigrams(lgram, rgram, n)` sorting and ChiaKey's "keep the learned weight decisive" measurement). User bigrams (`user_association`) participate before bundled bigrams, same user > dict order as next-word.
+- Effect is limited to candidate order; segmentation (which spans win) is untouched — that is the whole point of doing this phase before D6. Dogfood target: heteronym / homophone disambiguation after a committed word (e.g. 食 → 飯 vs 犯, 真 → 好 vs 号).
+
+### D6 — Bigram term in the lattice walker (gated)
+
+- Only opened if D5 dogfood shows **segmentation** errors that ordering cannot fix (the previous word changes which span should win).
+- Design outline (grounded in `walker.rs:129-200`): node state `(offset, chosen word)`; the closure returns the top-N candidates per span (N = 3, named constant) with today's `EdgeBest` **always at index 0 and in today's tie order**; transition term `t(w₁, w₂)` from D1 (bonus-only, 0 when unseen) added to `edge_cost`; first edge uses `$` when the buffer starts a sentence, else the D5 snapshot.
+- **Identity is a proof obligation, not a premise** (Codex Q4). Today's closure prices custom entries (`continuous.rs:674-732`, override the dictionary choice), learned rows (span frequency floor, `:740-789`) and per-candidate `user_weight_delta` (`cost.rs:343-376`) *inside* the single `EdgeBest`; exposing alternatives changes what the DP can pick. The P6 PR must ship a fixture proving: (a) with an empty bigram table every walk returns the same edges, choices and cost as `HEAD~1` over the full candidate-dump corpus, including custom / learned / user-delta cases; (b) with data, only spans whose previous word has a seen pair can change. `refactor-reviewer` runs on (a).
+- Must re-verify every fixed case named in `cost.rs` (S5 `taiuan → 台灣`, RC0 `ginalangtsiahpngbesai → 囡仔人食飯袂使`, 6-edge threshold) and the golden dumps (`engine/composing/tests/candidate_dump.rs`); `/code-review` mandatory (numeric fidelity, `taigi-incidents.md` § Review). mozc's full connection-matrix Viterbi stays the "do it properly" ceiling we cite for why N stays small (`mainstream-ime-comparison.md` § Segmentation row 4).
+
+### D7 — Two-word context (technique 4) — CUT from this roadmap
+
+Codex Q8 (YAGNI, solo maintainer): not planned. If dogfood after D4/D5 shows one-word context is the limiting factor, it returns as its own plan: user layer only, `user_association` + `prev2_word / prev2_tl`, lookup `(prev2, prev1) → prev1 → character`, age factor per vChewing `LXPerceptor.swift:968-1017`, schema in `engine/userdata` only. Bundled trigrams never (size, sparse corpus).
+
+---
+
+## Phases
+
+Each PR 200–500 LOC; PR boundary = phase boundary; each phase's status row lives in project memory `project_bigram_lm.md`. Order between the two tracks is a USER call; dependencies are stated.
+
+| Phase | Deliverable | Depends on | Touches | Gate |
+|---|---|---|---|---|
+| **P0** | This roadmap + `docs/README.md` index row + memory file `project_bigram_lm.md` | — | docs only | admin lane, direct to main |
+| **P1 — spike** (read-only, no branch, no product code) | Prototype aligner over the five paired sources in the scratchpad, `拆文分析器` vs hand-written pass; report `docs/reports/<date>-bigram-corpus-spike.md`: per-source aligned sentences / dropped lines, OOV rate, distinct `(w₁,w₂)` pairs, top-K coverage curve, how many of the 5 662 v1 keys and how many dictionary words get ≥ 1 continuation, projected v2 size at K = 30 / min count 2, ten hand-checked pairs per source | corpus checked out (`git submodule update --init --checkout corpus/taigi-corpus`) | none | USER reads the numbers before P2 opens; if coverage is thin, P1b runs first |
+| **P1b — corpus expansion** (in the `taigi-corpus` repository, its own PRs; submodule pointer bump here) | New / upgraded `sources/<id>` extractors for § Corpus expansion rows 1–8 in value order: iCorpus 漢字版 → TGB → KIPsupin 2009 → pre-aligned nmtl / khinhoan / ungian → Bible (lower weight) → 教典 tabular → SuíSiann → 分級例句; manifest rows with `parallel_poj_count`; then the P1 spike re-run on the grown corpus | P1 numbers | `corpus/taigi-corpus` (own repo), `.gitmodules` pointer | Each source: extractor test on three real records; P1 report appended with the delta per source. TAT (row 9) only if the USER files the application |
+| **P2** | `dictionary/build/corpus_bigrams.py` + committed `word_bigrams.tsv` / `word_unigrams.tsv` + `docs/SOURCES.md` rows + unit tests on the aligner (fixtures = ten corpus lines per source incl. every failure class found in P1). The generated TSVs are reviewed by their summary stats (row count, top-50, per-source drop rate), not line by line — the 200–500 LOC budget counts hand-written code only (Codex Q6) | P1 | `dictionary/` | Codex sandwich; `make dict` deterministic (two runs, same SHA) |
+| **P3** | `association.bin` v2: writer (`associations.py` merges v1 char pairs + word pairs + `$`), reader (`association_reader.rs` v2, still rejects v1 until the artifact ships), `binary-format.md` §2, SHA baseline re-cut as a reviewed, intentional artifact change; `make dict` + `make build` + refreshed artifacts committed (stale-binary gate). Split into P3a writer + artifact / P3b reader if the diff passes 700 LOC | P2 | `dictionary/build`, `engine/lexicon`, `dictionaries/`, platform artifact copies | Codex sandwich; reader golden test on a fixture file with both namespaces |
+| **P4** | Engine next-word: word-key lookup + character backoff incl. empty-roman rule (D4), `$` on the existing reset route, lost continuous pairs recorded (technique 2), `DICT_SCORE_CAP`; §8 restated + §24 backoff invariant, labels in `tools/invariant_labels.py`; engine tests for every branch (word hit / empty roman / backspace / `$`) | P3 | `engine/dispatch/src/predict.rs`, `engine/nextword`, `engine/composing/src/transition.rs`; no platform code expected (`ResetFull` route already exists) | Codex sandwich; stale-binary gate before phone tests; dogfood **S83** (below) both phones |
+| **P5** | Composing re-rank by previous word (D5): `context_snapshot` API + dispatch call in both `handle_composing` entry points, sort-layer bonus, user bigrams first. Depends on P3 only — may run before or after P4 (Open decisions 2) | P3 | `engine/nextword/src/handle.rs`, `engine/dispatch/src/{lib,user_data}.rs`, `engine/lexicon/src/continuous/sort_key.rs`, `engine/composing/src/api.rs` | Codex sandwich; candidate-dump golden diff reviewed line by line; stale-binary gate; dogfood **S84** |
+| **P6** (gated) | Bigram term in the walker (D6), with the identity fixture (a) + (b) | P5 dogfood shows segmentation errors | `engine/composing/src/lattice/{walker,cost}.rs`, `continuous.rs` closure | `/code-review` + refactor-reviewer on fixture (a); every `cost.rs` named case re-run |
+| **P7** (deferred) | Hanji-only sources through dictionary max-match + reading assignment, lower weight; opens only if P1 shows the five paired sources leave most dictionary words without a continuation; P1-style report first | P2 | `dictionary/build` | same as P2 |
+
+Cut on Codex Q8: D7 / two-word context (see D7). Techniques from the brainstorm **not** in this roadmap (unrelated to the bigram model, still unscheduled): 3 zero-query from learned phrases, 5 negative feedback, 6 rule table, 9 emoji, 10 offensive filter, 11 privacy gates.
+
+---
+
+## Best practices alignment
+
+Constraining rules per phase: P0 `planning.md` § Persistent hand-off; P1 `diagnosis-discipline.md` § Verify pipeline claims (numbers before a round); P2–P5 `round-workflow.md` § Codex review sandwich; P3 `taigi-incidents.md` stale-binary gate; P4 `behavioral-invariants.md` §7 / §8 / §24 + `project_invariant_labels` gate; P6 `taigi-incidents.md` § Review (`/code-review` on numeric fidelity); any later user-data schema work follows the user-data-engine roadmap (schema in the engine only).
+
+| Mainstream practice | Source `file:line` | This plan |
+|---|---|---|
+| Static word-bigram next-word table, top-K + min-weight prune, `$` start key, capped chaining | librime-predict `tools/make_predict_data/src/main.rs:31-89`, `predictor.cc:56-89` | D1, D3, D4 (P2–P4) |
+| Word-pair association keyed by both hanji and reading, ≤ 60 per prefix | McBopomofo `AssociatedPhrasesV2.h:48-72`, `derive_associated_phrases.py:9`; vChewing `lmAssociates.swift:175-184` | D3 key = `hanji\u{1}tl`, top-K per key |
+| Bigram table `bigrams(lgram, rgram, n)` beside unigrams, DP segmentation stays unigram — **schema only**: the bigram join is commented out and nothing writes the table (`khiin-reference.md` "Bigram sorting" is a README claim, not code) | khiin-rs `khiin/src/db/migrations/001/up.sql:59-65`, `khiin/src/db/sql/select_conversions.sql:7-9,22-24` | D5 keeps segmentation unigram; cite is for the shape, not for a working precedent |
+| Word bigram inside the walker: per node `max(topBigram, topUnigram + bow(prev))` + length prior; learned bigram = constant `log10(1) = 0` (max probability, count ignored on purpose after gold-set replay); capped store, evict fewest-picks then least-recent | ChiaKey `Frameworks/Manjusri/Headers/Node.h:412-457`, `Graph.h:491-495,595-606`, `LanguageModel.h:318-340,461-467,516-536` (`chiakey-reference.md` §3); KeyKey `Node.h:303-321` | D5 user-before-bundled with a bounded bonus; D6 strict backoff instead of `max()` (see Deliberately not adopted); cap already in `user_association` |
+| Adjacent-token pair counts from a Taigi corpus at build time, `min_count = 5` | rime-phah-taibun `scripts/build_phrases.py:63-116,187` (produced 0 entries on its corpus, `PLAN.md:98`) | D1 min count starts at 2 because the paired sources are small; P1 reports the count distribution before the constant is fixed |
+| Full connection-cost Viterbi = the ceiling, not the mobile default | mozc `src/converter/immutable_converter.cc`; `mainstream-ime-comparison.md` § Segmentation row 4 | D6 top-N = 3 with unigram identity, not a connection matrix |
+| Two-word context with backoff + age factor | McBopomofo `UserOverrideModel.cpp:255-300`; vChewing `LXPerceptor.swift:828,968-1017` | D7 — cut (Codex Q8), recorded for a later plan |
+| Corpus pairs recorded from user commits within a short window | mozc `user_history_predictor.cc:1325-1328` (10 s) | D4 lost-pair fix reuses the existing 10 s window |
+
+(The references survey run on 2026-09-28 is summarised in § Reference survey below; re-grep a cite before a round quotes it.)
+
+### Deliberately not adopted
+
+| Pattern | Why not |
+|---|---|
+| Neural LM re-rank (azooKey Zenzai, GGUF + llama.cpp) | no Taigi model; collides with the iOS 64 MB extension cap (brainstorm §2 ✗ row) |
+| Mandarin corpora, LLM-generated Taiwanese text | different grammar / model bias (brainstorm §6 key point) |
+| New `bigram.bin` artifact | five install sites for zero gain (D3) |
+| SQLite bundled LM (khiin, ChiaKey) | bundled read path is mmap everywhere; SQLite is user-data only (user-data-engine roadmap U2) |
+| Kneser-Ney / Katz smoothing (KeyKey: SRILM Good-Turing + Katz, pruned `3.5e-6`; azooKey: KN `d = 0.75`) | next-word is per-key top-K (no cross-key comparison); composing uses a single backoff constant; revisit only if D6 opens and dogfood shows over-confident unseen pairs |
+| ChiaKey's `max(topBigram, topUnigram + bow(prev))` node rule (both sides log10 probabilities, so the higher of the two estimates wins) | a trade-off, not a dismissal (Codex Q8): it needs true conditional probabilities and backoff weights on both sides; our D1 bonus-only term needs neither and keeps the D6 identity provable. Revisit if D6 opens and the bonus form under-corrects |
+| mozc POS connection matrix (2 672 × 2 672 class bigram) | needs POS tags no Taigi source carries; word pairs are what the corpus gives |
+| Bundled trigrams | sparse corpus, table size; two-word context itself is cut (D7) |
+| Tokenization inside `taigi-corpus` | that repo's principle 4; alignment stays in `dictionary/build` |
+| Hand-written hanji↔TL aligner as the first choice | 意傳 `拆文分析器` already does it with mismatch detection and is what built the Taiwanese-Corpus data; P1 measures it before any code is written (D2) |
+| LLM-generated Taiwanese text (`tw-hokkien-seed-text`, 3 M sentences) | synthetic, maintainers themselves flag character choice and naturalness; brainstorm §6 |
+| Building `association.bin` from the submodule at `make dict` time | opt-in 670 MB submodule would make the artifact machine-dependent; checked-in TSV keeps the SHA gate |
+
+---
+
+## Open USER decisions (ranked, each with a recommendation)
+
+1. **Predictions after Space** (brainstorm §5.3, still open) — recommend a dogfood A/B showing them once P4 lands; today the most common commit key hides everything this roadmap produces.
+2. **Phase order after P3** — recommend P4 (next-word) before P5 (composing): contained, visible in the strip, and it exercises the data before the walker depends on it.
+3. **Hanji-only sources (P7)** — recommend deciding after the P1 numbers; if the five paired sources already cover most dictionary words, skip P7.
+4. **Clause punctuation** (`，` — gap #10) — recommend: breaks the bundled chain (D1) and keeps today's next-word context rule unchanged in P4; revisit with dogfood.
+5. **Source priority in the next-word strip** (Codex Q7) — recommend `DICT_SCORE_CAP` so a user-learned pair always precedes bundled pairs (§8 "equal count" → "always"); alternative: keep today's magnitude mixing and accept that frequent corpus pairs outrank learned ones (gap #9 stays).
+6. **TAT corpus application** (§ Corpus expansion row 9) — USER-only action (ACLCLP agreement); recommend deferring until P1b shows the fetchable sources are insufficient.
+
+---
+
+## Dogfood items (to add to `docs/architecture/dogfood-checklist.md` when the phase opens)
+
+- **S83 (P4)** — commit 食 (TL `tsia̍h`), strip shows 飯 / 物 / 飽 from corpus pairs, not 食's intra-word completions; after `。` the strip shows sentence openers; backspace into a committed word still predicts from the last grapheme. Sentences from `corpus/taigi-typing` (`feedback_corpus_sentences_for_dogfood`).
+- **S84 (P5)** — after committing 真, typing `ho` ranks 好 first; after committing 電話, `ho` ranks 號 first; segmentation of `taiuan` and the RC0 sentence unchanged.
+- Base perf checklist (S1 POJ diacritics, S2 TPS, S3 Hanji candidate scroll) re-run after P3 (larger mmap) and P6 (walker).
+
+---
+
+## Reference survey (2026-09-28, read-only, `references/`)
+
+Only KeyKey and its rebuild ChiaKey put a **word** bigram inside the conversion walker. Homa (vChewing) can score bigrams but no data feeds it. mozc's converter is a **class** (POS) bigram. Everything else is unigram-only, with bigram data at most in next-word tables. `AzooKeyKanaKanjiConverter` and `ChiaKey-Lexicon` (the corpus pipeline) are not cloned.
+
+| Repo | Bigram in walker | Data | Build | Smoothing | Combine rule | User bigram | Caps |
+|---|---|---|---|---|---|---|---|
+| ChiaKey (Manjusri) | yes | SQLite `unigrams(qstring,current,probability,backoff)`, `bigrams(qstring,previous,current,probability)`, log10 floats; markers `!` `$` `*` | `prepare-sql.rb` (ARPA → SQL); unigram text < 8 code points, each bigram side < 4 (`:80,96`) | ARPA backoff weights | `max(topBigram, topUnigram + bow(prev))` + `lengthPrior = 1.0 × (syllables − 1)` (`Node.h:432-448`, `Node.cpp:14`) | `LearningStore<Bigram>`, score constant 0.0, count ignored (`LanguageModel.h:534-536`) | 16 000 entries, count cap 255, evict fewest-picks then least-recent, no time decay |
+| KeyKey (2012) | yes, same rule (`Node.h:303-321`) | same SQLite | SRILM `ngram-count -order 2 -unk` → `ngram -prune 3.5e-6` → `-mix-lm` search-term unigram LM (`DatabaseCooker/Makefile.SmartMandarin:32,77-90`) | Good-Turing + Katz (SRILM default) | same | FIFO 200, score = max unigram prob | full rewrite on save |
+| librime-predict | no (next-word only) | `key\tvalue\tweight` → darts trie + StringTable, float weight (`predict_db.cc:80-161`) | `make_predict_data` (Rust): `$ X` = sentence start, `X $` skipped (`main.rs:60-66`); duplicate keeps higher weight; `--filter_weight`, `--max_candidates` (`main.rs:52-55,83-88`) | none | exact lookup on the last commit or `$`; punct resets; chaining capped (`predictor.cc:63-86`) | none | runtime `max_candidates`, `max_iterations` |
+| librime core | pluggable `Grammar` | plugin | — | plugin | `weight + Grammar::Query(...)` else `log(1e-6)` penalty (`grammar.h:18-27`) | — | no grammar plugin in any cloned schema |
+| McBopomofo | no — unigram Viterbi `maxScore + node->score()` (`reading_grid.cpp:176`) | text `reading value log10` | `frequency_builder.py:64-66` `log10(fscale^(len/3−1) × count / norm)`; associated phrases ≤ 60 per prefix (`phrase_deriver.py:9-10`), unigram-derived | none | — | UserOverrideModel: 3-node key, `prob × exp(age × ln 0.5 / halfLife)` (`UserOverrideModel.cpp:232-297`) | 500 LRU, half-life 1.5 h |
+| vChewing / LibVanguard | Homa supports `getScore(previous:)` (`Homa_Node.swift:211-252`) but "唯音不支援 Bigram" (`InputHandler_CoreProtocol.swift:1013`), shim passes `previous: nil` | — | — | none | `max(bigram, unigram)` on exact prev + current | LXPerceptor POM: `freqFactor × ageFactor²`, 8-day window (`LXPerceptor.swift:968-1015`) | 500 |
+| mozc | class bigram: `lnode->cost + trans(rid, lid) + wcost` (`immutable_converter.cc:852,860`) | `connection_single_column.txt` 2 672 × 2 672 int costs, `INVALID_COST 30000` (`gen_connection_data.py`) | training not in OSS | n/a | "BIGRAM" prediction = prefix lookup on `history + key`, `cost += 1347 − 800 − prev_cost` (`dictionary_predictor.cc:541-545`) | UserHistoryPredictor ≤ 6 next links, score = recency − len + 1-week boost (`user_history_predictor.cc:96,2461-2465`) | 10 000 LRU; segment history 20 000 |
+| khiin-rs | **no** — join commented out, order `u.n desc, c.weight desc` (`select_conversions.sql:7-9,22-24`) | SQLite `bigrams(lgram, rgram, n)` (`migrations/001/up.sql:59-65`) | none writes it | none | unigram `ln(1/P)` DP (`segmenter.rs:178-222`) | none | — |
+| azooKey-Desktop | 5-gram char LM (Zenzai) via marisa tries | `lm_*` marisa | external | KN `d = 0.75` | base + personal LM, `alpha` 0 / 0.5 / 1 / 1.5 (`SegmentsManager.swift:102-115,965-969`) | personal `p13n_v1` marisa | beam 16, topK 32 |
+| rime-phah-taibun (Taigi) | build time only | `Counter[(w1, w2)]` → dictionary phrases | `build_phrases.py:63-116,187`: `int(500 × (1 + log10(1 + count) × 0.3))`, `min_count 5` | none | — | — | produced 0 entries (`PLAN.md:98`) |
+| Keyman lexical-models, FlorisBoard | no | `trie-1.0` wordlist; `suggest()` returns `emptyList()` | — | — | — | — | — |
+
+Units differ: Manjusri / McBopomofo / Homa log10 (higher better); mozc integer cost ≈ `−500 · ln p` (lower better); librime natural log; librime-predict raw counts as float. Our walker is natural-log min-cost (`cost.rs`), so D6's transition term is `−ln P_bo`.

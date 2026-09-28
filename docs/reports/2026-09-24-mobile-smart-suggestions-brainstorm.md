@@ -107,3 +107,55 @@ No crate cycles (`phonetics ← ranking ← lexicon ← composing`; `nextword` d
 2. **Sentence corpus** — candidates to license-check (unverified from memory): Mozilla Common Voice Taiwanese sentence collection (believed CC0), zh-min-nan Wikipedia (CC BY-SA, mostly POJ). `corpus/taigi-typing` is CC BY-ND and excluded.
 3. **Predictions after Space** — hidden today by design; recommend a dogfood A/B of showing them.
 4. **User-data stores into the engine** (audit Med row) — recommend leaving until R3 lands.
+
+---
+
+## 6. Addendum 2026-09-28 — bigram language model (added at USER request, to be picked up in a separate session)
+
+Trigger: USER heard ChiaKey described as a "bigram lexicon" and asked what that means and which model we use. Nothing decided; no round open; no release scope implied.
+
+### Status of §4 / §5 as of 2026-09-28
+
+- Done: R1 (#187–#191), R3 (#194 + #196), R2 (#197), R4 file split only (#198; shared toneless key refuted), small items (#200). R5 absorbed into the user-data-engine roadmap (all user-data stores now live in `engine/userdata`, so batch A/B schema work lands there once).
+- Not started: batch A (techniques 1, 2, 5, 6), batch B (3, 4, 7), corpus track (8), techniques 9–11.
+- §5 decision 2 answered: USER 2026-09-27, "these licences are all fine, ignore them" → `corpus/taigi-corpus` opt-in submodule (#248, ~670 MB, `update = none`). The §5.2 text above (Common Voice / Wikipedia) is superseded. `corpus/taigi-typing` status unchanged.
+- §5 decision 3 (predictions after Space) still open.
+
+### What "bigram lexicon" means, and where we stand (grounded in code)
+
+- **Unigram**: each word scored alone, P(w). **Bigram**: word-pair counts, P(w₂ | w₁). A bigram LM walks the candidate graph maximizing Σ log P(wᵢ | wᵢ₋₁), so the same reading converts differently depending on the previous word.
+- **ChiaKey** (`references/ChiaKey/`, `chiakey-reference.md:12,46-47,98-102`): Manjusri engine, SQLite unigram + bigram log10 probabilities, `Graph::walk`; user learning is a capped `user_bigram_cache(previous, current)` with `LearnedBigramScore = log10(1)`.
+- **Ours**:
+
+| Stage | Model | Where |
+|---|---|---|
+| Whole-sentence segmentation | Unigram — `cost = ln(1/p)`, p = (1+freq)/corpus total, length / syllable bias, user-weight discount; every edge priced independently | `engine/composing/src/lattice/cost.rs:1-40` |
+| Candidate sort | Unigram — `freq × syllable bias`, user weight as a separate leading dimension | `engine/ranking/src/score.rs:295` |
+| Next-word | Pair-shaped (`prev_word → next_word`) + user pairs | `engine/nextword/src/scorer.rs:6-16` |
+| Next-word bundled data | Pairs derived from inside 2–5-char dictionary words (台→灣), no running text | `dictionary/build/associations.py:1-30` |
+
+- **Key point**: intra-word pairs add almost nothing to segmentation — the whole word (台灣) already competes as one unigram edge. The useful signal is **cross-word** (食→飯, 真→好), which only running text provides: articles, dictionary example sentences, or the user's own typing (ChiaKey-style learned bigrams, empty at install). Mandarin corpora (different grammar) and LLM-generated text (model bias, unstable Taigi quality) are poor sources.
+
+### How the remaining items map onto a bigram LM
+
+| # | Item | Relation |
+|---|---|---|
+| **8** | Static word-bigram next-word table from a sentence corpus, top-K + min-weight prune, start-of-sentence key `$` | **Is** the bigram LM (corpus track). Closes gaps #1, #8, and #4 via `$` |
+| **7** | Previous-word re-rank of composing candidates | **Is** ChiaKey's use of it — feed bigrams into ranking / the lattice (or revive `booster.rs`). Data from 1 + 4 or the table from 8 |
+| **1** | Associations keyed by (漢字, TL) | The table from 8 must share this key format — design together |
+| **2** | Record lost continuous-commit pairs | = user bigrams (ChiaKey `user_bigram_cache`); A→B is never learned today |
+| **4** | Two-word context with backoff | Bigram → trigram extension |
+| 3 | Zero-query continuation from learned phrases | Indirect (`learned_phrases` data) |
+| 5, 6, 9, 10, 11 | Negative feedback, rule table, emoji, offensive filter, privacy | Unrelated |
+| §5.3 | Predictions after Space | Gates visibility: Space is the most common commit key and hides predictions today |
+
+Two tracks, different risk:
+
+- **Next-word track** (8, 1, 2, 4): `engine/nextword` + `association.bin`; contained.
+- **Composing track** (7): bigram term in `lattice/cost.rs` changes whole-sentence segmentation; needs `/code-review` and re-checks of fixed cases such as `taiuan → 台灣` (cost.rs S5 note).
+
+Both depend on the data from 8.
+
+### Suggested first step (read-only spike, no branch)
+
+Export `corpus/taigi-corpus` (`corpus export`), count (漢字, TL) word pairs across word boundaries, and report: total distinct pairs; top-K coverage; how many of the 5,662 `association.bin` keys get at least one cross-word continuation. Confirm first how the corpus marks word boundaries (TL hyphenation vs. spaces) — not yet checked.
