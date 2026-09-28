@@ -112,7 +112,7 @@ USER 2026-09-28: `taigi-corpus` is unfinished; fetch more corpora / search for m
   3. Hanji side: assign characters to TL words by syllable count; a hanlo run of Latin letters is an **anchor** that must equal its TL word verbatim (after the same normalization), otherwise the sentence is dropped. Sentence dropped when the totals differ. Modernized-character sources (khinhoan `个` ↔ `ê`) are expected to fail this more often — P1 reports the drop rate per source and ten hand-checked survivors per source before P2 fixes anything.
   4. Whitelist each `(hanji, tl)` against `dictionary.csv`; chain breaks at an OOV token.
   5. Count pairs and unigrams; write TSVs sorted, deterministic.
-- Per-source weight: 1.0 for the five paired sources; hanji-only sources (Phase 7) enter through dictionary max-match with reading assignment and a lower weight — a separate, optional phase, never mixed into Phase 2's numbers.
+- Per-source weight: P2 writes raw counts per source (one TSV column each, Codex 2026-09-28 pre-impl); P3 applies any weight. Hanji-only sources (Phase 7) enter through dictionary max-match with reading assignment and a lower weight — a separate, optional phase, never mixed into Phase 2's numbers.
 
 ### D3 — Artifact: `association.bin` **v2**, not a new file
 
