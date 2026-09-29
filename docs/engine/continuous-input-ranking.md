@@ -362,6 +362,10 @@ Constraints binding the decision:
 
 ---
 
+### 8.1 Previous-word context (bigram-lm-roadmap P5, 2026-09-30)
+
+The fetch also ranks by the word the pending tail follows — the composition's last nailed segment, else the last committed word inside its 10 s association window. `SortKey` carries it as `context_rank` (fourth dimension, below `user_weight`, above `score`); the walker's per-edge word pick uses the same key but only among homophones with the context-free winner's syllable count, so every `edge_cost` input — `span_frequency`, `syllable_count`, `user_weight` — and therefore the segmentation is unchanged. Contract, dimensions and tests: `behavioral-invariants.md` §56 `INVARIANT_CONTINUOUS_CONTEXT_RERANK`.
+
 ## 9. Open Questions
 
 Recorded 2026-05-11 to prevent re-discovery in future sessions; several were answered by the §8 work (Q1 → soft bias via the walker cost model; Q2 → `ContinuousFetchCtx.freq_map` per fetch). Not committed to any release.

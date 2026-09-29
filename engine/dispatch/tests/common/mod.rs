@@ -51,3 +51,34 @@ pub fn open_user_data(paths: &UserDataPaths) {
         "open answered {opened:?}"
     );
 }
+
+/// Installs the production lexicon (`dictionaries/`) once per test process;
+/// `false` (callers soft-skip) when the artifacts are absent — run `make dict`.
+// Not every suite in this directory needs the lexicon.
+#[allow(dead_code)]
+pub fn production_lexicon_ready() -> bool {
+    static READY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *READY.get_or_init(|| {
+        let artifact = |name: &str| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../dictionaries")
+                .join(name)
+                .to_str()
+                .expect("artifact path UTF-8")
+                .to_owned()
+        };
+        if !std::path::Path::new(&artifact("association.bin")).exists() {
+            eprintln!("production artifacts absent — run `make dict`; skipping.");
+            return false;
+        }
+        let paths = lexicon::LexiconPaths::validated(
+            &artifact("dictionary.fst"),
+            &artifact("dictionary.bin"),
+            &artifact("association.bin"),
+            &artifact("syllables.fst"),
+            0,
+        )
+        .expect("validate production LexiconPaths");
+        lexicon::EngineHandle::install(paths).is_ok()
+    })
+}

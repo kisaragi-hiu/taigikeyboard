@@ -468,6 +468,7 @@ pub struct Fetch {
     pub frequency: Vec<Selected>,
     pub custom: Vec<CustomEntry>,
     pub learned: Vec<LearnedEntry>,
+    pub context: ranking::ContextRanks,
 }
 
 impl Fetch {
@@ -492,6 +493,7 @@ impl Fetch {
                 custom: self.custom,
                 learned: self.learned,
             },
+            context: self.context,
         }
     }
 }
@@ -613,4 +615,33 @@ pub fn cell_with_hanji<'a>(cells: &'a [Cell], hanji: &str) -> &'a Cell {
         .iter()
         .find(|c| c.0.as_deref() == Some(hanji))
         .unwrap_or_else(|| panic!("no candidate with hanji {hanji}; got {cells:?}"))
+}
+
+/// Installs the production lexicon (`dictionaries/`) once per test process;
+/// `false` (callers soft-skip) when the artifacts are absent — run `make dict`.
+pub fn production_lexicon_ready() -> bool {
+    static READY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *READY.get_or_init(|| {
+        let artifact = |name: &str| {
+            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("../../dictionaries")
+                .join(name)
+                .to_str()
+                .expect("artifact path UTF-8")
+                .to_owned()
+        };
+        if !std::path::Path::new(&artifact("association.bin")).exists() {
+            eprintln!("production artifacts absent — run `make dict`; skipping.");
+            return false;
+        }
+        let paths = lexicon::LexiconPaths::validated(
+            &artifact("dictionary.fst"),
+            &artifact("dictionary.bin"),
+            &artifact("association.bin"),
+            &artifact("syllables.fst"),
+            0,
+        )
+        .expect("validate production LexiconPaths");
+        lexicon::EngineHandle::install(paths).is_ok()
+    })
 }

@@ -1,7 +1,7 @@
 //! Continuous candidate construction: dictionary / custom / learned rows to
 //! [`RawCandidate`], plus the `(roman, hanji, span)` dedupe.
 
-use ranking::{calculate_continuous_score, source_tier_rank, FrequencyMap};
+use ranking::{calculate_continuous_score, source_tier_rank, ContextRanks, FrequencyMap};
 
 use super::sort_key::sort_by_sort_key;
 use super::{
@@ -77,6 +77,7 @@ pub(super) fn merge_custom_dedupe_sort(
             raw_len,
             ctx.freq_map,
             ctx.now_ms,
+            ctx.context,
             coverage_kind,
             ctx.mode,
         ));
@@ -95,6 +96,7 @@ pub(super) fn merge_custom_dedupe_sort(
             (0, raw_len),
             ctx.freq_map,
             ctx.now_ms,
+            ctx.context,
             coverage_kind,
         ));
     }
@@ -108,6 +110,7 @@ pub(super) fn record_to_candidate(
     consumed_span: ConsumedSpan,
     freq_map: &FrequencyMap,
     now_ms: i64,
+    context: &ContextRanks,
     coverage_kind: u8,
 ) -> RawCandidate {
     let DictionaryRecord {
@@ -145,6 +148,7 @@ pub(super) fn record_to_candidate(
     let user_weight = freq_map
         .get(&display_text, &canonical_tl)
         .user_weight(now_ms);
+    let context_rank = context.rank(&display_text, &canonical_tl);
     let score = calculate_continuous_score(frequency, syllable_count);
     RawCandidate {
         consumed_span,
@@ -159,6 +163,7 @@ pub(super) fn record_to_candidate(
         bitmask,
         mode,
         user_weight,
+        context_rank,
         coverage_kind,
         // dict.bin FST hit — `source_tier_rank` derives the rank from
         // `bitmask`; `is_custom = false` keeps the kautian/taigitv/…
@@ -205,6 +210,7 @@ pub(super) fn custom_entry_to_candidate(
     raw_len: u32,
     freq_map: &FrequencyMap,
     now_ms: i64,
+    context: &ContextRanks,
     coverage_kind: u8,
     input_mode: phonetics::InputMode,
 ) -> RawCandidate {
@@ -240,6 +246,7 @@ pub(super) fn custom_entry_to_candidate(
     let user_weight = freq_map
         .get(&display_text, &canonical_tl)
         .user_weight(now_ms);
+    let context_rank = context.rank(&display_text, &canonical_tl);
     // `frequency = 0` (D4) → score 0; the candidate floats on
     // `user_weight` / `source_rank` / dedupe, not raw freq.
     let score = calculate_continuous_score(0, 1);
@@ -259,6 +266,7 @@ pub(super) fn custom_entry_to_candidate(
         bitmask: 0,
         mode,
         user_weight,
+        context_rank,
         coverage_kind,
         is_custom: true,
     }
@@ -276,6 +284,7 @@ pub(super) fn learned_entry_to_candidate(
     span: ConsumedSpan,
     freq_map: &FrequencyMap,
     now_ms: i64,
+    context: &ContextRanks,
     coverage_kind: u8,
 ) -> RawCandidate {
     let syllable_count = phonetics::api::tl_syllables(&entry.canonical_tl)
@@ -294,6 +303,7 @@ pub(super) fn learned_entry_to_candidate(
         span,
         freq_map,
         now_ms,
+        context,
         coverage_kind,
     )
 }
@@ -382,6 +392,7 @@ mod record_to_candidate_carrier_tests {
             (0, 7),
             &FrequencyMap::new(),
             0,
+            ContextRanks::empty(),
             COVERAGE_KIND_FULL,
         );
         assert_eq!(cand.roman, "tâi-uân");
@@ -405,6 +416,7 @@ mod record_to_candidate_carrier_tests {
             (0, 3),
             &FrequencyMap::new(),
             0,
+            ContextRanks::empty(),
             COVERAGE_KIND_FULL,
         );
         assert_eq!(cand.roman, "tāi");
@@ -424,6 +436,7 @@ mod record_to_candidate_carrier_tests {
             (0, 9),
             &FrequencyMap::new(),
             0,
+            ContextRanks::empty(),
             COVERAGE_KIND_FULL,
         );
         assert_eq!(cand.roman, "hip-siòng");
@@ -445,6 +458,7 @@ mod item12_custom_dedupe_tests {
     use super::*;
     use crate::continuous::sort_key::SortKey;
     use crate::continuous::{CandidateMode, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX};
+    use ranking::CONTEXT_RANK_NONE;
 
     /// Minimal non-custom `dict.bin`-shaped candidate. `bitmask` picks
     /// the source rank; all sort-noise dims are neutralized so a test
@@ -463,6 +477,7 @@ mod item12_custom_dedupe_tests {
             bitmask,
             mode: derive_mode(hanji),
             user_weight: 0.0,
+            context_rank: CONTEXT_RANK_NONE,
             coverage_kind: COVERAGE_KIND_FULL,
             is_custom: false,
         }
@@ -482,6 +497,7 @@ mod item12_custom_dedupe_tests {
             9,
             &FrequencyMap::new(),
             0,
+            ContextRanks::empty(),
             COVERAGE_KIND_FULL,
             phonetics::InputMode::Tl,
         );
@@ -515,6 +531,7 @@ mod item12_custom_dedupe_tests {
             3,
             &FrequencyMap::new(),
             0,
+            ContextRanks::empty(),
             COVERAGE_KIND_PARTIAL_PREFIX,
             phonetics::InputMode::Tl,
         );
@@ -542,6 +559,7 @@ mod item12_custom_dedupe_tests {
             3,
             &FrequencyMap::new(),
             0,
+            ContextRanks::empty(),
             COVERAGE_KIND_FULL,
             phonetics::InputMode::Tl,
         );
@@ -574,6 +592,7 @@ mod item12_custom_dedupe_tests {
             3,
             &FrequencyMap::new(),
             0,
+            ContextRanks::empty(),
             COVERAGE_KIND_FULL,
             phonetics::InputMode::Poj,
         );
@@ -601,6 +620,7 @@ mod item12_custom_dedupe_tests {
                 6,
                 &FrequencyMap::new(),
                 0,
+                ContextRanks::empty(),
                 COVERAGE_KIND_FULL,
                 phonetics::InputMode::Tl,
             ),
@@ -691,6 +711,7 @@ mod item12_custom_dedupe_tests {
             6,
             &FrequencyMap::new(),
             0,
+            ContextRanks::empty(),
             COVERAGE_KIND_FULL,
             phonetics::InputMode::Tl,
         );
@@ -714,6 +735,7 @@ mod item12_custom_dedupe_tests {
             3,
             &FrequencyMap::new(),
             0,
+            ContextRanks::empty(),
             COVERAGE_KIND_FULL,
             phonetics::InputMode::Tl,
         );

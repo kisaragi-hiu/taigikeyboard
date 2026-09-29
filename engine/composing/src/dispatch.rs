@@ -67,6 +67,7 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             enabled_sources_bitmask: m.enabled_sources_bitmask,
             literal_roman_candidate_disabled: m.literal_roman_candidate_disabled,
             user_rows: UserRows::default(),
+            context: ranking::ContextRanks::default(),
         },
         Method::CommitContinuous(m) => Intent::CommitContinuous {
             display_text: m.display_text,
@@ -127,10 +128,12 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
             enabled_sources_bitmask,
             literal_roman_candidate_disabled,
             user_rows,
+            context,
         } => handle_fetch_at_pos(
             engine,
             *now_ms,
             user_rows,
+            context,
             *enabled_sources_bitmask,
             *literal_roman_candidate_disabled,
             config,
@@ -157,6 +160,7 @@ fn handle_fetch_at_pos(
     engine: &Engine,
     now_ms: i64,
     user_rows: &UserRows,
+    context: &ranking::ContextRanks,
     enabled_sources_bitmask: u32,
     literal_roman_candidate_disabled: bool,
     config: &AppConfig,
@@ -234,6 +238,7 @@ fn handle_fetch_at_pos(
         &learned,
         mode,
         enabled_sources_bitmask,
+        context,
         config.hyphenless_roman,
         config.force_lowercase_nasal_marker,
     );
@@ -374,6 +379,7 @@ fn literal_roman_candidate(
         bitmask: 0,
         mode: derive_mode(None),
         user_weight: 0.0,
+        context_rank: ranking::CONTEXT_RANK_NONE,
         coverage_kind: COVERAGE_KIND_FULL,
         is_custom: false,
     })
@@ -561,6 +567,7 @@ mod tests {
             bitmask: 0,
             mode: lexicon::CandidateMode::Hant,
             user_weight: 0.0,
+            context_rank: ranking::CONTEXT_RANK_NONE,
             coverage_kind: lexicon::COVERAGE_KIND_FULL,
             is_custom: false,
         };
@@ -587,6 +594,7 @@ mod tests {
             bitmask: 0,
             mode: lexicon::CandidateMode::Tailo,
             user_weight: 0.0,
+            context_rank: ranking::CONTEXT_RANK_NONE,
             coverage_kind: lexicon::COVERAGE_KIND_FULL,
             is_custom: false,
         };
@@ -617,6 +625,7 @@ mod tests {
                 bitmask: 0,
                 mode: lexicon::CandidateMode::Hant,
                 user_weight: 0.0,
+                context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: lexicon::COVERAGE_KIND_FULL,
                 is_custom: false,
             }

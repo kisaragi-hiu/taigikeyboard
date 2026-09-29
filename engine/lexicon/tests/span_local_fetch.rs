@@ -68,6 +68,7 @@ fn ctx<'a>(
         prefix_index,
         dict,
         mode: phonetics::InputMode::Tl,
+        context: ranking::ContextRanks::empty(),
         tone_pin: lexicon::TonePin::None,
     }
 }

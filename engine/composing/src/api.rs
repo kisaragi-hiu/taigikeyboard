@@ -532,6 +532,11 @@ pub enum Intent {
         enabled_sources_bitmask: u32,
         literal_roman_candidate_disabled: bool,
         user_rows: UserRows,
+        /// The previous word's continuations, user-learned and bundled
+        /// (`dispatch::context`), ranked into the candidate order (§56).
+        /// Empty = no context. The platform sends none; a proto decode
+        /// leaves it empty.
+        context: ranking::ContextRanks,
     },
     /// Nail a candidate segment in `Phase::Continuous`. The engine takes
     /// `pending[..consumed_bytes]` as the nailed segment's raw text and
@@ -622,6 +627,22 @@ impl Engine {
             Phase::Idle => "",
             Phase::Composing { raw, .. } | Phase::Continuous { raw, .. } => raw,
         }
+    }
+
+    /// The word the pending tail follows inside this composition: the last
+    /// nailed segment as `(canonical text, association roman)` — the
+    /// identity the final commit's `preceding` carries — or `None` when no
+    /// segment is nailed (the committed context applies then, §56).
+    pub fn pending_context(&self) -> Option<(String, String)> {
+        let Phase::Continuous { nailed, .. } = &self.state.phase else {
+            return None;
+        };
+        nailed.last().map(|segment| {
+            (
+                segment.canonical_text.clone(),
+                crate::transition::association_roman(&segment.association_tl, &segment.raw_text),
+            )
+        })
     }
 
     /// Apply `intent` against the current state, mutate, and return the

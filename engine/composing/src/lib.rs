@@ -24,7 +24,7 @@ mod transition;
 pub use api::{
     Applied, ComposingError, Engine, EngineState, Intent, NailedSegment, Phase, UserRows,
 };
-pub use handle::EngineHandle;
+pub use handle::{EngineHandle, PendingSnapshot};
 
 // Compile-time guarantee: `Engine` must remain `Send` so the static
 // `OnceCell<EngineHandle>` in dispatch can wrap it in `Mutex<Engine>` and

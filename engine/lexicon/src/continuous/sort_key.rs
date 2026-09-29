@@ -1,13 +1,13 @@
-//! Continuous candidate ordering: the 8-dimensional [`SortKey`] and its NaN-safe
+//! Continuous candidate ordering: the 9-dimensional [`SortKey`] and its NaN-safe
 //! score wrapper.
 
 use std::cmp::Reverse;
 
-use ranking::source_tier_rank;
+use ranking::{source_tier_rank, CONTEXT_RANK_NONE};
 
 use super::RawCandidate;
 
-/// The eight-dimension [`SortKey`] sort every continuous fetch ends with.
+/// The nine-dimension [`SortKey`] sort every continuous fetch ends with.
 /// `stable_idx` is the pre-sort element position (see
 /// [`merge_custom_dedupe_sort`](super::candidate::merge_custom_dedupe_sort) for why it is stamped via `enumerate()`
 /// rather than inside the key extractor).
@@ -23,15 +23,16 @@ pub(super) fn sort_by_sort_key(out: Vec<RawCandidate>, raw_len: u32) -> Vec<RawC
 
 // v3.5.8 Phase 9.1 — SortKey
 //
-// Encodes the eight-dimension lexicographic sort policy pinned in
+// Encodes the nine-dimension lexicographic sort policy pinned in
 // `docs/releases/v3.5.8/plan.md` § Phase 9 (+ whole-sentence lattice + walker S8). Field
 // order in this struct matches `#[derive(Ord)]`'s lexicographic
 // comparison; `Reverse<T>` flips individual dimensions whose policy
 // is descending. NaN-safe because floats are wrapped in `NonNanF64`
 // which coerces NaN to `f64::MIN` at construction.
 //
-// Order: coverage_kind, tier, -user_weight, -score, -freq,
-// -coverage, source_rank, stable_idx. S8 moved `-coverage` from
+// Order: coverage_kind, tier, -user_weight, context_rank, -score, -freq,
+// -coverage, source_rank, stable_idx. Bigram P5 (§56) added `context_rank`
+// between `-user_weight` and `-score`. S8 moved `-coverage` from
 // dim 3 (above score) down to dim 6 (a weak tiebreak below
 // score/freq): the slot-0 whole-sentence walker now owns phrase
 // priority, so longest-coverage-first inside a tier only buried the
@@ -60,6 +61,12 @@ pub(super) struct SortKey {
     /// their dictionary frequency. `f64` so two selections seconds
     /// apart do not collapse into a tie.
     neg_user_weight: Reverse<NonNanF64>,
+    /// Ascending: [`RawCandidate::context_rank`] — a continuation of the
+    /// previous word (user-learned first, then bundled) precedes the rest
+    /// (§56). Below `user_weight` so a selected word still beats every
+    /// never-selected one; above `score` so the context is more than a
+    /// tie-break. All-`CONTEXT_RANK_NONE` (no context) changes nothing.
+    context_rank: u8,
     /// Descending: higher `freq × syll_bias × boost` wins.
     neg_score: Reverse<NonNanF64>,
     /// Descending: raw freq as a secondary tie-break independent of
@@ -101,11 +108,23 @@ impl SortKey {
             coverage_kind: candidate.coverage_kind,
             tier,
             neg_user_weight: Reverse(NonNanF64::new(candidate.user_weight)),
+            context_rank: candidate.context_rank,
             neg_score: Reverse(NonNanF64::new(f64::from(candidate.score))),
             neg_freq: Reverse(candidate.frequency),
             neg_coverage: Reverse(coverage_bytes),
             source_rank,
             stable_idx,
+        }
+    }
+}
+
+impl SortKey {
+    /// [`SortKey::new`] with the context dimension neutral — the
+    /// context-free order the walker's edge pick anchors on (§56).
+    pub(super) fn without_context(candidate: &RawCandidate, raw_len: u32, stable_idx: u32) -> Self {
+        Self {
+            context_rank: CONTEXT_RANK_NONE,
+            ..Self::new(candidate, raw_len, stable_idx)
         }
     }
 }
@@ -192,6 +211,7 @@ mod sort_key_tests {
             bitmask,
             mode: CandidateMode::Hant,
             user_weight,
+            context_rank: CONTEXT_RANK_NONE,
             coverage_kind: COVERAGE_KIND_FULL,
             is_custom: false,
         }
@@ -295,6 +315,63 @@ mod sort_key_tests {
         let unknown = cand(0, 3, 100.0, 100, 0);
 
         assert!(SortKey::new(&kautian, raw_len, 0) < SortKey::new(&unknown, raw_len, 1));
+    }
+
+    fn cand_with_context(score: f32, context_rank: u8) -> RawCandidate {
+        let mut c = cand(0, 3, score, score as u32, 0);
+        c.context_rank = context_rank;
+        c
+    }
+
+    // INVARIANT_CONTINUOUS_CONTEXT_RERANK (behavioral-invariants §56): a
+    // continuation of the previous word precedes a higher-scored stranger.
+    #[test]
+    fn context_hit_beats_higher_score() {
+        let raw_len: u32 = 3;
+        let stranger = cand_with_context(1000.0, ranking::CONTEXT_RANK_NONE);
+        let bundled = cand_with_context(10.0, ranking::CONTEXT_RANK_BUNDLED);
+        let user = cand_with_context(1.0, ranking::CONTEXT_RANK_USER);
+        assert!(SortKey::new(&bundled, raw_len, 1) < SortKey::new(&stranger, raw_len, 0));
+        assert!(SortKey::new(&user, raw_len, 2) < SortKey::new(&bundled, raw_len, 1));
+    }
+
+    // INVARIANT_CONTINUOUS_CONTEXT_RERANK: the context never crosses the
+    // dimensions above it — coverage kind, tier, user weight.
+    #[test]
+    fn context_hit_never_crosses_tier_coverage_kind_or_user_weight() {
+        let raw_len: u32 = 6;
+        let full_stranger = cand(0, 6, 1.0, 1, 0);
+        let mut partial_hit = cand_partial(0, 6, 1000.0, 1000, 0);
+        partial_hit.context_rank = ranking::CONTEXT_RANK_USER;
+        assert!(SortKey::new(&full_stranger, raw_len, 0) < SortKey::new(&partial_hit, raw_len, 1));
+
+        let tier0_stranger = cand(0, 6, 1.0, 1, 0);
+        let mut tier1_hit = cand(0, 3, 1000.0, 1000, 0);
+        tier1_hit.context_rank = ranking::CONTEXT_RANK_USER;
+        assert!(SortKey::new(&tier0_stranger, raw_len, 0) < SortKey::new(&tier1_hit, raw_len, 1));
+
+        let selected_stranger = cand_with_user_weight(0, 6, 1.0, 1, 0, 0.1);
+        let mut never_selected_hit = cand(0, 6, 1000.0, 1000, 0);
+        never_selected_hit.context_rank = ranking::CONTEXT_RANK_USER;
+        assert!(
+            SortKey::new(&selected_stranger, raw_len, 0)
+                < SortKey::new(&never_selected_hit, raw_len, 1)
+        );
+    }
+
+    // INVARIANT_CONTINUOUS_CONTEXT_RERANK: no context (every rank NONE) is
+    // the context-free order, and `without_context` neutralises a hit.
+    #[test]
+    fn no_context_is_the_context_free_order() {
+        let raw_len: u32 = 3;
+        let high = cand_with_context(100.0, ranking::CONTEXT_RANK_NONE);
+        let low = cand_with_context(10.0, ranking::CONTEXT_RANK_NONE);
+        assert!(SortKey::new(&high, raw_len, 0) < SortKey::new(&low, raw_len, 1));
+        let low_hit = cand_with_context(10.0, ranking::CONTEXT_RANK_USER);
+        assert_eq!(
+            SortKey::without_context(&low_hit, raw_len, 1),
+            SortKey::new(&low, raw_len, 1)
+        );
     }
 
     #[test]

@@ -1,8 +1,8 @@
 // Expands a nextword `PredictNext` into `FilterPredictions` by running the bundled lexicon lookup.
 
 use protos::engine::{
-    next_word_request::Method, AssocLookupRequest, DictionaryFiltersRequest, FilterPredictions,
-    NextWordRequest, PredictNext, RawNextWordPrediction, Source,
+    next_word_request::Method, DictionaryFiltersRequest, FilterPredictions, NextWordRequest,
+    PredictNext, RawNextWordPrediction, Source,
 };
 
 /// Bundled rows fetched per requested prediction: slack so the `(hanzi, tl)`
@@ -71,29 +71,16 @@ fn bundled_rows(
             return Vec::new();
         }
     };
-    let lookup = lexicon::api::assoc_lookup(AssocLookupRequest {
-        previous_word: word.to_owned(),
-        previous_tl: roman.to_owned(),
-        limit: u32::try_from(bundled_limit).unwrap_or(u32::MAX),
-        enabled_sources_bitmask: bitmask,
-    });
-    match lookup {
-        Ok(response) => response
-            .entries
-            .into_iter()
-            .map(|entry| RawNextWordPrediction {
-                hanzi: entry.candidate_word,
-                tl: entry.candidate_tl,
-                count: i64::from(entry.count),
-                last_used_ms: 0,
-                source: Source::Dict as i32,
-            })
-            .collect(),
-        Err(err) => {
-            log::debug!("nextword.predict.bundled_lookup_skipped: {err}");
-            Vec::new()
-        }
-    }
+    crate::context::bundled_continuations(word, roman, bundled_limit, bitmask)
+        .into_iter()
+        .map(|entry| RawNextWordPrediction {
+            hanzi: entry.candidate_word,
+            tl: entry.candidate_tl,
+            count: i64::from(entry.count),
+            last_used_ms: 0,
+            source: Source::Dict as i32,
+        })
+        .collect()
 }
 
 #[cfg(test)]

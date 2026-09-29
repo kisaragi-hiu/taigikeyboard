@@ -1035,6 +1035,7 @@ pub(crate) fn assemble_candidates(
     learned: &[LearnedEntry],
     mode: phonetics::InputMode,
     enabled_sources_bitmask: u32,
+    context: &ranking::ContextRanks,
     hyphenless_roman: bool,
     force_lowercase_nasal_marker: bool,
 ) -> Vec<RawCandidate> {
@@ -1063,6 +1064,9 @@ pub(crate) fn assemble_candidates(
             .map(|(prefix_index, dict)| ContinuousFetchCtx {
                 enabled_sources_bitmask,
                 freq_map,
+                // The previous word's continuations (§56) — the sort's
+                // context dimension and the walker's first-edge word pick.
+                context,
                 now_ms,
                 custom,
                 learned,
@@ -1235,6 +1239,7 @@ pub(crate) fn assemble_candidates(
                             bitmask: 0,
                             mode: slot0.mode,
                             user_weight: slot0.user_weight,
+                            context_rank: ranking::CONTEXT_RANK_NONE,
                             coverage_kind: slot0.coverage_kind,
                             is_custom: slot0.is_custom,
                         };
@@ -1708,6 +1713,7 @@ mod tests {
             bitmask: 0,
             mode: lexicon::CandidateMode::Hant,
             user_weight: 0.0,
+            context_rank: ranking::CONTEXT_RANK_NONE,
             coverage_kind: COVERAGE_KIND_FULL,
             is_custom: false,
         };
@@ -1735,6 +1741,7 @@ mod tests {
                 bitmask: 0,
                 mode: lexicon::CandidateMode::Tailo,
                 user_weight: 0.0,
+                context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
                 is_custom,
             }
@@ -1782,6 +1789,7 @@ mod tests {
                 bitmask: 0,
                 mode: lexicon::CandidateMode::Tailo,
                 user_weight: 0.0,
+                context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
                 is_custom: false,
             }
@@ -1811,6 +1819,7 @@ mod tests {
                 bitmask: 0,
                 mode: lexicon::CandidateMode::Tailo,
                 user_weight: 0.0,
+                context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
                 is_custom: false,
             }
@@ -1844,6 +1853,7 @@ mod tests {
                 bitmask: 0,
                 mode: lexicon::CandidateMode::Tailo,
                 user_weight: 0.0,
+                context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
                 is_custom: false,
             }

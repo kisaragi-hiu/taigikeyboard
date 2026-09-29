@@ -43,6 +43,20 @@ impl EngineHandle {
         HANDLE.get_or_init(EngineHandle::new)
     }
 
+    /// The committed word a word committed at `now_ms` would follow — the
+    /// 10 s association window of `decide::committed_context` — for the
+    /// composing fetch's context re-rank (§56). Advisory: read as of now,
+    /// without the envelope generation check, and only orders candidates;
+    /// a platform that reset its next-word context sends `ResetFull` /
+    /// `ContextTimeoutFired`, which clear it here too.
+    pub fn context_snapshot(&self, now_ms: i64) -> Option<(String, String)> {
+        let engine = self
+            .nextword
+            .lock()
+            .expect("nextword engine mutex poisoned");
+        crate::decide::committed_context(&engine.state, now_ms)
+    }
+
     /// Top-level nextword dispatch. Performs envelope generation-mismatch
     /// reset before delegating to the pure dispatch table.
     ///
@@ -144,6 +158,27 @@ mod tests {
     }
 
     /// Wrap-around at `u64::MAX` mirrors the per-intent bump behavior.
+    // INVARIANT_CONTINUOUS_CONTEXT_RERANK (§56): the snapshot is the last
+    // committed word inside its 10 s association window (strict `<`), and
+    // nothing once the state is reset.
+    #[test]
+    fn context_snapshot_follows_the_association_window() {
+        let handle = EngineHandle::new();
+        {
+            let mut engine = handle.nextword.lock().unwrap();
+            engine.state.last_selected_word = Some("我".to_owned());
+            engine.state.last_selected_roman = Some("guá".to_owned());
+            engine.state.last_selection_time_ms = 1_000;
+        }
+        assert_eq!(
+            handle.context_snapshot(10_999),
+            Some(("我".to_owned(), "guá".to_owned()))
+        );
+        assert_eq!(handle.context_snapshot(11_000), None, "window is strict <");
+        handle.nextword.lock().unwrap().reset();
+        assert_eq!(handle.context_snapshot(1_000), None);
+    }
+
     #[test]
     fn envelope_reset_wraps_at_u64_max() {
         let mut engine = Engine::new();

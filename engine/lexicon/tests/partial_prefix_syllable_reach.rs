@@ -135,6 +135,7 @@ fn ctx<'a>(
         prefix_index,
         dict,
         mode,
+        context: ranking::ContextRanks::empty(),
         tone_pin: lexicon::TonePin::None,
     }
 }
