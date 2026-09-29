@@ -7,8 +7,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * `SearchWithSourcesRequest` is Tab3's all-source lookup. Unlike `SearchRequest`,
- * the input may be either romanized or hanji; the engine internally classifies
+ * `SearchWithSourcesRequest` is Tab3's all-source lookup. The input may be
+ * either romanized or hanji; the engine internally classifies
  * and dispatches to the matching prefix family. Mirrors iOS
  * `DictionaryRepository.searchWithSources`.
  * </pre>
@@ -149,6 +149,16 @@ public  final class SearchWithSourcesRequest extends
    * Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
    * api.rs hardcoded `u32::MAX`, which both bypassed source filters
    * AND falsely forced khiin/variant on regardless of user toggles.
+   *
+   * kautian subcollections (binary v3): the HIGH region carries the user's
+   * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
+   * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
+   * enable mask (main | accent[10] | name, same layout as the record subtag).
+   * ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
+   * .kautian_subcoll` when present; a caller that leaves the sub-message absent
+   * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
+   * in dictionary_reader.rs. Full layout: `docs/engine/binary-format.md` §4.5.
+   * Same field semantics apply to `SearchByHanziRequest` below.
    * </pre>
    *
    * <code>uint32 enabled_sources_bitmask = 4;</code>
@@ -165,6 +175,16 @@ public  final class SearchWithSourcesRequest extends
    * Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
    * api.rs hardcoded `u32::MAX`, which both bypassed source filters
    * AND falsely forced khiin/variant on regardless of user toggles.
+   *
+   * kautian subcollections (binary v3): the HIGH region carries the user's
+   * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
+   * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
+   * enable mask (main | accent[10] | name, same layout as the record subtag).
+   * ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
+   * .kautian_subcoll` when present; a caller that leaves the sub-message absent
+   * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
+   * in dictionary_reader.rs. Full layout: `docs/engine/binary-format.md` §4.5.
+   * Same field semantics apply to `SearchByHanziRequest` below.
    * </pre>
    *
    * <code>uint32 enabled_sources_bitmask = 4;</code>
@@ -181,6 +201,16 @@ public  final class SearchWithSourcesRequest extends
    * Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
    * api.rs hardcoded `u32::MAX`, which both bypassed source filters
    * AND falsely forced khiin/variant on regardless of user toggles.
+   *
+   * kautian subcollections (binary v3): the HIGH region carries the user's
+   * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
+   * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
+   * enable mask (main | accent[10] | name, same layout as the record subtag).
+   * ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
+   * .kautian_subcoll` when present; a caller that leaves the sub-message absent
+   * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
+   * in dictionary_reader.rs. Full layout: `docs/engine/binary-format.md` §4.5.
+   * Same field semantics apply to `SearchByHanziRequest` below.
    * </pre>
    *
    * <code>uint32 enabled_sources_bitmask = 4;</code>
@@ -275,8 +305,8 @@ public  final class SearchWithSourcesRequest extends
 
   /**
    * <pre>
-   * `SearchWithSourcesRequest` is Tab3's all-source lookup. Unlike `SearchRequest`,
-   * the input may be either romanized or hanji; the engine internally classifies
+   * `SearchWithSourcesRequest` is Tab3's all-source lookup. The input may be
+   * either romanized or hanji; the engine internally classifies
    * and dispatches to the matching prefix family. Mirrors iOS
    * `DictionaryRepository.searchWithSources`.
    * </pre>
@@ -425,6 +455,16 @@ public  final class SearchWithSourcesRequest extends
      * Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
      * api.rs hardcoded `u32::MAX`, which both bypassed source filters
      * AND falsely forced khiin/variant on regardless of user toggles.
+     *
+     * kautian subcollections (binary v3): the HIGH region carries the user's
+     * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
+     * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
+     * enable mask (main | accent[10] | name, same layout as the record subtag).
+     * ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
+     * .kautian_subcoll` when present; a caller that leaves the sub-message absent
+     * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
+     * in dictionary_reader.rs. Full layout: `docs/engine/binary-format.md` §4.5.
+     * Same field semantics apply to `SearchByHanziRequest` below.
      * </pre>
      *
      * <code>uint32 enabled_sources_bitmask = 4;</code>
@@ -441,6 +481,16 @@ public  final class SearchWithSourcesRequest extends
      * Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
      * api.rs hardcoded `u32::MAX`, which both bypassed source filters
      * AND falsely forced khiin/variant on regardless of user toggles.
+     *
+     * kautian subcollections (binary v3): the HIGH region carries the user's
+     * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
+     * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
+     * enable mask (main | accent[10] | name, same layout as the record subtag).
+     * ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
+     * .kautian_subcoll` when present; a caller that leaves the sub-message absent
+     * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
+     * in dictionary_reader.rs. Full layout: `docs/engine/binary-format.md` §4.5.
+     * Same field semantics apply to `SearchByHanziRequest` below.
      * </pre>
      *
      * <code>uint32 enabled_sources_bitmask = 4;</code>
@@ -459,6 +509,16 @@ public  final class SearchWithSourcesRequest extends
      * Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
      * api.rs hardcoded `u32::MAX`, which both bypassed source filters
      * AND falsely forced khiin/variant on regardless of user toggles.
+     *
+     * kautian subcollections (binary v3): the HIGH region carries the user's
+     * per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
+     * subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
+     * enable mask (main | accent[10] | name, same layout as the record subtag).
+     * ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
+     * .kautian_subcoll` when present; a caller that leaves the sub-message absent
+     * keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
+     * in dictionary_reader.rs. Full layout: `docs/engine/binary-format.md` §4.5.
+     * Same field semantics apply to `SearchByHanziRequest` below.
      * </pre>
      *
      * <code>uint32 enabled_sources_bitmask = 4;</code>

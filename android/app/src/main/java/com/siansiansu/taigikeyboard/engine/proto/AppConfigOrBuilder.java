@@ -11,18 +11,6 @@ public interface AppConfigOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>string tone_mode = 1;</code>
-   * @return The toneMode.
-   */
-  java.lang.String getToneMode();
-  /**
-   * <code>string tone_mode = 1;</code>
-   * @return The bytes for toneMode.
-   */
-  com.google.protobuf.ByteString
-      getToneModeBytes();
-
-  /**
    * <code>string input_mode = 2;</code>
    * @return The inputMode.
    */

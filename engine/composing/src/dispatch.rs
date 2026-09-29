@@ -655,7 +655,6 @@ mod tests {
 
     fn config_tl() -> AppConfig {
         AppConfig {
-            tone_mode: String::new(),
             input_mode: "tl".to_string(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,

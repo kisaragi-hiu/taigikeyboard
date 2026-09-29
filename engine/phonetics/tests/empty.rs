@@ -7,7 +7,7 @@
 use phonetics::dispatch::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
-use protos::engine::{PhoneticsRequest, PhoneticsResponse, PojToTl, StripTone, TlToPoj};
+use protos::engine::{PhoneticsRequest, PhoneticsResponse, StripTone, TlToPoj};
 
 fn run(method: Method) -> PhoneticsResponse {
     let req = PhoneticsRequest {
@@ -33,14 +33,6 @@ fn expect_strip_tone_output(resp: &PhoneticsResponse) -> (String, String) {
 #[test]
 fn tl_to_poj_empty_input() {
     let resp = run(Method::TlToPoj(TlToPoj {
-        input: String::new(),
-    }));
-    assert_eq!(expect_string_output(&resp), "");
-}
-
-#[test]
-fn poj_to_tl_empty_input() {
-    let resp = run(Method::PojToTl(PojToTl {
         input: String::new(),
     }));
     assert_eq!(expect_string_output(&resp), "");

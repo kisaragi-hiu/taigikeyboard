@@ -21,7 +21,6 @@ public  final class LexiconRequest extends
   public enum MethodCase
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     INSTALL(11),
-    SEARCH(12),
     SEARCH_WITH_SOURCES(13),
     SEARCH_BY_HANZI(14),
     IS_HANZI(17),
@@ -42,7 +41,6 @@ public  final class LexiconRequest extends
     public static MethodCase forNumber(int value) {
       switch (value) {
         case 11: return INSTALL;
-        case 12: return SEARCH;
         case 13: return SEARCH_WITH_SOURCES;
         case 14: return SEARCH_BY_HANZI;
         case 17: return IS_HANZI;
@@ -133,76 +131,6 @@ public  final class LexiconRequest extends
    */
   private void clearInstall() {
     if (methodCase_ == 11) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int SEARCH_FIELD_NUMBER = 12;
-  /**
-   * <pre>
-   * autocomplete entry
-   * </pre>
-   *
-   * <code>.taigi.engine.SearchRequest search = 12;</code>
-   */
-  @java.lang.Override
-  public boolean hasSearch() {
-    return methodCase_ == 12;
-  }
-  /**
-   * <pre>
-   * autocomplete entry
-   * </pre>
-   *
-   * <code>.taigi.engine.SearchRequest search = 12;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.SearchRequest getSearch() {
-    if (methodCase_ == 12) {
-       return (com.siansiansu.taigikeyboard.engine.proto.SearchRequest) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.SearchRequest.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * autocomplete entry
-   * </pre>
-   *
-   * <code>.taigi.engine.SearchRequest search = 12;</code>
-   */
-  private void setSearch(com.siansiansu.taigikeyboard.engine.proto.SearchRequest value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 12;
-  }
-  /**
-   * <pre>
-   * autocomplete entry
-   * </pre>
-   *
-   * <code>.taigi.engine.SearchRequest search = 12;</code>
-   */
-  private void mergeSearch(com.siansiansu.taigikeyboard.engine.proto.SearchRequest value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 12 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.SearchRequest.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.SearchRequest.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SearchRequest) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 12;
-  }
-  /**
-   * <pre>
-   * autocomplete entry
-   * </pre>
-   *
-   * <code>.taigi.engine.SearchRequest search = 12;</code>
-   */
-  private void clearSearch() {
-    if (methodCase_ == 12) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -671,78 +599,6 @@ public  final class LexiconRequest extends
 
     /**
      * <pre>
-     * autocomplete entry
-     * </pre>
-     *
-     * <code>.taigi.engine.SearchRequest search = 12;</code>
-     */
-    @java.lang.Override
-    public boolean hasSearch() {
-      return instance.hasSearch();
-    }
-    /**
-     * <pre>
-     * autocomplete entry
-     * </pre>
-     *
-     * <code>.taigi.engine.SearchRequest search = 12;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.SearchRequest getSearch() {
-      return instance.getSearch();
-    }
-    /**
-     * <pre>
-     * autocomplete entry
-     * </pre>
-     *
-     * <code>.taigi.engine.SearchRequest search = 12;</code>
-     */
-    public Builder setSearch(com.siansiansu.taigikeyboard.engine.proto.SearchRequest value) {
-      copyOnWrite();
-      instance.setSearch(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * autocomplete entry
-     * </pre>
-     *
-     * <code>.taigi.engine.SearchRequest search = 12;</code>
-     */
-    public Builder setSearch(
-        com.siansiansu.taigikeyboard.engine.proto.SearchRequest.Builder builderForValue) {
-      copyOnWrite();
-      instance.setSearch(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * autocomplete entry
-     * </pre>
-     *
-     * <code>.taigi.engine.SearchRequest search = 12;</code>
-     */
-    public Builder mergeSearch(com.siansiansu.taigikeyboard.engine.proto.SearchRequest value) {
-      copyOnWrite();
-      instance.mergeSearch(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * autocomplete entry
-     * </pre>
-     *
-     * <code>.taigi.engine.SearchRequest search = 12;</code>
-     */
-    public Builder clearSearch() {
-      copyOnWrite();
-      instance.clearSearch();
-      return this;
-    }
-
-    /**
-     * <pre>
      * Tab3 multi-source
      * </pre>
      *
@@ -1048,15 +904,14 @@ public  final class LexiconRequest extends
             "method_",
             "methodCase_",
             com.siansiansu.taigikeyboard.engine.proto.InstallRequest.class,
-            com.siansiansu.taigikeyboard.engine.proto.SearchRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest.class,
             com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0001\u0000\u000b\u0012\u0006\u0000\u0000\u0000\u000b<\u0000\f<\u0000" +
-              "\r<\u0000\u000e<\u0000\u0011<\u0000\u0012<\u0000";
+              "\u0000\u0005\u0001\u0000\u000b\u0012\u0005\u0000\u0000\u0000\u000b<\u0000\r<\u0000" +
+              "\u000e<\u0000\u0011<\u0000\u0012<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

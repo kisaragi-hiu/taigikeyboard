@@ -31,25 +31,6 @@ public interface LexiconRequestOrBuilder extends
 
   /**
    * <pre>
-   * autocomplete entry
-   * </pre>
-   *
-   * <code>.taigi.engine.SearchRequest search = 12;</code>
-   * @return Whether the search field is set.
-   */
-  boolean hasSearch();
-  /**
-   * <pre>
-   * autocomplete entry
-   * </pre>
-   *
-   * <code>.taigi.engine.SearchRequest search = 12;</code>
-   * @return The search.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.SearchRequest getSearch();
-
-  /**
-   * <pre>
    * Tab3 multi-source
    * </pre>
    *

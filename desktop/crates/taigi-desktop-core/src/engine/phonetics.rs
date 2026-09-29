@@ -6,7 +6,7 @@
 
 use protos::engine::{
     phonetics_request, phonetics_response, request, response, DeriveCustomQueryKey,
-    NfdPreprocessForLookup, PhoneticsRequest, PhoneticsResponse, PojToTl, StripTone, TlToPoj,
+    NfdPreprocessForLookup, PhoneticsRequest, PhoneticsResponse, StripTone, TlToPoj,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -29,16 +29,6 @@ pub fn derive_custom_query_key(input: &str, mode: InputMode) -> Option<CustomSea
     )?
     .into_iter()
     .next()
-}
-
-/// The TL spelling of a POJ reading, for the identity keys a restore writes.
-pub fn poj_to_tl(input: &str) -> Option<String> {
-    string_result(
-        phonetics_request::Method::PojToTl(PojToTl {
-            input: input.to_owned(),
-        }),
-        "pojToTl",
-    )
 }
 
 /// The POJ spelling of a TL reading, for rendering results while the user

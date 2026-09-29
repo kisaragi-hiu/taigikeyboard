@@ -12,7 +12,7 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Phonetics core (6 ops) ---
+   * --- Phonetics core (4 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
@@ -21,24 +21,13 @@ public interface PhoneticsRequestOrBuilder extends
   boolean hasStripTone();
   /**
    * <pre>
-   * --- Phonetics core (6 ops) ---
+   * --- Phonetics core (4 ops) ---
    * </pre>
    *
    * <code>.taigi.engine.StripTone strip_tone = 11;</code>
    * @return The stripTone.
    */
   com.siansiansu.taigikeyboard.engine.proto.StripTone getStripTone();
-
-  /**
-   * <code>.taigi.engine.PojToTl poj_to_tl = 12;</code>
-   * @return Whether the pojToTl field is set.
-   */
-  boolean hasPojToTl();
-  /**
-   * <code>.taigi.engine.PojToTl poj_to_tl = 12;</code>
-   * @return The pojToTl.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.PojToTl getPojToTl();
 
   /**
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
@@ -50,17 +39,6 @@ public interface PhoneticsRequestOrBuilder extends
    * @return The tlToPoj.
    */
   com.siansiansu.taigikeyboard.engine.proto.TlToPoj getTlToPoj();
-
-  /**
-   * <code>.taigi.engine.NormalizeInput normalize_input = 15;</code>
-   * @return Whether the normalizeInput field is set.
-   */
-  boolean hasNormalizeInput();
-  /**
-   * <code>.taigi.engine.NormalizeInput normalize_input = 15;</code>
-   * @return The normalizeInput.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.NormalizeInput getNormalizeInput();
 
   /**
    * <code>.taigi.engine.GetToneVariations get_tone_variations = 18;</code>
@@ -86,51 +64,18 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Derivation (4 ops) ---
+   * --- Derivation (1 op) ---
    * </pre>
    *
-   * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
-   * @return Whether the deriveNotone field is set.
-   */
-  boolean hasDeriveNotone();
-  /**
-   * <pre>
-   * --- Derivation (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.DeriveNotone derive_notone = 20;</code>
-   * @return The deriveNotone.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.DeriveNotone getDeriveNotone();
-
-  /**
-   * <code>.taigi.engine.DeriveAbbrev derive_abbrev = 21;</code>
-   * @return Whether the deriveAbbrev field is set.
-   */
-  boolean hasDeriveAbbrev();
-  /**
-   * <code>.taigi.engine.DeriveAbbrev derive_abbrev = 21;</code>
-   * @return The deriveAbbrev.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.DeriveAbbrev getDeriveAbbrev();
-
-  /**
-   * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
-   * @return Whether the deriveCustomSearchKeys field is set.
-   */
-  boolean hasDeriveCustomSearchKeys();
-  /**
-   * <code>.taigi.engine.DeriveCustomSearchKeys derive_custom_search_keys = 22;</code>
-   * @return The deriveCustomSearchKeys.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.DeriveCustomSearchKeys getDeriveCustomSearchKeys();
-
-  /**
    * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
    * @return Whether the deriveCustomQueryKey field is set.
    */
   boolean hasDeriveCustomQueryKey();
   /**
+   * <pre>
+   * --- Derivation (1 op) ---
+   * </pre>
+   *
    * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
    * @return The deriveCustomQueryKey.
    */

@@ -1,6 +1,6 @@
 //! Dispatch: route every `LexiconRequest.method` oneof variant to the
 //! per-method API — the read-path variants
-//! (Install/Search/SearchWithSources/SearchByHanzi), the
+//! (Install/SearchWithSources/SearchByHanzi), the
 //! IsHanzi predicate, and the v3.5.8
 //! DictionaryFilters variant.
 
@@ -8,7 +8,7 @@ use protos::engine::lexicon_request::Method;
 use protos::engine::lexicon_response::Result as LexResult;
 use protos::engine::{
     DictionaryFiltersRequest, InstallRequest, IsHanziRequest, LexiconResponse,
-    SearchByHanziRequest, SearchRequest, SearchWithSourcesRequest,
+    SearchByHanziRequest, SearchWithSourcesRequest,
 };
 
 use crate::api;
@@ -18,13 +18,6 @@ pub fn handle_install(req: InstallRequest) -> Result<LexiconResponse, LexiconErr
     let resp = api::install(req)?;
     Ok(LexiconResponse {
         result: Some(LexResult::InstallResult(resp)),
-    })
-}
-
-pub fn handle_search(req: SearchRequest) -> Result<LexiconResponse, LexiconError> {
-    let resp = api::search(req)?;
-    Ok(LexiconResponse {
-        result: Some(LexResult::SearchResult(resp)),
     })
 }
 
@@ -64,7 +57,6 @@ pub fn handle_dictionary_filters(
 pub fn handle(method: Method) -> Result<LexiconResponse, LexiconError> {
     match method {
         Method::Install(req) => handle_install(req),
-        Method::Search(req) => handle_search(req),
         Method::SearchWithSources(req) => handle_search_with_sources(req),
         Method::SearchByHanzi(req) => handle_search_by_hanzi(req),
         Method::IsHanzi(req) => handle_is_hanzi(req),

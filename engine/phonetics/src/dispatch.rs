@@ -5,7 +5,6 @@
 //!
 //! Helpers are split across submodules:
 //! - This file owns the dispatch + result-shape construction.
-//! - `derivation` owns CustomDictionaryDerivation port (notone / abbrev).
 //! - `normalization` owns the InputNormalizer port (NFD / combining-mark
 //!   mechanics).
 //! - `tps_adjust` owns the TPSAdjustmentBundle port (collapsed entry).
@@ -13,11 +12,8 @@
 //! - `api`, `syllable`, `tps`, `poj`, `tl`, `tables`, `case_adjust`
 //!   provide the foundational helpers reused here.
 
-use crate::api::{
-    poj_display_to_tl_display, tl_display_to_poj_display, to_tone_number, PhoneticsError,
-};
+use crate::api::{tl_display_to_poj_display, to_tone_number, PhoneticsError};
 use crate::custom_search;
-use crate::derivation;
 use crate::normalization;
 use crate::tone_variations;
 use crate::tps;
@@ -48,14 +44,8 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
             let (bare, tone) = crate::syllable::strip_tone_mark(&payload.input);
             PhonResult::StripToneResult(StripToneResult { bare, tone })
         }
-        Method::PojToTl(payload) => PhonResult::StringResult(StringResult {
-            output: poj_display_to_tl_display(&payload.input),
-        }),
         Method::TlToPoj(payload) => PhonResult::StringResult(StringResult {
             output: tl_display_to_poj_display(&payload.input),
-        }),
-        Method::NormalizeInput(payload) => PhonResult::StringResult(StringResult {
-            output: normalization::normalize_input(&payload.input),
         }),
         Method::GetToneVariations(_) => PhonResult::ToneVariationsResult(tone_variations::build()),
         Method::NfdPreprocessForLookup(payload) => PhonResult::StringResult(StringResult {
@@ -63,22 +53,6 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
         }),
 
         // --- Derivation ---
-        Method::DeriveNotone(payload) => PhonResult::StringResult(StringResult {
-            output: derivation::derive_notone(&payload.roman),
-        }),
-        // Legacy `abbrev` column (first letter per syllable) — the index /
-        // search-key face is `derive_abbrev` via `DeriveCustomSearchKeys`.
-        Method::DeriveAbbrev(payload) => PhonResult::StringResult(StringResult {
-            output: derivation::derive_abbrev_first_letter(&payload.roman),
-        }),
-        Method::DeriveCustomSearchKeys(payload) => {
-            PhonResult::CustomSearchKeysResult(CustomSearchKeysResult {
-                keys: custom_search::derive_custom_search_keys(&payload.roman)
-                    .into_iter()
-                    .map(to_proto_key)
-                    .collect(),
-            })
-        }
         Method::DeriveCustomQueryKey(payload) => {
             PhonResult::CustomSearchKeysResult(CustomSearchKeysResult {
                 keys: custom_search::derive_custom_query_key(&payload.input, &payload.input_mode)

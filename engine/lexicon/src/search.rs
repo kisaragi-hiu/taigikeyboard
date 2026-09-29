@@ -1,13 +1,10 @@
 //! Search orchestration.
 //!
-//! Pipeline:
-//! 1. **D-8 hard guard** — `input_type == Hanzi` short-circuits to `[]`
-//!    BEFORE any reader is touched. Pinned by INVARIANT_LEX_HANZI_GUARD
-//!    (Rust + iOS + Android per Codex Mod 1).
-//! 2. Build trie key via `key_normalizer`.
-//! 3. `prefix_index.lookup_prefix` returns insertion-ordered rowids
+//! Pipeline (romanization; hanji queries go through `search_by_hanzi`):
+//! 1. Build trie key via `key_normalizer`.
+//! 2. `prefix_index.lookup_prefix` returns insertion-ordered rowids
 //!    (D-12 parity correction toward Android).
-//! 4. Resolve each rowid through `dictionary_reader.record` + filter,
+//! 3. Resolve each rowid through `dictionary_reader.record` + filter,
 //!    take `limit`, return `LexiconRowOut`.
 //!
 //! TPS dialect er↔or recall: C-3a moved the runtime expansion into the
@@ -48,17 +45,7 @@ pub struct LexiconAssocOut {
     pub count: u32,
 }
 
-// Search input type; dispatch maps proto InputType onto this enum.
-#[derive(Debug, Clone, Copy)]
-pub enum SearchInputType {
-    RomanNoTone,
-    // Toned roman input; diacritic or digit tones both accepted.
-    RomanWithTone,
-    // Hanzi input; search() short-circuits to [].
-    Hanzi,
-}
-
-// Search input mode (romanization scheme); dispatch maps proto InputMode onto this enum.
+// Search input mode (romanization scheme); `api::proto_input_mode` maps proto InputMode onto it.
 #[derive(Debug, Clone, Copy)]
 pub enum SearchInputMode {
     Tl,
@@ -71,7 +58,6 @@ pub enum SearchInputMode {
 pub struct SearchParams {
     // Raw user input, before normalization.
     pub input: String,
-    pub input_type: SearchInputType,
     pub input_mode: SearchInputMode,
     pub limit: u32,
     // Enabled-source bitmask, including the variant + khiin control bits.
@@ -83,10 +69,6 @@ pub fn search(
     prefix_index: &PrefixIndex,
     dict: &DictionaryReader,
 ) -> Result<Vec<LexiconRowOut>, LexiconError> {
-    // D-8 hard guard.
-    if matches!(params.input_type, SearchInputType::Hanzi) {
-        return Ok(Vec::new());
-    }
     if params.limit == 0 {
         return Ok(Vec::new());
     }
@@ -136,16 +118,6 @@ pub fn search(
         params.enabled_sources_bitmask,
         params.limit,
     ))
-}
-
-pub fn search_with_sources(
-    params: &SearchParams,
-    prefix_index: &PrefixIndex,
-    dict: &DictionaryReader,
-) -> Result<Vec<LexiconRowOut>, LexiconError> {
-    // Tab3 multi-source — matches the romanization path; hanzi inputs are
-    // dispatched to search_by_hanzi instead.
-    search(params, prefix_index, dict)
 }
 
 // Tab3 hanzi lookup — scans the FST for `hanzi:`-prefixed keys.

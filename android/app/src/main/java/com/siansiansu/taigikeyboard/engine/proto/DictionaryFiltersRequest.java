@@ -8,7 +8,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * `DictionaryFiltersRequest` resolves the user's 12-toggle dictionary
- * preferences into the ready-to-send bitmasks consumed by `SearchRequest` /
+ * preferences into the ready-to-send bitmasks consumed by
  * `SearchWithSourcesRequest` / `SearchByHanziRequest` / `AssocLookupRequest`.
  *
  * Single Rust source of truth replaces verbatim-mirrored bit math previously
@@ -163,7 +163,7 @@ public  final class DictionaryFiltersRequest extends
   /**
    * <pre>
    * `DictionaryFiltersRequest` resolves the user's 12-toggle dictionary
-   * preferences into the ready-to-send bitmasks consumed by `SearchRequest` /
+   * preferences into the ready-to-send bitmasks consumed by
    * `SearchWithSourcesRequest` / `SearchByHanziRequest` / `AssocLookupRequest`.
    *
    * Single Rust source of truth replaces verbatim-mirrored bit math previously

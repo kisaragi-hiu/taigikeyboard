@@ -7,7 +7,7 @@
 //! production-artifact run is `composing/tests/candidate_dump.rs`.
 
 use lexicon::dictionary_reader::{DictionaryReader, KAUTIAN_BIT};
-use lexicon::search::{self, SearchInputMode, SearchInputType, SearchParams};
+use lexicon::search::{self, SearchInputMode, SearchParams};
 use lexicon::{fetch_abbrev_candidates, COVERAGE_KIND_ABBREV};
 use phonetics::InputMode;
 use ranking::{FrequencyData, FrequencyMap};
@@ -196,7 +196,6 @@ fn tab3_search_unions_the_phonetic_and_abbreviation_families() {
     let dict = open_dict("abbrev-tab3.dict.bin", &rows());
     let params = SearchParams {
         input: "ss".to_string(),
-        input_type: SearchInputType::RomanNoTone,
         input_mode: SearchInputMode::Tl,
         limit: 10,
         enabled_sources_bitmask: u32::MAX,

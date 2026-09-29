@@ -114,10 +114,10 @@ enum CandidateDisplayMode {
 // (`phonetics::case_transform::apply_nasal_marker_case`, §53); identity
 // keys already fold both glyphs to `nn`.
 message AppConfig {
-  reserved 6;
-  reserved "is_association_recording_enabled";
+  // Tag 1 was `tone_mode` (set by nobody, read by nobody; removed 2026-09-30).
+  reserved 1, 6;
+  reserved "tone_mode", "is_association_recording_enabled";
 
-  string tone_mode = 1;
   string input_mode = 2;
   bool oo_doubletap_enabled = 3;
   bool nn_doubletap_enabled = 4;

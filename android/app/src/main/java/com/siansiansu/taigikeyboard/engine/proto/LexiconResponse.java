@@ -21,7 +21,6 @@ public  final class LexiconResponse extends
   public enum ResultCase
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     INSTALL_RESULT(11),
-    SEARCH_RESULT(12),
     SEARCH_WITH_SOURCES_RESULT(13),
     SEARCH_BY_HANZI_RESULT(14),
     IS_HANZI_RESULT(17),
@@ -42,7 +41,6 @@ public  final class LexiconResponse extends
     public static ResultCase forNumber(int value) {
       switch (value) {
         case 11: return INSTALL_RESULT;
-        case 12: return SEARCH_RESULT;
         case 13: return SEARCH_WITH_SOURCES_RESULT;
         case 14: return SEARCH_BY_HANZI_RESULT;
         case 17: return IS_HANZI_RESULT;
@@ -113,56 +111,6 @@ public  final class LexiconResponse extends
    */
   private void clearInstallResult() {
     if (resultCase_ == 11) {
-      resultCase_ = 0;
-      result_ = null;
-    }
-  }
-
-  public static final int SEARCH_RESULT_FIELD_NUMBER = 12;
-  /**
-   * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-   */
-  @java.lang.Override
-  public boolean hasSearchResult() {
-    return resultCase_ == 12;
-  }
-  /**
-   * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.SearchResponse getSearchResult() {
-    if (resultCase_ == 12) {
-       return (com.siansiansu.taigikeyboard.engine.proto.SearchResponse) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.SearchResponse.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-   */
-  private void setSearchResult(com.siansiansu.taigikeyboard.engine.proto.SearchResponse value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 12;
-  }
-  /**
-   * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-   */
-  private void mergeSearchResult(com.siansiansu.taigikeyboard.engine.proto.SearchResponse value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 12 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.SearchResponse.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.SearchResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SearchResponse) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 12;
-  }
-  /**
-   * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-   */
-  private void clearSearchResult() {
-    if (resultCase_ == 12) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -526,54 +474,6 @@ public  final class LexiconResponse extends
     }
 
     /**
-     * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-     */
-    @java.lang.Override
-    public boolean hasSearchResult() {
-      return instance.hasSearchResult();
-    }
-    /**
-     * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.SearchResponse getSearchResult() {
-      return instance.getSearchResult();
-    }
-    /**
-     * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-     */
-    public Builder setSearchResult(com.siansiansu.taigikeyboard.engine.proto.SearchResponse value) {
-      copyOnWrite();
-      instance.setSearchResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-     */
-    public Builder setSearchResult(
-        com.siansiansu.taigikeyboard.engine.proto.SearchResponse.Builder builderForValue) {
-      copyOnWrite();
-      instance.setSearchResult(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-     */
-    public Builder mergeSearchResult(com.siansiansu.taigikeyboard.engine.proto.SearchResponse value) {
-      copyOnWrite();
-      instance.mergeSearchResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-     */
-    public Builder clearSearchResult() {
-      copyOnWrite();
-      instance.clearSearchResult();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.SearchWithSourcesResponse search_with_sources_result = 13;</code>
      */
     @java.lang.Override
@@ -784,15 +684,14 @@ public  final class LexiconResponse extends
             "result_",
             "resultCase_",
             com.siansiansu.taigikeyboard.engine.proto.InstallResponse.class,
-            com.siansiansu.taigikeyboard.engine.proto.SearchResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0001\u0000\u000b\u0012\u0006\u0000\u0000\u0000\u000b<\u0000\f<\u0000" +
-              "\r<\u0000\u000e<\u0000\u0011<\u0000\u0012<\u0000";
+              "\u0000\u0005\u0001\u0000\u000b\u0012\u0005\u0000\u0000\u0000\u000b<\u0000\r<\u0000" +
+              "\u000e<\u0000\u0011<\u0000\u0012<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

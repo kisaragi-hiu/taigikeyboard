@@ -236,8 +236,6 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var toneMode: String = String()
-
   public var inputMode: String = String()
 
   public var ooDoubletapEnabled: Bool = false
@@ -449,7 +447,7 @@ nonisolated extension Taigi_Engine_CandidateDisplayMode: SwiftProtobuf._ProtoNam
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}tone_mode\0\u{3}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0\u{b}is_association_recording_enabled\0\u{c}\u{6}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -457,7 +455,6 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.toneMode) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.inputMode) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.ooDoubletapEnabled) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.nnDoubletapEnabled) }()
@@ -473,9 +470,6 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.toneMode.isEmpty {
-      try visitor.visitSingularStringField(value: self.toneMode, fieldNumber: 1)
-    }
     if !self.inputMode.isEmpty {
       try visitor.visitSingularStringField(value: self.inputMode, fieldNumber: 2)
     }
@@ -507,7 +501,6 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
   }
 
   public static func ==(lhs: Taigi_Engine_AppConfig, rhs: Taigi_Engine_AppConfig) -> Bool {
-    if lhs.toneMode != rhs.toneMode {return false}
     if lhs.inputMode != rhs.inputMode {return false}
     if lhs.ooDoubletapEnabled != rhs.ooDoubletapEnabled {return false}
     if lhs.nnDoubletapEnabled != rhs.nnDoubletapEnabled {return false}

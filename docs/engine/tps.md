@@ -199,9 +199,6 @@ RustEngineBridge.tlDisplayToTPS("guá",  orMapsToER: false)   // "ㄍㄨㄚˋ"
 // Key-level adjust (positional ㄇ/ㆬ, palatalization ㄗ→ㄐ, syllabic nasal, ㆮ/ㆯ):
 let r = RustEngineBridge.tpsInputAdjust(incoming: "ㄇ", rawInput: "ㄅㄚ")
 // r.adjusted = "ㆬ", r.replaceLast = nil
-
-// Lookup-side normalization (any input form → TL numeric)
-RustEngineBridge.normalizeInput("ㄉㄧㄠˊ")          // "tiau5"
 ```
 
 Internally the iOS / Android `CharacterInputPipeline` calls `RustEngineBridge.tpsInputAdjust` once per keystroke from `ActionHandler+KeyActions.handleCharacterInput` (iOS) / `TextInputManager.handleTaigiInput()` (Android) — no platform-side phonetic logic remains.
@@ -451,7 +448,7 @@ C-3a moves the expansion into the build pipeline: every row whose `tps_num` cont
 |---|---|---|
 | User typing ㄜ | matches ㄜ-keyed rows (bridge default) | same |
 | User typing ㄛ for a TL `or` row | misses (runtime branch dead post-C-1) | hits via `tps_*_var` build-time emit |
-| `SearchRequest.tps_or_mapped_to_er` | runtime read | OBSOLETE — wire-compat keep, runtime ignored |
+| `SearchRequest.tps_or_mapped_to_er` | runtime read | removed with the `Search` op (2026-09-30) |
 | `or_maps_to_er` user setting | recall + rendering | rendering only |
 
 Data scan (`dictionary/output/dictionary.csv` audit 2026-05-25): 1107 rows carry ㄜ in `tps_num`, all sourced from `er` / `or` tokens in `tl_num` (839 er-only, 275 or-only, 0 mixed of distinct tokens within one row, 4 rows with two `er`/`or` tokens). The substitution is safe — no other TL vowel maps to ㄜ in the bridge tables.

@@ -7,6 +7,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
+ * The WRITE side — the full {tl, poj, tps} × {num, notone, abbrev} search-key
+ * bundle for a stored custom-dictionary roman — is derived in-process by
+ * `engine/userdata` (`phonetics::api::derive_custom_search_keys`); no wire op.
+ *
  * `DeriveCustomQueryKey` — READ side (v3.6.1 R3). Given the user's current raw
  * input + settings `input_mode`, returns the single family-native key tagged
  * with its primary form (num / notone). Effective family =
@@ -209,6 +213,10 @@ public  final class DeriveCustomQueryKey extends
 
   /**
    * <pre>
+   * The WRITE side — the full {tl, poj, tps} × {num, notone, abbrev} search-key
+   * bundle for a stored custom-dictionary roman — is derived in-process by
+   * `engine/userdata` (`phonetics::api::derive_custom_search_keys`); no wire op.
+   *
    * `DeriveCustomQueryKey` — READ side (v3.6.1 R3). Given the user's current raw
    * input + settings `input_mode`, returns the single family-native key tagged
    * with its primary form (num / notone). Effective family =

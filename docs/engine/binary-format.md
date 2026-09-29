@@ -302,7 +302,7 @@ Excludes `variant`, `khiin` from "all" — those are exclusion flags, not main s
 
 The per-record `kautian_subtag` u16 (dictionary.bin §1.1) and the user's
 subcollection-enable bits in `enabled_sources_bitmask` (the wire field on
-`SearchRequest` / Tab3 / continuous) share ONE 12-bit layout so the filter
+`SearchWithSourcesRequest` / `SearchByHanziRequest` / continuous) share ONE 12-bit layout so the filter
 test is a single AND:
 
 ```

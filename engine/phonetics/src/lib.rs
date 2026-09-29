@@ -32,7 +32,7 @@ pub use api::{
     contains_tps, is_nasal_marker, is_word_material, to_tone_marks, to_tone_number,
     toneless_reading_key, InputMode, PhoneticsError, System,
 };
-pub use derivation::{derive_abbrev, derive_abbrev_first_letter, poj_abbrev_from_tl};
+pub use derivation::{derive_abbrev, poj_abbrev_from_tl};
 pub use normalization::{
     has_tone_marks, is_combining_tone_mark, normalize_input, taigi_unicode_base_form,
 };

@@ -504,8 +504,9 @@ pub fn toneless_reading_key(roman: &str) -> String {
     crate::derivation::derive_notone(roman)
 }
 
-// In-process twins of the `DeriveCustomSearchKeys` / `DeriveCustomQueryKey`
-// ops, for the engine's own user-data stores (`userdata`).
+// In-process search-key derivation for the engine's own user-data stores
+// (`userdata`): the write-side bundle plus the read-side query key (the latter
+// also reachable through the `DeriveCustomQueryKey` wire op).
 pub use crate::custom_search::{
     derive_custom_query_key, derive_custom_search_keys, CustomSearchKey,
 };
