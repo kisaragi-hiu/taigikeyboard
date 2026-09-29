@@ -77,11 +77,11 @@ So `layout → symbol → POJ/TL tone`. TPS/MOE punctuation overrides symbols; s
 | Aspect | iOS | Android |
 |---|---|---|
 | Tone-variation source | **Engine** `GetToneVariations`, indexed live at long-press | **Static JSON** `taigi_{poj,tl}.json`, baked into `KeyData.popup` at layout load |
-| Engine cache used by UI? | Yes (`TaigiToneMaps` proxies it) | **No** — `PhoneticsBridge.toneVariations` exists but has no UI consumer (dead cache) |
+| Engine cache used by UI? | Yes (`TaigiToneMaps` proxies it) | **No** — the JSON is the only source |
 | Lookup chain | Runtime `layout → symbol → tone` | None at press time; pre-resolved into `KeyData.popup` |
 | Selection on commit | KeyboardKit `ActionsBuilder` | `KeyPopupManager.activeKeyData()` (motion hit-test) → `KeyTouchCoordinator` |
 
-> ⚠ **Known duplication risk.** The Android `taigi_tl.json` content is a manual static duplicate of the engine's `build_mode_map` output (verified identical: `a → á à â ǎ ā a̍ a̋`, `n` ends in `ⁿ`, `ng → ńg …`, 18 keys). Changing the engine tone tables updates iOS automatically but leaves Android's JSON stale, with no `// CROSS-PLATFORM INVARIANT` comment linking the two. The dead `PhoneticsBridge.toneVariations` cache suggests an intended-but-incomplete migration to engine-sourced Android popups. Treat the JSON as a mirror that must be hand-synced until that migration lands; see `.claude/rules/cross-platform-alignment.md` §3a.
+> ⚠ **Known duplication risk.** The Android `taigi_tl.json` content is a manual static duplicate of the engine's `build_mode_map` output (verified identical: `a → á à â ǎ ā a̍ a̋`, `n` ends in `ⁿ`, `ng → ńg …`, 18 keys). Changing the engine tone tables updates iOS automatically but leaves Android's JSON stale, with no `// CROSS-PLATFORM INVARIANT` comment linking the two. Treat the JSON as a hand-synced mirror of `build_mode_map`; see `.claude/rules/cross-platform-alignment.md` §3a.
 
 ---
 

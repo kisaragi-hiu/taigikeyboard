@@ -455,35 +455,3 @@ pub fn high_contrast_colors() -> Option<HighContrastColors> {
 pub fn high_contrast_colors() -> Option<HighContrastColors> {
     None
 }
-
-/// Paints a top-level window's title bar dark or light
-/// (`DWMWA_USE_IMMERSIVE_DARK_MODE`): winit leaves the caption light whatever
-/// the client area draws, and a light caption over a dark form is the one
-/// thing that makes a window look foreign on Windows 11. Documented for
-/// Windows 11 (build 22000+); Windows 10 20H1+ honours the same value in
-/// practice — a compatibility target for the run-book, not a guarantee: a
-/// refusal degrades to the light caption and a debug log. `hwnd` is the raw
-/// handle (`raw_window_handle::Win32WindowHandle::hwnd`).
-#[cfg(windows)]
-pub fn set_dark_title_bar(hwnd: isize, is_dark: bool) {
-    use windows::core::BOOL;
-    use windows::Win32::Foundation::HWND;
-    use windows::Win32::Graphics::Dwm::{DwmSetWindowAttribute, DWMWA_USE_IMMERSIVE_DARK_MODE};
-    let value = BOOL(i32::from(is_dark));
-    // SAFETY: a BOOL of the size passed, on a window handle winit owns for
-    // the life of the app.
-    let result = unsafe {
-        DwmSetWindowAttribute(
-            HWND(hwnd as *mut _),
-            DWMWA_USE_IMMERSIVE_DARK_MODE,
-            &value as *const BOOL as *const _,
-            std::mem::size_of::<BOOL>() as u32,
-        )
-    };
-    if let Err(error) = result {
-        log::debug!("platform.dark_title_bar_unsupported error={error}");
-    }
-}
-
-#[cfg(not(windows))]
-pub fn set_dark_title_bar(_hwnd: isize, _is_dark: bool) {}

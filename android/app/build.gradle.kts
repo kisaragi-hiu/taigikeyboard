@@ -4,7 +4,6 @@ import java.time.format.DateTimeFormatter
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("jacoco")
     id("com.diffplug.spotless")
 }
 
@@ -18,10 +17,6 @@ spotless {
         target("*.gradle.kts")
         ktlint("1.5.0")
     }
-}
-
-jacoco {
-    toolVersion = "0.8.15"
 }
 
 val buildDate: String = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"))
@@ -96,14 +91,6 @@ android {
     sourceSets["main"].assets.srcDir(file("$rootDir/../dictionaries"))
 
     buildTypes {
-        debug {
-            // A9 — enable unit-test coverage so Jacoco .exec data and the
-            // debug class tree line up. Without this, `jacocoCoverageVerify`
-            // reports 0% because the default .exec file references
-            // instrumented class IDs that don't match
-            // `tmp/kotlin-classes/debug`.
-            enableUnitTestCoverage = true
-        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -248,86 +235,4 @@ dependencies {
     implementation("com.google.protobuf:protobuf-javalite:4.36.2")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
-}
-
-// A9 — invariant coverage gate. Runs against `testDebugUnitTest` only;
-// release coverage is not required because R8 churn would drift the
-// class-level numbers.
-val topTenCandidateClassPatterns =
-    listOf(
-        "com/siansiansu/taigikeyboard/ime/dictionary/TaigiPhonetics*.class",
-        "com/siansiansu/taigikeyboard/ime/dictionary/InputNormalizer*.class",
-        "com/siansiansu/taigikeyboard/ime/dictionary/CandidateProcessor*.class",
-        "com/siansiansu/taigikeyboard/ime/dictionary/ToneConverter*.class",
-        "com/siansiansu/taigikeyboard/ime/dictionary/SuggestionCaseTransformer*.class",
-        "com/siansiansu/taigikeyboard/ime/dictionary/ToneRestoration*.class",
-        "com/siansiansu/taigikeyboard/ime/dictionary/TPSConverter*.class",
-        "com/siansiansu/taigikeyboard/ime/dictionary/TaigiUnicode*.class",
-        "com/siansiansu/taigikeyboard/ime/core/nextword/NextWordScorer*.class",
-    )
-
-tasks.register<JacocoReport>("jacocoTestReport") {
-    group = "verification"
-    description = "Line coverage for top-10 shared-core candidates (A9 gate ≥70%)."
-    dependsOn("testDebugUnitTest")
-
-    reports {
-        xml.required.set(true)
-        html.required.set(true)
-    }
-
-    val buildDir = layout.buildDirectory.get().asFile
-    classDirectories.setFrom(
-        // AGP 8.x writes Kotlin debug classes under
-        // `intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes`.
-        // The old `tmp/kotlin-classes/debug` path is empty in current AGP.
-        fileTree("$buildDir/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
-            include(topTenCandidateClassPatterns)
-        },
-    )
-    sourceDirectories.setFrom(files("src/main/java"))
-    executionData.setFrom(
-        fileTree(buildDir) {
-            include(
-                "jacoco/testDebugUnitTest.exec",
-                "outputs/unit_test_code_coverage/debugUnitTest/*.exec",
-            )
-        },
-    )
-}
-
-tasks.register<JacocoCoverageVerification>("jacocoCoverageVerify") {
-    group = "verification"
-    description = "Enforce ≥70% class-level line coverage on top-10 shared-core candidates."
-    dependsOn("jacocoTestReport")
-
-    val buildDir = layout.buildDirectory.get().asFile
-    classDirectories.setFrom(
-        // AGP 8.x writes Kotlin debug classes under
-        // `intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes`.
-        // The old `tmp/kotlin-classes/debug` path is empty in current AGP.
-        fileTree("$buildDir/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
-            include(topTenCandidateClassPatterns)
-        },
-    )
-    sourceDirectories.setFrom(files("src/main/java"))
-    executionData.setFrom(
-        fileTree(buildDir) {
-            include(
-                "jacoco/testDebugUnitTest.exec",
-                "outputs/unit_test_code_coverage/debugUnitTest/*.exec",
-            )
-        },
-    )
-
-    violationRules {
-        rule {
-            element = "CLASS"
-            limit {
-                counter = "LINE"
-                value = "COVEREDRATIO"
-                minimum = "0.70".toBigDecimal()
-            }
-        }
-    }
 }

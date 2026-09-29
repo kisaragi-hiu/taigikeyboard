@@ -22,35 +22,6 @@ public extension RustEngineBridge {
         case capsLocked = 3
     }
 
-    // MARK: - Per-char helpers (single grapheme cluster)
-
-    /// Uppercase a single char/grapheme using mode-aware tone tables. For
-    /// multi-character inputs only the first letter is uppercased.
-    /// Replaces `ToneUtilities.uppercaseToneLetter`.
-    static func uppercaseToneChar(_ input: String, mode: InputMode, isNasalMarkerUppercaseEnabled: Bool) -> String {
-        var payload = Taigi_Engine_UppercaseToneChar()
-        payload.input = input
-        return caseStringDispatch(method: .uppercaseToneChar(payload), op: "uppercaseToneChar", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: input)
-    }
-
-    /// Uppercase ALL characters in `input` using mode-aware tone tables.
-    /// Used by Caps Lock paths. Replaces a separate Android API
-    /// (`ToneUtilities.fullUppercaseToneLetter`) and the iOS pattern of
-    /// passing a multi-char string into `uppercaseToneLetter`.
-    static func fullUppercaseToneString(_ input: String, mode: InputMode, isNasalMarkerUppercaseEnabled: Bool) -> String {
-        var payload = Taigi_Engine_FullUppercaseToneString()
-        payload.input = input
-        return caseStringDispatch(method: .fullUppercaseToneString(payload), op: "fullUppercaseToneString", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: input)
-    }
-
-    /// Lowercase a single char/grapheme using mode-aware tone tables.
-    /// Replaces `ToneUtilities.lowercaseToneLetter`.
-    static func lowercaseToneChar(_ input: String, mode: InputMode, isNasalMarkerUppercaseEnabled: Bool) -> String {
-        var payload = Taigi_Engine_LowercaseToneChar()
-        payload.input = input
-        return caseStringDispatch(method: .lowercaseToneChar(payload), op: "lowercaseToneChar", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: input)
-    }
-
     // MARK: - Per-string compound transforms
 
     /// Apply `letterCase` to `text`. Replaces
