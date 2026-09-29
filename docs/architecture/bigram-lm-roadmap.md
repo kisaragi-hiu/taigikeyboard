@@ -1,11 +1,11 @@
 # Bigram Language Model — Roadmap
 
-> **Type**: Planning (plan only — no implementation yet)
+> **Type**: Planning + implementation record
 > **Keywords**: `bigram`, `language model`, `next-word`, `association.bin`, `taigi-corpus`, `lattice`, `walker`, `prediction`
-> **Status**: PLAN ONLY (USER 2026-09-28: "I am not implementing this for now, write the plan only"). No round open, no branch, no release scope implied.
+> **Status**: **CLOSED for now** (USER 2026-09-30, after the Android dogfood). P0–P5 merged (#267, #268, #270, #271, #272) plus the punctuation-context fix the dogfood found (#273); P6 not opened (no segmentation error observed), P7 not adopted, D7 cut. The remaining brainstorm items (§2 techniques 3, 5, 6, 9, 10, 11; the `$` opener; Open decision 1) are unscheduled. No round open, no release scope implied.
 > **Session memory**: project memory `project_bigram_lm.md` (Claude auto-memory)
 > **Continues**: `docs/reports/2026-09-24-mobile-smart-suggestions-brainstorm.md` §6 (bigram addendum, 2026-09-28); techniques numbered **1–11** below are that report's §2 numbering
-> **Last updated**: 2026-09-28 (P1 spike report linked; P1b merged)
+> **Last updated**: 2026-09-30 (P4a/P4b/P5 merged, #273 punctuation fix, line closed)
 
 ---
 
