@@ -31,11 +31,12 @@ pub const INPUT_MODE: SettingsKey<InputMode> =
     SettingsKey::new("inputMode", ENGINE_DEFAULTS.input_mode);
 pub const IS_TRANSLATE_SWAPPED: SettingsKey<bool> =
     SettingsKey::new("isTranslateSwapped", ENGINE_DEFAULTS.is_translate_swapped);
-pub const IS_OUTPUT_BOTH_SCRIPTS: SettingsKey<bool> =
-    SettingsKey::new("outputBothScripts", ENGINE_DEFAULTS.is_output_both_scripts);
+// RETIRED 2026-09-30: `outputBothScripts` (Annotate in Brackets). No desktop
+// UI ever wrote it; mobile keeps its own key and UI. A hand-edited `true` in an
+// existing `settings.json` is now inert, so the spelling stays reserved.
 /// What a candidate cell shows. Same key and raw strings on every platform
-/// (`SharedSettings.swift` `candidateDisplayMode`). The two toggles above
-/// keep their own storage while this is `romanOnly`; the derived pair lives
+/// (`SharedSettings.swift` `candidateDisplayMode`). The swap toggle above
+/// keeps its own storage while this is `romanOnly`; the derived value lives
 /// in `SettingsDocument::engine_settings`.
 pub const CANDIDATE_DISPLAY_MODE: SettingsKey<CandidateDisplayMode> = SettingsKey::new(
     "candidateDisplayMode",
@@ -53,10 +54,10 @@ pub const IS_NASAL_MARKER_UPPERCASE_ENABLED: SettingsKey<bool> = SettingsKey::ne
     "nasalMarkerUppercaseEnabled",
     ENGINE_DEFAULTS.is_nasal_marker_uppercase_enabled,
 );
-pub const IS_FREQUENCY_RECORDING_ENABLED: SettingsKey<bool> = SettingsKey::new(
-    "frequencyRecordingEnabled",
-    ENGINE_DEFAULTS.is_frequency_recording_enabled,
-);
+// RETIRED 2026-09-30: `frequencyRecordingEnabled`. No platform has a UI for it
+// and the engine counts every pick now (`RecordUsage` tag 4 reserved). A
+// hand-edited `false` in an existing `settings.json` is inert; spelling reserved.
+//
 // RETIRED 2026-09-25: `associationRecordingEnabled`. The engine dropped
 // `AppConfig.is_association_recording_enabled` — association recording is
 // always on. No desktop UI ever wrote the key, but a hand-edited `false` may
@@ -300,7 +301,6 @@ mod tests {
         assert_eq!(IS_KHIIN_ENABLED.name, "khiin");
         assert_eq!(IS_KAUTIAN_ENABLED.name, "moeDictEnabled");
         assert_eq!(IS_TRANSLATE_SWAPPED.name, "isTranslateSwapped");
-        assert_eq!(IS_OUTPUT_BOTH_SCRIPTS.name, "outputBothScripts");
         assert_eq!(CANDIDATE_DISPLAY_MODE.name, "candidateDisplayMode");
         assert_eq!(
             CANDIDATE_DISPLAY_MODE.default,

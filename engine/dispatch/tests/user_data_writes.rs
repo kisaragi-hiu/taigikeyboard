@@ -128,7 +128,7 @@ fn the_engine_writes_what_the_platforms_wrote() {
             .learn_phrase("做進出口", "tsò tsìn-tshut-kháu");
         stores.learned_phrases.all_rows(); // flush the queued write
     }
-    open_user_data(&paths);
+    open_user_data(directory.path());
     let reader = UserDataStores::at(paths.clone(), JournalMode::Delete);
     reader.open_blocking();
 
@@ -138,7 +138,6 @@ fn the_engine_writes_what_the_platforms_wrote() {
             display_text: "台灣".to_owned(),
             canonical_tl: "tâi-uân".to_owned(),
             hanji: Some("台灣".to_owned()),
-            frequency_recording_disabled: false,
         })
         .payload,
         Some(response::Payload::UserData(_))
@@ -148,13 +147,11 @@ fn the_engine_writes_what_the_platforms_wrote() {
         .rows_for_words(&["台灣".to_owned()])
         .is_some_and(|rows| rows.len() == 1 && rows[0].tl == "tâi-uân")));
 
-    // With the desktop's recording setting off, no count — but a learned
-    // phrase picked whole is still touched (learning data, always on).
+    // A learned phrase picked whole is touched as well as counted (§50).
     record_usage(RecordUsage {
         display_text: "做進出口".to_owned(),
         canonical_tl: "tsò tsìn-tshut-kháu".to_owned(),
         hanji: Some("做進出口".to_owned()),
-        frequency_recording_disabled: true,
     });
     assert!(eventually(|| reader
         .learned_phrases
@@ -162,7 +159,7 @@ fn the_engine_writes_what_the_platforms_wrote() {
         .is_some_and(|rows| rows
             .iter()
             .any(|row| row.learn_count == 2))));
-    // A later count landing proves the queue drained past the uncounted one.
+    // A later count landing proves the queue drained past the touch.
     record_usage(RecordUsage {
         display_text: "台北".to_owned(),
         canonical_tl: "tâi-pak".to_owned(),
@@ -172,10 +169,13 @@ fn the_engine_writes_what_the_platforms_wrote() {
         .frequency
         .rows_for_words(&["台北".to_owned()])
         .is_some_and(|rows| rows.len() == 1)));
-    assert!(reader
-        .frequency
-        .rows_for_words(&["做進出口".to_owned()])
-        .is_some_and(|rows| rows.is_empty()));
+    assert!(
+        reader
+            .frequency
+            .rows_for_words(&["做進出口".to_owned()])
+            .is_some_and(|rows| rows.len() == 1),
+        "the touched phrase was counted too: every pick counts"
+    );
 
     // A final commit of hanji picks is learned into the engine's store (§50).
     composing(composing_request::Method::Start(Start {

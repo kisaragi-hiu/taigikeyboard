@@ -105,14 +105,6 @@ extension RustEngineBridge {
         return input
     }
 
-    /// `appConfig` plus the field the decide table reads: the swap flag, which
-    /// suppresses recording for raw-romanization commits (`decide.rs:86`).
-    private static func nextwordConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
-        var config = appConfig(settings)
-        config.isTranslateSwapped = settings.isTranslateSwapped
-        return config
-    }
-
     private static func decide(
         _ method: Taigi_Engine_NextWordRequest.OneOf_Method,
         op: String,
@@ -125,7 +117,7 @@ extension RustEngineBridge {
             payload: .nextword(request),
             op: op,
             generation: generation,
-            config: nextwordConfig(settings),
+            config: swappedAppConfig(settings),
         ) else {
             return
         }

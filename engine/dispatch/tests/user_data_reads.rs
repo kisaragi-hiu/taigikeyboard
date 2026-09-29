@@ -190,7 +190,7 @@ fn engine_reads_answer_what_the_same_rows_answer() {
     drop(stores);
 
     // The engine owns the data: the requests carry no rows.
-    open_user_data(&paths);
+    open_user_data(directory.path());
 
     assert_eq!(fetch(FetchAtPos::default()), direct_candidates);
     // 食 → 飯 / pn̄g, the one bigram the store holds, is boosted; every

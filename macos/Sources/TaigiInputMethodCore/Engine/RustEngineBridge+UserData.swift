@@ -34,7 +34,6 @@ extension RustEngineBridge {
         if let hanji = usage.hanji, !hanji.isEmpty {
             request.hanji = hanji
         }
-        request.frequencyRecordingDisabled = !usage.isFrequencyRecordingEnabled
         _ = userDataResult(.recordUsage(request), op: "userDataRecordUsage")
     }
 

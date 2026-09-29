@@ -171,9 +171,9 @@ enum RustEngineBridge {
         config.ooDoubletapEnabled = true
         config.nnDoubletapEnabled = true
         config.platformID = .macos
-        // On the base config, not only `continuousAppConfig`: the next-word
-        // filter reads it too (`engine/nextword/src/filter.rs`), and both
-        // derived configs start from this one.
+        // On the base config, not only `swappedAppConfig`: the next-word
+        // filter reads it too (`engine/nextword/src/filter.rs`), and the
+        // derived config starts from this one.
         config.candidateDisplayMode = switch settings.candidateDisplayMode {
         case .sideBySide: .sideBySide
         case .combined: .combined
@@ -188,17 +188,18 @@ enum RustEngineBridge {
         return config
     }
 
-    /// `appConfig` plus the two word-boundary-spacing flags the engine consults
-    /// while rendering a continuous composition's nailed prefix
-    /// (`docs/engine/continuous-input-ranking.md` §10.2). Every composing op
-    /// that renders the composition sends it — under Model B that is every
-    /// mutation, not only the commits — so a nail and the keystroke after it
-    /// agree on the prefix (`composingAppend`). Only `Reset`, which renders
-    /// nothing, carries no config at all.
-    static func continuousAppConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
+    /// `appConfig` plus the swap flag: the engine consults it while rendering
+    /// a continuous composition's nailed prefix
+    /// (`docs/engine/continuous-input-ranking.md` §10.2) and in the next-word
+    /// decide table, where it suppresses recording for raw-romanization
+    /// commits (`decide.rs:86`). Every composing op that renders the
+    /// composition sends it — under Model B that is every mutation, not only
+    /// the commits — so a nail and the keystroke after it agree on the prefix
+    /// (`composingAppend`); only `Reset`, which renders nothing, carries no
+    /// config at all. Every next-word request sends it too.
+    static func swappedAppConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
         var config = appConfig(settings)
         config.isTranslateSwapped = settings.isTranslateSwapped
-        config.outputBothScripts = settings.isOutputBothScripts
         return config
     }
 }

@@ -35,8 +35,8 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
         XCTAssertEqual(RustEngineBridge.appConfig(sideBySide).candidateDisplayMode, .sideBySide)
         XCTAssertEqual(RustEngineBridge.appConfig(romanOnly).candidateDisplayMode, .romanOnly)
         XCTAssertEqual(RustEngineBridge.appConfig(combined).candidateDisplayMode, .combined)
-        XCTAssertEqual(RustEngineBridge.continuousAppConfig(romanOnly).candidateDisplayMode, .romanOnly)
-        XCTAssertEqual(RustEngineBridge.continuousAppConfig(combined).candidateDisplayMode, .combined)
+        XCTAssertEqual(RustEngineBridge.swappedAppConfig(romanOnly).candidateDisplayMode, .romanOnly)
+        XCTAssertEqual(RustEngineBridge.swappedAppConfig(combined).candidateDisplayMode, .combined)
         XCTAssertNotEqual(RustEngineBridge.appConfig(.defaults).candidateDisplayMode, .unspecified)
     }
 }

@@ -65,16 +65,4 @@ public interface RecordUsageOrBuilder extends
    */
   com.google.protobuf.ByteString
       getHanjiBytes();
-
-  /**
-   * <pre>
-   * The desktop's frequency-recording setting, OFF: no count is kept, the
-   * learned-phrase touch still is (it is learning data, always on — §50).
-   * Negative so an un-wired build records, as the phones always do.
-   * </pre>
-   *
-   * <code>bool frequency_recording_disabled = 4;</code>
-   * @return The frequencyRecordingDisabled.
-   */
-  boolean getFrequencyRecordingDisabled();
 }

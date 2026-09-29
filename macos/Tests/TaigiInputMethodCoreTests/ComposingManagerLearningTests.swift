@@ -56,24 +56,6 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
     }
 
-    func testCommitCandidate_withRecordingOff_tellsTheEngineNotToCount() throws {
-        let manager = try makeManager(
-            settingsProvider: StubEngineSettingsProvider(frequencyRecording: false),
-        )
-        let executor = RecordingEffectExecutor()
-        let candidate = try composeAndTakeWholeBufferCandidate(manager, executing: executor)
-
-        _ = manager.commitCandidate(candidate, executing: executor)
-
-        XCTAssertEqual(
-            usage.recorded,
-            [expectedUsage(of: candidate, frequencyRecording: false)],
-            "the setting gates the count, not the boost — an off switch that still counted "
-                + "would keep changing the ranking of everything typed while it was off; the "
-                + "pick is still reported so a learned phrase taken whole is touched",
-        )
-    }
-
     // MARK: - Next word
 
     func testTwoCommitsInARow_reportBothUnderTheirIdentity() throws {
@@ -264,14 +246,13 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
     }
 
-    /// What committing `candidate` whole reports: the identity pair, its Hanji
-    /// for the learned-phrase touch, and the recording setting.
-    private func expectedUsage(of candidate: ContinuousCandidate, frequencyRecording: Bool = true) -> Usage {
+    /// What committing `candidate` whole reports: the identity pair and its
+    /// Hanji for the learned-phrase touch.
+    private func expectedUsage(of candidate: ContinuousCandidate) -> Usage {
         Usage(
             displayText: candidate.displayText,
             canonicalTl: candidate.canonicalTl,
             hanji: candidate.hanji,
-            isFrequencyRecordingEnabled: frequencyRecording,
         )
     }
 

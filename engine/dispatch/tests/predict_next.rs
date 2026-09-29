@@ -46,7 +46,7 @@ fn learned_rows_open() {
         }
         stores.association.all_rows(); // flush the queued writes
         drop(stores);
-        common::open_user_data(&paths);
+        common::open_user_data(directory.path());
         directory
     });
 }

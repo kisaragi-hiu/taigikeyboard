@@ -51,14 +51,6 @@ enum CandidateDocumentText {
             return ResolvedCommit(text: candidate.roman, wroteRomanization: true)
         }
 
-        if settings.isOutputBothScripts {
-            // Annotate in Brackets writes the pair, so the romanization IS in the document
-            // whichever half leads.
-            let text = settings.isTranslateSwapped
-                ? "\(hanji) (\(candidate.roman))"
-                : "\(candidate.roman) (\(hanji))"
-            return ResolvedCommit(text: text, wroteRomanization: true)
-        }
         return settings.isTranslateSwapped
             ? ResolvedCommit(text: hanji, wroteRomanization: false)
             : ResolvedCommit(text: candidate.roman, wroteRomanization: true)
@@ -68,9 +60,7 @@ enum CandidateDocumentText {
     /// commits, so mixed script (Han characters and romanization mixed in one
     /// sentence) costs one key per word and the mode never moves. Read off
     /// the same settings the cell was built from, so Space writes exactly the
-    /// script the user can see offered beside the highlighted one;
-    /// `isOutputBothScripts` is not read — it says how to show a candidate
-    /// carrying BOTH scripts, and this asks for the other one BY ITSELF.
+    /// script the user can see offered beside the highlighted one.
     ///
     /// Verbatim, hyphens included: 298 dictionary entries write the neutral-tone `--`
     /// into the hanji field (`交--人`, MOE orthography, pinned by §21/S8) and
@@ -82,8 +72,8 @@ enum CandidateDocumentText {
     /// name) and under a display with no Hanji on screen (Romanization Only): the
     /// romanization again would make Space a slower Return, and Hanji the
     /// user never saw would be worse.
-    /// The alternate is one script by itself, never the bracketed pair, so
-    /// the verdict it carries is simply which script that is.
+    /// The alternate is one script, so the verdict it carries is simply which
+    /// script that is.
     static func resolvedAlternate(
         for candidate: ContinuousCandidate,
         settings: EngineSettings,

@@ -302,9 +302,8 @@ final class ComposingManager {
     /// is the §34 literal, which takes no slot key.
     ///
     /// Alongside `documentText` rather than derived from it: a cell shows one
-    /// script or splits the two into columns while the document string may
-    /// bracket them into one, so they share the settings snapshot, not the
-    /// formatting. ONE snapshot for the whole list — it is a few dozen
+    /// script or splits the two into columns while the document gets one
+    /// script, so they share the settings snapshot, not the formatting. ONE snapshot for the whole list — it is a few dozen
     /// defaults reads, and a bar is rebuilt per keystroke — and one for BOTH
     /// answers, so the cells and the key row can never be resolved against
     /// two different instants.
@@ -397,7 +396,7 @@ final class ComposingManager {
 
         let outcome = CandidateCommitOutcome(transition)
         apply(transition, executing: executor)
-        recordUsage(of: candidate, after: outcome, settings: settings)
+        recordUsage(of: candidate, after: outcome)
         // The ENGINE's text with OUR verdict: the engine decides what actually
         // reached the document, this branch decided which script that is.
         return (outcome, Self.committedText(of: transition).map {
@@ -428,21 +427,15 @@ final class ComposingManager {
     /// candidate up by (`CLAUDE.md` Core Principle #7) — recording under the
     /// document rendering instead would key the row on a string that changes
     /// with the Hanji/romanization settings.
-    private func recordUsage(
-        of candidate: ContinuousCandidate,
-        after outcome: CandidateCommitOutcome,
-        settings: EngineSettings,
-    ) {
+    private func recordUsage(of candidate: ContinuousCandidate, after outcome: CandidateCommitOutcome) {
         switch outcome {
         case .nailed, .finalized:
-            // The setting gates the count only; the engine still touches a
-            // learned phrase picked whole (§50 touch-on-use — learning is
-            // always on).
+            // The engine counts the pick and touches a learned phrase picked
+            // whole (§50 touch-on-use).
             usageRecorder.record(Usage(
                 displayText: candidate.displayText,
                 canonicalTl: candidate.canonicalTl,
                 hanji: candidate.hanji,
-                isFrequencyRecordingEnabled: settings.isFrequencyRecordingEnabled,
             ))
         case .ignored, .unavailable:
             break

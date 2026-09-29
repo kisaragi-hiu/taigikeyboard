@@ -68,8 +68,8 @@ impl CandidateDisplayMode {
     }
 
     /// Effective swap for a stored flag. `Combined` leads with — and commits —
-    /// the hanji: forcing the pair on is a compatibility projection of that,
-    /// so every reader of the pair (auto-space, the nextword gates) behaves
+    /// the hanji: forcing the swap on is a compatibility projection of that,
+    /// so every reader of the swap (auto-space, the nextword gates) behaves
     /// as today's hanji-first mode (invariants §42); full-width punctuation
     /// reads `effective_full_width_punctuation` instead.
     /// `RomanOnly` has no hanji to lead with.
@@ -80,17 +80,10 @@ impl CandidateDisplayMode {
         matches!(self, Self::Combined) || (stored && self.shows_hanji())
     }
 
-    /// Effective Annotate in Brackets for a stored flag — off only where there is no hanji
-    /// to bracket; `Combined` keeps it (`Hanji (romanization)`).
-    pub fn effective_output_both_scripts(self, stored: bool) -> bool {
-        stored && self.shows_hanji()
-    }
-
     /// Whether a typed punctuation key becomes full-width (`，` for `,`) for a
-    /// stored swap flag — the stored flag masked like Annotate in Brackets, NOT the
+    /// stored swap flag — the stored flag masked by the display mode, NOT the
     /// candidate projection above, which `Combined` forces on while the swap
-    /// shortcut still picks the width. Mirrored on macOS / iOS / Android
-    /// beside `effective_output_both_scripts`.
+    /// shortcut still picks the width. Mirrored on macOS / iOS / Android.
     pub const fn effective_full_width_punctuation(self, stored: bool) -> bool {
         stored && self.shows_hanji()
     }
@@ -152,14 +145,13 @@ impl SettingChoice for CandidateDisplayMode {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EngineSettings {
     pub input_mode: InputMode,
-    /// Word-boundary spacing inputs for the engine's `continuous_word_space`
-    /// predicate (`docs/engine/continuous-input-ranking.md` §10.2). Both are
-    /// the EFFECTIVE values: the stored toggles AND-ed with `candidate_display_mode
-    /// != RomanOnly`, and the swap forced true under `Combined`
-    /// (`SettingsDocument::engine_settings`), never the raw document bools —
-    /// the raw ones stay untouched so leaving either mode restores them.
+    /// Word-boundary spacing input for the engine's `continuous_word_space`
+    /// predicate (`docs/engine/continuous-input-ranking.md` §10.2). The
+    /// EFFECTIVE value: the stored toggle AND-ed with `candidate_display_mode
+    /// != RomanOnly`, and forced true under `Combined`
+    /// (`SettingsDocument::engine_settings`), never the raw document bool —
+    /// the raw one stays untouched so leaving either mode restores it.
     pub is_translate_swapped: bool,
-    pub is_output_both_scripts: bool,
     /// `CandidateDisplayMode::effective_full_width_punctuation(stored)` —
     /// read by the TSF session's `document_punctuation` only.
     pub is_full_width_punctuation: bool,
@@ -186,9 +178,6 @@ pub struct EngineSettings {
     /// (`macos/.../EngineSettings.swift`, `ios/.../SharedSettings.swift`) and
     /// `nasalMarkerUppercaseEnabled` (`android/.../PrefHelper.kt`), all ON.
     pub is_nasal_marker_uppercase_enabled: bool,
-    /// Read on the write path only; the boost always applies to whatever was
-    /// learned. CROSS-PLATFORM INVARIANT — `SharedSettings.swift:48` (ON).
-    pub is_frequency_recording_enabled: bool,
     /// Gates the custom-dictionary lookup itself: off means the engine reads
     /// no custom rows (`FetchAtPos.custom_dictionary_disabled`). CROSS-PLATFORM INVARIANT —
     /// `SharedSettings.swift:51` (ON).
@@ -212,13 +201,11 @@ impl EngineSettings {
         Self {
             input_mode: InputMode::Tl,
             is_translate_swapped: MODE.effective_translate_swapped(STORED_SWAP),
-            is_output_both_scripts: false,
             is_full_width_punctuation: MODE.effective_full_width_punctuation(STORED_SWAP),
             candidate_display_mode: MODE,
             is_literal_roman_candidate_enabled: true,
             is_hyphenless_roman_enabled: false,
             is_nasal_marker_uppercase_enabled: true,
-            is_frequency_recording_enabled: true,
             is_custom_dict_enabled: true,
             dictionary_sources: DictionarySourceToggles::DEFAULT,
         }

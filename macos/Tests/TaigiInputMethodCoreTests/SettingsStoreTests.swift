@@ -84,8 +84,6 @@ final class SettingsStoreTests: XCTestCase {
     func testCurrent_readsEveryStoredValue() {
         userDefaults.set(InputMode.poj.rawValue, forKey: SettingsStore.Keys.inputMode.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isTranslateSwapped.name)
-        userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
-        userDefaults.set(false, forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
         // §34/S22 — the default moved ON on 2026-09-03, so a stored `false`
         // has to keep winning: someone who turned Show Typed Text First off stays off.
         userDefaults.set(false, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
@@ -97,13 +95,11 @@ final class SettingsStoreTests: XCTestCase {
             EngineSettings(
                 inputMode: .poj,
                 isTranslateSwapped: true,
-                isOutputBothScripts: true,
                 isFullWidthPunctuation: true,
                 candidateDisplayMode: .sideBySide,
                 isLiteralRomanCandidateEnabled: false,
                 isHyphenlessRomanEnabled: true,
                 isNasalMarkerUppercaseEnabled: false,
-                isFrequencyRecordingEnabled: false,
                 isCustomDictEnabled: EngineSettings.defaults.isCustomDictEnabled,
                 dictionarySources: EngineSettings.defaults.dictionarySources,
             ),
@@ -113,61 +109,46 @@ final class SettingsStoreTests: XCTestCase {
     // MARK: - Candidate display mode
 
     /// The one platform-side rule of the romanization-only display: the
-    /// engine and every gate read a swap pair that is `(false, false)` under
-    /// it — there is no Hanji to lead with or to bracket — while what the user
-    /// STORED stays put, so leaving the mode gives their swap straight back.
-    func testCurrent_underRomanOnly_derivesTheSwapPairFalse_andLeavesTheStoredValuesAlone() {
+    /// engine and every gate read the swap as `false` under it — there is no
+    /// Hanji to lead with — while what the user STORED stays put, so leaving
+    /// the mode gives their swap straight back.
+    func testCurrent_underRomanOnly_derivesTheSwapFalse_andLeavesTheStoredValueAlone() {
         let store = makeStore()
         store.storedIsTranslateSwapped = true
-        store.storedIsOutputBothScripts = true
 
         store.candidateDisplayMode = .romanOnly
 
         XCTAssertEqual(store.current.candidateDisplayMode, .romanOnly)
         XCTAssertFalse(store.current.isTranslateSwapped)
-        XCTAssertFalse(store.current.isOutputBothScripts)
         XCTAssertTrue(store.storedIsTranslateSwapped, "the stored swap must survive the mode")
-        XCTAssertTrue(store.storedIsOutputBothScripts, "the stored bracket setting must survive the mode")
         XCTAssertEqual(userDefaults.object(forKey: SettingsStore.Keys.isTranslateSwapped.name) as? Bool, true)
-        XCTAssertEqual(userDefaults.object(forKey: SettingsStore.Keys.isOutputBothScripts.name) as? Bool, true)
 
         store.candidateDisplayMode = .sideBySide
 
         XCTAssertTrue(store.current.isTranslateSwapped, "side by side must read the stored swap again")
-        XCTAssertTrue(store.current.isOutputBothScripts)
     }
 
     /// The one platform-side rule of the combined display: the swap reads
     /// `true` whatever is stored — the Hanji cell comes first and its commit
-    /// writes the Hanji — while the bracket setting is read as stored, so
-    /// Annotate in Brackets still commits `Hanji (romanization)`. The stored swap survives the
-    /// mode, so leaving it gives the user their own swap straight back.
-    func testCurrent_underCombined_forcesTheSwapOn_readsTheBracketAsStored_andLeavesTheStoredValuesAlone() {
+    /// writes the Hanji. The stored swap survives the mode, so leaving it
+    /// gives the user their own swap straight back.
+    func testCurrent_underCombined_forcesTheSwapOn_andLeavesTheStoredValueAlone() {
         let store = makeStore()
         store.storedIsTranslateSwapped = false
-        store.storedIsOutputBothScripts = false
 
         store.candidateDisplayMode = .combined
 
         XCTAssertEqual(store.current.candidateDisplayMode, .combined)
         XCTAssertTrue(store.current.isTranslateSwapped, "combined must lead with — and commit — the Hanji")
-        XCTAssertFalse(store.current.isOutputBothScripts, "combined must not invent a bracket setting")
         XCTAssertFalse(store.storedIsTranslateSwapped, "the stored swap must survive the mode")
-
-        store.storedIsOutputBothScripts = true
-
-        XCTAssertTrue(store.current.isTranslateSwapped)
-        XCTAssertTrue(store.current.isOutputBothScripts, "括號標註 stays in force under combined")
 
         store.candidateDisplayMode = .romanOnly
 
         XCTAssertFalse(store.current.isTranslateSwapped, "romanization-only is unchanged by the third mode")
-        XCTAssertFalse(store.current.isOutputBothScripts)
 
         store.candidateDisplayMode = .sideBySide
 
         XCTAssertFalse(store.current.isTranslateSwapped, "side by side must read the stored swap again")
-        XCTAssertTrue(store.current.isOutputBothScripts)
     }
 
     func testCandidateDisplayMode_withNothingStored_isSideBySide() {
@@ -245,11 +226,11 @@ final class SettingsStoreTests: XCTestCase {
     /// reach the engine without the store being told.
     func testCurrent_isReadLive_forAValueWrittenBehindTheStore() {
         let store = makeStore()
-        XCTAssertFalse(store.current.isOutputBothScripts)
+        XCTAssertFalse(store.current.isHyphenlessRomanEnabled)
 
-        userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
+        userDefaults.set(true, forKey: SettingsStore.Keys.isHyphenlessRomanEnabled.name)
 
-        XCTAssertTrue(store.current.isOutputBothScripts)
+        XCTAssertTrue(store.current.isHyphenlessRomanEnabled)
     }
 
     func testInputMode_writesTheRawValueOthersCanRead() {
@@ -276,7 +257,6 @@ final class SettingsStoreTests: XCTestCase {
     func testKeys_matchTheIOSSpellings() {
         XCTAssertEqual(SettingsStore.Keys.inputMode.name, "inputMode")
         XCTAssertEqual(SettingsStore.Keys.isTranslateSwapped.name, "isTranslateSwapped")
-        XCTAssertEqual(SettingsStore.Keys.isOutputBothScripts.name, "outputBothScripts")
         XCTAssertEqual(SettingsStore.Keys.displayLanguage.name, "displayLanguage")
     }
 
@@ -685,8 +665,6 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(CandidateDisplayMode.allCases.filter { !$0.showsHanji }, [.romanOnly])
         XCTAssertTrue(CandidateDisplayMode.combined.effectiveTranslateSwapped(stored: false))
         XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveTranslateSwapped(stored: true))
-        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveOutputBothScripts(stored: true))
-        XCTAssertTrue(CandidateDisplayMode.combined.effectiveOutputBothScripts(stored: true))
         // Punctuation width follows the STORED swap under Hanji–Romanization Pairing / Hanji with Romanization, never under Romanization Only.
         XCTAssertFalse(CandidateDisplayMode.combined.effectiveFullWidthPunctuation(stored: false))
         XCTAssertTrue(CandidateDisplayMode.combined.effectiveFullWidthPunctuation(stored: true))

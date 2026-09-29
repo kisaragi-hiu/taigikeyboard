@@ -211,50 +211,6 @@ public  final class RecordUsage extends
     bitField0_ |= 0x00000001;
   }
 
-  public static final int FREQUENCY_RECORDING_DISABLED_FIELD_NUMBER = 4;
-  private boolean frequencyRecordingDisabled_;
-  /**
-   * <pre>
-   * The desktop's frequency-recording setting, OFF: no count is kept, the
-   * learned-phrase touch still is (it is learning data, always on — §50).
-   * Negative so an un-wired build records, as the phones always do.
-   * </pre>
-   *
-   * <code>bool frequency_recording_disabled = 4;</code>
-   * @return The frequencyRecordingDisabled.
-   */
-  @java.lang.Override
-  public boolean getFrequencyRecordingDisabled() {
-    return frequencyRecordingDisabled_;
-  }
-  /**
-   * <pre>
-   * The desktop's frequency-recording setting, OFF: no count is kept, the
-   * learned-phrase touch still is (it is learning data, always on — §50).
-   * Negative so an un-wired build records, as the phones always do.
-   * </pre>
-   *
-   * <code>bool frequency_recording_disabled = 4;</code>
-   * @param value The frequencyRecordingDisabled to set.
-   */
-  private void setFrequencyRecordingDisabled(boolean value) {
-
-    frequencyRecordingDisabled_ = value;
-  }
-  /**
-   * <pre>
-   * The desktop's frequency-recording setting, OFF: no count is kept, the
-   * learned-phrase touch still is (it is learning data, always on — §50).
-   * Negative so an un-wired build records, as the phones always do.
-   * </pre>
-   *
-   * <code>bool frequency_recording_disabled = 4;</code>
-   */
-  private void clearFrequencyRecordingDisabled() {
-
-    frequencyRecordingDisabled_ = false;
-  }
-
   public static com.siansiansu.taigikeyboard.engine.proto.RecordUsage parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -549,52 +505,6 @@ public  final class RecordUsage extends
       return this;
     }
 
-    /**
-     * <pre>
-     * The desktop's frequency-recording setting, OFF: no count is kept, the
-     * learned-phrase touch still is (it is learning data, always on — §50).
-     * Negative so an un-wired build records, as the phones always do.
-     * </pre>
-     *
-     * <code>bool frequency_recording_disabled = 4;</code>
-     * @return The frequencyRecordingDisabled.
-     */
-    @java.lang.Override
-    public boolean getFrequencyRecordingDisabled() {
-      return instance.getFrequencyRecordingDisabled();
-    }
-    /**
-     * <pre>
-     * The desktop's frequency-recording setting, OFF: no count is kept, the
-     * learned-phrase touch still is (it is learning data, always on — §50).
-     * Negative so an un-wired build records, as the phones always do.
-     * </pre>
-     *
-     * <code>bool frequency_recording_disabled = 4;</code>
-     * @param value The frequencyRecordingDisabled to set.
-     * @return This builder for chaining.
-     */
-    public Builder setFrequencyRecordingDisabled(boolean value) {
-      copyOnWrite();
-      instance.setFrequencyRecordingDisabled(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * The desktop's frequency-recording setting, OFF: no count is kept, the
-     * learned-phrase touch still is (it is learning data, always on — §50).
-     * Negative so an un-wired build records, as the phones always do.
-     * </pre>
-     *
-     * <code>bool frequency_recording_disabled = 4;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearFrequencyRecordingDisabled() {
-      copyOnWrite();
-      instance.clearFrequencyRecordingDisabled();
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.RecordUsage)
   }
   @java.lang.Override
@@ -615,11 +525,10 @@ public  final class RecordUsage extends
             "displayText_",
             "canonicalTl_",
             "hanji_",
-            "frequencyRecordingDisabled_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0001\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u1208\u0000\u0004\u0007";
+              "\u0000\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u1208\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -331,7 +331,7 @@ impl ComposingManager {
             wrote_romanization: resolved.wrote_romanization,
         });
         self.apply(Some(transition), executor);
-        self.record_usage(candidate, outcome, &settings);
+        self.record_usage(candidate, outcome);
         (outcome, committed)
     }
 
@@ -353,26 +353,19 @@ impl ComposingManager {
     /// effect-backed outcome: `Ignored` can follow a composition the engine
     /// reset out from under the commit. Identity = `(display text, canonical
     /// TL)` (Core Principle #7), never the document rendering.
-    fn record_usage(
-        &self,
-        candidate: &ContinuousCandidate,
-        outcome: CandidateCommitOutcome,
-        settings: &EngineSettings,
-    ) {
+    fn record_usage(&self, candidate: &ContinuousCandidate, outcome: CandidateCommitOutcome) {
         if !matches!(
             outcome,
             CandidateCommitOutcome::Nailed | CandidateCommitOutcome::Finalized
         ) {
             return;
         }
-        // The engine counts it (unless the setting is off) and, for a Hanji
-        // pick, keeps a learned phrase taken whole ahead of the eviction line
-        // (§50 touch-on-use).
+        // The engine counts it and, for a Hanji pick, keeps a learned phrase
+        // taken whole ahead of the eviction line (§50 touch-on-use).
         self.usage.record(&Usage {
             display_text: candidate.display_text.clone(),
             canonical_tl: candidate.canonical_tl.clone(),
             hanji: candidate.hanji.clone(),
-            frequency_recording_enabled: settings.is_frequency_recording_enabled,
         });
     }
 
