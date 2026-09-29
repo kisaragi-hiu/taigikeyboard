@@ -15,6 +15,13 @@ pub(crate) const DECAY_HALF_LIFE_HOURS: f64 = 168.0;
 /// Additive bonus ensuring user entries outrank dict entries.
 pub(crate) const LEARNING_BONUS: f64 = 300.0;
 
+/// Ceiling on a prediction's summed dictionary contribution. Below the
+/// lowest possible user score (`1 × USER_WEIGHT × LOW_USAGE_DECAY_FLOOR +
+/// LEARNING_BONUS` = 315), so every learned prediction outranks every
+/// bundled-only one however large the corpus count (§8). Bundled rows arrive
+/// count-desc and the filter sort is stable, so capped ties keep corpus order.
+pub(crate) const DICT_SCORE_CAP: f64 = 250.0;
+
 /// Minimum decay retained for frequently-used entries (count >= threshold).
 pub(crate) const HIGH_USAGE_DECAY_FLOOR: f64 = 0.95;
 
@@ -33,6 +40,12 @@ pub(crate) const LN_2: f64 = 0.693;
 /// Dictionary-layer score: raw count × `DICT_WEIGHT`.
 pub(crate) fn score_dict(count: i64) -> f64 {
     count as f64 * DICT_WEIGHT
+}
+
+/// A merged prediction's rank score: its dictionary contribution capped at
+/// `DICT_SCORE_CAP`, plus its user contribution uncapped.
+pub(crate) fn combined_score(dict_score: f64, user_score: f64) -> f64 {
+    dict_score.min(DICT_SCORE_CAP) + user_score
 }
 
 /// Exponential time decay: `decay = exp(-ageHours / halfLifeHours * ln(2))`.
@@ -81,6 +94,23 @@ mod tests {
         let user = calculate_user_score(1, now, now);
         let dict = score_dict(100);
         assert!(user > dict, "user={} dict={}", user, dict);
+    }
+
+    // The cap sits below the weakest user score the scorer can produce.
+    #[test]
+    fn dict_cap_below_weakest_user_score() {
+        let now = 1_000_000_000_i64;
+        let very_old = now - (DECAY_HALF_LIFE_HOURS * 3_600_000.0 * 365.0) as i64;
+        let weakest_user = calculate_user_score(1, very_old, now);
+        assert!(combined_score(score_dict(1_000_000), 0.0) < weakest_user);
+    }
+
+    #[test]
+    fn combined_score_caps_dict_only() {
+        assert_eq!(combined_score(249.0, 0.0), 249.0);
+        assert_eq!(combined_score(250.0, 0.0), DICT_SCORE_CAP);
+        assert_eq!(combined_score(2137.0, 0.0), DICT_SCORE_CAP);
+        assert_eq!(combined_score(2137.0, 400.0), DICT_SCORE_CAP + 400.0);
     }
 
     #[test]

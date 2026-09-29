@@ -7,9 +7,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * One next-word query: engine/dispatch looks up the bundled bigrams for the
- * last character of `word` (source mask from `toggles`, 2 x limit rows),
- * follows them with the rows its own `user_association.db` holds after
+ * One next-word query: engine/dispatch looks up the bundled bigrams for
+ * `word` — its word key `word&#92;u{1}roman` first, the last character of `word`
+ * when that key yields no row under the source mask or `roman` is empty
+ * (source mask from `toggles`, 2 x limit rows; behavioral-invariants §24
+ * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF) — follows them with the rows its own `user_association.db` holds after
  * `word` / `roman` (best-evidence-first, never reordered), and runs
  * FilterPredictions. An empty `word` filters nothing. A bundled-lookup
  * failure (lexicon not installed) drops only the dict rows.
@@ -216,8 +218,8 @@ public  final class PredictNext extends
   private java.lang.String roman_;
   /**
    * <pre>
-   * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24).
+   * The committed word's canonical TL — the bundled word-key reading and the
+   * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -229,8 +231,8 @@ public  final class PredictNext extends
   }
   /**
    * <pre>
-   * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24).
+   * The committed word's canonical TL — the bundled word-key reading and the
+   * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -243,8 +245,8 @@ public  final class PredictNext extends
   }
   /**
    * <pre>
-   * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24).
+   * The committed word's canonical TL — the bundled word-key reading and the
+   * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -258,8 +260,8 @@ public  final class PredictNext extends
   }
   /**
    * <pre>
-   * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24).
+   * The committed word's canonical TL — the bundled word-key reading and the
+   * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -270,8 +272,8 @@ public  final class PredictNext extends
   }
   /**
    * <pre>
-   * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24).
+   * The committed word's canonical TL — the bundled word-key reading and the
+   * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -369,9 +371,11 @@ public  final class PredictNext extends
 
   /**
    * <pre>
-   * One next-word query: engine/dispatch looks up the bundled bigrams for the
-   * last character of `word` (source mask from `toggles`, 2 x limit rows),
-   * follows them with the rows its own `user_association.db` holds after
+   * One next-word query: engine/dispatch looks up the bundled bigrams for
+   * `word` — its word key `word&#92;u{1}roman` first, the last character of `word`
+   * when that key yields no row under the source mask or `roman` is empty
+   * (source mask from `toggles`, 2 x limit rows; behavioral-invariants §24
+   * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF) — follows them with the rows its own `user_association.db` holds after
    * `word` / `roman` (best-evidence-first, never reordered), and runs
    * FilterPredictions. An empty `word` filters nothing. A bundled-lookup
    * failure (lexicon not installed) drops only the dict rows.
@@ -584,8 +588,8 @@ public  final class PredictNext extends
 
     /**
      * <pre>
-     * The committed word's canonical TL — the `prev_tl` tier key of the user
-     * rows' order (§24).
+     * The committed word's canonical TL — the bundled word-key reading and the
+     * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
      * </pre>
      *
      * <code>string roman = 7;</code>
@@ -597,8 +601,8 @@ public  final class PredictNext extends
     }
     /**
      * <pre>
-     * The committed word's canonical TL — the `prev_tl` tier key of the user
-     * rows' order (§24).
+     * The committed word's canonical TL — the bundled word-key reading and the
+     * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
      * </pre>
      *
      * <code>string roman = 7;</code>
@@ -611,8 +615,8 @@ public  final class PredictNext extends
     }
     /**
      * <pre>
-     * The committed word's canonical TL — the `prev_tl` tier key of the user
-     * rows' order (§24).
+     * The committed word's canonical TL — the bundled word-key reading and the
+     * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
      * </pre>
      *
      * <code>string roman = 7;</code>
@@ -627,8 +631,8 @@ public  final class PredictNext extends
     }
     /**
      * <pre>
-     * The committed word's canonical TL — the `prev_tl` tier key of the user
-     * rows' order (§24).
+     * The committed word's canonical TL — the bundled word-key reading and the
+     * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
      * </pre>
      *
      * <code>string roman = 7;</code>
@@ -641,8 +645,8 @@ public  final class PredictNext extends
     }
     /**
      * <pre>
-     * The committed word's canonical TL — the `prev_tl` tier key of the user
-     * rows' order (§24).
+     * The committed word's canonical TL — the bundled word-key reading and the
+     * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
      * </pre>
      *
      * <code>string roman = 7;</code>

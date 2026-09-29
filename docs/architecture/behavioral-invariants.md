@@ -188,19 +188,22 @@ Live candidate ranking is the Continuous `FetchAtPos` path: lexicographic sort k
 
 ---
 
-## 8. Next-word weighting — user > dict
+## 8. Next-word weighting — user > dict, always
 
-**Invariant**: `score_dict(count)` = `count * 1.0`. `calculate_user_score(count, last_used_ms, now_ms)` = `count * 50.0 * max(decay_floor, decay) + 300.0`. The `LEARNING_BONUS = 300.0` guarantees any user entry outranks any dict entry of equivalent count.
+**Invariant**: `score_dict(count)` = `count * 1.0`. `calculate_user_score(count, last_used_ms, now_ms)` = `count * 50.0 * max(decay_floor, decay) + 300.0`. A merged prediction ranks by `combined_score(dict, user)` = `min(dict, DICT_SCORE_CAP) + user`, where `dict` / `user` are the summed dictionary / user contributions after the `(hanzi, tl)` merge and the reading-variant fold (§24). `DICT_SCORE_CAP = 250.0` sits below the lowest user score the scorer can produce (`1 × 50 × 0.30 + 300` = 315), so **every prediction with user evidence outranks every bundled-only prediction**, whatever the corpus count. Bundled rows arrive count-desc and the score sort is stable, so capped bundled ties keep their corpus order. Before 2026-09-29 the guarantee held only at equal count; `association.bin` v2 word keys carry unbounded corpus counts (bigram-lm-roadmap D1, Open decision 5).
 
 **Why**: when the user has selected a word, that signal must dominate cold-start dictionary ranking. Breaking this invariant makes the learning system feel dead.
 
-**Scope**: `engine/nextword/src/scorer.rs` (canonical, post-v3.5.5 swap).
+**Scope**: `engine/nextword/src/scorer.rs` (constants, `combined_score`) + `engine/nextword/src/filter.rs` (`MergedRow` keeps the two contributions apart until shaping).
 
-**Test labels** (in `engine/nextword/src/scorer.rs` `tests`):
+**Test labels** (in `engine/nextword/src/scorer.rs` / `filter.rs` `tests`):
 - `score_dict_count_zero_is_zero`
 - `score_dict_scales_linearly`
 - `fresh_user_score_includes_learning_bonus`
 - `user_outranks_dict_at_equal_count`
+- `dict_cap_below_weakest_user_score`
+- `combined_score_caps_dict_only`
+- `learned_prediction_outranks_any_bundled_prediction`
 
 ---
 
@@ -568,7 +571,7 @@ Truth table, one spelling per platform:
 
 **1. Storage identity — `(prev_word, prev_tl, next_word, next_tl)`.** Schema **v6**: the UNIQUE key carries `prev_tl`, so Core Principle #7 (`(Hanji, canonical TL)` pair = word identity) binds the bigram's **previous** side as well as its next. 重/tîng → 複 and 重/tāng → 複 are two observations of two different morphemes, not one row. Under the v5 key `(prev_word, next_word, next_tl)` the second write overwrote the first's `prev_tl` and summed their counts, so the stored romanization answered for a reading it was not learned under — visible to the user in the association browser and frozen into `.taigi` backups.
 
-**2. Recall scope — `prev_word` (Hanji) ALONE.** `prev_tl` is a **ranking signal, not a hard filter**. A stored row whose non-empty `prev_tl` differs from the query roman is STILL returned (it was silently dropped pre-v3.6.1). That recovers associations learned under the other reading of a polyphonic Hanji, and associations from a different commit path or app version — most importantly pre-v3.6.1 continuous-input commits stored a raw `prev_tl` (`taigi`) where a normal commit stored canonical TL (`tâi-gí`) for the same word, and the old `prev_tl = ? OR prev_tl = ''` hard filter made those vanish. Hanji-only also matches the bundled `association.bin`, which keys prev on Hanji bytes alone (`engine/lexicon/src/association_reader.rs`).
+**2. Recall scope — `prev_word` (Hanji) ALONE.** `prev_tl` is a **ranking signal, not a hard filter**. A stored row whose non-empty `prev_tl` differs from the query roman is STILL returned (it was silently dropped pre-v3.6.1). That recovers associations learned under the other reading of a polyphonic Hanji, and associations from a different commit path or app version — most importantly pre-v3.6.1 continuous-input commits stored a raw `prev_tl` (`taigi`) where a normal commit stored canonical TL (`tâi-gí`) for the same word, and the old `prev_tl = ? OR prev_tl = ''` hard filter made those vanish. The bundled `association.bin` is keyed differently — word key `(Hanji, TL)` first, character key as backoff (`INVARIANT_NEXTWORD_WORD_KEY_BACKOFF` below) — because its word keys hold corpus pairs, not the user's learned rows.
 
 **3. Prediction identity — `(next_word, next_tl)`, at most one user row each.** Because recall is deliberately wider than storage identity, a query pulls back several rows predicting the same word under different previous readings. `engine/nextword/src/filter.rs` merges by `(hanzi, tl)` and **adds** scores, and `calculate_user_score` contributes a fixed `LEARNING_BONUS` per row — so summing them would hand one predicted word several bonuses purely because its context word is polyphonic, moving the conflation the v6 key removed from the row to the score. **When user evidence exists, each predicted `(next_word, next_tl)` receives exactly one user-row contribution.** Dictionary rows still add on top of it: a learned word outranking the same word from the dictionary is the design.
 
@@ -577,11 +580,20 @@ Truth table, one spelling per platform:
 - **One index** — `(prev_word, prev_tl)` serves the recall query's `WHERE` from its left prefix and its tier ordering from the second column.
 - **Existing rows are grandfathered** — the v5→v6 rebuild preserves every row (widening a UNIQUE key cannot conflict, since the old key is a strict subset of the new). A row merged under the old key keeps its last-writer `prev_tl` and its summed count; a later commit under the other reading starts a fresh row. There is no way to recover which observations belonged to which reading, so nothing is split or deleted. A v2 stamp is the exception — dropped rather than migrated, as both phones did; any other pre-v6 table that carries the row columns is rebuilt with its rows (including an iOS pre-v3 table, which iOS used to drop — NAMED DIVERGENCE, user-data-engine-roadmap U7), and one without them is dropped.
 
+### `INVARIANT_NEXTWORD_WORD_KEY_BACKOFF`
+
+The bundled `association.bin` lookup (`engine/lexicon/src/search.rs::assoc_lookup`, reached from `engine/dispatch/src/predict.rs` with `AssocLookupRequest.previous_word` / `.previous_tl` = `PredictNext.word` / `.roman`) tries the committed word's **word key** `hanji\u{1}tl` (`lexicon::association_reader::word_key`, byte-exact — no normalisation) and backs off to the **character key** (next section) only when the word key yields no row under the enabled sources. An empty `roman` (backspace, hanji-only commit) goes straight to the character key. The backoff is word → character, one direction, never a merge: a word-key hit is not padded with character-key rows. This is the n-gram model's own lower-order backoff (bigram-lm-roadmap D4), not an alternate path for the same data.
+
+- **Filter before cut** — `AssociationReader::lookup` applies the source mask while reading and stops after `limit` survivors, so a key whose top entries come from disabled sources still yields its enabled ones; a word key counts as absent only when **no** entry passes (`lexicon/tests/parity.rs::assoc_lookup_filters_before_limit`). Before 2026-09-29 the reader cut first and filtered after, which also starved character keys under partial source toggles.
+- **Reading forms** — `roman` is canonical display TL on the candidate-commit paths (POJ converted in `nextword/src/decide.rs`); a raw continuous tail, a TPS commit or a legacy slice may carry another form, which simply misses the word key and backs off. Learned rows are unaffected either way (§24 recall scope above).
+
+**Tests**: engine `dispatch/tests/predict_next.rs` (production lexicon) — `known_reading_predicts_from_word_key` (食/tsia̍h → 酒 first; character key 食 → 飯 first), `unknown_reading_backs_off_to_character_key`, `word_key_emptied_by_source_filter_backs_off` (䆀/bái, taigitv only → 球), `word_key_hit_is_not_padded_from_character_key` (中/tìng → exactly 阮, 伊, 眾人).
+
 ### `INVARIANT_NEXTWORD_LOOKUP_KEY_LAST_GRAPHEME`
 
-The bundled `association.bin` lookup keys on the committed word's **last user-perceived character, whole** — and so does the backspace re-predict. A supplementary-plane Hanji (𣍐 U+2334D, a UTF-16 surrogate pair; 557 dictionary words carry one before their last character) is one key. iOS gets this from Swift `String.last`; Android's Kotlin `String.last()` returned one UTF-16 unit — the low surrogate alone — so after 𣍐 Android showed no bundled predictions (parity correction 2026-09-25, toward iOS).
+The bundled `association.bin` **character-key** lookup (the word-key backoff above, and every empty-`roman` query) keys on the committed word's **last user-perceived character, whole** — and so does the backspace re-predict. A supplementary-plane Hanji (𣍐 U+2334D, a UTF-16 surrogate pair; 557 dictionary words carry one before their last character) is one key. iOS gets this from Swift `String.last`; Android's Kotlin `String.last()` returned one UTF-16 unit — the low surrogate alone — so after 𣍐 Android showed no bundled predictions (parity correction 2026-09-25, toward iOS).
 
-**Sites**: the prediction key is engine-side since R3 (2026-09-25) — `engine/dispatch/src/predict.rs` takes the last Unicode scalar of `PredictNext.word`, which is the whole Hanji for every `association.bin` key (single-scalar Hanji). The backspace re-predict key stays platform-side: iOS `ActionHandler+KeyActions.swift::handleBackspaceForNextWord` (`String.last`), Android `lastGrapheme` (`ime/text/keyboard/TextInputKeyHandler.kt`, ICU `BreakIterator`) in `NextWordController.handleBackspaceForNextWord`.
+**Sites**: the prediction key is engine-side since R3 (2026-09-25) — `engine/lexicon/src/search.rs::assoc_lookup` takes the last Unicode scalar of `PredictNext.word`, which is the whole Hanji for every `association.bin` key (single-scalar Hanji). The backspace re-predict key stays platform-side: iOS `ActionHandler+KeyActions.swift::handleBackspaceForNextWord` (`String.last`), Android `lastGrapheme` (`ime/text/keyboard/TextInputKeyHandler.kt`, ICU `BreakIterator`) in `NextWordController.handleBackspaceForNextWord`.
 
 **Tests**: engine `dispatch/tests/predict_next.rs::supplementary_plane_hanji_is_one_lookup_key` (production lexicon, 袂𣍐 → 使), Android `TextInputKeyHandlerTest` `INVARIANT nextword lookup key keeps a supplementary Hanji whole` (backspace key).
 

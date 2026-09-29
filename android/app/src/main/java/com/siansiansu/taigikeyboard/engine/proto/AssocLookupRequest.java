@@ -27,10 +27,16 @@ public  final class AssocLookupRequest extends
     AssocLookupRequestOrBuilder {
   private AssocLookupRequest() {
     previousWord_ = "";
+    previousTl_ = "";
   }
   public static final int PREVIOUS_WORD_FIELD_NUMBER = 1;
   private java.lang.String previousWord_;
   /**
+   * <pre>
+   * The committed word, whole; the lexicon picks the key (word key
+   * `previous_word&#92;u{1}previous_tl`, else the last character).
+   * </pre>
+   *
    * <code>string previous_word = 1;</code>
    * @return The previousWord.
    */
@@ -39,6 +45,11 @@ public  final class AssocLookupRequest extends
     return previousWord_;
   }
   /**
+   * <pre>
+   * The committed word, whole; the lexicon picks the key (word key
+   * `previous_word&#92;u{1}previous_tl`, else the last character).
+   * </pre>
+   *
    * <code>string previous_word = 1;</code>
    * @return The bytes for previousWord.
    */
@@ -48,6 +59,11 @@ public  final class AssocLookupRequest extends
     return com.google.protobuf.ByteString.copyFromUtf8(previousWord_);
   }
   /**
+   * <pre>
+   * The committed word, whole; the lexicon picks the key (word key
+   * `previous_word&#92;u{1}previous_tl`, else the last character).
+   * </pre>
+   *
    * <code>string previous_word = 1;</code>
    * @param value The previousWord to set.
    */
@@ -58,6 +74,11 @@ public  final class AssocLookupRequest extends
     previousWord_ = value;
   }
   /**
+   * <pre>
+   * The committed word, whole; the lexicon picks the key (word key
+   * `previous_word&#92;u{1}previous_tl`, else the last character).
+   * </pre>
+   *
    * <code>string previous_word = 1;</code>
    */
   private void clearPreviousWord() {
@@ -65,6 +86,11 @@ public  final class AssocLookupRequest extends
     previousWord_ = getDefaultInstance().getPreviousWord();
   }
   /**
+   * <pre>
+   * The committed word, whole; the lexicon picks the key (word key
+   * `previous_word&#92;u{1}previous_tl`, else the last character).
+   * </pre>
+   *
    * <code>string previous_word = 1;</code>
    * @param value The bytes for previousWord to set.
    */
@@ -152,6 +178,88 @@ public  final class AssocLookupRequest extends
   private void clearEnabledSourcesBitmask() {
 
     enabledSourcesBitmask_ = 0;
+  }
+
+  public static final int PREVIOUS_TL_FIELD_NUMBER = 4;
+  private java.lang.String previousTl_;
+  /**
+   * <pre>
+   * The committed word's canonical display TL. Non-empty → the word key is
+   * tried first and the character key is the backoff when it yields no row
+   * under the mask; empty → character key only (behavioral-invariants §24
+   * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+   * </pre>
+   *
+   * <code>string previous_tl = 4;</code>
+   * @return The previousTl.
+   */
+  @java.lang.Override
+  public java.lang.String getPreviousTl() {
+    return previousTl_;
+  }
+  /**
+   * <pre>
+   * The committed word's canonical display TL. Non-empty → the word key is
+   * tried first and the character key is the backoff when it yields no row
+   * under the mask; empty → character key only (behavioral-invariants §24
+   * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+   * </pre>
+   *
+   * <code>string previous_tl = 4;</code>
+   * @return The bytes for previousTl.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getPreviousTlBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(previousTl_);
+  }
+  /**
+   * <pre>
+   * The committed word's canonical display TL. Non-empty → the word key is
+   * tried first and the character key is the backoff when it yields no row
+   * under the mask; empty → character key only (behavioral-invariants §24
+   * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+   * </pre>
+   *
+   * <code>string previous_tl = 4;</code>
+   * @param value The previousTl to set.
+   */
+  private void setPreviousTl(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    previousTl_ = value;
+  }
+  /**
+   * <pre>
+   * The committed word's canonical display TL. Non-empty → the word key is
+   * tried first and the character key is the backoff when it yields no row
+   * under the mask; empty → character key only (behavioral-invariants §24
+   * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+   * </pre>
+   *
+   * <code>string previous_tl = 4;</code>
+   */
+  private void clearPreviousTl() {
+
+    previousTl_ = getDefaultInstance().getPreviousTl();
+  }
+  /**
+   * <pre>
+   * The committed word's canonical display TL. Non-empty → the word key is
+   * tried first and the character key is the backoff when it yields no row
+   * under the mask; empty → character key only (behavioral-invariants §24
+   * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+   * </pre>
+   *
+   * <code>string previous_tl = 4;</code>
+   * @param value The bytes for previousTl to set.
+   */
+  private void setPreviousTlBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    previousTl_ = value.toStringUtf8();
+
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.AssocLookupRequest parseFrom(
@@ -263,6 +371,11 @@ public  final class AssocLookupRequest extends
 
 
     /**
+     * <pre>
+     * The committed word, whole; the lexicon picks the key (word key
+     * `previous_word&#92;u{1}previous_tl`, else the last character).
+     * </pre>
+     *
      * <code>string previous_word = 1;</code>
      * @return The previousWord.
      */
@@ -271,6 +384,11 @@ public  final class AssocLookupRequest extends
       return instance.getPreviousWord();
     }
     /**
+     * <pre>
+     * The committed word, whole; the lexicon picks the key (word key
+     * `previous_word&#92;u{1}previous_tl`, else the last character).
+     * </pre>
+     *
      * <code>string previous_word = 1;</code>
      * @return The bytes for previousWord.
      */
@@ -280,6 +398,11 @@ public  final class AssocLookupRequest extends
       return instance.getPreviousWordBytes();
     }
     /**
+     * <pre>
+     * The committed word, whole; the lexicon picks the key (word key
+     * `previous_word&#92;u{1}previous_tl`, else the last character).
+     * </pre>
+     *
      * <code>string previous_word = 1;</code>
      * @param value The previousWord to set.
      * @return This builder for chaining.
@@ -291,6 +414,11 @@ public  final class AssocLookupRequest extends
       return this;
     }
     /**
+     * <pre>
+     * The committed word, whole; the lexicon picks the key (word key
+     * `previous_word&#92;u{1}previous_tl`, else the last character).
+     * </pre>
+     *
      * <code>string previous_word = 1;</code>
      * @return This builder for chaining.
      */
@@ -300,6 +428,11 @@ public  final class AssocLookupRequest extends
       return this;
     }
     /**
+     * <pre>
+     * The committed word, whole; the lexicon picks the key (word key
+     * `previous_word&#92;u{1}previous_tl`, else the last character).
+     * </pre>
+     *
      * <code>string previous_word = 1;</code>
      * @param value The bytes for previousWord to set.
      * @return This builder for chaining.
@@ -394,6 +527,90 @@ public  final class AssocLookupRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * The committed word's canonical display TL. Non-empty → the word key is
+     * tried first and the character key is the backoff when it yields no row
+     * under the mask; empty → character key only (behavioral-invariants §24
+     * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+     * </pre>
+     *
+     * <code>string previous_tl = 4;</code>
+     * @return The previousTl.
+     */
+    @java.lang.Override
+    public java.lang.String getPreviousTl() {
+      return instance.getPreviousTl();
+    }
+    /**
+     * <pre>
+     * The committed word's canonical display TL. Non-empty → the word key is
+     * tried first and the character key is the backoff when it yields no row
+     * under the mask; empty → character key only (behavioral-invariants §24
+     * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+     * </pre>
+     *
+     * <code>string previous_tl = 4;</code>
+     * @return The bytes for previousTl.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getPreviousTlBytes() {
+      return instance.getPreviousTlBytes();
+    }
+    /**
+     * <pre>
+     * The committed word's canonical display TL. Non-empty → the word key is
+     * tried first and the character key is the backoff when it yields no row
+     * under the mask; empty → character key only (behavioral-invariants §24
+     * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+     * </pre>
+     *
+     * <code>string previous_tl = 4;</code>
+     * @param value The previousTl to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPreviousTl(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setPreviousTl(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The committed word's canonical display TL. Non-empty → the word key is
+     * tried first and the character key is the backoff when it yields no row
+     * under the mask; empty → character key only (behavioral-invariants §24
+     * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+     * </pre>
+     *
+     * <code>string previous_tl = 4;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearPreviousTl() {
+      copyOnWrite();
+      instance.clearPreviousTl();
+      return this;
+    }
+    /**
+     * <pre>
+     * The committed word's canonical display TL. Non-empty → the word key is
+     * tried first and the character key is the backoff when it yields no row
+     * under the mask; empty → character key only (behavioral-invariants §24
+     * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+     * </pre>
+     *
+     * <code>string previous_tl = 4;</code>
+     * @param value The bytes for previousTl to set.
+     * @return This builder for chaining.
+     */
+    public Builder setPreviousTlBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setPreviousTlBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AssocLookupRequest)
   }
   @java.lang.Override
@@ -413,10 +630,11 @@ public  final class AssocLookupRequest extends
             "previousWord_",
             "limit_",
             "enabledSourcesBitmask_",
+            "previousTl_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
-              "\u0003\u000b";
+              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
+              "\u0003\u000b\u0004\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

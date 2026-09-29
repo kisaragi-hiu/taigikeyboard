@@ -60,6 +60,27 @@ pub struct AssocFilter {
     pub enabled_mask: u16,
 }
 
+impl AssocFilter {
+    /// Every source enabled.
+    pub const ALL: Self = Self {
+        all_enabled: true,
+        enabled_mask: 0,
+    };
+
+    /// From the wire `enabled_sources_bitmask`: `u32::MAX` = all sources,
+    /// else its low 9 bits (the association source bits).
+    pub fn from_sources_bitmask(enabled_sources_bitmask: u32) -> Self {
+        Self {
+            all_enabled: enabled_sources_bitmask == u32::MAX,
+            enabled_mask: (enabled_sources_bitmask & 0x1FF) as u16,
+        }
+    }
+
+    fn passes(&self, entry_bitmask: u16) -> bool {
+        self.all_enabled || (entry_bitmask & self.enabled_mask) != 0
+    }
+}
+
 impl AssociationReader {
     // Opens and validates association.bin: magic, version, offset-table size.
     pub fn open(path: &std::path::Path) -> Result<Self, LexiconError> {
@@ -116,9 +137,16 @@ impl AssociationReader {
         self.build_timestamp
     }
 
-    /// Binary search by prev_word; returns up to `limit` entries in their
-    /// stored order (sorted by count DESC per build).
-    pub fn lookup(&self, prev_word: &str, limit: usize) -> Vec<AssociationEntry> {
+    /// Binary search by prev_word; returns up to `limit` entries that pass
+    /// `filter`, in their stored order (sorted by count DESC per build). The
+    /// filter runs before the `limit` cut, so a key whose top entries come
+    /// from disabled sources still yields its enabled ones.
+    pub fn lookup(
+        &self,
+        prev_word: &str,
+        limit: usize,
+        filter: &AssocFilter,
+    ) -> Vec<AssociationEntry> {
         if prev_word.is_empty() || self.key_count == 0 {
             return Vec::new();
         }
@@ -130,22 +158,12 @@ impl AssociationReader {
             let mid = lo + (hi - lo) / 2;
             let cmp = self.compare_key_at(mid as u32, target, bytes);
             match cmp {
-                Ordering::Equal => return self.read_entries(mid as u32, limit, bytes),
+                Ordering::Equal => return self.read_entries(mid as u32, limit, filter, bytes),
                 Ordering::Less => lo = mid + 1,
                 Ordering::Greater => hi = mid - 1,
             }
         }
         Vec::new()
-    }
-
-    pub fn passes_filter(entry_bitmask: u16, filter: &AssocFilter) -> bool {
-        if filter.all_enabled {
-            return true;
-        }
-        if filter.enabled_mask == 0 {
-            return false;
-        }
-        (entry_bitmask & filter.enabled_mask) != 0
     }
 
     fn compare_key_at(&self, index: u32, target: &[u8], bytes: &[u8]) -> Ordering {
@@ -178,7 +196,13 @@ impl AssociationReader {
         u32::from_le_bytes(bytes[pos..pos + 4].try_into().expect("4 bytes")) as usize
     }
 
-    fn read_entries(&self, index: u32, limit: usize, bytes: &[u8]) -> Vec<AssociationEntry> {
+    fn read_entries(
+        &self,
+        index: u32,
+        limit: usize,
+        filter: &AssocFilter,
+        bytes: &[u8],
+    ) -> Vec<AssociationEntry> {
         let key_offset = self.key_offset_at(index, bytes);
         if key_offset >= bytes.len() {
             return Vec::new();
@@ -198,10 +222,12 @@ impl AssociationReader {
         if entry_offset > bytes.len() {
             return Vec::new();
         }
-        let read_count = entry_count.min(limit);
-        let mut out = Vec::with_capacity(read_count);
+        let mut out = Vec::with_capacity(entry_count.min(limit));
         let mut pos = entry_offset;
-        for _ in 0..read_count {
+        for _ in 0..entry_count {
+            if out.len() >= limit {
+                break;
+            }
             if pos + 8 > bytes.len() {
                 break;
             }
@@ -215,6 +241,10 @@ impl AssociationReader {
             pos += 1;
             if pos + nw_len + nt_len > bytes.len() {
                 break;
+            }
+            if !filter.passes(bitmask) {
+                pos += nw_len + nt_len;
+                continue;
             }
             let next_word = match std::str::from_utf8(&bytes[pos..pos + nw_len]) {
                 Ok(s) => s.to_string(),

@@ -442,6 +442,8 @@ public nonisolated struct Taigi_Engine_AssocLookupRequest: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// The committed word, whole; the lexicon picks the key (word key
+  /// `previous_word\u{1}previous_tl`, else the last character).
   public var previousWord: String = String()
 
   public var limit: UInt32 = 0
@@ -453,6 +455,12 @@ public nonisolated struct Taigi_Engine_AssocLookupRequest: Sendable {
   /// `u32::MAX`, regressing the platform-side filter that used to honor
   /// `EnabledDictionaries.associationBitmask()`.
   public var enabledSourcesBitmask: UInt32 = 0
+
+  /// The committed word's canonical display TL. Non-empty → the word key is
+  /// tried first and the character key is the backoff when it yields no row
+  /// under the mask; empty → character key only (behavioral-invariants §24
+  /// INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+  public var previousTl: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1283,7 +1291,7 @@ nonisolated extension Taigi_Engine_SearchByHanziRequest: SwiftProtobuf.Message, 
 
 nonisolated extension Taigi_Engine_AssocLookupRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AssocLookupRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}previous_word\0\u{1}limit\0\u{3}enabled_sources_bitmask\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}previous_word\0\u{1}limit\0\u{3}enabled_sources_bitmask\0\u{3}previous_tl\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1294,6 +1302,7 @@ nonisolated extension Taigi_Engine_AssocLookupRequest: SwiftProtobuf.Message, Sw
       case 1: try { try decoder.decodeSingularStringField(value: &self.previousWord) }()
       case 2: try { try decoder.decodeSingularUInt32Field(value: &self.limit) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.enabledSourcesBitmask) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.previousTl) }()
       default: break
       }
     }
@@ -1309,6 +1318,9 @@ nonisolated extension Taigi_Engine_AssocLookupRequest: SwiftProtobuf.Message, Sw
     if self.enabledSourcesBitmask != 0 {
       try visitor.visitSingularUInt32Field(value: self.enabledSourcesBitmask, fieldNumber: 3)
     }
+    if !self.previousTl.isEmpty {
+      try visitor.visitSingularStringField(value: self.previousTl, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1316,6 +1328,7 @@ nonisolated extension Taigi_Engine_AssocLookupRequest: SwiftProtobuf.Message, Sw
     if lhs.previousWord != rhs.previousWord {return false}
     if lhs.limit != rhs.limit {return false}
     if lhs.enabledSourcesBitmask != rhs.enabledSourcesBitmask {return false}
+    if lhs.previousTl != rhs.previousTl {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -17,7 +17,11 @@ use protos::engine::{AppConfig, EnginePrediction, FilterResult, RawNextWordPredi
 struct MergedRow {
     hanzi: String,
     tl: String,
-    score: f64,
+    /// Summed `Source::Dict` scores; capped only when ranked
+    /// (`scorer::combined_score`), so merges never lift a bundled-only
+    /// prediction past a learned one (§8).
+    dict_score: f64,
+    user_score: f64,
     /// Whether a `Source::User` row has already contributed to `score` — see
     /// the merge loop for why a second one must not.
     has_user_score: bool,
@@ -60,6 +64,7 @@ pub(crate) fn filter(
             Source::Unspecified => return Err(NextWordError::InvalidSource),
         };
         let is_user = source == Source::User;
+        let (dict_score, user_score) = if is_user { (0.0, score) } else { (score, 0.0) };
         let key = (row.hanzi.clone(), row.tl.clone());
         merged
             .entry(key)
@@ -86,13 +91,15 @@ pub(crate) fn filter(
                 if is_user && existing.has_user_score {
                     return;
                 }
-                existing.score += score;
+                existing.dict_score += dict_score;
+                existing.user_score += user_score;
                 existing.has_user_score |= is_user;
             })
             .or_insert(MergedRow {
                 hanzi: row.hanzi,
                 tl: row.tl,
-                score,
+                dict_score,
+                user_score,
                 has_user_score: is_user,
             });
     }
@@ -179,8 +186,8 @@ fn collapse_reading_variants(rows: Vec<MergedRow>) -> Vec<MergedRow> {
         groups.entry(key).or_default().push(i);
     }
 
-    // `None` = row absorbed (drop); `Some(extra)` = survivor + folded score.
-    let mut delta: Vec<Option<f64>> = vec![Some(0.0); rows.len()];
+    // `None` = row absorbed (drop); `Some((dict, user))` = survivor + folded scores.
+    let mut delta: Vec<Option<(f64, f64)>> = vec![Some((0.0, 0.0)); rows.len()];
     for indices in groups.values() {
         if indices.len() < 2 {
             continue;
@@ -190,8 +197,9 @@ fn collapse_reading_variants(rows: Vec<MergedRow>) -> Vec<MergedRow> {
         };
         for &i in indices {
             if i != canonical {
-                if let Some(extra) = delta[canonical].as_mut() {
-                    *extra += rows[i].score;
+                if let Some((dict, user)) = delta[canonical].as_mut() {
+                    *dict += rows[i].dict_score;
+                    *user += rows[i].user_score;
                 }
                 delta[i] = None;
             }
@@ -201,7 +209,9 @@ fn collapse_reading_variants(rows: Vec<MergedRow>) -> Vec<MergedRow> {
     rows.into_iter()
         .zip(delta)
         .filter_map(|(mut row, delta)| {
-            row.score += delta?;
+            let (dict, user) = delta?;
+            row.dict_score += dict;
+            row.user_score += user;
             Some(row)
         })
         .collect()
@@ -266,7 +276,7 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
         subtitle,
         hanzi: m.hanzi,
         tl: m.tl,
-        score: m.score,
+        score: scorer::combined_score(m.dict_score, m.user_score),
     })
 }
 
@@ -535,6 +545,41 @@ mod tests {
             both.predictions[0].score > user_only.predictions[0].score,
             "the dict row still contributes on top of the user row",
         );
+    }
+
+    /// §8: every learned prediction outranks every bundled-only one, however
+    /// large the corpus count — even when two bundled reading variants of one
+    /// word fold together (`tâi-gí` + raw `taigi`, 2 × 2137 before the cap).
+    /// Capped bundled ties keep their incoming (corpus) order.
+    #[test]
+    fn learned_prediction_outranks_any_bundled_prediction() {
+        let state = PersistedState::default();
+        let config = config_tl_mode_translate_swapped(true);
+        let now = 1_000_000_000_000;
+        let a_year_ago = now - 365 * 24 * 3_600_000;
+        let result = filter(
+            &state,
+            vec![
+                dict_row("台語", "tâi-gí", 2137),
+                dict_row("台語", "taigi", 2137),
+                dict_row("灣", "uân", 900),
+                dict_row("北", "pak", 400),
+                user_row("南", "lâm", 1, a_year_ago),
+            ],
+            0,
+            now,
+            10,
+            &config,
+        )
+        .unwrap();
+
+        let hanzi: Vec<&str> = result
+            .predictions
+            .iter()
+            .map(|p| p.hanzi.as_str())
+            .collect();
+        assert_eq!(hanzi, vec!["南", "台語", "灣", "北"]);
+        assert_eq!(result.predictions[1].score, scorer::DICT_SCORE_CAP);
     }
 
     /// Two readings of the NEXT word are different predictions, not duplicates
