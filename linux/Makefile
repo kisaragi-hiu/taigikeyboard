@@ -30,25 +30,19 @@ DESTDIR ?=
 # the `.deb` and a source install share.
 LAYOUT ?= debian
 # The notices every layout carries: attribution, the third-party inventory,
-# the typefaces' OFL and the dictionary's per-source terms. Debian folds them
+# and the dictionary's per-source terms. Debian folds them
 # into its one `copyright` file; Fedora also ships the Apache text, which Arch
 # (its `licenses` package) and Debian (common-licenses) already hold.
-LICENSE_TEXTS := ../NOTICE ../THIRD_PARTY_LICENSES.md ../fonts/OFL-1.1.txt ../dictionary/LICENSE
+LICENSE_TEXTS := ../NOTICE ../THIRD_PARTY_LICENSES.md ../dictionary/LICENSE
 ifeq ($(LAYOUT),debian)
   LIBEXECDIR := $(PREFIX)/libexec
-  FONTDIR_TTF := $(PREFIX)/share/fonts/truetype/taigikeyboard
-  FONTDIR_OTF := $(PREFIX)/share/fonts/opentype/taigikeyboard
   LICENSEDIR := $(PREFIX)/share/doc/taigikeyboard
 else ifeq ($(LAYOUT),fedora)
   LIBEXECDIR := $(PREFIX)/libexec
-  FONTDIR_TTF := $(PREFIX)/share/fonts/taigikeyboard
-  FONTDIR_OTF := $(FONTDIR_TTF)
   LICENSEDIR := $(PREFIX)/share/licenses/taigikeyboard
   LICENSE_TEXTS += ../LICENSE
 else ifeq ($(LAYOUT),arch)
   LIBEXECDIR := $(PREFIX)/lib/ibus
-  FONTDIR_TTF := $(PREFIX)/share/fonts/taigikeyboard
-  FONTDIR_OTF := $(FONTDIR_TTF)
   LICENSEDIR := $(PREFIX)/share/licenses/taigikeyboard
 else
   $(error LAYOUT must be debian, fedora or arch, not '$(LAYOUT)')
@@ -166,11 +160,6 @@ install: build component install-fcitx5
 	for size in 16 22 24 32 48 64 128 256; do \
 	  install -Dm644 data/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png || exit 1; \
 	done
-	# The bundled typefaces (the ones macOS and Windows ship), as fontconfig
-	# fallbacks for the Han characters the desktop's fonts lack (roadmap L4);
-	# users pick them in Fcitx5 / IBus (L7).
-	install -Dm644 -t $(DESTDIR)$(FONTDIR_TTF) ../fonts/font/*.ttf
-	install -Dm644 -t $(DESTDIR)$(FONTDIR_OTF) ../fonts/font/*.otf
 ifeq ($(LAYOUT),debian)
 	# Debian Policy §12.5: one `copyright` file, every non-common licence
 	# verbatim; Apache-2.0 is named in the header (common-licenses).
@@ -179,15 +168,12 @@ ifeq ($(LAYOUT),debian)
 	    printf '\n%s\n%s\n\n' '========================================================================' "$${f#../}"; cat "$$f"; \
 	  done; } > $(DESTDIR)$(LICENSEDIR)/copyright
 else
-	# One file per text, named after its repo path (fonts/OFL-1.1.txt →
-	# fonts-OFL-1.1.txt), so the two `LICENSE`s stay apart.
+	# One file per text, named after its repo path (foo/bar.txt →
+	# foo-bar.txt), so the two `LICENSE`s stay apart.
 	for f in $(LICENSE_TEXTS); do \
 	  name="$${f#../}"; install -Dm644 "$$f" "$(DESTDIR)$(LICENSEDIR)/$${name//\//-}" || exit 1; \
 	done
 endif
-	# A package gets its cache rebuilt by fontconfig's dpkg trigger; a direct
-	# install into the live system rebuilds it here. Never for a staging root.
-	$(if $(DESTDIR),,-fc-cache $(PREFIX)/share/fonts)
 	@echo "installed under $(DESTDIR)$(PREFIX); restart fcitx5 (fcitx5 -r) and/or ibus (ibus restart)"
 
 # The addon's .so + its two .conf files, through CMake's own install rules.
@@ -203,10 +189,8 @@ uninstall:
 	rm -rf $(DESTDIR)$(PREFIX)/share/taigikeyboard
 	rm -f $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
 	rm -f $(DESTDIR)$(PREFIX)/share/icons/hicolor/*/apps/taigikeyboard.png
-	rm -rf $(DESTDIR)$(FONTDIR_TTF) $(DESTDIR)$(FONTDIR_OTF)
 	rm -rf $(DESTDIR)$(LICENSEDIR)
-	$(if $(DESTDIR),,-fc-cache $(PREFIX)/share/fonts)
-	@echo "removed; ~/.config/taigikeyboard, ~/.local/share/taigikeyboard and ~/.local/share/fonts/taigikeyboard are kept"
+	@echo "removed; ~/.config/taigikeyboard, ~/.local/share/taigikeyboard is kept"
 
 # The Debian package (roadmap L11): `make install` into a staging root — the
 # ONE install layout, so the package and a source install cannot drift —
