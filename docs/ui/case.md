@@ -52,8 +52,8 @@ All case-mapping math lives in Rust `engine/phonetics::case_transform` (since ca
 | Component | Location | Description |
 |-----------|----------|-------------|
 | Case-letter math (POJ/TL aware upper/lower, full-upper, suggestion transform, nasal-marker case adjust) | Rust `engine/phonetics/src/case_transform.rs` | Cross-platform canonical |
-| iOS bridge | `Engine/RustEngineBridge+CaseTransform.swift` | Wraps `transformInputCase` / `transformSuggestionCase` / `uppercaseToneChar` / `fullUppercaseToneString` / `lowercaseToneChar` |
-| Android bridge | `engine/CaseTransformBridge.kt` | Same surface, JVM signatures |
+| iOS bridge | `Engine/RustEngineBridge+CaseTransform.swift` | Wraps `transformInputCase` / `transformSuggestionCase` |
+| Android bridge | `engine/CaseTransformBridge.kt` | Superset: the 2 string ops + the 3 per-char ops (`KeyLabelCaseCache` key labels) |
 | iOS shift / capslock state | KeyboardKit (managed) | Drives `LetterCase` value passed into bridge |
 | Android shift / capslock state | `ime/text/CapsStateManager.kt` | Same role, calls bridge per keystroke |
 

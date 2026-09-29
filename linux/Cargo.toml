@@ -27,8 +27,8 @@ publish = false
 
 [workspace.dependencies]
 tempfile = "3"
-# `default-features = false`: no user-data stores (SQLite) through dispatch until
-# this platform switches (user-data-engine-roadmap U11).
+# `default-features = false`: each member opts in; `taigi-linux-core` enables
+# `user-data` (the SQLite stores).
 dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }

@@ -23,7 +23,7 @@ import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCa
  * state, the [AppConfig] factories and every nested DTO type. The per-slice
  * ops are extension functions on it, one file per slice (mirrors iOS
  * `RustEngineBridge+<Slice>.swift`):
- * - `PhoneticsBridge.kt` — phonetics core + TPS + tone-variations cache
+ * - `PhoneticsBridge.kt` — phonetics core + TPS
  * - `ComposingBridge.kt` — composing slice (10) + continuous-input (4)
  * - `NextWordBridge.kt` — NextWord slice (7 decide intents + filter)
  * - `LexiconBridge.kt` — lexicon read path
@@ -88,13 +88,6 @@ object RustEngineBridge {
         }
     }
 
-    // region Phonetics — ops are extensions in PhoneticsBridge.kt
-
-    /** Lazy-init cache for `Method::GetToneVariations`. See [PhoneticsBridge.toneVariations]. */
-    val toneVariations: ToneVariationsCache
-        get() = PhoneticsBridge.toneVariations
-
-    // endregion
     // region Lexicon DTOs — ops are extensions in LexiconBridge.kt
 
     /** Bridge-synthesized companion to proto `TaigiWord` (lexicon search row). */
@@ -829,12 +822,6 @@ data class StripToneOutcome(
 data class TpsAdjustOutcome(
     val adjusted: String,
     val replaceLast: String?,
-)
-
-/** Init-bulk-pull cache for the callout tone variation tables. */
-data class ToneVariationsCache(
-    val poj: Map<String, List<String>>,
-    val tl: Map<String, List<String>>,
 )
 
 /**

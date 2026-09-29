@@ -1,11 +1,10 @@
-// Phonetics + TPS ops — extensions on RustEngineBridge + the toneVariations cache.
+// Phonetics + TPS ops — extensions on RustEngineBridge.
 // Mirrors iOS RustEngineBridge+Phonetics.swift (TPS merged into same file per simplify decision).
 // Sends through RustEngineBridge.dispatch(op) { … } — shared JNI hop, exception boundary, recordFailure sink.
 
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
-import com.siansiansu.taigikeyboard.engine.proto.GetToneVariations
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
@@ -14,13 +13,11 @@ import com.siansiansu.taigikeyboard.engine.proto.StringResult
 import com.siansiansu.taigikeyboard.engine.proto.StripTone
 import com.siansiansu.taigikeyboard.engine.proto.StripToneResult
 import com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps
-import com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps
 import com.siansiansu.taigikeyboard.engine.proto.TlToPoj
-import com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult
 import com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult
 import com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust
 
-// region Phonetics core (6 ops)
+// region Phonetics core
 
 // Strips the syllable's tone combining mark; tone is "" when the syllable has none.
 fun RustEngineBridge.stripTone(input: String): StripToneOutcome {
@@ -55,48 +52,8 @@ fun RustEngineBridge.nfdPreprocessForLookup(input: String): String {
     )
 }
 
-/**
- * Residual state holder — every phonetics op is an extension on
- * `RustEngineBridge` above; only the lazy cache needs an owner.
- */
-internal object PhoneticsBridge {
-    /**
-     * Lazy-init cache for Method::GetToneVariations. Kotlin `by lazy` defaults
-     * to `LazyThreadSafetyMode.SYNCHRONIZED` — single execution + thread
-     * safety guaranteed by language semantics. First reader pays the FFI
-     * roundtrip; subsequent reads are zero-FFI.
-     */
-    val toneVariations: ToneVariationsCache by lazy {
-        val payload = GetToneVariations.newBuilder().build()
-        val resp = phoneticsDispatch({ it.getToneVariations = payload }, "getToneVariations")
-        if (resp == null || !resp.hasToneVariationsResult()) {
-            RustEngineBridge.recordFailure("getToneVariations", "missing ToneVariationsResult")
-            ToneVariationsCache(emptyMap(), emptyMap())
-        } else {
-            val r: ToneVariationsResult = resp.toneVariationsResult
-            ToneVariationsCache(
-                poj = r.pojVariationsMap.mapValues { (_, v) -> v.variationsList.toList() },
-                tl = r.tlVariationsMap.mapValues { (_, v) -> v.variationsList.toList() },
-            )
-        }
-    }
-}
-
 // endregion
-// region TPS (4 ops)
-
-// orMapsToER selects the er/or variant mapping.
-fun RustEngineBridge.tlNumericToTps(
-    text: String,
-    orMapsToER: Boolean,
-): String {
-    val payload = TlNumericToTps
-        .newBuilder()
-        .setText(text)
-        .setOrMapsToEr(orMapsToER)
-        .build()
-    return stringDispatch({ it.tlNumericToTps = payload }, text, "tlNumericToTps")
-}
+// region TPS
 
 fun RustEngineBridge.tlDisplayToTps(
     text: String,

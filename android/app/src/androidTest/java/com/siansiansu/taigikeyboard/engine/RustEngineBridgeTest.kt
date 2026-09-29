@@ -35,7 +35,7 @@ class RustEngineBridgeTest {
         RustEngineBridge.resetDiagnosticsForTesting()
     }
 
-    // region Phonetics core (6 ops)
+    // region Phonetics core
 
     @Test fun op_stripTone_returnsBareAndTone() {
         val outcome = RustEngineBridge.stripTone("guá")
@@ -47,23 +47,8 @@ class RustEngineBridgeTest {
         assertEquals("góa", RustEngineBridge.tlToPoj("guá"))
     }
 
-    @Test fun op_toneVariations_lazyCache_returnsBothModes() {
-        val cache = RustEngineBridge.toneVariations
-        assertTrue("POJ map should populate", cache.poj.isNotEmpty())
-        assertTrue("TL map should populate", cache.tl.isNotEmpty())
-        assertNotNull(cache.tl["a"])
-        assertNotNull(cache.poj["a"])
-        assertNotNull(cache.tl["oo"])
-        assertNotNull(cache.poj["o͘"])
-    }
-
     // endregion
-    // region TPS (4 ops)
-
-    @Test fun op_tlNumericToTps_basic() {
-        val out = RustEngineBridge.tlNumericToTps("tiau5", false)
-        assertTrue("TL numeric → TPS should produce zhuyin", out.isNotEmpty())
-    }
+    // region TPS
 
     @Test fun op_tlDisplayToTps_basic() {
         val out = RustEngineBridge.tlDisplayToTps("tiâu", false)

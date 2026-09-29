@@ -515,19 +515,8 @@ class NextWordController(
     }
 }
 
-/**
- * Map the platform's `EngineSettings.inputMode: String` to the
- * `RustEngineBridge` `InputMode` enum. Mirrors the conversion in
- * `CandidateUpdateCoordinator`. `"tps"` is a layout, not an engine
- * mode — falls back to TL because the NextWord engine has no TPS arm.
- */
-private fun String.toEngineInputMode(): InputMode =
-    when (this) {
-        "poj" -> InputMode.POJ
-        "tl", "tps" -> InputMode.TL
-        "english" -> InputMode.ENGLISH
-        else -> InputMode.POJ
-    }
+/** The engine `InputMode` for a stored `inputMode` string (one table: [InputMode.fromPrefString]). */
+private fun String.toEngineInputMode(): InputMode = InputMode.fromPrefString(this)
 
 /**
  * NextWord prediction cells. Ids run `-1..-n` — the NextWord sentinel range
