@@ -86,6 +86,19 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         }
     }
 
+    // INVARIANT_NEXTWORD_PUNCTUATION_OUTSIDE_COMPOSITION_REACHES_ENGINE (§40):
+    // punctuation and symbols typed outside a composition are reported to the
+    // next-word engine (it decides whether they end the sentence); letters and
+    // whitespace are not.
+    func testINVARIANT_punctuationTypedOutsideComposition_isContext_lettersAndWhitespaceAreNot() {
+        for s in ["。", "！", "？", ".", ",", "，", "、", ")", "」", "5", "@"] {
+            XCTAssertTrue(NextWordController.isContextCharacterOutsideComposition(s), "'\(s)' must reach the engine")
+        }
+        for s in ["", " ", "\n", "a", "Z", "ㄅ", "台", "a."] {
+            XCTAssertFalse(NextWordController.isContextCharacterOutsideComposition(s), "'\(s)' must not reach the engine")
+        }
+    }
+
     func testWordSelected_sentenceEndPunctuation_resetsAndCancelsTimer() {
         // Prime: a non-sentence-end word + showing flag.
         _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)

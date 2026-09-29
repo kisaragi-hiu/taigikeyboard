@@ -88,6 +88,20 @@ class TextInputKeyHandlerTest {
         assertFalse("empty string must not enter composing", isComposingCharacter(""))
     }
 
+    // INVARIANT_NEXTWORD_PUNCTUATION_OUTSIDE_COMPOSITION_REACHES_ENGINE (§40):
+    // punctuation and symbols typed outside a composition are reported to the
+    // next-word engine (it decides whether they end the sentence); letters and
+    // whitespace are not.
+    @Test
+    fun `INVARIANT punctuation typed outside a composition is context, letters and whitespace are not`() {
+        for (s in listOf("。", "！", "？", ".", ",", "，", "、", ")", "」", "5", "@")) {
+            assertTrue("'$s' must reach the engine", isContextCharacterOutsideComposition(s))
+        }
+        for (s in listOf("", " ", "\n", "a", "Z", "ㄅ", "台", "a.")) {
+            assertFalse("'$s' must not reach the engine", isContextCharacterOutsideComposition(s))
+        }
+    }
+
     @Test
     fun `isComposingCharacter inspects only the first character`() {
         // Only `firstOrNull()` is consulted — multi-char strings classify

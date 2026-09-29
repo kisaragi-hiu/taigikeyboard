@@ -106,6 +106,13 @@ extension ActionHandler {
             // stale; it is a cheap no-op when nothing is showing.
             nextWordController.clearDisplay()
             insertNonComposingCharacter(finalChar)
+            // Text going into the document without passing through a
+            // composition is still context: a full stop typed here is what
+            // ends the sentence the next-word learning would otherwise carry
+            // across (§40; mirrors macOS `noteCharacterTypedOutsideComposition`).
+            if NextWordController.isContextCharacterOutsideComposition(finalChar) {
+                nextWordController.noteCharacterTypedOutsideComposition(finalChar)
+            }
             return true
         }
 

@@ -93,6 +93,33 @@ final class NextWordController {
         applyDecideResult(result)
     }
 
+    /// Whether a character committed outside a composition is reported to the
+    /// next-word engine as context. Letters are excluded because a letter
+    /// starts a composition rather than reaching the host on its own;
+    /// whitespace because it can never be sentence-end punctuation and would
+    /// cost an engine round-trip per space bar press. Whether the character
+    /// ends the sentence or is noise is the engine's call
+    /// (`engine/nextword/src/decide.rs`).
+    ///
+    /// CROSS-PLATFORM INVARIANT — mirrors Android
+    /// `TextInputKeyHandler.isContextCharacterOutsideComposition` and macOS
+    /// `ComposingManager.noteCharacterTypedOutsideComposition`. Drift causes
+    /// silent divergence.
+    static func isContextCharacterOutsideComposition(_ character: String) -> Bool {
+        !character.isEmpty && !character.contains(where: { $0.isLetter || $0.isWhitespace })
+    }
+
+    /// A character the user typed straight into the document, outside any
+    /// composition (punctuation, a symbol). Forwarded as a commit with no
+    /// reading and no prediction so the engine can end the context on
+    /// sentence-end punctuation — what stops the last word of one sentence
+    /// being learned as the predecessor of the first word of the next
+    /// (`decide.rs` sentence-end rule). Mirrors macOS
+    /// `EngineNextWord.wordSelected(text: character, roman: "")`.
+    func noteCharacterTypedOutsideComposition(_ character: String) {
+        process(text: character, roman: "", triggerPrediction: false)
+    }
+
     func rePredictAfterBackspace(lastChar: String) {
         let settings = settingsProvider.current
         let result = RustEngineBridge.nextwordBackspace(

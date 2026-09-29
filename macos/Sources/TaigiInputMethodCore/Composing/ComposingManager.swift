@@ -110,6 +110,11 @@ final class ComposingManager {
     /// must not become the context. Whitespace is excluded because it can never
     /// be sentence-end punctuation, and forwarding it would put an engine
     /// round-trip on every space bar press outside a composition.
+    ///
+    /// CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordController
+    /// .noteCharacterTypedOutsideComposition` and Android `NextWordController
+    /// .noteCharacterTypedOutsideComposition` (both gated by the same
+    /// letter / whitespace predicate). Drift causes silent divergence.
     func noteCharacterTypedOutsideComposition(_ character: String) {
         guard !character.isEmpty,
               !character.contains(where: { $0.isLetter || $0.isWhitespace })
