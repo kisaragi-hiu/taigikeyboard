@@ -57,8 +57,8 @@ public interface PredictNextOrBuilder extends
 
   /**
    * <pre>
-   * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24).
+   * The committed word's canonical TL — the bundled word-key reading and the
+   * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
    * </pre>
    *
    * <code>string roman = 7;</code>
@@ -67,8 +67,8 @@ public interface PredictNextOrBuilder extends
   java.lang.String getRoman();
   /**
    * <pre>
-   * The committed word's canonical TL — the `prev_tl` tier key of the user
-   * rows' order (§24).
+   * The committed word's canonical TL — the bundled word-key reading and the
+   * `prev_tl` tier key of the user rows' order (§24). Empty = character key.
    * </pre>
    *
    * <code>string roman = 7;</code>

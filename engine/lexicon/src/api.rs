@@ -104,7 +104,7 @@ pub fn search_by_hanzi(req: SearchByHanziRequest) -> Result<SearchByHanziRespons
     })
 }
 
-// NextWord bigram lookup: binary search on the previous word, filtered by the 9-bit source mask.
+// NextWord bigram lookup for the committed word (word key, character-key backoff), source-filtered.
 pub fn assoc_lookup(req: AssocLookupRequest) -> Result<AssocLookupResponse, LexiconError> {
     EngineHandle::with_state(|state| {
         let assoc = state
@@ -113,6 +113,7 @@ pub fn assoc_lookup(req: AssocLookupRequest) -> Result<AssocLookupResponse, Lexi
             .ok_or_else(|| LexiconError::Internal("association reader unavailable".into()))?;
         let entries = search::assoc_lookup(
             &req.previous_word,
+            &req.previous_tl,
             req.limit,
             req.enabled_sources_bitmask,
             assoc,

@@ -31,15 +31,19 @@ fn filter_request(
     predict: PredictNext,
     user_rows: Vec<RawNextWordPrediction>,
 ) -> FilterPredictions {
-    let raw = match predict.word.chars().last() {
+    let raw = if predict.word.is_empty() {
         // An empty word predicts nothing — the platforms returned no rows at
         // all, learned ones included, before this op existed.
-        None => Vec::new(),
-        Some(last_character) => {
-            let mut raw = bundled_rows(last_character, predict.toggles, predict.limit);
-            raw.extend(user_rows);
-            raw
-        }
+        Vec::new()
+    } else {
+        let mut raw = bundled_rows(
+            &predict.word,
+            &predict.roman,
+            predict.toggles,
+            predict.limit,
+        );
+        raw.extend(user_rows);
+        raw
     };
     FilterPredictions {
         raw,
@@ -49,11 +53,13 @@ fn filter_request(
     }
 }
 
-/// Bundled `association.bin` rows keyed on the committed word's last
-/// character. A lookup failure (lexicon not installed yet) yields no rows,
-/// so learned rows still surface.
+/// Bundled `association.bin` rows for the committed word — the lexicon picks
+/// the key (word key `hanji\u{1}tl`, backing off to the last character; §24
+/// `INVARIANT_NEXTWORD_WORD_KEY_BACKOFF`). A lookup failure (lexicon not
+/// installed yet) yields no rows, so learned rows still surface.
 fn bundled_rows(
-    last_character: char,
+    word: &str,
+    roman: &str,
     toggles: Option<protos::engine::DictionaryToggles>,
     limit: i32,
 ) -> Vec<RawNextWordPrediction> {
@@ -66,7 +72,8 @@ fn bundled_rows(
         }
     };
     let lookup = lexicon::api::assoc_lookup(AssocLookupRequest {
-        previous_word: last_character.to_string(),
+        previous_word: word.to_owned(),
+        previous_tl: roman.to_owned(),
         limit: u32::try_from(bundled_limit).unwrap_or(u32::MAX),
         enabled_sources_bitmask: bitmask,
     });

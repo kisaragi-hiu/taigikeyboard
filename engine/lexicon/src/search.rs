@@ -16,7 +16,7 @@
 
 use indexmap::IndexSet;
 
-use crate::association_reader::{AssocFilter, AssociationReader};
+use crate::association_reader::{word_key, AssocFilter, AssociationReader};
 use crate::dictionary_reader::{DictionaryReader, DictionaryRecord, Filter};
 use crate::error::LexiconError;
 use crate::key_normalizer::{self, KeyMode, KeyType};
@@ -218,34 +218,42 @@ fn collect_filtered_sorted(
         .collect()
 }
 
-// NextWord bigram lookup — up to `limit` records, filtered by the 9-bit source mask.
+// NextWord bigram lookup for a committed word: its word key `hanji\u{1}tl`
+// when `previous_tl` is known and the key has rows under the source mask,
+// else the character key of its last character (an empty `previous_tl` goes
+// straight there). The bigram model's own backoff, word → character, never a
+// merge (behavioral-invariants §24 `INVARIANT_NEXTWORD_WORD_KEY_BACKOFF`).
+// Up to `limit` records, filtered before the cut so disabled top entries
+// never starve the list.
 pub fn assoc_lookup(
     previous_word: &str,
+    previous_tl: &str,
     limit: u32,
     enabled_sources_bitmask: u32,
     assoc: &AssociationReader,
 ) -> Result<Vec<LexiconAssocOut>, LexiconError> {
-    if previous_word.is_empty() || limit == 0 {
+    let Some(last_character) = previous_word.chars().last() else {
         return Ok(Vec::new());
-    }
-    let filter = AssocFilter {
-        all_enabled: enabled_sources_bitmask == u32::MAX,
-        enabled_mask: (enabled_sources_bitmask & 0x1FF) as u16, // 9 association bits
     };
-    let raw = assoc.lookup(previous_word, limit as usize);
-    let mut out: Vec<LexiconAssocOut> = Vec::with_capacity(raw.len());
-    for entry in raw {
-        if !AssociationReader::passes_filter(entry.bitmask, &filter) {
-            continue;
-        }
-        out.push(LexiconAssocOut {
+    let filter = AssocFilter::from_sources_bitmask(enabled_sources_bitmask);
+    let limit = limit as usize;
+    let mut entries = if previous_tl.is_empty() {
+        Vec::new()
+    } else {
+        assoc.lookup(&word_key(previous_word, previous_tl), limit, &filter)
+    };
+    if entries.is_empty() {
+        entries = assoc.lookup(&last_character.to_string(), limit, &filter);
+    }
+    Ok(entries
+        .into_iter()
+        .map(|entry| LexiconAssocOut {
             previous_word: previous_word.to_string(),
             candidate_word: entry.next_word,
             candidate_tl: entry.next_tl,
             count: entry.count,
-        });
-    }
-    Ok(out)
+        })
+        .collect())
 }
 
 fn record_to_row(rowid: u32, record: DictionaryRecord, effective_bitmask: u16) -> LexiconRowOut {

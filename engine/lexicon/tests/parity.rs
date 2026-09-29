@@ -332,17 +332,40 @@ fn invariant_lex_assoc_bitmask_filter_honored() {
     let assoc_path = write_temp("assoc-bitmask-filter.bin", &assoc_bytes);
     let reader = AssociationReader::open(&assoc_path).expect("synth assoc opens");
 
-    let all = search::assoc_lookup("好", 10, u32::MAX, &reader).expect("u32::MAX");
+    let all = search::assoc_lookup("好", "", 10, u32::MAX, &reader).expect("u32::MAX");
     assert_eq!(all.len(), 1, "u32::MAX must return the entry");
 
-    let none = search::assoc_lookup("好", 10, 0, &reader).expect("mask 0");
+    let none = search::assoc_lookup("好", "", 10, 0, &reader).expect("mask 0");
     assert!(none.is_empty(), "mask 0 must filter everything");
 
-    let matching = search::assoc_lookup("好", 10, 0x0001, &reader).expect("mask matches bit 0");
+    let matching = search::assoc_lookup("好", "", 10, 0x0001, &reader).expect("mask matches bit 0");
     assert_eq!(matching.len(), 1, "matching mask returns entry");
 
-    let mismatching = search::assoc_lookup("好", 10, 0x0002, &reader).expect("mask bit 1 only");
+    let mismatching = search::assoc_lookup("好", "", 10, 0x0002, &reader).expect("mask bit 1 only");
     assert!(mismatching.is_empty(), "non-matching mask filters entry");
+}
+
+/// The source filter runs before the `limit` cut: with the top entry's source
+/// disabled, `limit = 1` still returns the next enabled entry instead of
+/// nothing (a word key must not look empty when only its head is filtered).
+#[test]
+fn assoc_lookup_filters_before_limit() {
+    let assoc_bytes = build_tkwa(
+        2,
+        &[(
+            "好",
+            &[(0x0001, 100, "伊", "i1"), (0x0002, 50, "食", "tsiah8")],
+        )],
+    );
+    let assoc_path = write_temp("assoc-filter-before-limit.bin", &assoc_bytes);
+    let reader = AssociationReader::open(&assoc_path).expect("synth assoc opens");
+
+    let enabled_second = search::assoc_lookup("好", "", 1, 0x0002, &reader).expect("mask bit 1");
+    let words: Vec<&str> = enabled_second
+        .iter()
+        .map(|e| e.candidate_word.as_str())
+        .collect();
+    assert_eq!(words, vec!["食"]);
 }
 
 // --- INVARIANT_LEX_API_BITMASK_HONORED ---------------------------------

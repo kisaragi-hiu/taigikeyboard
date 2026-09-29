@@ -157,9 +157,11 @@ message FilterPredictions {
   int32                           limit             = 4;  // post-merge truncation; 30 default if 0
 }
 
-// One next-word query: engine/dispatch looks up the bundled bigrams for the
-// last character of `word` (source mask from `toggles`, 2 x limit rows),
-// follows them with the rows its own `user_association.db` holds after
+// One next-word query: engine/dispatch looks up the bundled bigrams for
+// `word` — its word key `word\u{1}roman` first, the last character of `word`
+// when that key yields no row under the source mask or `roman` is empty
+// (source mask from `toggles`, 2 x limit rows; behavioral-invariants §24
+// INVARIANT_NEXTWORD_WORD_KEY_BACKOFF) — follows them with the rows its own `user_association.db` holds after
 // `word` / `roman` (best-evidence-first, never reordered), and runs
 // FilterPredictions. An empty `word` filters nothing. A bundled-lookup
 // failure (lexicon not installed) drops only the dict rows.
@@ -173,8 +175,8 @@ message PredictNext {
   uint64                          query_generation  = 4;
   int64                           now_ms            = 5;
   int32                           limit             = 6;  // 30 default if 0
-  // The committed word's canonical TL — the `prev_tl` tier key of the user
-  // rows' order (§24).
+  // The committed word's canonical TL — the bundled word-key reading and the
+  // `prev_tl` tier key of the user rows' order (§24). Empty = character key.
   string                          roman             = 7;
 }
 
@@ -232,8 +234,9 @@ message EnginePrediction {
   string subtitle = 2;
   string hanzi    = 3;
   string tl       = 4;
-  // Merged score (sum of per-source scoreDict + calculateUserScore on
-  // (hanzi, tl) collision). Android maps to TaigiWord.lengthScore.
+  // Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
+  // taken over the (hanzi, tl) merge and the reading-variant fold
+  // (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
   double score    = 5;
 }
 

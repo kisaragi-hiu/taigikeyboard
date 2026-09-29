@@ -11,11 +11,21 @@ public interface AssocLookupRequestOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
+   * <pre>
+   * The committed word, whole; the lexicon picks the key (word key
+   * `previous_word&#92;u{1}previous_tl`, else the last character).
+   * </pre>
+   *
    * <code>string previous_word = 1;</code>
    * @return The previousWord.
    */
   java.lang.String getPreviousWord();
   /**
+   * <pre>
+   * The committed word, whole; the lexicon picks the key (word key
+   * `previous_word&#92;u{1}previous_tl`, else the last character).
+   * </pre>
+   *
    * <code>string previous_word = 1;</code>
    * @return The bytes for previousWord.
    */
@@ -42,4 +52,30 @@ public interface AssocLookupRequestOrBuilder extends
    * @return The enabledSourcesBitmask.
    */
   int getEnabledSourcesBitmask();
+
+  /**
+   * <pre>
+   * The committed word's canonical display TL. Non-empty → the word key is
+   * tried first and the character key is the backoff when it yields no row
+   * under the mask; empty → character key only (behavioral-invariants §24
+   * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+   * </pre>
+   *
+   * <code>string previous_tl = 4;</code>
+   * @return The previousTl.
+   */
+  java.lang.String getPreviousTl();
+  /**
+   * <pre>
+   * The committed word's canonical display TL. Non-empty → the word key is
+   * tried first and the character key is the backoff when it yields no row
+   * under the mask; empty → character key only (behavioral-invariants §24
+   * INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+   * </pre>
+   *
+   * <code>string previous_tl = 4;</code>
+   * @return The bytes for previousTl.
+   */
+  com.google.protobuf.ByteString
+      getPreviousTlBytes();
 }

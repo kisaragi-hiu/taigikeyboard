@@ -148,6 +148,8 @@ message SearchByHanziRequest {
 // independent of `engine/lexicon`. NextWord never imports or calls into
 // lexicon directly — engine/dispatch owns the cross-domain wiring.
 message AssocLookupRequest {
+  // The committed word, whole; the lexicon picks the key (word key
+  // `previous_word\u{1}previous_tl`, else the last character).
   string previous_word           = 1;
   uint32 limit                   = 2;
   // Source-toggle bitmask filtering bundled bigram entries. Layout matches
@@ -157,6 +159,11 @@ message AssocLookupRequest {
   // `u32::MAX`, regressing the platform-side filter that used to honor
   // `EnabledDictionaries.associationBitmask()`.
   uint32 enabled_sources_bitmask = 3;
+  // The committed word's canonical display TL. Non-empty → the word key is
+  // tried first and the character key is the backoff when it yields no row
+  // under the mask; empty → character key only (behavioral-invariants §24
+  // INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
+  string previous_tl             = 4;
 }
 
 // `IsHanziRequest` is the low-level CJK predicate used by Tab3 search to

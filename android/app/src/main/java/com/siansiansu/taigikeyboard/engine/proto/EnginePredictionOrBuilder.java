@@ -74,8 +74,9 @@ public interface EnginePredictionOrBuilder extends
 
   /**
    * <pre>
-   * Merged score (sum of per-source scoreDict + calculateUserScore on
-   * (hanzi, tl) collision). Android maps to TaigiWord.lengthScore.
+   * Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
+   * taken over the (hanzi, tl) merge and the reading-variant fold
+   * (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
    * </pre>
    *
    * <code>double score = 5;</code>
