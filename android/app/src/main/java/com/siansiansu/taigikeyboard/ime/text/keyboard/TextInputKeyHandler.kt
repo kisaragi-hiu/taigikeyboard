@@ -625,12 +625,6 @@ internal class TextInputKeyHandler(
 }
 
 /**
- * Pure-function classifier: returns `true` when [char] enters composing
- * mode (romanization letters, TPS bopomofo, TPS tone marks, hyphen
- * boundary, U+02D9 ˙). Used by [TextInputKeyHandler.handleTaigiInput];
- * exposed at file scope so pure-JVM tests can cover the table.
- */
-/**
  * Whether a character committed outside a composition is reported to the
  * next-word engine as context. Letters are excluded because a letter starts a
  * composition rather than reaching the host on its own; whitespace because it
@@ -642,9 +636,14 @@ internal class TextInputKeyHandler(
  * .isContextCharacterOutsideComposition` and macOS `ComposingManager
  * .noteCharacterTypedOutsideComposition`. Drift causes silent divergence.
  */
-internal fun isContextCharacterOutsideComposition(char: String): Boolean =
-    char.isNotEmpty() && char.none { it.isLetter() || it.isWhitespace() }
+internal fun isContextCharacterOutsideComposition(char: String): Boolean = char.isNotEmpty() && char.none { it.isLetter() || it.isWhitespace() }
 
+/**
+ * Pure-function classifier: returns `true` when [char] enters composing
+ * mode (romanization letters, TPS bopomofo, TPS tone marks, hyphen
+ * boundary, U+02D9 ˙). Used by [TextInputKeyHandler.handleTaigiInput];
+ * exposed at file scope so pure-JVM tests can cover the table.
+ */
 internal fun isComposingCharacter(char: String): Boolean {
     val first = char.firstOrNull() ?: return false
     // isLetter() covers: a-z, A-Z (Lu/Ll), TPS bopomofo ㄅ-ㆷ (Lo),
