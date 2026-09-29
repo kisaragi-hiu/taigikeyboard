@@ -76,6 +76,7 @@ fn word_selected(text: &str, roman: &str, now_ms: i64) {
                 require_roman_mode: false,
                 trigger_prediction: false,
                 input: Some(DecisionInput { now_ms }),
+                preceding: Vec::new(),
             })),
         }),
     );

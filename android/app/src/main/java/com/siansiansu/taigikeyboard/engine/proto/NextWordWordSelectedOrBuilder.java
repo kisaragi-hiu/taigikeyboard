@@ -39,4 +39,18 @@ public interface NextWordWordSelectedOrBuilder extends
    * @return The triggerPrediction.
    */
   boolean getTriggerPrediction();
+
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 4;</code>
+   */
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord>
+      getPrecedingList();
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 4;</code>
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CommittedWord getPreceding(int index);
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 4;</code>
+   */
+  int getPrecedingCount();
 }

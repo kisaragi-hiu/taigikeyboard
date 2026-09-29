@@ -103,6 +103,7 @@ public extension RustEngineBridge {
         roman: String,
         requireRomanMode: Bool,
         triggerPrediction: Bool,
+        preceding: [Taigi_Engine_CommittedWord] = [],
         nowMs: Int64,
         mode: InputMode,
         translateSwapped: Bool,
@@ -113,6 +114,7 @@ public extension RustEngineBridge {
         payload.roman = roman
         payload.requireRomanMode = requireRomanMode
         payload.triggerPrediction = triggerPrediction
+        payload.preceding = preceding
         payload.input = decisionInput(nowMs: nowMs)
         return decideDispatch(
             method: .wordSelected(payload),

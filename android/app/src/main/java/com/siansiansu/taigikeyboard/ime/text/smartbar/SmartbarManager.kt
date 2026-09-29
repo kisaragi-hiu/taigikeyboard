@@ -178,8 +178,6 @@ class SmartbarManager(
         rawInput: String = "",
     ) = nextWordController.handleNextWordPrediction(displayText, committedText, roman, hanzi, rawInput)
 
-    fun updateLastSelectedWord(word: String) = nextWordController.updateLastSelectedWord(word)
-
     fun handleBackspaceForNextWord(textBeforeCursor: String) = nextWordController.handleBackspaceForNextWord(textBeforeCursor)
 
     /**
@@ -212,6 +210,7 @@ class SmartbarManager(
                     text = effect.text,
                     roman = effect.roman.ifEmpty { effect.text },
                     triggerPrediction = effect.triggerPrediction,
+                    preceding = effect.preceding,
                 )
             }
 

@@ -52,7 +52,7 @@ final class ComposingEffectDecodingTests: XCTestCase {
             .performAutocomplete,
             .resetAutocompleteContext,
             .nextWordUpdateLastSelectedWord(text: "台", roman: "tâi"),
-            .nextWordWordSelected(text: "語", roman: "gí", triggerPrediction: true),
+            .nextWordWordSelected(text: "語", roman: "gí", triggerPrediction: true, preceding: []),
             .nextWordClearForNewComposing,
         ])
     }
@@ -72,7 +72,7 @@ final class ComposingEffectDecodingTests: XCTestCase {
 
         XCTAssertEqual(
             RustEngineBridge.decodeTransition(response).effects,
-            [.nextWordWordSelected(text: "語", roman: "gí", triggerPrediction: false)],
+            [.nextWordWordSelected(text: "語", roman: "gí", triggerPrediction: false, preceding: [])],
         )
     }
 

@@ -28,6 +28,7 @@ fun RustEngineBridge.nextwordWordSelected(
     mode: InputMode,
     translateSwapped: Boolean,
     generation: Long,
+    preceding: List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord> = emptyList(),
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.WordSelected
         .newBuilder()
@@ -36,6 +37,7 @@ fun RustEngineBridge.nextwordWordSelected(
         .setRequireRomanMode(requireRomanMode)
         .setTriggerPrediction(triggerPrediction)
         .setInput(decisionInput(nowMs))
+        .addAllPreceding(preceding)
         .build()
     return decideDispatch(
         methodSetter = { it.wordSelected = payload },
@@ -149,10 +151,9 @@ fun RustEngineBridge.nextwordSetIsShowing(
 }
 
 /**
- * Android-only Space-path intent. Codex v1 P1: preserves the
- * "compound-only / no timer reschedule / no generation bump"
- * semantics of the legacy `NextWordController.updateLastSelectedWord`.
- * iOS reaches it through the continuous-input mid-commit handshake (region header above).
+ * Continuous-input nail / unnail handshake. The engine learns nothing from it
+ * and changes no state; the final commit's `preceding` carries the nailed
+ * segments (behavioral-invariants §40).
  */
 fun RustEngineBridge.nextwordUpdateLastSelectedWord(
     text: String,

@@ -34,6 +34,7 @@ extension RustEngineBridge {
     static func nextwordWordSelected(
         text: String,
         roman: String,
+        preceding: [Taigi_Engine_CommittedWord],
         nowMs: Int64,
         settings: EngineSettings,
         generation: UInt64,
@@ -41,6 +42,7 @@ extension RustEngineBridge {
         var payload = Taigi_Engine_WordSelected()
         payload.text = text
         payload.roman = roman
+        payload.preceding = preceding
         // `require_roman_mode` gates Enter-commits-raw-romanization paths, which
         // reach the engine as ordinary commits on macOS.
         payload.requireRomanMode = false

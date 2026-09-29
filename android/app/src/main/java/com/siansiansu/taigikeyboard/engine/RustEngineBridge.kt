@@ -303,13 +303,15 @@ object RustEngineBridge {
             /**
              * v3.5.8 Phase 4 — continuous-input final-commit handshake. Maps to
              * `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
-             * trigger_prediction, now_ms)`. Forward `triggerPrediction` exactly —
-             * hardcoding either value breaks the Phase 4 commit contract.
+             * trigger_prediction, now_ms, preceding)`. Forward `triggerPrediction`
+             * and `preceding` exactly — `preceding` is the nailed segments committed
+             * before `text`, learned as one sequence (behavioral-invariants §40).
              */
             data class NextWordWordSelected(
                 val text: String,
                 val roman: String,
                 val triggerPrediction: Boolean,
+                val preceding: List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord>,
             ) : Effect()
 
             /**

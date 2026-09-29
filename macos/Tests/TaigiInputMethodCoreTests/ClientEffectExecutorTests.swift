@@ -90,7 +90,7 @@ final class ClientEffectExecutorTests: XCTestCase {
             .performAutocomplete,
             .resetAutocompleteContext,
             .nextWordUpdateLastSelectedWord(text: "台", roman: "tâi"),
-            .nextWordWordSelected(text: "台", roman: "tâi", triggerPrediction: true),
+            .nextWordWordSelected(text: "台", roman: "tâi", triggerPrediction: true, preceding: []),
             .nextWordClearForNewComposing,
         ]
 

@@ -4,7 +4,7 @@
 //! `dispatch.rs` and external crates consume.
 
 use protos::engine::{
-    AppConfig, DecideResult, FilterResult, NextWordResponse, RawNextWordPrediction,
+    AppConfig, CommittedWord, DecideResult, FilterResult, NextWordResponse, RawNextWordPrediction,
 };
 use thiserror::Error;
 
@@ -34,12 +34,15 @@ pub(crate) struct PersistedState {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Intent {
     /// Candidate selected — main platform write path; may record an association and predict.
+    /// `preceding` = words committed before `text` in the same commit (a
+    /// continuous composition's nailed segments), learned as one sequence.
     WordSelected {
         text: String,
         roman: String,
         require_roman_mode: bool,
         trigger_prediction: bool,
         now_ms: i64,
+        preceding: Vec<CommittedWord>,
     },
     /// Backspace — re-queries using the last character as context.
     Backspace { last_char: String, now_ms: i64 },
@@ -49,8 +52,9 @@ pub(crate) enum Intent {
     ClearForNewComposing { now_ms: i64 },
     /// Full reset — same as the context timeout, clearing all state.
     ResetFull { now_ms: i64 },
-    /// Android-only Space-path. Mutates state without timer effects or
-    /// generation bump; emits compound-only effect.
+    /// Continuous-input nail / unnail handshake. Learns nothing and leaves
+    /// the committed context alone — a nailed segment is not in the document
+    /// yet; the final commit's `WordSelected.preceding` carries it (§40).
     UpdateLastSelectedWord {
         text: String,
         roman: String,

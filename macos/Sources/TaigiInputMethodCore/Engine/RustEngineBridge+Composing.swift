@@ -377,6 +377,7 @@ extension RustEngineBridge {
                 text: payload.text,
                 roman: payload.roman,
                 triggerPrediction: payload.triggerPrediction,
+                preceding: payload.preceding,
             )
         case .nextWordClearForNewComposing:
             return .nextWordClearForNewComposing

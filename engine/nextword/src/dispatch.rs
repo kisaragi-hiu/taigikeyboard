@@ -26,6 +26,7 @@ fn decode_intent(req: &NextWordRequest) -> Result<DecodedRequest, NextWordError>
                 require_roman_mode: m.require_roman_mode,
                 trigger_prediction: m.trigger_prediction,
                 now_ms,
+                preceding: m.preceding,
             })
         }
         Method::Backspace(m) => {

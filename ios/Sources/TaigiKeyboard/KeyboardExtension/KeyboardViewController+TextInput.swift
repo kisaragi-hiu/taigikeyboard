@@ -27,8 +27,8 @@ extension KeyboardViewController {
                 "resetAutocompleteContext"
             case let .nextWordUpdateLastSelectedWord(text, roman):
                 "nextWordUpdateLastSelectedWord text.len=\(text.count) roman.len=\(roman.count)"
-            case let .nextWordWordSelected(text, roman, triggerPrediction):
-                "nextWordWordSelected text.len=\(text.count) roman.len=\(roman.count) trigger=\(triggerPrediction)"
+            case let .nextWordWordSelected(text, roman, triggerPrediction, preceding):
+                "nextWordWordSelected text.len=\(text.count) roman.len=\(roman.count) trigger=\(triggerPrediction) preceding=\(preceding.count)"
             case .nextWordClearForNewComposing:
                 "nextWordClearForNewComposing"
             }
@@ -54,17 +54,18 @@ extension KeyboardViewController {
         case .resetAutocompleteContext:
             state.autocompleteContext.reset()
         case let .nextWordUpdateLastSelectedWord(text, roman):
-            // v3.5.8 Phase 4 mid-commit handshake. Updates state.last_selected_word
-            // without bumping generation; controller injects nowMs / settings.
+            // Nail / unnail handshake — NextWord learns nothing from it (§40);
+            // the final commit's `preceding` carries the nailed segments.
             actionHandler?.nextWordController.updateLastSelectedWord(text: text, roman: roman)
-        case let .nextWordWordSelected(text, roman, triggerPrediction):
-            // Final-commit handshake. Forward triggerPrediction verbatim —
-            // the engine already decided whether prediction should fire.
+        case let .nextWordWordSelected(text, roman, triggerPrediction, preceding):
+            // Final-commit handshake. Forward triggerPrediction + preceding
+            // verbatim — the engine already decided what to predict and learn.
             actionHandler?.nextWordController.process(
                 text: text,
                 roman: roman,
                 requireRomanMode: false,
                 triggerPrediction: triggerPrediction,
+                preceding: preceding,
             )
         case .nextWordClearForNewComposing:
             // ClearForNewComposing ≠ ResetFull — clearDisplay() sends the

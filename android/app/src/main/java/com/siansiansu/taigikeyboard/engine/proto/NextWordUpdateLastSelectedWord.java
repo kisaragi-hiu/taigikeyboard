@@ -10,8 +10,11 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * Mid-commit handshake during continuous-input. Maps to
  * `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the
  * platform side. `text` is the committed segment's display (e.g., "紙"),
- * `roman` is the segment's raw input (e.g., "tsua"). Emitted only inside
- * `Phase::Continuous` mid-commit branches.
+ * `roman` is the segment's raw input (e.g., "tsua"). Emitted inside
+ * `Phase::Continuous` mid-commit branches (a nail) and on unnail. NextWord
+ * learns nothing from it — a nailed segment is not in the document yet;
+ * the final commit's `NextWordWordSelected.preceding` carries it
+ * (behavioral-invariants §40). Platforms read it as the nail signal.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.NextWordUpdateLastSelectedWord}
@@ -208,8 +211,11 @@ public  final class NextWordUpdateLastSelectedWord extends
    * Mid-commit handshake during continuous-input. Maps to
    * `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the
    * platform side. `text` is the committed segment's display (e.g., "紙"),
-   * `roman` is the segment's raw input (e.g., "tsua"). Emitted only inside
-   * `Phase::Continuous` mid-commit branches.
+   * `roman` is the segment's raw input (e.g., "tsua"). Emitted inside
+   * `Phase::Continuous` mid-commit branches (a nail) and on unnail. NextWord
+   * learns nothing from it — a nailed segment is not in the document yet;
+   * the final commit's `NextWordWordSelected.preceding` carries it
+   * (behavioral-invariants §40). Platforms read it as the nail signal.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.NextWordUpdateLastSelectedWord}

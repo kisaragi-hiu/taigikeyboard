@@ -135,7 +135,7 @@ Design intent:
 - A tap = accept the engine's segmentation for that span; the segment is *nailed* into the composition (visible, editable via backspace-unnail) but **not** committed to the document until the user finishes.
 - Enter / final-commit = the single hard finalize; the whole composition becomes literal text in one write. The underline disappears **only** here — matching every mainstream IME (§10.1.1) and the maintainer requirement.
 
-**Commit side effects (Codex B1 item 4; Bug 1 2026-05-15; Model B 2026-05-16)** — frequency recording (`user_frequency.db`) and NextWord are **payload-orthogonal** to the document write and key off `canonical_text`. They fire **at nail time** (`NextWordUpdateLastSelectedWord` per nailed segment) and once at hard finalize (`NextWordWordSelected`), independent of when/whether literal text is written. No double-count: already-nailed segments are not replayed at final commit (Codex risk (i)).
+**Commit side effects (Codex B1 item 4; Bug 1 2026-05-15; Model B 2026-05-16)** — frequency recording (`user_frequency.db`) and NextWord are **payload-orthogonal** to the document write and key off `canonical_text`. NextWord learns **only at hard finalize**: `NextWordWordSelected` carries the nailed segments as `preceding`, and the engine learns the whole composition as one sequence (behavioral-invariants §40 `INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING`, bigram-lm-roadmap P4b 2026-09-29). `NextWordUpdateLastSelectedWord` still fires per nailed segment — platforms read it as the nail signal — but NextWord learns nothing from it, so an abandoned composition teaches nothing.
 
 ### 10.4 Data-Flow Invariant
 

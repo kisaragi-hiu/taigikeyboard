@@ -27,7 +27,7 @@ use protos::engine::composing_response::Preedit;
 use protos::engine::effect;
 use protos::engine::AppConfig;
 use protos::engine::{
-    ClearPreeditWithoutCommit, CommitTextReplacingPreedit, ComposingResponse,
+    ClearPreeditWithoutCommit, CommitTextReplacingPreedit, CommittedWord, ComposingResponse,
     DeleteBackwardFromDocument, Effect, NextWordClearForNewComposing,
     NextWordUpdateLastSelectedWord, NextWordWordSelected, PerformAutocomplete, ResetAutocomplete,
     ResetAutocompleteContext, UpdatePreedit,
@@ -447,17 +447,15 @@ fn delete_backward_continuous(
     // the marked region. Authority is `raw_text`, never a display-char
     // count (swap / TPS / both-scripts display can desync from raw).
     let new_pending = popped.raw_text;
-    // Codex post-impl finding #1: roll the popped segment back out of
-    // nextword's `last_selected_word` so the next final commit can't record
-    // a false association from a word no longer being committed.
-    // v3.5.8 Phase 9 Bug 1 (Option A): NextWord last-selected correction must
-    // use the canonical key, not the (possibly swap-formatted) display
-    // string — keeps association learning mode-independent (decision b).
+    // Unnail handshake. NextWord learns nothing from it and keeps its
+    // committed context (behavioral-invariants §40) — the popped segment can
+    // no longer reach NextWord at all, because only the final commit's
+    // `preceding` carries nailed segments. Kept for platforms that read the
+    // effect stream; canonical key per v3.5.8 Phase 9 Bug 1 (Option A).
     let nextword_correction = match new_nailed.last() {
         Some(prev) => next_word_update_last_selected_word(
             prev.canonical_text.clone(),
-            // R2: re-establish the prior segment's context with its
-            // canonical TL (raw-slice fallback), mirroring the commit path.
+            // R2: canonical TL (raw-slice fallback), as the commit path.
             association_roman(&prev.association_tl, &prev.raw_text),
         ),
         None => next_word_clear_for_new_composing(),
@@ -554,9 +552,9 @@ fn commit_raw_continuous(
     // Single terminal NextWord word-selection for the last "word": the
     // pending tail when it exists (roman word, key = its derived form), else
     // the last nailed segment (canonical key — keeps association learning
-    // mode-independent, v3.5.8 Phase 9 Bug 1 Option A / decision b). Earlier
-    // nailed segments already fired UpdateLastSelectedWord at nail time;
-    // they are NOT replayed here (Codex risk (i) — no double-count).
+    // mode-independent, v3.5.8 Phase 9 Bug 1 Option A / decision b). Every
+    // nailed segment before it rides along as `preceding` — the only place
+    // NextWord learns a nailed segment (behavioral-invariants §40).
     let terminal_nextword = if !raw.is_empty() {
         // §41 — both fields drop the separator marker. `text` goes through
         // `derived_display`; `roman` is the raw tail, which for TPS still
@@ -566,19 +564,20 @@ fn commit_raw_continuous(
         // lookup reconstructs (Codex post-impl BLOCK 2026-08-21).
         let tail_display = derived_display(&raw, config);
         let tail_roman = strip_tps_separator_markers(&raw);
-        next_word_word_selected(tail_display, tail_roman, true)
+        next_word_word_selected(tail_display, tail_roman, true, &nailed)
     } else {
         // raw empty → all input is nailed; the last nailed segment is the
         // final word. `nailed` is non-empty here (combined non-empty with
         // empty raw implies a nailed segment exists).
-        match nailed.last() {
-            Some(last) => next_word_word_selected(
+        match nailed.split_last() {
+            Some((last, preceding)) => next_word_word_selected(
                 last.canonical_text.clone(),
                 // R2: this segment had a candidate selected at nail time →
                 // use its canonical TL (raw-slice fallback). The pending-tail
                 // branch above stays raw — there is no candidate there.
                 association_roman(&last.association_tl, &last.raw_text),
                 true,
+                preceding,
             ),
             None => next_word_clear_for_new_composing(),
         }
@@ -843,15 +842,20 @@ fn commit_continuous(
     if new_pending.is_empty() {
         // Final commit (Model B): the whole composition was in the marked
         // region; write all nailed segments' display text to the document
-        // in one go, then exit to Idle. Earlier mid-commits emitted
-        // UpdateLastSelectedWord per segment; this fires the single
-        // terminal WordSelected for the final segment (no replay — Codex
-        // risk (i)).
+        // in one go, then exit to Idle. The single terminal WordSelected is
+        // the final segment, with the earlier nailed segments as `preceding`
+        // (behavioral-invariants §40).
         // Pending is empty here, so the whole composition is just the
         // nailed prefix (combined_display would append derived("") = "").
         let combined = nailed_prefix(&new_nailed, config);
         let mut effects = finalize_effects(combined);
-        effects.push(next_word_word_selected(canonical, next_word_roman, true));
+        // `nailed` = every segment before the one just pushed.
+        effects.push(next_word_word_selected(
+            canonical,
+            next_word_roman,
+            true,
+            nailed,
+        ));
         // Learned phrases (§50): the whole composition, if it was a
         // sequence of hanji picks, becomes one learned pair.
         let learned = learned_phrase(&new_nailed);
@@ -1020,12 +1024,28 @@ fn next_word_update_last_selected_word(text: String, roman: String) -> Effect {
     }
 }
 
-fn next_word_word_selected(text: String, roman: String, trigger_prediction: bool) -> Effect {
+/// Final-commit NextWord handshake: the terminal word, with the nailed
+/// segments committed before it (`preceding`, document order) so NextWord
+/// learns the whole composition as one sequence (behavioral-invariants §40).
+fn next_word_word_selected(
+    text: String,
+    roman: String,
+    trigger_prediction: bool,
+    preceding: &[NailedSegment],
+) -> Effect {
+    let preceding = preceding
+        .iter()
+        .map(|segment| CommittedWord {
+            text: segment.canonical_text.clone(),
+            roman: association_roman(&segment.association_tl, &segment.raw_text),
+        })
+        .collect();
     Effect {
         kind: Some(effect::Kind::NextWordWordSelected(NextWordWordSelected {
             text,
             roman,
             trigger_prediction,
+            preceding,
         })),
     }
 }

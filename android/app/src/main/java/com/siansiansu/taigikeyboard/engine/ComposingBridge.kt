@@ -470,6 +470,7 @@ private fun synthComposing(proto: ComposingResponse): RustEngineBridge.Composing
                     text = eff.nextWordWordSelected.text,
                     roman = eff.nextWordWordSelected.roman,
                     triggerPrediction = eff.nextWordWordSelected.triggerPrediction,
+                    preceding = eff.nextWordWordSelected.precedingList,
                 )
             }
 

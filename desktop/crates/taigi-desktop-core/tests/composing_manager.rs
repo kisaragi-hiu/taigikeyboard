@@ -129,6 +129,7 @@ impl NextWordPort for Handle {
         &self,
         text: &str,
         roman: &str,
+        _preceding: &[protos::engine::CommittedWord],
         now_ms: i64,
         _settings: &EngineSettings,
         _generation: u64,
