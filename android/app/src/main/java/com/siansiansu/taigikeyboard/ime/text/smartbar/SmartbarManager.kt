@@ -180,6 +180,8 @@ class SmartbarManager(
 
     fun handleBackspaceForNextWord(textBeforeCursor: String) = nextWordController.handleBackspaceForNextWord(textBeforeCursor)
 
+    fun noteCharacterTypedOutsideComposition(char: String) = nextWordController.noteCharacterTypedOutsideComposition(char)
+
     /**
      * Dispatch a NextWord-shaped composing-engine Effect
      * (`NextWordUpdateLastSelectedWord` / `NextWordWordSelected` /

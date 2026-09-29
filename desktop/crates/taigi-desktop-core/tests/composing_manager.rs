@@ -803,6 +803,7 @@ fn two_commits_report_their_readings_and_a_full_stop_is_reported_between() {
     assert_eq!(rig.memory.reported(), vec!["。", "文"]);
 }
 
+// INVARIANT_NEXTWORD_PUNCTUATION_OUTSIDE_COMPOSITION_REACHES_ENGINE (§40)
 #[test]
 fn a_comma_is_reported_and_a_letter_outside_is_not() {
     let _lock = engine_lock();

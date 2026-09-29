@@ -228,6 +228,32 @@ class NextWordController(
     }
 
     /**
+     * A character the user typed straight into the document, outside any
+     * composition (punctuation, a symbol). Forwarded as a commit with no
+     * reading and no prediction so the engine can end the context on
+     * sentence-end punctuation — what stops the last word of one sentence
+     * being learned as the predecessor of the first word of the next
+     * (`decide.rs` sentence-end rule). Whether the character does that, or is
+     * noise that changes nothing, is the engine's call. Mirrors macOS
+     * `EngineNextWord.wordSelected(text: character, roman: "")`.
+     */
+    fun noteCharacterTypedOutsideComposition(char: String) {
+        val settings = settingsProvider.current
+        applyDecideResult(
+            RustEngineBridge.nextwordWordSelected(
+                text = char,
+                roman = "",
+                requireRomanMode = false,
+                triggerPrediction = false,
+                nowMs = System.currentTimeMillis(),
+                mode = settings.inputMode.toEngineInputMode(),
+                translateSwapped = settings.isTranslateSwapped,
+                generation = envelopeGen,
+            ),
+        )
+    }
+
+    /**
      * Continuous-input nail / unnail handshake (composing engine
      * `NextWordUpdateLastSelectedWord` effect). The engine learns nothing
      * from it and keeps the committed context — a nailed segment is not in

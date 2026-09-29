@@ -580,6 +580,13 @@ internal class TextInputKeyHandler(
             }
             commitNonComposingCharacter(ic, char)
             smartbarManager.clearCandidates()
+            // Text going into the document without passing through a
+            // composition is still context: a full stop typed here is what
+            // ends the sentence the next-word learning would otherwise carry
+            // across (§40; mirrors macOS `noteCharacterTypedOutsideComposition`).
+            if (isContextCharacterOutsideComposition(char)) {
+                smartbarManager.noteCharacterTypedOutsideComposition(char)
+            }
             return
         }
     }
@@ -616,6 +623,20 @@ internal class TextInputKeyHandler(
         ic.commitText(char, 1)
     }
 }
+
+/**
+ * Whether a character committed outside a composition is reported to the
+ * next-word engine as context. Letters are excluded because a letter starts a
+ * composition rather than reaching the host on its own; whitespace because it
+ * can never be sentence-end punctuation and would cost an engine round-trip
+ * per space bar press. Whether the character ends the sentence or is noise is
+ * the engine's call (`engine/nextword/src/decide.rs`).
+ *
+ * CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordController
+ * .isContextCharacterOutsideComposition` and macOS `ComposingManager
+ * .noteCharacterTypedOutsideComposition`. Drift causes silent divergence.
+ */
+internal fun isContextCharacterOutsideComposition(char: String): Boolean = char.isNotEmpty() && char.none { it.isLetter() || it.isWhitespace() }
 
 /**
  * Pure-function classifier: returns `true` when [char] enters composing
