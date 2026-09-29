@@ -19,6 +19,7 @@ use prost::Message;
 use protos::engine::{request, response, ErrorCode, Request, Response};
 
 mod case;
+mod context;
 mod predict;
 #[cfg(feature = "e2e-trace")]
 pub mod trace;
@@ -118,8 +119,7 @@ fn run(bytes: &[u8]) -> Response {
             #[cfg(feature = "user-data")]
             let handled = user_data::handle_composing(&comp_req, &config, generation);
             #[cfg(not(feature = "user-data"))]
-            let handled =
-                composing::EngineHandle::instance().handle(&comp_req, &config, generation);
+            let handled = context::handle_composing_without_stores(&comp_req, &config, generation);
             match handled {
                 Ok(comp_resp) => Response {
                     id,

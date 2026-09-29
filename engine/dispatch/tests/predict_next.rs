@@ -4,43 +4,13 @@
 
 mod common;
 
-use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock, PoisonError};
 
-use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 use protos::engine::{
     next_word_request::Method, next_word_response, request, response, DictionaryToggles,
     EnginePrediction, NextWordRequest, PredictNext,
 };
 use userdata::{AssociationPair, JournalMode, UserDataPaths, UserDataStores};
-
-fn production_artifact(name: &str) -> String {
-    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../dictionaries")
-        .join(name);
-    path.to_str().expect("artifact path UTF-8").to_owned()
-}
-
-/// Installs the production lexicon once; `false` (callers soft-skip) when
-/// the artifacts are absent — mirrors `composing/tests/cross_mode_parity.rs`.
-fn lexicon_ready() -> bool {
-    static READY: OnceLock<bool> = OnceLock::new();
-    *READY.get_or_init(|| {
-        if !PathBuf::from(production_artifact("association.bin")).exists() {
-            eprintln!("predict_next: production artifacts absent — run `make dict`; skipping.");
-            return false;
-        }
-        let paths = LexiconPaths::validated(
-            &production_artifact("dictionary.fst"),
-            &production_artifact("dictionary.bin"),
-            &production_artifact("association.bin"),
-            &production_artifact("syllables.fst"),
-            0,
-        )
-        .expect("validate production LexiconPaths");
-        LexiconHandle::install(paths).is_ok()
-    })
-}
 
 fn all_sources(enabled: bool) -> DictionaryToggles {
     DictionaryToggles {
@@ -128,7 +98,7 @@ fn hanzi_of(predictions: &[EnginePrediction]) -> Vec<&str> {
 // the last character, so 臺台 predicts from 台.
 #[test]
 fn bundled_rows_join_learned_rows_when_sources_enabled() {
-    if !lexicon_ready() {
+    if !common::production_lexicon_ready() {
         return;
     }
     let predictions = predict("臺台", all_sources(true));
@@ -146,7 +116,7 @@ fn bundled_rows_join_learned_rows_when_sources_enabled() {
 // 𣍐使 in the dictionary predicts 使 after a word ending in 𣍐.
 #[test]
 fn supplementary_plane_hanji_is_one_lookup_key() {
-    if !lexicon_ready() {
+    if !common::production_lexicon_ready() {
         return;
     }
     let predictions = predict("袂𣍐", all_sources(true));
@@ -159,7 +129,7 @@ fn supplementary_plane_hanji_is_one_lookup_key() {
 
 #[test]
 fn disabled_sources_leave_only_learned_rows() {
-    if !lexicon_ready() {
+    if !common::production_lexicon_ready() {
         return;
     }
     let predictions = predict("台", all_sources(false));
@@ -172,7 +142,7 @@ fn disabled_sources_leave_only_learned_rows() {
 // intra-word continuation 飯 (count 276).
 #[test]
 fn known_reading_predicts_from_word_key() {
-    if !lexicon_ready() {
+    if !common::production_lexicon_ready() {
         return;
     }
     let by_word = predict_after("食", "tsia̍h", all_sources(true));
@@ -185,7 +155,7 @@ fn known_reading_predicts_from_word_key() {
 // hold backs off to the character key — the same list an empty roman gets.
 #[test]
 fn unknown_reading_backs_off_to_character_key() {
-    if !lexicon_ready() {
+    if !common::production_lexicon_ready() {
         return;
     }
     let unknown = predict_after("食", "tsiah", all_sources(true));
@@ -197,7 +167,7 @@ fn unknown_reading_backs_off_to_character_key() {
 // the character key 䆀 has 球 from taigitv.
 #[test]
 fn word_key_emptied_by_source_filter_backs_off() {
-    if !lexicon_ready() {
+    if !common::production_lexicon_ready() {
         return;
     }
     let taigitv_only = DictionaryToggles {
@@ -216,7 +186,7 @@ fn word_key_emptied_by_source_filter_backs_off() {
 // merge — a word key with 3 rows yields those 3, not padded from 中's 479.
 #[test]
 fn word_key_hit_is_not_padded_from_character_key() {
-    if !lexicon_ready() {
+    if !common::production_lexicon_ready() {
         return;
     }
     let hanzi = hanzi_of(&predict_after("中", "tìng", all_sources(true))).join(",");

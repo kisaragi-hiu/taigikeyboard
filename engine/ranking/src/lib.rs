@@ -11,8 +11,10 @@
 //! `CONTINUOUS_DEFAULT_SOURCE_RANK`) are the cross-platform single source
 //! of truth — platforms never redefine them.
 
+mod context;
 mod score;
 
+pub use context::{ContextRanks, CONTEXT_RANK_BUNDLED, CONTEXT_RANK_NONE, CONTEXT_RANK_USER};
 pub use score::{
     calculate_continuous_score, decayed_user_weight_delta, source_tier_rank, user_freq_boost,
     FrequencyData, FrequencyMap, BOOST_ALPHA, CONTINUOUS_DEFAULT_SOURCE_RANK, MAX_BOOST,

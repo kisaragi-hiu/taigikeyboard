@@ -63,7 +63,7 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::dictionary_reader::{DictionaryReader, Filter};
 use crate::prefix_index::PrefixIndex;
-use ranking::FrequencyMap;
+use ranking::{ContextRanks, FrequencyMap};
 
 mod candidate;
 mod sort_key;
@@ -287,6 +287,10 @@ pub struct RawCandidate {
     /// `docs/engine/continuous-input-ranking.md` §3.2. Internal — NOT
     /// emitted on `CandidateMessage`.
     pub user_weight: f64,
+    /// Whether the previous word's bigram continuations include this
+    /// candidate, and from which layer (`ranking::CONTEXT_RANK_*`): the
+    /// `SortKey` dimension below `user_weight` and above `score` (§56).
+    pub context_rank: u8,
     /// v3.5.8 Phase 9 Item 10 — coverage kind for the new partial-prefix
     /// path. [`COVERAGE_KIND_FULL`] for the existing
     /// `fetch_candidates_for_keys_with_barriers` lookup-exact path;
@@ -367,6 +371,9 @@ pub struct ContinuousFetchCtx<'a> {
     pub freq_map: &'a FrequencyMap,
     /// Platform epoch-ms wall clock at fetch time.
     pub now_ms: i64,
+    /// The previous word's continuations (`dispatch::context`), ranked by
+    /// layer; `ContextRanks::empty()` = no context, the context-free order.
+    pub context: &'a ContextRanks,
     /// `custom_dictionary.db` hits to merge into the candidate list.
     /// Empty slice = no custom merge (the production wiring's
     /// cold-start default).
@@ -679,6 +686,7 @@ fn exact_candidates_for_key(
                 consumed_span,
                 ctx.freq_map,
                 ctx.now_ms,
+                ctx.context,
                 COVERAGE_KIND_FULL,
             ));
         },
@@ -704,7 +712,7 @@ fn exact_candidates_for_key(
 /// `docs/releases/v3.5.8/plan.md` § Phase 9 sort_key formula:
 ///
 /// ```text
-/// (coverage_kind, tier, -user_weight, -adjusted_score,
+/// (coverage_kind, tier, -user_weight, context_rank, -adjusted_score,
 ///  -freq, -coverage_bytes, source_tier_rank, stable_idx)
 /// ```
 ///
@@ -991,6 +999,7 @@ pub fn fetch_partial_prefix_candidates_unbounded(
                 *span,
                 ctx.freq_map,
                 ctx.now_ms,
+                ctx.context,
                 COVERAGE_KIND_PARTIAL_PREFIX,
             ));
         }
@@ -1038,26 +1047,14 @@ pub fn best_candidate_for_key_with_barriers(
     ctx: &ContinuousFetchCtx<'_>,
 ) -> Option<EdgeBest> {
     let filter = Filter::from_enabled_bitmask(ctx.enabled_sources_bitmask);
-    let mut best: Option<(SortKey, RawCandidate)> = None;
     let mut span_frequency = 0;
-    // Same `SortKey` order as the span-local list so slot 0 and the list
-    // agree on the edge's word. Every homophone here shares `coverage_kind`
-    // / `consumed_span`, so `raw_len = consumed_span.1` pins `tier` equal
-    // and only the user-weight / score / freq / source dims decide; strict
-    // `<` keeps the first FST rowid on a full tie. `span_frequency` is the
-    // dictionary's own maximum — a learned row carries `frequency = 0`.
+    let mut homophones: Vec<RawCandidate> = Vec::new();
+    // `span_frequency` is the dictionary's own maximum — a learned row
+    // carries `frequency = 0`.
     let mut consider = |cand: RawCandidate| {
         span_frequency = span_frequency.max(cand.frequency);
-        let key = SortKey::new(&cand, consumed_span.1, 0);
-        if best.as_ref().is_none_or(|(b, _)| key < *b) {
-            best = Some((key, cand));
-        }
+        homophones.push(cand);
     };
-    // A multi-syllable edge MAY span a stripped separator (§31 cross-space
-    // phrase edges), which is why the caller computes and passes
-    // `tps_final_only` in edge coordinates rather than this fn assuming
-    // there are no barriers (stale claim corrected by Codex post-impl
-    // 2026-08-20).
     exact_candidates_for_key(
         key,
         tps_final_only,
@@ -1079,13 +1076,52 @@ pub fn best_candidate_for_key_with_barriers(
             consumed_span,
             ctx.freq_map,
             ctx.now_ms,
+            ctx.context,
             COVERAGE_KIND_FULL,
         ));
     }
-    best.map(|(_, candidate)| EdgeBest {
+    let candidate = pick_edge_word(homophones, consumed_span.1, ctx.context.is_empty())?;
+    Some(EdgeBest {
         candidate,
         span_frequency,
     })
+}
+
+/// The edge's word among its homophones: the same `SortKey` order as the
+/// span-local list so slot 0 and the list agree. Every homophone shares
+/// `coverage_kind` / `consumed_span`, so `raw_len = consumed_span.1` pins
+/// `tier` equal and only the user-weight / context / score / freq / source
+/// dims decide; the insertion index breaks a full tie (first FST rowid).
+///
+/// With a previous-word context (§56) the pick may change the WORD but never
+/// the edge's COST, so segmentation is frozen: the context-free winner is
+/// found first, and the contextual winner is chosen only among homophones
+/// with its `syllable_count`. `context_rank` sits below `user_weight` in the
+/// key, so the winner keeps the context-free `user_weight` (the span max) —
+/// and `EdgeBest::span_frequency` is the key max regardless of the pick —
+/// which are the pick's only inputs to `lattice::edge_cost`.
+fn pick_edge_word(
+    homophones: Vec<RawCandidate>,
+    raw_len: u32,
+    context_free: bool,
+) -> Option<RawCandidate> {
+    let (baseline_index, syllable_count) = homophones
+        .iter()
+        .enumerate()
+        .min_by_key(|(i, cand)| SortKey::without_context(cand, raw_len, *i as u32))
+        .map(|(i, cand)| (i, cand.syllable_count))?;
+    let index = if context_free {
+        baseline_index
+    } else {
+        homophones
+            .iter()
+            .enumerate()
+            .filter(|(_, cand)| cand.syllable_count == syllable_count)
+            .min_by_key(|(i, cand)| SortKey::new(cand, raw_len, *i as u32))
+            .map(|(i, _)| i)
+            .unwrap_or(baseline_index)
+    };
+    homophones.into_iter().nth(index)
 }
 
 /// One lattice edge's word, as picked by
@@ -1211,6 +1247,7 @@ pub fn fetch_abbrev_candidates(
             (0, raw_len),
             ctx.freq_map,
             ctx.now_ms,
+            ctx.context,
             COVERAGE_KIND_ABBREV,
         ));
     }
@@ -1714,5 +1751,83 @@ mod typed_tone_pin_tests {
         assert!(!space.admits(None, "sī"));
         assert!(space.admits(Some("tps:ㄒㄧ"), "si"));
         assert!(!space.admits(Some("tps:ㄒㄧ"), "sī"));
+    }
+}
+
+#[cfg(test)]
+mod edge_word_pick_tests {
+    use super::*;
+    use ranking::{CONTEXT_RANK_BUNDLED, CONTEXT_RANK_NONE, CONTEXT_RANK_USER};
+
+    fn homophone(
+        hanji: &str,
+        frequency: u32,
+        syllable_count: u8,
+        user_weight: f64,
+        context_rank: u8,
+    ) -> RawCandidate {
+        RawCandidate {
+            consumed_span: (0, 3),
+            syllable_count,
+            display_text: hanji.to_owned(),
+            roman: "tse".to_owned(),
+            hanji: Some(hanji.to_owned()),
+            canonical_tl: "tse".to_owned(),
+            score: frequency as f32,
+            form: FORM_NOTONE,
+            frequency,
+            bitmask: 0,
+            mode: CandidateMode::Hant,
+            user_weight,
+            context_rank,
+            coverage_kind: COVERAGE_KIND_FULL,
+            is_custom: false,
+        }
+    }
+
+    fn picked(homophones: Vec<RawCandidate>, context_free: bool) -> Option<String> {
+        pick_edge_word(homophones, 3, context_free).map(|c| c.display_text)
+    }
+
+    // INVARIANT_CONTINUOUS_CONTEXT_RERANK (§56): a context hit takes the
+    // edge's word; the context-free pick is today's frequency order.
+    #[test]
+    fn context_hit_takes_the_word() {
+        let key = || {
+            vec![
+                homophone("這", 1000, 1, 0.0, CONTEXT_RANK_NONE),
+                homophone("濟", 100, 1, 0.0, CONTEXT_RANK_BUNDLED),
+                homophone("姊", 10, 1, 0.0, CONTEXT_RANK_USER),
+            ]
+        };
+        assert_eq!(picked(key(), true).as_deref(), Some("這"));
+        assert_eq!(picked(key(), false).as_deref(), Some("姊"));
+    }
+
+    // INVARIANT_CONTINUOUS_CONTEXT_RERANK: the pick never changes the edge's
+    // cost inputs — a hit with another syllable count or a lower user weight
+    // than the context-free winner cannot take the edge.
+    #[test]
+    fn context_hit_keeps_syllable_count_and_user_weight() {
+        let two_syllables = vec![
+            homophone("這", 1000, 1, 0.0, CONTEXT_RANK_NONE),
+            homophone("濟濟", 100, 2, 0.0, CONTEXT_RANK_USER),
+        ];
+        assert_eq!(picked(two_syllables, false).as_deref(), Some("這"));
+        let selected_stranger = vec![
+            homophone("這", 1000, 1, 0.5, CONTEXT_RANK_NONE),
+            homophone("濟", 100, 1, 0.0, CONTEXT_RANK_USER),
+        ];
+        assert_eq!(picked(selected_stranger, false).as_deref(), Some("這"));
+        let hit_among_equals = vec![
+            homophone("這", 1000, 1, 0.5, CONTEXT_RANK_NONE),
+            homophone("濟", 100, 1, 0.5, CONTEXT_RANK_USER),
+        ];
+        assert_eq!(picked(hit_among_equals, false).as_deref(), Some("濟"));
+    }
+
+    #[test]
+    fn no_homophone_no_word() {
+        assert_eq!(picked(Vec::new(), false), None);
     }
 }

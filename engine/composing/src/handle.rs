@@ -28,6 +28,16 @@ use protos::engine::{AppConfig, ComposingRequest, ComposingResponse};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
+/// The composing state a fetch is answered for (`EngineHandle::pending_snapshot`).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PendingSnapshot {
+    /// The pending raw buffer.
+    pub raw: String,
+    /// The last nailed segment as `(canonical text, association roman)`, or
+    /// `None` when the pending tail follows no nailed segment.
+    pub previous_word: Option<(String, String)>,
+}
+
 pub struct EngineHandle {
     composing: Mutex<Engine>,
     // Only compared and stored; atomic so a stale read-only request can be
@@ -99,12 +109,17 @@ impl EngineHandle {
         }
     }
 
-    /// The pending raw buffer — `Preedit.raw_input`, what a user-data lookup
-    /// keys on — or `None` when `generation` is stale. Lets the engine's own
-    /// `FetchAtPos` read the user-data stores before the fetch the rows ride
-    /// (user-data-engine-roadmap P3b).
-    pub fn pending_raw(&self, generation: u64) -> Option<String> {
-        self.read_at(generation, |engine| engine.pending_raw().to_owned())
+    /// What a `FetchAtPos` for `generation` ranks against — the pending raw
+    /// buffer (`Preedit.raw_input`, what a user-data lookup keys on) and the
+    /// word it follows inside the composition — or `None` when `generation`
+    /// is stale. Lets the engine's own `FetchAtPos` read the user-data
+    /// stores and the bigram tables before the fetch the rows ride
+    /// (user-data-engine-roadmap P3b, bigram-lm-roadmap P5).
+    pub fn pending_snapshot(&self, generation: u64) -> Option<PendingSnapshot> {
+        self.read_at(generation, |engine| PendingSnapshot {
+            raw: engine.pending_raw().to_owned(),
+            previous_word: engine.pending_context(),
+        })
     }
 
     /// Runs `read` on the engine as of `generation`, or answers `None` when a

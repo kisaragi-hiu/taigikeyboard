@@ -1008,7 +1008,7 @@ fn finalize_effects(text: String) -> Vec<Effect> {
 /// commit (fixing continuous-vs-normal fragmentation); the raw fallback
 /// preserves pre-R2 behavior for legacy callers + TPS-OOV hanji-absent
 /// candidates that carry no canonical TL.
-fn association_roman(association_tl: &str, raw_text: &str) -> String {
+pub(crate) fn association_roman(association_tl: &str, raw_text: &str) -> String {
     if association_tl.is_empty() {
         raw_text.to_owned()
     } else {

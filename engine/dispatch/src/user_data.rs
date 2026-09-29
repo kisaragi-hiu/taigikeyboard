@@ -9,7 +9,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Once, OnceLock};
 
 use composing::api::ComposingError;
-use composing::{Intent, UserRows};
+use composing::{PendingSnapshot, UserRows};
 use nextword::NextWordError;
 use protos::engine::{
     composing_request, next_word_request, response, user_data_request, user_data_response,
@@ -21,7 +21,7 @@ use protos::engine::{
     SearchCustomEntries, Source, UsageRecorded, UserDataJournal, UserDataOpened, UserDataRequest,
     UserDataReset, UserDataResponse,
 };
-use ranking::{FrequencyData, FrequencyMap};
+use ranking::{ContextRanks, FrequencyData, FrequencyMap, CONTEXT_RANK_USER};
 use userdata::{
     AssociationPair, BackupError, CustomDictionaryCSV, CustomDictionaryCSVError,
     CustomDictionaryError, CustomDictionaryRow, CustomDictionarySource, CustomDictionaryStore,
@@ -468,7 +468,7 @@ pub(crate) fn handle_composing(
 ) -> Result<ComposingResponse, ComposingError> {
     let composing = composing::EngineHandle::instance();
     let Some(stores) = UserDataHandle::instance().stores() else {
-        return composing.handle(request, config, generation);
+        return crate::context::handle_composing_without_stores(request, config, generation);
     };
     let Some(composing_request::Method::FetchAtPos(sent)) = request.method.as_ref() else {
         let applied = composing.handle_learning(request, config, generation)?;
@@ -479,27 +479,36 @@ pub(crate) fn handle_composing(
         }
         return Ok(applied.response);
     };
-    let fetch = |user_rows| Intent::FetchAtPos {
-        now_ms: sent.now_ms,
-        enabled_sources_bitmask: sent.enabled_sources_bitmask,
-        literal_roman_candidate_disabled: sent.literal_roman_candidate_disabled,
-        user_rows,
-    };
     // The buffer can grow between reading it and fetching (the main thread
     // keeps typing while a worker fetches): rows chosen for one buffer must
     // not rank another, so a fetch that answers for a different buffer is
     // redone once with that buffer's rows.
     let mut rows = UserRows::default();
+    let mut context = ContextRanks::new();
     let mut neutral = None;
     for _ in 0..2 {
         // A stale generation answers the idle snapshot inside `query`.
-        let Some(raw) = composing.pending_raw(generation) else {
-            return Ok(composing.query(&fetch(UserRows::default()), config, generation));
+        let Some(snapshot) = composing.pending_snapshot(generation) else {
+            return Ok(composing.query(
+                &crate::context::fetch_intent(sent, UserRows::default(), ContextRanks::new()),
+                config,
+                generation,
+            ));
         };
-        rows = buffer_rows(stores, &raw, config, sent.custom_dictionary_disabled);
-        let answer = composing.query(&fetch(rows.clone()), config, generation);
+        rows = buffer_rows(
+            stores,
+            &snapshot.raw,
+            config,
+            sent.custom_dictionary_disabled,
+        );
+        context = context_ranks(stores, &snapshot, sent.now_ms);
+        let answer = composing.query(
+            &crate::context::fetch_intent(sent, rows.clone(), context.clone()),
+            config,
+            generation,
+        );
         let answered_for = answer.preedit.as_ref().map(|p| p.raw_input.as_str());
-        let current = answered_for.unwrap_or("") == raw;
+        let current = answered_for.unwrap_or("") == snapshot.raw;
         neutral = Some(answer);
         if current {
             break;
@@ -510,7 +519,29 @@ pub(crate) fn handle_composing(
         return Ok(neutral);
     };
     rows.frequency = frequency;
-    Ok(composing.query(&fetch(rows), config, generation))
+    Ok(composing.query(
+        &crate::context::fetch_intent(sent, rows, context),
+        config,
+        generation,
+    ))
+}
+
+/// The continuations of the word the pending tail follows (§56): the
+/// user's learned bigrams (`user_association.db`, the §24 Hanji-keyed
+/// recall, best evidence first) over the bundled ones.
+fn context_ranks(stores: &UserDataStores, snapshot: &PendingSnapshot, now_ms: i64) -> ContextRanks {
+    let previous = crate::context::context_word(snapshot, now_ms);
+    let mut ranks = crate::context::bundled_ranks(previous.as_ref());
+    if let Some((word, word_tl)) = previous {
+        let rows = stores
+            .association
+            .rows_following(&word, &word_tl, crate::context::CONTEXT_ROWS)
+            .unwrap_or_default();
+        for row in rows {
+            ranks.insert(row.next, row.next_tl, CONTEXT_RANK_USER);
+        }
+    }
+    ranks
 }
 
 /// The custom-dictionary rows (unless the user turned the dictionary off)

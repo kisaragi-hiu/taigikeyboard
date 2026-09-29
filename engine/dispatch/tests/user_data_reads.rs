@@ -8,10 +8,8 @@
 mod common;
 
 use common::{open_user_data, tl_config};
-use std::path::PathBuf;
 
 use composing::{Intent, UserRows};
-use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 use protos::engine::{
     composing_request, next_word_request, next_word_response, request, response, Append,
     ComposingRequest, ContinuousResponse, DictionaryToggles, EnginePrediction, EnterContinuous,
@@ -25,33 +23,6 @@ use userdata::{
 
 const COMPOSING_GENERATION: u64 = 1;
 const NOW_MS: i64 = 1_800_000_000_000;
-
-fn production_artifact(name: &str) -> String {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../dictionaries")
-        .join(name)
-        .to_str()
-        .expect("artifact path UTF-8")
-        .to_owned()
-}
-
-/// Installs the production lexicon; `false` (soft-skip) when the artifacts
-/// are absent — as `predict_next.rs`.
-fn lexicon_ready() -> bool {
-    if !PathBuf::from(production_artifact("association.bin")).exists() {
-        eprintln!("user_data_reads: production artifacts absent — run `make dict`; skipping.");
-        return false;
-    }
-    let paths = LexiconPaths::validated(
-        &production_artifact("dictionary.fst"),
-        &production_artifact("dictionary.bin"),
-        &production_artifact("association.bin"),
-        &production_artifact("syllables.fst"),
-        0,
-    )
-    .expect("validate production LexiconPaths");
-    LexiconHandle::install(paths).is_ok()
-}
 
 fn roundtrip(generation: u64, payload: request::Payload) -> Response {
     common::roundtrip(tl_config(true), generation, payload)
@@ -108,7 +79,7 @@ fn predict(roman: &str) -> Vec<EnginePrediction> {
 
 #[test]
 fn engine_reads_answer_what_the_same_rows_answer() {
-    if !lexicon_ready() {
+    if !common::production_lexicon_ready() {
         return;
     }
     for character in ["t", "s", "i", "a", "h"] {
@@ -200,6 +171,7 @@ fn engine_reads_answer_what_the_same_rows_answer() {
     let direct_candidates = composing::EngineHandle::instance()
         .query(
             &Intent::FetchAtPos {
+                context: ranking::ContextRanks::new(),
                 now_ms: NOW_MS,
                 enabled_sources_bitmask: u32::MAX,
                 literal_roman_candidate_disabled: false,

@@ -88,7 +88,7 @@ struct WordSelection {
 }
 
 /// A committed word as a bigram side: display text + canonical TL.
-type ContextWord = (String, String);
+pub(crate) type ContextWord = (String, String);
 
 fn decide_word_selected(
     state: &mut PersistedState,
@@ -158,7 +158,7 @@ fn decide_word_selected(
 }
 
 /// The last committed word, when a word committed at `now_ms` may follow it.
-fn committed_context(state: &PersistedState, now_ms: i64) -> Option<ContextWord> {
+pub(crate) fn committed_context(state: &PersistedState, now_ms: i64) -> Option<ContextWord> {
     if !should_record_association(state, now_ms) {
         return None;
     }
