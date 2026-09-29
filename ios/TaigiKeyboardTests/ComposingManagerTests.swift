@@ -203,7 +203,7 @@ final class ComposingManagerTests: XCTestCase {
             .commitTextReplacingPreedit(derived),
             .resetAutocomplete,
             .resetAutocompleteContext,
-            .nextWordWordSelected(text: derived, roman: "hello", triggerPrediction: true),
+            .nextWordWordSelected(text: derived, roman: "hello", triggerPrediction: true, preceding: []),
         ])
     }
 
@@ -230,7 +230,7 @@ final class ComposingManagerTests: XCTestCase {
             .commitTextReplacingPreedit("Hello"),
             .resetAutocomplete,
             .resetAutocompleteContext,
-            .nextWordWordSelected(text: "Hello", roman: "Hello", triggerPrediction: true),
+            .nextWordWordSelected(text: "Hello", roman: "Hello", triggerPrediction: true, preceding: []),
         ])
     }
 

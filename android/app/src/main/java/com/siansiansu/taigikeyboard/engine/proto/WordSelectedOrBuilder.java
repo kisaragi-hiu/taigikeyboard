@@ -56,4 +56,18 @@ public interface WordSelectedOrBuilder extends
    * @return The input.
    */
   com.siansiansu.taigikeyboard.engine.proto.DecisionInput getInput();
+
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord>
+      getPrecedingList();
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CommittedWord getPreceding(int index);
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  int getPrecedingCount();
 }

@@ -130,6 +130,7 @@ impl ComposingManager {
         self.next_word.word_selected(
             character,
             "",
+            &[],
             self.clock.now_ms(),
             &self.current_settings(),
             self.current_generation,
@@ -403,10 +404,16 @@ impl ComposingManager {
                 // Learning handshakes are not document effects; routed here so
                 // the executor keeps its one job and the generation stays out
                 // of the effect path.
-                Effect::NextWordWordSelected { text, roman, .. } => {
+                Effect::NextWordWordSelected {
+                    text,
+                    roman,
+                    preceding,
+                    ..
+                } => {
                     self.next_word.word_selected(
                         text,
                         roman,
+                        preceding,
                         self.clock.now_ms(),
                         &settings,
                         self.current_generation,

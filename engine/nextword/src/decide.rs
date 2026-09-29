@@ -7,14 +7,14 @@
 //! §40 `INVARIANT_NEXTWORD_LEARNING_DECISION_CONTRACT`, which also records why
 //! the three rules it used to branch on were drift rather than design.
 //!
-//! Generation bump rule: every state-mutating intent EXCEPT
-//! `UpdateLastSelectedWord` bumps `current_generation`. Wrapping add —
-//! `u64::MAX + 1 = 0` is a fresh value.
+//! Generation bump rule: every state-mutating intent bumps
+//! `current_generation` (`UpdateLastSelectedWord` mutates nothing, §40).
+//! Wrapping add — `u64::MAX + 1 = 0` is a fresh value.
 
 use crate::api::{Association, Decided, Intent, NextWordError, PersistedState};
 use protos::engine::{
-    next_word_effect, AppConfig, CancelContextTimeout, ClearPredictionsUi, DecideResult,
-    NextWordEffect, Platform, QueryPredictions, RescheduleContextTimeout,
+    next_word_effect, AppConfig, CancelContextTimeout, ClearPredictionsUi, CommittedWord,
+    DecideResult, NextWordEffect, Platform, QueryPredictions, RescheduleContextTimeout,
 };
 
 /// Strict-`<` association window (10 s).
@@ -51,12 +51,16 @@ pub(crate) fn decide(
             require_roman_mode,
             trigger_prediction,
             now_ms,
+            preceding,
         } => decide_word_selected(
             state,
-            text,
-            roman,
-            require_roman_mode,
-            trigger_prediction,
+            WordSelection {
+                text,
+                roman,
+                require_roman_mode,
+                trigger_prediction,
+                preceding,
+            },
             now_ms,
             config,
         ),
@@ -66,87 +70,158 @@ pub(crate) fn decide(
         Intent::ContextTimeoutFired { now_ms: _ } => reset_and_clear_predictions(state).into(),
         Intent::ClearForNewComposing { now_ms: _ } => decide_clear_for_new_composing(state).into(),
         Intent::ResetFull { now_ms: _ } => reset_and_clear_predictions(state).into(),
-        Intent::UpdateLastSelectedWord {
-            text,
-            roman,
-            now_ms,
-        } => decide_update_last_selected_word(state, text, roman, now_ms),
+        // Nail / unnail: nothing is committed yet, so nothing is learned and
+        // the committed context stays (§40); the final commit's `preceding`
+        // carries the nailed segments.
+        Intent::UpdateLastSelectedWord { .. } => result_unchanged(state).into(),
         Intent::SetIsShowing { is_showing } => decide_set_is_showing(state, is_showing).into(),
     })
 }
 
-fn decide_word_selected(
-    state: &mut PersistedState,
+/// A `WordSelected` intent's payload.
+struct WordSelection {
     text: String,
     roman: String,
     require_roman_mode: bool,
     trigger_prediction: bool,
+    preceding: Vec<CommittedWord>,
+}
+
+/// A committed word as a bigram side: display text + canonical TL.
+type ContextWord = (String, String);
+
+fn decide_word_selected(
+    state: &mut PersistedState,
+    selection: WordSelection,
     now_ms: i64,
     config: &AppConfig,
 ) -> Decided {
+    let WordSelection {
+        text,
+        roman,
+        require_roman_mode,
+        trigger_prediction,
+        preceding,
+    } = selection;
     // Enter commits raw romanization only; skip entirely in Hanji mode.
     if require_roman_mode && config.is_translate_swapped {
         return result_unchanged(state).into();
     }
 
-    // Noise text never records or predicts. Sentence-end is a subset of
-    // noise: branch on it first so the reset path fires instead of no-op.
-    if is_noise_text(&text) {
-        if is_sentence_end_punctuation(&text) {
-            return reset_and_clear_predictions(state).into();
+    // One commit is one sequence (§40): the last committed word leads it
+    // only inside the association window; inside the commit every adjacent
+    // pair is learned, whatever time the nails took. A sentence end inside
+    // it breaks the chain; a clause mark does not.
+    let mut associations = Vec::new();
+    let mut previous = committed_context(state, now_ms);
+    let mut preceding_moved_context = false;
+    for word in preceding {
+        if is_noise_text(&word.text) {
+            if is_sentence_end_punctuation(&word.text) {
+                previous = None;
+                preceding_moved_context = true;
+            }
+            continue;
         }
-        return result_unchanged(state).into();
+        previous = Some(learn_word(
+            previous,
+            word.text,
+            &word.roman,
+            &mut associations,
+        ));
+        preceding_moved_context = true;
     }
 
-    // poj→tl is idempotent on TL input — safe for POJ and TPS alike.
-    let text_tl = phonetics::api::poj_display_to_tl_display(&roman);
-    let prev_tl = phonetics::api::poj_display_to_tl_display(
+    // Noise text never records or predicts. A sentence end resets; a clause
+    // mark keeps the context — the commit's last word when it had preceding
+    // words, else the context as it was.
+    if is_noise_text(&text) {
+        let ends_sentence = is_sentence_end_punctuation(&text);
+        if !ends_sentence && !preceding_moved_context {
+            return result_unchanged(state).into();
+        }
+        let result = match previous.filter(|_| !ends_sentence) {
+            Some(context) => commit_context(state, context, now_ms, false),
+            None => reset_and_clear_predictions(state),
+        };
+        return Decided {
+            result,
+            associations,
+        };
+    }
+
+    let context = learn_word(previous, text, &roman, &mut associations);
+    Decided {
+        result: commit_context(state, context, now_ms, trigger_prediction),
+        associations,
+    }
+}
+
+/// The last committed word, when a word committed at `now_ms` may follow it.
+fn committed_context(state: &PersistedState, now_ms: i64) -> Option<ContextWord> {
+    if !should_record_association(state, now_ms) {
+        return None;
+    }
+    let word = state.last_selected_word.clone()?;
+    let word_tl = phonetics::api::poj_display_to_tl_display(
         state.last_selected_roman.as_deref().unwrap_or(""),
     );
+    Some((word, word_tl))
+}
 
-    let mut associations = Vec::new();
-    if let Some(prev_word) = state.last_selected_word.clone() {
-        if should_record_association(state, now_ms) {
-            associations.push(Association {
-                prev: prev_word,
-                prev_tl: prev_tl.clone(),
-                next: text.clone(),
-                next_tl: text_tl.clone(),
-            });
-        }
+/// One committed word of a sequence: records `previous → word` and the
+/// word's compound pairs; returns the word as the next word's context.
+fn learn_word(
+    previous: Option<ContextWord>,
+    text: String,
+    roman: &str,
+    associations: &mut Vec<Association>,
+) -> ContextWord {
+    // poj→tl is idempotent on TL input — safe for POJ and TPS alike.
+    let text_tl = phonetics::api::poj_display_to_tl_display(roman);
+    if let Some((prev, prev_tl)) = previous {
+        associations.push(Association {
+            prev,
+            prev_tl,
+            next: text.clone(),
+            next_tl: text_tl.clone(),
+        });
     }
     associations.extend(compound_association_pairs(&text, &text_tl));
+    (text, text_tl)
+}
 
-    let mut effects: Vec<NextWordEffect> = Vec::new();
-    effects.push(NextWordEffect {
+/// Makes `context` the committed context as of `now_ms`: restarts the
+/// context timeout, bumps the generation (in-flight predictions for the old
+/// context go stale) and, when asked, queries predictions for it.
+fn commit_context(
+    state: &mut PersistedState,
+    (word, word_tl): ContextWord,
+    now_ms: i64,
+    trigger_prediction: bool,
+) -> DecideResult {
+    let mut effects = vec![NextWordEffect {
         kind: Some(next_word_effect::Kind::RescheduleContextTimeout(
             RescheduleContextTimeout {
                 after_ms: CONTEXT_TIMEOUT_MS,
             },
         )),
-    });
-
-    state.last_selected_word = Some(text);
-    state.last_selected_roman = Some(text_tl.clone());
+    }];
+    state.last_selected_word = Some(word.clone());
+    state.last_selected_roman = Some(word_tl.clone());
     state.last_selection_time_ms = now_ms;
     state.current_generation = state.current_generation.wrapping_add(1);
-
     if trigger_prediction {
-        let word = state.last_selected_word.clone().unwrap_or_default();
         effects.push(NextWordEffect {
             kind: Some(next_word_effect::Kind::QueryPredictions(QueryPredictions {
                 word,
-                roman: text_tl,
+                roman: word_tl,
                 generation: state.current_generation,
                 now_ms,
             })),
         });
     }
-
-    Decided {
-        result: snapshot_into_decide_result(state, effects),
-        associations,
-    }
+    snapshot_into_decide_result(state, effects)
 }
 
 fn decide_backspace(state: &mut PersistedState, last_char: String, now_ms: i64) -> DecideResult {
@@ -210,44 +285,6 @@ fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
         });
     }
     snapshot_into_decide_result(state, effects)
-}
-
-/// Mid-commit handshake: mutates state without bumping generation or
-/// scheduling the timeout. Records compound associations only (no
-/// `prev → this` bigram). Audit §5 #5 / Codex v1 P1. Android's Space path is
-/// where this came from; iOS's continuous mid-commit and macOS use it too.
-fn decide_update_last_selected_word(
-    state: &mut PersistedState,
-    text: String,
-    roman: String,
-    now_ms: i64,
-) -> Decided {
-    if text.is_empty() {
-        return result_unchanged(state).into();
-    }
-
-    // Noise neither records nor becomes context (§40) — same early return as
-    // `decide_word_selected`, except this arm still stamps the clock so the
-    // association window keeps advancing across a committed punctuation mark.
-    if is_noise_text(&text) {
-        state.last_selection_time_ms = now_ms;
-        return result_unchanged(state).into();
-    }
-
-    let roman_to_convert = if roman.is_empty() { &text } else { &roman };
-    let roman_tl = phonetics::api::poj_display_to_tl_display(roman_to_convert);
-
-    let associations = compound_association_pairs(&text, &roman_tl);
-
-    state.last_selected_word = Some(text);
-    state.last_selected_roman = Some(roman_tl);
-    state.last_selection_time_ms = now_ms;
-    // NO generation bump — distinguishes from WordSelected/Backspace etc.
-
-    Decided {
-        result: snapshot_into_decide_result(state, Vec::new()),
-        associations,
-    }
 }
 
 /// Platform-driven visibility sync. No effects, no generation bump —
@@ -405,23 +442,200 @@ mod tests {
         decide(state, intent, config).map(|decided| decided.result)
     }
 
-    /// The two intents that can record a compound association: the terminal
-    /// commit and the mid-commit handshake.
-    fn both_entry_points(text: &str) -> [Intent; 2] {
+    /// The two places a commit can record a compound association: its
+    /// terminal word, and a `preceding` word of the same commit (a nailed
+    /// continuous segment — here closed by a clause mark that learns nothing).
+    fn both_word_positions(text: &str) -> [Intent; 2] {
         [
             Intent::WordSelected {
                 text: text.to_owned(),
                 roman: text.to_owned(),
                 require_roman_mode: false,
                 trigger_prediction: false,
+                preceding: Vec::new(),
                 now_ms: 1_000,
             },
-            Intent::UpdateLastSelectedWord {
-                text: text.to_owned(),
-                roman: text.to_owned(),
+            Intent::WordSelected {
+                text: "，".to_owned(),
+                roman: "，".to_owned(),
+                require_roman_mode: false,
+                trigger_prediction: false,
+                preceding: vec![committed(text, text)],
                 now_ms: 1_000,
             },
         ]
+    }
+
+    fn committed(text: &str, roman: &str) -> CommittedWord {
+        CommittedWord {
+            text: text.to_owned(),
+            roman: roman.to_owned(),
+        }
+    }
+
+    /// A commit of `preceding` + `text` at `now_ms`.
+    fn commit(text: &str, roman: &str, preceding: Vec<CommittedWord>, now_ms: i64) -> Intent {
+        Intent::WordSelected {
+            text: text.to_owned(),
+            roman: roman.to_owned(),
+            require_roman_mode: false,
+            trigger_prediction: true,
+            preceding,
+            now_ms,
+        }
+    }
+
+    /// State whose last committed word is 我/guá, committed at t = 0.
+    fn after_gua() -> PersistedState {
+        PersistedState {
+            last_selected_word: Some("我".to_owned()),
+            last_selected_roman: Some("guá".to_owned()),
+            last_selection_time_ms: 0,
+            ..PersistedState::default()
+        }
+    }
+
+    fn pairs(decided: &Decided) -> Vec<String> {
+        decided
+            .associations
+            .iter()
+            .map(|a| format!("{}/{}→{}/{}", a.prev, a.prev_tl, a.next, a.next_tl))
+            .collect()
+    }
+
+    // INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING (behavioral-invariants §40):
+    // one commit is one sequence — the last committed word leads it inside
+    // the 10 s window, every adjacent pair inside it is learned.
+    #[test]
+    fn commit_learns_every_adjacent_pair_of_its_sequence() {
+        let mut state = after_gua();
+        let decided = decide(
+            &mut state,
+            commit(
+                "飯",
+                "pn̄g",
+                vec![committed("欲", "beh"), committed("食", "tsia̍h")],
+                9_999,
+            ),
+            &ios_config(true),
+        )
+        .unwrap();
+        assert_eq!(
+            pairs(&decided),
+            vec!["我/guá→欲/beh", "欲/beh→食/tsia̍h", "食/tsia̍h→飯/pn̄g"]
+        );
+        assert_eq!(state.last_selected_word.as_deref(), Some("飯"));
+        assert_eq!(state.last_selection_time_ms, 9_999);
+    }
+
+    // INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING: the window gates only the
+    // link to the previous commit; however long the nails took, the commit's
+    // own pairs are learned.
+    #[test]
+    fn commit_outside_window_still_learns_its_own_pairs() {
+        let mut state = after_gua();
+        let decided = decide(
+            &mut state,
+            commit(
+                "飯",
+                "pn̄g",
+                vec![committed("欲", "beh"), committed("食", "tsia̍h")],
+                10_000,
+            ),
+            &ios_config(true),
+        )
+        .unwrap();
+        assert_eq!(pairs(&decided), vec!["欲/beh→食/tsia̍h", "食/tsia̍h→飯/pn̄g"]);
+    }
+
+    // A repeated word is learned once per occurrence, not deduplicated.
+    #[test]
+    fn commit_repeated_word_learns_each_occurrence() {
+        let mut state = PersistedState::default();
+        let decided = decide(
+            &mut state,
+            commit(
+                "好",
+                "hó",
+                vec![committed("好", "hó"), committed("好", "hó")],
+                1_000,
+            ),
+            &ios_config(true),
+        )
+        .unwrap();
+        assert_eq!(pairs(&decided), vec!["好/hó→好/hó", "好/hó→好/hó"]);
+    }
+
+    // A sentence end inside the commit breaks the chain there; a clause mark
+    // does not (same rule as single-word commits).
+    #[test]
+    fn commit_sentence_end_breaks_chain_clause_mark_does_not() {
+        let mut state = after_gua();
+        let decided = decide(
+            &mut state,
+            commit(
+                "飯",
+                "pn̄g",
+                vec![
+                    committed("欲", "beh"),
+                    committed("。", "。"),
+                    committed("食", "tsia̍h"),
+                    committed("，", "，"),
+                ],
+                1_000,
+            ),
+            &ios_config(true),
+        )
+        .unwrap();
+        assert_eq!(pairs(&decided), vec!["我/guá→欲/beh", "食/tsia̍h→飯/pn̄g"]);
+    }
+
+    // A commit ending in a clause mark leaves its last word as the context.
+    #[test]
+    fn commit_ending_in_clause_mark_keeps_last_word_as_context() {
+        let mut state = after_gua();
+        let decided = decide(
+            &mut state,
+            commit(
+                "，",
+                "，",
+                vec![committed("欲", "beh"), committed("食", "tsia̍h")],
+                1_000,
+            ),
+            &ios_config(true),
+        )
+        .unwrap();
+        assert_eq!(pairs(&decided), vec!["我/guá→欲/beh", "欲/beh→食/tsia̍h"]);
+        assert_eq!(state.last_selected_word.as_deref(), Some("食"));
+        assert_eq!(state.last_selected_roman.as_deref(), Some("tsia̍h"));
+        // A new context: the old timeout must not clear it, in-flight
+        // predictions for 我 go stale, and a clause mark predicts nothing.
+        assert_eq!(state.current_generation, 1);
+        let kinds: Vec<_> = decided
+            .result
+            .effects
+            .iter()
+            .map(|e| e.kind.clone())
+            .collect();
+        assert!(matches!(
+            kinds.as_slice(),
+            [Some(next_word_effect::Kind::RescheduleContextTimeout(_))]
+        ));
+    }
+
+    // A sentence end inside the commit resets the context even when no word
+    // follows it — 我 must not lead the next sentence.
+    #[test]
+    fn commit_of_sentence_end_then_clause_mark_resets_context() {
+        let mut state = after_gua();
+        let decided = decide(
+            &mut state,
+            commit("，", "，", vec![committed("。", "。")], 1_000),
+            &ios_config(true),
+        )
+        .unwrap();
+        assert!(decided.associations.is_empty());
+        assert_eq!(state.last_selected_word, None);
     }
 
     #[test]
@@ -489,6 +703,7 @@ mod tests {
                 roman: "".to_owned(),
                 require_roman_mode: false,
                 trigger_prediction: true,
+                preceding: Vec::new(),
                 now_ms: 1_000,
             },
             &ios_config(false),
@@ -647,6 +862,7 @@ mod tests {
                     roman: "tâi-gí khí-puânn".to_owned(),
                     require_roman_mode: false,
                     trigger_prediction: false,
+                    preceding: Vec::new(),
                     now_ms: 1_000,
                 },
                 &config(platform, false),
@@ -664,7 +880,7 @@ mod tests {
     fn hyphenated_single_word_teaches_no_compound_on_either_entry_point() {
         // trace: 台語 is one word; neither the terminal WordSelected nor the
         // mid-commit UpdateLastSelectedWord may split it into tâi → gí.
-        for intent in both_entry_points("tâi-gí") {
+        for intent in both_word_positions("tâi-gí") {
             let mut state = PersistedState::default();
             let result = decide(&mut state, intent, &ios_config(false)).unwrap();
             assert!(
@@ -681,7 +897,7 @@ mod tests {
         // turns it into two "words" that segment alike on both sides — the
         // part-count guard cannot catch it. Only the noise gate can.
         for text in ["\u{02c6} \u{02c7}", ", ;"] {
-            for intent in both_entry_points(text) {
+            for intent in both_word_positions(text) {
                 let mut state = PersistedState::default();
                 let result = decide(&mut state, intent, &ios_config(false)).unwrap();
                 assert!(
@@ -714,6 +930,7 @@ mod tests {
                 roman: String::new(),
                 require_roman_mode: false,
                 trigger_prediction: false,
+                preceding: Vec::new(),
                 now_ms: 1_000,
             },
             &config(Platform::Macos, false),
@@ -744,6 +961,7 @@ mod tests {
             roman: roman.to_owned(),
             require_roman_mode: false,
             trigger_prediction: false,
+            preceding: Vec::new(),
             now_ms,
         };
         let comma = decide(&mut state, word("、", "", 1_200), &ios_config(false)).unwrap();
@@ -777,6 +995,7 @@ mod tests {
                 roman: String::new(),
                 require_roman_mode: false,
                 trigger_prediction: false,
+                preceding: Vec::new(),
                 now_ms: 5_000,
             },
             &ios_config(false),
@@ -837,27 +1056,43 @@ mod tests {
         );
     }
 
+    // INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING: a nail / unnail learns
+    // nothing and leaves the committed context, its time and the generation
+    // alone — so an abandoned composition teaches nothing and the next commit
+    // still follows 我 inside 我's own window.
     #[test]
-    fn update_last_selected_word_does_not_bump_generation() {
+    fn update_last_selected_word_learns_nothing_and_keeps_context() {
         let mut state = PersistedState {
             current_generation: 7,
-            ..PersistedState::default()
+            ..after_gua()
         };
-        let _ = apply(
+        let decided = decide(
             &mut state,
             Intent::UpdateLastSelectedWord {
-                text: "早安".to_owned(),
-                roman: "tsá-an".to_owned(),
-                now_ms: 1_000,
+                text: "早安 台灣".to_owned(),
+                roman: "tsá-an tâi-uân".to_owned(),
+                now_ms: 5_000,
             },
             &config(Platform::Android, false),
         )
         .unwrap();
-        assert_eq!(
-            state.current_generation, 7,
-            "must NOT bump on UpdateLastSelectedWord"
-        );
-        assert_eq!(state.last_selected_word, Some("早安".to_owned()));
+        assert!(decided.associations.is_empty());
+        assert_eq!(state.current_generation, 7);
+        assert_eq!(state.last_selected_word.as_deref(), Some("我"));
+        assert_eq!(state.last_selection_time_ms, 0);
+        let _ = decide(
+            &mut state,
+            Intent::ClearForNewComposing { now_ms: 6_000 },
+            &config(Platform::Android, false),
+        )
+        .unwrap();
+        let next = decide(
+            &mut state,
+            commit("好", "hó", Vec::new(), 10_000),
+            &ios_config(true),
+        )
+        .unwrap();
+        assert!(next.associations.is_empty(), "我's window closed at 10 s");
     }
 
     // INVARIANT_NEXTWORD_GENERATION_BUMPS_ON_INVALIDATING_INTENTS (nextword-engine-boundary.md §10)
@@ -869,6 +1104,7 @@ mod tests {
                 roman: "hó".to_owned(),
                 require_roman_mode: false,
                 trigger_prediction: true,
+                preceding: Vec::new(),
                 now_ms: 1_000,
             },
             Intent::Backspace {
@@ -923,6 +1159,7 @@ mod tests {
                 roman: "anything".to_owned(),
                 require_roman_mode: true,
                 trigger_prediction: true,
+                preceding: Vec::new(),
                 now_ms: 1_000,
             },
             &ios_config(true), // is_translate_swapped = true
@@ -947,6 +1184,7 @@ mod tests {
                 roman: "an".to_owned(),
                 require_roman_mode: false,
                 trigger_prediction: true,
+                preceding: Vec::new(),
                 now_ms: 5_000,
             },
             &ios_config(false),
@@ -979,6 +1217,7 @@ mod tests {
                 roman: "an".to_owned(),
                 require_roman_mode: false,
                 trigger_prediction: true,
+                preceding: Vec::new(),
                 now_ms: 20_000,
             },
             &ios_config(false),

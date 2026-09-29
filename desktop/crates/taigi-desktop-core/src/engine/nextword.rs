@@ -13,8 +13,8 @@
 //! are about a prediction UI the desktop does not have.
 
 use protos::engine::{
-    next_word_request, next_word_response, request, response, DecisionInput, NextWordRequest,
-    ResetFull, UpdateLastSelectedWord, WordSelected,
+    next_word_request, next_word_response, request, response, CommittedWord, DecisionInput,
+    NextWordRequest, ResetFull, UpdateLastSelectedWord, WordSelected,
 };
 
 use super::bridge::{nextword_config, record_failure, roundtrip};
@@ -27,6 +27,7 @@ use crate::settings::EngineSettings;
 pub fn word_selected(
     text: &str,
     roman: &str,
+    preceding: &[CommittedWord],
     now_ms: i64,
     settings: &EngineSettings,
     generation: u64,
@@ -40,6 +41,7 @@ pub fn word_selected(
             require_roman_mode: false,
             trigger_prediction: false,
             input: Some(DecisionInput { now_ms }),
+            preceding: preceding.to_vec(),
         }),
         "nextwordWordSelected",
         settings,
@@ -47,9 +49,10 @@ pub fn word_selected(
     )
 }
 
-/// A continuous composition nailed a segment mid-commit: the context moves
-/// on, nothing is finalized into the document yet. Records the compound
-/// bigrams only and does not bump the engine's generation (`decide.rs:253-290`).
+/// A continuous composition nailed a segment mid-commit: nothing is
+/// finalized into the document yet, so the engine learns nothing and keeps
+/// the committed context — the final commit's `preceding` carries the
+/// segment (behavioral-invariants §40).
 pub fn update_last_selected_word(
     text: &str,
     roman: &str,

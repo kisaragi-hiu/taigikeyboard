@@ -48,7 +48,13 @@ final class RecordingNextWordPort: NextWordPort {
         }
     }
 
-    func wordSelected(text: String, roman: String, settings _: EngineSettings, generation _: UInt64) {
+    func wordSelected(
+        text: String,
+        roman: String,
+        preceding _: [Taigi_Engine_CommittedWord],
+        settings _: EngineSettings,
+        generation _: UInt64,
+    ) {
         handshakes.append(.selected(text: text, roman: roman))
     }
 

@@ -117,6 +117,7 @@ final class ComposingManager {
         nextWord.wordSelected(
             text: character,
             roman: "",
+            preceding: [],
             settings: settingsProvider.current,
             generation: currentGeneration,
         )
@@ -488,10 +489,11 @@ final class ComposingManager {
             // executor writes into a client's document. Routing them here keeps
             // the executor's one job intact and keeps the generation — which
             // only this type knows — out of the effect path.
-            case let .nextWordWordSelected(text, roman, _):
+            case let .nextWordWordSelected(text, roman, _, preceding):
                 nextWord.wordSelected(
                     text: text,
                     roman: roman,
+                    preceding: preceding,
                     settings: settings,
                     generation: currentGeneration,
                 )

@@ -215,6 +215,9 @@ public nonisolated struct Taigi_Engine_DecisionInput: Sendable {
 /// User selected a candidate or committed composing text.
 /// require_roman_mode: Enter-commits-raw-romanization paths.
 /// trigger_prediction: false on Space.
+/// preceding: words committed in the same commit before `text`, in document
+/// order (a continuous composition's nailed segments) — learned as one
+/// sequence with it (behavioral-invariants §40). Empty for a single word.
 public nonisolated struct Taigi_Engine_WordSelected: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -237,11 +240,28 @@ public nonisolated struct Taigi_Engine_WordSelected: Sendable {
   /// Clears the value of `input`. Subsequent reads from it will return its default value.
   public mutating func clearInput() {self._input = nil}
 
+  public var preceding: [Taigi_Engine_CommittedWord] = []
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
 
   fileprivate var _input: Taigi_Engine_DecisionInput? = nil
+}
+
+/// One committed word: display text + its romanization (as `WordSelected`).
+public nonisolated struct Taigi_Engine_CommittedWord: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var text: String = String()
+
+  public var roman: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
 }
 
 /// Backspace after a word selection — re-predict, never record.
@@ -335,13 +355,12 @@ public nonisolated struct Taigi_Engine_ResetFull: Sendable {
   fileprivate var _input: Taigi_Engine_DecisionInput? = nil
 }
 
-/// Mid-commit handshake intent. Pre-v3.5.8 this was Android-only (Space-path
-/// per audit §5 #5). v3.5.8 Phase 4 introduced a continuous-input mid-commit
-/// handshake on iOS too — when `Phase::Continuous` lands a partial commit the
-/// composing engine emits `Effect::NextWordUpdateLastSelectedWord` and the
-/// platform forwards it through this intent. Mutates `state.last_selected_word`
-/// + `last_selection_time_ms` without bumping `current_generation`; no timer
-/// effects; records only a compound's own bigrams.
+/// Continuous-input nail / unnail handshake: the composing engine emits
+/// `Effect::NextWordUpdateLastSelectedWord` when `Phase::Continuous` lands (or
+/// a backspace pops) a segment, and the platform forwards it through this
+/// intent. Learns nothing and changes no state — a nailed segment is not in
+/// the document yet; the final commit's `WordSelected.preceding` carries it
+/// (behavioral-invariants §40 INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING).
 public nonisolated struct Taigi_Engine_UpdateLastSelectedWord: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -924,7 +943,7 @@ nonisolated extension Taigi_Engine_DecisionInput: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Taigi_Engine_WordSelected: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".WordSelected"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0\u{3}require_roman_mode\0\u{3}trigger_prediction\0\u{1}input\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0\u{3}require_roman_mode\0\u{3}trigger_prediction\0\u{1}input\0\u{1}preceding\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -937,6 +956,7 @@ nonisolated extension Taigi_Engine_WordSelected: SwiftProtobuf.Message, SwiftPro
       case 3: try { try decoder.decodeSingularBoolField(value: &self.requireRomanMode) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.triggerPrediction) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._input) }()
+      case 6: try { try decoder.decodeRepeatedMessageField(value: &self.preceding) }()
       default: break
       }
     }
@@ -962,6 +982,9 @@ nonisolated extension Taigi_Engine_WordSelected: SwiftProtobuf.Message, SwiftPro
     try { if let v = self._input {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     } }()
+    if !self.preceding.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.preceding, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -971,6 +994,42 @@ nonisolated extension Taigi_Engine_WordSelected: SwiftProtobuf.Message, SwiftPro
     if lhs.requireRomanMode != rhs.requireRomanMode {return false}
     if lhs.triggerPrediction != rhs.triggerPrediction {return false}
     if lhs._input != rhs._input {return false}
+    if lhs.preceding != rhs.preceding {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_CommittedWord: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CommittedWord"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.text.isEmpty {
+      try visitor.visitSingularStringField(value: self.text, fieldNumber: 1)
+    }
+    if !self.roman.isEmpty {
+      try visitor.visitSingularStringField(value: self.roman, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_CommittedWord, rhs: Taigi_Engine_CommittedWord) -> Bool {
+    if lhs.text != rhs.text {return false}
+    if lhs.roman != rhs.roman {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -25,11 +25,19 @@ struct ComposingTransition: Equatable, Sendable {
         case resetAutocomplete
         case performAutocomplete
         case resetAutocompleteContext
-        /// Continuous-input mid-commit handshake for the next-word learner.
+        /// Continuous-input nail / unnail handshake. The next-word learner
+        /// learns nothing from it (§40); it marks a nailed segment.
         case nextWordUpdateLastSelectedWord(text: String, roman: String)
         /// Continuous-input final-commit handshake. `triggerPrediction` is the
-        /// engine's decision — forward it, never hardcode it.
-        case nextWordWordSelected(text: String, roman: String, triggerPrediction: Bool)
+        /// engine's decision — forward it, never hardcode it. `preceding` =
+        /// the nailed segments committed before `text`, learned with it as one
+        /// sequence (behavioral-invariants §40) — forward it verbatim.
+        case nextWordWordSelected(
+            text: String,
+            roman: String,
+            triggerPrediction: Bool,
+            preceding: [Taigi_Engine_CommittedWord],
+        )
         /// Continuous-input abort handshake. Distinct from a full next-word
         /// reset; they are different engine intents.
         case nextWordClearForNewComposing

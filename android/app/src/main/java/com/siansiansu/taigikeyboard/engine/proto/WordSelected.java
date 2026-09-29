@@ -10,6 +10,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * User selected a candidate or committed composing text.
  * require_roman_mode: Enter-commits-raw-romanization paths.
  * trigger_prediction: false on Space.
+ * preceding: words committed in the same commit before `text`, in document
+ * order (a continuous composition's nailed segments) — learned as one
+ * sequence with it (behavioral-invariants §40). Empty for a single word.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.WordSelected}
@@ -23,6 +26,7 @@ public  final class WordSelected extends
   private WordSelected() {
     text_ = "";
     roman_ = "";
+    preceding_ = emptyProtobufList();
   }
   private int bitField0_;
   public static final int TEXT_FIELD_NUMBER = 1;
@@ -218,6 +222,100 @@ public  final class WordSelected extends
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
+  public static final int PRECEDING_FIELD_NUMBER = 6;
+  private com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.CommittedWord> preceding_;
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  @java.lang.Override
+  public java.util.List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord> getPrecedingList() {
+    return preceding_;
+  }
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  public java.util.List<? extends com.siansiansu.taigikeyboard.engine.proto.CommittedWordOrBuilder>
+      getPrecedingOrBuilderList() {
+    return preceding_;
+  }
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  @java.lang.Override
+  public int getPrecedingCount() {
+    return preceding_.size();
+  }
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.CommittedWord getPreceding(int index) {
+    return preceding_.get(index);
+  }
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  public com.siansiansu.taigikeyboard.engine.proto.CommittedWordOrBuilder getPrecedingOrBuilder(
+      int index) {
+    return preceding_.get(index);
+  }
+  private void ensurePrecedingIsMutable() {
+    com.google.protobuf.Internal.ProtobufList<com.siansiansu.taigikeyboard.engine.proto.CommittedWord> tmp = preceding_;
+    if (!tmp.isModifiable()) {
+      preceding_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+     }
+  }
+
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  private void setPreceding(
+      int index, com.siansiansu.taigikeyboard.engine.proto.CommittedWord value) {
+    java.util.Objects.requireNonNull(value);
+    ensurePrecedingIsMutable();
+    preceding_.set(index, value);
+  }
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  private void addPreceding(com.siansiansu.taigikeyboard.engine.proto.CommittedWord value) {
+    java.util.Objects.requireNonNull(value);
+    ensurePrecedingIsMutable();
+    preceding_.add(value);
+  }
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  private void addPreceding(
+      int index, com.siansiansu.taigikeyboard.engine.proto.CommittedWord value) {
+    java.util.Objects.requireNonNull(value);
+    ensurePrecedingIsMutable();
+    preceding_.add(index, value);
+  }
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  private void addAllPreceding(
+      java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.CommittedWord> values) {
+    ensurePrecedingIsMutable();
+    com.google.protobuf.AbstractMessageLite.addAll(
+        values, preceding_);
+  }
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  private void clearPreceding() {
+    preceding_ = emptyProtobufList();
+  }
+  /**
+   * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+   */
+  private void removePreceding(int index) {
+    ensurePrecedingIsMutable();
+    preceding_.remove(index);
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.WordSelected parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -306,6 +404,9 @@ public  final class WordSelected extends
    * User selected a candidate or committed composing text.
    * require_roman_mode: Enter-commits-raw-romanization paths.
    * trigger_prediction: false on Space.
+   * preceding: words committed in the same commit before `text`, in document
+   * order (a continuous composition's nailed segments) — learned as one
+   * sequence with it (behavioral-invariants §40). Empty for a single word.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.WordSelected}
@@ -522,6 +623,108 @@ public  final class WordSelected extends
       return this;
     }
 
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    @java.lang.Override
+    public java.util.List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord> getPrecedingList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getPrecedingList());
+    }
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    @java.lang.Override
+    public int getPrecedingCount() {
+      return instance.getPrecedingCount();
+    }/**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.CommittedWord getPreceding(int index) {
+      return instance.getPreceding(index);
+    }
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    public Builder setPreceding(
+        int index, com.siansiansu.taigikeyboard.engine.proto.CommittedWord value) {
+      copyOnWrite();
+      instance.setPreceding(index, value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    public Builder setPreceding(
+        int index, com.siansiansu.taigikeyboard.engine.proto.CommittedWord.Builder builderForValue) {
+      copyOnWrite();
+      instance.setPreceding(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    public Builder addPreceding(com.siansiansu.taigikeyboard.engine.proto.CommittedWord value) {
+      copyOnWrite();
+      instance.addPreceding(value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    public Builder addPreceding(
+        int index, com.siansiansu.taigikeyboard.engine.proto.CommittedWord value) {
+      copyOnWrite();
+      instance.addPreceding(index, value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    public Builder addPreceding(
+        com.siansiansu.taigikeyboard.engine.proto.CommittedWord.Builder builderForValue) {
+      copyOnWrite();
+      instance.addPreceding(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    public Builder addPreceding(
+        int index, com.siansiansu.taigikeyboard.engine.proto.CommittedWord.Builder builderForValue) {
+      copyOnWrite();
+      instance.addPreceding(index,
+          builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    public Builder addAllPreceding(
+        java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.CommittedWord> values) {
+      copyOnWrite();
+      instance.addAllPreceding(values);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    public Builder clearPreceding() {
+      copyOnWrite();
+      instance.clearPreceding();
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.CommittedWord preceding = 6;</code>
+     */
+    public Builder removePreceding(int index) {
+      copyOnWrite();
+      instance.removePreceding(index);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.WordSelected)
   }
   @java.lang.Override
@@ -544,10 +747,12 @@ public  final class WordSelected extends
             "requireRomanMode_",
             "triggerPrediction_",
             "input_",
+            "preceding_",
+            com.siansiansu.taigikeyboard.engine.proto.CommittedWord.class,
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0007\u0004\u0007\u0005\u1009\u0000";
+              "\u0000\u0006\u0000\u0001\u0001\u0006\u0006\u0000\u0001\u0000\u0001\u0208\u0002\u0208" +
+              "\u0003\u0007\u0004\u0007\u0005\u1009\u0000\u0006\u001b";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

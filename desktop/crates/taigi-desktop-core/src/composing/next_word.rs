@@ -9,20 +9,24 @@
 
 use crate::engine;
 use crate::settings::EngineSettings;
+use protos::engine::CommittedWord;
 
 /// Where the handshakes go: the engine in production ([`EngineNextWord`]); a
 /// recorder in the manager tests, which check what is reported and when.
 pub trait NextWordPort: Send {
-    /// The user finalized `text` into the document.
+    /// The user finalized `text` into the document, after the `preceding`
+    /// words of the same commit (a continuous composition's nailed segments).
     fn word_selected(
         &self,
         text: &str,
         roman: &str,
+        preceding: &[CommittedWord],
         now_ms: i64,
         settings: &EngineSettings,
         generation: u64,
     );
-    /// A continuous composition nailed a segment without finalizing.
+    /// A continuous composition nailed a segment without finalizing — the
+    /// engine learns nothing from it (§40).
     fn segment_nailed(
         &self,
         text: &str,
@@ -43,11 +47,12 @@ impl NextWordPort for EngineNextWord {
         &self,
         text: &str,
         roman: &str,
+        preceding: &[CommittedWord],
         now_ms: i64,
         settings: &EngineSettings,
         generation: u64,
     ) {
-        engine::nextword_word_selected(text, roman, now_ms, settings, generation);
+        engine::nextword_word_selected(text, roman, preceding, now_ms, settings, generation);
     }
 
     fn segment_nailed(

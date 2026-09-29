@@ -18,7 +18,7 @@ import Foundation
 /// - `rePredictAfterBackspace(lastChar:)`
 /// - `resetAndClearUI()`
 /// - `clearDisplay()`
-/// - `updateLastSelectedWord(text:roman:)` (v3.5.8 Phase 4 mid-commit handshake)
+/// - `updateLastSelectedWord(text:roman:)` (continuous nail / unnail handshake; learns nothing)
 /// - `isShowing` (read-only)
 final class NextWordController {
     let logger = DebugLogger(category: "NextWord")
@@ -71,13 +71,20 @@ final class NextWordController {
 
     // MARK: - Public API (preserved from pre-Rust controller)
 
-    func process(text: String, roman: String, requireRomanMode: Bool = false, triggerPrediction: Bool = true) {
+    func process(
+        text: String,
+        roman: String,
+        requireRomanMode: Bool = false,
+        triggerPrediction: Bool = true,
+        preceding: [Taigi_Engine_CommittedWord] = [],
+    ) {
         let settings = settingsProvider.current
         let result = RustEngineBridge.nextwordWordSelected(
             text: text,
             roman: roman,
             requireRomanMode: requireRomanMode,
             triggerPrediction: triggerPrediction,
+            preceding: preceding,
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
             translateSwapped: settings.isTranslateSwapped,
@@ -121,17 +128,12 @@ final class NextWordController {
         applyDecideResult(result)
     }
 
-    /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Emitted by
+    /// v3.5.8 Phase 4 — continuous-input nail / unnail handshake. Emitted by
     /// the composing engine via `Effect.nextWordUpdateLastSelectedWord`
-    /// when a `Phase::Continuous` mid-commit lands a segment. Updates
-    /// `state.last_selected_word` + `last_selection_time_ms` without
-    /// bumping `current_generation`, no timer effects.
-    ///
-    /// Distinct from `process(...)`: a mid-commit segment is not a
-    /// "user selected this word" event — `WordSelected` would record a
-    /// `prev → this` association and (optionally) trigger prediction;
-    /// `UpdateLastSelectedWord` only updates the context for the *next*
-    /// mid-commit's compound association.
+    /// when a `Phase::Continuous` mid-commit lands (or a backspace pops) a
+    /// segment. The engine learns nothing from it and keeps the committed
+    /// context: a nailed segment is not in the document yet, and the final
+    /// commit's `preceding` carries it (behavioral-invariants §40).
     func updateLastSelectedWord(text: String, roman: String) {
         let settings = settingsProvider.current
         let result = RustEngineBridge.nextwordUpdateLastSelectedWord(

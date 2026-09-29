@@ -2,7 +2,9 @@
 //! effects it wants the platform to run, and the continuous candidates.
 //! Port of `macos/Sources/TaigiInputMethodCore/Engine/ComposingTransition.swift`.
 
-use protos::engine::{effect, CandidateMessage, ComposingResponse, Effect as WireEffect};
+use protos::engine::{
+    effect, CandidateMessage, CommittedWord, ComposingResponse, Effect as WireEffect,
+};
 
 /// The complete effect vocabulary of `engine/protos/proto/composing.proto`
 /// `Effect`. All ten kinds are decoded even though the desktop acts on only
@@ -28,17 +30,21 @@ pub enum Effect {
     ResetAutocomplete,
     PerformAutocomplete,
     ResetAutocompleteContext,
-    /// Continuous-input mid-commit handshake for next-word learning.
+    /// Continuous-input nail / unnail handshake. Next-word learns nothing
+    /// from it (behavioral-invariants §40); it marks a nailed segment.
     NextWordUpdateLastSelectedWord {
         text: String,
         roman: String,
     },
     /// Continuous-input final-commit handshake. `trigger_prediction` is the
-    /// engine's decision — forwarded, never hardcoded.
+    /// engine's decision — forwarded, never hardcoded. `preceding` = the
+    /// nailed segments committed before `text`, in document order, learned
+    /// with it as one sequence (§40).
     NextWordWordSelected {
         text: String,
         roman: String,
         trigger_prediction: bool,
+        preceding: Vec<CommittedWord>,
     },
     /// Continuous-input abort handshake. Distinct from a full next-word reset.
     NextWordClearForNewComposing,
@@ -98,6 +104,7 @@ impl Effect {
                 text: payload.text.clone(),
                 roman: payload.roman.clone(),
                 trigger_prediction: payload.trigger_prediction,
+                preceding: payload.preceding.clone(),
             },
             effect::Kind::NextWordClearForNewComposing(_) => Effect::NextWordClearForNewComposing,
         })
@@ -248,6 +255,10 @@ mod tests {
                         text: "台".into(),
                         roman: "tâi".into(),
                         trigger_prediction: true,
+                        preceding: vec![CommittedWord {
+                            text: "台".into(),
+                            roman: "tâi".into(),
+                        }],
                     })),
                 },
                 WireEffect {
@@ -273,7 +284,11 @@ mod tests {
                 Effect::NextWordWordSelected {
                     text: "台".into(),
                     roman: "tâi".into(),
-                    trigger_prediction: true
+                    trigger_prediction: true,
+                    preceding: vec![CommittedWord {
+                        text: "台".into(),
+                        roman: "tâi".into(),
+                    }],
                 },
                 Effect::ClearPreeditWithoutCommit,
             ],

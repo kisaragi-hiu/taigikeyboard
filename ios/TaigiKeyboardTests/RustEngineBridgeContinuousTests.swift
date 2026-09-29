@@ -168,7 +168,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             generation: envelopeGen,
         )
         let selectedRoman: String? = commit.effects.lazy.compactMap { effect -> String? in
-            if case let .nextWordWordSelected(_, roman, _) = effect {
+            if case let .nextWordWordSelected(_, roman, _, _) = effect {
                 return roman
             }
             return nil

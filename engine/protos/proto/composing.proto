@@ -5,6 +5,8 @@ package taigi.engine;
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
+import "nextword.proto";
+
 // Composing slice — Intent → Effect state machine.
 //
 // Mirrors the iOS `ComposingState.Intent` / Android `ComposingState.Intent`
@@ -445,15 +447,25 @@ message ResetAutocompleteContext   {}
 // Mid-commit handshake during continuous-input. Maps to
 // `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the
 // platform side. `text` is the committed segment's display (e.g., "紙"),
-// `roman` is the segment's raw input (e.g., "tsua"). Emitted only inside
-// `Phase::Continuous` mid-commit branches.
+// `roman` is the segment's raw input (e.g., "tsua"). Emitted inside
+// `Phase::Continuous` mid-commit branches (a nail) and on unnail. NextWord
+// learns nothing from it — a nailed segment is not in the document yet;
+// the final commit's `NextWordWordSelected.preceding` carries it
+// (behavioral-invariants §40). Platforms read it as the nail signal.
 message NextWordUpdateLastSelectedWord { string text = 1; string roman = 2; }
 
 // Final-commit handshake during continuous-input. Maps to
 // `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
-// trigger_prediction, now_ms)`. Emitted when `Phase::Continuous` exits to
-// Idle through commit (pending consumed in full).
-message NextWordWordSelected { string text = 1; string roman = 2; bool trigger_prediction = 3; }
+// trigger_prediction, now_ms, preceding)`. Emitted when `Phase::Continuous`
+// exits to Idle through commit (pending consumed in full). `preceding` = the
+// nailed segments committed before the terminal word, in document order —
+// forwarded verbatim so NextWord learns the whole sequence in one decision.
+message NextWordWordSelected {
+  string                 text               = 1;
+  string                 roman              = 2;
+  bool                   trigger_prediction = 3;
+  repeated CommittedWord preceding          = 4;
+}
 
 // Continuous-input abort. Maps to
 // `NextWordRequest::ClearForNewComposing(now_ms)`. Emitted when

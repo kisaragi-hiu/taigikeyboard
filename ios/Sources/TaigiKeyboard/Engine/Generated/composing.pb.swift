@@ -1020,8 +1020,11 @@ public nonisolated struct Taigi_Engine_ResetAutocompleteContext: Sendable {
 /// Mid-commit handshake during continuous-input. Maps to
 /// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the
 /// platform side. `text` is the committed segment's display (e.g., "紙"),
-/// `roman` is the segment's raw input (e.g., "tsua"). Emitted only inside
-/// `Phase::Continuous` mid-commit branches.
+/// `roman` is the segment's raw input (e.g., "tsua"). Emitted inside
+/// `Phase::Continuous` mid-commit branches (a nail) and on unnail. NextWord
+/// learns nothing from it — a nailed segment is not in the document yet;
+/// the final commit's `NextWordWordSelected.preceding` carries it
+/// (behavioral-invariants §40). Platforms read it as the nail signal.
 public nonisolated struct Taigi_Engine_NextWordUpdateLastSelectedWord: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1038,8 +1041,10 @@ public nonisolated struct Taigi_Engine_NextWordUpdateLastSelectedWord: Sendable 
 
 /// Final-commit handshake during continuous-input. Maps to
 /// `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
-/// trigger_prediction, now_ms)`. Emitted when `Phase::Continuous` exits to
-/// Idle through commit (pending consumed in full).
+/// trigger_prediction, now_ms, preceding)`. Emitted when `Phase::Continuous`
+/// exits to Idle through commit (pending consumed in full). `preceding` = the
+/// nailed segments committed before the terminal word, in document order —
+/// forwarded verbatim so NextWord learns the whole sequence in one decision.
 public nonisolated struct Taigi_Engine_NextWordWordSelected: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -1050,6 +1055,8 @@ public nonisolated struct Taigi_Engine_NextWordWordSelected: Sendable {
   public var roman: String = String()
 
   public var triggerPrediction: Bool = false
+
+  public var preceding: [Taigi_Engine_CommittedWord] = []
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -2432,7 +2439,7 @@ nonisolated extension Taigi_Engine_NextWordUpdateLastSelectedWord: SwiftProtobuf
 
 nonisolated extension Taigi_Engine_NextWordWordSelected: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NextWordWordSelected"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0\u{3}trigger_prediction\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}roman\0\u{3}trigger_prediction\0\u{1}preceding\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2443,6 +2450,7 @@ nonisolated extension Taigi_Engine_NextWordWordSelected: SwiftProtobuf.Message, 
       case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.triggerPrediction) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.preceding) }()
       default: break
       }
     }
@@ -2458,6 +2466,9 @@ nonisolated extension Taigi_Engine_NextWordWordSelected: SwiftProtobuf.Message, 
     if self.triggerPrediction != false {
       try visitor.visitSingularBoolField(value: self.triggerPrediction, fieldNumber: 3)
     }
+    if !self.preceding.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.preceding, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -2465,6 +2476,7 @@ nonisolated extension Taigi_Engine_NextWordWordSelected: SwiftProtobuf.Message, 
     if lhs.text != rhs.text {return false}
     if lhs.roman != rhs.roman {return false}
     if lhs.triggerPrediction != rhs.triggerPrediction {return false}
+    if lhs.preceding != rhs.preceding {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

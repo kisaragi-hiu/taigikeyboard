@@ -28,13 +28,20 @@ public extension RustEngineBridge {
             /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Maps to
             /// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)`.
             /// Platform delegate forwards to `NextWordController.updateLastSelectedWord`
-            /// which injects `nowMs` + envelope generation.
+            /// which injects `nowMs` + envelope generation. NextWord learns nothing
+            /// from it (§40); `ComposingManager` reads it as the nail signal.
             case nextWordUpdateLastSelectedWord(text: String, roman: String)
             /// v3.5.8 Phase 4 — continuous-input final-commit handshake. Maps to
             /// `NextWordRequest::WordSelected(text, roman, require_roman_mode=false,
-            /// trigger_prediction, now_ms)`. Forward `triggerPrediction` exactly —
-            /// hardcoding either value breaks the Phase 4 commit contract.
-            case nextWordWordSelected(text: String, roman: String, triggerPrediction: Bool)
+            /// trigger_prediction, now_ms, preceding)`. Forward `triggerPrediction`
+            /// and `preceding` exactly — `preceding` is the nailed segments committed
+            /// before `text`, learned as one sequence (behavioral-invariants §40).
+            case nextWordWordSelected(
+                text: String,
+                roman: String,
+                triggerPrediction: Bool,
+                preceding: [Taigi_Engine_CommittedWord],
+            )
             /// v3.5.8 Phase 4 — continuous-input abort handshake. Maps to
             /// `NextWordRequest::ClearForNewComposing(now_ms)`. Platform delegate
             /// forwards to `NextWordController.clearDisplay()` (NOT
@@ -617,6 +624,7 @@ public extension RustEngineBridge {
                     text: m.text,
                     roman: m.roman,
                     triggerPrediction: m.triggerPrediction,
+                    preceding: m.preceding,
                 )
             case .nextWordClearForNewComposing:
                 return .nextWordClearForNewComposing

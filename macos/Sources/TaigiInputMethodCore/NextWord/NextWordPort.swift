@@ -20,9 +20,17 @@ import Foundation
 /// (`desktop/crates/taigi-desktop-core/src/composing/next_word.rs`).
 @MainActor
 protocol NextWordPort: AnyObject {
-    /// The user finalized `text` into the document.
-    func wordSelected(text: String, roman: String, settings: EngineSettings, generation: UInt64)
-    /// A continuous composition nailed a segment without finalizing.
+    /// The user finalized `text` into the document, after the `preceding`
+    /// words of the same commit (a continuous composition's nailed segments).
+    func wordSelected(
+        text: String,
+        roman: String,
+        preceding: [Taigi_Engine_CommittedWord],
+        settings: EngineSettings,
+        generation: UInt64,
+    )
+    /// A continuous composition nailed a segment without finalizing — the
+    /// engine learns nothing from it (§40).
     func segmentNailed(text: String, roman: String, settings: EngineSettings, generation: UInt64)
     /// The context is gone: nothing that follows follows it.
     func forgetContext(settings: EngineSettings, generation: UInt64)
@@ -31,10 +39,17 @@ protocol NextWordPort: AnyObject {
 /// The engine's next-word slice, stamped with the wall clock the engine's
 /// association window compares against.
 final class EngineNextWord: NextWordPort {
-    func wordSelected(text: String, roman: String, settings: EngineSettings, generation: UInt64) {
+    func wordSelected(
+        text: String,
+        roman: String,
+        preceding: [Taigi_Engine_CommittedWord],
+        settings: EngineSettings,
+        generation: UInt64,
+    ) {
         RustEngineBridge.nextwordWordSelected(
             text: text,
             roman: roman,
+            preceding: preceding,
             nowMs: Self.nowMs(),
             settings: settings,
             generation: generation,

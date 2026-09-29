@@ -195,6 +195,56 @@ fn final_commit_exits_to_idle_emits_word_selected() {
     assert_eq!(nw.text, "珠");
     assert_eq!(nw.roman, "tsu");
     assert!(nw.trigger_prediction);
+    assert!(nw.preceding.is_empty(), "no nailed segment before 珠");
+}
+
+// INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING (behavioral-invariants §40): the
+// final commit carries every nailed segment before the terminal word, in
+// document order, keyed canonically (canonical text + association TL, raw
+// slice as fallback) — the same identity the terminal word uses.
+#[test]
+fn final_commit_carries_nailed_segments_as_preceding() {
+    let mut e = engine_in_continuous("guabehtsiah");
+    for (display, canonical, association_tl, consumed) in
+        [("我", "我", "guá", 3), ("欲", "欲", "", 3)]
+    {
+        e.apply(
+            Intent::CommitContinuous {
+                display_text: display.to_string(),
+                canonical_text: canonical.to_string(),
+                association_tl: association_tl.to_string(),
+                hanji: None,
+                consumed_bytes: consumed,
+                syllable_count: 1,
+            },
+            &config_tl(),
+        );
+    }
+    let resp = e.apply(
+        Intent::CommitContinuous {
+            display_text: "食".to_string(),
+            canonical_text: "食".to_string(),
+            association_tl: "tsia̍h".to_string(),
+            hanji: None,
+            consumed_bytes: 5,
+            syllable_count: 1,
+        },
+        &config_tl(),
+    );
+    let Some(Kind::NextWordWordSelected(nw)) = resp.effect.last().and_then(|e| e.kind.as_ref())
+    else {
+        panic!(
+            "final commit ends with NextWordWordSelected, got {:?}",
+            resp.effect
+        );
+    };
+    assert_eq!((nw.text.as_str(), nw.roman.as_str()), ("食", "tsia̍h"));
+    let preceding: Vec<(&str, &str)> = nw
+        .preceding
+        .iter()
+        .map(|w| (w.text.as_str(), w.roman.as_str()))
+        .collect();
+    assert_eq!(preceding, vec![("我", "guá"), ("欲", "beh")]);
 }
 
 // ---- CommitContinuous validation ----------------------------------
@@ -767,12 +817,19 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
     };
     // Model B: whole composition — nailed "紙" + pending tail "li2" → "lí".
     assert_eq!(commit.text, "紙 lí");
-    // Terminal NextWordWordSelected is for the pending tail "word".
+    // Terminal NextWordWordSelected is for the pending tail "word"; the
+    // nailed 紙 precedes it (raw slice — no association TL was sent).
     let Kind::NextWordWordSelected(nw) = resp.effect[3].kind.as_ref().unwrap() else {
         unreachable!();
     };
     assert_eq!(nw.text, "lí");
     assert_eq!(nw.roman, "li2");
+    let preceding: Vec<(&str, &str)> = nw
+        .preceding
+        .iter()
+        .map(|w| (w.text.as_str(), w.roman.as_str()))
+        .collect();
+    assert_eq!(preceding, vec![("紙", "tsua")]);
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 
@@ -1136,6 +1193,48 @@ fn commit_raw_under_continuous_raw_empty_after_unnail_commits_nailed_only() {
     assert_eq!(nw.roman, "tsu");
     assert!(nw.trigger_prediction);
     assert_eq!(e.snapshot_state().phase, Phase::Idle);
+}
+
+// INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING (behavioral-invariants §40):
+// Enter with an empty tail makes the LAST nailed segment the terminal word
+// and every earlier one `preceding` — none dropped, none sent twice.
+#[test]
+fn commit_raw_with_empty_tail_carries_earlier_nails_as_preceding() {
+    let mut e = engine_in_continuous("tsuguaa");
+    for (display, consumed) in [("珠", 3), ("我", 3)] {
+        e.apply(
+            Intent::CommitContinuous {
+                display_text: display.to_string(),
+                canonical_text: String::new(),
+                association_tl: String::new(),
+                hanji: None,
+                consumed_bytes: consumed,
+                syllable_count: 1,
+            },
+            &config_tl(),
+        );
+    }
+    e.apply(Intent::DeleteBackward, &config_tl()); // pending "a" → ""
+    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
+        panic!("still Continuous with empty pending + 2 nailed");
+    };
+    assert_eq!((raw.as_str(), nailed.len()), ("", 2));
+
+    let resp = e.apply(Intent::CommitRaw, &config_tl());
+    let Some(Kind::NextWordWordSelected(nw)) = resp.effect.last().and_then(|e| e.kind.as_ref())
+    else {
+        panic!(
+            "Enter ends with NextWordWordSelected, got {:?}",
+            resp.effect
+        );
+    };
+    assert_eq!((nw.text.as_str(), nw.roman.as_str()), ("我", "gua"));
+    let preceding: Vec<(&str, &str)> = nw
+        .preceding
+        .iter()
+        .map(|w| (w.text.as_str(), w.roman.as_str()))
+        .collect();
+    assert_eq!(preceding, vec![("珠", "tsu")]);
 }
 
 // ---- Empty-Continuous invariant guards (Codex finding #2) --------

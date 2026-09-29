@@ -7,27 +7,21 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Continuous-input nail / unnail handshake: the composing engine emits
- * `Effect::NextWordUpdateLastSelectedWord` when `Phase::Continuous` lands (or
- * a backspace pops) a segment, and the platform forwards it through this
- * intent. Learns nothing and changes no state — a nailed segment is not in
- * the document yet; the final commit's `WordSelected.preceding` carries it
- * (behavioral-invariants §40 INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING).
+ * One committed word: display text + its romanization (as `WordSelected`).
  * </pre>
  *
- * Protobuf type {@code taigi.engine.UpdateLastSelectedWord}
+ * Protobuf type {@code taigi.engine.CommittedWord}
  */
 @com.google.protobuf.Generated
-public  final class UpdateLastSelectedWord extends
+public  final class CommittedWord extends
     com.google.protobuf.GeneratedMessageLite<
-        UpdateLastSelectedWord, UpdateLastSelectedWord.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.UpdateLastSelectedWord)
-    UpdateLastSelectedWordOrBuilder {
-  private UpdateLastSelectedWord() {
+        CommittedWord, CommittedWord.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.CommittedWord)
+    CommittedWordOrBuilder {
+  private CommittedWord() {
     text_ = "";
     roman_ = "";
   }
-  private int bitField0_;
   public static final int TEXT_FIELD_NUMBER = 1;
   private java.lang.String text_;
   /**
@@ -122,97 +116,50 @@ public  final class UpdateLastSelectedWord extends
 
   }
 
-  public static final int INPUT_FIELD_NUMBER = 3;
-  private com.siansiansu.taigikeyboard.engine.proto.DecisionInput input_;
-  /**
-   * <code>.taigi.engine.DecisionInput input = 3;</code>
-   */
-  @java.lang.Override
-  public boolean hasInput() {
-    return ((bitField0_ & 0x00000001) != 0);
-  }
-  /**
-   * <code>.taigi.engine.DecisionInput input = 3;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.DecisionInput getInput() {
-    return input_ == null ? com.siansiansu.taigikeyboard.engine.proto.DecisionInput.getDefaultInstance() : input_;
-  }
-  /**
-   * <code>.taigi.engine.DecisionInput input = 3;</code>
-   */
-  private void setInput(com.siansiansu.taigikeyboard.engine.proto.DecisionInput value) {
-    java.util.Objects.requireNonNull(value);
-    input_ = value;
-    bitField0_ |= 0x00000001;
-  }
-  /**
-   * <code>.taigi.engine.DecisionInput input = 3;</code>
-   */
-  @java.lang.SuppressWarnings("ReferenceEquality")
-  private void mergeInput(com.siansiansu.taigikeyboard.engine.proto.DecisionInput value) {
-    java.util.Objects.requireNonNull(value);
-    if (input_ != null &&
-        input_ != com.siansiansu.taigikeyboard.engine.proto.DecisionInput.getDefaultInstance()) {
-      input_ =
-        com.siansiansu.taigikeyboard.engine.proto.DecisionInput.newBuilder(input_).mergeFrom(value).buildPartial();
-    } else {
-      input_ = value;
-    }
-    bitField0_ |= 0x00000001;
-  }
-  /**
-   * <code>.taigi.engine.DecisionInput input = 3;</code>
-   */
-  private void clearInput() {
-    input_ = null;
-    bitField0_ = (bitField0_ & ~0x00000001);
-  }
-
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -220,24 +167,24 @@ public  final class UpdateLastSelectedWord extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -248,28 +195,23 @@ public  final class UpdateLastSelectedWord extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.CommittedWord prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
    * <pre>
-   * Continuous-input nail / unnail handshake: the composing engine emits
-   * `Effect::NextWordUpdateLastSelectedWord` when `Phase::Continuous` lands (or
-   * a backspace pops) a segment, and the platform forwards it through this
-   * intent. Learns nothing and changes no state — a nailed segment is not in
-   * the document yet; the final commit's `WordSelected.preceding` carries it
-   * (behavioral-invariants §40 INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING).
+   * One committed word: display text + its romanization (as `WordSelected`).
    * </pre>
    *
-   * Protobuf type {@code taigi.engine.UpdateLastSelectedWord}
+   * Protobuf type {@code taigi.engine.CommittedWord}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.UpdateLastSelectedWord)
-      com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWordOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.CommittedWord, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.CommittedWord)
+      com.siansiansu.taigikeyboard.engine.proto.CommittedWordOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.CommittedWord.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -373,54 +315,7 @@ public  final class UpdateLastSelectedWord extends
       return this;
     }
 
-    /**
-     * <code>.taigi.engine.DecisionInput input = 3;</code>
-     */
-    @java.lang.Override
-    public boolean hasInput() {
-      return instance.hasInput();
-    }
-    /**
-     * <code>.taigi.engine.DecisionInput input = 3;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.DecisionInput getInput() {
-      return instance.getInput();
-    }
-    /**
-     * <code>.taigi.engine.DecisionInput input = 3;</code>
-     */
-    public Builder setInput(com.siansiansu.taigikeyboard.engine.proto.DecisionInput value) {
-      copyOnWrite();
-      instance.setInput(value);
-      return this;
-      }
-    /**
-     * <code>.taigi.engine.DecisionInput input = 3;</code>
-     */
-    public Builder setInput(
-        com.siansiansu.taigikeyboard.engine.proto.DecisionInput.Builder builderForValue) {
-      copyOnWrite();
-      instance.setInput(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.DecisionInput input = 3;</code>
-     */
-    public Builder mergeInput(com.siansiansu.taigikeyboard.engine.proto.DecisionInput value) {
-      copyOnWrite();
-      instance.mergeInput(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.DecisionInput input = 3;</code>
-     */
-    public Builder clearInput() {  copyOnWrite();
-      instance.clearInput();
-      return this;
-    }
-
-    // @@protoc_insertion_point(builder_scope:taigi.engine.UpdateLastSelectedWord)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.CommittedWord)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -429,34 +324,32 @@ public  final class UpdateLastSelectedWord extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord();
+        return new com.siansiansu.taigikeyboard.engine.proto.CommittedWord();
       }
       case NEW_BUILDER: {
         return new Builder();
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "bitField0_",
             "text_",
             "roman_",
-            "input_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0001\u0001\u0003\u0003\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u1009\u0000";
+              "\u0000\u0002\u0000\u0000\u0001\u0002\u0002\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
+              "";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.CommittedWord> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.CommittedWord.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.CommittedWord>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -476,24 +369,24 @@ public  final class UpdateLastSelectedWord extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.UpdateLastSelectedWord)
-  private static final com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.CommittedWord)
+  private static final com.siansiansu.taigikeyboard.engine.proto.CommittedWord DEFAULT_INSTANCE;
   static {
-    UpdateLastSelectedWord defaultInstance = new UpdateLastSelectedWord();
+    CommittedWord defaultInstance = new CommittedWord();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      UpdateLastSelectedWord.class, defaultInstance);
+      CommittedWord.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.CommittedWord getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<UpdateLastSelectedWord> PARSER;
+  private static volatile com.google.protobuf.Parser<CommittedWord> PARSER;
 
-  public static com.google.protobuf.Parser<UpdateLastSelectedWord> parser() {
+  public static com.google.protobuf.Parser<CommittedWord> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

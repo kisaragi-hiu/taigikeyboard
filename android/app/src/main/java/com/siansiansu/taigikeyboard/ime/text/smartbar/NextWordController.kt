@@ -196,7 +196,8 @@ class NextWordController(
     /**
      * Sibling of [handleNextWordPrediction] that forwards the engine's
      * `Phase::Continuous` final-commit `NextWordWordSelected` Effect with the
-     * engine-supplied `triggerPrediction` flag preserved verbatim.
+     * engine-supplied `triggerPrediction` flag and `preceding` segments
+     * preserved verbatim (the engine learns the whole composition, §40).
      * [handleNextWordPrediction] hardcodes `triggerPrediction = true` because
      * every platform-side candidate tap predicts; the engine effect path
      * must not silently ignore a future `false` from the engine.
@@ -208,6 +209,7 @@ class NextWordController(
         text: String,
         roman: String,
         triggerPrediction: Boolean,
+        preceding: List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord>,
     ) {
         val settings = settingsProvider.current
         applyDecideResult(
@@ -220,19 +222,17 @@ class NextWordController(
                 mode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
                 generation = envelopeGen,
+                preceding = preceding,
             ),
         )
     }
 
     /**
-     * Update `lastSelectedWord` without triggering a prediction query —
-     * invoked when Space confirms composing text. Routes through the
-     * Android-only [RustEngineBridge.nextwordUpdateLastSelectedWord] intent
-     * (audit §5 #5 / Codex v1 P1) so pre-Rust Android-specific semantics
-     * are preserved verbatim:
-     * - records ONLY compound associations inside the word (no `prev→this`),
-     * - does NOT reschedule the context timeout,
-     * - does NOT bump `current_generation`.
+     * Continuous-input nail / unnail handshake (composing engine
+     * `NextWordUpdateLastSelectedWord` effect). The engine learns nothing
+     * from it and keeps the committed context — a nailed segment is not in
+     * the document yet; the final commit's `preceding` carries it
+     * (behavioral-invariants §40).
      */
     fun updateLastSelectedWord(
         word: String,
