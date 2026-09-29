@@ -15,7 +15,7 @@ use lexicon::dictionary_reader::{DictionaryReader, Filter};
 use lexicon::handle::EngineHandle;
 use lexicon::paths::LexiconPaths;
 use lexicon::prefix_index::PrefixIndex;
-use lexicon::search::{self, SearchInputMode, SearchInputType, SearchParams};
+use lexicon::search::{self, SearchInputMode, SearchParams};
 use lexicon::LexiconError;
 
 mod common;
@@ -170,36 +170,9 @@ fn invariant_lex_lookup_rowids_order_preserves_insertion() {
     );
 }
 
-// --- INVARIANT_LEX_HANZI_GUARD (Rust unit) -----------------------------
-
-#[test]
-fn invariant_lex_hanzi_guard_short_circuits() {
-    // Hanzi inputType returns [] without touching the readers — verified
-    // by passing dummy non-existent paths; if the guard fired the search
-    // would attempt to read the (missing) state and return an error.
-    let pairs: &[(&str, u32)] = &[];
-    let path = write_synthetic_fst("hanzi-guard.fst", pairs);
-    let index = PrefixIndex::open(&path).expect("empty fst opens");
-    let dict = synth_dictionary_reader(&[]);
-
-    let params = SearchParams {
-        input: "我".to_string(),
-        input_type: SearchInputType::Hanzi,
-        input_mode: SearchInputMode::Tl,
-        limit: 50,
-        enabled_sources_bitmask: u32::MAX,
-    };
-    let rows = search::search(&params, &index, &dict).expect("guard short-circuits");
-    assert!(
-        rows.is_empty(),
-        "INVARIANT_LEX_HANZI_GUARD: hanzi → []; got {} rows",
-        rows.len()
-    );
-}
-
 // --- TPS three-index read path (C-1) -----------------------------------
 
-/// `SearchRequest{input_mode=Tps}` now hits the `tps:` FST family
+/// `SearchParams{input_mode=Tps}` now hits the `tps:` FST family
 /// directly. Pins the C-0 emit shape (literal Bopomofo + tone mark) +
 /// the C-1 `key_normalizer` flip; pre-C-1 this same request fell through
 /// to `tl:` and missed every `tps:` row.
@@ -219,7 +192,6 @@ fn tps_input_mode_hits_tps_family_through_search() {
 
     let params = SearchParams {
         input: "\u{3124}\u{02CA}".to_string(),
-        input_type: SearchInputType::RomanWithTone,
         input_mode: SearchInputMode::Tps,
         limit: 50,
         enabled_sources_bitmask: u32::MAX,
@@ -250,7 +222,6 @@ fn tps_input_mode_tone8_substitution_matches_build_pipeline_key() {
     // the TPS path.
     let params = SearchParams {
         input: "\u{31A0}\u{3124}\u{31B7}\u{02D9}".to_string(),
-        input_type: SearchInputType::RomanWithTone,
         input_mode: SearchInputMode::Tps,
         limit: 50,
         enabled_sources_bitmask: u32::MAX,
@@ -286,7 +257,6 @@ fn tps_er_or_dual_emit_both_glyphs_hit_same_rowid() {
     // ㄜ-glyph user input (bridge default form).
     let er_params = SearchParams {
         input: "\u{310D}\u{311C}\u{02EA}".to_string(),
-        input_type: SearchInputType::RomanWithTone,
         input_mode: SearchInputMode::Tps,
         limit: 50,
         enabled_sources_bitmask: u32::MAX,
@@ -305,7 +275,6 @@ fn tps_er_or_dual_emit_both_glyphs_hit_same_rowid() {
     // the variant key emitted at build time.
     let or_params = SearchParams {
         input: "\u{310D}\u{311B}\u{02EA}".to_string(),
-        input_type: SearchInputType::RomanWithTone,
         input_mode: SearchInputMode::Tps,
         limit: 50,
         enabled_sources_bitmask: u32::MAX,

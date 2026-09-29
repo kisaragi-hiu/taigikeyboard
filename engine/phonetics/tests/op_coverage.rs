@@ -1,18 +1,16 @@
 //! Op coverage — exercises every `PhoneticsRequest.method` variant
 //! end-to-end through the dispatcher so the wire format, dispatch
 //! routing, and per-op implementation stay in sync. Includes branch
-//! coverage for the TPS input adjuster and NBSP-as-non-delimiter for
-//! `derive_abbrev`.
+//! coverage for the TPS input adjuster.
 
 use phonetics::api::normalize_tone;
 use phonetics::dispatch::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
-    AppConfig, BoolResult, DeriveAbbrev, DeriveNotone, GetToneVariations, IsTpsToneMark,
-    NfdPreprocessForLookup, NormalizeInput, PhoneticsRequest, PhoneticsResponse, PojToTl,
-    StringResult, StripTone, StripToneResult, TlDisplayToTps, TlNumericToTps, TlToPoj,
-    ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
+    AppConfig, BoolResult, GetToneVariations, IsTpsToneMark, NfdPreprocessForLookup,
+    PhoneticsRequest, PhoneticsResponse, StringResult, StripTone, StripToneResult, TlDisplayToTps,
+    TlNumericToTps, TlToPoj, ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
 };
 
 // ---------------- helpers ----------------
@@ -85,7 +83,6 @@ fn tone_variations_result(resp: &PhoneticsResponse) -> ToneVariationsResult {
 
 fn tl_config() -> AppConfig {
     AppConfig {
-        tone_mode: String::new(),
         input_mode: "tl".to_string(),
         oo_doubletap_enabled: false,
         nn_doubletap_enabled: false,
@@ -100,7 +97,6 @@ fn tl_config() -> AppConfig {
 
 fn poj_config(oo: bool, nn: bool) -> AppConfig {
     AppConfig {
-        tone_mode: String::new(),
         input_mode: "poj".to_string(),
         oo_doubletap_enabled: oo,
         nn_doubletap_enabled: nn,
@@ -255,15 +251,6 @@ fn strip_tone_returns_bare_and_tone() {
 }
 
 #[test]
-fn poj_to_tl_display_round_trip() {
-    let resp = run(Method::PojToTl(PojToTl {
-        input: "ho͘".to_string(),
-    }));
-    let out = string_result(&resp);
-    assert!(out.contains("hoo"), "POJ o͘ should map to TL oo: {out:?}");
-}
-
-#[test]
 fn tl_to_poj_display_round_trip() {
     let resp = run(Method::TlToPoj(TlToPoj {
         input: "hoo".to_string(),
@@ -273,33 +260,6 @@ fn tl_to_poj_display_round_trip() {
         out.contains('\u{0358}'),
         "TL oo should map to POJ o͘: {out:?}"
     );
-}
-
-#[test]
-fn normalize_input_extracts_tone_from_diacritic() {
-    let resp = run(Method::NormalizeInput(NormalizeInput {
-        input: "hó".to_string(),
-    }));
-    let out = string_result(&resp);
-    assert_eq!(out, "ho2");
-}
-
-#[test]
-fn normalize_input_handles_hyphenated_syllables() {
-    let resp = run(Method::NormalizeInput(NormalizeInput {
-        input: "gâu-tsá".to_string(),
-    }));
-    let out = string_result(&resp);
-    assert!(out.contains("gau5") && out.contains("tsa2"), "got {out:?}");
-}
-
-#[test]
-fn normalize_input_keeps_existing_tone_digit() {
-    let resp = run(Method::NormalizeInput(NormalizeInput {
-        input: "ho2".to_string(),
-    }));
-    let out = string_result(&resp);
-    assert_eq!(out, "ho2");
 }
 
 #[test]
@@ -329,64 +289,6 @@ fn nfd_preprocess_for_lookup_substitutes_nasal_marker() {
         input: "sa\u{207f}".to_string(),
     }));
     assert_eq!(string_result(&resp), "sann");
-}
-
-// ============================================================
-// Derivation
-// ============================================================
-
-// INVARIANT_NORMALIZER_STRIPS_HYPHENS_IN_NOTONE (behavioral-invariants.md §4)
-#[test]
-fn derive_notone_strips_diacritics_digits_hyphens_spaces() {
-    let resp = run(Method::DeriveNotone(DeriveNotone {
-        roman: "Gâu-tsá 2".to_string(),
-    }));
-    assert_eq!(string_result(&resp), "gautsa");
-}
-
-#[test]
-fn derive_notone_converts_nasal_marker_to_nn() {
-    let resp = run(Method::DeriveNotone(DeriveNotone {
-        roman: "siu\u{207f}".to_string(),
-    }));
-    assert_eq!(string_result(&resp), "siunn");
-}
-
-#[test]
-fn derive_abbrev_returns_first_char_per_syllable() {
-    let resp = run(Method::DeriveAbbrev(DeriveAbbrev {
-        roman: "gâu-tsá".to_string(),
-    }));
-    assert_eq!(string_result(&resp), "gt");
-}
-
-#[test]
-fn derive_abbrev_returns_empty_on_single_syllable() {
-    let resp = run(Method::DeriveAbbrev(DeriveAbbrev {
-        roman: "hó".to_string(),
-    }));
-    assert_eq!(string_result(&resp), "");
-}
-
-#[test]
-fn derive_abbrev_splits_on_ascii_whitespace_and_hyphen() {
-    let resp = run(Method::DeriveAbbrev(DeriveAbbrev {
-        roman: "a\tb\nc d-e".to_string(),
-    }));
-    assert_eq!(string_result(&resp), "abcde");
-}
-
-/// Codex v3 §1 fixture: `[ \t\n\x0B\f\r-]+` literal MUST NOT split NBSP.
-/// Pinning Android JVM `Regex("[\\s-]+")` ASCII-only behavior — Rust
-/// `regex` `\s` is Unicode-aware by default; using a literal char class
-/// avoids splitting U+00A0.
-#[test]
-fn derive_abbrev_does_not_split_on_nbsp() {
-    let resp = run(Method::DeriveAbbrev(DeriveAbbrev {
-        roman: "a\u{00A0}b".to_string(),
-    }));
-    // NBSP is not a delimiter, so "a\u{00A0}b" is a single syllable → "" abbrev.
-    assert_eq!(string_result(&resp), "");
 }
 
 // ============================================================

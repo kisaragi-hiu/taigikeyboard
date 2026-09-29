@@ -22,17 +22,6 @@ public interface LexiconResponseOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.InstallResponse getInstallResult();
 
   /**
-   * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-   * @return Whether the searchResult field is set.
-   */
-  boolean hasSearchResult();
-  /**
-   * <code>.taigi.engine.SearchResponse search_result = 12;</code>
-   * @return The searchResult.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.SearchResponse getSearchResult();
-
-  /**
    * <code>.taigi.engine.SearchWithSourcesResponse search_with_sources_result = 13;</code>
    * @return Whether the searchWithSourcesResult field is set.
    */

@@ -9,7 +9,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * `DictionaryFiltersResponse` carries ready-to-send outputs:
  * - `dictionary_filter_bitmask` plumbs straight into
- * `SearchRequest.enabled_sources_bitmask` / `SearchWithSourcesRequest` /
+ * `SearchWithSourcesRequest.enabled_sources_bitmask` /
  * `SearchByHanziRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
  * bit 10 dev (always set), bit 12 variant.
  * - `assoc_lookup_bitmask` plumbs straight into
@@ -308,7 +308,7 @@ public  final class DictionaryFiltersResponse extends
    * <pre>
    * `DictionaryFiltersResponse` carries ready-to-send outputs:
    * - `dictionary_filter_bitmask` plumbs straight into
-   * `SearchRequest.enabled_sources_bitmask` / `SearchWithSourcesRequest` /
+   * `SearchWithSourcesRequest.enabled_sources_bitmask` /
    * `SearchByHanziRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
    * bit 10 dev (always set), bit 12 variant.
    * - `assoc_lookup_bitmask` plumbs straight into

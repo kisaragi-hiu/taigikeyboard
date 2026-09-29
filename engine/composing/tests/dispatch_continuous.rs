@@ -179,6 +179,7 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
 // otherwise surface `a`→阿, suppressed only by the guard) needs a
 // hermetic installed `EngineHandle` and belongs to the lexicon-backed
 // layer. This note keeps a guard removal from passing silently.
+// INVARIANT_LEX_HANZI_GUARD (behavioral-invariants.md §14) — the one engine guard.
 #[test]
 fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
     // CJK accidentally in the composing buffer (paste / stale

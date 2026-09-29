@@ -31,7 +31,7 @@ use std::path::PathBuf;
 
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
-use lexicon::search::{self, SearchInputMode, SearchInputType, SearchParams};
+use lexicon::search::{self, SearchInputMode, SearchParams};
 
 mod common;
 use common::{build_tkdb_v3, write_temp};
@@ -67,7 +67,6 @@ fn fused_toneless_key_retrieves_single_and_multi_syllable_entries() {
 
     let params = SearchParams {
         input: "tsua".to_string(),
-        input_type: SearchInputType::RomanNoTone,
         input_mode: SearchInputMode::Tl,
         limit: 10,
         enabled_sources_bitmask: u32::MAX,
@@ -113,7 +112,6 @@ fn fused_toneless_key_works_for_poj_path() {
 
     let params = SearchParams {
         input: "chua".to_string(),
-        input_type: SearchInputType::RomanNoTone,
         input_mode: SearchInputMode::Poj,
         limit: 10,
         enabled_sources_bitmask: u32::MAX,

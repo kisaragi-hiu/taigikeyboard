@@ -29,14 +29,6 @@ public extension RustEngineBridge {
         public let prefixIndexEntryCount: UInt64
     }
 
-    /// Lexicon engine `inputType` (mirrors proto `InputType`).
-    enum LexiconInputType: Int32, Equatable {
-        case unspecified = 0
-        case romanNoTone = 1
-        case romanWithTone = 2
-        case hanzi = 3
-    }
-
     /// Lexicon engine `inputMode` (mirrors proto `InputMode`).
     enum LexiconInputMode: Int32, Equatable {
         case unspecified = 0
@@ -143,34 +135,6 @@ public extension RustEngineBridge {
             dictionaryRecordCount: r.dictionaryRecordCount,
             prefixIndexEntryCount: r.prefixIndexEntryCount,
         )
-    }
-
-    /// IME autocomplete entry. Hanzi `inputType` returns `[]` per D-8
-    /// hard guard pinned by `INVARIANT_LEX_HANZI_GUARD` (commit 12 adds
-    /// the platform parity test).
-    static func lexiconSearch(
-        input: String,
-        inputType: LexiconInputType,
-        inputMode: LexiconInputMode,
-        limit: UInt32,
-        tpsOrMappedToER: Bool,
-        enabledSourcesBitmask: UInt32,
-    ) -> [LexiconRow] {
-        var payload = Taigi_Engine_SearchRequest()
-        payload.input = input
-        payload.inputType = Taigi_Engine_InputType(rawValue: Int(inputType.rawValue)) ?? .unspecified
-        payload.inputMode = Taigi_Engine_InputMode(rawValue: Int(inputMode.rawValue)) ?? .unspecified
-        payload.limit = limit
-        payload.tpsOrMappedToEr = tpsOrMappedToER
-        payload.enabledSourcesBitmask = enabledSourcesBitmask
-        guard let resp = lexiconDispatch(method: .search(payload), op: "lexiconSearch") else {
-            return []
-        }
-        guard case let .searchResult(r)? = resp.result else {
-            recordFailure(op: "lexiconSearch", message: "missing search result")
-            return []
-        }
-        return r.rows.map(taigiWordToRow)
     }
 
     /// Tab3 multi-source dictionary lookup.
@@ -333,7 +297,7 @@ public extension RustEngineBridge {
 
     /// Lexicon envelope dispatch — encode → FFI roundtrip → decode the
     /// `LexiconResponse` payload. Used by every lexicon method in this
-    /// file (search / assoc / dictionary-filters / isHanzi). No `AppConfig` snapshot needed — lexicon ops
+    /// file (searchWithSources / searchByHanzi / dictionaryFilters / isHanzi). No `AppConfig` snapshot needed — lexicon ops
     /// read no live config.
     private static func lexiconDispatch(
         method: Taigi_Engine_LexiconRequest.OneOf_Method,

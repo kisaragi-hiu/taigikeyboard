@@ -15,8 +15,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * result. Replaces both platforms' `TaigiUnicode.nfdPreprocessed` call
  * inside `ExternalLookupURLBuilder`.
  *
- * Distinct from `NormalizeInput` (which lowercases + extracts tone digits
- * + adds default tones + splits syllables) — see
+ * Distinct from the in-process `normalization::normalize_input` (which
+ * lowercases + extracts tone digits + adds default tones + splits syllables) — see
  * `engine/phonetics/src/normalization.rs::taigi_unicode_base_form` doc
  * for the algorithm contrast against `trie_key_unicode_form`.
  * </pre>
@@ -172,8 +172,8 @@ public  final class NfdPreprocessForLookup extends
    * result. Replaces both platforms' `TaigiUnicode.nfdPreprocessed` call
    * inside `ExternalLookupURLBuilder`.
    *
-   * Distinct from `NormalizeInput` (which lowercases + extracts tone digits
-   * + adds default tones + splits syllables) — see
+   * Distinct from the in-process `normalization::normalize_input` (which
+   * lowercases + extracts tone digits + adds default tones + splits syllables) — see
    * `engine/phonetics/src/normalization.rs::taigi_unicode_base_form` doc
    * for the algorithm contrast against `trie_key_unicode_form`.
    * </pre>

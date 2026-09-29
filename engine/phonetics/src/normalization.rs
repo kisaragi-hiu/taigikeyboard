@@ -23,7 +23,7 @@ use unicode_normalization::UnicodeNormalization;
 // InputNormalizer (full pipeline → trie-query key)
 // ===========================================================================
 
-/// `Method::NormalizeInput` — full pipeline:
+/// The trie-query key normalizer (in-process; no wire op) — full pipeline:
 /// 1. TPS preprocess (if input contains TPS) via `from_zhuyin`.
 /// 2. Lowercase.
 /// 3. Detect whether input contains tone-mark diacritics (decides
@@ -149,6 +149,26 @@ mod tests {
     // preserved verbatim from the original ranking-side module.
 
     // INVARIANT_POJ_NASAL_TO_NN_SUBSTITUTION (behavioral-invariants.md §2)
+    // Retired `NormalizeInput` wire-op coverage, kept at the in-process seam.
+    // INVARIANT_NORMALIZER_STRIPS_HYPHENS_IN_NOTONE (behavioral-invariants.md §4):
+    // explicit hyphens split syllables and are dropped from the key.
+    #[test]
+    fn normalize_input_extracts_tone_from_diacritic() {
+        assert_eq!(normalize_input("hó"), "ho2");
+    }
+
+    #[test]
+    fn normalize_input_splits_and_drops_hyphens() {
+        let out = normalize_input("gâu-tsá");
+        assert!(out.contains("gau5") && out.contains("tsa2"), "got {out:?}");
+        assert!(!out.contains('-'), "hyphen must not survive: {out:?}");
+    }
+
+    #[test]
+    fn normalize_input_keeps_existing_tone_digit() {
+        assert_eq!(normalize_input("ho2"), "ho2");
+    }
+
     #[test]
     fn nasal_marker_superscript_n_becomes_nn() {
         assert_eq!(taigi_unicode_base_form("sa\u{207f}"), "sann");

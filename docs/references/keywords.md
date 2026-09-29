@@ -23,13 +23,13 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
 | **Suggestion** | A candidate word (text + title + subtitle + metadata) | iOS `Autocomplete.Suggestion` / Android `CandidateAdapter` |
-| **InputType** | Proto enum `Hanzi` / `RomanWithTone` / `RomanNoTone`, carried on `SearchRequest.input_type` (the `ClassifyInput` op was removed 2026-09-25) | `engine/protos/proto/lexicon.proto` |
+| **InputType** | Retired 2026-09-30 with the `Search` op: the proto enum, `SearchRequest` and the in-process `SearchInputType` are gone; romanization queries go through `lexicon::search::search`, hanji queries through `search_by_hanzi` | `engine/lexicon/src/search.rs` |
 | **composingTextSuggestion** | Position 0 candidate — always the current composing text | iOS `createComposingTextSuggestion()` |
 | **phraseSuggestion** | Learned phrase candidates inserted at position 1 | Rust `lexicon::assoc_lookup` |
 | **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `lexicon::key_normalizer::build` |
 
 ### 3. Tone Engine (`engine/tone.md`)
-All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge+Phonetics.swift` / `PhoneticsBridge.kt` (`stripTone`, `pojToTl`, `tlToPoj`, …); preedit tone rendering runs inside composing ops.
+All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge+Phonetics.swift` / `PhoneticsBridge.kt` (`stripTone`, `tlToPoj`, …); preedit tone rendering runs inside composing ops.
 
 | Keyword | Definition | Owner |
 |---------|-----------|-------|

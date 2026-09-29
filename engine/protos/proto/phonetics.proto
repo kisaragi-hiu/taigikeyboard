@@ -8,7 +8,7 @@ option java_multiple_files = true;
 // Phonetics module — POJ ↔ TL ↔ TPS spelling conversion, tone representation,
 // syllable structure, Unicode normalization, phonological auto-correct.
 //
-// 14 ops live in PhoneticsRequest.method oneof; each op returns its natural
+// 9 ops live in PhoneticsRequest.method oneof; each op returns its natural
 // shape via PhoneticsResponse.result oneof. Pattern mirrors iOS Composing
 // `oneof method` design + khiin-rs single-entry-point dispatch.
 //
@@ -21,23 +21,20 @@ option java_multiple_files = true;
 // =========================================================================
 
 message PhoneticsRequest {
-  // Retired ops with no production caller (removed 2026-09-25).
-  reserved 10, 14, 16, 30;
+  // Retired ops with no production caller (removed 2026-09-25 / 2026-09-30).
+  reserved 10, 12, 14, 15, 16, 20, 21, 22, 30;
   reserved "normalize_tone", "normalize_to_tl", "restore_tone", "contains_tps";
+  reserved "poj_to_tl", "normalize_input", "derive_notone", "derive_abbrev",
+      "derive_custom_search_keys";
 
   oneof method {
-    // --- Phonetics core (6 ops) ---
+    // --- Phonetics core (4 ops) ---
     StripTone strip_tone = 11;
-    PojToTl poj_to_tl = 12;
     TlToPoj tl_to_poj = 13;
-    NormalizeInput normalize_input = 15;
     GetToneVariations get_tone_variations = 18;
     NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;
 
-    // --- Derivation (4 ops) ---
-    DeriveNotone derive_notone = 20;
-    DeriveAbbrev derive_abbrev = 21;
-    DeriveCustomSearchKeys derive_custom_search_keys = 22;
+    // --- Derivation (1 op) ---
     DeriveCustomQueryKey derive_custom_query_key = 23;
 
     // --- TPS (4 ops) ---
@@ -53,14 +50,7 @@ message PhoneticsRequest {
 // =========================================================================
 
 message StripTone { string input = 1; }
-message PojToTl { string input = 1; }
 message TlToPoj { string input = 1; }
-
-// `NormalizeInput` is the full pipeline that produces a trie-query key:
-// TPS preprocess (if input contains TPS) → per-syllable diacritic→digit →
-// checked-ending heuristic for default tone (1 vs 4). Replaces both
-// platforms' `InputNormalizer.normalize`.
-message NormalizeInput { string input = 1; }
 
 // `GetToneVariations` is the init-bulk-pull op for callout tone variation
 // tables. Returns POJ + TL maps in one response. Caller caches once at
@@ -75,43 +65,20 @@ message GetToneVariations {}
 // result. Replaces both platforms' `TaigiUnicode.nfdPreprocessed` call
 // inside `ExternalLookupURLBuilder`.
 //
-// Distinct from `NormalizeInput` (which lowercases + extracts tone digits
-// + adds default tones + splits syllables) — see
+// Distinct from the in-process `normalization::normalize_input` (which
+// lowercases + extracts tone digits + adds default tones + splits syllables) — see
 // `engine/phonetics/src/normalization.rs::taigi_unicode_base_form` doc
 // for the algorithm contrast against `trie_key_unicode_form`.
 message NfdPreprocessForLookup { string input = 1; }
 
 // =========================================================================
-// Derivation request payloads (CustomDictionaryDerivation)
+// Derivation request payloads
 // =========================================================================
 
-// `DeriveNotone` strips tone diacritics + digits + hyphens + spaces,
-// after lowercase + nasal marker conversion. Replaces
-// `CustomDictionaryDerivation.generateNotone`.
-message DeriveNotone { string roman = 1; }
-
-// `DeriveAbbrev` returns first char per syllable (split by hyphen + ASCII
-// whitespace `[ \t\n\x0B\f\r-]+`), diacritics stripped. Returns "" when
-// fewer than 2 syllables. Whitespace canonical = ASCII only (matches
-// Android JVM `Regex("[\\s-]+")` semantics; preserves NBSP as non-delimiter).
-// LEGACY: this is the stored `abbrev` column's face (first letter). The
-// index / search-key abbreviation face — one leading spelling unit per
-// syllable, `ph` / `tsh` whole (§46) — is what `DeriveCustomSearchKeys`
-// emits; no query reads the legacy column.
-message DeriveAbbrev { string roman = 1; }
-
-// `DeriveCustomSearchKeys` — WRITE side (v3.6.1 R3). From a stored
-// custom-dictionary roman, materialize the full {tl, poj, tps} ×
-// {num, notone, abbrev} (+ TPS er/or dialect variant) search-key bundle so a
-// query typed in ANY input mode finds the entry. Mirrors the system-dict
-// three-family FST (`dictionary/build/create_fst.py:128-144`). The keys are
-// matched ONLY within `custom_dictionary.db`'s own query — never against the
-// system FST — so byte-identity with the build pipeline is NOT required; the
-// invariant is WRITE-key == QUERY-key for the same word (both via this op).
-// The raw `roman` column + engine `custom_toneless_key` lattice path are
-// untouched. Replaces `CustomDictionaryDerivation.searchPrefix`'s write half.
-message DeriveCustomSearchKeys { string roman = 1; }
-
+// The WRITE side — the full {tl, poj, tps} × {num, notone, abbrev} search-key
+// bundle for a stored custom-dictionary roman — is derived in-process by
+// `engine/userdata` (`phonetics::api::derive_custom_search_keys`); no wire op.
+//
 // `DeriveCustomQueryKey` — READ side (v3.6.1 R3). Given the user's current raw
 // input + settings `input_mode`, returns the single family-native key tagged
 // with its primary form (num / notone). Effective family =
@@ -230,7 +197,6 @@ message CustomSearchKey {
   string key = 3;
 }
 
-// Result for both `DeriveCustomSearchKeys` (the full write-side bundle) and
-// `DeriveCustomQueryKey` (0 or 1 read-side key). Empty when the input has no
-// derivable key.
+// Result for `DeriveCustomQueryKey` (0 or 1 read-side key). Empty when the
+// input has no derivable key.
 message CustomSearchKeysResult { repeated CustomSearchKey keys = 1; }

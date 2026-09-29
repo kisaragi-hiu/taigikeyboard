@@ -132,7 +132,7 @@ public  final class AssocLookupRequest extends
   /**
    * <pre>
    * Source-toggle bitmask filtering bundled bigram entries. Layout matches
-   * the low 9 bits of `enabled_sources_bitmask` in `SearchRequest`. Sentinel
+   * the low 9 bits of `enabled_sources_bitmask` in `SearchWithSourcesRequest`. Sentinel
    * `u32::MAX` short-circuits the filter (all sources enabled). Plumbed end
    * -to-end since v3.5.6 fix r3173013233 — prior to that, api.rs hardcoded
    * `u32::MAX`, regressing the platform-side filter that used to honor
@@ -149,7 +149,7 @@ public  final class AssocLookupRequest extends
   /**
    * <pre>
    * Source-toggle bitmask filtering bundled bigram entries. Layout matches
-   * the low 9 bits of `enabled_sources_bitmask` in `SearchRequest`. Sentinel
+   * the low 9 bits of `enabled_sources_bitmask` in `SearchWithSourcesRequest`. Sentinel
    * `u32::MAX` short-circuits the filter (all sources enabled). Plumbed end
    * -to-end since v3.5.6 fix r3173013233 — prior to that, api.rs hardcoded
    * `u32::MAX`, regressing the platform-side filter that used to honor
@@ -166,7 +166,7 @@ public  final class AssocLookupRequest extends
   /**
    * <pre>
    * Source-toggle bitmask filtering bundled bigram entries. Layout matches
-   * the low 9 bits of `enabled_sources_bitmask` in `SearchRequest`. Sentinel
+   * the low 9 bits of `enabled_sources_bitmask` in `SearchWithSourcesRequest`. Sentinel
    * `u32::MAX` short-circuits the filter (all sources enabled). Plumbed end
    * -to-end since v3.5.6 fix r3173013233 — prior to that, api.rs hardcoded
    * `u32::MAX`, regressing the platform-side filter that used to honor
@@ -475,7 +475,7 @@ public  final class AssocLookupRequest extends
     /**
      * <pre>
      * Source-toggle bitmask filtering bundled bigram entries. Layout matches
-     * the low 9 bits of `enabled_sources_bitmask` in `SearchRequest`. Sentinel
+     * the low 9 bits of `enabled_sources_bitmask` in `SearchWithSourcesRequest`. Sentinel
      * `u32::MAX` short-circuits the filter (all sources enabled). Plumbed end
      * -to-end since v3.5.6 fix r3173013233 — prior to that, api.rs hardcoded
      * `u32::MAX`, regressing the platform-side filter that used to honor
@@ -492,7 +492,7 @@ public  final class AssocLookupRequest extends
     /**
      * <pre>
      * Source-toggle bitmask filtering bundled bigram entries. Layout matches
-     * the low 9 bits of `enabled_sources_bitmask` in `SearchRequest`. Sentinel
+     * the low 9 bits of `enabled_sources_bitmask` in `SearchWithSourcesRequest`. Sentinel
      * `u32::MAX` short-circuits the filter (all sources enabled). Plumbed end
      * -to-end since v3.5.6 fix r3173013233 — prior to that, api.rs hardcoded
      * `u32::MAX`, regressing the platform-side filter that used to honor
@@ -511,7 +511,7 @@ public  final class AssocLookupRequest extends
     /**
      * <pre>
      * Source-toggle bitmask filtering bundled bigram entries. Layout matches
-     * the low 9 bits of `enabled_sources_bitmask` in `SearchRequest`. Sentinel
+     * the low 9 bits of `enabled_sources_bitmask` in `SearchWithSourcesRequest`. Sentinel
      * `u32::MAX` short-circuits the filter (all sources enabled). Plumbed end
      * -to-end since v3.5.6 fix r3173013233 — prior to that, api.rs hardcoded
      * `u32::MAX`, regressing the platform-side filter that used to honor

@@ -7,9 +7,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Result for both `DeriveCustomSearchKeys` (the full write-side bundle) and
- * `DeriveCustomQueryKey` (0 or 1 read-side key). Empty when the input has no
- * derivable key.
+ * Result for `DeriveCustomQueryKey` (0 or 1 read-side key). Empty when the
+ * input has no derivable key.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.CustomSearchKeysResult}
@@ -202,9 +201,8 @@ public  final class CustomSearchKeysResult extends
 
   /**
    * <pre>
-   * Result for both `DeriveCustomSearchKeys` (the full write-side bundle) and
-   * `DeriveCustomQueryKey` (0 or 1 read-side key). Empty when the input has no
-   * derivable key.
+   * Result for `DeriveCustomQueryKey` (0 or 1 read-side key). Empty when the
+   * input has no derivable key.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.CustomSearchKeysResult}

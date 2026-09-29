@@ -44,56 +44,8 @@ public  final class AppConfig extends
     // @@protoc_insertion_point(message_implements:taigi.engine.AppConfig)
     AppConfigOrBuilder {
   private AppConfig() {
-    toneMode_ = "";
     inputMode_ = "";
   }
-  public static final int TONE_MODE_FIELD_NUMBER = 1;
-  private java.lang.String toneMode_;
-  /**
-   * <code>string tone_mode = 1;</code>
-   * @return The toneMode.
-   */
-  @java.lang.Override
-  public java.lang.String getToneMode() {
-    return toneMode_;
-  }
-  /**
-   * <code>string tone_mode = 1;</code>
-   * @return The bytes for toneMode.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getToneModeBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(toneMode_);
-  }
-  /**
-   * <code>string tone_mode = 1;</code>
-   * @param value The toneMode to set.
-   */
-  private void setToneMode(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    toneMode_ = value;
-  }
-  /**
-   * <code>string tone_mode = 1;</code>
-   */
-  private void clearToneMode() {
-
-    toneMode_ = getDefaultInstance().getToneMode();
-  }
-  /**
-   * <code>string tone_mode = 1;</code>
-   * @param value The bytes for toneMode to set.
-   */
-  private void setToneModeBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    toneMode_ = value.toStringUtf8();
-
-  }
-
   public static final int INPUT_MODE_FIELD_NUMBER = 2;
   private java.lang.String inputMode_;
   /**
@@ -510,55 +462,6 @@ public  final class AppConfig extends
 
 
     /**
-     * <code>string tone_mode = 1;</code>
-     * @return The toneMode.
-     */
-    @java.lang.Override
-    public java.lang.String getToneMode() {
-      return instance.getToneMode();
-    }
-    /**
-     * <code>string tone_mode = 1;</code>
-     * @return The bytes for toneMode.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getToneModeBytes() {
-      return instance.getToneModeBytes();
-    }
-    /**
-     * <code>string tone_mode = 1;</code>
-     * @param value The toneMode to set.
-     * @return This builder for chaining.
-     */
-    public Builder setToneMode(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setToneMode(value);
-      return this;
-    }
-    /**
-     * <code>string tone_mode = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearToneMode() {
-      copyOnWrite();
-      instance.clearToneMode();
-      return this;
-    }
-    /**
-     * <code>string tone_mode = 1;</code>
-     * @param value The bytes for toneMode to set.
-     * @return This builder for chaining.
-     */
-    public Builder setToneModeBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setToneModeBytes(value);
-      return this;
-    }
-
-    /**
      * <code>string input_mode = 2;</code>
      * @return The inputMode.
      */
@@ -885,7 +788,6 @@ public  final class AppConfig extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "toneMode_",
             "inputMode_",
             "ooDoubletapEnabled_",
             "nnDoubletapEnabled_",
@@ -897,8 +799,8 @@ public  final class AppConfig extends
             "forceLowercaseNasalMarker_",
           };
           java.lang.String info =
-              "\u0000\n\u0000\u0000\u0001\u000b\n\u0000\u0000\u0000\u0001\u0208\u0002\u0208\u0003" +
-              "\u0007\u0004\u0007\u0005\u0007\u0007\f\b\u0007\t\f\n\u0007\u000b\u0007";
+              "\u0000\t\u0000\u0000\u0002\u000b\t\u0000\u0000\u0000\u0002\u0208\u0003\u0007\u0004" +
+              "\u0007\u0005\u0007\u0007\f\b\u0007\t\f\n\u0007\u000b\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

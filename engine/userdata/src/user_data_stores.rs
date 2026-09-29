@@ -10,10 +10,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Every key a stored custom-dictionary entry or learned phrase is findable
-/// under — the engine's own derivation, called in-process. Never `None`: unlike
-/// the `DeriveCustomSearchKeys` op it cannot fail, so it logs no failure; the
-/// `Option` is the `SearchKeyDeriver` shape, where `None` means the
-/// derivation could not answer.
+/// under — the engine's own derivation, called in-process. Never `None`: the
+/// derivation cannot fail, so it logs no failure; the `Option` is the
+/// `SearchKeyDeriver` shape, where `None` means the derivation could not answer.
 pub fn derive_custom_search_keys(roman: &str) -> Option<Vec<CustomSearchKey>> {
     Some(
         phonetics::api::derive_custom_search_keys(roman)

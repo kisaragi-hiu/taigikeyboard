@@ -726,7 +726,6 @@ mod tests {
     /// separator predicate reads; the rest stay at proto defaults.
     fn cfg(input_mode: &str, swapped: bool, both: bool) -> AppConfig {
         AppConfig {
-            tone_mode: String::new(),
             input_mode: input_mode.to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,

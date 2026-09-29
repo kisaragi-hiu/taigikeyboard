@@ -287,7 +287,6 @@ mod tests {
 
     fn config_tl_mode_translate_swapped(swapped: bool) -> AppConfig {
         AppConfig {
-            tone_mode: String::new(),
             input_mode: "tl".to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
@@ -302,7 +301,6 @@ mod tests {
 
     fn config_poj_mode() -> AppConfig {
         AppConfig {
-            tone_mode: String::new(),
             input_mode: "poj".to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,

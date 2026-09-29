@@ -73,8 +73,7 @@ fn normalize_tps_key_body(input: &str) -> String {
     out
 }
 
-/// Lexicon-internal key family selector. Mapped from
-/// `engine/protos::InputType` at the dispatch boundary.
+/// Lexicon-internal key family selector, chosen by `search::SearchParams`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyType {
     Romanization,

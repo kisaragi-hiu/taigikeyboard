@@ -1,10 +1,9 @@
 //! CustomDictionaryDerivation port.
 //!
 //! Mirrors iOS `Lexicon/Database/CustomDictionaryDerivation.swift`
-//! (`generateNotone`, `generateAbbrev` → the legacy first-letter face), and
-//! owns the index abbreviation face ([`derive_abbrev`], one leading
-//! spelling unit per syllable) the dictionary build and the custom-dict
-//! search keys share.
+//! (`generateNotone`), and owns the index abbreviation face
+//! ([`derive_abbrev`], one leading spelling unit per syllable) the dictionary
+//! build and the custom-dict search keys share.
 //!
 //! Whitespace canonical for `derive_abbrev` = `[ \t\n\x0B\f\r-]+` literal
 //! (ASCII whitespace + hyphen). Matches Android JVM `Regex("[\\s-]+")`
@@ -15,7 +14,7 @@
 
 use unicode_normalization::UnicodeNormalization;
 
-/// `Method::DeriveNotone` — strips tone diacritics + digits + hyphens + spaces
+/// The custom-dictionary `notone` key — strips tone diacritics + digits + hyphens + spaces
 /// from the base form of `roman`.
 ///
 /// The base form ([`taigi_unicode_base_form`]) is what makes a POJ display
@@ -44,34 +43,6 @@ pub(crate) fn derive_notone(roman: &str) -> String {
         result.push(ch);
     }
     result.nfc().collect::<String>()
-}
-
-/// `Method::DeriveAbbrev` — the LEGACY custom-dictionary `abbrev` column:
-/// first char per syllable, diacritics stripped, "" when fewer than 2
-/// syllables. Kept at first-letter semantics because that column is a
-/// stored rollback contract on iOS / Android
-/// (`INVARIANT_abbrev_key_is_one_char_per_syllable`) and no query reads it
-/// any more; the index face is [`derive_abbrev`].
-///
-/// Whitespace split = ASCII `[ \t\n\x0B\f\r-]+` literal (matches Android JVM
-/// behavior; NBSP U+00A0 stays a non-delimiter).
-pub fn derive_abbrev_first_letter(roman: &str) -> String {
-    let lowered = roman.to_lowercase();
-    let syllables: Vec<&str> = lowered
-        .split(SYLLABLE_DELIMITERS)
-        .filter(|s| !s.is_empty())
-        .collect();
-    if syllables.len() < 2 {
-        return String::new();
-    }
-    syllables
-        .iter()
-        .map(|s| {
-            let first: String = s.chars().take(1).collect();
-            strip_diacritics(&first)
-        })
-        .collect::<Vec<_>>()
-        .join("")
 }
 
 /// The abbreviation face of a romanized reading — the runtime mirror of
@@ -109,7 +80,8 @@ pub fn derive_abbrev(roman: &str) -> String {
         .collect::<String>()
 }
 
-/// ASCII whitespace + hyphen, the syllable delimiters of both faces.
+/// ASCII whitespace + hyphen, the syllable delimiters of the abbreviation face
+/// (ASCII only, matching the Android JVM `Regex("[\\s-]+")` this replaced).
 const SYLLABLE_DELIMITERS: [char; 7] = [' ', '\t', '\n', '\u{0B}', '\u{0C}', '\r', '-'];
 
 /// TL and POJ initials, longest first so a prefix scan takes `tsh` before
@@ -141,7 +113,7 @@ pub fn poj_abbrev_from_tl(tl: &str) -> String {
     derive_abbrev(&crate::api::tl_display_to_poj_display(tl))
 }
 
-/// Internal helper used by both abbreviation faces. NOT exposed as an op (Codex v1
+/// Internal helper of the abbreviation face. NOT exposed as an op (Codex v1
 /// Decision 4 — only dedicated derivation ops are exposed; primitives stay
 /// internal so platform cannot rebuild custom-dict semantics).
 fn strip_diacritics(s: &str) -> String {
@@ -190,13 +162,16 @@ mod tests {
         assert_eq!(derive_abbrev(""), "");
     }
 
-    // INVARIANT_ABBREV_KEY_IS_ONE_CHAR_PER_SYLLABLE (behavioral-invariants.md §10)
-    // trace: the legacy column stays first-letter (`ph` → `p`).
+    // INVARIANT_NORMALIZER_STRIPS_HYPHENS_IN_NOTONE (behavioral-invariants.md §4)
+    // trace: lowercase → ⁿ→nn → NFD → drop combining marks, digits, '-', ' ' → NFC.
     #[test]
-    fn derive_abbrev_first_letter_is_the_legacy_column_face() {
-        assert_eq!(derive_abbrev_first_letter("phi-thâu-kin"), "ptk");
-        assert_eq!(derive_abbrev_first_letter("só-sî"), "ss");
-        assert_eq!(derive_abbrev_first_letter("tâi"), "");
+    fn derive_notone_strips_diacritics_digits_hyphens_spaces() {
+        assert_eq!(derive_notone("Gâu-tsá 2"), "gautsa");
+    }
+
+    #[test]
+    fn derive_notone_converts_nasal_marker_to_nn() {
+        assert_eq!(derive_notone("siu\u{207f}"), "siunn");
     }
 
     #[test]

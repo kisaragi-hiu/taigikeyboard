@@ -121,24 +121,24 @@ A khiin-rs-style `CMD_SET_CONFIG` (`references/khiin-rs/khiin/src/engine.rs:296`
 
 ## 7. Phonetics slice — AS-IMPLEMENTED (PR #186 + PR #187)
 
-The merged D9.4 shape uses an `oneof method` dispatch, now 14 ops grouped into 3 families (four ops with no production caller — `NormalizeTone`, `NormalizeToTl`, `RestoreTone`, `ContainsTps` — were removed 2026-09-25, tags reserved). Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
+The merged D9.4 shape uses an `oneof method` dispatch, now 9 ops grouped into 3 families (nine ops with no production caller were removed — `NormalizeTone`, `NormalizeToTl`, `RestoreTone`, `ContainsTps` on 2026-09-25; `PojToTl`, `NormalizeInput`, `DeriveNotone`, `DeriveAbbrev`, `DeriveCustomSearchKeys` on 2026-09-30 — tags reserved). Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
 
 ```protobuf
 message PhoneticsRequest {
-  // Retired ops with no production caller (removed 2026-09-25).
-  reserved 10, 14, 16, 30;
+  // Retired ops with no production caller (removed 2026-09-25 / 2026-09-30).
+  reserved 10, 12, 14, 15, 16, 20, 21, 22, 30;
   reserved "normalize_tone", "normalize_to_tl", "restore_tone", "contains_tps";
+  reserved "poj_to_tl", "normalize_input", "derive_notone", "derive_abbrev",
+      "derive_custom_search_keys";
 
   oneof method {
-    // Phonetics core (6 ops): StripTone, PojToTl, TlToPoj,
-    // NormalizeInput, GetToneVariations, NfdPreprocessForLookup.
+    // Phonetics core (4 ops): StripTone, TlToPoj, GetToneVariations,
+    // NfdPreprocessForLookup.
     StripTone strip_tone = 11;
     // ... (see phonetics.proto for full list)
 
-    // Derivation (4 ops): DeriveNotone, DeriveAbbrev,
-    // DeriveCustomSearchKeys, DeriveCustomQueryKey.
-    DeriveNotone derive_notone = 20;
-    // ...
+    // Derivation (1 op): DeriveCustomQueryKey.
+    DeriveCustomQueryKey derive_custom_query_key = 23;
 
     // TPS (4 ops): TlNumericToTps, TlDisplayToTps,
     // IsTpsToneMark, TpsInputAdjust.
@@ -161,7 +161,7 @@ message PhoneticsResponse {
 ```
 
 - **Per-op payload type** rather than a flat `string input` — lets each op carry its natural shape (e.g. `TpsInputAdjust` takes `incoming` + `raw_input`; `TlNumericToTps` takes `text` + `or_maps_to_er`).
-- **`oneof result`** with 6 result shapes covers all 14 ops: most ops return `StringResult`; `StripTone` returns the `(bare, tone)` pair; `DeriveCustomSearchKeys` / `DeriveCustomQueryKey` use `CustomSearchKeysResult`; `IsTpsToneMark` uses `BoolResult`; the top-level `OptionalStringResult` arm (tag 12) was reserved when `RestoreTone` was removed — the message survives only inside `TpsAdjustResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
+- **`oneof result`** with 6 result shapes covers all 9 ops: most ops return `StringResult`; `StripTone` returns the `(bare, tone)` pair; `DeriveCustomQueryKey` uses `CustomSearchKeysResult`; `IsTpsToneMark` uses `BoolResult`; the top-level `OptionalStringResult` arm (tag 12) was reserved when `RestoreTone` was removed — the message survives only inside `TpsAdjustResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
 - Pure, stateless. Every op is a function of its payload alone — `phonetics::dispatch::handle(req)` takes no `AppConfig` (the settings-reading `NormalizeTone` op was removed 2026-09-25; `phonetics::api::normalize_tone` is now called in-process by `composing::derived`).
 - Replaces both platforms' `PhoneticsConverter.swift` / `TaigiPhonetics.kt` + `InputNormalizer` + `ToneRestoration` + `TPSConverter` + `TPSAdjustmentBundle` entry points.
 - **Two ops were removed mid-flight** (`AdjustNasalMarkerCase`, `NfdPreprocess`): originally callers reverted to platform-side helpers (`ToneUtilities.adjustNasalMarkerCase` / `TaigiUnicode.nfdPreprocessed`) for Android JVM unit-test compatibility. **(Obsolete after v3.5.3 follow-up — see `feedback_path_g_delete_mirrors.md`.)** Path G deleted the platform mirrors + their JVM unit tests; `phonetics::api::normalize_tone` applies `adjust_nasal_marker_case` in-band as part of the normalize pipeline; `Method::NfdPreprocessForLookup` exposes the Rust helper directly. The Rust phonetics crate is now the sole owner of both algorithms.

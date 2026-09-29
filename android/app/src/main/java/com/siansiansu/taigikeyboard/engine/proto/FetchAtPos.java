@@ -33,7 +33,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * source-toggle state so keyboard continuous candidates honour the SAME
  * 12 source toggles + kautian subcollection (10 dialect accents + surname/name
  * appendix) toggles the Tab3 browse path already applies. Same wire
- * layout as `SearchRequest.enabled_sources_bitmask` (sources/variant
+ * layout as `SearchWithSourcesRequest.enabled_sources_bitmask` (sources/variant
  * bits 0-12 + kautian subcollection high region bits 13-25), produced by
  * the SAME `compute_filters` bridge both platforms call for browse — no
  * continuous-specific encoder, so browse and continuous can never drift.
@@ -310,7 +310,7 @@ public  final class FetchAtPos extends
    * source-toggle state so keyboard continuous candidates honour the SAME
    * 12 source toggles + kautian subcollection (10 dialect accents + surname/name
    * appendix) toggles the Tab3 browse path already applies. Same wire
-   * layout as `SearchRequest.enabled_sources_bitmask` (sources/variant
+   * layout as `SearchWithSourcesRequest.enabled_sources_bitmask` (sources/variant
    * bits 0-12 + kautian subcollection high region bits 13-25), produced by
    * the SAME `compute_filters` bridge both platforms call for browse — no
    * continuous-specific encoder, so browse and continuous can never drift.

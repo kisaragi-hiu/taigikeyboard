@@ -416,7 +416,6 @@ mod tests {
 
     fn config(platform: Platform, translate_swapped: bool) -> AppConfig {
         AppConfig {
-            tone_mode: String::new(),
             input_mode: "tl".to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
