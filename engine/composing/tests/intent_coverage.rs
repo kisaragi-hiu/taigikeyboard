@@ -1,12 +1,13 @@
-//! One test per intent — round-trip through `dispatch::handle` to exercise
-//! the proto decode path alongside the transition table.
+//! The proto decode of every composing method, the §21 leading-hyphen literal
+//! through `dispatch::handle`, and the desktop Telex key path.
 
 use composing::CommitScript;
-use composing::{dispatch, Engine};
+use composing::{dispatch, Engine, Intent};
 use protos::engine::composing_request::Method;
 use protos::engine::{
-    Append, AppendHyphen, CommitDerived, CommitPreeditThenInsertExternal, CommitRaw,
-    ComposingRequest, DeleteBackward, ReplaceLast, Reset, SelectSuggestion, Start,
+    Append, AppendHyphen, CommitContinuous, CommitDerived, CommitPreeditThenInsertExternal,
+    CommitRaw, CommitScript as WireCommitScript, ComposingRequest, DeleteBackward, EnterContinuous,
+    ReplaceLast, Reset, ResetContinuous, SelectSuggestion, Start,
 };
 
 use crate::common;
@@ -61,210 +62,83 @@ fn intent_start_leading_hyphens_then_syllable_splits() {
     assert_eq!(resp.preedit.unwrap().raw_input, "ah");
 }
 
+// Every proto method decodes to its intent. The transition each intent
+// performs is pinned once, on `Engine::apply`, in `invariants.rs`.
 #[test]
-fn intent_start() {
-    let mut engine = Engine::new();
-    let resp = dispatch::handle(
-        &req(Method::Start(Start { text: "a".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .expect("start dispatches");
-    assert!(resp.is_composing);
-    assert_eq!(resp.preedit.as_ref().unwrap().raw_input, "a");
-}
-
-#[test]
-fn intent_append_idle_acts_as_start() {
-    let mut engine = Engine::new();
-    let resp = dispatch::handle(
-        &req(Method::Append(Append { char: "k".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert_eq!(resp.preedit.unwrap().raw_input, "k");
-    assert!(resp.is_composing);
-}
-
-#[test]
-fn intent_append_hyphen_appends_dash() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: "a".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = dispatch::handle(
-        &req(Method::AppendHyphen(AppendHyphen {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert_eq!(resp.preedit.unwrap().raw_input, "a-");
-}
-
-#[test]
-fn intent_replace_last_swaps_final_char() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: "ab".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = dispatch::handle(
-        &req(Method::ReplaceLast(ReplaceLast {
-            replacement: "c".into(),
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert_eq!(resp.preedit.unwrap().raw_input, "ac");
-}
-
-#[test]
-fn intent_delete_backward_shortens_buffer() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: "abc".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = dispatch::handle(
-        &req(Method::DeleteBackward(DeleteBackward {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert_eq!(resp.preedit.unwrap().raw_input, "ab");
-}
-
-#[test]
-fn intent_commit_derived_returns_to_idle() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: "a".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = dispatch::handle(
-        &req(Method::CommitDerived(CommitDerived {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert!(!resp.is_composing);
-}
-
-#[test]
-fn intent_commit_raw_uses_literal_input() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start {
-            text: "guá".into()
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = dispatch::handle(
-        &req(Method::CommitRaw(CommitRaw {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert!(!resp.is_composing);
-}
-
-#[test]
-fn intent_select_suggestion_commits_supplied_text() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: "a".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = dispatch::handle(
-        &req(Method::SelectSuggestion(SelectSuggestion {
-            text: "好".into(),
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert!(!resp.is_composing);
-}
-
-#[test]
-fn intent_commit_preedit_then_insert_external_in_composing() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: "a".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = dispatch::handle(
-        &req(Method::CommitPreeditThenInsertExternal(
-            CommitPreeditThenInsertExternal {
+fn every_method_decodes_to_its_intent() {
+    let cases = [
+        (
+            Method::Start(Start { text: "a".into() }),
+            Intent::Start { text: "a".into() },
+        ),
+        (
+            Method::Append(Append { char: "k".into() }),
+            Intent::Append { ch: "k".into() },
+        ),
+        (Method::AppendHyphen(AppendHyphen {}), Intent::AppendHyphen),
+        (
+            Method::ReplaceLast(ReplaceLast {
+                replacement: "c".into(),
+            }),
+            Intent::ReplaceLast {
+                replacement: "c".into(),
+            },
+        ),
+        (
+            Method::DeleteBackward(DeleteBackward {}),
+            Intent::DeleteBackward,
+        ),
+        (
+            Method::CommitDerived(CommitDerived {}),
+            Intent::CommitDerived,
+        ),
+        (Method::CommitRaw(CommitRaw {}), Intent::CommitRaw),
+        (
+            Method::SelectSuggestion(SelectSuggestion { text: "好".into() }),
+            Intent::SelectSuggestion { text: "好".into() },
+        ),
+        (
+            Method::CommitPreeditThenInsertExternal(CommitPreeditThenInsertExternal {
+                text: "🎉".into(),
+            }),
+            Intent::CommitPreeditThenInsertExternal {
                 text: "🎉".into()
             },
-        )),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert!(!resp.is_composing);
-}
-
-#[test]
-fn intent_commit_preedit_then_insert_external_in_idle() {
-    let mut engine = Engine::new();
-    let resp = dispatch::handle(
-        &req(Method::CommitPreeditThenInsertExternal(
-            CommitPreeditThenInsertExternal {
-                text: "🎉".into()
+        ),
+        (Method::Reset(Reset {}), Intent::Reset),
+        (
+            Method::EnterContinuous(EnterContinuous {}),
+            Intent::EnterContinuous,
+        ),
+        (
+            Method::CommitContinuous(CommitContinuous {
+                consumed_bytes: 3,
+                syllable_count: 1,
+                canonical_text: "珠".into(),
+                association_tl: "tsu".into(),
+                hanji: Some("珠".into()),
+                script: WireCommitScript::Hanji as i32,
+                roman: "tsu".into(),
+            }),
+            Intent::CommitContinuous {
+                canonical_text: "珠".into(),
+                association_tl: "tsu".into(),
+                hanji: Some("珠".into()),
+                consumed_bytes: 3,
+                syllable_count: 1,
+                script: Some(CommitScript::Hanji),
+                roman: "tsu".into(),
             },
-        )),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert!(!resp.is_composing);
-}
-
-#[test]
-fn intent_reset_returns_to_idle() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: "a".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = dispatch::handle(&req(Method::Reset(Reset {})), &mut engine, &config_tl()).unwrap();
-    assert!(!resp.is_composing);
-}
-
-#[test]
-fn snapshot_emits_no_effects() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(Start { text: "abc".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = engine.snapshot(&config_tl());
-    assert!(resp.is_composing);
-    assert_eq!(resp.preedit.unwrap().raw_input, "abc");
-    assert!(resp.effect.is_empty());
+        ),
+        (
+            Method::ResetContinuous(ResetContinuous {}),
+            Intent::ResetContinuous,
+        ),
+    ];
+    for (method, expected) in cases {
+        let decoded = dispatch::decode_intent(&req(method.clone())).expect("method present");
+        assert_eq!(decoded, expected, "{method:?}");
+    }
 }
 
 #[test]

@@ -13,56 +13,26 @@ use phonetics::{normalize_to_tl, strip_tone_mark, to_poj, to_tl};
 // SOURCE: phonetics.test.js, TaigiPhoneticsTests.swift, TaigiPhoneticsTest.kt — identical cases across all three.
 
 #[test]
-fn strip_tone_mark_acute_tone2() {
-    assert_eq!(strip_tone_mark("\u{00e1}"), ("a".into(), "2".into()));
-}
-
-#[test]
-fn strip_tone_mark_grave_tone3() {
-    assert_eq!(strip_tone_mark("\u{00e0}"), ("a".into(), "3".into()));
-}
-
-#[test]
-fn strip_tone_mark_circumflex_tone5() {
-    assert_eq!(strip_tone_mark("\u{00e2}"), ("a".into(), "5".into()));
-}
-
-#[test]
-fn strip_tone_mark_macron_tone7() {
-    assert_eq!(strip_tone_mark("\u{0101}"), ("a".into(), "7".into()));
-}
-
-#[test]
-fn strip_tone_mark_vertical_line_tone8() {
-    assert_eq!(strip_tone_mark("a\u{030d}"), ("a".into(), "8".into()));
-}
-
-#[test]
-fn strip_tone_mark_breve_tone9_poj() {
-    assert_eq!(strip_tone_mark("\u{0103}"), ("a".into(), "9".into()));
-}
-
-#[test]
-fn strip_tone_mark_double_acute_tone9_tl() {
-    assert_eq!(strip_tone_mark("a\u{030b}"), ("a".into(), "9".into()));
-}
-
-#[test]
-fn strip_tone_mark_no_mark() {
-    assert_eq!(strip_tone_mark("a"), ("a".into(), "".into()));
-}
-
-#[test]
-fn strip_tone_mark_trailing_digit() {
-    assert_eq!(strip_tone_mark("ka2"), ("ka".into(), "2".into()));
-}
-
-#[test]
-fn strip_tone_mark_multi_char_syllable() {
-    assert_eq!(
-        strip_tone_mark("tshi\u{016b}"),
-        ("tshiu".into(), "7".into())
-    );
+fn strip_tone_mark_splits_every_tone_mark_and_digit() {
+    let cases = [
+        ("\u{00e1}", "a", "2"),         // acute, tone 2
+        ("\u{00e0}", "a", "3"),         // grave, tone 3
+        ("\u{00e2}", "a", "5"),         // circumflex, tone 5
+        ("\u{0101}", "a", "7"),         // macron, tone 7
+        ("a\u{030d}", "a", "8"),        // vertical line, tone 8
+        ("\u{0103}", "a", "9"),         // breve, tone 9 (POJ)
+        ("a\u{030b}", "a", "9"),        // double acute, tone 9 (TL)
+        ("a", "a", ""),                 // no mark
+        ("ka2", "ka", "2"),             // trailing digit
+        ("tshi\u{016b}", "tshiu", "7"), // multi-char syllable
+    ];
+    for (input, bare, tone) in cases {
+        assert_eq!(
+            strip_tone_mark(input),
+            (bare.into(), tone.into()),
+            "strip_tone_mark({input:?})"
+        );
+    }
 }
 
 // MARK: - normalize_to_tl. SOURCE: TaigiPhoneticsTests.swift testNormalizeToTL_cases.
