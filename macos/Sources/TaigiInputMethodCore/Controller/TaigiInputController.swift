@@ -961,9 +961,8 @@ public final class TaigiInputController: IMKInputController {
         commit(candidate, script: script, from: manager, client: client, executing: executor)
     }
 
-    /// Commits one candidate in `script` — already resolved by the caller, so
-    /// the commit and the auto-space gate below read the same value — and
-    /// shows whatever the composition became.
+    /// Commits one candidate in `script` — resolved by the caller from the
+    /// cell — and shows whatever the composition became.
     @MainActor
     private func commit(
         _ candidate: ContinuousCandidate,
@@ -972,30 +971,26 @@ public final class TaigiInputController: IMKInputController {
         client: IMKTextInput,
         executing executor: ComposingEffectExecutor,
     ) {
-        let (outcome, commit) = manager.commitCandidate(
-            candidate, script: script, executing: executor,
-        )
+        let outcome = manager.commitCandidate(candidate, script: script, executing: executor)
         Self.logger.debug("candidate commit \(String(describing: outcome))")
         switch outcome {
-        case .finalized:
+        case let .finalized(earnsAutoSpace):
             dismissCandidates()
             // Final commit only, mirroring iOS (`ActionHandler+Suggestions.swift:129-133`):
             // a nailed segment keeps composing more syllables — and writes
             // nothing to the document under Model B anyway.
             //
-            // The commit's own verdict is carried into the gate rather than
-            // re-derived here: spacing is a property of ROMANIZATION, and both
-            // the Hanji/romanization key and a candidate with no Hanji write a script the
-            // output mode alone would name wrong (`AutoSpacePolicy
-            // .isGateActive`). So the answer follows the document — a
-            // romanization written in Hanji mode is spaced, a hanji written in
-            // romanization mode is not — and Auto-Space OFF still means no space
-            // anywhere (USER 2026-08-25).
-            appendAutoSpace(
-                afterCommit: commit?.text,
-                wroteRomanization: commit?.wroteRomanization ?? false,
-                client: client,
-            )
+            // The engine's verdict on what the pick wrote is carried into the
+            // gate rather than re-derived here: spacing is a property of
+            // ROMANIZATION (no trailing `-`), and both the Hanji/romanization
+            // key and a candidate with no Hanji write a script the output mode
+            // alone would name wrong (`AutoSpacePolicy.isGateActive`). So the
+            // answer follows the document — a romanization written in Hanji
+            // mode is spaced, a hanji written in romanization mode is not — and
+            // Auto-Space OFF still means no space anywhere (USER 2026-08-25).
+            if isAutoSpaceGateActive(wroteRomanization: earnsAutoSpace) {
+                appendAutoSpace(client)
+            }
         case .nailed, .ignored, .unavailable:
             // Anything short of a finished composition is answered by asking the
             // engine what it is holding NOW rather than by reading the outcome:
@@ -1018,11 +1013,13 @@ public final class TaigiInputController: IMKInputController {
     ) {
         let committedText = manager.commitComposition(executing: executor)
         dismissCandidates()
-        appendAutoSpace(
-            afterCommit: committedText,
-            wroteRomanization: AutoSpacePolicy.rawPreeditWritesRomanization(inputMode: settings.inputMode),
-            client: client,
-        )
+        guard let committedText,
+              isAutoSpaceGateActive(
+                  wroteRomanization: AutoSpacePolicy.rawPreeditWritesRomanization(inputMode: settings.inputMode),
+              ),
+              AutoSpacePolicy.shouldAppendSpace(afterCommitting: committedText)
+        else { return }
+        appendAutoSpace(client)
     }
 
     /// Re-reads the candidates for the composition as it now stands, and shows
@@ -1369,9 +1366,9 @@ public final class TaigiInputController: IMKInputController {
     /// `wroteRomanization` from whatever resolved the string this commit wrote.
     ///
     /// The verdict is never derived from the output mode here. A candidate
-    /// commit gets it from `CandidateDocumentText.resolved`, a preedit commit
-    /// from `rawPreeditWritesRomanization`, and the swap from the armed record
-    /// of the commit that wrote the space.
+    /// commit gets it from the engine (`CommitResolution.earns_auto_space`), a
+    /// preedit commit from `rawPreeditWritesRomanization`, and the swap from
+    /// the armed record of the commit that wrote the space.
     @MainActor
     private func isAutoSpaceGateActive(wroteRomanization: Bool) -> Bool {
         AutoSpacePolicy.isGateActive(
@@ -1380,28 +1377,19 @@ public final class TaigiInputController: IMKInputController {
         )
     }
 
-    /// Writes the trailing auto space after a commit that produced
-    /// `committedText`, and arms the punctuation swap on it.
+    /// Writes the trailing auto space after a commit that earned it, and arms
+    /// the punctuation swap on it.
     ///
     /// A second document mutation rather than part of the commit's: whether
     /// the space is earned depends on the text the engine decided to write,
-    /// which is only known once the commit has run. `nil` — a commit that
-    /// never reached the engine, or wrote nothing — earns nothing.
+    /// which is only known once the commit has run.
     ///
     /// Called from the explicit commit paths only. The lifecycle commits
     /// (`finishComposition` on deactivate, close, or a click outside) leave
     /// the document alone: the user did not finish a word there, and a space
     /// appearing at the old caret after focus moved on reads as corruption.
     @MainActor
-    private func appendAutoSpace(
-        afterCommit committedText: String?,
-        wroteRomanization: Bool,
-        client: IMKTextInput,
-    ) {
-        guard let committedText,
-              isAutoSpaceGateActive(wroteRomanization: wroteRomanization),
-              AutoSpacePolicy.shouldAppendSpace(afterCommitting: committedText)
-        else { return }
+    private func appendAutoSpace(_ client: IMKTextInput) {
         client.insertText(" ", replacementRange: ClientEffectExecutor.atInsertionPoint)
         armAutoSpaceSwap(client)
     }

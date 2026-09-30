@@ -11,7 +11,7 @@
 enum CandidateScript: Equatable, Sendable {
     /// What the output settings lead with — what Return writes.
     case primary
-    /// The other one — what Space writes (`CandidateDocumentText.alternateText`).
+    /// The other one — what Space writes (the engine's `CommitScript.OTHER`).
     case alternate
 
     /// The other script of the same candidate. Space on a presented cell

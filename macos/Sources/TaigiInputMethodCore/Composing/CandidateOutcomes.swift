@@ -20,48 +20,41 @@ enum CandidateFetchOutcome: Equatable {
     case found([ContinuousCandidate])
 }
 
-/// What committing a candidate did.
+/// What committing a candidate did, as the engine reported it
+/// (`ComposingResponse.commit`).
 ///
-/// Read from the engine's effects rather than from the composing mirror. A
-/// generation mismatch silently resets the engine to Idle before the intent
-/// runs (`engine/composing/src/handle.rs:61-66`), which turns the commit into a
-/// phase-mismatch noop while flipping `isComposing` to false — so a mirror read
-/// reports "the composition ended" for a commit that never happened. iOS learnt
-/// this the same way (`ios/…/Input/Composing/ComposingManager.swift:465-480`).
+/// Never read off the composing mirror: a generation mismatch silently resets
+/// the engine to Idle before the intent runs (`engine/composing/src/handle.rs`),
+/// which turns the commit into a noop while flipping `isComposing` to false —
+/// so a mirror read reports "the composition ended" for a commit that never
+/// happened.
 enum CandidateCommitOutcome: Equatable {
     /// The round-trip never reached the engine.
     case unavailable
-    /// The engine rejected the commit — a stale byte offset, or a composition
-    /// that had already gone. Nothing changed.
+    /// The engine rejected the commit — a stale byte offset, a composition
+    /// that had already gone, or a script the candidate does not have (Space
+    /// on a one-script cell). Nothing changed.
     case ignored
     /// The segment was nailed and the composition continues. Under Model B this
     /// writes nothing to the document; the marked region is re-rendered with the
-    /// nailed prefix in front of the remaining tail (`transition.rs:864-889`).
+    /// nailed prefix in front of the remaining tail.
     case nailed
     /// The whole composition was consumed, written to the document in one
-    /// mutation, and the engine returned to Idle (`transition.rs:842-861`).
-    case finalized
+    /// mutation, and the engine returned to Idle. `earnsAutoSpace` is the
+    /// engine's §23 verdict on what the pick wrote (romanization, no trailing
+    /// `-`); the live Auto-Space setting is still the caller's.
+    case finalized(earnsAutoSpace: Bool)
 
-    /// Model B leaves exactly one usable success signal per kind of commit: a
-    /// final commit is the only one that writes text, and a nail is marked by
-    /// the per-segment learning effect. A noop emits neither.
-    init(_ transition: ComposingTransition) {
-        let didWriteDocument = transition.effects.contains { effect in
-            if case .commitTextReplacingPreedit = effect {
-                return true
-            }
-            return false
-        }
-        let didNail = transition.effects.contains { effect in
-            if case .nextWordUpdateLastSelectedWord = effect {
-                return true
-            }
-            return false
-        }
-        switch (didWriteDocument, didNail) {
-        case (true, _): self = transition.isComposing ? .nailed : .finalized
-        case (false, true): self = .nailed
-        case (false, false): self = .ignored
+    /// CROSS-PLATFORM INVARIANT — mirrors
+    /// `desktop/crates/taigi-desktop-core/src/composing/outcomes.rs`
+    /// `CandidateCommitOutcome::from_resolution`.
+    init(_ resolution: Taigi_Engine_CommitResolution) {
+        switch resolution.outcome {
+        case .nailed: self = .nailed
+        case .finalized: self = .finalized(earnsAutoSpace: resolution.earnsAutoSpace)
+        // UNSPECIFIED: an answer without a resolution changed nothing this
+        // side can tell.
+        case .ignored, .unspecified, .UNRECOGNIZED: self = .ignored
         }
     }
 }

@@ -1,6 +1,7 @@
 // User-data slice of the engine bridge: the engine owns the four stores
-// (`docs/architecture/user-data-engine-roadmap.md` P6); this side names the
-// directory, reports the picks, and drives the Custom Dictionary page.
+// (`docs/architecture/user-data-engine-roadmap.md` P6) and counts the picks
+// itself (R5, `composingCommitContinuous`); this side names the directory and
+// drives the Custom Dictionary page.
 
 import Foundation
 
@@ -20,21 +21,6 @@ extension RustEngineBridge {
         open.journal = .delete
         open.inBackground = true
         _ = userDataResult(.open(open), op: "userDataOpen")
-    }
-
-    /// One pick, as the engine counts it. Best-effort: the engine queues the
-    /// write, and a failed round-trip is logged, never surfaced.
-    ///
-    /// CROSS-PLATFORM INVARIANT — mirrors
-    /// `desktop/crates/taigi-desktop-core/src/engine/user_data.rs` `record_usage`.
-    static func userDataRecordUsage(_ usage: Usage) {
-        var request = Taigi_Engine_RecordUsage()
-        request.displayText = usage.displayText
-        request.canonicalTl = usage.canonicalTl
-        if let hanji = usage.hanji, !hanji.isEmpty {
-            request.hanji = hanji
-        }
-        _ = userDataResult(.recordUsage(request), op: "userDataRecordUsage")
     }
 
     /// Empties the selected stores in place; `nil` when the engine could not.

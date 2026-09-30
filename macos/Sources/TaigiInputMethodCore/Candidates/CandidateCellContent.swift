@@ -15,9 +15,9 @@ import Foundation
 /// — and this is the macOS counterpart, rendered as MacishType's annotation
 /// column rather than a second line because the window is one row tall.
 ///
-/// Display only. What committing writes into the document stays
-/// `CandidateDocumentText`'s decision: the two agree on which script leads,
-/// while the cell may keep the other one in its own column.
+/// Display only. What committing writes into the document is the engine's
+/// decision (`engine/composing/src/commit_text.rs`): the two agree on which
+/// script leads, while the cell may keep the other one in its own column.
 struct CandidateCellContent: Equatable, Sendable {
     /// The script this cell leads with — romanization, or Hanji when swapped.
     let text: String
@@ -45,15 +45,14 @@ struct CandidateCellContent: Equatable, Sendable {
     static func cell(for candidate: ContinuousCandidate, settings: EngineSettings) -> Self {
         guard let hanji = candidate.presentableHanji else {
             // Romanization-only candidate: there is no second script to show,
-            // in either direction — the same case `CandidateDocumentText`
-            // answers with the bare romanization.
+            // in either direction — the same case the engine commits as the
+            // bare romanization.
             return Self(text: candidate.roman, annotation: nil)
         }
         // Before the swap arm, so the swap cannot put Hanji into a cell this
         // mode says shows none. No annotation on purpose: Space commits the
-        // annotation (`CandidateDocumentText.alternateText`), and with no
-        // other script on offer it must fall to `.ignored` rather than write
-        // Hanji the user never saw.
+        // other script, and with none on offer the engine answers `.ignored`
+        // rather than write Hanji the user never saw.
         if settings.candidateDisplayMode == .romanOnly {
             return Self(text: candidate.roman, annotation: nil)
         }

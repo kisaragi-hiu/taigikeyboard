@@ -23,8 +23,9 @@ enum AutoSpacePolicy {
     /// script the mode does NOT lead with, and a candidate with no Hanji (the
     /// §34 literal romanization, an out-of-vocabulary name) writes its romanization under
     /// every mode, so the proxy disagrees with the document in both
-    /// directions. The verdict comes from whatever resolved the string:
-    /// `CandidateDocumentText.resolved` for a candidate,
+    /// directions. The verdict comes from whatever resolved the string: the
+    /// engine for a candidate (`CommitResolution.earns_auto_space`, which
+    /// folds in the trailing-hyphen rule),
     /// `rawPreeditWritesRomanization(inputMode:)` for the preedit itself.
     static func isGateActive(isAutoSpaceEnabled: Bool, wroteRomanization: Bool) -> Bool {
         isAutoSpaceEnabled && wroteRomanization

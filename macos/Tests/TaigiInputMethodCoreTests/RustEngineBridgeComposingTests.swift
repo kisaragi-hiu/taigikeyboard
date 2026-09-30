@@ -128,15 +128,19 @@ final class RustEngineBridgeComposingTests: XCTestCase {
             candidates.first { $0.consumedSpanEnd > 0 && $0.consumedSpanEnd < pendingBytes },
             "taigi must offer a candidate shorter than the whole buffer to nail",
         )
-        let nailed = try XCTUnwrap(RustEngineBridge.composingCommitContinuous(
-            documentText: partial.roman,
+        let committed = try XCTUnwrap(RustEngineBridge.composingCommitContinuous(
+            script: .primary,
+            roman: partial.roman,
             canonicalText: partial.displayText,
             associationTl: partial.canonicalTl,
+            hanji: partial.hanji,
             consumedBytes: partial.consumedSpanEnd,
             syllableCount: partial.syllableCount,
             settings: settings,
             generation: generation,
         ))
+        XCTAssertEqual(committed.commit.outcome, .nailed)
+        let nailed = committed.transition
         XCTAssertTrue(nailed.isComposing, "a partial candidate nails a segment and keeps composing")
 
         let transition = try XCTUnwrap(

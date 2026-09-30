@@ -268,24 +268,23 @@ enum TestFixtures {
     }
 
     /// A manager whose learning is recorded in memory unless a case supplies
-    /// its own recorders.
+    /// its own recorder.
     ///
     /// The production initializer takes no defaults on purpose — the shipped
-    /// recorder counts into the user's real data. Defaulting HERE is the
+    /// next-word port teaches the user's real data. Defaulting HERE is the
     /// opposite hazard and the safe one: a case that forgets to say where its
     /// learning goes gets a recorder that is thrown away. This process never
     /// opens the engine's user data: the handle is process-wide, and an open
-    /// here would reach every later fetch in the run.
+    /// here would reach every later fetch in the run — so the picks the
+    /// engine counts itself (R5) go nowhere here.
     @MainActor
     static func makeComposingManager(
         settingsProvider: EngineSettingsProvider = StubEngineSettingsProvider(),
-        usage: RecordingUsageRecorder = RecordingUsageRecorder(),
         nextWord: RecordingNextWordPort = RecordingNextWordPort(),
         startingGeneration: UInt64,
     ) throws -> ComposingManager {
         ComposingManager(
             settingsProvider: settingsProvider,
-            usageRecorder: usage,
             nextWord: nextWord,
             startingGeneration: startingGeneration,
         )

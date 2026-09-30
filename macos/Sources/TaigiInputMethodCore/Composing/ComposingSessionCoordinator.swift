@@ -40,13 +40,12 @@ protocol ShortcutActionTarget: AnyObject {
 @MainActor
 final class ComposingSessionCoordinator {
     /// Process-wide, because the engine state it guards is — and the one place
-    /// the shipped composition is assembled, which is why the settings store,
-    /// the usage recorder and the learner's sink are named here rather than
-    /// defaulted into `ComposingManager`.
+    /// the shipped composition is assembled, which is why the settings store
+    /// and the learner's sink are named here rather than defaulted into
+    /// `ComposingManager`.
     static let shared = ComposingSessionCoordinator(
         composingManager: ComposingManager(
             settingsProvider: SettingsStore(),
-            usageRecorder: EngineUsageRecorder(),
             nextWord: EngineNextWord(),
         ),
     )

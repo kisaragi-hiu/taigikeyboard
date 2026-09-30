@@ -4,56 +4,24 @@
 import XCTest
 
 /// Drives real compositions against the real engine and asserts on what the
-/// manager reports: the picks it counts and the next-word handshakes. What the
-/// engine learns from a handshake — the window, noise, sentence ends — and
-/// stores is its own tests' (`engine/nextword/src/decide.rs`). Everything here needs the engine artefacts to be
-/// current — the next-word intents are rejected outright by an engine built
-/// before `PLATFORM_MACOS` existed.
+/// manager reports: the next-word handshakes. What the engine learns from a
+/// handshake — the window, noise, sentence ends — and stores is its own
+/// tests' (`engine/nextword/src/decide.rs`), and so is counting a pick under
+/// its `(display text, canonical TL)` pair whichever script it wrote (R5:
+/// `engine/composing/tests/continuous_commit_resolution.rs`
+/// `a_nail_then_a_final_pick_report_their_outcomes`,
+/// `engine/dispatch/tests/user_data_writes.rs`
+/// `engine_resolved_picks_are_counted_by_the_engine`). Everything here needs
+/// the engine artefacts to be current — the next-word intents are rejected
+/// outright by an engine built before `PLATFORM_MACOS` existed.
 @MainActor
 final class ComposingManagerLearningTests: XCTestCase {
     /// Fresh per case: XCTest makes a new instance for every test method.
-    private let usage = RecordingUsageRecorder()
     private let nextWord = RecordingNextWordPort()
 
     override func setUpWithError() throws {
         try super.setUpWithError()
         InstalledLexicon.installOnce()
-    }
-
-    // MARK: - Frequency
-
-    // INVARIANT_USER_FREQ_PAIR_KEY (behavioral-invariants.md §28)
-    func testCommitCandidate_countsTheWordUnderTheReadingItWasCommittedAs() throws {
-        let manager = try makeManager()
-        let executor = RecordingEffectExecutor()
-        let candidate = try composeAndTakeWholeBufferCandidate(manager, executing: executor)
-
-        _ = manager.commitCandidate(candidate, executing: executor)
-
-        XCTAssertEqual(
-            usage.recorded,
-            [expectedUsage(of: candidate)],
-            "the pick is counted under the (display text, canonical TL) pair the ranker looks it up by",
-        )
-    }
-
-    /// A Taiwanese word is the `(Hanji, canonical TL)` pair (Core Principle #7),
-    /// and which SCRIPT it was written in is not part of that. Committing the
-    /// other script must therefore land on the same row — otherwise mixed-script typing
-    /// would quietly split every word's frequency in two, and neither half
-    /// would rank.
-    func testAlternateScriptCommit_learnsTheSameWordAsThePrimaryOne() throws {
-        let manager = try makeManager()
-        let executor = RecordingEffectExecutor()
-        let candidate = try composeAndTakeWholeBufferCandidate(manager, executing: executor)
-
-        _ = manager.commitCandidate(candidate, script: .alternate, executing: executor)
-
-        XCTAssertEqual(
-            usage.recorded,
-            [expectedUsage(of: candidate)],
-            "the identity is the pair, never the rendering that reached the document",
-        )
     }
 
     // MARK: - Next word
@@ -97,10 +65,12 @@ final class ComposingManagerLearningTests: XCTestCase {
         )
     }
 
-    /// `.alternate` on a candidate that has no second script is answered here
-    /// and nowhere else: nothing reaches the engine, nothing reaches the
-    /// document, and nothing is learnt. One decision point — a caller-side
-    /// pre-check plus a fallback here would be two rules for one case.
+    /// `.alternate` on a candidate that has no second script is the engine's
+    /// to refuse (`CommitScript.OTHER` → IGNORED): nothing reaches the
+    /// document, nothing is learnt (`continuous_commit_resolution.rs`
+    /// `a_rejected_pick_is_ignored_and_changes_nothing`), and the composition
+    /// is left as it was. One decision point — a caller-side pre-check plus
+    /// the engine's refusal would be two rules for one case.
     func testAlternateOnASingleScriptCandidate_commitsNothing() throws {
         let manager = try makeManager()
         let executor = RecordingEffectExecutor()
@@ -114,16 +84,14 @@ final class ComposingManagerLearningTests: XCTestCase {
             syllableCount: candidate.syllableCount,
         )
 
-        let (outcome, commit) = manager.commitCandidate(
-            romanOnly, script: .alternate, executing: executor,
-        )
+        executor.clearEffects()
+
+        let outcome = manager.commitCandidate(romanOnly, script: .alternate, executing: executor)
 
         XCTAssertEqual(outcome, .ignored)
-        XCTAssertNil(commit, "a commit that wrote nothing earns no auto space")
-        XCTAssertEqual(
-            usage.recorded, [],
-            "a commit that wrote nothing teaches nothing",
-        )
+        XCTAssertEqual(executor.committedTexts, [], "nothing reaches the document")
+        XCTAssertTrue(manager.isComposing, "the composition is untouched")
+        XCTAssertEqual(nextWord.handshakes, [], "a commit that wrote nothing teaches nothing")
     }
 
     /// Sentence-end punctuation typed straight into the host is reported: the
@@ -240,19 +208,8 @@ final class ComposingManagerLearningTests: XCTestCase {
     ) throws -> ComposingManager {
         try TestFixtures.makeComposingManager(
             settingsProvider: settingsProvider,
-            usage: usage,
             nextWord: nextWord,
             startingGeneration: TestFixtures.generationCounter.next(),
-        )
-    }
-
-    /// What committing `candidate` whole reports: the identity pair and its
-    /// Hanji for the learned-phrase touch.
-    private func expectedUsage(of candidate: ContinuousCandidate) -> Usage {
-        Usage(
-            displayText: candidate.displayText,
-            canonicalTl: candidate.canonicalTl,
-            hanji: candidate.hanji,
         )
     }
 

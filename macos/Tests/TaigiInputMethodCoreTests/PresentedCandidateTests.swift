@@ -158,21 +158,17 @@ final class PresentedCandidateTests: XCTestCase {
         XCTAssertEqual(presented.map(\.script), [.primary, .alternate, .alternate])
     }
 
-    /// The commit each cell resolves to, end to end through the document
-    /// renderer: Return on the Hanji cell writes the Hanji, Return on the
-    /// romanization cell the romanization, and Space — the flip — the other
-    /// one of the SAME candidate in each case.
+    /// The script each cell commits: Return on the Hanji cell the lead, on
+    /// the romanization cell the other script, and Space — the flip — the
+    /// other one of the SAME candidate in each case. What those scripts write
+    /// is the engine's (`commit_text.rs` `truth_table`), asserted end to end in
+    /// `ComposingManagerCandidateTests`
+    /// `testCommitCandidate_writesWhatItsCellShows_andSpaceTheOtherScript`.
     func testCombined_eachCellCommitsItsOwnScript_andSpaceTheOther() {
         let presented = PresentedCandidate.presentation(of: [taigi], settings: combined)
 
-        func written(_ script: CandidateScript) -> String? {
-            switch script {
-            case .primary: CandidateDocumentText.text(for: taigi, settings: combined)
-            case .alternate: CandidateDocumentText.resolvedAlternate(for: taigi, settings: combined)?.text
-            }
-        }
-
-        XCTAssertEqual(presented.map { written($0.script) }, ["台語", "tâi-gí"])
-        XCTAssertEqual(presented.map { written($0.script.flipped) }, ["tâi-gí", "台語"])
+        XCTAssertEqual(presented.map(\.candidateIndex), [0, 0])
+        XCTAssertEqual(presented.map(\.script), [.primary, .alternate])
+        XCTAssertEqual(presented.map(\.script.flipped), [.alternate, .primary])
     }
 }
