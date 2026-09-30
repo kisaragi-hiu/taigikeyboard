@@ -120,11 +120,11 @@ Type-shape preferences that cross FFI:
 - **Stable channel only.** No nightly features, no `#![feature(...)]`.
 - **MSRV 1.86** (`rust-version` in root `Cargo.toml`); bumping is a PR-level decision with CI verification.
 - **`rustfmt` default config**, no deviations. Apply with `make fmt`; check without writing via `cd engine && cargo fmt --all -- --check` (CI gates it per §7).
-- **`clippy` with `-D warnings`** — CI gates it (`engine.yml`, engine + desktop workspaces); run locally with `make lint` (clippy + Kotlin spotlessCheck). Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
+- **`clippy` with `-D warnings`** — CI gates it (`engine.yml` engine workspace, `desktop.yml` desktop workspace); run locally with `make lint` (clippy + Kotlin spotlessCheck). Project-wide allow list lives in workspace `Cargo.toml` `[workspace.lints]`.
 
 ## 7. CI gate + supply chain `[A]`
 
-CI (`.github/workflows/engine.yml`) runs `cargo test --workspace`, `cargo fmt --check` and `cargo clippy -D warnings` on every PR touching `engine/`; `.github/workflows/security.yml` runs `cargo-audit` over all four Cargo workspaces + `cargo-deny` over the engine on PRs touching Cargo manifests / lockfiles and weekly. Post-PR verification follows CLAUDE.md § Build & Test.
+CI (`.github/workflows/engine.yml`) runs `cargo test --workspace`, `cargo fmt --check` and `cargo clippy -D warnings` on every PR touching `engine/`; `.github/workflows/desktop.yml` runs the desktop-shared workspace's tests + clippy and the desktop + Windows fmt check on PRs touching `desktop/`, `windows/` or `engine/`; `.github/workflows/security.yml` runs `cargo-audit` over all four Cargo workspaces + `cargo-deny` over the engine on PRs touching Cargo manifests / lockfiles and weekly. Post-PR verification follows CLAUDE.md § Build & Test.
 
 - `make`-target shortcuts available for round-internal iteration (fast paths) AND canonical form (full paths). See root `Makefile help` for the current target list.
 - **`cargo-audit`** scans against the RustSec advisory DB (CI `security.yml`; locally, install via `cargo install cargo-audit --locked`).
