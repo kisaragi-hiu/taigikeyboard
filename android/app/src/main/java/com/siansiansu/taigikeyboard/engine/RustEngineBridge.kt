@@ -1,6 +1,10 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.BuildConfig
+import com.siansiansu.taigikeyboard.engine.proto.CommitContinuous
+import com.siansiansu.taigikeyboard.engine.proto.CommitOutcome
+import com.siansiansu.taigikeyboard.engine.proto.CommitResolution
+import com.siansiansu.taigikeyboard.engine.proto.CommitScript
 import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.Request
 import com.siansiansu.taigikeyboard.engine.proto.Response
@@ -455,25 +459,91 @@ object RustEngineBridge {
     )
 
     /**
-     * Multi-return for [ComposingManager.commitContinuous]. iOS uses a labeled
-     * tuple `(didCommit: Bool, didFinalCommit: Bool)`; Kotlin's `Pair` loses the
-     * label semantics so we surface a named data class instead.
-     *
-     * - `didCommit` = engine emitted at least one `CommitTextReplacingPreedit` Effect
-     *   (real commit happened, mid OR final).
-     * - `didFinalCommit` = `didCommit && !transition.isComposing` (engine returned
-     *   to Idle this call, i.e. the last consumed-span emptied the buffer).
-     *
-     * Invariant: `didFinalCommit` implies `didCommit`. Stale-tap / generation-mismatch
-     * → `(false, false)`. Used by [com.siansiansu.taigikeyboard.ime.text.smartbar
-     * .CandidateClickHandler] to gate per-segment frequency learning + auto-space.
+     * One continuous-candidate pick (R5): which of its scripts the document
+     * gets, and the candidate metadata the engine resolves the text from
+     * (`engine/composing/src/commit_text.rs`). Every field but [script]
+     * round-trips verbatim from the [ContinuousCandidate] the user picked;
+     * [consumedBytes] is its `consumedSpanEnd`, an absolute offset into the
+     * pending raw buffer. Mirrors iOS `RustEngineBridge.ContinuousPick`.
      */
-    data class CommitContinuousResult(
-        val didCommit: Boolean,
-        val didFinalCommit: Boolean,
+    data class ContinuousPick(
+        val script: CommitScript,
+        /** The candidate's display romanization ([ContinuousCandidate.roman]). */
+        val roman: String,
+        /**
+         * Identity keys the engine counts the pick under — the canonical
+         * `hanji ?: roman` and TL (Core Principle #6), never the rendering.
+         */
+        val canonicalText: String,
+        val associationTl: String,
+        /** §50 — the pick's hanji, null for a hanji-less candidate. */
+        val hanji: String?,
+        val consumedBytes: Int,
+        val syllableCount: Int,
+    ) {
+        /** The wire request. */
+        fun toRequest(): CommitContinuous {
+            // A local, not the property: inside `apply` the builder's own
+            // `hanji` would shadow it.
+            val hanji = hanji
+            return CommitContinuous
+                .newBuilder()
+                .setScript(script)
+                .setRoman(roman)
+                .setCanonicalText(canonicalText)
+                // R2: canonical TL → NextWord next_tl/prev_tl. Empty → engine
+                // falls back to the raw committed slice.
+                .setAssociationTl(associationTl)
+                .apply { if (!hanji.isNullOrEmpty()) setHanji(hanji) }
+                .setConsumedBytes(consumedBytes)
+                .setSyllableCount(syllableCount)
+                .build()
+        }
+    }
+
+    /**
+     * What a continuous pick did, as the engine answered it
+     * (`ComposingResponse.commit`) — never read off the composing mirror: a
+     * generation mismatch resets the engine to Idle before the intent runs
+     * (`engine/composing/src/handle.rs`), so a mirror read would report a
+     * commit that never happened.
+     */
+    sealed interface ContinuousCommitOutcome {
+        /** Nothing changed: a stale generation, a rejected pick, or a failed round-trip. */
+        data object Ignored : ContinuousCommitOutcome
+
+        /** The segment was nailed and the composition continues (Model B: no document write). */
+        data object Nailed : ContinuousCommitOutcome
+
+        /**
+         * The whole composition was written and the engine is Idle.
+         * [earnsAutoSpace] is the engine's §23 verdict on what the pick wrote;
+         * the live Auto-Space setting is the caller's.
+         */
+        data class Finalized(
+            val earnsAutoSpace: Boolean,
+        ) : ContinuousCommitOutcome
+
+        companion object {
+            // CROSS-PLATFORM INVARIANT — mirrors iOS `RustEngineBridge.ContinuousCommitOutcome.init(_:)`.
+            fun from(resolution: CommitResolution): ContinuousCommitOutcome =
+                when (resolution.outcome) {
+                    CommitOutcome.COMMIT_OUTCOME_NAILED -> Nailed
+                    CommitOutcome.COMMIT_OUTCOME_FINALIZED -> Finalized(resolution.earnsAutoSpace)
+                    // UNSPECIFIED: an answer without a resolution changed
+                    // nothing this side can tell.
+                    else -> Ignored
+                }
+        }
+    }
+
+    /** Result of [composingCommitContinuous]: the transition to replay and what the pick did. */
+    data class ContinuousCommitResult(
+        val transition: ComposingTransition,
+        val outcome: ContinuousCommitOutcome,
     ) {
         companion object {
-            val NOOP = CommitContinuousResult(didCommit = false, didFinalCommit = false)
+            val FAILED = ContinuousCommitResult(ComposingTransition.NOOP, ContinuousCommitOutcome.Ignored)
         }
     }
 
