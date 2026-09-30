@@ -2,7 +2,7 @@
 
 > **Type**: Planning (PR table over the 2026-09-30 audit)
 > **Keywords**: `refactor`, `dead code`, `parity`, `desktop-core`, `userdata`, `commit resolution`, `test selection`, `naming`, `docs drift`
-> **Status**: in progress — R1–R8, R11, A merged; R9-2..4, R10, R12 remain (#274–#318)
+> **Status**: in progress — R1–R8, R11, R10-a1, A merged; R9-2..4, R10-a2, R10-b, R12 remain (#274–#320)
 > **Source**: `docs/reports/2026-09-30-audit-all.md` (frozen snapshot on `30a79c16`; §2 findings, §4 draft rounds, Appendices A–F)
 > **Session memory**: project memory `project_maintainability_audit_2026_09_30.md` (Claude auto-memory)
 
@@ -31,7 +31,7 @@
 | R7 | Test redundancy (engine layers, platform restatements, test-local copies, shared `engine/test-support`) | R7-1 #312 · R7-2a #314 (engine seam tests) · R7-2b #315 (platform restatements) · R7-3 #313 | merged |
 | R8 | Test selection: one integration binary per crate, `tools/test-select`, CI path filters, macOS `swift test` job | #299 #300 #301 #307 | Merged |
 | R9 | Naming batch A (identifiers, files, non-iOS folders) | R9-1 #308 · R9-2 · R9-3 · R9-4 | R9-1 merged |
-| R10 | Naming batch B (proto names; field numbers unchanged) | 1–2 | Pending |
+| R10 | Naming batch B (proto names; field numbers unchanged) | R10-a1 #320 (`hanji` fields, `DictionarySourceToggles`, assoc lookup out of the wire) · R10-a2 (nextword / case messages) · R10-b (composing effects, with R12-2) | R10-a1 merged |
 | R11 | Lexicon / composing boundary (`SortKey` → `ranking`, one key-family module, visibility) | R11-1 #316 (`ranking::CandidateSortKey`, lexicon visibility) · R11-2a #317 (`phonetics::KeyFamily`) · R11-2b #318 (`KeyFamily::toneless_face`) | merged |
 | R12 | `Phase::Composing` removal — ≤20-line spike first | spike GO 2026-09-30 · PR-1 · PR-2 | Spike done |
 | A | Docs drift (Appendix D, 57 rows) | direct to main 97da342b | Done |
@@ -54,3 +54,4 @@ Every PR runs its round type's pre-gate (`~/.claude/rules/round-workflow.md`): r
 - USER 2026-09-30 delegated two parity choices to the recommendation ("decide for me, follow your recommendation; you may choose which platform to align with"): R5 P2 — on the TPS layout a hanji-less pick writes what its cell shows, `tlDisplayToTps(roman)`, with no auto space, on both mobiles (Android changes; this also retires the iOS R2d path). R6 P0 — with every dictionary switched off the keyboard offers no dictionary candidates, on every platform (iOS and Android align to macOS / Windows / Linux).
 - R5 PR-b: only Continuous candidate taps move to the engine. A NextWord prediction tap is not a `CommitContinuous` (there is no composition to nail into), so iOS `formatOutputText` / `markedCellCommit` / `parseRomanAndHanzi` and Android `resolveUnmarkedCommit` / `resolveMarkedCellCommit` stay as the prediction resolvers, with their `UsageRecorder` (now without `hanji`: only a Continuous pick touches a learned phrase). The iOS hanji-less TPS cell moved from `tlNumericToTPS` to `tlDisplayToTPS` in the P2 commit, so the cell shows what the pick writes; the engine `TlNumericToTps` op is left with no platform caller.
 - R5 PR-b2: with every platform naming a script, the platform-written commit is gone — `CommitContinuous.display_text` (tag 1) is reserved, an empty `canonical_text` no longer falls back to it, and `COMMIT_SCRIPT_UNSPECIFIED` is ignored (a no-op answered `IGNORED`, as `CARET_DIRECTION_UNSPECIFIED` is a no-op) rather than read as LEAD: every sender is in this repository and names one, so an unnamed script is a bug to surface, not a pick to guess.
+- R10 split: proto renames land in the proto and in the engine code that mirrors the proto name (façade fns, domain enums); platform wrapper names wait for R9-3 and internal Rust names for R9-4, so each batch touches one layer. `is_translate_swapped` moves with the `isTranslateSwapped` identifiers in R9-3 (one concept, one PR). R10-a1: `AssocLookupRequest` / `Response` / `LexiconAssocEntry` were never a wire method and left the proto; `DictionaryFiltersResponse.assoc_lookup_bitmask` (tag 2, no platform reader) is reserved.
