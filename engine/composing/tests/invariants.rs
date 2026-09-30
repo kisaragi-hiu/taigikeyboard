@@ -255,6 +255,7 @@ fn invariant_commit_preedit_then_insert_in_idle_inserts_only_external() {
         &config_tl(),
     );
     assert_eq!(commit_text(&resp).as_deref(), Some("🎉"));
+    assert!(!resp.is_composing, "an idle insert stays idle");
 }
 
 #[test]
