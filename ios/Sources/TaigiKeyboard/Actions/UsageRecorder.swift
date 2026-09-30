@@ -13,9 +13,9 @@ struct Usage {
     var hanji: String?
 }
 
-/// CROSS-PLATFORM INVARIANT — mirrors macOS `UsageRecorder.swift`, Android
-/// `UsageRecorder.kt` and the desktop `UsageRecorder`
-/// (`desktop/crates/taigi-desktop-core/src/composing/usage.rs`).
+/// CROSS-PLATFORM INVARIANT — mirrors Android `UsageRecorder.kt` and the
+/// engine's own recording on macOS + desktop (R5: `engine/composing/src/transition.rs`
+/// `commit_continuous_resolved`, `Applied.usage`).
 protocol UsageRecorder: AnyObject {
     func record(_ usage: Usage)
 }
