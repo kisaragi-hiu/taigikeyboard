@@ -2,7 +2,7 @@
 //!
 //! Builds the multi-start DAG that S2's whole-sentence best-path
 //! walker will traverse. S1 itself does NOT walk and is strictly
-//! BEHAVIOR-NEUTRAL: `dispatch::build_keys_tl_with_inventory` builds
+//! BEHAVIOR-NEUTRAL: `shadow::build_continuous_keys` builds
 //! this full DAG but emits ONLY its left-anchored (`start == 0`)
 //! projection as keys, which is byte-identical to the pre-S1
 //! single-start `valid_span_endings(shadow, 0, …)` output. Nothing

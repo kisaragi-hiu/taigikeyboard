@@ -24,9 +24,6 @@
 
 use crate::api::{CaretDirection, CommitScript, ComposingError, Engine, Intent, Phase, UserRows};
 use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq};
-use crate::shadow::{
-    build_shadow_lattice_with_barriers, left_anchored_keys_and_restrictions, ShadowLattice,
-};
 use lexicon::{
     classification::is_hanzi, derive_mode, ConsumedSpan, LearnedEntry, RawCandidate,
     SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
@@ -382,44 +379,16 @@ fn literal_roman_candidate(
     })
 }
 
-/// Inventory-injected hermetic test seam for the shadow + key projection
-/// pipeline. v3.5.9 A2 moved the production path through
-/// [`crate::continuous::assemble_candidates`], which builds the shadow
-/// lattice once and derives the left-anchored keys inline (D1 fold).
-/// This wrapper survives only so the
-/// `engine/composing/tests/build_keys_tl_{lattice,hyphen,poj_diacritic}.rs`
-/// integration tests can drive a hermetic inventory without installing
-/// the global `LexiconHandle` singleton. Public (`#[doc(hidden)]`) for
-/// the test crate boundary; production callers must NOT reach for it
-/// (use the seam).
-///
-/// Pipeline (A1 [`crate::shadow::build_shadow_lattice_with_barriers`] +
-/// [`crate::shadow::left_anchored_keys_and_restrictions`], barriers
-/// dropped):
-///
-/// 1. Lowercase `raw` (ASCII only).
-/// 2. `shadow::canonicalize_poj_shadow` (Phase 9 Item 9; v3.5.9 B-2
-///    reshape) emits POJ ASCII in POJ mode (`chiah` stays `chiah`) and
-///    TL ASCII identity in TL mode (`tó-uī` stays `tó-uī`).
-/// 3. `shadow::build_hyphen_shadow` (Phase 9 Item 8) strips ASCII `-`.
-/// 4. The two byte-offset maps compose into a single
-///    `shadow_to_raw_end` so downstream `consumed_span_end` lines up
-///    with platform UI commit slicing.
-/// 5. The lattice builder (`crate::lattice::build_lattice`) walks the
-///    shadow against the inventory family selected by `mode` (B-2:
-///    `tl:` vs `poj:`) — both transforms ran upstream.
-/// 6. The left-anchored projection (`start == 0`) emits a fused
-///    toneless `{mode_prefix}:<key>` per ending (`tl:` in TL/English
-///    mode, `poj:` in POJ mode).
-/// Injectable test seam for the FULL continuous-input key set — the base
-/// reading's keys PLUS every alternate reading's
-/// (`INVARIANT_TPS_DEFOLD_ENUMERATE` §35, TPS-only). Same shared
-/// [`crate::shadow::build_continuous_keys`] production runs, so an
-/// integration test can pin an alternate reading against a hermetic
-/// inventory instead of only against production artifacts.
-///
-/// [`build_keys_tl_with_inventory`] stays the BASE-only seam: the pre-§35
-/// tests that pin exact base key sets must keep seeing exactly those.
+/// Inventory-injected hermetic test seam for continuous-input key
+/// building: the same [`crate::shadow::build_continuous_keys`] that
+/// [`crate::continuous::assemble_candidates`] runs (barriers and typed
+/// hyphen runs included), so the `engine/composing/tests/build_keys_*.rs`
+/// integration tests pin production keys against a hermetic inventory
+/// without installing the global `LexiconHandle` singleton. Public
+/// (`#[doc(hidden)]`) for the test crate boundary; production callers
+/// must NOT reach for it. The pipeline is documented on
+/// [`crate::shadow::build_shadow_lattice_with_barriers`] and
+/// [`crate::shadow::left_anchored_keys_and_restrictions`].
 #[doc(hidden)]
 pub fn build_continuous_keys_with_inventory(
     raw: &str,
@@ -427,27 +396,6 @@ pub fn build_continuous_keys_with_inventory(
     mode: phonetics::InputMode,
 ) -> Vec<(ConsumedSpan, String)> {
     crate::shadow::build_continuous_keys(raw, inv, mode).keys
-}
-
-#[doc(hidden)]
-pub fn build_keys_tl_with_inventory(
-    raw: &str,
-    inv: &SyllableInventory,
-    mode: phonetics::InputMode,
-) -> Vec<(ConsumedSpan, String)> {
-    // Barriers are discarded so the pre-§35 base key sets stay
-    // byte-identical (the §35 alternates are the other seam's job).
-    let ShadowLattice {
-        shadow,
-        shadow_to_raw_end,
-        lattice,
-        ..
-    } = build_shadow_lattice_with_barriers(raw, inv, mode);
-    // v3.5.9 B-2 — `mode` makes the emitted key prefix match the inventory
-    // family the shadow lattice was built against; `inv` drives longest-match
-    // prefix suppression (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`).
-    left_anchored_keys_and_restrictions(&shadow, &shadow_to_raw_end, &lattice, inv, mode, &[], &[])
-        .keys
 }
 
 /// Learned phrases (§50) — one row per reading. Both strings are canonical

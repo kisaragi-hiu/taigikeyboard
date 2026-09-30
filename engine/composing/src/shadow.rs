@@ -226,9 +226,8 @@ pub(crate) struct ShadowLattice {
 /// Returns a [`ShadowLattice`] — the shadow, its raw offset map, the
 /// DAG, the stripped-separator / hyphen barrier set in shadow coordinates
 /// (§35) and the `--` subset of it (§52). Shared by [`build_continuous_keys`] (left-anchored projection —
-/// byte-identical to pre-S1, the S1 pinning tests guard this),
-/// `continuous::fetch_walker_slot0_inner` (S2 whole-sentence walker) and
-/// the `dispatch::build_keys_tl_with_inventory` test seam, so the
+/// byte-identical to pre-S1, the S1 pinning tests guard this)
+/// and `continuous::fetch_walker_slot0_inner` (S2 whole-sentence walker), so the
 /// shadow + offset map + DAG are constructed exactly once per fetch and
 /// the consumers cannot drift.
 pub(crate) fn build_shadow_lattice_with_barriers(
@@ -472,7 +471,7 @@ pub(crate) fn build_continuous_keys(
     }
 }
 
-/// v3.5.9 A1 — extracted from the pre-A1 `build_keys_tl_with_inventory`
+/// v3.5.9 A1 — extracted from the pre-A1 key-building
 /// loop. Emit ONLY the lattice's left-anchored (`start == 0`)
 /// projection as keys, byte-identical to the pre-S1 single-start
 /// `valid_span_endings(shadow, 0, …)` output (`build_lattice` sorts
@@ -498,7 +497,8 @@ pub(crate) fn build_continuous_keys(
 /// (into the emitted key string, family prefix included) of glyphs
 /// immediately before a stripped separator / hyphen barrier — and its §41
 /// tone pin. `barriers` are shadow coordinates from
-/// [`build_shadow_lattice_with_barriers`]; empty for TL/POJ/English.
+/// [`build_shadow_lattice_with_barriers`]; for TL/POJ/English they are the
+/// typed hyphens (§52).
 pub(crate) fn left_anchored_keys_and_restrictions(
     shadow: &str,
     shadow_to_raw_end: &[usize],

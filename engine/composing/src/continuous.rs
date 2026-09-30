@@ -60,7 +60,7 @@
 //!    `ContinuousResponse` via `raw_to_proto_candidate` + `with_continuous`.
 //!
 //! **D1 fold (B2 lifecycle invariant).** Before A2 the shadow + lattice was
-//! built twice per non-TPS `FetchAtPos` — once in `build_keys_tl_with_inventory`,
+//! built twice per non-TPS `FetchAtPos` — once in the key-building pass,
 //! once at the head of `fetch_walker_slot0`. A2 hoists ONE `LexiconHandle::
 //! with_state` scope into [`assemble_candidates`] and calls
 //! `build_shadow_lattice_with_barriers(raw, inv, mode)` exactly once. Byte-identical
@@ -593,7 +593,7 @@ fn fetch_walker_slot0_inner(
     let path = crate::lattice::walk_best(lattice, shadow.len(), |start, end| {
         // Edges come from the syllabifier-built lattice so they are
         // well-formed by construction; the guard is defensive
-        // (mirrors the `build_keys_tl_with_inventory` projection
+        // (mirrors the `left_anchored_keys_and_restrictions` projection
         // guard) and also drops a digit-only / empty toneless span.
         if start >= end
             || end > shadow.len()
