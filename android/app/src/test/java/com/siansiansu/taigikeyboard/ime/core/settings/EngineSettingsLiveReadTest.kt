@@ -8,7 +8,7 @@ import org.junit.Test
  * settings MUST be live-read. Each property access on an
  * [EngineSettingsProvider]-returned value re-reads the underlying store.
  *
- * Uses an in-memory [MutableEngineSettingsProvider] (test-only) rather
+ * Uses the in-memory [StubEngineSettingsProvider] (test-only) rather
  * than `PrefHelper` because `PrefHelper` hard-wires the DataStore
  * delegate to a real Android `Context`, which pure-JVM tests cannot
  * construct. The invariant is about engine read semantics — not
@@ -23,9 +23,15 @@ class EngineSettingsLiveReadTest {
      */
     @Test
     fun test_INVARIANT_engine_settings_are_live_read() {
-        val backing = MutableBacking(inputMode = "poj")
-        val settings = MutableEngineSettings(backing)
-        val provider = MutableEngineSettingsProvider(settings)
+        val backing =
+            StubEngineSettings(
+                inputMode = "poj",
+                isCustomDictEnabled = false,
+                isMoeDictEnabled = false,
+                isKautianAccentLukangEnabled = false,
+                isKautianNameAppendixEnabled = false,
+            )
+        val provider = StubEngineSettingsProvider(backing)
 
         // Initial read reflects the constructor value.
         assertEquals("initial inputMode", "poj", provider.current.inputMode)
@@ -62,106 +68,5 @@ class EngineSettingsLiveReadTest {
         assertEquals(false, provider.current.isKautianAccentLukangEnabled)
         backing.isKautianNameAppendixEnabled = true
         assertEquals(true, provider.current.isKautianNameAppendixEnabled)
-    }
-
-    /**
-     * Plain backing bag of mutable fields — stands in for whatever the
-     * production provider reads (`PrefHelper.cachedPrefs`, `UserDefaults`,
-     * etc.).
-     */
-    private class MutableBacking(
-        var inputMode: String = "tl",
-        var candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-        var isTranslateSwapped: Boolean = false,
-        var isOutputBothScripts: Boolean = false,
-        var isLiteralRomanCandidateEnabled: Boolean = true,
-        var isHyphenlessRomanEnabled: Boolean = false,
-        var pojMarkerOptions: PojMarkerOptions =
-            PojMarkerOptions(
-                isDoubleTapOOEnabled = false,
-                isDoubleTapNNEnabled = false,
-                isNasalMarkerUppercaseEnabled = true,
-            ),
-        var isCustomDictEnabled: Boolean = false,
-        var isTpsOrMappedToER: Boolean = false,
-        var isMoeDictEnabled: Boolean = false,
-        var isNewwordDictEnabled: Boolean = false,
-        var isKunggeDictEnabled: Boolean = false,
-        var isITaigiDictEnabled: Boolean = false,
-        var isTaiwanJapanDictEnabled: Boolean = false,
-        var isTaiHuaDictEnabled: Boolean = false,
-        var isTaiwanPlantDictEnabled: Boolean = false,
-        var isSttiDictEnabled: Boolean = false,
-        var isKhpooDictEnabled: Boolean = false,
-        var isVariantEnabled: Boolean = false,
-        var isKhiinEnabled: Boolean = false,
-        var isLkkDictEnabled: Boolean = false,
-        var isDevDictEnabled: Boolean = false,
-        var isKautianAccentLukangEnabled: Boolean = false,
-        var isKautianAccentSansiaEnabled: Boolean = false,
-        var isKautianAccentTaipakEnabled: Boolean = false,
-        var isKautianAccentGilanEnabled: Boolean = false,
-        var isKautianAccentTainanEnabled: Boolean = false,
-        var isKautianAccentKaohsiungEnabled: Boolean = false,
-        var isKautianAccentKinmenEnabled: Boolean = false,
-        var isKautianAccentMakungEnabled: Boolean = false,
-        var isKautianAccentSintikEnabled: Boolean = false,
-        var isKautianAccentTaichungEnabled: Boolean = false,
-        var isKautianNameAppendixEnabled: Boolean = false,
-    )
-
-    /**
-     * [EngineSettings] implementation whose `get()` properties delegate to
-     * a mutable backing bag — each access reads the latest value. Matches
-     * the contract `PrefHelper` honors in production.
-     */
-    private class MutableEngineSettings(
-        private val backing: MutableBacking,
-    ) : EngineSettings {
-        override val inputMode: String get() = backing.inputMode
-        override val candidateDisplayMode: CandidateDisplayMode get() = backing.candidateDisplayMode
-        override val isTranslateSwapped: Boolean get() = backing.isTranslateSwapped
-        override val isOutputBothScripts: Boolean get() = backing.isOutputBothScripts
-        override val isLiteralRomanCandidateEnabled: Boolean get() = backing.isLiteralRomanCandidateEnabled
-        override val isHyphenlessRomanEnabled: Boolean get() = backing.isHyphenlessRomanEnabled
-        override val pojMarkerOptions: PojMarkerOptions get() = backing.pojMarkerOptions
-        override val isCustomDictEnabled: Boolean get() = backing.isCustomDictEnabled
-        override val isTpsOrMappedToER: Boolean get() = backing.isTpsOrMappedToER
-        override val isMoeDictEnabled: Boolean get() = backing.isMoeDictEnabled
-        override val isNewwordDictEnabled: Boolean get() = backing.isNewwordDictEnabled
-        override val isKunggeDictEnabled: Boolean get() = backing.isKunggeDictEnabled
-        override val isITaigiDictEnabled: Boolean get() = backing.isITaigiDictEnabled
-        override val isTaiwanJapanDictEnabled: Boolean get() = backing.isTaiwanJapanDictEnabled
-        override val isTaiHuaDictEnabled: Boolean get() = backing.isTaiHuaDictEnabled
-        override val isTaiwanPlantDictEnabled: Boolean get() = backing.isTaiwanPlantDictEnabled
-        override val isSttiDictEnabled: Boolean get() = backing.isSttiDictEnabled
-        override val isKhpooDictEnabled: Boolean get() = backing.isKhpooDictEnabled
-        override val isVariantEnabled: Boolean get() = backing.isVariantEnabled
-        override val isKhiinEnabled: Boolean get() = backing.isKhiinEnabled
-        override val isLkkDictEnabled: Boolean get() = backing.isLkkDictEnabled
-        override val isDevDictEnabled: Boolean get() = backing.isDevDictEnabled
-        override val isKautianAccentLukangEnabled: Boolean get() = backing.isKautianAccentLukangEnabled
-        override val isKautianAccentSansiaEnabled: Boolean get() = backing.isKautianAccentSansiaEnabled
-        override val isKautianAccentTaipakEnabled: Boolean get() = backing.isKautianAccentTaipakEnabled
-        override val isKautianAccentGilanEnabled: Boolean get() = backing.isKautianAccentGilanEnabled
-        override val isKautianAccentTainanEnabled: Boolean get() = backing.isKautianAccentTainanEnabled
-        override val isKautianAccentKaohsiungEnabled: Boolean get() = backing.isKautianAccentKaohsiungEnabled
-        override val isKautianAccentKinmenEnabled: Boolean get() = backing.isKautianAccentKinmenEnabled
-        override val isKautianAccentMakungEnabled: Boolean get() = backing.isKautianAccentMakungEnabled
-        override val isKautianAccentSintikEnabled: Boolean get() = backing.isKautianAccentSintikEnabled
-        override val isKautianAccentTaichungEnabled: Boolean get() = backing.isKautianAccentTaichungEnabled
-        override val isKautianNameAppendixEnabled: Boolean get() = backing.isKautianNameAppendixEnabled
-    }
-
-    /**
-     * Provider whose `current` returns the same [MutableEngineSettings]
-     * instance — minimal stand-in for the `PrefHelper`-backed live provider
-     * in production. Matches the `current = this` (property, not snapshot)
-     * pattern used by `PrefHelper`.
-     */
-    private class MutableEngineSettingsProvider(
-        private val settings: MutableEngineSettings,
-    ) : EngineSettingsProvider {
-        override val current: EngineSettings get() = settings
     }
 }

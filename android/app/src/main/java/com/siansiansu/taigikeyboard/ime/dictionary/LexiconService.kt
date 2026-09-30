@@ -3,6 +3,8 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 import android.content.Context
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.dictionaryFilters
+import com.siansiansu.taigikeyboard.engine.isHanzi
 import com.siansiansu.taigikeyboard.engine.searchByHanzi
 import com.siansiansu.taigikeyboard.engine.searchWithSources
 import com.siansiansu.taigikeyboard.engine.tlToPoj
@@ -10,19 +12,16 @@ import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Dictionary search orchestrator for the Dictionary tab (Tab3).
- *
- * Provides hanzi / roman exploration queries with per-query source-tag
- * filtering for badge display. The keyboard candidate path no longer
- * routes through this service — v3.5.8 Item 13 retired the platform
- * lexicon fallback and the Continuous-input engine is now the single
- * candidate source (`docs/engine/continuous-candidate-display.md` §15.4).
+ * The engine-backed [LexiconClient]: the system-dictionary lookups behind
+ * `DictionarySearchService` (Dictionary tab). The keyboard candidate path does
+ * not route through here — v3.5.8 Item 13 retired the platform lexicon
+ * fallback and the Continuous-input engine is the single candidate source
+ * (`docs/engine/continuous-candidate-display.md` §15.4).
  *
  * Owned by `CompositionRoot`; collaborators injected through the ctor.
  * Engine state is installed at app startup via `RustEngineBridge.lexiconInstall(...)`
@@ -31,26 +30,23 @@ import kotlinx.coroutines.withContext
 class LexiconService(
     appContext: Context,
     private val logger: LoggerBackend,
-) {
+) : LexiconClient {
     private val appContext: Context = appContext.applicationContext
 
     companion object {
         private const val TAG = "LexiconService"
     }
 
-    /**
-     * Search with source metadata (Dictionary tab exploration).
-     *
-     * `filterBitmask` is resolved by the caller (Dictionary tab VM) once per query
-     * via `RustEngineBridge.dictionaryFilters(...)` and reused for retag —
-     * keeping mask and badge filter on the same snapshot per Codex
-     * pre-impl BLOCK 6.
-     */
-    suspend fun searchWithSources(
+    override fun isHanzi(text: String): Boolean = RustEngineBridge.isHanzi(text)
+
+    override fun dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles): RustEngineBridge.DictionaryFilters = RustEngineBridge.dictionaryFilters(toggles)
+
+    /** Romanization search with source metadata; `filterBitmask` comes from [dictionaryFilters]. */
+    override suspend fun searchWithSources(
         input: String,
-        inputMode: InputMode,
+        inputMode: RustEngineBridge.LexiconInputMode,
         filterBitmask: UInt,
-        limit: Int = 50,
+        limit: Int,
     ): Outcome<List<DictionarySearchResult>, DictionaryError> {
         if (input.isEmpty()) return Outcome.Success(emptyList())
         if (!CompositionRoot.shared(appContext).awaitLexiconReady()) {
@@ -71,11 +67,11 @@ class LexiconService(
     }
 
     /** Search by hanzi prefix (Dictionary tab exploration). */
-    suspend fun searchByHanzi(
+    override suspend fun searchByHanzi(
         input: String,
-        inputMode: InputMode,
+        inputMode: RustEngineBridge.LexiconInputMode,
         filterBitmask: UInt,
-        limit: Int = 50,
+        limit: Int,
     ): Outcome<List<DictionarySearchResult>, DictionaryError> {
         if (input.isEmpty()) return Outcome.Success(emptyList())
         if (!CompositionRoot.shared(appContext).awaitLexiconReady()) {
@@ -102,21 +98,12 @@ class LexiconService(
 
     private fun bridgeSearchByHanziOrRoman(
         input: String,
-        inputMode: InputMode,
+        bridgeMode: RustEngineBridge.LexiconInputMode,
         limit: Int,
         filterBitmask: UInt,
         isCJK: Boolean,
-    ): List<RustEngineBridge.LexiconRow> {
-        // Android `InputMode` has no TPS case (only POJ / TL / ENGLISH);
-        // ENGLISH falls back to TL because the lexicon engine never receives
-        // English-mode queries on the autocomplete path. Aligning the
-        // InputMode enum across iOS / Android is a separate scope.
-        val bridgeMode = when (inputMode) {
-            InputMode.POJ -> RustEngineBridge.LexiconInputMode.POJ
-            InputMode.TL -> RustEngineBridge.LexiconInputMode.TL
-            InputMode.ENGLISH -> RustEngineBridge.LexiconInputMode.TL
-        }
-        return if (isCJK) {
+    ): List<RustEngineBridge.LexiconRow> =
+        if (isCJK) {
             RustEngineBridge.searchByHanzi(
                 query = input,
                 inputMode = bridgeMode,
@@ -131,16 +118,17 @@ class LexiconService(
                 enabledSourcesBitmask = filterBitmask,
             )
         }
-    }
 
     private fun rowsToSearchResults(
         rows: List<RustEngineBridge.LexiconRow>,
-        inputMode: InputMode,
+        inputMode: RustEngineBridge.LexiconInputMode,
         limit: Int,
     ): List<DictionarySearchResult> =
         rows
             .map { row ->
-                val roman = if (inputMode == InputMode.POJ) RustEngineBridge.tlToPoj(row.roman) else row.roman
+                // The engine returns raw TL; render POJ in POJ mode. TPS keeps the TL reading (as iOS).
+                val roman =
+                    if (inputMode == RustEngineBridge.LexiconInputMode.POJ) RustEngineBridge.tlToPoj(row.roman) else row.roman
                 val bitmask = row.sourceBitmask?.toInt() ?: 0
                 DictionarySearchResult(
                     id = row.id.toInt(),

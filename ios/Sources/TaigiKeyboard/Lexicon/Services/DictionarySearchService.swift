@@ -6,8 +6,8 @@ import Foundation
 /// in `LexiconService`): CJK vs roman path selection, custom-dict prefix search,
 /// kautian-first ordering, and source-tag filtering for badge display.
 ///
-/// System-dict queries flow through `RustEngineBridge.lexiconSearchByHanzi` /
-/// `lexiconSearchWithSources`. The Rust engine's bitmask filter drops rows
+/// System-dict queries flow through `LexiconClient` (`EngineLexiconClient` in
+/// production wraps `RustEngineBridge.lexiconSearchByHanzi` / `lexiconSearchWithSources`). The Rust engine's bitmask filter drops rows
 /// where ZERO enabled bits match — but multi-source rows that overlap at
 /// least one enabled source still arrive with their full source bitmask.
 /// `retagSources` then trims each row's `sources` array to enabled-only so
@@ -15,6 +15,7 @@ import Foundation
 final class DictionarySearchService: @unchecked Sendable {
     // MARK: - Dependencies
 
+    private let lexicon: any LexiconClient
     private let userData: any UserDataClient
     private let settingsProvider: EngineSettingsProvider
     private let logger = DebugLogger(category: "DictionarySearchService")
@@ -22,11 +23,26 @@ final class DictionarySearchService: @unchecked Sendable {
     // MARK: - Init
 
     init(
+        lexicon: any LexiconClient = EngineLexiconClient(),
         userData: any UserDataClient = CompositionRoot.userData,
         settingsProvider: EngineSettingsProvider = SharedSettings.shared,
     ) {
+        self.lexicon = lexicon
         self.userData = userData
         self.settingsProvider = settingsProvider
+    }
+
+    /// The FST family an input mode selects. `.tps` hits the `tps:` family so
+    /// a Zhuyin query finds its rows; `.english` never reaches the lexicon from
+    /// the keyboard, so it reads the TL family.
+    /// CROSS-PLATFORM INVARIANT — mirrors android/…/ime/dictionary/DictionarySearchService.kt
+    /// `lexiconMode`. Drift changes which index a Dictionary-tab query searches.
+    static func lexiconMode(_ inputMode: InputMode) -> RustEngineBridge.LexiconInputMode {
+        switch inputMode {
+        case .tl, .english: .tl
+        case .poj: .poj
+        case .tps: .tps
+        }
     }
 
     // MARK: - Public API
@@ -44,7 +60,7 @@ final class DictionarySearchService: @unchecked Sendable {
         guard !query.isEmpty else { return [] }
 
         let inputMode = settingsProvider.current.inputMode
-        let isCJK = RustEngineBridge.isHanzi(query)
+        let isCJK = lexicon.isHanzi(query)
         logger.debug("[SEARCH] query='\(query)' isCJK=\(isCJK) inputMode=\(String(describing: inputMode))")
 
         // Resolve filter bitmask + enabled-source set ONCE per query and
@@ -52,7 +68,7 @@ final class DictionarySearchService: @unchecked Sendable {
         // again in retag) would let toggle changes mid-search produce a
         // mask/badge mismatch (Codex pre-impl BLOCK 5).
         let toggles = RustEngineBridge.DictionaryToggles(from: settingsProvider.current)
-        let filters = RustEngineBridge.lexiconDictionaryFilters(toggles: toggles)
+        let filters = lexicon.dictionaryFilters(toggles: toggles)
 
         let systemResults = fetchSystemResults(
             query: query,
@@ -61,7 +77,7 @@ final class DictionarySearchService: @unchecked Sendable {
             limit: limit,
             filterBitmask: filters.dictionaryFilterBitmask,
         )
-        let customResults = isCJK ? [] : await lookupCustomDictionary(query: query)
+        let customResults = isCJK ? [] : await lookupCustomDictionary(query: query, limit: limit)
 
         let prepared = sortByMoeThenFrequency(systemResults)
             .map { retagSources($0, enabled: filters.enabledSources) }
@@ -78,22 +94,15 @@ final class DictionarySearchService: @unchecked Sendable {
         limit: Int,
         filterBitmask: UInt32,
     ) -> [DictionarySearchResult] {
-        // .english unreachable — keyboard passthrough never invokes lexicon
-        // search; mirrors Android `InputMode.ENGLISH -> LexiconInputMode.TL`.
-        let bridgeMode: RustEngineBridge.LexiconInputMode = switch inputMode {
-        case .tl: .tl
-        case .poj: .poj
-        case .tps: .tps
-        case .english: .tl
-        }
+        let bridgeMode = Self.lexiconMode(inputMode)
         let rows = isCJK
-            ? RustEngineBridge.lexiconSearchByHanzi(
+            ? lexicon.searchByHanzi(
                 query: query,
                 inputMode: bridgeMode,
                 limit: UInt32(limit),
                 enabledSourcesBitmask: filterBitmask,
             )
-            : RustEngineBridge.lexiconSearchWithSources(
+            : lexicon.searchWithSources(
                 input: query,
                 inputMode: bridgeMode,
                 limit: UInt32(limit),
@@ -117,10 +126,10 @@ final class DictionarySearchService: @unchecked Sendable {
     /// The user's own words for `query`, found the way the keyboard finds
     /// them — by the key the query derives, prefix-matched
     /// (`SearchCustomEntries`, roadmap P7b).
-    private func lookupCustomDictionary(query: String) async -> [DictionarySearchResult] {
+    private func lookupCustomDictionary(query: String, limit: Int) async -> [DictionarySearchResult] {
         let settings = settingsProvider.current
         guard settings.isCustomDictEnabled else { return [] }
-        let entries = await userData.search(query: query, mode: settings.inputMode, limit: 20)
+        let entries = await userData.search(query: query, mode: settings.inputMode, limit: limit)
         return entries.map { entry in
             DictionarySearchResult(
                 id: DictionarySearchResult.customDictMarkerId,
