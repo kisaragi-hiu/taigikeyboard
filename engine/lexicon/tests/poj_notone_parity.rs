@@ -23,9 +23,16 @@
 //! lean checkouts may omit the 24 MB output file) the test no-ops
 //! with a soft skip rather than blocking.
 
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use test_support::dictionary_csv_or_skip;
+
+/// `[tl, poj_notone]` per row; `None` (logged, the `suite` soft-skips) in a lean checkout.
+fn read_rows(suite: &str) -> Option<Vec<[&'static str; 2]>> {
+    Some(
+        dictionary_csv_or_skip(suite)?
+            .select(["tl", "poj_notone"])
+            .collect(),
+    )
+}
 
 /// Runtime derivation — byte-identical to the body of
 /// `matches_continuous_poj_toneless_key + derive_poj_notone_for_match`
@@ -68,70 +75,12 @@ fn derive_poj_notone_runtime(tl_display: &str) -> String {
     out
 }
 
-fn dictionary_csv_path() -> PathBuf {
-    // CARGO_MANIFEST_DIR = engine/lexicon → 4-up = repo root.
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.pop(); // engine
-    path.pop(); // repo root
-    path.push("dictionary");
-    path.push("output");
-    path.push("dictionary.csv");
-    path
-}
-
-/// Parse `dictionary.csv`'s relevant columns. The shipped file uses
-/// plain comma separation with no embedded quoted commas in the
-/// columns we read (`tl`, `poj_notone`); a naive splitter is safe.
-/// Returns `(tl, poj_notone)` per row in the order they appear.
-fn read_rows(path: &std::path::Path) -> std::io::Result<Vec<(String, String)>> {
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
-    let mut lines = reader.lines();
-    // Header
-    let header = lines.next().expect("CSV header line present")?;
-    let columns: Vec<&str> = header.split(',').collect();
-    let tl_idx = columns
-        .iter()
-        .position(|c| *c == "tl")
-        .expect("`tl` column present in CSV header");
-    let poj_notone_idx = columns
-        .iter()
-        .position(|c| *c == "poj_notone")
-        .expect("`poj_notone` column present in CSV header");
-
-    let mut rows = Vec::new();
-    for line in lines {
-        let line = line?;
-        if line.is_empty() {
-            continue;
-        }
-        let fields: Vec<&str> = line.split(',').collect();
-        // Tolerate any row that does not parse cleanly — the test is
-        // about derivation correctness on well-formed rows, not CSV
-        // parser robustness.
-        if fields.len() <= poj_notone_idx.max(tl_idx) {
-            continue;
-        }
-        rows.push((
-            fields[tl_idx].to_string(),
-            fields[poj_notone_idx].to_string(),
-        ));
-    }
-    Ok(rows)
-}
-
 #[test]
 fn runtime_poj_notone_matches_build_pipeline_for_every_row() {
-    let path = dictionary_csv_path();
-    if !path.exists() {
-        eprintln!(
-            "skipping POJ-notone parity test: {} not present (lean checkout)",
-            path.display()
-        );
+    let Some(rows) = read_rows("POJ-notone") else {
         return;
-    }
+    };
 
-    let rows = read_rows(&path).expect("read dictionary.csv rows");
     assert!(
         !rows.is_empty(),
         "expected non-empty `dictionary.csv` row stream"
@@ -142,7 +91,7 @@ fn runtime_poj_notone_matches_build_pipeline_for_every_row() {
     let mut anomalies = 0usize;
     let mut drift: Vec<(String, String, String)> = Vec::new();
 
-    for (tl, poj_notone) in &rows {
+    for &[tl, poj_notone] in &rows {
         total += 1;
         if tl.is_empty() || poj_notone.is_empty() {
             continue;
@@ -160,7 +109,7 @@ fn runtime_poj_notone_matches_build_pipeline_for_every_row() {
         compared += 1;
         let derived = derive_poj_notone_runtime(tl);
         if derived != *poj_notone {
-            drift.push((tl.clone(), poj_notone.clone(), derived));
+            drift.push((tl.to_string(), poj_notone.to_string(), derived));
             if drift.len() >= 10 {
                 break;
             }

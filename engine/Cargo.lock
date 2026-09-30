@@ -96,7 +96,6 @@ dependencies = [
 name = "composing"
 version = "0.1.0"
 dependencies = [
- "fst",
  "lexicon",
  "log",
  "once_cell",
@@ -104,6 +103,7 @@ dependencies = [
  "proptest",
  "protos",
  "ranking",
+ "test-support",
  "thiserror",
  "unicode-normalization",
 ]
@@ -121,6 +121,7 @@ dependencies = [
  "protos",
  "ranking",
  "tempfile",
+ "test-support",
  "userdata",
 ]
 
@@ -395,6 +396,7 @@ dependencies = [
  "prost",
  "protos",
  "ranking",
+ "test-support",
  "thiserror",
  "unicode-normalization",
 ]
@@ -504,6 +506,7 @@ dependencies = [
  "proptest",
  "protos",
  "regex",
+ "test-support",
  "thiserror",
  "unicode-normalization",
 ]
@@ -996,6 +999,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-support"
+version = "0.1.0"
+dependencies = [
+ "fst",
+]
+
+[[package]]
 name = "thiserror"
 version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1053,6 +1063,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "test-support",
  "thiserror",
  "uuid",
 ]

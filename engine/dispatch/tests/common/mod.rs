@@ -55,23 +55,14 @@ pub fn open_user_data(directory: &std::path::Path) {
 pub fn production_lexicon_ready() -> bool {
     static READY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *READY.get_or_init(|| {
-        let artifact = |name: &str| {
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../dictionaries")
-                .join(name)
-                .to_str()
-                .expect("artifact path UTF-8")
-                .to_owned()
-        };
-        if !std::path::Path::new(&artifact("association.bin")).exists() {
-            eprintln!("production artifacts absent — run `make dict`; skipping.");
+        let Some(artifacts) = test_support::ProductionArtifacts::locate() else {
             return false;
-        }
+        };
         let paths = lexicon::LexiconPaths::validated(
-            &artifact("dictionary.fst"),
-            &artifact("dictionary.bin"),
-            &artifact("association.bin"),
-            &artifact("syllables.fst"),
+            &artifacts.dictionary_fst,
+            &artifacts.dictionary_bin,
+            &artifacts.association_bin,
+            &artifacts.syllables_fst,
             0,
         )
         .expect("validate production LexiconPaths");

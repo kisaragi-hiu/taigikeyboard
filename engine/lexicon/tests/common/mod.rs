@@ -12,114 +12,29 @@ use lexicon::{
     fetch_candidates_for_keys_with_barriers, ConsumedSpan, ContinuousFetchCtx, RawCandidate,
 };
 use phonetics::InputMode;
+use test_support::{build_tkdb, fst_entry, write_fst_set, TkdbRow};
 
-const HEADER_SIZE: usize = 16;
-
-/// Single TKDB record fixture. The optional fields drive the on-disk record
-/// layout (independent of the header `version` int):
-/// - `syllable_count = None` → v1 layout (no syllable_count byte);
-///   `Some(n)` → v2+ layout with that count.
-/// - `kautian_subtag = None` → v1/v2 layout (no subtag bytes);
-///   `Some(s)` → v3 layout with the 2-byte subtag after syllable_count.
-pub struct DictRow<'a> {
-    pub bitmask: u16,
-    pub frequency: u32,
-    pub syllable_count: Option<u8>,
-    pub kautian_subtag: Option<u16>,
-    pub hanzi: &'a str,
-    pub tl: &'a str,
-}
-
-/// One TKWA entry: `(bitmask, count, next_word, next_tl)`.
-pub type AssocEntry<'a> = (u16, u32, &'a str, &'a str);
-
-/// Build a TKWA byte sequence: `version`, then `keys` in the order given
-/// (the caller sorts them by raw UTF-8 bytes — the reader binary-searches).
-pub fn build_tkwa(version: u32, keys: &[(&str, &[AssocEntry<'_>])]) -> Vec<u8> {
-    const HEADER: usize = 20;
-    let key_section_start = HEADER + keys.len() * 4;
-    let key_sizes: Vec<usize> = keys.iter().map(|(key, _)| 1 + key.len() + 4 + 2).collect();
-    let entry_section_start = key_section_start + key_sizes.iter().sum::<usize>();
-    let entry_size = |(_, _, nw, nt): &AssocEntry<'_>| 8 + nw.len() + nt.len();
-
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKWA");
-    out.extend_from_slice(&version.to_le_bytes());
-    out.extend_from_slice(&(keys.len() as u32).to_le_bytes());
-    let entry_count: usize = keys.iter().map(|(_, entries)| entries.len()).sum();
-    out.extend_from_slice(&(entry_count as u32).to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
-
-    let mut key_offset = key_section_start;
-    for size in &key_sizes {
-        out.extend_from_slice(&(key_offset as u32).to_le_bytes());
-        key_offset += size;
-    }
-    let mut entry_offset = entry_section_start;
-    for (key, entries) in keys {
-        assert!(key.len() <= u8::MAX as usize, "key too long");
-        out.push(key.len() as u8);
-        out.extend_from_slice(key.as_bytes());
-        out.extend_from_slice(&(entry_offset as u32).to_le_bytes());
-        out.extend_from_slice(&(entries.len() as u16).to_le_bytes());
-        entry_offset += entries.iter().map(entry_size).sum::<usize>();
-    }
-    for (_, entries) in keys {
-        for (bitmask, count, next_word, next_tl) in *entries {
-            out.extend_from_slice(&bitmask.to_le_bytes());
-            out.extend_from_slice(&count.to_le_bytes());
-            out.push(next_word.len() as u8);
-            out.push(next_tl.len() as u8);
-            out.extend_from_slice(next_word.as_bytes());
-            out.extend_from_slice(next_tl.as_bytes());
-        }
-    }
-    out
-}
-
-/// Build a TKDB byte sequence with the given `magic`, `version`, and rows.
-/// The caller is responsible for picking a `version` that matches the
-/// row layout (v2 → `syllable_count = Some(_)`; v3 → also
-/// `kautian_subtag = Some(_)`).
-pub fn build_tkdb_bin(magic: &[u8; 4], version: u32, rows: &[DictRow<'_>]) -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(magic);
-    out.extend_from_slice(&version.to_le_bytes());
-    out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
-
-    let offset_table_size = rows.len() * 4;
-    let mut offsets = Vec::<u32>::with_capacity(rows.len());
-    let mut payload = Vec::<u8>::new();
-    for row in rows {
-        offsets.push((HEADER_SIZE + offset_table_size + payload.len()) as u32);
-        payload.extend_from_slice(&row.bitmask.to_le_bytes());
-        payload.extend_from_slice(&row.frequency.to_le_bytes());
-        payload.push(row.hanzi.len() as u8);
-        payload.push(row.tl.len() as u8);
-        if let Some(syll) = row.syllable_count {
-            payload.push(syll);
-        }
-        if let Some(subtag) = row.kautian_subtag {
-            payload.extend_from_slice(&subtag.to_le_bytes());
-        }
-        payload.extend_from_slice(row.hanzi.as_bytes());
-        payload.extend_from_slice(row.tl.as_bytes());
-    }
-    for off in &offsets {
-        out.extend_from_slice(&off.to_le_bytes());
-    }
-    out.extend_from_slice(&payload);
-    out
+/// `(key, rowid)` → FST `key || 0xFF || rowid_le_4` (`key` carries its
+/// family prefix, `tl:tsua`). `lookup_exact` resolves `rowid`;
+/// `DictionaryReader::record` is 1-based, so FST rowid `N` maps to
+/// `build_tkdb_v3` row index `N-1`.
+pub fn write_synthetic_fst(name: &str, pairs: &[(&str, u32)]) -> PathBuf {
+    write_fst_set(
+        name,
+        pairs
+            .iter()
+            .map(|(key, rowid)| fst_entry(b"", key, *rowid))
+            .collect(),
+    )
 }
 
 /// 4-tuple convenience for v2 fixtures: `(bitmask, frequency, syllable_count,
 /// hanzi, tl)`. Emits a VERSION-2 binary (no subtag) — used only by the
 /// v2-loud-reject test now that the reader requires v3.
 pub fn build_tkdb_v2(magic: &[u8; 4], rows: &[(u16, u32, u8, &str, &str)]) -> Vec<u8> {
-    let dict_rows: Vec<DictRow<'_>> = rows
+    let dict_rows: Vec<TkdbRow<'_>> = rows
         .iter()
-        .map(|(bm, freq, syll, hanzi, tl)| DictRow {
+        .map(|(bm, freq, syll, hanzi, tl)| TkdbRow {
             bitmask: *bm,
             frequency: *freq,
             syllable_count: Some(*syll),
@@ -128,13 +43,13 @@ pub fn build_tkdb_v2(magic: &[u8; 4], rows: &[(u16, u32, u8, &str, &str)]) -> Ve
             tl,
         })
         .collect();
-    build_tkdb_bin(magic, 2, &dict_rows)
+    build_tkdb(magic, 2, &dict_rows)
 }
 
 /// 5-tuple convenience for v3 fixtures: `(bitmask, frequency, syllable_count,
 /// hanzi, tl)` with `kautian_subtag = 0` on every row. The default for tests
 /// that don't exercise subcollection provenance. Delegates to
-/// `build_tkdb_v3_subtag` (mirrors the `build_tkdb_v2` → `build_tkdb_bin`
+/// `build_tkdb_v3_subtag` (mirrors the `build_tkdb_v2` → `build_tkdb`
 /// thin-wrapper pattern).
 pub fn build_tkdb_v3(magic: &[u8; 4], rows: &[(u16, u32, u8, &str, &str)]) -> Vec<u8> {
     let with_subtag: Vec<(u16, u32, u8, u16, &str, &str)> = rows
@@ -147,9 +62,9 @@ pub fn build_tkdb_v3(magic: &[u8; 4], rows: &[(u16, u32, u8, &str, &str)]) -> Ve
 /// 6-tuple convenience for v3 fixtures with explicit kautian subtags:
 /// `(bitmask, frequency, syllable_count, kautian_subtag, hanzi, tl)`.
 pub fn build_tkdb_v3_subtag(magic: &[u8; 4], rows: &[(u16, u32, u8, u16, &str, &str)]) -> Vec<u8> {
-    let dict_rows: Vec<DictRow<'_>> = rows
+    let dict_rows: Vec<TkdbRow<'_>> = rows
         .iter()
-        .map(|(bm, freq, syll, subtag, hanzi, tl)| DictRow {
+        .map(|(bm, freq, syll, subtag, hanzi, tl)| TkdbRow {
             bitmask: *bm,
             frequency: *freq,
             syllable_count: Some(*syll),
@@ -158,27 +73,7 @@ pub fn build_tkdb_v3_subtag(magic: &[u8; 4], rows: &[(u16, u32, u8, u16, &str, &
             tl,
         })
         .collect();
-    build_tkdb_bin(magic, 3, &dict_rows)
-}
-
-/// Write `bytes` to a unique tmpdir path and return it.
-///
-/// `name` is a human-readable suffix for debugging; the actual path is
-/// namespaced with `process::id()` plus a per-process atomic counter so
-/// parallel tests within the same `cargo test` binary never collide
-/// (cargo runs `tests/*.rs` test fns in parallel by default; without
-/// the counter, two tests passing the same `name` — or two callers of
-/// `synth_dictionary_reader` with the same row count — would race on
-/// `File::create` and produce a flaky "file too small" panic). Mirrors
-/// the safe pattern at `tests/span_local_fetch.rs:155-156`.
-pub fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let pid = std::process::id();
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let path = std::env::temp_dir().join(format!("lexicon-test-{name}-{pid}-{n}"));
-    std::fs::write(&path, bytes).expect("write temp");
-    path
+    build_tkdb(magic, 3, &dict_rows)
 }
 
 /// Test-only span-local fetch: every dictionary candidate whose toneless
@@ -251,30 +146,10 @@ pub fn fetch_candidates_for_endings(
     fetch_candidates_for_keys_with_barriers(&keys, &[], &[], input.len() as u32, &inner)
 }
 
-/// One `dictionary.fst` wire entry: `key || 0xFF || rowid_le_4`.
-pub fn wire_entry(key: &str, rowid: u32) -> Vec<u8> {
-    let mut wire = key.as_bytes().to_vec();
-    wire.push(0xFF);
-    wire.extend_from_slice(&rowid.to_le_bytes());
-    wire
-}
-
-/// Build a wire-format `dictionary.fst` from `(key, rowid)` pairs and
-/// open it as a `PrefixIndex`.
+/// [`write_synthetic_fst`] opened as a `PrefixIndex`.
 pub fn build_wire_index(name: &str, entries: &[(&str, u32)]) -> lexicon::prefix_index::PrefixIndex {
-    let mut wires: Vec<Vec<u8>> = entries
-        .iter()
-        .map(|(key, rowid)| wire_entry(key, *rowid))
-        .collect();
-    wires.sort();
-    let path = write_temp(name, &[]);
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = fst::SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for wire in &wires {
-        builder.insert(wire).expect("insert");
-    }
-    builder.finish().expect("finish");
-    lexicon::prefix_index::PrefixIndex::open(&path).expect("open index")
+    lexicon::prefix_index::PrefixIndex::open(&write_synthetic_fst(name, entries))
+        .expect("open index")
 }
 
 /// A [`ContinuousFetchCtx`] with every source on, no user frequency, no

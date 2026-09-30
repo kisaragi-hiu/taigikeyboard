@@ -23,10 +23,9 @@
 //! `EngineHandle::install(LexiconPaths)` (mirrors
 //! `engine/lexicon/tests/parity.rs`). This file must call BOTH
 //! `composing::dispatch::handle` AND `lexicon::EngineHandle::install`, so
-//! it lives in `composing` (which depends on `lexicon`). The hermetic
-//! fixture builders live in `tests/common/mod.rs` because
-//! `lexicon/tests/common` is a lexicon-test-private module not visible to
-//! composing tests. `parity.rs` passes `""` for `syllables_fst` → inventory `None` →
+//! it lives in `composing` (which depends on `lexicon`). The fixture
+//! serializers come from `test-support`; the composing-shaped builders
+//! live in `tests/common/mod.rs`. `parity.rs` passes `""` for `syllables_fst` → inventory `None` →
 //! the whole-sentence walker path is silently skipped; S0 therefore builds
 //! a REAL `syllables.fst` so the walker slot-0 path is exercised.
 //!
@@ -59,11 +58,11 @@ use std::path::PathBuf;
 
 use crate::common::{
     build_syllables_fst, build_tkdb_v3, config, derive_poj_notone, empty_association_bin,
-    engine_install_lock, fetch_at_pos_response, fst_entry, install_lexicon,
-    wire_fetch_at_pos_response, write_fst_set, write_temp, Fetch, Row, Selected,
+    fetch_at_pos_response, install_lexicon, wire_fetch_at_pos_response, Fetch, Row, Selected,
 };
 use lexicon::CustomEntry;
 use protos::engine::{DictionaryToggles, FetchAtPos};
+use test_support::{engine_install_lock, fst_entry, write_fst_set, write_temp};
 
 // --- golden-only fixture builder (union of every key family) ---------------
 

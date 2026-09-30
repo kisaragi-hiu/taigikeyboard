@@ -12,48 +12,11 @@
 //! parametric `syllable_count` so the caller's longest-match loop can
 //! ask "is `hanji` an n-syllable compound?" for any `n >= 2`.
 
-use std::path::PathBuf;
-
-use crate::common::{build_tkdb_v3, write_temp};
+use crate::common::{build_tkdb_v3, write_synthetic_fst};
 use lexicon::compound_hanji_exists;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
-
-const SEPARATOR: u8 = 0xFF;
-
-/// `(key, rowid)` → FST `key || 0xFF || rowid_le_4`. `lookup_exact`
-/// resolves `rowid`; `DictionaryReader::record` is 1-based, so FST
-/// rowid `N` maps to `build_tkdb_v3` row index `N-1`.
-fn write_synthetic_fst(name: &str, pairs: &[(&str, u32)]) -> PathBuf {
-    use fst::SetBuilder;
-    use std::sync::atomic::{AtomicU64, Ordering};
-    // Per-process atomic counter + pid namespacing so concurrent tests
-    // within the same `cargo test` binary cannot race on the same path
-    // (mirrors `common::write_temp` + `tests/span_local_fetch.rs:155-156`).
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let pid = std::process::id();
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let path = std::env::temp_dir().join(format!("lexicon-test-{name}-{pid}-{n}"));
-    let mut entries: Vec<Vec<u8>> = pairs
-        .iter()
-        .map(|(key, rowid)| {
-            let mut e = Vec::with_capacity(key.len() + 1 + 4);
-            e.extend_from_slice(key.as_bytes());
-            e.push(SEPARATOR);
-            e.extend_from_slice(&rowid.to_le_bytes());
-            e
-        })
-        .collect();
-    entries.sort_unstable();
-    entries.dedup();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for entry in &entries {
-        builder.insert(entry).expect("insert");
-    }
-    builder.finish().expect("finish");
-    path
-}
+use test_support::write_temp;
 
 #[test]
 fn compound_hanji_exists_contract_matrix() {

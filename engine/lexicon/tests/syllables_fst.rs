@@ -20,11 +20,9 @@
 //! syllabifier crate exercises prefix walking. See
 //! `docs/reports/2026-05-20-v359-b-plan.md` §B-1.
 
-use std::path::PathBuf;
-
-use fst::SetBuilder;
 use lexicon::SyllableInventory;
 use phonetics::{canonicalize_poj_syllable, canonicalize_syllable, InputMode};
+use test_support::write_fst_set;
 
 /// 50 phonotactically valid TL/POJ-shaped syllables. Boundary coverage
 /// per roadmap §Phase 2 line 195 plus sampled common syllables. Note —
@@ -253,8 +251,7 @@ fn poj_family_isolates_divergent_canonicals_from_tl() {
 /// loud here instead of degrading runtime continuous input.
 #[test]
 fn production_syllables_fst_carries_both_tl_and_poj_families() {
-    let path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../dictionaries/syllables.fst");
+    let path = test_support::production_artifact("syllables.fst");
     if !path.exists() {
         // Dev / CI environments that strip the data artifact run
         // every other test in this file unchanged; skip with a
@@ -290,8 +287,8 @@ fn production_syllables_fst_carries_both_tl_and_poj_families() {
 }
 
 /// Build a `SyllableInventory` from canonical `(toneless, tone)` pairs by
-/// emitting numeric + toneless keys, sort+dedup, then fst::SetBuilder →
-/// temp file → `SyllableInventory::open`. Exercises the loader + mmap
+/// emitting numeric + toneless keys into a temp FST set →
+/// `SyllableInventory::open`. Exercises the loader + mmap
 /// path; does NOT cover the upstream `split_into_syllables` / residue
 /// detection / invalid-skip stats — those are pinned in
 /// `engine/build-helpers/fst-builder/src/syllables.rs#tests`.
@@ -307,10 +304,7 @@ fn build_inventory_from_pairs(pairs: &[(String, String)]) -> SyllableInventory {
             keys.push(format!("tl:{}", canonical));
         }
     }
-    keys.sort();
-    keys.dedup();
-
-    write_set_to_temp_inventory(&keys)
+    write_set_to_temp_inventory(keys)
 }
 
 /// v3.5.9 B-1 — build an inventory carrying BOTH `tl:` and `poj:`
@@ -338,27 +332,14 @@ fn build_dual_inventory(
             keys.push(format!("poj:{}", canonical));
         }
     }
-    keys.sort();
-    keys.dedup();
-    write_set_to_temp_inventory(&keys)
+    write_set_to_temp_inventory(keys)
 }
 
-/// Final fst::SetBuilder pass over already sorted+deduped keys.
-fn write_set_to_temp_inventory(keys: &[String]) -> SyllableInventory {
-    let path = unique_temp_path();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for key in keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
+/// `keys` (sorted + deduped by `write_fst_set`) as a temp FST set.
+fn write_set_to_temp_inventory(keys: Vec<String>) -> SyllableInventory {
+    let path = write_fst_set(
+        "syllables.fst",
+        keys.into_iter().map(String::into_bytes).collect(),
+    );
     SyllableInventory::open(&path).expect("open inventory")
-}
-
-fn unique_temp_path() -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let pid = std::process::id();
-    std::env::temp_dir().join(format!("lexicon-test-syllables-{pid}-{n}.fst"))
 }

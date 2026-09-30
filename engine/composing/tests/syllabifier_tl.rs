@@ -6,10 +6,6 @@
 //! `khihthau → {4, 8}`) hold without depending on the production
 //! `dictionaries/syllables.fst` (which contains additional
 //! syllables like `ta`, `tha`, `ba` that would expand the result set).
-//! The hermetic builder mirrors `engine/lexicon/tests/syllables_fst.rs`
-//! at line 186-207 — small duplication is preferable to a shared
-//! test-utils crate for one reuse.
-//!
 //! Reuses production `phonetics::canonicalize_syllable` so that test
 //! samples can be authored in either TL or POJ shape.
 

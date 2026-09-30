@@ -2013,20 +2013,10 @@ mod tests {
     }
 
     fn test_inventory(keys: &[&str]) -> SyllableInventory {
-        use fst::SetBuilder;
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let path =
-            std::env::temp_dir().join(format!("taigi_shadow_inv_{}_{n}.fst", std::process::id()));
-        let file = std::fs::File::create(&path).expect("create fst");
-        let mut sorted: Vec<&str> = keys.to_vec();
-        sorted.sort_unstable();
-        let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-        for key in sorted {
-            builder.insert(key.as_bytes()).expect("insert");
-        }
-        builder.finish().expect("finish");
+        let path = test_support::write_fst_set(
+            "inventory.fst",
+            keys.iter().map(|key| key.as_bytes().to_vec()).collect(),
+        );
         SyllableInventory::open(&path).expect("open inventory")
     }
 
@@ -2820,14 +2810,10 @@ mod tests {
 
     // ----- v3.5.8 S5 — no-dict carve-out (greedy + min-hop helpers) -----
 
-    // Hermetic `SyllableInventory` builder — same inline pattern as the
-    // `lattice::builder` unit tests (inline duplication preferred over a
-    // shared test-utils crate). Pins the carve-out helper without the
-    // `LexiconHandle` singleton (Codex post-impl S5 P3, 2026-05-17).
+    // Hermetic `SyllableInventory` builder. Pins the carve-out helper
+    // without the `LexiconHandle` singleton (Codex post-impl S5 P3,
+    // 2026-05-17).
     fn build_inventory(samples: &[&str]) -> SyllableInventory {
-        use std::path::PathBuf;
-
-        use fst::SetBuilder;
         use phonetics::canonicalize_syllable;
 
         let mut keys: Vec<String> = Vec::new();
@@ -2841,22 +2827,10 @@ mod tests {
                 keys.push(format!("tl:{canonical}"));
             }
         }
-        keys.sort();
-        keys.dedup();
-
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let path: PathBuf = std::env::temp_dir().join(format!(
-            "taigi_shadow_carveout_{}_{n}.fst",
-            std::process::id()
-        ));
-        let file = std::fs::File::create(&path).expect("create fst");
-        let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-        for key in &keys {
-            builder.insert(key.as_bytes()).expect("insert");
-        }
-        builder.finish().expect("finish");
+        let path = test_support::write_fst_set(
+            "inventory.fst",
+            keys.into_iter().map(String::into_bytes).collect(),
+        );
         SyllableInventory::open(&path).expect("open inventory")
     }
 
@@ -2866,9 +2840,6 @@ mod tests {
     /// Used by the B-2 mode-aware unit tests to prove POJ shadow helpers
     /// route to the `poj:` family of the tagged-single-FST.
     fn build_poj_inventory(samples: &[&str]) -> SyllableInventory {
-        use std::path::PathBuf;
-
-        use fst::SetBuilder;
         use phonetics::canonicalize_poj_syllable;
 
         let mut keys: Vec<String> = Vec::new();
@@ -2882,22 +2853,10 @@ mod tests {
                 keys.push(format!("poj:{canonical}"));
             }
         }
-        keys.sort();
-        keys.dedup();
-
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let path: PathBuf = std::env::temp_dir().join(format!(
-            "taigi_shadow_carveout_poj_{}_{n}.fst",
-            std::process::id()
-        ));
-        let file = std::fs::File::create(&path).expect("create fst");
-        let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-        for key in &keys {
-            builder.insert(key.as_bytes()).expect("insert");
-        }
-        builder.finish().expect("finish");
+        let path = test_support::write_fst_set(
+            "inventory.fst",
+            keys.into_iter().map(String::into_bytes).collect(),
+        );
         SyllableInventory::open(&path).expect("open inventory")
     }
 

@@ -4,7 +4,8 @@
 
 use lexicon::dictionary_reader::DictionaryReader;
 
-use crate::common::{build_tkdb_v3, build_tkdb_v3_subtag, write_temp};
+use crate::common::{build_tkdb_v3, build_tkdb_v3_subtag};
+use test_support::write_temp;
 
 const HEADER_SIZE: usize = 16;
 

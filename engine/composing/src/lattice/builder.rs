@@ -101,9 +101,6 @@ pub(crate) fn build_lattice_with_barriers(
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
-    use fst::SetBuilder;
     use lexicon::SyllableInventory;
     use phonetics::{canonicalize_syllable, InputMode};
 
@@ -111,11 +108,9 @@ mod tests {
 
     const MAX_SYLLABLES: usize = 8;
 
-    // Hermetic inventory builder — same pattern as the integration
-    // tests (`composing/tests/build_keys_tl_hyphen.rs`); inline
-    // duplication preferred over a shared test-utils crate. v3.5.9 B-1:
-    // keys carry the `tl:` family prefix so the inventory matches the
-    // tagged-single-FST format `SyllableInventory::contains_in` expects.
+    // Hermetic inventory builder. v3.5.9 B-1: keys carry the `tl:` family
+    // prefix so the inventory matches the tagged-single-FST format
+    // `SyllableInventory::contains_in` expects.
     fn build_inventory(samples: &[&str]) -> SyllableInventory {
         let mut keys: Vec<String> = Vec::new();
         for s in samples {
@@ -128,20 +123,10 @@ mod tests {
                 keys.push(format!("tl:{canonical}"));
             }
         }
-        keys.sort();
-        keys.dedup();
-
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let path: PathBuf =
-            std::env::temp_dir().join(format!("taigi_lattice_unit_{}_{n}.fst", std::process::id()));
-        let file = std::fs::File::create(&path).expect("create fst");
-        let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-        for key in &keys {
-            builder.insert(key.as_bytes()).expect("insert");
-        }
-        builder.finish().expect("finish");
+        let path = test_support::write_fst_set(
+            "inventory.fst",
+            keys.into_iter().map(String::into_bytes).collect(),
+        );
         SyllableInventory::open(&path).expect("open inventory")
     }
 

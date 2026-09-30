@@ -27,7 +27,7 @@ unicode-normalization = { workspace = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
-fst = { workspace = true }
+test-support = { workspace = true }
 
 [[test]]
 name = "it"

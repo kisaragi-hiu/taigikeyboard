@@ -4,11 +4,12 @@
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::LexiconError;
 
-use crate::common::{build_tkdb_bin, build_tkdb_v2, write_temp, DictRow};
+use crate::common::build_tkdb_v2;
+use test_support::{build_tkdb, write_temp, TkdbRow};
 
 #[test]
 fn invariant_lex_v1_rejected_with_v1v2_to_v3_marker() {
-    let rows = [DictRow {
+    let rows = [TkdbRow {
         bitmask: 0x0001,
         frequency: 1,
         syllable_count: None, // v1 layout: no syllable_count byte
@@ -16,7 +17,7 @@ fn invariant_lex_v1_rejected_with_v1v2_to_v3_marker() {
         hanzi: "好",
         tl: "ho2",
     }];
-    let bytes = build_tkdb_bin(b"TKDB", 1, &rows);
+    let bytes = build_tkdb(b"TKDB", 1, &rows);
     let path = write_temp("rejects-v1.bin", &bytes);
     let err = DictionaryReader::open(&path).expect_err("v1 must be rejected");
 
@@ -56,7 +57,7 @@ fn invariant_lex_v2_rejected_with_v1v2_to_v3_marker() {
 
 #[test]
 fn invariant_lex_unrelated_version_uses_generic_message() {
-    let bytes = build_tkdb_bin(b"TKDB", 99, &[]);
+    let bytes = build_tkdb(b"TKDB", 99, &[]);
     let path = write_temp("rejects-v99.bin", &bytes);
     let err = DictionaryReader::open(&path).expect_err("v99 must be rejected");
 

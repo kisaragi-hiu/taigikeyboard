@@ -170,9 +170,6 @@ fn is_false_toneless_boundary_tps(lowered: &str, end: usize) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::path::PathBuf;
-
-    use fst::SetBuilder;
     use lexicon::SyllableInventory;
     use phonetics::InputMode;
 
@@ -195,20 +192,10 @@ mod tests {
                 keys.push(format!("tps:{n}"));
             }
         }
-        keys.sort();
-        keys.dedup();
-
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static COUNTER: AtomicU64 = AtomicU64::new(0);
-        let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-        let path: PathBuf =
-            std::env::temp_dir().join(format!("taigi_tps_syl_unit_{}_{n}.fst", std::process::id()));
-        let file = std::fs::File::create(&path).expect("create fst");
-        let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-        for key in &keys {
-            builder.insert(key.as_bytes()).expect("insert");
-        }
-        builder.finish().expect("finish");
+        let path = test_support::write_fst_set(
+            "inventory.fst",
+            keys.into_iter().map(String::into_bytes).collect(),
+        );
         SyllableInventory::open(&path).expect("open inventory")
     }
 

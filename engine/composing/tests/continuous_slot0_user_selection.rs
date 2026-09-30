@@ -22,9 +22,9 @@
 
 use crate::common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, empty_association_bin,
-    engine_install_lock, fetch_hanji, install_lexicon, selected, write_temp, Fetch, Row, Selected,
-    NOW_MS,
+    fetch_hanji, install_lexicon, selected, Fetch, Row, Selected, NOW_MS,
 };
+use test_support::{engine_install_lock, write_temp};
 
 const TWO_HOURS_MS: i64 = 2 * 60 * 60 * 1000;
 

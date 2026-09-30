@@ -27,15 +27,12 @@
 //! `[\d\-]` must continue to strip BOTH digits AND hyphens for multi-syllable
 //! `tl_num` (e.g. `tsu1a2`) → fused `tl_notone` (`tsua`).
 
-use std::path::PathBuf;
-
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::search::{self, SearchInputMode, SearchParams};
 
-use crate::common::{build_tkdb_v3, write_temp};
-
-const SEPARATOR: u8 = 0xFF;
+use crate::common::{build_tkdb_v3, write_synthetic_fst};
+use test_support::write_temp;
 
 /// Toneless input `tsua` must retrieve both the single-syllable `紙` and
 /// the multi-syllable `珠仔` from a synthetic FST whose `tl:tsua` key
@@ -136,35 +133,4 @@ fn lookup_exact_returns_all_rowids_under_fused_toneless_key() {
     let mut rowids: Vec<u32> = prefix_index.lookup_exact("tl:tsua");
     rowids.sort_unstable();
     assert_eq!(rowids, vec![1u32, 2u32]);
-}
-
-fn write_synthetic_fst(name: &str, pairs: &[(&str, u32)]) -> PathBuf {
-    use fst::SetBuilder;
-    use std::sync::atomic::{AtomicU64, Ordering};
-    // Per-process atomic counter + pid namespacing so concurrent tests
-    // within the same `cargo test` binary cannot race on the same path
-    // (mirrors `common::write_temp` + `tests/span_local_fetch.rs:155-156`).
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let pid = std::process::id();
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let path = std::env::temp_dir().join(format!("lexicon-test-{name}-{pid}-{n}"));
-    let mut entries: Vec<Vec<u8>> = pairs
-        .iter()
-        .map(|(key, rowid)| {
-            let mut e = Vec::with_capacity(key.len() + 1 + 4);
-            e.extend_from_slice(key.as_bytes());
-            e.push(SEPARATOR);
-            e.extend_from_slice(&rowid.to_le_bytes());
-            e
-        })
-        .collect();
-    entries.sort_unstable();
-    entries.dedup();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for entry in &entries {
-        builder.insert(entry).expect("insert");
-    }
-    builder.finish().expect("finish");
-    path
 }

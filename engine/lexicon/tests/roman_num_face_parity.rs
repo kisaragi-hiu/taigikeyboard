@@ -33,76 +33,20 @@
 //! Soft-skips when the CSV is absent (lean checkout), like its
 //! `tps_notone_parity` / `poj_notone_parity` siblings.
 
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::{Path, PathBuf};
+use test_support::dictionary_csv_or_skip;
 
-fn dictionary_csv_path() -> PathBuf {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.pop(); // engine
-    path.pop(); // repo root
-    path.push("dictionary");
-    path.push("output");
-    path.push("dictionary.csv");
-    path
-}
-
-/// One CSV row's reading plus the four precomputed romanization key columns
-/// `create_fst.py` emits key families from.
-struct Row {
-    tl: String,
-    tl_num: String,
-    poj_num: String,
-    tl_notone: String,
-    poj_notone: String,
-    tl_abbrev: String,
-    poj_abbrev: String,
-}
-
-fn read_rows(path: &Path) -> std::io::Result<Vec<Row>> {
-    let reader = BufReader::new(File::open(path)?);
-    let mut lines = reader.lines();
-    let header = lines.next().expect("CSV header line present")?;
-    let columns: Vec<&str> = header.split(',').collect();
-    let column = |name: &str| {
-        columns
-            .iter()
-            .position(|c| *c == name)
-            .unwrap_or_else(|| panic!("`{name}` column present in CSV header"))
-    };
-    let (tl_idx, tl_num_idx, poj_num_idx) = (column("tl"), column("tl_num"), column("poj_num"));
-    let (tl_notone_idx, poj_notone_idx) = (column("tl_notone"), column("poj_notone"));
-    let (tl_abbrev_idx, poj_abbrev_idx) = (column("tl_abbrev"), column("poj_abbrev"));
-    let max_idx = tl_idx
-        .max(tl_num_idx)
-        .max(poj_num_idx)
-        .max(tl_notone_idx)
-        .max(poj_notone_idx)
-        .max(tl_abbrev_idx)
-        .max(poj_abbrev_idx);
-
-    let mut rows = Vec::new();
-    for line in lines {
-        let line = line?;
-        if line.is_empty() {
-            continue;
-        }
-        let fields: Vec<&str> = line.split(',').collect();
-        if fields.len() <= max_idx {
-            continue;
-        }
-        rows.push(Row {
-            tl: fields[tl_idx].to_string(),
-            tl_num: fields[tl_num_idx].to_string(),
-            poj_num: fields[poj_num_idx].to_string(),
-            tl_notone: fields[tl_notone_idx].to_string(),
-            poj_notone: fields[poj_notone_idx].to_string(),
-            tl_abbrev: fields[tl_abbrev_idx].to_string(),
-            poj_abbrev: fields[poj_abbrev_idx].to_string(),
-        });
-    }
-    Ok(rows)
-}
+/// The reading plus the six precomputed romanization key columns
+/// `create_fst.py` emits key families from. Every gate selects all seven, so
+/// the rows compared do not depend on which column is under test.
+const COLUMNS: [&str; 7] = [
+    "tl",
+    "tl_num",
+    "poj_num",
+    "tl_notone",
+    "poj_notone",
+    "tl_abbrev",
+    "poj_abbrev",
+];
 
 /// A reading the continuous path can actually reach: a `tl:`/`poj:` lookup key
 /// is romanization, so a row whose `tl` column holds Hanji (an upstream
@@ -189,15 +133,14 @@ fn syllable_ends_bound_the_face_they_describe() {
 }
 
 fn assert_column_parity(column: &str, derive: impl Fn(&str) -> String) {
-    let path = dictionary_csv_path();
-    if !path.exists() {
-        eprintln!(
-            "skipping {column} parity test: {} not present (lean checkout)",
-            path.display()
-        );
+    let Some(csv) = dictionary_csv_or_skip(column) else {
         return;
-    }
-    let rows = read_rows(&path).expect("read dictionary.csv rows");
+    };
+    let expected_idx = COLUMNS
+        .iter()
+        .position(|c| *c == column)
+        .unwrap_or_else(|| panic!("`{column}` is one of {COLUMNS:?}"));
+    let rows: Vec<[&str; 7]> = csv.select(COLUMNS).collect();
     assert!(
         !rows.is_empty(),
         "expected non-empty `dictionary.csv` row stream"
@@ -208,27 +151,20 @@ fn assert_column_parity(column: &str, derive: impl Fn(&str) -> String) {
     let mut drifted = 0usize;
     let mut drift: Vec<(String, String, String)> = Vec::new();
     for row in &rows {
-        let expected = match column {
-            "tl_num" => &row.tl_num,
-            "poj_num" => &row.poj_num,
-            "tl_notone" => &row.tl_notone,
-            "poj_notone" => &row.poj_notone,
-            "tl_abbrev" => &row.tl_abbrev,
-            _ => &row.poj_abbrev,
-        };
-        if row.tl.is_empty() || expected.is_empty() {
+        let (tl, expected) = (row[0], row[expected_idx]);
+        if tl.is_empty() || expected.is_empty() {
             continue;
         }
-        if !is_romanization(&row.tl) {
+        if !is_romanization(tl) {
             skipped += 1;
             continue;
         }
         compared += 1;
-        let derived = derive(&row.tl);
-        if &derived != expected {
+        let derived = derive(tl);
+        if derived != expected {
             drifted += 1;
             if drift.len() < 20 {
-                drift.push((row.tl.clone(), derived, expected.clone()));
+                drift.push((tl.to_string(), derived, expected.to_string()));
             }
         }
     }

@@ -32,60 +32,15 @@
 //! cannot reach via a `tps:<bopomofo>` lookup key anyway and are
 //! skipped.
 
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use test_support::dictionary_csv_or_skip;
 
-fn dictionary_csv_path() -> PathBuf {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.pop(); // engine
-    path.pop(); // repo root
-    path.push("dictionary");
-    path.push("output");
-    path.push("dictionary.csv");
-    path
-}
-
-/// Parse `dictionary.csv` returning `(tl, tps_notone, tps_notone_var)`
-/// per row. C-5 extended the row tuple to include the variant column
-/// for the er↔or dual-emit parity test below.
-fn read_rows(path: &std::path::Path) -> std::io::Result<Vec<(String, String, String)>> {
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
-    let mut lines = reader.lines();
-    let header = lines.next().expect("CSV header line present")?;
-    let columns: Vec<&str> = header.split(',').collect();
-    let tl_idx = columns
-        .iter()
-        .position(|c| *c == "tl")
-        .expect("`tl` column present in CSV header");
-    let tps_notone_idx = columns
-        .iter()
-        .position(|c| *c == "tps_notone")
-        .expect("`tps_notone` column present in CSV header");
-    let tps_notone_var_idx = columns
-        .iter()
-        .position(|c| *c == "tps_notone_var")
-        .expect("`tps_notone_var` column present in CSV header");
-
-    let mut rows = Vec::new();
-    let max_idx = tl_idx.max(tps_notone_idx).max(tps_notone_var_idx);
-    for line in lines {
-        let line = line?;
-        if line.is_empty() {
-            continue;
-        }
-        let fields: Vec<&str> = line.split(',').collect();
-        if fields.len() <= max_idx {
-            continue;
-        }
-        rows.push((
-            fields[tl_idx].to_string(),
-            fields[tps_notone_idx].to_string(),
-            fields[tps_notone_var_idx].to_string(),
-        ));
-    }
-    Ok(rows)
+/// `[tl, tps_notone, tps_notone_var]` per row; `None` (logged, the `suite` soft-skips) in a lean checkout.
+fn read_rows(suite: &str) -> Option<Vec<[&'static str; 3]>> {
+    Some(
+        dictionary_csv_or_skip(suite)?
+            .select(["tl", "tps_notone", "tps_notone_var"])
+            .collect(),
+    )
 }
 
 /// True when every char of `s` is a Bopomofo / Bopomofo Extended scalar
@@ -98,16 +53,10 @@ fn is_pure_bopomofo(s: &str) -> bool {
 
 #[test]
 fn runtime_tps_notone_matches_build_pipeline_for_every_row() {
-    let path = dictionary_csv_path();
-    if !path.exists() {
-        eprintln!(
-            "skipping TPS-notone parity test: {} not present (lean checkout)",
-            path.display()
-        );
+    let Some(rows) = read_rows("TPS-notone") else {
         return;
-    }
+    };
 
-    let rows = read_rows(&path).expect("read dictionary.csv rows");
     assert!(
         !rows.is_empty(),
         "expected non-empty `dictionary.csv` row stream"
@@ -118,7 +67,7 @@ fn runtime_tps_notone_matches_build_pipeline_for_every_row() {
     let mut anomalies = 0usize;
     let mut drift: Vec<(String, String, String)> = Vec::new();
 
-    for (tl, tps_notone, _var) in &rows {
+    for &[tl, tps_notone, _var] in &rows {
         total += 1;
         if tl.is_empty() || tps_notone.is_empty() {
             continue;
@@ -135,7 +84,7 @@ fn runtime_tps_notone_matches_build_pipeline_for_every_row() {
         compared += 1;
         let derived = phonetics::tps_notone_from_tl(tl);
         if derived != *tps_notone {
-            drift.push((tl.clone(), tps_notone.clone(), derived));
+            drift.push((tl.to_string(), tps_notone.to_string(), derived));
             if drift.len() >= 10 {
                 break;
             }
@@ -212,16 +161,10 @@ fn tps_notone_or_variant_substitutes_er_to_or_glyph() {
 /// guard would silently reject the ㄛ variant for divergent rows.
 #[test]
 fn runtime_tps_notone_var_matches_build_pipeline_for_every_row() {
-    let path = dictionary_csv_path();
-    if !path.exists() {
-        eprintln!(
-            "skipping TPS-notone-var parity test: {} not present (lean checkout)",
-            path.display()
-        );
+    let Some(rows) = read_rows("TPS-notone-var") else {
         return;
-    }
+    };
 
-    let rows = read_rows(&path).expect("read dictionary.csv rows");
     // Iterate every row with a non-empty pure-Bopomofo primary, compute
     // the runtime-derived variant, and compare to the CSV variant —
     // INCLUDING the empty-string case (no ㄜ → no variant). Skipping
@@ -233,7 +176,7 @@ fn runtime_tps_notone_var_matches_build_pipeline_for_every_row() {
     let mut nonempty_vars = 0usize;
     let mut drift: Vec<(String, String, String)> = Vec::new();
 
-    for (_tl, notone, var) in &rows {
+    for &[_tl, notone, var] in &rows {
         if notone.is_empty() {
             continue;
         }
@@ -247,7 +190,7 @@ fn runtime_tps_notone_var_matches_build_pipeline_for_every_row() {
             nonempty_vars += 1;
         }
         if derived != *var {
-            drift.push((notone.clone(), var.clone(), derived));
+            drift.push((notone.to_string(), var.to_string(), derived));
             if drift.len() >= 10 {
                 break;
             }

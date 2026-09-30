@@ -22,6 +22,7 @@ userdata = { workspace = true, optional = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+test-support = { workspace = true }
 
 [features]
 # The engine-owned user-data stores (`src/user_data/with_stores.rs`; the

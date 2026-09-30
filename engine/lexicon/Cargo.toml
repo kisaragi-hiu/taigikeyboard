@@ -21,6 +21,9 @@ protos = { workspace = true }
 ranking = { workspace = true }
 unicode-normalization = { workspace = true }
 
+[dev-dependencies]
+test-support = { workspace = true }
+
 [lints.rust]
 unsafe_code = "forbid"
 

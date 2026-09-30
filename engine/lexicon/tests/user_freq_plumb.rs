@@ -25,14 +25,12 @@
 //! invariants (Tier 1 ordering, mode derive) are pinned in that file;
 //! this file scopes to 9.3a-specific axes.
 
-use std::path::PathBuf;
-
-use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::ContinuousFetchCtx;
 use phonetics::InputMode;
 use ranking::{FrequencyMap, BOOST_ALPHA, MAX_BOOST, USER_WEIGHT_DECAY_TAU_MS};
+use test_support::{fst_entry, write_fst_set, write_temp};
 
 /// Length of the retired binary 1-hour recency window (epoch-ms). The
 /// tests below pin that a selection older than it still counts.
@@ -68,9 +66,7 @@ fn ctx<'a>(
     }
 }
 
-use crate::common::{
-    build_tkdb_v3, fetch_candidates_for_endings, frequency_map, write_temp, FrequencyFixture,
-};
+use crate::common::{build_tkdb_v3, fetch_candidates_for_endings, frequency_map, FrequencyFixture};
 
 struct Row<'a> {
     toneless_key: &'a str,
@@ -92,33 +88,12 @@ fn build_fixture(name: &str, rows: &[Row<'_>]) -> (PrefixIndex, DictionaryReader
     let mut fst_keys: Vec<Vec<u8>> = Vec::new();
     for (idx, r) in rows.iter().enumerate() {
         let rowid = (idx + 1) as u32;
-        let mut entry = Vec::with_capacity(r.toneless_key.len() + 4 + 5);
-        entry.extend_from_slice(b"tl:");
-        entry.extend_from_slice(r.toneless_key.as_bytes());
-        entry.push(0xFF);
-        entry.extend_from_slice(&rowid.to_le_bytes());
-        fst_keys.push(entry);
+        fst_keys.push(fst_entry(b"tl:", r.toneless_key, rowid));
     }
-    fst_keys.sort();
-
-    let fst_path = unique_temp_path(name);
-    let file = std::fs::File::create(&fst_path).expect("create fst tmp");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for entry in &fst_keys {
-        builder.insert(entry).expect("fst insert");
-    }
-    builder.finish().expect("fst finish");
+    let fst_path = write_fst_set(&format!("{name}.fst"), fst_keys);
     let prefix_index = PrefixIndex::open(&fst_path).expect("dictionary.fst opens");
 
     (prefix_index, dict)
-}
-
-fn unique_temp_path(name: &str) -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let pid = std::process::id();
-    std::env::temp_dir().join(format!("lexicon-test-phase9-3a-{name}-{pid}-{n}.fst"))
 }
 
 // ---------------------------------------------------------------------------
