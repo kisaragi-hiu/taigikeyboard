@@ -154,9 +154,7 @@ class SmartbarManager(
             getOutputBothScripts = { cachedOutputBothScripts },
             getComposingManager = { taigikeyboard.textInputManager.getComposingManager() },
             onClearCandidates = { clearCandidates() },
-            onNextWordPrediction = { displayText, committedText, roman, hanzi, rawInput ->
-                handleNextWordPrediction(displayText, committedText, roman, hanzi, rawInput)
-            },
+            onNextWordPrediction = { displayText, roman -> handleNextWordPrediction(displayText, roman) },
             onRequestCandidateRefresh = { taigikeyboard.textInputManager.requestTaigiCandidateRefresh() },
         )
 
@@ -172,11 +170,8 @@ class SmartbarManager(
 
     fun handleNextWordPrediction(
         displayText: String,
-        committedText: String,
         roman: String,
-        hanzi: String? = null,
-        rawInput: String = "",
-    ) = nextWordController.handleNextWordPrediction(displayText, committedText, roman, hanzi, rawInput)
+    ) = nextWordController.handleNextWordPrediction(displayText, roman)
 
     fun handleBackspaceForNextWord(textBeforeCursor: String) = nextWordController.handleBackspaceForNextWord(textBeforeCursor)
 

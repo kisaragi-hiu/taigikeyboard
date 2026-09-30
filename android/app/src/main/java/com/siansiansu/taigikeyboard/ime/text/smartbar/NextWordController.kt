@@ -143,67 +143,26 @@ class NextWordController(
     }
 
     /**
-     * Handle a word selection (candidate tap / Enter commit).
+     * Handle a word selection from the candidate strip / overlay under
+     * `Phase::Composing`. Every platform-side tap predicts, so
+     * `triggerPrediction` is fixed at `true`.
      *
-     * [committedText] is the full committed-text tail; if its last char is
-     * sentence-end punctuation we route a `ResetFull` first to zero the
-     * association context — pre-Rust parity (the subsequent `WordSelected`
-     * sees a clean state, so no bigram is recorded across the sentence
-     * boundary). The slight strengthening over the pre-Rust shadow-mutation
-     * (also bumps generation + cancels timer) is acceptable: this path is
-     * rare and the timer/gen state is about to be replaced by the
-     * `WordSelected` intent anyway.
-     *
-     * [rawInput] / [hanzi] stay on the signature for pre-Rust call-site
-     * parity; the engine does not consume them.
+     * The engine alone decides what the selection teaches and whether it
+     * ends the sentence context (`decide.rs`, behavioral-invariants §40) —
+     * a word ending in sentence punctuation (`多謝！`) is learned like any
+     * other, exactly as on iOS.
      */
     fun handleNextWordPrediction(
         displayText: String,
-        committedText: String,
         roman: String,
-        @Suppress("UNUSED_PARAMETER") hanzi: String? = null,
-        @Suppress("UNUSED_PARAMETER") rawInput: String = "",
-    ) {
-        val settings = settingsProvider.current
-        val nowMs = System.currentTimeMillis()
-
-        val lastCommittedChar = committedText.lastOrNull()
-        if (lastCommittedChar != null && lastCommittedChar in SENTENCE_END_PUNCTUATION) {
-            applyDecideResult(
-                RustEngineBridge.nextwordResetFull(
-                    nowMs = nowMs,
-                    mode = settings.inputMode.toEngineInputMode(),
-                    translateSwapped = settings.isTranslateSwapped,
-                    generation = envelopeGen,
-                ),
-            )
-        }
-
-        applyDecideResult(
-            RustEngineBridge.nextwordWordSelected(
-                text = displayText,
-                roman = roman,
-                requireRomanMode = false,
-                triggerPrediction = true,
-                nowMs = nowMs,
-                mode = settings.inputMode.toEngineInputMode(),
-                translateSwapped = settings.isTranslateSwapped,
-                generation = envelopeGen,
-            ),
-        )
-    }
+    ) = handleEngineWordSelected(displayText, roman, triggerPrediction = true, preceding = emptyList())
 
     /**
-     * Sibling of [handleNextWordPrediction] that forwards the engine's
-     * `Phase::Continuous` final-commit `NextWordWordSelected` Effect with the
-     * engine-supplied `triggerPrediction` flag and `preceding` segments
-     * preserved verbatim (the engine learns the whole composition, §40).
-     * [handleNextWordPrediction] hardcodes `triggerPrediction = true` because
-     * every platform-side candidate tap predicts; the engine effect path
-     * must not silently ignore a future `false` from the engine.
-     *
-     * Skips the sentence-end-punctuation reset branch — `committedText` from
-     * the engine effect is the word itself (no punctuation), so it never fires.
+     * Forward a `NextWordWordSelected` — the engine's `Phase::Continuous`
+     * final-commit Effect with its `triggerPrediction` flag and `preceding`
+     * segments preserved verbatim (the engine learns the whole composition,
+     * §40); the effect path must not silently ignore a future `false` from
+     * the engine.
      */
     fun handleEngineWordSelected(
         text: String,
@@ -487,14 +446,6 @@ class NextWordController(
          * update in the Rust crate + an `INVARIANT_*` parity-test mirror.
          */
         const val CONTEXT_TIMEOUT_MS: Long = 30_000L
-
-        /**
-         * Sentence-end pre-check set used by [handleNextWordPrediction].
-         * Mirrors `engine/nextword/src/decide.rs` `SENTENCE_END_PUNCTUATION`.
-         * CROSS-PLATFORM INVARIANT — keep in sync with the Rust constant.
-         */
-        private val SENTENCE_END_PUNCTUATION: Set<Char> =
-            setOf('。', '！', '？', '.', '!', '?')
 
         /**
          * Extract the trailing "word" from [text] using whitespace and ASCII

@@ -29,13 +29,7 @@ class CandidateClickHandler(
     private val getOutputBothScripts: () -> Boolean,
     private val getComposingManager: () -> com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager?,
     private val onClearCandidates: () -> Unit,
-    private val onNextWordPrediction: (
-        displayText: String,
-        committedText: String,
-        roman: String,
-        hanzi: String?,
-        rawInput: String,
-    ) -> Unit,
+    private val onNextWordPrediction: (displayText: String, roman: String) -> Unit,
     /**
      * Schedule a Taigi candidate recompute. Called only after a Continuous
      * mid-commit where the engine's `PerformAutocomplete` effect alone is
@@ -68,7 +62,6 @@ class CandidateClickHandler(
             val ic = taigikeyboard.currentInputConnection ?: return
 
             val composingManager = getComposingManager()
-            val capturedRawInput = composingManager?.getRawInput() ?: ""
 
             // Continuous-input branch routes BEFORE the sentinel-id branches.
             // The engine emits NextWordWordSelected on final commits which the
@@ -141,13 +134,7 @@ class CandidateClickHandler(
             // NextWord learns the canonical reading, not the rendered `roman`
             // (No Hyphens strips its hyphens, §49) — mirrors iOS
             // ActionHandler+Suggestions.swift `associationRoman` (`additionalInfo["tl"]`).
-            onNextWordPrediction(
-                selectedWord.displayText,
-                textToCommit,
-                canonicalTl.ifEmpty { selectedWord.roman },
-                selectedWord.hanzi,
-                capturedRawInput,
-            )
+            onNextWordPrediction(selectedWord.displayText, canonicalTl.ifEmpty { selectedWord.roman })
         }
     }
 
@@ -257,13 +244,7 @@ class CandidateClickHandler(
         usage.record(Usage(word.displayText, canonicalTl))
 
         // NextWord learns the canonical reading (§49) — see the strip path above.
-        onNextWordPrediction(
-            word.displayText,
-            textToCommit,
-            canonicalTl.ifEmpty { word.roman },
-            word.hanzi,
-            "",
-        )
+        onNextWordPrediction(word.displayText, canonicalTl.ifEmpty { word.roman })
 
         logger.debug(TAG) { "[OVERLAY] Selected suggestion: ${word.displayText} at index $index" }
     }
