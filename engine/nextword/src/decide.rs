@@ -1201,6 +1201,28 @@ mod tests {
         );
     }
 
+    // A selected word that ENDS in sentence punctuation (a custom entry such
+    // as 多謝！) is still a word: the pair is learned and it becomes the
+    // context. Only a selection with no word material that starts with
+    // sentence punctuation ends the sentence (`is_noise_text` +
+    // `is_sentence_end_punctuation`). Android used to reset before
+    // sending the selection when the committed text ended this way, dropping
+    // the pair (parity fix 2026-09-30); every platform now sends WordSelected
+    // alone.
+    // INVARIANT_NEXTWORD_TRAILING_SENTENCE_PUNCTUATION_IS_STILL_LEARNED (behavioral-invariants.md §40)
+    #[test]
+    fn word_selected_ending_in_sentence_punctuation_is_still_learned() {
+        let mut state = after_gua();
+        let decided = decide(
+            &mut state,
+            commit("多謝！", "to-siā!", Vec::new(), 1_000),
+            &ios_config(true),
+        )
+        .unwrap();
+        assert_eq!(pairs(&decided), vec!["我/guá→多謝！/to-siā!"]);
+        assert_eq!(state.last_selected_word.as_deref(), Some("多謝！"));
+    }
+
     #[test]
     fn word_selected_skips_record_outside_window() {
         let mut state = PersistedState {
