@@ -181,32 +181,48 @@ public enum RustEngineBridge {
         #endif
     }
 
-    /// Shared `AppConfig` builder. `internal` because two extension
-    /// files (`+Composing`, `+CaseTransform`) build their envelopes on top
-    /// of it. Every composing op wraps it with
-    /// `continuousAppConfig(settings)` (private to `+Composing.swift`),
-    /// which adds the §10.2 word-boundary spacing flags.
+    /// The one `AppConfig` builder: every request this bridge sends carries a
+    /// config built here, so the mode mapping and `platform_id` exist once.
+    /// Composing passes the live settings (`continuousAppConfig`), nextword
+    /// the swap (plus the display fields on its predict request), case
+    /// transform the nasal-marker switch; a field a request family does not
+    /// read keeps its proto default. `pojMarkers == nil` leaves the three POJ
+    /// marker fields at theirs (no folds, the marker follows the case).
     ///
-    /// Proto field 9 (`candidateDisplayMode`) is set by the two builders whose
-    /// requests the engine reads it on — `continuousAppConfig` and
-    /// `nextwordConfig` — not here (mirrors Android).
-    static func appConfig(mode: InputMode, toggles: PojMarkerOptions) -> Taigi_Engine_AppConfig {
+    /// TPS goes out as `"tps"` with the swap and No Hyphens exactly as the
+    /// settings hold them: the engine applies the TPS fold itself
+    /// (`AppConfig::renders_hanji_first` / `renders_hyphenless`,
+    /// `engine/protos/src/lib.rs`).
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/engine/EngineAppConfig.kt appConfig.
+    // Drift causes silent divergence (one platform renders TPS or the swap differently).
+    static func appConfig(
+        mode: InputMode,
+        pojMarkers: PojMarkerOptions? = nil,
+        isTranslateSwapped: Bool = false,
+        isOutputBothScripts: Bool = false,
+        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
+        isHyphenlessRomanEnabled: Bool = false,
+        isTpsOrMappedToER: Bool = false,
+    ) -> Taigi_Engine_AppConfig {
         var cfg = Taigi_Engine_AppConfig()
-        switch mode {
-        case .poj: cfg.inputMode = "poj"
-        case .tl: cfg.inputMode = "tl"
-        case .english: cfg.inputMode = "english"
-        case .tps: cfg.inputMode = "tl" // TPS is a layout, not an engine mode
+        cfg.platformID = .ios
+        // The raw values are the engine's `input_mode` strings.
+        cfg.inputMode = mode.rawValue
+        if let pojMarkers {
+            cfg.ooDoubletapEnabled = pojMarkers.isDoubleTapOOEnabled
+            cfg.nnDoubletapEnabled = pojMarkers.isDoubleTapNNEnabled
+            // Inverted on the wire (proto default = the marker follows the case, §53).
+            cfg.forceLowercaseNasalMarker = !pojMarkers.isNasalMarkerUppercaseEnabled
         }
-        cfg.ooDoubletapEnabled = toggles.isDoubleTapOOEnabled
-        cfg.nnDoubletapEnabled = toggles.isDoubleTapNNEnabled
-        // Inverted on the wire (proto default = the marker follows the case, §53).
-        cfg.forceLowercaseNasalMarker = !toggles.isNasalMarkerUppercaseEnabled
+        cfg.isTranslateSwapped = isTranslateSwapped
+        cfg.outputBothScripts = isOutputBothScripts
+        cfg.candidateDisplayMode = candidateDisplayMode.engineValue
+        cfg.hyphenlessRoman = isHyphenlessRomanEnabled
+        cfg.tpsOrMapsToEr = isTpsOrMappedToER
         return cfg
     }
 }
 
-// Shared by `appConfig` and `nextwordConfig` (`+NextWord.swift`) — one mapping, never two.
 extension CandidateDisplayMode {
     /// Explicit proto enum (never `.unspecified`) so the engine's single
     /// normalization helper sees the platform's actual choice.

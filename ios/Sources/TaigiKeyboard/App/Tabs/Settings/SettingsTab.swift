@@ -61,7 +61,7 @@ struct SettingsTab: View {
         // Toggle binds the STORED flag: it keeps showing the user's choice while disabled under Romanization Only.
         _isOutputBothScripts = State(initialValue: settings.storedIsOutputBothScripts)
         _literalRomanCandidateEnabled = State(initialValue: settings.isLiteralRomanCandidateEnabled)
-        _isHyphenlessRomanEnabled = State(initialValue: settings.storedIsHyphenlessRomanEnabled)
+        _isHyphenlessRomanEnabled = State(initialValue: settings.isHyphenlessRomanEnabled)
         _isTpsOrMappedToER = State(initialValue: settings.isTpsOrMappedToER)
         _toolbarAutoCollapse = State(initialValue: settings.isToolbarAutoCollapse)
         _isGlobeKeyEnabled = State(initialValue: settings.isGlobeKeyEnabled)
@@ -157,7 +157,7 @@ struct SettingsTab: View {
                         }
                     }
                     .onChange(of: isHyphenlessRomanEnabled) { _, newValue in
-                        settings.storedIsHyphenlessRomanEnabled = newValue
+                        settings.isHyphenlessRomanEnabled = newValue
                     }
 
                     Toggle(isOn: $literalRomanCandidateEnabled) {

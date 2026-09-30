@@ -299,9 +299,9 @@ final class SharedSettings {
 
     // MARK: - Hyphenless Romanization (No Hyphens, §49, default: off)
 
-    /// The STORED switch, bound by the settings toggle. `isHyphenlessRomanEnabled`
-    /// (the engine-facing value) folds TPS on top of it.
-    var storedIsHyphenlessRomanEnabled: Bool {
+    /// Sent to the engine as stored: the engine exempts the TPS layout itself
+    /// (`AppConfig::renders_hyphenless`), so there is no effective variant.
+    var isHyphenlessRomanEnabled: Bool {
         get { userDefaults.value(for: Self.isHyphenlessRomanEnabledKey) }
         set { userDefaults.set(newValue, for: Self.isHyphenlessRomanEnabledKey) }
     }
@@ -662,7 +662,7 @@ final class SharedSettings {
         storedIsOutputBothScripts = false
         candidateDisplayMode = .sideBySide
         isLiteralRomanCandidateEnabled = true
-        storedIsHyphenlessRomanEnabled = false
+        isHyphenlessRomanEnabled = false
         fontType = .keyboardDefault
         isAutoSpaceEnabled = false
         keyboardLayoutType = .phahTaigi
@@ -745,15 +745,6 @@ extension SharedSettings: EngineSettings {
     /// Effective Annotate in Brackets — same seam, same rule owner.
     var isOutputBothScripts: Bool {
         candidateDisplayMode.effectiveOutputBothScripts(stored: storedIsOutputBothScripts)
-    }
-
-    /// Effective No Hyphens — never under a TPS layout: the engine receives TPS as
-    /// `"tl"` / `"poj"` and the strip would break the platform's `-` re-split of
-    /// the candidate roman for bopomofo (`tlDisplayToTPS`). Same fold, same seam
-    /// as the swap fold in `RustEngineBridge.continuousAppConfig`.
-    // CROSS-PLATFORM INVARIANT — mirrors android PrefHelper.isHyphenlessRomanEnabled (!isTpsLayout && …).
-    var isHyphenlessRomanEnabled: Bool {
-        inputMode != .tps && storedIsHyphenlessRomanEnabled
     }
 }
 

@@ -220,7 +220,7 @@ final class SettingsKeyTests: XCTestCase {
         settings.isToolbarAutoCollapse = false
         settings.isTpsOrMappedToER = false
         settings.isLiteralRomanCandidateEnabled = false
-        settings.storedIsHyphenlessRomanEnabled = true
+        settings.isHyphenlessRomanEnabled = true
         settings.isGlobeKeyEnabled = !DeviceCapabilities.prefersGlobeKeyByDefault
 
         // RawRep enums + font.
