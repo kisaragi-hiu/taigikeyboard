@@ -62,7 +62,7 @@ A visual copy of this graph plus the per-keystroke request lane lives in `docs/a
 
 ## 2. Error handling `[R]` `[S]`
 
-- **`thiserror` for library errors**. Each domain crate owns its error enum deriving `thiserror::Error` (e.g. `lexicon::LexiconError` in `lexicon/src/error.rs`, `userdata::database::UserDataDatabaseError`); there is no workspace-wide `EngineError` type.
+- **`thiserror` for library errors**. Each domain crate owns its error enum deriving `thiserror::Error` (e.g. `lexicon::LexiconError` in `lexicon/src/error.rs`, `UserDataDatabaseError` in `userdata/src/database.rs`); there is no workspace-wide `EngineError` type.
 - **`anyhow` is forbidden in every workspace library crate**. Allowed in build scripts only.
 - **`Result<T, <CrateError>>` throughout internal APIs.** `dispatch` maps each crate error to the wire `ErrorCode` (`envelope.proto` `Response.error`) — e.g. `lexicon_error_code` in `dispatch/src/lib.rs` — and the FFI seams build error-only responses with `dispatch::encode_error` (see `.claude/rules/rust-ffi-safety.md` § FFI boundary discipline).
 - **No `panic!` / `unwrap()` / `expect()` on unvalidated input.** `unwrap()` on a `Mutex::lock()` result is acceptable (poison is a programmer error, not a data path); briefly explain with `// JUSTIFICATION:` when non-obvious. `SAFETY:` comments are reserved for `unsafe` blocks per `.claude/rules/rust-ffi-safety.md` §3 — a safe `Mutex::lock().unwrap()` does not take one.
