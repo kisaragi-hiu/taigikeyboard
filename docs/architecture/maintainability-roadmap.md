@@ -2,7 +2,7 @@
 
 > **Type**: Planning (PR table over the 2026-09-30 audit)
 > **Keywords**: `refactor`, `dead code`, `parity`, `desktop-core`, `userdata`, `commit resolution`, `test selection`, `naming`, `docs drift`
-> **Status**: in progress — R1–R3 merged (#274–#293)
+> **Status**: in progress — R1–R4 merged (#274–#295)
 > **Source**: `docs/reports/2026-09-30-audit-all.md` (frozen snapshot on `30a79c16`; §2 findings, §4 draft rounds, Appendices A–F)
 > **Session memory**: project memory `project_maintainability_audit_2026_09_30.md` (Claude auto-memory)
 
@@ -25,8 +25,8 @@
 | R3(a) | Settings windows reach user data through engine ops; retire `DeriveCustomQueryKey` | #281 #282 | Merged |
 | R3(b) | Settings-page model: PR-A presentation + launch parser, PR-B `SettingsWriter`, PR-C custom-dictionary listing state, PR-D remaining twin label / roster helpers | #284 #285 #286 #287 | Merged |
 | R3(c) | Win/Linux key-intent executor + `Runtime` → `desktop-core`: PR-1 Linux characterisation tests, PR-2 core executor (+Linux), PR-3 Windows on it, PR-3b shared `DesktopRuntime`, PR-4 parity: switch re-presents the open list the same way | #288 #289 #290 #291 #292 | Merged |
-| R4 | Engine user-data façade: `dispatch/src/user_data.rs` page logic → `userdata`; single-impl store traits; `cfg(not(user-data))` arms; one `CustomSearchKey` | #294 · PR-B | PR-A merged; PR-B in progress |
-| R5 | Engine-owned commit resolution (`CommitContinuous` returns document text + auto-space verdict, records usage) | 3 (engine; mobile; macOS + desktop) | Pending |
+| R4 | Engine user-data façade: `dispatch/src/user_data.rs` page logic → `userdata`; single-impl store traits; `cfg(not(user-data))` arms; one `CustomSearchKey` | #294 #295 | Merged |
+| R5 | Engine-owned commit resolution (`CommitContinuous` returns document text + auto-space verdict, records usage) | parity P1 (iOS) · P2 (TPS, USER) · PR-a engine · PR-c macOS + desktop · PR-b mobile | P1 open |
 | R6 | Config normalisation in the engine (flat settings snapshot, real `input_mode = "tps"`, engine-resolved sources) | 2–3 | Pending |
 | R7 | Test redundancy (engine layers, platform restatements, test-local copies, shared `engine/test-support`) | 3 | Pending |
 | R8 | Test selection: one integration binary per crate, `tools/test-select`, CI path filters, macOS `swift test` job | 2–3 | Pending |
@@ -50,3 +50,4 @@ Every PR runs its round type's pre-gate (`~/.claude/rules/round-workflow.md`): r
 - R3(b) PR-C: only state and rules move; which component owns the job slot differs per shell (Windows per page, Linux window-wide so an outcome survives a page rebuild) and stays there.
 - R3(c) PR-4: re-presenting an open list after a switch is one core rule (`represent_list`). Windows took the Linux behaviour: a refetch with Show Candidate Window switched off takes the list down, and a switch with no list open does nothing.
 - R1 PR4: the six keys were user-written until #407 removed the default-theme editor (2026-06-07), so a customized look is user content, not a stale setting. It becomes a user theme named like the editor's unnamed theme, past the five-theme cap, selected when the keyboard was showing it; a factory look is only removed.
+- R5 pre-plan (2026-09-30): not a pure refactor — iOS and Android already commit differently for a hanji-less candidate. P1 (iOS, Hanji-first, non-TPS): a hanji-less cell was read as its own hanji, so it earned no auto space and Annotate in Brackets wrote `taigi (taigi)`; reproduced by `ActionHandlerUnmarkedCommitTests`, fixed toward Android and §23 / §34. P2 (TPS layout, hanji-less candidate: iOS writes a broken TPS rendering unspaced, Android writes TL spaced) is a USER decision and blocks R5 PR-b only. Order: P1 → PR-a (engine resolver + `CommitResolution`) → PR-c (macOS + desktop) → P2 → PR-b (mobile).
