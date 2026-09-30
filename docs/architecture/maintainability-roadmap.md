@@ -2,7 +2,7 @@
 
 > **Type**: Planning (PR table over the 2026-09-30 audit)
 > **Keywords**: `refactor`, `dead code`, `parity`, `desktop-core`, `userdata`, `commit resolution`, `test selection`, `naming`, `docs drift`
-> **Status**: in progress — R1–R8, A merged; R9-2..4, R10, R11, R12 remain (#274–#315)
+> **Status**: in progress — R1–R8, R11, A merged; R9-2..4, R10, R12 remain (#274–#318)
 > **Source**: `docs/reports/2026-09-30-audit-all.md` (frozen snapshot on `30a79c16`; §2 findings, §4 draft rounds, Appendices A–F)
 > **Session memory**: project memory `project_maintainability_audit_2026_09_30.md` (Claude auto-memory)
 
@@ -32,7 +32,7 @@
 | R8 | Test selection: one integration binary per crate, `tools/test-select`, CI path filters, macOS `swift test` job | #299 #300 #301 #307 | Merged |
 | R9 | Naming batch A (identifiers, files, non-iOS folders) | R9-1 #308 · R9-2 · R9-3 · R9-4 | R9-1 merged |
 | R10 | Naming batch B (proto names; field numbers unchanged) | 1–2 | Pending |
-| R11 | Lexicon / composing boundary (`SortKey` → `ranking`, one key-family module, visibility) | 2 | Pending |
+| R11 | Lexicon / composing boundary (`SortKey` → `ranking`, one key-family module, visibility) | R11-1 #316 (`ranking::CandidateSortKey`, lexicon visibility) · R11-2a #317 (`phonetics::KeyFamily`) · R11-2b #318 (`KeyFamily::toneless_face`) | merged |
 | R12 | `Phase::Composing` removal — ≤20-line spike first | spike GO 2026-09-30 · PR-1 · PR-2 | Spike done |
 | A | Docs drift (Appendix D, 57 rows) | direct to main 97da342b | Done |
 
