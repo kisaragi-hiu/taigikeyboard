@@ -41,3 +41,13 @@ struct StubEngineSettings: EngineSettings {
     var isKautianAccentTaichungEnabled = true
     var isKautianNameAppendixEnabled = true
 }
+
+/// A provider whose `current` is the one stub it was built with. Mirrors Android
+/// `StubEngineSettingsProvider`.
+final class StubEngineSettingsProvider: EngineSettingsProvider {
+    let current: EngineSettings
+
+    init(_ settings: EngineSettings) {
+        current = settings
+    }
+}

@@ -18,6 +18,11 @@ data class DictionarySearchResult(
     val frequency: Int,
     val sources: List<DictionarySource>,
 ) {
+    companion object {
+        /** Sentinel id for rows synthesised from the user's custom dictionary. Mirrors iOS `customDictMarkerId`. */
+        const val CUSTOM_DICT_MARKER_ID = -2
+    }
+
     fun chhoeUrl(): String? = ExternalLookupURLBuilder.chhoeURL(tl)
 
     fun moeUrl(): String? = ExternalLookupURLBuilder.moeURL(tl)

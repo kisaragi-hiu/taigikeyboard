@@ -77,7 +77,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 | **notone** | Toneless romanization for prefix matching (e.g. `"lí hó"` → `"liho"`) | Rust `phonetics` `derive_notone` |
 | **abbrev** | Leading-spelling-unit abbreviation (§46) for quick lookup (e.g. `"lí hó"` → `"lh"`) | Rust `phonetics::derive_abbrev` |
 | **batchImport** | CSV import with deduplication by `roman\|hanzi` key | engine op `ImportCustomCsv` → `CustomDictionaryStore::batch_import` |
-| **customWordMarker** | Custom entries use `id = -2` to distinguish from system dictionary | iOS `DictionarySearchResult.customDictMarkerId`; Android `DictionarySearchViewModel.kt`, `SuggestionCaseTransformer.kt` |
+| **customWordMarker** | Custom entries use `id = -2` to distinguish from system dictionary | iOS `DictionarySearchResult.customDictMarkerId`; Android `DictionarySearchResult.CUSTOM_DICT_MARKER_ID`, `SuggestionCaseTransformer.kt` |
 
 ### 8. Diagnostics (`engine/diagnostics.md`)
 | Keyword | Definition | Key Class/Method |
@@ -99,7 +99,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 |---------|-----------|-----------------|
 | **Backup (`.taigi`)** | Export/import user data (custom dict, frequency, associations) | engine ops `ExportBackup` / `ImportBackup` → `userdata::export_backup` / `import_backup` |
 | **DataManagement** | Production UI for user data (replaced Debug screens) | `DataManagementView` / `DataManagementScreen` |
-| **DictionarySearch** | In-app dictionary search from settings (uses `RustEngineBridge.searchByHanzi` for hanzi inputs) | `DictionarySearchViewModel` |
+| **DictionarySearch** | In-app dictionary search from settings (uses `RustEngineBridge.searchByHanzi` for hanzi inputs) | iOS / Android `DictionarySearchService` (policy, over a `LexiconClient`); Android `DictionarySearchViewModel` |
 
 ### 11. Input Flow (`architecture/system-overview.md` §4)
 | Keyword | Definition | Key Class/Method |
