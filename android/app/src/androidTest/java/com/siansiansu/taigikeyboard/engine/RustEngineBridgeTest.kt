@@ -5,7 +5,6 @@ import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -20,9 +19,11 @@ import java.util.concurrent.CopyOnWriteArrayList
  * **Requires** the dev `.so` built by `engine/scripts/build-android-libs-dev.sh`
  * (with the `panic-injector` Cargo feature) so `panicForTest` resolves.
  *
- * Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') intact and
- * adds smoke coverage for every phonetics op on the bridge. Branch-level
- * fixture coverage lives in `engine/phonetics/tests/op_coverage.rs`.
+ * Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') plus one
+ * result-decode pin per phonetics op shape the Kotlin bridge maps itself
+ * (both `tpsInputAdjust` `replaceLast` branches). Op behaviour lives in
+ * `engine/phonetics/tests/op_coverage.rs`; the 2 MB cap boundary in
+ * `engine/dispatch/src/lib.rs` (`request_cap_accepts_exactly_the_cap_…`).
  */
 @RunWith(AndroidJUnit4::class)
 class RustEngineBridgeTest {
@@ -50,11 +51,6 @@ class RustEngineBridgeTest {
     // endregion
     // region TPS
 
-    @Test fun op_tlDisplayToTps_basic() {
-        val out = RustEngineBridge.tlDisplayToTps("tiâu", false)
-        assertTrue("TL display → TPS should produce zhuyin", out.isNotEmpty())
-    }
-
     @Test fun op_isTpsToneMark_acuteIsToneMark() {
         assertTrue(RustEngineBridge.isTpsToneMark('ˊ'))
     }
@@ -73,12 +69,6 @@ class RustEngineBridgeTest {
         val outcome = RustEngineBridge.tpsInputAdjust("ㄧ", "ㄗ")
         assertEquals("ㄧ", outcome.adjusted)
         assertEquals("ㄐ", outcome.replaceLast)
-    }
-
-    @Test fun op_tpsInputAdjust_syllabicNasal() {
-        val outcome = RustEngineBridge.tpsInputAdjust("ˊ", "ㄇ")
-        assertEquals("ˊ", outcome.adjusted)
-        assertEquals("ㆬ", outcome.replaceLast)
     }
 
     // endregion
@@ -110,20 +100,13 @@ class RustEngineBridgeTest {
     }
 
     // endregion
-    // region T5 — oversized + boundary
+    // region T5 — oversized
 
     @Test fun T5_overCap_returnsFailInvariant() {
         val oversized = ByteArray(2 * 1024 * 1024 + 1)
         val response = RustEngineBridge.sendRawBytes(oversized)
         assertNotNull(response)
         assertEquals(ErrorCode.FAIL_INVARIANT, response!!.error)
-    }
-
-    @Test fun T5_atCap_acceptedByGuard() {
-        val atCap = ByteArray(2 * 1024 * 1024)
-        val response = RustEngineBridge.sendRawBytes(atCap)
-        assertNotNull(response)
-        assertNotEquals(ErrorCode.FAIL_INVARIANT, response!!.error)
     }
 
     // endregion

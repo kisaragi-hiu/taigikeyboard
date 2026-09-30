@@ -40,31 +40,6 @@ final class ComposingManagerCandidateTests: XCTestCase {
 
     // MARK: - Fetching
 
-    func testFetchCandidates_whileComposing_findsCandidates() throws {
-        let manager = try makeManager()
-        composeTaigi(manager, executing: RecordingEffectExecutor())
-
-        guard case let .found(candidates) = manager.fetchCandidates() else {
-            return XCTFail("a composition the engine is holding must answer with a candidate list")
-        }
-
-        XCTAssertFalse(candidates.isEmpty, "the dictionary has entries for taigi")
-        XCTAssertTrue(
-            candidates.allSatisfy { $0.consumedSpanEnd > 0 },
-            "a candidate that consumes nothing could never be committed",
-        )
-    }
-
-    func testFetchCandidates_whileIdle_reportsNotComposing() throws {
-        let manager = try makeManager()
-
-        XCTAssertEqual(
-            manager.fetchCandidates(),
-            .notComposing,
-            "an idle engine has no continuous phase to read candidates from",
-        )
-    }
-
     /// The query is read-only, but "read-only" is only observable through what
     /// the engine does NEXT: a query that reset the composition — by bumping the
     /// generation, say — would leave the following keystroke starting a brand

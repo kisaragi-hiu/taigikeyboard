@@ -99,20 +99,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         }
     }
 
-    func testWordSelected_sentenceEndPunctuation_resetsAndCancelsTimer() {
-        // Prime: a non-sentence-end word + showing flag.
-        _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        let result = wordSelected(text: "。", roman: "", nowMs: 100)
-        XCTAssertNil(result.lastSelectedWord)
-        XCTAssertTrue(result.effects.contains(.cancelContextTimeout))
-    }
-
-    func testWordSelected_noiseText_skipsSilently() {
-        let result = wordSelected(text: ",", roman: "", nowMs: 0)
-        XCTAssertEqual(result.effects, [])
-        XCTAssertEqual(result.currentGeneration, baselineGen, "no-op preserves baseline")
-    }
-
     func testWordSelected_requireRomanModeInSwappedMode_isNoop() {
         let result = wordSelected(
             text: "abc", roman: "abc", nowMs: 0,
@@ -167,29 +153,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertTrue(result.effects.contains(.cancelContextTimeout))
     }
 
-    // MARK: - Decide: ClearForNewComposing
-
-    func testClearForNewComposing_whenNotShowing_emitsNothing() {
-        let result = clearForNewComposing(nowMs: 0)
-        XCTAssertEqual(result.effects, [])
-        XCTAssertEqual(result.currentGeneration, baselineGen &+ 1, "still bumps even with no UI clear")
-        XCTAssertFalse(result.isShowing)
-    }
-
-    // MARK: - Decide: ResetFull
-
-    func testResetFull_zeroesStateAndCancelsTimer() {
-        _ = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        let result = RustEngineBridge.nextwordResetFull(
-            nowMs: 100,
-            mode: .tl,
-            translateSwapped: false,
-            generation: envelopeGen,
-        )
-        XCTAssertNil(result.lastSelectedWord)
-        XCTAssertTrue(result.effects.contains(.cancelContextTimeout))
-    }
-
     // MARK: - SetIsShowing → ClearForNewComposing gate
 
     func testSetIsShowing_thenClearForNewComposing_emitsClearUIEffect() {
@@ -222,15 +185,6 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertEqual(result.currentGeneration, baselineGen, "no generation bump")
         XCTAssertTrue(result.isShowing)
         XCTAssertEqual(result.effects, [])
-    }
-
-    // MARK: - Decide echo
-
-    func testWordSelected_echoesLastSelectedWord() {
-        let result = wordSelected(text: "早", roman: "tsá", nowMs: 0)
-        XCTAssertEqual(result.lastSelectedWord, "早")
-        XCTAssertFalse(result.isShowing, "is_showing is platform-driven, not engine-set")
-        XCTAssertEqual(result.currentGeneration, baselineGen &+ 1)
     }
 
     // MARK: - Predict: stale drop

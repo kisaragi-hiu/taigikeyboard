@@ -292,6 +292,12 @@ mod tests {
     }
 
     #[test]
+    fn request_cap_accepts_exactly_the_cap_and_refuses_one_byte_over() {
+        assert!(!is_request_too_large(MAX_REQUEST_BYTES));
+        assert!(is_request_too_large(MAX_REQUEST_BYTES + 1));
+    }
+
+    #[test]
     fn dispatch_returns_fail_invariant_for_missing_payload() {
         let req = Request {
             id: 1,

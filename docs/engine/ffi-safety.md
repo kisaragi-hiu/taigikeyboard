@@ -125,7 +125,7 @@ The POC ships with these tests, run on both iOS and Android (per `.claude/rules/
 | T2 | Drop / cleanup | 1000 IME session create/destroy cycles → RSS stable, no growing handle table |
 | T3 | Thread safety | Two concurrent `send_command_bytes` from different threads → both return valid responses, TSan clean |
 | T4 | Malformed protobuf | Invalid bytes → `ErrorCode::FAIL_PARSE`, no panic |
-| T5 | Oversized payload | >1MB byte buffer → bounded behavior (reject or truncate); behavior documented either way |
+| T5 | Oversized payload | Request over `dispatch::MAX_REQUEST_BYTES` (2 MB) → `FAIL_INVARIANT` before the request is copied or decoded; exactly the cap is accepted. Boundary pinned in `dispatch` (`request_cap_accepts_exactly_the_cap_and_refuses_one_byte_over`); each adapter keeps an over-cap test for its mapping |
 | T6 | Logging round-trip | Rust `log::warn!` reaches platform log sink with category preserved |
 | T7 | Null handle | Every FFI fn called with a null `EngineHandle` returns the sick-engine sentinel without dereferencing |
 | T8 | Double shutdown | Calling `engine_shutdown` twice is bounded (idempotent or documented invalid); no UB |
