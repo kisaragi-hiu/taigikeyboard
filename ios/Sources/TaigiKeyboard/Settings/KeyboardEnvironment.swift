@@ -26,13 +26,9 @@ import SwiftUI
 protocol KeyboardEnvironment: AnyObject {
     var inputMode: InputMode { get set }
     var isFullAccessEnabled: Bool { get set }
-    var colorSettings: KeyboardColorSettings { get }
-    // "default" defers to the global appearance; built-in themes pick light/dark by colorScheme.
+    // "default" is the factory appearance; built-in themes pick light/dark by colorScheme.
     // Font is a global setting and is deliberately not part of this bundle.
     func resolvedAppearance(for colorScheme: ColorScheme) -> ThemeAppearance
-    var keyFontSizeScale: CGFloat { get }
-    var keyBorderWidth: CGFloat { get }
-    var candidateTextSizeScale: CGFloat { get }
     // Global setting, not per-theme: read directly by call sites with no per-render snapshot.
     var fontType: FontType { get }
     var keyboardLayoutType: KeyboardLayoutType { get }

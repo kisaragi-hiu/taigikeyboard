@@ -226,34 +226,119 @@ final class SharedSettingsTests: XCTestCase {
         XCTAssertEqual(settings.resolvedAppearance(for: .light).keyShadowIntensity, 0)
     }
 
-    // trace: default theme threads ALL customized appearance (5 size scalars + font) through
-    // snapshot, not just colors — the renderer-switch must not drop any global appearance key.
-    func test_snapshot_defaultTheme_carriesCustomizedSizesAndFont() {
-        settings.keyFontSizeScale = 1.1
-        settings.candidateTextSizeScale = 0.9
-        settings.keyCornerRadius = 10
-        settings.keyBorderWidth = 2
-        settings.fontType = .iansui
+    // MARK: - Retired global appearance → user theme
 
-        let snap = settings.snapshot(for: .light)
+    private static let retiredAppearanceKeys = [
+        "keyHeightScale", "keyFontSizeScale", "candidateTextSizeScale", "keyCornerRadius", "keyBorderWidth", "colorSettings",
+    ]
 
-        XCTAssertEqual(snap.keyFontSizeScale, 1.1)
-        XCTAssertEqual(snap.candidateTextSizeScale, 0.9)
-        XCTAssertEqual(snap.keyCornerRadius, 10)
-        XCTAssertEqual(snap.keyBorderWidth, 2)
-        XCTAssertEqual(snap.fontType, .iansui)
+    /// A settings facade whose user themes live in a fresh temporary directory.
+    private func settingsWithThemeStore() throws -> SharedSettings {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        return SharedSettings(userDefaults: defaults, themesContainerURL: directory)
     }
 
-    // trace: a customized user stays on "default" → resolvedTheme preserves their colorSettings verbatim,
-    // which is the entire "no migration needed" safety argument for the renderer switch.
-    func test_resolvedTheme_defaultTheme_preservesCustomizedColorSettings() {
+    /// What the retired appearance screen left behind: a red background, larger keys, round corners.
+    private func storeCustomizedLegacyLook() throws -> KeyboardColorSettings {
         var custom = KeyboardColorSettings()
         custom.background = .solid(CodableColor(.red))
-        settings.colorSettings = custom
+        try defaults.set(JSONEncoder().encode(custom), forKey: "colorSettings")
+        defaults.set(1.2, forKey: "keyHeightScale")
+        defaults.set(10.0, forKey: "keyCornerRadius")
+        return custom
+    }
+
+    private func assertRetiredKeysGone(file: StaticString = #filePath, line: UInt = #line) {
+        for key in Self.retiredAppearanceKeys {
+            XCTAssertNil(defaults.object(forKey: key), "\(key) must be removed", file: file, line: line)
+        }
+    }
+
+    // trace: fresh install → selectedThemeId absent → "default" → the factory appearance, nothing carried
+    func test_retireLegacyAppearance_nothingStored_changesNothing() throws {
+        let settings = try settingsWithThemeStore()
+        settings.retireLegacyAppearance(themeName: "新主題")
+        XCTAssertTrue(settings.loadUserThemes().isEmpty)
+        XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
+    }
+
+    // trace: customized look on "default" → one user theme holding it, selected; keys removed
+    func test_retireLegacyAppearance_customizedDefault_becomesTheSelectedUserTheme() throws {
+        let settings = try settingsWithThemeStore()
+        let custom = try storeCustomizedLegacyLook()
+
+        settings.retireLegacyAppearance(themeName: "新主題")
+
+        let themes = settings.loadUserThemes()
+        XCTAssertEqual(themes.count, 1)
+        let theme = try XCTUnwrap(themes.first)
+        XCTAssertEqual(theme.name, "新主題")
+        XCTAssertEqual(theme.appearance.colors.background, custom.background, "the picked color survives")
+        XCTAssertEqual(theme.appearance.keyHeightScale, 1.2)
+        XCTAssertEqual(theme.appearance.keyCornerRadius, 10)
+        XCTAssertEqual(theme.appearance.keyShadowIntensity, 0, "the retired screen had no shadow")
+        XCTAssertEqual(settings.selectedThemeId, theme.id.uuidString)
+        XCTAssertEqual(settings.resolvedAppearance(for: .light), theme.appearance)
+        assertRetiredKeysGone()
+
+        // Once the keys are gone a later launch carries nothing again.
+        settings.retireLegacyAppearance(themeName: "新主題")
+        XCTAssertEqual(settings.loadUserThemes().count, 1)
+    }
+
+    // trace: keys stored at their factory values (an old reset wrote them) → only removed
+    func test_retireLegacyAppearance_factoryValues_areOnlyRemoved() throws {
+        let settings = try settingsWithThemeStore()
+        defaults.set(1.0, forKey: "keyHeightScale")
+        defaults.set(6.0, forKey: "keyCornerRadius")
+
+        settings.retireLegacyAppearance(themeName: "新主題")
+
+        XCTAssertTrue(settings.loadUserThemes().isEmpty)
+        XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
+        assertRetiredKeysGone()
+    }
+
+    // trace: a built-in was showing → the look is kept as a theme, the selection stays
+    func test_retireLegacyAppearance_builtInSelected_keepsTheSelection() throws {
+        let settings = try settingsWithThemeStore()
+        _ = try storeCustomizedLegacyLook()
+        settings.selectedThemeId = "standardBlue"
+
+        settings.retireLegacyAppearance(themeName: "新主題")
+
+        XCTAssertEqual(settings.loadUserThemes().count, 1)
+        XCTAssertEqual(settings.selectedThemeId, "standardBlue")
+        assertRetiredKeysGone()
+    }
+
+    // trace: user themes already at the cap → the carried look is still added
+    func test_retireLegacyAppearance_atTheCap_stillKeepsTheLook() throws {
+        let settings = try settingsWithThemeStore()
+        for index in 0 ..< UserThemeStore.maxUserThemes {
+            let theme = UserTheme(id: UUID(), name: "T\(index)", appearance: .userThemeSeed, createdAt: Date(), updatedAt: Date())
+            XCTAssertTrue(settings.addUserTheme(theme))
+        }
+        _ = try storeCustomizedLegacyLook()
+
+        settings.retireLegacyAppearance(themeName: "新主題")
+
+        XCTAssertEqual(settings.loadUserThemes().count, UserThemeStore.maxUserThemes + 1)
+        assertRetiredKeysGone()
+    }
+
+    // trace: no theme store (the keyboard without Full Access) → keys kept for a later launch
+    func test_retireLegacyAppearance_themeNotWritten_keepsTheKeys() throws {
+        let settings = SharedSettings(userDefaults: defaults, themesContainerURL: nil)
+        _ = try storeCustomizedLegacyLook()
+
+        settings.retireLegacyAppearance(themeName: "新主題")
 
         XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
-        XCTAssertEqual(settings.resolvedAppearance(for: .light).colors, custom)
-        XCTAssertEqual(settings.resolvedAppearance(for: .light).keyShadowIntensity, 0)
+        XCTAssertNotNil(defaults.object(forKey: "colorSettings"))
+        XCTAssertNotNil(defaults.object(forKey: "keyHeightScale"))
     }
 
     // trace: selectedThemeId = built-in "standardBlue" → resolvedTheme routes through the catalog,

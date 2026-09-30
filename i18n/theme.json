@@ -207,8 +207,8 @@
       "values": { "hanji": "揤鈕陰影", "tailo": "Tshi̍h-liú im-iánn", "poj": "Chhi̍h-liú im-iáⁿ", "en": "Key Shadow", "ja": "キーの影" }
     },
     "editorTitleNew": {
-      "comment": "Theme editor top-bar title in create mode; also the fallback name when a theme is saved with a blank name (identity is the UUID; names may repeat and stay editable). theme.defaultName merged 2026-09-20.",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host"] },
+      "comment": "Theme editor top-bar title in create mode; also the fallback name when a theme is saved with a blank name (identity is the UUID; names may repeat and stay editable), and the name a look customized before themes existed is carried over under. theme.defaultName merged 2026-09-20.",
+      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "新主題", "tailo": "Sin tsú-tê", "poj": "Sin chú-tê", "en": "New Theme", "ja": "新しいテーマ" }
     },
     "editorTitleEdit": {

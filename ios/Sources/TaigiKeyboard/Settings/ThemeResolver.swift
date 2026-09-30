@@ -5,26 +5,23 @@ import SwiftUI
 ///
 /// Pure + deterministic (no keyboard runtime needed) so it is directly
 /// unit-testable. Handles three cases:
-/// - `ThemeId.default` → the legacy free-pick appearance (`legacyAppearance`),
-///   so uncustomized users stay all-nil (Liquid Glass) and customized users
-///   keep their look with no migration.
+/// - `ThemeId.default` → the factory appearance (all-nil adaptive colors).
 /// - a known `UserTheme` id → that theme's full appearance.
 /// - a known built-in id → factory sizes with the built-in's
 ///   `colorScheme`-appropriate color variant.
 ///
 /// Unknown ids — a deleted `UserTheme` still selected, or a stale/unknown
-/// built-in id — fall back to the full legacy appearance so the keyboard never
+/// built-in id — fall back to the factory appearance so the keyboard never
 /// renders an empty/broken theme.
 enum ThemeResolver {
     static func resolved(
         themeId: String,
         colorScheme: ColorScheme,
-        legacyAppearance: ThemeAppearance,
         userThemes: [UserTheme],
         builtInThemes: [BuiltInTheme] = BuiltInThemes.all,
     ) -> ThemeAppearance {
         if themeId == ThemeId.default {
-            return legacyAppearance
+            return .default
         }
         if let theme = userThemes.first(where: { $0.id.uuidString == themeId }) {
             return theme.appearance
@@ -38,8 +35,6 @@ enum ThemeResolver {
             appearance.keyBorderWidth = builtIn.keyBorderWidth ?? ThemeAppearance.default.keyBorderWidth
             return appearance
         }
-        // Unknown id → fall back to the full legacy appearance (Liquid Glass
-        // preserved for default users; customized users keep their look).
-        return legacyAppearance
+        return .default
     }
 }

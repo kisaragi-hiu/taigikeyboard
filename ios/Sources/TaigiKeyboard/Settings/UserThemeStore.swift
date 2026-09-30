@@ -45,13 +45,13 @@ final class UserThemeStore {
         }
     }
 
-    /// Appends a theme and persists. Returns `false` when already at
-    /// ``maxUserThemes`` OR when the write fails (nil container / encode /
+    /// Appends a theme and persists. Returns `false` when `isCapped` and already
+    /// at ``maxUserThemes``, OR when the write fails (nil container / encode /
     /// I/O error) — so callers never report a save that did not happen.
     @discardableResult
-    func add(_ theme: UserTheme) -> Bool {
+    func add(_ theme: UserTheme, isCapped: Bool = true) -> Bool {
         var themes = load()
-        guard themes.count < Self.maxUserThemes else { return false }
+        guard !isCapped || themes.count < Self.maxUserThemes else { return false }
         themes.append(theme)
         return save(themes)
     }

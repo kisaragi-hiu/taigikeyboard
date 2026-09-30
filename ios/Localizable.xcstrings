@@ -4232,7 +4232,7 @@
       }
     },
     "i18n_theme_editorTitleNew": {
-      "comment": "Theme editor top-bar title in create mode; also the fallback name when a theme is saved with a blank name (identity is the UUID; names may repeat and stay editable). theme.defaultName merged 2026-09-20.",
+      "comment": "Theme editor top-bar title in create mode; also the fallback name when a theme is saved with a blank name (identity is the UUID; names may repeat and stay editable), and the name a look customized before themes existed is carried over under. theme.defaultName merged 2026-09-20.",
       "extractionState": "manual",
       "localizations": {
         "en": {

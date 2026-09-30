@@ -4,13 +4,11 @@ import SwiftUI
 // MARK: - Theme identity
 
 enum ThemeId {
-    /// The legacy free-pick buffer. Uncustomized users resolve to all-nil →
-    /// KeyboardKit adaptive colors + Liquid Glass; customized users keep their
-    /// `colorSettings` look without any migration.
+    /// The factory theme: all-nil → KeyboardKit adaptive colors + Liquid Glass.
     static let `default` = "default"
 
     /// Whether `id` is a user theme. User-theme ids are `UUID` strings; the
-    /// `default` buffer and built-in ids are not. Distinguishes themes that own
+    /// `default` theme and built-in ids are not. Distinguishes themes that own
     /// their appearance (incl. explicit shadow) from `default` / built-in themes
     /// that inherit KeyboardKit's standard look.
     static func isUserTheme(_ id: String) -> Bool {

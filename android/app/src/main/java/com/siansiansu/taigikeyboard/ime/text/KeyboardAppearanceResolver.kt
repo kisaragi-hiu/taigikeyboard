@@ -33,8 +33,7 @@ internal class KeyboardAppearanceResolver(
     private var cachedTypeface: android.graphics.Typeface = android.graphics.Typeface.DEFAULT
 
     fun snapshot(): KeyboardAppearance {
-        // Resolve the active theme (default theme -> legacy colorSettings + scalars +
-        // flat shadow, so the default path stays byte-identical). The cache only
+        // Resolve the active theme (default theme -> the factory appearance). The cache only
         // re-parses JSON when a theme input flips, keeping the per-keystroke path cheap.
         val theme = themeCache.resolve(isKeyboardNightMode(taigikeyboard))
         return KeyboardAppearance(

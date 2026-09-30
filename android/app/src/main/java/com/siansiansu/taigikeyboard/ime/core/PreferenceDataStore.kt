@@ -114,7 +114,8 @@ object PreferenceKeys {
     // TPS settings
     val TPS_OR_MAPS_TO_ER = booleanPreferencesKey("tps__or_maps_to_er")
 
-    // Appearance settings
+    // Retired: the pre-theme global appearance, written by the appearance screen the theme editor
+    // replaced. [LegacyAppearance.retire] carries a customized one into a user theme, then removes them.
     val KEY_HEIGHT_SCALE = floatPreferencesKey("appearance__key_height_scale")
     val KEY_FONT_SIZE_SCALE = floatPreferencesKey("appearance__key_font_size_scale")
     val CANDIDATE_TEXT_SIZE_SCALE = floatPreferencesKey("appearance__candidate_text_size_scale")

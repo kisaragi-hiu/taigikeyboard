@@ -9,10 +9,10 @@ import SwiftUI
 /// both the keys and the callout use `settings.fontType`. Nothing here writes
 /// the live settings.
 struct KeyboardPreviewPanel: View {
-    /// The appearance to render — bound draft (theme editor) or default-buffer appearance.
+    /// The appearance to render — bound draft (theme editor) or default-theme appearance.
     let appearance: ThemeAppearance
     /// `true` for user-theme drafts (shadow slider 0 = flat); `false` for the
-    /// default buffer (keeps KeyboardKit's standard shadow, matching the keyboard).
+    /// default theme (keeps KeyboardKit's standard shadow, matching the keyboard).
     let appliesThemeShadow: Bool
     let colorScheme: ColorScheme
 

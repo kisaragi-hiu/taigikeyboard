@@ -369,5 +369,5 @@ The desktops run the same engine stores as the phones (`engine/userdata`, the sa
 - Rust FFI surface design — Phase IV-A.
 - OTA / incremental-update delivery — Phase IV-B.
 - UI assets (keyboard layouts, fonts, icons, tab1 content JSON).
-- Persisted settings (`SharedSettings` · Android DataStore blobs · `colorSettings`) — not shared-core candidates.
+- Persisted settings (`SharedSettings` · Android DataStore blobs · user themes) — not shared-core candidates.
 - Build-time-only artifacts — none. Post-v3.5.6 part 2 the build pipeline reads `dictionary.csv` directly into the binary writers; the previous SQLite intermediates (`dictionary.db`, `trie.db`) are gone.

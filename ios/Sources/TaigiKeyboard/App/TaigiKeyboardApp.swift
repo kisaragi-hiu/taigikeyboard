@@ -44,6 +44,9 @@ struct TaigiKeyboardApp: App {
         // as the extension's setupKeyboardKit(for:) — identical store + prefix.
         KeyboardSettings.setupStore(for: .taigiKeyboard)
 
+        // A look customized before themes existed becomes a user theme (once).
+        SharedSettings.shared.retireLegacyAppearance(themeName: DisplayLanguageStore().string(.themeEditorTitleNew))
+
         // Navigation bar title font (UIKit appearance, not affected by SwiftUI .environment)
         let navAppearance = UINavigationBarAppearance()
         navAppearance.configureWithDefaultBackground()

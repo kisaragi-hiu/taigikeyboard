@@ -7,13 +7,12 @@ import XCTest
 /// colors + shadow + 5 size scalars. Font is global, not part of a theme).
 ///
 /// Behavior under test:
-/// - `default` → the legacy free-pick appearance verbatim (so uncustomized
-///   users stay all-nil and customized users keep their look with no migration).
+/// - `default` → the factory appearance (all-nil adaptive colors).
 /// - a known `UserTheme` id → that theme's full appearance.
 /// - a known built-in id → factory sizes + the built-in's colorScheme
 ///   color variant.
 /// - an unknown id (deleted user theme, stale built-in id) → fall back to the
-///   full legacy appearance.
+///   factory appearance.
 final class ThemeResolverTests: XCTestCase {
     private func customized() -> KeyboardColorSettings {
         var cs = KeyboardColorSettings()
@@ -44,28 +43,14 @@ final class ThemeResolverTests: XCTestCase {
         )
     }
 
-    // trace: themeId == ThemeId.default → returns legacyAppearance verbatim
-    func testResolved_default_returnsLegacyAppearanceAllNil() {
+    // trace: themeId == ThemeId.default → the factory appearance, even past the Standard catalog head
+    func testResolved_default_returnsFactoryAppearance() {
         let resolved = ThemeResolver.resolved(
             themeId: ThemeId.default,
             colorScheme: .light,
-            legacyAppearance: .default,
             userThemes: [],
         )
         XCTAssertEqual(resolved, .default)
-    }
-
-    // trace: default user who customized colors/sizes stays on "default" → keeps the whole appearance
-    func testResolved_default_returnsCustomizedLegacyVerbatim() {
-        var legacy = makeAppearance(colors: customized(), shadow: 0.2)
-        legacy.keyHeightScale = 1.1
-        let resolved = ThemeResolver.resolved(
-            themeId: ThemeId.default,
-            colorScheme: .light,
-            legacyAppearance: legacy,
-            userThemes: [],
-        )
-        XCTAssertEqual(resolved, legacy)
     }
 
     // trace: themeId matches a user theme → that theme's FULL appearance (colors + sizes + shadow)
@@ -78,32 +63,28 @@ final class ThemeResolverTests: XCTestCase {
         let resolved = ThemeResolver.resolved(
             themeId: id.uuidString,
             colorScheme: .dark,
-            legacyAppearance: .default,
             userThemes: [theme],
         )
         XCTAssertEqual(resolved, appearance)
     }
 
-    // trace: a genuinely unknown id → fall back to the FULL legacy appearance
-    func testResolved_unknownId_fallsBackToLegacyAppearance() {
-        let legacy = makeAppearance(colors: customized(), shadow: 0.4)
+    // trace: a genuinely unknown id → fall back to the factory appearance
+    func testResolved_unknownId_fallsBackToFactoryAppearance() {
         let resolved = ThemeResolver.resolved(
             themeId: "no_such_theme",
             colorScheme: .light,
-            legacyAppearance: legacy,
             userThemes: [],
         )
-        XCTAssertEqual(resolved, legacy)
+        XCTAssertEqual(resolved, .default)
     }
 
-    // trace: a previously-selected user theme was deleted (id no longer in list) → fallback legacy
-    func testResolved_deletedUserTheme_fallsBackToLegacyAppearance() {
+    // trace: a previously-selected user theme was deleted (id no longer in list) → fallback factory
+    func testResolved_deletedUserTheme_fallsBackToFactoryAppearance() {
         let staleId = UUID()
         let other = makeUserTheme(id: UUID(), appearance: makeAppearance(colors: customized()))
         let resolved = ThemeResolver.resolved(
             themeId: staleId.uuidString,
             colorScheme: .light,
-            legacyAppearance: .default,
             userThemes: [other],
         )
         XCTAssertEqual(resolved, .default)
@@ -118,7 +99,6 @@ final class ThemeResolverTests: XCTestCase {
         let resolved = ThemeResolver.resolved(
             themeId: "standardBlue",
             colorScheme: .light,
-            legacyAppearance: makeAppearance(colors: customized()),
             userThemes: [],
         )
         XCTAssertEqual(resolved.colors, expected.colors(for: .light))
@@ -127,26 +107,22 @@ final class ThemeResolverTests: XCTestCase {
         XCTAssertEqual(resolved.keyShadowIntensity, 0)
     }
 
-    // trace: same built-in id + .dark → catalog branch wins over the legacy appearance
+    // trace: same built-in id + .dark → catalog branch, dark variant
     func testResolved_builtIn_darkResolvesThroughCatalog() {
         let expected = BuiltInThemes.theme(id: "standardBlue")!
         let resolved = ThemeResolver.resolved(
             themeId: "standardBlue",
             colorScheme: .dark,
-            legacyAppearance: .default,
             userThemes: [],
         )
         XCTAssertEqual(resolved.colors, expected.colors(for: .dark))
     }
 
-    // trace: built-in themes define colors only → factory sizes/shadow, regardless of legacy appearance
+    // trace: built-in themes define colors only → factory sizes/shadow
     func testResolved_builtIn_usesFactorySizes() {
-        var legacy = makeAppearance(colors: customized(), shadow: 0.5)
-        legacy.keyHeightScale = 1.15
         let resolved = ThemeResolver.resolved(
             themeId: "standardBlue",
             colorScheme: .dark,
-            legacyAppearance: legacy,
             userThemes: [],
         )
         XCTAssertEqual(resolved.keyHeightScale, ThemeAppearance.default.keyHeightScale)
@@ -163,7 +139,6 @@ final class ThemeResolverTests: XCTestCase {
         let resolved = ThemeResolver.resolved(
             themeId: "framedBlue",
             colorScheme: .light,
-            legacyAppearance: .default,
             userThemes: [],
         )
         XCTAssertEqual(resolved.keyBorderWidth, 1.0)
@@ -177,7 +152,6 @@ final class ThemeResolverTests: XCTestCase {
             let resolved = ThemeResolver.resolved(
                 themeId: id,
                 colorScheme: .light,
-                legacyAppearance: .default,
                 userThemes: [],
             )
             XCTAssertEqual(resolved.keyBorderWidth, ThemeAppearance.default.keyBorderWidth, "\(id) keeps the factory border")
@@ -190,7 +164,6 @@ final class ThemeResolverTests: XCTestCase {
         let resolved = ThemeResolver.resolved(
             themeId: "standardBlue",
             colorScheme: .dark,
-            legacyAppearance: .default,
             userThemes: [other],
         )
         XCTAssertEqual(resolved.colors, BuiltInThemes.theme(id: "standardBlue")!.colors(for: .dark))
