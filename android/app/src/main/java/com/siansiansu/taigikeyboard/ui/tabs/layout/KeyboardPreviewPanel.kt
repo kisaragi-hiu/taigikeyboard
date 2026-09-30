@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.core.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.core.themeBackground
 import com.siansiansu.taigikeyboard.ime.popup.KeyAnchor
@@ -46,7 +45,6 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyDimensionsInput
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyEventDispatcher
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyTouchCoordinator
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardAppearance
-import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardHeightFactor
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayout
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
@@ -108,10 +106,7 @@ fun KeyboardPreviewPanel(
         val layoutData = remember(layoutType, previewInputMode, prefs.candidateDisplayMode, themedContext) {
             val layoutManager = LayoutManager(themedContext, prefs)
             KeyboardLayoutData.from(
-                layoutManager.fetchComputedLayoutForPreview(
-                    KeyboardMode.CHARACTERS,
-                    Subtype.DEFAULT,
-                ),
+                layoutManager.fetchComputedLayoutForPreview(KeyboardMode.CHARACTERS),
             )
         }
 
@@ -136,7 +131,6 @@ fun KeyboardPreviewPanel(
             keyCornerRadius = keyCornerRadius,
             keyBorderWidth = keyBorderWidth,
             keyShadowIntensity = keyShadowIntensity,
-            heightFactor = KeyboardHeightFactor.fromPreferenceString(prefs.heightFactor),
             keyHeightScale = keyHeightScale,
         )
 
@@ -158,7 +152,6 @@ fun KeyboardPreviewPanel(
                     keyMarginH = keyMarginH,
                     baseKeyHeight = baseKeyHeight,
                     isLandscape = isLandscape(),
-                    heightFactor = appearance.heightFactor,
                     keyHeightScale = keyHeightScale,
                 ),
             )

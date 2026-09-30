@@ -9,7 +9,6 @@ import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
 import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardAppearance
-import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardHeightFactor
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
 /**
@@ -54,7 +53,6 @@ internal class KeyboardAppearanceResolver(
             keyCornerRadius = theme.keyCornerRadius,
             keyBorderWidth = theme.keyBorderWidth,
             keyShadowIntensity = theme.keyShadowIntensity,
-            heightFactor = KeyboardHeightFactor.fromPreferenceString(prefs.heightFactor),
             keyHeightScale = theme.keyHeightScale,
         )
     }

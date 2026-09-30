@@ -22,23 +22,36 @@ val Context.preferencesDataStore: DataStore<Preferences> by preferencesDataStore
  * Centralized key definitions to avoid string duplication.
  */
 object PreferenceKeys {
-    // Advanced settings
-    val SETTINGS_THEME = stringPreferencesKey("advanced__settings_theme")
-    val SHOW_APP_ICON = booleanPreferencesKey("advanced__show_app_icon")
+    /**
+     * Keys retired 2026-09-30. No settings UI in this repo ever wrote them —
+     * only the SharedPreferences migration (pre-repo values), the layout-type
+     * cascade (the paired phah flag) and the subtype manager — so
+     * [PrefHelper.migrateFromSharedPreferences] removes them on every start:
+     * a stale value must not shadow today's default. Spellings stay reserved.
+     */
+    val RETIRED: List<Preferences.Key<*>> =
+        listOf(
+            stringPreferencesKey("advanced__settings_theme"),
+            booleanPreferencesKey("advanced__show_app_icon"),
+            booleanPreferencesKey("correction__double_space_period"),
+            intPreferencesKey("keyboard__active_subtype_id"),
+            stringPreferencesKey("keyboard__subtypes"),
+            booleanPreferencesKey("keyboard__phah_taigi_layout_enabled"),
+            stringPreferencesKey("looknfeel__height_factor"),
+            intPreferencesKey("looknfeel__long_press_delay"),
+        )
+
+    /** Set once the launcher alias has been restored to its manifest default (see `TaigiKeyboardApplication`). */
+    val LAUNCHER_ALIAS_RESTORED = booleanPreferencesKey("internal__launcher_alias_restored")
 
     // App UI display language (i18n). Tag of DisplayLanguage; default "system" (Automatic) = follow device OS locale.
     val DISPLAY_LANGUAGE = stringPreferencesKey("app__display_language")
-
-    // Correction settings
-    val DOUBLE_SPACE_PERIOD = booleanPreferencesKey("correction__double_space_period")
 
     // Internal settings
     val VERSION_ON_INSTALL = stringPreferencesKey("internal__version_on_install")
     val VERSION_LAST_USE = stringPreferencesKey("internal__version_last_use")
 
     // Keyboard settings
-    val ACTIVE_SUBTYPE_ID = intPreferencesKey("keyboard__active_subtype_id")
-    val SUBTYPES = stringPreferencesKey("keyboard__subtypes")
     val INPUT_MODE = stringPreferencesKey("keyboard__input_mode")
     val IS_TRANSLATE_SWAPPED = booleanPreferencesKey("keyboard__is_translate_swapped")
     val OUTPUT_BOTH_SCRIPTS = booleanPreferencesKey("keyboard__output_both_scripts")
@@ -47,7 +60,6 @@ object PreferenceKeys {
     val CANDIDATE_DISPLAY_MODE = stringPreferencesKey("keyboard__candidate_display_mode")
     val LITERAL_ROMAN_CANDIDATE = booleanPreferencesKey("keyboard__literal_roman_candidate")
     val HYPHENLESS_ROMAN = booleanPreferencesKey("keyboard__hyphenless_roman")
-    val PHAH_TAIGI_LAYOUT_ENABLED = booleanPreferencesKey("keyboard__phah_taigi_layout_enabled")
     val KEYBOARD_LAYOUT_TYPE = stringPreferencesKey("keyboard__layout_type")
     val INPUT_MODE_BEFORE_TPS = stringPreferencesKey("keyboard__input_mode_before_tps")
     val LAYOUT_BEFORE_TPS = stringPreferencesKey("keyboard__layout_before_tps")
@@ -67,10 +79,6 @@ object PreferenceKeys {
     val AUTO_CAPITALIZATION_ENABLED = booleanPreferencesKey("taigi__auto_capitalization_enabled")
     val AUTO_SPACE_ENABLED = booleanPreferencesKey("taigi__auto_space_enabled")
     val FONT_TYPE = stringPreferencesKey("taigi__font_type")
-
-    // Looknfeel settings
-    val HEIGHT_FACTOR = stringPreferencesKey("looknfeel__height_factor")
-    val LONG_PRESS_DELAY = intPreferencesKey("looknfeel__long_press_delay")
 
     // Dictionary toggles. VARIANT = Variant Characters, KHIIN = Conventional Characters,
     // LKK = LKK漢羅合用建議用字, DEV = 開發者補充辭典.

@@ -39,7 +39,7 @@ The pointer hit-box of every key matches the visible bounding box of that key, i
 
 ### `INVARIANT_keyboard_long_press_delay_unchanged`
 
-Long-press popup extension fires at `prefs.longPressDelay` ms after `ACTION_DOWN` (default 300 ms; user-configurable). Special long-press paths — SPACE → IME picker, LANGUAGE_SWITCH → IME picker, DELETE repeat (50 ms repeat after 500 ms initial delay) — preserve their pre-D timings.
+Long-press popup extension fires 300 ms after `ACTION_DOWN` (`LONG_PRESS_DELAY_MS` in `ImeKeyEventDispatcher.kt`; the FlorisBoard `longPressDelay` setting was removed 2026-09-30, it never had a UI here). Special long-press paths — SPACE → IME picker, LANGUAGE_SWITCH → IME picker, DELETE repeat (50 ms repeat after 500 ms initial delay) — preserve their pre-D timings.
 
 ### `INVARIANT_keyboard_popup_drag_select_tracks_pointer`
 
@@ -77,7 +77,7 @@ A keyboard press is initiated only on `ACTION_DOWN` / `ACTION_POINTER_DOWN`. If 
 
 ### `INVARIANT_keyboard_register_input_view_main_thread_setup`
 
-`TextInputManager.onRegisterInputView` resolves `textViewGroup`, synchronously publishes the active mode's layout + appearance + active mode into `KeyboardUiState` (via `ensureLayoutLoadedNow`), mounts the keyboard ComposeView, and registers all four smartbar overlays **synchronously** before returning. The background `ensureLayoutLoaded` coroutine is reserved for runtime reload paths (subtype / input-mode / layout-type / settings changes), not the boot path. This ordering is load-bearing because `InputMethodService.onWindowShown` calls `setActiveInput(R.id.text_input)` immediately after the IME window first becomes visible, and that call reads `textInputManager.textViewGroup` synchronously. If the resolution sat behind a `launch(Dispatchers.Default) { withContext(Main) { ... } }` thread-hop, `onWindowShown` could race ahead, find `textViewGroup == null`, and `ViewGroup.indexOfChild(null) == -1` would feed `ViewAnimator.setDisplayedChild(-1)`, which wraps to `childCount - 1` (= the `media_input` emoji keyboard) — the "first-install opens emoji keyboard" symptom. `TaigiKeyboard.setActiveInput` defends against the same class of bug by clamping the resolved index with `coerceAtLeast(0)`.
+`TextInputManager.onRegisterInputView` resolves `textViewGroup`, synchronously publishes the active mode's layout + appearance + active mode into `KeyboardUiState` (via `ensureLayoutLoadedNow`), mounts the keyboard ComposeView, and registers all four smartbar overlays **synchronously** before returning. The background `ensureLayoutLoaded` coroutine is reserved for runtime reload paths (window show / input-mode / layout-type / settings changes), not the boot path. This ordering is load-bearing because `InputMethodService.onWindowShown` calls `setActiveInput(R.id.text_input)` immediately after the IME window first becomes visible, and that call reads `textInputManager.textViewGroup` synchronously. If the resolution sat behind a `launch(Dispatchers.Default) { withContext(Main) { ... } }` thread-hop, `onWindowShown` could race ahead, find `textViewGroup == null`, and `ViewGroup.indexOfChild(null) == -1` would feed `ViewAnimator.setDisplayedChild(-1)`, which wraps to `childCount - 1` (= the `media_input` emoji keyboard) — the "first-install opens emoji keyboard" symptom. `TaigiKeyboard.setActiveInput` defends against the same class of bug by clamping the resolved index with `coerceAtLeast(0)`.
 
 ### `INVARIANT_keyboard_body_layout_published_before_compose_mount`
 

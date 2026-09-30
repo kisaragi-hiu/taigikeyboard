@@ -279,33 +279,12 @@ class PrefHelper(
         }
     }
 
-    // Advanced settings
-    var settingsTheme: String by preference(PreferenceKeys.SETTINGS_THEME, "auto")
-        private set
-
-    var showAppIcon: Boolean by preference(PreferenceKeys.SHOW_APP_ICON, true)
-        private set
-
-    // Correction settings
-    var doubleSpacePeriod: Boolean by preference(PreferenceKeys.DOUBLE_SPACE_PERIOD, true)
-        private set
-
     // Internal settings
     var versionOnInstall: String by preference(PreferenceKeys.VERSION_ON_INSTALL, AppVersionTracker.DEFAULT_VERSION_RAW)
 
     var versionLastUse: String by preference(PreferenceKeys.VERSION_LAST_USE, AppVersionTracker.DEFAULT_VERSION_RAW)
 
-    // Keyboard settings
-    var activeSubtypeId: Int by preference(PreferenceKeys.ACTIVE_SUBTYPE_ID, -1)
-
-    var subtypes: String by preference(PreferenceKeys.SUBTYPES, "")
-
-    // Looknfeel settings
-    var heightFactor: String by preference(PreferenceKeys.HEIGHT_FACTOR, "normal")
-        private set
-
-    var longPressDelay: Int by preference(PreferenceKeys.LONG_PRESS_DELAY, 300)
-        private set
+    var launcherAliasRestored: Boolean by preference(PreferenceKeys.LAUNCHER_ALIAS_RESTORED, false)
 
     // Language settings
     //
@@ -388,8 +367,6 @@ class PrefHelper(
 
     var fontType: String by preference(PreferenceKeys.FONT_TYPE, DEFAULT_FONT_TYPE)
 
-    var phahTaigiLayoutEnabled: Boolean by preference(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, true)
-
     // Layout id: phahTaigi, qwerty, moe1, moe2, tps.
     //
     // Pattern-C: cross-key TPS state machine. Setter forwards to
@@ -446,8 +423,7 @@ class PrefHelper(
     }
 
     /**
-     * Writes [value] to `KEYBOARD_LAYOUT_TYPE` (+ paired
-     * `PHAH_TAIGI_LAYOUT_ENABLED`) and applies the TPS ↔ inputMode 1:1
+     * Writes [value] to `KEYBOARD_LAYOUT_TYPE` and applies the TPS ↔ inputMode 1:1
      * cascade. Cascade plan computed by [TpsCascade.forKeyboardLayoutType];
      * committed in a single DataStore transaction.
      *
@@ -799,8 +775,10 @@ class PrefHelper(
             .map { UserTheme.decodeList(it) }
 
     /**
-     * Migrates data from SharedPreferences to DataStore.
-     * This is called once during the first app launch after update.
+     * Migrates data from SharedPreferences to DataStore — the copy runs only
+     * while DataStore is empty — and, on every start, removes the retired keys
+     * ([PreferenceKeys.RETIRED]) in the same transaction. Called from every
+     * `Application.onCreate`.
      *
      * Writes DataStore directly (bypassing `updateCacheAndPersist`), so finishes
      * by calling [clearPendingOverlay] — see that helper for rationale.
@@ -814,16 +792,6 @@ class PrefHelper(
             if (prefs.asMap().isEmpty()) {
                 logger.debug(TAG) { "Migrating from SharedPreferences to DataStore" }
 
-                // Advanced settings
-                prefs[PreferenceKeys.SETTINGS_THEME] =
-                    sharedPrefs.getString("advanced__settings_theme", "auto") ?: "auto"
-                prefs[PreferenceKeys.SHOW_APP_ICON] =
-                    sharedPrefs.getBoolean("advanced__show_app_icon", true)
-
-                // Correction settings
-                prefs[PreferenceKeys.DOUBLE_SPACE_PERIOD] =
-                    sharedPrefs.getBoolean("correction__double_space_period", true)
-
                 // Internal settings
                 prefs[PreferenceKeys.VERSION_ON_INSTALL] =
                     sharedPrefs.getString("internal__version_on_install", AppVersionTracker.DEFAULT_VERSION_RAW)
@@ -833,10 +801,6 @@ class PrefHelper(
                         ?: AppVersionTracker.DEFAULT_VERSION_RAW
 
                 // Keyboard settings
-                prefs[PreferenceKeys.ACTIVE_SUBTYPE_ID] =
-                    sharedPrefs.getInt("keyboard__active_subtype_id", -1)
-                prefs[PreferenceKeys.SUBTYPES] =
-                    sharedPrefs.getString("keyboard__subtypes", "") ?: ""
                 prefs[PreferenceKeys.INPUT_MODE] =
                     sharedPrefs.getString("keyboard__input_mode", "tl") ?: "tl"
 
@@ -850,19 +814,14 @@ class PrefHelper(
                 prefs[PreferenceKeys.AUTO_SPACE_ENABLED] =
                     sharedPrefs.getBoolean("taigi__auto_space_enabled", false)
                 prefs[PreferenceKeys.FONT_TYPE] = DEFAULT_FONT_TYPE
-                prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] =
-                    sharedPrefs.getBoolean("keyboard__phah_taigi_layout_enabled", true)
-
-                // Looknfeel settings
-                prefs[PreferenceKeys.HEIGHT_FACTOR] =
-                    sharedPrefs.getString("looknfeel__height_factor", "normal") ?: "normal"
-                prefs[PreferenceKeys.LONG_PRESS_DELAY] =
-                    sharedPrefs.getInt("looknfeel__long_press_delay", 300)
 
                 logger.debug(TAG) { "Migration completed successfully" }
             } else {
                 logger.debug(TAG) { "DataStore already has data, skipping migration" }
             }
+            // Retired keys (2026-09-30): an older migration may have copied a
+            // pre-repo value in; removing an absent key is free, so every start.
+            PreferenceKeys.RETIRED.forEach { prefs.remove(it) }
         }
         clearPendingOverlay()
     }
@@ -886,11 +845,6 @@ class PrefHelper(
             versionLastUse?.let { prefs[PreferenceKeys.VERSION_LAST_USE] = it }
             userThemes?.let { prefs[PreferenceKeys.USER_THEMES] = it }
 
-            prefs[PreferenceKeys.SETTINGS_THEME] = "auto"
-            prefs[PreferenceKeys.SHOW_APP_ICON] = true
-            prefs[PreferenceKeys.DOUBLE_SPACE_PERIOD] = true
-            prefs[PreferenceKeys.ACTIVE_SUBTYPE_ID] = -1
-            prefs[PreferenceKeys.SUBTYPES] = ""
             prefs[PreferenceKeys.INPUT_MODE] = "tl"
             prefs[PreferenceKeys.IS_TRANSLATE_SWAPPED] = true
             prefs[PreferenceKeys.OUTPUT_BOTH_SCRIPTS] = false
@@ -900,10 +854,7 @@ class PrefHelper(
             prefs[PreferenceKeys.AUTO_CAPITALIZATION_ENABLED] = true
             prefs[PreferenceKeys.AUTO_SPACE_ENABLED] = false
             prefs[PreferenceKeys.FONT_TYPE] = DEFAULT_FONT_TYPE
-            prefs[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED] = true
             prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = "phahTaigi"
-            prefs[PreferenceKeys.HEIGHT_FACTOR] = "normal"
-            prefs[PreferenceKeys.LONG_PRESS_DELAY] = 300
             prefs[PreferenceKeys.KEY_HEIGHT_SCALE] = DEFAULT_KEY_HEIGHT_SCALE
             prefs[PreferenceKeys.KEY_FONT_SIZE_SCALE] = DEFAULT_KEY_FONT_SIZE_SCALE
             prefs[PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE] = DEFAULT_CANDIDATE_TEXT_SIZE_SCALE

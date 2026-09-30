@@ -7,7 +7,6 @@ import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.EditorInfo
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.InputView
-import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.popup.KeyPopupManager
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
@@ -105,7 +104,6 @@ class TextInputManager(
     private val uiCoordinator = KeyboardUiCoordinator(
         scope = this,
         layoutManagerFactory = { LayoutManager(taigikeyboard, prefs) },
-        activeSubtypeProvider = { taigikeyboard.activeSubtype },
         fullWidthPunctuationProvider = fullWidthPunctuationProvider,
         onLayoutChanged = { pushAppearance() },
         onActiveModeChanged = {
@@ -405,8 +403,14 @@ class TextInputManager(
         }
     }
 
-    override fun onSubtypeChanged(newSubtype: Subtype) {
-        uiCoordinator.reloadForSubtype(newSubtype)
+    /**
+     * Recomputes the CHARACTERS layout on every window show. Settings the
+     * layout reads with no observer of their own — the globe-key toggle
+     * (`prefs.isGlobeKeyEnabled`, written by both settings surfaces) — only
+     * reach the keys through this reload.
+     */
+    fun reloadCharacters() {
+        uiCoordinator.reloadCharacters()
     }
 
     override fun onInputModeChanged(newInputMode: String) {
@@ -428,7 +432,7 @@ class TextInputManager(
         }
         getComposingManager()?.bumpGeneration()
 
-        uiCoordinator.reloadForInputMode(newInputMode)
+        uiCoordinator.reloadCharacters(overrideInputMode = newInputMode)
     }
 
     /**
@@ -448,7 +452,7 @@ class TextInputManager(
     override fun onKeyboardLayoutTypeChanged(newLayoutType: String) {
         if (logger.isDebugEnabled) logger.i(TAG, "onKeyboardLayoutTypeChanged($newLayoutType)")
 
-        uiCoordinator.reloadForLayoutType()
+        uiCoordinator.reloadCharacters()
     }
 
     fun reloadCurrentLayout() {

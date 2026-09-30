@@ -7,7 +7,6 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.InputView
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.core.settings.OneHandedMode
 import com.siansiansu.taigikeyboard.ime.popup.KeyPopupManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
@@ -33,7 +32,6 @@ import kotlinx.coroutines.withContext
 internal class KeyboardUiCoordinator(
     private val scope: CoroutineScope,
     layoutManagerFactory: () -> LayoutManager,
-    private val activeSubtypeProvider: () -> Subtype,
     private val fullWidthPunctuationProvider: () -> Boolean,
     private val onLayoutChanged: () -> Unit,
     private val onActiveModeChanged: () -> Unit,
@@ -118,7 +116,7 @@ internal class KeyboardUiCoordinator(
     suspend fun ensureLayoutLoaded(mode: KeyboardMode) {
         if (!isLayoutLoadNeeded(mode)) return
         val computed = withContext(Dispatchers.IO) {
-            layoutManager.fetchComputedLayout(mode, activeSubtypeProvider())
+            layoutManager.fetchComputedLayout(mode)
         }
         publishLayout(mode, KeyboardLayoutData.from(computed))
     }
@@ -136,7 +134,7 @@ internal class KeyboardUiCoordinator(
      */
     fun ensureLayoutLoadedNow(mode: KeyboardMode) {
         if (!isLayoutLoadNeeded(mode)) return
-        val computed = layoutManager.fetchComputedLayout(mode, activeSubtypeProvider())
+        val computed = layoutManager.fetchComputedLayout(mode)
         publishLayout(mode, KeyboardLayoutData.from(computed))
     }
 
@@ -180,7 +178,7 @@ internal class KeyboardUiCoordinator(
         layoutReloadJob = scope.launch {
             val isFullWidthPunctuation = fullWidthPunctuationProvider()
             val computed = withContext(Dispatchers.IO) {
-                layoutManager.fetchComputedLayout(currentMode, activeSubtypeProvider(), isFullWidthPunctuation)
+                layoutManager.fetchComputedLayout(currentMode, isFullWidthPunctuation)
             }
             publishLayout(currentMode, KeyboardLayoutData.from(computed))
             onLayoutChanged()
@@ -200,7 +198,7 @@ internal class KeyboardUiCoordinator(
             for (mode in modes) {
                 if (mode != activeKeyboardMode) {
                     val computed = withContext(Dispatchers.IO) {
-                        layoutManager.fetchComputedLayout(mode, activeSubtypeProvider(), isFullWidthPunctuation)
+                        layoutManager.fetchComputedLayout(mode, isFullWidthPunctuation)
                     }
                     withContext(Dispatchers.Main) {
                         publishLayout(mode, KeyboardLayoutData.from(computed))
@@ -210,37 +208,20 @@ internal class KeyboardUiCoordinator(
         }
     }
 
-    fun reloadForSubtype(newSubtype: Subtype) {
-        layoutReloadJob?.cancel()
-        layoutReloadJob = scope.launch {
-            val computed = withContext(Dispatchers.IO) {
-                layoutManager.fetchComputedLayout(KeyboardMode.CHARACTERS, newSubtype)
-            }
-            publishLayout(KeyboardMode.CHARACTERS, KeyboardLayoutData.from(computed))
-            onLayoutChanged()
-        }
-    }
-
-    fun reloadForInputMode(overrideInputMode: String) {
+    /**
+     * Recomputes the CHARACTERS layout off the main thread and publishes it.
+     * [overrideInputMode] lets an input-mode change render before the async
+     * DataStore read catches up; every other caller (window show, layout-type
+     * change) reads the live prefs.
+     */
+    fun reloadCharacters(overrideInputMode: String? = null) {
         layoutReloadJob?.cancel()
         layoutReloadJob = scope.launch {
             val computed = withContext(Dispatchers.IO) {
                 layoutManager.fetchComputedLayout(
                     KeyboardMode.CHARACTERS,
-                    activeSubtypeProvider(),
                     overrideInputMode = overrideInputMode,
                 )
-            }
-            publishLayout(KeyboardMode.CHARACTERS, KeyboardLayoutData.from(computed))
-            onLayoutChanged()
-        }
-    }
-
-    fun reloadForLayoutType() {
-        layoutReloadJob?.cancel()
-        layoutReloadJob = scope.launch {
-            val computed = withContext(Dispatchers.IO) {
-                layoutManager.fetchComputedLayout(KeyboardMode.CHARACTERS, activeSubtypeProvider())
             }
             publishLayout(KeyboardMode.CHARACTERS, KeyboardLayoutData.from(computed))
             onLayoutChanged()

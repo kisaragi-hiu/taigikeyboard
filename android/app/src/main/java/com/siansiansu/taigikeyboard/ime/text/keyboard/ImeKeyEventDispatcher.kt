@@ -16,6 +16,8 @@ import com.siansiansu.taigikeyboard.ime.popup.tpsPopupWithBaseGlyph
 import com.siansiansu.taigikeyboard.ime.text.CapsStateManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 
+private const val LONG_PRESS_DELAY_MS = 300L
+
 internal class ImeKeyEventDispatcher(
     private val taigikeyboard: TaigiKeyboard,
     private val prefs: PrefHelper,
@@ -37,8 +39,8 @@ internal class ImeKeyEventDispatcher(
 
     override fun keyPressSound(data: KeyData) = taigikeyboard.keyPressSound(data)
 
-    override val longPressDelayMs: Long
-        get() = prefs.longPressDelay.toLong()
+    // Fixed since the FlorisBoard long-press setting had no UI here.
+    override val longPressDelayMs: Long = LONG_PRESS_DELAY_MS
 
     override fun resolveAnchor(
         bounds: KeyBounds,

@@ -6,36 +6,6 @@ import org.junit.Test
 
 /** Pure-JVM tests for [KeyboardLayoutSolver]. */
 class KeyboardLayoutSolverTest {
-    // --- KeyboardHeightFactor.fromPreferenceString ---
-
-    @Test
-    fun `fromPreferenceString maps each documented value`() {
-        assertEquals(KeyboardHeightFactor.EXTRA_SHORT, KeyboardHeightFactor.fromPreferenceString("extra_short"))
-        assertEquals(KeyboardHeightFactor.SHORT, KeyboardHeightFactor.fromPreferenceString("short"))
-        assertEquals(KeyboardHeightFactor.MID_SHORT, KeyboardHeightFactor.fromPreferenceString("mid_short"))
-        assertEquals(KeyboardHeightFactor.NORMAL, KeyboardHeightFactor.fromPreferenceString("normal"))
-        assertEquals(KeyboardHeightFactor.MID_TALL, KeyboardHeightFactor.fromPreferenceString("mid_tall"))
-        assertEquals(KeyboardHeightFactor.TALL, KeyboardHeightFactor.fromPreferenceString("tall"))
-        assertEquals(KeyboardHeightFactor.EXTRA_TALL, KeyboardHeightFactor.fromPreferenceString("extra_tall"))
-    }
-
-    @Test
-    fun `fromPreferenceString defaults unknown values to NORMAL`() {
-        assertEquals(KeyboardHeightFactor.NORMAL, KeyboardHeightFactor.fromPreferenceString(""))
-        assertEquals(KeyboardHeightFactor.NORMAL, KeyboardHeightFactor.fromPreferenceString("garbage"))
-    }
-
-    @Test
-    fun `each KeyboardHeightFactor exposes the legacy multiplier`() {
-        assertEquals(0.85f, KeyboardHeightFactor.EXTRA_SHORT.multiplier)
-        assertEquals(0.90f, KeyboardHeightFactor.SHORT.multiplier)
-        assertEquals(0.95f, KeyboardHeightFactor.MID_SHORT.multiplier)
-        assertEquals(1.00f, KeyboardHeightFactor.NORMAL.multiplier)
-        assertEquals(1.05f, KeyboardHeightFactor.MID_TALL.multiplier)
-        assertEquals(1.10f, KeyboardHeightFactor.TALL.multiplier)
-        assertEquals(1.15f, KeyboardHeightFactor.EXTRA_TALL.multiplier)
-    }
-
     // --- solveKeyDimensions ---
 
     @Test
@@ -46,7 +16,6 @@ class KeyboardLayoutSolverTest {
                 keyMarginH = 5,
                 baseKeyHeight = 200f,
                 isLandscape = false,
-                heightFactor = KeyboardHeightFactor.NORMAL,
                 keyHeightScale = 1.0f,
             ),
         )
@@ -64,7 +33,6 @@ class KeyboardLayoutSolverTest {
                 keyMarginH = 0,
                 baseKeyHeight = 200f,
                 isLandscape = true,
-                heightFactor = KeyboardHeightFactor.NORMAL,
                 keyHeightScale = 1.0f,
             ),
         )
@@ -74,19 +42,18 @@ class KeyboardLayoutSolverTest {
     }
 
     @Test
-    fun `solveKeyDimensions multiplies orientation factor by heightFactor and scale`() {
+    fun `solveKeyDimensions multiplies orientation factor by the height scale`() {
         val result = KeyboardLayoutSolver.solveKeyDimensions(
             KeyDimensionsInput(
                 containerWidth = 1000,
                 keyMarginH = 0,
                 baseKeyHeight = 100f,
                 isLandscape = false,
-                heightFactor = KeyboardHeightFactor.EXTRA_TALL,
-                keyHeightScale = 1.2f,
+                keyHeightScale = 1.38f,
             ),
         )
 
-        // 1.0 * 1.15 * 1.2 = 1.38
+        // 1.0 * 1.38 = 1.38
         assertEquals(1.38f, result.keyHeightFactor, 1e-5f)
         assertEquals(138, result.desiredKeyHeight)
     }
@@ -99,8 +66,7 @@ class KeyboardLayoutSolverTest {
                 keyMarginH = 0,
                 baseKeyHeight = 7f,
                 isLandscape = false,
-                heightFactor = KeyboardHeightFactor.MID_SHORT,
-                keyHeightScale = 1.0f,
+                keyHeightScale = 0.95f,
             ),
         )
 
@@ -120,8 +86,7 @@ class KeyboardLayoutSolverTest {
                 keyMarginH = 0,
                 baseKeyHeight = 200.99f,
                 isLandscape = false,
-                heightFactor = KeyboardHeightFactor.EXTRA_TALL,
-                keyHeightScale = 1.0f,
+                keyHeightScale = 1.15f,
             ),
         )
 

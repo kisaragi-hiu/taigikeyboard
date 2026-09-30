@@ -7,6 +7,7 @@ import com.siansiansu.taigikeyboard.engine.userDataOpen
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionaryConstants
+import com.siansiansu.taigikeyboard.settings.LauncherIconController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -55,6 +56,9 @@ class TaigiKeyboardApplication : Application() {
         // per the 2026-04 Android state audit §A7 (keep Application.onCreate cheap).
         applicationScope.launch {
             prefs.migrateFromSharedPreferences()
+            if (!prefs.launcherAliasRestored && LauncherIconController.restoreManifestDefault(this@TaigiKeyboardApplication)) {
+                prefs.launcherAliasRestored = true
+            }
         }
         // Copy bundled assets to filesDir then install the Rust shared-core
         // lexicon engine. Idempotent.
