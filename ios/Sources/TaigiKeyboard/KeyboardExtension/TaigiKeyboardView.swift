@@ -173,6 +173,7 @@ struct TaigiKeyboardView: View {
         // Publish the display-language store; overlays read it via @Environment and live-switch.
         // Applying it after the overlays are mounted still propagates (same path as colorScheme above).
         .environment(displayLanguageStore)
+        .hidingScrollEdgeEffects()
         .onAppear {
             if let mode = initialInputMode {
                 currentInputMode = mode
@@ -498,5 +499,20 @@ struct TaigiKeyboardView: View {
             break
         }
         return style
+    }
+}
+
+private extension View {
+    /// Opts every SwiftUI `ScrollView` in the keyboard (candidate strip, expanded grid, toolbar
+    /// overlays) out of the iOS 26+ scroll edge effect. On iOS 27 the system applied its soft
+    /// blur to the top edge of the candidate strip and hid the Hanji line (#304); the keyboard
+    /// pins no bars over its scroll views, so the effect never has anything to separate.
+    @ViewBuilder
+    func hidingScrollEdgeEffects() -> some View {
+        if #available(iOS 26.0, *) {
+            scrollEdgeEffectHidden(true, for: .all)
+        } else {
+            self
+        }
     }
 }
