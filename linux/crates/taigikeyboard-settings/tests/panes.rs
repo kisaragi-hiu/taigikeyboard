@@ -14,6 +14,7 @@
 use adw::prelude::*;
 use std::process::ExitCode;
 use std::rc::Rc;
+use taigi_desktop_core::engine::user_data;
 use taigi_desktop_core::keys::{
     ComposingAction, ComposingKeyBindings, KeyModifiers, ShortcutAction,
 };
@@ -47,10 +48,14 @@ fn main() -> ExitCode {
 
     let directory = tempfile::tempdir().expect("a temp directory");
     let store = SettingsFileStore::new(directory.path());
-    let stores = taigi_desktop_storage::UserDataStores::new(directory.path().to_path_buf());
-    stores.open();
-    let window =
-        SettingsWindow::build(&application, SettingsWriter::new(store.clone()), Ok(stores));
+    // The engine's user data is process-wide, so this one directory serves
+    // every window below; the open seeds the custom dictionary, which the
+    // custom-dictionary check empties before it counts.
+    assert!(
+        user_data::open(directory.path()),
+        "the engine opens its stores"
+    );
+    let window = SettingsWindow::build(&application, SettingsWriter::new(store.clone()), None);
 
     every_built_pane_is_in_the_stack(&window);
     a_switch_row_writes_its_key(&window);
@@ -279,25 +284,15 @@ fn the_kautian_expander_switch_writes_its_key(window: &Rc<SettingsWindow>) {
     eprintln!("panes: kautian switch greys its subcollections");
 }
 
-/// trace: two rows upserted into the store; the page's reload runs off the
-/// UI thread and lands on the main context — pumped here until it does —
-/// and the list then shows both.
+/// trace: two rows saved through the engine; the page's reload runs off
+/// the UI thread and lands on the main context — pumped here until it does
+/// — and the list then shows both.
 fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>) {
-    let stores = window.stores().expect("stores");
-    stores.custom_dictionary.open_blocking();
-    stores
-        .custom_dictionary
-        .upsert(&taigi_desktop_storage::CustomDictionaryRow::new(
-            "tsia̍h-pn̄g",
-            "食飯",
-        ))
-        .expect("upsert");
-    stores
-        .custom_dictionary
-        .upsert(&taigi_desktop_storage::CustomDictionaryRow::new(
-            "lim-tê", "啉茶",
-        ))
-        .expect("upsert");
+    // The open seeded the dictionary (the two example words); the count
+    // below is of what this test saves.
+    user_data::delete_all_custom_entries().expect("empty the seeded dictionary");
+    user_data::save_custom_entry("", "tsia̍h-pn̄g", "食飯").expect("save");
+    user_data::save_custom_entry("", "lim-tê", "啉茶").expect("save");
     let document = window.writer().borrow().document().clone();
     let strings = window.writer().borrow().strings();
     let page = taigikeyboard_settings::pages::build(
@@ -305,7 +300,7 @@ fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>)
         window,
         &strings,
         &document,
-        Some(stores),
+        true,
         window.job_slot(),
     );
     let dictionary = page
@@ -334,12 +329,7 @@ fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>)
         "the selection is kept by id across a reload"
     );
     // Text that would be markup is shown as typed.
-    stores
-        .custom_dictionary
-        .upsert(&taigi_desktop_storage::CustomDictionaryRow::new(
-            "a-b", "A&B <b>",
-        ))
-        .expect("upsert");
+    user_data::save_custom_entry("", "a-b", "A&B <b>").expect("save");
     dictionary.reload();
     pump_until(|| dictionary.shown_row_count() == 3);
     assert!(find_all::<gtk::Label>(page.widget.upcast_ref())
@@ -350,7 +340,7 @@ fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>)
         window,
         &strings,
         &document,
-        Some(stores),
+        true,
         window.job_slot(),
     );
     assert!(find_first::<gtk::SearchEntry>(search.widget.upcast_ref()).is_some());
@@ -361,7 +351,7 @@ fn the_read_only_window_writes_nothing(application: &adw::Application) {
     let window = SettingsWindow::build(
         application,
         SettingsWriter::read_only("test".to_owned()),
-        Err("test".to_owned()),
+        Some("test".to_owned()),
     );
     assert!(window.writer().borrow().is_read_only());
     window.update(|document| document.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true));

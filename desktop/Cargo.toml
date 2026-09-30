@@ -35,8 +35,6 @@ publish = false
 # itself; the Windows / Linux shells enable `user-data` on their own `dispatch` edge.
 dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
-# The user-data stores, engine-owned (rust-migration-policy §6).
-userdata = { path = "../engine/userdata", default-features = false }
 prost = "0.14"
 log = "0.4"
 serde = { version = "1", features = ["derive"] }

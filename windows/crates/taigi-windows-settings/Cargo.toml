@@ -16,6 +16,10 @@ path = "src/main.rs"
 taigi-desktop-core.workspace = true
 taigi-desktop-storage.workspace = true
 taigi-desktop-update.workspace = true
+# The window's pages reach the user-data stores through the engine's ops
+# (`taigi_desktop_core::engine::user_data`): the same `dispatch` edge the DLL
+# has, with the stores compiled in.
+dispatch = { workspace = true, features = ["user-data"] }
 taigi-windows-platform.workspace = true
 taigi-windows-update.workspace = true
 rfd.workspace = true

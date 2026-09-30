@@ -5,10 +5,11 @@
 //! under it, CSV import / export, delete all, and the one destructive verb
 //! for the learning records.
 //!
-//! Every store call — the loads included — runs off the UI thread
-//! (`jobs::spawn`): the newest load wins by generation, and the writes
-//! share the page's one work slot (refused, not queued — a queued delete
-//! would name a row the list may no longer show).
+//! Every engine request — the loads included — runs off the UI thread
+//! (`jobs::spawn` over `taigi_desktop_core::engine::user_data`, the same
+//! ops the macOS page makes): the newest load wins by generation, and the
+//! writes share the page's one work slot (refused, not queued — a queued
+//! delete would name a row the list may no longer show).
 //!
 //! The table is the Mac's: two columns, romanization then Hanji, under a header,
 //! a double-click (or Enter) on a row edits it, the ✎ button over the
@@ -23,15 +24,12 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use std::sync::Arc;
 use std::time::Duration;
+use taigi_desktop_core::engine::user_data::{
+    self, CustomDictionaryEntry, CustomDictionaryRefusal, UserDataError,
+};
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-use taigi_desktop_storage::{
-    utc_timestamp_now, CustomDictionaryCSV, CustomDictionaryCSVError, CustomDictionaryRow,
-    CustomDictionaryStore, LearnedPhraseStore, UserAssociationStore, UserDataStores,
-    UserFrequencyStore,
-};
 
 /// `CustomDictionaryPageModel.pageSize`.
 const PAGE_SIZE: usize = 10;
@@ -67,14 +65,6 @@ impl Confirm {
     }
 }
 
-/// What a load hands back: the page it fetched, or why it could not.
-struct Loaded {
-    page: usize,
-    rows: Vec<CustomDictionaryRow>,
-    match_count: usize,
-    total_count: usize,
-}
-
 /// What a write hands back.
 struct JobOutcome {
     message: Option<PageMessage>,
@@ -84,7 +74,7 @@ struct JobOutcome {
 
 #[derive(Default)]
 struct State {
-    rows: Vec<CustomDictionaryRow>,
+    rows: Vec<CustomDictionaryEntry>,
     /// Every entry, for the section header — what the dictionary HOLDS.
     total_count: usize,
     /// How many entries the current filter matches; what the pager divides.
@@ -127,7 +117,7 @@ impl State {
         Self::page_count_for(self.match_count)
     }
 
-    fn selected_row(&self) -> Option<&CustomDictionaryRow> {
+    fn selected_row(&self) -> Option<&CustomDictionaryEntry> {
         let id = self.selected_id.as_deref()?;
         self.rows.iter().find(|row| row.id == id)
     }
@@ -177,10 +167,6 @@ struct Widgets {
 pub struct CustomDictionaryPage {
     shell: Shell,
     strings: StringResolver,
-    store: Arc<CustomDictionaryStore>,
-    frequency: Arc<UserFrequencyStore>,
-    association: Arc<UserAssociationStore>,
-    learned_phrases: Arc<LearnedPhraseStore>,
     job_slot: JobSlot,
     state: RefCell<State>,
     widgets: Widgets,
@@ -199,21 +185,17 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     page.add(&switches);
     // No user-data directory: the stores never opened, and the banner at
     // the top of the window says so — nothing to list, nothing to write.
-    let Some(stores) = context.stores else {
+    if !context.has_user_data {
         return context;
-    };
-    let dictionary = CustomDictionaryPage::new(&context, stores, page);
+    }
+    let dictionary = CustomDictionaryPage::new(&context, page);
     dictionary.load();
     context.retain(dictionary);
     context
 }
 
 impl CustomDictionaryPage {
-    fn new(
-        context: &PageContext<'_>,
-        stores: &UserDataStores,
-        page: &adw::PreferencesPage,
-    ) -> Rc<Self> {
+    fn new(context: &PageContext<'_>, page: &adw::PreferencesPage) -> Rc<Self> {
         let strings = *context.strings;
         // The entries: the filter, the list, the verbs and the pager.
         let entries = adw::PreferencesGroup::builder()
@@ -341,10 +323,6 @@ impl CustomDictionaryPage {
         let this = Rc::new(Self {
             shell: context.shell.clone(),
             strings,
-            store: Arc::clone(&stores.custom_dictionary),
-            frequency: Arc::clone(&stores.frequency),
-            association: Arc::clone(&stores.association),
-            learned_phrases: Arc::clone(&stores.learned_phrases),
             job_slot: context.job_slot.clone(),
             state: RefCell::new(State::default()),
             is_rendering: Cell::new(false),
@@ -421,7 +399,7 @@ impl CustomDictionaryPage {
         let weak = Rc::downgrade(self);
         add.connect_clicked(move |_| {
             if let Some(page) = weak.upgrade() {
-                page.entry_dialog(CustomDictionaryRow::new("", ""));
+                page.entry_dialog(CustomDictionaryEntry::default());
             }
         });
         let weak = Rc::downgrade(self);
@@ -438,12 +416,8 @@ impl CustomDictionaryPage {
             let Some(id) = page.state.borrow().selected_id.clone() else {
                 return;
             };
-            let store = Arc::clone(&page.store);
             page.write(move || {
-                store
-                    .delete(&id)
-                    .map(|_| ())
-                    .map_err(|error| error.to_string())
+                user_data::delete_custom_entry(&id).map_err(|error| error.to_string())
             });
         });
         let weak = Rc::downgrade(self);
@@ -544,25 +518,9 @@ impl CustomDictionaryPage {
                 state.page,
             )
         };
-        let store = Arc::clone(&self.store);
         let weak = Rc::downgrade(self);
         jobs::spawn(
-            move || {
-                let match_count = store.count_matching(&filter)?;
-                let page = wanted_page.min(State::page_count_for(match_count) - 1);
-                let rows = store.rows(&filter, PAGE_SIZE, page * PAGE_SIZE)?;
-                let total_count = if filter.is_empty() {
-                    match_count
-                } else {
-                    store.count()?
-                };
-                Ok::<_, taigi_desktop_storage::CustomDictionaryError>(Loaded {
-                    page,
-                    rows,
-                    match_count,
-                    total_count,
-                })
-            },
+            move || user_data::list_custom_page(&filter, wanted_page, PAGE_SIZE),
             move |outcome| {
                 let Some(page) = weak.upgrade() else { return };
                 if page.state.borrow().load_generation != generation {
@@ -668,7 +626,7 @@ impl CustomDictionaryPage {
     /// Add or edit one entry (`CustomDictionaryEntrySheet`): two entry rows
     /// in an alert dialog; Save only with a romanization, which is what the
     /// entry is found by.
-    fn entry_dialog(self: &Rc<Self>, original: CustomDictionaryRow) {
+    fn entry_dialog(self: &Rc<Self>, original: CustomDictionaryEntry) {
         let is_new = original.roman.is_empty();
         let strings = self.strings;
         let dialog = adw::AlertDialog::new(
@@ -721,14 +679,16 @@ impl CustomDictionaryPage {
             if roman.is_empty() {
                 return;
             }
-            // The ID is the original's: an edit is an edit, not a new
-            // entry that happens to replace one.
-            let mut row = original.clone();
-            row.roman = roman;
-            row.hanzi = hanzi_field.text().trim().to_owned();
-            row.updated_at = utc_timestamp_now();
-            let store = Arc::clone(&page.store);
-            page.write(move || store.upsert(&row).map_err(|error| error.to_string()));
+            // The ID is the original's (empty for an add — the engine mints
+            // one): an edit is an edit, not a new entry that happens to
+            // replace one.
+            let id = original.id.clone();
+            let hanzi = hanzi_field.text().trim().to_owned();
+            page.write(move || {
+                user_data::save_custom_entry(&id, &roman, &hanzi)
+                    .map(|_| ())
+                    .map_err(|error| error.to_string())
+            });
         });
         dialog.present(self.shell.window().as_ref());
     }
@@ -757,12 +717,8 @@ impl CustomDictionaryPage {
             let Some(page) = weak.upgrade() else { return };
             match confirm {
                 Confirm::DeleteAll => {
-                    let store = Arc::clone(&page.store);
-                    page.write(move || {
-                        store
-                            .delete_all()
-                            .map(|_| ())
-                            .map_err(|error| error.to_string())
+                    page.write(|| {
+                        user_data::delete_all_custom_entries().map_err(|error| error.to_string())
                     });
                 }
                 Confirm::ClearLearningRecords => page.clear_learning_records(),
@@ -771,31 +727,17 @@ impl CustomDictionaryPage {
         dialog.present(self.shell.window().as_ref());
     }
 
-    /// Deletes the three learning tables — three calls, three files, no
-    /// transaction that could span them; each is attempted even when an
-    /// earlier one fails, and the notice reports rather than claims.
+    /// Empties the three learning tables — three files, no transaction that
+    /// could span them; the engine attempts each even when an earlier one
+    /// fails, and the notice reports rather than claims.
     fn clear_learning_records(self: &Rc<Self>) {
-        let frequency = Arc::clone(&self.frequency);
-        let association = Arc::clone(&self.association);
-        let learned_phrases = Arc::clone(&self.learned_phrases);
         self.begin_job(move || {
-            let mut failures = Vec::new();
-            if let Err(error) = frequency.delete_all() {
-                failures.push(format!("user_frequency: {error}"));
-            }
-            if let Err(error) = association.delete_all() {
-                failures.push(format!("user_association: {error}"));
-            }
-            if let Err(error) = learned_phrases.delete_all() {
-                failures.push(format!("learned_phrases: {error}"));
-            }
-            let message = if failures.is_empty() {
-                PageMessage::Done(StringKey::DictionaryClearLearningRecordsDone)
-            } else {
-                PageMessage::Failure {
+            let message = match user_data::clear_learning_records() {
+                Ok(()) => PageMessage::Done(StringKey::DictionaryClearLearningRecordsDone),
+                Err(error) => PageMessage::Failure {
                     title: StringKey::DictionaryClearLearningRecordsFailed,
-                    detail: failures.join("\n"),
-                }
+                    detail: error.to_string(),
+                },
             };
             JobOutcome {
                 message: Some(message),
@@ -824,14 +766,10 @@ impl CustomDictionaryPage {
                     return;
                 };
                 // The WHOLE dictionary, not the page or the filter's matches.
-                let store = Arc::clone(&page.store);
                 page.begin_job(move || {
-                    let outcome = store
-                        .all_rows()
+                    let outcome = user_data::export_custom_csv()
                         .map_err(|error| error.to_string())
-                        .and_then(|rows| {
-                            write_atomically(&path, CustomDictionaryCSV::encode(&rows))
-                        });
+                        .and_then(|csv| write_atomically(&path, &csv));
                     JobOutcome {
                         message: outcome.err().map(|error| {
                             PageMessage::failure(StringKey::CommonExportFailed, error)
@@ -857,22 +795,17 @@ impl CustomDictionaryPage {
                 let Some(path) = page.chosen_path(result, StringKey::CommonImportFailed) else {
                     return;
                 };
-                let store = Arc::clone(&page.store);
                 page.begin_job(move || {
-                    let decoded =
-                        CustomDictionaryCSV::decode_file(&path, CustomDictionaryStore::MAX_ENTRIES);
-                    let message = match decoded {
-                        Err(CustomDictionaryCSVError::NotUtf8) => PageMessage::NotUtf8,
-                        Err(error) => PageMessage::failure(StringKey::CommonImportFailed, error),
-                        Ok(rows) => match store.batch_import(&rows) {
-                            Ok(result) => PageMessage::Imported {
-                                imported: result.imported,
-                                skipped: result.skipped,
-                            },
-                            Err(error) => {
-                                PageMessage::failure(StringKey::CommonImportFailed, error)
-                            }
+                    let message = match user_data::import_custom_csv_file(&path) {
+                        Ok(imported) => PageMessage::Imported {
+                            imported: imported.imported as usize,
+                            skipped: imported.skipped as usize,
                         },
+                        Err(UserDataError::Refused {
+                            refusal: CustomDictionaryRefusal::NotUtf8,
+                            ..
+                        }) => PageMessage::NotUtf8,
+                        Err(error) => PageMessage::failure(StringKey::CommonImportFailed, error),
                     };
                     JobOutcome {
                         message: Some(message),
@@ -1051,7 +984,7 @@ fn local_date() -> String {
 /// temporary file is created exclusively in the target's directory (no
 /// name to collide with, no symlink to follow) and removed with its handle
 /// if the write fails.
-fn write_atomically(path: &std::path::Path, contents: String) -> Result<(), String> {
+fn write_atomically(path: &std::path::Path, contents: &[u8]) -> Result<(), String> {
     use std::io::Write;
     let directory = path.parent().ok_or_else(|| "no directory".to_owned())?;
     let mut temporary = tempfile::Builder::new()
@@ -1060,7 +993,7 @@ fn write_atomically(path: &std::path::Path, contents: String) -> Result<(), Stri
         .tempfile_in(directory)
         .map_err(|error| error.to_string())?;
     temporary
-        .write_all(contents.as_bytes())
+        .write_all(contents)
         .map_err(|error| error.to_string())?;
     temporary
         .persist(path)
@@ -1100,7 +1033,11 @@ mod tests {
             Some(StringKey::DictionaryNoResults)
         );
         let mut listed = state(1, 1, "");
-        listed.rows.push(CustomDictionaryRow::new("tsia̍h", "食"));
+        listed.rows.push(CustomDictionaryEntry {
+            roman: "tsia̍h".to_owned(),
+            hanzi: "食".to_owned(),
+            ..CustomDictionaryEntry::default()
+        });
         assert_eq!(listed.empty_state_key(), None);
     }
 

@@ -1,17 +1,25 @@
 //! User-data slice of the engine bridge: the engine owns the four stores
 //! (`docs/architecture/user-data-engine-roadmap.md`), the desktop names the
-//! files and reports its picks. Answered only by a shell built with
-//! `dispatch/user-data` (roadmap U11); anywhere else the engine refuses and
-//! these answer `None`.
+//! files, reports its picks, and edits the custom dictionary through the
+//! same ops the other platforms' settings pages use. Answered only by a
+//! shell built with `dispatch/user-data` (roadmap U11); anywhere else the
+//! engine refuses and these answer `None` / `false` (`open`, `record_usage`)
+//! or `Err(UserDataError::EngineUnavailable)` (the page ops). Port of
+//! `RustEngineBridge+UserData.swift` / `UserDataClient.swift`.
 
 use std::path::Path;
 
 use protos::engine::{
-    request, response, user_data_request, user_data_response, OpenUserData, RecordUsage,
-    UserDataJournal, UserDataRequest,
+    request, response, user_data_request, user_data_response, DeleteCustomEntry, ExportCustomCsv,
+    ImportCustomCsv, ListCustomEntries, OpenUserData, RecordUsage, ResetUserData, SaveCustomEntry,
+    SearchCustomEntries, UserDataJournal, UserDataRequest,
+};
+pub use protos::engine::{
+    CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal, CustomEntries,
 };
 
 use super::bridge::{record_failure, roundtrip};
+use crate::settings::InputMode;
 
 /// Opens the engine's stores over `directory` — the desktop's one-directory
 /// layout, write-ahead logged (U3). Cheap enough for a key path: the engine
@@ -53,15 +61,324 @@ pub fn record_usage(display_text: &str, canonical_tl: &str, hanji: Option<&str>)
     );
 }
 
+// ---- The settings window's pages (roadmap P4; macOS `UserDataClient.swift`) ----
+
+/// Why a page's request did nothing. The description is the alert's
+/// diagnostic line, English on purpose (`PageMessage::failure`).
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum UserDataError {
+    /// The round-trip failed or the engine refused the request; the bridge
+    /// logged why (a store's own error is in the engine log, `user-data
+    /// store failed`).
+    #[error("the engine did not answer {0}")]
+    EngineUnavailable(&'static str),
+    /// Something the user can be told — a full dictionary, a file that is
+    /// not UTF-8 — in the engine's own words.
+    #[error("{detail}")]
+    Refused {
+        refusal: CustomDictionaryRefusal,
+        detail: String,
+    },
+    /// A reset that emptied some stores and not others, one line per store
+    /// that failed (`user_frequency: <error>`).
+    #[error("{}", .0.join("\n"))]
+    NotEmptied(Vec<String>),
+}
+
+/// One page of the custom dictionary, newest edit first: `filter` as a
+/// substring of the romanization or Hanji, `limit` rows from `offset`
+/// (pulled back to the last page that exists).
+pub fn list_custom_entries(
+    filter: &str,
+    limit: usize,
+    offset: usize,
+) -> Result<CustomEntries, UserDataError> {
+    let op = "customDictionaryList";
+    match page_request(
+        user_data_request::Method::ListCustomEntries(ListCustomEntries {
+            filter: filter.to_owned(),
+            limit: clamped(limit),
+            offset: clamped(offset),
+        }),
+        op,
+    )? {
+        user_data_response::Result::CustomEntries(entries) => Ok(entries),
+        _ => Err(other_result(op)),
+    }
+}
+
+/// The page of the custom dictionary a settings window shows: `page_size`
+/// rows from `page` (zero-based), pulled back to the last page that exists
+/// when the matches shrank under it (a delete on the last page), so the
+/// page asked for is the page shown.
+#[derive(Clone, Debug)]
+pub struct CustomDictionaryPage {
+    pub page: usize,
+    pub rows: Vec<CustomDictionaryEntry>,
+    /// How many entries `filter` matches — what the pager divides.
+    pub match_count: usize,
+    /// Every entry, whatever the filter — what the dictionary HOLDS.
+    pub total_count: usize,
+}
+
+/// One page as the settings windows page it (`CustomDictionaryPageModel`).
+pub fn list_custom_page(
+    filter: &str,
+    page: usize,
+    page_size: usize,
+) -> Result<CustomDictionaryPage, UserDataError> {
+    let listing = list_custom_entries(filter, page_size, page * page_size)?;
+    Ok(CustomDictionaryPage {
+        page: listing.offset as usize / page_size.max(1),
+        rows: listing.entries,
+        match_count: listing.matching_total as usize,
+        total_count: listing.total as usize,
+    })
+}
+
+/// Adds a word (`id` empty) or edits the one with `id`; answers the stored
+/// row. A refusal (empty romanization, no search key, a full dictionary)
+/// is `UserDataError::Refused`.
+pub fn save_custom_entry(
+    id: &str,
+    roman: &str,
+    hanzi: &str,
+) -> Result<CustomDictionaryEntry, UserDataError> {
+    let op = "customDictionarySave";
+    match page_request(
+        user_data_request::Method::SaveCustomEntry(SaveCustomEntry {
+            id: (!id.is_empty()).then(|| id.to_owned()),
+            roman: roman.to_owned(),
+            hanzi: hanzi.to_owned(),
+        }),
+        op,
+    )? {
+        user_data_response::Result::CustomEntrySaved(saved) => match saved.entry {
+            Some(entry) => Ok(entry),
+            None => Err(refused(saved.refusal, saved.detail)),
+        },
+        _ => Err(other_result(op)),
+    }
+}
+
+/// Removes the row with `id`; a row that was not there is not a failure.
+pub fn delete_custom_entry(id: &str) -> Result<(), UserDataError> {
+    let op = "customDictionaryDelete";
+    match page_request(
+        user_data_request::Method::DeleteCustomEntry(DeleteCustomEntry { id: id.to_owned() }),
+        op,
+    )? {
+        user_data_response::Result::CustomEntryDeleted(_) => Ok(()),
+        _ => Err(other_result(op)),
+    }
+}
+
+/// Empties the custom dictionary.
+pub fn delete_all_custom_entries() -> Result<(), UserDataError> {
+    reset(ResetUserData {
+        custom_dictionary: true,
+        ..ResetUserData::default()
+    })
+}
+
+/// Empties the three learning stores (frequency, association, learned
+/// phrases); the custom dictionary is left alone. Every store is
+/// attempted even when an earlier one fails, and the error names the ones
+/// that could not be emptied.
+pub fn clear_learning_records() -> Result<(), UserDataError> {
+    reset(ResetUserData {
+        frequency: true,
+        association: true,
+        learned_phrases: true,
+        ..ResetUserData::default()
+    })
+}
+
+fn reset(reset: ResetUserData) -> Result<(), UserDataError> {
+    let op = "userDataReset";
+    match page_request(user_data_request::Method::Reset(reset), op)? {
+        user_data_response::Result::Reset(reset) if reset.failures.is_empty() => Ok(()),
+        user_data_response::Result::Reset(reset) => Err(UserDataError::NotEmptied(reset.failures)),
+        _ => Err(other_result(op)),
+    }
+}
+
+/// Imports the `roman,hanzi` CSV file the user picked: refused before the
+/// read when it is too big to be a word list, read whole, then handed to
+/// the engine (which skips the rows already stored and stops at the cap).
+/// A file that cannot be read or holds no usable rows is
+/// `UserDataError::Refused`.
+pub fn import_custom_csv_file(path: &Path) -> Result<CustomCsvImported, UserDataError> {
+    let size = std::fs::metadata(path)
+        .map_err(|error| unreadable(&error))?
+        .len();
+    // Refused before the read, so an import never loads a stray gigabyte;
+    // the engine refuses the bytes again. `CustomDictionaryCSVError`'s words.
+    if size > dispatch::CUSTOM_CSV_MAX_FILE_BYTES {
+        return Err(refused(
+            CustomDictionaryRefusal::FileTooLarge as i32,
+            format!(
+                "file is larger than {} MB",
+                dispatch::CUSTOM_CSV_MAX_FILE_BYTES / (1024 * 1024)
+            ),
+        ));
+    }
+    let csv = std::fs::read(path).map_err(|error| unreadable(&error))?;
+    let op = "customDictionaryImportCSV";
+    match page_request(
+        user_data_request::Method::ImportCustomCsv(ImportCustomCsv { csv }),
+        op,
+    )? {
+        user_data_response::Result::CustomCsvImported(imported)
+            if imported.refusal == CustomDictionaryRefusal::None as i32 =>
+        {
+            Ok(imported)
+        }
+        user_data_response::Result::CustomCsvImported(imported) => {
+            Err(refused(imported.refusal, imported.detail))
+        }
+        _ => Err(other_result(op)),
+    }
+}
+
+/// The whole dictionary as `roman,hanzi` CSV bytes.
+pub fn export_custom_csv() -> Result<Vec<u8>, UserDataError> {
+    let op = "customDictionaryExportCSV";
+    match page_request(
+        user_data_request::Method::ExportCustomCsv(ExportCustomCsv {}),
+        op,
+    )? {
+        user_data_response::Result::CustomCsvExported(exported) => Ok(exported.csv),
+        _ => Err(other_result(op)),
+    }
+}
+
+/// The custom entries `query` finds the way the keyboard finds them: by
+/// the search key the query derives under `mode`, prefix-matched. Empty
+/// when the query derives no key.
+pub fn search_custom_entries(
+    query: &str,
+    mode: InputMode,
+    limit: usize,
+) -> Result<Vec<CustomDictionaryEntry>, UserDataError> {
+    let op = "customDictionarySearch";
+    match page_request(
+        user_data_request::Method::SearchCustomEntries(SearchCustomEntries {
+            query: query.to_owned(),
+            input_mode: mode.wire().to_owned(),
+            limit: clamped(limit),
+        }),
+        op,
+    )? {
+        user_data_response::Result::CustomEntryMatches(matches) => Ok(matches.entries),
+        _ => Err(other_result(op)),
+    }
+}
+
+fn page_request(
+    method: user_data_request::Method,
+    op: &'static str,
+) -> Result<user_data_response::Result, UserDataError> {
+    user_data(method, op).ok_or(UserDataError::EngineUnavailable(op))
+}
+
+fn other_result(op: &'static str) -> UserDataError {
+    record_failure(op, "response carried a different user-data result");
+    UserDataError::EngineUnavailable(op)
+}
+
+fn refused(refusal: i32, detail: String) -> UserDataError {
+    UserDataError::Refused {
+        refusal: CustomDictionaryRefusal::try_from(refusal)
+            .unwrap_or(CustomDictionaryRefusal::None),
+        detail,
+    }
+}
+
+/// `CustomDictionaryCSVError::Read`'s words, so the alert reads as before.
+fn unreadable(error: &std::io::Error) -> UserDataError {
+    refused(
+        CustomDictionaryRefusal::None as i32,
+        format!("could not read the file: {error}"),
+    )
+}
+
+fn clamped(count: usize) -> u32 {
+    u32::try_from(count).unwrap_or(u32::MAX)
+}
+
 fn user_data(method: user_data_request::Method, op: &str) -> Option<user_data_response::Result> {
     let payload = request::Payload::UserData(UserDataRequest {
         method: Some(method),
     });
     match roundtrip(payload, op, 0, None)? {
-        response::Payload::UserData(answer) => answer.result,
+        response::Payload::UserData(answer) => match answer.result {
+            Some(result) => Some(result),
+            None => {
+                record_failure(op, "response carried no user-data result");
+                None
+            }
+        },
         _ => {
             record_failure(op, "response carried no user-data payload");
             None
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// trace: the import refuses a missing file with the codec's own words
+    /// (`CustomDictionaryCSVError::Read`) before any engine round-trip.
+    #[test]
+    fn an_import_of_a_missing_file_is_refused_in_the_reader_words() {
+        let directory = tempfile::tempdir().unwrap();
+        let error = import_custom_csv_file(&directory.path().join("absent.csv")).unwrap_err();
+        match error {
+            UserDataError::Refused { refusal, detail } => {
+                assert_eq!(refusal, CustomDictionaryRefusal::None);
+                assert!(detail.starts_with("could not read the file: "), "{detail}");
+            }
+            other => panic!("expected a read refusal, got {other:?}"),
+        }
+    }
+
+    /// trace: a file over the limit is refused on its size, unread
+    /// (`FileTooLarge`), with the same text `decode_file` gave.
+    #[test]
+    fn an_import_over_the_size_limit_is_refused_before_the_read() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("huge.csv");
+        let file = std::fs::File::create(&path).unwrap();
+        file.set_len(dispatch::CUSTOM_CSV_MAX_FILE_BYTES + 1)
+            .unwrap();
+        let error = import_custom_csv_file(&path).unwrap_err();
+        assert_eq!(
+            error,
+            UserDataError::Refused {
+                refusal: CustomDictionaryRefusal::FileTooLarge,
+                detail: "file is larger than 5 MB".to_owned(),
+            }
+        );
+    }
+
+    /// trace: the error texts are the macOS `UserDataClientError`
+    /// descriptions.
+    #[test]
+    fn errors_read_as_the_alert_lines() {
+        assert_eq!(
+            UserDataError::EngineUnavailable("customDictionaryList").to_string(),
+            "the engine did not answer customDictionaryList"
+        );
+        assert_eq!(
+            UserDataError::NotEmptied(vec![
+                "user_frequency: x".into(),
+                "learned_phrases: y".into()
+            ])
+            .to_string(),
+            "user_frequency: x\nlearned_phrases: y"
+        );
     }
 }

@@ -21,7 +21,6 @@ use std::rc::{Rc, Weak};
 use taigi_desktop_core::keys::{ChordRejection, RecordedPress};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsDocument, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
-use taigi_desktop_storage::UserDataStores;
 use taigi_linux_platform::{snapshot, RawKeyEvent};
 
 /// `SettingsPaneLayout` in `SettingsSplitView.swift`: sidebar 215 + detail 545.
@@ -32,10 +31,9 @@ const INITIAL_HEIGHT: i32 = 560;
 pub struct SettingsWindow {
     window: adw::ApplicationWindow,
     writer: RefCell<SettingsWriter>,
-    /// Held open for the window's life: the Custom Dictionary and Dictionary Search pages
-    /// read it. `None` when the data directory could not be had — the
-    /// banner says so (`data_failure`).
-    stores: Option<UserDataStores>,
+    /// Why the engine's user-data stores were not opened (no data
+    /// directory); `None` when they were. The banner shows it, and the
+    /// pages over user data then build only their switch.
     data_failure: Option<String>,
     /// The user-data pages' one work slot, owned HERE so a page rebuild (a
     /// display language change) cannot free a slot a job still holds.
@@ -66,12 +64,8 @@ impl SettingsWindow {
     pub fn build(
         application: &adw::Application,
         writer: SettingsWriter,
-        stores: Result<UserDataStores, String>,
+        data_failure: Option<String>,
     ) -> Rc<Self> {
-        let (stores, data_failure) = match stores {
-            Ok(stores) => (Some(stores), None),
-            Err(detail) => (None, Some(detail)),
-        };
         let sidebar = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::Single)
             .css_classes(["navigation-sidebar"])
@@ -122,7 +116,6 @@ impl SettingsWindow {
         let shell = Rc::new(Self {
             window,
             writer: RefCell::new(writer),
-            stores,
             data_failure,
             job_slot: JobSlot::default(),
             toasts,
@@ -168,10 +161,6 @@ impl SettingsWindow {
 
     pub fn writer(&self) -> &RefCell<SettingsWriter> {
         &self.writer
-    }
-
-    pub fn stores(&self) -> Option<&UserDataStores> {
-        self.stores.as_ref()
     }
 
     pub fn job_slot(&self) -> &JobSlot {
@@ -420,7 +409,7 @@ impl SettingsWindow {
                 self,
                 &strings,
                 &document,
-                self.stores.as_ref(),
+                self.data_failure.is_none(),
                 &self.job_slot,
             );
             self.stack.add_named(&page.widget, Some(pane.raw()));

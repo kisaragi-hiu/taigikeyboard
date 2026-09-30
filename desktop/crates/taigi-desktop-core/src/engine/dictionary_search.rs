@@ -1,18 +1,17 @@
 //! The Dictionary Search page's lookup: the custom dictionary first, then the
 //! engine's dictionaries under the user's source toggles, in the page's
-//! order. Port of `DictionarySearchService.swift`.
+//! order. One lookup for the Windows and Linux settings windows. Port of
+//! `DictionarySearchService.swift`.
 
-use std::sync::Arc;
-use taigi_desktop_core::engine::{
-    chhoe_url, derive_custom_query_key, dictionary_filters, is_hanzi, moe_url, search_by_hanzi,
-    search_with_sources, tl_to_poj, DictionarySource, LexiconRow,
-    ALL_SOURCES_ENABLED_SEARCH_BITMASK,
+use super::user_data::search_custom_entries;
+use super::{
+    chhoe_url, dictionary_filters, is_hanzi, moe_url, search_by_hanzi, search_with_sources,
+    tl_to_poj, DictionarySource, LexiconRow, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
 };
-use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument};
-use taigi_desktop_storage::CustomDictionaryStore;
+use crate::settings::{keys, InputMode, SettingsDocument};
 
 /// `DictionarySearchService.resultLimit`.
-pub const RESULT_LIMIT: u32 = 20;
+const RESULT_LIMIT: u32 = 20;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ResultId {
@@ -53,11 +52,7 @@ impl DictionarySearchResult {
 
 /// Every hit for `query`: custom entries (never for a hanji query), then
 /// the system rows sorted the page's way.
-pub fn search(
-    query: &str,
-    settings: &SettingsDocument,
-    custom_dictionary: &Arc<CustomDictionaryStore>,
-) -> Vec<DictionarySearchResult> {
+pub fn search(query: &str, settings: &SettingsDocument) -> Vec<DictionarySearchResult> {
     if query.is_empty() {
         return Vec::new();
     }
@@ -95,7 +90,7 @@ pub fn search(
     let mut results = if is_hanzi_query {
         Vec::new()
     } else {
-        custom_results(query, settings, mode, custom_dictionary)
+        custom_results(query, settings, mode)
     };
     results.extend(system);
     results
@@ -108,26 +103,25 @@ fn display_roman(tl: &str, mode: InputMode) -> String {
     }
 }
 
+/// The custom entries the query finds the way the keyboard does (the
+/// engine derives the key and prefix-matches it); none when the custom
+/// dictionary is off or the engine could not answer.
 fn custom_results(
     query: &str,
     settings: &SettingsDocument,
     mode: InputMode,
-    custom_dictionary: &Arc<CustomDictionaryStore>,
 ) -> Vec<DictionarySearchResult> {
     if !settings.bool(&keys::IS_CUSTOM_DICT_ENABLED) {
         return Vec::new();
     }
-    let Some(query_key) = derive_custom_query_key(query, mode) else {
-        return Vec::new();
-    };
-    custom_dictionary
-        .rows_matching(&query_key, RESULT_LIMIT as usize)
+    search_custom_entries(query, mode, RESULT_LIMIT as usize)
+        .unwrap_or_default()
         .into_iter()
-        .map(|row| DictionarySearchResult {
-            id: ResultId::Custom(row.id),
-            roman: row.roman,
+        .map(|entry| DictionarySearchResult {
+            id: ResultId::Custom(entry.id),
+            roman: entry.roman,
             lookup_tl: None,
-            hanzi: (!row.hanzi.is_empty()).then_some(row.hanzi),
+            hanzi: (!entry.hanzi.is_empty()).then_some(entry.hanzi),
             sources: vec![DictionarySource::Custom],
         })
         .collect()

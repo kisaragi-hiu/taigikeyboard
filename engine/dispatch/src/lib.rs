@@ -26,6 +26,12 @@ pub mod trace;
 #[cfg(feature = "user-data")]
 mod user_data;
 
+/// The biggest `roman,hanzi` CSV file a custom-dictionary import accepts
+/// (`ImportCustomCsv`). Exported so a platform can refuse the file before
+/// reading it, as the engine refuses the bytes; `user_data.rs` asserts it
+/// equals the `userdata` crate's own limit.
+pub const CUSTOM_CSV_MAX_FILE_BYTES: u64 = 5 * 1024 * 1024;
+
 /// Maximum accepted size of an FFI request byte buffer. Phonetics inputs
 /// from the IME are kilobytes at worst; 2 MB is generous slack for proto
 /// envelope overhead. Single source of truth — `swift-ffi` and

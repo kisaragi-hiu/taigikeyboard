@@ -3,10 +3,9 @@
 //! each desktop platform hands in (`%APPDATA%\TaigiKeyboard` on Windows, the
 //! XDG config / data directories on Linux).
 //!
-//! The learning databases and the custom dictionary moved to the engine
-//! `userdata` crate (`docs/architecture/user-data-engine-roadmap.md` P1); they
-//! are re-exported here so the Windows and Linux shells keep their imports
-//! until the desktop switch (P5).
+//! The learning databases and the custom dictionary are the engine's
+//! (`engine/userdata`, `docs/architecture/user-data-engine-roadmap.md`); the
+//! desktops reach them through `taigi_desktop_core::engine::user_data`.
 //!
 //! Host-testable: nothing here touches a Windows API, so the tests run on
 //! the Mac against temporary directories. Only `directory::user_data_directory`
@@ -22,10 +21,3 @@ pub use font_library::{
     ALLOWED_EXTENSIONS, FONTS_FOLDER_NAME, MAX_FILE_SIZE,
 };
 pub use settings_file::{LiveSettings, SettingsFileError, SettingsFileStore};
-pub use userdata::{
-    immediate_transaction, utc_timestamp_now, AssociationRow, CustomDictionaryCSV,
-    CustomDictionaryCSVError, CustomDictionaryError, CustomDictionaryIdentity,
-    CustomDictionaryImportResult, CustomDictionaryRow, CustomDictionaryStore, LearnedPhraseRow,
-    LearnedPhraseStore, LearningCapacity, SearchKeyDeriver, UserAssociationStore, UserDataCSV,
-    UserDataDatabase, UserDataDatabaseError, UserDataStores, UserFrequencyStore,
-};

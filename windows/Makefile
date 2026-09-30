@@ -16,8 +16,8 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 .PHONY: help i18n-check test check-gnu check-msvc check-dll check-box check fmt lint build install uninstall reload release clean
 
 # Crates with no C dependency: these are the ones the MSVC target can be
-# checked for from macOS. A crate that pulls in C (the storage crate's bundled
-# rusqlite, and so the settings exe over it) is gnu-only here — see
+# checked for from macOS. A crate that pulls in C (the engine's bundled
+# rusqlite behind `dispatch/user-data`, and so the settings exe) is gnu-only here — see
 # rust-toolchain.toml. The TSF crate links the
 # `windows` bindings, which do not build for a macOS host at all: its unit
 # tests are type-checked by `check-gnu` (`--all-targets`) and RUN only on a

@@ -5,10 +5,11 @@
 //! trio, the pager under it, CSV import/export, delete all, and the one
 //! destructive verb for the learning records.
 //!
-//! Every store call — the loads included — runs off the UI thread: the
-//! newest load wins by generation, and the writes share the page's one
-//! work slot (refused, not queued — a queued delete would name a row the
-//! list may no longer show).
+//! Every engine request — the loads included — runs off the UI thread
+//! (`taigi_desktop_core::engine::user_data`, the same ops the macOS page
+//! makes): the newest load wins by generation, and the writes share the
+//! page's one work slot (refused, not queued — a queued delete would name
+//! a row the list may no longer show).
 //!
 //! Named divergences: the Mac's double-click-to-edit and right-click menu
 //! become an explicit ✎ button over the selection (Reactor's `ListView`
@@ -24,14 +25,12 @@ use crate::winui::list_pager::{self, icon_button};
 use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
+use taigi_desktop_core::engine::user_data::{
+    self, CustomDictionaryEntry, CustomDictionaryPage, CustomDictionaryRefusal, UserDataError,
+};
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-use taigi_desktop_storage::{
-    utc_timestamp_now, CustomDictionaryCSV, CustomDictionaryCSVError, CustomDictionaryRow,
-    CustomDictionaryStore, UserDataStores,
-};
 use windows_reactor::*;
 
 /// `CustomDictionaryPageModel.pageSize`.
@@ -132,12 +131,7 @@ pub enum Message {
 /// What a load hands back: the page it fetched, or why it could not.
 #[derive(Clone)]
 pub enum LoadOutcome {
-    Loaded {
-        page: usize,
-        rows: Vec<CustomDictionaryRow>,
-        match_count: usize,
-        total_count: usize,
-    },
+    Loaded(CustomDictionaryPage),
     Failed(String),
 }
 
@@ -151,14 +145,14 @@ pub struct JobOutcome {
 
 /// The row being added or edited in the dialog.
 struct EditingRow {
-    original: CustomDictionaryRow,
+    original: CustomDictionaryEntry,
     roman: String,
     hanzi: String,
 }
 
 #[derive(Default)]
 pub struct CustomDictionaryModel {
-    rows: Vec<CustomDictionaryRow>,
+    rows: Vec<CustomDictionaryEntry>,
     /// Every entry, for the section header — what the dictionary HOLDS,
     /// which is not what the current filter matches.
     total_count: usize,
@@ -195,19 +189,15 @@ pub struct CustomDictionaryModel {
 }
 
 impl CustomDictionaryModel {
-    fn page_count_for(match_count: usize) -> usize {
-        list_pager::page_count(match_count, PAGE_SIZE)
-    }
-
     fn page_count(&self) -> usize {
-        Self::page_count_for(self.match_count)
+        list_pager::page_count(self.match_count, PAGE_SIZE)
     }
 
     fn is_working(&self) -> bool {
         self.job_generation.is_some()
     }
 
-    fn selected_row(&self) -> Option<&CustomDictionaryRow> {
+    fn selected_row(&self) -> Option<&CustomDictionaryEntry> {
         let id = self.selected_id.as_deref()?;
         self.rows.iter().find(|row| row.id == id)
     }
@@ -232,36 +222,25 @@ impl CustomDictionaryModel {
     }
 }
 
-/// What the page needs from the window to run a job. Disjoint fields, so
-/// the page can write settings and raise an alert while it owns its model.
-pub struct PageEnvironment<'a> {
-    pub stores: &'a UserDataStores,
-    pub message: &'a mut Option<PageMessage>,
-}
-
 /// Starts the first load, once, when the page is first shown.
 pub fn ensure_loaded(
     model: &mut CustomDictionaryModel,
-    stores: &UserDataStores,
     context: &ComponentContext<SettingsWindow>,
 ) {
     if model.is_first_load_requested {
         return;
     }
     model.is_first_load_requested = true;
-    load(model, stores, context);
+    load(model, context);
 }
 
+/// `alert` is the window's one notice: what a finished job has to say.
 pub fn update(
     model: &mut CustomDictionaryModel,
     message: Message,
-    environment: PageEnvironment<'_>,
+    alert: &mut Option<PageMessage>,
     context: &ComponentContext<SettingsWindow>,
 ) {
-    let PageEnvironment {
-        stores,
-        message: alert,
-    } = environment;
     match message {
         Message::FilterChanged(filter) => {
             if filter == model.filter {
@@ -289,27 +268,22 @@ pub fn update(
                 return;
             }
             model.page = 0;
-            load(model, stores, context);
+            load(model, context);
         }
         Message::ShowPage(page) => {
             model.page = page;
-            load(model, stores, context);
+            load(model, context);
         }
         Message::Loaded(generation, outcome) => {
             if generation != model.load_generation {
                 return;
             }
             match *outcome {
-                LoadOutcome::Loaded {
-                    page,
-                    rows,
-                    match_count,
-                    total_count,
-                } => {
-                    model.page = page;
-                    model.rows = rows;
-                    model.match_count = match_count;
-                    model.total_count = total_count;
+                LoadOutcome::Loaded(loaded) => {
+                    model.page = loaded.page;
+                    model.rows = loaded.rows;
+                    model.match_count = loaded.match_count;
+                    model.total_count = loaded.total_count;
                     // A selection the new page does not hold is no
                     // selection: the ✎ and − buttons must not act on a row
                     // that is not on screen.
@@ -343,7 +317,7 @@ pub fn update(
         }
         Message::Add => {
             model.editing = Some(EditingRow {
-                original: CustomDictionaryRow::new("", ""),
+                original: CustomDictionaryEntry::default(),
                 roman: String::new(),
                 hanzi: String::new(),
             });
@@ -361,17 +335,11 @@ pub fn update(
             let Some(id) = model.selected_id.clone() else {
                 return;
             };
-            let store = Arc::clone(&stores.custom_dictionary);
             write(
                 model,
                 context,
                 StringKey::DesktopProgressWorking,
-                move || {
-                    store
-                        .delete(&id)
-                        .map(|_| ())
-                        .map_err(|error| error.to_string())
-                },
+                move || user_data::delete_custom_entry(&id).map_err(|error| error.to_string()),
             );
         }
         Message::EntryFieldChanged(field, text) => {
@@ -395,22 +363,25 @@ pub fn update(
             if editing.roman.trim().is_empty() {
                 return;
             }
-            // The ID is the original's: an edit is an edit, not a new
-            // entry that happens to replace one.
-            let mut row = editing.original;
-            row.roman = editing.roman.trim().to_owned();
-            row.hanzi = editing.hanzi.trim().to_owned();
-            row.updated_at = utc_timestamp_now();
-            let store = Arc::clone(&stores.custom_dictionary);
+            // The ID is the original's (empty for an add — the engine mints
+            // one): an edit is an edit, not a new entry that happens to
+            // replace one.
+            let id = editing.original.id;
+            let roman = editing.roman.trim().to_owned();
+            let hanzi = editing.hanzi.trim().to_owned();
             write(
                 model,
                 context,
                 StringKey::DesktopProgressWorking,
-                move || store.upsert(&row).map_err(|error| error.to_string()),
+                move || {
+                    user_data::save_custom_entry(&id, &roman, &hanzi)
+                        .map(|_| ())
+                        .map_err(|error| error.to_string())
+                },
             );
         }
-        Message::Export => export(model, stores, context),
-        Message::Import => import(model, stores, context),
+        Message::Export => export(model, context),
+        Message::Import => import(model, context),
         Message::Ask(confirm) => model.confirming = Some(confirm),
         Message::ConfirmClosed(result) => {
             let confirmed = model.confirming.take().filter(|_| {
@@ -419,32 +390,15 @@ pub fn update(
                 result == ContentDialogResult::Primary
             });
             if let Some(confirm) = confirmed {
-                update(
-                    model,
-                    confirm.message(),
-                    PageEnvironment {
-                        stores,
-                        message: alert,
-                    },
-                    context,
-                );
+                update(model, confirm.message(), alert, context);
             }
         }
         Message::DeleteAll => {
-            let store = Arc::clone(&stores.custom_dictionary);
-            write(
-                model,
-                context,
-                StringKey::DesktopProgressWorking,
-                move || {
-                    store
-                        .delete_all()
-                        .map(|_| ())
-                        .map_err(|error| error.to_string())
-                },
-            );
+            write(model, context, StringKey::DesktopProgressWorking, || {
+                user_data::delete_all_custom_entries().map_err(|error| error.to_string())
+            });
         }
-        Message::ClearLearningRecords => clear_learning_records(model, stores, context),
+        Message::ClearLearningRecords => clear_learning_records(model, context),
         Message::JobFinished(generation, outcome) => {
             if model.job_generation != Some(generation) {
                 return;
@@ -460,7 +414,7 @@ pub fn update(
                 *alert = message;
             }
             if is_reload_wanted {
-                load(model, stores, context);
+                load(model, context);
             }
         }
         Message::ShowBusy(generation) => {
@@ -476,34 +430,16 @@ pub fn update(
 /// the list shrank under it — a delete on the last page, or a filter that
 /// now matches less. A load has no overlay: the rows already on screen
 /// stay put while it runs.
-fn load(
-    model: &mut CustomDictionaryModel,
-    stores: &UserDataStores,
-    context: &ComponentContext<SettingsWindow>,
-) {
+fn load(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWindow>) {
     model.load_generation = model.load_generation.wrapping_add(1);
     let generation = model.load_generation;
     let filter = model.filter.trim().to_owned();
     let wanted_page = model.page;
-    let store = Arc::clone(&stores.custom_dictionary);
     _ = context.spawn_background_with_rejection(
         move |_| {
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                let match_count = store.count_matching(&filter)?;
-                let page = wanted_page.min(CustomDictionaryModel::page_count_for(match_count) - 1);
-                let rows = store.rows(&filter, PAGE_SIZE, page * PAGE_SIZE)?;
-                // With no filter the two counts ask the same question.
-                let total_count = if filter.is_empty() {
-                    match_count
-                } else {
-                    store.count()?
-                };
-                Ok::<_, taigi_desktop_storage::CustomDictionaryError>(LoadOutcome::Loaded {
-                    page,
-                    rows,
-                    match_count,
-                    total_count,
-                })
+                user_data::list_custom_page(&filter, wanted_page, PAGE_SIZE)
+                    .map(LoadOutcome::Loaded)
             }));
             let outcome = match outcome {
                 Ok(Ok(loaded)) => loaded,
@@ -587,11 +523,7 @@ fn write(
     });
 }
 
-fn export(
-    model: &mut CustomDictionaryModel,
-    stores: &UserDataStores,
-    context: &ComponentContext<SettingsWindow>,
-) {
+fn export(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWindow>) {
     if model.is_working() {
         return;
     }
@@ -603,16 +535,14 @@ fn export(
         return;
     };
     // The WHOLE dictionary, not the page or the filter's matches.
-    let store = Arc::clone(&stores.custom_dictionary);
     begin_job(
         model,
         context,
         StringKey::DesktopProgressWorking,
         move || {
-            let outcome = store
-                .all_rows()
+            let outcome = user_data::export_custom_csv()
                 .map_err(|error| error.to_string())
-                .and_then(|rows| write_atomically(&path, CustomDictionaryCSV::encode(&rows)));
+                .and_then(|csv| write_atomically(&path, &csv));
             JobOutcome {
                 message: outcome
                     .err()
@@ -623,35 +553,28 @@ fn export(
     );
 }
 
-fn import(
-    model: &mut CustomDictionaryModel,
-    stores: &UserDataStores,
-    context: &ComponentContext<SettingsWindow>,
-) {
+fn import(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWindow>) {
     if model.is_working() {
         return;
     }
     let Some(path) = crate::winui::file_dialog::open() else {
         return;
     };
-    let store = Arc::clone(&stores.custom_dictionary);
     begin_job(
         model,
         context,
         StringKey::DesktopProgressWorking,
         move || {
-            let decoded =
-                CustomDictionaryCSV::decode_file(&path, CustomDictionaryStore::MAX_ENTRIES);
-            let message = match decoded {
-                Err(CustomDictionaryCSVError::NotUtf8) => PageMessage::NotUtf8,
-                Err(error) => PageMessage::failure(StringKey::CommonImportFailed, error),
-                Ok(rows) => match store.batch_import(&rows) {
-                    Ok(result) => PageMessage::Imported {
-                        imported: result.imported,
-                        skipped: result.skipped,
-                    },
-                    Err(error) => PageMessage::failure(StringKey::CommonImportFailed, error),
+            let message = match user_data::import_custom_csv_file(&path) {
+                Ok(imported) => PageMessage::Imported {
+                    imported: imported.imported as usize,
+                    skipped: imported.skipped as usize,
                 },
+                Err(UserDataError::Refused {
+                    refusal: CustomDictionaryRefusal::NotUtf8,
+                    ..
+                }) => PageMessage::NotUtf8,
+                Err(error) => PageMessage::failure(StringKey::CommonImportFailed, error),
             };
             JobOutcome {
                 message: Some(message),
@@ -661,39 +584,24 @@ fn import(
     );
 }
 
-/// Deletes the three learning tables — three calls, three files, no
-/// transaction that could span them; each is attempted even when an
-/// earlier one fails, and the alert reports rather than claims.
+/// Empties the three learning tables — three files, no transaction that
+/// could span them; the engine attempts each even when an earlier one
+/// fails, and the alert reports rather than claims.
 fn clear_learning_records(
     model: &mut CustomDictionaryModel,
-    stores: &UserDataStores,
     context: &ComponentContext<SettingsWindow>,
 ) {
-    let frequency = Arc::clone(&stores.frequency);
-    let association = Arc::clone(&stores.association);
-    let learned_phrases = Arc::clone(&stores.learned_phrases);
     begin_job(
         model,
         context,
         StringKey::DesktopProgressWorking,
         move || {
-            let mut failures = Vec::new();
-            if let Err(error) = frequency.delete_all() {
-                failures.push(format!("user_frequency: {error}"));
-            }
-            if let Err(error) = association.delete_all() {
-                failures.push(format!("user_association: {error}"));
-            }
-            if let Err(error) = learned_phrases.delete_all() {
-                failures.push(format!("learned_phrases: {error}"));
-            }
-            let message = if failures.is_empty() {
-                PageMessage::Done(StringKey::DictionaryClearLearningRecordsDone)
-            } else {
-                PageMessage::Failure {
+            let message = match user_data::clear_learning_records() {
+                Ok(()) => PageMessage::Done(StringKey::DictionaryClearLearningRecordsDone),
+                Err(error) => PageMessage::Failure {
                     title: StringKey::DictionaryClearLearningRecordsFailed,
-                    detail: failures.join("\n"),
-                }
+                    detail: error.to_string(),
+                },
             };
             JobOutcome {
                 message: Some(message),
@@ -706,7 +614,7 @@ fn clear_learning_records(
 
 /// `Data.write(to:options:.atomic)`: the file appears whole or not at all,
 /// and a failed export never damages the one it would have replaced.
-fn write_atomically(path: &PathBuf, contents: String) -> Result<(), String> {
+fn write_atomically(path: &PathBuf, contents: &[u8]) -> Result<(), String> {
     let temporary = path.with_extension(format!("csv.{}.tmp", std::process::id()));
     std::fs::write(&temporary, contents).map_err(|error| error.to_string())?;
     std::fs::rename(&temporary, path).map_err(|error| {
@@ -1114,7 +1022,11 @@ mod tests {
             Some(StringKey::DictionaryNoResults)
         );
         let mut listed = model(1, 1, "");
-        listed.rows.push(CustomDictionaryRow::new("tsia̍h", "食"));
+        listed.rows.push(CustomDictionaryEntry {
+            roman: "tsia̍h".to_owned(),
+            hanzi: "食".to_owned(),
+            ..CustomDictionaryEntry::default()
+        });
         assert_eq!(empty_state_key(&listed), None, "rows say it themselves");
     }
 

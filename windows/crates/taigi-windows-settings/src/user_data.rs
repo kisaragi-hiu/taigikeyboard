@@ -1,29 +1,23 @@
-//! Opening the three user-data stores at launch, and the migrations that
-//! go with it. Both windows call this — the egui one today, the WinUI one
-//! from roadmap W17 — so the launch-time side effects are one list, not
-//! one per toolkit.
+//! Opening the engine's user-data stores at launch (once, from
+//! `winui::window::run`).
 
 use std::path::PathBuf;
-use std::sync::Arc;
-use taigi_desktop_storage::UserDataStores;
+use taigi_desktop_core::engine::user_data;
 
-/// The stores, opened unless the window is read-only (no `%APPDATA%`: it
-/// shows the defaults and writes nothing, so it opens nothing either).
+/// Opens the stores for this process unless the window is read-only (no
+/// `%APPDATA%`: it shows the defaults and writes nothing, so it opens
+/// nothing either).
 ///
 /// What the DLL does on its first consumed key is done here too: a fresh
 /// install whose first visitor is this window still gets its seeds, and an
-/// older dictionary its re-derived keys. Both run off the launch path so a
-/// large dictionary cannot hold the window closed.
-pub fn open_at_launch(directory: PathBuf, is_read_only: bool) -> UserDataStores {
-    let stores = UserDataStores::new(directory);
+/// older dictionary its re-derived keys. The engine finishes that on a
+/// thread of its own, so a large dictionary cannot hold the window closed;
+/// a page's first request waits for it.
+pub fn open_at_launch(directory: PathBuf, is_read_only: bool) {
     if is_read_only {
-        return stores;
+        return;
     }
-    stores.open();
-    let custom_dictionary = Arc::clone(&stores.custom_dictionary);
-    std::thread::Builder::new()
-        .name("taigi-custom-dictionary-launch".into())
-        .spawn(move || custom_dictionary.finish_takeover())
-        .ok();
-    stores
+    // A refused open is logged by the bridge; the pages say so on their
+    // first request.
+    user_data::open(&directory);
 }
