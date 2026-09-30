@@ -22,8 +22,7 @@
 
 use composing::dispatch::{build_continuous_keys_with_inventory, build_keys_tl_with_inventory};
 
-mod common;
-use common::build_inventory;
+use crate::common::build_inventory;
 
 fn mapped(keys: &[((u32, u32), String)]) -> Vec<((u32, u32), &str)> {
     keys.iter().map(|(s, k)| (*s, k.as_str())).collect()

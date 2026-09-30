@@ -33,8 +33,7 @@ use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::search::{self, SearchInputMode, SearchParams};
 
-mod common;
-use common::{build_tkdb_v3, write_temp};
+use crate::common::{build_tkdb_v3, write_temp};
 
 const SEPARATOR: u8 = 0xFF;
 

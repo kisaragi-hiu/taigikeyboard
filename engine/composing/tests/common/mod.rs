@@ -1,10 +1,11 @@
 //! Shared helpers for composing integration tests.
 //!
-//! Cargo compiles each `tests/*.rs` as a separate crate, so a `tests/common/`
-//! module declared via `mod common;` from each test file is the standard way
-//! to share helpers without leaking them into the production crate (same
-//! pattern as `engine/lexicon/tests/common/mod.rs`, which is test-private to
-//! `lexicon` and therefore not importable from here).
+//! Each test binary root (`tests/it.rs`, `tests/prod.rs`,
+//! `tests/no_lexicon.rs`, see `Cargo.toml`) declares `mod common;` once and
+//! its test-file modules reach the helpers as `crate::common` — the helpers
+//! never leak into the production crate (same pattern as
+//! `engine/lexicon/tests/common/mod.rs`, which is test-private to `lexicon`
+//! and therefore not importable from here).
 //!
 //! Only helper *definitions* live here — hermetic fixture serializers
 //! (TKDB v3 / `dictionary.fst` / `syllables.fst` / `association.bin`), the
@@ -37,9 +38,10 @@ const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
 const TKDB_HEADER_SIZE: usize = 16;
 
 /// Serializes `LexiconHandle::install` vs. assertion within ONE test binary.
-/// Each `tests/*.rs` is its own process with its own `lexicon::EngineHandle`
-/// singleton, so the lock only guards cargo's in-binary `#[test]`
-/// parallelism from swapping the singleton mid-assertion.
+/// Each binary is its own process with its own `lexicon::EngineHandle`
+/// singleton, shared by every test-file module in it, so every test that
+/// installs a fixture holds this lock from install through its last
+/// assertion — cargo runs the binary's `#[test]`s in parallel.
 pub fn engine_install_lock() -> MutexGuard<'static, ()> {
     static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
     LOCK.get_or_init(|| Mutex::new(()))
@@ -60,23 +62,30 @@ pub struct Row {
     pub freq: u32,
 }
 
-/// Per-process temp namespace (pid) so a concurrent invocation of the same
-/// test binary cannot truncate/rewrite another's fixture files mid
-/// install/read.
+/// Per-process temp sequence number shared by [`write_temp`] and
+/// [`unique_temp_path`].
+fn next_temp_id() -> u64 {
+    use std::sync::atomic::{AtomicU64, Ordering};
+    static COUNTER: AtomicU64 = AtomicU64::new(0);
+    COUNTER.fetch_add(1, Ordering::Relaxed)
+}
+
+/// Fresh temp file per call (pid + counter): a concurrent invocation of the
+/// same test binary, or a later test in this one, never truncates or
+/// rewrites a fixture file another test still has installed (mmapped).
 pub fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
     let pid = std::process::id();
-    let path = std::env::temp_dir().join(format!("composing-test-{pid}-{name}"));
+    let n = next_temp_id();
+    let path = std::env::temp_dir().join(format!("composing-test-{pid}-{n}-{name}"));
     std::fs::write(&path, bytes).expect("write temp fixture");
     path
 }
 
 /// Unique `.fst` temp path for the `SyllableInventory` builders: pid plus a
-/// per-process atomic counter so parallel tests in one binary never collide.
+/// per-process counter so parallel tests in one binary never collide.
 pub fn unique_temp_path() -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
     let pid = std::process::id();
+    let n = next_temp_id();
     std::env::temp_dir().join(format!("composing-test-{pid}-{n}.fst"))
 }
 

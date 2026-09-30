@@ -2,9 +2,7 @@
 //! directories. Ported from `macos/Tests/TaigiInputMethodCoreTests/
 //! {LearningStore,LearningCapacity,CustomDictionaryStore}Tests.swift`.
 
-mod common;
-
-use common::{pair, paths, scratch};
+use crate::common::{pair, paths, scratch};
 use phonetics::api::{derive_custom_query_key, CustomSearchKey};
 use std::sync::{Arc, Mutex};
 use userdata::{

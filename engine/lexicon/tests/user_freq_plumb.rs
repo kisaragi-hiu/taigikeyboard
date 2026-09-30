@@ -68,8 +68,7 @@ fn ctx<'a>(
     }
 }
 
-mod common;
-use common::{
+use crate::common::{
     build_tkdb_v3, fetch_candidates_for_endings, frequency_map, write_temp, FrequencyFixture,
 };
 

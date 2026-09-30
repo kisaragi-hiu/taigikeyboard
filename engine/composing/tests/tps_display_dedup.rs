@@ -8,14 +8,13 @@
 //! romanizations are distinct rows in their UI.
 //!
 //! Hermetic install of `LexiconHandle` comes from `tests/common/mod.rs`
-//! (this binary is its own process with its own singleton; the lock
-//! guards in-binary `#[test]` parallelism). Fixture builders come from
+//! (the `it` binary is one process whose singleton every module shares; the
+//! lock guards in-binary `#[test]` parallelism). Fixture builders come from
 //! `tests/common/mod.rs` — composing tests cannot import
 //! `lexicon/tests/common/mod.rs` (test-private).
 
-mod common;
-use common::Fetch;
-use common::{
+use crate::common::Fetch;
+use crate::common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config, empty_association_bin,
     engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp, Row,
 };

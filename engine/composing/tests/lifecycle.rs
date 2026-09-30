@@ -5,8 +5,7 @@ use composing::EngineHandle;
 use protos::engine::composing_request::Method;
 use protos::engine::{Append, ComposingRequest, EnterContinuous, FetchAtPos, Reset, Start};
 
-mod common;
-use common::{config_tl, req};
+use crate::common::{config_tl, req};
 
 fn req_start(text: &str) -> ComposingRequest {
     ComposingRequest {

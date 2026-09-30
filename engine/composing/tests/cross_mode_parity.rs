@@ -42,9 +42,8 @@ use std::sync::OnceLock;
 
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 
-mod common;
-use common::Fetch;
-use common::{config, fetch_at_pos_response};
+use crate::common::Fetch;
+use crate::common::{config, fetch_at_pos_response};
 
 // ---------------------------------------------------------------------------
 // Production artifact + lexicon install (once per test process).
@@ -281,7 +280,7 @@ fn cross_mode_candidate_hanji_parity() {
 // ---------------------------------------------------------------------------
 // B — dev dump: print three-mode Hanji sets + MATCH/MISMATCH for given words.
 // Generates verified device-dogfood sheets + investigates reported diverges.
-//   PARITY_WORDS=我,水,樹 cargo test -p composing --test cross_mode_parity \
+//   PARITY_WORDS=我,水,樹 cargo test -p composing --test prod \
 //     -- --ignored --nocapture dump_cross_mode_parity
 // ---------------------------------------------------------------------------
 

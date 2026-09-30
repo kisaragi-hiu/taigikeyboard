@@ -14,8 +14,7 @@ use proptest::prelude::*;
 use protos::engine::effect::Kind;
 use protos::engine::AppConfig;
 
-mod common;
-use common::{config, config_tl};
+use crate::common::{config, config_tl};
 
 /// TL, or POJ with both double-tap folds on — the display then drops and
 /// folds characters, which is what the caret projection has to survive.

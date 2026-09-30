@@ -46,8 +46,7 @@
 use composing::dispatch::build_keys_tl_with_inventory;
 use unicode_normalization::UnicodeNormalization;
 
-mod common;
-use common::{build_inventory, build_poj_inventory};
+use crate::common::{build_inventory, build_poj_inventory};
 
 #[test]
 fn nfc_peh_oe_ji_tl_literal_no_oe_ue_recovery() {

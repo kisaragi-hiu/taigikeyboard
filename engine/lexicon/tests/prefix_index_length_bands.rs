@@ -12,8 +12,7 @@
 
 use std::collections::BTreeMap;
 
-mod common;
-use common::{build_wire_index, wire_entry};
+use crate::common::{build_wire_index, wire_entry};
 
 /// Full-scan oracle: every fixture rowid under `prefix`, bucketed by key
 /// byte length, wire byte order within a bucket, truncated to `cap`.

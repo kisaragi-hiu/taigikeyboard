@@ -1,8 +1,8 @@
 //! Shared fixture builders for lexicon integration tests.
 //!
-//! Cargo compiles each `tests/*.rs` as a separate crate, so a `tests/common/`
-//! module declared via `mod common;` from each test file is the standard
-//! way to share helpers without leaking them into the production crate.
+//! The `tests/it.rs` binary root declares `mod common;` once and its
+//! test-file modules reach the helpers as `crate::common` — they never leak
+//! into the production crate.
 
 #![allow(dead_code)] // Different test files use different subsets.
 

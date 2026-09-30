@@ -20,8 +20,7 @@
 //! 1, and the single syllables 經/king 9218 + 身/sin 10865 whose split
 //! undercuts a freq-1 two-syllable edge under the khiin cost model.
 
-mod common;
-use common::{
+use crate::common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, empty_association_bin,
     engine_install_lock, fetch_hanji, install_lexicon, selected, write_temp, Fetch, Row, Selected,
     NOW_MS,

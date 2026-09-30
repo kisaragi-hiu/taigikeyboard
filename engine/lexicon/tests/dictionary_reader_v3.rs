@@ -4,8 +4,7 @@
 
 use lexicon::dictionary_reader::DictionaryReader;
 
-mod common;
-use common::{build_tkdb_v3, build_tkdb_v3_subtag, write_temp};
+use crate::common::{build_tkdb_v3, build_tkdb_v3_subtag, write_temp};
 
 const HEADER_SIZE: usize = 16;
 

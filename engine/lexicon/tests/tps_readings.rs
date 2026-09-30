@@ -9,8 +9,7 @@
 //! ordering explicitly — reading recovery must be an ADDITION with the
 //! user's literal text first, never a replacement.
 
-mod common;
-use common::build_wire_index;
+use crate::common::build_wire_index;
 
 #[test]
 fn khokng_literal_resolves_to_the_khokng_reading() {

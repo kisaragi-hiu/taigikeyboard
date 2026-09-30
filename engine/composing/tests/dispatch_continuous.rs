@@ -21,8 +21,7 @@ use composing::dispatch;
 use protos::engine::composing_request::Method;
 use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, ResetContinuous};
 
-mod common;
-use common::{config_tl, req};
+use crate::common::{config_tl, req};
 
 // ---- Decode tests --------------------------------------------------------
 

@@ -20,8 +20,7 @@
 use composing::{Engine, Intent, Phase};
 use protos::engine::ComposingResponse;
 
-mod common;
-use common::config_tl;
+use crate::common::config_tl;
 
 fn assert_preedit_model_b_invariants(engine: &Engine, response: &ComposingResponse, label: &str) {
     let preedit = response

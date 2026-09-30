@@ -21,8 +21,7 @@
 
 use composing::dispatch::build_keys_tl_with_inventory;
 
-mod common;
-use common::build_inventory;
+use crate::common::build_inventory;
 
 #[test]
 fn hyphenless_input_matches_pre_item8_consumed_span() {

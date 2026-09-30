@@ -25,9 +25,9 @@ use composing::{dispatch, Intent, Phase};
 use protos::engine::composing_request::Method;
 use protos::engine::{CandidateMessage, CommitContinuous, EnterContinuous, FetchAtPos, Start};
 
-mod common;
-use common::Fetch;
-use common::{
+use crate::common;
+use crate::common::Fetch;
+use crate::common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config_tl, effect_kinds,
     empty_association_bin, engine_in_continuous, engine_install_lock, fetch_at_pos_response,
     fetch_cells, fetch_hanji, install_lexicon, req, selected, write_temp, Cell, Row, NOW_MS,
