@@ -125,16 +125,19 @@ extension ActionHandler {
                 // guard too, so this suggestion still carries the un-split
                 // dual-script shape this path expects.
                 let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
-                let (roman, hanzi) = parseRomanAndHanzi(
+                let (roman, hanzi) = Self.parseRomanAndHanzi(
                     from: suggestion,
                     isNextWord: false,
+                    isTPSLayout: isTPSLayout,
                     effectiveSwapped: effectiveSwapped,
                 )
-                let resolved = formatOutputText(
+                let resolved = Self.formatOutputText(
                     roman: roman,
                     hanzi: hanzi,
                     isTPSLayout: isTPSLayout,
                     effectiveSwapped: effectiveSwapped,
+                    isOutputBothScripts: settings.isOutputBothScripts,
+                    orMapsToER: settings.isTpsOrMappedToER,
                 )
                 docText = resolved.text
                 wroteRomanization = resolved.wroteRomanization
@@ -204,8 +207,20 @@ extension ActionHandler {
                     isOutputBothScripts: settings.isOutputBothScripts,
                 )
             } else {
-                (roman, hanzi) = parseRomanAndHanzi(from: suggestion, isNextWord: isNextWordPrediction, effectiveSwapped: effectiveSwapped)
-                resolved = formatOutputText(roman: roman, hanzi: hanzi, isTPSLayout: isTPSLayout, effectiveSwapped: effectiveSwapped)
+                (roman, hanzi) = Self.parseRomanAndHanzi(
+                    from: suggestion,
+                    isNextWord: isNextWordPrediction,
+                    isTPSLayout: isTPSLayout,
+                    effectiveSwapped: effectiveSwapped,
+                )
+                resolved = Self.formatOutputText(
+                    roman: roman,
+                    hanzi: hanzi,
+                    isTPSLayout: isTPSLayout,
+                    effectiveSwapped: effectiveSwapped,
+                    isOutputBothScripts: settings.isOutputBothScripts,
+                    orMapsToER: settings.isTpsOrMappedToER,
+                )
             }
             let textToCommit = resolved.text
 
@@ -306,9 +321,10 @@ extension ActionHandler {
 
     /// Extract romanization and Hanji from suggestion based on display mode. The NextWord path
     /// restores the fields that were swapped earlier.
-    private func parseRomanAndHanzi(
+    static func parseRomanAndHanzi(
         from suggestion: AutocompleteSuggestion,
         isNextWord: Bool,
+        isTPSLayout: Bool,
         effectiveSwapped: Bool,
     ) -> (roman: String, hanzi: String?) {
         if isNextWord {
@@ -331,6 +347,14 @@ extension ActionHandler {
                 : suggestion.text
             return (roman, suggestion.additionalInfo["hanzi"])
         } else if effectiveSwapped {
+            // The swap rewrite (`suggestionToHandle`) only swaps a cell that has a
+            // hanji subtitle, so a hanji-less cell arrives with its romanization as
+            // the text and no hanji at all (§23 / §34; Android
+            // `noHanji_commitsTheRomanizationUnderEveryMode`). TPS keeps the text as
+            // hanji: the Bopomofo it commits takes no word spacing.
+            if !isTPSLayout, suggestion.subtitle?.isEmpty ?? true {
+                return (suggestion.text, nil)
+            }
             return (suggestion.subtitle ?? suggestion.text, suggestion.text)
         } else {
             return (suggestion.text, suggestion.subtitle)
@@ -352,19 +376,21 @@ extension ActionHandler {
     // CROSS-PLATFORM INVARIANT — mirrors android/.../CandidateClickHandler.kt
     // `unmarkedCommit` and macos/.../CandidateDocumentText.swift `resolved`.
     // Drift changes which commits earn a space.
-    private func formatOutputText(
+    static func formatOutputText(
         roman: String,
         hanzi: String?,
         isTPSLayout: Bool,
         effectiveSwapped: Bool,
+        isOutputBothScripts: Bool,
+        orMapsToER: Bool,
     ) -> ResolvedCommit {
         let bracketRoman = isTPSLayout
-            ? RustEngineBridge.tlDisplayToTPS(roman, orMapsToER: settings.isTpsOrMappedToER)
+            ? RustEngineBridge.tlDisplayToTPS(roman, orMapsToER: orMapsToER)
             : roman
 
         // Annotate in Brackets writes the pair, so the romanization IS in the document
         // whichever half leads.
-        if settings.isOutputBothScripts, let hanzi, !hanzi.isEmpty {
+        if isOutputBothScripts, let hanzi, !hanzi.isEmpty {
             let text = effectiveSwapped
                 ? Self.bracketedHanjiCommit(hanzi: hanzi, roman: bracketRoman)
                 : "\(bracketRoman) (\(hanzi))"
