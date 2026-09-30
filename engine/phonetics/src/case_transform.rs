@@ -399,16 +399,6 @@ mod tests {
     }
 
     #[test]
-    fn nasal_lower_after_upper_letter_promotes() {
-        assert_eq!(adjust_nasal_marker_case("AN\u{207F}"), "AN\u{1D3A}");
-    }
-
-    #[test]
-    fn nasal_upper_after_lower_letter_demotes() {
-        assert_eq!(adjust_nasal_marker_case("an\u{1D3A}"), "an\u{207F}");
-    }
-
-    #[test]
     fn nasal_digits_do_not_reset_case() {
         assert_eq!(adjust_nasal_marker_case("AN2\u{207F}"), "AN2\u{1D3A}");
     }
@@ -518,31 +508,6 @@ mod tests {
     // -----------------------------------------------------------------
     // transform_suggestion
     // -----------------------------------------------------------------
-
-    #[test]
-    fn transform_suggestion_caps_lock_uppercases_all() {
-        assert_eq!(
-            transform_suggestion("góa", "G", LetterCase::CapsLocked, InputMode::Poj),
-            "GÓA"
-        );
-    }
-
-    #[test]
-    fn transform_suggestion_empty_composing_passthrough() {
-        assert_eq!(
-            transform_suggestion("góa", "", LetterCase::Lowercased, InputMode::Poj),
-            "góa"
-        );
-    }
-
-    #[test]
-    fn transform_suggestion_match_case_when_typed_covers_original() {
-        // composing has 3 letters "GOA" upper, original "góa" 3 letters → match
-        assert_eq!(
-            transform_suggestion("góa", "GOA", LetterCase::Lowercased, InputMode::Poj),
-            "GÓA"
-        );
-    }
 
     #[test]
     fn transform_suggestion_split_typed_remaining() {

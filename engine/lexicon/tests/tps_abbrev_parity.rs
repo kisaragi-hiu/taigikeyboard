@@ -14,7 +14,8 @@
 //!
 //! ## Runtime derivation
 //!
-//! Mirrors `extract_tps_abbrev(tl, tps_per_syllable)`:
+//! The production [`phonetics::tps_abbrev_from_tl`] (the custom-dictionary
+//! `tps:` abbrev key) mirrors `extract_tps_abbrev(tl, tps_per_syllable)`:
 //!   1. Split TL on `[-\s]+`; require ≥2 non-empty tokens.
 //!   2. Per TL token: `phonetics::api::to_tone_number(token)` → numeric
 //!      TL → `phonetics::tl_numeric_token_to_tps(numeric, false, true)`
@@ -39,33 +40,6 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
-
-/// Runtime mirror of `dictionary/common/abbrev.py::extract_tps_abbrev`.
-/// Returns the concatenated first-Bopomofo-char-per-syllable abbrev, or
-/// `""` when (a) TL has <2 tokens, or (b) any token's per-syllable TPS
-/// is empty (Node bridge rejection in production).
-fn derive_tps_abbrev_runtime(tl: &str) -> String {
-    let tokens: Vec<&str> = tl
-        .split(['-', ' ', '\t'])
-        .filter(|t| !t.is_empty())
-        .collect();
-    if tokens.len() < 2 {
-        return String::new();
-    }
-    let mut out = String::with_capacity(tokens.len() * 3);
-    for tok in tokens {
-        let numeric = phonetics::to_tone_number(tok);
-        let tps = phonetics::tl_numeric_token_to_tps(&numeric, false, true);
-        let first = tps
-            .chars()
-            .find(|&c| !phonetics::is_tps_tone_mark(c) && c != '-' && !c.is_whitespace());
-        match first {
-            Some(c) => out.push(c),
-            None => return String::new(),
-        }
-    }
-    out
-}
 
 fn dictionary_csv_path() -> PathBuf {
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -153,7 +127,7 @@ fn runtime_tps_abbrev_matches_build_pipeline_for_every_row() {
             continue;
         }
         compared += 1;
-        let derived = derive_tps_abbrev_runtime(tl);
+        let derived = phonetics::tps_abbrev_from_tl(tl);
         if derived != *abbrev {
             drift.push((tl.clone(), abbrev.clone(), derived));
             if drift.len() >= 10 {

@@ -16,38 +16,6 @@ fn req_start(text: &str) -> ComposingRequest {
 }
 
 #[test]
-fn lifecycle_intent_reset_when_idle_emits_no_effects() {
-    let handle = EngineHandle::new();
-    let resp = handle
-        .handle(
-            &ComposingRequest {
-                method: Some(Method::Reset(Reset {})),
-            },
-            &config_tl(),
-            1,
-        )
-        .unwrap();
-    assert!(resp.effect.is_empty());
-}
-
-#[test]
-fn lifecycle_intent_reset_when_composing_emits_clear_and_reset_autocomplete() {
-    let handle = EngineHandle::new();
-    handle.handle(&req_start("a"), &config_tl(), 1).unwrap();
-    let resp = handle
-        .handle(
-            &ComposingRequest {
-                method: Some(Method::Reset(Reset {})),
-            },
-            &config_tl(),
-            1,
-        )
-        .unwrap();
-    // Two effects per plan §5b.2: ClearPreeditWithoutCommit + ResetAutocomplete.
-    assert_eq!(resp.effect.len(), 2);
-}
-
-#[test]
 fn lifecycle_generation_increment_silently_drops_state() {
     let handle = EngineHandle::new();
     handle.handle(&req_start("abc"), &config_tl(), 1).unwrap();

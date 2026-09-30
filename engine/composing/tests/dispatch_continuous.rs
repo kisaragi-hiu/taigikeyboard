@@ -7,9 +7,9 @@
 //!   - Idle / Composing phase → `continuous = None` snapshot.
 //!   - `Phase::Continuous` + lexicon NOT installed → `continuous =
 //!     Some(empty)`.
-//! - Round-trip through dispatch for `EnterContinuous`, `CommitContinuous`,
-//!   `ResetContinuous` (state changes match `transition.rs` Phase-4
-//!   contract).
+//! - `EnterContinuous` / `CommitContinuous` / `ResetContinuous` answers
+//!   carry no `continuous` carrier (their transitions are pinned on
+//!   `Engine::apply` in `continuous_phase.rs`).
 //!
 //! The full TL/TPS lexicon-backed FetchAtPos integration (with hermetic
 //! `dictionary.fst` + `dictionary.bin` + `syllables.fst`) lives next to
@@ -25,19 +25,6 @@ use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, ResetContinu
 use crate::common::{config_tl, req};
 
 // ---- Decode tests --------------------------------------------------------
-
-#[test]
-fn decode_enter_continuous() {
-    let mut engine = Engine::new();
-    let _ = dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .expect("dispatch ok");
-    // EnterContinuous from Idle is no-op — phase stays Idle.
-    assert!(matches!(engine.snapshot_state().phase, Phase::Idle));
-}
 
 #[test]
 fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
@@ -267,127 +254,6 @@ fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
         cont.candidates
     );
 }
-
-#[test]
-fn decode_commit_continuous_mid_commit() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(protos::engine::Start {
-            text: "tsua".into(),
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-
-    // Commit "珠" consuming 3 of 4 bytes → mid-commit, stay in Continuous.
-    let resp = dispatch::handle(
-        &req(Method::CommitContinuous(CommitContinuous {
-            script: CommitScript::Roman as i32,
-            roman: "珠".into(),
-            canonical_text: "珠".into(),
-            association_tl: String::new(),
-            hanji: None,
-            consumed_bytes: 3,
-            syllable_count: 1,
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .expect("dispatch ok");
-
-    assert!(resp.is_composing, "mid-commit stays composing");
-    let state = engine.snapshot_state();
-    let Phase::Continuous { raw, nailed, .. } = &state.phase else {
-        panic!("expected Continuous phase, got {:?}", state.phase);
-    };
-    assert_eq!(raw, "a");
-    assert_eq!(nailed.len(), 1);
-    assert_eq!(nailed[0].display_text, "珠");
-    assert_eq!(nailed[0].syllable_count, 1);
-}
-
-#[test]
-fn decode_commit_continuous_final_commit_exits_to_idle() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(protos::engine::Start {
-            text: "tsua".into(),
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-
-    // Commit "紙" consuming all 4 bytes → final commit, exit to Idle.
-    let resp = dispatch::handle(
-        &req(Method::CommitContinuous(CommitContinuous {
-            script: CommitScript::Roman as i32,
-            roman: "紙".into(),
-            canonical_text: "紙".into(),
-            association_tl: String::new(),
-            hanji: None,
-            consumed_bytes: 4,
-            syllable_count: 1,
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .expect("dispatch ok");
-
-    assert!(!resp.is_composing, "final commit exits to idle");
-    assert!(matches!(engine.snapshot_state().phase, Phase::Idle));
-}
-
-#[test]
-fn decode_reset_continuous_aborts() {
-    let mut engine = Engine::new();
-    dispatch::handle(
-        &req(Method::Start(protos::engine::Start {
-            text: "tsua".into(),
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    dispatch::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-
-    let resp = dispatch::handle(
-        &req(Method::ResetContinuous(ResetContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .expect("dispatch ok");
-
-    assert!(!resp.is_composing);
-    assert!(matches!(engine.snapshot_state().phase, Phase::Idle));
-    // ResetContinuous emits the standard abort effect trio.
-    assert_eq!(
-        resp.effect.len(),
-        3,
-        "expected 3 abort effects, got {:?}",
-        resp.effect
-    );
-}
-
-// ---- Intent shape sanity --------------------------------------------------
 
 // ---- Optional-presence contract for `ContinuousResponse` -----------------
 // Per `composing.proto:152-161`, only `FetchAtPos` populates the

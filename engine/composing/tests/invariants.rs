@@ -66,6 +66,8 @@ fn invariant_append_when_idle_behaves_as_start() {
         effect_kinds(&resp),
         vec!["updatePreedit", "performAutocomplete"]
     );
+    assert!(resp.is_composing);
+    assert_eq!(raw_input(&resp), "a");
 }
 
 #[test]
@@ -296,6 +298,7 @@ fn invariant_snapshot_does_not_mutate() {
     engine.apply(Intent::Start { text: "abc".into() }, &config_tl());
     let snap_a = engine.snapshot(&config_tl());
     let snap_b = engine.snapshot(&config_tl());
+    assert!(snap_a.effect.is_empty(), "a snapshot emits no effects");
     assert_eq!(snap_a.preedit.unwrap().raw_input, "abc");
     assert_eq!(snap_b.preedit.unwrap().raw_input, "abc");
 }
