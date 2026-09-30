@@ -11,7 +11,6 @@ pub mod window;
 pub mod writer;
 
 use adw::prelude::*;
-use cli::LaunchOptions;
 use std::cell::RefCell;
 use std::rc::Rc;
 use taigi_desktop_core::settings::{keys, SettingsPane};
@@ -35,7 +34,7 @@ pub fn run() -> gtk::glib::ExitCode {
             .skip(1)
             .map(|argument| argument.to_string_lossy().into_owned())
             .collect();
-        let launch = match LaunchOptions::parse(arguments) {
+        let launch = match cli::parse(arguments) {
             Ok(launch) => launch,
             Err(error) => {
                 // To the CALLER's stderr: a second launch's command line is

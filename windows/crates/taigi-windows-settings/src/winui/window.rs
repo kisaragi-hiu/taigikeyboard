@@ -10,7 +10,7 @@
 //! pop-up rather than three drawn thumbnails; the window may be narrowed
 //! until `NavigationView` compacts its pane.
 
-use crate::presentation::{self, pane_title, PageMessage};
+use crate::presentation;
 use crate::settings_writer::{SettingsWriter, BUSY_REFRESH_INTERVAL, IDLE_REFRESH_INTERVAL};
 use crate::updates::{UpdateState, INSTALLED_VERSION};
 use crate::winui::cards;
@@ -25,6 +25,7 @@ use taigi_desktop_core::keys::{
     evaluate_press, ChordRejection, ComposingAction, ComposingKeyChord, RecordedPress,
     RecorderOutcome, RecorderTier, ShortcutAction, ShortcutConflicts,
 };
+use taigi_desktop_core::settings::presentation::{pane_title, PageMessage};
 use taigi_desktop_core::settings::{
     keys, AppearanceMode, SettingChoice, SettingsDocument, SettingsKey, SettingsPane,
 };

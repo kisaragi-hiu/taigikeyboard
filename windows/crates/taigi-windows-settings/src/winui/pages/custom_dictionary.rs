@@ -19,7 +19,6 @@
 //! Segoe Fluent Icons has no empty-container glyph, and a Windows 11 empty
 //! state is a line of text.
 
-use crate::presentation::PageMessage;
 use crate::winui::cards;
 use crate::winui::list_pager::{self, icon_button};
 use crate::winui::list_selection::{selectable_list, SettledRows};
@@ -30,6 +29,7 @@ use taigi_desktop_core::engine::user_data::{
     self, CustomDictionaryEntry, CustomDictionaryPage, CustomDictionaryRefusal, UserDataError,
 };
 use taigi_desktop_core::settings::keys;
+use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 

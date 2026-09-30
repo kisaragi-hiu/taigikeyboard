@@ -16,9 +16,7 @@ use taigi_desktop_core::composing::ComposingSessionCoordinator;
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{lexicon_install, user_data, LexiconInstallStats};
 use taigi_desktop_core::keys::ShortcutConflicts;
-use taigi_desktop_core::settings::{
-    keys, SettingsDocument, SettingsProvider, StaticSettingsProvider,
-};
+use taigi_desktop_core::settings::{SettingsDocument, SettingsProvider, StaticSettingsProvider};
 use taigi_desktop_core::strings::{DisplayLanguage, StringResolver};
 use taigi_desktop_storage::{user_data_directory, LiveSettings, SettingsFileStore};
 
@@ -207,8 +205,9 @@ impl Runtime {
     /// The language the UI strings are drawn in: the setting, or the
     /// machine's when it says `system`.
     pub fn display_language(&self) -> DisplayLanguage {
-        let tag = self.settings.current().string(&keys::DISPLAY_LANGUAGE);
-        DisplayLanguage::from_tag(&tag).effective(&taigi_windows_platform::system_locale())
+        self.settings
+            .current()
+            .effective_display_language(&taigi_windows_platform::system_locale())
     }
 
     pub fn strings(&self) -> StringResolver {

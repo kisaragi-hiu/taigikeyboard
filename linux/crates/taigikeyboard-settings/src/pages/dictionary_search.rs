@@ -10,7 +10,6 @@
 
 use super::PageContext;
 use crate::jobs;
-use crate::presentation::PageMessage;
 use crate::window::Shell;
 use adw::prelude::*;
 use gtk::glib;
@@ -21,6 +20,7 @@ use std::time::Duration;
 use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
 use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
+use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 

@@ -6,7 +6,6 @@
 
 #![cfg_attr(windows, windows_subsystem = "windows")]
 
-mod cli;
 mod presentation;
 mod prewarm;
 mod settings_writer;
@@ -16,9 +15,9 @@ mod user_data;
 mod winui;
 mod work;
 
-use cli::LaunchOptions;
 use presentation::strings_for;
 use std::process::ExitCode;
+use taigi_desktop_core::settings::launch::LaunchOptions;
 use taigi_desktop_core::settings::SettingsPane;
 use taigi_desktop_storage::{user_data_directory, LiveSettings, SettingsFileStore};
 

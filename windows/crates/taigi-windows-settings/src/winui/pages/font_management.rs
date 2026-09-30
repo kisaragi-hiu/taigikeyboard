@@ -23,9 +23,9 @@ use super::super::cards;
 use super::super::list_pager::{self, icon_button};
 use super::super::list_selection::{selectable_list, SettledRows};
 use super::super::window::{Message as WindowMessage, SettingsWindow};
-use crate::presentation::PageMessage;
 use crate::settings_writer::SettingsWriter;
 use crate::winui::file_dialog;
+use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::{
     set_stored_font_selection, stored_font_selection, CandidateFontChoice, SettingChoice,
     StoredFontSelection,

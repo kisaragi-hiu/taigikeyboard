@@ -5,9 +5,9 @@
 //! No update check (roadmap L10): the version row links to the download page.
 
 use super::PageContext;
-use crate::presentation::{display_language_label, WEBSITE_URL};
 use adw::prelude::*;
 use taigi_desktop_core::keys::ToneInputScheme;
+use taigi_desktop_core::settings::presentation::{display_language_label, WEBSITE_URL};
 use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SettingsDocument};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey};
 
@@ -89,9 +89,9 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         context.strings.resolve(StringKey::SettingsDisplayLanguage),
         language_labels,
         &DisplayLanguage::PICKER,
-        DisplayLanguage::from_tag(&context.document.string(&keys::DISPLAY_LANGUAGE)),
+        context.document.display_language(),
         |language, document| document.set_string(&keys::DISPLAY_LANGUAGE, language.tag()),
-        |document| DisplayLanguage::from_tag(&document.string(&keys::DISPLAY_LANGUAGE)),
+        SettingsDocument::display_language,
     );
     page.add(&group);
 
