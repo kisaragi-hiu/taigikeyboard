@@ -17,6 +17,7 @@ import com.siansiansu.taigikeyboard.engine.proto.TransformInputCase
 import com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion
 import com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions
 import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
 
 private const val TAG = "CaseTransformBridge"
@@ -173,15 +174,11 @@ private fun caseAppConfig(
     mode: InputMode,
     isNasalMarkerUppercaseEnabled: Boolean,
 ): AppConfig =
-    RustEngineBridge.appConfig(
-        mode = when (mode) {
-            InputMode.POJ -> NormalizeMode.POJ
-            InputMode.TL -> NormalizeMode.TL
-            InputMode.ENGLISH -> NormalizeMode.ENGLISH
-        },
-        toggles = PojMarkerOptionsCarrier(
-            isDoubleTapOoEnabled = false,
-            isDoubleTapNnEnabled = false,
+    appConfig(
+        inputMode = mode.engineInputMode(),
+        pojMarkers = PojMarkerOptions(
+            isDoubleTapOOEnabled = false,
+            isDoubleTapNNEnabled = false,
             isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         ),
     )

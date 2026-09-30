@@ -84,7 +84,7 @@ fun InputSettingsScreen(
     // Annotate in Brackets binds the STORED flag; it is only disabled (not cleared) while roman-only.
     var outputBoth by remember(resetCounter) { mutableStateOf(prefs.storedOutputBothScripts) }
     var literalRomanCandidate by remember(resetCounter) { mutableStateOf(prefs.literalRomanCandidateEnabled) }
-    var hyphenlessRoman by remember(resetCounter) { mutableStateOf(prefs.storedHyphenlessRomanEnabled) }
+    var hyphenlessRoman by remember(resetCounter) { mutableStateOf(prefs.isHyphenlessRomanEnabled) }
     var autoCap by remember(resetCounter) { mutableStateOf(prefs.autoCapitalizationEnabled) }
     var autoSpace by remember(resetCounter) { mutableStateOf(prefs.isAutoSpaceEnabled) }
     var doubleOO by remember(resetCounter) { mutableStateOf(prefs.enableDoubleTapOO) }
@@ -226,7 +226,7 @@ fun InputSettingsScreen(
                         infoText = L10n.settingsHyphenlessRomanInfo,
                         onCheckedChange = {
                             hyphenlessRoman = it
-                            prefs.storedHyphenlessRomanEnabled = it
+                            prefs.isHyphenlessRomanEnabled = it
                         },
                     )
                     SettingsDivider()

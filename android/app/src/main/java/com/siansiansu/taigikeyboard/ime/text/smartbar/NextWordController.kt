@@ -5,6 +5,7 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.engineInputMode
 import com.siansiansu.taigikeyboard.engine.nextwordBackspace
 import com.siansiansu.taigikeyboard.engine.nextwordClearForNewComposing
 import com.siansiansu.taigikeyboard.engine.nextwordContextTimeoutFired
@@ -95,7 +96,7 @@ class NextWordController(
         val settings = settingsProvider.current
         val result = RustEngineBridge.nextwordResetFull(
             nowMs = System.currentTimeMillis(),
-            mode = settings.inputMode.toEngineInputMode(),
+            inputMode = settings.inputMode.toEngineInputMode(),
             translateSwapped = settings.isTranslateSwapped,
             generation = envelopeGen,
         )
@@ -135,7 +136,7 @@ class NextWordController(
         applyDecideResult(
             RustEngineBridge.nextwordSetIsShowing(
                 showing,
-                mode = settings.inputMode.toEngineInputMode(),
+                inputMode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
                 generation = envelopeGen,
             ),
@@ -178,7 +179,7 @@ class NextWordController(
                 requireRomanMode = false,
                 triggerPrediction = triggerPrediction,
                 nowMs = System.currentTimeMillis(),
-                mode = settings.inputMode.toEngineInputMode(),
+                inputMode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
                 generation = envelopeGen,
                 preceding = preceding,
@@ -205,7 +206,7 @@ class NextWordController(
                 requireRomanMode = false,
                 triggerPrediction = false,
                 nowMs = System.currentTimeMillis(),
-                mode = settings.inputMode.toEngineInputMode(),
+                inputMode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
                 generation = envelopeGen,
             ),
@@ -230,7 +231,7 @@ class NextWordController(
                 text = word,
                 roman = roman ?: word,
                 nowMs = System.currentTimeMillis(),
-                mode = settings.inputMode.toEngineInputMode(),
+                inputMode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
                 generation = envelopeGen,
             ),
@@ -258,7 +259,7 @@ class NextWordController(
             applyDecideResult(
                 RustEngineBridge.nextwordResetFull(
                     nowMs = nowMs,
-                    mode = settings.inputMode.toEngineInputMode(),
+                    inputMode = settings.inputMode.toEngineInputMode(),
                     translateSwapped = settings.isTranslateSwapped,
                     generation = envelopeGen,
                 ),
@@ -271,7 +272,7 @@ class NextWordController(
             RustEngineBridge.nextwordBackspace(
                 lastChar = lastGrapheme(trimmed),
                 nowMs = nowMs,
-                mode = settings.inputMode.toEngineInputMode(),
+                inputMode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
                 generation = envelopeGen,
             ),
@@ -354,7 +355,7 @@ class NextWordController(
                         queryGeneration = queryGeneration,
                         nowMs = nowMs,
                         limit = 30,
-                        mode = settings.inputMode.toEngineInputMode(),
+                        inputMode = settings.inputMode.toEngineInputMode(),
                         translateSwapped = settings.isTranslateSwapped,
                         generation = generation,
                         candidateDisplayMode = settings.candidateDisplayMode,
@@ -397,7 +398,7 @@ class NextWordController(
         applyDecideResult(
             RustEngineBridge.nextwordSetIsShowing(
                 nowShowing,
-                mode = settings.inputMode.toEngineInputMode(),
+                inputMode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
                 generation = envelopeGen,
             ),
@@ -428,7 +429,7 @@ class NextWordController(
         applyDecideResult(
             RustEngineBridge.nextwordContextTimeoutFired(
                 nowMs = System.currentTimeMillis(),
-                mode = settings.inputMode.toEngineInputMode(),
+                inputMode = settings.inputMode.toEngineInputMode(),
                 translateSwapped = settings.isTranslateSwapped,
                 generation = envelopeGen,
             ),
@@ -466,8 +467,12 @@ class NextWordController(
     }
 }
 
-/** The engine `InputMode` for a stored `inputMode` string (one table: [InputMode.fromPrefString]). */
-private fun String.toEngineInputMode(): InputMode = InputMode.fromPrefString(this)
+/**
+ * The engine `input_mode` for a stored `inputMode` string. TPS goes out as `"tps"`, which the
+ * engine renders predictions for as TL (`nextword/src/filter.rs`); an unknown value reads as POJ,
+ * as [InputMode.fromPrefString] does.
+ */
+private fun String.toEngineInputMode(): String = engineInputMode(this, unknownAs = "poj")
 
 /**
  * NextWord prediction cells. Ids run `-1..-n` — the NextWord sentinel range

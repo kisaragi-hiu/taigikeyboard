@@ -8,9 +8,7 @@ import com.siansiansu.taigikeyboard.engine.proto.DecideResult
 import com.siansiansu.taigikeyboard.engine.proto.DecisionInput
 import com.siansiansu.taigikeyboard.engine.proto.NextWordRequest
 import com.siansiansu.taigikeyboard.engine.proto.NextWordResponse
-import com.siansiansu.taigikeyboard.engine.proto.Platform
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 
 // region Decide intents (6)
 // UpdateLastSelectedWord was originally Android-only (Space-path); v3.5.8
@@ -25,7 +23,7 @@ fun RustEngineBridge.nextwordWordSelected(
     requireRomanMode: Boolean,
     triggerPrediction: Boolean,
     nowMs: Long,
-    mode: InputMode,
+    inputMode: String,
     translateSwapped: Boolean,
     generation: Long,
     preceding: List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord> = emptyList(),
@@ -43,7 +41,7 @@ fun RustEngineBridge.nextwordWordSelected(
         methodSetter = { it.wordSelected = payload },
         op = "nextwordWordSelected",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped),
+        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
     )
 }
 
@@ -51,7 +49,7 @@ fun RustEngineBridge.nextwordWordSelected(
 fun RustEngineBridge.nextwordBackspace(
     lastChar: String,
     nowMs: Long,
-    mode: InputMode,
+    inputMode: String,
     translateSwapped: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
@@ -64,13 +62,13 @@ fun RustEngineBridge.nextwordBackspace(
         methodSetter = { it.backspace = payload },
         op = "nextwordBackspace",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped),
+        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
     )
 }
 
 fun RustEngineBridge.nextwordContextTimeoutFired(
     nowMs: Long,
-    mode: InputMode,
+    inputMode: String,
     translateSwapped: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
@@ -82,14 +80,14 @@ fun RustEngineBridge.nextwordContextTimeoutFired(
         methodSetter = { it.contextTimeoutFired = payload },
         op = "nextwordContextTimeoutFired",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped),
+        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
     )
 }
 
 // Clears the NextWord display but keeps lastSelectedWord for the next selection.
 fun RustEngineBridge.nextwordClearForNewComposing(
     nowMs: Long,
-    mode: InputMode,
+    inputMode: String,
     translateSwapped: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
@@ -101,14 +99,14 @@ fun RustEngineBridge.nextwordClearForNewComposing(
         methodSetter = { it.clearForNewComposing = payload },
         op = "nextwordClearForNewComposing",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped),
+        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
     )
 }
 
 // Full reset of lastSelectedWord / lastSelectionTimeMs / isShowing (focus change, input-mode switch).
 fun RustEngineBridge.nextwordResetFull(
     nowMs: Long,
-    mode: InputMode,
+    inputMode: String,
     translateSwapped: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
@@ -120,7 +118,7 @@ fun RustEngineBridge.nextwordResetFull(
         methodSetter = { it.resetFull = payload },
         op = "nextwordResetFull",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped),
+        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
     )
 }
 
@@ -134,7 +132,7 @@ fun RustEngineBridge.nextwordResetFull(
  */
 fun RustEngineBridge.nextwordSetIsShowing(
     isShowing: Boolean,
-    mode: InputMode,
+    inputMode: String,
     translateSwapped: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
@@ -146,7 +144,7 @@ fun RustEngineBridge.nextwordSetIsShowing(
         methodSetter = { it.setIsShowing = payload },
         op = "nextwordSetIsShowing",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped),
+        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
     )
 }
 
@@ -159,7 +157,7 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
     text: String,
     roman: String,
     nowMs: Long,
-    mode: InputMode,
+    inputMode: String,
     translateSwapped: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
@@ -173,7 +171,7 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
         methodSetter = { it.updateLastSelectedWord = payload },
         op = "nextwordUpdateLastSelectedWord",
         generation = generation,
-        config = nextwordConfig(mode, translateSwapped),
+        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
     )
 }
 
@@ -191,7 +189,7 @@ fun RustEngineBridge.nextwordPredictNext(
     queryGeneration: Long,
     nowMs: Long,
     limit: Int,
-    mode: InputMode,
+    inputMode: String,
     translateSwapped: Boolean,
     generation: Long,
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
@@ -212,7 +210,13 @@ fun RustEngineBridge.nextwordPredictNext(
         // Fields 9 / 10 ride only the predict request — the sole nextword reader
         // (`nextword/src/filter.rs` collapses same-roman predictions under ROMAN_ONLY
         // and shapes `text` hyphenless under No Hyphens).
-        config = nextwordConfig(mode, translateSwapped, candidateDisplayMode, hyphenlessRoman),
+        config =
+            appConfig(
+                inputMode,
+                isTranslateSwapped = translateSwapped,
+                candidateDisplayMode = candidateDisplayMode,
+                isHyphenlessRomanEnabled = hyphenlessRoman,
+            ),
     ) ?: return RustEngineBridge.NextWordFilterResult(emptyList(), wasStale = false)
     if (!resp.hasFilter()) {
         RustEngineBridge.recordFailure("nextwordPredictNext", "missing filter result")
@@ -238,23 +242,6 @@ private fun decisionInput(nowMs: Long): DecisionInput =
     DecisionInput
         .newBuilder()
         .setNowMs(nowMs)
-        .build()
-
-private fun nextwordConfig(
-    mode: InputMode,
-    translateSwapped: Boolean,
-    candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    hyphenlessRoman: Boolean = false,
-): AppConfig =
-    AppConfig
-        .newBuilder()
-        .setInputMode(mode.engineInputMode())
-        .setOoDoubletapEnabled(false)
-        .setNnDoubletapEnabled(false)
-        .setCandidateDisplayMode(candidateDisplayMode.toProto())
-        .setHyphenlessRoman(hyphenlessRoman)
-        .setIsTranslateSwapped(translateSwapped)
-        .setPlatformId(Platform.PLATFORM_ANDROID)
         .build()
 
 private inline fun nextwordDispatch(

@@ -79,8 +79,8 @@ interface EngineSettings {
     // Drift causes silent divergence (one platform still shows hyphens).
 
     /**
-     * No Hyphens (`behavioral-invariants.md` §49), EFFECTIVE: the stored switch
-     * with TPS folded off. Forwarded verbatim as `AppConfig.hyphenless_roman`.
+     * No Hyphens (`behavioral-invariants.md` §49) as stored. Forwarded verbatim
+     * as `AppConfig.hyphenless_roman`; the engine exempts the TPS layout itself.
      */
     val isHyphenlessRomanEnabled: Boolean
 

@@ -24,6 +24,7 @@ import com.siansiansu.taigikeyboard.engine.composingReset
 import com.siansiansu.taigikeyboard.engine.composingResetContinuous
 import com.siansiansu.taigikeyboard.engine.composingSelectSuggestion
 import com.siansiansu.taigikeyboard.engine.composingStart
+import com.siansiansu.taigikeyboard.engine.continuousAppConfig
 import com.siansiansu.taigikeyboard.engine.dictionaryFilters
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
@@ -425,7 +426,7 @@ class ComposingManager(
     suspend fun fetchContinuousCandidates(): List<RustEngineBridge.ContinuousCandidate> {
         val settings = settingsProvider.current
         return RustEngineBridge.composingFetchAtPos(
-            config = RustEngineBridge.continuousAppConfig(settings),
+            config = continuousAppConfig(settings),
             generation = currentGeneration,
             nowMs = System.currentTimeMillis(),
             // PR-9.6 — the dictionary source-toggle bitmask the Tab3 browse path
