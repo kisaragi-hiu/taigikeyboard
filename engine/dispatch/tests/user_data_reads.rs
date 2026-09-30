@@ -12,8 +12,8 @@ use common::{open_user_data, tl_config};
 use composing::{Intent, UserRows};
 use protos::engine::{
     composing_request, next_word_request, next_word_response, request, response, Append,
-    ComposingRequest, ContinuousResponse, DictionaryToggles, EnginePrediction, EnterContinuous,
-    FetchAtPos, NextWordRequest, PredictNext, Response,
+    ComposingRequest, ContinuousResponse, DictionarySourceToggles, EnginePrediction,
+    EnterContinuous, FetchAtPos, NextWordRequest, PredictNext, Response,
 };
 use ranking::{FrequencyData, FrequencyMap};
 use userdata::{
@@ -57,9 +57,9 @@ fn predict(roman: &str) -> Vec<EnginePrediction> {
             method: Some(next_word_request::Method::PredictNext(PredictNext {
                 word: "食".to_owned(),
                 roman: roman.to_owned(),
-                toggles: Some(DictionaryToggles {
+                toggles: Some(DictionarySourceToggles {
                     kautian: true,
-                    ..DictionaryToggles::default()
+                    ..DictionarySourceToggles::default()
                 }),
                 query_generation: 0,
                 now_ms: NOW_MS,
@@ -189,7 +189,7 @@ fn engine_reads_answer_what_the_same_rows_answer() {
     // 食 → 飯 / pn̄g, the one bigram the store holds, is boosted; every
     // other prediction stays as the bundled rows ranked it.
     let learned = predict("tsia̍h");
-    let is_learned = |p: &&EnginePrediction| p.hanzi == "飯" && p.tl == "pn̄g";
+    let is_learned = |p: &&EnginePrediction| p.hanji == "飯" && p.tl == "pn̄g";
     let score_of = |predictions: &[EnginePrediction]| {
         predictions
             .iter()

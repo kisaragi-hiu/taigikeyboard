@@ -20,53 +20,53 @@ public  final class RawNextWordPrediction extends
     // @@protoc_insertion_point(message_implements:taigi.engine.RawNextWordPrediction)
     RawNextWordPredictionOrBuilder {
   private RawNextWordPrediction() {
-    hanzi_ = "";
+    hanji_ = "";
     tl_ = "";
   }
-  public static final int HANZI_FIELD_NUMBER = 1;
-  private java.lang.String hanzi_;
+  public static final int HANJI_FIELD_NUMBER = 1;
+  private java.lang.String hanji_;
   /**
-   * <code>string hanzi = 1;</code>
-   * @return The hanzi.
+   * <code>string hanji = 1;</code>
+   * @return The hanji.
    */
   @java.lang.Override
-  public java.lang.String getHanzi() {
-    return hanzi_;
+  public java.lang.String getHanji() {
+    return hanji_;
   }
   /**
-   * <code>string hanzi = 1;</code>
-   * @return The bytes for hanzi.
+   * <code>string hanji = 1;</code>
+   * @return The bytes for hanji.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString
-      getHanziBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(hanzi_);
+      getHanjiBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(hanji_);
   }
   /**
-   * <code>string hanzi = 1;</code>
-   * @param value The hanzi to set.
+   * <code>string hanji = 1;</code>
+   * @param value The hanji to set.
    */
-  private void setHanzi(
+  private void setHanji(
       java.lang.String value) {
     java.util.Objects.requireNonNull(value);
 
-    hanzi_ = value;
+    hanji_ = value;
   }
   /**
-   * <code>string hanzi = 1;</code>
+   * <code>string hanji = 1;</code>
    */
-  private void clearHanzi() {
+  private void clearHanji() {
 
-    hanzi_ = getDefaultInstance().getHanzi();
+    hanji_ = getDefaultInstance().getHanji();
   }
   /**
-   * <code>string hanzi = 1;</code>
-   * @param value The bytes for hanzi to set.
+   * <code>string hanji = 1;</code>
+   * @param value The bytes for hanji to set.
    */
-  private void setHanziBytes(
+  private void setHanjiBytes(
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
-    hanzi_ = value.toStringUtf8();
+    hanji_ = value.toStringUtf8();
 
   }
 
@@ -315,51 +315,51 @@ public  final class RawNextWordPrediction extends
 
 
     /**
-     * <code>string hanzi = 1;</code>
-     * @return The hanzi.
+     * <code>string hanji = 1;</code>
+     * @return The hanji.
      */
     @java.lang.Override
-    public java.lang.String getHanzi() {
-      return instance.getHanzi();
+    public java.lang.String getHanji() {
+      return instance.getHanji();
     }
     /**
-     * <code>string hanzi = 1;</code>
-     * @return The bytes for hanzi.
+     * <code>string hanji = 1;</code>
+     * @return The bytes for hanji.
      */
     @java.lang.Override
     public com.google.protobuf.ByteString
-        getHanziBytes() {
-      return instance.getHanziBytes();
+        getHanjiBytes() {
+      return instance.getHanjiBytes();
     }
     /**
-     * <code>string hanzi = 1;</code>
-     * @param value The hanzi to set.
+     * <code>string hanji = 1;</code>
+     * @param value The hanji to set.
      * @return This builder for chaining.
      */
-    public Builder setHanzi(
+    public Builder setHanji(
         java.lang.String value) {
       copyOnWrite();
-      instance.setHanzi(value);
+      instance.setHanji(value);
       return this;
     }
     /**
-     * <code>string hanzi = 1;</code>
+     * <code>string hanji = 1;</code>
      * @return This builder for chaining.
      */
-    public Builder clearHanzi() {
+    public Builder clearHanji() {
       copyOnWrite();
-      instance.clearHanzi();
+      instance.clearHanji();
       return this;
     }
     /**
-     * <code>string hanzi = 1;</code>
-     * @param value The bytes for hanzi to set.
+     * <code>string hanji = 1;</code>
+     * @param value The bytes for hanji to set.
      * @return This builder for chaining.
      */
-    public Builder setHanziBytes(
+    public Builder setHanjiBytes(
         com.google.protobuf.ByteString value) {
       copyOnWrite();
-      instance.setHanziBytes(value);
+      instance.setHanjiBytes(value);
       return this;
     }
 
@@ -531,7 +531,7 @@ public  final class RawNextWordPrediction extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "hanzi_",
+            "hanji_",
             "tl_",
             "count_",
             "lastUsedMs_",

@@ -7,7 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * `DictionaryToggles` is the 12-boolean snapshot of user dictionary
+ * `DictionarySourceToggles` is the 12-boolean snapshot of user dictionary
  * preferences that drives `DictionaryFiltersRequest`. Field tags map
  * directly to the bit positions the engine consumes; reordering tags is
  * a wire break.
@@ -15,7 +15,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * Mirrors the iOS `EngineSettings` + Android `EngineSettings` boolean
  * surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
  *
- * kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcoll`
+ * kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcollections`
  * carries the user's per-subcollection enable state. PRESENCE of the
  * sub-message is the active sentinel — a platform that ships the toggles
  * sets it; any caller that leaves it absent (a platform whose UI is not
@@ -24,15 +24,15 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * owns the subtag bit packing so the layout lives in Rust only.
  * </pre>
  *
- * Protobuf type {@code taigi.engine.DictionaryToggles}
+ * Protobuf type {@code taigi.engine.DictionarySourceToggles}
  */
 @com.google.protobuf.Generated
-public  final class DictionaryToggles extends
+public  final class DictionarySourceToggles extends
     com.google.protobuf.GeneratedMessageLite<
-        DictionaryToggles, DictionaryToggles.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.DictionaryToggles)
-    DictionaryTogglesOrBuilder {
-  private DictionaryToggles() {
+        DictionarySourceToggles, DictionarySourceToggles.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.DictionarySourceToggles)
+    DictionarySourceTogglesOrBuilder {
+  private DictionarySourceToggles() {
   }
   private int bitField0_;
   public static final int KAUTIAN_FIELD_NUMBER = 1;
@@ -529,18 +529,18 @@ public  final class DictionaryToggles extends
     dev_ = false;
   }
 
-  public static final int KAUTIAN_SUBCOLL_FIELD_NUMBER = 13;
-  private com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles kautianSubcoll_;
+  public static final int KAUTIAN_SUBCOLLECTIONS_FIELD_NUMBER = 13;
+  private com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles kautianSubcollections_;
   /**
    * <pre>
    * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
    * gate (legacy all-on). Only meaningful when `kautian = true`.
    * </pre>
    *
-   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
    */
   @java.lang.Override
-  public boolean hasKautianSubcoll() {
+  public boolean hasKautianSubcollections() {
     return ((bitField0_ & 0x00000001) != 0);
   }
   /**
@@ -549,11 +549,11 @@ public  final class DictionaryToggles extends
    * gate (legacy all-on). Only meaningful when `kautian = true`.
    * </pre>
    *
-   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles getKautianSubcoll() {
-    return kautianSubcoll_ == null ? com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles.getDefaultInstance() : kautianSubcoll_;
+  public com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles getKautianSubcollections() {
+    return kautianSubcollections_ == null ? com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles.getDefaultInstance() : kautianSubcollections_;
   }
   /**
    * <pre>
@@ -561,11 +561,11 @@ public  final class DictionaryToggles extends
    * gate (legacy all-on). Only meaningful when `kautian = true`.
    * </pre>
    *
-   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
    */
-  private void setKautianSubcoll(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles value) {
+  private void setKautianSubcollections(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles value) {
     java.util.Objects.requireNonNull(value);
-    kautianSubcoll_ = value;
+    kautianSubcollections_ = value;
     bitField0_ |= 0x00000001;
   }
   /**
@@ -574,17 +574,17 @@ public  final class DictionaryToggles extends
    * gate (legacy all-on). Only meaningful when `kautian = true`.
    * </pre>
    *
-   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
    */
   @java.lang.SuppressWarnings("ReferenceEquality")
-  private void mergeKautianSubcoll(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles value) {
+  private void mergeKautianSubcollections(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles value) {
     java.util.Objects.requireNonNull(value);
-    if (kautianSubcoll_ != null &&
-        kautianSubcoll_ != com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles.getDefaultInstance()) {
-      kautianSubcoll_ =
-        com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles.newBuilder(kautianSubcoll_).mergeFrom(value).buildPartial();
+    if (kautianSubcollections_ != null &&
+        kautianSubcollections_ != com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles.getDefaultInstance()) {
+      kautianSubcollections_ =
+        com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles.newBuilder(kautianSubcollections_).mergeFrom(value).buildPartial();
     } else {
-      kautianSubcoll_ = value;
+      kautianSubcollections_ = value;
     }
     bitField0_ |= 0x00000001;
   }
@@ -594,57 +594,57 @@ public  final class DictionaryToggles extends
    * gate (legacy all-on). Only meaningful when `kautian = true`.
    * </pre>
    *
-   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+   * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
    */
-  private void clearKautianSubcoll() {
-    kautianSubcoll_ = null;
+  private void clearKautianSubcollections() {
+    kautianSubcollections_ = null;
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -652,24 +652,24 @@ public  final class DictionaryToggles extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -680,13 +680,13 @@ public  final class DictionaryToggles extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
    * <pre>
-   * `DictionaryToggles` is the 12-boolean snapshot of user dictionary
+   * `DictionarySourceToggles` is the 12-boolean snapshot of user dictionary
    * preferences that drives `DictionaryFiltersRequest`. Field tags map
    * directly to the bit positions the engine consumes; reordering tags is
    * a wire break.
@@ -694,7 +694,7 @@ public  final class DictionaryToggles extends
    * Mirrors the iOS `EngineSettings` + Android `EngineSettings` boolean
    * surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
    *
-   * kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcoll`
+   * kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcollections`
    * carries the user's per-subcollection enable state. PRESENCE of the
    * sub-message is the active sentinel — a platform that ships the toggles
    * sets it; any caller that leaves it absent (a platform whose UI is not
@@ -703,14 +703,14 @@ public  final class DictionaryToggles extends
    * owns the subtag bit packing so the layout lives in Rust only.
    * </pre>
    *
-   * Protobuf type {@code taigi.engine.DictionaryToggles}
+   * Protobuf type {@code taigi.engine.DictionarySourceToggles}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.DictionaryToggles)
-      com.siansiansu.taigikeyboard.engine.proto.DictionaryTogglesOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.DictionarySourceToggles)
+      com.siansiansu.taigikeyboard.engine.proto.DictionarySourceTogglesOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -1242,11 +1242,11 @@ public  final class DictionaryToggles extends
      * gate (legacy all-on). Only meaningful when `kautian = true`.
      * </pre>
      *
-     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
      */
     @java.lang.Override
-    public boolean hasKautianSubcoll() {
-      return instance.hasKautianSubcoll();
+    public boolean hasKautianSubcollections() {
+      return instance.hasKautianSubcollections();
     }
     /**
      * <pre>
@@ -1254,11 +1254,11 @@ public  final class DictionaryToggles extends
      * gate (legacy all-on). Only meaningful when `kautian = true`.
      * </pre>
      *
-     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles getKautianSubcoll() {
-      return instance.getKautianSubcoll();
+    public com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles getKautianSubcollections() {
+      return instance.getKautianSubcollections();
     }
     /**
      * <pre>
@@ -1266,11 +1266,11 @@ public  final class DictionaryToggles extends
      * gate (legacy all-on). Only meaningful when `kautian = true`.
      * </pre>
      *
-     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
      */
-    public Builder setKautianSubcoll(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles value) {
+    public Builder setKautianSubcollections(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles value) {
       copyOnWrite();
-      instance.setKautianSubcoll(value);
+      instance.setKautianSubcollections(value);
       return this;
       }
     /**
@@ -1279,12 +1279,12 @@ public  final class DictionaryToggles extends
      * gate (legacy all-on). Only meaningful when `kautian = true`.
      * </pre>
      *
-     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
      */
-    public Builder setKautianSubcoll(
-        com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles.Builder builderForValue) {
+    public Builder setKautianSubcollections(
+        com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles.Builder builderForValue) {
       copyOnWrite();
-      instance.setKautianSubcoll(builderForValue.build());
+      instance.setKautianSubcollections(builderForValue.build());
       return this;
     }
     /**
@@ -1293,11 +1293,11 @@ public  final class DictionaryToggles extends
      * gate (legacy all-on). Only meaningful when `kautian = true`.
      * </pre>
      *
-     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
      */
-    public Builder mergeKautianSubcoll(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles value) {
+    public Builder mergeKautianSubcollections(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles value) {
       copyOnWrite();
-      instance.mergeKautianSubcoll(value);
+      instance.mergeKautianSubcollections(value);
       return this;
     }
     /**
@@ -1306,14 +1306,14 @@ public  final class DictionaryToggles extends
      * gate (legacy all-on). Only meaningful when `kautian = true`.
      * </pre>
      *
-     * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
+     * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
      */
-    public Builder clearKautianSubcoll() {  copyOnWrite();
-      instance.clearKautianSubcoll();
+    public Builder clearKautianSubcollections() {  copyOnWrite();
+      instance.clearKautianSubcollections();
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.DictionaryToggles)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.DictionarySourceToggles)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -1322,7 +1322,7 @@ public  final class DictionaryToggles extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles();
+        return new com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -1342,7 +1342,7 @@ public  final class DictionaryToggles extends
             "variant_",
             "khiin_",
             "lkk_",
-            "kautianSubcoll_",
+            "kautianSubcollections_",
             "dev_",
           };
           java.lang.String info =
@@ -1355,13 +1355,13 @@ public  final class DictionaryToggles extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -1381,24 +1381,24 @@ public  final class DictionaryToggles extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.DictionaryToggles)
-  private static final com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.DictionarySourceToggles)
+  private static final com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles DEFAULT_INSTANCE;
   static {
-    DictionaryToggles defaultInstance = new DictionaryToggles();
+    DictionarySourceToggles defaultInstance = new DictionarySourceToggles();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      DictionaryToggles.class, defaultInstance);
+      DictionarySourceToggles.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<DictionaryToggles> PARSER;
+  private static volatile com.google.protobuf.Parser<DictionarySourceToggles> PARSER;
 
-  public static com.google.protobuf.Parser<DictionaryToggles> parser() {
+  public static com.google.protobuf.Parser<DictionarySourceToggles> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

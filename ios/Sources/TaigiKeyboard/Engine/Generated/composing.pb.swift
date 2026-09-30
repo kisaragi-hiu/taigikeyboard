@@ -596,8 +596,8 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
   /// un-wired build keeps the dictionary on.
   public var customDictionaryDisabled: Bool = false
 
-  public var toggles: Taigi_Engine_DictionaryToggles {
-    get {_toggles ?? Taigi_Engine_DictionaryToggles()}
+  public var toggles: Taigi_Engine_DictionarySourceToggles {
+    get {_toggles ?? Taigi_Engine_DictionarySourceToggles()}
     set {_toggles = newValue}
   }
   /// Returns true if `toggles` has been explicitly set.
@@ -609,7 +609,7 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
 
   public init() {}
 
-  fileprivate var _toggles: Taigi_Engine_DictionaryToggles? = nil
+  fileprivate var _toggles: Taigi_Engine_DictionarySourceToggles? = nil
 }
 
 /// v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The

@@ -6,8 +6,8 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface SearchByHanziResponseOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.SearchByHanziResponse)
+public interface SearchByHanjiResponseOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.SearchByHanjiResponse)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**

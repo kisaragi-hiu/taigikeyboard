@@ -73,7 +73,7 @@ extension RustEngineBridge {
         var save = Taigi_Engine_SaveCustomEntry()
         save.id = id
         save.roman = roman
-        save.hanzi = hanzi
+        save.hanji = hanzi
         guard case let .customEntrySaved(saved)? = userDataResult(
             .saveCustomEntry(save),
             op: "customDictionarySave",

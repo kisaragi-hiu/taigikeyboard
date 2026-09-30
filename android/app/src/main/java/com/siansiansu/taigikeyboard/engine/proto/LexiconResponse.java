@@ -22,8 +22,8 @@ public  final class LexiconResponse extends
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     INSTALL_RESULT(11),
     SEARCH_WITH_SOURCES_RESULT(13),
-    SEARCH_BY_HANZI_RESULT(14),
-    IS_HANZI_RESULT(17),
+    SEARCH_BY_HANJI_RESULT(14),
+    IS_HANJI_RESULT(17),
     DICTIONARY_FILTERS_RESULT(18),
     RESULT_NOT_SET(0);
     private final int value;
@@ -42,8 +42,8 @@ public  final class LexiconResponse extends
       switch (value) {
         case 11: return INSTALL_RESULT;
         case 13: return SEARCH_WITH_SOURCES_RESULT;
-        case 14: return SEARCH_BY_HANZI_RESULT;
-        case 17: return IS_HANZI_RESULT;
+        case 14: return SEARCH_BY_HANJI_RESULT;
+        case 17: return IS_HANJI_RESULT;
         case 18: return DICTIONARY_FILTERS_RESULT;
         case 0: return RESULT_NOT_SET;
         default: return null;
@@ -166,40 +166,40 @@ public  final class LexiconResponse extends
     }
   }
 
-  public static final int SEARCH_BY_HANZI_RESULT_FIELD_NUMBER = 14;
+  public static final int SEARCH_BY_HANJI_RESULT_FIELD_NUMBER = 14;
   /**
-   * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+   * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
    */
   @java.lang.Override
-  public boolean hasSearchByHanziResult() {
+  public boolean hasSearchByHanjiResult() {
     return resultCase_ == 14;
   }
   /**
-   * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+   * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse getSearchByHanziResult() {
+  public com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse getSearchByHanjiResult() {
     if (resultCase_ == 14) {
-       return (com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse) result_;
+       return (com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse) result_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse.getDefaultInstance();
   }
   /**
-   * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+   * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
    */
-  private void setSearchByHanziResult(com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse value) {
+  private void setSearchByHanjiResult(com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse value) {
     java.util.Objects.requireNonNull(value);
     result_ = value;
     resultCase_ = 14;
   }
   /**
-   * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+   * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
    */
-  private void mergeSearchByHanziResult(com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse value) {
+  private void mergeSearchByHanjiResult(com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse value) {
     java.util.Objects.requireNonNull(value);
     if (resultCase_ == 14 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse) result_)
+        result_ != com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse) result_)
           .mergeFrom(value).buildPartial();
     } else {
       result_ = value;
@@ -207,49 +207,49 @@ public  final class LexiconResponse extends
     resultCase_ = 14;
   }
   /**
-   * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+   * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
    */
-  private void clearSearchByHanziResult() {
+  private void clearSearchByHanjiResult() {
     if (resultCase_ == 14) {
       resultCase_ = 0;
       result_ = null;
     }
   }
 
-  public static final int IS_HANZI_RESULT_FIELD_NUMBER = 17;
+  public static final int IS_HANJI_RESULT_FIELD_NUMBER = 17;
   /**
-   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
    */
   @java.lang.Override
-  public boolean hasIsHanziResult() {
+  public boolean hasIsHanjiResult() {
     return resultCase_ == 17;
   }
   /**
-   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse getIsHanziResult() {
+  public com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse getIsHanjiResult() {
     if (resultCase_ == 17) {
-       return (com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse) result_;
+       return (com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse) result_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse.getDefaultInstance();
   }
   /**
-   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
    */
-  private void setIsHanziResult(com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse value) {
+  private void setIsHanjiResult(com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse value) {
     java.util.Objects.requireNonNull(value);
     result_ = value;
     resultCase_ = 17;
   }
   /**
-   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
    */
-  private void mergeIsHanziResult(com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse value) {
+  private void mergeIsHanjiResult(com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse value) {
     java.util.Objects.requireNonNull(value);
     if (resultCase_ == 17 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse) result_)
+        result_ != com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse.newBuilder((com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse) result_)
           .mergeFrom(value).buildPartial();
     } else {
       result_ = value;
@@ -257,9 +257,9 @@ public  final class LexiconResponse extends
     resultCase_ = 17;
   }
   /**
-   * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+   * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
    */
-  private void clearIsHanziResult() {
+  private void clearIsHanjiResult() {
     if (resultCase_ == 17) {
       resultCase_ = 0;
       result_ = null;
@@ -522,98 +522,98 @@ public  final class LexiconResponse extends
     }
 
     /**
-     * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+     * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
      */
     @java.lang.Override
-    public boolean hasSearchByHanziResult() {
-      return instance.hasSearchByHanziResult();
+    public boolean hasSearchByHanjiResult() {
+      return instance.hasSearchByHanjiResult();
     }
     /**
-     * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+     * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse getSearchByHanziResult() {
-      return instance.getSearchByHanziResult();
+    public com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse getSearchByHanjiResult() {
+      return instance.getSearchByHanjiResult();
     }
     /**
-     * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+     * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
      */
-    public Builder setSearchByHanziResult(com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse value) {
+    public Builder setSearchByHanjiResult(com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse value) {
       copyOnWrite();
-      instance.setSearchByHanziResult(value);
+      instance.setSearchByHanjiResult(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+     * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
      */
-    public Builder setSearchByHanziResult(
-        com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse.Builder builderForValue) {
+    public Builder setSearchByHanjiResult(
+        com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse.Builder builderForValue) {
       copyOnWrite();
-      instance.setSearchByHanziResult(builderForValue.build());
+      instance.setSearchByHanjiResult(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+     * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
      */
-    public Builder mergeSearchByHanziResult(com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse value) {
+    public Builder mergeSearchByHanjiResult(com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse value) {
       copyOnWrite();
-      instance.mergeSearchByHanziResult(value);
+      instance.mergeSearchByHanjiResult(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.SearchByHanziResponse search_by_hanzi_result = 14;</code>
+     * <code>.taigi.engine.SearchByHanjiResponse search_by_hanji_result = 14;</code>
      */
-    public Builder clearSearchByHanziResult() {
+    public Builder clearSearchByHanjiResult() {
       copyOnWrite();
-      instance.clearSearchByHanziResult();
+      instance.clearSearchByHanjiResult();
       return this;
     }
 
     /**
-     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
      */
     @java.lang.Override
-    public boolean hasIsHanziResult() {
-      return instance.hasIsHanziResult();
+    public boolean hasIsHanjiResult() {
+      return instance.hasIsHanjiResult();
     }
     /**
-     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse getIsHanziResult() {
-      return instance.getIsHanziResult();
+    public com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse getIsHanjiResult() {
+      return instance.getIsHanjiResult();
     }
     /**
-     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
      */
-    public Builder setIsHanziResult(com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse value) {
+    public Builder setIsHanjiResult(com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse value) {
       copyOnWrite();
-      instance.setIsHanziResult(value);
+      instance.setIsHanjiResult(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
      */
-    public Builder setIsHanziResult(
-        com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.Builder builderForValue) {
+    public Builder setIsHanjiResult(
+        com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse.Builder builderForValue) {
       copyOnWrite();
-      instance.setIsHanziResult(builderForValue.build());
+      instance.setIsHanjiResult(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
      */
-    public Builder mergeIsHanziResult(com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse value) {
+    public Builder mergeIsHanjiResult(com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse value) {
       copyOnWrite();
-      instance.mergeIsHanziResult(value);
+      instance.mergeIsHanjiResult(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.IsHanziResponse is_hanzi_result = 17;</code>
+     * <code>.taigi.engine.IsHanjiResponse is_hanji_result = 17;</code>
      */
-    public Builder clearIsHanziResult() {
+    public Builder clearIsHanjiResult() {
       copyOnWrite();
-      instance.clearIsHanziResult();
+      instance.clearIsHanjiResult();
       return this;
     }
 
@@ -685,8 +685,8 @@ public  final class LexiconResponse extends
             "resultCase_",
             com.siansiansu.taigikeyboard.engine.proto.InstallResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesResponse.class,
-            com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse.class,
-            com.siansiansu.taigikeyboard.engine.proto.IsHanziResponse.class,
+            com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse.class,
+            com.siansiansu.taigikeyboard.engine.proto.IsHanjiResponse.class,
             com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersResponse.class,
           };
           java.lang.String info =

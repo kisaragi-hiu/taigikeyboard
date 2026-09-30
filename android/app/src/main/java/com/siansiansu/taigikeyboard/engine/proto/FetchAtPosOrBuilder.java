@@ -35,13 +35,13 @@ public interface FetchAtPosOrBuilder extends
   boolean getCustomDictionaryDisabled();
 
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
    * @return Whether the toggles field is set.
    */
   boolean hasToggles();
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 9;</code>
    * @return The toggles.
    */
-  com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles getToggles();
+  com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles();
 }

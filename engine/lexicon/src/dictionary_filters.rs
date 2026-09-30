@@ -20,20 +20,17 @@ use crate::dictionary_reader::{
     KAUTIAN_SUBTAG_NAME_BIT, WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT, WIRE_KAUTIAN_SUBCOLL_MASK,
     WIRE_KAUTIAN_SUBCOLL_SHIFT,
 };
-use protos::engine::{DictionaryFiltersResponse, DictionarySourceCode, DictionaryToggles};
+use protos::engine::{DictionaryFiltersResponse, DictionarySourceCode, DictionarySourceToggles};
 
-/// Sentinel value for `assoc_lookup_bitmask` — preserves the documented
-/// shortcut at `lexicon.proto:166-173`. When the platform receives this
-/// value it forwards to `AssocLookupRequest.enabled_sources_bitmask`
-/// without further processing; the engine treats it as "filter disabled".
+/// `association_bitmask` when every association source is on: the
+/// association reader treats it as "filter disabled".
 const ASSOC_ALL_ENABLED_SENTINEL: u32 = u32::MAX;
 
 /// Compute filter bitmasks + enabled-source codes from the user's
 /// 12-toggle preference snapshot.
-pub(crate) fn compute_filters(toggles: &DictionaryToggles) -> DictionaryFiltersResponse {
+pub(crate) fn compute_filters(toggles: &DictionarySourceToggles) -> DictionaryFiltersResponse {
     DictionaryFiltersResponse {
         dictionary_filter_bitmask: dictionary_filter_bitmask(toggles),
-        assoc_lookup_bitmask: assoc_lookup_bitmask(toggles),
         enabled_source_codes: enabled_source_codes(toggles)
             .into_iter()
             .map(|c| c as i32)
@@ -44,7 +41,7 @@ pub(crate) fn compute_filters(toggles: &DictionaryToggles) -> DictionaryFiltersR
 /// Full `dictionary.bin` filter bitmask: source/variant bits 0-12 plus the
 /// kautian subcollection wire high region (bit 13 active + bits 14..=25 enable
 /// mask) when the subcollection toggles are present.
-pub fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
+pub fn dictionary_filter_bitmask(t: &DictionarySourceToggles) -> u32 {
     let mut mask: u32 = 0;
     if t.kautian {
         mask |= 1 << 0;
@@ -98,8 +95,8 @@ pub fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
 /// regardless, so gating them is moot). The `main` subcollection bit is set
 /// unconditionally when present: main is not a user toggle — it is
 /// always on whenever the kautian master is on.
-fn encode_kautian_subcoll_wire(t: &DictionaryToggles) -> u32 {
-    let Some(sub) = t.kautian_subcoll.as_ref() else {
+fn encode_kautian_subcoll_wire(t: &DictionarySourceToggles) -> u32 {
+    let Some(sub) = t.kautian_subcollections.as_ref() else {
         return 0;
     };
     if !t.kautian {
@@ -135,10 +132,9 @@ fn encode_kautian_subcoll_wire(t: &DictionaryToggles) -> u32 {
 }
 
 /// Association-bin filter bitmask: bits 0-8 mask of toggled sources.
-/// Returns `u32::MAX` sentinel when ALL 9 association sources are on,
-/// preserving the documented shortcut consumed by
-/// `AssocLookupRequest.enabled_sources_bitmask`.
-fn assoc_lookup_bitmask(t: &DictionaryToggles) -> u32 {
+/// Returns the `u32::MAX` sentinel when ALL 9 association sources are on,
+/// the shortcut `api::assoc_lookup` reads as "no filter".
+pub fn association_bitmask(t: &DictionarySourceToggles) -> u32 {
     if all_association_sources_enabled(t) {
         return ASSOC_ALL_ENABLED_SENTINEL;
     }
@@ -173,7 +169,7 @@ fn assoc_lookup_bitmask(t: &DictionaryToggles) -> u32 {
     mask
 }
 
-fn all_association_sources_enabled(t: &DictionaryToggles) -> bool {
+fn all_association_sources_enabled(t: &DictionarySourceToggles) -> bool {
     t.kautian
         && t.taigitv
         && t.itaigi
@@ -190,7 +186,7 @@ fn all_association_sources_enabled(t: &DictionaryToggles) -> bool {
 /// present; `DEV` (dictionary-supplement-file source) is gated by the dev toggle and pushed
 /// first-when-present so the order stays `[DEV?, CUSTOM, …]`; `variant` is
 /// a filter bit, not a source code.
-fn enabled_source_codes(t: &DictionaryToggles) -> Vec<DictionarySourceCode> {
+fn enabled_source_codes(t: &DictionarySourceToggles) -> Vec<DictionarySourceCode> {
     use DictionarySourceCode as C;
     let mut codes = Vec::new();
     if t.dev {
@@ -237,18 +233,18 @@ fn enabled_source_codes(t: &DictionaryToggles) -> Vec<DictionarySourceCode> {
 mod tests {
     use super::*;
     use crate::dictionary_reader::KAUTIAN_SUBTAG_USED_MASK;
-    use protos::engine::KautianSubcollToggles;
+    use protos::engine::KautianSubcollectionToggles;
 
     /// Bits 13..=25 of the wire mask (active sentinel + 12-bit enable mask).
     /// Low bits 0-12 are the source/variant region, asserted separately.
     const WIRE_HIGH_REGION: u32 = !0x1FFF;
 
-    fn all_off() -> DictionaryToggles {
-        DictionaryToggles::default()
+    fn all_off() -> DictionarySourceToggles {
+        DictionarySourceToggles::default()
     }
 
-    fn all_subcoll_on() -> KautianSubcollToggles {
-        KautianSubcollToggles {
+    fn all_subcoll_on() -> KautianSubcollectionToggles {
+        KautianSubcollectionToggles {
             accent_lukang: true,
             accent_sansia: true,
             accent_taipak: true,
@@ -263,8 +259,8 @@ mod tests {
         }
     }
 
-    fn all_on() -> DictionaryToggles {
-        DictionaryToggles {
+    fn all_on() -> DictionarySourceToggles {
+        DictionarySourceToggles {
             kautian: true,
             taigitv: true,
             itaigi: true,
@@ -278,7 +274,7 @@ mod tests {
             khiin: true,
             lkk: true,
             dev: true,
-            kautian_subcoll: None,
+            kautian_subcollections: None,
         }
     }
 
@@ -290,19 +286,19 @@ mod tests {
     fn all_toggles_off_keeps_nothing() {
         let r = compute_filters(&all_off());
         assert_eq!(r.dictionary_filter_bitmask, 0);
-        assert_eq!(r.assoc_lookup_bitmask, 0);
+        assert_eq!(association_bitmask(&all_off()), 0);
         let codes: Vec<i32> = vec![DictionarySourceCode::DictSourceCustom as i32];
         assert_eq!(r.enabled_source_codes, codes);
     }
 
     /// INVARIANT: when every association source is on,
-    /// `assoc_lookup_bitmask` is the `u32::MAX` sentinel — preserves the
+    /// `association_bitmask` is the `u32::MAX` sentinel — preserves the
     /// pre-v3.5.8 `allAssociationSourcesEnabled ? UInt32.max :
-    /// associationBitmask()` branch documented at `lexicon.proto:166-173`.
+    /// associationBitmask()` branch.
     #[test]
     fn all_assoc_sources_returns_sentinel() {
         let r = compute_filters(&all_on());
-        assert_eq!(r.assoc_lookup_bitmask, u32::MAX);
+        assert_eq!(association_bitmask(&all_on()), u32::MAX);
         // dictionary_filter_bitmask: bits 0-12 all set
         assert_eq!(r.dictionary_filter_bitmask, 0x1FFF);
     }
@@ -313,14 +309,14 @@ mod tests {
         let mut t = all_on();
         t.khpoo = false; // bit 8 off
         let r = compute_filters(&t);
-        assert_eq!(r.assoc_lookup_bitmask, 0xFF); // bits 0-7
+        assert_eq!(association_bitmask(&t), 0xFF); // bits 0-7
         assert_eq!(r.dictionary_filter_bitmask, 0x1FFF & !(1 << 8));
     }
 
     /// Bit position truth table — each toggle drives the documented bit.
     #[test]
     fn bit_positions_match_layout() {
-        type ToggleCase = (fn(&mut DictionaryToggles), u32);
+        type ToggleCase = (fn(&mut DictionarySourceToggles), u32);
         let cases: [ToggleCase; 13] = [
             (|t| t.kautian = true, 1 << 0),
             (|t| t.taigitv = true, 1 << 1),
@@ -388,8 +384,8 @@ mod tests {
     /// gate (legacy all-on). Mirrors a platform whose UI is not wired yet.
     #[test]
     fn subcoll_absent_sets_no_high_bits() {
-        let mut t = all_on(); // kautian master on, but kautian_subcoll left None
-        t.kautian_subcoll = None;
+        let mut t = all_on(); // kautian master on, but kautian_subcollections left None
+        t.kautian_subcollections = None;
         let mask = compute_filters(&t).dictionary_filter_bitmask;
         assert_eq!(
             mask & WIRE_HIGH_REGION,
@@ -404,7 +400,7 @@ mod tests {
     fn subcoll_present_all_on_sets_full_wire() {
         let mut t = all_off();
         t.kautian = true;
-        t.kautian_subcoll = Some(all_subcoll_on());
+        t.kautian_subcollections = Some(all_subcoll_on());
         let mask = compute_filters(&t).dictionary_filter_bitmask;
         let expected_high = WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT
             | (KAUTIAN_SUBTAG_USED_MASK as u32) << WIRE_KAUTIAN_SUBCOLL_SHIFT;
@@ -419,7 +415,7 @@ mod tests {
     fn subcoll_present_all_off_keeps_main() {
         let mut t = all_off();
         t.kautian = true;
-        t.kautian_subcoll = Some(KautianSubcollToggles::default());
+        t.kautian_subcollections = Some(KautianSubcollectionToggles::default());
         let mask = compute_filters(&t).dictionary_filter_bitmask;
         let main_only = 1u32 << KAUTIAN_SUBTAG_MAIN_BIT;
         let expected_high =
@@ -433,7 +429,7 @@ mod tests {
     fn subcoll_ignored_when_master_off() {
         let mut t = all_off();
         t.kautian = false;
-        t.kautian_subcoll = Some(all_subcoll_on());
+        t.kautian_subcollections = Some(all_subcoll_on());
         let mask = compute_filters(&t).dictionary_filter_bitmask;
         assert_eq!(mask & WIRE_HIGH_REGION, 0);
         assert_eq!(mask & (1 << 0), 0, "kautian source bit stays off");
@@ -443,7 +439,7 @@ mod tests {
     /// bit 11. Verifies the ENCODE order matches `dialect_columns`.
     #[test]
     fn subcoll_accent_bit_positions_match_dialect_order() {
-        type AccentCase = (fn(&mut KautianSubcollToggles), u16);
+        type AccentCase = (fn(&mut KautianSubcollectionToggles), u16);
         let cases: [AccentCase; 11] = [
             (|s| s.accent_lukang = true, 1),
             (|s| s.accent_sansia = true, 2),
@@ -458,11 +454,11 @@ mod tests {
             (|s| s.name_appendix = true, KAUTIAN_SUBTAG_NAME_BIT),
         ];
         for (set, subtag_bit) in cases {
-            let mut sub = KautianSubcollToggles::default();
+            let mut sub = KautianSubcollectionToggles::default();
             set(&mut sub);
             let mut t = all_off();
             t.kautian = true;
-            t.kautian_subcoll = Some(sub);
+            t.kautian_subcollections = Some(sub);
             let mask = compute_filters(&t).dictionary_filter_bitmask;
             // main (bit 0) is always on, plus the one toggled bit.
             let subtag = (1u16 << KAUTIAN_SUBTAG_MAIN_BIT) | (1u16 << subtag_bit);

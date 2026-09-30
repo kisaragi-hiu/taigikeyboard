@@ -54,7 +54,7 @@ pub(crate) fn filter(
     //    iteration order only affects equal-score ties.
     let mut merged: IndexMap<(String, String), MergedRow> = IndexMap::new();
     for row in raw {
-        if row.hanzi.is_empty() {
+        if row.hanji.is_empty() {
             continue;
         }
         let source = Source::try_from(row.source).map_err(|_| NextWordError::InvalidSource)?;
@@ -65,7 +65,7 @@ pub(crate) fn filter(
         };
         let is_user = source == Source::User;
         let (dict_score, user_score) = if is_user { (0.0, score) } else { (score, 0.0) };
-        let key = (row.hanzi.clone(), row.tl.clone());
+        let key = (row.hanji.clone(), row.tl.clone());
         merged
             .entry(key)
             .and_modify(|existing| {
@@ -96,7 +96,7 @@ pub(crate) fn filter(
                 existing.has_user_score |= is_user;
             })
             .or_insert(MergedRow {
-                hanzi: row.hanzi,
+                hanzi: row.hanji,
                 tl: row.tl,
                 dict_score,
                 user_score,
@@ -276,7 +276,7 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
     Some(EnginePrediction {
         text,
         subtitle,
-        hanzi: m.hanzi,
+        hanji: m.hanzi,
         tl: m.tl,
         score: scorer::combined_score(m.dict_score, m.user_score),
     })
@@ -326,7 +326,7 @@ mod tests {
 
     fn dict_row(hanzi: &str, tl: &str, count: i64) -> RawNextWordPrediction {
         RawNextWordPrediction {
-            hanzi: hanzi.to_owned(),
+            hanji: hanzi.to_owned(),
             tl: tl.to_owned(),
             count,
             last_used_ms: 0,
@@ -336,7 +336,7 @@ mod tests {
 
     fn user_row(hanzi: &str, tl: &str, count: i64, last_used_ms: i64) -> RawNextWordPrediction {
         RawNextWordPrediction {
-            hanzi: hanzi.to_owned(),
+            hanji: hanzi.to_owned(),
             tl: tl.to_owned(),
             count,
             last_used_ms,
@@ -452,7 +452,7 @@ mod tests {
     fn invalid_source_after_a_user_collision_still_errors() {
         let state = PersistedState::default();
         let bad = RawNextWordPrediction {
-            hanzi: "好".to_owned(),
+            hanji: "好".to_owned(),
             tl: "hó".to_owned(),
             count: 1,
             last_used_ms: 0,
@@ -578,7 +578,7 @@ mod tests {
         let hanzi: Vec<&str> = result
             .predictions
             .iter()
-            .map(|p| p.hanzi.as_str())
+            .map(|p| p.hanji.as_str())
             .collect();
         assert_eq!(hanzi, vec!["南", "台語", "灣", "北"]);
         assert_eq!(result.predictions[1].score, scorer::DICT_SCORE_CAP);
@@ -642,7 +642,7 @@ mod tests {
         .unwrap();
         assert!(!result.was_stale);
         assert_eq!(result.predictions.len(), 1);
-        assert_eq!(result.predictions[0].hanzi, "好");
+        assert_eq!(result.predictions[0].hanji, "好");
     }
 
     #[test]
@@ -673,7 +673,7 @@ mod tests {
             &state,
             vec![
                 RawNextWordPrediction {
-                    hanzi: "".to_owned(),
+                    hanji: "".to_owned(),
                     tl: "ho".to_owned(),
                     count: 5,
                     last_used_ms: 0,
@@ -696,7 +696,7 @@ mod tests {
         let result = filter(
             &state,
             vec![RawNextWordPrediction {
-                hanzi: "好".to_owned(),
+                hanji: "好".to_owned(),
                 tl: "hó".to_owned(),
                 count: 5,
                 last_used_ms: 0,
@@ -716,7 +716,7 @@ mod tests {
         let result = filter(
             &state,
             vec![RawNextWordPrediction {
-                hanzi: "好".to_owned(),
+                hanji: "好".to_owned(),
                 tl: "hó".to_owned(),
                 count: 5,
                 last_used_ms: 0,
@@ -805,10 +805,10 @@ mod tests {
         .unwrap();
         assert_eq!(result.predictions.len(), 3);
         // user "早" has highest score (~550 from learning bonus + decay)
-        assert_eq!(result.predictions[0].hanzi, "早");
+        assert_eq!(result.predictions[0].hanji, "早");
         // Among dicts: "安" (score=3) > "好" (score=1)
-        assert_eq!(result.predictions[1].hanzi, "安");
-        assert_eq!(result.predictions[2].hanzi, "好");
+        assert_eq!(result.predictions[1].hanji, "安");
+        assert_eq!(result.predictions[2].hanji, "好");
     }
 
     #[test]
@@ -874,7 +874,7 @@ mod tests {
             "fused raw folds into separator canonical"
         );
         let p = &result.predictions[0];
-        assert_eq!(p.hanzi, "台語");
+        assert_eq!(p.hanji, "台語");
         assert_eq!(p.tl, "tâi-gí", "separator-bearing canonical is kept");
         assert!(
             (p.score - (scorer::score_dict(5) + scorer::score_dict(3))).abs() < 1e-9,
@@ -933,7 +933,7 @@ mod tests {
             1,
             "separator + raw variants of one reading collapse"
         );
-        assert_eq!(result.predictions[0].hanzi, "予我");
+        assert_eq!(result.predictions[0].hanji, "予我");
     }
 
     // trace (Codex post-impl P1): genuine polyphonic single-syllable readings
@@ -1056,7 +1056,7 @@ mod tests {
         let collapsed = filter(&state, rows(), 0, 0, 10, &config_roman_only_display()).unwrap();
         assert_eq!(collapsed.predictions.len(), 1);
         assert_eq!(
-            collapsed.predictions[0].hanzi, "食",
+            collapsed.predictions[0].hanji, "食",
             "first-seen after the score sort"
         );
         assert_eq!(collapsed.predictions[0].text, "tsia̍h");

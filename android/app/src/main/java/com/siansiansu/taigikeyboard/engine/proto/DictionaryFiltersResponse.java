@@ -10,14 +10,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `DictionaryFiltersResponse` carries ready-to-send outputs:
  * - `dictionary_filter_bitmask` plumbs straight into
  * `SearchWithSourcesRequest.enabled_sources_bitmask` /
- * `SearchByHanziRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
+ * `SearchByHanjiRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
  * bit 10 dev (always set), bit 12 variant.
- * - `assoc_lookup_bitmask` plumbs straight into
- * `AssocLookupRequest.enabled_sources_bitmask`. Equals `u32::MAX` when
- * ALL 9 association sources are enabled (preserves the documented
- * sentinel shortcut at `lexicon.proto:166-173`); otherwise equals the
- * association mask (bits 0-8). engine/dispatch `PredictNext` computes it
- * itself from the toggles; platforms no longer forward it.
  * - `enabled_source_codes` lists every `DictionarySourceCode` whose source
  * the user has toggled on. `DEV` + `CUSTOM` are always present
  * (non-toggleable). Platforms decode via explicit switch/map into their
@@ -60,32 +54,6 @@ public  final class DictionaryFiltersResponse extends
   private void clearDictionaryFilterBitmask() {
 
     dictionaryFilterBitmask_ = 0;
-  }
-
-  public static final int ASSOC_LOOKUP_BITMASK_FIELD_NUMBER = 2;
-  private int assocLookupBitmask_;
-  /**
-   * <code>uint32 assoc_lookup_bitmask = 2;</code>
-   * @return The assocLookupBitmask.
-   */
-  @java.lang.Override
-  public int getAssocLookupBitmask() {
-    return assocLookupBitmask_;
-  }
-  /**
-   * <code>uint32 assoc_lookup_bitmask = 2;</code>
-   * @param value The assocLookupBitmask to set.
-   */
-  private void setAssocLookupBitmask(int value) {
-
-    assocLookupBitmask_ = value;
-  }
-  /**
-   * <code>uint32 assoc_lookup_bitmask = 2;</code>
-   */
-  private void clearAssocLookupBitmask() {
-
-    assocLookupBitmask_ = 0;
   }
 
   public static final int ENABLED_SOURCE_CODES_FIELD_NUMBER = 3;
@@ -309,14 +277,8 @@ public  final class DictionaryFiltersResponse extends
    * `DictionaryFiltersResponse` carries ready-to-send outputs:
    * - `dictionary_filter_bitmask` plumbs straight into
    * `SearchWithSourcesRequest.enabled_sources_bitmask` /
-   * `SearchByHanziRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
+   * `SearchByHanjiRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
    * bit 10 dev (always set), bit 12 variant.
-   * - `assoc_lookup_bitmask` plumbs straight into
-   * `AssocLookupRequest.enabled_sources_bitmask`. Equals `u32::MAX` when
-   * ALL 9 association sources are enabled (preserves the documented
-   * sentinel shortcut at `lexicon.proto:166-173`); otherwise equals the
-   * association mask (bits 0-8). engine/dispatch `PredictNext` computes it
-   * itself from the toggles; platforms no longer forward it.
    * - `enabled_source_codes` lists every `DictionarySourceCode` whose source
    * the user has toggled on. `DEV` + `CUSTOM` are always present
    * (non-toggleable). Platforms decode via explicit switch/map into their
@@ -362,34 +324,6 @@ public  final class DictionaryFiltersResponse extends
     public Builder clearDictionaryFilterBitmask() {
       copyOnWrite();
       instance.clearDictionaryFilterBitmask();
-      return this;
-    }
-
-    /**
-     * <code>uint32 assoc_lookup_bitmask = 2;</code>
-     * @return The assocLookupBitmask.
-     */
-    @java.lang.Override
-    public int getAssocLookupBitmask() {
-      return instance.getAssocLookupBitmask();
-    }
-    /**
-     * <code>uint32 assoc_lookup_bitmask = 2;</code>
-     * @param value The assocLookupBitmask to set.
-     * @return This builder for chaining.
-     */
-    public Builder setAssocLookupBitmask(int value) {
-      copyOnWrite();
-      instance.setAssocLookupBitmask(value);
-      return this;
-    }
-    /**
-     * <code>uint32 assoc_lookup_bitmask = 2;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearAssocLookupBitmask() {
-      copyOnWrite();
-      instance.clearAssocLookupBitmask();
       return this;
     }
 
@@ -531,12 +465,10 @@ public  final class DictionaryFiltersResponse extends
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
             "dictionaryFilterBitmask_",
-            "assocLookupBitmask_",
             "enabledSourceCodes_",
           };
           java.lang.String info =
-              "\u0000\u0003\u0000\u0000\u0001\u0003\u0003\u0000\u0001\u0000\u0001\u000b\u0002\u000b" +
-              "\u0003,";
+              "\u0000\u0002\u0000\u0000\u0001\u0003\u0002\u0000\u0001\u0000\u0001\u000b\u0003,";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

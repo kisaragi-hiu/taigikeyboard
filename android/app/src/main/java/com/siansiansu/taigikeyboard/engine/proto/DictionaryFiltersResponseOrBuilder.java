@@ -17,12 +17,6 @@ public interface DictionaryFiltersResponseOrBuilder extends
   int getDictionaryFilterBitmask();
 
   /**
-   * <code>uint32 assoc_lookup_bitmask = 2;</code>
-   * @return The assocLookupBitmask.
-   */
-  int getAssocLookupBitmask();
-
-  /**
    * <code>repeated .taigi.engine.DictionarySourceCode enabled_source_codes = 3;</code>
    * @return A list containing the enabledSourceCodes.
    */

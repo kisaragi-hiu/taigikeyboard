@@ -7,7 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * `KautianSubcollToggles` is the per-subcollection enable state for the
+ * `KautianSubcollectionToggles` is the per-subcollection enable state for the
  * kautian source (Phase 3). The main subcollection (main entry / headword) is
  * NOT a field — it is always on whenever the kautian master toggle is on,
  * so `compute_filters` sets its subtag bit unconditionally when this
@@ -18,15 +18,15 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `docs/engine/binary-format.md` §4.5.
  * </pre>
  *
- * Protobuf type {@code taigi.engine.KautianSubcollToggles}
+ * Protobuf type {@code taigi.engine.KautianSubcollectionToggles}
  */
 @com.google.protobuf.Generated
-public  final class KautianSubcollToggles extends
+public  final class KautianSubcollectionToggles extends
     com.google.protobuf.GeneratedMessageLite<
-        KautianSubcollToggles, KautianSubcollToggles.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.KautianSubcollToggles)
-    KautianSubcollTogglesOrBuilder {
-  private KautianSubcollToggles() {
+        KautianSubcollectionToggles, KautianSubcollectionToggles.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.KautianSubcollectionToggles)
+    KautianSubcollectionTogglesOrBuilder {
+  private KautianSubcollectionToggles() {
   }
   public static final int ACCENT_LUKANG_FIELD_NUMBER = 1;
   private boolean accentLukang_;
@@ -446,50 +446,50 @@ public  final class KautianSubcollToggles extends
     nameAppendix_ = false;
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -497,24 +497,24 @@ public  final class KautianSubcollToggles extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -525,13 +525,13 @@ public  final class KautianSubcollToggles extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
    * <pre>
-   * `KautianSubcollToggles` is the per-subcollection enable state for the
+   * `KautianSubcollectionToggles` is the per-subcollection enable state for the
    * kautian source (Phase 3). The main subcollection (main entry / headword) is
    * NOT a field — it is always on whenever the kautian master toggle is on,
    * so `compute_filters` sets its subtag bit unconditionally when this
@@ -542,14 +542,14 @@ public  final class KautianSubcollToggles extends
    * `docs/engine/binary-format.md` §4.5.
    * </pre>
    *
-   * Protobuf type {@code taigi.engine.KautianSubcollToggles}
+   * Protobuf type {@code taigi.engine.KautianSubcollectionToggles}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.KautianSubcollToggles)
-      com.siansiansu.taigikeyboard.engine.proto.KautianSubcollTogglesOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.KautianSubcollectionToggles)
+      com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionTogglesOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -995,7 +995,7 @@ public  final class KautianSubcollToggles extends
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.KautianSubcollToggles)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.KautianSubcollectionToggles)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -1004,7 +1004,7 @@ public  final class KautianSubcollToggles extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles();
+        return new com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -1033,13 +1033,13 @@ public  final class KautianSubcollToggles extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -1059,24 +1059,24 @@ public  final class KautianSubcollToggles extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.KautianSubcollToggles)
-  private static final com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.KautianSubcollectionToggles)
+  private static final com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles DEFAULT_INSTANCE;
   static {
-    KautianSubcollToggles defaultInstance = new KautianSubcollToggles();
+    KautianSubcollectionToggles defaultInstance = new KautianSubcollectionToggles();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      KautianSubcollToggles.class, defaultInstance);
+      KautianSubcollectionToggles.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<KautianSubcollToggles> PARSER;
+  private static volatile com.google.protobuf.Parser<KautianSubcollectionToggles> PARSER;
 
-  public static com.google.protobuf.Parser<KautianSubcollToggles> parser() {
+  public static com.google.protobuf.Parser<KautianSubcollectionToggles> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

@@ -8,12 +8,12 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * Engine-side filter+merge+sort+limit step (`PredictNext` expands into
- * it with the bundled rows and the engine's own user rows) — groups by (hanzi, tl), scores dict
+ * it with the bundled rows and the engine's own user rows) — groups by (hanji, tl), scores dict
  * rows via DICT_WEIGHT and user rows via decay+learning math, sorts desc
  * by score, applies limit, then shapes via display-rule filter. On
  * generation mismatch returns predictions=[] + was_stale=true.
  *
- * COLLISION RULE on (hanzi, tl): dict contributions SUM (a learned word
+ * COLLISION RULE on (hanji, tl): dict contributions SUM (a learned word
  * outranking the same word from the dictionary is the design), but at most
  * ONE user contribution is accepted — the FIRST. Under the v6
  * user_association key, one predicted word can be backed by several stored
@@ -333,12 +333,12 @@ public  final class FilterPredictions extends
   /**
    * <pre>
    * Engine-side filter+merge+sort+limit step (`PredictNext` expands into
-   * it with the bundled rows and the engine's own user rows) — groups by (hanzi, tl), scores dict
+   * it with the bundled rows and the engine's own user rows) — groups by (hanji, tl), scores dict
    * rows via DICT_WEIGHT and user rows via decay+learning math, sorts desc
    * by score, applies limit, then shapes via display-rule filter. On
    * generation mismatch returns predictions=[] + was_stale=true.
    *
-   * COLLISION RULE on (hanzi, tl): dict contributions SUM (a learned word
+   * COLLISION RULE on (hanji, tl): dict contributions SUM (a learned word
    * outranking the same word from the dictionary is the design), but at most
    * ONE user contribution is accepted — the FIRST. Under the v6
    * user_association key, one predicted word can be backed by several stored

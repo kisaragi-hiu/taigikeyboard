@@ -6,10 +6,8 @@
 
 use composing::dispatch::fetch_at_pos_intent;
 use composing::{EngineHandle as ComposingHandle, PendingSnapshot, UserRows};
-use protos::engine::{
-    composing_request, AppConfig, AssocLookupRequest, ComposingRequest, ComposingResponse,
-    LexiconAssocEntry,
-};
+use lexicon::search::AssociationHit;
+use protos::engine::{composing_request, AppConfig, ComposingRequest, ComposingResponse};
 use ranking::{ContextRanks, CONTEXT_RANK_BUNDLED};
 
 /// Continuations read per layer — what the next-word strip would show.
@@ -33,15 +31,15 @@ pub(crate) fn bundled_continuations(
     previous_tl: &str,
     limit: usize,
     enabled_sources_bitmask: u32,
-) -> Vec<LexiconAssocEntry> {
-    let lookup = lexicon::api::assoc_lookup(AssocLookupRequest {
-        previous_word: previous_word.to_owned(),
-        previous_tl: previous_tl.to_owned(),
-        limit: u32::try_from(limit).unwrap_or(u32::MAX),
+) -> Vec<AssociationHit> {
+    let lookup = lexicon::api::assoc_lookup(
+        previous_word,
+        previous_tl,
+        u32::try_from(limit).unwrap_or(u32::MAX),
         enabled_sources_bitmask,
-    });
+    );
     match lookup {
-        Ok(response) => response.entries,
+        Ok(entries) => entries,
         Err(err) => {
             log::debug!("assoc.bundled_lookup_skipped: {err}");
             Vec::new()

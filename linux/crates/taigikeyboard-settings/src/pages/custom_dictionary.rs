@@ -514,7 +514,7 @@ impl CustomDictionaryPage {
             .build();
         let hanzi = adw::EntryRow::builder()
             .title(strings.resolve(StringKey::DictionaryHanziLabel))
-            .text(&original.hanzi)
+            .text(&original.hanji)
             .use_markup(false)
             .build();
         fields.append(&roman);
@@ -650,7 +650,7 @@ impl CustomDictionaryPage {
                 rows: listing
                     .rows
                     .iter()
-                    .map(|row| (row.roman.clone(), row.hanzi.clone()))
+                    .map(|row| (row.roman.clone(), row.hanji.clone()))
                     .collect(),
                 selected_index: listing.selected_index(),
                 count: listing.count_label(),

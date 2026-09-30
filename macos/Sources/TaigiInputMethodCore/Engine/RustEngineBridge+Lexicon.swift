@@ -114,8 +114,8 @@ extension RustEngineBridge {
 
     /// The user's dictionary toggles on the wire — what `DictionaryFilters`
     /// and `FetchAtPos` carry; the engine resolves them into its source filter.
-    static func dictionaryTogglesProto(_ toggles: DictionarySourceToggles) -> Taigi_Engine_DictionaryToggles {
-        var togglesProto = Taigi_Engine_DictionaryToggles()
+    static func dictionaryTogglesProto(_ toggles: DictionarySourceToggles) -> Taigi_Engine_DictionarySourceToggles {
+        var togglesProto = Taigi_Engine_DictionarySourceToggles()
         togglesProto.kautian = toggles.kautian
         togglesProto.taigitv = toggles.taigitv
         togglesProto.itaigi = toggles.itaigi
@@ -133,7 +133,7 @@ extension RustEngineBridge {
         // Always sent: an absent subcollection message tells the engine to skip
         // the gate and treat every subcollection as on (`lexicon.proto:452-454`),
         // which would quietly ignore the eleven toggles macOS ships.
-        var subcollProto = Taigi_Engine_KautianSubcollToggles()
+        var subcollProto = Taigi_Engine_KautianSubcollectionToggles()
         let subcollections = toggles.kautianSubcollections
         subcollProto.accentLukang = subcollections.accentLukang
         subcollProto.accentSansia = subcollections.accentSansia
@@ -146,7 +146,7 @@ extension RustEngineBridge {
         subcollProto.accentSintik = subcollections.accentSintik
         subcollProto.accentTaichung = subcollections.accentTaichung
         subcollProto.nameAppendix = subcollections.nameAppendix
-        togglesProto.kautianSubcoll = subcollProto
+        togglesProto.kautianSubcollections = subcollProto
         return togglesProto
     }
 
@@ -221,15 +221,15 @@ extension RustEngineBridge {
         limit: UInt32,
         enabledSourcesBitmask: UInt32,
     ) -> [LexiconRow] {
-        var payload = Taigi_Engine_SearchByHanziRequest()
+        var payload = Taigi_Engine_SearchByHanjiRequest()
         payload.query = query
         payload.inputMode = inputMode.wire
         payload.limit = limit
         payload.enabledSourcesBitmask = enabledSourcesBitmask
 
         let op = "lexiconSearchByHanzi"
-        guard let response = lexiconResponse(.searchByHanzi(payload), op: op) else { return [] }
-        guard case let .searchByHanziResult(result)? = response.result else {
+        guard let response = lexiconResponse(.searchByHanji(payload), op: op) else { return [] }
+        guard case let .searchByHanjiResult(result)? = response.result else {
             recordFailure(op: op, message: "response carried no search result")
             return []
         }
@@ -247,16 +247,16 @@ extension RustEngineBridge {
     /// `false` on a failed round-trip, which routes a Hanji query down the
     /// romanization path and finds nothing, rather than failing the search.
     static func isHanzi(_ text: String) -> Bool {
-        var payload = Taigi_Engine_IsHanziRequest()
+        var payload = Taigi_Engine_IsHanjiRequest()
         payload.text = text
 
         let op = "isHanzi"
-        guard let response = lexiconResponse(.isHanzi(payload), op: op) else { return false }
-        guard case let .isHanziResult(result)? = response.result else {
+        guard let response = lexiconResponse(.isHanji(payload), op: op) else { return false }
+        guard case let .isHanjiResult(result)? = response.result else {
             recordFailure(op: op, message: "response carried no is-hanzi result")
             return false
         }
-        return result.isHanzi
+        return result.isHanji
     }
 
     private static func row(from proto: Taigi_Engine_TaigiWord) -> LexiconRow {

@@ -155,7 +155,7 @@ impl UserDataHandle {
                 "an entry needs a romanization".into(),
             ));
         }
-        let hanzi = save.hanzi.trim();
+        let hanzi = save.hanji.trim();
         let row = match save.id.as_deref() {
             Some(id) if !id.is_empty() => CustomDictionaryRow::with_id(id, roman, hanzi),
             _ => CustomDictionaryRow::new(roman, hanzi),
@@ -300,7 +300,7 @@ fn custom_dictionary_entry(row: &CustomDictionaryRow) -> CustomDictionaryEntry {
     CustomDictionaryEntry {
         id: row.id.clone(),
         roman: row.roman.clone(),
-        hanzi: row.hanzi.clone(),
+        hanji: row.hanzi.clone(),
         created_at: row.created_at.clone(),
         updated_at: row.updated_at.clone(),
     }
@@ -513,7 +513,7 @@ mod tests {
             user_data_request::Method::SaveCustomEntry(SaveCustomEntry {
                 id: id.map(str::to_owned),
                 roman: roman.into(),
-                hanzi: hanzi.into(),
+                hanji: hanzi.into(),
             }),
         ) {
             user_data_response::Result::CustomEntrySaved(saved) => saved,
@@ -545,7 +545,7 @@ mod tests {
         assert!(!entry.created_at.is_empty());
 
         let edited = save(&handle, Some(&entry.id), "tâi-uân", "臺灣");
-        assert_eq!(edited.entry.unwrap().hanzi, "臺灣");
+        assert_eq!(edited.entry.unwrap().hanji, "臺灣");
         let filtered = list(&handle, "臺");
         assert_eq!(filtered.entries.len(), 1);
         assert_eq!(filtered.matching_total, 1);
@@ -577,7 +577,7 @@ mod tests {
             user_data_response::Result::CustomEntryMatches(matches) => matches
                 .entries
                 .into_iter()
-                .map(|entry| entry.hanzi)
+                .map(|entry| entry.hanji)
                 .collect(),
             other => panic!("expected matches, got {other:?}"),
         }

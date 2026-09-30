@@ -11,14 +11,14 @@ import com.siansiansu.taigikeyboard.engine.proto.DictionaryFiltersRequest
 import com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode
 import com.siansiansu.taigikeyboard.engine.proto.InputMode
 import com.siansiansu.taigikeyboard.engine.proto.InstallRequest
-import com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest
-import com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles
+import com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest
+import com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles
 import com.siansiansu.taigikeyboard.engine.proto.LexiconRequest
 import com.siansiansu.taigikeyboard.engine.proto.LexiconResponse
-import com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest
+import com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiRequest
 import com.siansiansu.taigikeyboard.engine.proto.SearchWithSourcesRequest
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
-import com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles as ProtoDictionaryToggles
+import com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles as ProtoDictionarySourceToggles
 import com.siansiansu.taigikeyboard.engine.proto.TaigiWord as ProtoTaigiWord
 
 // region Read path (5 ops)
@@ -93,17 +93,17 @@ fun RustEngineBridge.searchByHanzi(
     limit: UInt,
     enabledSourcesBitmask: UInt,
 ): List<RustEngineBridge.LexiconRow> {
-    val payload = SearchByHanziRequest
+    val payload = SearchByHanjiRequest
         .newBuilder()
         .setQuery(query)
         .setInputMode(InputMode.forNumber(inputMode.protoValue) ?: InputMode.INPUT_MODE_UNSPECIFIED)
         .setLimit(limit.toInt())
         .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
         .build()
-    val resp = lexiconDispatch(LexiconRequest.newBuilder().setSearchByHanzi(payload).build(), "searchByHanzi")
+    val resp = lexiconDispatch(LexiconRequest.newBuilder().setSearchByHanji(payload).build(), "searchByHanzi")
         ?: return emptyList()
-    if (!resp.hasSearchByHanziResult()) return emptyList()
-    return resp.searchByHanziResult.rowsList.map(::taigiWordToRow)
+    if (!resp.hasSearchByHanjiResult()) return emptyList()
+    return resp.searchByHanjiResult.rowsList.map(::taigiWordToRow)
 }
 
 // endregion
@@ -140,8 +140,8 @@ fun RustEngineBridge.dictionaryFilters(toggles: RustEngineBridge.DictionaryToggl
 }
 
 /** Proto form of the user's dictionary toggles, shared by [dictionaryFilters], `composingFetchAtPos` and `nextwordPredictNext`. */
-internal fun dictionaryTogglesProto(toggles: RustEngineBridge.DictionaryToggles): ProtoDictionaryToggles =
-    ProtoDictionaryToggles
+internal fun dictionaryTogglesProto(toggles: RustEngineBridge.DictionaryToggles): ProtoDictionarySourceToggles =
+    ProtoDictionarySourceToggles
         .newBuilder()
         .setKautian(toggles.kautian)
         .setTaigitv(toggles.taigitv)
@@ -159,8 +159,8 @@ internal fun dictionaryTogglesProto(toggles: RustEngineBridge.DictionaryToggles)
         // Always set the subcollection message (Android ships the toggles)
         // so the engine runs the gate; absence would signal legacy all-on
         // (DD5). Mirrors iOS RustEngineBridge togglesProto mapping.
-        .setKautianSubcoll(
-            KautianSubcollToggles
+        .setKautianSubcollections(
+            KautianSubcollectionToggles
                 .newBuilder()
                 .setAccentLukang(toggles.kautianSubcoll.lukang)
                 .setAccentSansia(toggles.kautianSubcoll.sansia)
@@ -183,10 +183,10 @@ internal fun dictionaryTogglesProto(toggles: RustEngineBridge.DictionaryToggles)
  * Engine-side check fixes the pre-v3.5.7 Kotlin `Char.code` (16-bit) miss on Ext B-E.
  */
 fun RustEngineBridge.isHanzi(text: String): Boolean {
-    val payload = IsHanziRequest.newBuilder().setText(text).build()
-    val resp = lexiconDispatch(LexiconRequest.newBuilder().setIsHanzi(payload).build(), "isHanzi") ?: return false
-    if (!resp.hasIsHanziResult()) return false
-    return resp.isHanziResult.isHanzi
+    val payload = IsHanjiRequest.newBuilder().setText(text).build()
+    val resp = lexiconDispatch(LexiconRequest.newBuilder().setIsHanji(payload).build(), "isHanzi") ?: return false
+    if (!resp.hasIsHanjiResult()) return false
+    return resp.isHanjiResult.isHanji
 }
 
 /**

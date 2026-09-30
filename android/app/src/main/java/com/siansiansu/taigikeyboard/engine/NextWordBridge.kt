@@ -227,7 +227,7 @@ fun RustEngineBridge.nextwordPredictNext(
         RustEngineBridge.NextWordEnginePrediction(
             text = p.text,
             subtitle = if (p.subtitle.isEmpty()) null else p.subtitle,
-            hanzi = p.hanzi,
+            hanzi = p.hanji,
             tl = p.tl,
             score = p.score,
         )

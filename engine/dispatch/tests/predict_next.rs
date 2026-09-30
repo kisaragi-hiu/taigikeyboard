@@ -7,13 +7,13 @@ mod common;
 use std::sync::{Mutex, OnceLock, PoisonError};
 
 use protos::engine::{
-    next_word_request::Method, next_word_response, request, response, DictionaryToggles,
+    next_word_request::Method, next_word_response, request, response, DictionarySourceToggles,
     EnginePrediction, NextWordRequest, PredictNext,
 };
 use userdata::{AssociationPair, JournalMode, UserDataPaths, UserDataStores};
 
-fn all_sources(enabled: bool) -> DictionaryToggles {
-    DictionaryToggles {
+fn all_sources(enabled: bool) -> DictionarySourceToggles {
+    DictionarySourceToggles {
         kautian: enabled,
         taigitv: enabled,
         itaigi: enabled,
@@ -23,7 +23,7 @@ fn all_sources(enabled: bool) -> DictionaryToggles {
         kungge: enabled,
         stti: enabled,
         khpoo: enabled,
-        ..DictionaryToggles::default()
+        ..DictionarySourceToggles::default()
     }
 }
 
@@ -53,12 +53,16 @@ fn learned_rows_open() {
 
 /// One PredictNext round trip. Envelope generation 0 matches the fresh
 /// nextword handle, so `query_generation: 0` is never stale.
-fn predict(word: &str, toggles: DictionaryToggles) -> Vec<EnginePrediction> {
+fn predict(word: &str, toggles: DictionarySourceToggles) -> Vec<EnginePrediction> {
     predict_after(word, "", toggles)
 }
 
 /// [`predict`] for a committed word whose canonical TL reading is `roman`.
-fn predict_after(word: &str, roman: &str, toggles: DictionaryToggles) -> Vec<EnginePrediction> {
+fn predict_after(
+    word: &str,
+    roman: &str,
+    toggles: DictionarySourceToggles,
+) -> Vec<EnginePrediction> {
     // One prediction at a time: a store read never waits on the key path
     // (`try_lock`), so two parallel tests would each find the other reading.
     static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
@@ -91,7 +95,7 @@ fn predict_after(word: &str, roman: &str, toggles: DictionaryToggles) -> Vec<Eng
 }
 
 fn hanzi_of(predictions: &[EnginePrediction]) -> Vec<&str> {
-    predictions.iter().map(|p| p.hanzi.as_str()).collect()
+    predictions.iter().map(|p| p.hanji.as_str()).collect()
 }
 
 // 台 → 灣 is the top bundled pair (association.bin, count 2137); the key is
@@ -147,8 +151,8 @@ fn known_reading_predicts_from_word_key() {
     }
     let by_word = predict_after("食", "tsia̍h", all_sources(true));
     let by_character = predict("食", all_sources(true));
-    assert_eq!(by_word.first().map(|p| p.hanzi.as_str()), Some("酒"));
-    assert_eq!(by_character.first().map(|p| p.hanzi.as_str()), Some("飯"));
+    assert_eq!(by_word.first().map(|p| p.hanji.as_str()), Some("酒"));
+    assert_eq!(by_character.first().map(|p| p.hanji.as_str()), Some("飯"));
 }
 
 // INVARIANT_NEXTWORD_WORD_KEY_BACKOFF: a reading the word namespace does not
@@ -170,7 +174,7 @@ fn word_key_emptied_by_source_filter_backs_off() {
     if !common::production_lexicon_ready() {
         return;
     }
-    let taigitv_only = DictionaryToggles {
+    let taigitv_only = DictionarySourceToggles {
         taigitv: true,
         ..all_sources(false)
     };

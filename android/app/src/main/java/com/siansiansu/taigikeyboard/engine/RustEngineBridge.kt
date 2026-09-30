@@ -117,7 +117,7 @@ object RustEngineBridge {
 
     /**
      * Snapshot of the user's dictionary preference state. Field order mirrors
-     * `engine/protos/proto/lexicon.proto::DictionaryToggles` (12 source toggles
+     * `engine/protos/proto/lexicon.proto::DictionarySourceToggles` (12 source toggles
      * + nested [KautianSubcoll]). Build via `from(settings)`; never construct
      * piecemeal at search call sites — that splits the snapshot.
      */
@@ -140,9 +140,9 @@ object RustEngineBridge {
         /**
          * kautian subcollection enable state (10 accents + name appendix).
          * Android always populates this (the app ships the toggles), so the
-         * `kautian_subcoll` proto message is always present and the engine
+         * `kautian_subcollections` proto message is always present and the engine
          * always runs the subcollection gate. Field order mirrors config.yaml
-         * `dialect_columns` / proto `KautianSubcollToggles`.
+         * `dialect_columns` / proto `KautianSubcollectionToggles`.
          * Mirrors iOS `RustEngineBridge.DictionaryToggles.KautianSubcoll`.
          */
         data class KautianSubcoll(

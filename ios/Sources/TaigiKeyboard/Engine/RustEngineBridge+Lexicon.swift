@@ -38,7 +38,7 @@ public extension RustEngineBridge {
     }
 
     /// 12-toggle snapshot the user's dictionary preference state.
-    /// Field order mirrors `engine/protos/proto/lexicon.proto::DictionaryToggles`.
+    /// Field order mirrors `engine/protos/proto/lexicon.proto::DictionarySourceToggles`.
     /// Build via `init(from settings: EngineSettings)`; never construct
     /// piecemeal at search call sites — that splits the snapshot.
     struct DictionaryToggles: Equatable, Sendable {
@@ -57,9 +57,9 @@ public extension RustEngineBridge {
         public let dev: Bool
         /// kautian subcollection enable state (10 accents + name appendix).
         /// iOS always populates this (the app ships the toggles), so the
-        /// `kautian_subcoll` proto message is always present and the engine
+        /// `kautian_subcollections` proto message is always present and the engine
         /// always runs the subcollection gate. Field order mirrors
-        /// config.yaml `dialect_columns` / `KautianSubcollToggles` proto.
+        /// config.yaml `dialect_columns` / `KautianSubcollectionToggles` proto.
         public let kautianSubcoll: KautianSubcoll
 
         public struct KautianSubcoll: Equatable, Sendable {
@@ -166,15 +166,15 @@ public extension RustEngineBridge {
         limit: UInt32,
         enabledSourcesBitmask: UInt32,
     ) -> [LexiconRow] {
-        var payload = Taigi_Engine_SearchByHanziRequest()
+        var payload = Taigi_Engine_SearchByHanjiRequest()
         payload.query = query
         payload.inputMode = Taigi_Engine_InputMode(rawValue: Int(inputMode.rawValue)) ?? .unspecified
         payload.limit = limit
         payload.enabledSourcesBitmask = enabledSourcesBitmask
-        guard let resp = lexiconDispatch(method: .searchByHanzi(payload), op: "lexiconSearchByHanzi") else {
+        guard let resp = lexiconDispatch(method: .searchByHanji(payload), op: "lexiconSearchByHanzi") else {
             return []
         }
-        guard case let .searchByHanziResult(r)? = resp.result else {
+        guard case let .searchByHanjiResult(r)? = resp.result else {
             recordFailure(op: "lexiconSearchByHanzi", message: "missing result")
             return []
         }
@@ -207,8 +207,8 @@ public extension RustEngineBridge {
 
     /// Proto form of the user's dictionary toggles, shared by
     /// `lexiconDictionaryFilters`, `composingFetchAtPos` and `nextwordPredictNext`.
-    static func dictionaryTogglesProto(_ toggles: DictionaryToggles) -> Taigi_Engine_DictionaryToggles {
-        var togglesProto = Taigi_Engine_DictionaryToggles()
+    static func dictionaryTogglesProto(_ toggles: DictionaryToggles) -> Taigi_Engine_DictionarySourceToggles {
+        var togglesProto = Taigi_Engine_DictionarySourceToggles()
         togglesProto.kautian = toggles.kautian
         togglesProto.taigitv = toggles.taigitv
         togglesProto.itaigi = toggles.itaigi
@@ -224,7 +224,7 @@ public extension RustEngineBridge {
         togglesProto.dev = toggles.dev
         // Always set the subcollection message (iOS ships the toggles) so the
         // engine runs the gate; absence would signal legacy all-on (DD5).
-        var subcollProto = Taigi_Engine_KautianSubcollToggles()
+        var subcollProto = Taigi_Engine_KautianSubcollectionToggles()
         subcollProto.accentLukang = toggles.kautianSubcoll.lukang
         subcollProto.accentSansia = toggles.kautianSubcoll.sansia
         subcollProto.accentTaipak = toggles.kautianSubcoll.taipak
@@ -236,7 +236,7 @@ public extension RustEngineBridge {
         subcollProto.accentSintik = toggles.kautianSubcoll.sintik
         subcollProto.accentTaichung = toggles.kautianSubcoll.taichung
         subcollProto.nameAppendix = toggles.kautianSubcoll.nameAppendix
-        togglesProto.kautianSubcoll = subcollProto
+        togglesProto.kautianSubcollections = subcollProto
         return togglesProto
     }
 
@@ -244,16 +244,16 @@ public extension RustEngineBridge {
     /// codepoint (Unified + Extensions A-E). See
     /// `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
     static func isHanzi(_ text: String) -> Bool {
-        var payload = Taigi_Engine_IsHanziRequest()
+        var payload = Taigi_Engine_IsHanjiRequest()
         payload.text = text
-        guard let resp = lexiconDispatch(method: .isHanzi(payload), op: "isHanzi") else {
+        guard let resp = lexiconDispatch(method: .isHanji(payload), op: "isHanzi") else {
             return false
         }
-        guard case let .isHanziResult(r)? = resp.result else {
-            recordFailure(op: "isHanzi", message: "missing is_hanzi result")
+        guard case let .isHanjiResult(r)? = resp.result else {
+            recordFailure(op: "isHanzi", message: "missing is_hanji result")
             return false
         }
-        return r.isHanzi
+        return r.isHanji
     }
 
     // MARK: - Private helpers

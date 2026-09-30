@@ -233,6 +233,6 @@ struct EngineUserDataClient: UserDataClient {
 
 extension CustomDictionaryEntry {
     init(_ entry: Taigi_Engine_CustomDictionaryEntry) {
-        self.init(id: entry.id, roman: entry.roman, hanzi: entry.hanzi)
+        self.init(id: entry.id, roman: entry.roman, hanzi: entry.hanji)
     }
 }

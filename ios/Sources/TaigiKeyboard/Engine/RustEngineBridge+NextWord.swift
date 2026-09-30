@@ -260,7 +260,7 @@ public extension RustEngineBridge {
             NextWordEnginePrediction(
                 text: p.text,
                 subtitle: p.subtitle.isEmpty ? nil : p.subtitle,
-                hanzi: p.hanzi,
+                hanzi: p.hanji,
                 tl: p.tl,
                 score: p.score,
             )

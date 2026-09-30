@@ -6,8 +6,8 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface IsHanziRequestOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.IsHanziRequest)
+public interface IsHanjiRequestOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.IsHanjiRequest)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**

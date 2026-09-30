@@ -346,7 +346,7 @@ mod tests {
         CustomDictionaryEntry {
             id: id.to_owned(),
             roman: "tsia̍h".to_owned(),
-            hanzi: "食".to_owned(),
+            hanji: "食".to_owned(),
             ..CustomDictionaryEntry::default()
         }
     }

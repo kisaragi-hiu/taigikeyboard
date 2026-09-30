@@ -6,8 +6,8 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface DictionaryTogglesOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.DictionaryToggles)
+public interface DictionarySourceTogglesOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.DictionarySourceToggles)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
@@ -146,18 +146,18 @@ public interface DictionaryTogglesOrBuilder extends
    * gate (legacy all-on). Only meaningful when `kautian = true`.
    * </pre>
    *
-   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
-   * @return Whether the kautianSubcoll field is set.
+   * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
+   * @return Whether the kautianSubcollections field is set.
    */
-  boolean hasKautianSubcoll();
+  boolean hasKautianSubcollections();
   /**
    * <pre>
    * kautian subcollection toggles. Absent ⇒ engine skips the subcollection
    * gate (legacy all-on). Only meaningful when `kautian = true`.
    * </pre>
    *
-   * <code>.taigi.engine.KautianSubcollToggles kautian_subcoll = 13;</code>
-   * @return The kautianSubcoll.
+   * <code>.taigi.engine.KautianSubcollectionToggles kautian_subcollections = 13;</code>
+   * @return The kautianSubcollections.
    */
-  com.siansiansu.taigikeyboard.engine.proto.KautianSubcollToggles getKautianSubcoll();
+  com.siansiansu.taigikeyboard.engine.proto.KautianSubcollectionToggles getKautianSubcollections();
 }

@@ -99,7 +99,7 @@ fun RustEngineBridge.customDictionarySave(
         .newBuilder()
         .setId(id)
         .setRoman(roman)
-        .setHanzi(hanzi)
+        .setHanji(hanzi)
         .build()
     return userData("customDictionarySave") { setSaveCustomEntry(save) }
         ?.takeIf { it.hasCustomEntrySaved() }

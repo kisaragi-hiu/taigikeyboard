@@ -5,7 +5,7 @@ import Foundation
 /// The user's dictionary source preferences, in the shape the engine's
 /// `compute_filters` op reads them.
 ///
-/// Field order mirrors `engine/protos/proto/lexicon.proto::DictionaryToggles`
+/// Field order mirrors `engine/protos/proto/lexicon.proto::DictionarySourceToggles`
 /// (`:438-455`) so the bridge's assignment reads as a straight transcription.
 /// The 11 kautian subcollection flags are nested rather than flat because the
 /// wire has them nested too, and because they are only meaningful while
@@ -56,7 +56,7 @@ struct DictionarySourceToggles: Equatable, Sendable {
     var kautianSubcollections: KautianSubcollections
 
     /// The per-subcollection state of the kautian source. Order mirrors
-    /// `KautianSubcollToggles` (`lexicon.proto:466-478`), which is the
+    /// `KautianSubcollectionToggles` (`lexicon.proto`), which is the
     /// `config.yaml` `dialect_columns` order.
     struct KautianSubcollections: Equatable, Sendable {
         var accentLukang: Bool

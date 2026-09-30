@@ -289,7 +289,7 @@ fn association_pair(pair: nextword::Association) -> AssociationPair {
 
 fn user_prediction(row: &FollowingRow) -> RawNextWordPrediction {
     RawNextWordPrediction {
-        hanzi: row.next.clone(),
+        hanji: row.next.clone(),
         tl: row.next_tl.clone(),
         count: row.count,
         last_used_ms: row.last_used_ms,

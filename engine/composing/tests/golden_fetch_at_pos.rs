@@ -61,7 +61,7 @@ use crate::common::{
     fetch_at_pos_response, install_lexicon, wire_fetch_at_pos_response, Fetch, Row, Selected,
 };
 use lexicon::CustomEntry;
-use protos::engine::{DictionaryToggles, FetchAtPos};
+use protos::engine::{DictionarySourceToggles, FetchAtPos};
 use test_support::{engine_install_lock, fst_entry, write_fst_set, write_temp};
 
 // --- golden-only fixture builder (union of every key family) ---------------
@@ -633,7 +633,7 @@ fn first_drift_section(expected: &str, actual: &str) -> String {
 
 /// The hanji a wire `FetchAtPos` for `taiuantaigi` offers under `toggles`
 /// (every fixture row is tagged `lkk`), plus whether the §34 literal leads.
-fn wire_fetch(toggles: Option<DictionaryToggles>) -> (Vec<String>, bool) {
+fn wire_fetch(toggles: Option<DictionarySourceToggles>) -> (Vec<String>, bool) {
     let response = wire_fetch_at_pos_response(
         &config("tl"),
         "taiuantaigi",
@@ -662,13 +662,13 @@ fn fetch_at_pos_resolves_the_dictionary_toggles_it_carries() {
         "no toggles keeps every source on: {unwired:?}"
     );
 
-    let (all_off, literal_leads) = wire_fetch(Some(DictionaryToggles::default()));
+    let (all_off, literal_leads) = wire_fetch(Some(DictionarySourceToggles::default()));
     assert!(all_off.is_empty(), "every dictionary off: {all_off:?}");
     assert!(literal_leads, "the §34 literal is not a dictionary row");
 
-    let lkk_only = DictionaryToggles {
+    let lkk_only = DictionarySourceToggles {
         lkk: true,
-        ..DictionaryToggles::default()
+        ..DictionarySourceToggles::default()
     };
     assert_eq!(wire_fetch(Some(lkk_only)).0, unwired);
 }

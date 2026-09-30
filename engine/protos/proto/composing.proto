@@ -173,7 +173,7 @@ message FetchAtPos {
   // custom-dictionary rows for this fetch. Negative like field 6, so an
   // un-wired build keeps the dictionary on.
   bool custom_dictionary_disabled          = 8;
-  DictionaryToggles toggles                = 9;
+  DictionarySourceToggles toggles          = 9;
 }
 
 // v3.5.8 Phase 6 — commit a candidate segment in `Phase::Continuous`. The

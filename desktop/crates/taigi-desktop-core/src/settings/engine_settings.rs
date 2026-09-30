@@ -220,7 +220,7 @@ impl Default for EngineSettings {
 
 /// Which bundled dictionaries the user has switched on, in the shape the
 /// engine's `compute_filters` op reads them. Field order mirrors
-/// `engine/protos/proto/lexicon.proto::DictionaryToggles`.
+/// `engine/protos/proto/lexicon.proto::DictionarySourceToggles`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DictionarySourceToggles {
     /// 教育部臺灣台語常用詞辭典 (settings key `moeDictEnabled`).
@@ -250,7 +250,7 @@ pub struct DictionarySourceToggles {
     /// Supplementary Word List (詞庫增補檔案).
     pub dev: bool,
     /// Always populated: an absent subcollection message tells the engine to
-    /// skip the gate (`lexicon.proto` `DictionaryToggles.kautian_subcoll`).
+    /// skip the gate (`lexicon.proto` `DictionarySourceToggles.kautian_subcollections`).
     pub kautian_subcollections: KautianSubcollections,
 }
 
@@ -282,7 +282,7 @@ impl Default for DictionarySourceToggles {
 }
 
 /// The per-subcollection state of the kautian source. Order mirrors
-/// `KautianSubcollToggles` (`lexicon.proto`), the `config.yaml`
+/// `KautianSubcollectionToggles` (`lexicon.proto`), the `config.yaml`
 /// `dialect_columns` order.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct KautianSubcollections {
