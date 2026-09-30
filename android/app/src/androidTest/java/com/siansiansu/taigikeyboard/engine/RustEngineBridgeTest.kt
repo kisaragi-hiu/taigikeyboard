@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -18,8 +19,9 @@ import java.util.concurrent.CopyOnWriteArrayList
  * **Requires** the dev `.so` built by `engine/scripts/build-android-libs-dev.sh`
  * (with the `panic-injector` Cargo feature) so `panicForTest` resolves.
  *
- * Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') plus the
- * Kotlin-side `tpsInputAdjust` decode. Phonetics op behaviour lives in
+ * Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') plus one
+ * result-decode pin per phonetics op shape the Kotlin bridge maps itself
+ * (both `tpsInputAdjust` `replaceLast` branches). Op behaviour lives in
  * `engine/phonetics/tests/op_coverage.rs`; the 2 MB cap boundary in
  * `engine/dispatch/src/lib.rs` (`request_cap_accepts_exactly_the_cap_…`).
  */
@@ -34,7 +36,28 @@ class RustEngineBridgeTest {
         RustEngineBridge.resetDiagnosticsForTesting()
     }
 
-    // region TPS input adjust (Kotlin `replaceLast` decode, both branches)
+    // region Phonetics core
+
+    @Test fun op_stripTone_returnsBareAndTone() {
+        val outcome = RustEngineBridge.stripTone("guá")
+        assertEquals("gua", outcome.bare)
+        assertEquals("2", outcome.tone)
+    }
+
+    @Test fun op_tlToPoj_canonical() {
+        assertEquals("góa", RustEngineBridge.tlToPoj("guá"))
+    }
+
+    // endregion
+    // region TPS
+
+    @Test fun op_isTpsToneMark_acuteIsToneMark() {
+        assertTrue(RustEngineBridge.isTpsToneMark('ˊ'))
+    }
+
+    @Test fun op_isTpsToneMark_letterIsNotToneMark() {
+        assertFalse(RustEngineBridge.isTpsToneMark('a'))
+    }
 
     @Test fun op_tpsInputAdjust_dualForm() {
         val outcome = RustEngineBridge.tpsInputAdjust("ㄇ", "ㄚ")

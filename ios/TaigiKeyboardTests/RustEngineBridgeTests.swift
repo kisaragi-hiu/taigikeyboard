@@ -10,9 +10,10 @@ import XCTest
 /// (`test_T1_panicForTest_isCaughtAndProcessSurvives`) accepts both outcomes —
 /// see its doc comment.
 ///
-/// Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') plus the
-/// Swift-side tone-variation decode. Phonetics op behaviour lives in
-/// `engine/phonetics/tests/op_coverage.rs`; the 2 MB cap boundary in
+/// Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') plus one
+/// result-decode pin per phonetics op shape the Swift bridge maps itself.
+/// Op behaviour lives in `engine/phonetics/tests/op_coverage.rs`; TPS input
+/// adjust decode in `CharacterInputPipelineTests`; the 2 MB cap boundary in
 /// `engine/dispatch/src/lib.rs` (`request_cap_accepts_exactly_the_cap_…`).
 final class RustEngineBridgeTests: XCTestCase {
     override class func setUp() {
@@ -27,7 +28,17 @@ final class RustEngineBridgeTests: XCTestCase {
         RustEngineBridge.install()
     }
 
-    // MARK: - Tone variations (Swift-side decode)
+    // MARK: - Phonetics core
+
+    func test_op_stripTone_returnsBareAndToneTuple() {
+        let result = RustEngineBridge.stripTone("guá")
+        XCTAssertEqual(result.bare, "gua")
+        XCTAssertEqual(result.tone, "2")
+    }
+
+    func test_op_tlToPoj_canonical() {
+        XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
+    }
 
     func test_op_toneVariations_lazyCache_returnsBothModes() {
         let cache = RustEngineBridge.toneVariations
@@ -37,6 +48,16 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertNotNil(cache.poj["a"])
         XCTAssertNotNil(cache.tl["oo"])
         XCTAssertNotNil(cache.poj["o\u{0358}"])
+    }
+
+    // MARK: - TPS
+
+    func test_op_isTPSToneMark_acuteIsToneMark() {
+        XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{02ca}"))
+    }
+
+    func test_op_isTPSToneMark_letterIsNotToneMark() {
+        XCTAssertFalse(RustEngineBridge.isTPSToneMark("a"))
     }
 
     // MARK: - Diagnostics (Codex v2 §8 / v3 §7)

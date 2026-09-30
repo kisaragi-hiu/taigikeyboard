@@ -99,6 +99,15 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         }
     }
 
+    func testWordSelected_requireRomanModeInSwappedMode_isNoop() {
+        let result = wordSelected(
+            text: "abc", roman: "abc", nowMs: 0,
+            requireRomanMode: true, translateSwapped: true,
+        )
+        XCTAssertEqual(result.effects, [])
+        XCTAssertEqual(result.currentGeneration, baselineGen)
+    }
+
     func testWordSelected_triggerPredictionFalse_recordsButSkipsQuery() {
         let result = wordSelected(
             text: "早", roman: "tsá", nowMs: 0,

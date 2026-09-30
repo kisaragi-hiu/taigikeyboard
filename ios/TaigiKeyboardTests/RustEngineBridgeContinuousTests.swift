@@ -232,7 +232,10 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         allOff.isDevDictEnabled = false
 
         XCTAssertFalse(fetchedHanji("taigi", settings: settings).isEmpty, "the default toggles offer dictionary hanji")
-        envelopeGen &+= 1
+        // Draw from the shared counter so the next test's `setUp` still gets
+        // an unused generation (and the engine resets for it).
+        Self.nextEnvelopeGen &+= 1
+        envelopeGen = Self.nextEnvelopeGen
         XCTAssertEqual(fetchedHanji("taigi", settings: allOff), [])
     }
 
