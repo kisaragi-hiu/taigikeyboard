@@ -92,4 +92,15 @@ impl UserDataStores {
             self.custom_dictionary.finish_takeover();
         }
     }
+
+    /// One pick: counted under the `(display_text, canonical_tl)` pair and,
+    /// for a Hanji pick, a learned phrase taken whole touched (§50). The one
+    /// write both a platform's `RecordUsage` and an engine-resolved commit
+    /// make. Queued and best-effort: a failed write is logged by the store.
+    pub fn record_usage(&self, display_text: &str, canonical_tl: &str, hanji: Option<&str>) {
+        self.frequency.record(display_text, canonical_tl);
+        if let Some(hanji) = hanji {
+            self.learned_phrases.touch_phrase(hanji, canonical_tl);
+        }
+    }
 }

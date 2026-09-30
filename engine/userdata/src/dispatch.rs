@@ -243,14 +243,11 @@ impl UserDataHandle {
         if usage.display_text.is_empty() {
             return Err(RequestError::Invalid("usage without a display text"));
         }
-        stores
-            .frequency
-            .record(&usage.display_text, &usage.canonical_tl);
-        if let Some(hanji) = &usage.hanji {
-            stores
-                .learned_phrases
-                .touch_phrase(hanji, &usage.canonical_tl);
-        }
+        stores.record_usage(
+            &usage.display_text,
+            &usage.canonical_tl,
+            usage.hanji.as_deref(),
+        );
         Ok(())
     }
 
