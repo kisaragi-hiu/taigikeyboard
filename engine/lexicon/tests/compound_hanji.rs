@@ -12,11 +12,9 @@
 //! parametric `syllable_count` so the caller's longest-match loop can
 //! ask "is `hanji` an n-syllable compound?" for any `n >= 2`.
 
-mod common;
-
 use std::path::PathBuf;
 
-use common::{build_tkdb_v3, write_temp};
+use crate::common::{build_tkdb_v3, write_temp};
 use lexicon::compound_hanji_exists;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;

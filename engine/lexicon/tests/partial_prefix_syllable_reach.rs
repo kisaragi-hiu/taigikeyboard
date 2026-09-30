@@ -27,8 +27,7 @@ use lexicon::{
 use phonetics::InputMode;
 use ranking::FrequencyMap;
 
-mod common;
-use common::{build_tkdb_v3, write_temp};
+use crate::common::{build_tkdb_v3, write_temp};
 
 /// One dictionary fixture row. `bitmask` is fixed to the `lkk` source bit so
 /// every row passes the all-sources filter the tests use.

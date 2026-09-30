@@ -5,6 +5,8 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish = false
+# One test binary per concern (tests/it.rs etc.), not one per tests/*.rs.
+autotests = false
 
 [lints]
 workspace = true
@@ -26,3 +28,15 @@ unicode-normalization = { workspace = true }
 [dev-dependencies]
 proptest = { workspace = true }
 fst = { workspace = true }
+
+[[test]]
+name = "it"
+path = "tests/it.rs"
+
+[[test]]
+name = "prod"
+path = "tests/prod.rs"
+
+[[test]]
+name = "no_lexicon"
+path = "tests/no_lexicon.rs"

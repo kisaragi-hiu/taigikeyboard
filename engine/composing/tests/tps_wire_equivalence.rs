@@ -15,8 +15,8 @@ use protos::engine::{
     DeleteBackward, EnterContinuous, Start,
 };
 
-mod common;
-use common::{req, Fetch};
+use crate::common;
+use crate::common::{req, Fetch};
 
 /// What a pre-R6 platform sends on the TPS layout.
 fn legacy_wire() -> AppConfig {

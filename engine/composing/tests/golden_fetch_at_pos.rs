@@ -49,16 +49,15 @@
 //!
 //! ## Run / record
 //!
-//! `cargo test -p composing --test golden_fetch_at_pos` asserts.
-//! `UPDATE_GOLDEN=1 cargo test -p composing --test golden_fetch_at_pos`
+//! `cargo test -p composing --test it golden_fetch_at_pos` asserts.
+//! `UPDATE_GOLDEN=1 cargo test -p composing --test it golden_fetch_at_pos`
 //! re-records `tests/golden/fetch_at_pos.golden`. A non-empty diff on a
 //! behavior-neutral slice means the slice is NOT behavior-neutral — stop,
 //! do not `UPDATE_GOLDEN` to paper over it.
 
 use std::path::PathBuf;
 
-mod common;
-use common::{
+use crate::common::{
     build_syllables_fst, build_tkdb_v3, config, derive_poj_notone, empty_association_bin,
     engine_install_lock, fetch_at_pos_response, fst_entry, install_lexicon, write_fst_set,
     write_temp, Fetch, Row, Selected,
@@ -595,7 +594,7 @@ fn golden_fetch_at_pos() {
     let expected = std::fs::read_to_string(&path).unwrap_or_else(|e| {
         panic!(
             "golden missing ({e}); record with `UPDATE_GOLDEN=1 cargo test -p composing \
-             --test golden_fetch_at_pos` then commit {}",
+             --test it golden_fetch_at_pos` then commit {}",
             path.display()
         )
     });

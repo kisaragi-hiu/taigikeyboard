@@ -23,8 +23,7 @@
 use composing::dispatch::{build_continuous_keys_with_inventory, build_keys_tl_with_inventory};
 use lexicon::SyllableInventory;
 
-mod common;
-use common::inventory_from_keys;
+use crate::common::inventory_from_keys;
 
 fn mapped(keys: &[((u32, u32), String)]) -> Vec<((u32, u32), String)> {
     keys.iter().map(|(s, k)| (*s, k.clone())).collect()

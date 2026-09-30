@@ -8,8 +8,8 @@ use protos::engine::{
     ComposingRequest, DeleteBackward, ReplaceLast, Reset, SelectSuggestion, Start,
 };
 
-mod common;
-use common::{commit_text, config_tl, req};
+use crate::common;
+use crate::common::{commit_text, config_tl, req};
 
 // §21 INVARIANT_KHINSIANN_LEADING_MARKER_LITERAL — a leading `--` typed from
 // Idle is a document literal, NOT composing input (MOE-style). Production sends

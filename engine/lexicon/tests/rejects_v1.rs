@@ -4,8 +4,7 @@
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::LexiconError;
 
-mod common;
-use common::{build_tkdb_bin, build_tkdb_v2, write_temp, DictRow};
+use crate::common::{build_tkdb_bin, build_tkdb_v2, write_temp, DictRow};
 
 #[test]
 fn invariant_lex_v1_rejected_with_v1v2_to_v3_marker() {

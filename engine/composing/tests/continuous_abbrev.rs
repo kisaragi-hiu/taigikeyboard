@@ -12,9 +12,8 @@
 
 use protos::engine::CandidateMessage;
 
-mod common;
-use common::Fetch;
-use common::{
+use crate::common::Fetch;
+use crate::common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config, empty_association_bin,
     engine_install_lock, fetch_at_pos_response, fetch_hanji, fetch_hanji_with_custom,
     install_lexicon, write_temp, Row,

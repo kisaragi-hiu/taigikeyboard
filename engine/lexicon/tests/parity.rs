@@ -18,8 +18,8 @@ use lexicon::prefix_index::PrefixIndex;
 use lexicon::search::{self, SearchInputMode, SearchParams};
 use lexicon::LexiconError;
 
-mod common;
-use common::{build_tkdb_v3, build_tkwa, write_temp};
+use crate::common;
+use crate::common::{build_tkdb_v3, build_tkwa, write_temp};
 
 const SEPARATOR: u8 = 0xFF;
 

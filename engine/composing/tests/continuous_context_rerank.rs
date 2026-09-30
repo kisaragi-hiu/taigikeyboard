@@ -4,9 +4,9 @@
 //! context itself is built by `dispatch` (bundled + user bigrams); these tests
 //! hand a `ContextRanks` straight to the fetch, against the production lexicon.
 
-mod common;
+use crate::common;
 
-use common::{config_tl, fetch_at_pos_response, fetch_cells, Fetch};
+use crate::common::{config_tl, fetch_at_pos_response, fetch_cells, Fetch};
 use composing::api::Engine;
 use composing::Intent;
 use ranking::{ContextRanks, CONTEXT_RANK_BUNDLED};

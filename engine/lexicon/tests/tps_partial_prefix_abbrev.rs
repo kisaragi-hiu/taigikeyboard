@@ -21,8 +21,7 @@ use lexicon::fetch_partial_prefix_candidates;
 use phonetics::InputMode;
 use ranking::FrequencyMap;
 
-mod common;
-use common::{build_tkdb_v3, build_wire_index, hanji_of, neutral_ctx, write_temp};
+use crate::common::{build_tkdb_v3, build_wire_index, hanji_of, neutral_ctx, write_temp};
 
 /// Shortest-first ordering for Bopomofo keys: the short exact key comes
 /// before its longer extension even though plain byte order puts it last;

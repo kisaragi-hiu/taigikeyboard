@@ -17,8 +17,7 @@ use composing::{Engine, Intent, NailedSegment, Phase};
 use protos::engine::effect::Kind;
 use protos::engine::Effect;
 
-mod common;
-use common::{config_tl, effect_kinds, engine_in_continuous};
+use crate::common::{config_tl, effect_kinds, engine_in_continuous};
 
 fn assert_kinds<'a, K>(effects: &'a [Effect], expected: K)
 where

@@ -13,16 +13,15 @@
 //! paths would show the wrong-tone row and fail the assertion.
 //!
 //! Hermetic install of `LexiconHandle` comes from `tests/common/mod.rs`
-//! (this binary is its own process with its own
-//! singleton; the lock guards in-binary `#[test]` parallelism). The
+//! (the `it` binary is one process whose singleton every
+//! module shares; the lock guards in-binary `#[test]` parallelism). The
 //! fixture's `dictionary.fst` emits BOTH the toneless `tl:<tl_notone>` and
 //! the toned `tl:<tl_num>` key families, matching production
 //! `dictionary/build/create_fst.py:127-130` — without the toned keys the
 //! tone filter would have nothing to hit.
 
-mod common;
-use common::Fetch;
-use common::{
+use crate::common::Fetch;
+use crate::common::{
     build_dictionary_fst_tl_toned, build_dictionary_fst_tps, build_syllables_fst_tl,
     build_syllables_fst_tps, build_tkdb_v3, config, empty_association_bin, engine_install_lock,
     fetch_at_pos_response, install_lexicon, write_temp, Row,

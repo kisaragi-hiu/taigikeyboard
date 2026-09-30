@@ -12,8 +12,7 @@ use protos::engine::{
     Start,
 };
 
-mod common;
-use common::{commit_text, config_tl, req};
+use crate::common::{commit_text, config_tl, req};
 
 fn send(handle: &EngineHandle, generation: u64, method: Method, config: &AppConfig) -> Applied {
     handle

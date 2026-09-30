@@ -5,8 +5,7 @@
 use lexicon::association_reader::{word_key, AssocFilter, AssociationReader, START_KEY};
 use lexicon::LexiconError;
 
-mod common;
-use common::{build_tkwa, write_temp};
+use crate::common::{build_tkwa, write_temp};
 
 /// Keys in raw UTF-8 byte order: `$` (0x24) < `好` (E5 A5 BD) < `好\u{1}hó`
 /// (a prefix sorts before its extension).

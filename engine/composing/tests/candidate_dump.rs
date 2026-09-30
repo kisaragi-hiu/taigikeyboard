@@ -23,14 +23,14 @@
 //!
 //! ```sh
 //! # default sample inputs (tl mode)
-//! cargo test -p composing --test candidate_dump -- --ignored --nocapture
+//! cargo test -p composing --test prod candidate_dump -- --ignored --nocapture
 //! # custom inputs (comma-separated) + mode (tl|poj|tps) + simulated
 //! # user_frequency rows `display:tl:count[:age_ms]`, custom_dictionary
 //! # rows `roman[:hanji]` and learned-phrase rows `hanji:canonical_tl`
 //! DUMP_FREQ="更新:king-sin:1:7200000" \
 //! DUMP_CUSTOM="tâi-gí:台語" DUMP_LEARNED="記起來:kì--khí-lâi" \
 //! DUMP_INPUTS="tai5,tai5gi2,tsua" DUMP_MODE=tl \
-//!   cargo test -p composing --test candidate_dump -- --ignored --nocapture
+//!   cargo test -p composing --test prod candidate_dump -- --ignored --nocapture
 //! ```
 //!
 //! Requires the production artifacts to exist (run `make dict` first if
@@ -42,8 +42,7 @@ use std::path::PathBuf;
 
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 
-mod common;
-use common::{config, fetch_at_pos_response, Fetch, Selected};
+use crate::common::{config, fetch_at_pos_response, Fetch, Selected};
 use lexicon::{CustomEntry, LearnedEntry};
 
 const DEFAULT_INPUTS: &str = "tai5,tai5gi2,tai,tsua,ka";

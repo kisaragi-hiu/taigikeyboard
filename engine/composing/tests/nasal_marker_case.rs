@@ -10,9 +10,9 @@
 
 use protos::engine::AppConfig;
 
-mod common;
-use common::Fetch;
-use common::{
+use crate::common;
+use crate::common::Fetch;
+use crate::common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, cell_with_hanji, config,
     empty_association_bin, engine_install_lock, fetch_cells, install_lexicon, write_temp, Cell,
     Row,

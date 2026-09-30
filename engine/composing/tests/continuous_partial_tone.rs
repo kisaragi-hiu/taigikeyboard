@@ -22,8 +22,7 @@
 //! syllable that is itself a production syllable is present as a control
 //! row and asserted on: 豬 `ti` / 鎮 `tìn` under `ting`, 是 `sī` under `sik`.
 
-mod common;
-use common::{
+use crate::common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, empty_association_bin,
     engine_install_lock, fetch_hanji_with_custom as fetch_hanji_in, install_lexicon, write_temp,
     Row,

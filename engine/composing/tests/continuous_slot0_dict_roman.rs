@@ -26,9 +26,8 @@
 //!
 //! Hermetic `LexiconHandle` install comes from `tests/common/mod.rs`.
 
-mod common;
-use common::Fetch;
-use common::{
+use crate::common::Fetch;
+use crate::common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, config_tl,
     empty_association_bin, engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp,
     Row,

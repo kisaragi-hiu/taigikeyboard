@@ -7,8 +7,7 @@
 use composing::{Engine, Intent};
 use protos::engine::{effect::Kind as EffectKind, ComposingResponse};
 
-mod common;
-use common::{commit_text, config_tl};
+use crate::common::{commit_text, config_tl};
 
 fn raw_input(resp: &ComposingResponse) -> &str {
     resp.preedit

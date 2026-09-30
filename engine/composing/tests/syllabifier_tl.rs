@@ -16,8 +16,7 @@
 use composing::syllabifier::tl::valid_span_endings;
 use phonetics::InputMode;
 
-mod common;
-use common::{build_dual_inventory, build_inventory};
+use crate::common::{build_dual_inventory, build_inventory};
 
 const MAX_SYLLABLES: usize = 8;
 // All tests in this matrix exercise the TL family; the `mode` parameter

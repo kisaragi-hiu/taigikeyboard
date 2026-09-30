@@ -6,9 +6,8 @@
 //! once, and a file from a later build is left alone.
 
 use rusqlite::Connection;
-mod common;
 
-use common::{pair, paths, scratch};
+use crate::common::{pair, paths, scratch};
 use std::path::Path;
 use std::sync::Arc;
 use userdata::{

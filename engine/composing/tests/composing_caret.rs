@@ -9,8 +9,7 @@ use protos::engine::composing_response::Preedit;
 use protos::engine::effect::Kind;
 use protos::engine::{ComposingResponse, MoveCaret};
 
-mod common;
-use common::{config, config_tl, effect_kinds, req};
+use crate::common::{config, config_tl, effect_kinds, req};
 
 fn start(text: &str) -> Engine {
     let mut engine = Engine::new();

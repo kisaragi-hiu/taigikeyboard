@@ -84,8 +84,7 @@ fn ctx_neutral<'a>(
     ctx(freq_map, 0, &[], prefix_index, dict)
 }
 
-mod common;
-use common::{
+use crate::common::{
     build_tkdb_v3, fetch_candidates_for_endings, frequency_map, write_temp, FrequencyFixture,
 };
 

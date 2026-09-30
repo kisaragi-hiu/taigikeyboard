@@ -2,9 +2,7 @@
 //! iOS export and an Android one must restore, merging with what is there,
 //! and what the engine writes must restore on the other side.
 
-mod common;
-
-use common::{pair, paths, scratch};
+use crate::common::{pair, paths, scratch};
 use userdata::{
     export_backup, import_backup, BackupError, JournalMode, UserDataStores, BACKUP_VERSION,
 };
