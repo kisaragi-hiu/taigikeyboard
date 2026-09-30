@@ -5,8 +5,9 @@ import KeyboardKit
 
 /// §42 Hanji with Romanization split-cell wire vocabulary — shared by the builder
 /// (`buildContinuousSuggestions`), the render/commit guard
-/// (`CandidateCellHelper.suggestionToHandle`), and the commit resolver
-/// (`ActionHandler.markedCellCommit`). Values mirror Android
+/// (`CandidateCellHelper.suggestionToHandle`), and the commit script
+/// (`ActionHandler.commitScript(for:)`, `ActionHandler.markedCellCommit` for
+/// predictions). Values mirror Android
 /// `TaigiWord.MetadataKeys.CELL_SCRIPT*`; wire strings must not drift.
 enum CandidateCellScript {
     /// `additionalInfo` key carrying the cell's script marker.
@@ -23,9 +24,9 @@ enum CandidateCellScript {
     /// split cell. A marker is honoured only when it is one this build knows
     /// AND the cell carries a payload to commit — a wire defect (unknown
     /// value, empty `text`) resolves to `nil` so BOTH the render guard
-    /// (`CandidateCellHelper.suggestionToHandle`) and the commit resolver
-    /// (`ActionHandler.markedCellCommit`) fall back to the unmarked
-    /// mode-derived path together. Splitting that predicate is what let a
+    /// (`CandidateCellHelper.suggestionToHandle`) and the commit
+    /// (`ActionHandler.commitScript(for:)` / `markedCellCommit`) fall back to
+    /// the unmarked lead together. Splitting that predicate is what let a
     /// defective marker skip the swap rewrite and then be re-parsed as an
     /// un-split dual-script suggestion.
     static func marker(for suggestion: AutocompleteSuggestion) -> String? {
@@ -191,14 +192,12 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// Per `docs/engine/continuous-input-ranking.md` §10.1.2 (supersedes legacy
     /// slot-0 model) + §10.3 commit contract: in Continuous mode the strip has
     /// NO composing-text cell. `candidate[0]` is the engine ranker top and
-    /// Tap routes through `commitContinuous(displayText:canonicalText:)`.
-    /// Per §10.3 clarification γ (REVISED, Bug 1): the **document** string is
-    /// the swap/TPS/both-scripts form `ActionHandler` derives from `c.roman`
-    /// / `c.hanji` via the legacy `parseRomanAndHanzi`+`formatOutputText`
-    /// helpers — NOT the canonical `display_text` and NOT the segmented
-    /// visual form. The inline pre-edit (`markedText`) is the only
-    /// composing-text surface; Enter commits the pending tail via Item 3's
-    /// `Phase::Continuous` `Intent::CommitRaw` arm.
+    /// Tap routes through `ComposingManager.commitContinuous(_:)`, which has
+    /// the engine resolve the **document** string from `c.roman` / `c.hanji`
+    /// under the live settings (R5) — NOT the canonical `display_text` and
+    /// NOT the segmented visual form. The inline pre-edit (`markedText`) is
+    /// the only composing-text surface; Enter commits the pending tail via
+    /// Item 3's `Phase::Continuous` `Intent::CommitRaw` arm.
     ///
     /// Item 6 dual-line render: `text` / `title` carry `c.roman` (the
     /// engine-rendered display romanization — TL, or POJ-display when
@@ -207,22 +206,16 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// dual-line on HANT/MIXED and single-line on TAILO.
     ///
     /// `additionalInfo` carries `consumedBytes` + `syllableCount` (decimal
-    /// strings) plus `displayText` (engine-supplied canonical value = `hanji
-    /// ?? roman` per `record_to_candidate`) so
-    /// `ActionHandler.handleSuggestionSelection` can route the tap to
-    /// `composingManager.commitContinuous(...)` with the engine byte offsets
-    /// AND the canonical key. Post-Bug-1 the `displayText` sidechannel is the
-    /// **canonical key** forwarded as `commitContinuous(canonicalText:)` for
+    /// strings), `roman` (the display romanization) and `displayText`
+    /// (engine-supplied canonical value = `hanji ?? roman` per
+    /// `record_to_candidate`) so `ActionHandler.continuousPick(for:)` builds
+    /// the engine request from metadata alone: the view rewrites
+    /// `suggestion.text` (`CandidateCellHelper.suggestionToHandle` — the swap,
+    /// the TPS rendering; Codex PR #257 r3214912627). `displayText` is the
+    /// **canonical key** the engine counts the pick under for
     /// `user_frequency.db` + NextWord (mode-independent learning, decision
-    /// b) — it is no longer the document commit string. All three keys are
-    /// strict-required at the consumer; a missing sidechannel drops the tap
-    /// (Item 4 fork F2=A). The sidechannel also still defends against TPS
-    /// layout's `CandidateCellHelper.suggestionToHandle` rewriting
-    /// `suggestion.text` via `tlNumericToTPS` when the subtitle is nil/empty
-    /// (Codex PR #257 r3214912627): `parseRomanAndHanzi` consumes the
-    /// (possibly pre-swapped/rewritten) `Suggestion` exactly as the legacy
-    /// branch does, so document parity holds while the canonical key stays
-    /// clean on the sidechannel.
+    /// b) — never the document string. These keys are strict-required at the
+    /// consumer; a missing sidechannel drops the tap (Item 4 fork F2=A).
     ///
     /// `subtitle` collapses present-empty `c.hanji == ""` to `nil` so a wire
     /// defect (producer emitted `Some("")` instead of `None` for a TAILO
@@ -293,10 +286,15 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
             "syllableCount": String(c.syllableCount),
             "displayText": c.displayText,
             // R2: canonical TL identity → round-trips to
-            // commitContinuous(associationTl:) for the NextWord write.
+            // `ContinuousPick.associationTl` for the NextWord write.
             "canonicalTl": c.canonicalTl,
+            // R5: the display romanization the engine renders the commit from
+            // (`ContinuousPick.roman`) — the view may rewrite `text`. The same
+            // key and value the §42 hanji cell's bracket roman rides
+            // (`CandidateCellScript.bracketRomanKey`).
+            "roman": c.roman,
         ]
-        // §50: the pick's hanji → `commitContinuous(hanji:)`; absent for a
+        // §50: the pick's hanji → `ContinuousPick.hanji`; absent for a
         // hanji-less candidate so the engine never learns a literal / OOV.
         if let hanji = c.hanji, !hanji.isEmpty {
             info["hanji"] = hanji

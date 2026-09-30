@@ -37,6 +37,17 @@ final class ComposingManagerContinuousTests: XCTestCase {
     private var spy: DelegateSpy!
     private let settings = StubEngineSettings()
 
+    /// The 台 / `tâi` pick over the leading `tai` of the pending buffer.
+    private let taiPick = RustEngineBridge.ContinuousPick(
+        script: .lead,
+        roman: "tâi",
+        canonicalText: "台",
+        associationTl: "tâi",
+        hanji: "台",
+        consumedBytes: UInt32("tai".utf8.count),
+        syllableCount: 1,
+    )
+
     override class func setUp() {
         super.setUp()
         RustEngineBridge.install()
@@ -165,47 +176,33 @@ final class ComposingManagerContinuousTests: XCTestCase {
     // MARK: - commitContinuous
 
     /// Mid-commit (consumed_bytes < pending.utf8.count): engine consumes
-    /// the leading bytes, leaves the tail in `Phase::Continuous`. Wrapper
-    /// inlines `applyAsSelfCommit` to inspect `transition.effects` and
-    /// returns `(didCommit: true, didFinalCommit: false)` so the caller
-    /// (ActionHandler) records frequency without inserting a final-commit
+    /// the leading bytes, leaves the tail in `Phase::Continuous` and answers
+    /// `.nailed`, so the caller (ActionHandler) inserts no final-commit
     /// trailing space.
     func testCommitContinuous_PartialConsume_StaysInContinuous() {
         manager.startComposing(with: "taibak")
         spy.effects.removeAll()
 
-        let outcome = manager.commitContinuous(
-            displayText: "台",
-            canonicalText: "台",
-            associationTl: "tâi",
-            consumedBytes: UInt32("tai".utf8.count),
-            syllableCount: 1,
-        )
+        let outcome = manager.commitContinuous(taiPick)
 
         XCTAssertTrue(manager.isComposing, "Mid-commit keeps Continuous active")
         XCTAssertEqual(manager.rawInput, "bak", "Pending tail remains after partial consume")
-        XCTAssertTrue(outcome.didCommit, "Mid-commit success signal — Model B nail (NextWordUpdateLastSelectedWord)")
-        XCTAssertFalse(outcome.didFinalCommit, "Mid-commit does not exit Continuous")
+        XCTAssertEqual(outcome, .nailed, "Mid-commit nails the segment and keeps composing (Model B)")
     }
 
     /// Full-commit (consumed_bytes >= pending.utf8.count): engine exits to
-    /// Idle, wrapper clears mirror, returns `(true, true)`.
+    /// Idle, wrapper clears mirror, answers `.finalized`.
     func testCommitContinuous_FullConsume_ExitsToIdle() {
         manager.startComposing(with: "tai")
         spy.effects.removeAll()
 
-        let outcome = manager.commitContinuous(
-            displayText: "台",
-            canonicalText: "台",
-            associationTl: "tâi",
-            consumedBytes: UInt32("tai".utf8.count),
-            syllableCount: 1,
-        )
+        let outcome = manager.commitContinuous(taiPick)
 
         XCTAssertFalse(manager.isComposing, "Full-commit must exit to Idle")
         XCTAssertEqual(manager.rawInput, "")
-        XCTAssertTrue(outcome.didCommit, "Full-commit emits CommitTextReplacingPreedit")
-        XCTAssertTrue(outcome.didFinalCommit, "Full-commit exits Continuous → didFinalCommit")
+        guard case .finalized = outcome else {
+            return XCTFail("Full-commit exits Continuous → .finalized, got \(outcome)")
+        }
     }
 
     /// Codex PR #257 r3214932308 regression: when the platform bumps
@@ -213,10 +210,10 @@ final class ComposingManagerContinuousTests: XCTestCase {
     /// landing on a Continuous suggestion, the engine silently resets to
     /// Idle in `engine/composing/src/handle.rs:61-65` BEFORE applying the
     /// CommitContinuous intent. The intent then no-ops (phase mismatch),
-    /// emitting zero effects. The wrapper MUST return `(false, false)`
-    /// so the caller does not record frequency / insert a stray space
-    /// for text that was never written.
-    func testCommitContinuous_StaleAfterGenerationBump_ReturnsFalseFalse() {
+    /// emitting zero effects, and answers `.ignored`, so the caller inserts
+    /// no stray space and the engine counts nothing for text that was never
+    /// written.
+    func testCommitContinuous_StaleAfterGenerationBump_IsIgnored() {
         manager.startComposing(with: "tai")
         spy.effects.removeAll()
         // Simulate input-context switch firing `textWillChange` and bumping
@@ -224,22 +221,9 @@ final class ComposingManagerContinuousTests: XCTestCase {
         // Continuous candidate.
         manager.bumpGeneration()
 
-        let outcome = manager.commitContinuous(
-            displayText: "台",
-            canonicalText: "台",
-            associationTl: "tâi",
-            consumedBytes: UInt32("tai".utf8.count),
-            syllableCount: 1,
-        )
+        let outcome = manager.commitContinuous(taiPick)
 
-        XCTAssertFalse(
-            outcome.didCommit,
-            "Stale-generation tap must not be reported as committed (engine noops)",
-        )
-        XCTAssertFalse(
-            outcome.didFinalCommit,
-            "didFinalCommit must imply didCommit; both stay false on noop",
-        )
+        XCTAssertEqual(outcome, .ignored, "Stale-generation tap must not be reported as committed (engine noops)")
         let emittedCommitText = spy.effects.contains { effect in
             if case .commitTextReplacingPreedit = effect {
                 return true

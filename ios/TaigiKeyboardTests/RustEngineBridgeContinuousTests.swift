@@ -29,6 +29,17 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     private let settings = StubEngineSettings()
     private let hanjiFirst = StubEngineSettings(isTranslateSwapped: true)
 
+    /// The 台 / `tâi` pick over the leading `tai` of the pending buffer.
+    private let taiPick = RustEngineBridge.ContinuousPick(
+        script: .lead,
+        roman: "tâi",
+        canonicalText: "台",
+        associationTl: "tâi",
+        hanji: "台",
+        consumedBytes: UInt32("tai".utf8.count),
+        syllableCount: 1,
+    )
+
     override func setUp() {
         super.setUp()
         Self.nextEnvelopeGen &+= 1
@@ -159,14 +170,10 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         )
         // consumed_bytes = "tai".utf8.count → final commit
         let commit = RustEngineBridge.composingCommitContinuous(
-            displayText: "台",
-            canonicalText: "台",
-            associationTl: "tâi",
-            consumedBytes: UInt32("tai".utf8.count),
-            syllableCount: 1,
+            taiPick,
             settings: settings,
             generation: envelopeGen,
-        )
+        ).transition
         let selectedRoman: String? = commit.effects.lazy.compactMap { effect -> String? in
             if case let .nextWordWordSelected(_, roman, _, _) = effect {
                 return roman
@@ -200,14 +207,10 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             settings: settings, generation: envelopeGen,
         )
         let commit = RustEngineBridge.composingCommitContinuous(
-            displayText: "台",
-            canonicalText: "台",
-            associationTl: "tâi",
-            consumedBytes: UInt32("tai".utf8.count),
-            syllableCount: 1,
+            taiPick,
             settings: settings,
             generation: envelopeGen,
-        )
+        ).transition
         XCTAssertTrue(commit.isComposing, "Mid-commit must stay in Continuous phase")
         XCTAssertEqual(commit.rawInput, "bak", "Pending tail should remain after mid-commit")
         let hasUpdate = commit.effects.contains { effect in
@@ -238,11 +241,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             settings: hanjiFirst, generation: envelopeGen,
         )
         _ = RustEngineBridge.composingCommitContinuous(
-            displayText: "台",
-            canonicalText: "台",
-            associationTl: "tâi",
-            consumedBytes: UInt32("tai".utf8.count),
-            syllableCount: 1,
+            taiPick,
             settings: hanjiFirst,
             generation: envelopeGen,
         )
@@ -268,11 +267,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             settings: tps, generation: envelopeGen,
         )
         _ = RustEngineBridge.composingCommitContinuous(
-            displayText: "台",
-            canonicalText: "台",
-            associationTl: "tâi",
-            consumedBytes: UInt32("tai".utf8.count),
-            syllableCount: 1,
+            taiPick,
             settings: tps,
             generation: envelopeGen,
         )
@@ -284,6 +279,52 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
             settings: tps, generation: envelopeGen,
         )
         XCTAssertEqual(delete.displayText, "台bak", "TPS DeleteBackward must not insert a word-boundary space")
+    }
+
+    // MARK: - Engine-resolved commits (R5)
+
+    /// The engine writes what the pick resolves to and answers the auto-space
+    /// verdict: roman-led TL writes the romanization and earns the space.
+    func testCommitContinuous_RomanLedFinalPick_WritesRomanization_EarnsAutoSpace() {
+        _ = RustEngineBridge.composingStart("tai", settings: settings, generation: envelopeGen)
+        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: envelopeGen)
+        let result = RustEngineBridge.composingCommitContinuous(taiPick, settings: settings, generation: envelopeGen)
+        XCTAssertEqual(result.outcome, .finalized(earnsAutoSpace: true))
+        XCTAssertTrue(result.transition.effects.contains(.commitTextReplacingPreedit("tâi")), "\(result.transition.effects)")
+    }
+
+    /// R5 P2 (parity, USER 2026-09-30): on the TPS layout a hanji-less pick writes the Bopomofo
+    /// its cell shows (`tlDisplayToTPS(roman)`), which earns no space. Was: the view-rewritten
+    /// `tlNumericToTPS` of the display romanization. Android pins the same row engine-side
+    /// (`commit_text.rs` `tps_truth_table`).
+    func testCommitContinuous_TpsHanjilessPick_WritesItsBopomofo_EarnsNoSpace() {
+        let tps = StubEngineSettings(inputMode: .tps)
+        _ = RustEngineBridge.composingStart("tai", settings: tps, generation: envelopeGen)
+        _ = RustEngineBridge.composingEnterContinuous(settings: tps, generation: envelopeGen)
+        let hanjiless = RustEngineBridge.ContinuousPick(
+            script: .lead,
+            roman: "tâi",
+            canonicalText: "tâi",
+            associationTl: "tâi",
+            hanji: nil,
+            consumedBytes: UInt32("tai".utf8.count),
+            syllableCount: 1,
+        )
+        let result = RustEngineBridge.composingCommitContinuous(hanjiless, settings: tps, generation: envelopeGen)
+        let bopomofo = RustEngineBridge.tlDisplayToTPS("tâi", orMapsToER: tps.isTpsOrMappedToER)
+        XCTAssertEqual(bopomofo, "ㄉㄞˊ")
+        XCTAssertEqual(result.outcome, .finalized(earnsAutoSpace: false))
+        XCTAssertTrue(result.transition.effects.contains(.commitTextReplacingPreedit(bopomofo)), "\(result.transition.effects)")
+    }
+
+    /// A stale generation resets the engine before the commit runs: nothing is written and
+    /// the pick answers `.ignored` (no auto space, no usage).
+    func testCommitContinuous_StaleGeneration_IsIgnored() {
+        _ = RustEngineBridge.composingStart("tai", settings: settings, generation: envelopeGen)
+        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: envelopeGen)
+        let result = RustEngineBridge.composingCommitContinuous(taiPick, settings: settings, generation: envelopeGen &+ 1)
+        XCTAssertEqual(result.outcome, .ignored)
+        XCTAssertTrue(result.transition.effects.isEmpty, "\(result.transition.effects)")
     }
 
     // MARK: - Effect mapping completeness (no nil drops)

@@ -3,10 +3,11 @@
 import Foundation
 import KeyboardKit
 
-/// What one commit writes into the document, and whether that string carries
-/// romanization — the single input the auto-space gate reads.
+/// What one NextWord prediction commit writes into the document, and whether
+/// that string carries romanization — the single input the auto-space gate
+/// reads. A Continuous commit is resolved by the engine.
 // CROSS-PLATFORM INVARIANT — mirrors android `ResolvedCommit` and the engine's
-// `engine/composing/src/commit_text.rs` `ResolvedCommit` (macOS + desktop, R5).
+// `engine/composing/src/commit_text.rs` `ResolvedCommit` (every Continuous commit, R5).
 struct ResolvedCommit {
     let text: String
     let wroteRomanization: Bool
@@ -31,155 +32,27 @@ extension ActionHandler {
             return
         }
 
-        // v3.5.8 Phase 9 Item 4 + Bug 1 — Continuous-input commit branch.
-        // Per `docs/engine/continuous-input-ranking.md` §10.3 clarification γ
-        // (REVISED, Bug 1): the tap commits the **swap/TPS/both-scripts-
-        // formatted document string** — formatted from the candidate's
-        // roman/hanji by the SAME `parseRomanAndHanzi` + `formatOutputText`
-        // helpers the legacy lexicon branch uses, so Continuous and lexicon
-        // commits are identical for the same candidate under the same
-        // settings. The sidechannel `displayText` (= engine canonical
-        // `hanji ?? roman`) is NOT the document string anymore; it is
-        // forwarded as `commitContinuous(canonicalText:)` so the engine keys
-        // `user_frequency.db` + NextWord on the canonical token regardless of
-        // display mode (user decision b).
-        //
-        // Strict-required keys (Item 4 fork F2=A): `consumedBytes`,
-        // `syllableCount`, and `displayText` all come from
-        // `TaigiAutocompleteService.buildContinuousSuggestions`. Missing or
-        // unparseable → drop the tap silently. Falling back to
-        // `selectSuggestion(text:)` would lose `consumedBytes`, corrupting
-        // the engine's `Phase::Continuous { raw }` byte alignment.
-        //
-        // Frequency recording stays on the canonical sidechannel below;
-        // NextWord handshake fires via the engine effects (now keyed on
-        // `canonical_text`) on the mid/final commit
-        // (`engine/composing/src/transition.rs` `commit_continuous`).
+        // Continuous candidate (R5): the engine resolves what the pick writes
+        // from the candidate's own scripts under the live settings, counts the
+        // pick, and answers the auto-space verdict — so Continuous commits match
+        // macOS / Windows / Linux / Android by construction. The pick is read
+        // off the suggestion's metadata, never its view-rewritten `text`.
         if suggestion.additionalInfo["isContinuous"] == "true" {
-            guard let displayText = suggestion.additionalInfo["displayText"],
-                  let consumedBytesStr = suggestion.additionalInfo["consumedBytes"],
-                  let syllableCountStr = suggestion.additionalInfo["syllableCount"],
-                  let consumedBytes = UInt32(consumedBytesStr),
-                  let syllableCount = UInt32(syllableCountStr)
-            else {
+            // Strict-required metadata (Item 4 fork F2=A): missing → drop the
+            // tap. Falling back to `selectSuggestion(text:)` would lose
+            // `consumedBytes` and corrupt `Phase::Continuous { raw }` alignment.
+            guard let pick = Self.continuousPick(for: suggestion) else {
                 logger.debug(
                     "[SELECT] continuous metadata decode failed; dropping tap. "
                         + "additionalInfo=\(suggestion.additionalInfo.description)",
                 )
                 return
             }
-            // Effect-backed commit signal (Codex PR #257 r3214932308):
-            // `commitContinuous` returns `(didCommit, didFinalCommit)` derived
-            // from `transition.effects` containing `.commitTextReplacingPreedit`.
-            // This closes the generation-mismatch race left open by earlier
-            // wasComposing/isComposing gating: when `engine/composing/src/handle.rs:61-65`
-            // silently resets the engine to Idle before dispatch, the resulting
-            // CommitContinuous noop emits zero effects, so both flags stay
-            // false and neither frequency recording nor auto-space fires for
-            // text that was never written.
-            // v3.5.8 Phase 9 Bug 1 (Option A): the continuous tap must commit
-            // the SAME swap/TPS/both-scripts-formatted string the legacy
-            // lexicon path commits — reuse `parseRomanAndHanzi` +
-            // `formatOutputText` verbatim so parity is by construction
-            // (`parseRomanAndHanzi` already compensates for
-            // `CandidateCellHelper.suggestionToHandle`'s text↔subtitle
-            // pre-swap / TPS rewrite). The canonical sidechannel `displayText`
-            // (= engine `hanji ?? roman`) is forwarded as `canonicalText` so
-            // `user_frequency.db` + NextWord keys stay mode-independent
-            // (user decision b). Frequency recording below already keys on
-            // the canonical sidechannel and is unchanged.
-            //
-            // §42 Hanji with Romanization split cells arrive with an `additionalInfo["cellScript"]`
-            // marker and resolve the document text DIRECTLY from the marker +
-            // info fields (`markedCellCommit` below), bypassing the swap
-            // reconstruction — the identity sidechannels are shared by both
-            // cells, so frequency / NextWord recording is unchanged whichever cell
-            // of the same candidate is tapped.
-            let docText: String
-            // Whether this commit wrote romanization into the document — the
-            // SINGLE auto-space verdict read by the gate below (§42: the space
-            // follows the script actually committed, not the mode). Both arms
-            // resolve it beside the string, never from the mode afterwards:
-            //   marked roman cell          → true  (bare roman)
-            //   marked hanji, Annotate in Brackets OFF → false (pure Hanji)
-            //   marked hanji, Annotate in Brackets ON  → true  (`Hanji (romanization)` DID write
-            //                                       the romanization)
-            //   unmarked, no hanji         → true  (§34 literal, an OOV name:
-            //                                       romanization under every mode)
-            //   unmarked, hanji + swapped  → false (pure Hanji)
-            //   unmarked, otherwise        → true  (roman-led, or the bracket form)
-            let wroteRomanization: Bool
-            if let cellScript = CandidateCellScript.marker(for: suggestion) {
-                let resolved = Self.markedCellCommit(
-                    cellScript: cellScript,
-                    cellText: suggestion.text,
-                    roman: suggestion.additionalInfo[CandidateCellScript.bracketRomanKey],
-                    isOutputBothScripts: settings.isOutputBothScripts,
-                )
-                docText = resolved.text
-                wroteRomanization = resolved.wroteRomanization
-            } else {
-                // Unmarked commit — or a wire-defective marker, which
-                // `CandidateCellScript.marker` already declined for the render
-                // guard too, so this suggestion still carries the un-split
-                // dual-script shape this path expects.
-                let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
-                let (roman, hanzi) = Self.parseRomanAndHanzi(
-                    from: suggestion,
-                    isNextWord: false,
-                    isTPSLayout: isTPSLayout,
-                    effectiveSwapped: effectiveSwapped,
-                )
-                let resolved = Self.formatOutputText(
-                    roman: roman,
-                    hanzi: hanzi,
-                    isTPSLayout: isTPSLayout,
-                    effectiveSwapped: effectiveSwapped,
-                    isOutputBothScripts: settings.isOutputBothScripts,
-                    orMapsToER: settings.isTpsOrMappedToER,
-                )
-                docText = resolved.text
-                wroteRomanization = resolved.wroteRomanization
-            }
-            // R2: canonical TL identity sidechannel — forwarded as
-            // `associationTl` so NextWord learns the same `next_tl`/`prev_tl`
-            // a normal candidate commit records. Absent (wire skew / older
-            // suggestion) → "" → engine falls back to the raw committed slice.
-            let associationTl = suggestion.additionalInfo["canonicalTl"] ?? ""
-            let hanji = suggestion.additionalInfo["hanji"]
-            let (didCommit, didFinalCommit) = composingManager.commitContinuous(
-                displayText: docText,
-                canonicalText: displayText,
-                associationTl: associationTl,
-                hanji: hanji,
-                consumedBytes: consumedBytes,
-                syllableCount: syllableCount,
-            )
-            // Per-segment frequency learning mirrors the lexicon path: every
-            // successful commit records, mid OR final — plus §50 touch-on-use
-            // for a learned phrase picked as one candidate (`hanji`; a no-op
-            // for any other row). The engine keeps both (roadmap P7b).
-            // Sidechannel `displayText` (not view-rewritten suggestion.text)
-            // ensures frequency tracks what the engine committed, not the
-            // TPS surface form (PR #257 r3214912627).
-            // R5 pair-key (#7): record `(displayText, canonical TL)` so
-            // polyphonic Hanji keep separate frequency buckets. `associationTl` is
-            // the canonical-TL sidechannel already extracted above (the same
-            // reading NextWord learns); empty only on wire skew / TPS-OOV.
-            if didCommit {
-                CompositionRoot.usageRecorder.record(Usage(displayText: displayText, canonicalTl: associationTl, hanji: hanji))
-            }
-            // Auto-space only on FINAL commit (entire buffer consumed; engine
-            // exits Continuous → Idle). Mid-commits keep composing more
-            // syllables and must NOT insert a space.
-            // Keys on the RESOLVED committed script — the `wroteRomanization`
-            // verdict resolved above beside the string itself. Suffix check is
-            // on the actual committed document string (`docText`) so a trailing
-            // hyphen continuation suppresses the space — mirrors the legacy
-            // lexicon path (Codex post-impl: auto-space suffix check must use
-            // the document string, not the canonical key).
-            if didFinalCommit {
-                appendAutoSpaceIfEarned(documentText: docText, wroteRomanization: wroteRomanization)
+            // Auto-space only on the FINAL commit, as the engine judged what the
+            // pick wrote (romanization, no trailing `-`, §23); a nail keeps
+            // composing and a stale / rejected pick wrote nothing.
+            if case let .finalized(earnsAutoSpace) = composingManager.commitContinuous(pick) {
+                appendAutoSpace(ifEarned: settings.isAutoSpaceEnabled && earnsAutoSpace)
             }
             return
         }
@@ -257,7 +130,47 @@ extension ActionHandler {
 
     // MARK: - Suggestion Helpers
 
-    /// §42 Hanji with Romanization marked-cell document text.
+    /// The engine request for a Continuous candidate tap, read off the
+    /// suggestion's metadata alone (`TaigiAutocompleteService.continuousSidechannels`)
+    /// — the view may have rewritten `text` (`CandidateCellHelper.suggestionToHandle`:
+    /// the swap, the TPS rendering). `nil` when a strict key is missing.
+    static func continuousPick(for suggestion: AutocompleteSuggestion) -> RustEngineBridge.ContinuousPick? {
+        let info = suggestion.additionalInfo
+        guard let canonicalText = info["displayText"],
+              let roman = info["roman"],
+              let consumedBytes = info["consumedBytes"].flatMap(UInt32.init),
+              let syllableCount = info["syllableCount"].flatMap(UInt32.init)
+        else {
+            return nil
+        }
+        return RustEngineBridge.ContinuousPick(
+            script: commitScript(for: suggestion),
+            roman: roman,
+            canonicalText: canonicalText,
+            // Absent only on wire skew → "" → the engine falls back to the raw
+            // committed slice for NextWord.
+            associationTl: info["canonicalTl"] ?? "",
+            hanji: info["hanji"],
+            consumedBytes: consumedBytes,
+            syllableCount: syllableCount,
+        )
+    }
+
+    /// Which script a Continuous tap commits: a §42 split cell the one its
+    /// marker names, every other cell what the output settings lead with. A
+    /// defective marker is declined by `CandidateCellScript.marker`, so the
+    /// cell commits the lead, as the render guard shows it.
+    // CROSS-PLATFORM INVARIANT — mirrors android CandidateClickHandler.kt `commitScript`.
+    static func commitScript(for suggestion: AutocompleteSuggestion) -> Taigi_Engine_CommitScript {
+        switch CandidateCellScript.marker(for: suggestion) {
+        case CandidateCellScript.hanji: .hanji
+        case CandidateCellScript.roman: .roman
+        default: .lead
+        }
+    }
+
+    /// §42 Hanji with Romanization marked-cell document text for a NextWord
+    /// prediction tap (a Continuous tap is resolved by the engine).
     ///
     /// A split cell's `cellScript` marker is authoritative, so the document
     /// string resolves directly from the marker + info fields — never through
@@ -373,8 +286,8 @@ extension ActionHandler {
     /// romanization-only custom entry all fall to the last arm and write
     /// romanization whatever the mode leads with.
     // CROSS-PLATFORM INVARIANT — mirrors android/.../CandidateClickHandler.kt
-    // `unmarkedCommit` and engine/composing/src/commit_text.rs `resolve_commit_text`.
-    // Drift changes which commits earn a space.
+    // `resolveUnmarkedCommit` (prediction taps) and engine/composing/src/commit_text.rs
+    // `resolve_commit_text` (Continuous taps). Drift changes which commits earn a space.
     static func formatOutputText(
         roman: String,
         hanzi: String?,
@@ -409,11 +322,15 @@ extension ActionHandler {
     /// the previous arm (`beginInputEvent`), so the next punctuation key sees
     /// no space of ours to swap.
     func appendAutoSpaceIfEarned(documentText: String, wroteRomanization: Bool) {
-        guard Self.shouldAppendAutoSpace(
+        appendAutoSpace(ifEarned: Self.shouldAppendAutoSpace(
             isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
             wroteRomanization: wroteRomanization,
             documentText: documentText,
-        ) else { return }
+        ))
+    }
+
+    private func appendAutoSpace(ifEarned isEarned: Bool) {
+        guard isEarned else { return }
         keyboardContext.textDocumentProxy.insertText(" ")
         armAutoSpaceSwap()
     }

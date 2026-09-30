@@ -3,18 +3,16 @@
 
 import Foundation
 
-/// One candidate the user took. This side decides WHAT a pick is — the
-/// `(displayText, canonicalTl)` identity it counts under — and the engine
-/// keeps the count. `hanji` is set for a continuous pick, so a learned phrase
-/// taken whole is touched (§50).
+/// One NextWord prediction the user took. This side decides WHAT the pick is
+/// — the `(displayText, canonicalTl)` identity it counts under — and the
+/// engine keeps the count. A Continuous pick is counted by the engine itself.
 struct Usage {
     let displayText: String
     let canonicalTl: String
-    var hanji: String?
 }
 
-/// CROSS-PLATFORM INVARIANT — mirrors Android `UsageRecorder.kt` and the
-/// engine's own recording on macOS + desktop (R5: `engine/composing/src/transition.rs`
+/// CROSS-PLATFORM INVARIANT — mirrors Android `UsageRecorder.kt`; every
+/// Continuous pick the engine records itself (R5: `engine/composing/src/transition.rs`
 /// `commit_continuous_resolved`, `Applied.usage`).
 protocol UsageRecorder: AnyObject {
     func record(_ usage: Usage)
@@ -26,10 +24,6 @@ protocol UsageRecorder: AnyObject {
 final class EngineUsageRecorder: UsageRecorder {
     func record(_ usage: Usage) {
         guard UserDataOpening.isOpen else { return }
-        RustEngineBridge.userDataRecordUsage(
-            displayText: usage.displayText,
-            canonicalTl: usage.canonicalTl,
-            hanji: usage.hanji,
-        )
+        RustEngineBridge.userDataRecordUsage(displayText: usage.displayText, canonicalTl: usage.canonicalTl)
     }
 }
