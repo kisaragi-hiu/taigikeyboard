@@ -3,8 +3,9 @@
 // This test process never opens the engine's user data: the handle is
 // process-wide, so an open here would reach every later fetch in the run.
 // What the engine does with a pick, a bigram or a page request is asserted
-// by the engine's own tests (`engine/dispatch/src/user_data.rs`,
-// `engine/dispatch/tests/user_data_*.rs`); these record what this side SENDS.
+// by the engine's own tests (`engine/userdata/src/dispatch.rs`,
+// `engine/dispatch/src/user_data.rs`, `engine/dispatch/tests/user_data_*.rs`);
+// these record what this side SENDS.
 
 import Foundation
 @testable import TaigiInputMethodCore

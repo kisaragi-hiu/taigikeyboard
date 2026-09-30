@@ -10,6 +10,10 @@
 //! a `.taigi` export or a hand-copied database means the same thing on every
 //! platform.
 //!
+//! `UserDataHandle` is the process's one open of the stores and answers
+//! every `UserDataRequest`; `engine/dispatch` routes the request to it and
+//! maps `RequestError` to the wire's error code.
+//!
 //! Host-testable: nothing here touches a platform API, so the tests run
 //! against temporary directories.
 
@@ -26,7 +30,11 @@ mod custom_dictionary;
 #[cfg(feature = "sqlite")]
 mod database;
 #[cfg(feature = "sqlite")]
+mod dispatch;
+#[cfg(feature = "sqlite")]
 mod frequency;
+#[cfg(feature = "sqlite")]
+mod handle;
 #[cfg(feature = "sqlite")]
 mod learned_phrases;
 mod paths;
@@ -56,7 +64,11 @@ pub use database::{
     TAIGI_APPLICATION_ID,
 };
 #[cfg(feature = "sqlite")]
+pub use dispatch::RequestError;
+#[cfg(feature = "sqlite")]
 pub use frequency::UserFrequencyStore;
+#[cfg(feature = "sqlite")]
+pub use handle::UserDataHandle;
 #[cfg(feature = "sqlite")]
 pub use learned_phrases::{LearnedPhraseRow, LearnedPhraseStore};
 pub use paths::{

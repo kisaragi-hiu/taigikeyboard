@@ -1,0 +1,789 @@
+//! The user-data requests after the open — the pages' (list, save, delete,
+//! search, CSV and backup import / export, reset) and the key path's
+//! `RecordUsage` — answered from the stores [`UserDataHandle`] opened.
+//! `engine/dispatch` routes `UserDataRequest` here and maps [`RequestError`]
+//! to the wire's error code.
+
+use std::fmt::Display;
+
+use protos::engine::{
+    user_data_request, user_data_response, BackupExported, BackupImported, BackupRefusal,
+    CustomCsvExported, CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal,
+    CustomEntries, CustomEntryDeleted, CustomEntryMatches, CustomEntrySaved, ImportBackup,
+    ImportCustomCsv, ListCustomEntries, RecordUsage, ResetUserData, SaveCustomEntry,
+    SearchCustomEntries, UserDataReset,
+};
+
+use crate::{
+    BackupError, CustomDictionaryCSV, CustomDictionaryCSVError, CustomDictionaryError,
+    CustomDictionaryRow, CustomDictionaryStore, UserDataHandle, UserDataStores,
+};
+
+/// Why a user-data request did nothing.
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
+pub enum RequestError {
+    /// The request itself is wrong: no method, a relative or empty path, a
+    /// second open at other paths or journal, a reset of nothing, a reset
+    /// before open.
+    #[error("{0}")]
+    Invalid(&'static str),
+    /// A store could not do what was asked — its message, logged.
+    #[error("{0}")]
+    Store(String),
+}
+
+impl UserDataHandle {
+    /// A page's request — everything but the open and the key path's
+    /// `RecordUsage` — answered from stores that have finished opening.
+    pub(crate) fn handle_page(
+        stores: &UserDataStores,
+        method: &user_data_request::Method,
+    ) -> Result<user_data_response::Result, RequestError> {
+        use user_data_request::Method;
+        use user_data_response::Result as Answer;
+        Ok(match method {
+            Method::Reset(reset) => Answer::Reset(Self::reset(stores, reset)?),
+            Method::ListCustomEntries(list) => {
+                Answer::CustomEntries(Self::list_custom_entries(stores, list)?)
+            }
+            Method::SaveCustomEntry(save) => {
+                Answer::CustomEntrySaved(Self::save_custom_entry(stores, save)?)
+            }
+            Method::DeleteCustomEntry(delete) => {
+                let removed = stores
+                    .custom_dictionary
+                    .delete(&delete.id)
+                    .map_err(store_error)?;
+                Answer::CustomEntryDeleted(CustomEntryDeleted { removed })
+            }
+            Method::ImportCustomCsv(import) => {
+                Answer::CustomCsvImported(Self::import_custom_csv(stores, import)?)
+            }
+            Method::ExportCustomCsv(_) => {
+                Answer::CustomCsvExported(Self::export_custom_csv(stores)?)
+            }
+            Method::ExportBackup(export) => {
+                let backup = crate::export_backup(
+                    stores,
+                    &export.platform,
+                    &export.app_version,
+                    crate::unix_seconds_now(),
+                )
+                .map_err(store_error)?;
+                Answer::BackupExported(BackupExported { backup })
+            }
+            Method::ImportBackup(import) => {
+                Answer::BackupImported(Self::import_backup(stores, import)?)
+            }
+            Method::SearchCustomEntries(search) => {
+                Answer::CustomEntryMatches(Self::search_custom_entries(stores, search)?)
+            }
+            // Answered by `handle` before a page request is looked at.
+            Method::Open(_) | Method::RecordUsage(_) => {
+                return Err(RequestError::Invalid("not a page request"));
+            }
+        })
+    }
+
+    /// The dictionary search's lookup: the query's key, prefix-matched as
+    /// the keyboard matches it. A query that derives no key matches nothing.
+    fn search_custom_entries(
+        stores: &UserDataStores,
+        search: &SearchCustomEntries,
+    ) -> Result<CustomEntryMatches, RequestError> {
+        let dictionary = &stores.custom_dictionary;
+        let entries = crate::derive_custom_query_key(&search.query, &search.input_mode)
+            .map(|key| {
+                CustomDictionaryStore::rows_matching(dictionary, &key, search.limit as usize)
+            })
+            .unwrap_or_default();
+        Ok(CustomEntryMatches {
+            entries: entries.iter().map(custom_dictionary_entry).collect(),
+        })
+    }
+
+    fn list_custom_entries(
+        stores: &UserDataStores,
+        list: &ListCustomEntries,
+    ) -> Result<CustomEntries, RequestError> {
+        let dictionary = &stores.custom_dictionary;
+        let total = dictionary.count().map_err(store_error)?;
+        let matching_total = if list.filter.trim().is_empty() {
+            total
+        } else {
+            dictionary
+                .count_matching(&list.filter)
+                .map_err(store_error)?
+        };
+        // 0 = every match: a platform listing the whole dictionary asks once.
+        let limit = match list.limit {
+            0 => usize::MAX,
+            limit => limit as usize,
+        };
+        // Pulled back to the last page that exists: the matches can shrink
+        // under the page a platform is on (a delete on the last page).
+        let last_page = matching_total.saturating_sub(1) / limit.max(1) * limit;
+        let offset = (list.offset as usize).min(last_page);
+        let entries = dictionary
+            .rows(&list.filter, limit, offset)
+            .map_err(store_error)?;
+        Ok(CustomEntries {
+            entries: entries.iter().map(custom_dictionary_entry).collect(),
+            total: u32::try_from(total).unwrap_or(u32::MAX),
+            matching_total: u32::try_from(matching_total).unwrap_or(u32::MAX),
+            offset: u32::try_from(offset).unwrap_or(u32::MAX),
+        })
+    }
+
+    /// A new word (no `id`) or an edit. What the user can be told is a
+    /// refusal in the answer; only a store failure is an error.
+    fn save_custom_entry(
+        stores: &UserDataStores,
+        save: &SaveCustomEntry,
+    ) -> Result<CustomEntrySaved, RequestError> {
+        let dictionary = &stores.custom_dictionary;
+        let refused = |refusal: CustomDictionaryRefusal, detail: String| CustomEntrySaved {
+            refusal: refusal as i32,
+            entry: None,
+            detail,
+        };
+        let roman = save.roman.trim();
+        if roman.is_empty() {
+            return Ok(refused(
+                CustomDictionaryRefusal::EmptyRoman,
+                "an entry needs a romanization".into(),
+            ));
+        }
+        let hanzi = save.hanzi.trim();
+        let row = match save.id.as_deref() {
+            Some(id) if !id.is_empty() => CustomDictionaryRow::with_id(id, roman, hanzi),
+            _ => CustomDictionaryRow::new(roman, hanzi),
+        };
+        if let Err(error) = dictionary.upsert(&row) {
+            return match refusal(&error) {
+                Some(refusal) => Ok(refused(refusal, error.to_string())),
+                None => Err(store_error(error)),
+            };
+        }
+        // Read back: the store stamps the times (an edit keeps `created_at`).
+        let stored = dictionary.row(&row.id).map_err(store_error)?;
+        Ok(CustomEntrySaved {
+            refusal: CustomDictionaryRefusal::None as i32,
+            entry: stored.as_ref().map(custom_dictionary_entry),
+            detail: String::new(),
+        })
+    }
+
+    fn import_custom_csv(
+        stores: &UserDataStores,
+        import: &ImportCustomCsv,
+    ) -> Result<CustomCsvImported, RequestError> {
+        let dictionary = &stores.custom_dictionary;
+        let refused = |refusal: CustomDictionaryRefusal, detail: String| CustomCsvImported {
+            refusal: refusal as i32,
+            detail,
+            ..CustomCsvImported::default()
+        };
+        let rows = match CustomDictionaryCSV::decode_bytes(
+            &import.csv,
+            CustomDictionaryStore::MAX_ENTRIES,
+        ) {
+            Ok(rows) => rows,
+            Err(error) => {
+                return match csv_refusal(&error) {
+                    Some(refusal) => Ok(refused(refusal, error.to_string())),
+                    None => Err(store_error(error)),
+                }
+            }
+        };
+        match dictionary.batch_import(&rows) {
+            Ok(result) => Ok(CustomCsvImported {
+                refusal: CustomDictionaryRefusal::None as i32,
+                imported: u32::try_from(result.imported).unwrap_or(u32::MAX),
+                skipped: u32::try_from(result.skipped).unwrap_or(u32::MAX),
+                detail: String::new(),
+            }),
+            Err(error) => match refusal(&error) {
+                Some(refusal) => Ok(refused(refusal, error.to_string())),
+                None => Err(store_error(error)),
+            },
+        }
+    }
+
+    fn import_backup(
+        stores: &UserDataStores,
+        import: &ImportBackup,
+    ) -> Result<BackupImported, RequestError> {
+        let refused = |refusal: BackupRefusal| BackupImported {
+            refusal: refusal as i32,
+            ..BackupImported::default()
+        };
+        match crate::import_backup(stores, &import.backup) {
+            Ok(merged) => Ok(BackupImported {
+                refusal: BackupRefusal::None as i32,
+                custom_dictionary: u32::try_from(merged.custom_dictionary).unwrap_or(u32::MAX),
+                frequency: u32::try_from(merged.frequency).unwrap_or(u32::MAX),
+                association: u32::try_from(merged.association).unwrap_or(u32::MAX),
+            }),
+            Err(BackupError::Unreadable(_)) => Ok(refused(BackupRefusal::Unreadable)),
+            Err(BackupError::UnsupportedVersion(_)) => {
+                Ok(refused(BackupRefusal::UnsupportedVersion))
+            }
+            Err(error @ BackupError::Store(_)) => Err(store_error(error)),
+        }
+    }
+
+    fn export_custom_csv(stores: &UserDataStores) -> Result<CustomCsvExported, RequestError> {
+        let rows = stores.custom_dictionary.all_rows().map_err(store_error)?;
+        Ok(CustomCsvExported {
+            csv: CustomDictionaryCSV::encode(&rows).into_bytes(),
+        })
+    }
+
+    /// One commit counted and, for a Hanji pick, a learned phrase touched —
+    /// what each platform's candidate / prediction tap handler did itself.
+    pub(crate) fn record_usage(&self, usage: &RecordUsage) -> Result<(), RequestError> {
+        let stores = self.opened_stores()?;
+        if usage.display_text.is_empty() {
+            return Err(RequestError::Invalid("usage without a display text"));
+        }
+        stores
+            .frequency
+            .record(&usage.display_text, &usage.canonical_tl);
+        if let Some(hanji) = &usage.hanji {
+            stores
+                .learned_phrases
+                .touch_phrase(hanji, &usage.canonical_tl);
+        }
+        Ok(())
+    }
+
+    fn reset(
+        stores: &UserDataStores,
+        reset: &ResetUserData,
+    ) -> Result<UserDataReset, RequestError> {
+        if !(reset.frequency
+            || reset.association
+            || reset.custom_dictionary
+            || reset.learned_phrases)
+        {
+            return Err(RequestError::Invalid("reset selects no store"));
+        }
+        let mut removed = UserDataReset::default();
+        if reset.frequency {
+            removed.frequency_removed = emptied(
+                "user_frequency",
+                stores.frequency.delete_all(),
+                &mut removed.failures,
+            );
+        }
+        if reset.association {
+            removed.association_removed = emptied(
+                "user_association",
+                stores.association.delete_all(),
+                &mut removed.failures,
+            );
+        }
+        if reset.custom_dictionary {
+            let count = emptied(
+                "custom_dictionary",
+                stores.custom_dictionary.delete_all(),
+                &mut removed.failures,
+            );
+            removed.custom_dictionary_removed = i64::try_from(count).unwrap_or(i64::MAX);
+        }
+        if reset.learned_phrases {
+            removed.learned_phrases_removed = emptied(
+                "learned_phrases",
+                stores.learned_phrases.delete_all(),
+                &mut removed.failures,
+            );
+        }
+        Ok(removed)
+    }
+}
+
+fn custom_dictionary_entry(row: &CustomDictionaryRow) -> CustomDictionaryEntry {
+    CustomDictionaryEntry {
+        id: row.id.clone(),
+        roman: row.roman.clone(),
+        hanzi: row.hanzi.clone(),
+        created_at: row.created_at.clone(),
+        updated_at: row.updated_at.clone(),
+    }
+}
+
+/// The custom-dictionary write outcomes the user can be told about; `None`
+/// for a store failure.
+fn refusal(error: &CustomDictionaryError) -> Option<CustomDictionaryRefusal> {
+    match error {
+        CustomDictionaryError::CapacityReached { .. } => Some(CustomDictionaryRefusal::Full),
+        CustomDictionaryError::SearchKeyDerivationFailed { .. } => {
+            Some(CustomDictionaryRefusal::Unsearchable)
+        }
+        CustomDictionaryError::Database(_) => None,
+    }
+}
+
+/// The CSV outcomes the user can be told about; `None` for a read failure
+/// (only a file path can fail to read, never the bytes a platform hands in).
+fn csv_refusal(error: &CustomDictionaryCSVError) -> Option<CustomDictionaryRefusal> {
+    match error {
+        CustomDictionaryCSVError::FileTooLarge { .. } => {
+            Some(CustomDictionaryRefusal::FileTooLarge)
+        }
+        CustomDictionaryCSVError::NotUtf8 => Some(CustomDictionaryRefusal::NotUtf8),
+        CustomDictionaryCSVError::NoUsableRows => Some(CustomDictionaryRefusal::NoUsableRows),
+        CustomDictionaryCSVError::TooManyRows { .. } => Some(CustomDictionaryRefusal::Full),
+        CustomDictionaryCSVError::Read(_) => None,
+    }
+}
+
+/// One store emptied by a reset, or its failure noted for the answer and
+/// the log — a store that cannot be emptied is no reason to leave the
+/// others full.
+fn emptied<T: Default>(
+    store: &str,
+    result: Result<T, impl Display>,
+    failures: &mut Vec<String>,
+) -> T {
+    result.unwrap_or_else(|error| {
+        log::error!("user_data.reset_failed store={store} error={error}");
+        failures.push(format!("{store}: {error}"));
+        T::default()
+    })
+}
+
+fn store_error(error: impl Display) -> RequestError {
+    RequestError::Store(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::handle::tests::{open_request, opened};
+    use protos::engine::{
+        DeleteCustomEntry, ExportCustomCsv, OpenUserData, UserDataJournal, UserDataRequest,
+    };
+
+    #[test]
+    fn a_custom_dictionary_error_maps_to_its_refusal() {
+        // trace: `refusal` — CapacityReached → Full,
+        // SearchKeyDerivationFailed → Unsearchable, Database → None.
+        assert_eq!(
+            refusal(&CustomDictionaryError::CapacityReached { limit: 1 }),
+            Some(CustomDictionaryRefusal::Full)
+        );
+        assert_eq!(
+            refusal(&CustomDictionaryError::SearchKeyDerivationFailed { roman: "x".into() }),
+            Some(CustomDictionaryRefusal::Unsearchable)
+        );
+        assert_eq!(
+            refusal(&CustomDictionaryError::Database(
+                crate::UserDataDatabaseError::NotOpen("custom_dictionary".into())
+            )),
+            None
+        );
+    }
+
+    #[test]
+    fn a_csv_error_maps_to_its_refusal() {
+        // trace: `csv_refusal` — FileTooLarge → FileTooLarge, NotUtf8 →
+        // NotUtf8, NoUsableRows → NoUsableRows, TooManyRows → Full, Read → None.
+        assert_eq!(
+            csv_refusal(&CustomDictionaryCSVError::FileTooLarge { limit_bytes: 1 }),
+            Some(CustomDictionaryRefusal::FileTooLarge)
+        );
+        assert_eq!(
+            csv_refusal(&CustomDictionaryCSVError::NotUtf8),
+            Some(CustomDictionaryRefusal::NotUtf8)
+        );
+        assert_eq!(
+            csv_refusal(&CustomDictionaryCSVError::NoUsableRows),
+            Some(CustomDictionaryRefusal::NoUsableRows)
+        );
+        assert_eq!(
+            csv_refusal(&CustomDictionaryCSVError::TooManyRows { limit: 1 }),
+            Some(CustomDictionaryRefusal::Full)
+        );
+        assert_eq!(
+            csv_refusal(&CustomDictionaryCSVError::Read("gone".into())),
+            None
+        );
+    }
+
+    #[test]
+    fn a_usage_without_a_display_text_is_refused() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+
+        assert_eq!(
+            handle
+                .handle(&UserDataRequest {
+                    method: Some(user_data_request::Method::RecordUsage(RecordUsage {
+                        canonical_tl: "tâi-uân".into(),
+                        ..RecordUsage::default()
+                    })),
+                })
+                .unwrap_err(),
+            RequestError::Invalid("usage without a display text")
+        );
+    }
+
+    fn reset_request(reset: ResetUserData) -> UserDataRequest {
+        UserDataRequest {
+            method: Some(user_data_request::Method::Reset(reset)),
+        }
+    }
+
+    #[test]
+    fn reset_empties_only_the_selected_stores() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        let stores = handle.stores().unwrap();
+        stores.frequency.record("台", "tâi");
+
+        let response = handle
+            .handle(&reset_request(ResetUserData {
+                frequency: true,
+                ..ResetUserData::default()
+            }))
+            .unwrap();
+
+        match response.result {
+            Some(user_data_response::Result::Reset(reset)) => {
+                assert_eq!(reset.frequency_removed, 1);
+                assert_eq!(reset.custom_dictionary_removed, 0);
+                assert!(reset.failures.is_empty());
+            }
+            other => panic!("expected Reset, got {other:?}"),
+        }
+        assert_eq!(
+            stores.custom_dictionary.count().unwrap(),
+            2,
+            "not selected, kept"
+        );
+    }
+
+    #[test]
+    fn a_reset_of_nothing_or_before_open_is_refused() {
+        let handle = UserDataHandle::new();
+        assert_eq!(
+            handle
+                .handle(&reset_request(ResetUserData {
+                    frequency: true,
+                    ..ResetUserData::default()
+                }))
+                .unwrap_err(),
+            RequestError::Invalid("user data is not open yet")
+        );
+        let directory = tempfile::tempdir().unwrap();
+        handle.handle(&open_request(directory.path())).unwrap();
+        assert_eq!(
+            handle
+                .handle(&reset_request(ResetUserData::default()))
+                .unwrap_err(),
+            RequestError::Invalid("reset selects no store")
+        );
+    }
+
+    fn call(
+        handle: &UserDataHandle,
+        method: user_data_request::Method,
+    ) -> user_data_response::Result {
+        handle
+            .handle(&UserDataRequest {
+                method: Some(method),
+            })
+            .unwrap()
+            .result
+            .unwrap()
+    }
+
+    fn list(handle: &UserDataHandle, filter: &str) -> CustomEntries {
+        match call(
+            handle,
+            user_data_request::Method::ListCustomEntries(ListCustomEntries {
+                filter: filter.into(),
+                limit: 50,
+                offset: 0,
+            }),
+        ) {
+            user_data_response::Result::CustomEntries(entries) => entries,
+            other => panic!("expected entries, got {other:?}"),
+        }
+    }
+
+    fn save(
+        handle: &UserDataHandle,
+        id: Option<&str>,
+        roman: &str,
+        hanzi: &str,
+    ) -> CustomEntrySaved {
+        match call(
+            handle,
+            user_data_request::Method::SaveCustomEntry(SaveCustomEntry {
+                id: id.map(str::to_owned),
+                roman: roman.into(),
+                hanzi: hanzi.into(),
+            }),
+        ) {
+            user_data_response::Result::CustomEntrySaved(saved) => saved,
+            other => panic!("expected a save, got {other:?}"),
+        }
+    }
+
+    fn import(handle: &UserDataHandle, csv: &[u8]) -> CustomCsvImported {
+        match call(
+            handle,
+            user_data_request::Method::ImportCustomCsv(ImportCustomCsv { csv: csv.to_vec() }),
+        ) {
+            user_data_response::Result::CustomCsvImported(imported) => imported,
+            other => panic!("expected an import, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn the_custom_dictionary_page_adds_edits_filters_and_deletes() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        let seeded = list(&handle, "").total;
+
+        let added = save(&handle, None, " tâi-uân ", "台灣");
+        assert_eq!(added.refusal(), CustomDictionaryRefusal::None);
+        let entry = added.entry.expect("the stored row");
+        assert_eq!(entry.roman, "tâi-uân", "trimmed");
+        assert!(!entry.created_at.is_empty());
+
+        let edited = save(&handle, Some(&entry.id), "tâi-uân", "臺灣");
+        assert_eq!(edited.entry.unwrap().hanzi, "臺灣");
+        let filtered = list(&handle, "臺");
+        assert_eq!(filtered.entries.len(), 1);
+        assert_eq!(filtered.matching_total, 1);
+        assert_eq!(filtered.total, seeded + 1, "an edit is not a second word");
+
+        assert_eq!(
+            save(&handle, None, "  ", "空").refusal(),
+            CustomDictionaryRefusal::EmptyRoman
+        );
+        match call(
+            &handle,
+            user_data_request::Method::DeleteCustomEntry(DeleteCustomEntry { id: entry.id }),
+        ) {
+            user_data_response::Result::CustomEntryDeleted(deleted) => assert!(deleted.removed),
+            other => panic!("expected a delete, got {other:?}"),
+        }
+        assert_eq!(list(&handle, "").total, seeded);
+    }
+
+    fn search(handle: &UserDataHandle, query: &str) -> Vec<String> {
+        match call(
+            handle,
+            user_data_request::Method::SearchCustomEntries(SearchCustomEntries {
+                query: query.into(),
+                input_mode: "tl".into(),
+                limit: 50,
+            }),
+        ) {
+            user_data_response::Result::CustomEntryMatches(matches) => matches
+                .entries
+                .into_iter()
+                .map(|entry| entry.hanzi)
+                .collect(),
+            other => panic!("expected matches, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_dictionary_search_matches_by_the_typed_key_not_by_substring() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        save(&handle, None, "tâi-uân", "台灣");
+
+        assert_eq!(search(&handle, "taiuan"), ["台灣"]);
+        assert_eq!(search(&handle, "tai"), ["台灣"], "a prefix of the key");
+        assert!(search(&handle, "uan").is_empty(), "not a substring match");
+        assert!(search(&handle, "").is_empty(), "no key, no matches");
+    }
+
+    #[test]
+    fn a_page_past_the_end_answers_the_last_page_that_exists() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        // trace: two seeds + one added = 3 matches; pages of 2 start at 0, 2.
+        save(&handle, None, "tâi-uân", "台灣");
+
+        let answer = match call(
+            &handle,
+            user_data_request::Method::ListCustomEntries(ListCustomEntries {
+                filter: String::new(),
+                limit: 2,
+                offset: 10,
+            }),
+        ) {
+            user_data_response::Result::CustomEntries(entries) => entries,
+            other => panic!("expected entries, got {other:?}"),
+        };
+        assert_eq!(answer.offset, 2);
+        assert_eq!(answer.entries.len(), 1);
+        assert_eq!(answer.matching_total, 3);
+
+        let everything = match call(
+            &handle,
+            user_data_request::Method::ListCustomEntries(ListCustomEntries {
+                filter: String::new(),
+                limit: 0,
+                offset: 0,
+            }),
+        ) {
+            user_data_response::Result::CustomEntries(entries) => entries,
+            other => panic!("expected entries, got {other:?}"),
+        };
+        assert_eq!(everything.entries.len(), 3, "limit 0 lists every match");
+    }
+
+    #[test]
+    fn a_directory_names_the_same_files_as_the_four_paths() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+
+        let by_directory = UserDataRequest {
+            method: Some(user_data_request::Method::Open(OpenUserData {
+                directory: directory.path().display().to_string(),
+                journal: UserDataJournal::Delete as i32,
+                ..OpenUserData::default()
+            })),
+        };
+        assert!(
+            handle.handle(&by_directory).is_ok(),
+            "a repeat at the same files is answered, not refused as other paths"
+        );
+        assert!(
+            save(&handle, None, "  ", "空").detail == "an entry needs a romanization",
+            "a refusal carries its alert line"
+        );
+    }
+
+    #[test]
+    fn a_csv_round_trips_and_an_unusable_file_is_refused_with_its_reason() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+
+        let imported = import(
+            &handle,
+            "tâi-uân,台灣\n\"say \"\"hi\"\"\",講,好\ntâi-uân,台灣\n".as_bytes(),
+        );
+        assert_eq!(imported.refusal(), CustomDictionaryRefusal::None);
+        assert_eq!(imported.imported, 2, "the file's own duplicate is skipped");
+        let exported = match call(
+            &handle,
+            user_data_request::Method::ExportCustomCsv(ExportCustomCsv {}),
+        ) {
+            user_data_response::Result::CustomCsvExported(exported) => exported.csv,
+            other => panic!("expected an export, got {other:?}"),
+        };
+        let again = import(&handle, &exported);
+        assert_eq!(again.imported, 0, "everything exported is already there");
+
+        assert_eq!(
+            import(&handle, &[0xff, 0xfe, 0x00]).refusal(),
+            CustomDictionaryRefusal::NotUtf8
+        );
+        let unusable = import(&handle, b"just one column\n");
+        assert_eq!(unusable.refusal(), CustomDictionaryRefusal::NoUsableRows);
+        assert_eq!(
+            unusable.detail, "no usable rows in the file",
+            "the alert's line"
+        );
+        let huge = vec![b'a'; 5 * 1024 * 1024 + 1];
+        assert_eq!(
+            import(&handle, &huge).refusal(),
+            CustomDictionaryRefusal::FileTooLarge
+        );
+    }
+
+    #[test]
+    fn a_backup_exported_through_the_op_restores_through_it() {
+        use protos::engine::ExportBackup;
+
+        let source_directory = tempfile::tempdir().unwrap();
+        let source = UserDataHandle::new();
+        source
+            .handle(&open_request(source_directory.path()))
+            .unwrap();
+        save(&source, None, "tâi-uân", "台灣");
+        let backup = match call(
+            &source,
+            user_data_request::Method::ExportBackup(ExportBackup {
+                platform: "linux".into(),
+                app_version: "3.6.10".into(),
+            }),
+        ) {
+            user_data_response::Result::BackupExported(exported) => exported.backup,
+            other => panic!("expected a backup, got {other:?}"),
+        };
+
+        let target_directory = tempfile::tempdir().unwrap();
+        let target = UserDataHandle::new();
+        target
+            .handle(&open_request(target_directory.path()))
+            .unwrap();
+        let restore = |bytes: Vec<u8>| match call(
+            &target,
+            user_data_request::Method::ImportBackup(ImportBackup { backup: bytes }),
+        ) {
+            user_data_response::Result::BackupImported(imported) => imported,
+            other => panic!("expected an import, got {other:?}"),
+        };
+        let imported = restore(backup);
+        assert_eq!(imported.refusal(), BackupRefusal::None);
+        assert_eq!(
+            imported.custom_dictionary, 1,
+            "the seeds were there already"
+        );
+        assert_eq!(list(&target, "台灣").matching_total, 1);
+        assert_eq!(restore(b"{".to_vec()).refusal(), BackupRefusal::Unreadable);
+        assert_eq!(
+            restore(br#"{"version": 0}"#.to_vec()).refusal(),
+            BackupRefusal::UnsupportedVersion
+        );
+    }
+
+    #[test]
+    fn a_background_open_answers_at_once_and_loses_nothing_reported_meanwhile() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        let mut request = open_request(directory.path());
+        if let Some(user_data_request::Method::Open(open)) = request.method.as_mut() {
+            open.in_background = true;
+        }
+
+        handle.handle(&request).unwrap();
+        // trace: the stores are published before the answer, so this pick
+        // queues behind the open on the frequency store's worker.
+        call(
+            &handle,
+            user_data_request::Method::RecordUsage(RecordUsage {
+                display_text: "台灣".into(),
+                canonical_tl: "tâi-uân".into(),
+                ..RecordUsage::default()
+            }),
+        );
+
+        // A page request waits for the open to finish: the seeds are there.
+        assert_eq!(list(&handle, "").total, 2, "seeded before the page reads");
+        let stores = handle.stores().unwrap();
+        let rows = stores.frequency.all_rows().unwrap_or_default();
+        assert_eq!(rows.len(), 1, "counted once the open landed");
+        // The background finish runs once however the next open arrives.
+        opened(handle.handle(&open_request(directory.path())).unwrap());
+        assert!(handle.stores().unwrap().custom_dictionary.is_ready());
+    }
+}

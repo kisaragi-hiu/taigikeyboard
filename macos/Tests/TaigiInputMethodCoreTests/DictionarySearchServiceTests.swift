@@ -6,7 +6,7 @@ import XCTest
 /// Real engine for the bundled dictionaries, an in-memory user dictionary: the
 /// pipeline is mostly ordering and routing, and both are only true against
 /// the dictionary the user actually has. The engine's own key lookup for
-/// custom entries is its tests' (`engine/dispatch/src/user_data.rs`).
+/// custom entries is its tests' (`engine/userdata/src/dispatch.rs`).
 final class DictionarySearchServiceTests: XCTestCase {
     private var userData: FakeUserDataClient!
 

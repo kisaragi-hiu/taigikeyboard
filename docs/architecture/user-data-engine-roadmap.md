@@ -28,7 +28,7 @@
 | Association write | Engine emits `RecordAssociation` / `RecordCompoundAssociations`; platform persists | `engine/nextword/src/decide.rs:76-156`; iOS `NextWord/NextWordController.swift:175-204`; desktop `taigi-desktop-core/src/composing/learner.rs:69-82` |
 | Learned-phrase write | Engine emits `Effect.phrase_learned` ("the engine decides, the platform persists") | `engine/composing/src/transition.rs:854-856`; `composing.proto:515-526` |
 | Frequency write | No effect; platform records on tap (desktop / macOS gate on a frequency-recording setting) | iOS `Actions/ActionHandler+Suggestions.swift:175,231`; Android `CandidateClickHandler.kt:143`; macOS `ComposingManager.swift:518-519`; desktop `manager.rs:451-453` |
-| Custom-dict search keys | Engine derives (in-process `userdata` write bundle) and runs the SQL behind `SearchCustomEntries` (the `DeriveCustomQueryKey` op lost its last caller when the desktop settings windows switched to the op, 2026-09-30) | `engine/phonetics/src/custom_search.rs`, `engine/dispatch/src/user_data.rs` |
+| Custom-dict search keys | Engine derives (in-process `userdata` write bundle) and runs the SQL behind `SearchCustomEntries` (the `DeriveCustomQueryKey` op lost its last caller when the desktop settings windows switched to the op, 2026-09-30) | `engine/phonetics/src/custom_search.rs`, `engine/userdata/src/dispatch.rs` (`SearchCustomEntries`), `engine/dispatch/src/user_data.rs` (`FetchAtPos`) |
 | Engine file paths | Read-only mmaps via `LexiconRequest.install`; no writable directory concept | `engine/lexicon/src/api.rs:22-35`, `paths.rs:32-55` |
 
 ### The four implementations
