@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.mutablePreferencesOf
+import org.json.JSONArray
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -118,6 +119,31 @@ class LegacyAppearanceTest {
         assertEquals(UserThemeStore.MAX_USER_THEMES + 1, themes(prefs).size)
         assertEquals(existing.map { it.id } + NEW_ID, themes(prefs).map { it.id })
         assertRetiredKeysGone(prefs)
+    }
+
+    @Test
+    fun unreadableThemeList_leavesItAndTheKeys() {
+        val unreadable = "[{\"id\": \"a\"}, 7"
+        val prefs = customizedLegacyLook().apply { this[PreferenceKeys.USER_THEMES] = unreadable }
+
+        retire(prefs)
+
+        assertEquals(unreadable, prefs[PreferenceKeys.USER_THEMES])
+        assertEquals(null, prefs[PreferenceKeys.SELECTED_THEME_ID])
+        assertTrue(PreferenceKeys.COLOR_SETTINGS in prefs)
+    }
+
+    @Test
+    fun savedThemes_stayAsWritten() {
+        // A saved theme keeps its stored values (no seeding rewrite of its empty colors); the carried one is appended.
+        val saved = "[{\"id\":\"id-0\",\"name\":\"Mine\",\"appearance\":{\"colors\":{}},\"createdAt\":1,\"updatedAt\":1}]"
+        val prefs = customizedLegacyLook().apply { this[PreferenceKeys.USER_THEMES] = saved }
+
+        retire(prefs)
+
+        val first = JSONArray(prefs[PreferenceKeys.USER_THEMES]).getJSONObject(0)
+        assertEquals(0, first.getJSONObject("appearance").getJSONObject("colors").length())
+        assertEquals(listOf("id-0", NEW_ID), themes(prefs).map { it.id })
     }
 
     private companion object {

@@ -329,6 +329,24 @@ final class SharedSettingsTests: XCTestCase {
         assertRetiredKeysGone()
     }
 
+    // trace: a saved theme list that does not decode → left byte-for-byte, keys kept
+    func test_retireLegacyAppearance_unreadableThemeList_leavesItAndTheKeys() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
+        let file = directory.appendingPathComponent(UserThemeStore.fileName)
+        let unreadable = Data("[{\"id\": \"not-a-uuid\"}]".utf8)
+        try unreadable.write(to: file)
+        let settings = SharedSettings(userDefaults: defaults, themesContainerURL: directory)
+        _ = try storeCustomizedLegacyLook()
+
+        settings.retireLegacyAppearance(themeName: "新主題")
+
+        XCTAssertEqual(try Data(contentsOf: file), unreadable)
+        XCTAssertEqual(settings.selectedThemeId, ThemeId.default)
+        XCTAssertNotNil(defaults.object(forKey: "colorSettings"))
+    }
+
     // trace: no theme store (the keyboard without Full Access) → keys kept for a later launch
     func test_retireLegacyAppearance_themeNotWritten_keepsTheKeys() throws {
         let settings = SharedSettings(userDefaults: defaults, themesContainerURL: nil)

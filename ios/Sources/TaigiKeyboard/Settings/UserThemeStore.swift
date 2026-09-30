@@ -45,13 +45,29 @@ final class UserThemeStore {
         }
     }
 
-    /// Appends a theme and persists. Returns `false` when `isCapped` and already
-    /// at ``maxUserThemes``, OR when the write fails (nil container / encode /
+    /// Appends a theme and persists. Returns `false` when already at
+    /// ``maxUserThemes`` OR when the write fails (nil container / encode /
     /// I/O error) — so callers never report a save that did not happen.
     @discardableResult
-    func add(_ theme: UserTheme, isCapped: Bool = true) -> Bool {
+    func add(_ theme: UserTheme) -> Bool {
         var themes = load()
-        guard !isCapped || themes.count < Self.maxUserThemes else { return false }
+        guard themes.count < Self.maxUserThemes else { return false }
+        themes.append(theme)
+        return save(themes)
+    }
+
+    /// Appends a theme the app carries over on its own, with no user action: past the cap, and
+    /// only when the saved list reads back whole — a file that cannot be read or decoded is left
+    /// untouched rather than replaced. Returns whether the theme was saved.
+    func addCarriedOver(_ theme: UserTheme) -> Bool {
+        guard let fileURL else { return false }
+        var themes: [UserTheme] = []
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            guard let data = try? Data(contentsOf: fileURL),
+                  let saved = try? JSONDecoder().decode([UserTheme].self, from: data)
+            else { return false }
+            themes = saved
+        }
         themes.append(theme)
         return save(themes)
     }

@@ -535,8 +535,11 @@ final class SharedSettings {
     /// `themeName` and selects it when the keyboard was showing that look (the "default" theme,
     /// or an id nothing resolves), then removes the retired keys; a factory look is only removed.
     /// Runs at every app and keyboard launch and does nothing once the keys are gone. When the
-    /// theme cannot be written (no container, e.g. the keyboard without Full Access) the keys
-    /// stay, so the look is still there for the next launch to carry.
+    /// theme cannot be written (no container, e.g. the keyboard without Full Access, or a saved
+    /// theme list that does not read back whole) the keys stay, so the look is still there for
+    /// the next launch to carry. App and keyboard are separate processes with no lock between
+    /// them: a race (or a kill between the write and the removal) can carry the look twice,
+    /// never lose it. Android runs the same steps in one DataStore transaction.
     func retireLegacyAppearance(themeName: String, now: Date = Date()) {
         guard let legacy = storedLegacyAppearance else { return }
         if legacy != .default {
@@ -545,7 +548,7 @@ final class SharedSettings {
                 || (BuiltInThemes.theme(id: id) == nil && !loadUserThemes().contains { $0.id.uuidString == id })
             let theme = UserTheme(id: UUID(), name: themeName, appearance: legacy, createdAt: now, updatedAt: now)
             // Past the cap: a look the user made is never refused.
-            guard userThemeStore.add(theme, isCapped: false) else { return }
+            guard userThemeStore.addCarriedOver(theme) else { return }
             if wasShowingLegacy {
                 selectedThemeId = theme.id.uuidString
             }

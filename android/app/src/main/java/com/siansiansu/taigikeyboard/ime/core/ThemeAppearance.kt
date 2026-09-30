@@ -11,10 +11,10 @@ import org.json.JSONObject
  * (PrefHelper.fontType), so switching themes never changes the font.
  *
  * [colors] stays nullable per role (reuses [KeyboardColorSettings]) for the default
- * buffer and built-in themes, where a null role inherits the platform adaptive
+ * theme and built-in themes, where a null role inherits the platform adaptive
  * color. User themes are always seeded ([USER_THEME_SEED]) so they carry no null
- * role and look the same in light and dark mode. The model OWNS the size defaults
- * (the [PrefHelper] appearance keys reference them). Mirrors iOS ThemeAppearance.
+ * role and look the same in light and dark mode. The model OWNS the size defaults.
+ * Mirrors iOS ThemeAppearance.
  */
 data class ThemeAppearance(
     val colors: KeyboardColorSettings = KeyboardColorSettings(),

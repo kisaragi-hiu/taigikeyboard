@@ -2,6 +2,8 @@ package com.siansiansu.taigikeyboard.ime.core
 
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
+import org.json.JSONArray
+import org.json.JSONException
 import java.util.UUID
 
 /**
@@ -36,17 +38,33 @@ internal object LegacyAppearance {
         if (KEYS.none { it in prefs }) return
         val legacy = storedAppearance(prefs)
         if (legacy != ThemeAppearance.DEFAULT) {
-            val themes = UserTheme.decodeList(prefs[PreferenceKeys.USER_THEMES] ?: PrefHelper.DEFAULT_USER_THEMES)
+            // A saved list that does not read back whole is left alone, and the keys with it.
+            val saved = readableThemes(prefs[PreferenceKeys.USER_THEMES]) ?: return
             val selected = prefs[PreferenceKeys.SELECTED_THEME_ID] ?: ThemeId.DEFAULT
             val wasShowingLegacy =
                 selected == ThemeId.DEFAULT ||
-                    (BuiltInThemes.all.none { it.id == selected } && themes.none { it.id == selected })
+                    (BuiltInThemes.all.none { it.id == selected } && savedIds(saved).none { it == selected })
             val theme = UserTheme(id = newId, name = themeName, appearance = legacy, createdAt = now, updatedAt = now)
-            prefs[PreferenceKeys.USER_THEMES] = UserTheme.encodeList(themes + theme)
+            // Appended to the raw list, so the saved themes keep their stored values (no seeding rewrite).
+            prefs[PreferenceKeys.USER_THEMES] = saved.put(theme.toJson()).toString()
             if (wasShowingLegacy) prefs[PreferenceKeys.SELECTED_THEME_ID] = theme.id
         }
         KEYS.forEach { prefs.remove(it) }
     }
+
+    /** The saved theme list, or null when it is not a JSON array of objects. */
+    private fun readableThemes(json: String?): JSONArray? {
+        if (json.isNullOrBlank()) return JSONArray()
+        val array =
+            try {
+                JSONArray(json)
+            } catch (e: JSONException) {
+                return null
+            }
+        return array.takeIf { (0 until it.length()).all { index -> it.optJSONObject(index) != null } }
+    }
+
+    private fun savedIds(saved: JSONArray): List<String> = (0 until saved.length()).map { saved.getJSONObject(it).optString("id") }
 
     /** The look the retired keys hold; an absent key reads as its factory value, shadow as none. */
     private fun storedAppearance(prefs: MutablePreferences): ThemeAppearance =
