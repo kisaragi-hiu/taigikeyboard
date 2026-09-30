@@ -55,7 +55,7 @@ extension RustEngineBridge {
             .append(append),
             op: "composingAppend",
             generation: generation,
-            config: swappedAppConfig(settings),
+            config: appConfig(settings),
         )
     }
 
@@ -75,7 +75,7 @@ extension RustEngineBridge {
             .telexKey(telexKey),
             op: "composingTelexKey",
             generation: generation,
-            config: swappedAppConfig(settings),
+            config: appConfig(settings),
         )
     }
 
@@ -88,7 +88,7 @@ extension RustEngineBridge {
             .deleteBackward(Taigi_Engine_DeleteBackward()),
             op: "composingDeleteBackward",
             generation: generation,
-            config: swappedAppConfig(settings),
+            config: appConfig(settings),
         )
     }
 
@@ -112,7 +112,7 @@ extension RustEngineBridge {
             .moveCaret(moveCaret),
             op: "composingMoveCaret",
             generation: generation,
-            config: swappedAppConfig(settings),
+            config: appConfig(settings),
         )
     }
 
@@ -134,7 +134,7 @@ extension RustEngineBridge {
             .commitRaw(Taigi_Engine_CommitRaw()),
             op: "composingCommitRaw",
             generation: generation,
-            config: swappedAppConfig(settings),
+            config: appConfig(settings),
         )
     }
 
@@ -152,7 +152,7 @@ extension RustEngineBridge {
             .commitPreeditThenInsertExternal(insert),
             op: "composingCommitPreeditThenInsertExternal",
             generation: generation,
-            config: swappedAppConfig(settings),
+            config: appConfig(settings),
         )
     }
 
@@ -181,11 +181,11 @@ extension RustEngineBridge {
             .enterContinuous(Taigi_Engine_EnterContinuous()),
             op: "composingEnterContinuous",
             generation: generation,
-            // Same config as `composingAppend`: already under Continuous the
-            // answer is a snapshot whose `displayText` the manager mirrors,
-            // and a snapshot rendered with the base config would put the
-            // space back.
-            config: swappedAppConfig(settings),
+            // Carries the swap like `composingAppend`: already under
+            // Continuous the answer is a snapshot whose `displayText` the
+            // manager mirrors, and one rendered without the swap would put
+            // the space back.
+            config: appConfig(settings),
         )
     }
 
@@ -227,7 +227,7 @@ extension RustEngineBridge {
             .fetchAtPos(fetch),
             op: "composingFetchAtPos",
             generation: generation,
-            config: swappedAppConfig(settings),
+            config: appConfig(settings),
         ) else {
             return nil
         }
@@ -284,7 +284,7 @@ extension RustEngineBridge {
             .commitContinuous(commit),
             op: "composingCommitContinuous",
             generation: generation,
-            config: swappedAppConfig(settings),
+            config: appConfig(settings),
         )
     }
 

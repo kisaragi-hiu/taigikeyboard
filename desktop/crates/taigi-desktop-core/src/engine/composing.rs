@@ -20,18 +20,17 @@ use protos::engine::{
 
 use crate::keys::CaretDirection;
 
-use super::bridge::{record_failure, roundtrip, swapped_app_config};
+use super::bridge::{app_config, record_failure, roundtrip};
 use super::transition::{ComposingTransition, ContinuousCandidate, ContinuousFetchResult};
 use crate::settings::EngineSettings;
 
 /// Appends one typed character to the raw buffer.
 ///
-/// Carries the continuous config, as every op that re-renders the
+/// Carries the config with the swap flag, as every op that re-renders the
 /// composition does: under `Phase::Continuous` the answer is the whole
 /// marked region, nailed prefix included, and the prefix's word-boundary
-/// spacing reads the two flags only that config sets. With the base config
-/// a nail rendered `台gi` and the next keystroke `台 gi` (found by the
-/// composing-caret round, 2026-09-09).
+/// spacing reads that flag. Without it a nail rendered `台gi` and the next
+/// keystroke `台 gi` (found by the composing-caret round, 2026-09-09).
 pub fn append(
     character: &str,
     settings: &EngineSettings,
@@ -43,7 +42,7 @@ pub fn append(
         }),
         "composingAppend",
         generation,
-        Some(swapped_app_config(settings)),
+        Some(app_config(settings)),
     )
 }
 
@@ -63,7 +62,7 @@ pub fn telex_key(
         }),
         "composingTelexKey",
         generation,
-        Some(swapped_app_config(settings)),
+        Some(app_config(settings)),
     )
 }
 
@@ -73,7 +72,7 @@ pub fn delete_backward(settings: &EngineSettings, generation: u64) -> Option<Com
         composing_request::Method::DeleteBackward(DeleteBackward {}),
         "composingDeleteBackward",
         generation,
-        Some(swapped_app_config(settings)),
+        Some(app_config(settings)),
     )
 }
 
@@ -98,7 +97,7 @@ pub fn move_caret(
         }),
         "composingMoveCaret",
         generation,
-        Some(swapped_app_config(settings)),
+        Some(app_config(settings)),
     )
 }
 
@@ -110,7 +109,7 @@ pub fn commit_raw(settings: &EngineSettings, generation: u64) -> Option<Composin
         composing_request::Method::CommitRaw(CommitRaw {}),
         "composingCommitRaw",
         generation,
-        Some(swapped_app_config(settings)),
+        Some(app_config(settings)),
     )
 }
 
@@ -129,7 +128,7 @@ pub fn commit_preedit_then_insert_external(
         ),
         "composingCommitPreeditThenInsertExternal",
         generation,
-        Some(swapped_app_config(settings)),
+        Some(app_config(settings)),
     )
 }
 
@@ -151,10 +150,10 @@ pub fn enter_continuous(settings: &EngineSettings, generation: u64) -> Option<Co
         composing_request::Method::EnterContinuous(EnterContinuous {}),
         "composingEnterContinuous",
         generation,
-        // Same config as `append`: already under Continuous the answer is a
-        // snapshot whose `display_text` the manager mirrors, and a snapshot
-        // rendered with the base config would put the space back.
-        Some(swapped_app_config(settings)),
+        // Carries the swap like `append`: already under Continuous the answer
+        // is a snapshot whose `display_text` the manager mirrors, and one
+        // rendered without the swap would put the space back.
+        Some(app_config(settings)),
     )
 }
 
@@ -197,7 +196,7 @@ pub fn fetch_at_pos(
         composing_request::Method::FetchAtPos(fetch),
         "composingFetchAtPos",
         generation,
-        Some(swapped_app_config(settings)),
+        Some(app_config(settings)),
     )?;
     let candidates = response.continuous.as_ref().map(|continuous| {
         continuous
@@ -251,7 +250,7 @@ pub fn commit_continuous(
         }),
         "composingCommitContinuous",
         generation,
-        Some(swapped_app_config(settings)),
+        Some(app_config(settings)),
     )
 }
 
