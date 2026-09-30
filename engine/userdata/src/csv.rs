@@ -2,7 +2,6 @@
 //! Port of `Storage/UserDataCSV.swift` + `CustomDictionaryCSV.swift`.
 
 use crate::custom_dictionary::CustomDictionaryRow;
-use std::path::Path;
 
 /// The CSV dialect the platforms share. A SINGLE-RECORD dialect, not full
 /// RFC 4180: quoting inside a line is honoured (doubled-quote escape
@@ -68,8 +67,6 @@ pub enum CustomDictionaryCSVError {
     NoUsableRows,
     #[error("file holds more than {limit} entries")]
     TooManyRows { limit: usize },
-    #[error("could not read the file: {0}")]
-    Read(String),
 }
 
 /// The `roman,hanzi` CSV the Custom Dictionary page reads and writes.
@@ -122,25 +119,6 @@ impl CustomDictionaryCSV {
             return Err(CustomDictionaryCSVError::TooManyRows { limit: entry_limit });
         }
         Ok(rows)
-    }
-
-    /// Reads a file the user picked, refusing it before the read when it is
-    /// too big to be a word list.
-    pub fn decode_file(
-        path: &Path,
-        entry_limit: usize,
-    ) -> Result<Vec<CustomDictionaryRow>, CustomDictionaryCSVError> {
-        let size = std::fs::metadata(path)
-            .map_err(|error| CustomDictionaryCSVError::Read(error.to_string()))?
-            .len();
-        if size > Self::MAX_FILE_SIZE_BYTES {
-            return Err(CustomDictionaryCSVError::FileTooLarge {
-                limit_bytes: Self::MAX_FILE_SIZE_BYTES,
-            });
-        }
-        let bytes = std::fs::read(path)
-            .map_err(|error| CustomDictionaryCSVError::Read(error.to_string()))?;
-        Self::decode_bytes(&bytes, entry_limit)
     }
 
     /// Parses a file's bytes the platform read for the user — the size cap
@@ -222,17 +200,13 @@ mod tests {
     }
 
     #[test]
-    fn decode_file_refuses_oversize_and_non_utf8() {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("dict.csv");
-        std::fs::write(&path, vec![0xFF, 0xFE, b',', b'a']).unwrap();
+    fn decode_bytes_refuses_non_utf8() {
         assert_eq!(
-            CustomDictionaryCSV::decode_file(&path, LIMIT),
+            CustomDictionaryCSV::decode_bytes(&[0xFF, 0xFE, b',', b'a'], LIMIT),
             Err(CustomDictionaryCSVError::NotUtf8)
         );
-        std::fs::write(&path, "gua,我\n").unwrap();
         assert_eq!(
-            CustomDictionaryCSV::decode_file(&path, LIMIT)
+            CustomDictionaryCSV::decode_bytes("gua,我\n".as_bytes(), LIMIT)
                 .unwrap()
                 .len(),
             1

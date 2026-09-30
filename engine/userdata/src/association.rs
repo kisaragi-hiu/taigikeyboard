@@ -6,7 +6,6 @@ use crate::database::{
     has_column, immediate_transaction, table_exists, user_version, JournalMode, StoreSchema,
     UserDataDatabase, UserDataDatabaseError,
 };
-use crate::types::AssociationPair;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
@@ -16,6 +15,16 @@ const TABLE_NAME: &str = "user_association";
 const SCHEMA_VERSION: i64 = 6;
 const ROW_COLUMNS: &str = "prev_word, prev_tl, next_word, next_tl, count";
 const LIST_ORDER: &str = "count DESC, last_used DESC, prev_word ASC, next_word ASC";
+
+/// One learned bigram. `previous_tl` / `next_tl` are canonical TL — the
+/// identity axis of Core Principle #7.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AssociationPair {
+    pub previous: String,
+    pub previous_tl: String,
+    pub next: String,
+    pub next_tl: String,
+}
 
 /// A stored bigram and how many times it has been seen.
 #[derive(Clone, Debug, PartialEq, Eq)]

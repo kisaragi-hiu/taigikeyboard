@@ -5,11 +5,11 @@
 mod common;
 
 use common::{pair, paths, scratch};
+use phonetics::api::{derive_custom_query_key, CustomSearchKey};
 use std::sync::{Arc, Mutex};
 use userdata::{
-    derive_custom_query_key, derive_custom_search_keys, CustomDictionaryError, CustomDictionaryRow,
-    CustomDictionarySource, CustomDictionaryStore, CustomSearchKey, FrequencySource, JournalMode,
-    LearnedPhraseRow, LearnedPhraseSource, LearnedPhraseStore, LearningCapacity, SearchKeyDeriver,
+    derive_custom_search_keys, CustomDictionaryError, CustomDictionaryRow, CustomDictionaryStore,
+    JournalMode, LearnedPhraseRow, LearnedPhraseStore, LearningCapacity, SearchKeyDeriver,
     UserAssociationStore, UserDataStores, UserFrequencyStore,
 };
 
@@ -29,13 +29,13 @@ fn stub_deriver(prefix: &'static str) -> SearchKeyDeriver {
     Arc::new(move |roman: &str| {
         Some(vec![
             CustomSearchKey {
-                family: "tl".into(),
-                form: "notone".into(),
+                family: "tl",
+                form: "notone",
                 key: format!("{prefix}{roman}"),
             },
             CustomSearchKey {
-                family: "poj".into(),
-                form: "notone".into(),
+                family: "poj",
+                form: "notone",
                 key: format!("{prefix}{roman}"),
             },
         ])
@@ -57,10 +57,10 @@ fn custom_store(
     store
 }
 
-fn query_key(key: &str, family: &str) -> CustomSearchKey {
+fn query_key(key: &str, family: &'static str) -> CustomSearchKey {
     CustomSearchKey {
-        family: family.into(),
-        form: "notone".into(),
+        family,
+        form: "notone",
         key: key.into(),
     }
 }
@@ -95,8 +95,9 @@ fn recording_counts_the_pair_and_reads_back_by_word() {
         rows[0].last_used_ms > 1_600_000_000_000,
         "milliseconds since the epoch"
     );
-    let by_word =
-        FrequencySource::rows_for_words(&store, &["重".to_owned(), "無".to_owned()]).unwrap();
+    let by_word = store
+        .rows_for_words(&["重".to_owned(), "無".to_owned()])
+        .unwrap();
     assert_eq!(by_word.len(), 2);
     assert_eq!(store.rows_for_words(&[]).unwrap().len(), 0);
     assert_eq!(store.delete_all().unwrap(), 2);
@@ -246,9 +247,12 @@ fn an_added_entry_is_found_by_its_key_from_another_romanization_and_by_prefix() 
         hanzi_of(&store.rows_matching(&query_key("tai", "tl"), 20)),
         ["台語"]
     );
-    let via_trait = CustomDictionarySource::rows_matching(&store, "tl", "notone", "ta");
-    assert_eq!(via_trait.len(), 1);
-    assert_eq!(via_trait[0].roman, "taigi");
+    let keystroke = store.rows_matching(
+        &query_key("ta", "tl"),
+        CustomDictionaryStore::KEYSTROKE_LIMIT,
+    );
+    assert_eq!(keystroke.len(), 1);
+    assert_eq!(keystroke[0].roman, "taigi");
     assert_eq!(store.count().unwrap(), 2);
 }
 
@@ -523,18 +527,12 @@ fn the_engine_derivation_finds_a_poj_entry_typed_as_tl() {
     stores.custom_dictionary.open_blocking();
     stores.custom_dictionary.seed_if_empty().unwrap();
     let query = derive_custom_query_key("tsiahpa", "tl").expect("a query key");
-    // The `Arc` also implements the trait (its keystroke-path shape); the
-    // inherent, row-returning method is named explicitly.
-    let found = CustomDictionaryStore::rows_matching(&stores.custom_dictionary, &query, 20);
+    let found = stores.custom_dictionary.rows_matching(&query, 20);
     assert_eq!(hanzi_of(&found), ["食飽未"]);
     assert!(derive_custom_search_keys("gâu-tsá").is_some_and(|keys| !keys.is_empty()));
     let poj_query = derive_custom_query_key("chiahpa", "poj").expect("a POJ query key");
     assert_eq!(
-        hanzi_of(&CustomDictionaryStore::rows_matching(
-            &stores.custom_dictionary,
-            &poj_query,
-            20
-        )),
+        hanzi_of(&stores.custom_dictionary.rows_matching(&poj_query, 20)),
         ["食飽未"]
     );
 }
@@ -618,7 +616,8 @@ fn learned_matches(store: &LearnedPhraseStore, input: &str, mode: &str) -> Vec<S
     // Learning is queued behind the writer; `all_rows` is the barrier.
     store.all_rows();
     let key = derive_custom_query_key(input, mode).expect("query key");
-    LearnedPhraseSource::rows_matching(store, &key.family, &key.form, &key.key)
+    store
+        .rows_matching(&key, LearnedPhraseStore::KEYSTROKE_LIMIT)
         .into_iter()
         .map(|row| row.hanzi)
         .collect()

@@ -6,9 +6,8 @@ use crate::database::{
     has_column, immediate_transaction, is_taken_over, mark_taken_over, user_version, JournalMode,
     StoreSchema, UserDataDatabase, UserDataDatabaseError,
 };
-use crate::stores::CustomDictionarySource;
 use crate::timestamp::utc_timestamp_now;
-use crate::types::{CustomEntry, CustomSearchKey};
+use phonetics::api::CustomSearchKey;
 use rusqlite::{params, Connection, OptionalExtension};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
@@ -515,23 +514,6 @@ impl CustomDictionaryStore {
             .ok_or_else(|| CustomDictionaryError::SearchKeyDerivationFailed {
                 roman: roman.to_owned(),
             })
-    }
-}
-
-impl CustomDictionarySource for CustomDictionaryStore {
-    fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<CustomEntry> {
-        let query = CustomSearchKey {
-            family: family.to_owned(),
-            form: form.to_owned(),
-            key: key.to_owned(),
-        };
-        CustomDictionaryStore::rows_matching(self, &query, Self::KEYSTROKE_LIMIT)
-            .into_iter()
-            .map(|row| CustomEntry {
-                roman: row.roman,
-                hanzi: row.hanzi,
-            })
-            .collect()
     }
 }
 

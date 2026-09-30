@@ -10,37 +10,18 @@ publish = false
 [lints]
 workspace = true
 
-# `sqlite` = the stores themselves (rusqlite with bundled C SQLite). Without it
-# only the row types and store traits build, which keeps a build of
-# `taigi-desktop-core` without the storage crate C-free, so the Windows msvc
-# target can be `cargo check`ed from macOS (windows/Makefile `check-msvc`,
-# windows-roadmap W1/W13; user-data-engine-roadmap U11).
-[features]
-default = ["sqlite"]
-sqlite = ["dep:rusqlite", "dep:uuid", "dep:serde", "dep:serde_json", "dep:protos"]
-
+# Always links bundled C SQLite; the one gate on that linkage is
+# `dispatch/user-data`, the only edge to this crate (user-data-engine-roadmap U11).
 [dependencies]
 phonetics = { workspace = true }
-# The `UserDataRequest` façade (`handle` / `dispatch`), which needs the stores.
-protos = { workspace = true, optional = true }
-rusqlite = { workspace = true, optional = true }
-uuid = { workspace = true, optional = true }
-serde = { workspace = true, optional = true }
-serde_json = { workspace = true, optional = true }
+# The `UserDataRequest` façade (`handle` / `dispatch`).
+protos = { workspace = true }
+rusqlite = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
-
-[[test]]
-name = "stores"
-required-features = ["sqlite"]
-
-[[test]]
-name = "takeover"
-required-features = ["sqlite"]
-
-[[test]]
-name = "backup"
-required-features = ["sqlite"]

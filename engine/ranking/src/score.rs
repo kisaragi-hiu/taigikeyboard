@@ -103,7 +103,7 @@ impl FrequencyData {
 /// map: the outer level lets [`get`](Self::get) borrow `&str` and the
 /// inner level expresses the tolerant fallback directly. The engine builds
 /// this once per fetch from its `user_frequency.db` rows (`dispatch` crate,
-/// `user_data::frequency_map`) and reuses it across the whole batch.
+/// `user_data::with_stores::frequency_map`) and reuses it across the whole batch.
 ///
 /// **Legacy `canonical_tl == ""` bucket**: pre-R5 rows / old-backup
 /// imports that could not be re-keyed carry an empty `canonical_tl`.

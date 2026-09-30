@@ -6,8 +6,6 @@ use crate::database::{
     has_column, immediate_transaction, table_exists, JournalMode, StoreSchema, UserDataDatabase,
     UserDataDatabaseError,
 };
-use crate::stores::FrequencySource;
-use crate::types::FrequencyRow;
 use rusqlite::{params, params_from_iter, Connection};
 use std::path::PathBuf;
 
@@ -19,6 +17,15 @@ const ROW_COLUMNS: &str = "word, tl, count, CAST(strftime('%s', last_used) AS IN
 /// One order, most-used first, `(word, tl)` as the final tie-break so equal
 /// counts keep a stable order between two reads.
 const LIST_ORDER: &str = "count DESC, last_used DESC, word ASC, tl ASC";
+
+/// One learned frequency row, as the store hands it over.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FrequencyRow {
+    pub word: String,
+    pub tl: String,
+    pub count: i64,
+    pub last_used_ms: i64,
+}
 
 /// Records candidate commits and answers what the ranker should boost. The
 /// engine does the ranking (`engine/ranking/src/score.rs`); this store only
@@ -172,16 +179,6 @@ impl UserFrequencyStore {
             connection.execute("VACUUM;", []).ok();
             Ok(existing)
         })
-    }
-}
-
-impl FrequencySource for UserFrequencyStore {
-    fn rows_for_words(&self, words: &[String]) -> Option<Vec<FrequencyRow>> {
-        UserFrequencyStore::rows_for_words(self, words)
-    }
-
-    fn record(&self, word: &str, tl: &str) {
-        UserFrequencyStore::record(self, word, tl);
     }
 }
 

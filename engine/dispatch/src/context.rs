@@ -1,8 +1,8 @@
 //! The previous-word context a continuous fetch ranks by (bigram-lm-roadmap
 //! P5, behavioral-invariants §56): the bundled `association.bin`
 //! continuations of the word the pending tail follows, as `ContextRanks`.
-//! The user-learned continuations join in `user_data::handle_composing`; the
-//! builds without the user-data stores (desktop) take the bundled ones only.
+//! The user-learned continuations join in `user_data::with_stores`; before
+//! the stores open, and in a build without them, the bundled ones rank alone.
 
 use composing::{EngineHandle as ComposingHandle, Intent, PendingSnapshot, UserRows};
 use protos::engine::{

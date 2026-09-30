@@ -12,9 +12,8 @@ use common::{pair, paths, scratch};
 use std::path::Path;
 use std::sync::Arc;
 use userdata::{
-    derive_custom_search_keys, AssociationPair, CustomDictionaryStore, CustomSearchKey,
-    JournalMode, LearnedPhraseStore, UserAssociationStore, UserFrequencyStore,
-    TAIGI_APPLICATION_ID,
+    derive_custom_search_keys, AssociationPair, CustomDictionaryStore, JournalMode,
+    LearnedPhraseStore, UserAssociationStore, UserFrequencyStore, TAIGI_APPLICATION_ID,
 };
 
 /// Writes a native store's file the way that platform left it.
@@ -461,7 +460,10 @@ INSERT INTO custom_dictionary (id, roman, hanzi, notone) VALUES ('E1', 'gâu-ts�
 INSERT INTO custom_search_key VALUES ('E1', 'tl', 'notone', 'stale');
 ";
 
-fn stored_keys(path: &Path, id: &str) -> Vec<CustomSearchKey> {
+/// A search key as the side table stores it: `(family, form, key)`.
+type StoredKey = (String, String, String);
+
+fn stored_keys(path: &Path, id: &str) -> Vec<StoredKey> {
     let connection = raw(path);
     let mut statement = connection
         .prepare(
@@ -469,15 +471,18 @@ fn stored_keys(path: &Path, id: &str) -> Vec<CustomSearchKey> {
         )
         .unwrap();
     statement
-        .query_map([id], |row| {
-            Ok(CustomSearchKey {
-                family: row.get(0)?,
-                form: row.get(1)?,
-                key: row.get(2)?,
-            })
-        })
+        .query_map([id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
         .unwrap()
         .map(Result::unwrap)
+        .collect()
+}
+
+/// The keys the engine derives for `roman`, in the stored shape.
+fn derived_keys(roman: &str) -> Vec<StoredKey> {
+    derive_custom_search_keys(roman)
+        .unwrap()
+        .into_iter()
+        .map(|key| (key.family.to_owned(), key.form.to_owned(), key.key))
         .collect()
 }
 
@@ -497,10 +502,7 @@ fn an_android_v10_custom_dictionary_is_re_derived_and_keeps_its_stamp() {
     let store = custom_dictionary(&path);
 
     assert_eq!(store.count().unwrap(), 1);
-    assert_eq!(
-        stored_keys(&path, "E1"),
-        derive_custom_search_keys("gâu-tsá").unwrap()
-    );
+    assert_eq!(stored_keys(&path, "E1"), derived_keys("gâu-tsá"));
     assert_eq!(pragma(&path, "user_version"), 10);
     assert_eq!(
         pragma(&path, "application_id"),
@@ -521,10 +523,7 @@ fn an_ios_v6_custom_dictionary_keeps_version_six() {
     custom_dictionary(&path);
 
     assert_eq!(pragma(&path, "user_version"), 6);
-    assert_eq!(
-        stored_keys(&path, "E1"),
-        derive_custom_search_keys("gâu-tsá").unwrap()
-    );
+    assert_eq!(stored_keys(&path, "E1"), derived_keys("gâu-tsá"));
 }
 
 #[test]
@@ -646,7 +645,7 @@ fn every_released_phone_custom_dictionary_is_re_derived_under_a_stamp_its_app_ac
         assert_eq!(store.count().unwrap(), 1, "{release}");
         assert_eq!(
             stored_keys(&path, "E1"),
-            derive_custom_search_keys("gâu-tsá").unwrap(),
+            derived_keys("gâu-tsá"),
             "{release}"
         );
         assert_eq!(pragma(&path, "user_version"), expected, "{release}");
@@ -680,10 +679,7 @@ fn a_desktop_v4_custom_dictionary_is_re_derived_once_and_stays_v4() {
 
     custom_dictionary(&path);
 
-    assert_eq!(
-        stored_keys(&path, "D1"),
-        derive_custom_search_keys("tsia̍h-pá--buē").unwrap()
-    );
+    assert_eq!(stored_keys(&path, "D1"), derived_keys("tsia̍h-pá--buē"));
     assert_eq!(pragma(&path, "user_version"), 4);
     assert!(!columns(&path, "custom_dictionary").contains(&"notone".to_owned()));
     assert!(snapshot(&path).exists());
@@ -708,7 +704,7 @@ fn a_custom_dictionary_newer_than_every_platform_stays_closed() {
 
     assert!(!store.is_ready());
     assert!(store.rederive_search_keys_if_needed().is_err());
-    assert_eq!(stored_keys(&path, "E1")[0].key, "stale", "untouched");
+    assert_eq!(stored_keys(&path, "E1")[0].2, "stale", "untouched");
 }
 
 // ---------------------------------------------------------- the takeover

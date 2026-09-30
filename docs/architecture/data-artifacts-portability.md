@@ -161,7 +161,7 @@ None — one implementation. The native stores it replaced differed only cosmeti
 
 ### Rust-core path
 
-Done — `rusqlite` with `bundled` SQLite (one SQLite version on every platform, roadmap U2) in `engine/userdata`, behind its `sqlite` feature.
+Done — `rusqlite` with `bundled` SQLite (one SQLite version on every platform, roadmap U2) in `engine/userdata`, linked only through `dispatch/user-data`.
 
 ### Open decisions
 
@@ -242,7 +242,7 @@ A file the phones wrote keeps its legacy derived columns `notone` / `abbrev` / `
 
 ### Derived-key logic
 
-The search keys are pure functions of `roman`, derived in-process by the engine (`userdata::derive_custom_search_keys` → `phonetics::custom_search`, `behavioral-invariants.md` §10 / §26) on every write; the query key the same way (`userdata::derive_custom_query_key`). Write-time and read-time keys come from one module, so they agree by construction. The iOS / Android `CustomDictionaryDerivation` bridges are deleted.
+The search keys are pure functions of `roman`, derived in-process by the engine (`userdata::derive_custom_search_keys` → `phonetics::custom_search`, `behavioral-invariants.md` §10 / §26) on every write; the query key the same way (`phonetics::api::derive_custom_query_key`). Write-time and read-time keys come from one module, so they agree by construction. The iOS / Android `CustomDictionaryDerivation` bridges are deleted.
 
 ### Migration mechanism — one engine takeover over three native namespaces
 
