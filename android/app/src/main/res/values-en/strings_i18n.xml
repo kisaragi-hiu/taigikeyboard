@@ -43,9 +43,9 @@
     <string name="i18n_dictionary_addEntry">Add Word</string>
     <string name="i18n_dictionary_editEntry">Edit Word</string>
     <string name="i18n_dictionary_romanLabel">Romanization</string>
-    <string name="i18n_dictionary_romanPlaceholder">Example: 𠢕早</string>
+    <string name="i18n_dictionary_romanPlaceholder">Example: gâu-tsá</string>
     <string name="i18n_dictionary_hanziLabel">Hanji</string>
-    <string name="i18n_dictionary_hanziPlaceholder">Example: gâu-tsá</string>
+    <string name="i18n_dictionary_hanziPlaceholder">Example: 𠢕早</string>
     <string name="i18n_dictionary_deleteAll">Delete All Custom Words</string>
     <string name="i18n_dictionary_deleteAllMessage">Delete all custom words?</string>
     <string name="i18n_dictionary_customDictPrivacyWarning">Do not store ID numbers, passwords, credit-card numbers, or other sensitive data in the custom dictionary.</string>
