@@ -2,7 +2,7 @@
 
 **Status**: originally authored 2026-04-19 as the Phase 0 gate; remains the immutable cross-platform behavior contract through and beyond the Phase IV-B Rust extraction (slices v3.5.1 → case-transform). Each Rust slice must preserve every invariant in this document.
 
-**Purpose**: enumerate the cross-platform behaviors that the engine — Rust crates plus surviving platform glue — must uphold on every platform: iOS, Android, macOS (IMKit), Windows (TSF).
+**Purpose**: enumerate the cross-platform behaviors that the engine — Rust crates plus surviving platform glue — must uphold on every platform: iOS, Android, macOS (IMKit), Windows (TSF), Linux (Fcitx5 + IBus).
 
 **Scope boundary**: this doc captures *cross-platform behavior* only. Architecture purity (DI, ObservableObject, singletons, candidate-purity criteria) lives in `.claude/rules/ios-shared-core-candidates.md` + `.claude/rules/cross-platform-alignment.md`. The current Rust / pending / wont-migrate inventory is `docs/engine/migration-inventory.csv`. Data-artifact portability (`dictionary.fst`, `dictionary.bin`, `association.bin`, SQLite user data) lives in `data-artifacts-portability.md`. Android-only keyboard body invariants (touch, popup, window insets) live in [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md).
 
@@ -10,7 +10,7 @@
 
 **Test references**: each invariant ends with one or more `INVARIANT_*` test-case labels. Rust slices wire labels into `engine/<crate>/tests/`; platform tests cover bridge + integration paths.
 
-**Drift policy**: if any two of the four platforms (iOS, Android, macOS, Windows) diverge on an invariant, treat the divergence as a regression — open an issue, do not adjust this doc to match the code. UI-only invariants name the platforms they bind.
+**Drift policy**: if any two of the five platforms (iOS, Android, macOS, Windows, Linux) diverge on an invariant, treat the divergence as a regression — open an issue, do not adjust this doc to match the code. UI-only invariants name the platforms they bind.
 
 ---
 
@@ -21,9 +21,9 @@
 3. [TPS — TL ↔ TPS round-trip](#3-tps--tl--tps-round-trip)
 4. [Input normalization — mode-agnostic numeric tones](#4-input-normalization--mode-agnostic-numeric-tones)
 5. [Candidate dedup — engine vs display tiers](#5-candidate-dedup--engine-vs-display-tiers)
-6. [Candidate scoring — determinism + ordering](#6-candidate-scoring--determinism--ordering)
+6. [Candidate scoring — retired additive formula](#6-candidate-scoring--retired-additive-formula)
 7. [Next-word decay — RIME-style half-life](#7-next-word-decay--rime-style-half-life)
-8. [Next-word weighting — user > dict](#8-next-word-weighting--user--dict)
+8. [Next-word weighting — user > dict, always](#8-next-word-weighting--user--dict-always)
 9. [Case transformation](#9-case-transformation)
 10. [Custom-dictionary search-key derivation](#10-custom-dictionary-search-key-derivation)
 11. [Settings read semantics](#11-settings-read-semantics)
@@ -44,6 +44,35 @@
 27. [Custom dictionary — row-count capacity](#27-custom-dictionary--row-count-capacity)
 28. [User frequency — `(Hanji, canonical-TL)` pair-key identity](#28-user-frequency--hanji-canonical-tl-pair-key-identity)
 29. [User-data backup — excluded from OS automatic backup](#29-user-data-backup--excluded-from-os-automatic-backup)
+30. [Composing display is literal — no spelling conversion (TL + POJ)](#30-composing-display-is-literal--no-spelling-conversion-tl--poj)
+31. [TPS space is a soft syllable separator (first-tone continuous input)](#31-tps-space-is-a-soft-syllable-separator-first-tone-continuous-input)
+32. [TPS stop coda is phonotactically gated (no-space first-tone continuous input)](#32-tps-stop-coda-is-phonotactically-gated-no-space-first-tone-continuous-input)
+33. [TPS nasal coda is phonotactically gated (no-space first-tone continuous input)](#33-tps-nasal-coda-is-phonotactically-gated-no-space-first-tone-continuous-input)
+34. [Continuous literal-roman candidate (Hanji-with-romanization fast input)](#34--continuous-literal-roman-candidate-hanji-with-romanization-fast-input)
+35. [TPS ambiguity-aware lookup — every reading of the pressed keys reaches the dictionary](#35-tps-ambiguity-aware-lookup--every-reading-of-the-pressed-keys-reaches-the-dictionary)
+36. [Key-press feedback — app toggle gates sound + haptics (intentional OS-master divergence)](#36-key-press-feedback--app-toggle-gates-sound--haptics-intentional-os-master-divergence)
+37. [App UI display-language production roster](#37--app-ui-display-language-production-roster)
+38. [Main-app tab titles follow the display-language picker](#38--main-app-tab-titles-follow-the-display-language-picker)
+39. [Keyboard locale tag is the neutral `mul`, not a Chinese-bearing tag](#39--keyboard-locale-tag-is-the-neutral-mul-not-a-chinese-bearing-tag)
+40. [NextWord learning decisions are platform-neutral](#40--nextword-learning-decisions-are-platform-neutral)
+41. [TPS keyboard space pins the unmarked tone (1 open rime / 4 stop coda)](#41--tps-keyboard-space-pins-the-unmarked-tone-1-open-rime--4-stop-coda)
+42. [A candidate cell shows both scripts](#42--a-candidate-cell-shows-both-scripts)
+43. [A candidate never carries a syllable the user has not typed into](#43--a-candidate-never-carries-a-syllable-the-user-has-not-typed-into)
+44. [Romanization Only cells collapse rows that read the same](#44--romanization-only-cells-collapse-rows-that-read-the-same)
+45. [The `o͘ⁿ` spelling of the nasal final is respelled per syllable, never per buffer](#45--the-o͘ⁿ-spelling-of-the-nasal-final-is-respelled-per-syllable-never-per-buffer)
+46. [An acronym-shaped buffer reaches the words it abbreviates](#46--an-acronym-shaped-buffer-reaches-the-words-it-abbreviates)
+47. [The macOS symbol picker stands on a placeholder marked region](#47--the-macos-symbol-picker-stands-on-a-placeholder-marked-region)
+48. [Hanji leads out of the box; the desktop General pane owns the output script and its own reset](#48--hanji-leads-out-of-the-box-the-desktop-general-pane-owns-the-output-script-and-its-own-reset)
+49. [No Hyphens strips the romanization the user sees, never the keys the engine learns by](#49--no-hyphens-strips-the-romanization-the-user-sees-never-the-keys-the-engine-learns-by)
+50. [A phrase composed segment by segment becomes a whole-buffer candidate](#50--a-phrase-composed-segment-by-segment-becomes-a-whole-buffer-candidate)
+51. [A separator typed between two picks reaches the document as typed](#51--a-separator-typed-between-two-picks-reaches-the-document-as-typed)
+52. [A typed hyphen is a syllable boundary](#52--a-typed-hyphen-is-a-syllable-boundary)
+53. ["ⁿ becomes ᴺ in capitals" decides the case of the POJ nasal marker, everywhere the user reads it](#53--ⁿ-becomes-ᴺ-in-capitals-decides-the-case-of-the-poj-nasal-marker-everywhere-the-user-reads-it)
+54. [Every composing request renders under the settings it carries](#54--every-composing-request-renders-under-the-settings-it-carries)
+55. [The separator at every typed boundary is the one the user typed](#55--the-separator-at-every-typed-boundary-is-the-one-the-user-typed)
+56. [The previous word re-ranks the continuous candidates, never the segmentation](#56--the-previous-word-re-ranks-the-continuous-candidates-never-the-segmentation)
+57. [Every dictionary switched off offers no dictionary candidates](#57--every-dictionary-switched-off-offers-no-dictionary-candidates)
+- [Change protocol](#change-protocol) · [Cross-references](#cross-references)
 
 ---
 
@@ -73,7 +102,7 @@
 
 **Invariant**: `phonetics::normalization::taigi_unicode_base_form(s)` is the one NFD preprocessing every platform reaches (through the bridge), so the byte sequence is identical on every platform for every input the keyboard may see — POJ nasal marker substitution, NFD decomposition, and `o͘` collapse to `o`.
 
-**Why**: downstream consumers (Rust `ranking::score::roman_to_base`, `phonetics::normalization::normalize_input`, the custom-dictionary search keys `phonetics::custom_search`) depend on the output being identical across platforms. A divergent one-character preprocessing bug silently changes every dedup key, every score calculation, and every fst lookup.
+**Why**: downstream consumers (Rust `phonetics::normalization::normalize_input`, the custom-dictionary search keys `phonetics::custom_search`) depend on the output being identical across platforms. A divergent one-character preprocessing bug silently changes every dedup key, every score calculation, and every fst lookup.
 
 **Scope**: Rust `engine/phonetics::normalization::taigi_unicode_base_form` (canonical, since v3.5.3 PR #192). Bridged via `RustEngineBridge.nfdPreprocessForLookup`. Platform-side `TaigiUnicode.{swift,kt}` helpers were deleted under Path G.
 
@@ -165,10 +194,10 @@ Live candidate ranking is the Continuous `FetchAtPos` path: lexicographic sort k
 
 | Constant | Value |
 |---|---|
-| `decayHalfLifeHours` | 168.0 |
-| `highUsageDecayFloor` | 0.95 |
-| `lowUsageDecayFloor` | 0.3 |
-| `highUsageThreshold` | 3 |
+| `DECAY_HALF_LIFE_HOURS` | 168.0 |
+| `HIGH_USAGE_DECAY_FLOOR` | 0.95 |
+| `LOW_USAGE_DECAY_FLOOR` | 0.30 |
+| `HIGH_USAGE_THRESHOLD` | 3 |
 
 **Why**: decay shapes the entire learning curve for user associations. A change here is not caught by scoring tests — it surfaces only after days of use.
 
@@ -318,35 +347,6 @@ The former auto-cap-flag label is retired: the engine API takes no auto-cap flag
 
 ---
 
-## Change protocol
-
-- Adding a new invariant: append to this doc + index; create a matching `INVARIANT_*` test stub in G9 immediately.
-- Removing an invariant: requires a written rationale in the commit message and a Codex review pass.
-- Modifying a constant (decay, weights, thresholds): the Rust engine crate is the single source; a platform-side mirror (iOS, Android, macOS, Windows) that still exists moves in the same commit as the engine + this doc; reject cross-platform drift at review time.
-
-### Parity decisions left open by the 2026-09 refactor round
-
-The 2026-09 refactor round (old #706–#717, behavior-frozen) found these divergences and left them **untouched** because unifying them changes an observable property — each is a parity decision that needs its own round, dogfood, and (where a public op changes) an invariant entry here:
-
-| Divergence | Why it is not a refactor |
-|---|---|
-| `engine/ranking/src/score.rs` `is_nonspacing_mark` (strict Unicode `Mn`) vs `engine/phonetics/src/derivation.rs` hard-coded ranges | the two predicates differ on exotic input; unifying is a parity decision + dogfood, not a move |
-| `engine/phonetics/src/tps.rs` `is_tps_tone_mark` (8 fixed scalars incl. U+0307) vs `tps_adjust.rs` `TONE_MARK_CHARS` (table-derived, excludes U+0300–036F) | different sets; the `tps_adjust` version backs the public `Method::IsTpsToneMark` op — unification changes a public op |
-| `derive_poj_notone_for_match` → `poj_num_syllable_ends_from_tl` | replace only with a parity proof over every dictionary row (`tests/poj_notone_parity.rs`-style byte-equality) |
-| Byte-identical `*.pb.swift` macOS ↔ iOS | build-graph change in `.xcodeproj` / `Package.swift` — user-only config (CLAUDE.md Core Principle #1) |
-| Settings-key table ×2 (`SettingsStore.swift` ↔ `keys.rs`) | needs a generator = new tooling |
-| Engine `WalkerSlot0` ↔ `RawCandidate` mirror, `bounded` fetch trio, `prefix_index.rs` four lookups, `SyllableReach` / `KeyFace` | each source doc explains a deliberate divergence (sign bridge D3, cap ordering, `INVARIANT_LEX_LOOKUP_ROWIDS_ORDER`) |
-
----
-
-## Cross-references
-
-- Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
-- Per-platform criteria + exclusions: `.claude/rules/ios-shared-core-candidates.md` §1, `.claude/rules/android-guidelines.md` §1.
-- Data-artifact portability (`dictionary.fst` / `.bin` / SQLite user data): `docs/architecture/data-artifacts-portability.md`.
-
----
-
 ## 14. Lexicon — hanzi-input search guard (D-8 parity correction)
 
 **Added**: 2026-05-01 (v3.5.6 lexicon read-path slice). **Re-pointed engine-ward 2026-05-15 (v3.5.8 Item 13)**: the platform-side `LexiconService.search` autocomplete entry — and with it the platform D-8 guard + its iOS/Android parity tests — were retired when the platform lexicon fallback was removed (`continuous-candidate-display.md` §15.4). The keyboard candidate path is now the engine-only Continuous dispatch; the hanzi guard lives entirely in Rust.
@@ -421,7 +421,7 @@ In continuous input — the **sole** keyboard candidate source since Item 13 (PR
 
 This is a **conditional** contract, NOT "always filter": absent tone ⇒ all tones (intended), present tone ⇒ that tone only, per syllable. Do not "fix" the toneless-shows-all behavior — it is the feature.
 
-**Why**: typing `tai5` must never surface `tai2` / `tai3`. The continuous path strips tone digits to build a toneless fused key so the no-tone affordance works; before this invariant the strip was **unconditional**, so an explicitly-typed tone was silently discarded and every tone of the syllable appeared (critical bug, 2026-05-30, PR #367). The toned `tl:<tl_num>` keys already exist in `dictionary.fst` (`dictionary/build/create_fst.py:127-130`); they were simply never queried.
+**Why**: typing `tai5` must never surface `tai2` / `tai3`. The continuous path strips tone digits to build a toneless fused key so the no-tone affordance works; before this invariant the strip was **unconditional**, so an explicitly-typed tone was silently discarded and every tone of the syllable appeared (critical bug, 2026-05-30, PR #367). The toned `tl:<tl_num>` keys already exist in `dictionary.fst` (`dictionary/build/create_fst.py::romanization_keys`); they were simply never queried.
 
 **Scope**: TL and POJ only. **English** has no tone semantics (a trailing digit is not a tone) and keeps the toneless strip. **TPS** tones are Bopomofo scalars, not ASCII digits, so TPS always takes the toneless branch (out of this slice). The selection rule `composing::shadow::fst_body_for_span` (→ `span_is_fully_toned_ascii`, the `([a-z]+digit)+` grammar) is applied at all three continuous key-build sites: `left_anchored_keys_and_restrictions` (span-local), `build_partial_prefix_key` (Step 4b / empty-keys partial), and the walker edge (`fetch_walker_slot0_inner`). The walker's **custom-dictionary** override stays toneless-keyed (custom matching is tone-insensitive by design). Engine is the single source — iOS / Android inherit via FFI; there is no platform-side tone filtering.
 
@@ -637,8 +637,8 @@ A continuous-input candidate commit records the **candidate's canonical TL** as 
 
 A USER-added custom-dictionary entry is findable regardless of which input mode (TL / POJ / TPS-Bopomofo) the user types in. A word added once — stored as a single native `roman` (e.g. POJ `chiah` / 食) — must surface when the user later types its TL form (`tsiah`), its POJ form (`chiah`), OR its TPS Bopomofo, in continuous input AND the settings dictionary browser. Pre-R3 the query was mode-blind (`WHERE notone LIKE ?` on a single-family derived column), so TL↔POJ hit only by spelling coincidence and TL/POJ↔TPS hard-missed.
 
-- **Search axis = three-family, mirroring the system dictionary** — each entry materializes the full `{tl, poj, tps} × {num, notone, abbrev}` (+ TPS er/or dialect variant) search-key bundle into a `custom_search_key(entry_id, family, form, key)` side table, the custom-dict analogue of the system FST's three families (`dictionary/build/create_fst.py:128-144`). The bundle is derived by ONE engine function `phonetics::custom_search::derive_custom_search_keys(roman)` (raw roman → canonical TL → all families), called in-process by the engine store on every write (`userdata::derive_custom_search_keys`, §10), so no platform re-implements — or even sees — the derivation.
-- **Query is family-native** — `phonetics::custom_search::derive_custom_query_key(input, input_mode)` returns the single key for the **effective family** = `contains_tps(input) ? tps : parse(input_mode)`, mirroring the composing dispatch TPS upgrade (`engine/composing/src/dispatch.rs:208`); the TPS layout's `input_mode = "tps"` (R6) reads as the TL family, as the pre-R6 wire's `"tl"` did, so the family MUST come from the raw input, not settings alone. The engine store matches `WHERE family=? AND form IN (?, 'abbrev') AND key LIKE ?||'%'` (`CustomDictionaryStore::rows_matching`), keyed by that same `phonetics::api::derive_custom_query_key` — for the keystroke fetch (`dispatch::user_data::with_stores::buffer_rows`, the pending buffer under `AppConfig.input_mode`) and for the settings dictionary search (`UserDataRequest.search_custom_entries`).
+- **Search axis = three-family, mirroring the system dictionary** — each entry materializes the full `{tl, poj, tps} × {num, notone, abbrev}` (+ TPS er/or dialect variant) search-key bundle into a `custom_search_key(entry_id, family, form, key)` side table, the custom-dict analogue of the system FST's three families (`dictionary/build/create_fst.py::romanization_keys`). The bundle is derived by ONE engine function `phonetics::custom_search::derive_custom_search_keys(roman)` (raw roman → canonical TL → all families), called in-process by the engine store on every write (`userdata::derive_custom_search_keys`, §10), so no platform re-implements — or even sees — the derivation.
+- **Query is family-native** — `phonetics::custom_search::derive_custom_query_key(input, input_mode)` returns the single key for the **effective family** = `contains_tps(input) ? tps : parse(input_mode)`, mirroring the composing dispatch TPS upgrade (`engine/composing/src/dispatch.rs::handle_fetch_at_pos`); the TPS layout's `input_mode = "tps"` (R6) reads as the TL family, as the pre-R6 wire's `"tl"` did, so the family MUST come from the raw input, not settings alone. The engine store matches `WHERE family=? AND form IN (?, 'abbrev') AND key LIKE ?||'%'` (`CustomDictionaryStore::rows_matching`), keyed by that same `phonetics::api::derive_custom_query_key` — for the keystroke fetch (`dispatch::user_data::with_stores::buffer_rows`, the pending buffer under `AppConfig.input_mode`) and for the settings dictionary search (`UserDataRequest.search_custom_entries`).
 - **Internal-consistency contract, NOT system-FST parity** — the custom keys are matched ONLY within `custom_dictionary.db`'s own query, never against the system FST, so they need NOT byte-match the build pipeline; the invariant is WRITE-key == QUERY-key for the same word (both via the same engine module).
 - **Raw `roman` untouched** — the stored `roman` column and the engine's `composing::shadow::custom_toneless_key` lattice path (which reads `roman`, handed over as `composing::UserRows.custom`) are unchanged; the legacy `notone`/`abbrev`/`roman_num` columns survive on the files the phones wrote but are no longer written or queried (§10).
 - **Non-destructive migration** — the side table is added + backfilled from each existing row's `roman` (originally iOS schemaVersion 1→2; Android `DATABASE_VERSION` 5→6, `migrateV5ToV6`). Since the engine owns the file, its takeover creates the side table when absent and re-derives every entry's keys once (`CustomDictionaryStore::rederive_search_keys_if_needed`, user-data-engine-roadmap U7) — including a released file from before the side table; never DROPs user data.
@@ -825,7 +825,7 @@ One seam answers both the drawn labels and the key handler — `CandidateIndexLa
 
 **Scope**: shared Rust engine (`composing`) for the candidate itself + the toggle gate; thin platform wiring for the setting on all four platforms (settings store + `EngineSettings` + the invert + a UI row). The injection lives in the display-layer seam `composing::dispatch::handle_fetch_at_pos` (`literal_roman_candidate` helper), NOT in the segmentation / cost primitive `assemble_candidates` (incidents S5 / §18 / S9 — display-layer change). Every platform already commits a roman-only (hanji-absent) candidate's `roman` in swapped mode (iOS `formatOutputText` `else` / Android `CandidateClickHandler` `when` `else`; on the desktop a one-script cell has no `.alternate` script to offer, so `PresentedCandidate` / `presentation.rs` present it `.primary` and the commit writes its `roman`). Needs `make build` to refresh xcframework/jniLibs before device dogfood (no `make dict` — dict artifacts unchanged).
 
-**Engine sites**: `composing/proto/composing.proto` (`FetchAtPos.literal_roman_candidate_disabled` field 6), `composing/src/api.rs` (`Intent::FetchAtPos` field), `composing/src/dispatch.rs` (`decode_intent` + `handle` thread the flag; `literal_roman_candidate` gate + build; `!literal_roman_candidate_disabled` gate + bare-roman dedup in `handle_fetch_at_pos`). Reuses `composing::derived::derived_display` + `phonetics::api::canonical_tl_form`. Platform wiring: iOS `Settings/SharedSettings.swift` + `Settings/EngineSettings.swift` + `Engine/RustEngineBridge+Composing.swift` + `Input/Composing/ComposingManager.swift` + `App/Tabs/Settings/SettingsTab.swift` + `Overlays/SettingsSelectionOverlay.swift`; Android `ime/core/PreferenceDataStore.kt` + `PrefHelper.kt` + `ime/core/settings/EngineSettings.kt` + `engine/ComposingBridge.kt` + `engine/RustEngineBridge.kt` + `ime/text/composing/ComposingManager.kt` + `ui/tabs/settings/InputSettingsScreen.kt` + `ime/text/smartbar/SettingsOverlayContent.kt`; macOS `Settings/EngineSettings.swift` + `Settings/SettingsStore.swift` + `Settings/GeneralSettingsView.swift` + `Engine/RustEngineBridge+Composing.swift` (and the key must stay OUT of `Settings/RetiredSettingsCleanup.swift`); Windows `settings/engine_settings.rs` + `settings/keys.rs` + `settings/document.rs` + `engine/composing.rs` + `taigi-windows-settings/src/winui/pages/general.rs`.
+**Engine sites**: `engine/protos/proto/composing.proto` (`FetchAtPos.literal_roman_candidate_disabled` field 6), `composing/src/api.rs` (`Intent::FetchAtPos` field), `composing/src/dispatch.rs` (`decode_intent` + `handle` thread the flag; `literal_roman_candidate` gate + build; `!literal_roman_candidate_disabled` gate + bare-roman dedup in `handle_fetch_at_pos`). Reuses `composing::derived::derived_display` + `phonetics::api::canonical_tl_form`. Platform wiring: iOS `Settings/SharedSettings.swift` + `Settings/EngineSettings.swift` + `Engine/RustEngineBridge+Composing.swift` + `Input/Composing/ComposingManager.swift` + `App/Tabs/Settings/SettingsTab.swift` + `Overlays/SettingsSelectionOverlay.swift`; Android `ime/core/PreferenceDataStore.kt` + `PrefHelper.kt` + `ime/core/settings/EngineSettings.kt` + `engine/ComposingBridge.kt` + `engine/RustEngineBridge.kt` + `ime/text/composing/ComposingManager.kt` + `ui/tabs/settings/InputSettingsScreen.kt` + `ime/text/smartbar/SettingsOverlayContent.kt`; macOS `Settings/EngineSettings.swift` + `Settings/SettingsStore.swift` + `Settings/GeneralSettingsView.swift` + `Engine/RustEngineBridge+Composing.swift` (and the key must stay OUT of `Settings/RetiredSettingsCleanup.swift`); Windows `settings/engine_settings.rs` + `settings/keys.rs` + `settings/document.rs` + `engine/composing.rs` + `taigi-windows-settings/src/winui/pages/general.rs`.
 
 **Tests**: `composing/src/dispatch.rs` (`literal_roman_candidate_*` — always-shown matrix: toneless / partial / tone-1/4 / unhyphenated blob / trailing-hyphen / POJ doubletap all mirror the preedit; empty + TPS/English excluded; WYSIWYG + Tailo + `guá` identity fold) + `composing/tests/dispatch_continuous.rs` (`fetch_at_pos_literal_roman_toggle_gates_index0_prepend` — ON prepends the literal at index 0, OFF skips the prepend) + golden `composing/tests/golden/fetch_at_pos.golden` (every TL/POJ section leads with the preedit-literal Tailo row, all cases ON; TPS sections unchanged). Cross-platform device acceptance: **S22** (`.claude/rules/taigi-incidents.md` § Qualitative perf gate).
 
@@ -943,7 +943,7 @@ What a commit teaches NextWord depends on the **writing system it is written in*
 
 The rules, all in `engine/nextword/src/decide.rs`:
 
-- **Word boundary = whitespace only.** `split_compound` never breaks on `-`. In engine-rendered output a hyphen joins the syllables of one word (`tâi-gí` 台語), `--` marks the neutral tone (`hōo--guá` 予我), and a space separates the sub-words of a phrase entry (`iā sī` 也是) — the dictionary's stored separator convention, §22. A hyphen the **user types** is a composing-boundary delimiter inside a word as well (§20 — `tai-bak` compound hyphen, `goa--si` internal khinsiann), and raw typed text does reach this crate: `commit_raw_continuous` passes the pending tail's literal keystroke buffer as `roman` (`engine/composing/src/transition.rs:481-483`). So `-` marks a bigram boundary in neither provenance. `tâi-gí khí-puânn` → one pair 台語 → 齒盤.
+- **Word boundary = whitespace only.** `split_compound` never breaks on `-`. In engine-rendered output a hyphen joins the syllables of one word (`tâi-gí` 台語), `--` marks the neutral tone (`hōo--guá` 予我), and a space separates the sub-words of a phrase entry (`iā sī` 也是) — the dictionary's stored separator convention, §22. A hyphen the **user types** is a composing-boundary delimiter inside a word as well (§21 — `tai-bak` compound hyphen, `goa--si` internal khinsiann), and raw typed text does reach this crate: `commit_raw_continuous` passes the pending tail's literal keystroke buffer as `roman` (`engine/composing/src/transition.rs::commit_raw_continuous`). So `-` marks a bigram boundary in neither provenance. `tâi-gí khí-puânn` → one pair 台語 → 齒盤.
 - **TPS is one unit.** In TPS an ASCII space is the tone-1 syllable marker, not a word break (§31 `INVARIANT_TPS_SPACE_SOFT_SEPARATOR` — `ㄍㄠ` ␣ `ㄉㄞ` is 交代, one word), so a TPS payload never splits. `AppConfig.input_mode` does not answer this: the mobile platforms send the TPS layout as `"tps"` (R6), but a TPS commit's payload is what counts, and the engine still accepts the pre-R6 wire's `"tl"`. **Bopomofo content is the detector** — the same single source `composing::derived::derived_display` uses.
 - **Segmentation disagreement fails closed.** `compound_association_pairs` zips the Hanji and romanization sides by position; when the two split into different part counts (Hanji `也是` carries no space, its romanization `iā sī` does) it records **nothing**. The short side is never padded: word identity is the `(Hanji, canonical TL)` pair (Core Principle #7), so a blank TL writes a row no correctly-keyed lookup will ever match again.
 - **Noise = no word material anywhere.** `is_noise_text` is `!text.chars().any(phonetics::is_word_material)`, where word material is an alphabetic character that is not one of the four `Lm` TPS tone marks (`ˆ ˇ ˊ ˋ`) and not a POJ nasal (`ⁿ` / `ᴺ`). Expressed as a Unicode property rather than a punctuation table on purpose — a table only lists what the engine has been *told* is punctuation, so a mark nobody added reads as a word and gets learned. This keeps a commit that merely *starts* with a bracket or a space (`hit (彼)` under both-scripts), which a first-character test discards whole.
@@ -1026,7 +1026,7 @@ A Taigi word is the `(Hanji, romanization)` pair (Core Principle #7), so one scr
 
 - **Primary / secondary, not a formatted string.** The cell keeps the two scripts in separate visual roles — a smaller, dimmer secondary beside or under the primary — so the leading script stays scannable. What COMMITTING writes is a separate rendering (the engine's `composing/src/commit_text.rs` on macOS and the desktop, `formatOutputText` on iOS): the two agree on which script leads, and the document string may additionally bracket the other, but the cell never renders the bracket form.
 - **A one-script candidate shows one script.** A romanization-only candidate (`hanji` absent, or present-but-empty — the two mean the same thing) has no second script in either swap direction, and the cell reserves no width for it.
-- **Per platform**: iOS stacks them (`CandidateButtonView.swift:65-77` — `Text(displayTitle)` over `Text(displaySubtitle)`); Android mirrors it in the smartbar; macOS puts the secondary in MacishType's annotation column (`CandidateItemView`), because its window is one row tall. The vertical macOS layout aligns every row's annotation on one x, so the column reads as a column.
+- **Per platform**: iOS stacks them (`CandidateButtonView.swift` `body` — `Text(displayTitle)` over the subtitle `Text` in one `VStack`); Android mirrors it in the smartbar; macOS puts the secondary in MacishType's annotation column (`CandidateItemView`), because its window is one row tall. The vertical macOS layout aligns every row's annotation on one x, so the column reads as a column.
 - **The slot key beside a cell is the key that picks it.** macOS draws, beside each visible slot, the key the chosen set gives it (`CandidateIndexLabel`, PR #604 — superseding the 2026-08-21 "no index column" ruling once bare digits could select) — always the set, and the set is the ONLY thing that picks: a bare `1`…`9` is the tone marker whatever the buffer (`tai5` + `2` composes `tai52`, kept verbatim), so both the 2026-08-24 bare-digit-after-a-tone rule (#602) and the `↓` selection latch (#610) are retired (USER 2026-08-28: "consistent behavior" — one set of keys picks, a digit always means one thing) — `q w d f z x v y ;` under the shipped bare-key set (the eight letters no TL/POJ syllable spells plus `;`, which neither romanization writes and nobody types to end a word), or `⇧n` / `⌃n` / `⌥n` under the three digit sets (`CandidateSlotKeySet`, USER 2026-08-28 — four ways to select, one live at a time, chosen in the Shortcuts pane). The label column is measured against every form so it never steps as the live key changes. The slot numbering still follows the viewport. **Upgrade edge (accepted 2026-08-28)**: the `⇧` digits are read off the number-row key code, so the recorder refuses them whichever set is live and a global row left holding one from before is cleared at launch; a *composing* row recorded as the symbol `⇧3` types (`#` with Shift, US layout) cannot be told apart from a genuine `⇧#` binding without a key code, is left in place, and is shadowed by the fixed tier.
 
 **Scope**: platform display layers only — no engine change. The engine has always returned both fields on the candidate (`ContinuousCandidate.roman` / `.hanji`); macOS was rendering only one of them until this was pinned.
@@ -1075,7 +1075,7 @@ When Candidate Display = Romanization Only (`AppConfig.candidate_display_mode = 
 - **The literal is the survivor when it is in the group.** `dispatch.rs` keeps hanji-bearing dict rows beside the §34 literal today because they COMMIT differently (`台` vs `tâi`); under Romanization Only they commit identically, the reason vanishes, and the post-prepend placement collapses `隻/tsiah` into the literal `tsiah`. Learning consequence (research doc Q9′, accepted for round 1): the literal's `display_text` is the roman, so that tap learns the roman bucket `(tsiah, tsiah)`, not `(隻, tsiah)`.
 - **Custom entries are not guaranteed to survive.** Custom rank-0 wins only an identical-`(roman, hanji, span)` collision (`lexicon/src/continuous/`); `source_rank` is the second-to-last `SortKey` dimension (`:2362-2380`), so a custom `tsia̍h/X` with lower freq than dict 食 collapses behind it in this mode. Accepted for round 1 (the user still gets the same roman text; only the learned hanji pair differs); a custom-first survivor rule inside the group is the documented follow-up if dogfood wants it.
 - **One normalisation point.** `AppConfig::is_roman_only_display` (`engine/protos/src/lib.rs`) is the only place the raw `i32` is interpreted; both readers call it, so the fallback for `0` / unknown cannot drift.
-- **Platform side derives, never re-implements.** Each platform keeps `isTranslateSwapped` / `outputBothScripts` STORED untouched (mobile; the desktop retired its never-shipped `outputBothScripts` key on 2026-09-30, so macOS / Windows / Linux send `both = false` always) and exposes a derived read-only pair (`stored && mode != romanOnly`) at its `EngineSettings` seam; the engine therefore receives `swapped = false, both = false` under Romanization Only and every existing reader — `continuous_word_space`, `decide.rs:93`, `filter.rs:245`, auto-space, S10, keycap width, 選/suán, full-width punctuation, macOS/Windows Space-alternate (`.ignored` on an annotation-less cell) — behaves as roman-first without a new branch. The 文/A key is hidden on mobile only under Romanization Only (bottom row + expanded overlay — USER 2026-09-12: "no need to show it… it frees up a bit of space"; the space bar takes the width) and the toggle stays guarded for any other caller (stored value preserved; desktop shortcut silent no-op); Annotate in Brackets UI is disabled; TPS/English paths are untouched. Punctuation width reads its own derived value (`effectiveFullWidthPunctuation`, 2026-09-13) — `false` here like the pair, but under mixed it follows the stored swap while the pair is forced on (§42).
+- **Platform side derives, never re-implements.** Each platform keeps `isTranslateSwapped` / `outputBothScripts` STORED untouched (mobile; the desktop retired its never-shipped `outputBothScripts` key on 2026-09-30, so macOS / Windows / Linux send `both = false` always) and exposes a derived read-only pair (`stored && mode != romanOnly`) at its `EngineSettings` seam; the engine therefore receives `swapped = false, both = false` under Romanization Only and every existing reader — `continuous_word_space`, `decide.rs::decide_word_selected`, `filter.rs::shape_prediction`, auto-space, S10, keycap width, 選/suán, full-width punctuation, macOS/Windows Space-alternate (`.ignored` on an annotation-less cell) — behaves as roman-first without a new branch. The 文/A key is hidden on mobile only under Romanization Only (bottom row + expanded overlay — USER 2026-09-12: "no need to show it… it frees up a bit of space"; the space bar takes the width) and the toggle stays guarded for any other caller (stored value preserved; desktop shortcut silent no-op); Annotate in Brackets UI is disabled; TPS/English paths are untouched. Punctuation width reads its own derived value (`effectiveFullWidthPunctuation`, 2026-09-13) — `false` here like the pair, but under mixed it follows the stored swap while the pair is forced on (§42).
 
 **Scope**: shared Rust engine (`protos` + `composing::dispatch` + `nextword::filter`) + per-platform settings/cell arms (iOS, Android, macOS, Windows). Needs `make build`, not `make dict`.
 
@@ -1177,7 +1177,7 @@ Until 2026-09-18 every platform shipped `isTranslateSwapped = false`: a fresh in
 
 USER 2026-09-20: "evaluate adding a No Hyphens switch; when it is on, candidates carry no hyphens, e.g. tâi-uân -> tâiuân … for the neutral-tone marker "--", replace it with a dot '·'", then "only strip what the engine/dictionary produced" (user-typed hyphens stay), "make sure TPS and other features are not affected", "the user's custom dictionary must follow this setting too".
 
-- **One flag, one helper, three readers.** `AppConfig.hyphenless_roman` (proto field 10, default `false`) → `phonetics::api::hyphenless_display` (`--` → `tps::KHINSIANN_DOT` `·` U+00B7 first — the glyph TPS already writes for `--` — then every `-` dropped; spaces kept). Read by (1) `composing::continuous::assemble_candidates` Step 5, the presentation pass, on every `RawCandidate.roman` after the POJ render and before the rendered dedupe — dictionary rows, custom-dictionary rows and walker synth alike, and BEFORE dispatch's §34 literal prepend; (2) `nextword::filter::shape_prediction` on `EnginePrediction.text`, the same POJ-then-hyphenless order; (3) `composing::api::nailed_prefix`, whose engine-synthesised compound joiner becomes `""`. Nothing else changes: `derived_display` (preedit, §34 literal, Enter commit), the §21 leading `--` literal, the FST / shadow keys, `roman_reading_eq`, ranking's `roman_to_base` and `canonical_tl_form` never see the flag.
+- **One flag, one helper, three readers.** `AppConfig.hyphenless_roman` (proto field 10, default `false`) → `phonetics::api::hyphenless_display` (`--` → `tps::KHINSIANN_DOT` `·` U+00B7 first — the glyph TPS already writes for `--` — then every `-` dropped; spaces kept). Read by (1) `composing::continuous::assemble_candidates` Step 5, the presentation pass, on every `RawCandidate.roman` after the POJ render and before the rendered dedupe — dictionary rows, custom-dictionary rows and walker synth alike, and BEFORE dispatch's §34 literal prepend; (2) `nextword::filter::shape_prediction` on `EnginePrediction.text`, the same POJ-then-hyphenless order; (3) `composing::api::nailed_prefix`, whose engine-synthesised compound joiner becomes `""`. Nothing else changes: `derived_display` (preedit, §34 literal, Enter commit), the §21 leading `--` literal, the FST / shadow keys, `roman_reading_eq` and `canonical_tl_form` never see the flag.
 - **Identity fields keep the dictionary form.** `CandidateMessage.display_text` / `canonical_tl` and `EnginePrediction.tl` are untouched, so `FrequencyMap.get(&display_text, &canonical_tl)`, `CommitContinuous.canonical_text` / `association_tl` and `WordSelected` learn `tâi-uân`, not `tâiuân`. Every platform forwards `display_text` as the commit's canonical key (§34 / R5); Android's non-continuous tap paths (`CandidateClickHandler`) now hand NextWord the `CANONICAL_TL` sidechannel they already read for frequency, falling back to `roman` only for rows whose producer set none (English) — mirroring iOS `ActionHandler+Suggestions.swift` `associationRoman` (`additionalInfo["tl"]`).
 - **User-typed hyphens are literal (§30).** `tai-uan` typed shows the literal `tai-uan` at slot 0 beside the dictionary `tâiuân`/台灣; `--ah` still commits `--ah` / `--矣` (§21). The strip runs before the literal `retain` and §44 dedupe so those compare the rendered form, and a typed-hyphen literal and a hyphenless dictionary row that now read differently are not collapsed into each other.
 - **TPS is exempt, and the engine applies the exemption.** The platform re-splits `CandidateMessage.roman` on `-` for `TlDisplayToTps`, so the strip never runs on the TPS layout: `AppConfig::renders_hyphenless` (`engine/protos/src/lib.rs`) is `hyphenless_roman && input_mode != "tps"`, read by all three readers. The mobile platforms send the TPS layout as `input_mode = "tps"` with No Hyphens as stored (R6) — iOS `SharedSettings.isHyphenlessRomanEnabled`, Android `PrefHelper.isHyphenlessRomanEnabled`, both the stored switch — through the one `appConfig` builder (the composing `continuousAppConfig` and the next-word predict request). A platform on the pre-R6 wire (`"tl"` with the flag already folded off) renders identically. Desktop has no TPS layout; the flag rides every request's `appConfig` / `app_config` there so the candidate fetch and the next-word filter agree.
@@ -1307,3 +1307,31 @@ USER 2026-09-30 (maintainability-roadmap R6 P0, "decide for me, follow your reco
 
 **Tests**: iOS `ios/TaigiKeyboardTests/DictionaryFiltersWireMaskTests.swift` (all-off through the engine → `0` → sentinel, a partial mask unchanged, the failure fallback stays `UInt32.max`); Android `android/app/src/test/java/com/siansiansu/taigikeyboard/engine/DictionaryFiltersWireMaskTest.kt` (the same mapping — JVM tests cannot load the engine); desktop `taigi-desktop-core/src/engine/lexicon.rs` `wire_mask_turns_all_off_into_the_sentinel` + `tests/engine_roundtrip.rs` `all_sources_off_resolves_to_the_non_zero_sentinel`; macOS `RustEngineBridgeDictionaryFiltersTests.swift` (`testEveryDictionaryOff_*`).
 
+---
+
+## Change protocol
+
+- Adding a new invariant: add it after the last numbered section + to the index; land a test naming its `INVARIANT_*` label in the same PR (`tools/invariant_labels.py` gates it).
+- Removing an invariant: requires a written rationale in the commit message and a Codex review pass.
+- Modifying a constant (decay, weights, thresholds): the Rust engine crate is the single source; a platform-side mirror (iOS, Android, macOS, Windows / Linux) that still exists moves in the same commit as the engine + this doc; reject cross-platform drift at review time.
+
+### Parity decisions left open by the 2026-09 refactor round
+
+The 2026-09 refactor round (old #706–#717, behavior-frozen) found these divergences and left them **untouched** because unifying them changes an observable property — each is a parity decision that needs its own round, dogfood, and (where a public op changes) an invariant entry here:
+
+| Divergence | Why it is not a refactor |
+|---|---|
+| ~~`engine/ranking/src/score.rs` `is_nonspacing_mark` (strict Unicode `Mn`) vs `engine/phonetics/src/derivation.rs` hard-coded ranges~~ | closed 2026-09-25: the ranking copy went with the legacy additive ranking; only `phonetics/src/derivation.rs::is_nonspacing_mark` remains |
+| `engine/phonetics/src/tps.rs` `is_tps_tone_mark` (8 fixed scalars incl. U+0307) vs `tps_adjust.rs` `TONE_MARK_CHARS` (table-derived, excludes U+0300–036F) | different sets; the `tps_adjust` version backs the public `Method::IsTpsToneMark` op — unification changes a public op |
+| `derive_poj_notone_for_match` → `poj_num_syllable_ends_from_tl` | replace only with a parity proof over every dictionary row (`tests/poj_notone_parity.rs`-style byte-equality) |
+| Byte-identical `*.pb.swift` macOS ↔ iOS | build-graph change in `.xcodeproj` / `Package.swift` — user-only config (CLAUDE.md Core Principle #1) |
+| Settings-key table ×2 (`SettingsStore.swift` ↔ `keys.rs`) | needs a generator = new tooling |
+| Engine `WalkerSlot0` ↔ `RawCandidate` mirror, `bounded` fetch trio, `prefix_index.rs` four lookups, `SyllableReach` / `KeyFace` | each source doc explains a deliberate divergence (sign bridge D3, cap ordering, `INVARIANT_LEX_LOOKUP_ROWIDS_ORDER`) |
+
+---
+
+## Cross-references
+
+- Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
+- Per-platform criteria + exclusions: `.claude/rules/ios-shared-core-candidates.md` §1, `.claude/rules/android-guidelines.md` §1.
+- Data-artifact portability (`dictionary.fst` / `.bin` / SQLite user data): `docs/architecture/data-artifacts-portability.md`.
