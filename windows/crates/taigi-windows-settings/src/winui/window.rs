@@ -11,7 +11,6 @@
 //! until `NavigationView` compacts its pane.
 
 use crate::presentation;
-use crate::settings_writer::{SettingsWriter, BUSY_REFRESH_INTERVAL, IDLE_REFRESH_INTERVAL};
 use crate::updates::{UpdateState, INSTALLED_VERSION};
 use crate::winui::cards;
 use crate::winui::pages;
@@ -30,7 +29,7 @@ use taigi_desktop_core::settings::{
     keys, AppearanceMode, SettingChoice, SettingsDocument, SettingsKey, SettingsPane,
 };
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
-use taigi_desktop_storage::LiveSettings;
+use taigi_desktop_storage::{LiveSettings, SettingsWriter, IDLE_REFRESH_INTERVAL};
 use taigi_desktop_update::checker;
 use taigi_windows_platform::keyboard_hook::{Delivery, KeyboardHook};
 use windows_reactor::*;
@@ -86,6 +85,12 @@ const MINIMUM_HEIGHT: f64 = 470.0;
 const TITLE_FONT_SIZE: f64 = 28.0;
 /// Space between a pane's content and the window's edge.
 const FORM_INSET: f64 = 24.0;
+/// While a check or a download is in flight the answer is wanted sooner
+/// than the idle beat.
+const BUSY_REFRESH_INTERVAL: Duration = Duration::from_millis(100);
+/// What the banner says when there is no `%APPDATA%`: the missing
+/// variable's name is the whole diagnosis.
+const READ_ONLY_DETAIL: &str = "APPDATA";
 
 /// What the window is launched with. `Rc` because a component's input must
 /// be `Clone + PartialEq` and none of this is either; the root input never
@@ -289,7 +294,7 @@ impl SettingsWindow {
     }
 
     pub fn strings(&self) -> StringResolver {
-        self.settings.strings()
+        presentation::strings_for(self.settings.document())
     }
 
     pub fn updates(&self) -> &UpdateState {
@@ -521,14 +526,24 @@ impl Component for SettingsWindow {
     fn create(input: &Self::Input, context: &ComponentContext<Self>) -> Self {
         let launch = Rc::clone(&input.0);
         // A pane this build has no page for opens on General IN MEMORY and is
-        // NOT written back: the egui window still has that pane, and a
-        // preview launch must not move its stored selection.
+        // NOT written back: the stored selection stays what the user (or
+        // another build) chose.
         let listed = page_view(launch.pane).is_some();
         if !listed {
             log::info!("winui.pane_unsupported pane={}", launch.pane.raw());
         }
+        // No per-user directory: the window still follows the file `live`
+        // was opened over but refuses every write, saying so from the first
+        // frame — never a write to a file the DLL would not read (roadmap
+        // W2's unsupported-capability rule).
+        let live = Rc::clone(&launch.live);
+        let settings = if launch.is_read_only {
+            SettingsWriter::read_only_over(live, READ_ONLY_DETAIL)
+        } else {
+            SettingsWriter::new(live)
+        };
         let mut window = Self {
-            settings: SettingsWriter::new(Rc::clone(&launch.live), launch.is_read_only),
+            settings,
             pane: if listed {
                 launch.pane
             } else {

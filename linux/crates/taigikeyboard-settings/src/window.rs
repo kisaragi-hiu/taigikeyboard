@@ -9,8 +9,8 @@
 //! not persisted; the Appearance mode is a combo row.
 
 use crate::pages::{self, Page};
+use crate::presentation::strings_for;
 use crate::recorder::{Recorded, Recorder, RecorderTarget};
-use crate::writer::{SettingsWriter, REFRESH_INTERVAL};
 use crate::SIDEBAR;
 use adw::prelude::*;
 use gtk::glib::translate::IntoGlib;
@@ -21,6 +21,7 @@ use taigi_desktop_core::keys::{ChordRejection, RecordedPress};
 use taigi_desktop_core::settings::presentation::{pane_title, PageMessage};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsDocument, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
+use taigi_desktop_storage::{SettingsWriter, IDLE_REFRESH_INTERVAL};
 use taigi_linux_platform::{snapshot, RawKeyEvent};
 
 /// `SettingsPaneLayout` in `SettingsSplitView.swift`: sidebar 215 + detail 545.
@@ -95,7 +96,7 @@ impl SettingsWindow {
         content_view.add_top_bar(&adw::HeaderBar::new());
         content_view.set_content(Some(&toasts));
 
-        let sidebar_title = crate::presentation::strings_for(writer.document())
+        let sidebar_title = strings_for(writer.document())
             .resolve(StringKey::HomeAppHeaderTitle)
             .to_owned();
         let content_page = adw::NavigationPage::new(&content_view, "");
@@ -149,7 +150,7 @@ impl SettingsWindow {
         });
         // The live-reload beat, for as long as the window lives.
         let weak = Rc::downgrade(&shell);
-        glib::timeout_add_local(REFRESH_INTERVAL, move || match weak.upgrade() {
+        glib::timeout_add_local(IDLE_REFRESH_INTERVAL, move || match weak.upgrade() {
             Some(shell) => {
                 shell.tick();
                 glib::ControlFlow::Continue
@@ -161,6 +162,11 @@ impl SettingsWindow {
 
     pub fn writer(&self) -> &RefCell<SettingsWriter> {
         &self.writer
+    }
+
+    /// The resolver for the document as it now stands.
+    fn strings(&self) -> StringResolver {
+        strings_for(self.writer.borrow().document())
     }
 
     pub fn job_slot(&self) -> &JobSlot {
@@ -341,7 +347,7 @@ impl SettingsWindow {
                 if let Err(error) = result {
                     log::error!("url.open_failed url={url} error={error}");
                     if let Some(shell) = weak.upgrade() {
-                        let strings = shell.writer.borrow().strings();
+                        let strings = shell.strings();
                         shell.banner.set_title(&format!(
                             "{} — {url}",
                             strings.resolve(StringKey::DesktopOpenURLFailed)
@@ -373,7 +379,7 @@ impl SettingsWindow {
             None => self.sidebar.select_row(None::<&gtk::ListBoxRow>),
         }
         self.is_selecting.set(false);
-        let strings = self.writer.borrow().strings();
+        let strings = self.strings();
         let title = pane_title(&strings, pane);
         self.content_page.set_title(&title);
         self.window.set_title(Some(&title));
@@ -391,7 +397,7 @@ impl SettingsWindow {
         }
         let (strings, document) = {
             let writer = self.writer.borrow();
-            (writer.strings(), writer.document().clone())
+            (strings_for(writer.document()), writer.document().clone())
         };
         for pane in SIDEBAR {
             let row = adw::ActionRow::builder()
@@ -431,7 +437,7 @@ impl SettingsWindow {
     /// The banner, from the document.
     fn apply_chrome(&self) {
         let writer = self.writer.borrow();
-        let strings = writer.strings();
+        let strings = strings_for(writer.document());
         // One banner: the settings file first (nothing writes), else the
         // user data (the pages over it show only their switch).
         let notice = match (writer.write_failure(), &self.data_failure) {

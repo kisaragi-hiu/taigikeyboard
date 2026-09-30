@@ -20,11 +20,10 @@ use taigi_desktop_core::keys::{
 };
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
-use taigi_desktop_storage::SettingsFileStore;
+use taigi_desktop_storage::{LiveSettings, SettingsFileStore, SettingsWriter};
 use taigikeyboard_settings::pages::BUILT;
 use taigikeyboard_settings::recorder::RecorderTarget;
 use taigikeyboard_settings::window::SettingsWindow;
-use taigikeyboard_settings::writer::SettingsWriter;
 use taigikeyboard_settings::SIDEBAR;
 
 fn main() -> ExitCode {
@@ -55,7 +54,8 @@ fn main() -> ExitCode {
         user_data::open(directory.path()),
         "the engine opens its stores"
     );
-    let window = SettingsWindow::build(&application, SettingsWriter::new(store.clone()), None);
+    let writer = SettingsWriter::new(Rc::new(LiveSettings::new(store.clone())));
+    let window = SettingsWindow::build(&application, writer, None);
 
     every_built_pane_is_in_the_stack(&window);
     a_switch_row_writes_its_key(&window);
@@ -294,7 +294,8 @@ fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>)
     user_data::save_custom_entry("", "tsia̍h-pn̄g", "食飯").expect("save");
     user_data::save_custom_entry("", "lim-tê", "啉茶").expect("save");
     let document = window.writer().borrow().document().clone();
-    let strings = window.writer().borrow().strings();
+    let strings =
+        taigikeyboard_settings::presentation::strings_for(window.writer().borrow().document());
     let page = taigikeyboard_settings::pages::build(
         SettingsPane::CustomDictionary,
         window,

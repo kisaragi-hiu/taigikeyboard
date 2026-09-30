@@ -4,18 +4,18 @@
 //! install the pending row drives. The decisions are the update crate's;
 //! this runs them on a thread and reads the answer when the window looks.
 //!
-//! Written once for both windows: everything here takes the shared
-//! `SettingsWriter` and answers with a `PageMessage` when there is
-//! something for the window to say, so no toolkit reaches in here.
+//! Everything here takes the shared `SettingsWriter` and answers with a
+//! `PageMessage` when there is something for the window to say, so no
+//! toolkit reaches in here.
 
 use crate::presentation;
-use crate::settings_writer::SettingsWriter;
 use crate::work::PendingWork;
 use std::path::PathBuf;
 use std::sync::Arc;
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::update_schedule;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
+use taigi_desktop_storage::SettingsWriter;
 use taigi_desktop_update::{checker, HttpTransport, ManualOutcome, Outcome, UpdateManifest};
 use taigi_windows_update::{toast, Admission, UpdateInstallation, PUBLISHED_URL};
 
@@ -211,7 +211,7 @@ pub fn announce(settings: &mut SettingsWriter, manifest: &UpdateManifest) {
     let mut claimed = false;
     settings.update(|document| claimed = checker::claim_announcement(document, &version));
     if claimed {
-        let strings = settings.strings();
+        let strings = presentation::strings_for(settings.document());
         post_toast(&strings, manifest);
     }
 }
@@ -233,13 +233,11 @@ pub fn open_download_page(manifest: &UpdateManifest) -> Option<PageMessage> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::rc::Rc;
     use taigi_desktop_storage::{LiveSettings, SettingsFileStore};
 
-    fn writer(directory: &std::path::Path) -> SettingsWriter {
-        SettingsWriter::new(
-            std::rc::Rc::new(LiveSettings::new(SettingsFileStore::new(directory))),
-            false,
-        )
+    fn live(directory: &std::path::Path) -> Rc<LiveSettings> {
+        Rc::new(LiveSettings::new(SettingsFileStore::new(directory)))
     }
 
     fn manifest() -> UpdateManifest {
@@ -256,7 +254,7 @@ mod tests {
         // a second call for the same version finds it recorded and answers
         // false, so the toast is posted once however often the check runs.
         let directory = tempfile::tempdir().expect("a temporary settings directory");
-        let mut settings = writer(directory.path());
+        let mut settings = SettingsWriter::new(live(directory.path()));
         announce(&mut settings, &manifest());
         let after_first = settings.document().clone();
         announce(&mut settings, &manifest());
@@ -273,13 +271,11 @@ mod tests {
 
     #[test]
     fn a_read_only_window_refuses_the_write_and_keeps_saying_why() {
-        // trace: no `%APPDATA%` ⇒ the window opens on the defaults with the
-        // banner already up, and a check's stamp must not clear it.
+        // trace: no `%APPDATA%` ⇒ the window opens over the temp folder (here
+        // empty, so the defaults) with the banner already up, and a check's
+        // stamp must not clear it.
         let directory = tempfile::tempdir().expect("a temporary settings directory");
-        let mut settings = SettingsWriter::new(
-            std::rc::Rc::new(LiveSettings::new(SettingsFileStore::new(directory.path()))),
-            true,
-        );
+        let mut settings = SettingsWriter::read_only_over(live(directory.path()), "APPDATA");
         let before = settings.document().clone();
         announce(&mut settings, &manifest());
         assert_eq!(settings.document(), &before, "nothing was written");

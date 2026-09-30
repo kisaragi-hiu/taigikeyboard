@@ -8,7 +8,7 @@ pub mod presentation;
 pub mod recorder;
 pub mod user_data;
 pub mod window;
-pub mod writer;
+mod writer;
 
 use adw::prelude::*;
 use std::cell::RefCell;
@@ -54,7 +54,7 @@ pub fn run() -> gtk::glib::ExitCode {
                 // The window's own icon: the hicolor `taigikeyboard`, not one
                 // named after the application id (which is not installed).
                 gtk::Window::set_default_icon_name("taigikeyboard");
-                let writer = writer::SettingsWriter::at_launch();
+                let writer = writer::at_launch();
                 // The engine's user data follows the settings: no user
                 // directory, no learning data either (the banner says so).
                 let data_failure = if writer.is_read_only() {

@@ -1,7 +1,8 @@
 //! What the desktop input methods keep on disk beyond the engine's user-data
-//! stores: `settings.json`, the user's copied-in fonts, and the directory
-//! each desktop platform hands in (`%APPDATA%\TaigiKeyboard` on Windows, the
-//! XDG config / data directories on Linux).
+//! stores: `settings.json` (and the settings windows' writer over it), the
+//! user's copied-in fonts, and the directory each desktop platform hands in
+//! (`%APPDATA%\TaigiKeyboard` on Windows, the XDG config / data directories
+//! on Linux).
 //!
 //! The learning databases and the custom dictionary are the engine's
 //! (`engine/userdata`, `docs/architecture/user-data-engine-roadmap.md`); the
@@ -14,6 +15,7 @@
 mod directory;
 mod font_library;
 mod settings_file;
+mod settings_writer;
 
 pub use directory::{created, user_data_directory, DirectoryError, APPLICATION_FOLDER_NAME};
 pub use font_library::{
@@ -21,3 +23,4 @@ pub use font_library::{
     ALLOWED_EXTENSIONS, FONTS_FOLDER_NAME, MAX_FILE_SIZE,
 };
 pub use settings_file::{LiveSettings, SettingsFileError, SettingsFileStore};
+pub use settings_writer::{SettingsWriter, IDLE_REFRESH_INTERVAL};
