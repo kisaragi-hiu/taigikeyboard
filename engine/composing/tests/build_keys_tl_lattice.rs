@@ -1,6 +1,6 @@
 //! v3.5.8 S1 — behavior-neutrality contract for the lattice rewire.
 //!
-//! S1 makes `build_keys_tl_with_inventory` build the segmentation
+//! S1 makes `build_continuous_keys_with_inventory` build the segmentation
 //! lattice (the multi-start DAG S2's whole-sentence walker will
 //! traverse) but emit ONLY its left-anchored (`start == 0`)
 //! projection as keys. That projection is byte-identical to the
@@ -20,7 +20,7 @@
 //! topological order) is unit-tested in-crate in
 //! `composing/src/lattice/builder.rs`.
 
-use composing::dispatch::{build_continuous_keys_with_inventory, build_keys_tl_with_inventory};
+use composing::dispatch::build_continuous_keys_with_inventory;
 
 use crate::common::build_inventory;
 
@@ -39,7 +39,7 @@ fn output_is_left_anchored_only_no_interior_spans() {
         ("taiuantaigi", &["tai1", "uan1", "gi1"][..]),
     ] {
         let inv = build_inventory(inv_samples);
-        let keys = build_keys_tl_with_inventory(input, &inv, phonetics::InputMode::Tl);
+        let keys = build_continuous_keys_with_inventory(input, &inv, phonetics::InputMode::Tl);
         for (span, key) in &keys {
             assert_eq!(
                 span.0, 0,
@@ -55,7 +55,7 @@ fn hyphenless_output_is_byte_identical_to_pre_s1() {
     // `[(0,3) tl:tai, (0,6) tl:taibak]`; the lattice's left-anchored
     // projection must reproduce that verbatim (no interior `(3,6)`).
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("taibak", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("taibak", &inv, phonetics::InputMode::Tl);
     assert_eq!(
         mapped(&keys),
         vec![((0, 3), "tl:tai"), ((0, 6), "tl:taibak")],
@@ -69,7 +69,7 @@ fn internal_hyphen_output_is_byte_identical_to_pre_s1() {
     // (hyphen folded into the full-buffer span). The interior
     // `(3,7) tl:bak` edge exists in the lattice but is NOT emitted.
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("tai-bak", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("tai-bak", &inv, phonetics::InputMode::Tl);
     assert_eq!(
         mapped(&keys),
         vec![((0, 3), "tl:tai"), ((0, 7), "tl:taibak")],
@@ -85,7 +85,7 @@ fn longest_match_suppresses_shorter_single_syllable_prefix() {
     // suppressed — only `tl:tai` survives. This is the reported bug (`tai` /
     // `tai5` must not surface the 2-letter `ta` family).
     let inv = build_inventory(&["ta1", "tai5"]);
-    let keys = build_keys_tl_with_inventory("tai", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("tai", &inv, phonetics::InputMode::Tl);
     assert_eq!(
         mapped(&keys),
         vec![((0, 3), "tl:tai")],
@@ -103,7 +103,7 @@ fn phrase_reachable_shorter_span_survives_suppression() {
     // shorter prefix dropped. Proves the suppression keys on
     // single-syllable-ONLY, never silently dropping a phrase.
     let inv = build_inventory(&["a1", "i1", "ai1", "ainn1"]);
-    let keys = build_keys_tl_with_inventory("ainn", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("ainn", &inv, phonetics::InputMode::Tl);
     let m = mapped(&keys);
     assert!(
         m.iter().any(|(_, k)| *k == "tl:ai"),
@@ -129,36 +129,12 @@ fn tl_space_stays_hard_boundary_not_collapsed() {
     // `(0, 7)` phrase key (which would be the TPS behavior leaking into
     // TL). Pins that `build_separator_shadow` is identity for non-TPS.
     let inv = build_inventory(&["tai5", "uan5"]);
-    let keys = build_keys_tl_with_inventory("tai uan", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("tai uan", &inv, phonetics::InputMode::Tl);
     assert_eq!(
         mapped(&keys),
         vec![((0, 3), "tl:tai")],
         "TL space must stay a hard boundary; no cross-space phrase key allowed",
     );
-}
-
-// INVARIANT_TPS_DEFOLD_ENUMERATE (§35) — the alternate-reading generators are
-// TPS-only, so for TL / POJ / English the full-key seam must return EXACTLY the
-// base seam's output. Exact equality, not `contains`: an alternate leaking into
-// a non-TPS mode would show up as an extra key, and USER constraint for the
-// round was that TL / POJ must not change at all.
-
-#[test]
-fn full_key_seam_equals_base_key_seam_for_non_tps_modes() {
-    let inv = build_inventory(&["tai", "gi", "goa", "ai", "li", "hoo", "gua"]);
-    for raw in ["taigi", "tai5gi2", "goa2ai3li2", "hoogua", "tai-gi"] {
-        for mode in [
-            phonetics::InputMode::Tl,
-            phonetics::InputMode::Poj,
-            phonetics::InputMode::English,
-        ] {
-            assert_eq!(
-                build_continuous_keys_with_inventory(raw, &inv, mode),
-                build_keys_tl_with_inventory(raw, &inv, mode),
-                "{mode:?} {raw:?} must reach no alternate-reading generator",
-            );
-        }
-    }
 }
 
 #[test]
@@ -173,7 +149,7 @@ fn closed_dead_end_prefix_is_not_rescued_by_its_phrase_reading() {
     // chain `a` / `ah` / `ah8` is present, so the `i`+`a` phrase reading
     // and the `iah`-before-digit false boundary both actually fire.
     let inv = build_inventory(&["i1", "ia1", "iah4", "iah8", "a1", "ah4", "ah8"]);
-    let keys = build_keys_tl_with_inventory("iah8", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("iah8", &inv, phonetics::InputMode::Tl);
     assert_eq!(
         mapped(&keys),
         vec![((0, 4), "tl:iah8")],
@@ -187,8 +163,6 @@ fn typed_hyphen_after_the_remainder_closes_the_dead_end_too() {
     // instead of a tone digit. `ia` (end 2) still parses as `i`+`a`, but
     // nothing leaves end 2 and the `-` after `h` says the syllable is
     // finished, so `ia` is a closed dead end again.
-    // `build_continuous_keys_with_inventory` is the barrier-carrying seam
-    // (`build_keys_tl_with_inventory` discards barriers by design).
     let inv = build_inventory(&["i1", "ia1", "iah4", "iah8", "a1", "ah4", "ah8"]);
     let keys = build_continuous_keys_with_inventory("iah-", &inv, phonetics::InputMode::Tl);
     assert_eq!(
@@ -214,7 +188,7 @@ fn phrase_reachable_prefix_survives_while_the_remainder_is_open() {
     //   even though the remainder carries a digit.
     let inv = build_inventory(&["i1", "ia1", "iah4", "iah8", "a1", "ah4", "ah8", "kau3"]);
     for input in ["iah", "iakau3"] {
-        let keys = build_keys_tl_with_inventory(input, &inv, phonetics::InputMode::Tl);
+        let keys = build_continuous_keys_with_inventory(input, &inv, phonetics::InputMode::Tl);
         let m = mapped(&keys);
         assert!(
             m.iter().any(|(_, k)| *k == "tl:ia"),

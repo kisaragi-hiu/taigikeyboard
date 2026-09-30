@@ -1,9 +1,9 @@
 //! v3.5.9 D / C-3b — TPS continuous first-class behaviour pin.
 //!
 //! Mirror of `build_keys_tl_lattice.rs` for the TPS family. Confirms
-//! `build_keys_tl_with_inventory` (despite its legacy name, the
-//! production seam test wrapper for the shared `build_shadow_lattice_with_barriers`
-//! and `left_anchored_keys_and_restrictions` path) emits
+//! `build_continuous_keys_with_inventory` (the test seam over the shared
+//! `build_shadow_lattice_with_barriers` + `left_anchored_keys_and_restrictions`
+//! path production runs) emits
 //! `tps:<bopomofo_toneless>` keys against a `tps:`-tagged hermetic
 //! inventory when called with `InputMode::Tps`.
 //!
@@ -20,7 +20,7 @@
 //! 3. `mode_key_prefix(Tps)` emits the `tps:` family prefix matching
 //!    the `tps_notone` axis of the build pipeline.
 
-use composing::dispatch::{build_continuous_keys_with_inventory, build_keys_tl_with_inventory};
+use composing::dispatch::build_continuous_keys_with_inventory;
 use lexicon::SyllableInventory;
 
 use crate::common::inventory_from_keys;
@@ -43,7 +43,7 @@ fn tps_lattice_emits_tps_prefix_for_tone_marked_input() {
         "ㄉㄞ", "ㄉㄞˋ", // tone-2 / toneless ㄉㄞ
         "ㆣㄧ", "ㆣㄧˊ", // tone-5 / toneless ㆣㄧ
     ]);
-    let keys = build_keys_tl_with_inventory(
+    let keys = build_continuous_keys_with_inventory(
         "\u{3109}\u{311e}\u{02cb}\u{31a3}\u{3127}\u{02ca}",
         &inv,
         phonetics::InputMode::Tps,
@@ -71,7 +71,7 @@ fn tps_lattice_tone1_no_mark_emits_key() {
     // `ㄉㄞㆣㄧ` (3+3+3+3) both hit, so the left-anchored projection
     // emits the atomic and phrase keys.
     let inv = build_tps_inventory(&["ㄉㄞ", "ㆣㄧ"]);
-    let keys = build_keys_tl_with_inventory(
+    let keys = build_continuous_keys_with_inventory(
         "\u{3109}\u{311e}\u{31a3}\u{3127}",
         &inv,
         phonetics::InputMode::Tps,
@@ -100,7 +100,7 @@ fn tps_lattice_spans_tone1_separator_space_into_phrase_key() {
     let inv = build_tps_inventory(&["\u{310d}\u{3120}", "\u{3109}\u{311e}"]);
     let raw = "\u{310d}\u{3120}\u{0020}\u{3109}\u{311e}";
     assert_eq!(raw.len(), 13, "raw byte length precondition");
-    let keys = build_keys_tl_with_inventory(raw, &inv, phonetics::InputMode::Tps);
+    let keys = build_continuous_keys_with_inventory(raw, &inv, phonetics::InputMode::Tps);
 
     // First-syllable key — span ends at raw 6 (before the space), space
     // left pending for a mid-commit.
@@ -132,7 +132,7 @@ fn tps_lattice_inventory_gate_rejects_unknown_syllable() {
     // inventory so the lattice walker rejects it. Only the first
     // (`(0, 6) tps:ㄉㄞ`) edge survives; no phrase key emitted.
     let inv = build_tps_inventory(&["ㄉㄞ"]);
-    let keys = build_keys_tl_with_inventory(
+    let keys = build_continuous_keys_with_inventory(
         "\u{3109}\u{311e}\u{31a3}\u{3127}",
         &inv,
         phonetics::InputMode::Tps,
@@ -149,7 +149,7 @@ fn tps_lattice_inventory_gate_rejects_unknown_syllable() {
 #[test]
 fn tps_lattice_empty_input_yields_no_keys() {
     let inv = build_tps_inventory(&["ㄉㄞ"]);
-    let keys = build_keys_tl_with_inventory("", &inv, phonetics::InputMode::Tps);
+    let keys = build_continuous_keys_with_inventory("", &inv, phonetics::InputMode::Tps);
     assert!(keys.is_empty(), "{keys:?}");
 }
 
@@ -171,7 +171,7 @@ fn tps_lattice_caps_at_max_syllables_via_lattice_bfs() {
     const MAX_SYLLABLES: usize = 8;
     let inv = build_tps_inventory(&["ㄉㄞ"]);
     let raw = "\u{3109}\u{311e}".repeat(MAX_SYLLABLES + 1);
-    let keys = build_keys_tl_with_inventory(&raw, &inv, phonetics::InputMode::Tps);
+    let keys = build_continuous_keys_with_inventory(&raw, &inv, phonetics::InputMode::Tps);
     // Left-anchored phrase endings emitted by the BFS up to depth N.
     // The largest end must NOT exceed MAX_SYLLABLES * syllable_bytes.
     let max_end = keys

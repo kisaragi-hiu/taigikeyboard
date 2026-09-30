@@ -8,7 +8,7 @@
 //! spelling-fold cases below are now LITERAL-behavior guards (they assert
 //! the fold does NOT fire); the encoding cases are unchanged.
 //!
-//! Pins `build_keys_tl_with_inventory` against a hermetic
+//! Pins `build_continuous_keys_with_inventory` against a hermetic
 //! `SyllableInventory` for the shapes Codex's pre-impl + post-impl
 //! consults (2026-05-15) called out as the user-visible coverage gap
 //! and the offset-map atomic-fold regression hot-spot:
@@ -43,7 +43,7 @@
 // Phase 9 Item 9 — POJ-display canonicalize + offset map end-to-end test.
 // Nine cases: NFC 白話字 / NFD canary / chóa / peⁿ / so͘ / so͘+soo siblings / tâi-ōe / mixed combining+digit / ASCII regression / ASCII-only guard.
 
-use composing::dispatch::build_keys_tl_with_inventory;
+use composing::dispatch::build_continuous_keys_with_inventory;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::common::{build_inventory, build_poj_inventory};
@@ -58,7 +58,7 @@ fn nfc_peh_oe_ji_tl_literal_no_oe_ue_recovery() {
     // consuming the whole `pe̍h` (5 bytes, dropped `\u{030d}` folds into
     // the preceding `e`'s raw_end so commit leaves no dangling mark).
     let inv = build_inventory(&["peh8", "ue7", "ji7"]);
-    let keys = build_keys_tl_with_inventory(
+    let keys = build_continuous_keys_with_inventory(
         "pe\u{030d}h-\u{014d}e-j\u{012b}",
         &inv,
         phonetics::InputMode::Tl,
@@ -88,7 +88,7 @@ fn nfd_peh_oe_ji_tl_literal_matches_nfc_canary() {
     let nfd: String = nfc.nfd().collect();
     assert!(nfd.len() > nfc.len(), "NFD canary assumption violated");
     let inv = build_inventory(&["peh8", "ue7", "ji7"]);
-    let keys = build_keys_tl_with_inventory(&nfd, &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory(&nfd, &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         !key_strs.contains(&"tl:pehueji"),
@@ -112,7 +112,7 @@ fn tl_literal_choa_does_not_fold_to_tsua() {
     // shape, `ch` is not a TL initial) never matches the TL `tsua`
     // inventory. The pre-2026-06-05 `tl:tsua` recovery is gone.
     let inv = build_inventory(&["tsua7"]);
-    let keys = build_keys_tl_with_inventory("ch\u{00f3}a", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("ch\u{00f3}a", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         !key_strs.contains(&"tl:tsua"),
@@ -126,7 +126,7 @@ fn poj_superscript_nasal_marker_becomes_nn() {
     // Phase 2 `\u{207f}→nn` → `penn` → matches dict canonical for
     // 平 (`pee` + nasal) etc.
     let inv = build_inventory(&["penn1"]);
-    let keys = build_keys_tl_with_inventory("pe\u{207f}", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("pe\u{207f}", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:penn"),
@@ -147,7 +147,7 @@ fn poj_o_with_dot_above_right_becomes_oo() {
     // `so\u{0358}` (4 bytes) → Phase 1 keeps `\u{0358}` → Phase 2
     // `o\u{0358}→oo` → `soo` → matches dict canonical for 數 etc.
     let inv = build_inventory(&["soo3"]);
-    let keys = build_keys_tl_with_inventory("so\u{0358}", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("so\u{0358}", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:soo"),
@@ -171,7 +171,7 @@ fn poj_o_dot_atomic_longest_match_suppresses_shorter_so() {
     // longer surfaces at all, so there is no shorter candidate to strand the
     // mark. `tl:soo` still consumes the whole `so\u{0358}` source (raw_end=4).
     let inv = build_inventory(&["soo3", "so7"]);
-    let keys = build_keys_tl_with_inventory("so\u{0358}", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("so\u{0358}", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -200,7 +200,11 @@ fn mixed_combining_with_hyphen_tl_literal_no_oe_fold() {
     // TL-literal (2026-06-05) does NOT fold `oe→ue`, so the POJ `ōe` does
     // not match the TL `ue` inventory and the fused `tl:taiue` is absent.
     let inv = build_inventory(&["tai5", "ue7"]);
-    let keys = build_keys_tl_with_inventory("t\u{00e2}i-\u{014d}e", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory(
+        "t\u{00e2}i-\u{014d}e",
+        &inv,
+        phonetics::InputMode::Tl,
+    );
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:tai"),
@@ -223,7 +227,8 @@ fn dual_marker_combining_and_trailing_digit_canonicalizes() {
     // pre-fix). The single-syllable prefix span keeps its tone too:
     // `tl:tai5`.
     let inv = build_inventory(&["tai5", "ban3"]);
-    let keys = build_keys_tl_with_inventory("t\u{00e2}i5-ban3", &inv, phonetics::InputMode::Tl);
+    let keys =
+        build_continuous_keys_with_inventory("t\u{00e2}i5-ban3", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"tl:tai5ban3"),
@@ -245,7 +250,7 @@ fn pure_ascii_input_takes_identity_fast_path() {
     // real dictionary entries. (POJ mode deliberately DOES run the
     // chain on ASCII — see `poj_mode_ascii_*` tests below.)
     let inv = build_inventory(&["tai5", "bak4"]);
-    let keys = build_keys_tl_with_inventory("taibak", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("taibak", &inv, phonetics::InputMode::Tl);
     let mapped: Vec<((u32, u32), &str)> = keys
         .iter()
         .map(|(span, key)| (*span, key.as_str()))
@@ -269,7 +274,7 @@ fn ascii_only_poj_spellings_skip_canonicalize() {
     // ASCII in TL mode. (POJ mode is the opposite — see
     // `poj_mode_ascii_oe_substitution_fires`.)
     let inv = build_inventory(&["ue7", "ji7"]);
-    let keys = build_keys_tl_with_inventory("oe-ji", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("oe-ji", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         !key_strs.iter().any(|k| k.contains("ue")),
@@ -294,7 +299,7 @@ fn poj_mode_ascii_chiah_emits_poj_family() {
     // to `tl:tsiah`; B-2 makes POJ first-class so `chiah` stays
     // `poj:chiah`.
     let inv = build_poj_inventory(&["chiah8"]);
-    let keys = build_keys_tl_with_inventory("chiah", &inv, phonetics::InputMode::Poj);
+    let keys = build_continuous_keys_with_inventory("chiah", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"poj:chiah"),
@@ -311,7 +316,7 @@ fn poj_mode_ascii_chhia_emits_poj_family() {
     // v3.5.9 B-2 — 車 — POJ `chhia`. `chh→tsh` chain rule belongs to
     // NORMALIZE_TO_TL_RULES (TL fold), not POJ — POJ keeps POJ shape.
     let inv = build_poj_inventory(&["chhia1"]);
-    let keys = build_keys_tl_with_inventory("chhia", &inv, phonetics::InputMode::Poj);
+    let keys = build_continuous_keys_with_inventory("chhia", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"poj:chhia"),
@@ -323,7 +328,7 @@ fn poj_mode_ascii_chhia_emits_poj_family() {
 fn poj_mode_ascii_goa_emits_poj_family() {
     // v3.5.9 B-2 — 我 — POJ `góa`. `oa→ua` is TL-only; POJ keeps `goa`.
     let inv = build_poj_inventory(&["goa2"]);
-    let keys = build_keys_tl_with_inventory("goa", &inv, phonetics::InputMode::Poj);
+    let keys = build_continuous_keys_with_inventory("goa", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.contains(&"poj:goa"),
@@ -337,7 +342,7 @@ fn poj_mode_ascii_oe_no_tl_chain_fold() {
     // mode keeps `oe-ji` → `oeji` (hyphen-shadow strips `-`; POJ rule
     // list is encoding-only and does NOT fold `oe → ue`).
     let inv = build_poj_inventory(&["oe7", "ji7"]);
-    let keys = build_keys_tl_with_inventory("oe-ji", &inv, phonetics::InputMode::Poj);
+    let keys = build_continuous_keys_with_inventory("oe-ji", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.iter().any(|k| k.contains("poj:oe")),
@@ -359,7 +364,7 @@ fn poj_mode_ascii_toui_preserves_token_boundary() {
     // candidate dropped. Post-fix the shadow stays `toui` and the
     // lattice emits the `poj:toui` full-span phrase key.
     let inv = build_poj_inventory(&["to2", "ui7"]);
-    let keys = build_keys_tl_with_inventory("toui", &inv, phonetics::InputMode::Poj);
+    let keys = build_continuous_keys_with_inventory("toui", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.iter().any(|k| k == &"poj:toui"),
@@ -381,7 +386,8 @@ fn poj_mode_non_ascii_toui_preserves_token_boundary() {
     // glyph-only rule subset so `ou→oo` does NOT fire whole-buffer.
     // Shadow stays `toui`, lattice emits `poj:toui` phrase key.
     let inv = build_poj_inventory(&["to2", "ui7"]);
-    let keys = build_keys_tl_with_inventory("t\u{f3}u\u{12b}", &inv, phonetics::InputMode::Poj);
+    let keys =
+        build_continuous_keys_with_inventory("t\u{f3}u\u{12b}", &inv, phonetics::InputMode::Poj);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         key_strs.iter().any(|k| k == &"poj:toui"),
@@ -400,7 +406,7 @@ fn tl_mode_ascii_chiah_stays_identity() {
     // `tl:chiah` (no `tl:tsiah`), so a real TL entry whose toneless
     // form legitimately contains `ch`/`oa`/`oe`/`ou` is never garbled.
     let inv = build_inventory(&["tsiah8"]);
-    let keys = build_keys_tl_with_inventory("chiah", &inv, phonetics::InputMode::Tl);
+    let keys = build_continuous_keys_with_inventory("chiah", &inv, phonetics::InputMode::Tl);
     let key_strs: Vec<&str> = keys.iter().map(|(_, k)| k.as_str()).collect();
     assert!(
         !key_strs.contains(&"tl:tsiah"),
@@ -434,7 +440,7 @@ fn config_input_mode_string_drives_mode_through_key_construction() {
         "config `input_mode=\"poj\"` must parse to InputMode::Poj"
     );
     let poj_inv = build_poj_inventory(&["chiah8"]);
-    let poj_keys: Vec<String> = build_keys_tl_with_inventory("chiah", &poj_inv, poj_mode)
+    let poj_keys: Vec<String> = build_continuous_keys_with_inventory("chiah", &poj_inv, poj_mode)
         .into_iter()
         .map(|(_, k)| k)
         .collect();
@@ -449,7 +455,7 @@ fn config_input_mode_string_drives_mode_through_key_construction() {
         phonetics::InputMode::Tl,
         "config `input_mode=\"tl\"` must parse to InputMode::Tl"
     );
-    let tl_keys: Vec<String> = build_keys_tl_with_inventory("chiah", &inv, tl_mode)
+    let tl_keys: Vec<String> = build_continuous_keys_with_inventory("chiah", &inv, tl_mode)
         .into_iter()
         .map(|(_, k)| k)
         .collect();
