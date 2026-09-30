@@ -300,6 +300,7 @@ fn decode_commit_continuous_mid_commit() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            ..Default::default()
         })),
         &mut engine,
         &config_tl(),
@@ -344,6 +345,7 @@ fn decode_commit_continuous_final_commit_exits_to_idle() {
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
+            ..Default::default()
         })),
         &mut engine,
         &config_tl(),
@@ -446,6 +448,7 @@ fn commit_continuous_response_omits_continuous_carrier() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            ..Default::default()
         })),
         &mut engine,
         &config_tl(),

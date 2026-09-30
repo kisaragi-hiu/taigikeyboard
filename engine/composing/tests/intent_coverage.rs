@@ -397,6 +397,7 @@ fn nail(engine: &mut Engine, display_text: &str, consumed_bytes: usize) {
             hanji: None,
             consumed_bytes,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );

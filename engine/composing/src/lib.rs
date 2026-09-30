@@ -14,6 +14,7 @@ pub mod dispatch;
 pub mod handle;
 pub mod syllabifier;
 
+mod commit_text;
 mod continuous;
 mod derived;
 mod lattice;
@@ -22,7 +23,8 @@ pub mod telex;
 mod transition;
 
 pub use api::{
-    Applied, ComposingError, Engine, EngineState, Intent, NailedSegment, Phase, UserRows,
+    Applied, CommitRendering, CommitScript, ComposingError, Engine, EngineState, Intent,
+    NailedSegment, Phase, Usage, UserRows,
 };
 pub use handle::{EngineHandle, PendingSnapshot};
 

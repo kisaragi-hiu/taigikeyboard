@@ -246,6 +246,8 @@ pub fn commit_continuous(
             canonical_text: args.canonical_text.to_owned(),
             association_tl: args.association_tl.to_owned(),
             hanji: args.hanji.filter(|h| !h.is_empty()).map(str::to_owned),
+            // `script` UNSPECIFIED: the platform-resolved `display_text` above.
+            ..Default::default()
         }),
         "composingCommitContinuous",
         generation,

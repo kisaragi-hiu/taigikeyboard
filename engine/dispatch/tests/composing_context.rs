@@ -190,6 +190,7 @@ fn the_previous_word_reranks_the_candidates() {
             hanji: Some("真".to_owned()),
             consumed_bytes: 4,
             syllable_count: 1,
+            ..Default::default()
         }),
     );
     let nailed = fetched_hanji(generation);

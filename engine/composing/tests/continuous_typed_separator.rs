@@ -328,6 +328,7 @@ fn pick(engine: &mut Engine, cfg: &AppConfig, hanji: &str) -> ComposingResponse 
             hanji: c.hanji.clone(),
             consumed_bytes: c.consumed_span_end,
             syllable_count: c.syllable_count,
+            ..Default::default()
         })),
         engine,
         cfg,

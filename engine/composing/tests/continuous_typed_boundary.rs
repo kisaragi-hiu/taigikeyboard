@@ -236,6 +236,7 @@ fn boundary_holds_in_the_pending_buffer_after_a_pick() {
             hanji: jim.hanji.clone(),
             consumed_bytes: jim.consumed_span_end,
             syllable_count: jim.syllable_count,
+            ..Default::default()
         })),
         &mut engine,
         &cfg,

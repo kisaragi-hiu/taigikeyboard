@@ -176,4 +176,65 @@ public interface CommitContinuousOrBuilder extends
    */
   com.google.protobuf.ByteString
       getHanjiBytes();
+
+  /**
+   * <pre>
+   * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+   * every caller before R5) is the legacy path: `display_text` is written
+   * as sent and `ComposingResponse.commit` stays absent. Any other value
+   * makes the engine resolve the document text itself from `roman`, `hanji`
+   * and the request's `AppConfig` (`composing::commit_text`), ignore
+   * `display_text`, answer `ComposingResponse.commit`, and — with the
+   * user-data stores open — record the pick's usage itself (the platform
+   * then sends no `RecordUsage` for it). An empty `canonical_text` is
+   * IGNORED on this path (no fallback to the document text). TPS layouts
+   * stay on UNSPECIFIED until R5 PR-b: the resolver renders no TPS yet.
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitScript script = 7;</code>
+   * @return The enum numeric value on the wire for script.
+   */
+  int getScriptValue();
+  /**
+   * <pre>
+   * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+   * every caller before R5) is the legacy path: `display_text` is written
+   * as sent and `ComposingResponse.commit` stays absent. Any other value
+   * makes the engine resolve the document text itself from `roman`, `hanji`
+   * and the request's `AppConfig` (`composing::commit_text`), ignore
+   * `display_text`, answer `ComposingResponse.commit`, and — with the
+   * user-data stores open — record the pick's usage itself (the platform
+   * then sends no `RecordUsage` for it). An empty `canonical_text` is
+   * IGNORED on this path (no fallback to the document text). TPS layouts
+   * stay on UNSPECIFIED until R5 PR-b: the resolver renders no TPS yet.
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitScript script = 7;</code>
+   * @return The script.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CommitScript getScript();
+
+  /**
+   * <pre>
+   * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+   * rendered / recased / No Hyphens — the display romanization, never the
+   * canonical TL).
+   * </pre>
+   *
+   * <code>string roman = 8;</code>
+   * @return The roman.
+   */
+  java.lang.String getRoman();
+  /**
+   * <pre>
+   * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+   * rendered / recased / No Hyphens — the display romanization, never the
+   * canonical TL).
+   * </pre>
+   *
+   * <code>string roman = 8;</code>
+   * @return The bytes for roman.
+   */
+  com.google.protobuf.ByteString
+      getRomanBytes();
 }

@@ -1,0 +1,260 @@
+//! What an R5 `CommitContinuous` writes into the composition — the document
+//! text of one pick and whether it carries romanization — resolved by the
+//! engine from the pick's scripts and the request's output settings.
+//!
+//! One port of the four platform resolvers (behavioral-invariants §23 / §42):
+//! iOS `ActionHandler+Suggestions.swift` `formatOutputText` /
+//! `markedCellCommit`, Android `CandidateClickHandler.kt`
+//! `resolveUnmarkedCommit` / `resolveMarkedCellCommit`, desktop
+//! `taigi-desktop-core` `composing/document_text.rs` `resolved_commit` /
+//! `resolved_alternate` (macOS `CandidateDocumentText.swift`).
+//!
+//! TPS is not rendered here: the Bopomofo bracket romanization and the
+//! Hanji-less TPS commit land with R5 PR-b (an open USER decision).
+
+use protos::engine::{AppConfig, CandidateDisplayMode, CommitOutcome, CommitResolution};
+
+use crate::api::CommitScript;
+
+/// One pick's document text, and whether writing it puts romanization in
+/// the document — the verdict the auto-space gate reads (§23).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ResolvedCommit {
+    pub(crate) text: String,
+    pub(crate) wrote_romanization: bool,
+}
+
+impl ResolvedCommit {
+    fn romanization(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            wrote_romanization: true,
+        }
+    }
+
+    fn hanji(text: impl Into<String>) -> Self {
+        Self {
+            text: text.into(),
+            wrote_romanization: false,
+        }
+    }
+}
+
+/// The output settings a commit renders under, after the Candidate Display
+/// projections (§42): Romanization Only masks the lead and bracket flags (a
+/// §42 split cell, which that mode never shows, still commits its own script);
+/// Hanji with Romanization forces only the Hanji lead. The platforms already
+/// send the projected flags; applying them here too keeps the resolver right
+/// for any caller.
+struct OutputScripts {
+    hanji_leads: bool,
+    annotate_in_brackets: bool,
+    shows_hanji: bool,
+}
+
+impl OutputScripts {
+    fn of(config: &AppConfig) -> Self {
+        if config.is_roman_only_display() {
+            return Self {
+                hanji_leads: false,
+                annotate_in_brackets: false,
+                shows_hanji: false,
+            };
+        }
+        Self {
+            hanji_leads: renders_hanji_first(config),
+            annotate_in_brackets: config.output_both_scripts,
+            shows_hanji: true,
+        }
+    }
+}
+
+/// Whether a commit leads with the Hanji: the swap, or Hanji with
+/// Romanization's forced lead. The one place the lead is decided.
+fn renders_hanji_first(config: &AppConfig) -> bool {
+    config.is_translate_swapped || config.candidate_display_mode() == CandidateDisplayMode::Combined
+}
+
+/// What committing `script` of the pick `(roman, hanji)` writes, or `None`
+/// when that script does not exist (`Other` on a one-script pick or under
+/// Romanization Only) — the commit is then ignored. An empty `hanji` is no
+/// Hanji.
+pub(crate) fn resolve_commit_text(
+    script: CommitScript,
+    roman: &str,
+    hanji: Option<&str>,
+    config: &AppConfig,
+) -> Option<ResolvedCommit> {
+    let scripts = OutputScripts::of(config);
+    let hanji = hanji.filter(|hanji| !hanji.is_empty());
+    match (script, hanji) {
+        (CommitScript::Hanji, Some(hanji)) => {
+            Some(if scripts.annotate_in_brackets && !roman.is_empty() {
+                ResolvedCommit::romanization(format!("{hanji} ({roman})"))
+            } else {
+                ResolvedCommit::hanji(hanji)
+            })
+        }
+        (CommitScript::Roman, _) if !roman.is_empty() => Some(ResolvedCommit::romanization(roman)),
+        (CommitScript::Other, None) => None,
+        (CommitScript::Other, Some(hanji)) => scripts.shows_hanji.then(|| {
+            if scripts.hanji_leads {
+                ResolvedCommit::romanization(roman)
+            } else {
+                ResolvedCommit::hanji(hanji)
+            }
+        }),
+        // Lead, and a split cell whose own script is missing.
+        (_, hanji) => Some(lead(roman, hanji, &scripts)),
+    }
+}
+
+fn lead(roman: &str, hanji: Option<&str>, scripts: &OutputScripts) -> ResolvedCommit {
+    let Some(hanji) = hanji else {
+        // §34 literal, an OOV name, a roman-only custom row: romanization
+        // under every mode.
+        return ResolvedCommit::romanization(roman);
+    };
+    if scripts.annotate_in_brackets && !roman.is_empty() {
+        // The pair carries the romanization whichever half leads. No empty
+        // brackets (`台語 ()`): desktop and macOS call them a visible defect,
+        // and the split hanji cell above refuses them too.
+        let text = if scripts.hanji_leads {
+            format!("{hanji} ({roman})")
+        } else {
+            format!("{roman} ({hanji})")
+        };
+        return ResolvedCommit::romanization(text);
+    }
+    if scripts.hanji_leads {
+        ResolvedCommit::hanji(hanji)
+    } else {
+        ResolvedCommit::romanization(roman)
+    }
+}
+
+/// The wire answer for an R5 commit: `resolved` is what the pick wrote,
+/// unless `outcome` says nothing changed. The auto-space verdict is the
+/// platforms' `shouldAppendAutoSpace` minus the live setting, on a final
+/// commit only.
+pub(crate) fn commit_resolution(
+    outcome: CommitOutcome,
+    resolved: Option<ResolvedCommit>,
+) -> CommitResolution {
+    let Some(resolved) = resolved.filter(|_| outcome != CommitOutcome::Ignored) else {
+        return CommitResolution {
+            outcome: CommitOutcome::Ignored as i32,
+            ..CommitResolution::default()
+        };
+    };
+    let earns_auto_space = outcome == CommitOutcome::Finalized
+        && resolved.wrote_romanization
+        && !resolved.text.ends_with('-');
+    CommitResolution {
+        outcome: outcome as i32,
+        document_text: resolved.text,
+        wrote_romanization: resolved.wrote_romanization,
+        earns_auto_space,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn config(swapped: bool, brackets: bool, display: CandidateDisplayMode) -> AppConfig {
+        AppConfig {
+            input_mode: "tl".into(),
+            is_translate_swapped: swapped,
+            output_both_scripts: brackets,
+            candidate_display_mode: display as i32,
+            ..AppConfig::default()
+        }
+    }
+
+    #[test]
+    fn truth_table() {
+        use CandidateDisplayMode::{Combined, RomanOnly, SideBySide};
+        use CommitScript::{Hanji, Lead, Other, Roman};
+        const R: &str = "tâi-gí";
+        const H: Option<&str> = Some("台語");
+        let roman = |text: &str| Some((text.to_owned(), true));
+        let hanji = |text: &str| Some((text.to_owned(), false));
+        // (script, swapped, brackets, display, roman, hanji) → (text, wrote_romanization)
+        #[rustfmt::skip]
+        let rows = [
+            // trace: UnmarkedCommitResolverTest (Android) / formatOutputText (iOS)
+            // romanLed_… / hanjiLed_… / brackets_writeThePairEitherWayRound_…
+            (Lead, false, false, SideBySide, R, H, roman(R)),
+            (Lead, true, false, SideBySide, R, H, hanji("台語")),
+            (Lead, true, true, SideBySide, R, H, roman("台語 (tâi-gí)")),
+            (Lead, false, true, SideBySide, R, H, roman("tâi-gí (台語)")),
+            // Android `bracketedCommit` with an empty roman keeps its brackets.
+            (Lead, true, true, SideBySide, "", H, hanji("台語")),
+            // noHanji_commitsTheRomanizationUnderEveryMode; document_text.rs
+            // a_candidate_with_no_hanji_always_carries_romanization
+            (Lead, true, false, SideBySide, R, None, roman(R)),
+            (Lead, true, true, SideBySide, R, None, roman(R)),
+            (Lead, false, true, SideBySide, R, Some(""), roman(R)),
+            (Lead, true, false, SideBySide, R, Some(""), roman(R)),
+            // document_text.rs roman_only_mode_shows_and_writes_the_romanization_alone
+            (Lead, true, true, RomanOnly, R, H, roman(R)),
+            // trace: MarkedCellCommitResolverTest / ActionHandlerMarkedCellCommitTests
+            // hanjiCell_bracketsOff_… / hanjiCell_bracketsOn_… / …_missingRoman_…
+            (Hanji, true, false, Combined, R, H, hanji("台語")),
+            (Hanji, true, true, Combined, R, H, roman("台語 (tâi-gí)")),
+            (Hanji, true, true, Combined, "", H, hanji("台語")),
+            // test_INVARIANT_roman_cell_commits_bare_roman_even_with_brackets_on
+            (Roman, true, false, Combined, R, H, roman(R)),
+            (Roman, true, true, Combined, R, H, roman(R)),
+            // defectiveMarkers_failOpenToTheUnmarkedPath: the lead instead
+            (Hanji, true, true, Combined, R, None, roman(R)),
+            (Roman, true, false, Combined, "", H, hanji("台語")),
+            // trace: document_text.rs the_alternate_verdict_inverts_the_mode /
+            // alternate_text_follows_the_display_mode_not_the_cell
+            (Other, true, false, SideBySide, R, H, roman(R)),
+            (Other, false, false, SideBySide, R, H, hanji("台語")),
+            (Other, false, false, Combined, R, H, roman(R)),
+            (Other, true, false, SideBySide, R, None, None),
+            (Other, true, false, SideBySide, R, Some(""), None),
+            (Other, true, true, RomanOnly, R, H, None),
+        ];
+        for (script, swapped, brackets, display, roman, hanji, expected) in rows {
+            let config = config(swapped, brackets, display);
+            let actual = resolve_commit_text(script, roman, hanji, &config)
+                .map(|resolved| (resolved.text, resolved.wrote_romanization));
+            assert_eq!(
+                actual, expected,
+                "{script:?} swapped={swapped} brackets={brackets} {display:?} {roman:?} {hanji:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn resolution_earns_auto_space_only_on_a_romanized_final_commit() {
+        // trace: ActionHandler.shouldAppendAutoSpace /
+        // MarkedCellCommitResolverTest.shouldAppendAutoSpace_requiresSettingRomanizationAndNoHyphenTail,
+        // minus the live setting; the caller's final-commit gate folded in.
+        let pick = |text: &str, wrote_romanization| {
+            Some(ResolvedCommit {
+                text: text.to_owned(),
+                wrote_romanization,
+            })
+        };
+        let finalized = commit_resolution(CommitOutcome::Finalized, pick("tâi-gí", true));
+        assert_eq!(finalized.outcome, CommitOutcome::Finalized as i32);
+        assert_eq!(finalized.document_text, "tâi-gí");
+        assert!(finalized.wrote_romanization && finalized.earns_auto_space);
+        assert!(!commit_resolution(CommitOutcome::Nailed, pick("tâi-gí", true)).earns_auto_space);
+        assert!(!commit_resolution(CommitOutcome::Finalized, pick("台語", false)).earns_auto_space);
+        assert!(!commit_resolution(CommitOutcome::Finalized, pick("tâi-", true)).earns_auto_space);
+        let ignored = commit_resolution(CommitOutcome::Ignored, pick("tâi-gí", true));
+        assert_eq!(
+            ignored,
+            CommitResolution {
+                outcome: CommitOutcome::Ignored as i32,
+                ..CommitResolution::default()
+            }
+        );
+    }
+}

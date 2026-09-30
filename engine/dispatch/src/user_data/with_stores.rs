@@ -49,8 +49,9 @@ pub(crate) fn respond(id: u32, generation: u64, request: &UserDataRequest) -> Re
 /// two passes in-process (roadmap P3b, brainstorm R5): the custom and
 /// learned rows for the pending buffer, a neutral fetch that discovers the
 /// candidates, their frequency rows, and a re-ranked fetch. Every other
-/// request goes to composing, and the phrase a final commit taught (§50) is
-/// written to `learned_phrases.db` here (P3c).
+/// request goes to composing; the phrase a final commit taught (§50) is
+/// written to `learned_phrases.db` here (P3c), then the pick an engine-
+/// resolved commit counts (R5) — the platform records a legacy commit itself.
 pub(super) fn handle_composing(
     stores: &UserDataStores,
     request: &ComposingRequest,
@@ -64,6 +65,13 @@ pub(super) fn handle_composing(
             stores
                 .learned_phrases
                 .learn_phrase(&learned.hanji, &learned.canonical_tl);
+        }
+        if let Some(usage) = applied.usage {
+            stores.record_usage(
+                &usage.display_text,
+                &usage.canonical_tl,
+                usage.hanji.as_deref(),
+            );
         }
         return Ok(applied.response);
     };

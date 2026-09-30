@@ -129,6 +129,7 @@ fn invariant_holds_after_mid_commit_leaves_pending_tail() {
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -198,6 +199,7 @@ fn invariant_holds_for_append_after_mid_commit() {
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -246,6 +248,7 @@ fn invariant_holds_through_multi_step_mid_commit_chain() {
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -263,6 +266,7 @@ fn invariant_holds_through_multi_step_mid_commit_chain() {
             hanji: None,
             consumed_bytes: 2,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
