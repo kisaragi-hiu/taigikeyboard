@@ -139,7 +139,7 @@ fun RustEngineBridge.dictionaryFilters(toggles: RustEngineBridge.DictionaryToggl
     )
 }
 
-/** Proto form of the user's dictionary toggles, shared by [dictionaryFilters] and `nextwordPredictNext`. */
+/** Proto form of the user's dictionary toggles, shared by [dictionaryFilters], `composingFetchAtPos` and `nextwordPredictNext`. */
 internal fun dictionaryTogglesProto(toggles: RustEngineBridge.DictionaryToggles): ProtoDictionaryToggles =
     ProtoDictionaryToggles
         .newBuilder()

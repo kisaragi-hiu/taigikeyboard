@@ -10,7 +10,7 @@
 //! the pure transition table. After v3.5.9 A2 the candidate-assembly
 //! 6-step seam lives in [`crate::continuous::assemble_candidates`];
 //! dispatch only handles the phase/hanzi guards, the proto →
-//! domain hoists (`mode`, the source bitmask sentinel), and wire encoding.
+//! domain hoists (`mode`, the source filter from the toggles), and wire encoding.
 //!
 //! The mode-aware key construction lives in `composing::continuous`
 //! per the Phase 5 module contract pinned in
@@ -34,7 +34,7 @@ use lexicon::{
 use phonetics::contains_tps;
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, CommitScript as WireCommitScript,
-    ComposingRequest, ComposingResponse, ContinuousResponse,
+    ComposingRequest, ComposingResponse, ContinuousResponse, FetchAtPos,
 };
 
 /// Decode the proto request into a typed `Intent`. Returns `MissingMethod`
@@ -62,13 +62,9 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
         Method::EnterContinuous(_) => Intent::EnterContinuous,
         // The user rows are the engine's own reads (`UserRows`); a platform
         // sends none.
-        Method::FetchAtPos(m) => Intent::FetchAtPos {
-            now_ms: m.now_ms,
-            enabled_sources_bitmask: m.enabled_sources_bitmask,
-            literal_roman_candidate_disabled: m.literal_roman_candidate_disabled,
-            user_rows: UserRows::default(),
-            context: ranking::ContextRanks::default(),
-        },
+        Method::FetchAtPos(m) => {
+            fetch_at_pos_intent(&m, UserRows::default(), ranking::ContextRanks::default())
+        }
         Method::CommitContinuous(m) => Intent::CommitContinuous {
             script: commit_script(m.script()),
             roman: m.roman,
@@ -88,6 +84,28 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             },
         },
     })
+}
+
+/// The fetch intent for a wire `FetchAtPos`, ranked with `user_rows` and
+/// `context`. Its source filter is the request's toggles resolved by the
+/// lexicon encoder (every dictionary off → `0`, no dictionary candidates,
+/// §57), or every source when the request carries no toggles (fixtures, an
+/// un-wired sender — see the `FetchAtPos` proto comment).
+pub fn fetch_at_pos_intent(
+    fetch: &FetchAtPos,
+    user_rows: UserRows,
+    context: ranking::ContextRanks,
+) -> Intent {
+    Intent::FetchAtPos {
+        now_ms: fetch.now_ms,
+        enabled_sources_bitmask: fetch
+            .toggles
+            .as_ref()
+            .map_or(u32::MAX, lexicon::api::dictionary_filter_bitmask),
+        literal_roman_candidate_disabled: fetch.literal_roman_candidate_disabled,
+        user_rows,
+        context,
+    }
 }
 
 /// Pure dispatch entry: decode the proto request into an `Intent` and
@@ -155,8 +173,7 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
 ///
 /// v3.5.9 A2: the candidate-assembly 6-step seam lives in
 /// [`crate::continuous::assemble_candidates`]; this fn does the
-/// phase/hanzi guards, the sentinel normalisation, and the wire
-/// encoding around it.
+/// phase/hanzi guards and the wire encoding around it.
 fn handle_fetch_at_pos(
     engine: &Engine,
     now_ms: i64,
@@ -203,27 +220,13 @@ fn handle_fetch_at_pos(
     // Learned phrases (§50): one row per reading, the most-learned
     // separator form first.
     let learned = first_learned_per_reading(&user_rows.learned);
-    // PR-9.6 — normalise the source-toggle bitmask at the proto→domain
-    // boundary: proto3 default `0` means "platform did not wire this"
-    // (older / un-wired build) and maps to `u32::MAX` (legacy all-on),
-    // reproducing pre-PR-9.6 behaviour where continuous candidates
-    // ignored toggles. A real bitmask is never `0` because
-    // `compute_filters` always sets the `dev` bit, so `0` is an
-    // unambiguous absence marker. Normalising here keeps
-    // `assemble_candidates` taking an already-resolved enabled bitmask —
-    // no domain code has to know about the wire sentinel.
-    let enabled_sources_bitmask = if enabled_sources_bitmask == 0 {
-        u32::MAX
-    } else {
-        enabled_sources_bitmask
-    };
     // v3.5.9 A2 seam — the 6-step assemble_candidates contract
     // (key build → span-local/partial fetch → recase → walker slot-0
     // prepend → POJ presentation pass → return). Wire encoding (step 6)
     // happens below via `raw_to_proto_candidate` + `with_continuous`.
-    // PR-9.6 — `enabled_sources_bitmask` (already sentinel-normalised
-    // above) flows into `ContinuousFetchCtx` so the span-local + partial
-    // -prefix fetchers apply the same `Filter` the Tab3 browse path uses.
+    // `enabled_sources_bitmask` (resolved at decode) flows into
+    // `ContinuousFetchCtx` so the span-local + partial-prefix fetchers
+    // apply the same `Filter` the Tab3 browse path uses.
     let mut candidates = assemble_candidates(
         raw,
         &user_rows.frequency,

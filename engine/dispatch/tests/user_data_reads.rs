@@ -40,7 +40,6 @@ fn composing(method: composing_request::Method) -> Response {
 fn fetch(fetch: FetchAtPos) -> ContinuousResponse {
     let response = composing(composing_request::Method::FetchAtPos(FetchAtPos {
         now_ms: NOW_MS,
-        enabled_sources_bitmask: u32::MAX,
         ..fetch
     }));
     match response.payload {

@@ -445,10 +445,6 @@ public extension RustEngineBridge {
         settings: EngineSettings,
         generation: UInt64,
         nowMs: Int64,
-        // PR-9.6 — dictionary source-toggle bitmask (same one Tab3 browse
-        // sends). Default `0` = proto3-absent sentinel → engine all-on,
-        // preserving pre-PR-9.6 behaviour for callers (incl. tests).
-        enabledSourcesBitmask: UInt32 = 0,
         // §34/S22 — invert of the Show Typed Text First setting. Default `false` = show
         // (proto3-absent sentinel → engine prepends the literal-roman
         // candidate, the pre-toggle always-on behaviour for callers/tests).
@@ -459,7 +455,10 @@ public extension RustEngineBridge {
     ) -> ContinuousFetchResult {
         var payload = Taigi_Engine_FetchAtPos()
         payload.nowMs = nowMs
-        payload.enabledSourcesBitmask = enabledSourcesBitmask
+        // The dictionary toggles the Tab3 browse path resolves too; the engine
+        // turns them into its source filter (every dictionary off offers no
+        // dictionary candidates, §57).
+        payload.toggles = dictionaryTogglesProto(DictionaryToggles(from: settings))
         payload.literalRomanCandidateDisabled = literalRomanCandidateDisabled
         payload.customDictionaryDisabled = customDictionaryDisabled
         return composingFetchDispatch(

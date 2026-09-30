@@ -27,10 +27,8 @@ final class RustEngineBridgeDictionaryFiltersTests: XCTestCase {
         return toggles
     }
 
-    /// The defaults must never resolve to `0`: the engine reads `0` as
-    /// "platform did not wire this" and turns every source back on
-    /// (`composing.proto:176-183`), so a `0` here would silently restore the
-    /// pre-PR11 behaviour while looking wired.
+    /// The defaults must never resolve to `0`: that is the "nothing enabled"
+    /// answer, and a search with it finds no dictionary row.
     func testDefaultToggles_resolveToANonZeroMask() throws {
         XCTAssertNotEqual(try mask(.defaults), 0)
     }
@@ -115,29 +113,12 @@ final class RustEngineBridgeDictionaryFiltersTests: XCTestCase {
 
     // MARK: - The all-off state
 
-    /// Switching every dictionary off is a state the settings window allows,
-    /// and the engine's own answer for it is `0` — which the wire reserves for
-    /// "platform did not wire this" and turns back into ALL sources. Sending
-    /// that verbatim would hand the user every dictionary the moment they
-    /// turned the last one off.
+    /// Switching every dictionary off is a state the settings window allows;
+    /// the engine answers it with a mask naming no source, which the search
+    /// reads as "nothing enabled". The keyboard side of it is
+    /// `RustEngineBridgeComposingTests.testFetchAtPos_everyDictionaryOff_offersNoDictionaryCandidates`.
     func testEveryDictionaryOff_resolvesToZeroFromTheEngine() throws {
         XCTAssertEqual(try mask(.allSourcesOff), 0)
-    }
-
-    // INVARIANT_DICTIONARIES_ALL_OFF_OFFERS_NO_DICTIONARY_CANDIDATES (behavioral-invariants.md §57)
-    func testEveryDictionaryOff_goesOnTheWireAsAMaskWithNoSources() throws {
-        let sent = try filters(.allSourcesOff).wireMask
-
-        XCTAssertNotEqual(sent, 0, "a zero would be read as 'not wired' and re-enable everything")
-        XCTAssertEqual(sent, RustEngineBridge.noSourcesEnabledBitmask)
-        XCTAssertEqual(sent & 0x1FFF, 0, "the source region has to stay empty")
-    }
-
-    func testAResolvedMask_goesOnTheWireUnchanged() throws {
-        XCTAssertEqual(
-            RustEngineBridge.enabledSourcesBitmask(for: .defaults),
-            try mask(.defaults),
-        )
     }
 
     /// The subcollection region is only meaningful while the master toggle is

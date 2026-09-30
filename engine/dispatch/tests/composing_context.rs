@@ -91,7 +91,6 @@ fn fetched_hanji(generation: u64) -> Vec<String> {
         generation,
         composing_request::Method::FetchAtPos(FetchAtPos {
             now_ms: NOW_MS + 1_000,
-            enabled_sources_bitmask: u32::MAX,
             ..FetchAtPos::default()
         }),
     );

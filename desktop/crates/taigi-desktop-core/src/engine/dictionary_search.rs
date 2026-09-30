@@ -60,15 +60,15 @@ pub fn search(query: &str, settings: &SettingsDocument) -> Vec<DictionarySearchR
     let toggles = settings.dictionary_sources();
     let filters = dictionary_filters(&toggles);
     let is_hanzi_query = is_hanzi(query);
-    let wire_mask = filters
+    let sources_bitmask = filters
         .as_ref()
         .map_or(ALL_SOURCES_ENABLED_SEARCH_BITMASK, |filters| {
-            filters.wire_mask()
+            filters.dictionary_filter_bitmask
         });
     let rows = if is_hanzi_query {
-        search_by_hanzi(query, mode, RESULT_LIMIT, wire_mask)
+        search_by_hanzi(query, mode, RESULT_LIMIT, sources_bitmask)
     } else {
-        search_with_sources(query, mode, RESULT_LIMIT, wire_mask)
+        search_with_sources(query, mode, RESULT_LIMIT, sources_bitmask)
     };
     let system: Vec<DictionarySearchResult> = LexiconRow::sorted_for_search(rows)
         .into_iter()

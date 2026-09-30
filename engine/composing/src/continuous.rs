@@ -1018,9 +1018,9 @@ fn fetch_walker_slot0_inner(
 /// `mode == Poj` similarly derives the POJ branch — v3.5.9 B-0c
 /// dropped the prior `is_poj: bool` arg.
 ///
-/// PR-9.6 — `enabled_sources_bitmask` is the platform's dictionary
-/// source-toggle state, already sentinel-normalised by
-/// `handle_fetch_at_pos` (`0`/absent → `u32::MAX` all-on). It flows
+/// `enabled_sources_bitmask` is the user's dictionary source filter,
+/// resolved from the fetch's toggles at decode (`u32::MAX` = every
+/// source, `0` = none). It flows
 /// straight into `ContinuousFetchCtx` so both inner fetchers decode it
 /// via `Filter::from_enabled_bitmask` — identical filtering to the Tab3
 /// browse path (12 sources + variant + khiin + kautian subcollection).
@@ -1053,9 +1053,8 @@ pub(crate) fn assemble_candidates(
         // seam invocation. `Some` only when BOTH `prefix_index` and
         // `dictionary` resolved; either inner fetcher (span-local or
         // partial-prefix) needs both.
-        // PR-9.6 — `enabled_sources_bitmask` is now the platform's
-        // source-toggle state (sentinel-normalised in
-        // `dispatch::handle_fetch_at_pos`: `0`/absent → `u32::MAX`), so
+        // `enabled_sources_bitmask` is the user's source filter
+        // (resolved from the fetch's toggles at decode), so
         // the span-local + partial-prefix fetchers apply the SAME
         // `Filter` (sources + variant + khiin + kautian subcollection)
         // the Tab3 browse path applies. `u32::MAX` keeps every source on.

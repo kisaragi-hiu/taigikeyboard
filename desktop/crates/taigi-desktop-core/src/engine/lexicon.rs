@@ -126,41 +126,11 @@ pub struct DictionaryFilters {
     pub enabled_sources: BTreeSet<DictionarySource>,
 }
 
-/// A mask carrying no source bits, for the user who switched every
-/// dictionary off. The wire cannot say that with `0`: the composing path
-/// reads `0` as "platform did not wire this" and turns everything back on
-/// (`engine/composing/src/dispatch.rs` `handle_fetch_at_pos`). Bit 13 is the kautian
-/// subcollection gate's "active" flag, which makes the mask non-zero while
-/// leaving the source region (bits 0-12) empty.
-///
-/// CROSS-PLATFORM INVARIANT — mirrors macOS
-/// `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Lexicon.swift`
-/// `noSourcesEnabledBitmask`, iOS
-/// `ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+Lexicon.swift`
-/// `noSourcesEnabledBitmask` and Android
-/// `android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt`
-/// `DictionaryFilters.NO_SOURCES_ENABLED_BITMASK`: every dictionary switched
-/// off offers no dictionary candidates on every platform
-/// (`docs/architecture/behavioral-invariants.md` §57). Drift causes silent
-/// divergence.
-pub const NO_SOURCES_ENABLED_BITMASK: u32 = 1 << 13;
-
 /// What a SEARCH sends when the toggles could not be resolved. The search
 /// path takes `u32::MAX` as its "filter disabled" sentinel
 /// (`engine/lexicon/src/dictionary_reader.rs:147`); sending `0` there would
 /// be fail-CLOSED.
 pub const ALL_SOURCES_ENABLED_SEARCH_BITMASK: u32 = u32::MAX;
-
-impl DictionaryFilters {
-    /// The value to put on the composing wire (`FetchAtPos.enabled_sources_bitmask`).
-    pub fn wire_mask(&self) -> u32 {
-        if self.dictionary_filter_bitmask == 0 {
-            NO_SOURCES_ENABLED_BITMASK
-        } else {
-            self.dictionary_filter_bitmask
-        }
-    }
-}
 
 /// Points the engine at the dictionary data. Sent once per process; the
 /// files are read-only and outlive every composing session.
@@ -208,8 +178,36 @@ pub fn install(
 /// `None` means the round-trip failed. Callers resolve ONCE per query and pass
 /// the answer down, so mask and badge set describe one instant.
 pub fn dictionary_filters(toggles: &DictionarySourceToggles) -> Option<DictionaryFilters> {
+    let op = "lexiconDictionaryFilters";
+    let response = lexicon_response(
+        lexicon_request::Method::DictionaryFilters(DictionaryFiltersRequest {
+            toggles: Some(dictionary_toggles(toggles)),
+        }),
+        op,
+    )?;
+    match response.result {
+        Some(lexicon_response::Result::DictionaryFiltersResult(result)) => {
+            Some(DictionaryFilters {
+                dictionary_filter_bitmask: result.dictionary_filter_bitmask,
+                enabled_sources: result
+                    .enabled_source_codes
+                    .iter()
+                    .filter_map(|code| DictionarySource::from_code(*code))
+                    .collect(),
+            })
+        }
+        _ => {
+            record_failure(op, "response carried no dictionary-filters result");
+            None
+        }
+    }
+}
+
+/// The user's dictionary toggles on the wire — what `DictionaryFilters` and
+/// `FetchAtPos` carry; the engine resolves them into its source filter.
+pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> DictionaryToggles {
     let subcollections = &toggles.kautian_subcollections;
-    let toggles_proto = DictionaryToggles {
+    DictionaryToggles {
         kautian: toggles.kautian,
         taigitv: toggles.taigitv,
         itaigi: toggles.itaigi,
@@ -238,29 +236,6 @@ pub fn dictionary_filters(toggles: &DictionarySourceToggles) -> Option<Dictionar
             accent_taichung: subcollections.accent_taichung,
             name_appendix: subcollections.name_appendix,
         }),
-    };
-    let op = "lexiconDictionaryFilters";
-    let response = lexicon_response(
-        lexicon_request::Method::DictionaryFilters(DictionaryFiltersRequest {
-            toggles: Some(toggles_proto),
-        }),
-        op,
-    )?;
-    match response.result {
-        Some(lexicon_response::Result::DictionaryFiltersResult(result)) => {
-            Some(DictionaryFilters {
-                dictionary_filter_bitmask: result.dictionary_filter_bitmask,
-                enabled_sources: result
-                    .enabled_source_codes
-                    .iter()
-                    .filter_map(|code| DictionarySource::from_code(*code))
-                    .collect(),
-            })
-        }
-        _ => {
-            record_failure(op, "response carried no dictionary-filters result");
-            None
-        }
     }
 }
 
@@ -393,16 +368,6 @@ pub fn is_hanzi(text: &str) -> bool {
     }
 }
 
-/// The value to put in `FetchAtPos.enabled_sources_bitmask` for `toggles`.
-/// Three answers: a resolved mask goes out as it is; a resolved `0` (the
-/// user turned everything off) goes out as `NO_SOURCES_ENABLED_BITMASK`; a
-/// FAILED resolve goes out as `0` so the engine searches everything — a
-/// failure is not a preference, and degrading to a wider list is recoverable
-/// where degrading to none looks like a broken keyboard.
-pub fn enabled_sources_bitmask(toggles: &DictionarySourceToggles) -> u32 {
-    dictionary_filters(toggles).map_or(0, |filters| filters.wire_mask())
-}
-
 fn lexicon_response(method: lexicon_request::Method, op: &str) -> Option<LexiconResponse> {
     let payload = request::Payload::Lexicon(LexiconRequest {
         method: Some(method),
@@ -467,21 +432,6 @@ mod tests {
     fn is_hanzi_answers_through_the_engine() {
         assert!(is_hanzi("台語"));
         assert!(!is_hanzi("tai"));
-    }
-
-    // INVARIANT_DICTIONARIES_ALL_OFF_OFFERS_NO_DICTIONARY_CANDIDATES (behavioral-invariants.md §57)
-    #[test]
-    fn wire_mask_turns_all_off_into_the_sentinel() {
-        let all_off = DictionaryFilters {
-            dictionary_filter_bitmask: 0,
-            enabled_sources: BTreeSet::new(),
-        };
-        assert_eq!(all_off.wire_mask(), NO_SOURCES_ENABLED_BITMASK);
-        let some = DictionaryFilters {
-            dictionary_filter_bitmask: 0b101,
-            enabled_sources: BTreeSet::new(),
-        };
-        assert_eq!(some.wire_mask(), 0b101);
     }
 
     #[test]

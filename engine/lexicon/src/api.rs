@@ -10,7 +10,10 @@ use protos::engine::{
 };
 
 use crate::classification;
+// The source filter alone, for an engine fetch that carries the toggles
+// itself (`FetchAtPos.toggles`).
 use crate::dictionary_filters::compute_filters;
+pub use crate::dictionary_filters::dictionary_filter_bitmask;
 use crate::error::LexiconError;
 use crate::handle::EngineHandle;
 use crate::paths::LexiconPaths;

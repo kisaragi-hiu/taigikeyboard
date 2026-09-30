@@ -44,7 +44,7 @@ pub(crate) fn compute_filters(toggles: &DictionaryToggles) -> DictionaryFiltersR
 /// Full `dictionary.bin` filter bitmask: source/variant bits 0-12 plus the
 /// kautian subcollection wire high region (bit 13 active + bits 14..=25 enable
 /// mask) when the subcollection toggles are present.
-fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
+pub fn dictionary_filter_bitmask(t: &DictionaryToggles) -> u32 {
     let mut mask: u32 = 0;
     if t.kautian {
         mask |= 1 << 0;

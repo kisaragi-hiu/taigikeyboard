@@ -165,8 +165,8 @@ struct EngineSettings: Equatable, Sendable {
     let isCustomDictEnabled: Bool
 
     /// Which bundled dictionaries the engine may draw candidates from. Reaches
-    /// the engine as `FetchAtPos.enabled_sources_bitmask` after the
-    /// `compute_filters` op resolves it (`RustEngineBridge+Lexicon.swift`).
+    /// the engine as `FetchAtPos.toggles`, which it resolves into its source
+    /// filter (`RustEngineBridge.dictionaryTogglesProto`).
     let dictionarySources: DictionarySourceToggles
 
     /// What a fresh install types with. Every value matches the iOS and Android

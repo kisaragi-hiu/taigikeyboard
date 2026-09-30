@@ -20,24 +20,6 @@ struct DictionaryFilters: Equatable, Sendable {
     let dictionaryFilterBitmask: UInt32
     /// The sources the user has switched on, for labelling results.
     let enabledSources: Set<DictionarySource>
-
-    /// The value to put on the wire.
-    ///
-    /// `0` is not "no sources": the composing path reads it as "platform did
-    /// not wire this" and searches all of them
-    /// (`engine/composing/src/dispatch.rs` `handle_fetch_at_pos`). A user who switched
-    /// everything off means it, so their answer goes out as a mask with no
-    /// source bits instead.
-    ///
-    /// The SEARCH path does not share that normalisation — it builds its
-    /// filter from the mask verbatim (`engine/lexicon/src/search.rs:190`), so
-    /// there `0` already means "nothing enabled" and the all-on sentinel is
-    /// `UInt32.max`. That is why a failed resolve has a different fallback per
-    /// path; see `RustEngineBridge.allSourcesEnabledSearchBitmask`.
-    var wireMask: UInt32 {
-        dictionaryFilterBitmask == 0 ? RustEngineBridge.noSourcesEnabledBitmask
-            : dictionaryFilterBitmask
-    }
 }
 
 /// One row of a dictionary search.
@@ -115,6 +97,24 @@ extension RustEngineBridge {
     /// set used to label the results have to describe one instant, or a toggle
     /// changed mid-search shows badges the results were not filtered by.
     static func lexiconDictionaryFilters(toggles: DictionarySourceToggles) -> DictionaryFilters? {
+        var filters = Taigi_Engine_DictionaryFiltersRequest()
+        filters.toggles = dictionaryTogglesProto(toggles)
+
+        let op = "lexiconDictionaryFilters"
+        guard let response = lexiconResponse(.dictionaryFilters(filters), op: op) else { return nil }
+        guard case let .dictionaryFiltersResult(result)? = response.result else {
+            recordFailure(op: op, message: "response carried no dictionary-filters result")
+            return nil
+        }
+        return DictionaryFilters(
+            dictionaryFilterBitmask: result.dictionaryFilterBitmask,
+            enabledSources: Set(result.enabledSourceCodes.compactMap(dictionarySource(from:))),
+        )
+    }
+
+    /// The user's dictionary toggles on the wire — what `DictionaryFilters`
+    /// and `FetchAtPos` carry; the engine resolves them into its source filter.
+    static func dictionaryTogglesProto(_ toggles: DictionarySourceToggles) -> Taigi_Engine_DictionaryToggles {
         var togglesProto = Taigi_Engine_DictionaryToggles()
         togglesProto.kautian = toggles.kautian
         togglesProto.taigitv = toggles.taigitv
@@ -147,20 +147,7 @@ extension RustEngineBridge {
         subcollProto.accentTaichung = subcollections.accentTaichung
         subcollProto.nameAppendix = subcollections.nameAppendix
         togglesProto.kautianSubcoll = subcollProto
-
-        var filters = Taigi_Engine_DictionaryFiltersRequest()
-        filters.toggles = togglesProto
-
-        let op = "lexiconDictionaryFilters"
-        guard let response = lexiconResponse(.dictionaryFilters(filters), op: op) else { return nil }
-        guard case let .dictionaryFiltersResult(result)? = response.result else {
-            recordFailure(op: op, message: "response carried no dictionary-filters result")
-            return nil
-        }
-        return DictionaryFilters(
-            dictionaryFilterBitmask: result.dictionaryFilterBitmask,
-            enabledSources: Set(result.enabledSourceCodes.compactMap(dictionarySource(from:))),
-        )
+        return togglesProto
     }
 
     /// The engine's own name for a source, mapped to ours.
@@ -191,51 +178,14 @@ extension RustEngineBridge {
         }
     }
 
-    /// A mask carrying no source bits, for the user who switched every
-    /// dictionary off.
-    ///
-    /// The wire cannot say that with a `0`: the engine reads `0` as "platform
-    /// did not wire this" and turns everything back on
-    /// (`composing.proto` `FetchAtPos`), so sending the engine's own all-off answer
-    /// verbatim would hand the user every dictionary the moment they turned
-    /// the last one off. Bit 13 is the kautian subcollection gate's "active"
-    /// flag (`engine/lexicon/src/dictionary_filters.rs`), which makes the mask
-    /// non-zero while leaving the source region — bits 0-12 — empty, so no
-    /// record passes the filter.
-    ///
-    /// CROSS-PLATFORM INVARIANT — mirrors desktop
-    /// `desktop/crates/taigi-desktop-core/src/engine/lexicon.rs`
-    /// `NO_SOURCES_ENABLED_BITMASK`, iOS
-    /// `ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+Lexicon.swift`
-    /// `noSourcesEnabledBitmask` and Android
-    /// `android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt`
-    /// `DictionaryFilters.NO_SOURCES_ENABLED_BITMASK`. Drift causes silent
-    /// divergence (`docs/architecture/behavioral-invariants.md` §57).
-    static let noSourcesEnabledBitmask: UInt32 = 1 << 13
-
     /// What a SEARCH sends when the toggles could not be resolved.
     ///
-    /// The two paths read a mask differently. Composing normalises `0` to
-    /// all-on; search does not, and takes `UInt32.max` as its "filter
-    /// disabled" sentinel (`engine/lexicon/src/dictionary_reader.rs:147`).
-    /// Sending `0` here would be fail-CLOSED — an FFI hiccup would empty the
+    /// Search takes `UInt32.max` as its "filter disabled" sentinel
+    /// (`engine/lexicon/src/dictionary_reader.rs` `Filter::from_enabled_bitmask`)
+    /// and `0` as "nothing enabled". Sending `0` here would be fail-CLOSED — an FFI hiccup would empty the
     /// dictionary rather than widen it, which is the opposite of what a
     /// failure should degrade to.
     static let allSourcesEnabledSearchBitmask = UInt32.max
-
-    /// The value to put in `FetchAtPos.enabled_sources_bitmask` for `toggles`.
-    ///
-    /// Three answers rather than one, and the difference matters:
-    /// - a resolved mask goes out as it is;
-    /// - a resolved mask of `0` means the user turned everything off, and goes
-    ///   out as `noSourcesEnabledBitmask`;
-    /// - a FAILED resolve goes out as `0`, so the engine falls back to
-    ///   searching everything. A failure is not a preference: degrading to a
-    ///   wider candidate list is recoverable, degrading to none looks like a
-    ///   broken keyboard.
-    static func enabledSourcesBitmask(for toggles: DictionarySourceToggles) -> UInt32 {
-        lexiconDictionaryFilters(toggles: toggles)?.wireMask ?? 0
-    }
 
     /// Searches by romanization.
     ///

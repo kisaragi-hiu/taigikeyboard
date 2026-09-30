@@ -223,10 +223,9 @@ fun RustEngineBridge.composingFetchAtPos(
     config: AppConfig,
     generation: Long,
     nowMs: Long,
-    // PR-9.6 — dictionary source-toggle bitmask (same one Tab3 browse
-    // sends). Default `0u` = proto3-absent sentinel → engine all-on,
-    // preserving pre-PR-9.6 behaviour for callers (incl. tests).
-    enabledSourcesBitmask: UInt = 0u,
+    // The user's dictionary toggles (the ones Tab3 browse resolves); the
+    // engine turns them into its source filter.
+    dictionaryToggles: RustEngineBridge.DictionaryToggles,
     // §34/S22 — invert of the Show Typed Text First setting. Default `false` = show
     // (proto3-absent sentinel → engine prepends the literal-roman
     // candidate, the pre-toggle always-on behaviour for callers/tests).
@@ -238,9 +237,9 @@ fun RustEngineBridge.composingFetchAtPos(
     val payload = com.siansiansu.taigikeyboard.engine.proto.FetchAtPos
         .newBuilder()
         .setNowMs(nowMs)
-        .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
         .setLiteralRomanCandidateDisabled(literalRomanCandidateDisabled)
         .setCustomDictionaryDisabled(customDictionaryDisabled)
+        .setToggles(dictionaryTogglesProto(dictionaryToggles))
         .build()
     return composingFetchDispatch(
         methodSetter = { it.fetchAtPos = payload },

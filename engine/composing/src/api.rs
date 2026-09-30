@@ -548,12 +548,10 @@ pub enum Intent {
     /// ([`UserRows`]) — the engine reads them from its stores, a wire
     /// request decodes with none.
     ///
-    /// PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
-    /// source-toggle state so continuous candidates honour the same
-    /// toggles as Tab3 browse. Decoded verbatim from
-    /// `FetchAtPos.enabled_sources_bitmask`; the `0`-means-absent →
-    /// `u32::MAX` sentinel is resolved in `handle_fetch_at_pos`. Full
-    /// wire/sentinel contract: the `FetchAtPos` proto comment.
+    /// `enabled_sources_bitmask` is the `dictionary.bin` source filter the
+    /// fetch applies, the same as Tab3 browse — resolved from
+    /// `FetchAtPos.toggles` at decode ([`crate::dispatch::fetch_at_pos_intent`]);
+    /// `u32::MAX` = every source, `0` = none.
     /// §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
     /// preedit-literal roman candidate (index-0 `derived_display` WYSIWYG row
     /// for Hanji-romanization one-tap). Decoded verbatim from `FetchAtPos`; OFF suppresses

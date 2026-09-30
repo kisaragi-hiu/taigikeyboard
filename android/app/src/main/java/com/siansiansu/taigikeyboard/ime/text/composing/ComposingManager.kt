@@ -25,7 +25,6 @@ import com.siansiansu.taigikeyboard.engine.composingResetContinuous
 import com.siansiansu.taigikeyboard.engine.composingSelectSuggestion
 import com.siansiansu.taigikeyboard.engine.composingStart
 import com.siansiansu.taigikeyboard.engine.continuousAppConfig
-import com.siansiansu.taigikeyboard.engine.dictionaryFilters
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
@@ -429,12 +428,10 @@ class ComposingManager(
             config = continuousAppConfig(settings),
             generation = currentGeneration,
             nowMs = System.currentTimeMillis(),
-            // PR-9.6 — the dictionary source-toggle bitmask the Tab3 browse path
-            // sends too (12 source toggles + kautian subcollections), in its wire
-            // form: every dictionary off offers no dictionary candidates (§57).
-            enabledSourcesBitmask = RustEngineBridge
-                .dictionaryFilters(RustEngineBridge.DictionaryToggles.from(settings))
-                .wireMask,
+            // The dictionary toggles the Tab3 browse path resolves too (12 source
+            // toggles + kautian subcollections); every dictionary off offers no
+            // dictionary candidates (§57).
+            dictionaryToggles = RustEngineBridge.DictionaryToggles.from(settings),
             // §34/S22 — invert of the Show Typed Text First setting.
             literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
             customDictionaryDisabled = !settings.isCustomDictEnabled,

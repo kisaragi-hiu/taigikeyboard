@@ -92,12 +92,11 @@ fn dump_continuous_candidates() {
     let mode = std::env::var("DUMP_MODE").unwrap_or_else(|_| "tl".to_string());
     let inputs = std::env::var("DUMP_INPUTS").unwrap_or_else(|_| DEFAULT_INPUTS.to_string());
     // DUMP_BITMASK lets a run mimic the device's source-toggle filter
-    // (e.g. dev on + itaigi off). Default 0 → dispatch normalizes to
-    // u32::MAX (all sources), matching the prior all-sources behavior.
+    // (e.g. dev on + itaigi off). Default: every source.
     let bitmask: u32 = std::env::var("DUMP_BITMASK")
         .ok()
         .and_then(|s| s.parse().ok())
-        .unwrap_or(0);
+        .unwrap_or(u32::MAX);
     let cfg = config(&mode);
 
     // DUMP_FREQ="更新:king-sin:10;羽:ú:10:7200000" — simulated

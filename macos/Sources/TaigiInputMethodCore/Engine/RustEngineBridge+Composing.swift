@@ -195,11 +195,9 @@ extension RustEngineBridge {
     /// generation: a bumped generation resets the engine before the query runs
     /// (`engine/composing/src/handle.rs:61-66`).
     ///
-    /// `enabledSourcesBitmask` is what the user's dictionary toggles resolve to
-    /// (`lexiconDictionaryFilters`). `0` is not "no sources": the engine reads
-    /// it as "platform did not wire this" and searches all of them
-    /// (`composing.proto:176-183`), which is the degrade a failed resolve
-    /// takes.
+    /// The user's dictionary toggles go with it; the engine resolves them
+    /// into its source filter, so every dictionary off offers no dictionary
+    /// candidates (`docs/architecture/behavioral-invariants.md` §57).
     ///
     /// The user's own data is not among the arguments: the engine reads its
     /// stores itself and ranks in the same call (user-data-engine-roadmap P6).
@@ -208,7 +206,6 @@ extension RustEngineBridge {
         settings: EngineSettings,
         generation: UInt64,
         nowMs: Int64 = 0,
-        enabledSourcesBitmask: UInt32 = 0,
     ) -> ContinuousFetchResult? {
         var fetch = Taigi_Engine_FetchAtPos()
         // §34/S22 — positive platform setting → inverted proto disable gate
@@ -218,7 +215,7 @@ extension RustEngineBridge {
         // `fetch_at_pos`, which inverts the same setting onto the same field.
         fetch.literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled
         fetch.nowMs = nowMs
-        fetch.enabledSourcesBitmask = enabledSourcesBitmask
+        fetch.toggles = dictionaryTogglesProto(settings.dictionarySources)
         // The engine reads the user's dictionary only with this setting on.
         // CROSS-PLATFORM INVARIANT — mirrors the desktop `fetch_at_pos`.
         fetch.customDictionaryDisabled = !settings.isCustomDictEnabled

@@ -103,7 +103,7 @@ struct DictionarySearchService: Sendable {
         // than showing an empty dictionary because one FFI call did not come
         // back. The search path's all-on sentinel is `UInt32.max`, NOT `0` —
         // `0` there means "no sources enabled" and would empty the list.
-        let wireMask = filters?.wireMask ?? RustEngineBridge.allSourcesEnabledSearchBitmask
+        let sourcesBitmask = filters?.dictionaryFilterBitmask ?? RustEngineBridge.allSourcesEnabledSearchBitmask
         let enabledSources = filters?.enabledSources
         let mode: LexiconInputMode = settings.inputMode == .poj ? .poj : .tl
 
@@ -112,13 +112,13 @@ struct DictionarySearchService: Sendable {
                 query: query,
                 inputMode: mode,
                 limit: UInt32(Self.resultLimit),
-                enabledSourcesBitmask: wireMask,
+                enabledSourcesBitmask: sourcesBitmask,
             )
             : RustEngineBridge.lexiconSearchWithSources(
                 input: query,
                 inputMode: mode,
                 limit: UInt32(Self.resultLimit),
-                enabledSourcesBitmask: wireMask,
+                enabledSourcesBitmask: sourcesBitmask,
             )
 
         // Sorted BEFORE the badges are trimmed: the sort asks whether a row is
