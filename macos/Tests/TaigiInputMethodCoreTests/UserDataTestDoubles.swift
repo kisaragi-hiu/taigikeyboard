@@ -10,18 +10,6 @@
 import Foundation
 @testable import TaigiInputMethodCore
 
-/// Every pick the manager reported, in order.
-@MainActor
-final class RecordingUsageRecorder: UsageRecorder {
-    private(set) var recorded: [Usage] = []
-
-    nonisolated init() {}
-
-    func record(_ usage: Usage) {
-        recorded.append(usage)
-    }
-}
-
 /// One next-word handshake the manager reported. What the engine learns from
 /// it — the window, noise, sentence ends, compounds — is the engine's
 /// (`engine/nextword/src/decide.rs`); when and what the manager reports is

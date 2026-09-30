@@ -395,7 +395,7 @@ private fun bracketedCommit(
 ): String = "$hanzi ($roman)"
 
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
-// `formatOutputText` and macos/.../CandidateDocumentText.swift `resolved`. Drift causes
+// `formatOutputText` and engine/composing/src/commit_text.rs `resolve_commit_text`. Drift causes
 // silent divergence (a missing or stray auto-space after a swapped-mode commit).
 
 /**
@@ -527,9 +527,8 @@ internal fun resolveMarkedCellCommit(
         else -> null
     }
 
-// CROSS-PLATFORM INVARIANT — mirrors ios `ActionHandler.ResolvedCommit`,
-// macos `CandidateDocumentText.ResolvedCommit`, windows
-// `composing::document_text::ResolvedCommit`.
+// CROSS-PLATFORM INVARIANT — mirrors ios `ActionHandler.ResolvedCommit` and the
+// engine's `engine/composing/src/commit_text.rs` `ResolvedCommit` (macOS + desktop, R5).
 
 /**
  * What one commit writes into the document, and whether that string carries

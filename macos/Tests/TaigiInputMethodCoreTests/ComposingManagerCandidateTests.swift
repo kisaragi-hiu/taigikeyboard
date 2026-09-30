@@ -102,22 +102,22 @@ final class ComposingManagerCandidateTests: XCTestCase {
             "taigi must offer at least one candidate spanning the whole buffer",
         )
 
-        let outcome = manager.commitCandidate(candidate, executing: executor).outcome
+        let outcome = manager.commitCandidate(candidate, executing: executor)
 
-        XCTAssertEqual(outcome, .finalized)
+        XCTAssertEqual(outcome, .finalized(earnsAutoSpace: true), "roman-first writes romanization")
         XCTAssertFalse(manager.isComposing)
         XCTAssertEqual(
             executor.committedTexts,
-            [CandidateDocumentText.text(for: candidate, settings: settings.current)],
+            [CandidateCellContent.cell(for: candidate, settings: settings.current).text],
             "one document mutation, carrying the rendering the settings asked for — "
                 + "asserting only the count would pass with the canonical key sent by mistake",
         )
         XCTAssertTrue(manager.displayText.isEmpty, "an ended composition has nothing left to render")
     }
 
-    /// The formatter has its own unit tests; this is the wiring — that the
-    /// manager passes the rendering to the bridge and the canonical key
-    /// separately, rather than sending one string for both.
+    /// The engine's resolver has its own unit tests (`commit_text.rs`); this is
+    /// the wiring — that the manager sends the script and the identity keys
+    /// separately, and the engine renders under the settings sent with them.
     func testCommitCandidate_swappedOutput_writesTheHanjiRatherThanTheRomanization() throws {
         let manager = try TestFixtures.makeComposingManager(
             settingsProvider: StubEngineSettingsProvider(swapped: true),
@@ -131,9 +131,59 @@ final class ComposingManagerCandidateTests: XCTestCase {
         )
         let hanji = try XCTUnwrap(candidate.hanji)
 
-        _ = manager.commitCandidate(candidate, executing: executor)
+        let outcome = manager.commitCandidate(candidate, executing: executor)
 
         XCTAssertEqual(executor.committedTexts, [hanji])
+        XCTAssertEqual(outcome, .finalized(earnsAutoSpace: false), "a Hanji commit earns no space")
+    }
+
+    /// What a commit writes is the engine's (`engine/composing/src/commit_text.rs`),
+    /// what a cell shows is this side's, and the two must agree: Return on a
+    /// cell writes exactly the text the cell leads with, under every display,
+    /// and Space the other script of the same candidate — its annotation, the
+    /// other half of a Hanji with Romanization split, or nothing at all under
+    /// Romanization Only, which shows no Hanji to switch to.
+    func testCommitCandidate_writesWhatItsCellShows_andSpaceTheOtherScript() throws {
+        let displays: [(swapped: Bool, mode: CandidateDisplayMode)] = [
+            (false, .sideBySide), (true, .sideBySide), (true, .combined), (false, .romanOnly),
+        ]
+        for (swapped, mode) in displays {
+            let provider = StubEngineSettingsProvider(swapped: swapped, candidateDisplayMode: mode)
+            for flip in [false, true] {
+                var index = 0
+                while true {
+                    let manager = try TestFixtures.makeComposingManager(
+                        settingsProvider: provider,
+                        startingGeneration: TestFixtures.generationCounter.next(),
+                    )
+                    let executor = RecordingEffectExecutor()
+                    composeTaigi(manager, executing: executor)
+                    let candidate = try XCTUnwrap(wholeBufferCandidate(from: manager, requiringHanji: true))
+                    let cells = manager.presentation(for: [candidate]).cells
+                    guard index < cells.count else { break }
+                    let cell = cells[index]
+                    let expected: String? = if !flip {
+                        cell.cell.text
+                    } else if mode == .combined {
+                        cells[1 - index].cell.text
+                    } else {
+                        cell.cell.annotation
+                    }
+                    let label = "swapped=\(swapped) \(mode) cell=\(index) flip=\(flip)"
+
+                    let outcome = manager.commitCandidate(
+                        candidate, script: flip ? cell.script.flipped : cell.script, executing: executor,
+                    )
+
+                    XCTAssertEqual(executor.committedTexts, expected.map { [$0] } ?? [], label)
+                    if expected == nil {
+                        XCTAssertEqual(outcome, .ignored, label)
+                        XCTAssertTrue(manager.isComposing, label)
+                    }
+                    index += 1
+                }
+            }
+        }
     }
 
     func testCommitCandidate_consumingPartOfTheBuffer_nailsItAndKeepsComposing() throws {
@@ -145,7 +195,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
             "taigi must offer at least one candidate shorter than the whole buffer",
         )
 
-        let outcome = manager.commitCandidate(candidate, executing: executor).outcome
+        let outcome = manager.commitCandidate(candidate, executing: executor)
 
         XCTAssertEqual(outcome, .nailed)
         XCTAssertTrue(manager.isComposing)
@@ -190,7 +240,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
         let executor = RecordingEffectExecutor()
         composeTaigi(manager, executing: executor)
         let candidate = try XCTUnwrap(partialCandidate(from: manager))
-        let nailedText = CandidateDocumentText.text(for: candidate, settings: settings.current)
+        let nailedText = CandidateCellContent.cell(for: candidate, settings: settings.current).text
         executor.clearEffects()
 
         _ = manager.commitCandidate(candidate, executing: executor)
@@ -221,7 +271,7 @@ final class ComposingManagerCandidateTests: XCTestCase {
         manager.cancelComposition(executing: executor)
         executor.clearEffects()
 
-        let outcome = manager.commitCandidate(candidate, executing: executor).outcome
+        let outcome = manager.commitCandidate(candidate, executing: executor)
 
         XCTAssertEqual(
             outcome,

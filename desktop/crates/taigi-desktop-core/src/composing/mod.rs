@@ -2,25 +2,24 @@
 //! updated and the engine's effects handed to the client that asked.
 //!
 //! Port of `macos/Sources/TaigiInputMethodCore/Composing/*.swift` +
-//! `NextWord/NextWordPort.swift` + `Candidates/{CandidateDocumentText,
-//! CandidateCellContent,CandidateScript}.swift`. The TSF shell implements
-//! [`ComposingEffectExecutor`] over an edit session; the engine keeps the
-//! user's data (picks reach it through [`UsageRecorder`]); tests record in
-//! memory.
+//! `NextWord/NextWordPort.swift` + `Candidates/{CandidateCellContent,
+//! CandidateScript}.swift`. The TSF shell implements
+//! [`ComposingEffectExecutor`] over an edit session; the engine resolves what
+//! a pick writes and keeps the user's data (it counts the picks itself);
+//! tests record in memory.
 
+mod cell_content;
 mod clock;
 mod coordinator;
-mod document_text;
 mod intent_executor;
 mod manager;
 mod next_word;
 mod outcomes;
 mod presentation;
-mod usage;
 
+pub use cell_content::{CandidateCellContent, CandidateScript};
 pub use clock::{Clock, SystemClock};
 pub use coordinator::{ComposingSessionCoordinator, ContextToken};
-pub use document_text::{CandidateCellContent, CandidateScript, ResolvedCommit};
 pub use intent_executor::{
     insert_symbol, pass_through_may_consume, perform_intent, refresh_list, represent_list,
     IntentSurface,
@@ -29,4 +28,3 @@ pub use manager::{ComposingEffectExecutor, ComposingManager};
 pub use next_word::{EngineNextWord, NextWordPort};
 pub use outcomes::{CandidateCommitOutcome, CandidateFetchOutcome, CandidateListChange};
 pub use presentation::{CandidateSource, PresentedCandidate};
-pub use usage::{EngineUsage, NoUsage, Usage, UsageRecorder};

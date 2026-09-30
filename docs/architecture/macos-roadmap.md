@@ -239,8 +239,9 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
   - **Superseded 2026-09-26** (storage only; the decide arms above stand):
     both learning databases are the engine's (`engine/userdata`,
     `user-data-engine-roadmap.md` P6 / P9b). Picks reach `user_frequency.db`
-    through `UsageRecorder` (`EngineUsageRecorder` → `RecordUsage`); the
-    engine writes the associations its decisions record, and the manager
+    through the engine itself — it counts each candidate commit it resolves
+    (R5 PR-c, 2026-09-30; `UsageRecorder` retired); the engine writes the
+    associations its decisions record, and the manager
     only reports handshakes through `NextWord/NextWordPort.swift`
     (`EngineNextWord`). iOS and Android reached the v6 association shape too.
 - **D8 Dictionary artifacts** — read from the repo-root `dictionaries/` (read-only)

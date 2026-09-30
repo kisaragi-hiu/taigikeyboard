@@ -1,7 +1,9 @@
 //! What the two candidate operations answer: a query's three kinds of
 //! nothing, and what a commit actually did. Port of `CandidateOutcomes.swift`.
 
-use crate::engine::{ComposingTransition, ContinuousCandidate, Effect};
+use protos::engine::{CommitOutcome, CommitResolution};
+
+use crate::engine::ContinuousCandidate;
 
 /// The answer to a candidate query. Three cases rather than an optional list
 /// because the caller acts on each differently, and collapsing any two shows
@@ -42,49 +44,40 @@ impl CandidateFetchOutcome {
     }
 }
 
-/// What committing a candidate did, read from the engine's effects rather
-/// than from the composing mirror: a generation mismatch silently resets the
-/// engine to Idle before the intent runs, which turns the commit into a noop
-/// while flipping `is_composing` to false — so a mirror read reports "the
-/// composition ended" for a commit that never happened.
+/// What committing a candidate did, as the engine reported it
+/// (`ComposingResponse.commit`) — never read off the composing mirror: a
+/// generation mismatch silently resets the engine to Idle before the intent
+/// runs, which turns the commit into a noop while flipping `is_composing` to
+/// false, so a mirror read reports "the composition ended" for a commit that
+/// never happened.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CandidateCommitOutcome {
     /// The round-trip never reached the engine.
     Unavailable,
-    /// The engine rejected the commit — a stale offset, or a composition
-    /// that had already gone. Nothing changed.
+    /// The engine rejected the commit — a stale offset, a composition that
+    /// had already gone, or a script the candidate does not have (Space on a
+    /// one-script cell). Nothing changed.
     Ignored,
     /// The segment was nailed and the composition continues. Under Model B
-    /// this writes nothing to the document (`transition.rs:864-889`).
+    /// this writes nothing to the document.
     Nailed,
     /// The whole composition was consumed, written to the document in one
-    /// mutation, and the engine returned to Idle (`transition.rs:842-861`).
-    Finalized,
+    /// mutation, and the engine returned to Idle. `earns_auto_space` is the
+    /// engine's §23 verdict on what the pick wrote (romanization, no
+    /// trailing `-`); the live Auto-Space setting is still the caller's.
+    Finalized { earns_auto_space: bool },
 }
 
 impl CandidateCommitOutcome {
-    /// Model B leaves exactly one usable success signal per kind of commit: a
-    /// final commit is the only one that writes text, and a nail is marked by
-    /// the per-segment learning effect. A noop emits neither.
-    pub fn from_transition(transition: &ComposingTransition) -> Self {
-        let did_write_document = transition
-            .effects
-            .iter()
-            .any(|effect| matches!(effect, Effect::CommitTextReplacingPreedit(_)));
-        let did_nail = transition
-            .effects
-            .iter()
-            .any(|effect| matches!(effect, Effect::NextWordUpdateLastSelectedWord { .. }));
-        match (did_write_document, did_nail) {
-            (true, _) => {
-                if transition.is_composing {
-                    Self::Nailed
-                } else {
-                    Self::Finalized
-                }
-            }
-            (false, true) => Self::Nailed,
-            (false, false) => Self::Ignored,
+    pub(crate) fn from_resolution(resolution: &CommitResolution) -> Self {
+        match resolution.outcome() {
+            CommitOutcome::Nailed => Self::Nailed,
+            CommitOutcome::Finalized => Self::Finalized {
+                earns_auto_space: resolution.earns_auto_space,
+            },
+            // UNSPECIFIED: an answer without a resolution changed nothing
+            // this side can tell.
+            CommitOutcome::Ignored | CommitOutcome::Unspecified => Self::Ignored,
         }
     }
 }
@@ -116,38 +109,34 @@ mod tests {
         );
     }
 
-    fn transition(effects: Vec<Effect>, is_composing: bool) -> ComposingTransition {
-        ComposingTransition {
-            raw_input: String::new(),
-            display_text: String::new(),
-            effects,
-            is_composing,
+    fn resolution(outcome: CommitOutcome, earns_auto_space: bool) -> CommitResolution {
+        CommitResolution {
+            outcome: outcome as i32,
+            earns_auto_space,
+            ..CommitResolution::default()
         }
     }
 
     #[test]
-    fn outcome_reads_effects_not_the_mirror() {
+    fn outcome_reads_the_engine_resolution() {
         assert_eq!(
-            CandidateCommitOutcome::from_transition(&transition(
-                vec![Effect::CommitTextReplacingPreedit("台語".into())],
-                false
-            )),
-            CandidateCommitOutcome::Finalized
+            CandidateCommitOutcome::from_resolution(&resolution(CommitOutcome::Finalized, true)),
+            CandidateCommitOutcome::Finalized {
+                earns_auto_space: true
+            }
         );
         assert_eq!(
-            CandidateCommitOutcome::from_transition(&transition(
-                vec![Effect::NextWordUpdateLastSelectedWord {
-                    text: "台".into(),
-                    roman: "tâi".into()
-                }],
-                true
-            )),
+            CandidateCommitOutcome::from_resolution(&resolution(CommitOutcome::Nailed, false)),
             CandidateCommitOutcome::Nailed
         );
         assert_eq!(
-            CandidateCommitOutcome::from_transition(&transition(vec![], false)),
+            CandidateCommitOutcome::from_resolution(&resolution(CommitOutcome::Ignored, false)),
+            CandidateCommitOutcome::Ignored
+        );
+        assert_eq!(
+            CandidateCommitOutcome::from_resolution(&CommitResolution::default()),
             CandidateCommitOutcome::Ignored,
-            "a generation-reset noop flips is_composing without writing anything"
+            "an answer with no resolution is not a commit"
         );
     }
 }

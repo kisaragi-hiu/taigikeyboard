@@ -3,7 +3,8 @@
 //! Port of `macos/Sources/TaigiInputMethodCore/Engine/ComposingTransition.swift`.
 
 use protos::engine::{
-    effect, CandidateMessage, CommittedWord, ComposingResponse, Effect as WireEffect,
+    effect, CandidateMessage, CommitResolution, CommittedWord, ComposingResponse,
+    Effect as WireEffect,
 };
 
 /// The complete effect vocabulary of `engine/protos/proto/composing.proto`
@@ -203,6 +204,15 @@ impl ContinuousCandidate {
 pub struct ContinuousFetchResult {
     pub transition: ComposingTransition,
     pub candidates: Option<Vec<ContinuousCandidate>>,
+}
+
+/// Result of a candidate commit whose document text the engine resolved:
+/// the transition to replay, and what the commit did
+/// (`ComposingResponse.commit` — outcome and auto-space verdict).
+#[derive(Clone, Debug, PartialEq)]
+pub struct ContinuousCommitResult {
+    pub transition: ComposingTransition,
+    pub commit: CommitResolution,
 }
 
 /// Builders shared by sibling modules' tests (the `metrics.rs` precedent).

@@ -1,20 +1,18 @@
 //! The composing orchestration against the REAL engine and dictionaries, with
-//! in-memory stores and a recording executor — the port of macOS's
+//! in-memory ports and a recording executor — the port of macOS's
 //! `ComposingManagerTests` / `ComposingManagerCandidateTests` /
 //! `ComposingManagerLearningTests` / `ComposingSessionCoordinatorTests`.
 //!
 //! Same singleton discipline as `engine_roundtrip.rs`: one lock, one fresh
 //! generation block per test.
 
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use taigi_desktop_core::composing::{
     CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript, Clock, ComposingEffectExecutor,
-    ComposingManager, ComposingSessionCoordinator, ContextToken, NextWordPort, Usage,
-    UsageRecorder,
+    ComposingManager, ComposingSessionCoordinator, ContextToken, NextWordPort,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, ContinuousCandidate, Effect};
@@ -78,11 +76,11 @@ enum Handshake {
     Forgot,
 }
 
-/// What the manager handed on: each pick it reported, each next-word
-/// handshake, and the clock.
+/// What the manager handed on: each next-word handshake, and the clock. The
+/// picks are the engine's to count (R5) — pinned by the engine's
+/// `dispatch/tests/user_data_writes.rs` `engine_resolved_picks_are_counted_by_the_engine`.
 #[derive(Default)]
 struct Memory {
-    usages: Mutex<Vec<Usage>>,
     handshakes: Mutex<Vec<Handshake>>,
     now_ms: Mutex<i64>,
 }
@@ -100,27 +98,10 @@ impl Memory {
             })
             .collect()
     }
-
-    /// The picks the engine would count, per `(display text, canonical TL)`.
-    fn counted(&self) -> HashMap<(String, String), i64> {
-        let mut counted = HashMap::new();
-        for usage in self.usages.lock().unwrap().iter() {
-            *counted
-                .entry((usage.display_text.clone(), usage.canonical_tl.clone()))
-                .or_insert(0) += 1;
-        }
-        counted
-    }
 }
 
 #[derive(Clone)]
 struct Handle(Arc<Memory>);
-
-impl UsageRecorder for Handle {
-    fn record(&self, usage: &Usage) {
-        self.0.usages.lock().unwrap().push(usage.clone());
-    }
-}
 
 impl NextWordPort for Handle {
     fn word_selected(
@@ -214,7 +195,6 @@ fn rig() -> Rig {
     let manager = ComposingManager::new(
         Arc::new(settings.clone()),
         Box::new(handle.clone()),
-        Box::new(handle.clone()),
         Box::new(handle),
         fresh_generation(),
     );
@@ -258,25 +238,33 @@ impl Rig {
             })
     }
 
+    /// The engine's outcome, and the text this commit wrote to the document.
     fn commit(
         &mut self,
         candidate: &ContinuousCandidate,
         script: CandidateScript,
     ) -> (CandidateCommitOutcome, Option<String>) {
-        let (outcome, committed) =
-            self.manager
-                .commit_candidate(candidate, script, &mut self.recorder);
-        (outcome, committed.map(|commit| commit.text))
+        let before = self.recorder.effects.len();
+        let outcome = self
+            .manager
+            .commit_candidate(candidate, script, &mut self.recorder);
+        let committed =
+            self.recorder.effects[before..]
+                .iter()
+                .rev()
+                .find_map(|effect| match effect {
+                    Effect::CommitTextReplacingPreedit(text) => Some(text.clone()),
+                    _ => None,
+                });
+        (outcome, committed)
     }
 
-    /// The auto-space verdict the same commit resolves — asserted apart from
-    /// the text because the two travel together through one return.
+    /// The engine's auto-space verdict on a commit that must finalize.
     fn commit_verdict(&mut self, candidate: &ContinuousCandidate, script: CandidateScript) -> bool {
-        self.manager
-            .commit_candidate(candidate, script, &mut self.recorder)
-            .1
-            .expect("a finalized commit carries its text and verdict")
-            .wrote_romanization
+        match self.commit(candidate, script).0 {
+            CandidateCommitOutcome::Finalized { earns_auto_space } => earns_auto_space,
+            other => panic!("expected a final commit, got {other:?}"),
+        }
     }
 
     fn advance_clock(&self, ms: i64) {
@@ -514,7 +502,12 @@ fn commit_candidate_consuming_the_whole_buffer_writes_the_document_and_ends() {
     rig.type_text("taigi");
     let taigi = rig.candidate("台語");
     let (outcome, committed) = rig.commit(&taigi, CandidateScript::Primary);
-    assert_eq!(outcome, CandidateCommitOutcome::Finalized);
+    assert_eq!(
+        outcome,
+        CandidateCommitOutcome::Finalized {
+            earns_auto_space: false
+        }
+    );
     assert_eq!(
         committed.as_deref(),
         Some("台語"),
@@ -533,13 +526,23 @@ fn commit_candidate_roman_output_writes_the_romanization_and_alternate_writes_th
     rig.type_text("taigi");
     let taigi = rig.candidate("台語");
     let (outcome, committed) = rig.commit(&taigi, CandidateScript::Primary);
-    assert_eq!(outcome, CandidateCommitOutcome::Finalized);
+    assert_eq!(
+        outcome,
+        CandidateCommitOutcome::Finalized {
+            earns_auto_space: true
+        }
+    );
     assert_eq!(committed.as_deref(), Some("tâi-gí"));
 
     rig.type_text("taigi");
     let taigi = rig.candidate("台語");
     let (outcome, committed) = rig.commit(&taigi, CandidateScript::Alternate);
-    assert_eq!(outcome, CandidateCommitOutcome::Finalized);
+    assert_eq!(
+        outcome,
+        CandidateCommitOutcome::Finalized {
+            earns_auto_space: false
+        }
+    );
     assert_eq!(
         committed.as_deref(),
         Some("台語"),
@@ -547,7 +550,7 @@ fn commit_candidate_roman_output_writes_the_romanization_and_alternate_writes_th
     );
 }
 
-/// trace: `resolved_commit` — the hanji-absent arm, through the real engine.
+/// trace: engine `commit_text::lead` — the hanji-absent arm.
 /// §34's literal is a one-script candidate, so it earns the auto space under
 /// every mode; the old gate read `(script, swap)` and called it a hanji
 /// commit in Hanji-first and Hanji with Romanization, the two modes that force the swap on.
@@ -632,17 +635,13 @@ fn commit_candidate_after_the_composition_ended_is_ignored() {
     let (outcome, committed) = rig.commit(&taigi, CandidateScript::Primary);
     assert_eq!(outcome, CandidateCommitOutcome::Ignored);
     assert_eq!(committed, None);
-    assert!(
-        rig.memory.usages.lock().unwrap().is_empty(),
-        "an ignored commit reports nothing"
-    );
 }
 
 /// §34 under the shipped defaults (Show Typed Text First ON): a fresh bar has the
 /// typed literal in slot 0 — one script — so the highlighted-candidate commit
 /// that Enter routes to (`keys/intent.rs` `return_commits_the_candidate_and_shift_return_the_literal`;
 /// the window opens on slot 0) writes exactly what was typed in either output
-/// mode, and learns it under its canonical reading. The dictionary's first
+/// mode. The dictionary's first
 /// candidate is one slot along. ⇧Enter's raw path is
 /// `commit_composition_writes_the_composition_and_ends_it`.
 #[test]
@@ -663,18 +662,14 @@ fn enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode() {
         let (outcome, committed) = rig.commit(&candidates[0], CandidateScript::Primary);
         assert_eq!(
             outcome,
-            CandidateCommitOutcome::Finalized,
+            CandidateCommitOutcome::Finalized {
+                earns_auto_space: true
+            },
             "swapped={swapped}"
         );
         assert_eq!(committed.as_deref(), Some("taigi"), "swapped={swapped}");
         assert!(!rig.manager.is_composing(), "swapped={swapped}");
         assert_eq!(rig.recorder.committed(), ["taigi"], "swapped={swapped}");
-        let learned = rig.memory.counted();
-        assert_eq!(
-            learned.keys().collect::<Vec<_>>(),
-            [&("taigi".to_string(), candidates[0].canonical_tl.clone())],
-            "learned under the literal's canonical reading — swapped={swapped}"
-        );
     }
 }
 
@@ -697,7 +692,12 @@ fn enter_on_a_fresh_bar_commits_the_dictionary_word_when_the_literal_row_is_off(
         candidates[0]
     );
     let (outcome, committed) = rig.commit(&candidates[0], CandidateScript::Primary);
-    assert_eq!(outcome, CandidateCommitOutcome::Finalized);
+    assert_eq!(
+        outcome,
+        CandidateCommitOutcome::Finalized {
+            earns_auto_space: false
+        }
+    );
     assert_eq!(committed.as_deref(), candidates[0].hanji.as_deref());
     assert_ne!(
         committed.as_deref(),
@@ -721,26 +721,11 @@ fn alternate_on_a_single_script_candidate_commits_nothing() {
 }
 
 // MARK: - ComposingManagerLearningTests
-
-// INVARIANT_USER_FREQ_PAIR_KEY (behavioral-invariants.md §28)
-#[test]
-fn commit_candidate_counts_the_word_under_its_reading_in_either_script() {
-    let _lock = engine_lock();
-    let mut rig = rig();
-    rig.type_text("taigi");
-    let taigi = rig.candidate("台語");
-    rig.commit(&taigi, CandidateScript::Primary);
-    rig.type_text("taigi");
-    let taigi = rig.candidate("台語");
-    rig.commit(&taigi, CandidateScript::Alternate);
-    let store = rig.memory.counted();
-    assert_eq!(
-        store.get(&("台語".to_owned(), "tâi-gí".to_owned())),
-        Some(&2),
-        "{store:?}"
-    );
-    assert_eq!(store.len(), 1, "identity is the pair, not the rendering");
-}
+//
+// Counting a pick under its `(display text, canonical TL)` pair, whichever
+// script it wrote, is the engine's since R5 — `continuous_commit_resolution.rs`
+// `a_nail_then_a_final_pick_report_their_outcomes` (the usage triple) and
+// `user_data_writes.rs` `engine_resolved_picks_are_counted_by_the_engine`.
 
 #[test]
 fn two_commits_report_their_readings_and_a_full_stop_is_reported_between() {

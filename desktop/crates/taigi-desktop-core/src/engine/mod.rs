@@ -18,7 +18,8 @@ pub mod user_data;
 
 pub use composing::{
     append, commit_continuous, commit_preedit_then_insert_external, commit_raw, delete_backward,
-    enter_continuous, fetch_at_pos, move_caret, reset, telex_key, CommitContinuousArgs, FetchArgs,
+    enter_continuous, fetch_at_pos, move_caret, reset, telex_key, CommitContinuousArgs,
+    CommitScript, FetchArgs,
 };
 pub use external_lookup::{chhoe_url, digit_tone_form, moe_url};
 pub use lexicon::{
@@ -33,7 +34,8 @@ pub use nextword::{
 };
 pub use phonetics::{nfd_preprocess_for_lookup, strip_tone, tl_to_poj};
 pub use transition::{
-    CandidateMode, ComposingTransition, ContinuousCandidate, ContinuousFetchResult, Effect,
+    CandidateMode, ComposingTransition, ContinuousCandidate, ContinuousCommitResult,
+    ContinuousFetchResult, Effect,
 };
 
 #[cfg(test)]

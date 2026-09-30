@@ -193,7 +193,7 @@ Authoritative ownership map (Rust crate vs platform glue) — see `engine/migrat
 | `Tone` | Tone-mark conversion + nasal-marker | `engine/phonetics` | no direct bridge — applied inside composing ops (`engine/composing`) |
 | `CaseTransform` | Per-char + per-string case mapping (POJ/TL aware) | `engine/phonetics::case_transform` | `RustEngineBridge+CaseTransform.swift` / `CaseTransformBridge.kt` |
 | `NextWord` | Bigram association lookup + decay scoring + ranking | `engine/nextword` (+ `engine/lexicon::assoc_lookup`) | `NextWordController.swift` / `NextWordController.kt` (timer/threading) |
-| `UserFrequency` | Per-word usage tracking (count + lastUsed) | `engine/userdata` (read in `FetchAtPos`, written by `RecordUsage`) | `UsageRecorder.swift` / `UsageRecorder.kt` (picks → `RecordUsage`) |
+| `UserFrequency` | Per-word usage tracking (count + lastUsed) | `engine/userdata` (read in `FetchAtPos`, written by `RecordUsage`) | mobile `UsageRecorder.swift` / `UsageRecorder.kt` (picks → `RecordUsage`); macOS / Windows / Linux: the engine counts each commit it resolves (R5) |
 | ~~`Segmentation`~~ | ~~Syllable segmentation~~ (removed v3.4.6) | — | — |
 | `Layout` | Keyboard layout | — | `CustomLayoutService.swift` / `LayoutManager.kt` |
 | `Theme` | Theme & styling | — | `Styling/Providers/` / `themes.xml` + `PrefHelper.kt` |

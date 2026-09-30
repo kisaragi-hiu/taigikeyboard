@@ -59,7 +59,7 @@ final class CandidateCellContentTests: XCTestCase {
     }
 
     /// A romanization-only candidate has no second script in EITHER direction —
-    /// the same case `CandidateDocumentText` answers with the bare romanization.
+    /// the same case the engine commits as the bare romanization.
     func testRomanizationOnlyCandidate_hasNoAnnotationInEitherDirection() {
         for swapped in [false, true] {
             let cell = CandidateCellContent.cell(
@@ -106,65 +106,10 @@ final class CandidateCellContentTests: XCTestCase {
         }
     }
 
-    /// Space commits the annotation (#610), and a romanization-only cell has
-    /// none — so Space on it must resolve to nothing to write, the same
-    /// one-script path the §34 literal candidate already takes, rather than
-    /// committing Hanji the user never saw.
-    func testRomanOnly_offersNoAlternateScriptToSpace() {
-        for swapped in [false, true] {
-            XCTAssertNil(
-                CandidateDocumentText.resolvedAlternate(
-                    for: candidate(roman: "tâi-gí", hanji: "台語"),
-                    settings: settings(swapped: swapped, displayMode: .romanOnly),
-                )?.text,
-                "swapped=\(swapped)",
-            )
-        }
-    }
-
-    /// The cell and the commit agree under this display as under the others:
-    /// with the derived swap `false` — what `SettingsStore` hands the engine —
-    /// the document gets exactly the romanization the cell shows.
-    func testRomanOnly_cellIsExactlyTheDocumentText_underTheDerivedSwap() {
-        let word = candidate(roman: "tâi-gí", hanji: "台語")
-        let settings = settings(swapped: false, displayMode: .romanOnly)
-
-        XCTAssertEqual(CandidateCellContent.cell(for: word, settings: settings).text, "tâi-gí")
-        XCTAssertEqual(CandidateDocumentText.text(for: word, settings: settings), "tâi-gí")
-    }
-
-    /// The cell and the commit resolve the same settings snapshot, so the cell
-    /// always LEADS with the script the document gets first.
-    func testCellPrimary_leadsWithWhateverTheDocumentLeadsWith() {
-        let word = candidate(roman: "tâi-gí", hanji: "台語")
-
-        for swapped in [false, true] {
-            let settings = settings(swapped: swapped)
-            let cell = CandidateCellContent.cell(for: word, settings: settings)
-            let document = CandidateDocumentText.text(for: word, settings: settings)
-
-            XCTAssertTrue(
-                document.hasPrefix(cell.text),
-                "swapped=\(swapped): document \"\(document)\" "
-                    + "does not lead with the cell's \"\(cell.text)\"",
-            )
-        }
-    }
-
-    /// Under the defaults the two are the same string, which is what the
-    /// end-to-end commit tests assert on.
-    func testCellPrimary_isExactlyTheDocumentTextUnderTheDefaults() {
-        let word = candidate(roman: "tâi-gí", hanji: "台語")
-
-        for swapped in [false, true] {
-            let settings = settings(swapped: swapped)
-
-            XCTAssertEqual(
-                CandidateCellContent.cell(for: word, settings: settings).text,
-                CandidateDocumentText.text(for: word, settings: settings),
-            )
-        }
-    }
+    // What each cell commits — its own text on Return, the other script on
+    // Space, nothing under Romanization Only — is asserted end to end against
+    // the engine's resolver: `ComposingManagerCandidateTests`
+    // `testCommitCandidate_writesWhatItsCellShows_andSpaceTheOtherScript`.
 
     // MARK: - Cell reconfiguration
 

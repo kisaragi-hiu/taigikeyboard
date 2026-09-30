@@ -131,16 +131,13 @@ impl DesktopRuntime {
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    /// The coordinator, built on first use; picks reach the engine only
-    /// where this process has a data directory. `prepare_for_first_key` must
-    /// have run.
+    /// The coordinator, built on first use; the engine keeps what it learns
+    /// only where this process has a data directory (`prepare_for_first_key`
+    /// opens it there). `prepare_for_first_key` must have run.
     pub fn coordinator(&self) -> &Mutex<ComposingSessionCoordinator> {
         self.coordinator.get_or_init(|| {
             let settings: Arc<dyn SettingsProvider> = Arc::clone(&self.settings) as _;
-            Mutex::new(ComposingSessionCoordinator::for_desktop(
-                settings,
-                self.data_directory.is_some(),
-            ))
+            Mutex::new(ComposingSessionCoordinator::for_desktop(settings))
         })
     }
 

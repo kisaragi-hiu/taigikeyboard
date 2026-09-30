@@ -242,25 +242,27 @@ extension RustEngineBridge {
 
     /// Commits one candidate returned by `composingFetchAtPos`.
     ///
-    /// Every argument except `documentText` must be round-tripped verbatim from
-    /// the `ContinuousCandidate` the user picked — in particular `consumedBytes`
-    /// is the candidate's `consumedSpanEnd`, an absolute offset into the pending
-    /// raw buffer, NOT the span's length (`engine/protos/proto/composing.proto:228`).
-    /// The engine collapses to a noop on a mismatched or unaligned offset
-    /// (`transition.rs:812-817`), so there is nothing for the caller to validate.
+    /// Every argument except `script` must be round-tripped verbatim from the
+    /// `ContinuousCandidate` the user picked — in particular `consumedBytes` is
+    /// the candidate's `consumedSpanEnd`, an absolute offset into the pending
+    /// raw buffer, NOT the span's length (`composing.proto` `CommitContinuous`).
+    /// The engine collapses to a noop on a mismatched or unaligned offset, so
+    /// there is nothing for the caller to validate.
     ///
-    /// `documentText` is the platform's rendering of the candidate for the
-    /// document; `canonicalText` and `associationTl` are the identity keys the
-    /// engine learns from, which is why they are separate arguments rather than
-    /// derived from the rendering (Core Principle #7 keys a word on the
-    /// `(Hanji, canonical TL)` pair).
+    /// `script` says which of the pick's scripts the document gets, relative
+    /// to the output settings, and the engine resolves the text from `roman`
+    /// and `hanji` under the same `settings` (`engine/composing/src/commit_text.rs`).
+    /// `canonicalText` and `associationTl` are the identity keys the engine
+    /// counts the pick under — itself, with the user data open (R5) — never
+    /// the rendering (Core Principle #7 keys a word on the `(Hanji, canonical
+    /// TL)` pair).
     ///
     /// Consuming the whole pending buffer makes this a final commit — the
     /// engine writes the composition to the document and exits to Idle. Anything
-    /// less nails the segment and stays continuous, writing nothing
-    /// (`transition.rs:842-889`, Model B).
+    /// less nails the segment and stays continuous, writing nothing (Model B).
     static func composingCommitContinuous(
-        documentText: String,
+        script: CandidateScript,
+        roman: String,
         canonicalText: String,
         associationTl: String,
         // §50 — the picked candidate's hanji, `nil` for a hanji-less pick; the
@@ -270,9 +272,13 @@ extension RustEngineBridge {
         syllableCount: UInt32,
         settings: EngineSettings,
         generation: UInt64,
-    ) -> ComposingTransition? {
+    ) -> ContinuousCommitResult? {
         var commit = Taigi_Engine_CommitContinuous()
-        commit.displayText = documentText
+        commit.script = switch script {
+        case .primary: .lead
+        case .alternate: .other
+        }
+        commit.roman = roman
         commit.canonicalText = canonicalText
         commit.associationTl = associationTl
         if let hanji, !hanji.isEmpty {
@@ -280,12 +286,16 @@ extension RustEngineBridge {
         }
         commit.consumedBytes = consumedBytes
         commit.syllableCount = syllableCount
-        return dispatchComposing(
+        guard let response = composingResponse(
             .commitContinuous(commit),
             op: "composingCommitContinuous",
             generation: generation,
             config: appConfig(settings),
-        )
+        ) else {
+            return nil
+        }
+        // Always set on this path; an absent one reads as UNSPECIFIED → ignored.
+        return ContinuousCommitResult(transition: decodeTransition(response), commit: response.commit)
     }
 
     // MARK: - Dispatch

@@ -25,8 +25,9 @@ pub fn is_attaching_punctuation(text: &str) -> bool {
 
 /// True when this commit earns a trailing space at all — the same gate every
 /// insertion site and the punctuation swap read. `wrote_romanization` comes
-/// from whatever resolved the string: `composing::resolved_commit` for a
-/// candidate, [`raw_preedit_writes_romanization`] for the preedit itself.
+/// from whatever resolved the string: the engine for a candidate
+/// (`CommitResolution.earns_auto_space`), [`raw_preedit_writes_romanization`]
+/// for the preedit itself.
 pub fn is_gate_active(is_auto_space_enabled: bool, wrote_romanization: bool) -> bool {
     is_auto_space_enabled && wrote_romanization
 }

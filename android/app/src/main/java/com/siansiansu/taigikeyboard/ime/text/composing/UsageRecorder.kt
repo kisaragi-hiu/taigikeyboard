@@ -19,8 +19,9 @@ data class Usage(
 )
 
 /**
- * CROSS-PLATFORM INVARIANT — mirrors macOS `UsageRecorder.swift` and the
- * desktop `UsageRecorder` (`desktop/crates/taigi-desktop-core/src/composing/usage.rs`).
+ * CROSS-PLATFORM INVARIANT — mirrors iOS `UsageRecorder.swift` and the engine's
+ * own recording on macOS + desktop (R5: `engine/composing/src/transition.rs`
+ * `commit_continuous_resolved`, `Applied.usage`).
  * An interface so the tap handler can be driven from JVM tests, which cannot
  * load the engine.
  */

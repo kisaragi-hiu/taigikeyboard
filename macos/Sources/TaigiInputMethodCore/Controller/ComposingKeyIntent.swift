@@ -165,8 +165,8 @@ enum ComposingKeyIntent: Equatable {
     /// The Hanji/romanization key. Taiwanese is written with Han characters and romanization
     /// mixed inside one sentence, and which words a person romanizes is
     /// personal — so the choice belongs to the word being typed, not to a mode
-    /// the user has to flip in and out of for it (`CandidateDocumentText
-    /// .alternateText(for:settings:)`).
+    /// the user has to flip in and out of for it (`CandidateScript.alternate`,
+    /// resolved by the engine).
     case commitAlternateScript
     /// Commit the candidate in this slot of the visible page, counting from
     /// zero — what the slot keys address (`CandidateSlotKeySet`: the bare

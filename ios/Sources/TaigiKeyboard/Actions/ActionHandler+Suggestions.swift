@@ -5,9 +5,8 @@ import KeyboardKit
 
 /// What one commit writes into the document, and whether that string carries
 /// romanization — the single input the auto-space gate reads.
-// CROSS-PLATFORM INVARIANT — mirrors android `ResolvedCommit`, macos
-// `CandidateDocumentText.ResolvedCommit`, windows
-// `composing::document_text::ResolvedCommit`.
+// CROSS-PLATFORM INVARIANT — mirrors android `ResolvedCommit` and the engine's
+// `engine/composing/src/commit_text.rs` `ResolvedCommit` (macOS + desktop, R5).
 struct ResolvedCommit {
     let text: String
     let wroteRomanization: Bool
@@ -374,7 +373,7 @@ extension ActionHandler {
     /// romanization-only custom entry all fall to the last arm and write
     /// romanization whatever the mode leads with.
     // CROSS-PLATFORM INVARIANT — mirrors android/.../CandidateClickHandler.kt
-    // `unmarkedCommit` and macos/.../CandidateDocumentText.swift `resolved`.
+    // `unmarkedCommit` and engine/composing/src/commit_text.rs `resolve_commit_text`.
     // Drift changes which commits earn a space.
     static func formatOutputText(
         roman: String,

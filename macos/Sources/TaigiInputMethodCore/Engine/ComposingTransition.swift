@@ -115,3 +115,11 @@ struct ContinuousFetchResult: Equatable, Sendable {
     let transition: ComposingTransition
     let candidates: [ContinuousCandidate]?
 }
+
+/// Result of a candidate commit whose document text the engine resolved: the
+/// transition to replay, and what the commit did (`ComposingResponse.commit` —
+/// outcome and auto-space verdict).
+struct ContinuousCommitResult: Equatable, Sendable {
+    let transition: ComposingTransition
+    let commit: Taigi_Engine_CommitResolution
+}
