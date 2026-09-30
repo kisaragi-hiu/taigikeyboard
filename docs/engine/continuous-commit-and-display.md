@@ -121,6 +121,8 @@ Under **Model B** there is exactly **one** literal document write per continuous
 
 **Clarification γ — Tap formats the segment as the swap-aware string; `canonical_text` is the canonical key (v3.5.8 Phase 9 Bug 1; Model-B-adjusted)**
 
+> **Superseded in mechanism by R5 (2026-09-30).** The rule below — the segment is the swap / TPS / both-scripts string — still holds, but the ENGINE formats it: every platform sends `CommitContinuous.script` + the candidate's `roman` / `hanji`, the engine resolves the text (`engine/composing/src/commit_text.rs`) and counts the pick; `CommitContinuous.display_text` is reserved and nothing is formatted or recorded platform-side (`docs/architecture/behavioral-invariants.md` §23 / §28).
+
 The roman-with-spaces rendering in slot 0 (§10.2 segmented rule) is **display-only**. On tap, the platform formats the candidate's `roman` / `hanji` through the **same swap/TPS/both-scripts formatter the legacy lexicon path uses**; that formatted string becomes the segment's `NailedSegment.display_text` and (Model B) joins the marked region immediately and the single combined `CommitTextReplacingPreedit` at hard finalize — so Continuous and lexicon produce identical document text for the same candidate under the same settings. The canonical key (`hanji.unwrap_or(roman)`) is sent **separately** on `CommitContinuous.canonical_text` and used only for the NextWord/frequency effects. This preserves:
 
 - Frequency-recording keys (platform records on the canonical sidechannel — `ActionHandler.handleSuggestionSelection` continuous branch / `CandidateClickHandler.handleContinuousCandidateClick`)
