@@ -4,17 +4,14 @@ import XCTest
 
 /// v3.5.8 Phase 7A — iOS bridge surface tests for the continuous-input slice.
 ///
-/// Scope (per pre-impl Codex consult, Q4 = A):
-/// - 4 ContinuousRequest wrappers compile + round-trip via the FFI seam,
-/// - `ContinuousFetchResult` tri-state semantics (nil / empty / non-empty)
-///   on the `candidates` field,
-/// - 3 Phase 4 NextWord effect cases decode through `synthComposing`
-///   instead of being dropped to nil (the pre-7A behavior).
-///
-/// Functional verification of dispatch logic is in
-/// `engine/composing/tests/dispatch_continuous.rs`; engine state machine
-/// coverage is in `engine/composing/tests/continuous_phase.rs`. This file
-/// is the iOS-side boundary check.
+/// Scope: Swift-side decode the engine cannot see — the `candidates` nil
+/// branch of `ContinuousFetchResult`, the partial-consume NextWord effect,
+/// the engine-resolved commit (`earnsAutoSpace`, `ContinuousPick.request`),
+/// spacing flags, `CandidateMode` / wire-schema decode, the bridge-failure
+/// flag. Phase transitions, fetch, reset and stale-generation behaviour are
+/// engine tests (`engine/composing/tests/continuous_phase.rs`,
+/// `dispatch_continuous.rs`, `continuous_commit_resolution.rs`); the
+/// manager-level flow is `ComposingManagerContinuousTests`.
 final class RustEngineBridgeContinuousTests: XCTestCase {
     override class func setUp() {
         super.setUp()
@@ -46,31 +43,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         envelopeGen = Self.nextEnvelopeGen
     }
 
-    // MARK: - EnterContinuous
-
-    func testEnterContinuous_FromComposing_PreservesRawAndStaysComposing() {
-        _ = RustEngineBridge.composingStart(
-            "tsua", settings: settings, generation: envelopeGen,
-        )
-        let enter = RustEngineBridge.composingEnterContinuous(
-            settings: settings, generation: envelopeGen,
-        )
-        XCTAssertTrue(enter.isComposing)
-        XCTAssertEqual(enter.rawInput, "tsua")
-        // EnterContinuous is a phase swap — no document mutation.
-        XCTAssertTrue(enter.effects.isEmpty, "expected no effects, got \(enter.effects)")
-    }
-
-    func testEnterContinuous_FromIdle_NoOp() {
-        let enter = RustEngineBridge.composingEnterContinuous(
-            settings: settings, generation: envelopeGen,
-        )
-        XCTAssertFalse(enter.isComposing)
-        XCTAssertEqual(enter.rawInput, "")
-        XCTAssertTrue(enter.effects.isEmpty)
-    }
-
-    // MARK: - FetchAtPos tri-state
+    // MARK: - FetchAtPos outside Continuous (nil carrier)
 
     func testFetchAtPos_FromIdle_CandidatesIsNil() {
         // Phase::Idle → engine returns snapshot without `continuous` carrier.
@@ -85,111 +58,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         XCTAssertFalse(
             result.isBridgeFailure,
             "Successful Idle dispatch must not flag as bridge failure (Codex r3216857164)",
-        )
-    }
-
-    func testFetchAtPos_FromComposing_NotYetContinuous_CandidatesIsNil() {
-        _ = RustEngineBridge.composingStart(
-            "tsua", settings: settings, generation: envelopeGen,
-        )
-        // Composing phase is NOT Continuous — handle_fetch_at_pos returns
-        // snapshot without continuous carrier.
-        let result = RustEngineBridge.composingFetchAtPos(
-            settings: settings, generation: envelopeGen,
-            nowMs: 0,
-        )
-        XCTAssertNil(result.candidates, "Composing phase must yield nil candidates")
-        XCTAssertTrue(result.transition.isComposing)
-        XCTAssertFalse(
-            result.isBridgeFailure,
-            "Successful non-Continuous dispatch must not flag as bridge failure",
-        )
-    }
-
-    func testFetchAtPos_FromContinuous_CandidatesNonNil() {
-        // Continuous phase → carrier is present (Some). Whether it contains
-        // hits depends on whether the lexicon was installed with a syllable
-        // inventory. Unit tests do not install lexicon, so the carrier is
-        // present-but-empty (the tri-state distinction we want to lock).
-        _ = RustEngineBridge.composingStart(
-            "tsua", settings: settings, generation: envelopeGen,
-        )
-        _ = RustEngineBridge.composingEnterContinuous(
-            settings: settings, generation: envelopeGen,
-        )
-        let result = RustEngineBridge.composingFetchAtPos(
-            settings: settings, generation: envelopeGen,
-            nowMs: 0,
-        )
-        XCTAssertNotNil(
-            result.candidates,
-            "Continuous phase must yield non-nil candidates carrier (engine sets continuous=Some)",
-        )
-        XCTAssertTrue(result.transition.isComposing)
-        XCTAssertTrue(
-            result.transition.effects.isEmpty,
-            "FetchAtPos is read-only; effects must be empty",
-        )
-        XCTAssertFalse(
-            result.isBridgeFailure,
-            "Successful Continuous dispatch must not flag as bridge failure",
-        )
-    }
-
-    // MARK: - ResetContinuous emits NextWordClearForNewComposing
-
-    func testResetContinuous_FromContinuous_EmitsNextWordClearForNewComposing() {
-        _ = RustEngineBridge.composingStart(
-            "tsua", settings: settings, generation: envelopeGen,
-        )
-        _ = RustEngineBridge.composingEnterContinuous(
-            settings: settings, generation: envelopeGen,
-        )
-        let reset = RustEngineBridge.composingResetContinuous(generation: envelopeGen)
-        XCTAssertFalse(reset.isComposing, "ResetContinuous must exit to Idle")
-        let hasClear = reset.effects.contains { effect in
-            if case .nextWordClearForNewComposing = effect {
-                return true
-            }
-            return false
-        }
-        XCTAssertTrue(
-            hasClear,
-            "Phase 4 contract: ResetContinuous emits NextWordClearForNewComposing; got \(reset.effects)",
-        )
-    }
-
-    // MARK: - CommitContinuous final-commit emits NextWordWordSelected
-
-    func testCommitContinuous_FullConsume_EmitsNextWordWordSelected() {
-        _ = RustEngineBridge.composingStart(
-            "tai", settings: settings, generation: envelopeGen,
-        )
-        _ = RustEngineBridge.composingEnterContinuous(
-            settings: settings, generation: envelopeGen,
-        )
-        // consumed_bytes = "tai".utf8.count → final commit
-        let commit = RustEngineBridge.composingCommitContinuous(
-            taiPick,
-            settings: settings,
-            generation: envelopeGen,
-        ).transition
-        let selectedRoman: String? = commit.effects.lazy.compactMap { effect -> String? in
-            if case let .nextWordWordSelected(_, roman, _, _) = effect {
-                return roman
-            }
-            return nil
-        }.first
-        XCTAssertNotNil(
-            selectedRoman,
-            "Phase 4 final-commit contract: CommitContinuous emits NextWordWordSelected; got \(commit.effects)",
-        )
-        // R2 end-to-end through the real engine: the association roman is the
-        // candidate's canonical TL (associationTl "tâi"), NOT the raw slice
-        // "tai". This is the write-side fragmentation fix.
-        XCTAssertEqual(
-            selectedRoman, "tâi",
-            "WordSelected roman must be the canonical TL (associationTl), not the raw slice",
         )
     }
 
@@ -317,70 +185,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         XCTAssertTrue(result.transition.effects.contains(.commitTextReplacingPreedit(bopomofo)), "\(result.transition.effects)")
     }
 
-    /// A stale generation resets the engine before the commit runs: nothing is written and
-    /// the pick answers `.ignored` (no auto space, no usage).
-    func testCommitContinuous_StaleGeneration_IsIgnored() {
-        _ = RustEngineBridge.composingStart("tai", settings: settings, generation: envelopeGen)
-        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: envelopeGen)
-        let result = RustEngineBridge.composingCommitContinuous(taiPick, settings: settings, generation: envelopeGen &+ 1)
-        XCTAssertEqual(result.outcome, .ignored)
-        XCTAssertTrue(result.transition.effects.isEmpty, "\(result.transition.effects)")
-    }
-
-    // MARK: - Effect mapping completeness (no nil drops)
-
-    /// Phase 7A removed the three `nil` returns at the bottom of
-    /// `synthComposing` (pre-Phase-7A behavior). Verify by triggering a
-    /// reset path that the engine populates with NextWord effects, and
-    /// confirming none are silently dropped.
-    func testNextWordEffects_AreNeverDroppedToNil() {
-        _ = RustEngineBridge.composingStart(
-            "tai", settings: settings, generation: envelopeGen,
-        )
-        _ = RustEngineBridge.composingEnterContinuous(
-            settings: settings, generation: envelopeGen,
-        )
-        let reset = RustEngineBridge.composingResetContinuous(generation: envelopeGen)
-        // Pre-Phase-7A this would silently filter NextWord effects out.
-        // Now they must appear in the effect list — the count cannot be
-        // less than the engine emits.
-        let nextWordEffects = reset.effects.filter { effect in
-            switch effect {
-            case .nextWordUpdateLastSelectedWord,
-                 .nextWordWordSelected,
-                 .nextWordClearForNewComposing:
-                true
-            default:
-                false
-            }
-        }
-        XCTAssertFalse(
-            nextWordEffects.isEmpty,
-            "ResetContinuous must surface at least one NextWord effect post-Phase-7A",
-        )
-    }
-
-    // MARK: - FetchAtPos read-only invariance
-
-    func testFetchAtPos_DoesNotMutateBuffer() {
-        _ = RustEngineBridge.composingStart(
-            "tsua", settings: settings, generation: envelopeGen,
-        )
-        let before = RustEngineBridge.composingEnterContinuous(
-            settings: settings, generation: envelopeGen,
-        )
-        _ = RustEngineBridge.composingFetchAtPos(
-            settings: settings, generation: envelopeGen,
-            nowMs: 0,
-        )
-        let after = RustEngineBridge.composingFetchAtPos(
-            settings: settings, generation: envelopeGen,
-            nowMs: 0,
-        ).transition
-        XCTAssertEqual(before.rawInput, after.rawInput, "rawInput must not change across FetchAtPos")
-        XCTAssertEqual(before.isComposing, after.isComposing, "isComposing must not change")
-    }
-
     // MARK: - Phase 9.2 mode carrier
 
     /// Decode mapping from `Taigi_Engine_CandidateMode` (wire integer) to
@@ -401,69 +205,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     func testCandidateModeDecode_UnknownWireValueFallsBackToUnspecified() {
         XCTAssertEqual(RustEngineBridge.CandidateMode.decode(99), .unspecified)
         XCTAssertEqual(RustEngineBridge.CandidateMode.decode(-1), .unspecified)
-    }
-
-    // MARK: - FetchAtPos wire shape
-
-    /// Bridge-acceptance only: `composingFetchAtPos` carries `nowMs` and
-    /// `customDictionaryDisabled` through the FFI envelope and preserves the
-    /// carrier-present + read-only invariants. The engine reads the user's
-    /// data itself (user-data-engine-roadmap P7b) — never opened in this test
-    /// process, so the fetch ranks neutrally; the ranking math is pinned by
-    /// Rust (`engine/dispatch/tests/user_data_reads.rs`).
-    func testFetchAtPos_AcceptsNowMsAndCustomDictionaryDisabled() {
-        _ = RustEngineBridge.composingStart(
-            "tsua", settings: settings, generation: envelopeGen,
-        )
-        _ = RustEngineBridge.composingEnterContinuous(
-            settings: settings, generation: envelopeGen,
-        )
-
-        let result = RustEngineBridge.composingFetchAtPos(
-            settings: settings,
-            generation: envelopeGen,
-            nowMs: 1_700_000_001_000,
-            customDictionaryDisabled: true,
-        )
-
-        // Carrier present proves the dispatcher reached
-        // `handle_fetch_at_pos` with the populated payload (Rust counterpart:
-        // `fetch_at_pos_carries_user_freq_snapshot_through_decode` in
-        // `engine/composing/tests/dispatch_continuous.rs`). Unit tests do
-        // not install the lexicon, so the candidate list itself is empty.
-        XCTAssertNotNil(
-            result.candidates,
-            "Continuous phase must yield a non-nil candidates carrier even with empty FST",
-        )
-        XCTAssertTrue(result.transition.isComposing)
-        // FetchAtPos read-only contract holds regardless of snapshot payload.
-        XCTAssertTrue(
-            result.transition.effects.isEmpty,
-            "FetchAtPos is read-only; effects must be empty",
-        )
-        XCTAssertFalse(
-            result.isBridgeFailure,
-            "Successful populated dispatch must not flag as bridge failure",
-        )
-    }
-
-    /// The optional parameters keep their proto3-absent defaults (literal
-    /// shown, custom dictionary read); the sources follow `settings`.
-    func testFetchAtPos_DefaultParameters_PreserveNeutralBehavior() {
-        _ = RustEngineBridge.composingStart(
-            "tsua", settings: settings, generation: envelopeGen,
-        )
-        _ = RustEngineBridge.composingEnterContinuous(
-            settings: settings, generation: envelopeGen,
-        )
-
-        let result = RustEngineBridge.composingFetchAtPos(
-            settings: settings, generation: envelopeGen,
-            nowMs: 0,
-        )
-        XCTAssertNotNil(result.candidates, "Default-parameter call must still reach Continuous")
-        XCTAssertTrue(result.transition.effects.isEmpty)
-        XCTAssertFalse(result.isBridgeFailure)
     }
 
     // MARK: - Dictionary toggles

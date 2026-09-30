@@ -10,9 +10,10 @@ import XCTest
 /// (`test_T1_panicForTest_isCaughtAndProcessSurvives`) accepts both outcomes —
 /// see its doc comment.
 ///
-/// Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') intact and
-/// adds smoke coverage for every phonetics op on the bridge. Branch-level
-/// fixture coverage lives in `engine/phonetics/tests/op_coverage.rs`.
+/// Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') plus the
+/// Swift-side tone-variation decode. Phonetics op behaviour lives in
+/// `engine/phonetics/tests/op_coverage.rs`; the 2 MB cap boundary in
+/// `engine/dispatch/src/lib.rs` (`request_cap_accepts_exactly_the_cap_…`).
 final class RustEngineBridgeTests: XCTestCase {
     override class func setUp() {
         super.setUp()
@@ -26,17 +27,7 @@ final class RustEngineBridgeTests: XCTestCase {
         RustEngineBridge.install()
     }
 
-    // MARK: - Phonetics core (6 ops)
-
-    func test_op_stripTone_returnsBareAndToneTuple() {
-        let result = RustEngineBridge.stripTone("guá")
-        XCTAssertEqual(result.bare, "gua")
-        XCTAssertEqual(result.tone, "2")
-    }
-
-    func test_op_tlToPoj_canonical() {
-        XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
-    }
+    // MARK: - Tone variations (Swift-side decode)
 
     func test_op_toneVariations_lazyCache_returnsBothModes() {
         let cache = RustEngineBridge.toneVariations
@@ -46,39 +37,6 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertNotNil(cache.poj["a"])
         XCTAssertNotNil(cache.tl["oo"])
         XCTAssertNotNil(cache.poj["o\u{0358}"])
-    }
-
-    // MARK: - TPS (3 ops)
-
-    func test_op_tlDisplayToTPS_basic() {
-        let out = RustEngineBridge.tlDisplayToTPS("tiâu", orMapsToER: false)
-        XCTAssertFalse(out.isEmpty, "TL display → TPS should produce zhuyin")
-    }
-
-    func test_op_isTPSToneMark_acuteIsToneMark() {
-        XCTAssertTrue(RustEngineBridge.isTPSToneMark("\u{02ca}"))
-    }
-
-    func test_op_isTPSToneMark_letterIsNotToneMark() {
-        XCTAssertFalse(RustEngineBridge.isTPSToneMark("a"))
-    }
-
-    func test_op_tpsInputAdjust_dualForm() {
-        let result = RustEngineBridge.tpsInputAdjust(incoming: "ㄇ", rawInput: "ㄚ")
-        XCTAssertEqual(result.adjusted, "ㆬ")
-        XCTAssertNil(result.replaceLast)
-    }
-
-    func test_op_tpsInputAdjust_palatalization() {
-        let result = RustEngineBridge.tpsInputAdjust(incoming: "ㄧ", rawInput: "ㄗ")
-        XCTAssertEqual(result.adjusted, "ㄧ")
-        XCTAssertEqual(result.replaceLast, "ㄐ")
-    }
-
-    func test_op_tpsInputAdjust_syllabicNasal() {
-        let result = RustEngineBridge.tpsInputAdjust(incoming: "\u{02ca}", rawInput: "ㄇ")
-        XCTAssertEqual(result.adjusted, "\u{02ca}")
-        XCTAssertEqual(result.replaceLast, "ㆬ")
     }
 
     // MARK: - Diagnostics (Codex v2 §8 / v3 §7)
@@ -120,20 +78,13 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertEqual(response?.error, .failParse)
     }
 
-    // MARK: - T5: oversized payload + boundary
+    // MARK: - T5: oversized payload
 
     func test_T5_overCap_returnsFailInvariant() {
         let oversized = [UInt8](repeating: 0x00, count: 2 * 1024 * 1024 + 1)
         let response = RustEngineBridge.sendRawBytes(oversized)
         XCTAssertNotNil(response)
         XCTAssertEqual(response?.error, .failInvariant)
-    }
-
-    func test_T5_atCap_returnsParseOrInvariant() {
-        let atCap = [UInt8](repeating: 0x00, count: 2 * 1024 * 1024)
-        let response = RustEngineBridge.sendRawBytes(atCap)
-        XCTAssertNotNil(response)
-        XCTAssertNotEqual(response?.error, .failInvariant)
     }
 
     // MARK: - T6: logging round-trip

@@ -4,8 +4,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -20,9 +18,10 @@ import java.util.concurrent.CopyOnWriteArrayList
  * **Requires** the dev `.so` built by `engine/scripts/build-android-libs-dev.sh`
  * (with the `panic-injector` Cargo feature) so `panicForTest` resolves.
  *
- * Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') intact and
- * adds smoke coverage for every phonetics op on the bridge. Branch-level
- * fixture coverage lives in `engine/phonetics/tests/op_coverage.rs`.
+ * Keeps the D9.2 lifecycle / FFI-safety tests (T1/T4/T5/T6/T7') plus the
+ * Kotlin-side `tpsInputAdjust` decode. Phonetics op behaviour lives in
+ * `engine/phonetics/tests/op_coverage.rs`; the 2 MB cap boundary in
+ * `engine/dispatch/src/lib.rs` (`request_cap_accepts_exactly_the_cap_…`).
  */
 @RunWith(AndroidJUnit4::class)
 class RustEngineBridgeTest {
@@ -35,33 +34,7 @@ class RustEngineBridgeTest {
         RustEngineBridge.resetDiagnosticsForTesting()
     }
 
-    // region Phonetics core
-
-    @Test fun op_stripTone_returnsBareAndTone() {
-        val outcome = RustEngineBridge.stripTone("guá")
-        assertEquals("gua", outcome.bare)
-        assertEquals("2", outcome.tone)
-    }
-
-    @Test fun op_tlToPoj_canonical() {
-        assertEquals("góa", RustEngineBridge.tlToPoj("guá"))
-    }
-
-    // endregion
-    // region TPS
-
-    @Test fun op_tlDisplayToTps_basic() {
-        val out = RustEngineBridge.tlDisplayToTps("tiâu", false)
-        assertTrue("TL display → TPS should produce zhuyin", out.isNotEmpty())
-    }
-
-    @Test fun op_isTpsToneMark_acuteIsToneMark() {
-        assertTrue(RustEngineBridge.isTpsToneMark('ˊ'))
-    }
-
-    @Test fun op_isTpsToneMark_letterIsNotToneMark() {
-        assertFalse(RustEngineBridge.isTpsToneMark('a'))
-    }
+    // region TPS input adjust (Kotlin `replaceLast` decode, both branches)
 
     @Test fun op_tpsInputAdjust_dualForm() {
         val outcome = RustEngineBridge.tpsInputAdjust("ㄇ", "ㄚ")
@@ -73,12 +46,6 @@ class RustEngineBridgeTest {
         val outcome = RustEngineBridge.tpsInputAdjust("ㄧ", "ㄗ")
         assertEquals("ㄧ", outcome.adjusted)
         assertEquals("ㄐ", outcome.replaceLast)
-    }
-
-    @Test fun op_tpsInputAdjust_syllabicNasal() {
-        val outcome = RustEngineBridge.tpsInputAdjust("ˊ", "ㄇ")
-        assertEquals("ˊ", outcome.adjusted)
-        assertEquals("ㆬ", outcome.replaceLast)
     }
 
     // endregion
@@ -110,20 +77,13 @@ class RustEngineBridgeTest {
     }
 
     // endregion
-    // region T5 — oversized + boundary
+    // region T5 — oversized
 
     @Test fun T5_overCap_returnsFailInvariant() {
         val oversized = ByteArray(2 * 1024 * 1024 + 1)
         val response = RustEngineBridge.sendRawBytes(oversized)
         assertNotNull(response)
         assertEquals(ErrorCode.FAIL_INVARIANT, response!!.error)
-    }
-
-    @Test fun T5_atCap_acceptedByGuard() {
-        val atCap = ByteArray(2 * 1024 * 1024)
-        val response = RustEngineBridge.sendRawBytes(atCap)
-        assertNotNull(response)
-        assertNotEquals(ErrorCode.FAIL_INVARIANT, response!!.error)
     }
 
     // endregion
