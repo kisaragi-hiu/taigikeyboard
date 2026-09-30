@@ -5,11 +5,13 @@
 //! under it, CSV import / export, delete all, and the one destructive verb
 //! for the learning records.
 //!
-//! Every engine request — the loads included — runs off the UI thread
-//! (`jobs::spawn` over `taigi_desktop_core::engine::user_data`, the same
-//! ops the macOS page makes): the newest load wins by generation, and the
-//! writes share the page's one work slot (refused, not queued — a queued
-//! delete would name a row the list may no longer show).
+//! The listing rules and every job body are
+//! `taigi_desktop_core::settings::custom_dictionary`'s, shared with the
+//! Windows pane; this file draws them and runs them. Every engine request —
+//! the loads included — runs off the UI thread (`jobs::spawn`): the newest
+//! load wins by generation, and the writes share the window's one work
+//! slot, `JobSlot` (refused, not queued — a queued delete would name a row
+//! the list may no longer show).
 //!
 //! The table is the Mac's: two columns, romanization then Hanji, under a header,
 //! a double-click (or Enter) on a row edits it, the ✎ button over the
@@ -23,70 +25,19 @@ use adw::prelude::*;
 use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
-use std::time::Duration;
-use taigi_desktop_core::engine::user_data::{
-    self, CustomDictionaryEntry, CustomDictionaryRefusal, UserDataError,
+use taigi_desktop_core::engine::user_data::CustomDictionaryEntry;
+use taigi_desktop_core::settings::custom_dictionary::{
+    clear_learning_records_job, delete_all_job, delete_entry_job, export_file_name, export_job,
+    import_job, save_entry_job, Confirm, JobOutcome, Listing, LoadLanded, FILTER_SETTLE,
+    LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
 };
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 
-/// `CustomDictionaryPageModel.pageSize`.
-const PAGE_SIZE: usize = 10;
-/// `reloadWhenFilterSettles`.
-const FILTER_SETTLE: Duration = Duration::from_millis(200);
-/// How long a job may run before the page says so (`overlayDelay`): a
-/// millisecond-long write must not flash a spinner.
-const OVERLAY_DELAY: Duration = Duration::from_millis(400);
-
-/// A command that empties a store, waiting on its confirmation — there is
-/// no undo, and these two empty a table.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Confirm {
-    DeleteAll,
-    ClearLearningRecords,
-}
-
-impl Confirm {
-    fn title_key(self) -> StringKey {
-        match self {
-            Self::DeleteAll => StringKey::DictionaryDeleteAll,
-            Self::ClearLearningRecords => StringKey::DictionaryClearLearningRecords,
-        }
-    }
-
-    /// The question under the title. `ClearLearningRecords` has none
-    /// authored, and its title already asks it.
-    fn message_key(self) -> Option<StringKey> {
-        match self {
-            Self::DeleteAll => Some(StringKey::DictionaryDeleteAllMessage),
-            Self::ClearLearningRecords => None,
-        }
-    }
-}
-
-/// What a write hands back.
-struct JobOutcome {
-    message: Option<PageMessage>,
-    /// Whether the list changed and must be reloaded.
-    is_reload_wanted: bool,
-}
-
 #[derive(Default)]
 struct State {
-    rows: Vec<CustomDictionaryEntry>,
-    /// Every entry, for the section header — what the dictionary HOLDS.
-    total_count: usize,
-    /// How many entries the current filter matches; what the pager divides.
-    match_count: usize,
-    /// Which page is on screen, zero-based.
-    page: usize,
-    filter: String,
-    /// Which load the rows on screen came from: the newest wins by number.
-    load_generation: u64,
-    /// The row the list has selected, by ID — never by index, which moves
-    /// under a reload.
-    selected_id: Option<String>,
+    listing: Listing,
     /// The job this page started and still waits on (the slot itself is
     /// the window's, `JobSlot`).
     job_generation: Option<u64>,
@@ -106,45 +57,6 @@ struct Drawn {
     has_next: bool,
     is_busy: bool,
     has_selection: bool,
-}
-
-impl State {
-    fn page_count_for(match_count: usize) -> usize {
-        match_count.div_ceil(PAGE_SIZE).max(1)
-    }
-
-    fn page_count(&self) -> usize {
-        Self::page_count_for(self.match_count)
-    }
-
-    fn selected_row(&self) -> Option<&CustomDictionaryEntry> {
-        let id = self.selected_id.as_deref()?;
-        self.rows.iter().find(|row| row.id == id)
-    }
-
-    /// Against the counts, not against the filter box
-    /// (`CustomDictionaryPage.swift:countLabel`).
-    fn count_label(&self) -> String {
-        if self.match_count < self.total_count {
-            format!("{} / {}", self.match_count, self.total_count)
-        } else {
-            self.total_count.to_string()
-        }
-    }
-
-    /// Which sentence the empty list shows, or `None` while there are rows:
-    /// an empty dictionary is a STATE the + button answers, a filter
-    /// matching nothing is a RESULT of what was typed.
-    fn empty_state_key(&self) -> Option<StringKey> {
-        if !self.rows.is_empty() {
-            return None;
-        }
-        Some(if self.filter.is_empty() {
-            StringKey::DictionaryCustomDictEmpty
-        } else {
-            StringKey::DictionaryNoResults
-        })
-    }
 }
 
 /// The page's widgets the state is drawn into.
@@ -376,11 +288,12 @@ impl CustomDictionaryPage {
             let id = page
                 .state
                 .borrow()
+                .listing
                 .rows
                 .get(row.index() as usize)
                 .map(|row| row.id.clone());
             if id.is_some() {
-                page.state.borrow_mut().selected_id = id;
+                page.state.borrow_mut().listing.selected_id = id;
                 page.render_verbs();
             }
         });
@@ -391,7 +304,13 @@ impl CustomDictionaryPage {
             if page.job_slot.is_taken() {
                 return;
             }
-            let target = page.state.borrow().rows.get(row.index() as usize).cloned();
+            let target = page
+                .state
+                .borrow()
+                .listing
+                .rows
+                .get(row.index() as usize)
+                .cloned();
             if let Some(target) = target {
                 page.entry_dialog(target);
             }
@@ -405,7 +324,7 @@ impl CustomDictionaryPage {
         let weak = Rc::downgrade(self);
         self.widgets.edit.connect_clicked(move |_| {
             let Some(page) = weak.upgrade() else { return };
-            let row = page.state.borrow().selected_row().cloned();
+            let row = page.state.borrow().listing.selected_row().cloned();
             if let Some(row) = row {
                 page.entry_dialog(row);
             }
@@ -413,12 +332,10 @@ impl CustomDictionaryPage {
         let weak = Rc::downgrade(self);
         self.widgets.delete.connect_clicked(move |_| {
             let Some(page) = weak.upgrade() else { return };
-            let Some(id) = page.state.borrow().selected_id.clone() else {
+            let Some(id) = page.state.borrow().listing.selected_id.clone() else {
                 return;
             };
-            page.write(move || {
-                user_data::delete_custom_entry(&id).map_err(|error| error.to_string())
-            });
+            page.begin_job(move || delete_entry_job(&id));
         });
         let weak = Rc::downgrade(self);
         self.widgets.previous.connect_clicked(move |_| {
@@ -461,29 +378,22 @@ impl CustomDictionaryPage {
     /// The reload waits for the box to settle, so a word typed letter by
     /// letter is one query, not six.
     fn filter_changed(self: &Rc<Self>, filter: String) {
-        let generation = {
-            let mut state = self.state.borrow_mut();
-            if filter == state.filter {
-                return;
-            }
-            state.filter = filter;
-            state.load_generation = state.load_generation.wrapping_add(1);
-            state.load_generation
+        let Some(generation) = self.state.borrow_mut().listing.set_filter(filter) else {
+            return;
         };
         let weak = Rc::downgrade(self);
         glib::timeout_add_local_once(FILTER_SETTLE, move || {
             let Some(page) = weak.upgrade() else { return };
-            if page.state.borrow().load_generation != generation {
-                return;
+            let is_settled = page.state.borrow_mut().listing.settle(generation);
+            if is_settled {
+                page.load();
             }
-            page.state.borrow_mut().page = 0;
-            page.load();
         });
     }
 
     /// How many rows the list shows (for the tests).
     pub fn shown_row_count(&self) -> usize {
-        self.state.borrow().rows.len()
+        self.state.borrow().listing.rows.len()
     }
 
     /// Reloads the page on screen (for the tests; the page reloads itself
@@ -495,61 +405,34 @@ impl CustomDictionaryPage {
     fn step_page(self: &Rc<Self>, delta: isize) {
         {
             let mut state = self.state.borrow_mut();
-            let count = state.page_count();
-            let target = state.page as isize + delta;
-            if target < 0 || target as usize >= count {
+            let listing = &mut state.listing;
+            let target = listing.page as isize + delta;
+            if target < 0 || target as usize >= listing.page_count() {
                 return;
             }
-            state.page = target as usize;
+            listing.page = target as usize;
         }
         self.load();
     }
 
-    /// Starts a load of the page on screen, pulling it back inside the
-    /// list if the list shrank under it. A load has no overlay: the rows
+    /// Starts a load of the page on screen. A load has no overlay: the rows
     /// already on screen stay put while it runs.
     fn load(self: &Rc<Self>) {
-        let (generation, filter, wanted_page) = {
-            let mut state = self.state.borrow_mut();
-            state.load_generation = state.load_generation.wrapping_add(1);
-            (
-                state.load_generation,
-                state.filter.trim().to_owned(),
-                state.page,
-            )
-        };
+        let request = self.state.borrow_mut().listing.begin_load();
+        let generation = request.generation;
         let weak = Rc::downgrade(self);
         jobs::spawn(
-            move || user_data::list_custom_page(&filter, wanted_page, PAGE_SIZE),
+            move || request.fetch(),
             move |outcome| {
                 let Some(page) = weak.upgrade() else { return };
-                if page.state.borrow().load_generation != generation {
-                    return;
-                }
-                match outcome {
-                    Some(Ok(loaded)) => {
-                        let mut state = page.state.borrow_mut();
-                        state.page = loaded.page;
-                        state.rows = loaded.rows;
-                        state.match_count = loaded.match_count;
-                        state.total_count = loaded.total_count;
-                        // A selection the new page does not hold is no
-                        // selection.
-                        if state.selected_row().is_none() {
-                            state.selected_id = None;
-                        }
-                    }
-                    // Not an empty list: "empty" and "could not be read"
-                    // look the same on screen, and only one is worth doing
-                    // something about. The rows already shown stay.
-                    Some(Err(error)) => page.report(PageMessage::failure(
-                        StringKey::DesktopCustomDictReadFailed,
-                        error,
-                    )),
-                    None => page.report(PageMessage::failure(
-                        StringKey::DesktopCustomDictReadFailed,
-                        "the load did not finish",
-                    )),
+                let outcome = outcome.unwrap_or_else(|| Err(LOAD_DID_NOT_FINISH.to_owned()));
+                // Landed and released before the notice or the render
+                // touches a widget.
+                let landed = page.state.borrow_mut().listing.land(generation, outcome);
+                match landed {
+                    LoadLanded::Stale => return,
+                    LoadLanded::Adopted => {}
+                    LoadLanded::Failed(notice) => page.report(notice),
                 }
                 page.render();
             },
@@ -576,13 +459,7 @@ impl CustomDictionaryPage {
         let strings = self.strings;
         jobs::spawn(job, move |outcome| {
             slot.release(generation);
-            let outcome = outcome.unwrap_or_else(|| JobOutcome {
-                message: Some(PageMessage::failure(
-                    StringKey::DesktopCustomDictWriteFailed,
-                    "the operation did not finish",
-                )),
-                is_reload_wanted: true,
-            });
+            let outcome = outcome.unwrap_or_else(JobOutcome::did_not_finish);
             if let Some(message) = outcome.message {
                 shell.report(&message, &strings);
             }
@@ -609,17 +486,6 @@ impl CustomDictionaryPage {
                 page.state.borrow_mut().is_busy_shown = true;
                 page.render();
             }
-        });
-    }
-
-    /// A write that answers with nothing but its failure, and asks for a
-    /// reload either way.
-    fn write(self: &Rc<Self>, body: impl FnOnce() -> Result<(), String> + Send + 'static) {
-        self.begin_job(move || JobOutcome {
-            message: body()
-                .err()
-                .map(|error| PageMessage::failure(StringKey::DesktopCustomDictWriteFailed, error)),
-            is_reload_wanted: true,
         });
     }
 
@@ -675,20 +541,13 @@ impl CustomDictionaryPage {
                 return;
             }
             let Some(page) = weak.upgrade() else { return };
-            let roman = roman_field.text().trim().to_owned();
-            if roman.is_empty() {
+            let roman = roman_field.text().to_string();
+            if roman.trim().is_empty() {
                 return;
             }
-            // The ID is the original's (empty for an add — the engine mints
-            // one): an edit is an edit, not a new entry that happens to
-            // replace one.
             let id = original.id.clone();
-            let hanzi = hanzi_field.text().trim().to_owned();
-            page.write(move || {
-                user_data::save_custom_entry(&id, &roman, &hanzi)
-                    .map(|_| ())
-                    .map_err(|error| error.to_string())
-            });
+            let hanzi = hanzi_field.text().to_string();
+            page.begin_job(move || save_entry_job(&id, &roman, &hanzi));
         });
         dialog.present(self.shell.window().as_ref());
     }
@@ -715,36 +574,12 @@ impl CustomDictionaryPage {
                 return;
             }
             let Some(page) = weak.upgrade() else { return };
-            match confirm {
-                Confirm::DeleteAll => {
-                    page.write(|| {
-                        user_data::delete_all_custom_entries().map_err(|error| error.to_string())
-                    });
-                }
-                Confirm::ClearLearningRecords => page.clear_learning_records(),
-            }
+            page.begin_job(match confirm {
+                Confirm::DeleteAll => delete_all_job,
+                Confirm::ClearLearningRecords => clear_learning_records_job,
+            });
         });
         dialog.present(self.shell.window().as_ref());
-    }
-
-    /// Empties the three learning tables — three files, no transaction that
-    /// could span them; the engine attempts each even when an earlier one
-    /// fails, and the notice reports rather than claims.
-    fn clear_learning_records(self: &Rc<Self>) {
-        self.begin_job(move || {
-            let message = match user_data::clear_learning_records() {
-                Ok(()) => PageMessage::Done(StringKey::DictionaryClearLearningRecordsDone),
-                Err(error) => PageMessage::Failure {
-                    title: StringKey::DictionaryClearLearningRecordsFailed,
-                    detail: error.to_string(),
-                },
-            };
-            JobOutcome {
-                message: Some(message),
-                // The custom dictionary is untouched by this.
-                is_reload_wanted: false,
-            }
-        });
     }
 
     fn export(self: &Rc<Self>) {
@@ -752,10 +587,7 @@ impl CustomDictionaryPage {
             return;
         }
         let dialog = gtk::FileDialog::new();
-        dialog.set_initial_name(Some(&format!(
-            "taigi_custom_dictionary_{}.csv",
-            local_date()
-        )));
+        dialog.set_initial_name(Some(&export_file_name(&local_date())));
         let weak = Rc::downgrade(self);
         dialog.save(
             self.shell.window().as_ref(),
@@ -765,18 +597,7 @@ impl CustomDictionaryPage {
                 let Some(path) = page.chosen_path(result, StringKey::CommonExportFailed) else {
                     return;
                 };
-                // The WHOLE dictionary, not the page or the filter's matches.
-                page.begin_job(move || {
-                    let outcome = user_data::export_custom_csv()
-                        .map_err(|error| error.to_string())
-                        .and_then(|csv| write_atomically(&path, &csv));
-                    JobOutcome {
-                        message: outcome.err().map(|error| {
-                            PageMessage::failure(StringKey::CommonExportFailed, error)
-                        }),
-                        is_reload_wanted: false,
-                    }
-                });
+                page.begin_job(move || export_job(&path, write_atomically));
             },
         );
     }
@@ -795,23 +616,7 @@ impl CustomDictionaryPage {
                 let Some(path) = page.chosen_path(result, StringKey::CommonImportFailed) else {
                     return;
                 };
-                page.begin_job(move || {
-                    let message = match user_data::import_custom_csv_file(&path) {
-                        Ok(imported) => PageMessage::Imported {
-                            imported: imported.imported as usize,
-                            skipped: imported.skipped as usize,
-                        },
-                        Err(UserDataError::Refused {
-                            refusal: CustomDictionaryRefusal::NotUtf8,
-                            ..
-                        }) => PageMessage::NotUtf8,
-                        Err(error) => PageMessage::failure(StringKey::CommonImportFailed, error),
-                    };
-                    JobOutcome {
-                        message: Some(message),
-                        is_reload_wanted: true,
-                    }
-                });
+                page.begin_job(move || import_job(&path));
             },
         );
     }
@@ -840,23 +645,21 @@ impl CustomDictionaryPage {
     fn render(&self) {
         let drawn = {
             let state = self.state.borrow();
+            let listing = &state.listing;
             Drawn {
-                rows: state
+                rows: listing
                     .rows
                     .iter()
                     .map(|row| (row.roman.clone(), row.hanzi.clone()))
                     .collect(),
-                selected_index: state
-                    .selected_id
-                    .as_deref()
-                    .and_then(|id| state.rows.iter().position(|row| row.id == id)),
-                count: state.count_label(),
-                empty: state.empty_state_key(),
-                page_label: format!("{} / {}", state.page + 1, state.page_count()),
-                has_previous: state.page > 0,
-                has_next: state.page + 1 < state.page_count(),
+                selected_index: listing.selected_index(),
+                count: listing.count_label(),
+                empty: listing.empty_state_key(),
+                page_label: format!("{} / {}", listing.page + 1, listing.page_count()),
+                has_previous: listing.page > 0,
+                has_next: listing.page + 1 < listing.page_count(),
                 is_busy: state.is_busy_shown,
-                has_selection: state.selected_row().is_some(),
+                has_selection: listing.selected_row().is_some(),
             }
         };
         let widgets = &self.widgets;
@@ -922,7 +725,7 @@ impl CustomDictionaryPage {
     fn render_verbs(&self) {
         let (is_busy, has_selection) = {
             let state = self.state.borrow();
-            (state.is_busy_shown, state.selected_row().is_some())
+            (state.is_busy_shown, state.listing.selected_row().is_some())
         };
         self.widgets.edit.set_sensitive(!is_busy && has_selection);
         self.widgets.delete.set_sensitive(!is_busy && has_selection);
@@ -999,54 +802,4 @@ fn write_atomically(path: &std::path::Path, contents: &[u8]) -> Result<(), Strin
         .persist(path)
         .map(|_| ())
         .map_err(|error| error.error.to_string())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn state(match_count: usize, total_count: usize, filter: &str) -> State {
-        State {
-            match_count,
-            total_count,
-            filter: filter.to_owned(),
-            ..State::default()
-        }
-    }
-
-    #[test]
-    fn the_count_reads_as_one_number_until_a_filter_actually_narrows_it() {
-        // trace: `CustomDictionaryPage.swift:countLabel`.
-        assert_eq!(state(2, 2, "").count_label(), "2");
-        assert_eq!(state(2, 2, "tsia").count_label(), "2");
-        assert_eq!(state(1, 2, "tsia").count_label(), "1 / 2");
-    }
-
-    #[test]
-    fn an_empty_list_says_which_kind_of_empty_it_is() {
-        assert_eq!(
-            state(0, 0, "").empty_state_key(),
-            Some(StringKey::DictionaryCustomDictEmpty)
-        );
-        assert_eq!(
-            state(0, 2, "zzz").empty_state_key(),
-            Some(StringKey::DictionaryNoResults)
-        );
-        let mut listed = state(1, 1, "");
-        listed.rows.push(CustomDictionaryEntry {
-            roman: "tsia̍h".to_owned(),
-            hanzi: "食".to_owned(),
-            ..CustomDictionaryEntry::default()
-        });
-        assert_eq!(listed.empty_state_key(), None);
-    }
-
-    #[test]
-    fn pages_are_ten_rows_and_never_fewer_than_one() {
-        // trace: 0 → 1 page, 10 → 1, 11 → 2, 25 → 3.
-        assert_eq!(State::page_count_for(0), 1);
-        assert_eq!(State::page_count_for(10), 1);
-        assert_eq!(State::page_count_for(11), 2);
-        assert_eq!(State::page_count_for(25), 3);
-    }
 }

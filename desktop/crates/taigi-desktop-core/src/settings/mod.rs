@@ -8,8 +8,14 @@
 //! (`macos/Sources/TaigiInputMethodCore/Settings/SettingsStore.swift:36-50`),
 //! so `settings.json` speaks the same vocabulary as `defaults read` does on a
 //! Mac and a future settings transfer has one name per setting.
+//!
+//! It also holds what both settings WINDOWS draw from, toolkit-neutral:
+//! `presentation` (labels, links, page notices), `launch` (the command
+//! line) and `custom_dictionary` (that pane's model, over the engine's
+//! user-data ops).
 
 mod choices;
+pub mod custom_dictionary;
 mod document;
 mod engine_settings;
 mod font_selection;
