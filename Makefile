@@ -10,7 +10,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
 # with every toolchain installed (docs/BUILDING.md).
 .DEFAULT_GOAL := help
 
-.PHONY: build protos ios-libs android-libs macos-libs test test-crate doc dict dogfood e2e help \
+.PHONY: build protos ios-libs android-libs macos-libs test test-crate test-changed doc dict dogfood e2e help \
         fmt lint hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         macos-release desktop-release desktop-patch desktop-announce version-mobile version-desktop \
@@ -68,6 +68,14 @@ test:
 test-crate:
 	@if [ -z "$(CRATE)" ]; then echo "Usage: make test-crate CRATE=<name>"; exit 2; fi
 	cd $(ENGINE) && cargo test -p "$(CRATE)"
+
+# Run only the gates this branch's changes need: tools/test_select.py maps every
+# path changed since BASE (default: merge-base with origin/main; plus uncommitted
+# and untracked files) to its platform commands. PLATFORM=engine,macos narrows it;
+# `python3 tools/test_select.py` without --run prints the selection.
+# Usage: make test-changed [BASE=origin/main] [PLATFORM=engine,macos]
+test-changed:
+	python3 tools/test_select.py --run $(if $(BASE),--base $(BASE)) $(if $(PLATFORM),--platform $(PLATFORM))
 
 # Generate rustdoc HTML for the workspace and open in browser. Excludes
 # android-jni because it shares `[lib] name = "rust_taigi"` with swift-ffi
@@ -305,6 +313,7 @@ help:
 	@echo "Build and test (commands per platform: docs/BUILDING.md)"
 	@echo "  make test               cargo test --workspace (engine, includes doctests)"
 	@echo "  make test-crate CRATE=<name>  cargo test for one engine crate"
+	@echo "  make test-changed [BASE=<ref>] [PLATFORM=engine,macos]  Only the gates the branch's changes need"
 	@echo "  make doc                Build rustdoc HTML for the engine workspace and open it"
 	@echo "  make protos             Regenerate the committed Swift + Java protobuf bindings (protoc 36.2)"
 	@echo "  make ios-libs           Engine xcframework for iOS (macOS host)"
