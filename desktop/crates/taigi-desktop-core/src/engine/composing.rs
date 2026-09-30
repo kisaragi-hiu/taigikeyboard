@@ -12,13 +12,15 @@
 //! Every op answers `None` when the round-trip itself failed, which is a
 //! different thing from the engine answering that it is idle.
 
+/// Which of a pick's scripts a candidate commit writes — the wire enum, so a
+/// caller maps its own cell script onto it once.
+pub use protos::engine::CommitScript;
 use protos::engine::{
     composing_request, request, response, Append, CaretDirection as WireCaretDirection,
-    CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw, CommitScript, ComposingRequest,
+    CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw, ComposingRequest,
     ComposingResponse, DeleteBackward, EnterContinuous, FetchAtPos, MoveCaret, Reset, TelexKey,
 };
 
-use crate::composing::CandidateScript;
 use crate::keys::CaretDirection;
 
 use super::bridge::{app_config, record_failure, roundtrip};
@@ -222,7 +224,7 @@ pub fn fetch_at_pos(
 pub struct CommitContinuousArgs<'a> {
     /// Which of the pick's scripts the document gets, relative to the output
     /// settings; the engine resolves the text (`composing::commit_text`).
-    pub script: CandidateScript,
+    pub script: CommitScript,
     /// The pick's display romanization, as the candidate carried it.
     pub roman: &'a str,
     /// The identity keys the engine learns from (Core Principle #7).
@@ -245,10 +247,6 @@ pub fn commit_continuous(
     settings: &EngineSettings,
     generation: u64,
 ) -> Option<ContinuousCommitResult> {
-    let script = match args.script {
-        CandidateScript::Primary => CommitScript::Lead,
-        CandidateScript::Alternate => CommitScript::Other,
-    };
     let response = composing_response(
         composing_request::Method::CommitContinuous(CommitContinuous {
             consumed_bytes: args.consumed_bytes,
@@ -256,7 +254,7 @@ pub fn commit_continuous(
             canonical_text: args.canonical_text.to_owned(),
             association_tl: args.association_tl.to_owned(),
             hanji: args.hanji.filter(|h| !h.is_empty()).map(str::to_owned),
-            script: script as i32,
+            script: args.script as i32,
             roman: args.roman.to_owned(),
             // Ignored once `script` is set: the engine writes what it resolved.
             display_text: String::new(),

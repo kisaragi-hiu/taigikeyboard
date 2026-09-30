@@ -12,7 +12,6 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
 use protos::engine::CommitOutcome;
-use taigi_desktop_core::composing::CandidateScript;
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, CommitContinuousArgs, Effect, FetchArgs};
 use taigi_desktop_core::settings::{EngineSettings, InputMode};
@@ -147,7 +146,7 @@ fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
 
     let commit = engine::commit_continuous(
         &CommitContinuousArgs {
-            script: CandidateScript::Primary,
+            script: engine::CommitScript::Lead,
             roman: &taigi.roman,
             canonical_text: &taigi.display_text,
             association_tl: &taigi.canonical_tl,
@@ -194,7 +193,7 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
         .expect("single-syllable 台 spanning `tai`");
     let commit = engine::commit_continuous(
         &CommitContinuousArgs {
-            script: CandidateScript::Primary,
+            script: engine::CommitScript::Lead,
             roman: &tai.roman,
             canonical_text: "台",
             association_tl: &tai.canonical_tl,

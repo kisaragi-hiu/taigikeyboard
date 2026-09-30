@@ -286,7 +286,10 @@ impl ComposingManager {
         );
         let Some(committed) = engine::commit_continuous(
             &CommitContinuousArgs {
-                script,
+                script: match script {
+                    CandidateScript::Primary => engine::CommitScript::Lead,
+                    CandidateScript::Alternate => engine::CommitScript::Other,
+                },
                 roman: &candidate.roman,
                 canonical_text: &candidate.display_text,
                 association_tl: &candidate.canonical_tl,
