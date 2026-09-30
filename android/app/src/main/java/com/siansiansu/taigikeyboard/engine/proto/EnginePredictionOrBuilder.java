@@ -26,8 +26,8 @@ public interface EnginePredictionOrBuilder extends
    * <pre>
    * "" == nil (Optional on iOS, nullable on Android). Filter contract
    * guarantees subtitle = "" only when roman is empty (i.e. nil case);
-   * non-nil empty subtitle cannot arise because hanzi is required
-   * non-empty by the empty-hanzi filter.
+   * non-nil empty subtitle cannot arise because hanji is required
+   * non-empty by the empty-hanji filter.
    * </pre>
    *
    * <code>string subtitle = 2;</code>
@@ -38,8 +38,8 @@ public interface EnginePredictionOrBuilder extends
    * <pre>
    * "" == nil (Optional on iOS, nullable on Android). Filter contract
    * guarantees subtitle = "" only when roman is empty (i.e. nil case);
-   * non-nil empty subtitle cannot arise because hanzi is required
-   * non-empty by the empty-hanzi filter.
+   * non-nil empty subtitle cannot arise because hanji is required
+   * non-empty by the empty-hanji filter.
    * </pre>
    *
    * <code>string subtitle = 2;</code>
@@ -49,16 +49,16 @@ public interface EnginePredictionOrBuilder extends
       getSubtitleBytes();
 
   /**
-   * <code>string hanzi = 3;</code>
-   * @return The hanzi.
+   * <code>string hanji = 3;</code>
+   * @return The hanji.
    */
-  java.lang.String getHanzi();
+  java.lang.String getHanji();
   /**
-   * <code>string hanzi = 3;</code>
-   * @return The bytes for hanzi.
+   * <code>string hanji = 3;</code>
+   * @return The bytes for hanji.
    */
   com.google.protobuf.ByteString
-      getHanziBytes();
+      getHanjiBytes();
 
   /**
    * <code>string tl = 4;</code>
@@ -75,7 +75,7 @@ public interface EnginePredictionOrBuilder extends
   /**
    * <pre>
    * Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
-   * taken over the (hanzi, tl) merge and the reading-variant fold
+   * taken over the (hanji, tl) merge and the reading-variant fold
    * (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
    * </pre>
    *

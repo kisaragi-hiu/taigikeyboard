@@ -7,9 +7,9 @@ use std::collections::BTreeSet;
 
 use protos::engine::{
     lexicon_request, lexicon_response, request, response, DictionaryFiltersRequest,
-    DictionarySourceCode, DictionaryToggles, InputMode as WireInputMode, InstallRequest,
-    IsHanziRequest, KautianSubcollToggles, LexiconRequest, LexiconResponse, SearchByHanziRequest,
-    SearchWithSourcesRequest, TaigiWord,
+    DictionarySourceCode, DictionarySourceToggles as WireDictionarySourceToggles,
+    InputMode as WireInputMode, InstallRequest, IsHanjiRequest, KautianSubcollectionToggles,
+    LexiconRequest, LexiconResponse, SearchByHanjiRequest, SearchWithSourcesRequest, TaigiWord,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -205,9 +205,9 @@ pub fn dictionary_filters(toggles: &DictionarySourceToggles) -> Option<Dictionar
 
 /// The user's dictionary toggles on the wire — what `DictionaryFilters` and
 /// `FetchAtPos` carry; the engine resolves them into its source filter.
-pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> DictionaryToggles {
+pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> WireDictionarySourceToggles {
     let subcollections = &toggles.kautian_subcollections;
-    DictionaryToggles {
+    WireDictionarySourceToggles {
         kautian: toggles.kautian,
         taigitv: toggles.taigitv,
         itaigi: toggles.itaigi,
@@ -223,7 +223,7 @@ pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> Dictionar
         dev: toggles.dev,
         // Always sent: an absent subcollection message tells the engine to
         // skip the gate and treat every subcollection as on.
-        kautian_subcoll: Some(KautianSubcollToggles {
+        kautian_subcollections: Some(KautianSubcollectionToggles {
             accent_lukang: subcollections.accent_lukang,
             accent_sansia: subcollections.accent_sansia,
             accent_taipak: subcollections.accent_taipak,
@@ -329,18 +329,18 @@ pub fn search_by_hanzi(
     enabled_sources_bitmask: u32,
 ) -> Vec<LexiconRow> {
     let op = "lexiconSearchByHanzi";
-    let request = SearchByHanziRequest {
+    let request = SearchByHanjiRequest {
         query: query.to_owned(),
         input_mode: wire_input_mode(mode),
         limit,
         enabled_sources_bitmask,
     };
-    let Some(response) = lexicon_response(lexicon_request::Method::SearchByHanzi(request), op)
+    let Some(response) = lexicon_response(lexicon_request::Method::SearchByHanji(request), op)
     else {
         return Vec::new();
     };
     match response.result {
-        Some(lexicon_response::Result::SearchByHanziResult(result)) => {
+        Some(lexicon_response::Result::SearchByHanjiResult(result)) => {
             result.rows.into_iter().map(LexiconRow::from_wire).collect()
         }
         _ => {
@@ -353,14 +353,14 @@ pub fn search_by_hanzi(
 /// Whether `text` is a hanji query (`RustEngineBridge+Lexicon.swift:298-309`).
 pub fn is_hanzi(text: &str) -> bool {
     let op = "isHanzi";
-    let request = IsHanziRequest {
+    let request = IsHanjiRequest {
         text: text.to_owned(),
     };
-    let Some(response) = lexicon_response(lexicon_request::Method::IsHanzi(request), op) else {
+    let Some(response) = lexicon_response(lexicon_request::Method::IsHanji(request), op) else {
         return false;
     };
     match response.result {
-        Some(lexicon_response::Result::IsHanziResult(result)) => result.is_hanzi,
+        Some(lexicon_response::Result::IsHanjiResult(result)) => result.is_hanji,
         _ => {
             record_failure(op, "response carried no is-hanzi result");
             false

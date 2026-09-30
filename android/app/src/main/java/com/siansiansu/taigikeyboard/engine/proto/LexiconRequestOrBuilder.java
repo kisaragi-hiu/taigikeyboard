@@ -50,41 +50,41 @@ public interface LexiconRequestOrBuilder extends
 
   /**
    * <pre>
-   * Tab3 hanzi prefix
+   * Tab3 Hanji prefix
    * </pre>
    *
-   * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
-   * @return Whether the searchByHanzi field is set.
+   * <code>.taigi.engine.SearchByHanjiRequest search_by_hanji = 14;</code>
+   * @return Whether the searchByHanji field is set.
    */
-  boolean hasSearchByHanzi();
+  boolean hasSearchByHanji();
   /**
    * <pre>
-   * Tab3 hanzi prefix
+   * Tab3 Hanji prefix
    * </pre>
    *
-   * <code>.taigi.engine.SearchByHanziRequest search_by_hanzi = 14;</code>
-   * @return The searchByHanzi.
+   * <code>.taigi.engine.SearchByHanjiRequest search_by_hanji = 14;</code>
+   * @return The searchByHanji.
    */
-  com.siansiansu.taigikeyboard.engine.proto.SearchByHanziRequest getSearchByHanzi();
+  com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiRequest getSearchByHanji();
 
   /**
    * <pre>
    * v3.5.7 Tab3 short-circuit
    * </pre>
    *
-   * <code>.taigi.engine.IsHanziRequest is_hanzi = 17;</code>
-   * @return Whether the isHanzi field is set.
+   * <code>.taigi.engine.IsHanjiRequest is_hanji = 17;</code>
+   * @return Whether the isHanji field is set.
    */
-  boolean hasIsHanzi();
+  boolean hasIsHanji();
   /**
    * <pre>
    * v3.5.7 Tab3 short-circuit
    * </pre>
    *
-   * <code>.taigi.engine.IsHanziRequest is_hanzi = 17;</code>
-   * @return The isHanzi.
+   * <code>.taigi.engine.IsHanjiRequest is_hanji = 17;</code>
+   * @return The isHanji.
    */
-  com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest getIsHanzi();
+  com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest getIsHanji();
 
   /**
    * <pre>

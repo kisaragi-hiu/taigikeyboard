@@ -33,9 +33,9 @@ pub struct LexiconRowOut {
     pub source_bitmask: Option<u32>,
 }
 
-/// Public per-bigram output. Mirrors proto `LexiconAssocEntry`.
+/// One bundled bigram continuation — what `api::assoc_lookup` returns.
 #[derive(Debug, Clone)]
-pub struct LexiconAssocOut {
+pub struct AssociationHit {
     // Previous word — the key that was queried.
     pub previous_word: String,
     // Following candidate, written in hanji.
@@ -187,7 +187,7 @@ pub fn assoc_lookup(
     limit: u32,
     enabled_sources_bitmask: u32,
     assoc: &AssociationReader,
-) -> Result<Vec<LexiconAssocOut>, LexiconError> {
+) -> Result<Vec<AssociationHit>, LexiconError> {
     let Some(last_character) = previous_word.chars().last() else {
         return Ok(Vec::new());
     };
@@ -203,7 +203,7 @@ pub fn assoc_lookup(
     }
     Ok(entries
         .into_iter()
-        .map(|entry| LexiconAssocOut {
+        .map(|entry| AssociationHit {
             previous_word: previous_word.to_string(),
             candidate_word: entry.next_word,
             candidate_tl: entry.next_tl,

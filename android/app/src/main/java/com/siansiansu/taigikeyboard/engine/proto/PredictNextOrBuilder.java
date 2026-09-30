@@ -23,15 +23,15 @@ public interface PredictNextOrBuilder extends
       getWordBytes();
 
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 3;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 3;</code>
    * @return Whether the toggles field is set.
    */
   boolean hasToggles();
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 3;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 3;</code>
    * @return The toggles.
    */
-  com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles getToggles();
+  com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles();
 
   /**
    * <code>uint64 query_generation = 4;</code>

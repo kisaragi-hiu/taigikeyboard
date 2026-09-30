@@ -11,13 +11,13 @@ public interface DictionaryFiltersRequestOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
    * @return Whether the toggles field is set.
    */
   boolean hasToggles();
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
    * @return The toggles.
    */
-  com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles getToggles();
+  com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles();
 }

@@ -7,20 +7,20 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * `IsHanziRequest` is the low-level CJK predicate used by Tab3 search to
- * short-circuit hanzi queries. Tab3 needs the predicate without paying the
+ * `IsHanjiRequest` is the low-level CJK predicate used by Tab3 search to
+ * short-circuit Hanji queries. Tab3 needs the predicate without paying the
  * search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
  * </pre>
  *
- * Protobuf type {@code taigi.engine.IsHanziRequest}
+ * Protobuf type {@code taigi.engine.IsHanjiRequest}
  */
 @com.google.protobuf.Generated
-public  final class IsHanziRequest extends
+public  final class IsHanjiRequest extends
     com.google.protobuf.GeneratedMessageLite<
-        IsHanziRequest, IsHanziRequest.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.IsHanziRequest)
-    IsHanziRequestOrBuilder {
-  private IsHanziRequest() {
+        IsHanjiRequest, IsHanjiRequest.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.IsHanjiRequest)
+    IsHanjiRequestOrBuilder {
+  private IsHanjiRequest() {
     text_ = "";
   }
   public static final int TEXT_FIELD_NUMBER = 1;
@@ -70,50 +70,50 @@ public  final class IsHanziRequest extends
 
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -121,24 +121,24 @@ public  final class IsHanziRequest extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -149,25 +149,25 @@ public  final class IsHanziRequest extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
    * <pre>
-   * `IsHanziRequest` is the low-level CJK predicate used by Tab3 search to
-   * short-circuit hanzi queries. Tab3 needs the predicate without paying the
+   * `IsHanjiRequest` is the low-level CJK predicate used by Tab3 search to
+   * short-circuit Hanji queries. Tab3 needs the predicate without paying the
    * search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
    * </pre>
    *
-   * Protobuf type {@code taigi.engine.IsHanziRequest}
+   * Protobuf type {@code taigi.engine.IsHanjiRequest}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.IsHanziRequest)
-      com.siansiansu.taigikeyboard.engine.proto.IsHanziRequestOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.IsHanjiRequest)
+      com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequestOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -222,7 +222,7 @@ public  final class IsHanziRequest extends
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.IsHanziRequest)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.IsHanjiRequest)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -231,7 +231,7 @@ public  final class IsHanziRequest extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest();
+        return new com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -248,13 +248,13 @@ public  final class IsHanziRequest extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -274,24 +274,24 @@ public  final class IsHanziRequest extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.IsHanziRequest)
-  private static final com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.IsHanjiRequest)
+  private static final com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest DEFAULT_INSTANCE;
   static {
-    IsHanziRequest defaultInstance = new IsHanziRequest();
+    IsHanjiRequest defaultInstance = new IsHanjiRequest();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      IsHanziRequest.class, defaultInstance);
+      IsHanjiRequest.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.IsHanziRequest getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.IsHanjiRequest getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<IsHanziRequest> PARSER;
+  private static volatile com.google.protobuf.Parser<IsHanjiRequest> PARSER;
 
-  public static com.google.protobuf.Parser<IsHanziRequest> parser() {
+  public static com.google.protobuf.Parser<IsHanjiRequest> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

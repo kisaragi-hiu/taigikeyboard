@@ -1,8 +1,8 @@
 // Expands a nextword `PredictNext` into `FilterPredictions` by running the bundled lexicon lookup.
 
 use protos::engine::{
-    next_word_request::Method, DictionaryFiltersRequest, FilterPredictions, NextWordRequest,
-    PredictNext, RawNextWordPrediction, Source,
+    next_word_request::Method, FilterPredictions, NextWordRequest, PredictNext,
+    RawNextWordPrediction, Source,
 };
 
 /// Bundled rows fetched per requested prediction: slack so the `(hanzi, tl)`
@@ -60,21 +60,15 @@ fn filter_request(
 fn bundled_rows(
     word: &str,
     roman: &str,
-    toggles: Option<protos::engine::DictionaryToggles>,
+    toggles: Option<protos::engine::DictionarySourceToggles>,
     limit: i32,
 ) -> Vec<RawNextWordPrediction> {
     let bundled_limit = nextword::api::effective_prediction_limit(limit) * BUNDLED_OVERFETCH_FACTOR;
-    let bitmask = match lexicon::api::dictionary_filters(DictionaryFiltersRequest { toggles }) {
-        Ok(filters) => filters.assoc_lookup_bitmask,
-        Err(err) => {
-            log::warn!("nextword.predict.filters_failed: {err}");
-            return Vec::new();
-        }
-    };
+    let bitmask = lexicon::api::association_bitmask(&toggles.unwrap_or_default());
     crate::context::bundled_continuations(word, roman, bundled_limit, bitmask)
         .into_iter()
         .map(|entry| RawNextWordPrediction {
-            hanzi: entry.candidate_word,
+            hanji: entry.candidate_word,
             tl: entry.candidate_tl,
             count: i64::from(entry.count),
             last_used_ms: 0,
@@ -93,7 +87,7 @@ mod tests {
 
     fn user_row(hanzi: &str, count: i64) -> RawNextWordPrediction {
         RawNextWordPrediction {
-            hanzi: hanzi.to_owned(),
+            hanji: hanzi.to_owned(),
             tl: String::new(),
             count,
             last_used_ms: 1,

@@ -402,12 +402,12 @@ public nonisolated struct Taigi_Engine_SetIsShowing: Sendable {
 }
 
 /// Engine-side filter+merge+sort+limit step (`PredictNext` expands into
-/// it with the bundled rows and the engine's own user rows) — groups by (hanzi, tl), scores dict
+/// it with the bundled rows and the engine's own user rows) — groups by (hanji, tl), scores dict
 /// rows via DICT_WEIGHT and user rows via decay+learning math, sorts desc
 /// by score, applies limit, then shapes via display-rule filter. On
 /// generation mismatch returns predictions=[] + was_stale=true.
 ///
-/// COLLISION RULE on (hanzi, tl): dict contributions SUM (a learned word
+/// COLLISION RULE on (hanji, tl): dict contributions SUM (a learned word
 /// outranking the same word from the dictionary is the design), but at most
 /// ONE user contribution is accepted — the FIRST. Under the v6
 /// user_association key, one predicted word can be backed by several stored
@@ -456,8 +456,8 @@ public nonisolated struct Taigi_Engine_PredictNext: Sendable {
 
   public var word: String = String()
 
-  public var toggles: Taigi_Engine_DictionaryToggles {
-    get {_toggles ?? Taigi_Engine_DictionaryToggles()}
+  public var toggles: Taigi_Engine_DictionarySourceToggles {
+    get {_toggles ?? Taigi_Engine_DictionarySourceToggles()}
     set {_toggles = newValue}
   }
   /// Returns true if `toggles` has been explicitly set.
@@ -480,7 +480,7 @@ public nonisolated struct Taigi_Engine_PredictNext: Sendable {
 
   public init() {}
 
-  fileprivate var _toggles: Taigi_Engine_DictionaryToggles? = nil
+  fileprivate var _toggles: Taigi_Engine_DictionarySourceToggles? = nil
 }
 
 /// Pre-merge un-scored row tagged by source. Platform NextWordService.predict
@@ -490,7 +490,7 @@ public nonisolated struct Taigi_Engine_RawNextWordPrediction: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var hanzi: String = String()
+  public var hanji: String = String()
 
   public var tl: String = String()
 
@@ -590,16 +590,16 @@ public nonisolated struct Taigi_Engine_EnginePrediction: Sendable {
 
   /// "" == nil (Optional on iOS, nullable on Android). Filter contract
   /// guarantees subtitle = "" only when roman is empty (i.e. nil case);
-  /// non-nil empty subtitle cannot arise because hanzi is required
-  /// non-empty by the empty-hanzi filter.
+  /// non-nil empty subtitle cannot arise because hanji is required
+  /// non-empty by the empty-hanji filter.
   public var subtitle: String = String()
 
-  public var hanzi: String = String()
+  public var hanji: String = String()
 
   public var tl: String = String()
 
   /// Merged score: min(dict_sum, DICT_SCORE_CAP 250) + user_sum, the sums
-  /// taken over the (hanzi, tl) merge and the reading-variant fold
+  /// taken over the (hanji, tl) merge and the reading-variant fold
   /// (behavioral-invariants §8). Android maps to TaigiWord.lengthScore.
   public var score: Double = 0
 
@@ -1356,7 +1356,7 @@ nonisolated extension Taigi_Engine_PredictNext: SwiftProtobuf.Message, SwiftProt
 
 nonisolated extension Taigi_Engine_RawNextWordPrediction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RawNextWordPrediction"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}hanzi\0\u{1}tl\0\u{1}count\0\u{3}last_used_ms\0\u{1}source\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}hanji\0\u{1}tl\0\u{1}count\0\u{3}last_used_ms\0\u{1}source\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1364,7 +1364,7 @@ nonisolated extension Taigi_Engine_RawNextWordPrediction: SwiftProtobuf.Message,
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.hanzi) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.hanji) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.tl) }()
       case 3: try { try decoder.decodeSingularInt64Field(value: &self.count) }()
       case 4: try { try decoder.decodeSingularInt64Field(value: &self.lastUsedMs) }()
@@ -1375,8 +1375,8 @@ nonisolated extension Taigi_Engine_RawNextWordPrediction: SwiftProtobuf.Message,
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.hanzi.isEmpty {
-      try visitor.visitSingularStringField(value: self.hanzi, fieldNumber: 1)
+    if !self.hanji.isEmpty {
+      try visitor.visitSingularStringField(value: self.hanji, fieldNumber: 1)
     }
     if !self.tl.isEmpty {
       try visitor.visitSingularStringField(value: self.tl, fieldNumber: 2)
@@ -1394,7 +1394,7 @@ nonisolated extension Taigi_Engine_RawNextWordPrediction: SwiftProtobuf.Message,
   }
 
   public static func ==(lhs: Taigi_Engine_RawNextWordPrediction, rhs: Taigi_Engine_RawNextWordPrediction) -> Bool {
-    if lhs.hanzi != rhs.hanzi {return false}
+    if lhs.hanji != rhs.hanji {return false}
     if lhs.tl != rhs.tl {return false}
     if lhs.count != rhs.count {return false}
     if lhs.lastUsedMs != rhs.lastUsedMs {return false}
@@ -1553,7 +1553,7 @@ nonisolated extension Taigi_Engine_FilterResult: SwiftProtobuf.Message, SwiftPro
 
 nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".EnginePrediction"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}subtitle\0\u{1}hanzi\0\u{1}tl\0\u{1}score\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0\u{1}subtitle\0\u{1}hanji\0\u{1}tl\0\u{1}score\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1563,7 +1563,7 @@ nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, Swif
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.text) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.subtitle) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.hanzi) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.hanji) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.tl) }()
       case 5: try { try decoder.decodeSingularDoubleField(value: &self.score) }()
       default: break
@@ -1578,8 +1578,8 @@ nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, Swif
     if !self.subtitle.isEmpty {
       try visitor.visitSingularStringField(value: self.subtitle, fieldNumber: 2)
     }
-    if !self.hanzi.isEmpty {
-      try visitor.visitSingularStringField(value: self.hanzi, fieldNumber: 3)
+    if !self.hanji.isEmpty {
+      try visitor.visitSingularStringField(value: self.hanji, fieldNumber: 3)
     }
     if !self.tl.isEmpty {
       try visitor.visitSingularStringField(value: self.tl, fieldNumber: 4)
@@ -1593,7 +1593,7 @@ nonisolated extension Taigi_Engine_EnginePrediction: SwiftProtobuf.Message, Swif
   public static func ==(lhs: Taigi_Engine_EnginePrediction, rhs: Taigi_Engine_EnginePrediction) -> Bool {
     if lhs.text != rhs.text {return false}
     if lhs.subtitle != rhs.subtitle {return false}
-    if lhs.hanzi != rhs.hanzi {return false}
+    if lhs.hanji != rhs.hanji {return false}
     if lhs.tl != rhs.tl {return false}
     if lhs.score != rhs.score {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}

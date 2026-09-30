@@ -302,7 +302,7 @@ Excludes `variant`, `khiin` from "all" — those are exclusion flags, not main s
 
 The per-record `kautian_subtag` u16 (dictionary.bin §1.1) and the user's
 subcollection-enable bits in `enabled_sources_bitmask` (the wire field on
-`SearchWithSourcesRequest` / `SearchByHanziRequest` / continuous) share ONE 12-bit layout so the filter
+`SearchWithSourcesRequest` / `SearchByHanjiRequest` / continuous) share ONE 12-bit layout so the filter
 test is a single AND:
 
 ```
@@ -336,7 +336,7 @@ has enabled.
 `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*` / `WIRE_KAUTIAN_SUBCOLL_*`).
 
 The toggle→wire ENCODE landed in Phase 3 (iOS): `compute_filters` sets bit 13 +
-the enable mask from `DictionaryToggles.kautian_subcoll` (a nested message —
+the enable mask from `DictionarySourceToggles.kautian_subcollections` (a nested message —
 PRESENCE is the active sentinel). iOS always sends it (it ships the toggles);
 a caller that leaves it absent (Android until its UI phase, NextWord) keeps the
 gate off = legacy all-on. The subcollection-enable filtering applies to the

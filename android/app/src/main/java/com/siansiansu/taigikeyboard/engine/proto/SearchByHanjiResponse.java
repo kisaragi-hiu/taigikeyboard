@@ -6,15 +6,15 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
- * Protobuf type {@code taigi.engine.SearchByHanziResponse}
+ * Protobuf type {@code taigi.engine.SearchByHanjiResponse}
  */
 @com.google.protobuf.Generated
-public  final class SearchByHanziResponse extends
+public  final class SearchByHanjiResponse extends
     com.google.protobuf.GeneratedMessageLite<
-        SearchByHanziResponse, SearchByHanziResponse.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.SearchByHanziResponse)
-    SearchByHanziResponseOrBuilder {
-  private SearchByHanziResponse() {
+        SearchByHanjiResponse, SearchByHanjiResponse.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.SearchByHanjiResponse)
+    SearchByHanjiResponseOrBuilder {
+  private SearchByHanjiResponse() {
     rows_ = emptyProtobufList();
   }
   public static final int ROWS_FIELD_NUMBER = 1;
@@ -111,50 +111,50 @@ public  final class SearchByHanziResponse extends
     rows_.remove(index);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -162,24 +162,24 @@ public  final class SearchByHanziResponse extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -190,19 +190,19 @@ public  final class SearchByHanziResponse extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
-   * Protobuf type {@code taigi.engine.SearchByHanziResponse}
+   * Protobuf type {@code taigi.engine.SearchByHanjiResponse}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.SearchByHanziResponse)
-      com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponseOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.SearchByHanjiResponse)
+      com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponseOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -310,7 +310,7 @@ public  final class SearchByHanziResponse extends
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.SearchByHanziResponse)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.SearchByHanjiResponse)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -319,7 +319,7 @@ public  final class SearchByHanziResponse extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse();
+        return new com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -337,13 +337,13 @@ public  final class SearchByHanziResponse extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -363,24 +363,24 @@ public  final class SearchByHanziResponse extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.SearchByHanziResponse)
-  private static final com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.SearchByHanjiResponse)
+  private static final com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse DEFAULT_INSTANCE;
   static {
-    SearchByHanziResponse defaultInstance = new SearchByHanziResponse();
+    SearchByHanjiResponse defaultInstance = new SearchByHanjiResponse();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      SearchByHanziResponse.class, defaultInstance);
+      SearchByHanjiResponse.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanziResponse getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.SearchByHanjiResponse getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<SearchByHanziResponse> PARSER;
+  private static volatile com.google.protobuf.Parser<SearchByHanjiResponse> PARSER;
 
-  public static com.google.protobuf.Parser<SearchByHanziResponse> parser() {
+  public static com.google.protobuf.Parser<SearchByHanjiResponse> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

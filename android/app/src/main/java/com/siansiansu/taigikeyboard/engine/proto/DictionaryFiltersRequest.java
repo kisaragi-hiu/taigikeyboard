@@ -9,14 +9,14 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * `DictionaryFiltersRequest` resolves the user's 12-toggle dictionary
  * preferences into the ready-to-send bitmasks consumed by
- * `SearchWithSourcesRequest` / `SearchByHanziRequest` / `AssocLookupRequest`.
+ * `SearchWithSourcesRequest` / `SearchByHanjiRequest`.
  *
  * Single Rust source of truth replaces verbatim-mirrored bit math previously
  * in `ios/.../EnabledDictionaries.swift` + `android/.../EnabledDictionaries.kt`
  * (~80 LOC pure-logic duplication, audit residue 2026-05-04 § A.1 P2).
  *
- * `toggles` may be absent on the wire (prost `Option&lt;DictionaryToggles&gt;`);
- * the engine treats absence as `DictionaryToggles::default()` (all false).
+ * `toggles` may be absent on the wire (prost `Option&lt;DictionarySourceToggles&gt;`);
+ * the engine treats absence as `DictionarySourceToggles::default()` (all false).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.DictionaryFiltersRequest}
@@ -31,46 +31,46 @@ public  final class DictionaryFiltersRequest extends
   }
   private int bitField0_;
   public static final int TOGGLES_FIELD_NUMBER = 1;
-  private com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles toggles_;
+  private com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles toggles_;
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
    */
   @java.lang.Override
   public boolean hasToggles() {
     return ((bitField0_ & 0x00000001) != 0);
   }
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles getToggles() {
-    return toggles_ == null ? com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles.getDefaultInstance() : toggles_;
+  public com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles() {
+    return toggles_ == null ? com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.getDefaultInstance() : toggles_;
   }
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
    */
-  private void setToggles(com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles value) {
+  private void setToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
     java.util.Objects.requireNonNull(value);
     toggles_ = value;
     bitField0_ |= 0x00000001;
   }
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
    */
   @java.lang.SuppressWarnings("ReferenceEquality")
-  private void mergeToggles(com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles value) {
+  private void mergeToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
     java.util.Objects.requireNonNull(value);
     if (toggles_ != null &&
-        toggles_ != com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles.getDefaultInstance()) {
+        toggles_ != com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.getDefaultInstance()) {
       toggles_ =
-        com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles.newBuilder(toggles_).mergeFrom(value).buildPartial();
+        com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.newBuilder(toggles_).mergeFrom(value).buildPartial();
     } else {
       toggles_ = value;
     }
     bitField0_ |= 0x00000001;
   }
   /**
-   * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+   * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
    */
   private void clearToggles() {
     toggles_ = null;
@@ -164,14 +164,14 @@ public  final class DictionaryFiltersRequest extends
    * <pre>
    * `DictionaryFiltersRequest` resolves the user's 12-toggle dictionary
    * preferences into the ready-to-send bitmasks consumed by
-   * `SearchWithSourcesRequest` / `SearchByHanziRequest` / `AssocLookupRequest`.
+   * `SearchWithSourcesRequest` / `SearchByHanjiRequest`.
    *
    * Single Rust source of truth replaces verbatim-mirrored bit math previously
    * in `ios/.../EnabledDictionaries.swift` + `android/.../EnabledDictionaries.kt`
    * (~80 LOC pure-logic duplication, audit residue 2026-05-04 § A.1 P2).
    *
-   * `toggles` may be absent on the wire (prost `Option&lt;DictionaryToggles&gt;`);
-   * the engine treats absence as `DictionaryToggles::default()` (all false).
+   * `toggles` may be absent on the wire (prost `Option&lt;DictionarySourceToggles&gt;`);
+   * the engine treats absence as `DictionarySourceToggles::default()` (all false).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.DictionaryFiltersRequest}
@@ -188,46 +188,46 @@ public  final class DictionaryFiltersRequest extends
 
 
     /**
-     * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
      */
     @java.lang.Override
     public boolean hasToggles() {
       return instance.hasToggles();
     }
     /**
-     * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles getToggles() {
+    public com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles getToggles() {
       return instance.getToggles();
     }
     /**
-     * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
      */
-    public Builder setToggles(com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles value) {
+    public Builder setToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
       copyOnWrite();
       instance.setToggles(value);
       return this;
       }
     /**
-     * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
      */
     public Builder setToggles(
-        com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles.Builder builderForValue) {
+        com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles.Builder builderForValue) {
       copyOnWrite();
       instance.setToggles(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
      */
-    public Builder mergeToggles(com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles value) {
+    public Builder mergeToggles(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceToggles value) {
       copyOnWrite();
       instance.mergeToggles(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.DictionaryToggles toggles = 1;</code>
+     * <code>.taigi.engine.DictionarySourceToggles toggles = 1;</code>
      */
     public Builder clearToggles() {  copyOnWrite();
       instance.clearToggles();

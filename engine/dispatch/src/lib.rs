@@ -246,22 +246,22 @@ fn encode(response: &Response) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use protos::engine::{AppConfig, IsHanziRequest, LexiconRequest};
+    use protos::engine::{AppConfig, IsHanjiRequest, LexiconRequest};
 
-    fn lexicon_request(req: IsHanziRequest) -> Request {
+    fn lexicon_request(req: IsHanjiRequest) -> Request {
         Request {
             id: 42,
             config_snapshot: Some(AppConfig::default()),
             generation: 7,
             payload: Some(request::Payload::Lexicon(LexiconRequest {
-                method: Some(protos::engine::lexicon_request::Method::IsHanzi(req)),
+                method: Some(protos::engine::lexicon_request::Method::IsHanji(req)),
             })),
         }
     }
 
     #[test]
     fn dispatch_routes_lexicon_request_to_lexicon() {
-        let req = lexicon_request(IsHanziRequest {
+        let req = lexicon_request(IsHanjiRequest {
             text: "我".to_owned(),
         });
         let mut buf = Vec::with_capacity(req.encoded_len());
@@ -278,10 +278,10 @@ mod tests {
             panic!("expected Lexicon payload, got {payload:?}");
         };
         let result = lex_resp.result.expect("result present");
-        let protos::engine::lexicon_response::Result::IsHanziResult(is_hanzi) = result else {
-            panic!("expected IsHanziResult, got {result:?}");
+        let protos::engine::lexicon_response::Result::IsHanjiResult(is_hanji) = result else {
+            panic!("expected IsHanjiResult, got {result:?}");
         };
-        assert!(is_hanzi.is_hanzi, "我 is hanzi");
+        assert!(is_hanji.is_hanji, "我 is hanji");
     }
 
     #[test]

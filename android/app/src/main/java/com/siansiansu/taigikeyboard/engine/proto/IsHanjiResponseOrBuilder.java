@@ -6,13 +6,13 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface IsHanziResponseOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.IsHanziResponse)
+public interface IsHanjiResponseOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.IsHanjiResponse)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>bool is_hanzi = 1;</code>
-   * @return The isHanzi.
+   * <code>bool is_hanji = 1;</code>
+   * @return The isHanji.
    */
-  boolean getIsHanzi();
+  boolean getIsHanji();
 }

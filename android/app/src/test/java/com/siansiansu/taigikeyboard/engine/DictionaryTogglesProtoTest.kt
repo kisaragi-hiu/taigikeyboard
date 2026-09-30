@@ -60,9 +60,9 @@ class DictionaryTogglesProtoTest {
 
         val proto = dictionaryTogglesProto(RustEngineBridge.DictionaryToggles.from(settings))
 
-        assertTrue("an absent message would switch the subcollection gate off", proto.hasKautianSubcoll())
-        assertFalse(proto.kautianSubcoll.accentGilan)
-        assertTrue(proto.kautianSubcoll.accentLukang)
+        assertTrue("an absent message would switch the subcollection gate off", proto.hasKautianSubcollections())
+        assertFalse(proto.kautianSubcollections.accentGilan)
+        assertTrue(proto.kautianSubcollections.accentLukang)
         assertTrue(proto.kautian)
     }
 }

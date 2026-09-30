@@ -553,7 +553,7 @@ public nonisolated struct Taigi_Engine_CustomDictionaryEntry: Sendable {
 
   public var roman: String = String()
 
-  public var hanzi: String = String()
+  public var hanji: String = String()
 
   public var createdAt: String = String()
 
@@ -623,7 +623,7 @@ public nonisolated struct Taigi_Engine_SaveCustomEntry: Sendable {
 
   public var roman: String = String()
 
-  public var hanzi: String = String()
+  public var hanji: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1521,7 +1521,7 @@ nonisolated extension Taigi_Engine_UsageRecorded: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Taigi_Engine_CustomDictionaryEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CustomDictionaryEntry"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}roman\0\u{1}hanzi\0\u{3}created_at\0\u{3}updated_at\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}roman\0\u{1}hanji\0\u{3}created_at\0\u{3}updated_at\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1531,7 +1531,7 @@ nonisolated extension Taigi_Engine_CustomDictionaryEntry: SwiftProtobuf.Message,
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.hanzi) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.hanji) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.createdAt) }()
       case 5: try { try decoder.decodeSingularStringField(value: &self.updatedAt) }()
       default: break
@@ -1546,8 +1546,8 @@ nonisolated extension Taigi_Engine_CustomDictionaryEntry: SwiftProtobuf.Message,
     if !self.roman.isEmpty {
       try visitor.visitSingularStringField(value: self.roman, fieldNumber: 2)
     }
-    if !self.hanzi.isEmpty {
-      try visitor.visitSingularStringField(value: self.hanzi, fieldNumber: 3)
+    if !self.hanji.isEmpty {
+      try visitor.visitSingularStringField(value: self.hanji, fieldNumber: 3)
     }
     if !self.createdAt.isEmpty {
       try visitor.visitSingularStringField(value: self.createdAt, fieldNumber: 4)
@@ -1561,7 +1561,7 @@ nonisolated extension Taigi_Engine_CustomDictionaryEntry: SwiftProtobuf.Message,
   public static func ==(lhs: Taigi_Engine_CustomDictionaryEntry, rhs: Taigi_Engine_CustomDictionaryEntry) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.roman != rhs.roman {return false}
-    if lhs.hanzi != rhs.hanzi {return false}
+    if lhs.hanji != rhs.hanji {return false}
     if lhs.createdAt != rhs.createdAt {return false}
     if lhs.updatedAt != rhs.updatedAt {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -1656,7 +1656,7 @@ nonisolated extension Taigi_Engine_CustomEntries: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Taigi_Engine_SaveCustomEntry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".SaveCustomEntry"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}roman\0\u{1}hanzi\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}id\0\u{1}roman\0\u{1}hanji\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1666,7 +1666,7 @@ nonisolated extension Taigi_Engine_SaveCustomEntry: SwiftProtobuf.Message, Swift
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self._id) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.roman) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.hanzi) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.hanji) }()
       default: break
       }
     }
@@ -1683,8 +1683,8 @@ nonisolated extension Taigi_Engine_SaveCustomEntry: SwiftProtobuf.Message, Swift
     if !self.roman.isEmpty {
       try visitor.visitSingularStringField(value: self.roman, fieldNumber: 2)
     }
-    if !self.hanzi.isEmpty {
-      try visitor.visitSingularStringField(value: self.hanzi, fieldNumber: 3)
+    if !self.hanji.isEmpty {
+      try visitor.visitSingularStringField(value: self.hanji, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -1692,7 +1692,7 @@ nonisolated extension Taigi_Engine_SaveCustomEntry: SwiftProtobuf.Message, Swift
   public static func ==(lhs: Taigi_Engine_SaveCustomEntry, rhs: Taigi_Engine_SaveCustomEntry) -> Bool {
     if lhs._id != rhs._id {return false}
     if lhs.roman != rhs.roman {return false}
-    if lhs.hanzi != rhs.hanzi {return false}
+    if lhs.hanji != rhs.hanji {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -40,14 +40,14 @@ public interface SaveCustomEntryOrBuilder extends
       getRomanBytes();
 
   /**
-   * <code>string hanzi = 3;</code>
-   * @return The hanzi.
+   * <code>string hanji = 3;</code>
+   * @return The hanji.
    */
-  java.lang.String getHanzi();
+  java.lang.String getHanji();
   /**
-   * <code>string hanzi = 3;</code>
-   * @return The bytes for hanzi.
+   * <code>string hanji = 3;</code>
+   * @return The bytes for hanji.
    */
   com.google.protobuf.ByteString
-      getHanziBytes();
+      getHanjiBytes();
 }

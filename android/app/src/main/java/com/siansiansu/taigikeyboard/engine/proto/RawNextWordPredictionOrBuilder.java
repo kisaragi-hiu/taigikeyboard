@@ -11,16 +11,16 @@ public interface RawNextWordPredictionOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>string hanzi = 1;</code>
-   * @return The hanzi.
+   * <code>string hanji = 1;</code>
+   * @return The hanji.
    */
-  java.lang.String getHanzi();
+  java.lang.String getHanji();
   /**
-   * <code>string hanzi = 1;</code>
-   * @return The bytes for hanzi.
+   * <code>string hanji = 1;</code>
+   * @return The bytes for hanji.
    */
   com.google.protobuf.ByteString
-      getHanziBytes();
+      getHanjiBytes();
 
   /**
    * <code>string tl = 2;</code>

@@ -121,7 +121,7 @@ fn custom_results(
             id: ResultId::Custom(entry.id),
             roman: entry.roman,
             lookup_tl: None,
-            hanzi: (!entry.hanzi.is_empty()).then_some(entry.hanzi),
+            hanzi: (!entry.hanji.is_empty()).then_some(entry.hanji),
             sources: vec![DictionarySource::Custom],
         })
         .collect()

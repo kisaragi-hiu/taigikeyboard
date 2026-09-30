@@ -5,7 +5,7 @@ package taigi.engine;
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
-// Lexicon module — dictionary install, search, association lookup, input
+// Lexicon module — dictionary install, search, input
 // classification and dictionary-filter resolution.
 //
 // Ops live in the LexiconRequest.method oneof. Pattern mirrors PhoneticsRequest.method oneof so the top-level dispatcher
@@ -17,7 +17,7 @@ option java_multiple_files = true;
 //   per audit § 3 (Android does not have these in CandidateProcessor;
 //   moving them to Rust would change Android behavior)
 //
-// v3.5.7 added `is_hanzi` for the Tab3 hanzi short-circuit. Tab3 parity
+// v3.5.7 added `is_hanji` for the Tab3 Hanji short-circuit. Tab3 parity
 // correction in same slice — Android `DictionarySearchViewModel.kt:97`
 // previously used Kotlin `Char.code` (16-bit), missing CJK Extensions B/C/D/E.
 
@@ -39,8 +39,8 @@ message LexiconRequest {
   oneof method {
     InstallRequest            install               = 11;  // lexicon read-path
     SearchWithSourcesRequest  search_with_sources   = 13;  // Tab3 multi-source
-    SearchByHanziRequest      search_by_hanzi       = 14;  // Tab3 hanzi prefix
-    IsHanziRequest            is_hanzi              = 17;  // v3.5.7 Tab3 short-circuit
+    SearchByHanjiRequest      search_by_hanji       = 14;  // Tab3 Hanji prefix
+    IsHanjiRequest            is_hanji              = 17;  // v3.5.7 Tab3 short-circuit
     DictionaryFiltersRequest  dictionary_filters    = 18;  // v3.5.8 toggles → bitmasks + enabled codes
   }
 }
@@ -77,8 +77,7 @@ message InstallRequest {
 
 // `SearchWithSourcesRequest` is Tab3's all-source lookup. The input may be
 // either romanized or hanji; the engine internally classifies
-// and dispatches to the matching prefix family. Mirrors iOS
-// `DictionaryRepository.searchWithSources`.
+// and dispatches to the matching prefix family.
 message SearchWithSourcesRequest {
   string input                   = 1;
   InputMode input_mode           = 2;
@@ -93,17 +92,16 @@ message SearchWithSourcesRequest {
   // per-subcollection enable bits — bit 13 = active sentinel (0 ⇒ engine skips
   // subcollection gating = all on, the legacy/pre-UI default), bits 14..=25 =
   // enable mask (main | accent[10] | name, same layout as the record subtag).
-  // ENCODE (Phase 3): `compute_filters` sets these from `DictionaryToggles
-  // .kautian_subcoll` when present; a caller that leaves the sub-message absent
+  // ENCODE (Phase 3): `compute_filters` sets these from `DictionarySourceToggles
+  // .kautian_subcollections` when present; a caller that leaves the sub-message absent
   // keeps bit 13 clear = legacy all-on. Decode: `Filter::from_enabled_bitmask`
   // in dictionary_reader.rs. Full layout: `docs/engine/binary-format.md` §4.5.
-  // Same field semantics apply to `SearchByHanziRequest` below.
+  // Same field semantics apply to `SearchByHanjiRequest` below.
   uint32 enabled_sources_bitmask = 4;
 }
 
-// `SearchByHanziRequest` is Tab3's hanzi-prefix-only lookup. Mirrors iOS
-// `DictionaryRepository.searchByHanzi`.
-message SearchByHanziRequest {
+// `SearchByHanjiRequest` is Tab3's Hanji-prefix-only lookup.
+message SearchByHanjiRequest {
   string query                   = 1;
   InputMode input_mode           = 2;
   uint32 limit                   = 3;
@@ -111,73 +109,44 @@ message SearchByHanziRequest {
   uint32 enabled_sources_bitmask = 4;
 }
 
-// `AssocLookupRequest` is the bundled-bigram lookup against `association.bin`
-// (TKWA), the input of `lexicon::api::assoc_lookup`. Not a wire method: only
-// engine/dispatch calls it, expanding nextword `PredictNext`
-// (`engine/dispatch/src/predict.rs`).
-//
-// **Crate isolation invariant**: the Rust `engine/nextword` crate stays
-// independent of `engine/lexicon`. NextWord never imports or calls into
-// lexicon directly — engine/dispatch owns the cross-domain wiring.
-message AssocLookupRequest {
-  // The committed word, whole; the lexicon picks the key (word key
-  // `previous_word\u{1}previous_tl`, else the last character).
-  string previous_word           = 1;
-  uint32 limit                   = 2;
-  // Source-toggle bitmask filtering bundled bigram entries. Layout matches
-  // the low 9 bits of `enabled_sources_bitmask` in `SearchWithSourcesRequest`. Sentinel
-  // `u32::MAX` short-circuits the filter (all sources enabled). Plumbed end
-  // -to-end since v3.5.6 fix r3173013233 — prior to that, api.rs hardcoded
-  // `u32::MAX`, regressing the platform-side filter that used to honor
-  // `EnabledDictionaries.associationBitmask()`.
-  uint32 enabled_sources_bitmask = 3;
-  // The committed word's canonical display TL. Non-empty → the word key is
-  // tried first and the character key is the backoff when it yields no row
-  // under the mask; empty → character key only (behavioral-invariants §24
-  // INVARIANT_NEXTWORD_WORD_KEY_BACKOFF).
-  string previous_tl             = 4;
-}
-
-// `IsHanziRequest` is the low-level CJK predicate used by Tab3 search to
-// short-circuit hanzi queries. Tab3 needs the predicate without paying the
+// `IsHanjiRequest` is the low-level CJK predicate used by Tab3 search to
+// short-circuit Hanji queries. Tab3 needs the predicate without paying the
 // search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
-message IsHanziRequest {
+message IsHanjiRequest {
   string text = 1;
 }
 
 // `DictionaryFiltersRequest` resolves the user's 12-toggle dictionary
 // preferences into the ready-to-send bitmasks consumed by
-// `SearchWithSourcesRequest` / `SearchByHanziRequest` / `AssocLookupRequest`.
+// `SearchWithSourcesRequest` / `SearchByHanjiRequest`.
 //
 // Single Rust source of truth replaces verbatim-mirrored bit math previously
 // in `ios/.../EnabledDictionaries.swift` + `android/.../EnabledDictionaries.kt`
 // (~80 LOC pure-logic duplication, audit residue 2026-05-04 § A.1 P2).
 //
-// `toggles` may be absent on the wire (prost `Option<DictionaryToggles>`);
-// the engine treats absence as `DictionaryToggles::default()` (all false).
+// `toggles` may be absent on the wire (prost `Option<DictionarySourceToggles>`);
+// the engine treats absence as `DictionarySourceToggles::default()` (all false).
 message DictionaryFiltersRequest {
-  DictionaryToggles toggles = 1;
+  DictionarySourceToggles toggles = 1;
 }
 
 // `DictionaryFiltersResponse` carries ready-to-send outputs:
 // - `dictionary_filter_bitmask` plumbs straight into
 //   `SearchWithSourcesRequest.enabled_sources_bitmask` /
-//   `SearchByHanziRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
+//   `SearchByHanjiRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
 //   bit 10 dev (always set), bit 12 variant.
-// - `assoc_lookup_bitmask` plumbs straight into
-//   `AssocLookupRequest.enabled_sources_bitmask`. Equals `u32::MAX` when
-//   ALL 9 association sources are enabled (preserves the documented
-//   sentinel shortcut at `lexicon.proto:166-173`); otherwise equals the
-//   association mask (bits 0-8). engine/dispatch `PredictNext` computes it
-//   itself from the toggles; platforms no longer forward it.
 // - `enabled_source_codes` lists every `DictionarySourceCode` whose source
 //   the user has toggled on. `DEV` + `CUSTOM` are always present
 //   (non-toggleable). Platforms decode via explicit switch/map into their
 //   `DictionarySource` enum — DO NOT use Swift `rawValue` or Kotlin
 //   `ordinal` since the platform enums lack stable numeric values.
 message DictionaryFiltersResponse {
+  // Tag 2 was `assoc_lookup_bitmask`: no platform read it; engine/dispatch
+  // `PredictNext` takes the association mask from
+  // `lexicon::api::association_bitmask` (2026-10-01).
+  reserved 2;
+  reserved "assoc_lookup_bitmask";
   uint32                          dictionary_filter_bitmask  = 1;
-  uint32                          assoc_lookup_bitmask       = 2;
   repeated DictionarySourceCode   enabled_source_codes       = 3;
 }
 
@@ -193,8 +162,8 @@ message LexiconResponse {
   oneof result {
     InstallResponse            install_result              = 11;
     SearchWithSourcesResponse  search_with_sources_result  = 13;
-    SearchByHanziResponse      search_by_hanzi_result      = 14;
-    IsHanziResponse            is_hanzi_result             = 17;
+    SearchByHanjiResponse      search_by_hanji_result      = 14;
+    IsHanjiResponse            is_hanji_result             = 17;
     DictionaryFiltersResponse  dictionary_filters_result   = 18;
   }
 }
@@ -214,18 +183,12 @@ message SearchWithSourcesResponse {
   repeated TaigiWord rows = 1;
 }
 
-message SearchByHanziResponse {
+message SearchByHanjiResponse {
   repeated TaigiWord rows = 1;
 }
 
-// `AssocLookupResponse.entries` is a vector of bundled bigram entries; the
-// nextword filter ranks them after engine/dispatch tags them SOURCE_DICT.
-message AssocLookupResponse {
-  repeated LexiconAssocEntry entries = 1;
-}
-
-message IsHanziResponse {
-  bool is_hanzi = 1;
+message IsHanjiResponse {
+  bool is_hanji = 1;
 }
 
 // =========================================================================
@@ -248,21 +211,6 @@ message TaigiWord {
   optional uint32 source_bitmask = 5;
 }
 
-// `LexiconAssocEntry` is one bundled bigram tuple — `previous_word` /
-// `candidate_word` (hanzi) / `candidate_tl` (TL) / `count`. Read-only; the
-// mutable `user_association.db` SQLite half is OUT OF SCOPE for v3.5.6
-// (audit § scope D-Boundary).
-//
-// `candidate_tl` carries the TL string per entry from the bundled
-// association.bin wire format (next_tl). Without it, the platform NextWord
-// pipeline cannot reconstruct the romanized form for predictions.
-message LexiconAssocEntry {
-  string previous_word   = 1;
-  string candidate_word  = 2;
-  uint32 count           = 3;
-  string candidate_tl    = 4;
-}
-
 // `InputMode` is lexicon-local. Mirrors the platform-side input-mode setting
 // (TL / POJ / TPS). `engine/protos/envelope.proto::AppConfig.input_mode` uses
 // a string today; we re-encode here as enum so the lexicon bridge surface
@@ -275,7 +223,7 @@ enum InputMode {
   INPUT_MODE_TPS          = 3;
 }
 
-// `DictionaryToggles` is the 12-boolean snapshot of user dictionary
+// `DictionarySourceToggles` is the 12-boolean snapshot of user dictionary
 // preferences that drives `DictionaryFiltersRequest`. Field tags map
 // directly to the bit positions the engine consumes; reordering tags is
 // a wire break.
@@ -283,14 +231,14 @@ enum InputMode {
 // Mirrors the iOS `EngineSettings` + Android `EngineSettings` boolean
 // surface (see `EnabledDictionaries.swift` / `.kt` pre-v3.5.8).
 //
-// kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcoll`
+// kautian subcollections (binary v3, Phase 3 ENCODE): `kautian_subcollections`
 // carries the user's per-subcollection enable state. PRESENCE of the
 // sub-message is the active sentinel — a platform that ships the toggles
 // sets it; any caller that leaves it absent (a platform whose UI is not
 // yet wired, NextWord) signals "no subcollection gating" and the engine
 // keeps the legacy all-on behaviour (wire bit 13 stays 0). `compute_filters`
 // owns the subtag bit packing so the layout lives in Rust only.
-message DictionaryToggles {
+message DictionarySourceToggles {
   bool kautian = 1;  // 教育部臺灣台語常用詞辭典
   bool taigitv = 2;  // 台語新詞辭庫
   bool itaigi  = 3;  // iTaigi 華台對照典
@@ -306,10 +254,10 @@ message DictionaryToggles {
   bool dev     = 14; // developer supplement (Supplementary Word List, filter bit 10) — default on, now toggleable
   // kautian subcollection toggles. Absent ⇒ engine skips the subcollection
   // gate (legacy all-on). Only meaningful when `kautian = true`.
-  KautianSubcollToggles kautian_subcoll = 13;
+  KautianSubcollectionToggles kautian_subcollections = 13;
 }
 
-// `KautianSubcollToggles` is the per-subcollection enable state for the
+// `KautianSubcollectionToggles` is the per-subcollection enable state for the
 // kautian source (Phase 3). The main subcollection (main entry / headword) is
 // NOT a field — it is always on whenever the kautian master toggle is on,
 // so `compute_filters` sets its subtag bit unconditionally when this
@@ -318,7 +266,7 @@ message DictionaryToggles {
 // `name_appendix` → subtag bit 11. Bit layout owner is Rust
 // `engine/lexicon/src/dictionary_reader.rs` (`KAUTIAN_SUBTAG_*`); see
 // `docs/engine/binary-format.md` §4.5.
-message KautianSubcollToggles {
+message KautianSubcollectionToggles {
   bool accent_lukang    = 1;  // Lukang (Quanzhou-leaning) (subtag bit 1)
   bool accent_sansia    = 2;  // Sansia (Quanzhou-leaning) (subtag bit 2)
   bool accent_taipak    = 3;  // Taipei (Quanzhou-leaning) (subtag bit 3)

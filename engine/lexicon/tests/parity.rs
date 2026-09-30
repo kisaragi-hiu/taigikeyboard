@@ -325,7 +325,7 @@ fn assoc_lookup_filters_before_limit() {
 // --- INVARIANT_LEX_API_BITMASK_HONORED ---------------------------------
 
 /// Regression for v3.5.6 fix r3173440126 — `api::search_with_sources` and
-/// `api::search_by_hanzi` previously hardcoded `u32::MAX` (Tab3 paths),
+/// `api::search_by_hanji` previously hardcoded `u32::MAX` (Tab3 paths),
 /// bypassing user dictionary-source toggles AND falsely forcing variant +
 /// khiin on. Drives the assertion through `lexicon::api` so the regression
 /// is pinned at the layer where it actually existed (search.rs has always
@@ -333,7 +333,7 @@ fn assoc_lookup_filters_before_limit() {
 #[test]
 fn invariant_lex_api_bitmask_plumbing_honored() {
     use lexicon::api;
-    use protos::engine::{SearchByHanziRequest, SearchWithSourcesRequest};
+    use protos::engine::{SearchByHanjiRequest, SearchWithSourcesRequest};
 
     let _engine_lock = engine_install_lock();
 
@@ -377,20 +377,20 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
     );
 
     // search_by_hanzi: same assertions, hanzi-prefix path.
-    let make_by_hanzi = |mask: u32| SearchByHanziRequest {
+    let make_by_hanzi = |mask: u32| SearchByHanjiRequest {
         query: "好".to_string(),
         input_mode: protos::engine::InputMode::Tl as i32,
         limit: 10,
         enabled_sources_bitmask: mask,
     };
-    let hit_h = api::search_by_hanzi(make_by_hanzi(0x0001)).expect("hit_h");
+    let hit_h = api::search_by_hanji(make_by_hanzi(0x0001)).expect("hit_h");
     assert_eq!(
         hit_h.rows.len(),
         1,
         "search_by_hanzi with matching mask returns entry"
     );
 
-    let miss_h = api::search_by_hanzi(make_by_hanzi(0x0002)).expect("miss_h");
+    let miss_h = api::search_by_hanji(make_by_hanzi(0x0002)).expect("miss_h");
     assert!(
         miss_h.rows.is_empty(),
         "search_by_hanzi with non-matching mask filters entry"

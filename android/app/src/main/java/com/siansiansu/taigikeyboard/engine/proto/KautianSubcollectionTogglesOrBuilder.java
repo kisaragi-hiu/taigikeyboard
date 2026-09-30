@@ -6,8 +6,8 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface KautianSubcollTogglesOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.KautianSubcollToggles)
+public interface KautianSubcollectionTogglesOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.KautianSubcollectionToggles)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**

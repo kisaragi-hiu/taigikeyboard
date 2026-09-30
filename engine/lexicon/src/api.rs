@@ -4,21 +4,20 @@
 
 use phonetics::KeyFamily;
 use protos::engine::{
-    AssocLookupRequest, AssocLookupResponse, DictionaryFiltersRequest, DictionaryFiltersResponse,
-    InstallRequest, InstallResponse, IsHanziRequest, IsHanziResponse, LexiconAssocEntry,
-    SearchByHanziRequest, SearchByHanziResponse, SearchWithSourcesRequest,
-    SearchWithSourcesResponse, TaigiWord,
+    DictionaryFiltersRequest, DictionaryFiltersResponse, InstallRequest, InstallResponse,
+    IsHanjiRequest, IsHanjiResponse, SearchByHanjiRequest, SearchByHanjiResponse,
+    SearchWithSourcesRequest, SearchWithSourcesResponse, TaigiWord,
 };
 
 use crate::classification;
 // The source filter alone, for an engine fetch that carries the toggles
 // itself (`FetchAtPos.toggles`).
 use crate::dictionary_filters::compute_filters;
-pub use crate::dictionary_filters::dictionary_filter_bitmask;
+pub use crate::dictionary_filters::{association_bitmask, dictionary_filter_bitmask};
 use crate::error::LexiconError;
 use crate::handle::EngineHandle;
 use crate::paths::LexiconPaths;
-use crate::search::{self, LexiconAssocOut, LexiconRowOut, SearchParams};
+use crate::search::{self, AssociationHit, LexiconRowOut, SearchParams};
 
 // Validates paths, opens FST/TKDB/TKWA (+ optional syllables.fst), atomically swaps the handle.
 pub fn install(req: InstallRequest) -> Result<InstallResponse, LexiconError> {
@@ -63,7 +62,7 @@ pub fn search_with_sources(
 }
 
 // Tab3 Hanji lookup: scans the index under the `hanzi:` prefix, filtered by the source bitmask.
-pub fn search_by_hanzi(req: SearchByHanziRequest) -> Result<SearchByHanziResponse, LexiconError> {
+pub fn search_by_hanji(req: SearchByHanjiRequest) -> Result<SearchByHanjiResponse, LexiconError> {
     EngineHandle::with_state(|state| {
         let prefix_index = state
             .prefix_index
@@ -80,36 +79,40 @@ pub fn search_by_hanzi(req: SearchByHanziRequest) -> Result<SearchByHanziRespons
             prefix_index,
             dict,
         )?;
-        Ok(SearchByHanziResponse {
+        Ok(SearchByHanjiResponse {
             rows: rows.into_iter().map(row_out_to_taigi_word).collect(),
         })
     })
 }
 
 // NextWord bigram lookup for the committed word (word key, character-key backoff), source-filtered.
-pub fn assoc_lookup(req: AssocLookupRequest) -> Result<AssocLookupResponse, LexiconError> {
+// Not a wire method: only engine/dispatch calls it (nextword `PredictNext`, the fetch context).
+// `previous_tl` empty → character key only; `enabled_sources_bitmask` `u32::MAX` → no filter.
+pub fn assoc_lookup(
+    previous_word: &str,
+    previous_tl: &str,
+    limit: u32,
+    enabled_sources_bitmask: u32,
+) -> Result<Vec<AssociationHit>, LexiconError> {
     EngineHandle::with_state(|state| {
         let assoc = state
             .association
             .as_ref()
             .ok_or_else(|| LexiconError::Internal("association reader unavailable".into()))?;
-        let entries = search::assoc_lookup(
-            &req.previous_word,
-            &req.previous_tl,
-            req.limit,
-            req.enabled_sources_bitmask,
+        search::assoc_lookup(
+            previous_word,
+            previous_tl,
+            limit,
+            enabled_sources_bitmask,
             assoc,
-        )?;
-        Ok(AssocLookupResponse {
-            entries: entries.into_iter().map(assoc_out_to_proto).collect(),
-        })
+        )
     })
 }
 
 // True when the text contains any CJK Hanji, Extensions A-E included.
-pub fn is_hanzi(req: IsHanziRequest) -> Result<IsHanziResponse, LexiconError> {
-    Ok(IsHanziResponse {
-        is_hanzi: classification::is_hanzi(&req.text),
+pub fn is_hanji(req: IsHanjiRequest) -> Result<IsHanjiResponse, LexiconError> {
+    Ok(IsHanjiResponse {
+        is_hanji: classification::is_hanzi(&req.text),
     })
 }
 
@@ -138,14 +141,5 @@ fn row_out_to_taigi_word(row: LexiconRowOut) -> TaigiWord {
         hanji: row.hanji,
         length_score: row.length_score,
         source_bitmask: row.source_bitmask,
-    }
-}
-
-fn assoc_out_to_proto(entry: LexiconAssocOut) -> LexiconAssocEntry {
-    LexiconAssocEntry {
-        previous_word: entry.previous_word,
-        candidate_word: entry.candidate_word,
-        count: entry.count,
-        candidate_tl: entry.candidate_tl,
     }
 }

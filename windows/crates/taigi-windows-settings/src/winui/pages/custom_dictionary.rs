@@ -198,7 +198,7 @@ pub fn update(
             if let Some(row) = model.listing.selected_row() {
                 model.editing = Some(EditingRow {
                     roman: row.roman.clone(),
-                    hanzi: row.hanzi.clone(),
+                    hanzi: row.hanji.clone(),
                     original: row.clone(),
                 });
             }
@@ -500,7 +500,7 @@ fn entry_table(
                                 .text(row.roman.clone())
                                 .opacity(SECONDARY_OPACITY)
                                 .grid_column(0),
-                            TextBlock::new().text(row.hanzi.clone()).grid_column(1),
+                            TextBlock::new().text(row.hanji.clone()).grid_column(1),
                         )),
                 ),
             )

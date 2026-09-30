@@ -169,7 +169,7 @@ enum CustomDictionaryRefusal {
 message CustomDictionaryEntry {
   string id = 1;
   string roman = 2;
-  string hanzi = 3;
+  string hanji = 3;
   string created_at = 4;
   string updated_at = 5;
 }
@@ -197,7 +197,7 @@ message CustomEntries {
 message SaveCustomEntry {
   optional string id = 1;
   string roman = 2;
-  string hanzi = 3;
+  string hanji = 3;
 }
 
 message CustomEntrySaved {
