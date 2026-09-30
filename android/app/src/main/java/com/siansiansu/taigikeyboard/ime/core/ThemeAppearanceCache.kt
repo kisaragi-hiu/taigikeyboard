@@ -12,8 +12,8 @@ import android.content.res.Configuration
  *
  * One instance per consumer ([KeyboardAppearanceResolver] for keys, [SmartbarManager]
  * for the candidate strip). Resolution is pure + deterministic, so the two caches stay
- * in lockstep without sharing mutable state. `fontType` / `heightFactor` are NOT theme
- * inputs and stay outside this cache.
+ * in lockstep without sharing mutable state. `fontType` is NOT a theme input and
+ * stays outside this cache.
  */
 internal class ThemeAppearanceCache(
     private val prefs: PrefHelper,

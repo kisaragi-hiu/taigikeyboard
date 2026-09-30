@@ -34,11 +34,6 @@ class TpsCascadeTest {
             writes[PreferenceKeys.LAYOUT_BEFORE_TPS],
         )
         assertEquals("flips layout to tps", "tps", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertEquals(
-            "PHAH_TAIGI_LAYOUT_ENABLED → false on TPS entry",
-            false,
-            writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED],
-        )
     }
 
     @Test
@@ -56,7 +51,6 @@ class TpsCascadeTest {
             writes[PreferenceKeys.LAYOUT_BEFORE_TPS],
         )
         assertNull(writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertNull(writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
     }
 
     @Test
@@ -70,7 +64,6 @@ class TpsCascadeTest {
             )
         assertEquals("qwerty", writes[PreferenceKeys.LAYOUT_BEFORE_TPS])
         assertEquals("tps", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertEquals(false, writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
     }
 
     // ------------------------------------------------------------------ //
@@ -92,11 +85,6 @@ class TpsCascadeTest {
             "phahTaigi",
             writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE],
         )
-        assertEquals(
-            "PHAH_TAIGI_LAYOUT_ENABLED tracks restored layout",
-            true,
-            writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED],
-        )
     }
 
     @Test
@@ -109,7 +97,6 @@ class TpsCascadeTest {
                 layoutBeforeTps = "qwerty",
             )
         assertEquals("qwerty", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertEquals(false, writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
     }
 
     @Test
@@ -127,7 +114,6 @@ class TpsCascadeTest {
             "GUARDED — no layout restore because layout already left TPS",
             writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE],
         )
-        assertNull(writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
         assertNull(writes[PreferenceKeys.LAYOUT_BEFORE_TPS])
     }
 
@@ -147,7 +133,6 @@ class TpsCascadeTest {
         assertEquals("tl", writes[PreferenceKeys.INPUT_MODE])
         assertNull(writes[PreferenceKeys.LAYOUT_BEFORE_TPS])
         assertNull(writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertNull(writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
     }
 
     @Test
@@ -167,7 +152,6 @@ class TpsCascadeTest {
             writes[PreferenceKeys.LAYOUT_BEFORE_TPS],
         )
         assertNull(writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertNull(writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
     }
 
     // ------------------------------------------------------------------ //
@@ -184,11 +168,6 @@ class TpsCascadeTest {
                 inputModeBeforeTps = "tl", // stale default
             )
         assertEquals("tps", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertEquals(
-            "PHAH_TAIGI_LAYOUT_ENABLED → false on TPS layout entry",
-            false,
-            writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED],
-        )
         assertEquals(
             "saves current inputMode into INPUT_MODE_BEFORE_TPS",
             "tl",
@@ -207,7 +186,6 @@ class TpsCascadeTest {
                 inputModeBeforeTps = "poj",
             )
         assertEquals("tps", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertEquals(false, writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
         assertNull(
             "no INPUT_MODE_BEFORE_TPS save when inputMode already TPS",
             writes[PreferenceKeys.INPUT_MODE_BEFORE_TPS],
@@ -230,7 +208,6 @@ class TpsCascadeTest {
                 inputModeBeforeTps = "poj",
             )
         assertEquals("phahTaigi", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertEquals(true, writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
         assertEquals(
             "restores INPUT_MODE from INPUT_MODE_BEFORE_TPS",
             "poj",
@@ -251,7 +228,6 @@ class TpsCascadeTest {
                 inputModeBeforeTps = "tl",
             )
         assertEquals("qwerty", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertEquals(false, writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
         assertEquals(
             "UNCONDITIONAL — restore fires despite live inputMode = poj",
             "tl",
@@ -273,7 +249,6 @@ class TpsCascadeTest {
                 inputModeBeforeTps = "tl",
             )
         assertEquals("qwerty", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertEquals(false, writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
         assertNull(writes[PreferenceKeys.INPUT_MODE])
         assertNull(writes[PreferenceKeys.INPUT_MODE_BEFORE_TPS])
     }
@@ -288,31 +263,7 @@ class TpsCascadeTest {
                 inputModeBeforeTps = "tl",
             )
         assertEquals("tps", writes[PreferenceKeys.KEYBOARD_LAYOUT_TYPE])
-        assertEquals(false, writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED])
         assertNull("idempotent TPS layout write — no inputMode cascade", writes[PreferenceKeys.INPUT_MODE])
         assertNull(writes[PreferenceKeys.INPUT_MODE_BEFORE_TPS])
-    }
-
-    // ------------------------------------------------------------------ //
-    // PHAH_TAIGI_LAYOUT_ENABLED tracking — paired field invariant
-    // ------------------------------------------------------------------ //
-
-    @Test
-    fun forKeyboardLayoutType_phahTaigiEnabledTrue_onlyWhenLayoutIsPhahTaigi() {
-        val layouts = listOf("phahTaigi", "qwerty", "moe1", "moe2", "tps")
-        for (layout in layouts) {
-            val writes =
-                TpsCascade.forKeyboardLayoutType(
-                    newValue = layout,
-                    oldValue = "phahTaigi",
-                    currentInputMode = "tl",
-                    inputModeBeforeTps = "tl",
-                )
-            assertEquals(
-                "PHAH_TAIGI_LAYOUT_ENABLED tracks (newValue == \"phahTaigi\") — layout=$layout",
-                layout == "phahTaigi",
-                writes[PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED],
-            )
-        }
     }
 }

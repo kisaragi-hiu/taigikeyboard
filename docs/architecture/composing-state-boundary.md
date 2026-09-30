@@ -217,7 +217,7 @@ Observable Android ↔ iOS divergence today:
 | Path | Today (Android) | Honors `clearPreeditWithoutCommit`? |
 |---|---|---|
 | `deleteBackward` empty-raw path | `reset(ic)` → `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — pre-zero owned by `reset(ic)`. |
-| `reset(ic)` called directly (external, e.g. subtype switch, session end with pending preedit) | `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — corrected by parity PR (see §11.6). |
+| `reset(ic)` called directly (external, e.g. input-mode switch, session end with pending preedit) | `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — corrected by parity PR (see §11.6). |
 | `commitComposition(ic)` | sync fallback derive + `ic.setComposingText(composingText, 1)` + `ic.finishComposingText()` | Intended commit path — pre-zero not applicable. The fast/slow split against an externally cleared region (§11.10 divergence #3) no longer surfaces the stale-commit bug: `TextInputManager.onUpdateSelection` → `ComposingManager.onExternalComposingRegionCleared()` zeroes internal state before any later commit runs. |
 | `selectSuggestion(text, ic)` | `ic.setComposingText(suggestion, 1)` + `ic.finishComposingText()` | Equivalent to `commitTextReplacingPreedit` — atomic replace. |
 | `TextInputManager.resetComposingText()` bare-IC fallback (new-editor session start — a same-editor `restarting=true` keeps the manager and reconciles instead, DELETE / ENTER non-composing, NUMERIC-PHONE key) | delegates to top-level `clearHostComposingRegion(ic)` → `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — corrected by parity PR (see §11.6). |

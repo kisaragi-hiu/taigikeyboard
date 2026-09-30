@@ -73,11 +73,7 @@ class DictionarySearchViewModel(
     private suspend fun performSearch(query: String) {
         _isSearching.value = true
         try {
-            val inputMode =
-                when (prefs.inputMode) {
-                    "poj" -> InputMode.POJ
-                    else -> InputMode.TL
-                }
+            val inputMode = InputMode.fromPrefString(prefs.inputMode)
 
             // Kotlin `Char.code` is 16-bit (UTF-16 code unit), so any inline
             // CJK range check fails to match supplementary-plane codepoints.

@@ -457,21 +457,20 @@ internal class TextInputKeyHandler(
             return
         }
 
-        if (prefs.doubleSpacePeriod) {
-            if (capsStateManager.hasSpaceRecentlyPressed) {
-                osHandler.removeCallbacksAndMessages(null)
-                val text = ic.getTextBeforeCursor(2, 0) ?: ""
-                if (text.length == 2 && !text.matches(DOUBLE_SPACE_PERIOD_REGEX)) {
-                    ic.deleteSurroundingText(1, 0)
-                    ic.commitText(".", 1)
-                }
-                capsStateManager.hasSpaceRecentlyPressed = false
-            } else {
-                capsStateManager.hasSpaceRecentlyPressed = true
-                osHandler.postDelayed({
-                    capsStateManager.hasSpaceRecentlyPressed = false
-                }, 300)
+        // Double-space → period (always on; the FlorisBoard toggle had no UI here).
+        if (capsStateManager.hasSpaceRecentlyPressed) {
+            osHandler.removeCallbacksAndMessages(null)
+            val text = ic.getTextBeforeCursor(2, 0) ?: ""
+            if (text.length == 2 && !text.matches(DOUBLE_SPACE_PERIOD_REGEX)) {
+                ic.deleteSurroundingText(1, 0)
+                ic.commitText(".", 1)
             }
+            capsStateManager.hasSpaceRecentlyPressed = false
+        } else {
+            capsStateManager.hasSpaceRecentlyPressed = true
+            osHandler.postDelayed({
+                capsStateManager.hasSpaceRecentlyPressed = false
+            }, 300)
         }
         ic.commitText(KeyCode.SPACE.toChar().toString(), 1)
     }

@@ -28,7 +28,7 @@ import org.junit.Test
  *
  * `setActiveKeyboardMode` orchestration (CLIPBOARD coerce + cache-hit-vs-load
  * fork + `onActiveModeChanged` callback timing) is dogfood-scope per F10=C —
- * it needs a real [LayoutManager] + [Subtype] to exercise both branches.
+ * it needs a real [LayoutManager] to exercise both branches.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class KeyboardUiCoordinatorTest {
@@ -36,7 +36,6 @@ class KeyboardUiCoordinatorTest {
         KeyboardUiCoordinator(
             scope = scope,
             layoutManagerFactory = { error("layoutManager not used in this test") },
-            activeSubtypeProvider = { error("activeSubtype not used in this test") },
             fullWidthPunctuationProvider = { false },
             onLayoutChanged = {},
             onActiveModeChanged = {},

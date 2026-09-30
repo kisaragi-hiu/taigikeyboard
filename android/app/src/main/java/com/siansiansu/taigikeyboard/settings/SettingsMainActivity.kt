@@ -43,10 +43,6 @@ class SettingsMainActivity : AppCompatActivity() {
         private const val TAB_DICTIONARY = 3
         private const val TAB_SETTINGS = 4
 
-        private const val THEME_LIGHT = "light"
-        private const val THEME_DARK = "dark"
-        private const val THEME_AUTO = "auto"
-
         private const val FALLBACK_VERSION = "1.0"
     }
 
@@ -66,14 +62,7 @@ class SettingsMainActivity : AppCompatActivity() {
             startActivity(SetupGuideActivity.createIntent(this, isFullScreen = true))
         }
 
-        val mode =
-            when (prefs.settingsTheme) {
-                THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
-                THEME_DARK -> AppCompatDelegate.MODE_NIGHT_YES
-                THEME_AUTO -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                else -> AppCompatDelegate.MODE_NIGHT_UNSPECIFIED
-            }
-        AppCompatDelegate.setDefaultNightMode(mode)
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
 
         setupEdgeToEdge()
 
@@ -202,18 +191,5 @@ class SettingsMainActivity : AppCompatActivity() {
         } catch (_: Exception) {
             // No browser available to handle the URL
         }
-    }
-
-    private fun updateLauncherIconStatus() {
-        if (prefs.showAppIcon) {
-            LauncherIconController.showAppIcon(this)
-        } else {
-            LauncherIconController.hideAppIcon(this)
-        }
-    }
-
-    override fun onPause() {
-        updateLauncherIconStatus()
-        super.onPause()
     }
 }

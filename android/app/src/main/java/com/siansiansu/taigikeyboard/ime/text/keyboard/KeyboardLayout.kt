@@ -433,9 +433,8 @@ data class KeyboardAppearance(
     val keyShadowIntensity: Float,
     /** Drives [KeyboardLayoutSolver.solveKeyDimensions] inside
      *  [KeyboardImeRoot]. Surfaced through appearance because per-key
-     *  dimensions only need to change when these prefs flip — not on
+     *  dimensions only need to change when the theme's height flips — not on
      *  per-keystroke recomposition. */
-    val heightFactor: KeyboardHeightFactor,
     val keyHeightScale: Float,
 ) {
     companion object {

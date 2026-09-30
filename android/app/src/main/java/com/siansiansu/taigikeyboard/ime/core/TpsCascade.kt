@@ -27,8 +27,7 @@ internal object TpsCascade {
     /**
      * Computes the write plan for [PrefHelper.applyInputMode]. Includes the
      * `INPUT_MODE` write itself plus, on TPS entry/exit, the paired
-     * `LAYOUT_BEFORE_TPS` save, `KEYBOARD_LAYOUT_TYPE`, and
-     * `PHAH_TAIGI_LAYOUT_ENABLED` cascade writes.
+     * `LAYOUT_BEFORE_TPS` save and `KEYBOARD_LAYOUT_TYPE` cascade write.
      */
     fun forInputMode(
         newValue: String,
@@ -43,24 +42,21 @@ internal object TpsCascade {
                 if (currentLayout != "tps") {
                     put(PreferenceKeys.LAYOUT_BEFORE_TPS, currentLayout)
                     put(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, "tps")
-                    put(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, false)
                 }
             } else if (newValue != "tps" && oldValue == "tps") {
                 // Exit: guarded restore — only restore layout if the live layout is
                 // still TPS. A manual layout change earlier in the same flow is preserved.
                 if (currentLayout == "tps") {
                     put(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, layoutBeforeTps)
-                    put(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, layoutBeforeTps == "phahTaigi")
                 }
             }
             put(PreferenceKeys.INPUT_MODE, newValue)
         }
 
     /**
-     * Computes the write plan for [PrefHelper.applyKeyboardLayoutType]. Includes
-     * the `KEYBOARD_LAYOUT_TYPE` + `PHAH_TAIGI_LAYOUT_ENABLED` paired writes
-     * plus, on TPS entry/exit, the `INPUT_MODE_BEFORE_TPS` save and
-     * `INPUT_MODE` cascade write.
+     * Computes the write plan for [PrefHelper.applyKeyboardLayoutType]: the
+     * `KEYBOARD_LAYOUT_TYPE` write plus, on TPS entry/exit, the
+     * `INPUT_MODE_BEFORE_TPS` save and `INPUT_MODE` cascade write.
      *
      * Exit branch UNCONDITIONALLY restores `INPUT_MODE` from
      * `inputModeBeforeTps` — see [TpsCascade] KDoc for asymmetry rationale.
@@ -84,6 +80,5 @@ internal object TpsCascade {
                 put(PreferenceKeys.INPUT_MODE, inputModeBeforeTps)
             }
             put(PreferenceKeys.KEYBOARD_LAYOUT_TYPE, newValue)
-            put(PreferenceKeys.PHAH_TAIGI_LAYOUT_ENABLED, newValue == "phahTaigi")
         }
 }

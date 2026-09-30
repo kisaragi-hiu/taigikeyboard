@@ -137,9 +137,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         isAutoSpaceArmed = false
     }
 
-    lateinit var subtypeManager: SubtypeManager
-    lateinit var activeSubtype: Subtype
-
     lateinit var textInputManager: TextInputManager
         private set
     lateinit var smartbarManager: SmartbarManager
@@ -211,9 +208,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         keyPressVibrator = KeyPressVibrator(this, prefs)
 
         compositionRoot.logger.i(TAG, "onCreate()")
-
-        subtypeManager = SubtypeManager(prefs)
-        activeSubtype = subtypeManager.getActiveSubtype() ?: Subtype.DEFAULT
 
         // Construct the IME manager graph directly (A7: no more `getInstance()`
         // cycle). Order matters — SmartbarManager ctor needs TextInputManager;
@@ -435,8 +429,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
     override fun onWindowShown() {
         compositionRoot.logger.i(TAG, "onWindowShown()")
 
-        activeSubtype = subtypeManager.getActiveSubtype() ?: Subtype.DEFAULT
-        onSubtypeChanged(activeSubtype)
+        textInputManager.reloadCharacters()
         setActiveInput(R.id.text_input)
 
         super.onWindowShown()
@@ -555,11 +548,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
         }
     }
 
-    private fun onSubtypeChanged(newSubtype: Subtype) {
-        textInputManager.onSubtypeChanged(newSubtype)
-        mediaInputManager.onSubtypeChanged(newSubtype)
-    }
-
     private fun onInputModeChanged(newInputMode: String) {
         textInputManager.onInputModeChanged(newInputMode)
         mediaInputManager.onInputModeChanged(newInputMode)
@@ -617,8 +605,6 @@ class TaigiKeyboard : LifecycleInputMethodService() {
             candidatesStart: Int,
             candidatesEnd: Int,
         ) {}
-
-        fun onSubtypeChanged(newSubtype: Subtype) {}
 
         fun onInputModeChanged(newInputMode: String) {}
 

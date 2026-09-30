@@ -132,7 +132,6 @@ private fun KeyboardSurface(
             keyMarginH,
             baseKeyHeight,
             isLandscape,
-            appearance.heightFactor,
             appearance.keyHeightScale,
         ) {
             KeyboardLayoutSolver.solveKeyDimensions(
@@ -141,7 +140,6 @@ private fun KeyboardSurface(
                     keyMarginH = keyMarginH,
                     baseKeyHeight = baseKeyHeight,
                     isLandscape = isLandscape,
-                    heightFactor = appearance.heightFactor,
                     keyHeightScale = appearance.keyHeightScale,
                 ),
             )

@@ -14,7 +14,7 @@ package com.siansiansu.taigikeyboard.ime.text.keyboard
 object KeyboardLayoutSolver {
     fun solveKeyDimensions(input: KeyDimensionsInput): KeyDimensions {
         val orientationFactor = if (input.isLandscape) 0.85f else 1.0f
-        val keyHeightFactor = orientationFactor * input.heightFactor.multiplier * input.keyHeightScale
+        val keyHeightFactor = orientationFactor * input.keyHeightScale
         val keyMarginH = input.keyMarginH
         val desiredKeyWidth = (input.containerWidth / 10) - (2 * keyMarginH)
         val desiredKeyHeight = (input.baseKeyHeight * keyHeightFactor).toInt()
@@ -112,33 +112,6 @@ object KeyboardLayoutSolver {
     }
 }
 
-enum class KeyboardHeightFactor(
-    val multiplier: Float,
-) {
-    EXTRA_SHORT(0.85f),
-    SHORT(0.90f),
-    MID_SHORT(0.95f),
-    NORMAL(1.00f),
-    MID_TALL(1.05f),
-    TALL(1.10f),
-    EXTRA_TALL(1.15f),
-    ;
-
-    companion object {
-        fun fromPreferenceString(value: String): KeyboardHeightFactor =
-            when (value) {
-                "extra_short" -> EXTRA_SHORT
-                "short" -> SHORT
-                "mid_short" -> MID_SHORT
-                "normal" -> NORMAL
-                "mid_tall" -> MID_TALL
-                "tall" -> TALL
-                "extra_tall" -> EXTRA_TALL
-                else -> NORMAL
-            }
-    }
-}
-
 enum class AnchorSide { LEFT, RIGHT }
 
 data class KeyDimensionsInput(
@@ -149,7 +122,6 @@ data class KeyDimensionsInput(
      *  matching the legacy in-View arithmetic. */
     val baseKeyHeight: Float,
     val isLandscape: Boolean,
-    val heightFactor: KeyboardHeightFactor,
     val keyHeightScale: Float,
 )
 

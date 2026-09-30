@@ -7,7 +7,6 @@ package com.siansiansu.taigikeyboard.ime.text.layout
 import android.content.Context
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.core.Subtype
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
@@ -77,28 +76,12 @@ class LayoutManager(
         return layoutData
     }
 
-    private fun loadExtendedPopups(subtype: Subtype): Map<String, List<KeyData>> {
-        val inputMode = prefs.inputMode
-
-        if (inputMode == "english" || inputMode == "tps") {
-            return mapOf()
-        }
-
-        val lang = subtype.locale.language
-
+    private fun loadExtendedPopups(): Map<String, List<KeyData>> {
         val taigiMap =
-            when {
-                lang == "nan" || subtype.layout == "qwerty_poj" || subtype.layout == "qwerty_tl" -> {
-                    when (inputMode) {
-                        "poj" -> loadExtendedPopupsInternal("ime/text/characters/extended_popups/taigi_poj.json")
-                        "tl" -> loadExtendedPopupsInternal("ime/text/characters/extended_popups/taigi_tl.json")
-                        else -> null
-                    }
-                }
-
-                else -> {
-                    null
-                }
+            when (prefs.inputMode) {
+                "poj" -> loadExtendedPopupsInternal("ime/text/characters/extended_popups/taigi_poj.json")
+                "tl" -> loadExtendedPopupsInternal("ime/text/characters/extended_popups/taigi_tl.json")
+                else -> null
             }
 
         // If Taigi popup loaded successfully, return it; otherwise return empty map
@@ -139,7 +122,6 @@ class LayoutManager(
      *   m m m m m m m m m m
      *
      * @param keyboardMode The keyboard mode for the returning [ComputedLayoutData].
-     * @param subtype The subtype used for populating the extended popups.
      * @param main The main layout type and name.
      * @param modifier The modifier (mod) layout type and name.
      * @param extension The extension layout type and name.
@@ -147,7 +129,6 @@ class LayoutManager(
      */
     private fun mergeLayouts(
         keyboardMode: KeyboardMode,
-        subtype: Subtype,
         main: LTN? = null,
         modifier: LTN? = null,
         extension: LTN? = null,
@@ -204,7 +185,7 @@ class LayoutManager(
         // (NORMAL/PASSWORD → "~normal", EMAIL_ADDRESS/URI → "~uri") to
         // remove the nested if/else duplication below.
         if (keyboardMode == KeyboardMode.CHARACTERS) {
-            val extendedPopups = loadExtendedPopups(subtype)
+            val extendedPopups = loadExtendedPopups()
             for (computedRow in computedArrangement) {
                 for (keyData in computedRow) {
                     if (keyData.variation != KeyVariation.ALL) {
@@ -239,17 +220,13 @@ class LayoutManager(
     }
 
     /**
-     * Computes a layout for [keyboardMode] based on the given [subtype] and returns it.
-     *
-     * TODO: used layouts for symbols should be dynamically selected based on subtype
+     * Computes a layout for [keyboardMode] and returns it.
      *
      * @param keyboardMode The keyboard mode for which the layout should be computed.
-     * @param subtype The subtype which localizes the computed layout.
      * @param overrideIsFullWidthPunctuation Optional override for isFullWidthPunctuation; takes precedence over the prefs value.
      */
     private fun computeLayoutFor(
         keyboardMode: KeyboardMode,
-        subtype: Subtype,
         overrideIsFullWidthPunctuation: Boolean? = null,
         overrideInputMode: String? = null,
     ): ComputedLayoutData {
@@ -301,24 +278,11 @@ class LayoutManager(
                                     "tps"
                                 }
 
-                                "qwerty" -> {
+                                // "qwerty", and any value a hand edit could leave behind.
+                                else -> {
                                     when (inputMode) {
                                         "poj" -> "qwerty_poj"
-                                        "tl" -> "qwerty_tl"
                                         else -> "qwerty_tl"
-                                    }
-                                }
-
-                                else -> {
-                                    // Backward compatibility: fall back to the legacy phahTaigiLayoutEnabled flag.
-                                    if (prefs.phahTaigiLayoutEnabled) {
-                                        "qwerty_phah_taigi_$modSuffix"
-                                    } else {
-                                        when (inputMode) {
-                                            "poj" -> "qwerty_poj"
-                                            "tl" -> "qwerty_tl"
-                                            else -> "qwerty_tl"
-                                        }
                                     }
                                 }
                             }
@@ -336,7 +300,6 @@ class LayoutManager(
                         prefs.keyboardLayoutType == "moe1" -> "moe1_$modSuffix"
                         prefs.keyboardLayoutType == "moe2" -> "moe2_$modSuffix"
                         prefs.keyboardLayoutType == "tps" -> "tps_halfwidth"
-                        prefs.phahTaigiLayoutEnabled -> "phah_taigi_$modSuffix"
                         else -> "default_$modSuffix"
                     }
                 modifier = LTN(LayoutType.CHARACTERS_MOD, modifierName)
@@ -378,7 +341,7 @@ class LayoutManager(
             }
         }
 
-        val result = mergeLayouts(keyboardMode, subtype, main, modifier, extension)
+        val result = mergeLayouts(keyboardMode, main, modifier, extension)
 
         // 文/A is dropped where it could flip nothing — Romanization Only (always half-width)
         // and TPS (always full-width) — from every mode's rows (characters +
@@ -417,34 +380,28 @@ class LayoutManager(
     }
 
     /**
-     * Fetches the computed layout for the given [keyboardMode]/[subtype] combo.
+     * Fetches the computed layout for the given [keyboardMode].
      * This function computes the layout synchronously and returns it directly.
      *
      * @param keyboardMode The keyboard mode for which the layout should be computed.
-     * @param subtype The subtype which localizes the computed layout.
      * @param overrideIsFullWidthPunctuation Optional override for isFullWidthPunctuation; takes precedence over the prefs value.
      * @return The computed layout data.
      */
     fun fetchComputedLayout(
         keyboardMode: KeyboardMode,
-        subtype: Subtype,
         overrideIsFullWidthPunctuation: Boolean? = null,
         overrideInputMode: String? = null,
-    ): ComputedLayoutData = computeLayoutFor(keyboardMode, subtype, overrideIsFullWidthPunctuation, overrideInputMode)
+    ): ComputedLayoutData = computeLayoutFor(keyboardMode, overrideIsFullWidthPunctuation, overrideInputMode)
 
     /**
      * Fetches a layout for preview mode, always using Taigi mode (never English).
      * This matches iOS KeyboardPreviewPanel behavior.
      */
-    fun fetchComputedLayoutForPreview(
-        keyboardMode: KeyboardMode,
-        subtype: Subtype,
-    ): ComputedLayoutData {
+    fun fetchComputedLayoutForPreview(keyboardMode: KeyboardMode): ComputedLayoutData {
         // Force Taigi mode — if user's inputMode is "english", override to "tl"
         val previewInputMode = if (prefs.inputMode == "english") "tl" else prefs.inputMode
         return computeLayoutFor(
             keyboardMode,
-            subtype,
             overrideIsFullWidthPunctuation = false,
             overrideInputMode = previewInputMode,
         )
