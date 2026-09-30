@@ -103,7 +103,8 @@ fn decide_word_selected(
         trigger_prediction,
         preceding,
     } = selection;
-    // Enter commits raw romanization only; skip entirely in Hanji mode.
+    // Enter commits raw romanization only; skip entirely in Hanji mode. The
+    // stored swap, unfolded: a TPS commit reads it as it always has.
     if require_roman_mode && config.is_translate_swapped {
         return result_unchanged(state).into();
     }
@@ -327,11 +328,11 @@ pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec
     // In TPS an ASCII space is the tone-1 syllable marker, not a word break
     // (§31 `INVARIANT_TPS_SPACE_SOFT_SEPARATOR` — `ㄍㄠ` ␣ `ㄉㄞ` is 交代, one
     // word), so a TPS payload has no boundary to learn across. Detected from
-    // Bopomofo content because `AppConfig.input_mode` never says `"tps"` here:
-    // every platform folds TPS into `"tl"` / `"poj"` when it builds the
-    // NextWord config (iOS `RustEngineBridge+NextWord.swift` `nextwordConfig`,
-    // Android `InputMode.engineInputMode()`). Content upgrading the mode is the
-    // established shape (`composing/src/dispatch.rs:187-212`), not a workaround.
+    // Bopomofo content, not `AppConfig.input_mode`: the pre-R6 wire sends TPS
+    // as `"tl"` (iOS `RustEngineBridge+NextWord.swift` `nextwordConfig`), and
+    // the payload, not the layout, is what carries the §31 space. Content
+    // upgrading the mode is the established shape (`composing::dispatch`
+    // `handle_fetch_at_pos`), not a workaround.
     if phonetics::contains_tps(display_text) || phonetics::contains_tps(roman) {
         return Vec::new();
     }
@@ -425,6 +426,7 @@ mod tests {
             candidate_display_mode: 0,
             hyphenless_roman: false,
             force_lowercase_nasal_marker: false,
+            tps_or_maps_to_er: false,
         }
     }
 

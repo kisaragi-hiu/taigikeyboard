@@ -2,15 +2,15 @@
 //!
 //! Routes `taigi.engine.CaseRequest` oneof variants to the corresponding
 //! `phonetics::case_transform` functions, builds a `CaseResponse`. Mode is
-//! read from the envelope's `AppConfig.input_mode` per the same convention
-//! as `phonetics::dispatch::handle`.
+//! the envelope's `phonetics::api::composing_mode` — the TPS layout cases
+//! with the TL tables, as it did while TPS arrived as `"tl"`.
 //!
 //! Returns `None` for an empty `method` oneof (the top-level dispatch
 //! converts that to `ErrorCode::FailInvariant`). Otherwise always returns
 //! `Some(CaseResponse)` — the case ops are infallible by construction
 //! (table lookups + stdlib casing).
 
-use phonetics::api::parse_input_mode;
+use phonetics::api::composing_mode;
 use phonetics::case_transform::{
     full_uppercase_tone_string, lowercase_tone_char, transform_input_case, transform_suggestion,
     uppercase_tone_char, LetterCase,
@@ -20,7 +20,7 @@ use protos::engine::{AppConfig, CaseRequest, CaseResponse, CaseStringResult};
 
 pub(crate) fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseResponse> {
     let method = request.method.as_ref()?;
-    let mode = parse_input_mode(&config.input_mode);
+    let mode = composing_mode(config);
 
     let output = match method {
         Method::UppercaseToneChar(req) => uppercase_tone_char(&req.input, mode),
@@ -171,6 +171,48 @@ mod tests {
         assert_eq!(unwrap_string(resp), "\u{207f}");
     }
 
+    /// R6: the TPS layout (`"tps"`) cases with the TL tables, exactly as the
+    /// pre-R6 wire (`"tl"`) did — every op, including `a̋`, which only TL maps.
+    #[test]
+    fn dispatch_tps_layout_cases_like_tl() {
+        let letter_case = protos::engine::LetterCase::CapsLocked as i32;
+        let methods = [
+            Method::UppercaseToneChar(UppercaseToneChar {
+                input: "a̋".to_string(),
+            }),
+            Method::FullUppercaseToneString(FullUppercaseToneString {
+                input: "tshiâⁿ".to_string(),
+            }),
+            Method::LowercaseToneChar(LowercaseToneChar {
+                input: "Á".to_string(),
+            }),
+            Method::TransformInputCase(TransformInputCase {
+                text: "tsh".to_string(),
+                letter_case,
+            }),
+            Method::TransformSuggestion(TransformSuggestion {
+                original_text: "tâi-gí".to_string(),
+                composing_text: "tai".to_string(),
+                letter_case,
+            }),
+        ];
+        for method in methods {
+            let req = CaseRequest {
+                method: Some(method),
+            };
+            let tl = handle(&req, &config_for("tl")).expect("response present");
+            let tps = handle(&req, &config_for("tps")).expect("response present");
+            assert_eq!(tps, tl, "{req:?}");
+        }
+        let req = CaseRequest {
+            method: Some(Method::UppercaseToneChar(UppercaseToneChar {
+                input: "a̋".to_string(),
+            })),
+        };
+        let tps = handle(&req, &config_for("tps")).expect("response present");
+        assert_eq!(unwrap_string(tps), "A̋");
+    }
+
     #[test]
     fn dispatch_returns_none_for_missing_method() {
         let req = CaseRequest { method: None };
@@ -213,7 +255,7 @@ mod tests {
 
     #[test]
     fn dispatch_unknown_input_mode_string_defaults_to_tl() {
-        // parse_input_mode contract: anything not "poj"/"english" → TL.
+        // composing_mode contract: anything not "poj"/"english" → TL.
         let req = CaseRequest {
             method: Some(Method::UppercaseToneChar(UppercaseToneChar {
                 input: "a̋".to_string(),

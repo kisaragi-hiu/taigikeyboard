@@ -62,17 +62,19 @@ impl OutputScripts {
             };
         }
         Self {
-            hanji_leads: renders_hanji_first(config),
+            hanji_leads: hanji_leads(config),
             annotate_in_brackets: config.output_both_scripts,
             shows_hanji: true,
         }
     }
 }
 
-/// Whether a commit leads with the Hanji: the swap, or Hanji with
-/// Romanization's forced lead. The one place the lead is decided.
-fn renders_hanji_first(config: &AppConfig) -> bool {
-    config.is_translate_swapped || config.candidate_display_mode() == CandidateDisplayMode::Combined
+/// Whether a commit leads with the Hanji: the composition renders Hanji first
+/// (the swap, or the TPS layout), or Hanji with Romanization forces the lead.
+/// The one place the lead is decided.
+fn hanji_leads(config: &AppConfig) -> bool {
+    config.renders_hanji_first()
+        || config.candidate_display_mode() == CandidateDisplayMode::Combined
 }
 
 /// What committing `script` of the pick `(roman, hanji)` writes, or `None`

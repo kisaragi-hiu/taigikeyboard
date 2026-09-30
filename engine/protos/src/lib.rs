@@ -40,4 +40,65 @@ impl engine::AppConfig {
             engine::CandidateDisplayMode::RomanOnly | engine::CandidateDisplayMode::Combined
         )
     }
+
+    /// Whether the keyboard is on the TPS (Bopomofo) layout: `input_mode` is
+    /// `"tps"` (either spelling `phonetics::api::parse_input_mode` accepts). A
+    /// pre-R6 platform sends TPS as `"tl"` with the fold already applied to the
+    /// swap / hyphenless flags, which the two readers below then pass through.
+    pub fn is_tps_layout(&self) -> bool {
+        matches!(self.input_mode.as_str(), "tps" | "TPS")
+    }
+
+    /// Whether the composition renders Hanji first: the swap, or the TPS
+    /// layout (which shows Hanji / Bopomofo, never the romanization).
+    pub fn renders_hanji_first(&self) -> bool {
+        self.is_translate_swapped || self.is_tps_layout()
+    }
+
+    /// Whether No Hyphens applies: never on the TPS layout, whose platform
+    /// re-splits the candidate `roman` on `-` to render Bopomofo (§49).
+    pub fn renders_hyphenless(&self) -> bool {
+        self.hyphenless_roman && !self.is_tps_layout()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::engine::AppConfig;
+
+    fn config(input_mode: &str, swapped: bool, hyphenless: bool) -> AppConfig {
+        AppConfig {
+            input_mode: input_mode.to_owned(),
+            is_translate_swapped: swapped,
+            hyphenless_roman: hyphenless,
+            ..AppConfig::default()
+        }
+    }
+
+    #[test]
+    fn tps_layout_is_the_tps_input_mode_only() {
+        assert!(config("tps", false, false).is_tps_layout());
+        assert!(config("TPS", false, false).is_tps_layout());
+        for mode in ["tl", "poj", "english", "", "Tps"] {
+            assert!(!config(mode, false, false).is_tps_layout(), "{mode:?}");
+        }
+    }
+
+    #[test]
+    fn tps_layout_renders_hanji_first_whatever_the_stored_swap() {
+        assert!(config("tps", false, false).renders_hanji_first());
+        assert!(config("tps", true, false).renders_hanji_first());
+        assert!(config("tl", true, false).renders_hanji_first());
+        assert!(!config("tl", false, false).renders_hanji_first());
+        assert!(!config("poj", false, false).renders_hanji_first());
+    }
+
+    #[test]
+    fn tps_layout_never_renders_hyphenless() {
+        assert!(!config("tps", false, true).renders_hyphenless());
+        assert!(!config("tps", false, false).renders_hyphenless());
+        assert!(config("tl", false, true).renders_hyphenless());
+        assert!(config("poj", true, true).renders_hyphenless());
+        assert!(!config("tl", false, false).renders_hyphenless());
+    }
 }

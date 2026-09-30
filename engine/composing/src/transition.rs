@@ -130,7 +130,7 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
 /// untouched and the preedit re-renders the whole composition; selection
 /// resets as a fresh typing step does.
 fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> ComposingResponse {
-    let mode = phonetics::api::parse_input_mode(&config.input_mode);
+    let mode = phonetics::api::composing_mode(config);
     match &state.phase {
         Phase::Idle => match crate::telex::apply_telex_key("", key, mode) {
             Some(text) => enter_composing(state, text, config),

@@ -16,8 +16,8 @@ use protos::engine::AppConfig;
 use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
 
-// Keyboard input mode, mirroring the `AppConfig.input_mode` string. Platforms still send "tl"/"poj"
-// plus the `is_translate_swapped` flag for TPS; `composing::dispatch` upgrades to `Tps` once
+// Keyboard input mode, mirroring the `AppConfig.input_mode` string. The TPS layout composes with
+// the TL tables ([`composing_mode`]); `composing::dispatch` upgrades to `Tps` once
 // `contains_tps(raw)` fires, so the `Tps` variant mostly circulates inside the engine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputMode {
@@ -60,6 +60,19 @@ pub fn parse_input_mode(mode: &str) -> InputMode {
         "tps" | "TPS" => InputMode::Tps,
         "english" | "English" | "EN" => InputMode::English,
         _ => InputMode::Tl,
+    }
+}
+
+/// The mode a request composes and cases under: [`parse_input_mode`], except
+/// that the TPS layout (`AppConfig::is_tps_layout`) reads as `Tl` — a
+/// Bopomofo-free TPS buffer (`-`, a lone tone mark) takes the TL tables, as it
+/// did while platforms sent TPS as `"tl"`. Bopomofo content still upgrades to
+/// `Tps` at the composing seam (`contains_tps`).
+pub fn composing_mode(config: &AppConfig) -> InputMode {
+    if config.is_tps_layout() {
+        InputMode::Tl
+    } else {
+        parse_input_mode(&config.input_mode)
     }
 }
 
@@ -162,7 +175,7 @@ fn convert_nasal_double_n(input: &str) -> String {
 /// `to_tone_marks` → `convert_syllable` → `match_case` already writes `ᴺ`
 /// after a capital.
 pub fn normalize_tone(input: &str, config: &AppConfig) -> String {
-    let mode = parse_input_mode(&config.input_mode);
+    let mode = composing_mode(config);
     let preprocessed = preprocess_for_normalize_tone(input, mode, config);
     let tone_marked = to_tone_marks(&preprocessed, mode);
     apply_nasal_marker_case(&tone_marked, config.force_lowercase_nasal_marker).into_owned()
@@ -581,6 +594,24 @@ fn rewrite_token(token: &str, target: System, keep_tl_finals: bool) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn composing_mode_reads_the_tps_layout_as_tl() {
+        let mode = |input_mode: &str| {
+            composing_mode(&AppConfig {
+                input_mode: input_mode.to_string(),
+                ..AppConfig::default()
+            })
+        };
+        assert_eq!(mode("tps"), InputMode::Tl);
+        assert_eq!(mode("TPS"), InputMode::Tl);
+        assert_eq!(mode("tl"), InputMode::Tl);
+        assert_eq!(mode("poj"), InputMode::Poj);
+        assert_eq!(mode("english"), InputMode::English);
+        assert_eq!(mode(""), InputMode::Tl);
+        // `parse_input_mode` itself still knows TPS (the content upgrade's target).
+        assert_eq!(parse_input_mode("tps"), InputMode::Tps);
+    }
 
     #[test]
     fn hyphenless_display_drops_hyphens_and_dots_the_khinsiann_marker() {
