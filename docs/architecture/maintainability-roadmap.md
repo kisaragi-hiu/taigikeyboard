@@ -2,7 +2,7 @@
 
 > **Type**: Planning (PR table over the 2026-09-30 audit)
 > **Keywords**: `refactor`, `dead code`, `parity`, `desktop-core`, `userdata`, `commit resolution`, `test selection`, `naming`, `docs drift`
-> **Status**: in progress — R1–R4 merged (#274–#295)
+> **Status**: in progress — R1–R5, R8, A merged; R6 PR-3, R7, R9-2..4, R10, R11, R12 remain (#274–#310)
 > **Source**: `docs/reports/2026-09-30-audit-all.md` (frozen snapshot on `30a79c16`; §2 findings, §4 draft rounds, Appendices A–F)
 > **Session memory**: project memory `project_maintainability_audit_2026_09_30.md` (Claude auto-memory)
 
@@ -26,15 +26,15 @@
 | R3(b) | Settings-page model: PR-A presentation + launch parser, PR-B `SettingsWriter`, PR-C custom-dictionary listing state, PR-D remaining twin label / roster helpers | #284 #285 #286 #287 | Merged |
 | R3(c) | Win/Linux key-intent executor + `Runtime` → `desktop-core`: PR-1 Linux characterisation tests, PR-2 core executor (+Linux), PR-3 Windows on it, PR-3b shared `DesktopRuntime`, PR-4 parity: switch re-presents the open list the same way | #288 #289 #290 #291 #292 | Merged |
 | R4 | Engine user-data façade: `dispatch/src/user_data.rs` page logic → `userdata`; single-impl store traits; `cfg(not(user-data))` arms; one `CustomSearchKey` | #294 #295 | Merged |
-| R5 | Engine-owned commit resolution (`CommitContinuous` returns document text + auto-space verdict, records usage) | P1 #296 · PR-a #297 · R6 #302 #303 · PR-c #305 · PR-b mobile + P2 TPS · PR-b2 legacy path removal | PR-b in review |
+| R5 | Engine-owned commit resolution (`CommitContinuous` returns document text + auto-space verdict, records usage) | P1 #296 · PR-a #297 · PR-c #305 · PR-b #309 #310 | Merged |
 | R6 | Config normalisation in the engine (flat settings snapshot, real `input_mode = "tps"`, engine-resolved sources) | #298 #302 #303 · PR-3 | PR-3 next |
 | R7 | Test redundancy (engine layers, platform restatements, test-local copies, shared `engine/test-support`) | 3 | Pending |
-| R8 | Test selection: one integration binary per crate, `tools/test-select`, CI path filters, macOS `swift test` job | #299 #300 #301 · R8a | R8a in progress |
-| R9 | Naming batch A (identifiers, files, non-iOS folders) | 3–4 | Pending |
+| R8 | Test selection: one integration binary per crate, `tools/test-select`, CI path filters, macOS `swift test` job | #299 #300 #301 #307 | Merged |
+| R9 | Naming batch A (identifiers, files, non-iOS folders) | R9-1 #308 · R9-2 · R9-3 · R9-4 | R9-1 merged |
 | R10 | Naming batch B (proto names; field numbers unchanged) | 1–2 | Pending |
 | R11 | Lexicon / composing boundary (`SortKey` → `ranking`, one key-family module, visibility) | 2 | Pending |
-| R12 | `Phase::Composing` removal — ≤20-line spike first | 2 | Pending |
-| A | Docs drift (Appendix D, 57 rows) | admin lane | Pending |
+| R12 | `Phase::Composing` removal — ≤20-line spike first | spike GO 2026-09-30 · PR-1 · PR-2 | Spike done |
+| A | Docs drift (Appendix D, 57 rows) | direct to main 97da342b | Done |
 
 Every PR runs its round type's pre-gate (`~/.claude/rules/round-workflow.md`): refactor = behaviour-freeze list + `refactor-reviewer`; bugfix = root cause + Codex agreement; feature = plan + Codex design pass.
 
