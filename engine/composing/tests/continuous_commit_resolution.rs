@@ -188,6 +188,9 @@ fn a_rejected_pick_is_ignored_and_changes_nothing() {
     );
     let expected = resolution(CommitOutcome::Finalized, "台", false, false);
     assert_eq!(applied.response.commit, Some(expected));
+    // The other script counts under the same `(hanji ?? roman, TL)` pair as
+    // the lead: identity never follows the rendering (Core Principle #6).
+    assert_eq!(applied.usage, usage("台", "tâi", Some("台")));
 }
 
 #[test]

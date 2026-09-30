@@ -328,11 +328,10 @@ pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec
     // In TPS an ASCII space is the tone-1 syllable marker, not a word break
     // (§31 `INVARIANT_TPS_SPACE_SOFT_SEPARATOR` — `ㄍㄠ` ␣ `ㄉㄞ` is 交代, one
     // word), so a TPS payload has no boundary to learn across. Detected from
-    // Bopomofo content, not `AppConfig.input_mode`: the pre-R6 wire sends TPS
-    // as `"tl"` (iOS `RustEngineBridge+NextWord.swift` `nextwordConfig`), and
-    // the payload, not the layout, is what carries the §31 space. Content
-    // upgrading the mode is the established shape (`composing::dispatch`
-    // `handle_fetch_at_pos`), not a workaround.
+    // Bopomofo content, not `AppConfig.input_mode`: the payload, not the
+    // layout, is what carries the §31 space, and a pre-R6 platform sent TPS
+    // as `"tl"`. Content upgrading the mode is the established shape
+    // (`composing::dispatch` `handle_fetch_at_pos`), not a workaround.
     if phonetics::contains_tps(display_text) || phonetics::contains_tps(roman) {
         return Vec::new();
     }

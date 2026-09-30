@@ -12,10 +12,9 @@
 //! - `api`, `syllable`, `tps`, `poj`, `tl`, `tables`, `case_adjust`
 //!   provide the foundational helpers reused here.
 
-use crate::api::{tl_display_to_poj_display, to_tone_number, PhoneticsError};
+use crate::api::{tl_display_to_poj_display, tl_display_to_tps, tl_numeric_to_tps, PhoneticsError};
 use crate::normalization;
 use crate::tone_variations;
-use crate::tps;
 use crate::tps_adjust;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
@@ -53,10 +52,10 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
 
         // --- TPS ---
         Method::TlNumericToTps(payload) => PhonResult::StringResult(StringResult {
-            output: tps_to_tps_numeric(&payload.text, payload.or_maps_to_er),
+            output: tl_numeric_to_tps(&payload.text, payload.or_maps_to_er),
         }),
         Method::TlDisplayToTps(payload) => PhonResult::StringResult(StringResult {
-            output: tps_to_tps_display(&payload.text, payload.or_maps_to_er),
+            output: tl_display_to_tps(&payload.text, payload.or_maps_to_er),
         }),
         Method::IsTpsToneMark(payload) => PhonResult::BoolResult(BoolResult {
             value: tps_adjust::is_tps_tone_mark_str(&payload.char),
@@ -84,40 +83,4 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
     Ok(PhoneticsResponse {
         result: Some(result),
     })
-}
-
-// ---- Local helpers ------------------------------------------------------
-
-/// `Method::TlNumericToTps` — input is numeric tone form (e.g. `"hoo2"`).
-/// Mirrors iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`.
-fn tps_to_tps_numeric(text: &str, or_maps_to_er: bool) -> String {
-    convert_numeric_tl_to_tps(text, or_maps_to_er)
-}
-
-/// `Method::TlDisplayToTps` — input is display form with diacritics
-/// (e.g. `"hóo"`). Strips diacritics → numeric → `to_zhuyin`. Mirrors iOS
-/// `TLToTPS.convertFromDisplay` / Android `TPSConverter.toTPSFromDisplay`.
-fn tps_to_tps_display(text: &str, or_maps_to_er: bool) -> String {
-    let numeric = to_tone_number(text);
-    convert_numeric_tl_to_tps(&numeric, or_maps_to_er)
-}
-
-/// Mirrors iOS `TLToTPS.convert` / Android `TPSConverter.toTPS`: split TL
-/// on `-`, convert each non-empty syllable, join with a single space (the
-/// reference platforms' `joined(separator: " ")` / `joinToString(" ")`).
-/// Empty tokens (e.g. from `--` or leading/trailing `-`) are dropped to
-/// avoid double-spacing.
-fn convert_numeric_tl_to_tps(text: &str, or_maps_to_er: bool) -> String {
-    if text.is_empty() {
-        return String::new();
-    }
-    text.split('-')
-        .filter(|tok| !tok.is_empty())
-        .map(|tok| {
-            tps::to_zhuyin(tok, false, or_maps_to_er)
-                .trim_end()
-                .to_string()
-        })
-        .collect::<Vec<_>>()
-        .join(" ")
 }
