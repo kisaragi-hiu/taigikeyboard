@@ -1,7 +1,7 @@
 //! The key contract: what one key event means to a composition, and the part
 //! of that contract the user chooses. Pure classification — no Win32.
 //!
-//! Port of `macos/Sources/TaigiInputMethodCore/Controller/{ComposingKeyIntent,
+//! Port of `macos/Sources/TaigiInputMethodCore/Keys/{ComposingKeyIntent,
 //! ComposingAction, ComposingKeyChord, ComposingKeyBindings,
 //! ToneInputScheme}.swift`. The TSF
 //! shell builds a [`KeyEventSnapshot`] from `OnKeyDown` and asks

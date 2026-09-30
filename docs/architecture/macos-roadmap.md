@@ -209,7 +209,7 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
   `user-data-engine-roadmap.md` P6) — macOS sends `OpenUserData` at launch
   (`ComposingSessionCoordinator.openUserData`), the engine reads the entries
   itself inside `FetchAtPos` (`custom_entries` is `reserved`), and the Custom
-  Dictionary page goes through `Settings/UserDataClient.swift`.
+  Dictionary page goes through `Lexicon/UserDataClient.swift`.
 - **D7 User freq / nextword** — **CLOSED at PR8a+PR9 (#528)**. PR3–PR7 ran the
   FetchAtPos carrier's neutral phase only, with `platform_id = 0`, which was
   safe because the only validator is nextword

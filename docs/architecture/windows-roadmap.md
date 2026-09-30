@@ -628,8 +628,8 @@ registration, desktop toast requirements).
 | `regsvr32` per architecture, `SetRegView 64` | PIME `installer/installer.nsi:299-303, 633-650` | W8 |
 | `+crt-static` for the TIP DLL | khiin `windows/ime/.cargo/config.toml:1-6` | W14 |
 | Candidate geometry / paging / positioning oracles | macOS `Candidates/*.swift` + tests | W4, PR3 |
-| Key table, modes, auto-space, full-width, learning identity | macOS `Controller/*.swift`, `Composing/*.swift` | W5, PR2/PR4 |
-| Settings keys/defaults, storage schemas, CSV, update flow | macOS `Settings/*.swift`, `Storage/*.swift` | PR2/PR4/PR7-9 |
+| Key table, modes, auto-space, full-width, learning identity | macOS `Keys/*.swift`, `Policies/*.swift`, `Composing/*.swift` | W5, PR2/PR4 |
+| Settings keys/defaults, storage schemas, CSV, update flow | macOS `Settings/*.swift`, `Updates/*.swift`, `Storage/*.swift` | PR2/PR4/PR7-9 |
 
 **Deliberately not adopted**
 

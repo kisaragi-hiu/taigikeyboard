@@ -60,7 +60,7 @@ The `custom_search_key` side table backs cross-input-mode (three-index TL / POJ 
 
 ## CRUD Operations
 
-Engine ops (`UserDataRequest`, `engine/protos/proto/user_data.proto`), reached through each platform's `UserDataClient` (iOS `Lexicon/Services/UserDataClient.swift`, Android `ime/dictionary/UserDataClient.kt`, macOS `Settings/UserDataClient.swift`):
+Engine ops (`UserDataRequest`, `engine/protos/proto/user_data.proto`), reached through each platform's `UserDataClient` (iOS `Lexicon/Services/UserDataClient.swift`, Android `ime/dictionary/UserDataClient.kt`, macOS `Lexicon/UserDataClient.swift`):
 
 | Operation | Engine op | iOS / Android `UserDataClient` |
 |-----------|-----------|-----|
