@@ -3,11 +3,11 @@
 //! and the reset card. Port of `GeneralSettingsView.swift`.
 
 use super::{choice_row, reset_row};
-use crate::presentation::display_language_label;
 use crate::updates::INSTALLED_VERSION;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow, SettingsWrite};
 use taigi_desktop_core::keys::ToneInputScheme;
+use taigi_desktop_core::settings::presentation::display_language_label;
 use taigi_desktop_core::settings::{keys, InputMode, SettingChoice};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_update::checker;
@@ -126,7 +126,7 @@ pub fn view(
         choice_row(
             strings.resolve(StringKey::SettingsDisplayLanguage),
             &DisplayLanguage::PICKER,
-            DisplayLanguage::from_tag(&document.string(&keys::DISPLAY_LANGUAGE)),
+            document.display_language(),
             true,
             |language: DisplayLanguage| display_language_label(language, strings),
             |language| Message::SetChoice(language.map(SettingsWrite::display_language)),

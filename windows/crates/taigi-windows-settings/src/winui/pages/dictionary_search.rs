@@ -7,13 +7,13 @@
 //! dictionaries' first load — runs off the UI thread; the newest query
 //! wins by generation.
 
-use crate::presentation::PageMessage;
 use crate::winui::cards;
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use std::time::Duration;
 use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
 use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
+use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;

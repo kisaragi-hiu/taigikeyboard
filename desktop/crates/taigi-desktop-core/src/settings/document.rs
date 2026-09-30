@@ -21,6 +21,7 @@ use super::engine_settings::{
     CandidateDisplayMode, DictionarySourceToggles, EngineSettings, KautianSubcollections,
 };
 use super::keys;
+use crate::strings::DisplayLanguage;
 use crate::symbols::RecentSymbols;
 
 /// The name of one setting, paired with the value used when the user has
@@ -155,6 +156,19 @@ impl SettingsDocument {
         values: &[String],
     ) {
         self.set_raw(key.name, Value::from(values));
+    }
+
+    /// The display language as stored — `System` included, which is what
+    /// the picker shows selected.
+    pub fn display_language(&self) -> DisplayLanguage {
+        DisplayLanguage::from_tag(&self.string(&keys::DISPLAY_LANGUAGE))
+    }
+
+    /// The language strings are drawn in: the stored one, `System` resolved
+    /// against the machine's `system_locale`
+    /// (`DisplayLanguageStore.syncFromSettings`).
+    pub fn effective_display_language(&self, system_locale: &str) -> DisplayLanguage {
+        self.display_language().effective(system_locale)
     }
 
     /// The symbol picker's recent picks (`SettingsStore.swift` `recentSymbols`).
@@ -339,6 +353,7 @@ mod tests {
         assert!(doc.engine_settings().is_full_width_punctuation);
         assert!(!doc.bool(&keys::IS_AUTO_SPACE_ENABLED));
         assert_eq!(doc.string(&keys::DISPLAY_LANGUAGE), "system");
+        assert_eq!(doc.display_language(), DisplayLanguage::System);
         assert_eq!(
             doc.choice(&keys::CANDIDATE_LAYOUT),
             CandidateLayout::Expandable

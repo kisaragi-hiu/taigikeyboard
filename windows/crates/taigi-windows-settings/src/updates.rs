@@ -8,11 +8,12 @@
 //! `SettingsWriter` and answers with a `PageMessage` when there is
 //! something for the window to say, so no toolkit reaches in here.
 
-use crate::presentation::{self, PageMessage};
+use crate::presentation;
 use crate::settings_writer::SettingsWriter;
 use crate::work::PendingWork;
 use std::path::PathBuf;
 use std::sync::Arc;
+use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::update_schedule;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_update::{checker, HttpTransport, ManualOutcome, Outcome, UpdateManifest};

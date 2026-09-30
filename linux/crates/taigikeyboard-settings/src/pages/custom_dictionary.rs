@@ -18,7 +18,6 @@
 
 use super::{icon_button, remove_rows, PageContext};
 use crate::jobs;
-use crate::presentation::PageMessage;
 use crate::window::{JobSlot, Shell};
 use adw::prelude::*;
 use gtk::{gio, glib};
@@ -29,6 +28,7 @@ use taigi_desktop_core::engine::user_data::{
     self, CustomDictionaryEntry, CustomDictionaryRefusal, UserDataError,
 };
 use taigi_desktop_core::settings::keys;
+use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 
 /// `CustomDictionaryPageModel.pageSize`.

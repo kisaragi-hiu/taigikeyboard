@@ -5,11 +5,11 @@
 //! already says which build this is.
 
 use super::PageContext;
-use crate::presentation::{
+use adw::prelude::*;
+use taigi_desktop_core::settings::presentation::{
     DISCORD_URL, EMAIL_URL, FACEBOOK_URL, GITHUB_URL, INSTAGRAM_URL, SPONSOR_URL, THREADS_URL,
     WEBSITE_URL,
 };
-use adw::prelude::*;
 use taigi_desktop_core::strings::StringKey;
 
 pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {

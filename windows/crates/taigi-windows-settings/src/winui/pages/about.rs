@@ -7,13 +7,13 @@
 //! icon, no name and no version — the update row on General already says which build
 //! this is.
 
-use crate::presentation::{
-    DISCORD_URL, EMAIL_URL, FACEBOOK_URL, GITHUB_URL, INSTAGRAM_URL, SPONSOR_URL, THREADS_URL,
-    WEBSITE_URL,
-};
 use crate::winui::cards;
 use crate::winui::font_awesome::FontAwesomeGlyph;
 use crate::winui::window::{Message, SettingsWindow};
+use taigi_desktop_core::settings::presentation::{
+    DISCORD_URL, EMAIL_URL, FACEBOOK_URL, GITHUB_URL, INSTAGRAM_URL, SPONSOR_URL, THREADS_URL,
+    WEBSITE_URL,
+};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 

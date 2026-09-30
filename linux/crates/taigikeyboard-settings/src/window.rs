@@ -9,7 +9,6 @@
 //! not persisted; the Appearance mode is a combo row.
 
 use crate::pages::{self, Page};
-use crate::presentation::{pane_title, PageMessage};
 use crate::recorder::{Recorded, Recorder, RecorderTarget};
 use crate::writer::{SettingsWriter, REFRESH_INTERVAL};
 use crate::SIDEBAR;
@@ -19,6 +18,7 @@ use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
 use taigi_desktop_core::keys::{ChordRejection, RecordedPress};
+use taigi_desktop_core::settings::presentation::{pane_title, PageMessage};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsDocument, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_linux_platform::{snapshot, RawKeyEvent};
