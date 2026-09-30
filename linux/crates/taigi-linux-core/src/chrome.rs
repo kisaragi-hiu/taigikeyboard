@@ -14,7 +14,7 @@ use crate::executor::{Emit, KeySurface, LookupTableContent, Recorder};
 use crate::runtime::Runtime;
 use crate::selection::LookupSelection;
 use crate::session::{self, EngineState, SymbolPicker, PAGE_SIZE};
-use taigi_desktop_core::composing::{insert_symbol, ContextToken};
+use taigi_desktop_core::composing::{insert_symbol, represent_list, ContextToken};
 use taigi_desktop_core::keys::{
     menu_rows, telex_guide_rows, ComposingKeyBindings, MenuCommand, ShortcutAction, MENU,
 };
@@ -252,10 +252,10 @@ fn represent_open_list(
     let Some(manager) = coordinator.manager(token) else {
         return;
     };
+    represent_list(settings, manager, &mut state.candidates, refetch);
     if refetch {
-        session::refresh_candidates(settings, manager, state);
-    } else {
-        state.candidates.refresh_presentation(manager);
+        // A refetched list starts over at its first cell.
+        state.selection = LookupSelection::new(state.candidates.len(), PAGE_SIZE);
     }
 }
 

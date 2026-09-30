@@ -30,7 +30,7 @@ use std::rc::Rc;
 use std::sync::MutexGuard;
 use taigi_desktop_core::composing::CandidateCellContent;
 use taigi_desktop_core::composing::{
-    insert_symbol, pass_through_may_consume, perform_intent, CandidateListChange, CandidateSource,
+    insert_symbol, pass_through_may_consume, perform_intent, represent_list, CandidateSource,
     ComposingEffectExecutor, ComposingManager, ComposingSessionCoordinator, ContextToken,
     IntentSurface,
 };
@@ -1194,10 +1194,11 @@ impl TextService_Impl {
     }
 
     /// Re-presents the open list for `identity` under the settings in force
-    /// right now: re-fetched first when the change alters which candidates
-    /// exist (`refetch`), where an empty answer takes the window down —
-    /// otherwise the same list re-rendered in place. Never hidden first:
-    /// from mid-composition that reads as the window vanishing.
+    /// right now (`represent_list`): re-fetched when the change alters which
+    /// candidates exist, where an empty answer — or the Show Candidate
+    /// Window setting turned off since — takes the window down; otherwise
+    /// the same list re-rendered in place. Never hidden first: from
+    /// mid-composition that reads as the window vanishing.
     fn represent_open_list(&self, identity: usize, runtime: &Runtime, refetch: bool) {
         let (token, presenter) = {
             let mut state = self.state.borrow_mut();
@@ -1221,21 +1222,12 @@ impl TextService_Impl {
                 return;
             };
             let source = &mut entry.state.candidates;
-            if !refetch {
-                source.refresh_presentation(manager);
-                Some(window_content(source, slot_key_set))
-            } else {
-                match manager.fetch_candidates().list_change() {
-                    CandidateListChange::Replace(candidates) => {
-                        source.set(candidates, manager);
-                        Some(window_content(source, slot_key_set))
-                    }
-                    CandidateListChange::Clear => {
-                        source.clear();
-                        None
-                    }
-                }
+            // No list open: a switch never opens one.
+            if source.is_empty() {
+                return;
             }
+            represent_list(&settings, manager, source, refetch)
+                .then(|| window_content(source, slot_key_set))
         };
         match cells {
             Some(content) => presenter
