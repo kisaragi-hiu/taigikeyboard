@@ -240,7 +240,10 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 /// `engine/protos/src/lib.rs`), so `is_translate_swapped` and
 /// `hyphenless_roman` are the Candidate-Display-projected stored values
 /// WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
-/// plus the TPS-folded swap / hyphenless) — both render identically.
+/// plus the TPS-folded swap / hyphenless) — composing renders both
+/// identically. Nextword's empty-romanization drop and Enter skip read the
+/// swap as sent, not folded; today every platform sends nextword the stored
+/// swap, so moving to `"tps"` changes nothing there.
 public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

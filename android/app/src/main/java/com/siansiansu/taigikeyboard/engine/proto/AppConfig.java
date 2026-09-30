@@ -42,7 +42,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `engine/protos/src/lib.rs`), so `is_translate_swapped` and
  * `hyphenless_roman` are the Candidate-Display-projected stored values
  * WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
- * plus the TPS-folded swap / hyphenless) — both render identically.
+ * plus the TPS-folded swap / hyphenless) — composing renders both
+ * identically. Nextword's empty-romanization drop and Enter skip read the
+ * swap as sent, not folded; today every platform sends nextword the stored
+ * swap, so moving to `"tps"` changes nothing there.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AppConfig}
@@ -547,7 +550,10 @@ public  final class AppConfig extends
    * `engine/protos/src/lib.rs`), so `is_translate_swapped` and
    * `hyphenless_roman` are the Candidate-Display-projected stored values
    * WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
-   * plus the TPS-folded swap / hyphenless) — both render identically.
+   * plus the TPS-folded swap / hyphenless) — composing renders both
+   * identically. Nextword's empty-romanization drop and Enter skip read the
+   * swap as sent, not folded; today every platform sends nextword the stored
+   * swap, so moving to `"tps"` changes nothing there.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AppConfig}
