@@ -44,6 +44,7 @@ impl UserDataHandle {
         &HANDLE
     }
 
+    /// Answers one user-data request: `Open`, `RecordUsage`, or a page request.
     pub fn handle(&self, request: &UserDataRequest) -> Result<UserDataResponse, RequestError> {
         let method = request
             .method
@@ -118,9 +119,9 @@ impl UserDataHandle {
     }
 
     /// The open stores once they have finished opening — for the pages'
-    /// requests (`handle_page`), which run off the key path and must not read or edit a
-    /// custom dictionary still being taken over, re-derived or seeded by a
-    /// background open. Waits for that open, or finishes it here.
+    /// requests (`dispatch.rs::handle_page`), which run off the key path and must
+    /// not read or edit a custom dictionary still being taken over, re-derived or
+    /// seeded by a background open. Waits for that open, or finishes it here.
     fn settled_stores(&self) -> Result<&UserDataStores, RequestError> {
         let opened = self
             .opened
