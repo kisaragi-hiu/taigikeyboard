@@ -295,7 +295,8 @@ fn refused(refusal: i32, detail: String) -> UserDataError {
     }
 }
 
-/// `CustomDictionaryCSVError::Read`'s words, so the alert reads as before.
+/// The engine's former file reader's words (`could not read the file: …`),
+/// so the alert reads as before.
 fn unreadable(error: &std::io::Error) -> UserDataError {
     refused(
         CustomDictionaryRefusal::None as i32,
@@ -331,7 +332,7 @@ mod tests {
     use super::*;
 
     /// trace: the import refuses a missing file with the codec's own words
-    /// (`CustomDictionaryCSVError::Read`) before any engine round-trip.
+    /// (`could not read the file: …`) before any engine round-trip.
     #[test]
     fn an_import_of_a_missing_file_is_refused_in_the_reader_words() {
         let directory = tempfile::tempdir().unwrap();
@@ -346,7 +347,7 @@ mod tests {
     }
 
     /// trace: a file over the limit is refused on its size, unread
-    /// (`FileTooLarge`), with the same text `decode_file` gave.
+    /// (`FileTooLarge`), with the same text the engine gives.
     #[test]
     fn an_import_over_the_size_limit_is_refused_before_the_read() {
         let directory = tempfile::tempdir().unwrap();

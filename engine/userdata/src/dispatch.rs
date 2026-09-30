@@ -190,12 +190,7 @@ impl UserDataHandle {
             CustomDictionaryStore::MAX_ENTRIES,
         ) {
             Ok(rows) => rows,
-            Err(error) => {
-                return match csv_refusal(&error) {
-                    Some(refusal) => Ok(refused(refusal, error.to_string())),
-                    None => Err(store_error(error)),
-                }
-            }
+            Err(error) => return Ok(refused(csv_refusal(&error), error.to_string())),
         };
         match dictionary.batch_import(&rows) {
             Ok(result) => Ok(CustomCsvImported {
@@ -326,17 +321,14 @@ fn refusal(error: &CustomDictionaryError) -> Option<CustomDictionaryRefusal> {
     }
 }
 
-/// The CSV outcomes the user can be told about; `None` for a read failure
-/// (only a file path can fail to read, never the bytes a platform hands in).
-fn csv_refusal(error: &CustomDictionaryCSVError) -> Option<CustomDictionaryRefusal> {
+/// What the user is told about a CSV the codec refused — every outcome is
+/// theirs to hear: the platform hands in bytes, so nothing can fail to read.
+fn csv_refusal(error: &CustomDictionaryCSVError) -> CustomDictionaryRefusal {
     match error {
-        CustomDictionaryCSVError::FileTooLarge { .. } => {
-            Some(CustomDictionaryRefusal::FileTooLarge)
-        }
-        CustomDictionaryCSVError::NotUtf8 => Some(CustomDictionaryRefusal::NotUtf8),
-        CustomDictionaryCSVError::NoUsableRows => Some(CustomDictionaryRefusal::NoUsableRows),
-        CustomDictionaryCSVError::TooManyRows { .. } => Some(CustomDictionaryRefusal::Full),
-        CustomDictionaryCSVError::Read(_) => None,
+        CustomDictionaryCSVError::FileTooLarge { .. } => CustomDictionaryRefusal::FileTooLarge,
+        CustomDictionaryCSVError::NotUtf8 => CustomDictionaryRefusal::NotUtf8,
+        CustomDictionaryCSVError::NoUsableRows => CustomDictionaryRefusal::NoUsableRows,
+        CustomDictionaryCSVError::TooManyRows { .. } => CustomDictionaryRefusal::Full,
     }
 }
 
@@ -390,26 +382,22 @@ mod tests {
     #[test]
     fn a_csv_error_maps_to_its_refusal() {
         // trace: `csv_refusal` — FileTooLarge → FileTooLarge, NotUtf8 →
-        // NotUtf8, NoUsableRows → NoUsableRows, TooManyRows → Full, Read → None.
+        // NotUtf8, NoUsableRows → NoUsableRows, TooManyRows → Full.
         assert_eq!(
             csv_refusal(&CustomDictionaryCSVError::FileTooLarge { limit_bytes: 1 }),
-            Some(CustomDictionaryRefusal::FileTooLarge)
+            CustomDictionaryRefusal::FileTooLarge
         );
         assert_eq!(
             csv_refusal(&CustomDictionaryCSVError::NotUtf8),
-            Some(CustomDictionaryRefusal::NotUtf8)
+            CustomDictionaryRefusal::NotUtf8
         );
         assert_eq!(
             csv_refusal(&CustomDictionaryCSVError::NoUsableRows),
-            Some(CustomDictionaryRefusal::NoUsableRows)
+            CustomDictionaryRefusal::NoUsableRows
         );
         assert_eq!(
             csv_refusal(&CustomDictionaryCSVError::TooManyRows { limit: 1 }),
-            Some(CustomDictionaryRefusal::Full)
-        );
-        assert_eq!(
-            csv_refusal(&CustomDictionaryCSVError::Read("gone".into())),
-            None
+            CustomDictionaryRefusal::Full
         );
     }
 
