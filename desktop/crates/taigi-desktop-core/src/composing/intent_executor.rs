@@ -232,6 +232,29 @@ pub fn refresh_list(
     }
 }
 
+/// Re-presents an OPEN list under the settings in force right now, after a
+/// switch that changed them: refetched when the change alters which
+/// candidates exist (`refetch`), otherwise the same list re-rendered in
+/// place. An empty list stays empty — a switch never opens one — and a
+/// refetch obeys the Show Candidate Window setting like any other. Answers
+/// whether a list is left to show.
+pub fn represent_list(
+    settings: &SettingsDocument,
+    manager: &mut ComposingManager,
+    list: &mut CandidateSource,
+    refetch: bool,
+) -> bool {
+    if list.is_empty() {
+        return false;
+    }
+    if refetch {
+        refresh_list(settings, manager, list);
+    } else {
+        list.refresh_presentation(manager);
+    }
+    !list.is_empty()
+}
+
 fn refresh(
     settings: &SettingsDocument,
     manager: &mut ComposingManager,

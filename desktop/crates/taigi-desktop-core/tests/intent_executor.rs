@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use taigi_desktop_core::composing::{
-    insert_symbol, pass_through_may_consume, perform_intent, CandidateSource,
+    insert_symbol, pass_through_may_consume, perform_intent, represent_list, CandidateSource,
     ComposingEffectExecutor, ComposingManager, EngineNextWord, IntentSurface, NoUsage, SystemClock,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
@@ -339,4 +339,46 @@ fn a_key_that_finishes_the_composition_then_belongs_to_the_client() {
     rig.type_word("ho");
     assert!(!rig.run(ComposingKeyIntent::CommitThenPassThrough, &no_key()));
     assert_eq!(rig.calls(), ["commit ho", "list closed"]);
+}
+
+#[test]
+fn a_switch_re_presents_an_open_list_and_never_opens_one() {
+    let mut rig = new_rig(false);
+    // No list open: neither kind of switch opens one.
+    assert!(!represent_list(
+        &rig.settings,
+        &mut rig.manager,
+        &mut rig.list,
+        true
+    ));
+    assert!(rig.list.is_empty());
+
+    rig.type_word("ho");
+    let open = rig.list.len();
+    assert!(open > 0);
+    assert!(represent_list(
+        &rig.settings,
+        &mut rig.manager,
+        &mut rig.list,
+        false
+    ));
+    assert_eq!(rig.list.len(), open, "re-rendered in place");
+    assert!(represent_list(
+        &rig.settings,
+        &mut rig.manager,
+        &mut rig.list,
+        true
+    ));
+    assert_eq!(rig.list.len(), open, "same composition, same candidates");
+
+    // Show Candidate Window switched off since: a refetch fetches nothing.
+    rig.settings
+        .set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false);
+    assert!(!represent_list(
+        &rig.settings,
+        &mut rig.manager,
+        &mut rig.list,
+        true
+    ));
+    assert!(rig.list.is_empty());
 }

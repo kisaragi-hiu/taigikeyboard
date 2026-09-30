@@ -17,7 +17,7 @@ use crate::executor::{Emit, KeySurface, LookupTableContent, Recorder};
 use crate::runtime::Runtime;
 use crate::selection::LookupSelection;
 use taigi_desktop_core::composing::{
-    pass_through_may_consume, perform_intent, refresh_list, CandidateSource, ComposingManager,
+    pass_through_may_consume, perform_intent, CandidateSource, ComposingManager,
     ComposingSessionCoordinator, ContextToken,
 };
 use taigi_desktop_core::keys::{
@@ -590,17 +590,6 @@ fn table_content(
 /// and how the arrows read, from the one setting.
 pub(crate) fn is_vertical_layout(settings: &SettingsDocument) -> bool {
     settings.choice(&keys::CANDIDATE_LAYOUT) != CandidateLayout::Horizontal
-}
-
-/// Re-reads the candidates for the composition as it now stands, the
-/// highlight back on the first cell.
-pub(crate) fn refresh_candidates(
-    settings: &SettingsDocument,
-    manager: &mut ComposingManager,
-    state: &mut EngineState,
-) {
-    refresh_list(settings, manager, &mut state.candidates);
-    state.selection = LookupSelection::new(state.candidates.len(), PAGE_SIZE);
 }
 
 /// An executor that records nothing: for a composition the DAEMON already

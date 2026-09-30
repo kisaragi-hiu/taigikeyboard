@@ -306,3 +306,35 @@ fn backspace_with_nothing_composed_is_the_clients() {
     let mut session = Session::new(true, true);
     assert_eq!(session.press_with(BACKSPACE, 0), (false, Vec::new()));
 }
+
+#[test]
+fn a_refetching_switch_obeys_the_candidate_window_setting() {
+    let _serial = serial();
+    // trace (read by running): Ctrl+Alt+H = CycleCandidateDisplayMode, which
+    // re-fetches the open list under the new mode.
+    let mut session = Session::new(true, true);
+    session.type_word("ho");
+    let (is_handled, emits) = session.press_with('h' as u32, state::CONTROL | state::MOD1);
+    assert!(is_handled);
+    assert!(
+        matches!(emits.first(), Some(Emit::LookupTable(_))),
+        "window on: the refetched list is shown, got {emits:?}"
+    );
+
+    // The window switched off (in the settings window) while the list was
+    // up: the next refetch fetches nothing and takes the list down.
+    drop(session);
+    let mut session = Session::new(true, true);
+    session.type_word("ho");
+    let config = session._directory.path().join("config");
+    SettingsFileStore::new(&config)
+        .update(|document| document.set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false))
+        .expect("settings written");
+    let (is_handled, emits) = session.press_with('h' as u32, state::CONTROL | state::MOD1);
+    assert!(is_handled);
+    assert_eq!(
+        emits,
+        [Emit::HideLookupTable, Emit::ModeChanged, Emit::AnnounceMode]
+    );
+    assert!(session.state.candidates.is_empty());
+}
