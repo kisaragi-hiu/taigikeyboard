@@ -75,7 +75,8 @@ impl EngineHandle {
     }
 
     /// [`handle`](Self::handle), with the phrase a final commit taught (§50)
-    /// — for the engine's own learned-phrase store.
+    /// and the usage an R5 commit counts — for the engine's own user-data
+    /// stores.
     pub fn handle_learning(
         &self,
         req: &ComposingRequest,

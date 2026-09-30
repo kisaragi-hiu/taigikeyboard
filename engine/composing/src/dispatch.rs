@@ -23,7 +23,7 @@
 //! `build_keys_tps` `tl:`-folded path is retired).
 
 use crate::api::{
-    CaretDirection, CommitScript, CommitScriptPick, ComposingError, Engine, Intent, Phase, UserRows,
+    CaretDirection, CommitRendering, CommitScript, ComposingError, Engine, Intent, Phase, UserRows,
 };
 use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq};
 use crate::shadow::{
@@ -72,7 +72,7 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             context: ranking::ContextRanks::default(),
         },
         Method::CommitContinuous(m) => Intent::CommitContinuous {
-            resolve: commit_script_pick(m.script(), m.roman),
+            resolve: commit_rendering(m.script(), m.roman),
             display_text: m.display_text,
             canonical_text: m.canonical_text,
             association_tl: m.association_tl,
@@ -522,7 +522,7 @@ fn with_continuous(
 /// The R5 half of a `CommitContinuous`: `None` for `UNSPECIFIED` — the
 /// legacy platform-resolved commit, and what prost reads an unknown (newer)
 /// script as.
-fn commit_script_pick(script: WireCommitScript, roman: String) -> Option<CommitScriptPick> {
+fn commit_rendering(script: WireCommitScript, roman: String) -> Option<CommitRendering> {
     let script = match script {
         WireCommitScript::Unspecified => return None,
         WireCommitScript::Lead => CommitScript::Lead,
@@ -530,7 +530,7 @@ fn commit_script_pick(script: WireCommitScript, roman: String) -> Option<CommitS
         WireCommitScript::Hanji => CommitScript::Hanji,
         WireCommitScript::Roman => CommitScript::Roman,
     };
-    Some(CommitScriptPick { script, roman })
+    Some(CommitRendering { script, roman })
 }
 
 /// Clamp the syllable count into `u8`. FST romanization keys are only

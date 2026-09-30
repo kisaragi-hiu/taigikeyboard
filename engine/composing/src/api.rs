@@ -65,7 +65,7 @@ pub enum CommitScript {
 /// An R5 commit: the engine resolves the document text from the pick's
 /// `roman` (display romanization) and hanji under the request's settings.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CommitScriptPick {
+pub struct CommitRendering {
     pub script: CommitScript,
     pub roman: String,
 }
@@ -600,7 +600,7 @@ pub enum Intent {
         /// R5: `Some` = the engine resolves the document text itself and
         /// ignores `display_text` (`transition::commit_continuous_resolved`);
         /// `None` = the legacy platform-resolved commit.
-        resolve: Option<CommitScriptPick>,
+        resolve: Option<CommitRendering>,
     },
     ResetContinuous,
     /// Desktop Telex scheme — one tone / affricate / hyphen letter applied

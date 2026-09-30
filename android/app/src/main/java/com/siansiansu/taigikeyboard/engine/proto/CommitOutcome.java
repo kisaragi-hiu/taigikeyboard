@@ -12,6 +12,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
 public enum CommitOutcome
     implements com.google.protobuf.Internal.EnumLite {
   /**
+   * <pre>
+   * never emitted
+   * </pre>
+   *
    * <code>COMMIT_OUTCOME_UNSPECIFIED = 0;</code>
    */
   COMMIT_OUTCOME_UNSPECIFIED(0),
@@ -43,6 +47,10 @@ public enum CommitOutcome
   ;
 
   /**
+   * <pre>
+   * never emitted
+   * </pre>
+   *
    * <code>COMMIT_OUTCOME_UNSPECIFIED = 0;</code>
    */
   public static final int COMMIT_OUTCOME_UNSPECIFIED_VALUE = 0;

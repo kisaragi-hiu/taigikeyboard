@@ -25,23 +25,24 @@ pub(crate) struct ResolvedCommit {
 }
 
 impl ResolvedCommit {
-    fn romanization(text: &str) -> Self {
+    fn romanization(text: impl Into<String>) -> Self {
         Self {
-            text: text.to_owned(),
+            text: text.into(),
             wrote_romanization: true,
         }
     }
 
-    fn hanji(text: &str) -> Self {
+    fn hanji(text: impl Into<String>) -> Self {
         Self {
-            text: text.to_owned(),
+            text: text.into(),
             wrote_romanization: false,
         }
     }
 }
 
 /// The output settings a commit renders under, after the Candidate Display
-/// projections (§42): Romanization Only masks every stored script flag;
+/// projections (§42): Romanization Only masks the lead and bracket flags (a
+/// §42 split cell, which that mode never shows, still commits its own script);
 /// Hanji with Romanization forces only the Hanji lead. The platforms already
 /// send the projected flags; applying them here too keeps the resolver right
 /// for any caller.
@@ -89,7 +90,7 @@ pub(crate) fn resolve_commit_text(
     match (script, hanji) {
         (CommitScript::Hanji, Some(hanji)) => {
             Some(if scripts.annotate_in_brackets && !roman.is_empty() {
-                ResolvedCommit::romanization(&format!("{hanji} ({roman})"))
+                ResolvedCommit::romanization(format!("{hanji} ({roman})"))
             } else {
                 ResolvedCommit::hanji(hanji)
             })
@@ -114,15 +115,16 @@ fn lead(roman: &str, hanji: Option<&str>, scripts: &OutputScripts) -> ResolvedCo
         // under every mode.
         return ResolvedCommit::romanization(roman);
     };
-    if scripts.annotate_in_brackets {
-        // The pair carries the romanization whichever half leads — even an
-        // empty one (`台語 ()`, Android `resolveUnmarkedCommit`).
+    if scripts.annotate_in_brackets && !roman.is_empty() {
+        // The pair carries the romanization whichever half leads. No empty
+        // brackets (`台語 ()`): desktop and macOS call them a visible defect,
+        // and the split hanji cell above refuses them too.
         let text = if scripts.hanji_leads {
             format!("{hanji} ({roman})")
         } else {
             format!("{roman} ({hanji})")
         };
-        return ResolvedCommit::romanization(&text);
+        return ResolvedCommit::romanization(text);
     }
     if scripts.hanji_leads {
         ResolvedCommit::hanji(hanji)
@@ -172,7 +174,7 @@ mod tests {
 
     #[test]
     fn truth_table() {
-        use CandidateDisplayMode::{Combined as Mixed, RomanOnly, SideBySide as Pair};
+        use CandidateDisplayMode::{Combined, RomanOnly, SideBySide};
         use CommitScript::{Hanji, Lead, Other, Roman};
         const R: &str = "tâi-gí";
         const H: Option<&str> = Some("台語");
@@ -183,38 +185,38 @@ mod tests {
         let rows = [
             // trace: UnmarkedCommitResolverTest (Android) / formatOutputText (iOS)
             // romanLed_… / hanjiLed_… / brackets_writeThePairEitherWayRound_…
-            (Lead, false, false, Pair, R, H, roman(R)),
-            (Lead, true, false, Pair, R, H, hanji("台語")),
-            (Lead, true, true, Pair, R, H, roman("台語 (tâi-gí)")),
-            (Lead, false, true, Pair, R, H, roman("tâi-gí (台語)")),
+            (Lead, false, false, SideBySide, R, H, roman(R)),
+            (Lead, true, false, SideBySide, R, H, hanji("台語")),
+            (Lead, true, true, SideBySide, R, H, roman("台語 (tâi-gí)")),
+            (Lead, false, true, SideBySide, R, H, roman("tâi-gí (台語)")),
             // Android `bracketedCommit` with an empty roman keeps its brackets.
-            (Lead, true, true, Pair, "", H, roman("台語 ()")),
+            (Lead, true, true, SideBySide, "", H, hanji("台語")),
             // noHanji_commitsTheRomanizationUnderEveryMode; document_text.rs
             // a_candidate_with_no_hanji_always_carries_romanization
-            (Lead, true, false, Pair, R, None, roman(R)),
-            (Lead, true, true, Pair, R, None, roman(R)),
-            (Lead, false, true, Pair, R, Some(""), roman(R)),
-            (Lead, true, false, Pair, R, Some(""), roman(R)),
+            (Lead, true, false, SideBySide, R, None, roman(R)),
+            (Lead, true, true, SideBySide, R, None, roman(R)),
+            (Lead, false, true, SideBySide, R, Some(""), roman(R)),
+            (Lead, true, false, SideBySide, R, Some(""), roman(R)),
             // document_text.rs roman_only_mode_shows_and_writes_the_romanization_alone
             (Lead, true, true, RomanOnly, R, H, roman(R)),
             // trace: MarkedCellCommitResolverTest / ActionHandlerMarkedCellCommitTests
             // hanjiCell_bracketsOff_… / hanjiCell_bracketsOn_… / …_missingRoman_…
-            (Hanji, true, false, Mixed, R, H, hanji("台語")),
-            (Hanji, true, true, Mixed, R, H, roman("台語 (tâi-gí)")),
-            (Hanji, true, true, Mixed, "", H, hanji("台語")),
+            (Hanji, true, false, Combined, R, H, hanji("台語")),
+            (Hanji, true, true, Combined, R, H, roman("台語 (tâi-gí)")),
+            (Hanji, true, true, Combined, "", H, hanji("台語")),
             // test_INVARIANT_roman_cell_commits_bare_roman_even_with_brackets_on
-            (Roman, true, false, Mixed, R, H, roman(R)),
-            (Roman, true, true, Mixed, R, H, roman(R)),
+            (Roman, true, false, Combined, R, H, roman(R)),
+            (Roman, true, true, Combined, R, H, roman(R)),
             // defectiveMarkers_failOpenToTheUnmarkedPath: the lead instead
-            (Hanji, true, true, Mixed, R, None, roman(R)),
-            (Roman, true, false, Mixed, "", H, hanji("台語")),
+            (Hanji, true, true, Combined, R, None, roman(R)),
+            (Roman, true, false, Combined, "", H, hanji("台語")),
             // trace: document_text.rs the_alternate_verdict_inverts_the_mode /
             // alternate_text_follows_the_display_mode_not_the_cell
-            (Other, true, false, Pair, R, H, roman(R)),
-            (Other, false, false, Pair, R, H, hanji("台語")),
-            (Other, false, false, Mixed, R, H, roman(R)),
-            (Other, true, false, Pair, R, None, None),
-            (Other, true, false, Pair, R, Some(""), None),
+            (Other, true, false, SideBySide, R, H, roman(R)),
+            (Other, false, false, SideBySide, R, H, hanji("台語")),
+            (Other, false, false, Combined, R, H, roman(R)),
+            (Other, true, false, SideBySide, R, None, None),
+            (Other, true, false, SideBySide, R, Some(""), None),
             (Other, true, true, RomanOnly, R, H, None),
         ];
         for (script, swapped, brackets, display, roman, hanji, expected) in rows {

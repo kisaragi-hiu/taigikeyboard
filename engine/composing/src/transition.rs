@@ -19,7 +19,7 @@
 
 use crate::api::{
     combined_display, combined_display_with_tail, nailed_prefix, Applied, CaretDirection,
-    CommitScriptPick, EngineState, Intent, NailedSegment, Phase, Usage,
+    CommitRendering, EngineState, Intent, NailedSegment, Phase, Usage,
 };
 use crate::commit_text::{commit_resolution, resolve_commit_text};
 use crate::derived::{derived_display, display_caret_utf16, strip_tps_separator_markers};
@@ -792,7 +792,7 @@ fn commit_preedit_then_insert_external_under_continuous(
 /// `consumed_bytes`) collapse to `noop` rather than panicking.
 // v3.5.8 Phase 9 Bug 1 (Option A): `display_text` is the swap/TPS/both-
 // scripts-formatted string the platform tap handler produced (mirroring the
-// legacy lexicon formatter); under **Model B (§10)** it is the segment's
+// legacy lexicon formatter) — or, on the R5 path, the engine-resolved text; under **Model B (§10)** it is the segment's
 // text **inside the marked region**, not yet in the document. `canonical_text`
 // is the canonical dictionary key (`hanji.unwrap_or(roman)`) used for NextWord
 // association so learning stays mode-independent (user decision b). Empty
@@ -924,7 +924,7 @@ struct SegmentPick {
 fn commit_continuous_resolved(
     state: &mut EngineState,
     pick: SegmentPick,
-    resolve: CommitScriptPick,
+    resolve: CommitRendering,
     config: &AppConfig,
 ) -> Applied {
     let hanji = pick.hanji.clone().filter(|hanji| !hanji.is_empty());

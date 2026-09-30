@@ -242,7 +242,8 @@ message CommitContinuous {
   // `display_text`, answer `ComposingResponse.commit`, and — with the
   // user-data stores open — record the pick's usage itself (the platform
   // then sends no `RecordUsage` for it). An empty `canonical_text` is
-  // IGNORED on this path (no fallback to the document text).
+  // IGNORED on this path (no fallback to the document text). TPS layouts
+  // stay on UNSPECIFIED until R5 PR-b: the resolver renders no TPS yet.
   CommitScript script = 7;
   // The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
   // rendered / recased / No Hyphens — the display romanization, never the
@@ -274,7 +275,7 @@ message CommitResolution {
 }
 
 enum CommitOutcome {
-  COMMIT_OUTCOME_UNSPECIFIED = 0;
+  COMMIT_OUTCOME_UNSPECIFIED = 0; // never emitted
   COMMIT_OUTCOME_NAILED      = 1;  // mid-commit: the composition continues
   COMMIT_OUTCOME_FINALIZED   = 2;  // the buffer was consumed; the engine is Idle
   COMMIT_OUTCOME_IGNORED     = 3;  // nothing changed (stale generation, rejected pick)

@@ -26,7 +26,7 @@
 | R3(b) | Settings-page model: PR-A presentation + launch parser, PR-B `SettingsWriter`, PR-C custom-dictionary listing state, PR-D remaining twin label / roster helpers | #284 #285 #286 #287 | Merged |
 | R3(c) | Win/Linux key-intent executor + `Runtime` → `desktop-core`: PR-1 Linux characterisation tests, PR-2 core executor (+Linux), PR-3 Windows on it, PR-3b shared `DesktopRuntime`, PR-4 parity: switch re-presents the open list the same way | #288 #289 #290 #291 #292 | Merged |
 | R4 | Engine user-data façade: `dispatch/src/user_data.rs` page logic → `userdata`; single-impl store traits; `cfg(not(user-data))` arms; one `CustomSearchKey` | #294 #295 | Merged |
-| R5 | Engine-owned commit resolution (`CommitContinuous` returns document text + auto-space verdict, records usage) | parity P1 (iOS) · P2 (TPS, USER) · PR-a engine · PR-c macOS + desktop · PR-b mobile | P1 open |
+| R5 | Engine-owned commit resolution (`CommitContinuous` returns document text + auto-space verdict, records usage) | P1 #296 · PR-a #297 · R6 PR-1/2 · PR-c macOS + desktop · P2 (TPS, USER) · PR-b mobile | PR-a in review |
 | R6 | Config normalisation in the engine (flat settings snapshot, real `input_mode = "tps"`, engine-resolved sources) | 2–3 | Pending |
 | R7 | Test redundancy (engine layers, platform restatements, test-local copies, shared `engine/test-support`) | 3 | Pending |
 | R8 | Test selection: one integration binary per crate, `tools/test-select`, CI path filters, macOS `swift test` job | 2–3 | Pending |
