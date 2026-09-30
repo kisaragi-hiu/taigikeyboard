@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, thiserror::Error)]
 pub enum DirectoryError {
     /// `%APPDATA%` is not set — a host running without a user profile (an
-    /// AppContainer, a service). The user data then stays closed (`NoUsage`).
+    /// AppContainer, a service). The user data then stays closed, and the
+    /// engine keeps nothing it learns.
     #[error("APPDATA is not set; no per-user directory to keep learning data in")]
     NoAppData,
     #[error("could not create {path}: {source}")]

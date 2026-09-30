@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use taigi_desktop_core::composing::{
     insert_symbol, pass_through_may_consume, perform_intent, represent_list, CandidateSource,
-    ComposingEffectExecutor, ComposingManager, EngineNextWord, IntentSurface, NoUsage, SystemClock,
+    ComposingEffectExecutor, ComposingManager, EngineNextWord, IntentSurface, SystemClock,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, Effect};
@@ -110,7 +110,6 @@ fn new_rig(is_auto_space_enabled: bool) -> Rig {
     settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, is_auto_space_enabled);
     let manager = ComposingManager::new(
         Arc::new(StaticSettingsProvider::new(settings.clone())),
-        Box::new(NoUsage),
         Box::new(EngineNextWord),
         Box::new(SystemClock),
         fresh_generation(),
@@ -320,6 +319,31 @@ fn enter_commits_the_highlighted_cell_and_space_its_other_script() {
         rig.calls(),
         ["commit hó", "list closed", "insert \" \"", "arm"]
     );
+}
+
+#[test]
+fn enter_on_the_literal_writes_it_spaced_and_space_on_it_writes_nothing() {
+    // trace: cell 0 is the §34 literal `ho` (no Hanji). Enter = LEAD → the
+    // romanization, which earns the space; Space = OTHER → the engine has no
+    // other script to write → IGNORED: nothing written, the list refetched.
+    let mut rig = new_rig(true);
+    rig.type_word("ho");
+    rig.surface.selected = Some(0);
+    assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
+    assert_eq!(
+        rig.calls(),
+        ["commit ho", "list closed", "insert \" \"", "arm"]
+    );
+
+    drop(rig);
+    let mut rig = new_rig(true);
+    rig.type_word("ho");
+    rig.surface.selected = Some(0);
+    let open = rig.list.len();
+    assert!(rig.run(ComposingKeyIntent::CommitAlternateScript, &no_key()));
+    assert_eq!(rig.calls(), [format!("list {open}")]);
+    assert!(rig.manager.is_composing(), "the composition is untouched");
+    assert_eq!(rig.manager.raw_input(), "ho");
 }
 
 #[test]

@@ -11,6 +11,8 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Mutex, OnceLock};
 
+use protos::engine::CommitOutcome;
+use taigi_desktop_core::composing::CandidateScript;
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, CommitContinuousArgs, Effect, FetchArgs};
 use taigi_desktop_core::settings::{EngineSettings, InputMode};
@@ -145,7 +147,8 @@ fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
 
     let commit = engine::commit_continuous(
         &CommitContinuousArgs {
-            document_text: &taigi.display_text,
+            script: CandidateScript::Primary,
+            roman: &taigi.roman,
             canonical_text: &taigi.display_text,
             association_tl: &taigi.canonical_tl,
             hanji: taigi.hanji.as_deref(),
@@ -156,6 +159,12 @@ fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
         generation,
     )
     .expect("commit round trip");
+    // trace: hanji-first default → LEAD resolves the Hanji; no romanization
+    // written, so no auto space (engine `commit_text`).
+    assert_eq!(commit.commit.outcome(), CommitOutcome::Finalized);
+    assert_eq!(commit.commit.document_text, "台語");
+    assert!(!commit.commit.earns_auto_space);
+    let commit = commit.transition;
     assert!(
         !commit.is_composing,
         "consuming the whole buffer is a final commit"
@@ -185,7 +194,8 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
         .expect("single-syllable 台 spanning `tai`");
     let commit = engine::commit_continuous(
         &CommitContinuousArgs {
-            document_text: "台",
+            script: CandidateScript::Primary,
+            roman: &tai.roman,
             canonical_text: "台",
             association_tl: &tai.canonical_tl,
             hanji: tai.hanji.as_deref(),
@@ -196,6 +206,8 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
         generation,
     )
     .expect("commit");
+    assert_eq!(commit.commit.outcome(), CommitOutcome::Nailed);
+    let commit = commit.transition;
     assert!(
         commit.is_composing,
         "Model B: a nailed segment stays in the composition"

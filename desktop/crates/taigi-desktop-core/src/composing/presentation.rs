@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 
-use super::document_text::{CandidateCellContent, CandidateScript};
+use super::cell_content::{CandidateCellContent, CandidateScript};
 use super::manager::ComposingManager;
 use crate::engine::ContinuousCandidate;
 use crate::settings::{CandidateDisplayMode, EngineSettings};
@@ -184,7 +184,7 @@ impl CandidateSource {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::composing::{EngineNextWord, NoUsage, SystemClock};
+    use crate::composing::{EngineNextWord, SystemClock};
     use crate::engine::test_support::candidate;
     use crate::settings::{keys, SettingsDocument, StaticSettingsProvider};
     use std::sync::Arc;
@@ -288,7 +288,6 @@ mod tests {
         document.set_choice(&keys::CANDIDATE_DISPLAY_MODE, mode);
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
-            Box::new(NoUsage),
             Box::new(EngineNextWord),
             Box::new(SystemClock),
             1,
@@ -301,7 +300,6 @@ mod tests {
         document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, enabled);
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
-            Box::new(NoUsage),
             Box::new(EngineNextWord),
             Box::new(SystemClock),
             1,

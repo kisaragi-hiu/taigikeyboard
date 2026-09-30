@@ -7,8 +7,8 @@
 
 use super::{
     CandidateCommitOutcome, CandidateListChange, CandidateSource, ComposingEffectExecutor,
+    ComposingManager,
 };
-use super::{ComposingManager, ResolvedCommit};
 use crate::keys::{CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot};
 use crate::policies;
 use crate::settings::{keys, SettingsDocument};
@@ -76,14 +76,12 @@ pub fn perform_intent(
         ComposingKeyIntent::Commit => {
             // The preedit AS TYPED: romanization on a platform shipping TL and
             // POJ only, whichever script the candidate list led with.
-            let committed = manager
-                .commit_composition(surface)
-                .map(|text| ResolvedCommit {
-                    text,
-                    wrote_romanization: raw_preedit_wrote_romanization(settings),
-                });
+            let committed = manager.commit_composition(surface);
             close_list(list, surface);
-            append_auto_space(committed.as_ref(), settings, surface);
+            let earns_auto_space = committed.is_some_and(|text| {
+                raw_preedit_wrote_romanization(settings) && policies::should_append_space(&text)
+            });
+            append_auto_space(earns_auto_space, settings, surface);
             true
         }
         ComposingKeyIntent::Cancel => {
@@ -271,8 +269,8 @@ fn close_list(list: &mut CandidateSource, surface: &mut impl IntentSurface) {
 }
 
 /// Commits the candidate behind cell `cell`, in the cell's own script or
-/// (`flip`) the other one. The script is resolved BEFORE the commit and the
-/// same one decides the auto space. No cell (no list, an index past it)
+/// (`flip`) the other one; the engine resolves what that script writes and
+/// whether it earns the auto space. No cell (no list, an index past it)
 /// commits nothing.
 fn commit_candidate(
     cell: Option<usize>,
@@ -285,12 +283,12 @@ fn commit_candidate(
     let Some((candidate, script)) = cell.and_then(|index| list.resolve(index, flip)) else {
         return;
     };
-    let (outcome, committed) = manager.commit_candidate(candidate, script, surface);
+    let outcome = manager.commit_candidate(candidate, script, surface);
     log::debug!("candidate.commit {outcome:?}");
     match outcome {
-        CandidateCommitOutcome::Finalized => {
+        CandidateCommitOutcome::Finalized { earns_auto_space } => {
             close_list(list, surface);
-            append_auto_space(committed.as_ref(), settings, surface);
+            append_auto_space(earns_auto_space, settings, surface);
         }
         CandidateCommitOutcome::Nailed
         | CandidateCommitOutcome::Ignored
@@ -320,18 +318,16 @@ fn swap_auto_space(
     true
 }
 
-/// The trailing auto space after an explicit commit, and the swap armed on
-/// it — not once a write of this key has failed. Lifecycle commits never
-/// come here.
+/// The trailing auto space after an explicit commit that earned one (it
+/// wrote romanization with no trailing `-`), and the swap armed on it — with
+/// Auto-Space live, and not once a write of this key has failed. Lifecycle
+/// commits never come here.
 fn append_auto_space(
-    committed: Option<&ResolvedCommit>,
+    earns_auto_space: bool,
     settings: &SettingsDocument,
     surface: &mut impl IntentSurface,
 ) {
-    let Some(committed) = committed else { return };
-    if !auto_space_gate(settings, committed.wrote_romanization)
-        || !policies::should_append_space(&committed.text)
-    {
+    if !auto_space_gate(settings, earns_auto_space) {
         return;
     }
     surface.insert_external(" ");
@@ -340,8 +336,9 @@ fn append_auto_space(
     }
 }
 
-/// The gate every auto-space site reads: Auto-Space live, and whether the
-/// commit wrote romanization (from whatever resolved the string).
+/// The gate every auto-space site reads: Auto-Space live, and the commit's
+/// own verdict — the engine's `earns_auto_space` for a candidate, the input
+/// mode for the preedit as typed.
 fn auto_space_gate(settings: &SettingsDocument, wrote_romanization: bool) -> bool {
     policies::is_gate_active(
         settings.bool(&keys::IS_AUTO_SPACE_ENABLED),

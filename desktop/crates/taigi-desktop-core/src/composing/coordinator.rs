@@ -34,7 +34,6 @@ use std::sync::Arc;
 use super::clock::SystemClock;
 use super::manager::ComposingManager;
 use super::next_word::EngineNextWord;
-use super::usage::{EngineUsage, NoUsage, UsageRecorder};
 use crate::settings::SettingsProvider;
 
 /// Identity of one input context. Allocated by the shell (a counter, never a
@@ -56,19 +55,12 @@ pub struct ComposingSessionCoordinator {
 
 impl ComposingSessionCoordinator {
     /// What a desktop shell runs: the engine reads, ranks and keeps the
-    /// user's data (user-data-engine-roadmap P5), so the manager reports
-    /// picks — only where the process has a data directory to keep them in
-    /// (`learns`) — and the engine records the associations it decides on
-    /// itself.
-    pub fn for_desktop(settings: Arc<dyn SettingsProvider>, learns: bool) -> Self {
-        let usage: Box<dyn UsageRecorder> = if learns {
-            Box::new(EngineUsage)
-        } else {
-            Box::new(NoUsage)
-        };
+    /// user's data (user-data-engine-roadmap P5) — it counts the picks and
+    /// records the associations it decides on itself, wherever the process
+    /// opened a data directory for it (R5).
+    pub fn for_desktop(settings: Arc<dyn SettingsProvider>) -> Self {
         Self::new(ComposingManager::new(
             settings,
-            usage,
             Box::new(EngineNextWord),
             Box::new(SystemClock),
             1,

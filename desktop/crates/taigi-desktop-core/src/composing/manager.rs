@@ -8,14 +8,11 @@
 
 use std::sync::Arc;
 
+use super::cell_content::CandidateScript;
 use super::clock::Clock;
-use super::document_text::{
-    document_text, resolved_alternate, resolved_commit, CandidateScript, ResolvedCommit,
-};
 use super::next_word::NextWordPort;
 use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
 use super::presentation::{leads_with_literal_roman, presentation, PresentedCandidate};
-use super::usage::{Usage, UsageRecorder};
 use crate::engine::{
     self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, Effect, FetchArgs,
 };
@@ -39,8 +36,6 @@ pub struct ComposingManager {
     /// join, and because the candidate window anchors to what is on screen.
     display_text: String,
     settings: Arc<dyn SettingsProvider>,
-    /// Where picks are counted; the engine reads the user's data itself.
-    usage: Box<dyn UsageRecorder>,
     /// Where the next-word handshakes go, stamped with `clock`.
     next_word: Box<dyn NextWordPort>,
     clock: Box<dyn Clock>,
@@ -52,12 +47,9 @@ pub struct ComposingManager {
 
 impl ComposingManager {
     /// `starting_generation` defaults to 1 in production because 0 is the
-    /// generation an unset proto field carries. The recorder is explicit —
-    /// a defaulted parameter is how a test would silently teach the user's
-    /// own database from a fixture.
+    /// generation an unset proto field carries.
     pub fn new(
         settings: Arc<dyn SettingsProvider>,
-        usage: Box<dyn UsageRecorder>,
         next_word: Box<dyn NextWordPort>,
         clock: Box<dyn Clock>,
         starting_generation: u64,
@@ -67,7 +59,6 @@ impl ComposingManager {
             raw_input: String::new(),
             display_text: String::new(),
             settings,
-            usage,
             next_word,
             clock,
             current_generation: starting_generation,
@@ -257,13 +248,6 @@ impl ComposingManager {
         }
     }
 
-    /// What committing `candidate` would write into the document, under the
-    /// settings in force right now — so the window labels a cell with the
-    /// string that cell produces.
-    pub fn document_text(&self, candidate: &ContinuousCandidate) -> String {
-        document_text(candidate, &self.current_settings())
-    }
-
     /// The cells the window shows for `candidates`, under one snapshot of the
     /// settings in force right now — Combined splits a candidate into two, so the
     /// window's indices are cell indices (`CandidateSource::resolve`) — plus
@@ -285,54 +269,39 @@ impl ComposingManager {
 
     /// Commits `candidate`, which must come from the `fetch_candidates` call
     /// that produced the list the user is looking at. `script` picks WHICH of
-    /// the candidate's two renderings the document gets; `Alternate` on a
-    /// single-script candidate answers `Ignored` without reaching the engine.
-    /// Returns the outcome and, for a commit that wrote something, the text
-    /// written together with whether it carried romanization — the auto-space
-    /// verdict, which only the arm that picked the rendering knows
-    /// (`policies::is_gate_active`).
+    /// the candidate's two renderings the document gets; the engine resolves
+    /// the text under the same settings snapshot, answers `Ignored` for a
+    /// script the candidate does not have (Space on a one-script cell), and —
+    /// with the user data open — counts the pick under its `(display text,
+    /// canonical TL)` identity (Core Principle #7), never the rendering.
     pub fn commit_candidate(
         &mut self,
         candidate: &ContinuousCandidate,
         script: CandidateScript,
         executor: &mut dyn ComposingEffectExecutor,
-    ) -> (CandidateCommitOutcome, Option<ResolvedCommit>) {
-        let settings = self.current_settings();
+    ) -> CandidateCommitOutcome {
         log::debug!(
             "commitCandidate consumedBytes={}",
             candidate.consumed_span_end
         );
-        let resolved = match script {
-            CandidateScript::Primary => resolved_commit(candidate, &settings),
-            CandidateScript::Alternate => match resolved_alternate(candidate, &settings) {
-                Some(alternate) => alternate,
-                None => return (CandidateCommitOutcome::Ignored, None),
-            },
-        };
-        let Some(transition) = engine::commit_continuous(
+        let Some(committed) = engine::commit_continuous(
             &CommitContinuousArgs {
-                document_text: &resolved.text,
+                script,
+                roman: &candidate.roman,
                 canonical_text: &candidate.display_text,
                 association_tl: &candidate.canonical_tl,
                 hanji: candidate.hanji.as_deref(),
                 consumed_bytes: candidate.consumed_span_end,
                 syllable_count: candidate.syllable_count,
             },
-            &settings,
+            &self.current_settings(),
             self.current_generation,
         ) else {
-            return (CandidateCommitOutcome::Unavailable, None);
+            return CandidateCommitOutcome::Unavailable;
         };
-        let outcome = CandidateCommitOutcome::from_transition(&transition);
-        // The ENGINE's text with OUR verdict: the engine decides what actually
-        // reached the document, this arm decided which script that is.
-        let committed = Self::committed_text(Some(&transition)).map(|text| ResolvedCommit {
-            text,
-            wrote_romanization: resolved.wrote_romanization,
-        });
-        self.apply(Some(transition), executor);
-        self.record_usage(candidate, outcome);
-        (outcome, committed)
+        let outcome = CandidateCommitOutcome::from_resolution(&committed.commit);
+        self.apply(Some(committed.transition), executor);
+        outcome
     }
 
     /// The text `transition` wrote to the document, read off the effects —
@@ -347,26 +316,6 @@ impl ComposingManager {
                 _ => None,
             })
             .next_back()
-    }
-
-    /// Counts a candidate the engine confirmed it took. Gated on the
-    /// effect-backed outcome: `Ignored` can follow a composition the engine
-    /// reset out from under the commit. Identity = `(display text, canonical
-    /// TL)` (Core Principle #7), never the document rendering.
-    fn record_usage(&self, candidate: &ContinuousCandidate, outcome: CandidateCommitOutcome) {
-        if !matches!(
-            outcome,
-            CandidateCommitOutcome::Nailed | CandidateCommitOutcome::Finalized
-        ) {
-            return;
-        }
-        // The engine counts it and, for a Hanji pick, keeps a learned phrase
-        // taken whole ahead of the eviction line (§50 touch-on-use).
-        self.usage.record(&Usage {
-            display_text: candidate.display_text.clone(),
-            canonical_tl: candidate.canonical_tl.clone(),
-            hanji: candidate.hanji.clone(),
-        });
     }
 
     /// Promotes the composition into the continuous phase, on the same call

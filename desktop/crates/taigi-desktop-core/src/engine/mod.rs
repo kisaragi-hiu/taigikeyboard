@@ -33,7 +33,8 @@ pub use nextword::{
 };
 pub use phonetics::{nfd_preprocess_for_lookup, strip_tone, tl_to_poj};
 pub use transition::{
-    CandidateMode, ComposingTransition, ContinuousCandidate, ContinuousFetchResult, Effect,
+    CandidateMode, ComposingTransition, ContinuousCandidate, ContinuousCommitResult,
+    ContinuousFetchResult, Effect,
 };
 
 #[cfg(test)]

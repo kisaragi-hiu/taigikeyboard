@@ -1,17 +1,18 @@
 //! User-data slice of the engine bridge: the engine owns the four stores
 //! (`docs/architecture/user-data-engine-roadmap.md`), the desktop names the
-//! files, reports its picks, and edits the custom dictionary through the
-//! same ops the other platforms' settings pages use. Answered only by a
-//! shell built with `dispatch/user-data` (roadmap U11); anywhere else the
-//! engine refuses and these answer `None` / `false` (`open`, `record_usage`)
-//! or `Err(UserDataError::EngineUnavailable)` (the page ops). Port of
+//! files, and edits the custom dictionary through the same ops the other
+//! platforms' settings pages use; the engine counts the picks itself (R5,
+//! `engine::commit_continuous`). Answered only by a shell built with
+//! `dispatch/user-data` (roadmap U11); anywhere else the engine refuses and
+//! these answer `false` (`open`) or `Err(UserDataError::EngineUnavailable)`
+//! (the page ops). Port of
 //! `RustEngineBridge+UserData.swift` / `UserDataClient.swift`.
 
 use std::path::Path;
 
 use protos::engine::{
     request, response, user_data_request, user_data_response, DeleteCustomEntry, ExportCustomCsv,
-    ImportCustomCsv, ListCustomEntries, OpenUserData, RecordUsage, ResetUserData, SaveCustomEntry,
+    ImportCustomCsv, ListCustomEntries, OpenUserData, ResetUserData, SaveCustomEntry,
     SearchCustomEntries, UserDataJournal, UserDataRequest,
 };
 pub use protos::engine::{
@@ -45,20 +46,6 @@ pub fn open(directory: &Path) -> bool {
         record_failure("userDataOpen", "response carried no open result");
         false
     }
-}
-
-/// One pick, as the engine counts it (`RecordUsage`). Best-effort: the
-/// engine queues the write, and a failed round-trip is logged, never
-/// surfaced to the user.
-pub fn record_usage(display_text: &str, canonical_tl: &str, hanji: Option<&str>) {
-    user_data(
-        user_data_request::Method::RecordUsage(RecordUsage {
-            display_text: display_text.to_owned(),
-            canonical_tl: canonical_tl.to_owned(),
-            hanji: hanji.filter(|hanji| !hanji.is_empty()).map(str::to_owned),
-        }),
-        "userDataRecordUsage",
-    );
 }
 
 // ---- The settings window's pages (roadmap P4; macOS `UserDataClient.swift`) ----

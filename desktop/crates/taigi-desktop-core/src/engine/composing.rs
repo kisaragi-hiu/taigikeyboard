@@ -14,14 +14,17 @@
 
 use protos::engine::{
     composing_request, request, response, Append, CaretDirection as WireCaretDirection,
-    CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw, ComposingRequest,
+    CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw, CommitScript, ComposingRequest,
     ComposingResponse, DeleteBackward, EnterContinuous, FetchAtPos, MoveCaret, Reset, TelexKey,
 };
 
+use crate::composing::CandidateScript;
 use crate::keys::CaretDirection;
 
 use super::bridge::{app_config, record_failure, roundtrip};
-use super::transition::{ComposingTransition, ContinuousCandidate, ContinuousFetchResult};
+use super::transition::{
+    ComposingTransition, ContinuousCandidate, ContinuousCommitResult, ContinuousFetchResult,
+};
 use crate::settings::EngineSettings;
 
 /// Appends one typed character to the raw buffer.
@@ -211,14 +214,17 @@ pub fn fetch_at_pos(
     })
 }
 
-/// What a candidate commit round-trips. Every field except `document_text`
-/// comes verbatim from the `ContinuousCandidate` the user picked — in
-/// particular `consumed_bytes` is the candidate's `consumed_span_end`, an
-/// absolute offset into the pending raw buffer (`composing.proto:228`).
+/// What a candidate commit round-trips. Every field except `script` comes
+/// verbatim from the `ContinuousCandidate` the user picked — in particular
+/// `consumed_bytes` is the candidate's `consumed_span_end`, an absolute
+/// offset into the pending raw buffer (`composing.proto` `CommitContinuous`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CommitContinuousArgs<'a> {
-    /// The platform's rendering of the candidate for the document.
-    pub document_text: &'a str,
+    /// Which of the pick's scripts the document gets, relative to the output
+    /// settings; the engine resolves the text (`composing::commit_text`).
+    pub script: CandidateScript,
+    /// The pick's display romanization, as the candidate carried it.
+    pub roman: &'a str,
     /// The identity keys the engine learns from (Core Principle #7).
     pub canonical_text: &'a str,
     pub association_tl: &'a str,
@@ -231,27 +237,39 @@ pub struct CommitContinuousArgs<'a> {
 
 /// Commits one candidate returned by `fetch_at_pos`. Consuming the whole
 /// pending buffer makes this a final commit; anything less nails the segment
-/// and stays continuous, writing nothing (`transition.rs:842-889`, Model B).
+/// and stays continuous, writing nothing (Model B). The engine resolves the
+/// document text from `script` and the settings, reports what the commit did,
+/// and — with the user data open — counts the pick itself (R5).
 pub fn commit_continuous(
     args: &CommitContinuousArgs<'_>,
     settings: &EngineSettings,
     generation: u64,
-) -> Option<ComposingTransition> {
-    dispatch(
+) -> Option<ContinuousCommitResult> {
+    let script = match args.script {
+        CandidateScript::Primary => CommitScript::Lead,
+        CandidateScript::Alternate => CommitScript::Other,
+    };
+    let response = composing_response(
         composing_request::Method::CommitContinuous(CommitContinuous {
-            display_text: args.document_text.to_owned(),
             consumed_bytes: args.consumed_bytes,
             syllable_count: args.syllable_count,
             canonical_text: args.canonical_text.to_owned(),
             association_tl: args.association_tl.to_owned(),
             hanji: args.hanji.filter(|h| !h.is_empty()).map(str::to_owned),
-            // `script` UNSPECIFIED: the platform-resolved `display_text` above.
-            ..Default::default()
+            script: script as i32,
+            roman: args.roman.to_owned(),
+            // Ignored once `script` is set: the engine writes what it resolved.
+            display_text: String::new(),
         }),
         "composingCommitContinuous",
         generation,
         Some(app_config(settings)),
-    )
+    )?;
+    Some(ContinuousCommitResult {
+        transition: ComposingTransition::decode(&response),
+        // Always set on this path; a default reads as UNSPECIFIED → ignored.
+        commit: response.commit.unwrap_or_default(),
+    })
 }
 
 fn dispatch(
