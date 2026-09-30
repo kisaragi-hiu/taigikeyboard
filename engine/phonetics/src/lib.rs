@@ -14,6 +14,7 @@ mod case_tables;
 pub mod case_transform;
 mod custom_search;
 mod derivation;
+mod key_family;
 mod normalization;
 mod poj;
 mod syllable;
@@ -33,6 +34,7 @@ pub use api::{
     toneless_reading_key, InputMode, PhoneticsError, System,
 };
 pub use derivation::{derive_abbrev, poj_abbrev_from_tl};
+pub use key_family::{abbrev_family_key, KeyFamily, HANJI_KEY_PREFIX};
 pub use normalization::{
     has_tone_marks, is_combining_tone_mark, normalize_input, taigi_unicode_base_form,
 };

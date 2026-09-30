@@ -16,7 +16,7 @@
 //!    `mode` (`tps:` against the C-0 emit of `dictionary.fst`).
 //! 2. `keys.is_empty()` → [`fetch_via_lexicon_partial_inner`] (Item 10
 //!    fallthrough) for ALL modes (TL/POJ/English/TPS). Each mode emits its
-//!    own family prefix via [`crate::shadow::mode_key_prefix`], so a TPS
+//!    own family prefix via [`phonetics::KeyFamily::for_input_mode`], so a TPS
 //!    leading initial like `ㄉ` scans `tps:ㄉ` byte-range exactly as TL's
 //!    `g` scans `tl:g`.
 //!    Else → `lexicon::fetch_candidates_for_keys_with_barriers` (span-local
@@ -618,7 +618,7 @@ fn fetch_walker_slot0_inner(
         // feeding the shadow + lattice (`build_shadow_lattice_with_barriers`) above
         // also feeds the key prefix here, so the lookup family is
         // consistent with the inventory family that produced the edge.
-        let key_prefix = crate::shadow::mode_key_prefix(mode);
+        let key_prefix = phonetics::KeyFamily::for_input_mode(mode).prefix();
         // Explicit-tone fix — the DICT lookup is tone-aware: a fully-toned
         // edge (`tai5`) looks up the verbatim `tl:tai5` key so slot 0 can
         // only be synthesized from the typed tone, matching the span-local
@@ -660,7 +660,7 @@ fn fetch_walker_slot0_inner(
         // 2026-08-20; the "already fires today" part of that finding did
         // not survive verification. The §17 branch DOES fire: TL/POJ custom
         // entries are the common case.
-        let custom_key = format!("{key_prefix}:{toneless}");
+        let custom_key = format!("{key_prefix}{toneless}");
         // v3.5.8 S6 (Codex pre-impl S6 Q3, 2026-05-17) — a
         // `custom_dictionary.db` entry whose normalized toneless
         // roman equals this edge's key OVERRIDES the `dict.bin`
@@ -1090,7 +1090,7 @@ pub(crate) fn assemble_candidates(
         // v3.5.9 D / C-3b — all modes (Tl / Poj / Tps / English) share
         // the same shadow-pipeline path: build the shadow + lattice ONCE
         // here and project the left-anchored keys via mode-aware
-        // [`shadow::mode_key_prefix`] + [`shadow::strip_tones_for_mode`];
+        // [`phonetics::KeyFamily::for_input_mode`] + [`shadow::strip_tones_for_mode`];
         // walker reuses the SAME lattice (no rebuild). The legacy
         // `build_keys_tps` short-circuit retired with C-3b — TPS now
         // walks the same path TL/POJ already do, the only difference

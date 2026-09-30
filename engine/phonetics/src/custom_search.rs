@@ -24,16 +24,12 @@ use crate::api::{
     to_tone_number, InputMode,
 };
 use crate::derivation::{derive_abbrev, derive_notone};
+use crate::key_family::KeyFamily;
 use crate::tps::{
     from_zhuyin, is_tps_tone_mark, normalize_tps_tone8_scalar, tps_abbrev_from_tl,
     tps_notone_from_tl, tps_notone_or_variant, tps_num_from_tl,
 };
 use std::collections::HashSet;
-
-/// Family prefixes — mirror the system-dict FST key families.
-const FAMILY_TL: &str = "tl";
-const FAMILY_POJ: &str = "poj";
-const FAMILY_TPS: &str = "tps";
 
 /// Forms — mirror the existing `notone` / `abbrev` / `roman_num` columns.
 const FORM_NUM: &str = "num";
@@ -67,8 +63,8 @@ pub fn derive_custom_search_keys(roman: &str) -> Vec<CustomSearchKey> {
     let poj = tl_display_to_poj_display(&tl);
 
     let mut keys = Vec::new();
-    push_latin_family(&mut keys, FAMILY_TL, &tl);
-    push_latin_family(&mut keys, FAMILY_POJ, &poj);
+    push_latin_family(&mut keys, KeyFamily::Tl, &tl);
+    push_latin_family(&mut keys, KeyFamily::Poj, &poj);
     push_tps_family(&mut keys, &tl);
     dedup_nonempty(keys)
 }
@@ -85,15 +81,15 @@ pub fn derive_custom_query_key(input: &str, input_mode: &str) -> Option<CustomSe
     // layout may arrive as `"tps"` or, on the pre-R6 wire, as `"tl"`; either
     // way a Bopomofo-free query takes the TL family.
     let family = if contains_tps(input) {
-        FAMILY_TPS
+        KeyFamily::Tps
     } else {
         match parse_input_mode(input_mode) {
-            InputMode::Poj => FAMILY_POJ,
-            InputMode::Tl | InputMode::Tps | InputMode::English => FAMILY_TL,
+            InputMode::Poj => KeyFamily::Poj,
+            InputMode::Tl | InputMode::Tps | InputMode::English => KeyFamily::Tl,
         }
     };
 
-    let (form, key) = if family == FAMILY_TPS {
+    let (form, key) = if family == KeyFamily::Tps {
         // TPS tone marks are spacing modifier letters, NOT ASCII digits, so the
         // tone-aware test is glyph presence; the toneless form additionally
         // strips them to match the stored `tps:notone` key.
@@ -112,12 +108,16 @@ pub fn derive_custom_query_key(input: &str, input_mode: &str) -> Option<CustomSe
     if key.is_empty() {
         return None;
     }
-    Some(CustomSearchKey { family, form, key })
+    Some(CustomSearchKey {
+        family: family.tag(),
+        form,
+        key,
+    })
 }
 
 // ---- WRITE helpers ------------------------------------------------------
 
-fn push_latin_family(keys: &mut Vec<CustomSearchKey>, family: &'static str, display: &str) {
+fn push_latin_family(keys: &mut Vec<CustomSearchKey>, family: KeyFamily, display: &str) {
     push_key(
         keys,
         family,
@@ -133,35 +133,34 @@ fn push_tps_family(keys: &mut Vec<CustomSearchKey>, tl: &str) {
     let notone = tps_notone_from_tl(tl);
     let abbrev = tps_abbrev_from_tl(tl);
     // Primary forms.
-    push_key(keys, FAMILY_TPS, FORM_NUM, num.clone());
-    push_key(keys, FAMILY_TPS, FORM_NOTONE, notone.clone());
-    push_key(keys, FAMILY_TPS, FORM_ABBREV, abbrev.clone());
+    push_key(keys, KeyFamily::Tps, FORM_NUM, num.clone());
+    push_key(keys, KeyFamily::Tps, FORM_NOTONE, notone.clone());
+    push_key(keys, KeyFamily::Tps, FORM_ABBREV, abbrev.clone());
     // er/or dialect variants — additional same-(family, form) rows (ㄜ→ㄛ) so a
     // query producing whichever glyph the user typed still matches. Empty when
     // the form carries no ㄜ.
-    push_key(keys, FAMILY_TPS, FORM_NUM, tps_notone_or_variant(&num));
+    push_key(keys, KeyFamily::Tps, FORM_NUM, tps_notone_or_variant(&num));
     push_key(
         keys,
-        FAMILY_TPS,
+        KeyFamily::Tps,
         FORM_NOTONE,
         tps_notone_or_variant(&notone),
     );
     push_key(
         keys,
-        FAMILY_TPS,
+        KeyFamily::Tps,
         FORM_ABBREV,
         tps_notone_or_variant(&abbrev),
     );
 }
 
-fn push_key(
-    keys: &mut Vec<CustomSearchKey>,
-    family: &'static str,
-    form: &'static str,
-    key: String,
-) {
+fn push_key(keys: &mut Vec<CustomSearchKey>, family: KeyFamily, form: &'static str, key: String) {
     if !key.is_empty() {
-        keys.push(CustomSearchKey { family, form, key });
+        keys.push(CustomSearchKey {
+            family: family.tag(),
+            form,
+            key,
+        });
     }
 }
 
@@ -199,7 +198,7 @@ fn fuse_latin_numeric(numeric: &str) -> String {
 /// (`tps_num_from_tl` → `to_zhuyin(encode_safe=false)`). Canonicalize `U+02D9 →
 /// U+0307` BEFORE classification so the kept (`num`) form matches the stored key
 /// and the dropped (`notone`) form still strips it — mirrors
-/// `lexicon::key_normalizer::normalize_tps_key_body`.
+/// [`crate::key_family::tps_key_body`].
 fn strip_tps_input(input: &str, keep_tone_marks: bool) -> String {
     let mut out = String::with_capacity(input.len());
     for ch in input.chars() {
@@ -239,8 +238,8 @@ mod tests {
     #[test]
     fn poj_stored_is_findable_via_tl_and_poj() {
         let stored = derive_custom_search_keys("chiah");
-        assert!(has(&stored, FAMILY_TL, FORM_NOTONE, "tsiah"));
-        assert!(has(&stored, FAMILY_POJ, FORM_NOTONE, "chiah"));
+        assert!(has(&stored, "tl", FORM_NOTONE, "tsiah"));
+        assert!(has(&stored, "poj", FORM_NOTONE, "chiah"));
 
         let q_tl = derive_custom_query_key("tsiah", "tl").unwrap();
         assert!(
@@ -276,7 +275,7 @@ mod tests {
         // input_mode "tl" on purpose — effective family must upgrade to tps
         // because the raw input contains Bopomofo.
         let q = derive_custom_query_key(&bopomofo, "tl").unwrap();
-        assert_eq!(q.family, FAMILY_TPS);
+        assert_eq!(q.family, "tps");
         assert_eq!(q.form, FORM_NOTONE);
         assert!(
             query_hits_stored(&stored, &q),
@@ -290,7 +289,7 @@ mod tests {
     #[test]
     fn tone_aware_cross_mode_num() {
         let stored = derive_custom_search_keys("chia̍h");
-        assert!(has(&stored, FAMILY_TL, FORM_NUM, "tsiah8"));
+        assert!(has(&stored, "tl", FORM_NUM, "tsiah8"));
         let q = derive_custom_query_key("tsiah8", "tl").unwrap();
         assert_eq!(q.form, FORM_NUM);
         assert!(query_hits_stored(&stored, &q));
@@ -302,7 +301,7 @@ mod tests {
     #[test]
     fn abbrev_cross_form_match() {
         let stored = derive_custom_search_keys("guá-sī");
-        assert!(has(&stored, FAMILY_TL, FORM_ABBREV, "gs"));
+        assert!(has(&stored, "tl", FORM_ABBREV, "gs"));
         let q = derive_custom_query_key("gs", "tl").unwrap();
         assert!(
             query_hits_stored(&stored, &q),
@@ -318,7 +317,7 @@ mod tests {
         let stored = derive_custom_search_keys("chia̍h");
         let stored_num = stored
             .iter()
-            .find(|k| k.family == FAMILY_TPS && k.form == FORM_NUM)
+            .find(|k| k.family == "tps" && k.form == FORM_NUM)
             .expect("tps num key present");
         assert!(
             stored_num.key.contains('\u{0307}'),
@@ -328,7 +327,7 @@ mod tests {
         let keyboard_input = stored_num.key.replace('\u{0307}', "\u{02d9}");
         assert!(keyboard_input.contains('\u{02d9}'));
         let q = derive_custom_query_key(&keyboard_input, "tl").unwrap();
-        assert_eq!(q.family, FAMILY_TPS);
+        assert_eq!(q.family, "tps");
         assert_eq!(q.form, FORM_NUM, "tone mark present → num form");
         assert_eq!(q.key, stored_num.key, "U+02D9 normalized back to U+0307");
         assert!(query_hits_stored(&stored, &q));
@@ -345,8 +344,8 @@ mod tests {
     #[test]
     fn poj_oo_dot_entry_is_findable_by_ascii_oo_query() {
         let stored = derive_custom_search_keys("băng-só͘-khó͘");
-        assert!(has(&stored, FAMILY_POJ, FORM_NOTONE, "bangsookhoo"));
-        assert!(has(&stored, FAMILY_TL, FORM_NOTONE, "bangsookhoo"));
+        assert!(has(&stored, "poj", FORM_NOTONE, "bangsookhoo"));
+        assert!(has(&stored, "tl", FORM_NOTONE, "bangsookhoo"));
 
         let q_poj = derive_custom_query_key("bangsookhoo", "poj").unwrap();
         assert!(
@@ -364,7 +363,7 @@ mod tests {
     #[test]
     fn poj_oo_dot_entry_is_findable_by_numeric_ascii_query() {
         let stored = derive_custom_search_keys("băng-só͘-khó͘");
-        assert!(has(&stored, FAMILY_POJ, FORM_NUM, "bang9soo2khoo2"));
+        assert!(has(&stored, "poj", FORM_NUM, "bang9soo2khoo2"));
         let q = derive_custom_query_key("bang9soo2khoo2", "poj").unwrap();
         assert_eq!(q.form, FORM_NUM);
         assert!(query_hits_stored(&stored, &q));
@@ -376,7 +375,7 @@ mod tests {
     #[test]
     fn poj_nasal_entry_is_findable_by_numeric_ascii_query() {
         let stored = derive_custom_search_keys("kiaⁿ");
-        assert!(has(&stored, FAMILY_POJ, FORM_NUM, "kiann1"));
+        assert!(has(&stored, "poj", FORM_NUM, "kiann1"));
         let q = derive_custom_query_key("kiann1", "poj").unwrap();
         assert!(query_hits_stored(&stored, &q));
     }
@@ -387,8 +386,8 @@ mod tests {
     fn oo_dot_does_not_collapse_onto_bare_o() {
         let dotted = derive_custom_search_keys("ō͘");
         let bare = derive_custom_search_keys("ô");
-        assert!(has(&dotted, FAMILY_POJ, FORM_NOTONE, "oo"));
-        assert!(has(&bare, FAMILY_POJ, FORM_NOTONE, "o"));
+        assert!(has(&dotted, "poj", FORM_NOTONE, "oo"));
+        assert!(has(&bare, "poj", FORM_NOTONE, "o"));
         let q_bare = derive_custom_query_key("o", "poj").unwrap();
         assert!(
             !query_hits_stored(&dotted, &q_bare),

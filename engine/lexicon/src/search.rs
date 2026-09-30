@@ -1,7 +1,7 @@
 //! Search orchestration.
 //!
 //! Pipeline (romanization; hanji queries go through `search_by_hanzi`):
-//! 1. Build trie key via `key_normalizer`.
+//! 1. Build trie key via `phonetics::KeyFamily::search_key`.
 //! 2. `prefix_index.lookup_prefix` returns insertion-ordered rowids
 //!    (D-12 parity correction toward Android).
 //! 3. Resolve each rowid through `dictionary_reader.record` + filter,
@@ -12,11 +12,11 @@
 //! same rowid). The lexicon search path is now mode-blind for that axis.
 
 use indexmap::IndexSet;
+use phonetics::{abbrev_family_key, KeyFamily, HANJI_KEY_PREFIX};
 
 use crate::association_reader::{word_key, AssocFilter, AssociationReader};
 use crate::dictionary_reader::{DictionaryReader, DictionaryRecord, Filter};
 use crate::error::LexiconError;
-use crate::key_normalizer::{self, KeyMode, KeyType};
 use crate::prefix_index::PrefixIndex;
 
 /// Public per-row output. Mirrors proto `TaigiWord` but kept Rust-native to
@@ -45,20 +45,12 @@ pub struct LexiconAssocOut {
     pub count: u32,
 }
 
-// Search input mode (romanization scheme); `api::proto_input_mode` maps proto InputMode onto it.
-#[derive(Debug, Clone, Copy)]
-pub enum SearchInputMode {
-    Tl,
-    Poj,
-    // TPS bopomofo — queries the `tps:` key family, independent since C-1.
-    Tps,
-}
-
 #[derive(Debug, Clone)]
 pub struct SearchParams {
     // Raw user input, before normalization.
     pub input: String,
-    pub input_mode: SearchInputMode,
+    // Key family of the input; `api::proto_key_family` maps proto InputMode onto it.
+    pub family: KeyFamily,
     pub limit: u32,
     // Enabled-source bitmask, including the variant + khiin control bits.
     pub enabled_sources_bitmask: u32,
@@ -73,15 +65,7 @@ pub fn search(
         return Ok(Vec::new());
     }
 
-    let key = key_normalizer::build(
-        &params.input,
-        KeyType::Romanization,
-        match params.input_mode {
-            SearchInputMode::Tl => KeyMode::Tl,
-            SearchInputMode::Poj => KeyMode::Poj,
-            SearchInputMode::Tps => KeyMode::Tps,
-        },
-    );
+    let key = params.family.search_key(&params.input);
 
     // Exact-then-prefix concatenation matches Android's
     // `(exactRowIds + prefixRowIds).distinct()` semantics. IndexSet
@@ -93,7 +77,7 @@ pub fn search(
     // since §46, so both families are unioned — main exact, abbrev exact,
     // main prefix, abbrev prefix. Only the insertion order of frequency
     // ties changed against the pre-§46 single-range byte order.
-    let abbrev_key = key_normalizer::abbrev_family_key(&key);
+    let abbrev_key = abbrev_family_key(&key);
     let mut rowids: IndexSet<u32> = IndexSet::new();
     for id in prefix_index.lookup_exact(&key) {
         rowids.insert(id);
@@ -131,7 +115,7 @@ pub fn search_by_hanzi(
     if query.is_empty() || limit == 0 {
         return Ok(Vec::new());
     }
-    let key = format!("hanzi:{query}");
+    let key = format!("{HANJI_KEY_PREFIX}{query}");
     let mut rowids: IndexSet<u32> = IndexSet::new();
     for id in prefix_index.lookup_exact(&key) {
         rowids.insert(id);

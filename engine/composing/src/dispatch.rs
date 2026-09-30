@@ -16,7 +16,7 @@
 //! per the Phase 5 module contract pinned in
 //! `engine/lexicon/src/continuous/`: TL/English emit `tl:<lowered>`,
 //! POJ emits `poj:<lowered>` (v3.5.9 B-2 PR #309 promoted POJ to a
-//! first-class FST key family via `composing::shadow::mode_key_prefix`),
+//! first-class FST key family via `phonetics::KeyFamily::for_input_mode`),
 //! and TPS emits `tps:<bopomofo_toneless>` against the C-0 emit of
 //! `dictionary.fst` (v3.5.9 D / C-3b promoted TPS to first-class via
 //! the same shadow → lattice path TL/POJ already walk; the legacy

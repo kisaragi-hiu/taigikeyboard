@@ -252,7 +252,7 @@ pub fn is_tps_tone_mark(ch: char) -> bool {
 /// every other char (including the already-combining `U+0307`) passes through.
 ///
 /// Char-level shared source for the key-shaping sites that build a `tps:` key
-/// from raw buffer input: `lexicon::key_normalizer` (Tab3 search),
+/// from raw buffer input: `KeyFamily::search_key` (Tab3 search),
 /// `custom_search` (custom-dictionary keys), and `composing::shadow`
 /// (continuous explicit-tone key). The continuous syllabifier probe
 /// (`composing::syllabifier::tps`) applies the same `U+02D9 → U+0307`

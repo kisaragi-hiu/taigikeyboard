@@ -12,9 +12,10 @@ use std::path::PathBuf;
 use lexicon::association_reader::AssociationReader;
 use lexicon::dictionary_reader::{DictionaryReader, Filter};
 use lexicon::prefix_index::PrefixIndex;
-use lexicon::search::{self, SearchInputMode, SearchParams};
+use lexicon::search::{self, SearchParams};
 use lexicon::LexiconError;
 use lexicon::{EngineHandle, LexiconPaths};
+use phonetics::KeyFamily;
 
 use crate::common::{build_tkdb_v3, write_synthetic_fst};
 use test_support::{build_tkwa, engine_install_lock, write_temp};
@@ -156,9 +157,9 @@ fn invariant_lex_lookup_rowids_order_preserves_insertion() {
 
 // --- TPS three-index read path (C-1) -----------------------------------
 
-/// `SearchParams{input_mode=Tps}` now hits the `tps:` FST family
+/// `SearchParams { family: KeyFamily::Tps }` now hits the `tps:` FST family
 /// directly. Pins the C-0 emit shape (literal Bopomofo + tone mark) +
-/// the C-1 `key_normalizer` flip; pre-C-1 this same request fell through
+/// the C-1 key-family flip; pre-C-1 this same request fell through
 /// to `tl:` and missed every `tps:` row.
 #[test]
 fn tps_input_mode_hits_tps_family_through_search() {
@@ -176,7 +177,7 @@ fn tps_input_mode_hits_tps_family_through_search() {
 
     let params = SearchParams {
         input: "\u{3124}\u{02CA}".to_string(),
-        input_mode: SearchInputMode::Tps,
+        family: KeyFamily::Tps,
         limit: 50,
         enabled_sources_bitmask: u32::MAX,
     };
@@ -202,11 +203,11 @@ fn tps_input_mode_tone8_substitution_matches_build_pipeline_key() {
     let dict = synth_dictionary_reader(&[(0, 100, "_tone8_row", "_")]);
 
     // Platform keyboard types `\u{02D9}` (standalone modifier letter
-    // dot). `key_normalizer` substitutes to `\u{0307}` (combining) on
+    // dot). `KeyFamily::search_key` substitutes to `\u{0307}` (combining) on
     // the TPS path.
     let params = SearchParams {
         input: "\u{31A0}\u{3124}\u{31B7}\u{02D9}".to_string(),
-        input_mode: SearchInputMode::Tps,
+        family: KeyFamily::Tps,
         limit: 50,
         enabled_sources_bitmask: u32::MAX,
     };
@@ -241,7 +242,7 @@ fn tps_er_or_dual_emit_both_glyphs_hit_same_rowid() {
     // ㄜ-glyph user input (bridge default form).
     let er_params = SearchParams {
         input: "\u{310D}\u{311C}\u{02EA}".to_string(),
-        input_mode: SearchInputMode::Tps,
+        family: KeyFamily::Tps,
         limit: 50,
         enabled_sources_bitmask: u32::MAX,
     };
@@ -259,7 +260,7 @@ fn tps_er_or_dual_emit_both_glyphs_hit_same_rowid() {
     // the variant key emitted at build time.
     let or_params = SearchParams {
         input: "\u{310D}\u{311B}\u{02EA}".to_string(),
-        input_mode: SearchInputMode::Tps,
+        family: KeyFamily::Tps,
         limit: 50,
         enabled_sources_bitmask: u32::MAX,
     };

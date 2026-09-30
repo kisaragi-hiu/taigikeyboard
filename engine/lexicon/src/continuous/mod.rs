@@ -26,7 +26,7 @@
 //! - **`input` MUST be mode-canonical** (lowercase or mixed-case): TL
 //!   ASCII under TL/English, POJ ASCII under POJ, Bopomofo under TPS. All
 //!   modes walk the same shadow → lattice path in `composing` and emit
-//!   keys in their own FST family (`composing::shadow::mode_key_prefix`).
+//!   keys in their own FST family (`phonetics::KeyFamily::for_input_mode`).
 //! - `endings` SHOULD be ascending UTF-8 char boundaries within
 //!   `input[pos..]`. Out-of-range or non-boundary endings are silently
 //!   skipped (matches the syllabifier's safe contract).
@@ -59,6 +59,7 @@
 //! syllabifier endings → `(span, key)` pairs) lives in
 //! `engine/lexicon/tests/common/mod.rs`.
 
+use phonetics::{KeyFamily, HANJI_KEY_PREFIX};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::dictionary_reader::{DictionaryReader, Filter};
@@ -579,7 +580,7 @@ fn for_each_exact_reading(
     final_only_offsets: &[usize],
     mut visit: impl FnMut(&str, u32),
 ) {
-    if key.starts_with("tps:") {
+    if key.starts_with(KeyFamily::Tps.prefix()) {
         for (matched_key, rowid, _subst) in
             prefix_index.lookup_exact_tps_readings(key, final_only_offsets)
         {
@@ -624,7 +625,7 @@ fn is_unmarked_tps_tone(tone: char) -> bool {
 /// `reading` is a canonical TL reading — `DictionaryRecord.tl` for a
 /// dictionary hit, `CustomEntry.roman` for a custom entry.
 fn reading_passes_space_pin(tps_body: &str, reading: &str) -> bool {
-    let body = match tps_body.strip_prefix("tps:") {
+    let body = match tps_body.strip_prefix(KeyFamily::Tps.prefix()) {
         Some(body) => body,
         // Bare body — the whole-buffer form, TPS by construction.
         None if !tps_body.contains(':') => tps_body,
@@ -715,7 +716,7 @@ fn exact_candidates_for_key(
 /// promoted POJ and v3.5.9 D / C-3b promoted TPS to first-class FST
 /// families). The production caller
 /// (`composing::continuous::assemble_candidates`) selects the
-/// prefix via `composing::shadow::mode_key_prefix(mode)` and feeds
+/// prefix via `phonetics::KeyFamily::for_input_mode(mode)` and feeds
 /// pairs in directly for all modes.
 ///
 /// # v3.5.8 Phase 9.1 — lexicographic CandidateSortKey
@@ -948,7 +949,7 @@ pub fn fetch_partial_prefix_candidates_unbounded(
         // travels with each rowid so the record guard below validates what
         // the pattern actually hit, not the literal prefix (Codex
         // post-impl 2026-08-19 BLOCK 1). TL/POJ keep the plain lookup.
-        let hits: Vec<(String, u32)> = if fst_key.starts_with("tps:") {
+        let hits: Vec<(String, u32)> = if fst_key.starts_with(KeyFamily::Tps.prefix()) {
             ctx.prefix_index
                 .lookup_prefix_shortest_first_tps_readings(fst_key, PARTIAL_PREFIX_HYDRATE_CAP)
         } else {
@@ -1201,7 +1202,7 @@ pub fn compound_hanji_exists(
     if syllable_count < 2 {
         return false;
     }
-    let key = format!("hanzi:{hanji}");
+    let key = format!("{HANJI_KEY_PREFIX}{hanji}");
     for rowid in prefix_index.lookup_exact(&key) {
         if let Some(record) = dict.record(rowid) {
             if record.syllable_count == syllable_count && record.hanzi.as_deref() == Some(hanji) {

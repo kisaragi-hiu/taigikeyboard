@@ -40,7 +40,7 @@ User input → key-level adjust → shadow/lattice → tps: key → FST lookup
   ㄉㄧㄠˊ  → phonetics::tps_adjust → composing → tps:ㄉㄧㄠˊ → dictionary hit
 ```
 
-Under `InputMode::Tps` the buffer stays Bopomofo end to end: `composing::shadow::mode_key_prefix` (`engine/composing/src/shadow.rs:22-28`) selects the `tps` family, and the lexicon fetch (`engine/lexicon/src/continuous/`) looks the key up in `dictionary.fst` populated at build time by `dictionary/build/create_fst.py`. The legacy per-syllable `phonetics::tps_to_tl` fold into `tl:` keys was retired in v3.5.9 D / C-3b (`engine/composing/src/continuous.rs:334-340`); `tps_to_tl` now serves only `phonetics::tps_adjust` syllable validation (`engine/phonetics/src/tps_adjust.rs:179-180`).
+Under `InputMode::Tps` the buffer stays Bopomofo end to end: `phonetics::KeyFamily::for_input_mode` (`engine/phonetics/src/key_family.rs`) selects the `tps` family, and the lexicon fetch (`engine/lexicon/src/continuous/`) looks the key up in `dictionary.fst` populated at build time by `dictionary/build/create_fst.py`. The legacy per-syllable `phonetics::tps_to_tl` fold into `tl:` keys was retired in v3.5.9 D / C-3b (`engine/composing/src/continuous.rs:334-340`); `tps_to_tl` now serves only `phonetics::tps_adjust` syllable validation (`engine/phonetics/src/tps_adjust.rs:179-180`).
 
 ---
 
@@ -430,7 +430,7 @@ TPS multi-syllable input inserts an automatic syllable separator (`-`) at bounda
 
 TPS tone 1 and tone 4 are **unmarked** (no symbol). The build pipeline converts each row's TL form to fused Bopomofo via `dictionary/common/stages/numtone.py::_derive_tps_num`, which emits the SAME `tps_num` for both single-syllable `tsua2` (紙) and multi-syllable `tsu1a2` (珠仔) — both render as `ㄗㄨㄚˋ` because the tone-1 syllable on `tsu` is unmarked. The `tps:ㄗㄨㄚˋ` key in `dictionary.fst` therefore points to both rowids, and a TPS user typing `ㄗㄨㄚˋ` recovers both candidates.
 
-Pre-C-1, the engine fell through to `tl:` keys for TPS input, so the user's `ㄗㄨㄚˋ` lookup never reached the dictionary at all without per-keystroke conversion. C-1 (`engine/lexicon/src/key_normalizer.rs:34`) flipped `KeyMode::Tps` to the `tps:` family directly, and C-0 populated that family at build time.
+Pre-C-1, the engine fell through to `tl:` keys for TPS input, so the user's `ㄗㄨㄚˋ` lookup never reached the dictionary at all without per-keystroke conversion. C-1 flipped TPS input to the `tps:` family directly (today `phonetics::KeyFamily::Tps`, `engine/phonetics/src/key_family.rs`), and C-0 populated that family at build time.
 
 ---
 

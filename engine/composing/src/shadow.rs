@@ -4,29 +4,12 @@
 // helpers.
 
 use lexicon::{ConsumedSpan, SyllableInventory, TonePin, TypedBoundary};
-use phonetics::InputMode;
+use phonetics::{InputMode, KeyFamily};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::lattice::{build_lattice_with_barriers, Lattice};
 use crate::syllabifier::tl::is_tl_tone_digit;
 use crate::syllabifier::valid_span_endings_lowered_with_barriers;
-
-/// v3.5.9 B-2 — map `mode` to its FST key family prefix. The tagged-single-FST
-/// (`syllables.fst` + `dictionary.fst`) carries `tl:` / `poj:` / `tps:`
-/// families; English shares the TL family because English buffers do not
-/// have their own inventory and the syllabifier is not invoked there.
-///
-/// v3.5.9 D / C-3b — TPS promoted to a first-class family. The continuous
-/// walker now emits `tps:<bopomofo_toneless>` keys against the C-0 emit
-/// of `dictionary.fst`; the legacy `build_keys_tps` path (which folded
-/// TPS into `tl:` keys via `phonetics::tps_to_tl`) is retired.
-pub(crate) fn mode_key_prefix(mode: InputMode) -> &'static str {
-    match mode {
-        InputMode::Poj => "poj",
-        InputMode::Tps => "tps",
-        InputMode::Tl | InputMode::English => "tl",
-    }
-}
 
 /// v3.5.9 D / C-3b — mode-aware tone-mark stripping. Generalises the
 /// TL/POJ-only [`strip_ascii_tone_digits`] so a TPS shadow slice strips
@@ -640,7 +623,7 @@ fn remainder_has_closed_syllable(
 /// [`span_key`] derives it for both the left-anchored keys and the walker
 /// edges.
 pub(crate) struct SpanKey {
-    /// `"{prefix}:{body}"` — [`mode_key_prefix`] + [`fst_body_for_span`].
+    /// `"{prefix}{body}"` — [`KeyFamily::prefix`] + [`fst_body_for_span`].
     pub key: String,
     /// [`key_final_only_offsets`] — KEY byte offsets of the glyph before
     /// each barrier inside / at the end of the span.
@@ -679,9 +662,9 @@ pub(crate) fn span_key(
     if body.is_empty() {
         return None;
     }
-    let prefix = mode_key_prefix(mode);
+    let prefix = KeyFamily::for_input_mode(mode).prefix();
     let span_barriers = span_local_barriers(barriers, start, end);
-    let final_only = key_final_only_offsets(span, &body, mode, &span_barriers, prefix.len() + 1);
+    let final_only = key_final_only_offsets(span, &body, mode, &span_barriers, prefix.len());
     // §52 — the typed runs this span answers to: each interior / trailing
     // barrier with its kind, plus the run typed right before the span
     // (`at: 0`), which only a reading that itself opens with `--` reads.
@@ -695,7 +678,7 @@ pub(crate) fn span_key(
         })
         .collect();
     Some(SpanKey {
-        key: format!("{prefix}:{body}"),
+        key: format!("{prefix}{body}"),
         final_only,
         tone_pin: span_tone_pin(span, &body, end, mode, barriers, boundaries),
     })
@@ -1174,8 +1157,8 @@ fn fused_shadow_with_barriers(
 ///
 /// MUST produce a key byte-identical to the one
 /// `continuous::fetch_walker_slot0_inner`'s edge provider builds for a
-/// syllable span (`<prefix>:{toneless}` with `prefix ∈ {tl, poj}` per
-/// `mode_key_prefix(mode)`; v3.5.9 B-2 PR #309 promoted POJ to a
+/// syllable span (`{prefix}{toneless}`, the colon-carrying `tl:` / `poj:` /
+/// `tps:` prefix of `KeyFamily::for_input_mode(mode)`; v3.5.9 B-2 PR #309 promoted POJ to a
 /// first-class FST key family, pre-B-2 every key prefixed `tl:`).
 /// `toneless` is the hyphen-stripped, mode-canonicalized,
 /// (TPS-only) space-stripped, tone-stripped shadow slice — the shared
@@ -1229,8 +1212,8 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
     // byte-identity with the edge provider's emitted key (the S6
     // invariant), so this MUST consume the same `mode` and the same
     // shadow pipeline — both are now mode-aware in lockstep.
-    let prefix = mode_key_prefix(mode);
-    Some(format!("{prefix}:{toneless}"))
+    let prefix = KeyFamily::for_input_mode(mode).prefix();
+    Some(format!("{prefix}{toneless}"))
 }
 
 /// Canonicalize POJ-display input (`pe̍h-ōe-jī`, `chóa`, `peⁿ`, `so͘`)
@@ -1507,7 +1490,7 @@ fn offset_aware_replace(s: &mut String, map: &mut Vec<usize>, find: &str, repl: 
 /// **skips the syllabifier** (the partial-prefix path is reached
 /// precisely because the syllabifier returned no valid ending — TL `g`,
 /// TPS `ㄉ`, etc.). Emits the `tl:` / `poj:` / `tps:` family prefix
-/// matching `mode` via [`mode_key_prefix`] so the byte-range scan in
+/// matching `mode` via [`KeyFamily::for_input_mode`] so the byte-range scan in
 /// [`crate::continuous::fetch_via_lexicon_partial_inner`] hits the right
 /// FST family. Returns `None` when the resulting toneless key is empty
 /// (raw was hyphen-only / digit-only for TL/POJ, bare tone mark for TPS)
@@ -1568,14 +1551,15 @@ pub(crate) fn abbrev_query_key(raw: &str, mode: InputMode) -> Option<String> {
             .all(|c| phonetics::is_tps_char(c) && !phonetics::is_tps_tone_mark(c)),
         InputMode::English => false,
     };
-    shaped.then(|| {
-        format!(
-            "{}{}:{}",
-            mode_key_prefix(mode),
-            lexicon::key_normalizer::ABBREV_FAMILY_SUFFIX,
-            raw.to_ascii_lowercase()
-        )
-    })
+    if !shaped {
+        return None;
+    }
+    let key = format!(
+        "{}{}",
+        KeyFamily::for_input_mode(mode).prefix(),
+        raw.to_ascii_lowercase()
+    );
+    phonetics::abbrev_family_key(&key)
 }
 
 #[cfg(test)]
