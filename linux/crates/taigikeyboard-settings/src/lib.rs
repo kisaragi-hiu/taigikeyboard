@@ -6,7 +6,6 @@ pub mod jobs;
 pub mod pages;
 pub mod presentation;
 pub mod recorder;
-pub mod search;
 pub mod user_data;
 pub mod window;
 pub mod writer;
@@ -57,14 +56,14 @@ pub fn run() -> gtk::glib::ExitCode {
                 // named after the application id (which is not installed).
                 gtk::Window::set_default_icon_name("taigikeyboard");
                 let writer = writer::SettingsWriter::at_launch();
-                // The stores follow the settings: no user directory, no
-                // learning data either (the banner says so).
-                let stores = if writer.is_read_only() {
-                    Err("HOME / XDG_DATA_HOME".to_owned())
+                // The engine's user data follows the settings: no user
+                // directory, no learning data either (the banner says so).
+                let data_failure = if writer.is_read_only() {
+                    Some("HOME / XDG_DATA_HOME".to_owned())
                 } else {
                     user_data::open_at_launch()
                 };
-                let shell = SettingsWindow::build(application, writer, stores);
+                let shell = SettingsWindow::build(application, writer, data_failure);
                 *window.borrow_mut() = Some(Rc::clone(&shell));
                 shell
             }

@@ -18,7 +18,6 @@ use std::cell::Cell;
 use std::rc::Rc;
 use taigi_desktop_core::settings::{SettingChoice, SettingsDocument, SettingsKey, SettingsPane};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-use taigi_desktop_storage::UserDataStores;
 
 /// The panes this crate draws, listed or not (Dictionary Search and About have no
 /// sidebar row, as on the other desktops).
@@ -69,8 +68,10 @@ pub struct PageContext<'a> {
     pub shell: Shell,
     pub strings: &'a StringResolver,
     pub document: &'a SettingsDocument,
-    /// `None` in a read-only launch: the pages over user data show why.
-    pub stores: Option<&'a UserDataStores>,
+    /// Whether this launch opened the engine's user-data stores; false in
+    /// a read-only launch, where the pages over user data build only their
+    /// switch (the banner says why).
+    pub has_user_data: bool,
     pub job_slot: JobSlot,
     suppress: Rc<Cell<bool>>,
     refreshers: Vec<Refresher>,
@@ -82,14 +83,14 @@ impl<'a> PageContext<'a> {
         window: &Rc<SettingsWindow>,
         strings: &'a StringResolver,
         document: &'a SettingsDocument,
-        stores: Option<&'a UserDataStores>,
+        has_user_data: bool,
         job_slot: &JobSlot,
     ) -> Self {
         Self {
             shell: Shell(Rc::downgrade(window)),
             strings,
             document,
-            stores,
+            has_user_data,
             job_slot: job_slot.clone(),
             suppress: Rc::new(Cell::new(false)),
             refreshers: Vec::new(),
@@ -270,10 +271,10 @@ pub fn build(
     window: &Rc<SettingsWindow>,
     strings: &StringResolver,
     document: &SettingsDocument,
-    stores: Option<&UserDataStores>,
+    has_user_data: bool,
     job_slot: &JobSlot,
 ) -> Page {
-    let context = PageContext::new(window, strings, document, stores, job_slot);
+    let context = PageContext::new(window, strings, document, has_user_data, job_slot);
     let widget = adw::PreferencesPage::new();
     // Explicit per pane: a pane added to `BUILT` without a page is a
     // mistake to hear about, not a General page under the wrong title.

@@ -99,7 +99,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 |---------|-----------|-----------------|
 | **Backup (`.taigi`)** | Export/import user data (custom dict, frequency, associations) | engine ops `ExportBackup` / `ImportBackup` → `userdata::export_backup` / `import_backup` |
 | **DataManagement** | Production UI for user data (replaced Debug screens) | `DataManagementView` / `DataManagementScreen` |
-| **DictionarySearch** | In-app dictionary search from settings (uses `RustEngineBridge.searchByHanzi` for hanzi inputs) | iOS / Android `DictionarySearchService` (policy, over a `LexiconClient`); Android `DictionarySearchViewModel` |
+| **DictionarySearch** | In-app dictionary search from settings (uses `RustEngineBridge.searchByHanzi` for hanzi inputs) | iOS / Android `DictionarySearchService` (policy, over a `LexiconClient`); Android `DictionarySearchViewModel`; macOS `DictionarySearchService.swift`; Windows + Linux `taigi_desktop_core::engine::dictionary_search` (one lookup for both settings windows, custom rows through `SearchCustomEntries`) |
 
 ### 11. Input Flow (`architecture/system-overview.md` §4)
 | Keyword | Definition | Key Class/Method |

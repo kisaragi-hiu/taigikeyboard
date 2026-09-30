@@ -16,7 +16,7 @@
 use super::list_selection::recorded::{insertion_parents, selections};
 use super::window::{SettingsWindow, SettingsWindowInput};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
-use taigi_desktop_storage::{LiveSettings, SettingsFileStore, UserDataStores};
+use taigi_desktop_storage::{LiveSettings, SettingsFileStore};
 use tempfile::TempDir;
 use windows_reactor::{Pump, RecordingRuntime, View};
 
@@ -37,10 +37,11 @@ fn stamped_directory() -> TempDir {
 
 /// Mounts the whole window on `pane` against the headless runtime.
 ///
-/// The stores are handed over unopened — `user_data::open_at_launch`'s job
-/// is the launch's, and a test that only plans a view tree must not run its
-/// migrations. A closed store answers a query the way a read-only launch's
-/// does, and the tree under test is the same.
+/// The user-data stores stay closed — `user_data::open_at_launch`'s job is
+/// the launch's, and a test that only plans a view tree must not run its
+/// migrations. The engine answers a page's first load with a refusal
+/// (nothing is open in this process), which the tree under test shows as
+/// the alert a failed load shows.
 fn plan(directory: &TempDir, pane: SettingsPane, is_read_only: bool) -> Result<(), String> {
     planned(directory, pane, is_read_only).map(|_| ())
 }
@@ -53,7 +54,6 @@ fn planned(
 ) -> Result<Pump<RecordingRuntime>, String> {
     let input = SettingsWindowInput::new(
         LiveSettings::new(SettingsFileStore::new(directory.path())),
-        UserDataStores::new(directory.path().to_path_buf()),
         is_read_only,
         pane,
         false,

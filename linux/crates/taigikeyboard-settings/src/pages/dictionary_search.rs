@@ -2,26 +2,27 @@
 //! badges and buttons to look the reading up in the MOE dictionary or ChhoeTaigi. Port of
 //! `DictionarySearchPage.swift` / the Windows `dictionary_search.rs`. Built
 //! but UNLISTED, as on the other desktops: reached only by
-//! `--pane dictionarySearch`. The lookup — the engine's dictionaries and
-//! the custom-dictionary query, plus the dictionaries' first load — runs
-//! off the UI thread; the newest query wins by generation.
+//! `--pane dictionarySearch`. The lookup
+//! (`taigi_desktop_core::engine::dictionary_search`) — the engine's
+//! dictionaries and the custom-dictionary query, plus the dictionaries'
+//! first load — runs off the UI thread; the newest query wins by
+//! generation.
 
 use super::PageContext;
 use crate::jobs;
 use crate::presentation::PageMessage;
-use crate::search::{search, DictionarySearchResult};
 use crate::window::Shell;
 use adw::prelude::*;
 use gtk::glib;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 use std::time::Duration;
 use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
+use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-use taigi_desktop_storage::CustomDictionaryStore;
 
 /// `DictionarySearchModel.visibleResultLimit`.
 const VISIBLE_RESULT_LIMIT: usize = 5;
@@ -47,7 +48,6 @@ struct State {
 pub struct DictionarySearchPage {
     shell: Shell,
     strings: StringResolver,
-    store: Arc<CustomDictionaryStore>,
     state: RefCell<State>,
     results: gtk::ListBox,
     empty: gtk::Label,
@@ -55,7 +55,7 @@ pub struct DictionarySearchPage {
 
 pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {
     let group = adw::PreferencesGroup::new();
-    let Some(stores) = context.stores else {
+    if !context.has_user_data {
         group.add(
             &gtk::Label::builder()
                 .label(context.strings.resolve(StringKey::DictionaryNoResults))
@@ -64,7 +64,7 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         );
         page.add(&group);
         return context;
-    };
+    }
     let query = gtk::SearchEntry::new();
     query.set_placeholder_text(Some(
         context
@@ -89,7 +89,6 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     let this = Rc::new(DictionarySearchPage {
         shell: context.shell.clone(),
         strings: *context.strings,
-        store: Arc::clone(&stores.custom_dictionary),
         state: RefCell::new(State {
             document: context.document.clone(),
             ..State::default()
@@ -152,18 +151,14 @@ impl DictionarySearchPage {
     fn start(self: &Rc<Self>, generation: u64) {
         let (query, settings) = {
             let state = self.state.borrow();
-            (
-                state.query.trim().to_owned(),
-                Arc::new(state.document.clone()),
-            )
+            (state.query.trim().to_owned(), state.document.clone())
         };
-        let store = Arc::clone(&self.store);
         let weak = Rc::downgrade(self);
         jobs::spawn(
             move || {
                 let is_loaded = LEXICON_LOADED.get().is_some()
                     || (load_lexicon() && LEXICON_LOADED.set(()).is_ok());
-                is_loaded.then(|| search(&query, &settings, &store))
+                is_loaded.then(|| search(&query, &settings))
             },
             move |outcome| {
                 let Some(page) = weak.upgrade() else { return };

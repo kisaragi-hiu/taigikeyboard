@@ -1599,7 +1599,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "userdata",
 ]
 
 [[package]]
@@ -1610,7 +1609,6 @@ dependencies = [
  "serde_json",
  "taigi-desktop-core",
  "thiserror",
- "userdata",
 ]
 
 [[package]]
@@ -1663,6 +1661,7 @@ dependencies = [
 name = "taigikeyboard-settings"
 version = "3.6.11"
 dependencies = [
+ "dispatch",
  "gio",
  "gtk4",
  "libadwaita",

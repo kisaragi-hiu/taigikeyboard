@@ -1,35 +1,14 @@
-//! Phonetics slice of the engine bridge: the search key a custom-dictionary
-//! query is looked up by, and the small conversions the dictionary pages need
-//! (the keys an entry is stored under are derived in-process by engine
-//! `userdata`). Port of
-//! `RustEngineBridge+Phonetics.swift`.
+//! Phonetics slice of the engine bridge: the small conversions the
+//! dictionary pages need (the search keys a custom entry is stored and
+//! looked up under are the engine `userdata`'s own, behind the user-data
+//! ops). Port of `RustEngineBridge+Phonetics.swift`.
 
 use protos::engine::{
-    phonetics_request, phonetics_response, request, response, DeriveCustomQueryKey,
-    NfdPreprocessForLookup, PhoneticsRequest, PhoneticsResponse, StripTone, TlToPoj,
+    phonetics_request, phonetics_response, request, response, NfdPreprocessForLookup,
+    PhoneticsRequest, PhoneticsResponse, StripTone, TlToPoj,
 };
 
 use super::bridge::{record_failure, roundtrip};
-use crate::settings::InputMode;
-
-// Moved to the engine `userdata` crate (user-data-engine-roadmap P1);
-// re-exported here until the desktop switch (P5).
-pub use userdata::CustomSearchKey;
-
-/// The single key the user's current input should be looked up by. The
-/// family is decided by the engine, not by the mode alone. `None` = nothing
-/// to look up (empty input, residue that forms no key, or a failed trip).
-pub fn derive_custom_query_key(input: &str, mode: InputMode) -> Option<CustomSearchKey> {
-    custom_search_keys(
-        phonetics_request::Method::DeriveCustomQueryKey(DeriveCustomQueryKey {
-            input: input.to_owned(),
-            input_mode: mode.wire().to_owned(),
-        }),
-        "deriveCustomQueryKey",
-    )?
-    .into_iter()
-    .next()
-}
 
 /// The POJ spelling of a TL reading, for rendering results while the user
 /// is typing POJ.
@@ -79,27 +58,6 @@ fn string_result(method: phonetics_request::Method, op: &str) -> Option<String> 
         Some(phonetics_response::Result::StringResult(result)) => Some(result.output),
         _ => {
             record_failure(op, "response carried no string result");
-            None
-        }
-    }
-}
-
-fn custom_search_keys(method: phonetics_request::Method, op: &str) -> Option<Vec<CustomSearchKey>> {
-    let response = phonetics_response(method, op)?;
-    match response.result {
-        Some(phonetics_response::Result::CustomSearchKeysResult(result)) => Some(
-            result
-                .keys
-                .into_iter()
-                .map(|key| CustomSearchKey {
-                    family: key.family,
-                    form: key.form,
-                    key: key.key,
-                })
-                .collect(),
-        ),
-        _ => {
-            record_failure(op, "response carried no custom-search-keys result");
             None
         }
     }

@@ -9,7 +9,6 @@
 mod cli;
 mod presentation;
 mod prewarm;
-mod search;
 mod settings_writer;
 mod updates;
 mod user_data;

@@ -8,6 +8,7 @@
 
 mod bridge;
 mod composing;
+pub mod dictionary_search;
 mod external_lookup;
 mod lexicon;
 mod nextword;
@@ -30,9 +31,7 @@ pub use nextword::{
     update_last_selected_word as nextword_update_last_selected_word,
     word_selected as nextword_word_selected,
 };
-pub use phonetics::{
-    derive_custom_query_key, nfd_preprocess_for_lookup, strip_tone, tl_to_poj, CustomSearchKey,
-};
+pub use phonetics::{nfd_preprocess_for_lookup, strip_tone, tl_to_poj};
 pub use transition::{
     CandidateMode, ComposingTransition, ContinuousCandidate, ContinuousFetchResult, Effect,
 };

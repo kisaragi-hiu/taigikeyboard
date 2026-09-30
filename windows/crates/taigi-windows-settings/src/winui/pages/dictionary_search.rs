@@ -2,21 +2,20 @@
 //! badges and a menu to look the reading up in the MOE dictionary or ChhoeTaigi. Port of
 //! `DictionarySearchPage.swift`. Built but UNLISTED, as on macOS (not
 //! released yet, USER 2026-08-21): reached only by `--pane dictionarySearch`.
-//! The lookup — the engine's FFI and the custom-dictionary query, plus the
+//! The lookup (`taigi_desktop_core::engine::dictionary_search`) — the
+//! engine's dictionaries and the custom-dictionary query, plus the
 //! dictionaries' first load — runs off the UI thread; the newest query
 //! wins by generation.
 
 use crate::presentation::PageMessage;
-use crate::search::{search, DictionarySearchResult};
 use crate::winui::cards;
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
-use std::sync::Arc;
 use std::time::Duration;
 use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
+use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-use taigi_desktop_storage::UserDataStores;
 use windows_reactor::*;
 
 /// `DictionarySearchModel.visibleResultLimit`.
@@ -62,23 +61,14 @@ pub struct DictionarySearchModel {
     is_lexicon_loaded: bool,
 }
 
-pub struct PageEnvironment<'a> {
-    pub stores: &'a UserDataStores,
-    pub document: &'a SettingsDocument,
-    pub message: &'a mut Option<PageMessage>,
-}
-
+/// `alert` is the window's one notice: what a failed search has to say.
 pub fn update(
     model: &mut DictionarySearchModel,
     message: Message,
-    environment: PageEnvironment<'_>,
+    document: &SettingsDocument,
+    alert: &mut Option<PageMessage>,
     context: &ComponentContext<SettingsWindow>,
 ) {
-    let PageEnvironment {
-        stores,
-        document,
-        message: alert,
-    } = environment;
     match message {
         Message::QueryChanged(query) => {
             if query == model.query {
@@ -110,7 +100,7 @@ pub fn update(
             if generation != model.generation {
                 return;
             }
-            start(model, document, stores, context);
+            start(model, document, context);
         }
         Message::Finished(generation, outcome) => {
             let SearchOutcome {
@@ -145,13 +135,11 @@ pub fn update(
 fn start(
     model: &mut DictionarySearchModel,
     document: &SettingsDocument,
-    stores: &UserDataStores,
     context: &ComponentContext<SettingsWindow>,
 ) {
     let generation = model.generation;
     let query = model.query.trim().to_owned();
-    let settings = Arc::new(document.clone());
-    let store = Arc::clone(&stores.custom_dictionary);
+    let settings = document.clone();
     let is_lexicon_loaded = model.is_lexicon_loaded;
     let rejection = WindowMessage::DictionarySearch(Message::Finished(
         generation,
@@ -166,7 +154,7 @@ fn start(
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 let is_loaded = is_lexicon_loaded || load_lexicon();
                 let results = if is_loaded {
-                    search(&query, &settings, &store)
+                    search(&query, &settings)
                 } else {
                     Vec::new()
                 };

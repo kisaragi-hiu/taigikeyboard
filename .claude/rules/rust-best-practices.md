@@ -54,7 +54,7 @@ Current runtime crates — dependency edges flow **one way, top → bottom** (th
 **Dependency-direction invariant** — a crate may depend only on crates in its own layer or below:
 
 - **Forbidden upward edges**: no domain crate (`phonetics` / `ranking` / `lexicon` / `nextword` / `composing` / `userdata`) may depend on `dispatch` or an FFI crate; the leaf layer (`phonetics` / `protos` / `mmap-host`) may depend on nothing above itself.
-- **`dispatch` is the only orchestrator** — the single crate allowed to reference every domain. FFI crates (`swift-ffi` / `android-jni`) see only `dispatch` + `protos`. Outside this workspace, `taigi-desktop-core` also takes `userdata` (row types + store traits, no `sqlite` feature) — temporary until user-data-engine-roadmap P5, when the desktop reaches the stores through `dispatch` like every other shell.
+- **`dispatch` is the only orchestrator** — the single crate allowed to reference every domain. FFI crates (`swift-ffi` / `android-jni`) see only `dispatch` + `protos`. Outside this workspace, `taigi-desktop-core` sees only `dispatch` + `protos` too (its `userdata` edge went with the desktop settings windows' switch to the user-data ops, 2026-09-30).
 - **Cargo enforces acyclicity at build time** (a cycle fails to compile) — that is the hard backstop. This layering rule is the *soft* guide that stops the graph degrading into flat all-depends-on-all while still technically acyclic.
 - **New crate / new edge**: place it so the arrow still points down. If a domain crate appears to need something currently in `dispatch`, that is an inversion — push the shared piece **down** into `phonetics` / `protos`, never add an upward edge (mirrors `~/.claude/rules/planning.md` § No redundant fallback — keep data flow one-direction).
 

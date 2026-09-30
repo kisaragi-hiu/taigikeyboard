@@ -29,6 +29,9 @@ use userdata::{
     UserDataStores,
 };
 
+// The limit a platform may check before the read is the codec's own.
+const _: () = assert!(crate::CUSTOM_CSV_MAX_FILE_BYTES == CustomDictionaryCSV::MAX_FILE_SIZE_BYTES);
+
 /// Why a user-data request did nothing.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum UserDataError {

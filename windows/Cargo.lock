@@ -1010,7 +1010,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "userdata",
 ]
 
 [[package]]
@@ -1021,7 +1020,6 @@ dependencies = [
  "serde_json",
  "taigi-desktop-core",
  "thiserror",
- "userdata",
 ]
 
 [[package]]
@@ -1052,6 +1050,7 @@ dependencies = [
 name = "taigi-windows-settings"
 version = "3.6.11"
 dependencies = [
+ "dispatch",
  "log",
  "raw-window-handle",
  "rfd",

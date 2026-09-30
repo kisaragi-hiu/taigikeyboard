@@ -29,7 +29,7 @@ use taigi_desktop_core::settings::{
     keys, AppearanceMode, SettingChoice, SettingsDocument, SettingsKey, SettingsPane,
 };
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
-use taigi_desktop_storage::{LiveSettings, UserDataStores};
+use taigi_desktop_storage::LiveSettings;
 use taigi_desktop_update::checker;
 use taigi_windows_platform::keyboard_hook::{Delivery, KeyboardHook};
 use windows_reactor::*;
@@ -91,9 +91,6 @@ const FORM_INSET: f64 = 24.0;
 /// changes, so identity is the right comparison.
 pub struct Launch {
     live: Rc<LiveSettings>,
-    /// Held open for the window's life: the launch migrations run off it,
-    /// and the Custom Dictionary and Dictionary Search pages read it.
-    stores: UserDataStores,
     is_read_only: bool,
     pane: SettingsPane,
     is_check_now: bool,
@@ -110,20 +107,18 @@ impl PartialEq for SettingsWindowInput {
 
 impl SettingsWindowInput {
     /// The one place a launch is assembled, so `run` and the pane-planning
-    /// tests reach the component through the same path. The stores are
-    /// passed in rather than opened here: opening them is a LAUNCH-time
-    /// side effect (migrations on a background thread), and a test that
-    /// only plans a view tree must not start one.
+    /// tests reach the component through the same path. The user-data
+    /// stores are not opened here: opening them is a LAUNCH-time side
+    /// effect (`user_data::open_at_launch`, migrations on the engine's own
+    /// thread), and a test that only plans a view tree must not start one.
     pub(crate) fn new(
         live: LiveSettings,
-        stores: UserDataStores,
         is_read_only: bool,
         pane: SettingsPane,
         is_check_now: bool,
     ) -> Self {
         Self(Rc::new(Launch {
             live: Rc::new(live),
-            stores,
             is_read_only,
             pane,
             is_check_now,
@@ -140,13 +135,8 @@ pub fn run(
     is_read_only: bool,
     is_check_now: bool,
 ) -> bool {
-    let input = SettingsWindowInput::new(
-        live,
-        crate::user_data::open_at_launch(directory, is_read_only),
-        is_read_only,
-        pane,
-        is_check_now,
-    );
+    crate::user_data::open_at_launch(directory, is_read_only);
+    let input = SettingsWindowInput::new(live, is_read_only, pane, is_check_now);
     match App::run_component::<SettingsWindow>(input) {
         Ok(()) => true,
         Err(error) => {
@@ -402,11 +392,7 @@ impl SettingsWindow {
     /// typefaces are there.
     fn enter_pane(&mut self, context: &ComponentContext<Self>) {
         if self.pane == SettingsPane::CustomDictionary && !self.settings.is_read_only() {
-            pages::custom_dictionary::ensure_loaded(
-                &mut self.custom_dictionary,
-                &self.launch.stores,
-                context,
-            );
+            pages::custom_dictionary::ensure_loaded(&mut self.custom_dictionary, context);
         }
         if self.pane == SettingsPane::FontManagement {
             pages::font_management::on_enter(&mut self.font_management);
@@ -646,38 +632,19 @@ impl Component for SettingsWindow {
                 );
             }
             Message::CustomDictionary(message) => {
-                let Self {
-                    launch,
-                    custom_dictionary,
-                    message: alert,
-                    ..
-                } = self;
                 pages::custom_dictionary::update(
-                    custom_dictionary,
+                    &mut self.custom_dictionary,
                     message,
-                    pages::custom_dictionary::PageEnvironment {
-                        stores: &launch.stores,
-                        message: alert,
-                    },
+                    &mut self.message,
                     context,
                 );
             }
             Message::DictionarySearch(message) => {
-                let Self {
-                    launch,
-                    settings,
-                    dictionary_search,
-                    message: alert,
-                    ..
-                } = self;
                 pages::dictionary_search::update(
-                    dictionary_search,
+                    &mut self.dictionary_search,
                     message,
-                    pages::dictionary_search::PageEnvironment {
-                        stores: &launch.stores,
-                        document: settings.document(),
-                        message: alert,
-                    },
+                    self.settings.document(),
+                    &mut self.message,
                     context,
                 );
             }

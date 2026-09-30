@@ -67,8 +67,6 @@ graph TD
     swiftffi["swift-ffi<br/>iOS + macOS staticlib"] --> dispatch
     androidjni["android-jni<br/>Android cdylib"] --> dispatch
     wincore["taigi-desktop-core<br/>(desktop/ workspace, shared by windows/ + linux/)"] --> dispatch
-    wincore -.->|"types + traits only"| userdata
-    wstorage["taigi-desktop-storage<br/>(desktop/ workspace)"] --> userdata
     dispatch --> composing
     dispatch --> lexicon
     dispatch --> nextword
@@ -84,11 +82,11 @@ graph TD
 
     classDef adapter fill:#e8f0fe,stroke:#4285f4;
     classDef leaf fill:#e6f4ea,stroke:#34a853;
-    class swiftffi,androidjni,wincore,wstorage adapter;
+    class swiftffi,androidjni,wincore adapter;
     class phonetics,mmaphost leaf;
 ```
 
-Omitted for readability: **`protos`** (prost-generated message types; every crate depends on it — the true leaf); **`mmap-host`** (the single `unsafe` mmap carve-out, used only by `lexicon`); external crates (`swift-bridge` / `jni` in the adapters, `fst` in `lexicon` + `fst-builder`, `memmap2` in `mmap-host`, `rusqlite` (bundled SQLite) in `userdata` behind its default `sqlite` feature — `taigi-desktop-core` takes only the row types and store traits, so a build without `taigi-desktop-storage` stays C-free); **`build-helpers/fst-builder`** (offline tool producing `dictionary.fst` / `syllables.fst`). Layers: **adapters** (`swift-ffi`, `android-jni`, `taigi-desktop-core`) → **use-case** (`dispatch`) → **domain** (`composing`, `lexicon`, `ranking`, `nextword`, `userdata`) → **leaf kernel** (`phonetics`, `protos`, `mmap-host`).
+Omitted for readability: **`protos`** (prost-generated message types; every crate depends on it — the true leaf); **`mmap-host`** (the single `unsafe` mmap carve-out, used only by `lexicon`); external crates (`swift-bridge` / `jni` in the adapters, `fst` in `lexicon` + `fst-builder`, `memmap2` in `mmap-host`, `rusqlite` (bundled SQLite) in `userdata` behind its default `sqlite` feature — `taigi-desktop-core` reaches the stores only through `dispatch`'s user-data ops, so a build that leaves `dispatch/user-data` off stays C-free; `taigi-desktop-storage` (settings file, fonts, directory) sits beside `desktop-core` with no engine edge of its own); **`build-helpers/fst-builder`** (offline tool producing `dictionary.fst` / `syllables.fst`). Layers: **adapters** (`swift-ffi`, `android-jni`, `taigi-desktop-core`) → **use-case** (`dispatch`) → **domain** (`composing`, `lexicon`, `ranking`, `nextword`, `userdata`) → **leaf kernel** (`phonetics`, `protos`, `mmap-host`).
 
 ---
 
