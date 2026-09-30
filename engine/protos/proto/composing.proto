@@ -234,6 +234,50 @@ message CommitContinuous {
   // F2: hanji is an explicit sidechannel, never inferred from
   // `canonical_text` vs `association_tl`).
   optional string hanji = 6;
+  // R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+  // every caller before R5) is the legacy path: `display_text` is written
+  // as sent and `ComposingResponse.commit` stays absent. Any other value
+  // makes the engine resolve the document text itself from `roman`, `hanji`
+  // and the request's `AppConfig` (`composing::commit_text`), ignore
+  // `display_text`, answer `ComposingResponse.commit`, and — with the
+  // user-data stores open — record the pick's usage itself (the platform
+  // then sends no `RecordUsage` for it). An empty `canonical_text` is
+  // IGNORED on this path (no fallback to the document text).
+  CommitScript script = 7;
+  // The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+  // rendered / recased / No Hyphens — the display romanization, never the
+  // canonical TL).
+  string roman = 8;
+}
+
+// Which rendering of the picked candidate the document gets (R5).
+enum CommitScript {
+  COMMIT_SCRIPT_UNSPECIFIED = 0;  // legacy: the platform-resolved `display_text`
+  COMMIT_SCRIPT_LEAD        = 1;  // what the output settings lead with (Enter / a tap)
+  COMMIT_SCRIPT_OTHER       = 2;  // the other script of the lead (desktop Space)
+  COMMIT_SCRIPT_HANJI       = 3;  // a §42 split Hanji cell
+  COMMIT_SCRIPT_ROMAN       = 4;  // a §42 split romanization cell
+}
+
+// What an R5 `CommitContinuous` did (`COMMIT_SCRIPT_*` other than
+// UNSPECIFIED) — replaces the platforms' effect scans.
+message CommitResolution {
+  CommitOutcome outcome   = 1;
+  // The text this pick wrote into the composition — the segment, not the
+  // whole finalized composition. Empty when IGNORED.
+  string document_text    = 2;
+  // `document_text` carries romanization (behavioral-invariants §23).
+  bool wrote_romanization = 3;
+  // FINALIZED && wrote_romanization && `document_text` does not end in `-`.
+  // The platform still ANDs its live Auto-Space setting.
+  bool earns_auto_space   = 4;
+}
+
+enum CommitOutcome {
+  COMMIT_OUTCOME_UNSPECIFIED = 0;
+  COMMIT_OUTCOME_NAILED      = 1;  // mid-commit: the composition continues
+  COMMIT_OUTCOME_FINALIZED   = 2;  // the buffer was consumed; the engine is Idle
+  COMMIT_OUTCOME_IGNORED     = 3;  // nothing changed (stale generation, rejected pick)
 }
 
 // v3.5.8 Phase 6 — abort continuous-input. Drops `Phase::Continuous`
@@ -301,6 +345,10 @@ message ComposingResponse {
   // default safe). Pending-display text is NOT duplicated here — it is
   // already in `preedit.display_text` for `Phase::Continuous`.
   optional ContinuousResponse continuous = 5;
+
+  // R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+  // absent for every other request and for the legacy commit.
+  optional CommitResolution commit = 6;
 }
 
 // v3.5.8 Phase 6 — payload for `FetchAtPos` responses. Carries the

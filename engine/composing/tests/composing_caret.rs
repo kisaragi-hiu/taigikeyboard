@@ -210,6 +210,7 @@ fn continuous_keeps_the_caret_on_promotion_resets_it_on_nail_and_never_enters_a_
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -290,6 +291,7 @@ fn continuous_mid_tail_append_keeps_the_nailed_prefix_and_projects_the_caret() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -338,6 +340,7 @@ fn hanji_first_prefix_has_no_space_before_the_tail() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config,
     );

@@ -118,6 +118,7 @@ fn pending_context_is_the_last_nailed_segment() {
             hanji: Some("真".to_string()),
             consumed_bytes: 4,
             syllable_count: 1,
+            resolve: None,
         },
         &config,
     );

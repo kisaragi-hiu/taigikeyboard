@@ -85,6 +85,7 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -138,6 +139,7 @@ fn mid_commit_chains_raw_span_from_previous_segment() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -149,6 +151,7 @@ fn mid_commit_chains_raw_span_from_previous_segment() {
             hanji: None,
             consumed_bytes: 1,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -174,6 +177,7 @@ fn final_commit_exits_to_idle_emits_word_selected() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -216,6 +220,7 @@ fn final_commit_carries_nailed_segments_as_preceding() {
                 hanji: None,
                 consumed_bytes: consumed,
                 syllable_count: 1,
+                resolve: None,
             },
             &config_tl(),
         );
@@ -228,6 +233,7 @@ fn final_commit_carries_nailed_segments_as_preceding() {
             hanji: None,
             consumed_bytes: 5,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -260,6 +266,7 @@ fn commit_continuous_out_of_range_is_noop() {
             hanji: None,
             consumed_bytes: 99,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -290,6 +297,7 @@ fn commit_continuous_at_non_char_boundary_is_noop() {
             hanji: None,
             consumed_bytes: 1, // mid-codepoint
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -307,6 +315,7 @@ fn commit_continuous_zero_bytes_is_noop() {
             hanji: None,
             consumed_bytes: 0,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -324,6 +333,7 @@ fn commit_continuous_empty_display_is_noop() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -343,6 +353,7 @@ fn reset_continuous_exits_emits_clear_and_nextword_signal() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -395,6 +406,7 @@ fn append_under_continuous_extends_pending_only() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -409,6 +421,7 @@ fn append_under_continuous_extends_pending_only() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -456,6 +469,7 @@ fn replace_last_under_continuous_modifies_pending_only() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -502,6 +516,7 @@ fn delete_backward_under_continuous_pops_nailed_when_pending_empty() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -551,6 +566,7 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -562,6 +578,7 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
             hanji: None,
             consumed_bytes: 1,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -615,6 +632,7 @@ fn delete_backward_pops_multi_char_display_emits_no_document_deletes() {
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 2,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -679,6 +697,7 @@ fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_compositi
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -793,6 +812,7 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -898,6 +918,7 @@ fn full_span_commit_consumes_the_trailing_separator_marker() {
             hanji: None,
             consumed_bytes: raw.len(),
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -1086,6 +1107,7 @@ fn select_suggestion_under_continuous_with_nailed_prefix_commits_combined() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -1125,6 +1147,7 @@ fn commit_preedit_then_insert_external_with_nailed_prefix_combines_all() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -1157,6 +1180,7 @@ fn commit_raw_under_continuous_raw_empty_after_unnail_commits_nailed_only() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -1210,6 +1234,7 @@ fn commit_raw_with_empty_tail_carries_earlier_nails_as_preceding() {
                 hanji: None,
                 consumed_bytes: consumed,
                 syllable_count: 1,
+                resolve: None,
             },
             &config_tl(),
         );
@@ -1320,6 +1345,7 @@ fn bug1_mid_commit_marks_display_but_nextword_uses_canonical() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -1367,6 +1393,7 @@ fn bug1_final_commit_documents_display_but_word_selected_uses_canonical() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -1398,6 +1425,7 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -1409,6 +1437,7 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
             hanji: None,
             consumed_bytes: 1,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );
@@ -1457,6 +1486,7 @@ fn bug1_empty_canonical_falls_back_to_display_text() {
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
+            resolve: None,
         },
         &config_tl(),
     );

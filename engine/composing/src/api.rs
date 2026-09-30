@@ -47,6 +47,40 @@ pub enum CaretDirection {
     Right,
 }
 
+/// Which rendering of a pick the document gets — the wire `CommitScript`
+/// minus `UNSPECIFIED`, which is the legacy path (`Intent::CommitContinuous`
+/// `resolve: None`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CommitScript {
+    /// What the output settings lead with (Enter / a tap).
+    Lead,
+    /// The other script of the lead (desktop Space).
+    Other,
+    /// A §42 split Hanji cell.
+    Hanji,
+    /// A §42 split romanization cell.
+    Roman,
+}
+
+/// An R5 commit: the engine resolves the document text from the pick's
+/// `roman` (display romanization) and hanji under the request's settings.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CommitScriptPick {
+    pub script: CommitScript,
+    pub roman: String,
+}
+
+/// One pick the engine counts on the R5 path — the triple each platform's
+/// tap handler recorded itself: the canonical display text (the identity
+/// sidechannel, never the document rendering), the canonical TL, and the
+/// Hanji when the pick carried one.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Usage {
+    pub display_text: String,
+    pub canonical_tl: String,
+    pub hanji: Option<String>,
+}
+
 impl Phase {
     /// Pending-tail display form rendered through the derived-display chain
     /// (POJ doubletap → tone marks → nasal-case adjust; TPS pass-through).
@@ -457,14 +491,17 @@ pub struct UserRows {
     pub learned: Vec<lexicon::LearnedEntry>,
 }
 
-/// What a mutating intent produced: the response the platform gets, and the
-/// phrase a final commit taught (§50). The engine keeps the phrase in its own
-/// store (`dispatch` crate, `user_data::handle_composing`); it never crosses
-/// the FFI.
+/// What a mutating intent produced: the response the platform gets, the
+/// phrase a final commit taught (§50), and the pick an R5 commit counts. The
+/// engine keeps both in its own stores (`dispatch` crate,
+/// `user_data::handle_composing`); neither crosses the FFI.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Applied {
     pub response: ComposingResponse,
     pub learned: Option<lexicon::LearnedEntry>,
+    /// Set by an R5 `CommitContinuous` that nailed or finalized; `None` for
+    /// the legacy commit, whose platform records the pick itself.
+    pub usage: Option<Usage>,
 }
 
 impl From<ComposingResponse> for Applied {
@@ -472,6 +509,7 @@ impl From<ComposingResponse> for Applied {
         Self {
             response,
             learned: None,
+            usage: None,
         }
     }
 }
@@ -559,6 +597,10 @@ pub enum Intent {
         hanji: Option<String>,
         consumed_bytes: usize,
         syllable_count: u8,
+        /// R5: `Some` = the engine resolves the document text itself and
+        /// ignores `display_text` (`transition::commit_continuous_resolved`);
+        /// `None` = the legacy platform-resolved commit.
+        resolve: Option<CommitScriptPick>,
     },
     ResetContinuous,
     /// Desktop Telex scheme — one tone / affricate / hyphen letter applied

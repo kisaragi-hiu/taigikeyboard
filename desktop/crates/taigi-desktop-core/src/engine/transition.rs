@@ -270,6 +270,7 @@ mod tests {
             ],
             is_composing: true,
             continuous: None,
+            commit: None,
         };
         let transition = ComposingTransition::decode(&response);
         assert_eq!(transition.raw_input, "tai5");

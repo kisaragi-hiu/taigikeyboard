@@ -19,16 +19,17 @@
 
 use crate::api::{
     combined_display, combined_display_with_tail, nailed_prefix, Applied, CaretDirection,
-    EngineState, Intent, NailedSegment, Phase,
+    CommitScriptPick, EngineState, Intent, NailedSegment, Phase, Usage,
 };
+use crate::commit_text::{commit_resolution, resolve_commit_text};
 use crate::derived::{derived_display, display_caret_utf16, strip_tps_separator_markers};
 use lexicon::LearnedEntry;
 use protos::engine::composing_response::Preedit;
 use protos::engine::effect;
 use protos::engine::AppConfig;
 use protos::engine::{
-    ClearPreeditWithoutCommit, CommitTextReplacingPreedit, CommittedWord, ComposingResponse,
-    DeleteBackwardFromDocument, Effect, NextWordClearForNewComposing,
+    ClearPreeditWithoutCommit, CommitOutcome, CommitTextReplacingPreedit, CommittedWord,
+    ComposingResponse, DeleteBackwardFromDocument, Effect, NextWordClearForNewComposing,
     NextWordUpdateLastSelectedWord, NextWordWordSelected, PerformAutocomplete, ResetAutocomplete,
     ResetAutocompleteContext, UpdatePreedit,
 };
@@ -101,17 +102,19 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
             hanji,
             consumed_bytes,
             syllable_count,
+            resolve,
         } => {
-            return commit_continuous(
-                state,
-                display_text,
+            let pick = SegmentPick {
                 canonical_text,
                 association_tl,
                 hanji,
                 consumed_bytes,
                 syllable_count,
-                config,
-            )
+            };
+            return match resolve {
+                None => commit_continuous(state, display_text, pick, config).0,
+                Some(resolve) => commit_continuous_resolved(state, pick, resolve, config),
+            };
         }
         Intent::ResetContinuous => reset_continuous(state, config),
         Intent::TelexKey { key } => telex_key(state, &key, config),
@@ -238,6 +241,7 @@ fn step_response(preedit: Preedit) -> ComposingResponse {
         effect: effects,
         is_composing: true,
         continuous: None,
+        commit: None,
     }
 }
 
@@ -479,6 +483,7 @@ fn delete_backward_continuous(
         effect: effects,
         is_composing: true,
         continuous: None,
+        commit: None,
     }
 }
 
@@ -653,6 +658,7 @@ pub(crate) fn snapshot(state: &EngineState, config: &AppConfig) -> ComposingResp
         effect: Vec::new(),
         is_composing,
         continuous: None,
+        commit: None,
     }
 }
 
@@ -663,6 +669,7 @@ fn exit_to_idle(state: &mut EngineState, effects: Vec<Effect>) -> ComposingRespo
         effect: effects,
         is_composing: false,
         continuous: None,
+        commit: None,
     }
 }
 
@@ -701,6 +708,7 @@ fn enter_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingRes
         effect: Vec::new(),
         is_composing: true,
         continuous: None,
+        commit: None,
     }
 }
 
@@ -792,26 +800,30 @@ fn commit_preedit_then_insert_external_under_continuous(
 // a mid-commit emits NO `CommitTextReplacingPreedit` — it only re-renders
 // the combined marked region; the single literal document write happens at
 // final-commit (whole composition) or via Enter (`commit_raw_continuous`).
-#[allow(clippy::too_many_arguments)]
+// Returns what the commit did beside the response — the outcome the R5 path
+// reports (`commit_continuous_resolved`); the legacy path drops it.
 fn commit_continuous(
     state: &mut EngineState,
     display_text: String,
-    canonical_text: String,
-    association_tl: String,
-    hanji: Option<String>,
-    consumed_bytes: usize,
-    syllable_count: u8,
+    pick: SegmentPick,
     config: &AppConfig,
-) -> Applied {
+) -> (Applied, CommitOutcome) {
+    let SegmentPick {
+        canonical_text,
+        association_tl,
+        hanji,
+        consumed_bytes,
+        syllable_count,
+    } = pick;
     let Phase::Continuous { raw, nailed, .. } = &state.phase else {
-        return noop(state, config).into();
+        return (noop(state, config).into(), CommitOutcome::Ignored);
     };
     if display_text.is_empty()
         || consumed_bytes == 0
         || consumed_bytes > raw.len()
         || !raw.is_char_boundary(consumed_bytes)
     {
-        return noop(state, config).into();
+        return (noop(state, config).into(), CommitOutcome::Ignored);
     }
     let canonical = if canonical_text.is_empty() {
         display_text.clone()
@@ -859,10 +871,12 @@ fn commit_continuous(
         // Learned phrases (§50): the whole composition, if it was a
         // sequence of hanji picks, becomes one learned pair.
         let learned = learned_phrase(&new_nailed);
-        return Applied {
+        let applied = Applied {
             response: exit_to_idle(state, effects),
             learned,
+            usage: None,
         };
+        return (applied, CommitOutcome::Finalized);
     }
 
     // Mid-commit (Model B): stay in Continuous, NO document write — just
@@ -882,13 +896,59 @@ fn commit_continuous(
         next_word_update_last_selected_word(canonical, next_word_roman),
         perform_autocomplete(),
     ];
-    ComposingResponse {
+    let response = ComposingResponse {
         preedit: Some(preedit),
         effect: effects,
         is_composing: true,
         continuous: None,
+        commit: None,
+    };
+    (response.into(), CommitOutcome::Nailed)
+}
+
+/// The pick a `CommitContinuous` names, apart from what it writes.
+struct SegmentPick {
+    canonical_text: String,
+    association_tl: String,
+    hanji: Option<String>,
+    consumed_bytes: usize,
+    syllable_count: u8,
+}
+
+/// R5 — [`commit_continuous`] with the document text resolved by the engine
+/// ([`resolve_commit_text`]) instead of sent by the platform, answering
+/// `ComposingResponse.commit` and, for a pick that nailed or finalized, the
+/// usage the platform used to record (`Applied.usage`). A pick with no
+/// canonical text, or a script it does not have, is ignored: no state
+/// change, no usage.
+fn commit_continuous_resolved(
+    state: &mut EngineState,
+    pick: SegmentPick,
+    resolve: CommitScriptPick,
+    config: &AppConfig,
+) -> Applied {
+    let hanji = pick.hanji.clone().filter(|hanji| !hanji.is_empty());
+    let resolved = if pick.canonical_text.is_empty() {
+        None
+    } else {
+        resolve_commit_text(resolve.script, &resolve.roman, hanji.as_deref(), config)
+    };
+    let Some(resolved) = resolved else {
+        let mut response = noop(state, config);
+        response.commit = Some(commit_resolution(CommitOutcome::Ignored, None));
+        return response.into();
+    };
+    let usage = Usage {
+        display_text: pick.canonical_text.clone(),
+        canonical_tl: pick.association_tl.clone(),
+        hanji,
+    };
+    let (mut applied, outcome) = commit_continuous(state, resolved.text.clone(), pick, config);
+    if outcome != CommitOutcome::Ignored {
+        applied.usage = Some(usage);
     }
-    .into()
+    applied.response.commit = Some(commit_resolution(outcome, Some(resolved)));
+    applied
 }
 
 /// Continuous-mode abort — **Model B (Codex risk (ii))**. Nailed segments

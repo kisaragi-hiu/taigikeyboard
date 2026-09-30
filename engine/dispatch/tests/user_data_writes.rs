@@ -45,6 +45,7 @@ fn commit_continuous(
         hanji: Some(hanji.to_owned()),
         consumed_bytes,
         syllable_count,
+        ..Default::default()
     })
 }
 

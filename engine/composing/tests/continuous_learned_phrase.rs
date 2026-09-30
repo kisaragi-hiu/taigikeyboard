@@ -47,6 +47,7 @@ fn pick((hanji, tl, consumed_bytes, syllable_count): Pick<'_>) -> Intent {
         hanji: hanji.map(str::to_string),
         consumed_bytes,
         syllable_count,
+        resolve: None,
     }
 }
 
@@ -215,6 +216,7 @@ fn commit(cand: &CandidateMessage) -> Intent {
         hanji: cand.hanji.clone(),
         consumed_bytes: cand.consumed_span_end,
         syllable_count: cand.syllable_count,
+        ..Default::default()
     });
     dispatch::decode_intent(&req(method)).expect("CommitContinuous decodes")
 }
