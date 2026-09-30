@@ -124,6 +124,7 @@ final class RustEngineBridgeDictionaryFiltersTests: XCTestCase {
         XCTAssertEqual(try mask(.allSourcesOff), 0)
     }
 
+    // INVARIANT_DICTIONARIES_ALL_OFF_OFFERS_NO_DICTIONARY_CANDIDATES (behavioral-invariants.md §57)
     func testEveryDictionaryOff_goesOnTheWireAsAMaskWithNoSources() throws {
         let sent = try filters(.allSourcesOff).wireMask
 

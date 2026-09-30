@@ -429,10 +429,11 @@ class ComposingManager(
             generation = currentGeneration,
             nowMs = System.currentTimeMillis(),
             // PR-9.6 — the dictionary source-toggle bitmask the Tab3 browse path
-            // sends too (12 source toggles + kautian subcollections).
+            // sends too (12 source toggles + kautian subcollections), in its wire
+            // form: every dictionary off offers no dictionary candidates (§57).
             enabledSourcesBitmask = RustEngineBridge
                 .dictionaryFilters(RustEngineBridge.DictionaryToggles.from(settings))
-                .dictionaryFilterBitmask,
+                .wireMask,
             // §34/S22 — invert of the Show Typed Text First setting.
             literalRomanCandidateDisabled = !settings.isLiteralRomanCandidateEnabled,
             customDictionaryDisabled = !settings.isCustomDictEnabled,

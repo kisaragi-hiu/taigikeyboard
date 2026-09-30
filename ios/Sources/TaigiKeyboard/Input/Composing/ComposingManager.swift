@@ -178,10 +178,11 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             generation: currentGeneration,
             nowMs: Int64(Date().timeIntervalSince1970 * 1000),
             // PR-9.6 — the dictionary source-toggle bitmask the Tab3 browse
-            // path sends too (`DictionarySearchService.search`).
+            // path sends too (`DictionarySearchService.search`), in its wire
+            // form: every dictionary off offers no dictionary candidates (§57).
             enabledSourcesBitmask: RustEngineBridge.lexiconDictionaryFilters(
                 toggles: RustEngineBridge.DictionaryToggles(from: settings),
-            ).dictionaryFilterBitmask,
+            ).wireMask,
             // §34/S22 — invert of the Show Typed Text First setting.
             literalRomanCandidateDisabled: !settings.isLiteralRomanCandidateEnabled,
             customDictionaryDisabled: !settings.isCustomDictEnabled,

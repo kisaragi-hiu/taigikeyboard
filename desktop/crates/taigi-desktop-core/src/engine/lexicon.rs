@@ -129,13 +129,20 @@ pub struct DictionaryFilters {
 /// A mask carrying no source bits, for the user who switched every
 /// dictionary off. The wire cannot say that with `0`: the composing path
 /// reads `0` as "platform did not wire this" and turns everything back on
-/// (`engine/composing/src/dispatch.rs:247`). Bit 13 is the kautian
+/// (`engine/composing/src/dispatch.rs` `handle_fetch_at_pos`). Bit 13 is the kautian
 /// subcollection gate's "active" flag, which makes the mask non-zero while
 /// leaving the source region (bits 0-12) empty.
 ///
-/// NAMED CROSS-PLATFORM DIVERGENCE (deferred): iOS and Android send the
-/// engine's `0` straight through and still search every dictionary in this
-/// state; macOS and Windows do not.
+/// CROSS-PLATFORM INVARIANT — mirrors macOS
+/// `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Lexicon.swift`
+/// `noSourcesEnabledBitmask`, iOS
+/// `ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+Lexicon.swift`
+/// `noSourcesEnabledBitmask` and Android
+/// `android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt`
+/// `DictionaryFilters.NO_SOURCES_ENABLED_BITMASK`: every dictionary switched
+/// off offers no dictionary candidates on every platform
+/// (`docs/architecture/behavioral-invariants.md` §57). Drift causes silent
+/// divergence.
 pub const NO_SOURCES_ENABLED_BITMASK: u32 = 1 << 13;
 
 /// What a SEARCH sends when the toggles could not be resolved. The search
@@ -462,6 +469,7 @@ mod tests {
         assert!(!is_hanzi("tai"));
     }
 
+    // INVARIANT_DICTIONARIES_ALL_OFF_OFFERS_NO_DICTIONARY_CANDIDATES (behavioral-invariants.md §57)
     #[test]
     fn wire_mask_turns_all_off_into_the_sentinel() {
         let all_off = DictionaryFilters {
