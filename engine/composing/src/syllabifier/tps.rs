@@ -58,7 +58,7 @@ const MAX_SYLLABLE_BYTES_TPS: usize = 24;
 ///   (`tps:ㄉㄞˊ`) wins over the shorter toneless form when the user
 ///   typed a tone mark.
 /// - Tone-8 dot `U+02D9` (encode-safe modifier-letter dot typed by
-///   the platform keyboards per `engine/lexicon/src/key_normalizer.rs`)
+///   the platform keyboards per `engine/phonetics/src/key_family.rs`)
 ///   is substituted to the canonical combining `U+0307` before the
 ///   BFS, so the inventory probe hits the build-pipeline-emitted form
 ///   (`dictionary/build/merge_csv.py` writes `U+0307`). Both code

@@ -17,7 +17,7 @@
 //! 2. The mode-aware `strip_tones_for_mode(.., Tps)` drops the 8
 //!    Bopomofo tone scalars per
 //!    `phonetics::tps::is_tps_tone_mark`.
-//! 3. `mode_key_prefix(Tps)` emits the `tps:` family prefix matching
+//! 3. `KeyFamily::for_input_mode(Tps)` emits the `tps:` family prefix matching
 //!    the `tps_notone` axis of the build pipeline.
 
 use composing::dispatch::build_continuous_keys_with_inventory;

@@ -2,6 +2,7 @@
 //! and returns proto-shaped outputs; the dispatch module wraps these into
 //! envelope responses.
 
+use phonetics::KeyFamily;
 use protos::engine::{
     AssocLookupRequest, AssocLookupResponse, DictionaryFiltersRequest, DictionaryFiltersResponse,
     InstallRequest, InstallResponse, IsHanziRequest, IsHanziResponse, LexiconAssocEntry,
@@ -17,7 +18,7 @@ pub use crate::dictionary_filters::dictionary_filter_bitmask;
 use crate::error::LexiconError;
 use crate::handle::EngineHandle;
 use crate::paths::LexiconPaths;
-use crate::search::{self, LexiconAssocOut, LexiconRowOut, SearchInputMode, SearchParams};
+use crate::search::{self, LexiconAssocOut, LexiconRowOut, SearchParams};
 
 // Validates paths, opens FST/TKDB/TKWA (+ optional syllables.fst), atomically swaps the handle.
 pub fn install(req: InstallRequest) -> Result<InstallResponse, LexiconError> {
@@ -41,7 +42,7 @@ pub fn search_with_sources(
 ) -> Result<SearchWithSourcesResponse, LexiconError> {
     let params = SearchParams {
         input: req.input,
-        input_mode: proto_input_mode(req.input_mode),
+        family: proto_key_family(req.input_mode),
         limit: req.limit,
         enabled_sources_bitmask: req.enabled_sources_bitmask,
     };
@@ -120,13 +121,13 @@ pub fn dictionary_filters(
     Ok(compute_filters(&toggles))
 }
 
-fn proto_input_mode(value: i32) -> SearchInputMode {
+fn proto_key_family(value: i32) -> KeyFamily {
     use protos::engine::InputMode;
     match InputMode::try_from(value).unwrap_or(InputMode::Unspecified) {
-        InputMode::Poj => SearchInputMode::Poj,
-        InputMode::Tps => SearchInputMode::Tps,
+        InputMode::Poj => KeyFamily::Poj,
+        InputMode::Tps => KeyFamily::Tps,
         // Unspecified + Tl default to TL.
-        _ => SearchInputMode::Tl,
+        _ => KeyFamily::Tl,
     }
 }
 

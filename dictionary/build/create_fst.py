@@ -111,7 +111,7 @@ def _tl_num_syllable_count(tl_num: str) -> int:
 
 # Abbreviation keys get their own family per romanization (`tl-abbrev:`,
 # `poj-abbrev:`, `tps-abbrev:`) so a phonetic-family prefix scan never
-# meets an acronym key. Mirrors `lexicon::key_normalizer::ABBREV_FAMILY_SUFFIX`.
+# meets an acronym key. Mirrors `phonetics::abbrev_family_key`.
 ABBREV_FAMILY_SUFFIX = "-abbrev"
 
 _NUM_SYLLABLE_RE = re.compile(r"[a-z]+[0-9]?")

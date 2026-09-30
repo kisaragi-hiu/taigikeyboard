@@ -19,7 +19,6 @@ pub mod dictionary_reader;
 pub mod dispatch;
 mod error;
 mod handle;
-pub mod key_normalizer;
 mod paths;
 pub mod prefix_index;
 pub mod search;

@@ -29,7 +29,8 @@
 
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
-use lexicon::search::{self, SearchInputMode, SearchParams};
+use lexicon::search::{self, SearchParams};
+use phonetics::KeyFamily;
 
 use crate::common::{build_tkdb_v3, write_synthetic_fst};
 use test_support::write_temp;
@@ -63,7 +64,7 @@ fn fused_toneless_key_retrieves_single_and_multi_syllable_entries() {
 
     let params = SearchParams {
         input: "tsua".to_string(),
-        input_mode: SearchInputMode::Tl,
+        family: KeyFamily::Tl,
         limit: 10,
         enabled_sources_bitmask: u32::MAX,
     };
@@ -108,7 +109,7 @@ fn fused_toneless_key_works_for_poj_path() {
 
     let params = SearchParams {
         input: "chua".to_string(),
-        input_mode: SearchInputMode::Poj,
+        family: KeyFamily::Poj,
         limit: 10,
         enabled_sources_bitmask: u32::MAX,
     };

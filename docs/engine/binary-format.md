@@ -206,9 +206,9 @@ Logical keys (the `key_bytes` part before the separator) carry one of these sema
 | `tl-abbrev:` / `poj-abbrev:` / `tps-abbrev:` | the per-syllable abbreviation face of the row (`tl_abbrev` / `poj_abbrev` / `tps_abbrev` + variant) | `tl-abbrev:hb`, `poj-abbrev:hb`, `tps-abbrev:ㄏㄅ` |
 | `hanzi:` | hanzi (for reverse lookup, prefix search only) | `hanzi:好` |
 
-The abbreviation face has its own family per romanization (`behavioral-invariants.md` §46, 2026-09-18) so a prefix scan over a phonetic family never meets an acronym key: the continuous-input hydration needs no acronym heuristics, `lexicon::fetch_abbrev_candidates` reads the abbreviation family alone, and Tab3 `lexicon::search` unions both families to keep acronym search. `lexicon::key_normalizer::abbrev_family_key` derives the twin key.
+The abbreviation face has its own family per romanization (`behavioral-invariants.md` §46, 2026-09-18) so a prefix scan over a phonetic family never meets an acronym key: the continuous-input hydration needs no acronym heuristics, `lexicon::fetch_abbrev_candidates` reads the abbreviation family alone, and Tab3 `lexicon::search` unions both families to keep acronym search. `phonetics::abbrev_family_key` derives the twin key.
 
-**Invariant**: the prefix is added by `lexicon::key_normalizer::build` based on `(KeyType, KeyMode)` at the engine seam. Callers (platform classifiers, `lexicon::search`) MUST NOT prepend the prefix themselves.
+**Invariant**: the prefix comes from `phonetics::KeyFamily` (`prefix()` / `search_key()`, `HANJI_KEY_PREFIX`) at the engine seam. Callers (platform classifiers, `lexicon::search`, `composing::shadow`) MUST NOT spell the prefix themselves.
 
 ### 3.3 Reader & host crate
 
@@ -355,7 +355,7 @@ When ANY of the following changes, ALL listed files MUST be updated in the same 
 | `association.bin` byte layout | build script, Rust `engine/lexicon::association_reader`, this doc |
 | Bitmask bit positions | build script (`dictionary/common/source_bits.py`), Rust `engine/lexicon::dictionary_filters`, platform `DictionarySource` DTO, this doc |
 | `kautian_subtag` + wire subcollection-enable bit layout (§4.5) | `dictionary/common/source_bits.py` (`encode_kautian_subtag`), `dictionary/build/create_dictionary_bin.py`, Rust `engine/lexicon::dictionary_reader` (`KAUTIAN_SUBTAG_*` / `WIRE_KAUTIAN_SUBCOLL_*`), this doc |
-| Key prefix list (`tl:` / `poj:` / `hanzi:`) | build script (`create_fst.py`), Rust `lexicon::key_normalizer`, this doc |
+| Key prefix list (`tl:` / `poj:` / `tps:`, `tl-abbrev:` / `poj-abbrev:` / `tps-abbrev:`, `hanzi:`) | build script (`create_fst.py`), Rust `phonetics::KeyFamily`, this doc |
 | Magic bytes (`TKDB` / `TKWA`) | build script, Rust readers, this doc |
 | File version (`dictionary.bin = 3`, `association.bin = 1`) | build script, Rust readers, this doc |
 | Endianness (little-endian) | build script, Rust readers |

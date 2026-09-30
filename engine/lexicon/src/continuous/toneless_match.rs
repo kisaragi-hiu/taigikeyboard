@@ -1,6 +1,8 @@
 //! Continuous toneless-key guards: does a record's reconstructed toneless face
 //! (`tl_notone` / `poj_notone` / `tps_notone`) match the key it was found under.
 
+use phonetics::KeyFamily;
+
 /// v3.5.8 — continuous-input abbreviation-collision guard. Returns
 /// `true` iff `record_tl` genuinely matched the queried `key` via its
 /// toneless spelling (`tl_notone`), not via its acronym (`tl_abbrev`).
@@ -29,7 +31,7 @@
 /// key, NOT a continuous toneless key, so the guard is skipped rather
 /// than silently filtering a non-continuous caller ([`toneless_body`]).
 fn matches_continuous_tl_toneless_key(key: &str, record_tl: &str) -> bool {
-    toneless_body(key, "tl:")
+    toneless_body(key, KeyFamily::Tl.prefix())
         .is_none_or(|body| face_eq_with_nasal_oo_alias(&tl_toneless_face(record_tl), body))
 }
 
@@ -124,7 +126,7 @@ fn poj_toneless_face(record_tl: &str) -> String {
 /// mirrors the TL guard: a `poj:` key whose body still carries an ASCII
 /// digit is treated as a numeric-tone key and passed through.
 fn matches_continuous_poj_toneless_key(key: &str, record_tl: &str) -> bool {
-    toneless_body(key, "poj:")
+    toneless_body(key, KeyFamily::Poj.prefix())
         .is_none_or(|body| face_eq_with_nasal_oo_alias(&poj_toneless_face(record_tl), body))
 }
 
@@ -195,7 +197,8 @@ fn derive_poj_notone_for_match(poj_display: &str) -> String {
 /// so the guard passes through (mirrors TL/POJ guards' digit-in-body
 /// bypass).
 fn matches_continuous_tps_toneless_key(key: &str, record_tl: &str) -> bool {
-    toneless_body(key, "tps:").is_none_or(|body| tps_face_eq(&tps_toneless_faces(record_tl), body))
+    toneless_body(key, KeyFamily::Tps.prefix())
+        .is_none_or(|body| tps_face_eq(&tps_toneless_faces(record_tl), body))
 }
 
 /// The record's `tps_notone` face plus its C-3a or→er dialect variant
@@ -233,9 +236,9 @@ pub(super) fn tps_face_starts_with(
 /// unknown prefix pass through (`matches_continuous_tl_toneless_key`
 /// returns `true` for keys lacking the `tl:` prefix).
 pub(super) fn matches_continuous_toneless_key(key: &str, record_tl: &str) -> bool {
-    if key.starts_with("poj:") {
+    if key.starts_with(KeyFamily::Poj.prefix()) {
         matches_continuous_poj_toneless_key(key, record_tl)
-    } else if key.starts_with("tps:") {
+    } else if key.starts_with(KeyFamily::Tps.prefix()) {
         matches_continuous_tps_toneless_key(key, record_tl)
     } else {
         matches_continuous_tl_toneless_key(key, record_tl)
@@ -265,9 +268,9 @@ pub(super) fn matches_continuous_toneless_key(key: &str, record_tl: &str) -> boo
 /// Sibling of [`matches_continuous_toneless_key`]; the two share the
 /// reconstruction code and only differ in `==` vs `starts_with`.
 pub(super) fn matches_continuous_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
-    if key.starts_with("poj:") {
+    if key.starts_with(KeyFamily::Poj.prefix()) {
         matches_continuous_poj_toneless_prefix_key(key, record_tl)
-    } else if key.starts_with("tps:") {
+    } else if key.starts_with(KeyFamily::Tps.prefix()) {
         matches_continuous_tps_toneless_prefix_key(key, record_tl)
     } else {
         matches_continuous_tl_toneless_prefix_key(key, record_tl)
@@ -275,7 +278,7 @@ pub(super) fn matches_continuous_toneless_prefix_key(key: &str, record_tl: &str)
 }
 
 fn matches_continuous_tl_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
-    toneless_body(key, "tl:")
+    toneless_body(key, KeyFamily::Tl.prefix())
         .is_none_or(|body| starts_with_face_or_nasal_oo_alias(&tl_toneless_face(record_tl), body))
 }
 
@@ -307,12 +310,12 @@ fn starts_with_face_or_nasal_oo_alias(face: &str, body: &str) -> bool {
 }
 
 fn matches_continuous_poj_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
-    toneless_body(key, "poj:")
+    toneless_body(key, KeyFamily::Poj.prefix())
         .is_none_or(|body| starts_with_face_or_nasal_oo_alias(&poj_toneless_face(record_tl), body))
 }
 
 fn matches_continuous_tps_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
-    toneless_body(key, "tps:")
+    toneless_body(key, KeyFamily::Tps.prefix())
         .is_none_or(|body| tps_face_starts_with(&tps_toneless_faces(record_tl), body))
 }
 
@@ -347,24 +350,14 @@ pub(super) enum KeyFace {
 impl KeyFace {
     pub(super) fn of(family: &str, body: &str) -> Option<Self> {
         let numeric_tone = body.bytes().any(|b| b.is_ascii_digit());
-        match family {
-            "tl:" => Some(if numeric_tone {
-                KeyFace::TlNum
-            } else {
-                KeyFace::TlNotone
-            }),
-            "poj:" => Some(if numeric_tone {
-                KeyFace::PojNum
-            } else {
-                KeyFace::PojNotone
-            }),
-            "tps:" => Some(if body.chars().any(phonetics::is_tps_tone_mark) {
-                KeyFace::TpsNum
-            } else {
-                KeyFace::TpsNotone
-            }),
-            _ => None,
-        }
+        Some(match KeyFamily::from_prefix(family)? {
+            KeyFamily::Tl if numeric_tone => KeyFace::TlNum,
+            KeyFamily::Tl => KeyFace::TlNotone,
+            KeyFamily::Poj if numeric_tone => KeyFace::PojNum,
+            KeyFamily::Poj => KeyFace::PojNotone,
+            KeyFamily::Tps if body.chars().any(phonetics::is_tps_tone_mark) => KeyFace::TpsNum,
+            KeyFamily::Tps => KeyFace::TpsNotone,
+        })
     }
 }
 

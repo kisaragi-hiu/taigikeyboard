@@ -23,7 +23,7 @@
 
 use fst::Set;
 use mmap_host::MmapHandle;
-use phonetics::InputMode;
+use phonetics::{InputMode, KeyFamily};
 
 use crate::error::LexiconError;
 
@@ -77,12 +77,7 @@ impl SyllableInventory {
     /// Bopomofo syllable per line, in both numeric-tone-marked and
     /// toneless forms).
     pub fn contains_in(&self, mode: InputMode, syllable: &str) -> bool {
-        let prefix = match mode {
-            InputMode::Poj => "poj:",
-            InputMode::Tps => "tps:",
-            InputMode::Tl | InputMode::English => "tl:",
-        };
-        self.contains_prefixed(prefix, syllable)
+        self.contains_prefixed(KeyFamily::for_input_mode(mode).prefix(), syllable)
     }
 
     /// TPS ambiguity-aware membership probe: true when ANY reading of
@@ -104,17 +99,21 @@ impl SyllableInventory {
         // only ever match the literal, so a literal miss is a miss. This
         // keeps the per-keystroke BFS (O(n × 24) probes, most of which
         // miss) from building an automaton per probe.
-        if self.contains_prefixed("tps:", syllable) {
+        let prefix = KeyFamily::Tps.prefix();
+        if self.contains_prefixed(prefix, syllable) {
             return true;
         }
         if !crate::tps_pattern::has_ambiguous_glyph(syllable) {
             return false;
         }
-        let mut key = String::with_capacity(4 + syllable.len());
-        key.push_str("tps:");
+        let mut key = String::with_capacity(prefix.len() + syllable.len());
+        key.push_str(prefix);
         key.push_str(syllable);
         // Pattern offsets are relative to the full key (prefix included).
-        let shifted: Vec<usize> = final_only_offsets.iter().map(|o| o + 4).collect();
+        let shifted: Vec<usize> = final_only_offsets
+            .iter()
+            .map(|o| o + prefix.len())
+            .collect();
         let pattern = crate::tps_pattern::TpsKeyPattern::new(
             &key,
             crate::tps_pattern::WireMode::Exact,

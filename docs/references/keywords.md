@@ -26,7 +26,7 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | **InputType** | Retired 2026-09-30 with the `Search` op: the proto enum, `SearchRequest` and the in-process `SearchInputType` are gone; romanization queries go through `lexicon::search::search`, hanji queries through `search_by_hanzi` | `engine/lexicon/src/search.rs` |
 | **composingTextSuggestion** | Position 0 candidate — always the current composing text | iOS `createComposingTextSuggestion()` |
 | **phraseSuggestion** | Learned phrase candidates inserted at position 1 | Rust `lexicon::assoc_lookup` |
-| **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `lexicon::key_normalizer::build` |
+| **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `phonetics::KeyFamily::search_key` (`hanzi:` = `phonetics::HANJI_KEY_PREFIX`) |
 
 ### 3. Tone Engine (`engine/tone.md`)
 All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge+Phonetics.swift` / `PhoneticsBridge.kt` (`stripTone`, `tlToPoj`, …); preedit tone rendering runs inside composing ops.
@@ -49,7 +49,7 @@ fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap reade
 | **EnabledDictionaries** | Per-source toggle + 16-bit `source_bitmask` for filter | iOS `EnabledDictionaries.swift` / Android `.kt` (DTO; bitmask layout from `binary-format.md`) |
 | **bitmaskFilter** | 16-bit source bitmask replaces SQL WHERE for dictionary filtering | Rust `lexicon::dictionary_reader::Filter` |
 | **InputNormalizer** | Converts any input form to TL numeric tone format | Rust `phonetics::normalization::normalize_input` |
-| **searchKey** | Normalized key format: prefix + lowercase, no hyphens, numeric tones (e.g. `tl:gua2si7`) | Rust `lexicon::key_normalizer::build` |
+| **searchKey** | Normalized key format: prefix + lowercase, no hyphens, numeric tones (e.g. `tl:gua2si7`) | Rust `phonetics::KeyFamily::search_key` |
 | **scoringFormula** | `userFreqScore(×100) + completionPenalty(-1000) + closenessBonus(+500) + recencyBonus(+200) + exactBonus(+100) + baseFreqScore` | Rust `ranking::score` |
 | **userFrequency** | Per-word usage count, dominates ranking. `user_frequency.db`, engine-owned; read inside `FetchAtPos`, written by `RecordUsage` | Rust `userdata::UserFrequencyStore` |
 | **timeDecay** | Exponential decay with 1-hour recency window for ranking-side bonus | Rust `ranking::score` constants (`RECENCY_WINDOW_MS=3_600_000`) |
