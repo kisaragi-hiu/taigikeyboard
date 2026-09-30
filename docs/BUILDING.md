@@ -92,6 +92,13 @@ make hooks          # pre-commit: gitleaks + personal-data checks on staged chan
 | Dictionary | `make dict` | `python3 -m pytest tests`, run inside `dictionary/` (needs the `taigi-converter` submodule) |
 | taigi-converter | — | `npm test` in `taigi-converter/` |
 
+`make test-changed` runs only the rows the branch's changes need
+(`tools/test_select.py`: engine crates plus their reverse dependencies, and
+each touched platform); `BASE=<ref>` diffs against another base,
+`PLATFORM=engine,macos` narrows it, and the script without `--run` only prints
+the selection. Its iOS command names the maintainer's simulator; use the table's
+command with your own.
+
 Before opening a pull request, run `make lint` — rustfmt, clippy, SwiftFormat and
 Spotless, the same checks CI runs (`make fmt` applies the formatters).
 

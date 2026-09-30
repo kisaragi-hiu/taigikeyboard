@@ -46,6 +46,8 @@ Path-scoped rules load themselves; these do not:
 
 **Commit-first ordering**: commit → push → `gh pr create`, no pre-commit test gate. Post-PR verification (`~/.claude/rules/round-workflow.md` § Codex review sandwich step 6) runs build+test for every touched platform in parallel, in the background, after the PR URL returns.
 
+**Post-PR verification = `python3 tools/test_select.py --run --platform <p>`** per touched platform (background, parallel; no args = print the selection; `make test-changed` runs all). The table's full suites (`cargo test --workspace` etc.) only for release prep, a USER ask, or a pre-merge catch-net.
+
 | Platform | Build | Test |
 |---|---|---|
 | engine | `cargo build --workspace` | `cargo test --workspace` |
