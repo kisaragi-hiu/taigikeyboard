@@ -54,20 +54,18 @@ fun RustEngineBridge.userDataOpen(
 }
 
 /**
- * One pick, as the engine counts it — its frequency, and the touch of a
- * learned phrase taken whole ([hanji] set). Best-effort: the engine queues the
- * write, and a failed round-trip is logged, never surfaced.
+ * One NextWord prediction pick, as the engine counts it (a Continuous pick the
+ * engine counts itself, R5). Best-effort: the engine queues the write, and a
+ * failed round-trip is logged, never surfaced.
  */
 fun RustEngineBridge.userDataRecordUsage(
     displayText: String,
     canonicalTl: String,
-    hanji: String?,
 ) {
     val usage = RecordUsage
         .newBuilder()
         .setDisplayText(displayText)
         .setCanonicalTl(canonicalTl)
-        .apply { if (!hanji.isNullOrEmpty()) setHanji(hanji) }
         .build()
     userData("userDataRecordUsage") { setRecordUsage(usage) }
 }

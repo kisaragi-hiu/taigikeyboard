@@ -244,12 +244,16 @@ enum CandidateCellHelper {
 
     // MARK: - Private
 
-    /// TPS fallback: renders the roman romanization as TPS symbols.
+    /// TPS fallback for a hanji-less cell: its display romanization (tone
+    /// marks) rendered as TPS symbols — what picking it writes (R5 P2, the
+    /// engine's `commit_text.rs` Bopomofo).
+    // CROSS-PLATFORM INVARIANT — mirrors android SmartbarCandidateStrip.kt
+    // `tlDisplayToTps(word.roman, …)`. Drift shows one platform a cell its pick does not write.
     private static func tpsFallback(
         for suggestion: AutocompleteSuggestion,
         orMapsToER: Bool,
     ) -> String {
-        RustEngineBridge.tlNumericToTPS(suggestion.text, orMapsToER: orMapsToER)
+        RustEngineBridge.tlDisplayToTPS(suggestion.text, orMapsToER: orMapsToER)
     }
 
     /// Replaces the commit text with `newText`, moving the original text to the subtitle to keep

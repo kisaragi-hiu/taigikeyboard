@@ -63,18 +63,7 @@ public extension RustEngineBridge {
         )
     }()
 
-    // MARK: TPS (4 ops)
-
-    static func tlNumericToTPS(_ text: String, orMapsToER: Bool) -> String {
-        var payload = Taigi_Engine_TlNumericToTps()
-        payload.text = text
-        payload.orMapsToEr = orMapsToER
-        return stringDispatch(
-            method: .tlNumericToTps(payload),
-            input: text,
-            op: "tlNumericToTps",
-        )
-    }
+    // MARK: TPS (3 ops)
 
     static func tlDisplayToTPS(_ text: String, orMapsToER: Bool) -> String {
         var payload = Taigi_Engine_TlDisplayToTps()

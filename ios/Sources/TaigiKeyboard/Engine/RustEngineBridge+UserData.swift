@@ -37,16 +37,13 @@ extension RustEngineBridge {
         return true
     }
 
-    /// One pick, as the engine counts it — its frequency, and the touch of a
-    /// learned phrase taken whole (`hanji` set). Best-effort: the engine
-    /// queues the write, and a failed round-trip is logged, never surfaced.
-    static func userDataRecordUsage(displayText: String, canonicalTl: String, hanji: String?) {
+    /// One NextWord prediction pick, as the engine counts it (a Continuous
+    /// pick the engine counts itself, R5). Best-effort: the engine queues the
+    /// write, and a failed round-trip is logged, never surfaced.
+    static func userDataRecordUsage(displayText: String, canonicalTl: String) {
         var usage = Taigi_Engine_RecordUsage()
         usage.displayText = displayText
         usage.canonicalTl = canonicalTl
-        if let hanji, !hanji.isEmpty {
-            usage.hanji = hanji
-        }
         _ = userDataResult(.recordUsage(usage), op: "userDataRecordUsage")
     }
 

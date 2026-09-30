@@ -251,43 +251,31 @@ fun RustEngineBridge.composingFetchAtPos(
 }
 
 /**
- * Commit a candidate segment in `Phase::Continuous`. `displayText` /
- * `consumedBytes` / `syllableCount` MUST come from a
- * [RustEngineBridge.ContinuousCandidate] returned by an immediately
- * preceding [composingFetchAtPos] call — sending mismatched values
- * mis-aligns the committed segment. `consumedBytes >= pending.utf8.size`
- * triggers a final commit (exit to Idle). Programmer-error inputs collapse
- * to noop on the engine side.
+ * Commit a candidate segment in `Phase::Continuous`. The pick MUST come from
+ * a [RustEngineBridge.ContinuousCandidate] returned by an immediately
+ * preceding [composingFetchAtPos] call — mismatched values mis-align the
+ * committed segment. `consumedBytes >= pending.utf8.size` makes a final
+ * commit (exit to Idle); anything less nails the segment, writing nothing
+ * (Model B). The engine resolves the document text from the pick's scripts
+ * under [settings] and counts the pick itself (R5). Mirrors iOS
+ * `RustEngineBridge.composingCommitContinuous`.
  */
 fun RustEngineBridge.composingCommitContinuous(
-    displayText: String,
-    canonicalText: String,
-    associationTl: String,
-    // §50 — the picked candidate's hanji (`ContinuousCandidate.hanji`), null
-    // for a hanji-less pick; the engine learns a composition only when every
-    // segment carried one.
-    hanji: String? = null,
-    consumedBytes: Int,
-    syllableCount: Int,
+    pick: RustEngineBridge.ContinuousPick,
     settings: EngineSettings,
     generation: Long,
-): RustEngineBridge.ComposingTransition {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.CommitContinuous
-        .newBuilder()
-        .setDisplayText(displayText)
-        .setCanonicalText(canonicalText)
-        // R2: canonical TL → NextWord next_tl/prev_tl. Empty → engine
-        // falls back to the raw committed slice.
-        .setAssociationTl(associationTl)
-        .apply { if (!hanji.isNullOrEmpty()) setHanji(hanji) }
-        .setConsumedBytes(consumedBytes)
-        .setSyllableCount(syllableCount)
-        .build()
-    return composingDispatch(
-        methodSetter = { it.commitContinuous = payload },
+): RustEngineBridge.ContinuousCommitResult {
+    val request = pick.toRequest()
+    val payload = composingProtoRoundtrip(
+        methodSetter = { it.commitContinuous = request },
         op = "composingCommitContinuous",
         generation = generation,
         config = continuousAppConfig(settings),
+    ) ?: return RustEngineBridge.ContinuousCommitResult.FAILED
+    // Always set on this path; an absent one reads as UNSPECIFIED → ignored.
+    return RustEngineBridge.ContinuousCommitResult(
+        transition = synthComposing(payload),
+        outcome = RustEngineBridge.ContinuousCommitOutcome.from(payload.commit),
     )
 }
 

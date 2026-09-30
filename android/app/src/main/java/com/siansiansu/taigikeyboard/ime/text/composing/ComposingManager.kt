@@ -441,86 +441,40 @@ class ComposingManager(
         )
     }
 
-    // v3.5.8 Phase 9 Bug 1 (Option A): `displayText` is the swap/TPS/both-
-    // scripts-formatted DOCUMENT string (caller mirrors the legacy lexicon
-    // formatter); `canonicalText` is the canonical key (`hanji ?? roman`)
-    // routed to NextWord so association learning stays mode-independent.
-
     /**
-     * Commit one Continuous candidate. `displayText` / `consumedBytes` /
-     * `syllableCount` MUST come verbatim from a [RustEngineBridge.ContinuousCandidate]
-     * returned by an immediately preceding [fetchContinuousCandidates] call.
+     * Commit one Continuous candidate. The pick MUST come verbatim from a
+     * [RustEngineBridge.ContinuousCandidate] returned by an immediately
+     * preceding [fetchContinuousCandidates] call.
      *
-     * Returns an effect-backed [RustEngineBridge.CommitContinuousResult] so
-     * callers can gate side-effects (frequency recording, auto-space) on
-     * actual commit success rather than coarse `_isComposing.value` mirror
-     * state. Generation mismatch silently resets the engine to Idle in
-     * `engine/composing/src/handle.rs:61-65` BEFORE the intent runs, in
-     * which case `Intent::CommitContinuous` becomes a phase-mismatch noop —
-     * the post-call mirror flips to `_isComposing.value=false` (engine is
-     * Idle) but no `CommitTextReplacingPreedit` Effect is emitted. Without
-     * the effect-backed gate, callers would record frequency for uncommitted
-     * text and append a stray space.
-     *
-     * **Model B** (§10): mid-commit (nail) emits `[UpdatePreedit(whole
-     * composition), NextWordUpdateLastSelectedWord, PerformAutocomplete]`
-     * and stays Continuous — NO `CommitTextReplacingPreedit`; final-commit
+     * The engine resolves the document text, counts the pick (R5), and
+     * answers what the pick did — the outcome callers gate the auto space and
+     * the strip refresh on. **Model B** (§10): mid-commit (nail) emits
+     * `[UpdatePreedit(whole composition), NextWordUpdateLastSelectedWord,
+     * PerformAutocomplete]` and stays Continuous; final-commit
      * (`consumedBytes >= pending.utf8.size`) emits `[CommitTextReplacingPreedit
      * (whole composition), ResetAutocomplete, ResetAutocompleteContext,
-     * NextWordWordSelected]` and exits Continuous. `didCommit` therefore
-     * keys on `CommitTextReplacingPreedit` (final) OR
-     * `NextWordUpdateLastSelectedWord` (the per-segment nail signal); a
-     * noop emits neither.
+     * NextWordWordSelected]` and exits Continuous; a stale generation or a
+     * rejected pick emits nothing and answers `Ignored`.
      */
     fun commitContinuous(
-        displayText: String,
-        canonicalText: String,
-        associationTl: String,
-        consumedBytes: Int,
-        syllableCount: Int,
+        pick: RustEngineBridge.ContinuousPick,
         ic: InputConnection,
-        // §50 — the pick's hanji, null for a hanji-less candidate.
-        hanji: String? = null,
-    ): RustEngineBridge.CommitContinuousResult {
+    ): RustEngineBridge.ContinuousCommitOutcome {
         logger.tdebug(TAG) {
-            "[COMPOSE] fn=commitContinuous displayLen=${displayText.length} canonicalLen=${canonicalText.length} consumedBytes=$consumedBytes syllCount=$syllableCount"
+            "[COMPOSE] fn=commitContinuous script=${pick.script} canonicalLen=${pick.canonicalText.length} consumedBytes=${pick.consumedBytes} syllCount=${pick.syllableCount}"
         }
-        val settings = settingsProvider.current
-        val transition = RustEngineBridge.composingCommitContinuous(
-            displayText = displayText,
-            canonicalText = canonicalText,
-            associationTl = associationTl,
-            hanji = hanji,
-            consumedBytes = consumedBytes,
-            syllableCount = syllableCount,
-            settings = settings,
+        val result = RustEngineBridge.composingCommitContinuous(
+            pick = pick,
+            settings = settingsProvider.current,
             generation = currentGeneration,
         )
-        // Inspect transition BEFORE dispatching effects so we return an
-        // effect-backed signal. `applyAsSelfCommit` body inlined (3 lines)
-        // for the same reason — semantics identical to the helper.
-        val hasCommitText = transition.effects.any { effect ->
-            effect is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit
-        }
-        val hasNail = transition.effects.any { effect ->
-            effect is RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord
-        }
-        // Model B: nail (mid-commit) emits no commit-text; the learning
-        // effect is its success signal. Final-commit emits commit-text +
-        // exits. noop emits neither → both flags false (closes the
-        // generation-mismatch race, unchanged guarantee).
-        val didCommit = hasCommitText || hasNail
-        val didFinalCommit = hasCommitText && !transition.isComposing
         selfCommitInProgress = true
         try {
-            applyTransition(transition, ic)
+            applyTransition(result.transition, ic)
         } finally {
             selfCommitInProgress = false
         }
-        return RustEngineBridge.CommitContinuousResult(
-            didCommit = didCommit,
-            didFinalCommit = didFinalCommit,
-        )
+        return result.outcome
     }
 
     /**

@@ -7,20 +7,18 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.userDataRecordUsage
 
 /**
- * One candidate the user took. This side decides WHAT a pick is — the
- * `(displayText, canonicalTl)` identity it counts under — and the engine
- * keeps the count. [hanji] is set for a continuous pick, so a learned phrase
- * taken whole is touched (§50).
+ * One NextWord prediction the user took. This side decides WHAT the pick is —
+ * the `(displayText, canonicalTl)` identity it counts under — and the engine
+ * keeps the count. A Continuous pick is counted by the engine itself.
  */
 data class Usage(
     val displayText: String,
     val canonicalTl: String,
-    val hanji: String? = null,
 )
 
 /**
- * CROSS-PLATFORM INVARIANT — mirrors iOS `UsageRecorder.swift` and the engine's
- * own recording on macOS + desktop (R5: `engine/composing/src/transition.rs`
+ * CROSS-PLATFORM INVARIANT — mirrors iOS `UsageRecorder.swift`; every
+ * Continuous pick the engine records itself (R5: `engine/composing/src/transition.rs`
  * `commit_continuous_resolved`, `Applied.usage`).
  * An interface so the tap handler can be driven from JVM tests, which cannot
  * load the engine.
@@ -32,6 +30,6 @@ fun interface UsageRecorder {
 /** The engine's own stores (`UserDataRequest.record_usage`). */
 object EngineUsageRecorder : UsageRecorder {
     override fun record(usage: Usage) {
-        RustEngineBridge.userDataRecordUsage(usage.displayText, usage.canonicalTl, usage.hanji)
+        RustEngineBridge.userDataRecordUsage(usage.displayText, usage.canonicalTl)
     }
 }

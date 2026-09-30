@@ -194,95 +194,36 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         return fetched.candidates ?? []
     }
 
-    /// Commit one Continuous candidate. `displayText` / `consumedBytes` /
-    /// `syllableCount` MUST come verbatim from a `ContinuousCandidate`
-    /// returned by an immediately preceding `fetchContinuousCandidates()`
-    /// call — the engine collapses to noop on UTF-8/syllable boundary
-    /// violations, so caller-side validation is unnecessary
-    /// (`engine/composing/src/transition.rs:613-679`).
+    /// Commit one Continuous candidate. The pick MUST come verbatim from a
+    /// `ContinuousCandidate` returned by an immediately preceding
+    /// `fetchContinuousCandidates()` call — the engine collapses to noop on
+    /// UTF-8/syllable boundary violations, so caller-side validation is
+    /// unnecessary.
     ///
-    /// Returns an effect-backed signal so callers can gate side effects
-    /// (frequency recording, auto-space) on actual commit success rather
-    /// than coarse `isComposing` mirror state. Codex PR #257 r3214932308:
-    /// generation mismatch can silently reset the engine to Idle in
-    /// `engine/composing/src/handle.rs:61-65` BEFORE the intent runs, in
-    /// which case `Intent::CommitContinuous` becomes a phase-mismatch noop
-    /// — the post-call mirror flips to `isComposing=false` (engine is
-    /// Idle) but no `CommitTextReplacingPreedit` effect is emitted.
-    /// Without an effect-backed gate, callers would record frequency for
-    /// uncommitted text and append a stray space.
-    ///
-    /// - Returns (**Model B**, §10):
-    ///   - `didCommit`: a continuous selection succeeded — a **nail**
-    ///     (mid-commit) OR a final commit. Under Model B a mid-commit nail
-    ///     does NOT write the document (emits no `.commitTextReplacingPreedit`)
-    ///     so it is detected by `.nextWordUpdateLastSelectedWord` (the
-    ///     per-segment learning signal emitted exactly on a successful nail
-    ///     in this path); a final commit is detected by
-    ///     `.commitTextReplacingPreedit`. A noop emits neither.
-    ///   - `didFinalCommit`: `.commitTextReplacingPreedit` present AND
-    ///     `transition` exited Continuous — only the hard finalize writes
-    ///     literal text. Implies `didCommit`.
-    ///
+    /// The engine resolves the document text, counts the pick (R5), and
+    /// answers what the pick did — the outcome callers gate the auto space on.
     /// Model B mid-commit (nail) emits `[UpdatePreedit(whole composition),
     /// NextWordUpdateLastSelectedWord, PerformAutocomplete]` and stays
     /// Continuous; final-commit (`consumedBytes >= pending.utf8.count`)
     /// emits `[CommitTextReplacingPreedit(whole composition),
     /// ResetAutocomplete, ResetAutocompleteContext, NextWordWordSelected]`
-    /// and exits Continuous.
-    // v3.5.8 Phase 9 Bug 1 (Option A): `displayText` is the swap/TPS/both-
-    // scripts-formatted DOCUMENT string (caller mirrors the legacy lexicon
-    // formatter); `canonicalText` is the canonical key (`hanji ?? roman`)
-    // routed to NextWord so association learning stays mode-independent.
-    public func commitContinuous(
-        displayText: String,
-        canonicalText: String,
-        associationTl: String,
-        hanji: String? = nil,
-        consumedBytes: UInt32,
-        syllableCount: UInt32,
-    ) -> (didCommit: Bool, didFinalCommit: Bool) {
+    /// and exits Continuous; a stale generation or a rejected pick emits
+    /// nothing and answers `.ignored`.
+    public func commitContinuous(_ pick: RustEngineBridge.ContinuousPick) -> RustEngineBridge.ContinuousCommitOutcome {
         logger.debug(
-            "[COMPOSE] fn=commitContinuous displayLen=\(displayText.count) "
-                + "canonicalLen=\(canonicalText.count) "
-                + "consumedBytes=\(consumedBytes) syllCount=\(syllableCount)",
+            "[COMPOSE] fn=commitContinuous script=\(pick.script) "
+                + "canonicalLen=\(pick.canonicalText.count) "
+                + "consumedBytes=\(pick.consumedBytes) syllCount=\(pick.syllableCount)",
         )
-        let settings = settingsProvider.current
-        let transition = RustEngineBridge.composingCommitContinuous(
-            displayText: displayText,
-            canonicalText: canonicalText,
-            associationTl: associationTl,
-            hanji: hanji,
-            consumedBytes: consumedBytes,
-            syllableCount: syllableCount,
-            settings: settings,
+        let result = RustEngineBridge.composingCommitContinuous(
+            pick,
+            settings: settingsProvider.current,
             generation: currentGeneration,
         )
-        // Inspect transition BEFORE dispatching effects so we can return an
-        // effect-backed signal. `applyAsSelfCommit` body inlined (3 lines)
-        // for the same reason — semantics identical to the helper.
-        let hasCommitText = transition.effects.contains { effect in
-            if case .commitTextReplacingPreedit = effect {
-                return true
-            }
-            return false
-        }
-        let hasNail = transition.effects.contains { effect in
-            if case .nextWordUpdateLastSelectedWord = effect {
-                return true
-            }
-            return false
-        }
-        // Model B: nail (mid-commit) emits no commit-text; the learning
-        // effect is its success signal. Final-commit emits commit-text +
-        // exits. noop emits neither → both flags false (closes the
-        // generation-mismatch race, unchanged guarantee).
-        let didCommit = hasCommitText || hasNail
-        let didFinalCommit = hasCommitText && !transition.isComposing
         selfCommitInProgress = true
         defer { selfCommitInProgress = false }
-        apply(transition)
-        return (didCommit: didCommit, didFinalCommit: didFinalCommit)
+        apply(result.transition)
+        return result.outcome
     }
 
     /// Abort Continuous-input. Drops `Phase::Continuous`'s pending + nailed

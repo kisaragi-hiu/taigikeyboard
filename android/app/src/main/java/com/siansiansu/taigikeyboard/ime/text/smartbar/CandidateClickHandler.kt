@@ -4,6 +4,7 @@
 package com.siansiansu.taigikeyboard.ime.text.smartbar
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.proto.CommitScript
 import com.siansiansu.taigikeyboard.engine.tlDisplayToTps
 import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -139,8 +140,8 @@ class CandidateClickHandler(
     }
 
     /**
-     * Document text + auto-space verdict for one Taigi candidate tap — every
-     * tap path (strip, expanded overlay, Continuous) resolves through here.
+     * Document text + auto-space verdict for one NextWord prediction tap,
+     * strip or expanded overlay (a Continuous tap is resolved by the engine).
      * A §42 Hanji with Romanization [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked cell commits
      * the script its marker names ([resolveMarkedCellCommit]); an unmarked
      * cell follows the mode ([resolveUnmarkedCommit]), with the Annotate in Brackets roman
@@ -250,132 +251,53 @@ class CandidateClickHandler(
     }
 
     /**
-     * Continuous-input candidate tap (slot 0 and slot N, identical contract).
+     * Continuous-input candidate tap (slot 0 and slot N, identical contract),
+     * strip and expanded overlay alike.
      *
-     * Per `docs/engine/continuous-input-ranking.md` §10.3 clarification γ
-     * (REVISED, Bug 1): commits the **swap/TPS/both-scripts-formatted
-     * document string** built from the raw [TaigiWord.roman] / [TaigiWord.hanzi]
-     * via the same `bracketRoman` + when-expr the legacy lexicon path uses —
-     * so Continuous and lexicon commits match for the same candidate under
-     * the same settings. The `DISPLAY_TEXT` sidechannel (engine canonical
-     * `hanji.unwrap_or(roman)`) is NOT the document string; it is forwarded
-     * as `commitContinuous(canonicalText = …)` so `user_frequency.db` +
-     * NextWord key on the canonical token regardless of display mode
-     * (decision b).
+     * R5: the engine resolves what the pick writes from the candidate's own
+     * scripts under the live settings, counts the pick, and answers what it
+     * did — so Continuous commits match iOS / macOS / Windows / Linux by
+     * construction. The pick is read off the word's metadata ([continuousPick]);
+     * a §42 split cell commits the script its marker names ([commitScript]).
      *
-     * Decodes the [TaigiWord.additionalInfo] sidechannel, dispatches
-     * `commitContinuous`, and gates per-segment frequency learning +
-     * final-commit auto-space on the effect-backed
-     * [RustEngineBridge.CommitContinuousResult]. Stale taps where the engine
-     * has already left Continuous collapse to `(false, false)` so neither
-     * side-effect fires.
-     *
-     * `DISPLAY_TEXT`, `CONSUMED_BYTES`, and `SYLLABLE_COUNT` are all
+     * `DISPLAY_TEXT`, `CONSUMED_BYTES`, and `SYLLABLE_COUNT` are
      * strict-required (Item 4 fork F2=A); missing or unparseable → drop the
-     * tap. The document string IS derived from [TaigiWord.roman] /
-     * [TaigiWord.hanzi] (that is the legacy-parity contract); only the
-     * canonical key rides the sidechannel. No fallback to
-     * `selectSuggestion(text)` — would lose `consumedBytes` and corrupt
-     * `Phase::Continuous { raw }` byte alignment.
-     *
-     * §42 Hanji with Romanization split cells: a [TaigiWord.MetadataKeys.CELL_SCRIPT]-marked
-     * cell resolves its document string via [resolveMarkedCellCommit]
-     * (the marker is authoritative; the mode-derived when-expr is bypassed)
-     * and its auto-space verdict rides [ResolvedCommit.wroteRomanization].
-     * Identity (`commitContinuous` canonicalText/associationTl, word-frequency
-     * pair-key) is marker-independent — both cells commit the same
-     * candidate.
+     * tap. No fallback to `selectSuggestion(text)` — would lose
+     * `consumedBytes` and corrupt `Phase::Continuous { raw }` byte alignment.
      */
     private fun handleContinuousCandidateClick(
         selectedWord: TaigiWord,
         ic: android.view.inputmethod.InputConnection,
         composingManager: com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager,
     ) {
-        val info = selectedWord.additionalInfo
-        val displayText = info[TaigiWord.MetadataKeys.DISPLAY_TEXT]
-        val consumedBytes = info[TaigiWord.MetadataKeys.CONSUMED_BYTES]?.toIntOrNull()
-        val syllableCount = info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]?.toIntOrNull()
-        if (displayText == null || consumedBytes == null || syllableCount == null) {
+        val pick = continuousPick(selectedWord)
+        if (pick == null) {
+            val info = selectedWord.additionalInfo
             logger.w(
                 TAG,
                 "[CONTINUOUS] decode failed displayText=${info[TaigiWord.MetadataKeys.DISPLAY_TEXT]} consumedBytes=${info[TaigiWord.MetadataKeys.CONSUMED_BYTES]} syllableCount=${info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]}",
             )
             return
         }
+        val outcome = composingManager.commitContinuous(pick, ic)
+        logger.debug(TAG) { "[CONTINUOUS] commit script=${pick.script} outcome=$outcome" }
 
-        // v3.5.8 Phase 9 Bug 1 (Option A): commit the SAME swap/TPS/both-
-        // scripts-formatted string the legacy lexicon path commits (mirror
-        // of handleCandidateClick's bracketRoman + when-expr, minus the
-        // english arm — continuous candidates are never english). Built from
-        // the RAW TaigiWord.roman/.hanzi (Android does not view-rewrite the
-        // word before click handling, unlike iOS Suggestion). The canonical
-        // DISPLAY_TEXT sidechannel is forwarded as canonicalText so
-        // user_frequency.db + NextWord keys stay mode-independent (decision b).
-        //
-        // §42 Hanji with Romanization split cells: a CELL_SCRIPT-marked cell resolves the
-        // document text DIRECTLY from the marker (hanji cell → Hanji or
-        // `Hanji (romanization)` under Annotate in Brackets; roman cell → the BARE roman,
-        // brackets ignored — desktop `.alternate` parity), bypassing the
-        // mode-derived when-expr. Marked cells never exist under TPS (the
-        // builder split is gated off there), so no TPS re-render applies.
-        val cachedIsTranslateSwapped = getIsTranslateSwapped()
-        val cachedOutputBothScripts = getOutputBothScripts()
-        val isTPSLayout = prefs.isTpsLayout
-        val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
-        val resolved = resolveTaigiCommit(selectedWord, isTPSLayout, effectiveSwapped, cachedOutputBothScripts)
-        val textToCommit = resolved.text
-
-        // R2: canonical TL identity sidechannel — forwarded as
-        // `associationTl` so NextWord learns the same next_tl/prev_tl a
-        // normal candidate commit records. Absent (wire skew / older
-        // suggestion) → "" → engine falls back to the raw committed slice.
-        val associationTl = info[TaigiWord.MetadataKeys.CANONICAL_TL] ?: ""
-        // §50 — the pick's hanji (identity, not the committed script): the
-        // engine learns a composition only when every segment carried one.
-        val hanji = selectedWord.hanzi?.takeIf { it.isNotEmpty() }
-        val result = composingManager.commitContinuous(
-            displayText = textToCommit,
-            canonicalText = displayText,
-            associationTl = associationTl,
-            consumedBytes = consumedBytes,
-            syllableCount = syllableCount,
-            ic = ic,
-            hanji = hanji,
-        )
-
-        logger.debug(TAG) {
-            "[CONTINUOUS] commit displayText='$displayText' didCommit=${result.didCommit} didFinalCommit=${result.didFinalCommit}"
-        }
-
-        // Per-segment frequency on every successful commit (mid OR final),
-        // plus §50 touch-on-use for a learned row picked whole (`hanji`; a
-        // no-op for any other row). Stale taps (didCommit=false) skip — the
-        // engine had silently reset to Idle, so these are non-events. R5
-        // pair-key (#7): the `associationTl` canonical-TL sidechannel resolved
-        // above (same reading NextWord learns). The phrase the engine just
-        // learned is its own write (roadmap P8b).
-        if (result.didCommit) {
-            usage.record(Usage(displayText, associationTl, hanji))
-        }
-
-        // Mid-commit: engine stays in Continuous with a fresh pending span,
-        // but `PerformAutocomplete` is a delegate no-op so the strip would
-        // keep stale `consumedBytes` metadata until the next keypress. Trigger
-        // the standard refresh. Final-commit deliberately skipped: it emits
-        // NextWordWordSelected which drives async NextWord predict; a Taigi
-        // refresh would see `rawInput=null` and call `clearCandidates()`,
-        // racing with / wiping the fresh predictions.
-        if (result.didCommit && !result.didFinalCommit) {
-            onRequestCandidateRefresh()
-        }
-
-        // Auto-space only on final-commit (engine returned to Idle this call).
-        // Mid-commits leave the buffer non-empty so a stray space would split
-        // the word mid-syllable. Suffix check runs on the actual committed
-        // document string (`textToCommit`), not the canonical key (Codex
-        // post-impl: auto-space suffix check must use the document string).
-        if (result.didFinalCommit) {
-            appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
+        when (outcome) {
+            // Mid-commit: engine stays in Continuous with a fresh pending span,
+            // but `PerformAutocomplete` is a delegate no-op so the strip would
+            // keep stale `consumedBytes` metadata until the next keypress.
+            // Trigger the standard refresh. Final-commit deliberately skipped:
+            // it emits NextWordWordSelected which drives async NextWord
+            // predict; a Taigi refresh would see `rawInput=null` and call
+            // `clearCandidates()`, racing with / wiping the fresh predictions.
+            RustEngineBridge.ContinuousCommitOutcome.Nailed -> onRequestCandidateRefresh()
+            // Auto-space only on the final commit, as the engine judged what
+            // the pick wrote (romanization, no trailing `-`, §23).
+            is RustEngineBridge.ContinuousCommitOutcome.Finalized ->
+                appendAutoSpace(taigikeyboard, ic, taigikeyboard.prefs.isAutoSpaceEnabled && outcome.earnsAutoSpace)
+            // A stale tap (the engine had silently reset to Idle) or a
+            // rejected pick wrote nothing.
+            RustEngineBridge.ContinuousCommitOutcome.Ignored -> Unit
         }
     }
 
@@ -457,11 +379,67 @@ internal fun appendAutoSpaceIfEarned(
     ic: android.view.inputmethod.InputConnection,
     committedText: String,
     wroteRomanization: Boolean,
+) = appendAutoSpace(
+    taigikeyboard,
+    ic,
+    shouldAppendAutoSpace(taigikeyboard.prefs.isAutoSpaceEnabled, wroteRomanization, committedText),
+)
+
+/**
+ * The one insertion site of the auto space: [isEarned] is the whole verdict,
+ * the live Auto-Space setting included ([appendAutoSpaceIfEarned], or the
+ * engine's `earns_auto_space` ANDed with it on a Continuous commit).
+ */
+private fun appendAutoSpace(
+    taigikeyboard: TaigiKeyboard,
+    ic: android.view.inputmethod.InputConnection,
+    isEarned: Boolean,
 ) {
-    if (!shouldAppendAutoSpace(taigikeyboard.prefs.isAutoSpaceEnabled, wroteRomanization, committedText)) return
+    if (!isEarned) return
     ic.commitText(" ", 1)
     taigikeyboard.armAutoSpaceSwap()
 }
+
+/**
+ * The engine request for a Continuous candidate tap, read off the word's
+ * metadata (`TaigiAutocompleteService.kt` `continuousSidechannels`) and its own
+ * `roman` / `hanzi` (the candidate's, never rewritten on Android). `null` when
+ * a strict key is missing. Mirrors iOS `ActionHandler.continuousPick(for:)`.
+ */
+internal fun continuousPick(word: TaigiWord): RustEngineBridge.ContinuousPick? {
+    val info = word.additionalInfo
+    val canonicalText = info[TaigiWord.MetadataKeys.DISPLAY_TEXT] ?: return null
+    val consumedBytes = info[TaigiWord.MetadataKeys.CONSUMED_BYTES]?.toIntOrNull() ?: return null
+    val syllableCount = info[TaigiWord.MetadataKeys.SYLLABLE_COUNT]?.toIntOrNull() ?: return null
+    return RustEngineBridge.ContinuousPick(
+        script = commitScript(word),
+        roman = word.roman,
+        canonicalText = canonicalText,
+        // Absent only on wire skew → "" → the engine falls back to the raw
+        // committed slice for NextWord.
+        associationTl = info[TaigiWord.MetadataKeys.CANONICAL_TL] ?: "",
+        // §50 — the pick's hanji (identity, not the committed script): the
+        // engine learns a composition only when every segment carried one.
+        hanji = word.hanzi?.takeIf { it.isNotEmpty() },
+        consumedBytes = consumedBytes,
+        syllableCount = syllableCount,
+    )
+}
+
+// CROSS-PLATFORM INVARIANT — mirrors ios ActionHandler+Suggestions.swift `commitScript(for:)`.
+
+/**
+ * Which script a Continuous tap commits: a §42 split cell the one its
+ * [TaigiWord.MetadataKeys.CELL_SCRIPT] marker names, every other cell what the
+ * output settings lead with. An unknown marker commits the lead; a marker
+ * whose script the pick lacks the engine resolves to the lead too.
+ */
+internal fun commitScript(word: TaigiWord): CommitScript =
+    when (word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT]) {
+        TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI -> CommitScript.COMMIT_SCRIPT_HANJI
+        TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN -> CommitScript.COMMIT_SCRIPT_ROMAN
+        else -> CommitScript.COMMIT_SCRIPT_LEAD
+    }
 
 // CROSS-PLATFORM INVARIANT — one name on all four platforms: ios
 // `ActionHandler.rawPreeditWritesRomanization`, macOS/Windows

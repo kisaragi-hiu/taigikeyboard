@@ -306,6 +306,29 @@ pub fn to_tone_number(text: &str) -> String {
     result
 }
 
+/// Numeric-tone TL (`"hoo2"`, `"tai5-gi2"`) → TPS Bopomofo, one syllable per
+/// `-`-separated token joined by a single space (the platforms'
+/// `joined(separator: " ")` / `joinToString(" ")`). Empty tokens (`--`, a
+/// leading or trailing `-`) are dropped so nothing double-spaces.
+pub fn tl_numeric_to_tps(text: &str, or_maps_to_er: bool) -> String {
+    text.split('-')
+        .filter(|tok| !tok.is_empty())
+        .map(|tok| {
+            crate::tps::to_zhuyin(tok, false, or_maps_to_er)
+                .trim_end()
+                .to_string()
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Display TL with tone marks (`"hóo"`, `"tâi-gí"`) → TPS Bopomofo: the tone
+/// marks become digits, then [`tl_numeric_to_tps`]. What a TPS-layout cell
+/// shows for a candidate with no Hanji, and what picking it writes.
+pub fn tl_display_to_tps(text: &str, or_maps_to_er: bool) -> String {
+    tl_numeric_to_tps(&to_tone_number(text), or_maps_to_er)
+}
+
 fn is_letter_like(c: char) -> bool {
     c.is_alphabetic() || c == '\u{0358}' || is_nasal_marker(c)
 }

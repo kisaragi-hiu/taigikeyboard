@@ -10,9 +10,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * Per-request live snapshot. iOS EngineSettings / Android EngineSettings
  * shape — minimal in D9.1, expands per slice. Engine NEVER caches; live-read
  * per call per behavioral-invariants.md §11. Platform wrappers MUST pass
- * current values per request (e.g. iOS `RustEngineBridge.appConfig(mode:,
- * toggles: PojMarkerOptions)` requires the `PojMarkerOptions` parameter, no
- * default).
+ * current values per request, each from its one builder (iOS / macOS
+ * `RustEngineBridge.appConfig`, Android `EngineAppConfig.kt` `appConfig`,
+ * desktop `engine/bridge.rs` `app_config`).
  *
  * D9.4 added `oo_doubletap_enabled` + `nn_doubletap_enabled` for POJ
  * preprocessing (oo→o͘, nn→ⁿ) read by `phonetics::api::normalize_tone` on the

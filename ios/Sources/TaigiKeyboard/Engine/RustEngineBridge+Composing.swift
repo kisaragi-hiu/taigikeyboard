@@ -6,7 +6,8 @@ import SwiftProtobuf
 /// Composing slice extension for `RustEngineBridge`. Holds 10 composing
 /// ops + 4 continuous-input ops (v3.5.8 Phase 6) + their synthesized value
 /// types (`ComposingTransition` / `CandidateMode` / `ContinuousCandidate` /
-/// `ContinuousFetchResult`) + the composing-specific dispatch helpers
+/// `ContinuousPick` / `ContinuousCommitResult` / `ContinuousFetchResult`) +
+/// the composing-specific dispatch helpers
 /// (`composingProtoRoundtrip` / `composingDispatch` / `composingFetchDispatch`
 /// / `synthComposing` / `continuousAppConfig`). The four dispatch helpers
 /// stay `private` to the composing surface; `continuousAppConfig` is
@@ -158,6 +159,82 @@ public extension RustEngineBridge {
             self.hanji = hanji
             self.canonicalTl = canonicalTl
         }
+    }
+
+    /// One continuous-candidate pick (R5): which of its scripts the document
+    /// gets, and the candidate metadata the engine resolves the text from
+    /// (`engine/composing/src/commit_text.rs`) — never the view-rewritten
+    /// suggestion. Every field but `script` round-trips verbatim from the
+    /// `ContinuousCandidate` the user picked; `consumedBytes` is its
+    /// `consumedSpanEnd`, an absolute offset into the pending raw buffer.
+    struct ContinuousPick: Equatable {
+        public let script: Taigi_Engine_CommitScript
+        /// The candidate's display romanization (`ContinuousCandidate.roman`).
+        public let roman: String
+        /// Identity keys the engine counts the pick under — the canonical
+        /// `hanji ?? roman` and TL (Core Principle #6), never the rendering.
+        public let canonicalText: String
+        public let associationTl: String
+        /// §50 — the pick's hanji, `nil` for a hanji-less candidate.
+        public let hanji: String?
+        public let consumedBytes: UInt32
+        public let syllableCount: UInt32
+
+        /// The wire request.
+        var request: Taigi_Engine_CommitContinuous {
+            var request = Taigi_Engine_CommitContinuous()
+            request.script = script
+            request.roman = roman
+            request.canonicalText = canonicalText
+            // R2: canonical TL of the chosen candidate → NextWord `next_tl` /
+            // `prev_tl`. Empty → engine falls back to the raw committed slice.
+            request.associationTl = associationTl
+            if let hanji, !hanji.isEmpty {
+                request.hanji = hanji
+            }
+            request.consumedBytes = consumedBytes
+            request.syllableCount = syllableCount
+            return request
+        }
+    }
+
+    /// What a continuous pick did, as the engine answered it
+    /// (`ComposingResponse.commit`) — never read off the composing mirror: a
+    /// generation mismatch resets the engine to Idle before the intent runs
+    /// (`engine/composing/src/handle.rs`), so a mirror read would report a
+    /// commit that never happened.
+    enum ContinuousCommitOutcome: Equatable {
+        /// Nothing changed: a stale generation, a rejected pick, or a failed
+        /// round-trip.
+        case ignored
+        /// The segment was nailed and the composition continues (Model B: no
+        /// document write).
+        case nailed
+        /// The whole composition was written and the engine is Idle.
+        /// `earnsAutoSpace` is the engine's §23 verdict on what the pick wrote;
+        /// the live Auto-Space setting is the caller's.
+        case finalized(earnsAutoSpace: Bool)
+
+        // CROSS-PLATFORM INVARIANT — mirrors macOS `CandidateCommitOutcome.init(_:)`
+        // and android `RustEngineBridge.ContinuousCommitOutcome.from`.
+        init(_ resolution: Taigi_Engine_CommitResolution) {
+            switch resolution.outcome {
+            case .nailed: self = .nailed
+            case .finalized: self = .finalized(earnsAutoSpace: resolution.earnsAutoSpace)
+            // UNSPECIFIED: an answer without a resolution changed nothing this
+            // side can tell.
+            case .ignored, .unspecified, .UNRECOGNIZED: self = .ignored
+            }
+        }
+    }
+
+    /// Result of `composingCommitContinuous`: the transition to replay and what
+    /// the pick did.
+    struct ContinuousCommitResult: Equatable {
+        public let transition: ComposingTransition
+        public let outcome: ContinuousCommitOutcome
+
+        static let failed = ContinuousCommitResult(transition: .noop, outcome: .ignored)
     }
 
     /// Read-query result for `composingFetchAtPos`. The `candidates` tri-state
@@ -393,41 +470,31 @@ public extension RustEngineBridge {
         )
     }
 
-    /// Commit a candidate segment in `Phase::Continuous`. `displayText` /
-    /// `consumedBytes` / `syllableCount` MUST come from a `ContinuousCandidate`
-    /// returned by an immediately preceding `composingFetchAtPos` call —
-    /// sending mismatched values mis-aligns the committed segment.
-    /// `consumedBytes >= pending.utf8.count` triggers a final commit (exit
-    /// to Idle). Programmer-error inputs collapse to noop on the engine side.
+    /// Commit a candidate segment in `Phase::Continuous`. The pick MUST come
+    /// from a `ContinuousCandidate` returned by an immediately preceding
+    /// `composingFetchAtPos` call — mismatched values mis-align the committed
+    /// segment. `consumedBytes >= pending.utf8.count` makes a final commit
+    /// (exit to Idle); anything less nails the segment, writing nothing
+    /// (Model B). The engine resolves the document text from the pick's
+    /// scripts under `settings` and — with the user data open — counts the
+    /// pick itself (R5). Mirrors macOS `RustEngineBridge.composingCommitContinuous`.
     internal static func composingCommitContinuous(
-        displayText: String,
-        canonicalText: String,
-        associationTl: String,
-        // §50 — the picked candidate's hanji (`ContinuousCandidate.hanji`),
-        // `nil` for a hanji-less pick; the engine learns a composition only
-        // when every segment carried one.
-        hanji: String? = nil,
-        consumedBytes: UInt32,
-        syllableCount: UInt32,
+        _ pick: ContinuousPick,
         settings: EngineSettings,
         generation: UInt64,
-    ) -> ComposingTransition {
-        var payload = Taigi_Engine_CommitContinuous()
-        payload.displayText = displayText
-        payload.canonicalText = canonicalText
-        // R2: canonical TL of the chosen candidate → NextWord `next_tl` /
-        // `prev_tl`. Empty → engine falls back to the raw committed slice.
-        payload.associationTl = associationTl
-        if let hanji, !hanji.isEmpty {
-            payload.hanji = hanji
-        }
-        payload.consumedBytes = consumedBytes
-        payload.syllableCount = syllableCount
-        return composingDispatch(
-            method: .commitContinuous(payload),
+    ) -> ContinuousCommitResult {
+        guard let payload = composingProtoRoundtrip(
+            method: .commitContinuous(pick.request),
             op: "composingCommitContinuous",
             generation: generation,
             config: continuousAppConfig(settings),
+        ) else {
+            return .failed
+        }
+        // Always set on this path; an absent one reads as UNSPECIFIED → ignored.
+        return ContinuousCommitResult(
+            transition: synthComposing(payload),
+            outcome: ContinuousCommitOutcome(payload.commit),
         )
     }
 

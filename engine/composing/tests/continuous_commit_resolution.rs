@@ -188,6 +188,31 @@ fn a_rejected_pick_is_ignored_and_changes_nothing() {
     );
     let expected = resolution(CommitOutcome::Finalized, "台", false, false);
     assert_eq!(applied.response.commit, Some(expected));
+    // The other script counts under the same `(hanji ?? roman, TL)` pair as
+    // the lead: identity never follows the rendering (Core Principle #6).
+    assert_eq!(applied.usage, usage("台", "tâi", Some("台")));
+}
+
+#[test]
+fn a_tps_pick_without_hanji_writes_its_bopomofo_and_earns_no_space() {
+    // trace: R5 P2 (USER 2026-09-30) — the TPS layout writes what the cell
+    // shows, `tl_display_to_tps("tâi")` = ㄉ + ㄞ + ˊ, which takes no word
+    // spacing; the pick still counts under its TL identity.
+    let config = AppConfig {
+        input_mode: "tps".into(),
+        ..config_tl()
+    };
+    let handle = continuous("tai", 1, &config);
+    let applied = send(
+        &handle,
+        1,
+        pick(CommitScript::Lead, "tâi", None, "tâi", 3),
+        &config,
+    );
+    let expected = resolution(CommitOutcome::Finalized, "ㄉㄞˊ", false, false);
+    assert_eq!(applied.response.commit, Some(expected));
+    assert_eq!(commit_text(&applied.response).as_deref(), Some("ㄉㄞˊ"));
+    assert_eq!(applied.usage, usage("tâi", "tâi", None));
 }
 
 #[test]

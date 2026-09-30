@@ -96,9 +96,8 @@ internal fun shouldSplitCombinedCells(
  * Per `docs/engine/continuous-input-ranking.md` §10.1.2 (supersedes legacy
  * slot-0 model) + §10.3 commit contract, Continuous mode has NO
  * composing-text cell at slot 0. `candidate[0]` is the engine ranker top
- * and the tap commits the swap/TPS/both-scripts-formatted document string
- * built from `roman` / `hanzi` by the legacy formatter (clarification γ,
- * REVISED — Bug 1). The inline pre-edit (`setComposingText`) is the only
+ * and the tap commits the document string the engine resolves from
+ * `roman` / `hanzi` under the live settings (R5). The inline pre-edit (`setComposingText`) is the only
  * composing-text surface; Enter commits the pending tail via Item 3.
  *
  * v3.5.8 Phase 9 Item 6: `roman` carries `candidate.roman` (the
@@ -113,11 +112,10 @@ internal fun shouldSplitCombinedCells(
  * `additionalInfo[DISPLAY_TEXT]` (= `hanji ?? roman` per
  * `record_to_candidate`) on HANT/MIXED candidates. The tap routes through
  * [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler],
- * which formats the document string from `roman`/`hanzi` (legacy parity)
- * and forwards the `DISPLAY_TEXT` sidechannel as
- * `commitContinuous(canonicalText = …)` — the canonical key for
- * `user_frequency.db` + NextWord, NOT the document commit string
- * (clarification γ, REVISED — Bug 1).
+ * which sends `roman`/`hanzi` for the engine to resolve the document string
+ * from (R5) and the `DISPLAY_TEXT` sidechannel as
+ * `ContinuousPick.canonicalText` — the canonical key for
+ * `user_frequency.db` + NextWord, NOT the document commit string.
  *
  * `hanzi` collapses present-empty `candidate.hanji == ""` to `null` via
  * `takeIf { it.isNotEmpty() }` so a wire defect (producer emitted
