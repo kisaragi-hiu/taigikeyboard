@@ -1,6 +1,7 @@
 //! One test per intent — round-trip through `dispatch::handle` to exercise
 //! the proto decode path alongside the transition table.
 
+use composing::CommitScript;
 use composing::{dispatch, Engine};
 use protos::engine::composing_request::Method;
 use protos::engine::{
@@ -391,13 +392,13 @@ fn intent_telex_under_continuous_edits_only_the_pending_tail() {
 fn nail(engine: &mut Engine, display_text: &str, consumed_bytes: usize) {
     engine.apply(
         composing::Intent::CommitContinuous {
-            display_text: display_text.to_string(),
-            canonical_text: String::new(),
+            canonical_text: display_text.to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: display_text.to_string(),
         },
         &config_tl(),
     );

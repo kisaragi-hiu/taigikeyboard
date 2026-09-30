@@ -186,7 +186,7 @@ message FetchAtPos {
 // committed segment's raw text and keeps the remainder as the new pending
 // tail. `consumed_bytes >= pending.len()` becomes a final commit (exit
 // to Idle). Programmer-error inputs (out-of-range / non-char-boundary
-// `consumed_bytes`, empty `display_text`) collapse to noop.
+// `consumed_bytes`, no `script`, empty `canonical_text`) collapse to noop.
 //
 // **Platform contract**: when committing the user's tap on a candidate
 // returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
@@ -195,20 +195,18 @@ message FetchAtPos {
 // values will mis-align the committed segment with the candidate the
 // user saw.
 message CommitContinuous {
-  // Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
-  // swap/TPS/both-scripts-formatted output the platform tap handler
-  // produces (mirrors the legacy lexicon-path formatter), NOT the
-  // canonical dictionary key.
-  string display_text   = 1;
+  // Tag 1 was `display_text` — the document string the platform formatted
+  // itself. Every platform names a `script` since R5 and the engine
+  // resolves the text; removed 2026-09-30.
+  reserved 1;
+  reserved "display_text";
+
   uint32 consumed_bytes = 2;
   uint32 syllable_count = 3;
   // v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
-  // (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
-  // association so learning stays mode-independent. Wire-absent / empty
-  // (legacy callers, the other 12 methods) decodes as "" → engine falls
-  // back to `display_text`, preserving pre-Bug-1 behavior. Plain string
-  // (not `optional`): the empty-default IS the fallback signal, no
-  // presence distinction needed.
+  // (`hanji.unwrap_or(roman)`) the engine counts the pick under
+  // (`user_frequency.db`) and NextWord learns, so learning stays
+  // mode-independent. Empty → the commit is IGNORED.
   string canonical_text = 4;
   // v3.6.1 R2 — canonical TL romanization of the committed candidate
   // (`CandidateMessage.canonical_tl`, snapshotted BEFORE the POJ-render /
@@ -234,16 +232,13 @@ message CommitContinuous {
   // F2: hanji is an explicit sidechannel, never inferred from
   // `canonical_text` vs `association_tl`).
   optional string hanji = 6;
-  // R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
-  // every caller before R5) is the legacy path: `display_text` is written
-  // as sent and `ComposingResponse.commit` stays absent. Any other value
-  // makes the engine resolve the document text itself from `roman`, `hanji`
-  // and the request's `AppConfig` (`composing::commit_text`), ignore
-  // `display_text`, answer `ComposingResponse.commit`, and — with the
-  // user-data stores open — record the pick's usage itself (the platform
-  // then sends no `RecordUsage` for it). An empty `canonical_text` is
-  // IGNORED on this path (no fallback to the document text). On the TPS
-  // layout the romanization written renders as Bopomofo.
+  // R5 — engine-owned commit resolution: the engine resolves the document
+  // text from `roman`, `hanji` and the request's `AppConfig`
+  // (`composing::commit_text`), answers `ComposingResponse.commit`, and —
+  // with the user-data stores open — records the pick's usage itself (the
+  // platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
+  // newer than the engine) is IGNORED. On the TPS layout the romanization
+  // written renders as Bopomofo.
   CommitScript script = 7;
   // The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
   // rendered / recased / No Hyphens — the display romanization, never the
@@ -253,15 +248,14 @@ message CommitContinuous {
 
 // Which rendering of the picked candidate the document gets (R5).
 enum CommitScript {
-  COMMIT_SCRIPT_UNSPECIFIED = 0;  // legacy: the platform-resolved `display_text`
+  COMMIT_SCRIPT_UNSPECIFIED = 0;  // no script: the commit is ignored
   COMMIT_SCRIPT_LEAD        = 1;  // what the output settings lead with (Enter / a tap)
   COMMIT_SCRIPT_OTHER       = 2;  // the other script of the lead (desktop Space)
   COMMIT_SCRIPT_HANJI       = 3;  // a §42 split Hanji cell
   COMMIT_SCRIPT_ROMAN       = 4;  // a §42 split romanization cell
 }
 
-// What an R5 `CommitContinuous` did (`COMMIT_SCRIPT_*` other than
-// UNSPECIFIED) — replaces the platforms' effect scans.
+// What a `CommitContinuous` did (R5) — replaces the platforms' effect scans.
 message CommitResolution {
   CommitOutcome outcome   = 1;
   // The text this pick wrote into the composition — the segment, not the
@@ -347,8 +341,7 @@ message ComposingResponse {
   // already in `preedit.display_text` for `Phase::Continuous`.
   optional ContinuousResponse continuous = 5;
 
-  // R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-  // absent for every other request and for the legacy commit.
+  // R5 — set by every `CommitContinuous`; absent for every other request.
   optional CommitResolution commit = 6;
 }
 

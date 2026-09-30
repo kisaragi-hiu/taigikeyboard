@@ -256,8 +256,6 @@ pub fn commit_continuous(
             hanji: args.hanji.filter(|h| !h.is_empty()).map(str::to_owned),
             script: args.script as i32,
             roman: args.roman.to_owned(),
-            // Ignored once `script` is set: the engine writes what it resolved.
-            display_text: String::new(),
         }),
         "composingCommitContinuous",
         generation,

@@ -13,7 +13,7 @@ struct Usage {
 
 /// CROSS-PLATFORM INVARIANT — mirrors Android `UsageRecorder.kt`; every
 /// Continuous pick the engine records itself (R5: `engine/composing/src/transition.rs`
-/// `commit_continuous_resolved`, `Applied.usage`).
+/// `commit_continuous`, `Applied.usage`).
 protocol UsageRecorder: AnyObject {
     func record(_ usage: Usage)
 }

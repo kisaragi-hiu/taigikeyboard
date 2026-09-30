@@ -48,8 +48,7 @@ pub enum CaretDirection {
 }
 
 /// Which rendering of a pick the document gets — the wire `CommitScript`
-/// minus `UNSPECIFIED`, which is the legacy path (`Intent::CommitContinuous`
-/// `resolve: None`).
+/// minus `UNSPECIFIED`, which a commit is ignored under.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CommitScript {
     /// What the output settings lead with (Enter / a tap).
@@ -60,14 +59,6 @@ pub enum CommitScript {
     Hanji,
     /// A §42 split romanization cell.
     Roman,
-}
-
-/// An R5 commit: the engine resolves the document text from the pick's
-/// `roman` (display romanization) and hanji under the request's settings.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CommitRendering {
-    pub script: CommitScript,
-    pub roman: String,
 }
 
 /// One pick the engine counts on the R5 path — the triple each platform's
@@ -503,8 +494,7 @@ pub struct UserRows {
 pub struct Applied {
     pub response: ComposingResponse,
     pub learned: Option<lexicon::LearnedEntry>,
-    /// Set by an R5 `CommitContinuous` that nailed or finalized; `None` for
-    /// the legacy commit, whose platform records the pick itself.
+    /// Set by a `CommitContinuous` that nailed or finalized (R5).
     pub usage: Option<Usage>,
 }
 
@@ -586,25 +576,27 @@ pub enum Intent {
     /// `consumed_bytes >= pending.len()`, this becomes a final commit and
     /// exits to Idle. Caller (Phase 6+ proto layer) is responsible for
     /// `consumed_bytes` aligning with both UTF-8 char boundaries and TL
-    /// syllable boundaries returned by the syllabifier.
+    /// syllable boundaries returned by the syllabifier. The engine resolves
+    /// what the pick writes itself (R5, `commit_text::resolve_commit_text`).
     CommitContinuous {
-        display_text: String,
         // v3.5.8 Phase 9 Bug 1 (Option A): canonical key for freq/NextWord.
-        // Empty → engine falls back to `display_text` (legacy callers).
+        // Empty → the commit is ignored.
         canonical_text: String,
         // v3.6.1 R2: canonical TL of the committed candidate. Becomes the
         // NextWord `roman` arg (→ `prev_tl`/`next_tl`); empty → engine
-        // falls back to the raw committed slice (legacy / TPS-OOV).
+        // falls back to the raw committed slice (TPS-OOV).
         association_tl: String,
         // Learned phrases (§50): the picked candidate's hanji, `None` when
         // the pick carried none (contract on the `CommitContinuous` proto).
         hanji: Option<String>,
         consumed_bytes: usize,
         syllable_count: u8,
-        /// R5: `Some` = the engine resolves the document text itself and
-        /// ignores `display_text` (`transition::commit_continuous_resolved`);
-        /// `None` = the legacy platform-resolved commit.
-        resolve: Option<CommitRendering>,
+        /// Which rendering of the pick the document gets; `None` (the wire's
+        /// `UNSPECIFIED`, or a script newer than this engine) ignores the
+        /// commit.
+        script: Option<CommitScript>,
+        /// The pick's display romanization (`CandidateMessage.roman`).
+        roman: String,
     },
     ResetContinuous,
     /// Desktop Telex scheme — one tone / affricate / hyphen letter applied

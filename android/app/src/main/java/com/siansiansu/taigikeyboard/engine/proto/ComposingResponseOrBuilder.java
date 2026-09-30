@@ -90,8 +90,7 @@ public interface ComposingResponseOrBuilder extends
 
   /**
    * <pre>
-   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-   * absent for every other request and for the legacy commit.
+   * R5 — set by every `CommitContinuous`; absent for every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -100,8 +99,7 @@ public interface ComposingResponseOrBuilder extends
   boolean hasCommit();
   /**
    * <pre>
-   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-   * absent for every other request and for the legacy commit.
+   * R5 — set by every `CommitContinuous`; absent for every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>

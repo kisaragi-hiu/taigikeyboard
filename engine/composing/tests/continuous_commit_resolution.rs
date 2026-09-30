@@ -1,7 +1,7 @@
-//! R5 — a `CommitContinuous` that names a `CommitScript` has the engine
-//! resolve the document text (`composing::commit_text`), report what the
+//! R5 — a `CommitContinuous` has the engine resolve the document text
+//! (`composing::commit_text`) from the script it names, report what the
 //! commit did (`ComposingResponse.commit`) and hand back the pick's usage
-//! (`Applied.usage`); an `UNSPECIFIED` one is the legacy commit, unchanged.
+//! (`Applied.usage`); one naming no script is ignored.
 //! Through `EngineHandle`, so a stale generation is exercised as the
 //! platforms meet it.
 
@@ -31,10 +31,8 @@ fn continuous(raw: &str, generation: u64, config: &AppConfig) -> EngineHandle {
 }
 
 /// A pick of `(roman, hanji)` whose identity is `hanji ?? roman` / `tl`.
-/// `display_text` is junk: the R5 path must never write it.
 fn pick(script: CommitScript, roman: &str, hanji: Option<&str>, tl: &str, bytes: u32) -> Method {
     Method::CommitContinuous(CommitContinuous {
-        display_text: "platform-sent".into(),
         canonical_text: hanji.unwrap_or(roman).into(),
         association_tl: tl.into(),
         hanji: hanji.map(str::to_owned),
@@ -216,7 +214,10 @@ fn a_tps_pick_without_hanji_writes_its_bopomofo_and_earns_no_space() {
 }
 
 #[test]
-fn the_legacy_commit_writes_what_was_sent_and_reports_nothing() {
+fn a_commit_naming_no_script_is_ignored() {
+    // trace: `dispatch::commit_script` reads UNSPECIFIED (and an unknown,
+    // newer script) as `None`; `transition::commit_continuous` then resolves
+    // nothing — the legacy platform-written path is gone (R5 PR-b2).
     let config = config_tl();
     let handle = continuous("tai", 1, &config);
     let applied = send(
@@ -225,10 +226,11 @@ fn the_legacy_commit_writes_what_was_sent_and_reports_nothing() {
         pick(CommitScript::Unspecified, "tâi", Some("台"), "tâi", 3),
         &config,
     );
-    assert_eq!(applied.response.commit, None);
-    assert_eq!(applied.usage, None, "the platform records the legacy pick");
-    assert_eq!(
-        commit_text(&applied.response).as_deref(),
-        Some("platform-sent")
+    assert_eq!(applied.response.commit, Some(ignored()));
+    assert_eq!(applied.usage, None);
+    assert!(applied.response.effect.is_empty());
+    assert!(
+        applied.response.is_composing,
+        "the composition is untouched"
     );
 }

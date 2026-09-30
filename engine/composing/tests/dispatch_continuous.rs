@@ -19,6 +19,7 @@
 use composing::api::{Engine, Phase};
 use composing::dispatch;
 use protos::engine::composing_request::Method;
+use protos::engine::CommitScript;
 use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, ResetContinuous};
 
 use crate::common::{config_tl, req};
@@ -293,13 +294,13 @@ fn decode_commit_continuous_mid_commit() {
     // Commit "珠" consuming 3 of 4 bytes → mid-commit, stay in Continuous.
     let resp = dispatch::handle(
         &req(Method::CommitContinuous(CommitContinuous {
-            display_text: "珠".into(),
-            canonical_text: String::new(),
+            script: CommitScript::Roman as i32,
+            roman: "珠".into(),
+            canonical_text: "珠".into(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            ..Default::default()
         })),
         &mut engine,
         &config_tl(),
@@ -338,13 +339,13 @@ fn decode_commit_continuous_final_commit_exits_to_idle() {
     // Commit "紙" consuming all 4 bytes → final commit, exit to Idle.
     let resp = dispatch::handle(
         &req(Method::CommitContinuous(CommitContinuous {
-            display_text: "紙".into(),
-            canonical_text: String::new(),
+            script: CommitScript::Roman as i32,
+            roman: "紙".into(),
+            canonical_text: "紙".into(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
-            ..Default::default()
         })),
         &mut engine,
         &config_tl(),
@@ -441,13 +442,13 @@ fn commit_continuous_response_omits_continuous_carrier() {
     .unwrap();
     let resp = dispatch::handle(
         &req(Method::CommitContinuous(CommitContinuous {
-            display_text: "珠".into(),
-            canonical_text: String::new(),
+            script: CommitScript::Roman as i32,
+            roman: "珠".into(),
+            canonical_text: "珠".into(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            ..Default::default()
         })),
         &mut engine,
         &config_tl(),

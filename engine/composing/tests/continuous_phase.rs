@@ -13,6 +13,7 @@
 //! `transition.rs` doc-comment promises proto-ordered effect consumption,
 //! so order regressions must surface here.
 
+use composing::CommitScript;
 use composing::{Engine, Intent, NailedSegment, Phase};
 use protos::engine::effect::Kind;
 use protos::engine::Effect;
@@ -78,13 +79,13 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -132,25 +133,25 @@ fn mid_commit_chains_raw_span_from_previous_segment() {
     let mut e = engine_in_continuous("tsuagua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
     e.apply(
         Intent::CommitContinuous {
-            display_text: "仔".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "仔".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 1,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "仔".to_string(),
         },
         &config_tl(),
     );
@@ -170,13 +171,13 @@ fn final_commit_exits_to_idle_emits_word_selected() {
     let mut e = engine_in_continuous("tsu");
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -213,26 +214,26 @@ fn final_commit_carries_nailed_segments_as_preceding() {
     {
         e.apply(
             Intent::CommitContinuous {
-                display_text: display.to_string(),
                 canonical_text: canonical.to_string(),
                 association_tl: association_tl.to_string(),
                 hanji: None,
                 consumed_bytes: consumed,
                 syllable_count: 1,
-                resolve: None,
+                script: Some(CommitScript::Roman),
+                roman: display.to_string(),
             },
             &config_tl(),
         );
     }
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: "食".to_string(),
             canonical_text: "食".to_string(),
             association_tl: "tsia̍h".to_string(),
             hanji: None,
             consumed_bytes: 5,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "食".to_string(),
         },
         &config_tl(),
     );
@@ -259,13 +260,13 @@ fn commit_continuous_out_of_range_is_noop() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: "X".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "X".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 99,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "X".to_string(),
         },
         &config_tl(),
     );
@@ -290,13 +291,13 @@ fn commit_continuous_at_non_char_boundary_is_noop() {
     e.apply(Intent::EnterContinuous, &config_tl());
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: "X".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "X".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 1, // mid-codepoint
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "X".to_string(),
         },
         &config_tl(),
     );
@@ -308,13 +309,13 @@ fn commit_continuous_zero_bytes_is_noop() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: "X".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "X".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 0,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "X".to_string(),
         },
         &config_tl(),
     );
@@ -326,13 +327,13 @@ fn commit_continuous_empty_display_is_noop() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: String::new(),
             canonical_text: String::new(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: String::new(),
         },
         &config_tl(),
     );
@@ -346,13 +347,13 @@ fn reset_continuous_exits_emits_clear_and_nextword_signal() {
     let mut e = engine_in_continuous("tsua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -399,13 +400,13 @@ fn append_under_continuous_extends_pending_only() {
     let mut e = engine_in_continuous("tsu");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -414,13 +415,13 @@ fn append_under_continuous_extends_pending_only() {
     let mut e = engine_in_continuous("tsuagua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -462,13 +463,13 @@ fn replace_last_under_continuous_modifies_pending_only() {
     let mut e = engine_in_continuous("tsuagua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -509,13 +510,13 @@ fn delete_backward_under_continuous_pops_nailed_when_pending_empty() {
     let mut e = engine_in_continuous("tsua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -559,25 +560,25 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
     let mut e = engine_in_continuous("tsuagua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
     e.apply(
         Intent::CommitContinuous {
-            display_text: "仔".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "仔".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 1,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "仔".to_string(),
         },
         &config_tl(),
     );
@@ -625,13 +626,13 @@ fn delete_backward_pops_multi_char_display_emits_no_document_deletes() {
     // Mid-commit a 2-syllable segment (display "珠仔" = 2 chars, raw "tsua" = 4 bytes).
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠仔".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠仔".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 2,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠仔".to_string(),
         },
         &config_tl(),
     );
@@ -690,13 +691,13 @@ fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_compositi
     let mut e = engine_in_continuous("tsuagua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -805,13 +806,13 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
     let mut e = engine_in_continuous("tsuali2");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "紙".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "紙".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "紙".to_string(),
         },
         &config_tl(),
     );
@@ -911,13 +912,13 @@ fn full_span_commit_consumes_the_trailing_separator_marker() {
     let mut e = engine_in_continuous(raw);
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: "詩".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "詩".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: raw.len(),
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "詩".to_string(),
         },
         &config_tl(),
     );
@@ -1100,13 +1101,13 @@ fn select_suggestion_under_continuous_with_nailed_prefix_commits_combined() {
     let mut e = engine_in_continuous("tsua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -1140,13 +1141,13 @@ fn commit_preedit_then_insert_external_with_nailed_prefix_combines_all() {
     let mut e = engine_in_continuous("tsua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -1173,13 +1174,13 @@ fn commit_raw_under_continuous_raw_empty_after_unnail_commits_nailed_only() {
     let mut e = engine_in_continuous("tsua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -1227,13 +1228,13 @@ fn commit_raw_with_empty_tail_carries_earlier_nails_as_preceding() {
     for (display, consumed) in [("珠", 3), ("我", 3)] {
         e.apply(
             Intent::CommitContinuous {
-                display_text: display.to_string(),
-                canonical_text: String::new(),
+                canonical_text: display.to_string(),
                 association_tl: String::new(),
                 hanji: None,
                 consumed_bytes: consumed,
                 syllable_count: 1,
-                resolve: None,
+                script: Some(CommitScript::Roman),
+                roman: display.to_string(),
             },
             &config_tl(),
         );
@@ -1338,13 +1339,13 @@ fn bug1_mid_commit_marks_display_but_nextword_uses_canonical() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: "tāi-uân".to_string(), // swapped roman → marked region
-            canonical_text: "臺灣".to_string(),  // canonical hanji → NextWord text
+            canonical_text: "臺灣".to_string(), // canonical hanji → NextWord text
             association_tl: "tâi-uân".to_string(), // R2 canonical TL → NextWord roman
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "tāi-uân".to_string(),
         },
         &config_tl(),
     );
@@ -1386,13 +1387,13 @@ fn bug1_final_commit_documents_display_but_word_selected_uses_canonical() {
     let mut e = engine_in_continuous("tsu");
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: "tāi-uân".to_string(),
             canonical_text: "臺灣".to_string(),
             association_tl: "tâi-uân".to_string(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "tāi-uân".to_string(),
         },
         &config_tl(),
     );
@@ -1418,25 +1419,25 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
     let mut e = engine_in_continuous("tsuagua");
     e.apply(
         Intent::CommitContinuous {
-            display_text: "tāi-uân".to_string(), // 7 chars
             canonical_text: "臺灣".to_string(),
             association_tl: "tâi-uân".to_string(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "tāi-uân".to_string(),
         },
         &config_tl(),
     );
     e.apply(
         Intent::CommitContinuous {
-            display_text: "gí".to_string(), // 2 chars
             canonical_text: "語".to_string(),
             association_tl: "gí".to_string(),
             hanji: None,
             consumed_bytes: 1,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "gí".to_string(),
         },
         &config_tl(),
     );
@@ -1479,13 +1480,13 @@ fn bug1_empty_canonical_falls_back_to_display_text() {
     let mut e = engine_in_continuous("tsu");
     let resp = e.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );

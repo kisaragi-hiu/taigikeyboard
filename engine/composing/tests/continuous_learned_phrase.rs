@@ -21,7 +21,7 @@
 //! NOT 記起來.
 
 use composing::api::Engine;
-use composing::{dispatch, Intent, Phase};
+use composing::{dispatch, CommitScript, Intent, Phase};
 use protos::engine::composing_request::Method;
 use protos::engine::{CandidateMessage, CommitContinuous, EnterContinuous, FetchAtPos, Start};
 
@@ -41,13 +41,13 @@ type Pick<'a> = (Option<&'a str>, &'a str, usize, u8);
 
 fn pick((hanji, tl, consumed_bytes, syllable_count): Pick<'_>) -> Intent {
     Intent::CommitContinuous {
-        display_text: hanji.unwrap_or(tl).to_string(),
         canonical_text: hanji.unwrap_or(tl).to_string(),
         association_tl: tl.to_string(),
         hanji: hanji.map(str::to_string),
         consumed_bytes,
         syllable_count,
-        resolve: None,
+        script: Some(CommitScript::Roman),
+        roman: hanji.unwrap_or(tl).to_string(),
     }
 }
 
@@ -210,13 +210,13 @@ fn dictionary_khinsiann_piece_wins_over_the_typed_separator() {
 /// decoded as the wire request is.
 fn commit(cand: &CandidateMessage) -> Intent {
     let method = Method::CommitContinuous(CommitContinuous {
-        display_text: cand.display_text.clone(),
+        script: protos::engine::CommitScript::Lead as i32,
+        roman: cand.roman.clone(),
         canonical_text: cand.display_text.clone(),
         association_tl: cand.canonical_tl.clone(),
         hanji: cand.hanji.clone(),
         consumed_bytes: cand.consumed_span_end,
         syllable_count: cand.syllable_count,
-        ..Default::default()
     });
     dispatch::decode_intent(&req(method)).expect("CommitContinuous decodes")
 }

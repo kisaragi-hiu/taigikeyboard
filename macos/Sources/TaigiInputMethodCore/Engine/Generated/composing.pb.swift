@@ -24,7 +24,7 @@ fileprivate nonisolated struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobu
 public nonisolated enum Taigi_Engine_CommitScript: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
 
-  /// legacy: the platform-resolved `display_text`
+  /// no script: the commit is ignored
   case unspecified // = 0
 
   /// what the output settings lead with (Enter / a tap)
@@ -618,7 +618,7 @@ public nonisolated struct Taigi_Engine_FetchAtPos: Sendable {
 /// committed segment's raw text and keeps the remainder as the new pending
 /// tail. `consumed_bytes >= pending.len()` becomes a final commit (exit
 /// to Idle). Programmer-error inputs (out-of-range / non-char-boundary
-/// `consumed_bytes`, empty `display_text`) collapse to noop.
+/// `consumed_bytes`, no `script`, empty `canonical_text`) collapse to noop.
 ///
 /// **Platform contract**: when committing the user's tap on a candidate
 /// returned by `FetchAtPos`, `consumed_bytes` MUST equal the chosen
@@ -631,23 +631,14 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
-  /// swap/TPS/both-scripts-formatted output the platform tap handler
-  /// produces (mirrors the legacy lexicon-path formatter), NOT the
-  /// canonical dictionary key.
-  public var displayText: String = String()
-
   public var consumedBytes: UInt32 = 0
 
   public var syllableCount: UInt32 = 0
 
   /// v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
-  /// (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
-  /// association so learning stays mode-independent. Wire-absent / empty
-  /// (legacy callers, the other 12 methods) decodes as "" → engine falls
-  /// back to `display_text`, preserving pre-Bug-1 behavior. Plain string
-  /// (not `optional`): the empty-default IS the fallback signal, no
-  /// presence distinction needed.
+  /// (`hanji.unwrap_or(roman)`) the engine counts the pick under
+  /// (`user_frequency.db`) and NextWord learns, so learning stays
+  /// mode-independent. Empty → the commit is IGNORED.
   public var canonicalText: String = String()
 
   /// v3.6.1 R2 — canonical TL romanization of the committed candidate
@@ -683,16 +674,13 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
   /// Clears the value of `hanji`. Subsequent reads from it will return its default value.
   public mutating func clearHanji() {self._hanji = nil}
 
-  /// R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
-  /// every caller before R5) is the legacy path: `display_text` is written
-  /// as sent and `ComposingResponse.commit` stays absent. Any other value
-  /// makes the engine resolve the document text itself from `roman`, `hanji`
-  /// and the request's `AppConfig` (`composing::commit_text`), ignore
-  /// `display_text`, answer `ComposingResponse.commit`, and — with the
-  /// user-data stores open — record the pick's usage itself (the platform
-  /// then sends no `RecordUsage` for it). An empty `canonical_text` is
-  /// IGNORED on this path (no fallback to the document text). On the TPS
-  /// layout the romanization written renders as Bopomofo.
+  /// R5 — engine-owned commit resolution: the engine resolves the document
+  /// text from `roman`, `hanji` and the request's `AppConfig`
+  /// (`composing::commit_text`), answers `ComposingResponse.commit`, and —
+  /// with the user-data stores open — records the pick's usage itself (the
+  /// platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
+  /// newer than the engine) is IGNORED. On the TPS layout the romanization
+  /// written renders as Bopomofo.
   public var script: Taigi_Engine_CommitScript = .unspecified
 
   /// The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
@@ -707,8 +695,7 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
   fileprivate var _hanji: String? = nil
 }
 
-/// What an R5 `CommitContinuous` did (`COMMIT_SCRIPT_*` other than
-/// UNSPECIFIED) — replaces the platforms' effect scans.
+/// What a `CommitContinuous` did (R5) — replaces the platforms' effect scans.
 public nonisolated struct Taigi_Engine_CommitResolution: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -826,8 +813,7 @@ public nonisolated struct Taigi_Engine_ComposingResponse: Sendable {
   /// Clears the value of `continuous`. Subsequent reads from it will return its default value.
   public mutating func clearContinuous() {self._continuous = nil}
 
-  /// R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-  /// absent for every other request and for the legacy commit.
+  /// R5 — set by every `CommitContinuous`; absent for every other request.
   public var commit: Taigi_Engine_CommitResolution {
     get {_commit ?? Taigi_Engine_CommitResolution()}
     set {_commit = newValue}
@@ -1874,7 +1860,7 @@ nonisolated extension Taigi_Engine_FetchAtPos: SwiftProtobuf.Message, SwiftProto
 
 nonisolated extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CommitContinuous"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text\0\u{3}consumed_bytes\0\u{3}syllable_count\0\u{3}canonical_text\0\u{3}association_tl\0\u{1}hanji\0\u{1}script\0\u{1}roman\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}consumed_bytes\0\u{3}syllable_count\0\u{3}canonical_text\0\u{3}association_tl\0\u{1}hanji\0\u{1}script\0\u{1}roman\0\u{b}display_text\0\u{c}\u{1}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1882,7 +1868,6 @@ nonisolated extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, Swif
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.displayText) }()
       case 2: try { try decoder.decodeSingularUInt32Field(value: &self.consumedBytes) }()
       case 3: try { try decoder.decodeSingularUInt32Field(value: &self.syllableCount) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.canonicalText) }()
@@ -1900,9 +1885,6 @@ nonisolated extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, Swif
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.displayText.isEmpty {
-      try visitor.visitSingularStringField(value: self.displayText, fieldNumber: 1)
-    }
     if self.consumedBytes != 0 {
       try visitor.visitSingularUInt32Field(value: self.consumedBytes, fieldNumber: 2)
     }
@@ -1928,7 +1910,6 @@ nonisolated extension Taigi_Engine_CommitContinuous: SwiftProtobuf.Message, Swif
   }
 
   public static func ==(lhs: Taigi_Engine_CommitContinuous, rhs: Taigi_Engine_CommitContinuous) -> Bool {
-    if lhs.displayText != rhs.displayText {return false}
     if lhs.consumedBytes != rhs.consumedBytes {return false}
     if lhs.syllableCount != rhs.syllableCount {return false}
     if lhs.canonicalText != rhs.canonicalText {return false}

@@ -20,6 +20,7 @@ use composing::api::Engine;
 use composing::dispatch;
 use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
+use protos::engine::CommitScript;
 use protos::engine::{
     AppConfig, CandidateMessage, CommitContinuous, CommitRaw, ComposingResponse, DeleteBackward,
     EnterContinuous, FetchAtPos, Start,
@@ -321,13 +322,13 @@ fn pick(engine: &mut Engine, cfg: &AppConfig, hanji: &str) -> ComposingResponse 
     };
     dispatch::handle(
         &req(Method::CommitContinuous(CommitContinuous {
-            display_text,
+            script: CommitScript::Roman as i32,
+            roman: display_text,
             canonical_text: c.display_text.clone(),
             association_tl: c.canonical_tl.clone(),
             hanji: c.hanji.clone(),
             consumed_bytes: c.consumed_span_end,
             syllable_count: c.syllable_count,
-            ..Default::default()
         })),
         engine,
         cfg,

@@ -50,8 +50,8 @@ pub(crate) fn respond(id: u32, generation: u64, request: &UserDataRequest) -> Re
 /// learned rows for the pending buffer, a neutral fetch that discovers the
 /// candidates, their frequency rows, and a re-ranked fetch. Every other
 /// request goes to composing; the phrase a final commit taught (§50) is
-/// written to `learned_phrases.db` here (P3c), then the pick an engine-
-/// resolved commit counts (R5) — the platform records a legacy commit itself.
+/// written to `learned_phrases.db` here (P3c), then the pick a
+/// `CommitContinuous` counts (R5).
 pub(super) fn handle_composing(
     stores: &UserDataStores,
     request: &ComposingRequest,

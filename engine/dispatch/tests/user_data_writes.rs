@@ -40,13 +40,13 @@ fn commit_continuous(
     syllable_count: u32,
 ) -> composing_request::Method {
     composing_request::Method::CommitContinuous(CommitContinuous {
-        display_text: hanji.to_owned(),
+        script: CommitScript::Roman as i32,
+        roman: hanji.to_owned(),
         canonical_text: hanji.to_owned(),
         association_tl: tl.to_owned(),
         hanji: Some(hanji.to_owned()),
         consumed_bytes,
         syllable_count,
-        ..Default::default()
     })
 }
 
@@ -65,7 +65,6 @@ fn commit_resolved(
         syllable_count: 1,
         script: CommitScript::Lead as i32,
         roman: roman.to_owned(),
-        ..Default::default()
     })
 }
 
@@ -278,8 +277,7 @@ fn the_engine_writes_what_the_platforms_wrote() {
 
 /// R5: a pick whose document text the engine resolved is counted by the
 /// engine — once per pick, under the `(display, canonical TL)` pair, with a
-/// learned phrase touched only by a Hanji pick — and a legacy pick is not
-/// (its platform records it).
+/// learned phrase touched only by a Hanji pick.
 fn engine_resolved_picks_are_counted_by_the_engine(reader: &UserDataStores) {
     // trace: 食 (`tsiah`, 5 bytes) nails, 飯 (`png`, 3 bytes) finalizes.
     compose_resolved(
@@ -319,14 +317,17 @@ fn engine_resolved_picks_are_counted_by_the_engine(reader: &UserDataStores) {
     );
 
     // A final count landing proves the frequency queue drained past every
-    // pick above: the pick made before the open and the legacy picks
-    // (記 / 起來, the platform's to record) were never counted.
+    // pick above: the pick made before the open was never counted, and the
+    // learned-phrase picks (記 / 起來) were, once each.
     compose_resolved("tsiah", &[commit_resolved("tsia̍h", Some("食"), "tsia̍h", 5)]);
     assert!(eventually(
         || frequency_row(reader, "食") == Some(("tsia̍h".to_owned(), 2))
     ));
-    for word in ["早", "記", "起來"] {
-        assert_eq!(frequency_row(reader, word), None, "{word}");
-    }
+    assert_eq!(frequency_row(reader, "早"), None);
+    assert_eq!(frequency_row(reader, "記"), Some(("kì".to_owned(), 1)));
+    assert_eq!(
+        frequency_row(reader, "起來"),
+        Some(("khí-lâi".to_owned(), 1))
+    );
     assert_eq!(learn_count(reader, "做進出口"), Some(touched_before + 1));
 }

@@ -65,7 +65,6 @@ fn lead_candidate(response: &ComposingResponse) -> CandidateMessage {
 fn pick(candidate: &CandidateMessage, script: CommitScript) -> Method {
     let canonical = candidate.hanji.clone().unwrap_or(candidate.roman.clone());
     Method::CommitContinuous(CommitContinuous {
-        display_text: canonical.clone(),
         canonical_text: canonical,
         association_tl: candidate.canonical_tl.clone(),
         hanji: candidate.hanji.clone(),

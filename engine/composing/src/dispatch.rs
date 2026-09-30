@@ -22,9 +22,7 @@
 //! the same shadow → lattice path TL/POJ already walk; the legacy
 //! `build_keys_tps` `tl:`-folded path is retired).
 
-use crate::api::{
-    CaretDirection, CommitRendering, CommitScript, ComposingError, Engine, Intent, Phase, UserRows,
-};
+use crate::api::{CaretDirection, CommitScript, ComposingError, Engine, Intent, Phase, UserRows};
 use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq};
 use crate::shadow::{
     build_shadow_lattice_with_barriers, left_anchored_keys_and_restrictions, ShadowLattice,
@@ -72,8 +70,8 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             context: ranking::ContextRanks::default(),
         },
         Method::CommitContinuous(m) => Intent::CommitContinuous {
-            resolve: commit_rendering(m.script(), m.roman),
-            display_text: m.display_text,
+            script: commit_script(m.script()),
+            roman: m.roman,
             canonical_text: m.canonical_text,
             association_tl: m.association_tl,
             hanji: m.hanji,
@@ -512,18 +510,16 @@ fn with_continuous(
     snapshot
 }
 
-/// The R5 half of a `CommitContinuous`: `None` for `UNSPECIFIED` — the
-/// legacy platform-resolved commit, and what prost reads an unknown (newer)
-/// script as.
-fn commit_rendering(script: WireCommitScript, roman: String) -> Option<CommitRendering> {
-    let script = match script {
-        WireCommitScript::Unspecified => return None,
-        WireCommitScript::Lead => CommitScript::Lead,
-        WireCommitScript::Other => CommitScript::Other,
-        WireCommitScript::Hanji => CommitScript::Hanji,
-        WireCommitScript::Roman => CommitScript::Roman,
-    };
-    Some(CommitRendering { script, roman })
+/// The script a `CommitContinuous` names: `None` for `UNSPECIFIED`, which
+/// prost also reads an unknown (newer) script as — the commit is ignored.
+fn commit_script(script: WireCommitScript) -> Option<CommitScript> {
+    match script {
+        WireCommitScript::Unspecified => None,
+        WireCommitScript::Lead => Some(CommitScript::Lead),
+        WireCommitScript::Other => Some(CommitScript::Other),
+        WireCommitScript::Hanji => Some(CommitScript::Hanji),
+        WireCommitScript::Roman => Some(CommitScript::Roman),
+    }
 }
 
 /// Clamp the syllable count into `u8`. FST romanization keys are only
