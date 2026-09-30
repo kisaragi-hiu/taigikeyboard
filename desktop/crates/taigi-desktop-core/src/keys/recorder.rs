@@ -3,9 +3,11 @@
 //! `GlobalShortcutPolicy`) that is not AppKit. The settings window feeds it
 //! the press and draws the answer.
 
+use super::action::ComposingAction;
 use super::chord::{ChordRejection, ComposingKeyChord};
-use super::shortcut_actions::global_rejection;
+use super::shortcut_actions::{global_rejection, ShortcutAction, ShortcutConflicts};
 use super::snapshot::KeyModifiers;
+use crate::settings::SettingsDocument;
 use crate::strings::StringKey;
 
 /// Which registry the row writes to — what it refuses on top of the shared
@@ -16,6 +18,46 @@ pub enum RecorderTier {
     Composing,
     /// A global chord: refuses what the system or the host owns.
     Global,
+}
+
+/// Which row is recording, and so which registry it writes to.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RecorderTarget {
+    Global(ShortcutAction),
+    Composing(ComposingAction),
+}
+
+impl RecorderTarget {
+    pub fn label_key(self) -> StringKey {
+        match self {
+            Self::Global(action) => action.label_key(),
+            Self::Composing(action) => action.label_key(),
+        }
+    }
+
+    pub fn tier(self) -> RecorderTier {
+        match self {
+            Self::Global(_) => RecorderTier::Global,
+            Self::Composing(_) => RecorderTier::Composing,
+        }
+    }
+
+    /// Stores `chord` on this row, emptying whatever else held it — last
+    /// writer wins across BOTH registries (`ShortcutConflicts`).
+    pub fn store(self, document: &mut SettingsDocument, chord: Option<&ComposingKeyChord>) {
+        match self {
+            Self::Global(action) => {
+                action.store_in(document, chord);
+                ShortcutConflicts::resolve_after_global_recording(document, action);
+            }
+            Self::Composing(action) => {
+                if let Some(chord) = chord {
+                    ShortcutConflicts::resolve_after_composing_recording(document, action, chord);
+                }
+                document.set_composing_chord(action, chord);
+            }
+        }
+    }
 }
 
 /// One key press as the recorder sees it: the character the key types
@@ -112,6 +154,69 @@ pub fn rejection_message_key(rejection: ChordRejection) -> StringKey {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::keys::ComposingKeyBindings;
+
+    #[test]
+    fn the_last_row_to_record_a_chord_is_the_one_that_keeps_it() {
+        // trace: both registries go through `RecorderTarget::store`, so the
+        // conflict pass cannot be forgotten on one of them. Ctrl+K on a
+        // global row, then the same chord on a composing row: the global
+        // row empties (`ShortcutConflicts`). Moved from the Windows window's
+        // tests, where it ran only on the box.
+        let chord = ComposingKeyChord::make(
+            Some("k"),
+            KeyModifiers {
+                control: true,
+                ..Default::default()
+            },
+        )
+        .expect("Ctrl+K is a chord");
+        let mut document = SettingsDocument::default();
+        let global = RecorderTarget::Global(ShortcutAction::ToggleRomanization);
+        global.store(&mut document, Some(&chord));
+        assert_eq!(
+            ShortcutAction::ToggleRomanization.chord_in(&document),
+            Some(chord.clone())
+        );
+
+        let composing = RecorderTarget::Composing(ComposingAction::PageForward);
+        composing.store(&mut document, Some(&chord));
+        assert_eq!(
+            ComposingKeyBindings::from_document(&document).chord(ComposingAction::PageForward),
+            Some(&chord)
+        );
+        assert_eq!(
+            ShortcutAction::ToggleRomanization.chord_in(&document),
+            None,
+            "the row that had it first gives it up"
+        );
+
+        // Clearing empties only the row it was pressed on, on either registry.
+        composing.store(&mut document, None);
+        assert_eq!(
+            ComposingKeyBindings::from_document(&document).chord(ComposingAction::PageForward),
+            None
+        );
+        global.store(&mut document, Some(&chord));
+        global.store(&mut document, None);
+        assert_eq!(ShortcutAction::ToggleRomanization.chord_in(&document), None);
+    }
+
+    #[test]
+    fn a_target_names_its_row_and_its_registry() {
+        let global = RecorderTarget::Global(ShortcutAction::ToggleRomanization);
+        let composing = RecorderTarget::Composing(ComposingAction::PageForward);
+        assert_eq!(global.tier(), RecorderTier::Global);
+        assert_eq!(composing.tier(), RecorderTier::Composing);
+        assert_eq!(
+            global.label_key(),
+            ShortcutAction::ToggleRomanization.label_key()
+        );
+        assert_eq!(
+            composing.label_key(),
+            ComposingAction::PageForward.label_key()
+        );
+    }
 
     fn press(key: &str, modifiers: KeyModifiers) -> RecordedPress {
         RecordedPress {

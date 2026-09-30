@@ -7,13 +7,11 @@
 use super::PageContext;
 use adw::prelude::*;
 use taigi_desktop_core::keys::ToneInputScheme;
-use taigi_desktop_core::settings::presentation::{display_language_label, WEBSITE_URL};
+use taigi_desktop_core::settings::presentation::{
+    display_language_label, output_script_label, OUTPUT_SCRIPTS, WEBSITE_URL,
+};
 use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SettingsDocument};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey};
-
-/// The Output pop-up's roster: the stored swap as the two scripts it picks
-/// between, Hanji (the default) first.
-const OUTPUT_SCRIPTS: &[bool] = &[true, false];
 
 pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {
     // One run of rows, no sub-groups (USER 2026-09-18: "no grouping").
@@ -130,12 +128,4 @@ fn allows_swap(document: &SettingsDocument) -> bool {
     document
         .choice(&keys::CANDIDATE_DISPLAY_MODE)
         .allows_swap_toggle()
-}
-
-fn output_script_label(is_hanji: bool) -> StringKey {
-    if is_hanji {
-        StringKey::SettingsOutputScriptHanji
-    } else {
-        StringKey::SettingsOutputScriptRoman
-    }
 }

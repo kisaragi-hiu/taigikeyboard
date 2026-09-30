@@ -8,21 +8,17 @@
 //! visibly empties. The fixed rows show keys nothing records.
 
 use super::PageContext;
-use crate::recorder::RecorderTarget;
 use adw::prelude::*;
-use taigi_desktop_core::candidates::HorizontalPageLayout;
+use taigi_desktop_core::keys::shortcut_labels::{
+    caret_chords_label, shifted_slot_keys_label, slot_keys_label, width_flip_chords_label,
+    CANCEL_KEY_LABEL, NAVIGATION_KEYS_LABEL,
+};
 use taigi_desktop_core::keys::{
-    rejection_message_key, CandidateSlotKeySet, ComposingAction, ComposingKeyBindings,
-    ComposingKeyChord, KeyModifiers, ShortcutAction, CARET_CHORD_MODIFIERS, WIDTH_FLIP_MODIFIERS,
+    rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
+    RecorderTarget, ShortcutAction,
 };
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::StringKey;
-
-/// The six keys the fixed navigation tier reads, in the keycap legends
-/// (`ShortcutSettingsView.swift` `navigationKeysLabel`).
-const NAVIGATION_KEYS_LABEL: &str = "←  →  ↑  ↓  PgUp  PgDn";
-/// The cancel key's keycap legend.
-const CANCEL_KEY_LABEL: &str = "Esc";
 
 pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {
     let bindings = ComposingKeyBindings::from_document(context.document);
@@ -207,56 +203,4 @@ fn fixed_row(
         .build();
     group.add(&row);
     row
-}
-
-/// `Ctrl+←  Ctrl+→`, named by the same modifier labels the recorder rows
-/// use (`ShortcutSettingsView.swift` `caretChordsLabel`).
-fn caret_chords_label() -> String {
-    ["←", "→"]
-        .map(|arrow| {
-            ComposingKeyChord::modifier_labels(CARET_CHORD_MODIFIERS)
-                .chain([arrow.to_owned()])
-                .collect::<Vec<_>>()
-                .join("+")
-        })
-        .join("  ")
-}
-
-/// `Ctrl+,  Ctrl+.  Ctrl+;` — three of the keys the width flip reaches.
-fn width_flip_chords_label() -> String {
-    [",", ".", ";"]
-        .map(|key| {
-            ComposingKeyChord {
-                key: key.to_owned(),
-                modifiers: WIDTH_FLIP_MODIFIERS,
-            }
-            .display()
-        })
-        .join("  ")
-}
-
-/// `qwdfzxvy;` under Standard, `123456789` under Telex: every key of the
-/// live slot set, bare.
-fn slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
-    ComposingKeyChord {
-        key: slot_keys_run(slot_keys),
-        modifiers: KeyModifiers::NONE,
-    }
-    .display()
-}
-
-/// The same run behind ONE Shift: the Hanji/romanization commit aimed at a slot.
-fn shifted_slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
-    ComposingKeyChord {
-        key: slot_keys_run(slot_keys),
-        modifiers: KeyModifiers::SHIFT,
-    }
-    .display()
-}
-
-/// The nine slot keys of `slot_keys` as one run, in page order.
-fn slot_keys_run(slot_keys: CandidateSlotKeySet) -> String {
-    (0..HorizontalPageLayout::PAGE_SIZE)
-        .map(|slot| slot_keys.label_for_slot(slot))
-        .collect()
 }

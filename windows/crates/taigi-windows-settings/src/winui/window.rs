@@ -21,8 +21,7 @@ use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
 use taigi_desktop_core::keys::{
-    evaluate_press, ChordRejection, ComposingAction, ComposingKeyChord, RecordedPress,
-    RecorderOutcome, RecorderTier, ShortcutAction, ShortcutConflicts,
+    evaluate_press, ChordRejection, RecordedPress, RecorderOutcome, RecorderTarget,
 };
 use taigi_desktop_core::settings::presentation::{pane_title, PageMessage};
 use taigi_desktop_core::settings::{
@@ -195,46 +194,6 @@ pub enum ResetScope {
     /// (`ShortcutSettingsView.swift:578-603`).
     Shortcuts,
     DictionarySources,
-}
-
-/// Which row is recording, and so which registry it writes to.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RecorderTarget {
-    Global(ShortcutAction),
-    Composing(ComposingAction),
-}
-
-impl RecorderTarget {
-    pub fn label_key(self) -> StringKey {
-        match self {
-            Self::Global(action) => action.label_key(),
-            Self::Composing(action) => action.label_key(),
-        }
-    }
-
-    fn tier(self) -> RecorderTier {
-        match self {
-            Self::Global(_) => RecorderTier::Global,
-            Self::Composing(_) => RecorderTier::Composing,
-        }
-    }
-
-    /// Stores `chord` on this row, emptying whatever else held it — last
-    /// writer wins across BOTH registries (`ShortcutConflicts`).
-    fn store(self, document: &mut SettingsDocument, chord: Option<&ComposingKeyChord>) {
-        match self {
-            Self::Global(action) => {
-                action.store_in(document, chord);
-                ShortcutConflicts::resolve_after_global_recording(document, action);
-            }
-            Self::Composing(action) => {
-                if let Some(chord) = chord {
-                    ShortcutConflicts::resolve_after_composing_recording(document, action, chord);
-                }
-                document.set_composing_chord(action, chord);
-            }
-        }
-    }
 }
 
 impl Message {
@@ -775,7 +734,6 @@ impl Component for SettingsWindow {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use taigi_desktop_core::keys::ComposingKeyBindings;
     use taigi_desktop_core::settings::CandidateLayout;
 
     #[test]
@@ -793,47 +751,6 @@ mod tests {
         SettingsWrite::display_language(DisplayLanguage::English).apply(&mut resolved);
 
         assert_eq!(resolved, typed);
-    }
-
-    #[test]
-    fn the_last_row_to_record_a_chord_is_the_one_that_keeps_it() {
-        // trace: both registries go through `RecorderTarget::store`, so the
-        // conflict pass cannot be forgotten on one of them. Ctrl+K on a
-        // global row, then the same chord on a composing row: the global
-        // row empties (`ShortcutConflicts`).
-        let chord = ComposingKeyChord::make(
-            Some("k"),
-            taigi_desktop_core::keys::KeyModifiers {
-                control: true,
-                ..Default::default()
-            },
-        )
-        .expect("Ctrl+K is a chord");
-        let mut document = SettingsDocument::default();
-        let global = RecorderTarget::Global(ShortcutAction::ToggleRomanization);
-        global.store(&mut document, Some(&chord));
-        assert_eq!(
-            ShortcutAction::ToggleRomanization.chord_in(&document),
-            Some(chord.clone())
-        );
-
-        RecorderTarget::Composing(ComposingAction::PageForward).store(&mut document, Some(&chord));
-        assert_eq!(
-            ComposingKeyBindings::from_document(&document).chord(ComposingAction::PageForward),
-            Some(&chord)
-        );
-        assert_eq!(
-            ShortcutAction::ToggleRomanization.chord_in(&document),
-            None,
-            "the row that had it first gives it up"
-        );
-
-        // Clearing empties only the row it was pressed on.
-        RecorderTarget::Composing(ComposingAction::PageForward).store(&mut document, None);
-        assert_eq!(
-            ComposingKeyBindings::from_document(&document).chord(ComposingAction::PageForward),
-            None
-        );
     }
 
     #[test]

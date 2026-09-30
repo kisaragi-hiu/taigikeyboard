@@ -10,14 +10,14 @@
 
 use crate::pages::{self, Page};
 use crate::presentation::strings_for;
-use crate::recorder::{Recorded, Recorder, RecorderTarget};
+use crate::recorder::{Recorded, Recorder};
 use crate::SIDEBAR;
 use adw::prelude::*;
 use gtk::glib::translate::IntoGlib;
 use gtk::{gio, glib};
 use std::cell::{Cell, RefCell};
 use std::rc::{Rc, Weak};
-use taigi_desktop_core::keys::{ChordRejection, RecordedPress};
+use taigi_desktop_core::keys::{ChordRejection, RecordedPress, RecorderTarget};
 use taigi_desktop_core::settings::presentation::{pane_title, PageMessage};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsDocument, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};

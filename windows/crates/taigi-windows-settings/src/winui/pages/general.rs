@@ -7,7 +7,9 @@ use crate::updates::INSTALLED_VERSION;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow, SettingsWrite};
 use taigi_desktop_core::keys::ToneInputScheme;
-use taigi_desktop_core::settings::presentation::display_language_label;
+use taigi_desktop_core::settings::presentation::{
+    display_language_label, output_script_label, OUTPUT_SCRIPTS,
+};
 use taigi_desktop_core::settings::{keys, InputMode, SettingChoice};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_update::checker;
@@ -138,18 +140,6 @@ pub fn view(
         // restore.
         reset_row(strings, ResetScope::General, context),
     ))
-}
-
-/// The Output pop-up's roster: the stored swap as the two scripts it picks
-/// between, Hanji (the default) first.
-const OUTPUT_SCRIPTS: &[bool] = &[true, false];
-
-fn output_script_label(is_hanji: bool) -> StringKey {
-    if is_hanji {
-        StringKey::SettingsOutputScriptHanji
-    } else {
-        StringKey::SettingsOutputScriptRoman
-    }
 }
 
 /// One row, never two (`GeneralSettingsView.swift:89-117`): a known update

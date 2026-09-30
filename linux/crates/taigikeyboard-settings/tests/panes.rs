@@ -16,13 +16,12 @@ use std::process::ExitCode;
 use std::rc::Rc;
 use taigi_desktop_core::engine::user_data;
 use taigi_desktop_core::keys::{
-    ComposingAction, ComposingKeyBindings, KeyModifiers, ShortcutAction,
+    ComposingAction, ComposingKeyBindings, KeyModifiers, RecorderTarget, ShortcutAction,
 };
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::{LiveSettings, SettingsFileStore, SettingsWriter};
 use taigikeyboard_settings::pages::BUILT;
-use taigikeyboard_settings::recorder::RecorderTarget;
 use taigikeyboard_settings::window::SettingsWindow;
 use taigikeyboard_settings::SIDEBAR;
 
