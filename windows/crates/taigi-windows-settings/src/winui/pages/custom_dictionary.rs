@@ -5,11 +5,12 @@
 //! trio, the pager under it, CSV import/export, delete all, and the one
 //! destructive verb for the learning records.
 //!
-//! Every engine request — the loads included — runs off the UI thread
-//! (`taigi_desktop_core::engine::user_data`, the same ops the macOS page
-//! makes): the newest load wins by generation, and the writes share the
-//! page's one work slot (refused, not queued — a queued delete would name
-//! a row the list may no longer show).
+//! The listing rules and every job body are
+//! `taigi_desktop_core::settings::custom_dictionary`'s, shared with the
+//! Linux pane; this file draws them and runs them. Every engine request —
+//! the loads included — runs off the UI thread: the newest load wins by
+//! generation, and the writes share the page's one work slot (refused, not
+//! queued — a queued delete would name a row the list may no longer show).
 //!
 //! Named divergences: the Mac's double-click-to-edit and right-click menu
 //! become an explicit ✎ button over the selection (Reactor's `ListView`
@@ -23,23 +24,18 @@ use crate::winui::cards;
 use crate::winui::list_pager::{self, icon_button};
 use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
-use std::path::PathBuf;
-use std::time::Duration;
-use taigi_desktop_core::engine::user_data::{
-    self, CustomDictionaryEntry, CustomDictionaryPage, CustomDictionaryRefusal, UserDataError,
+use std::path::Path;
+use taigi_desktop_core::engine::user_data::{CustomDictionaryEntry, CustomDictionaryPage};
+use taigi_desktop_core::settings::custom_dictionary::{
+    clear_learning_records_job, delete_all_job, delete_entry_job, export_file_name, export_job,
+    import_job, save_entry_job, Confirm, JobOutcome, Listing, LoadLanded, FILTER_SETTLE,
+    LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
 };
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
-/// `CustomDictionaryPageModel.pageSize`.
-const PAGE_SIZE: usize = 10;
-/// `reloadWhenFilterSettles`.
-const FILTER_SETTLE: Duration = Duration::from_millis(200);
-/// How long a job may run before the page says so (`overlayDelay`): a
-/// millisecond-long write must not flash a spinner.
-const OVERLAY_DELAY: Duration = Duration::from_millis(400);
 /// A definite height, not a floor (`Metrics.tableHeight`): the page is
 /// sized from the page size, so a short page keeps the controls under the
 /// table where they were.
@@ -62,43 +58,6 @@ pub enum EntryField {
     Hanzi,
 }
 
-/// A command that empties a store, waiting on its confirmation.
-///
-/// Confirmed rather than run on the press (neither the Mac nor this window
-/// used to ask): the button that runs it no longer IS the card, so the
-/// press is that much easier to make by accident, and there is no undo —
-/// the ✎ / − verbs act on one row, these two empty a table.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Confirm {
-    DeleteAll,
-    ClearLearningRecords,
-}
-
-impl Confirm {
-    fn title_key(self) -> StringKey {
-        match self {
-            Self::DeleteAll => StringKey::DictionaryDeleteAll,
-            Self::ClearLearningRecords => StringKey::DictionaryClearLearningRecords,
-        }
-    }
-
-    /// The question under the title. `ClearLearningRecords` has none
-    /// authored, and its title already asks it.
-    fn message_key(self) -> Option<StringKey> {
-        match self {
-            Self::DeleteAll => Some(StringKey::DictionaryDeleteAllMessage),
-            Self::ClearLearningRecords => None,
-        }
-    }
-
-    fn message(self) -> Message {
-        match self {
-            Self::DeleteAll => Message::DeleteAll,
-            Self::ClearLearningRecords => Message::ClearLearningRecords,
-        }
-    }
-}
-
 #[derive(Clone)]
 pub enum Message {
     FilterChanged(String),
@@ -106,7 +65,7 @@ pub enum Message {
     FilterSettled(u64),
     /// A page the user stepped to, already clamped by the caller.
     ShowPage(usize),
-    Loaded(u64, Box<LoadOutcome>),
+    Loaded(u64, Box<Result<CustomDictionaryPage, String>>),
     Select(Option<usize>),
     Add,
     Edit,
@@ -115,7 +74,8 @@ pub enum Message {
     EntryDialogClosed(ContentDialogResult),
     Export,
     Import,
-    /// A destructive command asking for its confirmation.
+    /// A destructive command asking for its confirmation (`Confirm` says why
+    /// it asks).
     Ask(Confirm),
     ConfirmClosed(ContentDialogResult),
     /// Confirmed — only [`Message::ConfirmClosed`] sends these.
@@ -128,21 +88,6 @@ pub enum Message {
     RowsApplied(Option<Vec<String>>),
 }
 
-/// What a load hands back: the page it fetched, or why it could not.
-#[derive(Clone)]
-pub enum LoadOutcome {
-    Loaded(CustomDictionaryPage),
-    Failed(String),
-}
-
-/// What a write hands back.
-#[derive(Clone)]
-pub struct JobOutcome {
-    message: Option<PageMessage>,
-    /// Whether the list changed and must be reloaded.
-    is_reload_wanted: bool,
-}
-
 /// The row being added or edited in the dialog.
 struct EditingRow {
     original: CustomDictionaryEntry,
@@ -152,23 +97,8 @@ struct EditingRow {
 
 #[derive(Default)]
 pub struct CustomDictionaryModel {
-    rows: Vec<CustomDictionaryEntry>,
-    /// Every entry, for the section header — what the dictionary HOLDS,
-    /// which is not what the current filter matches.
-    total_count: usize,
-    /// How many entries the current filter matches; what the pager divides.
-    match_count: usize,
-    /// Which page is on screen, zero-based.
-    page: usize,
-    filter: String,
-    /// Which load the rows on screen came from: a load started under an
-    /// older filter can come back after a newer one has, and would put rows
-    /// on screen that do not match the box. The newest wins by number.
-    load_generation: u64,
+    listing: Listing,
     is_first_load_requested: bool,
-    /// The row the list has selected, by ID — never by index, which moves
-    /// under a reload.
-    selected_id: Option<String>,
     /// Which rows the list on screen holds, so the selection index reaches
     /// XAML a render after the rows it counts do (`list_selection`).
     settled: SettledRows,
@@ -189,36 +119,8 @@ pub struct CustomDictionaryModel {
 }
 
 impl CustomDictionaryModel {
-    fn page_count(&self) -> usize {
-        list_pager::page_count(self.match_count, PAGE_SIZE)
-    }
-
     fn is_working(&self) -> bool {
         self.job_generation.is_some()
-    }
-
-    fn selected_row(&self) -> Option<&CustomDictionaryEntry> {
-        let id = self.selected_id.as_deref()?;
-        self.rows.iter().find(|row| row.id == id)
-    }
-
-    fn selected_index(&self) -> Option<usize> {
-        let id = self.selected_id.as_deref()?;
-        self.rows.iter().position(|row| row.id == id)
-    }
-
-    /// What the dictionary holds — and, while a filter narrows it, how much
-    /// of that the filter matches.
-    ///
-    /// Against the counts, not against the filter box (`CustomDictionaryPage
-    /// .swift:countLabel`): a filter that matches everything says nothing by
-    /// saying "17000 / 17000".
-    fn count_label(&self) -> String {
-        if self.match_count < self.total_count {
-            format!("{} / {}", self.match_count, self.total_count)
-        } else {
-            self.total_count.to_string()
-        }
     }
 }
 
@@ -243,18 +145,13 @@ pub fn update(
 ) {
     match message {
         Message::FilterChanged(filter) => {
-            if filter == model.filter {
+            let Some(generation) = model.listing.set_filter(filter) else {
                 return;
-            }
-            model.filter = filter;
-            // The reload waits for the box to settle, so a word typed
-            // letter by letter is one query, not six. A wait the runtime
-            // will not start applies the filter AT ONCE instead — a
-            // filter that never arrives would leave the list showing
-            // rows the box no longer describes, and "applied without
-            // waiting" is not a failure worth a banner.
-            model.load_generation = model.load_generation.wrapping_add(1);
-            let generation = model.load_generation;
+            };
+            // A wait the runtime will not start applies the filter AT ONCE
+            // instead — a filter that never arrives would leave the list
+            // showing rows the box no longer describes, and "applied
+            // without waiting" is not a failure worth a banner.
             _ = context.spawn_background_with_rejection(
                 move |_| {
                     std::thread::sleep(FILTER_SETTLE);
@@ -264,42 +161,17 @@ pub fn update(
             );
         }
         Message::FilterSettled(generation) => {
-            if generation != model.load_generation {
-                return;
+            if model.listing.settle(generation) {
+                load(model, context);
             }
-            model.page = 0;
-            load(model, context);
         }
         Message::ShowPage(page) => {
-            model.page = page;
+            model.listing.page = page;
             load(model, context);
         }
         Message::Loaded(generation, outcome) => {
-            if generation != model.load_generation {
-                return;
-            }
-            match *outcome {
-                LoadOutcome::Loaded(loaded) => {
-                    model.page = loaded.page;
-                    model.rows = loaded.rows;
-                    model.match_count = loaded.match_count;
-                    model.total_count = loaded.total_count;
-                    // A selection the new page does not hold is no
-                    // selection: the ✎ and − buttons must not act on a row
-                    // that is not on screen.
-                    if model.selected_index().is_none() {
-                        model.selected_id = None;
-                    }
-                }
-                // Not an empty list: "empty" and "could not be read" look
-                // the same on screen, and only one is worth doing
-                // something about. The rows already shown stay.
-                LoadOutcome::Failed(error) => {
-                    *alert = Some(PageMessage::failure(
-                        StringKey::DesktopCustomDictReadFailed,
-                        error,
-                    ));
-                }
+            if let LoadLanded::Failed(notice) = model.listing.land(generation, *outcome) {
+                *alert = Some(notice);
             }
         }
         Message::Select(index) => {
@@ -313,7 +185,7 @@ pub fn update(
             let Some(id) = index.and_then(|index| model.settled.key_at(index)) else {
                 return;
             };
-            model.selected_id = Some(id.to_owned());
+            model.listing.selected_id = Some(id.to_owned());
         }
         Message::Add => {
             model.editing = Some(EditingRow {
@@ -323,7 +195,7 @@ pub fn update(
             });
         }
         Message::Edit => {
-            if let Some(row) = model.selected_row() {
+            if let Some(row) = model.listing.selected_row() {
                 model.editing = Some(EditingRow {
                     roman: row.roman.clone(),
                     hanzi: row.hanzi.clone(),
@@ -332,14 +204,14 @@ pub fn update(
             }
         }
         Message::Delete => {
-            let Some(id) = model.selected_id.clone() else {
+            let Some(id) = model.listing.selected_id.clone() else {
                 return;
             };
-            write(
+            begin_job(
                 model,
                 context,
                 StringKey::DesktopProgressWorking,
-                move || user_data::delete_custom_entry(&id).map_err(|error| error.to_string()),
+                move || delete_entry_job(&id),
             );
         }
         Message::EntryFieldChanged(field, text) => {
@@ -363,21 +235,16 @@ pub fn update(
             if editing.roman.trim().is_empty() {
                 return;
             }
-            // The ID is the original's (empty for an add — the engine mints
-            // one): an edit is an edit, not a new entry that happens to
-            // replace one.
-            let id = editing.original.id;
-            let roman = editing.roman.trim().to_owned();
-            let hanzi = editing.hanzi.trim().to_owned();
-            write(
+            let EditingRow {
+                original,
+                roman,
+                hanzi,
+            } = editing;
+            begin_job(
                 model,
                 context,
                 StringKey::DesktopProgressWorking,
-                move || {
-                    user_data::save_custom_entry(&id, &roman, &hanzi)
-                        .map(|_| ())
-                        .map_err(|error| error.to_string())
-                },
+                move || save_entry_job(&original.id, &roman, &hanzi),
             );
         }
         Message::Export => export(model, context),
@@ -390,15 +257,25 @@ pub fn update(
                 result == ContentDialogResult::Primary
             });
             if let Some(confirm) = confirmed {
-                update(model, confirm.message(), alert, context);
+                let command = match confirm {
+                    Confirm::DeleteAll => Message::DeleteAll,
+                    Confirm::ClearLearningRecords => Message::ClearLearningRecords,
+                };
+                update(model, command, alert, context);
             }
         }
-        Message::DeleteAll => {
-            write(model, context, StringKey::DesktopProgressWorking, || {
-                user_data::delete_all_custom_entries().map_err(|error| error.to_string())
-            });
-        }
-        Message::ClearLearningRecords => clear_learning_records(model, context),
+        Message::DeleteAll => begin_job(
+            model,
+            context,
+            StringKey::DesktopProgressWorking,
+            delete_all_job,
+        ),
+        Message::ClearLearningRecords => begin_job(
+            model,
+            context,
+            StringKey::DesktopProgressWorking,
+            clear_learning_records_job,
+        ),
         Message::JobFinished(generation, outcome) => {
             if model.job_generation != Some(generation) {
                 return;
@@ -426,35 +303,23 @@ pub fn update(
     }
 }
 
-/// Starts a load of the page on screen, pulling it back inside the list if
-/// the list shrank under it — a delete on the last page, or a filter that
-/// now matches less. A load has no overlay: the rows already on screen
-/// stay put while it runs.
+/// Starts a load of the page on screen. A load has no overlay: the rows
+/// already on screen stay put while it runs.
 fn load(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWindow>) {
-    model.load_generation = model.load_generation.wrapping_add(1);
-    let generation = model.load_generation;
-    let filter = model.filter.trim().to_owned();
-    let wanted_page = model.page;
+    let request = model.listing.begin_load();
+    let generation = request.generation;
     _ = context.spawn_background_with_rejection(
         move |_| {
-            let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                user_data::list_custom_page(&filter, wanted_page, PAGE_SIZE)
-                    .map(LoadOutcome::Loaded)
-            }));
-            let outcome = match outcome {
-                Ok(Ok(loaded)) => loaded,
-                Ok(Err(error)) => LoadOutcome::Failed(error.to_string()),
-                Err(_) => LoadOutcome::Failed("the load did not finish".to_owned()),
-            };
+            let outcome =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| request.fetch()))
+                    .unwrap_or_else(|_| Err(LOAD_DID_NOT_FINISH.to_owned()));
             WindowMessage::CustomDictionary(Message::Loaded(generation, Box::new(outcome)))
         },
         // A thread the runtime would not start is a failure the user sees,
         // never a load that quietly never lands.
         WindowMessage::CustomDictionary(Message::Loaded(
             generation,
-            Box::new(LoadOutcome::Failed(
-                "the load could not be started".to_owned(),
-            )),
+            Box::new(Err("the load could not be started".to_owned())),
         )),
     );
 }
@@ -480,13 +345,7 @@ fn begin_job(
             // A panicking store call must not leave the slot held for the
             // life of the window.
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(job))
-                .unwrap_or_else(|_| JobOutcome {
-                    message: Some(PageMessage::failure(
-                        StringKey::DesktopCustomDictWriteFailed,
-                        "the operation did not finish",
-                    )),
-                    is_reload_wanted: true,
-                });
+                .unwrap_or_else(|_| JobOutcome::did_not_finish());
             WindowMessage::CustomDictionary(Message::JobFinished(generation, Box::new(outcome)))
         },
         WindowMessage::CustomDictionary(Message::JobFinished(
@@ -507,49 +366,19 @@ fn begin_job(
     });
 }
 
-/// A write that answers with nothing but its failure, and asks for a
-/// reload either way.
-fn write(
-    model: &mut CustomDictionaryModel,
-    context: &ComponentContext<SettingsWindow>,
-    label: StringKey,
-    body: impl FnOnce() -> Result<(), String> + Send + 'static,
-) {
-    begin_job(model, context, label, move || JobOutcome {
-        message: body()
-            .err()
-            .map(|error| PageMessage::failure(StringKey::DesktopCustomDictWriteFailed, error)),
-        is_reload_wanted: true,
-    });
-}
-
 fn export(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWindow>) {
     if model.is_working() {
         return;
     }
-    let suggested = format!(
-        "taigi_custom_dictionary_{}.csv",
-        taigi_windows_platform::local_date()
-    );
+    let suggested = export_file_name(&taigi_windows_platform::local_date());
     let Some(path) = crate::winui::file_dialog::save(&suggested) else {
         return;
     };
-    // The WHOLE dictionary, not the page or the filter's matches.
     begin_job(
         model,
         context,
         StringKey::DesktopProgressWorking,
-        move || {
-            let outcome = user_data::export_custom_csv()
-                .map_err(|error| error.to_string())
-                .and_then(|csv| write_atomically(&path, &csv));
-            JobOutcome {
-                message: outcome
-                    .err()
-                    .map(|error| PageMessage::failure(StringKey::CommonExportFailed, error)),
-                is_reload_wanted: false,
-            }
-        },
+        move || export_job(&path, write_atomically),
     );
 }
 
@@ -564,57 +393,13 @@ fn import(model: &mut CustomDictionaryModel, context: &ComponentContext<Settings
         model,
         context,
         StringKey::DesktopProgressWorking,
-        move || {
-            let message = match user_data::import_custom_csv_file(&path) {
-                Ok(imported) => PageMessage::Imported {
-                    imported: imported.imported as usize,
-                    skipped: imported.skipped as usize,
-                },
-                Err(UserDataError::Refused {
-                    refusal: CustomDictionaryRefusal::NotUtf8,
-                    ..
-                }) => PageMessage::NotUtf8,
-                Err(error) => PageMessage::failure(StringKey::CommonImportFailed, error),
-            };
-            JobOutcome {
-                message: Some(message),
-                is_reload_wanted: true,
-            }
-        },
-    );
-}
-
-/// Empties the three learning tables — three files, no transaction that
-/// could span them; the engine attempts each even when an earlier one
-/// fails, and the alert reports rather than claims.
-fn clear_learning_records(
-    model: &mut CustomDictionaryModel,
-    context: &ComponentContext<SettingsWindow>,
-) {
-    begin_job(
-        model,
-        context,
-        StringKey::DesktopProgressWorking,
-        move || {
-            let message = match user_data::clear_learning_records() {
-                Ok(()) => PageMessage::Done(StringKey::DictionaryClearLearningRecordsDone),
-                Err(error) => PageMessage::Failure {
-                    title: StringKey::DictionaryClearLearningRecordsFailed,
-                    detail: error.to_string(),
-                },
-            };
-            JobOutcome {
-                message: Some(message),
-                // The custom dictionary is untouched by this.
-                is_reload_wanted: false,
-            }
-        },
+        move || import_job(&path),
     );
 }
 
 /// `Data.write(to:options:.atomic)`: the file appears whole or not at all,
 /// and a failed export never damages the one it would have replaced.
-fn write_atomically(path: &PathBuf, contents: &[u8]) -> Result<(), String> {
+fn write_atomically(path: &Path, contents: &[u8]) -> Result<(), String> {
     let temporary = path.with_extension(format!("csv.{}.tmp", std::process::id()));
     std::fs::write(&temporary, contents).map_err(|error| error.to_string())?;
     std::fs::rename(&temporary, path).map_err(|error| {
@@ -654,10 +439,10 @@ pub fn view(
         enabled_row,
         cards::section_title_with_count(
             strings.resolve(StringKey::DesktopEntriesSection),
-            &model.count_label(),
+            &model.listing.count_label(),
         ),
         TextBox::new()
-            .text(model.filter.clone())
+            .text(model.listing.filter().to_owned())
             .is_enabled(is_enabled)
             .placeholder_text(strings.resolve(StringKey::DictionarySearchPlaceholder))
             .on_text_changed(
@@ -700,6 +485,7 @@ fn entry_table(
     is_enabled: bool,
 ) -> View {
     let items = model
+        .listing
         .rows
         .iter()
         .map(|row| {
@@ -720,7 +506,7 @@ fn entry_table(
             )
         })
         .collect::<Vec<_>>();
-    let has_selection = model.selected_row().is_some();
+    let has_selection = model.listing.selected_row().is_some();
     // The list itself stays live while a job runs: selecting a row writes
     // nothing, and the verbs over it are what a job turns off. The selection
     // index reaches XAML a render after the rows it counts (`list_selection`);
@@ -729,7 +515,7 @@ fn entry_table(
         "customDictionary.rows",
         &model.settled,
         items,
-        model.selected_index(),
+        model.listing.selected_index(),
         ListView::new()
             .selection_mode(ListViewSelectionMode::Single)
             .on_selection_changed(
@@ -805,8 +591,8 @@ fn table_controls(
                 context.callback(|()| WindowMessage::CustomDictionary(Message::Delete)),
             ),
         ),
-        model.page,
-        model.page_count(),
+        model.listing.page,
+        model.listing.page_count(),
         is_enabled,
         strings,
         context,
@@ -868,7 +654,7 @@ fn busy_overlay(model: &CustomDictionaryModel, strings: &StringResolver) -> View
 /// which also keeps the sentence a screen reader is told from being an
 /// accessibility label bolted onto a picture.
 fn empty_state(model: &CustomDictionaryModel, strings: &StringResolver) -> View {
-    let Some(key) = empty_state_key(model) else {
+    let Some(key) = model.listing.empty_state_key() else {
         return View::empty();
     };
     TextBlock::new()
@@ -878,18 +664,6 @@ fn empty_state(model: &CustomDictionaryModel, strings: &StringResolver) -> View 
         .horizontal_alignment(HorizontalAlignment::Center)
         .vertical_alignment(VerticalAlignment::Center)
         .into()
-}
-
-/// Which sentence [`empty_state`] shows, or `None` while there are rows.
-fn empty_state_key(model: &CustomDictionaryModel) -> Option<StringKey> {
-    if !model.rows.is_empty() {
-        return None;
-    }
-    Some(if model.filter.is_empty() {
-        StringKey::DictionaryCustomDictEmpty
-    } else {
-        StringKey::DictionaryNoResults
-    })
 }
 
 /// The one dialog the page can have up. An entry is being edited or a
@@ -983,67 +757,4 @@ fn entry_dialog(
                     ),
             )),
         )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn model(match_count: usize, total_count: usize, filter: &str) -> CustomDictionaryModel {
-        CustomDictionaryModel {
-            match_count,
-            total_count,
-            filter: filter.to_owned(),
-            ..CustomDictionaryModel::default()
-        }
-    }
-
-    #[test]
-    fn the_count_reads_as_one_number_until_a_filter_actually_narrows_it() {
-        // trace: `CustomDictionaryPage.swift:countLabel` — against the
-        // counts, not against the box. A filter every entry matches says
-        // nothing by saying "2 / 2".
-        assert_eq!(model(2, 2, "").count_label(), "2");
-        assert_eq!(model(2, 2, "tsia").count_label(), "2");
-        assert_eq!(model(1, 2, "tsia").count_label(), "1 / 2");
-    }
-
-    #[test]
-    fn an_empty_list_says_which_kind_of_empty_it_is() {
-        // trace: `CustomDictionaryPage.swift:378-396` — an empty dictionary
-        // is a state the + button answers; a filter matching nothing is a
-        // result of what was typed.
-        assert_eq!(
-            empty_state_key(&model(0, 0, "")),
-            Some(StringKey::DictionaryCustomDictEmpty)
-        );
-        assert_eq!(
-            empty_state_key(&model(0, 2, "zzz")),
-            Some(StringKey::DictionaryNoResults)
-        );
-        let mut listed = model(1, 1, "");
-        listed.rows.push(CustomDictionaryEntry {
-            roman: "tsia̍h".to_owned(),
-            hanzi: "食".to_owned(),
-            ..CustomDictionaryEntry::default()
-        });
-        assert_eq!(empty_state_key(&listed), None, "rows say it themselves");
-    }
-
-    #[test]
-    fn both_destructive_commands_are_confirmed_and_only_one_asks_a_question() {
-        assert_eq!(
-            Confirm::DeleteAll.title_key(),
-            StringKey::DictionaryDeleteAll
-        );
-        assert_eq!(
-            Confirm::DeleteAll.message_key(),
-            Some(StringKey::DictionaryDeleteAllMessage)
-        );
-        assert_eq!(
-            Confirm::ClearLearningRecords.title_key(),
-            StringKey::DictionaryClearLearningRecords
-        );
-        assert_eq!(Confirm::ClearLearningRecords.message_key(), None);
-    }
 }
