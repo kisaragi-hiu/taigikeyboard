@@ -344,6 +344,46 @@ mod tests {
         assert_eq!(resp.id, 9);
     }
 
+    fn user_data_error(id: u32, request: protos::engine::UserDataRequest) -> i32 {
+        let req = Request {
+            id,
+            config_snapshot: None,
+            generation: 0,
+            payload: Some(request::Payload::UserData(request)),
+        };
+        let mut buf = Vec::new();
+        req.encode(&mut buf).unwrap();
+        let resp = Response::decode(process_request(&buf).as_slice()).unwrap();
+        assert_eq!(resp.id, id);
+        assert!(resp.payload.is_none());
+        resp.error
+    }
+
+    #[test]
+    fn dispatch_returns_fail_invariant_for_user_data_missing_method() {
+        let error = user_data_error(11, protos::engine::UserDataRequest { method: None });
+        assert_eq!(error, ErrorCode::FailInvariant as i32);
+    }
+
+    #[test]
+    fn dispatch_returns_fail_invariant_for_record_usage_before_open() {
+        // trace: lib unit tests never open the process's handle, so
+        // `RecordUsage` meets "user data is not open yet".
+        let error = user_data_error(
+            12,
+            protos::engine::UserDataRequest {
+                method: Some(protos::engine::user_data_request::Method::RecordUsage(
+                    protos::engine::RecordUsage {
+                        display_text: "台灣".into(),
+                        canonical_tl: "tâi-uân".into(),
+                        ..protos::engine::RecordUsage::default()
+                    },
+                )),
+            },
+        );
+        assert_eq!(error, ErrorCode::FailInvariant as i32);
+    }
+
     /// Mirrors `docs/engine/ffi-safety.md` §7 T1' (library-side panic
     /// isolation). Inject a dispatcher that panics; the same
     /// `catch_unwind` boundary used by `process_request` must convert

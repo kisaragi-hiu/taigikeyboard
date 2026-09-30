@@ -17,10 +17,12 @@ workspace = true
 # windows-roadmap W1/W13; user-data-engine-roadmap U11).
 [features]
 default = ["sqlite"]
-sqlite = ["dep:rusqlite", "dep:uuid", "dep:serde", "dep:serde_json"]
+sqlite = ["dep:rusqlite", "dep:uuid", "dep:serde", "dep:serde_json", "dep:protos"]
 
 [dependencies]
 phonetics = { workspace = true }
+# The `UserDataRequest` façade (`handle` / `dispatch`), which needs the stores.
+protos = { workspace = true, optional = true }
 rusqlite = { workspace = true, optional = true }
 uuid = { workspace = true, optional = true }
 serde = { workspace = true, optional = true }

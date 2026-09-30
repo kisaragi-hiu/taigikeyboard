@@ -1048,6 +1048,7 @@ version = "0.1.0"
 dependencies = [
  "log",
  "phonetics",
+ "protos",
  "rusqlite",
  "serde",
  "serde_json",
