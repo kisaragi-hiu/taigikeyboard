@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, SystemTime};
-use taigi_desktop_core::settings::{SettingsDocument, SettingsProvider};
+use taigi_desktop_core::settings::{SettingsDocument, SettingsProvider, SettingsStore};
 
 #[derive(Debug, thiserror::Error)]
 pub enum SettingsFileError {
@@ -205,6 +205,15 @@ impl SettingsFileStore {
                 Err(error) => return Err(write_error(error)),
             }
         }
+    }
+}
+
+impl SettingsStore for SettingsFileStore {
+    fn update_document(
+        &self,
+        mutate: &mut dyn FnMut(&mut SettingsDocument),
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        self.update(mutate).map(|_| ()).map_err(Into::into)
     }
 }
 
