@@ -691,8 +691,8 @@ public nonisolated struct Taigi_Engine_CommitContinuous: Sendable {
   /// `display_text`, answer `ComposingResponse.commit`, and — with the
   /// user-data stores open — record the pick's usage itself (the platform
   /// then sends no `RecordUsage` for it). An empty `canonical_text` is
-  /// IGNORED on this path (no fallback to the document text). TPS layouts
-  /// stay on UNSPECIFIED until R5 PR-b: the resolver renders no TPS yet.
+  /// IGNORED on this path (no fallback to the document text). On the TPS
+  /// layout the romanization written renders as Bopomofo.
   public var script: Taigi_Engine_CommitScript = .unspecified
 
   /// The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-

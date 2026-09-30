@@ -48,12 +48,7 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertNotNil(cache.poj["o\u{0358}"])
     }
 
-    // MARK: - TPS (4 ops)
-
-    func test_op_tlNumericToTPS_basic() {
-        let out = RustEngineBridge.tlNumericToTPS("tiau5", orMapsToER: false)
-        XCTAssertFalse(out.isEmpty, "TL numeric → TPS should produce zhuyin")
-    }
+    // MARK: - TPS (3 ops)
 
     func test_op_tlDisplayToTPS_basic() {
         let out = RustEngineBridge.tlDisplayToTPS("tiâu", orMapsToER: false)

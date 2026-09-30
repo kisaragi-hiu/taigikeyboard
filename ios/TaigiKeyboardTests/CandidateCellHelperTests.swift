@@ -222,9 +222,32 @@ final class CandidateCellHelperTests: XCTestCase {
         XCTAssertEqual(handled.additionalInfo[CandidateCellScript.infoKey], CandidateCellScript.hanji)
     }
 
+    /// R5 P2 (parity, USER 2026-09-30): a hanji-less TPS cell shows its display romanization
+    /// rendered as TPS — `tlDisplayToTPS`, what picking it writes (engine `commit_text.rs`) and
+    /// what Android's cell shows. Was `tlNumericToTPS`, which reads tone digits, of the
+    /// tone-marked romanization.
+    func testTPSLayout_hanjilessCell_showsItsRomanizationAsTPS() {
+        RustEngineBridge.install()
+        let title = CandidateCellHelper.displayTitle(
+            for: romanOnlyRow,
+            isTranslateSwapped: false,
+            isTPSLayout: true,
+            orMapsToER: false,
+            candidateDisplayMode: .sideBySide,
+        )
+        XCTAssertEqual(title, "ㄉㄞˊ", "trace: tâi → tai5 → ㄉ + ㄞ + ˊ")
+        let handled = CandidateCellHelper.suggestionToHandle(
+            for: romanOnlyRow,
+            isTranslateSwapped: false,
+            isTPSLayout: true,
+            orMapsToER: false,
+        )
+        XCTAssertEqual(handled.text, title, "the rendered cell and the handed cell agree")
+    }
+
     /// The guard also precedes the TPS fallback rewrite (defensive — TPS never
     /// splits, but a marked cell reaching a TPS-layout render must not be
-    /// re-rendered through `tlNumericToTPS`).
+    /// re-rendered through `tlDisplayToTPS`).
     func testSuggestionToHandle_markedCell_isNoOp_underTPSLayout() {
         let handled = CandidateCellHelper.suggestionToHandle(
             for: markedRomanCell,
