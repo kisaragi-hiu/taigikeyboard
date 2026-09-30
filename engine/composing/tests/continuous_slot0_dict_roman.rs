@@ -29,9 +29,9 @@
 use crate::common::Fetch;
 use crate::common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, config_tl,
-    empty_association_bin, engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp,
-    Row,
+    empty_association_bin, fetch_at_pos_response, install_lexicon, Row,
 };
+use test_support::{engine_install_lock, write_temp};
 
 /// 予我/hōo--guá (neutral tone, freq 16) + 戶外/hōo-guā (hyphen, freq 25) collide on
 /// `tl_notone = hoogua`. 予/hōo + 我/guá are high-freq single chars so the

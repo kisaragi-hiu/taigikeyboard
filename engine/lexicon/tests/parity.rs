@@ -8,7 +8,6 @@
 //! Tests pin the invariants from `docs/architecture/behavioral-invariants.md`.
 
 use std::path::PathBuf;
-use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use lexicon::association_reader::AssociationReader;
 use lexicon::dictionary_reader::{DictionaryReader, Filter};
@@ -18,22 +17,8 @@ use lexicon::prefix_index::PrefixIndex;
 use lexicon::search::{self, SearchInputMode, SearchParams};
 use lexicon::LexiconError;
 
-use crate::common;
-use crate::common::{build_tkdb_v3, build_tkwa, write_temp};
-
-const SEPARATOR: u8 = 0xFF;
-
-/// Process-wide serialization for tests that call `EngineHandle::install`.
-/// `EngineHandle` is a global singleton; without this, parallel test threads
-/// can swap engine state between one test's install and its assertions.
-/// Codex post-impl R2 reproduced this flake at `--test-threads=16` after
-/// ~50 iterations.
-fn engine_install_lock() -> MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-}
+use crate::common::{build_tkdb_v3, write_synthetic_fst};
+use test_support::{build_tkwa, engine_install_lock, write_temp};
 
 // --- INVARIANT_LEX_FILTER_BITMASK ---------------------------------------
 
@@ -476,37 +461,6 @@ fn invariant_lex_install_search_serialization_no_panic() {
 
 // --- helpers -----------------------------------------------------------
 
-fn write_synthetic_fst(name: &str, pairs: &[(&str, u32)]) -> PathBuf {
-    use fst::SetBuilder;
-    use std::sync::atomic::{AtomicU64, Ordering};
-    // Per-process atomic counter + pid namespacing so concurrent tests
-    // within the same `cargo test` binary cannot race on the same path
-    // (mirrors `common::write_temp` + `tests/span_local_fetch.rs:155-156`).
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let pid = std::process::id();
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let path = std::env::temp_dir().join(format!("lexicon-test-{name}-{pid}-{n}"));
-    let mut entries: Vec<Vec<u8>> = pairs
-        .iter()
-        .map(|(key, rowid)| {
-            let mut e = Vec::with_capacity(key.len() + 1 + 4);
-            e.extend_from_slice(key.as_bytes());
-            e.push(SEPARATOR);
-            e.extend_from_slice(&rowid.to_le_bytes());
-            e
-        })
-        .collect();
-    entries.sort_unstable();
-    entries.dedup();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for entry in &entries {
-        builder.insert(entry).expect("insert");
-    }
-    builder.finish().expect("finish");
-    path
-}
-
 /// Convenience wrapper: emits a v3 TKDB binary with `syllable_count = 1` and
 /// `kautian_subtag = 0` on every row. Callers that assert on syllable_count or
 /// subtag should use `common::build_tkdb_v3` / `build_tkdb_v3_subtag` directly.
@@ -519,15 +473,15 @@ fn synth_dictionary_bin(magic: &[u8; 4], rows: &[(u16, u32, &str, &str)]) -> Vec
 }
 
 /// `bad-version` regression test still needs to forge an arbitrary version
-/// number, so it goes through `build_tkdb_bin` directly.
+/// number, so it goes through `build_tkdb` directly.
 fn synth_dictionary_bin_with_version(
     magic: &[u8; 4],
     version: u32,
     rows: &[(u16, u32, &str, &str)],
 ) -> Vec<u8> {
-    let dict_rows: Vec<common::DictRow<'_>> = rows
+    let dict_rows: Vec<test_support::TkdbRow<'_>> = rows
         .iter()
-        .map(|(bm, freq, hanzi, tl)| common::DictRow {
+        .map(|(bm, freq, hanzi, tl)| test_support::TkdbRow {
             bitmask: *bm,
             frequency: *freq,
             syllable_count: Some(1),
@@ -536,7 +490,7 @@ fn synth_dictionary_bin_with_version(
             tl,
         })
         .collect();
-    common::build_tkdb_bin(magic, version, &dict_rows)
+    test_support::build_tkdb(magic, version, &dict_rows)
 }
 
 fn synth_dictionary_reader(rows: &[(u16, u32, &str, &str)]) -> DictionaryReader {

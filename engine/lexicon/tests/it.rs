@@ -25,39 +25,7 @@ mod whole_buffer_abbrev;
 /// so a new test file cannot silently stop running under `autotests = false`.
 #[test]
 fn every_test_file_belongs_to_a_test_binary() {
-    use std::collections::BTreeSet;
-    let crate_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
-    let manifest = std::fs::read_to_string(crate_dir.join("Cargo.toml")).expect("read Cargo.toml");
-    let mut declared = BTreeSet::new();
-    for root in manifest.lines().filter_map(|line| {
-        line.trim()
-            .strip_prefix("path = \"tests/")?
-            .strip_suffix(".rs\"")
-    }) {
-        let source = std::fs::read_to_string(crate_dir.join(format!("tests/{root}.rs")))
-            .expect("read test root");
-        declared.extend(
-            source
-                .lines()
-                .filter_map(|line| line.strip_prefix("mod ")?.strip_suffix(';'))
-                .map(str::to_owned),
-        );
-        declared.insert(root.to_owned());
-    }
-    let files: BTreeSet<String> = std::fs::read_dir(crate_dir.join("tests"))
-        .expect("read tests/")
-        .map(|entry| entry.expect("tests/ entry").path())
-        .filter(|path| path.extension().is_some_and(|ext| ext == "rs"))
-        .map(|path| {
-            path.file_stem()
-                .expect("file stem")
-                .to_string_lossy()
-                .into_owned()
-        })
-        .collect();
-    let orphans: Vec<_> = files.difference(&declared).collect();
-    assert!(
-        orphans.is_empty(),
-        "tests/<name>.rs not declared by any [[test]] root in Cargo.toml: {orphans:?}"
-    );
+    test_support::assert_every_test_file_is_declared(std::path::Path::new(env!(
+        "CARGO_MANIFEST_DIR"
+    )));
 }

@@ -16,8 +16,9 @@
 use crate::common::Fetch;
 use crate::common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config, empty_association_bin,
-    engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp, Row,
+    fetch_at_pos_response, install_lexicon, Row,
 };
+use test_support::{engine_install_lock, write_temp};
 
 fn fixture_rows() -> Vec<Row> {
     // The reported bug: two 灣 rows differ only on tone (and hence

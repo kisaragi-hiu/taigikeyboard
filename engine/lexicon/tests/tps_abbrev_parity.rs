@@ -37,57 +37,15 @@
 //! notone form). The csv has 28 non-empty `tps_abbrev_var` rows; pin
 //! all of them.
 
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::PathBuf;
+use test_support::dictionary_csv_or_skip;
 
-fn dictionary_csv_path() -> PathBuf {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.pop(); // engine
-    path.pop(); // repo root
-    path.push("dictionary");
-    path.push("output");
-    path.push("dictionary.csv");
-    path
-}
-
-fn read_rows(path: &std::path::Path) -> std::io::Result<Vec<(String, String, String)>> {
-    let file = File::open(path)?;
-    let reader = BufReader::new(file);
-    let mut lines = reader.lines();
-    let header = lines.next().expect("CSV header line present")?;
-    let columns: Vec<&str> = header.split(',').collect();
-    let tl_idx = columns
-        .iter()
-        .position(|c| *c == "tl")
-        .expect("`tl` column present in CSV header");
-    let tps_abbrev_idx = columns
-        .iter()
-        .position(|c| *c == "tps_abbrev")
-        .expect("`tps_abbrev` column present in CSV header");
-    let tps_abbrev_var_idx = columns
-        .iter()
-        .position(|c| *c == "tps_abbrev_var")
-        .expect("`tps_abbrev_var` column present in CSV header");
-
-    let mut rows = Vec::new();
-    let max_idx = tl_idx.max(tps_abbrev_idx).max(tps_abbrev_var_idx);
-    for line in lines {
-        let line = line?;
-        if line.is_empty() {
-            continue;
-        }
-        let fields: Vec<&str> = line.split(',').collect();
-        if fields.len() <= max_idx {
-            continue;
-        }
-        rows.push((
-            fields[tl_idx].to_string(),
-            fields[tps_abbrev_idx].to_string(),
-            fields[tps_abbrev_var_idx].to_string(),
-        ));
-    }
-    Ok(rows)
+/// `[tl, tps_abbrev, tps_abbrev_var]` per row; `None` (logged, the `suite` soft-skips) in a lean checkout.
+fn read_rows(suite: &str) -> Option<Vec<[&'static str; 3]>> {
+    Some(
+        dictionary_csv_or_skip(suite)?
+            .select(["tl", "tps_abbrev", "tps_abbrev_var"])
+            .collect(),
+    )
 }
 
 fn is_pure_bopomofo(s: &str) -> bool {
@@ -96,16 +54,10 @@ fn is_pure_bopomofo(s: &str) -> bool {
 
 #[test]
 fn runtime_tps_abbrev_matches_build_pipeline_for_every_row() {
-    let path = dictionary_csv_path();
-    if !path.exists() {
-        eprintln!(
-            "skipping TPS-abbrev parity test: {} not present (lean checkout)",
-            path.display()
-        );
+    let Some(rows) = read_rows("TPS-abbrev") else {
         return;
-    }
+    };
 
-    let rows = read_rows(&path).expect("read dictionary.csv rows");
     assert!(
         !rows.is_empty(),
         "expected non-empty `dictionary.csv` row stream"
@@ -115,7 +67,7 @@ fn runtime_tps_abbrev_matches_build_pipeline_for_every_row() {
     let mut anomalies = 0usize;
     let mut drift: Vec<(String, String, String)> = Vec::new();
 
-    for (tl, abbrev, _var) in &rows {
+    for &[tl, abbrev, _var] in &rows {
         if tl.is_empty() || abbrev.is_empty() {
             continue;
         }
@@ -129,7 +81,7 @@ fn runtime_tps_abbrev_matches_build_pipeline_for_every_row() {
         compared += 1;
         let derived = phonetics::tps_abbrev_from_tl(tl);
         if derived != *abbrev {
-            drift.push((tl.clone(), abbrev.clone(), derived));
+            drift.push((tl.to_string(), abbrev.to_string(), derived));
             if drift.len() >= 10 {
                 break;
             }
@@ -165,16 +117,10 @@ fn runtime_tps_abbrev_matches_build_pipeline_for_every_row() {
 /// column produced the input).
 #[test]
 fn runtime_tps_abbrev_var_matches_build_pipeline_for_every_row() {
-    let path = dictionary_csv_path();
-    if !path.exists() {
-        eprintln!(
-            "skipping TPS-abbrev-var parity test: {} not present (lean checkout)",
-            path.display()
-        );
+    let Some(rows) = read_rows("TPS-abbrev-var") else {
         return;
-    }
+    };
 
-    let rows = read_rows(&path).expect("read dictionary.csv rows");
     // Iterate every row with a non-empty pure-Bopomofo primary, compute
     // the runtime-derived variant, and compare to the CSV variant —
     // INCLUDING the empty-string case (no ㄜ → no variant). Skipping
@@ -186,7 +132,7 @@ fn runtime_tps_abbrev_var_matches_build_pipeline_for_every_row() {
     let mut nonempty_vars = 0usize;
     let mut drift: Vec<(String, String, String)> = Vec::new();
 
-    for (_tl, abbrev, var) in &rows {
+    for &[_tl, abbrev, var] in &rows {
         if abbrev.is_empty() {
             continue;
         }
@@ -200,7 +146,7 @@ fn runtime_tps_abbrev_var_matches_build_pipeline_for_every_row() {
             nonempty_vars += 1;
         }
         if derived != *var {
-            drift.push((abbrev.clone(), var.clone(), derived));
+            drift.push((abbrev.to_string(), var.to_string(), derived));
             if drift.len() >= 10 {
                 break;
             }

@@ -25,9 +25,6 @@
 //! `tests/syllables_fst.rs:186-207`; dict.bin v2 builder is shared
 //! `tests/common/mod.rs::build_tkdb_v3`.
 
-use std::path::PathBuf;
-
-use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
@@ -39,6 +36,7 @@ use lexicon::{
 };
 use phonetics::InputMode;
 use ranking::FrequencyMap;
+use test_support::{fst_entry, write_fst_set, write_temp};
 
 /// v3.5.9 D7 — build the shared `ContinuousFetchCtx` at a test site
 /// with explicit `freq_map` / `now_ms` / `custom`. Pins
@@ -84,9 +82,7 @@ fn ctx_neutral<'a>(
     ctx(freq_map, 0, &[], prefix_index, dict)
 }
 
-use crate::common::{
-    build_tkdb_v3, fetch_candidates_for_endings, frequency_map, write_temp, FrequencyFixture,
-};
+use crate::common::{build_tkdb_v3, fetch_candidates_for_endings, frequency_map, FrequencyFixture};
 
 /// Single dictionary fixture row: `(toneless_tl_key, hanzi, tl, syllable_count, frequency)`.
 /// `bitmask` is fixed to `1 << 11` (the `lkk` source per
@@ -128,38 +124,17 @@ fn build_fixture_sourced(name: &str, rows: &[(u16, &Row<'_>)]) -> (PrefixIndex, 
     let dict_path = write_temp(&format!("phase5-{name}.dict.bin"), &dict_bytes);
     let dict = DictionaryReader::open(&dict_path).expect("dict.bin opens");
 
-    // 2. dictionary.fst — entries must be inserted in ascending byte
-    // order. Sort by `tl:<key> + 0xFF + rowid` before insertion.
+    // 2. dictionary.fst — `tl:<key> + 0xFF + rowid` entries (`write_fst_set`
+    // sorts them into the ascending byte order the builder needs).
     let mut fst_keys: Vec<Vec<u8>> = Vec::new();
     for (idx, (_, r)) in rows.iter().enumerate() {
         let rowid = (idx + 1) as u32;
-        let mut entry = Vec::with_capacity(r.toneless_key.len() + 4 + 5);
-        entry.extend_from_slice(b"tl:");
-        entry.extend_from_slice(r.toneless_key.as_bytes());
-        entry.push(0xFF);
-        entry.extend_from_slice(&rowid.to_le_bytes());
-        fst_keys.push(entry);
+        fst_keys.push(fst_entry(b"tl:", r.toneless_key, rowid));
     }
-    fst_keys.sort();
-
-    let fst_path = unique_temp_path(name);
-    let file = std::fs::File::create(&fst_path).expect("create fst tmp");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for entry in &fst_keys {
-        builder.insert(entry).expect("fst insert");
-    }
-    builder.finish().expect("fst finish");
+    let fst_path = write_fst_set(&format!("{name}.fst"), fst_keys);
     let prefix_index = PrefixIndex::open(&fst_path).expect("dictionary.fst opens");
 
     (prefix_index, dict)
-}
-
-fn unique_temp_path(name: &str) -> PathBuf {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    let n = COUNTER.fetch_add(1, Ordering::Relaxed);
-    let pid = std::process::id();
-    std::env::temp_dir().join(format!("lexicon-test-phase5-{name}-{pid}-{n}.fst"))
 }
 
 /// Locate a candidate by `(display_text, consumed_span, syllable_count)`.

@@ -17,7 +17,6 @@
 //! `fetch_candidates_for_keys` — and the end-to-end candidate strip, which is
 //! pinned by `composing/tests/golden/fetch_at_pos.golden`.
 
-use fst::SetBuilder;
 use lexicon::dictionary_reader::DictionaryReader;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::{
@@ -26,8 +25,9 @@ use lexicon::{
 };
 use phonetics::InputMode;
 use ranking::FrequencyMap;
+use test_support::{fst_entry, write_fst_set, write_temp};
 
-use crate::common::{build_tkdb_v3, write_temp};
+use crate::common::build_tkdb_v3;
 
 /// One dictionary fixture row. `bitmask` is fixed to the `lkk` source bit so
 /// every row passes the all-sources filter the tests use.
@@ -93,25 +93,10 @@ fn build_fixture(name: &str, family: &str, rows: &[Row<'_>]) -> (PrefixIndex, Di
     for (idx, row) in rows.iter().enumerate() {
         let rowid = (idx + 1) as u32;
         for body in key_bodies(family, row.tl) {
-            let mut entry = Vec::new();
-            entry.extend_from_slice(family.as_bytes());
-            entry.extend_from_slice(body.as_bytes());
-            entry.push(0xFF);
-            entry.extend_from_slice(&rowid.to_le_bytes());
-            entries.push(entry);
+            entries.push(fst_entry(family.as_bytes(), &body, rowid));
         }
     }
-    entries.sort();
-    entries.dedup();
-
-    let mut builder = SetBuilder::memory();
-    for entry in &entries {
-        builder.insert(entry).expect("fst insert");
-    }
-    let fst_path = write_temp(
-        &format!("syllable-reach-{name}.dictionary.fst"),
-        &builder.into_inner().expect("fst finish"),
-    );
+    let fst_path = write_fst_set(&format!("syllable-reach-{name}.dictionary.fst"), entries);
     (
         PrefixIndex::open(&fst_path).expect("dictionary.fst opens"),
         dict,

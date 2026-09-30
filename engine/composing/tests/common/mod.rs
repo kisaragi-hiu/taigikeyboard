@@ -4,24 +4,22 @@
 //! `tests/no_lexicon.rs`, see `Cargo.toml`) declares `mod common;` once and
 //! its test-file modules reach the helpers as `crate::common` — the helpers
 //! never leak into the production crate (same pattern as
-//! `engine/lexicon/tests/common/mod.rs`, which is test-private to `lexicon`
-//! and therefore not importable from here).
+//! `engine/lexicon/tests/common/mod.rs`).
 //!
-//! Only helper *definitions* live here — hermetic fixture serializers
-//! (TKDB v3 / `dictionary.fst` / `syllables.fst` / `association.bin`), the
-//! per-binary install lock, temp-path namespacing, the `AppConfig` /
-//! `ComposingRequest` constructors, and the `Start → EnterContinuous →
-//! FetchAtPos` driver. Every test file keeps its own fixture rows, syllable
-//! samples, and assertions.
+//! Only helper *definitions* live here — the composing-shaped fixture
+//! builders (`dictionary.fst` / `syllables.fst` families over [`Row`]), the
+//! `AppConfig` / `ComposingRequest` constructors, and the `Start →
+//! EnterContinuous → FetchAtPos` driver. Crate-neutral pieces (install lock,
+//! temp files, TKDB / TKWA serializers, production artifacts) come from the
+//! `test-support` dev-dependency. Every test file keeps its own fixture rows,
+//! syllable samples, and assertions.
 
 #![allow(dead_code)] // Different test files use different subsets.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use composing::api::Engine;
 use composing::{dispatch, Intent, UserRows};
-use fst::SetBuilder;
 use lexicon::{
     CustomEntry, EngineHandle as LexiconHandle, LearnedEntry, LexiconPaths, SyllableInventory,
 };
@@ -32,22 +30,9 @@ use protos::engine::{
     AppConfig, ComposingRequest, ComposingResponse, Effect, EnterContinuous, FetchAtPos, Start,
 };
 use ranking::FrequencyData;
+use test_support::{build_tkdb, build_tkwa, fst_entry, write_fst_set, TkdbRow};
 
-pub const SEPARATOR: u8 = 0xFF;
 const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
-const TKDB_HEADER_SIZE: usize = 16;
-
-/// Serializes `LexiconHandle::install` vs. assertion within ONE test binary.
-/// Each binary is its own process with its own `lexicon::EngineHandle`
-/// singleton, shared by every test-file module in it, so every test that
-/// installs a fixture holds this lock from install through its last
-/// assertion — cargo runs the binary's `#[test]`s in parallel.
-pub fn engine_install_lock() -> MutexGuard<'static, ()> {
-    static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
-    LOCK.get_or_init(|| Mutex::new(()))
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-}
 
 /// One dictionary fixture row. Empty `hanzi` ⇒ TAILO (no hanji). `rowid` is
 /// the 1-based slice index, shared between `dictionary.bin` (offset-table
@@ -62,87 +47,21 @@ pub struct Row {
     pub freq: u32,
 }
 
-/// Per-process temp sequence number shared by [`write_temp`] and
-/// [`unique_temp_path`].
-fn next_temp_id() -> u64 {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static COUNTER: AtomicU64 = AtomicU64::new(0);
-    COUNTER.fetch_add(1, Ordering::Relaxed)
-}
-
-/// Fresh temp file per call (pid + counter): a concurrent invocation of the
-/// same test binary, or a later test in this one, never truncates or
-/// rewrites a fixture file another test still has installed (mmapped).
-pub fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
-    let pid = std::process::id();
-    let n = next_temp_id();
-    let path = std::env::temp_dir().join(format!("composing-test-{pid}-{n}-{name}"));
-    std::fs::write(&path, bytes).expect("write temp fixture");
-    path
-}
-
-/// Unique `.fst` temp path for the `SyllableInventory` builders: pid plus a
-/// per-process counter so parallel tests in one binary never collide.
-pub fn unique_temp_path() -> PathBuf {
-    let pid = std::process::id();
-    let n = next_temp_id();
-    std::env::temp_dir().join(format!("composing-test-{pid}-{n}.fst"))
-}
-
-/// TKDB v3 byte layout — verbatim logic from
-/// `engine/lexicon/tests/common/mod.rs::build_tkdb_bin` (`build_tkdb_v3`
-/// path: every row carries a `syllable_count` byte + a `kautian_subtag` u16).
+/// TKDB v3 `dictionary.bin`: every row rank-neutral with no kautian
+/// provenance (subtag 0).
 pub fn build_tkdb_v3(rows: &[Row]) -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKDB");
-    out.extend_from_slice(&3u32.to_le_bytes()); // version
-    out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
-
-    let offset_table_size = rows.len() * 4;
-    let mut offsets = Vec::<u32>::with_capacity(rows.len());
-    let mut payload = Vec::<u8>::new();
-    for row in rows {
-        offsets.push((TKDB_HEADER_SIZE + offset_table_size + payload.len()) as u32);
-        payload.extend_from_slice(&RANK_NEUTRAL_BITMASK.to_le_bytes());
-        payload.extend_from_slice(&row.freq.to_le_bytes());
-        payload.push(row.hanzi.len() as u8);
-        payload.push(row.tl.len() as u8);
-        payload.push(row.syll);
-        payload.extend_from_slice(&0u16.to_le_bytes()); // kautian_subtag (v3); 0 = no kautian provenance
-        payload.extend_from_slice(row.hanzi.as_bytes());
-        payload.extend_from_slice(row.tl.as_bytes());
-    }
-    for off in &offsets {
-        out.extend_from_slice(&off.to_le_bytes());
-    }
-    out.extend_from_slice(&payload);
-    out
-}
-
-/// Write sorted, deduped FST `entries` to a fresh temp file and return it.
-pub fn write_fst_set(name: &str, mut entries: Vec<Vec<u8>>) -> PathBuf {
-    entries.sort();
-    entries.dedup();
-    let path = write_temp(name, &[]);
-    let file = std::fs::File::create(&path).unwrap_or_else(|e| panic!("create {name}: {e}"));
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("fst builder");
-    for entry in &entries {
-        builder.insert(entry).expect("fst insert");
-    }
-    builder.finish().expect("fst finish");
-    path
-}
-
-/// `<family>:<body> + 0xFF + rowid_le_u32` — the production `dictionary.fst`
-/// entry shape (`dictionary/build/create_fst.py`).
-pub fn fst_entry(family: &[u8], body: &str, rowid: u32) -> Vec<u8> {
-    let mut e = Vec::with_capacity(family.len() + body.len() + 5);
-    e.extend_from_slice(family);
-    e.extend_from_slice(body.as_bytes());
-    e.push(SEPARATOR);
-    e.extend_from_slice(&rowid.to_le_bytes());
-    e
+    let tkdb_rows: Vec<TkdbRow<'_>> = rows
+        .iter()
+        .map(|row| TkdbRow {
+            bitmask: RANK_NEUTRAL_BITMASK,
+            frequency: row.freq,
+            syllable_count: Some(row.syll),
+            kautian_subtag: Some(0),
+            hanzi: row.hanzi,
+            tl: row.tl,
+        })
+        .collect();
+    build_tkdb(b"TKDB", 3, &tkdb_rows)
 }
 
 /// `dictionary.fst` with the toneless `tl:` family, the `poj:` family
@@ -284,18 +203,12 @@ pub fn poj_syllable_keys(samples: &[&str]) -> Vec<String> {
 }
 
 /// Hermetic `SyllableInventory` over an explicit key list (sorted + deduped
-/// here), written to a `unique_temp_path()` FST.
+/// by [`write_fst_set`]).
 pub fn inventory_from_keys(keys: Vec<String>) -> SyllableInventory {
-    let mut keys = keys;
-    keys.sort();
-    keys.dedup();
-    let path = unique_temp_path();
-    let file = std::fs::File::create(&path).expect("create fst");
-    let mut builder = SetBuilder::new(std::io::BufWriter::new(file)).expect("builder");
-    for key in &keys {
-        builder.insert(key.as_bytes()).expect("insert");
-    }
-    builder.finish().expect("finish");
+    let path = write_fst_set(
+        "inventory.fst",
+        keys.into_iter().map(String::into_bytes).collect(),
+    );
     SyllableInventory::open(&path).expect("open inventory")
 }
 
@@ -390,13 +303,7 @@ pub fn build_syllables_fst_tps(rows: &[Row]) -> PathBuf {
 
 /// Empty `association.bin` — `TKWA` + version 2 + 0 keys/entries/ts.
 pub fn empty_association_bin() -> Vec<u8> {
-    let mut out = Vec::new();
-    out.extend_from_slice(b"TKWA");
-    out.extend_from_slice(&2u32.to_le_bytes());
-    out.extend_from_slice(&0u32.to_le_bytes()); // key_count
-    out.extend_from_slice(&0u32.to_le_bytes()); // entry_count
-    out.extend_from_slice(&0u32.to_le_bytes()); // build_ts
-    out
+    build_tkwa(2, &[])
 }
 
 /// Validate the four fixture paths and swap them into the process-global
@@ -662,23 +569,14 @@ pub fn cell_with_hanji<'a>(cells: &'a [Cell], hanji: &str) -> &'a Cell {
 pub fn production_lexicon_ready() -> bool {
     static READY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *READY.get_or_init(|| {
-        let artifact = |name: &str| {
-            std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../../dictionaries")
-                .join(name)
-                .to_str()
-                .expect("artifact path UTF-8")
-                .to_owned()
-        };
-        if !std::path::Path::new(&artifact("association.bin")).exists() {
-            eprintln!("production artifacts absent — run `make dict`; skipping.");
+        let Some(artifacts) = test_support::ProductionArtifacts::locate() else {
             return false;
-        }
+        };
         let paths = lexicon::LexiconPaths::validated(
-            &artifact("dictionary.fst"),
-            &artifact("dictionary.bin"),
-            &artifact("association.bin"),
-            &artifact("syllables.fst"),
+            &artifacts.dictionary_fst,
+            &artifacts.dictionary_bin,
+            &artifacts.association_bin,
+            &artifacts.syllables_fst,
             0,
         )
         .expect("validate production LexiconPaths");

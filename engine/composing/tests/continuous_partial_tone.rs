@@ -24,10 +24,10 @@
 
 use crate::common::{
     build_dictionary_fst_tl_toned, build_syllables_fst_tl, build_tkdb_v3, empty_association_bin,
-    engine_install_lock, fetch_hanji_with_custom as fetch_hanji_in, install_lexicon, write_temp,
-    Row,
+    fetch_hanji_with_custom as fetch_hanji_in, install_lexicon, Row,
 };
 use lexicon::CustomEntry;
+use test_support::{engine_install_lock, write_temp};
 
 fn fixture_rows() -> Vec<Row> {
     vec![

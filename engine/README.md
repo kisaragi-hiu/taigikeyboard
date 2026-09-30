@@ -18,6 +18,7 @@ Cross-platform shared core for TaigiKeyboard. All five platforms route their pho
 | `swift-ffi` | `staticlib` — `swift-bridge` entry points consumed by the iOS extension via `RustTaigi.xcframework`. |
 | `android-jni` | `cdylib` — JNI entry points consumed by `RustEngineBridge.kt`. |
 | `build-helpers/fst-builder` | Offline CLI that builds and queries the lexicon `.fst` artifacts. Not shipped to platforms. |
+| `test-support` | Dev-dependency of the `lexicon` / `composing` / `dispatch` tests: temp files, TKDB / TKWA / FST fixture serializers, the per-binary install lock, production artifacts and a once-per-process `dictionary.csv` loader. Depends on no engine crate. Not shipped. |
 
 Dependency direction: `swift-ffi` / `android-jni` → `dispatch` → `composing` / `nextword` / `lexicon` / `ranking` / `userdata` / `phonetics`. `composing` → `lexicon`, `ranking`, `phonetics`; `lexicon` → `ranking`, `phonetics`, `mmap-host`; `nextword` and `userdata` → `phonetics`; `ranking` depends on no workspace crate. Every runtime crate but `ranking` and `mmap-host` depends on `protos` directly. Full graph: `../.claude/rules/rust-best-practices.md` §1a.
 

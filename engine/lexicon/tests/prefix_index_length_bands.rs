@@ -12,7 +12,8 @@
 
 use std::collections::BTreeMap;
 
-use crate::common::{build_wire_index, wire_entry};
+use crate::common::build_wire_index;
+use test_support::fst_entry;
 
 /// Full-scan oracle: every fixture rowid under `prefix`, bucketed by key
 /// byte length, wire byte order within a bucket, truncated to `cap`.
@@ -20,7 +21,7 @@ fn oracle(keys: &[(&str, u32)], prefix: &str, cap: usize) -> Vec<u32> {
     let mut wires: Vec<(Vec<u8>, usize, u32)> = keys
         .iter()
         .filter(|(key, _)| key.starts_with(prefix))
-        .map(|(key, rowid)| (wire_entry(key, *rowid), key.len(), *rowid))
+        .map(|(key, rowid)| (fst_entry(b"", key, *rowid), key.len(), *rowid))
         .collect();
     wires.sort();
     let mut buckets: BTreeMap<usize, Vec<u32>> = BTreeMap::new();

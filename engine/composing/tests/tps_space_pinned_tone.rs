@@ -29,10 +29,10 @@
 use crate::common::Fetch;
 use crate::common::{
     build_dictionary_fst_tps, build_syllables_fst_tps, build_tkdb_v3, config,
-    empty_association_bin, engine_install_lock, fetch_at_pos_response, install_lexicon, write_temp,
-    Row,
+    empty_association_bin, fetch_at_pos_response, install_lexicon, Row,
 };
 use lexicon::CustomEntry;
+use test_support::{engine_install_lock, write_temp};
 
 /// Three families, each minimal for one axis of the fix:
 /// - `ㄒㄧ` open rime: 詩 (si1, unmarked) vs 死 (si2) / 是 (si7). The

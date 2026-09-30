@@ -1,0 +1,17 @@
+[package]
+name = "test-support"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+# Dev-dependency only. Never depends on an engine crate: `lexicon`'s own
+# tests use it, and a `lexicon` edge here would link a second copy of that
+# crate into them.
+
+[lints]
+workspace = true
+
+[dependencies]
+fst = { workspace = true }

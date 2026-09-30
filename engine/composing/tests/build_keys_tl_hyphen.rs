@@ -14,10 +14,6 @@
 //! 6. `tai-` — trailing hyphen left in the pending buffer (NOT
 //!    consumed).
 //! 7. `tai-bak-` — internal `-` consumed, trailing `-` left dangling.
-//!
-//! The hermetic inventory builder mirrors
-//! `engine/composing/tests/syllabifier_tl.rs:204-247` to avoid a shared
-//! test-utils crate.
 
 use composing::dispatch::build_keys_tl_with_inventory;
 
@@ -183,9 +179,3 @@ fn multi_byte_chars_preserve_byte_correct_offset_map() {
         .collect();
     assert_eq!(mapped, vec![((0, 3), "tl:tai")]);
 }
-
-// ---- Hermetic SyllableInventory builder -----------------------------
-// Pattern mirrors `engine/composing/tests/syllabifier_tl.rs:204-247`;
-// inline duplication preferred over a shared crate per the comment
-// there ("small duplication is preferable to a shared test-utils
-// crate for one reuse").

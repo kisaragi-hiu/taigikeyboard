@@ -38,8 +38,6 @@
 //! Prints `consumed_span`, `syllable_count`, `roman`,
 //! and `hanji` per candidate.
 
-use std::path::PathBuf;
-
 use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 
 use crate::common::{config, fetch_at_pos_response, Fetch, Selected};
@@ -48,9 +46,7 @@ use lexicon::{CustomEntry, LearnedEntry};
 const DEFAULT_INPUTS: &str = "tai5,tai5gi2,tai,tsua,ka";
 
 fn production_artifact(name: &str) -> String {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../dictionaries")
-        .join(name)
+    test_support::production_artifact(name)
         .to_str()
         .expect("artifact path is valid UTF-8")
         .to_string()

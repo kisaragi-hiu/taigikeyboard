@@ -15,10 +15,10 @@ use protos::engine::CandidateMessage;
 use crate::common::Fetch;
 use crate::common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, config, empty_association_bin,
-    engine_install_lock, fetch_at_pos_response, fetch_hanji, fetch_hanji_with_custom,
-    install_lexicon, write_temp, Row,
+    fetch_at_pos_response, fetch_hanji, fetch_hanji_with_custom, install_lexicon, Row,
 };
 use lexicon::CustomEntry;
+use test_support::{engine_install_lock, write_temp};
 
 /// Abbreviation-only rows under `mk` beyond the ones that are also partial
 /// extensions — enough that the block would overflow the output cap.

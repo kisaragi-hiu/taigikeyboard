@@ -23,9 +23,10 @@
 use crate::common::Fetch;
 use crate::common::{
     build_dictionary_fst_tl_toned, build_dictionary_fst_tps, build_syllables_fst_tl,
-    build_syllables_fst_tps, build_tkdb_v3, config, empty_association_bin, engine_install_lock,
-    fetch_at_pos_response, install_lexicon, write_temp, Row,
+    build_syllables_fst_tps, build_tkdb_v3, config, empty_association_bin, fetch_at_pos_response,
+    install_lexicon, Row,
 };
+use test_support::{engine_install_lock, write_temp};
 
 /// 紙/tsuá (tone2) and 蛇/tsuâ (tone5) share the toneless key `tsua` and
 /// differ ONLY by tone — the minimal fixture that makes "explicit tone

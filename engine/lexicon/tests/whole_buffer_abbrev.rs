@@ -12,7 +12,8 @@ use lexicon::{fetch_abbrev_candidates, COVERAGE_KIND_ABBREV};
 use phonetics::InputMode;
 use ranking::{FrequencyData, FrequencyMap};
 
-use crate::common::{build_tkdb_v3, build_wire_index, hanji_of, neutral_ctx, write_temp};
+use crate::common::{build_tkdb_v3, build_wire_index, hanji_of, neutral_ctx};
+use test_support::write_temp;
 
 const DEFAULT_SOURCE: u16 = 1 << 11;
 

@@ -137,11 +137,6 @@ fn tl_space_stays_hard_boundary_not_collapsed() {
     );
 }
 
-// ---- Hermetic SyllableInventory builder -----------------------------
-// Pattern mirrors `engine/composing/tests/build_keys_tl_hyphen.rs`;
-// inline duplication preferred over a shared test-utils crate for the
-// same reason documented there.
-
 // INVARIANT_TPS_DEFOLD_ENUMERATE (§35) — the alternate-reading generators are
 // TPS-only, so for TL / POJ / English the full-key seam must return EXACTLY the
 // base seam's output. Exact equality, not `contains`: an alternate leaking into

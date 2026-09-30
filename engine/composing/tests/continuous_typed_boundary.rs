@@ -21,10 +21,10 @@ use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, Start};
 use crate::common::Fetch;
 use crate::common::{
     build_dictionary_fst, build_syllables_fst, build_tkdb_v3, cell_with_hanji, config,
-    empty_association_bin, engine_install_lock, fetch_cells, install_lexicon, req, write_temp,
-    Cell, Row,
+    empty_association_bin, fetch_cells, install_lexicon, req, Cell, Row,
 };
 use lexicon::CustomEntry;
+use test_support::{engine_install_lock, write_temp};
 
 fn fixture_rows() -> Vec<Row> {
     vec![

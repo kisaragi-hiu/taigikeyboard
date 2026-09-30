@@ -44,28 +44,11 @@ use lexicon::{EngineHandle as LexiconHandle, LexiconPaths};
 
 use crate::common::Fetch;
 use crate::common::{config, fetch_at_pos_response};
+use test_support::production_artifact;
 
 // ---------------------------------------------------------------------------
 // Production artifact + lexicon install (once per test process).
 // ---------------------------------------------------------------------------
-
-/// One of the four artifacts the platforms ship, from the committed directory
-/// they all package out of.
-fn production_artifact(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../dictionaries")
-        .join(name)
-}
-
-/// `dictionary.csv` — a pipeline intermediate the platforms do not ship, so it
-/// stays in the dictionary pipeline's own output directory rather than moving
-/// to `dictionaries/` with the four artifacts. It is committed, so a clean
-/// checkout has it; only the artifacts `lexicon_ready` probes can be absent.
-fn pipeline_output(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../dictionary/output")
-        .join(name)
-}
 
 /// Install the production lexicon exactly once. Returns `false` (and the
 /// callers soft-skip) when artifacts are absent — mirrors `candidate_dump.rs`;
@@ -141,42 +124,20 @@ fn sampled_cases() -> Vec<Case> {
     const TOP_BY_FREQ: usize = 200;
     const STRIDE: usize = 60;
 
-    let path = pipeline_output("dictionary.csv");
-    let text = std::fs::read_to_string(&path).expect("read dictionary.csv");
-    let mut lines = text.lines();
-    let header: Vec<&str> = lines.next().expect("CSV header").split(',').collect();
-    let col = |name: &str| {
-        header
-            .iter()
-            .position(|c| *c == name)
-            .unwrap_or_else(|| panic!("`{name}` column present in CSV header"))
-    };
-    let (i_hanzi, i_tl, i_freq, i_tl_num, i_poj_num, i_tps_num, i_tps_var) = (
-        col("hanzi"),
-        col("tl"),
-        col("frequency"),
-        col("tl_num"),
-        col("poj_num"),
-        col("tps_num"),
-        col("tps_notone_var"),
-    );
-    let max_idx = [
-        i_hanzi, i_tl, i_freq, i_tl_num, i_poj_num, i_tps_num, i_tps_var,
-    ]
-    .into_iter()
-    .max()
-    .unwrap();
-
+    // `dictionary.csv` is a pipeline intermediate the platforms do not ship;
+    // it is committed, so a clean checkout has it — only the artifacts
+    // `lexicon_ready` probes can be absent.
+    let csv = test_support::dictionary_csv().expect("dictionary/output/dictionary.csv present");
     let mut filtered: Vec<Case> = Vec::new();
-    for line in lines {
-        let f: Vec<&str> = line.split(',').collect();
-        if f.len() <= max_idx {
-            continue;
-        }
-        let tl = f[i_tl];
-        let tl_num = f[i_tl_num];
-        let poj_num = f[i_poj_num];
-        let tps_num = f[i_tps_num];
+    for [hanzi, tl, frequency, tl_num, poj_num, tps_num, tps_var] in csv.select([
+        "hanzi",
+        "tl",
+        "frequency",
+        "tl_num",
+        "poj_num",
+        "tps_num",
+        "tps_notone_var",
+    ]) {
         // single-syllable only
         if tl.contains('-') || tl.contains(' ') {
             continue;
@@ -190,15 +151,15 @@ fn sampled_cases() -> Vec<Case> {
             continue;
         }
         // er↔or dialect variant → TPS emits extra `_var` candidates
-        if !f[i_tps_var].is_empty() {
+        if !tps_var.is_empty() {
             continue;
         }
         filtered.push(Case {
-            hanzi: f[i_hanzi].to_string(),
+            hanzi: hanzi.to_string(),
             tl_num: tl_num.to_string(),
             poj_num: poj_num.to_string(),
             tps_num: tps_num.to_string(),
-            frequency: f[i_freq].parse().unwrap_or(0),
+            frequency: frequency.parse().unwrap_or(0),
         });
     }
 
