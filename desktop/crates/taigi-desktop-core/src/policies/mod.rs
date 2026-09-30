@@ -1,6 +1,6 @@
 //! Pure document-text policies the controller applies around a commit:
 //! auto-space and full-width punctuation. Port of
-//! `macos/Sources/TaigiInputMethodCore/Controller/{AutoSpacePolicy,
+//! `macos/Sources/TaigiInputMethodCore/Policies/{AutoSpacePolicy,
 //! AutoSpacePunctuation,FullWidthPunctuation}.swift`.
 
 mod auto_space;

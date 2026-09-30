@@ -333,7 +333,7 @@ const BADGE_FONT_SIZE: f64 = 12.0;
 const BADGE_TEXT_OPACITY: f64 = 0.65;
 
 /// A small bordered tag after a row's text — a dictionary source, a learned
-/// row (§50). mirrors macos/.../Settings/TagBadge.swift.
+/// row (§50). mirrors macos/.../Settings/Components/TagBadge.swift.
 pub fn badge(text: &str) -> View {
     Border::new()
         .background(ThemeBrush::CardBackground)

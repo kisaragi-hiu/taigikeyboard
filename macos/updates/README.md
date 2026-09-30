@@ -19,7 +19,7 @@ already has to distrust it. Gatekeeper cannot make this call alone — it accept
 any correctly notarized package, including one an attacker notarized under their
 own Developer ID — which is why the team is pinned rather than inferred.
 
-The readers are `macos/Sources/TaigiInputMethodCore/Settings/UpdateChecker.swift`
+The readers are `macos/Sources/TaigiInputMethodCore/Updates/UpdateChecker.swift`
 (the check) and `UpdateInstallation.swift` / `UpdatePackageVerifier.swift` (the
 download and what it has to prove).
 
