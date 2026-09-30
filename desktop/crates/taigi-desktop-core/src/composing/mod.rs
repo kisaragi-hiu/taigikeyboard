@@ -11,6 +11,7 @@
 mod clock;
 mod coordinator;
 mod document_text;
+mod intent_executor;
 mod manager;
 mod next_word;
 mod outcomes;
@@ -20,6 +21,9 @@ mod usage;
 pub use clock::{Clock, SystemClock};
 pub use coordinator::{ComposingSessionCoordinator, ContextToken};
 pub use document_text::{CandidateCellContent, CandidateScript, ResolvedCommit};
+pub use intent_executor::{
+    insert_symbol, pass_through_may_consume, perform_intent, refresh_list, IntentSurface,
+};
 pub use manager::{ComposingEffectExecutor, ComposingManager};
 pub use next_word::{EngineNextWord, NextWordPort};
 pub use outcomes::{CandidateCommitOutcome, CandidateFetchOutcome, CandidateListChange};

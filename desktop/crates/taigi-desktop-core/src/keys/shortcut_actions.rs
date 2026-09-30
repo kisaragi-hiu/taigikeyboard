@@ -14,7 +14,7 @@
 use super::action::ComposingAction;
 use super::bindings::ComposingKeyBindings;
 use super::chord::{ChordRejection, ComposingKeyChord};
-use super::snapshot::KeyModifiers;
+use super::snapshot::{KeyEventSnapshot, KeyModifiers};
 use crate::settings::{keys, SettingsDocument};
 use crate::strings::StringKey;
 
@@ -47,6 +47,16 @@ impl ShortcutAction {
         Self::ShowTelexGuide,
         Self::OpenLastSettingsPane,
     ];
+
+    /// The global action `snapshot` is, if its recorded chord matches — read
+    /// before the composing classifier, whether or not a composition runs.
+    pub fn matching(snapshot: &KeyEventSnapshot, settings: &SettingsDocument) -> Option<Self> {
+        Self::ALL.into_iter().find(|action| {
+            action
+                .chord_in(settings)
+                .is_some_and(|chord| chord.matches(snapshot))
+        })
+    }
 
     pub fn raw(self) -> &'static str {
         match self {

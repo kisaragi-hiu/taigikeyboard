@@ -13,18 +13,17 @@
 //! lock is dropped.
 
 use crate::chrome;
-use crate::executor::{Emit, LookupTableContent, Recorder};
+use crate::executor::{Emit, KeySurface, LookupTableContent, Recorder};
 use crate::runtime::Runtime;
 use crate::selection::LookupSelection;
 use taigi_desktop_core::composing::{
-    CandidateCommitOutcome, CandidateListChange, CandidateSource, ComposingManager,
-    ComposingSessionCoordinator, ContextToken, ResolvedCommit,
+    pass_through_may_consume, perform_intent, refresh_list, CandidateSource, ComposingManager,
+    ComposingSessionCoordinator, ContextToken,
 };
 use taigi_desktop_core::keys::{
     CandidateNavigation, CandidateSlotKeySet, ComposingKeyBindings, ComposingKeyIntent,
     KeyEventSnapshot, ShortcutAction, SymbolPickerIntent,
 };
-use taigi_desktop_core::policies;
 use taigi_desktop_core::settings::{keys, CandidateLayout, SettingsDocument};
 use taigi_linux_platform::key_translation::state::RELEASE;
 use taigi_linux_platform::{snapshot, RawKeyEvent};
@@ -155,7 +154,7 @@ pub fn process_key(
     let settings = runtime.settings.current();
     let mut emits = Vec::new();
     let bindings = ComposingKeyBindings::from_document(&settings);
-    let global_action = global_action_for(snapshot, &settings);
+    let global_action = ShortcutAction::matching(snapshot, &settings);
     // A held toggle chord repeats on the wire as presses with no release
     // between them; the repeats are consumed without firing again.
     if let Some(latched) = state.latched_chord {
@@ -287,7 +286,11 @@ pub fn process_key(
         "key.intent {intent:?} composing={is_composing} candidates={is_showing_candidates}"
     );
     let would_consume = match &intent {
-        ComposingKeyIntent::PassThrough => pass_through_may_consume(snapshot, &settings, state),
+        ComposingKeyIntent::PassThrough => pass_through_may_consume(
+            snapshot,
+            &settings,
+            state.armed_auto_space && state.can_delete_surrounding(),
+        ),
         ComposingKeyIntent::CommitThenPassThrough => is_composing,
         _ => true,
     };
@@ -406,18 +409,6 @@ pub(crate) fn commit_for_picker(
     )
 }
 
-/// The global action `snapshot` is, if its recorded chord matches.
-fn global_action_for(
-    snapshot: &KeyEventSnapshot,
-    settings: &SettingsDocument,
-) -> Option<ShortcutAction> {
-    ShortcutAction::ALL.into_iter().find(|action| {
-        action
-            .chord_in(settings)
-            .is_some_and(|chord| chord.matches(snapshot))
-    })
-}
-
 /// A panel navigation (`PageUp` … `CursorDown`): the same intents the keys
 /// carry, run without a key.
 pub fn navigate_from_panel(
@@ -492,9 +483,8 @@ fn run_key(
     bindings: &ComposingKeyBindings,
 ) -> KeyReply {
     // Every key gets exactly one chance at the swap: the arm is consumed
-    // here, and only the auto-space paths below re-arm it.
-    let armed_swap = std::mem::take(&mut state.armed_auto_space);
-    let mut recorder = Recorder::new(state.can_delete_surrounding());
+    // here, and only the auto-space paths re-arm it.
+    let is_swap_armed = std::mem::take(&mut state.armed_auto_space);
     // Ownership: a key from this context while another owns the engine
     // takes it over. The other context's composition was already finished
     // by the daemon's `FocusOut` (`end_session`), so `claim` finds nothing
@@ -508,131 +498,21 @@ fn run_key(
         );
     }
     let manager = coordinator.claim(token);
-    let handled = match &intent {
-        ComposingKeyIntent::Input(text) => {
-            manager.append(text, &mut recorder);
-            refresh_candidates(settings, manager, state);
-            true
-        }
-        ComposingKeyIntent::TelexKey(key) => {
-            manager.telex_key(key, &mut recorder);
-            refresh_candidates(settings, manager, state);
-            true
-        }
-        ComposingKeyIntent::DeleteBackward => {
-            manager.delete_backward(&mut recorder);
-            refresh_candidates(settings, manager, state);
-            true
-        }
-        ComposingKeyIntent::Commit => {
-            let committed = manager
-                .commit_composition(&mut recorder)
-                .map(|text| ResolvedCommit {
-                    text,
-                    wrote_romanization: raw_preedit_wrote_romanization(settings),
-                });
-            state.clear_list();
-            append_auto_space(committed.as_ref(), settings, &mut recorder);
-            true
-        }
-        ComposingKeyIntent::Cancel => {
-            manager.cancel_composition(&mut recorder);
-            state.clear_list();
-            true
-        }
-        ComposingKeyIntent::CommitThenInsert(text) => {
-            let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
-            let document_text =
-                document_punctuation(settings, text, is_width_flip).unwrap_or_else(|| text.clone());
-            let gate = auto_space_gate(settings, raw_preedit_wrote_romanization(settings));
-            let insert = policies::augment_insert(&document_text, manager.display_text(), gate);
-            let committed = manager.commit_composition_then_insert(&insert.text, &mut recorder);
-            state.clear_list();
-            if insert.leaves_trailing_auto_space && committed.is_some() {
-                recorder.arm_swap();
-            }
-            true
-        }
-        ComposingKeyIntent::CommitThenPassThrough => {
-            manager.commit_composition(&mut recorder);
-            state.clear_list();
-            false
-        }
-        ComposingKeyIntent::PassThrough => {
-            match ComposingKeyIntent::document_text(snapshot) {
-                None => false,
-                Some(typed) => {
-                    let is_width_flip =
-                        ComposingKeyIntent::width_flip_character(snapshot).is_some();
-                    let punctuation = document_punctuation(settings, &typed, is_width_flip);
-                    let swapping = if is_width_flip {
-                        punctuation.as_deref().unwrap_or(&typed)
-                    } else {
-                        &typed
-                    };
-                    if swap_auto_space(swapping, armed_swap, settings, manager, &mut recorder) {
-                        true
-                    } else if let Some(punctuation) = punctuation {
-                        // Punctuation this input method writes itself: the
-                        // client cannot map a key it types.
-                        recorder.insert_external(&punctuation);
-                        manager.note_character_typed_outside_composition(&punctuation);
-                        true
-                    } else {
-                        manager.note_character_typed_outside_composition(&typed);
-                        false
-                    }
-                }
-            }
-        }
-        ComposingKeyIntent::CommitHighlightedCandidate => {
-            commit_candidate(
-                state.selection.selected_index(),
-                false,
-                settings,
-                manager,
-                &mut recorder,
-                state,
-            );
-            true
-        }
-        // Space: the highlighted cell's OTHER script.
-        ComposingKeyIntent::CommitAlternateScript => {
-            commit_candidate(
-                state.selection.selected_index(),
-                true,
-                settings,
-                manager,
-                &mut recorder,
-                state,
-            );
-            true
-        }
-        ComposingKeyIntent::SelectCandidateSlot { slot, flip } => {
-            // A chord aimed at an empty slot is consumed all the same.
-            commit_candidate(
-                state.selection.candidate_index_for_key_slot(*slot),
-                *flip,
-                settings,
-                manager,
-                &mut recorder,
-                state,
-            );
-            true
-        }
-        ComposingKeyIntent::Navigate(direction) => {
-            state
-                .selection
-                .navigate(*direction, is_vertical_layout(settings));
-            true
-        }
-        ComposingKeyIntent::MoveCaret(direction) => {
-            // No refetch: the text did not change, so the candidates, the
-            // highlight and the page still describe it.
-            manager.move_caret(*direction, &mut recorder);
-            true
-        }
+    let mut surface = KeySurface {
+        recorder: Recorder::new(state.can_delete_surrounding()),
+        is_swap_armed,
+        selection: &mut state.selection,
+        is_vertical: is_vertical_layout(settings),
     };
+    let handled = perform_intent(
+        &intent,
+        snapshot,
+        settings,
+        manager,
+        &mut state.candidates,
+        &mut surface,
+    );
+    let recorder = surface.recorder;
     state.armed_auto_space = recorder.armed_swap;
     let mut emits = recorder.emits;
     present_table(state, settings, bindings, &mut emits);
@@ -712,138 +592,15 @@ pub(crate) fn is_vertical_layout(settings: &SettingsDocument) -> bool {
     settings.choice(&keys::CANDIDATE_LAYOUT) != CandidateLayout::Horizontal
 }
 
-/// The pass-through keys this input method consumes: attaching
-/// punctuation right after an auto space (the swap), full-width
-/// punctuation in hanji-first mode, and the width-flip chord in either
-/// width. Mirrors the Windows key sink's `pass_through_may_consume`.
-fn pass_through_may_consume(
-    snapshot: &KeyEventSnapshot,
-    settings: &SettingsDocument,
-    state: &EngineState,
-) -> bool {
-    let Some(typed) = ComposingKeyIntent::document_text(snapshot) else {
-        return false;
-    };
-    let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
-    if document_punctuation(settings, &typed, is_width_flip).is_some() {
-        return true;
-    }
-    state.armed_auto_space
-        && state.can_delete_surrounding()
-        && policies::is_attaching_punctuation(&typed)
-        && settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-}
-
-/// Re-reads the candidates for the composition as it now stands; with the
-/// Show Candidate Window setting off nothing is fetched, not merely not shown.
+/// Re-reads the candidates for the composition as it now stands, the
+/// highlight back on the first cell.
 pub(crate) fn refresh_candidates(
     settings: &SettingsDocument,
     manager: &mut ComposingManager,
     state: &mut EngineState,
 ) {
-    if !settings.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED) {
-        state.clear_list();
-        return;
-    }
-    match manager.fetch_candidates().list_change() {
-        CandidateListChange::Replace(candidates) => {
-            state.candidates.set(candidates, manager);
-            let count = state.candidates.cells().len();
-            state.selection = LookupSelection::new(count, PAGE_SIZE);
-        }
-        CandidateListChange::Clear => state.clear_list(),
-    }
-}
-
-/// Commits the candidate behind cell `cell_index`, in its own script or
-/// (`flip`, Space) the other one.
-fn commit_candidate(
-    cell_index: Option<usize>,
-    flip: bool,
-    settings: &SettingsDocument,
-    manager: &mut ComposingManager,
-    recorder: &mut Recorder,
-    state: &mut EngineState,
-) {
-    let Some((candidate, script)) =
-        cell_index.and_then(|index| state.candidates.resolve(index, flip))
-    else {
-        return;
-    };
-    let candidate = candidate.clone();
-    let (outcome, committed) = manager.commit_candidate(&candidate, script, recorder);
-    log::debug!("candidate.commit {outcome:?}");
-    match outcome {
-        CandidateCommitOutcome::Finalized => {
-            state.clear_list();
-            append_auto_space(committed.as_ref(), settings, recorder);
-        }
-        CandidateCommitOutcome::Nailed
-        | CandidateCommitOutcome::Ignored
-        | CandidateCommitOutcome::Unavailable => {
-            refresh_candidates(settings, manager, state);
-        }
-    }
-}
-
-/// The §23 swap for `text` about to be written outside a composition.
-pub(crate) fn swap_auto_space(
-    text: &str,
-    armed_swap: bool,
-    settings: &SettingsDocument,
-    manager: &mut ComposingManager,
-    recorder: &mut Recorder,
-) -> bool {
-    if !armed_swap
-        || !policies::is_attaching_punctuation(text)
-        || !settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-        || !recorder.swap_preceding_space(&format!("{text} "))
-    {
-        return false;
-    }
-    manager.note_character_typed_outside_composition(text);
-    recorder.arm_swap();
-    true
-}
-
-fn auto_space_gate(settings: &SettingsDocument, wrote_romanization: bool) -> bool {
-    policies::is_gate_active(
-        settings.bool(&keys::IS_AUTO_SPACE_ENABLED),
-        wrote_romanization,
-    )
-}
-
-fn raw_preedit_wrote_romanization(settings: &SettingsDocument) -> bool {
-    policies::raw_preedit_writes_romanization(settings.choice(&keys::INPUT_MODE))
-}
-
-/// The trailing auto space after an explicit commit, and the swap armed on
-/// it.
-fn append_auto_space(
-    committed: Option<&ResolvedCommit>,
-    settings: &SettingsDocument,
-    recorder: &mut Recorder,
-) {
-    let Some(committed) = committed else { return };
-    if !auto_space_gate(settings, committed.wrote_romanization)
-        || !policies::should_append_space(&committed.text)
-    {
-        return;
-    }
-    recorder.insert_external(" ");
-    recorder.arm_swap();
-}
-
-fn document_punctuation(
-    settings: &SettingsDocument,
-    text: &str,
-    is_width_flip: bool,
-) -> Option<String> {
-    policies::document_punctuation(
-        text,
-        settings.engine_settings().is_full_width_punctuation,
-        is_width_flip,
-    )
+    refresh_list(settings, manager, &mut state.candidates);
+    state.selection = LookupSelection::new(state.candidates.len(), PAGE_SIZE);
 }
 
 /// An executor that records nothing: for a composition the DAEMON already

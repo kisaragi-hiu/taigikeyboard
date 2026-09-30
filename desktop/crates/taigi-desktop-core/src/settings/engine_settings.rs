@@ -153,7 +153,7 @@ pub struct EngineSettings {
     /// the raw one stays untouched so leaving either mode restores it.
     pub is_translate_swapped: bool,
     /// `CandidateDisplayMode::effective_full_width_punctuation(stored)` —
-    /// read by the TSF session's `document_punctuation` only.
+    /// read by the composing intent executor's `document_punctuation`.
     pub is_full_width_punctuation: bool,
     /// What a candidate cell shows; `AppConfig.candidate_display_mode`.
     /// CROSS-PLATFORM INVARIANT — mirrors
