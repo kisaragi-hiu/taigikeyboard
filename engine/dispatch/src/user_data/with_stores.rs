@@ -86,7 +86,11 @@ pub(super) fn handle_composing(
         // A stale generation answers the idle snapshot inside `query`.
         let Some(snapshot) = composing.pending_snapshot(generation) else {
             return Ok(composing.query(
-                &crate::context::fetch_intent(sent, UserRows::default(), ContextRanks::new()),
+                &composing::dispatch::fetch_at_pos_intent(
+                    sent,
+                    UserRows::default(),
+                    ContextRanks::new(),
+                ),
                 config,
                 generation,
             ));
@@ -99,7 +103,7 @@ pub(super) fn handle_composing(
         );
         context = context_ranks(stores, &snapshot, sent.now_ms);
         let answer = composing.query(
-            &crate::context::fetch_intent(sent, rows.clone(), context.clone()),
+            &composing::dispatch::fetch_at_pos_intent(sent, rows.clone(), context.clone()),
             config,
             generation,
         );
@@ -116,7 +120,7 @@ pub(super) fn handle_composing(
     };
     rows.frequency = frequency;
     Ok(composing.query(
-        &crate::context::fetch_intent(sent, rows, context),
+        &composing::dispatch::fetch_at_pos_intent(sent, rows, context),
         config,
         generation,
     ))

@@ -13,7 +13,7 @@ use std::sync::{Mutex, OnceLock};
 
 use protos::engine::CommitOutcome;
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
-use taigi_desktop_core::engine::{self, CommitContinuousArgs, Effect, FetchArgs};
+use taigi_desktop_core::engine::{self, CommitContinuousArgs, Effect};
 use taigi_desktop_core::settings::{EngineSettings, InputMode};
 
 fn dictionaries_dir() -> PathBuf {
@@ -112,20 +112,7 @@ fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
     let generation = fresh_generation();
     compose("taigi", &settings, generation);
 
-    let sources = engine::enabled_sources_bitmask(&settings.dictionary_sources);
-    assert_ne!(
-        sources, 0,
-        "toggles resolve through the engine, never a failed 0"
-    );
-    let fetch = engine::fetch_at_pos(
-        &settings,
-        generation,
-        &FetchArgs {
-            enabled_sources_bitmask: sources,
-            ..FetchArgs::default()
-        },
-    )
-    .expect("fetch round trip");
+    let fetch = engine::fetch_at_pos(&settings, generation, 0).expect("fetch round trip");
     let candidates = fetch
         .candidates
         .expect("continuous phase answers with a list");
@@ -183,7 +170,7 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
     let settings = EngineSettings::default();
     let generation = fresh_generation();
     compose("taigi", &settings, generation);
-    let fetch = engine::fetch_at_pos(&settings, generation, &FetchArgs::default()).expect("fetch");
+    let fetch = engine::fetch_at_pos(&settings, generation, 0).expect("fetch");
     let candidates = fetch.candidates.expect("continuous");
     let tai = candidates
         .iter()
@@ -237,7 +224,7 @@ fn literal_roman_candidate_leads_the_list_under_the_shipped_defaults() {
     let generation = fresh_generation();
     let settings = EngineSettings::default();
     compose("tai", &settings, generation);
-    let candidates = engine::fetch_at_pos(&settings, generation, &FetchArgs::default())
+    let candidates = engine::fetch_at_pos(&settings, generation, 0)
         .expect("fetch")
         .candidates
         .expect("continuous");
@@ -261,7 +248,7 @@ fn poj_mode_renders_poj_display_and_keeps_canonical_tl() {
         ..EngineSettings::default()
     };
     compose("chiah", &poj, generation);
-    let candidates = engine::fetch_at_pos(&poj, generation, &FetchArgs::default())
+    let candidates = engine::fetch_at_pos(&poj, generation, 0)
         .expect("fetch")
         .candidates
         .expect("continuous");
@@ -308,10 +295,12 @@ fn commit_preedit_then_insert_external_is_one_effect() {
     );
 }
 
+// INVARIANT_DICTIONARIES_ALL_OFF_OFFERS_NO_DICTIONARY_CANDIDATES (behavioral-invariants.md §57)
 #[test]
-fn all_sources_off_resolves_to_the_non_zero_sentinel() {
+fn all_sources_off_fetches_no_dictionary_candidates() {
     let _engine = engine();
-    let mut sources = EngineSettings::default().dictionary_sources;
+    let mut settings = EngineSettings::default();
+    let sources = &mut settings.dictionary_sources;
     sources.kautian = false;
     sources.taigitv = false;
     sources.itaigi = false;
@@ -325,14 +314,27 @@ fn all_sources_off_resolves_to_the_non_zero_sentinel() {
     sources.khiin = false;
     sources.lkk = false;
     sources.dev = false;
-    let filters = engine::dictionary_filters(&sources).expect("resolve");
-    assert_eq!(
-        filters.wire_mask(),
-        engine::NO_SOURCES_ENABLED_BITMASK,
-        "exactly the kautian-gate bit, no source bits: {:#b}",
-        filters.wire_mask()
+    let generation = fresh_generation();
+    compose("taigi", &settings, generation);
+    let candidates = engine::fetch_at_pos(&settings, generation, 0)
+        .expect("fetch round trip")
+        .candidates
+        .expect("continuous phase answers with a list");
+    let hanji: Vec<_> = candidates
+        .iter()
+        .filter_map(|c| c.hanji.as_deref())
+        .collect();
+    assert!(hanji.is_empty(), "no dictionary hanji: {hanji:?}");
+    assert!(
+        !candidates.is_empty(),
+        "the typed-text literal is not a dictionary row"
     );
-    assert_eq!(engine::NO_SOURCES_ENABLED_BITMASK, 1 << 13);
+    engine::reset(generation);
+}
+
+#[test]
+fn default_toggles_resolve_their_badge_sources() {
+    let _engine = engine();
     let defaults =
         engine::dictionary_filters(&EngineSettings::default().dictionary_sources).expect("resolve");
     assert!(defaults

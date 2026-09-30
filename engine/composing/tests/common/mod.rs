@@ -29,7 +29,7 @@ use phonetics::{canonicalize_poj_syllable, canonicalize_syllable};
 use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
 use protos::engine::{
-    AppConfig, ComposingRequest, ComposingResponse, Effect, EnterContinuous, Start,
+    AppConfig, ComposingRequest, ComposingResponse, Effect, EnterContinuous, FetchAtPos, Start,
 };
 use ranking::FrequencyData;
 
@@ -469,7 +469,8 @@ pub fn selected(hanji: &str, canonical_tl: &str, count: i32, age_ms: i64) -> Sel
 
 /// A `FetchAtPos` as the engine runs it: the settings a platform sends plus
 /// the user rows the engine reads from its stores (`composing::UserRows`).
-#[derive(Clone, Debug, Default)]
+/// The default filter is every source, as for a `FetchAtPos` without toggles.
+#[derive(Clone, Debug)]
 pub struct Fetch {
     pub now_ms: i64,
     pub enabled_sources_bitmask: u32,
@@ -478,6 +479,20 @@ pub struct Fetch {
     pub custom: Vec<CustomEntry>,
     pub learned: Vec<LearnedEntry>,
     pub context: ranking::ContextRanks,
+}
+
+impl Default for Fetch {
+    fn default() -> Self {
+        Self {
+            now_ms: 0,
+            enabled_sources_bitmask: u32::MAX,
+            literal_roman_candidate_disabled: false,
+            frequency: Vec::new(),
+            custom: Vec::new(),
+            learned: Vec::new(),
+            context: ranking::ContextRanks::default(),
+        }
+    }
 }
 
 impl Fetch {
@@ -549,6 +564,22 @@ pub fn req(method: Method) -> ComposingRequest {
 /// `None` when the engine never entered the continuous phase — callers that
 /// care distinguish that from an empty candidate list).
 pub fn fetch_at_pos_response(config: &AppConfig, raw: &str, fetch: Fetch) -> ComposingResponse {
+    let mut engine = continuous_engine(config, raw);
+    dispatch::apply(fetch.intent(), &mut engine, config)
+}
+
+/// [`fetch_at_pos_response`] for a wire `FetchAtPos`, decoded the way a
+/// platform request is (`dispatch::handle`) — no user rows.
+pub fn wire_fetch_at_pos_response(
+    config: &AppConfig,
+    raw: &str,
+    fetch: FetchAtPos,
+) -> ComposingResponse {
+    let mut engine = continuous_engine(config, raw);
+    dispatch::handle(&req(Method::FetchAtPos(fetch)), &mut engine, config).expect("FetchAtPos")
+}
+
+fn continuous_engine(config: &AppConfig, raw: &str) -> Engine {
     let mut engine = Engine::new();
     dispatch::handle(
         &req(Method::Start(Start { text: raw.into() })),
@@ -562,7 +593,7 @@ pub fn fetch_at_pos_response(config: &AppConfig, raw: &str, fetch: Fetch) -> Com
         config,
     )
     .expect("EnterContinuous");
-    dispatch::apply(fetch.intent(), &mut engine, config)
+    engine
 }
 
 /// [`fetch_at_pos_response`] under `config(input_mode)` with

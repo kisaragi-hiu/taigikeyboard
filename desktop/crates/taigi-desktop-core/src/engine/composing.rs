@@ -24,6 +24,7 @@ use protos::engine::{
 use crate::keys::CaretDirection;
 
 use super::bridge::{app_config, record_failure, roundtrip};
+use super::lexicon::dictionary_toggles;
 use super::transition::{
     ComposingTransition, ContinuousCandidate, ContinuousCommitResult, ContinuousFetchResult,
 };
@@ -162,31 +163,24 @@ pub fn enter_continuous(settings: &EngineSettings, generation: u64) -> Option<Co
     )
 }
 
-/// What one `FetchAtPos` carries besides the settings. The user's own data
-/// is not among it: the engine reads its stores itself and ranks in one
-/// call (user-data-engine-roadmap P3b / P5).
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct FetchArgs {
-    /// The clock the engine's recency ranking reads.
-    pub now_ms: i64,
-    /// `0` is not "no sources": the engine reads it as "platform did not
-    /// wire this" and searches all of them — see `lexicon::enabled_sources_bitmask`.
-    pub enabled_sources_bitmask: u32,
-}
-
 /// Reads the candidates for the current continuous composition.
 ///
 /// Read-only, so it must be sent under the composition's EXISTING generation:
 /// a bumped generation resets the engine before the query runs
 /// (`engine/composing/src/handle.rs:61-66`).
+///
+/// `now_ms` is the clock the engine's recency ranking reads. The user's own
+/// data is not an argument: the engine reads its stores itself and ranks in
+/// one call (user-data-engine-roadmap P3b / P5).
 pub fn fetch_at_pos(
     settings: &EngineSettings,
     generation: u64,
-    args: &FetchArgs,
+    now_ms: i64,
 ) -> Option<ContinuousFetchResult> {
     let fetch = FetchAtPos {
-        now_ms: args.now_ms,
-        enabled_sources_bitmask: args.enabled_sources_bitmask,
+        now_ms,
+        // The engine resolves the toggles into its source filter itself.
+        toggles: Some(dictionary_toggles(&settings.dictionary_sources)),
         // §34/S22 — positive platform setting → inverted proto disable gate
         // (the field's own comment carries why), so Show Typed Text First ON leaves the
         // preedit literal leading the list and Enter commits what was typed.

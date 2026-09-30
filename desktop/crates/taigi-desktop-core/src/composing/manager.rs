@@ -13,9 +13,7 @@ use super::clock::Clock;
 use super::next_word::NextWordPort;
 use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
 use super::presentation::{leads_with_literal_roman, presentation, PresentedCandidate};
-use crate::engine::{
-    self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, Effect, FetchArgs,
-};
+use crate::engine::{self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, Effect};
 use crate::keys::CaretDirection;
 use crate::settings::{EngineSettings, SettingsProvider};
 
@@ -229,16 +227,9 @@ impl ComposingManager {
     /// and ranks with it itself (user-data-engine-roadmap P3b / P5).
     pub fn fetch_candidates(&mut self) -> CandidateFetchOutcome {
         let settings = self.current_settings();
-        let Some(fetched) = engine::fetch_at_pos(
-            &settings,
-            self.current_generation,
-            &FetchArgs {
-                now_ms: self.clock.now_ms(),
-                enabled_sources_bitmask: engine::enabled_sources_bitmask(
-                    &settings.dictionary_sources,
-                ),
-            },
-        ) else {
+        let Some(fetched) =
+            engine::fetch_at_pos(&settings, self.current_generation, self.clock.now_ms())
+        else {
             return CandidateFetchOutcome::Unavailable;
         };
         self.mirror(&fetched.transition);

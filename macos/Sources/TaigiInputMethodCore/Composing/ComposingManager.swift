@@ -273,8 +273,6 @@ final class ComposingManager {
             settings: settings,
             generation: currentGeneration,
             nowMs: Int64(Date().timeIntervalSince1970 * 1000),
-            enabledSourcesBitmask: RustEngineBridge
-                .enabledSourcesBitmask(for: settings.dictionarySources),
         ) else { return .unavailable }
 
         mirror(fetched.transition)

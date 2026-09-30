@@ -4,10 +4,11 @@
 //! The user-learned continuations join in `user_data::with_stores`; before
 //! the stores open, and in a build without them, the bundled ones rank alone.
 
-use composing::{EngineHandle as ComposingHandle, Intent, PendingSnapshot, UserRows};
+use composing::dispatch::fetch_at_pos_intent;
+use composing::{EngineHandle as ComposingHandle, PendingSnapshot, UserRows};
 use protos::engine::{
     composing_request, AppConfig, AssocLookupRequest, ComposingRequest, ComposingResponse,
-    FetchAtPos, LexiconAssocEntry,
+    LexiconAssocEntry,
 };
 use ranking::{ContextRanks, CONTEXT_RANK_BUNDLED};
 
@@ -68,21 +69,6 @@ pub(crate) fn bundled_ranks(previous: Option<&(String, String)>) -> ContextRanks
     ranks
 }
 
-/// The fetch intent for `sent`, with the rows and context the engine read.
-pub(crate) fn fetch_intent(
-    sent: &FetchAtPos,
-    user_rows: UserRows,
-    context: ContextRanks,
-) -> Intent {
-    Intent::FetchAtPos {
-        now_ms: sent.now_ms,
-        enabled_sources_bitmask: sent.enabled_sources_bitmask,
-        literal_roman_candidate_disabled: sent.literal_roman_candidate_disabled,
-        user_rows,
-        context,
-    }
-}
-
 /// A composing request without the user-data stores: a `FetchAtPos` ranks
 /// by the bundled context, every other request goes straight to composing.
 pub(crate) fn handle_composing_without_stores(
@@ -100,7 +86,7 @@ pub(crate) fn handle_composing_without_stores(
         .map(|snapshot| bundled_ranks(context_word(&snapshot, sent.now_ms).as_ref()))
         .unwrap_or_default();
     Ok(composing.query(
-        &fetch_intent(sent, UserRows::default(), context),
+        &fetch_at_pos_intent(sent, UserRows::default(), context),
         config,
         generation,
     ))

@@ -195,6 +195,23 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         )
     }
 
+    /// The fetch carries the toggles and the engine filters by them; the user's
+    /// custom dictionary is left out so only `dictionary.bin` rows carry hanji.
+    // INVARIANT_DICTIONARIES_ALL_OFF_OFFERS_NO_DICTIONARY_CANDIDATES (behavioral-invariants.md §57)
+    func testFetchAtPos_everyDictionaryOff_offersNoDictionaryCandidates() throws {
+        let allOff = TestFixtures.settings(customDict: false, dictionarySources: .allSourcesOff)
+        for character in "taigi" {
+            _ = RustEngineBridge.composingAppend(String(character), settings: allOff, generation: generation)
+        }
+        _ = RustEngineBridge.composingEnterContinuous(settings: allOff, generation: generation)
+
+        let candidates = try XCTUnwrap(
+            RustEngineBridge.composingFetchAtPos(settings: allOff, generation: generation)?.candidates,
+        )
+        XCTAssertEqual(candidates.compactMap(\.hanji), [])
+        XCTAssertFalse(candidates.isEmpty, "the typed-text literal is not a dictionary row")
+    }
+
     func testFetchAtPos_whenNotComposing_reportsNoContinuousPhaseRatherThanFailure() throws {
         let result = try XCTUnwrap(
             RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation),

@@ -17,12 +17,6 @@ public interface FetchAtPosOrBuilder extends
   long getNowMs();
 
   /**
-   * <code>uint32 enabled_sources_bitmask = 5;</code>
-   * @return The enabledSourcesBitmask.
-   */
-  int getEnabledSourcesBitmask();
-
-  /**
    * <code>bool literal_roman_candidate_disabled = 6;</code>
    * @return The literalRomanCandidateDisabled.
    */
@@ -39,4 +33,15 @@ public interface FetchAtPosOrBuilder extends
    * @return The customDictionaryDisabled.
    */
   boolean getCustomDictionaryDisabled();
+
+  /**
+   * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+   * @return Whether the toggles field is set.
+   */
+  boolean hasToggles();
+  /**
+   * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+   * @return The toggles.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles getToggles();
 }

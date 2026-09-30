@@ -359,11 +359,9 @@ pub struct LearnedEntry {
 /// seam; integration tests build it once per test). No constructor is
 /// needed.
 pub struct ContinuousFetchCtx<'a> {
-    /// `Filter::from_enabled_bitmask` input. PR-9.6 — production passes
-    /// the platform's dictionary source-toggle bitmask (sentinel-
-    /// normalised in `composing::dispatch::handle_fetch_at_pos`, so `0`/
-    /// absent already became `u32::MAX` all-on); tests narrow it to verify
-    /// filter behaviour.
+    /// `Filter::from_enabled_bitmask` input — production passes the user's
+    /// source filter (`composing::dispatch::fetch_at_pos_intent`,
+    /// `u32::MAX` = every source); tests narrow it to verify filter behaviour.
     pub enabled_sources_bitmask: u32,
     /// User-selection snapshot keyed by the `(display_text, canonical_tl)`
     /// pair (Core Principle #7). Empty map + `now_ms = 0` is the

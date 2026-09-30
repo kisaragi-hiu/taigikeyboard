@@ -88,55 +88,16 @@ public extension RustEngineBridge {
         let enabledSources: Set<DictionarySource>
 
         /// What a failed resolve degrades to: every source on. `UInt32.max` is
-        /// the engine's "filter disabled" sentinel on both the search path
-        /// (`dictionary_reader.rs::Filter::from_enabled_bitmask`) and the
-        /// composing path. Fail-open on purpose — a wider candidate list is
-        /// recoverable, an empty one looks like a broken keyboard. Mirrors
+        /// the engine's "filter disabled" sentinel on the search path
+        /// (`dictionary_reader.rs::Filter::from_enabled_bitmask`). Fail-open on
+        /// purpose — a wider candidate list is recoverable, an empty one looks
+        /// like a broken keyboard. Mirrors
         /// Android `RustEngineBridge.DictionaryFilters.ALL_SOURCES_ENABLED`.
         static let allSourcesEnabled = DictionaryFilters(
             dictionaryFilterBitmask: UInt32.max,
             enabledSources: Set(DictionarySource.allCases),
         )
-
-        /// The value to put in `FetchAtPos.enabled_sources_bitmask`.
-        ///
-        /// `0` is not "no sources" on that wire: the composing path reads it
-        /// as "platform did not wire this" and searches every dictionary
-        /// (`engine/composing/src/dispatch.rs` `handle_fetch_at_pos`). A user
-        /// who switched every dictionary off means it, so the engine's `0`
-        /// goes out as `noSourcesEnabledBitmask` instead. A failed resolve
-        /// (`allSourcesEnabled`, `UInt32.max`) is non-zero and goes out as it
-        /// is — a failure still widens the list, it never empties it.
-        ///
-        /// Composing only: the Dictionary tab search builds its filter from
-        /// the mask verbatim, so there `0` already means "nothing enabled".
-        ///
-        /// CROSS-PLATFORM INVARIANT — mirrors macOS
-        /// `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Lexicon.swift:37`
-        /// `DictionaryFilters.wireMask`, desktop
-        /// `desktop/crates/taigi-desktop-core/src/engine/lexicon.rs:156`
-        /// `DictionaryFilters::wire_mask` and Android
-        /// `android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt`
-        /// `DictionaryFilters.wireMask`. Drift causes silent divergence
-        /// (`docs/architecture/behavioral-invariants.md` §57).
-        var wireMask: UInt32 {
-            dictionaryFilterBitmask == 0 ? RustEngineBridge.noSourcesEnabledBitmask : dictionaryFilterBitmask
-        }
     }
-
-    /// A mask carrying no source bits, for the user who switched every
-    /// dictionary off. Bit 13 is the kautian subcollection gate's "active"
-    /// flag (`engine/lexicon/src/dictionary_reader.rs`
-    /// `WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT`), which makes the mask non-zero while
-    /// leaving the source region — bits 0-12 — empty, so no dictionary record
-    /// passes the filter.
-    ///
-    /// CROSS-PLATFORM INVARIANT — mirrors macOS
-    /// `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Lexicon.swift:214`
-    /// `noSourcesEnabledBitmask` and desktop
-    /// `desktop/crates/taigi-desktop-core/src/engine/lexicon.rs:146`
-    /// `NO_SOURCES_ENABLED_BITMASK`. Drift causes silent divergence.
-    static let noSourcesEnabledBitmask: UInt32 = 1 << 13
 
     // MARK: - Methods
 
@@ -245,7 +206,7 @@ public extension RustEngineBridge {
     }
 
     /// Proto form of the user's dictionary toggles, shared by
-    /// `lexiconDictionaryFilters` and `nextwordPredictNext`.
+    /// `lexiconDictionaryFilters`, `composingFetchAtPos` and `nextwordPredictNext`.
     static func dictionaryTogglesProto(_ toggles: DictionaryToggles) -> Taigi_Engine_DictionaryToggles {
         var togglesProto = Taigi_Engine_DictionaryToggles()
         togglesProto.kautian = toggles.kautian

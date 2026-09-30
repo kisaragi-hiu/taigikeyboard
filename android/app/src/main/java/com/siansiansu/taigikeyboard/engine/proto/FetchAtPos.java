@@ -29,25 +29,16 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `user_weight = 0.0` for every candidate — see
  * `engine/ranking/src/score.rs::decayed_user_weight_delta`.
  *
- * PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
- * source-toggle state so keyboard continuous candidates honour the SAME
- * 12 source toggles + kautian subcollection (10 dialect accents + surname/name
- * appendix) toggles the Tab3 browse path already applies. Same wire
- * layout as `SearchWithSourcesRequest.enabled_sources_bitmask` (sources/variant
- * bits 0-12 + kautian subcollection high region bits 13-25), produced by
- * the SAME `compute_filters` bridge both platforms call for browse — no
- * continuous-specific encoder, so browse and continuous can never drift.
- * The engine decodes it via `Filter::from_enabled_bitmask` inside
- * `composing::continuous::assemble_candidates` → `ContinuousFetchCtx`.
- *
- * SENTINEL: `0` (proto3 default) means "platform did not wire this" and
- * is normalised to `u32::MAX` (legacy all-on) in
- * `composing::dispatch::handle_fetch_at_pos`, reproducing the pre-PR-9.6
- * behaviour for older / un-wired builds. A real bitmask is never `0`
- * because `compute_filters` always sets the `dev` bit (bit 10), so `0`
- * is an unambiguous absence marker (mirrors the `assoc_lookup_bitmask`
- * `u32::MAX` sentinel + the kautian subcollection bit-13 absent=all-on
- * convention).
+ * `toggles` are the user's dictionary switches — the same message Tab3
+ * browse (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine
+ * resolves them into the source filter itself with the encoder behind
+ * `DictionaryFilters`, so keyboard candidates honour the same 12 source
+ * toggles + kautian subcollection toggles as browse and no platform
+ * computes a bitmask. Absent `toggles` keeps every source on — a default for
+ * test fixtures, like fields 6 and 8: the engine ships inside each app, so
+ * no platform build without the field reaches it, and every platform in this
+ * repository sends them. Toggles with every dictionary off offer no
+ * dictionary candidates (§57).
  *
  * §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
  * preedit-literal roman candidate (the `derived_display` WYSIWYG row that
@@ -56,8 +47,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * candidates that `assemble_candidates` produces naturally — only the §34
  * forced prepend.
  *
- * SENTINEL (inverted, mirrors the `enabled_sources_bitmask` legacy-default
- * idiom above): proto3 default `false` means "show" (= pre-toggle always-on
+ * SENTINEL (inverted, so the un-wired default is the legacy behaviour):
+ * proto3 default `false` means "show" (= pre-toggle always-on
  * behaviour), so older / un-wired builds and proto-decoded fixtures keep the
  * candidate. The platform sends `true` only when the user turns the
  * Show Typed Text First setting OFF. Platform settings stay positive and ship ON on
@@ -77,6 +68,7 @@ public  final class FetchAtPos extends
     FetchAtPosOrBuilder {
   private FetchAtPos() {
   }
+  private int bitField0_;
   public static final int NOW_MS_FIELD_NUMBER = 3;
   private long nowMs_;
   /**
@@ -101,32 +93,6 @@ public  final class FetchAtPos extends
   private void clearNowMs() {
 
     nowMs_ = 0L;
-  }
-
-  public static final int ENABLED_SOURCES_BITMASK_FIELD_NUMBER = 5;
-  private int enabledSourcesBitmask_;
-  /**
-   * <code>uint32 enabled_sources_bitmask = 5;</code>
-   * @return The enabledSourcesBitmask.
-   */
-  @java.lang.Override
-  public int getEnabledSourcesBitmask() {
-    return enabledSourcesBitmask_;
-  }
-  /**
-   * <code>uint32 enabled_sources_bitmask = 5;</code>
-   * @param value The enabledSourcesBitmask to set.
-   */
-  private void setEnabledSourcesBitmask(int value) {
-
-    enabledSourcesBitmask_ = value;
-  }
-  /**
-   * <code>uint32 enabled_sources_bitmask = 5;</code>
-   */
-  private void clearEnabledSourcesBitmask() {
-
-    enabledSourcesBitmask_ = 0;
   }
 
   public static final int LITERAL_ROMAN_CANDIDATE_DISABLED_FIELD_NUMBER = 6;
@@ -197,6 +163,53 @@ public  final class FetchAtPos extends
   private void clearCustomDictionaryDisabled() {
 
     customDictionaryDisabled_ = false;
+  }
+
+  public static final int TOGGLES_FIELD_NUMBER = 9;
+  private com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles toggles_;
+  /**
+   * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+   */
+  @java.lang.Override
+  public boolean hasToggles() {
+    return ((bitField0_ & 0x00000001) != 0);
+  }
+  /**
+   * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles getToggles() {
+    return toggles_ == null ? com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles.getDefaultInstance() : toggles_;
+  }
+  /**
+   * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+   */
+  private void setToggles(com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles value) {
+    java.util.Objects.requireNonNull(value);
+    toggles_ = value;
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergeToggles(com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles value) {
+    java.util.Objects.requireNonNull(value);
+    if (toggles_ != null &&
+        toggles_ != com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles.getDefaultInstance()) {
+      toggles_ =
+        com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles.newBuilder(toggles_).mergeFrom(value).buildPartial();
+    } else {
+      toggles_ = value;
+    }
+    bitField0_ |= 0x00000001;
+  }
+  /**
+   * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+   */
+  private void clearToggles() {
+    toggles_ = null;
+    bitField0_ = (bitField0_ & ~0x00000001);
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.FetchAtPos parseFrom(
@@ -306,25 +319,16 @@ public  final class FetchAtPos extends
    * `user_weight = 0.0` for every candidate — see
    * `engine/ranking/src/score.rs::decayed_user_weight_delta`.
    *
-   * PR-9.6 — `enabled_sources_bitmask` carries the user's dictionary
-   * source-toggle state so keyboard continuous candidates honour the SAME
-   * 12 source toggles + kautian subcollection (10 dialect accents + surname/name
-   * appendix) toggles the Tab3 browse path already applies. Same wire
-   * layout as `SearchWithSourcesRequest.enabled_sources_bitmask` (sources/variant
-   * bits 0-12 + kautian subcollection high region bits 13-25), produced by
-   * the SAME `compute_filters` bridge both platforms call for browse — no
-   * continuous-specific encoder, so browse and continuous can never drift.
-   * The engine decodes it via `Filter::from_enabled_bitmask` inside
-   * `composing::continuous::assemble_candidates` → `ContinuousFetchCtx`.
-   *
-   * SENTINEL: `0` (proto3 default) means "platform did not wire this" and
-   * is normalised to `u32::MAX` (legacy all-on) in
-   * `composing::dispatch::handle_fetch_at_pos`, reproducing the pre-PR-9.6
-   * behaviour for older / un-wired builds. A real bitmask is never `0`
-   * because `compute_filters` always sets the `dev` bit (bit 10), so `0`
-   * is an unambiguous absence marker (mirrors the `assoc_lookup_bitmask`
-   * `u32::MAX` sentinel + the kautian subcollection bit-13 absent=all-on
-   * convention).
+   * `toggles` are the user's dictionary switches — the same message Tab3
+   * browse (`DictionaryFiltersRequest`) and `PredictNext` carry. The engine
+   * resolves them into the source filter itself with the encoder behind
+   * `DictionaryFilters`, so keyboard candidates honour the same 12 source
+   * toggles + kautian subcollection toggles as browse and no platform
+   * computes a bitmask. Absent `toggles` keeps every source on — a default for
+   * test fixtures, like fields 6 and 8: the engine ships inside each app, so
+   * no platform build without the field reaches it, and every platform in this
+   * repository sends them. Toggles with every dictionary off offer no
+   * dictionary candidates (§57).
    *
    * §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
    * preedit-literal roman candidate (the `derived_display` WYSIWYG row that
@@ -333,8 +337,8 @@ public  final class FetchAtPos extends
    * candidates that `assemble_candidates` produces naturally — only the §34
    * forced prepend.
    *
-   * SENTINEL (inverted, mirrors the `enabled_sources_bitmask` legacy-default
-   * idiom above): proto3 default `false` means "show" (= pre-toggle always-on
+   * SENTINEL (inverted, so the un-wired default is the legacy behaviour):
+   * proto3 default `false` means "show" (= pre-toggle always-on
    * behaviour), so older / un-wired builds and proto-decoded fixtures keep the
    * candidate. The platform sends `true` only when the user turns the
    * Show Typed Text First setting OFF. Platform settings stay positive and ship ON on
@@ -382,34 +386,6 @@ public  final class FetchAtPos extends
     public Builder clearNowMs() {
       copyOnWrite();
       instance.clearNowMs();
-      return this;
-    }
-
-    /**
-     * <code>uint32 enabled_sources_bitmask = 5;</code>
-     * @return The enabledSourcesBitmask.
-     */
-    @java.lang.Override
-    public int getEnabledSourcesBitmask() {
-      return instance.getEnabledSourcesBitmask();
-    }
-    /**
-     * <code>uint32 enabled_sources_bitmask = 5;</code>
-     * @param value The enabledSourcesBitmask to set.
-     * @return This builder for chaining.
-     */
-    public Builder setEnabledSourcesBitmask(int value) {
-      copyOnWrite();
-      instance.setEnabledSourcesBitmask(value);
-      return this;
-    }
-    /**
-     * <code>uint32 enabled_sources_bitmask = 5;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearEnabledSourcesBitmask() {
-      copyOnWrite();
-      instance.clearEnabledSourcesBitmask();
       return this;
     }
 
@@ -487,6 +463,53 @@ public  final class FetchAtPos extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+     */
+    @java.lang.Override
+    public boolean hasToggles() {
+      return instance.hasToggles();
+    }
+    /**
+     * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles getToggles() {
+      return instance.getToggles();
+    }
+    /**
+     * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+     */
+    public Builder setToggles(com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles value) {
+      copyOnWrite();
+      instance.setToggles(value);
+      return this;
+      }
+    /**
+     * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+     */
+    public Builder setToggles(
+        com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles.Builder builderForValue) {
+      copyOnWrite();
+      instance.setToggles(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+     */
+    public Builder mergeToggles(com.siansiansu.taigikeyboard.engine.proto.DictionaryToggles value) {
+      copyOnWrite();
+      instance.mergeToggles(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.DictionaryToggles toggles = 9;</code>
+     */
+    public Builder clearToggles() {  copyOnWrite();
+      instance.clearToggles();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.FetchAtPos)
   }
   @java.lang.Override
@@ -503,14 +526,15 @@ public  final class FetchAtPos extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
+            "bitField0_",
             "nowMs_",
-            "enabledSourcesBitmask_",
             "literalRomanCandidateDisabled_",
             "customDictionaryDisabled_",
+            "toggles_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0003\b\u0004\u0000\u0000\u0000\u0003\u0002\u0005\u000b" +
-              "\u0006\u0007\b\u0007";
+              "\u0000\u0004\u0000\u0001\u0003\t\u0004\u0000\u0000\u0000\u0003\u0002\u0006\u0007" +
+              "\b\u0007\t\u1009\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

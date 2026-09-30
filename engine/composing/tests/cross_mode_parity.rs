@@ -104,7 +104,6 @@ fn complete_syllable_hanji_set(input: &str, mode: &str) -> BTreeSet<String> {
         &cfg,
         input,
         Fetch {
-            enabled_sources_bitmask: u32::MAX,
             literal_roman_candidate_disabled: true,
             ..Default::default()
         },

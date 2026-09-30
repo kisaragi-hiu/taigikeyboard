@@ -45,7 +45,6 @@ fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
             now_ms: 0,
-            enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
             ..FetchAtPos::default()
         })),
@@ -84,7 +83,6 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
             now_ms: 0,
-            enabled_sources_bitmask: 0,
             // §34/S22: disable the literal-roman prepend so this test isolates
             // the lexicon-degradation path. With it ON (default), the bare
             // `derived_display("tsua")` candidate is added regardless of the
@@ -131,7 +129,6 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
         let resp = dispatch::handle(
             &req(Method::FetchAtPos(FetchAtPos {
                 now_ms: 0,
-                enabled_sources_bitmask: 0,
                 literal_roman_candidate_disabled: disabled,
                 ..FetchAtPos::default()
             })),
@@ -210,7 +207,6 @@ fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
             now_ms: 0,
-            enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
             ..FetchAtPos::default()
         })),
@@ -255,7 +251,6 @@ fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
     let resp = dispatch::handle(
         &req(Method::FetchAtPos(FetchAtPos {
             now_ms: 0,
-            enabled_sources_bitmask: 0,
             literal_roman_candidate_disabled: false,
             ..FetchAtPos::default()
         })),
