@@ -5,8 +5,9 @@ use composing::CommitScript;
 use composing::{dispatch, Engine, Intent};
 use protos::engine::composing_request::Method;
 use protos::engine::{
-    Append, AppendHyphen, CommitDerived, CommitPreeditThenInsertExternal, CommitRaw,
-    ComposingRequest, DeleteBackward, ReplaceLast, Reset, SelectSuggestion, Start,
+    Append, AppendHyphen, CommitContinuous, CommitDerived, CommitPreeditThenInsertExternal,
+    CommitRaw, CommitScript as WireCommitScript, ComposingRequest, DeleteBackward, EnterContinuous,
+    ReplaceLast, Reset, ResetContinuous, SelectSuggestion, Start,
 };
 
 use crate::common;
@@ -105,6 +106,34 @@ fn every_method_decodes_to_its_intent() {
             },
         ),
         (Method::Reset(Reset {}), Intent::Reset),
+        (
+            Method::EnterContinuous(EnterContinuous {}),
+            Intent::EnterContinuous,
+        ),
+        (
+            Method::CommitContinuous(CommitContinuous {
+                consumed_bytes: 3,
+                syllable_count: 1,
+                canonical_text: "珠".into(),
+                association_tl: "tsu".into(),
+                hanji: Some("珠".into()),
+                script: WireCommitScript::Hanji as i32,
+                roman: "tsu".into(),
+            }),
+            Intent::CommitContinuous {
+                canonical_text: "珠".into(),
+                association_tl: "tsu".into(),
+                hanji: Some("珠".into()),
+                consumed_bytes: 3,
+                syllable_count: 1,
+                script: Some(CommitScript::Hanji),
+                roman: "tsu".into(),
+            },
+        ),
+        (
+            Method::ResetContinuous(ResetContinuous {}),
+            Intent::ResetContinuous,
+        ),
     ];
     for (method, expected) in cases {
         let decoded = dispatch::decode_intent(&req(method.clone())).expect("method present");
