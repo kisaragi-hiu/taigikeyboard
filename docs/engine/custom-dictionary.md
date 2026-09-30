@@ -130,7 +130,7 @@ The format is **round-trip compatible across platforms** (same schema, same v2, 
 Custom entries have **highest priority** — shown before system dictionary results.
 
 **Flow** (every platform, inside one `FetchAtPos`):
-1. `engine/dispatch/src/user_data/with_stores.rs` (`buffer_rows`) derives the query key from the raw (unsegmented) pending buffer (`derive_custom_query_key`) and reads the matching custom rows — skipped when `FetchAtPos.custom_dictionary_disabled` — plus the learned phrases
+1. `engine/dispatch/src/user_data/with_stores.rs` (`buffer_rows`) derives the query key from the raw (unsegmented) pending buffer (`phonetics::api::derive_custom_query_key`) and reads the matching custom rows — skipped when `FetchAtPos.custom_dictionary_disabled` — plus the learned phrases
 2. The rows reach composing as `composing::UserRows`
 3. System dictionary queried in the same fetch
 4. Merge: custom words first, then system words, deduplicated
