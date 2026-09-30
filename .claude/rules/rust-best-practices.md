@@ -41,7 +41,7 @@ Current runtime crates — dependency edges flow **one way, top → bottom** (th
 │  lexicon   → ranking, phonetics, mmap-host                   │
 │  ranking   → (protos only)                                   │
 │  nextword  → phonetics                                       │
-│  userdata  → phonetics, protos  (SQLite stores, `sqlite`)    │
+│  userdata  → phonetics, protos  (SQLite stores)              │
 └───────────────────────────┬─────────────────────────────────┘
                             │ depends ↓
 ┌─ leaf / shared kernel ────┴─────────────────────────────────┐

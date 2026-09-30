@@ -17,62 +17,38 @@
 //! Host-testable: nothing here touches a platform API, so the tests run
 //! against temporary directories.
 
-#[cfg(feature = "sqlite")]
 mod association;
-#[cfg(feature = "sqlite")]
 mod backup;
-#[cfg(feature = "sqlite")]
 mod capacity;
-#[cfg(feature = "sqlite")]
 mod csv;
-#[cfg(feature = "sqlite")]
 mod custom_dictionary;
-#[cfg(feature = "sqlite")]
 mod database;
-#[cfg(feature = "sqlite")]
 mod dispatch;
-#[cfg(feature = "sqlite")]
 mod frequency;
-#[cfg(feature = "sqlite")]
 mod handle;
-#[cfg(feature = "sqlite")]
 mod learned_phrases;
 mod paths;
-#[cfg(feature = "sqlite")]
 mod stores;
-#[cfg(feature = "sqlite")]
 mod timestamp;
 
-#[cfg(feature = "sqlite")]
 pub use association::{AssociationPair, AssociationRow, FollowingRow, UserAssociationStore};
-#[cfg(feature = "sqlite")]
 pub use backup::{export_backup, import_backup, BackupError, BackupImported, BACKUP_VERSION};
-#[cfg(feature = "sqlite")]
 pub use capacity::LearningCapacity;
-#[cfg(feature = "sqlite")]
 pub use csv::{CustomDictionaryCSV, CustomDictionaryCSVError, UserDataCSV};
-#[cfg(feature = "sqlite")]
 pub use custom_dictionary::{
     CustomDictionaryError, CustomDictionaryIdentity, CustomDictionaryImportResult,
     CustomDictionaryRow, CustomDictionaryStore, SearchKeyDeriver,
 };
-#[cfg(feature = "sqlite")]
 pub use database::{
     immediate_transaction, JournalMode, UserDataDatabase, UserDataDatabaseError,
     TAIGI_APPLICATION_ID,
 };
-#[cfg(feature = "sqlite")]
 pub use dispatch::RequestError;
-#[cfg(feature = "sqlite")]
 pub use frequency::{FrequencyRow, UserFrequencyStore};
-#[cfg(feature = "sqlite")]
 pub use handle::UserDataHandle;
-#[cfg(feature = "sqlite")]
 pub use learned_phrases::{LearnedPhraseRow, LearnedPhraseStore};
 pub use paths::{
     UserDataPaths, ASSOCIATION_FILE, CUSTOM_DICTIONARY_FILE, FREQUENCY_FILE, LEARNED_PHRASES_FILE,
 };
-#[cfg(feature = "sqlite")]
 pub use stores::{derive_custom_search_keys, UserDataStores};
-#[cfg(feature = "sqlite")]
 pub use timestamp::{unix_seconds_now, utc_timestamp_now};

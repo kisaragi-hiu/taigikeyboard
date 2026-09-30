@@ -23,13 +23,12 @@ mod context;
 mod predict;
 #[cfg(feature = "e2e-trace")]
 pub mod trace;
-#[cfg(feature = "user-data")]
 mod user_data;
 
 /// The biggest `roman,hanzi` CSV file a custom-dictionary import accepts
 /// (`ImportCustomCsv`). Exported so a platform can refuse the file before
-/// reading it, as the engine refuses the bytes; `user_data.rs` asserts it
-/// equals the `userdata` crate's own limit.
+/// reading it, as the engine refuses the bytes; `user_data/with_stores.rs`
+/// asserts it equals the `userdata` crate's own limit.
 pub const CUSTOM_CSV_MAX_FILE_BYTES: u64 = 5 * 1024 * 1024;
 
 /// Maximum accepted size of an FFI request byte buffer. Phonetics inputs
@@ -122,11 +121,7 @@ fn run(bytes: &[u8]) -> Response {
         },
         request::Payload::Composing(comp_req) => {
             // With the engine's own user data open, `FetchAtPos` reads it (U11).
-            #[cfg(feature = "user-data")]
-            let handled = user_data::handle_composing(&comp_req, &config, generation);
-            #[cfg(not(feature = "user-data"))]
-            let handled = context::handle_composing_without_stores(&comp_req, &config, generation);
-            match handled {
+            match user_data::handle_composing(&comp_req, &config, generation) {
                 Ok(comp_resp) => Response {
                     id,
                     error: ErrorCode::Ok as i32,
@@ -160,15 +155,7 @@ fn run(bytes: &[u8]) -> Response {
         request::Payload::Nextword(nw_req) => {
             // With the engine's own user data open, predictions read it and
             // the associations it decides are written (U11).
-            #[cfg(feature = "user-data")]
-            let handled = user_data::handle_nextword(nw_req, &config, generation);
-            #[cfg(not(feature = "user-data"))]
-            let handled = nextword::EngineHandle::instance().handle(
-                &predict::expand_predict_next(nw_req, Vec::new()),
-                &config,
-                generation,
-            );
-            match handled {
+            match user_data::handle_nextword(nw_req, &config, generation) {
                 Ok(nw_resp) => Response {
                     id,
                     error: ErrorCode::Ok as i32,
@@ -193,16 +180,8 @@ fn run(bytes: &[u8]) -> Response {
                 error_response(id, ErrorCode::FailInvariant, generation)
             }
         },
-        #[cfg(feature = "user-data")]
         request::Payload::UserData(user_data_req) => {
             user_data::respond(id, generation, &user_data_req)
-        }
-        // Built without the `user-data` feature: a platform that has not
-        // switched to the engine's stores yet (user-data-engine-roadmap U11).
-        #[cfg(not(feature = "user-data"))]
-        request::Payload::UserData(_) => {
-            log::warn!("user-data request on a build without the user-data feature (id={id})");
-            error_response(id, ErrorCode::FailInvariant, generation)
         }
     }
 }

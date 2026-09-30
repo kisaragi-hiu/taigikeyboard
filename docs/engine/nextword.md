@@ -118,7 +118,7 @@ Characters not recorded as associations:
 
 ## Ownership
 
-Engine state machine + decision tables + scoring all live in Rust `engine/nextword`. The engine also reads `user_association.db` for `PredictNext` and writes the bigrams a decision records (`nextword::Handled.associations`, persisted in `engine/dispatch/src/user_data.rs`). Platform side handles timer / threading.
+Engine state machine + decision tables + scoring all live in Rust `engine/nextword`. The engine also reads `user_association.db` for `PredictNext` and writes the bigrams a decision records (`nextword::Handled.associations`, persisted in `engine/dispatch/src/user_data/with_stores.rs`). Platform side handles timer / threading.
 
 | Component | Location |
 |-----------|----------|
@@ -127,7 +127,7 @@ Engine state machine + decision tables + scoring all live in Rust `engine/nextwo
 | Decide / filter / score | Rust `engine/nextword/src/{decide,filter,scorer}.rs` |
 | Generation guard (drops stale async results) | Rust `nextword::PersistedState.current_generation` |
 | Bigram source (read-only) | `association.bin` via Rust `engine/lexicon::assoc_lookup` |
-| User association source | `user_association.db` via Rust `userdata::UserAssociationStore` (`rows_following` read, `record` write), wired in `engine/dispatch/src/user_data.rs` `handle_nextword` |
+| User association source | `user_association.db` via Rust `userdata::UserAssociationStore` (`rows_following` read, `record` write), wired in `engine/dispatch/src/user_data/with_stores.rs` `handle_nextword` |
 | iOS bridge | `Engine/RustEngineBridge+NextWord.swift` |
 | Android bridge | `engine/RustEngineBridge.kt` |
 | iOS platform executor | `NextWord/NextWordController.swift` (Timer, DispatchQueue.main, @MainActor) |

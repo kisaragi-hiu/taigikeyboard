@@ -1,356 +1,61 @@
-//! The user-data request's wire answer, and the composing / next-word
-//! requests answered with the engine's own user data. The stores, their
-//! one open per process and the requests' logic are `userdata`'s
-//! (`UserDataHandle`); this module maps its answer to the wire's error code
-//! and joins the stores to `composing` / `nextword`, which only `dispatch`
-//! sees together. Plan: `docs/architecture/user-data-engine-roadmap.md`.
+//! The user-data request, and the composing / next-word requests the
+//! engine's own user data joins. Built into every adapter: with the
+//! `user-data` feature and the stores open, `with_stores` answers; before
+//! the open, or in a build without the feature, a composing request ranks by
+//! the bundled context only, a prediction has no user rows, and nothing
+//! taught or recorded is kept — nowhere to keep it. Plan:
+//! `docs/architecture/user-data-engine-roadmap.md`.
 
-use std::collections::HashSet;
+#[cfg(feature = "user-data")]
+mod with_stores;
 
 use composing::api::ComposingError;
-use composing::{PendingSnapshot, UserRows};
 use nextword::NextWordError;
 use protos::engine::{
-    composing_request, next_word_request, response, AppConfig, ComposingRequest, ComposingResponse,
-    ErrorCode, NextWordRequest, NextWordResponse, RawNextWordPrediction, Response, Source,
-    UserDataRequest,
-};
-use ranking::{ContextRanks, FrequencyData, FrequencyMap, CONTEXT_RANK_USER};
-use userdata::{
-    AssociationPair, CustomDictionaryCSV, CustomDictionaryRow, CustomDictionaryStore, FollowingRow,
-    LearnedPhraseRow, LearnedPhraseStore, RequestError, UserDataHandle, UserDataStores,
+    AppConfig, ComposingRequest, ComposingResponse, NextWordRequest, NextWordResponse,
 };
 
-// The limit a platform may check before the read is the codec's own.
-const _: () = assert!(crate::CUSTOM_CSV_MAX_FILE_BYTES == CustomDictionaryCSV::MAX_FILE_SIZE_BYTES);
+#[cfg(feature = "user-data")]
+pub(crate) use with_stores::respond;
 
-/// Answers one user-data request — the `user-data` arm of `crate::run`.
-pub(crate) fn respond(id: u32, generation: u64, request: &UserDataRequest) -> Response {
-    let (error, payload) = match UserDataHandle::instance().handle(request) {
-        Ok(answer) => (ErrorCode::Ok, Some(response::Payload::UserData(answer))),
-        Err(RequestError::Invalid(reason)) => {
-            log::warn!("user-data request refused (id={id}): {reason}");
-            (ErrorCode::FailInvariant, None)
-        }
-        Err(RequestError::Store(message)) => {
-            log::error!("user-data store failed (id={id}): {message}");
-            (ErrorCode::FailIo, None)
-        }
-    };
-    Response {
-        id,
-        error: error as i32,
-        generation,
-        payload,
-    }
+/// Answers one user-data request — the `UserData` arm of `crate::run`: a
+/// build without the stores refuses it (user-data-engine-roadmap U11).
+#[cfg(not(feature = "user-data"))]
+pub(crate) fn respond(
+    id: u32,
+    generation: u64,
+    _request: &protos::engine::UserDataRequest,
+) -> protos::engine::Response {
+    log::warn!("user-data request on a build without the user-data feature (id={id})");
+    crate::error_response(id, protos::engine::ErrorCode::FailInvariant, generation)
 }
 
-/// A composing request, answered with the engine's own user data once the
-/// platform opened it. `FetchAtPos` runs two passes in-process (roadmap
-/// P3b, brainstorm R5): the custom and learned rows for the pending buffer,
-/// a neutral fetch that discovers the candidates, their frequency rows, and
-/// a re-ranked fetch. Every other request goes to composing, and the phrase
-/// a final commit taught (§50) is written to `learned_phrases.db` here
-/// (P3c). Before the open, everything goes straight to composing and a
-/// taught phrase is not kept — nowhere to keep it.
+/// A composing request — the `Composing` arm of `crate::run`.
 pub(crate) fn handle_composing(
     request: &ComposingRequest,
     config: &AppConfig,
     generation: u64,
 ) -> Result<ComposingResponse, ComposingError> {
-    let composing = composing::EngineHandle::instance();
-    let Some(stores) = UserDataHandle::instance().stores() else {
-        return crate::context::handle_composing_without_stores(request, config, generation);
-    };
-    let Some(composing_request::Method::FetchAtPos(sent)) = request.method.as_ref() else {
-        let applied = composing.handle_learning(request, config, generation)?;
-        if let Some(learned) = applied.learned {
-            stores
-                .learned_phrases
-                .learn_phrase(&learned.hanji, &learned.canonical_tl);
-        }
-        return Ok(applied.response);
-    };
-    // The buffer can grow between reading it and fetching (the main thread
-    // keeps typing while a worker fetches): rows chosen for one buffer must
-    // not rank another, so a fetch that answers for a different buffer is
-    // redone once with that buffer's rows.
-    let mut rows = UserRows::default();
-    let mut context = ContextRanks::new();
-    let mut neutral = None;
-    for _ in 0..2 {
-        // A stale generation answers the idle snapshot inside `query`.
-        let Some(snapshot) = composing.pending_snapshot(generation) else {
-            return Ok(composing.query(
-                &crate::context::fetch_intent(sent, UserRows::default(), ContextRanks::new()),
-                config,
-                generation,
-            ));
-        };
-        rows = buffer_rows(
-            stores,
-            &snapshot.raw,
-            config,
-            sent.custom_dictionary_disabled,
-        );
-        context = context_ranks(stores, &snapshot, sent.now_ms);
-        let answer = composing.query(
-            &crate::context::fetch_intent(sent, rows.clone(), context.clone()),
-            config,
-            generation,
-        );
-        let answered_for = answer.preedit.as_ref().map(|p| p.raw_input.as_str());
-        let current = answered_for.unwrap_or("") == snapshot.raw;
-        neutral = Some(answer);
-        if current {
-            break;
-        }
+    #[cfg(feature = "user-data")]
+    if let Some(stores) = userdata::UserDataHandle::instance().stores() {
+        return with_stores::handle_composing(stores, request, config, generation);
     }
-    let neutral = neutral.expect("the loop fetches at least once");
-    let Some(frequency) = frequency_map(stores, &neutral) else {
-        return Ok(neutral);
-    };
-    rows.frequency = frequency;
-    Ok(composing.query(
-        &crate::context::fetch_intent(sent, rows, context),
-        config,
-        generation,
-    ))
+    crate::context::handle_composing_without_stores(request, config, generation)
 }
 
-/// The continuations of the word the pending tail follows (§56): the
-/// user's learned bigrams (`user_association.db`, the §24 Hanji-keyed
-/// recall, best evidence first) over the bundled ones.
-fn context_ranks(stores: &UserDataStores, snapshot: &PendingSnapshot, now_ms: i64) -> ContextRanks {
-    let previous = crate::context::context_word(snapshot, now_ms);
-    let mut ranks = crate::context::bundled_ranks(previous.as_ref());
-    if let Some((word, word_tl)) = previous {
-        let rows = stores
-            .association
-            .rows_following(&word, &word_tl, crate::context::CONTEXT_ROWS)
-            .unwrap_or_default();
-        for row in rows {
-            ranks.insert(row.next, row.next_tl, CONTEXT_RANK_USER);
-        }
-    }
-    ranks
-}
-
-/// The custom-dictionary rows (unless the user turned the dictionary off)
-/// and the learned phrases for `raw`, keyed the way the platforms keyed
-/// them — no frequency rows yet.
-fn buffer_rows(
-    stores: &UserDataStores,
-    raw: &str,
-    config: &AppConfig,
-    custom_dictionary_disabled: bool,
-) -> UserRows {
-    let Some(key) = (!raw.is_empty())
-        .then(|| phonetics::api::derive_custom_query_key(raw, &config.input_mode))
-        .flatten()
-    else {
-        return UserRows::default();
-    };
-    let custom = if custom_dictionary_disabled {
-        Vec::new()
-    } else {
-        stores
-            .custom_dictionary
-            .rows_matching(&key, CustomDictionaryStore::KEYSTROKE_LIMIT)
-            .into_iter()
-            .map(custom_entry)
-            .collect()
-    };
-    let learned = stores
-        .learned_phrases
-        .rows_matching(&key, LearnedPhraseStore::KEYSTROKE_LIMIT)
-        .into_iter()
-        .map(learned_entry)
-        .collect();
-    UserRows {
-        custom,
-        learned,
-        ..UserRows::default()
-    }
-}
-
-/// The learned counts for the candidates `neutral` offers, deduped by the
-/// key the engine ranks on; `None` when there is nothing to re-rank with.
-fn frequency_map(stores: &UserDataStores, neutral: &ComposingResponse) -> Option<FrequencyMap> {
-    let mut seen = HashSet::new();
-    let words: Vec<String> = neutral
-        .continuous
-        .iter()
-        .flat_map(|continuous| &continuous.candidates)
-        .map(|candidate| candidate.display_text.as_str())
-        .filter(|word| seen.insert(*word))
-        .map(str::to_owned)
-        .collect();
-    if words.is_empty() {
-        return None;
-    }
-    let rows = stores.frequency.rows_for_words(&words)?;
-    if rows.is_empty() {
-        return None;
-    }
-    Some(
-        rows.into_iter()
-            .map(|row| {
-                let data = FrequencyData {
-                    count: ranked_count(row.count),
-                    last_used_ms: row.last_used_ms,
-                };
-                (row.word, row.tl, data)
-            })
-            .collect(),
-    )
-}
-
-/// A stored count as ranking reads it: saturated at `i32::MAX`; a negative
-/// one (never written) reads as 0.
-fn ranked_count(count: i64) -> i32 {
-    i32::try_from(count.max(0)).unwrap_or(i32::MAX)
-}
-
-/// A next-word request, with the engine's own user data once the platform
-/// opened it: `PredictNext` ranks the rows the store holds for the word, and
-/// the bigrams a decision records are written here — one decision's pairs
-/// in one transaction (P3b / P3c). Before the open, a prediction has no
-/// user rows and a recorded bigram is not kept — nowhere to keep it.
+/// A next-word request — the `Nextword` arm of `crate::run`.
 pub(crate) fn handle_nextword(
     request: NextWordRequest,
     config: &AppConfig,
     generation: u64,
 ) -> Result<NextWordResponse, NextWordError> {
-    let stores = UserDataHandle::instance().stores();
-    let user_rows = stores
-        .map(|stores| following_rows(stores, &request))
-        .unwrap_or_default();
-    let request = crate::predict::expand_predict_next(request, user_rows);
-    let nextword::Handled {
-        response,
-        associations,
-    } = nextword::EngineHandle::instance().handle_recording(&request, config, generation)?;
-    if let Some(stores) = stores {
-        let pairs: Vec<AssociationPair> = associations.into_iter().map(association_pair).collect();
-        stores.association.record(&pairs);
+    #[cfg(feature = "user-data")]
+    if let Some(stores) = userdata::UserDataHandle::instance().stores() {
+        return with_stores::handle_nextword(stores, request, config, generation);
     }
-    Ok(response)
-}
-
-/// The rows `user_association.db` holds after a `PredictNext` word; none for
-/// any other request. Over-fetches twice the prediction limit, as the
-/// platforms did, so the `(hanzi, tl)` merge never leaves fewer than `limit`
-/// survivors.
-fn following_rows(
-    stores: &UserDataStores,
-    request: &NextWordRequest,
-) -> Vec<RawNextWordPrediction> {
-    let Some(next_word_request::Method::PredictNext(predict)) = request.method.as_ref() else {
-        return Vec::new();
-    };
-    let limit = nextword::api::effective_prediction_limit(predict.limit) * 2;
-    stores
-        .association
-        .rows_following(&predict.word, &predict.roman, limit)
-        .unwrap_or_default()
-        .iter()
-        .map(user_prediction)
-        .collect()
-}
-
-// The row → engine / wire forms.
-
-/// An empty stored hanzi is a romanization-only entry.
-fn custom_entry(row: CustomDictionaryRow) -> lexicon::CustomEntry {
-    lexicon::CustomEntry {
-        roman: row.roman,
-        hanji: (!row.hanzi.is_empty()).then_some(row.hanzi),
-    }
-}
-
-fn learned_entry(phrase: LearnedPhraseRow) -> lexicon::LearnedEntry {
-    lexicon::LearnedEntry {
-        hanji: phrase.hanzi,
-        canonical_tl: phrase.canonical_tl,
-    }
-}
-
-fn association_pair(pair: nextword::Association) -> AssociationPair {
-    AssociationPair {
-        previous: pair.prev,
-        previous_tl: pair.prev_tl,
-        next: pair.next,
-        next_tl: pair.next_tl,
-    }
-}
-
-fn user_prediction(row: &FollowingRow) -> RawNextWordPrediction {
-    RawNextWordPrediction {
-        hanzi: row.next.clone(),
-        tl: row.next_tl.clone(),
-        count: row.count,
-        last_used_ms: row.last_used_ms,
-        source: Source::User as i32,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use userdata::{CustomDictionaryRow, CustomDictionaryStore, JournalMode};
-
-    #[test]
-    fn a_stored_count_saturates_for_ranking() {
-        assert_eq!(ranked_count(7), 7);
-        assert_eq!(ranked_count(i64::from(i32::MAX) + 1), i32::MAX);
-        assert_eq!(ranked_count(-3), 0);
-    }
-
-    #[test]
-    fn buffer_rows_hand_the_keystroke_path_at_most_its_limits() {
-        // trace: 21 custom rows `tâi-uân` / 台灣0..20 and 6 learned phrases
-        // `tâi-uân` / 台灣0..5 all key `taiuan` (tl); raw "taiuan" prefix-
-        // matches the custom rows (KEYSTROKE_LIMIT 20) and equals the learned
-        // key (KEYSTROKE_LIMIT 5). The seeds (gâu-tsá, tsia̍h-pá--buē) miss.
-        let directory = tempfile::tempdir().unwrap();
-        let stores = UserDataStores::at(
-            userdata::UserDataPaths::in_directory(directory.path()),
-            JournalMode::Delete,
-        );
-        stores.open_blocking();
-        for index in 0..21 {
-            stores
-                .custom_dictionary
-                .upsert(&CustomDictionaryRow::new(
-                    "tâi-uân",
-                    &format!("台灣{index}"),
-                ))
-                .unwrap();
-            if index < 6 {
-                stores
-                    .learned_phrases
-                    .learn_phrase(&format!("台灣{index}"), "tâi-uân");
-            }
-        }
-        // Flushes the queued learns.
-        assert_eq!(stores.learned_phrases.all_rows().unwrap().len(), 6);
-        let config = AppConfig {
-            input_mode: "tl".into(),
-            ..AppConfig::default()
-        };
-
-        let rows = buffer_rows(&stores, "taiuan", &config, false);
-        assert_eq!(rows.custom.len(), CustomDictionaryStore::KEYSTROKE_LIMIT);
-        assert_eq!(rows.custom.len(), 20);
-        assert_eq!(rows.learned.len(), 5);
-
-        let disabled = buffer_rows(&stores, "taiuan", &config, true);
-        assert!(disabled.custom.is_empty(), "the user turned it off");
-        assert_eq!(
-            disabled.learned.len(),
-            5,
-            "learning data is not the dictionary"
-        );
-    }
+    nextword::EngineHandle::instance().handle(
+        &crate::predict::expand_predict_next(request, Vec::new()),
+        config,
+        generation,
+    )
 }

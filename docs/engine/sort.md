@@ -48,7 +48,7 @@ Ranking math lives in Rust `engine/ranking` (since v3.5.2). Frequency storage is
 | Frequency map + boost / decay | Rust `engine/ranking/src/score.rs` (`FrequencyMap`, `user_freq_boost`, `decayed_user_weight_delta`) |
 | Candidate sort | Rust `engine/lexicon/src/continuous/` (Continuous `FetchAtPos`) |
 | Frequency store | Rust `engine/userdata` `UserFrequencyStore` (`record` on `RecordUsage`, `rows_for_words`) |
-| Rows → ranking | Rust `engine/dispatch/src/user_data.rs` `frequency_map` → `composing::UserRows.frequency` on the re-ranked `FetchAtPos`; no platform sends rows |
+| Rows → ranking | Rust `engine/dispatch/src/user_data/with_stores.rs` `frequency_map` → `composing::UserRows.frequency` on the re-ranked `FetchAtPos`; no platform sends rows |
 
 ---
 

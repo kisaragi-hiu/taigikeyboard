@@ -161,7 +161,7 @@ None — one implementation. The native stores it replaced differed only cosmeti
 
 ### Rust-core path
 
-Done — `rusqlite` with `bundled` SQLite (one SQLite version on every platform, roadmap U2) in `engine/userdata`, behind its `sqlite` feature.
+Done — `rusqlite` with `bundled` SQLite (one SQLite version on every platform, roadmap U2) in `engine/userdata`, linked only through `dispatch/user-data`.
 
 ### Open decisions
 

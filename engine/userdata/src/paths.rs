@@ -1,7 +1,5 @@
 //! Where the four stores' files live — the one piece of user data the
-//! platform decides (roadmap U5). Built without the `sqlite` feature too, so
-//! a shell that only talks to the engine through `dispatch` can name the
-//! files it asks the engine to open.
+//! platform decides (roadmap U5).
 
 use std::path::{Path, PathBuf};
 
