@@ -2,7 +2,7 @@
 
 > **Type**: Planning (PR table over the 2026-09-30 audit)
 > **Keywords**: `refactor`, `dead code`, `parity`, `desktop-core`, `userdata`, `commit resolution`, `test selection`, `naming`, `docs drift`
-> **Status**: in progress — R1–R6, R8, A merged; R7, R9-2..4, R10, R11, R12 remain (#274–#311)
+> **Status**: in progress — R1–R6, R7-1, R8, A merged; R7-2..3, R9-2..4, R10, R11, R12 remain (#274–#312)
 > **Source**: `docs/reports/2026-09-30-audit-all.md` (frozen snapshot on `30a79c16`; §2 findings, §4 draft rounds, Appendices A–F)
 > **Session memory**: project memory `project_maintainability_audit_2026_09_30.md` (Claude auto-memory)
 
@@ -28,7 +28,7 @@
 | R4 | Engine user-data façade: `dispatch/src/user_data.rs` page logic → `userdata`; single-impl store traits; `cfg(not(user-data))` arms; one `CustomSearchKey` | #294 #295 | Merged |
 | R5 | Engine-owned commit resolution (`CommitContinuous` returns document text + auto-space verdict, records usage) | P1 #296 · PR-a #297 · PR-c #305 · PR-b #309 #310 | Merged |
 | R6 | Config normalisation in the engine (flat settings snapshot, real `input_mode = "tps"`, engine-resolved sources) | #298 #302 #303 #311 | Merged |
-| R7 | Test redundancy (engine layers, platform restatements, test-local copies, shared `engine/test-support`) | 3 | Pending |
+| R7 | Test redundancy (engine layers, platform restatements, test-local copies, shared `engine/test-support`) | R7-1 #312 · R7-2 · R7-3 | R7-1 merged |
 | R8 | Test selection: one integration binary per crate, `tools/test-select`, CI path filters, macOS `swift test` job | #299 #300 #301 #307 | Merged |
 | R9 | Naming batch A (identifiers, files, non-iOS folders) | R9-1 #308 · R9-2 · R9-3 · R9-4 | R9-1 merged |
 | R10 | Naming batch B (proto names; field numbers unchanged) | 1–2 | Pending |
