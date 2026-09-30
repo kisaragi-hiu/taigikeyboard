@@ -25,7 +25,7 @@ struct DictionaryFilters: Equatable, Sendable {
     ///
     /// `0` is not "no sources": the composing path reads it as "platform did
     /// not wire this" and searches all of them
-    /// (`engine/composing/src/dispatch.rs:247`). A user who switched
+    /// (`engine/composing/src/dispatch.rs` `handle_fetch_at_pos`). A user who switched
     /// everything off means it, so their answer goes out as a mask with no
     /// source bits instead.
     ///
@@ -196,18 +196,21 @@ extension RustEngineBridge {
     ///
     /// The wire cannot say that with a `0`: the engine reads `0` as "platform
     /// did not wire this" and turns everything back on
-    /// (`composing.proto:176-183`), so sending the engine's own all-off answer
+    /// (`composing.proto` `FetchAtPos`), so sending the engine's own all-off answer
     /// verbatim would hand the user every dictionary the moment they turned
     /// the last one off. Bit 13 is the kautian subcollection gate's "active"
     /// flag (`engine/lexicon/src/dictionary_filters.rs`), which makes the mask
     /// non-zero while leaving the source region — bits 0-12 — empty, so no
     /// record passes the filter.
     ///
-    /// NAMED CROSS-PLATFORM DIVERGENCE, classified **deferred**
-    /// (`.claude/rules/cross-platform-alignment.md` §3): iOS and Android send
-    /// the engine's `0` straight through and therefore still search every
-    /// dictionary in this state. Fixing them means touching their own bridges,
-    /// which is a round of its own.
+    /// CROSS-PLATFORM INVARIANT — mirrors desktop
+    /// `desktop/crates/taigi-desktop-core/src/engine/lexicon.rs`
+    /// `NO_SOURCES_ENABLED_BITMASK`, iOS
+    /// `ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+Lexicon.swift`
+    /// `noSourcesEnabledBitmask` and Android
+    /// `android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt`
+    /// `DictionaryFilters.NO_SOURCES_ENABLED_BITMASK`. Drift causes silent
+    /// divergence (`docs/architecture/behavioral-invariants.md` §57).
     static let noSourcesEnabledBitmask: UInt32 = 1 << 13
 
     /// What a SEARCH sends when the toggles could not be resolved.

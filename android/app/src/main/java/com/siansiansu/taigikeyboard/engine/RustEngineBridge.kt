@@ -201,7 +201,50 @@ object RustEngineBridge {
         val dictionaryFilterBitmask: UInt,
         val enabledSources: Set<DictionarySource>,
     ) {
+        /**
+         * The value to put in `FetchAtPos.enabled_sources_bitmask`.
+         *
+         * `0` is not "no sources" on that wire: the composing path reads it as
+         * "platform did not wire this" and searches every dictionary
+         * (`engine/composing/src/dispatch.rs` `handle_fetch_at_pos`). A user who
+         * switched every dictionary off means it, so the engine's `0` goes out
+         * as [NO_SOURCES_ENABLED_BITMASK] instead. A failed resolve
+         * ([ALL_SOURCES_ENABLED], `UInt.MAX_VALUE`) is non-zero and goes out as
+         * it is — a failure still widens the list, it never empties it.
+         *
+         * Composing only: the Dictionary tab search builds its filter from the
+         * mask verbatim, so there `0` already means "nothing enabled".
+         *
+         * CROSS-PLATFORM INVARIANT — mirrors iOS
+         * `ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+Lexicon.swift`
+         * `DictionaryFilters.wireMask`, macOS
+         * `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Lexicon.swift:37`
+         * `DictionaryFilters.wireMask` and desktop
+         * `desktop/crates/taigi-desktop-core/src/engine/lexicon.rs:156`
+         * `DictionaryFilters::wire_mask`. Drift causes silent divergence
+         * (`docs/architecture/behavioral-invariants.md` §57).
+         */
+        val wireMask: UInt
+            get() = if (dictionaryFilterBitmask == 0u) NO_SOURCES_ENABLED_BITMASK else dictionaryFilterBitmask
+
         companion object {
+            /**
+             * A mask carrying no source bits, for the user who switched every
+             * dictionary off. Bit 13 is the kautian subcollection gate's
+             * "active" flag (`engine/lexicon/src/dictionary_reader.rs`
+             * `WIRE_KAUTIAN_SUBCOLL_ACTIVE_BIT`), which makes the mask non-zero
+             * while leaving the source region — bits 0-12 — empty, so no
+             * dictionary record passes the filter.
+             *
+             * CROSS-PLATFORM INVARIANT — mirrors iOS
+             * `ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+Lexicon.swift`
+             * `noSourcesEnabledBitmask`, macOS
+             * `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Lexicon.swift:214`
+             * and desktop `desktop/crates/taigi-desktop-core/src/engine/lexicon.rs:146`
+             * `NO_SOURCES_ENABLED_BITMASK`. Drift causes silent divergence.
+             */
+            val NO_SOURCES_ENABLED_BITMASK: UInt = 1u shl 13
+
             /**
              * What a failed resolve degrades to: every source on. `UInt.MAX_VALUE`
              * is the engine's "filter disabled" sentinel on both the search path
