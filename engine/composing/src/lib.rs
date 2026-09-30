@@ -23,8 +23,8 @@ pub mod telex;
 mod transition;
 
 pub use api::{
-    Applied, CommitRendering, CommitScript, ComposingError, Engine, EngineState, Intent,
-    NailedSegment, Phase, Usage, UserRows,
+    Applied, CommitScript, ComposingError, Engine, EngineState, Intent, NailedSegment, Phase,
+    Usage, UserRows,
 };
 pub use handle::{EngineHandle, PendingSnapshot};
 

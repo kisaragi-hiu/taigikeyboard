@@ -19,7 +19,7 @@ data class Usage(
 /**
  * CROSS-PLATFORM INVARIANT — mirrors iOS `UsageRecorder.swift`; every
  * Continuous pick the engine records itself (R5: `engine/composing/src/transition.rs`
- * `commit_continuous_resolved`, `Applied.usage`).
+ * `commit_continuous`, `Applied.usage`).
  * An interface so the tap handler can be driven from JVM tests, which cannot
  * load the engine.
  */

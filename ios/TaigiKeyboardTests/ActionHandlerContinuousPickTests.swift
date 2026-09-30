@@ -133,7 +133,6 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
         XCTAssertEqual(request.hanji, "台語")
         XCTAssertEqual(request.consumedBytes, 7)
         XCTAssertEqual(request.syllableCount, 2)
-        XCTAssertTrue(request.displayText.isEmpty, "the engine resolves the document text itself")
 
         let hanjiless = RustEngineBridge.ContinuousPick(
             script: .lead,

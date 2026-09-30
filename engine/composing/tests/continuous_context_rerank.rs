@@ -5,6 +5,7 @@
 //! hand a `ContextRanks` straight to the fetch, against the production lexicon.
 
 use crate::common;
+use composing::CommitScript;
 
 use crate::common::{config_tl, fetch_at_pos_response, fetch_cells, Fetch};
 use composing::api::Engine;
@@ -112,13 +113,13 @@ fn pending_context_is_the_last_nailed_segment() {
     assert_eq!(engine.pending_context(), None, "nothing nailed yet");
     engine.apply(
         Intent::CommitContinuous {
-            display_text: "真".to_string(),
             canonical_text: "真".to_string(),
             association_tl: "tsin".to_string(),
             hanji: Some("真".to_string()),
             consumed_bytes: 4,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "真".to_string(),
         },
         &config,
     );

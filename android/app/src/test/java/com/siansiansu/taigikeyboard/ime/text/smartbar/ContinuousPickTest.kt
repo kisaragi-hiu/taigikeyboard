@@ -9,7 +9,6 @@ import com.siansiansu.taigikeyboard.ime.text.composing.buildContinuousSuggestion
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -121,7 +120,6 @@ class ContinuousPickTest {
         assertEquals("台語", request.hanji)
         assertEquals(7, request.consumedBytes)
         assertEquals(2, request.syllableCount)
-        assertTrue("the engine resolves the document text itself", request.displayText.isEmpty())
     }
 
     @Test

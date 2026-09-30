@@ -17,7 +17,7 @@ public enum CommitScript
     implements com.google.protobuf.Internal.EnumLite {
   /**
    * <pre>
-   * legacy: the platform-resolved `display_text`
+   * no script: the commit is ignored
    * </pre>
    *
    * <code>COMMIT_SCRIPT_UNSPECIFIED = 0;</code>
@@ -60,7 +60,7 @@ public enum CommitScript
 
   /**
    * <pre>
-   * legacy: the platform-resolved `display_text`
+   * no script: the commit is ignored
    * </pre>
    *
    * <code>COMMIT_SCRIPT_UNSPECIFIED = 0;</code>

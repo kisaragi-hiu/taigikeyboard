@@ -7,8 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * What an R5 `CommitContinuous` did (`COMMIT_SCRIPT_*` other than
- * UNSPECIFIED) — replaces the platforms' effect scans.
+ * What a `CommitContinuous` did (R5) — replaces the platforms' effect scans.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.CommitResolution}
@@ -301,8 +300,7 @@ public  final class CommitResolution extends
 
   /**
    * <pre>
-   * What an R5 `CommitContinuous` did (`COMMIT_SCRIPT_*` other than
-   * UNSPECIFIED) — replaces the platforms' effect scans.
+   * What a `CommitContinuous` did (R5) — replaces the platforms' effect scans.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.CommitResolution}

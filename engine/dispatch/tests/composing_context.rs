@@ -7,6 +7,7 @@
 
 mod common;
 
+use protos::engine::CommitScript;
 use std::sync::OnceLock;
 
 use common::{open_user_data, roundtrip, tl_config};
@@ -184,13 +185,13 @@ fn the_previous_word_reranks_the_candidates() {
     composing(
         generation,
         composing_request::Method::CommitContinuous(CommitContinuous {
-            display_text: "真".to_owned(),
+            script: CommitScript::Roman as i32,
+            roman: "真".to_owned(),
             canonical_text: "真".to_owned(),
             association_tl: "tsin".to_owned(),
             hanji: Some("真".to_owned()),
             consumed_bytes: 4,
             syllable_count: 1,
-            ..Default::default()
         }),
     );
     let nailed = fetched_hanji(generation);

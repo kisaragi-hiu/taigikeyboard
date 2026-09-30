@@ -953,8 +953,7 @@ public  final class ComposingResponse extends
   private com.siansiansu.taigikeyboard.engine.proto.CommitResolution commit_;
   /**
    * <pre>
-   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-   * absent for every other request and for the legacy commit.
+   * R5 — set by every `CommitContinuous`; absent for every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -965,8 +964,7 @@ public  final class ComposingResponse extends
   }
   /**
    * <pre>
-   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-   * absent for every other request and for the legacy commit.
+   * R5 — set by every `CommitContinuous`; absent for every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -977,8 +975,7 @@ public  final class ComposingResponse extends
   }
   /**
    * <pre>
-   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-   * absent for every other request and for the legacy commit.
+   * R5 — set by every `CommitContinuous`; absent for every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -990,8 +987,7 @@ public  final class ComposingResponse extends
   }
   /**
    * <pre>
-   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-   * absent for every other request and for the legacy commit.
+   * R5 — set by every `CommitContinuous`; absent for every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1010,8 +1006,7 @@ public  final class ComposingResponse extends
   }
   /**
    * <pre>
-   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-   * absent for every other request and for the legacy commit.
+   * R5 — set by every `CommitContinuous`; absent for every other request.
    * </pre>
    *
    * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1464,8 +1459,7 @@ public  final class ComposingResponse extends
 
     /**
      * <pre>
-     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-     * absent for every other request and for the legacy commit.
+     * R5 — set by every `CommitContinuous`; absent for every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1476,8 +1470,7 @@ public  final class ComposingResponse extends
     }
     /**
      * <pre>
-     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-     * absent for every other request and for the legacy commit.
+     * R5 — set by every `CommitContinuous`; absent for every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1488,8 +1481,7 @@ public  final class ComposingResponse extends
     }
     /**
      * <pre>
-     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-     * absent for every other request and for the legacy commit.
+     * R5 — set by every `CommitContinuous`; absent for every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1501,8 +1493,7 @@ public  final class ComposingResponse extends
       }
     /**
      * <pre>
-     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-     * absent for every other request and for the legacy commit.
+     * R5 — set by every `CommitContinuous`; absent for every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1515,8 +1506,7 @@ public  final class ComposingResponse extends
     }
     /**
      * <pre>
-     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-     * absent for every other request and for the legacy commit.
+     * R5 — set by every `CommitContinuous`; absent for every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
@@ -1528,8 +1518,7 @@ public  final class ComposingResponse extends
     }
     /**
      * <pre>
-     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
-     * absent for every other request and for the legacy commit.
+     * R5 — set by every `CommitContinuous`; absent for every other request.
      * </pre>
      *
      * <code>optional .taigi.engine.CommitResolution commit = 6;</code>

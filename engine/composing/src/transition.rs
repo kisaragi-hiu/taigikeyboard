@@ -19,7 +19,7 @@
 
 use crate::api::{
     combined_display, combined_display_with_tail, nailed_prefix, Applied, CaretDirection,
-    CommitRendering, EngineState, Intent, NailedSegment, Phase, Usage,
+    CommitScript, EngineState, Intent, NailedSegment, Phase, Usage,
 };
 use crate::commit_text::{commit_resolution, resolve_commit_text};
 use crate::derived::{derived_display, display_caret_utf16, strip_tps_separator_markers};
@@ -96,13 +96,13 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
         // continuous_phase findings #2/#3 pattern).
         Intent::FetchAtPos { .. } => snapshot(state, config),
         Intent::CommitContinuous {
-            display_text,
             canonical_text,
             association_tl,
             hanji,
             consumed_bytes,
             syllable_count,
-            resolve,
+            script,
+            roman,
         } => {
             let pick = SegmentPick {
                 canonical_text,
@@ -111,10 +111,7 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
                 consumed_bytes,
                 syllable_count,
             };
-            return match resolve {
-                None => commit_continuous(state, display_text, pick, config).0,
-                Some(resolve) => commit_continuous_resolved(state, pick, resolve, config),
-            };
+            return commit_continuous(state, pick, script, &roman, config);
         }
         Intent::ResetContinuous => reset_continuous(state, config),
         Intent::TelexKey { key } => telex_key(state, &key, config),
@@ -786,30 +783,27 @@ fn commit_preedit_then_insert_external_under_continuous(
     exit_to_idle(state, effects)
 }
 
-/// `Phase::Continuous` segment commit. `consumed_bytes >= pending.len()` is
-/// the final-commit branch (exit to Idle); otherwise mid-commit (stay in
-/// Continuous). Programmer-error inputs (out-of-range or non-char-boundary
-/// `consumed_bytes`) collapse to `noop` rather than panicking.
-// v3.5.8 Phase 9 Bug 1 (Option A): `display_text` is the swap/TPS/both-
-// scripts-formatted string the platform tap handler produced (mirroring the
-// legacy lexicon formatter) — or, on the R5 path, the engine-resolved text; under **Model B (§10)** it is the segment's
-// text **inside the marked region**, not yet in the document. `canonical_text`
-// is the canonical dictionary key (`hanji.unwrap_or(roman)`) used for NextWord
-// association so learning stays mode-independent (user decision b). Empty
-// `canonical_text` (legacy callers) falls back to `display_text`. Model B:
+/// `Phase::Continuous` segment commit of the resolved `display_text`.
+/// `consumed_bytes >= pending.len()` is the final-commit branch (exit to
+/// Idle); otherwise mid-commit (stay in Continuous). Programmer-error inputs
+/// (out-of-range or non-char-boundary `consumed_bytes`) collapse to `noop`
+/// rather than panicking.
+// Under **Model B (§10)** `display_text` is the segment's text **inside the
+// marked region**, not yet in the document. `canonical_text` is the
+// canonical dictionary key (`hanji.unwrap_or(roman)`) used for NextWord
+// association so learning stays mode-independent (user decision b). Model B:
 // a mid-commit emits NO `CommitTextReplacingPreedit` — it only re-renders
 // the combined marked region; the single literal document write happens at
 // final-commit (whole composition) or via Enter (`commit_raw_continuous`).
-// Returns what the commit did beside the response — the outcome the R5 path
-// reports (`commit_continuous_resolved`); the legacy path drops it.
-fn commit_continuous(
+// Returns what the commit did beside the response.
+fn nail_segment(
     state: &mut EngineState,
     display_text: String,
     pick: SegmentPick,
     config: &AppConfig,
 ) -> (Applied, CommitOutcome) {
     let SegmentPick {
-        canonical_text,
+        canonical_text: canonical,
         association_tl,
         hanji,
         consumed_bytes,
@@ -825,11 +819,6 @@ fn commit_continuous(
     {
         return (noop(state, config).into(), CommitOutcome::Ignored);
     }
-    let canonical = if canonical_text.is_empty() {
-        display_text.clone()
-    } else {
-        canonical_text
-    };
     let pending = raw.clone();
     let mut new_nailed = nailed.clone();
     let raw_text = pending[..consumed_bytes].to_string();
@@ -915,24 +904,22 @@ struct SegmentPick {
     syllable_count: u8,
 }
 
-/// R5 — [`commit_continuous`] with the document text resolved by the engine
-/// ([`resolve_commit_text`]) instead of sent by the platform, answering
-/// `ComposingResponse.commit` and, for a pick that nailed or finalized, the
-/// usage the platform used to record (`Applied.usage`). A pick with no
-/// canonical text, or a script it does not have, is ignored: no state
-/// change, no usage.
-fn commit_continuous_resolved(
+/// `Intent::CommitContinuous` (R5): [`nail_segment`] with the document text
+/// the engine resolves ([`resolve_commit_text`]), answering
+/// `ComposingResponse.commit` and, for a pick that nailed or finalized, its
+/// usage (`Applied.usage`). A pick with no script, no canonical text, or a
+/// script it does not have, is ignored: no state change, no usage.
+fn commit_continuous(
     state: &mut EngineState,
     pick: SegmentPick,
-    resolve: CommitRendering,
+    script: Option<CommitScript>,
+    roman: &str,
     config: &AppConfig,
 ) -> Applied {
     let hanji = pick.hanji.clone().filter(|hanji| !hanji.is_empty());
-    let resolved = if pick.canonical_text.is_empty() {
-        None
-    } else {
-        resolve_commit_text(resolve.script, &resolve.roman, hanji.as_deref(), config)
-    };
+    let resolved = script
+        .filter(|_| !pick.canonical_text.is_empty())
+        .and_then(|script| resolve_commit_text(script, roman, hanji.as_deref(), config));
     let Some(resolved) = resolved else {
         let mut response = noop(state, config);
         response.commit = Some(commit_resolution(CommitOutcome::Ignored, None));
@@ -943,7 +930,7 @@ fn commit_continuous_resolved(
         canonical_tl: pick.association_tl.clone(),
         hanji,
     };
-    let (mut applied, outcome) = commit_continuous(state, resolved.text.clone(), pick, config);
+    let (mut applied, outcome) = nail_segment(state, resolved.text.clone(), pick, config);
     if outcome != CommitOutcome::Ignored {
         applied.usage = Some(usage);
     }

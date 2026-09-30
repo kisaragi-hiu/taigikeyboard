@@ -15,6 +15,7 @@
 use composing::api::Engine;
 use composing::dispatch;
 use protos::engine::composing_request::Method;
+use protos::engine::CommitScript;
 use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, Start};
 
 use crate::common::Fetch;
@@ -229,13 +230,13 @@ fn boundary_holds_in_the_pending_buffer_after_a_pick() {
     assert_eq!(jim.consumed_span_end, 3);
     dispatch::handle(
         &req(Method::CommitContinuous(CommitContinuous {
-            display_text: jim.roman.clone(),
+            script: CommitScript::Roman as i32,
+            roman: jim.roman.clone(),
             canonical_text: jim.display_text.clone(),
             association_tl: jim.canonical_tl.clone(),
             hanji: jim.hanji.clone(),
             consumed_bytes: jim.consumed_span_end,
             syllable_count: jim.syllable_count,
-            ..Default::default()
         })),
         &mut engine,
         &cfg,

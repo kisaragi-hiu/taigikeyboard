@@ -17,6 +17,7 @@
 //! `Phase::composing_display` is the canonical whole-composition accessor.
 //! If either invariant breaks, the Enter contract diverges silently.
 
+use composing::CommitScript;
 use composing::{Engine, Intent, Phase};
 use protos::engine::ComposingResponse;
 
@@ -122,13 +123,13 @@ fn invariant_holds_after_mid_commit_leaves_pending_tail() {
     // Mid-commit: consume the first 4 bytes ("tsua" → 紙), pending tail = "li2".
     let response = engine.apply(
         Intent::CommitContinuous {
-            display_text: "紙".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "紙".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "紙".to_string(),
         },
         &config_tl(),
     );
@@ -192,13 +193,13 @@ fn invariant_holds_for_append_after_mid_commit() {
     // Mid-commit consumes "tsua" (4 bytes), pending tail = "li".
     engine.apply(
         Intent::CommitContinuous {
-            display_text: "紙".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "紙".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "紙".to_string(),
         },
         &config_tl(),
     );
@@ -241,13 +242,13 @@ fn invariant_holds_through_multi_step_mid_commit_chain() {
     // Step 1: nail "tsua" → 紙, pending = "lipoo".
     let r1 = engine.apply(
         Intent::CommitContinuous {
-            display_text: "紙".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "紙".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 4,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "紙".to_string(),
         },
         &config_tl(),
     );
@@ -259,13 +260,13 @@ fn invariant_holds_through_multi_step_mid_commit_chain() {
     // Step 2: nail "li" → 你, pending = "poo".
     let r2 = engine.apply(
         Intent::CommitContinuous {
-            display_text: "你".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "你".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 2,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "你".to_string(),
         },
         &config_tl(),
     );

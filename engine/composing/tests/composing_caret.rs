@@ -3,6 +3,7 @@
 //! caret, and `Preedit.caret_utf16` projects it into the display.
 
 use composing::api::{CaretDirection, Phase};
+use composing::CommitScript;
 use composing::{dispatch, Engine, Intent};
 use protos::engine::composing_request::Method;
 use protos::engine::composing_response::Preedit;
@@ -203,13 +204,13 @@ fn continuous_keeps_the_caret_on_promotion_resets_it_on_nail_and_never_enters_a_
     // caret is 3.
     let resp = engine.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -284,13 +285,13 @@ fn continuous_mid_tail_append_keeps_the_nailed_prefix_and_projects_the_caret() {
     engine.apply(Intent::EnterContinuous, &config_tl());
     engine.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config_tl(),
     );
@@ -333,13 +334,13 @@ fn hanji_first_prefix_has_no_space_before_the_tail() {
     engine.apply(Intent::EnterContinuous, &config);
     let resp = engine.apply(
         Intent::CommitContinuous {
-            display_text: "珠".to_string(),
-            canonical_text: String::new(),
+            canonical_text: "珠".to_string(),
             association_tl: String::new(),
             hanji: None,
             consumed_bytes: 3,
             syllable_count: 1,
-            resolve: None,
+            script: Some(CommitScript::Roman),
+            roman: "珠".to_string(),
         },
         &config,
     );

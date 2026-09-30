@@ -11,32 +11,6 @@ public interface CommitContinuousOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <pre>
-   * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
-   * swap/TPS/both-scripts-formatted output the platform tap handler
-   * produces (mirrors the legacy lexicon-path formatter), NOT the
-   * canonical dictionary key.
-   * </pre>
-   *
-   * <code>string display_text = 1;</code>
-   * @return The displayText.
-   */
-  java.lang.String getDisplayText();
-  /**
-   * <pre>
-   * Document-committed string. v3.5.8 Phase 9 Bug 1: this is the
-   * swap/TPS/both-scripts-formatted output the platform tap handler
-   * produces (mirrors the legacy lexicon-path formatter), NOT the
-   * canonical dictionary key.
-   * </pre>
-   *
-   * <code>string display_text = 1;</code>
-   * @return The bytes for displayText.
-   */
-  com.google.protobuf.ByteString
-      getDisplayTextBytes();
-
-  /**
    * <code>uint32 consumed_bytes = 2;</code>
    * @return The consumedBytes.
    */
@@ -51,12 +25,9 @@ public interface CommitContinuousOrBuilder extends
   /**
    * <pre>
    * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
-   * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
-   * association so learning stays mode-independent. Wire-absent / empty
-   * (legacy callers, the other 12 methods) decodes as "" → engine falls
-   * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
-   * (not `optional`): the empty-default IS the fallback signal, no
-   * presence distinction needed.
+   * (`hanji.unwrap_or(roman)`) the engine counts the pick under
+   * (`user_frequency.db`) and NextWord learns, so learning stays
+   * mode-independent. Empty → the commit is IGNORED.
    * </pre>
    *
    * <code>string canonical_text = 4;</code>
@@ -66,12 +37,9 @@ public interface CommitContinuousOrBuilder extends
   /**
    * <pre>
    * v3.5.8 Phase 9 Bug 1 (Option A). Canonical dictionary key
-   * (`hanji.unwrap_or(roman)`) used for `user_frequency.db` / NextWord
-   * association so learning stays mode-independent. Wire-absent / empty
-   * (legacy callers, the other 12 methods) decodes as "" → engine falls
-   * back to `display_text`, preserving pre-Bug-1 behavior. Plain string
-   * (not `optional`): the empty-default IS the fallback signal, no
-   * presence distinction needed.
+   * (`hanji.unwrap_or(roman)`) the engine counts the pick under
+   * (`user_frequency.db`) and NextWord learns, so learning stays
+   * mode-independent. Empty → the commit is IGNORED.
    * </pre>
    *
    * <code>string canonical_text = 4;</code>
@@ -179,16 +147,13 @@ public interface CommitContinuousOrBuilder extends
 
   /**
    * <pre>
-   * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
-   * every caller before R5) is the legacy path: `display_text` is written
-   * as sent and `ComposingResponse.commit` stays absent. Any other value
-   * makes the engine resolve the document text itself from `roman`, `hanji`
-   * and the request's `AppConfig` (`composing::commit_text`), ignore
-   * `display_text`, answer `ComposingResponse.commit`, and — with the
-   * user-data stores open — record the pick's usage itself (the platform
-   * then sends no `RecordUsage` for it). An empty `canonical_text` is
-   * IGNORED on this path (no fallback to the document text). On the TPS
-   * layout the romanization written renders as Bopomofo.
+   * R5 — engine-owned commit resolution: the engine resolves the document
+   * text from `roman`, `hanji` and the request's `AppConfig`
+   * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
+   * with the user-data stores open — records the pick's usage itself (the
+   * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
+   * newer than the engine) is IGNORED. On the TPS layout the romanization
+   * written renders as Bopomofo.
    * </pre>
    *
    * <code>.taigi.engine.CommitScript script = 7;</code>
@@ -197,16 +162,13 @@ public interface CommitContinuousOrBuilder extends
   int getScriptValue();
   /**
    * <pre>
-   * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
-   * every caller before R5) is the legacy path: `display_text` is written
-   * as sent and `ComposingResponse.commit` stays absent. Any other value
-   * makes the engine resolve the document text itself from `roman`, `hanji`
-   * and the request's `AppConfig` (`composing::commit_text`), ignore
-   * `display_text`, answer `ComposingResponse.commit`, and — with the
-   * user-data stores open — record the pick's usage itself (the platform
-   * then sends no `RecordUsage` for it). An empty `canonical_text` is
-   * IGNORED on this path (no fallback to the document text). On the TPS
-   * layout the romanization written renders as Bopomofo.
+   * R5 — engine-owned commit resolution: the engine resolves the document
+   * text from `roman`, `hanji` and the request's `AppConfig`
+   * (`composing::commit_text`), answers `ComposingResponse.commit`, and —
+   * with the user-data stores open — records the pick's usage itself (the
+   * platform sends no `RecordUsage` for it). `UNSPECIFIED` (or a script
+   * newer than the engine) is IGNORED. On the TPS layout the romanization
+   * written renders as Bopomofo.
    * </pre>
    *
    * <code>.taigi.engine.CommitScript script = 7;</code>
