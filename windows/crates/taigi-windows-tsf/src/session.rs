@@ -30,14 +30,15 @@ use std::rc::Rc;
 use std::sync::MutexGuard;
 use taigi_desktop_core::composing::CandidateCellContent;
 use taigi_desktop_core::composing::{
-    CandidateCommitOutcome, CandidateListChange, CandidateSource, ComposingManager,
-    ComposingSessionCoordinator, ContextToken, ResolvedCommit,
+    insert_symbol, pass_through_may_consume, perform_intent, CandidateListChange, CandidateSource,
+    ComposingEffectExecutor, ComposingManager, ComposingSessionCoordinator, ContextToken,
+    IntentSurface,
 };
+use taigi_desktop_core::engine::Effect;
 use taigi_desktop_core::keys::{
     telex_guide_rows, CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent,
     KeyEventSnapshot, ShortcutAction, SymbolPickerIntent,
 };
-use taigi_desktop_core::policies;
 use taigi_desktop_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_core::symbols::SymbolTable;
@@ -114,7 +115,7 @@ impl TextService_Impl {
         // A chord recorded in the settings window takes effect at the next
         // key, whichever way the file's change was noticed.
         self.sync_preserved_keys(&settings);
-        let global_action = global_action_for(&snapshot, &settings);
+        let global_action = ShortcutAction::matching(&snapshot, &settings);
 
         // The Telex guide goes down on the first key after it came up,
         // before that key is read: it is a card to glance at, not a mode
@@ -286,22 +287,13 @@ impl TextService_Impl {
         settings: &SettingsDocument,
         identity: usize,
     ) -> bool {
-        let Some(typed) = ComposingKeyIntent::document_text(snapshot) else {
-            return false;
-        };
-        let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
-        if document_punctuation(settings, &typed, is_width_flip).is_some() {
-            return true;
-        }
         let is_armed = self
             .state
             .borrow_mut()
             .contexts
             .entry_mut(identity)
             .is_some_and(|entry| entry.state.armed_auto_space.is_some());
-        is_armed
-            && policies::is_attaching_punctuation(&typed)
-            && settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
+        pass_through_may_consume(snapshot, settings, is_armed)
     }
 
     /// The session: deferred engine work, ownership handover, password
@@ -1374,8 +1366,9 @@ impl Surface {
     }
 }
 
-/// The session's work, performed against the engine and the document
-/// (`handle(_:client:)`'s switch, plus the picker's insert).
+/// The session's work, performed against the engine and the document: the
+/// shared executor (`taigi_desktop_core::composing::perform_intent`,
+/// `insert_symbol`) over this key's editor and window.
 #[allow(clippy::too_many_arguments)]
 fn perform_work(
     work: &KeyWork,
@@ -1387,326 +1380,89 @@ fn perform_work(
     surface: &Surface,
     armed_swap: Option<&ITfRange>,
 ) -> KeyOutcome {
-    let intent = match work {
-        KeyWork::Compose(intent) => intent,
+    let mut intent_surface = TsfIntentSurface {
+        editor,
+        surface,
+        armed_swap,
+    };
+    match work {
         KeyWork::InsertSymbol(symbol) => {
-            // One string at the caret, so a bracket pair lands as both
-            // halves with the caret after the closing one (`「」`), and not
-            // through the full-width map: what the user picked is what they
-            // get, `()` included. An attaching mark swaps with the auto
-            // space a commit left, as a typed one would.
-            if !swap_auto_space(symbol, armed_swap, settings, manager, editor) {
-                editor.insert_external(symbol);
-                manager.note_character_typed_outside_composition(symbol);
-            }
-            return KeyOutcome::Consumed;
-        }
-    };
-    match intent {
-        ComposingKeyIntent::Input(text) => {
-            manager.append(text, editor);
-            refresh_candidates(settings, manager, list);
-            surface.present(list, editor);
+            insert_symbol(symbol, settings, manager, &mut intent_surface);
             KeyOutcome::Consumed
         }
-        ComposingKeyIntent::TelexKey(key) => {
-            manager.telex_key(key, editor);
-            refresh_candidates(settings, manager, list);
-            surface.present(list, editor);
-            KeyOutcome::Consumed
-        }
-        ComposingKeyIntent::DeleteBackward => {
-            manager.delete_backward(editor);
-            refresh_candidates(settings, manager, list);
-            surface.present(list, editor);
-            KeyOutcome::Consumed
-        }
-        ComposingKeyIntent::Commit => {
-            // The preedit AS TYPED: romanization on a platform shipping TL and
-            // POJ only, whichever script the candidate list led with.
-            let committed = manager
-                .commit_composition(editor)
-                .map(|text| ResolvedCommit {
-                    text,
-                    wrote_romanization: raw_preedit_wrote_romanization(settings),
-                });
-            list.clear();
-            surface.hide();
-            append_auto_space(committed.as_ref(), settings, editor);
-            KeyOutcome::Consumed
-        }
-        ComposingKeyIntent::Cancel => {
-            manager.cancel_composition(editor);
-            list.clear();
-            surface.hide();
-            KeyOutcome::Consumed
-        }
-        ComposingKeyIntent::CommitThenInsert(text) => {
-            // Mapped before the auto-space augmentation so the full-width
-            // character rides the same single mutation as the commit. Both
-            // rewrites CAN fire: this path commits the preedit as typed,
-            // which is romanization under every mode, while the full-width
-            // map still answers to the output MODE — so Hanji-first gets
-            // `taigi？ `. That approximation is a full-width punctuation policy question,
-            // left standing (macOS pins the same pair).
-            let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
-            let document_text =
-                document_punctuation(settings, text, is_width_flip).unwrap_or_else(|| text.clone());
-            let gate = auto_space_gate(settings, raw_preedit_wrote_romanization(settings));
-            let insert = policies::augment_insert(&document_text, manager.display_text(), gate);
-            let committed = manager.commit_composition_then_insert(&insert.text, editor);
-            list.clear();
-            surface.hide();
-            if insert.leaves_trailing_auto_space && committed.is_some() {
-                editor.arm_swap();
-            }
-            KeyOutcome::Consumed
-        }
-        ComposingKeyIntent::CommitThenPassThrough => {
-            manager.commit_composition(editor);
-            list.clear();
-            surface.hide();
-            KeyOutcome::ToHost
-        }
-        ComposingKeyIntent::PassThrough => {
-            let Some(typed) = ComposingKeyIntent::document_text(snapshot) else {
-                return KeyOutcome::ToHost;
-            };
-            // The swap is read before the width for a bare key (the word in
-            // front of the caret is romanization, which keeps Latin marks);
-            // the width-flip chord named its width, so the swap attaches the
-            // glyph the user asked for (`TaigiInputController.swift`).
-            let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
-            let punctuation = document_punctuation(settings, &typed, is_width_flip);
-            let swapping = if is_width_flip {
-                punctuation.as_deref().unwrap_or(&typed)
+        KeyWork::Compose(intent) => {
+            if perform_intent(
+                intent,
+                snapshot,
+                settings,
+                manager,
+                list,
+                &mut intent_surface,
+            ) {
+                KeyOutcome::Consumed
             } else {
-                &typed
-            };
-            if swap_auto_space(swapping, armed_swap, settings, manager, editor) {
-                return KeyOutcome::Consumed;
+                KeyOutcome::ToHost
             }
-            // Punctuation this input method writes itself: the host cannot
-            // map a key it types (and would read the chord as a shortcut).
-            if let Some(punctuation) = punctuation {
-                editor.insert_external(&punctuation);
-                manager.note_character_typed_outside_composition(&punctuation);
-                return KeyOutcome::Consumed;
-            }
-            manager.note_character_typed_outside_composition(&typed);
-            KeyOutcome::ToHost
-        }
-        ComposingKeyIntent::CommitHighlightedCandidate => {
-            commit_candidate(
-                surface.selected_index(),
-                false,
-                settings,
-                manager,
-                editor,
-                list,
-                surface,
-            );
-            KeyOutcome::Consumed
-        }
-        // Space: the highlighted cell's OTHER script.
-        ComposingKeyIntent::CommitAlternateScript => {
-            commit_candidate(
-                surface.selected_index(),
-                true,
-                settings,
-                manager,
-                editor,
-                list,
-                surface,
-            );
-            KeyOutcome::Consumed
-        }
-        ComposingKeyIntent::SelectCandidateSlot { slot, flip } => {
-            // A chord aimed at an empty slot is consumed all the same. `flip`
-            // is Shift on the key: the same cell in its other script, with
-            // Space's "nothing to write" answer for a cell that has one.
-            commit_candidate(
-                surface.candidate_index_for_key_slot(*slot),
-                *flip,
-                settings,
-                manager,
-                editor,
-                list,
-                surface,
-            );
-            KeyOutcome::Consumed
-        }
-        ComposingKeyIntent::Navigate(direction) => {
-            surface.navigate(*direction);
-            KeyOutcome::Consumed
-        }
-        ComposingKeyIntent::MoveCaret(direction) => {
-            // No refetch and no repaint: the text did not change, so the
-            // candidates, the highlight and the page still describe it
-            // (`TaigiInputController.handle` `.moveCaret`).
-            manager.move_caret(*direction, editor);
-            KeyOutcome::Consumed
         }
     }
 }
 
-/// The auto-space swap (`guá ` + `，` → `guá，`, §23) for `text` that is
-/// about to be written outside a composition — typed, or picked from the
-/// symbol picker. The arm's EXISTENCE is the verdict — it is only ever set
-/// after a commit that wrote romanization earned its space — so only
-/// Auto-Space itself is re-read live here. Answers whether the rewrite
-/// happened; on success the swap is re-armed at the caret the rewrite
-/// left, re-verified against the document on the next key (`?!` chains),
-/// and the engine hears about the character as the end of a context.
-fn swap_auto_space(
-    text: &str,
-    armed_swap: Option<&ITfRange>,
-    settings: &SettingsDocument,
-    manager: &mut ComposingManager,
-    editor: &mut CompositionEditor<'_>,
-) -> bool {
-    let Some(anchor) = armed_swap else {
-        return false;
-    };
-    if !policies::is_attaching_punctuation(text)
-        || !settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
-        || !editor.swap_preceding_space(&format!("{text} "), anchor)
-    {
-        return false;
-    }
-    manager.note_character_typed_outside_composition(text);
-    editor.arm_swap();
-    true
+/// One key's editor and window as the shared executor reaches them. The
+/// list is shown and hidden through `Surface`'s queue — replayed after the
+/// session — and the caret it anchors to is read here, under the cookie.
+struct TsfIntentSurface<'k, 'e> {
+    editor: &'k mut CompositionEditor<'e>,
+    surface: &'k Surface,
+    /// The auto space this key may swap: the caret the last commit armed.
+    /// The swap re-verifies it against the document (`?!` chains).
+    armed_swap: Option<&'k ITfRange>,
 }
 
-/// Re-reads the candidates for the composition as it now stands
-/// (`TaigiInputController.swift` `refreshCandidates`); `Surface::present`
-/// then puts them on screen, or hides when the list is empty.
-///
-/// With the Show Candidate Window setting off nothing is fetched, not merely not shown: a
-/// list kept behind no window would turn `is_showing_candidates` on and hand
-/// Space and the slot keys to candidates the user cannot see. The
-/// composition itself is untouched — it still promotes to continuous, and
-/// Enter writes it as typed (`ComposingKeyIntent`). Unlike the Mac, a flip
-/// mid-composition is noticed at the NEXT key event, not at once: the TIP
-/// runs inside the host with no settings observer of its own, and
-/// `settings` is the one snapshot each key is handled against — so the next
-/// key hides an open window (off) or fetches for the composition (on).
-fn refresh_candidates(
-    settings: &SettingsDocument,
-    manager: &mut ComposingManager,
-    list: &mut CandidateSource,
-) {
-    if !settings.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED) {
-        list.clear();
-        return;
-    }
-    match manager.fetch_candidates().list_change() {
-        CandidateListChange::Replace(candidates) => list.set(candidates, manager),
-        CandidateListChange::Clear => list.clear(),
+impl ComposingEffectExecutor for TsfIntentSurface<'_, '_> {
+    fn execute(&mut self, effect: &Effect) {
+        self.editor.execute(effect);
     }
 }
 
-/// Commits the candidate behind window cell `cell_index`, in the cell's own
-/// script or (`flip`, Space) the other one. The script is resolved BEFORE the
-/// commit and the same one decides the auto space, so a Combined roman cell earns
-/// it as `Alternate` under the derived swap.
-#[allow(clippy::too_many_arguments)]
-fn commit_candidate(
-    cell_index: Option<usize>,
-    flip: bool,
-    settings: &SettingsDocument,
-    manager: &mut ComposingManager,
-    editor: &mut CompositionEditor<'_>,
-    list: &mut CandidateSource,
-    surface: &Surface,
-) {
-    // Nil (no window) and an index past the list both mean nothing to
-    // commit; the key is consumed either way.
-    let Some((candidate, script)) = cell_index.and_then(|index| list.resolve(index, flip)) else {
-        return;
-    };
-    let candidate = candidate.clone();
-    let (outcome, committed) = manager.commit_candidate(&candidate, script, editor);
-    log::debug!("candidate.commit {outcome:?}");
-    match outcome {
-        CandidateCommitOutcome::Finalized => {
-            list.clear();
-            surface.hide();
-            append_auto_space(committed.as_ref(), settings, editor);
-        }
-        CandidateCommitOutcome::Nailed
-        | CandidateCommitOutcome::Ignored
-        | CandidateCommitOutcome::Unavailable => {
-            refresh_candidates(settings, manager, list);
-            surface.present(list, editor);
-        }
+impl IntentSurface for TsfIntentSurface<'_, '_> {
+    fn insert_external(&mut self, text: &str) {
+        self.editor.insert_external(text);
     }
-}
 
-/// The gate every auto-space site reads — Auto-Space live
-/// (`isAutoSpaceGateActive`), and `wrote_romanization` from whatever
-/// resolved the string this commit wrote. Never re-derived from the output
-/// mode here: a candidate commit gets it from `composing::resolved_commit`,
-/// a preedit commit from [`raw_preedit_wrote_romanization`], and the swap
-/// from the armed record of the commit that wrote the space.
-fn auto_space_gate(settings: &SettingsDocument, wrote_romanization: bool) -> bool {
-    policies::is_gate_active(
-        settings.bool(&keys::IS_AUTO_SPACE_ENABLED),
-        wrote_romanization,
-    )
-}
-
-/// Whether committing the preedit AS TYPED writes romanization — the
-/// literal-commit chord and the mid-composition punctuation key. One key read,
-/// not a whole `engine_settings()` snapshot: this runs per keystroke.
-fn raw_preedit_wrote_romanization(settings: &SettingsDocument) -> bool {
-    policies::raw_preedit_writes_romanization(settings.choice(&keys::INPUT_MODE))
-}
-
-/// The trailing auto space after an explicit commit, and the swap armed on
-/// it. Lifecycle commits never come here.
-fn append_auto_space(
-    committed: Option<&ResolvedCommit>,
-    settings: &SettingsDocument,
-    editor: &mut CompositionEditor<'_>,
-) {
-    let Some(committed) = committed else { return };
-    if !auto_space_gate(settings, committed.wrote_romanization)
-        || !policies::should_append_space(&committed.text)
-    {
-        return;
+    fn swap_preceding_space(&mut self, replacement: &str) -> bool {
+        let Some(anchor) = self.armed_swap else {
+            return false;
+        };
+        self.editor.swap_preceding_space(replacement, anchor)
     }
-    editor.insert_external(" ");
-    if editor.failure.is_none() {
-        editor.arm_swap();
+
+    fn arm_swap(&mut self) {
+        self.editor.arm_swap();
     }
-}
 
-/// `policies::document_punctuation` under the DERIVED width, so roman-only
-/// stays half-width and combined follows the stored swap the shortcut
-/// toggles; `is_width_flip` is `width_flip_character`'s verdict on the key
-/// that typed `text`.
-fn document_punctuation(
-    settings: &SettingsDocument,
-    text: &str,
-    is_width_flip: bool,
-) -> Option<String> {
-    policies::document_punctuation(
-        text,
-        settings.engine_settings().is_full_width_punctuation,
-        is_width_flip,
-    )
-}
+    /// The editor keeps its first failure; `run_key` abandons the
+    /// composition on it after the executor returns.
+    fn has_write_failed(&self) -> bool {
+        self.editor.failure.is_some()
+    }
 
-/// The global action `snapshot` is, if its recorded chord matches.
-fn global_action_for(
-    snapshot: &KeyEventSnapshot,
-    settings: &SettingsDocument,
-) -> Option<ShortcutAction> {
-    ShortcutAction::ALL.into_iter().find(|action| {
-        action
-            .chord_in(settings)
-            .is_some_and(|chord| chord.matches(snapshot))
-    })
+    fn list_changed(&mut self, list: &mut CandidateSource) {
+        self.surface.present(list, self.editor);
+    }
+
+    fn list_closed(&mut self) {
+        self.surface.hide();
+    }
+
+    fn selected_index(&self) -> Option<usize> {
+        self.surface.selected_index()
+    }
+
+    fn index_for_key_slot(&self, slot: usize) -> Option<usize> {
+        self.surface.candidate_index_for_key_slot(slot)
+    }
+
+    fn navigate(&mut self, direction: CandidateNavigation) {
+        self.surface.navigate(direction);
+    }
 }
