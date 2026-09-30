@@ -11,11 +11,10 @@ use std::path::PathBuf;
 
 use lexicon::association_reader::AssociationReader;
 use lexicon::dictionary_reader::{DictionaryReader, Filter};
-use lexicon::handle::EngineHandle;
-use lexicon::paths::LexiconPaths;
 use lexicon::prefix_index::PrefixIndex;
 use lexicon::search::{self, SearchInputMode, SearchParams};
 use lexicon::LexiconError;
+use lexicon::{EngineHandle, LexiconPaths};
 
 use crate::common::{build_tkdb_v3, write_synthetic_fst};
 use test_support::{build_tkwa, engine_install_lock, write_temp};

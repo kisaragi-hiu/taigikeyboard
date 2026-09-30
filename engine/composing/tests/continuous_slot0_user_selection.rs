@@ -7,7 +7,7 @@
 //!    (`lexicon::best_candidate_for_key_with_barriers`) ranked by
 //!    `freq × boost` with the boost capped at `ranking::MAX_BOOST` (×5),
 //!    so 更新 (freq 1) could never beat 敬神 (freq 25) whatever the count.
-//!    User weight is now the leading `SortKey` dimension for the edge pick
+//!    User weight is now the leading `CandidateSortKey` dimension for the edge pick
 //!    and the span-local list alike.
 //! 2. **What the edge costs.** The walker priced an edge on the chosen
 //!    word's own frequency; swapping in the rarer 更新 made the whole-buffer

@@ -593,7 +593,7 @@ fn dictionary_homophone_beats_a_learned_row_until_the_user_prefers_it() {
     );
 
     // One pick of the learned phrase → it leads (user weight is the
-    // leading SortKey dimension, same as #69).
+    // leading CandidateSortKey dimension, same as #69).
     let hanji = fetch_hanji(
         "kikhilai",
         "tl",

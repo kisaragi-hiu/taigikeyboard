@@ -252,7 +252,7 @@ pub const USER_WEIGHT_DECAY_TAU_MS: i64 = 30 * 24 * 60 * 60 * 1000;
 /// `composing::lattice::cost::edge_cost`).
 ///
 /// Also the Continuous candidate's `RawCandidate.user_weight` — the
-/// leading user-preference dimension of the lexicon `SortKey` and of
+/// leading user-preference dimension of the lexicon `CandidateSortKey` and of
 /// the walker's per-edge homophone pick (2026-09-14): any selected
 /// word (`> 0.0`) precedes every never-selected one.
 pub fn decayed_user_weight_delta(count: u32, now_ms: i64, last_used_ms: i64) -> f64 {

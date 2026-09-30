@@ -336,7 +336,7 @@ object RustEngineBridge {
      * that would parallel-implement the derive and violate
      * `.claude/rules/cross-platform-alignment.md`).
      *
-     * Metadata-only in v3.5.8 — does NOT enter the engine's `SortKey`
+     * Metadata-only in v3.5.8 — does NOT enter the engine's `CandidateSortKey`
      * tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a). `UNSPECIFIED`
      * is the proto3 default and means "unknown carrier — old engine or
      * dropped field"; never emitted by the current Rust engine.

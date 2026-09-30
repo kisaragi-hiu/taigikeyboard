@@ -386,7 +386,7 @@ Refactor so all candidates flow through one carrier; lexicon path becomes an int
 **Rejected**:
 - Scope = full v3.5.9+ release; out of v3.5.8 Phase 9 timebox
 - Would touch the lexicon `search` API surface that 10+ platform call sites depend on
-- Lexicon path has different ranking (linear `process_candidates`, no SortKey lattice) — merging requires re-design of `engine/ranking`
+- Lexicon path has different ranking (linear `process_candidates`, no CandidateSortKey lattice) — merging requires re-design of `engine/ranking`
 
 ### 6.3 Option D — Wire `hanji_or_empty` (no proto3 optional)
 
@@ -542,7 +542,7 @@ Per [`~/.claude/rules/planning.md`](https://github.com/siansiansu/configurations
 - **No** `CandidateMode`-based rendering rules — Phase 9.2 mode is metadata-only; cell shape is decided by `hanji` presence (mirrors lexicon path)
 - **No** new `display_strategy` / `display_hints` proto field — single roman + hanji pair is sufficient
 - **No** changes to `commitContinuous` wire (display_text/consumed_bytes/syllable_count stays exactly as is)
-- **No** changes to `engine/ranking` SortKey **base policy** (display fields don't enter ranking) — see §15.5 for how partial-prefix candidates fit the 8-dim SortKey (S8 demoted `-coverage` to a weak tiebreak below score/freq)
+- **No** changes to `engine/ranking` CandidateSortKey **base policy** (display fields don't enter ranking) — see §15.5 for how partial-prefix candidates fit the 8-dim CandidateSortKey (S8 demoted `-coverage` to a weak tiebreak below score/freq)
 - **No** changes to `user_frequency.db` schema (commit key remains `display_text`)
 - **No** custom_dictionary integration (still scheduled for Phase 9.6 — wire fields will naturally flow once custom path emits `RawCandidate`)
 - **No** keyboard-level mode toggle (HanjiMode / TailoMode like MOE) — TaigiKeyboard's `isTranslateSwapped` axis is the deliberate UX differentiator (§11 + §15.1)

@@ -1,9 +1,10 @@
 //! Continuous candidate construction: dictionary / custom / learned rows to
 //! [`RawCandidate`], plus the `(roman, hanji, span)` dedupe.
 
-use ranking::{calculate_continuous_score, source_tier_rank, ContextRanks, FrequencyMap};
+use ranking::{
+    calculate_continuous_score, sort_by_candidate_key, source_tier_rank, ContextRanks, FrequencyMap,
+};
 
-use super::sort_key::sort_by_sort_key;
 use super::{
     derive_mode, ConsumedSpan, ContinuousFetchCtx, CustomEntry, LearnedEntry, RawCandidate,
     FORM_NOTONE,
@@ -12,7 +13,7 @@ use crate::dictionary_reader::DictionaryRecord;
 
 /// Shared tail of every continuous fetch: merge `custom_dictionary.db`
 /// hits into the dictionary candidates `out`, collapse `(roman, hanji,
-/// span)` duplicates, then apply the eight-dimension [`SortKey`](super::sort_key::SortKey) sort.
+/// span)` duplicates, then apply the nine-dimension [`CandidateSortKey`](ranking::CandidateSortKey) sort.
 /// `coverage_kind` is stamped on the custom synths — `COVERAGE_KIND_FULL`
 /// on the exact path, `COVERAGE_KIND_PARTIAL_PREFIX` on the partial-prefix
 /// path so §15.5's "partial-prefix ranks strictly below full-syllable" rule
@@ -42,9 +43,9 @@ use crate::dictionary_reader::DictionaryRecord;
 /// **Dedupe** (Item 12): `dict.bin` is already collapsed by
 /// `dictionary/build/merge_csv.py:107`'s `groupby(["hanzi", "_tl_key"])`,
 /// so the only realistic duplicate is custom-vs-`dict.bin` sharing a
-/// `(roman, hanji)` pair. MUST run BEFORE the `SortKey` sort: the winner is
+/// `(roman, hanji)` pair. MUST run BEFORE the `CandidateSortKey` sort: the winner is
 /// the lowest `source_tier_rank` survivor (custom rank 0 beats any
-/// `dict.bin` tier), which is NOT what the full 8-dim sort would pick (it
+/// `dict.bin` tier), which is NOT what the full 9-dim sort would pick (it
 /// weighs `score`/`freq` ahead of `source_rank`, so a high-freq `dict.bin`
 /// duplicate could otherwise mask the user's custom entry). `(roman,
 /// hanji)` is the dual key (Codex pre-impl D1) so romanization variants of
@@ -101,7 +102,7 @@ pub(super) fn merge_custom_dedupe_sort(
         ));
     }
     dedupe_by_roman_hanji_span(&mut out);
-    sort_by_sort_key(out, raw_len)
+    sort_by_candidate_key(out, raw_len, RawCandidate::rank_facts)
 }
 
 pub(super) fn record_to_candidate(
@@ -181,14 +182,14 @@ pub(super) fn record_to_candidate(
 ///   FST/syllabifier span model, so they commit the whole buffer as
 ///   one block (final-commit), mirroring the legacy lexicon path's
 ///   treatment of custom dict and Item 10 partial-prefix Q15.4. With
-///   `consumed_span_end == raw_len` the downstream `SortKey.tier` is
+///   `consumed_span_end == raw_len` the downstream `CandidateSortKey.tier` is
 ///   `0` (full-buffer) — NO forced Tier-1 promotion
 ///   (`docs/releases/v3.5.8/plan.md` § Phase 9: "無強制 Tier 1 promotion").
 /// - `frequency = 0`, `syllable_count = 1` — `custom_dictionary.db`
 ///   carries no `dict.bin`-comparable frequency. `is_custom = true`
 ///   gives `source_tier_rank` rank `0`, which is what governs the
 ///   `(roman, hanji)` dedupe winner and prior-axis ties; it does NOT
-///   globally float custom above `dict.bin` because `SortKey` weighs
+///   globally float custom above `dict.bin` because `CandidateSortKey` weighs
 ///   `score`/`freq` ahead of `source_rank`. This is intentional —
 ///   Item 12's job is duplicate elimination + custom-wins-collision,
 ///   not a global custom-priority tier
@@ -261,7 +262,7 @@ pub(super) fn custom_entry_to_candidate(
         form: FORM_NOTONE,
         frequency: 0,
         // No `dict.bin` source bits; rank is forced to 0 via
-        // `is_custom = true` in `SortKey::new` /
+        // `is_custom = true` in `CandidateSortKey::new` /
         // `dedupe_by_roman_hanji_span` (`source_tier_rank` short-circuits).
         bitmask: 0,
         mode,
@@ -274,7 +275,7 @@ pub(super) fn custom_entry_to_candidate(
 
 /// Learned phrases (§50) — one [`LearnedEntry`] as a candidate at `span`:
 /// a `dict.bin` record the dictionary does not carry, with no frequency and
-/// no source bits, so [`SortKey`](super::sort_key::SortKey) gives it the default source rank (below
+/// no source bits, so [`CandidateSortKey`](ranking::CandidateSortKey) gives it the default source rank (below
 /// every dictionary source and below a manual custom row) and the
 /// `(roman, hanji, span)` dedupe keeps a dictionary / custom duplicate over
 /// it. `syllable_count` is read off the TL's separators for the walker's
@@ -312,7 +313,7 @@ pub(super) fn learned_entry_to_candidate(
 /// D1 + D2, 2026-05-15). **v3.5.8 S2: key extended to
 /// `(roman, hanji, consumed_span)`** (Codex pre-impl S2 Q1d,
 /// 2026-05-16). Runs on the merged `dict.bin` + custom candidate
-/// vector BEFORE the `SortKey` sort.
+/// vector BEFORE the `CandidateSortKey` sort.
 ///
 /// - **Key**: the triple `(roman, hanji, consumed_span)`. The
 ///   `(roman, hanji)` pair (D1) keeps romanization variants of the
@@ -335,7 +336,7 @@ pub(super) fn learned_entry_to_candidate(
 ///   `merge_csv.py` already precludes in production — keeps the first
 ///   FST hit).
 /// - Survivor **insertion order is preserved** so the downstream
-///   `SortKey.stable_idx` stays deterministic.
+///   `CandidateSortKey.stable_idx` stays deterministic.
 pub(super) fn dedupe_by_roman_hanji_span(out: &mut Vec<RawCandidate>) {
     use std::collections::{HashMap, HashSet};
     // key (borrowed from `out`) → (winning source rank, index of winner).
@@ -456,9 +457,8 @@ mod item12_custom_dedupe_tests {
     //! rank 0). Spec: `docs/engine/continuous-input-ranking.md`
     //! §10.10.
     use super::*;
-    use crate::continuous::sort_key::SortKey;
     use crate::continuous::{CandidateMode, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX};
-    use ranking::CONTEXT_RANK_NONE;
+    use ranking::{CandidateSortKey, CONTEXT_RANK_NONE};
 
     /// Minimal non-custom `dict.bin`-shaped candidate. `bitmask` picks
     /// the source rank; all sort-noise dims are neutralized so a test
@@ -651,7 +651,7 @@ mod item12_custom_dedupe_tests {
     fn dedupe_rank_tie_keeps_earlier_insertion_and_order() {
         // D2 tie-break: two same-rank non-custom collisions keep the
         // earlier-inserted one; unrelated entries keep insertion order
-        // so the downstream `SortKey.stable_idx` stays deterministic.
+        // so the downstream `CandidateSortKey.stable_idx` stays deterministic.
         let mut first = dict_cand("a", Some("甲"), 1 << 0);
         first.frequency = 10; // earlier insertion, lower freq
         let mut second = dict_cand("a", Some("甲"), 1 << 0);
@@ -723,7 +723,7 @@ mod item12_custom_dedupe_tests {
 
     #[test]
     fn is_custom_forces_source_rank_zero_in_sortkey() {
-        // The `is_custom` axis must reach `SortKey` via
+        // The `is_custom` axis must reach `CandidateSortKey` via
         // `source_tier_rank(bitmask, is_custom)` — a custom candidate
         // (no source bits) sorts ahead of a default-source dict
         // candidate when every prior dim is equal.
@@ -745,8 +745,8 @@ mod item12_custom_dedupe_tests {
         dict.consumed_span = (0, 3);
         dict.frequency = 0;
         dict.score = custom.score;
-        let k_custom = SortKey::new(&custom, 3, 0);
-        let k_dict = SortKey::new(&dict, 3, 1);
+        let k_custom = CandidateSortKey::new(&custom.rank_facts(), 3, 0);
+        let k_dict = CandidateSortKey::new(&dict.rank_facts(), 3, 1);
         assert!(
             k_custom < k_dict,
             "is_custom → source_rank 0 must outrank default source rank"

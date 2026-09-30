@@ -13,18 +13,18 @@
 pub mod api;
 pub mod association_reader;
 pub mod classification;
-pub mod continuous;
+mod continuous;
 mod dictionary_filters;
 pub mod dictionary_reader;
 pub mod dispatch;
-pub mod error;
-pub mod handle;
+mod error;
+mod handle;
 pub mod key_normalizer;
-pub mod paths;
+mod paths;
 pub mod prefix_index;
 pub mod search;
-pub mod syllable_inventory;
-pub mod tps_pattern;
+mod syllable_inventory;
+mod tps_pattern;
 
 const _: fn() = || {
     fn assert_send<T: Send>() {}
