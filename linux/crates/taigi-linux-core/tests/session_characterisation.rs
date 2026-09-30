@@ -1,0 +1,308 @@
+//! What one key does through the whole Linux session path —
+//! `process_raw_key` over a runtime on the repo's real dictionaries — pinned
+//! before the key-intent executor moves into `taigi-desktop-core`
+//! (maintainability roadmap R3(c)). Every expected value here was read by
+//! running HEAD, not derived.
+//!
+//! Hermetic: nothing is learned (the data directory cannot be created), so a
+//! commit never reorders a later test's list; and the tests take one lock,
+//! because the lexicon and the engine's user data are one per process.
+
+use std::path::PathBuf;
+use std::sync::{Mutex, MutexGuard};
+use taigi_desktop_core::composing::ContextToken;
+use taigi_desktop_core::settings::keys;
+use taigi_desktop_storage::SettingsFileStore;
+use taigi_linux_core::session::{end_session, process_raw_key, EngineState, CAP_SURROUNDING_TEXT};
+use taigi_linux_core::{Emit, LookupTableContent, Runtime};
+use taigi_linux_platform::key_translation::state;
+use taigi_linux_platform::{RawKeyEvent, UserDirectories};
+
+const SPACE: u32 = 0x20;
+const COMMA: u32 = 0x2c;
+const PERIOD: u32 = 0x2e;
+const RETURN: u32 = 0xff0d;
+const ESCAPE: u32 = 0xff1b;
+const BACKSPACE: u32 = 0xff08;
+
+/// A session over the real dictionaries with auto-space on or off, and a
+/// client that can (or cannot) delete surrounding text.
+struct Session {
+    _directory: tempfile::TempDir,
+    runtime: Runtime,
+    token: ContextToken,
+    state: EngineState,
+}
+
+/// Ends the composition like a focus-out, so the engine singleton carries
+/// nothing into the next test.
+impl Drop for Session {
+    fn drop(&mut self) {
+        end_session(&self.runtime, self.token, &mut self.state);
+    }
+}
+
+/// One test at a time: the lexicon and the user data are one per process.
+/// Held for the whole test, so a test may open several sessions.
+fn serial() -> MutexGuard<'static, ()> {
+    static SERIAL: Mutex<()> = Mutex::new(());
+    SERIAL
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
+
+impl Session {
+    fn new(is_auto_space_enabled: bool, can_delete_surrounding: bool) -> Self {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let config = directory.path().join("config");
+        std::fs::create_dir_all(&config).expect("config directory");
+        SettingsFileStore::new(&config)
+            .update(|document| {
+                document.set_bool(&keys::IS_AUTO_SPACE_ENABLED, is_auto_space_enabled)
+            })
+            .expect("settings written");
+        // A data directory under a FILE cannot be created: no learning.
+        let blocker = directory.path().join("not-a-directory");
+        std::fs::write(&blocker, "").expect("blocker file");
+        let runtime = Runtime::from_directories(
+            Some(UserDirectories {
+                config,
+                data: blocker.join("data"),
+            }),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../dictionaries"),
+        );
+        let state = EngineState {
+            capabilities: if can_delete_surrounding {
+                CAP_SURROUNDING_TEXT
+            } else {
+                0
+            },
+            ..EngineState::default()
+        };
+        let token = runtime.allocate_token();
+        Self {
+            _directory: directory,
+            runtime,
+            token,
+            state,
+        }
+    }
+
+    fn press_with(&mut self, keyval: u32, modifiers: u32) -> (bool, Vec<Emit>) {
+        let reply = process_raw_key(
+            &self.runtime,
+            self.token,
+            &mut self.state,
+            RawKeyEvent {
+                keyval,
+                keycode: 0,
+                state: modifiers,
+            },
+        );
+        (reply.handled, reply.emits)
+    }
+
+    /// A consumed key's emits.
+    fn press(&mut self, keyval: u32) -> Vec<Emit> {
+        let (is_handled, emits) = self.press_with(keyval, 0);
+        assert!(is_handled, "key {keyval:#x} is consumed");
+        emits
+    }
+
+    /// Types `letters` into a composition and answers the last key's list.
+    fn type_word(&mut self, letters: &str) -> LookupTableContent {
+        let mut last = Vec::new();
+        for letter in letters.chars() {
+            last = self.press(letter as u32);
+        }
+        match last.as_slice() {
+            [Emit::Preedit { text, .. }, Emit::LookupTable(table)] => {
+                assert_eq!(text, letters);
+                table.clone()
+            }
+            other => panic!("typing shows the preedit and its list, got {other:?}"),
+        }
+    }
+}
+
+fn commit(text: &str) -> Emit {
+    Emit::Commit(text.to_owned())
+}
+
+#[test]
+fn typing_shows_the_preedit_and_a_labelled_list_led_by_the_literal() {
+    let _serial = serial();
+    let mut session = Session::new(false, false);
+    let table = session.type_word("ho");
+    // trace: cell 0 is the literal roman; the first hanji cell is 好 hó; the
+    // Standard slot keys label the page, vertical, cursor on the literal.
+    assert_eq!(&table.candidates[..2], ["ho", "好 hó"]);
+    assert_eq!(table.labels, ["q", "w", "d", "f", "z", "x", "v", "y", ";"]);
+    assert_eq!((table.cursor, table.cursor_visible), (0, true));
+    assert_eq!((table.page_size, table.vertical), (9, true));
+}
+
+#[test]
+fn a_slot_key_commits_its_cell_and_closes_the_list() {
+    let _serial = serial();
+    for is_auto_space_enabled in [false, true] {
+        let mut session = Session::new(is_auto_space_enabled, true);
+        session.type_word("ho");
+        assert_eq!(
+            session.press('w' as u32),
+            [Emit::ClearPreedit, commit("好"), Emit::HideLookupTable],
+            "auto_space={is_auto_space_enabled}: a Hanji commit takes no space"
+        );
+        assert!(!session.state.armed_auto_space);
+    }
+}
+
+#[test]
+fn return_commits_the_literal_and_auto_space_follows_a_romanization() {
+    let _serial = serial();
+    let mut session = Session::new(false, true);
+    session.type_word("ho");
+    assert_eq!(
+        session.press(RETURN),
+        [Emit::ClearPreedit, commit("ho"), Emit::HideLookupTable]
+    );
+    assert!(!session.state.armed_auto_space);
+
+    let mut session = Session::new(true, true);
+    session.type_word("ho");
+    assert_eq!(
+        session.press(RETURN),
+        [
+            Emit::ClearPreedit,
+            commit("ho"),
+            commit(" "),
+            Emit::HideLookupTable
+        ]
+    );
+    assert!(session.state.armed_auto_space, "the space is swappable");
+}
+
+#[test]
+fn escape_abandons_the_composition() {
+    let _serial = serial();
+    let mut session = Session::new(true, true);
+    session.type_word("ho");
+    assert_eq!(
+        session.press(ESCAPE),
+        [Emit::ClearPreedit, Emit::HideLookupTable]
+    );
+    assert!(!session.state.armed_auto_space);
+}
+
+#[test]
+fn space_inside_a_composition_only_redraws_the_list() {
+    let _serial = serial();
+    let mut session = Session::new(true, true);
+    let typed = session.type_word("tsiah");
+    assert_eq!(session.press(SPACE), [Emit::LookupTable(typed)]);
+    assert!(!session.state.armed_auto_space);
+}
+
+#[test]
+fn punctuation_inside_a_composition_commits_the_literal_with_the_full_width_mark() {
+    let _serial = serial();
+    let mut session = Session::new(false, true);
+    session.type_word("tsiah");
+    assert_eq!(
+        session.press(COMMA),
+        [Emit::ClearPreedit, commit("tsiah，"), Emit::HideLookupTable]
+    );
+    assert!(!session.state.armed_auto_space);
+
+    let mut session = Session::new(true, true);
+    session.type_word("tsiah");
+    assert_eq!(
+        session.press(COMMA),
+        [
+            Emit::ClearPreedit,
+            commit("tsiah， "),
+            Emit::HideLookupTable
+        ]
+    );
+    assert!(session.state.armed_auto_space);
+}
+
+#[test]
+fn bare_punctuation_after_hanji_is_full_width() {
+    let _serial = serial();
+    let mut session = Session::new(true, true);
+    session.type_word("ho");
+    session.press('w' as u32);
+    assert_eq!(session.press(PERIOD), [commit("。")]);
+}
+
+#[test]
+fn the_auto_space_swap_needs_the_surrounding_text_capability() {
+    let _serial = serial();
+    // Without it the space stays and the mark is typed after it, full width.
+    let mut session = Session::new(true, false);
+    session.type_word("ho");
+    session.press(RETURN);
+    assert!(session.state.armed_auto_space);
+    assert_eq!(session.press(COMMA), [commit("，")]);
+    assert!(!session.state.armed_auto_space);
+
+    // With it the space goes and the mark takes its half-width romanized form
+    // plus the space.
+    let mut session = Session::new(true, true);
+    session.type_word("ho");
+    session.press(RETURN);
+    assert_eq!(
+        session.press(COMMA),
+        [
+            Emit::DeleteSurrounding {
+                offset: -1,
+                count: 1
+            },
+            commit(", ")
+        ]
+    );
+    // trace (read by running HEAD): the swapped mark ends in a space of its
+    // own, so the next mark may swap again.
+    assert!(session.state.armed_auto_space);
+}
+
+#[test]
+fn the_armed_swap_lasts_exactly_one_key() {
+    let _serial = serial();
+    let mut session = Session::new(true, true);
+    session.type_word("ho");
+    session.press(RETURN);
+    assert!(session.state.armed_auto_space);
+    session.press('x' as u32);
+    assert!(!session.state.armed_auto_space, "any key spends the arm");
+    session.press(ESCAPE);
+    assert_eq!(session.press(COMMA), [commit("，")], "no swap two keys on");
+}
+
+#[test]
+fn the_symbol_picker_neither_swaps_nor_keeps_the_arm() {
+    let _serial = serial();
+    let mut session = Session::new(true, true);
+    session.type_word("ho");
+    session.press(RETURN);
+    assert!(session.state.armed_auto_space);
+    let (is_handled, emits) = session.press_with(COMMA, state::CONTROL | state::MOD1);
+    assert!(is_handled);
+    let [Emit::LookupTable(picker)] = emits.as_slice() else {
+        panic!("Ctrl+Alt+, opens the picker, got {emits:?}");
+    };
+    let first = picker.candidates[0].clone();
+    assert_eq!(
+        session.press(RETURN),
+        [commit(&first), Emit::HideLookupTable]
+    );
+    assert!(!session.state.armed_auto_space);
+}
+
+#[test]
+fn backspace_with_nothing_composed_is_the_clients() {
+    let _serial = serial();
+    let mut session = Session::new(true, true);
+    assert_eq!(session.press_with(BACKSPACE, 0), (false, Vec::new()));
+}
