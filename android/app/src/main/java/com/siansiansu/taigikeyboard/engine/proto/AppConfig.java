@@ -23,10 +23,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `roman` (`composing::dispatch`), the prediction `text`
  * (`nextword::filter`) and the engine-synthesised compound joiner
  * (`composing::api::nailed_prefix`); identity fields (`display_text`,
- * `canonical_tl`, `tl`) and user-typed text keep their hyphens. The
- * platform sends `false` under a TPS layout (the engine sees TPS as
- * `"tl"` / `"poj"` and the platform re-splits `roman` on `-` for bopomofo),
- * exactly as it folds TPS into `is_translate_swapped`.
+ * `canonical_tl`, `tl`) and user-typed text keep their hyphens. The engine
+ * applies it only off the TPS layout (`AppConfig::renders_hyphenless`): the
+ * platform re-splits `roman` on `-` for bopomofo.
  *
  * 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ becomes ᴺ in capitals OFF, USER): the
  * POJ nasal marker is always `ⁿ` U+207F, never `ᴺ` U+1D3A (Caps Lock
@@ -34,6 +33,16 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * marker follows the preceding letter's case). Rendering only
  * (`phonetics::case_transform::apply_nasal_marker_case`, §53); identity
  * keys already fold both glyphs to `nn`.
+ *
+ * 2026-09-30 (R6) `input_mode` accepts `"tps"` as a real mode, and
+ * `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
+ * `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
+ * `"tps"` the engine composes with the TL tables and applies the TPS fold
+ * itself (`AppConfig::renders_hanji_first` / `renders_hyphenless` in
+ * `engine/protos/src/lib.rs`), so `is_translate_swapped` and
+ * `hyphenless_roman` are the Candidate-Display-projected stored values
+ * WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
+ * plus the TPS-folded swap / hyphenless) — both render identically.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.AppConfig}
@@ -50,6 +59,10 @@ public  final class AppConfig extends
   public static final int INPUT_MODE_FIELD_NUMBER = 2;
   private java.lang.String inputMode_;
   /**
+   * <pre>
+   * "tl" | "poj" | "tps" | "english".
+   * </pre>
+   *
    * <code>string input_mode = 2;</code>
    * @return The inputMode.
    */
@@ -58,6 +71,10 @@ public  final class AppConfig extends
     return inputMode_;
   }
   /**
+   * <pre>
+   * "tl" | "poj" | "tps" | "english".
+   * </pre>
+   *
    * <code>string input_mode = 2;</code>
    * @return The bytes for inputMode.
    */
@@ -67,6 +84,10 @@ public  final class AppConfig extends
     return com.google.protobuf.ByteString.copyFromUtf8(inputMode_);
   }
   /**
+   * <pre>
+   * "tl" | "poj" | "tps" | "english".
+   * </pre>
+   *
    * <code>string input_mode = 2;</code>
    * @param value The inputMode to set.
    */
@@ -77,6 +98,10 @@ public  final class AppConfig extends
     inputMode_ = value;
   }
   /**
+   * <pre>
+   * "tl" | "poj" | "tps" | "english".
+   * </pre>
+   *
    * <code>string input_mode = 2;</code>
    */
   private void clearInputMode() {
@@ -84,6 +109,10 @@ public  final class AppConfig extends
     inputMode_ = getDefaultInstance().getInputMode();
   }
   /**
+   * <pre>
+   * "tl" | "poj" | "tps" | "english".
+   * </pre>
+   *
    * <code>string input_mode = 2;</code>
    * @param value The bytes for inputMode to set.
    */
@@ -149,6 +178,10 @@ public  final class AppConfig extends
   public static final int IS_TRANSLATE_SWAPPED_FIELD_NUMBER = 5;
   private boolean isTranslateSwapped_;
   /**
+   * <pre>
+   * Candidate-Display-projected Hanji-first swap, without the TPS fold.
+   * </pre>
+   *
    * <code>bool is_translate_swapped = 5;</code>
    * @return The isTranslateSwapped.
    */
@@ -157,6 +190,10 @@ public  final class AppConfig extends
     return isTranslateSwapped_;
   }
   /**
+   * <pre>
+   * Candidate-Display-projected Hanji-first swap, without the TPS fold.
+   * </pre>
+   *
    * <code>bool is_translate_swapped = 5;</code>
    * @param value The isTranslateSwapped to set.
    */
@@ -165,6 +202,10 @@ public  final class AppConfig extends
     isTranslateSwapped_ = value;
   }
   /**
+   * <pre>
+   * Candidate-Display-projected Hanji-first swap, without the TPS fold.
+   * </pre>
+   *
    * <code>bool is_translate_swapped = 5;</code>
    */
   private void clearIsTranslateSwapped() {
@@ -287,6 +328,10 @@ public  final class AppConfig extends
   public static final int HYPHENLESS_ROMAN_FIELD_NUMBER = 10;
   private boolean hyphenlessRoman_;
   /**
+   * <pre>
+   * No Hyphens as stored, without the TPS fold.
+   * </pre>
+   *
    * <code>bool hyphenless_roman = 10;</code>
    * @return The hyphenlessRoman.
    */
@@ -295,6 +340,10 @@ public  final class AppConfig extends
     return hyphenlessRoman_;
   }
   /**
+   * <pre>
+   * No Hyphens as stored, without the TPS fold.
+   * </pre>
+   *
    * <code>bool hyphenless_roman = 10;</code>
    * @param value The hyphenlessRoman to set.
    */
@@ -303,6 +352,10 @@ public  final class AppConfig extends
     hyphenlessRoman_ = value;
   }
   /**
+   * <pre>
+   * No Hyphens as stored, without the TPS fold.
+   * </pre>
+   *
    * <code>bool hyphenless_roman = 10;</code>
    */
   private void clearHyphenlessRoman() {
@@ -334,6 +387,44 @@ public  final class AppConfig extends
   private void clearForceLowercaseNasalMarker() {
 
     forceLowercaseNasalMarker_ = false;
+  }
+
+  public static final int TPS_OR_MAPS_TO_ER_FIELD_NUMBER = 12;
+  private boolean tpsOrMapsToEr_;
+  /**
+   * <pre>
+   * TPS or→er dialect switch; no engine reader yet.
+   * </pre>
+   *
+   * <code>bool tps_or_maps_to_er = 12;</code>
+   * @return The tpsOrMapsToEr.
+   */
+  @java.lang.Override
+  public boolean getTpsOrMapsToEr() {
+    return tpsOrMapsToEr_;
+  }
+  /**
+   * <pre>
+   * TPS or→er dialect switch; no engine reader yet.
+   * </pre>
+   *
+   * <code>bool tps_or_maps_to_er = 12;</code>
+   * @param value The tpsOrMapsToEr to set.
+   */
+  private void setTpsOrMapsToEr(boolean value) {
+
+    tpsOrMapsToEr_ = value;
+  }
+  /**
+   * <pre>
+   * TPS or→er dialect switch; no engine reader yet.
+   * </pre>
+   *
+   * <code>bool tps_or_maps_to_er = 12;</code>
+   */
+  private void clearTpsOrMapsToEr() {
+
+    tpsOrMapsToEr_ = false;
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.AppConfig parseFrom(
@@ -437,10 +528,9 @@ public  final class AppConfig extends
    * `roman` (`composing::dispatch`), the prediction `text`
    * (`nextword::filter`) and the engine-synthesised compound joiner
    * (`composing::api::nailed_prefix`); identity fields (`display_text`,
-   * `canonical_tl`, `tl`) and user-typed text keep their hyphens. The
-   * platform sends `false` under a TPS layout (the engine sees TPS as
-   * `"tl"` / `"poj"` and the platform re-splits `roman` on `-` for bopomofo),
-   * exactly as it folds TPS into `is_translate_swapped`.
+   * `canonical_tl`, `tl`) and user-typed text keep their hyphens. The engine
+   * applies it only off the TPS layout (`AppConfig::renders_hyphenless`): the
+   * platform re-splits `roman` on `-` for bopomofo.
    *
    * 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ becomes ᴺ in capitals OFF, USER): the
    * POJ nasal marker is always `ⁿ` U+207F, never `ᴺ` U+1D3A (Caps Lock
@@ -448,6 +538,16 @@ public  final class AppConfig extends
    * marker follows the preceding letter's case). Rendering only
    * (`phonetics::case_transform::apply_nasal_marker_case`, §53); identity
    * keys already fold both glyphs to `nn`.
+   *
+   * 2026-09-30 (R6) `input_mode` accepts `"tps"` as a real mode, and
+   * `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
+   * `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
+   * `"tps"` the engine composes with the TL tables and applies the TPS fold
+   * itself (`AppConfig::renders_hanji_first` / `renders_hyphenless` in
+   * `engine/protos/src/lib.rs`), so `is_translate_swapped` and
+   * `hyphenless_roman` are the Candidate-Display-projected stored values
+   * WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
+   * plus the TPS-folded swap / hyphenless) — both render identically.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.AppConfig}
@@ -464,6 +564,10 @@ public  final class AppConfig extends
 
 
     /**
+     * <pre>
+     * "tl" | "poj" | "tps" | "english".
+     * </pre>
+     *
      * <code>string input_mode = 2;</code>
      * @return The inputMode.
      */
@@ -472,6 +576,10 @@ public  final class AppConfig extends
       return instance.getInputMode();
     }
     /**
+     * <pre>
+     * "tl" | "poj" | "tps" | "english".
+     * </pre>
+     *
      * <code>string input_mode = 2;</code>
      * @return The bytes for inputMode.
      */
@@ -481,6 +589,10 @@ public  final class AppConfig extends
       return instance.getInputModeBytes();
     }
     /**
+     * <pre>
+     * "tl" | "poj" | "tps" | "english".
+     * </pre>
+     *
      * <code>string input_mode = 2;</code>
      * @param value The inputMode to set.
      * @return This builder for chaining.
@@ -492,6 +604,10 @@ public  final class AppConfig extends
       return this;
     }
     /**
+     * <pre>
+     * "tl" | "poj" | "tps" | "english".
+     * </pre>
+     *
      * <code>string input_mode = 2;</code>
      * @return This builder for chaining.
      */
@@ -501,6 +617,10 @@ public  final class AppConfig extends
       return this;
     }
     /**
+     * <pre>
+     * "tl" | "poj" | "tps" | "english".
+     * </pre>
+     *
      * <code>string input_mode = 2;</code>
      * @param value The bytes for inputMode to set.
      * @return This builder for chaining.
@@ -569,6 +689,10 @@ public  final class AppConfig extends
     }
 
     /**
+     * <pre>
+     * Candidate-Display-projected Hanji-first swap, without the TPS fold.
+     * </pre>
+     *
      * <code>bool is_translate_swapped = 5;</code>
      * @return The isTranslateSwapped.
      */
@@ -577,6 +701,10 @@ public  final class AppConfig extends
       return instance.getIsTranslateSwapped();
     }
     /**
+     * <pre>
+     * Candidate-Display-projected Hanji-first swap, without the TPS fold.
+     * </pre>
+     *
      * <code>bool is_translate_swapped = 5;</code>
      * @param value The isTranslateSwapped to set.
      * @return This builder for chaining.
@@ -587,6 +715,10 @@ public  final class AppConfig extends
       return this;
     }
     /**
+     * <pre>
+     * Candidate-Display-projected Hanji-first swap, without the TPS fold.
+     * </pre>
+     *
      * <code>bool is_translate_swapped = 5;</code>
      * @return This builder for chaining.
      */
@@ -719,6 +851,10 @@ public  final class AppConfig extends
     }
 
     /**
+     * <pre>
+     * No Hyphens as stored, without the TPS fold.
+     * </pre>
+     *
      * <code>bool hyphenless_roman = 10;</code>
      * @return The hyphenlessRoman.
      */
@@ -727,6 +863,10 @@ public  final class AppConfig extends
       return instance.getHyphenlessRoman();
     }
     /**
+     * <pre>
+     * No Hyphens as stored, without the TPS fold.
+     * </pre>
+     *
      * <code>bool hyphenless_roman = 10;</code>
      * @param value The hyphenlessRoman to set.
      * @return This builder for chaining.
@@ -737,6 +877,10 @@ public  final class AppConfig extends
       return this;
     }
     /**
+     * <pre>
+     * No Hyphens as stored, without the TPS fold.
+     * </pre>
+     *
      * <code>bool hyphenless_roman = 10;</code>
      * @return This builder for chaining.
      */
@@ -774,6 +918,46 @@ public  final class AppConfig extends
       return this;
     }
 
+    /**
+     * <pre>
+     * TPS or→er dialect switch; no engine reader yet.
+     * </pre>
+     *
+     * <code>bool tps_or_maps_to_er = 12;</code>
+     * @return The tpsOrMapsToEr.
+     */
+    @java.lang.Override
+    public boolean getTpsOrMapsToEr() {
+      return instance.getTpsOrMapsToEr();
+    }
+    /**
+     * <pre>
+     * TPS or→er dialect switch; no engine reader yet.
+     * </pre>
+     *
+     * <code>bool tps_or_maps_to_er = 12;</code>
+     * @param value The tpsOrMapsToEr to set.
+     * @return This builder for chaining.
+     */
+    public Builder setTpsOrMapsToEr(boolean value) {
+      copyOnWrite();
+      instance.setTpsOrMapsToEr(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * TPS or→er dialect switch; no engine reader yet.
+     * </pre>
+     *
+     * <code>bool tps_or_maps_to_er = 12;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearTpsOrMapsToEr() {
+      copyOnWrite();
+      instance.clearTpsOrMapsToEr();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.AppConfig)
   }
   @java.lang.Override
@@ -799,10 +983,11 @@ public  final class AppConfig extends
             "candidateDisplayMode_",
             "hyphenlessRoman_",
             "forceLowercaseNasalMarker_",
+            "tpsOrMapsToEr_",
           };
           java.lang.String info =
-              "\u0000\t\u0000\u0000\u0002\u000b\t\u0000\u0000\u0000\u0002\u0208\u0003\u0007\u0004" +
-              "\u0007\u0005\u0007\u0007\f\b\u0007\t\f\n\u0007\u000b\u0007";
+              "\u0000\n\u0000\u0000\u0002\f\n\u0000\u0000\u0000\u0002\u0208\u0003\u0007\u0004\u0007" +
+              "\u0005\u0007\u0007\f\b\u0007\t\f\n\u0007\u000b\u0007\f\u0007";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

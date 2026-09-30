@@ -183,31 +183,24 @@ fn handle_fetch_at_pos(
     if is_hanzi(raw) {
         return with_continuous(snapshot, ContinuousResponse::default());
     }
-    // v3.5.9 D / C-3b — mode upgrade: the raw buffer trumps
-    // `config.input_mode` when TPS Bopomofo is detected. Existing
-    // platform `AppConfig` builders map TPS to `"tl"` / `"poj"` for
-    // legacy reasons (`ios/.../RustEngineBridge+Composing.swift:584-599`,
-    // `android/.../engine/RustEngineBridge.kt:1270-1288` — both fold
-    // TPS into `is_translate_swapped` and keep `input_mode` as the
-    // underlying romanization choice), so the config string alone
-    // would mis-classify a TPS buffer. Bopomofo chars are unambiguous
-    // (`phonetics::contains_tps` mirrors the same detection used in
-    // `engine/composing/src/derived.rs:27`), so we promote the parsed
-    // mode to `InputMode::Tps` whenever any Bopomofo char is present.
+    // v3.5.9 D / C-3b — mode upgrade: the buffer's content, not the
+    // config, decides TPS. Any Bopomofo char (`phonetics::contains_tps`,
+    // the same detection `derived::derived_display` uses) makes the fetch
+    // `InputMode::Tps`, whatever `input_mode` says; a Bopomofo-free buffer
+    // composes under `composing_mode`, which reads the TPS layout
+    // (`"tps"`, or the pre-R6 wire's `"tl"`) as TL. So a TPS buffer that
+    // opens with `-` or a lone tone mark takes the TL tables until its
+    // first Bopomofo glyph, on either wire.
     //
     // Single-source mode flow into `assemble_candidates`: the seam
     // derives every TPS-gated branch from `mode == InputMode::Tps`
     // internally — pre-C-3b had a parallel `is_tps: bool` arg that
     // duplicated this axis (`is_tps = contains_tps(raw)`, dual source
     // of truth). Dropping the bool eliminates split-brain risk.
-    //
-    // The POJ-vs-TL/English branch in the seam is unaffected: platform
-    // builders DO map POJ → `"poj"` so config is reliable for that
-    // axis; only TPS needs the `contains_tps` override.
     let mode = if contains_tps(raw) {
         phonetics::InputMode::Tps
     } else {
-        phonetics::api::parse_input_mode(&config.input_mode)
+        phonetics::api::composing_mode(config)
     };
     // Learned phrases (§50): one row per reading, the most-learned
     // separator form first.
@@ -242,7 +235,7 @@ fn handle_fetch_at_pos(
         mode,
         enabled_sources_bitmask,
         context,
-        config.hyphenless_roman,
+        config.renders_hyphenless(),
         config.force_lowercase_nasal_marker,
     );
     // INVARIANT_CONTINUOUS_LITERAL_ROMAN_CANDIDATE (§34): whenever composing
@@ -681,6 +674,7 @@ mod tests {
             candidate_display_mode: 0,
             hyphenless_roman: false,
             force_lowercase_nasal_marker: false,
+            tps_or_maps_to_er: false,
         }
     }
 

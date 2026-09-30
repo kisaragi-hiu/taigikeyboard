@@ -221,10 +221,9 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 /// `roman` (`composing::dispatch`), the prediction `text`
 /// (`nextword::filter`) and the engine-synthesised compound joiner
 /// (`composing::api::nailed_prefix`); identity fields (`display_text`,
-/// `canonical_tl`, `tl`) and user-typed text keep their hyphens. The
-/// platform sends `false` under a TPS layout (the engine sees TPS as
-/// `"tl"` / `"poj"` and the platform re-splits `roman` on `-` for bopomofo),
-/// exactly as it folds TPS into `is_translate_swapped`.
+/// `canonical_tl`, `tl`) and user-typed text keep their hyphens. The engine
+/// applies it only off the TPS layout (`AppConfig::renders_hyphenless`): the
+/// platform re-splits `roman` on `-` for bopomofo.
 ///
 /// 2026-09-22 added `force_lowercase_nasal_marker` (ⁿ becomes ᴺ in capitals OFF, USER): the
 /// POJ nasal marker is always `ⁿ` U+207F, never `ᴺ` U+1D3A (Caps Lock
@@ -232,17 +231,29 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 /// marker follows the preceding letter's case). Rendering only
 /// (`phonetics::case_transform::apply_nasal_marker_case`, §53); identity
 /// keys already fold both glyphs to `nn`.
+///
+/// 2026-09-30 (R6) `input_mode` accepts `"tps"` as a real mode, and
+/// `tps_or_maps_to_er` carries the TPS or→er dialect choice (the same flag
+/// `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
+/// `"tps"` the engine composes with the TL tables and applies the TPS fold
+/// itself (`AppConfig::renders_hanji_first` / `renders_hyphenless` in
+/// `engine/protos/src/lib.rs`), so `is_translate_swapped` and
+/// `hyphenless_roman` are the Candidate-Display-projected stored values
+/// WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
+/// plus the TPS-folded swap / hyphenless) — both render identically.
 public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
+  /// "tl" | "poj" | "tps" | "english".
   public var inputMode: String = String()
 
   public var ooDoubletapEnabled: Bool = false
 
   public var nnDoubletapEnabled: Bool = false
 
+  /// Candidate-Display-projected Hanji-first swap, without the TPS fold.
   public var isTranslateSwapped: Bool = false
 
   public var platformID: Taigi_Engine_Platform = .unspecified
@@ -251,9 +262,13 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
 
   public var candidateDisplayMode: Taigi_Engine_CandidateDisplayMode = .unspecified
 
+  /// No Hyphens as stored, without the TPS fold.
   public var hyphenlessRoman: Bool = false
 
   public var forceLowercaseNasalMarker: Bool = false
+
+  /// TPS or→er dialect switch; no engine reader yet.
+  public var tpsOrMapsToEr: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -448,7 +463,7 @@ nonisolated extension Taigi_Engine_CandidateDisplayMode: SwiftProtobuf._ProtoNam
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -465,6 +480,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       case 9: try { try decoder.decodeSingularEnumField(value: &self.candidateDisplayMode) }()
       case 10: try { try decoder.decodeSingularBoolField(value: &self.hyphenlessRoman) }()
       case 11: try { try decoder.decodeSingularBoolField(value: &self.forceLowercaseNasalMarker) }()
+      case 12: try { try decoder.decodeSingularBoolField(value: &self.tpsOrMapsToEr) }()
       default: break
       }
     }
@@ -498,6 +514,9 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if self.forceLowercaseNasalMarker != false {
       try visitor.visitSingularBoolField(value: self.forceLowercaseNasalMarker, fieldNumber: 11)
     }
+    if self.tpsOrMapsToEr != false {
+      try visitor.visitSingularBoolField(value: self.tpsOrMapsToEr, fieldNumber: 12)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -511,6 +530,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if lhs.candidateDisplayMode != rhs.candidateDisplayMode {return false}
     if lhs.hyphenlessRoman != rhs.hyphenlessRoman {return false}
     if lhs.forceLowercaseNasalMarker != rhs.forceLowercaseNasalMarker {return false}
+    if lhs.tpsOrMapsToEr != rhs.tpsOrMapsToEr {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

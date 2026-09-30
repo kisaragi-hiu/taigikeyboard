@@ -11,11 +11,19 @@ public interface AppConfigOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
+   * <pre>
+   * "tl" | "poj" | "tps" | "english".
+   * </pre>
+   *
    * <code>string input_mode = 2;</code>
    * @return The inputMode.
    */
   java.lang.String getInputMode();
   /**
+   * <pre>
+   * "tl" | "poj" | "tps" | "english".
+   * </pre>
+   *
    * <code>string input_mode = 2;</code>
    * @return The bytes for inputMode.
    */
@@ -35,6 +43,10 @@ public interface AppConfigOrBuilder extends
   boolean getNnDoubletapEnabled();
 
   /**
+   * <pre>
+   * Candidate-Display-projected Hanji-first swap, without the TPS fold.
+   * </pre>
+   *
    * <code>bool is_translate_swapped = 5;</code>
    * @return The isTranslateSwapped.
    */
@@ -69,6 +81,10 @@ public interface AppConfigOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode getCandidateDisplayMode();
 
   /**
+   * <pre>
+   * No Hyphens as stored, without the TPS fold.
+   * </pre>
+   *
    * <code>bool hyphenless_roman = 10;</code>
    * @return The hyphenlessRoman.
    */
@@ -79,4 +95,14 @@ public interface AppConfigOrBuilder extends
    * @return The forceLowercaseNasalMarker.
    */
   boolean getForceLowercaseNasalMarker();
+
+  /**
+   * <pre>
+   * TPS or→er dialect switch; no engine reader yet.
+   * </pre>
+   *
+   * <code>bool tps_or_maps_to_er = 12;</code>
+   * @return The tpsOrMapsToEr.
+   */
+  boolean getTpsOrMapsToEr();
 }

@@ -187,11 +187,10 @@ pub struct NailedSegment {
 /// `true`) — hence the `output_both_scripts` AppConfig field
 /// (Codex pre-impl 2026-05-18).
 fn continuous_word_space(config: &AppConfig) -> bool {
-    let effective_swapped = config.is_translate_swapped || config.input_mode == "tps";
     // De Morgan of the platform `appendAutoSpaceIfApplicable` guard
     // `if (effectiveSwapped && !outputBothScripts) return`: roman-ish =
-    // not swapped, OR both-scripts is on.
-    !effective_swapped || config.output_both_scripts
+    // not Hanji-first (swap or TPS layout), OR both-scripts is on.
+    !config.renders_hanji_first() || config.output_both_scripts
 }
 
 /// Pure `Σ text.of(nailed[i])` join (the display, or the learned TL), parameterized by the
@@ -354,7 +353,12 @@ fn longest_compound_run<F: Fn(&str, u8) -> bool>(
 /// pre-Option-A behaviour.
 pub(crate) fn nailed_prefix(nailed: &[NailedSegment], config: &AppConfig) -> String {
     let space = continuous_word_space(config);
-    nailed_join(nailed, SegmentText::Display, space, config.hyphenless_roman)
+    nailed_join(
+        nailed,
+        SegmentText::Display,
+        space,
+        config.renders_hyphenless(),
+    )
 }
 
 /// Learned phrases (§50) — the canonical TL a composition of nailed
@@ -777,6 +781,7 @@ mod tests {
             candidate_display_mode: 0,
             hyphenless_roman: false,
             force_lowercase_nasal_marker: false,
+            tps_or_maps_to_er: false,
         }
     }
 
@@ -805,7 +810,7 @@ mod tests {
     #[test]
     fn tps_renders_as_is_no_space() {
         let n = [seg("ㄏㄧㆵ"), seg("ㄉㄨㄧ")];
-        // input_mode == "tps" → effective_swapped regardless of flag.
+        // input_mode == "tps" → Hanji-first regardless of the stored swap.
         assert_eq!(nailed_prefix(&n, &cfg("tps", false, false)), "ㄏㄧㆵㄉㄨㄧ");
     }
 

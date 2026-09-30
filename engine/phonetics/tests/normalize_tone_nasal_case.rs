@@ -117,14 +117,25 @@ fn normalize_tone_poj_doubletap_off_keeps_every_typed_capital() {
 }
 
 #[test]
-fn normalize_tone_english_and_tps_bypass_keep_input() {
-    for mode in ["english", "tps"] {
-        let cfg = AppConfig {
-            input_mode: mode.to_string(),
-            ..Default::default()
-        };
-        assert_eq!(normalize("SIANN5", cfg), "SIANN5", "mode {mode}");
-    }
+fn normalize_tone_english_bypass_keeps_input() {
+    let cfg = AppConfig {
+        input_mode: "english".to_string(),
+        ..Default::default()
+    };
+    assert_eq!(normalize("SIANN5", cfg), "SIANN5");
+}
+
+#[test]
+fn normalize_tone_tps_layout_takes_the_tl_tables() {
+    // R6: a Bopomofo-free buffer on the TPS layout (`"tps"`) normalizes as the
+    // pre-R6 wire (`"tl"`) did; Bopomofo content never reaches here
+    // (`composing::derived::derived_display` returns it first).
+    let tps = || AppConfig {
+        input_mode: "tps".to_string(),
+        ..Default::default()
+    };
+    assert_eq!(normalize("SIANN5", tps()), normalize("SIANN5", tl()));
+    assert_eq!(normalize("tai5-uan5", tps()), "tâi-uân");
 }
 
 #[test]

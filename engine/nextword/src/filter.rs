@@ -248,16 +248,18 @@ fn separatorless_form(tl: &str) -> String {
 }
 
 fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction> {
-    let use_tl = config.input_mode == "tl";
+    // The TPS layout renders predictions from TL, as it did while TPS arrived as `"tl"`.
+    let use_tl = config.input_mode == "tl" || config.is_tps_layout();
     let mut roman = if use_tl {
         m.tl.clone()
     } else {
         phonetics::api::tl_display_to_poj_display(&m.tl)
     };
     // No Hyphens — presentation only; `tl` below stays the association key.
-    if config.hyphenless_roman {
+    if config.renders_hyphenless() {
         roman = phonetics::api::hyphenless_display(&roman);
     }
+    // The stored swap, unfolded: a TPS prediction reads it as it always has.
     if !config.is_translate_swapped && roman.is_empty() {
         return None;
     }
@@ -296,6 +298,7 @@ mod tests {
             candidate_display_mode: 0,
             hyphenless_roman: false,
             force_lowercase_nasal_marker: false,
+            tps_or_maps_to_er: false,
         }
     }
 
@@ -310,6 +313,7 @@ mod tests {
             candidate_display_mode: 0,
             hyphenless_roman: false,
             force_lowercase_nasal_marker: false,
+            tps_or_maps_to_er: false,
         }
     }
 
@@ -1101,6 +1105,43 @@ mod tests {
         let shaped = filter(&state, rows(), 0, 0, 10, &poj).unwrap();
         assert_eq!(shaped.predictions[0].text, "tâioân");
         assert_eq!(shaped.predictions[0].tl, "tâi-uân");
+    }
+
+    /// R6: the TPS layout as `"tps"` with the stored flags shapes exactly what
+    /// the pre-R6 wire (`"tl"`, No Hyphens folded off, the stored swap) shaped:
+    /// TL text, hyphens kept, and the empty-roman drop still reading the
+    /// stored swap.
+    #[test]
+    fn tps_layout_shapes_predictions_like_the_legacy_tl_wire() {
+        let state = PersistedState::default();
+        let rows = || {
+            vec![
+                dict_row("台灣", "tâi-uân", 9),
+                dict_row("予我", "hōo--guá", 3),
+                dict_row("彼", "", 1),
+            ]
+        };
+        for swapped in [false, true] {
+            let legacy = config_tl_mode_translate_swapped(swapped);
+            let expected = filter(&state, rows(), 0, 0, 10, &legacy).unwrap();
+            for hyphenless in [false, true] {
+                let tps = AppConfig {
+                    input_mode: "tps".to_owned(),
+                    hyphenless_roman: hyphenless,
+                    ..config_tl_mode_translate_swapped(swapped)
+                };
+                let shaped = filter(&state, rows(), 0, 0, 10, &tps).unwrap();
+                assert_eq!(
+                    shaped, expected,
+                    "swapped={swapped} hyphenless={hyphenless}"
+                );
+                assert_eq!(shaped.predictions[0].text, "tâi-uân");
+                assert_eq!(shaped.predictions[1].text, "hōo--guá");
+                // trace: `彼` has no roman — kept (as its hanji) only when swapped.
+                let kept = shaped.predictions.iter().any(|p| p.text == "彼");
+                assert_eq!(kept, swapped, "swapped={swapped}");
+            }
+        }
     }
 
     /// The collapse runs before the limit so the strip is filled with
