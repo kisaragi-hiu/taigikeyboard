@@ -24,7 +24,6 @@ public  final class PhoneticsRequest extends
     TL_TO_POJ(13),
     GET_TONE_VARIATIONS(18),
     NFD_PREPROCESS_FOR_LOOKUP(19),
-    DERIVE_CUSTOM_QUERY_KEY(23),
     TL_NUMERIC_TO_TPS(32),
     TL_DISPLAY_TO_TPS(33),
     IS_TPS_TONE_MARK(34),
@@ -48,7 +47,6 @@ public  final class PhoneticsRequest extends
         case 13: return TL_TO_POJ;
         case 18: return GET_TONE_VARIATIONS;
         case 19: return NFD_PREPROCESS_FOR_LOOKUP;
-        case 23: return DERIVE_CUSTOM_QUERY_KEY;
         case 32: return TL_NUMERIC_TO_TPS;
         case 33: return TL_DISPLAY_TO_TPS;
         case 34: return IS_TPS_TONE_MARK;
@@ -289,76 +287,6 @@ public  final class PhoneticsRequest extends
    */
   private void clearNfdPreprocessForLookup() {
     if (methodCase_ == 19) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int DERIVE_CUSTOM_QUERY_KEY_FIELD_NUMBER = 23;
-  /**
-   * <pre>
-   * --- Derivation (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-   */
-  @java.lang.Override
-  public boolean hasDeriveCustomQueryKey() {
-    return methodCase_ == 23;
-  }
-  /**
-   * <pre>
-   * --- Derivation (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey getDeriveCustomQueryKey() {
-    if (methodCase_ == 23) {
-       return (com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * --- Derivation (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-   */
-  private void setDeriveCustomQueryKey(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 23;
-  }
-  /**
-   * <pre>
-   * --- Derivation (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-   */
-  private void mergeDeriveCustomQueryKey(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 23 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 23;
-  }
-  /**
-   * <pre>
-   * --- Derivation (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-   */
-  private void clearDeriveCustomQueryKey() {
-    if (methodCase_ == 23) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -911,78 +839,6 @@ public  final class PhoneticsRequest extends
 
     /**
      * <pre>
-     * --- Derivation (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-     */
-    @java.lang.Override
-    public boolean hasDeriveCustomQueryKey() {
-      return instance.hasDeriveCustomQueryKey();
-    }
-    /**
-     * <pre>
-     * --- Derivation (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey getDeriveCustomQueryKey() {
-      return instance.getDeriveCustomQueryKey();
-    }
-    /**
-     * <pre>
-     * --- Derivation (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-     */
-    public Builder setDeriveCustomQueryKey(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey value) {
-      copyOnWrite();
-      instance.setDeriveCustomQueryKey(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Derivation (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-     */
-    public Builder setDeriveCustomQueryKey(
-        com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.Builder builderForValue) {
-      copyOnWrite();
-      instance.setDeriveCustomQueryKey(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Derivation (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-     */
-    public Builder mergeDeriveCustomQueryKey(com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey value) {
-      copyOnWrite();
-      instance.mergeDeriveCustomQueryKey(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Derivation (1 op) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-     */
-    public Builder clearDeriveCustomQueryKey() {
-      copyOnWrite();
-      instance.clearDeriveCustomQueryKey();
-      return this;
-    }
-
-    /**
-     * <pre>
      * --- TPS (4 ops) ---
      * </pre>
      *
@@ -1219,15 +1075,14 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.TlToPoj.class,
             com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.class,
             com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.class,
-            com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey.class,
             com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.class,
             com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.class,
           };
           java.lang.String info =
-              "\u0000\t\u0001\u0000\u000b#\t\u0000\u0000\u0000\u000b<\u0000\r<\u0000\u0012<\u0000" +
-              "\u0013<\u0000\u0017<\u0000 <\u0000!<\u0000\"<\u0000#<\u0000";
+              "\u0000\b\u0001\u0000\u000b#\b\u0000\u0000\u0000\u000b<\u0000\r<\u0000\u0012<\u0000" +
+              "\u0013<\u0000 <\u0000!<\u0000\"<\u0000#<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

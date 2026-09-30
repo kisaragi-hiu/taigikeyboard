@@ -64,25 +64,6 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Derivation (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-   * @return Whether the deriveCustomQueryKey field is set.
-   */
-  boolean hasDeriveCustomQueryKey();
-  /**
-   * <pre>
-   * --- Derivation (1 op) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.DeriveCustomQueryKey derive_custom_query_key = 23;</code>
-   * @return The deriveCustomQueryKey.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.DeriveCustomQueryKey getDeriveCustomQueryKey();
-
-  /**
-   * <pre>
    * --- TPS (4 ops) ---
    * </pre>
    *
