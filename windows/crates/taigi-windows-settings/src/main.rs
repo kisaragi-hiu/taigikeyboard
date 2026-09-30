@@ -8,7 +8,6 @@
 
 mod presentation;
 mod prewarm;
-mod settings_writer;
 mod updates;
 mod user_data;
 #[cfg(windows)]
@@ -44,8 +43,9 @@ fn main() -> ExitCode {
         log::info!("settings.already_running");
         return ExitCode::SUCCESS;
     }
-    // No per-user directory (`%APPDATA%` unset): the window opens on the
-    // defaults and refuses every write, saying so. Never a file somewhere
+    // No per-user directory (`%APPDATA%` unset): the window opens over the
+    // temp folder — the defaults, unless a `settings.json` happens to be
+    // there — and refuses every write, saying so. Never a write somewhere
     // else — the DLL would not read it, and a save that "worked" into a
     // temp folder would be a lie (roadmap W2).
     let (directory, is_read_only) = match user_data_directory() {

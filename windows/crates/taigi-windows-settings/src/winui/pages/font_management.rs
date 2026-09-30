@@ -23,7 +23,7 @@ use super::super::cards;
 use super::super::list_pager::{self, icon_button};
 use super::super::list_selection::{selectable_list, SettledRows};
 use super::super::window::{Message as WindowMessage, SettingsWindow};
-use crate::settings_writer::SettingsWriter;
+use crate::presentation::strings_for;
 use crate::winui::file_dialog;
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::{
@@ -31,7 +31,7 @@ use taigi_desktop_core::settings::{
     StoredFontSelection,
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-use taigi_desktop_storage as storage;
+use taigi_desktop_storage::{self as storage, SettingsWriter};
 use taigi_windows_platform::font_file;
 use unicode_normalization::UnicodeNormalization;
 use windows_reactor::*;
@@ -284,7 +284,7 @@ pub fn update(model: &mut FontManagementModel, message: Message, environment: Pa
             let Some(key) = model.settled.key_at(index).map(str::to_owned) else {
                 return;
             };
-            let strings = environment.settings.strings();
+            let strings = strings_for(environment.settings.document());
             if let Some(row) = model
                 .visible_rows(&strings)
                 .rows
@@ -384,7 +384,8 @@ fn take_in(
 /// user can try again once those hosts have moved on.
 fn remove(model: &mut FontManagementModel, environment: PageEnvironment<'_>) {
     let stored = stored_font_selection(environment.settings.document());
-    let Some(file_name) = model.removable_custom_file(&stored, &environment.settings.strings())
+    let Some(file_name) =
+        model.removable_custom_file(&stored, &strings_for(environment.settings.document()))
     else {
         return;
     };
