@@ -820,6 +820,118 @@ mod tests {
         assert_eq!(ranked_count(-3), 0);
     }
 
+    #[test]
+    fn buffer_rows_hand_the_keystroke_path_at_most_its_limits() {
+        // trace: 21 custom rows `tâi-uân` / 台灣0..20 and 6 learned phrases
+        // `tâi-uân` / 台灣0..5 all key `taiuan` (tl); raw "taiuan" prefix-
+        // matches the custom rows (KEYSTROKE_LIMIT 20) and equals the learned
+        // key (KEYSTROKE_LIMIT 5). The seeds (gâu-tsá, tsia̍h-pá--buē) miss.
+        let directory = tempfile::tempdir().unwrap();
+        let stores = UserDataStores::at(
+            userdata::UserDataPaths::in_directory(directory.path()),
+            JournalMode::Delete,
+        );
+        stores.open_blocking();
+        for index in 0..21 {
+            stores
+                .custom_dictionary
+                .upsert(&CustomDictionaryRow::new(
+                    "tâi-uân",
+                    &format!("台灣{index}"),
+                ))
+                .unwrap();
+            if index < 6 {
+                stores
+                    .learned_phrases
+                    .learn_phrase(&format!("台灣{index}"), "tâi-uân");
+            }
+        }
+        // Flushes the queued learns.
+        assert_eq!(stores.learned_phrases.all_rows().unwrap().len(), 6);
+        let config = AppConfig {
+            input_mode: "tl".into(),
+            ..AppConfig::default()
+        };
+
+        let rows = buffer_rows(&stores, "taiuan", &config, false);
+        assert_eq!(rows.custom.len(), CustomDictionaryStore::KEYSTROKE_LIMIT);
+        assert_eq!(rows.custom.len(), 20);
+        assert_eq!(rows.learned.len(), 5);
+
+        let disabled = buffer_rows(&stores, "taiuan", &config, true);
+        assert!(disabled.custom.is_empty(), "the user turned it off");
+        assert_eq!(
+            disabled.learned.len(),
+            5,
+            "learning data is not the dictionary"
+        );
+    }
+
+    #[test]
+    fn a_custom_dictionary_error_maps_to_its_refusal() {
+        // trace: `refusal` — CapacityReached → Full,
+        // SearchKeyDerivationFailed → Unsearchable, Database → None.
+        assert_eq!(
+            refusal(&CustomDictionaryError::CapacityReached { limit: 1 }),
+            Some(CustomDictionaryRefusal::Full)
+        );
+        assert_eq!(
+            refusal(&CustomDictionaryError::SearchKeyDerivationFailed { roman: "x".into() }),
+            Some(CustomDictionaryRefusal::Unsearchable)
+        );
+        assert_eq!(
+            refusal(&CustomDictionaryError::Database(
+                userdata::UserDataDatabaseError::NotOpen("custom_dictionary".into())
+            )),
+            None
+        );
+    }
+
+    #[test]
+    fn a_csv_error_maps_to_its_refusal() {
+        // trace: `csv_refusal` — FileTooLarge → FileTooLarge, NotUtf8 →
+        // NotUtf8, NoUsableRows → NoUsableRows, TooManyRows → Full, Read → None.
+        assert_eq!(
+            csv_refusal(&CustomDictionaryCSVError::FileTooLarge { limit_bytes: 1 }),
+            Some(CustomDictionaryRefusal::FileTooLarge)
+        );
+        assert_eq!(
+            csv_refusal(&CustomDictionaryCSVError::NotUtf8),
+            Some(CustomDictionaryRefusal::NotUtf8)
+        );
+        assert_eq!(
+            csv_refusal(&CustomDictionaryCSVError::NoUsableRows),
+            Some(CustomDictionaryRefusal::NoUsableRows)
+        );
+        assert_eq!(
+            csv_refusal(&CustomDictionaryCSVError::TooManyRows { limit: 1 }),
+            Some(CustomDictionaryRefusal::Full)
+        );
+        assert_eq!(
+            csv_refusal(&CustomDictionaryCSVError::Read("gone".into())),
+            None
+        );
+    }
+
+    #[test]
+    fn a_usage_without_a_display_text_is_refused() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+
+        assert_eq!(
+            handle
+                .handle(&UserDataRequest {
+                    method: Some(user_data_request::Method::RecordUsage(RecordUsage {
+                        canonical_tl: "tâi-uân".into(),
+                        ..RecordUsage::default()
+                    })),
+                })
+                .unwrap_err(),
+            UserDataError::Invalid("usage without a display text")
+        );
+    }
+
     fn open_request(directory: &std::path::Path) -> UserDataRequest {
         UserDataRequest {
             method: Some(user_data_request::Method::Open(OpenUserData {
