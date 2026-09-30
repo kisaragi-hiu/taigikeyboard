@@ -7,8 +7,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Which stores are ready. A store that is not — a file from a later build,
- * a disk error — stays closed and ranks neutrally; the engine logs why.
+ * Acknowledges the open. A store that is not ready — a file from a later
+ * build, a disk error — stays closed and ranks neutrally; the engine logs
+ * which (`user_data.open …`). No platform read the per-store flags, so
+ * they went (2026-09-30).
  * </pre>
  *
  * Protobuf type {@code taigi.engine.UserDataOpened}
@@ -21,110 +23,6 @@ public  final class UserDataOpened extends
     UserDataOpenedOrBuilder {
   private UserDataOpened() {
   }
-  public static final int FREQUENCY_READY_FIELD_NUMBER = 1;
-  private boolean frequencyReady_;
-  /**
-   * <code>bool frequency_ready = 1;</code>
-   * @return The frequencyReady.
-   */
-  @java.lang.Override
-  public boolean getFrequencyReady() {
-    return frequencyReady_;
-  }
-  /**
-   * <code>bool frequency_ready = 1;</code>
-   * @param value The frequencyReady to set.
-   */
-  private void setFrequencyReady(boolean value) {
-
-    frequencyReady_ = value;
-  }
-  /**
-   * <code>bool frequency_ready = 1;</code>
-   */
-  private void clearFrequencyReady() {
-
-    frequencyReady_ = false;
-  }
-
-  public static final int ASSOCIATION_READY_FIELD_NUMBER = 2;
-  private boolean associationReady_;
-  /**
-   * <code>bool association_ready = 2;</code>
-   * @return The associationReady.
-   */
-  @java.lang.Override
-  public boolean getAssociationReady() {
-    return associationReady_;
-  }
-  /**
-   * <code>bool association_ready = 2;</code>
-   * @param value The associationReady to set.
-   */
-  private void setAssociationReady(boolean value) {
-
-    associationReady_ = value;
-  }
-  /**
-   * <code>bool association_ready = 2;</code>
-   */
-  private void clearAssociationReady() {
-
-    associationReady_ = false;
-  }
-
-  public static final int CUSTOM_DICTIONARY_READY_FIELD_NUMBER = 3;
-  private boolean customDictionaryReady_;
-  /**
-   * <code>bool custom_dictionary_ready = 3;</code>
-   * @return The customDictionaryReady.
-   */
-  @java.lang.Override
-  public boolean getCustomDictionaryReady() {
-    return customDictionaryReady_;
-  }
-  /**
-   * <code>bool custom_dictionary_ready = 3;</code>
-   * @param value The customDictionaryReady to set.
-   */
-  private void setCustomDictionaryReady(boolean value) {
-
-    customDictionaryReady_ = value;
-  }
-  /**
-   * <code>bool custom_dictionary_ready = 3;</code>
-   */
-  private void clearCustomDictionaryReady() {
-
-    customDictionaryReady_ = false;
-  }
-
-  public static final int LEARNED_PHRASES_READY_FIELD_NUMBER = 4;
-  private boolean learnedPhrasesReady_;
-  /**
-   * <code>bool learned_phrases_ready = 4;</code>
-   * @return The learnedPhrasesReady.
-   */
-  @java.lang.Override
-  public boolean getLearnedPhrasesReady() {
-    return learnedPhrasesReady_;
-  }
-  /**
-   * <code>bool learned_phrases_ready = 4;</code>
-   * @param value The learnedPhrasesReady to set.
-   */
-  private void setLearnedPhrasesReady(boolean value) {
-
-    learnedPhrasesReady_ = value;
-  }
-  /**
-   * <code>bool learned_phrases_ready = 4;</code>
-   */
-  private void clearLearnedPhrasesReady() {
-
-    learnedPhrasesReady_ = false;
-  }
-
   public static com.siansiansu.taigikeyboard.engine.proto.UserDataOpened parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -210,8 +108,10 @@ public  final class UserDataOpened extends
 
   /**
    * <pre>
-   * Which stores are ready. A store that is not — a file from a later build,
-   * a disk error — stays closed and ranks neutrally; the engine logs why.
+   * Acknowledges the open. A store that is not ready — a file from a later
+   * build, a disk error — stays closed and ranks neutrally; the engine logs
+   * which (`user_data.open …`). No platform read the per-store flags, so
+   * they went (2026-09-30).
    * </pre>
    *
    * Protobuf type {@code taigi.engine.UserDataOpened}
@@ -226,118 +126,6 @@ public  final class UserDataOpened extends
       super(DEFAULT_INSTANCE);
     }
 
-
-    /**
-     * <code>bool frequency_ready = 1;</code>
-     * @return The frequencyReady.
-     */
-    @java.lang.Override
-    public boolean getFrequencyReady() {
-      return instance.getFrequencyReady();
-    }
-    /**
-     * <code>bool frequency_ready = 1;</code>
-     * @param value The frequencyReady to set.
-     * @return This builder for chaining.
-     */
-    public Builder setFrequencyReady(boolean value) {
-      copyOnWrite();
-      instance.setFrequencyReady(value);
-      return this;
-    }
-    /**
-     * <code>bool frequency_ready = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearFrequencyReady() {
-      copyOnWrite();
-      instance.clearFrequencyReady();
-      return this;
-    }
-
-    /**
-     * <code>bool association_ready = 2;</code>
-     * @return The associationReady.
-     */
-    @java.lang.Override
-    public boolean getAssociationReady() {
-      return instance.getAssociationReady();
-    }
-    /**
-     * <code>bool association_ready = 2;</code>
-     * @param value The associationReady to set.
-     * @return This builder for chaining.
-     */
-    public Builder setAssociationReady(boolean value) {
-      copyOnWrite();
-      instance.setAssociationReady(value);
-      return this;
-    }
-    /**
-     * <code>bool association_ready = 2;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearAssociationReady() {
-      copyOnWrite();
-      instance.clearAssociationReady();
-      return this;
-    }
-
-    /**
-     * <code>bool custom_dictionary_ready = 3;</code>
-     * @return The customDictionaryReady.
-     */
-    @java.lang.Override
-    public boolean getCustomDictionaryReady() {
-      return instance.getCustomDictionaryReady();
-    }
-    /**
-     * <code>bool custom_dictionary_ready = 3;</code>
-     * @param value The customDictionaryReady to set.
-     * @return This builder for chaining.
-     */
-    public Builder setCustomDictionaryReady(boolean value) {
-      copyOnWrite();
-      instance.setCustomDictionaryReady(value);
-      return this;
-    }
-    /**
-     * <code>bool custom_dictionary_ready = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearCustomDictionaryReady() {
-      copyOnWrite();
-      instance.clearCustomDictionaryReady();
-      return this;
-    }
-
-    /**
-     * <code>bool learned_phrases_ready = 4;</code>
-     * @return The learnedPhrasesReady.
-     */
-    @java.lang.Override
-    public boolean getLearnedPhrasesReady() {
-      return instance.getLearnedPhrasesReady();
-    }
-    /**
-     * <code>bool learned_phrases_ready = 4;</code>
-     * @param value The learnedPhrasesReady to set.
-     * @return This builder for chaining.
-     */
-    public Builder setLearnedPhrasesReady(boolean value) {
-      copyOnWrite();
-      instance.setLearnedPhrasesReady(value);
-      return this;
-    }
-    /**
-     * <code>bool learned_phrases_ready = 4;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearLearnedPhrasesReady() {
-      copyOnWrite();
-      instance.clearLearnedPhrasesReady();
-      return this;
-    }
 
     // @@protoc_insertion_point(builder_scope:taigi.engine.UserDataOpened)
   }
@@ -354,15 +142,9 @@ public  final class UserDataOpened extends
         return new Builder();
       }
       case BUILD_MESSAGE_INFO: {
-          java.lang.Object[] objects = new java.lang.Object[] {
-            "frequencyReady_",
-            "associationReady_",
-            "customDictionaryReady_",
-            "learnedPhrasesReady_",
-          };
+          java.lang.Object[] objects = null;
           java.lang.String info =
-              "\u0000\u0004\u0000\u0000\u0001\u0004\u0004\u0000\u0000\u0000\u0001\u0007\u0002\u0007" +
-              "\u0003\u0007\u0004\u0007";
+              "\u0000\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

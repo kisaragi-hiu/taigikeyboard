@@ -9,7 +9,7 @@ final class CandidateDocumentTextTests: XCTestCase {
     func testDefaults_writeTheRomanization() {
         let text = CandidateDocumentText.text(
             for: word,
-            settings: TestFixtures.settings(swapped: false, bothScripts: false),
+            settings: TestFixtures.settings(swapped: false),
         )
 
         XCTAssertEqual(text, "tâi-gí")
@@ -18,48 +18,24 @@ final class CandidateDocumentTextTests: XCTestCase {
     func testSwapped_writesTheHanji() {
         let text = CandidateDocumentText.text(
             for: word,
-            settings: TestFixtures.settings(swapped: true, bothScripts: false),
+            settings: TestFixtures.settings(swapped: true),
         )
 
         XCTAssertEqual(text, "台語")
-    }
-
-    func testBothScripts_bracketsTheHanjiAfterTheRomanization() {
-        let text = CandidateDocumentText.text(
-            for: word,
-            settings: TestFixtures.settings(swapped: false, bothScripts: true),
-        )
-
-        XCTAssertEqual(text, "tâi-gí (台語)")
-    }
-
-    func testBothScriptsSwapped_bracketsTheRomanizationAfterTheHanji() {
-        let text = CandidateDocumentText.text(
-            for: word,
-            settings: TestFixtures.settings(swapped: true, bothScripts: true),
-        )
-
-        XCTAssertEqual(
-            text,
-            "台語 (tâi-gí)",
-            "the swap decides which script leads; both-scripts only decides that both appear",
-        )
     }
 
     func testRomanizationOnlyCandidate_writesTheRomanizationUnderEverySetting() {
         let romanOnly = TestFixtures.candidate(roman: "tâi-gí", hanji: nil)
 
         for swapped in [true, false] {
-            for bothScripts in [true, false] {
-                XCTAssertEqual(
-                    CandidateDocumentText.text(
-                        for: romanOnly,
-                        settings: TestFixtures.settings(swapped: swapped, bothScripts: bothScripts),
-                    ),
-                    "tâi-gí",
-                    "no hanji exists to swap to or bracket (swapped: \(swapped), both: \(bothScripts))",
-                )
-            }
+            XCTAssertEqual(
+                CandidateDocumentText.text(
+                    for: romanOnly,
+                    settings: TestFixtures.settings(swapped: swapped),
+                ),
+                "tâi-gí",
+                "no hanji exists to swap to (swapped: \(swapped))",
+            )
         }
     }
 
@@ -69,28 +45,19 @@ final class CandidateDocumentTextTests: XCTestCase {
     /// property of romanization, so the verdict follows the STRING this branch
     /// picked, never the output mode.
     func testResolved_saysWhetherTheStringItPickedCarriesRomanization() {
-        // trace: resolved() — hanji + !swapped + !both → roman → true.
+        // trace: resolved() — hanji + !swapped → roman → true.
         XCTAssertTrue(
             CandidateDocumentText.resolved(
-                for: word, settings: TestFixtures.settings(swapped: false, bothScripts: false),
+                for: word, settings: TestFixtures.settings(swapped: false),
             ).wroteRomanization,
         )
-        // hanji + swapped + !both → the bare 台語 → false.
+        // hanji + swapped → the bare 台語 → false.
         XCTAssertFalse(
             CandidateDocumentText.resolved(
-                for: word, settings: TestFixtures.settings(swapped: true, bothScripts: false),
+                for: word, settings: TestFixtures.settings(swapped: true),
             ).wroteRomanization,
             "a pure 漢字 commit earns no space",
         )
-        // Annotate in Brackets writes the pair either way round, and the pair HAS the roman.
-        for swapped in [false, true] {
-            XCTAssertTrue(
-                CandidateDocumentText.resolved(
-                    for: word, settings: TestFixtures.settings(swapped: swapped, bothScripts: true),
-                ).wroteRomanization,
-                "swapped: \(swapped)",
-            )
-        }
     }
 
     /// trace: `resolved` — the hanji-absent arm. Romanization under EVERY
@@ -100,50 +67,41 @@ final class CandidateDocumentTextTests: XCTestCase {
         let romanOnly = TestFixtures.candidate(roman: "taigi", hanji: nil)
 
         for swapped in [false, true] {
-            for bothScripts in [false, true] {
-                let resolved = CandidateDocumentText.resolved(
-                    for: romanOnly,
-                    settings: TestFixtures.settings(swapped: swapped, bothScripts: bothScripts),
-                )
-                XCTAssertEqual(resolved.text, "taigi")
-                XCTAssertTrue(
-                    resolved.wroteRomanization,
-                    "swapped: \(swapped), both: \(bothScripts)",
-                )
-            }
+            let resolved = CandidateDocumentText.resolved(
+                for: romanOnly,
+                settings: TestFixtures.settings(swapped: swapped),
+            )
+            XCTAssertEqual(resolved.text, "taigi")
+            XCTAssertTrue(resolved.wroteRomanization, "swapped: \(swapped)")
         }
     }
 
     /// Space writes the script the mode does NOT lead with, so the verdict
-    /// inverts with it — and Annotate in Brackets never applies, since the alternate is one
-    /// script by itself. The strings themselves are pinned by
+    /// inverts with it. The strings themselves are pinned by
     /// `testAlternate_isWhicheverScriptThePrimaryIsNot`.
-    func testResolvedAlternate_invertsTheModeAndIgnoresBrackets() {
-        for bothScripts in [false, true] {
-            XCTAssertEqual(
-                CandidateDocumentText.resolvedAlternate(
-                    for: word, settings: TestFixtures.settings(swapped: true, bothScripts: bothScripts),
-                )?.wroteRomanization, true, "both: \(bothScripts)",
-            )
-            XCTAssertEqual(
-                CandidateDocumentText.resolvedAlternate(
-                    for: word, settings: TestFixtures.settings(swapped: false, bothScripts: bothScripts),
-                )?.wroteRomanization, false,
-                "Space wrote the hanji, not the pair (both: \(bothScripts))",
-            )
-        }
+    func testResolvedAlternate_invertsTheMode() {
+        XCTAssertEqual(
+            CandidateDocumentText.resolvedAlternate(
+                for: word, settings: TestFixtures.settings(swapped: true),
+            )?.wroteRomanization, true,
+        )
+        XCTAssertEqual(
+            CandidateDocumentText.resolvedAlternate(
+                for: word, settings: TestFixtures.settings(swapped: false),
+            )?.wroteRomanization, false,
+            "Space wrote the hanji",
+        )
     }
 
     func testPresentButEmptyHanji_isTreatedAsAbsent() {
         let defective = TestFixtures.candidate(roman: "tâi-gí", hanji: "")
 
         XCTAssertEqual(
-            CandidateDocumentText.text(for: defective, settings: TestFixtures.settings(swapped: false, bothScripts: true)),
+            CandidateDocumentText.text(for: defective, settings: TestFixtures.settings(swapped: false)),
             "tâi-gí",
-            "a wire defect must not render as an empty bracket in the user's document",
         )
         XCTAssertEqual(
-            CandidateDocumentText.text(for: defective, settings: TestFixtures.settings(swapped: true, bothScripts: false)),
+            CandidateDocumentText.text(for: defective, settings: TestFixtures.settings(swapped: true)),
             "tâi-gí",
             "swapping to an empty hanji would commit nothing at all",
         )
@@ -155,28 +113,12 @@ final class CandidateDocumentTextTests: XCTestCase {
     /// gesture, and it is why the key needs no mode of its own.
     func testAlternate_isWhicheverScriptThePrimaryIsNot() {
         for swapped in [false, true] {
-            let settings = TestFixtures.settings(swapped: swapped, bothScripts: false)
+            let settings = TestFixtures.settings(swapped: swapped)
             let primary = CandidateDocumentText.text(for: word, settings: settings)
             let alternate = CandidateDocumentText.resolvedAlternate(for: word, settings: settings)?.text
 
             XCTAssertEqual(alternate, swapped ? "tâi-gí" : "台語", "swapped: \(swapped)")
             XCTAssertNotEqual(alternate, primary)
-        }
-    }
-
-    /// The bracket setting says how to write a candidate that shows BOTH
-    /// scripts. Space is the request for one of them by itself, so it is not
-    /// read — a bracketed pair here would write the script the user already had.
-    func testAlternate_ignoresTheBracketSetting() {
-        for swapped in [false, true] {
-            XCTAssertEqual(
-                CandidateDocumentText.resolvedAlternate(
-                    for: word,
-                    settings: TestFixtures.settings(swapped: swapped, bothScripts: true),
-                )?.text,
-                swapped ? "tâi-gí" : "台語",
-                "swapped: \(swapped)",
-            )
         }
     }
 
@@ -190,7 +132,7 @@ final class CandidateDocumentTextTests: XCTestCase {
                 XCTAssertNil(
                     CandidateDocumentText.resolvedAlternate(
                         for: romanOnly,
-                        settings: TestFixtures.settings(swapped: swapped, bothScripts: false),
+                        settings: TestFixtures.settings(swapped: swapped),
                     )?.text,
                     "hanji: \(String(describing: hanji)), swapped: \(swapped)",
                 )
@@ -218,7 +160,7 @@ final class CandidateDocumentTextTests: XCTestCase {
     /// resolved from the same settings, and this pins that they agree.
     func testAlternate_isTheScriptTheCellShowsBesideThePrimary() {
         for swapped in [false, true] {
-            let settings = TestFixtures.settings(swapped: swapped, bothScripts: false)
+            let settings = TestFixtures.settings(swapped: swapped)
 
             XCTAssertEqual(
                 CandidateDocumentText.resolvedAlternate(for: word, settings: settings)?.text,
@@ -233,7 +175,7 @@ final class CandidateDocumentTextTests: XCTestCase {
     /// mixed entries carry the romanized half's own hyphen. Stripping either
     /// here would be this layer second-guessing the dictionary.
     func testAlternate_writesTheFieldVerbatim() {
-        let hanjiSettings = TestFixtures.settings(swapped: false, bothScripts: false)
+        let hanjiSettings = TestFixtures.settings(swapped: false)
         for (roman, hanji) in [("kau--lâng", "交--人"), ("âng-kì-kì", "紅kì-kì")] {
             XCTAssertEqual(
                 CandidateDocumentText.resolvedAlternate(

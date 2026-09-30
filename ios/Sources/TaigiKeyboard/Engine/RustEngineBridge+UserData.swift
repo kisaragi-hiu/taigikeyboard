@@ -24,7 +24,7 @@ extension RustEngineBridge {
     /// stores in use before it returns and finishes the takeover of the files
     /// the old repositories wrote on a thread of its own. Without it the call
     /// waits for that — never on the main thread. A repeat with the same
-    /// directory answers the stores' readiness. `false` when the engine did
+    /// directory is acknowledged again. `false` when the engine did
     /// not open them (a failed round-trip, or other paths than this process
     /// opened).
     @discardableResult

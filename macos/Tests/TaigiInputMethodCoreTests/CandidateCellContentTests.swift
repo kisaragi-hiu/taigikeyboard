@@ -23,12 +23,10 @@ final class CandidateCellContentTests: XCTestCase {
 
     private func settings(
         swapped: Bool,
-        bothScripts: Bool = false,
         displayMode: CandidateDisplayMode = .sideBySide,
     ) -> EngineSettings {
         TestFixtures.settings(
             swapped: swapped,
-            bothScripts: bothScripts,
             candidateDisplayMode: displayMode,
         )
     }
@@ -125,40 +123,36 @@ final class CandidateCellContentTests: XCTestCase {
     }
 
     /// The cell and the commit agree under this display as under the others:
-    /// with the derived pair `(false, false)` — what `SettingsStore` hands
-    /// the engine — the document gets exactly the romanization the cell shows.
-    func testRomanOnly_cellIsExactlyTheDocumentText_underTheDerivedPair() {
+    /// with the derived swap `false` — what `SettingsStore` hands the engine —
+    /// the document gets exactly the romanization the cell shows.
+    func testRomanOnly_cellIsExactlyTheDocumentText_underTheDerivedSwap() {
         let word = candidate(roman: "tâi-gí", hanji: "台語")
-        let settings = settings(swapped: false, bothScripts: false, displayMode: .romanOnly)
+        let settings = settings(swapped: false, displayMode: .romanOnly)
 
         XCTAssertEqual(CandidateCellContent.cell(for: word, settings: settings).text, "tâi-gí")
         XCTAssertEqual(CandidateDocumentText.text(for: word, settings: settings), "tâi-gí")
     }
 
     /// The cell and the commit resolve the same settings snapshot, so the cell
-    /// always LEADS with the script the document gets first — including the
-    /// both-scripts rendering, where the document additionally brackets the
-    /// other one and the cell keeps it in its own column.
+    /// always LEADS with the script the document gets first.
     func testCellPrimary_leadsWithWhateverTheDocumentLeadsWith() {
         let word = candidate(roman: "tâi-gí", hanji: "台語")
 
         for swapped in [false, true] {
-            for bothScripts in [false, true] {
-                let settings = settings(swapped: swapped, bothScripts: bothScripts)
-                let cell = CandidateCellContent.cell(for: word, settings: settings)
-                let document = CandidateDocumentText.text(for: word, settings: settings)
+            let settings = settings(swapped: swapped)
+            let cell = CandidateCellContent.cell(for: word, settings: settings)
+            let document = CandidateDocumentText.text(for: word, settings: settings)
 
-                XCTAssertTrue(
-                    document.hasPrefix(cell.text),
-                    "swapped=\(swapped) bothScripts=\(bothScripts): document \"\(document)\" "
-                        + "does not lead with the cell's \"\(cell.text)\"",
-                )
-            }
+            XCTAssertTrue(
+                document.hasPrefix(cell.text),
+                "swapped=\(swapped): document \"\(document)\" "
+                    + "does not lead with the cell's \"\(cell.text)\"",
+            )
         }
     }
 
-    /// With both scripts off — the shipped default — the two are the same
-    /// string, which is what the end-to-end commit tests assert on.
+    /// Under the defaults the two are the same string, which is what the
+    /// end-to-end commit tests assert on.
     func testCellPrimary_isExactlyTheDocumentTextUnderTheDefaults() {
         let word = candidate(roman: "tâi-gí", hanji: "台語")
 

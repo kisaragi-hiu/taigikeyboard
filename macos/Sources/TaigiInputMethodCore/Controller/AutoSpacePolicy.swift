@@ -9,11 +9,9 @@ import Foundation
 /// `ActionHandler+KeyActions.swift`, behavioral-invariants.md §23): a committed
 /// word gets a trailing space; a trailing hyphen — a syllable the user is
 /// about to continue — suppresses it; a commit that put HANJI in the document
-/// turns the feature off unless Annotate in Brackets keeps the romanization in the output.
-/// macOS retired the Annotate in Brackets toggle (`RetiredSettingsCleanup` pins it false),
-/// so that branch of the gate never fires here today — it is kept because it IS
-/// the iOS formula, and a second spelling of the gate is how the platforms
-/// drift.
+/// turns the feature off. (iOS adds one more arm: Annotate in Brackets keeps
+/// the romanization in the output. macOS never ships that toggle, so the
+/// `wroteRomanization` verdict it reads never comes from a bracketed pair.)
 enum AutoSpacePolicy {
     /// True when this commit earns a trailing space at all — the same gate
     /// every insertion site and the punctuation swap read.

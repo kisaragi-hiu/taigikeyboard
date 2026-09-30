@@ -277,25 +277,6 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         }
     }
 
-    /// With Annotate in Brackets on, Return writes the bracketed pair and Space still writes
-    /// ONE script — the bracket setting says how to show a candidate that
-    /// carries both, and Space is the request for the other one by itself.
-    func testBothScriptsMode_SpaceStillWritesASingleScript() throws {
-        try withSetting(SettingsStore.Keys.isOutputBothScripts.name, to: true) {
-            let session = try composedSession()
-            let cell = try session.walkToFirstTwoScriptCell()
-            session.client.clearWrites()
-
-            _ = try session.controller.handle(
-                TestFixtures.keyDownEvent(characters: " "), client: session.client,
-            )
-
-            let written = try XCTUnwrap(session.client.insertedTexts.last)
-            XCTAssertEqual(written, cell.annotation)
-            XCTAssertFalse(written.contains("("), "no bracketed pair — one script was asked for")
-        }
-    }
-
     /// A candidate with only one script declines the key rather than writing
     /// that script twice — the answer `⌃7` gets on a page with no seventh slot.
     /// Letting it through instead would drop a raw space into a document that

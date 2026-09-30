@@ -20,7 +20,6 @@ final class PresentedCandidateTests: XCTestCase {
         let settingsUnderTest = [
             TestFixtures.settings(swapped: false),
             TestFixtures.settings(swapped: true),
-            TestFixtures.settings(swapped: false, bothScripts: true),
             TestFixtures.settings(swapped: false, candidateDisplayMode: .romanOnly),
             TestFixtures.settings(swapped: true, candidateDisplayMode: .romanOnly),
         ]

@@ -410,21 +410,17 @@ public nonisolated struct Taigi_Engine_UserDataResponse: Sendable {
 /// waits until every store is open, taken over (roadmap U7) and the custom
 /// dictionary re-derived and seeded — call it off the main thread then. With
 /// `in_background` the engine finishes that on a thread of its own and
-/// answers at once (readiness as of now), which a key path can afford. A
-/// repeat with the same paths answers the stores' current readiness;
-/// different paths are refused.
+/// answers at once, which a key path can afford — the acknowledgement does
+/// not promise that every store is usable yet. A repeat with the same
+/// directory and override is acknowledged again; different ones are refused.
 public nonisolated struct Taigi_Engine_OpenUserData: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var frequencyPath: String = String()
-
+  /// Overrides the association file alone — Android's `user_association.db`
+  /// lives in `filesDir`, the other three in `directory`. Empty everywhere else.
   public var associationPath: String = String()
-
-  public var customDictionaryPath: String = String()
-
-  public var learnedPhrasesPath: String = String()
 
   public var journal: Taigi_Engine_UserDataJournal = .wal
 
@@ -432,9 +428,7 @@ public nonisolated struct Taigi_Engine_OpenUserData: Sendable {
 
   /// The one directory the files live in, under the names every platform
   /// shares (`user_frequency.db`, `user_association.db`,
-  /// `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-  /// above overrides its own file — Android's `user_association.db` in
-  /// `filesDir`. Without it, all four paths are required.
+  /// `custom_dictionary.db`, `learned_phrases.db`). Required.
   public var directory: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -442,20 +436,14 @@ public nonisolated struct Taigi_Engine_OpenUserData: Sendable {
   public init() {}
 }
 
-/// Which stores are ready. A store that is not — a file from a later build,
-/// a disk error — stays closed and ranks neutrally; the engine logs why.
+/// Acknowledges the open. A store that is not ready — a file from a later
+/// build, a disk error — stays closed and ranks neutrally; the engine logs
+/// which (`user_data.open …`). No platform read the per-store flags, so
+/// they went (2026-09-30).
 public nonisolated struct Taigi_Engine_UserDataOpened: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
-
-  public var frequencyReady: Bool = false
-
-  public var associationReady: Bool = false
-
-  public var customDictionaryReady: Bool = false
-
-  public var learnedPhrasesReady: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -537,11 +525,6 @@ public nonisolated struct Taigi_Engine_RecordUsage: Sendable {
   public var hasHanji: Bool {self._hanji != nil}
   /// Clears the value of `hanji`. Subsequent reads from it will return its default value.
   public mutating func clearHanji() {self._hanji = nil}
-
-  /// The desktop's frequency-recording setting, OFF: no count is kept, the
-  /// learned-phrase touch still is (it is learning data, always on — §50).
-  /// Negative so an un-wired build records, as the phones always do.
-  public var frequencyRecordingDisabled: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1316,7 +1299,7 @@ nonisolated extension Taigi_Engine_UserDataResponse: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".OpenUserData"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}frequency_path\0\u{3}association_path\0\u{3}custom_dictionary_path\0\u{3}learned_phrases_path\0\u{1}journal\0\u{3}in_background\0\u{1}directory\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}association_path\0\u{2}\u{3}journal\0\u{3}in_background\0\u{1}directory\0\u{b}frequency_path\0\u{b}custom_dictionary_path\0\u{b}learned_phrases_path\0\u{c}\u{1}\u{1}\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1324,10 +1307,7 @@ nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftPro
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.frequencyPath) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.associationPath) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.customDictionaryPath) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self.learnedPhrasesPath) }()
       case 5: try { try decoder.decodeSingularEnumField(value: &self.journal) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.inBackground) }()
       case 7: try { try decoder.decodeSingularStringField(value: &self.directory) }()
@@ -1337,17 +1317,8 @@ nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftPro
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.frequencyPath.isEmpty {
-      try visitor.visitSingularStringField(value: self.frequencyPath, fieldNumber: 1)
-    }
     if !self.associationPath.isEmpty {
       try visitor.visitSingularStringField(value: self.associationPath, fieldNumber: 2)
-    }
-    if !self.customDictionaryPath.isEmpty {
-      try visitor.visitSingularStringField(value: self.customDictionaryPath, fieldNumber: 3)
-    }
-    if !self.learnedPhrasesPath.isEmpty {
-      try visitor.visitSingularStringField(value: self.learnedPhrasesPath, fieldNumber: 4)
     }
     if self.journal != .wal {
       try visitor.visitSingularEnumField(value: self.journal, fieldNumber: 5)
@@ -1362,10 +1333,7 @@ nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftPro
   }
 
   public static func ==(lhs: Taigi_Engine_OpenUserData, rhs: Taigi_Engine_OpenUserData) -> Bool {
-    if lhs.frequencyPath != rhs.frequencyPath {return false}
     if lhs.associationPath != rhs.associationPath {return false}
-    if lhs.customDictionaryPath != rhs.customDictionaryPath {return false}
-    if lhs.learnedPhrasesPath != rhs.learnedPhrasesPath {return false}
     if lhs.journal != rhs.journal {return false}
     if lhs.inBackground != rhs.inBackground {return false}
     if lhs.directory != rhs.directory {return false}
@@ -1376,44 +1344,18 @@ nonisolated extension Taigi_Engine_OpenUserData: SwiftProtobuf.Message, SwiftPro
 
 nonisolated extension Taigi_Engine_UserDataOpened: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".UserDataOpened"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}frequency_ready\0\u{3}association_ready\0\u{3}custom_dictionary_ready\0\u{3}learned_phrases_ready\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{b}frequency_ready\0\u{b}association_ready\0\u{b}custom_dictionary_ready\0\u{b}learned_phrases_ready\0\u{c}\u{1}\u{1}\u{c}\u{2}\u{1}\u{c}\u{3}\u{1}\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularBoolField(value: &self.frequencyReady) }()
-      case 2: try { try decoder.decodeSingularBoolField(value: &self.associationReady) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.customDictionaryReady) }()
-      case 4: try { try decoder.decodeSingularBoolField(value: &self.learnedPhrasesReady) }()
-      default: break
-      }
-    }
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.frequencyReady != false {
-      try visitor.visitSingularBoolField(value: self.frequencyReady, fieldNumber: 1)
-    }
-    if self.associationReady != false {
-      try visitor.visitSingularBoolField(value: self.associationReady, fieldNumber: 2)
-    }
-    if self.customDictionaryReady != false {
-      try visitor.visitSingularBoolField(value: self.customDictionaryReady, fieldNumber: 3)
-    }
-    if self.learnedPhrasesReady != false {
-      try visitor.visitSingularBoolField(value: self.learnedPhrasesReady, fieldNumber: 4)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   public static func ==(lhs: Taigi_Engine_UserDataOpened, rhs: Taigi_Engine_UserDataOpened) -> Bool {
-    if lhs.frequencyReady != rhs.frequencyReady {return false}
-    if lhs.associationReady != rhs.associationReady {return false}
-    if lhs.customDictionaryReady != rhs.customDictionaryReady {return false}
-    if lhs.learnedPhrasesReady != rhs.learnedPhrasesReady {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1516,7 +1458,7 @@ nonisolated extension Taigi_Engine_UserDataReset: SwiftProtobuf.Message, SwiftPr
 
 nonisolated extension Taigi_Engine_RecordUsage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".RecordUsage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text\0\u{3}canonical_tl\0\u{1}hanji\0\u{3}frequency_recording_disabled\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}display_text\0\u{3}canonical_tl\0\u{1}hanji\0\u{b}frequency_recording_disabled\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1527,7 +1469,6 @@ nonisolated extension Taigi_Engine_RecordUsage: SwiftProtobuf.Message, SwiftProt
       case 1: try { try decoder.decodeSingularStringField(value: &self.displayText) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.canonicalTl) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self._hanji) }()
-      case 4: try { try decoder.decodeSingularBoolField(value: &self.frequencyRecordingDisabled) }()
       default: break
       }
     }
@@ -1547,9 +1488,6 @@ nonisolated extension Taigi_Engine_RecordUsage: SwiftProtobuf.Message, SwiftProt
     try { if let v = self._hanji {
       try visitor.visitSingularStringField(value: v, fieldNumber: 3)
     } }()
-    if self.frequencyRecordingDisabled != false {
-      try visitor.visitSingularBoolField(value: self.frequencyRecordingDisabled, fieldNumber: 4)
-    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1557,7 +1495,6 @@ nonisolated extension Taigi_Engine_RecordUsage: SwiftProtobuf.Message, SwiftProt
     if lhs.displayText != rhs.displayText {return false}
     if lhs.canonicalTl != rhs.canonicalTl {return false}
     if lhs._hanji != rhs._hanji {return false}
-    if lhs.frequencyRecordingDisabled != rhs.frequencyRecordingDisabled {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

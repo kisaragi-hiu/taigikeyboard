@@ -5,7 +5,6 @@ use protos::engine::{
     request, response, user_data_request, AppConfig, OpenUserData, Platform, Request, Response,
     UserDataJournal, UserDataRequest,
 };
-use userdata::UserDataPaths;
 
 /// An iOS TL request config; `swapped` is `is_translate_swapped`.
 pub fn tl_config(swapped: bool) -> AppConfig {
@@ -29,18 +28,15 @@ pub fn roundtrip(config: AppConfig, generation: u64, payload: request::Payload) 
         .expect("response decodes")
 }
 
-/// Opens the engine's user data at `paths`, rollback-journaled as on iOS,
-/// and asserts it answered.
-pub fn open_user_data(paths: &UserDataPaths) {
+/// Opens the engine's user data in `directory`, rollback-journaled as on
+/// iOS, and asserts it answered.
+pub fn open_user_data(directory: &std::path::Path) {
     let opened = roundtrip(
         tl_config(false),
         0,
         request::Payload::UserData(UserDataRequest {
             method: Some(user_data_request::Method::Open(OpenUserData {
-                frequency_path: paths.frequency.display().to_string(),
-                association_path: paths.association.display().to_string(),
-                custom_dictionary_path: paths.custom_dictionary.display().to_string(),
-                learned_phrases_path: paths.learned_phrases.display().to_string(),
+                directory: directory.display().to_string(),
                 journal: UserDataJournal::Delete as i32,
                 ..OpenUserData::default()
             })),

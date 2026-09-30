@@ -35,7 +35,7 @@ fn user_data_open() {
         }]);
         stores.association.all_rows(); // flush the queued writes
         drop(stores);
-        open_user_data(&paths);
+        open_user_data(directory.path());
         directory
     });
 }

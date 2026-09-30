@@ -17,7 +17,7 @@ enum InputMode: String, CaseIterable, Sendable {
 ///
 /// Raw values are the storage contract every platform shares
 /// (`docs/reports/2026-08-30-hanlo-together-mode-research.md` §12) — the same
-/// convention `isTranslateSwapped` / `outputBothScripts` follow, so a future
+/// convention `isTranslateSwapped` follows, so a future
 /// settings transfer carries one vocabulary.
 /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SettingsModels.swift
 /// `CandidateDisplayMode` and the Android `CandidateDisplayMode.storageValue`.
@@ -61,8 +61,8 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
     }
 
     /// Effective swap for a stored flag. `.combined` leads with — and commits —
-    /// the Hanji: forcing the pair on is a compatibility projection of that,
-    /// so every reader of the pair (auto-space, full-width punctuation, the
+    /// the Hanji: forcing the swap on is a compatibility projection of that,
+    /// so every reader of the swap (auto-space, full-width punctuation, the
     /// nextword gates) behaves as today's hanji-first mode
     /// (`behavioral-invariants.md` §42). `.romanOnly` has no Hanji to lead with.
     /// CROSS-PLATFORM INVARIANT — mirrors ios `SettingsModels.swift`
@@ -73,17 +73,10 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
         self == .combined || (stored && showsHanji)
     }
 
-    /// Effective Annotate in Brackets for a stored flag — off only where there is no Hanji
-    /// to bracket; `.combined` keeps it (`Hanji (romanization)`).
-    func effectiveOutputBothScripts(stored: Bool) -> Bool {
-        stored && showsHanji
-    }
-
     /// Whether a typed punctuation key becomes full-width (`，` for `,`) for a
-    /// stored swap flag — the stored flag masked like Annotate in Brackets, NOT the candidate
-    /// projection above, which `.combined` forces on while the swap shortcut
-    /// still picks the width. Mirrored on ios / android / windows beside
-    /// `effectiveOutputBothScripts`.
+    /// stored swap flag — the stored flag masked by the display mode, NOT the
+    /// candidate projection above, which `.combined` forces on while the swap
+    /// shortcut still picks the width. Mirrored on ios / android / windows.
     func effectiveFullWidthPunctuation(stored: Bool) -> Bool {
         stored && showsHanji
     }
@@ -99,34 +92,29 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
 struct EngineSettings: Equatable, Sendable {
     let inputMode: InputMode
 
-    /// Word-boundary spacing inputs for the engine's `continuous_word_space`
-    /// predicate (`docs/engine/continuous-input-ranking.md` §10.2). Both are
-    /// `false` until PR5 ships the settings UI, but they are carried in the
-    /// snapshot rather than hardcoded at the call sites because iOS's #380
-    /// regression was exactly a call site that stopped passing the live pair.
-    /// `isOutputBothScripts` is what separates hanji-first (no inter-segment
-    /// space) from both-scripts (`hit (彼)` — space wanted); the swap flag is
-    /// `true` for both, so one flag cannot express it.
+    /// Word-boundary spacing input for the engine's `continuous_word_space`
+    /// predicate (`docs/engine/continuous-input-ranking.md` §10.2). Carried in
+    /// the snapshot rather than hardcoded at the call sites because iOS's #380
+    /// regression was exactly a call site that stopped passing the live value.
+    /// (Annotate in Brackets — `output_both_scripts` on the wire — is a mobile
+    /// setting; macOS never ships it, so the wire field stays at its default.)
     ///
-    /// EFFECTIVE, not stored: under `candidateDisplayMode == .romanOnly` both
-    /// read `false` whatever the user has stored, because a mode that shows
-    /// and commits only romanization has no Hanji to lead with or to bracket.
-    /// The stored values live on in `UserDefaults`
-    /// (`SettingsStore.storedIsTranslateSwapped` / `storedIsOutputBothScripts`)
-    /// and come back the moment the mode returns to `.sideBySide`. Under
+    /// EFFECTIVE, not stored: under `candidateDisplayMode == .romanOnly` it
+    /// reads `false` whatever the user has stored, because a mode that shows
+    /// and commits only romanization has no Hanji to lead with. The stored
+    /// value lives on in `UserDefaults` (`SettingsStore.storedIsTranslateSwapped`)
+    /// and comes back the moment the mode returns to `.sideBySide`. Under
     /// `.combined` the swap reads `true` whatever is stored — the Hanji cell
     /// comes first and is the `.primary` commit, the romanization cell beside
-    /// it the `.alternate` one (`PresentedCandidate`) — while the bracket
-    /// setting is read as stored (`SettingsStore.current` has the why). Every
-    /// reader of "swap" — engine `AppConfig`, cell, document text, auto-space
-    /// — reads THIS pair, never the stored one; full-width punctuation reads
+    /// it the `.alternate` one (`PresentedCandidate`). Every reader of "swap"
+    /// — engine `AppConfig`, cell, document text, auto-space — reads THIS
+    /// value, never the stored one; full-width punctuation reads
     /// `isFullWidthPunctuation` instead.
     /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift
-    /// `isTranslateSwapped` / `isOutputBothScripts` (derived the same way) and
-    /// the Windows `document.rs engine_settings()`. Drift changes what a
+    /// `isTranslateSwapped` (derived the same way) and the Windows
+    /// `document.rs engine_settings()`. Drift changes what a
     /// romanization-only install commits.
     let isTranslateSwapped: Bool
-    let isOutputBothScripts: Bool
 
     /// `CandidateDisplayMode.effectiveFullWidthPunctuation(stored:)` — read by
     /// `TaigiInputController.documentPunctuation` only.
@@ -136,7 +124,7 @@ struct EngineSettings: Equatable, Sendable {
     /// alone. Sent to the engine as `AppConfig.candidate_display_mode`, which
     /// is what collapses same-romanization rows under `.romanOnly`
     /// (`engine/composing/src/dispatch.rs`, `engine/nextword/src/filter.rs`);
-    /// on this side it selects the cell arm and derives the pair above.
+    /// on this side it selects the cell arm and derives the swap above.
     /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift
     /// `candidateDisplayMode`, which defaults it to side-by-side. Drift changes
     /// what a fresh install's candidate cells show.
@@ -170,14 +158,6 @@ struct EngineSettings: Equatable, Sendable {
     /// `nasalMarkerUppercaseEnabled` in android/…/ime/core/PrefHelper.kt, all ON.
     let isNasalMarkerUppercaseEnabled: Bool
 
-    /// Whether committing a candidate counts towards its ranking next time.
-    /// Read on the write path only — the boost itself is always applied to
-    /// whatever counts have been learned, so turning this off freezes the
-    /// learned ranking rather than discarding it.
-    /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:48,
-    /// which defaults it ON. Drift changes whether a fresh install learns.
-    let isFrequencyRecordingEnabled: Bool
-
     /// Whether the user's own dictionary contributes candidates. Gates the
     /// lookup itself, not just the display: with it off nothing is read from
     /// `custom_dictionary.db` (`FetchAtPos.custom_dictionary_disabled`).
@@ -205,13 +185,11 @@ struct EngineSettings: Equatable, Sendable {
         return EngineSettings(
             inputMode: .tl,
             isTranslateSwapped: mode.effectiveTranslateSwapped(stored: storedSwap),
-            isOutputBothScripts: false,
             isFullWidthPunctuation: mode.effectiveFullWidthPunctuation(stored: storedSwap),
             candidateDisplayMode: mode,
             isLiteralRomanCandidateEnabled: true,
             isHyphenlessRomanEnabled: false,
             isNasalMarkerUppercaseEnabled: true,
-            isFrequencyRecordingEnabled: true,
             isCustomDictEnabled: true,
             dictionarySources: .defaults,
         )

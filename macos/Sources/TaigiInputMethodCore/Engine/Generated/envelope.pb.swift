@@ -210,8 +210,9 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 /// duplicates that only the engine can collapse consistently for four
 /// platforms. Set on the BASE config (every request) — composing AND nextword
 /// read it; the other request families ignore it. Platforms keep sending the
-/// derived `is_translate_swapped` / `output_both_scripts` pair (both `false`
-/// under Romanization Only) so spacing / recording semantics need no new reader.
+/// derived `is_translate_swapped` (and, on mobile, `output_both_scripts`; the
+/// desktop sends only the swap) — both `false` under Romanization Only — so
+/// spacing / recording semantics need no new reader.
 ///
 /// 2026-09-20 added `hyphenless_roman` (No Hyphens, USER): the rendered
 /// romanization drops the inter-syllable `-` and writes the neutral-tone marker `--`

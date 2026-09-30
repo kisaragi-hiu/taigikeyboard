@@ -1,6 +1,6 @@
 //! Where a pick is counted. The desktop decides WHAT a pick is — the
-//! identity it counts under, whether the user's frequency setting lets it be
-//! counted — and the engine keeps the count (user-data-engine-roadmap P5).
+//! identity it counts under — and the engine keeps the count
+//! (user-data-engine-roadmap P5).
 
 use crate::engine;
 
@@ -12,8 +12,6 @@ pub struct Usage {
     pub canonical_tl: String,
     /// Set for a Hanji pick, so a learned phrase taken whole is touched.
     pub hanji: Option<String>,
-    /// The user's frequency-recording setting.
-    pub frequency_recording_enabled: bool,
 }
 
 /// `Send + Sync` for the same reason as the manager's other seams: one
@@ -32,7 +30,6 @@ impl UsageRecorder for EngineUsage {
             &usage.display_text,
             &usage.canonical_tl,
             usage.hanji.as_deref(),
-            usage.frequency_recording_enabled,
         );
     }
 }

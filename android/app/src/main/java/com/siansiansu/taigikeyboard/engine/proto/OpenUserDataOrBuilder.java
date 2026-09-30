@@ -11,52 +11,26 @@ public interface OpenUserDataOrBuilder extends
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>string frequency_path = 1;</code>
-   * @return The frequencyPath.
-   */
-  java.lang.String getFrequencyPath();
-  /**
-   * <code>string frequency_path = 1;</code>
-   * @return The bytes for frequencyPath.
-   */
-  com.google.protobuf.ByteString
-      getFrequencyPathBytes();
-
-  /**
+   * <pre>
+   * Overrides the association file alone — Android's `user_association.db`
+   * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+   * </pre>
+   *
    * <code>string association_path = 2;</code>
    * @return The associationPath.
    */
   java.lang.String getAssociationPath();
   /**
+   * <pre>
+   * Overrides the association file alone — Android's `user_association.db`
+   * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+   * </pre>
+   *
    * <code>string association_path = 2;</code>
    * @return The bytes for associationPath.
    */
   com.google.protobuf.ByteString
       getAssociationPathBytes();
-
-  /**
-   * <code>string custom_dictionary_path = 3;</code>
-   * @return The customDictionaryPath.
-   */
-  java.lang.String getCustomDictionaryPath();
-  /**
-   * <code>string custom_dictionary_path = 3;</code>
-   * @return The bytes for customDictionaryPath.
-   */
-  com.google.protobuf.ByteString
-      getCustomDictionaryPathBytes();
-
-  /**
-   * <code>string learned_phrases_path = 4;</code>
-   * @return The learnedPhrasesPath.
-   */
-  java.lang.String getLearnedPhrasesPath();
-  /**
-   * <code>string learned_phrases_path = 4;</code>
-   * @return The bytes for learnedPhrasesPath.
-   */
-  com.google.protobuf.ByteString
-      getLearnedPhrasesPathBytes();
 
   /**
    * <code>.taigi.engine.UserDataJournal journal = 5;</code>
@@ -79,9 +53,7 @@ public interface OpenUserDataOrBuilder extends
    * <pre>
    * The one directory the files live in, under the names every platform
    * shares (`user_frequency.db`, `user_association.db`,
-   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-   * above overrides its own file — Android's `user_association.db` in
-   * `filesDir`. Without it, all four paths are required.
+   * `custom_dictionary.db`, `learned_phrases.db`). Required.
    * </pre>
    *
    * <code>string directory = 7;</code>
@@ -92,9 +64,7 @@ public interface OpenUserDataOrBuilder extends
    * <pre>
    * The one directory the files live in, under the names every platform
    * shares (`user_frequency.db`, `user_association.db`,
-   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-   * above overrides its own file — Android's `user_association.db` in
-   * `filesDir`. Without it, all four paths are required.
+   * `custom_dictionary.db`, `learned_phrases.db`). Required.
    * </pre>
    *
    * <code>string directory = 7;</code>

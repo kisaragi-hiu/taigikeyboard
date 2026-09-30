@@ -111,19 +111,7 @@ pub fn resolved_commit(
             wrote_romanization: true,
         };
     };
-    if settings.is_output_both_scripts {
-        // Annotate in Brackets writes the pair, so the romanization IS in the document
-        // whichever half leads.
-        let text = if settings.is_translate_swapped {
-            format!("{hanji} ({})", candidate.roman)
-        } else {
-            format!("{} ({hanji})", candidate.roman)
-        };
-        ResolvedCommit {
-            text,
-            wrote_romanization: true,
-        }
-    } else if settings.is_translate_swapped {
+    if settings.is_translate_swapped {
         ResolvedCommit {
             text: hanji.to_owned(),
             wrote_romanization: false,
@@ -140,8 +128,7 @@ pub fn resolved_commit(
 /// `None` when the candidate has one script or the mode shows no hanji.
 /// Read off the settings, never the cell: under Combined the flip in
 /// `CandidateSource::resolve` turns this into "the other cell's script".
-/// `is_output_both_scripts` is not consulted — Space writes one script, so
-/// its verdict is simply which script that is.
+/// Space writes one script, so its verdict is simply which script that is.
 pub fn resolved_alternate(
     candidate: &ContinuousCandidate,
     settings: &EngineSettings,
@@ -174,30 +161,27 @@ mod tests {
     use super::*;
     use crate::engine::test_support::candidate;
 
-    fn settings(swapped: bool, both: bool) -> EngineSettings {
+    fn settings(swapped: bool) -> EngineSettings {
         EngineSettings {
             is_translate_swapped: swapped,
-            is_output_both_scripts: both,
             ..EngineSettings::default()
         }
     }
 
     #[test]
-    fn document_text_follows_the_output_settings() {
-        // trace: CandidateDocumentTextTests.swift:9-47.
+    fn document_text_follows_the_swap() {
+        // trace: CandidateDocumentTextTests.swift.
         let c = candidate("tâi-gí", Some("台語"), 0);
-        assert_eq!(document_text(&c, &settings(false, false)), "tâi-gí");
-        assert_eq!(document_text(&c, &settings(true, false)), "台語");
-        assert_eq!(document_text(&c, &settings(false, true)), "tâi-gí (台語)");
-        assert_eq!(document_text(&c, &settings(true, true)), "台語 (tâi-gí)");
+        assert_eq!(document_text(&c, &settings(false)), "tâi-gí");
+        assert_eq!(document_text(&c, &settings(true)), "台語");
     }
 
     #[test]
     fn roman_only_and_empty_hanji_write_the_romanization_everywhere() {
         for c in [candidate("guá", None, 0), candidate("guá", Some(""), 0)] {
-            for (swapped, both) in [(false, false), (true, false), (false, true), (true, true)] {
-                assert_eq!(document_text(&c, &settings(swapped, both)), "guá");
-                assert_eq!(alternate_text(&c, &settings(swapped, both)), None);
+            for swapped in [false, true] {
+                assert_eq!(document_text(&c, &settings(swapped)), "guá");
+                assert_eq!(alternate_text(&c, &settings(swapped)), None);
             }
         }
     }
@@ -230,7 +214,7 @@ mod tests {
         };
         assert_eq!(document_text(&c, &derived), "tâi-gí");
         // Side-by-side is untouched by the roman-only arm.
-        let cell = CandidateCellContent::cell(&c, &settings(false, false));
+        let cell = CandidateCellContent::cell(&c, &settings(false));
         assert_eq!(cell.annotation.as_deref(), Some("台語"));
     }
 
@@ -238,41 +222,32 @@ mod tests {
     fn alternate_text_follows_the_display_mode_not_the_cell() {
         // trace: hanji present → SideBySide both swaps = the annotation the
         // cell carries today; Combined (derived swap = true) = roman; RomanOnly
-        // = None; hanji-less = None; Annotate in Brackets ignored (one script).
+        // = None; hanji-less = None.
         let c = candidate("tâi-gí", Some("台語"), 0);
-        for both in [false, true] {
-            let side_by_side = |swapped| EngineSettings {
-                is_translate_swapped: swapped,
-                is_output_both_scripts: both,
-                ..EngineSettings::default()
-            };
-            assert_eq!(
-                alternate_text(&c, &side_by_side(false)),
-                CandidateCellContent::cell(&c, &side_by_side(false)).annotation
-            );
-            assert_eq!(
-                alternate_text(&c, &side_by_side(true)),
-                CandidateCellContent::cell(&c, &side_by_side(true)).annotation
-            );
-            let combined = EngineSettings {
-                is_translate_swapped: true,
-                is_output_both_scripts: both,
-                candidate_display_mode: CandidateDisplayMode::Combined,
-                ..EngineSettings::default()
-            };
-            assert_eq!(alternate_text(&c, &combined).as_deref(), Some("tâi-gí"));
-            let roman_only = EngineSettings {
-                is_output_both_scripts: both,
-                candidate_display_mode: CandidateDisplayMode::RomanOnly,
-                ..EngineSettings::default()
-            };
-            assert_eq!(alternate_text(&c, &roman_only), None);
-            assert_eq!(alternate_text(&candidate("guá", None, 0), &combined), None);
-            assert_eq!(
-                alternate_text(&candidate("guá", Some(""), 0), &combined),
-                None
-            );
-        }
+        assert_eq!(
+            alternate_text(&c, &settings(false)),
+            CandidateCellContent::cell(&c, &settings(false)).annotation
+        );
+        assert_eq!(
+            alternate_text(&c, &settings(true)),
+            CandidateCellContent::cell(&c, &settings(true)).annotation
+        );
+        let combined = EngineSettings {
+            is_translate_swapped: true,
+            candidate_display_mode: CandidateDisplayMode::Combined,
+            ..EngineSettings::default()
+        };
+        assert_eq!(alternate_text(&c, &combined).as_deref(), Some("tâi-gí"));
+        let roman_only = EngineSettings {
+            candidate_display_mode: CandidateDisplayMode::RomanOnly,
+            ..EngineSettings::default()
+        };
+        assert_eq!(alternate_text(&c, &roman_only), None);
+        assert_eq!(alternate_text(&candidate("guá", None, 0), &combined), None);
+        assert_eq!(
+            alternate_text(&candidate("guá", Some(""), 0), &combined),
+            None
+        );
     }
 
     #[test]
@@ -280,17 +255,11 @@ mod tests {
         // trace: CandidateDocumentTextTests.swift
         // `testResolved_saysWhetherTheStringItPickedCarriesRomanization`.
         let c = candidate("tâi-gí", Some("台語"), 0);
-        assert!(resolved_commit(&c, &settings(false, false)).wrote_romanization);
+        assert!(resolved_commit(&c, &settings(false)).wrote_romanization);
         assert!(
-            !resolved_commit(&c, &settings(true, false)).wrote_romanization,
+            !resolved_commit(&c, &settings(true)).wrote_romanization,
             "a pure 漢字 commit earns no space"
         );
-        for swapped in [false, true] {
-            assert!(
-                resolved_commit(&c, &settings(swapped, true)).wrote_romanization,
-                "括號標註 writes the pair either way round (swapped={swapped})"
-            );
-        }
     }
 
     #[test]
@@ -299,52 +268,43 @@ mod tests {
         // under EVERY mode, including the two the old mode proxy called a
         // hanji commit (Hanji-first and Hanji with Romanization).
         for c in [candidate("taigi", None, 0), candidate("taigi", Some(""), 0)] {
-            for (swapped, both) in [(false, false), (true, false), (false, true), (true, true)] {
-                let resolved = resolved_commit(&c, &settings(swapped, both));
+            for swapped in [false, true] {
+                let resolved = resolved_commit(&c, &settings(swapped));
                 assert_eq!(resolved.text, "taigi");
-                assert!(resolved.wrote_romanization, "swapped={swapped} both={both}");
+                assert!(resolved.wrote_romanization, "swapped={swapped}");
             }
         }
     }
 
     #[test]
-    fn the_alternate_verdict_inverts_the_mode_and_ignores_brackets() {
+    fn the_alternate_verdict_inverts_the_mode() {
         let c = candidate("tâi-gí", Some("台語"), 0);
-        for both in [false, true] {
-            let swapped = resolved_alternate(&c, &settings(true, both)).unwrap();
-            assert_eq!(swapped.text, "tâi-gí");
-            assert!(swapped.wrote_romanization, "both={both}");
-            let roman_first = resolved_alternate(&c, &settings(false, both)).unwrap();
-            assert_eq!(roman_first.text, "台語");
-            assert!(
-                !roman_first.wrote_romanization,
-                "Space wrote the hanji, not the pair (both={both})"
-            );
-        }
+        let swapped = resolved_alternate(&c, &settings(true)).unwrap();
+        assert_eq!(swapped.text, "tâi-gí");
+        assert!(swapped.wrote_romanization);
+        let roman_first = resolved_alternate(&c, &settings(false)).unwrap();
+        assert_eq!(roman_first.text, "台語");
+        assert!(!roman_first.wrote_romanization, "Space wrote the hanji");
     }
 
     #[test]
-    fn alternate_is_whichever_script_the_primary_is_not_and_ignores_brackets() {
-        // trace: CandidateDocumentTextTests.swift:85-160.
+    fn alternate_is_whichever_script_the_primary_is_not() {
+        // trace: CandidateDocumentTextTests.swift `testAlternate_isWhicheverScriptThePrimaryIsNot`.
         let c = candidate("tâi-gí", Some("台語"), 0);
         assert_eq!(
-            alternate_text(&c, &settings(false, false)).as_deref(),
+            alternate_text(&c, &settings(false)).as_deref(),
             Some("台語")
         );
         assert_eq!(
-            alternate_text(&c, &settings(true, false)).as_deref(),
+            alternate_text(&c, &settings(true)).as_deref(),
             Some("tâi-gí")
         );
-        assert_eq!(
-            alternate_text(&c, &settings(false, true)).as_deref(),
-            Some("台語")
-        );
-        let cell = CandidateCellContent::cell(&c, &settings(true, false));
+        let cell = CandidateCellContent::cell(&c, &settings(true));
         assert_eq!(cell.text, "台語");
         assert_eq!(cell.annotation.as_deref(), Some("tâi-gí"));
         let hyphenated = candidate("kau--lâng", Some("交--人"), 0);
         assert_eq!(
-            alternate_text(&hyphenated, &settings(false, false)).as_deref(),
+            alternate_text(&hyphenated, &settings(false)).as_deref(),
             Some("交--人"),
             "verbatim"
         );

@@ -16,9 +16,8 @@ import Foundation
 /// column rather than a second line because the window is one row tall.
 ///
 /// Display only. What committing writes into the document stays
-/// `CandidateDocumentText`'s decision: the two agree on which script leads, but
-/// the document string can carry both in brackets while the cell keeps them in
-/// separate columns.
+/// `CandidateDocumentText`'s decision: the two agree on which script leads,
+/// while the cell may keep the other one in its own column.
 struct CandidateCellContent: Equatable, Sendable {
     /// The script this cell leads with — romanization, or Hanji when swapped.
     let text: String

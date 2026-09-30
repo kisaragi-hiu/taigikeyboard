@@ -47,13 +47,9 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "isTranslateSwapped",
             defaultValue: EngineSettings.defaults.isTranslateSwapped,
         )
-        static let isOutputBothScripts = SettingsKey(
-            name: "outputBothScripts",
-            defaultValue: EngineSettings.defaults.isOutputBothScripts,
-        )
         /// Both scripts side by side, or the romanization alone. Stored as the
-        /// enum's raw value like `inputMode`; the two keys above are left
-        /// untouched by it — switching back restores whatever they hold.
+        /// enum's raw value like `inputMode`; the swap key above is left
+        /// untouched by it — switching back restores whatever it holds.
         static let candidateDisplayMode = SettingsKey(
             name: "candidateDisplayMode",
             defaultValue: EngineSettings.defaults.candidateDisplayMode,
@@ -69,10 +65,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         static let isNasalMarkerUppercaseEnabled = SettingsKey(
             name: "nasalMarkerUppercaseEnabled",
             defaultValue: EngineSettings.defaults.isNasalMarkerUppercaseEnabled,
-        )
-        static let isFrequencyRecordingEnabled = SettingsKey(
-            name: "frequencyRecordingEnabled",
-            defaultValue: EngineSettings.defaults.isFrequencyRecordingEnabled,
         )
         static let isCustomDictEnabled = SettingsKey(
             name: "customDictEnabled",
@@ -361,21 +353,19 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     }
 
     var current: EngineSettings {
-        // The ONE place the stored swap pair becomes the effective one; the
-        // rules live on `CandidateDisplayMode` (§42). The stored values stay
-        // put for the way back to side-by-side.
+        // The ONE place the stored swap becomes the effective one; the rules
+        // live on `CandidateDisplayMode` (§42). The stored value stays put
+        // for the way back to side-by-side.
         let displayMode = candidateDisplayMode
         let storedSwap = storedIsTranslateSwapped
         return EngineSettings(
             inputMode: inputMode,
             isTranslateSwapped: displayMode.effectiveTranslateSwapped(stored: storedSwap),
-            isOutputBothScripts: displayMode.effectiveOutputBothScripts(stored: storedIsOutputBothScripts),
             isFullWidthPunctuation: displayMode.effectiveFullWidthPunctuation(stored: storedSwap),
             candidateDisplayMode: displayMode,
             isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
             isHyphenlessRomanEnabled: bool(Keys.isHyphenlessRomanEnabled),
             isNasalMarkerUppercaseEnabled: bool(Keys.isNasalMarkerUppercaseEnabled),
-            isFrequencyRecordingEnabled: bool(Keys.isFrequencyRecordingEnabled),
             isCustomDictEnabled: bool(Keys.isCustomDictEnabled),
             dictionarySources: dictionarySources,
         )
@@ -696,7 +686,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     /// same never-written-reads-as-default rule its readers use.
     ///
     /// `stored` in the name because these are the raw values and NOT what the
-    /// engine composes under: `current` derives the effective pair from them
+    /// engine composes under: `current` derives the effective swap from it
     /// and `candidateDisplayMode`. A gate that read these directly would apply
     /// a swap the romanization-only display has switched off, which is why the
     /// only callers are the writers — the shortcut toggle, the General pane's
@@ -704,11 +694,6 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     var storedIsTranslateSwapped: Bool {
         get { bool(Keys.isTranslateSwapped) }
         set { userDefaults.set(newValue, forKey: Keys.isTranslateSwapped.name) }
-    }
-
-    var storedIsOutputBothScripts: Bool {
-        get { bool(Keys.isOutputBothScripts) }
-        set { userDefaults.set(newValue, forKey: Keys.isOutputBothScripts.name) }
     }
 
     /// Whether committing a word auto-inserts a trailing space. Read by the

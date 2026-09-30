@@ -9,28 +9,4 @@ package com.siansiansu.taigikeyboard.engine.proto;
 public interface UserDataOpenedOrBuilder extends
     // @@protoc_insertion_point(interface_extends:taigi.engine.UserDataOpened)
     com.google.protobuf.MessageLiteOrBuilder {
-
-  /**
-   * <code>bool frequency_ready = 1;</code>
-   * @return The frequencyReady.
-   */
-  boolean getFrequencyReady();
-
-  /**
-   * <code>bool association_ready = 2;</code>
-   * @return The associationReady.
-   */
-  boolean getAssociationReady();
-
-  /**
-   * <code>bool custom_dictionary_ready = 3;</code>
-   * @return The customDictionaryReady.
-   */
-  boolean getCustomDictionaryReady();
-
-  /**
-   * <code>bool learned_phrases_ready = 4;</code>
-   * @return The learnedPhrasesReady.
-   */
-  boolean getLearnedPhrasesReady();
 }

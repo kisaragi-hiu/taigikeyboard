@@ -242,10 +242,10 @@ impl SettingsDocument {
 
     /// The engine-facing snapshot as of this document.
     ///
-    /// The swap and Annotate in Brackets pair comes out DERIVED — the rules live on
-    /// `CandidateDisplayMode` (invariants §42). The stored bools are left
-    /// alone, so switching back to side-by-side restores them. Every consumer
-    /// of the pair reads it from here, never `bool(&IS_TRANSLATE_SWAPPED)`
+    /// The swap comes out DERIVED — the rules live on `CandidateDisplayMode`
+    /// (invariants §42). The stored bool is left alone, so switching back to
+    /// side-by-side restores it. Every consumer of the swap reads it from
+    /// here, never `bool(&IS_TRANSLATE_SWAPPED)`
     /// directly; the raw read is for the panes and the toggle shortcut that
     /// write it.
     pub fn engine_settings(&self) -> EngineSettings {
@@ -255,8 +255,6 @@ impl SettingsDocument {
         EngineSettings {
             input_mode: self.choice(&keys::INPUT_MODE),
             is_translate_swapped: candidate_display_mode.effective_translate_swapped(stored_swap),
-            is_output_both_scripts: candidate_display_mode
-                .effective_output_both_scripts(self.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS)),
             is_full_width_punctuation: candidate_display_mode
                 .effective_full_width_punctuation(stored_swap),
             candidate_display_mode,
@@ -264,7 +262,6 @@ impl SettingsDocument {
                 .bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
             is_hyphenless_roman_enabled: self.bool(&keys::IS_HYPHENLESS_ROMAN_ENABLED),
             is_nasal_marker_uppercase_enabled: self.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
-            is_frequency_recording_enabled: self.bool(&keys::IS_FREQUENCY_RECORDING_ENABLED),
             is_custom_dict_enabled: self.bool(&keys::IS_CUSTOM_DICT_ENABLED),
             dictionary_sources: self.dictionary_sources(),
         }
@@ -352,12 +349,12 @@ mod tests {
     #[test]
     fn absent_bool_is_default_not_false() {
         // trace: macOS `UserDefaults.bool(forKey:)` trap — a fresh install must
-        // keep frequency recording ON even though nothing was ever stored.
+        // keep the custom dictionary ON even though nothing was ever stored.
         let doc = SettingsDocument::default();
-        assert!(doc.bool(&keys::IS_FREQUENCY_RECORDING_ENABLED));
+        assert!(doc.bool(&keys::IS_CUSTOM_DICT_ENABLED));
         let mut stored = SettingsDocument::default();
-        stored.set_bool(&keys::IS_FREQUENCY_RECORDING_ENABLED, false);
-        assert!(!stored.bool(&keys::IS_FREQUENCY_RECORDING_ENABLED));
+        stored.set_bool(&keys::IS_CUSTOM_DICT_ENABLED, false);
+        assert!(!stored.bool(&keys::IS_CUSTOM_DICT_ENABLED));
     }
 
     #[test]
@@ -481,13 +478,12 @@ mod tests {
     }
 
     #[test]
-    fn roman_only_masks_the_swap_pair_without_touching_what_is_stored() {
-        // trace: stored swap=true, both=true; mode=romanOnly → the snapshot
-        // reads (false, false) while `bool(&key)` still answers true; back to
-        // sideBySide → (true, true) again with no write in between.
+    fn roman_only_masks_the_swap_without_touching_what_is_stored() {
+        // trace: stored swap=true; mode=romanOnly → the snapshot reads false
+        // while `bool(&key)` still answers true; back to sideBySide → true
+        // again with no write in between.
         let mut doc = SettingsDocument::default();
         doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, true);
-        doc.set_bool(&keys::IS_OUTPUT_BOTH_SCRIPTS, true);
         doc.set_choice(
             &keys::CANDIDATE_DISPLAY_MODE,
             CandidateDisplayMode::RomanOnly,
@@ -497,13 +493,9 @@ mod tests {
             snapshot.candidate_display_mode,
             CandidateDisplayMode::RomanOnly
         );
-        assert!(!snapshot.is_translate_swapped && !snapshot.is_output_both_scripts);
+        assert!(!snapshot.is_translate_swapped);
         assert!(
             doc.bool(&keys::IS_TRANSLATE_SWAPPED),
-            "stored value untouched"
-        );
-        assert!(
-            doc.bool(&keys::IS_OUTPUT_BOTH_SCRIPTS),
             "stored value untouched"
         );
         let revision = doc.revision;
@@ -511,20 +503,17 @@ mod tests {
             &keys::CANDIDATE_DISPLAY_MODE,
             CandidateDisplayMode::SideBySide,
         );
-        let restored = doc.engine_settings();
-        assert!(restored.is_translate_swapped && restored.is_output_both_scripts);
+        assert!(doc.engine_settings().is_translate_swapped);
         assert_eq!(doc.revision, revision + 1, "only the mode was written");
     }
 
     #[test]
-    fn combined_forces_the_swap_and_leaves_the_bracket_toggle_alone() {
+    fn combined_forces_the_swap_and_leaves_the_stored_swap_alone() {
         // trace: stored swap=false (written — the fresh default is
-        // hanji-first), both=false; mode=combined → (true, false): each
-        // script is its own adjacent cell, hanji first, and a commit writes
-        // the hanji — the projection of that onto the pair is a forced swap.
-        // Stored both=true → (true, true), so Annotate in Brackets still yields
-        // `Hanji (romanization)`. Roman-only still masks to (false, false); back to
-        // sideBySide reads the stored (false, true) again with no bool
+        // hanji-first); mode=combined → true: each script is its own adjacent
+        // cell, hanji first, and a commit writes the hanji — the projection
+        // of that onto the flag is a forced swap. Roman-only still masks to
+        // false; back to sideBySide reads the stored false again with no bool
         // written in between.
         let mut doc = SettingsDocument::default();
         doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, false);
@@ -537,30 +526,24 @@ mod tests {
             snapshot.candidate_display_mode,
             CandidateDisplayMode::Combined
         );
-        assert!(snapshot.is_translate_swapped && !snapshot.is_output_both_scripts);
+        assert!(snapshot.is_translate_swapped);
         assert!(
             !doc.bool(&keys::IS_TRANSLATE_SWAPPED),
             "stored value untouched"
         );
 
-        doc.set_bool(&keys::IS_OUTPUT_BOTH_SCRIPTS, true);
-        let with_brackets = doc.engine_settings();
-        assert!(with_brackets.is_translate_swapped && with_brackets.is_output_both_scripts);
-
         doc.set_choice(
             &keys::CANDIDATE_DISPLAY_MODE,
             CandidateDisplayMode::RomanOnly,
         );
-        let roman_only = doc.engine_settings();
-        assert!(!roman_only.is_translate_swapped && !roman_only.is_output_both_scripts);
+        assert!(!doc.engine_settings().is_translate_swapped);
 
         let revision = doc.revision;
         doc.set_choice(
             &keys::CANDIDATE_DISPLAY_MODE,
             CandidateDisplayMode::SideBySide,
         );
-        let restored = doc.engine_settings();
-        assert!(!restored.is_translate_swapped && restored.is_output_both_scripts);
+        assert!(!doc.engine_settings().is_translate_swapped);
         assert_eq!(doc.revision, revision + 1, "only the mode was written");
     }
 
@@ -576,8 +559,6 @@ mod tests {
         assert!(SideBySide.shows_hanji() && Combined.shows_hanji() && !RomanOnly.shows_hanji());
         assert!(Combined.effective_translate_swapped(false));
         assert!(!RomanOnly.effective_translate_swapped(true));
-        assert!(!RomanOnly.effective_output_both_scripts(true));
-        assert!(Combined.effective_output_both_scripts(true));
         // Punctuation width follows the STORED swap under side-by-side /
         // combined, never under roman-only.
         assert!(!Combined.effective_full_width_punctuation(false));

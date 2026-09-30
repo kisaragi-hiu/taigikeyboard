@@ -209,7 +209,7 @@ impl UserDataHandle {
         } else {
             finish_open(&opened.stores, &opened.initialized);
         }
-        Ok(readiness(&opened.stores))
+        Ok(UserDataOpened {})
     }
 
     /// The open stores, or the refusal a request before the open gets. Never
@@ -395,11 +395,9 @@ impl UserDataHandle {
         if usage.display_text.is_empty() {
             return Err(UserDataError::Invalid("usage without a display text"));
         }
-        if !usage.frequency_recording_disabled {
-            stores
-                .frequency
-                .record(&usage.display_text, &usage.canonical_tl);
-        }
+        stores
+            .frequency
+            .record(&usage.display_text, &usage.canonical_tl);
         if let Some(hanji) = &usage.hanji {
             stores
                 .learned_phrases
@@ -765,13 +763,12 @@ fn emptied<T: Default>(
 fn finish_open(stores: &UserDataStores, initialized: &Once) {
     initialized.call_once(|| {
         stores.open_blocking();
-        let ready = readiness(stores);
         log::info!(
             "user_data.open frequency={} association={} custom_dictionary={} learned_phrases={}",
-            ready.frequency_ready,
-            ready.association_ready,
-            ready.custom_dictionary_ready,
-            ready.learned_phrases_ready
+            stores.frequency.is_ready(),
+            stores.association.is_ready(),
+            stores.custom_dictionary.is_ready(),
+            stores.learned_phrases.is_ready()
         );
     });
 }
@@ -780,32 +777,14 @@ fn store_error(error: impl Display) -> UserDataError {
     UserDataError::Store(error.to_string())
 }
 
-/// The files `open` names: its directory under the shared names, each
-/// non-empty per-file path overriding its own; without a directory, all four
-/// paths.
+/// The files `open` names: its directory under the shared names, with a
+/// non-empty `association_path` overriding that one file (Android).
 fn requested_paths(open: &OpenUserData) -> Result<UserDataPaths, UserDataError> {
-    let file = |path: &str, in_directory: Option<&PathBuf>| match in_directory {
-        Some(default) if path.is_empty() => Ok(default.clone()),
-        _ => absolute(path),
-    };
-    let shared = (!open.directory.is_empty())
-        .then(|| absolute(&open.directory).map(|directory| UserDataPaths::in_directory(&directory)))
-        .transpose()?;
-    Ok(UserDataPaths {
-        frequency: file(&open.frequency_path, shared.as_ref().map(|p| &p.frequency))?,
-        association: file(
-            &open.association_path,
-            shared.as_ref().map(|p| &p.association),
-        )?,
-        custom_dictionary: file(
-            &open.custom_dictionary_path,
-            shared.as_ref().map(|p| &p.custom_dictionary),
-        )?,
-        learned_phrases: file(
-            &open.learned_phrases_path,
-            shared.as_ref().map(|p| &p.learned_phrases),
-        )?,
-    })
+    let mut paths = UserDataPaths::in_directory(&absolute(&open.directory)?);
+    if !open.association_path.is_empty() {
+        paths.association = absolute(&open.association_path)?;
+    }
+    Ok(paths)
 }
 
 fn absolute(path: &str) -> Result<PathBuf, UserDataError> {
@@ -826,15 +805,6 @@ fn journal(journal: UserDataJournal) -> JournalMode {
     }
 }
 
-fn readiness(stores: &UserDataStores) -> UserDataOpened {
-    UserDataOpened {
-        frequency_ready: stores.frequency.is_ready(),
-        association_ready: stores.association.is_ready(),
-        custom_dictionary_ready: stores.custom_dictionary.is_ready(),
-        learned_phrases_ready: stores.learned_phrases.is_ready(),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -848,13 +818,9 @@ mod tests {
     }
 
     fn open_request(directory: &std::path::Path) -> UserDataRequest {
-        let paths = UserDataPaths::in_directory(directory);
         UserDataRequest {
             method: Some(user_data_request::Method::Open(OpenUserData {
-                frequency_path: paths.frequency.display().to_string(),
-                association_path: paths.association.display().to_string(),
-                custom_dictionary_path: paths.custom_dictionary.display().to_string(),
-                learned_phrases_path: paths.learned_phrases.display().to_string(),
+                directory: directory.display().to_string(),
                 journal: UserDataJournal::Delete as i32,
                 ..OpenUserData::default()
             })),
@@ -879,13 +845,13 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let handle = UserDataHandle::new();
 
-        let answer = opened(handle.handle(&open_request(directory.path())).unwrap());
+        opened(handle.handle(&open_request(directory.path())).unwrap());
 
-        assert!(answer.frequency_ready);
-        assert!(answer.association_ready);
-        assert!(answer.custom_dictionary_ready);
-        assert!(answer.learned_phrases_ready);
         let stores = handle.stores().unwrap();
+        assert!(stores.frequency.is_ready());
+        assert!(stores.association.is_ready());
+        assert!(stores.custom_dictionary.is_ready());
+        assert!(stores.learned_phrases.is_ready());
         assert_eq!(
             stores.custom_dictionary.count().unwrap(),
             2,
@@ -926,11 +892,25 @@ mod tests {
     }
 
     #[test]
-    fn a_relative_path_is_refused_before_anything_opens() {
+    fn a_relative_or_empty_directory_is_refused_before_anything_opens() {
+        for directory in ["", "relative/dir"] {
+            let handle = UserDataHandle::new();
+            let request = open_request(std::path::Path::new(directory));
+
+            assert!(matches!(
+                handle.handle(&request),
+                Err(UserDataError::Invalid(_))
+            ));
+            assert!(handle.stores().is_none());
+        }
+    }
+
+    #[test]
+    fn a_relative_association_override_is_refused_before_anything_opens() {
         let handle = UserDataHandle::new();
         let mut request = open_request(std::path::Path::new("/tmp"));
         if let Some(user_data_request::Method::Open(open)) = request.method.as_mut() {
-            open.frequency_path = "user_frequency.db".into();
+            open.association_path = "user_association.db".into();
         }
 
         assert!(matches!(
@@ -938,6 +918,30 @@ mod tests {
             Err(UserDataError::Invalid(_))
         ));
         assert!(handle.stores().is_none());
+    }
+
+    #[test]
+    fn an_association_override_replaces_that_one_file() {
+        // trace: Android keeps `user_association.db` in `filesDir`, the other
+        // three stores in `directory`.
+        let directory = tempfile::tempdir().unwrap();
+        let elsewhere = tempfile::tempdir().unwrap();
+        let association = elsewhere.path().join("user_association.db");
+        let handle = UserDataHandle::new();
+        let mut request = open_request(directory.path());
+        if let Some(user_data_request::Method::Open(open)) = request.method.as_mut() {
+            open.association_path = association.display().to_string();
+        }
+
+        opened(handle.handle(&request).unwrap());
+
+        let stores = handle.stores().unwrap();
+        assert!(stores.association.is_ready());
+        assert!(association.exists(), "the override names the file");
+        assert!(
+            !directory.path().join("user_association.db").exists(),
+            "and the directory's own slot stays empty"
+        );
     }
 
     #[test]
@@ -1286,8 +1290,7 @@ mod tests {
         let rows = stores.frequency.all_rows().unwrap_or_default();
         assert_eq!(rows.len(), 1, "counted once the open landed");
         // The background finish runs once however the next open arrives.
-        assert!(
-            opened(handle.handle(&open_request(directory.path())).unwrap()).custom_dictionary_ready
-        );
+        opened(handle.handle(&open_request(directory.path())).unwrap());
+        assert!(handle.stores().unwrap().custom_dictionary.is_ready());
     }
 }

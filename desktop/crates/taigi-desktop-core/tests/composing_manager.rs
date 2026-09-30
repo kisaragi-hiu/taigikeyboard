@@ -105,11 +105,9 @@ impl Memory {
     fn counted(&self) -> HashMap<(String, String), i64> {
         let mut counted = HashMap::new();
         for usage in self.usages.lock().unwrap().iter() {
-            if usage.frequency_recording_enabled {
-                *counted
-                    .entry((usage.display_text.clone(), usage.canonical_tl.clone()))
-                    .or_insert(0) += 1;
-            }
+            *counted
+                .entry((usage.display_text.clone(), usage.canonical_tl.clone()))
+                .or_insert(0) += 1;
         }
         counted
     }
@@ -742,27 +740,6 @@ fn commit_candidate_counts_the_word_under_its_reading_in_either_script() {
         "{store:?}"
     );
     assert_eq!(store.len(), 1, "identity is the pair, not the rendering");
-}
-
-#[test]
-fn commit_candidate_with_recording_off_learns_nothing() {
-    let _lock = engine_lock();
-    let mut rig = rig();
-    rig.settings
-        .edit(|doc| doc.set_bool(&keys::IS_FREQUENCY_RECORDING_ENABLED, false));
-    rig.type_text("taigi");
-    let taigi = rig.candidate("台語");
-    let (outcome, _) = rig.commit(&taigi, CandidateScript::Primary);
-    assert_eq!(outcome, CandidateCommitOutcome::Finalized);
-    assert!(
-        rig.memory.counted().is_empty(),
-        "the setting says do not count"
-    );
-    assert_eq!(
-        rig.memory.usages.lock().unwrap().len(),
-        1,
-        "the pick is still reported: a learned phrase is touched either way"
-    );
 }
 
 #[test]

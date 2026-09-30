@@ -9,13 +9,9 @@ import KeyboardShortcuts
 /// is free, and re-clearing also catches a manual `defaults write` that would
 /// otherwise resurrect hidden state.
 ///
-/// The engine still reads two recording/output settings keys — they are
-/// cross-platform contract, and the composing carrier encodes them either way —
-/// so a value stored by a build that HAD the toggle would silently outlive the
-/// UI that set it. Removing the stored values returns each to its default:
-/// Annotate in Brackets back off, Frequency Records back on. Association Records is no longer a setting at
-/// all (association recording is unconditional), so its key is swept with the
-/// retired names.
+/// Nothing reads a retired key any more, so every sweep here is hygiene: it
+/// keeps the defaults domain honest and stops a later setting that reused a
+/// name from inheriting a value nobody chose for it.
 @MainActor
 enum RetiredSettingsCleanup {
     /// Raw `KeyboardShortcuts.Name`s of the retired hotkey actions, kept so a
@@ -102,6 +98,14 @@ enum RetiredSettingsCleanup {
         // is always on, so a stored value (a `false` left by an older build or
         // a hand edit) is inert now.
         "associationRecordingEnabled",
+        // Annotate in Brackets and Frequency Records, retired 2026-09-30: neither
+        // toggle ever shipped in a release (both lived only in builds from
+        // main between 2026-08-16 and 2026-08-24), nothing reads the keys any
+        // more — the desktop never brackets, and the engine counts every pick
+        // (`RecordUsage` tag 4 reserved). Mobile keeps its own Annotate in
+        // Brackets key and UI.
+        "outputBothScripts",
+        "frequencyRecordingEnabled",
     ]
 
     /// Raw values of composing actions removed from the roster: Commit Hanji Directly and
@@ -119,22 +123,6 @@ enum RetiredSettingsCleanup {
     ]
 
     static func run(userDefaults: UserDefaults = .standard) {
-        userDefaults.removeObject(forKey: SettingsStore.Keys.isOutputBothScripts.name)
-        // The Frequency Records toggle went with the pane that carried it. Unlike the
-        // retired names below this changes BEHAVIOUR rather than only tidying:
-        // `SettingsStore.current` still reads the key, so a `false` stored by a
-        // build that HAD the toggle would keep learning switched off with
-        // nothing left to switch it back on. Clearing it returns it to its
-        // `true` default.
-        //
-        // Launch-time, and the read is live, so this restores the default once
-        // per launch rather than making the key unreachable — a deliberate
-        // `defaults write` still takes effect for the rest of that session.
-        // Closing that would mean not reading it from defaults at all, which
-        // is a wider change than this round: the key beside it
-        // (`isOutputBothScripts`) is read live on purpose — see
-        // `CandidateDocumentText`.
-        userDefaults.removeObject(forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
         for name in retiredDefaultsNames {
             userDefaults.removeObject(forKey: name)
         }

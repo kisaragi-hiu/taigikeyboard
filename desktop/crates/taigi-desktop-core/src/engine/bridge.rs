@@ -110,22 +110,13 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
     }
 }
 
-/// `app_config` plus the two word-boundary-spacing flags the engine consults
-/// while rendering a continuous composition's nailed prefix
-/// (`docs/engine/continuous-input-ranking.md` §10.2). Applied only at the
-/// entry points that render that prefix, matching iOS and macOS.
-pub(super) fn continuous_app_config(settings: &EngineSettings) -> AppConfig {
-    AppConfig {
-        is_translate_swapped: settings.is_translate_swapped,
-        output_both_scripts: settings.is_output_both_scripts,
-        ..app_config(settings)
-    }
-}
-
-/// `app_config` plus the field the next-word decide table reads: the swap
-/// flag, which suppresses recording for raw-romanization commits
-/// (`decide.rs:86`).
-pub(super) fn nextword_config(settings: &EngineSettings) -> AppConfig {
+/// `app_config` plus the swap flag: the engine consults it while rendering a
+/// continuous composition's nailed prefix
+/// (`docs/engine/continuous-input-ranking.md` §10.2) and in the next-word
+/// decide table, where it suppresses recording for raw-romanization commits
+/// (`decide.rs:86`). Sent by the composing ops that render that prefix and by
+/// every next-word request, matching iOS and macOS.
+pub(super) fn swapped_app_config(settings: &EngineSettings) -> AppConfig {
     AppConfig {
         is_translate_swapped: settings.is_translate_swapped,
         ..app_config(settings)
@@ -171,15 +162,13 @@ mod tests {
             candidate_display_mode: CandidateDisplayMode::Combined,
             ..EngineSettings::default()
         };
-        let continuous = continuous_app_config(&settings);
+        let continuous = swapped_app_config(&settings);
         assert_eq!(
             continuous.candidate_display_mode,
             WireDisplayMode::Combined as i32
         );
         assert!(continuous.is_translate_swapped);
-        assert!(!continuous.output_both_scripts);
         assert!(!continuous.is_roman_only_display());
-        assert!(nextword_config(&settings).is_translate_swapped);
     }
 
     #[test]
@@ -189,8 +178,7 @@ mod tests {
             ..EngineSettings::default()
         };
         assert!(app_config(&settings).is_roman_only_display());
-        assert!(continuous_app_config(&settings).is_roman_only_display());
-        assert!(nextword_config(&settings).is_roman_only_display());
+        assert!(swapped_app_config(&settings).is_roman_only_display());
     }
 
     #[test]
@@ -200,8 +188,7 @@ mod tests {
             ..EngineSettings::default()
         };
         assert!(app_config(&settings).hyphenless_roman);
-        assert!(continuous_app_config(&settings).hyphenless_roman);
-        assert!(nextword_config(&settings).hyphenless_roman);
+        assert!(swapped_app_config(&settings).hyphenless_roman);
     }
 
     // INVARIANT_NASAL_MARKER_CASE_FOLLOWS_THE_SWITCH (behavioral-invariants.md §53)
@@ -216,21 +203,21 @@ mod tests {
             ..EngineSettings::default()
         };
         assert!(app_config(&settings).force_lowercase_nasal_marker);
-        assert!(continuous_app_config(&settings).force_lowercase_nasal_marker);
+        assert!(swapped_app_config(&settings).force_lowercase_nasal_marker);
     }
 
     #[test]
-    fn continuous_and_nextword_configs_add_their_own_flags_only() {
+    fn swapped_app_config_adds_the_swap_flag_only() {
         let settings = EngineSettings {
             is_translate_swapped: true,
-            is_output_both_scripts: true,
             ..EngineSettings::default()
         };
-        let continuous = continuous_app_config(&settings);
-        assert!(continuous.is_translate_swapped && continuous.output_both_scripts);
-        let nextword = nextword_config(&settings);
-        assert!(nextword.is_translate_swapped);
-        assert!(!nextword.output_both_scripts);
+        let swapped = swapped_app_config(&settings);
+        assert!(swapped.is_translate_swapped);
+        assert!(
+            !swapped.output_both_scripts,
+            "desktop has no Annotate in Brackets: the wire field stays at its default"
+        );
     }
 
     #[test]

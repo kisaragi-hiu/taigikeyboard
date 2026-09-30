@@ -64,31 +64,34 @@ enum UserDataJournal {
 // waits until every store is open, taken over (roadmap U7) and the custom
 // dictionary re-derived and seeded — call it off the main thread then. With
 // `in_background` the engine finishes that on a thread of its own and
-// answers at once (readiness as of now), which a key path can afford. A
-// repeat with the same paths answers the stores' current readiness;
-// different paths are refused.
+// answers at once, which a key path can afford — the acknowledgement does
+// not promise that every store is usable yet. A repeat with the same
+// directory and override is acknowledged again; different ones are refused.
 message OpenUserData {
-  string frequency_path = 1;
+  // Per-file overrides for the other three stores: set by no platform,
+  // removed 2026-09-30.
+  reserved 1, 3, 4;
+  reserved "frequency_path", "custom_dictionary_path", "learned_phrases_path";
+
+  // Overrides the association file alone — Android's `user_association.db`
+  // lives in `filesDir`, the other three in `directory`. Empty everywhere else.
   string association_path = 2;
-  string custom_dictionary_path = 3;
-  string learned_phrases_path = 4;
   UserDataJournal journal = 5;
   bool in_background = 6;
   // The one directory the files live in, under the names every platform
   // shares (`user_frequency.db`, `user_association.db`,
-  // `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-  // above overrides its own file — Android's `user_association.db` in
-  // `filesDir`. Without it, all four paths are required.
+  // `custom_dictionary.db`, `learned_phrases.db`). Required.
   string directory = 7;
 }
 
-// Which stores are ready. A store that is not — a file from a later build,
-// a disk error — stays closed and ranks neutrally; the engine logs why.
+// Acknowledges the open. A store that is not ready — a file from a later
+// build, a disk error — stays closed and ranks neutrally; the engine logs
+// which (`user_data.open …`). No platform read the per-store flags, so
+// they went (2026-09-30).
 message UserDataOpened {
-  bool frequency_ready = 1;
-  bool association_ready = 2;
-  bool custom_dictionary_ready = 3;
-  bool learned_phrases_ready = 4;
+  reserved 1, 2, 3, 4;
+  reserved "frequency_ready", "association_ready", "custom_dictionary_ready",
+      "learned_phrases_ready";
 }
 
 // Empties the selected stores, in place (`DELETE`, never a file unlink —
@@ -130,10 +133,10 @@ message RecordUsage {
   // The picked candidate's Hanji, when it has one (a learned phrase can
   // only be touched by its Hanji); absent for a Hanji-less pick.
   optional string hanji = 3;
-  // The desktop's frequency-recording setting, OFF: no count is kept, the
-  // learned-phrase touch still is (it is learning data, always on — §50).
-  // Negative so an un-wired build records, as the phones always do.
-  bool frequency_recording_disabled = 4;
+  // Tag 4 was the desktop's frequency-recording toggle; no platform has a
+  // UI for it, so every pick counts (removed 2026-09-30).
+  reserved 4;
+  reserved "frequency_recording_disabled";
 }
 
 message UsageRecorded {}

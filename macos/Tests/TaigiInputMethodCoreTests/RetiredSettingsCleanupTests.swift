@@ -24,13 +24,11 @@ final class RetiredSettingsCleanupTests: XCTestCase {
     }
 
     func testStoredTrueValuesOfRetiredToggles_areRemoved() {
-        userDefaults.set(true, forKey: SettingsStore.Keys.isOutputBothScripts.name)
+        userDefaults.set(true, forKey: "outputBothScripts")
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
-        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isOutputBothScripts.name))
-        let settings = SettingsStore(userDefaults: userDefaults)
-        XCTAssertFalse(settings.storedIsOutputBothScripts)
+        XCTAssertNil(userDefaults.object(forKey: "outputBothScripts"))
     }
 
     /// A tombstone for Show Typed Text First is what left its earlier pane row dead —
@@ -127,18 +125,16 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         )
     }
 
-    /// The learning toggles went with the Frequency Records / Association Records panes. The
-    /// frequency half is a behaviour fix, not hygiene: the engine still reads
-    /// that key, so a stored `false` would keep learning off with no UI left
-    /// to turn it on. The association key is no longer read at all (recording
-    /// is unconditional), so it is simply swept.
-    func testStoredFalseOnTheRetiredRecordingToggles_returnsThemToOn() {
-        userDefaults.set(false, forKey: SettingsStore.Keys.isFrequencyRecordingEnabled.name)
+    /// The learning toggles went with the Frequency Records / Association Records panes.
+    /// Neither key is read any more (recording is unconditional), so a stored
+    /// `false` is simply swept.
+    func testStoredFalseOnTheRetiredRecordingToggles_isRemoved() {
+        userDefaults.set(false, forKey: "frequencyRecordingEnabled")
         userDefaults.set(false, forKey: "associationRecordingEnabled")
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
-        XCTAssertTrue(SettingsStore(userDefaults: userDefaults).current.isFrequencyRecordingEnabled)
+        XCTAssertNil(userDefaults.object(forKey: "frequencyRecordingEnabled"))
         XCTAssertNil(userDefaults.object(forKey: "associationRecordingEnabled"))
     }
 

@@ -206,16 +206,13 @@ enum TestFixtures {
     static func settings(
         inputMode: InputMode = .tl,
         swapped: Bool = false,
-        bothScripts: Bool = false,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        frequencyRecording: Bool = true,
         customDict: Bool = true,
         dictionarySources: DictionarySourceToggles = .defaults,
     ) -> EngineSettings {
         EngineSettings(
             inputMode: inputMode,
             isTranslateSwapped: swapped,
-            isOutputBothScripts: bothScripts,
             isFullWidthPunctuation: swapped,
             candidateDisplayMode: candidateDisplayMode,
             // §34/S22 ships ON; a case that wants it off writes the real
@@ -223,7 +220,6 @@ enum TestFixtures {
             isLiteralRomanCandidateEnabled: true,
             isHyphenlessRomanEnabled: false,
             isNasalMarkerUppercaseEnabled: true,
-            isFrequencyRecordingEnabled: frequencyRecording,
             isCustomDictEnabled: customDict,
             dictionarySources: dictionarySources,
         )
@@ -587,18 +583,14 @@ final class StubEngineSettingsProvider: EngineSettingsProvider {
     init(
         inputMode: InputMode = .tl,
         swapped: Bool = false,
-        bothScripts: Bool = false,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        frequencyRecording: Bool = true,
         customDict: Bool = true,
         dictionarySources: DictionarySourceToggles = .defaults,
     ) {
         current = TestFixtures.settings(
             inputMode: inputMode,
             swapped: swapped,
-            bothScripts: bothScripts,
             candidateDisplayMode: candidateDisplayMode,
-            frequencyRecording: frequencyRecording,
             customDict: customDict,
             dictionarySources: dictionarySources,
         )

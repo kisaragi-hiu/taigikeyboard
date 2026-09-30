@@ -17,9 +17,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * waits until every store is open, taken over (roadmap U7) and the custom
  * dictionary re-derived and seeded — call it off the main thread then. With
  * `in_background` the engine finishes that on a thread of its own and
- * answers at once (readiness as of now), which a key path can afford. A
- * repeat with the same paths answers the stores' current readiness;
- * different paths are refused.
+ * answers at once, which a key path can afford — the acknowledgement does
+ * not promise that every store is usable yet. A repeat with the same
+ * directory and override is acknowledged again; different ones are refused.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.OpenUserData}
@@ -31,62 +31,17 @@ public  final class OpenUserData extends
     // @@protoc_insertion_point(message_implements:taigi.engine.OpenUserData)
     OpenUserDataOrBuilder {
   private OpenUserData() {
-    frequencyPath_ = "";
     associationPath_ = "";
-    customDictionaryPath_ = "";
-    learnedPhrasesPath_ = "";
     directory_ = "";
   }
-  public static final int FREQUENCY_PATH_FIELD_NUMBER = 1;
-  private java.lang.String frequencyPath_;
-  /**
-   * <code>string frequency_path = 1;</code>
-   * @return The frequencyPath.
-   */
-  @java.lang.Override
-  public java.lang.String getFrequencyPath() {
-    return frequencyPath_;
-  }
-  /**
-   * <code>string frequency_path = 1;</code>
-   * @return The bytes for frequencyPath.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getFrequencyPathBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(frequencyPath_);
-  }
-  /**
-   * <code>string frequency_path = 1;</code>
-   * @param value The frequencyPath to set.
-   */
-  private void setFrequencyPath(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    frequencyPath_ = value;
-  }
-  /**
-   * <code>string frequency_path = 1;</code>
-   */
-  private void clearFrequencyPath() {
-
-    frequencyPath_ = getDefaultInstance().getFrequencyPath();
-  }
-  /**
-   * <code>string frequency_path = 1;</code>
-   * @param value The bytes for frequencyPath to set.
-   */
-  private void setFrequencyPathBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    frequencyPath_ = value.toStringUtf8();
-
-  }
-
   public static final int ASSOCIATION_PATH_FIELD_NUMBER = 2;
   private java.lang.String associationPath_;
   /**
+   * <pre>
+   * Overrides the association file alone — Android's `user_association.db`
+   * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+   * </pre>
+   *
    * <code>string association_path = 2;</code>
    * @return The associationPath.
    */
@@ -95,6 +50,11 @@ public  final class OpenUserData extends
     return associationPath_;
   }
   /**
+   * <pre>
+   * Overrides the association file alone — Android's `user_association.db`
+   * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+   * </pre>
+   *
    * <code>string association_path = 2;</code>
    * @return The bytes for associationPath.
    */
@@ -104,6 +64,11 @@ public  final class OpenUserData extends
     return com.google.protobuf.ByteString.copyFromUtf8(associationPath_);
   }
   /**
+   * <pre>
+   * Overrides the association file alone — Android's `user_association.db`
+   * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+   * </pre>
+   *
    * <code>string association_path = 2;</code>
    * @param value The associationPath to set.
    */
@@ -114,6 +79,11 @@ public  final class OpenUserData extends
     associationPath_ = value;
   }
   /**
+   * <pre>
+   * Overrides the association file alone — Android's `user_association.db`
+   * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+   * </pre>
+   *
    * <code>string association_path = 2;</code>
    */
   private void clearAssociationPath() {
@@ -121,6 +91,11 @@ public  final class OpenUserData extends
     associationPath_ = getDefaultInstance().getAssociationPath();
   }
   /**
+   * <pre>
+   * Overrides the association file alone — Android's `user_association.db`
+   * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+   * </pre>
+   *
    * <code>string association_path = 2;</code>
    * @param value The bytes for associationPath to set.
    */
@@ -128,100 +103,6 @@ public  final class OpenUserData extends
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
     associationPath_ = value.toStringUtf8();
-
-  }
-
-  public static final int CUSTOM_DICTIONARY_PATH_FIELD_NUMBER = 3;
-  private java.lang.String customDictionaryPath_;
-  /**
-   * <code>string custom_dictionary_path = 3;</code>
-   * @return The customDictionaryPath.
-   */
-  @java.lang.Override
-  public java.lang.String getCustomDictionaryPath() {
-    return customDictionaryPath_;
-  }
-  /**
-   * <code>string custom_dictionary_path = 3;</code>
-   * @return The bytes for customDictionaryPath.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getCustomDictionaryPathBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(customDictionaryPath_);
-  }
-  /**
-   * <code>string custom_dictionary_path = 3;</code>
-   * @param value The customDictionaryPath to set.
-   */
-  private void setCustomDictionaryPath(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    customDictionaryPath_ = value;
-  }
-  /**
-   * <code>string custom_dictionary_path = 3;</code>
-   */
-  private void clearCustomDictionaryPath() {
-
-    customDictionaryPath_ = getDefaultInstance().getCustomDictionaryPath();
-  }
-  /**
-   * <code>string custom_dictionary_path = 3;</code>
-   * @param value The bytes for customDictionaryPath to set.
-   */
-  private void setCustomDictionaryPathBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    customDictionaryPath_ = value.toStringUtf8();
-
-  }
-
-  public static final int LEARNED_PHRASES_PATH_FIELD_NUMBER = 4;
-  private java.lang.String learnedPhrasesPath_;
-  /**
-   * <code>string learned_phrases_path = 4;</code>
-   * @return The learnedPhrasesPath.
-   */
-  @java.lang.Override
-  public java.lang.String getLearnedPhrasesPath() {
-    return learnedPhrasesPath_;
-  }
-  /**
-   * <code>string learned_phrases_path = 4;</code>
-   * @return The bytes for learnedPhrasesPath.
-   */
-  @java.lang.Override
-  public com.google.protobuf.ByteString
-      getLearnedPhrasesPathBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(learnedPhrasesPath_);
-  }
-  /**
-   * <code>string learned_phrases_path = 4;</code>
-   * @param value The learnedPhrasesPath to set.
-   */
-  private void setLearnedPhrasesPath(
-      java.lang.String value) {
-    java.util.Objects.requireNonNull(value);
-
-    learnedPhrasesPath_ = value;
-  }
-  /**
-   * <code>string learned_phrases_path = 4;</code>
-   */
-  private void clearLearnedPhrasesPath() {
-
-    learnedPhrasesPath_ = getDefaultInstance().getLearnedPhrasesPath();
-  }
-  /**
-   * <code>string learned_phrases_path = 4;</code>
-   * @param value The bytes for learnedPhrasesPath to set.
-   */
-  private void setLearnedPhrasesPathBytes(
-      com.google.protobuf.ByteString value) {
-    checkByteStringIsUtf8(value);
-    learnedPhrasesPath_ = value.toStringUtf8();
 
   }
 
@@ -300,9 +181,7 @@ public  final class OpenUserData extends
    * <pre>
    * The one directory the files live in, under the names every platform
    * shares (`user_frequency.db`, `user_association.db`,
-   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-   * above overrides its own file — Android's `user_association.db` in
-   * `filesDir`. Without it, all four paths are required.
+   * `custom_dictionary.db`, `learned_phrases.db`). Required.
    * </pre>
    *
    * <code>string directory = 7;</code>
@@ -316,9 +195,7 @@ public  final class OpenUserData extends
    * <pre>
    * The one directory the files live in, under the names every platform
    * shares (`user_frequency.db`, `user_association.db`,
-   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-   * above overrides its own file — Android's `user_association.db` in
-   * `filesDir`. Without it, all four paths are required.
+   * `custom_dictionary.db`, `learned_phrases.db`). Required.
    * </pre>
    *
    * <code>string directory = 7;</code>
@@ -333,9 +210,7 @@ public  final class OpenUserData extends
    * <pre>
    * The one directory the files live in, under the names every platform
    * shares (`user_frequency.db`, `user_association.db`,
-   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-   * above overrides its own file — Android's `user_association.db` in
-   * `filesDir`. Without it, all four paths are required.
+   * `custom_dictionary.db`, `learned_phrases.db`). Required.
    * </pre>
    *
    * <code>string directory = 7;</code>
@@ -351,9 +226,7 @@ public  final class OpenUserData extends
    * <pre>
    * The one directory the files live in, under the names every platform
    * shares (`user_frequency.db`, `user_association.db`,
-   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-   * above overrides its own file — Android's `user_association.db` in
-   * `filesDir`. Without it, all four paths are required.
+   * `custom_dictionary.db`, `learned_phrases.db`). Required.
    * </pre>
    *
    * <code>string directory = 7;</code>
@@ -366,9 +239,7 @@ public  final class OpenUserData extends
    * <pre>
    * The one directory the files live in, under the names every platform
    * shares (`user_frequency.db`, `user_association.db`,
-   * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-   * above overrides its own file — Android's `user_association.db` in
-   * `filesDir`. Without it, all four paths are required.
+   * `custom_dictionary.db`, `learned_phrases.db`). Required.
    * </pre>
    *
    * <code>string directory = 7;</code>
@@ -476,9 +347,9 @@ public  final class OpenUserData extends
    * waits until every store is open, taken over (roadmap U7) and the custom
    * dictionary re-derived and seeded — call it off the main thread then. With
    * `in_background` the engine finishes that on a thread of its own and
-   * answers at once (readiness as of now), which a key path can afford. A
-   * repeat with the same paths answers the stores' current readiness;
-   * different paths are refused.
+   * answers at once, which a key path can afford — the acknowledgement does
+   * not promise that every store is usable yet. A repeat with the same
+   * directory and override is acknowledged again; different ones are refused.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.OpenUserData}
@@ -495,55 +366,11 @@ public  final class OpenUserData extends
 
 
     /**
-     * <code>string frequency_path = 1;</code>
-     * @return The frequencyPath.
-     */
-    @java.lang.Override
-    public java.lang.String getFrequencyPath() {
-      return instance.getFrequencyPath();
-    }
-    /**
-     * <code>string frequency_path = 1;</code>
-     * @return The bytes for frequencyPath.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getFrequencyPathBytes() {
-      return instance.getFrequencyPathBytes();
-    }
-    /**
-     * <code>string frequency_path = 1;</code>
-     * @param value The frequencyPath to set.
-     * @return This builder for chaining.
-     */
-    public Builder setFrequencyPath(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setFrequencyPath(value);
-      return this;
-    }
-    /**
-     * <code>string frequency_path = 1;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearFrequencyPath() {
-      copyOnWrite();
-      instance.clearFrequencyPath();
-      return this;
-    }
-    /**
-     * <code>string frequency_path = 1;</code>
-     * @param value The bytes for frequencyPath to set.
-     * @return This builder for chaining.
-     */
-    public Builder setFrequencyPathBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setFrequencyPathBytes(value);
-      return this;
-    }
-
-    /**
+     * <pre>
+     * Overrides the association file alone — Android's `user_association.db`
+     * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+     * </pre>
+     *
      * <code>string association_path = 2;</code>
      * @return The associationPath.
      */
@@ -552,6 +379,11 @@ public  final class OpenUserData extends
       return instance.getAssociationPath();
     }
     /**
+     * <pre>
+     * Overrides the association file alone — Android's `user_association.db`
+     * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+     * </pre>
+     *
      * <code>string association_path = 2;</code>
      * @return The bytes for associationPath.
      */
@@ -561,6 +393,11 @@ public  final class OpenUserData extends
       return instance.getAssociationPathBytes();
     }
     /**
+     * <pre>
+     * Overrides the association file alone — Android's `user_association.db`
+     * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+     * </pre>
+     *
      * <code>string association_path = 2;</code>
      * @param value The associationPath to set.
      * @return This builder for chaining.
@@ -572,6 +409,11 @@ public  final class OpenUserData extends
       return this;
     }
     /**
+     * <pre>
+     * Overrides the association file alone — Android's `user_association.db`
+     * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+     * </pre>
+     *
      * <code>string association_path = 2;</code>
      * @return This builder for chaining.
      */
@@ -581,6 +423,11 @@ public  final class OpenUserData extends
       return this;
     }
     /**
+     * <pre>
+     * Overrides the association file alone — Android's `user_association.db`
+     * lives in `filesDir`, the other three in `directory`. Empty everywhere else.
+     * </pre>
+     *
      * <code>string association_path = 2;</code>
      * @param value The bytes for associationPath to set.
      * @return This builder for chaining.
@@ -589,104 +436,6 @@ public  final class OpenUserData extends
         com.google.protobuf.ByteString value) {
       copyOnWrite();
       instance.setAssociationPathBytes(value);
-      return this;
-    }
-
-    /**
-     * <code>string custom_dictionary_path = 3;</code>
-     * @return The customDictionaryPath.
-     */
-    @java.lang.Override
-    public java.lang.String getCustomDictionaryPath() {
-      return instance.getCustomDictionaryPath();
-    }
-    /**
-     * <code>string custom_dictionary_path = 3;</code>
-     * @return The bytes for customDictionaryPath.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getCustomDictionaryPathBytes() {
-      return instance.getCustomDictionaryPathBytes();
-    }
-    /**
-     * <code>string custom_dictionary_path = 3;</code>
-     * @param value The customDictionaryPath to set.
-     * @return This builder for chaining.
-     */
-    public Builder setCustomDictionaryPath(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setCustomDictionaryPath(value);
-      return this;
-    }
-    /**
-     * <code>string custom_dictionary_path = 3;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearCustomDictionaryPath() {
-      copyOnWrite();
-      instance.clearCustomDictionaryPath();
-      return this;
-    }
-    /**
-     * <code>string custom_dictionary_path = 3;</code>
-     * @param value The bytes for customDictionaryPath to set.
-     * @return This builder for chaining.
-     */
-    public Builder setCustomDictionaryPathBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setCustomDictionaryPathBytes(value);
-      return this;
-    }
-
-    /**
-     * <code>string learned_phrases_path = 4;</code>
-     * @return The learnedPhrasesPath.
-     */
-    @java.lang.Override
-    public java.lang.String getLearnedPhrasesPath() {
-      return instance.getLearnedPhrasesPath();
-    }
-    /**
-     * <code>string learned_phrases_path = 4;</code>
-     * @return The bytes for learnedPhrasesPath.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getLearnedPhrasesPathBytes() {
-      return instance.getLearnedPhrasesPathBytes();
-    }
-    /**
-     * <code>string learned_phrases_path = 4;</code>
-     * @param value The learnedPhrasesPath to set.
-     * @return This builder for chaining.
-     */
-    public Builder setLearnedPhrasesPath(
-        java.lang.String value) {
-      copyOnWrite();
-      instance.setLearnedPhrasesPath(value);
-      return this;
-    }
-    /**
-     * <code>string learned_phrases_path = 4;</code>
-     * @return This builder for chaining.
-     */
-    public Builder clearLearnedPhrasesPath() {
-      copyOnWrite();
-      instance.clearLearnedPhrasesPath();
-      return this;
-    }
-    /**
-     * <code>string learned_phrases_path = 4;</code>
-     * @param value The bytes for learnedPhrasesPath to set.
-     * @return This builder for chaining.
-     */
-    public Builder setLearnedPhrasesPathBytes(
-        com.google.protobuf.ByteString value) {
-      copyOnWrite();
-      instance.setLearnedPhrasesPathBytes(value);
       return this;
     }
 
@@ -769,9 +518,7 @@ public  final class OpenUserData extends
      * <pre>
      * The one directory the files live in, under the names every platform
      * shares (`user_frequency.db`, `user_association.db`,
-     * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-     * above overrides its own file — Android's `user_association.db` in
-     * `filesDir`. Without it, all four paths are required.
+     * `custom_dictionary.db`, `learned_phrases.db`). Required.
      * </pre>
      *
      * <code>string directory = 7;</code>
@@ -785,9 +532,7 @@ public  final class OpenUserData extends
      * <pre>
      * The one directory the files live in, under the names every platform
      * shares (`user_frequency.db`, `user_association.db`,
-     * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-     * above overrides its own file — Android's `user_association.db` in
-     * `filesDir`. Without it, all four paths are required.
+     * `custom_dictionary.db`, `learned_phrases.db`). Required.
      * </pre>
      *
      * <code>string directory = 7;</code>
@@ -802,9 +547,7 @@ public  final class OpenUserData extends
      * <pre>
      * The one directory the files live in, under the names every platform
      * shares (`user_frequency.db`, `user_association.db`,
-     * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-     * above overrides its own file — Android's `user_association.db` in
-     * `filesDir`. Without it, all four paths are required.
+     * `custom_dictionary.db`, `learned_phrases.db`). Required.
      * </pre>
      *
      * <code>string directory = 7;</code>
@@ -821,9 +564,7 @@ public  final class OpenUserData extends
      * <pre>
      * The one directory the files live in, under the names every platform
      * shares (`user_frequency.db`, `user_association.db`,
-     * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-     * above overrides its own file — Android's `user_association.db` in
-     * `filesDir`. Without it, all four paths are required.
+     * `custom_dictionary.db`, `learned_phrases.db`). Required.
      * </pre>
      *
      * <code>string directory = 7;</code>
@@ -838,9 +579,7 @@ public  final class OpenUserData extends
      * <pre>
      * The one directory the files live in, under the names every platform
      * shares (`user_frequency.db`, `user_association.db`,
-     * `custom_dictionary.db`, `learned_phrases.db`). A non-empty `*_path`
-     * above overrides its own file — Android's `user_association.db` in
-     * `filesDir`. Without it, all four paths are required.
+     * `custom_dictionary.db`, `learned_phrases.db`). Required.
      * </pre>
      *
      * <code>string directory = 7;</code>
@@ -870,17 +609,14 @@ public  final class OpenUserData extends
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "frequencyPath_",
             "associationPath_",
-            "customDictionaryPath_",
-            "learnedPhrasesPath_",
             "journal_",
             "inBackground_",
             "directory_",
           };
           java.lang.String info =
-              "\u0000\u0007\u0000\u0000\u0001\u0007\u0007\u0000\u0000\u0000\u0001\u0208\u0002\u0208" +
-              "\u0003\u0208\u0004\u0208\u0005\f\u0006\u0007\u0007\u0208";
+              "\u0000\u0004\u0000\u0000\u0002\u0007\u0004\u0000\u0000\u0000\u0002\u0208\u0005\f" +
+              "\u0006\u0007\u0007\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

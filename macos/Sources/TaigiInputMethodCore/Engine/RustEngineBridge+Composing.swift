@@ -55,7 +55,7 @@ extension RustEngineBridge {
             .append(append),
             op: "composingAppend",
             generation: generation,
-            config: continuousAppConfig(settings),
+            config: swappedAppConfig(settings),
         )
     }
 
@@ -75,7 +75,7 @@ extension RustEngineBridge {
             .telexKey(telexKey),
             op: "composingTelexKey",
             generation: generation,
-            config: continuousAppConfig(settings),
+            config: swappedAppConfig(settings),
         )
     }
 
@@ -88,7 +88,7 @@ extension RustEngineBridge {
             .deleteBackward(Taigi_Engine_DeleteBackward()),
             op: "composingDeleteBackward",
             generation: generation,
-            config: continuousAppConfig(settings),
+            config: swappedAppConfig(settings),
         )
     }
 
@@ -112,7 +112,7 @@ extension RustEngineBridge {
             .moveCaret(moveCaret),
             op: "composingMoveCaret",
             generation: generation,
-            config: continuousAppConfig(settings),
+            config: swappedAppConfig(settings),
         )
     }
 
@@ -134,7 +134,7 @@ extension RustEngineBridge {
             .commitRaw(Taigi_Engine_CommitRaw()),
             op: "composingCommitRaw",
             generation: generation,
-            config: continuousAppConfig(settings),
+            config: swappedAppConfig(settings),
         )
     }
 
@@ -152,7 +152,7 @@ extension RustEngineBridge {
             .commitPreeditThenInsertExternal(insert),
             op: "composingCommitPreeditThenInsertExternal",
             generation: generation,
-            config: continuousAppConfig(settings),
+            config: swappedAppConfig(settings),
         )
     }
 
@@ -185,7 +185,7 @@ extension RustEngineBridge {
             // answer is a snapshot whose `displayText` the manager mirrors,
             // and a snapshot rendered with the base config would put the
             // space back.
-            config: continuousAppConfig(settings),
+            config: swappedAppConfig(settings),
         )
     }
 
@@ -227,7 +227,7 @@ extension RustEngineBridge {
             .fetchAtPos(fetch),
             op: "composingFetchAtPos",
             generation: generation,
-            config: continuousAppConfig(settings),
+            config: swappedAppConfig(settings),
         ) else {
             return nil
         }
@@ -284,7 +284,7 @@ extension RustEngineBridge {
             .commitContinuous(commit),
             op: "composingCommitContinuous",
             generation: generation,
-            config: continuousAppConfig(settings),
+            config: swappedAppConfig(settings),
         )
     }
 
