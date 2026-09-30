@@ -10,11 +10,11 @@
 //! Everything here runs under the coordinator lock where it needs the
 //! engine and emits nothing; the shell replays the returned [`Emit`]s.
 
-use crate::executor::{Emit, LookupTableContent, Recorder};
+use crate::executor::{Emit, KeySurface, LookupTableContent, Recorder};
 use crate::runtime::Runtime;
 use crate::selection::LookupSelection;
 use crate::session::{self, EngineState, SymbolPicker, PAGE_SIZE};
-use taigi_desktop_core::composing::ContextToken;
+use taigi_desktop_core::composing::{insert_symbol, ContextToken};
 use taigi_desktop_core::keys::{
     menu_rows, telex_guide_rows, ComposingKeyBindings, MenuCommand, ShortcutAction, MENU,
 };
@@ -375,16 +375,19 @@ pub(crate) fn pick_symbol(
     // exist, and it hears about the character as the end of a next-word
     // context.
     runtime.prepare_for_first_key();
-    let armed_swap = std::mem::take(&mut state.armed_auto_space);
-    let mut recorder = Recorder::new(state.can_delete_surrounding());
+    let is_swap_armed = std::mem::take(&mut state.armed_auto_space);
+    let mut surface = KeySurface {
+        recorder: Recorder::new(state.can_delete_surrounding()),
+        is_swap_armed,
+        selection: &mut state.selection,
+        is_vertical: session::is_vertical_layout(settings),
+    };
     {
         let mut coordinator = runtime.lock_coordinator();
         let manager = coordinator.claim(token);
-        if !session::swap_auto_space(&symbol, armed_swap, settings, manager, &mut recorder) {
-            recorder.insert_external(&symbol);
-            manager.note_character_typed_outside_composition(&symbol);
-        }
+        insert_symbol(&symbol, settings, manager, &mut surface);
     }
+    let recorder = surface.recorder;
     state.armed_auto_space = recorder.armed_swap;
     let mut emits = recorder.emits;
     session::present_table(state, settings, bindings, &mut emits);

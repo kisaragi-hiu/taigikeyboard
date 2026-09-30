@@ -149,6 +149,11 @@ impl CandidateSource {
         self.presented.is_empty()
     }
 
+    /// How many cells the window draws — `cells().len()` without copying them.
+    pub fn len(&self) -> usize {
+        self.presented.len()
+    }
+
     /// What the window draws, display order.
     pub fn cells(&self) -> Vec<CandidateCellContent> {
         self.presented

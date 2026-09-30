@@ -8,8 +8,11 @@
 //! the document: on IBus the preedit is the daemon's, `CommitText` is the
 //! one write, and a preedit character never lives in the document.
 
-use taigi_desktop_core::composing::ComposingEffectExecutor;
+use crate::selection::LookupSelection;
+use crate::session::PAGE_SIZE;
+use taigi_desktop_core::composing::{CandidateSource, ComposingEffectExecutor, IntentSurface};
 use taigi_desktop_core::engine::Effect;
+use taigi_desktop_core::keys::CandidateNavigation;
 
 /// One signal to send the daemon, in order.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -125,6 +128,63 @@ impl ComposingEffectExecutor for Recorder {
             | Effect::NextWordWordSelected { .. }
             | Effect::NextWordClearForNewComposing => {}
         }
+    }
+}
+
+/// One key's surface for the shared executor
+/// (`taigi_desktop_core::composing::perform_intent`): the recorder, whether
+/// this key may swap the auto space, and the selection over the list.
+pub(crate) struct KeySurface<'a> {
+    pub recorder: Recorder,
+    /// The arm this key took over (every key gets exactly one chance at the
+    /// swap); the recorder's own `armed_swap` is the arm it leaves.
+    pub is_swap_armed: bool,
+    pub selection: &'a mut LookupSelection,
+    pub is_vertical: bool,
+}
+
+impl ComposingEffectExecutor for KeySurface<'_> {
+    fn execute(&mut self, effect: &Effect) {
+        self.recorder.execute(effect);
+    }
+}
+
+impl IntentSurface for KeySurface<'_> {
+    fn insert_external(&mut self, text: &str) {
+        self.recorder.insert_external(text);
+    }
+
+    fn swap_preceding_space(&mut self, replacement: &str) -> bool {
+        self.is_swap_armed && self.recorder.swap_preceding_space(replacement)
+    }
+
+    fn arm_swap(&mut self) {
+        self.recorder.arm_swap();
+    }
+
+    /// A signal cannot fail on this side: the daemon gets it after the lock.
+    fn has_write_failed(&self) -> bool {
+        false
+    }
+
+    fn list_changed(&mut self, list: &mut CandidateSource) {
+        *self.selection = LookupSelection::new(list.len(), PAGE_SIZE);
+    }
+
+    fn list_closed(&mut self) {
+        *self.selection = LookupSelection::new(0, PAGE_SIZE);
+    }
+
+    fn selected_index(&self) -> Option<usize> {
+        self.selection.selected_index()
+    }
+
+    fn index_for_key_slot(&self, slot: usize) -> Option<usize> {
+        self.selection.candidate_index_for_key_slot(slot)
+    }
+
+    fn navigate(&mut self, direction: CandidateNavigation) {
+        self.selection.navigate(direction, self.is_vertical);
     }
 }
 
