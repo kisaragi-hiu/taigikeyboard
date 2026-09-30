@@ -200,7 +200,7 @@ impl TextService_Impl {
         let runtime = Runtime::shared();
         log::info!(
             "tsf.activate client_id={client_id} flags={flags:#x} learning={}",
-            runtime.capability.learning
+            runtime.is_learning()
         );
         // The user has this input method selected somewhere, so the
         // settings window is one shortcut away: map its WinUI runtime now,

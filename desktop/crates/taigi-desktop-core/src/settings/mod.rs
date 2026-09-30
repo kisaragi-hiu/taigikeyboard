@@ -37,6 +37,19 @@ pub use engine_settings::{
 };
 pub use font_selection::{set_stored_font_selection, stored_font_selection, StoredFontSelection};
 
+/// Where a write to the settings document goes: one locked load → mutate →
+/// save, so two writers (an input method and its settings window) cannot
+/// lose each other's change. Implemented over `settings.json` in
+/// `taigi-desktop-storage`; this crate only names the contract.
+pub trait SettingsStore: Send + Sync {
+    /// Runs `mutate` on the document as it is now and saves it when it
+    /// changed. `mutate` is not run when the store cannot be locked or read.
+    fn update_document(
+        &self,
+        mutate: &mut dyn FnMut(&mut SettingsDocument),
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+}
+
 /// Live-read access to the current settings document.
 ///
 /// Every consumer reads through this at the moment it needs a value and

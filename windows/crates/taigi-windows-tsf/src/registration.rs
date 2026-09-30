@@ -48,7 +48,7 @@ const CATEGORIES: [GUID; 6] = [
     //
     // The roadmap refused it for W2's AppContainer degradation, which reads
     // the opposite way round: the TIP already degrades on purpose there
-    // (`DataCapability`, probed once per process), so it FUNCTIONS in an
+    // (the runtime's data probe, once per process), so it FUNCTIONS in an
     // immersive host — without the user dictionary in a real AppContainer,
     // with everything in a WinUI 3 desktop host, which is not one. Refusing
     // the category did not protect anyone; it removed the IME from every
