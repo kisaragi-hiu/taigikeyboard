@@ -1,8 +1,10 @@
 name: Engine
 
 # The shared Rust engine, gated on every change to it: tests, clippy, then
-# formatting for the engine, Windows and desktop-shared workspaces (Linux gates
-# its own in linux-build.yml, nightly — `make linux-check` before a Linux PR). Ubuntu only — the engine has no platform code, and
+# formatting. The desktop-shared and Windows workspaces link the engine and are
+# gated in desktop.yml, which an engine change also triggers; Linux gates its
+# own in linux-build.yml, nightly — `make linux-check` before a Linux PR.
+# Ubuntu only — the engine has no platform code, and
 # the platform builds that link it (Xcode, Gradle, SwiftPM, the TSF DLL) stay on
 # the maintainer's machines and the release runners; each needs a toolchain that
 # would cost more runner time than the tests it would run.
@@ -13,10 +15,6 @@ on:
   pull_request:
     paths:
       - 'engine/**'
-      - 'windows/**/*.rs'
-      - 'windows/Cargo.*'
-      - 'desktop/**/*.rs'
-      - 'desktop/Cargo.*'
       - 'dictionary/output/dictionary.csv'
       - 'dictionaries/**'
       - '.github/workflows/engine.yml'
@@ -24,10 +22,6 @@ on:
     branches: [main]
     paths:
       - 'engine/**'
-      - 'windows/**/*.rs'
-      - 'windows/Cargo.*'
-      - 'desktop/**/*.rs'
-      - 'desktop/Cargo.*'
       - 'dictionary/output/dictionary.csv'
       - 'dictionaries/**'
       - '.github/workflows/engine.yml'
@@ -93,33 +87,19 @@ jobs:
         working-directory: engine
         run: cargo test --workspace --no-fail-fast -- --skip corpus_total_freq_matches_dictionary_csv
 
-      # Both workspaces, one formatter. Windows crates are checked here rather
-      # than compiled: rustfmt reads source, so it needs no Windows target.
-      # The desktop-shared crates: pure, so their tests run here natively, on the
-      # same runner and cache (the shells' cross checks stay on the maintainer's
-      # Mac and the release runners).
+      # Only the targets the feature changes: the lib (trace.rs's unit tests
+      # are behind it) and tests/e2e_trace.rs (`#![cfg(feature = "e2e-trace")]`).
+      # The rest of dispatch already ran feature-off in the step above.
       - name: cargo test (dispatch, e2e-trace on)
         working-directory: engine
-        run: cargo test -p dispatch --features e2e-trace
+        run: cargo test -p dispatch --features e2e-trace --lib --test e2e_trace
 
-      - name: cargo test (desktop-shared crates)
-        run: cargo test --workspace --manifest-path desktop/Cargo.toml
+      # Same gate as `make lint`, engine half; desktop.yml runs the desktop half.
+      - name: cargo clippy -D warnings (engine)
+        run: cargo clippy --manifest-path engine/Cargo.toml --workspace --all-targets --locked -- -D warnings
 
-      # Same gate as `make lint`. The Windows workspace is not linted here: its
-      # crates need the Windows targets (`make windows-check` on a host with
-      # mingw-w64, the MSVC build in windows-build.yml).
-      - name: cargo clippy -D warnings (engine + desktop)
-        run: |
-          set -euo pipefail
-          cargo clippy --manifest-path engine/Cargo.toml --workspace --all-targets --locked -- -D warnings
-          cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
-
-      - name: cargo fmt --check (engine + windows + desktop)
-        run: |
-          set -euo pipefail
-          cargo fmt --all --check --manifest-path engine/Cargo.toml
-          cargo fmt --all --check --manifest-path windows/Cargo.toml
-          cargo fmt --all --check --manifest-path desktop/Cargo.toml
+      - name: cargo fmt --check (engine)
+        run: cargo fmt --all --check --manifest-path engine/Cargo.toml
 
   # docs/architecture/e2e-trace-schema.md § Test mode only.
   e2e-trace-guard:

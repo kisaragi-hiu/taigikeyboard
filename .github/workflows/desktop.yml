@@ -1,0 +1,90 @@
+name: Desktop
+
+# The desktop-shared crates (`desktop/`, consumed by the Windows and Linux
+# shells): native tests, clippy, then formatting for the desktop-shared and
+# Windows workspaces. Split out of engine.yml so a desktop-only change does not
+# re-run the engine suite; an engine change still triggers this workflow,
+# because `desktop/` links `dispatch` and `protos` by path.
+#
+# The crates are pure, so they test natively on Ubuntu. The Windows workspace
+# is formatted here but not compiled: rustfmt reads source, so it needs no
+# Windows target. Its clippy + build need the Windows targets (`make
+# windows-check` on a host with mingw-w64, the MSVC build in
+# windows-build.yml); Linux gates its own in linux-build.yml.
+on:
+  pull_request:
+    paths:
+      - 'desktop/**'
+      - 'windows/**/*.rs'
+      - 'windows/Cargo.*'
+      - 'engine/**'
+      - '.github/workflows/desktop.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'desktop/**'
+      - 'windows/**/*.rs'
+      - 'windows/Cargo.*'
+      - 'engine/**'
+      - '.github/workflows/desktop.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Same pin as engine.yml: engine/protos/build.rs (linked through `protos`)
+  # shells out to protoc, and the runner image has none.
+  PROTOC_VERSION: 36.1
+  PROTOC_SHA256: c4bc672d9d49214dc8cafdceadf4df92182d6ca8e3ec65a56b2d7de5602669b4
+
+jobs:
+  test:
+    name: desktop cargo test + clippy + fmt
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      # Mirrors `channel` in desktop/rust-toolchain.toml and windows/rust-toolchain.toml.
+      RUSTUP_TOOLCHAIN: stable
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+
+      # RUSTUP_TOOLCHAIN (job env above) overrides the rust-toolchain.toml
+      # files, so only the host target is installed.
+      - name: Install the toolchain (host target only)
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy --no-self-update
+          cargo --version && rustc --version && protoc --version
+
+      # Cached across runs by desktop/Cargo.lock hash. The engine crates build
+      # into desktop/target as path dependencies, so they are rebuilt with the
+      # workspace's own crates; only registry dependencies come from the cache.
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: desktop
+
+      - name: cargo test (desktop-shared crates)
+        run: cargo test --workspace --manifest-path desktop/Cargo.toml
+
+      # Same gate as `make lint`, desktop half; engine.yml runs the engine half.
+      - name: cargo clippy -D warnings (desktop)
+        run: cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
+
+      - name: cargo fmt --check (windows + desktop)
+        run: |
+          set -euo pipefail
+          cargo fmt --all --check --manifest-path windows/Cargo.toml
+          cargo fmt --all --check --manifest-path desktop/Cargo.toml
