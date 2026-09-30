@@ -131,10 +131,6 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertFalse(settings.isOutputBothScripts)
         XCTAssertTrue(settings.isMoeDictEnabled)
         XCTAssertFalse(settings.isITaigiDictEnabled)
-        XCTAssertEqual(settings.keyHeightScale, 1.0)
-        XCTAssertEqual(settings.keyCornerRadius, 6.0)
-        XCTAssertEqual(settings.keyBorderWidth, 0)
-        XCTAssertEqual(settings.colorSettings, .default)
         XCTAssertTrue(settings.isLiteralRomanCandidateEnabled, "§34/S22 顯示當咧拍的字 ships ON")
         XCTAssertFalse(settings.isHyphenlessRomanEnabled, "無連字符 ships OFF")
         XCTAssertTrue(settings.isNasalMarkerUppercaseEnabled, "ⁿ大本字 ships ON")
@@ -235,18 +231,6 @@ final class SettingsKeyTests: XCTestCase {
         // App UI display language (String descriptor).
         settings.displayLanguage = DisplayLanguage.tailo.tag
 
-        // CGFloat appearance.
-        settings.keyHeightScale = 2.0
-        settings.keyFontSizeScale = 2.0
-        settings.candidateTextSizeScale = 2.0
-        settings.keyCornerRadius = 12.0
-        settings.keyBorderWidth = 3.0
-
-        // Codable colour blob.
-        var custom = KeyboardColorSettings.default
-        custom.background = .solid(CodableColor(.red))
-        settings.colorSettings = custom
-
         settings.resetToDefaults()
 
         XCTAssertEqual(settings.inputMode, .tl)
@@ -276,12 +260,6 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertTrue(settings.isToolbarAutoCollapse)
         XCTAssertTrue(settings.isTpsOrMappedToER)
         XCTAssertEqual(settings.isGlobeKeyEnabled, DeviceCapabilities.prefersGlobeKeyByDefault)
-        XCTAssertEqual(settings.keyHeightScale, 1.0)
-        XCTAssertEqual(settings.keyFontSizeScale, 1.0)
-        XCTAssertEqual(settings.candidateTextSizeScale, 1.0)
-        XCTAssertEqual(settings.keyCornerRadius, 6.0)
-        XCTAssertEqual(settings.keyBorderWidth, 0)
-        XCTAssertEqual(settings.colorSettings, .default)
     }
 
     // MARK: - DisplayLanguage roster + clamp
@@ -389,13 +367,6 @@ final class SettingsKeyTests: XCTestCase {
         // App UI display language (frozen key "displayLanguage").
         defaults.set(DisplayLanguage.tailo.tag, forKey: "displayLanguage")
 
-        // CGFloat / Double appearance.
-        defaults.set(1.5, forKey: "keyHeightScale")
-        defaults.set(1.5, forKey: "keyFontSizeScale")
-        defaults.set(1.5, forKey: "candidateTextSizeScale")
-        defaults.set(8.0, forKey: "keyCornerRadius")
-        defaults.set(2.0, forKey: "keyBorderWidth")
-
         // Facade reads through the descriptors.
         XCTAssertFalse(settings.isDoubleTapOOEnabled)
         XCTAssertFalse(settings.isDoubleTapNNEnabled)
@@ -424,10 +395,5 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertEqual(settings.keyboardLayoutType, .qwerty)
         XCTAssertEqual(settings.fontType, .system)
         XCTAssertEqual(settings.displayLanguage, DisplayLanguage.tailo.tag)
-        XCTAssertEqual(settings.keyHeightScale, 1.5)
-        XCTAssertEqual(settings.keyFontSizeScale, 1.5)
-        XCTAssertEqual(settings.candidateTextSizeScale, 1.5)
-        XCTAssertEqual(settings.keyCornerRadius, 8.0)
-        XCTAssertEqual(settings.keyBorderWidth, 2.0)
     }
 }

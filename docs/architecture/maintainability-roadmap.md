@@ -2,7 +2,7 @@
 
 > **Type**: Planning (PR table over the 2026-09-30 audit)
 > **Keywords**: `refactor`, `dead code`, `parity`, `desktop-core`, `userdata`, `commit resolution`, `test selection`, `naming`, `docs drift`
-> **Status**: in progress — R1–R3(c) merged (#274–#291 + R3(c) PR-4)
+> **Status**: in progress — R1–R3 merged (#274–#292)
 > **Source**: `docs/reports/2026-09-30-audit-all.md` (frozen snapshot on `30a79c16`; §2 findings, §4 draft rounds, Appendices A–F)
 > **Session memory**: project memory `project_maintainability_audit_2026_09_30.md` (Claude auto-memory)
 
@@ -19,12 +19,12 @@
 | Round | Content | PRs | Status |
 |---|---|---|---|
 | R1 | Dead surface: dead wire ops, platform dead code, retired settings (desktop), Android legacy compat | #274 #275 #276 #277 | Merged |
-| R1 PR4 | Legacy appearance keys on iOS + Android (`keyHeightScale`, `keyFontSizeScale`, `candidateTextSizeScale`, `keyCornerRadius`, `keyBorderWidth`, `colorSettings`) — delete; the default theme reads stock values. User themes untouched | 1 | Pending |
+| R1 PR4 | Legacy appearance keys on iOS + Android (`keyHeightScale`, `keyFontSizeScale`, `candidateTextSizeScale`, `keyCornerRadius`, `keyBorderWidth`, `colorSettings`) — a customized look is carried into a user theme (selected when it was showing), then the keys go; the default theme reads stock values. User themes untouched | 1 | In review |
 | R2 | Parity bugfixes: (a) Android Dictionary tab toggle + TPS search, (b) Android sentence-end pre-check, (c) `en` placeholders | #278 #280 #279 | Merged |
 | R2d | iOS `CandidateCellHelper.tpsFallback` on hanji-less TPS cells | — | **Blocked** — unconfirmed, needs a USER on-device check |
 | R3(a) | Settings windows reach user data through engine ops; retire `DeriveCustomQueryKey` | #281 #282 | Merged |
 | R3(b) | Settings-page model: PR-A presentation + launch parser, PR-B `SettingsWriter`, PR-C custom-dictionary listing state, PR-D remaining twin label / roster helpers | #284 #285 #286 #287 | Merged |
-| R3(c) | Win/Linux key-intent executor + `Runtime` → `desktop-core`: PR-1 Linux characterisation tests, PR-2 core executor (+Linux), PR-3 Windows on it, PR-3b shared `DesktopRuntime`, PR-4 parity: switch re-presents the open list the same way | #288 #289 #290 #291 · PR-4 | PR-4 open |
+| R3(c) | Win/Linux key-intent executor + `Runtime` → `desktop-core`: PR-1 Linux characterisation tests, PR-2 core executor (+Linux), PR-3 Windows on it, PR-3b shared `DesktopRuntime`, PR-4 parity: switch re-presents the open list the same way | #288 #289 #290 #291 #292 | Merged |
 | R4 | Engine user-data façade: `dispatch/src/user_data.rs` page logic → `userdata`; single-impl store traits; `cfg(not(user-data))` arms; one `CustomSearchKey` | 2 | Pending |
 | R5 | Engine-owned commit resolution (`CommitContinuous` returns document text + auto-space verdict, records usage) | 3 (engine; mobile; macOS + desktop) | Pending |
 | R6 | Config normalisation in the engine (flat settings snapshot, real `input_mode = "tps"`, engine-resolved sources) | 2–3 | Pending |
@@ -49,3 +49,4 @@ Every PR runs its round type's pre-gate (`~/.claude/rules/round-workflow.md`): r
 - R3(b) PR-B: the three atomic writers (`SettingsFileStore::save`, Windows / Linux CSV export) stay separate — the Linux export creates its temp file exclusively so it follows no pre-planted symlink, and no unification keeps that.
 - R3(b) PR-C: only state and rules move; which component owns the job slot differs per shell (Windows per page, Linux window-wide so an outcome survives a page rebuild) and stays there.
 - R3(c) PR-4: re-presenting an open list after a switch is one core rule (`represent_list`). Windows took the Linux behaviour: a refetch with Show Candidate Window switched off takes the list down, and a switch with no list open does nothing.
+- R1 PR4: the six keys were user-written until #407 removed the default-theme editor (2026-06-07), so a customized look is user content, not a stale setting. It becomes a user theme named like the editor's unnamed theme, past the five-theme cap, selected when the keyboard was showing it; a factory look is only removed.

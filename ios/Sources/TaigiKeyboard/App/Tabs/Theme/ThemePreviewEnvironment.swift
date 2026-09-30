@@ -4,7 +4,7 @@ import SwiftUI
 /// A display-only `KeyboardEnvironment` for the appearance preview.
 ///
 /// All appearance reads return the supplied `appearance` (a draft user theme, or
-/// the default buffer), so the preview renders exactly what is being edited
+/// the default theme), so the preview renders exactly what is being edited
 /// without writing the live settings. Non-appearance reads (layout type, the
 /// notification store, translate/TPS flags, and the GLOBAL font — font is not
 /// part of a theme) are read from `SharedSettings.shared` so the preview matches
@@ -25,9 +25,9 @@ final class ThemePreviewEnvironment: KeyboardEnvironment {
     var isFullAccessEnabled: Bool = false
 
     /// - Parameters:
-    ///   - appearance: the theme appearance to render (draft user theme / default buffer).
+    ///   - appearance: the theme appearance to render (draft user theme / default theme).
     ///   - appliesThemeShadow: `true` for user-theme drafts (slider 0 = flat); `false` for
-    ///     the default buffer (keeps KeyboardKit's standard shadow, matching the real keyboard).
+    ///     the default theme (keeps KeyboardKit's standard shadow, matching the real keyboard).
     init(appearance: ThemeAppearance, appliesThemeShadow: Bool, base: SharedSettings = .shared) {
         self.appearance = appearance
         self.appliesThemeShadow = appliesThemeShadow
@@ -35,24 +35,8 @@ final class ThemePreviewEnvironment: KeyboardEnvironment {
         inputMode = base.inputMode
     }
 
-    var colorSettings: KeyboardColorSettings {
-        appearance.colors
-    }
-
     func resolvedAppearance(for _: ColorScheme) -> ThemeAppearance {
         appearance
-    }
-
-    var keyFontSizeScale: CGFloat {
-        CGFloat(appearance.keyFontSizeScale)
-    }
-
-    var keyBorderWidth: CGFloat {
-        CGFloat(appearance.keyBorderWidth)
-    }
-
-    var candidateTextSizeScale: CGFloat {
-        CGFloat(appearance.candidateTextSizeScale)
     }
 
     var fontType: FontType {

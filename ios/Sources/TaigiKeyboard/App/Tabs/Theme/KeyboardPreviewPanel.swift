@@ -3,16 +3,16 @@ import SwiftUI
 
 /// A display-only keyboard preview that renders the real `TaigiKeyboardView`
 /// against a supplied `ThemeAppearance` (a draft user theme, or the default
-/// buffer). Colors / sizes / shadow come from the appearance via
+/// theme). Colors / sizes / shadow come from the appearance via
 /// `ThemePreviewEnvironment`; row height + corner follow it through the injected
 /// `CustomLayoutService` overload. Font is GLOBAL (not part of the theme), so
 /// both the keys and the callout use `settings.fontType`. Nothing here writes
 /// the live settings.
 struct KeyboardPreviewPanel: View {
-    /// The appearance to render — bound draft (theme editor) or default-buffer appearance.
+    /// The appearance to render — bound draft (theme editor) or default-theme appearance.
     let appearance: ThemeAppearance
     /// `true` for user-theme drafts (shadow slider 0 = flat); `false` for the
-    /// default buffer (keeps KeyboardKit's standard shadow, matching the keyboard).
+    /// default theme (keeps KeyboardKit's standard shadow, matching the keyboard).
     let appliesThemeShadow: Bool
     let colorScheme: ColorScheme
 

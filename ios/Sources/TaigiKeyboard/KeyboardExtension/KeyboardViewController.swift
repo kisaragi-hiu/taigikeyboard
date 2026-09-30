@@ -92,6 +92,10 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
             UserDataOpening.open(in: SharedSettings.sharedContainerURL)
         }
 
+        // A look customized before themes existed becomes a user theme (once;
+        // the app does the same at its launch).
+        SharedSettings.shared.retireLegacyAppearance(themeName: DisplayLanguageStore().string(.themeEditorTitleNew))
+
         // Install the lexicon engine state (fst + dictionary.bin +
         // association.bin) once at extension launch. Idempotent — calling
         // again with the same paths is a no-op observation-wise. Bundle

@@ -12,6 +12,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.preference.PreferenceManager
 import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
+import com.siansiansu.taigikeyboard.i18n.buildStringResolver
+import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
@@ -77,16 +79,9 @@ class PrefHelper(
         private const val MAX_COLLECTOR_RETRIES = 3L
         private const val COLLECTOR_RETRY_DELAY_MS = 1_000L
 
-        // Appearance size defaults are owned by ThemeAppearance (the model); referenced here for the settings keys.
-        const val DEFAULT_KEY_HEIGHT_SCALE = ThemeAppearance.DEFAULT_KEY_HEIGHT_SCALE
-        const val DEFAULT_KEY_FONT_SIZE_SCALE = ThemeAppearance.DEFAULT_KEY_FONT_SIZE_SCALE
-        const val DEFAULT_CANDIDATE_TEXT_SIZE_SCALE = ThemeAppearance.DEFAULT_CANDIDATE_TEXT_SIZE_SCALE
-        const val DEFAULT_KEY_CORNER_RADIUS = ThemeAppearance.DEFAULT_KEY_CORNER_RADIUS
-        const val DEFAULT_KEY_BORDER_WIDTH = ThemeAppearance.DEFAULT_KEY_BORDER_WIDTH
         const val DEFAULT_FONT_TYPE = "openHuninn"
-        const val DEFAULT_COLOR_SETTINGS = "{}"
 
-        // Theme defaults (v3.6.2) — "default" = legacy free-pick buffer; empty user-theme list
+        // Theme defaults (v3.6.2) — "default" = the factory appearance; empty user-theme list
         const val DEFAULT_SELECTED_THEME_ID = ThemeId.DEFAULT
         const val DEFAULT_USER_THEMES = "[]"
     }
@@ -515,19 +510,6 @@ class PrefHelper(
     // Name appendix defaults on (opt-out; CROSS-PLATFORM mirrors iOS SharedSettings.swift isKautianNameAppendixEnabledKey)
     var kautianNameAppendixEnabled: Boolean by preference(PreferenceKeys.KAUTIAN_NAME_APPENDIX_ENABLED, true)
 
-    // Appearance settings
-    var keyHeightScale: Float by preference(PreferenceKeys.KEY_HEIGHT_SCALE, DEFAULT_KEY_HEIGHT_SCALE)
-
-    var keyFontSizeScale: Float by preference(PreferenceKeys.KEY_FONT_SIZE_SCALE, DEFAULT_KEY_FONT_SIZE_SCALE)
-
-    var candidateTextSizeScale: Float by preference(PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE, DEFAULT_CANDIDATE_TEXT_SIZE_SCALE)
-
-    var keyCornerRadius: Float by preference(PreferenceKeys.KEY_CORNER_RADIUS, DEFAULT_KEY_CORNER_RADIUS)
-
-    var keyBorderWidth: Float by preference(PreferenceKeys.KEY_BORDER_WIDTH, DEFAULT_KEY_BORDER_WIDTH)
-
-    var colorSettings: String by preference(PreferenceKeys.COLOR_SETTINGS, DEFAULT_COLOR_SETTINGS)
-
     // Theme settings (v3.6.2)
     var selectedThemeId: String by preference(PreferenceKeys.SELECTED_THEME_ID, DEFAULT_SELECTED_THEME_ID)
 
@@ -537,30 +519,13 @@ class PrefHelper(
     fun loadUserThemes(): List<UserTheme> = UserTheme.decodeList(userThemes)
 
     /**
-     * The legacy free-pick appearance = the current global color settings + the
-     * five size scalars (flat shadow). This is the `"default"` theme's appearance;
-     * existing customized users keep their look here with no migration.
-     */
-    val legacyAppearance: ThemeAppearance
-        get() =
-            ThemeAppearance(
-                colors = KeyboardColorSettings.fromJson(colorSettings),
-                keyShadowIntensity = ThemeAppearance.DEFAULT_KEY_SHADOW_INTENSITY,
-                keyHeightScale = keyHeightScale,
-                keyFontSizeScale = keyFontSizeScale,
-                candidateTextSizeScale = candidateTextSizeScale,
-                keyCornerRadius = keyCornerRadius,
-                keyBorderWidth = keyBorderWidth,
-            )
-
-    /**
      * Resolves the active theme into the appearance the renderer consumes.
      *
      * Convenience form — re-parses the colorSettings + userThemes JSON on every
      * call. NOT for the per-keystroke render path: P2 routes that through
      * KeyboardAppearanceResolver's string-equality parse cache instead.
      */
-    fun resolvedAppearance(isDark: Boolean): ThemeAppearance = ThemeResolver.resolved(selectedThemeId, isDark, legacyAppearance, loadUserThemes())
+    fun resolvedAppearance(isDark: Boolean): ThemeAppearance = ThemeResolver.resolved(selectedThemeId, isDark, loadUserThemes())
 
     var variantEnabled: Boolean by preference(PreferenceKeys.VARIANT_DICT_ENABLED, false)
 
@@ -786,6 +751,8 @@ class PrefHelper(
     suspend fun migrateFromSharedPreferences() {
         val sharedPrefs: SharedPreferences = PreferenceManager.getDefaultSharedPreferences(context)
         val logger = CompositionRoot.shared(context).logger
+        // Resolved before the transaction: a read inside it must not wait on the store.
+        val legacyThemeName = legacyThemeName()
 
         dataStore.edit { prefs ->
             // Only migrate if DataStore is empty
@@ -822,9 +789,14 @@ class PrefHelper(
             // Retired keys (2026-09-30): an older migration may have copied a
             // pre-repo value in; removing an absent key is free, so every start.
             PreferenceKeys.RETIRED.forEach { prefs.remove(it) }
+            // A look customized before themes existed becomes a user theme (once).
+            LegacyAppearance.retire(prefs, themeName = legacyThemeName, now = System.currentTimeMillis())
         }
         clearPendingOverlay()
     }
+
+    /** The name a carried-over look is saved under: the editor's own fallback name. */
+    private fun legacyThemeName(): String = buildStringResolver(context, DisplayLanguage.fromTag(displayLanguageTag)).resolve(StringKey.THEME_EDITOR_TITLE_NEW)
 
     /**
      * Resets every preference to its default, keeping the internal version keys.
@@ -855,18 +827,12 @@ class PrefHelper(
             prefs[PreferenceKeys.AUTO_SPACE_ENABLED] = false
             prefs[PreferenceKeys.FONT_TYPE] = DEFAULT_FONT_TYPE
             prefs[PreferenceKeys.KEYBOARD_LAYOUT_TYPE] = "phahTaigi"
-            prefs[PreferenceKeys.KEY_HEIGHT_SCALE] = DEFAULT_KEY_HEIGHT_SCALE
-            prefs[PreferenceKeys.KEY_FONT_SIZE_SCALE] = DEFAULT_KEY_FONT_SIZE_SCALE
-            prefs[PreferenceKeys.CANDIDATE_TEXT_SIZE_SCALE] = DEFAULT_CANDIDATE_TEXT_SIZE_SCALE
-            prefs[PreferenceKeys.KEY_CORNER_RADIUS] = DEFAULT_KEY_CORNER_RADIUS
-            prefs[PreferenceKeys.KEY_BORDER_WIDTH] = DEFAULT_KEY_BORDER_WIDTH
             prefs[PreferenceKeys.TPS_OR_MAPS_TO_ER] = true
             prefs[PreferenceKeys.TOOLBAR_AUTO_COLLAPSE] = true
             prefs[PreferenceKeys.GLOBE_KEY_ENABLED] = true
             prefs[PreferenceKeys.SOUND_FEEDBACK_ENABLED] = true
             prefs[PreferenceKeys.VIBRATION_FEEDBACK_ENABLED] = true
             prefs[PreferenceKeys.CUSTOM_DICT_ENABLED] = true
-            prefs.remove(PreferenceKeys.COLOR_SETTINGS)
             prefs[PreferenceKeys.SELECTED_THEME_ID] = DEFAULT_SELECTED_THEME_ID
 
             CompositionRoot.shared(context).logger.debug(TAG) { "All preferences reset to defaults" }

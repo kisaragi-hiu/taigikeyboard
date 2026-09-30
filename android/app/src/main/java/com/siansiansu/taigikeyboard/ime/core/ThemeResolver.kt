@@ -5,22 +5,20 @@ package com.siansiansu.taigikeyboard.ime.core
  * deterministic (no keyboard runtime needed) so it is directly unit-testable.
  * Mirrors iOS ThemeResolver. Handles:
  *
- * - [ThemeId.DEFAULT] -> the legacy free-pick appearance (uncustomized users
- *   stay adaptive, customized users keep their look, no migration).
+ * - [ThemeId.DEFAULT] -> the factory appearance (all-null adaptive colors).
  * - a known user-theme id -> that theme's full appearance.
  * - a known built-in id -> factory sizes + the built-in's night-mode color variant.
- * - an unknown id (deleted user theme / stale built-in) -> the legacy appearance,
+ * - an unknown id (deleted user theme / stale built-in) -> the factory appearance,
  *   so the keyboard never renders an empty/broken theme.
  */
 object ThemeResolver {
     fun resolved(
         themeId: String,
         isDark: Boolean,
-        legacyAppearance: ThemeAppearance,
         userThemes: List<UserTheme>,
         builtInThemes: List<BuiltInTheme> = BuiltInThemes.all,
     ): ThemeAppearance {
-        if (themeId == ThemeId.DEFAULT) return legacyAppearance
+        if (themeId == ThemeId.DEFAULT) return ThemeAppearance.DEFAULT
         // Gate the user branch on a UUID-shaped id (mirrors iOS `id.uuidString == themeId`):
         // a built-in id like "standardBlue" can never resolve to a user theme, so a corrupt
         // persisted user theme carrying a built-in id cannot shadow the built-in.
@@ -36,6 +34,6 @@ object ThemeResolver {
                 keyBorderWidth = builtIn.keyBorderWidth ?: ThemeAppearance.DEFAULT.keyBorderWidth,
             )
         }
-        return legacyAppearance
+        return ThemeAppearance.DEFAULT
     }
 }

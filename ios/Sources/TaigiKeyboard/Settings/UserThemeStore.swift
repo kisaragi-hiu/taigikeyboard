@@ -56,6 +56,22 @@ final class UserThemeStore {
         return save(themes)
     }
 
+    /// Appends a theme the app carries over on its own, with no user action: past the cap, and
+    /// only when the saved list reads back whole — a file that cannot be read or decoded is left
+    /// untouched rather than replaced. Returns whether the theme was saved.
+    func addCarriedOver(_ theme: UserTheme) -> Bool {
+        guard let fileURL else { return false }
+        var themes: [UserTheme] = []
+        if FileManager.default.fileExists(atPath: fileURL.path) {
+            guard let data = try? Data(contentsOf: fileURL),
+                  let saved = try? JSONDecoder().decode([UserTheme].self, from: data)
+            else { return false }
+            themes = saved
+        }
+        themes.append(theme)
+        return save(themes)
+    }
+
     /// Replaces the theme with the same `id` (no-op if absent).
     func update(_ theme: UserTheme) {
         var themes = load()

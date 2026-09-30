@@ -96,12 +96,14 @@ final class SharedSettings {
     /// and the reset-to-default `removeObject(forKey:)` path.
     private static let isGlobeKeyEnabledKey: SettingsKey<Bool> = .bool("isGlobeKeyEnabled", default: false)
 
+    // Retired: the pre-theme global appearance, written by the appearance screen #407 removed.
+    // Read once by `retireLegacyAppearance(themeName:)`, which carries a customized look into a
+    // user theme and then removes them.
     private static let keyHeightScaleKey: SettingsKey<CGFloat> = .cgFloat("keyHeightScale", default: 1.0)
     private static let keyFontSizeScaleKey: SettingsKey<CGFloat> = .cgFloat("keyFontSizeScale", default: 1.0)
     private static let candidateTextSizeScaleKey: SettingsKey<CGFloat> = .cgFloat("candidateTextSizeScale", default: 1.0)
     private static let keyCornerRadiusKey: SettingsKey<CGFloat> = .cgFloat("keyCornerRadius", default: 6.0)
     private static let keyBorderWidthKey: SettingsKey<CGFloat> = .cgFloat("keyBorderWidth", default: 0)
-
     private static let colorSettingsKey: SettingsKey<KeyboardColorSettings> = .codable("colorSettings", default: .default)
 
     private static let selectedThemeIdKey: SettingsKey<String> = .string("selectedThemeId", default: ThemeId.default)
@@ -114,8 +116,12 @@ final class SharedSettings {
 
     static let shared = SharedSettings()
 
+    /// Where `user_themes.json` lives: the App Group container, or a test's own directory.
+    private let themesContainerURL: URL?
+
     private init() {
         userDefaults = Self.sharedUserDefaults
+        themesContainerURL = Self.sharedContainerURL
     }
 
     /// Test-only seam: builds a `SharedSettings` against a caller-supplied
@@ -128,9 +134,11 @@ final class SharedSettings {
     /// `userDefaults`, so this seam is **not** a fully isolated facade.
     /// Tests must not exercise the `UserDefaults.didChangeNotification`
     /// path through `settingsUserDefaults`; only stored-value reads / writes
-    /// flow through the injected store.
-    init(userDefaults: UserDefaults) {
+    /// flow through the injected store. User themes go to `themesContainerURL`
+    /// (nil = no store: every theme write fails).
+    init(userDefaults: UserDefaults, themesContainerURL: URL? = SharedSettings.sharedContainerURL) {
         self.userDefaults = userDefaults
+        self.themesContainerURL = themesContainerURL
     }
 
     // The setter forwards to setInputMode(_:) so the layout stays in sync.
@@ -484,41 +492,9 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isTpsOrMappedToERKey) }
     }
 
-    // MARK: - Appearance (scale factor, default 1.0)
+    // MARK: - Themes
 
-    var keyHeightScale: CGFloat {
-        get { userDefaults.value(for: Self.keyHeightScaleKey) }
-        set { userDefaults.set(newValue, for: Self.keyHeightScaleKey) }
-    }
-
-    var keyFontSizeScale: CGFloat {
-        get { userDefaults.value(for: Self.keyFontSizeScaleKey) }
-        set { userDefaults.set(newValue, for: Self.keyFontSizeScaleKey) }
-    }
-
-    var candidateTextSizeScale: CGFloat {
-        get { userDefaults.value(for: Self.candidateTextSizeScaleKey) }
-        set { userDefaults.set(newValue, for: Self.candidateTextSizeScaleKey) }
-    }
-
-    var keyCornerRadius: CGFloat {
-        get { userDefaults.value(for: Self.keyCornerRadiusKey) }
-        set { userDefaults.set(newValue, for: Self.keyCornerRadiusKey) }
-    }
-
-    var keyBorderWidth: CGFloat {
-        get { userDefaults.value(for: Self.keyBorderWidthKey) }
-        set { userDefaults.set(newValue, for: Self.keyBorderWidthKey) }
-    }
-
-    // Free-form color buffer, JSON-encoded into UserDefaults; a decode failure or missing value
-    // yields .default (all nil). It is both the "default" theme's source and the editor's scratch target.
-    var colorSettings: KeyboardColorSettings {
-        get { userDefaults.value(for: Self.colorSettingsKey) }
-        set { userDefaults.set(newValue, for: Self.colorSettingsKey) }
-    }
-
-    // "default" renders from colorSettings; any other id resolves through userThemeStore or a built-in.
+    // "default" renders the factory appearance; any other id resolves through userThemeStore or a built-in.
     var selectedThemeId: String {
         get { userDefaults.value(for: Self.selectedThemeIdKey) }
         set { userDefaults.set(newValue, for: Self.selectedThemeIdKey) }
@@ -528,7 +504,7 @@ final class SharedSettings {
     // themeRevision to refresh the other process, then sweeps the theme photos no saved
     // theme references any more (a replaced / deleted photo never lingers).
     private lazy var userThemeStore = UserThemeStore(
-        containerURL: Self.sharedContainerURL,
+        containerURL: themesContainerURL,
         onMutated: { [weak self] in
             self?.bumpThemeRevision()
             self?.sweepThemeImages()
@@ -541,34 +517,68 @@ final class SharedSettings {
         userDefaults.set(next, for: Self.themeRevisionKey)
     }
 
-    // The global appearance (the "default" theme): colorSettings plus the 5 size scalars. Shadow is
-    // pinned to 0 (the free-form buffer has none); font is a global setting and stays out of this bundle.
-    private var legacyAppearance: ThemeAppearance {
-        ThemeAppearance(
-            colors: colorSettings,
-            keyShadowIntensity: 0,
-            keyHeightScale: keyHeightScale,
-            keyFontSizeScale: keyFontSizeScale,
-            candidateTextSizeScale: candidateTextSizeScale,
-            keyCornerRadius: keyCornerRadius,
-            keyBorderWidth: keyBorderWidth,
-        )
-    }
-
     // Resolved appearance for the renderer. "default" takes the fast path (no file I/O). Only a UUID id
     // reads the user-theme file; a built-in id resolves from the BuiltInThemes table by colorScheme,
     // keeping the render hot path free of I/O.
     func resolvedAppearance(for colorScheme: ColorScheme) -> ThemeAppearance {
         let id = selectedThemeId
         if id == ThemeId.default {
-            return legacyAppearance
+            return .default
         }
         let userThemes = ThemeId.isUserTheme(id) ? cachedUserThemes() : []
-        return ThemeResolver.resolved(
-            themeId: id,
-            colorScheme: colorScheme,
-            legacyAppearance: legacyAppearance,
-            userThemes: userThemes,
+        return ThemeResolver.resolved(themeId: id, colorScheme: colorScheme, userThemes: userThemes)
+    }
+
+    // MARK: - Retired global appearance
+
+    /// Carries a look customized on the retired appearance screen into a user theme named
+    /// `themeName` and selects it when the keyboard was showing that look (the "default" theme,
+    /// or an id nothing resolves), then removes the retired keys; a factory look is only removed.
+    /// Runs at every app and keyboard launch and does nothing once the keys are gone. When the
+    /// theme cannot be written (no container, e.g. the keyboard without Full Access, or a saved
+    /// theme list that does not read back whole) the keys stay, so the look is still there for
+    /// the next launch to carry. App and keyboard are separate processes with no lock between
+    /// them: a race (or a kill between the write and the removal) can carry the look twice,
+    /// never lose it. Android runs the same steps in one DataStore transaction.
+    func retireLegacyAppearance(themeName: String, now: Date = Date()) {
+        guard let legacy = storedLegacyAppearance else { return }
+        if legacy != .default {
+            let id = selectedThemeId
+            let wasShowingLegacy = id == ThemeId.default
+                || (BuiltInThemes.theme(id: id) == nil && !loadUserThemes().contains { $0.id.uuidString == id })
+            let theme = UserTheme(id: UUID(), name: themeName, appearance: legacy, createdAt: now, updatedAt: now)
+            // Past the cap: a look the user made is never refused.
+            guard userThemeStore.addCarriedOver(theme) else { return }
+            if wasShowingLegacy {
+                selectedThemeId = theme.id.uuidString
+            }
+        }
+        userDefaults.remove(Self.keyHeightScaleKey)
+        userDefaults.remove(Self.keyFontSizeScaleKey)
+        userDefaults.remove(Self.candidateTextSizeScaleKey)
+        userDefaults.remove(Self.keyCornerRadiusKey)
+        userDefaults.remove(Self.keyBorderWidthKey)
+        userDefaults.remove(Self.colorSettingsKey)
+    }
+
+    /// The look the retired keys hold, or nil when none of them is stored. Shadow is 0: the
+    /// retired screen had no shadow control.
+    private var storedLegacyAppearance: ThemeAppearance? {
+        let isAnyStored = userDefaults.storedObject(for: Self.keyHeightScaleKey) != nil
+            || userDefaults.storedObject(for: Self.keyFontSizeScaleKey) != nil
+            || userDefaults.storedObject(for: Self.candidateTextSizeScaleKey) != nil
+            || userDefaults.storedObject(for: Self.keyCornerRadiusKey) != nil
+            || userDefaults.storedObject(for: Self.keyBorderWidthKey) != nil
+            || userDefaults.storedObject(for: Self.colorSettingsKey) != nil
+        guard isAnyStored else { return nil }
+        return ThemeAppearance(
+            colors: userDefaults.value(for: Self.colorSettingsKey),
+            keyShadowIntensity: 0,
+            keyHeightScale: userDefaults.value(for: Self.keyHeightScaleKey),
+            keyFontSizeScale: userDefaults.value(for: Self.keyFontSizeScaleKey),
+            candidateTextSizeScale: userDefaults.value(for: Self.candidateTextSizeScaleKey),
+            keyCornerRadius: userDefaults.value(for: Self.keyCornerRadiusKey),
+            keyBorderWidth: userDefaults.value(for: Self.keyBorderWidthKey),
         )
     }
 
@@ -690,14 +700,7 @@ final class SharedSettings {
         userDefaults.remove(Self.isGlobeKeyEnabledKey)
         // TPS
         isTpsOrMappedToER = true
-        // Appearance — defaults sourced from ThemeAppearance.default (single source).
-        keyHeightScale = ThemeAppearance.default.keyHeightScale
-        keyFontSizeScale = ThemeAppearance.default.keyFontSizeScale
-        candidateTextSizeScale = ThemeAppearance.default.candidateTextSizeScale
-        keyCornerRadius = ThemeAppearance.default.keyCornerRadius
-        keyBorderWidth = ThemeAppearance.default.keyBorderWidth
-        colorSettings = .default
-        // Back to the default theme (the colorSettings buffer); stored user themes are not deleted.
+        // Back to the default theme (the factory appearance); stored user themes are not deleted.
         selectedThemeId = ThemeId.default
         // Writes the persisted value only. The caller (resetAllSettings) must then call
         // DisplayLanguageStore.syncFromSettings(), or the on-screen language will not follow.

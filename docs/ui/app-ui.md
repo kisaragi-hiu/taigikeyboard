@@ -181,7 +181,7 @@ When layout appearance changes (font size, key labels, etc.), update these scree
 | Component | File |
 |-----------|------|
 | Tab container | `ContentView.swift` |
-| Theme colors | KeyboardKit adaptive colors + `SharedSettings.colorSettings` |
+| Theme colors | KeyboardKit adaptive colors + the selected theme (`SharedSettings.resolvedAppearance(for:)`) |
 | Localization | `Strings/` i18n resolver — `DisplayLanguageStore` + `StringResolver` + generated `StringKey` / `StringResolverFormats`; strings codegen from `i18n/*.json` → `Localizable.xcstrings`. (All `*Texts.swift` constant files removed in R2b.) |
 | Image assets | `Assets.xcassets/` |
 

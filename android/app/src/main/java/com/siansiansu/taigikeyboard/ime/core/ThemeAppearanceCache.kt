@@ -5,10 +5,9 @@ import android.content.res.Configuration
 
 /**
  * Caches the resolved [ThemeAppearance] so the per-keystroke render path does not
- * re-parse the colorSettings + userThemes JSON on every call. Re-resolves through
+ * re-parse the userThemes JSON on every call. Re-resolves through
  * [ThemeResolver] ONLY when one of the resolver inputs flips: the selected theme id,
- * the colorSettings JSON, the userThemes JSON, the night-mode flag, or any of the
- * five size scalars (which feed `PrefHelper.legacyAppearance`).
+ * the userThemes JSON, or the night-mode flag.
  *
  * One instance per consumer ([KeyboardAppearanceResolver] for keys, [SmartbarManager]
  * for the candidate strip). Resolution is pure + deterministic, so the two caches stay
@@ -24,19 +23,13 @@ internal class ThemeAppearanceCache(
     fun resolve(isDark: Boolean): ThemeAppearance {
         val key = Key(
             selectedThemeId = prefs.selectedThemeId,
-            colorSettingsJson = prefs.colorSettings,
             userThemesJson = prefs.userThemes,
             isDark = isDark,
-            keyHeightScale = prefs.keyHeightScale,
-            keyFontSizeScale = prefs.keyFontSizeScale,
-            candidateTextSizeScale = prefs.candidateTextSizeScale,
-            keyCornerRadius = prefs.keyCornerRadius,
-            keyBorderWidth = prefs.keyBorderWidth,
         )
         if (key != cachedKey) {
             cachedKey = key
             // Resolve through the single PrefHelper entry point so the resolver-input
-            // wiring (legacyAppearance + userThemes) lives in ONE place; the cache only
+            // wiring (selected id + userThemes) lives in ONE place; the cache only
             // adds the re-resolve gate that entry point's doc says it lacks.
             cached = prefs.resolvedAppearance(key.isDark)
         }
@@ -46,14 +39,8 @@ internal class ThemeAppearanceCache(
     /** Snapshot of every [ThemeResolver] input; equality drives the re-resolve gate. */
     private data class Key(
         val selectedThemeId: String,
-        val colorSettingsJson: String,
         val userThemesJson: String,
         val isDark: Boolean,
-        val keyHeightScale: Float,
-        val keyFontSizeScale: Float,
-        val candidateTextSizeScale: Float,
-        val keyCornerRadius: Float,
-        val keyBorderWidth: Float,
     )
 }
 
