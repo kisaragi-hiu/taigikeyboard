@@ -16,18 +16,13 @@ use gtk::glib;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::OnceLock;
-use std::time::Duration;
 use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
 use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
+use taigi_desktop_core::settings::dictionary_search::{DEBOUNCE, VISIBLE_RESULT_LIMIT};
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-
-/// `DictionarySearchModel.visibleResultLimit`.
-const VISIBLE_RESULT_LIMIT: usize = 5;
-/// `DictionarySearchModel.debounce`.
-const DEBOUNCE: Duration = Duration::from_millis(300);
 
 /// Set once the dictionaries are in this process: only the first query
 /// pays for loading them, the load is the process's, not a page's — and

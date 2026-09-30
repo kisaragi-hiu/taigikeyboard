@@ -10,11 +10,14 @@
 
 use super::reset_row;
 use crate::winui::cards;
-use crate::winui::window::{Message, RecorderTarget, ResetScope, SettingsWindow};
-use taigi_desktop_core::candidates::HorizontalPageLayout;
+use crate::winui::window::{Message, ResetScope, SettingsWindow};
+use taigi_desktop_core::keys::shortcut_labels::{
+    caret_chords_label, shifted_slot_keys_label, slot_keys_label, width_flip_chords_label,
+    CANCEL_KEY_LABEL, NAVIGATION_KEYS_LABEL,
+};
 use taigi_desktop_core::keys::{
-    rejection_message_key, CandidateSlotKeySet, ComposingAction, ComposingKeyBindings,
-    ComposingKeyChord, KeyModifiers, ShortcutAction, CARET_CHORD_MODIFIERS, WIDTH_FLIP_MODIFIERS,
+    rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
+    RecorderTarget, ShortcutAction,
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
@@ -135,73 +138,6 @@ fn fixed_row(label: &str, keys: String) -> View {
             .opacity(0.65)
             .vertical_alignment(VerticalAlignment::Center),
     )
-}
-
-/// The six keys the fixed navigation tier reads, in the keycap legends
-/// Windows prints (`ShortcutSettingsView.swift` `navigationKeysLabel`).
-const NAVIGATION_KEYS_LABEL: &str = "←  →  ↑  ↓  PgUp  PgDn";
-
-/// The cancel key's keycap legend (`ShortcutSettingsView.swift`
-/// `cancelKeyLabel`).
-const CANCEL_KEY_LABEL: &str = "Esc";
-
-/// `Ctrl+←  Ctrl+→`, named by the same modifier labels the recorder rows
-/// use, from the modifier the classifier reads (`ShortcutSettingsView.swift`
-/// `caretChordsLabel`).
-fn caret_chords_label() -> String {
-    ["←", "→"]
-        .map(|arrow| {
-            ComposingKeyChord::modifier_labels(CARET_CHORD_MODIFIERS)
-                .chain([arrow.to_owned()])
-                .collect::<Vec<_>>()
-                .join("+")
-        })
-        .join("  ")
-}
-
-/// `Ctrl+,  Ctrl+.  Ctrl+;` — three of the keys the width flip reaches, in
-/// the recorder rows' own spelling (`ShortcutSettingsView.swift`
-/// `widthFlipChordsLabel`).
-fn width_flip_chords_label() -> String {
-    [",", ".", ";"]
-        .map(|key| {
-            ComposingKeyChord {
-                key: key.to_owned(),
-                modifiers: WIDTH_FLIP_MODIFIERS,
-            }
-            .display()
-        })
-        .join("  ")
-}
-
-/// `qwdfzxvy;` under Standard, `123456789` under Telex: every key of the
-/// live slot set, bare, in the recorder rows' own spelling — lowercase
-/// because a bare key shows the character it types
-/// (`ShortcutSettingsView.swift` `slotKeysLabel`).
-fn slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
-    ComposingKeyChord {
-        key: slot_keys_run(slot_keys),
-        modifiers: KeyModifiers::NONE,
-    }
-    .display()
-}
-
-/// `Shift+QWDFZXVY;` under Standard, `Shift+123456789` under Telex: every key
-/// of the live slot set behind ONE Shift, in the recorder rows' own spelling
-/// (`ShortcutSettingsView.swift` `shiftedSlotKeysLabel`).
-fn shifted_slot_keys_label(slot_keys: CandidateSlotKeySet) -> String {
-    ComposingKeyChord {
-        key: slot_keys_run(slot_keys),
-        modifiers: KeyModifiers::SHIFT,
-    }
-    .display()
-}
-
-/// The nine slot keys of `slot_keys` as one run, in page order.
-fn slot_keys_run(slot_keys: CandidateSlotKeySet) -> String {
-    (0..HorizontalPageLayout::PAGE_SIZE)
-        .map(|slot| slot_keys.label_for_slot(slot))
-        .collect()
 }
 
 fn global_rows(

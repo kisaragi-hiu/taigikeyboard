@@ -1,0 +1,12 @@
+//! The Dictionary Search pane's presentation policy, shared by both
+//! settings windows (`DictionarySearchModel` in `DictionarySearchPage.swift`).
+//! The search itself is `engine::dictionary_search`.
+
+use std::time::Duration;
+
+/// How many results the pane shows (`visibleResultLimit`).
+pub const VISIBLE_RESULT_LIMIT: usize = 5;
+
+/// How long the box waits after the last keystroke before it searches
+/// (`debounce`).
+pub const DEBOUNCE: Duration = Duration::from_millis(300);

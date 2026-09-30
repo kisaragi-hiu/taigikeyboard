@@ -11,11 +11,14 @@
 //!
 //! It also holds what both settings WINDOWS draw from, toolkit-neutral:
 //! `presentation` (labels, links, page notices), `launch` (the command
-//! line) and `custom_dictionary` (that pane's model, over the engine's
-//! user-data ops).
+//! line), `dictionary_sources` (that pane's roster), `dictionary_search`
+//! (that pane's result limit and debounce) and `custom_dictionary` (that
+//! pane's model, over the engine's user-data ops).
 
 mod choices;
 pub mod custom_dictionary;
+pub mod dictionary_search;
+pub mod dictionary_sources;
 mod document;
 mod engine_settings;
 mod font_selection;

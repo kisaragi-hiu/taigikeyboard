@@ -9,19 +9,15 @@
 
 use crate::winui::cards;
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
-use std::time::Duration;
 use taigi_desktop_core::dictionary_artifacts::{dictionary_version, DictionaryArtifacts};
 use taigi_desktop_core::engine::dictionary_search::{search, DictionarySearchResult};
 use taigi_desktop_core::engine::lexicon_install;
+use taigi_desktop_core::settings::dictionary_search::{DEBOUNCE, VISIBLE_RESULT_LIMIT};
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
-/// `DictionarySearchModel.visibleResultLimit`.
-const VISIBLE_RESULT_LIMIT: usize = 5;
-/// `DictionarySearchModel.debounce`.
-const DEBOUNCE: Duration = Duration::from_millis(300);
 const ROW_GAP: f64 = 8.0;
 const LOOKUP_GLYPH: &str = "\u{E8A7}";
 const SECONDARY_OPACITY: f64 = 0.65;

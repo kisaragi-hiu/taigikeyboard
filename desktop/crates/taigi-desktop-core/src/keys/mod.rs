@@ -16,6 +16,7 @@ mod language_mode;
 mod recorder;
 mod shift_tap;
 mod shortcut_actions;
+pub mod shortcut_labels;
 mod slot_key_set;
 mod snapshot;
 mod symbol_picker;
@@ -32,7 +33,8 @@ pub use intent::{
 };
 pub use language_mode::LanguageMode;
 pub use recorder::{
-    evaluate_press, rejection_message_key, RecordedPress, RecorderOutcome, RecorderTier,
+    evaluate_press, rejection_message_key, RecordedPress, RecorderOutcome, RecorderTarget,
+    RecorderTier,
 };
 pub use shift_tap::{
     ShiftTapTracker, LEFT_SHIFT_SCAN_CODE, RIGHT_SHIFT_SCAN_CODE, SHIFT_TAP_MAX_MILLISECONDS,

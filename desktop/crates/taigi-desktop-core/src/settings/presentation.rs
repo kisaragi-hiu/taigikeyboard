@@ -52,6 +52,19 @@ pub fn display_language_label(language: DisplayLanguage, strings: &StringResolve
     )
 }
 
+/// The Output pop-up's roster: the stored swap as the two scripts it picks
+/// between, Hanji (the default) first.
+pub const OUTPUT_SCRIPTS: &[bool] = &[true, false];
+
+/// The Output pop-up's row for the stored swap: which script leads.
+pub fn output_script_label(is_hanji: bool) -> StringKey {
+    if is_hanji {
+        StringKey::SettingsOutputScriptHanji
+    } else {
+        StringKey::SettingsOutputScriptRoman
+    }
+}
+
 /// What a page reports after a job (`UserDataPageChrome.swift:19-52`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PageMessage {

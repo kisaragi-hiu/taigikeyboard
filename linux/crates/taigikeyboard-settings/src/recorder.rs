@@ -1,57 +1,16 @@
-//! The shortcut recorder's state and its targets: which row is recording,
-//! which registry it writes to, what the last press was refused for. The
-//! decision itself is the shared `keys::evaluate_press`; the key events
+//! The shortcut recorder's state: which row is recording (a
+//! `taigi_desktop_core::keys::RecorderTarget`, which also names the registry
+//! it writes to) and what the last press was refused for. The decision
+//! itself is the shared `keys::evaluate_press`; the key events
 //! come from a `gtk::EventControllerKey` on the window in the capture phase
 //! (`window.rs`), so a recording field sees every key before any widget
 //! does — the GTK counterpart of the Windows keyboard hook, with no hook.
 
 use std::collections::HashSet;
 use taigi_desktop_core::keys::{
-    evaluate_press, ChordRejection, ComposingAction, ComposingKeyChord, RecordedPress,
-    RecorderOutcome, RecorderTier, ShortcutAction, ShortcutConflicts,
+    evaluate_press, ChordRejection, ComposingKeyChord, RecordedPress, RecorderOutcome,
+    RecorderTarget,
 };
-use taigi_desktop_core::settings::SettingsDocument;
-use taigi_desktop_core::strings::StringKey;
-
-/// Which row is recording, and so which registry it writes to.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum RecorderTarget {
-    Global(ShortcutAction),
-    Composing(ComposingAction),
-}
-
-impl RecorderTarget {
-    pub fn label_key(self) -> StringKey {
-        match self {
-            Self::Global(action) => action.label_key(),
-            Self::Composing(action) => action.label_key(),
-        }
-    }
-
-    fn tier(self) -> RecorderTier {
-        match self {
-            Self::Global(_) => RecorderTier::Global,
-            Self::Composing(_) => RecorderTier::Composing,
-        }
-    }
-
-    /// Stores `chord` on this row, emptying whatever else held it — last
-    /// writer wins across BOTH registries (`ShortcutConflicts`).
-    pub fn store(self, document: &mut SettingsDocument, chord: Option<&ComposingKeyChord>) {
-        match self {
-            Self::Global(action) => {
-                action.store_in(document, chord);
-                ShortcutConflicts::resolve_after_global_recording(document, action);
-            }
-            Self::Composing(action) => {
-                if let Some(chord) = chord {
-                    ShortcutConflicts::resolve_after_composing_recording(document, action, chord);
-                }
-                document.set_composing_chord(action, chord);
-            }
-        }
-    }
-}
 
 /// The window's recording state.
 #[derive(Debug, Default)]
@@ -134,7 +93,7 @@ impl Recorder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use taigi_desktop_core::keys::KeyModifiers;
+    use taigi_desktop_core::keys::{KeyModifiers, ShortcutAction};
 
     fn press(key: &str, modifiers: KeyModifiers) -> RecordedPress {
         RecordedPress {
