@@ -20,6 +20,11 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         // injected scratch store because the swap-rerender case needs the
         // controller and the shared coordinator's engine reading ONE domain.
         UserDefaults.standard.set(false, forKey: SettingsStore.Keys.isAutoSpaceEnabled.name)
+        // The swap starts from the factory default (Hanji-first), whatever
+        // the machine's xctest domain holds — a stored value left behind by
+        // an earlier run would otherwise flip which script leads every cell
+        // here, and a fresh CI runner has none.
+        clearSettingRestoredAtTeardown(SettingsStore.Keys.isTranslateSwapped.name)
     }
 
     override func tearDown() {
@@ -148,8 +153,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// trip through the output setting.
     func testSpace_commitsTheOtherScript() throws {
         let session = try composedSession()
-        // Default output leads with the romanization, so the cell's annotation
-        // IS the other script — the one on screen under the primary.
+        // Whichever script the output leads with (Hanji by default), the
+        // cell's annotation IS the other one — on screen under the primary.
         let otherScript = try XCTUnwrap(session.walkToFirstTwoScriptCell().annotation)
         session.client.clearWrites()
 
@@ -306,17 +311,24 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// against the Hanji–Romanization Pairing bar for the same composition, so the assertion follows
     /// whatever the dictionary ranks first rather than naming it.
     func testCombined_showsTheHanjiAndItsRomanizationAsAdjacentCells() throws {
-        let sideBySide = try XCTUnwrap(composedSession().presenter.shownContent).cells
+        let sideBySideSession = try composedSession()
+        let sideBySide = try XCTUnwrap(sideBySideSession.presenter.shownContent).cells
         let leading = try XCTUnwrap(sideBySide.firstTwoScriptCell, "taigi has a candidate carrying both scripts")
-        let hanji = try XCTUnwrap(leading.annotation)
+        let annotation = try XCTUnwrap(leading.annotation)
+        // Side by side, the cell leads with the script the stored swap puts
+        // first; Hanji with Romanization orders its cells Hanji-first whatever
+        // is stored (`effectiveTranslateSwapped`).
+        let isHanjiFirst = sideBySideSession.controller.settings.storedIsTranslateSwapped
+        let hanji = isHanjiFirst ? leading.text : annotation
+        let romanization = isHanjiFirst ? annotation : leading.text
 
         try withDisplayMode(.combined) {
             let cells = try XCTUnwrap(composedSession().presenter.shownContent).cells
 
             XCTAssertEqual(cells[0].text, Self.composition, "§34's literal still leads, one script")
-            try assertRomanizationFollowsHanji(in: cells, hanji: hanji, romanization: leading.text)
+            try assertRomanizationFollowsHanji(in: cells, hanji: hanji, romanization: romanization)
             XCTAssertTrue(cells.allSatisfy { $0.annotation == nil }, "one script per cell, no annotation")
-            XCTAssertFalse(cells.contains { $0.text == "\(hanji) \(leading.text)" }, "no formatted label")
+            XCTAssertFalse(cells.contains { $0.text == "\(hanji) \(romanization)" }, "no formatted label")
         }
     }
 
@@ -633,20 +645,31 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         // dictionary's business, so it is searched for rather than hardcoded —
         // one fresh session per slot, since choosing one changes the state.
         var nailed: (session: Session, firstPage: CandidateWindowContent)?
+        // Every index answers, like a real text view: the nail re-marks the
+        // buffer shorter than `taigi` (`台gi` Hanji-first), and the tail's bar
+        // must still find an anchor there.
+        let everyIndex = Dictionary(
+            uniqueKeysWithValues: (0 ... Self.caretIndex).map { ($0, Self.caretRectAtEndOfComposition) },
+        )
         for slot in 0 ..< HorizontalPageLayout.pageSize where nailed == nil {
-            let session = try composedSession()
+            let session = try composedSession(caretRects: everyIndex)
             let firstPage = try XCTUnwrap(session.presenter.shownContent)
             guard slot < firstPage.cells.count else { break }
             session.client.clearWrites()
 
+            let slotKey = CandidateSlotKeySet.bareKeyRow[slot]
             _ = try session.controller.handle(
-                TestFixtures.keyDownEvent(characters: CandidateSlotKeySet.bareKeyRow[slot]),
+                TestFixtures.keyDownEvent(characters: slotKey),
                 client: session.client,
             )
 
-            if session.client.insertedTexts.isEmpty, session.presenter.isShowing {
-                nailed = (session, firstPage)
-            }
+            // A nail re-marks the composition with its head resolved; a key
+            // that wrote nothing, or was typed onto the buffer, is no nail.
+            guard session.client.insertedTexts.isEmpty, session.presenter.isShowing,
+                  case let .setMarkedText(marked, _) = session.client.writes.last,
+                  marked != Self.composition, marked != Self.composition + slotKey
+            else { continue }
+            nailed = (session, firstPage)
         }
 
         let (session, firstPage) = try XCTUnwrap(

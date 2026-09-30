@@ -1,0 +1,94 @@
+name: macOS
+
+# The macOS input method's Swift suite (`make -C macos test`: i18n check +
+# `swift test`) against an engine built from the same commit. Not a required
+# check.
+#
+# Runner: macos-26 (arm64), whose default Xcode is 26.x. KeyboardShortcuts
+# 3.1.0's manifest is swift-tools 6.2 (see macos/Package.swift), so package
+# resolution needs Swift 6.2+ — macos-15 defaults to Xcode 16.4 (Swift 6.1)
+# and would need an explicit Xcode switch that breaks whenever the image drops
+# that Xcode. The public repo runs macOS minutes free.
+#
+# The engine is built for the runner's architecture only
+# (TAIGI_MACOS_TARGETS): `swift test` links one slice, and the second
+# release + LTO build of swift-ffi would roughly double the Rust time. The
+# universal build stays with `make build` / the release pipeline.
+on:
+  pull_request:
+    paths:
+      - 'macos/**'
+      - 'engine/**'
+      - '!engine/android-jni/**'
+      - '!engine/build-helpers/fst-builder/**'
+      - 'dictionaries/**'
+      - 'i18n/**'
+      - 'tools/i18n/**'
+      - 'symbols/**'
+      - 'fonts/font/**'
+      - '.github/workflows/macos.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'macos/**'
+      - 'engine/**'
+      - '!engine/android-jni/**'
+      - '!engine/build-helpers/fst-builder/**'
+      - 'dictionaries/**'
+      - 'i18n/**'
+      - 'tools/i18n/**'
+      - 'symbols/**'
+      - 'fonts/font/**'
+      - '.github/workflows/macos.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Same protoc as engine.yml (engine/protos/build.rs shells out to it for
+  # prost), macOS arm64 build of the release.
+  PROTOC_VERSION: 36.1
+  PROTOC_SHA256: de56d57afe30c5d191b11d24ff93dd4025728d7fb43b773886b2d3613e0bdbb2
+
+jobs:
+  test:
+    name: macOS swift test
+    runs-on: macos-26
+    timeout-minutes: 40
+    env:
+      # Overrides engine/rust-toolchain.toml's target list (iOS / Android /
+      # x86_64 macOS), so only the host target — the one built here — is installed.
+      RUSTUP_TOOLCHAIN: stable
+      TAIGI_MACOS_TARGETS: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-osx-aarch_64.zip"
+          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+
+      - name: Install the toolchain (host target only)
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable --profile minimal --no-self-update
+          cargo --version && rustc --version && protoc --version
+          xcodebuild -version && swift --version
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: engine
+
+      - name: Build the engine xcframework (arm64)
+        run: bash engine/scripts/build-macos-xcframework.sh
+
+      - name: make -C macos test
+        run: make -C macos test

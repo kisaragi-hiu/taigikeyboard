@@ -30,7 +30,12 @@ OUT_DIR="$ENGINE_DIR/target/macos-out"
 # in engine/rust-toolchain.toml, not installed on the fly. The first is the one
 # swift-bridge artefacts are taken from; they are source-level and identical
 # across architectures.
-TARGET_TRIPLES=(aarch64-apple-darwin x86_64-apple-darwin)
+#
+# TAIGI_MACOS_TARGETS (space-separated triples) narrows the set for a test-only
+# build: .github/workflows/macos.yml sets it to the runner's aarch64-apple-darwin,
+# since `swift test` links one architecture. Never set it for a release — the
+# universal link in macos/scripts/bundle-app.sh then fails on the missing slice.
+read -r -a TARGET_TRIPLES <<< "${TAIGI_MACOS_TARGETS:-aarch64-apple-darwin x86_64-apple-darwin}"
 BRIDGE_TRIPLE="${TARGET_TRIPLES[0]}"
 FRAMEWORK_NAME="RustTaigi"
 LIB_NAME="librust_taigi.a"
@@ -49,6 +54,7 @@ rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
 THIN_LIBS=()
+BUILT_ARCHS=()
 for triple in "${TARGET_TRIPLES[@]}"; do
     cargo build --release -p swift-ffi --target "$triple"
     thin_lib="$ENGINE_DIR/target/$triple/release/$LIB_NAME"
@@ -64,7 +70,11 @@ for triple in "${TARGET_TRIPLES[@]}"; do
         exit 1
     fi
     THIN_LIBS+=("$thin_lib")
+    BUILT_ARCHS+=("$expected_arch")
 done
+# The slice's architecture set, spelled as the check below reads it from the
+# plist: sorted, comma-joined ("arm64,x86_64" for the default pair).
+EXPECTED_ARCHS="$(printf '%s\n' "${BUILT_ARCHS[@]}" | LC_ALL=C sort | paste -sd, -)"
 
 # One fat archive, not one xcframework slice per architecture: arm64 and x86_64
 # macOS are the same platform, and `-create-xcframework` rejects two libraries
@@ -105,7 +115,7 @@ xcodebuild -create-xcframework \
 
 swift_bridge_stage_wrappers "$BRIDGE_OUT_DIR" "$OUT_DIR" "$FRAMEWORK_NAME"
 
-# Verify the xcframework really carries both macOS architectures before staging
+# Verify the xcframework really carries every built architecture before staging
 # it. `-create-xcframework` infers platform from the archive's Mach-O metadata,
 # so a wrong-triple build would otherwise be caught only at link time — and a
 # half-universal framework only at install time, on a Mac nobody here owns.
@@ -116,8 +126,8 @@ SLICE_COUNT="$(plutil -extract AvailableLibraries raw -o - "$XCFRAMEWORK_PLIST")
 SUPPORTED_PLATFORM="$(plutil -extract AvailableLibraries.0.SupportedPlatform raw -o - "$XCFRAMEWORK_PLIST")"
 SUPPORTED_ARCHS="$(plutil -extract AvailableLibraries.0.SupportedArchitectures json -o - "$XCFRAMEWORK_PLIST" |
     python3 -c 'import json,sys; print(",".join(sorted(json.load(sys.stdin))))')"
-if [[ "$SLICE_COUNT" != "1" || "$SUPPORTED_PLATFORM" != "macos" || "$SUPPORTED_ARCHS" != "arm64,x86_64" ]]; then
-    echo "error: expected exactly 1 macos slice carrying arm64,x86_64 — got $SLICE_COUNT slice(s), first = $SUPPORTED_PLATFORM/$SUPPORTED_ARCHS" >&2
+if [[ "$SLICE_COUNT" != "1" || "$SUPPORTED_PLATFORM" != "macos" || "$SUPPORTED_ARCHS" != "$EXPECTED_ARCHS" ]]; then
+    echo "error: expected exactly 1 macos slice carrying $EXPECTED_ARCHS — got $SLICE_COUNT slice(s), first = $SUPPORTED_PLATFORM/$SUPPORTED_ARCHS" >&2
     exit 1
 fi
 
