@@ -154,12 +154,20 @@ enum RustEngineBridge {
 
     // MARK: - AppConfig
 
-    /// The engine holds no settings of its own; every request carries the
-    /// snapshot it should be rendered under.
-    /// Set on every request, not only the ones that read it. The composing
-    /// engine ignores it; the next-word engine rejects the unset value outright
-    /// (`engine/nextword/src/decide.rs:61`), and a field that is populated only
-    /// on the paths that currently need it is one a later slice forgets to set.
+    /// The one `AppConfig` builder. The engine holds no settings of its own;
+    /// every request — each composing op that renders the composition and
+    /// every next-word request — carries the snapshot it should be rendered
+    /// under. Under Model B every composing mutation re-renders a continuous
+    /// composition's nailed prefix, so a nail and the keystroke after it agree
+    /// only if both carry the same swap flag (`composingAppend`,
+    /// `docs/engine/continuous-input-ranking.md` §10.2); only `Reset`, which
+    /// renders nothing, carries no config at all.
+    ///
+    /// `platform_id` is set on every request, not only the ones that read it.
+    /// The composing engine ignores it; the next-word engine rejects the unset
+    /// value outright (`engine/nextword/src/decide.rs:61`), and a field that is
+    /// populated only on the paths that currently need it is one a later slice
+    /// forgets to set.
     static func appConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
         var config = Taigi_Engine_AppConfig()
         config.inputMode = settings.inputMode.rawValue
@@ -171,34 +179,22 @@ enum RustEngineBridge {
         config.ooDoubletapEnabled = true
         config.nnDoubletapEnabled = true
         config.platformID = .macos
-        // On the base config, not only `swappedAppConfig`: the next-word
-        // filter reads it too (`engine/nextword/src/filter.rs`), and the
-        // derived config starts from this one.
+        // The composing fetch collapses same-romanization rows on it and the
+        // next-word filter reads it too (`engine/nextword/src/filter.rs`).
         config.candidateDisplayMode = switch settings.candidateDisplayMode {
         case .sideBySide: .sideBySide
         case .combined: .combined
         case .romanOnly: .romanOnly
         }
-        // Base config for the same reason: the candidate fetch and the next-word
-        // filter both shape their romanization by it (§49).
+        // The candidate fetch and the next-word filter both shape their
+        // romanization by it (§49).
         config.hyphenlessRoman = settings.isHyphenlessRomanEnabled
         // Inverted on the wire (proto default = the marker follows the case,
-        // §53); base config for the preedit, the candidates and the case ops.
+        // §53); read by the preedit, the candidates and the case ops.
         config.forceLowercaseNasalMarker = !settings.isNasalMarkerUppercaseEnabled
-        return config
-    }
-
-    /// `appConfig` plus the swap flag: the engine consults it while rendering
-    /// a continuous composition's nailed prefix
-    /// (`docs/engine/continuous-input-ranking.md` §10.2) and in the next-word
-    /// decide table, where it suppresses recording for raw-romanization
-    /// commits (`decide.rs:86`). Every composing op that renders the
-    /// composition sends it — under Model B that is every mutation, not only
-    /// the commits — so a nail and the keystroke after it agree on the prefix
-    /// (`composingAppend`); only `Reset`, which renders nothing, carries no
-    /// config at all. Every next-word request sends it too.
-    static func swappedAppConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
-        var config = appConfig(settings)
+        // Rendering the nailed prefix (§10.2) and the next-word decide table,
+        // where it suppresses recording for raw-romanization commits
+        // (`decide.rs:86`).
         config.isTranslateSwapped = settings.isTranslateSwapped
         return config
     }

@@ -142,11 +142,10 @@ struct EngineSettings: Equatable, Sendable {
     let isLiteralRomanCandidateEnabled: Bool
 
     /// No Hyphens (`behavioral-invariants.md` §49) — sent as
-    /// `AppConfig.hyphenless_roman` on the base config; no TPS layout here,
-    /// so no fold.
+    /// `AppConfig.hyphenless_roman` on every request; no TPS layout here.
     /// CROSS-PLATFORM INVARIANT — mirrors `isHyphenlessRomanEnabled` in
     /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift and
-    /// `hyphenlessRomanEnabled` in android/…/ime/core/PrefHelper.kt, both OFF.
+    /// android/…/ime/core/PrefHelper.kt, both OFF.
     let isHyphenlessRomanEnabled: Bool
 
     /// ⁿ becomes ᴺ in capitals (`behavioral-invariants.md` §53) — the POJ nasal marker follows

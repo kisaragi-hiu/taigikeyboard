@@ -108,7 +108,7 @@ public extension RustEngineBridge {
         // doesn't accidentally pick up unrelated state.
         request.configSnapshot = appConfig(
             mode: mode,
-            toggles: PojMarkerOptions(
+            pojMarkers: PojMarkerOptions(
                 isDoubleTapOOEnabled: false,
                 isDoubleTapNNEnabled: false,
                 isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,

@@ -24,7 +24,7 @@ fun RustEngineBridge.composingStart(
         methodSetter = { it.start = payload },
         op = "composingStart",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 
@@ -41,7 +41,7 @@ fun RustEngineBridge.composingAppend(
         methodSetter = { it.append = payload },
         op = "composingAppend",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 
@@ -57,7 +57,7 @@ fun RustEngineBridge.composingAppendHyphen(
         methodSetter = { it.appendHyphen = payload },
         op = "composingAppendHyphen",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 
@@ -74,7 +74,7 @@ fun RustEngineBridge.composingReplaceLast(
         methodSetter = { it.replaceLast = payload },
         op = "composingReplaceLast",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 
@@ -90,7 +90,7 @@ fun RustEngineBridge.composingDeleteBackward(
         methodSetter = { it.deleteBackward = payload },
         op = "composingDeleteBackward",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 
@@ -106,7 +106,7 @@ fun RustEngineBridge.composingCommitDerived(
         methodSetter = { it.commitDerived = payload },
         op = "composingCommitDerived",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 
@@ -124,7 +124,7 @@ fun RustEngineBridge.composingCommitRaw(
         methodSetter = { it.commitRaw = payload },
         op = "composingCommitRaw",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 
@@ -143,7 +143,7 @@ fun RustEngineBridge.composingSelectSuggestion(
         methodSetter = { it.selectSuggestion = payload },
         op = "composingSelectSuggestion",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 
@@ -164,7 +164,7 @@ fun RustEngineBridge.composingCommitPreeditThenInsertExternal(
         methodSetter = { it.commitPreeditThenInsertExternal = payload },
         op = "composingCommitPreeditThenInsertExternal",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 
@@ -201,7 +201,7 @@ fun RustEngineBridge.composingEnterContinuous(
         methodSetter = { it.enterContinuous = payload },
         op = "composingEnterContinuous",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 
@@ -218,7 +218,7 @@ fun RustEngineBridge.composingEnterContinuous(
  * `RustEngineBridge.composingFetchAtPos`.
  */
 fun RustEngineBridge.composingFetchAtPos(
-    // Built once by the caller (`RustEngineBridge.continuousAppConfig`) from
+    // Built once by the caller (`continuousAppConfig`) from
     // one snapshot of the live settings.
     config: AppConfig,
     generation: Long,
@@ -287,7 +287,7 @@ fun RustEngineBridge.composingCommitContinuous(
         methodSetter = { it.commitContinuous = payload },
         op = "composingCommitContinuous",
         generation = generation,
-        config = RustEngineBridge.continuousAppConfig(settings),
+        config = continuousAppConfig(settings),
     )
 }
 

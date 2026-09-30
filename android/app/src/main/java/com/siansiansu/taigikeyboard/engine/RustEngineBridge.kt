@@ -1,26 +1,22 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.BuildConfig
-import com.siansiansu.taigikeyboard.engine.proto.AppConfig
 import com.siansiansu.taigikeyboard.engine.proto.ErrorCode
 import com.siansiansu.taigikeyboard.engine.proto.Request
 import com.siansiansu.taigikeyboard.engine.proto.Response
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
-import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicInteger
-import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCandidateDisplayMode
 
 /**
  * Thin Kotlin wrapper around the Rust shared-core FFI exposed by
  * `engine/android-jni/src/lib.rs`.
  *
  * This object owns the JNI seam, [dispatch], the logger / diagnostics
- * state, the [AppConfig] factories and every nested DTO type. The per-slice
+ * state and every nested DTO type (`AppConfig` is built in `EngineAppConfig.kt`). The per-slice
  * ops are extension functions on it, one file per slice (mirrors iOS
  * `RustEngineBridge+<Slice>.swift`):
  * - `PhoneticsBridge.kt` — phonetics core + TPS
@@ -698,7 +694,7 @@ object RustEngineBridge {
     }
 
     // endregion
-    // region Diagnostics + AppConfig helpers (shared by sibling bridges)
+    // region Diagnostics (shared by sibling bridges)
 
     private val diagnosticsLock = Any()
     private val failureCounter = AtomicInteger(0)
@@ -736,77 +732,6 @@ object RustEngineBridge {
         }
     }
 
-    /**
-     * Phonetics / composing base [AppConfig] — input mode + the POJ marker
-     * options (doubletap folds, ⁿ-becomes-ᴺ inverted on the wire as
-     * `force_lowercase_nasal_marker`, §53). `internal` so sibling impl
-     * objects share one canonical factory (no per-slice drift).
-     */
-    internal fun appConfig(
-        mode: NormalizeMode,
-        toggles: PojMarkerOptionsCarrier,
-    ): AppConfig =
-        AppConfig
-            .newBuilder()
-            .setInputMode(
-                when (mode) {
-                    NormalizeMode.POJ -> "poj"
-                    NormalizeMode.TL -> "tl"
-                    NormalizeMode.ENGLISH -> "english"
-                },
-            ).setOoDoubletapEnabled(toggles.isDoubleTapOoEnabled)
-            .setNnDoubletapEnabled(toggles.isDoubleTapNnEnabled)
-            .setForceLowercaseNasalMarker(!toggles.isNasalMarkerUppercaseEnabled)
-            .build()
-
-    /**
-     * Continuous-rendering [AppConfig]: base [appConfig] plus the two
-     * v3.5.8 §10.2 word-boundary-spacing flags the engine's
-     * `continuous_word_space` predicate consumes.
-     *
-     * `effectiveSwapped` (= translate-swap OR TPS layout, combined
-     * platform-side because [NormalizeMode] has no TPS and TPS resolves
-     * to `"tl"`/`"poj"` `input_mode`, so the engine's own
-     * `input_mode == "tps"` branch never fires) rides
-     * `is_translate_swapped`. `outputBothScripts` distinguishes
-     * hanji-first (no inter-segment space) from both-scripts
-     * (`hit (彼)` — space wanted); `is_translate_swapped` is `true` for
-     * both, so the second flag is required.
-     *
-     * Every composing op that renders the composition sends it — under
-     * Model B that is every mutation and every snapshot, not only the
-     * commits: `Append` / `DeleteBackward` after a nail re-render the
-     * nailed prefix through `combined_display(nailed, raw, config)` too,
-     * so a nail and the keystroke after it must agree on the prefix
-     * (the 2026-05-18 "commit entry points only" split left Hanji-first
-     * showing `台 gi` while typing after `台`; desktop closed the same
-     * drift in #31, S37). Only `Reset`, which carries no config, stays
-     * outside.
-     *
-     * CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift continuousAppConfig.
-     * Drift causes silent divergence (hanji-first spurious word-boundary spaces).
-     */
-    internal fun continuousAppConfig(settings: EngineSettings): AppConfig =
-        appConfig(resolveMode(settings.inputMode), PojMarkerOptionsCarrier.from(settings.pojMarkerOptions))
-            .toBuilder()
-            // TPS is a layout, not an engine mode: the engine sees `"tl"` /
-            // `"poj"`, so its own `input_mode == "tps"` branch never fires and
-            // the swap is folded here, once, at the settings seam.
-            .setIsTranslateSwapped(settings.isTranslateSwapped || settings.inputMode == "tps")
-            .setOutputBothScripts(settings.isOutputBothScripts)
-            .setCandidateDisplayMode(settings.candidateDisplayMode.toProto())
-            // Proto field 10 — No Hyphens; already TPS-folded by `PrefHelper.isHyphenlessRomanEnabled` (§49).
-            .setHyphenlessRoman(settings.isHyphenlessRomanEnabled)
-            .build()
-
-    /** The engine has no TPS mode; a TPS layout composes under its underlying romanization. */
-    internal fun resolveMode(inputMode: String): NormalizeMode =
-        when (inputMode) {
-            "poj" -> NormalizeMode.POJ
-            "english" -> NormalizeMode.ENGLISH
-            else -> NormalizeMode.TL
-        }
-
     private const val LEVEL_ERROR = 0
     private const val LEVEL_WARN = 1
     private const val LEVEL_INFO = 2
@@ -820,41 +745,6 @@ object RustEngineBridge {
 // Public DTOs (Kotlin doesn't allow named-tuple returns; using data classes)
 // =========================================================================
 
-/** Engine `AppConfig.input_mode` value. Mirrors iOS `InputMode` minus `.tps` */
-enum class NormalizeMode { POJ, TL, ENGLISH }
-
-/**
- * Carrier for the POJ marker options (the two doubletap folds + ⁿ becomes ᴺ in capitals).
- * Caller (e.g. ComposingManager) MUST construct this from live settings per
- * Codex v2 §7 — no default value at the wrapper level.
- */
-data class PojMarkerOptionsCarrier(
-    val isDoubleTapOoEnabled: Boolean,
-    val isDoubleTapNnEnabled: Boolean,
-    val isNasalMarkerUppercaseEnabled: Boolean,
-) {
-    companion object {
-        fun from(options: com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions): PojMarkerOptionsCarrier =
-            PojMarkerOptionsCarrier(
-                isDoubleTapOoEnabled = options.isDoubleTapOOEnabled,
-                isDoubleTapNnEnabled = options.isDoubleTapNNEnabled,
-                isNasalMarkerUppercaseEnabled = options.isNasalMarkerUppercaseEnabled,
-            )
-    }
-}
-
-/**
- * `AppConfig.candidate_display_mode` (field 9). The engine collapses
- * same-roman candidate rows itself under ROMAN_ONLY (`handle_fetch_at_pos`
- * + nextword `filter`); every other request family ignores the field.
- */
-internal fun CandidateDisplayMode.toProto(): ProtoCandidateDisplayMode =
-    when (this) {
-        CandidateDisplayMode.SIDE_BY_SIDE -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE
-        CandidateDisplayMode.ROMAN_ONLY -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_ROMAN_ONLY
-        CandidateDisplayMode.COMBINED -> ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_COMBINED
-    }
-
 /** Result of `Method::StripTone`. */
 data class StripToneOutcome(
     val bare: String,
@@ -866,15 +756,3 @@ data class TpsAdjustOutcome(
     val adjusted: String,
     val replaceLast: String?,
 )
-
-/**
- * The engine's `input_mode` string for [this]. Android's enum has no TPS case
- * (`"tps"` settings collapse to [InputMode.TL] in `InputMode.fromPrefString`);
- * the engine upgrades to the TPS family itself when the input carries TPS.
- */
-internal fun InputMode.engineInputMode(): String =
-    when (this) {
-        InputMode.POJ -> "poj"
-        InputMode.TL -> "tl"
-        InputMode.ENGLISH -> "english"
-    }

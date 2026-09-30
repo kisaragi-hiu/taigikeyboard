@@ -17,7 +17,7 @@ use protos::engine::{
     NextWordRequest, ResetFull, UpdateLastSelectedWord, WordSelected,
 };
 
-use super::bridge::{record_failure, roundtrip, swapped_app_config};
+use super::bridge::{app_config, record_failure, roundtrip};
 use crate::settings::EngineSettings;
 
 /// The user committed `text`, read as `roman`. `trigger_prediction` is forced
@@ -90,8 +90,7 @@ fn decide(method: next_word_request::Method, op: &str, settings: &EngineSettings
     let payload = request::Payload::Nextword(NextWordRequest {
         method: Some(method),
     });
-    let Some(response) = roundtrip(payload, op, generation, Some(swapped_app_config(settings)))
-    else {
+    let Some(response) = roundtrip(payload, op, generation, Some(app_config(settings))) else {
         return;
     };
     match response {

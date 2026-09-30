@@ -117,7 +117,7 @@ extension RustEngineBridge {
             payload: .nextword(request),
             op: op,
             generation: generation,
-            config: swappedAppConfig(settings),
+            config: appConfig(settings),
         ) else {
             return
         }

@@ -91,10 +91,7 @@ public extension RustEngineBridge {
             method: .updateLastSelectedWord(payload),
             op: "nextwordUpdateLastSelectedWord",
             generation: generation,
-            config: nextwordConfig(
-                mode: mode,
-                translateSwapped: translateSwapped,
-            ),
+            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
         )
     }
 
@@ -120,10 +117,7 @@ public extension RustEngineBridge {
             method: .wordSelected(payload),
             op: "nextwordWordSelected",
             generation: generation,
-            config: nextwordConfig(
-                mode: mode,
-                translateSwapped: translateSwapped,
-            ),
+            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
         )
     }
 
@@ -141,10 +135,7 @@ public extension RustEngineBridge {
             method: .backspace(payload),
             op: "nextwordBackspace",
             generation: generation,
-            config: nextwordConfig(
-                mode: mode,
-                translateSwapped: translateSwapped,
-            ),
+            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
         )
     }
 
@@ -160,10 +151,7 @@ public extension RustEngineBridge {
             method: .contextTimeoutFired(payload),
             op: "nextwordContextTimeoutFired",
             generation: generation,
-            config: nextwordConfig(
-                mode: mode,
-                translateSwapped: translateSwapped,
-            ),
+            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
         )
     }
 
@@ -181,10 +169,7 @@ public extension RustEngineBridge {
             method: .clearForNewComposing_p(payload),
             op: "nextwordClearForNewComposing",
             generation: generation,
-            config: nextwordConfig(
-                mode: mode,
-                translateSwapped: translateSwapped,
-            ),
+            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
         )
     }
 
@@ -200,10 +185,7 @@ public extension RustEngineBridge {
             method: .resetFull(payload),
             op: "nextwordResetFull",
             generation: generation,
-            config: nextwordConfig(
-                mode: mode,
-                translateSwapped: translateSwapped,
-            ),
+            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
         )
     }
 
@@ -224,10 +206,7 @@ public extension RustEngineBridge {
             method: .setIsShowing(payload),
             op: "nextwordSetIsShowing",
             generation: generation,
-            config: nextwordConfig(
-                mode: mode,
-                translateSwapped: translateSwapped,
-            ),
+            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
         )
     }
 
@@ -262,11 +241,13 @@ public extension RustEngineBridge {
             method: .predictNext(payload),
             op: "nextwordPredictNext",
             generation: generation,
-            config: nextwordConfig(
+            // The only nextword request that reads the display fields (`nextword/src/filter.rs`), so the caller
+            // MUST pass the live settings here (mirrors Android); every other nextword request leaves the defaults.
+            config: appConfig(
                 mode: mode,
-                translateSwapped: translateSwapped,
+                isTranslateSwapped: translateSwapped,
                 candidateDisplayMode: candidateDisplayMode,
-                hyphenlessRoman: hyphenlessRoman,
+                isHyphenlessRomanEnabled: hyphenlessRoman,
             ),
         ) else {
             return NextWordFilterResult(predictions: [], wasStale: false)
@@ -294,36 +275,6 @@ public extension RustEngineBridge {
         var input = Taigi_Engine_DecisionInput()
         input.nowMs = nowMs
         return input
-    }
-
-    /// Build an `AppConfig` populated for the NextWord engine. iOS bridge
-    /// always sets `platform_id = .ios`; tone toggles default to false (the
-    /// NextWord engine does not read them, but the field is required).
-    // `candidateDisplayMode` and `hyphenlessRoman` ride only `nextwordPredictNext` — the sole nextword reader of
-    // fields 9 / 10 (mirrors Android); `nextwordPredictNext` MUST pass the live settings; the other entry points
-    // leave the defaults.
-    private static func nextwordConfig(
-        mode: InputMode,
-        translateSwapped: Bool,
-        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        hyphenlessRoman: Bool = false,
-    ) -> Taigi_Engine_AppConfig {
-        var cfg = Taigi_Engine_AppConfig()
-        // Proto field 9 — the nextword filter collapses same-roman predictions under Romanization Only.
-        cfg.candidateDisplayMode = candidateDisplayMode.engineValue
-        // Proto field 10 — No Hyphens shapes `EnginePrediction.text`; `tl` keeps the hyphen.
-        cfg.hyphenlessRoman = hyphenlessRoman
-        switch mode {
-        case .poj: cfg.inputMode = "poj"
-        case .tl: cfg.inputMode = "tl"
-        case .english: cfg.inputMode = "english"
-        case .tps: cfg.inputMode = "tl" // TPS is a layout, not an engine mode
-        }
-        cfg.ooDoubletapEnabled = false
-        cfg.nnDoubletapEnabled = false
-        cfg.isTranslateSwapped = translateSwapped
-        cfg.platformID = .ios
-        return cfg
     }
 
     /// Nextword-specific dispatch helper. Mirrors the composing dispatch

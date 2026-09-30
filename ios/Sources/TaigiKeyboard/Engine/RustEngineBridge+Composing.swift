@@ -8,9 +8,9 @@ import SwiftProtobuf
 /// types (`ComposingTransition` / `CandidateMode` / `ContinuousCandidate` /
 /// `ContinuousFetchResult`) + the composing-specific dispatch helpers
 /// (`composingProtoRoundtrip` / `composingDispatch` / `composingFetchDispatch`
-/// / `synthComposing` / `continuousAppConfig`). All five helpers stay
-/// `private` within this file — they are file-local to the composing
-/// surface.
+/// / `synthComposing` / `continuousAppConfig`). The four dispatch helpers
+/// stay `private` to the composing surface; `continuousAppConfig` is
+/// internal so the tests can pin the wire config.
 public extension RustEngineBridge {
     // MARK: - Synthesized value types
 
@@ -448,14 +448,13 @@ public extension RustEngineBridge {
 
     // MARK: - Private dispatch (composing envelope)
 
-    /// Continuous-rendering `AppConfig`: base `appConfig(mode:toggles:)`
-    /// plus the two v3.5.8 §10.2 word-boundary-spacing flags the engine's
-    /// `continuous_word_space` predicate consumes.
+    /// The composing `AppConfig`: the live settings through `appConfig`,
+    /// including the two v3.5.8 §10.2 word-boundary-spacing flags the
+    /// engine's `continuous_word_space` predicate consumes.
     ///
-    /// `effectiveSwapped` (= translate-swap OR TPS layout, combined
-    /// platform-side because both platforms map TPS → `"tl"`/`"poj"`
-    /// `input_mode`, so the engine's own `input_mode == "tps"` branch
-    /// never fires) rides `is_translate_swapped`. `outputBothScripts`
+    /// The swap is the Candidate-Display-projected setting; a TPS layout is
+    /// sent as `"tps"` and the engine reads it as Hanji-first itself
+    /// (`AppConfig::renders_hanji_first`). `outputBothScripts`
     /// distinguishes hanji-first (no inter-segment space) from
     /// both-scripts (`hit (彼)` — space wanted); `is_translate_swapped`
     /// is `true` for both, so the second flag is required.
@@ -471,19 +470,18 @@ public extension RustEngineBridge {
     /// outside.
     // `candidateDisplayMode` (proto field 9) travels with the pair: under Romanization Only the callers already
     // pass the DERIVED `(false, false)` pair, and FetchAtPos uses the mode to collapse same-roman rows.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt continuousAppConfig.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/engine/EngineAppConfig.kt continuousAppConfig.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
-    private static func continuousAppConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
-        var cfg = appConfig(mode: settings.inputMode, toggles: settings.pojMarkerOptions)
-        cfg.candidateDisplayMode = settings.candidateDisplayMode.engineValue
-        // Already TPS-folded by `SharedSettings.isHyphenlessRomanEnabled` (§49).
-        cfg.hyphenlessRoman = settings.isHyphenlessRomanEnabled
-        // TPS is a layout, not an engine mode: the engine sees `"tl"` /
-        // `"poj"`, so its own `input_mode == "tps"` branch never fires and the
-        // swap is folded here, once, at the settings seam.
-        cfg.isTranslateSwapped = settings.isTranslateSwapped || settings.inputMode == .tps
-        cfg.outputBothScripts = settings.isOutputBothScripts
-        return cfg
+    internal static func continuousAppConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
+        appConfig(
+            mode: settings.inputMode,
+            pojMarkers: settings.pojMarkerOptions,
+            isTranslateSwapped: settings.isTranslateSwapped,
+            isOutputBothScripts: settings.isOutputBothScripts,
+            candidateDisplayMode: settings.candidateDisplayMode,
+            isHyphenlessRomanEnabled: settings.isHyphenlessRomanEnabled,
+            isTpsOrMappedToER: settings.isTpsOrMappedToER,
+        )
     }
 
     /// Encode → FFI roundtrip → decode for the composing slice. Returns the

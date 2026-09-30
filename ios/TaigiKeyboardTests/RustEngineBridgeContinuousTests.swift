@@ -256,6 +256,36 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         XCTAssertEqual(delete.displayText, "台bak", "hanji-first DeleteBackward must not insert a word-boundary space")
     }
 
+    // INVARIANT_EVERY_COMPOSING_OP_CARRIES_THE_RENDERING_CONFIG (behavioral-invariants.md §54)
+    /// The TPS layout with the swap stored OFF: the bridge sends `"tps"` and the stored swap, and
+    /// the engine reads the layout as Hanji-first itself — the prefix after a nail stays unspaced.
+    func testAppendAfterNail_TpsLayoutSwapStoredOff_KeepsPrefixUnspaced() {
+        let tps = StubEngineSettings(inputMode: .tps, isTranslateSwapped: false)
+        _ = RustEngineBridge.composingStart(
+            "taibak", settings: tps, generation: envelopeGen,
+        )
+        _ = RustEngineBridge.composingEnterContinuous(
+            settings: tps, generation: envelopeGen,
+        )
+        _ = RustEngineBridge.composingCommitContinuous(
+            displayText: "台",
+            canonicalText: "台",
+            associationTl: "tâi",
+            consumedBytes: UInt32("tai".utf8.count),
+            syllableCount: 1,
+            settings: tps,
+            generation: envelopeGen,
+        )
+        let append = RustEngineBridge.composingAppend(
+            "k", settings: tps, generation: envelopeGen,
+        )
+        XCTAssertEqual(append.displayText, "台bakk", "TPS Append must not insert a word-boundary space")
+        let delete = RustEngineBridge.composingDeleteBackward(
+            settings: tps, generation: envelopeGen,
+        )
+        XCTAssertEqual(delete.displayText, "台bak", "TPS DeleteBackward must not insert a word-boundary space")
+    }
+
     // MARK: - Effect mapping completeness (no nil drops)
 
     /// Phase 7A removed the three `nil` returns at the bottom of
