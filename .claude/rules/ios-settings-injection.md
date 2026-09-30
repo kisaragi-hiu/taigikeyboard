@@ -31,7 +31,7 @@ A one-shot snapshot injection (inject once at init, store the value) **breaks th
 
 | Context                                   | Access pattern                                     |
 |-------------------------------------------|----------------------------------------------------|
-| Engine service (`LexiconService`, etc.)   | `provider.current` at each call site               |
+| Engine service (`DictionarySearchService`, `NextWordController`) | `provider.current` at each call site               |
 | Engine value-type operation               | Receive `EngineSettings` as a parameter            |
 | UI view                                   | `@ObservedObject var settings = SharedSettings.shared` (app / platform layer only) |
 | Keyboard extension entry (`KeyboardViewController`) | Constructs the provider, injects into engine     |

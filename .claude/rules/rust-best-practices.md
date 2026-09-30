@@ -37,10 +37,10 @@ Current runtime crates — dependency edges flow **one way, top → bottom** (th
 └───────────────────────────┬─────────────────────────────────┘
                             │ depends ↓
 ┌─ domain ──────────────────┴─────────────────────────────────┐
-│  composing → lexicon, ranking, phonetics                     │
-│  lexicon   → ranking, phonetics, mmap-host                   │
-│  ranking   → (protos only)                                   │
-│  nextword  → phonetics                                       │
+│  composing → lexicon, ranking, phonetics, protos             │
+│  lexicon   → ranking, phonetics, mmap-host, protos           │
+│  ranking   → (no internal deps; pure scoring primitives)     │
+│  nextword  → phonetics, protos                               │
 │  userdata  → phonetics, protos  (SQLite stores)              │
 └───────────────────────────┬─────────────────────────────────┘
                             │ depends ↓
@@ -62,22 +62,11 @@ A visual copy of this graph plus the per-keystroke request lane lives in `docs/a
 
 ## 2. Error handling `[R]` `[S]`
 
-- **`thiserror` for library errors**. Every public engine error derives `thiserror::Error`:
-  ```rust
-  #[derive(thiserror::Error, Debug)]
-  pub enum EngineError {
-      #[error("invalid protobuf: {0}")]
-      InvalidProto(#[from] prost::DecodeError),
-      #[error("database locked")]
-      DatabaseLocked,
-      #[error("internal panic: {0}")]
-      InternalPanic(String),
-  }
-  ```
+- **`thiserror` for library errors**. Each domain crate owns its error enum deriving `thiserror::Error` (e.g. `lexicon::LexiconError` in `lexicon/src/error.rs`, `userdata::database::UserDataDatabaseError`); there is no workspace-wide `EngineError` type.
 - **`anyhow` is forbidden in every workspace library crate**. Allowed in build scripts only.
-- **`Result<T, EngineError>` throughout internal APIs.** Encode into `Response.ErrorCode` only at the FFI edge (see `.claude/rules/rust-ffi-safety.md` § FFI boundary discipline).
+- **`Result<T, <CrateError>>` throughout internal APIs.** `dispatch` maps each crate error to the wire `ErrorCode` (`envelope.proto` `Response.error`) — e.g. `lexicon_error_code` in `dispatch/src/lib.rs` — and the FFI seams build error-only responses with `dispatch::encode_error` (see `.claude/rules/rust-ffi-safety.md` § FFI boundary discipline).
 - **No `panic!` / `unwrap()` / `expect()` on unvalidated input.** `unwrap()` on a `Mutex::lock()` result is acceptable (poison is a programmer error, not a data path); briefly explain with `// JUSTIFICATION:` when non-obvious. `SAFETY:` comments are reserved for `unsafe` blocks per `.claude/rules/rust-ffi-safety.md` §3 — a safe `Mutex::lock().unwrap()` does not take one.
-- **`?` is allowed and idiomatic inside the `catch_unwind` closure** (which returns `Result<Vec<u8>, EngineError>`). What is banned is propagating a `Result` out of the FFI function itself — the outer `extern fn` must return protobuf bytes or a null sentinel, never a Rust `Result` or `Option`. Encode errors into `Response.ErrorCode` at the seam between closure and extern fn.
+- **`?` is allowed and idiomatic inside `dispatch`'s handlers**, which turn every `Err` into an error `Response`. What is banned is propagating a `Result` out of the FFI function itself — the outer `extern fn` must return protobuf bytes or a null sentinel, never a Rust `Result` or `Option`. The seam's `catch_unwind` maps a panic to `encode_error(…, ErrorCode::FailInternal, …)` (`swift-ffi/src/lib.rs::process_request_bytes`).
 
 ## 3. Crate + type choices `[R]` `[A]`
 

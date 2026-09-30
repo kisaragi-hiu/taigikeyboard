@@ -5,7 +5,7 @@ Project-specific imperative rules distilled from past incidents. The dated narra
 ## Diagnosis (`~/.claude/rules/diagnosis-discipline.md`)
 
 - **Confirm before a round**: a USER `確認:input X → expected Y` line is a dogfood criterion, not an observed bug. Unmerged / unbuilt prerequisite PRs mean the path never ran.
-- **Trace before assert**: grep the real tables (`engine/phonetics/src/tables.rs`) before writing an oracle or claiming a fold is safe; `to_tl` returns "" for tones 1 / 4.
+- **Trace before assert**: grep the real tables (`engine/phonetics/src/tables.rs`) before writing an oracle or claiming a fold is safe; `tables::tl_tone_mark` returns "" for tones 1 / 4, so `tl::to_tl` leaves those syllables unmarked.
 - **Fixture rule**: a syllabifier / continuous-fetch / golden fixture exercising syllable `X` must also include every production syllable that is a strict prefix of `X` and assert its absence (or presence). Confirm against production artifacts via `engine/composing/tests/candidate_dump.rs` first.
 - **Fix-location rule**: display-only candidate strips belong in the span-local key builder (`composing::shadow::left_anchored_keys_and_restrictions`), never in `syllabifier::valid_span_endings` — touching the primitive reintroduces the `span_min_syllable_count("tania")` regression.
 - **Verify pipeline claims**: grep production data + run a real query before trusting a roadmap's "current behaviour"; `dictionary/common/notone.py::remove_tone()` already strips digits and hyphens.

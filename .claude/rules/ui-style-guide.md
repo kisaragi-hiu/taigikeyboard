@@ -163,7 +163,7 @@ Never replace these icons with action-specific alternatives (don't use a "Share"
 
 **One carve-out — footer-weight inline links.** A link inside a footnote line (attribution, copyright, sponsor) drops the icon, takes the surrounding line's type, and draws in the same colour as the text beside it. An icon plus an accent colour is what makes a line read as a control; a footer must read as fine print. The affordance moves to the pointer and a hover lift. Scope is strict: the link is inline in a footnote-styled line, not a row, not a button, not a section body. Everything else keeps the icon.
 
-Reference implementation: `ExternalLinkButton.Style.footer` (macOS, `Settings/ExternalLinkButton.swift`), used by the 一般 pane footer. Matches the project site's own footer at `taigi-converter/index.html:206-221`.
+No footer-weight link ships today: the macOS About page (`Settings/AboutPage.swift`) turned its links into `ExternalLinkButton` `.row(glyph)` rows and keeps only the copyright line, as plain text, in the section footer. A new footer link follows the project site's own footer (`taigi-converter/index.html`).
 
 ## Feature Grouping by Usage Frequency
 

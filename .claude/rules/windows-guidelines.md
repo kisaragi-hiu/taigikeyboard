@@ -9,11 +9,14 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 
 ## Authored without a Windows machine
 
-- The platform was written blind (USER 2026-08-29). Every PR passes `make windows-check` on the
-  macOS host: `cargo test -p taigi-desktop-core` (native), `cargo clippy --workspace --all-targets
-  --target x86_64-pc-windows-gnu -- -D warnings` (full graph incl. rusqlite via mingw-w64), and
-  `cargo check --target x86_64-pc-windows-msvc` for the non-C crates. These gates prove compilation,
-  not behaviour — behaviour is the dogfood run-book's job. Never claim "works on Windows".
+- The platform was written blind (USER 2026-08-29). Every PR passes `make windows-check`
+  (`windows/Makefile` `check`) on the macOS host: the i18n check, `cargo test` for the
+  `HOST_TESTABLE` crates (native), `cargo clippy --workspace --all-targets --target
+  x86_64-pc-windows-gnu -- -D warnings` (full graph incl. rusqlite via mingw-w64), `cargo check`
+  for the `MSVC_CHECKABLE` crates on `x86_64-pc-windows-msvc`, the GNU DLL link + export check
+  (`check-dll`), `check-box` over ssh, and `cargo fmt --check`. `taigi-desktop-core` is tested
+  in its own workspace (`make -C desktop test`). These gates prove compilation, not behaviour —
+  behaviour is the dogfood run-book's job. Never claim "works on Windows".
 - Put logic in `taigi-desktop-core` (`unsafe_code = forbid`, host-testable, in the `desktop/`
   workspace shared with Linux — `linux-roadmap.md` L2) whenever it does not need a
   Win32 handle. `taigi-windows-tsf` and `taigi-windows-settings` are thin shells. A change under
@@ -126,8 +129,10 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 
 - `%APPDATA%\TaigiKeyboard\` for `settings.json` + the four user DBs (incl. `learned_phrases.db`); the install dir for
   dictionaries and fonts, resolved from the DLL's module path. No registry-stored settings.
-- SQLite schemas are byte-identical to the macOS `CREATE TABLE` text; multi-process access uses
-  WAL + `busy_timeout`. Writes are best-effort (AppContainer hosts cannot write).
+- The user DBs are the engine's (`engine/userdata`): one schema per store for every platform
+  (`frequency.rs`, `association.rs`, `custom_dictionary.rs`, `learned_phrases.rs`); the desktop
+  opens them `JournalMode::Wal` with the reader / writer `busy_timeout`s in
+  `userdata/src/database.rs`. Writes are best-effort (AppContainer hosts cannot write).
 - Settings are live-read (invariant §11): the TIP re-reads on mtime change; the settings exe
   writes atomically (tmp + rename).
 

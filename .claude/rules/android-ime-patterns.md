@@ -44,7 +44,7 @@ Durable checklist for every Android refactor PR:
 - [ ] Refactor-freeze observed per `.claude/rules/cross-platform-alignment.md` §1. If the PR intentionally changes behavior, it uses the emergency tier (§1a) or parity-correction tier (§1b) and labels accordingly.
 - [ ] Codex + `/simplify` pre-review on plan before implementation (per `~/.claude/rules/code-review-rules.md` §8), run in parallel.
 - [ ] Codex post-review on diff before merge.
-- [ ] Qualitative dogfooding pass (S1 / S2 / S3 sequences) on a real Android device for any hot-path round (concrete Taigi sequences in `.claude/rules/taigi-incidents.md` § Qualitative perf gate).
+- [ ] Qualitative dogfooding pass (S1 / S2 / S3 sequences) on a real Android device for any hot-path round (the "Qualitative perf gate" bullet in `.claude/rules/taigi-incidents.md` § Review; concrete Taigi sequences in `docs/architecture/dogfood-checklist.md`).
 - [ ] Invariant tests stay green.
 - [ ] `// CROSS-PLATFORM INVARIANT` comments updated if constants moved (policy in `.claude/rules/cross-platform-alignment.md` §3a).
 - [ ] No new `android.util.Log` / `GlobalScope` / `!!` / `object`-with-state introduced.

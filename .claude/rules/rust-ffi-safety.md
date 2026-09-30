@@ -20,7 +20,7 @@ Mandatory rules for the Rust ↔ platform boundary: FFI surface, domain↔proto 
 
 Policy lives here; the technical spec is `docs/engine/ffi-safety.md`. Enforcement:
 
-- **`std::panic::catch_unwind` wraps every FFI function body.** A panic → encoded `EngineError::InternalPanic(msg)` → protobuf `Response.error_code` → platform recovers. Unwind across FFI is undefined behavior in both JNI and C ABI.
+- **`std::panic::catch_unwind` wraps every FFI function body.** A panic → `dispatch::encode_error(…, ErrorCode::FailInternal, …)` → protobuf `Response.error` → platform recovers (there is no `EngineError` type; see `swift-ffi/src/lib.rs::process_request_bytes`). Unwind across FFI is undefined behavior in both JNI and C ABI.
 - **Engine is guarded by `Mutex<Engine>`**. Engine state is `Send + !Sync`; the mutex serializes concurrent native calls. `Arc<Mutex<Engine>>` only if the handle is shared across platform threads (usually not needed — one engine per process).
 - **Drop discipline** (applies once a handle crosses the FFI — see §4): every opaque handle exposes an explicit `shutdown(handle)` FFI. Rust side implements `Drop` with the same teardown path. Platform side (Kotlin `use {}` / Swift `deinit`) must call `shutdown`. Two khiin-rs failure modes this rule blocks: (a) Kotlin `EngineManager.kt:48` declares `external fun shutdown(enginePtr: Long)` with no matching Rust `extern fn` in `android/rust/src/lib.rs` — Kotlin link succeeds but runtime call panics; (b) `swift/bridge/src/lib.rs:33-35` defines `EngineBridge { engine_ptr: *mut c_void }` with zero `Drop` impl anywhere in the file — the boxed `Engine` leaks on app teardown.
 - **Error sentinels travel in protobuf**: every FFI return is either a valid protobuf byte buffer carrying `Response.ErrorCode`, or an out-of-band failure (null bytes / negative length) that means "engine is sick, restart this IME session". Never leak Rust error types across the ABI.
@@ -42,7 +42,8 @@ Concretely, `engine/phonetics/src/lib.rs` is the canonical shape:
 pub mod api;        // tests + CLI hit phonetics::api::*
 pub mod dispatch;   // engine/dispatch routes through phonetics::dispatch::handle
 
-mod case_adjust;
+pub mod case_transform; // cross-crate case façade (dispatch/src/case.rs)
+mod case_tables;
 mod derivation;
 mod normalization;
 mod syllable;

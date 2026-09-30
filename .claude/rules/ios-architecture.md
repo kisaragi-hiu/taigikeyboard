@@ -62,8 +62,8 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 | `Composition/`             | Engine   | `CompositionRoot` — production service graph shared by app + extension; Foundation-only |
 | `Logging/`                 | Engine   | `LoggerBackend` (Shared-Core Candidate); `DebugLogger.swift` at the root is the extension-facing wrapper |
 | `Input/`                   | Engine   | Incl. `Composing/` — must be KK-free (see §3)     |
-| `Lexicon/`                 | Engine   | DB repos allowed (Foundation + SQLite3 C API). `LexiconService`, `NextWordService`, `DictionaryRepository` all inject `EngineSettingsProvider`. |
-| `NextWord/`                | Engine   |                                                   |
+| `Lexicon/`                 | Engine   | Engine clients only, no SQLite: `LexiconClient`, `UserDataClient`, `DictionarySearchService` (injects `EngineSettingsProvider`). |
+| `NextWord/`                | Engine   | `NextWordController` (injects `EngineSettingsProvider`) |
 | `Autocomplete/Services/`   | Mixed    | `TaigiAutocompleteService.swift` and `EnglishAutocompleteService.swift` inherit `KeyboardKit.AutocompleteService` — unavoidable KK adapter boundary. `AutocompleteProviders.swift` is engine-pure. Treat subclass files as Platform-in-Engine-folder. |
 | `Settings/` (non-UI parts) | Engine   | `EngineSettings`, `EngineSettingsProvider`, etc.  |
 | `Settings/` (UI parts)     | Platform | `KeyboardColorSettings` (UIColor), `CodableColor` |
@@ -85,7 +85,7 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 Engine-layer files import Foundation only (plus SwiftProtobuf in `Engine/`) so the layer stays KeyboardKit-free and unit-testable:
 
 - No `KeyboardKit`, `UIKit`, `SwiftUI`, `Combine` imports.
-- No global singletons from outside the layer (no `SharedSettings.shared`, `KeyboardSettings.store`, `DictionaryRepository.shared` in pure-logic code) — dependencies are injected so tests can stub them.
+- No global singletons from outside the layer (no `SharedSettings.shared`, `KeyboardSettings.store` in pure-logic code) — dependencies are injected so tests can stub them.
 - No direct `FileManager`, App Group container paths, or network — callers inject the data.
 - No SQLite: the user's data is the engine's (`engine/userdata`, `docs/architecture/user-data-engine-roadmap.md` P7b), reached through `RustEngineBridge+UserData.swift` / `UserDataClient`.
 
@@ -103,7 +103,7 @@ Engine-layer files import Foundation only (plus SwiftProtobuf in `Engine/`) so t
 ### App layer
 
 - Free to import anything the host app needs.
-- Reaches Engine-layer types through the service layer only (e.g., Tab views call `LexiconService`, not `DictionaryRepository.shared`).
+- Reaches Engine-layer types through the service layer only (e.g., Dictionary tab view models take an injected `DictionarySearchService` / `UserDataClient`, defaulting to `CompositionRoot`).
 
 ---
 
@@ -128,7 +128,7 @@ If an Engine-layer file appears to need KeyboardKit, the file is in the **wrong 
 
 ### Files
 
-- File name matches the primary type it defines (`LexiconService.swift` → `public final class LexiconService`).
+- File name matches the primary type it defines (`DictionarySearchService.swift` → `final class DictionarySearchService`).
 - One public type per file when reasonable; nested helper types OK if they support the primary type.
 - Avoid generic suffixes: `Manager`, `Helper`, `Util`, `Utils`, `Handler` are discouraged unless they map to a concrete, well-scoped responsibility (e.g., a `…Manager` that is a literal owner of one resource — OK).
 
