@@ -17,7 +17,7 @@ use protos::engine::{
 };
 use ranking::{FrequencyData, FrequencyMap};
 use userdata::{
-    AssociationPair, CustomDictionaryRow, CustomDictionarySource, JournalMode, LearnedPhraseSource,
+    AssociationPair, CustomDictionaryRow, CustomDictionaryStore, JournalMode, LearnedPhraseStore,
     UserDataPaths, UserDataStores,
 };
 
@@ -124,7 +124,7 @@ fn engine_reads_answer_what_the_same_rows_answer() {
     stores.association.all_rows();
 
     // The same rows, handed to composing directly.
-    let key = userdata::derive_custom_query_key("tsiah", "tl").unwrap();
+    let key = phonetics::api::derive_custom_query_key("tsiah", "tl").unwrap();
     let frequency: FrequencyMap = stores
         .frequency
         .rows_for_words(std::slice::from_ref(&boosted.display_text))
@@ -140,30 +140,24 @@ fn engine_reads_answer_what_the_same_rows_answer() {
         .collect();
     let rows = UserRows {
         frequency,
-        custom: CustomDictionarySource::rows_matching(
-            &stores.custom_dictionary,
-            &key.family,
-            &key.form,
-            &key.key,
-        )
-        .into_iter()
-        .map(|row| lexicon::CustomEntry {
-            roman: row.roman,
-            hanji: (!row.hanzi.is_empty()).then_some(row.hanzi),
-        })
-        .collect(),
-        learned: LearnedPhraseSource::rows_matching(
-            &stores.learned_phrases,
-            &key.family,
-            &key.form,
-            &key.key,
-        )
-        .into_iter()
-        .map(|phrase| lexicon::LearnedEntry {
-            hanji: phrase.hanzi,
-            canonical_tl: phrase.canonical_tl,
-        })
-        .collect(),
+        custom: stores
+            .custom_dictionary
+            .rows_matching(&key, CustomDictionaryStore::KEYSTROKE_LIMIT)
+            .into_iter()
+            .map(|row| lexicon::CustomEntry {
+                roman: row.roman,
+                hanji: (!row.hanzi.is_empty()).then_some(row.hanzi),
+            })
+            .collect(),
+        learned: stores
+            .learned_phrases
+            .rows_matching(&key, LearnedPhraseStore::KEYSTROKE_LIMIT)
+            .into_iter()
+            .map(|phrase| lexicon::LearnedEntry {
+                hanji: phrase.hanzi,
+                canonical_tl: phrase.canonical_tl,
+            })
+            .collect(),
     };
     assert!(rows.frequency != FrequencyMap::new());
     assert!(!rows.custom.is_empty());

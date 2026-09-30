@@ -91,10 +91,11 @@ impl UserDataHandle {
         stores: &UserDataStores,
         search: &SearchCustomEntries,
     ) -> Result<CustomEntryMatches, RequestError> {
-        let dictionary = &stores.custom_dictionary;
-        let entries = crate::derive_custom_query_key(&search.query, &search.input_mode)
+        let entries = phonetics::api::derive_custom_query_key(&search.query, &search.input_mode)
             .map(|key| {
-                CustomDictionaryStore::rows_matching(dictionary, &key, search.limit as usize)
+                stores
+                    .custom_dictionary
+                    .rows_matching(&key, search.limit as usize)
             })
             .unwrap_or_default();
         Ok(CustomEntryMatches {

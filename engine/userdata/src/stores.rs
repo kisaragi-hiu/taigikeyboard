@@ -1,65 +1,95 @@
-//! The seams the composing path reads and writes through. The stores in this
-//! crate implement them over SQLite; tests implement them in memory. `Send +
-//! Sync` because the one manager per process lives behind a mutex a TSF host
-//! may reach from several thread managers (windows-roadmap W3).
+//! The four stores opened together, and the in-process search-key
+//! derivation they write with.
 
-use crate::types::{CustomEntry, FrequencyRow, LearnedPhrase};
+use crate::{
+    CustomDictionaryStore, JournalMode, LearnedPhraseStore, SearchKeyDeriver, UserAssociationStore,
+    UserDataPaths, UserFrequencyStore,
+};
+use phonetics::api::CustomSearchKey;
+use std::path::PathBuf;
+use std::sync::Arc;
 
-/// `user_frequency.db`, as the keystroke path sees it.
-pub trait FrequencySource: Send + Sync {
-    /// The learned rows for `words` (display-text keys), or `None` when the
-    /// store could not answer right now — a closed store, a busy database.
-    /// `None` and an empty list both degrade to the neutral ranking; they are
-    /// kept apart only so a caller can log the difference.
-    fn rows_for_words(&self, words: &[String]) -> Option<Vec<FrequencyRow>>;
-    /// Counts one commit of the `(word, canonical TL)` pair. Best-effort.
-    fn record(&self, word: &str, tl: &str);
+/// Every key a stored custom-dictionary entry or learned phrase is findable
+/// under — the engine's own derivation, called in-process. Never `None`: the
+/// derivation cannot fail, so it logs no failure; the `Option` is the
+/// `SearchKeyDeriver` shape, where `None` means the derivation could not answer.
+/// Its read-side twin is `phonetics::api::derive_custom_query_key`.
+pub fn derive_custom_search_keys(roman: &str) -> Option<Vec<CustomSearchKey>> {
+    Some(phonetics::api::derive_custom_search_keys(roman))
 }
 
-/// `custom_dictionary.db`, as the keystroke path sees it.
-pub trait CustomDictionarySource: Send + Sync {
-    /// The rows whose search key under `family` / `form` starts with `key`.
-    fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<CustomEntry>;
+/// The user-data stores, constructed together and opened together. Separate
+/// files rather than tables in one database, matching iOS and Android:
+/// different capacity policies, very different write rates, and a user
+/// clearing one kind of data keeps the others.
+pub struct UserDataStores {
+    pub frequency: Arc<UserFrequencyStore>,
+    pub association: Arc<UserAssociationStore>,
+    pub custom_dictionary: Arc<CustomDictionaryStore>,
+    pub learned_phrases: Arc<LearnedPhraseStore>,
 }
 
-/// `learned_phrases.db` (§50), as the keystroke path sees it — learning
-/// data, not the user's dictionary (USER 2026-09-21).
-pub trait LearnedPhraseSource: Send + Sync {
-    /// The phrases whose search key under `family` / `form` EQUALS `key` —
-    /// the whole buffer, never a prefix.
-    fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase>;
-    /// Records one phrase a final commit taught. Best-effort; never logs the words.
-    fn learn_phrase(&self, hanzi: &str, canonical_tl: &str);
-    /// Bumps a phrase the user just picked whole. Best-effort.
-    fn touch_phrase(&self, hanzi: &str, canonical_tl: &str);
-}
-
-// A shared store is the store: the shell hands one `Arc` to the manager and
-// keeps another for the settings window's pages.
-impl<T: FrequencySource + ?Sized> FrequencySource for std::sync::Arc<T> {
-    fn rows_for_words(&self, words: &[String]) -> Option<Vec<FrequencyRow>> {
-        (**self).rows_for_words(words)
+impl UserDataStores {
+    /// The desktop layout: all four files in `directory`, write-ahead logged.
+    /// Nothing is opened yet.
+    pub fn new(directory: PathBuf) -> Self {
+        Self::at(UserDataPaths::in_directory(&directory), JournalMode::Wal)
     }
 
-    fn record(&self, word: &str, tl: &str) {
-        (**self).record(word, tl);
+    /// Stores at `paths`, journaled per `journal`, using the engine's own
+    /// search-key derivation. Nothing is opened yet.
+    pub fn at(paths: UserDataPaths, journal: JournalMode) -> Self {
+        let derive_search_keys: SearchKeyDeriver = Arc::new(derive_custom_search_keys);
+        Self {
+            frequency: Arc::new(UserFrequencyStore::new(
+                paths.frequency,
+                journal,
+                UserFrequencyStore::shipped_capacity(),
+            )),
+            association: Arc::new(UserAssociationStore::new(
+                paths.association,
+                journal,
+                UserAssociationStore::shipped_capacity(),
+            )),
+            custom_dictionary: Arc::new(CustomDictionaryStore::new(
+                paths.custom_dictionary,
+                journal,
+                Arc::clone(&derive_search_keys),
+                CustomDictionaryStore::MAX_ENTRIES,
+            )),
+            learned_phrases: Arc::new(LearnedPhraseStore::new(
+                paths.learned_phrases,
+                journal,
+                derive_search_keys,
+                LearnedPhraseStore::MAX_ENTRIES,
+            )),
+        }
     }
-}
 
-impl<T: CustomDictionarySource + ?Sized> CustomDictionarySource for std::sync::Arc<T> {
-    fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<CustomEntry> {
-        (**self).rows_matching(family, form, key)
+    /// Opens all of them, off the calling thread. Safe to call more than
+    /// once — each store opens its file exactly once.
+    pub fn open(&self) {
+        self.frequency.open();
+        self.association.open();
+        self.custom_dictionary.open();
+        self.learned_phrases.open();
     }
-}
 
-impl<T: LearnedPhraseSource + ?Sized> LearnedPhraseSource for std::sync::Arc<T> {
-    fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase> {
-        (**self).rows_matching(family, form, key)
-    }
-    fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        (**self).learn_phrase(hanzi, canonical_tl);
-    }
-    fn touch_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        (**self).touch_phrase(hanzi, canonical_tl);
+    /// Opens all of them and finishes the custom dictionary's takeover —
+    /// its search keys re-derived, the seed entries written into an
+    /// untouched dictionary — before returning, so a caller learns which
+    /// stores are ready. Blocks: never on a UI thread or a store worker.
+    /// A failure is logged and leaves that store as it is; the others go on.
+    pub fn open_blocking(&self) {
+        // All four start opening on their own workers first, so the waits
+        // below overlap instead of running one file after another.
+        self.open();
+        self.frequency.open_blocking();
+        self.association.open_blocking();
+        self.learned_phrases.open_blocking();
+        self.custom_dictionary.open_blocking();
+        if self.custom_dictionary.is_ready() {
+            self.custom_dictionary.finish_takeover();
+        }
     }
 }

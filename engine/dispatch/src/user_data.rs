@@ -17,8 +17,8 @@ use protos::engine::{
 };
 use ranking::{ContextRanks, FrequencyData, FrequencyMap, CONTEXT_RANK_USER};
 use userdata::{
-    AssociationPair, CustomDictionaryCSV, CustomDictionarySource, CustomEntry, FollowingRow,
-    LearnedPhrase, LearnedPhraseSource, RequestError, UserDataHandle, UserDataStores,
+    AssociationPair, CustomDictionaryCSV, CustomDictionaryRow, CustomDictionaryStore, FollowingRow,
+    LearnedPhraseRow, LearnedPhraseStore, RequestError, UserDataHandle, UserDataStores,
 };
 
 // The limit a platform may check before the read is the codec's own.
@@ -146,7 +146,7 @@ fn buffer_rows(
     custom_dictionary_disabled: bool,
 ) -> UserRows {
     let Some(key) = (!raw.is_empty())
-        .then(|| userdata::derive_custom_query_key(raw, &config.input_mode))
+        .then(|| phonetics::api::derive_custom_query_key(raw, &config.input_mode))
         .flatten()
     else {
         return UserRows::default();
@@ -154,25 +154,19 @@ fn buffer_rows(
     let custom = if custom_dictionary_disabled {
         Vec::new()
     } else {
-        CustomDictionarySource::rows_matching(
-            &stores.custom_dictionary,
-            &key.family,
-            &key.form,
-            &key.key,
-        )
-        .iter()
-        .map(custom_entry)
-        .collect()
+        stores
+            .custom_dictionary
+            .rows_matching(&key, CustomDictionaryStore::KEYSTROKE_LIMIT)
+            .into_iter()
+            .map(custom_entry)
+            .collect()
     };
-    let learned = LearnedPhraseSource::rows_matching(
-        &stores.learned_phrases,
-        &key.family,
-        &key.form,
-        &key.key,
-    )
-    .iter()
-    .map(learned_entry)
-    .collect();
+    let learned = stores
+        .learned_phrases
+        .rows_matching(&key, LearnedPhraseStore::KEYSTROKE_LIMIT)
+        .into_iter()
+        .map(learned_entry)
+        .collect();
     UserRows {
         custom,
         learned,
@@ -268,17 +262,17 @@ fn following_rows(
 // The row → engine / wire forms.
 
 /// An empty stored hanzi is a romanization-only entry.
-fn custom_entry(row: &CustomEntry) -> lexicon::CustomEntry {
+fn custom_entry(row: CustomDictionaryRow) -> lexicon::CustomEntry {
     lexicon::CustomEntry {
-        roman: row.roman.clone(),
-        hanji: (!row.hanzi.is_empty()).then(|| row.hanzi.clone()),
+        roman: row.roman,
+        hanji: (!row.hanzi.is_empty()).then_some(row.hanzi),
     }
 }
 
-fn learned_entry(phrase: &LearnedPhrase) -> lexicon::LearnedEntry {
+fn learned_entry(phrase: LearnedPhraseRow) -> lexicon::LearnedEntry {
     lexicon::LearnedEntry {
-        hanji: phrase.hanzi.clone(),
-        canonical_tl: phrase.canonical_tl.clone(),
+        hanji: phrase.hanzi,
+        canonical_tl: phrase.canonical_tl,
     }
 }
 

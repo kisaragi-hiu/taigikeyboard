@@ -38,15 +38,13 @@ mod handle;
 #[cfg(feature = "sqlite")]
 mod learned_phrases;
 mod paths;
+#[cfg(feature = "sqlite")]
 mod stores;
 #[cfg(feature = "sqlite")]
 mod timestamp;
-mod types;
-#[cfg(feature = "sqlite")]
-mod user_data_stores;
 
 #[cfg(feature = "sqlite")]
-pub use association::{AssociationRow, FollowingRow, UserAssociationStore};
+pub use association::{AssociationPair, AssociationRow, FollowingRow, UserAssociationStore};
 #[cfg(feature = "sqlite")]
 pub use backup::{export_backup, import_backup, BackupError, BackupImported, BACKUP_VERSION};
 #[cfg(feature = "sqlite")]
@@ -66,7 +64,7 @@ pub use database::{
 #[cfg(feature = "sqlite")]
 pub use dispatch::RequestError;
 #[cfg(feature = "sqlite")]
-pub use frequency::UserFrequencyStore;
+pub use frequency::{FrequencyRow, UserFrequencyStore};
 #[cfg(feature = "sqlite")]
 pub use handle::UserDataHandle;
 #[cfg(feature = "sqlite")]
@@ -74,9 +72,7 @@ pub use learned_phrases::{LearnedPhraseRow, LearnedPhraseStore};
 pub use paths::{
     UserDataPaths, ASSOCIATION_FILE, CUSTOM_DICTIONARY_FILE, FREQUENCY_FILE, LEARNED_PHRASES_FILE,
 };
-pub use stores::{CustomDictionarySource, FrequencySource, LearnedPhraseSource};
+#[cfg(feature = "sqlite")]
+pub use stores::{derive_custom_search_keys, UserDataStores};
 #[cfg(feature = "sqlite")]
 pub use timestamp::{unix_seconds_now, utc_timestamp_now};
-pub use types::{AssociationPair, CustomEntry, CustomSearchKey, FrequencyRow, LearnedPhrase};
-#[cfg(feature = "sqlite")]
-pub use user_data_stores::{derive_custom_query_key, derive_custom_search_keys, UserDataStores};

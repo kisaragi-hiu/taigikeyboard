@@ -42,7 +42,8 @@ const FORM_ABBREV: &str = "abbrev";
 
 /// One materialized search key. `family` / `form` are stable string tags
 /// shared with the SQLite side table; `key` is the fused family-native search
-/// string. Native struct (dispatch maps it to the proto `CustomSearchKey`).
+/// string. `engine/userdata` writes and queries its side tables with it.
+#[derive(Clone)]
 pub struct CustomSearchKey {
     pub family: &'static str,
     pub form: &'static str,

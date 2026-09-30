@@ -7,8 +7,7 @@ use crate::custom_dictionary::SearchKeyDeriver;
 use crate::database::{
     immediate_transaction, JournalMode, StoreSchema, UserDataDatabase, UserDataDatabaseError,
 };
-use crate::stores::LearnedPhraseSource;
-use crate::types::{CustomSearchKey, LearnedPhrase};
+use phonetics::api::CustomSearchKey;
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
@@ -197,31 +196,6 @@ impl LearnedPhraseStore {
             connection.execute("VACUUM;", []).ok();
             Ok(existing)
         })
-    }
-}
-
-impl LearnedPhraseSource for LearnedPhraseStore {
-    fn rows_matching(&self, family: &str, form: &str, key: &str) -> Vec<LearnedPhrase> {
-        let query = CustomSearchKey {
-            family: family.to_owned(),
-            form: form.to_owned(),
-            key: key.to_owned(),
-        };
-        LearnedPhraseStore::rows_matching(self, &query, Self::KEYSTROKE_LIMIT)
-            .into_iter()
-            .map(|row| LearnedPhrase {
-                hanzi: row.hanzi,
-                canonical_tl: row.canonical_tl,
-            })
-            .collect()
-    }
-
-    fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        LearnedPhraseStore::learn_phrase(self, hanzi, canonical_tl);
-    }
-
-    fn touch_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        LearnedPhraseStore::touch_phrase(self, hanzi, canonical_tl);
     }
 }
 
