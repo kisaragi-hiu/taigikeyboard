@@ -60,15 +60,6 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
     set {method = .nfdPreprocessForLookup(newValue)}
   }
 
-  /// --- Derivation (1 op) ---
-  public var deriveCustomQueryKey: Taigi_Engine_DeriveCustomQueryKey {
-    get {
-      if case .deriveCustomQueryKey(let v)? = method {return v}
-      return Taigi_Engine_DeriveCustomQueryKey()
-    }
-    set {method = .deriveCustomQueryKey(newValue)}
-  }
-
   /// --- TPS (4 ops) ---
   public var tlNumericToTps: Taigi_Engine_TlNumericToTps {
     get {
@@ -110,8 +101,6 @@ public nonisolated struct Taigi_Engine_PhoneticsRequest: Sendable {
     case tlToPoj(Taigi_Engine_TlToPoj)
     case getToneVariations(Taigi_Engine_GetToneVariations)
     case nfdPreprocessForLookup(Taigi_Engine_NfdPreprocessForLookup)
-    /// --- Derivation (1 op) ---
-    case deriveCustomQueryKey(Taigi_Engine_DeriveCustomQueryKey)
     /// --- TPS (4 ops) ---
     case tlNumericToTps(Taigi_Engine_TlNumericToTps)
     case tlDisplayToTps(Taigi_Engine_TlDisplayToTps)
@@ -178,33 +167,6 @@ public nonisolated struct Taigi_Engine_NfdPreprocessForLookup: Sendable {
   // methods supported on all messages.
 
   public var input: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// The WRITE side — the full {tl, poj, tps} × {num, notone, abbrev} search-key
-/// bundle for a stored custom-dictionary roman — is derived in-process by
-/// `engine/userdata` (`phonetics::api::derive_custom_search_keys`); no wire op.
-///
-/// `DeriveCustomQueryKey` — READ side (v3.6.1 R3). Given the user's current raw
-/// input + settings `input_mode`, returns the single family-native key tagged
-/// with its primary form (num / notone). Effective family =
-/// contains_tps(input) ? tps : parse(input_mode) — mirrors the composing
-/// dispatch TPS upgrade (`engine/composing/src/dispatch.rs:208`), so Android
-/// (whose `NormalizeMode` lacks a TPS variant) gets the right family from the
-/// raw input rather than settings alone. The platform matches the returned key
-/// against the entry's {primary-form, abbrev} rows in that family. Returns no
-/// key for empty / residue-only input.
-public nonisolated struct Taigi_Engine_DeriveCustomQueryKey: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var input: String = String()
-
-  public var inputMode: String = String()
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -322,14 +284,6 @@ public nonisolated struct Taigi_Engine_PhoneticsResponse: Sendable {
     set {result = .tpsAdjustResult(newValue)}
   }
 
-  public var customSearchKeysResult: Taigi_Engine_CustomSearchKeysResult {
-    get {
-      if case .customSearchKeysResult(let v)? = result {return v}
-      return Taigi_Engine_CustomSearchKeysResult()
-    }
-    set {result = .customSearchKeysResult(newValue)}
-  }
-
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Result: Equatable, Sendable {
@@ -338,7 +292,6 @@ public nonisolated struct Taigi_Engine_PhoneticsResponse: Sendable {
     case boolResult(Taigi_Engine_BoolResult)
     case toneVariationsResult(Taigi_Engine_ToneVariationsResult)
     case tpsAdjustResult(Taigi_Engine_TpsAdjustResult)
-    case customSearchKeysResult(Taigi_Engine_CustomSearchKeysResult)
 
   }
 
@@ -456,48 +409,13 @@ public nonisolated struct Taigi_Engine_TpsAdjustResult: Sendable {
   fileprivate var _replaceLast: Taigi_Engine_OptionalStringResult? = nil
 }
 
-/// One materialized custom-dictionary search key (v3.6.1 R3). `family` ∈
-/// {tl, poj, tps}; `form` ∈ {num, notone, abbrev}; `key` is the fused
-/// family-native search string. TPS er/or dialect variants are emitted as
-/// additional rows sharing the same (family, form) with an alternate `key`, so
-/// the query side stays family-uniform.
-public nonisolated struct Taigi_Engine_CustomSearchKey: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var family: String = String()
-
-  public var form: String = String()
-
-  public var key: String = String()
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
-/// Result for `DeriveCustomQueryKey` (0 or 1 read-side key). Empty when the
-/// input has no derivable key.
-public nonisolated struct Taigi_Engine_CustomSearchKeysResult: Sendable {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  public var keys: [Taigi_Engine_CustomSearchKey] = []
-
-  public var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  public init() {}
-}
-
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate nonisolated let _protobuf_package = "taigi.engine"
 
 nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{b}strip_tone\0\u{4}\u{2}tl_to_poj\0\u{4}\u{5}get_tone_variations\0\u{3}nfd_preprocess_for_lookup\0\u{4}\u{4}derive_custom_query_key\0\u{4}\u{9}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{b}normalize_tone\0\u{b}normalize_to_tl\0\u{b}restore_tone\0\u{b}contains_tps\0\u{b}poj_to_tl\0\u{b}normalize_input\0\u{b}derive_notone\0\u{b}derive_abbrev\0\u{b}derive_custom_search_keys\0\u{c}\u{a}\u{1}\u{c}\u{c}\u{1}\u{c}\u{e}\u{1}\u{c}\u{f}\u{1}\u{c}\u{10}\u{1}\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{16}\u{1}\u{c}\u{1e}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{b}strip_tone\0\u{4}\u{2}tl_to_poj\0\u{4}\u{5}get_tone_variations\0\u{3}nfd_preprocess_for_lookup\0\u{4}\u{d}tl_numeric_to_tps\0\u{3}tl_display_to_tps\0\u{3}is_tps_tone_mark\0\u{3}tps_input_adjust\0\u{b}normalize_tone\0\u{b}normalize_to_tl\0\u{b}restore_tone\0\u{b}contains_tps\0\u{b}poj_to_tl\0\u{b}normalize_input\0\u{b}derive_notone\0\u{b}derive_abbrev\0\u{b}derive_custom_search_keys\0\u{b}derive_custom_query_key\0\u{c}\u{a}\u{1}\u{c}\u{c}\u{1}\u{c}\u{e}\u{1}\u{c}\u{f}\u{1}\u{c}\u{10}\u{1}\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{16}\u{1}\u{c}\u{17}\u{1}\u{c}\u{1e}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -555,19 +473,6 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
           self.method = .nfdPreprocessForLookup(v)
-        }
-      }()
-      case 23: try {
-        var v: Taigi_Engine_DeriveCustomQueryKey?
-        var hadOneofValue = false
-        if let current = self.method {
-          hadOneofValue = true
-          if case .deriveCustomQueryKey(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .deriveCustomQueryKey(v)
         }
       }()
       case 32: try {
@@ -648,10 +553,6 @@ nonisolated extension Taigi_Engine_PhoneticsRequest: SwiftProtobuf.Message, Swif
     case .nfdPreprocessForLookup?: try {
       guard case .nfdPreprocessForLookup(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
-    }()
-    case .deriveCustomQueryKey?: try {
-      guard case .deriveCustomQueryKey(let v)? = self.method else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 23)
     }()
     case .tlNumericToTps?: try {
       guard case .tlNumericToTps(let v)? = self.method else { preconditionFailure() }
@@ -785,41 +686,6 @@ nonisolated extension Taigi_Engine_NfdPreprocessForLookup: SwiftProtobuf.Message
 
   public static func ==(lhs: Taigi_Engine_NfdPreprocessForLookup, rhs: Taigi_Engine_NfdPreprocessForLookup) -> Bool {
     if lhs.input != rhs.input {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_DeriveCustomQueryKey: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".DeriveCustomQueryKey"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0\u{3}input_mode\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.input) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.inputMode) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.input.isEmpty {
-      try visitor.visitSingularStringField(value: self.input, fieldNumber: 1)
-    }
-    if !self.inputMode.isEmpty {
-      try visitor.visitSingularStringField(value: self.inputMode, fieldNumber: 2)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_DeriveCustomQueryKey, rhs: Taigi_Engine_DeriveCustomQueryKey) -> Bool {
-    if lhs.input != rhs.input {return false}
-    if lhs.inputMode != rhs.inputMode {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -962,7 +828,7 @@ nonisolated extension Taigi_Engine_TpsInputAdjust: SwiftProtobuf.Message, SwiftP
 
 nonisolated extension Taigi_Engine_PhoneticsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".PhoneticsResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}string_result\0\u{3}strip_tone_result\0\u{4}\u{2}bool_result\0\u{3}tone_variations_result\0\u{3}tps_adjust_result\0\u{3}custom_search_keys_result\0\u{b}optional_string_result\0\u{c}\u{c}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}string_result\0\u{3}strip_tone_result\0\u{4}\u{2}bool_result\0\u{3}tone_variations_result\0\u{3}tps_adjust_result\0\u{b}optional_string_result\0\u{b}custom_search_keys_result\0\u{c}\u{c}\u{1}\u{c}\u{10}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1035,19 +901,6 @@ nonisolated extension Taigi_Engine_PhoneticsResponse: SwiftProtobuf.Message, Swi
           self.result = .tpsAdjustResult(v)
         }
       }()
-      case 16: try {
-        var v: Taigi_Engine_CustomSearchKeysResult?
-        var hadOneofValue = false
-        if let current = self.result {
-          hadOneofValue = true
-          if case .customSearchKeysResult(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.result = .customSearchKeysResult(v)
-        }
-      }()
       default: break
       }
     }
@@ -1078,10 +931,6 @@ nonisolated extension Taigi_Engine_PhoneticsResponse: SwiftProtobuf.Message, Swi
     case .tpsAdjustResult?: try {
       guard case .tpsAdjustResult(let v)? = self.result else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
-    }()
-    case .customSearchKeysResult?: try {
-      guard case .customSearchKeysResult(let v)? = self.result else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     }()
     case nil: break
     }
@@ -1324,76 +1173,6 @@ nonisolated extension Taigi_Engine_TpsAdjustResult: SwiftProtobuf.Message, Swift
   public static func ==(lhs: Taigi_Engine_TpsAdjustResult, rhs: Taigi_Engine_TpsAdjustResult) -> Bool {
     if lhs.adjusted != rhs.adjusted {return false}
     if lhs._replaceLast != rhs._replaceLast {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_CustomSearchKey: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CustomSearchKey"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}family\0\u{1}form\0\u{1}key\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.family) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.form) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.key) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.family.isEmpty {
-      try visitor.visitSingularStringField(value: self.family, fieldNumber: 1)
-    }
-    if !self.form.isEmpty {
-      try visitor.visitSingularStringField(value: self.form, fieldNumber: 2)
-    }
-    if !self.key.isEmpty {
-      try visitor.visitSingularStringField(value: self.key, fieldNumber: 3)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_CustomSearchKey, rhs: Taigi_Engine_CustomSearchKey) -> Bool {
-    if lhs.family != rhs.family {return false}
-    if lhs.form != rhs.form {return false}
-    if lhs.key != rhs.key {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-nonisolated extension Taigi_Engine_CustomSearchKeysResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".CustomSearchKeysResult"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}keys\0")
-
-  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.keys) }()
-      default: break
-      }
-    }
-  }
-
-  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.keys.isEmpty {
-      try visitor.visitRepeatedMessageField(value: self.keys, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  public static func ==(lhs: Taigi_Engine_CustomSearchKeysResult, rhs: Taigi_Engine_CustomSearchKeysResult) -> Bool {
-    if lhs.keys != rhs.keys {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -25,7 +25,6 @@ public  final class PhoneticsResponse extends
     BOOL_RESULT(13),
     TONE_VARIATIONS_RESULT(14),
     TPS_ADJUST_RESULT(15),
-    CUSTOM_SEARCH_KEYS_RESULT(16),
     RESULT_NOT_SET(0);
     private final int value;
     private ResultCase(int value) {
@@ -46,7 +45,6 @@ public  final class PhoneticsResponse extends
         case 13: return BOOL_RESULT;
         case 14: return TONE_VARIATIONS_RESULT;
         case 15: return TPS_ADJUST_RESULT;
-        case 16: return CUSTOM_SEARCH_KEYS_RESULT;
         case 0: return RESULT_NOT_SET;
         default: return null;
       }
@@ -313,56 +311,6 @@ public  final class PhoneticsResponse extends
    */
   private void clearTpsAdjustResult() {
     if (resultCase_ == 15) {
-      resultCase_ = 0;
-      result_ = null;
-    }
-  }
-
-  public static final int CUSTOM_SEARCH_KEYS_RESULT_FIELD_NUMBER = 16;
-  /**
-   * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-   */
-  @java.lang.Override
-  public boolean hasCustomSearchKeysResult() {
-    return resultCase_ == 16;
-  }
-  /**
-   * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult getCustomSearchKeysResult() {
-    if (resultCase_ == 16) {
-       return (com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-   */
-  private void setCustomSearchKeysResult(com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 16;
-  }
-  /**
-   * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-   */
-  private void mergeCustomSearchKeysResult(com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 16 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 16;
-  }
-  /**
-   * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-   */
-  private void clearCustomSearchKeysResult() {
-    if (resultCase_ == 16) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -717,54 +665,6 @@ public  final class PhoneticsResponse extends
       return this;
     }
 
-    /**
-     * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-     */
-    @java.lang.Override
-    public boolean hasCustomSearchKeysResult() {
-      return instance.hasCustomSearchKeysResult();
-    }
-    /**
-     * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult getCustomSearchKeysResult() {
-      return instance.getCustomSearchKeysResult();
-    }
-    /**
-     * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-     */
-    public Builder setCustomSearchKeysResult(com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult value) {
-      copyOnWrite();
-      instance.setCustomSearchKeysResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-     */
-    public Builder setCustomSearchKeysResult(
-        com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult.Builder builderForValue) {
-      copyOnWrite();
-      instance.setCustomSearchKeysResult(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-     */
-    public Builder mergeCustomSearchKeysResult(com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult value) {
-      copyOnWrite();
-      instance.mergeCustomSearchKeysResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CustomSearchKeysResult custom_search_keys_result = 16;</code>
-     */
-    public Builder clearCustomSearchKeysResult() {
-      copyOnWrite();
-      instance.clearCustomSearchKeysResult();
-      return this;
-    }
-
     // @@protoc_insertion_point(builder_scope:taigi.engine.PhoneticsResponse)
   }
   @java.lang.Override
@@ -788,11 +688,10 @@ public  final class PhoneticsResponse extends
             com.siansiansu.taigikeyboard.engine.proto.BoolResult.class,
             com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult.class,
             com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.class,
-            com.siansiansu.taigikeyboard.engine.proto.CustomSearchKeysResult.class,
           };
           java.lang.String info =
-              "\u0000\u0006\u0001\u0000\n\u0010\u0006\u0000\u0000\u0000\n<\u0000\u000b<\u0000\r" +
-              "<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000";
+              "\u0000\u0005\u0001\u0000\n\u000f\u0005\u0000\u0000\u0000\n<\u0000\u000b<\u0000\r" +
+              "<\u0000\u000e<\u0000\u000f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
