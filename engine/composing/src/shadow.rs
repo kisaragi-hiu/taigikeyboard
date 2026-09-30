@@ -1232,7 +1232,7 @@ pub(crate) fn custom_toneless_key(roman: &str, mode: InputMode) -> Option<String
 ///   typing `toui` for POJ `tó-uī` (indexed `poj_notone=toui`) would
 ///   get folded to `tooi` and lose the lattice match. Per-syllable
 ///   callers (build-pipeline `canonicalize_poj_syllable`, runtime
-///   `derive_poj_notone_for_match`) still consume the full
+///   `phonetics::KeyFamily::Poj.toneless_face`) still consume the full
 ///   [`phonetics::NORMALIZE_TO_POJ_RULES`] — they apply per-token so
 ///   the `ou` alias only ever sees a single syllable.
 /// - `mode != InputMode::Poj` (TL / TPS / English) →

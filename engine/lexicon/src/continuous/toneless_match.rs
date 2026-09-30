@@ -31,8 +31,9 @@ use phonetics::KeyFamily;
 /// key, NOT a continuous toneless key, so the guard is skipped rather
 /// than silently filtering a non-continuous caller ([`toneless_body`]).
 fn matches_continuous_tl_toneless_key(key: &str, record_tl: &str) -> bool {
-    toneless_body(key, KeyFamily::Tl.prefix())
-        .is_none_or(|body| face_eq_with_nasal_oo_alias(&tl_toneless_face(record_tl), body))
+    toneless_body(key, KeyFamily::Tl.prefix()).is_none_or(|body| {
+        face_eq_with_nasal_oo_alias(&KeyFamily::Tl.toneless_face(record_tl), body)
+    })
 }
 
 /// Body of `key` when it is a toneless-surface key of `family` (`"tl:"` /
@@ -50,19 +51,6 @@ fn toneless_body<'a>(key: &'a str, family: &str) -> Option<&'a str> {
         KeyFace::TlNotone | KeyFace::PojNotone | KeyFace::TpsNotone
     )
     .then_some(body)
-}
-
-/// The record's `tl_notone` face — what `create_fst.py` indexes under
-/// `tl:` — reconstructed from `record.tl`. `normalize_input` yields a
-/// per-syllable numeric-tone form (`gín-á-lâng` → `gin2a2lang5`), so every
-/// ASCII tone digit is dropped to reach the stored fused surface
-/// (`remove_tone(to_numeric_tone(tl)) == tl_notone` holds for every
-/// `dictionary.csv` row — verified pre-impl; `tests/roman_num_face_parity.rs`).
-fn tl_toneless_face(record_tl: &str) -> String {
-    phonetics::normalize_input(record_tl)
-        .chars()
-        .filter(|c| !c.is_ascii_digit())
-        .collect()
 }
 
 /// `face == body`, also accepting the nasal-`oo` alias respelling of the face.
@@ -83,90 +71,14 @@ fn face_eq_with_nasal_oo_alias(face: &str, body: &str) -> bool {
     face == body || phonetics::nasal_oo_alias_spelling(face).is_some_and(|alias| alias == body)
 }
 
-/// The record's `poj_notone` face — v3.5.9 B-2 POJ counterpart of [`tl_toneless_face`].
-/// `record.tl` is the only romanization the engine record carries
-/// (Codex BLOCK #1 — `dict.bin` has no `poj` field), so we derive the
-/// `poj_notone` surface at runtime byte-for-byte the way
-/// `dictionary/build/merge_csv.py:226-240` does in production:
-///   1. [`phonetics::tl_display_to_poj_display`] rewrites the TL display
-///      form into POJ display (`tsiah → chiah`, `gín-á-lâng →
-///      gín-á-lâng`).
-///   2. Split on both `-` AND space. `record.tl` carries multi-syllable
-///      records as either `gín-á-lâng` (hyphenated) or `iā sī`
-///      (space-separated; 998 rows in `dictionary.csv` have spaces) —
-///      Codex pre-impl BLOCK caught the hyphen-only split.
-///   3. **Per token**: NFD-walk, drop the 8 POJ / TL combining tone
-///      marks (`U+0300, U+0301, U+0302, U+0304, U+0306, U+030B,
-///      U+030C, U+030D`), lowercase, then apply
-///      [`phonetics::NORMALIZE_TO_POJ_RULES`] (`ou→oo`,
-///      `o\u{0358}→oo`, `\u{207f}→nn`, `\u{1d3a}→nn`) and strip any
-///      ASCII digits the normalize stage emits.
-///   4. Concatenate the per-token results into the final body.
-///
-/// Step 3's normalize MUST run **per token before concat**, not over
-/// the concatenated surface — see [`derive_poj_notone_for_match`]'s
-/// own contract (`ou→oo` would mis-fire across hyphen boundaries on
-/// `tó-uī → toui`; concat-then-normalize would drift to `tooi`).
-///
-/// Encoding-only — no phonotactic gating — because that is what the
-/// build pipeline does. A phonotactic gate (Codex post-impl SHOULD #1)
-/// would silently reject ~10 legitimate dictionary rows whose TL has
-/// shapes the syllable table does not enumerate (e.g. `hehⁿ` →
-/// `poj_notone=hehnn`; `tl_notone=hehⁿ`; both legitimately indexed in
-/// the shipped `dictionary.fst`). The non-golden parity test
-/// `engine/lexicon/tests/poj_notone_parity.rs` pins this against
-/// every row of `dictionary/output/dictionary.csv`.
-///
-fn poj_toneless_face(record_tl: &str) -> String {
-    derive_poj_notone_for_match(&phonetics::api::tl_display_to_poj_display(record_tl))
-}
-
 /// v3.5.9 B-2 — POJ analog of [`matches_continuous_tl_toneless_key`]:
-/// `record_tl`'s [`poj_toneless_face`] equals the `poj:` body. Scope
+/// `record_tl`'s POJ [`KeyFamily::toneless_face`] equals the `poj:` body. Scope
 /// mirrors the TL guard: a `poj:` key whose body still carries an ASCII
 /// digit is treated as a numeric-tone key and passed through.
 fn matches_continuous_poj_toneless_key(key: &str, record_tl: &str) -> bool {
-    toneless_body(key, KeyFamily::Poj.prefix())
-        .is_none_or(|body| face_eq_with_nasal_oo_alias(&poj_toneless_face(record_tl), body))
-}
-
-/// v3.5.9 B-2 — encoding-only POJ-notone derivation; helper for
-/// [`matches_continuous_poj_toneless_key`]. Per-token: NFD-walk, drop
-/// the 8 combining tone marks, lowercase, apply
-/// [`phonetics::NORMALIZE_TO_POJ_RULES`], strip ASCII digits — then
-/// concatenate tokens. Pure / deterministic — testable directly.
-///
-/// Per-token application is load-bearing: the `ou → oo` alias must not
-/// fire across a hyphen boundary. For a 2-syllable record like
-/// `tó-uī`, hand-concatenation would form `toui` and fire `ou → oo`,
-/// drifting from the build pipeline's `to_numeric_tone +
-/// remove_tone(remove_hyphens)` output `toui`. Per-token, `tó` → `to`,
-/// `uī` → `ui`, concat `toui` (no `ou` formed). The non-golden parity
-/// test `engine/lexicon/tests/poj_notone_parity.rs` pins this against
-/// every row of `dictionary/output/dictionary.csv`.
-fn derive_poj_notone_for_match(poj_display: &str) -> String {
-    use unicode_normalization::UnicodeNormalization;
-    let mut out = String::with_capacity(poj_display.len());
-    for token in poj_display.split(['-', ' ']) {
-        if token.is_empty() {
-            continue;
-        }
-        let mut token_buf = String::with_capacity(token.len());
-        for ch in token.nfd() {
-            if phonetics::is_combining_tone_mark(ch) {
-                continue;
-            }
-            for lower_ch in ch.to_lowercase() {
-                token_buf.push(lower_ch);
-            }
-        }
-        for c in phonetics::normalize_to_poj(&token_buf).chars() {
-            if !c.is_ascii_digit() {
-                out.push(c);
-            }
-        }
-    }
-    out
+    toneless_body(key, KeyFamily::Poj.prefix()).is_none_or(|body| {
+        face_eq_with_nasal_oo_alias(&KeyFamily::Poj.toneless_face(record_tl), body)
+    })
 }
 
 /// v3.5.9 D / C-3b — TPS analog of [`matches_continuous_tl_toneless_key`] /
@@ -205,7 +117,7 @@ fn matches_continuous_tps_toneless_key(key: &str, record_tl: &str) -> bool {
 /// (`None` when the primary has no ㄜ to substitute) — the two TPS
 /// toneless keys the build emits per row.
 fn tps_toneless_faces(record_tl: &str) -> (String, Option<String>) {
-    with_tps_or_variant(phonetics::tps_notone_from_tl(record_tl))
+    with_tps_or_variant(KeyFamily::Tps.toneless_face(record_tl))
 }
 
 /// Pair a TPS face with its C-3a or→er dialect variant
@@ -259,8 +171,8 @@ pub(super) fn matches_continuous_toneless_key(key: &str, record_tl: &str) -> boo
 /// rowid whose `tl_abbrev` happens to start with `taigi`.
 ///
 /// The variant returns `true` when `reconstructed_toneless.starts_with(
-/// body)`. Reuses the per-family face reconstruction ([`tl_toneless_face`] /
-/// [`poj_toneless_face`] / [`tps_toneless_faces`]) and [`toneless_body`] so
+/// body)`. Reuses the per-family face reconstruction ([`KeyFamily::toneless_face`],
+/// [`tps_toneless_faces`]) and [`toneless_body`] so
 /// the reconstruction path is byte-identical to the equality guards. The
 /// digit-in-body pass-through stays identical too — numeric-tone keys
 /// are reserved for non-continuous code paths.
@@ -278,8 +190,9 @@ pub(super) fn matches_continuous_toneless_prefix_key(key: &str, record_tl: &str)
 }
 
 fn matches_continuous_tl_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
-    toneless_body(key, KeyFamily::Tl.prefix())
-        .is_none_or(|body| starts_with_face_or_nasal_oo_alias(&tl_toneless_face(record_tl), body))
+    toneless_body(key, KeyFamily::Tl.prefix()).is_none_or(|body| {
+        starts_with_face_or_nasal_oo_alias(&KeyFamily::Tl.toneless_face(record_tl), body)
+    })
 }
 
 /// `face.starts_with(body)`, also accepting the nasal-`oo` alias respelling of
@@ -310,8 +223,9 @@ fn starts_with_face_or_nasal_oo_alias(face: &str, body: &str) -> bool {
 }
 
 fn matches_continuous_poj_toneless_prefix_key(key: &str, record_tl: &str) -> bool {
-    toneless_body(key, KeyFamily::Poj.prefix())
-        .is_none_or(|body| starts_with_face_or_nasal_oo_alias(&poj_toneless_face(record_tl), body))
+    toneless_body(key, KeyFamily::Poj.prefix()).is_none_or(|body| {
+        starts_with_face_or_nasal_oo_alias(&KeyFamily::Poj.toneless_face(record_tl), body)
+    })
 }
 
 fn matches_continuous_tps_toneless_prefix_key(key: &str, record_tl: &str) -> bool {

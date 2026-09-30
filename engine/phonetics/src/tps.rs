@@ -346,7 +346,7 @@ pub fn canonicalize_tps_syllable(token: &str) -> Option<(String, String)> {
 /// `"".join(tps_per_syllable)` produces.
 ///
 /// Encoding-only — no phonotactic gating — same posture as the POJ analog
-/// (`engine/lexicon/src/continuous/toneless_match.rs::derive_poj_notone_for_match`): the
+/// (`KeyFamily::Poj.toneless_face`, `key_family.rs`): the
 /// build pipeline does not gate, gating here would silently reject any
 /// legitimate dictionary row whose TL shape the Rust port misses but the
 /// Node bridge accepts. The non-golden parity test

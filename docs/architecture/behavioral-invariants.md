@@ -1323,7 +1323,7 @@ The 2026-09 refactor round (old #706–#717, behavior-frozen) found these diverg
 |---|---|
 | ~~`engine/ranking/src/score.rs` `is_nonspacing_mark` (strict Unicode `Mn`) vs `engine/phonetics/src/derivation.rs` hard-coded ranges~~ | closed 2026-09-25: the ranking copy went with the legacy additive ranking; only `phonetics/src/derivation.rs::is_nonspacing_mark` remains |
 | `engine/phonetics/src/tps.rs` `is_tps_tone_mark` (8 fixed scalars incl. U+0307) vs `tps_adjust.rs` `TONE_MARK_CHARS` (table-derived, excludes U+0300–036F) | different sets; the `tps_adjust` version backs the public `Method::IsTpsToneMark` op — unification changes a public op |
-| `derive_poj_notone_for_match` → `poj_num_syllable_ends_from_tl` | replace only with a parity proof over every dictionary row (`tests/poj_notone_parity.rs`-style byte-equality) |
+| `KeyFamily::Poj.toneless_face` (`phonetics/src/key_family.rs`) → `poj_num_syllable_ends_from_tl` | replace only with a parity proof over every dictionary row (`tests/poj_notone_parity.rs`-style byte-equality) |
 | Byte-identical `*.pb.swift` macOS ↔ iOS | build-graph change in `.xcodeproj` / `Package.swift` — user-only config (CLAUDE.md Core Principle #1) |
 | Settings-key table ×2 (`SettingsStore.swift` ↔ `keys.rs`) | needs a generator = new tooling |
 | Engine `WalkerSlot0` ↔ `RawCandidate` mirror, `bounded` fetch trio, `prefix_index.rs` four lookups, `SyllableReach` / `KeyFace` | each source doc explains a deliberate divergence (sign bridge D3, cap ordering, `INVARIANT_LEX_LOOKUP_ROWIDS_ORDER`) |

@@ -9,9 +9,12 @@
 //!   ([`abbrev_family_key`])
 //! - `hanzi:` — hanji ([`HANJI_KEY_PREFIX`])
 
-use crate::api::InputMode;
-use crate::normalization::normalize_input;
-use crate::tps::normalize_tps_tone8_scalar;
+use unicode_normalization::UnicodeNormalization;
+
+use crate::api::{tl_display_to_poj_display, InputMode};
+use crate::normalization::{is_combining_tone_mark, normalize_input};
+use crate::syllable::normalize_to_poj;
+use crate::tps::{normalize_tps_tone8_scalar, tps_notone_from_tl};
 
 /// A phonetic key family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -70,6 +73,70 @@ impl KeyFamily {
         };
         format!("{}{body}", self.prefix())
     }
+
+    /// A TL reading's toneless key body in this family — the `tl_notone` /
+    /// `poj_notone` / `tps_notone` column `create_fst.py` indexes the row
+    /// under, reconstructed at runtime from the reading alone (`dict.bin`
+    /// carries only `tl`). TPS returns the primary face; its or→er dialect
+    /// variant is [`crate::tps_notone_or_variant`].
+    pub fn toneless_face(self, reading_tl: &str) -> String {
+        match self {
+            Self::Tl => tl_toneless_face(reading_tl),
+            Self::Poj => poj_notone_of_display(&tl_display_to_poj_display(reading_tl)),
+            Self::Tps => tps_notone_from_tl(reading_tl),
+        }
+    }
+}
+
+/// `normalize_input` yields a per-syllable numeric-tone form
+/// (`gín-á-lâng` → `gin2a2lang5`), so every ASCII tone digit is dropped to
+/// reach the stored fused surface (`remove_tone(to_numeric_tone(tl)) ==
+/// tl_notone` holds for every `dictionary.csv` row;
+/// `lexicon/tests/roman_num_face_parity.rs`).
+fn tl_toneless_face(reading_tl: &str) -> String {
+    normalize_input(reading_tl)
+        .chars()
+        .filter(|c| !c.is_ascii_digit())
+        .collect()
+}
+
+/// The `poj_notone` surface of a POJ display form, byte-for-byte the way
+/// `dictionary/build/merge_csv.py:226-240` derives it:
+///   1. split on both `-` AND space (`record.tl` carries multi-syllable
+///      readings as `gín-á-lâng` or `iā sī`), skipping empty tokens
+///      (`-tiong-tàu`, `thàu-tiong-tàu-`);
+///   2. per token: NFD-walk, drop the 8 combining tone marks, lowercase,
+///      apply [`normalize_to_poj`] (`ou→oo`, `o\u{0358}→oo`, `\u{207f}→nn`,
+///      `\u{1d3a}→nn`), strip ASCII digits;
+///   3. concatenate.
+///
+/// Per-token normalization is load-bearing: `ou → oo` must not fire across
+/// a hyphen boundary (`tó-uī` → `toui`, not `tooi`). Encoding-only — no
+/// phonotactic gate — because the build has none (`hehⁿ` → `hehnn` is
+/// indexed). `lexicon/tests/poj_notone_parity.rs` pins this against every
+/// row of `dictionary/output/dictionary.csv`.
+fn poj_notone_of_display(poj_display: &str) -> String {
+    let mut out = String::with_capacity(poj_display.len());
+    for token in poj_display.split(['-', ' ']) {
+        if token.is_empty() {
+            continue;
+        }
+        let mut token_buf = String::with_capacity(token.len());
+        for ch in token.nfd() {
+            if is_combining_tone_mark(ch) {
+                continue;
+            }
+            for lower_ch in ch.to_lowercase() {
+                token_buf.push(lower_ch);
+            }
+        }
+        for c in normalize_to_poj(&token_buf).chars() {
+            if !c.is_ascii_digit() {
+                out.push(c);
+            }
+        }
+    }
+    out
 }
 
 /// Key prefix of the hanji family.
@@ -185,6 +252,22 @@ mod tests {
         assert_eq!(
             KeyFamily::Tps.search_key("\u{3110}\u{3127}\u{0307}"),
             "tps:\u{3110}\u{3127}\u{0307}"
+        );
+    }
+
+    #[test]
+    fn toneless_face_is_the_family_notone_column() {
+        // trace: normalize_input → "gin2a2lang5", digits dropped.
+        assert_eq!(KeyFamily::Tl.toneless_face("gín-á-lâng"), "ginalang");
+        // trace: POJ display "chia̍h", tone mark dropped.
+        assert_eq!(KeyFamily::Poj.toneless_face("tsia̍h"), "chiah");
+        // Per-token: `ou → oo` never fires across the hyphen.
+        assert_eq!(KeyFamily::Poj.toneless_face("tó-uī"), "toui");
+        // Space-separated reading splits like a hyphenated one.
+        assert_eq!(KeyFamily::Poj.toneless_face("iā sī"), "iasi");
+        assert_eq!(
+            KeyFamily::Tps.toneless_face("tsia̍h"),
+            crate::tps_notone_from_tl("tsia̍h")
         );
     }
 

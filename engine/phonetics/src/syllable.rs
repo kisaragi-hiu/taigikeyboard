@@ -371,7 +371,7 @@ pub(crate) fn normalize_to_tl_keep_tl_finals(text: &str) -> String {
 ///
 /// **Per-syllable use only.** The `ou → oo` alias is safe under
 /// per-syllable / single-token application (which is how
-/// [`canonicalize_poj_syllable`] and `derive_poj_notone_for_match`
+/// [`canonicalize_poj_syllable`] and `key_family::poj_notone_of_display`
 /// consume this list — `ou` can only appear inside one POJ syllable,
 /// and that one syllable is the dirty-row case we want to canonicalize).
 /// For whole-buffer use (`composing::shadow::canonicalize_poj_shadow`,
