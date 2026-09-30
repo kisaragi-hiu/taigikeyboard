@@ -87,4 +87,25 @@ public interface ComposingResponseOrBuilder extends
    * @return The continuous.
    */
   com.siansiansu.taigikeyboard.engine.proto.ContinuousResponse getContinuous();
+
+  /**
+   * <pre>
+   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+   * absent for every other request and for the legacy commit.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+   * @return Whether the commit field is set.
+   */
+  boolean hasCommit();
+  /**
+   * <pre>
+   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+   * absent for every other request and for the legacy commit.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+   * @return The commit.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.CommitResolution getCommit();
 }

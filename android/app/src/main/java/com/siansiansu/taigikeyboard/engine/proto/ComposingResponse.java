@@ -949,6 +949,78 @@ public  final class ComposingResponse extends
     bitField0_ = (bitField0_ & ~0x00000002);
   }
 
+  public static final int COMMIT_FIELD_NUMBER = 6;
+  private com.siansiansu.taigikeyboard.engine.proto.CommitResolution commit_;
+  /**
+   * <pre>
+   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+   * absent for every other request and for the legacy commit.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+   */
+  @java.lang.Override
+  public boolean hasCommit() {
+    return ((bitField0_ & 0x00000004) != 0);
+  }
+  /**
+   * <pre>
+   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+   * absent for every other request and for the legacy commit.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.CommitResolution getCommit() {
+    return commit_ == null ? com.siansiansu.taigikeyboard.engine.proto.CommitResolution.getDefaultInstance() : commit_;
+  }
+  /**
+   * <pre>
+   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+   * absent for every other request and for the legacy commit.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+   */
+  private void setCommit(com.siansiansu.taigikeyboard.engine.proto.CommitResolution value) {
+    java.util.Objects.requireNonNull(value);
+    commit_ = value;
+    bitField0_ |= 0x00000004;
+  }
+  /**
+   * <pre>
+   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+   * absent for every other request and for the legacy commit.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+   */
+  @java.lang.SuppressWarnings("ReferenceEquality")
+  private void mergeCommit(com.siansiansu.taigikeyboard.engine.proto.CommitResolution value) {
+    java.util.Objects.requireNonNull(value);
+    if (commit_ != null &&
+        commit_ != com.siansiansu.taigikeyboard.engine.proto.CommitResolution.getDefaultInstance()) {
+      commit_ =
+        com.siansiansu.taigikeyboard.engine.proto.CommitResolution.newBuilder(commit_).mergeFrom(value).buildPartial();
+    } else {
+      commit_ = value;
+    }
+    bitField0_ |= 0x00000004;
+  }
+  /**
+   * <pre>
+   * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+   * absent for every other request and for the legacy commit.
+   * </pre>
+   *
+   * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+   */
+  private void clearCommit() {
+    commit_ = null;
+    bitField0_ = (bitField0_ & ~0x00000004);
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.ComposingResponse parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -1390,6 +1462,83 @@ public  final class ComposingResponse extends
       return this;
     }
 
+    /**
+     * <pre>
+     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+     * absent for every other request and for the legacy commit.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+     */
+    @java.lang.Override
+    public boolean hasCommit() {
+      return instance.hasCommit();
+    }
+    /**
+     * <pre>
+     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+     * absent for every other request and for the legacy commit.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.CommitResolution getCommit() {
+      return instance.getCommit();
+    }
+    /**
+     * <pre>
+     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+     * absent for every other request and for the legacy commit.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+     */
+    public Builder setCommit(com.siansiansu.taigikeyboard.engine.proto.CommitResolution value) {
+      copyOnWrite();
+      instance.setCommit(value);
+      return this;
+      }
+    /**
+     * <pre>
+     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+     * absent for every other request and for the legacy commit.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+     */
+    public Builder setCommit(
+        com.siansiansu.taigikeyboard.engine.proto.CommitResolution.Builder builderForValue) {
+      copyOnWrite();
+      instance.setCommit(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+     * absent for every other request and for the legacy commit.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+     */
+    public Builder mergeCommit(com.siansiansu.taigikeyboard.engine.proto.CommitResolution value) {
+      copyOnWrite();
+      instance.mergeCommit(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * R5 — set only by a `CommitContinuous` that named a `CommitScript`;
+     * absent for every other request and for the legacy commit.
+     * </pre>
+     *
+     * <code>optional .taigi.engine.CommitResolution commit = 6;</code>
+     */
+    public Builder clearCommit() {  copyOnWrite();
+      instance.clearCommit();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.ComposingResponse)
   }
   @java.lang.Override
@@ -1412,10 +1561,11 @@ public  final class ComposingResponse extends
             com.siansiansu.taigikeyboard.engine.proto.Effect.class,
             "isComposing_",
             "continuous_",
+            "commit_",
           };
           java.lang.String info =
-              "\u0000\u0004\u0000\u0001\u0001\u0005\u0004\u0000\u0001\u0000\u0001\u1009\u0000\u0002" +
-              "\u001b\u0004\u0007\u0005\u1009\u0001";
+              "\u0000\u0005\u0000\u0001\u0001\u0006\u0005\u0000\u0001\u0000\u0001\u1009\u0000\u0002" +
+              "\u001b\u0004\u0007\u0005\u1009\u0001\u0006\u1009\u0002";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

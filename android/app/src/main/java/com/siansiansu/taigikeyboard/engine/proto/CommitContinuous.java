@@ -36,6 +36,7 @@ public  final class CommitContinuous extends
     canonicalText_ = "";
     associationTl_ = "";
     hanji_ = "";
+    roman_ = "";
   }
   private int bitField0_;
   public static final int DISPLAY_TEXT_FIELD_NUMBER = 1;
@@ -521,6 +522,186 @@ public  final class CommitContinuous extends
     checkByteStringIsUtf8(value);
     hanji_ = value.toStringUtf8();
     bitField0_ |= 0x00000001;
+  }
+
+  public static final int SCRIPT_FIELD_NUMBER = 7;
+  private int script_;
+  /**
+   * <pre>
+   * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+   * every caller before R5) is the legacy path: `display_text` is written
+   * as sent and `ComposingResponse.commit` stays absent. Any other value
+   * makes the engine resolve the document text itself from `roman`, `hanji`
+   * and the request's `AppConfig` (`composing::commit_text`), ignore
+   * `display_text`, answer `ComposingResponse.commit`, and — with the
+   * user-data stores open — record the pick's usage itself (the platform
+   * then sends no `RecordUsage` for it). An empty `canonical_text` is
+   * IGNORED on this path (no fallback to the document text).
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitScript script = 7;</code>
+   * @return The enum numeric value on the wire for script.
+   */
+  @java.lang.Override
+  public int getScriptValue() {
+    return script_;
+  }
+  /**
+   * <pre>
+   * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+   * every caller before R5) is the legacy path: `display_text` is written
+   * as sent and `ComposingResponse.commit` stays absent. Any other value
+   * makes the engine resolve the document text itself from `roman`, `hanji`
+   * and the request's `AppConfig` (`composing::commit_text`), ignore
+   * `display_text`, answer `ComposingResponse.commit`, and — with the
+   * user-data stores open — record the pick's usage itself (the platform
+   * then sends no `RecordUsage` for it). An empty `canonical_text` is
+   * IGNORED on this path (no fallback to the document text).
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitScript script = 7;</code>
+   * @return The script.
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.CommitScript getScript() {
+    com.siansiansu.taigikeyboard.engine.proto.CommitScript result = com.siansiansu.taigikeyboard.engine.proto.CommitScript.forNumber(script_);
+    return result == null ? com.siansiansu.taigikeyboard.engine.proto.CommitScript.UNRECOGNIZED : result;
+  }
+  /**
+   * <pre>
+   * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+   * every caller before R5) is the legacy path: `display_text` is written
+   * as sent and `ComposingResponse.commit` stays absent. Any other value
+   * makes the engine resolve the document text itself from `roman`, `hanji`
+   * and the request's `AppConfig` (`composing::commit_text`), ignore
+   * `display_text`, answer `ComposingResponse.commit`, and — with the
+   * user-data stores open — record the pick's usage itself (the platform
+   * then sends no `RecordUsage` for it). An empty `canonical_text` is
+   * IGNORED on this path (no fallback to the document text).
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitScript script = 7;</code>
+   * @param value The enum numeric value on the wire for script to set.
+   */
+  private void setScriptValue(int value) {
+      script_ = value;
+  }
+  /**
+   * <pre>
+   * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+   * every caller before R5) is the legacy path: `display_text` is written
+   * as sent and `ComposingResponse.commit` stays absent. Any other value
+   * makes the engine resolve the document text itself from `roman`, `hanji`
+   * and the request's `AppConfig` (`composing::commit_text`), ignore
+   * `display_text`, answer `ComposingResponse.commit`, and — with the
+   * user-data stores open — record the pick's usage itself (the platform
+   * then sends no `RecordUsage` for it). An empty `canonical_text` is
+   * IGNORED on this path (no fallback to the document text).
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitScript script = 7;</code>
+   * @param value The script to set.
+   * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+   */
+  private void setScript(com.siansiansu.taigikeyboard.engine.proto.CommitScript value) {
+    script_ = value.getNumber();
+
+  }
+  /**
+   * <pre>
+   * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+   * every caller before R5) is the legacy path: `display_text` is written
+   * as sent and `ComposingResponse.commit` stays absent. Any other value
+   * makes the engine resolve the document text itself from `roman`, `hanji`
+   * and the request's `AppConfig` (`composing::commit_text`), ignore
+   * `display_text`, answer `ComposingResponse.commit`, and — with the
+   * user-data stores open — record the pick's usage itself (the platform
+   * then sends no `RecordUsage` for it). An empty `canonical_text` is
+   * IGNORED on this path (no fallback to the document text).
+   * </pre>
+   *
+   * <code>.taigi.engine.CommitScript script = 7;</code>
+   */
+  private void clearScript() {
+
+    script_ = 0;
+  }
+
+  public static final int ROMAN_FIELD_NUMBER = 8;
+  private java.lang.String roman_;
+  /**
+   * <pre>
+   * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+   * rendered / recased / No Hyphens — the display romanization, never the
+   * canonical TL).
+   * </pre>
+   *
+   * <code>string roman = 8;</code>
+   * @return The roman.
+   */
+  @java.lang.Override
+  public java.lang.String getRoman() {
+    return roman_;
+  }
+  /**
+   * <pre>
+   * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+   * rendered / recased / No Hyphens — the display romanization, never the
+   * canonical TL).
+   * </pre>
+   *
+   * <code>string roman = 8;</code>
+   * @return The bytes for roman.
+   */
+  @java.lang.Override
+  public com.google.protobuf.ByteString
+      getRomanBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(roman_);
+  }
+  /**
+   * <pre>
+   * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+   * rendered / recased / No Hyphens — the display romanization, never the
+   * canonical TL).
+   * </pre>
+   *
+   * <code>string roman = 8;</code>
+   * @param value The roman to set.
+   */
+  private void setRoman(
+      java.lang.String value) {
+    java.util.Objects.requireNonNull(value);
+
+    roman_ = value;
+  }
+  /**
+   * <pre>
+   * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+   * rendered / recased / No Hyphens — the display romanization, never the
+   * canonical TL).
+   * </pre>
+   *
+   * <code>string roman = 8;</code>
+   */
+  private void clearRoman() {
+
+    roman_ = getDefaultInstance().getRoman();
+  }
+  /**
+   * <pre>
+   * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+   * rendered / recased / No Hyphens — the display romanization, never the
+   * canonical TL).
+   * </pre>
+   *
+   * <code>string roman = 8;</code>
+   * @param value The bytes for roman to set.
+   */
+  private void setRomanBytes(
+      com.google.protobuf.ByteString value) {
+    checkByteStringIsUtf8(value);
+    roman_ = value.toStringUtf8();
+
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.CommitContinuous parseFrom(
@@ -1134,6 +1315,192 @@ public  final class CommitContinuous extends
       return this;
     }
 
+    /**
+     * <pre>
+     * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+     * every caller before R5) is the legacy path: `display_text` is written
+     * as sent and `ComposingResponse.commit` stays absent. Any other value
+     * makes the engine resolve the document text itself from `roman`, `hanji`
+     * and the request's `AppConfig` (`composing::commit_text`), ignore
+     * `display_text`, answer `ComposingResponse.commit`, and — with the
+     * user-data stores open — record the pick's usage itself (the platform
+     * then sends no `RecordUsage` for it). An empty `canonical_text` is
+     * IGNORED on this path (no fallback to the document text).
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitScript script = 7;</code>
+     * @return The enum numeric value on the wire for script.
+     */
+    @java.lang.Override
+    public int getScriptValue() {
+      return instance.getScriptValue();
+    }
+    /**
+     * <pre>
+     * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+     * every caller before R5) is the legacy path: `display_text` is written
+     * as sent and `ComposingResponse.commit` stays absent. Any other value
+     * makes the engine resolve the document text itself from `roman`, `hanji`
+     * and the request's `AppConfig` (`composing::commit_text`), ignore
+     * `display_text`, answer `ComposingResponse.commit`, and — with the
+     * user-data stores open — record the pick's usage itself (the platform
+     * then sends no `RecordUsage` for it). An empty `canonical_text` is
+     * IGNORED on this path (no fallback to the document text).
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitScript script = 7;</code>
+     * @param value The script to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder setScriptValue(int value) {
+      copyOnWrite();
+      instance.setScriptValue(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+     * every caller before R5) is the legacy path: `display_text` is written
+     * as sent and `ComposingResponse.commit` stays absent. Any other value
+     * makes the engine resolve the document text itself from `roman`, `hanji`
+     * and the request's `AppConfig` (`composing::commit_text`), ignore
+     * `display_text`, answer `ComposingResponse.commit`, and — with the
+     * user-data stores open — record the pick's usage itself (the platform
+     * then sends no `RecordUsage` for it). An empty `canonical_text` is
+     * IGNORED on this path (no fallback to the document text).
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitScript script = 7;</code>
+     * @return The script.
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.CommitScript getScript() {
+      return instance.getScript();
+    }
+    /**
+     * <pre>
+     * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+     * every caller before R5) is the legacy path: `display_text` is written
+     * as sent and `ComposingResponse.commit` stays absent. Any other value
+     * makes the engine resolve the document text itself from `roman`, `hanji`
+     * and the request's `AppConfig` (`composing::commit_text`), ignore
+     * `display_text`, answer `ComposingResponse.commit`, and — with the
+     * user-data stores open — record the pick's usage itself (the platform
+     * then sends no `RecordUsage` for it). An empty `canonical_text` is
+     * IGNORED on this path (no fallback to the document text).
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitScript script = 7;</code>
+     * @param value The enum numeric value on the wire for script to set.
+     * @return This builder for chaining.
+     */
+    public Builder setScript(com.siansiansu.taigikeyboard.engine.proto.CommitScript value) {
+      copyOnWrite();
+      instance.setScript(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * R5 — engine-owned commit resolution. `UNSPECIFIED` (proto3 default,
+     * every caller before R5) is the legacy path: `display_text` is written
+     * as sent and `ComposingResponse.commit` stays absent. Any other value
+     * makes the engine resolve the document text itself from `roman`, `hanji`
+     * and the request's `AppConfig` (`composing::commit_text`), ignore
+     * `display_text`, answer `ComposingResponse.commit`, and — with the
+     * user-data stores open — record the pick's usage itself (the platform
+     * then sends no `RecordUsage` for it). An empty `canonical_text` is
+     * IGNORED on this path (no fallback to the document text).
+     * </pre>
+     *
+     * <code>.taigi.engine.CommitScript script = 7;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearScript() {
+      copyOnWrite();
+      instance.clearScript();
+      return this;
+    }
+
+    /**
+     * <pre>
+     * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+     * rendered / recased / No Hyphens — the display romanization, never the
+     * canonical TL).
+     * </pre>
+     *
+     * <code>string roman = 8;</code>
+     * @return The roman.
+     */
+    @java.lang.Override
+    public java.lang.String getRoman() {
+      return instance.getRoman();
+    }
+    /**
+     * <pre>
+     * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+     * rendered / recased / No Hyphens — the display romanization, never the
+     * canonical TL).
+     * </pre>
+     *
+     * <code>string roman = 8;</code>
+     * @return The bytes for roman.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getRomanBytes() {
+      return instance.getRomanBytes();
+    }
+    /**
+     * <pre>
+     * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+     * rendered / recased / No Hyphens — the display romanization, never the
+     * canonical TL).
+     * </pre>
+     *
+     * <code>string roman = 8;</code>
+     * @param value The roman to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRoman(
+        java.lang.String value) {
+      copyOnWrite();
+      instance.setRoman(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+     * rendered / recased / No Hyphens — the display romanization, never the
+     * canonical TL).
+     * </pre>
+     *
+     * <code>string roman = 8;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearRoman() {
+      copyOnWrite();
+      instance.clearRoman();
+      return this;
+    }
+    /**
+     * <pre>
+     * The pick's `CandidateMessage.roman`, as the candidate carried it (POJ-
+     * rendered / recased / No Hyphens — the display romanization, never the
+     * canonical TL).
+     * </pre>
+     *
+     * <code>string roman = 8;</code>
+     * @param value The bytes for roman to set.
+     * @return This builder for chaining.
+     */
+    public Builder setRomanBytes(
+        com.google.protobuf.ByteString value) {
+      copyOnWrite();
+      instance.setRomanBytes(value);
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.CommitContinuous)
   }
   @java.lang.Override
@@ -1157,10 +1524,12 @@ public  final class CommitContinuous extends
             "canonicalText_",
             "associationTl_",
             "hanji_",
+            "script_",
+            "roman_",
           };
           java.lang.String info =
-              "\u0000\u0006\u0000\u0001\u0001\u0006\u0006\u0000\u0000\u0000\u0001\u0208\u0002\u000b" +
-              "\u0003\u000b\u0004\u0208\u0005\u0208\u0006\u1208\u0000";
+              "\u0000\b\u0000\u0001\u0001\b\b\u0000\u0000\u0000\u0001\u0208\u0002\u000b\u0003\u000b" +
+              "\u0004\u0208\u0005\u0208\u0006\u1208\u0000\u0007\f\b\u0208";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
