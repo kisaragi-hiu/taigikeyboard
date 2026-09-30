@@ -95,7 +95,7 @@ If you are working on… → read these in order.
 2. **`khiin-rs/ji/src/lomaji.rs` + `tone.rs`** — closest match for what our Rust syllabifier does.
 3. **`rime-moetaigi/moetaigi.schema.yaml`** — TPS (Bopomofo-style) tone-mark placement. Reference for `keyboard/tps/*`.
 4. **`McBopomofo/Source/Engine/Mandarin/`** — Bopomofo input validation. Useful as a structural mirror; phonetic rules don't transfer.
-5. 🔑 **`Tekkon/Sources/Tekkon/Tekkon_SyllableComposer.swift`** (#25) — incremental keystroke → syllable state machine. **Read before touching TPS composing**: it solves the same "this key could be the previous syllable's coda or the next syllable's onset" ambiguity as our §32/§33/S23 work (`engine/composing` `adjust_initial_key` / `dual_final_form`). `Tekkon_Constants.swift` holds the layout→phonabet tables; `Tekkon_PinyinTrie.swift` is the romanization→phonabet path. Read-only reference — LGPL, do **not** vendor code.
+5. 🔑 **`Tekkon/Sources/Tekkon/Tekkon_SyllableComposer.swift`** (#25) — incremental keystroke → syllable state machine. **Read before touching TPS composing**: it solves the same "this key could be the previous syllable's coda or the next syllable's onset" ambiguity as our §32/§33/S23 work (`engine/phonetics/src/tps_adjust.rs` `adjust_initial_key` / `dual_final_form`). `Tekkon_Constants.swift` holds the layout→phonabet tables; `Tekkon_PinyinTrie.swift` is the romanization→phonabet path. Read-only reference — LGPL, do **not** vendor code.
 
 ### Predictive / next-word
 
@@ -530,7 +530,7 @@ If you are working on… → read these in order.
 ### 29. Fcitx5 — `references/fcitx5/`
 
 - **What**: the Linux input-method framework our primary Linux shell plugs into (`linux/fcitx5/`, `docs/architecture/linux-roadmap.md` PR4). Shallow clone detached at tag **5.1.7** (`8274ece`, 2024-01-16) — the version Ubuntu 24.04 ships, so its headers match what CI and the dogfood VMs build against. Frontends for XIM, Wayland `text-input`, DBus and the IBus protocol (`src/frontend/`).
-- **Why we care**: the API contract, not an engine. `make -C linux check-cpp` syntax-checks our addon against `src/lib` on the Mac host (`linux/Makefile:75`). The 5.1.7 pin is why the addon uses `add_library(MODULE)` + `FCITX_ADDON_FACTORY` rather than `add_fcitx5_addon` / `FCITX_ADDON_FACTORY_V2` (5.1.12+).
+- **Why we care**: the API contract, not an engine. `make -C linux check-cpp` syntax-checks our addon against `src/lib` on the Mac host (`linux/Makefile` `check-cpp`). The 5.1.7 pin is why the addon uses `add_library(MODULE)` + `FCITX_ADDON_FACTORY` rather than `add_fcitx5_addon` / `FCITX_ADDON_FACTORY_V2` (5.1.12+).
 - **Where to look**:
   - `src/lib/fcitx/inputmethodengine.h` — `InputMethodEngine` → `V2` (sub-mode icon/label) → `V3` (invoke action) → `V4`
   - `src/lib/fcitx/candidatelist.h` — `CommonCandidateList`, paging, cursor, layout hint
@@ -615,7 +615,7 @@ For Phase II+ (cross-platform alignment), read:
 1. **`azookey-reference.md`** — iOS UI patterns.
 2. **`florisboard/app/src/main/kotlin/dev/patrickgold/florisboard/`** — Android IME service skeleton + Compose IME UI (engine *not* wired in).
 3. **`trime/app/src/main/java/com/osfans/trime/core/` + `daemon/`** — Android IME *with* a native engine wired in via an async daemon; the FFI-threading model for our Android↔Rust boundary.
-4. **`.claude/rules/cross-platform-alignment.md`** — refactor-freeze + Phase II end gate.
+4. **`.claude/rules/cross-platform-alignment.md`** — refactor-freeze, parity-correction tier, invariant labels.
 
 ---
 

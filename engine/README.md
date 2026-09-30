@@ -1,6 +1,6 @@
 # engine — Rust shared-core workspace
 
-Cross-platform shared core for TaigiKeyboard. iOS and Android route their phonetics, composing, lexicon-ranking, and next-word call sites through the same Rust implementation via a single proto-encoded byte buffer crossing the FFI seam.
+Cross-platform shared core for TaigiKeyboard. All five platforms route their phonetics, composing, lexicon-ranking, next-word and user-data call sites through the same Rust implementation via a single proto-encoded byte buffer: iOS / macOS through `swift-ffi`, Android through `android-jni`, Windows / Linux in-process through `taigi-desktop-core` (`desktop/`, a path dependency on `dispatch`).
 
 ## Crates
 
@@ -10,7 +10,8 @@ Cross-platform shared core for TaigiKeyboard. iOS and Android route their phonet
 | `composing` | Domain crate: IME composing-state machine + `EngineHandle` singleton (`Mutex<…>` + `once_cell::sync::OnceCell`). `forbid(unsafe_code)`. |
 | `nextword` | Domain crate: bigram next-word model + generation counter + filter/boost. `forbid(unsafe_code)`. |
 | `lexicon` | Domain crate: `fst` + dictionary/association mmap reader + classification. `forbid(unsafe_code)`. |
-| `ranking` | Domain crate: candidate dedup → score → sort → TPS dedup for the lexicon pipeline. `forbid(unsafe_code)`. |
+| `ranking` | Domain crate: continuous-input ranking primitives — source rank, user-frequency boost + decay, dictionary-derived score, previous-word context (`context.rs`). No internal deps. `forbid(unsafe_code)`. |
+| `userdata` | Domain crate: the user's SQLite stores (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`, `learned_phrases.db`) + `.taigi` backup, behind `UserDataHandle`; bundled `rusqlite`, linked only through `dispatch`'s `user-data` feature. |
 | `protos` | `prost`-generated wire types. Single envelope shared across all domain crates. |
 | `mmap-host` | Sole loader of mmap-backed assets. One of three crates with `unsafe_code = "allow"`. |
 | `dispatch` | Top-level FFI router. Single `process_request(&[u8]) -> Vec<u8>` entry; decodes the envelope, routes by `Request.payload` variant to the matching domain crate, encodes the response. Owns `MAX_REQUEST_BYTES` and the panic-boundary `catch_unwind`. |
@@ -18,7 +19,7 @@ Cross-platform shared core for TaigiKeyboard. iOS and Android route their phonet
 | `android-jni` | `cdylib` — JNI entry points consumed by `RustEngineBridge.kt`. |
 | `build-helpers/fst-builder` | Offline CLI that builds and queries the lexicon `.fst` artifacts. Not shipped to platforms. |
 
-Dependency direction: `swift-ffi` / `android-jni` → `dispatch` → `composing` / `nextword` / `lexicon` / `ranking` / `phonetics`. The first four also depend on `phonetics`; `lexicon` additionally depends on `mmap-host`. All domain crates depend on `protos` directly.
+Dependency direction: `swift-ffi` / `android-jni` → `dispatch` → `composing` / `nextword` / `lexicon` / `ranking` / `userdata` / `phonetics`. `composing` → `lexicon`, `ranking`, `phonetics`; `lexicon` → `ranking`, `phonetics`, `mmap-host`; `nextword` and `userdata` → `phonetics`; `ranking` depends on no workspace crate. Every runtime crate but `ranking` and `mmap-host` depends on `protos` directly. Full graph: `../.claude/rules/rust-best-practices.md` §1a.
 
 ## Authoritative contracts
 

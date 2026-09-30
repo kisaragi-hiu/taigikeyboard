@@ -11,7 +11,7 @@ Rule layers:
 ```
 android/  ios/  macos/  windows/  linux/   # platform apps
 engine/            # Shared Rust engine — Cargo workspace, FFI to every platform
-desktop/           # Rust crates shared by Windows + Linux (taigi-desktop-core / -storage)
+desktop/           # Rust crates shared by Windows + Linux (taigi-desktop-core / -storage / -update)
 dictionary/        # Dictionary sources + build pipeline + output artifacts
 docs/              # engine/, architecture/, ui/, references/, reports/, roadmap.md
 knowledge/         # Taiwanese phonetics reference (TL/POJ/TPS)

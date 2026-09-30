@@ -19,11 +19,11 @@
 
 | File | Description | Status |
 |------|-------------|--------|
-| `engine/migration-inventory.csv` | Rust slice inventory: every shipped pub item + native pending/keep/wont-migrate (148 rows, 13 cols, zh-TW descriptions) | Canonical |
+| `engine/migration-inventory.csv` | Rust slice inventory: every shipped pub item + native pending/keep/wont-migrate (146 rows, 13 cols, zh-TW descriptions) | Canonical |
 | `engine/binary-format.md` | `dictionary.fst` + `association.bin` binary spec (mmap-friendly, byte-exact cross-platform) | Active |
 | `engine/ffi-safety.md` | Cross-FFI safety contract: panic boundaries, size caps, generation semantics | Active |
 | `engine/rust-core-proto.md` | Engine proto envelope + per-slice request/response shapes | Active |
-| `engine/composing.md` | Composing state machine (`Phase::Idle` / `Composing { raw }`) — Rust `engine/composing` | Active |
+| `engine/composing.md` | Composing state machine (`Phase::Idle` / `Composing { raw, caret }` / `Continuous { raw, caret, nailed }`) — Rust `engine/composing` | Active |
 | `engine/continuous-input-ranking.md` | Continuous-input ranking source of truth: lexicographic SortKey + user_freq_boost + recency_rank | Active |
 | `engine/continuous-candidate-display.md` | Continuous candidate dual-line display (roman + hanji) spec — §4 carrier shipped (Items 5+6); §15 fallback retire DONE (Item 13) | Active |
 | `engine/continuous-commit-and-display.md` | Continuous mode commit/display contract (Model B) — extracted from `continuous-input-ranking.md` §10 | Active |
@@ -39,7 +39,7 @@
 
 | File | Description | Status |
 |------|-------------|--------|
-| `architecture/system-overview.md` | Four-platform architecture entry point: system context, engine crate graph, build pipeline, keystroke flow + per-platform glue chain | Active |
+| `architecture/system-overview.md` | Five-platform architecture entry point: system context, engine crate graph, build pipeline, keystroke flow + per-platform glue chain | Active |
 | `architecture/behavioral-invariants.md` | Cross-platform behavior contract (every Rust slice must preserve) | Active |
 | `architecture/dogfood-checklist.md` | Real-device acceptance items `Sn` (type X → expect Y, pins `INVARIANT_*`, per-item `Status` line) — read before a dogfood pass | Active |
 | `architecture/incident-log.md` | Dated incident narratives behind the rules in `.claude/rules/taigi-incidents.md` (append-only) | Reference |
@@ -54,11 +54,11 @@
 | `architecture/desktop-release.md` | How a desktop version reaches a user: staged on a draft, tested, published by hand, announced automatically | Active |
 | `architecture/macos-release.md` | macOS Developer ID signing, notarization, and what only a Mac asserts about its `.pkg` | Active |
 | `architecture/windows-roadmap.md` | Windows desktop IME (TSF in Rust over the shared engine, macOS UX parity) — design W1–W17, PR table, reference alignment, dogfood run-book; shipped desktop v3.6.7/v3.6.8 | Reference |
-| `architecture/linux-roadmap.md` | Linux desktop IME (Fcitx5 addon primary + IBus engine second over one Rust core, GTK 4 / libadwaita settings window over the shared `desktop/` crates) — design L1–L13, PR table, named divergences, dogfood run-book | Planning |
-| `architecture/e2e-testing-roadmap.md` | End-to-end test system — AI-driven simulator / emulator / VM / container runs, test-build-only JSONL trace, analyzer for bugs + perf, per-platform drivers, capability spike results, PR table | Planning |
+| `architecture/linux-roadmap.md` | Linux desktop IME (Fcitx5 addon primary + IBus engine second over one Rust core, GTK 4 / libadwaita settings window over the shared `desktop/` crates) — design L1–L13, PR table, named divergences, dogfood run-book; PR0–PR9 merged, device dogfood pending | Done |
+| `architecture/e2e-testing-roadmap.md` | End-to-end test system — AI-driven simulator / emulator / VM / container runs, test-build-only JSONL trace, analyzer for bugs + perf, per-platform drivers, capability spike results, PR table; Linux live (`make e2e PLATFORM=linux` / `linux-desktop`), macOS / Windows / mobile manual | Active |
 | `architecture/theme-color-roles-roadmap.md` | Mobile custom-theme color tiers rollout (USER-adjustable / derived / fixed) — phase table P0–P7 over the audit items | Planning |
 | `architecture/user-data-engine-roadmap.md` | The four user-data SQLite stores moved from four platform implementations into one engine crate (`engine/userdata`) — audit of today's stores and their drift, design U1–U10, PR table, reference alignment | Done |
-| `architecture/bigram-lm-roadmap.md` | Cross-word bigram language model from `corpus/taigi-corpus` — today's unigram walker + intra-word association table, corpus alignment survey, design D1–D7 (`association.bin` v2 word keys + `$`, next-word backoff, composing re-rank, gated walker term), phases P0–P8, reference survey of every bigram implementation in `references/`, corpus-expansion survey (ten more Taiwanese sources + the 意傳 aligner) | Planning (plan only) |
+| `architecture/bigram-lm-roadmap.md` | Cross-word bigram language model from `corpus/taigi-corpus` — today's unigram walker + intra-word association table, corpus alignment survey, design D1–D7 (`association.bin` v2 word keys + `$`, next-word backoff, composing re-rank, gated walker term), phases P0–P8, reference survey of every bigram implementation in `references/`, corpus-expansion survey (ten more Taiwanese sources + the 意傳 aligner); P0–P5 merged, P6/P7 not adopted | Closed (2026-09-30) |
 | `architecture/maintainability-roadmap.md` | Follow-up of the 2026-09-30 maintainability audit — mandate (settings may change, user data never lost), PR table R1–R12 + docs drift, rounds left to USER decisions | Planning |
 | `architecture/e2e-trace-schema.md` | Test-build-only JSONL trace contract — how it stays out of release, `trace_open` / `engine_request` / `engine_panic` / `adapter_reject` events | Reference |
 | `architecture/linux-release.md` | The Linux half of a desktop release: the `.deb` (both shells, dictionaries, settings window), how `make -C linux deb` and `linux-build.yml` build and attach it, no in-app update | Reference |
@@ -199,4 +199,4 @@ Authoritative ownership map (Rust crate vs platform glue) — see `engine/migrat
 | `Theme` | Theme & styling | — | `Styling/Providers/` / `themes.xml` + `PrefHelper.kt` |
 | `CustomDictionary` | User-defined dictionary CRUD, CSV, `.taigi` backup | `engine/userdata` (`UserDataRequest` ops) | `UserDataClient.swift` / `UserDataClient.kt` |
 | `Diagnostics` | Device info for bug reports | — | `DiagnosticService.swift` / `DiagnosticService.kt` |
-| `FFI` | Bytes-in / bytes-out engine entrypoint | `engine/dispatch` + `engine/swift-ffi` + `engine/android-jni` | `RustEngineBridge.process_request_bytes` (both platforms) |
+| `FFI` | Bytes-in / bytes-out engine entrypoint | `engine/dispatch` + `engine/swift-ffi` + `engine/android-jni` | iOS `process_request_bytes` (swift-bridge) / Android `RustEngineBridge.processRequestBytes` (JNI) |
