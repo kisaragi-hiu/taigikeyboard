@@ -172,7 +172,7 @@ The FFI boundary is a single `process_request_bytes` entrypoint per adapter; the
 | NextWord glue | `NextWord/NextWordController.swift` (timer, `@MainActor`, generation counter; the engine reads and writes `user_association.db` itself) | `engine/nextword` (`decide`, filter) + `engine/dispatch` `PredictNext` (bundled lookup) via `nextwordPredictNext` |
 | Settings | `Settings/SharedSettings.swift` + `SettingsKey.swift` (live-read `EngineSettingsProvider`) | `AppConfig` per request |
 
-Engine search ownership on the fetch step: `lexicon::key_normalizer` (calls `phonetics::normalize_input`) → `lexicon::prefix_index::PrefixIndex` (fst scan) → `lexicon::dictionary_reader::DictionaryReader` + `Filter` (rowid → record, source bitmask) → `lexicon::continuous` sort key (`ranking` score + user weight).
+Engine search ownership on the fetch step: `lexicon::key_normalizer` (calls `phonetics::normalize_input`) → `lexicon::prefix_index::PrefixIndex` (fst scan) → `lexicon::dictionary_reader::DictionaryReader` + `Filter` (rowid → record, source bitmask) → `ranking::CandidateSortKey` order (`ranking` score + user weight).
 
 ### 4.2 Same chain on the other platforms
 

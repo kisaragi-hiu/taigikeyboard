@@ -101,7 +101,7 @@ impl PrefixIndex {
     /// fixes the budget bias.
     ///
     /// This is a **hydration budget policy only** — the visible candidate
-    /// order is still decided by the caller's `SortKey` (recency / score /
+    /// order is still decided by the caller's `CandidateSortKey` (recency / score /
     /// frequency). Length just decides which rowids enter the pool.
     ///
     /// The abbreviation (acronym) keys live in their own `*-abbrev:` family

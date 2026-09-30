@@ -9,7 +9,7 @@
 //!   `user_weight`.
 //! - `user_weight` saturates at `ranking::MAX_BOOST − 1` — 100 selections
 //!   weigh the same as 40, defending against stale-dominance.
-//! - `RawCandidate.user_weight` (the leading `SortKey` user dim) is
+//! - `RawCandidate.user_weight` (the leading `CandidateSortKey` user dim) is
 //!   `ranking::decayed_user_weight_delta` of the entry — `> 0.0` for
 //!   any selected word, still `> 0.0` past the old 1-hour window, and
 //!   `0.0` for never-used entries.

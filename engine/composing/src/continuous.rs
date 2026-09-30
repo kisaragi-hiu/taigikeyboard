@@ -47,7 +47,7 @@
 //!    covers this for inputs with no valid syllable, Step 4b extends
 //!    it to already-syllabified inputs. Cross-batch
 //!    `(roman, hanji, consumed_span)` dedupe drops extension hits
-//!    already present in the FULL block. `SortKey`'s leading
+//!    already present in the FULL block. `CandidateSortKey`'s leading
 //!    `coverage_kind` dim pins the result strictly below the FULL
 //!    block, so no global re-sort is needed.
 //! 5. POJ presentation pass: `mode == Poj` → [`recase_tl_as_poj_display`]
@@ -739,7 +739,7 @@ fn fetch_walker_slot0_inner(
         // `ctx.enabled_sources_bitmask`.
         // Learned phrases (§50) — the rows keyed to this edge, filtered by
         // the same tone pin a custom row answers to. They enter the
-        // dictionary's own `SortKey` pick; when any is present the edge is
+        // dictionary's own `CandidateSortKey` pick; when any is present the edge is
         // priced at least as a `CUSTOM_EFFECTIVE_FREQ` word so the span
         // the user once composed as one word keeps winning the
         // segmentation (the #69 span-vs-word decoupling: "is this span a
@@ -768,7 +768,7 @@ fn fetch_walker_slot0_inner(
                 } else {
                     span_frequency.max(crate::lattice::CUSTOM_EFFECTIVE_FREQ)
                 };
-                // Word = the user's pick (`SortKey` order). Cost =
+                // Word = the user's pick (`CandidateSortKey` order). Cost =
                 // `span_frequency` (key max) so a rarer preferred
                 // homophone does not lose the segmentation; the S3
                 // path discount reads the pick's own `user_weight`.
@@ -1185,7 +1185,7 @@ pub(crate) fn assemble_candidates(
             // ---- Step 4: walker slot-0 prepend (all modes).
             // v3.5.8 S2 — whole-sentence walker. The synthesized
             // full-buffer best path is explicitly prepended at slot 0
-            // (Codex pre-impl S2 Q1 — the 8-dim `SortKey` cannot
+            // (Codex pre-impl S2 Q1 — the 8-dim `CandidateSortKey` cannot
             // guarantee slot 0 on its own). Span-aware de-dup against
             // the synth (Codex pre-impl S2 Q1d): drop any span-local
             // candidate identical on `(roman, hanji, consumed_span)` so
@@ -1324,7 +1324,7 @@ pub(crate) fn assemble_candidates(
             // Step 4b runs the same `fetch_partial_prefix_candidates`
             // machinery that branch uses against the whole-buffer key
             // built by `build_partial_prefix_key(raw, mode)`. The result
-            // carries `COVERAGE_KIND_PARTIAL_PREFIX`, so `SortKey`'s
+            // carries `COVERAGE_KIND_PARTIAL_PREFIX`, so `CandidateSortKey`'s
             // leading dim pins these strictly below the FULL block in
             // the merged vec — concat-without-resort preserves the
             // `[FULL...][PARTIAL...]` invariant.
@@ -1422,7 +1422,7 @@ pub(crate) fn assemble_candidates(
                     // best-scoring subset of the non-duplicate extensions,
                     // not the post-truncate dregs of a homophone-dominated
                     // pool. The lexicon-side sort is preserved (the
-                    // un-truncated pool was already sorted by SortKey),
+                    // un-truncated pool was already sorted by CandidateSortKey),
                     // so `truncate` keeps the global score order.
                     ext.truncate(PARTIAL_PREFIX_OUTPUT_CAP);
                     c.extend(ext);
@@ -1436,7 +1436,7 @@ pub(crate) fn assemble_candidates(
         // buffer's shape (`shadow::abbrev_query_key`), not "no exact keys":
         // `mk` has the left-anchored syllable `m` and is still the
         // abbreviation of 物件. Hits carry `COVERAGE_KIND_ABBREV`, which
-        // `SortKey` ranks below PARTIAL, so appending keeps
+        // `CandidateSortKey` ranks below PARTIAL, so appending keeps
         // `[FULL…][PARTIAL…][ABBREV…]` without a re-sort — for a valid onset
         // like `ts` the single-syllable partial hits stay put and the
         // abbreviated words trail them. Same recase → exclude → truncate

@@ -45,12 +45,12 @@
 //!
 //! # Ordering
 //!
-//! Returned candidates are sorted by the 8-dimensional `SortKey`
+//! Returned candidates are sorted by the 9-dimensional `CandidateSortKey`
 //! documented at [`fetch_candidates_for_keys_with_barriers`];
 //! `calculate_continuous_score` provides only one of those dimensions.
 //! Within-tier ties keep insertion order (`endings` order, then
 //! `prefix_index` rowid order — `lookup_exact` is deterministic per
-//! build). The comparator coerces `NaN` scores to `f32::MIN` so even a
+//! build). The comparator coerces `NaN` scores to `f64::MIN` so even a
 //! contract-violating boost cannot break the ordering invariant.
 //!
 //! The production entry is [`fetch_candidates_for_keys_with_barriers`],
@@ -63,17 +63,17 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::dictionary_reader::{DictionaryReader, Filter};
 use crate::prefix_index::PrefixIndex;
-use ranking::{ContextRanks, FrequencyMap};
+use ranking::{
+    sort_by_candidate_key, CandidateRankFacts, CandidateSortKey, ContextRanks, FrequencyMap,
+};
 
 mod candidate;
-mod sort_key;
 mod toneless_match;
 
 use candidate::{
     dedupe_by_roman_hanji_span, learned_entry_to_candidate, merge_custom_dedupe_sort,
     record_to_candidate,
 };
-use sort_key::{sort_by_sort_key, SortKey};
 use toneless_match::{
     matches_continuous_toneless_key, matches_continuous_toneless_prefix_key, tps_face_starts_with,
     with_tps_or_variant, KeyFace,
@@ -97,7 +97,7 @@ pub const COVERAGE_KIND_FULL: u8 = 0;
 /// partial-prefix hits (syllabifier returned no ending, engine fell
 /// through to [`fetch_partial_prefix_candidates`] via
 /// `prefix_index.lookup_prefix`). Ranks strictly below
-/// [`COVERAGE_KIND_FULL`] in [`SortKey`] regardless of any other
+/// [`COVERAGE_KIND_FULL`] in [`CandidateSortKey`] regardless of any other
 /// dimension; see `docs/engine/continuous-candidate-display.md` §15.5.
 pub const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
 
@@ -105,7 +105,7 @@ pub const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
 /// ([`fetch_abbrev_candidates`]): the typed buffer is an acronym-shaped
 /// string (`ss`, `tk`, `ㄙㄒ`) and the record's per-syllable-initial face
 /// (`tl_abbrev` / `poj_abbrev` / `tps_abbrev`) equals it. Ranks strictly
-/// below [`COVERAGE_KIND_PARTIAL_PREFIX`] in [`SortKey`]: an acronym-shaped
+/// below [`COVERAGE_KIND_PARTIAL_PREFIX`] in [`CandidateSortKey`]: an acronym-shaped
 /// buffer that is also a valid onset (`ts`, `kh`) is mid-syllable at least
 /// as often as it is an abbreviation, so the single-syllable partial hits
 /// the user was reaching for keep their positions and the abbreviated
@@ -118,7 +118,7 @@ pub const COVERAGE_KIND_ABBREV: u8 = 2;
 /// bounded on the iOS keyboard-extension RAM/latency budget. Set well
 /// above [`PARTIAL_PREFIX_OUTPUT_CAP`] so high-frequency short
 /// candidates landing past the legacy byte-sort first 30 still reach
-/// the [`SortKey`] sort and can win on score / freq rather than be
+/// the [`CandidateSortKey`] sort and can win on score / freq rather than be
 /// silently dropped at the rowid stage. See
 /// `docs/engine/continuous-candidate-display.md` §15.8.
 ///
@@ -131,7 +131,7 @@ pub const PARTIAL_PREFIX_HYDRATE_CAP: usize = 500;
 
 /// Maximum candidates returned from [`fetch_partial_prefix_candidates`]
 /// to the platform candidate strip. Applied AFTER hydration, dedupe,
-/// and [`SortKey`] sort — so the top-N visible to the user is the
+/// and [`CandidateSortKey`] sort — so the top-N visible to the user is the
 /// globally best-scoring subset of the (up to
 /// [`PARTIAL_PREFIX_HYDRATE_CAP`]) hydrated pool, not the FST
 /// byte-sort prefix. Matches the legacy `LexiconService` per-request
@@ -145,8 +145,8 @@ pub const PARTIAL_PREFIX_OUTPUT_CAP: usize = 30;
 /// detection by [`derive_mode`]; never emitted as
 /// [`CandidateMode::Unspecified`] from Rust.
 ///
-/// **Metadata-only in v3.5.8 Phase 9.2** — does NOT enter the seven-
-/// dimension [`SortKey`] tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2
+/// **Metadata-only in v3.5.8 Phase 9.2** — does NOT enter the nine-
+/// dimension [`CandidateSortKey`] tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2
 /// Q3.a "reserve rank use until real collisions are measured"). The
 /// existing `form` axis remains orthogonal (toneless / numeric / hanji
 /// / abbrev) and unaffected.
@@ -261,27 +261,27 @@ pub struct RawCandidate {
     pub form: u8,
     /// Raw dictionary frequency before any bias / boost. Carried
     /// alongside the multiplicative `score` so the v3.5.8 Phase 9.1
-    /// `SortKey` can use raw freq as an explicit tie-break dimension
+    /// `CandidateSortKey` can use raw freq as an explicit tie-break dimension
     /// distinct from `adjusted_score`. Always equals
     /// `DictionaryRecord::frequency` for candidates produced by
     /// `fetch_candidates_for_keys_with_barriers`.
     pub frequency: u32,
     /// Dictionary source bitmask copied verbatim from
     /// [`DictionaryRecord::bitmask`](crate::dictionary_reader::DictionaryRecord::bitmask). Used by the v3.5.8 Phase 9.1
-    /// `SortKey` to derive `source_tier_rank` at sort time per
+    /// `CandidateSortKey` to derive `source_tier_rank` at sort time per
     /// `docs/releases/v3.5.8/plan.md` § Phase 9. Carrying it on the candidate (vs.
     /// re-reading the dictionary record) lets the sort be a pure
     /// function of the returned `RawCandidate` vector.
     pub bitmask: u16,
     /// MOE-aligned candidate-type discriminator (HANT / TAILO / MIXED).
     /// Derived by [`derive_mode`] from `DictionaryRecord.hanzi`.
-    /// Metadata-only in Phase 9.2 — not consulted by [`SortKey`].
+    /// Metadata-only in Phase 9.2 — not consulted by [`CandidateSortKey`].
     pub mode: CandidateMode,
     /// Time-decayed user-selection weight for this candidate's
     /// `(display_text, canonical_tl)` pair
     /// ([`ranking::FrequencyData::user_weight`]; `0.0` = never selected,
     /// no wall clock, or clock-skew). Leading user-preference dimension
-    /// of [`SortKey`] and of the walker's per-edge pick
+    /// of [`CandidateSortKey`] and of the walker's per-edge pick
     /// ([`best_candidate_for_key_with_barriers`]) — any selected word
     /// outranks every never-selected homophone. Rationale:
     /// `docs/engine/continuous-input-ranking.md` §3.2. Internal — NOT
@@ -289,7 +289,7 @@ pub struct RawCandidate {
     pub user_weight: f64,
     /// Whether the previous word's bigram continuations include this
     /// candidate, and from which layer (`ranking::CONTEXT_RANK_*`): the
-    /// `SortKey` dimension below `user_weight` and above `score` (§56).
+    /// `CandidateSortKey` dimension below `user_weight` and above `score` (§56).
     pub context_rank: u8,
     /// v3.5.8 Phase 9 Item 10 — coverage kind for the new partial-prefix
     /// path. [`COVERAGE_KIND_FULL`] for the existing
@@ -300,7 +300,7 @@ pub struct RawCandidate {
     /// Internal axis only — does NOT enter `CandidateMessage` (same
     /// pattern as [`user_weight`](Self::user_weight); see
     /// `docs/engine/continuous-candidate-display.md` §15.5). Consumed
-    /// solely by [`SortKey`] to push every partial-prefix candidate
+    /// solely by [`CandidateSortKey`] to push every partial-prefix candidate
     /// strictly below every full-syllable candidate in lexicographic
     /// order, irrespective of `tier`, user weight, score, dict freq, or
     /// source rank.
@@ -308,7 +308,7 @@ pub struct RawCandidate {
     /// v3.5.8 Phase 9 Item 12 — `true` for candidates synthesized from
     /// a `custom_dictionary.db` entry ([`custom_entry_to_candidate`](candidate::custom_entry_to_candidate)),
     /// `false` for `dict.bin` FST hits ([`record_to_candidate`]). Read
-    /// by [`SortKey::new`] (→ `source_tier_rank(bitmask, is_custom)`
+    /// by [`CandidateSortKey::new`] (→ `source_tier_rank(bitmask, is_custom)`
     /// returns rank `0` when `true`, ahead of every `dict.bin` source
     /// tier) and by the `(roman, hanji)` dedupe winner policy
     /// (`docs/engine/continuous-input-ranking.md` §10.10): on a
@@ -318,6 +318,22 @@ pub struct RawCandidate {
     /// `CandidateMessage` (same pattern as [`coverage_kind`] /
     /// `user_weight`).
     pub is_custom: bool,
+}
+
+impl RawCandidate {
+    /// The fields [`CandidateSortKey`] orders by.
+    pub fn rank_facts(&self) -> CandidateRankFacts {
+        CandidateRankFacts {
+            coverage_kind: self.coverage_kind,
+            consumed_span: self.consumed_span,
+            user_weight: self.user_weight,
+            context_rank: self.context_rank,
+            score: self.score,
+            frequency: self.frequency,
+            bitmask: self.bitmask,
+            is_custom: self.is_custom,
+        }
+    }
 }
 
 /// v3.5.8 Phase 9 Item 12 — one `custom_dictionary.db` row, as the engine
@@ -339,7 +355,7 @@ pub struct CustomEntry {
 /// commit teaches it (`composing::Applied`). Unlike [`CustomEntry`] both
 /// fields are canonical (the engine derived them), so a learned row is ranked exactly like a
 /// `dict.bin` record with no frequency and no source bits: it competes in
-/// the same [`SortKey`] pick and never overrides
+/// the same [`CandidateSortKey`] pick and never overrides
 /// (`docs/architecture/behavioral-invariants.md` §50).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LearnedEntry {
@@ -702,7 +718,7 @@ fn exact_candidates_for_key(
 /// prefix via `composing::shadow::mode_key_prefix(mode)` and feeds
 /// pairs in directly for all modes.
 ///
-/// # v3.5.8 Phase 9.1 — lexicographic SortKey
+/// # v3.5.8 Phase 9.1 — lexicographic CandidateSortKey
 ///
 /// `raw_len` is the byte length of the original pending buffer
 /// (`Phase::Continuous { raw }.len()`); it is the predicate input
@@ -735,11 +751,11 @@ fn exact_candidates_for_key(
 /// up each candidate by that pair, computes
 /// [`ranking::user_freq_boost`] (saturated at
 /// [`ranking::MAX_BOOST`]), and derives
-/// `SortKey.neg_user_weight` via [`ranking::decayed_user_weight_delta`]
+/// `CandidateSortKey.neg_user_weight` via [`ranking::decayed_user_weight_delta`]
 /// (which guards against `now_ms <= 0`, `last_used_ms <= 0`, and
 /// clock skew). NaN scores (only reachable if the boost helper
 /// produces a non-finite value — which it cannot under the
-/// public contract) are coerced to `f32::MIN` at `SortKey`
+/// public contract) are coerced to `f64::MIN` at `CandidateSortKey`
 /// construction so the descending-order invariant holds.
 ///
 /// # Barriers
@@ -809,7 +825,7 @@ pub fn fetch_candidates_for_keys_with_barriers(
 /// 4. Build candidates with `coverage_kind = COVERAGE_KIND_PARTIAL_PREFIX`
 ///    and `consumed_span = key.0` (caller pins `(0, raw.len())` per
 ///    Q15.4 — partial-prefix candidates always final-commit).
-/// 5. Sort via the same eight-dimension [`SortKey`]; the leading
+/// 5. Sort via the same nine-dimension [`CandidateSortKey`]; the leading
 ///    `coverage_kind` dim is `1` here so the whole batch ranks below
 ///    any concurrent full-syllable hits if a caller ever merges them
 ///    (this fn produces partial-prefix candidates only).
@@ -895,7 +911,7 @@ pub fn fetch_partial_prefix_candidates_unbounded(
     // plus 2-4 small String allocations, so the extra budget is cheap,
     // but it lets high-frequency short candidates landing past the
     // legacy byte-sort first 30 (e.g. `tl:ki` after a wall of
-    // `tl:ka-*` phrases) reach the SortKey sort.
+    // `tl:ka-*` phrases) reach the CandidateSortKey sort.
     //
     // This fn does NOT truncate — the bounded wrapper
     // `fetch_partial_prefix_candidates` applies `PARTIAL_PREFIX_OUTPUT_CAP`
@@ -918,7 +934,7 @@ pub fn fetch_partial_prefix_candidates_unbounded(
         // cap — user-reported: typing `ㄍ` surfaced only multi-syllable
         // phrases, the common single chars never reached the ranker. Length
         // bucketing is a hydration-budget policy only; the visible order is
-        // still the downstream `SortKey` (recency / score / frequency).
+        // still the downstream `CandidateSortKey` (recency / score / frequency).
         //
         // Acronym `*_abbrev` keys live in their own `*-abbrev:` family
         // (`create_fst.py`; `fetch_abbrev_candidates` is their only reader),
@@ -1006,9 +1022,9 @@ pub fn fetch_partial_prefix_candidates_unbounded(
 }
 
 /// v3.5.8 S2 — single best dictionary candidate for one exact FST
-/// key. Returns the [`SortKey`]-first [`record_to_candidate`] over
+/// key. Returns the [`CandidateSortKey`]-first [`record_to_candidate`] over
 /// `prefix_index.lookup_exact(key)` (user-selected word before
-/// dictionary frequency; NaN coerced low via [`NonNanF64`](sort_key::NonNanF64); ties keep
+/// dictionary frequency; NaN coerced low via `CandidateSortKey`; ties keep
 /// the first FST rowid for determinism) together with the key's
 /// max frequency ([`EdgeBest::span_frequency`]), or `None` when the
 /// key has no dict hit. PR-9.6 — the walker reads the
@@ -1085,7 +1101,7 @@ pub fn best_candidate_for_key_with_barriers(
     })
 }
 
-/// The edge's word among its homophones: the same `SortKey` order as the
+/// The edge's word among its homophones: the same `CandidateSortKey` order as the
 /// span-local list so slot 0 and the list agree. Every homophone shares
 /// `coverage_kind` / `consumed_span`, so `raw_len = consumed_span.1` pins
 /// `tier` equal and only the user-weight / context / score / freq / source
@@ -1106,7 +1122,9 @@ fn pick_edge_word(
     let (baseline_index, syllable_count) = homophones
         .iter()
         .enumerate()
-        .min_by_key(|(i, cand)| SortKey::without_context(cand, raw_len, *i as u32))
+        .min_by_key(|(i, cand)| {
+            CandidateSortKey::without_context(&cand.rank_facts(), raw_len, *i as u32)
+        })
         .map(|(i, cand)| (i, cand.syllable_count))?;
     let index = if context_free {
         baseline_index
@@ -1115,7 +1133,7 @@ fn pick_edge_word(
             .iter()
             .enumerate()
             .filter(|(_, cand)| cand.syllable_count == syllable_count)
-            .min_by_key(|(i, cand)| SortKey::new(cand, raw_len, *i as u32))
+            .min_by_key(|(i, cand)| CandidateSortKey::new(&cand.rank_facts(), raw_len, *i as u32))
             .map(|(i, _)| i)
             .unwrap_or(baseline_index)
     };
@@ -1128,7 +1146,7 @@ fn pick_edge_word(
 #[derive(Debug)]
 pub struct EdgeBest {
     /// The homophone the user sees for this edge — user-selected word
-    /// first, then dictionary frequency (the [`SortKey`] order).
+    /// first, then dictionary frequency (the [`CandidateSortKey`] order).
     pub candidate: RawCandidate,
     /// Highest `dict.bin` frequency among the key's homophones that
     /// pass the edge's source / tone-pin / barrier filters — not the
@@ -1213,7 +1231,7 @@ pub fn compound_hanji_exists(
 /// Per row: source `filter`, then [`record_to_candidate`] with
 /// [`COVERAGE_KIND_ABBREV`] at `consumed_span = (0, raw_len)`;
 /// `syllable_count` stays the record's (鎖匙 = 2). Sorted by the same
-/// [`SortKey`]; **not truncated** — the caller excludes rows already on
+/// [`CandidateSortKey`]; **not truncated** — the caller excludes rows already on
 /// screen first, then applies [`PARTIAL_PREFIX_OUTPUT_CAP`] (the Step 4b
 /// lesson, Codex PR #351). Custom entries are not merged here; the fetch
 /// that ran before already merged them for the same buffer. Hydration is
@@ -1250,7 +1268,7 @@ pub fn fetch_abbrev_candidates(
         ));
     }
     dedupe_by_roman_hanji_span(&mut out);
-    sort_by_sort_key(out, raw_len)
+    sort_by_candidate_key(out, raw_len, RawCandidate::rank_facts)
 }
 
 /// The typed input must reach INTO a record's FINAL syllable for a

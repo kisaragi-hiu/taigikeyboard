@@ -230,7 +230,7 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     assert!((zhuah.score - 88.0).abs() < 1e-4);
     assert!((zhu.score - 90.0).abs() < 1e-4);
 
-    // v3.5.8 SortKey expected order (post-S8; per
+    // v3.5.8 CandidateSortKey expected order (post-S8; per
     // `docs/releases/v3.5.8/plan.md` § Phase 9 sort_key formula):
     //   (coverage_kind, tier, -user_weight, -adjusted_score, -freq,
     //    -coverage_bytes, source_rank, stable_idx)
@@ -249,7 +249,7 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
     assert_eq!(
         display_order,
         vec!["紙", "珠仔", "珠"],
-        "Phase 9.1 SortKey: Tier 0 (full buffer) precedes Tier 1; \
+        "Phase 9.1 CandidateSortKey: Tier 0 (full buffer) precedes Tier 1; \
          within Tier 0 sort by score desc"
     );
 }
@@ -452,9 +452,9 @@ fn out_of_range_endings_silently_skipped() {
 // parameter. That parameter is gone — `fetch_candidates_for_*` now
 // builds the boost internally via `ranking::user_freq_boost(count)`,
 // which always returns a finite value in `[1.0, MAX_BOOST]`. The
-// `NonNanF32` defense inside `SortKey` is still pinned by
+// `NonNanF64` defense inside `CandidateSortKey` is still pinned by
 // `nan_score_is_coerced_to_minimum_not_panic` in
-// `continuous/sort_key.rs` `sort_key_tests`.
+// `engine/ranking/src/sort_key.rs`.
 
 #[test]
 fn numeric_tone_input_strips_to_fused_toneless_key() {
@@ -564,7 +564,7 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
 // These cases use synthetic dict fixtures that mirror the frequency
 // disparity that drove the Phase 9 pivot (`docs/engine/continuous-input-
 // ranking.md` §3.1): single-char freq orders of magnitude above
-// multi-syllable phrases. The SortKey must surface the full-buffer
+// multi-syllable phrases. The CandidateSortKey must surface the full-buffer
 // phrase in slot #1 regardless of that disparity.
 // ---------------------------------------------------------------------------
 
@@ -579,7 +579,7 @@ fn taiuantaigi_full_buffer_phrase_outranks_high_freq_short_match() {
     //
     // Pre-Phase-9 (pure score desc): 「台」 (score=31281) outranks
     // 「臺灣台語」 (score=12×1.3=15.6) by ~2000x → user sees 「台」 at slot #1.
-    // Phase 9.1 SortKey: 「臺灣台語」 is Tier 0 (consumed_span_end == raw_len),
+    // Phase 9.1 CandidateSortKey: 「臺灣台語」 is Tier 0 (consumed_span_end == raw_len),
     // 「台灣」 and 「台」 are Tier 1 → 「臺灣台語」 surfaces at #1.
     //
     // v3.5.8 whole-sentence lattice + walker S8: the headline (Tier 0 phrase #1)
@@ -745,8 +745,8 @@ fn taixyz_invalid_tail_yields_empty_tier1_top() {
 #[test]
 fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
     // Three candidates under the SAME toneless key "tai" with identical
-    // SortKey dimensions 0..7 (coverage_kind, tier, -user_weight,
-    // -score, -freq, -coverage, source_rank). Only `stable_idx`
+    // CandidateSortKey dimensions 0..7 (coverage_kind, tier, -user_weight,
+    // context_rank, -score, -freq, -coverage, source_rank). Only `stable_idx`
     // (the last dim) differentiates.
     // The sort MUST keep them in pre-sort fetch order — which is FST
     // byte-sort over the encoded `tl:tai\xFF<rowid_le_u32>` suffix
@@ -769,7 +769,7 @@ fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
             // Distinct tones, all reducing to toneless "tai" so the
             // v3.5.8 abbrev-collision guard keeps them (a real dict
             // row's `tl` always normalizes back to its `tl_notone`);
-            // they still tie on every SortKey dimension (freq / syll /
+            // they still tie on every CandidateSortKey dimension (freq / syll /
             // coverage / source / recency) so only `stable_idx`
             // separates them — the property under test.
             Row {
@@ -809,7 +809,7 @@ fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
     assert_eq!(
         display_order,
         vec!["一", "二", "三"],
-        "stable_idx must preserve insertion order when higher SortKey \
+        "stable_idx must preserve insertion order when higher CandidateSortKey \
          dimensions are tied; got {display_order:?}. Regression for \
          Codex PR #262 r3216153007."
     );
@@ -818,7 +818,7 @@ fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
 #[test]
 fn raw_candidate_carries_dictionary_record_bitmask_for_sort_key() {
     // Phase 9.1 plumbs `DictionaryRecord.bitmask` through to
-    // `RawCandidate.bitmask` so `SortKey` can derive source_tier_rank
+    // `RawCandidate.bitmask` so `CandidateSortKey` can derive source_tier_rank
     // at sort time without re-reading the dictionary. Verify the byte
     // identity (caller fixture sets bit 11 — see `build_fixture`).
     let (prefix_index, dict) = build_fixture(
@@ -1093,7 +1093,7 @@ fn partial_prefix_engine_path_surfaces_lookup_prefix_hits() {
         assert_eq!(c.consumed_span, (0, 1));
     }
 
-    // Within the partial bucket, the existing 8-dim SortKey policy
+    // Within the partial bucket, the existing 9-dim CandidateSortKey policy
     // still applies — higher dict-freq wins on the `-neg_freq` dim
     // even after coverage_kind tied to 1.
     assert_eq!(out[0].display_text, "我", "higher-freq partial wins");
@@ -1331,7 +1331,7 @@ fn partial_prefix_high_freq_short_candidate_survives_past_legacy_byte_sort_cap()
     // ran BEFORE hydration, in FST byte-sort order. For input `tl:k`,
     // the FST front-loaded `tl:ka-*` multi-syllable phrases and
     // evicted high-frequency single-syllable entries like `tl:ki`
-    // before any SortKey scoring happened. This test pins the fix:
+    // before any CandidateSortKey scoring happened. This test pins the fix:
     // 35 low-freq `ka-XX` rows come first in byte order (rowids 1-35,
     // all with `frequency = 1`), then 1 high-freq `ki` row at rowid
     // 36 (`frequency = 50_000`). With HYDRATE_CAP=500 every row is
@@ -1804,7 +1804,7 @@ fn best_candidate_for_key_returns_highest_score_on_collision() {
 #[test]
 fn best_candidate_for_key_breaks_score_tie_by_source_rank_like_the_list() {
     // Codex post-impl 2026-09-14 P2 (intended change): the edge pick now
-    // runs the full `SortKey` order, so an exact score tie falls to
+    // runs the full `CandidateSortKey` order, so an exact score tie falls to
     // `source_rank` before FST rowid — production `kap` 洽/甲 (both 4927):
     // the old strict-`>` score compare kept the first rowid 洽, the list
     // led with kautian 甲, and the user saw slot 0 disagree with the list.

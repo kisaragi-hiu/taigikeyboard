@@ -1,10 +1,10 @@
 //! Continuous-input ranking primitives — source rank, user-frequency
-//! boost + decay, `(display_text, canonical_tl)` frequency map, and the
-//! dictionary-derived score.
+//! boost + decay, `(display_text, canonical_tl)` frequency map, the
+//! dictionary-derived score, and the candidate sort key.
 //!
 //! Pure-CPU, stateless. No I/O, no time reads inside the crate (caller
 //! supplies `now_ms`), no logging on the hot path. Consumed by
-//! `lexicon::continuous` and `composing`; the implementation module is
+//! `lexicon::continuous` and `composing`; the implementation modules are
 //! crate-private.
 //!
 //! Constants (`BOOST_ALPHA`, `MAX_BOOST`, `USER_WEIGHT_DECAY_TAU_MS`,
@@ -13,6 +13,7 @@
 
 mod context;
 mod score;
+mod sort_key;
 
 pub use context::{ContextRanks, CONTEXT_RANK_BUNDLED, CONTEXT_RANK_NONE, CONTEXT_RANK_USER};
 pub use score::{
@@ -20,3 +21,4 @@ pub use score::{
     FrequencyData, FrequencyMap, BOOST_ALPHA, CONTINUOUS_DEFAULT_SOURCE_RANK, MAX_BOOST,
     USER_WEIGHT_DECAY_TAU_MS,
 };
+pub use sort_key::{sort_by_candidate_key, CandidateRankFacts, CandidateSortKey};

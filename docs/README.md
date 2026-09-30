@@ -24,7 +24,7 @@
 | `engine/ffi-safety.md` | Cross-FFI safety contract: panic boundaries, size caps, generation semantics | Active |
 | `engine/rust-core-proto.md` | Engine proto envelope + per-slice request/response shapes | Active |
 | `engine/composing.md` | Composing state machine (`Phase::Idle` / `Composing { raw, caret }` / `Continuous { raw, caret, nailed }`) — Rust `engine/composing` | Active |
-| `engine/continuous-input-ranking.md` | Continuous-input ranking source of truth: lexicographic SortKey + user_freq_boost + recency_rank | Active |
+| `engine/continuous-input-ranking.md` | Continuous-input ranking source of truth: lexicographic CandidateSortKey + user_freq_boost + recency_rank | Active |
 | `engine/continuous-candidate-display.md` | Continuous candidate dual-line display (roman + hanji) spec — §4 carrier shipped (Items 5+6); §15 fallback retire DONE (Item 13) | Active |
 | `engine/continuous-commit-and-display.md` | Continuous mode commit/display contract (Model B) — extracted from `continuous-input-ranking.md` §10 | Active |
 | `engine/tone.md` | Tone conversion / restoration / nasal-marker — Rust `engine/phonetics` | Active |

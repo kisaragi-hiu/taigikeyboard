@@ -12,7 +12,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
  * detection; see `engine/lexicon/src/continuous/mod.rs::derive_mode`.
  *
- * Metadata-only: this field does NOT enter the `SortKey` tie-break
+ * Metadata-only: this field does NOT enter the `CandidateSortKey` tie-break
  * in v3.5.8 (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a — "reserve rank
  * use until real collisions are measured"). It is orthogonal to the
  * existing `form` axis (toneless / numeric / hanji / abbrev).

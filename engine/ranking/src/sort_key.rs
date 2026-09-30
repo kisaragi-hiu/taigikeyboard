@@ -1,27 +1,58 @@
-//! Continuous candidate ordering: the 9-dimensional [`SortKey`] and its NaN-safe
-//! score wrapper.
+//! Continuous candidate ordering: the 9-dimensional [`CandidateSortKey`],
+//! the [`CandidateRankFacts`] it reads, and its NaN-safe score wrapper.
 
 use std::cmp::Reverse;
 
-use ranking::{source_tier_rank, CONTEXT_RANK_NONE};
+use crate::{source_tier_rank, CONTEXT_RANK_NONE};
 
-use super::RawCandidate;
-
-/// The nine-dimension [`SortKey`] sort every continuous fetch ends with.
-/// `stable_idx` is the pre-sort element position (see
-/// [`merge_custom_dedupe_sort`](super::candidate::merge_custom_dedupe_sort) for why it is stamped via `enumerate()`
-/// rather than inside the key extractor).
-pub(super) fn sort_by_sort_key(out: Vec<RawCandidate>, raw_len: u32) -> Vec<RawCandidate> {
-    let mut indexed: Vec<(SortKey, RawCandidate)> = out
-        .into_iter()
-        .enumerate()
-        .map(|(i, c)| (SortKey::new(&c, raw_len, i as u32), c))
-        .collect();
-    indexed.sort_by_key(|(key, _)| *key);
-    indexed.into_iter().map(|(_, c)| c).collect()
+/// The candidate fields the continuous sort reads — everything
+/// [`CandidateSortKey::new`] needs besides the buffer length and the
+/// insertion index. Built by `lexicon::RawCandidate::rank_facts`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CandidateRankFacts {
+    /// `lexicon::COVERAGE_KIND_*`: full syllable `0` < partial prefix `1`
+    /// < abbreviation `2`.
+    pub coverage_kind: u8,
+    /// Raw-buffer byte span `(start, end)` the candidate consumes.
+    pub consumed_span: (u32, u32),
+    /// Time-decayed user-selection weight; `0.0` = never selected.
+    pub user_weight: f64,
+    /// `CONTEXT_RANK_*` — previous-word continuation layer.
+    pub context_rank: u8,
+    /// [`crate::calculate_continuous_score`].
+    pub score: f32,
+    /// Raw dictionary frequency.
+    pub frequency: u32,
+    /// Dictionary source bitmask (`dict.bin` source bits).
+    pub bitmask: u16,
+    /// `true` for a custom-dictionary entry (source rank 0).
+    pub is_custom: bool,
 }
 
-// v3.5.8 Phase 9.1 — SortKey
+/// The nine-dimension [`CandidateSortKey`] sort every continuous fetch
+/// ends with. `stable_idx` is the pre-sort element position, stamped via
+/// `enumerate()` BEFORE the sort rather than inside the key extractor so
+/// it stays the caller's insertion order.
+pub fn sort_by_candidate_key<T>(
+    items: Vec<T>,
+    raw_len: u32,
+    facts: impl Fn(&T) -> CandidateRankFacts,
+) -> Vec<T> {
+    let mut indexed: Vec<(CandidateSortKey, T)> = items
+        .into_iter()
+        .enumerate()
+        .map(|(i, item)| {
+            (
+                CandidateSortKey::new(&facts(&item), raw_len, i as u32),
+                item,
+            )
+        })
+        .collect();
+    indexed.sort_by_key(|(key, _)| *key);
+    indexed.into_iter().map(|(_, item)| item).collect()
+}
+
+// v3.5.8 Phase 9.1 — CandidateSortKey
 //
 // Encodes the nine-dimension lexicographic sort policy pinned in
 // `docs/releases/v3.5.8/plan.md` § Phase 9 (+ whole-sentence lattice + walker S8). Field
@@ -39,10 +70,10 @@ pub(super) fn sort_by_sort_key(out: Vec<RawCandidate>, raw_len: u32) -> Vec<RawC
 // short single-syllable first-segment candidate.
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(super) struct SortKey {
+pub struct CandidateSortKey {
     /// v3.5.8 Phase 9 Item 10 — leading dim. `0` for full-syllable
     /// (the pre-Item-10 `fetch_candidates_for_keys_with_barriers` path) and `1`
-    /// for partial-prefix ([`fetch_partial_prefix_candidates`](super::fetch_partial_prefix_candidates)).
+    /// for partial-prefix (`lexicon::fetch_partial_prefix_candidates`).
     /// Sits ahead of [`tier`](Self::tier) because partial-prefix
     /// candidates have `consumed_span_end == raw_len`
     /// (Q15.4 → `tier = 0`); without this dim a partial-prefix
@@ -56,12 +87,12 @@ pub(super) struct SortKey {
     /// (`docs/releases/v3.5.8/plan.md` § Phase 9 / `docs/engine/continuous-input-
     /// ranking.md` §1.1).
     tier: u8,
-    /// Descending: [`RawCandidate::user_weight`] — a selected word
+    /// Descending: [`CandidateRankFacts::user_weight`] — a selected word
     /// (`> 0.0`) precedes every never-selected one (`0.0`) whatever
     /// their dictionary frequency. `f64` so two selections seconds
     /// apart do not collapse into a tie.
     neg_user_weight: Reverse<NonNanF64>,
-    /// Ascending: [`RawCandidate::context_rank`] — a continuation of the
+    /// Ascending: [`CandidateRankFacts::context_rank`] — a continuation of the
     /// previous word (user-learned first, then bundled) precedes the rest
     /// (§56). Below `user_weight` so a selected word still beats every
     /// never-selected one; above `score` so the context is more than a
@@ -86,56 +117,52 @@ pub(super) struct SortKey {
     /// `kNumExactMatchOnTop`).
     neg_coverage: Reverse<u32>,
     /// Ascending: `custom=0, kautian=1, taigitv=2, stti=3, kungge=4,
-    /// default=5` per `ranking::source_tier_rank`.
+    /// default=5` per [`source_tier_rank`].
     source_rank: u8,
     /// Insertion index — deterministic by caller-provided `keys`
     /// order × `prefix_index.lookup_exact` FST byte-sort.
     stable_idx: u32,
 }
 
-impl SortKey {
-    pub(super) fn new(candidate: &RawCandidate, raw_len: u32, stable_idx: u32) -> Self {
-        let (start, end) = candidate.consumed_span;
+impl CandidateSortKey {
+    pub fn new(facts: &CandidateRankFacts, raw_len: u32, stable_idx: u32) -> Self {
+        let (start, end) = facts.consumed_span;
         let coverage_bytes = end.saturating_sub(start);
         let tier: u8 = if end == raw_len { 0 } else { 1 };
-        // v3.5.8 Phase 9 Item 12 — `is_custom` is now carried on the
+        // v3.5.8 Phase 9 Item 12 — `is_custom` is carried on the
         // candidate (`record_to_candidate` → false, dict.bin source
         // bits; `custom_entry_to_candidate` → true, forces rank 0).
-        // Before Item 12 this was hardcoded `false` because no caller
-        // could produce a custom candidate yet.
-        let source_rank = source_tier_rank(candidate.bitmask, candidate.is_custom);
+        let source_rank = source_tier_rank(facts.bitmask, facts.is_custom);
         Self {
-            coverage_kind: candidate.coverage_kind,
+            coverage_kind: facts.coverage_kind,
             tier,
-            neg_user_weight: Reverse(NonNanF64::new(candidate.user_weight)),
-            context_rank: candidate.context_rank,
-            neg_score: Reverse(NonNanF64::new(f64::from(candidate.score))),
-            neg_freq: Reverse(candidate.frequency),
+            neg_user_weight: Reverse(NonNanF64::new(facts.user_weight)),
+            context_rank: facts.context_rank,
+            neg_score: Reverse(NonNanF64::new(f64::from(facts.score))),
+            neg_freq: Reverse(facts.frequency),
             neg_coverage: Reverse(coverage_bytes),
             source_rank,
             stable_idx,
         }
     }
-}
 
-impl SortKey {
-    /// [`SortKey::new`] with the context dimension neutral — the
+    /// [`CandidateSortKey::new`] with the context dimension neutral — the
     /// context-free order the walker's edge pick anchors on (§56).
-    pub(super) fn without_context(candidate: &RawCandidate, raw_len: u32, stable_idx: u32) -> Self {
+    pub fn without_context(facts: &CandidateRankFacts, raw_len: u32, stable_idx: u32) -> Self {
         Self {
             context_rank: CONTEXT_RANK_NONE,
-            ..Self::new(candidate, raw_len, stable_idx)
+            ..Self::new(facts, raw_len, stable_idx)
         }
     }
 }
 
 /// `f64` newtype with a total order via [`f64::total_cmp`] after
-/// coercing `NaN` to [`f64::MIN`]. Lets [`SortKey`] derive `Ord`
+/// coercing `NaN` to [`f64::MIN`]. Lets [`CandidateSortKey`] derive `Ord`
 /// without a hand-written comparator, while still defending against
 /// `NaN` leakage from a contract-violating `user_freq_boost`
-/// (`calculate_continuous_score` docs).
+/// ([`crate::calculate_continuous_score`] docs).
 #[derive(Debug, Clone, Copy)]
-pub(super) struct NonNanF64(f64);
+struct NonNanF64(f64);
 
 impl NonNanF64 {
     fn new(v: f64) -> Self {
@@ -164,29 +191,32 @@ impl Ord for NonNanF64 {
 }
 
 #[cfg(test)]
-mod sort_key_tests {
-    //! Hermetic unit tests for the v3.5.8 Phase 9.1 `SortKey` policy.
-    //! Hermetic-fixture regression tests (`taiuantaigi` / `e` / `taixyz`
-    //! acceptance matrix) live alongside in
-    //! `engine/lexicon/tests/span_local_fetch.rs`, using the same
-    //! `build_fixture` synthetic dict.bin + FST builder.
+mod tests {
+    //! Hermetic unit tests for the v3.5.8 Phase 9.1 `CandidateSortKey`
+    //! policy. Hermetic-fixture regression tests (`taiuantaigi` / `e` /
+    //! `taixyz` acceptance matrix) live in
+    //! `engine/lexicon/tests/span_local_fetch.rs`.
     use super::*;
-    use crate::continuous::{
-        CandidateMode, COVERAGE_KIND_FULL, COVERAGE_KIND_PARTIAL_PREFIX, FORM_NOTONE,
-    };
+    use crate::{CONTEXT_RANK_BUNDLED, CONTEXT_RANK_USER};
+
+    /// `lexicon::COVERAGE_KIND_FULL` / `COVERAGE_KIND_PARTIAL_PREFIX`.
+    const COVERAGE_KIND_FULL: u8 = 0;
+    const COVERAGE_KIND_PARTIAL_PREFIX: u8 = 1;
+
+    /// Kautian source bit (1 << 0) — source rank 1.
+    const KAUTIAN_BIT: u16 = 1 << 0;
 
     /// Convenience builder so each test only specifies the dimensions
     /// it exercises. Fields not exercised default to neutral values:
-    /// `frequency = 0`, `bitmask = 0` (→ source rank = default = 5),
-    /// `score = 0.0`, `syllable_count = 1`, `user_weight = 0.0` (never
-    /// selected = the cold-start default).
+    /// `bitmask = 0` (→ source rank = default = 5), `user_weight = 0.0`
+    /// (never selected = the cold-start default), no context.
     fn cand(
         span_start: u32,
         span_end: u32,
         score: f32,
         frequency: u32,
         bitmask: u16,
-    ) -> RawCandidate {
+    ) -> CandidateRankFacts {
         cand_with_user_weight(span_start, span_end, score, frequency, bitmask, 0.0)
     }
 
@@ -197,40 +227,57 @@ mod sort_key_tests {
         frequency: u32,
         bitmask: u16,
         user_weight: f64,
-    ) -> RawCandidate {
-        RawCandidate {
+    ) -> CandidateRankFacts {
+        CandidateRankFacts {
+            coverage_kind: COVERAGE_KIND_FULL,
             consumed_span: (span_start, span_end),
-            syllable_count: 1,
-            display_text: String::new(),
-            roman: String::new(),
-            hanji: None,
-            canonical_tl: String::new(),
-            score,
-            form: FORM_NOTONE,
-            frequency,
-            bitmask,
-            mode: CandidateMode::Hant,
             user_weight,
             context_rank: CONTEXT_RANK_NONE,
-            coverage_kind: COVERAGE_KIND_FULL,
+            score,
+            frequency,
+            bitmask,
             is_custom: false,
         }
     }
 
-    /// v3.5.8 Phase 9 Item 10 — partial-prefix variant for the new
-    /// `coverage_kind` dim. Defaults to user_weight=0.0 (never
-    /// selected) so tests can isolate the coverage_kind axis without
-    /// mixing in user preference.
+    /// v3.5.8 Phase 9 Item 10 — partial-prefix variant for the
+    /// `coverage_kind` dim. Never selected, so tests isolate the
+    /// coverage_kind axis without mixing in user preference.
     fn cand_partial(
         span_start: u32,
         span_end: u32,
         score: f32,
         frequency: u32,
         bitmask: u16,
-    ) -> RawCandidate {
-        let mut c = cand_with_user_weight(span_start, span_end, score, frequency, bitmask, 0.0);
-        c.coverage_kind = COVERAGE_KIND_PARTIAL_PREFIX;
-        c
+    ) -> CandidateRankFacts {
+        CandidateRankFacts {
+            coverage_kind: COVERAGE_KIND_PARTIAL_PREFIX,
+            ..cand(span_start, span_end, score, frequency, bitmask)
+        }
+    }
+
+    fn cand_with_context(score: f32, context_rank: u8) -> CandidateRankFacts {
+        CandidateRankFacts {
+            context_rank,
+            ..cand(0, 3, score, score as u32, 0)
+        }
+    }
+
+    fn key(facts: &CandidateRankFacts, raw_len: u32, stable_idx: u32) -> CandidateSortKey {
+        CandidateSortKey::new(facts, raw_len, stable_idx)
+    }
+
+    #[test]
+    fn sort_orders_by_key_and_keeps_insertion_order_on_ties() {
+        let raw_len: u32 = 3;
+        let items = vec![
+            ("tie-first", cand(0, 3, 1.0, 1, 0)),
+            ("high", cand(0, 3, 100.0, 100, 0)),
+            ("tie-second", cand(0, 3, 1.0, 1, 0)),
+        ];
+        let sorted = sort_by_candidate_key(items, raw_len, |(_, facts)| *facts);
+        let order: Vec<&str> = sorted.iter().map(|(name, _)| *name).collect();
+        assert_eq!(order, ["high", "tie-first", "tie-second"]);
     }
 
     #[test]
@@ -244,7 +291,7 @@ mod sort_key_tests {
         let single = cand(0, 3, 31281.0, 31281, 0); // Tier 1, dominant score.
 
         assert!(
-            SortKey::new(&phrase, raw_len, 0) < SortKey::new(&single, raw_len, 1),
+            key(&phrase, raw_len, 0) < key(&single, raw_len, 1),
             "Tier 0 phrase must precede Tier 1 single-char in lexicographic sort"
         );
     }
@@ -261,7 +308,7 @@ mod sort_key_tests {
         let longer = cand(0, 6, 100.0, 100, 0);
         let shorter = cand(0, 3, 1000.0, 1000, 0);
 
-        assert!(SortKey::new(&shorter, raw_len, 0) < SortKey::new(&longer, raw_len, 1));
+        assert!(key(&shorter, raw_len, 0) < key(&longer, raw_len, 1));
     }
 
     #[test]
@@ -277,7 +324,7 @@ mod sort_key_tests {
         let single = cand(0, 3, 31281.0, 31281, 0); // gua → 我
         let longer_prefix = cand(0, 6, 1379.0, 1379, 0); // a 2-syll prefix
         assert!(
-            SortKey::new(&single, raw_len, 0) < SortKey::new(&longer_prefix, raw_len, 1),
+            key(&single, raw_len, 0) < key(&longer_prefix, raw_len, 1),
             "high-freq single-syllable first segment must not be buried \
              below a lower-freq longer prefix"
         );
@@ -292,7 +339,7 @@ mod sort_key_tests {
         let longer = cand(0, 6, 100.0, 100, 0);
         let shorter = cand(0, 3, 100.0, 100, 0);
 
-        assert!(SortKey::new(&longer, raw_len, 0) < SortKey::new(&shorter, raw_len, 1));
+        assert!(key(&longer, raw_len, 0) < key(&shorter, raw_len, 1));
     }
 
     #[test]
@@ -301,7 +348,7 @@ mod sort_key_tests {
         let high = cand(0, 4, 100.0, 100, 0);
         let low = cand(0, 4, 88.0, 80, 0);
 
-        assert!(SortKey::new(&high, raw_len, 0) < SortKey::new(&low, raw_len, 1));
+        assert!(key(&high, raw_len, 0) < key(&low, raw_len, 1));
     }
 
     #[test]
@@ -310,17 +357,10 @@ mod sort_key_tests {
         // kautian (bit 0, rank 1) should precede an unknown source
         // (rank 5).
         let raw_len: u32 = 3;
-        const KAUTIAN_BIT: u16 = 1 << 0;
         let kautian = cand(0, 3, 100.0, 100, KAUTIAN_BIT);
         let unknown = cand(0, 3, 100.0, 100, 0);
 
-        assert!(SortKey::new(&kautian, raw_len, 0) < SortKey::new(&unknown, raw_len, 1));
-    }
-
-    fn cand_with_context(score: f32, context_rank: u8) -> RawCandidate {
-        let mut c = cand(0, 3, score, score as u32, 0);
-        c.context_rank = context_rank;
-        c
+        assert!(key(&kautian, raw_len, 0) < key(&unknown, raw_len, 1));
     }
 
     // INVARIANT_CONTINUOUS_CONTEXT_RERANK (behavioral-invariants §56): a
@@ -328,11 +368,11 @@ mod sort_key_tests {
     #[test]
     fn context_hit_beats_higher_score() {
         let raw_len: u32 = 3;
-        let stranger = cand_with_context(1000.0, ranking::CONTEXT_RANK_NONE);
-        let bundled = cand_with_context(10.0, ranking::CONTEXT_RANK_BUNDLED);
-        let user = cand_with_context(1.0, ranking::CONTEXT_RANK_USER);
-        assert!(SortKey::new(&bundled, raw_len, 1) < SortKey::new(&stranger, raw_len, 0));
-        assert!(SortKey::new(&user, raw_len, 2) < SortKey::new(&bundled, raw_len, 1));
+        let stranger = cand_with_context(1000.0, CONTEXT_RANK_NONE);
+        let bundled = cand_with_context(10.0, CONTEXT_RANK_BUNDLED);
+        let user = cand_with_context(1.0, CONTEXT_RANK_USER);
+        assert!(key(&bundled, raw_len, 1) < key(&stranger, raw_len, 0));
+        assert!(key(&user, raw_len, 2) < key(&bundled, raw_len, 1));
     }
 
     // INVARIANT_CONTINUOUS_CONTEXT_RERANK: the context never crosses the
@@ -342,21 +382,18 @@ mod sort_key_tests {
         let raw_len: u32 = 6;
         let full_stranger = cand(0, 6, 1.0, 1, 0);
         let mut partial_hit = cand_partial(0, 6, 1000.0, 1000, 0);
-        partial_hit.context_rank = ranking::CONTEXT_RANK_USER;
-        assert!(SortKey::new(&full_stranger, raw_len, 0) < SortKey::new(&partial_hit, raw_len, 1));
+        partial_hit.context_rank = CONTEXT_RANK_USER;
+        assert!(key(&full_stranger, raw_len, 0) < key(&partial_hit, raw_len, 1));
 
         let tier0_stranger = cand(0, 6, 1.0, 1, 0);
         let mut tier1_hit = cand(0, 3, 1000.0, 1000, 0);
-        tier1_hit.context_rank = ranking::CONTEXT_RANK_USER;
-        assert!(SortKey::new(&tier0_stranger, raw_len, 0) < SortKey::new(&tier1_hit, raw_len, 1));
+        tier1_hit.context_rank = CONTEXT_RANK_USER;
+        assert!(key(&tier0_stranger, raw_len, 0) < key(&tier1_hit, raw_len, 1));
 
         let selected_stranger = cand_with_user_weight(0, 6, 1.0, 1, 0, 0.1);
         let mut never_selected_hit = cand(0, 6, 1000.0, 1000, 0);
-        never_selected_hit.context_rank = ranking::CONTEXT_RANK_USER;
-        assert!(
-            SortKey::new(&selected_stranger, raw_len, 0)
-                < SortKey::new(&never_selected_hit, raw_len, 1)
-        );
+        never_selected_hit.context_rank = CONTEXT_RANK_USER;
+        assert!(key(&selected_stranger, raw_len, 0) < key(&never_selected_hit, raw_len, 1));
     }
 
     // INVARIANT_CONTINUOUS_CONTEXT_RERANK: no context (every rank NONE) is
@@ -364,25 +401,25 @@ mod sort_key_tests {
     #[test]
     fn no_context_is_the_context_free_order() {
         let raw_len: u32 = 3;
-        let high = cand_with_context(100.0, ranking::CONTEXT_RANK_NONE);
-        let low = cand_with_context(10.0, ranking::CONTEXT_RANK_NONE);
-        assert!(SortKey::new(&high, raw_len, 0) < SortKey::new(&low, raw_len, 1));
-        let low_hit = cand_with_context(10.0, ranking::CONTEXT_RANK_USER);
+        let high = cand_with_context(100.0, CONTEXT_RANK_NONE);
+        let low = cand_with_context(10.0, CONTEXT_RANK_NONE);
+        assert!(key(&high, raw_len, 0) < key(&low, raw_len, 1));
+        let low_hit = cand_with_context(10.0, CONTEXT_RANK_USER);
         assert_eq!(
-            SortKey::without_context(&low_hit, raw_len, 1),
-            SortKey::new(&low, raw_len, 1)
+            CandidateSortKey::without_context(&low_hit, raw_len, 1),
+            key(&low, raw_len, 1)
         );
     }
 
     #[test]
     fn stable_idx_breaks_ties_when_all_else_equal() {
-        // Identical RawCandidate, only the synthetic insertion index
-        // varies — earlier index must sort first.
+        // Identical facts, only the synthetic insertion index varies —
+        // earlier index must sort first.
         let raw_len: u32 = 3;
         let a = cand(0, 3, 100.0, 100, 0);
         let b = cand(0, 3, 100.0, 100, 0);
 
-        assert!(SortKey::new(&a, raw_len, 0) < SortKey::new(&b, raw_len, 1));
+        assert!(key(&a, raw_len, 0) < key(&b, raw_len, 1));
     }
 
     #[test]
@@ -393,19 +430,19 @@ mod sort_key_tests {
         let nan = cand(0, 3, f32::NAN, 100, 0);
         let normal = cand(0, 3, 0.001, 100, 0);
 
-        // NaN coerced to f32::MIN → with Reverse<>, NaN ends up LAST
-        // (largest sort_key in ascending order).
-        assert!(SortKey::new(&normal, raw_len, 0) < SortKey::new(&nan, raw_len, 1));
+        // NaN coerced to f64::MIN → with Reverse<>, NaN ends up LAST
+        // (largest sort key in ascending order).
+        assert!(key(&normal, raw_len, 0) < key(&nan, raw_len, 1));
     }
 
     #[test]
-    fn sort_key_reads_user_weight_from_candidate() {
-        // `SortKey::new` reads `candidate.user_weight` verbatim — no
+    fn sort_key_reads_user_weight_from_facts() {
+        // `CandidateSortKey::new` reads `facts.user_weight` verbatim — no
         // sentinel, no recomputation.
         let raw_len: u32 = 3;
-        let never = SortKey::new(&cand(0, 3, 1.0, 1, 0), raw_len, 0);
+        let never = key(&cand(0, 3, 1.0, 1, 0), raw_len, 0);
         assert_eq!(never.neg_user_weight, Reverse(NonNanF64::new(0.0)));
-        let selected = SortKey::new(&cand_with_user_weight(0, 3, 1.0, 1, 0, 0.1), raw_len, 1);
+        let selected = key(&cand_with_user_weight(0, 3, 1.0, 1, 0, 0.1), raw_len, 1);
         assert_eq!(selected.neg_user_weight, Reverse(NonNanF64::new(0.1)));
     }
 
@@ -420,7 +457,7 @@ mod sort_key_tests {
         let selected_rare = cand_with_user_weight(0, 3, 1.1, 1, 0, 0.1);
         let never_common = cand(0, 3, 27.5, 25, 0);
         assert!(
-            SortKey::new(&selected_rare, raw_len, 1) < SortKey::new(&never_common, raw_len, 0),
+            key(&selected_rare, raw_len, 1) < key(&never_common, raw_len, 0),
             "user_weight > 0 must precede user_weight == 0 whatever the score"
         );
     }
@@ -432,25 +469,25 @@ mod sort_key_tests {
         let raw_len: u32 = 3;
         let heavy_rare = cand_with_user_weight(0, 3, 1.0, 1, 0, 2.0);
         let light_common = cand_with_user_weight(0, 3, 100.0, 100, 0, 0.5);
-        assert!(SortKey::new(&heavy_rare, raw_len, 1) < SortKey::new(&light_common, raw_len, 0));
+        assert!(key(&heavy_rare, raw_len, 1) < key(&light_common, raw_len, 0));
         let tie_high = cand_with_user_weight(0, 3, 100.0, 100, 0, 0.5);
         let tie_low = cand_with_user_weight(0, 3, 1.0, 1, 0, 0.5);
-        assert!(SortKey::new(&tie_high, raw_len, 1) < SortKey::new(&tie_low, raw_len, 0));
+        assert!(key(&tie_high, raw_len, 1) < key(&tie_low, raw_len, 0));
     }
 
     #[test]
     fn empty_span_yields_zero_coverage_without_panic() {
         // Defensive: a degenerate `(2, 2)` span (consumed_span_end ==
-        // start) must produce SortKey with `neg_coverage = Reverse(0)`,
+        // start) must produce a key with `neg_coverage = Reverse(0)`,
         // not panic in `saturating_sub`.
         let raw_len: u32 = 4;
-        let key = SortKey::new(&cand(2, 2, 0.0, 0, 0), raw_len, 0);
+        let key = key(&cand(2, 2, 0.0, 0, 0), raw_len, 0);
         assert_eq!(key.neg_coverage, Reverse(0));
         // Tier 1 because end (2) != raw_len (4).
         assert_eq!(key.tier, 1);
     }
 
-    // ----- v3.5.8 Phase 9 Item 10 — `coverage_kind` SortKey dim -----
+    // ----- v3.5.8 Phase 9 Item 10 — `coverage_kind` dim -----
 
     #[test]
     fn coverage_kind_full_beats_partial_regardless_of_other_dims() {
@@ -465,35 +502,25 @@ mod sort_key_tests {
         // `coverage_kind` is mis-ordered.
         let raw_len: u32 = 3;
         let full_weak = cand_with_user_weight(0, 3, 0.001, 1, 0, 0.0);
-        let mut partial_strong = cand_partial(0, 3, f32::MAX, u32::MAX, KAUTIAN_BIT_U16);
+        let mut partial_strong = cand_partial(0, 3, f32::MAX, u32::MAX, KAUTIAN_BIT);
         partial_strong.user_weight = 4.0;
-        // Sanity: the partial helper sets `coverage_kind = 1` while
-        // the full helper leaves it at the default `0`.
-        assert_eq!(full_weak.coverage_kind, COVERAGE_KIND_FULL);
-        assert_eq!(partial_strong.coverage_kind, COVERAGE_KIND_PARTIAL_PREFIX);
         assert!(
-            SortKey::new(&full_weak, raw_len, 0) < SortKey::new(&partial_strong, raw_len, 1),
+            key(&full_weak, raw_len, 0) < key(&partial_strong, raw_len, 1),
             "Item 10: full-syllable must precede partial-prefix regardless of other dims"
         );
     }
 
     #[test]
     fn within_partial_prefix_inner_dims_still_apply() {
-        // Inside the `coverage_kind = 1` bucket the
-        // `(tier, recency, -score, -freq, -coverage, source, stable_idx)`
-        // policy (post-S8 order) still drives ordering — verify with
-        // two partials where only `-score` differs.
+        // Inside the `coverage_kind = 1` bucket the remaining dims still
+        // drive ordering — verify with two partials where only `-score`
+        // differs.
         let raw_len: u32 = 4;
         let high = cand_partial(0, 4, 100.0, 100, 0);
         let low = cand_partial(0, 4, 1.0, 1, 0);
         assert!(
-            SortKey::new(&high, raw_len, 0) < SortKey::new(&low, raw_len, 1),
+            key(&high, raw_len, 0) < key(&low, raw_len, 1),
             "inside coverage_kind=1, higher score still wins"
         );
     }
-
-    /// Bitmask helper for the kautian source bit (1 << 0); declared
-    /// here as a local `u16` to keep the test fixture self-contained
-    /// without re-importing from `ranking::score::tests`.
-    const KAUTIAN_BIT_U16: u16 = 1 << 0;
 }

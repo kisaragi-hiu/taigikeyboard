@@ -10,7 +10,7 @@
 //! and buried the short high-frequency single-syllable readings past the
 //! `PARTIAL_PREFIX_HYDRATE_CAP`. The fix spends the hydrate budget on the
 //! SHORTEST matched keys first via `PrefixIndex::lookup_prefix_shortest_first`
-//! (all modes); the downstream `SortKey` then ranks the pool by frequency.
+//! (all modes); the downstream `CandidateSortKey` then ranks the pool by frequency.
 //! The initial-only `tps_abbrev` acronym keys (Bopomofo orders all initials
 //! ahead of all vowels, so they would otherwise win the shortest-first
 //! budget) live in their own `tps-abbrev:` family since §46 and never enter
