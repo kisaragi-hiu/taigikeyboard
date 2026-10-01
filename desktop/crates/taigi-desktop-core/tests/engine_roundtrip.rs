@@ -49,7 +49,6 @@ fn compose(text: &str, settings: &EngineSettings, generation: u64) -> engine::Co
             .expect("append round trip");
         last = Some(step);
     }
-    engine::enter_continuous(settings, generation).expect("enter continuous");
     last.expect("non-empty text")
 }
 

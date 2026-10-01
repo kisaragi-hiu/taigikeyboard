@@ -1,9 +1,6 @@
 //! Phase 4 — `Phase::Continuous` integration tests.
 //!
-//! Phase 4 keeps the new Intents (`EnterContinuous` / `CommitContinuous` /
-//! `ResetContinuous`) Rust-only — the proto `oneof method` carrier lands in
-//! Phase 6. Tests therefore exercise the engine through the in-process
-//! `Engine::apply` API and inspect `Phase::Continuous` internals via
+//! Tests exercise the engine through the in-process `Engine::apply` API and inspect `Phase::Continuous` internals via
 //! `Engine::snapshot_state`. **Model B**: nailed segments are NOT in the
 //! document; `ComposingResponse.preedit.display_text` carries the whole
 //! composition (Σ nailed display + derived pending tail) while
@@ -49,30 +46,6 @@ fn start_lands_in_continuous_with_nothing_nailed() {
             assert_eq!(caret, 4);
             assert!(nailed.is_empty());
         }
-        other => panic!("expected Continuous, got {other:?}"),
-    }
-    // The platforms' follow-up EnterContinuous is a no-op.
-    let resp = e.apply(Intent::EnterContinuous, &config_tl());
-    assert!(resp.effect.is_empty());
-    assert!(resp.is_composing);
-}
-
-#[test]
-fn enter_continuous_from_idle_is_noop() {
-    let mut e = Engine::new();
-    let resp = e.apply(Intent::EnterContinuous, &config_tl());
-    assert!(resp.effect.is_empty());
-    assert_eq!(e.snapshot_state().phase, Phase::Idle);
-}
-
-#[test]
-fn enter_continuous_from_continuous_is_noop() {
-    let mut e = engine_in_continuous("tsua");
-    let resp = e.apply(Intent::EnterContinuous, &config_tl());
-    assert!(resp.effect.is_empty());
-    let state = e.snapshot_state();
-    match state.phase {
-        Phase::Continuous { raw, .. } => assert_eq!(raw, "tsua"),
         other => panic!("expected Continuous, got {other:?}"),
     }
 }
@@ -293,7 +266,6 @@ fn commit_continuous_at_non_char_boundary_is_noop() {
         },
         &config_tl(),
     );
-    e.apply(Intent::EnterContinuous, &config_tl());
     let resp = e.apply(
         Intent::CommitContinuous {
             canonical_text: "X".to_string(),
@@ -345,7 +317,7 @@ fn commit_continuous_empty_display_is_noop() {
     assert!(resp.effect.is_empty());
 }
 
-// ---- Reset under Continuous (also the wire `ResetContinuous`) -----
+// ---- Reset under Continuous ---------------------------------------
 
 #[test]
 fn reset_after_a_nail_discards_the_whole_composition() {
@@ -721,8 +693,7 @@ fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_compositi
 // becomes "commit Σ nailed.display_text + text"; `CommitPreeditThenInsert
 // External` becomes "commit Σ nailed.display_text + pending derived +
 // external atomically" (nailed segments were never in the document, so
-// they ride the single commit). `CommitDerived` stays snapshot noop —
-// Continuous auto-nails via mid-commit. `CommitRaw` (Enter) commits the
+// they ride the single commit). `CommitRaw` (Enter) commits the
 // whole composition `Phase::composing_display` (§10.10a Model B; see
 // `commit_raw_under_continuous_*` tests below and
 // `docs/engine/continuous-input-ranking.md` §10.3).
@@ -751,14 +722,6 @@ fn start_under_continuous_aborts_then_begins_fresh_composition() {
     };
     assert_eq!(raw, "abc");
     assert!(nailed.is_empty());
-}
-
-#[test]
-fn commit_derived_under_continuous_is_noop() {
-    let mut e = engine_in_continuous("tsua");
-    let resp = e.apply(Intent::CommitDerived, &config_tl());
-    assert!(resp.effect.is_empty());
-    assert!(matches!(e.snapshot_state().phase, Phase::Continuous { .. }));
 }
 
 // Phase 9 Item 3 — Enter-raw commit in Continuous. The four tests below pin
@@ -867,7 +830,6 @@ fn commit_raw_under_continuous_with_translate_swapped_unchanged() {
         },
         &config,
     );
-    e.apply(Intent::EnterContinuous, &config);
     let resp = e.apply(Intent::CommitRaw, &config);
     let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
         unreachable!();
@@ -887,7 +849,6 @@ fn commit_raw_under_continuous_tps_passes_through_verbatim() {
         },
         &config_tl(),
     );
-    e.apply(Intent::EnterContinuous, &config_tl());
     let resp = e.apply(Intent::CommitRaw, &config_tl());
     let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
         unreachable!();
@@ -946,7 +907,6 @@ fn terminal_nextword_roman_drops_the_separator_marker() {
         },
         &config_tl(),
     );
-    e.apply(Intent::EnterContinuous, &config_tl());
     let resp = e.apply(Intent::CommitRaw, &config_tl());
     let nw = resp
         .effect
@@ -973,7 +933,6 @@ fn commit_raw_under_continuous_tps_hides_the_separator_marker() {
         },
         &config_tl(),
     );
-    e.apply(Intent::EnterContinuous, &config_tl());
     let resp = e.apply(Intent::CommitRaw, &config_tl());
     let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
         unreachable!();

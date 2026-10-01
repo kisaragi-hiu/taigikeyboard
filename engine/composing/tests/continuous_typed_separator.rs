@@ -23,7 +23,7 @@ use protos::engine::effect::Kind;
 use protos::engine::CommitScript;
 use protos::engine::{
     AppConfig, CandidateMessage, CommitContinuous, CommitRaw, ComposingResponse, DeleteBackward,
-    EnterContinuous, FetchAtPos, Start,
+    FetchAtPos, Start,
 };
 
 use crate::common::Fetch;
@@ -290,12 +290,12 @@ fn install_tng_lai() {
 
 fn started(raw: &str, cfg: &AppConfig) -> Engine {
     let mut engine = Engine::new();
-    for method in [
-        Method::Start(Start { text: raw.into() }),
-        Method::EnterContinuous(EnterContinuous {}),
-    ] {
-        requests::handle(&req(method), &mut engine, cfg).expect("setup");
-    }
+    requests::handle(
+        &req(Method::Start(Start { text: raw.into() })),
+        &mut engine,
+        cfg,
+    )
+    .expect("setup");
     engine
 }
 

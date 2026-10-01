@@ -4,17 +4,15 @@ import XCTest
 /// v3.5.8 Phase 7B — `ComposingManager` Continuous-input wrapper tests.
 ///
 /// Scope (per Codex consult 2026-05-10, session 019e11d7):
-/// - Auto-promotion: every raw-input mutation (`startComposing` /
-///   `appendCharacter` / `appendHyphen` / `replaceLastCharacter`) issues a
-///   synchronous `EnterContinuous` so the engine reaches `Phase::Continuous`.
-///   Verified via `RustEngineBridge.composingFetchAtPos` returning a
-///   non-nil candidates carrier (the only public observable distinguishing
-///   `Phase::Composing` from `Phase::Continuous`).
+/// - One engine call per keystroke: every raw-input mutation
+///   (`startComposing` / `appendCharacter` / `appendHyphen` /
+///   `replaceLastCharacter`) leaves a composition `FetchAtPos` answers with
+///   a candidates carrier — no separate promotion request (R12).
 /// - `fetchContinuousCandidates()` is read-only — does not mutate `rawInput`
 ///   or `isComposing` (mirrors `RustEngineBridgeContinuousTests`).
 /// - `commitContinuous` mid-commit stays in Continuous (pending tail remains
 ///   addressable); full-commit exits to Idle and clears mirror.
-/// - `resetContinuous` from Continuous returns to Idle and emits the abort
+/// - `reset` from a composition returns to Idle and emits the abort
 ///   effect trio (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
 ///   `NextWordClearForNewComposing`).
 ///
@@ -71,12 +69,12 @@ final class ComposingManagerContinuousTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - Auto-promotion to Continuous
+    // MARK: - One call per keystroke
 
-    /// Pins the Codex Fork A modification (synchronous promotion). After
-    /// `appendCharacter`, the engine MUST be in `Phase::Continuous` —
-    /// observable via `FetchAtPos.candidates` going from nil to non-nil.
-    func testAppendCharacter_PromotesToContinuous() {
+    /// After `appendCharacter` alone the engine holds a composition —
+    /// observable via `FetchAtPos.candidates` being non-nil (R12: no
+    /// separate promotion request).
+    func testAppendCharacter_ComposesInOneCall() {
         manager.appendCharacter("t")
         manager.appendCharacter("s")
         manager.appendCharacter("u")
@@ -89,11 +87,11 @@ final class ComposingManagerContinuousTests: XCTestCase {
         )
         XCTAssertNotNil(
             result.candidates,
-            "appendCharacter must auto-promote to Phase::Continuous (FetchAtPos returns Some)",
+            "appendCharacter alone must leave a composition FetchAtPos reads",
         )
     }
 
-    func testStartComposing_PromotesToContinuous() {
+    func testStartComposing_ComposesInOneCall() {
         manager.startComposing(with: "tsua")
 
         let result = RustEngineBridge.composingFetchAtPos(
@@ -103,11 +101,11 @@ final class ComposingManagerContinuousTests: XCTestCase {
         )
         XCTAssertNotNil(
             result.candidates,
-            "startComposing must auto-promote to Phase::Continuous",
+            "startComposing alone must leave a composition FetchAtPos reads",
         )
     }
 
-    func testAppendHyphen_PromotesToContinuous() {
+    func testAppendHyphen_ComposesInOneCall() {
         manager.startComposing(with: "tai")
         manager.appendHyphen()
 
@@ -122,7 +120,7 @@ final class ComposingManagerContinuousTests: XCTestCase {
         )
     }
 
-    func testReplaceLastCharacter_PromotesToContinuous() {
+    func testReplaceLastCharacter_ComposesInOneCall() {
         manager.startComposing(with: "tsuab")
         manager.replaceLastCharacter(with: "c")
 
@@ -236,17 +234,17 @@ final class ComposingManagerContinuousTests: XCTestCase {
         )
     }
 
-    // MARK: - resetContinuous
+    // MARK: - reset
 
-    /// `resetContinuous` from Continuous emits the engine-defined abort
+    /// `reset` from a composition emits the engine-defined abort
     /// trio. Order is asserted at the engine layer
     /// (`engine/composing/tests/continuous_phase.rs`); the wrapper just
     /// fans the effects to the delegate.
-    func testResetContinuous_FromContinuous_EmitsAbortTrio() {
+    func testReset_FromComposition_EmitsAbortTrio() {
         manager.startComposing(with: "tsua")
         spy.effects.removeAll()
 
-        manager.resetContinuous()
+        manager.reset()
 
         XCTAssertFalse(manager.isComposing, "Reset must exit to Idle")
         XCTAssertEqual(manager.rawInput, "")
@@ -259,8 +257,8 @@ final class ComposingManagerContinuousTests: XCTestCase {
         ])
     }
 
-    func testResetContinuous_FromIdle_IsNoop() {
-        manager.resetContinuous()
+    func testReset_FromIdle_IsNoop() {
+        manager.reset()
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertTrue(spy.effects.isEmpty, "Reset from Idle emits no effects")

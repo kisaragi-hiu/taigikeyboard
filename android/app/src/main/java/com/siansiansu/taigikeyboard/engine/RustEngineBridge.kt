@@ -274,8 +274,6 @@ object RustEngineBridge {
                 val text: String,
             ) : Effect()
 
-            object DeleteBackwardFromDocument : Effect()
-
             object ResetAutocomplete : Effect()
 
             object PerformAutocomplete : Effect()

@@ -12,8 +12,8 @@ use common::{open_user_data, tl_config};
 use composing::{Intent, UserRows};
 use protos::engine::{
     composing_request, next_word_request, next_word_response, request, response, Append,
-    ComposingRequest, ContinuousResponse, DictionarySourceToggles, EnginePrediction,
-    EnterContinuous, FetchAtPos, NextWordRequest, PredictNext, Response,
+    ComposingRequest, ContinuousResponse, DictionarySourceToggles, EnginePrediction, FetchAtPos,
+    NextWordRequest, PredictNext, Response,
 };
 use ranking::{FrequencyData, FrequencyMap};
 use userdata::{
@@ -86,9 +86,6 @@ fn engine_reads_answer_what_the_same_rows_answer() {
             char: character.to_owned(),
         }));
     }
-    composing(composing_request::Method::EnterContinuous(
-        EnterContinuous {},
-    ));
     let neutral = fetch(FetchAtPos::default());
     let boosted = neutral
         .candidates

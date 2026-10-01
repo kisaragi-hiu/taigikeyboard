@@ -44,17 +44,6 @@ public interface EffectOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.CommitTextReplacingPreedit getCommitTextReplacingPreedit();
 
   /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   * @return Whether the deleteBackwardFromDocument field is set.
-   */
-  boolean hasDeleteBackwardFromDocument();
-  /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   * @return The deleteBackwardFromDocument.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument getDeleteBackwardFromDocument();
-
-  /**
    * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
    * @return Whether the resetAutocomplete field is set.
    */

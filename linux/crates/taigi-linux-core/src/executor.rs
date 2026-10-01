@@ -115,10 +115,6 @@ impl ComposingEffectExecutor for Recorder {
                 self.emits.push(Emit::ClearPreedit);
                 self.emits.push(Emit::Commit(text.clone()));
             }
-            // NAMED DIVERGENCE (as macOS `ClientEffectExecutor.swift:56-63`
-            // and Windows): the preedit never lived in the document, so a
-            // delete there would eat a real character.
-            Effect::DeleteBackwardFromDocument => {}
             // No autocomplete surface; the learning handshakes never reach
             // an executor (`ComposingManager` reports them to next word).
             Effect::ResetAutocomplete

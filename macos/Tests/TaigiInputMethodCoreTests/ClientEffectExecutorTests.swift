@@ -67,21 +67,6 @@ final class ClientEffectExecutorTests: XCTestCase {
         )
     }
 
-    func testDeleteBackwardFromDocument_touchesNothing() {
-        let client = RecordingTextInputClient()
-
-        ClientEffectExecutor(client: client).execute(.deleteBackwardFromDocument)
-
-        XCTAssertEqual(
-            client.writes,
-            [],
-            """
-            NAMED DIVERGENCE from iOS: the preedit lived only in the marked region, so \
-            forwarding this would eat a character the user typed before composing
-            """,
-        )
-    }
-
     func testEffectsWithNoMacOSSurfaceYet_touchNothing() {
         let client = RecordingTextInputClient()
         let executor = ClientEffectExecutor(client: client)

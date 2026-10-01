@@ -12,7 +12,7 @@ use composing::requests;
 use protos::engine::composing_request::Method;
 use protos::engine::{
     AppConfig, Append, CandidateMessage, CommitContinuous, CommitScript, ComposingResponse,
-    DeleteBackward, EnterContinuous, Start,
+    DeleteBackward, Start,
 };
 
 use crate::common;
@@ -75,7 +75,7 @@ fn pick(candidate: &CandidateMessage, script: CommitScript) -> Method {
     })
 }
 
-/// Every response of `Start(raw) → EnterContinuous → FetchAtPos`, then — when
+/// Every response of `Start(raw) → FetchAtPos`, then — when
 /// `nail` names a script — a pick of the lead candidate, a fetch, an `Append`
 /// of `appended`, a `DeleteBackward` and a last fetch.
 fn session(
@@ -88,11 +88,6 @@ fn session(
         send(
             &mut engine,
             Method::Start(Start { text: raw.into() }),
-            config,
-        ),
-        send(
-            &mut engine,
-            Method::EnterContinuous(EnterContinuous {}),
             config,
         ),
         fetch(&mut engine, config),
@@ -146,7 +141,7 @@ fn bopomofo_buffers_fetch_the_same_candidates_and_preedit() {
     // Bopomofo content upgrades both wires to `InputMode::Tps` before any
     // config field is read.
     let responses = assert_wires_agree("ㄉㄞˊㄨㄢˊ", None);
-    let hanji = hanji(&responses[2]);
+    let hanji = hanji(&responses[1]);
     assert!(
         hanji.iter().any(|h| h == "臺灣" || h == "台灣"),
         "{hanji:?}"
@@ -161,7 +156,7 @@ fn a_separator_space_buffer_fetches_the_same_candidates() {
     }
     // §31: the space is the tone-1 marker; `ㄍㄠ ㄉㄞ˪` reaches 交代 on both wires.
     let responses = assert_wires_agree("ㄍㄠ ㄉㄞ˪", None);
-    let hanji = hanji(&responses[2]);
+    let hanji = hanji(&responses[1]);
     assert!(hanji.iter().any(|h| h == "交代"), "{hanji:?}");
 }
 
@@ -185,7 +180,7 @@ fn the_nailed_prefix_after_a_legacy_commit_renders_the_same() {
     // Hanji-first on both wires: the nailed Hanji joins the pending tail with
     // no word space, and the tail's candidates keep the TPS fold.
     let responses = assert_wires_agree("ㄉㄞˊㄨㄢˊㄌㄤˊ", Some((CommitScript::Unspecified, "ㄚ")));
-    let nailed = responses[3]
+    let nailed = responses[2]
         .preedit
         .as_ref()
         .expect("preedit after the nail");
@@ -200,7 +195,7 @@ fn an_r5_commit_resolves_the_same_document_text() {
     // `commit_text::hanji_leads` reads `renders_hanji_first`: the stored swap
     // under `"tps"`, the folded one under `"tl"` — both lead with the Hanji.
     let responses = assert_wires_agree("ㄉㄞˊㄨㄢˊㄌㄤˊ", Some((CommitScript::Lead, "ㄚ")));
-    let resolution = responses[3].commit.as_ref().expect("an R5 resolution");
+    let resolution = responses[2].commit.as_ref().expect("an R5 resolution");
     assert!(!resolution.wrote_romanization, "{resolution:?}");
 }
 
@@ -219,6 +214,6 @@ fn negative_control_the_unfolded_tl_wire_renders_differently() {
     };
     let responses = session("ㄉㄞˊㄨㄢˊㄌㄤˊ", nail, &unfolded);
     assert_ne!(responses, session("ㄉㄞˊㄨㄢˊㄌㄤˊ", nail, &legacy_wire()));
-    let resolution = responses[3].commit.as_ref().expect("an R5 resolution");
+    let resolution = responses[2].commit.as_ref().expect("an R5 resolution");
     assert!(resolution.wrote_romanization, "{resolution:?}");
 }

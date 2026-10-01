@@ -21,7 +21,6 @@ final class ComposingEffectDecodingTests: XCTestCase {
             makeEffect(.commitTextReplacingPreedit(
                 payload(Taigi_Engine_CommitTextReplacingPreedit()) { $0.text = "台語" },
             )),
-            makeEffect(.deleteBackwardFromDocument(Taigi_Engine_DeleteBackwardFromDocument())),
             makeEffect(.resetAutocomplete(Taigi_Engine_ResetAutocomplete())),
             makeEffect(.performAutocomplete(Taigi_Engine_PerformAutocomplete())),
             makeEffect(.resetAutocompleteContext(Taigi_Engine_ResetAutocompleteContext())),
@@ -47,7 +46,6 @@ final class ComposingEffectDecodingTests: XCTestCase {
             .updatePreedit("tâi", caretUTF16: 2),
             .clearPreeditWithoutCommit,
             .commitTextReplacingPreedit("台語"),
-            .deleteBackwardFromDocument,
             .resetAutocomplete,
             .performAutocomplete,
             .resetAutocompleteContext,

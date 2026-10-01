@@ -10,12 +10,9 @@ import Foundation
 ///   character on a Mac keyboard rather than a dedicated key as it is on iOS.
 /// - `ReplaceLast` is skipped because it exists for TPS auto-correct, and macOS
 ///   ships TL and POJ only.
-/// - `CommitDerived` and `ResetContinuous` have no caller here:
-///   `Reset` already covers aborting a continuous composition
-///   (`transition.rs:554`).
-/// - `Start` is absent because `Append` enters `Phase::Composing` from Idle by
-///   itself (`transition.rs:54`), so a separate "begin" op would be a second way
-///   to do the same thing — and one that skips the per-character preprocessing.
+/// - `Start` is absent because `Append` begins the composition from Idle by
+///   itself, so a separate "begin" op would be a second way to do the same
+///   thing — and one that skips the per-character preprocessing.
 /// - `SelectSuggestion` is absent because it is not what it looks like. Under
 ///   `Phase::Continuous` it REPLACES the pending tail and re-prepends the nailed
 ///   prefix (`transition.rs:724`), so handing it the composition as rendered
@@ -167,27 +164,6 @@ extension RustEngineBridge {
     }
 
     // MARK: - Continuous input
-
-    /// Promotes an active composition into the continuous phase, where the
-    /// engine segments the whole buffer instead of one syllable. Safe to send
-    /// unconditionally: the engine no-ops on an empty buffer and on a
-    /// composition that is already continuous (`transition.rs:496-502`), so the
-    /// platform needs no eligibility rule of its own.
-    static func composingEnterContinuous(
-        settings: EngineSettings,
-        generation: UInt64,
-    ) -> ComposingTransition? {
-        dispatchComposing(
-            .enterContinuous(Taigi_Engine_EnterContinuous()),
-            op: "composingEnterContinuous",
-            generation: generation,
-            // Carries the swap like `composingAppend`: already under
-            // Continuous the answer is a snapshot whose `displayText` the
-            // manager mirrors, and one rendered without the swap would put
-            // the space back.
-            config: appConfig(settings),
-        )
-    }
 
     /// Reads the candidates for the current continuous composition.
     ///
@@ -369,8 +345,6 @@ extension RustEngineBridge {
             return .clearPreeditWithoutCommit
         case let .commitTextReplacingPreedit(payload):
             return .commitTextReplacingPreedit(payload.text)
-        case .deleteBackwardFromDocument:
-            return .deleteBackwardFromDocument
         case .resetAutocomplete:
             return .resetAutocomplete
         case .performAutocomplete:

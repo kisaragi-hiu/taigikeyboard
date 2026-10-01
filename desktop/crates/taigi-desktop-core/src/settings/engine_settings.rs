@@ -140,8 +140,8 @@ impl SettingChoice for CandidateDisplayMode {
 /// Immutable snapshot of everything the engine needs to render a composition.
 ///
 /// A snapshot rather than a set of getters because a single user intent can
-/// issue several engine calls (an `Append` is immediately followed by an
-/// `EnterContinuous`), and those calls must agree (`EngineSettings.swift:14-20`).
+/// issue several engine calls (a commit, then the next-word handshake), and
+/// those calls must agree (`EngineSettings.swift:14-20`).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EngineSettings {
     pub input_mode: InputMode,

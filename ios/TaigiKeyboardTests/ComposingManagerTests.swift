@@ -193,7 +193,7 @@ final class ComposingManagerTests: XCTestCase {
         manager.commitComposition()
 
         XCTAssertFalse(manager.isComposing)
-        // v3.5.8 Phase 7B: startComposing auto-promotes to Phase::Continuous;
+        // startComposing composes in Phase::Continuous (R12);
         // `commitComposition` routes through CommitRaw, which under Continuous
         // commits `derived_display(pending)` and fires the terminal
         // NextWordWordSelected (records the association — Model B; matches

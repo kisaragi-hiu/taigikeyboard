@@ -17,8 +17,6 @@ extension KeyboardViewController {
                 "clearPreeditWithoutCommit"
             case let .commitTextReplacingPreedit(text):
                 "commitTextReplacingPreedit len=\(text.count)"
-            case .deleteBackwardFromDocument:
-                "deleteBackwardFromDocument"
             case .resetAutocomplete:
                 "resetAutocomplete"
             case .performAutocomplete:
@@ -45,8 +43,6 @@ extension KeyboardViewController {
             // achieves this via `commitText(text, 1)`).
             clearMarkedText()
             textDocumentProxy.insertText(text)
-        case .deleteBackwardFromDocument:
-            textDocumentProxy.deleteBackward()
         case .resetAutocomplete:
             resetAutocomplete()
         case .performAutocomplete:

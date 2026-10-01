@@ -428,7 +428,7 @@ class TextInputManager(
         // drop residual state at the FFI boundary on the next request.
         val ic = taigikeyboard.currentInputConnection
         if (ic != null) {
-            getComposingManager()?.resetContinuous(ic)
+            getComposingManager()?.reset(ic)
         }
         getComposingManager()?.bumpGeneration()
 

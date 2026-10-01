@@ -93,7 +93,6 @@ final class RustEngineBridgeComposingTests: XCTestCase {
 
     func testCommitRaw_commitsTheCompositionAsRendered() throws {
         let composed = try compose("tai")
-        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
 
         let transition = try XCTUnwrap(
             RustEngineBridge.composingCommitRaw(settings: settings, generation: generation),
@@ -115,7 +114,6 @@ final class RustEngineBridgeComposingTests: XCTestCase {
     /// `SelectSuggestion` has no macOS wrapper at all.
     func testCommitRaw_afterANailedSegment_writesTheCompositionOnceNotTwice() throws {
         _ = try compose("taigi")
-        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
         let pendingBytes = UInt32("taigi".utf8.count)
         let candidates = try XCTUnwrap(
             XCTUnwrap(
@@ -154,7 +152,6 @@ final class RustEngineBridgeComposingTests: XCTestCase {
 
     func testCommitPreeditThenInsertExternal_commitsCompositionAndTrailingTextTogether() throws {
         _ = try compose("tai")
-        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
         let transition = try XCTUnwrap(RustEngineBridge.composingCommitPreeditThenInsertExternal(
             " ",
             settings: settings,
@@ -173,9 +170,8 @@ final class RustEngineBridgeComposingTests: XCTestCase {
 
     // MARK: - Continuous input
 
-    func testFetchAtPos_afterEnteringContinuous_returnsCandidates() throws {
+    func testFetchAtPos_afterComposing_returnsCandidates() throws {
         _ = try compose("taigi")
-        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
 
         let result = try XCTUnwrap(
             RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation),
@@ -201,7 +197,6 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         for character in "taigi" {
             _ = RustEngineBridge.composingAppend(String(character), settings: allOff, generation: generation)
         }
-        _ = RustEngineBridge.composingEnterContinuous(settings: allOff, generation: generation)
 
         let candidates = try XCTUnwrap(
             RustEngineBridge.composingFetchAtPos(settings: allOff, generation: generation)?.candidates,
@@ -226,7 +221,6 @@ final class RustEngineBridgeComposingTests: XCTestCase {
     /// invert through the settings the shipped provider reads.
     func testFetchAtPos_literalRomanCandidateLeads_underTheShippedDefaults() throws {
         _ = try compose("taigi")
-        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: generation)
 
         let shown = try XCTUnwrap(
             RustEngineBridge.composingFetchAtPos(settings: settings, generation: generation),

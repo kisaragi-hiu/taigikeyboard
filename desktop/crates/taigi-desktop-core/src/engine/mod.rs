@@ -18,8 +18,7 @@ pub mod user_data;
 
 pub use composing::{
     append, commit_continuous, commit_preedit_then_insert_external, commit_raw, delete_backward,
-    enter_continuous, fetch_at_pos, move_caret, reset, telex_key, CommitContinuousArgs,
-    CommitScript,
+    fetch_at_pos, move_caret, reset, telex_key, CommitContinuousArgs, CommitScript,
 };
 pub use external_lookup::{chhoe_url, digit_tone_form, moe_url};
 pub use lexicon::{

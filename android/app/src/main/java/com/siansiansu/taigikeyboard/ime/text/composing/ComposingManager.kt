@@ -13,15 +13,12 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.composingAppend
 import com.siansiansu.taigikeyboard.engine.composingAppendHyphen
 import com.siansiansu.taigikeyboard.engine.composingCommitContinuous
-import com.siansiansu.taigikeyboard.engine.composingCommitDerived
 import com.siansiansu.taigikeyboard.engine.composingCommitPreeditThenInsertExternal
 import com.siansiansu.taigikeyboard.engine.composingCommitRaw
 import com.siansiansu.taigikeyboard.engine.composingDeleteBackward
-import com.siansiansu.taigikeyboard.engine.composingEnterContinuous
 import com.siansiansu.taigikeyboard.engine.composingFetchAtPos
 import com.siansiansu.taigikeyboard.engine.composingReplaceLast
 import com.siansiansu.taigikeyboard.engine.composingReset
-import com.siansiansu.taigikeyboard.engine.composingResetContinuous
 import com.siansiansu.taigikeyboard.engine.composingSelectSuggestion
 import com.siansiansu.taigikeyboard.engine.composingStart
 import com.siansiansu.taigikeyboard.engine.continuousAppConfig
@@ -152,12 +149,12 @@ class ComposingManager(
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=startComposing char='$char'" }
         val settings = settingsProvider.current
-        // Snapshot generation BEFORE the dispatch so the tail-call promote
+        // Snapshot generation BEFORE the dispatch so the Reset + Start pair
         // shares the same value. `applyTransition` may synchronously re-enter
         // via `onUpdateSelection` → `bumpGeneration` on hosts that fire
         // selection callbacks inside `commitText` / `setComposingText`;
-        // re-reading `currentGeneration` would let EnterContinuous silently
-        // reset newer composing state.
+        // re-reading `currentGeneration` would let Start silently reset the
+        // state the Reset just cleared.
         val generation = currentGeneration
         if (_isComposing.value) {
             // Mid-composition restart: clear-without-commit before starting fresh.
@@ -174,7 +171,6 @@ class ComposingManager(
             ),
             ic,
         )
-        promoteToContinuousIfEligible(settings, ic, generation)
     }
 
     fun appendCharacter(
@@ -183,30 +179,26 @@ class ComposingManager(
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=appendCharacter char='$char'" }
         val settings = settingsProvider.current
-        val generation = currentGeneration
         applyTransition(
             RustEngineBridge.composingAppend(
                 char,
                 settings,
-                generation,
+                currentGeneration,
             ),
             ic,
         )
-        promoteToContinuousIfEligible(settings, ic, generation)
     }
 
     fun appendHyphen(ic: InputConnection) {
         logger.tdebug(TAG) { "[COMPOSE] fn=appendHyphen" }
         val settings = settingsProvider.current
-        val generation = currentGeneration
         applyTransition(
             RustEngineBridge.composingAppendHyphen(
                 settings,
-                generation,
+                currentGeneration,
             ),
             ic,
         )
-        promoteToContinuousIfEligible(settings, ic, generation)
     }
 
     fun replaceLastCharacter(
@@ -215,36 +207,28 @@ class ComposingManager(
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=replaceLastCharacter replacement='$replacement'" }
         val settings = settingsProvider.current
-        val generation = currentGeneration
         applyTransition(
             RustEngineBridge.composingReplaceLast(
                 replacement,
                 settings,
-                generation,
+                currentGeneration,
             ),
             ic,
         )
-        promoteToContinuousIfEligible(settings, ic, generation)
     }
 
     /**
      * Delete one grapheme. Returns `true` if the wrapper consumed the key.
      *
      * **Model B** (v3.5.8 Phase 9, Codex pre-impl point 5): route ALL
-     * composing backspace to the engine. The old Android divergence —
-     * routing the 1-char / empty-raw case through
-     * [RustEngineBridge.composingReset] to stop a stray
-     * `DeleteBackwardFromDocument` deleting a pre-existing document char —
-     * no longer applies: under Model B `delete_backward_continuous` never
-     * emits `DeleteBackwardFromDocument` (nailed segments are not in the
-     * document), and `Continuous { raw: "", nailed: [...] }` is a valid
+     * composing backspace to the engine. The engine never deletes from the
+     * document on backspace (the composition lives only in the marked
+     * region), and `Continuous { raw: "", nailed: [...] }` is a valid
      * live state where the next backspace must **unnail** the last segment.
      * The old `_rawInput.value.isEmpty()` early-return wrongly let that key
      * fall through to the host (deleting a real document char); the
      * `length == 1` reset shortcut would wrongly abort the whole
-     * composition when a nailed prefix exists. Bare `Phase::Composing`
-     * reaching here would violate the Phase 7B invariant; we deliberately
-     * do not branch on phase (no safe phase signal in the mirror).
+     * composition when a nailed prefix exists.
      *
      * The engine owns every sub-case (pending shrink / unnail / exit).
      */
@@ -275,21 +259,8 @@ class ComposingManager(
         // composition (`select_suggestion_under_continuous` prepends
         // `nailed_prefix`). `selectSuggestion(candidate)` still uses
         // SelectSuggestion (bare candidate → engine prepends correctly).
-        // Empty preedit → CommitDerived (a no-op on Idle). Bare
-        // `Phase::Composing` reaching here would violate the Phase 7B
-        // invariant; we deliberately do not branch on phase (Codex pre-impl
-        // point 3).
+        // An empty composition makes `CommitRaw` a no-op.
         val settings = settingsProvider.current
-        if (getComposingText().orEmpty().isEmpty()) {
-            applyAsSelfCommit(
-                RustEngineBridge.composingCommitDerived(
-                    settings,
-                    currentGeneration,
-                ),
-                ic,
-            )
-            return
-        }
         applyAsSelfCommit(
             RustEngineBridge.composingCommitRaw(
                 settings,
@@ -360,34 +331,6 @@ class ComposingManager(
     }
 
     // region Continuous-input platform integration (v3.5.8)
-
-    /**
-     * Synchronous tail-call promote into `Phase::Continuous` after every raw-
-     * input mutation. Caller (Start / Append / AppendHyphen / ReplaceLast)
-     * passes the same `generation` snapshot it captured before its own
-     * dispatch — re-reading [currentGeneration] here is unsafe because
-     * synchronous `onUpdateSelection` callbacks during the preceding
-     * `applyTransition` can bump it.
-     *
-     * Engine no-ops on empty buffer / already-Continuous; the local
-     * `_rawInput.value.isEmpty()` short-circuit saves the FFI roundtrip in
-     * the empty-buffer case (StateFlow is set by the immediately preceding
-     * same-thread `applyTransition` so it is fresh).
-     */
-    private fun promoteToContinuousIfEligible(
-        settings: com.siansiansu.taigikeyboard.ime.settings.EngineSettings,
-        ic: InputConnection,
-        generation: Long,
-    ) {
-        if (_rawInput.value.isEmpty()) return
-        val transition = RustEngineBridge.composingEnterContinuous(
-            settings,
-            generation,
-        )
-        // EnterContinuous emits zero effects; applyTransition still runs to
-        // refresh the local mirror with the engine snapshot.
-        applyTransition(transition, ic)
-    }
 
     /**
      * Span-local candidate query for the current `Phase::Continuous { raw }`.
@@ -472,25 +415,6 @@ class ComposingManager(
             selfCommitInProgress = false
         }
         return result.outcome
-    }
-
-    /**
-     * Abort Continuous-input. Drops `Phase::Continuous`'s pending + nailed
-     * list, exits to Idle, emits the standard abort effect trio
-     * (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
-     * `NextWordClearForNewComposing`). **Model B** (§10.6): nailed segments
-     * were never literal document text — `ClearPreeditWithoutCommit` clears
-     * the WHOLE marked composition; abort discards it entirely (no document
-     * write, no `DeleteBackwardFromDocument`). Used by
-     * `TextInputManager.onInputModeChanged` so stale Continuous state can't
-     * leak across TL ↔ POJ ↔ TPS swaps.
-     */
-    fun resetContinuous(ic: InputConnection) {
-        logger.tdebug(TAG) { "[COMPOSE] fn=resetContinuous" }
-        applyAsSelfCommit(
-            RustEngineBridge.composingResetContinuous(currentGeneration),
-            ic,
-        )
     }
 
     // endregion
@@ -651,7 +575,6 @@ private fun RustEngineBridge.ComposingTransition.Effect.describeKind(): String =
         is RustEngineBridge.ComposingTransition.Effect.UpdatePreedit -> "UpdatePreedit len=${display.length}"
         RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit -> "ClearPreeditWithoutCommit"
         is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit -> "CommitTextReplacingPreedit len=${text.length}"
-        RustEngineBridge.ComposingTransition.Effect.DeleteBackwardFromDocument -> "DeleteBackwardFromDocument"
         RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete -> "ResetAutocomplete"
         RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete -> "PerformAutocomplete"
         RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext -> "ResetAutocompleteContext"

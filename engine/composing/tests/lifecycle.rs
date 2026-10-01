@@ -3,7 +3,7 @@
 
 use composing::EngineHandle;
 use protos::engine::composing_request::Method;
-use protos::engine::{Append, ComposingRequest, EnterContinuous, FetchAtPos, Reset, Start};
+use protos::engine::{Append, ComposingRequest, FetchAtPos, Reset, Start};
 
 use crate::common::{config_tl, req};
 
@@ -29,25 +29,6 @@ fn lifecycle_generation_increment_silently_drops_state() {
     // The drop itself emits NO effects; the Start request emits its normal effects.
     assert_eq!(resp_after_bump.effect.len(), 2);
     let _ = resp_same; // suppress unused
-}
-
-#[test]
-fn lifecycle_enter_continuous_at_a_new_generation_still_resets() {
-    // `EnterContinuous` is a no-op transition since R12 but stays a mutating
-    // intent: a platform that bumped its generation still gets a fresh engine.
-    let handle = EngineHandle::new();
-    handle.handle(&req_start("abc"), &config_tl(), 1).unwrap();
-    let resp = handle
-        .handle(
-            &ComposingRequest {
-                method: Some(Method::EnterContinuous(EnterContinuous {})),
-            },
-            &config_tl(),
-            2,
-        )
-        .unwrap();
-    assert!(resp.effect.is_empty());
-    assert!(!resp.is_composing, "the stale composition was dropped");
 }
 
 #[test]
@@ -105,13 +86,6 @@ fn req_fetch_at_pos() -> ComposingRequest {
 
 fn start_continuous(handle: &EngineHandle, text: &str) {
     handle.handle(&req_start(text), &config_tl(), 1).unwrap();
-    handle
-        .handle(
-            &req(Method::EnterContinuous(EnterContinuous {})),
-            &config_tl(),
-            1,
-        )
-        .unwrap();
 }
 
 #[test]

@@ -5,9 +5,9 @@ use composing::CommitScript;
 use composing::{requests, Engine, Intent};
 use protos::engine::composing_request::Method;
 use protos::engine::{
-    Append, AppendHyphen, CommitContinuous, CommitDerived, CommitPreeditThenInsertExternal,
-    CommitRaw, CommitScript as WireCommitScript, ComposingRequest, DeleteBackward, EnterContinuous,
-    ReplaceLast, Reset, ResetContinuous, SelectSuggestion, Start,
+    Append, AppendHyphen, CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw,
+    CommitScript as WireCommitScript, ComposingRequest, DeleteBackward, ReplaceLast, Reset,
+    SelectSuggestion, Start,
 };
 
 use crate::common;
@@ -88,10 +88,6 @@ fn every_method_decodes_to_its_intent() {
             Method::DeleteBackward(DeleteBackward {}),
             Intent::DeleteBackward,
         ),
-        (
-            Method::CommitDerived(CommitDerived {}),
-            Intent::CommitDerived,
-        ),
         (Method::CommitRaw(CommitRaw {}), Intent::CommitRaw),
         (
             Method::SelectSuggestion(SelectSuggestion { text: "好".into() }),
@@ -106,10 +102,6 @@ fn every_method_decodes_to_its_intent() {
             },
         ),
         (Method::Reset(Reset {}), Intent::Reset),
-        (
-            Method::EnterContinuous(EnterContinuous {}),
-            Intent::EnterContinuous,
-        ),
         (
             Method::CommitContinuous(CommitContinuous {
                 consumed_bytes: 3,
@@ -130,7 +122,6 @@ fn every_method_decodes_to_its_intent() {
                 roman: "tsu".into(),
             },
         ),
-        (Method::ResetContinuous(ResetContinuous {}), Intent::Reset),
     ];
     for (method, expected) in cases {
         let decoded = requests::decode_intent(&req(method.clone())).expect("method present");
@@ -244,12 +235,6 @@ fn intent_telex_f_appends_a_hyphen() {
 fn intent_telex_under_continuous_edits_only_the_pending_tail() {
     let mut engine = Engine::new();
     append(&mut engine, "tai", &config_tl());
-    requests::handle(
-        &req(Method::EnterContinuous(protos::engine::EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
     let resp = telex(&mut engine, "d", &config_tl());
     let preedit = resp.preedit.unwrap();
     assert_eq!(preedit.raw_input, "tai5");
@@ -290,12 +275,6 @@ fn intent_telex_under_continuous_keeps_nailed_segments() {
     // has a non-empty pending tail beside it — `tsu` nailed out of `tsuts`.
     let mut engine = Engine::new();
     append(&mut engine, "tsuts", &config_tl());
-    requests::handle(
-        &req(Method::EnterContinuous(protos::engine::EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
     nail(&mut engine, "珠", 3);
     append(&mut engine, "ai", &config_tl());
     let resp = telex(&mut engine, "d", &config_tl());

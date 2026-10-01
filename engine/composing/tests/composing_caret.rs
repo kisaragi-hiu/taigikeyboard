@@ -190,12 +190,10 @@ fn telex_key_acts_on_the_chunk_before_the_caret() {
 }
 
 #[test]
-fn continuous_keeps_the_caret_on_enter_continuous_resets_it_on_nail_and_never_enters_a_segment() {
-    // "tsua" caret 3 (← once) → the no-op EnterContinuous keeps 3.
+fn continuous_resets_the_caret_on_nail_and_never_enters_a_segment() {
+    // "tsua" caret 3 (← once).
     let mut engine = start("tsua");
-    move_caret(&mut engine, CaretDirection::Left);
-    let resp = engine.apply(Intent::EnterContinuous, &config_tl());
-    assert!(resp.effect.is_empty());
+    let resp = move_caret(&mut engine, CaretDirection::Left);
     assert_eq!(caret_of(&engine), 3);
     assert_eq!(preedit(&resp).caret_utf16, 3);
 
@@ -282,7 +280,6 @@ fn continuous_mid_tail_append_keeps_the_nailed_prefix_and_projects_the_caret() {
     // then "h": "ai" caret 2 → ← caret 1 → insert h at 1 → "ahi" caret 2.
     // Display "珠 ahi": prefix "珠 " is 2 units, a→1, h→2; caret 4.
     let mut engine = start("tsua");
-    engine.apply(Intent::EnterContinuous, &config_tl());
     engine.apply(
         Intent::CommitContinuous {
             canonical_text: "珠".to_string(),
@@ -331,7 +328,6 @@ fn hanji_first_prefix_has_no_space_before_the_tail() {
         },
         &config,
     );
-    engine.apply(Intent::EnterContinuous, &config);
     let resp = engine.apply(
         Intent::CommitContinuous {
             canonical_text: "珠".to_string(),

@@ -18,10 +18,6 @@ struct ComposingTransition: Equatable, Sendable {
         case updatePreedit(String, caretUTF16: Int)
         case clearPreeditWithoutCommit
         case commitTextReplacingPreedit(String)
-        /// Emitted only by the `Phase::Composing` backspace-to-empty branch
-        /// (`engine/composing/src/transition.rs:266-276`); the continuous branch
-        /// never emits it (`transition.rs:289-292`).
-        case deleteBackwardFromDocument
         case resetAutocomplete
         case performAutocomplete
         case resetAutocompleteContext

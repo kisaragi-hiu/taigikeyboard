@@ -49,14 +49,12 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             replacement: m.replacement,
         },
         Method::DeleteBackward(_) => Intent::DeleteBackward,
-        Method::CommitDerived(_) => Intent::CommitDerived,
         Method::CommitRaw(_) => Intent::CommitRaw,
         Method::SelectSuggestion(m) => Intent::SelectSuggestion { text: m.text },
         Method::CommitPreeditThenInsertExternal(m) => {
             Intent::CommitPreeditThenInsertExternal { text: m.text }
         }
         Method::Reset(_) => Intent::Reset,
-        Method::EnterContinuous(_) => Intent::EnterContinuous,
         // The user rows are the engine's own reads (`UserRows`); a platform
         // sends none.
         Method::FetchAtPos(m) => {
@@ -71,8 +69,6 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             consumed_bytes: m.consumed_bytes as usize,
             syllable_count: clamp_syllable_count(m.syllable_count),
         },
-        // Identical to `Reset` since R12: Idle → no-op, Continuous → abort trio.
-        Method::ResetContinuous(_) => Intent::Reset,
         Method::TelexKey(m) => Intent::TelexKey { key: m.key },
         Method::MoveCaret(m) => Intent::MoveCaret {
             direction: match m.direction() {

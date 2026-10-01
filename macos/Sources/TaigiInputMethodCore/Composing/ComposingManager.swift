@@ -125,10 +125,10 @@ final class ComposingManager {
         )
     }
 
-    /// Appends one typed character. The engine starts a composition when it is
-    /// idle (`engine/composing/src/transition.rs:55`), so there is no separate
-    /// "begin" call and no platform-side phase check that could disagree with
-    /// the engine's.
+    /// Appends one typed character — one engine request per key. The engine
+    /// starts a composition when it is idle, so there is no separate "begin"
+    /// call and no platform-side phase check that could disagree with the
+    /// engine's.
     func append(_ character: String, executing executor: ComposingEffectExecutor) {
         Self.logger.debug("append '\(character)'")
         let settings = settingsProvider.current
@@ -140,15 +140,12 @@ final class ComposingManager {
             ),
             executing: executor,
         )
-        promoteToContinuous(settings: settings, executing: executor)
     }
 
     /// Applies one Telex key — a tone letter, `z` or `f` — to the pending
     /// syllable. Shaped like `append` because it is the same step with the
     /// engine deciding what the key writes (`engine/composing/src/telex.rs`):
-    /// an idle `z` starts a composition the way a letter does, and the
-    /// promotion afterwards is what keeps a Telex-typed syllable on the same
-    /// continuous phase an appended one reaches.
+    /// an idle `z` starts a composition the way a letter does.
     func telexKey(_ key: String, executing executor: ComposingEffectExecutor) {
         Self.logger.debug("telexKey '\(key)'")
         let settings = settingsProvider.current
@@ -160,7 +157,6 @@ final class ComposingManager {
             ),
             executing: executor,
         )
-        promoteToContinuous(settings: settings, executing: executor)
     }
 
     /// Drops the last character of the raw buffer. Ends the composition when
@@ -377,25 +373,6 @@ final class ComposingManager {
     /// Promotes the composition into the continuous phase, where the engine
     /// segments the whole buffer instead of one syllable.
     ///
-    /// Sent unconditionally on the same call stack as the character that
-    /// triggered it, sharing its generation: the engine no-ops on an empty
-    /// buffer and on an already-continuous composition (`transition.rs:496-502`),
-    /// so a platform-side eligibility rule would only be a second, drifting
-    /// copy of that decision — and deferring the call to a later turn would let
-    /// a generation bump land in between and wipe the composition it promotes.
-    private func promoteToContinuous(
-        settings: EngineSettings,
-        executing executor: ComposingEffectExecutor,
-    ) {
-        apply(
-            RustEngineBridge.composingEnterContinuous(
-                settings: settings,
-                generation: currentGeneration,
-            ),
-            executing: executor,
-        )
-    }
-
     /// Mirror first, then run the effects in the order the engine listed them.
     /// The order is the engine's instruction, not an implementation detail: a
     /// commit that ran before the preedit update it replaces would leave the
@@ -446,7 +423,6 @@ final class ComposingManager {
             case .updatePreedit,
                  .clearPreeditWithoutCommit,
                  .commitTextReplacingPreedit,
-                 .deleteBackwardFromDocument,
                  .resetAutocomplete,
                  .performAutocomplete,
                  .resetAutocompleteContext:

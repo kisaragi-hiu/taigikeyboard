@@ -13,8 +13,7 @@ use std::sync::OnceLock;
 use common::{open_user_data, roundtrip, tl_config};
 use protos::engine::{
     composing_request, next_word_request, request, response, CommitContinuous, ComposingRequest,
-    DecisionInput, EnterContinuous, FetchAtPos, NextWordRequest, Reset, ResetAll, Start,
-    WordSelected,
+    DecisionInput, FetchAtPos, NextWordRequest, Reset, ResetAll, Start, WordSelected,
 };
 use userdata::{AssociationPair, JournalMode, UserDataPaths, UserDataStores};
 
@@ -78,10 +77,6 @@ fn hanji_after_typing(generation: u64, raw: &str) -> Vec<String> {
         composing_request::Method::Start(Start {
             text: raw.to_owned(),
         }),
-    );
-    composing(
-        generation,
-        composing_request::Method::EnterContinuous(EnterContinuous {}),
     );
     fetched_hanji(generation)
 }
@@ -176,10 +171,6 @@ fn the_previous_word_reranks_the_candidates() {
         composing_request::Method::Start(Start {
             text: "tsintse".to_owned(),
         }),
-    );
-    composing(
-        generation,
-        composing_request::Method::EnterContinuous(EnterContinuous {}),
     );
     composing(
         generation,

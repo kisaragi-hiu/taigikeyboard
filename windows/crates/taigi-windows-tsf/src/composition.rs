@@ -385,10 +385,6 @@ impl ComposingEffectExecutor for CompositionEditor<'_> {
                 Effect::UpdatePreedit { text, caret_utf16 } => self.set_preedit(text, *caret_utf16),
                 Effect::ClearPreeditWithoutCommit => self.end_with(""),
                 Effect::CommitTextReplacingPreedit(text) => self.end_with(text),
-                // NAMED DIVERGENCE (as macOS `ClientEffectExecutor.swift:56-63`):
-                // the preedit only ever lived in the composition, so deleting
-                // a document character would eat a real host character.
-                Effect::DeleteBackwardFromDocument => Ok(()),
                 // No autocomplete surface; the learning handshakes never reach
                 // an executor (`ComposingManager` reports them to next word).
                 Effect::ResetAutocomplete

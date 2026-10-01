@@ -85,10 +85,9 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
 /// Immutable snapshot of everything the engine needs to render a composition.
 ///
 /// A snapshot rather than a set of getters because a single user intent can
-/// issue several FFI calls (an `Append` is immediately followed by an
-/// `EnterContinuous`), and those calls must agree: reading the settings twice
-/// could straddle a change and render the two halves of one keystroke under
-/// different rules.
+/// issue several FFI calls (a commit, then its next-word handshake), and those
+/// calls must agree: reading the settings twice could straddle a change and
+/// render the two halves of one intent under different rules.
 struct EngineSettings: Equatable, Sendable {
     let inputMode: InputMode
 

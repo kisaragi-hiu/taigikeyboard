@@ -22,12 +22,6 @@ pub enum Effect {
     },
     ClearPreeditWithoutCommit,
     CommitTextReplacingPreedit(String),
-    /// Emitted only by the `Phase::Composing` backspace-to-empty branch
-    /// (`engine/composing/src/transition.rs:266-276`). Ignored on desktop:
-    /// the preedit only ever lived in the composition, so deleting a document
-    /// character would eat a real host character (named divergence, macOS
-    /// `ClientEffectExecutor.swift:56-63`).
-    DeleteBackwardFromDocument,
     ResetAutocomplete,
     PerformAutocomplete,
     ResetAutocompleteContext,
@@ -91,7 +85,6 @@ impl Effect {
             effect::Kind::CommitTextReplacingPreedit(payload) => {
                 Effect::CommitTextReplacingPreedit(payload.text.clone())
             }
-            effect::Kind::DeleteBackwardFromDocument(_) => Effect::DeleteBackwardFromDocument,
             effect::Kind::ResetAutocomplete(_) => Effect::ResetAutocomplete,
             effect::Kind::PerformAutocomplete(_) => Effect::PerformAutocomplete,
             effect::Kind::ResetAutocompleteContext(_) => Effect::ResetAutocompleteContext,

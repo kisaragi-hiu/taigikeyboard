@@ -1,14 +1,14 @@
 //! v3.5.8 Continuous Input Phase 6 — dispatch decoding + degraded-path tests.
 //!
 //! Covers:
-//! - Decoding `EnterContinuous` / `FetchAtPos` / `CommitContinuous` /
-//!   `ResetContinuous` from `ComposingRequest.method` oneof variants.
+//! - Decoding `FetchAtPos` / `CommitContinuous` from `ComposingRequest.method`
+//!   oneof variants.
 //! - `Intent::FetchAtPos` short-circuit behavior in `requests::handle`:
 //!   - Idle → `continuous = None` snapshot.
-//!   - right after the first keystroke (no `EnterContinuous`) → carrier.
+//!   - right after the first keystroke → carrier.
 //!   - `Phase::Continuous` + lexicon NOT installed → `continuous =
 //!     Some(empty)`.
-//! - `EnterContinuous` / `CommitContinuous` / `ResetContinuous` answers
+//! - `CommitContinuous` / `Reset` answers
 //!   carry no `continuous` carrier (their transitions are pinned on
 //!   `Engine::apply` in `continuous_phase.rs`).
 //!
@@ -21,7 +21,7 @@ use composing::api::{Engine, Phase};
 use composing::requests;
 use protos::engine::composing_request::Method;
 use protos::engine::CommitScript;
-use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, ResetContinuous};
+use protos::engine::{CommitContinuous, FetchAtPos};
 
 use crate::common::{config_tl, req};
 
@@ -29,10 +29,9 @@ use crate::common::{config_tl, req};
 
 #[test]
 fn fetch_at_pos_right_after_the_first_keystroke_answers_candidates() {
-    // R12: a fetch that reaches the engine before the platform's
-    // `EnterContinuous` (iOS async autocomplete) already finds a
-    // composition — before, it saw `Phase::Composing` and answered no
-    // carrier, an empty candidate bar.
+    // R12: the first keystroke's fetch already finds a composition. Before,
+    // an iOS async fetch that beat the platform's promotion call saw
+    // `Phase::Composing` and answered no carrier — an empty candidate bar.
     let mut engine = Engine::new();
     requests::handle(
         &req(Method::Start(protos::engine::Start {
@@ -90,12 +89,6 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
         &config_tl(),
     )
     .unwrap();
-    requests::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
 
     let resp = requests::handle(
         &req(Method::FetchAtPos(FetchAtPos {
@@ -133,12 +126,6 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
             &req(Method::Start(protos::engine::Start {
                 text: "tsua".into(),
             })),
-            &mut engine,
-            &config_tl(),
-        )
-        .unwrap();
-        requests::handle(
-            &req(Method::EnterContinuous(EnterContinuous {})),
             &mut engine,
             &config_tl(),
         )
@@ -210,12 +197,6 @@ fn decode_fetch_at_pos_hanji_buffer_returns_empty_carrier() {
         &config_tl(),
     )
     .unwrap();
-    requests::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
     assert!(matches!(
         engine.snapshot_state().phase,
         Phase::Continuous { .. }
@@ -254,12 +235,6 @@ fn decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier() {
         &config_tl(),
     )
     .unwrap();
-    requests::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
     assert!(matches!(
         engine.snapshot_state().phase,
         Phase::Continuous { .. }
@@ -292,41 +267,12 @@ fn decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier() {
 // candidate strip on a state-changing op. (Codex post-impl finding.)
 
 #[test]
-fn enter_continuous_response_omits_continuous_carrier() {
-    let mut engine = Engine::new();
-    requests::handle(
-        &req(Method::Start(protos::engine::Start {
-            text: "tsua".into(),
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    let resp = requests::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .expect("dispatch ok");
-    assert!(
-        resp.continuous.is_none(),
-        "EnterContinuous must NOT populate continuous"
-    );
-}
-
-#[test]
 fn commit_continuous_response_omits_continuous_carrier() {
     let mut engine = Engine::new();
     requests::handle(
         &req(Method::Start(protos::engine::Start {
             text: "tsua".into(),
         })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    requests::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
         &config_tl(),
     )
@@ -352,7 +298,7 @@ fn commit_continuous_response_omits_continuous_carrier() {
 }
 
 #[test]
-fn reset_continuous_response_omits_continuous_carrier() {
+fn reset_response_omits_continuous_carrier() {
     let mut engine = Engine::new();
     requests::handle(
         &req(Method::Start(protos::engine::Start {
@@ -362,47 +308,36 @@ fn reset_continuous_response_omits_continuous_carrier() {
         &config_tl(),
     )
     .unwrap();
-    requests::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
     let resp = requests::handle(
-        &req(Method::ResetContinuous(ResetContinuous {})),
+        &req(Method::Reset(protos::engine::Reset {})),
         &mut engine,
         &config_tl(),
     )
     .expect("dispatch ok");
     assert!(
         resp.continuous.is_none(),
-        "ResetContinuous must NOT populate continuous"
+        "Reset must NOT populate continuous"
     );
 }
 
-// ---- Phase-4 precondition retest at dispatch layer ------------------------
+// ---- Empty-composition precondition at the dispatch layer -----------------
 // Phase 4 transition tests cover this; mirror at dispatch boundary so a
 // future intent-decode rename can't silently relax the precondition.
 // (Codex post-impl finding.)
 
 #[test]
-fn empty_start_then_enter_continuous_stays_idle() {
+fn empty_start_stays_idle_at_the_wire() {
     let mut engine = Engine::new();
-    requests::handle(
-        &req(Method::Start(protos::engine::Start { text: "".into() })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
     let resp = requests::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
+        &req(Method::Start(protos::engine::Start { text: "".into() })),
         &mut engine,
         &config_tl(),
     )
     .expect("dispatch ok");
     assert!(
         !matches!(engine.snapshot_state().phase, Phase::Continuous { .. }),
-        "EnterContinuous from empty raw must NOT enter Phase::Continuous"
+        "an empty Start must NOT enter Phase::Continuous"
     );
+    assert!(!resp.is_composing);
     assert!(resp.continuous.is_none());
 }

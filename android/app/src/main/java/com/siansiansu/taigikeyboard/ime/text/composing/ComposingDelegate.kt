@@ -47,10 +47,6 @@ object DefaultComposingDelegate : ComposingDelegate {
                 ic.commitText(effect.text, 1)
             }
 
-            RustEngineBridge.ComposingTransition.Effect.DeleteBackwardFromDocument -> {
-                ic.deleteSurroundingText(1, 0)
-            }
-
             RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete,
             RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete,
             RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext,

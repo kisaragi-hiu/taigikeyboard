@@ -8,10 +8,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * Platform-neutral effects. The wrapper maps document-mutation effects
- * (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`
- * / `DeleteBackwardFromDocument`) to `setComposingText` / `commitText` /
- * `deleteSurroundingText` (Android) or `setMarkedText` / `clearMarkedText` +
- * `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
+ * (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`)
+ * to `setComposingText` / `commitText` (Android) or `setMarkedText` /
+ * `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
  * `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
  * autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
  *
@@ -41,7 +40,6 @@ public  final class Effect extends
     UPDATE_PREEDIT(1),
     CLEAR_PREEDIT_WITHOUT_COMMIT(2),
     COMMIT_TEXT_REPLACING_PREEDIT(3),
-    DELETE_BACKWARD_FROM_DOCUMENT(4),
     RESET_AUTOCOMPLETE(5),
     PERFORM_AUTOCOMPLETE(6),
     RESET_AUTOCOMPLETE_CONTEXT(7),
@@ -66,7 +64,6 @@ public  final class Effect extends
         case 1: return UPDATE_PREEDIT;
         case 2: return CLEAR_PREEDIT_WITHOUT_COMMIT;
         case 3: return COMMIT_TEXT_REPLACING_PREEDIT;
-        case 4: return DELETE_BACKWARD_FROM_DOCUMENT;
         case 5: return RESET_AUTOCOMPLETE;
         case 6: return PERFORM_AUTOCOMPLETE;
         case 7: return RESET_AUTOCOMPLETE_CONTEXT;
@@ -239,56 +236,6 @@ public  final class Effect extends
    */
   private void clearCommitTextReplacingPreedit() {
     if (kindCase_ == 3) {
-      kindCase_ = 0;
-      kind_ = null;
-    }
-  }
-
-  public static final int DELETE_BACKWARD_FROM_DOCUMENT_FIELD_NUMBER = 4;
-  /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   */
-  @java.lang.Override
-  public boolean hasDeleteBackwardFromDocument() {
-    return kindCase_ == 4;
-  }
-  /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument getDeleteBackwardFromDocument() {
-    if (kindCase_ == 4) {
-       return (com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument) kind_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   */
-  private void setDeleteBackwardFromDocument(com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument value) {
-    java.util.Objects.requireNonNull(value);
-    kind_ = value;
-    kindCase_ = 4;
-  }
-  /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   */
-  private void mergeDeleteBackwardFromDocument(com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument value) {
-    java.util.Objects.requireNonNull(value);
-    if (kindCase_ == 4 &&
-        kind_ != com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.getDefaultInstance()) {
-      kind_ = com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument) kind_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      kind_ = value;
-    }
-    kindCase_ = 4;
-  }
-  /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   */
-  private void clearDeleteBackwardFromDocument() {
-    if (kindCase_ == 4) {
       kindCase_ = 0;
       kind_ = null;
     }
@@ -680,10 +627,9 @@ public  final class Effect extends
   /**
    * <pre>
    * Platform-neutral effects. The wrapper maps document-mutation effects
-   * (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`
-   * / `DeleteBackwardFromDocument`) to `setComposingText` / `commitText` /
-   * `deleteSurroundingText` (Android) or `setMarkedText` / `clearMarkedText` +
-   * `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
+   * (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`)
+   * to `setComposingText` / `commitText` (Android) or `setMarkedText` /
+   * `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
    * `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
    * autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
    *
@@ -862,54 +808,6 @@ public  final class Effect extends
     public Builder clearCommitTextReplacingPreedit() {
       copyOnWrite();
       instance.clearCommitTextReplacingPreedit();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-     */
-    @java.lang.Override
-    public boolean hasDeleteBackwardFromDocument() {
-      return instance.hasDeleteBackwardFromDocument();
-    }
-    /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument getDeleteBackwardFromDocument() {
-      return instance.getDeleteBackwardFromDocument();
-    }
-    /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-     */
-    public Builder setDeleteBackwardFromDocument(com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument value) {
-      copyOnWrite();
-      instance.setDeleteBackwardFromDocument(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-     */
-    public Builder setDeleteBackwardFromDocument(
-        com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.Builder builderForValue) {
-      copyOnWrite();
-      instance.setDeleteBackwardFromDocument(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-     */
-    public Builder mergeDeleteBackwardFromDocument(com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument value) {
-      copyOnWrite();
-      instance.mergeDeleteBackwardFromDocument(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-     */
-    public Builder clearDeleteBackwardFromDocument() {
-      copyOnWrite();
-      instance.clearDeleteBackwardFromDocument();
       return this;
     }
 
@@ -1222,7 +1120,6 @@ public  final class Effect extends
             com.siansiansu.taigikeyboard.engine.proto.UpdatePreedit.class,
             com.siansiansu.taigikeyboard.engine.proto.ClearPreeditWithoutCommit.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitTextReplacingPreedit.class,
-            com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.class,
             com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete.class,
             com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete.class,
             com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext.class,
@@ -1231,9 +1128,8 @@ public  final class Effect extends
             com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing.class,
           };
           java.lang.String info =
-              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
-              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<" +
-              "\u0000";
+              "\u0000\t\u0001\u0000\u0001\n\t\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

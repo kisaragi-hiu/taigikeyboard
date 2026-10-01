@@ -94,25 +94,8 @@ fun RustEngineBridge.composingDeleteBackward(
     )
 }
 
-// Commits the derived display string, e.g. raw "ho2" commits as "hó".
-fun RustEngineBridge.composingCommitDerived(
-    settings: EngineSettings,
-    generation: Long,
-): RustEngineBridge.ComposingTransition {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.CommitDerived
-        .newBuilder()
-        .build()
-    return composingDispatch(
-        methodSetter = { it.commitDerived = payload },
-        op = "composingCommitDerived",
-        generation = generation,
-        config = continuousAppConfig(settings),
-    )
-}
-
-// Under `Phase::Continuous` the engine commits the whole composition
-// (`combined_display(nailed, pending, config)`), not the literal keystrokes;
-// the composing arm commits `raw` verbatim.
+// The engine commits the whole composition
+// (`combined_display(nailed, pending, config)`), not the literal keystrokes.
 fun RustEngineBridge.composingCommitRaw(
     settings: EngineSettings,
     generation: Long,
@@ -181,29 +164,7 @@ fun RustEngineBridge.composingReset(generation: Long): RustEngineBridge.Composin
 }
 
 // endregion
-// region Continuous-input (4 ops) — v3.5.8
-
-/**
- * `Phase::Composing { raw }` → `Phase::Continuous { raw, committed: [] }`.
- * Phase 6 contract: no payload — buffer is whatever earlier `Start` /
- * `Append` populated. Engine no-ops on Idle / already-Continuous / empty
- * `Composing.raw`. AppConfig is required because the snapshot's preedit
- * display goes through `derived_display(raw, config)`.
- */
-fun RustEngineBridge.composingEnterContinuous(
-    settings: EngineSettings,
-    generation: Long,
-): RustEngineBridge.ComposingTransition {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.EnterContinuous
-        .newBuilder()
-        .build()
-    return composingDispatch(
-        methodSetter = { it.enterContinuous = payload },
-        op = "composingEnterContinuous",
-        generation = generation,
-        config = continuousAppConfig(settings),
-    )
-}
+// region Continuous-input (2 ops) — v3.5.8
 
 /**
  * Read-only candidate query for the current `Phase::Continuous { raw }`.
@@ -275,26 +236,6 @@ fun RustEngineBridge.composingCommitContinuous(
     return RustEngineBridge.ContinuousCommitResult(
         transition = synthComposing(payload),
         outcome = RustEngineBridge.ContinuousCommitOutcome.from(payload.commit),
-    )
-}
-
-/**
- * Abort continuous-input. Drops `Phase::Continuous` committed list +
- * pending raw, exits to Idle, emits the standard abort effect trio
- * (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
- * `NextWordClearForNewComposing`). Committed segments stay in the
- * document — earlier `CommitTextReplacingPreedit` effects already wrote
- * them.
- */
-fun RustEngineBridge.composingResetContinuous(generation: Long): RustEngineBridge.ComposingTransition {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.ResetContinuous
-        .newBuilder()
-        .build()
-    return composingDispatch(
-        methodSetter = { it.resetContinuous = payload },
-        op = "composingResetContinuous",
-        generation = generation,
-        config = null,
     )
 }
 
@@ -427,10 +368,6 @@ private fun synthComposing(proto: ComposingResponse): RustEngineBridge.Composing
                 RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit(
                     eff.commitTextReplacingPreedit.text,
                 )
-            }
-
-            eff.hasDeleteBackwardFromDocument() -> {
-                RustEngineBridge.ComposingTransition.Effect.DeleteBackwardFromDocument
             }
 
             eff.hasResetAutocomplete() -> {

@@ -1,5 +1,5 @@
 //! Whole-buffer abbreviation candidates end to end (`Start →
-//! EnterContinuous → FetchAtPos`) — `behavioral-invariants.md` §46, USER
+//! FetchAtPos`) — `behavioral-invariants.md` §46, USER
 //! 2026-09-18 `ss` → 鎖匙 `só-sî`. Step 4c of
 //! `composing::continuous::assemble_candidates` + `shadow::abbrev_query_key` +
 //! `lexicon::fetch_abbrev_candidates`; the per-family face checks and the

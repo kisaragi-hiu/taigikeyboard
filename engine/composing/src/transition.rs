@@ -67,9 +67,6 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
         }
         Intent::ReplaceLast { replacement } => replace_last(state, replacement, config),
         Intent::DeleteBackward => delete_backward(state, config),
-        // No single-segment phase to commit or promote (R12): both are
-        // no-ops kept for platforms that still send them.
-        Intent::CommitDerived | Intent::EnterContinuous => noop(state, config),
         Intent::CommitRaw => commit_raw(state, config),
         Intent::SelectSuggestion { text } => match &state.phase {
             Phase::Continuous { nailed, .. } => {
@@ -539,7 +536,7 @@ fn insert_external_when_idle(
     exit_to_idle(state, vec![commit_text_replacing_preedit(external)])
 }
 
-/// User-initiated reset (also the wire `ResetContinuous`) — **Model B
+/// User-initiated reset — **Model B
 /// (Codex risk (ii))**. Nailed segments were never written to the document;
 /// the whole composition lived in one marked region, so the abort trio
 /// clears that **entire** region and dropping the state discards every

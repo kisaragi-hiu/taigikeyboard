@@ -1,12 +1,11 @@
 //! Composing slice of the engine bridge: the intents the desktop sends and
 //! the decoding of what comes back. Port of `RustEngineBridge+Composing.swift`.
 //!
-//! This is a subset of the engine's sixteen intents, for the reasons that
+//! This is a subset of the engine's intents, for the reasons that
 //! file documents at length: `AppendHyphen` is an alias for `Append("-")`,
-//! `ReplaceLast` is TPS-only, `Start` is unnecessary (`Append` enters
-//! `Phase::Composing` from Idle), `SelectSuggestion` double-counts the nailed
-//! prefix under `Phase::Continuous` (`transition.rs:724`) so the literal
-//! commit is `CommitRaw`. Candidate navigation is a permanent platform-side
+//! `ReplaceLast` is TPS-only, `Start` is unnecessary (`Append` begins the
+//! composition from Idle), `SelectSuggestion` double-counts the nailed
+//! prefix under `Phase::Continuous` so the literal commit is `CommitRaw`. Candidate navigation is a permanent platform-side
 //! concern (`cross-platform-alignment.md` §4.1).
 //!
 //! Every op answers `None` when the round-trip itself failed, which is a
@@ -18,7 +17,7 @@ pub use protos::engine::CommitScript;
 use protos::engine::{
     composing_request, request, response, Append, CaretDirection as WireCaretDirection,
     CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw, ComposingRequest,
-    ComposingResponse, DeleteBackward, EnterContinuous, FetchAtPos, MoveCaret, Reset, TelexKey,
+    ComposingResponse, DeleteBackward, FetchAtPos, MoveCaret, Reset, TelexKey,
 };
 
 use crate::keys::CaretDirection;
@@ -145,21 +144,6 @@ pub fn reset(generation: u64) -> Option<ComposingTransition> {
         "composingReset",
         generation,
         None,
-    )
-}
-
-/// Promotes an active composition into the continuous phase. Safe to send
-/// unconditionally: the engine no-ops on an empty buffer and on a composition
-/// that is already continuous (`transition.rs:496-502`).
-pub fn enter_continuous(settings: &EngineSettings, generation: u64) -> Option<ComposingTransition> {
-    dispatch(
-        composing_request::Method::EnterContinuous(EnterContinuous {}),
-        "composingEnterContinuous",
-        generation,
-        // Carries the swap like `append`: already under Continuous the answer
-        // is a snapshot whose `display_text` the manager mirrors, and one
-        // rendered without the swap would put the space back.
-        Some(app_config(settings)),
     )
 }
 

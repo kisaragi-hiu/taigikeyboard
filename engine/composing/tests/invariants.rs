@@ -24,7 +24,6 @@ fn effect_kinds(resp: &ComposingResponse) -> Vec<&'static str> {
             EffectKind::UpdatePreedit(_) => "updatePreedit",
             EffectKind::ClearPreeditWithoutCommit(_) => "clearPreeditWithoutCommit",
             EffectKind::CommitTextReplacingPreedit(_) => "commitTextReplacingPreedit",
-            EffectKind::DeleteBackwardFromDocument(_) => "deleteBackwardFromDocument",
             EffectKind::ResetAutocomplete(_) => "resetAutocomplete",
             EffectKind::PerformAutocomplete(_) => "performAutocomplete",
             EffectKind::ResetAutocompleteContext(_) => "resetAutocompleteContext",
@@ -161,25 +160,6 @@ fn invariant_delete_backward_partial_keeps_composing() {
 fn invariant_delete_backward_idle_is_noop() {
     let mut engine = Engine::new();
     let resp = engine.apply(Intent::DeleteBackward, &config_tl());
-    assert!(resp.effect.is_empty());
-}
-
-// ---- CommitDerived ----
-
-#[test]
-fn invariant_commit_derived_is_noop_while_composing() {
-    // No single-segment phase to commit since R12; Enter is `CommitRaw`.
-    let mut engine = Engine::new();
-    engine.apply(Intent::Start { text: "a".into() }, &config_tl());
-    let resp = engine.apply(Intent::CommitDerived, &config_tl());
-    assert!(resp.effect.is_empty());
-    assert!(resp.is_composing);
-}
-
-#[test]
-fn invariant_commit_derived_idle_is_noop() {
-    let mut engine = Engine::new();
-    let resp = engine.apply(Intent::CommitDerived, &config_tl());
     assert!(resp.effect.is_empty());
 }
 
