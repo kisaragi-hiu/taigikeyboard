@@ -58,7 +58,11 @@ impl Session {
         std::fs::create_dir_all(&config).expect("config directory");
         SettingsFileStore::new(&config)
             .update(|document| {
-                document.set_bool(&keys::IS_AUTO_SPACE_ENABLED, is_auto_space_enabled)
+                document.set_bool(&keys::IS_AUTO_SPACE_ENABLED, is_auto_space_enabled);
+                // These characterisations are written around the §34 literal
+                // leading the list; Show Typed Text First ships OFF since
+                // 2026-10-02, so it is pinned ON here.
+                document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
             })
             .expect("settings written");
         // A data directory under a FILE cannot be created: no learning.

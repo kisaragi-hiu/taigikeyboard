@@ -68,6 +68,9 @@ def settings_document(settings: dict) -> dict:
     output = settings.get("output")
     if output is not None:
         values["isTranslateSwapped"] = output == "hanji"
+    show_typed_text_first = settings.get("show_typed_text_first")
+    if show_typed_text_first is not None:
+        values["literalRomanCandidateEnabled"] = show_typed_text_first
     return {"revision": 1, "values": values}
 
 

@@ -330,8 +330,8 @@ class PrefHelper(
     // App UI display language tag (i18n). Default = system (Automatic) — fresh install follows device OS locale.
     var displayLanguageTag: String by preference(PreferenceKeys.DISPLAY_LANGUAGE, DisplayLanguage.DEFAULT_TAG)
 
-    // §34/S22 — Show Typed Text First toggle. Default true (on; USER 2026-09-03).
-    var literalRomanCandidateEnabled: Boolean by preference(PreferenceKeys.LITERAL_ROMAN_CANDIDATE, true)
+    // §34/S22 — Show Typed Text First toggle. Default false (off; USER 2026-10-02).
+    var literalRomanCandidateEnabled: Boolean by preference(PreferenceKeys.LITERAL_ROMAN_CANDIDATE, false)
 
     // No Hyphens (§49), sent to the engine as stored: the engine exempts the
     // TPS layout itself (`AppConfig::renders_hyphenless`).

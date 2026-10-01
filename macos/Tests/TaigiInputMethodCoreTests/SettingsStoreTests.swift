@@ -59,7 +59,7 @@ final class SettingsStoreTests: XCTestCase {
         userDefaults.set("en", forKey: SettingsStore.Keys.displayLanguage.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isAutoSpaceEnabled.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
-        userDefaults.set(false, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
+        userDefaults.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isHyphenlessRomanEnabled.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isNasalMarkerUppercaseEnabled.name)
         userDefaults.set(CandidateLayout.horizontal.rawValue, forKey: SettingsStore.Keys.candidateLayout.name)
@@ -74,7 +74,7 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(userDefaults.string(forKey: SettingsStore.Keys.displayLanguage.name), "en", "display language kept")
         XCTAssertEqual(store.isAutoSpaceEnabled, SettingsStore.Keys.isAutoSpaceEnabled.defaultValue)
         XCTAssertEqual(store.isCandidateWindowEnabled, SettingsStore.Keys.isCandidateWindowEnabled.defaultValue)
-        XCTAssertTrue(store.current.isLiteralRomanCandidateEnabled)
+        XCTAssertFalse(store.current.isLiteralRomanCandidateEnabled)
         XCTAssertFalse(store.current.isHyphenlessRomanEnabled)
         XCTAssertTrue(store.current.isNasalMarkerUppercaseEnabled)
         XCTAssertEqual(store.candidateLayout, .horizontal, "外觀's key")
@@ -84,9 +84,9 @@ final class SettingsStoreTests: XCTestCase {
     func testCurrent_readsEveryStoredValue() {
         userDefaults.set(InputMode.poj.rawValue, forKey: SettingsStore.Keys.inputMode.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isHanjiFirst.name)
-        // §34/S22 — the default moved ON on 2026-09-03, so a stored `false`
-        // has to keep winning: someone who turned Show Typed Text First off stays off.
-        userDefaults.set(false, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
+        // §34/S22 — the default moved OFF on 2026-10-02, so a stored `true`
+        // has to keep winning: someone who turned Show Typed Text First on stays on.
+        userDefaults.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isHyphenlessRomanEnabled.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isNasalMarkerUppercaseEnabled.name)
 
@@ -97,7 +97,7 @@ final class SettingsStoreTests: XCTestCase {
                 isHanjiFirst: true,
                 isFullWidthPunctuation: true,
                 candidateDisplayMode: .sideBySide,
-                isLiteralRomanCandidateEnabled: false,
+                isLiteralRomanCandidateEnabled: true,
                 isHyphenlessRomanEnabled: true,
                 isNasalMarkerUppercaseEnabled: false,
                 isCustomDictEnabled: EngineSettings.defaults.isCustomDictEnabled,

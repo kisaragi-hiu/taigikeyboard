@@ -108,6 +108,9 @@ fn new_rig(is_auto_space_enabled: bool) -> Rig {
     let engine = engine_lock();
     let mut settings = SettingsDocument::default();
     settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, is_auto_space_enabled);
+    // The surface's slot mapping assumes the §34 literal at cell 0, so Show
+    // Typed Text First is pinned ON (it ships OFF since 2026-10-02).
+    settings.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
     let manager = ComposingManager::new(
         Arc::new(StaticSettingsProvider::new(settings.clone())),
         Box::new(EngineNextWord),

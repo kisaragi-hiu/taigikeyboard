@@ -211,14 +211,14 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
     engine::reset(generation);
 }
 
-/// §34 leads the list under the shipped defaults: Show Typed Text First is ON out of
-/// the box on all four platforms (USER 2026-09-03), so with TL/POJ text
-/// composed the preedit literal is slot 0. What a commit of that slot writes,
-/// and the OFF half of the switch, are `composing_manager.rs`'s
+/// §34 under the shipped defaults: Show Typed Text First is OFF out of the box on
+/// every platform (USER 2026-10-02), so with TL/POJ text composed slot 0 is a
+/// dictionary candidate, not the preedit literal. What a commit writes either
+/// way is `composing_manager.rs`'s
 /// `enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode` /
 /// `…_commits_the_dictionary_word_when_the_literal_row_is_off`.
 #[test]
-fn literal_roman_candidate_leads_the_list_under_the_shipped_defaults() {
+fn literal_roman_candidate_is_absent_under_the_shipped_defaults() {
     let _engine = engine();
     let generation = fresh_generation();
     let settings = EngineSettings::default();
@@ -227,13 +227,10 @@ fn literal_roman_candidate_leads_the_list_under_the_shipped_defaults() {
         .expect("fetch")
         .candidates
         .expect("continuous");
-    assert_eq!(
-        candidates[0].display_text, "tai",
-        "§34: the preedit literal leads the list"
-    );
     assert!(
-        candidates[0].hanji.is_none(),
-        "the literal carries one script — a commit writes the romanization"
+        candidates[0].hanji.is_some(),
+        "§34 off: nothing forces the one-script literal to the front: {:?}",
+        candidates[0]
     );
     engine::reset(generation);
 }

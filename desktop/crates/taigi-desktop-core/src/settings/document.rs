@@ -618,16 +618,16 @@ mod tests {
         );
     }
 
-    /// §34/S22 — the ON default is covered by `empty_document_reads_every_default`;
+    /// §34/S22 — the OFF default is covered by `empty_document_reads_every_default`;
     /// what only this pins is that `engine_settings()` maps THIS key, so a user
-    /// who turned Show Typed Text First off keeps it off across the 2026-09-03 flip.
+    /// who turned Show Typed Text First on keeps it on across the 2026-10-02 flip.
     #[test]
-    fn literal_roman_candidate_honours_a_stored_false() {
+    fn literal_roman_candidate_honours_a_stored_true() {
         let mut doc = SettingsDocument::default();
 
-        doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, false);
+        doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
 
-        assert!(!doc.engine_settings().is_literal_roman_candidate_enabled);
+        assert!(doc.engine_settings().is_literal_roman_candidate_enabled);
     }
 
     #[test]

@@ -35,11 +35,11 @@ final class RetiredSettingsCleanupTests: XCTestCase {
     /// the sweep cleared what the row wrote, every launch (`behavioral-invariants.md`
     /// §34 desktop notes). The row is back, so the sweep must leave the key alone.
     func testTheLiteralRomanCandidateSetting_survivesTheSweep() {
-        userDefaults.set(false, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
+        userDefaults.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
-        XCTAssertFalse(
+        XCTAssertTrue(
             SettingsStore(userDefaults: userDefaults).current.isLiteralRomanCandidateEnabled,
             "the sweep must not take a setting the 一般 pane still writes",
         )
