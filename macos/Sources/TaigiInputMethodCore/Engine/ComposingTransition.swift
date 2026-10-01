@@ -48,18 +48,18 @@ struct ComposingTransition: Equatable, Sendable {
 }
 
 /// MOE-aligned candidate-type discriminator, derived in Rust
-/// (`engine/lexicon/src/continuous/mod.rs::derive_mode`). Platforms read it and
+/// (`engine/lexicon/src/continuous/mod.rs::derive_script_kind`). Platforms read it and
 /// never recompute it — sniffing the display text would be a second, drifting
 /// implementation of the same rule.
-enum CandidateMode: Equatable, Sendable {
-    /// The wire carried no mode, or one this build does not know. Means
-    /// "ignore mode", never "guess the mode locally".
+enum CandidateScriptKind: Equatable, Sendable {
+    /// The wire carried no script kind, or one this build does not know. Means
+    /// "ignore it", never "guess it locally".
     case unspecified
     case hant
     case tailo
     case mixed
 
-    static func decode(_ wire: Int) -> CandidateMode {
+    static func decode(_ wire: Int) -> CandidateScriptKind {
         switch wire {
         case 1: .hant
         case 2: .tailo
@@ -83,7 +83,7 @@ struct ContinuousCandidate: Equatable, Sendable {
     let displayText: String
     let score: Float
     let form: UInt32
-    let mode: CandidateMode
+    let scriptKind: CandidateScriptKind
     /// Display romanization for the candidate cell — POJ-rendered in POJ mode.
     /// Not an identity key; that is `canonicalTl`.
     let roman: String

@@ -15,7 +15,7 @@ import SwiftProtobuf
 /// - `RustEngineBridge+Phonetics.swift` — 8 phonetics + 2 derivation + 5
 ///   TPS ops + lazy `toneVariations` cache + `ToneVariationsCache`.
 /// - `RustEngineBridge+Composing.swift` — 10 composing + 4 continuous
-///   ops + `ComposingTransition` / `CandidateMode` / `ContinuousCandidate`
+///   ops + `ComposingTransition` / `CandidateScriptKind` / `ContinuousCandidate`
 ///   / `ContinuousFetchResult` synthesized types.
 /// - `RustEngineBridge+Lexicon.swift` — install / search / assoc /
 ///   dictionary-filters / isHanji reads.

@@ -5,7 +5,7 @@ import SwiftProtobuf
 
 /// Composing slice extension for `RustEngineBridge`. Holds 10 composing
 /// ops + 4 continuous-input ops (v3.5.8 Phase 6) + their synthesized value
-/// types (`ComposingTransition` / `CandidateMode` / `ContinuousCandidate` /
+/// types (`ComposingTransition` / `CandidateScriptKind` / `ContinuousCandidate` /
 /// `ContinuousPick` / `ContinuousCommitResult` / `ContinuousFetchResult`) +
 /// the composing-specific dispatch helpers
 /// (`composingProtoRoundtrip` / `composingDispatch` / `composingFetchDispatch`
@@ -64,10 +64,10 @@ public extension RustEngineBridge {
     }
 
     /// MOE-aligned candidate-type discriminator. Wire mirror of
-    /// `protos::engine::CandidateMode` (Phase 9.2). Engine derives in
+    /// `protos::engine::CandidateScriptKind` (Phase 9.2). Engine derives in
     /// Rust from `DictionaryRecord.hanji` presence + NFKD-normalized
     /// Latin-letter detection (`engine/lexicon/src/continuous/
-    /// derive_mode`); platforms read but never recompute (no
+    /// derive_script_kind`); platforms read but never recompute (no
     /// display-text sniffing — that would parallel-implement the
     /// derive and violate `.claude/rules/cross-platform-alignment.md`).
     ///
@@ -75,19 +75,19 @@ public extension RustEngineBridge {
     /// tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a). `.unspecified`
     /// is the proto3 default and means "unknown carrier — old engine or
     /// dropped field"; it is never emitted by the current Rust engine.
-    /// Platforms must treat `.unspecified` as "ignore mode" rather than
+    /// Platforms must treat `.unspecified` as "ignore it" rather than
     /// falling back to any local classification.
-    enum CandidateMode: Equatable {
+    enum CandidateScriptKind: Equatable {
         case unspecified
         case hant
         case tailo
         case mixed
 
-        /// Decode the wire integer (`CandidateMessage.mode.rawValue`)
+        /// Decode the wire integer (`CandidateMessage.scriptKind.rawValue`)
         /// produced by SwiftProtobuf. Unrecognized values (forward-compat
         /// from a newer engine) collapse to `.unspecified` so the
         /// platform never crashes on a binding mismatch.
-        static func decode(_ wire: Int) -> CandidateMode {
+        static func decode(_ wire: Int) -> CandidateScriptKind {
             switch wire {
             case 1: .hant
             case 2: .tailo
@@ -98,13 +98,13 @@ public extension RustEngineBridge {
     }
 
     /// Single span-local continuous-input candidate. Wire mirror of
-    /// `protos::engine::CandidateMessage` (Phase 6 + 9.2 `mode`).
+    /// `protos::engine::CandidateMessage` (Phase 6 + 9.2 `script_kind`).
     ///
     /// `consumedSpanStart` / `consumedSpanEnd` are byte offsets into the
     /// **original raw user input** stored in `Phase::Continuous { raw }` —
     /// TL/POJ users → ASCII bytes, TPS users → Bopomofo bytes. Platform UI
     /// slices `pending[start..<end]` on commit. `form` is currently always 1
-    /// (FORM_NOTONE). `mode` is the Phase 9.2 carrier; metadata-only.
+    /// (FORM_NOTONE). `scriptKind` is the Phase 9.2 carrier; metadata-only.
     struct ContinuousCandidate: Equatable {
         public let consumedSpanStart: UInt32
         public let consumedSpanEnd: UInt32
@@ -112,7 +112,7 @@ public extension RustEngineBridge {
         public let displayText: String
         public let score: Float
         public let form: UInt32
-        public let mode: CandidateMode
+        public let scriptKind: CandidateScriptKind
         /// v3.5.8 Phase 9 Item 5 — display-romanization sidechannel for
         /// dual-line cell render. Always non-empty for dictionary-
         /// sourced candidates; the engine renders it for the active
@@ -142,7 +142,7 @@ public extension RustEngineBridge {
             displayText: String,
             score: Float,
             form: UInt32,
-            mode: CandidateMode,
+            scriptKind: CandidateScriptKind,
             roman: String,
             hanji: String?,
             canonicalTl: String,
@@ -153,7 +153,7 @@ public extension RustEngineBridge {
             self.displayText = displayText
             self.score = score
             self.form = form
-            self.mode = mode
+            self.scriptKind = scriptKind
             self.roman = roman
             self.hanji = hanji
             self.canonicalTl = canonicalTl
@@ -604,7 +604,7 @@ public extension RustEngineBridge {
                     displayText: msg.displayText,
                     score: msg.score,
                     form: msg.form,
-                    mode: CandidateMode.decode(msg.mode.rawValue),
+                    scriptKind: CandidateScriptKind.decode(msg.scriptKind.rawValue),
                     roman: roman,
                     hanji: msg.hasHanji ? msg.hanji : nil,
                     canonicalTl: msg.canonicalTl,

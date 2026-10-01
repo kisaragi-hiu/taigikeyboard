@@ -25,7 +25,7 @@
 use crate::api::{CaretDirection, CommitScript, ComposingError, Engine, Intent, Phase, UserRows};
 use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq};
 use lexicon::{
-    classification::is_hanji, derive_mode, ConsumedSpan, LearnedEntry, RawCandidate,
+    classification::is_hanji, derive_script_kind, ConsumedSpan, LearnedEntry, RawCandidate,
     SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
 };
 use phonetics::contains_tps;
@@ -335,7 +335,7 @@ fn adopt_collapsed_dict_identity(literal: &mut RawCandidate, candidates: &[RawCa
 ///   promoted to `InputMode::Tps` upstream); English excluded.
 /// * the preedit literal is non-empty.
 ///
-/// The candidate is roman-only (`hanji = None` → `CandidateMode::Tailo`),
+/// The candidate is roman-only (`hanji = None` → `CandidateScriptKind::Tailo`),
 /// with `roman == display_text ==` the preedit literal (except the identity
 /// it inherits under a single-script display — `adopt_collapsed_dict_identity`)
 /// — WYSIWYG with the underline (§30 literal-no-fold: tone marks only, no spelling fold). It
@@ -368,7 +368,7 @@ fn literal_roman_candidate(
         form: FORM_NOTONE,
         frequency: 0,
         bitmask: 0,
-        mode: derive_mode(None),
+        script_kind: derive_script_kind(None),
         user_weight: 0.0,
         context_rank: ranking::CONTEXT_RANK_NONE,
         coverage_kind: COVERAGE_KIND_FULL,
@@ -429,7 +429,7 @@ fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
         display_text: c.display_text,
         score: c.score,
         form: c.form as u32,
-        mode: c.mode.to_proto_i32(),
+        script_kind: c.script_kind.to_proto_i32(),
         // v3.5.8 Phase 9 Item 5 — `roman` is always non-empty for a
         // dictionary-sourced candidate; it is the display romanization
         // for the active input mode (TL, or POJ-display after the
@@ -519,7 +519,7 @@ mod tests {
             form: FORM_NOTONE,
             frequency: 12,
             bitmask: 0,
-            mode: lexicon::CandidateMode::Hant,
+            script_kind: lexicon::CandidateScriptKind::Hant,
             user_weight: 0.0,
             context_rank: ranking::CONTEXT_RANK_NONE,
             coverage_kind: lexicon::COVERAGE_KIND_FULL,
@@ -546,7 +546,7 @@ mod tests {
             form: FORM_NOTONE,
             frequency: 3,
             bitmask: 0,
-            mode: lexicon::CandidateMode::Tailo,
+            script_kind: lexicon::CandidateScriptKind::Tailo,
             user_weight: 0.0,
             context_rank: ranking::CONTEXT_RANK_NONE,
             coverage_kind: lexicon::COVERAGE_KIND_FULL,
@@ -577,7 +577,7 @@ mod tests {
                 form: FORM_NOTONE,
                 frequency: 1,
                 bitmask: 0,
-                mode: lexicon::CandidateMode::Hant,
+                script_kind: lexicon::CandidateScriptKind::Hant,
                 user_weight: 0.0,
                 context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: lexicon::COVERAGE_KIND_FULL,
@@ -640,7 +640,7 @@ mod tests {
         assert_eq!(cand.display_text, cand.roman); // WYSIWYG: display == roman
         assert_ne!(cand.roman, "nng7"); // a tone-mark conversion happened
         assert!(cand.hanji.is_none());
-        assert_eq!(cand.mode, lexicon::CandidateMode::Tailo);
+        assert_eq!(cand.script_kind, lexicon::CandidateScriptKind::Tailo);
         assert_eq!(cand.consumed_span, (0, 4));
         assert!(!cand.canonical_tl.is_empty()); // #7 identity sidechannel set
     }

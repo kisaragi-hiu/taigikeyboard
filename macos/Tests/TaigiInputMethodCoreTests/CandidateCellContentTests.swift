@@ -14,7 +14,7 @@ final class CandidateCellContentTests: XCTestCase {
             displayText: hanji ?? roman,
             score: 1,
             form: 0,
-            mode: .unspecified,
+            scriptKind: .unspecified,
             roman: roman,
             hanji: hanji,
             canonicalTl: roman,

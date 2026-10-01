@@ -52,7 +52,7 @@ class ContinuousSuggestionsContractTest {
         displayText: String,
         score: Float = 1.0f,
         form: Int = 1,
-        mode: RustEngineBridge.CandidateMode = RustEngineBridge.CandidateMode.HANT,
+        scriptKind: RustEngineBridge.CandidateScriptKind = RustEngineBridge.CandidateScriptKind.HANT,
         roman: String? = null,
         hanji: String? = null,
         canonicalTl: String? = null,
@@ -64,7 +64,7 @@ class ContinuousSuggestionsContractTest {
             displayText = displayText,
             score = score,
             form = form,
-            mode = mode,
+            scriptKind = scriptKind,
             roman = roman ?: displayText,
             hanji = hanji,
             canonicalTl = canonicalTl ?: roman ?: displayText,
@@ -84,7 +84,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "tsua",
                 score = 1.0f,
                 form = 1,
-                mode = RustEngineBridge.CandidateMode.HANT,
+                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
@@ -106,7 +106,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "tsua",
                 score = 1.0f,
                 form = 1,
-                mode = RustEngineBridge.CandidateMode.HANT,
+                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             ),
             cand(
                 consumedSpanStart = 0,
@@ -115,7 +115,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "珠仔",
                 score = 0.5f,
                 form = 1,
-                mode = RustEngineBridge.CandidateMode.HANT,
+                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
@@ -166,7 +166,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "uan",
                 score = 1.0f,
                 form = 1,
-                mode = RustEngineBridge.CandidateMode.HANT,
+                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
@@ -186,7 +186,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "tâi-uân",
                 score = 1.0f,
                 form = 1,
-                mode = RustEngineBridge.CandidateMode.HANT,
+                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             ),
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
@@ -219,7 +219,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "臺灣",
                 score = 1.0f,
                 form = 1,
-                mode = RustEngineBridge.CandidateMode.HANT,
+                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
                 roman = "tâi-uân",
                 hanji = "臺灣",
             ),
@@ -256,7 +256,7 @@ class ContinuousSuggestionsContractTest {
                 consumedSpanEnd = 7,
                 syllableCount = 2,
                 displayText = "臺灣",
-                mode = RustEngineBridge.CandidateMode.HANT,
+                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
                 roman = "tâi-uân",
                 hanji = "臺灣",
             ),
@@ -279,7 +279,7 @@ class ContinuousSuggestionsContractTest {
                 consumedSpanEnd = 4,
                 syllableCount = 1,
                 displayText = "tāi",
-                mode = RustEngineBridge.CandidateMode.TAILO,
+                scriptKind = RustEngineBridge.CandidateScriptKind.TAILO,
                 roman = "tāi",
                 hanji = null,
             ),
@@ -291,7 +291,7 @@ class ContinuousSuggestionsContractTest {
     }
 
     /**
-     * MIXED candidate (`hanji` carries Latin letters per `derive_mode`
+     * MIXED candidate (`hanji` carries Latin letters per `derive_script_kind`
      * NFKD scan in `engine/lexicon/src/continuous/`). Renders
      * dual-line the same way HANT does.
      */
@@ -302,7 +302,7 @@ class ContinuousSuggestionsContractTest {
                 consumedSpanEnd = 9,
                 syllableCount = 2,
                 displayText = "hip相",
-                mode = RustEngineBridge.CandidateMode.MIXED,
+                scriptKind = RustEngineBridge.CandidateScriptKind.MIXED,
                 roman = "hip-siòng",
                 hanji = "hip相",
             ),
@@ -327,7 +327,7 @@ class ContinuousSuggestionsContractTest {
                 consumedSpanEnd = 4,
                 syllableCount = 1,
                 displayText = "tāi",
-                mode = RustEngineBridge.CandidateMode.TAILO,
+                scriptKind = RustEngineBridge.CandidateScriptKind.TAILO,
                 roman = "tāi",
                 hanji = "",
             ),
@@ -355,7 +355,7 @@ class ContinuousSuggestionsContractTest {
                 displayText = "c$i",
                 score = 1.0f,
                 form = 1,
-                mode = RustEngineBridge.CandidateMode.HANT,
+                scriptKind = RustEngineBridge.CandidateScriptKind.HANT,
             )
         }
         val result = buildContinuousSuggestionsForCandidates(candidates)
@@ -379,26 +379,26 @@ class ContinuousSuggestionsContractTest {
         assertTrue("Empty candidates → empty suggestions", result.isEmpty())
     }
 
-    // --- v3.5.8 Phase 9.2 — CandidateMode wire decode ---
+    // --- v3.5.8 Phase 9.2 — CandidateScriptKind wire decode ---
 
     @Test
-    fun `CandidateMode decode maps all four wire values`() {
+    fun `CandidateScriptKind decode maps all four wire values`() {
         // Pins UNSPECIFIED=0, HANT=1, TAILO=2, MIXED=3 from
-        // `engine/protos/proto/composing.proto::CandidateMode`. Mirrors
-        // iOS RustEngineBridgeContinuousTests.testCandidateModeDecode_AllWireValues.
-        assertEquals(RustEngineBridge.CandidateMode.UNSPECIFIED, RustEngineBridge.CandidateMode.decode(0))
-        assertEquals(RustEngineBridge.CandidateMode.HANT, RustEngineBridge.CandidateMode.decode(1))
-        assertEquals(RustEngineBridge.CandidateMode.TAILO, RustEngineBridge.CandidateMode.decode(2))
-        assertEquals(RustEngineBridge.CandidateMode.MIXED, RustEngineBridge.CandidateMode.decode(3))
+        // `engine/protos/proto/composing.proto::CandidateScriptKind`. Mirrors
+        // iOS RustEngineBridgeContinuousTests.testCandidateScriptKindDecode_AllWireValues.
+        assertEquals(RustEngineBridge.CandidateScriptKind.UNSPECIFIED, RustEngineBridge.CandidateScriptKind.decode(0))
+        assertEquals(RustEngineBridge.CandidateScriptKind.HANT, RustEngineBridge.CandidateScriptKind.decode(1))
+        assertEquals(RustEngineBridge.CandidateScriptKind.TAILO, RustEngineBridge.CandidateScriptKind.decode(2))
+        assertEquals(RustEngineBridge.CandidateScriptKind.MIXED, RustEngineBridge.CandidateScriptKind.decode(3))
     }
 
     @Test
-    fun `CandidateMode decode falls back to UNSPECIFIED for unknown wire values`() {
+    fun `CandidateScriptKind decode falls back to UNSPECIFIED for unknown wire values`() {
         // Forward-compat: a wire value the platform binding doesn't recognize
         // (e.g. a newer engine added a fourth variant) must collapse to
         // UNSPECIFIED rather than crash or randomly map. Mirrors iOS Codex F8.
-        assertEquals(RustEngineBridge.CandidateMode.UNSPECIFIED, RustEngineBridge.CandidateMode.decode(99))
-        assertEquals(RustEngineBridge.CandidateMode.UNSPECIFIED, RustEngineBridge.CandidateMode.decode(-1))
+        assertEquals(RustEngineBridge.CandidateScriptKind.UNSPECIFIED, RustEngineBridge.CandidateScriptKind.decode(99))
+        assertEquals(RustEngineBridge.CandidateScriptKind.UNSPECIFIED, RustEngineBridge.CandidateScriptKind.decode(-1))
     }
 
     // --- v3.5.8 Phase 9 Item 5 — `roman` / `hanji` wire schema ---

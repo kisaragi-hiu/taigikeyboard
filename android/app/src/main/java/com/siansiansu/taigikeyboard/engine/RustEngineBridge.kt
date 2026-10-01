@@ -327,9 +327,9 @@ object RustEngineBridge {
 
     /**
      * MOE-aligned candidate-type discriminator. Wire mirror of
-     * `protos::engine::CandidateMode` (Phase 9.2). Engine derives in Rust
+     * `protos::engine::CandidateScriptKind` (Phase 9.2). Engine derives in Rust
      * from `DictionaryRecord.hanji` presence + NFKD-normalized Latin-letter
-     * detection (`engine/lexicon/src/continuous/mod.rs::derive_mode`); the
+     * detection (`engine/lexicon/src/continuous/mod.rs::derive_script_kind`); the
      * platform reads but never recomputes (no display-text sniffing —
      * that would parallel-implement the derive and violate
      * `.claude/rules/cross-platform-alignment.md`).
@@ -338,10 +338,10 @@ object RustEngineBridge {
      * tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a). `UNSPECIFIED`
      * is the proto3 default and means "unknown carrier — old engine or
      * dropped field"; never emitted by the current Rust engine.
-     * Platforms must treat `UNSPECIFIED` as "ignore mode" rather than
+     * Platforms must treat `UNSPECIFIED` as "ignore it" rather than
      * falling back to any local classification.
      */
-    enum class CandidateMode {
+    enum class CandidateScriptKind {
         UNSPECIFIED,
         HANT,
         TAILO,
@@ -350,12 +350,12 @@ object RustEngineBridge {
 
         companion object {
             /**
-             * Decode the wire integer (`CandidateMessage.getModeValue()`)
+             * Decode the wire integer (`CandidateMessage.getScriptKindValue()`)
              * produced by protobuf-javalite. Unrecognized values
              * (forward-compat from a newer engine) collapse to `UNSPECIFIED`
              * so the platform never crashes on a binding mismatch.
              */
-            fun decode(wire: Int): CandidateMode =
+            fun decode(wire: Int): CandidateScriptKind =
                 when (wire) {
                     1 -> HANT
                     2 -> TAILO
@@ -367,13 +367,13 @@ object RustEngineBridge {
 
     /**
      * Single span-local continuous-input candidate. Wire mirror of
-     * `protos::engine::CandidateMessage` (Phase 6 + 9.2 `mode`).
+     * `protos::engine::CandidateMessage` (Phase 6 + 9.2 `script_kind`).
      *
      * `consumedSpanStart` / `consumedSpanEnd` are byte offsets into the
      * **original raw user input** stored in `Phase::Continuous { raw }` —
      * TL/POJ users → ASCII bytes, TPS users → Bopomofo bytes. Platform UI
      * slices `pending` from `start` to `end` on commit. `form` is currently
-     * always 1 (FORM_NOTONE). `mode` is the Phase 9.2 carrier;
+     * always 1 (FORM_NOTONE). `scriptKind` is the Phase 9.2 carrier;
      * metadata-only.
      */
     data class ContinuousCandidate(
@@ -383,7 +383,7 @@ object RustEngineBridge {
         val displayText: String,
         val score: Float,
         val form: Int,
-        val mode: CandidateMode,
+        val scriptKind: CandidateScriptKind,
         /**
          * v3.5.8 Phase 9 Item 5 — display-romanization sidechannel for
          * dual-line cell render. Always non-empty for dictionary-

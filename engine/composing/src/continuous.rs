@@ -83,10 +83,11 @@ use crate::shadow::{
     greedy_longest_syllabification, span_min_syllable_count, strip_tones_for_mode,
 };
 use lexicon::{
-    best_candidate_for_key_with_barriers, derive_mode, fetch_candidates_for_keys_with_barriers,
-    fetch_partial_prefix_candidates, fetch_partial_prefix_candidates_unbounded, CandidateMode,
-    ConsumedSpan, ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, LearnedEntry,
-    RawCandidate, SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
+    best_candidate_for_key_with_barriers, derive_script_kind,
+    fetch_candidates_for_keys_with_barriers, fetch_partial_prefix_candidates,
+    fetch_partial_prefix_candidates_unbounded, CandidateScriptKind, ConsumedSpan,
+    ContinuousFetchCtx, CustomEntry, EngineHandle as LexiconHandle, LearnedEntry, RawCandidate,
+    SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE, PARTIAL_PREFIX_OUTPUT_CAP,
 };
 use ranking::FrequencyMap;
 
@@ -114,7 +115,7 @@ pub(crate) struct WalkerSlot0 {
     /// computed ONCE here from the synth `roman` (the single point that
     /// knows the fold rule) so the seam reads it instead of re-folding.
     pub canonical_tl: String,
-    pub mode: CandidateMode,
+    pub script_kind: CandidateScriptKind,
     pub user_weight: f64,
     pub coverage_kind: u8,
     pub is_custom: bool,
@@ -964,13 +965,13 @@ fn fetch_walker_slot0_inner(
     // canonical_tl); `get` returns the neutral default on a miss.
     let user_weight = edge_user_weight_delta(freq_map, now_ms, &display_text, &canonical_tl);
     // Classify via the lexicon single-source-of-truth so the
-    // synth's `CandidateMessage.mode` matches span-local / custom
+    // synth's `CandidateMessage.script_kind` matches span-local / custom
     // candidates exactly — including MIXED when the concatenated
     // hanji contains a Latin letter (e.g. a path through `…hip相`).
     // Codex PR #285 P2: the earlier `hanji.is_some()` binary
     // mis-emitted HANT for mixed-script full-buffer paths, breaking
     // platform dual-line render parity with regular candidates.
-    let candidate_mode = derive_mode(hanji.as_deref());
+    let script_kind = derive_script_kind(hanji.as_deref());
     Some(WalkerSlot0 {
         // S5: `path.cost` is a min-cost (lower = better) total.
         // The seam converts to wire `score = -(cost as f32)`
@@ -986,7 +987,7 @@ fn fetch_walker_slot0_inner(
         roman,
         hanji,
         canonical_tl,
-        mode: candidate_mode,
+        script_kind,
         user_weight,
         coverage_kind: COVERAGE_KIND_FULL,
         // v3.5.8 S6 (Codex pre-impl S6 Q4): provenance truth — a
@@ -1236,7 +1237,7 @@ pub(crate) fn assemble_candidates(
                             // walker-N/A; slot 0 explicit prepend.
                             frequency: 0,
                             bitmask: 0,
-                            mode: slot0.mode,
+                            script_kind: slot0.script_kind,
                             user_weight: slot0.user_weight,
                             context_rank: ranking::CONTEXT_RANK_NONE,
                             coverage_kind: slot0.coverage_kind,
@@ -1710,7 +1711,7 @@ mod tests {
             form: FORM_NOTONE,
             frequency: 0,
             bitmask: 0,
-            mode: lexicon::CandidateMode::Hant,
+            script_kind: lexicon::CandidateScriptKind::Hant,
             user_weight: 0.0,
             context_rank: ranking::CONTEXT_RANK_NONE,
             coverage_kind: COVERAGE_KIND_FULL,
@@ -1738,7 +1739,7 @@ mod tests {
                 form: FORM_NOTONE,
                 frequency: 0,
                 bitmask: 0,
-                mode: lexicon::CandidateMode::Tailo,
+                script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
                 context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
@@ -1786,7 +1787,7 @@ mod tests {
                 form: FORM_NOTONE,
                 frequency: 0,
                 bitmask: 0,
-                mode: lexicon::CandidateMode::Tailo,
+                script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
                 context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
@@ -1816,7 +1817,7 @@ mod tests {
                 form: FORM_NOTONE,
                 frequency: 0,
                 bitmask: 0,
-                mode: lexicon::CandidateMode::Tailo,
+                script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
                 context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,
@@ -1850,7 +1851,7 @@ mod tests {
                 form: FORM_NOTONE,
                 frequency: 0,
                 bitmask: 0,
-                mode: lexicon::CandidateMode::Tailo,
+                script_kind: lexicon::CandidateScriptKind::Tailo,
                 user_weight: 0.0,
                 context_rank: ranking::CONTEXT_RANK_NONE,
                 coverage_kind: COVERAGE_KIND_FULL,

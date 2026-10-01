@@ -321,7 +321,7 @@ enum TestFixtures {
             displayText: displayText,
             score: 0,
             form: 0,
-            mode: .unspecified,
+            scriptKind: .unspecified,
             roman: roman,
             hanji: hanji,
             canonicalTl: canonicalTl,

@@ -24,8 +24,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `engine/lexicon/src/continuous/`); reserved for hanji (0) /
  * numeric (2) / abbrev (3) when proto-side carriers exist.
  *
- * `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
- * see `CandidateMode` above.
+ * `script_kind` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
+ * see `CandidateScriptKind` above.
  *
  * v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
  * sidechannels added so platform UI can build dual-line cells
@@ -239,47 +239,47 @@ public  final class CandidateMessage extends
     form_ = 0;
   }
 
-  public static final int MODE_FIELD_NUMBER = 7;
-  private int mode_;
+  public static final int SCRIPT_KIND_FIELD_NUMBER = 7;
+  private int scriptKind_;
   /**
-   * <code>.taigi.engine.CandidateMode mode = 7;</code>
-   * @return The enum numeric value on the wire for mode.
+   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
+   * @return The enum numeric value on the wire for scriptKind.
    */
   @java.lang.Override
-  public int getModeValue() {
-    return mode_;
+  public int getScriptKindValue() {
+    return scriptKind_;
   }
   /**
-   * <code>.taigi.engine.CandidateMode mode = 7;</code>
-   * @return The mode.
+   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
+   * @return The scriptKind.
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.CandidateMode getMode() {
-    com.siansiansu.taigikeyboard.engine.proto.CandidateMode result = com.siansiansu.taigikeyboard.engine.proto.CandidateMode.forNumber(mode_);
-    return result == null ? com.siansiansu.taigikeyboard.engine.proto.CandidateMode.UNRECOGNIZED : result;
+  public com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind getScriptKind() {
+    com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind result = com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind.forNumber(scriptKind_);
+    return result == null ? com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind.UNRECOGNIZED : result;
   }
   /**
-   * <code>.taigi.engine.CandidateMode mode = 7;</code>
-   * @param value The enum numeric value on the wire for mode to set.
+   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
+   * @param value The enum numeric value on the wire for scriptKind to set.
    */
-  private void setModeValue(int value) {
-      mode_ = value;
+  private void setScriptKindValue(int value) {
+      scriptKind_ = value;
   }
   /**
-   * <code>.taigi.engine.CandidateMode mode = 7;</code>
-   * @param value The mode to set.
+   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
+   * @param value The scriptKind to set.
    * @throws IllegalArgumentException if UNRECOGNIZED is provided.
    */
-  private void setMode(com.siansiansu.taigikeyboard.engine.proto.CandidateMode value) {
-    mode_ = value.getNumber();
+  private void setScriptKind(com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind value) {
+    scriptKind_ = value.getNumber();
 
   }
   /**
-   * <code>.taigi.engine.CandidateMode mode = 7;</code>
+   * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
    */
-  private void clearMode() {
+  private void clearScriptKind() {
 
-    mode_ = 0;
+    scriptKind_ = 0;
   }
 
   public static final int ROMAN_FIELD_NUMBER = 8;
@@ -623,8 +623,8 @@ public  final class CandidateMessage extends
    * `engine/lexicon/src/continuous/`); reserved for hanji (0) /
    * numeric (2) / abbrev (3) when proto-side carriers exist.
    *
-   * `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
-   * see `CandidateMode` above.
+   * `script_kind` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
+   * see `CandidateScriptKind` above.
    *
    * v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
    * sidechannels added so platform UI can build dual-line cells
@@ -849,49 +849,49 @@ public  final class CandidateMessage extends
     }
 
     /**
-     * <code>.taigi.engine.CandidateMode mode = 7;</code>
-     * @return The enum numeric value on the wire for mode.
+     * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
+     * @return The enum numeric value on the wire for scriptKind.
      */
     @java.lang.Override
-    public int getModeValue() {
-      return instance.getModeValue();
+    public int getScriptKindValue() {
+      return instance.getScriptKindValue();
     }
     /**
-     * <code>.taigi.engine.CandidateMode mode = 7;</code>
-     * @param value The mode to set.
+     * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
+     * @param value The scriptKind to set.
      * @throws IllegalArgumentException if UNRECOGNIZED is provided.
      * @return This builder for chaining.
      */
-    public Builder setModeValue(int value) {
+    public Builder setScriptKindValue(int value) {
       copyOnWrite();
-      instance.setModeValue(value);
+      instance.setScriptKindValue(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.CandidateMode mode = 7;</code>
-     * @return The mode.
+     * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
+     * @return The scriptKind.
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.CandidateMode getMode() {
-      return instance.getMode();
+    public com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind getScriptKind() {
+      return instance.getScriptKind();
     }
     /**
-     * <code>.taigi.engine.CandidateMode mode = 7;</code>
-     * @param value The enum numeric value on the wire for mode to set.
+     * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
+     * @param value The enum numeric value on the wire for scriptKind to set.
      * @return This builder for chaining.
      */
-    public Builder setMode(com.siansiansu.taigikeyboard.engine.proto.CandidateMode value) {
+    public Builder setScriptKind(com.siansiansu.taigikeyboard.engine.proto.CandidateScriptKind value) {
       copyOnWrite();
-      instance.setMode(value);
+      instance.setScriptKind(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.CandidateMode mode = 7;</code>
+     * <code>.taigi.engine.CandidateScriptKind script_kind = 7;</code>
      * @return This builder for chaining.
      */
-    public Builder clearMode() {
+    public Builder clearScriptKind() {
       copyOnWrite();
-      instance.clearMode();
+      instance.clearScriptKind();
       return this;
     }
 
@@ -1163,7 +1163,7 @@ public  final class CandidateMessage extends
             "displayText_",
             "score_",
             "form_",
-            "mode_",
+            "scriptKind_",
             "roman_",
             "hanji_",
             "canonicalTl_",

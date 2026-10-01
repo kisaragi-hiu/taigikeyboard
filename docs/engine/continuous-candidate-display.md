@@ -175,6 +175,8 @@ This is **correct** — pending preedit has no hanji yet to display. But when sl
 
 ## 4. Proposed Solution — Option A (wire-level dual-field carrier)
 
+> **Renamed (2026-10-01, maintainability round R10-b2)**: `CandidateMode` is now `CandidateScriptKind` (values `CANDIDATE_SCRIPT_KIND_*`, numbers unchanged) and `CandidateMessage.mode` is `script_kind` (tag 7); Rust `derive_mode` → `derive_script_kind`, platform field `mode` → `scriptKind`. The snippets in this spec keep the names they shipped with.
+
 ### 4.1 Goal
 
 Continuous candidates ship **both** roman (TL) and hanji (when present) on every wire frame. Platform UI builds dual-line cells via the same fields the lexicon path uses. Single-line render reserved only for TAILO candidates (`hanzi = None`) where there is genuinely nothing to put in the subtitle — matching lexicon path behavior exactly.
