@@ -4,6 +4,34 @@ Standardized keyword mapping for core input method functionality and UI componen
 
 ---
 
+## Code Naming Conventions
+
+How engine and platform identifiers name recurring concepts (maintainability rounds R9 / R10, 2026-10-01). New code follows these; the frozen names below keep their spelling because data on users' devices or in shipped files already uses it.
+
+| Term | Meaning in code | Examples |
+|------|-----------------|----------|
+| **hanji** | Han characters of a word. Every code identifier spells it `hanji` (Taiwanese romanization of 漢字), never `hanzi` | `DictionaryRecord.hanji`, `is_hanji`, proto `CandidateMessage.hanji`, iOS/Android `isHanjiFirst` |
+| **Identity** | A word is the `(hanji, canonical-TL)` pair — neither field alone (CLAUDE.md Core Principle #6) | `CandidateMessage.canonical_tl`, user-data `(word, tl)` keys |
+| **Record** | One decoded row of a bundled binary file | `lexicon::DictionaryRecord` (`dictionary.bin`) |
+| **Row** | One row of a user-data SQLite store, a search result, or a test fixture row | `userdata::{CustomDictionaryRow, LearnedPhraseRow, FrequencyRow, AssociationRow}`, `lexicon::search::SearchRow`, `test_support::TkdbRow` |
+| **Entry** | An in-memory value a reader or the ranker consumes | `lexicon::AssociationEntry` (`association.bin`), `lexicon::{CustomEntry, LearnedEntry}` (user rows handed to continuous fetch) |
+| **Key** | A lookup string `<family>:<body>` in `dictionary.fst` or a user store; `KeyFamily` names the family | `phonetics::KeyFamily::search_key`, `phonetics::CustomSearchKey`; not to be confused with `ranking::CandidateSortKey` (an ordering key) |
+| **notone** | The stored toneless form a pipeline or derivation produces — the name the `dictionary.csv` columns use | `tl_notone`, `tps_notone_from_tl`, `derive_notone` |
+| **toneless** | The runtime matching side: keys built from the typed buffer and the guards that compare them | `custom_toneless_key`, `matches_continuous_toneless_key`, `KeyFamily::toneless_face` |
+| **shadow** | The canonicalized working copy of the raw composing buffer (mode-aware POJ fold, hyphens stripped) that the lattice segments; offset maps lead back to raw bytes | `composing::shadow::{build_continuous_keys, ShadowLattice}` |
+| **requests** | A domain crate's request façade: decodes its proto request, runs it, encodes the response | `composing::requests::handle`, `lexicon::requests::handle`; the `engine/dispatch` crate routes the envelope to them |
+| **previous / next** | The two words of an association (bigram) | `nextword::api::Association { previous, previous_tl, next, next_tl }`, `userdata::FollowingRow { next, next_tl }` |
+| **predictions visible** | Whether the next-word strip is showing | nextword `SetPredictionsVisible`, `DecideResult.predictions_visible` |
+
+**Frozen persisted names** (keep the old spelling; renaming breaks stored data or shipped files):
+
+- `hanzi` — SQLite columns (`custom_dictionary.db`, `learned_phrases.db`), `.taigi` backup JSON key `customDictionary[].hanzi`, the `hanzi:` FST key prefix (`phonetics::HANJI_KEY_PREFIX`), the `dictionary.csv` column, the `hanzi_len` field of the `dictionary.bin` layout, i18n keys `dictionary.hanziLabel` / `hanziPlaceholder`, iOS `Suggestion.additionalInfo["hanzi"]`.
+- `prev_word` / `prev_tl` — SQLite columns, `.taigi` JSON keys `prevWord` / `prevTl`, the `association.bin` layout.
+- `isTranslateSwapped` / `keyboard__is_translate_swapped` settings keys, the `toggleTranslateSwapped` shortcut action id, `didMoveTranslateSwappedDefaultToBacktick`.
+- Retired proto field tags stay `reserved`.
+
+---
+
 ## Core Input Method Keywords
 
 ### 1. Composing (`engine/composing.md`)
@@ -44,7 +72,7 @@ fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap reade
 |---------|-----------|-------|
 | **fst prefix index** | `dictionary.fst` — Burntsushi `fst` crate, stores `key → rowid` for `tl:` / `poj:` / `hanzi:` keys | Rust `lexicon::prefix_index::PrefixIndex` |
 | **prefixSearch** | Iterate keys with a given prefix, returning rowid list | Rust `lexicon::search::search` |
-| **DictionaryReader** | Binary mmap reader: rowid → `{hanji, tl, length_score, source_bitmask}` | Rust `lexicon::dictionary_reader::DictionaryReader` |
+| **DictionaryReader** | Binary mmap reader: rowid → `DictionaryRecord {bitmask, frequency, hanji, tl, syllable_count, kautian_subtag}` | Rust `lexicon::dictionary_reader::DictionaryReader` |
 | **AssociationReader** | Binary mmap reader: prev_word → bigram entries | Rust `lexicon::association_reader::AssociationReader` |
 | **EnabledDictionaries** | Per-source toggle + 16-bit `source_bitmask` for filter | iOS `EnabledDictionaries.swift` / Android `.kt` (DTO; bitmask layout from `binary-format.md`) |
 | **bitmaskFilter** | 16-bit source bitmask replaces SQL WHERE for dictionary filtering | Rust `lexicon::dictionary_reader::Filter` |
@@ -73,7 +101,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 ### 7. Custom Dictionary (`engine/custom-dictionary.md`)
 | Keyword | Definition | Key Class/Method |
 |---------|-----------|-----------------|
-| **CustomDictionaryEntry** | User-defined word (roman + hanzi; search keys derived into `custom_search_key`) | proto `CustomDictionaryEntry` / Rust `userdata::CustomDictionaryRow` |
+| **CustomDictionaryEntry** | User-defined word (roman + hanji; search keys derived into `custom_search_key`) | proto `CustomDictionaryEntry` / Rust `userdata::CustomDictionaryRow` |
 | **notone** | Toneless romanization for prefix matching (e.g. `"lí hó"` → `"liho"`) | Rust `phonetics` `derive_notone` |
 | **abbrev** | Leading-spelling-unit abbreviation (§46) for quick lookup (e.g. `"lí hó"` → `"lh"`) | Rust `phonetics::derive_abbrev` |
 | **batchImport** | CSV import with deduplication by `roman\|hanzi` key | engine op `ImportCustomCsv` → `CustomDictionaryStore::batch_import` |
