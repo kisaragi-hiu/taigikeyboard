@@ -242,7 +242,7 @@ pub(super) fn handle_nextword(
 
 /// The rows `user_association.db` holds after a `PredictNext` word; none for
 /// any other request. Over-fetches twice the prediction limit, as the
-/// platforms did, so the `(hanzi, tl)` merge never leaves fewer than `limit`
+/// platforms did, so the `(hanji, tl)` merge never leaves fewer than `limit`
 /// survivors.
 fn following_rows(
     stores: &UserDataStores,
@@ -263,17 +263,17 @@ fn following_rows(
 
 // The row → engine / wire forms.
 
-/// An empty stored hanzi is a romanization-only entry.
+/// An empty stored hanji is a romanization-only entry.
 fn custom_entry(row: CustomDictionaryRow) -> lexicon::CustomEntry {
     lexicon::CustomEntry {
         roman: row.roman,
-        hanji: (!row.hanzi.is_empty()).then_some(row.hanzi),
+        hanji: (!row.hanji.is_empty()).then_some(row.hanji),
     }
 }
 
 fn learned_entry(phrase: LearnedPhraseRow) -> lexicon::LearnedEntry {
     lexicon::LearnedEntry {
-        hanji: phrase.hanzi,
+        hanji: phrase.hanji,
         canonical_tl: phrase.canonical_tl,
     }
 }

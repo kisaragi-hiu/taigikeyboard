@@ -476,6 +476,8 @@ Recommendation: **A**. Aligns with `TaigiWord.kt` Android field name (`hanzi`), 
 
 Trade-off: `DictionaryRecord` uses `hanzi` (Hanyu Pinyin spelling). Stick with `hanzi` everywhere for consistency, OR rename `DictionaryRecord` field. Recommended: keep `hanzi` everywhere in code; UI strings + commit messages use Hanji / hanji as preferred.
 
+> **Superseded (2026-10-01, maintainability round R9-4)**: code identifiers now spell `hanji` everywhere (`DictionaryRecord.hanji`, `is_hanji`, `CustomDictionaryRow.hanji`, proto fields since R10-a). `hanzi` survives only in persisted names: SQLite columns, `.taigi` backup JSON keys, the `hanzi:` FST key prefix, the `dictionary.csv` column and the `hanzi_len` binary-layout field.
+
 ### Q2 — Should `display_text` stay on the wire?
 
 Option **Keep** (recommended): platform commit + frequency tracking are existing contracts; `display_text` = `hanji ?? roman` derivable but already-encoded means no platform-side recomputation.

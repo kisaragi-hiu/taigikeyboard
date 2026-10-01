@@ -21,7 +21,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `Phase::Continuous { raw }` (or its preedit mirror) on commit.
  *
  * `form` is currently always `1` (FORM_NOTONE; see
- * `engine/lexicon/src/continuous/`); reserved for hanzi (0) /
+ * `engine/lexicon/src/continuous/`); reserved for hanji (0) /
  * numeric (2) / abbrev (3) when proto-side carriers exist.
  *
  * `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
@@ -39,7 +39,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * input mode — the underlying `DictionaryRecord.tl` by default, or
  * POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when
  * `AppConfig.input_mode = poj` (engine-rendered, mirroring the
- * dictionary-search path); `hanji` mirrors `DictionaryRecord.hanzi`
+ * dictionary-search path); `hanji` mirrors `DictionaryRecord.hanji`
  * (proto3 `optional` distinguishes "TAILO candidate — no hanji
  * exists" from "wire-frame defect"). See
  * `docs/engine/continuous-candidate-display.md` §4 for the full
@@ -620,7 +620,7 @@ public  final class CandidateMessage extends
    * `Phase::Continuous { raw }` (or its preedit mirror) on commit.
    *
    * `form` is currently always `1` (FORM_NOTONE; see
-   * `engine/lexicon/src/continuous/`); reserved for hanzi (0) /
+   * `engine/lexicon/src/continuous/`); reserved for hanji (0) /
    * numeric (2) / abbrev (3) when proto-side carriers exist.
    *
    * `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
@@ -638,7 +638,7 @@ public  final class CandidateMessage extends
    * input mode — the underlying `DictionaryRecord.tl` by default, or
    * POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when
    * `AppConfig.input_mode = poj` (engine-rendered, mirroring the
-   * dictionary-search path); `hanji` mirrors `DictionaryRecord.hanzi`
+   * dictionary-search path); `hanji` mirrors `DictionaryRecord.hanji`
    * (proto3 `optional` distinguishes "TAILO candidate — no hanji
    * exists" from "wire-frame defect"). See
    * `docs/engine/continuous-candidate-display.md` §4 for the full

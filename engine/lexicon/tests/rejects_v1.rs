@@ -14,7 +14,7 @@ fn invariant_lex_v1_rejected_with_v1v2_to_v3_marker() {
         frequency: 1,
         syllable_count: None, // v1 layout: no syllable_count byte
         kautian_subtag: None, // v1 layout: no subtag bytes
-        hanzi: "好",
+        hanji: "好",
         tl: "ho2",
     }];
     let bytes = build_tkdb(b"TKDB", 1, &rows);

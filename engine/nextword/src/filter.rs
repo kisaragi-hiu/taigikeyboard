@@ -6,7 +6,7 @@
 //!
 //! Generation-mismatch path returns `was_stale=true` with empty
 //! predictions. Per Codex v1+v2 review: `Source::Unspecified` →
-//! `FailInvariant`. Empty `hanzi` rows dropped silently (cannot become
+//! `FailInvariant`. Empty `hanji` rows dropped silently (cannot become
 //! UI-meaningful).
 
 use crate::api::{NextWordError, PersistedState};
@@ -15,7 +15,7 @@ use indexmap::IndexMap;
 use protos::engine::{AppConfig, EnginePrediction, FilterResult, RawNextWordPrediction, Source};
 
 struct MergedRow {
-    hanzi: String,
+    hanji: String,
     tl: String,
     /// Summed `Source::Dict` scores; capped only when ranked
     /// (`scorer::combined_score`), so merges never lift a bundled-only
@@ -46,7 +46,7 @@ pub(crate) fn filter(
     let effective_limit = crate::api::effective_prediction_limit(limit);
 
     // 1. score each row, fail-invariant on Source::Unspecified, merge by
-    //    (hanzi, tl). IndexMap preserves insertion order — matches Android
+    //    (hanji, tl). IndexMap preserves insertion order — matches Android
     //    `mutableMapOf` / `LinkedHashMap`. iOS pre-v3.5.5 had unstable
     //    HashMap iteration order; v3.5.5 unifies on insertion order — minor
     //    parity correction toward Android. No observable user-facing
@@ -69,7 +69,7 @@ pub(crate) fn filter(
         merged
             .entry(key)
             .and_modify(|existing| {
-                // At most ONE user contribution per exact `(hanzi, tl)` in a
+                // At most ONE user contribution per exact `(hanji, tl)` in a
                 // request. Summing is right for dict + user — that IS the
                 // design, a learned word outranking the same word from the
                 // dictionary — and wrong for user + user: under the v6 storage
@@ -96,7 +96,7 @@ pub(crate) fn filter(
                 existing.has_user_score |= is_user;
             })
             .or_insert(MergedRow {
-                hanzi: row.hanji,
+                hanji: row.hanji,
                 tl: row.tl,
                 dict_score,
                 user_score,
@@ -126,7 +126,7 @@ pub(crate) fn filter(
 
     // 3b. Candidate Display = Romanization Only (§44): the prediction cell hides `subtitle`
     //     (the hanji), so homophone predictions (`食/tsia̍h` + `𤆬/tsia̍h`,
-    //     distinct after the `(hanzi, tl)` merge) read as duplicates.
+    //     distinct after the `(hanji, tl)` merge) read as duplicates.
     //     Collapse by the rendered `text` — under Romanization Only the platform sends
     //     `is_hanji_first = false`, so `shape_prediction` already
     //     dropped roman-empty rows and `text` is always the romanization.
@@ -150,14 +150,14 @@ pub(crate) fn filter(
 /// word into one prediction. The continuous-input commit path stores a
 /// raw next_tl (`taigi`) while a normal candidate commit stores the
 /// canonical next_tl (`tâi-gí`); `UNIQUE(prev,next,next_tl)` lets both
-/// rows persist and the `(hanzi, tl)` merge above keeps them distinct, so
+/// rows persist and the `(hanji, tl)` merge above keeps them distinct, so
 /// 台語 would otherwise surface twice. This read-layer pass folds the raw
 /// variant's score into the single canonical row.
 ///
 /// Canonical selection is **separator-based** (Codex post-impl 2026-06-03
 /// P1): a genuine multi-syllable reading is ALWAYS hyphen/space-separated
 /// in canonical TL, so a no-separator row sharing the toneless key can
-/// only be a fused raw keystroke slice. Within a `(hanzi, toneless_key)`
+/// only be a fused raw keystroke slice. Within a `(hanji, toneless_key)`
 /// group the canonical is the unique separator-bearing rendering; every
 /// no-separator row folds into it, and separator-bearing rows that are the
 /// SAME reading (`hōo-guá` vs `hōo--guá`, `-` vs `--`) fold together too.
@@ -179,10 +179,10 @@ pub(crate) fn filter(
 fn collapse_reading_variants(rows: Vec<MergedRow>) -> Vec<MergedRow> {
     use std::collections::HashMap;
 
-    // group key (hanzi, reading-key) -> indices into `rows`.
+    // group key (hanji, reading-key) -> indices into `rows`.
     let mut groups: HashMap<(String, String), Vec<usize>> = HashMap::with_capacity(rows.len());
     for (i, row) in rows.iter().enumerate() {
-        let key = (row.hanzi.clone(), phonetics::toneless_reading_key(&row.tl));
+        let key = (row.hanji.clone(), phonetics::toneless_reading_key(&row.tl));
         groups.entry(key).or_default().push(i);
     }
 
@@ -264,19 +264,19 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
         return None;
     }
     let text = if roman.is_empty() {
-        m.hanzi.clone()
+        m.hanji.clone()
     } else {
         roman.clone()
     };
     let subtitle = if roman.is_empty() {
         String::new()
     } else {
-        m.hanzi.clone()
+        m.hanji.clone()
     };
     Some(EnginePrediction {
         text,
         subtitle,
-        hanji: m.hanzi,
+        hanji: m.hanji,
         tl: m.tl,
         score: scorer::combined_score(m.dict_score, m.user_score),
     })
@@ -324,9 +324,9 @@ mod tests {
         }
     }
 
-    fn dict_row(hanzi: &str, tl: &str, count: i64) -> RawNextWordPrediction {
+    fn dict_row(hanji: &str, tl: &str, count: i64) -> RawNextWordPrediction {
         RawNextWordPrediction {
-            hanji: hanzi.to_owned(),
+            hanji: hanji.to_owned(),
             tl: tl.to_owned(),
             count,
             last_used_ms: 0,
@@ -334,9 +334,9 @@ mod tests {
         }
     }
 
-    fn user_row(hanzi: &str, tl: &str, count: i64, last_used_ms: i64) -> RawNextWordPrediction {
+    fn user_row(hanji: &str, tl: &str, count: i64, last_used_ms: i64) -> RawNextWordPrediction {
         RawNextWordPrediction {
-            hanji: hanzi.to_owned(),
+            hanji: hanji.to_owned(),
             tl: tl.to_owned(),
             count,
             last_used_ms,
@@ -479,7 +479,7 @@ mod tests {
     /// `taigi` a pre-v3.6.1 continuous commit stored) are two exact keys, so
     /// each keeps its own user contribution, and `collapse_reading_variants`
     /// then folds both scores into the surviving row. The cap is per exact
-    /// `(hanzi, tl)`, not per final displayed prediction. The old SQL subquery
+    /// `(hanji, tl)`, not per final displayed prediction. The old SQL subquery
     /// did not prevent this either — it deduped the same `(next_word, next_tl)`
     /// — so this is not a regression, and #383's canonical-TL write fix stops
     /// NEW fragmentation from appearing.
@@ -575,17 +575,17 @@ mod tests {
         )
         .unwrap();
 
-        let hanzi: Vec<&str> = result
+        let hanji: Vec<&str> = result
             .predictions
             .iter()
             .map(|p| p.hanji.as_str())
             .collect();
-        assert_eq!(hanzi, vec!["南", "台語", "灣", "北"]);
+        assert_eq!(hanji, vec!["南", "台語", "灣", "北"]);
         assert_eq!(result.predictions[1].score, scorer::DICT_SCORE_CAP);
     }
 
     /// Two readings of the NEXT word are different predictions, not duplicates
-    /// — the cap keys on `(hanzi, tl)` and must not collapse them.
+    /// — the cap keys on `(hanji, tl)` and must not collapse them.
     #[test]
     fn different_next_tl_stays_two_predictions() {
         let state = PersistedState::default();
@@ -667,7 +667,7 @@ mod tests {
     }
 
     #[test]
-    fn empty_hanzi_rows_dropped() {
+    fn empty_hanji_rows_dropped() {
         let state = PersistedState::default();
         let result = filter(
             &state,
@@ -763,7 +763,7 @@ mod tests {
         .unwrap();
         assert_eq!(result.predictions.len(), 1);
         let p = &result.predictions[0];
-        assert_eq!(p.text, "好"); // hanzi as fallback
+        assert_eq!(p.text, "好"); // hanji as fallback
         assert_eq!(p.subtitle, ""); // nil
     }
 
@@ -852,7 +852,7 @@ mod tests {
     // Pins behavioral-invariants.md §24 INVARIANT_NEXTWORD_READ_LAYER_DEDUP.
 
     // trace: continuous raw next_tl "taigi" (no separator) + normal canonical
-    // "tâi-gí" (hyphen separator) for 台語. (hanzi, tl) merge keeps them as 2
+    // "tâi-gí" (hyphen separator) for 台語. (hanji, tl) merge keeps them as 2
     // rows; toneless key "taigi" groups them; canonical = the separator-
     // bearing row, raw folds in. Result: 1 prediction, canonical roman,
     // score = score_dict(3) + score_dict(5).
@@ -1016,13 +1016,13 @@ mod tests {
         let state = PersistedState::default();
         let mut raw = Vec::new();
         for i in 0..5 {
-            let hanzi = format!("詞{}", i);
+            let hanji = format!("詞{}", i);
             raw.push(dict_row(
-                &hanzi,
+                &hanji,
                 &format!("ts\u{00e1}-{}", i),
                 (i + 1) as i64,
             )); // separator canonical
-            raw.push(dict_row(&hanzi, &format!("tsa{}", i), 1)); // fused raw variant
+            raw.push(dict_row(&hanji, &format!("tsa{}", i), 1)); // fused raw variant
         }
         let result = filter(&state, raw, 0, 1_000, 3, &config_tl_mode_hanji_first(false)).unwrap();
         assert_eq!(
@@ -1039,7 +1039,7 @@ mod tests {
     }
 
     /// §44 — Romanization Only cells hide the hanji, so homophone predictions (distinct
-    /// after the `(hanzi, tl)` merge) collapse to the best-scored one;
+    /// after the `(hanji, tl)` merge) collapse to the best-scored one;
     /// side-by-side keeps both.
     #[test]
     fn roman_only_display_collapses_same_roman_predictions_keeping_the_best() {

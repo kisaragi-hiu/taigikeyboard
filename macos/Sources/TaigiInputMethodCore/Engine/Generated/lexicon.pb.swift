@@ -330,7 +330,7 @@ public nonisolated struct Taigi_Engine_SearchByHanjiRequest: Sendable {
 
 /// `IsHanjiRequest` is the low-level CJK predicate used by Tab3 search to
 /// short-circuit Hanji queries. Tab3 needs the predicate without paying the
-/// search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
+/// search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE.
 public nonisolated struct Taigi_Engine_IsHanjiRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

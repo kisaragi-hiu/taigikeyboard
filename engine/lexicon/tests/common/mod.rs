@@ -29,17 +29,17 @@ pub fn write_synthetic_fst(name: &str, pairs: &[(&str, u32)]) -> PathBuf {
 }
 
 /// 4-tuple convenience for v2 fixtures: `(bitmask, frequency, syllable_count,
-/// hanzi, tl)`. Emits a VERSION-2 binary (no subtag) — used only by the
+/// hanji, tl)`. Emits a VERSION-2 binary (no subtag) — used only by the
 /// v2-loud-reject test now that the reader requires v3.
 pub fn build_tkdb_v2(magic: &[u8; 4], rows: &[(u16, u32, u8, &str, &str)]) -> Vec<u8> {
     let dict_rows: Vec<TkdbRow<'_>> = rows
         .iter()
-        .map(|(bm, freq, syll, hanzi, tl)| TkdbRow {
+        .map(|(bm, freq, syll, hanji, tl)| TkdbRow {
             bitmask: *bm,
             frequency: *freq,
             syllable_count: Some(*syll),
             kautian_subtag: None,
-            hanzi,
+            hanji,
             tl,
         })
         .collect();
@@ -47,29 +47,29 @@ pub fn build_tkdb_v2(magic: &[u8; 4], rows: &[(u16, u32, u8, &str, &str)]) -> Ve
 }
 
 /// 5-tuple convenience for v3 fixtures: `(bitmask, frequency, syllable_count,
-/// hanzi, tl)` with `kautian_subtag = 0` on every row. The default for tests
+/// hanji, tl)` with `kautian_subtag = 0` on every row. The default for tests
 /// that don't exercise subcollection provenance. Delegates to
 /// `build_tkdb_v3_subtag` (mirrors the `build_tkdb_v2` → `build_tkdb`
 /// thin-wrapper pattern).
 pub fn build_tkdb_v3(magic: &[u8; 4], rows: &[(u16, u32, u8, &str, &str)]) -> Vec<u8> {
     let with_subtag: Vec<(u16, u32, u8, u16, &str, &str)> = rows
         .iter()
-        .map(|(bm, freq, syll, hanzi, tl)| (*bm, *freq, *syll, 0u16, *hanzi, *tl))
+        .map(|(bm, freq, syll, hanji, tl)| (*bm, *freq, *syll, 0u16, *hanji, *tl))
         .collect();
     build_tkdb_v3_subtag(magic, &with_subtag)
 }
 
 /// 6-tuple convenience for v3 fixtures with explicit kautian subtags:
-/// `(bitmask, frequency, syllable_count, kautian_subtag, hanzi, tl)`.
+/// `(bitmask, frequency, syllable_count, kautian_subtag, hanji, tl)`.
 pub fn build_tkdb_v3_subtag(magic: &[u8; 4], rows: &[(u16, u32, u8, u16, &str, &str)]) -> Vec<u8> {
     let dict_rows: Vec<TkdbRow<'_>> = rows
         .iter()
-        .map(|(bm, freq, syll, subtag, hanzi, tl)| TkdbRow {
+        .map(|(bm, freq, syll, subtag, hanji, tl)| TkdbRow {
             bitmask: *bm,
             frequency: *freq,
             syllable_count: Some(*syll),
             kautian_subtag: Some(*subtag),
-            hanzi,
+            hanji,
             tl,
         })
         .collect();

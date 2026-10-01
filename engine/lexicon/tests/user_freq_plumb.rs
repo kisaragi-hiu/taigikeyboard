@@ -70,7 +70,7 @@ use crate::common::{build_tkdb_v3, fetch_candidates_for_endings, frequency_map, 
 
 struct Row<'a> {
     toneless_key: &'a str,
-    hanzi: &'a str,
+    hanji: &'a str,
     tl: &'a str,
     syll: u8,
     freq: u32,
@@ -79,7 +79,7 @@ struct Row<'a> {
 fn build_fixture(name: &str, rows: &[Row<'_>]) -> (PrefixIndex, DictionaryReader) {
     let dict_rows: Vec<(u16, u32, u8, &str, &str)> = rows
         .iter()
-        .map(|r| (1u16 << 11, r.freq, r.syll, r.hanzi, r.tl))
+        .map(|r| (1u16 << 11, r.freq, r.syll, r.hanji, r.tl))
         .collect();
     let dict_bytes = build_tkdb_v3(b"TKDB", &dict_rows);
     let dict_path = write_temp(&format!("phase9-3a-{name}.dict.bin"), &dict_bytes);
@@ -106,7 +106,7 @@ fn selections_leave_score_untouched_and_raise_user_weight() {
         "boost-amplifies",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 100,
@@ -151,7 +151,7 @@ fn user_weight_saturates_when_count_high() {
         "boost-saturates",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 100,
@@ -189,7 +189,7 @@ fn user_weight_is_one_selection_delta_when_just_selected() {
         "recency-fresh",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 100,
@@ -221,7 +221,7 @@ fn user_weight_persists_past_the_old_one_hour_window() {
         "recency-stale",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 100,
@@ -258,7 +258,7 @@ fn user_weight_zero_when_clock_skew_now_before_last_used() {
         "recency-skew",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 100,
@@ -292,7 +292,7 @@ fn user_weight_zero_when_now_ms_is_zero() {
         "recency-now-zero",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 100,
@@ -329,14 +329,14 @@ fn selected_candidate_outranks_never_selected_within_same_tier_and_coverage() {
         &[
             Row {
                 toneless_key: "tai",
-                hanzi: "台",
+                hanji: "台",
                 tl: "tâi",
                 syll: 1,
                 freq: 100,
             },
             Row {
                 toneless_key: "tai",
-                hanzi: "代",
+                hanji: "代",
                 tl: "tāi",
                 syll: 1,
                 freq: 100,
@@ -381,14 +381,14 @@ fn rare_selected_homophone_outranks_common_never_selected_after_hours() {
         &[
             Row {
                 toneless_key: "kingsin",
-                hanzi: "敬神",
+                hanji: "敬神",
                 tl: "kìng-sîn",
                 syll: 2,
                 freq: 25,
             },
             Row {
                 toneless_key: "kingsin",
-                hanzi: "更新",
+                hanji: "更新",
                 tl: "king-sin",
                 syll: 2,
                 freq: 1,
@@ -437,21 +437,21 @@ fn empty_freq_map_with_zero_now_matches_pre_9_3a_behaviour() {
         &[
             Row {
                 toneless_key: "tai",
-                hanzi: "台",
+                hanji: "台",
                 tl: "tâi",
                 syll: 1,
                 freq: 31281,
             },
             Row {
                 toneless_key: "taiuan",
-                hanzi: "台灣",
+                hanji: "台灣",
                 tl: "tâi-uân",
                 syll: 2,
                 freq: 1379,
             },
             Row {
                 toneless_key: "taiuantaigi",
-                hanzi: "臺灣台語",
+                hanji: "臺灣台語",
                 tl: "tâi-uân-tâi-gí",
                 syll: 4,
                 freq: 12,
@@ -495,7 +495,7 @@ fn mismatched_display_text_key_leaves_score_neutral() {
         "mismatched-key",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 100,
@@ -532,7 +532,7 @@ fn duplicate_keys_in_freq_map_apply_last_write_winner_to_candidate() {
         "duplicate-keys",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 100,
@@ -579,21 +579,21 @@ fn taiuantaigi_phrase_keeps_slot_one_when_selected() {
         &[
             Row {
                 toneless_key: "tai",
-                hanzi: "台",
+                hanji: "台",
                 tl: "tâi",
                 syll: 1,
                 freq: 31281,
             },
             Row {
                 toneless_key: "taiuan",
-                hanzi: "台灣",
+                hanji: "台灣",
                 tl: "tâi-uân",
                 syll: 2,
                 freq: 1379,
             },
             Row {
                 toneless_key: "taiuantaigi",
-                hanzi: "臺灣台語",
+                hanji: "臺灣台語",
                 tl: "tâi-uân-tâi-gí",
                 syll: 4,
                 freq: 12,

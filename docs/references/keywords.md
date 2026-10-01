@@ -23,7 +23,7 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
 | **Suggestion** | A candidate word (text + title + subtitle + metadata) | iOS `Autocomplete.Suggestion` / Android `CandidateAdapter` |
-| **InputType** | Retired 2026-09-30 with the `Search` op: the proto enum, `SearchRequest` and the in-process `SearchInputType` are gone; romanization queries go through `lexicon::search::search`, hanji queries through `search_by_hanzi` | `engine/lexicon/src/search.rs` |
+| **InputType** | Retired 2026-09-30 with the `Search` op: the proto enum, `SearchRequest` and the in-process `SearchInputType` are gone; romanization queries go through `lexicon::search::search`, hanji queries through `search_by_hanji` | `engine/lexicon/src/search.rs` |
 | **composingTextSuggestion** | Position 0 candidate — always the current composing text | iOS `createComposingTextSuggestion()` |
 | **phraseSuggestion** | Learned phrase candidates inserted at position 1 | Rust `lexicon::lookup_associations` |
 | **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `phonetics::KeyFamily::search_key` (`hanzi:` = `phonetics::HANJI_KEY_PREFIX`) |
@@ -44,7 +44,7 @@ fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap reade
 |---------|-----------|-------|
 | **fst prefix index** | `dictionary.fst` — Burntsushi `fst` crate, stores `key → rowid` for `tl:` / `poj:` / `hanzi:` keys | Rust `lexicon::prefix_index::PrefixIndex` |
 | **prefixSearch** | Iterate keys with a given prefix, returning rowid list | Rust `lexicon::search::search` |
-| **DictionaryReader** | Binary mmap reader: rowid → `{hanzi, tl, length_score, source_bitmask}` | Rust `lexicon::dictionary_reader::DictionaryReader` |
+| **DictionaryReader** | Binary mmap reader: rowid → `{hanji, tl, length_score, source_bitmask}` | Rust `lexicon::dictionary_reader::DictionaryReader` |
 | **AssociationReader** | Binary mmap reader: prev_word → bigram entries | Rust `lexicon::association_reader::AssociationReader` |
 | **EnabledDictionaries** | Per-source toggle + 16-bit `source_bitmask` for filter | iOS `EnabledDictionaries.swift` / Android `.kt` (DTO; bitmask layout from `binary-format.md`) |
 | **bitmaskFilter** | 16-bit source bitmask replaces SQL WHERE for dictionary filtering | Rust `lexicon::dictionary_reader::Filter` |

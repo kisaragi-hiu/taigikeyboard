@@ -29,7 +29,7 @@ fn fixture_rows() -> Vec<Row> {
         // trace: abbrev "ss" (só + sî), toneless "sosi".
         Row {
             toneless_key: "sosi",
-            hanzi: "鎖匙",
+            hanji: "鎖匙",
             tl: "só-sî",
             syll: 2,
             freq: 100,
@@ -37,7 +37,7 @@ fn fixture_rows() -> Vec<Row> {
         // trace: abbrev "ss" too, higher freq → ranks ahead of 鎖匙.
         Row {
             toneless_key: "siansenn",
-            hanzi: "先生",
+            hanji: "先生",
             tl: "sian-senn",
             syll: 2,
             freq: 400,
@@ -46,7 +46,7 @@ fn fixture_rows() -> Vec<Row> {
         // `ts` that must stay ahead of every abbreviation hit.
         Row {
             toneless_key: "tse",
-            hanzi: "這",
+            hanji: "這",
             tl: "tse",
             syll: 1,
             freq: 27_958,
@@ -54,7 +54,7 @@ fn fixture_rows() -> Vec<Row> {
         // trace: abbrev "tss" (leading units ts + s — `ts` is one unit).
         Row {
             toneless_key: "tsasi",
-            hanzi: "早時",
+            hanji: "早時",
             tl: "tsá-sî",
             syll: 2,
             freq: 50,
@@ -63,14 +63,14 @@ fn fixture_rows() -> Vec<Row> {
         // takes the span-local branch; 物件 (abbrev "mk") must still surface.
         Row {
             toneless_key: "m",
-            hanzi: "毋",
+            hanji: "毋",
             tl: "m̄",
             syll: 1,
             freq: 39_475,
         },
         Row {
             toneless_key: "mihkiann",
-            hanzi: "物件",
+            hanji: "物件",
             tl: "mi̍h-kiānn",
             syll: 2,
             freq: 244,
@@ -79,7 +79,7 @@ fn fixture_rows() -> Vec<Row> {
         // `chia̍h-pn̄g` → POJ abbrev "chp".
         Row {
             toneless_key: "tsiahpng",
-            hanzi: "食飯",
+            hanji: "食飯",
             tl: "tsia̍h-pn̄g",
             syll: 2,
             freq: 144,
@@ -90,7 +90,7 @@ fn fixture_rows() -> Vec<Row> {
     // the second syllable, §43 admits it) AND an abbreviation hit. High
     // freq so they lead the abbreviation pool and would eat a pre-exclude
     // cap.
-    for (hanzi, tl, toneless_key) in [
+    for (hanji, tl, toneless_key) in [
         ("毋肯", "m̄-khíng", "mkhing"),
         ("毋甘", "m̄-kam", "mkam"),
         ("毋管", "m̄-kuán", "mkuan"),
@@ -101,7 +101,7 @@ fn fixture_rows() -> Vec<Row> {
     ] {
         rows.push(Row {
             toneless_key,
-            hanzi,
+            hanji,
             tl,
             syll: 2,
             freq: 5_000,
@@ -111,7 +111,7 @@ fn fixture_rows() -> Vec<Row> {
     for i in 0..MK_ABBREV_ONLY_ROWS {
         rows.push(Row {
             toneless_key: "moka",
-            hanzi: Box::leak(format!("詞{i}").into_boxed_str()),
+            hanji: Box::leak(format!("詞{i}").into_boxed_str()),
             tl: "mó-ka",
             syll: 2,
             freq: 10,

@@ -97,12 +97,12 @@ fn frequency_row(reader: &UserDataStores, word: &str) -> Option<(String, i64)> {
         .map(|row| (row.tl, row.count))
 }
 
-fn learn_count(reader: &UserDataStores, hanzi: &str) -> Option<i64> {
+fn learn_count(reader: &UserDataStores, hanji: &str) -> Option<i64> {
     reader
         .learned_phrases
         .all_rows()?
         .into_iter()
-        .find(|row| row.hanzi == hanzi)
+        .find(|row| row.hanji == hanji)
         .map(|row| row.learn_count)
 }
 
@@ -255,7 +255,7 @@ fn the_engine_writes_what_the_platforms_wrote() {
         .all_rows()
         .is_some_and(|rows| rows
             .iter()
-            .any(|row| row.hanzi == "記起來"))));
+            .any(|row| row.hanji == "記起來"))));
 
     // The engine records the bigram it decides on.
     word_selected("食", "tsia̍h", 10_000);

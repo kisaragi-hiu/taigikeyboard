@@ -36,21 +36,21 @@ fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "tsua",
-            hanzi: "紙",
+            hanji: "紙",
             tl: "tsuá", // tone 2 → tl_num tsua2
             syll: 1,
             freq: 100,
         },
         Row {
             toneless_key: "tsua",
-            hanzi: "蛇",
+            hanji: "蛇",
             tl: "tsuâ", // tone 5 → tl_num tsua5
             syll: 1,
             freq: 70,
         },
         Row {
             toneless_key: "tsu",
-            hanzi: "珠",
+            hanji: "珠",
             tl: "tsu",
             syll: 1,
             freq: 90,
@@ -185,28 +185,28 @@ fn closed_dead_end_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "iah",
-            hanzi: "抑",
+            hanji: "抑",
             tl: "ia̍h",
             syll: 1,
             freq: 100,
         },
         Row {
             toneless_key: "ia",
-            hanzi: "也",
+            hanji: "也",
             tl: "iā",
             syll: 1,
             freq: 500,
         },
         Row {
             toneless_key: "i",
-            hanzi: "伊",
+            hanji: "伊",
             tl: "i",
             syll: 1,
             freq: 900,
         },
         Row {
             toneless_key: "ah",
-            hanzi: "曷",
+            hanji: "曷",
             tl: "a̍h",
             syll: 1,
             freq: 50,

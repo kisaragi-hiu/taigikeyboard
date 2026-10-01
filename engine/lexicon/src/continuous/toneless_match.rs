@@ -474,7 +474,7 @@ mod dispatcher_tests {
     }
 
     #[test]
-    fn hanzi_key_passes_through() {
+    fn hanji_key_passes_through() {
         // Falls into the TL branch which itself passes through any key
         // lacking the `tl:` prefix → guard returns `true`.
         assert!(dispatch("hanzi:外夷", "guā-î"));

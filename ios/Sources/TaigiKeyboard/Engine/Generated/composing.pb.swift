@@ -169,7 +169,7 @@ public nonisolated enum Taigi_Engine_CaretDirection: SwiftProtobuf.Enum, Swift.C
 
 /// v3.5.8 Phase 9.2 — candidate-type discriminator. MOE `VocType`
 /// (`VT_HANT` / `VT_TAILO` / `VT_MIXED`) is the cite. Derived in Rust
-/// from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
+/// from `DictionaryRecord.hanji` presence + NFKD-normalized Latin-letter
 /// detection; see `engine/lexicon/src/continuous/mod.rs::derive_mode`.
 ///
 /// Metadata-only: this field does NOT enter the `CandidateSortKey` tie-break
@@ -888,7 +888,7 @@ public nonisolated struct Taigi_Engine_ContinuousResponse: Sendable {
 /// `Phase::Continuous { raw }` (or its preedit mirror) on commit.
 ///
 /// `form` is currently always `1` (FORM_NOTONE; see
-/// `engine/lexicon/src/continuous/`); reserved for hanzi (0) /
+/// `engine/lexicon/src/continuous/`); reserved for hanji (0) /
 /// numeric (2) / abbrev (3) when proto-side carriers exist.
 ///
 /// `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
@@ -906,7 +906,7 @@ public nonisolated struct Taigi_Engine_ContinuousResponse: Sendable {
 /// input mode — the underlying `DictionaryRecord.tl` by default, or
 /// POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when
 /// `AppConfig.input_mode = poj` (engine-rendered, mirroring the
-/// dictionary-search path); `hanji` mirrors `DictionaryRecord.hanzi`
+/// dictionary-search path); `hanji` mirrors `DictionaryRecord.hanji`
 /// (proto3 `optional` distinguishes "TAILO candidate — no hanji
 /// exists" from "wire-frame defect"). See
 /// `docs/engine/continuous-candidate-display.md` §4 for the full

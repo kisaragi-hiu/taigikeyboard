@@ -1,6 +1,6 @@
 //! Search orchestration.
 //!
-//! Pipeline (romanization; hanji queries go through `search_by_hanzi`):
+//! Pipeline (romanization; hanji queries go through `search_by_hanji`):
 //! 1. Build trie key via `phonetics::KeyFamily::search_key`.
 //! 2. `prefix_index.lookup_prefix` returns insertion-ordered rowids
 //!    (D-12 parity correction toward Android).
@@ -104,8 +104,8 @@ pub fn search(
     ))
 }
 
-// Tab3 hanzi lookup — scans the FST for `hanzi:`-prefixed keys.
-pub fn search_by_hanzi(
+// Tab3 hanji lookup — scans the FST for `hanzi:`-prefixed keys.
+pub fn search_by_hanji(
     query: &str,
     limit: u32,
     enabled_sources_bitmask: u32,
@@ -216,7 +216,7 @@ fn record_to_row(rowid: u32, record: DictionaryRecord, effective_bitmask: u16) -
     SearchRow {
         id: rowid as i64,
         roman: record.tl,
-        hanji: record.hanzi,
+        hanji: record.hanji,
         length_score: Some(record.frequency as i32),
         source_bitmask: Some(effective_bitmask as u32),
     }

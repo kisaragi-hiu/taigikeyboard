@@ -190,7 +190,7 @@ fn reset(reset: ResetUserData) -> Result<(), UserDataError> {
     }
 }
 
-/// Imports the `roman,hanzi` CSV file the user picked: refused before the
+/// Imports the `roman,hanji` CSV file the user picked: refused before the
 /// read when it is too big to be a word list, read whole, then handed to
 /// the engine (which skips the rows already stored and stops at the cap).
 /// A file that cannot be read or holds no usable rows is
@@ -228,7 +228,7 @@ pub fn import_custom_csv_file(path: &Path) -> Result<CustomCsvImported, UserData
     }
 }
 
-/// The whole dictionary as `roman,hanzi` CSV bytes.
+/// The whole dictionary as `roman,hanji` CSV bytes.
 pub fn export_custom_csv() -> Result<Vec<u8>, UserDataError> {
     let op = "customDictionaryExportCSV";
     match page_request(

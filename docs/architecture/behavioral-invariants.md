@@ -353,17 +353,17 @@ The former auto-cap-flag label is retired: the engine API takes no auto-cap flag
 
 **Behavior**: a hanzi (CJK) composing buffer never produces keyboard candidates. One engine guard enforces this:
 
-1. **Continuous dispatch** (Item 11) — `engine/composing/src/dispatch.rs::handle_fetch_at_pos` checks `is_hanzi(raw)` at the top of dispatch and returns an empty `ContinuousResponse` (carrier present, candidates empty). `is_hanzi` is `.any()`, so a single stray CJK char anywhere fails closed.
+1. **Continuous dispatch** (Item 11) — `engine/composing/src/dispatch.rs::handle_fetch_at_pos` checks `is_hanji(raw)` at the top of dispatch and returns an empty `ContinuousResponse` (carrier present, candidates empty). `is_hanji` is `.any()`, so a single stray CJK char anywhere fails closed.
 
 The former second guard — `lexicon::search` short-circuiting a `Hanzi` input type — went with the `Search` wire op on 2026-09-30: after Item 13 nothing but a test could reach it (Tab3 hard-codes the romanization path), so `SearchParams` no longer carries an input type.
 
 **Rationale**: pre-Item-13 the platform `LexiconService.search` hit `lookupCustomDictionary` before the engine guard on iOS, so a custom-dict entry matching the hanzi buffer could leak as a suggestion. That entire platform autocomplete path is now deleted — the custom-dict-on-hanzi layering surface no longer exists outside Rust, so the guard is purely an engine concern.
 
-**Tab3 unaffected**: Tab3 dictionary search accepts hanzi by design and is a fully separate consumer (iOS and Android `DictionarySearchService` → `LexiconClient` `searchByHanji` / `searchWithSources`). Its romanization path shares `lexicon::search::search` with nothing else now; hanji queries go to `search_by_hanzi`, so no D-8 guard is needed.
+**Tab3 unaffected**: Tab3 dictionary search accepts hanzi by design and is a fully separate consumer (iOS and Android `DictionarySearchService` → `LexiconClient` `searchByHanji` / `searchWithSources`). Its romanization path shares `lexicon::search::search` with nothing else now; hanji queries go to `search_by_hanji`, so no D-8 guard is needed.
 
-**Tests** (`INVARIANT_LEX_HANZI_GUARD`) — Rust engine only after Item 13:
+**Tests** (`INVARIANT_LEX_HANJI_GUARD`) — Rust engine only after Item 13:
 
-1. `engine/composing/tests/dispatch_continuous.rs::decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier` + `decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier` (Item 11) — pin the Continuous-dispatch guard incl. mixed-buffer (`"a好b"`) fail-closed. (The lexicon-side `invariant_lex_hanzi_guard_short_circuits` test left with the guard on 2026-09-30.)
+1. `engine/composing/tests/dispatch_continuous.rs::decode_fetch_at_pos_hanji_buffer_returns_empty_carrier` + `decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier` (Item 11) — pin the Continuous-dispatch guard incl. mixed-buffer (`"a好b"`) fail-closed. (The lexicon-side `invariant_lex_hanzi_guard_short_circuits` test left with the guard on 2026-09-30.)
 
 The prior platform-layer parity tests (iOS `LexiconServiceHanziGuardTests.swift`, Android `LexiconServiceHanziGuardTest.kt`) were deleted in Item 13 per `feedback_path_g_delete_mirrors.md`: the platform regression surface they guarded (custom-dict-before-guard) was removed with the platform lexicon path; algorithm correctness lives in the Rust engine tests above.
 
@@ -371,13 +371,13 @@ The prior platform-layer parity tests (iOS `LexiconServiceHanziGuardTests.swift`
 
 ## 15. Lexicon — input classification (v3.5.7)
 
-**Added**: 2026-05-02 (v3.5.7 classification slice + Tab3 hanzi-range parity correction). Codex sandwich rounds 1+2 + post-draft APPROVED. Implementation in Rust `engine/lexicon::classification::is_hanzi`.
+**Added**: 2026-05-02 (v3.5.7 classification slice + Tab3 hanzi-range parity correction). Codex sandwich rounds 1+2 + post-draft APPROVED. Implementation in Rust `engine/lexicon::classification::is_hanji`.
 
-**2026-09-25**: the `ClassifyInput` op had no production caller and was removed with `classify_input` / `contains_numeric_tone`; `NUMERIC_TONE_SET`, `PRECEDENCE` and `SEARCH_KEY` are **retired** (their tests deleted). Only `HANZI_RANGE` remains live. The proto `InputType` enum and `SearchRequest` went with the `Search` op on 2026-09-30 (no production caller); the in-process `lexicon::search::SearchInputType` remains.
+**2026-09-25**: the `ClassifyInput` op had no production caller and was removed with `classify_input` / `contains_numeric_tone`; `NUMERIC_TONE_SET`, `PRECEDENCE` and `SEARCH_KEY` are **retired** (their tests deleted). Only `HANJI_RANGE` remains live. The proto `InputType` enum and `SearchRequest` went with the `Search` op on 2026-09-30 (no production caller); the in-process `lexicon::search::SearchInputType` remains.
 
-### `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`
+### `INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`
 
-`is_hanzi(text)` returns `true` iff `text` contains at least one Unicode codepoint in any of:
+`is_hanji(text)` returns `true` iff `text` contains at least one Unicode codepoint in any of:
 
 - CJK Unified Ideographs `0x4E00–0x9FFF`
 - CJK Extension A `0x3400–0x4DBF`
@@ -396,7 +396,7 @@ Removed with `classify_input` / `contains_numeric_tone` (no production caller). 
 
 ### Tests
 
-- **Rust engine unit** — `engine/lexicon/src/classification.rs::tests` covers `HANZI_RANGE` (13 tests).
+- **Rust engine unit** — `engine/lexicon/src/classification.rs::tests` covers `HANJI_RANGE` (13 tests).
 - **iOS / Android** — Tab3 routes through `RustEngineBridge.isHanji` / `LexiconBridge.isHanji`; no platform-side range check.
 
 ---

@@ -161,7 +161,7 @@ enum CustomDictionaryRefusal {
   // An import file over 5 MB.
   CUSTOM_DICTIONARY_REFUSAL_FILE_TOO_LARGE = 4;
   CUSTOM_DICTIONARY_REFUSAL_NOT_UTF8 = 5;
-  // Content, but not one `roman,hanzi` row.
+  // Content, but not one `roman,hanji` row.
   CUSTOM_DICTIONARY_REFUSAL_NO_USABLE_ROWS = 6;
 }
 
@@ -213,7 +213,7 @@ message DeleteCustomEntry { string id = 1; }
 
 message CustomEntryDeleted { bool removed = 1; }
 
-// A `roman,hanzi` CSV file's bytes, as the platform's file picker read them.
+// A `roman,hanji` CSV file's bytes, as the platform's file picker read them.
 // Rows already stored (same roman and Hanji) are skipped; the import stops
 // at the dictionary's cap without failing, so `imported` may be fewer than
 // the file's rows even with no refusal.
@@ -245,7 +245,7 @@ message CustomEntryMatches { repeated CustomDictionaryEntry entries = 1; }
 
 message ExportCustomCsv {}
 
-// The whole dictionary as `roman,hanzi` lines, for the platform to save.
+// The whole dictionary as `roman,hanji` lines, for the platform to save.
 message CustomCsvExported { bytes csv = 1; }
 
 // ---- The `.taigi` backup (roadmap P4b) ----

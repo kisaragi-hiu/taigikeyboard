@@ -55,7 +55,7 @@ public enum CustomDictionaryRefusal
   CUSTOM_DICTIONARY_REFUSAL_NOT_UTF8(5),
   /**
    * <pre>
-   * Content, but not one `roman,hanzi` row.
+   * Content, but not one `roman,hanji` row.
    * </pre>
    *
    * <code>CUSTOM_DICTIONARY_REFUSAL_NO_USABLE_ROWS = 6;</code>
@@ -108,7 +108,7 @@ public enum CustomDictionaryRefusal
   public static final int CUSTOM_DICTIONARY_REFUSAL_NOT_UTF8_VALUE = 5;
   /**
    * <pre>
-   * Content, but not one `roman,hanzi` row.
+   * Content, but not one `roman,hanji` row.
    * </pre>
    *
    * <code>CUSTOM_DICTIONARY_REFUSAL_NO_USABLE_ROWS = 6;</code>

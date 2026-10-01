@@ -23,21 +23,21 @@ fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "siann",
-            hanzi: "聲",
+            hanji: "聲",
             tl: "siann",
             syll: 1,
             freq: 9000,
         },
         Row {
             toneless_key: "siannim",
-            hanzi: "聲音",
+            hanji: "聲音",
             tl: "siann-im",
             syll: 2,
             freq: 9000,
         },
         Row {
             toneless_key: "im",
-            hanzi: "音",
+            hanji: "音",
             tl: "im",
             syll: 1,
             freq: 100,

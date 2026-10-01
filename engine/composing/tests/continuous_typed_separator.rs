@@ -37,28 +37,28 @@ fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "hoo",
-            hanzi: "予",
+            hanji: "予",
             tl: "hōo",
             syll: 1,
             freq: 80_000,
         },
         Row {
             toneless_key: "gua",
-            hanzi: "我",
+            hanji: "我",
             tl: "guá",
             syll: 1,
             freq: 80_000,
         },
         Row {
             toneless_key: "si",
-            hanzi: "是",
+            hanji: "是",
             tl: "sī",
             syll: 1,
             freq: 80_000,
         },
         Row {
             toneless_key: "hoogua",
-            hanzi: "予我",
+            hanji: "予我",
             tl: "hōo--guá",
             syll: 2,
             freq: 16,
@@ -192,21 +192,21 @@ fn pang_tang_lai_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "pang",
-            hanzi: "放",
+            hanji: "放",
             tl: "pàng",
             syll: 1,
             freq: 80_000,
         },
         Row {
             toneless_key: "tanglai",
-            hanzi: "重利",
+            hanji: "重利",
             tl: "tāng-lāi",
             syll: 2,
             freq: 25,
         },
         Row {
             toneless_key: "pangtanglai",
-            hanzi: "放重利",
+            hanji: "放重利",
             tl: "pàng tāng-lāi",
             syll: 3,
             freq: 16,
@@ -262,21 +262,21 @@ fn tng_lai_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "tng",
-            hanzi: "轉",
+            hanji: "轉",
             tl: "tńg",
             syll: 1,
             freq: 50_000,
         },
         Row {
             toneless_key: "lai",
-            hanzi: "來",
+            hanji: "來",
             tl: "lâi",
             syll: 1,
             freq: 60_000,
         },
         Row {
             toneless_key: "tnglai",
-            hanzi: "轉來",
+            hanji: "轉來",
             tl: "tńg--lâi",
             syll: 2,
             freq: 3_000,
@@ -434,7 +434,7 @@ fn unnail_restores_the_run_and_a_repick_keeps_it() {
     let mut rows = tng_lai_rows();
     rows.push(Row {
         toneless_key: "khi",
-        hanzi: "去",
+        hanji: "去",
         tl: "khì",
         syll: 1,
         freq: 40_000,

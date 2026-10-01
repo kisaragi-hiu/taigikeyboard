@@ -134,6 +134,15 @@ fn what_the_engine_writes_restores_on_a_fresh_install() {
         "sorted keys"
     );
     assert!(!text.contains("origin"), "never written");
+    // Persisted JSON key names: the code says `hanji` / `previous`, the
+    // `.taigi` format keeps what older apps wrote and read.
+    for key in [
+        "\"hanzi\": \"台灣\"",
+        "\"prevWord\": \"重\"",
+        "\"prevTl\": \"tîng\"",
+    ] {
+        assert!(text.contains(key), "export keeps the {key} key");
+    }
 
     let target_directory = scratch();
     let target = stores(&target_directory);
@@ -145,7 +154,7 @@ fn what_the_engine_writes_restores_on_a_fresh_install() {
         .all_rows()
         .unwrap()
         .iter()
-        .any(|row| row.hanzi == "台灣"));
+        .any(|row| row.hanji == "台灣"));
 }
 
 #[test]

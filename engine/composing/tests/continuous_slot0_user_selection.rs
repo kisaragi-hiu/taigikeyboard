@@ -32,28 +32,28 @@ fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "kingsin",
-            hanzi: "敬神",
+            hanji: "敬神",
             tl: "kìng-sîn",
             syll: 2,
             freq: 25,
         },
         Row {
             toneless_key: "kingsin",
-            hanzi: "更新",
+            hanji: "更新",
             tl: "king-sin",
             syll: 2,
             freq: 1,
         },
         Row {
             toneless_key: "king",
-            hanzi: "經",
+            hanji: "經",
             tl: "king",
             syll: 1,
             freq: 9218,
         },
         Row {
             toneless_key: "sin",
-            hanzi: "身",
+            hanji: "身",
             tl: "sin",
             syll: 1,
             freq: 10865,
@@ -128,7 +128,7 @@ fn selected_rare_phrase_alone_under_its_key_beats_the_single_syllable_split() {
     let _lock = engine_install_lock();
     let rows: Vec<Row> = fixture_rows()
         .into_iter()
-        .filter(|r| r.hanzi != "敬神")
+        .filter(|r| r.hanji != "敬神")
         .collect();
     let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
     let fst_path = build_dictionary_fst_tl_toned(&rows);

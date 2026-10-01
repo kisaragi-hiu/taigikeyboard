@@ -982,7 +982,7 @@ mod tests {
 
     #[test]
     fn a_hanji_only_commit_pairs_with_an_empty_tl() {
-        // trace: the hanzi-only suggestion path sends roman "" — poj→tl("")
+        // trace: the hanji-only suggestion path sends roman "" — poj→tl("")
         // = "", so the pair carries `next_tl: ""` rather than a guessed one.
         let mut state = PersistedState {
             last_selected_word: Some("早".to_owned()),

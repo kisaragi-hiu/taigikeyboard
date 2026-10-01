@@ -118,7 +118,7 @@ pub(super) fn record_to_candidate(
         bitmask: _,
         frequency,
         syllable_count,
-        hanzi,
+        hanji,
         tl,
         kautian_subtag: _,
     } = record;
@@ -126,9 +126,9 @@ pub(super) fn record_to_candidate(
     // disabled) drives `source_tier_rank` so a multi-source survivor ranks by
     // its other source's tier, not kautian's (DD6 ranking-weight drop).
     let bitmask = effective_bitmask;
-    let mode = derive_mode(hanzi.as_deref());
+    let mode = derive_mode(hanji.as_deref());
     // Phase 9 Item 5: `roman` = `tl` alongside `display_text`. `hanji`
-    // mirrors `DictionaryRecord.hanzi` verbatim so the proto3 `optional`
+    // mirrors `DictionaryRecord.hanji` verbatim so the proto3 `optional`
     // field can preserve the absent-vs-empty distinction. R2 identity
     // sidechannel: `DictionaryRecord.tl` is already canonical TL, so
     // `canonical_tl` equals `roman` here BEFORE the composing-layer recase /
@@ -136,7 +136,6 @@ pub(super) fn record_to_candidate(
     // each source string is cloned once, not twice.
     let roman = tl;
     let canonical_tl = roman.clone();
-    let hanji = hanzi;
     let display_text = hanji.clone().unwrap_or_else(|| roman.clone());
     // Phase 9.3a + R5 pair-key (#7): look up the candidate's
     // user-frequency snapshot by the `(display_text, canonical_tl)`
@@ -295,7 +294,7 @@ pub(super) fn learned_entry_to_candidate(
         DictionaryRecord {
             bitmask: 0,
             frequency: 0,
-            hanzi: Some(entry.hanji.clone()),
+            hanji: Some(entry.hanji.clone()),
             tl: entry.canonical_tl.clone(),
             syllable_count,
             kautian_subtag: 0,
@@ -374,13 +373,13 @@ mod record_to_candidate_carrier_tests {
     use super::*;
     use crate::continuous::{CandidateMode, COVERAGE_KIND_FULL};
 
-    fn record(tl: &str, hanzi: Option<&str>) -> DictionaryRecord {
+    fn record(tl: &str, hanji: Option<&str>) -> DictionaryRecord {
         DictionaryRecord {
             bitmask: 0,
             frequency: 0,
             syllable_count: 1,
             kautian_subtag: 0,
-            hanzi: hanzi.map(str::to_owned),
+            hanji: hanji.map(str::to_owned),
             tl: tl.to_owned(),
         }
     }
@@ -408,7 +407,7 @@ mod record_to_candidate_carrier_tests {
 
     #[test]
     fn tailo_record_emits_roman_and_none_hanji() {
-        // `hanzi = None` → TAILO path; `display_text` falls back to TL,
+        // `hanji = None` → TAILO path; `display_text` falls back to TL,
         // `roman` stays equal to TL, `hanji` is wire-absent
         // (proto3 `optional` distinguishes None from Some("")).
         let cand = record_to_candidate(

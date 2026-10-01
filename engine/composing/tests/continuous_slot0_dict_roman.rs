@@ -40,14 +40,14 @@ fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "hoogua",
-            hanzi: "予我",
+            hanji: "予我",
             tl: "hōo--guá", // khinsiann; tl_num hoo7gua2
             syll: 2,
             freq: 16,
         },
         Row {
             toneless_key: "hoogua",
-            hanzi: "戶外",
+            hanji: "戶外",
             tl: "hōo-guā", // hyphen; tl_num hoo7gua7 — tone 7 (different word)
             syll: 2,
             freq: 25,
@@ -60,14 +60,14 @@ fn fixture_rows() -> Vec<Row> {
         // single's freq exceeds ~18.4k; 80k leaves comfortable margin.
         Row {
             toneless_key: "hoo",
-            hanzi: "予",
+            hanji: "予",
             tl: "hōo",
             syll: 1,
             freq: 80_000,
         },
         Row {
             toneless_key: "gua",
-            hanzi: "我",
+            hanji: "我",
             tl: "guá",
             syll: 1,
             freq: 80_000,

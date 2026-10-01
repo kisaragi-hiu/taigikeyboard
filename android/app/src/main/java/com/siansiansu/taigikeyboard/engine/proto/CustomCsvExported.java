@@ -7,7 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * The whole dictionary as `roman,hanzi` lines, for the platform to save.
+ * The whole dictionary as `roman,hanji` lines, for the platform to save.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.CustomCsvExported}
@@ -133,7 +133,7 @@ public  final class CustomCsvExported extends
 
   /**
    * <pre>
-   * The whole dictionary as `roman,hanzi` lines, for the platform to save.
+   * The whole dictionary as `roman,hanji` lines, for the platform to save.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.CustomCsvExported}

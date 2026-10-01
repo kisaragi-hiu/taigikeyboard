@@ -112,7 +112,7 @@ pub fn export_backup(
         custom_dictionary: custom
             .into_iter()
             .map(|row| CustomEntry {
-                hanzi: row.hanzi,
+                hanzi: row.hanji,
                 origin: None,
                 roman: row.roman,
             })

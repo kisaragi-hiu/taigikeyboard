@@ -30,7 +30,7 @@ fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "jim",
-            hanzi: "忍",
+            hanji: "忍",
             tl: "jím",
             syll: 1,
             freq: 600,
@@ -38,49 +38,49 @@ fn fixture_rows() -> Vec<Row> {
         // A plain-`-` compound over the report's first two syllables.
         Row {
             toneless_key: "jimkhi",
-            hanzi: "忍氣",
+            hanji: "忍氣",
             tl: "jím-khì",
             syll: 2,
             freq: 400,
         },
         Row {
             toneless_key: "khi",
-            hanzi: "去",
+            hanji: "去",
             tl: "khì",
             syll: 1,
             freq: 38_000,
         },
         Row {
             toneless_key: "khi",
-            hanzi: "起",
+            hanji: "起",
             tl: "khí",
             syll: 1,
             freq: 16_000,
         },
         Row {
             toneless_key: "khia",
-            hanzi: "企",
+            hanji: "企",
             tl: "khiā",
             syll: 1,
             freq: 2_500,
         },
         Row {
             toneless_key: "khiah",
-            hanzi: "隙",
+            hanji: "隙",
             tl: "khiah",
             syll: 1,
             freq: 100,
         },
         Row {
             toneless_key: "khiah",
-            hanzi: "屐",
+            hanji: "屐",
             tl: "khia̍h",
             syll: 1,
             freq: 50,
         },
         Row {
             toneless_key: "khiah",
-            hanzi: "去啊",
+            hanji: "去啊",
             tl: "khì--ah",
             syll: 2,
             freq: 16,
@@ -88,14 +88,14 @@ fn fixture_rows() -> Vec<Row> {
         // Production stores the khinsiann single without its `--` (矣 `ah`).
         Row {
             toneless_key: "ah",
-            hanzi: "矣",
+            hanji: "矣",
             tl: "ah",
             syll: 1,
             freq: 20_000,
         },
         Row {
             toneless_key: "ah",
-            hanzi: "啊",
+            hanji: "啊",
             tl: "ah",
             syll: 1,
             freq: 9_000,

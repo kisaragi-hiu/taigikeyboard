@@ -27,14 +27,14 @@ fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "uan",
-            hanzi: "灣",
+            hanji: "灣",
             tl: "uan",
             syll: 1,
             freq: 9981,
         },
         Row {
             toneless_key: "uan",
-            hanzi: "灣",
+            hanji: "灣",
             tl: "uân",
             syll: 1,
             freq: 7984,
@@ -43,7 +43,7 @@ fn fixture_rows() -> Vec<Row> {
         // distinct hanji on the same toneless key — must always survive.
         Row {
             toneless_key: "uan",
-            hanzi: "彎",
+            hanji: "彎",
             tl: "uan",
             syll: 1,
             freq: 100,

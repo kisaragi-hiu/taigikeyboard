@@ -32,7 +32,7 @@ use crate::common::build_tkdb_v3;
 /// One dictionary fixture row. `bitmask` is fixed to the `lkk` source bit so
 /// every row passes the all-sources filter the tests use.
 struct Row<'a> {
-    hanzi: &'a str,
+    hanji: &'a str,
     tl: &'a str,
     syll: u8,
     freq: u32,
@@ -81,7 +81,7 @@ fn num_and_notone(num: String) -> Vec<String> {
 fn build_fixture(name: &str, family: &str, rows: &[Row<'_>]) -> (PrefixIndex, DictionaryReader) {
     let dict_rows: Vec<(u16, u32, u8, &str, &str)> = rows
         .iter()
-        .map(|r| (1u16 << 11, r.freq, r.syll, r.hanzi, r.tl))
+        .map(|r| (1u16 << 11, r.freq, r.syll, r.hanji, r.tl))
         .collect();
     let dict_path = write_temp(
         &format!("syllable-reach-{name}.dict.bin"),
@@ -151,19 +151,19 @@ fn hanji_for(
 fn tl_rows() -> Vec<Row<'static>> {
     vec![
         Row {
-            hanzi: "水",
+            hanji: "水",
             tl: "tsuí",
             syll: 1,
             freq: 900,
         },
         Row {
-            hanzi: "水手",
+            hanji: "水手",
             tl: "tsuí-siú",
             syll: 2,
             freq: 500,
         },
         Row {
-            hanzi: "水社寮",
+            hanji: "水社寮",
             tl: "tsuí-siā-liâu",
             syll: 3,
             freq: 100,
@@ -217,13 +217,13 @@ fn tl_multi_syllable_extension_drops_at_every_earlier_boundary() {
     // "kesithau" (8) ≥ 8 dropped.
     let rows = vec![
         Row {
-            hanzi: "家私頭",
+            hanji: "家私頭",
             tl: "ke-si-thâu",
             syll: 3,
             freq: 300,
         },
         Row {
-            hanzi: "家私頭仔",
+            hanji: "家私頭仔",
             tl: "ke-si-thâu-á",
             syll: 4,
             freq: 300,
@@ -241,13 +241,13 @@ fn tl_numeric_tone_key_measures_reach_on_the_toned_face() {
     // syllable and could admit a word the user stopped short of.
     let rows = vec![
         Row {
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 900,
         },
         Row {
-            hanzi: "台灣",
+            hanji: "台灣",
             tl: "tâi-uân",
             syll: 2,
             freq: 800,
@@ -261,7 +261,7 @@ fn tl_numeric_tone_key_measures_reach_on_the_toned_face() {
 fn tl_numeric_tone_key_admits_a_word_typed_into_its_last_syllable() {
     // trace: typed `tai5u` (5) > head "tai5" (4) → 台灣 returns.
     let rows = vec![Row {
-        hanzi: "台灣",
+        hanji: "台灣",
         tl: "tâi-uân",
         syll: 2,
         freq: 800,
@@ -281,13 +281,13 @@ fn an_unmarked_reading_is_measured_on_its_numeric_face_too() {
     // case in this file uses a marked reading (`tâi-uân`) and cannot see it.
     let rows = vec![
         Row {
-            hanzi: "交",
+            hanji: "交",
             tl: "kau",
             syll: 1,
             freq: 900,
         },
         Row {
-            hanzi: "交關",
+            hanji: "交關",
             tl: "kau-kuan",
             syll: 2,
             freq: 400,
@@ -303,13 +303,13 @@ fn an_unmarked_reading_is_measured_on_its_numeric_face_too() {
     // Same reading, stop-coda default tone 4 rather than 1.
     let rows = vec![
         Row {
-            hanzi: "甲",
+            hanji: "甲",
             tl: "kah",
             syll: 1,
             freq: 900,
         },
         Row {
-            hanzi: "甲意",
+            hanji: "甲意",
             tl: "kah-ì",
             syll: 2,
             freq: 400,
@@ -335,13 +335,13 @@ fn poj_numeric_tone_key_measures_reach_on_the_toned_face() {
     // ["goa2", "si7"] → head "goa2" (4) ≥ 4 dropped.
     let rows = vec![
         Row {
-            hanzi: "我",
+            hanji: "我",
             tl: "guá",
             syll: 1,
             freq: 900,
         },
         Row {
-            hanzi: "我是",
+            hanji: "我是",
             tl: "guá-sī",
             syll: 2,
             freq: 400,
@@ -354,13 +354,13 @@ fn poj_numeric_tone_key_measures_reach_on_the_toned_face() {
 fn tps_rows() -> Vec<Row<'static>> {
     vec![
         Row {
-            hanzi: "交",
+            hanji: "交",
             tl: "kau",
             syll: 1,
             freq: 900,
         },
         Row {
-            hanzi: "交代",
+            hanji: "交代",
             tl: "kau-tài",
             syll: 2,
             freq: 500,
@@ -393,13 +393,13 @@ fn tps_or_dialect_variant_face_is_measured_on_its_own_glyphs() {
     // while single-syllable 火 stays.
     let rows = vec![
         Row {
-            hanzi: "火",
+            hanji: "火",
             tl: "hér",
             syll: 1,
             freq: 900,
         },
         Row {
-            hanzi: "火爐",
+            hanji: "火爐",
             tl: "hér-lôo",
             syll: 2,
             freq: 400,
@@ -471,7 +471,7 @@ fn a_flood_of_rejected_rows_does_not_starve_the_readings_that_survive() {
     // budget, plus one single-syllable 水. Typed `tsui` drops every
     // two-syllable row (head "tsui" ≥ 4) and must still return 水.
     let mut rows = vec![Row {
-        hanzi: "水",
+        hanji: "水",
         tl: "tsuí",
         syll: 1,
         freq: 10,
@@ -485,7 +485,7 @@ fn a_flood_of_rejected_rows_does_not_starve_the_readings_that_survive() {
     let flood: Vec<String> = tails.iter().map(|tail| format!("tsuí-s{tail}")).collect();
     for (i, tl) in flood.iter().enumerate() {
         rows.push(Row {
-            hanzi: FLOOD_HANZI,
+            hanji: FLOOD_HANJI,
             tl,
             syll: 2,
             freq: 1000 + i as u32,
@@ -503,7 +503,7 @@ fn a_flood_of_rejected_rows_does_not_starve_the_readings_that_survive() {
 /// Filler Hanji for the flood rows, deliberately DIFFERENT from the single
 /// reading under test so a leaked flood row shows up in the assertion instead
 /// of hiding behind an identical label.
-const FLOOD_HANZI: &str = "汁";
+const FLOOD_HANJI: &str = "汁";
 
 #[test]
 fn a_toned_tps_body_stopping_on_a_boundary_is_rejected() {
@@ -516,13 +516,13 @@ fn a_toned_tps_body_stopping_on_a_boundary_is_rejected() {
     // (16) → head 16 ≥ 16 → dropped; one glyph further (19) → kept.
     let rows = vec![
         Row {
-            hanzi: "台語",
+            hanji: "台語",
             tl: "tâi-gí",
             syll: 2,
             freq: 900,
         },
         Row {
-            hanzi: "台語課",
+            hanji: "台語課",
             tl: "tâi-gí-khò",
             syll: 3,
             freq: 400,
@@ -557,13 +557,13 @@ fn a_toned_or_dialect_variant_body_is_measured_on_its_own_face() {
     // `ㄏㄛˋㄌ` (12) → kept. 火 stays either way.
     let rows = vec![
         Row {
-            hanzi: "火",
+            hanji: "火",
             tl: "hér",
             syll: 1,
             freq: 900,
         },
         Row {
-            hanzi: "火爐",
+            hanji: "火爐",
             tl: "hér-lôo",
             syll: 2,
             freq: 400,
@@ -597,13 +597,13 @@ fn a_khinsiann_separator_does_not_add_a_syllable() {
     // `hoo7` (4) → head 4 ≥ 4 → dropped; `hoo7g` (5) → kept.
     let rows = vec![
         Row {
-            hanzi: "予",
+            hanji: "予",
             tl: "hōo",
             syll: 1,
             freq: 900,
         },
         Row {
-            hanzi: "予我",
+            hanji: "予我",
             tl: "hōo--guá",
             syll: 2,
             freq: 400,
@@ -624,13 +624,13 @@ fn a_space_separated_reading_splits_at_the_space() {
     // → head 4 ≥ 3 → dropped; `ia7s` (4) → kept.
     let rows = vec![
         Row {
-            hanzi: "也",
+            hanji: "也",
             tl: "iā",
             syll: 1,
             freq: 900,
         },
         Row {
-            hanzi: "也是",
+            hanji: "也是",
             tl: "iā sī",
             syll: 2,
             freq: 400,

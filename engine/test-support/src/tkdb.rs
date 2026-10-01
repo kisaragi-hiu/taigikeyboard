@@ -15,7 +15,7 @@ pub struct TkdbRow<'a> {
     pub frequency: u32,
     pub syllable_count: Option<u8>,
     pub kautian_subtag: Option<u16>,
-    pub hanzi: &'a str,
+    pub hanji: &'a str,
     pub tl: &'a str,
 }
 
@@ -35,7 +35,7 @@ pub fn build_tkdb(magic: &[u8; 4], version: u32, rows: &[TkdbRow<'_>]) -> Vec<u8
         offsets.push((TKDB_HEADER_SIZE + offset_table_size + payload.len()) as u32);
         payload.extend_from_slice(&row.bitmask.to_le_bytes());
         payload.extend_from_slice(&row.frequency.to_le_bytes());
-        payload.push(row.hanzi.len() as u8);
+        payload.push(row.hanji.len() as u8);
         payload.push(row.tl.len() as u8);
         if let Some(syll) = row.syllable_count {
             payload.push(syll);
@@ -43,7 +43,7 @@ pub fn build_tkdb(magic: &[u8; 4], version: u32, rows: &[TkdbRow<'_>]) -> Vec<u8
         if let Some(subtag) = row.kautian_subtag {
             payload.extend_from_slice(&subtag.to_le_bytes());
         }
-        payload.extend_from_slice(row.hanzi.as_bytes());
+        payload.extend_from_slice(row.hanji.as_bytes());
         payload.extend_from_slice(row.tl.as_bytes());
     }
     for off in &offsets {

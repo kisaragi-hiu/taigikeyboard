@@ -84,7 +84,7 @@ fn ctx_neutral<'a>(
 
 use crate::common::{build_tkdb_v3, fetch_candidates_for_endings, frequency_map, FrequencyFixture};
 
-/// Single dictionary fixture row: `(toneless_tl_key, hanzi, tl, syllable_count, frequency)`.
+/// Single dictionary fixture row: `(toneless_tl_key, hanji, tl, syllable_count, frequency)`.
 /// `bitmask` is fixed to `1 << 11` (the `lkk` source per
 /// `dictionary/common/source_bits.py:35`); the per-source mask check
 /// is short-circuited at `u32::MAX` filter input below, so any set
@@ -97,7 +97,7 @@ use crate::common::{build_tkdb_v3, fetch_candidates_for_endings, frequency_map, 
 /// mirrored as 1-based in the FST).
 struct Row<'a> {
     toneless_key: &'a str,
-    hanzi: &'a str,
+    hanji: &'a str,
     tl: &'a str,
     syll: u8,
     freq: u32,
@@ -118,7 +118,7 @@ fn build_fixture_sourced(name: &str, rows: &[(u16, &Row<'_>)]) -> (PrefixIndex, 
     // 1. dict.bin v2.
     let dict_rows: Vec<(u16, u32, u8, &str, &str)> = rows
         .iter()
-        .map(|(bitmask, r)| (*bitmask, r.freq, r.syll, r.hanzi, r.tl))
+        .map(|(bitmask, r)| (*bitmask, r.freq, r.syll, r.hanji, r.tl))
         .collect();
     let dict_bytes = build_tkdb_v3(b"TKDB", &dict_rows);
     let dict_path = write_temp(&format!("phase5-{name}.dict.bin"), &dict_bytes);
@@ -171,21 +171,21 @@ fn tsua_surfaces_zhi_zhuah_zhu_across_two_spans() {
         &[
             Row {
                 toneless_key: "tsua",
-                hanzi: "紙",
+                hanji: "紙",
                 tl: "tsuá",
                 syll: 1,
                 freq: 100,
             },
             Row {
                 toneless_key: "tsua",
-                hanzi: "珠仔",
+                hanji: "珠仔",
                 tl: "tsu-á",
                 syll: 2,
                 freq: 80,
             },
             Row {
                 toneless_key: "tsu",
-                hanzi: "珠",
+                hanji: "珠",
                 tl: "tsu",
                 syll: 1,
                 freq: 90,
@@ -271,21 +271,21 @@ fn taigikhipuann_surfaces_long_reach_4_syllable_word() {
         &[
             Row {
                 toneless_key: "tai",
-                hanzi: "台",
+                hanji: "台",
                 tl: "tâi",
                 syll: 1,
                 freq: 200,
             },
             Row {
                 toneless_key: "taigi",
-                hanzi: "台語",
+                hanji: "台語",
                 tl: "tâi-gí",
                 syll: 2,
                 freq: 150,
             },
             Row {
                 toneless_key: "taigikhipuann",
-                hanzi: "台語齒盤",
+                hanji: "台語齒盤",
                 tl: "tâi-gí-khí-puânn",
                 syll: 4,
                 freq: 5,
@@ -330,7 +330,7 @@ fn taixyz_emits_only_single_syllable_when_endings_capped() {
         &[
             Row {
                 toneless_key: "tai",
-                hanzi: "台",
+                hanji: "台",
                 tl: "tâi",
                 syll: 1,
                 freq: 200,
@@ -339,7 +339,7 @@ fn taixyz_emits_only_single_syllable_when_endings_capped() {
             // endings included 4. Must NOT surface because endings={3}.
             Row {
                 toneless_key: "taix",
-                hanzi: "假詞",
+                hanji: "假詞",
                 tl: "tai-x",
                 syll: 2,
                 freq: 999,
@@ -381,7 +381,7 @@ fn empty_endings_yields_empty() {
         "empty-endings",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 1,
@@ -403,7 +403,7 @@ fn pos_at_or_past_input_end_yields_empty() {
         "pos-past-end",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 1,
@@ -430,7 +430,7 @@ fn out_of_range_endings_silently_skipped() {
         "oob-endings",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 50,
@@ -466,7 +466,7 @@ fn numeric_tone_input_strips_to_fused_toneless_key() {
         "numeric-single",
         &[Row {
             toneless_key: "tsua",
-            hanzi: "紙",
+            hanji: "紙",
             tl: "tsuá",
             syll: 1,
             freq: 100,
@@ -493,7 +493,7 @@ fn numeric_tone_multi_syllable_strips_each_segment_to_fused_key() {
         "numeric-multi",
         &[Row {
             toneless_key: "taibak",
-            hanzi: "代墨",
+            hanji: "代墨",
             tl: "tâi-ba̍k",
             syll: 2,
             freq: 50,
@@ -530,7 +530,7 @@ fn hyphen_in_input_is_not_stripped_at_lexicon_layer() {
         "hyphen-no-strip",
         &[Row {
             toneless_key: "taibak",
-            hanzi: "代墨",
+            hanji: "代墨",
             tl: "tâi-ba̍k",
             syll: 2,
             freq: 50,
@@ -595,21 +595,21 @@ fn taiuantaigi_full_buffer_phrase_outranks_high_freq_short_match() {
         &[
             Row {
                 toneless_key: "tai",
-                hanzi: "台",
+                hanji: "台",
                 tl: "tâi",
                 syll: 1,
                 freq: 31281,
             },
             Row {
                 toneless_key: "taiuan",
-                hanzi: "台灣",
+                hanji: "台灣",
                 tl: "tâi-uân",
                 syll: 2,
                 freq: 1379,
             },
             Row {
                 toneless_key: "taiuantaigi",
-                hanzi: "臺灣台語",
+                hanji: "臺灣台語",
                 tl: "tâi-uân-tâi-gí",
                 syll: 4,
                 freq: 12,
@@ -651,14 +651,14 @@ fn single_char_input_e_still_surfaces_de_at_slot_1() {
         &[
             Row {
                 toneless_key: "e",
-                hanzi: "的",
+                hanji: "的",
                 tl: "ê",
                 syll: 1,
                 freq: 184693,
             },
             Row {
                 toneless_key: "e",
-                hanzi: "鞋",
+                hanji: "鞋",
                 tl: "ê",
                 syll: 1,
                 freq: 500,
@@ -677,12 +677,12 @@ fn single_char_input_e_still_surfaces_de_at_slot_1() {
     assert_eq!(out.len(), 2);
     assert_eq!(
         out[0].display_text, "的",
-        "high-freq Tier 0 hanzi at slot 1"
+        "high-freq Tier 0 hanji at slot 1"
     );
     assert_eq!(out[0].consumed_span, (0, 1));
     assert_eq!(
         out[1].display_text, "鞋",
-        "low-freq Tier 0 hanzi at slot 2 (within-tier score desc)"
+        "low-freq Tier 0 hanji at slot 2 (within-tier score desc)"
     );
 }
 
@@ -701,14 +701,14 @@ fn taixyz_invalid_tail_yields_empty_tier1_top() {
         &[
             Row {
                 toneless_key: "tai",
-                hanzi: "台",
+                hanji: "台",
                 tl: "tâi",
                 syll: 1,
                 freq: 31281,
             },
             Row {
                 toneless_key: "tai",
-                hanzi: "代",
+                hanji: "代",
                 tl: "tāi",
                 syll: 1,
                 freq: 14215,
@@ -774,21 +774,21 @@ fn stable_idx_preserves_insertion_order_at_fetch_boundary() {
             // separates them — the property under test.
             Row {
                 toneless_key: "tai",
-                hanzi: "一",
+                hanji: "一",
                 tl: "tâi",
                 syll: 1,
                 freq: 100,
             },
             Row {
                 toneless_key: "tai",
-                hanzi: "二",
+                hanji: "二",
                 tl: "tài",
                 syll: 1,
                 freq: 100,
             },
             Row {
                 toneless_key: "tai",
-                hanzi: "三",
+                hanji: "三",
                 tl: "tāi",
                 syll: 1,
                 freq: 100,
@@ -825,7 +825,7 @@ fn raw_candidate_carries_dictionary_record_bitmask_for_sort_key() {
         "bitmask-plumb",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 100,
@@ -860,28 +860,28 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
     // production-emittable `CandidateMode` arms and asserts the byte
     // identity through `record_to_candidate`.
     //
-    // Empty `hanzi` ("") drives the v2 dict.bin header's `hanzi_len = 0`,
-    // which `DictionaryReader::record` decodes as `hanzi: None` → TAILO.
+    // Empty `hanji` ("") drives the v2 dict.bin header's `hanzi_len = 0`,
+    // which `DictionaryReader::record` decodes as `hanji: None` → TAILO.
     let (prefix_index, dict) = build_fixture(
         "mode-plumb",
         &[
             Row {
                 toneless_key: "tai",
-                hanzi: "台",
+                hanji: "台",
                 tl: "tâi",
                 syll: 1,
                 freq: 100,
             },
             Row {
                 toneless_key: "li",
-                hanzi: "",
+                hanji: "",
                 tl: "lí",
                 syll: 1,
                 freq: 50,
             },
             Row {
                 toneless_key: "iausi",
-                hanzi: "iáu是",
+                hanji: "iáu是",
                 tl: "iáu-sī",
                 syll: 2,
                 freq: 30,
@@ -911,7 +911,7 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
     assert_eq!(
         tailo[0].mode,
         CandidateMode::Tailo,
-        "empty hanzi (None) must derive TAILO; display_text falls back to TL"
+        "empty hanji (None) must derive TAILO; display_text falls back to TL"
     );
     assert_eq!(tailo[0].display_text, "lí");
 
@@ -926,7 +926,7 @@ fn mode_carrier_propagates_through_fetch_for_hant_tailo_mixed() {
     assert_eq!(
         mixed[0].mode,
         CandidateMode::Mixed,
-        "hanzi containing Latin letter (NFKD-normalized) must derive MIXED"
+        "hanji containing Latin letter (NFKD-normalized) must derive MIXED"
     );
     assert_eq!(mixed[0].display_text, "iáu是");
 }
@@ -937,29 +937,29 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
     // Mirrors the in-crate `record_to_candidate_carrier_tests` hermetic
     // unit tests but exercises the full `DictionaryReader` → FST
     // lookup → `record_to_candidate` chain so the contract holds at
-    // the integration boundary too. Empty `hanzi` ("") drives the v2
+    // the integration boundary too. Empty `hanji` ("") drives the v2
     // dict.bin header's `hanzi_len = 0`, which `DictionaryReader::record`
-    // decodes as `hanzi: None` — the only TAILO path.
+    // decodes as `hanji: None` — the only TAILO path.
     let (prefix_index, dict) = build_fixture(
         "item5-carrier",
         &[
             Row {
                 toneless_key: "tai",
-                hanzi: "台",
+                hanji: "台",
                 tl: "tâi",
                 syll: 1,
                 freq: 100,
             },
             Row {
                 toneless_key: "li",
-                hanzi: "",
+                hanji: "",
                 tl: "lí",
                 syll: 1,
                 freq: 50,
             },
             Row {
                 toneless_key: "iausi",
-                hanzi: "iáu是",
+                hanji: "iáu是",
                 tl: "iáu-sī",
                 syll: 2,
                 freq: 30,
@@ -989,7 +989,7 @@ fn roman_and_hanji_propagate_through_fetch_for_hant_tailo_mixed() {
     assert_eq!(tailo[0].roman, "lí");
     assert_eq!(
         tailo[0].hanji, None,
-        "empty hanzi (None) must wire as proto3 `optional` absent — NOT Some(empty)"
+        "empty hanji (None) must wire as proto3 `optional` absent — NOT Some(empty)"
     );
 
     let mixed = fetch_candidates_for_endings(
@@ -1042,21 +1042,21 @@ fn partial_prefix_engine_path_surfaces_lookup_prefix_hits() {
         &[
             Row {
                 toneless_key: "gua",
-                hanzi: "我",
+                hanji: "我",
                 tl: "guá",
                 syll: 1,
                 freq: 200,
             },
             Row {
                 toneless_key: "guan",
-                hanzi: "阮",
+                hanji: "阮",
                 tl: "guán",
                 syll: 1,
                 freq: 50,
             },
             Row {
                 toneless_key: "lin",
-                hanzi: "恁",
+                hanji: "恁",
                 tl: "lín",
                 syll: 1,
                 freq: 30,
@@ -1124,7 +1124,7 @@ fn partial_prefix_filters_abbrev_collisions() {
         &[
             Row {
                 toneless_key: "taigi",
-                hanzi: "台語",
+                hanji: "台語",
                 tl: "tâi-gí",
                 syll: 2,
                 freq: 100,
@@ -1136,7 +1136,7 @@ fn partial_prefix_filters_abbrev_collisions() {
             // the FST entry inside the `lookup_prefix("tl:taigi")` range.
             Row {
                 toneless_key: "taigir",
-                hanzi: "X",
+                hanji: "X",
                 tl: "tó-â-iàu-gô-iàu",
                 syll: 5,
                 freq: 50,
@@ -1190,7 +1190,7 @@ fn partial_prefix_unbounded_exposes_full_pool_for_cross_batch_dedupe() {
     let mut rows: Vec<Row> = (1..=32)
         .map(|i| Row {
             toneless_key: "hong",
-            hanzi: HOMOPHONE_HANZI[i - 1],
+            hanji: HOMOPHONE_HANJI[i - 1],
             tl: HOMOPHONE_TL[i - 1],
             syll: 1,
             freq: 1000 + i as u32,
@@ -1198,7 +1198,7 @@ fn partial_prefix_unbounded_exposes_full_pool_for_cross_batch_dedupe() {
         .collect();
     rows.push(Row {
         toneless_key: "honn",
-        hanzi: "好",
+        hanji: "好",
         tl: "hònn",
         syll: 1,
         freq: 10,
@@ -1241,11 +1241,11 @@ fn partial_prefix_unbounded_exposes_full_pool_for_cross_batch_dedupe() {
     );
 }
 
-// Hermetic hanzi + tl pools for the 32-homophone fixture above. Each
-// hanzi/tl pair is unique so the per-row `(roman, hanji, span)` triple
+// Hermetic hanji + tl pools for the 32-homophone fixture above. Each
+// hanji/tl pair is unique so the per-row `(roman, hanji, span)` triple
 // is distinct (no internal `dedupe_by_roman_hanji_span` collapse before
 // the test's bounded/unbounded comparison runs).
-const HOMOPHONE_HANZI: [&str; 32] = [
+const HOMOPHONE_HANJI: [&str; 32] = [
     "風", "封", "豐", "瘋", "蜂", "鋒", "峰", "烽", "馮", "逢", "縫", "奉", "鳳", "捧", "棒", "蓬",
     "篷", "鵬", "彭", "澎", "膨", "朋", "棚", "繃", "崩", "綳", "甭", "蓬", "鬃", "宏", "弘", "洪",
 ];
@@ -1262,7 +1262,7 @@ fn partial_prefix_returns_empty_when_no_dict_hits() {
         "item10-no-hits",
         &[Row {
             toneless_key: "gua",
-            hanzi: "我",
+            hanji: "我",
             tl: "guá",
             syll: 1,
             freq: 200,
@@ -1302,7 +1302,7 @@ fn partial_prefix_output_caps_at_output_cap() {
             let lo = (b'a' + (i % 26) as u8) as char;
             Row {
                 toneless_key: Box::leak(format!("t{hi}{lo}").into_boxed_str()),
-                hanzi: Box::leak(format!("漢{i}").into_boxed_str()),
+                hanji: Box::leak(format!("漢{i}").into_boxed_str()),
                 tl: Box::leak(format!("t{hi}{lo}").into_boxed_str()),
                 syll: 1,
                 freq: 1,
@@ -1349,7 +1349,7 @@ fn partial_prefix_high_freq_short_candidate_survives_past_legacy_byte_sort_cap()
             let lo = (b'a' + (i % 26) as u8) as char;
             Row {
                 toneless_key: Box::leak(format!("ka-{hi}{lo}").into_boxed_str()),
-                hanzi: Box::leak(format!("加{i}").into_boxed_str()),
+                hanji: Box::leak(format!("加{i}").into_boxed_str()),
                 tl: Box::leak(format!("ka-{hi}{lo}").into_boxed_str()),
                 syll: 2,
                 freq: 1,
@@ -1360,7 +1360,7 @@ fn partial_prefix_high_freq_short_candidate_survives_past_legacy_byte_sort_cap()
     // byte-rank 36, dropped by the old 30-row pre-cap.
     rows.push(Row {
         toneless_key: "ki",
-        hanzi: "基",
+        hanji: "基",
         tl: "ki",
         syll: 1,
         freq: 50_000,
@@ -1405,9 +1405,9 @@ fn partial_prefix_dedupe_runs_before_output_truncate() {
     //
     // Fixture: OUTPUT_CAP dict rows that all hydrate to the SAME
     // `(roman, hanji)` (distinct toneless_keys `kaa`..`kbd`, all with
-    // `tl = "kaa"` / `hanzi = "加"`) plus 1 UNIQUE row at byte-rank
+    // `tl = "kaa"` / `hanji = "加"`) plus 1 UNIQUE row at byte-rank
     // OUTPUT_CAP under toneless_key `kbe` with `tl = "kbe"` /
-    // `hanzi = "基"`.
+    // `hanji = "基"`.
     // Correct order (dedupe → sort → truncate): dedupe collapses the
     // 30 dupes to 1; output = {"加", "基"} (2 candidates, truncate
     // no-op).
@@ -1419,14 +1419,14 @@ fn partial_prefix_dedupe_runs_before_output_truncate() {
     let mut rows: Vec<Row> = (0..cap)
         .map(|i| {
             // Distinct toneless_keys (`kaa`, `kab`, …) so the FST
-            // accepts them as separate entries, but `tl` + `hanzi`
+            // accepts them as separate entries, but `tl` + `hanji`
             // collapse them to a single `(roman, hanji)` after
             // `dedupe_by_roman_hanji_span`.
             let hi = (b'a' + (i / 26) as u8) as char;
             let lo = (b'a' + (i % 26) as u8) as char;
             Row {
                 toneless_key: Box::leak(format!("k{hi}{lo}").into_boxed_str()),
-                hanzi: "加",
+                hanji: "加",
                 tl: "kaa",
                 syll: 1,
                 freq: 1,
@@ -1436,7 +1436,7 @@ fn partial_prefix_dedupe_runs_before_output_truncate() {
     // Byte-sort puts this last (after `kbd` at i=29 → `kbe` is i=30).
     rows.push(Row {
         toneless_key: "kbe",
-        hanzi: "基",
+        hanji: "基",
         tl: "kbe",
         syll: 1,
         freq: 1,
@@ -1493,7 +1493,7 @@ fn partial_prefix_hydrates_up_to_hydrate_cap_then_truncates() {
             let c = (b'a' + (i % 26) as u8) as char;
             Row {
                 toneless_key: Box::leak(format!("s{a}{b}{c}").into_boxed_str()),
-                hanzi: Box::leak(format!("漢{i}").into_boxed_str()),
+                hanji: Box::leak(format!("漢{i}").into_boxed_str()),
                 tl: Box::leak(format!("s{a}{b}{c}").into_boxed_str()),
                 syll: 1,
                 freq: 1,
@@ -1533,7 +1533,7 @@ fn partial_prefix_empty_key_returns_empty() {
         "item10-empty-key",
         &[Row {
             toneless_key: "x",
-            hanzi: "X",
+            hanji: "X",
             tl: "x",
             syll: 1,
             freq: 1,
@@ -1559,7 +1559,7 @@ fn partial_prefix_coverage_kind_zero_unchanged_on_full_syllable_path() {
         "item10-full-default",
         &[Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 100,
@@ -1592,7 +1592,7 @@ fn item12_custom_only_entry_surfaces_full_buffer() {
         "item12-custom-only",
         &[Row {
             toneless_key: "kah",
-            hanzi: "甲",
+            hanji: "甲",
             tl: "kah",
             syll: 1,
             freq: 100,
@@ -1627,7 +1627,7 @@ fn item12_custom_dedupes_and_wins_dict_collision() {
         "item12-collision",
         &[Row {
             toneless_key: "taigi",
-            hanzi: "台語",
+            hanji: "台語",
             tl: "tâi-gí",
             syll: 2,
             freq: 99999,
@@ -1665,7 +1665,7 @@ fn item12_custom_roman_variant_not_deduped() {
         "item12-roman-variant",
         &[Row {
             toneless_key: "taigi",
-            hanzi: "台語",
+            hanji: "台語",
             tl: "tâi-gí",
             syll: 2,
             freq: 100,
@@ -1699,7 +1699,7 @@ fn item12_custom_merges_into_partial_prefix_path() {
         "item12-partial-custom",
         &[Row {
             toneless_key: "gua",
-            hanzi: "我",
+            hanji: "我",
             tl: "guá",
             syll: 1,
             freq: 100,
@@ -1734,7 +1734,7 @@ fn item12_empty_custom_is_noop() {
         "item12-empty-custom",
         &[Row {
             toneless_key: "taigi",
-            hanzi: "台語",
+            hanji: "台語",
             tl: "tâi-gí",
             syll: 2,
             freq: 100,
@@ -1766,14 +1766,14 @@ fn best_candidate_for_key_returns_highest_score_on_collision() {
         &[
             Row {
                 toneless_key: "taiuan",
-                hanzi: "台灣",
+                hanji: "台灣",
                 tl: "tai5-uan5",
                 syll: 2,
                 freq: 100,
             },
             Row {
                 toneless_key: "taiuan",
-                hanzi: "臺灣",
+                hanji: "臺灣",
                 tl: "tâi-uân",
                 syll: 2,
                 freq: 5000,
@@ -1814,14 +1814,14 @@ fn best_candidate_for_key_breaks_score_tie_by_source_rank_like_the_list() {
     const TAIGITV_BIT: u16 = 1 << 1;
     let first_unknown = Row {
         toneless_key: "kap",
-        hanzi: "洽",
+        hanji: "洽",
         tl: "kap",
         syll: 1,
         freq: 4927,
     };
     let second_ranked = Row {
         toneless_key: "kap",
-        hanzi: "甲",
+        hanji: "甲",
         tl: "kap",
         syll: 1,
         freq: 4927,
@@ -1856,14 +1856,14 @@ fn best_candidate_for_key_prefers_selected_row_but_keeps_span_frequency_of_key()
         &[
             Row {
                 toneless_key: "taiuan",
-                hanzi: "台灣",
+                hanji: "台灣",
                 tl: "tâi-uân",
                 syll: 2,
                 freq: 100,
             },
             Row {
                 toneless_key: "taiuan",
-                hanzi: "臺灣",
+                hanji: "臺灣",
                 tl: "tâi-uân",
                 syll: 2,
                 freq: 5000,
@@ -1905,7 +1905,7 @@ fn best_candidate_for_key_none_when_key_absent() {
         "s2-best-absent",
         &[Row {
             toneless_key: "taigi",
-            hanzi: "台語",
+            hanji: "台語",
             tl: "tâi-gí",
             syll: 2,
             freq: 100,
@@ -1946,14 +1946,14 @@ fn continuous_drops_tl_abbrev_collision_keeps_genuine_toneless() {
         &[
             Row {
                 toneless_key: "gi",
-                hanzi: "語",
+                hanji: "語",
                 tl: "gí",
                 syll: 1,
                 freq: 100,
             },
             Row {
                 toneless_key: "gi",
-                hanzi: "外夷",
+                hanji: "外夷",
                 tl: "guā-î",
                 syll: 2,
                 freq: 5000,

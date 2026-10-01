@@ -119,9 +119,9 @@ fn only_a_dictionary_compound_run_learns_its_hyphens() {
         ("khau", "口", "kháu", 1, 4000),
         ("tsintshutkhau", "進出口", "tsìn-tshut-kháu", 3, 100),
     ]
-    .map(|(toneless_key, hanzi, tl, syll, freq)| Row {
+    .map(|(toneless_key, hanji, tl, syll, freq)| Row {
         toneless_key,
-        hanzi,
+        hanji,
         tl,
         syll,
         freq,
@@ -370,35 +370,35 @@ fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "ki",
-            hanzi: "機",
+            hanji: "機",
             tl: "ki",
             syll: 1,
             freq: 6318,
         },
         Row {
             toneless_key: "ki",
-            hanzi: "記",
+            hanji: "記",
             tl: "kì",
             syll: 1,
             freq: 2000,
         },
         Row {
             toneless_key: "khilai",
-            hanzi: "起來",
+            hanji: "起來",
             tl: "khí-lâi",
             syll: 2,
             freq: 3000,
         },
         Row {
             toneless_key: "khi",
-            hanzi: "起",
+            hanji: "起",
             tl: "khí",
             syll: 1,
             freq: 16425,
         },
         Row {
             toneless_key: "lai",
-            hanzi: "來",
+            hanji: "來",
             tl: "lâi",
             syll: 1,
             freq: 30000,
@@ -477,7 +477,7 @@ fn readings_for<'a>(cells: &'a [Cell], hanji: &str) -> Vec<&'a str> {
 
 #[test]
 fn learned_rows_differing_only_in_separator_collapse_to_the_first() {
-    // `UNIQUE(hanzi, roman)` keeps a slip and its correction as two rows;
+    // `UNIQUE(hanji, roman)` keeps a slip and its correction as two rows;
     // the platform lists them `learn_count DESC, updated_at DESC`, and only
     // that first row surfaces — whichever separator it carries.
     let _lock = engine_install_lock();
@@ -539,14 +539,14 @@ fn learned_phrase_matches_a_poj_typed_buffer() {
     let rows = vec![
         Row {
             toneless_key: "tshia",
-            hanzi: "車",
+            hanji: "車",
             tl: "tshia",
             syll: 1,
             freq: 5000,
         },
         Row {
             toneless_key: "thau",
-            hanzi: "頭",
+            hanji: "頭",
             tl: "thâu",
             syll: 1,
             freq: 9000,
@@ -571,7 +571,7 @@ fn dictionary_homophone_beats_a_learned_row_until_the_user_prefers_it() {
     let mut rows = fixture_rows();
     rows.push(Row {
         toneless_key: "kikhilai",
-        hanzi: "機器來",
+        hanji: "機器來",
         tl: "ki-khì-lâi",
         syll: 3,
         freq: 12,
@@ -614,7 +614,7 @@ fn learned_pair_the_dictionary_also_carries_is_listed_once_from_the_dictionary()
     let mut rows = fixture_rows();
     rows.push(Row {
         toneless_key: "kikhilai",
-        hanzi: "記起來",
+        hanji: "記起來",
         tl: "kì-khí-lâi",
         syll: 3,
         freq: 12,
@@ -675,35 +675,35 @@ fn guaiasi_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "gua",
-            hanzi: "我",
+            hanji: "我",
             tl: "guá",
             syll: 1,
             freq: 50000,
         },
         Row {
             toneless_key: "ia",
-            hanzi: "也",
+            hanji: "也",
             tl: "iā",
             syll: 1,
             freq: 20000,
         },
         Row {
             toneless_key: "i",
-            hanzi: "伊",
+            hanji: "伊",
             tl: "i",
             syll: 1,
             freq: 40000,
         },
         Row {
             toneless_key: "si",
-            hanzi: "是",
+            hanji: "是",
             tl: "sī",
             syll: 1,
             freq: 60000,
         },
         Row {
             toneless_key: "iasi",
-            hanzi: "也是",
+            hanji: "也是",
             tl: "iā sī",
             syll: 2,
             freq: 3000,
@@ -743,14 +743,14 @@ fn learned_row_answers_the_nasal_oo_alias_key() {
     let rows = vec![
         Row {
             toneless_key: "honn",
-            hanzi: "好",
+            hanji: "好",
             tl: "hònn",
             syll: 1,
             freq: 9000,
         },
         Row {
             toneless_key: "hian",
-            hanzi: "玄",
+            hanji: "玄",
             tl: "hiân",
             syll: 1,
             freq: 4000,

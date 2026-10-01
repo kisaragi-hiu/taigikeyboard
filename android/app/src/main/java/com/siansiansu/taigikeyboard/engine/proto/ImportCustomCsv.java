@@ -7,7 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * A `roman,hanzi` CSV file's bytes, as the platform's file picker read them.
+ * A `roman,hanji` CSV file's bytes, as the platform's file picker read them.
  * Rows already stored (same roman and Hanji) are skipped; the import stops
  * at the dictionary's cap without failing, so `imported` may be fewer than
  * the file's rows even with no refusal.
@@ -136,7 +136,7 @@ public  final class ImportCustomCsv extends
 
   /**
    * <pre>
-   * A `roman,hanzi` CSV file's bytes, as the platform's file picker read them.
+   * A `roman,hanji` CSV file's bytes, as the platform's file picker read them.
    * Rows already stored (same roman and Hanji) are skipped; the import stops
    * at the dictionary's cap without failing, so `imported` may be fewer than
    * the file's rows even with no refusal.

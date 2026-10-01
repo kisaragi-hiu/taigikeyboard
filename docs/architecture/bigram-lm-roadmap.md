@@ -217,7 +217,7 @@ Constraining rules per phase: P0 `planning.md` § Persistent hand-off; P1 `diagn
 3. **Hanji-only sources (P7)** — **decided USER 2026-09-30: not adopted.**
 4. **Clause punctuation** (`，` — gap #10) — recommend: breaks the bundled chain (D1) and keeps today's next-word context rule unchanged in P4; revisit with dogfood.
 5. **Source priority in the next-word strip** (Codex Q7) — **decided USER 2026-09-29: `DICT_SCORE_CAP` = 250, clamp** (§8 "equal count" → "always"; lands in P4a).
-6. **Engine `lexicon::classification::is_hanzi` stops at Extension E** while `dictionary.csv` carries 44 characters up to U+30E6C (Extension G) and the Python pipeline now tests through Extension G (`dictionary/common/cjk.py`, P3) — recommend aligning the engine in the round that next touches `classification.rs`; the callers (`composing/src/dispatch.rs:176`, `lexicon/src/api.rs:129`) decide whether such a character counts as hanji at all, so measure before changing.
+6. **Engine `lexicon::classification::is_hanji` stops at Extension E** while `dictionary.csv` carries 44 characters up to U+30E6C (Extension G) and the Python pipeline now tests through Extension G (`dictionary/common/cjk.py`, P3) — recommend aligning the engine in the round that next touches `classification.rs`; the callers (`composing/src/dispatch.rs:176`, `lexicon/src/api.rs:129`) decide whether such a character counts as hanji at all, so measure before changing.
 7. **TAT corpus application** (§ Corpus expansion row 9) — USER-only action (ACLCLP agreement); recommend deferring until P1b shows the fetchable sources are insufficient.
 
 ---

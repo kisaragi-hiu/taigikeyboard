@@ -163,7 +163,7 @@ impl UserAssociationStore {
     /// `prev_tl` equals `previous_tl` first, then untagged ones, then the
     /// other readings of the same Hanji — never dropped — each tier by count,
     /// recency, then `id`. The next-word filter keeps only the FIRST row per
-    /// predicted `(hanzi, tl)`, so this order decides whose evidence counts,
+    /// predicted `(hanji, tl)`, so this order decides whose evidence counts,
     /// and `ORDER BY` ranks before `LIMIT` truncates. Ported
     /// from iOS `NextWordRepository.swift` `fetchUserRows` and
     /// Android `NextWordService.kt` `USER_PREDICT_SQL`.

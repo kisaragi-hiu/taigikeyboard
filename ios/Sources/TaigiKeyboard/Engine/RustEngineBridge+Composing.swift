@@ -66,7 +66,7 @@ public extension RustEngineBridge {
 
     /// MOE-aligned candidate-type discriminator. Wire mirror of
     /// `protos::engine::CandidateMode` (Phase 9.2). Engine derives in
-    /// Rust from `DictionaryRecord.hanzi` presence + NFKD-normalized
+    /// Rust from `DictionaryRecord.hanji` presence + NFKD-normalized
     /// Latin-letter detection (`engine/lexicon/src/continuous/
     /// derive_mode`); platforms read but never recompute (no
     /// display-text sniffing — that would parallel-implement the

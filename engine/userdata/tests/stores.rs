@@ -63,8 +63,8 @@ fn query_key(key: &str, family: &'static str) -> CustomSearchKey {
     }
 }
 
-fn hanzi_of(rows: &[CustomDictionaryRow]) -> Vec<&str> {
-    rows.iter().map(|r| r.hanzi.as_str()).collect()
+fn hanji_of(rows: &[CustomDictionaryRow]) -> Vec<&str> {
+    rows.iter().map(|r| r.hanji.as_str()).collect()
 }
 
 // Frequency
@@ -237,12 +237,12 @@ fn an_added_entry_is_found_by_its_key_from_another_romanization_and_by_prefix() 
         .upsert(&CustomDictionaryRow::new("taigi", "台語"))
         .unwrap();
     assert_eq!(
-        hanzi_of(&store.rows_matching(&query_key("gua", "tl"), 20)),
+        hanji_of(&store.rows_matching(&query_key("gua", "tl"), 20)),
         ["我"]
     );
     assert_eq!(store.rows_matching(&query_key("gua", "poj"), 20).len(), 1);
     assert_eq!(
-        hanzi_of(&store.rows_matching(&query_key("tai", "tl"), 20)),
+        hanji_of(&store.rows_matching(&query_key("tai", "tl"), 20)),
         ["台語"]
     );
     let keystroke = store.rows_matching(
@@ -294,7 +294,7 @@ fn the_capacity_refuses_a_new_entry_but_never_an_edit() {
         Err(CustomDictionaryError::CapacityReached { limit: 2 })
     ));
     let mut edited = first.clone();
-    edited.hanzi = "假".into();
+    edited.hanji = "假".into();
     store.upsert(&edited).unwrap();
     assert_eq!(store.count().unwrap(), 2);
     assert!(
@@ -323,9 +323,9 @@ fn listing_pages_filters_and_counts_with_one_predicate() {
         stub_deriver(""),
         CustomDictionaryStore::MAX_ENTRIES,
     );
-    for (roman, hanzi) in [("gua", "我"), ("li", "你"), ("i", "伊"), ("guan_a", "阮仔")] {
+    for (roman, hanji) in [("gua", "我"), ("li", "你"), ("i", "伊"), ("guan_a", "阮仔")] {
         store
-            .upsert(&CustomDictionaryRow::new(roman, hanzi))
+            .upsert(&CustomDictionaryRow::new(roman, hanji))
             .unwrap();
     }
     assert_eq!(store.rows("", 2, 0).unwrap().len(), 2);
@@ -424,7 +424,7 @@ fn keys_written_by_an_older_derivation_are_rederived_once() {
     let entry = CustomDictionaryRow::new("gua", "我");
     old_store.upsert(&entry).unwrap();
     assert_eq!(
-        hanzi_of(&old_store.rows_matching(&query_key("old-gua", "tl"), 20)),
+        hanji_of(&old_store.rows_matching(&query_key("old-gua", "tl"), 20)),
         ["我"]
     );
     drop(old_store);
@@ -442,7 +442,7 @@ fn keys_written_by_an_older_derivation_are_rederived_once() {
     let new_store = custom_store(&directory, recording, CustomDictionaryStore::MAX_ENTRIES);
     new_store.rederive_search_keys_if_needed().unwrap();
     assert_eq!(
-        hanzi_of(&new_store.rows_matching(&query_key("new-gua", "tl"), 20)),
+        hanji_of(&new_store.rows_matching(&query_key("new-gua", "tl"), 20)),
         ["我"]
     );
     assert!(
@@ -485,7 +485,7 @@ fn an_unversioned_store_with_rows_is_rederived_and_an_edit_in_flight_keeps_its_o
     new_store.upsert(&edited).unwrap();
     new_store.rederive_search_keys_if_needed().unwrap();
     assert_eq!(
-        hanzi_of(&new_store.rows_matching(&query_key("new-goa", "tl"), 20)),
+        hanji_of(&new_store.rows_matching(&query_key("new-goa", "tl"), 20)),
         ["我"]
     );
     assert!(new_store
@@ -526,11 +526,11 @@ fn the_engine_derivation_finds_a_poj_entry_typed_as_tl() {
     stores.custom_dictionary.seed_if_empty().unwrap();
     let query = derive_custom_query_key("tsiahpa", "tl").expect("a query key");
     let found = stores.custom_dictionary.rows_matching(&query, 20);
-    assert_eq!(hanzi_of(&found), ["食飽未"]);
+    assert_eq!(hanji_of(&found), ["食飽未"]);
     assert!(derive_custom_search_keys("gâu-tsá").is_some_and(|keys| !keys.is_empty()));
     let poj_query = derive_custom_query_key("chiahpa", "poj").expect("a POJ query key");
     assert_eq!(
-        hanzi_of(&stores.custom_dictionary.rows_matching(&poj_query, 20)),
+        hanji_of(&stores.custom_dictionary.rows_matching(&poj_query, 20)),
         ["食飽未"]
     );
 }
@@ -617,7 +617,7 @@ fn learned_matches(store: &LearnedPhraseStore, input: &str, mode: &str) -> Vec<S
     store
         .rows_matching(&key, LearnedPhraseStore::KEYSTROKE_LIMIT)
         .into_iter()
-        .map(|row| row.hanzi)
+        .map(|row| row.hanji)
         .collect()
 }
 
@@ -632,7 +632,7 @@ fn learning_the_same_pair_twice_is_one_row_with_count_two_found_by_the_whole_buf
     assert_eq!(
         store.all_rows().unwrap(),
         vec![LearnedPhraseRow {
-            hanzi: "記起來".into(),
+            hanji: "記起來".into(),
             canonical_tl: "kì--khí-lâi".into(),
             learn_count: 2,
         }]
@@ -663,7 +663,7 @@ fn touching_bumps_a_known_pair_and_ignores_an_unknown_one_most_composed_first() 
             .all_rows()
             .unwrap()
             .iter()
-            .map(|row| (row.hanzi.as_str(), row.learn_count))
+            .map(|row| (row.hanji.as_str(), row.learn_count))
             .collect::<Vec<_>>(),
         [("記起來", 2), ("機起來", 1)]
     );
@@ -683,11 +683,11 @@ fn learning_past_the_cap_evicts_the_fewest_composed_row_and_its_keys_never_the_n
     store.learn_phrase("詞0", "su-0");
     store.learn_phrase("新詞", "sin-su");
     let rows = store.all_rows().unwrap();
-    let hanzi: Vec<&str> = rows.iter().map(|row| row.hanzi.as_str()).collect();
-    assert_eq!(rows.len(), 3, "rows stay at the cap; got {hanzi:?}");
-    assert!(hanzi.contains(&"詞0"), "the twice-composed row survives");
-    assert!(hanzi.contains(&"新詞"), "the newest learn is kept");
-    let evicted = if hanzi.contains(&"詞1") {
+    let hanji: Vec<&str> = rows.iter().map(|row| row.hanji.as_str()).collect();
+    assert_eq!(rows.len(), 3, "rows stay at the cap; got {hanji:?}");
+    assert!(hanji.contains(&"詞0"), "the twice-composed row survives");
+    assert!(hanji.contains(&"新詞"), "the newest learn is kept");
+    let evicted = if hanji.contains(&"詞1") {
         "su2"
     } else {
         "su1"
@@ -734,7 +734,7 @@ fn a_custom_dictionary_that_reached_the_parked_learned_shape_keeps_only_its_manu
         stub_deriver(""),
         CustomDictionaryStore::MAX_ENTRIES,
     );
-    assert_eq!(hanzi_of(&store.all_rows().unwrap()), ["台語"]);
+    assert_eq!(hanji_of(&store.all_rows().unwrap()), ["台語"]);
     assert!(
         store
             .rows_matching(&query_key("kikhilai", "tl"), 20)
@@ -742,7 +742,7 @@ fn a_custom_dictionary_that_reached_the_parked_learned_shape_keeps_only_its_manu
         "the learned row's keys went with it"
     );
     assert_eq!(
-        hanzi_of(&store.rows_matching(&query_key("taigi", "tl"), 20)),
+        hanji_of(&store.rows_matching(&query_key("taigi", "tl"), 20)),
         ["台語"]
     );
     let connection =
@@ -774,7 +774,7 @@ fn an_import_crosses_the_chunk_boundary_and_derives_each_romanization_once() {
     let directory = scratch();
     let store = custom_store(&directory, recording, CustomDictionaryStore::MAX_ENTRIES);
     // 1203 rows: two full chunks of 500 and a partial third; every third row
-    // shares a romanization with the one before it (same word, other hanzi).
+    // shares a romanization with the one before it (same word, other hanji).
     let rows: Vec<CustomDictionaryRow> = (0..1203)
         .map(|i| {
             CustomDictionaryRow::new(
@@ -833,7 +833,7 @@ fn a_romanization_only_entry_is_stored_and_found_and_the_seeds_carry_their_ids()
         .unwrap();
     let found = store.rows_matching(&query_key("tsiah", "tl"), 20);
     assert_eq!(found.len(), 1);
-    assert_eq!(found[0].hanzi, "", "an empty 漢字 column is legitimate");
+    assert_eq!(found[0].hanji, "", "an empty 漢字 column is legitimate");
     store.delete_all().unwrap();
     store.seed_if_empty().unwrap();
     let mut seeded = store.all_rows().unwrap();
@@ -841,7 +841,7 @@ fn a_romanization_only_entry_is_stored_and_found_and_the_seeds_carry_their_ids()
     assert_eq!(
         seeded
             .iter()
-            .map(|r| (r.id.as_str(), r.roman.as_str(), r.hanzi.as_str()))
+            .map(|r| (r.id.as_str(), r.roman.as_str(), r.hanji.as_str()))
             .collect::<Vec<_>>(),
         [
             ("default-gau-tsa", "gâu-tsá", "𠢕早"),
@@ -898,7 +898,7 @@ fn a_restore_fills_the_room_left_past_duplicates() {
         ("d", "丁"),
     ]
     .iter()
-    .map(|(roman, hanzi)| CustomDictionaryRow::new(roman, hanzi))
+    .map(|(roman, hanji)| CustomDictionaryRow::new(roman, hanji))
     .collect();
     let result = store.import_until_full(&rows).unwrap();
 

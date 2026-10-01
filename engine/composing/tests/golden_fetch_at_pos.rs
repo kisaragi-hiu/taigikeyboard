@@ -31,7 +31,7 @@
 //!
 //! ## Grounding (no invented dictionary content)
 //!
-//! Every dictionary triple `(toneless_key, hanzi, tl)` is sourced verbatim
+//! Every dictionary triple `(toneless_key, hanji, tl)` is sourced verbatim
 //! from either an existing hermetic test or production `dictionary.csv`:
 //!
 //! - `span_local_fetch.rs` — tsua/taigikhipuann/taiuantaigi/taibak/
@@ -134,21 +134,21 @@ fn fixture_rows() -> Vec<Row> {
         // span_local_fetch::tsua_surfaces_zhi_zhuah_zhu_across_two_spans
         Row {
             toneless_key: "tsua",
-            hanzi: "紙",
+            hanji: "紙",
             tl: "tsuá",
             syll: 1,
             freq: 100,
         },
         Row {
             toneless_key: "tsua",
-            hanzi: "珠仔",
+            hanji: "珠仔",
             tl: "tsu-á",
             syll: 2,
             freq: 80,
         },
         Row {
             toneless_key: "tsu",
-            hanzi: "珠",
+            hanji: "珠",
             tl: "tsu",
             syll: 1,
             freq: 90,
@@ -156,21 +156,21 @@ fn fixture_rows() -> Vec<Row> {
         // span_local_fetch::taiuantaigi_* / user_freq_plumb cold-start
         Row {
             toneless_key: "tai",
-            hanzi: "台",
+            hanji: "台",
             tl: "tâi",
             syll: 1,
             freq: 31281,
         },
         Row {
             toneless_key: "taiuan",
-            hanzi: "台灣",
+            hanji: "台灣",
             tl: "tâi-uân",
             syll: 2,
             freq: 1379,
         },
         Row {
             toneless_key: "taiuantaigi",
-            hanzi: "臺灣台語",
+            hanji: "臺灣台語",
             tl: "tâi-uân-tâi-gí",
             syll: 4,
             freq: 12,
@@ -178,7 +178,7 @@ fn fixture_rows() -> Vec<Row> {
         // span_local_fetch::taigikhipuann_surfaces_long_reach_4_syllable_word
         Row {
             toneless_key: "taigi",
-            hanzi: "台語",
+            hanji: "台語",
             tl: "tâi-gí",
             syll: 2,
             freq: 150,
@@ -194,14 +194,14 @@ fn fixture_rows() -> Vec<Row> {
         // the buffer can produce.
         Row {
             toneless_key: "taigir",
-            hanzi: "台語",
+            hanji: "台語",
             tl: "tâi-gír",
             syll: 2,
             freq: 25,
         },
         Row {
             toneless_key: "taigikhipuann",
-            hanzi: "台語齒盤",
+            hanji: "台語齒盤",
             tl: "tâi-gí-khí-puânn",
             syll: 4,
             freq: 5,
@@ -209,7 +209,7 @@ fn fixture_rows() -> Vec<Row> {
         // span_local_fetch::numeric_tone_multi_syllable_strips_each_segment_to_fused_key
         Row {
             toneless_key: "taibak",
-            hanzi: "代墨",
+            hanji: "代墨",
             tl: "tâi-ba̍k",
             syll: 2,
             freq: 50,
@@ -217,14 +217,14 @@ fn fixture_rows() -> Vec<Row> {
         // span_local_fetch::mode_carrier_propagates_through_fetch (TAILO + MIXED)
         Row {
             toneless_key: "li",
-            hanzi: "",
+            hanji: "",
             tl: "lí",
             syll: 1,
             freq: 50,
         },
         Row {
             toneless_key: "iausi",
-            hanzi: "iáu是",
+            hanji: "iáu是",
             tl: "iáu-sī",
             syll: 2,
             freq: 30,
@@ -232,7 +232,7 @@ fn fixture_rows() -> Vec<Row> {
         // span_local_fetch::partial_prefix_engine_path_surfaces_lookup_prefix_hits
         Row {
             toneless_key: "gua",
-            hanzi: "我",
+            hanji: "我",
             tl: "guá",
             syll: 1,
             freq: 200,
@@ -243,7 +243,7 @@ fn fixture_rows() -> Vec<Row> {
         // accepts `ㄨ` as a span ending → span-local fetch hits this row.
         Row {
             toneless_key: "u",
-            hanzi: "有",
+            hanji: "有",
             tl: "ū",
             syll: 1,
             freq: 53685,

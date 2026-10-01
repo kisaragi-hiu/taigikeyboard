@@ -240,7 +240,7 @@ extension RustEngineBridge {
     ///
     /// Asked of the engine rather than tested here: the ranges are an
     /// invariant the three platforms share
-    /// (`INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`), and Android's
+    /// (`INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`), and Android's
     /// hand-written version had an unreachable clause for exactly this reason —
     /// its 16-bit character type could not express the extension planes.
     ///

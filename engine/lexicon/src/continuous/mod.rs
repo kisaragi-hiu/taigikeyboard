@@ -84,7 +84,7 @@ use toneless_match::{
 /// carries the notone form: span-local keys are `<prefix>:<toneless>`
 /// bodies, and the tone-pinned (`tl_num` / `poj_num`) keys the same
 /// guards accept resolve to the same records. The other form ordinals
-/// (hanzi 0 / numeric 2 / abbrev 3) are reserved for carriers the proto
+/// (hanji 0 / numeric 2 / abbrev 3) are reserved for carriers the proto
 /// side does not have.
 pub const FORM_NOTONE: u8 = 1;
 
@@ -142,7 +142,7 @@ pub const PARTIAL_PREFIX_OUTPUT_CAP: usize = 30;
 /// MOE-aligned candidate-type discriminator (`VocType` analog). Carried
 /// on every [`RawCandidate`] and wire-encoded onto
 /// `protos::taigi::engine::CandidateMessage.mode` (Phase 9.2). Derived
-/// from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
+/// from `DictionaryRecord.hanji` presence + NFKD-normalized Latin-letter
 /// detection by [`derive_mode`]; never emitted as
 /// [`CandidateMode::Unspecified`] from Rust.
 ///
@@ -159,7 +159,7 @@ pub enum CandidateMode {
     Unspecified = 0,
     /// Hanji-only display (no Latin letters after NFKD normalization).
     Hant = 1,
-    /// Roman/romanization-only display — `DictionaryRecord.hanzi` was
+    /// Roman/romanization-only display — `DictionaryRecord.hanji` was
     /// `None`, so `display_text` fell back to the TL field.
     Tailo = 2,
     /// Hanji display containing at least one Latin letter after NFKD
@@ -177,8 +177,8 @@ impl CandidateMode {
     }
 }
 
-/// Derive the [`CandidateMode`] for a dictionary record. `hanzi.is_none()`
-/// is the only TAILO path; otherwise the hanzi string is NFKD-normalized
+/// Derive the [`CandidateMode`] for a dictionary record. `hanji.is_none()`
+/// is the only TAILO path; otherwise the hanji string is NFKD-normalized
 /// (folding `ê` → `e` + combining circumflex and `Ａ` → `A`) and any
 /// resulting ASCII alphabetic codepoint flips the candidate to MIXED.
 /// Digits / punctuation / kana / private-use glyphs alone do NOT flip
@@ -194,8 +194,8 @@ impl CandidateMode {
 /// `hanji.is_some()` binary in the synth path mis-emitted HANT for
 /// mixed-script paths like `…hip相`). `pub` so `composing` reuses the
 /// wire-visible classification instead of duplicating the NFKD rule.
-pub fn derive_mode(hanzi: Option<&str>) -> CandidateMode {
-    match hanzi {
+pub fn derive_mode(hanji: Option<&str>) -> CandidateMode {
+    match hanji {
         None => CandidateMode::Tailo,
         Some(text) if text.nfkd().any(|c| c.is_ascii_alphabetic()) => CandidateMode::Mixed,
         Some(_) => CandidateMode::Hant,
@@ -232,7 +232,7 @@ pub struct RawCandidate {
     /// its document string from this presentation roman.
     pub roman: String,
     /// v3.5.8 Phase 9 Item 5 — hanji display carried alongside
-    /// `display_text`. `None` iff `DictionaryRecord.hanzi.is_none()`
+    /// `display_text`. `None` iff `DictionaryRecord.hanji.is_none()`
     /// (TAILO candidate); `Some` otherwise. On the wire this maps to
     /// `optional string hanji` so consumers can distinguish "TAILO
     /// — no hanji exists" from "wire-frame defect / absent field"
@@ -275,7 +275,7 @@ pub struct RawCandidate {
     /// function of the returned `RawCandidate` vector.
     pub bitmask: u16,
     /// MOE-aligned candidate-type discriminator (HANT / TAILO / MIXED).
-    /// Derived by [`derive_mode`] from `DictionaryRecord.hanzi`.
+    /// Derived by [`derive_mode`] from `DictionaryRecord.hanji`.
     /// Metadata-only in Phase 9.2 — not consulted by [`CandidateSortKey`].
     pub mode: CandidateMode,
     /// Time-decayed user-selection weight for this candidate's
@@ -341,9 +341,9 @@ impl RawCandidate {
 /// reads it from its store (`composing::UserRows`). `roman` / `hanji` are
 /// the raw stored columns, verbatim (no display capitalization) so the engine's
 /// `(roman, hanji)` dedupe key collides correctly against
-/// `dict.bin`'s `DictionaryRecord.tl` / `.hanzi`. `hanji = None`
+/// `dict.bin`'s `DictionaryRecord.tl` / `.hanji`. `hanji = None`
 /// is a romanization-only custom entry (mirrors
-/// `DictionaryRecord.hanzi` / `RawCandidate.hanji` `Option` semantics
+/// `DictionaryRecord.hanji` / `RawCandidate.hanji` `Option` semantics
 /// — drives [`derive_mode`] → `CandidateMode::Tailo`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CustomEntry {
@@ -565,7 +565,7 @@ pub type ConsumedSpan = (u32, u32);
 /// (`PrefixIndex::lookup_exact_tps_readings`, §35): one index walk
 /// returns every reading of the pressed keys, substitution-count
 /// ascending so the user's literal text always resolves first. TL /
-/// POJ / hanzi keys keep the plain exact lookup — byte-identical
+/// POJ / hanji keys keep the plain exact lookup — byte-identical
 /// behavior, zero automaton cost (`matched_key` = the query key,
 /// `subst` = 0).
 ///
@@ -587,7 +587,7 @@ fn for_each_exact_reading(
             visit(&matched_key, rowid);
         }
     } else {
-        // TL / POJ / hanzi: byte-identical to the pre-§35 exact lookup —
+        // TL / POJ / hanji: byte-identical to the pre-§35 exact lookup —
         // the matched key IS the query key, no per-rowid allocation.
         for rowid in prefix_index.lookup_exact(key) {
             visit(key, rowid);
@@ -1160,7 +1160,7 @@ pub struct EdgeBest {
     pub span_frequency: u32,
 }
 
-/// Does the exact hanzi `hanji` resolve to a dictionary entry of
+/// Does the exact hanji `hanji` resolve to a dictionary entry of
 /// **exactly `syllable_count` TL syllables**? Used by the composing
 /// render/commit join ([`crate`] consumer `composing::api::nailed_prefix`)
 /// to decide whether a contiguous run of manually-nailed single-syllable
@@ -1176,11 +1176,11 @@ pub struct EdgeBest {
 /// NOT [`best_candidate_for_key_with_barriers`], which returns a single ranking
 /// winner and would make a presentation separator depend on score
 /// (Codex pre-impl Q2 2026-05-18) — and returns `true` iff some record
-/// has `syllable_count == <argument>` **and** `hanzi == Some(hanji)`.
+/// has `syllable_count == <argument>` **and** `hanji == Some(hanji)`.
 /// The `syllable_count` gate is load-bearing: many two-CJK-codepoint
 /// dictionary entries are NOT two TL syllables (e.g. `先生 / sin-senn`,
 /// `新婦 / sim-pū`); existence alone would over-hyphenate them (Codex
-/// pre-impl N2 2026-05-18). The explicit `hanzi` re-check guards
+/// pre-impl N2 2026-05-18). The explicit `hanji` re-check guards
 /// against wrong rowids / future index drift; it cannot bridge
 /// byte-different but visually-equivalent variant forms (an accepted
 /// data-level limitation, identical to the toneless-key path).
@@ -1205,7 +1205,7 @@ pub fn compound_hanji_exists(
     let key = format!("{HANJI_KEY_PREFIX}{hanji}");
     for rowid in prefix_index.lookup_exact(&key) {
         if let Some(record) = dict.record(rowid) {
-            if record.syllable_count == syllable_count && record.hanzi.as_deref() == Some(hanji) {
+            if record.syllable_count == syllable_count && record.hanji.as_deref() == Some(hanji) {
                 return true;
             }
         }
@@ -1433,17 +1433,17 @@ mod mode_derive_tests {
     //! derive (`derive_mode`). Covers the four classification axes
     //! Codex co-decided 2026-05-11:
     //!
-    //! 1. `hanzi.is_none()` → TAILO
-    //! 2. Plain-ASCII Latin in hanzi → MIXED
-    //! 3. NFC-composed Latin (e.g. `ê`) in hanzi → MIXED via NFKD
-    //! 4. Fullwidth Latin (e.g. `Ａ`) in hanzi → MIXED via NFKD
+    //! 1. `hanji.is_none()` → TAILO
+    //! 2. Plain-ASCII Latin in hanji → MIXED
+    //! 3. NFC-composed Latin (e.g. `ê`) in hanji → MIXED via NFKD
+    //! 4. Fullwidth Latin (e.g. `Ａ`) in hanji → MIXED via NFKD
     //! 5. Pure CJK → HANT
     //! 6. Digits / punctuation alone do NOT flip MIXED
     use super::*;
 
     #[test]
-    fn no_hanzi_means_tailo() {
-        // Roman-only entries (`hanzi = None`, `display_text` falls back
+    fn no_hanji_means_tailo() {
+        // Roman-only entries (`hanji = None`, `display_text` falls back
         // to the TL field).
         assert_eq!(derive_mode(None), CandidateMode::Tailo);
     }
@@ -1457,7 +1457,7 @@ mod mode_derive_tests {
     }
 
     #[test]
-    fn plain_ascii_latin_in_hanzi_is_mixed() {
+    fn plain_ascii_latin_in_hanji_is_mixed() {
         // Real dictionary entries: `hip相`, `iah是`, `ing暗`. The first
         // Latin codepoint is plain ASCII so it would flip MIXED even
         // without NFKD; this test pins the easy path.
@@ -1483,7 +1483,7 @@ mod mode_derive_tests {
     }
 
     #[test]
-    fn composed_latin_in_hanzi_is_mixed_via_nfkd() {
+    fn composed_latin_in_hanji_is_mixed_via_nfkd() {
         // Real entries `ê早` (line 22953 of dictionary.csv), `ē得`
         // (22960), `屎î` (42037). The Latin codepoint is NFC-composed
         // (e.g. `ê` = U+00EA, NOT `e` + combining circumflex), so
@@ -1495,7 +1495,7 @@ mod mode_derive_tests {
     }
 
     #[test]
-    fn fullwidth_latin_in_hanzi_is_mixed_via_nfkd() {
+    fn fullwidth_latin_in_hanji_is_mixed_via_nfkd() {
         // Theoretical: U+FF21..U+FF3A fullwidth Latin folds to ASCII
         // under NFKD (NOT NFD). Pins the "K/D normalization, not just
         // D" choice from Codex F3-c.
@@ -1513,8 +1513,8 @@ mod mode_derive_tests {
     }
 
     #[test]
-    fn empty_hanzi_string_stays_hant() {
-        // Defensive: `hanzi = Some("")` (shouldn't happen but the
+    fn empty_hanji_string_stays_hant() {
+        // Defensive: `hanji = Some("")` (shouldn't happen but the
         // contract is "any Some without Latin letters = HANT", and an
         // empty NFKD iterator finds no ASCII alphabetic codepoint).
         assert_eq!(derive_mode(Some("")), CandidateMode::Hant);
