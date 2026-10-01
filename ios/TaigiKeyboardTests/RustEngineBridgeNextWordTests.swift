@@ -48,7 +48,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         // bumps `current_generation` by 1. The exact baseline value
         // depends on the prior test's terminal state (envelope-reset is
         // bump-not-zero per PR #198 fix).
-        let baseline = RustEngineBridge.nextwordResetFull(
+        let baseline = RustEngineBridge.nextwordResetAll(
             nowMs: 0,
             mode: .tl,
             hanjiFirst: false,
@@ -56,7 +56,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         )
         baselineGen = baseline.currentGeneration
         XCTAssertNil(baseline.lastSelectedWord)
-        XCTAssertFalse(baseline.isShowing)
+        XCTAssertFalse(baseline.predictionsVisible)
     }
 
     // MARK: - Decide: WordSelected
@@ -155,10 +155,10 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
 
     // MARK: - SetPredictionsVisible → ClearForNewComposing gate
 
-    func testSetIsShowing_thenClearForNewComposing_emitsClearUIEffect() {
+    func testSetPredictionsVisible_thenClearForNewComposing_emitsClearUIEffect() {
         // Pre-fix: bridge had no setter for state.is_showing, so the gate
         // never tripped after swap. Guards the v3.5.5 bridge gap fix.
-        _ = RustEngineBridge.nextwordSetIsShowing(
+        _ = RustEngineBridge.nextwordSetPredictionsVisible(
             true,
             mode: .tl,
             hanjiFirst: false,
@@ -174,16 +174,16 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertTrue(sawClear, "ClearForNewComposing must emit clearPredictionsUI when is_showing=true")
     }
 
-    func testSetIsShowing_doesNotBumpGeneration() {
+    func testSetPredictionsVisible_doesNotBumpGeneration() {
         let baselineGen = currentGen()
-        let result = RustEngineBridge.nextwordSetIsShowing(
+        let result = RustEngineBridge.nextwordSetPredictionsVisible(
             true,
             mode: .tl,
             hanjiFirst: false,
             generation: envelopeGen,
         )
         XCTAssertEqual(result.currentGeneration, baselineGen, "no generation bump")
-        XCTAssertTrue(result.isShowing)
+        XCTAssertTrue(result.predictionsVisible)
         XCTAssertEqual(result.effects, [])
     }
 
@@ -268,7 +268,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     /// Current engine generation, read through `SetPredictionsVisible(false)` — the
     /// one intent that echoes state without bumping the generation.
     private func currentGen() -> UInt64 {
-        RustEngineBridge.nextwordSetIsShowing(
+        RustEngineBridge.nextwordSetPredictionsVisible(
             false,
             mode: .tl,
             hanjiFirst: false,

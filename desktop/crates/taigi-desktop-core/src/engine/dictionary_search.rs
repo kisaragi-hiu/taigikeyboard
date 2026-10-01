@@ -5,7 +5,7 @@
 
 use super::user_data::search_custom_entries;
 use super::{
-    chhoe_url, dictionary_filters, is_hanzi, moe_url, search_by_hanzi, search_with_sources,
+    chhoe_url, dictionary_filters, is_hanji, moe_url, search_by_hanji, search_with_sources,
     tl_to_poj, DictionarySource, LexiconRow, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
 };
 use crate::settings::{keys, InputMode, SettingsDocument};
@@ -59,14 +59,14 @@ pub fn search(query: &str, settings: &SettingsDocument) -> Vec<DictionarySearchR
     let mode: InputMode = settings.choice(&keys::INPUT_MODE);
     let toggles = settings.dictionary_sources();
     let filters = dictionary_filters(&toggles);
-    let is_hanzi_query = is_hanzi(query);
+    let is_hanji_query = is_hanji(query);
     let sources_bitmask = filters
         .as_ref()
         .map_or(ALL_SOURCES_ENABLED_SEARCH_BITMASK, |filters| {
             filters.dictionary_filter_bitmask
         });
-    let rows = if is_hanzi_query {
-        search_by_hanzi(query, mode, RESULT_LIMIT, sources_bitmask)
+    let rows = if is_hanji_query {
+        search_by_hanji(query, mode, RESULT_LIMIT, sources_bitmask)
     } else {
         search_with_sources(query, mode, RESULT_LIMIT, sources_bitmask)
     };
@@ -87,7 +87,7 @@ pub fn search(query: &str, settings: &SettingsDocument) -> Vec<DictionarySearchR
             }
         })
         .collect();
-    let mut results = if is_hanzi_query {
+    let mut results = if is_hanji_query {
         Vec::new()
     } else {
         custom_results(query, settings, mode)

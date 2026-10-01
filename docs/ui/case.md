@@ -52,7 +52,7 @@ All case-mapping math lives in Rust `engine/phonetics::case_transform` (since ca
 | Component | Location | Description |
 |-----------|----------|-------------|
 | Case-letter math (POJ/TL aware upper/lower, full-upper, suggestion transform, nasal-marker case adjust) | Rust `engine/phonetics/src/case_transform.rs` | Cross-platform canonical |
-| iOS bridge | `Engine/RustEngineBridge+CaseTransform.swift` | Wraps `transformInputCase` / `transformSuggestionCase` |
+| iOS bridge | `Engine/RustEngineBridge+CaseTransform.swift` | Wraps `transformInputCase` / `transformCandidateCase` |
 | Android bridge | `engine/CaseTransformBridge.kt` | Superset: the 2 string ops + the 3 per-char ops (`KeyLabelCaseCache` key labels) |
 | iOS shift / capslock state | KeyboardKit (managed) | Drives `LetterCase` value passed into bridge |
 | Android shift / capslock state | `ime/text/CapsStateManager.kt` | Same role, calls bridge per keystroke |
@@ -81,4 +81,4 @@ All case-mapping math lives in Rust `engine/phonetics::case_transform` (since ca
 | State tracking | KeyboardKit managed | `CapsStateManager.kt` (extracted from TextInputManager in v3.4.6) |
 | Control method | Settings sync | `updateCapsState()` |
 | Real-time update | NotificationCenter | DataStore Flow |
-| Suggestion case | `RustEngineBridge.transformSuggestionCase(...)` (called from `Autocomplete/Services/SuggestionCaseTransformer.swift` thin wrapper) | `RustEngineBridge.transformSuggestion(...)` (called from `ime/dictionary/SuggestionCaseTransformer.kt` thin wrapper that retains platform skip-rule guards) |
+| Suggestion case | `RustEngineBridge.transformCandidateCase(...)` (called from `Autocomplete/Services/SuggestionCaseTransformer.swift` thin wrapper) | `RustEngineBridge.transformCandidateCase(...)` (called from `ime/dictionary/SuggestionCaseTransformer.kt` thin wrapper that retains platform skip-rule guards) |

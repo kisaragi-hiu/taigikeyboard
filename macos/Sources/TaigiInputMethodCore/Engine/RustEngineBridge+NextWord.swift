@@ -82,7 +82,7 @@ extension RustEngineBridge {
     /// Forgets the current context outright. Sent when the composition session
     /// changes hands, so the last word typed in one application cannot be
     /// learned as the predecessor of the first word typed in the next.
-    static func nextwordResetFull(
+    static func nextwordResetAll(
         nowMs: Int64,
         settings: EngineSettings,
         generation: UInt64,
@@ -91,7 +91,7 @@ extension RustEngineBridge {
         payload.input = decisionInput(nowMs: nowMs)
         decide(
             .resetAll(payload),
-            op: "nextwordResetFull",
+            op: "nextwordResetAll",
             settings: settings,
             generation: generation,
         )

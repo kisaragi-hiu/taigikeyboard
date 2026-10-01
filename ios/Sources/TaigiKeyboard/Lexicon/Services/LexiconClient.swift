@@ -5,7 +5,7 @@ import Foundation
 /// Android `ime/dictionary/LexiconClient.kt`; the shipped implementation is
 /// `EngineLexiconClient`, the same shape as `UserDataClient`.
 protocol LexiconClient: Sendable {
-    func isHanzi(_ text: String) -> Bool
+    func isHanji(_ text: String) -> Bool
     func dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles) -> RustEngineBridge.DictionaryFilters
     func searchWithSources(
         input: String,
@@ -13,7 +13,7 @@ protocol LexiconClient: Sendable {
         limit: UInt32,
         enabledSourcesBitmask: UInt32,
     ) -> [RustEngineBridge.LexiconRow]
-    func searchByHanzi(
+    func searchByHanji(
         query: String,
         inputMode: RustEngineBridge.LexiconInputMode,
         limit: UInt32,
@@ -23,8 +23,8 @@ protocol LexiconClient: Sendable {
 
 /// The engine's lexicon ops, one bridge call each.
 struct EngineLexiconClient: LexiconClient {
-    func isHanzi(_ text: String) -> Bool {
-        RustEngineBridge.isHanzi(text)
+    func isHanji(_ text: String) -> Bool {
+        RustEngineBridge.isHanji(text)
     }
 
     func dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles) -> RustEngineBridge.DictionaryFilters {
@@ -45,13 +45,13 @@ struct EngineLexiconClient: LexiconClient {
         )
     }
 
-    func searchByHanzi(
+    func searchByHanji(
         query: String,
         inputMode: RustEngineBridge.LexiconInputMode,
         limit: UInt32,
         enabledSourcesBitmask: UInt32,
     ) -> [RustEngineBridge.LexiconRow] {
-        RustEngineBridge.lexiconSearchByHanzi(
+        RustEngineBridge.lexiconSearchByHanji(
             query: query,
             inputMode: inputMode,
             limit: limit,

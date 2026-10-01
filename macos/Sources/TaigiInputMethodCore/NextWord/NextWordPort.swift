@@ -67,7 +67,7 @@ final class EngineNextWord: NextWordPort {
     }
 
     func forgetContext(settings: EngineSettings, generation: UInt64) {
-        RustEngineBridge.nextwordResetFull(nowMs: Self.nowMs(), settings: settings, generation: generation)
+        RustEngineBridge.nextwordResetAll(nowMs: Self.nowMs(), settings: settings, generation: generation)
     }
 
     private static func nowMs() -> Int64 {

@@ -4,8 +4,8 @@ import android.content.Context
 import com.siansiansu.taigikeyboard.BuildConfig
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.dictionaryFilters
-import com.siansiansu.taigikeyboard.engine.isHanzi
-import com.siansiansu.taigikeyboard.engine.searchByHanzi
+import com.siansiansu.taigikeyboard.engine.isHanji
+import com.siansiansu.taigikeyboard.engine.searchByHanji
 import com.siansiansu.taigikeyboard.engine.searchWithSources
 import com.siansiansu.taigikeyboard.engine.tlToPoj
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
@@ -37,7 +37,7 @@ class LexiconService(
         private const val TAG = "LexiconService"
     }
 
-    override fun isHanzi(text: String): Boolean = RustEngineBridge.isHanzi(text)
+    override fun isHanji(text: String): Boolean = RustEngineBridge.isHanji(text)
 
     override fun dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles): RustEngineBridge.DictionaryFilters = RustEngineBridge.dictionaryFilters(toggles)
 
@@ -55,7 +55,7 @@ class LexiconService(
 
         return withContext(Dispatchers.IO) {
             try {
-                val rows = bridgeSearchByHanziOrRoman(input, inputMode, limit, filterBitmask, isCJK = false)
+                val rows = bridgeSearchByHanjiOrRoman(input, inputMode, limit, filterBitmask, isCJK = false)
                 Outcome.Success(rowsToSearchResults(rows, inputMode, limit))
             } catch (e: CancellationException) {
                 throw e
@@ -67,7 +67,7 @@ class LexiconService(
     }
 
     /** Search by hanzi prefix (Dictionary tab exploration). */
-    override suspend fun searchByHanzi(
+    override suspend fun searchByHanji(
         input: String,
         inputMode: RustEngineBridge.LexiconInputMode,
         filterBitmask: UInt,
@@ -81,7 +81,7 @@ class LexiconService(
         return withContext(Dispatchers.IO) {
             logger.debug(TAG) { "[HANZI-SEARCH] query='$input' limit=$limit" }
             try {
-                val rows = bridgeSearchByHanziOrRoman(input, inputMode, limit, filterBitmask, isCJK = true)
+                val rows = bridgeSearchByHanjiOrRoman(input, inputMode, limit, filterBitmask, isCJK = true)
                 val results = rowsToSearchResults(rows, inputMode, limit)
                 if (BuildConfig.DEBUG) {
                     logger.d(TAG, "[HANZI-SEARCH] returned ${results.size} results")
@@ -96,7 +96,7 @@ class LexiconService(
         }
     }
 
-    private fun bridgeSearchByHanziOrRoman(
+    private fun bridgeSearchByHanjiOrRoman(
         input: String,
         bridgeMode: RustEngineBridge.LexiconInputMode,
         limit: Int,
@@ -104,7 +104,7 @@ class LexiconService(
         isCJK: Boolean,
     ): List<RustEngineBridge.LexiconRow> =
         if (isCJK) {
-            RustEngineBridge.searchByHanzi(
+            RustEngineBridge.searchByHanji(
                 query = input,
                 inputMode = bridgeMode,
                 limit = limit.toUInt(),

@@ -33,7 +33,7 @@ public extension RustEngineBridge {
 
         public let effects: [Effect]
         public let currentGeneration: UInt64
-        public let isShowing: Bool
+        public let predictionsVisible: Bool
         /// `nil` when the engine has no last-selected word; otherwise the
         /// echo of `state.last_selected_word`. Empty wire string maps to
         /// `nil` per proto contract.
@@ -42,7 +42,7 @@ public extension RustEngineBridge {
         public static let noop = NextWordDecideResult(
             effects: [],
             currentGeneration: 0,
-            isShowing: false,
+            predictionsVisible: false,
             lastSelectedWord: nil,
         )
     }
@@ -173,7 +173,7 @@ public extension RustEngineBridge {
         )
     }
 
-    static func nextwordResetFull(
+    static func nextwordResetAll(
         nowMs: Int64,
         mode: InputMode,
         hanjiFirst: Bool,
@@ -183,7 +183,7 @@ public extension RustEngineBridge {
         payload.input = decisionInput(nowMs: nowMs)
         return decideDispatch(
             method: .resetAll(payload),
-            op: "nextwordResetFull",
+            op: "nextwordResetAll",
             generation: generation,
             config: appConfig(mode: mode, isHanjiFirst: hanjiFirst),
         )
@@ -194,17 +194,17 @@ public extension RustEngineBridge {
     /// downstream `nextwordClearForNewComposing` / sentence-end / context
     /// timeout / resetFull paths gate `clearPredictionsUI` emission on it.
     /// No effects, no current_generation bump.
-    static func nextwordSetIsShowing(
-        _ isShowing: Bool,
+    static func nextwordSetPredictionsVisible(
+        _ visible: Bool,
         mode: InputMode,
         hanjiFirst: Bool,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_SetPredictionsVisible()
-        payload.visible = isShowing
+        payload.visible = visible
         return decideDispatch(
             method: .setPredictionsVisible(payload),
-            op: "nextwordSetIsShowing",
+            op: "nextwordSetPredictionsVisible",
             generation: generation,
             config: appConfig(mode: mode, isHanjiFirst: hanjiFirst),
         )
@@ -343,7 +343,7 @@ public extension RustEngineBridge {
         return NextWordDecideResult(
             effects: effects,
             currentGeneration: proto.currentGeneration,
-            isShowing: proto.predictionsVisible,
+            predictionsVisible: proto.predictionsVisible,
             lastSelectedWord: proto.lastSelectedWord.isEmpty ? nil : proto.lastSelectedWord,
         )
     }

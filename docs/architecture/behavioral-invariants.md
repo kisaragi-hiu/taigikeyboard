@@ -242,7 +242,7 @@ Live candidate ranking is the Continuous `FetchAtPos` path: lexicographic sort k
 
 **Why**: candidate capitalization is visible on every keystroke. Divergence means the keyboard feels inconsistent between devices.
 
-**Scope**: Rust `engine/phonetics::case_transform::transform_input_case` + `transform_candidate_case` (canonical, since case-transform slice / PR #205). Bridged via `RustEngineBridge.transformInputCase` / `transformSuggestionCase`. Platform `CaseTransformer.{swift,kt}` deleted under Path G. The `CapitalizeCandidate` op (no production caller) was removed 2026-09-25.
+**Scope**: Rust `engine/phonetics::case_transform::transform_input_case` + `transform_candidate_case` (canonical, since case-transform slice / PR #205). Bridged via `RustEngineBridge.transformInputCase` / `transformCandidateCase`. Platform `CaseTransformer.{swift,kt}` deleted under Path G. The `CapitalizeCandidate` op (no production caller) was removed 2026-09-25.
 
 **Corner cases**:
 - Uppercase TPS syllables do not exist; `inputMode == .tps` → no-op.
@@ -359,7 +359,7 @@ The former second guard — `lexicon::search` short-circuiting a `Hanzi` input t
 
 **Rationale**: pre-Item-13 the platform `LexiconService.search` hit `lookupCustomDictionary` before the engine guard on iOS, so a custom-dict entry matching the hanzi buffer could leak as a suggestion. That entire platform autocomplete path is now deleted — the custom-dict-on-hanzi layering surface no longer exists outside Rust, so the guard is purely an engine concern.
 
-**Tab3 unaffected**: Tab3 dictionary search accepts hanzi by design and is a fully separate consumer (iOS and Android `DictionarySearchService` → `LexiconClient` `searchByHanzi` / `searchWithSources`). Its romanization path shares `lexicon::search::search` with nothing else now; hanji queries go to `search_by_hanzi`, so no D-8 guard is needed.
+**Tab3 unaffected**: Tab3 dictionary search accepts hanzi by design and is a fully separate consumer (iOS and Android `DictionarySearchService` → `LexiconClient` `searchByHanji` / `searchWithSources`). Its romanization path shares `lexicon::search::search` with nothing else now; hanji queries go to `search_by_hanzi`, so no D-8 guard is needed.
 
 **Tests** (`INVARIANT_LEX_HANZI_GUARD`) — Rust engine only after Item 13:
 
@@ -388,7 +388,7 @@ The prior platform-layer parity tests (iOS `LexiconServiceHanziGuardTests.swift`
 
 Extensions F/G/H/I/J are **explicitly excluded** at this slice. Future expansion is a separate behavior change, not part of this parity correction.
 
-**Tab3 parity correction**: pre-v3.5.7, Android `DictionarySearchViewModel.kt:97` used `query.any { it.code in 0x4E00..0x9FFF || it.code in 0x3400..0x4DBF || it.code in 0x20000..0x2A6DF }`. Kotlin `Char.code` is a 16-bit UTF-16 code unit (0–65535), so the `0x20000..0x2A6DF` clause was unreachable; effective coverage was Unified + A only. v3.5.7 routes both platforms' Tab3 through the canonical Rust 6-range check (`LexiconBridge.isHanzi` / `RustEngineBridge.isHanzi`).
+**Tab3 parity correction**: pre-v3.5.7, Android `DictionarySearchViewModel.kt:97` used `query.any { it.code in 0x4E00..0x9FFF || it.code in 0x3400..0x4DBF || it.code in 0x20000..0x2A6DF }`. Kotlin `Char.code` is a 16-bit UTF-16 code unit (0–65535), so the `0x20000..0x2A6DF` clause was unreachable; effective coverage was Unified + A only. v3.5.7 routes both platforms' Tab3 through the canonical Rust 6-range check (`LexiconBridge.isHanji` / `RustEngineBridge.isHanji`).
 
 ### Retired 2026-09-25: `NUMERIC_TONE_SET` / `PRECEDENCE` / `SEARCH_KEY`
 
@@ -397,7 +397,7 @@ Removed with `classify_input` / `contains_numeric_tone` (no production caller). 
 ### Tests
 
 - **Rust engine unit** — `engine/lexicon/src/classification.rs::tests` covers `HANZI_RANGE` (13 tests).
-- **iOS / Android** — Tab3 routes through `RustEngineBridge.isHanzi` / `LexiconBridge.isHanzi`; no platform-side range check.
+- **iOS / Android** — Tab3 routes through `RustEngineBridge.isHanji` / `LexiconBridge.isHanji`; no platform-side range check.
 
 ---
 

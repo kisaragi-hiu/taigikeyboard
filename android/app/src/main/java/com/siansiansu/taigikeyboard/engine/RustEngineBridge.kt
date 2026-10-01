@@ -515,7 +515,7 @@ object RustEngineBridge {
     data class NextWordDecideResult(
         val effects: List<Effect>,
         val currentGeneration: Long,
-        val isShowing: Boolean,
+        val predictionsVisible: Boolean,
         /**
          * `null` when the engine has no last-selected word; otherwise the
          * echo of `state.last_selected_word`. Empty wire string maps to
@@ -552,7 +552,7 @@ object RustEngineBridge {
             val NOOP = NextWordDecideResult(
                 effects = emptyList(),
                 currentGeneration = 0L,
-                isShowing = false,
+                predictionsVisible = false,
                 lastSelectedWord = null,
             )
         }

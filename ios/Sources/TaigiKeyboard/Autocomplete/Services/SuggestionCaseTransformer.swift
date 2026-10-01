@@ -1,7 +1,7 @@
 import Foundation
 import KeyboardKit
 
-/// Thin per-word bridge over `RustEngineBridge.transformSuggestionCase`.
+/// Thin per-word bridge over `RustEngineBridge.transformCandidateCase`.
 /// Skip rules (composing-text candidate / NextWord candidate) stay
 /// platform-side via `additionalInfo` flags — only transform-eligible
 /// suggestions reach the engine. Algorithm correctness lives in the Rust
@@ -15,7 +15,7 @@ enum SuggestionCaseTransformer {
         isNasalMarkerUppercaseEnabled: Bool,
     ) -> [AutocompleteSuggestion] {
         suggestions.map { suggestion in
-            transformSuggestion(
+            transformCandidateCase(
                 suggestion,
                 composingText: composingText,
                 keyboardCase: keyboardCase,
@@ -25,7 +25,7 @@ enum SuggestionCaseTransformer {
         }
     }
 
-    private static func transformSuggestion(
+    private static func transformCandidateCase(
         _ suggestion: AutocompleteSuggestion,
         composingText: String,
         keyboardCase: Keyboard.KeyboardCase,
@@ -52,7 +52,7 @@ enum SuggestionCaseTransformer {
             return suggestion
         }
 
-        let transformedText = RustEngineBridge.transformSuggestionCase(
+        let transformedText = RustEngineBridge.transformCandidateCase(
             original: suggestion.text,
             composing: composingText,
             letterCase: keyboardCase.asLetterCase,

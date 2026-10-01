@@ -103,8 +103,8 @@ fun RustEngineBridge.nextwordClearForNewComposing(
     )
 }
 
-// Full reset of lastSelectedWord / lastSelectionTimeMs / isShowing (focus change, input-mode switch).
-fun RustEngineBridge.nextwordResetFull(
+// Full reset of lastSelectedWord / lastSelectionTimeMs / predictions visibility (focus change, input-mode switch).
+fun RustEngineBridge.nextwordResetAll(
     nowMs: Long,
     inputMode: String,
     hanjiFirst: Boolean,
@@ -116,7 +116,7 @@ fun RustEngineBridge.nextwordResetFull(
         .build()
     return decideDispatch(
         methodSetter = { it.resetAll = payload },
-        op = "nextwordResetFull",
+        op = "nextwordResetAll",
         generation = generation,
         config = appConfig(inputMode, isHanjiFirst = hanjiFirst),
     )
@@ -127,22 +127,22 @@ fun RustEngineBridge.nextwordResetFull(
  * predict() result (or clearing it on empty result) so the engine's
  * `state.is_showing` stays accurate. Downstream
  * `nextwordClearForNewComposing` / sentence-end / context timeout /
- * `nextwordResetFull` paths gate `ClearPredictionsUI` emission on it.
+ * `nextwordResetAll` paths gate `ClearPredictionsUI` emission on it.
  * No effects, no `current_generation` bump.
  */
-fun RustEngineBridge.nextwordSetIsShowing(
-    isShowing: Boolean,
+fun RustEngineBridge.nextwordSetPredictionsVisible(
+    visible: Boolean,
     inputMode: String,
     hanjiFirst: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible
         .newBuilder()
-        .setVisible(isShowing)
+        .setVisible(visible)
         .build()
     return decideDispatch(
         methodSetter = { it.setPredictionsVisible = payload },
-        op = "nextwordSetIsShowing",
+        op = "nextwordSetPredictionsVisible",
         generation = generation,
         config = appConfig(inputMode, isHanjiFirst = hanjiFirst),
     )
@@ -314,7 +314,7 @@ private fun synthDecideResult(proto: DecideResult): RustEngineBridge.NextWordDec
     return RustEngineBridge.NextWordDecideResult(
         effects = effects,
         currentGeneration = proto.currentGeneration,
-        isShowing = proto.predictionsVisible,
+        predictionsVisible = proto.predictionsVisible,
         lastSelectedWord = if (proto.lastSelectedWord.isEmpty()) null else proto.lastSelectedWord,
     )
 }

@@ -7,7 +7,7 @@ import Foundation
 /// kautian-first ordering, and source-tag filtering for badge display.
 ///
 /// System-dict queries flow through `LexiconClient` (`EngineLexiconClient` in
-/// production wraps `RustEngineBridge.lexiconSearchByHanzi` / `lexiconSearchWithSources`). The Rust engine's bitmask filter drops rows
+/// production wraps `RustEngineBridge.lexiconSearchByHanji` / `lexiconSearchWithSources`). The Rust engine's bitmask filter drops rows
 /// where ZERO enabled bits match — but multi-source rows that overlap at
 /// least one enabled source still arrive with their full source bitmask.
 /// `retagSources` then trims each row's `sources` array to enabled-only so
@@ -60,7 +60,7 @@ final class DictionarySearchService: @unchecked Sendable {
         guard !query.isEmpty else { return [] }
 
         let inputMode = settingsProvider.current.inputMode
-        let isCJK = lexicon.isHanzi(query)
+        let isCJK = lexicon.isHanji(query)
         logger.debug("[SEARCH] query='\(query)' isCJK=\(isCJK) inputMode=\(String(describing: inputMode))")
 
         // Resolve filter bitmask + enabled-source set ONCE per query and
@@ -96,7 +96,7 @@ final class DictionarySearchService: @unchecked Sendable {
     ) -> [DictionarySearchResult] {
         let bridgeMode = Self.lexiconMode(inputMode)
         let rows = isCJK
-            ? lexicon.searchByHanzi(
+            ? lexicon.searchByHanji(
                 query: query,
                 inputMode: bridgeMode,
                 limit: UInt32(limit),

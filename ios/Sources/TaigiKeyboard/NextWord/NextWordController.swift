@@ -7,9 +7,9 @@ import Foundation
 /// - serializes intents through `RustEngineBridge.nextword*`,
 /// - interprets the returned `NextWordDecideResult.Effect` list against
 ///   platform resources (Timer, main-thread UI callbacks),
-/// - caches `isShowing` echoed back from the engine for
+/// - caches `predictionsVisible` echoed back from the engine for
 ///   sync read access by `ActionHandler`,
-/// - pushes UI visibility back into the engine via `nextwordSetIsShowing`
+/// - pushes UI visibility back into the engine via `nextwordSetPredictionsVisible`
 ///   after async predict() results render.
 ///
 /// **Public surface** preserved from the pre-Rust controller so call sites
@@ -35,9 +35,9 @@ final class NextWordController {
     // MARK: - Cached state (echoed from Rust)
 
     /// Mirrors `state.is_showing`. Set locally by `handleQueryResult` after
-    /// rendering, then pushed to the engine via `nextwordSetIsShowing` so
+    /// rendering, then pushed to the engine via `nextwordSetPredictionsVisible` so
     /// downstream clear / reset paths gate `clearPredictionsUI` correctly.
-    private var cachedIsShowing: Bool = false
+    private var cachedPredictionsVisible: Bool = false
 
     private var contextTimeoutTimer: Timer?
 
@@ -50,7 +50,7 @@ final class NextWordController {
 
     /// Whether NextWord predictions are currently displayed.
     var isShowing: Bool {
-        cachedIsShowing
+        cachedPredictionsVisible
     }
 
     func bumpEnvelopeGeneration() {
@@ -63,10 +63,10 @@ final class NextWordController {
         // + UI here so cross-field stale suggestions don't linger.
         // Codex post-impl PR #198 r3171935009.
         stopContextTimeoutTimer()
-        if cachedIsShowing {
+        if cachedPredictionsVisible {
             contextUpdater?.resetNextWordSuggestions()
         }
-        cachedIsShowing = false
+        cachedPredictionsVisible = false
     }
 
     // MARK: - Public API (preserved from pre-Rust controller)
@@ -134,7 +134,7 @@ final class NextWordController {
 
     func resetAndClearUI() {
         let settings = settingsProvider.current
-        let result = RustEngineBridge.nextwordResetFull(
+        let result = RustEngineBridge.nextwordResetAll(
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
             hanjiFirst: settings.isHanjiFirst,
@@ -184,7 +184,7 @@ final class NextWordController {
     /// run on main. No synchronization on cached state — the main-thread
     /// invariant is the contract.
     private func applyDecideResult(_ result: RustEngineBridge.NextWordDecideResult) {
-        cachedIsShowing = result.isShowing
+        cachedPredictionsVisible = result.predictionsVisible
         for effect in result.effects {
             execute(effect)
         }
@@ -243,7 +243,7 @@ final class NextWordController {
     /// the learned rows and added the bundled rows for the word, then merged +
     /// scored + sorted + truncated + dropped on stale generation — then push
     /// the new `is_showing` value back into engine state via
-    /// `nextwordSetIsShowing` — required so subsequent
+    /// `nextwordSetPredictionsVisible` — required so subsequent
     /// `ClearForNewComposing` / sentence-end / context-timeout / `ResetAll`
     /// paths can emit `clearPredictionsUI` when there is UI to clear.
     @MainActor
@@ -266,13 +266,13 @@ final class NextWordController {
         }
 
         // Push the rendered visibility back into engine state.
-        let synced = RustEngineBridge.nextwordSetIsShowing(
+        let synced = RustEngineBridge.nextwordSetPredictionsVisible(
             nowShowing,
             mode: settings.inputMode,
             hanjiFirst: settings.isHanjiFirst,
             generation: envelopeGen,
         )
-        cachedIsShowing = synced.isShowing
+        cachedPredictionsVisible = synced.predictionsVisible
     }
 
     /// Clear is synchronous to match the pre-Rust controller's behavior:
@@ -283,7 +283,7 @@ final class NextWordController {
     /// (above) keeps this safe.
     private func clearPredictionsUIEffect() {
         contextUpdater?.resetNextWordSuggestions()
-        cachedIsShowing = false
+        cachedPredictionsVisible = false
     }
 
     // MARK: - Timer

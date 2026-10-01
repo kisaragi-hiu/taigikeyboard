@@ -217,7 +217,7 @@ The abbreviation face has its own family per romanization (`behavioral-invariant
 | fst load + range/prefix search | Rust `engine/lexicon::prefix_index::PrefixIndex` |
 | mmap unsafe boundary | Rust `engine/mmap-host::MmapHandle` (only crate not `forbid unsafe_code`) |
 | Lookup orchestration | Rust `engine/lexicon::search::search` |
-| Platform bridge | `RustEngineBridge.search` / `searchByHanzi` / `searchWithSources` (iOS `RustEngineBridge+Lexicon.swift`, Android `LexiconBridge.kt`) |
+| Platform bridge | `RustEngineBridge.search` / `searchByHanji` / `searchWithSources` (iOS `RustEngineBridge+Lexicon.swift`, Android `LexiconBridge.kt`) |
 
 There is no on-device build pathway — the fst is a read-only asset, one byte-identical copy per platform, written by `dictionary/build/deploy.sh`.
 

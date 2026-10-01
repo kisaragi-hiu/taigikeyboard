@@ -18,8 +18,8 @@ import SwiftProtobuf
 ///   ops + `ComposingTransition` / `CandidateMode` / `ContinuousCandidate`
 ///   / `ContinuousFetchResult` synthesized types.
 /// - `RustEngineBridge+Lexicon.swift` — install / search / assoc /
-///   dictionary-filters / isHanzi reads.
-/// - `RustEngineBridge+NextWord.swift` — 6 decide intents + setIsShowing
+///   dictionary-filters / isHanji reads.
+/// - `RustEngineBridge+NextWord.swift` — 6 decide intents + setPredictionsVisible
 ///   + filter.
 /// - `RustEngineBridge+CaseTransform.swift` — per-char / per-word case
 ///   transforms.

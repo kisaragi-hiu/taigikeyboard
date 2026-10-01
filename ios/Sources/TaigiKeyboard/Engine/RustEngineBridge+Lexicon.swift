@@ -160,7 +160,7 @@ public extension RustEngineBridge {
     }
 
     /// Tab3 hanzi-prefix dictionary lookup.
-    static func lexiconSearchByHanzi(
+    static func lexiconSearchByHanji(
         query: String,
         inputMode: LexiconInputMode,
         limit: UInt32,
@@ -171,11 +171,11 @@ public extension RustEngineBridge {
         payload.inputMode = Taigi_Engine_InputMode(rawValue: Int(inputMode.rawValue)) ?? .unspecified
         payload.limit = limit
         payload.enabledSourcesBitmask = enabledSourcesBitmask
-        guard let resp = lexiconDispatch(method: .searchByHanji(payload), op: "lexiconSearchByHanzi") else {
+        guard let resp = lexiconDispatch(method: .searchByHanji(payload), op: "lexiconSearchByHanji") else {
             return []
         }
         guard case let .searchByHanjiResult(r)? = resp.result else {
-            recordFailure(op: "lexiconSearchByHanzi", message: "missing result")
+            recordFailure(op: "lexiconSearchByHanji", message: "missing result")
             return []
         }
         return r.rows.map(taigiWordToRow)
@@ -243,14 +243,14 @@ public extension RustEngineBridge {
     /// Tab3 short-circuit predicate. True iff `text` contains any CJK
     /// codepoint (Unified + Extensions A-E). See
     /// `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
-    static func isHanzi(_ text: String) -> Bool {
+    static func isHanji(_ text: String) -> Bool {
         var payload = Taigi_Engine_IsHanjiRequest()
         payload.text = text
-        guard let resp = lexiconDispatch(method: .isHanji(payload), op: "isHanzi") else {
+        guard let resp = lexiconDispatch(method: .isHanji(payload), op: "isHanji") else {
             return false
         }
         guard case let .isHanjiResult(r)? = resp.result else {
-            recordFailure(op: "isHanzi", message: "missing is_hanji result")
+            recordFailure(op: "isHanji", message: "missing is_hanji result")
             return false
         }
         return r.isHanji
@@ -297,7 +297,7 @@ public extension RustEngineBridge {
 
     /// Lexicon envelope dispatch — encode → FFI roundtrip → decode the
     /// `LexiconResponse` payload. Used by every lexicon method in this
-    /// file (searchWithSources / searchByHanzi / dictionaryFilters / isHanzi). No `AppConfig` snapshot needed — lexicon ops
+    /// file (searchWithSources / searchByHanji / dictionaryFilters / isHanji). No `AppConfig` snapshot needed — lexicon ops
     /// read no live config.
     private static func lexiconDispatch(
         method: Taigi_Engine_LexiconRequest.OneOf_Method,

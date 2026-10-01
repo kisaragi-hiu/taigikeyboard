@@ -87,7 +87,7 @@ fun RustEngineBridge.searchWithSources(
 /**
  * Dictionary tab hanzi-prefix lookup; `query` must be Hanji.
  */
-fun RustEngineBridge.searchByHanzi(
+fun RustEngineBridge.searchByHanji(
     query: String,
     inputMode: RustEngineBridge.LexiconInputMode,
     limit: UInt,
@@ -100,7 +100,7 @@ fun RustEngineBridge.searchByHanzi(
         .setLimit(limit.toInt())
         .setEnabledSourcesBitmask(enabledSourcesBitmask.toInt())
         .build()
-    val resp = lexiconDispatch(LexiconRequest.newBuilder().setSearchByHanji(payload).build(), "searchByHanzi")
+    val resp = lexiconDispatch(LexiconRequest.newBuilder().setSearchByHanji(payload).build(), "searchByHanji")
         ?: return emptyList()
     if (!resp.hasSearchByHanjiResult()) return emptyList()
     return resp.searchByHanjiResult.rowsList.map(::taigiWordToRow)
@@ -182,9 +182,9 @@ internal fun dictionaryTogglesProto(toggles: RustEngineBridge.DictionaryToggles)
  * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
  * Engine-side check fixes the pre-v3.5.7 Kotlin `Char.code` (16-bit) miss on Ext B-E.
  */
-fun RustEngineBridge.isHanzi(text: String): Boolean {
+fun RustEngineBridge.isHanji(text: String): Boolean {
     val payload = IsHanjiRequest.newBuilder().setText(text).build()
-    val resp = lexiconDispatch(LexiconRequest.newBuilder().setIsHanji(payload).build(), "isHanzi") ?: return false
+    val resp = lexiconDispatch(LexiconRequest.newBuilder().setIsHanji(payload).build(), "isHanji") ?: return false
     if (!resp.hasIsHanjiResult()) return false
     return resp.isHanjiResult.isHanji
 }
