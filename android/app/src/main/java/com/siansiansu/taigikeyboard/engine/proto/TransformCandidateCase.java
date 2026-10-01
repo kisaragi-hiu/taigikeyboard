@@ -7,8 +7,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * `TransformSuggestion` applies the SuggestionCaseTransformer per-word
- * case transformation:
+ * `TransformCandidateCase` applies the per-candidate case transformation:
  * - CAPS_LOCKED: full upper
  * - else with non-empty composing_text: split typed-portion (matchCase to
  * composing) + remaining-portion (UPPERCASED → first upper / LOWERCASED → lower)
@@ -20,15 +19,15 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * — only transform-eligible items reach this op.
  * </pre>
  *
- * Protobuf type {@code taigi.engine.TransformSuggestion}
+ * Protobuf type {@code taigi.engine.TransformCandidateCase}
  */
 @com.google.protobuf.Generated
-public  final class TransformSuggestion extends
+public  final class TransformCandidateCase extends
     com.google.protobuf.GeneratedMessageLite<
-        TransformSuggestion, TransformSuggestion.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.TransformSuggestion)
-    TransformSuggestionOrBuilder {
-  private TransformSuggestion() {
+        TransformCandidateCase, TransformCandidateCase.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.TransformCandidateCase)
+    TransformCandidateCaseOrBuilder {
+  private TransformCandidateCase() {
     originalText_ = "";
     composingText_ = "";
   }
@@ -169,50 +168,50 @@ public  final class TransformSuggestion extends
     letterCase_ = 0;
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -220,24 +219,24 @@ public  final class TransformSuggestion extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -248,14 +247,13 @@ public  final class TransformSuggestion extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
    * <pre>
-   * `TransformSuggestion` applies the SuggestionCaseTransformer per-word
-   * case transformation:
+   * `TransformCandidateCase` applies the per-candidate case transformation:
    * - CAPS_LOCKED: full upper
    * - else with non-empty composing_text: split typed-portion (matchCase to
    * composing) + remaining-portion (UPPERCASED → first upper / LOWERCASED → lower)
@@ -267,14 +265,14 @@ public  final class TransformSuggestion extends
    * — only transform-eligible items reach this op.
    * </pre>
    *
-   * Protobuf type {@code taigi.engine.TransformSuggestion}
+   * Protobuf type {@code taigi.engine.TransformCandidateCase}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.TransformSuggestion)
-      com.siansiansu.taigikeyboard.engine.proto.TransformSuggestionOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.TransformCandidateCase)
+      com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCaseOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -425,7 +423,7 @@ public  final class TransformSuggestion extends
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.TransformSuggestion)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.TransformCandidateCase)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -434,7 +432,7 @@ public  final class TransformSuggestion extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion();
+        return new com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -454,13 +452,13 @@ public  final class TransformSuggestion extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -480,24 +478,24 @@ public  final class TransformSuggestion extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.TransformSuggestion)
-  private static final com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.TransformCandidateCase)
+  private static final com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase DEFAULT_INSTANCE;
   static {
-    TransformSuggestion defaultInstance = new TransformSuggestion();
+    TransformCandidateCase defaultInstance = new TransformCandidateCase();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      TransformSuggestion.class, defaultInstance);
+      TransformCandidateCase.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<TransformSuggestion> PARSER;
+  private static volatile com.google.protobuf.Parser<TransformCandidateCase> PARSER;
 
-  public static com.google.protobuf.Parser<TransformSuggestion> parser() {
+  public static com.google.protobuf.Parser<TransformCandidateCase> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

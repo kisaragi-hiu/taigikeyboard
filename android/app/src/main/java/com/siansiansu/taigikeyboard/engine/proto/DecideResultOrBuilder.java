@@ -43,10 +43,10 @@ public interface DecideResultOrBuilder extends
   long getCurrentGeneration();
 
   /**
-   * <code>bool is_showing = 3;</code>
-   * @return The isShowing.
+   * <code>bool predictions_visible = 3;</code>
+   * @return The predictionsVisible.
    */
-  boolean getIsShowing();
+  boolean getPredictionsVisible();
 
   /**
    * <pre>

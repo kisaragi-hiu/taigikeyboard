@@ -63,15 +63,15 @@ public interface NextWordRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.ClearForNewComposing getClearForNewComposing();
 
   /**
-   * <code>.taigi.engine.ResetFull reset_full = 14;</code>
-   * @return Whether the resetFull field is set.
+   * <code>.taigi.engine.ResetAll reset_all = 14;</code>
+   * @return Whether the resetAll field is set.
    */
-  boolean hasResetFull();
+  boolean hasResetAll();
   /**
-   * <code>.taigi.engine.ResetFull reset_full = 14;</code>
-   * @return The resetFull.
+   * <code>.taigi.engine.ResetAll reset_all = 14;</code>
+   * @return The resetAll.
    */
-  com.siansiansu.taigikeyboard.engine.proto.ResetFull getResetFull();
+  com.siansiansu.taigikeyboard.engine.proto.ResetAll getResetAll();
 
   /**
    * <pre>
@@ -106,34 +106,34 @@ public interface NextWordRequestOrBuilder extends
    * result of an async predict() call (or clears it on empty result), it
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
-   * ResetFull paths can correctly emit ClearPredictionsUI when there is
+   * ResetAll paths can correctly emit ClearPredictionsUI when there is
    * UI to clear. Mutates state.is_showing only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
    * </pre>
    *
-   * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
-   * @return Whether the setIsShowing field is set.
+   * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
+   * @return Whether the setPredictionsVisible field is set.
    */
-  boolean hasSetIsShowing();
+  boolean hasSetPredictionsVisible();
   /**
    * <pre>
    * Platform-driven UI visibility update. After the platform renders the
    * result of an async predict() call (or clears it on empty result), it
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
-   * ResetFull paths can correctly emit ClearPredictionsUI when there is
+   * ResetAll paths can correctly emit ClearPredictionsUI when there is
    * UI to clear. Mutates state.is_showing only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
    * </pre>
    *
-   * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
-   * @return The setIsShowing.
+   * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
+   * @return The setPredictionsVisible.
    */
-  com.siansiansu.taigikeyboard.engine.proto.SetIsShowing getSetIsShowing();
+  com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible getSetPredictionsVisible();
 
   /**
    * <pre>

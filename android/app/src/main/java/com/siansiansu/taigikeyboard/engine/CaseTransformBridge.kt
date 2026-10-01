@@ -13,8 +13,8 @@ import com.siansiansu.taigikeyboard.engine.proto.CaseRequest
 import com.siansiansu.taigikeyboard.engine.proto.CaseResponse
 import com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString
 import com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar
+import com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase
 import com.siansiansu.taigikeyboard.engine.proto.TransformInputCase
-import com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion
 import com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar
 import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions
@@ -122,14 +122,14 @@ fun RustEngineBridge.transformSuggestion(
     mode: InputMode,
     isNasalMarkerUppercaseEnabled: Boolean,
 ): String {
-    val payload = TransformSuggestion
+    val payload = TransformCandidateCase
         .newBuilder()
         .setOriginalText(original)
         .setComposingText(composing)
         .setLetterCase(ProtoLetterCase.forNumber(letterCase.protoValue) ?: ProtoLetterCase.LETTER_CASE_UNSPECIFIED)
         .build()
     return caseStringDispatch(
-        CaseRequest.newBuilder().setTransformSuggestion(payload).build(),
+        CaseRequest.newBuilder().setTransformCandidateCase(payload).build(),
         op = "transformSuggestion",
         mode = mode,
         isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,

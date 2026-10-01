@@ -6,13 +6,13 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface SetIsShowingOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.SetIsShowing)
+public interface SetPredictionsVisibleOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.SetPredictionsVisible)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>bool is_showing = 1;</code>
-   * @return The isShowing.
+   * <code>bool visible = 1;</code>
+   * @return The visible.
    */
-  boolean getIsShowing();
+  boolean getVisible();
 }

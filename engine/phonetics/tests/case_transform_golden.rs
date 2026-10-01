@@ -10,7 +10,7 @@
 //! responsibility lives here.
 
 use phonetics::case_transform::{
-    adjust_nasal_marker_case, transform_input_case, transform_suggestion, LetterCase,
+    adjust_nasal_marker_case, transform_candidate_case, transform_input_case, LetterCase,
 };
 use phonetics::InputMode;
 
@@ -255,7 +255,7 @@ fn poj_o_dot_lowercase() {
 #[test]
 fn suggestion_caps_lock_all_uppercase_poj() {
     assert_eq!(
-        transform_suggestion("tâi-gí", "tai", LetterCase::CapsLocked, InputMode::Poj),
+        transform_candidate_case("tâi-gí", "tai", LetterCase::CapsLocked, InputMode::Poj),
         "TÂI-GÍ"
     );
 }
@@ -263,7 +263,7 @@ fn suggestion_caps_lock_all_uppercase_poj() {
 #[test]
 fn suggestion_caps_lock_all_uppercase_tl() {
     assert_eq!(
-        transform_suggestion("tâi-gí", "tai", LetterCase::CapsLocked, InputMode::Tl),
+        transform_candidate_case("tâi-gí", "tai", LetterCase::CapsLocked, InputMode::Tl),
         "TÂI-GÍ"
     );
 }
@@ -274,7 +274,7 @@ fn suggestion_caps_capitalize_next_letter_after_typed() {
     // → "Tâi"; remaining "-gí" with caps=Uppercased → first LETTER upper
     // → "-Gí". Final: "Tâi-Gí".
     assert_eq!(
-        transform_suggestion("tâi-gí", "Tai", LetterCase::Uppercased, InputMode::Poj),
+        transform_candidate_case("tâi-gí", "Tai", LetterCase::Uppercased, InputMode::Poj),
         "Tâi-Gí"
     );
 }
@@ -284,7 +284,7 @@ fn suggestion_caps_single_letter_remaining() {
     // Typed "h" (1 letter) → "h" matchCase → "h"; remaining "ó" with
     // Uppercased → "Ó" via tone table. Final: "hÓ".
     assert_eq!(
-        transform_suggestion("hó", "h", LetterCase::Uppercased, InputMode::Poj),
+        transform_candidate_case("hó", "h", LetterCase::Uppercased, InputMode::Poj),
         "hÓ"
     );
 }
@@ -293,7 +293,7 @@ fn suggestion_caps_single_letter_remaining() {
 fn suggestion_no_caps_lowercase_remainder() {
     // Typed "Tai" → "Tâi"; remaining "-gí" with Lowercased → "-gí".
     assert_eq!(
-        transform_suggestion("tâi-gí", "Tai", LetterCase::Lowercased, InputMode::Poj),
+        transform_candidate_case("tâi-gí", "Tai", LetterCase::Lowercased, InputMode::Poj),
         "Tâi-gí"
     );
 }
@@ -301,7 +301,7 @@ fn suggestion_no_caps_lowercase_remainder() {
 #[test]
 fn suggestion_match_case_preserves_typed_case() {
     assert_eq!(
-        transform_suggestion("tâi-gí", "Tai", LetterCase::Lowercased, InputMode::Poj),
+        transform_candidate_case("tâi-gí", "Tai", LetterCase::Lowercased, InputMode::Poj),
         "Tâi-gí"
     );
 }
@@ -311,7 +311,7 @@ fn suggestion_match_case_all_typed() {
     // composing "HO2" has 2 letters; candidate "hó" has 2 letters
     // (h + ó precomposed); typed >= original → matchCase whole candidate.
     assert_eq!(
-        transform_suggestion("hó", "HO2", LetterCase::Lowercased, InputMode::Poj),
+        transform_candidate_case("hó", "HO2", LetterCase::Lowercased, InputMode::Poj),
         "HÓ"
     );
 }
@@ -319,13 +319,13 @@ fn suggestion_match_case_all_typed() {
 #[test]
 fn suggestion_empty_composing_passthrough() {
     assert_eq!(
-        transform_suggestion("tâi-gí", "", LetterCase::Lowercased, InputMode::Poj),
+        transform_candidate_case("tâi-gí", "", LetterCase::Lowercased, InputMode::Poj),
         "tâi-gí"
     );
 }
 
 // =========================================================================
-// Nasal marker case adjust — post-process verification through transform_suggestion
+// Nasal marker case adjust — post-process verification through transform_candidate_case
 // =========================================================================
 
 #[test]
@@ -333,7 +333,7 @@ fn suggestion_post_process_nasal_marker_promotes_after_uppercase() {
     // composing "AN" (2 letters upper) → candidate "an\u{207F}" 2 letters →
     // matchCase → "AN\u{207F}" → adjust_nasal_marker_case → "AN\u{1D3A}"
     assert_eq!(
-        transform_suggestion("an\u{207F}", "AN", LetterCase::Lowercased, InputMode::Poj),
+        transform_candidate_case("an\u{207F}", "AN", LetterCase::Lowercased, InputMode::Poj),
         "AN\u{1D3A}"
     );
 }
@@ -357,7 +357,7 @@ fn suggestion_tl_tone_letter_capitalization() {
     // SuggestionCaseTransformerTest.kt:128-132 — TL `ôo` doubled-vowel
     // form must capitalize via TL table to "Ôo".
     assert_eq!(
-        transform_suggestion("ôo-peh-sai", "O", LetterCase::Lowercased, InputMode::Tl),
+        transform_candidate_case("ôo-peh-sai", "O", LetterCase::Lowercased, InputMode::Tl),
         "Ôo-peh-sai"
     );
 }
@@ -368,7 +368,7 @@ fn suggestion_digits_not_counted_as_letters() {
     // letters (k, a); digit 2 not counted. Candidate "ká" has 2 letters
     // (k + ó precomposed). typed >= original → matchCase whole.
     assert_eq!(
-        transform_suggestion("ká", "Ka2", LetterCase::Lowercased, InputMode::Poj),
+        transform_candidate_case("ká", "Ka2", LetterCase::Lowercased, InputMode::Poj),
         "Ká"
     );
 }
@@ -378,7 +378,7 @@ fn suggestion_empty_roman_unchanged() {
     // SuggestionCaseTransformerTest.kt:172-177 — empty original returns
     // empty regardless of caps state.
     assert_eq!(
-        transform_suggestion("", "tai", LetterCase::CapsLocked, InputMode::Poj),
+        transform_candidate_case("", "tai", LetterCase::CapsLocked, InputMode::Poj),
         ""
     );
 }
@@ -388,13 +388,13 @@ fn suggestion_empty_roman_unchanged() {
 fn suggestion_caps_lock_dominates_caps_flag() {
     // SuggestionCaseTransformerTest.kt:249-258 — when capsLock=true,
     // the value of caps doesn't matter (both produce identical output).
-    let with_caps_off = transform_suggestion(
+    let with_caps_off = transform_candidate_case(
         "tâi-gí",
         "T",
         LetterCase::CapsLocked, // CapsLocked subsumes both caps states
         InputMode::Poj,
     );
-    let with_caps_on = transform_suggestion(
+    let with_caps_on = transform_candidate_case(
         "tâi-gí",
         "T",
         LetterCase::CapsLocked, // same — there is no "caps + capsLock" combined state in our enum

@@ -47,7 +47,7 @@ public extension RustEngineBridge {
             /// `NextWordRequest::ClearForNewComposing(now_ms)`. Platform delegate
             /// forwards to `NextWordController.clearDisplay()` (NOT
             /// `resetAndClearUI()` — that sends the structurally distinct
-            /// `ResetFull` intent).
+            /// `ResetAll` intent).
             case nextWordClearForNewComposing
         }
 

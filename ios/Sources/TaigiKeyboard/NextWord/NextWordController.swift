@@ -57,7 +57,7 @@ final class NextWordController {
         envelopeGen &+= 1
         // Cross-field IME-session boundary. Rust engine state will be wiped
         // on the next bridge call (envelope mismatch sets is_showing=false
-        // before the request processes), so a follow-up ResetFull /
+        // before the request processes), so a follow-up ResetAll /
         // ClearForNewComposing cannot emit ClearPredictionsUI through the
         // engine's was_showing gate. Force-clear platform-side cached state
         // + UI here so cross-field stale suggestions don't linger.
@@ -244,7 +244,7 @@ final class NextWordController {
     /// scored + sorted + truncated + dropped on stale generation — then push
     /// the new `is_showing` value back into engine state via
     /// `nextwordSetIsShowing` — required so subsequent
-    /// `ClearForNewComposing` / sentence-end / context-timeout / `ResetFull`
+    /// `ClearForNewComposing` / sentence-end / context-timeout / `ResetAll`
     /// paths can emit `clearPredictionsUI` when there is UI to clear.
     @MainActor
     private func handleQueryResult(

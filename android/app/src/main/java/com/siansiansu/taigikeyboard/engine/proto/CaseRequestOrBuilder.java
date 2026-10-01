@@ -71,15 +71,15 @@ public interface CaseRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.TransformInputCase getTransformInputCase();
 
   /**
-   * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
-   * @return Whether the transformSuggestion field is set.
+   * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
+   * @return Whether the transformCandidateCase field is set.
    */
-  boolean hasTransformSuggestion();
+  boolean hasTransformCandidateCase();
   /**
-   * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
-   * @return The transformSuggestion.
+   * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
+   * @return The transformCandidateCase.
    */
-  com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion getTransformSuggestion();
+  com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase getTransformCandidateCase();
 
   public com.siansiansu.taigikeyboard.engine.proto.CaseRequest.MethodCase getMethodCase();
 }

@@ -5,7 +5,7 @@ import Foundation
 /// The next-word intents macOS uses, which is three of the engine's eight.
 ///
 /// macOS learns but does not predict, so the whole read half of the slice —
-/// `FilterPredictions`, `SetIsShowing` — has no caller here and is not
+/// `FilterPredictions`, `SetPredictionsVisible` — has no caller here and is not
 /// wrapped. `Backspace` is absent for the same
 /// reason: it exists to re-issue a prediction query against the character left
 /// behind, and it records nothing.
@@ -87,10 +87,10 @@ extension RustEngineBridge {
         settings: EngineSettings,
         generation: UInt64,
     ) {
-        var payload = Taigi_Engine_ResetFull()
+        var payload = Taigi_Engine_ResetAll()
         payload.input = decisionInput(nowMs: nowMs)
         decide(
-            .resetFull(payload),
+            .resetAll(payload),
             op: "nextwordResetFull",
             settings: settings,
             generation: generation,

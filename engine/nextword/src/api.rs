@@ -51,7 +51,7 @@ pub(crate) enum Intent {
     /// New composing — hides candidates, keeps context; emits ClearPredictionsUI if showing.
     ClearForNewComposing { now_ms: i64 },
     /// Full reset — same as the context timeout, clearing all state.
-    ResetFull { now_ms: i64 },
+    ResetAll { now_ms: i64 },
     /// Continuous-input nail / unnail handshake. Learns nothing and leaves
     /// the committed context alone — a nailed segment is not in the document
     /// yet; the final commit's `WordSelected.preceding` carries it (§40).
@@ -64,7 +64,7 @@ pub(crate) enum Intent {
     /// no effects, no generation bump. Called by the platform after
     /// rendering the result of an async predict() so subsequent clear/reset
     /// paths know whether to emit `ClearPredictionsUI`.
-    SetIsShowing { is_showing: bool },
+    SetPredictionsVisible { visible: bool },
 }
 
 /// One `prev → next` bigram a commit decided to record, each side the

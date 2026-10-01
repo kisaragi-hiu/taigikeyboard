@@ -24,7 +24,7 @@ public  final class CaseRequest extends
     FULL_UPPERCASE_TONE_STRING(11),
     LOWERCASE_TONE_CHAR(12),
     TRANSFORM_INPUT_CASE(20),
-    TRANSFORM_SUGGESTION(22),
+    TRANSFORM_CANDIDATE_CASE(22),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -44,7 +44,7 @@ public  final class CaseRequest extends
         case 11: return FULL_UPPERCASE_TONE_STRING;
         case 12: return LOWERCASE_TONE_CHAR;
         case 20: return TRANSFORM_INPUT_CASE;
-        case 22: return TRANSFORM_SUGGESTION;
+        case 22: return TRANSFORM_CANDIDATE_CASE;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -306,40 +306,40 @@ public  final class CaseRequest extends
     }
   }
 
-  public static final int TRANSFORM_SUGGESTION_FIELD_NUMBER = 22;
+  public static final int TRANSFORM_CANDIDATE_CASE_FIELD_NUMBER = 22;
   /**
-   * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+   * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
    */
   @java.lang.Override
-  public boolean hasTransformSuggestion() {
+  public boolean hasTransformCandidateCase() {
     return methodCase_ == 22;
   }
   /**
-   * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+   * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion getTransformSuggestion() {
+  public com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase getTransformCandidateCase() {
     if (methodCase_ == 22) {
-       return (com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion) method_;
+       return (com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase) method_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase.getDefaultInstance();
   }
   /**
-   * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+   * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
    */
-  private void setTransformSuggestion(com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion value) {
+  private void setTransformCandidateCase(com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase value) {
     java.util.Objects.requireNonNull(value);
     method_ = value;
     methodCase_ = 22;
   }
   /**
-   * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+   * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
    */
-  private void mergeTransformSuggestion(com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion value) {
+  private void mergeTransformCandidateCase(com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase value) {
     java.util.Objects.requireNonNull(value);
     if (methodCase_ == 22 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion) method_)
+        method_ != com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase.newBuilder((com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase) method_)
           .mergeFrom(value).buildPartial();
     } else {
       method_ = value;
@@ -347,9 +347,9 @@ public  final class CaseRequest extends
     methodCase_ = 22;
   }
   /**
-   * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+   * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
    */
-  private void clearTransformSuggestion() {
+  private void clearTransformCandidateCase() {
     if (methodCase_ == 22) {
       methodCase_ = 0;
       method_ = null;
@@ -706,50 +706,50 @@ public  final class CaseRequest extends
     }
 
     /**
-     * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+     * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
      */
     @java.lang.Override
-    public boolean hasTransformSuggestion() {
-      return instance.hasTransformSuggestion();
+    public boolean hasTransformCandidateCase() {
+      return instance.hasTransformCandidateCase();
     }
     /**
-     * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+     * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion getTransformSuggestion() {
-      return instance.getTransformSuggestion();
+    public com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase getTransformCandidateCase() {
+      return instance.getTransformCandidateCase();
     }
     /**
-     * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+     * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
      */
-    public Builder setTransformSuggestion(com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion value) {
+    public Builder setTransformCandidateCase(com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase value) {
       copyOnWrite();
-      instance.setTransformSuggestion(value);
+      instance.setTransformCandidateCase(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+     * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
      */
-    public Builder setTransformSuggestion(
-        com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion.Builder builderForValue) {
+    public Builder setTransformCandidateCase(
+        com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase.Builder builderForValue) {
       copyOnWrite();
-      instance.setTransformSuggestion(builderForValue.build());
+      instance.setTransformCandidateCase(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+     * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
      */
-    public Builder mergeTransformSuggestion(com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion value) {
+    public Builder mergeTransformCandidateCase(com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase value) {
       copyOnWrite();
-      instance.mergeTransformSuggestion(value);
+      instance.mergeTransformCandidateCase(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.TransformSuggestion transform_suggestion = 22;</code>
+     * <code>.taigi.engine.TransformCandidateCase transform_candidate_case = 22;</code>
      */
-    public Builder clearTransformSuggestion() {
+    public Builder clearTransformCandidateCase() {
       copyOnWrite();
-      instance.clearTransformSuggestion();
+      instance.clearTransformCandidateCase();
       return this;
     }
 
@@ -775,7 +775,7 @@ public  final class CaseRequest extends
             com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString.class,
             com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar.class,
             com.siansiansu.taigikeyboard.engine.proto.TransformInputCase.class,
-            com.siansiansu.taigikeyboard.engine.proto.TransformSuggestion.class,
+            com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase.class,
           };
           java.lang.String info =
               "\u0000\u0005\u0001\u0000\n\u0016\u0005\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f" +

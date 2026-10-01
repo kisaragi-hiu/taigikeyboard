@@ -100,12 +100,12 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     set {method = .clearForNewComposing_p(newValue)}
   }
 
-  public var resetFull: Taigi_Engine_ResetFull {
+  public var resetAll: Taigi_Engine_ResetAll {
     get {
-      if case .resetFull(let v)? = method {return v}
-      return Taigi_Engine_ResetFull()
+      if case .resetAll(let v)? = method {return v}
+      return Taigi_Engine_ResetAll()
     }
-    set {method = .resetFull(newValue)}
+    set {method = .resetAll(newValue)}
   }
 
   /// Android-only Space-path intent (audit §5 #5). iOS wrappers never
@@ -125,17 +125,17 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
   /// result of an async predict() call (or clears it on empty result), it
   /// pushes the resulting visibility back to the engine via this intent so
   /// subsequent ClearForNewComposing / sentence-end / context-timeout /
-  /// ResetFull paths can correctly emit ClearPredictionsUI when there is
+  /// ResetAll paths can correctly emit ClearPredictionsUI when there is
   /// UI to clear. Mutates state.is_showing only — does NOT bump
   /// current_generation (the in-flight query that produced the rendered
   /// result already won the race; later intents will bump as usual).
   /// Returns DecideResult with empty effects + snapshot of state.
-  public var setIsShowing: Taigi_Engine_SetIsShowing {
+  public var setPredictionsVisible: Taigi_Engine_SetPredictionsVisible {
     get {
-      if case .setIsShowing(let v)? = method {return v}
-      return Taigi_Engine_SetIsShowing()
+      if case .setPredictionsVisible(let v)? = method {return v}
+      return Taigi_Engine_SetPredictionsVisible()
     }
-    set {method = .setIsShowing(newValue)}
+    set {method = .setPredictionsVisible(newValue)}
   }
 
   /// --- Pure post-query helpers (20s) ---
@@ -168,7 +168,7 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     case backspace(Taigi_Engine_Backspace)
     case contextTimeoutFired(Taigi_Engine_ContextTimeoutFired)
     case clearForNewComposing_p(Taigi_Engine_ClearForNewComposing)
-    case resetFull(Taigi_Engine_ResetFull)
+    case resetAll(Taigi_Engine_ResetAll)
     /// Android-only Space-path intent (audit §5 #5). iOS wrappers never
     /// emit this; Rust engine accepts generically. Mutates
     /// last_selected_*/lastSelectionTimeMs without bumping
@@ -179,12 +179,12 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     /// result of an async predict() call (or clears it on empty result), it
     /// pushes the resulting visibility back to the engine via this intent so
     /// subsequent ClearForNewComposing / sentence-end / context-timeout /
-    /// ResetFull paths can correctly emit ClearPredictionsUI when there is
+    /// ResetAll paths can correctly emit ClearPredictionsUI when there is
     /// UI to clear. Mutates state.is_showing only — does NOT bump
     /// current_generation (the in-flight query that produced the rendered
     /// result already won the race; later intents will bump as usual).
     /// Returns DecideResult with empty effects + snapshot of state.
-    case setIsShowing(Taigi_Engine_SetIsShowing)
+    case setPredictionsVisible(Taigi_Engine_SetPredictionsVisible)
     /// --- Pure post-query helpers (20s) ---
     /// Pure post-query filter+merge+sort+limit — return FilterResult
     /// (handles stale-gen drop).
@@ -334,7 +334,7 @@ public nonisolated struct Taigi_Engine_ClearForNewComposing: Sendable {
 }
 
 /// Full reset (sentence-end punctuation outside WordSelected, or empty doc).
-public nonisolated struct Taigi_Engine_ResetFull: Sendable {
+public nonisolated struct Taigi_Engine_ResetAll: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -386,15 +386,15 @@ public nonisolated struct Taigi_Engine_UpdateLastSelectedWord: Sendable {
   fileprivate var _input: Taigi_Engine_DecisionInput? = nil
 }
 
-/// Platform → engine visibility sync. Pushes is_showing back to state
-/// after platform rendering of an async predict() result. No effects,
-/// no generation bump; just state.is_showing = is_showing.
-public nonisolated struct Taigi_Engine_SetIsShowing: Sendable {
+/// Platform → engine visibility sync. Pushes the prediction bar's visibility
+/// to state after platform rendering of an async predict() result. No effects,
+/// no generation bump; just state.is_showing = visible.
+public nonisolated struct Taigi_Engine_SetPredictionsVisible: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  public var isShowing: Bool = false
+  public var visible: Bool = false
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -549,7 +549,7 @@ public nonisolated struct Taigi_Engine_DecideResult: Sendable {
 
   public var currentGeneration: UInt64 = 0
 
-  public var isShowing: Bool = false
+  public var predictionsVisible: Bool = false
 
   /// Echo of last_selected_word so platform can implement
   /// SelectionContextProvider without holding a parallel cache.
@@ -727,7 +727,7 @@ nonisolated extension Taigi_Engine_Source: SwiftProtobuf._ProtoNameProviding {
 
 nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".NextWordRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}word_selected\0\u{1}backspace\0\u{3}context_timeout_fired\0\u{3}clear_for_new_composing\0\u{3}reset_full\0\u{3}update_last_selected_word\0\u{3}set_is_showing\0\u{4}\u{4}filter_predictions\0\u{4}\u{2}predict_next\0\u{b}boost_candidates\0\u{b}query_state\0\u{c}\u{15}\u{1}\u{c}\u{1e}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}word_selected\0\u{1}backspace\0\u{3}context_timeout_fired\0\u{3}clear_for_new_composing\0\u{3}reset_all\0\u{3}update_last_selected_word\0\u{3}set_predictions_visible\0\u{4}\u{4}filter_predictions\0\u{4}\u{2}predict_next\0\u{b}boost_candidates\0\u{b}query_state\0\u{c}\u{15}\u{1}\u{c}\u{1e}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -788,16 +788,16 @@ nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, Swift
         }
       }()
       case 14: try {
-        var v: Taigi_Engine_ResetFull?
+        var v: Taigi_Engine_ResetAll?
         var hadOneofValue = false
         if let current = self.method {
           hadOneofValue = true
-          if case .resetFull(let m) = current {v = m}
+          if case .resetAll(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .resetFull(v)
+          self.method = .resetAll(v)
         }
       }()
       case 15: try {
@@ -814,16 +814,16 @@ nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, Swift
         }
       }()
       case 16: try {
-        var v: Taigi_Engine_SetIsShowing?
+        var v: Taigi_Engine_SetPredictionsVisible?
         var hadOneofValue = false
         if let current = self.method {
           hadOneofValue = true
-          if case .setIsShowing(let m) = current {v = m}
+          if case .setPredictionsVisible(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .setIsShowing(v)
+          self.method = .setPredictionsVisible(v)
         }
       }()
       case 20: try {
@@ -879,16 +879,16 @@ nonisolated extension Taigi_Engine_NextWordRequest: SwiftProtobuf.Message, Swift
       guard case .clearForNewComposing_p(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
     }()
-    case .resetFull?: try {
-      guard case .resetFull(let v)? = self.method else { preconditionFailure() }
+    case .resetAll?: try {
+      guard case .resetAll(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 14)
     }()
     case .updateLastSelectedWord?: try {
       guard case .updateLastSelectedWord(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
     }()
-    case .setIsShowing?: try {
-      guard case .setIsShowing(let v)? = self.method else { preconditionFailure() }
+    case .setPredictionsVisible?: try {
+      guard case .setPredictionsVisible(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     }()
     case .filterPredictions?: try {
@@ -1142,8 +1142,8 @@ nonisolated extension Taigi_Engine_ClearForNewComposing: SwiftProtobuf.Message, 
   }
 }
 
-nonisolated extension Taigi_Engine_ResetFull: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ResetFull"
+nonisolated extension Taigi_Engine_ResetAll: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ResetAll"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}input\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1169,7 +1169,7 @@ nonisolated extension Taigi_Engine_ResetFull: SwiftProtobuf.Message, SwiftProtob
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_ResetFull, rhs: Taigi_Engine_ResetFull) -> Bool {
+  public static func ==(lhs: Taigi_Engine_ResetAll, rhs: Taigi_Engine_ResetAll) -> Bool {
     if lhs._input != rhs._input {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -1220,9 +1220,9 @@ nonisolated extension Taigi_Engine_UpdateLastSelectedWord: SwiftProtobuf.Message
   }
 }
 
-nonisolated extension Taigi_Engine_SetIsShowing: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".SetIsShowing"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}is_showing\0")
+nonisolated extension Taigi_Engine_SetPredictionsVisible: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SetPredictionsVisible"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}visible\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1230,21 +1230,21 @@ nonisolated extension Taigi_Engine_SetIsShowing: SwiftProtobuf.Message, SwiftPro
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularBoolField(value: &self.isShowing) }()
+      case 1: try { try decoder.decodeSingularBoolField(value: &self.visible) }()
       default: break
       }
     }
   }
 
   public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if self.isShowing != false {
-      try visitor.visitSingularBoolField(value: self.isShowing, fieldNumber: 1)
+    if self.visible != false {
+      try visitor.visitSingularBoolField(value: self.visible, fieldNumber: 1)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_SetIsShowing, rhs: Taigi_Engine_SetIsShowing) -> Bool {
-    if lhs.isShowing != rhs.isShowing {return false}
+  public static func ==(lhs: Taigi_Engine_SetPredictionsVisible, rhs: Taigi_Engine_SetPredictionsVisible) -> Bool {
+    if lhs.visible != rhs.visible {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1473,7 +1473,7 @@ nonisolated extension Taigi_Engine_NextWordResponse: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DecideResult"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}effects\0\u{3}current_generation\0\u{3}is_showing\0\u{3}last_selected_word\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}effects\0\u{3}current_generation\0\u{3}predictions_visible\0\u{3}last_selected_word\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1483,7 +1483,7 @@ nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftPro
       switch fieldNumber {
       case 1: try { try decoder.decodeRepeatedMessageField(value: &self.effects) }()
       case 2: try { try decoder.decodeSingularUInt64Field(value: &self.currentGeneration) }()
-      case 3: try { try decoder.decodeSingularBoolField(value: &self.isShowing) }()
+      case 3: try { try decoder.decodeSingularBoolField(value: &self.predictionsVisible) }()
       case 4: try { try decoder.decodeSingularStringField(value: &self.lastSelectedWord) }()
       default: break
       }
@@ -1497,8 +1497,8 @@ nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftPro
     if self.currentGeneration != 0 {
       try visitor.visitSingularUInt64Field(value: self.currentGeneration, fieldNumber: 2)
     }
-    if self.isShowing != false {
-      try visitor.visitSingularBoolField(value: self.isShowing, fieldNumber: 3)
+    if self.predictionsVisible != false {
+      try visitor.visitSingularBoolField(value: self.predictionsVisible, fieldNumber: 3)
     }
     if !self.lastSelectedWord.isEmpty {
       try visitor.visitSingularStringField(value: self.lastSelectedWord, fieldNumber: 4)
@@ -1509,7 +1509,7 @@ nonisolated extension Taigi_Engine_DecideResult: SwiftProtobuf.Message, SwiftPro
   public static func ==(lhs: Taigi_Engine_DecideResult, rhs: Taigi_Engine_DecideResult) -> Bool {
     if lhs.effects != rhs.effects {return false}
     if lhs.currentGeneration != rhs.currentGeneration {return false}
-    if lhs.isShowing != rhs.isShowing {return false}
+    if lhs.predictionsVisible != rhs.predictionsVisible {return false}
     if lhs.lastSelectedWord != rhs.lastSelectedWord {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

@@ -56,13 +56,13 @@ fn decode_intent(req: &NextWordRequest) -> Result<DecodedRequest, NextWordError>
                 .ok_or(NextWordError::MissingDecisionInput)?;
             DecodedRequest::Decide(Intent::ClearForNewComposing { now_ms })
         }
-        Method::ResetFull(m) => {
+        Method::ResetAll(m) => {
             let now_ms = m
                 .input
                 .as_ref()
                 .map(|i| i.now_ms)
                 .ok_or(NextWordError::MissingDecisionInput)?;
-            DecodedRequest::Decide(Intent::ResetFull { now_ms })
+            DecodedRequest::Decide(Intent::ResetAll { now_ms })
         }
         Method::UpdateLastSelectedWord(m) => {
             let now_ms = m
@@ -76,9 +76,9 @@ fn decode_intent(req: &NextWordRequest) -> Result<DecodedRequest, NextWordError>
                 now_ms,
             })
         }
-        Method::SetIsShowing(m) => DecodedRequest::Decide(Intent::SetIsShowing {
-            is_showing: m.is_showing,
-        }),
+        Method::SetPredictionsVisible(m) => {
+            DecodedRequest::Decide(Intent::SetPredictionsVisible { visible: m.visible })
+        }
         Method::FilterPredictions(m) => DecodedRequest::Filter {
             raw: m.raw,
             query_generation: m.query_generation,

@@ -110,12 +110,12 @@ fun RustEngineBridge.nextwordResetFull(
     translateSwapped: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.ResetFull
+    val payload = com.siansiansu.taigikeyboard.engine.proto.ResetAll
         .newBuilder()
         .setInput(decisionInput(nowMs))
         .build()
     return decideDispatch(
-        methodSetter = { it.resetFull = payload },
+        methodSetter = { it.resetAll = payload },
         op = "nextwordResetFull",
         generation = generation,
         config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
@@ -136,12 +136,12 @@ fun RustEngineBridge.nextwordSetIsShowing(
     translateSwapped: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.SetIsShowing
+    val payload = com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible
         .newBuilder()
-        .setIsShowing(isShowing)
+        .setVisible(isShowing)
         .build()
     return decideDispatch(
-        methodSetter = { it.setIsShowing = payload },
+        methodSetter = { it.setPredictionsVisible = payload },
         op = "nextwordSetIsShowing",
         generation = generation,
         config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
@@ -314,7 +314,7 @@ private fun synthDecideResult(proto: DecideResult): RustEngineBridge.NextWordDec
     return RustEngineBridge.NextWordDecideResult(
         effects = effects,
         currentGeneration = proto.currentGeneration,
-        isShowing = proto.isShowing,
+        isShowing = proto.predictionsVisible,
         lastSelectedWord = if (proto.lastSelectedWord.isEmpty()) null else proto.lastSelectedWord,
     )
 }

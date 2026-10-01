@@ -53,7 +53,7 @@ message CaseRequest {
 
     // --- Per-string compound transforms ---
     TransformInputCase      transform_input_case       = 20;
-    TransformSuggestion     transform_suggestion       = 22;
+    TransformCandidateCase  transform_candidate_case   = 22;
   }
 }
 
@@ -91,8 +91,7 @@ message TransformInputCase {
   LetterCase letter_case = 2;
 }
 
-// `TransformSuggestion` applies the SuggestionCaseTransformer per-word
-// case transformation:
+// `TransformCandidateCase` applies the per-candidate case transformation:
 // - CAPS_LOCKED: full upper
 // - else with non-empty composing_text: split typed-portion (matchCase to
 //   composing) + remaining-portion (UPPERCASED → first upper / LOWERCASED → lower)
@@ -102,7 +101,7 @@ message TransformInputCase {
 // returns the final-form string ready for display. Suggestion skip rules
 // (iOS `additionalInfo` flags, Android `id` markers) stay platform-side
 // — only transform-eligible items reach this op.
-message TransformSuggestion {
+message TransformCandidateCase {
   string     original_text  = 1;
   string     composing_text = 2;
   LetterCase letter_case    = 3;

@@ -69,12 +69,14 @@ pub(crate) fn decide(
         }
         Intent::ContextTimeoutFired { now_ms: _ } => reset_and_clear_predictions(state).into(),
         Intent::ClearForNewComposing { now_ms: _ } => decide_clear_for_new_composing(state).into(),
-        Intent::ResetFull { now_ms: _ } => reset_and_clear_predictions(state).into(),
+        Intent::ResetAll { now_ms: _ } => reset_and_clear_predictions(state).into(),
         // Nail / unnail: nothing is committed yet, so nothing is learned and
         // the committed context stays (§40); the final commit's `preceding`
         // carries the nailed segments.
         Intent::UpdateLastSelectedWord { .. } => result_unchanged(state).into(),
-        Intent::SetIsShowing { is_showing } => decide_set_is_showing(state, is_showing).into(),
+        Intent::SetPredictionsVisible { visible } => {
+            decide_set_predictions_visible(state, visible).into()
+        }
     })
 }
 
@@ -262,7 +264,7 @@ fn decide_clear_for_new_composing(state: &mut PersistedState) -> DecideResult {
 }
 
 /// Shared reset path used by sentence-end punctuation, context timeout,
-/// and `ResetFull` intents.
+/// and `ResetAll` intents.
 fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
     let was_showing = state.is_showing;
     let new_generation = state.current_generation.wrapping_add(1);
@@ -292,8 +294,8 @@ fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
 /// the predict() round-trip whose render produced this update already
 /// completed; subsequent intents will bump as usual. Returns the current
 /// snapshot so the platform receives a consistent value echo.
-fn decide_set_is_showing(state: &mut PersistedState, is_showing: bool) -> DecideResult {
-    state.is_showing = is_showing;
+fn decide_set_predictions_visible(state: &mut PersistedState, visible: bool) -> DecideResult {
+    state.is_showing = visible;
     snapshot_into_decide_result(state, Vec::new())
 }
 
@@ -401,7 +403,7 @@ fn snapshot_into_decide_result(
     DecideResult {
         effects,
         current_generation: state.current_generation,
-        is_showing: state.is_showing,
+        predictions_visible: state.is_showing,
         last_selected_word: state.last_selected_word.clone().unwrap_or_default(),
     }
 }
@@ -642,7 +644,7 @@ mod tests {
     fn unspecified_platform_returns_invalid_platform() {
         let config = config(Platform::Unspecified, false);
         let mut state = PersistedState::default();
-        let err = apply(&mut state, Intent::ResetFull { now_ms: 0 }, &config).unwrap_err();
+        let err = apply(&mut state, Intent::ResetAll { now_ms: 0 }, &config).unwrap_err();
         assert!(matches!(err, NextWordError::InvalidPlatform));
     }
 
@@ -1019,7 +1021,7 @@ mod tests {
         let mut state = PersistedState::default();
         assert!(apply(
             &mut state,
-            Intent::SetIsShowing { is_showing: false },
+            Intent::SetPredictionsVisible { visible: false },
             &config(Platform::Linux, false),
         )
         .is_ok());
@@ -1034,7 +1036,7 @@ mod tests {
         assert!(
             apply(
                 &mut state,
-                Intent::SetIsShowing { is_showing: false },
+                Intent::SetPredictionsVisible { visible: false },
                 &config(Platform::Windows, false),
             )
             .is_ok(),
@@ -1048,7 +1050,7 @@ mod tests {
         assert!(
             apply(
                 &mut state,
-                Intent::SetIsShowing { is_showing: false },
+                Intent::SetPredictionsVisible { visible: false },
                 &config(Platform::Macos, false),
             )
             .is_ok(),
@@ -1113,7 +1115,7 @@ mod tests {
             },
             Intent::ContextTimeoutFired { now_ms: 2_000 },
             Intent::ClearForNewComposing { now_ms: 3_000 },
-            Intent::ResetFull { now_ms: 4_000 },
+            Intent::ResetAll { now_ms: 4_000 },
         ];
         for intent in invalidating {
             let mut state = PersistedState {
@@ -1138,7 +1140,7 @@ mod tests {
         };
         let _ = apply(
             &mut state,
-            Intent::ResetFull { now_ms: 1_000 },
+            Intent::ResetAll { now_ms: 1_000 },
             &ios_config(false),
         )
         .unwrap();
@@ -1252,7 +1254,7 @@ mod tests {
     }
 
     #[test]
-    fn set_is_showing_updates_state_without_bump_or_effects() {
+    fn set_predictions_visible_updates_state_without_bump_or_effects() {
         let mut state = PersistedState {
             current_generation: 9,
             is_showing: false,
@@ -1260,7 +1262,7 @@ mod tests {
         };
         let result = apply(
             &mut state,
-            Intent::SetIsShowing { is_showing: true },
+            Intent::SetPredictionsVisible { visible: true },
             &ios_config(false),
         )
         .unwrap();
@@ -1270,14 +1272,14 @@ mod tests {
     }
 
     #[test]
-    fn set_is_showing_then_clear_for_new_composing_emits_clear() {
+    fn set_predictions_visible_then_clear_for_new_composing_emits_clear() {
         // Regression guard for the v3.5.5 bridge gap fix: pre-fix, platform
         // had no way to push is_showing=true into the engine, so the
         // ClearForNewComposing → ClearPredictionsUI gate never tripped.
         let mut state = PersistedState::default();
         apply(
             &mut state,
-            Intent::SetIsShowing { is_showing: true },
+            Intent::SetPredictionsVisible { visible: true },
             &ios_config(false),
         )
         .unwrap();

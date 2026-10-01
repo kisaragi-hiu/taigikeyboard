@@ -179,10 +179,10 @@ public extension RustEngineBridge {
         translateSwapped: Bool,
         generation: UInt64,
     ) -> NextWordDecideResult {
-        var payload = Taigi_Engine_ResetFull()
+        var payload = Taigi_Engine_ResetAll()
         payload.input = decisionInput(nowMs: nowMs)
         return decideDispatch(
-            method: .resetFull(payload),
+            method: .resetAll(payload),
             op: "nextwordResetFull",
             generation: generation,
             config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
@@ -200,10 +200,10 @@ public extension RustEngineBridge {
         translateSwapped: Bool,
         generation: UInt64,
     ) -> NextWordDecideResult {
-        var payload = Taigi_Engine_SetIsShowing()
-        payload.isShowing = isShowing
+        var payload = Taigi_Engine_SetPredictionsVisible()
+        payload.visible = isShowing
         return decideDispatch(
-            method: .setIsShowing(payload),
+            method: .setPredictionsVisible(payload),
             op: "nextwordSetIsShowing",
             generation: generation,
             config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
@@ -343,7 +343,7 @@ public extension RustEngineBridge {
         return NextWordDecideResult(
             effects: effects,
             currentGeneration: proto.currentGeneration,
-            isShowing: proto.isShowing,
+            isShowing: proto.predictionsVisible,
             lastSelectedWord: proto.lastSelectedWord.isEmpty ? nil : proto.lastSelectedWord,
         )
     }

@@ -6,8 +6,8 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface ResetFullOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.ResetFull)
+public interface ResetAllOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.ResetAll)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
