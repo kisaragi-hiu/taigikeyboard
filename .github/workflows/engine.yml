@@ -101,6 +101,41 @@ jobs:
       - name: cargo fmt --check (engine)
         run: cargo fmt --all --check --manifest-path engine/Cargo.toml
 
+  # engine/Cargo.toml's `rust-version` is a promise to anyone embedding the
+  # engine, and the other workspaces' newer floor (1.95) never exercises it.
+  # Read from the manifest so the check cannot drift from the declaration.
+  msrv:
+    name: cargo check on the declared rust-version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+
+      - name: Install the declared rust-version (host target only)
+        run: |
+          set -euo pipefail
+          msrv="$(sed -n 's/^rust-version = "\(.*\)"/\1/p' engine/Cargo.toml)"
+          [ -n "$msrv" ] || { echo "::error::no rust-version in engine/Cargo.toml"; exit 1; }
+          rustup toolchain install "$msrv" --profile minimal --no-self-update
+          echo "RUSTUP_TOOLCHAIN=$msrv" >> "$GITHUB_ENV"
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: engine
+          key: msrv
+
+      - name: cargo check --all-targets
+        run: cargo check --manifest-path engine/Cargo.toml --workspace --all-targets --locked
+
   # docs/architecture/e2e-trace-schema.md § Test mode only.
   e2e-trace-guard:
     name: e2e trace stays out of release

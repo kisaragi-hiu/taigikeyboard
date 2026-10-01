@@ -39,6 +39,18 @@ Ignored files survive `git checkout`, so bootstrapping is one pass per machine, 
 
 `make dict` must finish before `make build` when dictionary sources moved.
 
+## Four Cargo workspaces (deliberate)
+
+`engine/`, `desktop/`, `windows/` and `linux/` are four workspaces, each with its own `Cargo.lock`, `target/` and `rust-toolchain.toml`; the three desktop ones reach the engine crates by path, so each compiles its own copy. A root workspace was spiked on 2026-10-01 and not adopted:
+
+- The lockfiles do not conflict: of 272 external crates, 106 appear in two or more workspaces, and the only version differences are multi-version sets every workspace already carries (`syn` 1/2/3, `hashbrown`, `getrandom`), plus the Windows windows-rs two-island lock, which one resolver would keep. Merging is possible.
+- What it would cost: ~140 `cargo` call sites across Makefiles, CI, the release scripts, the Windows box gate and the Linux VM sync; one `rust-toolchain.toml` carrying every platform's targets; the desktop version moving out of `[workspace.package]` (`tools/release_notes.py`); `windows/.cargo/config.toml` (static CRT) silently skipped by a root invocation; and one feature graph across all crates, which can change what `dispatch` and SQLite are built with.
+- A shared `build.target-dir` instead saves less than it seems (each platform target compiles separately anyway) and makes one workspace's `cargo clean` or build lock everyone's.
+
+The engine's `rust-version` (1.86, below the desktop workspaces' 1.95) is checked on every engine change by the `msrv` job in `.github/workflows/engine.yml`.
+
+Revisit when a fifth workspace appears, or when a shared dependency has to be bumped by hand in more than one lockfile.
+
 ## A release rebuilds first
 
 `/release-mobile` and `/release-desktop` run `make i18n` + `make build` themselves (and `make dict` when dictionary sources moved): the engine binaries a platform links are generated and gitignored, so nothing else can prove the shipped artifact was built from the commit being released.
