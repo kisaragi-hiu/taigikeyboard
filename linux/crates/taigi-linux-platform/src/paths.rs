@@ -219,8 +219,8 @@ mod tests {
     fn the_data_dir_override_points_a_dev_tree_at_its_own_dictionaries() {
         let layout = InstallLayout::new("/usr");
         assert_eq!(
-            dictionaries_directory_with(env(&[(DATA_DIR_OVERRIDE, "/src/taigikeyboard")]), &layout),
-            PathBuf::from("/src/taigikeyboard/dictionaries")
+            dictionaries_directory_with(env(&[(DATA_DIR_OVERRIDE, "/src/taigikeyboard/assets")]), &layout),
+            PathBuf::from("/src/taigikeyboard/assets/dictionaries")
         );
         assert_eq!(
             dictionaries_directory_with(env(&[(DATA_DIR_OVERRIDE, "")]), &layout),

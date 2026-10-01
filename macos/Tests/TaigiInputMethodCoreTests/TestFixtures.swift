@@ -10,10 +10,10 @@ import XCTest
 /// relative to the running bundle; only the tests, which run outside any bundle,
 /// need to know where the repository keeps its copies.
 enum TestFixtures {
-    /// `<repo>/dictionaries` — the shared artifact directory `bundle-app.sh`
+    /// `<repo>/assets/dictionaries` — the shared artifact directory `bundle-app.sh`
     /// copies into the assembled `.app`.
     static let dictionaryDirectory = repositoryRoot
-        .appendingPathComponent("dictionaries")
+        .appendingPathComponent("assets/dictionaries")
 
     /// One counter for the whole test process, so no two suites can hand the
     /// engine the same generation — spacing per-suite counters apart by hand
@@ -77,7 +77,7 @@ enum TestFixtures {
         return root.subviews.flatMap { descendants(of: $0, as: T.self) }
     }
 
-    /// `<repo>/fonts/font` — the shared typeface directory every platform
+    /// `<repo>/assets/fonts/font` — the shared typeface directory every platform
     /// packages from, and the one `bundle-app.sh` copies into the assembled
     /// `.app`'s `ATSApplicationFontsPath`.
     static let fontDirectory = repositoryRoot.appendingPathComponent("assets/fonts/font")
@@ -179,11 +179,11 @@ enum TestFixtures {
         )
     }
 
-    /// `<repo>/symbols/desktop-symbols.json` — the symbol picker's table,
+    /// `<repo>/assets/symbols/desktop-symbols.json` — the symbol picker's table,
     /// which `bundle-app.sh` copies into the assembled `.app`. The tests run
     /// outside any bundle, so a controller case injects this copy.
     static let symbolTableURL = repositoryRoot
-        .appendingPathComponent("symbols")
+        .appendingPathComponent("assets/symbols")
         .appendingPathComponent(SymbolTable.fileName)
 
     /// The shipped symbol table, read the way the app reads it.

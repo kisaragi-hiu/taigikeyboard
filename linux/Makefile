@@ -279,7 +279,7 @@ arch:
 # taigikeyboard` from another terminal selects it (the component XML must
 # already be installed once so the daemon knows the name).
 run-engine:
-	TAIGIKEYBOARD_DATA_DIR=$(CURDIR)/.. RUST_LOG=debug cargo run -p taigikeyboard-ibus -- --ibus
+	TAIGIKEYBOARD_DATA_DIR=$(CURDIR)/../assets RUST_LOG=debug cargo run -p taigikeyboard-ibus -- --ibus
 
 # The settings window from this tree — the visual smoke the Windows window
 # never had on the host (roadmap L3). Writes the real ~/.config/taigikeyboard/settings.json.

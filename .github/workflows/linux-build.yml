@@ -145,7 +145,7 @@ jobs:
           echo "addon file: $found"
           desktop-file-validate "$PREFIX/share/applications/tw.taigikeyboard.Settings.desktop"
           export IBUS_COMPONENT_PATH="$PREFIX/share/ibus/component"
-          export TAIGIKEYBOARD_DATA_DIR="$GITHUB_WORKSPACE"
+          export TAIGIKEYBOARD_DATA_DIR="$GITHUB_WORKSPACE/assets"
           export XDG_CONFIG_HOME="$RUNNER_TEMP/xdg-config"
           export XDG_DATA_HOME="$RUNNER_TEMP/xdg-data"
           export RUST_LOG=debug
