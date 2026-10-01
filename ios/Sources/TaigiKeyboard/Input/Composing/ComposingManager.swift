@@ -89,7 +89,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             settings: settings,
             generation: currentGeneration,
         ))
-        promoteToContinuousIfEligible(settings: settings)
     }
 
     public func appendCharacter(_ char: String) {
@@ -100,7 +99,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             settings: settings,
             generation: currentGeneration,
         ))
-        promoteToContinuousIfEligible(settings: settings)
     }
 
     // The hyphen is the POJ / TL syllable separator.
@@ -111,7 +109,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             settings: settings,
             generation: currentGeneration,
         ))
-        promoteToContinuousIfEligible(settings: settings)
     }
 
     /// TPS auto-correct — swaps the last raw-input character in place.
@@ -123,33 +120,9 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             settings: settings,
             generation: currentGeneration,
         ))
-        promoteToContinuousIfEligible(settings: settings)
     }
 
     // MARK: - v3.5.8 Phase 7B — Continuous-input adapters
-
-    /// Synchronous Continuous-mode promotion fired immediately after each
-    /// raw-input mutation (`startComposing` / `appendCharacter` / `appendHyphen`
-    /// / `replaceLastCharacter`). Per Codex 2026-05-10 ANALYSIS-ONLY consult
-    /// (Fork A modify): MUST run on the same thread frame as the triggering
-    /// intent so the `EnterContinuous` request shares the caller's
-    /// `currentGeneration` snapshot — the engine resets to Idle on any
-    /// generation mismatch (`engine/composing/src/handle.rs:61-65`), so a
-    /// delayed/async call could silently wipe newer composing state.
-    /// Engine no-ops the request when `Phase::Composing { raw }` is empty or
-    /// when already in `Phase::Continuous` (`engine/composing/src/transition.rs:496-502`),
-    /// so unconditional issuance is safe and avoids platform-side eligibility
-    /// heuristics.
-    private func promoteToContinuousIfEligible(settings: EngineSettings) {
-        let transition = RustEngineBridge.composingEnterContinuous(
-            settings: settings,
-            generation: currentGeneration,
-        )
-        // EnterContinuous emits zero effects (transition.rs:514). The mirror
-        // refresh keeps `composingText` in sync with the engine's preedit
-        // even though no platform side-effects fire.
-        apply(transition)
-    }
 
     /// Synchronous span-local candidate query. Read-only; engine returns the
     /// current `Phase::Continuous { raw }` candidate set in score-desc order.
@@ -197,10 +170,10 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// The engine resolves the document text, counts the pick (R5), and
     /// answers what the pick did — the outcome callers gate the auto space on.
     /// Model B mid-commit (nail) emits `[UpdatePreedit(whole composition),
-    /// NextWordUpdateLastSelectedWord, PerformAutocomplete]` and stays
+    /// NextWordUpdateLastSelectedWord, RefreshCandidates]` and stays
     /// Continuous; final-commit (`consumedBytes >= pending.utf8.count`)
     /// emits `[CommitTextReplacingPreedit(whole composition),
-    /// ResetAutocomplete, ResetAutocompleteContext, NextWordWordSelected]`
+    /// ClearCandidates, ResetCandidateContext, NextWordWordSelected]`
     /// and exits Continuous; a stale generation or a rejected pick emits
     /// nothing and answers `.ignored`.
     public func commitContinuous(_ pick: RustEngineBridge.ContinuousPick) -> RustEngineBridge.ContinuousCommitOutcome {
@@ -220,20 +193,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         return result.outcome
     }
 
-    /// Abort Continuous-input. Drops `Phase::Continuous`'s pending + nailed
-    /// list, exits to Idle, emits the standard abort effect trio
-    /// (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
-    /// `NextWordClearForNewComposing`). **Model B** (§10.6): nailed segments
-    /// were never literal document text — `ClearPreeditWithoutCommit` clears
-    /// the WHOLE marked composition; abort discards it entirely (no document
-    /// write, no `DeleteBackwardFromDocument`).
-    /// Used by `KeyboardViewController+Setup.syncSettings` on input-mode swap
-    /// (TL ↔ POJ ↔ TPS) so stale Continuous state can't leak across modes.
-    public func resetContinuous() {
-        logger.debug("[COMPOSE] fn=resetContinuous")
-        applyAsSelfCommit(RustEngineBridge.composingResetContinuous(generation: currentGeneration))
-    }
-
     public func deleteBackward() {
         logger.debug("[COMPOSE] fn=deleteBackward")
         let settings = settingsProvider.current
@@ -250,40 +209,12 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // the engine commits `Σ nailed.display_text + derived(pending)` (the
         // whole composition) and fires the terminal NextWord; it builds the
         // string from engine state, so there is no prefix duplication. The
-        // old `SelectSuggestion(composingText)` reroute double-counted the
+        // old `SelectCandidate(composingText)` reroute double-counted the
         // nailed prefix once the composing buffer became the whole
-        // composition (`select_suggestion_under_continuous` prepends
-        // `nailed_prefix`). `selectSuggestion(candidate)` still uses
-        // SelectSuggestion (bare candidate → engine prepends the nailed
-        // prefix correctly). Empty preedit → CommitDerived (a no-op on
-        // Idle). Bare `Phase::Composing` reaching here would violate the
-        // Phase 7B invariant (every active composition is auto-promoted to
-        // Continuous first); we deliberately do NOT branch on phase — the
-        // binding has no safe phase signal (Codex pre-impl point 3).
-        let settings = settingsProvider.current
-        guard !composingText.isEmpty else {
-            applyAsSelfCommit(RustEngineBridge.composingCommitDerived(
-                settings: settings,
-                generation: currentGeneration,
-            ))
-            return
-        }
-        applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
-            settings: settings,
-            generation: currentGeneration,
-        ))
-    }
-
-    public func commitRawInput() {
-        logger.debug("[COMPOSE] fn=commitRawInput")
-        // v3.5.8 Phase 9 Item 3 + Model B (§10.3):
-        // `Intent::CommitRaw` handles `Phase::Continuous` natively in the
-        // engine — under Model B it commits the WHOLE composition
-        // (`Σ nailed.display_text + derived(pending)`) and fires the same
-        // terminal NextWord effect as a final-commit candidate tap (see
-        // `engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*`).
-        // The Phase 7B SelectSuggestion bypass is no longer needed; the
-        // engine owns the per-phase routing.
+        // composition (`select_candidate_under_continuous` prepends
+        // `nailed_prefix`). `selectCandidate(candidate)` still uses
+        // SelectCandidate (bare candidate → engine prepends the nailed
+        // prefix correctly). Idle → `CommitRaw` is a no-op.
         let settings = settingsProvider.current
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
             settings: settings,
@@ -291,10 +222,10 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         ))
     }
 
-    public func selectSuggestion(text: String) {
-        logger.debug("[COMPOSE] fn=selectSuggestion len=\(text.count)")
+    public func selectCandidate(text: String) {
+        logger.debug("[COMPOSE] fn=selectCandidate len=\(text.count)")
         let settings = settingsProvider.current
-        applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(
+        applyAsSelfCommit(RustEngineBridge.composingSelectCandidate(
             text,
             settings: settings,
             generation: currentGeneration,

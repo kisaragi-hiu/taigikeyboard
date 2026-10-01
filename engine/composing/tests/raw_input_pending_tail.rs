@@ -65,16 +65,15 @@ fn assert_preedit_model_b_invariants(engine: &Engine, response: &ComposingRespon
 }
 
 #[test]
-fn invariant_holds_after_enter_continuous() {
+fn invariant_holds_after_start() {
     let mut engine = Engine::new();
-    engine.apply(
+    let response = engine.apply(
         Intent::Start {
             text: "tsua-li2".to_string(),
         },
         &config_tl(),
     );
-    let response = engine.apply(Intent::EnterContinuous, &config_tl());
-    assert_preedit_model_b_invariants(&engine, &response, "after EnterContinuous");
+    assert_preedit_model_b_invariants(&engine, &response, "after Start");
 }
 
 #[test]
@@ -86,7 +85,6 @@ fn invariant_holds_after_append_in_continuous() {
         },
         &config_tl(),
     );
-    engine.apply(Intent::EnterContinuous, &config_tl());
     let response = engine.apply(
         Intent::Append {
             ch: "2".to_string(),
@@ -105,7 +103,6 @@ fn invariant_holds_after_delete_backward_in_continuous() {
         },
         &config_tl(),
     );
-    engine.apply(Intent::EnterContinuous, &config_tl());
     let response = engine.apply(Intent::DeleteBackward, &config_tl());
     assert_preedit_model_b_invariants(&engine, &response, "after DeleteBackward");
 }
@@ -119,7 +116,6 @@ fn invariant_holds_after_mid_commit_leaves_pending_tail() {
         },
         &config_tl(),
     );
-    engine.apply(Intent::EnterContinuous, &config_tl());
     // Mid-commit: consume the first 4 bytes ("tsua" → 紙), pending tail = "li2".
     let response = engine.apply(
         Intent::CommitContinuous {
@@ -155,7 +151,6 @@ fn invariant_holds_after_replace_last_in_continuous() {
         },
         &config_tl(),
     );
-    engine.apply(Intent::EnterContinuous, &config_tl());
     let response = engine.apply(
         Intent::ReplaceLast {
             replacement: "1".to_string(),
@@ -189,7 +184,6 @@ fn invariant_holds_for_append_after_mid_commit() {
         },
         &config_tl(),
     );
-    engine.apply(Intent::EnterContinuous, &config_tl());
     // Mid-commit consumes "tsua" (4 bytes), pending tail = "li".
     engine.apply(
         Intent::CommitContinuous {
@@ -237,7 +231,6 @@ fn invariant_holds_through_multi_step_mid_commit_chain() {
         },
         &config_tl(),
     );
-    engine.apply(Intent::EnterContinuous, &config_tl());
 
     // Step 1: nail "tsua" → 紙, pending = "lipoo".
     let r1 = engine.apply(

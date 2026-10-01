@@ -10,7 +10,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * Desktop only — step the caret inside the pending tail one Unicode scalar
  * value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
  * buffer does not change, so the response carries `UpdatePreedit` (with the
- * new `caret_utf16`) and NO `PerformAutocomplete`: candidates, highlight and
+ * new `caret_utf16`) and NO `RefreshCandidates`: candidates, highlight and
  * page stay. At either edge of the pending tail — the caret never enters a
  * nailed segment — the request is a no-op with no effects. Every mutator
  * then edits at the caret: `Append` inserts there, `DeleteBackward` /
@@ -160,7 +160,7 @@ public  final class MoveCaret extends
    * Desktop only — step the caret inside the pending tail one Unicode scalar
    * value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
    * buffer does not change, so the response carries `UpdatePreedit` (with the
-   * new `caret_utf16`) and NO `PerformAutocomplete`: candidates, highlight and
+   * new `caret_utf16`) and NO `RefreshCandidates`: candidates, highlight and
    * page stay. At either edge of the pending tail — the caret never enters a
    * nailed segment — the request is a no-op with no effects. Every mutator
    * then edits at the caret: `Append` inserts there, `DeleteBackward` /

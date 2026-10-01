@@ -69,14 +69,14 @@ final class ComposingManagerTests: XCTestCase {
 
     // MARK: - startComposing / appendCharacter
 
-    func testStartComposing_entersComposingAndFiresUpdateThenPerform() {
+    func testStartComposing_entersComposingAndFiresUpdateThenRefresh() {
         manager.startComposing(with: "a")
 
         XCTAssertTrue(manager.isComposing)
         XCTAssertEqual(manager.rawInput, "a")
         XCTAssertEqual(spy.effects, [
             .updatePreedit(manager.composingText),
-            .performAutocomplete,
+            .refreshCandidates,
         ])
     }
 
@@ -87,7 +87,7 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertEqual(manager.rawInput, "a")
         XCTAssertEqual(spy.effects, [
             .updatePreedit(manager.composingText),
-            .performAutocomplete,
+            .refreshCandidates,
         ])
     }
 
@@ -100,7 +100,7 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertEqual(manager.rawInput, "ab")
         XCTAssertEqual(spy.effects, [
             .updatePreedit(manager.composingText),
-            .performAutocomplete,
+            .refreshCandidates,
         ])
     }
 
@@ -118,7 +118,7 @@ final class ComposingManagerTests: XCTestCase {
         // engine emitted.
         XCTAssertEqual(spy.effects, [
             .updatePreedit(manager.composingText),
-            .performAutocomplete,
+            .refreshCandidates,
         ])
     }
 
@@ -152,7 +152,7 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertEqual(manager.rawInput, "a")
         XCTAssertEqual(spy.effects, [
             .updatePreedit(manager.composingText),
-            .performAutocomplete,
+            .refreshCandidates,
         ])
     }
 
@@ -171,7 +171,7 @@ final class ComposingManagerTests: XCTestCase {
         // continuous_phase.rs::delete_backward_under_continuous_with_empty_state_exits_to_idle).
         XCTAssertEqual(spy.effects, [
             .clearPreeditWithoutCommit,
-            .resetAutocomplete,
+            .clearCandidates,
             .nextWordClearForNewComposing,
         ])
     }
@@ -183,7 +183,7 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    // MARK: - commitComposition / commitRawInput
+    // MARK: - commitComposition
 
     func testCommitComposition_insertsDerivedTextAndExits() {
         manager.startComposing(with: "hello")
@@ -193,7 +193,7 @@ final class ComposingManagerTests: XCTestCase {
         manager.commitComposition()
 
         XCTAssertFalse(manager.isComposing)
-        // v3.5.8 Phase 7B: startComposing auto-promotes to Phase::Continuous;
+        // startComposing composes in Phase::Continuous (R12);
         // `commitComposition` routes through CommitRaw, which under Continuous
         // commits `derived_display(pending)` and fires the terminal
         // NextWordWordSelected (records the association — Model B; matches
@@ -201,8 +201,8 @@ final class ComposingManagerTests: XCTestCase {
         // and testCommitRawInput below). roman carries the raw buffer "hello".
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit(derived),
-            .resetAutocomplete,
-            .resetAutocompleteContext,
+            .clearCandidates,
+            .resetCandidateContext,
             .nextWordWordSelected(text: derived, roman: "hello", triggerPrediction: true, preceding: []),
         ])
     }
@@ -212,55 +212,28 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    func testCommitRawInput_insertsRawStringBypassingConversion() {
-        manager.startComposing(with: "Hello")
-        spy.effects.removeAll()
+    // MARK: - selectCandidate
 
-        manager.commitRawInput()
-
-        XCTAssertFalse(manager.isComposing)
-        // v3.5.8 Phase 9 Item 3 (2026-05-13): engine handles Continuous
-        // CommitRaw natively now — commits `derived_display(pending)` and
-        // fires `NextWordWordSelected` (matches commit_continuous final-
-        // commit shape). For "Hello" derived display passes through
-        // verbatim because it has no convertible tone digits. NextWord
-        // payload carries text=display, roman=raw, triggerPrediction=true
-        // (same shape `commit_continuous` uses on final commit).
-        XCTAssertEqual(spy.effects, [
-            .commitTextReplacingPreedit("Hello"),
-            .resetAutocomplete,
-            .resetAutocompleteContext,
-            .nextWordWordSelected(text: "Hello", roman: "Hello", triggerPrediction: true, preceding: []),
-        ])
-    }
-
-    func testCommitRawInput_whenIdle_isNoop() {
-        manager.commitRawInput()
-        XCTAssertTrue(spy.effects.isEmpty)
-    }
-
-    // MARK: - selectSuggestion
-
-    func testSelectSuggestion_whenComposing_commitsAtomically() {
+    func testSelectCandidate_whenComposing_commitsAtomically() {
         manager.startComposing(with: "a")
         spy.effects.removeAll()
 
-        manager.selectSuggestion(text: "picked")
+        manager.selectCandidate(text: "picked")
 
         XCTAssertFalse(manager.isComposing)
-        // SelectSuggestion under Continuous commits the text + exits, with a
+        // SelectCandidate under Continuous commits the text + exits, with a
         // terminal NextWordClearForNewComposing (matches engine/composing/tests/
-        // continuous_phase.rs::select_suggestion_under_continuous_commits_text_and_exits).
+        // continuous_phase.rs::select_candidate_under_continuous_commits_text_and_exits).
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit("picked"),
-            .resetAutocomplete,
-            .resetAutocompleteContext,
+            .clearCandidates,
+            .resetCandidateContext,
             .nextWordClearForNewComposing,
         ])
     }
 
-    func testSelectSuggestion_whenIdle_isNoop() {
-        manager.selectSuggestion(text: "picked")
+    func testSelectCandidate_whenIdle_isNoop() {
+        manager.selectCandidate(text: "picked")
 
         XCTAssertFalse(manager.isComposing)
         XCTAssertTrue(spy.effects.isEmpty)
@@ -286,8 +259,8 @@ final class ComposingManagerTests: XCTestCase {
         // continuous_phase.rs::commit_preedit_then_insert_external_under_continuous_combines_pending_and_external).
         XCTAssertEqual(spy.effects, [
             .commitTextReplacingPreedit(derived + "😀"),
-            .resetAutocomplete,
-            .resetAutocompleteContext,
+            .clearCandidates,
+            .resetCandidateContext,
             .nextWordClearForNewComposing,
         ])
     }
@@ -332,7 +305,7 @@ final class ComposingManagerTests: XCTestCase {
         // The clear-not-commit invariant below is unaffected.
         XCTAssertEqual(spy.effects, [
             .clearPreeditWithoutCommit,
-            .resetAutocomplete,
+            .clearCandidates,
             .nextWordClearForNewComposing,
         ])
         XCTAssertFalse(spy.effects.contains { effect in

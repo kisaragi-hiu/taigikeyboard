@@ -6,7 +6,7 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface EnterContinuousOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.EnterContinuous)
+public interface RefreshCandidatesOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.RefreshCandidates)
     com.google.protobuf.MessageLiteOrBuilder {
 }

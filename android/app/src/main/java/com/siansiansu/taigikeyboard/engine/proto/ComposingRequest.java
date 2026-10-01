@@ -25,15 +25,12 @@ public  final class ComposingRequest extends
     APPEND_HYPHEN(12),
     REPLACE_LAST(13),
     DELETE_BACKWARD(14),
-    COMMIT_DERIVED(15),
     COMMIT_RAW(16),
-    SELECT_SUGGESTION(17),
+    SELECT_CANDIDATE(17),
     COMMIT_PREEDIT_THEN_INSERT_EXTERNAL(18),
     RESET(19),
-    ENTER_CONTINUOUS(30),
     FETCH_AT_POS(31),
     COMMIT_CONTINUOUS(32),
-    RESET_CONTINUOUS(33),
     TELEX_KEY(40),
     MOVE_CARET(41),
     METHOD_NOT_SET(0);
@@ -56,15 +53,12 @@ public  final class ComposingRequest extends
         case 12: return APPEND_HYPHEN;
         case 13: return REPLACE_LAST;
         case 14: return DELETE_BACKWARD;
-        case 15: return COMMIT_DERIVED;
         case 16: return COMMIT_RAW;
-        case 17: return SELECT_SUGGESTION;
+        case 17: return SELECT_CANDIDATE;
         case 18: return COMMIT_PREEDIT_THEN_INSERT_EXTERNAL;
         case 19: return RESET;
-        case 30: return ENTER_CONTINUOUS;
         case 31: return FETCH_AT_POS;
         case 32: return COMMIT_CONTINUOUS;
-        case 33: return RESET_CONTINUOUS;
         case 40: return TELEX_KEY;
         case 41: return MOVE_CARET;
         case 0: return METHOD_NOT_SET;
@@ -358,56 +352,6 @@ public  final class ComposingRequest extends
     }
   }
 
-  public static final int COMMIT_DERIVED_FIELD_NUMBER = 15;
-  /**
-   * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-   */
-  @java.lang.Override
-  public boolean hasCommitDerived() {
-    return methodCase_ == 15;
-  }
-  /**
-   * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.CommitDerived getCommitDerived() {
-    if (methodCase_ == 15) {
-       return (com.siansiansu.taigikeyboard.engine.proto.CommitDerived) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.CommitDerived.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-   */
-  private void setCommitDerived(com.siansiansu.taigikeyboard.engine.proto.CommitDerived value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 15;
-  }
-  /**
-   * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-   */
-  private void mergeCommitDerived(com.siansiansu.taigikeyboard.engine.proto.CommitDerived value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 15 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.CommitDerived.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.CommitDerived.newBuilder((com.siansiansu.taigikeyboard.engine.proto.CommitDerived) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 15;
-  }
-  /**
-   * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-   */
-  private void clearCommitDerived() {
-    if (methodCase_ == 15) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
   public static final int COMMIT_RAW_FIELD_NUMBER = 16;
   /**
    * <code>.taigi.engine.CommitRaw commit_raw = 16;</code>
@@ -458,40 +402,40 @@ public  final class ComposingRequest extends
     }
   }
 
-  public static final int SELECT_SUGGESTION_FIELD_NUMBER = 17;
+  public static final int SELECT_CANDIDATE_FIELD_NUMBER = 17;
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
    */
   @java.lang.Override
-  public boolean hasSelectSuggestion() {
+  public boolean hasSelectCandidate() {
     return methodCase_ == 17;
   }
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion getSelectSuggestion() {
+  public com.siansiansu.taigikeyboard.engine.proto.SelectCandidate getSelectCandidate() {
     if (methodCase_ == 17) {
-       return (com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion) method_;
+       return (com.siansiansu.taigikeyboard.engine.proto.SelectCandidate) method_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.getDefaultInstance();
   }
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
    */
-  private void setSelectSuggestion(com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion value) {
+  private void setSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
     java.util.Objects.requireNonNull(value);
     method_ = value;
     methodCase_ = 17;
   }
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
    */
-  private void mergeSelectSuggestion(com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion value) {
+  private void mergeSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
     java.util.Objects.requireNonNull(value);
     if (methodCase_ == 17 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion) method_)
+        method_ != com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SelectCandidate) method_)
           .mergeFrom(value).buildPartial();
     } else {
       method_ = value;
@@ -499,9 +443,9 @@ public  final class ComposingRequest extends
     methodCase_ = 17;
   }
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
    */
-  private void clearSelectSuggestion() {
+  private void clearSelectCandidate() {
     if (methodCase_ == 17) {
       methodCase_ = 0;
       method_ = null;
@@ -608,78 +552,12 @@ public  final class ComposingRequest extends
     }
   }
 
-  public static final int ENTER_CONTINUOUS_FIELD_NUMBER = 30;
-  /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-   */
-  @java.lang.Override
-  public boolean hasEnterContinuous() {
-    return methodCase_ == 30;
-  }
-  /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.EnterContinuous getEnterContinuous() {
-    if (methodCase_ == 30) {
-       return (com.siansiansu.taigikeyboard.engine.proto.EnterContinuous) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.EnterContinuous.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-   */
-  private void setEnterContinuous(com.siansiansu.taigikeyboard.engine.proto.EnterContinuous value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 30;
-  }
-  /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-   */
-  private void mergeEnterContinuous(com.siansiansu.taigikeyboard.engine.proto.EnterContinuous value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 30 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.EnterContinuous.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.EnterContinuous.newBuilder((com.siansiansu.taigikeyboard.engine.proto.EnterContinuous) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 30;
-  }
-  /**
-   * <pre>
-   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-   */
-  private void clearEnterContinuous() {
-    if (methodCase_ == 30) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
   public static final int FETCH_AT_POS_FIELD_NUMBER = 31;
   /**
+   * <pre>
+   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+   * </pre>
+   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    */
   @java.lang.Override
@@ -687,6 +565,10 @@ public  final class ComposingRequest extends
     return methodCase_ == 31;
   }
   /**
+   * <pre>
+   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+   * </pre>
+   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    */
   @java.lang.Override
@@ -697,6 +579,10 @@ public  final class ComposingRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.FetchAtPos.getDefaultInstance();
   }
   /**
+   * <pre>
+   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+   * </pre>
+   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    */
   private void setFetchAtPos(com.siansiansu.taigikeyboard.engine.proto.FetchAtPos value) {
@@ -705,6 +591,10 @@ public  final class ComposingRequest extends
     methodCase_ = 31;
   }
   /**
+   * <pre>
+   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+   * </pre>
+   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    */
   private void mergeFetchAtPos(com.siansiansu.taigikeyboard.engine.proto.FetchAtPos value) {
@@ -719,6 +609,10 @@ public  final class ComposingRequest extends
     methodCase_ = 31;
   }
   /**
+   * <pre>
+   * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+   * </pre>
+   *
    * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
    */
   private void clearFetchAtPos() {
@@ -773,56 +667,6 @@ public  final class ComposingRequest extends
    */
   private void clearCommitContinuous() {
     if (methodCase_ == 32) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int RESET_CONTINUOUS_FIELD_NUMBER = 33;
-  /**
-   * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-   */
-  @java.lang.Override
-  public boolean hasResetContinuous() {
-    return methodCase_ == 33;
-  }
-  /**
-   * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.ResetContinuous getResetContinuous() {
-    if (methodCase_ == 33) {
-       return (com.siansiansu.taigikeyboard.engine.proto.ResetContinuous) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.ResetContinuous.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-   */
-  private void setResetContinuous(com.siansiansu.taigikeyboard.engine.proto.ResetContinuous value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 33;
-  }
-  /**
-   * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-   */
-  private void mergeResetContinuous(com.siansiansu.taigikeyboard.engine.proto.ResetContinuous value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 33 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.ResetContinuous.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.ResetContinuous.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ResetContinuous) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 33;
-  }
-  /**
-   * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-   */
-  private void clearResetContinuous() {
-    if (methodCase_ == 33) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1322,54 +1166,6 @@ public  final class ComposingRequest extends
     }
 
     /**
-     * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-     */
-    @java.lang.Override
-    public boolean hasCommitDerived() {
-      return instance.hasCommitDerived();
-    }
-    /**
-     * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.CommitDerived getCommitDerived() {
-      return instance.getCommitDerived();
-    }
-    /**
-     * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-     */
-    public Builder setCommitDerived(com.siansiansu.taigikeyboard.engine.proto.CommitDerived value) {
-      copyOnWrite();
-      instance.setCommitDerived(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-     */
-    public Builder setCommitDerived(
-        com.siansiansu.taigikeyboard.engine.proto.CommitDerived.Builder builderForValue) {
-      copyOnWrite();
-      instance.setCommitDerived(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-     */
-    public Builder mergeCommitDerived(com.siansiansu.taigikeyboard.engine.proto.CommitDerived value) {
-      copyOnWrite();
-      instance.mergeCommitDerived(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.CommitDerived commit_derived = 15;</code>
-     */
-    public Builder clearCommitDerived() {
-      copyOnWrite();
-      instance.clearCommitDerived();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.CommitRaw commit_raw = 16;</code>
      */
     @java.lang.Override
@@ -1418,50 +1214,50 @@ public  final class ComposingRequest extends
     }
 
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
     @java.lang.Override
-    public boolean hasSelectSuggestion() {
-      return instance.hasSelectSuggestion();
+    public boolean hasSelectCandidate() {
+      return instance.hasSelectCandidate();
     }
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion getSelectSuggestion() {
-      return instance.getSelectSuggestion();
+    public com.siansiansu.taigikeyboard.engine.proto.SelectCandidate getSelectCandidate() {
+      return instance.getSelectCandidate();
     }
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
-    public Builder setSelectSuggestion(com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion value) {
+    public Builder setSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
       copyOnWrite();
-      instance.setSelectSuggestion(value);
+      instance.setSelectCandidate(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
-    public Builder setSelectSuggestion(
-        com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.Builder builderForValue) {
+    public Builder setSelectCandidate(
+        com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.Builder builderForValue) {
       copyOnWrite();
-      instance.setSelectSuggestion(builderForValue.build());
+      instance.setSelectCandidate(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
-    public Builder mergeSelectSuggestion(com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion value) {
+    public Builder mergeSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
       copyOnWrite();
-      instance.mergeSelectSuggestion(value);
+      instance.mergeSelectCandidate(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
-    public Builder clearSelectSuggestion() {
+    public Builder clearSelectCandidate() {
       copyOnWrite();
-      instance.clearSelectSuggestion();
+      instance.clearSelectCandidate();
       return this;
     }
 
@@ -1566,74 +1362,6 @@ public  final class ComposingRequest extends
      * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
      * </pre>
      *
-     * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-     */
-    @java.lang.Override
-    public boolean hasEnterContinuous() {
-      return instance.hasEnterContinuous();
-    }
-    /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.EnterContinuous getEnterContinuous() {
-      return instance.getEnterContinuous();
-    }
-    /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-     */
-    public Builder setEnterContinuous(com.siansiansu.taigikeyboard.engine.proto.EnterContinuous value) {
-      copyOnWrite();
-      instance.setEnterContinuous(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-     */
-    public Builder setEnterContinuous(
-        com.siansiansu.taigikeyboard.engine.proto.EnterContinuous.Builder builderForValue) {
-      copyOnWrite();
-      instance.setEnterContinuous(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-     */
-    public Builder mergeEnterContinuous(com.siansiansu.taigikeyboard.engine.proto.EnterContinuous value) {
-      copyOnWrite();
-      instance.mergeEnterContinuous(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.EnterContinuous enter_continuous = 30;</code>
-     */
-    public Builder clearEnterContinuous() {
-      copyOnWrite();
-      instance.clearEnterContinuous();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     @java.lang.Override
@@ -1641,6 +1369,10 @@ public  final class ComposingRequest extends
       return instance.hasFetchAtPos();
     }
     /**
+     * <pre>
+     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+     * </pre>
+     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     @java.lang.Override
@@ -1648,6 +1380,10 @@ public  final class ComposingRequest extends
       return instance.getFetchAtPos();
     }
     /**
+     * <pre>
+     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+     * </pre>
+     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     public Builder setFetchAtPos(com.siansiansu.taigikeyboard.engine.proto.FetchAtPos value) {
@@ -1656,6 +1392,10 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+     * </pre>
+     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     public Builder setFetchAtPos(
@@ -1665,6 +1405,10 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+     * </pre>
+     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     public Builder mergeFetchAtPos(com.siansiansu.taigikeyboard.engine.proto.FetchAtPos value) {
@@ -1673,6 +1417,10 @@ public  final class ComposingRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
+     * </pre>
+     *
      * <code>.taigi.engine.FetchAtPos fetch_at_pos = 31;</code>
      */
     public Builder clearFetchAtPos() {
@@ -1726,54 +1474,6 @@ public  final class ComposingRequest extends
     public Builder clearCommitContinuous() {
       copyOnWrite();
       instance.clearCommitContinuous();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-     */
-    @java.lang.Override
-    public boolean hasResetContinuous() {
-      return instance.hasResetContinuous();
-    }
-    /**
-     * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.ResetContinuous getResetContinuous() {
-      return instance.getResetContinuous();
-    }
-    /**
-     * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-     */
-    public Builder setResetContinuous(com.siansiansu.taigikeyboard.engine.proto.ResetContinuous value) {
-      copyOnWrite();
-      instance.setResetContinuous(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-     */
-    public Builder setResetContinuous(
-        com.siansiansu.taigikeyboard.engine.proto.ResetContinuous.Builder builderForValue) {
-      copyOnWrite();
-      instance.setResetContinuous(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-     */
-    public Builder mergeResetContinuous(com.siansiansu.taigikeyboard.engine.proto.ResetContinuous value) {
-      copyOnWrite();
-      instance.mergeResetContinuous(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ResetContinuous reset_continuous = 33;</code>
-     */
-    public Builder clearResetContinuous() {
-      copyOnWrite();
-      instance.clearResetContinuous();
       return this;
     }
 
@@ -1920,22 +1620,19 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.AppendHyphen.class,
             com.siansiansu.taigikeyboard.engine.proto.ReplaceLast.class,
             com.siansiansu.taigikeyboard.engine.proto.DeleteBackward.class,
-            com.siansiansu.taigikeyboard.engine.proto.CommitDerived.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitRaw.class,
-            com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.class,
+            com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitPreeditThenInsertExternal.class,
             com.siansiansu.taigikeyboard.engine.proto.Reset.class,
-            com.siansiansu.taigikeyboard.engine.proto.EnterContinuous.class,
             com.siansiansu.taigikeyboard.engine.proto.FetchAtPos.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitContinuous.class,
-            com.siansiansu.taigikeyboard.engine.proto.ResetContinuous.class,
             com.siansiansu.taigikeyboard.engine.proto.TelexKey.class,
             com.siansiansu.taigikeyboard.engine.proto.MoveCaret.class,
           };
           java.lang.String info =
-              "\u0000\u0010\u0001\u0000\n)\u0010\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000" +
-              "\r<\u0000\u000e<\u0000\u000f<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000\u0013" +
-              "<\u0000\u001e<\u0000\u001f<\u0000 <\u0000!<\u0000(<\u0000)<\u0000";
+              "\u0000\r\u0001\u0000\n)\r\u0000\u0000\u0000\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000" +
+              "\u000e<\u0000\u0010<\u0000\u0011<\u0000\u0012<\u0000\u0013<\u0000\u001f<\u0000 <" +
+              "\u0000(<\u0000)<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

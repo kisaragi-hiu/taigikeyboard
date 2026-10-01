@@ -71,9 +71,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         _ = RustEngineBridge.composingStart(
             "taibak", settings: settings, generation: envelopeGen,
         )
-        _ = RustEngineBridge.composingEnterContinuous(
-            settings: settings, generation: envelopeGen,
-        )
         let commit = RustEngineBridge.composingCommitContinuous(
             taiPick,
             settings: settings,
@@ -105,9 +102,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         _ = RustEngineBridge.composingStart(
             "taibak", settings: hanjiFirst, generation: envelopeGen,
         )
-        _ = RustEngineBridge.composingEnterContinuous(
-            settings: hanjiFirst, generation: envelopeGen,
-        )
         _ = RustEngineBridge.composingCommitContinuous(
             taiPick,
             settings: hanjiFirst,
@@ -131,9 +125,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
         _ = RustEngineBridge.composingStart(
             "taibak", settings: tps, generation: envelopeGen,
         )
-        _ = RustEngineBridge.composingEnterContinuous(
-            settings: tps, generation: envelopeGen,
-        )
         _ = RustEngineBridge.composingCommitContinuous(
             taiPick,
             settings: tps,
@@ -155,7 +146,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     /// verdict: roman-led TL writes the romanization and earns the space.
     func testCommitContinuous_RomanLedFinalPick_WritesRomanization_EarnsAutoSpace() {
         _ = RustEngineBridge.composingStart("tai", settings: settings, generation: envelopeGen)
-        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: envelopeGen)
         let result = RustEngineBridge.composingCommitContinuous(taiPick, settings: settings, generation: envelopeGen)
         XCTAssertEqual(result.outcome, .finalized(earnsAutoSpace: true))
         XCTAssertTrue(result.transition.effects.contains(.commitTextReplacingPreedit("tâi")), "\(result.transition.effects)")
@@ -168,7 +158,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     func testCommitContinuous_TpsHanjilessPick_WritesItsBopomofo_EarnsNoSpace() {
         let tps = StubEngineSettings(inputMode: .tps)
         _ = RustEngineBridge.composingStart("tai", settings: tps, generation: envelopeGen)
-        _ = RustEngineBridge.composingEnterContinuous(settings: tps, generation: envelopeGen)
         let hanjiless = RustEngineBridge.ContinuousPick(
             script: .lead,
             roman: "tâi",
@@ -241,7 +230,6 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
 
     private func fetchedHanji(_ raw: String, settings: StubEngineSettings) -> [String] {
         _ = RustEngineBridge.composingStart(raw, settings: settings, generation: envelopeGen)
-        _ = RustEngineBridge.composingEnterContinuous(settings: settings, generation: envelopeGen)
         let result = RustEngineBridge.composingFetchAtPos(
             settings: settings, generation: envelopeGen,
             nowMs: 0,

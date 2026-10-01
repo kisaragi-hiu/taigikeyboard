@@ -36,7 +36,7 @@
 | `appendCharacter` | Append character, update dual-state |
 | `deleteBackward` | Delete character, handle tone restoration |
 | `commitComposition` | Confirm composition, output text |
-| `selectSuggestion` | Select candidate, replace composition |
+| `selectCandidate` | Select candidate, replace composition |
 
 ### appendCharacter Flow
 
@@ -84,7 +84,7 @@ Composing engine state machine lives in Rust `engine/composing` (since v3.5.4 / 
 | State machine (`Phase × Intent → (state', Effect[])`) | Rust `engine/composing` (`api.rs`, `transition.rs`, `derived.rs`) |
 | FFI singleton + generation guard | Rust `engine/composing::EngineHandle` (read-only intents never reset — see below) |
 | Tone-mark application + POJ doubletap (`oo→o͘`, `nn→ⁿ`) | Rust `engine/phonetics` |
-| iOS bridge (10 text-input + 4 continuous-input ops) | `Engine/RustEngineBridge+Composing.swift` (composingStart / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitDerived / CommitRaw / SelectSuggestion / CommitPreeditThenInsertExternal / Reset + EnterContinuous / FetchAtPos / CommitContinuous / ResetContinuous) |
+| iOS bridge (9 text-input + 2 continuous-input ops) | `Engine/RustEngineBridge+Composing.swift` (composingStart / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / SelectCandidate / CommitPreeditThenInsertExternal / Reset + FetchAtPos / CommitContinuous) — one engine call per keystroke (R12) |
 | iOS platform wrapper | `Input/Composing/ComposingManager.swift` (Combine + KeyboardKit context wiring) |
 | iOS effect interpreter | `Input/Composing/ComposingDelegate.swift` (`UITextDocumentProxy`) |
 | Android bridge | `engine/ComposingBridge.kt` (same 10 + 4 ops) |

@@ -14,8 +14,7 @@ use std::time::{Duration, Instant};
 use protos::engine::{
     composing_request, next_word_request, next_word_response, request, response, user_data_request,
     CommitContinuous, CommitOutcome, CommitScript, ComposingRequest, ComposingResponse,
-    DecisionInput, EnterContinuous, NextWordRequest, RecordUsage, Response, Start, UserDataRequest,
-    WordSelected,
+    DecisionInput, NextWordRequest, RecordUsage, Response, Start, UserDataRequest, WordSelected,
 };
 use userdata::{JournalMode, UserDataPaths, UserDataStores};
 
@@ -74,9 +73,6 @@ fn compose_resolved(raw: &str, picks: &[composing_request::Method]) {
     composing(composing_request::Method::Start(Start {
         text: raw.to_owned(),
     }));
-    composing(composing_request::Method::EnterContinuous(
-        EnterContinuous {},
-    ));
     let mut last = None;
     for pick in picks {
         last = composing(pick.clone()).commit;
@@ -241,9 +237,6 @@ fn the_engine_writes_what_the_platforms_wrote() {
     composing(composing_request::Method::Start(Start {
         text: "kikhilai".to_owned(),
     }));
-    composing(composing_request::Method::EnterContinuous(
-        EnterContinuous {},
-    ));
     composing(commit_continuous("記", "kì", 2, 1));
     let committed = composing(commit_continuous("起來", "khí-lâi", 6, 2));
     assert!(

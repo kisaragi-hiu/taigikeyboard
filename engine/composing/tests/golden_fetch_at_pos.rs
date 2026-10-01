@@ -506,7 +506,7 @@ fn matrix() -> Vec<Case> {
 
 // --- driver + golden -----------------------------------------------------
 
-/// Drive one case through `Start → EnterContinuous → FetchAtPos` on a
+/// Drive one case through `Start → FetchAtPos` on a
 /// fresh `Engine` and format its candidate vector as a golden block.
 fn run_case(c: &Case) -> String {
     let cfg = config(c.input_mode);

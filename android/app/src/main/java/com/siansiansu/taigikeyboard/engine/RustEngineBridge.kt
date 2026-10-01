@@ -274,13 +274,11 @@ object RustEngineBridge {
                 val text: String,
             ) : Effect()
 
-            object DeleteBackwardFromDocument : Effect()
+            object ClearCandidates : Effect()
 
-            object ResetAutocomplete : Effect()
+            object RefreshCandidates : Effect()
 
-            object PerformAutocomplete : Effect()
-
-            object ResetAutocompleteContext : Effect()
+            object ResetCandidateContext : Effect()
 
             /**
              * v3.5.8 Phase 4 — continuous-input mid-commit handshake. Maps to

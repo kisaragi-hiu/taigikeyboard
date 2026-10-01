@@ -16,7 +16,7 @@ use composing::api::Engine;
 use composing::requests;
 use protos::engine::composing_request::Method;
 use protos::engine::CommitScript;
-use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, Start};
+use protos::engine::{CommitContinuous, FetchAtPos, Start};
 
 use crate::common::Fetch;
 use crate::common::{
@@ -209,12 +209,6 @@ fn boundary_holds_in_the_pending_buffer_after_a_pick() {
         &cfg,
     )
     .expect("Start");
-    requests::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        &cfg,
-    )
-    .expect("EnterContinuous");
     let first = requests::handle(
         &req(Method::FetchAtPos(FetchAtPos::default())),
         &mut engine,

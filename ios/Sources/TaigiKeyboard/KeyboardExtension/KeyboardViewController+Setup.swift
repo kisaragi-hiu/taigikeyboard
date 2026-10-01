@@ -168,7 +168,7 @@ extension KeyboardViewController {
             // the new mode's FetchAtPos calls. `bumpGeneration` then causes
             // any in-flight engine call to be silently dropped at the FFI
             // boundary (`engine/composing/src/handle.rs:61-65`).
-            actionHandler?.composingManager.resetContinuous()
+            actionHandler?.composingManager.reset()
             actionHandler?.composingManager.bumpGeneration()
             lastInputMode = currentInputMode
             setupAutocompleteServiceForCurrentMode()

@@ -1,10 +1,7 @@
 //! Phase 4 — `Phase::Continuous` integration tests.
 //!
-//! Phase 4 keeps the new Intents (`EnterContinuous` / `CommitContinuous` /
-//! `ResetContinuous`) Rust-only — the proto `oneof method` carrier lands in
-//! Phase 6. Tests therefore exercise the engine through the in-process
-//! `Engine::apply` API and inspect `Phase::Continuous` internals via
-//! `Engine::snapshot_state`. **Model B**: nailed segments are NOT in the
+//! Tests exercise the engine through the in-process `Engine::apply` API and
+//! inspect `Phase::Continuous` internals via `Engine::snapshot_state`. **Model B**: nailed segments are NOT in the
 //! document; `ComposingResponse.preedit.display_text` carries the whole
 //! composition (Σ nailed display + derived pending tail) while
 //! `preedit.raw_input` stays the pending tail only.
@@ -41,7 +38,7 @@ fn start_lands_in_continuous_with_nothing_nailed() {
         },
         &config_tl(),
     );
-    assert_kinds(&resp.effect, ["UpdatePreedit", "PerformAutocomplete"]);
+    assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
     assert!(resp.is_composing);
     match e.snapshot_state().phase {
         Phase::Continuous { raw, caret, nailed } => {
@@ -49,30 +46,6 @@ fn start_lands_in_continuous_with_nothing_nailed() {
             assert_eq!(caret, 4);
             assert!(nailed.is_empty());
         }
-        other => panic!("expected Continuous, got {other:?}"),
-    }
-    // The platforms' follow-up EnterContinuous is a no-op.
-    let resp = e.apply(Intent::EnterContinuous, &config_tl());
-    assert!(resp.effect.is_empty());
-    assert!(resp.is_composing);
-}
-
-#[test]
-fn enter_continuous_from_idle_is_noop() {
-    let mut e = Engine::new();
-    let resp = e.apply(Intent::EnterContinuous, &config_tl());
-    assert!(resp.effect.is_empty());
-    assert_eq!(e.snapshot_state().phase, Phase::Idle);
-}
-
-#[test]
-fn enter_continuous_from_continuous_is_noop() {
-    let mut e = engine_in_continuous("tsua");
-    let resp = e.apply(Intent::EnterContinuous, &config_tl());
-    assert!(resp.effect.is_empty());
-    let state = e.snapshot_state();
-    match state.phase {
-        Phase::Continuous { raw, .. } => assert_eq!(raw, "tsua"),
         other => panic!("expected Continuous, got {other:?}"),
     }
 }
@@ -102,7 +75,7 @@ fn mid_commit_pushes_segment_and_emits_ordered_effects() {
         [
             "UpdatePreedit",
             "NextWordUpdateLastSelectedWord",
-            "PerformAutocomplete",
+            "RefreshCandidates",
         ],
     );
 
@@ -190,8 +163,8 @@ fn final_commit_exits_to_idle_emits_word_selected() {
         &resp.effect,
         [
             "CommitTextReplacingPreedit",
-            "ResetAutocomplete",
-            "ResetAutocompleteContext",
+            "ClearCandidates",
+            "ResetCandidateContext",
             "NextWordWordSelected",
         ],
     );
@@ -293,7 +266,6 @@ fn commit_continuous_at_non_char_boundary_is_noop() {
         },
         &config_tl(),
     );
-    e.apply(Intent::EnterContinuous, &config_tl());
     let resp = e.apply(
         Intent::CommitContinuous {
             canonical_text: "X".to_string(),
@@ -345,7 +317,7 @@ fn commit_continuous_empty_display_is_noop() {
     assert!(resp.effect.is_empty());
 }
 
-// ---- Reset under Continuous (also the wire `ResetContinuous`) -----
+// ---- Reset under Continuous ---------------------------------------
 
 #[test]
 fn reset_after_a_nail_discards_the_whole_composition() {
@@ -370,7 +342,7 @@ fn reset_after_a_nail_discards_the_whole_composition() {
         &resp.effect,
         [
             "ClearPreeditWithoutCommit",
-            "ResetAutocomplete",
+            "ClearCandidates",
             "NextWordClearForNewComposing",
         ],
     );
@@ -385,7 +357,7 @@ fn reset_under_continuous_emits_the_abort_trio() {
         &resp.effect,
         [
             "ClearPreeditWithoutCommit",
-            "ResetAutocomplete",
+            "ClearCandidates",
             "NextWordClearForNewComposing",
         ],
     );
@@ -431,7 +403,7 @@ fn append_under_continuous_extends_pending_only() {
         },
         &config_tl(),
     );
-    assert_kinds(&resp.effect, ["UpdatePreedit", "PerformAutocomplete"]);
+    assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
     let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!();
     };
@@ -450,7 +422,7 @@ fn append_under_continuous_extends_pending_only() {
 fn append_hyphen_under_continuous_appends_dash() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(Intent::AppendHyphen, &config_tl());
-    assert_kinds(&resp.effect, ["UpdatePreedit", "PerformAutocomplete"]);
+    assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
     let Phase::Continuous { raw, .. } = e.snapshot_state().phase else {
         panic!();
     };
@@ -479,7 +451,7 @@ fn replace_last_under_continuous_modifies_pending_only() {
         },
         &config_tl(),
     );
-    assert_kinds(&resp.effect, ["UpdatePreedit", "PerformAutocomplete"]);
+    assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
     let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
         panic!();
     };
@@ -497,7 +469,7 @@ fn replace_last_under_continuous_modifies_pending_only() {
 fn delete_backward_under_continuous_drops_pending_char() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(Intent::DeleteBackward, &config_tl());
-    assert_kinds(&resp.effect, ["UpdatePreedit", "PerformAutocomplete"]);
+    assert_kinds(&resp.effect, ["UpdatePreedit", "RefreshCandidates"]);
     let Phase::Continuous { raw, .. } = e.snapshot_state().phase else {
         panic!();
     };
@@ -531,14 +503,14 @@ fn delete_backward_under_continuous_pops_nailed_when_pending_empty() {
     // raw_text ("tsu") as pending. ZERO DeleteBackwardFromDocument (the
     // nailed segment was never in the document). No nailed remains so
     // nextword's last_selected_word must clear (Codex post-impl finding #1),
-    // then UpdatePreedit(combined) + PerformAutocomplete.
+    // then UpdatePreedit(combined) + RefreshCandidates.
     let resp = e.apply(Intent::DeleteBackward, &config_tl());
     assert_kinds(
         &resp.effect,
         [
             "NextWordClearForNewComposing",
             "UpdatePreedit",
-            "PerformAutocomplete",
+            "RefreshCandidates",
         ],
     );
     let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
@@ -589,14 +561,14 @@ fn delete_backward_pop_with_remaining_nailed_emits_nextword_update() {
 
     // Model B: unnail "仔" — ZERO DeleteBackwardFromDocument. The remaining
     // nailed "珠" makes the nextword correction an UpdateLastSelectedWord
-    // (not a clear), then UpdatePreedit(combined) + PerformAutocomplete.
+    // (not a clear), then UpdatePreedit(combined) + RefreshCandidates.
     let resp = e.apply(Intent::DeleteBackward, &config_tl());
     assert_kinds(
         &resp.effect,
         [
             "NextWordUpdateLastSelectedWord",
             "UpdatePreedit",
-            "PerformAutocomplete",
+            "RefreshCandidates",
         ],
     );
     // The NextWordUpdateLastSelectedWord payload should reflect "珠" / "tsu",
@@ -644,13 +616,13 @@ fn delete_backward_pops_multi_char_display_emits_no_document_deletes() {
     // Model B: unnail of a 2-char display segment emits ZERO
     // DeleteBackwardFromDocument (it was never in the document), then
     // NextWordClearForNewComposing (nailed list now empty), then
-    // UpdatePreedit + PerformAutocomplete.
+    // UpdatePreedit + RefreshCandidates.
     assert_kinds(
         &resp.effect,
         [
             "NextWordClearForNewComposing",
             "UpdatePreedit",
-            "PerformAutocomplete",
+            "RefreshCandidates",
         ],
     );
     let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
@@ -676,7 +648,7 @@ fn delete_backward_under_continuous_with_empty_state_exits_to_idle() {
         &resp.effect,
         [
             "ClearPreeditWithoutCommit",
-            "ResetAutocomplete",
+            "ClearCandidates",
             "NextWordClearForNewComposing",
         ],
     );
@@ -714,15 +686,14 @@ fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_compositi
 // ---- Continuous-phase routing of legacy text-bearing Intents -----
 //
 // Per Codex post-impl finding #3, the three Intents that carry user text
-// (`Start`, `SelectSuggestion`, `CommitPreeditThenInsertExternal`) under
+// (`Start`, `SelectCandidate`, `CommitPreeditThenInsertExternal`) under
 // Continuous must NOT silently drop the text. Under **Model B** they drop
 // continuous state and route the text through a sane equivalent: `Start`
-// becomes "abort continuous + begin fresh Composing"; `SelectSuggestion`
+// becomes "abort continuous + begin fresh Composing"; `SelectCandidate`
 // becomes "commit Σ nailed.display_text + text"; `CommitPreeditThenInsert
 // External` becomes "commit Σ nailed.display_text + pending derived +
 // external atomically" (nailed segments were never in the document, so
-// they ride the single commit). `CommitDerived` stays snapshot noop —
-// Continuous auto-nails via mid-commit. `CommitRaw` (Enter) commits the
+// they ride the single commit). `CommitRaw` (Enter) commits the
 // whole composition `Phase::composing_display` (§10.10a Model B; see
 // `commit_raw_under_continuous_*` tests below and
 // `docs/engine/continuous-input-ranking.md` §10.3).
@@ -740,10 +711,10 @@ fn start_under_continuous_aborts_then_begins_fresh_composition() {
         &resp.effect,
         [
             "ClearPreeditWithoutCommit",
-            "ResetAutocomplete",
+            "ClearCandidates",
             "NextWordClearForNewComposing",
             "UpdatePreedit",
-            "PerformAutocomplete",
+            "RefreshCandidates",
         ],
     );
     let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
@@ -751,14 +722,6 @@ fn start_under_continuous_aborts_then_begins_fresh_composition() {
     };
     assert_eq!(raw, "abc");
     assert!(nailed.is_empty());
-}
-
-#[test]
-fn commit_derived_under_continuous_is_noop() {
-    let mut e = engine_in_continuous("tsua");
-    let resp = e.apply(Intent::CommitDerived, &config_tl());
-    assert!(resp.effect.is_empty());
-    assert!(matches!(e.snapshot_state().phase, Phase::Continuous { .. }));
 }
 
 // Phase 9 Item 3 — Enter-raw commit in Continuous. The four tests below pin
@@ -779,8 +742,8 @@ fn commit_raw_under_continuous_commits_derived_display_and_fires_nextword() {
         &resp.effect,
         [
             "CommitTextReplacingPreedit",
-            "ResetAutocomplete",
-            "ResetAutocompleteContext",
+            "ClearCandidates",
+            "ResetCandidateContext",
             "NextWordWordSelected",
         ],
     );
@@ -827,8 +790,8 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
         &resp.effect,
         [
             "CommitTextReplacingPreedit",
-            "ResetAutocomplete",
-            "ResetAutocompleteContext",
+            "ClearCandidates",
+            "ResetCandidateContext",
             "NextWordWordSelected",
         ],
     );
@@ -867,7 +830,6 @@ fn commit_raw_under_continuous_with_translate_swapped_unchanged() {
         },
         &config,
     );
-    e.apply(Intent::EnterContinuous, &config);
     let resp = e.apply(Intent::CommitRaw, &config);
     let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
         unreachable!();
@@ -887,7 +849,6 @@ fn commit_raw_under_continuous_tps_passes_through_verbatim() {
         },
         &config_tl(),
     );
-    e.apply(Intent::EnterContinuous, &config_tl());
     let resp = e.apply(Intent::CommitRaw, &config_tl());
     let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
         unreachable!();
@@ -946,7 +907,6 @@ fn terminal_nextword_roman_drops_the_separator_marker() {
         },
         &config_tl(),
     );
-    e.apply(Intent::EnterContinuous, &config_tl());
     let resp = e.apply(Intent::CommitRaw, &config_tl());
     let nw = resp
         .effect
@@ -973,7 +933,6 @@ fn commit_raw_under_continuous_tps_hides_the_separator_marker() {
         },
         &config_tl(),
     );
-    e.apply(Intent::EnterContinuous, &config_tl());
     let resp = e.apply(Intent::CommitRaw, &config_tl());
     let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
         unreachable!();
@@ -985,10 +944,10 @@ fn commit_raw_under_continuous_tps_hides_the_separator_marker() {
 }
 
 #[test]
-fn select_suggestion_under_continuous_commits_text_and_exits() {
+fn select_candidate_under_continuous_commits_text_and_exits() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(
-        Intent::SelectSuggestion {
+        Intent::SelectCandidate {
             text: "紙".to_string(),
         },
         &config_tl(),
@@ -997,8 +956,8 @@ fn select_suggestion_under_continuous_commits_text_and_exits() {
         &resp.effect,
         [
             "CommitTextReplacingPreedit",
-            "ResetAutocomplete",
-            "ResetAutocompleteContext",
+            "ClearCandidates",
+            "ResetCandidateContext",
             "NextWordClearForNewComposing",
         ],
     );
@@ -1010,10 +969,10 @@ fn select_suggestion_under_continuous_commits_text_and_exits() {
 }
 
 #[test]
-fn select_suggestion_under_continuous_with_empty_text_just_resets() {
+fn select_candidate_under_continuous_with_empty_text_just_resets() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(
-        Intent::SelectSuggestion {
+        Intent::SelectCandidate {
             text: String::new(),
         },
         &config_tl(),
@@ -1022,7 +981,7 @@ fn select_suggestion_under_continuous_with_empty_text_just_resets() {
         &resp.effect,
         [
             "ClearPreeditWithoutCommit",
-            "ResetAutocomplete",
+            "ClearCandidates",
             "NextWordClearForNewComposing",
         ],
     );
@@ -1043,8 +1002,8 @@ fn commit_preedit_then_insert_external_under_continuous_combines_pending_and_ext
         &resp.effect,
         [
             "CommitTextReplacingPreedit",
-            "ResetAutocomplete",
-            "ResetAutocompleteContext",
+            "ClearCandidates",
+            "ResetCandidateContext",
             "NextWordClearForNewComposing",
         ],
     );
@@ -1074,8 +1033,8 @@ fn commit_preedit_then_insert_external_under_continuous_with_empty_external_is_n
 // Model-B "Σ nailed.display_text + …" combine. These pin §10.8 #9.
 
 #[test]
-fn select_suggestion_under_continuous_with_nailed_prefix_commits_combined() {
-    // Nail "珠" (raw "tsu") leaving pending "a", then SelectSuggestion.
+fn select_candidate_under_continuous_with_nailed_prefix_commits_combined() {
+    // Nail "珠" (raw "tsu") leaving pending "a", then SelectCandidate.
     let mut e = engine_in_continuous("tsua");
     e.apply(
         Intent::CommitContinuous {
@@ -1090,7 +1049,7 @@ fn select_suggestion_under_continuous_with_nailed_prefix_commits_combined() {
         &config_tl(),
     );
     let resp = e.apply(
-        Intent::SelectSuggestion {
+        Intent::SelectCandidate {
             text: "紙".to_string(),
         },
         &config_tl(),
@@ -1099,8 +1058,8 @@ fn select_suggestion_under_continuous_with_nailed_prefix_commits_combined() {
         &resp.effect,
         [
             "CommitTextReplacingPreedit",
-            "ResetAutocomplete",
-            "ResetAutocompleteContext",
+            "ClearCandidates",
+            "ResetCandidateContext",
             "NextWordClearForNewComposing",
         ],
     );
@@ -1175,8 +1134,8 @@ fn commit_raw_under_continuous_raw_empty_after_unnail_commits_nailed_only() {
         &resp.effect,
         [
             "CommitTextReplacingPreedit",
-            "ResetAutocomplete",
-            "ResetAutocompleteContext",
+            "ClearCandidates",
+            "ResetCandidateContext",
             "NextWordWordSelected",
         ],
     );
@@ -1273,7 +1232,7 @@ fn replace_last_to_empty_pending_no_nailed_exits_to_idle() {
         &resp.effect,
         [
             "ClearPreeditWithoutCommit",
-            "ResetAutocomplete",
+            "ClearCandidates",
             "NextWordClearForNewComposing",
         ],
     );
@@ -1325,13 +1284,13 @@ fn bug1_mid_commit_marks_display_but_nextword_uses_canonical() {
         &config_tl(),
     );
     // Model B mid-commit: [UpdatePreedit(combined), NextWordUpdateLastSelectedWord,
-    // PerformAutocomplete] — NO CommitTextReplacingPreedit.
+    // RefreshCandidates] — NO CommitTextReplacingPreedit.
     assert_kinds(
         &resp.effect,
         [
             "UpdatePreedit",
             "NextWordUpdateLastSelectedWord",
-            "PerformAutocomplete",
+            "RefreshCandidates",
         ],
     );
     let Kind::UpdatePreedit(up) = resp.effect[0].kind.as_ref().unwrap() else {
@@ -1429,7 +1388,7 @@ fn bug1_backspace_pop_correction_uses_canonical_no_document_delete() {
         [
             "NextWordUpdateLastSelectedWord",
             "UpdatePreedit",
-            "PerformAutocomplete",
+            "RefreshCandidates",
         ],
     );
     // Correction targets seg0 — canonical, not the swapped display string.

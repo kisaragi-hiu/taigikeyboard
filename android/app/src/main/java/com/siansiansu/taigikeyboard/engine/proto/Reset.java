@@ -8,7 +8,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * Clear all state (mode switch, teardown). User-initiated; emits the abort
- * trio `[ClearPreeditWithoutCommit, ResetAutocomplete,
+ * trio `[ClearPreeditWithoutCommit, ClearCandidates,
  * NextWordClearForNewComposing]` if composing, `[]` if Idle. Nothing reaches
  * the document.
  * </pre>
@@ -109,7 +109,7 @@ public  final class Reset extends
   /**
    * <pre>
    * Clear all state (mode switch, teardown). User-initiated; emits the abort
-   * trio `[ClearPreeditWithoutCommit, ResetAutocomplete,
+   * trio `[ClearPreeditWithoutCommit, ClearCandidates,
    * NextWordClearForNewComposing]` if composing, `[]` if Idle. Nothing reaches
    * the document.
    * </pre>

@@ -8,8 +8,7 @@
 use composing::{Applied, EngineHandle, Usage};
 use protos::engine::composing_request::Method;
 use protos::engine::{
-    AppConfig, CommitContinuous, CommitOutcome, CommitResolution, CommitScript, EnterContinuous,
-    Start,
+    AppConfig, CommitContinuous, CommitOutcome, CommitResolution, CommitScript, Start,
 };
 
 use crate::common::{commit_text, config_tl, req};
@@ -25,8 +24,6 @@ fn continuous(raw: &str, generation: u64, config: &AppConfig) -> EngineHandle {
     let handle = EngineHandle::new();
     let start = Method::Start(Start { text: raw.into() });
     send(&handle, generation, start, config);
-    let enter = Method::EnterContinuous(EnterContinuous {});
-    send(&handle, generation, enter, config);
     handle
 }
 

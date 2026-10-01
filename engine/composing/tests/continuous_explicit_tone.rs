@@ -72,7 +72,7 @@ fn install_tl_rows(rows: &[Row], syllables: &[&str]) {
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
-/// Drive `raw` through `Start → EnterContinuous → FetchAtPos` in TL mode and
+/// Drive `raw` through `Start → FetchAtPos` in TL mode and
 /// return the candidate hanji set.
 fn fetch_hanji(raw: &str) -> Vec<String> {
     fetch_hanji_in(raw, "tl")

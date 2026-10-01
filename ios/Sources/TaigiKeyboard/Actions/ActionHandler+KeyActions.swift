@@ -252,7 +252,7 @@ extension ActionHandler {
             // This allows English words to pass through without tone conversion
             // (Google Pinyin convention: Enter = raw Latin text, Space = converted text)
             //
-            // Model B §10.3: `commitRawInput()`→CommitRaw → the engine's
+            // Model B §10.3: `commitComposition()`→CommitRaw → the engine's
             // Continuous final-commit emits the terminal
             // NextWordWordSelected(trigger:true), routed to
             // `nextWordController.process` → records the association +
@@ -264,7 +264,7 @@ extension ActionHandler {
             // double-recorded the association. Removing it is
             // behavior-preserving and makes the engine effect the SOLE
             // source (§10.3).
-            composingManager.commitRawInput()
+            composingManager.commitComposition()
 
             // Auto-space follows what the commit WROTE, not the output mode:
             // a raw commit is romanization in TL/POJ and Bopomofo in TPS. The

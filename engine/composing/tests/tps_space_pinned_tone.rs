@@ -125,7 +125,7 @@ fn install_fixture_tps() {
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
-/// Drive `raw` through `Start → EnterContinuous → FetchAtPos` in TPS mode
+/// Drive `raw` through `Start → FetchAtPos` in TPS mode
 /// and return the candidate hanji list.
 fn fetch_hanji(raw: &str) -> Vec<String> {
     fetch_hanji_with_custom(raw, Vec::new())

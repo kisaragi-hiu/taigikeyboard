@@ -159,7 +159,7 @@ class TextInputManager(
      * Trigger the standard Taigi candidate recompute pipeline.
      * Used by [com.siansiansu.taigikeyboard.ime.text.candidates.CandidateClickHandler]
      * after a Continuous mid-commit, where the engine emits
-     * `PerformAutocomplete` but `DefaultComposingDelegate` treats it as a
+     * `RefreshCandidates` but `DefaultComposingDelegate` treats it as a
      * no-op — the candidate flow has historically been driven from the
      * keystroke pipeline, not from effect dispatch.
      */
@@ -428,7 +428,7 @@ class TextInputManager(
         // drop residual state at the FFI boundary on the next request.
         val ic = taigikeyboard.currentInputConnection
         if (ic != null) {
-            getComposingManager()?.resetContinuous(ic)
+            getComposingManager()?.reset(ic)
         }
         getComposingManager()?.bumpGeneration()
 

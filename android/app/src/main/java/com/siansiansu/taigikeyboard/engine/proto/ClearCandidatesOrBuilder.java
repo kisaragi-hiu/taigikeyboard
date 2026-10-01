@@ -6,7 +6,7 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface CommitDerivedOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.CommitDerived)
+public interface ClearCandidatesOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.ClearCandidates)
     com.google.protobuf.MessageLiteOrBuilder {
 }

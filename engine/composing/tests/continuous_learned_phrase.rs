@@ -23,7 +23,7 @@
 use composing::api::Engine;
 use composing::{requests, CommitScript, Intent, Phase};
 use protos::engine::composing_request::Method;
-use protos::engine::{CandidateMessage, CommitContinuous, EnterContinuous, FetchAtPos, Start};
+use protos::engine::{CandidateMessage, CommitContinuous, FetchAtPos, Start};
 
 use crate::common;
 use crate::common::Fetch;
@@ -96,8 +96,8 @@ fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
         effect_kinds(&fin.response.effect),
         vec![
             "CommitTextReplacingPreedit",
-            "ResetAutocomplete",
-            "ResetAutocompleteContext",
+            "ClearCandidates",
+            "ResetCandidateContext",
             "NextWordWordSelected",
         ]
     );
@@ -247,14 +247,14 @@ fn typed_khinsiann_survives_the_real_fetch_and_commit_path() {
     install(&fixture_rows(), FIXTURE_SYLLABLES);
     let cfg = config_tl();
     let mut engine = Engine::new();
-    for method in [
-        Method::Start(Start {
+    requests::handle(
+        &req(Method::Start(Start {
             text: "ki--khilai".into(),
-        }),
-        Method::EnterContinuous(EnterContinuous {}),
-    ] {
-        requests::handle(&req(method), &mut engine, &cfg).expect("setup");
-    }
+        })),
+        &mut engine,
+        &cfg,
+    )
+    .expect("setup");
 
     let ki = fetch_candidate(&mut engine, "記");
     assert_eq!(ki.consumed_span_end, 2, "記 ends before the typed run");

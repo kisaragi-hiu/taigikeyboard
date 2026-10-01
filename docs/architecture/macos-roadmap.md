@@ -37,7 +37,7 @@ Host app — IMKTextInput client
 │   allocator; ownership transfer on activate/client-switch     │
 ├───────────────────────────────────────────────────────────────┤
 │ ComposingManager (port of iOS contract: 3-phase apply, effect │
-│   order, EnterContinuous promotion, Model B commit, FetchAtPos│
+│   order, one call per key (R12), Model B commit, FetchAtPos   │
 │   full carrier — neutral phase only until PR8b)               │
 ├──────────────┬─────────────────────┬──────────────────────────┤
 │ CandidatePanel│ Settings window     │ CustomDictionaryStore   │
@@ -149,8 +149,8 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
   continuous carrier); a candidate commit is `CommitContinuous` only, with
   `consumed_bytes == candidate.consumed_span_end` (`composing.proto:228`);
   Enter keeps the existing `CommitRaw` (`transition.rs:443`) — feeding the
-  marked-region text to `SelectSuggestion` instead would double-count the
-  nailed prefix, since `select_suggestion_under_continuous` computes
+  marked-region text to `SelectCandidate` instead would double-count the
+  nailed prefix, since `select_candidate_under_continuous` computes
   `nailed_prefix` and then `push_str`s the argument (`transition.rs:724`):
   `台北` nailed + `台北大學` marked → `台北台北大學`. macOS never sent
   `SetSelectedCandidateIndex` (removed from the engine 2026-09-25 together

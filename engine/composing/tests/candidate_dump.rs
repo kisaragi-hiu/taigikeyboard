@@ -2,7 +2,7 @@
 //!
 //! Drives the **production** dictionary artifacts
 //! (`dictionaries/{dictionary.fst,dictionary.bin,association.bin,syllables.fst}`)
-//! through the real `Start → EnterContinuous → FetchAtPos` pipeline and
+//! through the real `Start → FetchAtPos` pipeline and
 //! prints the full candidate list for one or more inputs. This is the
 //! deterministic, offline replacement for "log what the keyboard showed":
 //! the engine is a pure function of (artifacts, input), so any reported

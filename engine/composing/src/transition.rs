@@ -28,9 +28,9 @@ use protos::engine::composing_response::Preedit;
 use protos::engine::effect;
 use protos::engine::AppConfig;
 use protos::engine::{
-    ClearPreeditWithoutCommit, CommitOutcome, CommitTextReplacingPreedit, CommittedWord,
-    ComposingResponse, Effect, NextWordClearForNewComposing, NextWordUpdateLastSelectedWord,
-    NextWordWordSelected, PerformAutocomplete, ResetAutocomplete, ResetAutocompleteContext,
+    ClearCandidates, ClearPreeditWithoutCommit, CommitOutcome, CommitTextReplacingPreedit,
+    CommittedWord, ComposingResponse, Effect, NextWordClearForNewComposing,
+    NextWordUpdateLastSelectedWord, NextWordWordSelected, RefreshCandidates, ResetCandidateContext,
     UpdatePreedit,
 };
 
@@ -67,13 +67,10 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
         }
         Intent::ReplaceLast { replacement } => replace_last(state, replacement, config),
         Intent::DeleteBackward => delete_backward(state, config),
-        // No single-segment phase to commit or promote (R12): both are
-        // no-ops kept for platforms that still send them.
-        Intent::CommitDerived | Intent::EnterContinuous => noop(state, config),
         Intent::CommitRaw => commit_raw(state, config),
-        Intent::SelectSuggestion { text } => match &state.phase {
+        Intent::SelectCandidate { text } => match &state.phase {
             Phase::Continuous { nailed, .. } => {
-                select_suggestion_under_continuous(state, nailed.clone(), text, config)
+                select_candidate_under_continuous(state, nailed.clone(), text, config)
             }
             Phase::Idle => noop(state, config),
         },
@@ -146,7 +143,7 @@ fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> Composin
 /// `Intent::MoveCaret` — step the caret one char inside the pending tail.
 /// The buffer is untouched, so the answer is the snapshot plus one
 /// `UpdatePreedit` carrying the new caret and nothing else: no
-/// `PerformAutocomplete`, so candidates, highlight and page stay. At an
+/// `RefreshCandidates`, so candidates, highlight and page stay. At an
 /// edge (the caret never enters a nailed segment) it is a plain snapshot.
 fn move_caret(
     state: &mut EngineState,
@@ -228,7 +225,7 @@ fn step_caret(raw: &str, caret: usize, direction: CaretDirection) -> Option<usiz
 /// callers build it via [`combined_display`], Model B) while `raw` stays the
 /// still-editable pending tail.
 fn step_response(preedit: Preedit) -> ComposingResponse {
-    let effects = vec![update_preedit(&preedit), perform_autocomplete()];
+    let effects = vec![update_preedit(&preedit), refresh_candidates()];
     ComposingResponse {
         preedit: Some(preedit),
         effect: effects,
@@ -440,7 +437,7 @@ fn delete_backward_continuous(
     let effects = vec![
         nextword_correction,
         update_preedit(&preedit),
-        perform_autocomplete(),
+        refresh_candidates(),
     ];
     ComposingResponse {
         preedit: Some(preedit),
@@ -539,7 +536,7 @@ fn insert_external_when_idle(
     exit_to_idle(state, vec![commit_text_replacing_preedit(external)])
 }
 
-/// User-initiated reset (also the wire `ResetContinuous`) — **Model B
+/// User-initiated reset — **Model B
 /// (Codex risk (ii))**. Nailed segments were never written to the document;
 /// the whole composition lived in one marked region, so the abort trio
 /// clears that **entire** region and dropping the state discards every
@@ -613,7 +610,7 @@ fn start_under_continuous(
     }
 }
 
-/// `Intent::SelectSuggestion { text }` arriving while in `Phase::Continuous`.
+/// `Intent::SelectCandidate { text }` arriving while in `Phase::Continuous`.
 /// Codex post-impl finding #3: silently dropping `text` would lose user
 /// selection. **Model B**: the nailed prefix is in the marked region (not
 /// the document), so committing `text` alone would lose it. Commit the
@@ -621,7 +618,7 @@ fn start_under_continuous(
 /// `Σ nailed[i].display_text + text` — in one `CommitTextReplacingPreedit`,
 /// preserving the net-document parity the pre-Model-B behavior had
 /// (nailed-in-doc + text). Then exit Continuous.
-fn select_suggestion_under_continuous(
+fn select_candidate_under_continuous(
     state: &mut EngineState,
     nailed: Vec<NailedSegment>,
     text: String,
@@ -629,7 +626,7 @@ fn select_suggestion_under_continuous(
 ) -> ComposingResponse {
     if text.is_empty() {
         // Empty suggestion: drop continuous state without inserting. Mirrors
-        // SelectSuggestion-on-Idle being a no-op.
+        // SelectCandidate-on-Idle being a no-op.
         return reset(state, config);
     }
     let mut combined = nailed_prefix(&nailed, config);
@@ -762,7 +759,7 @@ fn nail_segment(
     let effects = vec![
         update_preedit(&preedit),
         next_word_update_last_selected_word(canonical, next_word_roman),
-        perform_autocomplete(),
+        refresh_candidates(),
     ];
     let response = ComposingResponse {
         preedit: Some(preedit),
@@ -862,22 +859,22 @@ fn commit_text_replacing_preedit(text: String) -> Effect {
     }
 }
 
-fn reset_autocomplete() -> Effect {
+fn clear_candidates() -> Effect {
     Effect {
-        kind: Some(effect::Kind::ResetAutocomplete(ResetAutocomplete {})),
+        kind: Some(effect::Kind::ClearCandidates(ClearCandidates {})),
     }
 }
 
-fn perform_autocomplete() -> Effect {
+fn refresh_candidates() -> Effect {
     Effect {
-        kind: Some(effect::Kind::PerformAutocomplete(PerformAutocomplete {})),
+        kind: Some(effect::Kind::RefreshCandidates(RefreshCandidates {})),
     }
 }
 
-fn reset_autocomplete_context() -> Effect {
+fn reset_candidate_context() -> Effect {
     Effect {
-        kind: Some(effect::Kind::ResetAutocompleteContext(
-            ResetAutocompleteContext {},
+        kind: Some(effect::Kind::ResetCandidateContext(
+            ResetCandidateContext {},
         )),
     }
 }
@@ -889,7 +886,7 @@ fn reset_autocomplete_context() -> Effect {
 fn abort_continuous_effects() -> Vec<Effect> {
     vec![
         clear_preedit_without_commit(),
-        reset_autocomplete(),
+        clear_candidates(),
         next_word_clear_for_new_composing(),
     ]
 }
@@ -902,8 +899,8 @@ fn abort_continuous_effects() -> Vec<Effect> {
 fn finalize_effects(text: String) -> Vec<Effect> {
     vec![
         commit_text_replacing_preedit(text),
-        reset_autocomplete(),
-        reset_autocomplete_context(),
+        clear_candidates(),
+        reset_candidate_context(),
     ]
 }
 

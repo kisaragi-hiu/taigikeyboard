@@ -6,8 +6,8 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface SelectSuggestionOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.SelectSuggestion)
+public interface SelectCandidateOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.SelectCandidate)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**

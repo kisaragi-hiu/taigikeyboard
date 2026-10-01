@@ -6,19 +6,16 @@ import Foundation
 /// The composing intents macOS uses. This is a subset of the engine's sixteen:
 ///
 /// - `AppendHyphen` is skipped because it is a pure alias for `Append("-")`
-///   (`engine/composing/src/transition.rs:63-69`), and a hyphen is an ordinary
+///   (`engine/composing/src/transition.rs::apply`), and a hyphen is an ordinary
 ///   character on a Mac keyboard rather than a dedicated key as it is on iOS.
 /// - `ReplaceLast` is skipped because it exists for TPS auto-correct, and macOS
 ///   ships TL and POJ only.
-/// - `CommitDerived` and `ResetContinuous` have no caller here:
-///   `Reset` already covers aborting a continuous composition
-///   (`transition.rs:554`).
-/// - `Start` is absent because `Append` enters `Phase::Composing` from Idle by
-///   itself (`transition.rs:54`), so a separate "begin" op would be a second way
-///   to do the same thing — and one that skips the per-character preprocessing.
-/// - `SelectSuggestion` is absent because it is not what it looks like. Under
+/// - `Start` is absent because `Append` begins the composition from Idle by
+///   itself, so a separate "begin" op would be a second way to do the same
+///   thing — and one that skips the per-character preprocessing.
+/// - `SelectCandidate` is absent because it is not what it looks like. Under
 ///   `Phase::Continuous` it REPLACES the pending tail and re-prepends the nailed
-///   prefix (`transition.rs:724`), so handing it the composition as rendered
+///   prefix (`transition.rs::select_candidate_under_continuous`), so handing it the composition as rendered
 ///   double-counts that prefix: `台北` nailed plus a marked `台北大學` commits
 ///   `台北台北大學`. Selecting a candidate is `CommitContinuous` (span-local),
 ///   and Return is `CommitRaw` (the whole marked region) — between them nothing
@@ -118,12 +115,14 @@ extension RustEngineBridge {
 
     /// Commits the whole composition exactly as the marked region renders it —
     /// `Σ nailed.display_text + derived(pending)` under the continuous phase
-    /// (`transition.rs:443`), which is what the snapshot reports as
-    /// `display_text` (`transition.rs:585`). This is the Return key.
+    /// (`transition.rs::commit_raw_continuous`), which is what the snapshot
+    /// reports as `display_text` (`transition.rs::snapshot`). This is the
+    /// Return key.
     ///
-    /// Not `composingSelectSuggestion`, despite what an earlier note in this
+    /// Not `composingSelectCandidate`, despite what an earlier note in this
     /// file claimed: under `Phase::Continuous` that op prepends the nailed
-    /// prefix to whatever text it is handed (`transition.rs:724`), so passing
+    /// prefix to whatever text it is handed
+    /// (`transition.rs::select_candidate_under_continuous`), so passing
     /// it the marked-region string double-counts — a composition reading
     /// `台北大學` with `台北` already nailed would commit `台北台北大學`.
     static func composingCommitRaw(
@@ -167,27 +166,6 @@ extension RustEngineBridge {
     }
 
     // MARK: - Continuous input
-
-    /// Promotes an active composition into the continuous phase, where the
-    /// engine segments the whole buffer instead of one syllable. Safe to send
-    /// unconditionally: the engine no-ops on an empty buffer and on a
-    /// composition that is already continuous (`transition.rs:496-502`), so the
-    /// platform needs no eligibility rule of its own.
-    static func composingEnterContinuous(
-        settings: EngineSettings,
-        generation: UInt64,
-    ) -> ComposingTransition? {
-        dispatchComposing(
-            .enterContinuous(Taigi_Engine_EnterContinuous()),
-            op: "composingEnterContinuous",
-            generation: generation,
-            // Carries the swap like `composingAppend`: already under
-            // Continuous the answer is a snapshot whose `displayText` the
-            // manager mirrors, and one rendered without the swap would put
-            // the space back.
-            config: appConfig(settings),
-        )
-    }
 
     /// Reads the candidates for the current continuous composition.
     ///
@@ -369,14 +347,12 @@ extension RustEngineBridge {
             return .clearPreeditWithoutCommit
         case let .commitTextReplacingPreedit(payload):
             return .commitTextReplacingPreedit(payload.text)
-        case .deleteBackwardFromDocument:
-            return .deleteBackwardFromDocument
-        case .resetAutocomplete:
-            return .resetAutocomplete
-        case .performAutocomplete:
-            return .performAutocomplete
-        case .resetAutocompleteContext:
-            return .resetAutocompleteContext
+        case .clearCandidates_p:
+            return .clearCandidates
+        case .refreshCandidates:
+            return .refreshCandidates
+        case .resetCandidateContext:
+            return .resetCandidateContext
         case let .nextWordUpdateLastSelectedWord(payload):
             return .nextWordUpdateLastSelectedWord(text: payload.text, roman: payload.roman)
         case let .nextWordWordSelected(payload):

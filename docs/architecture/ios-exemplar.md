@@ -187,7 +187,7 @@ Two instances of this pattern exist; both state machines now live in Rust (`engi
 
 - **Pure** — `engine/composing` (`ComposingState`, `ComposingTransition`, the `Effect` list); `ToneToggles` on the settings side.
 - **Platform** — `ComposingManager` (`ObservableObject`, `@Published`, owns `ComposingDelegate` implemented by `KeyboardViewController` on iOS and by an `InputConnection` wrapper on Android).
-- **Contract** — `Effect` enum names are platform-neutral (`updatePreedit`, `clearPreeditWithoutCommit`, `commitTextReplacingPreedit`, `deleteBackwardFromDocument`, `resetAutocomplete`, `performAutocomplete`, `resetAutocompleteContext`). iOS and Android bindings interpret the same enum. **Critical Android caveat**: `finishComposingText()` commits the composing region by default — bindings MUST zero the region via `setComposingText("", 1)` before issuing it, to honor `clearPreeditWithoutCommit` semantics. See the Effect → platform mapping table in `composing-state-boundary.md` §2.2.
+- **Contract** — `Effect` enum names are platform-neutral (`updatePreedit`, `clearPreeditWithoutCommit`, `commitTextReplacingPreedit`, `clearCandidates`, `refreshCandidates`, `resetCandidateContext`). iOS and Android bindings interpret the same enum. **Critical Android caveat**: `finishComposingText()` commits the composing region by default — bindings MUST zero the region via `setComposingText("", 1)` before issuing it, to honor `clearPreeditWithoutCommit` semantics. See the Effect → platform mapping table in `composing-state-boundary.md` §2.2.
 
 ### 4.2 NextWord pipeline — see `nextword-engine-boundary.md`
 

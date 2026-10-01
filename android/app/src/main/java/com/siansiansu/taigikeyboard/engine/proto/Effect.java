@@ -8,11 +8,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * Platform-neutral effects. The wrapper maps document-mutation effects
- * (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`
- * / `DeleteBackwardFromDocument`) to `setComposingText` / `commitText` /
- * `deleteSurroundingText` (Android) or `setMarkedText` / `clearMarkedText` +
- * `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
- * `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
+ * (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`)
+ * to `setComposingText` / `commitText` (Android) or `setMarkedText` /
+ * `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ClearCandidates` /
+ * `RefreshCandidates` / `ResetCandidateContext`) route to the platform
  * autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
  *
  * `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
@@ -41,10 +40,9 @@ public  final class Effect extends
     UPDATE_PREEDIT(1),
     CLEAR_PREEDIT_WITHOUT_COMMIT(2),
     COMMIT_TEXT_REPLACING_PREEDIT(3),
-    DELETE_BACKWARD_FROM_DOCUMENT(4),
-    RESET_AUTOCOMPLETE(5),
-    PERFORM_AUTOCOMPLETE(6),
-    RESET_AUTOCOMPLETE_CONTEXT(7),
+    CLEAR_CANDIDATES(5),
+    REFRESH_CANDIDATES(6),
+    RESET_CANDIDATE_CONTEXT(7),
     NEXT_WORD_UPDATE_LAST_SELECTED_WORD(8),
     NEXT_WORD_WORD_SELECTED(9),
     NEXT_WORD_CLEAR_FOR_NEW_COMPOSING(10),
@@ -66,10 +64,9 @@ public  final class Effect extends
         case 1: return UPDATE_PREEDIT;
         case 2: return CLEAR_PREEDIT_WITHOUT_COMMIT;
         case 3: return COMMIT_TEXT_REPLACING_PREEDIT;
-        case 4: return DELETE_BACKWARD_FROM_DOCUMENT;
-        case 5: return RESET_AUTOCOMPLETE;
-        case 6: return PERFORM_AUTOCOMPLETE;
-        case 7: return RESET_AUTOCOMPLETE_CONTEXT;
+        case 5: return CLEAR_CANDIDATES;
+        case 6: return REFRESH_CANDIDATES;
+        case 7: return RESET_CANDIDATE_CONTEXT;
         case 8: return NEXT_WORD_UPDATE_LAST_SELECTED_WORD;
         case 9: return NEXT_WORD_WORD_SELECTED;
         case 10: return NEXT_WORD_CLEAR_FOR_NEW_COMPOSING;
@@ -244,90 +241,40 @@ public  final class Effect extends
     }
   }
 
-  public static final int DELETE_BACKWARD_FROM_DOCUMENT_FIELD_NUMBER = 4;
+  public static final int CLEAR_CANDIDATES_FIELD_NUMBER = 5;
   /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
+   * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
    */
   @java.lang.Override
-  public boolean hasDeleteBackwardFromDocument() {
-    return kindCase_ == 4;
-  }
-  /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument getDeleteBackwardFromDocument() {
-    if (kindCase_ == 4) {
-       return (com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument) kind_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   */
-  private void setDeleteBackwardFromDocument(com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument value) {
-    java.util.Objects.requireNonNull(value);
-    kind_ = value;
-    kindCase_ = 4;
-  }
-  /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   */
-  private void mergeDeleteBackwardFromDocument(com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument value) {
-    java.util.Objects.requireNonNull(value);
-    if (kindCase_ == 4 &&
-        kind_ != com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.getDefaultInstance()) {
-      kind_ = com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.newBuilder((com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument) kind_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      kind_ = value;
-    }
-    kindCase_ = 4;
-  }
-  /**
-   * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
-   */
-  private void clearDeleteBackwardFromDocument() {
-    if (kindCase_ == 4) {
-      kindCase_ = 0;
-      kind_ = null;
-    }
-  }
-
-  public static final int RESET_AUTOCOMPLETE_FIELD_NUMBER = 5;
-  /**
-   * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
-   */
-  @java.lang.Override
-  public boolean hasResetAutocomplete() {
+  public boolean hasClearCandidates() {
     return kindCase_ == 5;
   }
   /**
-   * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
+   * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete getResetAutocomplete() {
+  public com.siansiansu.taigikeyboard.engine.proto.ClearCandidates getClearCandidates() {
     if (kindCase_ == 5) {
-       return (com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete) kind_;
+       return (com.siansiansu.taigikeyboard.engine.proto.ClearCandidates) kind_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.ClearCandidates.getDefaultInstance();
   }
   /**
-   * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
+   * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
    */
-  private void setResetAutocomplete(com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete value) {
+  private void setClearCandidates(com.siansiansu.taigikeyboard.engine.proto.ClearCandidates value) {
     java.util.Objects.requireNonNull(value);
     kind_ = value;
     kindCase_ = 5;
   }
   /**
-   * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
+   * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
    */
-  private void mergeResetAutocomplete(com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete value) {
+  private void mergeClearCandidates(com.siansiansu.taigikeyboard.engine.proto.ClearCandidates value) {
     java.util.Objects.requireNonNull(value);
     if (kindCase_ == 5 &&
-        kind_ != com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete.getDefaultInstance()) {
-      kind_ = com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete) kind_)
+        kind_ != com.siansiansu.taigikeyboard.engine.proto.ClearCandidates.getDefaultInstance()) {
+      kind_ = com.siansiansu.taigikeyboard.engine.proto.ClearCandidates.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ClearCandidates) kind_)
           .mergeFrom(value).buildPartial();
     } else {
       kind_ = value;
@@ -335,49 +282,49 @@ public  final class Effect extends
     kindCase_ = 5;
   }
   /**
-   * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
+   * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
    */
-  private void clearResetAutocomplete() {
+  private void clearClearCandidates() {
     if (kindCase_ == 5) {
       kindCase_ = 0;
       kind_ = null;
     }
   }
 
-  public static final int PERFORM_AUTOCOMPLETE_FIELD_NUMBER = 6;
+  public static final int REFRESH_CANDIDATES_FIELD_NUMBER = 6;
   /**
-   * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+   * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
    */
   @java.lang.Override
-  public boolean hasPerformAutocomplete() {
+  public boolean hasRefreshCandidates() {
     return kindCase_ == 6;
   }
   /**
-   * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+   * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete getPerformAutocomplete() {
+  public com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates getRefreshCandidates() {
     if (kindCase_ == 6) {
-       return (com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete) kind_;
+       return (com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates) kind_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates.getDefaultInstance();
   }
   /**
-   * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+   * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
    */
-  private void setPerformAutocomplete(com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete value) {
+  private void setRefreshCandidates(com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates value) {
     java.util.Objects.requireNonNull(value);
     kind_ = value;
     kindCase_ = 6;
   }
   /**
-   * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+   * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
    */
-  private void mergePerformAutocomplete(com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete value) {
+  private void mergeRefreshCandidates(com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates value) {
     java.util.Objects.requireNonNull(value);
     if (kindCase_ == 6 &&
-        kind_ != com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete.getDefaultInstance()) {
-      kind_ = com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete.newBuilder((com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete) kind_)
+        kind_ != com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates.getDefaultInstance()) {
+      kind_ = com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates.newBuilder((com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates) kind_)
           .mergeFrom(value).buildPartial();
     } else {
       kind_ = value;
@@ -385,49 +332,49 @@ public  final class Effect extends
     kindCase_ = 6;
   }
   /**
-   * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+   * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
    */
-  private void clearPerformAutocomplete() {
+  private void clearRefreshCandidates() {
     if (kindCase_ == 6) {
       kindCase_ = 0;
       kind_ = null;
     }
   }
 
-  public static final int RESET_AUTOCOMPLETE_CONTEXT_FIELD_NUMBER = 7;
+  public static final int RESET_CANDIDATE_CONTEXT_FIELD_NUMBER = 7;
   /**
-   * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
+   * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
    */
   @java.lang.Override
-  public boolean hasResetAutocompleteContext() {
+  public boolean hasResetCandidateContext() {
     return kindCase_ == 7;
   }
   /**
-   * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
+   * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext getResetAutocompleteContext() {
+  public com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext getResetCandidateContext() {
     if (kindCase_ == 7) {
-       return (com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext) kind_;
+       return (com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext) kind_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext.getDefaultInstance();
   }
   /**
-   * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
+   * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
    */
-  private void setResetAutocompleteContext(com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext value) {
+  private void setResetCandidateContext(com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext value) {
     java.util.Objects.requireNonNull(value);
     kind_ = value;
     kindCase_ = 7;
   }
   /**
-   * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
+   * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
    */
-  private void mergeResetAutocompleteContext(com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext value) {
+  private void mergeResetCandidateContext(com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext value) {
     java.util.Objects.requireNonNull(value);
     if (kindCase_ == 7 &&
-        kind_ != com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext.getDefaultInstance()) {
-      kind_ = com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext) kind_)
+        kind_ != com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext.getDefaultInstance()) {
+      kind_ = com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext) kind_)
           .mergeFrom(value).buildPartial();
     } else {
       kind_ = value;
@@ -435,9 +382,9 @@ public  final class Effect extends
     kindCase_ = 7;
   }
   /**
-   * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
+   * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
    */
-  private void clearResetAutocompleteContext() {
+  private void clearResetCandidateContext() {
     if (kindCase_ == 7) {
       kindCase_ = 0;
       kind_ = null;
@@ -680,11 +627,10 @@ public  final class Effect extends
   /**
    * <pre>
    * Platform-neutral effects. The wrapper maps document-mutation effects
-   * (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`
-   * / `DeleteBackwardFromDocument`) to `setComposingText` / `commitText` /
-   * `deleteSurroundingText` (Android) or `setMarkedText` / `clearMarkedText` +
-   * `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
-   * `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
+   * (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`)
+   * to `setComposingText` / `commitText` (Android) or `setMarkedText` /
+   * `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ClearCandidates` /
+   * `RefreshCandidates` / `ResetCandidateContext`) route to the platform
    * autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
    *
    * `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
@@ -866,194 +812,146 @@ public  final class Effect extends
     }
 
     /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
+     * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
      */
     @java.lang.Override
-    public boolean hasDeleteBackwardFromDocument() {
-      return instance.hasDeleteBackwardFromDocument();
+    public boolean hasClearCandidates() {
+      return instance.hasClearCandidates();
     }
     /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
+     * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument getDeleteBackwardFromDocument() {
-      return instance.getDeleteBackwardFromDocument();
+    public com.siansiansu.taigikeyboard.engine.proto.ClearCandidates getClearCandidates() {
+      return instance.getClearCandidates();
     }
     /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
+     * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
      */
-    public Builder setDeleteBackwardFromDocument(com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument value) {
+    public Builder setClearCandidates(com.siansiansu.taigikeyboard.engine.proto.ClearCandidates value) {
       copyOnWrite();
-      instance.setDeleteBackwardFromDocument(value);
+      instance.setClearCandidates(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
+     * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
      */
-    public Builder setDeleteBackwardFromDocument(
-        com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.Builder builderForValue) {
+    public Builder setClearCandidates(
+        com.siansiansu.taigikeyboard.engine.proto.ClearCandidates.Builder builderForValue) {
       copyOnWrite();
-      instance.setDeleteBackwardFromDocument(builderForValue.build());
+      instance.setClearCandidates(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
+     * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
      */
-    public Builder mergeDeleteBackwardFromDocument(com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument value) {
+    public Builder mergeClearCandidates(com.siansiansu.taigikeyboard.engine.proto.ClearCandidates value) {
       copyOnWrite();
-      instance.mergeDeleteBackwardFromDocument(value);
+      instance.mergeClearCandidates(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.DeleteBackwardFromDocument delete_backward_from_document = 4;</code>
+     * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
      */
-    public Builder clearDeleteBackwardFromDocument() {
+    public Builder clearClearCandidates() {
       copyOnWrite();
-      instance.clearDeleteBackwardFromDocument();
+      instance.clearClearCandidates();
       return this;
     }
 
     /**
-     * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
+     * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
      */
     @java.lang.Override
-    public boolean hasResetAutocomplete() {
-      return instance.hasResetAutocomplete();
+    public boolean hasRefreshCandidates() {
+      return instance.hasRefreshCandidates();
     }
     /**
-     * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
+     * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete getResetAutocomplete() {
-      return instance.getResetAutocomplete();
+    public com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates getRefreshCandidates() {
+      return instance.getRefreshCandidates();
     }
     /**
-     * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
+     * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
      */
-    public Builder setResetAutocomplete(com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete value) {
+    public Builder setRefreshCandidates(com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates value) {
       copyOnWrite();
-      instance.setResetAutocomplete(value);
+      instance.setRefreshCandidates(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
+     * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
      */
-    public Builder setResetAutocomplete(
-        com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete.Builder builderForValue) {
+    public Builder setRefreshCandidates(
+        com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates.Builder builderForValue) {
       copyOnWrite();
-      instance.setResetAutocomplete(builderForValue.build());
+      instance.setRefreshCandidates(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
+     * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
      */
-    public Builder mergeResetAutocomplete(com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete value) {
+    public Builder mergeRefreshCandidates(com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates value) {
       copyOnWrite();
-      instance.mergeResetAutocomplete(value);
+      instance.mergeRefreshCandidates(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
+     * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
      */
-    public Builder clearResetAutocomplete() {
+    public Builder clearRefreshCandidates() {
       copyOnWrite();
-      instance.clearResetAutocomplete();
+      instance.clearRefreshCandidates();
       return this;
     }
 
     /**
-     * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+     * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
      */
     @java.lang.Override
-    public boolean hasPerformAutocomplete() {
-      return instance.hasPerformAutocomplete();
+    public boolean hasResetCandidateContext() {
+      return instance.hasResetCandidateContext();
     }
     /**
-     * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+     * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete getPerformAutocomplete() {
-      return instance.getPerformAutocomplete();
+    public com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext getResetCandidateContext() {
+      return instance.getResetCandidateContext();
     }
     /**
-     * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+     * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
      */
-    public Builder setPerformAutocomplete(com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete value) {
+    public Builder setResetCandidateContext(com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext value) {
       copyOnWrite();
-      instance.setPerformAutocomplete(value);
+      instance.setResetCandidateContext(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+     * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
      */
-    public Builder setPerformAutocomplete(
-        com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete.Builder builderForValue) {
+    public Builder setResetCandidateContext(
+        com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext.Builder builderForValue) {
       copyOnWrite();
-      instance.setPerformAutocomplete(builderForValue.build());
+      instance.setResetCandidateContext(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+     * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
      */
-    public Builder mergePerformAutocomplete(com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete value) {
+    public Builder mergeResetCandidateContext(com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext value) {
       copyOnWrite();
-      instance.mergePerformAutocomplete(value);
+      instance.mergeResetCandidateContext(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
+     * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
      */
-    public Builder clearPerformAutocomplete() {
+    public Builder clearResetCandidateContext() {
       copyOnWrite();
-      instance.clearPerformAutocomplete();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
-     */
-    @java.lang.Override
-    public boolean hasResetAutocompleteContext() {
-      return instance.hasResetAutocompleteContext();
-    }
-    /**
-     * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext getResetAutocompleteContext() {
-      return instance.getResetAutocompleteContext();
-    }
-    /**
-     * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
-     */
-    public Builder setResetAutocompleteContext(com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext value) {
-      copyOnWrite();
-      instance.setResetAutocompleteContext(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
-     */
-    public Builder setResetAutocompleteContext(
-        com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext.Builder builderForValue) {
-      copyOnWrite();
-      instance.setResetAutocompleteContext(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
-     */
-    public Builder mergeResetAutocompleteContext(com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext value) {
-      copyOnWrite();
-      instance.mergeResetAutocompleteContext(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
-     */
-    public Builder clearResetAutocompleteContext() {
-      copyOnWrite();
-      instance.clearResetAutocompleteContext();
+      instance.clearResetCandidateContext();
       return this;
     }
 
@@ -1222,18 +1120,16 @@ public  final class Effect extends
             com.siansiansu.taigikeyboard.engine.proto.UpdatePreedit.class,
             com.siansiansu.taigikeyboard.engine.proto.ClearPreeditWithoutCommit.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitTextReplacingPreedit.class,
-            com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.class,
-            com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete.class,
-            com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete.class,
-            com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext.class,
+            com.siansiansu.taigikeyboard.engine.proto.ClearCandidates.class,
+            com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates.class,
+            com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordUpdateLastSelectedWord.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordWordSelected.class,
             com.siansiansu.taigikeyboard.engine.proto.NextWordClearForNewComposing.class,
           };
           java.lang.String info =
-              "\u0000\n\u0001\u0000\u0001\n\n\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
-              "<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<" +
-              "\u0000";
+              "\u0000\t\u0001\u0000\u0001\n\t\u0000\u0000\u0000\u0001<\u0000\u0002<\u0000\u0003" +
+              "<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000\t<\u0000\n<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

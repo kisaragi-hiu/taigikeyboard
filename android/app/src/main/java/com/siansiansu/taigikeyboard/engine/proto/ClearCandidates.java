@@ -6,60 +6,60 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
- * Protobuf type {@code taigi.engine.DeleteBackwardFromDocument}
+ * Protobuf type {@code taigi.engine.ClearCandidates}
  */
 @com.google.protobuf.Generated
-public  final class DeleteBackwardFromDocument extends
+public  final class ClearCandidates extends
     com.google.protobuf.GeneratedMessageLite<
-        DeleteBackwardFromDocument, DeleteBackwardFromDocument.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.DeleteBackwardFromDocument)
-    DeleteBackwardFromDocumentOrBuilder {
-  private DeleteBackwardFromDocument() {
+        ClearCandidates, ClearCandidates.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.ClearCandidates)
+    ClearCandidatesOrBuilder {
+  private ClearCandidates() {
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -67,24 +67,24 @@ public  final class DeleteBackwardFromDocument extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -95,25 +95,25 @@ public  final class DeleteBackwardFromDocument extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.ClearCandidates prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
-   * Protobuf type {@code taigi.engine.DeleteBackwardFromDocument}
+   * Protobuf type {@code taigi.engine.ClearCandidates}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.DeleteBackwardFromDocument)
-      com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocumentOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.ClearCandidates, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.ClearCandidates)
+      com.siansiansu.taigikeyboard.engine.proto.ClearCandidatesOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.ClearCandidates.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
 
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.DeleteBackwardFromDocument)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.ClearCandidates)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -122,7 +122,7 @@ public  final class DeleteBackwardFromDocument extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument();
+        return new com.siansiansu.taigikeyboard.engine.proto.ClearCandidates();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -137,13 +137,13 @@ public  final class DeleteBackwardFromDocument extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.ClearCandidates> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.ClearCandidates.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.ClearCandidates>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -163,24 +163,24 @@ public  final class DeleteBackwardFromDocument extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.DeleteBackwardFromDocument)
-  private static final com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.ClearCandidates)
+  private static final com.siansiansu.taigikeyboard.engine.proto.ClearCandidates DEFAULT_INSTANCE;
   static {
-    DeleteBackwardFromDocument defaultInstance = new DeleteBackwardFromDocument();
+    ClearCandidates defaultInstance = new ClearCandidates();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      DeleteBackwardFromDocument.class, defaultInstance);
+      ClearCandidates.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.DeleteBackwardFromDocument getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.ClearCandidates getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<DeleteBackwardFromDocument> PARSER;
+  private static volatile com.google.protobuf.Parser<ClearCandidates> PARSER;
 
-  public static com.google.protobuf.Parser<DeleteBackwardFromDocument> parser() {
+  public static com.google.protobuf.Parser<ClearCandidates> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

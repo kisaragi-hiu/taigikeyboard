@@ -19,7 +19,7 @@ extension ActionHandler {
     func handleSuggestionSelection(_ suggestion: AutocompleteSuggestion) {
         // Raw input candidate: commit literal keystrokes directly (no tone conversion)
         if suggestion.additionalInfo["isRawInput"] == "true" {
-            composingManager.commitRawInput()
+            composingManager.commitComposition()
             // The literal keystrokes go into the document, so the verdict is
             // what the layout composes — romanization in TL/POJ, Bopomofo in
             // TPS, which takes no spacing. The output mode does not enter into
@@ -39,7 +39,7 @@ extension ActionHandler {
         // off the suggestion's metadata, never its view-rewritten `text`.
         if suggestion.additionalInfo["isContinuous"] == "true" {
             // Strict-required metadata (Item 4 fork F2=A): missing → drop the
-            // tap. Falling back to `selectSuggestion(text:)` would lose
+            // tap. Falling back to `selectCandidate(text:)` would lose
             // `consumedBytes` and corrupt `Phase::Continuous { raw }` alignment.
             guard let pick = Self.continuousPick(for: suggestion) else {
                 logger.debug(
@@ -361,7 +361,7 @@ extension ActionHandler {
         if isNextWord {
             keyboardContext.textDocumentProxy.insertText(text)
         } else {
-            composingManager.selectSuggestion(text: text)
+            composingManager.selectCandidate(text: text)
         }
     }
 }

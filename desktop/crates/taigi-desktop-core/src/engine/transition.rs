@@ -22,15 +22,9 @@ pub enum Effect {
     },
     ClearPreeditWithoutCommit,
     CommitTextReplacingPreedit(String),
-    /// Emitted only by the `Phase::Composing` backspace-to-empty branch
-    /// (`engine/composing/src/transition.rs:266-276`). Ignored on desktop:
-    /// the preedit only ever lived in the composition, so deleting a document
-    /// character would eat a real host character (named divergence, macOS
-    /// `ClientEffectExecutor.swift:56-63`).
-    DeleteBackwardFromDocument,
-    ResetAutocomplete,
-    PerformAutocomplete,
-    ResetAutocompleteContext,
+    ClearCandidates,
+    RefreshCandidates,
+    ResetCandidateContext,
     /// Continuous-input nail / unnail handshake. Next-word learns nothing
     /// from it (behavioral-invariants §40); it marks a nailed segment.
     NextWordUpdateLastSelectedWord {
@@ -91,10 +85,9 @@ impl Effect {
             effect::Kind::CommitTextReplacingPreedit(payload) => {
                 Effect::CommitTextReplacingPreedit(payload.text.clone())
             }
-            effect::Kind::DeleteBackwardFromDocument(_) => Effect::DeleteBackwardFromDocument,
-            effect::Kind::ResetAutocomplete(_) => Effect::ResetAutocomplete,
-            effect::Kind::PerformAutocomplete(_) => Effect::PerformAutocomplete,
-            effect::Kind::ResetAutocompleteContext(_) => Effect::ResetAutocompleteContext,
+            effect::Kind::ClearCandidates(_) => Effect::ClearCandidates,
+            effect::Kind::RefreshCandidates(_) => Effect::RefreshCandidates,
+            effect::Kind::ResetCandidateContext(_) => Effect::ResetCandidateContext,
             effect::Kind::NextWordUpdateLastSelectedWord(payload) => {
                 Effect::NextWordUpdateLastSelectedWord {
                     text: payload.text.clone(),

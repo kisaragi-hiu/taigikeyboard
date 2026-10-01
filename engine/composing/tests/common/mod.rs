@@ -9,7 +9,7 @@
 //! Only helper *definitions* live here — the composing-shaped fixture
 //! builders (`dictionary.fst` / `syllables.fst` families over [`Row`]), the
 //! `AppConfig` / `ComposingRequest` constructors, and the `Start →
-//! EnterContinuous → FetchAtPos` driver. Crate-neutral pieces (install lock,
+//! FetchAtPos` driver. Crate-neutral pieces (install lock,
 //! temp files, TKDB / TKWA serializers, production artifacts) come from the
 //! `test-support` dev-dependency. Every test file keeps its own fixture rows,
 //! syllable samples, and assertions.
@@ -26,9 +26,7 @@ use lexicon::{
 use phonetics::{canonicalize_poj_syllable, canonicalize_syllable};
 use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
-use protos::engine::{
-    AppConfig, ComposingRequest, ComposingResponse, Effect, EnterContinuous, FetchAtPos, Start,
-};
+use protos::engine::{AppConfig, ComposingRequest, ComposingResponse, Effect, FetchAtPos, Start};
 use ranking::FrequencyData;
 use test_support::{build_tkdb, build_tkwa, fst_entry, write_fst_set, TkdbRow};
 
@@ -348,7 +346,6 @@ pub fn engine_in_continuous(raw: &str) -> Engine {
         },
         &config_tl(),
     );
-    e.apply(composing::Intent::EnterContinuous, &config_tl());
     e
 }
 
@@ -449,10 +446,9 @@ pub fn effect_kinds(effects: &[Effect]) -> Vec<&'static str> {
             Kind::UpdatePreedit(_) => "UpdatePreedit",
             Kind::ClearPreeditWithoutCommit(_) => "ClearPreeditWithoutCommit",
             Kind::CommitTextReplacingPreedit(_) => "CommitTextReplacingPreedit",
-            Kind::DeleteBackwardFromDocument(_) => "DeleteBackwardFromDocument",
-            Kind::ResetAutocomplete(_) => "ResetAutocomplete",
-            Kind::PerformAutocomplete(_) => "PerformAutocomplete",
-            Kind::ResetAutocompleteContext(_) => "ResetAutocompleteContext",
+            Kind::ClearCandidates(_) => "ClearCandidates",
+            Kind::RefreshCandidates(_) => "RefreshCandidates",
+            Kind::ResetCandidateContext(_) => "ResetCandidateContext",
             Kind::NextWordUpdateLastSelectedWord(_) => "NextWordUpdateLastSelectedWord",
             Kind::NextWordWordSelected(_) => "NextWordWordSelected",
             Kind::NextWordClearForNewComposing(_) => "NextWordClearForNewComposing",
@@ -466,7 +462,7 @@ pub fn req(method: Method) -> ComposingRequest {
     }
 }
 
-/// Drive `raw` through `Start → EnterContinuous → FetchAtPos` on a fresh
+/// Drive `raw` through `Start → FetchAtPos` on a fresh
 /// `Engine` and return the `FetchAtPos` response (its `continuous` carrier is
 /// `None` when the engine never entered the continuous phase — callers that
 /// care distinguish that from an empty candidate list).
@@ -494,12 +490,6 @@ fn continuous_engine(config: &AppConfig, raw: &str) -> Engine {
         config,
     )
     .expect("Start");
-    requests::handle(
-        &req(Method::EnterContinuous(EnterContinuous {})),
-        &mut engine,
-        config,
-    )
-    .expect("EnterContinuous");
     engine
 }
 

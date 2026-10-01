@@ -6,60 +6,60 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
- * Protobuf type {@code taigi.engine.ResetAutocomplete}
+ * Protobuf type {@code taigi.engine.RefreshCandidates}
  */
 @com.google.protobuf.Generated
-public  final class ResetAutocomplete extends
+public  final class RefreshCandidates extends
     com.google.protobuf.GeneratedMessageLite<
-        ResetAutocomplete, ResetAutocomplete.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.ResetAutocomplete)
-    ResetAutocompleteOrBuilder {
-  private ResetAutocomplete() {
+        RefreshCandidates, RefreshCandidates.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.RefreshCandidates)
+    RefreshCandidatesOrBuilder {
+  private RefreshCandidates() {
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -67,24 +67,24 @@ public  final class ResetAutocomplete extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -95,25 +95,25 @@ public  final class ResetAutocomplete extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
-   * Protobuf type {@code taigi.engine.ResetAutocomplete}
+   * Protobuf type {@code taigi.engine.RefreshCandidates}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.ResetAutocomplete)
-      com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.RefreshCandidates)
+      com.siansiansu.taigikeyboard.engine.proto.RefreshCandidatesOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
 
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.ResetAutocomplete)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.RefreshCandidates)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -122,7 +122,7 @@ public  final class ResetAutocomplete extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete();
+        return new com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -137,13 +137,13 @@ public  final class ResetAutocomplete extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -163,24 +163,24 @@ public  final class ResetAutocomplete extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.ResetAutocomplete)
-  private static final com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.RefreshCandidates)
+  private static final com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates DEFAULT_INSTANCE;
   static {
-    ResetAutocomplete defaultInstance = new ResetAutocomplete();
+    RefreshCandidates defaultInstance = new RefreshCandidates();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      ResetAutocomplete.class, defaultInstance);
+      RefreshCandidates.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<ResetAutocomplete> PARSER;
+  private static volatile com.google.protobuf.Parser<RefreshCandidates> PARSER;
 
-  public static com.google.protobuf.Parser<ResetAutocomplete> parser() {
+  public static com.google.protobuf.Parser<RefreshCandidates> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

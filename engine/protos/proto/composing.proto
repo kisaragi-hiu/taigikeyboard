@@ -10,10 +10,10 @@ import "nextword.proto";
 
 // Composing slice — Intent → Effect state machine.
 //
-// Mirrors the iOS `ComposingState.Intent` / Android `ComposingState.Intent`
-// case set 1:1 pre-migration. The Rust crate `engine/composing` owns the
-// state (`Phase::Idle | Composing { raw } | Continuous { .. }`)
-// inside a singleton `Mutex<Engine>` held by `EngineHandle`.
+// The Rust crate `engine/composing` owns the state
+// (`Phase::Idle | Continuous { raw, caret, nailed }`) inside a singleton
+// `Mutex<Engine>` held by `EngineHandle`. One request per keystroke: the
+// first keystroke already composes in `Continuous` (R12, 2026-10-01).
 //
 // Naming convention: `oneof method` matches the Phonetics/Lexicon dispatch
 // pattern adopted in PR #186.
@@ -32,6 +32,12 @@ message ComposingRequest {
   // production caller and were removed 2026-09-25.
   reserved 20, 21;
   reserved "set_selected_candidate_index", "query_state";
+  // Tags 15 (`commit_derived`), 30 (`enter_continuous`) and 33
+  // (`reset_continuous`) went with the single-segment Composing phase (R12,
+  // 2026-10-01): the first two had become no-ops, the third an alias of
+  // `reset`.
+  reserved 15, 30, 33;
+  reserved "commit_derived", "enter_continuous", "reset_continuous";
 
   oneof method {
     // --- Text-input mutators (10s) ---
@@ -40,17 +46,14 @@ message ComposingRequest {
     AppendHyphen                    append_hyphen                        = 12;
     ReplaceLast                     replace_last                         = 13;
     DeleteBackward                  delete_backward                      = 14;
-    CommitDerived                   commit_derived                       = 15;
     CommitRaw                       commit_raw                           = 16;
-    SelectSuggestion                select_suggestion                    = 17;
+    SelectCandidate                 select_candidate                     = 17;
     CommitPreeditThenInsertExternal commit_preedit_then_insert_external  = 18;
     Reset                           reset                                = 19;
 
     // --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
-    EnterContinuous                 enter_continuous                     = 30;
     FetchAtPos                      fetch_at_pos                         = 31;
     CommitContinuous                commit_continuous                    = 32;
-    ResetContinuous                 reset_continuous                     = 33;
 
     // --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
     TelexKey                        telex_key                            = 40;
@@ -77,17 +80,13 @@ message ReplaceLast { string replacement = 1; }
 // nailed → unnails the last one.
 message DeleteBackward {}
 
-// No-op since R12 (2026-10-01): there is no single-segment phase to commit.
-// Enter is `CommitRaw`.
-message CommitDerived {}
-
 // Enter: commit the whole composition (nailed segments + the derived
 // pending tail, TPS separator markers dropped) to the document.
 message CommitRaw {}
 
 // Commit the supplied platform-resolved suggestion text, atomically
 // replacing the current preedit.
-message SelectSuggestion { string text = 1; }
+message SelectCandidate { string text = 1; }
 
 // Commit the current preedit (if any) and atomically insert externally
 // supplied text in one document write. Non-Taigi input surfaces (emoji
@@ -95,15 +94,10 @@ message SelectSuggestion { string text = 1; }
 message CommitPreeditThenInsertExternal { string text = 1; }
 
 // Clear all state (mode switch, teardown). User-initiated; emits the abort
-// trio `[ClearPreeditWithoutCommit, ResetAutocomplete,
+// trio `[ClearPreeditWithoutCommit, ClearCandidates,
 // NextWordClearForNewComposing]` if composing, `[]` if Idle. Nothing reaches
 // the document.
 message Reset {}
-
-// No-op since R12 (2026-10-01): the first keystroke already composes in
-// `Phase::Continuous`. Still a mutating request, so a stale generation
-// resets the engine.
-message EnterContinuous {}
 
 // v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
 // `Phase::Continuous { raw }` (the whole buffer). The engine builds the
@@ -269,11 +263,6 @@ enum CommitOutcome {
   COMMIT_OUTCOME_IGNORED     = 3;  // nothing changed (stale generation, rejected pick)
 }
 
-// Same as `Reset` since R12 (decodes to it): drops the nailed segments and
-// the pending tail, exits to Idle with the abort trio. Nailed segments were
-// never in the document (Model B), so nothing is written.
-message ResetContinuous {}
-
 // Desktop Telex scheme: one key from `x v y d w q` (tones 1/4 2/8 3 5 7 9 —
 // `x` and `v` write the checked tone after a stop coda `p t k h`, the open
 // tone otherwise), `z` (affricate initial `ts` / `ch` by
@@ -287,7 +276,7 @@ message TelexKey { string key = 1; }
 // Desktop only — step the caret inside the pending tail one Unicode scalar
 // value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
 // buffer does not change, so the response carries `UpdatePreedit` (with the
-// new `caret_utf16`) and NO `PerformAutocomplete`: candidates, highlight and
+// new `caret_utf16`) and NO `RefreshCandidates`: candidates, highlight and
 // page stay. At either edge of the pending tail — the caret never enters a
 // nailed segment — the request is a no-op with no effects. Every mutator
 // then edits at the caret: `Append` inserts there, `DeleteBackward` /
@@ -432,11 +421,10 @@ message CandidateMessage {
 }
 
 // Platform-neutral effects. The wrapper maps document-mutation effects
-// (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`
-// / `DeleteBackwardFromDocument`) to `setComposingText` / `commitText` /
-// `deleteSurroundingText` (Android) or `setMarkedText` / `clearMarkedText` +
-// `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
-// `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
+// (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`)
+// to `setComposingText` / `commitText` (Android) or `setMarkedText` /
+// `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ClearCandidates` /
+// `RefreshCandidates` / `ResetCandidateContext`) route to the platform
 // autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
 //
 // `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
@@ -451,14 +439,17 @@ message Effect {
   // (user-data-engine-roadmap P9a).
   reserved 11;
   reserved "phrase_learned";
+  // Tag 4 (`delete_backward_from_document`) was emitted only by the
+  // single-segment Composing phase's backspace-to-empty branch (R12).
+  reserved 4;
+  reserved "delete_backward_from_document";
   oneof kind {
     UpdatePreedit                  update_preedit                       = 1;
     ClearPreeditWithoutCommit      clear_preedit_without_commit         = 2;
     CommitTextReplacingPreedit     commit_text_replacing_preedit        = 3;
-    DeleteBackwardFromDocument     delete_backward_from_document        = 4;
-    ResetAutocomplete              reset_autocomplete                   = 5;
-    PerformAutocomplete            perform_autocomplete                 = 6;
-    ResetAutocompleteContext       reset_autocomplete_context           = 7;
+    ClearCandidates                clear_candidates                     = 5;
+    RefreshCandidates              refresh_candidates                   = 6;
+    ResetCandidateContext          reset_candidate_context              = 7;
     NextWordUpdateLastSelectedWord next_word_update_last_selected_word  = 8;
     NextWordWordSelected           next_word_word_selected              = 9;
     NextWordClearForNewComposing   next_word_clear_for_new_composing    = 10;
@@ -469,10 +460,9 @@ message Effect {
 message UpdatePreedit              { string display = 1; uint32 caret_utf16 = 2; }
 message ClearPreeditWithoutCommit  {}
 message CommitTextReplacingPreedit { string text = 1; }
-message DeleteBackwardFromDocument {}  // never emitted since R12 (2026-10-01)
-message ResetAutocomplete          {}
-message PerformAutocomplete        {}
-message ResetAutocompleteContext   {}
+message ClearCandidates            {}
+message RefreshCandidates          {}
+message ResetCandidateContext      {}
 
 // Mid-commit handshake during continuous-input. Maps to
 // `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the
@@ -499,6 +489,6 @@ message NextWordWordSelected {
 
 // Continuous-input abort. Maps to
 // `NextWordRequest::ClearForNewComposing(now_ms)`. Emitted when
-// `ResetContinuous` / `Reset` / empty-buffer `DeleteBackward` exits
+// `Reset` / an emptying `DeleteBackward` / `ReplaceLast` exits
 // `Phase::Continuous` without committing.
 message NextWordClearForNewComposing {}

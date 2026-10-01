@@ -62,8 +62,6 @@ fn arb_intent() -> impl Strategy<Value = Intent> {
         any::<u8>().prop_map(|b| Intent::TelexKey {
             key: ["v", "y", "d", "z", "f"][usize::from(b % 5)].to_string(),
         }),
-        Just(Intent::EnterContinuous),
-        Just(Intent::CommitDerived),
         Just(Intent::CommitRaw),
         Just(Intent::Reset),
     ]

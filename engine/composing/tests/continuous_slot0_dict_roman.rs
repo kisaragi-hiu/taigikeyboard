@@ -84,7 +84,7 @@ fn install_fixture() {
     install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
-/// Drive `raw` through `Start → EnterContinuous → FetchAtPos` and return
+/// Drive `raw` through `Start → FetchAtPos` and return
 /// the `(hanji, roman)` pairs in candidate order.
 ///
 /// Runs in DEFAULT config (literal-roman candidate ON, §34/S22). The

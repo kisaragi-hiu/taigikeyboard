@@ -182,17 +182,14 @@ message ComposingRequest {
     AppendHyphen append_hyphen = 12;                           // alias for Append("-")
     ReplaceLast replace_last = 13;                             // TPS auto-correct
     DeleteBackward delete_backward = 14;
-    CommitDerived commit_derived = 15;                         // commit tone-marked form
     CommitRaw commit_raw = 16;                                 // commit literal raw input (e.g. English passthrough)
-    SelectSuggestion select_suggestion = 17;                   // commit platform-resolved suggestion text
+    SelectCandidate select_candidate = 17;                   // commit platform-resolved suggestion text
     CommitPreeditThenInsertExternal commit_preedit_then_insert_external = 18;  // atomic emoji/paste insertion
     Reset reset = 19;                                          // teardown / mode switch
 
     // --- Continuous-input ops (30s, v3.5.8) ---
-    EnterContinuous enter_continuous = 30;
     FetchAtPos fetch_at_pos = 31;                              // read-only candidate fetch
     CommitContinuous commit_continuous = 32;
-    ResetContinuous reset_continuous = 33;
 
     // --- Desktop editing keys (40s) ---
     TelexKey telex_key = 40;
@@ -205,9 +202,8 @@ message Append { string char = 1; }
 message AppendHyphen {}
 message ReplaceLast { string replacement = 1; }
 message DeleteBackward {}
-message CommitDerived {}
 message CommitRaw {}
-message SelectSuggestion { string text = 1; }
+message SelectCandidate { string text = 1; }
 message CommitPreeditThenInsertExternal { string text = 1; }
 message Reset {}
 
@@ -228,20 +224,18 @@ message Effect {
     CommitTextReplacingPreedit commit_text_replacing_preedit = 1;
     UpdatePreedit update_preedit = 2;
     ClearPreeditWithoutCommit clear_preedit_without_commit = 3;
-    DeleteBackwardFromDocument delete_backward_from_document = 4;
-    ResetAutocomplete reset_autocomplete = 5;                // clear suggestion list
-    PerformAutocomplete perform_autocomplete = 6;            // run fresh query against current buffer
-    ResetAutocompleteContext reset_autocomplete_context = 7; // reset selection / bigram history
+    ClearCandidates clear_candidates = 5;                // clear suggestion list
+    RefreshCandidates refresh_candidates = 6;            // run fresh query against current buffer
+    ResetCandidateContext reset_candidate_context = 7; // reset selection / bigram history
   }
 }
 
 message CommitTextReplacingPreedit { string text = 1; }   // atomic replace
 message UpdatePreedit { string display = 1; }
 message ClearPreeditWithoutCommit {}
-message DeleteBackwardFromDocument {}
-message ResetAutocomplete {}
-message PerformAutocomplete {}
-message ResetAutocompleteContext {}
+message ClearCandidates {}
+message RefreshCandidates {}
+message ResetCandidateContext {}
 ```
 
 - **Intent set mirrors the platform `ComposingState.Intent`** sealed type exactly:
@@ -251,15 +245,15 @@ message ResetAutocompleteContext {}
   - `Start` vs `Append` — `Append` becomes `Start` when idle but the explicit `Start` is what platform code emits at composition begin (caret reset semantics differ — see iOS `case start` at `ComposingState.swift:25` and Android `data class Start` at `ComposingState.kt:49-51`).
   - `AppendHyphen` — semantic alias kept distinct so platform call-sites don't synthesize `"-"` strings on the wire.
   - `ReplaceLast` — TPS auto-correct (`ActionHandler+KeyActions.swift:37-39` iOS, `TextInputManager.kt:850,855` Android).
-  - `CommitDerived` vs `CommitRaw` — historical split (derived = tone-marked form, raw = literal numeric form). Since R12 (2026-10-01) `CommitDerived` is a no-op and `CommitRaw` (Enter) commits the whole derived composition; the literal-numeric commit went with the single-segment `Composing` phase.
+  - `CommitDerived` vs `CommitRaw` — historical split (derived = tone-marked form, raw = literal numeric form). `CommitDerived` left the wire in R12 (2026-10-01, tag 15 reserved); `CommitRaw` (Enter) commits the whole derived composition, and the literal-numeric commit went with the single-segment `Composing` phase.
   - `CommitPreeditThenInsertExternal` — emoji palette / clipboard paste atomic write (`MediaInputManager.kt:155` Android; iOS emoji delegate). Splitting into commit + insert reintroduces the silent-finish-composing race this intent was added to prevent.
 - Mirrors the `ComposingTransition` / `Effect` shape already in iOS+Android Phase II:
   - **iOS**: `ComposingTransition.swift:18-44` — full `Effect` enum.
   - **Android**: `ime/text/composing/ComposingTransition.kt:32-66` — parallel sealed class shape.
 - `Effect` is **neutral** — no `InputConnection` / `UITextDocumentProxy` / `KeyboardKit` / `Compose` references.
-- The platform interpreter maps document-mutation effects (`CommitTextReplacingPreedit` / `UpdatePreedit` / `ClearPreeditWithoutCommit` / `DeleteBackwardFromDocument`) to `setComposingText` / `commitText` / `deleteSurroundingText` / equivalent, and routes autocomplete-control effects (`ResetAutocomplete` / `PerformAutocomplete` / `ResetAutocompleteContext`) to the platform autocomplete subsystem.
-- `DeleteBackwardFromDocument` was emitted only by the single-segment `Composing` phase's delete-to-empty path; since R12 (2026-10-01) backspacing a composition to empty is the abort trio (the char only lived in the marked region) and the engine never emits it.
-- The 3 autocomplete-control effects MUST be on the wire. Composing emits them as part of normal transitions (typing, commit, reset — see `ComposingTransition.swift:33-43`, `ComposingTransition.kt:55-64`); without them on the wire, a Rust composing slice cannot tell the platform autocomplete subsystem when to clear suggestions, run a fresh query, or reset the bigram history. Candidate queries / context resets would drift even when text effects are correct. The autocomplete subsystem itself stays platform-side; only the cross-subsystem signals cross the FFI.
+- The platform interpreter maps document-mutation effects (`CommitTextReplacingPreedit` / `UpdatePreedit` / `ClearPreeditWithoutCommit`) to `setComposingText` / `commitText` / equivalent, and routes autocomplete-control effects (`ClearCandidates` / `RefreshCandidates` / `ResetCandidateContext`) to the platform autocomplete subsystem.
+- `DeleteBackwardFromDocument` (Effect tag 4) was emitted only by the single-segment `Composing` phase's delete-to-empty path and was removed with it in R12 (2026-10-01; tag reserved): backspacing a composition to empty is the abort trio, since the char only lived in the marked region.
+- The 3 candidate-control effects (`ClearCandidates` / `RefreshCandidates` / `ResetCandidateContext`, named `*Autocomplete*` before R10-b) MUST be on the wire. Composing emits them as part of normal transitions (typing, commit, reset — see `ComposingTransition.swift:33-43`, `ComposingTransition.kt:55-64`); without them on the wire, a Rust composing slice cannot tell the platform autocomplete subsystem when to clear suggestions, run a fresh query, or reset the bigram history. Candidate queries / context resets would drift even when text effects are correct. The autocomplete subsystem itself stays platform-side; only the cross-subsystem signals cross the FFI.
 - `selected_candidate_index` (tag 3) was removed 2026-09-25: with no setter it was always `is_composing ? 0 : -1`, and candidate highlight is platform-owned (iOS derives it from `isComposing`).
 - **Prediction-related effects** (`QueryPredictions`, candidate-list updates) are NOT in this slice — they belong to NextWord.
 
@@ -311,7 +305,7 @@ message CaseResponse {
   - Candidate navigation ownership stays platform-side. `references/khiin-rs/protos/src/command.proto:114-117` validates this pattern: "App should decide how to show and navigate candidates".
   - No layout, styling, KeyboardKit, FlorisBoard types.
   - No platform text-region types (`NSRange`, `ExtractedText`, `TextPosition`).
-- **No candidate ids in the Composing slice.** `SelectSuggestion` carries text the platform already resolved.
+- **No candidate ids in the Composing slice.** `SelectCandidate` carries text the platform already resolved.
 - **No Lexicon / NextWord proto** in this document. This includes prediction queries, prediction results, and candidate-list updates.
 - **No SQLite I/O proto in this document.** User-data SQLite is engine-owned per `.claude/rules/rust-migration-policy.md` §6 (`engine/userdata`); its ops are the separate `UserDataRequest` domain (`engine/protos/proto/user_data.proto`, `docs/architecture/user-data-engine-roadmap.md`) — typed ops, never paths or raw SQL beyond `OpenUserData`. The former platform stores (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`, `NextWord/Repository/*`, etc.) were deleted and appear with `status=rust_shipped` in `migration-inventory.csv`.
 - **No UniFFI signature.** Protobuf-first per the roadmap revision.
@@ -337,4 +331,4 @@ message CaseResponse {
 - `docs/architecture/behavioral-invariants.md:295-309` (§11 settings live-read)
 - `docs/architecture/nextword-engine-boundary.md` §2, §2.4, §3 — generation counter ownership
 - `docs/architecture/composing-state-boundary.md` §11.10 — Android `Effect` divergences
-- `ios/Sources/TaigiKeyboard/Input/Composing/ComposingState.swift:47-49` — `selectSuggestion(String)` shape
+- `ios/Sources/TaigiKeyboard/Input/Composing/ComposingState.swift:47-49` — `selectCandidate(String)` shape

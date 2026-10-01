@@ -56,16 +56,7 @@ final class ClientEffectExecutor: ComposingEffectExecutor {
             // clients render as a visible flicker and undo as two steps.
             client.insertText(text, replacementRange: Self.atInsertionPoint)
 
-        case .deleteBackwardFromDocument:
-            // NAMED CROSS-PLATFORM DIVERGENCE (`cross-platform-alignment.md` §3,
-            // intentional): iOS forwards this to `proxy.deleteBackward()`
-            // because its preedit is real document text. Under IMK the preedit
-            // only ever existed in the marked region, which the preceding
-            // `ClearPreeditWithoutCommit` already removed, so forwarding would
-            // eat a character the user typed before the composition started.
-            Self.logger.debug("deleteBackwardFromDocument ignored — nothing was written to the document")
-
-        case .resetAutocomplete, .performAutocomplete, .resetAutocompleteContext:
+        case .clearCandidates, .refreshCandidates, .resetCandidateContext:
             // macOS has no autocomplete surface yet; the engine emits these
             // unconditionally. Explicitly ignored rather than filtered out at
             // decode time so the case is visible when that surface lands.

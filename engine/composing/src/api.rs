@@ -10,7 +10,7 @@ use thiserror::Error;
 /// Composition phase. `Idle` means no preedit; every composition is
 /// `Continuous { raw, caret, nailed }` (the v3.5.8 multi-segment state) from
 /// its first keystroke — the former single-segment `Composing` phase only
-/// ever lived between that keystroke and the platform's `EnterContinuous`
+/// ever lived between that keystroke and the platform's former `EnterContinuous`
 /// (removed R12, 2026-10-01). A Continuous phase is never empty in both
 /// `raw` and `nailed`.
 ///
@@ -502,12 +502,6 @@ impl From<ComposingResponse> for Applied {
 
 /// What a `ComposingRequest` asks the engine to do. Decoded from
 /// `protos::engine::ComposingRequest::method` inside `requests::handle`.
-/// Wire `ResetContinuous` decodes to [`Intent::Reset`].
-///
-/// `CommitDerived` and `EnterContinuous` are no-ops since R12 (there is no
-/// single-segment phase to commit or promote); they stay decodable for
-/// platforms that still send them. `EnterContinuous` stays a mutating
-/// intent, so a stale generation still resets the engine.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Intent {
     Start {
@@ -521,16 +515,14 @@ pub enum Intent {
         replacement: String,
     },
     DeleteBackward,
-    CommitDerived,
     CommitRaw,
-    SelectSuggestion {
+    SelectCandidate {
         text: String,
     },
     CommitPreeditThenInsertExternal {
         text: String,
     },
     Reset,
-    EnterContinuous,
     /// v3.5.8 Phase 6 — pure read of span-local continuous-input
     /// candidates for the current `Phase::Continuous { raw }` starting
     /// at `position` (always `0` in v3.5.8; non-zero short-circuits
@@ -706,7 +698,7 @@ impl Engine {
     /// `requests::handle`. NOT public API — external callers always go
     /// through `requests::handle`. The user-initiated `Intent::Reset` path
     /// goes through `apply(Intent::Reset, ...)`, which emits the
-    /// `ClearPreeditWithoutCommit + ResetAutocomplete` effects when
+    /// `ClearPreeditWithoutCommit + ClearCandidates` effects when
     /// composing; this helper is silent (no effects) for the
     /// generation-mismatch drop. Call site is `EngineHandle::handle`.
     pub(crate) fn reset(&mut self) {

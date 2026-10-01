@@ -22,10 +22,9 @@ public extension RustEngineBridge {
             case updatePreedit(String)
             case clearPreeditWithoutCommit
             case commitTextReplacingPreedit(String)
-            case deleteBackwardFromDocument
-            case resetAutocomplete
-            case performAutocomplete
-            case resetAutocompleteContext
+            case clearCandidates
+            case refreshCandidates
+            case resetCandidateContext
             /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Maps to
             /// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)`.
             /// Platform delegate forwards to `NextWordController.updateLastSelectedWord`
@@ -342,21 +341,8 @@ public extension RustEngineBridge {
         )
     }
 
-    internal static func composingCommitDerived(
-        settings: EngineSettings,
-        generation: UInt64,
-    ) -> ComposingTransition {
-        composingDispatch(
-            method: .commitDerived(Taigi_Engine_CommitDerived()),
-            op: "composingCommitDerived",
-            generation: generation,
-            config: continuousAppConfig(settings),
-        )
-    }
-
-    // Under `Phase::Continuous` the engine commits the whole composition
-    // (`combined_display(nailed, pending, config)`), not the literal
-    // keystrokes; the composing arm commits `raw` verbatim.
+    // The engine commits the whole composition
+    // (`combined_display(nailed, pending, config)`), not the literal keystrokes.
     internal static func composingCommitRaw(
         settings: EngineSettings,
         generation: UInt64,
@@ -369,18 +355,18 @@ public extension RustEngineBridge {
         )
     }
 
-    // Under `Phase::Continuous` the engine prepends `nailed_prefix(nailed,
-    // config)` to `text`; the composing arm commits `text` verbatim.
-    internal static func composingSelectSuggestion(
+    // The engine prepends `nailed_prefix(nailed, config)` to `text`; Idle
+    // ignores the request.
+    internal static func composingSelectCandidate(
         _ text: String,
         settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
-        var payload = Taigi_Engine_SelectSuggestion()
+        var payload = Taigi_Engine_SelectCandidate()
         payload.text = text
         return composingDispatch(
-            method: .selectSuggestion(payload),
-            op: "composingSelectSuggestion",
+            method: .selectCandidate(payload),
+            op: "composingSelectCandidate",
             generation: generation,
             config: continuousAppConfig(settings),
         )
@@ -412,24 +398,7 @@ public extension RustEngineBridge {
         )
     }
 
-    // MARK: Continuous-input (4 ops) — v3.5.8 Phase 6
-
-    /// `Phase::Composing { raw }` → `Phase::Continuous { raw, committed: [] }`.
-    /// Phase 6 contract: no payload — buffer is whatever earlier `Start` /
-    /// `Append` populated. Engine no-ops on Idle / already-Continuous / empty
-    /// `Composing.raw`. AppConfig is required because the snapshot's preedit
-    /// display goes through `derived_display(raw, config)`.
-    internal static func composingEnterContinuous(
-        settings: EngineSettings,
-        generation: UInt64,
-    ) -> ComposingTransition {
-        composingDispatch(
-            method: .enterContinuous(Taigi_Engine_EnterContinuous()),
-            op: "composingEnterContinuous",
-            generation: generation,
-            config: continuousAppConfig(settings),
-        )
-    }
+    // MARK: Continuous-input (2 ops) — v3.5.8 Phase 6
 
     /// Read-only candidate query for the current `Phase::Continuous { raw }`.
     /// Caller MUST share the active composing-session generation — FetchAtPos
@@ -494,21 +463,6 @@ public extension RustEngineBridge {
         return ContinuousCommitResult(
             transition: synthComposing(payload),
             outcome: ContinuousCommitOutcome(payload.commit),
-        )
-    }
-
-    /// Abort continuous-input. Drops `Phase::Continuous` committed list +
-    /// pending raw, exits to Idle, emits the standard abort effect trio
-    /// (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
-    /// `NextWordClearForNewComposing`). Committed segments stay in the
-    /// document — earlier `CommitTextReplacingPreedit` effects already wrote
-    /// them.
-    static func composingResetContinuous(generation: UInt64) -> ComposingTransition {
-        composingDispatch(
-            method: .resetContinuous(Taigi_Engine_ResetContinuous()),
-            op: "composingResetContinuous",
-            generation: generation,
-            config: nil,
         )
     }
 
@@ -677,10 +631,9 @@ public extension RustEngineBridge {
             case let .updatePreedit(m): return .updatePreedit(m.display)
             case .clearPreeditWithoutCommit_p: return .clearPreeditWithoutCommit
             case let .commitTextReplacingPreedit(m): return .commitTextReplacingPreedit(m.text)
-            case .deleteBackwardFromDocument: return .deleteBackwardFromDocument
-            case .resetAutocomplete: return .resetAutocomplete
-            case .performAutocomplete: return .performAutocomplete
-            case .resetAutocompleteContext: return .resetAutocompleteContext
+            case .clearCandidates_p: return .clearCandidates
+            case .refreshCandidates: return .refreshCandidates
+            case .resetCandidateContext: return .resetCandidateContext
             case let .nextWordUpdateLastSelectedWord(m):
                 return .nextWordUpdateLastSelectedWord(text: m.text, roman: m.roman)
             case let .nextWordWordSelected(m):

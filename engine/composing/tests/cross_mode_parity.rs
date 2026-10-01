@@ -77,7 +77,7 @@ fn lexicon_ready() -> bool {
     })
 }
 
-/// Drive `Start → EnterContinuous → FetchAtPos` for one input in one mode and
+/// Drive `Start → FetchAtPos` for one input in one mode and
 /// return the set of Hanji from COMPLETE single-syllable candidates only
 /// (`consumed_span == (0, len)` + `syllable_count == 1`), dropping the
 /// literal-roman candidate (`hanji == None`, also disabled at the request).

@@ -126,29 +126,24 @@ impl ComposingManager {
         );
     }
 
-    /// Appends one typed character. The engine starts a composition when idle
-    /// (`transition.rs:55`), so there is no separate "begin" call.
+    /// Appends one typed character. The engine starts a composition when idle,
+    /// so there is no separate "begin" call — one engine request per key.
     pub fn append(&mut self, character: &str, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("append");
         let settings = self.current_settings();
         let transition = engine::append(character, &settings, self.current_generation);
         self.apply(transition, executor);
-        self.promote_to_continuous(&settings, executor);
     }
 
     /// Applies one Telex key — a tone letter, `z` or `f` — to the pending
     /// syllable. Shaped like `append` because it is the same step with the
     /// engine deciding what the key writes (`engine/composing/src/telex.rs`):
-    /// an idle `z` starts a composition the way a letter does, and the
-    /// promotion afterwards is what keeps a Telex-typed syllable on the same
-    /// continuous phase an appended one reaches (`ComposingManager.swift`
-    /// `telexKey`).
+    /// an idle `z` starts a composition the way a letter does.
     pub fn telex_key(&mut self, key: &str, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("telexKey");
         let settings = self.current_settings();
         let transition = engine::telex_key(key, &settings, self.current_generation);
         self.apply(transition, executor);
-        self.promote_to_continuous(&settings, executor);
     }
 
     /// Drops the last character of the raw buffer. Ends the composition when
@@ -159,8 +154,8 @@ impl ComposingManager {
         self.apply(transition, executor);
     }
 
-    /// Steps the caret inside the pending tail. Not a buffer change: no
-    /// promotion, and the engine asks for no fetch — the candidates on
+    /// Steps the caret inside the pending tail. Not a buffer change: the
+    /// engine asks for no fetch — the candidates on
     /// screen still describe the same text (`ComposingManager.swift`
     /// `moveCaret`).
     pub fn move_caret(
@@ -312,18 +307,6 @@ impl ComposingManager {
             .next_back()
     }
 
-    /// Promotes the composition into the continuous phase, on the same call
-    /// stack as the character that triggered it: the engine no-ops on an
-    /// empty or already-continuous buffer (`transition.rs:496-502`).
-    fn promote_to_continuous(
-        &mut self,
-        settings: &EngineSettings,
-        executor: &mut dyn ComposingEffectExecutor,
-    ) {
-        let transition = engine::enter_continuous(settings, self.current_generation);
-        self.apply(transition, executor);
-    }
-
     /// Mirror first, then run the effects in the order the engine listed
     /// them. `None` is a round-trip that never reached the engine: nothing to
     /// mirror and nothing to perform.
@@ -371,10 +354,9 @@ impl ComposingManager {
                 Effect::UpdatePreedit { .. }
                 | Effect::ClearPreeditWithoutCommit
                 | Effect::CommitTextReplacingPreedit(_)
-                | Effect::DeleteBackwardFromDocument
-                | Effect::ResetAutocomplete
-                | Effect::PerformAutocomplete
-                | Effect::ResetAutocompleteContext => executor.execute(effect),
+                | Effect::ClearCandidates
+                | Effect::RefreshCandidates
+                | Effect::ResetCandidateContext => executor.execute(effect),
             }
         }
     }

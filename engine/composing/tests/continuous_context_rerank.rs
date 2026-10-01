@@ -109,7 +109,6 @@ fn pending_context_is_the_last_nailed_segment() {
         },
         &config,
     );
-    engine.apply(Intent::EnterContinuous, &config);
     assert_eq!(engine.pending_context(), None, "nothing nailed yet");
     engine.apply(
         Intent::CommitContinuous {

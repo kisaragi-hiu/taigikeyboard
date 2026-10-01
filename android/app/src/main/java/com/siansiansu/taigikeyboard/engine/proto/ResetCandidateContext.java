@@ -6,65 +6,60 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
- * <pre>
- * No-op since R12 (2026-10-01): there is no single-segment phase to commit.
- * Enter is `CommitRaw`.
- * </pre>
- *
- * Protobuf type {@code taigi.engine.CommitDerived}
+ * Protobuf type {@code taigi.engine.ResetCandidateContext}
  */
 @com.google.protobuf.Generated
-public  final class CommitDerived extends
+public  final class ResetCandidateContext extends
     com.google.protobuf.GeneratedMessageLite<
-        CommitDerived, CommitDerived.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.CommitDerived)
-    CommitDerivedOrBuilder {
-  private CommitDerived() {
+        ResetCandidateContext, ResetCandidateContext.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.ResetCandidateContext)
+    ResetCandidateContextOrBuilder {
+  private ResetCandidateContext() {
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -72,24 +67,24 @@ public  final class CommitDerived extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -100,30 +95,25 @@ public  final class CommitDerived extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.CommitDerived prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
-   * <pre>
-   * No-op since R12 (2026-10-01): there is no single-segment phase to commit.
-   * Enter is `CommitRaw`.
-   * </pre>
-   *
-   * Protobuf type {@code taigi.engine.CommitDerived}
+   * Protobuf type {@code taigi.engine.ResetCandidateContext}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.CommitDerived, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.CommitDerived)
-      com.siansiansu.taigikeyboard.engine.proto.CommitDerivedOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.CommitDerived.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.ResetCandidateContext)
+      com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContextOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
 
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.CommitDerived)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.ResetCandidateContext)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -132,7 +122,7 @@ public  final class CommitDerived extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.CommitDerived();
+        return new com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -147,13 +137,13 @@ public  final class CommitDerived extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.CommitDerived> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.CommitDerived.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.CommitDerived>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -173,24 +163,24 @@ public  final class CommitDerived extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.CommitDerived)
-  private static final com.siansiansu.taigikeyboard.engine.proto.CommitDerived DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.ResetCandidateContext)
+  private static final com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext DEFAULT_INSTANCE;
   static {
-    CommitDerived defaultInstance = new CommitDerived();
+    ResetCandidateContext defaultInstance = new ResetCandidateContext();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      CommitDerived.class, defaultInstance);
+      ResetCandidateContext.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.CommitDerived getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<CommitDerived> PARSER;
+  private static volatile com.google.protobuf.Parser<ResetCandidateContext> PARSER;
 
-  public static com.google.protobuf.Parser<CommitDerived> parser() {
+  public static com.google.protobuf.Parser<ResetCandidateContext> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

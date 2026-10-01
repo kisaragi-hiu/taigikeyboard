@@ -1029,8 +1029,8 @@ public final class TaigiInputController: IMKInputController {
         // With the window off nothing is fetched, not merely not shown: a
         // list kept behind no window would turn `isShowingCandidates` on and
         // hand Space and the slot keys to candidates the user cannot see.
-        // The composition itself is untouched — it still promotes to
-        // continuous, and Return writes it as typed (`ComposingKeyIntent`).
+        // The composition itself is untouched — the engine still composes
+        // it, and Return writes it as typed (`ComposingKeyIntent`).
         guard settings.isCandidateWindowEnabled else {
             dismissCandidates()
             return
