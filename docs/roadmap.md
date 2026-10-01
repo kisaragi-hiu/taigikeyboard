@@ -3,14 +3,14 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `release trains`
 > **Status**: Active
-> **Last updated**: 2026-09-30 (mobile v3.6.10 / v3.6.11 rows; bigram LM closed; maintainability audit follow-up in flight). 2026-09-26: Active items all merged — collapsed into Closed phases; design bodies frozen in `docs/reports/2026-09-26-shipped-roadmap-design-notes.md`
+> **Last updated**: 2026-10-01 (maintainability audit follow-up complete). 2026-09-30: mobile v3.6.10 / v3.6.11 rows; bigram LM closed. 2026-09-26: Active items all merged — collapsed into Closed phases; design bodies frozen in `docs/reports/2026-09-26-shipped-roadmap-design-notes.md`
 
 ---
 
 ## Summary
 
 - **Forward-looking work items only.** Shipped detail lives in `docs/releases/<version>/plan.md` + `changelog/mobile-<version>.md` + Claude auto-memory.
-- **Active**: the 2026-09-30 maintainability audit follow-up ([`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md)); pending dogfood is tracked in `docs/architecture/dogfood-checklist.md`.
+- **Active**: none; pending dogfood is tracked in `docs/architecture/dogfood-checklist.md`.
 - **No open deferred TODO**: the keyboard theme picker (the last 2026-06-01 candidate) shipped in v3.6.2; the one design-locked, unscheduled item is the converted-romanization commit (§ Out of scope / deferred).
 - **Release scope / timing / tag is user-gated** per [`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope].
 
@@ -18,9 +18,7 @@
 
 ## Active / In-flight items
 
-- **Maintainability audit follow-up** — PR table R1–R12 + docs drift, status per row in [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md) (source audit: [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md)).
-
-Everything scoped through 2026-09-26 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
+None. Everything scoped through 2026-10-01 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
 ---
 
@@ -90,6 +88,7 @@ Project-specific additions only (branching, sandwich, test scope, admin tier liv
 
 ## Closed phases / shipped audits
 
+- **Maintainability audit follow-up** — COMPLETE 2026-10-01: R1–R12 + docs drift MERGED (#274–#331). PR table: [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md); source audit: [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md).
 - **Bigram language model** — CLOSED 2026-09-30 (USER, after the Android dogfood): P0–P5 MERGED (#267, #268, #270–#272) + the punctuation-context fix #273; P6 not opened, P7 not adopted. `association.bin` v2 word keys shipped in mobile v3.6.11. Design + status: [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md).
 - **User data in the engine** — P0–P9d MERGED 2026-09-26 (#219–#237): the four user-data SQLite stores are engine-owned (`engine/userdata`). Design + PR table: [`architecture/user-data-engine-roadmap.md`](architecture/user-data-engine-roadmap.md). Device dogfood pending (iOS first look OK).
 - **Identical desktop menus; Linux update check added then removed** — phases 1–5 MERGED 2026-09-25 (#175–#178, site #20); Linux half reversed the same day (#193, no update check on Linux). S77. Design: [`reports/2026-09-26-shipped-roadmap-design-notes.md`](reports/2026-09-26-shipped-roadmap-design-notes.md) § Linux update check.
