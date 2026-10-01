@@ -93,7 +93,7 @@ internal fun shouldSplitCombinedCells(
  * [com.siansiansu.taigikeyboard.ime.text.candidates.CandidateClickHandler]
  * tap routing.
  *
- * Per `docs/engine/continuous-input-ranking.md` §10.1.2 (supersedes legacy
+ * Per `docs/engine/continuous-commit-and-display.md` §10.1.2 (supersedes legacy
  * slot-0 model) + §10.3 commit contract, Continuous mode has NO
  * composing-text cell at slot 0. `candidate[0]` is the engine ranker top
  * and the tap commits the document string the engine resolves from

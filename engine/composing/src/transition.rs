@@ -7,7 +7,7 @@
 //!
 //! `Phase::Continuous` (v3.5.8) follows **Model B** (mainstream-aligned —
 //! librime / khiin-rs / MOE / azooKey; see
-//! `docs/engine/continuous-input-ranking.md` §10): nailed segments are **NOT**
+//! `docs/engine/continuous-commit-and-display.md` §10): nailed segments are **NOT**
 //! in the host document. The whole composition — `Σ nailed[i].display_text`
 //! followed by the derived display of the pending `raw` tail — occupies a
 //! single marked / preedit region until a hard finalize (Enter / final-commit
@@ -468,7 +468,7 @@ fn commit_raw(state: &mut EngineState, config: &AppConfig) -> ComposingResponse 
 /// **single terminal** `NextWordWordSelected` for the last "word": the
 /// pending tail when one exists, else the last nailed segment.
 ///
-/// See `docs/engine/continuous-input-ranking.md` §10.3 commit contract
+/// See `docs/engine/continuous-commit-and-display.md` §10.3 commit contract
 /// (Enter commits the whole composition) and §10.7 "Enter after segments
 /// already nailed" row.
 fn commit_raw_continuous(

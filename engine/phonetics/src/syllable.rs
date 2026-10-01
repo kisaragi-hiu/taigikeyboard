@@ -536,7 +536,7 @@ pub fn nasal_oo_alias_spelling(syllable: &str) -> Option<String> {
 /// Used by `engine/build-helpers/fst-builder` `build-syllables` to emit
 /// the `poj:` family of the v3.5.9 B-1 tagged-single-FST syllable
 /// inventory (`syllables.fst`). See
-/// `docs/reports/2026-05-20-v359-b-plan.md` §B-1.
+/// `docs/engine/syllabifier.md` § Family-split rationale.
 pub fn canonicalize_poj_syllable(token: &str) -> Option<(String, String)> {
     let (bare, tone) = strip_tone_mark(token);
     let lowered = bare.to_lowercase();

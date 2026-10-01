@@ -132,7 +132,7 @@ Each is a symptom of four implementations; each is fixed once by the engine stor
 
 Each platform switch carries a dogfood item (`docs/architecture/dogfood-checklist.md`) covering: existing data survives the upgrade (frequency ranking, predictions, custom entries, learned phrases), reset, CSV round-trip, `.taigi` round-trip.
 
-Until P9 merges, new suggestion features land in the engine store only (§6); brainstorm batch A/B waits for the platforms that will use it.
+P9 merged 2026-09-26: new suggestion features land in the engine store only (§6).
 
 ---
 

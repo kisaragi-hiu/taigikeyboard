@@ -2,7 +2,7 @@
 
 > **Type**: Reference — the "read first for architecture" entry point (`AGENTS.md`)
 > **Keywords**: `architecture`, `diagram`, `engine`, `FFI`, `build-pipeline`, `data-flow`, `five platforms`
-> **Related**: data-artifacts-portability.md, build-artifacts.md, ../engine/rust-core-proto.md, ../engine/ffi-safety.md
+> **Related**: data-artifacts-portability.md, build-artifacts.md, ../engine/rust-core-proto.md, ../contributing/rust-ffi-safety.md
 
 ---
 
@@ -157,7 +157,7 @@ sequenceDiagram
     Bridge-->>UI: execute Effects on the text field · render candidates
 ```
 
-The FFI boundary is a single `process_request_bytes` entrypoint per adapter; the proto envelope + per-slice request/response shapes are in [`../engine/rust-core-proto.md`](../engine/rust-core-proto.md); panic / size-cap / generation semantics in [`../engine/ffi-safety.md`](../engine/ffi-safety.md). Composing state machine contract: [`composing-state-boundary.md`](composing-state-boundary.md); next-word contract: [`nextword-engine-boundary.md`](nextword-engine-boundary.md).
+The FFI boundary is a single `process_request_bytes` entrypoint per adapter; the proto envelope + per-slice request/response shapes are in [`../engine/rust-core-proto.md`](../engine/rust-core-proto.md); panic / size-cap / generation semantics in [`../contributing/rust-ffi-safety.md`](../contributing/rust-ffi-safety.md). Composing state machine contract: [`composing-state-boundary.md`](composing-state-boundary.md); next-word contract: [`nextword-engine-boundary.md`](nextword-engine-boundary.md).
 
 ### 4.1 iOS glue chain (the exemplar; `ios-exemplar.md`)
 
@@ -193,5 +193,5 @@ State machine on every platform: the engine's `composing::api::Phase` is `Idle` 
 ## 5. Where to read next
 
 - Cross-platform contract: `behavioral-invariants.md` · glue shape (layers, DI, live-read settings): `ios-exemplar.md` (+ §9 Android deviations) · composing / next-word bindings: `composing-state-boundary.md`, `nextword-engine-boundary.md`.
-- Engine wire: `../engine/rust-core-proto.md`, `../engine/ffi-safety.md` · desktop design records: `macos-roadmap.md`, `windows-roadmap.md`.
+- Engine wire: `../engine/rust-core-proto.md`, `../contributing/rust-ffi-safety.md` · desktop design records: `macos-roadmap.md`, `windows-roadmap.md`.
 - Releasing: `desktop-release.md` (entry), `macos-release.md`, `windows-release.md`, `manual-release-notes.md` · device acceptance: `dogfood-checklist.md`.

@@ -5,7 +5,7 @@
 //! typed `5` was discarded: `create_fst.py` emits only a toneless and a
 //! fully-toned key family per record, so a span with SOME syllables toned
 //! falls back to the toneless key and nothing downstream re-applied the
-//! digit (`docs/reports/2026-09-14-partial-tone-candidate-filter.md`).
+//! digit (`docs/architecture/behavioral-invariants.md` §17 case 3).
 //!
 //! After the fix the toneless lookup stays (there is still no partial-tone
 //! FST family) and a post-lookup [`lexicon::TonePin::TypedTones`] pins

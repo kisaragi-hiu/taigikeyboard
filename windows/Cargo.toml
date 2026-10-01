@@ -90,7 +90,7 @@ unsafe_code = "forbid"
 all = { level = "warn", priority = -1 }
 
 # Unwinding stays ON for the DLL: every COM entry point is a `catch_unwind`
-# boundary (`docs/engine/ffi-safety.md` §2), and `panic = "abort"` would take
+# boundary (`docs/contributing/rust-ffi-safety.md` §1.2), and `panic = "abort"` would take
 # the host process down with the input method. rakukan chose abort and spent
 # a doc page auditing the consequences (`references/rakukan/docs/handoff.md`).
 [profile.release]

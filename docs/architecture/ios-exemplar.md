@@ -352,9 +352,9 @@ The AndroidX `ViewModel` class is for tab / settings app code, not for IME-inter
 
 ## 7. Contract surface — shared-core candidates
 
-The live roster is `../engine/migration-inventory.csv` (one row per symbol; `status` ∈ rust / native / wont_migrate). Historically iOS carried 43 Swift shared-core candidates across Phonetics, Input/TPS, Lexicon, NextWord, Autocomplete, Settings and Logging; the Phonetics, TPS, Composing, NextWord, ranking and case-transform groups migrated to Rust crates and only the Lexicon model / utility files, Settings protocols and `LoggerBackend` remain marked on each platform (16 files each on iOS and Android).
+The live roster is `../engine/migration-inventory.csv` (one row per symbol; `status` ∈ rust / native / wont_migrate). Historically iOS carried 43 Swift shared-core candidates across Phonetics, Input/TPS, Lexicon, NextWord, Autocomplete, Settings and Logging; the Phonetics, TPS, Composing, NextWord, ranking and case-transform groups migrated to Rust crates and only the Lexicon / dictionary model files, Settings types, a few input helpers (`CharacterInputPipeline`, `AutoSpacePunctuation`) and `LoggerBackend` remain marked — 12 files on iOS (`// MARK: - Shared-Core Candidate`) and 14 on Android (`// region Shared-Core Candidate`) as of 2026-10-02; recount with `grep -rl "Shared-Core Candidate"`.
 
-**Contract surface rule**: adding a marker requires the import-purity greps to pass (`docs/contributing/ios-shared-core-candidates.md` §1, `docs/contributing/android-guidelines.md` §1). Removing one requires a written rationale + Codex review.
+**Contract surface rule**: adding a marker requires the import-purity greps to pass (`docs/contributing/ios-architecture.md` §5, `docs/contributing/android-guidelines.md` §1). Removing one requires a written rationale + Codex review.
 
 ---
 

@@ -463,7 +463,7 @@ pub(crate) fn build_continuous_keys(
 /// from S1.
 ///
 /// Interior (`start > 0`) edges are NOT emitted as user-facing keys:
-/// under Model B (`docs/engine/continuous-input-ranking.md`
+/// under Model B (`docs/engine/continuous-commit-and-display.md`
 /// §10.3/§10.4) commit is forward-only `pending[..consumed_bytes]`,
 /// so an independently tappable interior candidate has no
 /// Model-B-consistent commit. S2's whole-sentence walker consumes

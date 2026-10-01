@@ -1,6 +1,6 @@
 # Open-source readiness, best practices and repository layout — audit
 
-Status: **audit only, nothing decided, no round open** (USER 2026-09-24: 「我也想做最佳實踐評估,也review專案資料夾結構,比起新功能,我可能會先針對專案重構,確保遵循open source慣例,其他人可以更容易使用這個repo」).
+Status: **executed** — rounds 0–9 merged (#170–#335; round 9 decided to keep four Cargo workspaces); round 10 and the optional row are listed in `docs/roadmap.md` § Open candidates. Original status: audit only, nothing decided, no round open (USER 2026-09-24: 「我也想做最佳實踐評估,也review專案資料夾結構,比起新功能,我可能會先針對專案重構,確保遵循open source慣例,其他人可以更容易使用這個repo」).
 Companion to `2026-09-24-mobile-smart-suggestions-brainstorm.md` (engine / mobile code-level audit lives there). No release scope implied.
 
 Sources: two read-only passes on `cb1cec63` (new-contributor / community-health audit; folder-structure / build-layout review). Items marked **verified** were re-checked by hand.

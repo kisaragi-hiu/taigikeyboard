@@ -12,7 +12,7 @@ import XCTest
 /// suite, which all cross the same seam.
 final class EngineFfiSmokeTests: XCTestCase {
     /// Negative control, and the macOS side of case T4 in
-    /// `docs/engine/ffi-safety.md` (iOS runs it as
+    /// `docs/contributing/rust-ffi-safety.md` §6 (iOS runs it as
     /// `RustEngineBridgeTests.test_T4_malformedBytes_returnsFailParse`).
     /// The happy path alone cannot tell "the Rust dispatcher answered" from
     /// "something Swift-side handed back a default `Response`": only the Rust

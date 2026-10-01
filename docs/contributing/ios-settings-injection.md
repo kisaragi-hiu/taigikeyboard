@@ -41,6 +41,6 @@ Settings requiring this check: `inputMode`, `isAutoSpaceEnabled`, `isOutputBothS
 ## 6. References
 
 - `docs/contributing/ios-architecture.md` — parent file (layer dependencies, audit checklist)
-- `docs/contributing/ios-shared-core-candidates.md` §1 (Criteria #2) — engine-layer files must not read `*.shared` singletons; this file's `EngineSettingsProvider` is the injection mechanism
+- `docs/contributing/ios-architecture.md` §5 (criterion 2) — engine-layer files must not read `*.shared` singletons; this file's `EngineSettingsProvider` is the injection mechanism
 - `docs/contributing/android-guidelines.md` §6 — Android DataStore + settings access (live-read counterpart)
 - `docs/architecture/ios-exemplar.md` §3 — live-read warning + executor contract

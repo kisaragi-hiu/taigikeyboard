@@ -4,7 +4,7 @@
 //! to the matching module crate (`phonetics`, `composing`, `lexicon`,
 //! `nextword`), re-encodes the response, and returns the byte buffer.
 //!
-//! Wrapped in `catch_unwind` per `docs/engine/ffi-safety.md` §2 so panics
+//! Wrapped in `catch_unwind` per `docs/contributing/rust-ffi-safety.md` §1.2 so panics
 //! anywhere in the decode → dispatch → encode pipeline surface as a
 //! `Response` with `ErrorCode::FailInternal` rather than aborting the host
 //! process. The FFI crates (`swift-ffi`, `android-jni`) wrap this same
@@ -369,7 +369,7 @@ mod tests {
         assert_eq!(error, ErrorCode::FailInvariant as i32);
     }
 
-    /// Mirrors `docs/engine/ffi-safety.md` §7 T1' (library-side panic
+    /// Mirrors `docs/contributing/rust-ffi-safety.md` §6 T1' (library-side panic
     /// isolation). Inject a dispatcher that panics; the same
     /// `catch_unwind` boundary used by `process_request` must convert
     /// the panic into an encoded `Response` carrying `FailInternal`.

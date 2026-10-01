@@ -203,7 +203,7 @@ Implication: every `apply` call on the wrapper side threads `mode` + `toneToggle
 
 ### 11.1 Current Android state (pre-A4-impl)
 
-`android/app/.../ime/text/composing/ComposingManager.kt` is a single `class` with direct `InputConnection` side effects inline. No `Effect` enum, no delegate abstraction, no owned `CoroutineScope`. Background display derivation is driven externally by `CandidateUpdateCoordinator` and applied back via `ComposingManager.applyDerivedDisplay(derivedText, ic)`.
+`android/app/.../ime/text/composing/ComposingManager.kt` is a single `class` with direct `InputConnection` side effects inline. No `Effect` enum, no delegate abstraction, no owned `CoroutineScope`. Background display derivation is driven externally by `CandidateUpdateCoordinator` and applied back via `ComposingManager.applyDerivedDisplay(derivedText, ic)`. (Historical: the state machine has since moved to Rust `engine/composing` and `applyDerivedDisplay` no longer exists; the divergence table below is kept current.)
 
 Observable Android ↔ iOS divergence today:
 
@@ -273,21 +273,11 @@ The correction landed as an **isolated PR before A4-impl** per `docs/contributin
 
 ### 11.7 Clock and settings at the boundary
 
-`ComposingState` is clock-free (the state machine has no time-dependent transitions). Settings enter per §3: wrapper reads `EngineSettingsProvider.current.inputMode` + `.toneToggles` at each `apply(intent)` call. `ToneToggles` already exists at `ime/core/settings/ToneToggles.kt` (data class mirroring iOS). `ToneConverter.convertToToneMarks` currently takes two `Boolean` parameters; A4-impl wraps them at the `ComposingState.derivedDisplay(...)` boundary and updates `ToneConverter`'s signature to accept `ToneToggles` directly.
+The composing state machine is clock-free (no time-dependent transitions). Settings enter per §3: `ComposingManager.kt` reads one `EngineSettingsProvider.current` snapshot per call and passes it with the Rust engine request; tone-mark conversion runs in the engine (the Kotlin `ToneConverter.kt` / `ToneToggles.kt` files this section once described were removed in the Path G migration).
 
 ### 11.8 Shared-core candidate roster delta (Android-side)
 
-A4-impl adds the following Android files to the roster (mirroring §6 iOS columns):
-
-| iOS file (§6) | Android file (target) | Shared-Core Candidate marker? |
-|---|---|---|
-| `Input/Composing/ComposingState.swift` | `ime/text/composing/ComposingState.kt` *(new)* | **Held** — transitively imports `ToneConverter`; marker unlocks when `ToneConverter.kt` is purified (future round) |
-| `Input/Composing/ComposingTransition.swift` | `ime/text/composing/ComposingTransition.kt` *(new)* | Yes — landed by A8-sweep |
-| `Settings/ToneToggles.swift` | `ime/core/settings/ToneToggles.kt` *(already exists, add marker)* | Yes — landed by A8-sweep |
-| `Phonetics/ToneConverter.swift` (parameterized) | `ime/dictionary/ToneConverter.kt` — NOT yet shared-core pure (imports `android.util.Log`, `BuildConfig`). A4-impl signature migration took `ToneToggles`; A8-sweep kept logging intact and applied a `// NOTE: Not shared-core` header. | Deferred to follow-up round (LoggerBackend migration) |
-| `Input/Composing/ComposingManager.swift` (reduced wrapper) | `ime/text/composing/ComposingManager.kt` (reduced wrapper) | No — platform. |
-
-A8-sweep applied the `// region Shared-Core Candidate` header per `docs/contributing/android-guidelines.md` §1 to `ComposingTransition.kt` + `ToneToggles.kt`. `ComposingState.kt` marker is held per Codex pre-review (2026-04-20): marking it would leak a transitive platform dependency through `ToneConverter.kt`.
+Superseded. The A4-impl roster (`ComposingState.kt`, `ComposingTransition.kt`, `ToneToggles.kt`, `ToneConverter.kt`) was deleted when the state machine moved to Rust `engine/composing` (Path G). The only Android composing file left is `ime/text/composing/ComposingManager.kt` (+ `ComposingDelegate`) — the platform wrapper, not a shared-core candidate.
 
 ### 11.9 Out of scope for A4-design
 

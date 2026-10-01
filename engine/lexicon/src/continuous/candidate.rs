@@ -28,7 +28,7 @@ use crate::dictionary_reader::DictionaryRecord;
 /// collision). The legacy custom dict is prefix-visible, so the
 /// partial-prefix path merges too — Continuous must not hide the user's
 /// custom word while they are still typing toward the first syllable
-/// boundary. See `docs/engine/continuous-input-ranking.md` §10.10.
+/// boundary. See `docs/engine/continuous-commit-and-display.md` §10.10.
 ///
 /// A custom entry is synthesized whole-buffer, so the buffer's
 /// [`TonePin`](super::TonePin) applies to it exactly as to a dictionary hit: with the
@@ -192,7 +192,7 @@ pub(super) fn record_to_candidate(
 ///   `score`/`freq` ahead of `source_rank`. This is intentional —
 ///   Item 12's job is duplicate elimination + custom-wins-collision,
 ///   not a global custom-priority tier
-///   (`docs/engine/continuous-input-ranking.md` §10.10).
+///   (`docs/engine/continuous-commit-and-display.md` §10.10).
 /// - `display_text = hanji.unwrap_or(canonical_tl_form(roman, mode))` —
 ///   v3.5.9 B-4 closes the bounded asymmetry the pre-B-4
 ///   `unwrap_or(roman)` contract documented at
@@ -453,7 +453,7 @@ mod item12_custom_dedupe_tests {
     //! (dual `(roman, hanji)` key), D2 (lowest `source_tier_rank`
     //! winner, rank-tie → earlier insertion), D3 (full-buffer span),
     //! D4 (`frequency = 0`, `syllable_count = 1`, `is_custom` drives
-    //! rank 0). Spec: `docs/engine/continuous-input-ranking.md`
+    //! rank 0). Spec: `docs/engine/continuous-commit-and-display.md`
     //! §10.10.
     use super::*;
     use crate::continuous::{

@@ -105,7 +105,7 @@ const DESKTOP_PLATFORM: Platform = if cfg!(target_os = "linux") {
 /// cases the nasal marker (§53) in the preedit, the candidate fetch and the
 /// next-word filter; the nasal switch is inverted on the wire (proto default =
 /// the marker follows the case). The swap flag renders a continuous
-/// composition's nailed prefix (`docs/engine/continuous-input-ranking.md`
+/// composition's nailed prefix (`docs/engine/continuous-commit-and-display.md`
 /// §10.2) and feeds the next-word decide table, where it suppresses recording
 /// for raw-romanization commits (`decide.rs:86`). Sent by every composing op
 /// that renders the composition and by every next-word request, matching iOS

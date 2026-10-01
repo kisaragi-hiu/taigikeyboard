@@ -222,14 +222,9 @@ Constraining rules per phase: P1 `docs/contributing/known-pitfalls.md` § Tests 
 
 ---
 
-## Dogfood items (to add to `docs/architecture/dogfood-checklist.md` when the phase opens)
+## Dogfood items
 
-- **S84 (P5)** — commit 真 (`tsin`), then type `tse` without leaving the field: the candidate list leads with 濟 (a continuation of 真) instead of the context-free 今; type `tse` again after a `。` or a 10 s pause: 今 leads again. Inside one continuous composition, nail 真 then keep typing `tse`: 濟 leads. `taiuan` still yields its two-syllable word (台員 / 台灣) at slot 0 whatever was committed before.
-- **S85 (P4b)** — type a continuous composition of three words after committing a word (e.g. commit 我, then `behtsiahpng` → 欲 食 飯, tapping each candidate); then commit 欲 again: the strip leads with 食 (learned 欲 → 食, a pair only the final commit used to lose). Abort a composition after nailing a segment (backspace it all away): nothing is learned from it.
-- **S83 (P4a)** — commit 食 (TL `tsia̍h`), strip leads with 酒 / 無 / 著 / 到 (word-key corpus pairs), not 飯 / 飽 (食's intra-word continuations); a word the user already learned a continuation for still shows that continuation first; backspace into a committed word still predicts from the last grapheme. Sentences from `corpus/taigi-typing` (`feedback_corpus_sentences_for_dogfood`).
-- Base perf checklist (S1 POJ diacritics, S2 TPS, S3 Hanji candidate scroll) re-run after P3 (larger mmap) and P6 (walker).
-
----
+S83 (P4a), S84 (P5) and S85 (P4b) live in `docs/architecture/dogfood-checklist.md`. Base perf checklist (S1 POJ diacritics, S2 TPS, S3 Hanji candidate scroll) re-runs after any change to the mmap size or the walker.
 
 ## Reference survey (2026-09-28, read-only, `references/`)
 

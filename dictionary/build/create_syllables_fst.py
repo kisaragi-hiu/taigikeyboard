@@ -47,10 +47,9 @@ cannot be recognised as one valid syllable. Tagging the families into
 `tl:` / `poj:` / `tps:` key prefixes in a single FST keeps the storage
 shared (the three syllable inventories overlap heavily by prefix tree)
 while letting `lexicon::SyllableInventory::contains_in(mode, syllable)`
-serve the right family at runtime. Rationale + design alternatives in
-`docs/reports/2026-05-20-v359-b-plan.md` §B-1; the TPS family extension
-follows the same pattern (v3.5.9 D / C-0,
-`memory/project_v359_d_tps_triindex_plan.md`).
+serve the right family at runtime. Rationale: `docs/engine/syllabifier.md`
+§ Family-split rationale; the TPS family extension follows the same
+pattern (v3.5.9 D / C-0).
 
 Consumers
 ---------

@@ -637,7 +637,7 @@ registration, desktop toast requirements).
 |---|---|---|
 | Out-of-process engine host over a named pipe | khiin `engine_coordinator.rs`; rakukan `rakukan-engine-rpc`; PIME | Those engines drag llama.cpp / Python / msvcp into hosts; ours is a few MB of static Rust plus shared mmap. In-proc = no IPC, no ACL, no service lifecycle (Codex F1: conditional CONFIRM). Revisit only if dogfood shows AppContainer hosts matter (W2). |
 | GDI candidate rendering | rakukan `candidate_window.rs:295-400` | No DPI, no private fonts, no dark mode there — all three are macOS parity items. |
-| `panic = "abort"` in the DLL | rakukan `Cargo.toml:55-59` | Every COM entry is a `catch_unwind` boundary per `docs/engine/ffi-safety.md`; abort would take the host down. |
+| `panic = "abort"` in the DLL | rakukan `Cargo.toml:55-59` | Every COM entry is a `catch_unwind` boundary per `docs/contributing/rust-ffi-safety.md` §1.2; abort would take the host down. |
 | TIP spawning the updater from a keystroke | (own first draft) | Codex W9: host policy / security products / process ancestry. Scheduled task instead. |
 | Ctrl+Alt **composing** bindings | (own first draft) | Codex F7: AltGr conflict on non-US layouts — a composing binding stands for as long as it is bound. The GLOBAL tier does allow Ctrl+Alt (USER 2026-08-31): those chords answer only while this TIP is selected, and they are what carries the Mac's ⌃⌘ roster over. |
 | `GUID_TFCAT_TIPCAP_COMLESS`, `IMMERSIVESUPPORT` | khiin/rakukan register all seven | Codex W6: declaring capabilities the TIP does not have. |

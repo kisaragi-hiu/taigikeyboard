@@ -312,7 +312,7 @@ pub struct RawCandidate {
     /// by [`CandidateSortKey::new`] (→ `source_tier_rank(bitmask, is_custom)`
     /// returns rank `0` when `true`, ahead of every `dict.bin` source
     /// tier) and by the `(roman, hanji)` dedupe winner policy
-    /// (`docs/engine/continuous-input-ranking.md` §10.10): on a
+    /// (`docs/engine/continuous-commit-and-display.md` §10.10): on a
     /// duplicate `(roman, hanji)` pair the lowest `source_tier_rank`
     /// survivor wins, so a custom entry always beats a `dict.bin`
     /// duplicate. Internal axis only — NOT emitted on

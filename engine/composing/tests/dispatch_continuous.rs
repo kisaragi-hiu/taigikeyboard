@@ -167,7 +167,7 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
 
 // v3.5.8 Phase 9 Item 11 — hanji guard ported into the engine.
 // Spec: `continuous-candidate-display.md` §15.3.E + §15.6
-// (`hanji_guard_in_engine`) + `continuous-input-ranking.md` §10.7.
+// (`hanji_guard_in_engine`) + `continuous-commit-and-display.md` §10.7.
 // §15.6 nominally places this in the `requests.rs` mod test, but that
 // module doc routes Engine-dependent / degraded-path checks here next
 // to the sibling `decode_fetch_at_pos_*_returns_empty_carrier` tests.

@@ -1,18 +1,54 @@
 # Rust FFI Safety
 
-Mandatory rules for the Rust ↔ platform boundary: FFI surface, domain↔proto layering, `unsafe` discipline, opaque-handle pattern, enforcement hooks. Split out from `docs/contributing/rust-best-practices.md` for focus. General Rust hygiene (workspace, errors, crates, tests, versions) stays in the parent file.
+Mandatory rules for the Rust ↔ platform boundary: the seam as built, panic / thread / error / logging discipline, domain↔proto layering, `unsafe` discipline, the opaque-handle pattern, enforcement hooks and the test contract. Single copy — the former `docs/engine/ffi-safety.md` spec is folded in here. General Rust hygiene (workspace, errors, crates, tests, versions) stays in `docs/contributing/rust-best-practices.md`.
 
-**Active window**: every Rust PR touching `swift-ffi/`, `android-jni/`, `engine/dispatch`, `protos/`, or any domain crate's RPC façade.
+**Active window**: every Rust PR touching `engine/swift-ffi/`, `engine/android-jni/`, `engine/dispatch`, `engine/protos/`, any domain crate's RPC façade, `linux/crates/taigi-linux-ffi/` or a `windows/crates/taigi-windows-tsf/` COM entry.
 
 ## 1. FFI boundary discipline `[S]`
 
-Policy lives here; the technical spec is `docs/engine/ffi-safety.md`. Enforcement:
+### 1.1 The seam as built
 
-- **`std::panic::catch_unwind` wraps every FFI function body.** A panic → `dispatch::encode_error(…, ErrorCode::FailInternal, …)` → protobuf `Response.error` → platform recovers (there is no `EngineError` type; see `swift-ffi/src/lib.rs::process_request_bytes`). Unwind across FFI is undefined behavior in both JNI and C ABI.
-- **Engine is guarded by `Mutex<Engine>`**. Engine state is `Send + !Sync`; the mutex serializes concurrent native calls. `Arc<Mutex<Engine>>` only if the handle is shared across platform threads (usually not needed — one engine per process).
-- **Drop discipline** (applies once a handle crosses the FFI — see §4): every opaque handle exposes an explicit `shutdown(handle)` FFI. Rust side implements `Drop` with the same teardown path. Platform side (Kotlin `use {}` / Swift `deinit`) must call `shutdown`. Two khiin-rs failure modes this rule blocks: (a) Kotlin `EngineManager.kt:48` declares `external fun shutdown(enginePtr: Long)` with no matching Rust `extern fn` in `android/rust/src/lib.rs` — Kotlin link succeeds but runtime call panics; (b) `swift/bridge/src/lib.rs:33-35` defines `EngineBridge { engine_ptr: *mut c_void }` with zero `Drop` impl anywhere in the file — the boxed `Engine` leaks on app teardown.
-- **Error sentinels travel in protobuf**: every FFI return is either a valid protobuf byte buffer carrying `Response.ErrorCode`, or an out-of-band failure (null bytes / negative length) that means "engine is sick, restart this IME session". Never leak Rust error types across the ABI.
-- **Logging bridge**: the `log` crate is the only logging API candidate code sees. Platform adapter (`OSLog` on iOS, `android.util.Log` on Android) is registered once at engine init via `log::set_logger`. Candidate code never imports `OSLog`, `android.util.Log`, or any platform log API.
+- **Engine adapters (iOS, macOS, Android)** — a process-singleton, bytes-in / bytes-out seam. The entry takes only `bytes: &[u8]` and reaches the engine through `EngineHandle::instance()` (`engine/composing/src/handle.rs`); no handle crosses the boundary and there is no shutdown call — the singleton owns its lifetime, and the user-data stores are process-wide in `userdata` (`UserDataHandle`, opened once by `OpenUserData`). Live entry points: `process_request_bytes` / `install_logger_sink` / `set_log_level` / `panic_for_test` / `e2e_trace_open` (`engine/swift-ffi`) and `processRequestBytes` / `registerLogger` / `setLogLevel` / `panicForTest` / `e2eTraceOpen` (`engine/android-jni`). Both call `dispatch::process_request` directly.
+- **Linux Fcitx5 addon** — a C ABI over `taigi-linux-core` (`linux/crates/taigi-linux-ffi`, contract `include/taigikeyboard.h`): opaque handles (`TaigiRuntime`, `TaigiEngine`, `TaigiReply`, `TaigiMenu`), each with a matching `*_free`, accessors instead of shared structs. This is the §4 pattern.
+- **Windows TSF DLL** — every COM entry runs through `windows/crates/taigi-windows-tsf/src/com_guard.rs` (`guarded` / `guarded_hresult`), which turns a panic into `E_FAIL` plus one log line.
+
+### 1.2 Panic discipline — `catch_unwind` mandatory
+
+Every exported function (`#[no_mangle]` / `extern "system"` / `#[swift_bridge::bridge]` method / C ABI entry / COM method) wraps its body in `std::panic::catch_unwind`. Unwinding across a language boundary is undefined behavior on JNI, the C ABI and COM.
+
+- Engine adapters: a caught panic → `dispatch::encode_error(…, ErrorCode::FailInternal, …)` → protobuf `Response.error`. There is no `EngineError` type.
+- Linux C ABI: a panic answers the null / false / zero the header documents and is logged. Windows COM: `E_FAIL` and a log line.
+- `?` is fine inside the closure; the outer `extern fn` never returns a Rust `Result` or `Option`.
+- Unwinding stays on in every crate that hosts a boundary (`panic = "unwind"` in `linux/Cargo.toml`; `windows/Cargo.toml` explains why `abort` would take the host process down).
+- Failure mode blocked: khiin-rs parses JNI request bytes with `.expect(...)` (`references/khiin-rs/android/rust/src/lib.rs:51-56`), so a malformed payload aborts the whole IME process.
+
+### 1.3 Thread safety — `Mutex<Engine>`, never raw pointer + `&mut`
+
+Engine state is `Send + !Sync`; the platform may call concurrently (IME thread, settings push, background refresh). The singleton holds `Mutex<Engine>` and locks it per request — platforms never receive a raw `*mut Engine`, and casting back via `&mut *(ptr as *mut Engine)` is forbidden. `RwLock` is not part of the contract. Failure mode blocked: khiin-rs casts the raw pointer back to `&mut Engine` with no synchronization (`references/khiin-rs/android/rust/src/lib.rs:64`, `references/khiin-rs/swift/bridge/src/lib.rs:51-52`), so two platform calls can alias one `&mut`.
+
+### 1.4 Request size cap
+
+`dispatch::MAX_REQUEST_BYTES` (2 MB) is checked before the request is copied or decoded; over the cap answers `FAIL_INVARIANT`, exactly the cap is accepted.
+
+### 1.5 Error channel — the protobuf envelope
+
+Every FFI return is either (a) valid protobuf bytes carrying `Response.error: ErrorCode` — the platform parses the envelope first — or (b) an out-of-band failure (null / empty / negative length) meaning "engine is sick, restart this IME session". Rust error types never cross the ABI (`docs/contributing/rust-best-practices.md` §2); they convert to `ErrorCode` at the seam.
+
+| Code | Name | Cause |
+|---|---|---|
+| 0 | `OK` | Success |
+| 1 | `FAIL_PARSE` | Malformed bytes |
+| 2 | `FAIL_INTERNAL` | Caught panic |
+| 3 | `FAIL_IO` | DB / file error |
+| 4 | `FAIL_INVARIANT` | Engine invariant violated or request over the cap — surfaced as data, logged, the engine serves the next request |
+
+Source of truth: `engine/protos/proto/envelope.proto` `enum ErrorCode`.
+
+### 1.6 Logging bridge — `log` crate only
+
+- Rust core imports nothing beyond the `log` crate. Forbidden in engine code: `OSLog`, `os_log`, `android.util.Log`, `__android_log_print`, `println!`, `eprintln!`.
+- Each adapter crate defines the `log::Log` implementation that forwards each record into the platform's `LoggerBackend` (`docs/architecture/behavioral-invariants.md` §12). The adapter lives in the adapter crate, never in a domain crate.
+- `log::set_logger` succeeds once per process: registration sits behind a `Once` / `OnceLock` so a second IME session start never panics on `SetLoggerError`. The logger outlives every session.
 
 ## 2. Domain↔proto boundary rule `[R]` `[A]`
 
@@ -44,7 +80,7 @@ mod syllable;
 |---|---|---|
 | `phonetics`, `lexicon`, `composing`, `nextword`, `userdata` (domain) | **Request façade** (`requests.rs`) takes / returns `protos::engine::*` directly. Native-Rust helpers (CLI / test convenience functions) may exist alongside but never grow into a parallel mirror tier. | Implementation modules `mod`-private; one or two `pub mod` façades; `pub use` only for genuine cross-crate symbols. |
 | `engine/dispatch` | Single `process_request(&[u8]) -> Vec<u8>`. Decodes once, routes by `Request.payload` variant to the matching domain crate, encodes once. | Pure routing — no proto↔proto translation, except cross-domain composition only `dispatch` can do (`predict.rs` expands nextword `PredictNext` with a lexicon lookup into `FilterPredictions`; `user_data/with_stores.rs` feeds the `userdata` stores' rows to `composing` / `nextword`). |
-| `swift-ffi`, `android-jni` | Bytes in, bytes out across the FFI seam. `catch_unwind` per §1. | Calls `dispatch::process_request` directly. |
+| `swift-ffi`, `android-jni` | Bytes in, bytes out across the FFI seam. `catch_unwind` per §1.2. | Calls `dispatch::process_request` directly. |
 
 **What this rule excludes.** Native-Rust input/output structs that mirror proto messages, `From<NativeFoo> for protos::engine::Foo` impls, separate per-op entry points in dispatch (`dispatch::process_phonetics`, `dispatch::process_ranking`, …) — all banned. They show up in candidate refactors and they are always extra work for no end-user benefit.
 
@@ -55,13 +91,11 @@ mod syllable;
 - **Every `unsafe` block carries a `// SAFETY:` comment** explaining the invariant that makes the operation sound. The khiin-rs unsafe deref at `references/khiin-rs/swift/bridge/src/lib.rs:52` has no SAFETY note — this pattern is rejected at review.
 - **`unsafe` blocks are confined to FFI marshaling.** No domain logic inside `unsafe`. Target: `unsafe` block contents ≤ 3 lines.
 - **No `transmute` unless absolutely required** — prefer `as` casts, `From`/`Into`, or `#[repr(C)]` layout-compatible structs.
-- **No raw pointer dereferences outside FFI crates.** Domain crates inherit the workspace `unsafe_code = "forbid"` lint. Only `android-jni`, `swift-ffi` and the documented `mmap-host` carve-out may contain `unsafe`.
+- **No raw pointer dereferences outside FFI crates.** Domain crates inherit the workspace `unsafe_code = "forbid"` lint. Only `android-jni`, `swift-ffi`, the documented `mmap-host` carve-out and the desktop boundary crates (`taigi-linux-ffi`, `taigi-windows-tsf`) may contain `unsafe`.
 
 ## 4. Opaque handle pattern `[S]` `[R]`
 
-Today no handle crosses the FFI: engine state is a per-process singleton inside the domain crates (`handle.rs`, `Mutex<Engine>` / `RwLock`), and the FFI surface is `process_request_bytes` plus logger registration. Use the pattern below only if a handle is introduced.
-
-For engines owned on one side of the FFI boundary:
+The engine adapters pass no handle (§1.1). Any boundary that does — today the Linux C ABI — follows this pattern:
 
 ```rust
 #[repr(transparent)]
@@ -88,22 +122,52 @@ pub extern "C" fn engine_shutdown(handle: EngineHandle) {
 }
 ```
 
-Both extern fns wrap their bodies in `catch_unwind` per §1. Every `unsafe` block carries a `// SAFETY:` comment per §3. The handle is `#[repr(transparent)]` so the ABI matches `*mut Engine` exactly.
+Both extern fns wrap their bodies in `catch_unwind` per §1.2. Every `unsafe` block carries a `// SAFETY:` comment per §3. The handle is `#[repr(transparent)]` so the ABI matches `*mut Engine` exactly.
 
-- **Kotlin side**: wrap `jlong` in `@JvmInline value class EngineHandle(val raw: Long)` — type-safe, zero runtime cost.
-- **Swift side**: swift-bridge generates the wrapper; platform holds it via ARC.
+- **Drop discipline**: every handle has an explicit free / shutdown entry matched on both sides; the Rust type implements `Drop` with the full teardown; a null handle is a no-op, never a dereference. Failure modes blocked: khiin-rs Kotlin declares `external fun shutdown(enginePtr: Long)` (`references/khiin-rs/android/app/src/main/kotlin/be/chiahpa/khiin/EngineManager.kt:39-48`) with no matching Rust extern (`references/khiin-rs/android/rust/src/lib.rs:11-79`) — the link succeeds and the call fails at runtime; khiin-rs Swift `EngineBridge` (`references/khiin-rs/swift/bridge/src/lib.rs:33-48`) has no `Drop`, so the boxed engine leaks on every teardown.
+- **Kotlin side**: wrap `jlong` in `@JvmInline value class EngineHandle(val raw: Long)`, freed from `close()` / `onDestroy`.
+- **Swift side**: swift-bridge generates the wrapper; the platform holds it via ARC and frees from `deinit`.
+- **C / C++ side**: the header documents ownership of every returned pointer and which `*_free` releases it.
 - **Never expose the raw pointer to platform code.** The handle is opaque.
 
 ## 5. Enforcement hooks `[A]`
 
-- **Spec docs**: `docs/engine/ffi-safety.md` and `docs/engine/rust-core-proto.md` cite this rules file. Rule deviations in those docs require `// JUSTIFICATION:` prose in-line.
+- **Spec docs**: `docs/engine/rust-core-proto.md` cites this rules file. Rule deviations require `// JUSTIFICATION:` prose in-line at the deviation site.
 - **Every Rust FFI PR** is reviewed against §§1–4 here plus the `docs/contributing/cross-platform-alignment.md` §1c shared-core-candidate equivalence constraint, with the design reviewed before implementation and the diff after. New `unsafe` blocks (§3) always take both reviews; deviations land only with written rationale.
 
-## 6. References
+## 6. Test contract
+
+| ID | Test | Pass condition | Pinned in |
+|---|---|---|---|
+| T1 | Panic at FFI | Forced panic inside a Rust entry → platform receives encoded `FAIL_INTERNAL`; app does not crash | `panic_for_test` / `panicForTest` entries |
+| T1' | Library-side panic | A panicking dispatcher behind the same `catch_unwind` boundary answers `FailInternal` | `engine/dispatch/src/lib.rs` `forced_dispatcher_panic_is_caught_and_returns_fail_internal` |
+| T2 | Session lifecycle | 1000 IME session create / destroy cycles → RSS stable, no growing handle table | — |
+| T3 | Thread safety | Two concurrent requests from different threads → both valid, TSan clean | — |
+| T4 | Malformed protobuf | Invalid bytes → `FAIL_PARSE`, no panic | `engine/dispatch/tests/malformed.rs`; iOS `RustEngineBridgeTests.test_T4_malformedBytes_returnsFailParse`; macOS `EngineFfiSmokeTests` |
+| T5 | Oversized payload | Over `MAX_REQUEST_BYTES` → `FAIL_INVARIANT` before copy / decode; exactly the cap is accepted | `engine/dispatch/tests/oversized.rs`, `engine/dispatch/src/lib.rs` `request_cap_accepts_exactly_the_cap_and_refuses_one_byte_over`; each adapter keeps an over-cap test for its mapping |
+| T6 | Logging round-trip | Rust `log::warn!` reaches the platform sink with category preserved | `engine/dispatch/tests/logging.rs` |
+| T7 | Null handle (handle ABIs only) | Every entry called with a null handle answers its documented sentinel without dereferencing | — |
+| T8 | Double free (handle ABIs only) | Freeing twice is bounded (idempotent or documented invalid); no UB | — |
+| T9 | Call after free (handle ABIs only) | A call after free answers the sentinel without touching freed memory | — |
+
+## 7. What is NOT shared-core
+
+Rust core never sees platform-only surfaces. The authoritative exclude lists live in:
+
+- `docs/architecture/ios-exemplar.md` §1 (layer map), §9.2–§9.4 (Android deviations: live-read, coroutines, InputConnection)
+- `docs/contributing/ios-architecture.md` § Shared-core candidates (criteria + exclusions)
+- `docs/contributing/android-guidelines.md` §1
+- `docs/contributing/cross-platform-alignment.md` §1c
+- `docs/engine/migration-inventory.csv` (filter `status=wont_migrate` for the current exclusion set)
+
+This file does not re-enumerate those symbols; a third copy of the same list would force every expansion to update three places.
+
+## 8. References
 
 - `docs/contributing/rust-best-practices.md` — parent file: workspace, errors, crates, tests, versions, non-goals
 - `docs/contributing/rust-migration-policy.md` — slice migration policy
 - `docs/contributing/cross-platform-alignment.md` §1c, §4.1 — shared-core-candidate constraint + non-goals
-- `docs/engine/ffi-safety.md` — technical spec (this file is the policy)
 - `docs/engine/rust-core-proto.md` — Request/Response schema
+- `references/khiin-rs/khiin/src/engine.rs:57` — `send_command_bytes` single-entry-point shape
+- `references/ChiaKey` `ChiaKeyCore` — the opaque-handle C ABI shape `taigi-linux-ffi` follows
 - Rustonomicon (https://doc.rust-lang.org/nomicon/) — authoritative `unsafe` reference

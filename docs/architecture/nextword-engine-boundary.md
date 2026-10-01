@@ -398,13 +398,11 @@ A5-impl adds the following Android files to the roster (mirroring §8 iOS column
 
 | iOS file (§8) | Android file (target) | Shared-Core Candidate marker? |
 |---|---|---|
-| `NextWord/NextWordEngine.swift` | `ime/core/nextword/NextWordEngine.kt` *(new)* | Yes |
-| `NextWord/NextWordOutcome.swift` | `ime/core/nextword/NextWordOutcome.kt` *(new — holds `NextWordIntent`, `NextWordPersistedState`, `NextWordDecisionInput`, `NextWordOutcome`, `Effect` types)* | Yes |
-| `NextWord/RawNextWordPrediction.swift` | `ime/core/nextword/RawNextWordPrediction.kt` *(new)* | Yes |
+| `NextWord/NextWordEngine.swift`, `NextWordOutcome.swift`, `RawNextWordPrediction.swift` | `ime/core/nextword/NextWordEngine.kt`, `NextWordOutcome.kt`, `RawNextWordPrediction.kt` — all deleted (Path G): the state machine and its types live in Rust `engine/nextword`; `RawNextWordPrediction` survives only as a generated proto message | Was Yes; superseded by the engine |
 | `NextWord/NextWordController.swift` (platform executor) | `ime/text/nextword/NextWordController.kt` (reduced wrapper) | No — platform executor. |
 | `NextWord/Services/NextWordService.swift` (Prediction → DTO mapping) | `ime/dictionary/NextWordService.kt` — both deleted (user-data-engine-roadmap P7b / P8b): the engine reads the learned rows itself and adds the bundled rows in `PredictNext` (R3, 2026-09-25); the clock goes to `nextwordPredictNext` — §13.3 | No — SQLite + file manager (now `engine/userdata`). |
 
-**Post-A5-impl state (2026-04-20)**: the four new files ship the `// region Shared-Core Candidate` header inline — landing them without the header would have required reformatting them again in A8-sweep. The `// CROSS-PLATFORM INVARIANT` comments on `ASSOCIATION_TIMEOUT_MS` + `CONTEXT_TIMEOUT_MS` also land in A5-impl (§13.7 below). A8-sweep remains responsible for retro-fitting markers on pre-existing files that A5 did not touch, and for the broader §5.3 surface audit (CandidateProcessor scoring constants, any additional §11 divergence comments).
+**Post-A5-impl state (2026-04-20, historical — the new files were later deleted, see table)**: the four new files ship the `// region Shared-Core Candidate` header inline — landing them without the header would have required reformatting them again in A8-sweep. The `// CROSS-PLATFORM INVARIANT` comments on `ASSOCIATION_TIMEOUT_MS` + `CONTEXT_TIMEOUT_MS` also land in A5-impl (§13.7 below). A8-sweep remains responsible for retro-fitting markers on pre-existing files that A5 did not touch, and for the broader §5.3 surface audit (CandidateProcessor scoring constants, any additional §11 divergence comments).
 
 ### 13.11 Out of scope for A5-design
 

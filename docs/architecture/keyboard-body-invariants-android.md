@@ -29,7 +29,7 @@
 
 ## Why these invariants exist
 
-Phase D structurally retires the dismiss-bug hazard documented in project memory `project_ime_window_arch.md` (Claude auto-memory). Any drift on these invariants risks resurrecting that class of bugs (off-by-pixel ghost taps, pinned-popup latency drift, lost multi-touch cancellation, navbar-area inset re-tunes that re-introduce `MATCH_PARENT × MATCH_PARENT` + `TOUCHABLE_INSETS_VISIBLE` pairing).
+Phase D structurally retires the IME-window dismiss-bug hazard: `onConfigureWindow` forced to `MATCH_PARENT × MATCH_PARENT` + custom child-position `onComputeInsets` + `TOUCHABLE_INSETS_VISIBLE` — any one is harmless, the three together made the window intermittently dismiss itself in several hosts (`incident-log.md`, PR #179 → #180). Any drift on these invariants risks resurrecting that class of bugs (off-by-pixel ghost taps, pinned-popup latency drift, lost multi-touch cancellation, navbar-area inset re-tunes that re-introduce `MATCH_PARENT × MATCH_PARENT` + `TOUCHABLE_INSETS_VISIBLE` pairing).
 
 ---
 
@@ -57,7 +57,7 @@ The bottom padding of the keyboard body equals `max(navigationBars.bottom, manda
 
 ### `INVARIANT_keyboard_navbar_dismiss_bug_stays_resolved`
 
-Opening the IME in Discord, Chrome, and any default `WRAP_CONTENT`-host app does not cause an "open then immediately dismiss" cycle. This is the regression surface for the `project_ime_window_arch.md` 3-element hazard (`onConfigureWindow` overridden to `MATCH_PARENT × MATCH_PARENT` + custom child-position insets + `TOUCHABLE_INSETS_VISIBLE`). Phase D removed the `inner_input_view_container.setPadding` workaround; `InputView.onApplyWindowInsets` now derives the `WindowInsets`-based bottom padding declaratively (see `INVARIANT_keyboard_navbar_inset_padding_factor`), applied through the Compose `KeyboardImeRoot`.
+Opening the IME in Discord, Chrome, and any default `WRAP_CONTENT`-host app does not cause an "open then immediately dismiss" cycle. This is the regression surface for the 3-element IME-window hazard (`onConfigureWindow` overridden to `MATCH_PARENT × MATCH_PARENT` + custom child-position insets + `TOUCHABLE_INSETS_VISIBLE`). Phase D removed the `inner_input_view_container.setPadding` workaround; `InputView.onApplyWindowInsets` now derives the `WindowInsets`-based bottom padding declaratively (see `INVARIANT_keyboard_navbar_inset_padding_factor`), applied through the Compose `KeyboardImeRoot`.
 
 ### `INVARIANT_keyboard_action_cancel_unconditional_cleanup`
 
@@ -94,6 +94,6 @@ A keyboard press is initiated only on `ACTION_DOWN` / `ACTION_POINTER_DOWN`. If 
 ## Cross-references
 
 - Parent doc (cross-platform invariants §1–§15): `behavioral-invariants.md`.
-- Architectural context for the dismiss-bug class: project memory `project_ime_window_arch.md` (Claude auto-memory, local-only).
+- Architectural context for the dismiss-bug class: `incident-log.md` (PR #179 → #180) and `docs/contributing/known-pitfalls.md` (platform-default IME insets; reference `references/aiongtaigi-sushi` / `references/florisboard`).
 - Layout solver pinned tests: `KeyboardLayoutSolverTest` (Android JVM unit).
 - AOSP LatinIME parity reference: `PointerTracker.onMoveEvent` (no MOVE-driven press promotion).

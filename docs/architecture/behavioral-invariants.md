@@ -4,7 +4,7 @@
 
 **Purpose**: enumerate the cross-platform behaviors that the engine — Rust crates plus surviving platform glue — must uphold on every platform: iOS, Android, macOS (IMKit), Windows (TSF), Linux (Fcitx5 + IBus).
 
-**Scope boundary**: this doc captures *cross-platform behavior* only. Architecture purity (DI, ObservableObject, singletons, candidate-purity criteria) lives in `docs/contributing/ios-shared-core-candidates.md` + `docs/contributing/cross-platform-alignment.md`. The current Rust / pending / wont-migrate inventory is `docs/engine/migration-inventory.csv`. Data-artifact portability (`dictionary.fst`, `dictionary.bin`, `association.bin`, SQLite user data) lives in `data-artifacts-portability.md`. Android-only keyboard body invariants (touch, popup, window insets) live in [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md).
+**Scope boundary**: this doc captures *cross-platform behavior* only. Architecture purity (DI, ObservableObject, singletons, candidate-purity criteria) lives in `docs/contributing/ios-architecture.md` §5 + `docs/contributing/cross-platform-alignment.md`. The current Rust / pending / wont-migrate inventory is `docs/engine/migration-inventory.csv`. Data-artifact portability (`dictionary.fst`, `dictionary.bin`, `association.bin`, SQLite user data) lives in `data-artifacts-portability.md`. Android-only keyboard body invariants (touch, popup, window insets) live in [`keyboard-body-invariants-android.md`](keyboard-body-invariants-android.md).
 
 **Implementation pointer**: most "Scope" lines below name the Rust crate that now owns the behavior plus the cross-platform bridge call. Where a behavior is partly platform-side (UI / OS backup policy / KeyboardKit / IME glue), both halves are listed. The user-data SQLite stores are engine-owned (`engine/userdata`, `docs/architecture/user-data-engine-roadmap.md`).
 
@@ -1333,5 +1333,5 @@ The 2026-09 refactor round (old #706–#717, behavior-frozen) found these diverg
 ## Cross-references
 
 - Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
-- Per-platform criteria + exclusions: `docs/contributing/ios-shared-core-candidates.md` §1, `docs/contributing/android-guidelines.md` §1.
+- Per-platform criteria + exclusions: `docs/contributing/ios-architecture.md` §5, `docs/contributing/android-guidelines.md` §1.
 - Data-artifact portability (`dictionary.fst` / `.bin` / SQLite user data): `docs/architecture/data-artifacts-portability.md`.

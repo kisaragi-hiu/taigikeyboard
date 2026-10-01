@@ -1,6 +1,6 @@
 # 候選詞顯示 (candidate display) modes — research: 漢羅並排 · 漢羅濫 · 羅馬字
 
-> **Type**: Report (dated snapshot) — research only, **nothing implemented**
+> **Type**: Report (dated snapshot) — the Candidate Display picker it researched shipped (see Status); §14–§16 spelling correction stays future reference
 > **Keywords**: `候選詞顯示`, `漢羅並排`, `漢羅合用`, `羅馬字模式`, `漢羅齊出` (former name), `台語拼音校正`, `hanlo`, `isTranslateSwapped`, `outputBothScripts`, `CandidateCellContent`, `CandidateCellHelper`, `SmartbarCandidateStrip`, `EnglishCandidateStrip`, `§42`, `§34`, `dedupe_by_roman_hanji_span`, `corrector`, `Levenshtein`
 > **Date**: 2026-08-30 (Part I) / 2026-09-01 (Part II)
 > **Platforms named by USER**: Part I (漢羅合用): iOS, Android, macOS (Windows not named — Q8). Part II (羅馬字): **iOS, Android, macOS, Windows** (USER 2026-09-01; candidate window kept on all platforms per the final decision — §12).

@@ -1592,7 +1592,7 @@ fn partial_prefix_coverage_kind_zero_unchanged_on_full_syllable_path() {
 // ---------------------------------------------------------------------------
 // v3.5.8 Phase 9 Item 12 — custom_dictionary.db merge + (roman, hanji)
 // dedupe end-to-end through `fetch_candidates_for_keys_with_barriers`. Spec
-// `docs/engine/continuous-input-ranking.md` §10.10 +
+// `docs/engine/continuous-commit-and-display.md` §10.10 +
 // `docs/engine/continuous-candidate-display.md` §15.
 // ---------------------------------------------------------------------------
 

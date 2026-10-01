@@ -101,8 +101,7 @@
 // `docs/contributing/cross-platform-alignment.md` §3a — platforms mirror them and the
 // `pub` surface is part of the contract. The walker constants here are
 // `pub(crate)`, engine-only (no platform sees them), and stay with the cost
-// model they parameterize. v3.5.9 A3 reframe locks this in (see
-// `docs/reports/2026-05-18-v358-refactor-design-spec.md` §3A.1).
+// model they parameterize (v3.5.9 A3 reframe).
 
 /// Total corpus frequency mass — the denominator that turns a raw
 /// `DictionaryRecord.frequency` into a corpus probability

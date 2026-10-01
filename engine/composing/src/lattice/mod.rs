@@ -9,7 +9,7 @@
 //! the user can see, tap, or commit changes in S1.
 //!
 //! Interior (`start > 0`) edges are NOT emitted as user-facing keys.
-//! Under Model B (`docs/engine/continuous-input-ranking.md`
+//! Under Model B (`docs/engine/continuous-commit-and-display.md`
 //! §10.3/§10.4) commit is forward-only `pending[..consumed_bytes]`,
 //! so there is no Model-B-consistent commit for an independently
 //! tappable interior candidate. S2 therefore does **not** add a

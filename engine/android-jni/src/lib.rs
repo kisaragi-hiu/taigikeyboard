@@ -3,7 +3,7 @@
 //! `JavaVM` + `Global<JClass<'static>>` reference to the `RustEngineBridge`
 //! class.
 //!
-//! Per `docs/engine/ffi-safety.md` §2, every exported `extern "system"` body
+//! Per `docs/contributing/rust-ffi-safety.md` §1.2, every exported `extern "system"` body
 //! is run inside [`EnvUnowned::with_env`], which wraps the closure in
 //! [`std::panic::catch_unwind`] so panics never unwind across the JNI
 //! boundary. Per plan v3 §B3 + plan v4 §R3-H2 the JNI body length-checks the

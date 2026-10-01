@@ -18,8 +18,7 @@
 //! (`chit8`/`tsit8`, `goa2`/`gua2`, `toa7`/`tua7`). The continuous
 //! POJ buffer needs to recognise `chiah` as one valid syllable, which
 //! a single TL-folded inventory cannot do without conflating boundaries.
-//! Design + alternatives in `docs/reports/2026-05-20-v359-b-plan.md`
-//! §B-1.
+//! Rationale: `docs/engine/syllabifier.md` § Family-split rationale.
 
 use fst::Set;
 use mmap_host::MmapHandle;

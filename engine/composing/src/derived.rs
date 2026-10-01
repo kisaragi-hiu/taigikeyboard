@@ -6,7 +6,7 @@
 //! plan §3.2a.
 //!
 //! This is the rendering primitive behind [`crate::api::Phase::raw_input`] —
-//! see `docs/engine/continuous-input-ranking.md` §10.2 / §10.3 clarification β
+//! see `docs/engine/continuous-commit-and-display.md` §10.2 / §10.3 clarification β
 //! for the `rawInput` contract. User-typed hyphens are preserved as conversion
 //! boundaries (the tone-mark chain splits on `-`); the engine does NOT validate
 //! whether each chunk is a real syllable, and does not insert hyphens on its

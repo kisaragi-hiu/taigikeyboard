@@ -67,7 +67,7 @@ The inventory does **not** expose `valid_span_endings` / `span_min_syllable_coun
 
 **Key families.** Each phonotactically valid syllable appears as **two keys per family** — numeric (`tl:tsua7`) and toneless (`tl:tsua`) — under one of three prefixes: `tl:` (POJ rows folded to TL), `poj:` (POJ rows kept as POJ ASCII), `tps:` (Bopomofo).
 
-**Family-split rationale (v3.5.9 B-1).** ~80,000 of ~159,000 dictionary rows have `tl_num != poj_num` (`chit8`/`tsit8`, `goa2`/`gua2`). A single TL-folded inventory loses POJ-side syllable boundaries, so a continuous POJ buffer like `chiah` could not be recognized as one valid syllable. Tagging all families into one FST keeps storage shared (prefix-tree overlap) while `contains_in(mode, …)` serves the correct family. Design + alternatives: `docs/reports/2026-05-20-v359-b-plan.md` §B-1; the TPS family was added in v3.5.9 D / C-0.
+**Family-split rationale (v3.5.9 B-1).** ~80,000 of ~159,000 dictionary rows have `tl_num != poj_num` (`chit8`/`tsit8`, `goa2`/`gua2`). A single TL-folded inventory loses POJ-side syllable boundaries, so a continuous POJ buffer like `chiah` could not be recognized as one valid syllable. Tagging all families into one FST keeps storage shared (prefix-tree overlap) while `contains_in(mode, …)` serves the correct family. The TPS family was added in v3.5.9 D / C-0.
 
 ---
 
