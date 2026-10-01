@@ -7,9 +7,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Clear all state (mode switch, teardown). User-initiated; emits
- * `[ClearPreeditWithoutCommit, ResetAutocomplete]` if was composing,
- * `[]` if was Idle.
+ * Clear all state (mode switch, teardown). User-initiated; emits the abort
+ * trio `[ClearPreeditWithoutCommit, ResetAutocomplete,
+ * NextWordClearForNewComposing]` if composing, `[]` if Idle. Nothing reaches
+ * the document.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.Reset}
@@ -107,9 +108,10 @@ public  final class Reset extends
 
   /**
    * <pre>
-   * Clear all state (mode switch, teardown). User-initiated; emits
-   * `[ClearPreeditWithoutCommit, ResetAutocomplete]` if was composing,
-   * `[]` if was Idle.
+   * Clear all state (mode switch, teardown). User-initiated; emits the abort
+   * trio `[ClearPreeditWithoutCommit, ResetAutocomplete,
+   * NextWordClearForNewComposing]` if composing, `[]` if Idle. Nothing reaches
+   * the document.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.Reset}

@@ -439,9 +439,10 @@ public nonisolated struct Taigi_Engine_ReplaceLast: Sendable {
   public init() {}
 }
 
-/// Delete one grapheme. Empties → Idle. iOS emits
-/// `DeleteBackwardFromDocument`; Android wrapper routes 1-char-empty through
-/// `Reset` instead (`composing-slice-plan.md §5b.1`).
+/// Delete one grapheme before the caret. Emptying the composition exits to
+/// Idle with the abort trio; nothing is deleted from the document (the
+/// char only lived in the marked region). Pending empty with segments
+/// nailed → unnails the last one.
 public nonisolated struct Taigi_Engine_DeleteBackward: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -452,7 +453,8 @@ public nonisolated struct Taigi_Engine_DeleteBackward: Sendable {
   public init() {}
 }
 
-/// Commit the tone-marked derived form to the document.
+/// No-op since R12 (2026-10-01): there is no single-segment phase to commit.
+/// Enter is `CommitRaw`.
 public nonisolated struct Taigi_Engine_CommitDerived: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -463,8 +465,8 @@ public nonisolated struct Taigi_Engine_CommitDerived: Sendable {
   public init() {}
 }
 
-/// Commit the literal raw input (bypass tone conversion). Used for
-/// Enter-at-index-0 / English passthrough.
+/// Enter: commit the whole composition (nailed segments + the derived
+/// pending tail, TPS separator markers dropped) to the document.
 public nonisolated struct Taigi_Engine_CommitRaw: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -504,9 +506,10 @@ public nonisolated struct Taigi_Engine_CommitPreeditThenInsertExternal: Sendable
   public init() {}
 }
 
-/// Clear all state (mode switch, teardown). User-initiated; emits
-/// `[ClearPreeditWithoutCommit, ResetAutocomplete]` if was composing,
-/// `[]` if was Idle.
+/// Clear all state (mode switch, teardown). User-initiated; emits the abort
+/// trio `[ClearPreeditWithoutCommit, ResetAutocomplete,
+/// NextWordClearForNewComposing]` if composing, `[]` if Idle. Nothing reaches
+/// the document.
 public nonisolated struct Taigi_Engine_Reset: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -517,12 +520,9 @@ public nonisolated struct Taigi_Engine_Reset: Sendable {
   public init() {}
 }
 
-/// v3.5.8 Phase 6 — transition `Phase::Composing { raw }` → `Phase::Continuous
-/// { raw, committed: [] }`. No payload: the buffer is already populated by
-/// prior `Start` / `Append` calls. No-op when state is Idle / Continuous or
-/// when the existing `Composing.raw` is empty (matches Phase-4 strict
-/// precondition pinned at `engine/composing/src/transition.rs:484-490`).
-/// Mode comes from `Request.config_snapshot.input_mode`.
+/// No-op since R12 (2026-10-01): the first keystroke already composes in
+/// `Phase::Continuous`. Still a mutating request, so a stale generation
+/// resets the engine.
 public nonisolated struct Taigi_Engine_EnterContinuous: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -717,12 +717,9 @@ public nonisolated struct Taigi_Engine_CommitResolution: Sendable {
   public init() {}
 }
 
-/// v3.5.8 Phase 6 — abort continuous-input. Drops `Phase::Continuous`
-/// committed list and pending raw, exits to Idle, and emits the standard
-/// abort effect trio (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
-/// `NextWordClearForNewComposing`). Committed segments stay in the
-/// document (already inserted via earlier `CommitTextReplacingPreedit`
-/// effects).
+/// Same as `Reset` since R12 (decodes to it): drops the nailed segments and
+/// the pending tail, exits to Idle with the abort trio. Nailed segments were
+/// never in the document (Model B), so nothing is written.
 public nonisolated struct Taigi_Engine_ResetContinuous: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

@@ -52,7 +52,9 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
         },
         Intent::Append { ch } => match &state.phase {
             Phase::Idle => begin_composition_or_insert_leading_hyphens(state, ch, config),
-            Phase::Continuous { .. } => append_continuous(state, ch, config),
+            Phase::Continuous { raw, caret, nailed } => {
+                append_continuous(state, raw.clone(), *caret, nailed.clone(), &ch, config)
+            }
         },
         Intent::AppendHyphen => {
             return apply(
@@ -70,12 +72,20 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
         Intent::CommitDerived | Intent::EnterContinuous => noop(state, config),
         Intent::CommitRaw => commit_raw(state, config),
         Intent::SelectSuggestion { text } => match &state.phase {
-            Phase::Continuous { .. } => select_suggestion_under_continuous(state, text, config),
+            Phase::Continuous { nailed, .. } => {
+                select_suggestion_under_continuous(state, nailed.clone(), text, config)
+            }
             Phase::Idle => noop(state, config),
         },
         Intent::CommitPreeditThenInsertExternal { text } => match &state.phase {
-            Phase::Continuous { .. } => {
-                commit_preedit_then_insert_external_under_continuous(state, text, config)
+            Phase::Continuous { raw, nailed, .. } => {
+                commit_preedit_then_insert_external_under_continuous(
+                    state,
+                    raw.clone(),
+                    nailed.clone(),
+                    text,
+                    config,
+                )
             }
             Phase::Idle => insert_external_when_idle(state, text, config),
         },
@@ -613,6 +623,7 @@ fn start_under_continuous(
 /// (nailed-in-doc + text). Then exit Continuous.
 fn select_suggestion_under_continuous(
     state: &mut EngineState,
+    nailed: Vec<NailedSegment>,
     text: String,
     config: &AppConfig,
 ) -> ComposingResponse {
@@ -621,10 +632,7 @@ fn select_suggestion_under_continuous(
         // SelectSuggestion-on-Idle being a no-op.
         return reset(state, config);
     }
-    let Phase::Continuous { nailed, .. } = &state.phase else {
-        return noop(state, config);
-    };
-    let mut combined = nailed_prefix(nailed, config);
+    let mut combined = nailed_prefix(&nailed, config);
     combined.push_str(&text);
     let mut effects = finalize_effects(combined);
     effects.push(next_word_clear_for_new_composing());
@@ -639,16 +647,15 @@ fn select_suggestion_under_continuous(
 /// exits Continuous. Empty `text` collapses to `noop`.
 fn commit_preedit_then_insert_external_under_continuous(
     state: &mut EngineState,
+    raw: String,
+    nailed: Vec<NailedSegment>,
     external: String,
     config: &AppConfig,
 ) -> ComposingResponse {
     if external.is_empty() {
         return noop(state, config);
     }
-    let Phase::Continuous { raw, nailed, .. } = &state.phase else {
-        return noop(state, config);
-    };
-    let mut combined = combined_display(nailed, raw, config);
+    let mut combined = combined_display(&nailed, &raw, config);
     combined.push_str(&external);
     let mut effects = finalize_effects(combined);
     effects.push(next_word_clear_for_new_composing());
@@ -813,15 +820,19 @@ fn commit_continuous(
 /// `Append { ch }` under `Phase::Continuous`. Appends to the pending tail;
 /// nailed segments are untouched. The preedit re-renders the **whole
 /// composition** (Model B). Empty `ch` collapses to noop.
-fn append_continuous(state: &mut EngineState, ch: String, config: &AppConfig) -> ComposingResponse {
-    let Phase::Continuous { raw, caret, nailed } = &state.phase else {
-        return noop(state, config);
-    };
+fn append_continuous(
+    state: &mut EngineState,
+    pending: String,
+    caret: usize,
+    nailed: Vec<NailedSegment>,
+    ch: &str,
+    config: &AppConfig,
+) -> ComposingResponse {
     if ch.is_empty() {
         return noop(state, config);
     }
-    let (new_pending, caret) = insert_at_caret(raw, *caret, &ch);
-    step_continuous(state, new_pending, caret, nailed.clone(), config)
+    let (new_pending, caret) = insert_at_caret(&pending, caret, ch);
+    step_continuous(state, new_pending, caret, nailed, config)
 }
 
 // ---- Effect constructors ------------------------------------------

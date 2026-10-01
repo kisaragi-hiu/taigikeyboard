@@ -7,12 +7,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * v3.5.8 Phase 6 — abort continuous-input. Drops `Phase::Continuous`
- * committed list and pending raw, exits to Idle, and emits the standard
- * abort effect trio (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
- * `NextWordClearForNewComposing`). Committed segments stay in the
- * document (already inserted via earlier `CommitTextReplacingPreedit`
- * effects).
+ * Same as `Reset` since R12 (decodes to it): drops the nailed segments and
+ * the pending tail, exits to Idle with the abort trio. Nailed segments were
+ * never in the document (Model B), so nothing is written.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.ResetContinuous}
@@ -110,12 +107,9 @@ public  final class ResetContinuous extends
 
   /**
    * <pre>
-   * v3.5.8 Phase 6 — abort continuous-input. Drops `Phase::Continuous`
-   * committed list and pending raw, exits to Idle, and emits the standard
-   * abort effect trio (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
-   * `NextWordClearForNewComposing`). Committed segments stay in the
-   * document (already inserted via earlier `CommitTextReplacingPreedit`
-   * effects).
+   * Same as `Reset` since R12 (decodes to it): drops the nailed segments and
+   * the pending tail, exits to Idle with the abort trio. Nailed segments were
+   * never in the document (Model B), so nothing is written.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.ResetContinuous}

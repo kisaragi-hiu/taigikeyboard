@@ -378,7 +378,7 @@ fn reset_after_a_nail_discards_the_whole_composition() {
 }
 
 #[test]
-fn reset_under_continuous_emits_nextword_clear_in_addition_to_composing_pair() {
+fn reset_under_continuous_emits_the_abort_trio() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(Intent::Reset, &config_tl());
     assert_kinds(

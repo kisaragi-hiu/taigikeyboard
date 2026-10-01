@@ -7,7 +7,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Commit the tone-marked derived form to the document.
+ * No-op since R12 (2026-10-01): there is no single-segment phase to commit.
+ * Enter is `CommitRaw`.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.CommitDerived}
@@ -105,7 +106,8 @@ public  final class CommitDerived extends
 
   /**
    * <pre>
-   * Commit the tone-marked derived form to the document.
+   * No-op since R12 (2026-10-01): there is no single-segment phase to commit.
+   * Enter is `CommitRaw`.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.CommitDerived}
