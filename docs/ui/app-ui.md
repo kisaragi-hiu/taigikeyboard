@@ -126,7 +126,7 @@ Previous Debug screens (`DebugView`, `DebugActivity`) were removed and replaced 
 - iOS: `Strings/Generated/{StringKey,GeneratedTaigiStrings,StringResolverFormats}.swift` + `Localizable.xcstrings`; resolved at runtime by `Strings/StringResolver.swift` against `Strings/DisplayLanguageStore.swift`.
 - Android: `i18n/generated/{L10n,StringKey,GeneratedTaigiStrings,StringResolverFormats}.kt`.
 
-No hand-written `*Texts.swift` / `*Texts.kt` facades remain. Home-tab feature / FAQ content is a separate nested schema under `i18n/content/` (see above). Key-management rules: `.claude/rules/i18n.md`; invariants §37-§39.
+No hand-written `*Texts.swift` / `*Texts.kt` facades remain. Home-tab feature / FAQ content is a separate nested schema under `i18n/content/` (see above). Key-management rules: `docs/contributing/i18n.md`; invariants §37-§39.
 
 ---
 

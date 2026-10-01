@@ -76,7 +76,7 @@ iOS `Settings/SharedSettings.swift` (`SettingsKey` definitions + `resetToDefault
 
 - **New normal permission** (e.g. `VIBRATE`, `INTERNET`) → auto-granted at install, silent on upgrade. SAFE (but list it — INTERNET specifically warrants a privacy/security glance given this keyboard's no-network posture).
 - **New dangerous permission** (`READ_CONTACTS`, `RECORD_AUDIO`, …) → upgrade shows a prompt / the feature is dead until granted → BLOCKING or BEHAVIOR-CHANGE depending on whether a core flow depends on it.
-- **`android:exported` flipped to true**, or an exported component losing its `android:permission` (`BIND_INPUT_METHOD`) → security regression → BLOCKING. Cross-check `.claude/rules/security-rules.md` § Exported Components.
+- **`android:exported` flipped to true**, or an exported component losing its `android:permission` (`BIND_INPUT_METHOD`) → security regression → BLOCKING. Cross-check `docs/contributing/security-rules.md` § Exported Components.
 - **`allowBackup`** flipped → backup-posture change (`INVARIANT_USER_DATA_EXCLUDED_FROM_OS_BACKUP` §29) → BEHAVIOR-CHANGE.
 
 ### 5. Removed / renamed bundled assets
@@ -99,7 +99,7 @@ For each deleted asset, ask: **does any persisted user state reference it by an 
 ### 7. Version monotonicity (store gate)
 
 - **Android** `app/build.gradle.kts` `versionCode` — must strictly increase or the store / installer refuses the update. This repo computes `versionCode = (System.currentTimeMillis()/60_000)` → monotonic by construction; just confirm the expression is unchanged. A hardcoded or decreased versionCode → BLOCKING.
-- **iOS** `MARKETING_VERSION` in `project.pbxproj` — must increase for App Store; `make version-mobile x.y.z` writes it on iOS + Android together (the mobile train). macOS + Windows + Linux are the separately numbered **desktop train** (`make version-desktop x.y.z`; `CFBundleVersion` = `MAJOR*10000 + MINOR*100 + PATCH` must increase per shipped pkg). A desktop audit takes `desktop-<version>` (the tag a desktop release creates in this repo since 2026-09-09) or, for anything older, a main-repo commit — the earlier `macos-v*` / `windows-v*` tags live on the website repo and are not in this history. `CURRENT_PROJECT_VERSION` stays 1 by design — App Store Connect numbers a marketing version's uploads itself — so a build number that did NOT move is not a finding. **pbxproj is user-owned** (`.claude/rules/ios-guidelines.md`) — do NOT edit it; read both targets (app + keyboard-extension), and when a bump is needed name the `make version-mobile` / `make version-desktop` command as a user action item.
+- **iOS** `MARKETING_VERSION` in `project.pbxproj` — must increase for App Store; `make version-mobile x.y.z` writes it on iOS + Android together (the mobile train). macOS + Windows + Linux are the separately numbered **desktop train** (`make version-desktop x.y.z`; `CFBundleVersion` = `MAJOR*10000 + MINOR*100 + PATCH` must increase per shipped pkg). A desktop audit takes `desktop-<version>` (the tag a desktop release creates in this repo since 2026-09-09) or, for anything older, a main-repo commit — the earlier `macos-v*` / `windows-v*` tags live on the website repo and are not in this history. `CURRENT_PROJECT_VERSION` stays 1 by design — App Store Connect numbers a marketing version's uploads itself — so a build number that did NOT move is not a finding. **pbxproj is user-owned** (`docs/contributing/ios-guidelines.md`) — do NOT edit it; read both targets (app + keyboard-extension), and when a bump is needed name the `make version-mobile` / `make version-desktop` command as a user action item.
 
 ## Output
 
@@ -126,7 +126,7 @@ Rules:
 - Every row cites `file:line` + the old→new value. No claim without evidence.
 - A SAFE result for a whole area still gets one row ("schema: all unchanged → no migration runs").
 - BEHAVIOR-CHANGE findings are cross-checked against the target changelog file (`changelog/mobile-v<version>.md` / `changelog/desktop-v<version>.md`); flag any that are missing from the changelog.
-- Never assign release scope (in/out of vX) — that is user-gated (`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope). Report compat facts only.
+- Never assign release scope (in/out of vX) — that is the maintainer's call. Report compat facts only.
 - This skill does not fix anything. If a BLOCKING finding needs a code change, that is a separate user-gated bugfix round (Core Principle #4).
 
 ## Notes

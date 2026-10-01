@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Every `INVARIANT_*` label a living doc names must appear in a test.
 
-`.claude/rules/cross-platform-alignment.md` §3a: the test that pins a documented
+`docs/contributing/cross-platform-alignment.md` §3a: the test that pins a documented
 cross-platform behaviour carries its label, case-insensitive — in the test's
 name (Rust `fn invariant_<label>_…`, XCTest `func testINVARIANT_<label>_…`,
 JUnit `fun INVARIANT_<label>_…`) or in a comment above the tests
@@ -32,7 +32,7 @@ DOC_GLOBS = (
     "docs/architecture/*.md",
     "docs/engine/*.md",
     "docs/ui/*.md",
-    ".claude/rules/*.md",
+    "docs/contributing/*.md",
 )
 DOC_EXCLUDES = {"docs/architecture/incident-log.md"}
 TEST_SUFFIXES = (".rs", ".swift", ".kt")
@@ -147,7 +147,7 @@ def main() -> int:
     if new or stale:
         print(
             "Name the label in the test that pins it (test name or comment), or drop the label "
-            "if the behaviour is gone (.claude/rules/cross-platform-alignment.md §3a)."
+            "if the behaviour is gone (docs/contributing/cross-platform-alignment.md §3a)."
         )
         return 1
     print(

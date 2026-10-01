@@ -1,7 +1,7 @@
 //! `TaigiKeyboard.dll`: the Text Services Framework text service. The five
 //! DLL exports live here; everything else is a module. Every export and
 //! every COM method body is a `catch_unwind` boundary — a panic must never
-//! cross into the host process (`.claude/rules/windows-guidelines.md` § TSF).
+//! cross into the host process (`docs/contributing/windows-guidelines.md` § TSF).
 //!
 //! PR5a gave it the lifecycle (activation, sinks, tray button + menu,
 //! settings reload); PR5b the composing: key sink → classifier → engine +

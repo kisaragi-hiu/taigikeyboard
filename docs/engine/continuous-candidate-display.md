@@ -2,7 +2,7 @@
 
 > **Type**: Specification (problem + fix, shipped v3.5.8)
 > **Keywords**: `Continuous`, `Candidate`, `display`, `roman`, `hanji`, `subtitle`, `dual-line`, `wire-schema`, `eliminate-fallback`
-> **Related**: [continuous-input-ranking.md](continuous-input-ranking.md), [composing.md](composing.md), [binary-format.md](binary-format.md), [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-platform-alignment.md)
+> **Related**: [continuous-input-ranking.md](continuous-input-ranking.md), [composing.md](composing.md), [binary-format.md](binary-format.md), [`docs/contributing/cross-platform-alignment.md`](../../docs/contributing/cross-platform-alignment.md)
 > **Status**: §4 dual-line carrier shipped (Items 5–6); §15 fallback retire **COMPLETE** — Items 7–12 closed every engine syllabification gap and **Item 13 (v3.5.8 capstone) retired the platform lexicon fallback** so the Continuous engine is the single candidate source. All in v3.5.8 (USER 2026-05-11: "v3.5.8 is the continuous-typing release; keep fixing it until I am satisfied"). Item 13 = v3.5.8 feature-complete; see [`changelog/mobile-v3.5.8.md`](../../changelog/mobile-v3.5.8.md).
 > **Author**: Dogfood findings 2026-05-11. Source observation = user during v3.5.8 dogfood. §15 added 2026-05-11 (night) per user pivot: "the engine handles all syllable-segmentation logic internally; the fallback is redundant".
 > **Adjacent spec (2026-05-13)**: [`continuous-input-ranking.md`](continuous-input-ranking.md) §10 — Commit Behavior & Display Split. Composing buffer (`rawInput`) vs candidate[0] (segmented) split + Enter / Tap-0 / Tap-N commit dispatch. Grounded in MOE `KeySectionsModel` (§10.1.1). Drafted; co-confirm pending in the same Codex pass as this doc.
@@ -36,7 +36,7 @@ User expectation:
 
 ### 1.2 Why this matters
 
-- **Dogfood is qualitative gate** (`~/.claude/rules/code-review-rules.md` §9) — UX inconsistency drowns out signal for the remaining Phase 9 sub-PRs (9.4a / 9.4b / 9.5 / 9.6).
+- **Dogfood is qualitative gate** (`docs/contributing/known-pitfalls.md` § Review and device gates) — UX inconsistency drowns out signal for the remaining Phase 9 sub-PRs (9.4a / 9.4b / 9.5 / 9.6).
 - **Phase 9.6 will compound the problem** — custom_dict integration will route custom candidates through the same `CandidateMessage` carrier; without a roman/hanji split, custom continuous candidates ship single-line too.
 - **Mainstream IME parity** — MOE Tâi-gí (`tutgInputLine` candidates) and khiin-rs (`khiin/src/candidate.rs`) both expose roman + hanji as separate display fields; aligning brings TaigiKeyboard back into the mainstream pattern.
 
@@ -377,7 +377,7 @@ UI looks up roman/hanji by `display_text` on each candidate via a second FFI cal
 
 **Rejected**:
 - Violates "engine owns display strings" principle (v3.5.8 design decision, [`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md))
-- Violates [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-platform-alignment.md) "behavior contract pinned at engine layer"
+- Violates [`docs/contributing/cross-platform-alignment.md`](../../docs/contributing/cross-platform-alignment.md) "behavior contract pinned at engine layer"
 - Doubles FFI overhead per fetch (typically 5-30 candidates)
 - Race window: between FetchAtPos response and platform re-lookup the dictionary state could change
 
@@ -541,7 +541,7 @@ Recommendation: **B**. Cleaner review boundaries; Finding 1 can land first as a 
 
 ## 10. Out-of-Scope (YAGNI guards)
 
-Per [`~/.claude/rules/planning.md`](https://github.com/siansiansu/configurations/blob/main/claude/rules/planning.md) § No future-version planning and [`.claude/rules/rust-best-practices.md`](../../.claude/rules/rust-best-practices.md) §8:
+Per [`docs/contributing/rust-best-practices.md`](../../docs/contributing/rust-best-practices.md) §8:
 
 - **No** `CandidateMode`-based rendering rules — Phase 9.2 mode is metadata-only; cell shape is decided by `hanji` presence (mirrors lexicon path)
 - **No** new `display_strategy` / `display_hints` proto field — single roman + hanji pair is sufficient
@@ -561,7 +561,7 @@ Per [`~/.claude/rules/planning.md`](https://github.com/siansiansu/configurations
 
 ## 11. Mainstream IME Cite-and-Trace
 
-Per `~/.claude/rules/planning.md` § Cite best practices explicitly — display contract precedents:
+Display contract precedents:
 
 | IME | Carrier | Field shape |
 |---|---|---|
@@ -576,7 +576,7 @@ All four reference IMEs ship **at least two display fields** per candidate. Taig
 
 ## 12. Cross-Platform Parity Tier
 
-Per [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-platform-alignment.md) §1b parity-correction tier:
+Per [`docs/contributing/cross-platform-alignment.md`](../../docs/contributing/cross-platform-alignment.md) §1b parity-correction tier:
 
 - Wire schema change ships in **same release tag** on both platforms
 - iOS + Android `ContinuousCandidate` data class gains identical 2 fields

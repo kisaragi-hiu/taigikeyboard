@@ -1,0 +1,46 @@
+# iOS Settings Injection
+
+`EngineSettingsProvider` wiring contract for live-read settings on the iOS target. Split out from `docs/contributing/ios-architecture.md` for focus.
+
+## 1. Rule
+
+Engine-layer code **MUST NOT** read `SharedSettings.shared` directly. It reads from an injected `EngineSettingsProvider` instead.
+
+## 2. Definition
+
+Both protocols are Foundation-only: `Settings/EngineSettings.swift` (the engine-facing setting properties) and `Settings/EngineSettingsProvider.swift` (`var current: EngineSettings { get }`). Read those files for the live property list.
+
+`SharedSettings.shared` conforms and returns `self` from `current`, so each property access re-reads `UserDefaults`.
+
+## 3. Why provider, not snapshot
+
+`KeyboardViewController`, `TaigiAutocompleteService`, `ComposingManager`, and several views rely on `UserDefaults.didChangeNotification` + lazy re-read of `SharedSettings.shared` to implement **live updates** — when the user changes a setting in the host app, the keyboard extension reflects it without being relaunched.
+
+A one-shot snapshot injection (inject once at init, store the value) **breaks this invariant**: input mode switches, TPS toggles, enabled-dictionary toggles would stop propagating. `TaigiKeyboardView` today uses a per-render snapshot (it re-reads on every render cycle), which is a different pattern and remains safe.
+
+## 4. Usage
+
+| Context                                   | Access pattern                                     |
+|-------------------------------------------|----------------------------------------------------|
+| Engine service (`DictionarySearchService`, `NextWordController`) | `provider.current` at each call site               |
+| Engine value-type operation               | Receive `EngineSettings` as a parameter            |
+| UI view                                   | `@ObservedObject var settings = SharedSettings.shared` (app / platform layer only) |
+| Keyboard extension entry (`KeyboardViewController`) | Constructs the provider, injects into engine     |
+| Unit test                                 | Inject a stub `EngineSettingsProvider`             |
+
+## 5. Change sync regression test (mandatory)
+
+Every phase that touches settings wiring must verify:
+
+1. Launch app, open keyboard extension, confirm current setting value is used.
+2. Without relaunching the keyboard, change the setting in the host app.
+3. Interact with the keyboard again — the new setting must be applied.
+
+Settings requiring this check: `inputMode`, `isAutoSpaceEnabled`, `isOutputBothScripts`, enabled-dictionaries set, TPS layout toggle.
+
+## 6. References
+
+- `docs/contributing/ios-architecture.md` — parent file (layer dependencies, audit checklist)
+- `docs/contributing/ios-shared-core-candidates.md` §1 (Criteria #2) — engine-layer files must not read `*.shared` singletons; this file's `EngineSettingsProvider` is the injection mechanism
+- `docs/contributing/android-guidelines.md` §6 — Android DataStore + settings access (live-read counterpart)
+- `docs/architecture/ios-exemplar.md` §3 — live-read warning + executor contract

@@ -37,7 +37,7 @@ Open `<run>/report.md`. Order of attention:
 
 ## 3. Report, do not fix
 
-- A failure is an **observed failure** (`~/.claude/rules/diagnosis-discipline.md`): report the scenario, the trace excerpt and the first divergent event to the USER. A bugfix round needs root cause + USER approval first (CLAUDE.md Core Principle #4).
+- A failure is an **observed failure**: report the scenario, the trace excerpt and the first divergent event to the USER. A bugfix round needs root cause + USER approval first (`AGENTS.md` Core Principle #4).
 - Rule out the harness before blaming the IME: a `trace` finding, a timeout on the first key (lexicon load), or a window-focus error point at the driver.
 - Never edit a scenario's expectation to match what the run produced. Expectations come from the `source` the scenario names (USER-quoted dogfood items, `knowledge/`).
 

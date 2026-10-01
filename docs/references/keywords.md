@@ -11,7 +11,7 @@ How engine and platform identifiers name recurring concepts (maintainability rou
 | Term | Meaning in code | Examples |
 |------|-----------------|----------|
 | **hanji** | Han characters of a word. Every code identifier spells it `hanji` (Taiwanese romanization of 漢字), never `hanzi` | `DictionaryRecord.hanji`, `is_hanji`, proto `CandidateMessage.hanji`, iOS/Android `isHanjiFirst` |
-| **Identity** | A word is the `(hanji, canonical-TL)` pair — neither field alone (CLAUDE.md Core Principle #6) | `CandidateMessage.canonical_tl`, user-data `(word, tl)` keys |
+| **Identity** | A word is the `(hanji, canonical-TL)` pair — neither field alone (AGENTS.md Core Principle #6) | `CandidateMessage.canonical_tl`, user-data `(word, tl)` keys |
 | **Record** | One decoded row of a bundled binary file | `lexicon::DictionaryRecord` (`dictionary.bin`) |
 | **Row** | One row of a user-data SQLite store, a search result, or a test fixture row | `userdata::{CustomDictionaryRow, LearnedPhraseRow, FrequencyRow, AssociationRow}`, `lexicon::search::SearchRow`, `test_support::TkdbRow` |
 | **Entry** | An in-memory value a reader or the ranker consumes | `lexicon::AssociationEntry` (`association.bin`), `lexicon::{CustomEntry, LearnedEntry}` (user rows handed to continuous fetch) |

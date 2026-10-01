@@ -18,7 +18,7 @@
 //! 程式 / 等式 / 中式 share the toneless key `tingsik` and differ ONLY by
 //! the first syllable's tone, and 程式 carries the LOWEST frequency so a
 //! ranking-only explanation cannot pass. Per the fixture rule in
-//! `.claude/rules/taigi-incidents.md`, every strict prefix of a probed
+//! `docs/contributing/known-pitfalls.md`, every strict prefix of a probed
 //! syllable that is itself a production syllable is present as a control
 //! row and asserted on: 豬 `ti` / 鎮 `tìn` under `ting`, 是 `sī` under `sik`.
 

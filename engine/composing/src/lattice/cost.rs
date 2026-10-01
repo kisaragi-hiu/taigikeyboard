@@ -98,7 +98,7 @@
 // `engine/ranking/src/score.rs` (`BOOST_ALPHA`, `MAX_BOOST`,
 // `RECENCY_WINDOW_MS`, `CONTINUOUS_DEFAULT_SOURCE_RANK`,
 // `USER_WEIGHT_DECAY_TAU_MS`). Those are `pub` cross-platform invariants per
-// `.claude/rules/cross-platform-alignment.md` §3a — platforms mirror them and the
+// `docs/contributing/cross-platform-alignment.md` §3a — platforms mirror them and the
 // `pub` surface is part of the contract. The walker constants here are
 // `pub(crate)`, engine-only (no platform sees them), and stay with the cost
 // model they parameterize. v3.5.9 A3 reframe locks this in (see

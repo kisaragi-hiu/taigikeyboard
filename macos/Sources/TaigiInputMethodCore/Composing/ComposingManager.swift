@@ -332,7 +332,7 @@ final class ComposingManager {
     /// (`AutoSpacePolicy.isGateActive`).
     ///
     /// The engine also counts the pick, with the user data open, under the
-    /// `(display text, canonical TL)` pair (`CLAUDE.md` Core Principle #7) —
+    /// `(display text, canonical TL)` pair (`AGENTS.md` Core Principle #6) —
     /// never the rendering, so a change of output script does not split a
     /// word's frequency or association rows.
     func commitCandidate(

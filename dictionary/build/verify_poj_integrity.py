@@ -44,7 +44,7 @@ from common.taigi_bridge import convert_tl_to_poj_strict  # noqa: E402
 
 INPUT_FILE = BASE_DIR / "output" / "dictionary.csv"
 
-# Independent TL→POJ converter (vendored, gitignored — see CLAUDE.md project
+# Independent TL→POJ converter (vendored, gitignored — see AGENTS.md project
 # structure). Skipped if not present so the gate still runs without it.
 _KESI_PATH = BASE_DIR.parent / "references" / "KeSi"
 _kesi_ku: type | None = None

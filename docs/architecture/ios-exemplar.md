@@ -254,7 +254,7 @@ Android Studio's `// region` / `// endregion` pair gives the same code-folding h
 /// `<path/to/KotlinFile.kt>`. Drift causes silent divergence.
 ```
 
-Required wherever a value is duplicated literally across platforms and drift would silently change behavior. Numeric engine constants (NextWord scoring — `USER_WEIGHT` / `LEARNING_BONUS` / decay in `engine/nextword/src/scorer.rs`; candidate `SOURCE_TIERS` / `TIER_DENOMINATOR` in `engine/ranking/src/score.rs`; NextWord timing `CONTEXT_TIMEOUT_MS` in `engine/nextword/src/decide.rs`) live once in Rust, so the marker now binds the surfaces that still have a per-platform copy: settings-key / model tables (`Settings/SettingsModels.swift` ↔ Android `EngineSettings.kt` ↔ macOS `CandidateFontChoice.swift` ↔ Windows `keys.rs`), candidate-strip layout constants, the `mul` keyboard locale tag (`behavioral-invariants.md` §39), and any residual timing constant a platform executor mirrors from the engine (Android `NextWordController.kt` `CONTEXT_TIMEOUT_MS`). The policy (constants + tests + docs update together, `INVARIANT_*` test-label prefix) lives in `.claude/rules/cross-platform-alignment.md` §3a.
+Required wherever a value is duplicated literally across platforms and drift would silently change behavior. Numeric engine constants (NextWord scoring — `USER_WEIGHT` / `LEARNING_BONUS` / decay in `engine/nextword/src/scorer.rs`; candidate `SOURCE_TIERS` / `TIER_DENOMINATOR` in `engine/ranking/src/score.rs`; NextWord timing `CONTEXT_TIMEOUT_MS` in `engine/nextword/src/decide.rs`) live once in Rust, so the marker now binds the surfaces that still have a per-platform copy: settings-key / model tables (`Settings/SettingsModels.swift` ↔ Android `EngineSettings.kt` ↔ macOS `CandidateFontChoice.swift` ↔ Windows `keys.rs`), candidate-strip layout constants, the `mul` keyboard locale tag (`behavioral-invariants.md` §39), and any residual timing constant a platform executor mirrors from the engine (Android `NextWordController.kt` `CONTEXT_TIMEOUT_MS`). The policy (constants + tests + docs update together, `INVARIANT_*` test-label prefix) lives in `docs/contributing/cross-platform-alignment.md` §3a.
 
 ### 5.4 Naming
 
@@ -354,7 +354,7 @@ The AndroidX `ViewModel` class is for tab / settings app code, not for IME-inter
 
 The live roster is `../engine/migration-inventory.csv` (one row per symbol; `status` ∈ rust / native / wont_migrate). Historically iOS carried 43 Swift shared-core candidates across Phonetics, Input/TPS, Lexicon, NextWord, Autocomplete, Settings and Logging; the Phonetics, TPS, Composing, NextWord, ranking and case-transform groups migrated to Rust crates and only the Lexicon model / utility files, Settings protocols and `LoggerBackend` remain marked on each platform (16 files each on iOS and Android).
 
-**Contract surface rule**: adding a marker requires the import-purity greps to pass (`.claude/rules/ios-shared-core-candidates.md` §1, `.claude/rules/android-guidelines.md` §1). Removing one requires a written rationale + Codex review.
+**Contract surface rule**: adding a marker requires the import-purity greps to pass (`docs/contributing/ios-shared-core-candidates.md` §1, `docs/contributing/android-guidelines.md` §1). Removing one requires a written rationale + Codex review.
 
 ---
 
@@ -368,7 +368,7 @@ These previously slipped in and were refactored out. They must not return:
 4. **Direct repository call from a View.** Always a ViewModel in between.
 5. **Singleton resurrection.** If a service is `static let shared` / `companion object INSTANCE`, it must also accept DI; do not reintroduce `shared` where DI defaults have been removed.
 6. **Combine / Flow publishers crossing target boundaries.** Extension and host app each own their own object graph.
-7. **`UIKit` / `SwiftUI` / Android SDK / Compose imports inside `Lexicon/Models/`, surviving `Autocomplete/Services/` shells, or any Foundation-only Lexicon utility file.** (Phonetics, TPS, Composing engine, NextWord engine, and case-transform are all in Rust now.) Enforced by `Foundation`-only import greps + the Rust-side `forbid(unsafe_code)` lint per `.claude/rules/rust-best-practices.md`.
+7. **`UIKit` / `SwiftUI` / Android SDK / Compose imports inside `Lexicon/Models/`, surviving `Autocomplete/Services/` shells, or any Foundation-only Lexicon utility file.** (Phonetics, TPS, Composing engine, NextWord engine, and case-transform are all in Rust now.) Enforced by `Foundation`-only import greps + the Rust-side `forbid(unsafe_code)` lint per `docs/contributing/rust-best-practices.md`.
 8. **Platform-bound DTOs in engine signatures.** `NextWordService.Prediction` leaking into `filterPredictions` was the Codex finding that motivated `RawNextWordPrediction`. Rule: services map their rows to shared-core DTOs at the service boundary.
 9. **`SharedPreferences` snapshot via `val`.** See §3. Every settings field must be re-read on access.
 
@@ -376,7 +376,7 @@ These previously slipped in and were refactored out. They must not return:
 
 ## 9. Android deviations from this exemplar
 
-Android has converged on the shape above. Where it *must* diverge — for platform, framework, or language-semantic reasons — the divergence is recorded here so later rounds do not re-litigate it. Kotlin rules (marker criteria, invariant syntax, DI, coroutines, IME lifecycle) are in `.claude/rules/android-guidelines.md`; naming and access levels follow §5.4 / §5.5 with these refinements: `object` only for stateless utilities; shared-core types `public`, platform wiring `internal`; no `inline` / `reified` or cross-boundary extension functions at the shared-core boundary.
+Android has converged on the shape above. Where it *must* diverge — for platform, framework, or language-semantic reasons — the divergence is recorded here so later rounds do not re-litigate it. Kotlin rules (marker criteria, invariant syntax, DI, coroutines, IME lifecycle) are in `docs/contributing/android-guidelines.md`; naming and access levels follow §5.4 / §5.5 with these refinements: `object` only for stateless utilities; shared-core types `public`, platform wiring `internal`; no `inline` / `reified` or cross-boundary extension functions at the shared-core boundary.
 
 ### 9.1 Composition scope
 
@@ -385,7 +385,7 @@ iOS composes the engine graph at two entry points (§2). Android also has two li
 - **IME service graph** — `TaigiKeyboard : LifecycleInputMethodService` (`ime/core/TaigiKeyboard.kt`). Created in `onCreate`, torn down in `onDestroy`. Owns per-session state (composing, candidates, next-word history).
 - **App graph** — `TaigiKeyboardApplication : Application` owns the warm-up chain (`prefs.warmUp()` + `migrateFromSharedPreferences` + per-service `init(context)`); `CompositionRoot` (`ime/core/CompositionRoot.kt`) is the process-wide service holder both scopes reach into. Services are idempotent, so a duplicate `init` during migration stays safe.
 
-Engine-layer code receives its dependencies via constructor injection from whichever scope constructs it. No `.INSTANCE` reach-ins (`.claude/rules/android-guidelines.md` §4).
+Engine-layer code receives its dependencies via constructor injection from whichever scope constructs it. No `.INSTANCE` reach-ins (`docs/contributing/android-guidelines.md` §4).
 
 ### 9.2 Settings live-read
 
@@ -420,5 +420,5 @@ iOS uses `Lexicon/`, `NextWord/`, `Settings/` as sibling trees (§5.1). Android 
 - Behavioral invariants: `behavioral-invariants.md`.
 - Engine/platform split exemplars: `composing-state-boundary.md` (§11 Android binding), `nextword-engine-boundary.md` (§13 Android binding).
 - Data-artifact portability: `data-artifacts-portability.md`.
-- Cross-platform policy (refactor-freeze, invariant-discipline, divergence docs): `.claude/rules/cross-platform-alignment.md`.
+- Cross-platform policy (refactor-freeze, invariant-discipline, divergence docs): `docs/contributing/cross-platform-alignment.md`.
 - Four-platform layout and build map: `system-overview.md`.

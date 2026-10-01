@@ -7,7 +7,7 @@
 //! deterministic, offline replacement for "log what the keyboard showed":
 //! the engine is a pure function of (artifacts, input), so any reported
 //! candidate strip can be reproduced exactly by typing the same input here.
-//! No on-device candidate logging (which `.claude/rules/security-rules.md`
+//! No on-device candidate logging (which `docs/contributing/security-rules.md`
 //! forbids for full user input) is needed.
 //!
 //! Why this is NOT a cross-IME comparison: peer IMEs under `references/`
@@ -34,7 +34,7 @@
 //! ```
 //!
 //! Requires the production artifacts to exist (run `make dict` first if
-//! `dictionaries/` is stale — see the stale-binary gate in `CLAUDE.md`).
+//! `dictionaries/` is stale — see the stale-artifact gate in `AGENTS.md`).
 //! Prints `consumed_span`, `syllable_count`, `roman`,
 //! and `hanji` per candidate.
 

@@ -345,7 +345,7 @@ pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec
     // carries no space while its romanization `iā sī` does, and padding the
     // short side would attach an empty `next_tl` to a real word. An empty TL is
     // not a neutral value here: word identity is the `(Hanji, canonical TL)`
-    // pair (`CLAUDE.md` Core Principle #7), so a blank one writes a row no
+    // pair (`AGENTS.md` Core Principle #6), so a blank one writes a row no
     // correctly-keyed lookup will ever match again.
     if parts.len() <= 1 || roman_parts.len() != parts.len() {
         return Vec::new();

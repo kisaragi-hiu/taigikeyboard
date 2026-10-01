@@ -203,7 +203,7 @@ fn tps_lattice_caps_at_max_syllables_via_lattice_bfs() {
 // only exists under an alternate reading (bare `ㄇ` → the syllabic `ㆬ`,
 // `ㄎㄛㆻㄫ` → kho|kng) must produce its literal key.
 //
-// Fixture rule (`.claude/rules/taigi-incidents.md` § Trace before assert):
+// Fixture rule (`docs/contributing/known-pitfalls.md` § Tests and diagnosis):
 // every inventory carries the BASE reading's syllables as well as the
 // alternate's, so an expanded ending is proven an ADDITION, not a
 // replacement.

@@ -326,11 +326,11 @@ The engine takes `nowMs` on every decision entry point (`DecisionInput.now_ms`).
 - The executor carries the same intent `nowMs` (on the `queryPredictions` effect) into `RustEngineBridge.nextwordPredictNext` (`PredictNext.now_ms`, expanded to `FilterPredictions` by engine/dispatch), where the learned rows the engine reads from its own `user_association.db` are decay-scored. No platform reads a row or passes a clock anywhere else (the former `NextWordService.userRows` is deleted, user-data-engine-roadmap P8b).
 - Result: the engine and the prediction query use ONE consistent `nowMs` per intent — no 1–2 ms drift between "should record association?" check and user-row decay scoring.
 
-Engine-side forbidden calls (per `.claude/rules/android-guidelines.md` §1 criterion 3): `System.currentTimeMillis()`, `SystemClock.*`, `Instant.now()`. Note: `kotlinx.coroutines.delay` (top-level suspend function) is also forbidden inside the engine — all scheduling lives in the platform executor.
+Engine-side forbidden calls (per `docs/contributing/android-guidelines.md` §1 criterion 3): `System.currentTimeMillis()`, `SystemClock.*`, `Instant.now()`. Note: `kotlinx.coroutines.delay` (top-level suspend function) is also forbidden inside the engine — all scheduling lives in the platform executor.
 
 ### 13.4 Settings access
 
-Executor reads `EngineSettingsProvider.current` once at intent entry, passes value to `NextWordEngine.decide(...)` via `NextWordDecisionInput.settings`. Prediction-filter step takes a fresh snapshot inside the query coroutine (after the lexicon-ready wait, before the `nextwordPredictNext` call; the dictionary toggles are snapshotted at query start), same as iOS §7. Live-read semantics from `EngineSettings.kt` are preserved — see `.claude/rules/android-guidelines.md` §6.
+Executor reads `EngineSettingsProvider.current` once at intent entry, passes value to `NextWordEngine.decide(...)` via `NextWordDecisionInput.settings`. Prediction-filter step takes a fresh snapshot inside the query coroutine (after the lexicon-ready wait, before the `nextwordPredictNext` call; the dictionary toggles are snapshotted at query start), same as iOS §7. Live-read semantics from `EngineSettings.kt` are preserved — see `docs/contributing/android-guidelines.md` §6.
 
 ### 13.5 Active context-timeout — coroutine binding
 
@@ -345,7 +345,7 @@ A5-impl MAY rename this "delay" / "scheduled coroutine" if a Kotlin-idiomatic na
 
 ### 13.6 Generation counter — parity correction
 
-Today Android lacks the iOS §3 `currentGeneration` mechanism. Late predictions can update UI even after state invalidation. A5-impl lands this as a **parity correction** per `.claude/rules/cross-platform-alignment.md` §1b:
+Today Android lacks the iOS §3 `currentGeneration` mechanism. Late predictions can update UI even after state invalidation. A5-impl lands this as a **parity correction** per `docs/contributing/cross-platform-alignment.md` §1b:
 
 - `NextWordPersistedState.currentGeneration: Long` (wrapping `Long` ≈ iOS `UInt64` for practical purposes — 2^63 wall-clock-ms is plenty).
 - Every invalidating intent bumps generation (see §3 rule).
@@ -360,7 +360,7 @@ Today Android lacks the iOS §3 `currentGeneration` mechanism. Late predictions 
 - `ASSOCIATION_TIMEOUT_MS = 10_000L`
 - `CONTEXT_TIMEOUT_MS = 30_000L`
 
-per `.claude/rules/cross-platform-alignment.md` §3a + `.claude/rules/android-guidelines.md` §2. A5-design plan originally deferred this to A8-sweep; it was inlined into A5-impl instead because the constants moved in the same PR. A8-sweep has no follow-up work on these comments.
+per `docs/contributing/cross-platform-alignment.md` §3a + `docs/contributing/android-guidelines.md` §2. A5-design plan originally deferred this to A8-sweep; it was inlined into A5-impl instead because the constants moved in the same PR. A8-sweep has no follow-up work on these comments.
 
 ### 13.8 Strict-less-than boundary + negative-delta guard
 
@@ -419,7 +419,7 @@ A5-impl adds the following Android files to the roster (mirroring §8 iOS column
 
 - iOS boundary contract: §§1–12 above.
 - A5-impl shipped via Phase II Round A5; engine logic now in Rust `engine/nextword` (since v3.5.5).
-- Parity-correction policy: `.claude/rules/cross-platform-alignment.md` §1b.
-- Android guidelines (shared-core purity, clock, coroutines): `.claude/rules/android-guidelines.md` §§1, 5.
-- Engine settings live-read rule: `.claude/rules/android-guidelines.md` §6 + `ios-exemplar.md` §3.
+- Parity-correction policy: `docs/contributing/cross-platform-alignment.md` §1b.
+- Android guidelines (shared-core purity, clock, coroutines): `docs/contributing/android-guidelines.md` §§1, 5.
+- Engine settings live-read rule: `docs/contributing/android-guidelines.md` §6 + `ios-exemplar.md` §3.
 - Behavioral invariants (decay half-life + user>dict weighting): `behavioral-invariants.md` §§7, 8.

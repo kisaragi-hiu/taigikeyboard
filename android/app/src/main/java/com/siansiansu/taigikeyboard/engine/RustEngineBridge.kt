@@ -332,7 +332,7 @@ object RustEngineBridge {
      * detection (`engine/lexicon/src/continuous/mod.rs::derive_script_kind`); the
      * platform reads but never recomputes (no display-text sniffing —
      * that would parallel-implement the derive and violate
-     * `.claude/rules/cross-platform-alignment.md`).
+     * `docs/contributing/cross-platform-alignment.md`).
      *
      * Metadata-only in v3.5.8 — does NOT enter the engine's `CandidateSortKey`
      * tie-break (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a). `UNSPECIFIED`

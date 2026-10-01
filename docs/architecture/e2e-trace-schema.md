@@ -83,7 +83,7 @@ Written through `dispatch::trace::event` (same file, same clock as the engine ev
 | `key` | `keyval` (X keysym), `state` (modifier mask), `handled` | every key the framework hands in |
 | `preedit` | `text` (`""` = cleared) | `Emit::Preedit` / `Emit::ClearPreedit` |
 | `commit` | `text` | `Emit::Commit` — what the IME asked the client to insert; the host's own read-back is the driver's `observed_text` |
-| `candidates` | `items` = `[{"hanji", "tl", "canonical_tl"}]`, display order: `hanji` (`""` for a romanization-only cell), `tl` = the reading as displayed, `canonical_tl` = identity (CLAUDE.md Core Principle #6) | `Emit::LookupTable` for the candidate list (the symbol picker is not traced) |
+| `candidates` | `items` = `[{"hanji", "tl", "canonical_tl"}]`, display order: `hanji` (`""` for a romanization-only cell), `tl` = the reading as displayed, `canonical_tl` = identity (AGENTS.md Core Principle #6) | `Emit::LookupTable` for the candidate list (the symbol picker is not traced) |
 | `session_end` | `source` | the daemon ended the composition (focus out, reset, disable) |
 
 The analyzer's "first hanji candidate" is the first `candidates` item whose `hanji` holds a CJK character (the §34 literal slot is skipped) and compares its displayed `tl`, plus its `hanji` when the scenario names one (`analyze.matches_cell`).

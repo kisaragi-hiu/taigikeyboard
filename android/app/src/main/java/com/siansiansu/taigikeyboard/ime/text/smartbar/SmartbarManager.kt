@@ -247,7 +247,7 @@ class SmartbarManager(
                 // user's keyboard never crashes; the facade `e` below is a
                 // best-effort diagnostic — the AndroidLoggerBackend gates
                 // every level on `BuildConfig.DEBUG` per the
-                // zero-logs-in-release privacy policy (.claude/rules/security-rules.md),
+                // zero-logs-in-release privacy policy (docs/contributing/security-rules.md),
                 // so in production this is intentionally swallowed, not surfaced.
                 val msg = "NextWordEffectRouter received non-NextWord effect: $effect"
                 if (com.siansiansu.taigikeyboard.BuildConfig.DEBUG) {

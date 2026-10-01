@@ -172,8 +172,8 @@ pub fn install(
 /// Resolves the user's dictionary toggles into the bitmask the engine filters
 /// candidates by. The bit layout — including the kautian subcollection region
 /// in bits 13-25 — belongs to Rust (`engine/lexicon/src/dictionary_filters.rs`);
-/// this asks for it rather than reproducing it (`planning.md` § No redundant
-/// fallback).
+/// this asks for it rather than reproducing it (no redundant fallback,
+/// `AGENTS.md` § Design principles).
 ///
 /// `None` means the round-trip failed. Callers resolve ONCE per query and pass
 /// the answer down, so mask and badge set describe one instant.

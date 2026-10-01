@@ -8,7 +8,7 @@ disable-model-invocation: false
 
 Answer one question: **which dependencies can move today, what does each move cost, and which are held on purpose?**
 
-Output is a report; the USER decides which upgrade rounds open (`~/.claude/rules/diagnosis-discipline.md` § No unilateral release scope). Never write "deferred", "post-vX" or "known limitation".
+Output is a report; the maintainer decides which upgrade rounds open. Never write "deferred", "post-vX" or "known limitation".
 
 **Read-only.** Only dry-run / query commands. Never run `cargo update` without `--dry-run`, `mise upgrade`, `uv lock`, or edit any manifest. `ios/TaigiKeyboard.xcodeproj/**` (incl. its `Package.resolved`) is USER-only — report, never touch.
 
@@ -68,7 +68,7 @@ Each tracked `Cargo.lock` is its own workspace: `git ls-files '*Cargo.lock'` (en
 1. macOS: `macos/Package.swift` requirements + `macos/Package.resolved` versions.
 2. iOS: `ios/TaigiKeyboard.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` → every row USER-ONLY (still state SAFE/MAJOR underneath).
 3. Latest per package: `git ls-remote --tags --refs <repositoryURL> | awk -F/ '{print $NF}' | sed 's/^v//' | awk '!/-/' | sort -V | tail -3` (strip `v` first — repos mix `v1.x` and `3.x` tags, and `sort -V` ranks `v…` above digits).
-4. KeyboardKit ≥ 10.9 is a closed binary target — changelog from the release notes (`gh release view -R KeyboardKit/KeyboardKit <tag>`), API check per `.claude/rules/doc-lookup.md`. Any KK bump needs spacebar-drag + autocap + settings dogfood (memory).
+4. KeyboardKit ≥ 10.9 is a closed binary target — changelog from the release notes (`gh release view -R KeyboardKit/KeyboardKit <tag>`), API check per `docs/contributing/doc-lookup.md`. Any KK bump needs spacebar-drag + autocap + settings dogfood (memory).
 5. `ios/Vendor/ISEmojiView` is vendored source — report its upstream latest only; upgrading is a manual port.
 
 ### python
@@ -90,7 +90,7 @@ Each tracked `Cargo.lock` is its own workspace: `git ls-files '*Cargo.lock'` (en
 
 - Changelog / release notes link or quoted breaking line — never from model memory.
 - Call sites of the changed API (`file:line`, LSP references preferred over grep).
-- Build cost: which stale-artifact gate the bump triggers (`CLAUDE.md` § Build & Test: `engine/` → `make build`, `dictionary/` → `make dict` + `make build`) and which platforms' post-PR verification it needs.
+- Build cost: which stale-artifact gate the bump triggers (`AGENTS.md` § Build & Test: `engine/` → `make build`, `dictionary/` → `make dict` + `make build`) and which platforms' post-PR verification it needs.
 
 ## 4. Report
 

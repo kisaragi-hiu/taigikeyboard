@@ -30,7 +30,7 @@ android {
         // Android 9+, so Android 9 users can still install from Play. Was 30
         // from 2026-08-17 (#532) to 2026-09-19, lowered back after an Android 9
         // user could no longer install. User-data SQL is the engine's bundled
-        // SQLite, not the OS one (.claude/rules/android-guidelines.md §8a).
+        // SQLite, not the OS one (docs/contributing/android-guidelines.md §8a).
         minSdk = 28
         targetSdk = 36
         // versionCode = Unix epoch minutes — auto-monotonic, never collides

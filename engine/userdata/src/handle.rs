@@ -1,6 +1,6 @@
 //! The user-data stores, opened once per process on the platform's word
 //! (`UserDataRequest.open`) and reset on its word (`.reset`). What they hold
-//! is the engine's (`.claude/rules/rust-migration-policy.md` §6); where the
+//! is the engine's (`docs/contributing/rust-migration-policy.md` §6); where the
 //! files live is the platform's. Plan: `docs/architecture/user-data-engine-roadmap.md`.
 
 use std::path::PathBuf;

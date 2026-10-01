@@ -2,15 +2,15 @@
 
 > **Type**: Reference (append-only)
 > **Keywords**: `incident`, `rules`, `why`, `receipt`
-> **Related**: ../../.claude/rules/taigi-incidents.md, dogfood-checklist.md, behavioral-invariants.md
+> **Related**: ../contributing/known-pitfalls.md, dogfood-checklist.md, behavioral-invariants.md
 
 ---
 
 ## Summary
 
-One entry per incident: what went wrong, the USER's words where they set the rule, and the pointer for the full receipt. The imperative rules distilled from these live in `.claude/rules/taigi-incidents.md` (always-on); the abstracted cross-project rules in `~/.claude/rules/`. PR numbers before 2026-09-07 refer to the archive repository — see `pr-number-migration.md`.
+One entry per incident: what went wrong, the USER's words where they set the rule, and the pointer for the full receipt. The imperative rules distilled from these live in `docs/contributing/known-pitfalls.md`. PR numbers before 2026-09-07 refer to the archive repository — see `pr-number-migration.md`.
 
-## Maps to `~/.claude/rules/diagnosis-discipline.md`
+## Diagnosis
 
 ### Confirm bug before round
 
@@ -37,13 +37,13 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 - **2026-05-16 v3.5.8 Bug 3** — a missing underline was labelled "documented known limitation" and the segmentation redesign pushed "post-v3.5.8". USER: "don't decide on your own what falls outside the v3.5.8 scope; when v3.5.8 is due for release I will give you explicit instructions". Both were must-fix.
 
-## Maps to `~/.claude/rules/round-workflow.md`
+## Review
 
 ### Second pass over the opened diff
 
 - **PR #227** (2026-05-07) — the sandwich passed "math fidelity"; a diff-level review caught a double `toInt()` truncation (±1px on non-integer-density devices). Ask for `/code-review` when a refactor diff carries numeric / geometry fidelity risk.
 
-## Maps to `~/.claude/rules/planning.md`
+## Planning
 
 ### Grounded in code
 
@@ -51,14 +51,14 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 - **2026-09-18 iPad external keyboard (PRs #77 / #78 / #80 / #83, reverted)** — three PRs built hardware-key composing on `UIInputViewController.pressesBegan`, with "iPadOS delivers `pressesBegan` to the extension" listed only as an unverified dogfood assumption. Real-iPad dogfood: hardware keys reach the host as plain ASCII; the extension never receives `UIPress` events (iPadOS routes them to the host app's responder chain only — the same limit every third-party keyboard has, e.g. PTT iOS 2023-07-24"iPad not accepting third-party input methods on the (hardware) keyboard has long been criticised"). USER: "why didn't you tell me at the planning stage that it couldn't be done?" / "iOS doesn't support external keyboards for third-party input methods; revert the external-keyboard features". A platform-capability assumption that the whole plan rests on gets a 20-line spike PR on device BEFORE the plan, not a dogfood row after it.
 
-## Maps to `.claude/rules/phonetics.md`
+## Phonetics (`docs/contributing/phonetics.md`)
 
-### Authoritative-source-only (CLAUDE.md Core Principle #3)
+### Authoritative-source-only (AGENTS.md Core Principle #3)
 
 - **2026-04-26 `iri/erk/eeh`** — proposed removing finals absent from the dictionary. USER: "iri/erk/eeh are meaningful; they are special finals". They are dialectal finals per `knowledge/taigi-phonetics-reference.md` §3.2.6.
 - **2026-05-20 TPS schema** — proposed `tps_num = digit-tone` and a "bopomofo" option. USER: "TPS has its own tone notation; it is not typed with digits" / "TPS is not bopomofo". Answer was in `knowledge/taigi-phonetics-reference.md` §5 + `engine/phonetics/src/tps.rs::ZHUYIN_TONES`.
 
-## Privacy (`.claude/rules/taigi-incidents.md` § Privacy)
+## Privacy (`docs/contributing/known-pitfalls.md` § Privacy)
 
 ### Personal identifiers in the public tree
 

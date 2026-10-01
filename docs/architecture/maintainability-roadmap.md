@@ -36,7 +36,7 @@
 | R12 | `Phase::Composing` removal — ≤20-line spike first | spike GO 2026-09-30 · PR-1 #329 (engine: Continuous from the first keystroke; `EnterContinuous` / `CommitDerived` no-op; wire `ResetContinuous` → `Reset`; differential 268k lines identical) · PR-2 #330 (shells drop the second call; Req 15 / 30 / 33 and Effect 4 reserved; R10-b renames) | **R12 complete** |
 | A | Docs drift (Appendix D, 57 rows) | direct to main 97da342b | Done |
 
-Every PR runs its round type's pre-gate (`~/.claude/rules/round-workflow.md`): refactor = behaviour-freeze list + `refactor-reviewer`; bugfix = root cause + Codex agreement; feature = plan + Codex design pass.
+Every PR runs its type's pre-gate: refactor = behaviour-freeze list (`docs/contributing/cross-platform-alignment.md` §1) + `refactor-reviewer`; bugfix = confirmed root cause; feature = reviewed plan.
 
 ## Not scheduled (USER decisions)
 

@@ -450,7 +450,7 @@ If you are working on… → read these in order.
   - `Packages/vChewing_Tekkon/` — vendored phonabet composer (upstream = #25)
   - `Packages/vChewing_LangModelAssembly/` — LM convergence / multiple dictionary sources
   - `Packages/vChewing_CandidateWindow/` — IMK candidate window (compare #20 MacishType)
-- **Caveat**: macOS IMK, Mandarin. Phonetic rules do **not** transfer to Taigi (CLAUDE.md Core Principle #3). Mine the **architecture + algorithm doc**, not the tables.
+- **Caveat**: macOS IMK, Mandarin. Phonetic rules do **not** transfer to Taigi (AGENTS.md Core Principle #3). Mine the **architecture + algorithm doc**, not the tables.
 
 ### 24. LibVanguard — `references/vChewing-LibVanguard/`
 
@@ -562,9 +562,9 @@ If you are working on… → read these in order.
 Four repos under `references/` are **not IME engines** and are intentionally absent from the matrix/cards above. Listed here so a future session does not re-explore them looking for engine patterns:
 
 - **`ISEmojiView/`** (`fec2d03`, 2025-11-27, MIT) — an iOS **emoji-keyboard UI component** (categories, skin-tone variants, recently-used, system-style bottom bar). Not an IME. Relevance: **UI-only** reference for our emoji palette (`EmojiPaletteView`), if we revisit emoji-picker layout. `Sources/ISEmojiView/`.
-- **`KeSi/`** (`826e787`, 2025-12-16, MIT) — `i3thuan5/KeSi`, a **Tâi-bûn NLP toolkit** (Python) by 意傳科技: word segmentation, neutral-tone marking, Unicode NFC + MOE custom-character-code normalisation, Hanji-with-romanization ↔ full romanization. Not an IME. Relevance: **phonetics / dictionary** tooling (see `memory/project_kesi_deprecated.md`), not the engine comparison — read `knowledge/taigi-phonetics-reference.md` + `taigi-converter/` first per CLAUDE.md Core Principle #3.
+- **`KeSi/`** (`826e787`, 2025-12-16, MIT) — `i3thuan5/KeSi`, a **Tâi-bûn NLP toolkit** (Python) by 意傳科技: word segmentation, neutral-tone marking, Unicode NFC + MOE custom-character-code normalisation, Hanji-with-romanization ↔ full romanization. Not an IME. Relevance: **phonetics / dictionary** tooling (see `memory/project_kesi_deprecated.md`), not the engine comparison — read `knowledge/taigi-phonetics-reference.md` + `taigi-converter/` first per AGENTS.md Core Principle #3.
 - **`azooKey_emoji_dictionary_storage/`** (`467c33a`, 2026-04-25) — azooKey's **emoji dictionary data** repo (Python generators + `EmojiDictionary` tables, per-Unicode-version regeneration). Data, not an engine. Relevance: emoji-palette entry sourcing, sibling of card #1.
-- **`Taigi-Input-method-dictionary-supplement/`** (`ada348a`, 2026-01-14) — 建中's CSV supplement tables for the MOE 教育部臺灣台語輸入法 (一府五院 / 行政區 / 數字·時間·日期 / 台·臺 / 菜市仔名 / …). **Dictionary data, not an engine** — the dev-supplement source behind PR #368/#369 (see `memory/project_dev_supplement_dict.md`). Relevance: **dictionary entries** to fold into our build, gated by CLAUDE.md Core Principle #3 + #7 `(Hanji, romanization)` identity — not an algorithm reference.
+- **`Taigi-Input-method-dictionary-supplement/`** (`ada348a`, 2026-01-14) — 建中's CSV supplement tables for the MOE 教育部臺灣台語輸入法 (一府五院 / 行政區 / 數字·時間·日期 / 台·臺 / 菜市仔名 / …). **Dictionary data, not an engine** — the dev-supplement source behind PR #368/#369 (see `memory/project_dev_supplement_dict.md`). Relevance: **dictionary entries** to fold into our build, gated by AGENTS.md Core Principle #3 + #7 `(Hanji, romanization)` identity — not an algorithm reference.
 
 ---
 
@@ -615,7 +615,7 @@ For Phase II+ (cross-platform alignment), read:
 1. **`azookey-reference.md`** — iOS UI patterns.
 2. **`florisboard/app/src/main/kotlin/dev/patrickgold/florisboard/`** — Android IME service skeleton + Compose IME UI (engine *not* wired in).
 3. **`trime/app/src/main/java/com/osfans/trime/core/` + `daemon/`** — Android IME *with* a native engine wired in via an async daemon; the FFI-threading model for our Android↔Rust boundary.
-4. **`.claude/rules/cross-platform-alignment.md`** — refactor-freeze, parity-correction tier, invariant labels.
+4. **`docs/contributing/cross-platform-alignment.md`** — refactor-freeze, parity-correction tier, invariant labels.
 
 ---
 

@@ -8,7 +8,7 @@
 # generated-proto directory and does not need that script's Java block +
 # per-file post-process pass. Both run from `make build`, so the macOS tree
 # cannot go stale behind an `engine/protos/proto/` change; only its regenerated
-# output has to be committed (`.claude/rules/rust-migration-policy.md` §4).
+# output has to be committed (`docs/contributing/rust-migration-policy.md` §4).
 # The proto set is globbed, so adding a `.proto` needs no edit here.
 #
 # Prerequisites (install once, locally):

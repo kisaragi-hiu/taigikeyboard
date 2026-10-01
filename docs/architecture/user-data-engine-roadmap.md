@@ -4,7 +4,7 @@
 > **Keywords**: `user data`, `SQLite`, `rusqlite`, `user_frequency`, `user_association`, `custom_dictionary`, `learned_phrases`, `.taigi`, `migration`, `engine`
 > **Status**: complete — P0–P9d merged 2026-09-26 (#219–#237); per-platform device dogfood pending.
 > **Session memory**: project memory `project_user_data_engine.md` (Claude auto-memory)
-> **Supersedes**: the "user-data SQLite stays platform-native" rule (`.claude/rules/rust-migration-policy.md` §6, rewritten 2026-09-26) and every `wont_migrate` row for the four stores in `docs/engine/migration-inventory.csv`
+> **Supersedes**: the "user-data SQLite stays platform-native" rule (`docs/contributing/rust-migration-policy.md` §6, rewritten 2026-09-26) and every `wont_migrate` row for the four stores in `docs/engine/migration-inventory.csv`
 
 ---
 
@@ -142,11 +142,11 @@ Until P9 merges, new suggestion features land in the engine store only (§6); br
 
 | Phase | Constraining rule |
 |---|---|
-| 1, 6, 7, 8 | `~/.claude/rules/round-workflow.md` § Workflow types — Refactor: behaviour-freeze boundary, every caller listed; `refactor-reviewer` |
-| 2, 3, 4 | `.claude/rules/rust-migration-policy.md` §6 (engine-owned) + `.claude/rules/rust-best-practices.md` §1a (dependency direction: `userdata` below `dispatch`, beside `lexicon`) |
-| 2 | `~/.claude/rules/diagnosis-discipline.md` § Verify hard-prerequisite claims — every migration shape proven by a fixture built from a real file |
-| 3 | `~/.claude/rules/planning.md` § No redundant fallback — U9 is temporary and removed in P9 |
-| 7 | `.claude/rules/taigi-incidents.md` — spike a platform-capability assumption before planning on it (phase S) |
+| 1, 6, 7, 8 | `docs/contributing/cross-platform-alignment.md` §1 — refactor: behaviour-freeze boundary, every caller listed; `refactor-reviewer` |
+| 2, 3, 4 | `docs/contributing/rust-migration-policy.md` §6 (engine-owned) + `docs/contributing/rust-best-practices.md` §1a (dependency direction: `userdata` below `dispatch`, beside `lexicon`) |
+| 2 | Verify hard-prerequisite claims — every migration shape proven by a fixture built from a real file |
+| 3 | `AGENTS.md` § Design principles (no redundant fallback) — U9 is temporary and removed in P9 |
+| 7 | `docs/contributing/known-pitfalls.md` — spike a platform-capability assumption before planning on it (phase S) |
 | all | `docs/architecture/behavioral-invariants.md` §24 (prediction order), §29 (backup exclusion), §46, §50 |
 
 **Mainstream practice**

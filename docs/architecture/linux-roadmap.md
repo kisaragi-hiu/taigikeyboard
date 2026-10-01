@@ -24,7 +24,7 @@ Three consequences shape every decision below:
    named with the Windows five-way classification (**identical semantics** ·
    **platform-adapted presentation** · **unsupported host capability** ·
    **intentionally not in this slice** · **unverified until Linux dogfood**), per
-   `.claude/rules/cross-platform-alignment.md` §3.
+   `docs/contributing/cross-platform-alignment.md` §3.
 2. **Native widgets for the settings window** (USER). On Linux "native" is the desktop's
    toolkit: GTK 4 + libadwaita (§ L3), the toolkit GNOME Settings, `ibus-setup` and the
    GNOME IME preference dialogs are built with.
@@ -225,7 +225,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   (`tools/i18n/generate.py` `WINDOWS_STRINGS_DIR` → `desktop/crates/taigi-desktop-core/src/strings`).
   The Windows `Makefile` `HOST_TESTABLE` roster drops the two crates (tested in
   `desktop/`); `check-gnu` still compiles them for the gnu target through the graph.
-  `.claude/rules/windows-guidelines.md`, `docs/architecture/system-overview.md`,
+  `docs/contributing/windows-guidelines.md`, `docs/architecture/system-overview.md`,
   `windows/README.md` and the i18n rule's grep line are updated in the same PR; the
   memory hand-off notes the move. **Doc comments inside the moved crates keep their
   macOS `file:line` citations** (still the oracle) and lose the words "Windows input
@@ -463,7 +463,7 @@ PR0 (quota, 2026-09-22); each later PR records its own verdict here.
 
 | PR | Phase | Scope | Status |
 |---|---|---|---|
-| PR0 | Admin | this roadmap + `.claude/rules/linux-guidelines.md` + docs index + memory topic | this PR |
+| PR0 | Admin | this roadmap + `docs/contributing/linux-guidelines.md` + docs index + memory topic | this PR |
 | PR1 | Proto | `PLATFORM_LINUX = 5` in `envelope.proto` + committed platform stubs regenerated (mechanical, its own PR as W12) | pending |
 | PR2 | Crate move | `desktop/` workspace: `taigi-desktop-core` + `taigi-desktop-storage` moved + renamed; `windows/` re-pointed; `windows/Makefile` rosters; `tools/i18n/generate.py` output path + `linux` in `VALID_PLATFORMS` with every `windows`-scoped key also scoped `linux`; `tools/release_notes.py` version files; root `Makefile` `desktop-check` / `linux-check`; docs + rules references; `make windows-check` green | pending |
 | PR3 | Engine I — wire | `linux/` workspace + toolchain; `taigi-linux-platform` (XDG paths, prefix, key translation, launcher, open URL; host stubs none needed); `taigikeyboard-ibus`: bus address + connection, factory, engine object with the full key path (snapshot → intent → manager inside the runtime lock → preedit / commit / lookup table), focus + reset + destroy lifecycle, wire types with signature tests; component XML template; `linux/Makefile`; `linux-build.yml` with the daemon smoke | MERGED #143 `28b3e4f6` 2026-09-23 — Codex skipped (quota) |

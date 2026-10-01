@@ -7,7 +7,7 @@ license.workspace = true
 publish = false
 
 # JUSTIFICATION: FFI crate — overrides workspace `unsafe_code = "forbid"` per
-# `.claude/rules/rust-ffi-safety.md` §3 (`unsafe` discipline). Every `unsafe` block in
+# `docs/contributing/rust-ffi-safety.md` §3 (`unsafe` discipline). Every `unsafe` block in
 # this crate carries a `// SAFETY:` comment per the same rule.
 [lints.rust]
 unsafe_code = "allow"
