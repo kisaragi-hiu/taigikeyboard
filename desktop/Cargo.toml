@@ -23,7 +23,7 @@ members = [
 [workspace.package]
 version = "3.6.12"
 edition = "2021"
-rust-version = "1.95"
+rust-version = "1.93"
 license = "Apache-2.0"
 repository = "https://github.com/taigikeyboard/taigikeyboard"
 publish = false
