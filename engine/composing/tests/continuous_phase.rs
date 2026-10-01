@@ -1,7 +1,7 @@
 //! Phase 4 — `Phase::Continuous` integration tests.
 //!
-//! Tests exercise the engine through the in-process `Engine::apply` API and inspect `Phase::Continuous` internals via
-//! `Engine::snapshot_state`. **Model B**: nailed segments are NOT in the
+//! Tests exercise the engine through the in-process `Engine::apply` API and
+//! inspect `Phase::Continuous` internals via `Engine::snapshot_state`. **Model B**: nailed segments are NOT in the
 //! document; `ComposingResponse.preedit.display_text` carries the whole
 //! composition (Σ nailed display + derived pending tail) while
 //! `preedit.raw_input` stays the pending tail only.

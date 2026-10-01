@@ -111,8 +111,8 @@ fun RustEngineBridge.composingCommitRaw(
     )
 }
 
-// Under `Phase::Continuous` the engine prepends `nailed_prefix(nailed, config)`
-// to `text`; the composing arm commits `text` verbatim.
+// The engine prepends `nailed_prefix(nailed, config)` to `text`; Idle
+// ignores the request.
 fun RustEngineBridge.composingSelectCandidate(
     text: String,
     settings: EngineSettings,

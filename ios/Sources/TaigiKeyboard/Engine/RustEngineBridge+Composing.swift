@@ -355,8 +355,8 @@ public extension RustEngineBridge {
         )
     }
 
-    // Under `Phase::Continuous` the engine prepends `nailed_prefix(nailed,
-    // config)` to `text`; the composing arm commits `text` verbatim.
+    // The engine prepends `nailed_prefix(nailed, config)` to `text`; Idle
+    // ignores the request.
     internal static func composingSelectCandidate(
         _ text: String,
         settings: EngineSettings,
@@ -631,7 +631,7 @@ public extension RustEngineBridge {
             case let .updatePreedit(m): return .updatePreedit(m.display)
             case .clearPreeditWithoutCommit_p: return .clearPreeditWithoutCommit
             case let .commitTextReplacingPreedit(m): return .commitTextReplacingPreedit(m.text)
-            case .clearCandidates: return .clearCandidates
+            case .clearCandidates_p: return .clearCandidates
             case .refreshCandidates: return .refreshCandidates
             case .resetCandidateContext: return .resetCandidateContext
             case let .nextWordUpdateLastSelectedWord(m):

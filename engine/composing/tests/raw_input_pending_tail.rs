@@ -65,6 +65,18 @@ fn assert_preedit_model_b_invariants(engine: &Engine, response: &ComposingRespon
 }
 
 #[test]
+fn invariant_holds_after_start() {
+    let mut engine = Engine::new();
+    let response = engine.apply(
+        Intent::Start {
+            text: "tsua-li2".to_string(),
+        },
+        &config_tl(),
+    );
+    assert_preedit_model_b_invariants(&engine, &response, "after Start");
+}
+
+#[test]
 fn invariant_holds_after_append_in_continuous() {
     let mut engine = Engine::new();
     engine.apply(

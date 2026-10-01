@@ -502,7 +502,6 @@ impl From<ComposingResponse> for Applied {
 
 /// What a `ComposingRequest` asks the engine to do. Decoded from
 /// `protos::engine::ComposingRequest::method` inside `requests::handle`.
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Intent {
     Start {

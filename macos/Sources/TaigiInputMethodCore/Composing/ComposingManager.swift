@@ -172,8 +172,8 @@ final class ComposingManager {
         )
     }
 
-    /// Steps the caret inside the pending tail. Not a buffer change: no
-    /// promotion, and the engine asks for no fetch — the candidates on screen
+    /// Steps the caret inside the pending tail. Not a buffer change: the
+    /// engine asks for no fetch — the candidates on screen
     /// still describe the same text.
     func moveCaret(_ direction: CaretDirection, executing executor: ComposingEffectExecutor) {
         Self.logger.debug("moveCaret \(String(describing: direction))")
@@ -370,9 +370,6 @@ final class ComposingManager {
         }.last
     }
 
-    /// Promotes the composition into the continuous phase, where the engine
-    /// segments the whole buffer instead of one syllable.
-    ///
     /// Mirror first, then run the effects in the order the engine listed them.
     /// The order is the engine's instruction, not an implementation detail: a
     /// commit that ran before the preedit update it replaces would leave the

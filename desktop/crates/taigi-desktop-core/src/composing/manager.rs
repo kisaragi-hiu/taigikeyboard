@@ -154,8 +154,8 @@ impl ComposingManager {
         self.apply(transition, executor);
     }
 
-    /// Steps the caret inside the pending tail. Not a buffer change: no
-    /// promotion, and the engine asks for no fetch — the candidates on
+    /// Steps the caret inside the pending tail. Not a buffer change: the
+    /// engine asks for no fetch — the candidates on
     /// screen still describe the same text (`ComposingManager.swift`
     /// `moveCaret`).
     pub fn move_caret(

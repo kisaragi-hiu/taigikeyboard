@@ -37,7 +37,7 @@ Host app — IMKTextInput client
 │   allocator; ownership transfer on activate/client-switch     │
 ├───────────────────────────────────────────────────────────────┤
 │ ComposingManager (port of iOS contract: 3-phase apply, effect │
-│   order, EnterContinuous promotion, Model B commit, FetchAtPos│
+│   order, one call per key (R12), Model B commit, FetchAtPos   │
 │   full carrier — neutral phase only until PR8b)               │
 ├──────────────┬─────────────────────┬──────────────────────────┤
 │ CandidatePanel│ Settings window     │ CustomDictionaryStore   │

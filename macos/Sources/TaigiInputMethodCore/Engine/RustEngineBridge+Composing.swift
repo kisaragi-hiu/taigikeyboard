@@ -6,7 +6,7 @@ import Foundation
 /// The composing intents macOS uses. This is a subset of the engine's sixteen:
 ///
 /// - `AppendHyphen` is skipped because it is a pure alias for `Append("-")`
-///   (`engine/composing/src/transition.rs:63-69`), and a hyphen is an ordinary
+///   (`engine/composing/src/transition.rs::apply`), and a hyphen is an ordinary
 ///   character on a Mac keyboard rather than a dedicated key as it is on iOS.
 /// - `ReplaceLast` is skipped because it exists for TPS auto-correct, and macOS
 ///   ships TL and POJ only.
@@ -15,7 +15,7 @@ import Foundation
 ///   thing — and one that skips the per-character preprocessing.
 /// - `SelectCandidate` is absent because it is not what it looks like. Under
 ///   `Phase::Continuous` it REPLACES the pending tail and re-prepends the nailed
-///   prefix (`transition.rs:724`), so handing it the composition as rendered
+///   prefix (`transition.rs::select_candidate_under_continuous`), so handing it the composition as rendered
 ///   double-counts that prefix: `台北` nailed plus a marked `台北大學` commits
 ///   `台北台北大學`. Selecting a candidate is `CommitContinuous` (span-local),
 ///   and Return is `CommitRaw` (the whole marked region) — between them nothing
@@ -115,12 +115,14 @@ extension RustEngineBridge {
 
     /// Commits the whole composition exactly as the marked region renders it —
     /// `Σ nailed.display_text + derived(pending)` under the continuous phase
-    /// (`transition.rs:443`), which is what the snapshot reports as
-    /// `display_text` (`transition.rs:585`). This is the Return key.
+    /// (`transition.rs::commit_raw_continuous`), which is what the snapshot
+    /// reports as `display_text` (`transition.rs::snapshot`). This is the
+    /// Return key.
     ///
     /// Not `composingSelectCandidate`, despite what an earlier note in this
     /// file claimed: under `Phase::Continuous` that op prepends the nailed
-    /// prefix to whatever text it is handed (`transition.rs:724`), so passing
+    /// prefix to whatever text it is handed
+    /// (`transition.rs::select_candidate_under_continuous`), so passing
     /// it the marked-region string double-counts — a composition reading
     /// `台北大學` with `台北` already nailed would commit `台北台北大學`.
     static func composingCommitRaw(
@@ -345,7 +347,7 @@ extension RustEngineBridge {
             return .clearPreeditWithoutCommit
         case let .commitTextReplacingPreedit(payload):
             return .commitTextReplacingPreedit(payload.text)
-        case .clearCandidates:
+        case .clearCandidates_p:
             return .clearCandidates
         case .refreshCandidates:
             return .refreshCandidates

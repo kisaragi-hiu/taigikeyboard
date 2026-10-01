@@ -69,7 +69,7 @@ final class ComposingManagerTests: XCTestCase {
 
     // MARK: - startComposing / appendCharacter
 
-    func testStartComposing_entersComposingAndFiresUpdateThenPerform() {
+    func testStartComposing_entersComposingAndFiresUpdateThenRefresh() {
         manager.startComposing(with: "a")
 
         XCTAssertTrue(manager.isComposing)
@@ -183,7 +183,7 @@ final class ComposingManagerTests: XCTestCase {
         XCTAssertTrue(spy.effects.isEmpty)
     }
 
-    // MARK: - commitComposition / commitRawInput
+    // MARK: - commitComposition
 
     func testCommitComposition_insertsDerivedTextAndExits() {
         manager.startComposing(with: "hello")
@@ -209,33 +209,6 @@ final class ComposingManagerTests: XCTestCase {
 
     func testCommitComposition_whenIdle_isNoop() {
         manager.commitComposition()
-        XCTAssertTrue(spy.effects.isEmpty)
-    }
-
-    func testCommitRawInput_insertsRawStringBypassingConversion() {
-        manager.startComposing(with: "Hello")
-        spy.effects.removeAll()
-
-        manager.commitRawInput()
-
-        XCTAssertFalse(manager.isComposing)
-        // v3.5.8 Phase 9 Item 3 (2026-05-13): engine handles Continuous
-        // CommitRaw natively now — commits `derived_display(pending)` and
-        // fires `NextWordWordSelected` (matches commit_continuous final-
-        // commit shape). For "Hello" derived display passes through
-        // verbatim because it has no convertible tone digits. NextWord
-        // payload carries text=display, roman=raw, triggerPrediction=true
-        // (same shape `commit_continuous` uses on final commit).
-        XCTAssertEqual(spy.effects, [
-            .commitTextReplacingPreedit("Hello"),
-            .clearCandidates,
-            .resetCandidateContext,
-            .nextWordWordSelected(text: "Hello", roman: "Hello", triggerPrediction: true, preceding: []),
-        ])
-    }
-
-    func testCommitRawInput_whenIdle_isNoop() {
-        manager.commitRawInput()
         XCTAssertTrue(spy.effects.isEmpty)
     }
 

@@ -19,7 +19,7 @@ extension ActionHandler {
     func handleSuggestionSelection(_ suggestion: AutocompleteSuggestion) {
         // Raw input candidate: commit literal keystrokes directly (no tone conversion)
         if suggestion.additionalInfo["isRawInput"] == "true" {
-            composingManager.commitRawInput()
+            composingManager.commitComposition()
             // The literal keystrokes go into the document, so the verdict is
             // what the layout composes — romanization in TL/POJ, Bopomofo in
             // TPS, which takes no spacing. The output mode does not enter into

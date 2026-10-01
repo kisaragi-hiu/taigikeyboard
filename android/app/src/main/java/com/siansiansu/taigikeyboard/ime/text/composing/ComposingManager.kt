@@ -149,25 +149,11 @@ class ComposingManager(
     ) {
         logger.tdebug(TAG) { "[COMPOSE] fn=startComposing char='$char'" }
         val settings = settingsProvider.current
-        // Snapshot generation BEFORE the dispatch so the Reset + Start pair
-        // shares the same value. `applyTransition` may synchronously re-enter
-        // via `onUpdateSelection` → `bumpGeneration` on hosts that fire
-        // selection callbacks inside `commitText` / `setComposingText`;
-        // re-reading `currentGeneration` would let Start silently reset the
-        // state the Reset just cleared.
-        val generation = currentGeneration
-        if (_isComposing.value) {
-            // Mid-composition restart: clear-without-commit before starting fresh.
-            applyAsSelfCommit(
-                RustEngineBridge.composingReset(generation),
-                ic,
-            )
-        }
         applyTransition(
             RustEngineBridge.composingStart(
                 char,
                 settings,
-                generation,
+                currentGeneration,
             ),
             ic,
         )
@@ -260,26 +246,6 @@ class ComposingManager(
         // `nailed_prefix`). `selectCandidate(candidate)` still uses
         // SelectCandidate (bare candidate → engine prepends correctly).
         // An empty composition makes `CommitRaw` a no-op.
-        val settings = settingsProvider.current
-        applyAsSelfCommit(
-            RustEngineBridge.composingCommitRaw(
-                settings,
-                currentGeneration,
-            ),
-            ic,
-        )
-    }
-
-    fun commitRawInput(ic: InputConnection) {
-        logger.tdebug(TAG) { "[COMPOSE] fn=commitRawInput" }
-        // v3.5.8 Phase 9 Item 3 + Model B (§10.3): engine handles
-        // `Phase::Continuous` CommitRaw natively — under Model B it commits
-        // the WHOLE composition (`Σ nailed.display_text + derived(pending)`)
-        // and fires the terminal NextWordWordSelected (matches
-        // commit_continuous final-commit shape). The Phase 7B
-        // SelectCandidate bypass is gone; the engine owns per-phase
-        // routing. See
-        // engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*.
         val settings = settingsProvider.current
         applyAsSelfCommit(
             RustEngineBridge.composingCommitRaw(

@@ -245,7 +245,7 @@ message ResetCandidateContext {}
   - `Start` vs `Append` — `Append` becomes `Start` when idle but the explicit `Start` is what platform code emits at composition begin (caret reset semantics differ — see iOS `case start` at `ComposingState.swift:25` and Android `data class Start` at `ComposingState.kt:49-51`).
   - `AppendHyphen` — semantic alias kept distinct so platform call-sites don't synthesize `"-"` strings on the wire.
   - `ReplaceLast` — TPS auto-correct (`ActionHandler+KeyActions.swift:37-39` iOS, `TextInputManager.kt:850,855` Android).
-  - `CommitDerived` vs `CommitRaw` — historical split (derived = tone-marked form, raw = literal numeric form). Since R12 (2026-10-01) `CommitDerived` is a no-op and `CommitRaw` (Enter) commits the whole derived composition; the literal-numeric commit went with the single-segment `Composing` phase.
+  - `CommitDerived` vs `CommitRaw` — historical split (derived = tone-marked form, raw = literal numeric form). `CommitDerived` left the wire in R12 (2026-10-01, tag 15 reserved); `CommitRaw` (Enter) commits the whole derived composition, and the literal-numeric commit went with the single-segment `Composing` phase.
   - `CommitPreeditThenInsertExternal` — emoji palette / clipboard paste atomic write (`MediaInputManager.kt:155` Android; iOS emoji delegate). Splitting into commit + insert reintroduces the silent-finish-composing race this intent was added to prevent.
 - Mirrors the `ComposingTransition` / `Effect` shape already in iOS+Android Phase II:
   - **iOS**: `ComposingTransition.swift:18-44` — full `Effect` enum.

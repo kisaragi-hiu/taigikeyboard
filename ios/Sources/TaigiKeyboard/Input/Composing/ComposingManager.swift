@@ -222,23 +222,6 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         ))
     }
 
-    public func commitRawInput() {
-        logger.debug("[COMPOSE] fn=commitRawInput")
-        // v3.5.8 Phase 9 Item 3 + Model B (§10.3):
-        // `Intent::CommitRaw` handles `Phase::Continuous` natively in the
-        // engine — under Model B it commits the WHOLE composition
-        // (`Σ nailed.display_text + derived(pending)`) and fires the same
-        // terminal NextWord effect as a final-commit candidate tap (see
-        // `engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*`).
-        // The Phase 7B SelectCandidate bypass is no longer needed; the
-        // engine owns the per-phase routing.
-        let settings = settingsProvider.current
-        applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
-            settings: settings,
-            generation: currentGeneration,
-        ))
-    }
-
     public func selectCandidate(text: String) {
         logger.debug("[COMPOSE] fn=selectCandidate len=\(text.count)")
         let settings = settingsProvider.current

@@ -21,7 +21,7 @@ final class ComposingEffectDecodingTests: XCTestCase {
             makeEffect(.commitTextReplacingPreedit(
                 payload(Taigi_Engine_CommitTextReplacingPreedit()) { $0.text = "台語" },
             )),
-            makeEffect(.clearCandidates(Taigi_Engine_ClearCandidates())),
+            makeEffect(.clearCandidates_p(Taigi_Engine_ClearCandidates())),
             makeEffect(.refreshCandidates(Taigi_Engine_RefreshCandidates())),
             makeEffect(.resetCandidateContext(Taigi_Engine_ResetCandidateContext())),
             makeEffect(.nextWordUpdateLastSelectedWord(
@@ -77,7 +77,7 @@ final class ComposingEffectDecodingTests: XCTestCase {
     func testDecodeTransition_effectWithNoKind_isDroppedWithoutDroppingItsNeighbours() {
         let response = makeResponse(effects: [
             Taigi_Engine_Effect(),
-            makeEffect(.clearCandidates(Taigi_Engine_ClearCandidates())),
+            makeEffect(.clearCandidates_p(Taigi_Engine_ClearCandidates())),
         ])
 
         XCTAssertEqual(RustEngineBridge.decodeTransition(response).effects, [.clearCandidates])

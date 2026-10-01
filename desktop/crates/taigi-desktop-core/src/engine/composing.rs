@@ -5,8 +5,9 @@
 //! file documents at length: `AppendHyphen` is an alias for `Append("-")`,
 //! `ReplaceLast` is TPS-only, `Start` is unnecessary (`Append` begins the
 //! composition from Idle), `SelectCandidate` double-counts the nailed
-//! prefix under `Phase::Continuous` so the literal commit is `CommitRaw`. Candidate navigation is a permanent platform-side
-//! concern (`cross-platform-alignment.md` §4.1).
+//! prefix under `Phase::Continuous` so the literal commit is `CommitRaw`.
+//! Candidate navigation is a permanent platform-side concern
+//! (`cross-platform-alignment.md` §4.1).
 //!
 //! Every op answers `None` when the round-trip itself failed, which is a
 //! different thing from the engine answering that it is idle.
