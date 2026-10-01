@@ -2,7 +2,7 @@
 
 > **Type**: Planning (PR table over the 2026-09-30 audit)
 > **Keywords**: `refactor`, `dead code`, `parity`, `desktop-core`, `userdata`, `commit resolution`, `test selection`, `naming`, `docs drift`
-> **Status**: in progress — R1–R8, R9-1, R9-2, R9-3a, R9-3b, R9-3c, R10-a, R11, A merged; R9-4, R10-b, R12 remain (#274–#325)
+> **Status**: in progress — R1–R8, R9-1, R9-2, R9-3a, R9-3b, R9-3c, R9-4a, R10-a, R11, A merged; R9-4b–e, R10-b, R12 remain (#274–#326)
 > **Source**: `docs/reports/2026-09-30-audit-all.md` (frozen snapshot on `30a79c16`; §2 findings, §4 draft rounds, Appendices A–F)
 > **Session memory**: project memory `project_maintainability_audit_2026_09_30.md` (Claude auto-memory)
 
@@ -30,7 +30,7 @@
 | R6 | Config normalisation in the engine (flat settings snapshot, real `input_mode = "tps"`, engine-resolved sources) | #298 #302 #303 #311 | Merged |
 | R7 | Test redundancy (engine layers, platform restatements, test-local copies, shared `engine/test-support`) | R7-1 #312 · R7-2a #314 (engine seam tests) · R7-2b #315 (platform restatements) · R7-3 #313 | merged |
 | R8 | Test selection: one integration binary per crate, `tools/test-select`, CI path filters, macOS `swift test` job | #299 #300 #301 #307 | Merged |
-| R9 | Naming batch A (identifiers, files, non-iOS folders) | R9-1 #308 · R9-2 #322 (Android packages: `ime/theme`, `ime/settings`, `ime/text/{candidates,overlays,nextword}`) · R9-3a #323 (`isTranslateSwapped` → `isHanjiFirst`; persisted keys, shortcut id, i18n key frozen) · R9-3b #324 (R10-a wrapper names: `nextwordResetAll`, `nextwordSetPredictionsVisible`, `transformCandidateCase`, `searchByHanji` / `isHanji`) · R9-3c #325 (platform `hanzi` fields / locals → `hanji`; generated i18n names, iOS `additionalInfo["hanzi"]`, DB columns, backup JSON, FST prefix frozen) · R9-4 | R9-1, R9-2, R9-3a, R9-3b, R9-3c merged |
+| R9 | Naming batch A (identifiers, files, non-iOS folders) | R9-1 #308 · R9-2 #322 (Android packages: `ime/theme`, `ime/settings`, `ime/text/{candidates,overlays,nextword}`) · R9-3a #323 (`isTranslateSwapped` → `isHanjiFirst`; persisted keys, shortcut id, i18n key frozen) · R9-3b #324 (R10-a wrapper names: `nextwordResetAll`, `nextwordSetPredictionsVisible`, `transformCandidateCase`, `searchByHanji` / `isHanji`) · R9-3c #325 (platform `hanzi` fields / locals → `hanji`; generated i18n names, iOS `additionalInfo["hanzi"]`, DB columns, backup JSON, FST prefix frozen) · R9-4a #326 (nextword `predictions_visible`, `Association{previous,previous_tl}`, `lookup_associations`, `AssociationFilter`, `SearchRow`) · R9-4b test-fixture hanji · R9-4c prod hanji + INVARIANT labels · R9-4d `dispatch.rs` → `requests.rs` · R9-4e glossary | R9-1, R9-2, R9-3a–c, R9-4a merged |
 | R10 | Naming batch B (proto names; field numbers unchanged) | R10-a1 #320 (`hanji` fields, `DictionarySourceToggles`, assoc lookup out of the wire) · R10-a2 #321 (nextword `ResetAll` / `SetPredictionsVisible`, case `TransformCandidateCase`) · R10-b (composing effects, with R12-2) | R10-a merged |
 | R11 | Lexicon / composing boundary (`SortKey` → `ranking`, one key-family module, visibility) | R11-1 #316 (`ranking::CandidateSortKey`, lexicon visibility) · R11-2a #317 (`phonetics::KeyFamily`) · R11-2b #318 (`KeyFamily::toneless_face`) | merged |
 | R12 | `Phase::Composing` removal — ≤20-line spike first | spike GO 2026-09-30 · PR-1 · PR-2 | Spike done |
