@@ -1,6 +1,6 @@
 // NextWord platform executor — Android wiring into the Rust nextword crate (since v3.5.5).
 // Decisions/state live in Rust; this file handles intent serialization, Effect interpretation
-// (timeout / UI callback), and caches lastSelectedWord/isShowing from engine.
+// (timeout / UI callback), and caches lastSelectedWord/predictionsVisible from engine.
 
 package com.siansiansu.taigikeyboard.ime.text.nextword
 
@@ -10,8 +10,8 @@ import com.siansiansu.taigikeyboard.engine.nextwordBackspace
 import com.siansiansu.taigikeyboard.engine.nextwordClearForNewComposing
 import com.siansiansu.taigikeyboard.engine.nextwordContextTimeoutFired
 import com.siansiansu.taigikeyboard.engine.nextwordPredictNext
-import com.siansiansu.taigikeyboard.engine.nextwordResetFull
-import com.siansiansu.taigikeyboard.engine.nextwordSetIsShowing
+import com.siansiansu.taigikeyboard.engine.nextwordResetAll
+import com.siansiansu.taigikeyboard.engine.nextwordSetPredictionsVisible
 import com.siansiansu.taigikeyboard.engine.nextwordUpdateLastSelectedWord
 import com.siansiansu.taigikeyboard.engine.nextwordWordSelected
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
@@ -40,9 +40,9 @@ import kotlinx.coroutines.withContext
  * - interprets the returned `NextWordDecideResult.Effect` list against
  *   coroutine-scheduled timeout and UI callbacks (the engine keeps the
  *   learned bigrams and reads them for predictions itself — roadmap P8b),
- * - caches `lastSelectedWord` / `isShowing` echoed back from the engine so
+ * - caches `lastSelectedWord` / `predictionsVisible` echoed back from the engine so
  *   `SmartbarManager` / `CandidateClickHandler` reads stay synchronous,
- * - pushes UI visibility back into the engine via `nextwordSetIsShowing`
+ * - pushes UI visibility back into the engine via `nextwordSetPredictionsVisible`
  *   after async predict() results render so downstream clear/reset paths
  *   gate `clearPredictionsUI` correctly (commit 7 bridge gap fix).
  *
@@ -66,7 +66,7 @@ class NextWordController(
     // / Cached state echoed from every decide call. Synchronous read for
     // / SmartbarManager / CandidateClickHandler.
     private var cachedLastSelectedWord: String? = null
-    private var cachedIsShowing: Boolean = false
+    private var cachedPredictionsVisible: Boolean = false
 
     // / Active context-timeout job. `null` when no timeout scheduled.
     private var contextTimeoutJob: Job? = null
@@ -78,14 +78,14 @@ class NextWordController(
 
     fun getLastSelectedWord(): String? = cachedLastSelectedWord
 
-    fun isShowingNextWordCandidates(): Boolean = cachedIsShowing
+    fun isShowingNextWordCandidates(): Boolean = cachedPredictionsVisible
 
     /**
      * Zero association state + cancel any pending timeout. Called on
      * `onStartInputView` when switching input fields.
      *
      * Bumps `envelopeGen` so the engine handle's mismatch reset wipes Rust
-     * state to default BEFORE the subsequent [RustEngineBridge.nextwordResetFull]
+     * state to default BEFORE the subsequent [RustEngineBridge.nextwordResetAll]
      * call processes — which then bumps `current_generation`, emits
      * `CancelContextTimeout` (already cancelled above; idempotent), and
      * skips `ClearPredictionsUI` because `is_showing` is now false post-reset.
@@ -96,7 +96,7 @@ class NextWordController(
         cancelContextTimeoutJob()
         envelopeGen += 1L
         val settings = settingsProvider.current
-        val result = RustEngineBridge.nextwordResetFull(
+        val result = RustEngineBridge.nextwordResetAll(
             nowMs = System.currentTimeMillis(),
             inputMode = settings.inputMode.toEngineInputMode(),
             hanjiFirst = settings.isHanjiFirst,
@@ -106,7 +106,7 @@ class NextWordController(
     }
 
     /**
-     * Mark `isShowing = false` + bump generation to drop any in-flight
+     * Mark predictions hidden + bump generation to drop any in-flight
      * prediction result that might land after this point. Called from
      * [SmartbarManager.clearCandidates] AFTER the UI is already cleared, so
      * the `ClearPredictionsUI` effect the engine emits while it was still
@@ -129,14 +129,14 @@ class NextWordController(
     /**
      * Direct `is_showing` setter — invoked by [SmartbarManager.updateCandidates]
      * after the candidate bar has been rendered with NextWord suggestions.
-     * Routes through [RustEngineBridge.nextwordSetIsShowing]; no generation
+     * Routes through [RustEngineBridge.nextwordSetPredictionsVisible]; no generation
      * bump per the bridge contract (the prediction round that produced
      * these suggestions is still current).
      */
     fun setShowingNextWord(showing: Boolean) {
         val settings = settingsProvider.current
         applyDecideResult(
-            RustEngineBridge.nextwordSetIsShowing(
+            RustEngineBridge.nextwordSetPredictionsVisible(
                 showing,
                 inputMode = settings.inputMode.toEngineInputMode(),
                 hanjiFirst = settings.isHanjiFirst,
@@ -259,7 +259,7 @@ class NextWordController(
             cancelContextTimeoutJob()
             envelopeGen += 1L
             applyDecideResult(
-                RustEngineBridge.nextwordResetFull(
+                RustEngineBridge.nextwordResetAll(
                     nowMs = nowMs,
                     inputMode = settings.inputMode.toEngineInputMode(),
                     hanjiFirst = settings.isHanjiFirst,
@@ -267,7 +267,7 @@ class NextWordController(
                 ),
             )
             onClearCandidates()
-            cachedIsShowing = false
+            cachedPredictionsVisible = false
             return
         }
         applyDecideResult(
@@ -290,7 +290,7 @@ class NextWordController(
         isUiAlreadyCleared: Boolean = false,
     ) {
         cachedLastSelectedWord = result.lastSelectedWord
-        cachedIsShowing = result.isShowing
+        cachedPredictionsVisible = result.predictionsVisible
         for (effect in result.effects) {
             execute(effect, isUiAlreadyCleared)
         }
@@ -320,7 +320,7 @@ class NextWordController(
 
             is RustEngineBridge.NextWordDecideResult.Effect.ClearPredictionsUI -> {
                 if (!isUiAlreadyCleared) onClearCandidates()
-                cachedIsShowing = false
+                cachedPredictionsVisible = false
             }
         }
     }
@@ -374,7 +374,7 @@ class NextWordController(
      * Render an async prediction query's answer — [RustEngineBridge.nextwordPredictNext]
      * read the learned rows and added the bundled rows, then score+merge+sort+limit +
      * stale generation drop — then push the new visibility back to engine state via
-     * `nextwordSetIsShowing` so downstream clear/reset paths can emit
+     * `nextwordSetPredictionsVisible` so downstream clear/reset paths can emit
      * `ClearPredictionsUI` correctly. On Main.
      */
     private fun handleQueryResult(
@@ -398,7 +398,7 @@ class NextWordController(
         }
 
         applyDecideResult(
-            RustEngineBridge.nextwordSetIsShowing(
+            RustEngineBridge.nextwordSetPredictionsVisible(
                 nowShowing,
                 inputMode = settings.inputMode.toEngineInputMode(),
                 hanjiFirst = settings.isHanjiFirst,

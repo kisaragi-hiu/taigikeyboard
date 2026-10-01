@@ -17,7 +17,7 @@ final class DictionarySearchServiceTests: XCTestCase {
         }
 
         /// CJK by the BMP range only — enough for the fixtures; production asks the engine.
-        func isHanzi(_ text: String) -> Bool {
+        func isHanji(_ text: String) -> Bool {
             text.unicodeScalars.contains { (0x4E00 ... 0x9FFF).contains($0.value) }
         }
 
@@ -35,7 +35,7 @@ final class DictionarySearchServiceTests: XCTestCase {
             return rows
         }
 
-        func searchByHanzi(
+        func searchByHanji(
             query _: String,
             inputMode: RustEngineBridge.LexiconInputMode,
             limit _: UInt32,

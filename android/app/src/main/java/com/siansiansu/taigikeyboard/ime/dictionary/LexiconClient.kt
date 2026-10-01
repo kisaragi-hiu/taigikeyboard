@@ -11,7 +11,7 @@ import com.siansiansu.taigikeyboard.ime.core.Outcome
  * [LexiconService], the same shape as `UserDataClient` / `EngineUserDataClient`.
  */
 interface LexiconClient {
-    fun isHanzi(text: String): Boolean
+    fun isHanji(text: String): Boolean
 
     fun dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles): RustEngineBridge.DictionaryFilters
 
@@ -22,7 +22,7 @@ interface LexiconClient {
         limit: Int,
     ): Outcome<List<DictionarySearchResult>, DictionaryError>
 
-    suspend fun searchByHanzi(
+    suspend fun searchByHanji(
         input: String,
         inputMode: RustEngineBridge.LexiconInputMode,
         filterBitmask: UInt,

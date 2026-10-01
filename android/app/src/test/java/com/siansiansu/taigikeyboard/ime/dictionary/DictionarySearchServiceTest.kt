@@ -24,7 +24,7 @@ class DictionarySearchServiceTest {
         val romanCalls = mutableListOf<RustEngineBridge.LexiconInputMode>()
         val hanziCalls = mutableListOf<RustEngineBridge.LexiconInputMode>()
 
-        override fun isHanzi(text: String): Boolean = text.any { it in '一'..'鿿' }
+        override fun isHanji(text: String): Boolean = text.any { it in '一'..'鿿' }
 
         override fun dictionaryFilters(toggles: RustEngineBridge.DictionaryToggles): RustEngineBridge.DictionaryFilters =
             RustEngineBridge.DictionaryFilters(
@@ -47,7 +47,7 @@ class DictionarySearchServiceTest {
             return Outcome.Success(rows)
         }
 
-        override suspend fun searchByHanzi(
+        override suspend fun searchByHanji(
             input: String,
             inputMode: RustEngineBridge.LexiconInputMode,
             filterBitmask: UInt,

@@ -36,8 +36,8 @@ Burntsushi `fst` finite-state transducer holding dictionary keys (`tl:`, `poj:`,
 
 | Platform | Entry point |
 |---|---|
-| iOS | `RustEngineBridge.search` / `searchByHanzi` / `searchWithSources` → Rust `engine/lexicon` |
-| Android | `LexiconBridge.search` / `searchByHanzi` / `searchWithSources` → same Rust crate |
+| iOS | `RustEngineBridge.search` / `searchByHanji` / `searchWithSources` → Rust `engine/lexicon` |
+| Android | `LexiconBridge.search` / `searchByHanji` / `searchWithSources` → same Rust crate |
 
 Rust `engine/lexicon::prefix_index::PrefixIndex` opens the file via `mmap-host` (the only crate not `forbid(unsafe_code)`) and exposes `Map::range` / `Map::get` for prefix scans + exact lookup.
 

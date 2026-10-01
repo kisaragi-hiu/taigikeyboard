@@ -10,7 +10,7 @@ import SwiftProtobuf
 ///
 /// Suggestion skip rules (`additionalInfo["isComposingText"]` /
 /// `additionalInfo["isNextWord"]`) stay on the platform side — only
-/// transform-eligible items reach `transformSuggestionCase(...)`.
+/// transform-eligible items reach `transformCandidateCase(...)`.
 public extension RustEngineBridge {
     // MARK: - Synthesized enum
 
@@ -41,7 +41,7 @@ public extension RustEngineBridge {
     /// Per-suggestion case transformation. Output is post-processed via
     /// engine-side `adjustNasalMarkerCase` (no separate FFI hop needed).
     /// Replaces the body of `SuggestionCaseTransformer.transform` per word.
-    static func transformSuggestionCase(
+    static func transformCandidateCase(
         original: String,
         composing: String,
         letterCase: CaseTransformLetterCase,
@@ -54,7 +54,7 @@ public extension RustEngineBridge {
         payload.letterCase = Taigi_Engine_LetterCase(rawValue: Int(letterCase.rawValue)) ?? .unspecified
         return caseStringDispatch(
             method: .transformCandidateCase(payload),
-            op: "transformSuggestionCase",
+            op: "transformCandidateCase",
             mode: mode,
             isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
             fallback: original,

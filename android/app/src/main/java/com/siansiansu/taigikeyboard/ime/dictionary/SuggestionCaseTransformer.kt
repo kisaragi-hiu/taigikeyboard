@@ -1,11 +1,11 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
-import com.siansiansu.taigikeyboard.engine.transformSuggestion
+import com.siansiansu.taigikeyboard.engine.transformCandidateCase
 import com.siansiansu.taigikeyboard.ime.settings.InputMode
 
 /**
- * Thin per-word bridge over `RustEngineBridge.transformSuggestion`.
+ * Thin per-word bridge over `RustEngineBridge.transformCandidateCase`.
  * Skip rules (composing-text candidate `id == 0`, NextWord/English
  * `id < 0 && id != -2`) stay platform-side via the existing numeric-id
  * markers — only transform-eligible suggestions reach the engine.
@@ -53,7 +53,7 @@ object SuggestionCaseTransformer {
         // it's already the user's typed text.
         if (word.id == 0) return word
 
-        val transformedRoman = RustEngineBridge.transformSuggestion(
+        val transformedRoman = RustEngineBridge.transformCandidateCase(
             original = word.roman,
             composing = composingText,
             letterCase = RustEngineBridge.LetterCase.from(caps = caps, capsLock = capsLock),

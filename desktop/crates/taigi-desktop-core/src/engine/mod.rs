@@ -23,12 +23,12 @@ pub use composing::{
 };
 pub use external_lookup::{chhoe_url, digit_tone_form, moe_url};
 pub use lexicon::{
-    dictionary_filters, install as lexicon_install, is_hanzi, search_by_hanzi, search_with_sources,
+    dictionary_filters, install as lexicon_install, is_hanji, search_by_hanji, search_with_sources,
     DictionaryFilters, DictionarySource, LexiconInstallStats, LexiconRow,
     ALL_SOURCES_ENABLED_SEARCH_BITMASK,
 };
 pub use nextword::{
-    reset_full as nextword_reset_full,
+    reset_all as nextword_reset_all,
     update_last_selected_word as nextword_update_last_selected_word,
     word_selected as nextword_word_selected,
 };

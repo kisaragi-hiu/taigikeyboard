@@ -322,13 +322,13 @@ pub fn search_with_sources(
 }
 
 /// The Dictionary Search page's hanji-prefix lookup (`RustEngineBridge+Lexicon.swift:267-286`).
-pub fn search_by_hanzi(
+pub fn search_by_hanji(
     query: &str,
     mode: InputMode,
     limit: u32,
     enabled_sources_bitmask: u32,
 ) -> Vec<LexiconRow> {
-    let op = "lexiconSearchByHanzi";
+    let op = "lexiconSearchByHanji";
     let request = SearchByHanjiRequest {
         query: query.to_owned(),
         input_mode: wire_input_mode(mode),
@@ -351,8 +351,8 @@ pub fn search_by_hanzi(
 }
 
 /// Whether `text` is a hanji query (`RustEngineBridge+Lexicon.swift:298-309`).
-pub fn is_hanzi(text: &str) -> bool {
-    let op = "isHanzi";
+pub fn is_hanji(text: &str) -> bool {
+    let op = "isHanji";
     let request = IsHanjiRequest {
         text: text.to_owned(),
     };
@@ -362,7 +362,7 @@ pub fn is_hanzi(text: &str) -> bool {
     match response.result {
         Some(lexicon_response::Result::IsHanjiResult(result)) => result.is_hanji,
         _ => {
-            record_failure(op, "response carried no is-hanzi result");
+            record_failure(op, "response carried no is-hanji result");
             false
         }
     }
@@ -429,9 +429,9 @@ mod tests {
     }
 
     #[test]
-    fn is_hanzi_answers_through_the_engine() {
-        assert!(is_hanzi("台語"));
-        assert!(!is_hanzi("tai"));
+    fn is_hanji_answers_through_the_engine() {
+        assert!(is_hanji("台語"));
+        assert!(!is_hanji("tai"));
     }
 
     #[test]

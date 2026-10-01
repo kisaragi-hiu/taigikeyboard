@@ -48,7 +48,7 @@ class DictionarySearchService(
         val settings = settingsProvider.current
         // Kotlin `Char.code` is 16-bit, so an inline CJK range check misses supplementary-plane
         // codepoints; the engine owns the 6-range classification (INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE).
-        val isCJK = lexicon.isHanzi(query)
+        val isCJK = lexicon.isHanji(query)
         logger.debug(TAG) { "[SEARCH] query='$query' isCJK=$isCJK inputMode=${settings.inputMode}" }
 
         // Resolve the filter bitmask + enabled-source set ONCE per query and hand both down
@@ -57,7 +57,7 @@ class DictionarySearchService(
         val mode = lexiconMode(settings.inputMode)
         val outcome =
             if (isCJK) {
-                lexicon.searchByHanzi(query, mode, filters.dictionaryFilterBitmask, limit)
+                lexicon.searchByHanji(query, mode, filters.dictionaryFilterBitmask, limit)
             } else {
                 lexicon.searchWithSources(query, mode, filters.dictionaryFilterBitmask, limit)
             }

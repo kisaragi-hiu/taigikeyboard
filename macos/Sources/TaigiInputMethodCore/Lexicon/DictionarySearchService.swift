@@ -77,16 +77,16 @@ struct DictionarySearchService: Sendable {
         let settings = settingsProvider.current
         let filters = RustEngineBridge.lexiconDictionaryFilters(toggles: settings.dictionarySources)
 
-        let isHanziQuery = RustEngineBridge.isHanzi(query)
+        let isHanjiQuery = RustEngineBridge.isHanji(query)
         let systemResults = systemResults(
             query: query,
             settings: settings,
-            isHanziQuery: isHanziQuery,
+            isHanjiQuery: isHanjiQuery,
             filters: filters,
         )
         // The custom dictionary is keyed by romanization, so a Hanji query has
         // nothing to look up in it.
-        let customResults = isHanziQuery ? [] : customResults(query: query, settings: settings)
+        let customResults = isHanjiQuery ? [] : customResults(query: query, settings: settings)
 
         return customResults + systemResults
     }
@@ -96,7 +96,7 @@ struct DictionarySearchService: Sendable {
     private func systemResults(
         query: String,
         settings: EngineSettings,
-        isHanziQuery: Bool,
+        isHanjiQuery: Bool,
         filters: DictionaryFilters?,
     ) -> [DictionarySearchResult] {
         // A failed resolve searches everything and labels everything, rather
@@ -107,8 +107,8 @@ struct DictionarySearchService: Sendable {
         let enabledSources = filters?.enabledSources
         let mode: LexiconInputMode = settings.inputMode == .poj ? .poj : .tl
 
-        let rows = isHanziQuery
-            ? RustEngineBridge.lexiconSearchByHanzi(
+        let rows = isHanjiQuery
+            ? RustEngineBridge.lexiconSearchByHanji(
                 query: query,
                 inputMode: mode,
                 limit: UInt32(Self.resultLimit),

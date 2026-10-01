@@ -215,7 +215,7 @@ extension RustEngineBridge {
     }
 
     /// Searches by Hanji.
-    static func lexiconSearchByHanzi(
+    static func lexiconSearchByHanji(
         query: String,
         inputMode: LexiconInputMode,
         limit: UInt32,
@@ -227,7 +227,7 @@ extension RustEngineBridge {
         payload.limit = limit
         payload.enabledSourcesBitmask = enabledSourcesBitmask
 
-        let op = "lexiconSearchByHanzi"
+        let op = "lexiconSearchByHanji"
         guard let response = lexiconResponse(.searchByHanji(payload), op: op) else { return [] }
         guard case let .searchByHanjiResult(result)? = response.result else {
             recordFailure(op: op, message: "response carried no search result")
@@ -246,11 +246,11 @@ extension RustEngineBridge {
     ///
     /// `false` on a failed round-trip, which routes a Hanji query down the
     /// romanization path and finds nothing, rather than failing the search.
-    static func isHanzi(_ text: String) -> Bool {
+    static func isHanji(_ text: String) -> Bool {
         var payload = Taigi_Engine_IsHanjiRequest()
         payload.text = text
 
-        let op = "isHanzi"
+        let op = "isHanji"
         guard let response = lexiconResponse(.isHanji(payload), op: op) else { return false }
         guard case let .isHanjiResult(result)? = response.result else {
             recordFailure(op: op, message: "response carried no is-hanzi result")

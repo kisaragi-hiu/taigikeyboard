@@ -67,6 +67,6 @@ impl NextWordPort for EngineNextWord {
     }
 
     fn forget_context(&self, now_ms: i64, settings: &EngineSettings, generation: u64) {
-        engine::nextword_reset_full(now_ms, settings, generation);
+        engine::nextword_reset_all(now_ms, settings, generation);
     }
 }

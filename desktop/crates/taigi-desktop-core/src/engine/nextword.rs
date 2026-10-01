@@ -75,12 +75,12 @@ pub fn update_last_selected_word(
 /// Forgets the current context outright. Sent when the composition session
 /// changes hands, so the last word typed in one application cannot be
 /// learned as the predecessor of the first word typed in the next.
-pub fn reset_full(now_ms: i64, settings: &EngineSettings, generation: u64) {
+pub fn reset_all(now_ms: i64, settings: &EngineSettings, generation: u64) {
     decide(
         next_word_request::Method::ResetAll(ResetAll {
             input: Some(DecisionInput { now_ms }),
         }),
-        "nextwordResetFull",
+        "nextwordResetAll",
         settings,
         generation,
     )

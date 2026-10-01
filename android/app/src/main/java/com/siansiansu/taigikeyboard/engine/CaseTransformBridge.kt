@@ -4,7 +4,7 @@
 // Mode and ⁿ-becomes-ᴺ-in-capitals (§53) are forwarded via the envelope `AppConfig`; case-transform is independent
 // of POJ doubletap preprocessing so the fold fields are left off. Suggestion skip rules
 // (`id < 0 && id != -2` and `id == 0`) stay platform-side — only transform-eligible items reach
-// `transformSuggestion(...)`. The `LetterCase` indicator lives on `RustEngineBridge.LetterCase`.
+// `transformCandidateCase(...)`. The `LetterCase` indicator lives on `RustEngineBridge.LetterCase`.
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -115,7 +115,7 @@ fun RustEngineBridge.transformInputCase(
  * CapsLock uppercases everything; otherwise the candidate is split at the composing length —
  * typed portion matches the typed case, remaining portion is title- or lower-cased.
  */
-fun RustEngineBridge.transformSuggestion(
+fun RustEngineBridge.transformCandidateCase(
     original: String,
     composing: String,
     letterCase: RustEngineBridge.LetterCase,
@@ -130,7 +130,7 @@ fun RustEngineBridge.transformSuggestion(
         .build()
     return caseStringDispatch(
         CaseRequest.newBuilder().setTransformCandidateCase(payload).build(),
-        op = "transformSuggestion",
+        op = "transformCandidateCase",
         mode = mode,
         isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         fallback = original,
