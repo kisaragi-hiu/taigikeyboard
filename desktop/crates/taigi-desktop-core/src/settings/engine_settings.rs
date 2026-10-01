@@ -146,7 +146,7 @@ impl SettingChoice for CandidateDisplayMode {
 pub struct EngineSettings {
     pub input_mode: InputMode,
     /// Word-boundary spacing input for the engine's `continuous_word_space`
-    /// predicate (`docs/engine/continuous-input-ranking.md` §10.2). The
+    /// predicate (`docs/engine/continuous-commit-and-display.md` §10.2). The
     /// EFFECTIVE value: the stored toggle AND-ed with `candidate_display_mode
     /// != RomanOnly`, and forced true under `Combined`
     /// (`SettingsDocument::engine_settings`), never the raw document bool —

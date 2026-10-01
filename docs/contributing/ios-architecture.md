@@ -4,7 +4,7 @@ Mandatory architectural contract for the iOS target. Read before any non-trivial
 
 iOS is the architectural exemplar; Android matches the shape documented at `docs/architecture/ios-exemplar.md`. The per-slice Rust inventory lives in `docs/engine/migration-inventory.csv`.
 
-**Split note**: Shared-core candidate criteria + marker live in `docs/contributing/ios-shared-core-candidates.md`. Settings-injection wiring lives in `docs/contributing/ios-settings-injection.md`.
+**Split note**: settings-injection wiring lives in `docs/contributing/ios-settings-injection.md`.
 
 ---
 
@@ -141,11 +141,43 @@ If an Engine-layer file appears to need KeyboardKit, the file is in the **wrong 
 
 ---
 
-## 5. Per-Change Audit Checklist
+## 5. Shared-Core Candidates
+
+Marking a file is a **contract** about its dependencies, not a promise to extract it. The criteria apply to any new candidate marking and to the `native_keep` roster in `docs/engine/migration-inventory.csv`.
+
+### Criteria — ALL must hold
+
+1. Only `import Foundation` (no `UIKit`, `SwiftUI`, `KeyboardKit`, `Combine`, `OSLog`).
+2. No global singleton dependency (no `SharedSettings.shared`, no `KeyboardSettings.store`, no `*.shared` access) — settings arrive through `EngineSettingsProvider` (`docs/contributing/ios-settings-injection.md`).
+3. No DB / App Group container / `FileManager` / file-system access — data is injected.
+4. No app-specific URL generation (e.g., `iTaigi://...`, `moedict://...`) or external service integration.
+5. No platform side effects — no `NotificationCenter` observers, no `Timer`, no `DispatchQueue.main`, no `OperationQueue`.
+6. No `@Published`, no `ObservableObject`, no `@MainActor` on type declarations.
+
+Matches inside `///` doc comments of a candidate file are informational, not violations (e.g., a doc comment stating the file does *not* use `SharedSettings.shared`). Android mirrors these criteria in `docs/contributing/android-guidelines.md` §1.
+
+### Marking
+
+Every file that satisfies the criteria begins with:
+
+```swift
+// MARK: - Shared-Core Candidate
+// Pure logic, Foundation-only. Eligible for cross-platform extraction.
+```
+
+Engine-layer files that do **not** qualify begin with a one-line `// NOTE: Not shared-core — <reason>` comment so the audit state stays visible at the top of the file.
+
+### Roster
+
+Authoritative inventory: `docs/engine/migration-inventory.csv` — `rust_shipped` for migrated items, `native_keep` for platform-stays candidates, `wont_migrate` for explicit exclusions (Services glue, KeyboardKit wrappers, URL builders, UI). Do not re-enumerate or count here — update the CSV.
+
+---
+
+## 6. Per-Change Audit Checklist
 
 Apply to any non-trivial structural change:
 
-- [ ] Any new or moved file in Engine/ passes shared-core criteria (if it claims the marker) — see `docs/contributing/ios-shared-core-candidates.md`
+- [ ] Any new or moved file in Engine/ passes the shared-core criteria (if it claims the marker) — §5
 - [ ] No Engine-layer file imports `KeyboardKit` / `UIKit` / `SwiftUI` / `Combine`
 - [ ] No Engine-layer file reads `SharedSettings.shared` / `KeyboardSettings.store` — see `docs/contributing/ios-settings-injection.md`
 - [ ] Settings change sync regression test passes (live-read propagation from app to keyboard) — see `docs/contributing/ios-settings-injection.md` § Change sync regression test
@@ -153,10 +185,9 @@ Apply to any non-trivial structural change:
 
 ---
 
-## 6. References
+## 7. References
 
 - `docs/contributing/ios-guidelines.md` — day-to-day iOS rules (SourceKit, KeyboardKit, memory mgmt, naming, tests)
-- `docs/contributing/ios-shared-core-candidates.md` — criteria + marker for files eligible for cross-platform extraction
 - `docs/contributing/ios-settings-injection.md` — `EngineSettingsProvider` wiring for live-read settings
 - `docs/contributing/android-guidelines.md` — Android counterpart with shared-core / Kotlin best-practice rules
 - `docs/contributing/cross-platform-alignment.md` — refactor-freeze contract both platforms follow

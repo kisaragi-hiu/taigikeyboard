@@ -21,10 +21,9 @@
 |------|-------------|--------|
 | `engine/migration-inventory.csv` | Rust slice inventory: every shipped pub item + native pending/keep/wont-migrate (146 rows, 13 cols, zh-TW descriptions) | Canonical |
 | `engine/binary-format.md` | `dictionary.fst` + `association.bin` binary spec (mmap-friendly, byte-exact cross-platform) | Active |
-| `engine/ffi-safety.md` | Cross-FFI safety contract: panic boundaries, size caps, generation semantics | Active |
 | `engine/rust-core-proto.md` | Engine proto envelope + per-slice request/response shapes | Active |
 | `engine/composing.md` | Composing state machine (`Phase::Idle` / `Continuous { raw, caret, nailed }`) — Rust `engine/composing` | Active |
-| `engine/continuous-input-ranking.md` | Continuous-input ranking source of truth: lexicographic CandidateSortKey + user_freq_boost + recency_rank | Active |
+| `engine/continuous-input-ranking.md` | Continuous-input ranking design record (v3.5.8): lexicographic CandidateSortKey + user_freq_boost + recency_rank; the code's module docs win where they differ | Reference |
 | `engine/continuous-candidate-display.md` | Continuous candidate dual-line display (roman + hanji) spec — §4 carrier shipped (Items 5+6); §15 fallback retire DONE (Item 13) | Active |
 | `engine/continuous-commit-and-display.md` | Continuous mode commit/display contract (Model B) — extracted from `continuous-input-ranking.md` §10 | Active |
 | `engine/tone.md` | Tone conversion / restoration / nasal-marker — Rust `engine/phonetics` | Active |
@@ -56,12 +55,11 @@
 | `architecture/windows-roadmap.md` | Windows desktop IME (TSF in Rust over the shared engine, macOS UX parity) — design W1–W17, PR table, reference alignment, dogfood run-book; shipped desktop v3.6.7/v3.6.8 | Reference |
 | `architecture/linux-roadmap.md` | Linux desktop IME (Fcitx5 addon primary + IBus engine second over one Rust core, GTK 4 / libadwaita settings window over the shared `desktop/` crates) — design L1–L13, PR table, named divergences, dogfood run-book; PR0–PR9 merged, device dogfood pending | Done |
 | `architecture/e2e-testing-roadmap.md` | End-to-end test system — AI-driven simulator / emulator / VM / container runs, test-build-only JSONL trace, analyzer for bugs + perf, per-platform drivers, capability spike results, PR table; Linux live (`make e2e PLATFORM=linux` / `linux-desktop`), macOS / Windows / mobile manual | Active |
-| `architecture/theme-color-roles-roadmap.md` | Mobile custom-theme color tiers rollout (USER-adjustable / derived / fixed) — phase table P0–P7 over the audit items | Planning |
 | `architecture/user-data-engine-roadmap.md` | The four user-data SQLite stores moved from four platform implementations into one engine crate (`engine/userdata`) — audit of today's stores and their drift, design U1–U10, PR table, reference alignment | Done |
 | `architecture/bigram-lm-roadmap.md` | Cross-word bigram language model from `corpus/taigi-corpus` — today's unigram walker + intra-word association table, corpus alignment survey, design D1–D7 (`association.bin` v2 word keys + `$`, next-word backoff, composing re-rank, gated walker term), phases P0–P8, reference survey of every bigram implementation in `references/`, corpus-expansion survey (ten more Taiwanese sources + the 意傳 aligner); P0–P5 merged, P6/P7 not adopted | Closed (2026-09-30) |
-| `architecture/maintainability-roadmap.md` | Follow-up of the 2026-09-30 maintainability audit — mandate (settings may change, user data never lost), PR table R1–R12 + docs drift, rounds left to USER decisions | Planning |
+| `architecture/maintainability-roadmap.md` | Follow-up of the 2026-09-30 maintainability audit — mandate (settings may change, user data never lost), PR table R1–R12 + docs drift, decisions recorded while running; complete 2026-10-01 | Done |
 | `architecture/e2e-trace-schema.md` | Test-build-only JSONL trace contract — how it stays out of release, `trace_open` / `engine_request` / `engine_panic` / `adapter_reject` events | Reference |
-| `architecture/linux-release.md` | The Linux half of a desktop release: the `.deb` (both shells, dictionaries, settings window), how `make -C linux deb` and `linux-build.yml` build and attach it, no in-app update | Reference |
+| `architecture/linux-release.md` | The Linux half of a desktop release: the `.deb` / `.rpm` / Arch packages (both shells, dictionaries, settings window), how `make -C linux deb` and `linux-build.yml` build and attach them, no in-app update | Reference |
 | `architecture/windows-release.md` | Windows installer (Inno Setup), Authenticode signing, and web-distributed installer workflow | Active |
 | `architecture/ios-exemplar.md` | Cross-platform architectural pattern (layers, DI, live-read settings, markers) + §9 Android deviations | Reference |
 
@@ -91,27 +89,19 @@
 
 ### `reports/` — Audit & Analysis Reports (historical)
 
-One-off snapshots ordered chronologically. Specs cited by engine code (`v358-refactor-design-spec`, `v359-b-plan`) stay here as source-of-truth.
+One-off snapshots ordered chronologically. A report stays while live code cites it, it holds design rationale found nowhere else, or its research is still open; otherwise it is deleted once its facts live in `architecture/behavioral-invariants.md`, an `engine/` spec or a roadmap (git history keeps the text).
 
 | File | Description | Status |
 |------|-------------|--------|
-| `reports/2026-05-18-v358-refactor-design-spec.md` | v3.5.9 refactor implementation design spec (S0/A2/A1) | Historical |
-| `reports/2026-05-20-triple-index-eval.md` | Triple index (POJ+TL+TPS first-class lattice) feasibility eval | Historical |
-| `reports/2026-05-20-v359-b-plan.md` | v3.5.9-B dual-index (POJ first-class lattice) plan (Codex-converged v3) | Historical |
-| `reports/2026-06-03-user-data-cross-mode-audit.md` | User-data cross-input-mode + single→triple-index compatibility audit (v3.6.1 fix candidates) | Historical |
-| `reports/2026-06-22-i18n-content-draft-review.md` | i18n content.json 5-lang draft proofread sheet | Historical |
-| `reports/2026-06-22-i18n-poj-draft-review.md` | i18n POJ draft proofread sheet | Historical |
-| `reports/2026-06-22-i18n-symbol-draft-review.md` | i18n symbol draft proofread sheet | Historical |
-| `reports/2026-06-22-i18n-tl-draft-review.md` | i18n TL draft proofread sheet | Historical |
-| `reports/2026-08-30-hanlo-together-mode-research.md` | Candidate Display picker research: Hanji and romanization side by side (default, title/subtitle) / Hanji with Romanization (one-label hanji+roman, formerly "Hanji and romanization together"; Part I) / Romanization Only (roman-only cells in today's candidate UI, all 4 platforms; Part II — 3-column + Taigi spelling correction considered and dropped, kept as future correction reference) — research only, not implemented | Plan |
+| `reports/2026-08-30-hanlo-together-mode-research.md` | Candidate Display picker research: Hanji and romanization side by side (default, title/subtitle) / Hanji with Romanization (one-label hanji+roman, formerly "Hanji and romanization together"; Part I) / Romanization Only (roman-only cells in today's candidate UI, all 4 platforms; Part II — 3-column + Taigi spelling correction considered and dropped, kept as future correction reference) — the picker shipped (all platforms); Taigi spelling correction stays open research | Historical |
 | `reports/desktop-3.6.x-design-notes.md` | Frozen design bodies of the seven desktop 3.6.8 sections collapsed out of `roadmap.md` (installed typefaces, Telex, symbol picker, composing caret, ⇧+slot, Shortcuts pane, custom fonts) | Historical |
 | `reports/2026-09-11-windows-candidate-window-paint-latency.md` | Windows candidate window frame-before-content latency: measured on the box (2-5 ms steady, one 171 ms first-show in Chrome), mechanism (in-proc `ShowWindow` before `WM_PAINT`), what mozc / PIME / khiin do, options B (in-proc sync paint) / C (renderer process) costed — evaluation only, nothing decided | Plan |
 | `reports/2026-09-21-taile-mode-tone-commit.md` | TL mode — tone key commits without a candidate window (MOE Mac IME parity): why marked text stays, desktop-only Enter cost under Candidate Display = Romanization Only, options A (Space commits when `.ignored`) / B (real TL mode) costed, open USER decisions — research only, low priority (USER 2026-09-21) | Plan |
-| `reports/2026-09-24-mobile-smart-suggestions-brainstorm.md` | Mobile smart suggestions brainstorm: today's next-word = dictionary-word completion keyed on the last character (gaps ranked), references survey (mozc / McBopomofo / vChewing / librime-predict / ChiaKey / azooKey) ranked for Taigi, engine + mobile maintainability audit (dead ops, Swift/Kotlin prediction-assembly duplication), draft R1 → R3 → batches A/B + corpus track, open USER decisions — brainstorm only, nothing decided | Plan |
-| `reports/2026-09-24-open-source-readiness-and-layout.md` | Open-source readiness + repository layout audit: community files, fresh-clone blockers (build doc only in CLAUDE.md, macOS-only `make build`, unpinned protoc), privacy scrub, dictionary licence position, four Cargo workspaces / CI coverage gaps, non-reproducible `build_ts`, proposed target tree (platforms stay top-level) + phased rounds 0–10 — audit only, nothing decided | Plan |
+| `reports/2026-09-24-mobile-smart-suggestions-brainstorm.md` | Mobile smart suggestions brainstorm: today's next-word = dictionary-word completion keyed on the last character (gaps ranked), references survey (mozc / McBopomofo / vChewing / librime-predict / ChiaKey / azooKey) ranked for Taigi, engine + mobile maintainability audit (dead ops, Swift/Kotlin prediction-assembly duplication), draft R1 → R3 → batches A/B + corpus track, open USER decisions — R1–R4 and batches A/B delivered (smart suggestions + bigram LM); leftovers listed in `roadmap.md` § Open candidates | Historical |
+| `reports/2026-09-24-open-source-readiness-and-layout.md` | Open-source readiness + repository layout audit: community files, fresh-clone blockers (build doc only in CLAUDE.md, macOS-only `make build`, unpinned protoc), privacy scrub, dictionary licence position, four Cargo workspaces / CI coverage gaps, non-reproducible `build_ts`, proposed target tree (platforms stay top-level) + phased rounds 0–10 — rounds 0–9 executed (#170–#335); round 10 + optional items in `roadmap.md` § Open candidates | Historical |
+| `reports/2026-09-30-audit-all.md` | Whole-repo maintainability audit (frozen on `30a79c16`): findings, justified-looking layers not to re-flag, draft rounds — executed as `architecture/maintainability-roadmap.md` | Historical |
 | `reports/2026-09-26-shipped-roadmap-design-notes.md` | Frozen design bodies of the roadmap items collapsed on 2026-09-26 after they merged (identical desktop menus + Linux update check added then removed, learned phrases, mobile custom theme, Telex tone 1 / 4 keys, input-source menu) | Historical |
 | `reports/2026-09-28-bigram-corpus-spike.md` | Bigram LM roadmap P1 spike — per-source hanji↔TL alignment of eight `taigi-corpus` sources, pair counts / top-K coverage / `association.bin` v2 size projection, romanized function-word recovery options, dictionary reading-prior accuracy vs iCorpus gold, 意傳 aligner comparison; opens the P2 decision | Historical |
-| `reports/2026-09-14-partial-tone-candidate-filter.md` | Partial-tone TL/POJ input (`teng5-sek`) drops the typed tone: `fst_body_for_span` is all-or-nothing, so a mixed toned/toneless span falls back to the toneless FST key and the typed digit is stripped (§17 case 3, by design) — root cause confirmed on production artifacts, all four platforms; fixed in the same PR by the candidate-layer `lexicon::TonePin::TypedTones` pin (§17 case 3) | Historical |
 
 ### `releases/` — Per-Release Archives (1)
 

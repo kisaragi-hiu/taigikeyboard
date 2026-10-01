@@ -2,7 +2,7 @@
 
 > **Type**: Reference (Phonetics slice = AS-IMPLEMENTED post PR #186/#187; Composing slice = AS-IMPLEMENTED in v3.5.4)
 > **Keywords**: `protobuf`, `Command`, `Request`, `Response`, `request-id`, `generation`, `AppConfig`, `Phonetics`, `Composing`
-> **Related**: `ffi-safety.md`, `../architecture/behavioral-invariants.md`, `../architecture/composing-state-boundary.md`, `../architecture/nextword-engine-boundary.md`
+> **Related**: `../contributing/rust-ffi-safety.md`, `../architecture/behavioral-invariants.md`, `../architecture/composing-state-boundary.md`, `../architecture/nextword-engine-boundary.md`
 > **Audience**: anyone extending the engine proto contract.
 > **Authoritative source**: `engine/protos/proto/envelope.proto` + `engine/protos/proto/phonetics.proto` (the .proto files are canonical when they diverge from this doc).
 
@@ -13,7 +13,7 @@
 - **Phonetics slice (D9.4 — MERGED)** + **Composing slice (D9.3 — MERGED in v3.5.4).**
 - Lexicon, NextWord (including prediction queries / results), SQLite, custom-dictionary, candidate-scoring are outside this document — see their own crates and `../architecture/nextword-engine-boundary.md`.
 - §7 reflects the merged Phonetics wire (PR #186 D9.4-Phonetics + PR #187 D9.4-cleanup). §8 reflects the merged Composing wire (v3.5.4); naming was changed from `oneof intent` to `oneof method` per the Phonetics convention adopted in PR #186.
-- **Authoritative companion**: `docs/contributing/rust-best-practices.md` §3 (crate choices — `prost` for protobuf), §8 (non-goals); `docs/contributing/rust-ffi-safety.md` §4 (opaque handle pattern).
+- **Authoritative companion**: `docs/contributing/rust-best-practices.md` §3 (crate choices — `prost` for protobuf), §8 (non-goals); `docs/contributing/rust-ffi-safety.md` §1 (the seam as built).
 
 ---
 
@@ -34,11 +34,11 @@ The Rust engine's logical shape, mirroring `references/khiin-rs/khiin/src/engine
 fn send_command_bytes(handle: EngineHandle, bytes: &[u8]) -> Vec<u8>
 ```
 
-Concrete extern signatures differ per platform (per `docs/contributing/rust-ffi-safety.md` §4):
+Concrete extern signatures differ per platform (per `docs/contributing/rust-ffi-safety.md` §1.1):
 
 - **JNI** (`android-jni`): `JByteArray` in / `JByteArray` out, plus `EngineHandle` as `jlong` wrapped in a `@JvmInline value class` on the Kotlin side.
 - **swift-bridge** (`swift-ffi`): `&[u8]` in / `Vec<u8>` out, with an `EngineBridge` struct holding the handle.
-- Both wrap the body in `catch_unwind` per `ffi-safety.md` §2 and lock the `Mutex<Engine>` per `ffi-safety.md` §3.
+- Both wrap the body in `catch_unwind` per `rust-ffi-safety.md` §1.2 and lock the `Mutex<Engine>` per `rust-ffi-safety.md` §1.3.
 
 ---
 
@@ -161,8 +161,8 @@ message PhoneticsResponse {
 - **`oneof result`** with 5 result shapes covers all 8 ops: most ops return `StringResult`; `StripTone` returns the `(bare, tone)` pair; `IsTpsToneMark` uses `BoolResult`; the `CustomSearchKeysResult` arm (tag 16) was reserved with `DeriveCustomQueryKey` on 2026-09-30; the top-level `OptionalStringResult` arm (tag 12) was reserved when `RestoreTone` was removed — the message survives only inside `TpsAdjustResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
 - Pure, stateless. Every op is a function of its payload alone — `phonetics::requests::handle(req)` takes no `AppConfig` (the settings-reading `NormalizeTone` op was removed 2026-09-25; `phonetics::api::normalize_tone` is now called in-process by `composing::derived`).
 - Replaces both platforms' `PhoneticsConverter.swift` / `TaigiPhonetics.kt` + `InputNormalizer` + `ToneRestoration` + `TPSConverter` + `TPSAdjustmentBundle` entry points.
-- **Two ops were removed mid-flight** (`AdjustNasalMarkerCase`, `NfdPreprocess`): originally callers reverted to platform-side helpers (`ToneUtilities.adjustNasalMarkerCase` / `TaigiUnicode.nfdPreprocessed`) for Android JVM unit-test compatibility. **(Obsolete after v3.5.3 follow-up — see `feedback_path_g_delete_mirrors.md`.)** Path G deleted the platform mirrors + their JVM unit tests; `phonetics::api::normalize_tone` applies `adjust_nasal_marker_case` in-band as part of the normalize pipeline; `Method::NfdPreprocessForLookup` exposes the Rust helper directly. The Rust phonetics crate is now the sole owner of both algorithms.
-- Thread-safe by construction (no mutable state). The unified `Mutex<Engine>` wrap from `ffi-safety.md` §3 keeps the FFI contract uniform across slices.
+- **Two ops were removed mid-flight** (`AdjustNasalMarkerCase`, `NfdPreprocess`): originally callers reverted to platform-side helpers (`ToneUtilities.adjustNasalMarkerCase` / `TaigiUnicode.nfdPreprocessed`) for Android JVM unit-test compatibility. **(Obsolete after the v3.5.3 follow-up, which deleted platform mirrors outright instead of keeping them for JVM tests.)** Path G deleted the platform mirrors + their JVM unit tests; `phonetics::api::normalize_tone` applies `adjust_nasal_marker_case` in-band as part of the normalize pipeline; `Method::NfdPreprocessForLookup` exposes the Rust helper directly. The Rust phonetics crate is now the sole owner of both algorithms.
+- Thread-safe by construction (no mutable state). The unified `Mutex<Engine>` wrap from `rust-ffi-safety.md` §1.3 keeps the FFI contract uniform across slices.
 
 ---
 
@@ -324,7 +324,7 @@ message CaseResponse {
 ## 11. References
 
 - `docs/contributing/rust-best-practices.md` — mandatory companion (§3 crate choices, §8 non-goals)
-- `docs/contributing/rust-ffi-safety.md` — mandatory companion (§4 opaque handle pattern)
+- `docs/contributing/rust-ffi-safety.md` — mandatory companion (§1 seam as built, §6 test contract)
 - `references/khiin-rs/protos/src/command.proto:114-117` — candidate display is the client app's job
 - `references/khiin-rs/khiin/src/engine.rs:57` — `send_command_bytes` shape
 - `references/khiin-rs/README.md:140-152` — protobuf rationale + request-id correlation

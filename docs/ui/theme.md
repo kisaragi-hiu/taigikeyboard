@@ -115,7 +115,13 @@ Slider range 0…4 in 0.5 steps (`App/Tabs/Theme/ThemeControlRows.swift` `ThemeS
 
 ### Custom Theme Color Roles (USER 2026-09-27)
 
-A user theme renders **light-only**: iOS `ThemeId.forcedColorScheme` / Android `TaigiKeyboard.syncForcedLight` pin the keyboard to light, so no element follows system dark mode. Every keyboard element falls in exactly one tier: USER-adjustable, derived from a USER role, or fixed. No element may paint a system / attr / asset color that ignores the roles. Rollout: `docs/architecture/theme-color-roles-roadmap.md`.
+A user theme renders **light-only**: iOS `ThemeId.forcedColorScheme` / Android `TaigiKeyboard.syncForcedLight` pin the keyboard to light, so no element follows system dark mode. Every keyboard element falls in exactly one tier: USER-adjustable, derived from a USER role, or fixed. No element may paint a system / attr / asset color that ignores the roles. Rolled out 2026-09-27 (#252, #255, #257, #258) under three rules that still hold for any new element:
+
+- Adaptive (built-in `default`) themes stay visually unchanged: a derived color applies only when its source role is set.
+- Each mirrored derivation carries a `CROSS-PLATFORM INVARIANT` comment citing the other platform.
+- Tier 3 fixed colors are not themed; the Android caps-lock accent only stops key text from overriding it.
+
+The English autocorrect highlight is deliberately absent: neither platform emits an autocorrect suggestion (iOS `EnglishAutocompleteService` builds `AutocompleteSuggestion(text:)` only), so there is nothing to theme.
 
 **Tier 1 — USER-adjustable (the five roles above; no new roles):** background, key fill, key text, candidate text, candidate highlight.
 

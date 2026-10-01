@@ -137,7 +137,7 @@ Codifying `docs/contributing/cross-platform-alignment.md` §4.1 in Rust terms:
 - khiin-rs reference study (2026-04-22): lessons to adopt + avoid, captured in `references/khiin-rs/`.
 - `docs/contributing/cross-platform-alignment.md` §4.1 — Rust shared-core non-goals.
 - `docs/contributing/android-guidelines.md` §1 Kotlin→Rust shape preferences — mirror of the type-shape rules here.
-- `docs/contributing/ios-shared-core-candidates.md` — the iOS-side equivalent of what counts as a candidate for Rust extraction.
+- `docs/contributing/ios-architecture.md` §5 — the iOS-side equivalent of what counts as a candidate for Rust extraction.
 - `docs/architecture/behavioral-invariants.md` — invariant contracts the Rust implementation must preserve.
 - Rust API Guidelines (https://rust-lang.github.io/api-guidelines/) — adopted as the naming + docs baseline.
 - Rustonomicon (https://doc.rust-lang.org/nomicon/) — authoritative `unsafe` reference.

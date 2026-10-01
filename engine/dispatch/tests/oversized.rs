@@ -1,5 +1,5 @@
 //! `engine/dispatch::process_request` — oversized payloads
-//! (`docs/engine/ffi-safety.md` §7 T5: ">1 MB byte buffer → bounded
+//! (`docs/contributing/rust-ffi-safety.md` §6 T5, first draft: ">1 MB byte buffer → bounded
 //! behavior, documented either way").
 //!
 //! Library-level documented behavior: the dispatcher itself has **no

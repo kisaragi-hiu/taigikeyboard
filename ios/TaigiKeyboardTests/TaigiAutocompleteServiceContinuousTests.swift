@@ -12,7 +12,7 @@ import XCTest
 /// `commitContinuous` consumed-byte offsets and corrupts the engine pending
 /// buffer — invisible to the user until they hit a bad commit boundary.
 ///
-/// Per `docs/engine/continuous-input-ranking.md` §10.1.2 (supersedes legacy
+/// Per `docs/engine/continuous-commit-and-display.md` §10.1.2 (supersedes legacy
 /// slot-0 model) + §10.3 commit contract: Continuous mode has NO
 /// composing-text cell at slot 0. `candidate[0]` is the engine ranker top;
 /// Tap-0 commits `candidate[0].display_text` (clarification γ — canonical

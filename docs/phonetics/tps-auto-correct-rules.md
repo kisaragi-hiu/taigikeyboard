@@ -47,12 +47,9 @@ When the incoming character is **ㄧ** or **ㆪ**, and the last character of raw
 
 ### Implementation
 
-| Platform | Function | Location |
-|---|---|---|
-| iOS | `TPSConverter.palatalizationReplacement(forIncoming:lastRawChar:)` | `TPSConverter.swift` |
-| Android | `TPSConverter.palatalizationReplacement(incoming, lastRawChar)` | `TPSConverter.kt` |
+Rust shared-core single source: `engine/phonetics/src/tps_adjust.rs::palatalization_replacement`. Both iOS and Android call into the Rust engine via `Method::TpsInputAdjust` (the platform `TPSConverter.swift` / `TPSConverter.kt` mirrors were deleted in the Path G migration).
 
-Called after `adjustTPSInitialKey` in the input pipeline. Uses `composingManager.replaceLastCharacter()` to modify rawInput retroactively.
+Called after `adjust_initial_key` inside `tps_adjust::adjust`; the result comes back as `replace_last`, which the platform applies to rawInput retroactively.
 
 ---
 
@@ -148,7 +145,7 @@ Rust shared-core single source: `engine/phonetics/src/tps_adjust.rs::adjust_init
 
 Standalone syllabic m and ng are valid Taiwanese syllables (e.g. m̄ = 姆, n̂g = 黃). In TPS, these use the syllabic forms ㆬ and ㆭ (from the vowel table), not the initial forms ㄇ and ㄫ (from the consonant table).
 
-When the user types ㄇ at syllable start, `adjustTPSInitialKey` keeps it as ㄇ because a vowel might follow. But when a tone mark arrives next, we know no vowel followed — the user wants syllabic m/ng.
+When the user types ㄇ at syllable start, `adjust_initial_key` keeps it as ㄇ because a vowel might follow. But when a tone mark arrives next, we know no vowel followed — the user wants syllabic m/ng.
 
 ### Rule
 
@@ -165,16 +162,13 @@ Without correction, `toTL("ㄇ˫")` produces `"m 7"` (with space — consonant-o
 
 ### Why this is safe
 
-If ㄇ were after a vowel, `adjustTPSInitialKey` (Rule 2) would have already converted it to ㆬ. So if rawInput still ends with ㄇ, it must be at syllable start. A tone mark after syllable-start ㄇ unambiguously means syllabic m. Same logic for ㄫ.
+If ㄇ were after a vowel, `adjust_initial_key` (Rule 2) would have already converted it to ㆬ. So if rawInput still ends with ㄇ, it must be at syllable start. A tone mark after syllable-start ㄇ unambiguously means syllabic m. Same logic for ㄫ.
 
 ### Implementation
 
-| Platform | Function | Location |
-|---|---|---|
-| iOS | `TPSConverter.syllabicNasalReplacement(forIncoming:lastRawChar:)` | `TPSConverter.swift` |
-| Android | `TPSConverter.syllabicNasalReplacement(incoming, lastRawChar)` | `TPSConverter.kt` |
+Rust shared-core single source: `engine/phonetics/src/tps_adjust.rs::syllabic_nasal_replacement`. Both iOS and Android call into the Rust engine via `Method::TpsInputAdjust` (the platform `TPSConverter.swift` / `TPSConverter.kt` mirrors were deleted in the Path G migration).
 
-Called after `adjustTPSNasalizedVowelKey` and before `palatalizationReplacement` in the input pipeline. Uses `composingManager.replaceLastCharacter()` to modify rawInput retroactively (same pattern as Rule 1).
+Called after `adjust_nasalized_vowel_key` and before `palatalization_replacement` inside `tps_adjust::adjust`; the result comes back as `replace_last` (same pattern as Rule 1).
 
 ---
 
@@ -200,38 +194,30 @@ When the incoming character is **ㆮ** (ainn) and the last character of rawInput
 
 ### Implementation
 
-| Platform | Function | Location |
-|---|---|---|
-| iOS | `TPSConverter.adjustTPSNasalizedVowelKey(_:afterRawInput:)` | `TPSConverter.swift` |
-| Android | `TPSConverter.adjustTPSNasalizedVowelKey(char, afterRawInput)` | `TPSConverter.kt` |
+Rust shared-core single source: `engine/phonetics/src/tps_adjust.rs::adjust_nasalized_vowel_key`. Both iOS and Android call into the Rust engine via `Method::TpsInputAdjust` (the platform `TPSConverter.swift` / `TPSConverter.kt` mirrors were deleted in the Path G migration).
 
 ---
 
 ## Input Pipeline Execution Order
 
-All auto-correct rules execute in sequence in the character input handler, BEFORE the character is appended to rawInput:
+All auto-correct rules run in one engine call, `engine/phonetics/src/tps_adjust.rs::adjust` (`Method::TpsInputAdjust`), BEFORE the platform appends the character to the raw input. The platform gates the call by the TPS layout and applies both results:
 
 ```
 User taps key
   │
-  ├─ 1. CaseTransformer (caps handling)
+  ├─ 1. CaseTransformer (caps handling, platform)
   │
-  ├─ 2. adjustTPSInitialKey()        ← Rule 2: ㄇ/ㄫ position
-  │     Modifies: incoming character
-  │
-  ├─ 3. adjustTPSNasalizedVowelKey() ← Rule 3: ㆮ/ㆯ
-  │     Modifies: incoming character
-  │
-  ├─ 3b. syllabicNasalReplacement() ← Rule 2b: ㄇ/ㄫ + tone
-  │     Modifies: last character of rawInput (retroactive)
-  │
-  ├─ 4. palatalizationReplacement()  ← Rule 1: palatalization
-  │     Modifies: last character of rawInput (retroactive)
-  │
-  └─ 5. appendCharacter(finalChar)   ← incoming char added to rawInput
+  └─ 2. tps_adjust::adjust(incoming, raw_input) → (adjusted, replace_last?)
+        ├─ adjust_tone_nine_digit()      ← tone 9 digit
+        ├─ adjust_initial_key()          ← Rule 2: initial vs coda position
+        ├─ adjust_nasalized_vowel_key()  ← Rule 3: ㆮ/ㆯ
+        │     (these modify the incoming character)
+        ├─ syllabic_nasal_replacement()  ← Rule 2b: ㄇ/ㄫ + tone
+        └─ palatalization_replacement()  ← Rule 1: palatalization (only when 2b returns nothing)
+              (these return a replacement for the LAST raw character)
 ```
 
-**Key difference**: Rules 2 and 3 modify the **incoming** character before it enters rawInput. Rule 1 modifies the **previous** character already in rawInput (look-back correction).
+**Key difference**: Rules 2 and 3 modify the **incoming** character before it enters the raw input. Rules 1 and 2b replace the **previous** character already in the raw input (look-back correction, `replace_last`).
 
 ---
 
@@ -291,17 +277,70 @@ These are manual alternatives accessible via long-press, providing access to rel
 
 | Phonetic rule (from reference) | Auto-correct implementation | Status |
 |---|---|---|
-| Palatalization: ts/tsh/s/j + i → tɕ/tɕʰ/ɕ/dʑ | Rule 1: `palatalizationReplacement()` | Implemented |
-| m position: initial vs final/syllabic | Rule 2: `adjustTPSInitialKey()` | Implemented |
-| n position: initial vs final (ㄣ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
-| ng position: initial vs final (ㆭ) vs -ing (ㄥ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
-| p position: initial (ㄅ) vs coda (ㆴ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
-| t position: initial (ㄉ) vs coda (ㆵ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
-| k position: initial (ㄍ) vs coda (ㆻ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
-| h position: initial (ㄏ) vs coda (ㆷ) | Rule 2: `adjustTPSInitialKey()` | Implemented |
-| Standalone syllabic m + tone → ㆬ | Rule 2b: `syllabicNasalReplacement()` | Implemented |
-| Standalone syllabic ng + tone → ㆭ | Rule 2b: `syllabicNasalReplacement()` | Implemented |
-| iainn invalid → iaunn | Rule 3: `adjustTPSNasalizedVowelKey()` | Implemented |
+| Palatalization: ts/tsh/s/j + i → tɕ/tɕʰ/ɕ/dʑ | Rule 1: `palatalization_replacement()` | Implemented |
+| m position: initial vs final/syllabic | Rule 2: `adjust_initial_key()` | Implemented |
+| n position: initial vs final (ㄣ) | Rule 2: `adjust_initial_key()` | Implemented |
+| ng position: initial vs final (ㆭ) vs -ing (ㄥ) | Rule 2: `adjust_initial_key()` | Implemented |
+| p position: initial (ㄅ) vs coda (ㆴ) | Rule 2: `adjust_initial_key()` | Implemented |
+| t position: initial (ㄉ) vs coda (ㆵ) | Rule 2: `adjust_initial_key()` | Implemented |
+| k position: initial (ㄍ) vs coda (ㆻ) | Rule 2: `adjust_initial_key()` | Implemented |
+| h position: initial (ㄏ) vs coda (ㆷ) | Rule 2: `adjust_initial_key()` | Implemented |
+| Standalone syllabic m + tone → ㆬ | Rule 2b: `syllabic_nasal_replacement()` | Implemented |
+| Standalone syllabic ng + tone → ㆭ | Rule 2b: `syllabic_nasal_replacement()` | Implemented |
+| iainn invalid → iaunn | Rule 3: `adjust_nasalized_vowel_key()` | Implemented |
 | o → oo before -p/-t/-k (not -h) | Post-processing Step 7 (display only) | Display only |
 | ㄧ + ㆭ → ㄧㄥ (ing rhyme) | Post-processing Step 5b (display only) | Display only |
 | Palatalized + nn → nasalized ㆪ | Post-processing Step 6 (display only) | Display only |
+
+---
+
+## Manual test checklist
+
+Run on every TPS-capable platform before a release that touches TPS input. Each case: keys typed → expected display (expected search key).
+
+### Rule 1: palatalization
+
+- [ ] ㄗ + ㄧ → ㄐㄧ (tsi)
+- [ ] ㄘ + ㄧ → ㄑㄧ (tshi)
+- [ ] ㄙ + ㄧ → ㄒㄧ (si)
+- [ ] ㆡ + ㄧ → ㆢㄧ (ji)
+- [ ] ㄗ + ㆪ → ㄐㆪ (tsinn)
+- [ ] ㄘ + ㆪ → ㄑㆪ (tshinn)
+- [ ] ㄙ + ㆪ → ㄒㆪ (sinn)
+- [ ] ㆡ + ㆪ → ㆢㆪ (jinn)
+- Must not trigger: ㄙ + ㄚ → ㄙㄚ (ㄚ is not an i vowel) · ㄒ + ㄧ → ㄒㄧ (already palatal) · ㄍ + ㄧ → ㄍㄧ (ㄍ is not a sibilant)
+
+### Rule 2: initial vs coda position
+
+The same key is an initial at a syllable start and a coda after a vowel.
+
+- Nasal codas: (empty) + ㄇ → ㄇ (initial m) · ㄚ + ㄇ → ㄚㆬ (am) · (empty) + ㄋ → ㄋ · ㄚ + ㄋ → ㄚㄣ (an) · ㄒㄧ + ㄋ → ㄒㄧㄣ (sin) · (empty) + ㄫ → ㄫ · ㄚ + ㄫ → ㄚㆭ (ang) · ㄧ + ㄫ → ㄧㄥ (ing — ㄥ after ㄧ)
+- Stop codas: (empty) + ㄅ → ㄅ · ㄍㄚ + ㄅ → ㄍㄚㆴ (kap) · (empty) + ㄉ → ㄉ · ㄍㄚ + ㄉ → ㄍㄚㆵ (kat) · (empty) + ㄍ → ㄍ · ㄍㄚ + ㄍ → ㄍㄚㆻ (kak) · (empty) + ㄏ → ㄏ · ㄍㄚ + ㄏ → ㄍㄚㆷ (kah)
+- Syllable boundary keeps the initial: ˋ + ㄇ → …ˋㄇ · ˋ + ㄅ → …ˋㄅ · ㆴ + ㄅ → …ㆴㄅ · space + ㄋ → …ㄋ
+- After a nasal coda a new syllable starts: ㄒㄧ + ㄇ(→ㆬ) + ㄇ → ㄒㄧㆬㄇ · ㄚ + ㄋ(→ㄣ) + ㄋ → ㄚㄣㄋ · ㄚ + ㄫ(→ㆭ) + ㄍ → ㄚㆭㄍ · ㄧ + ㄫ(→ㄥ) + ㄍ → ㄧㄥㄍ · ㄒㄧ + ㄇ(→ㆬ) + ㄅ → ㄒㄧㆬㄅ
+- Toneless multi-syllable search: ㄒㄧ + ㄇ(→ㆬ) + ㄇ + ㄨ + ㄚ → "sim mua" has candidates · ㄍㄚ + ㄫ(→ㆭ) + ㄍ + ㄚ + ㄨ → "kang kau" has candidates
+
+### Rule 2b: syllabic nasal + tone
+
+- [ ] (empty) + ㄇ + ˫ → ㆬ˫ (m7)
+- [ ] (empty) + ㄇ + ˋ → ㆬˋ (m2)
+- [ ] (empty) + ㄫ + ˊ → ㆭˊ (ng5)
+- [ ] (empty) + ㄫ + ˋ → ㆭˋ (ng2)
+- Must not trigger: ㄚ + ㄇ(→ㆬ) + ˫ → ㄚㆬ˫ (already a coda, Rule 2) · (empty) + ㄇ + ㄚ → ㄇㄚ (ㄚ is not a tone mark)
+
+### Rule 3: ㆮ → ㆯ
+
+- [ ] ㄧ + ㆮ → ㄧㆯ (iaunn — Taigi has no iainn)
+- [ ] ㄚ + ㆮ → ㄚㆮ (ainn is valid, unchanged)
+
+### Real words
+
+- [ ] 錢 tsînn: ㄗ + ㆪ + ˊ → ㄐㆪˊ → 錢 offered
+- [ ] 心 sim: ㄙ + ㄧ + ㄇ → ㄒㄧㆬ → 心 offered
+- [ ] 因 in: ㄧ + ㄋ → ㄧㄣ → 因 offered
+- [ ] 港 káng: ㄍ + ㄚ + ㄫ + ˊ → ㄍㄚㆭˊ → 港 offered
+- [ ] 永 íng: ㄧ + ㄫ + ˊ → ㄧㄥˊ → 永 offered
+- [ ] 角 kak: ㄍ + ㄚ + ㄍ → ㄍㄚㆻ → 角 offered
+- [ ] 答 tap: ㄉ + ㄚ + ㄅ → ㄉㄚㆴ → 答 offered
+- [ ] 食 tsia̍h: ㄗ + ㄧ + ㄚ + ㄏ + ˙ → ㄐㄧㄚㆷ˙ → 食 offered
+- [ ] 嘔 iáunn: ㄧ + ㆮ + ˊ → ㄧㆯˊ → 嘔 offered

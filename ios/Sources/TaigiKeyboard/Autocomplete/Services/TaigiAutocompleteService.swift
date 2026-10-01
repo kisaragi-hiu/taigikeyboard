@@ -189,7 +189,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
 
     /// v3.5.8 Phase 9 — Continuous candidate suggestions.
     ///
-    /// Per `docs/engine/continuous-input-ranking.md` §10.1.2 (supersedes legacy
+    /// Per `docs/engine/continuous-commit-and-display.md` §10.1.2 (supersedes legacy
     /// slot-0 model) + §10.3 commit contract: in Continuous mode the strip has
     /// NO composing-text cell. `candidate[0]` is the engine ranker top and
     /// Tap routes through `ComposingManager.commitContinuous(_:)`, which has

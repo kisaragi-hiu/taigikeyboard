@@ -696,7 +696,7 @@ fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_compositi
 // they ride the single commit). `CommitRaw` (Enter) commits the
 // whole composition `Phase::composing_display` (§10.10a Model B; see
 // `commit_raw_under_continuous_*` tests below and
-// `docs/engine/continuous-input-ranking.md` §10.3).
+// `docs/engine/continuous-commit-and-display.md` §10.3).
 
 #[test]
 fn start_under_continuous_aborts_then_begins_fresh_composition() {

@@ -18,7 +18,7 @@
 //!
 //! Loader behaviour is intentionally minimal (membership only); the
 //! syllabifier crate exercises prefix walking. See
-//! `docs/reports/2026-05-20-v359-b-plan.md` §B-1.
+//! `docs/engine/syllabifier.md` § Family-split rationale.
 
 use lexicon::SyllableInventory;
 use phonetics::{canonicalize_poj_syllable, canonicalize_syllable, InputMode};

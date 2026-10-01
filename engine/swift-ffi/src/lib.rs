@@ -2,7 +2,7 @@
 //! `dispatch::process_request` plus a logger sink registration.
 //!
 //! Everything that crosses the FFI seam is wrapped in `catch_unwind` per
-//! `docs/engine/ffi-safety.md` §2 and the request body is size-capped per
+//! `docs/contributing/rust-ffi-safety.md` §1.2 and the request body is size-capped per
 //! plan v3 §B3 so an oversized payload returns `FAIL_INVARIANT` instead of
 //! allocating without bound.
 

@@ -31,7 +31,7 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 ### Workaround circuit-breaker
 
-- **PR #179 → #180** (2026-04-25) — 8 Codex-approved mitigations for IME dismiss, failure rate never zero, new hosts kept appearing. Comparing to `references/aiongtaigi-sushi` / `references/florisboard` exposed the `MATCH_PARENT × MATCH_PARENT` + custom-inset architecture; #180 reverted to platform defaults. Receipt: project memory `project_ime_window_arch.md`.
+- **PR #179 → #180** (2026-04-25) — 8 Codex-approved mitigations for IME dismiss, failure rate never zero, new hosts kept appearing. Comparing to `references/aiongtaigi-sushi` / `references/florisboard` exposed the `MATCH_PARENT × MATCH_PARENT` + custom-inset architecture; #180 reverted to platform defaults. The hazard is the three elements together — `onConfigureWindow` forced to `MATCH_PARENT × MATCH_PARENT`, custom child-position `onComputeInsets`, `TOUCHABLE_INSETS_VISIBLE`; any one alone is harmless.
 
 ### No unilateral release scope
 

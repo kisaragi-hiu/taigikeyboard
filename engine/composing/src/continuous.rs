@@ -74,9 +74,6 @@
 //! **B1 step ordering** is load-bearing — step 5 (POJ render + post-render
 //! dedupe) MUST run after step 4 (slot-0 prepend). Reordering changes the
 //! visible candidate vector.
-//!
-//! Spec source-of-truth: `docs/reports/2026-05-18-v358-refactor-design-spec.md`
-//! § 2 + ⭐ B1 / B2 / S7 amendment block.
 
 use crate::shadow::{
     build_continuous_keys, build_partial_prefix_key, custom_toneless_key,

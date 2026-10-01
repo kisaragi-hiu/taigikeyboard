@@ -12,7 +12,7 @@ Each rule is tagged with one or more of `[R]`, `[B]`, `[A]`.
 
 ## 1. Shared-core candidate rules `[R]`
 
-Files marked `// region Shared-Core Candidate` must satisfy ALL criteria below. Mirrors the iOS Shared-Core contract in `docs/contributing/ios-shared-core-candidates.md` — same criteria, Kotlin-translated.
+Files marked `// region Shared-Core Candidate` must satisfy ALL criteria below. Mirrors the iOS Shared-Core contract in `docs/contributing/ios-architecture.md` §5 — same criteria, Kotlin-translated.
 
 1. Imports Kotlin stdlib only. Forbidden: `android.*`, `androidx.*`, `kotlinx.coroutines.*`, `java.util.concurrent.*`, `com.squareup.moshi.*`.
 2. No `object` with mutable state, no `companion object` state, no reflection, no Moshi / serialization.
@@ -60,7 +60,7 @@ The **policy** (constants + tests + docs update together, comment format, `INVAR
 Generic Kotlin idioms (`val` over `var`, sealed hierarchies, data classes, coroutines) follow the [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html); this section keeps only the project-specific ones.
 
 - Follow the [Android Keyboard Design Guidelines](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method) for IME components.
-- `enum class` for pure enums with no associated state (sealed hierarchies and data classes: global `kotlin.md`).
+- `enum class` for pure enums with no associated state (sealed hierarchies and data classes: the Kotlin coding conventions above).
 - No `lateinit` on public API (private `lateinit` OK inside lifecycle-bound classes). `!!`: §7.
 
 ## 4. Android lifecycle + DI `[B]` `[A]`

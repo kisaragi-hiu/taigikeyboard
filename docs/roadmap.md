@@ -11,7 +11,7 @@
 
 - **Forward-looking work items only.** Shipped detail lives in `docs/releases/<version>/plan.md` + `changelog/mobile-<version>.md`.
 - **Active**: none; pending dogfood is tracked in `docs/architecture/dogfood-checklist.md`.
-- **No open deferred TODO**: the keyboard theme picker (the last 2026-06-01 candidate) shipped in v3.6.2; the one design-locked, unscheduled item is the converted-romanization commit (§ Out of scope / deferred).
+- **Open candidates**: every unfinished, parked or brainstorm item across the roadmaps and reports is listed once in § Open candidates (unscheduled), with a link to its design; the one design-locked item is the converted-romanization commit.
 - **Release scope / timing / tag is the maintainer's call.**
 
 ---
@@ -40,7 +40,7 @@ Newest first. Two trains since 2026-09: mobile `mobile-x.y.z` (iOS + Android) an
 | v3.6.4 | 2026-08-07 (`v3.6.4` @ `ed38499f`) | [`changelog/mobile-v3.6.4.md`](../changelog/mobile-v3.6.4.md) | — (App UI i18n — five display languages) |
 | v3.6.3 | 2026-06-20 (`v3.6.3` @ `acea9a8f`) | [`changelog/mobile-v3.6.3.md`](../changelog/mobile-v3.6.3.md) | — (TPS fixes: explicit tone, tone 9, `ir`; single-initial input; Android autocorrect / vibration / rich-editor backspace) |
 | v3.6.2 | 2026-06-12 (`v3.6.2` @ `c550e100`) | [`changelog/mobile-v3.6.2.md`](../changelog/mobile-v3.6.2.md) | — (keyboard theme picker + custom theme editor; Show Romanization toggle) |
-| v3.6.1 | 2026-06-06 (`v3.6.1` @ `d1259966`) | [`changelog/mobile-v3.6.1.md`](../changelog/mobile-v3.6.1.md) | [`docs/reports/2026-06-03-user-data-cross-mode-audit.md`](reports/2026-06-03-user-data-cross-mode-audit.md) — cross-mode user-data consistency R1–R7, Hanji-with-romanization literal candidate, backup exclusion |
+| v3.6.1 | 2026-06-06 (`v3.6.1` @ `d1259966`) | [`changelog/mobile-v3.6.1.md`](../changelog/mobile-v3.6.1.md) | — (cross-mode user-data consistency R1–R7, Hanji-with-romanization literal candidate, backup exclusion; contracts in `architecture/behavioral-invariants.md`) |
 | v3.6.0 | 2026-05-31 (`b782205c`) | [`changelog/mobile-v3.6.0.md`](../changelog/mobile-v3.6.0.md) | — (kautian subcoll + dev supplement + source-toggle filtering + explicit-tone fix) |
 | v3.5.9 | 2026-05-29 (`3c8bec16`) | [`changelog/mobile-v3.5.9.md`](../changelog/mobile-v3.5.9.md) | — (TPS tri-index + Tier-A/B refactor; design memo `project_v359_d_tps_triindex_plan.md`) |
 | v3.5.8 | 2026-05-20 (`61df3028`) | [`changelog/mobile-v3.5.8.md`](../changelog/mobile-v3.5.8.md) | [`docs/releases/v3.5.8/plan.md`](releases/v3.5.8/plan.md) — Phase 0-9 + whole-sentence lattice + walker S1-S9 + continuous-compound-hyphen fix |
@@ -58,9 +58,9 @@ Detailed plan archives are added retroactively only when source material exists;
 
 ---
 
-## Out of scope / deferred (truly forward-looking)
+## Open candidates (unscheduled)
 
-Forward-looking candidates only, NOT items already shipped. (v3.5.8-era items that read like candidates but shipped — `whole-sentence lattice + walker`, `continuous compound-hyphen`, `Phase 9 user-freq plumb` — live in [`docs/releases/v3.5.8/plan.md`](releases/v3.5.8/plan.md).)
+Forward-looking candidates only, NOT items already shipped. None is assigned to a release; scope and timing are the maintainer's call. (v3.5.8-era items that read like candidates but shipped — `whole-sentence lattice + walker`, `continuous compound-hyphen`, `Phase 9 user-freq plumb` — live in [`docs/releases/v3.5.8/plan.md`](releases/v3.5.8/plan.md).)
 
 ### Converted-romanization commit — segment + numeric-tone→diacritic on Enter
 
@@ -73,6 +73,53 @@ In TL/POJ, Enter should commit the **converted** romanization — multi-syllable
 ### TL mode (臺羅模式) — tone key commits without a candidate window (MOE parity)
 
 **Status**: research only, NOT implemented, **low priority** (USER 2026-09-21: "this feature is neither urgent nor important, and demand is low, so its priority is lower"). Community request: in pure-romanization typing the tone key should write the syllable at once, as the MOE Mac IME's 臺羅模式 does (`tai5` → `tâi`, no Enter, no window). Real on the desktops only — macOS / Windows Space is `.ignored` under Candidate Display = Romanization Only, so every word costs an Enter; mobile Space already commits. Marked text itself stays (rewrite-on-tone rejected). Two options costed — A: desktop Space commits when it has no alternate script (~30 LOC each side); B: a real TL mode (tone key commits, no window, hand-typed hyphens). Open USER decisions (where the mode lives, tone 1/4 ending, mobile parity) + MOE behaviour still to verify on a Mac. Full write-up: [`reports/2026-09-21-taile-mode-tone-commit.md`](reports/2026-09-21-taile-mode-tone-commit.md).
+
+### Other open items
+
+One line each; the linked section holds the design, the measurements and the open questions. Pending device dogfood is not repeated here — it lives in [`architecture/dogfood-checklist.md`](architecture/dogfood-checklist.md) (user-data device checks, S74 Linux first machine, the macOS batch, S83–S85).
+
+**Features and research**
+
+| Item | Status | Where |
+|---|---|---|
+| Predictions after Space (mobile): show next-word predictions after a Space commit | open USER decision; recommendation = dogfood A/B | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § Open USER decisions #1 |
+| Smart-suggestion techniques outside the bigram model: 3 zero-query from learned phrases, 5 negative feedback, 6 rule table, 9 emoji, 10 offensive-word filter, 11 privacy gates | brainstorm only | [`reports/2026-09-24-mobile-smart-suggestions-brainstorm.md`](reports/2026-09-24-mobile-smart-suggestions-brainstorm.md) |
+| `$` sentence-start opener for next-word | needs a real sentence-end trigger first | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § D4 |
+| Corpus expansion (P1b): new `taigi-corpus` extractors (iCorpus 漢字版, TGB, …); TAT corpus = USER-only ACLCLP application | never run | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § Corpus expansion |
+| Taigi romanization spelling correction (edit-distance search over `syllables.fst`) | future reference | [`reports/2026-08-30-hanlo-together-mode-research.md`](reports/2026-08-30-hanlo-together-mode-research.md) §14–§16 |
+| Windows candidate window: frame painted before content | parked; B = in-proc sync paint (~50 LOC), C = renderer process (2–3k LOC) | [`reports/2026-09-11-windows-candidate-window-paint-latency.md`](reports/2026-09-11-windows-candidate-window-paint-latency.md) |
+| Windows candidate window exposed to screen readers (UIA) | deferred, named | [`architecture/windows-roadmap.md`](architecture/windows-roadmap.md) § Windows-specific acceptance matrix |
+
+**Engine gaps and small decisions**
+
+| Item | Status | Where |
+|---|---|---|
+| `lexicon::classification::is_hanji` stops at CJK Extension E; the Python pipeline tests through Extension G | measure callers first, then align | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § Open USER decisions #6 |
+| Clause punctuation `，`: reset or keep the next-word context | recommendation recorded, no decision | same § #4 |
+| `lexicon.proto` still documents `DEV` as always-on (the toggle shipped) | needs a proto regen round (iOS + Android generated trees) | [`architecture/macos-roadmap.md`](architecture/macos-roadmap.md) § Open items this track produced |
+| v2 `.taigi` restore folds POJ→TL over canonical-TL readings (macOS folds v1 only) | verify it still applies now the engine owns the codec | same § |
+| Fedora × IBus e2e skipped (daemon never lists the test component) | own root-cause round | [`architecture/e2e-testing-roadmap.md`](architecture/e2e-testing-roadmap.md) § PR table PR4 |
+| Linux Space (`CommitAlternateScript`) produced no commit in the Xvfb harness | unconfirmed; not a round until reproduced on a real session (S74) | same § Spike results |
+
+**Refactors (USER decisions)**
+
+| Item | Status | Where |
+|---|---|---|
+| macOS over `desktop-core` (~4,000 Swift lines duplicate `desktop/crates`) | not scheduled | [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md) § Not scheduled |
+| iOS top-level folder renames (`.pbxproj` = USER-only) | not scheduled | same § |
+| Shared Swift package for macOS + iOS (open-source round 10) | not scheduled; USER adds the local package in Xcode | [`reports/2026-09-24-open-source-readiness-and-layout.md`](reports/2026-09-24-open-source-readiness-and-layout.md) § rounds |
+| Optional: `zh-TW` README, xcconfig signing, Android Gradle proto plugin | not scheduled | same § |
+
+**Project and legal (USER)**
+
+| Item | Status | Where |
+|---|---|---|
+| Dictionary licensing: four sources without a licence, ShareAlike compatibility not analysed | published as-is, not settled | [`go-public-checklist.md`](go-public-checklist.md) §4 |
+| SignPath Foundation code-signing application | no verdict recorded | [`go-public-checklist.md`](go-public-checklist.md), [`CODE_SIGNING_POLICY.md`](CODE_SIGNING_POLICY.md) |
+| GitHub private vulnerability reporting + non-provider secret patterns | not applied (one `gh api` PATCH) | [`go-public-checklist.md`](go-public-checklist.md) §10 |
+| TL / POJ prose proofreading of the app UI | USER, data-only | § Closed phases › App UI i18n |
+
+**Not to re-propose** (USER-closed): bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
 
 ## Per-round gates (process invariants, project-wide)
 
@@ -89,6 +136,7 @@ Apply to every change regardless of release:
 - **Maintainability audit follow-up** — COMPLETE 2026-10-01: R1–R12 + docs drift MERGED (#274–#331). PR table: [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md); source audit: [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md).
 - **Bigram language model** — CLOSED 2026-09-30 (USER, after the Android dogfood): P0–P5 MERGED (#267, #268, #270–#272) + the punctuation-context fix #273; P6 not opened, P7 not adopted. `association.bin` v2 word keys shipped in mobile v3.6.11. Design + status: [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md).
 - **User data in the engine** — P0–P9d MERGED 2026-09-26 (#219–#237): the four user-data SQLite stores are engine-owned (`engine/userdata`). Design + PR table: [`architecture/user-data-engine-roadmap.md`](architecture/user-data-engine-roadmap.md). Device dogfood pending (iOS first look OK).
+- **Mobile custom-theme color roles** — P0–P7 MERGED 2026-09-27 (#252, #255, #257, #258; P3 dropped, premise false). Tiers + rollout rules: [`ui/theme.md`](ui/theme.md) § Custom Theme Color Roles.
 - **Identical desktop menus; Linux update check added then removed** — phases 1–5 MERGED 2026-09-25 (#175–#178, site #20); Linux half reversed the same day (#193, no update check on Linux). S77. Design: [`reports/2026-09-26-shipped-roadmap-design-notes.md`](reports/2026-09-26-shipped-roadmap-design-notes.md) § Linux update check.
 - **Learned phrases** — #109–#113 MERGED 2026-09-20; own store PR-A–D #125–#128 MERGED 2026-09-21; store engine-owned since user-data P3c. S62. Design: [`reports/2026-09-26-shipped-roadmap-design-notes.md`](reports/2026-09-26-shipped-roadmap-design-notes.md) § Learned phrases.
 - **Mobile custom theme — one background surface, gradient direction, photo background** — A–D #90–#93 MERGED 2026-09-20 (+ follow-up E). S54 / S55. Design: [`reports/2026-09-26-shipped-roadmap-design-notes.md`](reports/2026-09-26-shipped-roadmap-design-notes.md) § Mobile custom theme; current state [`ui/theme.md`](ui/theme.md).
@@ -96,7 +144,7 @@ Apply to every change regardless of release:
 - **Desktop input-source menu — global shortcut rows** — #100 `f763d8bf` MERGED 2026-09-20. S59. Notes: [`reports/2026-09-26-shipped-roadmap-design-notes.md`](reports/2026-09-26-shipped-roadmap-design-notes.md) § Desktop input-source menu.
 - **Desktop 3.6.8 items** — custom fonts #16, installed typefaces #45 (S42 / S43 PASS), Telex keys + candidate-window toggle #17–#22, symbol picker #26–#28, composing caret #29–#31, ⇧ + slot key #35, Shortcuts pane #36; shipped in desktop v3.6.8. Dogfood S30–S38. Design: [`reports/desktop-3.6.x-design-notes.md`](reports/desktop-3.6.x-design-notes.md).
 - **kautian subcollections** (accent + Surname Appendix toggles + pronunciation-difference word-level extension) — 5 phases MERGED, shipped **v3.6.0** (#354-#358).
-- **v3.6.1 user-data key consistency across input modes** — CLOSED / shipped: rounds R1–R7 MERGED 2026-06-03/04 (#382–#388; association recall + canonical-TL commit + custom words cross-mode + Android cap parity + `(hanji, tl)` frequency key + SQLite hygiene + backup exclusion). Dogfood items S11–S16. Triple index kept. Full audit: [`docs/reports/2026-06-03-user-data-cross-mode-audit.md`](reports/2026-06-03-user-data-cross-mode-audit.md).
+- **v3.6.1 user-data key consistency across input modes** — CLOSED / shipped: rounds R1–R7 MERGED 2026-06-03/04 (#382–#388; association recall + canonical-TL commit + custom words cross-mode + Android cap parity + `(hanji, tl)` frequency key + SQLite hygiene + backup exclusion). Dogfood items S11–S16. Triple index kept. The user-data stores later moved into the engine (see User data in the engine above); the canonical-TL key contract lives in `architecture/behavioral-invariants.md`.
 - **App UI i18n — multi-language** (Hanji / English / Japanese / Tâi-lô / Pe̍h-ōe-jī + Automatic) — SHIPPED; all five display languages in the production picker. Open: TL/POJ prose proofreading by the USER (data-only). Outcome: `docs/contributing/i18n.md`, `behavioral-invariants.md` §37–39, `system-overview.md` §3 (`make i18n`).
 - **Keyboard theme picker** (swipe gallery + custom theme) — SHIPPED v3.6.2: iOS #400-411, Android port #412-#418. Current-state reference: [`docs/ui/theme.md`](ui/theme.md).
 - **Android UI modernization** (Compose M3 chrome/overlay) — DONE 2026-05-30 (#362 / #364 / #365). 3 leaf overlays (Symbol/Layout/Candidate) View→Compose M3 over `KeyboardChromeColors`; keys stay custom-draw; `InputView`/window kept View (IME-dismiss bug zone). Memory `project_android_compose_modernization.md`.

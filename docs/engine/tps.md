@@ -305,7 +305,7 @@ In TPS, the same sound has different symbols depending on syllable position:
 
 **Scope**: TPS layout only. Gated by `inputMode == .tps` (iOS) / `keyboardLayoutType == "tps"` (Android).
 
-When the user taps ㄇ or ㄫ, `adjustTPSInitialKey()` checks the last character of `rawInput`:
+When the user taps ㄇ or ㄫ, `tps_adjust::adjust_initial_key()` checks the last character of the raw input:
 
 **At syllable start** (any of the following) → keep initial form (ㄇ / ㄫ):
 - Empty buffer (not composing)

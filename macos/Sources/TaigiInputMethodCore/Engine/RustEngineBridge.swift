@@ -160,7 +160,7 @@ enum RustEngineBridge {
     /// under. Under Model B every composing mutation re-renders a continuous
     /// composition's nailed prefix, so a nail and the keystroke after it agree
     /// only if both carry the same swap flag (`composingAppend`,
-    /// `docs/engine/continuous-input-ranking.md` §10.2); only `Reset`, which
+    /// `docs/engine/continuous-commit-and-display.md` §10.2); only `Reset`, which
     /// renders nothing, carries no config at all.
     ///
     /// `platform_id` is set on every request, not only the ones that read it.

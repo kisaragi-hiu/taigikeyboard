@@ -92,7 +92,7 @@ struct EngineSettings: Equatable, Sendable {
     let inputMode: InputMode
 
     /// Word-boundary spacing input for the engine's `continuous_word_space`
-    /// predicate (`docs/engine/continuous-input-ranking.md` §10.2). Carried in
+    /// predicate (`docs/engine/continuous-commit-and-display.md` §10.2). Carried in
     /// the snapshot rather than hardcoded at the call sites because iOS's #380
     /// regression was exactly a call site that stopped passing the live value.
     /// (Annotate in Brackets — `output_both_scripts` on the wire — is a mobile

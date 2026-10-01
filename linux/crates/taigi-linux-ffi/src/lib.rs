@@ -6,8 +6,8 @@
 //! accessors and frees — no struct crosses the boundary, so the header
 //! never has to agree with Rust on layout.
 //!
-//! Every entry point runs under `catch_unwind` (`docs/engine/ffi-safety.md`
-//! §2): a panic answers the null / false / zero the header documents and is
+//! Every entry point runs under `catch_unwind` (`docs/contributing/rust-ffi-safety.md`
+//! §1.2): a panic answers the null / false / zero the header documents and is
 //! logged; it never unwinds into C++.
 
 use std::ffi::{c_char, CStr, CString};

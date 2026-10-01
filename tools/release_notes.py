@@ -748,7 +748,7 @@ def _parse_args() -> argparse.Namespace:
             "--train",
             choices=TRAIN_CHOICES,
             required=True,
-            help="mobile = iOS + Android; desktop = macOS + Windows",
+            help="mobile = iOS + Android; desktop = macOS + Windows + Linux",
         )
     set_versions.add_argument(
         "--allow-downgrade",

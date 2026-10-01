@@ -24,10 +24,9 @@ Dependency direction: `swift-ffi` / `android-jni` → `dispatch` → `composing`
 
 ## Authoritative contracts
 
-- `../docs/engine/ffi-safety.md` — FFI seam discipline (panic isolation, Mutex, Drop, error sentinels, logging bridge).
 - `../docs/engine/rust-core-proto.md` — Wire shape per slice.
 - `../docs/contributing/rust-best-practices.md` — Workspace conventions, MSRV, crate choices.
-- `../docs/contributing/rust-ffi-safety.md` §2 — Domain↔proto boundary rule (the dispatch / RPC façade of each domain crate accepts/returns `protos::engine::*` directly).
+- `../docs/contributing/rust-ffi-safety.md` — FFI seam discipline (panic isolation, Mutex, error envelope, logging bridge, opaque handles, test contract); §2 Domain↔proto boundary rule (the dispatch / RPC façade of each domain crate accepts/returns `protos::engine::*` directly).
 
 ## Toolchain
 

@@ -5,12 +5,9 @@
 //! input matrix, so every later behavior-neutral refactor slice's
 //! acceptance reduces to "empty golden diff". The golden is frozen against
 //! post-v3.5.8 `main` (v3.5.8 already shipped at tag `61df3028`; behavior
-//! is frozen — the design-spec §0 precondition is satisfied).
+//! is frozen).
 //!
-//! Design source of truth:
-//! `docs/reports/2026-05-18-v358-refactor-design-spec.md` §1 + ⭐ amendment
-//! block (B2 lifecycle invariant, B3 expanded matrix). Codex pre-impl
-//! ANALYSIS-ONLY review applied (both BLOCKs resolved by tightening
+//! Codex pre-impl ANALYSIS-ONLY review applied (both BLOCKs resolved by tightening
 //! grounding — no invented dictionary content; the ≥6-syllable case uses
 //! known-valid syllables with `.expect()` canonicalization, not silent
 //! skip).

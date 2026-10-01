@@ -12,8 +12,8 @@ repository (`docs/architecture/pr-number-migration.md`). Verified 2026-09-13 wit
 **disabled**, `secret_scanning_validity_checks` disabled. The §4 dictionary
 licence position was published as recorded below (the maintainer's reading,
 not a grant) and stays the open legal item — also the likely obstacle for the
-SignPath Foundation application submitted 2026-09-07 (memory
-`project_oss_public_signpath.md`; no verdict recorded as of 2026-09-13).
+SignPath Foundation application submitted 2026-09-07 (no verdict recorded as
+of 2026-09-13).
 
 The flip was irreversible in practice: forks, caches and archives keep whatever
 the history contained at that moment. This file is the ordered list of what had

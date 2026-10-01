@@ -1,8 +1,8 @@
 # End-to-End Test System — Roadmap
 
-> **Type**: Planning (design record + PR table; becomes Reference once shipped)
+> **Type**: Reference (design record + PR table)
 > **Keywords**: `e2e`, `test mode`, `trace`, `simulator`, `emulator`, `VM`, `container`, `scenario`, `perf`, `Xvfb`, `xdotool`, `UiAutomator`
-> **Status**: Linux live (PR1–PR3b merged 2026-09-24: `make e2e PLATFORM=linux`, CI `linux-e2e.yml`, skill `/e2e`); PR3c `make e2e PLATFORM=linux-desktop` (branch `feat/e2e-linux-desktop`), PR4–PR8 pending; real-desktop-session goal added 2026-09-24 (§ Goal 5). Phase 0 plan written 2026-09-24; Codex ANALYSIS-ONLY pre-review 2026-09-24 = REVISE (revisions applied below); spikes S-A–S-D run 2026-09-24 (§ Spikes — results).
+> **Status**: Linux live — PR1–PR4 + PR9 merged (`make e2e PLATFORM=linux` / `linux-desktop`, nightly CI matrix `linux-e2e.yml`, skill `/e2e`); PR5 macOS / PR6 Windows dropped and PR7 Android / PR8 iOS not planned (USER 2026-09-24: manual testing). Open: Fedora × IBus skipped (§ PR table PR4). Real-desktop-session goal added 2026-09-24 (§ Goal 5). Phase 0 plan written 2026-09-24; Codex ANALYSIS-ONLY pre-review 2026-09-24 = REVISE (revisions applied below); spikes S-A–S-D run 2026-09-24 (§ Spikes — results).
 > **Session memory**: project memory `project_e2e_test_system.md` (Claude auto-memory)
 
 ---
@@ -160,6 +160,6 @@ Rules: an e2e failure is an observed failure and goes through the normal bugfix 
 
 USER 2026-09-24: "I'll add iOS later; skip windows if it's powered off; the rest go"
 
-1. iOS: the USER adds an XCUITest target in Xcode later; PR8 waits for it.
+1. iOS: the USER adds an XCUITest target in Xcode later; PR8 waits for it. Superseded USER 2026-09-24: PR8 not planned.
 2. Windows: the driver probes the box first; powered off, unreachable or locked console → the run reports `skipped` with the reason, never a failure.
 3. Linux CI matrix: runs on PRs touching `linux/`, `engine/` or `e2e/`, plus `workflow_dispatch`. Superseded USER 2026-09-25: "switch everything to scheduled runs": no PR trigger; full matrix nightly 19:00 UTC + `workflow_dispatch` only.

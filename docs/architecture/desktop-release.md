@@ -3,7 +3,7 @@
 How a desktop version (macOS + Windows + Linux, one shared number) gets from a commit to
 a user. The platform-specific halves are `macos-release.md` (certificates,
 notarization, the package), `windows-release.md` (signing status, the
-installer, the box) and `linux-release.md` (the `.deb`); everything below is
+installer, the box) and `linux-release.md` (the `.deb` / `.rpm` / Arch packages); everything below is
 shared by all three, and is the single
 description of the flow — the platform documents link here rather than repeat it.
 
@@ -14,9 +14,9 @@ A desktop release happens in two halves with a manual test between them, and
 
 | | Runs | Does |
 |---|---|---|
-| Stage all | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and `linux-build.yml` together and waits for both: GitHub-hosted runners build the `.exe` and the `.deb` from the same commit and attach them to the same draft. All three or none, onto a draft it re-creates each run (`tools/release/stage-desktop.sh`; the Linux half: `linux-release.md`) |
+| Stage all | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and `linux-build.yml` together and waits for both: GitHub-hosted runners build the `.exe` and the Linux `.deb` / `.rpm` / Arch packages from the same commit and attach them to the same draft. All three or none, onto a draft it re-creates each run (`tools/release/stage-desktop.sh`; the Linux half: `linux-release.md`) |
 | Stage a patch | `make desktop-patch PLATFORM=macos\|windows\|linux` (this Mac) | The same run for ONE platform: its installers only, on a draft of their own version. Without macOS, the script creates the empty draft on this commit first, since the hosted attach steps only join one |
-| **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the three assets, install, use them |
+| **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the assets, install, use them |
 | **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
 | Announce | **automatic** — publishing fires `.github/workflows/announce-release.yml` | Proves each download is anonymously reachable, writes every `_data/*_release.json` in one commit, waits for the live macOS and Windows appcasts (Linux has none). `make desktop-announce` is the same script, for a re-run |
 
@@ -40,7 +40,7 @@ staged, so re-staging never has to be untangled by hand; a release that has
 already been **published** is the exception and stops the run.
 
 Beside each installer goes a `.sha256` of what was staged. On the unsigned
-Windows channel — and the Linux `.deb`, which is not signed either — it is what a
+Windows channel — and the Linux packages, which are not signed either — it is what a
 user can check a manual download against, and it is what `windows-release.md`
 and `linux-release.md` promise every release publishes.
 
@@ -150,5 +150,5 @@ job, so a release is never blocked on it.
 | The announcement, run by the publish | `tools/release/announce-release.sh` + `.github/workflows/announce-release.yml` |
 | What only a Mac can say about the package | `macos/scripts/publish-release.sh` |
 | What only Windows can say about the installer | `windows/scripts/publish-release.sh` |
-| The Linux package and its attach step | `linux/Makefile` (`deb`), `.github/workflows/linux-build.yml`, `linux-release.md` |
+| The Linux package and its attach step | `linux/Makefile` (`deb` / `rpm` / `arch`), `.github/workflows/linux-build.yml`, `linux-release.md` |
 | The manifest wire formats | `macos/updates/README.md`, `windows/updates/README.md` |

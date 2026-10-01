@@ -20,7 +20,7 @@ use thiserror::Error;
 /// mobile it is always the end. It lives beside `raw` rather than on
 /// `EngineState` so replacing the phase can never leave a stale offset.
 ///
-/// **Model B (mainstream-aligned, see `docs/engine/continuous-input-ranking.md`
+/// **Model B (mainstream-aligned, see `docs/engine/continuous-commit-and-display.md`
 /// §10):** `nailed` segments are **NOT** in the host document. The whole
 /// composition — `Σ nailed[i].display_text` followed by the derived display
 /// of the pending `raw` tail — lives in **one** marked / composing region
@@ -96,7 +96,7 @@ impl Phase {
     }
 
     /// The composing-buffer surface the host renders in its single
-    /// marked / composing region (`docs/engine/continuous-input-ranking.md`
+    /// marked / composing region (`docs/engine/continuous-commit-and-display.md`
     /// §10.2 / §10.4 invariant I1, Model B).
     ///
     /// - `Idle` → empty string.
@@ -122,7 +122,7 @@ impl Phase {
 
 /// One **nailed** segment inside `Phase::Continuous`. "Nailed" means the
 /// user accepted a candidate for this part of the buffer, but — under
-/// Model B (`docs/engine/continuous-input-ranking.md` §10) — it is **NOT**
+/// Model B (`docs/engine/continuous-commit-and-display.md` §10) — it is **NOT**
 /// yet written to the host document; it lives inside the active marked /
 /// composing region until a hard finalize. `raw_span` records the byte
 /// offsets in the original raw input the user typed (start = end of the
@@ -157,7 +157,7 @@ pub struct NailedSegment {
 }
 
 /// v3.5.8 — word-boundary separator policy for the Model B continuous
-/// composing buffer (`docs/engine/continuous-input-ranking.md` §10.2
+/// composing buffer (`docs/engine/continuous-commit-and-display.md` §10.2
 /// segmented-spacing contract). A single ASCII space joins adjacent
 /// nailed segments (and the nailed prefix ↔ pending tail) **only when
 /// the rendered script is roman-ish**: roman-first, or both-scripts

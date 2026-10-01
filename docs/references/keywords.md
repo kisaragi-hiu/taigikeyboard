@@ -74,7 +74,7 @@ fst prefix index (replaced MARISA in v3.5.6) + dictionary/association mmap reade
 | **prefixSearch** | Iterate keys with a given prefix, returning rowid list | Rust `lexicon::search::search` |
 | **DictionaryReader** | Binary mmap reader: rowid → `DictionaryRecord {bitmask, frequency, hanji, tl, syllable_count, kautian_subtag}` | Rust `lexicon::dictionary_reader::DictionaryReader` |
 | **AssociationReader** | Binary mmap reader: prev_word → bigram entries | Rust `lexicon::association_reader::AssociationReader` |
-| **EnabledDictionaries** | Per-source toggle + 16-bit `source_bitmask` for filter | iOS `EnabledDictionaries.swift` / Android `.kt` (DTO; bitmask layout from `binary-format.md`) |
+| **EnabledDictionaries** | Per-source toggle + 16-bit `source_bitmask` for filter | Rust `lexicon::dictionary_filters` (`DictionarySourceToggles` → `dictionary_filter_bitmask` / `association_bitmask`; replaced the deleted iOS / Android `EnabledDictionaries` files; bitmask layout from `binary-format.md`) |
 | **bitmaskFilter** | 16-bit source bitmask replaces SQL WHERE for dictionary filtering | Rust `lexicon::dictionary_reader::Filter` |
 | **InputNormalizer** | Converts any input form to TL numeric tone format | Rust `phonetics::normalization::normalize_input` |
 | **searchKey** | Normalized key format: prefix + lowercase, no hyphens, numeric tones (e.g. `tl:gua2si7`) | Rust `phonetics::KeyFamily::search_key` |

@@ -1,6 +1,6 @@
 # Mobile smart suggestions — brainstorm, references survey, maintainability audit
 
-Status: **brainstorm only, nothing decided, no round open** (USER 2026-09-24: 「this is brainstorm rounds … 我目前是對於手機輸入法的智慧建議有興趣，目前的字詞預測是比較簡單的」).
+Status: **brainstorm, since executed in part** — R1–R4 merged, batches A/B delivered by the bigram LM (`docs/architecture/bigram-lm-roadmap.md`, closed 2026-09-30); leftovers in `docs/roadmap.md` § Open candidates. Original status: brainstorm only, nothing decided, no round open (USER 2026-09-24: 「this is brainstorm rounds … 我目前是對於手機輸入法的智慧建議有興趣，目前的字詞預測是比較簡單的」).
 No release scope is implied. Open USER decisions are listed at the end.
 
 Sources: three read-only research passes on 2026-09-24 (current pipeline map, `references/` prediction survey, engine + mobile maintainability audit). High-severity claims were spot-checked by hand (marked **verified**); the rest are `file:line` cites from the research passes and must be re-grepped before a round quotes them.
@@ -117,7 +117,7 @@ Trigger: USER heard ChiaKey described as a "bigram lexicon" and asked what that 
 ### Status of §4 / §5 as of 2026-09-28
 
 - Done: R1 (#187–#191), R3 (#194 + #196), R2 (#197), R4 file split only (#198; shared toneless key refuted), small items (#200). R5 absorbed into the user-data-engine roadmap (all user-data stores now live in `engine/userdata`, so batch A/B schema work lands there once).
-- Not started: batch A (techniques 1, 2, 5, 6), batch B (3, 4, 7), corpus track (8), techniques 9–11.
+- Delivered by the bigram LM (P3–P5): techniques 1, 2, 7, 8; technique 4 cut (bigram D7). Unscheduled: 3, 5, 6, 9, 10, 11.
 - §5 decision 2 answered: USER 2026-09-27, "these licences are all fine, ignore them" → `corpus/taigi-corpus` opt-in submodule (#248, ~670 MB, `update = none`). The §5.2 text above (Common Voice / Wikipedia) is superseded. `corpus/taigi-typing` status unchanged.
 - §5 decision 3 (predictions after Space) still open.
 

@@ -1,5 +1,5 @@
-//! `engine/dispatch` honors the `log` crate contract (`ffi-safety.md`
-//! §7 T6 library half). A capture logger installed by this test must
+//! `engine/dispatch` honors the `log` crate contract (`rust-ffi-safety.md`
+//! §6 T6 library half). A capture logger installed by this test must
 //! receive records emitted from the dispatch path; the FFI-side round
 //! trip through `OSLog` / `android.util.Log` is exercised separately
 //! by the platform test targets.
