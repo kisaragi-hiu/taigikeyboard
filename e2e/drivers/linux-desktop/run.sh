@@ -51,5 +51,5 @@ drive() {
 }
 
 mkdir -p "$RUN_DIR"
-drive linux-gnome-ibus ibus ssh binhian@192.168.64.2 start_utm
+drive linux-gnome-ibus ibus ssh "${TAIGI_E2E_LINUX_HOST:-utm-linux}" start_utm
 drive linux-kde-fcitx5 fcitx5 "ssh -J win -p 2222" taigi@127.0.0.1 start_vbox
