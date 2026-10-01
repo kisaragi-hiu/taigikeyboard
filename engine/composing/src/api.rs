@@ -517,7 +517,7 @@ pub enum Intent {
     },
     DeleteBackward,
     CommitRaw,
-    SelectSuggestion {
+    SelectCandidate {
         text: String,
     },
     CommitPreeditThenInsertExternal {
@@ -699,7 +699,7 @@ impl Engine {
     /// `requests::handle`. NOT public API — external callers always go
     /// through `requests::handle`. The user-initiated `Intent::Reset` path
     /// goes through `apply(Intent::Reset, ...)`, which emits the
-    /// `ClearPreeditWithoutCommit + ResetAutocomplete` effects when
+    /// `ClearPreeditWithoutCommit + ClearCandidates` effects when
     /// composing; this helper is silent (no effects) for the
     /// generation-mismatch drop. Call site is `EngineHandle::handle`.
     pub(crate) fn reset(&mut self) {

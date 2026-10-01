@@ -6,7 +6,7 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface PerformAutocompleteOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.PerformAutocomplete)
+public interface ResetCandidateContextOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.ResetCandidateContext)
     com.google.protobuf.MessageLiteOrBuilder {
 }

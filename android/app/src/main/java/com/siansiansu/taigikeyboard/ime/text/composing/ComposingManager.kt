@@ -19,7 +19,7 @@ import com.siansiansu.taigikeyboard.engine.composingDeleteBackward
 import com.siansiansu.taigikeyboard.engine.composingFetchAtPos
 import com.siansiansu.taigikeyboard.engine.composingReplaceLast
 import com.siansiansu.taigikeyboard.engine.composingReset
-import com.siansiansu.taigikeyboard.engine.composingSelectSuggestion
+import com.siansiansu.taigikeyboard.engine.composingSelectCandidate
 import com.siansiansu.taigikeyboard.engine.composingStart
 import com.siansiansu.taigikeyboard.engine.continuousAppConfig
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
@@ -254,11 +254,11 @@ class ComposingManager(
         // commits `Σ nailed.display_text + derived(pending)` (the whole
         // composition) and fires the terminal NextWord, building the string
         // from engine state so there is no prefix duplication. The old
-        // `SelectSuggestion(getComposingText())` reroute double-counted the
+        // `SelectCandidate(getComposingText())` reroute double-counted the
         // nailed prefix once the composing buffer became the whole
-        // composition (`select_suggestion_under_continuous` prepends
-        // `nailed_prefix`). `selectSuggestion(candidate)` still uses
-        // SelectSuggestion (bare candidate → engine prepends correctly).
+        // composition (`select_candidate_under_continuous` prepends
+        // `nailed_prefix`). `selectCandidate(candidate)` still uses
+        // SelectCandidate (bare candidate → engine prepends correctly).
         // An empty composition makes `CommitRaw` a no-op.
         val settings = settingsProvider.current
         applyAsSelfCommit(
@@ -277,7 +277,7 @@ class ComposingManager(
         // the WHOLE composition (`Σ nailed.display_text + derived(pending)`)
         // and fires the terminal NextWordWordSelected (matches
         // commit_continuous final-commit shape). The Phase 7B
-        // SelectSuggestion bypass is gone; the engine owns per-phase
+        // SelectCandidate bypass is gone; the engine owns per-phase
         // routing. See
         // engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*.
         val settings = settingsProvider.current
@@ -290,14 +290,14 @@ class ComposingManager(
         )
     }
 
-    fun selectSuggestion(
+    fun selectCandidate(
         suggestion: String,
         ic: InputConnection,
     ) {
-        logger.tdebug(TAG) { "[COMPOSE] fn=selectSuggestion len=${suggestion.length}" }
+        logger.tdebug(TAG) { "[COMPOSE] fn=selectCandidate len=${suggestion.length}" }
         val settings = settingsProvider.current
         applyAsSelfCommit(
-            RustEngineBridge.composingSelectSuggestion(
+            RustEngineBridge.composingSelectCandidate(
                 suggestion,
                 settings,
                 currentGeneration,
@@ -390,9 +390,9 @@ class ComposingManager(
      * answers what the pick did — the outcome callers gate the auto space and
      * the strip refresh on. **Model B** (§10): mid-commit (nail) emits
      * `[UpdatePreedit(whole composition), NextWordUpdateLastSelectedWord,
-     * PerformAutocomplete]` and stays Continuous; final-commit
+     * RefreshCandidates]` and stays Continuous; final-commit
      * (`consumedBytes >= pending.utf8.size`) emits `[CommitTextReplacingPreedit
-     * (whole composition), ResetAutocomplete, ResetAutocompleteContext,
+     * (whole composition), ClearCandidates, ResetCandidateContext,
      * NextWordWordSelected]` and exits Continuous; a stale generation or a
      * rejected pick emits nothing and answers `Ignored`.
      */
@@ -550,7 +550,7 @@ class ComposingManager(
                     // NextWord-shaped composing effects flow through a sibling
                     // router, not the InputConnection-bound delegate. Engine
                     // emits these only on Continuous mid/final commits + resets;
-                    // the platform NextWord callback path on SelectSuggestion
+                    // the platform NextWord callback path on SelectCandidate
                     // (CandidateClickHandler.onNextWordPrediction) and this
                     // engine effect path do not double-fire.
                     nextWordRouter.route(effect)
@@ -575,9 +575,9 @@ private fun RustEngineBridge.ComposingTransition.Effect.describeKind(): String =
         is RustEngineBridge.ComposingTransition.Effect.UpdatePreedit -> "UpdatePreedit len=${display.length}"
         RustEngineBridge.ComposingTransition.Effect.ClearPreeditWithoutCommit -> "ClearPreeditWithoutCommit"
         is RustEngineBridge.ComposingTransition.Effect.CommitTextReplacingPreedit -> "CommitTextReplacingPreedit len=${text.length}"
-        RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete -> "ResetAutocomplete"
-        RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete -> "PerformAutocomplete"
-        RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext -> "ResetAutocompleteContext"
+        RustEngineBridge.ComposingTransition.Effect.ClearCandidates -> "ClearCandidates"
+        RustEngineBridge.ComposingTransition.Effect.RefreshCandidates -> "RefreshCandidates"
+        RustEngineBridge.ComposingTransition.Effect.ResetCandidateContext -> "ResetCandidateContext"
         is RustEngineBridge.ComposingTransition.Effect.NextWordUpdateLastSelectedWord -> "NextWordUpdateLastSelectedWord"
         is RustEngineBridge.ComposingTransition.Effect.NextWordWordSelected -> "NextWordWordSelected trigger=$triggerPrediction"
         RustEngineBridge.ComposingTransition.Effect.NextWordClearForNewComposing -> "NextWordClearForNewComposing"

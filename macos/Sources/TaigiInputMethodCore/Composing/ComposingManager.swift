@@ -423,9 +423,9 @@ final class ComposingManager {
             case .updatePreedit,
                  .clearPreeditWithoutCommit,
                  .commitTextReplacingPreedit,
-                 .resetAutocomplete,
-                 .performAutocomplete,
-                 .resetAutocompleteContext:
+                 .clearCandidates,
+                 .refreshCandidates,
+                 .resetCandidateContext:
                 executor.execute(effect)
             }
         }

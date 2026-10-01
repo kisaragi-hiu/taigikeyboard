@@ -18,9 +18,9 @@ struct ComposingTransition: Equatable, Sendable {
         case updatePreedit(String, caretUTF16: Int)
         case clearPreeditWithoutCommit
         case commitTextReplacingPreedit(String)
-        case resetAutocomplete
-        case performAutocomplete
-        case resetAutocompleteContext
+        case clearCandidates
+        case refreshCandidates
+        case resetCandidateContext
         /// Continuous-input nail / unnail handshake. The next-word learner
         /// learns nothing from it (§40); it marks a nailed segment.
         case nextWordUpdateLastSelectedWord(text: String, roman: String)

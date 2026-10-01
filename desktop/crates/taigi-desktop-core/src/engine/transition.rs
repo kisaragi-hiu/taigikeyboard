@@ -22,9 +22,9 @@ pub enum Effect {
     },
     ClearPreeditWithoutCommit,
     CommitTextReplacingPreedit(String),
-    ResetAutocomplete,
-    PerformAutocomplete,
-    ResetAutocompleteContext,
+    ClearCandidates,
+    RefreshCandidates,
+    ResetCandidateContext,
     /// Continuous-input nail / unnail handshake. Next-word learns nothing
     /// from it (behavioral-invariants §40); it marks a nailed segment.
     NextWordUpdateLastSelectedWord {
@@ -85,9 +85,9 @@ impl Effect {
             effect::Kind::CommitTextReplacingPreedit(payload) => {
                 Effect::CommitTextReplacingPreedit(payload.text.clone())
             }
-            effect::Kind::ResetAutocomplete(_) => Effect::ResetAutocomplete,
-            effect::Kind::PerformAutocomplete(_) => Effect::PerformAutocomplete,
-            effect::Kind::ResetAutocompleteContext(_) => Effect::ResetAutocompleteContext,
+            effect::Kind::ClearCandidates(_) => Effect::ClearCandidates,
+            effect::Kind::RefreshCandidates(_) => Effect::RefreshCandidates,
+            effect::Kind::ResetCandidateContext(_) => Effect::ResetCandidateContext,
             effect::Kind::NextWordUpdateLastSelectedWord(payload) => {
                 Effect::NextWordUpdateLastSelectedWord {
                     text: payload.text.clone(),

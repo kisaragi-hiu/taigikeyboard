@@ -96,8 +96,8 @@ fn final_commit_of_hanji_picks_learns_the_joined_phrase() {
         effect_kinds(&fin.response.effect),
         vec![
             "CommitTextReplacingPreedit",
-            "ResetAutocomplete",
-            "ResetAutocompleteContext",
+            "ClearCandidates",
+            "ResetCandidateContext",
             "NextWordWordSelected",
         ]
     );

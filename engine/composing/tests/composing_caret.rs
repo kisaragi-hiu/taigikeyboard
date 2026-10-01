@@ -119,7 +119,7 @@ fn append_inserts_at_the_caret_and_refetches() {
         },
         &config_tl(),
     );
-    assert_eq!(kinds(&resp), vec!["UpdatePreedit", "PerformAutocomplete"]);
+    assert_eq!(kinds(&resp), vec!["UpdatePreedit", "RefreshCandidates"]);
     let p = preedit(&resp);
     assert_eq!(
         (p.raw_input.as_str(), p.display_text.as_str()),
@@ -137,7 +137,7 @@ fn delete_backward_removes_the_char_before_the_caret_and_stops_at_the_start() {
     move_caret(&mut engine, CaretDirection::Left);
     move_caret(&mut engine, CaretDirection::Left);
     let resp = engine.apply(Intent::DeleteBackward, &config_tl());
-    assert_eq!(kinds(&resp), vec!["UpdatePreedit", "PerformAutocomplete"]);
+    assert_eq!(kinds(&resp), vec!["UpdatePreedit", "RefreshCandidates"]);
     assert_eq!(preedit(&resp).raw_input, "ka2");
     assert_eq!(caret_of(&engine), 1);
 
@@ -245,7 +245,7 @@ fn continuous_resets_the_caret_on_nail_and_never_enters_a_segment() {
     // none, so NextWord is cleared rather than re-pointed.
     move_caret(&mut engine, CaretDirection::Right);
     let resp = engine.apply(Intent::DeleteBackward, &config_tl());
-    assert_eq!(kinds(&resp), vec!["UpdatePreedit", "PerformAutocomplete"]);
+    assert_eq!(kinds(&resp), vec!["UpdatePreedit", "RefreshCandidates"]);
     assert_eq!(preedit(&resp).raw_input, "");
     assert_eq!(caret_of(&engine), 0);
     let resp = engine.apply(Intent::DeleteBackward, &config_tl());
@@ -254,7 +254,7 @@ fn continuous_resets_the_caret_on_nail_and_never_enters_a_segment() {
         vec![
             "NextWordClearForNewComposing",
             "UpdatePreedit",
-            "PerformAutocomplete"
+            "RefreshCandidates"
         ]
     );
     assert_eq!(preedit(&resp).raw_input, "tsu");
@@ -305,7 +305,7 @@ fn continuous_mid_tail_append_keeps_the_nailed_prefix_and_projects_the_caret() {
         },
         &config_tl(),
     );
-    assert_eq!(kinds(&resp), vec!["UpdatePreedit", "PerformAutocomplete"]);
+    assert_eq!(kinds(&resp), vec!["UpdatePreedit", "RefreshCandidates"]);
     let p = preedit(&resp);
     assert_eq!(
         (p.raw_input.as_str(), p.display_text.as_str()),

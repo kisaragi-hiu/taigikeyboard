@@ -12,8 +12,8 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
  * + §11.2 (Android-specific rules: zero-then-finish for clear-preedit;
  * atomic `commitText` for replace-preedit).
  *
- * Engine-side effects (`ResetAutocomplete` / `PerformAutocomplete` /
- * `ResetAutocompleteContext`) are no-ops at this layer — the existing
+ * Engine-side effects (`ClearCandidates` / `RefreshCandidates` /
+ * `ResetCandidateContext`) are no-ops at this layer — the existing
  * [com.siansiansu.taigikeyboard.ime.text.CandidateUpdateCoordinator] flow
  * handles candidate / autocomplete updates triggered from the wrapper's
  * caller.
@@ -47,9 +47,9 @@ object DefaultComposingDelegate : ComposingDelegate {
                 ic.commitText(effect.text, 1)
             }
 
-            RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete,
-            RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete,
-            RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext,
+            RustEngineBridge.ComposingTransition.Effect.ClearCandidates,
+            RustEngineBridge.ComposingTransition.Effect.RefreshCandidates,
+            RustEngineBridge.ComposingTransition.Effect.ResetCandidateContext,
             -> {
                 Unit
             }

@@ -113,18 +113,18 @@ fun RustEngineBridge.composingCommitRaw(
 
 // Under `Phase::Continuous` the engine prepends `nailed_prefix(nailed, config)`
 // to `text`; the composing arm commits `text` verbatim.
-fun RustEngineBridge.composingSelectSuggestion(
+fun RustEngineBridge.composingSelectCandidate(
     text: String,
     settings: EngineSettings,
     generation: Long,
 ): RustEngineBridge.ComposingTransition {
-    val payload = com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion
+    val payload = com.siansiansu.taigikeyboard.engine.proto.SelectCandidate
         .newBuilder()
         .setText(text)
         .build()
     return composingDispatch(
-        methodSetter = { it.selectSuggestion = payload },
-        op = "composingSelectSuggestion",
+        methodSetter = { it.selectCandidate = payload },
+        op = "composingSelectCandidate",
         generation = generation,
         config = continuousAppConfig(settings),
     )
@@ -370,16 +370,16 @@ private fun synthComposing(proto: ComposingResponse): RustEngineBridge.Composing
                 )
             }
 
-            eff.hasResetAutocomplete() -> {
-                RustEngineBridge.ComposingTransition.Effect.ResetAutocomplete
+            eff.hasClearCandidates() -> {
+                RustEngineBridge.ComposingTransition.Effect.ClearCandidates
             }
 
-            eff.hasPerformAutocomplete() -> {
-                RustEngineBridge.ComposingTransition.Effect.PerformAutocomplete
+            eff.hasRefreshCandidates() -> {
+                RustEngineBridge.ComposingTransition.Effect.RefreshCandidates
             }
 
-            eff.hasResetAutocompleteContext() -> {
-                RustEngineBridge.ComposingTransition.Effect.ResetAutocompleteContext
+            eff.hasResetCandidateContext() -> {
+                RustEngineBridge.ComposingTransition.Effect.ResetCandidateContext
             }
 
             eff.hasNextWordUpdateLastSelectedWord() -> {

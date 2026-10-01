@@ -17,12 +17,12 @@ extension KeyboardViewController {
                 "clearPreeditWithoutCommit"
             case let .commitTextReplacingPreedit(text):
                 "commitTextReplacingPreedit len=\(text.count)"
-            case .resetAutocomplete:
-                "resetAutocomplete"
-            case .performAutocomplete:
-                "performAutocomplete"
-            case .resetAutocompleteContext:
-                "resetAutocompleteContext"
+            case .clearCandidates:
+                "clearCandidates"
+            case .refreshCandidates:
+                "refreshCandidates"
+            case .resetCandidateContext:
+                "resetCandidateContext"
             case let .nextWordUpdateLastSelectedWord(text, roman):
                 "nextWordUpdateLastSelectedWord text.len=\(text.count) roman.len=\(roman.count)"
             case let .nextWordWordSelected(text, roman, triggerPrediction, preceding):
@@ -43,11 +43,11 @@ extension KeyboardViewController {
             // achieves this via `commitText(text, 1)`).
             clearMarkedText()
             textDocumentProxy.insertText(text)
-        case .resetAutocomplete:
+        case .clearCandidates:
             resetAutocomplete()
-        case .performAutocomplete:
+        case .refreshCandidates:
             performAutocomplete()
-        case .resetAutocompleteContext:
+        case .resetCandidateContext:
             state.autocompleteContext.reset()
         case let .nextWordUpdateLastSelectedWord(text, roman):
             // Nail / unnail handshake — NextWord learns nothing from it (§40);

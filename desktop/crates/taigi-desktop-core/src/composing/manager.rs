@@ -354,9 +354,9 @@ impl ComposingManager {
                 Effect::UpdatePreedit { .. }
                 | Effect::ClearPreeditWithoutCommit
                 | Effect::CommitTextReplacingPreedit(_)
-                | Effect::ResetAutocomplete
-                | Effect::PerformAutocomplete
-                | Effect::ResetAutocompleteContext => executor.execute(effect),
+                | Effect::ClearCandidates
+                | Effect::RefreshCandidates
+                | Effect::ResetCandidateContext => executor.execute(effect),
             }
         }
     }

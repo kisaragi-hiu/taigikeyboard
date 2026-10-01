@@ -47,7 +47,7 @@ message ComposingRequest {
     ReplaceLast                     replace_last                         = 13;
     DeleteBackward                  delete_backward                      = 14;
     CommitRaw                       commit_raw                           = 16;
-    SelectSuggestion                select_suggestion                    = 17;
+    SelectCandidate                select_candidate                    = 17;
     CommitPreeditThenInsertExternal commit_preedit_then_insert_external  = 18;
     Reset                           reset                                = 19;
 
@@ -86,7 +86,7 @@ message CommitRaw {}
 
 // Commit the supplied platform-resolved suggestion text, atomically
 // replacing the current preedit.
-message SelectSuggestion { string text = 1; }
+message SelectCandidate { string text = 1; }
 
 // Commit the current preedit (if any) and atomically insert externally
 // supplied text in one document write. Non-Taigi input surfaces (emoji
@@ -94,7 +94,7 @@ message SelectSuggestion { string text = 1; }
 message CommitPreeditThenInsertExternal { string text = 1; }
 
 // Clear all state (mode switch, teardown). User-initiated; emits the abort
-// trio `[ClearPreeditWithoutCommit, ResetAutocomplete,
+// trio `[ClearPreeditWithoutCommit, ClearCandidates,
 // NextWordClearForNewComposing]` if composing, `[]` if Idle. Nothing reaches
 // the document.
 message Reset {}
@@ -276,7 +276,7 @@ message TelexKey { string key = 1; }
 // Desktop only — step the caret inside the pending tail one Unicode scalar
 // value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
 // buffer does not change, so the response carries `UpdatePreedit` (with the
-// new `caret_utf16`) and NO `PerformAutocomplete`: candidates, highlight and
+// new `caret_utf16`) and NO `RefreshCandidates`: candidates, highlight and
 // page stay. At either edge of the pending tail — the caret never enters a
 // nailed segment — the request is a no-op with no effects. Every mutator
 // then edits at the caret: `Append` inserts there, `DeleteBackward` /
@@ -423,8 +423,8 @@ message CandidateMessage {
 // Platform-neutral effects. The wrapper maps document-mutation effects
 // (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`)
 // to `setComposingText` / `commitText` (Android) or `setMarkedText` /
-// `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
-// `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
+// `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ClearCandidates` /
+// `RefreshCandidates` / `ResetCandidateContext`) route to the platform
 // autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
 //
 // `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
@@ -447,9 +447,9 @@ message Effect {
     UpdatePreedit                  update_preedit                       = 1;
     ClearPreeditWithoutCommit      clear_preedit_without_commit         = 2;
     CommitTextReplacingPreedit     commit_text_replacing_preedit        = 3;
-    ResetAutocomplete              reset_autocomplete                   = 5;
-    PerformAutocomplete            perform_autocomplete                 = 6;
-    ResetAutocompleteContext       reset_autocomplete_context           = 7;
+    ClearCandidates              clear_candidates                   = 5;
+    RefreshCandidates            refresh_candidates                 = 6;
+    ResetCandidateContext       reset_candidate_context           = 7;
     NextWordUpdateLastSelectedWord next_word_update_last_selected_word  = 8;
     NextWordWordSelected           next_word_word_selected              = 9;
     NextWordClearForNewComposing   next_word_clear_for_new_composing    = 10;
@@ -460,9 +460,9 @@ message Effect {
 message UpdatePreedit              { string display = 1; uint32 caret_utf16 = 2; }
 message ClearPreeditWithoutCommit  {}
 message CommitTextReplacingPreedit { string text = 1; }
-message ResetAutocomplete          {}
-message PerformAutocomplete        {}
-message ResetAutocompleteContext   {}
+message ClearCandidates          {}
+message RefreshCandidates        {}
+message ResetCandidateContext   {}
 
 // Mid-commit handshake during continuous-input. Maps to
 // `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)` on the

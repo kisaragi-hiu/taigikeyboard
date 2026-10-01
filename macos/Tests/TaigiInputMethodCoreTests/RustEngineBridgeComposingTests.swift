@@ -71,7 +71,7 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         XCTAssertFalse(transition.isComposing)
         XCTAssertEqual(
             transition.effects,
-            [.clearPreeditWithoutCommit, .resetAutocomplete, .nextWordClearForNewComposing],
+            [.clearPreeditWithoutCommit, .clearCandidates, .nextWordClearForNewComposing],
             "the engine's abort trio must arrive whole and in order",
         )
     }
@@ -107,11 +107,11 @@ final class RustEngineBridgeComposingTests: XCTestCase {
     }
 
     /// Guards the mistake this bridge used to document: committing the literal
-    /// by handing the marked-region text to `SelectSuggestion` re-prepends the
+    /// by handing the marked-region text to `SelectCandidate` re-prepends the
     /// nailed prefix (`engine/composing/src/transition.rs:724`), so a
     /// composition reading `台北大學` with `台北` nailed would commit
     /// `台北台北大學`. `CommitRaw` is the op that does not, which is why
-    /// `SelectSuggestion` has no macOS wrapper at all.
+    /// `SelectCandidate` has no macOS wrapper at all.
     func testCommitRaw_afterANailedSegment_writesTheCompositionOnceNotTwice() throws {
         _ = try compose("taigi")
         let pendingBytes = UInt32("taigi".utf8.count)

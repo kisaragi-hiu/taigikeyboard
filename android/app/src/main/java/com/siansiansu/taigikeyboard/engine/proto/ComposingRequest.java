@@ -26,7 +26,7 @@ public  final class ComposingRequest extends
     REPLACE_LAST(13),
     DELETE_BACKWARD(14),
     COMMIT_RAW(16),
-    SELECT_SUGGESTION(17),
+    SELECT_CANDIDATE(17),
     COMMIT_PREEDIT_THEN_INSERT_EXTERNAL(18),
     RESET(19),
     FETCH_AT_POS(31),
@@ -54,7 +54,7 @@ public  final class ComposingRequest extends
         case 13: return REPLACE_LAST;
         case 14: return DELETE_BACKWARD;
         case 16: return COMMIT_RAW;
-        case 17: return SELECT_SUGGESTION;
+        case 17: return SELECT_CANDIDATE;
         case 18: return COMMIT_PREEDIT_THEN_INSERT_EXTERNAL;
         case 19: return RESET;
         case 31: return FETCH_AT_POS;
@@ -402,40 +402,40 @@ public  final class ComposingRequest extends
     }
   }
 
-  public static final int SELECT_SUGGESTION_FIELD_NUMBER = 17;
+  public static final int SELECT_CANDIDATE_FIELD_NUMBER = 17;
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
    */
   @java.lang.Override
-  public boolean hasSelectSuggestion() {
+  public boolean hasSelectCandidate() {
     return methodCase_ == 17;
   }
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion getSelectSuggestion() {
+  public com.siansiansu.taigikeyboard.engine.proto.SelectCandidate getSelectCandidate() {
     if (methodCase_ == 17) {
-       return (com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion) method_;
+       return (com.siansiansu.taigikeyboard.engine.proto.SelectCandidate) method_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.getDefaultInstance();
   }
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
    */
-  private void setSelectSuggestion(com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion value) {
+  private void setSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
     java.util.Objects.requireNonNull(value);
     method_ = value;
     methodCase_ = 17;
   }
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
    */
-  private void mergeSelectSuggestion(com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion value) {
+  private void mergeSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
     java.util.Objects.requireNonNull(value);
     if (methodCase_ == 17 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion) method_)
+        method_ != com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SelectCandidate) method_)
           .mergeFrom(value).buildPartial();
     } else {
       method_ = value;
@@ -443,9 +443,9 @@ public  final class ComposingRequest extends
     methodCase_ = 17;
   }
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
    */
-  private void clearSelectSuggestion() {
+  private void clearSelectCandidate() {
     if (methodCase_ == 17) {
       methodCase_ = 0;
       method_ = null;
@@ -1214,50 +1214,50 @@ public  final class ComposingRequest extends
     }
 
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
     @java.lang.Override
-    public boolean hasSelectSuggestion() {
-      return instance.hasSelectSuggestion();
+    public boolean hasSelectCandidate() {
+      return instance.hasSelectCandidate();
     }
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion getSelectSuggestion() {
-      return instance.getSelectSuggestion();
+    public com.siansiansu.taigikeyboard.engine.proto.SelectCandidate getSelectCandidate() {
+      return instance.getSelectCandidate();
     }
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
-    public Builder setSelectSuggestion(com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion value) {
+    public Builder setSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
       copyOnWrite();
-      instance.setSelectSuggestion(value);
+      instance.setSelectCandidate(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
-    public Builder setSelectSuggestion(
-        com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.Builder builderForValue) {
+    public Builder setSelectCandidate(
+        com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.Builder builderForValue) {
       copyOnWrite();
-      instance.setSelectSuggestion(builderForValue.build());
+      instance.setSelectCandidate(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
-    public Builder mergeSelectSuggestion(com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion value) {
+    public Builder mergeSelectCandidate(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate value) {
       copyOnWrite();
-      instance.mergeSelectSuggestion(value);
+      instance.mergeSelectCandidate(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
+     * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
      */
-    public Builder clearSelectSuggestion() {
+    public Builder clearSelectCandidate() {
       copyOnWrite();
-      instance.clearSelectSuggestion();
+      instance.clearSelectCandidate();
       return this;
     }
 
@@ -1621,7 +1621,7 @@ public  final class ComposingRequest extends
             com.siansiansu.taigikeyboard.engine.proto.ReplaceLast.class,
             com.siansiansu.taigikeyboard.engine.proto.DeleteBackward.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitRaw.class,
-            com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.class,
+            com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.class,
             com.siansiansu.taigikeyboard.engine.proto.CommitPreeditThenInsertExternal.class,
             com.siansiansu.taigikeyboard.engine.proto.Reset.class,
             com.siansiansu.taigikeyboard.engine.proto.FetchAtPos.class,

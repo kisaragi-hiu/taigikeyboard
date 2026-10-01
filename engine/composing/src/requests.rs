@@ -50,7 +50,7 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
         },
         Method::DeleteBackward(_) => Intent::DeleteBackward,
         Method::CommitRaw(_) => Intent::CommitRaw,
-        Method::SelectSuggestion(m) => Intent::SelectSuggestion { text: m.text },
+        Method::SelectCandidate(m) => Intent::SelectCandidate { text: m.text },
         Method::CommitPreeditThenInsertExternal(m) => {
             Intent::CommitPreeditThenInsertExternal { text: m.text }
         }

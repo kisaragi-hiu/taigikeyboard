@@ -170,10 +170,10 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// The engine resolves the document text, counts the pick (R5), and
     /// answers what the pick did — the outcome callers gate the auto space on.
     /// Model B mid-commit (nail) emits `[UpdatePreedit(whole composition),
-    /// NextWordUpdateLastSelectedWord, PerformAutocomplete]` and stays
+    /// NextWordUpdateLastSelectedWord, RefreshCandidates]` and stays
     /// Continuous; final-commit (`consumedBytes >= pending.utf8.count`)
     /// emits `[CommitTextReplacingPreedit(whole composition),
-    /// ResetAutocomplete, ResetAutocompleteContext, NextWordWordSelected]`
+    /// ClearCandidates, ResetCandidateContext, NextWordWordSelected]`
     /// and exits Continuous; a stale generation or a rejected pick emits
     /// nothing and answers `.ignored`.
     public func commitContinuous(_ pick: RustEngineBridge.ContinuousPick) -> RustEngineBridge.ContinuousCommitOutcome {
@@ -209,11 +209,11 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // the engine commits `Σ nailed.display_text + derived(pending)` (the
         // whole composition) and fires the terminal NextWord; it builds the
         // string from engine state, so there is no prefix duplication. The
-        // old `SelectSuggestion(composingText)` reroute double-counted the
+        // old `SelectCandidate(composingText)` reroute double-counted the
         // nailed prefix once the composing buffer became the whole
-        // composition (`select_suggestion_under_continuous` prepends
-        // `nailed_prefix`). `selectSuggestion(candidate)` still uses
-        // SelectSuggestion (bare candidate → engine prepends the nailed
+        // composition (`select_candidate_under_continuous` prepends
+        // `nailed_prefix`). `selectCandidate(candidate)` still uses
+        // SelectCandidate (bare candidate → engine prepends the nailed
         // prefix correctly). Idle → `CommitRaw` is a no-op.
         let settings = settingsProvider.current
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
@@ -230,7 +230,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         // (`Σ nailed.display_text + derived(pending)`) and fires the same
         // terminal NextWord effect as a final-commit candidate tap (see
         // `engine/composing/tests/continuous_phase.rs::commit_raw_under_continuous_*`).
-        // The Phase 7B SelectSuggestion bypass is no longer needed; the
+        // The Phase 7B SelectCandidate bypass is no longer needed; the
         // engine owns the per-phase routing.
         let settings = settingsProvider.current
         applyAsSelfCommit(RustEngineBridge.composingCommitRaw(
@@ -239,10 +239,10 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
         ))
     }
 
-    public func selectSuggestion(text: String) {
-        logger.debug("[COMPOSE] fn=selectSuggestion len=\(text.count)")
+    public func selectCandidate(text: String) {
+        logger.debug("[COMPOSE] fn=selectCandidate len=\(text.count)")
         let settings = settingsProvider.current
-        applyAsSelfCommit(RustEngineBridge.composingSelectSuggestion(
+        applyAsSelfCommit(RustEngineBridge.composingSelectCandidate(
             text,
             settings: settings,
             generation: currentGeneration,

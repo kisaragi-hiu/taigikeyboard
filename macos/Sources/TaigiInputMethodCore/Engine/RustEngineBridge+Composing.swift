@@ -13,7 +13,7 @@ import Foundation
 /// - `Start` is absent because `Append` begins the composition from Idle by
 ///   itself, so a separate "begin" op would be a second way to do the same
 ///   thing — and one that skips the per-character preprocessing.
-/// - `SelectSuggestion` is absent because it is not what it looks like. Under
+/// - `SelectCandidate` is absent because it is not what it looks like. Under
 ///   `Phase::Continuous` it REPLACES the pending tail and re-prepends the nailed
 ///   prefix (`transition.rs:724`), so handing it the composition as rendered
 ///   double-counts that prefix: `台北` nailed plus a marked `台北大學` commits
@@ -118,7 +118,7 @@ extension RustEngineBridge {
     /// (`transition.rs:443`), which is what the snapshot reports as
     /// `display_text` (`transition.rs:585`). This is the Return key.
     ///
-    /// Not `composingSelectSuggestion`, despite what an earlier note in this
+    /// Not `composingSelectCandidate`, despite what an earlier note in this
     /// file claimed: under `Phase::Continuous` that op prepends the nailed
     /// prefix to whatever text it is handed (`transition.rs:724`), so passing
     /// it the marked-region string double-counts — a composition reading
@@ -345,12 +345,12 @@ extension RustEngineBridge {
             return .clearPreeditWithoutCommit
         case let .commitTextReplacingPreedit(payload):
             return .commitTextReplacingPreedit(payload.text)
-        case .resetAutocomplete:
-            return .resetAutocomplete
-        case .performAutocomplete:
-            return .performAutocomplete
-        case .resetAutocompleteContext:
-            return .resetAutocompleteContext
+        case .clearCandidates:
+            return .clearCandidates
+        case .refreshCandidates:
+            return .refreshCandidates
+        case .resetCandidateContext:
+            return .resetCandidateContext
         case let .nextWordUpdateLastSelectedWord(payload):
             return .nextWordUpdateLastSelectedWord(text: payload.text, roman: payload.roman)
         case let .nextWordWordSelected(payload):

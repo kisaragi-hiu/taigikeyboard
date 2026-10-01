@@ -13,7 +13,7 @@ import XCTest
 /// - `commitContinuous` mid-commit stays in Continuous (pending tail remains
 ///   addressable); full-commit exits to Idle and clears mirror.
 /// - `reset` from a composition returns to Idle and emits the abort
-///   effect trio (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
+///   effect trio (`ClearPreeditWithoutCommit` + `ClearCandidates` +
 ///   `NextWordClearForNewComposing`).
 ///
 /// Boundary coverage: `RustEngineBridgeContinuousTests` pins the FFI
@@ -249,10 +249,10 @@ final class ComposingManagerContinuousTests: XCTestCase {
         XCTAssertFalse(manager.isComposing, "Reset must exit to Idle")
         XCTAssertEqual(manager.rawInput, "")
         // Abort trio order pinned by engine: ClearPreeditWithoutCommit ->
-        // ResetAutocomplete -> NextWordClearForNewComposing.
+        // ClearCandidates -> NextWordClearForNewComposing.
         XCTAssertEqual(spy.effects, [
             .clearPreeditWithoutCommit,
-            .resetAutocomplete,
+            .clearCandidates,
             .nextWordClearForNewComposing,
         ])
     }

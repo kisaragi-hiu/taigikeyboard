@@ -44,37 +44,37 @@ public interface EffectOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.CommitTextReplacingPreedit getCommitTextReplacingPreedit();
 
   /**
-   * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
-   * @return Whether the resetAutocomplete field is set.
+   * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
+   * @return Whether the clearCandidates field is set.
    */
-  boolean hasResetAutocomplete();
+  boolean hasClearCandidates();
   /**
-   * <code>.taigi.engine.ResetAutocomplete reset_autocomplete = 5;</code>
-   * @return The resetAutocomplete.
+   * <code>.taigi.engine.ClearCandidates clear_candidates = 5;</code>
+   * @return The clearCandidates.
    */
-  com.siansiansu.taigikeyboard.engine.proto.ResetAutocomplete getResetAutocomplete();
+  com.siansiansu.taigikeyboard.engine.proto.ClearCandidates getClearCandidates();
 
   /**
-   * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
-   * @return Whether the performAutocomplete field is set.
+   * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
+   * @return Whether the refreshCandidates field is set.
    */
-  boolean hasPerformAutocomplete();
+  boolean hasRefreshCandidates();
   /**
-   * <code>.taigi.engine.PerformAutocomplete perform_autocomplete = 6;</code>
-   * @return The performAutocomplete.
+   * <code>.taigi.engine.RefreshCandidates refresh_candidates = 6;</code>
+   * @return The refreshCandidates.
    */
-  com.siansiansu.taigikeyboard.engine.proto.PerformAutocomplete getPerformAutocomplete();
+  com.siansiansu.taigikeyboard.engine.proto.RefreshCandidates getRefreshCandidates();
 
   /**
-   * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
-   * @return Whether the resetAutocompleteContext field is set.
+   * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
+   * @return Whether the resetCandidateContext field is set.
    */
-  boolean hasResetAutocompleteContext();
+  boolean hasResetCandidateContext();
   /**
-   * <code>.taigi.engine.ResetAutocompleteContext reset_autocomplete_context = 7;</code>
-   * @return The resetAutocompleteContext.
+   * <code>.taigi.engine.ResetCandidateContext reset_candidate_context = 7;</code>
+   * @return The resetCandidateContext.
    */
-  com.siansiansu.taigikeyboard.engine.proto.ResetAutocompleteContext getResetAutocompleteContext();
+  com.siansiansu.taigikeyboard.engine.proto.ResetCandidateContext getResetCandidateContext();
 
   /**
    * <code>.taigi.engine.NextWordUpdateLastSelectedWord next_word_update_last_selected_word = 8;</code>

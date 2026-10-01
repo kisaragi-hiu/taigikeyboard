@@ -278,12 +278,12 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .commitRaw(newValue)}
   }
 
-  public var selectSuggestion: Taigi_Engine_SelectSuggestion {
+  public var selectCandidate: Taigi_Engine_SelectCandidate {
     get {
-      if case .selectSuggestion(let v)? = method {return v}
-      return Taigi_Engine_SelectSuggestion()
+      if case .selectCandidate(let v)? = method {return v}
+      return Taigi_Engine_SelectCandidate()
     }
-    set {method = .selectSuggestion(newValue)}
+    set {method = .selectCandidate(newValue)}
   }
 
   public var commitPreeditThenInsertExternal: Taigi_Engine_CommitPreeditThenInsertExternal {
@@ -346,7 +346,7 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     case replaceLast(Taigi_Engine_ReplaceLast)
     case deleteBackward(Taigi_Engine_DeleteBackward)
     case commitRaw(Taigi_Engine_CommitRaw)
-    case selectSuggestion(Taigi_Engine_SelectSuggestion)
+    case selectCandidate(Taigi_Engine_SelectCandidate)
     case commitPreeditThenInsertExternal(Taigi_Engine_CommitPreeditThenInsertExternal)
     case reset(Taigi_Engine_Reset)
     /// --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
@@ -440,7 +440,7 @@ public nonisolated struct Taigi_Engine_CommitRaw: Sendable {
 
 /// Commit the supplied platform-resolved suggestion text, atomically
 /// replacing the current preedit.
-public nonisolated struct Taigi_Engine_SelectSuggestion: Sendable {
+public nonisolated struct Taigi_Engine_SelectCandidate: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -468,7 +468,7 @@ public nonisolated struct Taigi_Engine_CommitPreeditThenInsertExternal: Sendable
 }
 
 /// Clear all state (mode switch, teardown). User-initiated; emits the abort
-/// trio `[ClearPreeditWithoutCommit, ResetAutocomplete,
+/// trio `[ClearPreeditWithoutCommit, ClearCandidates,
 /// NextWordClearForNewComposing]` if composing, `[]` if Idle. Nothing reaches
 /// the document.
 public nonisolated struct Taigi_Engine_Reset: Sendable {
@@ -688,7 +688,7 @@ public nonisolated struct Taigi_Engine_TelexKey: Sendable {
 /// Desktop only — step the caret inside the pending tail one Unicode scalar
 /// value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
 /// buffer does not change, so the response carries `UpdatePreedit` (with the
-/// new `caret_utf16`) and NO `PerformAutocomplete`: candidates, highlight and
+/// new `caret_utf16`) and NO `RefreshCandidates`: candidates, highlight and
 /// page stay. At either edge of the pending tail — the caret never enters a
 /// nailed segment — the request is a no-op with no effects. Every mutator
 /// then edits at the caret: `Append` inserts there, `DeleteBackward` /
@@ -896,8 +896,8 @@ public nonisolated struct Taigi_Engine_CandidateMessage: Sendable {
 /// Platform-neutral effects. The wrapper maps document-mutation effects
 /// (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`)
 /// to `setComposingText` / `commitText` (Android) or `setMarkedText` /
-/// `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ResetAutocomplete` /
-/// `PerformAutocomplete` / `ResetAutocompleteContext`) route to the platform
+/// `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ClearCandidates` /
+/// `RefreshCandidates` / `ResetCandidateContext`) route to the platform
 /// autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
 ///
 /// `NextWord*` effects (tags 8/9/10) are Phase 4 continuous-input handshake.
@@ -938,28 +938,28 @@ public nonisolated struct Taigi_Engine_Effect: Sendable {
     set {kind = .commitTextReplacingPreedit(newValue)}
   }
 
-  public var resetAutocomplete: Taigi_Engine_ResetAutocomplete {
+  public var clearCandidates_p: Taigi_Engine_ClearCandidates {
     get {
-      if case .resetAutocomplete(let v)? = kind {return v}
-      return Taigi_Engine_ResetAutocomplete()
+      if case .clearCandidates_p(let v)? = kind {return v}
+      return Taigi_Engine_ClearCandidates()
     }
-    set {kind = .resetAutocomplete(newValue)}
+    set {kind = .clearCandidates_p(newValue)}
   }
 
-  public var performAutocomplete: Taigi_Engine_PerformAutocomplete {
+  public var refreshCandidates: Taigi_Engine_RefreshCandidates {
     get {
-      if case .performAutocomplete(let v)? = kind {return v}
-      return Taigi_Engine_PerformAutocomplete()
+      if case .refreshCandidates(let v)? = kind {return v}
+      return Taigi_Engine_RefreshCandidates()
     }
-    set {kind = .performAutocomplete(newValue)}
+    set {kind = .refreshCandidates(newValue)}
   }
 
-  public var resetAutocompleteContext: Taigi_Engine_ResetAutocompleteContext {
+  public var resetCandidateContext: Taigi_Engine_ResetCandidateContext {
     get {
-      if case .resetAutocompleteContext(let v)? = kind {return v}
-      return Taigi_Engine_ResetAutocompleteContext()
+      if case .resetCandidateContext(let v)? = kind {return v}
+      return Taigi_Engine_ResetCandidateContext()
     }
-    set {kind = .resetAutocompleteContext(newValue)}
+    set {kind = .resetCandidateContext(newValue)}
   }
 
   public var nextWordUpdateLastSelectedWord: Taigi_Engine_NextWordUpdateLastSelectedWord {
@@ -992,9 +992,9 @@ public nonisolated struct Taigi_Engine_Effect: Sendable {
     case updatePreedit(Taigi_Engine_UpdatePreedit)
     case clearPreeditWithoutCommit_p(Taigi_Engine_ClearPreeditWithoutCommit)
     case commitTextReplacingPreedit(Taigi_Engine_CommitTextReplacingPreedit)
-    case resetAutocomplete(Taigi_Engine_ResetAutocomplete)
-    case performAutocomplete(Taigi_Engine_PerformAutocomplete)
-    case resetAutocompleteContext(Taigi_Engine_ResetAutocompleteContext)
+    case clearCandidates_p(Taigi_Engine_ClearCandidates)
+    case refreshCandidates(Taigi_Engine_RefreshCandidates)
+    case resetCandidateContext(Taigi_Engine_ResetCandidateContext)
     case nextWordUpdateLastSelectedWord(Taigi_Engine_NextWordUpdateLastSelectedWord)
     case nextWordWordSelected(Taigi_Engine_NextWordWordSelected)
     case nextWordClearForNewComposing(Taigi_Engine_NextWordClearForNewComposing)
@@ -1041,7 +1041,7 @@ public nonisolated struct Taigi_Engine_CommitTextReplacingPreedit: Sendable {
   public init() {}
 }
 
-public nonisolated struct Taigi_Engine_ResetAutocomplete: Sendable {
+public nonisolated struct Taigi_Engine_ClearCandidates: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1051,7 +1051,7 @@ public nonisolated struct Taigi_Engine_ResetAutocomplete: Sendable {
   public init() {}
 }
 
-public nonisolated struct Taigi_Engine_PerformAutocomplete: Sendable {
+public nonisolated struct Taigi_Engine_RefreshCandidates: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1061,7 +1061,7 @@ public nonisolated struct Taigi_Engine_PerformAutocomplete: Sendable {
   public init() {}
 }
 
-public nonisolated struct Taigi_Engine_ResetAutocompleteContext: Sendable {
+public nonisolated struct Taigi_Engine_ResetCandidateContext: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -1153,7 +1153,7 @@ nonisolated extension Taigi_Engine_CandidateMode: SwiftProtobuf._ProtoNameProvid
 
 nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{4}\u{2}commit_raw\0\u{3}select_suggestion\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{4}\u{c}fetch_at_pos\0\u{3}commit_continuous\0\u{4}\u{8}telex_key\0\u{3}move_caret\0\u{b}set_selected_candidate_index\0\u{b}query_state\0\u{b}commit_derived\0\u{b}enter_continuous\0\u{b}reset_continuous\0\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{f}\u{1}\u{c}\u{1e}\u{1}\u{c}!\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{4}\u{2}commit_raw\0\u{3}select_candidate\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{4}\u{c}fetch_at_pos\0\u{3}commit_continuous\0\u{4}\u{8}telex_key\0\u{3}move_caret\0\u{b}set_selected_candidate_index\0\u{b}query_state\0\u{b}commit_derived\0\u{b}enter_continuous\0\u{b}reset_continuous\0\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{f}\u{1}\u{c}\u{1e}\u{1}\u{c}!\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1240,16 +1240,16 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
         }
       }()
       case 17: try {
-        var v: Taigi_Engine_SelectSuggestion?
+        var v: Taigi_Engine_SelectCandidate?
         var hadOneofValue = false
         if let current = self.method {
           hadOneofValue = true
-          if case .selectSuggestion(let m) = current {v = m}
+          if case .selectCandidate(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .selectSuggestion(v)
+          self.method = .selectCandidate(v)
         }
       }()
       case 18: try {
@@ -1365,8 +1365,8 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
       guard case .commitRaw(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 16)
     }()
-    case .selectSuggestion?: try {
-      guard case .selectSuggestion(let v)? = self.method else { preconditionFailure() }
+    case .selectCandidate?: try {
+      guard case .selectCandidate(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
     }()
     case .commitPreeditThenInsertExternal?: try {
@@ -1552,8 +1552,8 @@ nonisolated extension Taigi_Engine_CommitRaw: SwiftProtobuf.Message, SwiftProtob
   }
 }
 
-nonisolated extension Taigi_Engine_SelectSuggestion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".SelectSuggestion"
+nonisolated extension Taigi_Engine_SelectCandidate: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SelectCandidate"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}text\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1575,7 +1575,7 @@ nonisolated extension Taigi_Engine_SelectSuggestion: SwiftProtobuf.Message, Swif
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_SelectSuggestion, rhs: Taigi_Engine_SelectSuggestion) -> Bool {
+  public static func ==(lhs: Taigi_Engine_SelectCandidate, rhs: Taigi_Engine_SelectCandidate) -> Bool {
     if lhs.text != rhs.text {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
@@ -2054,7 +2054,7 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
 
 nonisolated extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".Effect"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}update_preedit\0\u{3}clear_preedit_without_commit\0\u{3}commit_text_replacing_preedit\0\u{4}\u{2}reset_autocomplete\0\u{3}perform_autocomplete\0\u{3}reset_autocomplete_context\0\u{3}next_word_update_last_selected_word\0\u{3}next_word_word_selected\0\u{3}next_word_clear_for_new_composing\0\u{b}phrase_learned\0\u{b}delete_backward_from_document\0\u{c}\u{b}\u{1}\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}update_preedit\0\u{3}clear_preedit_without_commit\0\u{3}commit_text_replacing_preedit\0\u{4}\u{2}clear_candidates\0\u{3}refresh_candidates\0\u{3}reset_candidate_context\0\u{3}next_word_update_last_selected_word\0\u{3}next_word_word_selected\0\u{3}next_word_clear_for_new_composing\0\u{b}phrase_learned\0\u{b}delete_backward_from_document\0\u{c}\u{b}\u{1}\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2102,42 +2102,42 @@ nonisolated extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf.
         }
       }()
       case 5: try {
-        var v: Taigi_Engine_ResetAutocomplete?
+        var v: Taigi_Engine_ClearCandidates?
         var hadOneofValue = false
         if let current = self.kind {
           hadOneofValue = true
-          if case .resetAutocomplete(let m) = current {v = m}
+          if case .clearCandidates_p(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .resetAutocomplete(v)
+          self.kind = .clearCandidates_p(v)
         }
       }()
       case 6: try {
-        var v: Taigi_Engine_PerformAutocomplete?
+        var v: Taigi_Engine_RefreshCandidates?
         var hadOneofValue = false
         if let current = self.kind {
           hadOneofValue = true
-          if case .performAutocomplete(let m) = current {v = m}
+          if case .refreshCandidates(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .performAutocomplete(v)
+          self.kind = .refreshCandidates(v)
         }
       }()
       case 7: try {
-        var v: Taigi_Engine_ResetAutocompleteContext?
+        var v: Taigi_Engine_ResetCandidateContext?
         var hadOneofValue = false
         if let current = self.kind {
           hadOneofValue = true
-          if case .resetAutocompleteContext(let m) = current {v = m}
+          if case .resetCandidateContext(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.kind = .resetAutocompleteContext(v)
+          self.kind = .resetCandidateContext(v)
         }
       }()
       case 8: try {
@@ -2202,16 +2202,16 @@ nonisolated extension Taigi_Engine_Effect: SwiftProtobuf.Message, SwiftProtobuf.
       guard case .commitTextReplacingPreedit(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     }()
-    case .resetAutocomplete?: try {
-      guard case .resetAutocomplete(let v)? = self.kind else { preconditionFailure() }
+    case .clearCandidates_p?: try {
+      guard case .clearCandidates_p(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     }()
-    case .performAutocomplete?: try {
-      guard case .performAutocomplete(let v)? = self.kind else { preconditionFailure() }
+    case .refreshCandidates?: try {
+      guard case .refreshCandidates(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
     }()
-    case .resetAutocompleteContext?: try {
-      guard case .resetAutocompleteContext(let v)? = self.kind else { preconditionFailure() }
+    case .resetCandidateContext?: try {
+      guard case .resetCandidateContext(let v)? = self.kind else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
     }()
     case .nextWordUpdateLastSelectedWord?: try {
@@ -2322,8 +2322,8 @@ nonisolated extension Taigi_Engine_CommitTextReplacingPreedit: SwiftProtobuf.Mes
   }
 }
 
-nonisolated extension Taigi_Engine_ResetAutocomplete: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ResetAutocomplete"
+nonisolated extension Taigi_Engine_ClearCandidates: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ClearCandidates"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2335,14 +2335,14 @@ nonisolated extension Taigi_Engine_ResetAutocomplete: SwiftProtobuf.Message, Swi
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_ResetAutocomplete, rhs: Taigi_Engine_ResetAutocomplete) -> Bool {
+  public static func ==(lhs: Taigi_Engine_ClearCandidates, rhs: Taigi_Engine_ClearCandidates) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Taigi_Engine_PerformAutocomplete: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".PerformAutocomplete"
+nonisolated extension Taigi_Engine_RefreshCandidates: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RefreshCandidates"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2354,14 +2354,14 @@ nonisolated extension Taigi_Engine_PerformAutocomplete: SwiftProtobuf.Message, S
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_PerformAutocomplete, rhs: Taigi_Engine_PerformAutocomplete) -> Bool {
+  public static func ==(lhs: Taigi_Engine_RefreshCandidates, rhs: Taigi_Engine_RefreshCandidates) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-nonisolated extension Taigi_Engine_ResetAutocompleteContext: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".ResetAutocompleteContext"
+nonisolated extension Taigi_Engine_ResetCandidateContext: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".ResetCandidateContext"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -2373,7 +2373,7 @@ nonisolated extension Taigi_Engine_ResetAutocompleteContext: SwiftProtobuf.Messa
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_ResetAutocompleteContext, rhs: Taigi_Engine_ResetAutocompleteContext) -> Bool {
+  public static func ==(lhs: Taigi_Engine_ResetCandidateContext, rhs: Taigi_Engine_ResetCandidateContext) -> Bool {
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

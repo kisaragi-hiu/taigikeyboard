@@ -24,9 +24,9 @@ fn effect_kinds(resp: &ComposingResponse) -> Vec<&'static str> {
             EffectKind::UpdatePreedit(_) => "updatePreedit",
             EffectKind::ClearPreeditWithoutCommit(_) => "clearPreeditWithoutCommit",
             EffectKind::CommitTextReplacingPreedit(_) => "commitTextReplacingPreedit",
-            EffectKind::ResetAutocomplete(_) => "resetAutocomplete",
-            EffectKind::PerformAutocomplete(_) => "performAutocomplete",
-            EffectKind::ResetAutocompleteContext(_) => "resetAutocompleteContext",
+            EffectKind::ClearCandidates(_) => "clearCandidates",
+            EffectKind::RefreshCandidates(_) => "refreshCandidates",
+            EffectKind::ResetCandidateContext(_) => "resetCandidateContext",
             EffectKind::NextWordUpdateLastSelectedWord(_) => "nextWordUpdateLastSelectedWord",
             EffectKind::NextWordWordSelected(_) => "nextWordWordSelected",
             EffectKind::NextWordClearForNewComposing(_) => "nextWordClearForNewComposing",
@@ -47,12 +47,12 @@ fn invariant_initial_state_is_idle() {
 // ---- Start / Append effect ordering ----
 
 #[test]
-fn invariant_start_emits_update_preedit_then_perform_autocomplete() {
+fn invariant_start_emits_update_preedit_then_refresh_candidates() {
     let mut engine = Engine::new();
     let resp = engine.apply(Intent::Start { text: "a".into() }, &config_tl());
     assert_eq!(
         effect_kinds(&resp),
-        vec!["updatePreedit", "performAutocomplete"]
+        vec!["updatePreedit", "refreshCandidates"]
     );
     assert!(resp.is_composing);
 }
@@ -63,7 +63,7 @@ fn invariant_append_when_idle_behaves_as_start() {
     let resp = engine.apply(Intent::Append { ch: "a".into() }, &config_tl());
     assert_eq!(
         effect_kinds(&resp),
-        vec!["updatePreedit", "performAutocomplete"]
+        vec!["updatePreedit", "refreshCandidates"]
     );
     assert!(resp.is_composing);
     assert_eq!(raw_input(&resp), "a");
@@ -141,7 +141,7 @@ fn invariant_delete_backward_to_empty_aborts_without_touching_the_document() {
         effect_kinds(&resp),
         vec![
             "clearPreeditWithoutCommit",
-            "resetAutocomplete",
+            "clearCandidates",
             "nextWordClearForNewComposing"
         ]
     );
@@ -172,21 +172,21 @@ fn invariant_commit_raw_idle_is_noop() {
     assert!(resp.effect.is_empty());
 }
 
-// ---- SelectSuggestion ----
+// ---- SelectCandidate ----
 
 #[test]
-fn invariant_select_suggestion_commits_supplied_text() {
+fn invariant_select_candidate_commits_supplied_text() {
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "a".into() }, &config_tl());
-    let resp = engine.apply(Intent::SelectSuggestion { text: "好".into() }, &config_tl());
+    let resp = engine.apply(Intent::SelectCandidate { text: "好".into() }, &config_tl());
     assert_eq!(commit_text(&resp).as_deref(), Some("好"));
     assert!(!resp.is_composing);
 }
 
 #[test]
-fn invariant_select_suggestion_idle_is_noop() {
+fn invariant_select_candidate_idle_is_noop() {
     let mut engine = Engine::new();
-    let resp = engine.apply(Intent::SelectSuggestion { text: "好".into() }, &config_tl());
+    let resp = engine.apply(Intent::SelectCandidate { text: "好".into() }, &config_tl());
     assert!(resp.effect.is_empty());
 }
 

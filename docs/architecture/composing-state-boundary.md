@@ -30,7 +30,7 @@ The Swift sketches in §2.1–§2.4 are the original design notation; the state 
 │  - enum Phase { idle, composing(raw) }                               │
 │  - Intent API: start, append, appendHyphen, replaceLast,             │
 │    deleteBackward, commit (→ either composition or raw),             │
-│    selectSuggestion(text), reset                                     │
+│    selectCandidate(text), reset                                     │
 │  - Pure derivation: derivedDisplay(raw, mode, toneToggles)           │
 │    via TPSTables.containsTPS / ToneConverter                         │
 │  - Emits Transition values with a platform-neutral Effect list       │
@@ -79,10 +79,9 @@ public struct ComposingTransition: Equatable {
         case updatePreedit(String)           // preedit text currently shown to the user
         case clearPreeditWithoutCommit       // wipe preedit; do NOT commit what was there
         case commitTextReplacingPreedit(String)  // atomically replace preedit with given text
-        case deleteBackwardFromDocument      // one grapheme from the backing text
-        case resetAutocomplete               // engine autocomplete list
-        case performAutocomplete             // trigger a new autocomplete pass
-        case resetAutocompleteContext        // selection / bigram context
+        case clearCandidates                 // clear the candidate list
+        case refreshCandidates               // re-query candidates
+        case resetCandidateContext           // selection / bigram context
     }
 
     public let newPhase: ComposingState.Phase
@@ -101,31 +100,25 @@ Android Phase II authors must implement the same Effect enum against `InputConne
 | `updatePreedit(text)` | `setMarkedText(text, selectedRange: end)` | `setComposingText(text, 1)` |
 | `clearPreeditWithoutCommit` | `setMarkedText("", selectedRange: 0) + unmarkText()` | `setComposingText("", 1) + finishComposingText()` — **but** `finishComposingText` on Android commits the current composing region, so the Android binding MUST issue `setComposingText("", 1)` first to zero the region before `finishComposingText`. |
 | `commitTextReplacingPreedit(text)` | `unmarkText()` is implicit; `insertText(text)` replaces the marked range atomically. | `commitText(text, 1)` — Android commits and clears composing region in one call. |
-| `deleteBackwardFromDocument` | `deleteBackward()` | `deleteSurroundingText(1, 0)` (must be issued **after** any pending `commitText` / `finishComposingText`). |
-| `resetAutocomplete` | engine-side suggestion clear | engine-side suggestion clear |
-| `performAutocomplete` | engine-side query trigger | engine-side query trigger |
-| `resetAutocompleteContext` | engine-side context clear | engine-side context clear |
+| `clearCandidates` | engine-side suggestion clear | engine-side suggestion clear |
+| `refreshCandidates` | engine-side query trigger | engine-side query trigger |
+| `resetCandidateContext` | engine-side context clear | engine-side context clear |
 
 **Critical Android caveat**: `finishComposingText()` is NOT a "clear without commit" — it commits the current composing region. The binding must therefore always zero the composing region via `setComposingText("", 1)` before issuing `finishComposingText()` to honor `clearPreeditWithoutCommit` semantics. Same caveat applies to `commitTextReplacingPreedit` — do not call `finishComposingText` before `commitText` or you will duplicate the text.
 
 ### 2.3 Ordering contracts, expressed as effect sequences
 
-The existing ordering contracts live inside `ComposingState.apply(_:)` as **pure tests** rather than property-observer side effects. E.g. `apply(.deleteBackward)` when `raw == "a"` returns:
+The ordering contracts live in the engine's transition table as **pure tests** rather than property-observer side effects. E.g. `DeleteBackward` when the composition is `"a"` returns the abort trio — the char only lived in the marked region, so nothing is deleted from the document (R12, 2026-10-01; the old single-segment phase emitted a document delete here):
 
 ```
-Transition(
-  newPhase: .idle,
-  newSelectedIndex: -1,
-  effects: [
-    .clearPreeditWithoutCommit,
-    .resetAutocomplete,
-    .deleteBackwardFromDocument,   // must come after the two above
-  ],
-  derivedDisplay: ""
-)
+effects: [
+  .clearPreeditWithoutCommit,
+  .clearCandidates,
+  .nextWordClearForNewComposing,
+]
 ```
 
-`apply(.selectSuggestion(text))` returns:
+`apply(.selectCandidate(text))` returns:
 
 ```
 Transition(
@@ -133,8 +126,8 @@ Transition(
   newSelectedIndex: -1,
   effects: [
     .commitTextReplacingPreedit(text),  // one atomic effect; no separate clear-then-insert
-    .resetAutocomplete,
-    .resetAutocompleteContext,
+    .clearCandidates,
+    .resetCandidateContext,
   ],
   derivedDisplay: ""
 )
@@ -219,7 +212,7 @@ Observable Android ↔ iOS divergence today:
 | `deleteBackward` empty-raw path | `reset(ic)` → `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — pre-zero owned by `reset(ic)`. |
 | `reset(ic)` called directly (external, e.g. input-mode switch, session end with pending preedit) | `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — corrected by parity PR (see §11.6). |
 | `commitComposition(ic)` | sync fallback derive + `ic.setComposingText(composingText, 1)` + `ic.finishComposingText()` | Intended commit path — pre-zero not applicable. The fast/slow split against an externally cleared region (§11.10 divergence #3) no longer surfaces the stale-commit bug: `TextInputManager.onUpdateSelection` → `ComposingManager.onExternalComposingRegionCleared()` zeroes internal state before any later commit runs. |
-| `selectSuggestion(text, ic)` | `ic.setComposingText(suggestion, 1)` + `ic.finishComposingText()` | Equivalent to `commitTextReplacingPreedit` — atomic replace. |
+| `selectCandidate(text, ic)` | `ic.setComposingText(suggestion, 1)` + `ic.finishComposingText()` | Equivalent to `commitTextReplacingPreedit` — atomic replace. |
 | `TextInputManager.resetComposingText()` bare-IC fallback (new-editor session start — a same-editor `restarting=true` keeps the manager and reconciles instead, DELETE / ENTER non-composing, NUMERIC-PHONE key) | delegates to top-level `clearHostComposingRegion(ic)` → `ic.setComposingText("", 1)` + `ic.finishComposingText()` | Yes — corrected by parity PR (see §11.6). |
 
 `reset(ic)` is the canonical owner of the zero-then-finish sequence for composing-aware sites; external callers and the `deleteBackward` empty-raw path now route through it. Bare-`InputConnection` fallback sites in `TextInputManager` (where `composingManager` is null or the current keyboard mode bypasses composing) delegate to the sibling top-level helper `clearHostComposingRegion(ic)` so the zero-then-finish invariant holds at every IC-layer clear site. Pinned by `INVARIANT_composing_clear_preedit_does_not_commit` (see `behavioral-invariants.md` §13).
@@ -230,8 +223,7 @@ Android wrapper's `execute(Effect)` implements §2.2 table column 3 verbatim. Ad
 
 1. **Zero-then-finish is mandatory** for `clearPreeditWithoutCommit`. `InputConnection.finishComposingText()` commits the current composing region by default; binding MUST issue `ic.setComposingText("", 1)` before `ic.finishComposingText()` or the preedit is silently committed. Same caveat applies at every site that clears preedit — not just the Effect binding.
 2. **Atomic commit — do not pre-finish.** For `commitTextReplacingPreedit(text)`, call `ic.commitText(text, 1)` directly. Do NOT call `ic.finishComposingText()` first — `commitText` atomically replaces the composing region and clears it; a prior `finishComposingText` would commit the old preedit and then `commitText` would insert the new text, producing a double-commit.
-3. **Ordering: document ops after preedit ops.** `deleteBackwardFromDocument` issues `ic.deleteSurroundingText(1, 0)` AFTER any pending `commitText` / `finishComposingText` for the same intent. Mirrors iOS `UITextDocumentProxy.deleteBackward()` ordering.
-4. **Engine-side effects** (`resetAutocomplete`, `performAutocomplete`, `resetAutocompleteContext`) touch only engine state — no `InputConnection` calls — matching iOS.
+3. **Engine-side effects** (`clearCandidates`, `refreshCandidates`, `resetCandidateContext`) touch only engine state — no `InputConnection` calls — matching iOS.
 
 ### 11.3 Threading
 
@@ -321,7 +313,7 @@ For live-typing intents — `Start` / `Append` / `AppendHyphen` / `ReplaceLast` 
 
 **Test expectations** —
 
-- Pure-state: `ComposingStateTest.live-typing UpdatePreedit carries raw keystrokes not derived form` pins Android's raw-text contract. iOS `ComposingStateTests.testStart_emitsUpdatePreeditThenPerformAutocomplete` pins iOS's derived-text contract. The two are intentionally NOT cross-platform symmetric — they each assert their own platform's emitted text.
+- Pure-state: `ComposingStateTest.live-typing UpdatePreedit carries raw keystrokes not derived form` pins Android's raw-text contract. iOS `ComposingStateTests.testStart_emitsUpdatePreeditThenRefreshCandidates` pins iOS's derived-text contract. The two are intentionally NOT cross-platform symmetric — they each assert their own platform's emitted text.
 - Binding-side: `ComposingManagerTest.appendCharacter shows raw keystrokes in preedit` asserts the last `setComposingText` call Android emits during keystroke sequence is the raw form.
 
 **Wrapper-level intent routing divergences** (Android only) — three cases where Android's `ComposingManager` dispatches differently than iOS because Android's in-document composing region (vs iOS floating marked text) makes certain emitted effects platform-unsafe:

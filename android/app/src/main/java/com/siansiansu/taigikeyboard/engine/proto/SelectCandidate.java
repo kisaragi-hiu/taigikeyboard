@@ -11,15 +11,15 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * replacing the current preedit.
  * </pre>
  *
- * Protobuf type {@code taigi.engine.SelectSuggestion}
+ * Protobuf type {@code taigi.engine.SelectCandidate}
  */
 @com.google.protobuf.Generated
-public  final class SelectSuggestion extends
+public  final class SelectCandidate extends
     com.google.protobuf.GeneratedMessageLite<
-        SelectSuggestion, SelectSuggestion.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.SelectSuggestion)
-    SelectSuggestionOrBuilder {
-  private SelectSuggestion() {
+        SelectCandidate, SelectCandidate.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.SelectCandidate)
+    SelectCandidateOrBuilder {
+  private SelectCandidate() {
     text_ = "";
   }
   public static final int TEXT_FIELD_NUMBER = 1;
@@ -69,50 +69,50 @@ public  final class SelectSuggestion extends
 
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -120,24 +120,24 @@ public  final class SelectSuggestion extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -148,7 +148,7 @@ public  final class SelectSuggestion extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.SelectCandidate prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
@@ -158,14 +158,14 @@ public  final class SelectSuggestion extends
    * replacing the current preedit.
    * </pre>
    *
-   * Protobuf type {@code taigi.engine.SelectSuggestion}
+   * Protobuf type {@code taigi.engine.SelectCandidate}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.SelectSuggestion)
-      com.siansiansu.taigikeyboard.engine.proto.SelectSuggestionOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.SelectCandidate, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.SelectCandidate)
+      com.siansiansu.taigikeyboard.engine.proto.SelectCandidateOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -220,7 +220,7 @@ public  final class SelectSuggestion extends
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.SelectSuggestion)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.SelectCandidate)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -229,7 +229,7 @@ public  final class SelectSuggestion extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion();
+        return new com.siansiansu.taigikeyboard.engine.proto.SelectCandidate();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -246,13 +246,13 @@ public  final class SelectSuggestion extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.SelectCandidate> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.SelectCandidate.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.SelectCandidate>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -272,24 +272,24 @@ public  final class SelectSuggestion extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.SelectSuggestion)
-  private static final com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.SelectCandidate)
+  private static final com.siansiansu.taigikeyboard.engine.proto.SelectCandidate DEFAULT_INSTANCE;
   static {
-    SelectSuggestion defaultInstance = new SelectSuggestion();
+    SelectCandidate defaultInstance = new SelectCandidate();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      SelectSuggestion.class, defaultInstance);
+      SelectCandidate.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.SelectCandidate getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<SelectSuggestion> PARSER;
+  private static volatile com.google.protobuf.Parser<SelectCandidate> PARSER;
 
-  public static com.google.protobuf.Parser<SelectSuggestion> parser() {
+  public static com.google.protobuf.Parser<SelectCandidate> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

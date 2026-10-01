@@ -34,7 +34,7 @@ class CandidateClickHandler(
     private val onNextWordPrediction: (displayText: String, roman: String) -> Unit,
     /**
      * Schedule a Taigi candidate recompute. Called only after a Continuous
-     * mid-commit where the engine's `PerformAutocomplete` effect alone is
+     * mid-commit where the engine's `RefreshCandidates` effect alone is
      * not enough to refresh the strip with the post-commit pending span.
      */
     private val onRequestCandidateRefresh: () -> Unit = {},
@@ -122,7 +122,7 @@ class CandidateClickHandler(
                 composingManager?.reset(ic)
                 logger.debug(TAG) { "[NEXTWORD-CLICK] AFTER commitText: result=$result" }
             } else {
-                composingManager?.selectSuggestion(textToCommit, ic)
+                composingManager?.selectCandidate(textToCommit, ic)
             }
 
             appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
@@ -214,7 +214,7 @@ class CandidateClickHandler(
         // Continuous-input branch routes BEFORE the sentinel-id branches.
         // Overlay taps on Continuous candidates must go through commitContinuous
         // with the consumedBytes / syllableCount sidechannel; the default
-        // selectSuggestion path would commit displayText only and mis-align
+        // selectCandidate path would commit displayText only and mis-align
         // the engine pending buffer.
         if (word.additionalInfo[TaigiWord.MetadataKeys.IS_CONTINUOUS] == "true" && composingManager != null) {
             handleContinuousCandidateClick(word, ic, composingManager)
@@ -235,7 +235,7 @@ class CandidateClickHandler(
             composingManager?.reset(ic)
             logger.debug(TAG) { "[OVERLAY] NextWord commitText: '$textToCommit'" }
         } else {
-            composingManager?.selectSuggestion(textToCommit, ic)
+            composingManager?.selectCandidate(textToCommit, ic)
         }
 
         appendAutoSpaceIfEarned(taigikeyboard, ic, textToCommit, resolved.wroteRomanization)
@@ -263,7 +263,7 @@ class CandidateClickHandler(
      *
      * `DISPLAY_TEXT`, `CONSUMED_BYTES`, and `SYLLABLE_COUNT` are
      * strict-required (Item 4 fork F2=A); missing or unparseable → drop the
-     * tap. No fallback to `selectSuggestion(text)` — would lose
+     * tap. No fallback to `selectCandidate(text)` — would lose
      * `consumedBytes` and corrupt `Phase::Continuous { raw }` byte alignment.
      */
     private fun handleContinuousCandidateClick(
@@ -285,7 +285,7 @@ class CandidateClickHandler(
 
         when (outcome) {
             // Mid-commit: engine stays in Continuous with a fresh pending span,
-            // but `PerformAutocomplete` is a delegate no-op so the strip would
+            // but `RefreshCandidates` is a delegate no-op so the strip would
             // keep stale `consumedBytes` metadata until the next keypress.
             // Trigger the standard refresh. Final-commit deliberately skipped:
             // it emits NextWordWordSelected which drives async NextWord

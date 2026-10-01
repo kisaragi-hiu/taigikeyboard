@@ -56,7 +56,7 @@ final class ClientEffectExecutor: ComposingEffectExecutor {
             // clients render as a visible flicker and undo as two steps.
             client.insertText(text, replacementRange: Self.atInsertionPoint)
 
-        case .resetAutocomplete, .performAutocomplete, .resetAutocompleteContext:
+        case .clearCandidates, .refreshCandidates, .resetCandidateContext:
             // macOS has no autocomplete surface yet; the engine emits these
             // unconditionally. Explicitly ignored rather than filtered out at
             // decode time so the case is visible when that surface lands.

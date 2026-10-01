@@ -229,7 +229,7 @@ class SmartbarManager(
                 //
                 // The visible-strip clear is conditional: Continuous
                 // backspace-pop emits this alongside UpdatePreedit /
-                // PerformAutocomplete (engine/composing/tests/continuous_phase.rs)
+                // RefreshCandidates (engine/composing/tests/continuous_phase.rs)
                 // while Taigi composing candidates are still active; an
                 // unconditional candidate wipe would cause visible flicker.
                 if (nextWordController.isShowingNextWordCandidates()) {

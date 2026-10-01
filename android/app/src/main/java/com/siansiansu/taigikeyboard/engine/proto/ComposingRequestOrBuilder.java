@@ -85,15 +85,15 @@ public interface ComposingRequestOrBuilder extends
   com.siansiansu.taigikeyboard.engine.proto.CommitRaw getCommitRaw();
 
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
-   * @return Whether the selectSuggestion field is set.
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
+   * @return Whether the selectCandidate field is set.
    */
-  boolean hasSelectSuggestion();
+  boolean hasSelectCandidate();
   /**
-   * <code>.taigi.engine.SelectSuggestion select_suggestion = 17;</code>
-   * @return The selectSuggestion.
+   * <code>.taigi.engine.SelectCandidate select_candidate = 17;</code>
+   * @return The selectCandidate.
    */
-  com.siansiansu.taigikeyboard.engine.proto.SelectSuggestion getSelectSuggestion();
+  com.siansiansu.taigikeyboard.engine.proto.SelectCandidate getSelectCandidate();
 
   /**
    * <code>.taigi.engine.CommitPreeditThenInsertExternal commit_preedit_then_insert_external = 18;</code>

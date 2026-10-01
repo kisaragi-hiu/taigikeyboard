@@ -21,9 +21,9 @@ final class ComposingEffectDecodingTests: XCTestCase {
             makeEffect(.commitTextReplacingPreedit(
                 payload(Taigi_Engine_CommitTextReplacingPreedit()) { $0.text = "台語" },
             )),
-            makeEffect(.resetAutocomplete(Taigi_Engine_ResetAutocomplete())),
-            makeEffect(.performAutocomplete(Taigi_Engine_PerformAutocomplete())),
-            makeEffect(.resetAutocompleteContext(Taigi_Engine_ResetAutocompleteContext())),
+            makeEffect(.clearCandidates(Taigi_Engine_ClearCandidates())),
+            makeEffect(.refreshCandidates(Taigi_Engine_RefreshCandidates())),
+            makeEffect(.resetCandidateContext(Taigi_Engine_ResetCandidateContext())),
             makeEffect(.nextWordUpdateLastSelectedWord(
                 payload(Taigi_Engine_NextWordUpdateLastSelectedWord()) {
                     $0.text = "台"
@@ -46,9 +46,9 @@ final class ComposingEffectDecodingTests: XCTestCase {
             .updatePreedit("tâi", caretUTF16: 2),
             .clearPreeditWithoutCommit,
             .commitTextReplacingPreedit("台語"),
-            .resetAutocomplete,
-            .performAutocomplete,
-            .resetAutocompleteContext,
+            .clearCandidates,
+            .refreshCandidates,
+            .resetCandidateContext,
             .nextWordUpdateLastSelectedWord(text: "台", roman: "tâi"),
             .nextWordWordSelected(text: "語", roman: "gí", triggerPrediction: true, preceding: []),
             .nextWordClearForNewComposing,
@@ -77,10 +77,10 @@ final class ComposingEffectDecodingTests: XCTestCase {
     func testDecodeTransition_effectWithNoKind_isDroppedWithoutDroppingItsNeighbours() {
         let response = makeResponse(effects: [
             Taigi_Engine_Effect(),
-            makeEffect(.resetAutocomplete(Taigi_Engine_ResetAutocomplete())),
+            makeEffect(.clearCandidates(Taigi_Engine_ClearCandidates())),
         ])
 
-        XCTAssertEqual(RustEngineBridge.decodeTransition(response).effects, [.resetAutocomplete])
+        XCTAssertEqual(RustEngineBridge.decodeTransition(response).effects, [.clearCandidates])
     }
 
     private func makeResponse(effects: [Taigi_Engine_Effect]) -> Taigi_Engine_ComposingResponse {

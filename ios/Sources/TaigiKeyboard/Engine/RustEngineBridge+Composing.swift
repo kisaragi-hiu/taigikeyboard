@@ -22,9 +22,9 @@ public extension RustEngineBridge {
             case updatePreedit(String)
             case clearPreeditWithoutCommit
             case commitTextReplacingPreedit(String)
-            case resetAutocomplete
-            case performAutocomplete
-            case resetAutocompleteContext
+            case clearCandidates
+            case refreshCandidates
+            case resetCandidateContext
             /// v3.5.8 Phase 4 — continuous-input mid-commit handshake. Maps to
             /// `NextWordRequest::UpdateLastSelectedWord(text, roman, now_ms)`.
             /// Platform delegate forwards to `NextWordController.updateLastSelectedWord`
@@ -357,16 +357,16 @@ public extension RustEngineBridge {
 
     // Under `Phase::Continuous` the engine prepends `nailed_prefix(nailed,
     // config)` to `text`; the composing arm commits `text` verbatim.
-    internal static func composingSelectSuggestion(
+    internal static func composingSelectCandidate(
         _ text: String,
         settings: EngineSettings,
         generation: UInt64,
     ) -> ComposingTransition {
-        var payload = Taigi_Engine_SelectSuggestion()
+        var payload = Taigi_Engine_SelectCandidate()
         payload.text = text
         return composingDispatch(
-            method: .selectSuggestion(payload),
-            op: "composingSelectSuggestion",
+            method: .selectCandidate(payload),
+            op: "composingSelectCandidate",
             generation: generation,
             config: continuousAppConfig(settings),
         )
@@ -631,9 +631,9 @@ public extension RustEngineBridge {
             case let .updatePreedit(m): return .updatePreedit(m.display)
             case .clearPreeditWithoutCommit_p: return .clearPreeditWithoutCommit
             case let .commitTextReplacingPreedit(m): return .commitTextReplacingPreedit(m.text)
-            case .resetAutocomplete: return .resetAutocomplete
-            case .performAutocomplete: return .performAutocomplete
-            case .resetAutocompleteContext: return .resetAutocompleteContext
+            case .clearCandidates: return .clearCandidates
+            case .refreshCandidates: return .refreshCandidates
+            case .resetCandidateContext: return .resetCandidateContext
             case let .nextWordUpdateLastSelectedWord(m):
                 return .nextWordUpdateLastSelectedWord(text: m.text, roman: m.roman)
             case let .nextWordWordSelected(m):

@@ -42,8 +42,8 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | **rawInput** | Numeric-tone ASCII preedit (e.g. `gua2`) — drives lexicon search-key | Rust `composing::Phase::Continuous { raw }` (the pending tail) |
 | **composingText** | Derived display text (e.g. `guá`) — Rust applies tone marks per `AppConfig.input_mode` | Rust `composing::derived` |
 | **ComposingState** | `Phase::Idle` or `Phase::Continuous { raw, caret, nailed }` | Rust `composing::EngineState` |
-| **Intent** | Input intents: text input (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / SelectSuggestion / CommitPreeditThenInsertExternal / Reset), continuous input (FetchAtPos / CommitContinuous), desktop editing keys (TelexKey / MoveCaret); `CommitDerived` / `EnterContinuous` are no-ops and wire `ResetContinuous` decodes to `Reset` (R12) | Rust `composing::Intent` |
-| **Effect** | Platform-neutral effect enum (updatePreedit / clearPreeditWithoutCommit / commitTextReplacingPreedit / resetAutocomplete / performAutocomplete / resetAutocompleteContext / nextWord*; `deleteBackwardFromDocument` is never emitted since R12) | Rust `composing::transition` |
+| **Intent** | Input intents: text input (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / SelectCandidate / CommitPreeditThenInsertExternal / Reset), continuous input (FetchAtPos / CommitContinuous), desktop editing keys (TelexKey / MoveCaret); `CommitDerived` / `EnterContinuous` / `ResetContinuous` were removed in R12 (tags 15 / 30 / 33 reserved) | Rust `composing::Intent` |
+| **Effect** | Platform-neutral effect enum (updatePreedit / clearPreeditWithoutCommit / commitTextReplacingPreedit / clearCandidates / refreshCandidates / resetCandidateContext / nextWord*; `deleteBackwardFromDocument` was removed in R12, tag 4 reserved) | Rust `composing::transition` |
 | **commitComposition** | Effect interpreter inserts derived text + clears preedit | iOS `ComposingDelegate.execute(_:)` / Android `ComposingDelegate` |
 | **markedText** | iOS inline composition display via `setMarkedText` | iOS `KeyboardViewController.setMarkedText()` |
 
@@ -137,7 +137,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 | **spaceAction** | Commit composing + insert space | `handleSpaceAction()` |
 | **backspaceAction** | Delete within composing or text field | `handleBackspaceAction()` |
 | **returnAction** | Confirm selected candidate or commit composing | `handleReturnAction()` |
-| **performAutocomplete** | Trigger candidate search after composing state changes | `KeyboardViewController.performAutocomplete()` |
+| **refreshCandidates** | Engine effect `RefreshCandidates`: re-query candidates after the composition changed (iOS runs KeyboardKit `performAutocomplete()`) | `KeyboardViewController.performAutocomplete()` |
 
 ---
 

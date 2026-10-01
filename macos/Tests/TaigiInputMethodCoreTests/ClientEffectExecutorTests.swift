@@ -71,9 +71,9 @@ final class ClientEffectExecutorTests: XCTestCase {
         let client = RecordingTextInputClient()
         let executor = ClientEffectExecutor(client: client)
         let unwired: [ComposingTransition.Effect] = [
-            .resetAutocomplete,
-            .performAutocomplete,
-            .resetAutocompleteContext,
+            .clearCandidates,
+            .refreshCandidates,
+            .resetCandidateContext,
             .nextWordUpdateLastSelectedWord(text: "台", roman: "tâi"),
             .nextWordWordSelected(text: "台", roman: "tâi", triggerPrediction: true, preceding: []),
             .nextWordClearForNewComposing,

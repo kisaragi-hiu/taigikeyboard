@@ -387,9 +387,9 @@ impl ComposingEffectExecutor for CompositionEditor<'_> {
                 Effect::CommitTextReplacingPreedit(text) => self.end_with(text),
                 // No autocomplete surface; the learning handshakes never reach
                 // an executor (`ComposingManager` reports them to next word).
-                Effect::ResetAutocomplete
-                | Effect::PerformAutocomplete
-                | Effect::ResetAutocompleteContext
+                Effect::ClearCandidates
+                | Effect::RefreshCandidates
+                | Effect::ResetCandidateContext
                 | Effect::NextWordUpdateLastSelectedWord { .. }
                 | Effect::NextWordWordSelected { .. }
                 | Effect::NextWordClearForNewComposing => Ok(()),

@@ -105,7 +105,7 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
     }
 
     /// Strict-required metadata: a suggestion missing any of it is dropped, never committed
-    /// through `selectSuggestion(text:)`.
+    /// through `selectCandidate(text:)`.
     func testMissingMetadata_dropsTheTap() throws {
         let suggestion = try XCTUnwrap(handed([candidate(roman: "tâi-gí", hanji: "台語")]).first)
         for key in ["displayText", "roman", "consumedBytes", "syllableCount"] {
