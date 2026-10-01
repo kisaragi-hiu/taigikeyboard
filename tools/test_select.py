@@ -85,7 +85,7 @@ NO_GATE_DIRS = {
     "knowledge",
     "scripts",
 }
-INVARIANT_PREFIXES = ("docs/", ".claude/rules/", "tools/invariant_labels")
+INVARIANT_PREFIXES = ("docs/", "tools/invariant_labels")
 INVARIANT_SUFFIXES = (".rs", ".kt", ".swift")
 
 

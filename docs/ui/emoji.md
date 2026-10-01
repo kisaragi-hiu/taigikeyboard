@@ -9,7 +9,7 @@
 ## Summary
 
 - Full emoji palette on both platforms, backed by the in-repo `emoji` data pipeline (`dist/emoji.json`, Unicode Emoji 17.0 / CLDR 48, 1889 emoji, 9 categories).
-- **Intentional UI divergence**: iOS uses the vendored third-party `ISEmojiView` (UIKit); Android uses a custom Jetpack Compose palette. This is recorded per `.claude/rules/cross-platform-alignment.md` §3, not a parity bug.
+- **Intentional UI divergence**: iOS uses the vendored third-party `ISEmojiView` (UIKit); Android uses a custom Jetpack Compose palette. This is recorded per `docs/contributing/cross-platform-alignment.md` §3, not a parity bug.
 - Both insert emoji through the engine's atomic preedit-commit path (`ComposingManager.commitPreeditThenInsertExternal`) — the one strict parity point.
 
 ---

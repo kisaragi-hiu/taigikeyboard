@@ -5,7 +5,7 @@ import SwiftUI
 /// All shared font sizes, colors, and styles used across tabs and settings
 /// are defined here. Change a value here → applies everywhere.
 ///
-/// See .claude/rules/ui-style-guide.md for the cross-platform spec.
+/// See docs/contributing/ui-style-guide.md for the cross-platform spec.
 enum AppStyle {
     // MARK: - Font Sizes
 

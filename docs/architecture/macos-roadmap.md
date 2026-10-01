@@ -374,7 +374,7 @@ NSWindow.toolbarStyle · NSOpen/NSSavePanel in LSUIElement · UTType for `.taigi
 NSWorkspace.open.
 
 Every PR: Codex sandwich + `/simplify`; PR1/PR8a additionally FFI-adjacent
-review per `.claude/rules/rust-ffi-safety.md` §5. Engine-touched PRs run
+review per `docs/contributing/rust-ffi-safety.md` §5. Engine-touched PRs run
 `cargo test --workspace`; macOS PRs run `swift test` (from PR2 on).
 
 ## Shared-surface coordination register
@@ -385,7 +385,7 @@ review per `.claude/rules/rust-ffi-safety.md` §5. Engine-touched PRs run
 | `engine/scripts/build-macos-xcframework.sh` (new) | PR1 | yes | no |
 | `gen-macos-protos` isolated target | PR1 | yes | no (proto unchanged → no regen diff) |
 | Root Makefile `macos-*` targets | PR1 | yes | no |
-| `rust-migration-policy.md` §4 + `CLAUDE.md` stale-binary gate: macOS regen rows | PR1 | yes | no (docs / rules only) |
+| `rust-migration-policy.md` §4 + `AGENTS.md` stale-artifact gate: macOS regen rows | PR1 | yes | no (docs / rules only) |
 | `PLATFORM_MACOS` + regen | PR8a | yes | **yes — generated `.pb.swift`/`.java` only, semantically inert; user-coordinated timing** |
 | `engine/swift-ffi` crate | — | **no change needed** | — |
 

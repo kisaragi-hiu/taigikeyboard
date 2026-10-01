@@ -1,10 +1,6 @@
----
-paths: ["android/**/*.kt"]
----
-
 # Android IME / UI / Testing / Refactor Patterns
 
-Compose + IME-specific patterns + testing + refactor-round checklist. Split out from `.claude/rules/android-guidelines.md` for focus. Core architecture / Kotlin idioms / DI / DataStore stay in the parent file.
+Compose + IME-specific patterns + testing + refactor-round checklist. Split out from [`android-guidelines.md`](android-guidelines.md) for focus. Core architecture / Kotlin idioms / DI / DataStore stay in the parent file.
 
 ## 1. Compose patterns `[B]`
 
@@ -30,32 +26,30 @@ Compose + IME-specific patterns + testing + refactor-round checklist. Split out 
 
 ## 3. Testing `[B]` `[A]`
 
-Cross-platform test naming + assertion conventions follow `.claude/rules/ios-guidelines.md` "Test Conventions"; Android-specific additions only here.
+Cross-platform test naming + assertion conventions follow `docs/contributing/ios-guidelines.md` "Test Conventions"; Android-specific additions only here.
 
 - JUnit 4 — project default (see existing `app/src/test/java/.../ime/dictionary/*Test.kt`). Do not mix JUnit 5.
 - `kotlinx-coroutines-test` — `runTest { … }` block with injectable `TestDispatcher` for time-controlled tests.
-- `INVARIANT_*` function-name prefix for cross-platform-invariant tests; labels match `docs/architecture/behavioral-invariants.md` (policy: `.claude/rules/cross-platform-alignment.md` §3a).
+- `INVARIANT_*` function-name prefix for cross-platform-invariant tests; labels match `docs/architecture/behavioral-invariants.md` (policy: `docs/contributing/cross-platform-alignment.md` §3a).
 - Tests must be runnable via `./gradlew test` (wired into `testImplementation` in the test source set).
 
 ## 4. Refactor-round checklist `[A]`
 
 Durable checklist for every Android refactor PR:
 
-- [ ] Refactor-freeze observed per `.claude/rules/cross-platform-alignment.md` §1. If the PR intentionally changes behavior, it uses the emergency tier (§1a) or parity-correction tier (§1b) and labels accordingly.
-- [ ] Codex + `/simplify` pre-review on plan before implementation (per `~/.claude/rules/code-review-rules.md` §8), run in parallel.
-- [ ] Codex post-review on diff before merge.
-- [ ] Qualitative dogfooding pass (S1 / S2 / S3 sequences) on a real Android device for any hot-path round (the "Qualitative perf gate" bullet in `.claude/rules/taigi-incidents.md` § Review; concrete Taigi sequences in `docs/architecture/dogfood-checklist.md`).
+- [ ] Refactor-freeze observed per `docs/contributing/cross-platform-alignment.md` §1. If the PR intentionally changes behavior, it uses the emergency tier (§1a) or parity-correction tier (§1b) and labels accordingly.
+- [ ] Plan reviewed before implementation; diff reviewed before merge.
+- [ ] Qualitative dogfooding pass (S1 / S2 / S3 sequences) on a real Android device for any hot-path round (the "Qualitative perf gate" bullet in `docs/contributing/known-pitfalls.md` § Review and device gates; concrete Taigi sequences in `docs/architecture/dogfood-checklist.md`).
 - [ ] Invariant tests stay green.
-- [ ] `// CROSS-PLATFORM INVARIANT` comments updated if constants moved (policy in `.claude/rules/cross-platform-alignment.md` §3a).
+- [ ] `// CROSS-PLATFORM INVARIANT` comments updated if constants moved (policy in `docs/contributing/cross-platform-alignment.md` §3a).
 - [ ] No new `android.util.Log` / `GlobalScope` / `!!` / `object`-with-state introduced.
-- [ ] PR touching a shared-core-candidate file honors `.claude/rules/cross-platform-alignment.md` §1c.
+- [ ] PR touching a shared-core-candidate file honors `docs/contributing/cross-platform-alignment.md` §1c.
 
 ## 5. References
 
-- `.claude/rules/android-guidelines.md` — parent file: shared-core criteria, Kotlin idioms, lifecycle/DI, DataStore, null/error handling, Gradle
-- `.claude/rules/cross-platform-alignment.md` — refactor-freeze contract + emergency / parity tiers + §3a invariant policy
+- `docs/contributing/android-guidelines.md` — parent file: shared-core criteria, Kotlin idioms, lifecycle/DI, DataStore, null/error handling, Gradle
+- `docs/contributing/cross-platform-alignment.md` — refactor-freeze contract + emergency / parity tiers + §3a invariant policy
 - `docs/architecture/ios-exemplar.md` — alignment target
 - `docs/architecture/composing-state-boundary.md` — composing/finishComposingText contract
 - `docs/architecture/behavioral-invariants.md` — `INVARIANT_*` labels
-- `~/.claude/rules/code-review-rules.md` — review checklist + §8 review-before-impl + §9 perf gate
 - `docs/architecture/dogfood-checklist.md` — concrete Taigi dogfood sequences (S1–Sn)

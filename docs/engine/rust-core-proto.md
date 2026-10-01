@@ -13,7 +13,7 @@
 - **Phonetics slice (D9.4 — MERGED)** + **Composing slice (D9.3 — MERGED in v3.5.4).**
 - Lexicon, NextWord (including prediction queries / results), SQLite, custom-dictionary, candidate-scoring are outside this document — see their own crates and `../architecture/nextword-engine-boundary.md`.
 - §7 reflects the merged Phonetics wire (PR #186 D9.4-Phonetics + PR #187 D9.4-cleanup). §8 reflects the merged Composing wire (v3.5.4); naming was changed from `oneof intent` to `oneof method` per the Phonetics convention adopted in PR #186.
-- **Authoritative companion**: `.claude/rules/rust-best-practices.md` §3 (crate choices — `prost` for protobuf), §8 (non-goals); `.claude/rules/rust-ffi-safety.md` §4 (opaque handle pattern).
+- **Authoritative companion**: `docs/contributing/rust-best-practices.md` §3 (crate choices — `prost` for protobuf), §8 (non-goals); `docs/contributing/rust-ffi-safety.md` §4 (opaque handle pattern).
 
 ---
 
@@ -34,7 +34,7 @@ The Rust engine's logical shape, mirroring `references/khiin-rs/khiin/src/engine
 fn send_command_bytes(handle: EngineHandle, bytes: &[u8]) -> Vec<u8>
 ```
 
-Concrete extern signatures differ per platform (per `.claude/rules/rust-ffi-safety.md` §4):
+Concrete extern signatures differ per platform (per `docs/contributing/rust-ffi-safety.md` §4):
 
 - **JNI** (`android-jni`): `JByteArray` in / `JByteArray` out, plus `EngineHandle` as `jlong` wrapped in a `@JvmInline value class` on the Kotlin side.
 - **swift-bridge** (`swift-ffi`): `&[u8]` in / `Vec<u8>` out, with an `EngineBridge` struct holding the handle.
@@ -301,13 +301,13 @@ message CaseResponse {
 
 ## 9. Non-goals codified
 
-- **No platform UI semantics** in any message (per `.claude/rules/cross-platform-alignment.md:115-117`):
+- **No platform UI semantics** in any message (per `docs/contributing/cross-platform-alignment.md:115-117`):
   - Candidate navigation ownership stays platform-side. `references/khiin-rs/protos/src/command.proto:114-117` validates this pattern: "App should decide how to show and navigate candidates".
   - No layout, styling, KeyboardKit, FlorisBoard types.
   - No platform text-region types (`NSRange`, `ExtractedText`, `TextPosition`).
 - **No candidate ids in the Composing slice.** `SelectCandidate` carries text the platform already resolved.
 - **No Lexicon / NextWord proto** in this document. This includes prediction queries, prediction results, and candidate-list updates.
-- **No SQLite I/O proto in this document.** User-data SQLite is engine-owned per `.claude/rules/rust-migration-policy.md` §6 (`engine/userdata`); its ops are the separate `UserDataRequest` domain (`engine/protos/proto/user_data.proto`, `docs/architecture/user-data-engine-roadmap.md`) — typed ops, never paths or raw SQL beyond `OpenUserData`. The former platform stores (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`, `NextWord/Repository/*`, etc.) were deleted and appear with `status=rust_shipped` in `migration-inventory.csv`.
+- **No SQLite I/O proto in this document.** User-data SQLite is engine-owned per `docs/contributing/rust-migration-policy.md` §6 (`engine/userdata`); its ops are the separate `UserDataRequest` domain (`engine/protos/proto/user_data.proto`, `docs/architecture/user-data-engine-roadmap.md`) — typed ops, never paths or raw SQL beyond `OpenUserData`. The former platform stores (`Lexicon/Database/*Repository.swift`, `SQLiteConnectionManager.swift`, `NextWord/Repository/*`, etc.) were deleted and appear with `status=rust_shipped` in `migration-inventory.csv`.
 - **No UniFFI signature.** Protobuf-first per the roadmap revision.
 
 ---
@@ -323,8 +323,8 @@ message CaseResponse {
 
 ## 11. References
 
-- `.claude/rules/rust-best-practices.md` — mandatory companion (§3 crate choices, §8 non-goals)
-- `.claude/rules/rust-ffi-safety.md` — mandatory companion (§4 opaque handle pattern)
+- `docs/contributing/rust-best-practices.md` — mandatory companion (§3 crate choices, §8 non-goals)
+- `docs/contributing/rust-ffi-safety.md` — mandatory companion (§4 opaque handle pattern)
 - `references/khiin-rs/protos/src/command.proto:114-117` — candidate display is the client app's job
 - `references/khiin-rs/khiin/src/engine.rs:57` — `send_command_bytes` shape
 - `references/khiin-rs/README.md:140-152` — protobuf rationale + request-id correlation

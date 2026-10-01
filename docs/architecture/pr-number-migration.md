@@ -2,7 +2,7 @@
 
 > **Type**: Reference
 > **Keywords**: `pull request`, `archive`, `migration`, `numbering`
-> **Related**: ../../CLAUDE.md
+> **Related**: ../../AGENTS.md
 
 ---
 

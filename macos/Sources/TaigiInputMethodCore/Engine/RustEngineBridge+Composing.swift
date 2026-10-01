@@ -21,7 +21,7 @@ import Foundation
 ///   and Return is `CommitRaw` (the whole marked region) — between them nothing
 ///   is left for it to do.
 /// - Candidate navigation lives entirely in the platform's own candidate
-///   model (`.claude/rules/cross-platform-alignment.md` §4.1); the engine's
+///   model (`docs/contributing/cross-platform-alignment.md` §4.1); the engine's
 ///   `SetSelectedCandidateIndex` op had no caller on any platform and was
 ///   removed 2026-09-25.
 ///

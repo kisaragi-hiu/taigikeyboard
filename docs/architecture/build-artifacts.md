@@ -2,7 +2,7 @@
 
 > **Type**: Reference
 > **Keywords**: `bootstrap`, `make build`, `make dict`, `dictionaries`, `fonts`, `stale-artifact gate`
-> **Related**: ../../CLAUDE.md § Build & Test, data-artifacts-portability.md, system-overview.md §3
+> **Related**: ../../AGENTS.md § Build & Test, data-artifacts-portability.md, system-overview.md §3
 
 ---
 
@@ -10,7 +10,7 @@
 
 - Engine binaries (xcframeworks, `jniLibs/*.so`, platform protos) are **generated** by `make build` and gitignored.
 - The dictionary artifacts (`dictionaries/`) and the typefaces (`fonts/font/`) are **committed once** and packaged natively by all four platforms.
-- `CLAUDE.md` keeps only the bootstrap table and the stale-artifact gate; the rationale and the timings live here.
+- `AGENTS.md` keeps only the bootstrap table and the stale-artifact gate; the rationale and the timings live here.
 
 ## Typefaces
 
@@ -28,7 +28,7 @@ They stay committed at all because that is the USER's standing instruction (2026
 
 ## One pass per machine
 
-Ignored files survive `git checkout`, so bootstrapping is one pass per machine, not per build. After that, re-run only what a change invalidates — the stale-artifact gate table in `CLAUDE.md` § Build & Test.
+Ignored files survive `git checkout`, so bootstrapping is one pass per machine, not per build. After that, re-run only what a change invalidates — the stale-artifact gate table in `AGENTS.md` § Build & Test.
 
 ## Timings (measured 2026-09-07, warm machine, fresh clone with submodules)
 

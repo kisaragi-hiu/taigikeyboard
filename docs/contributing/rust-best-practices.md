@@ -1,10 +1,6 @@
----
-paths: ["engine/**/*.rs", "engine/**/Cargo.toml"]
----
-
 # Rust Best Practices
 
-Mandatory rules for Rust shared-core development. Read before any Rust code lands in the engine. FFI / proto-boundary / `unsafe` / opaque-handle / enforcement rules are split into `.claude/rules/rust-ffi-safety.md`.
+Mandatory rules for Rust shared-core development. Read before any Rust code lands in the engine. FFI / proto-boundary / `unsafe` / opaque-handle / enforcement rules are split into `docs/contributing/rust-ffi-safety.md`.
 
 **Three goals** every rule below serves at least one of:
 
@@ -56,7 +52,7 @@ Current runtime crates — dependency edges flow **one way, top → bottom** (th
 - **Forbidden upward edges**: no domain crate (`phonetics` / `ranking` / `lexicon` / `nextword` / `composing` / `userdata`) may depend on `dispatch` or an FFI crate; the leaf layer (`phonetics` / `protos` / `mmap-host`) may depend on nothing above itself.
 - **`dispatch` is the only orchestrator** — the single crate allowed to reference every domain. FFI crates (`swift-ffi` / `android-jni`) see only `dispatch` + `protos`. Outside this workspace, `taigi-desktop-core` sees only `dispatch` + `protos` too (its `userdata` edge went with the desktop settings windows' switch to the user-data ops, 2026-09-30).
 - **Cargo enforces acyclicity at build time** (a cycle fails to compile) — that is the hard backstop. This layering rule is the *soft* guide that stops the graph degrading into flat all-depends-on-all while still technically acyclic.
-- **New crate / new edge**: place it so the arrow still points down. If a domain crate appears to need something currently in `dispatch`, that is an inversion — push the shared piece **down** into `phonetics` / `protos`, never add an upward edge (mirrors `~/.claude/rules/planning.md` § No redundant fallback — keep data flow one-direction).
+- **New crate / new edge**: place it so the arrow still points down. If a domain crate appears to need something currently in `dispatch`, that is an inversion — push the shared piece **down** into `phonetics` / `protos`, never add an upward edge (mirrors `AGENTS.md` § Design principles § No redundant fallback — keep data flow one-direction).
 
 A visual copy of this graph plus the per-keystroke request lane lives in `docs/architecture/system-overview.md` § 2 Engine crate dependency graph.
 
@@ -64,8 +60,8 @@ A visual copy of this graph plus the per-keystroke request lane lives in `docs/a
 
 - **`thiserror` for library errors**. Each domain crate owns its error enum deriving `thiserror::Error` (e.g. `lexicon::LexiconError` in `lexicon/src/error.rs`, `UserDataDatabaseError` in `userdata/src/database.rs`); there is no workspace-wide `EngineError` type.
 - **`anyhow` is forbidden in every workspace library crate**. Allowed in build scripts only.
-- **`Result<T, <CrateError>>` throughout internal APIs.** `dispatch` maps each crate error to the wire `ErrorCode` (`envelope.proto` `Response.error`) — e.g. `lexicon_error_code` in `dispatch/src/lib.rs` — and the FFI seams build error-only responses with `dispatch::encode_error` (see `.claude/rules/rust-ffi-safety.md` § FFI boundary discipline).
-- **No `panic!` / `unwrap()` / `expect()` on unvalidated input.** `unwrap()` on a `Mutex::lock()` result is acceptable (poison is a programmer error, not a data path); briefly explain with `// JUSTIFICATION:` when non-obvious. `SAFETY:` comments are reserved for `unsafe` blocks per `.claude/rules/rust-ffi-safety.md` §3 — a safe `Mutex::lock().unwrap()` does not take one.
+- **`Result<T, <CrateError>>` throughout internal APIs.** `dispatch` maps each crate error to the wire `ErrorCode` (`envelope.proto` `Response.error`) — e.g. `lexicon_error_code` in `dispatch/src/lib.rs` — and the FFI seams build error-only responses with `dispatch::encode_error` (see `docs/contributing/rust-ffi-safety.md` § FFI boundary discipline).
+- **No `panic!` / `unwrap()` / `expect()` on unvalidated input.** `unwrap()` on a `Mutex::lock()` result is acceptable (poison is a programmer error, not a data path); briefly explain with `// JUSTIFICATION:` when non-obvious. `SAFETY:` comments are reserved for `unsafe` blocks per `docs/contributing/rust-ffi-safety.md` §3 — a safe `Mutex::lock().unwrap()` does not take one.
 - **`?` is allowed and idiomatic inside `dispatch`'s handlers**, which turn every `Err` into an error `Response`. What is banned is propagating a `Result` out of the FFI function itself — the outer `extern fn` must return protobuf bytes or a null sentinel, never a Rust `Result` or `Option`. The seam's `catch_unwind` maps a panic to `encode_error(…, ErrorCode::FailInternal, …)` (`swift-ffi/src/lib.rs::process_request_bytes`).
 
 ## 3. Crate + type choices `[R]` `[A]`
@@ -85,8 +81,8 @@ Pinned choices (deviations require written justification):
 
 Type-shape preferences that cross FFI:
 
-- `#[repr(transparent)]` newtype for opaque handles (see `.claude/rules/rust-ffi-safety.md` § Opaque handle pattern).
-- **Explicit numeric widths**: `i64` / `f64` at the boundary (not `isize` / `usize`). Mirrors `.claude/rules/android-guidelines.md` §1 Kotlin→Rust shape rules.
+- `#[repr(transparent)]` newtype for opaque handles (see `docs/contributing/rust-ffi-safety.md` § Opaque handle pattern).
+- **Explicit numeric widths**: `i64` / `f64` at the boundary (not `isize` / `usize`). Mirrors `docs/contributing/android-guidelines.md` §1 Kotlin→Rust shape rules.
 - **UTF-8 strings only** — protobuf `string` already enforces; never use `&[u8]` for text data.
 
 ## 4. Cross-compile + build tooling `[A]`
@@ -115,7 +111,7 @@ Type-shape preferences that cross FFI:
 
 ## 7. CI gate + supply chain `[A]`
 
-CI (`.github/workflows/engine.yml`) runs `cargo test --workspace`, `cargo fmt --check` and `cargo clippy -D warnings` on every PR touching `engine/`; `.github/workflows/desktop.yml` runs the desktop-shared workspace's tests + clippy and the desktop + Windows fmt check on PRs touching `desktop/`, `windows/` or `engine/`; `.github/workflows/security.yml` runs `cargo-audit` over all four Cargo workspaces + `cargo-deny` over the engine on PRs touching Cargo manifests / lockfiles and weekly. Post-PR verification follows CLAUDE.md § Build & Test.
+CI (`.github/workflows/engine.yml`) runs `cargo test --workspace`, `cargo fmt --check` and `cargo clippy -D warnings` on every PR touching `engine/`; `.github/workflows/desktop.yml` runs the desktop-shared workspace's tests + clippy and the desktop + Windows fmt check on PRs touching `desktop/`, `windows/` or `engine/`; `.github/workflows/security.yml` runs `cargo-audit` over all four Cargo workspaces + `cargo-deny` over the engine on PRs touching Cargo manifests / lockfiles and weekly. Post-PR verification follows AGENTS.md § Build & Test.
 
 - `make`-target shortcuts available for round-internal iteration (fast paths) AND canonical form (full paths). See root `Makefile help` for the current target list.
 - **`cargo-audit`** scans against the RustSec advisory DB (CI `security.yml`; locally, install via `cargo install cargo-audit --locked`).
@@ -125,7 +121,7 @@ CI (`.github/workflows/engine.yml`) runs `cargo test --workspace`, `cargo fmt --
 
 ## 8. Explicit non-goals
 
-Codifying `.claude/rules/cross-platform-alignment.md` §4.1 in Rust terms:
+Codifying `docs/contributing/cross-platform-alignment.md` §4.1 in Rust terms:
 
 - **No async runtime** (`tokio`, `async-std`, `smol`). Engine is synchronous. Platform wrappers handle threading.
 - **No stray global state.** Process-wide engine state lives only in each stateful domain crate's `handle.rs` singleton behind a `Mutex` / `RwLock`. Immutable lookup tables may use `once_cell::sync::Lazy`. No other mutable globals.
@@ -136,12 +132,12 @@ Codifying `.claude/rules/cross-platform-alignment.md` §4.1 in Rust terms:
 
 ## 9. References
 
-- `.claude/rules/rust-ffi-safety.md` — companion: FFI boundary discipline, domain↔proto boundary, `unsafe`, opaque-handle pattern, enforcement
-- `.claude/rules/rust-migration-policy.md` — when to start a slice migration, design goals, no toggles, mirror deletion
+- `docs/contributing/rust-ffi-safety.md` — companion: FFI boundary discipline, domain↔proto boundary, `unsafe`, opaque-handle pattern, enforcement
+- `docs/contributing/rust-migration-policy.md` — when to start a slice migration, design goals, no toggles, mirror deletion
 - khiin-rs reference study (2026-04-22): lessons to adopt + avoid, captured in `references/khiin-rs/`.
-- `.claude/rules/cross-platform-alignment.md` §4.1 — Rust shared-core non-goals.
-- `.claude/rules/android-guidelines.md` §1 Kotlin→Rust shape preferences — mirror of the type-shape rules here.
-- `.claude/rules/ios-shared-core-candidates.md` — the iOS-side equivalent of what counts as a candidate for Rust extraction.
+- `docs/contributing/cross-platform-alignment.md` §4.1 — Rust shared-core non-goals.
+- `docs/contributing/android-guidelines.md` §1 Kotlin→Rust shape preferences — mirror of the type-shape rules here.
+- `docs/contributing/ios-shared-core-candidates.md` — the iOS-side equivalent of what counts as a candidate for Rust extraction.
 - `docs/architecture/behavioral-invariants.md` — invariant contracts the Rust implementation must preserve.
 - Rust API Guidelines (https://rust-lang.github.io/api-guidelines/) — adopted as the naming + docs baseline.
 - Rustonomicon (https://doc.rust-lang.org/nomicon/) — authoritative `unsafe` reference.

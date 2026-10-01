@@ -25,10 +25,11 @@ Two things that are **not** covered by that:
 
 ## Before you open a pull request
 
-Read [`CLAUDE.md`](CLAUDE.md) — despite the name, it is the working
-description of this repository's layout, conventions, and per-platform rules,
-and the per-platform style guides in `.claude/rules/` are the real style
-guides.
+Read [`AGENTS.md`](AGENTS.md) — the working description of this repository's
+layout, principles and build gates, written for coding agents and humans
+alike. The style guide for each platform, and the cross-cutting rules
+(phonetics, i18n, cross-platform alignment, known pitfalls), are in
+[`docs/contributing/`](docs/contributing/README.md).
 
 Behaviour that the platforms must agree on is specified in
 [`docs/architecture/behavioral-invariants.md`](docs/architecture/behavioral-invariants.md).

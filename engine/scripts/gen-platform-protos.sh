@@ -95,7 +95,7 @@ if [[ "$actual_protoc" != "$required_protoc" && "${TAIGI_ALLOW_PROTOC_DRIFT:-0}"
    The committed bindings already match the pinned runtime and are left alone.
    Regenerating with a mismatched protoc would rewrite every generated .java
    with gencode the runtime does not match, and that churn is easy to commit by
-   accident (.claude/rules/rust-migration-policy.md section 4).
+   accident (docs/contributing/rust-migration-policy.md section 4).
 
    IF YOU CHANGED A .proto THIS ROUND, the bindings are now STALE — install the
    matching compiler before trusting any platform build:

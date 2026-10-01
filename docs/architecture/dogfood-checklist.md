@@ -2,13 +2,13 @@
 
 > **Type**: Reference (living)
 > **Keywords**: `dogfood`, `acceptance`, `perf-gate`, `invariant`
-> **Related**: behavioral-invariants.md, ../../.claude/rules/taigi-incidents.md
+> **Related**: behavioral-invariants.md, ../contributing/known-pitfalls.md
 
-The qualitative perf gate (`~/.claude/rules/code-review-rules.md` §9) made concrete. Read this **when preparing a device dogfood pass or when a PR / memory entry cites an `Sn` item** — it is not always-on context.
+The qualitative perf gate (`docs/contributing/known-pitfalls.md` § Review and device gates) made concrete. Read this **when preparing a device dogfood pass or when a PR / memory entry cites an `Sn` item** — it is not always-on context.
 
 - Base checklist: **S1 POJ diacritics**, **S2 TPS composition**, **S3 Hanji candidate scroll**, plus iOS keyboard-extension 64 MB hard cap, leak-free + no-keyboard-dismiss. Translates "perceptible regression on real interactive sequences" into a concrete acceptance gate.
 
-Each **Sn** below = a dogfood acceptance item: **type X → expect Y** + the `INVARIANT_*` it pins. Full root-cause / fix-file / Codex-sandwich receipts live in `docs/architecture/behavioral-invariants.md §N` + the matching project-memory topic file (Claude auto-memory, `~/.claude/projects/<project>/memory/`) — not duplicated here. Recurring patterns (state once):
+Each **Sn** below = a dogfood acceptance item: **type X → expect Y** + the `INVARIANT_*` it pins. Full root-cause / fix-file receipts live in `docs/architecture/behavioral-invariants.md §N` — not duplicated here. Recurring patterns (state once):
 
 - **Evasion shape** (S4/S5/S9/S11/S13/S15/S17–S21): every hermetic fixture used a single reading / family / initial-form, so the production collision never fired in tests → real-device + the `engine/composing/tests/candidate_dump.rs` dev harness (production artifacts) are the catch-net. Android JVM can't load the `.so`/SQLite, so SQL-path items are dogfood-pinned there.
 - **Fix-location lesson** (S5/§18, reused by S9/S17/S22): a display-only candidate-strip change belongs in the span-local key builder (`composing::shadow` / display-layer seam), never the shared segmentation primitive (`syllabifier::valid_span_endings`) — touching the primitive reintroduces the #290 non-greedy-recovery regression.

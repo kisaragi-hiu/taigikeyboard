@@ -107,6 +107,6 @@ The inventory does **not** expose `valid_span_endings` / `span_min_syllable_coun
 - `binary-format.md` (`syllables.fst` byte format), `tps.md` (TPS canonicalization), `composing.md` (lattice/walker).
 - `continuous-input-ranking.md`, `continuous-commit-and-display.md` (the pipeline this feeds).
 - `architecture/behavioral-invariants.md` (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`, §30 literal-no-fold).
-- `.claude/rules/phonetics.md` + `knowledge/taigi-phonetics-reference.md` (table-contract authority).
+- `docs/contributing/phonetics.md` + `knowledge/taigi-phonetics-reference.md` (table-contract authority).
 
 > Note: `syllabifier/tps.rs` shares the TL inv-driven BFS shape but its TPS-specific coda/tone handling was not line-by-line verified for this doc — read it directly when documenting TPS-specific span behavior.

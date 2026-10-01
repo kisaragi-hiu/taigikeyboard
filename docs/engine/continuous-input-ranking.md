@@ -296,7 +296,7 @@ A holistic fix requires all three — which is by definition out of Phase 9 scop
 
 **Target**: bring Continuous-input behavior into alignment with the conventions established by mainstream IMEs ── primarily **MOE Tâi-gí**, **Rime / librime**, and **Google Pinyin**. These three are the reference set; alignment with one is generally consistent with all three because they share architectural primitives.
 
-This section states **direction**, not schedule (`~/.claude/rules/planning.md` § No future-version planning); no specific release version is committed here. The goals are the criteria a future plan must satisfy to "close" this spec.
+This section states **direction**, not schedule; no specific release version is committed here. The goals are the criteria a future plan must satisfy to "close" this spec.
 
 ### 7.1 Goal axes
 
@@ -344,14 +344,14 @@ A future plan that **closes G1 + G2 + G4** while preserving G3 is the success cr
 
 ---
 
-**[ORIGINAL — superseded]** Ship with this limitation documented. Phase 9 budget (≤ 200 LOC + dogfood notes per [`docs/releases/v3.5.8/plan.md` § Phase 9 PR split](../releases/v3.5.8/plan.md#phase-9--continuous-input-ranking-修復--主流-ime-對齊-finalized-2026-05-11)) does not accommodate a meaningful fix. This document does **not** propose specific scoping for later releases (`~/.claude/rules/planning.md` § No future-version planning).
+**[ORIGINAL — superseded]** Ship with this limitation documented. Phase 9 budget (≤ 200 LOC + dogfood notes per [`docs/releases/v3.5.8/plan.md` § Phase 9 PR split](../releases/v3.5.8/plan.md#phase-9--continuous-input-ranking-修復--主流-ime-對齊-finalized-2026-05-11)) does not accommodate a meaningful fix. This document does **not** propose specific scoping for later releases.
 
 Constraints binding the decision:
 
 - v3.5.8 is dogfood-oriented (per [`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) header).
 - No fallback toggle to disable Continuous (USER rule at the time); we ship as-is or we don't ship.
 - Solo maintainer — ranking work blocks other v3.5.8 phases if attempted now.
-- `~/.claude/rules/round-workflow.md` § Branching & rounds — context-clear between rounds; this decision must be recoverable from this document alone.
+- This decision must be recoverable from this document alone.
 
 **What v3.5.8 release notes should communicate to users:**
 
@@ -399,8 +399,8 @@ Recorded 2026-05-11 to prevent re-discovery in future sessions; several were ans
 |---|---|
 | [`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) | v3.5.8 archive § Phase 5 deferred / § Phase 6 limitations / § Phase 9 |
 | `docs/architecture/behavioral-invariants.md` | §11 live-read settings (relevant for Q2 above) |
-| `.claude/rules/cross-platform-alignment.md` | §3a CROSS-PLATFORM INVARIANT (relevant if ranking constants get tuned per platform — they must not) |
-| `.claude/rules/rust-ffi-safety.md` | §2 domain↔proto boundary (relevant if `FetchAtPos` proto evolves) |
+| `docs/contributing/cross-platform-alignment.md` | §3a CROSS-PLATFORM INVARIANT (relevant if ranking constants get tuned per platform — they must not) |
+| `docs/contributing/rust-ffi-safety.md` | §2 domain↔proto boundary (relevant if `FetchAtPos` proto evolves) |
 | [`engine/lexicon/src/continuous/`](../../engine/lexicon/src/continuous/) + [`engine/ranking/src/sort_key.rs`](../../engine/ranking/src/sort_key.rs) module docs | Live ranking authority: `ContinuousFetchCtx`, `CandidateSortKey`, `user_freq_boost` derivation |
 | `references/moe_taigi_apk/decompiled/sources/moe/taigi/TailoJNI.java` | MOE native ranking entry point |
 | `references/moe_taigi_apk/decompiled/sources/android/moe/taiwanese/taigi/data/local/model/CandidateModel.java` | MOE per-candidate metadata schema |

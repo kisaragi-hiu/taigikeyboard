@@ -6,7 +6,7 @@ option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
 // User-data module — the four SQLite stores the engine owns
-// (`.claude/rules/rust-migration-policy.md` §6; plan and status in
+// (`docs/contributing/rust-migration-policy.md` §6; plan and status in
 // `docs/architecture/user-data-engine-roadmap.md`). The platform decides
 // WHERE each file lives and how it journals; everything about WHAT is in
 // them (schema, migration, capacity, reset) is the engine's.

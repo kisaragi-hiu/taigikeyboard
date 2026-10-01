@@ -20,14 +20,14 @@ Cross-platform shared core for TaigiKeyboard. All five platforms route their pho
 | `build-helpers/fst-builder` | Offline CLI that builds and queries the lexicon `.fst` artifacts. Not shipped to platforms. |
 | `test-support` | Dev-dependency of the `lexicon` / `composing` / `dispatch` tests: temp files, TKDB / TKWA / FST fixture serializers, the per-binary install lock, production artifacts and a once-per-process `dictionary.csv` loader. Depends on no engine crate. Not shipped. |
 
-Dependency direction: `swift-ffi` / `android-jni` → `dispatch` → `composing` / `nextword` / `lexicon` / `ranking` / `userdata` / `phonetics`. `composing` → `lexicon`, `ranking`, `phonetics`; `lexicon` → `ranking`, `phonetics`, `mmap-host`; `nextword` and `userdata` → `phonetics`; `ranking` depends on no workspace crate. Every runtime crate but `ranking` and `mmap-host` depends on `protos` directly. Full graph: `../.claude/rules/rust-best-practices.md` §1a.
+Dependency direction: `swift-ffi` / `android-jni` → `dispatch` → `composing` / `nextword` / `lexicon` / `ranking` / `userdata` / `phonetics`. `composing` → `lexicon`, `ranking`, `phonetics`; `lexicon` → `ranking`, `phonetics`, `mmap-host`; `nextword` and `userdata` → `phonetics`; `ranking` depends on no workspace crate. Every runtime crate but `ranking` and `mmap-host` depends on `protos` directly. Full graph: `../docs/contributing/rust-best-practices.md` §1a.
 
 ## Authoritative contracts
 
 - `../docs/engine/ffi-safety.md` — FFI seam discipline (panic isolation, Mutex, Drop, error sentinels, logging bridge).
 - `../docs/engine/rust-core-proto.md` — Wire shape per slice.
-- `../.claude/rules/rust-best-practices.md` — Workspace conventions, MSRV, crate choices.
-- `../.claude/rules/rust-ffi-safety.md` §2 — Domain↔proto boundary rule (the dispatch / RPC façade of each domain crate accepts/returns `protos::engine::*` directly).
+- `../docs/contributing/rust-best-practices.md` — Workspace conventions, MSRV, crate choices.
+- `../docs/contributing/rust-ffi-safety.md` §2 — Domain↔proto boundary rule (the dispatch / RPC façade of each domain crate accepts/returns `protos::engine::*` directly).
 
 ## Toolchain
 
@@ -35,4 +35,4 @@ Rust stable channel (`rust-toolchain.toml`). `prost-build` compiles `.proto` fil
 
 ## MSRV
 
-Rust 1.86, set in `Cargo.toml` `[workspace.package].rust-version`. Bumping MSRV is a PR-level decision per `../.claude/rules/rust-best-practices.md` §6 (Rust version policy). Two prior bumps documented: 1.75 → 1.85 in D9.1 (`edition2024` ecosystem catch-up), 1.85 → 1.86 in D9.2 (`cargo-ndk` 4.x requirement).
+Rust 1.86, set in `Cargo.toml` `[workspace.package].rust-version`. Bumping MSRV is a PR-level decision per `../docs/contributing/rust-best-practices.md` §6 (Rust version policy). Two prior bumps documented: 1.75 → 1.85 in D9.1 (`edition2024` ecosystem catch-up), 1.85 → 1.86 in D9.2 (`cargo-ndk` 4.x requirement).

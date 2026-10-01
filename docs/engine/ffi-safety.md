@@ -2,7 +2,7 @@
 
 > **Type**: Reference
 > **Keywords**: `FFI`, `panic`, `Drop`, `Mutex`, `EngineHandle`, `ErrorCode`, `logging-bridge`, `catch_unwind`, `shutdown`
-> **Related**: `rust-core-proto.md`, `../architecture/behavioral-invariants.md`, `../../.claude/rules/rust-best-practices.md`, `../../.claude/rules/rust-ffi-safety.md`
+> **Related**: `rust-core-proto.md`, `../architecture/behavioral-invariants.md`, `../../docs/contributing/rust-best-practices.md`, `../../docs/contributing/rust-ffi-safety.md`
 > **Audience**: anyone authoring Rust core code or platform FFI glue.
 
 ---
@@ -10,8 +10,8 @@
 ## 1. Scope and audience
 
 - Applies to every Rust function exposed via `jni` (Android) or `swift-bridge` (iOS / macOS).
-- **Does NOT apply** to internal Rust code that never crosses the FFI boundary. Pure-engine and phonetics crates (`engine`, `phonetics`) follow the broader Rust idioms in `.claude/rules/rust-best-practices.md`; this spec only governs the FFI seam.
-- **Authoritative companion**: `.claude/rules/rust-ffi-safety.md` §1 (FFI boundary discipline) and §4 (opaque handle pattern). Any deviation from this spec or that rules file requires inline `// JUSTIFICATION:` prose at the deviation site, per `.claude/rules/rust-ffi-safety.md` §5.
+- **Does NOT apply** to internal Rust code that never crosses the FFI boundary. Pure-engine and phonetics crates (`engine`, `phonetics`) follow the broader Rust idioms in `docs/contributing/rust-best-practices.md`; this spec only governs the FFI seam.
+- **Authoritative companion**: `docs/contributing/rust-ffi-safety.md` §1 (FFI boundary discipline) and §4 (opaque handle pattern). Any deviation from this spec or that rules file requires inline `// JUSTIFICATION:` prose at the deviation site, per `docs/contributing/rust-ffi-safety.md` §5.
 
 > **AS-BUILT divergence (post-D9)**: the engine implemented this contract as a **process-singleton, bytes-in / bytes-out** seam — NOT the per-session opaque-handle design that §3/§4 below pre-authored. Concretely: the FFI entry takes only `bytes: &[u8]` and reaches the engine via `EngineHandle::instance()` (`engine/composing/src/handle.rs`); **no opaque `*mut` handle crosses the boundary and there is no `engine_shutdown` FFI** (the singleton owns lifetime). There is **no `EngineError` type** — a caught panic maps directly to `ErrorCode::FAIL_INTERNAL` via `catch_unwind`. Live entrypoints: `process_request_bytes` / `install_logger_sink` / `set_log_level` / `panic_for_test` (swift-ffi) and `processRequestBytes` / `registerLogger` / `setLogLevel` / `panicForTest` (android-jni). §2 (catch_unwind mandatory) holds as-built; §3 `Mutex<Engine>` exists but is locked inside the singleton, not at the seam; §3/§4 opaque-handle + shutdown remain as pre-impl design record.
 
@@ -55,7 +55,7 @@ Engine state is `Send + !Sync`. The platform may deliver concurrent calls (IME t
 
 Every opaque handle exposes an explicit `engine_shutdown(handle)` FFI. The Rust engine type implements `Drop` with the full teardown path (drop dictionary handles). The user-data SQLite stores are not part of it: they are process-wide in `userdata` (`UserDataHandle` in `engine/userdata/src/handle.rs`, opened once by `OpenUserData`) and outlive any one handle. The platform side calls shutdown deterministically.
 
-The opaque handle pattern itself is defined in `.claude/rules/rust-ffi-safety.md` §4. This section adds the platform-binding contract and the test surface; it does not redefine the pattern.
+The opaque handle pattern itself is defined in `docs/contributing/rust-ffi-safety.md` §4. This section adds the platform-binding contract and the test surface; it does not redefine the pattern.
 
 **Platform binding**:
 
@@ -82,7 +82,7 @@ Every FFI return from a stateful operation is one of:
 - (a) **Valid protobuf bytes** carrying `Response.error: ErrorCode`. The platform always parses the envelope first.
 - (b) **Out-of-band failure signal** — null pointer / negative length. The platform treats this as "engine is sick, restart this IME session."
 
-Rust never propagates a `Result` or `Option` across the ABI (`.claude/rules/rust-best-practices.md` §2). Rust error types stay inside the catch-unwind closure; they convert to `ErrorCode` at the seam.
+Rust never propagates a `Result` or `Option` across the ABI (`docs/contributing/rust-best-practices.md` §2). Rust error types stay inside the catch-unwind closure; they convert to `ErrorCode` at the seam.
 
 **Initial ErrorCode shape** (final values land with the Phase III proto):
 
@@ -117,7 +117,7 @@ This rule extends the existing platform `LoggerBackend` invariant — Rust core 
 
 ## 7. Test contract for D9 POC acceptance
 
-The POC ships with these tests, run on both iOS and Android (per `.claude/rules/rust-best-practices.md` §5):
+The POC ships with these tests, run on both iOS and Android (per `docs/contributing/rust-best-practices.md` §5):
 
 | ID | Test | Pass condition |
 |---|---|---|
@@ -131,7 +131,7 @@ The POC ships with these tests, run on both iOS and Android (per `.claude/rules/
 | T8 | Double shutdown | Calling `engine_shutdown` twice is bounded (idempotent or documented invalid); no UB |
 | T9 | Call after shutdown | `send_command_bytes` after `engine_shutdown` returns the sick-engine sentinel without dereferencing freed memory |
 
-Tests live in `android-jni/tests/` and `swift-ffi/tests/` per `.claude/rules/rust-best-practices.md` §5.
+Tests live in `android-jni/tests/` and `swift-ffi/tests/` per `docs/contributing/rust-best-practices.md` §5.
 
 ---
 
@@ -145,14 +145,14 @@ Rust core never sees platform-only surfaces. The authoritative exclude lists liv
 - `../../rules/cross-platform-alignment.md` §1c
 - `migration-inventory.csv` (live roster — filter `status=wont_migrate` for the current exclusion set)
 
-This document does not re-enumerate those symbols. Adding a third copy of the same blacklist would force every future expansion to update three places — see `.claude/rules/cross-platform-alignment.md` §1c for the authoritative-list pointer rationale.
+This document does not re-enumerate those symbols. Adding a third copy of the same blacklist would force every future expansion to update three places — see `docs/contributing/cross-platform-alignment.md` §1c for the authoritative-list pointer rationale.
 
 ---
 
 ## 9. References
 
-- `.claude/rules/rust-ffi-safety.md` — mandatory companion (§1 FFI discipline, §3 unsafe, §4 opaque handle pattern, §5 enforcement hooks)
-- `.claude/rules/rust-best-practices.md` — secondary companion (§2 error handling, §8 non-goals)
+- `docs/contributing/rust-ffi-safety.md` — mandatory companion (§1 FFI discipline, §3 unsafe, §4 opaque handle pattern, §5 enforcement hooks)
+- `docs/contributing/rust-best-practices.md` — secondary companion (§2 error handling, §8 non-goals)
 - `references/khiin-rs/khiin/src/engine.rs:57` — `send_command_bytes` single-entry-point shape
 - `references/khiin-rs/android/rust/src/lib.rs:51-56` — JNI parse panic (failure mode for §2)
 - `references/khiin-rs/android/rust/src/lib.rs:64` — unsafe `&mut` from raw pointer with no sync (failure mode for §3)

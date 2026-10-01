@@ -20,7 +20,7 @@ struct SettingsKey<Value: Sendable>: Sendable {
 /// Live-read by construction: `current` goes to `UserDefaults` on every access
 /// and caches nothing, so a mode switched from the input-source menu applies to
 /// the very next keystroke without anything having to be told about it
-/// (`.claude/rules/ios-settings-injection.md` §3 — a snapshot taken at
+/// (`docs/contributing/ios-settings-injection.md` §3 — a snapshot taken at
 /// construction is exactly what breaks mid-session TL↔POJ switching).
 ///
 /// Instances cache nothing, so there is no shared one: the input-source menu

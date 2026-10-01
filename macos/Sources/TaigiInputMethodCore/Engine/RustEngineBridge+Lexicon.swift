@@ -88,7 +88,7 @@ extension RustEngineBridge {
     /// The bit layout — including the kautian subcollection region in bits
     /// 13-25 — belongs to Rust (`engine/lexicon/src/dictionary_filters.rs`),
     /// and this asks for it rather than reproducing it. No platform keeps a
-    /// mirrored bit-math fallback (`planning.md` § No redundant fallback) —
+    /// mirrored bit-math fallback (`AGENTS.md` § Design principles) —
     /// the bridge and the engine are built by one `make build`, and a second
     /// copy of the layout is a second thing to keep in step.
     ///

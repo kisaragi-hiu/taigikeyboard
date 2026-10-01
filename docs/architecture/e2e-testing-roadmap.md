@@ -78,7 +78,7 @@ The trace file lives in the platform's app sandbox (iOS extension container or A
 
 #### Trace schema (Codex revisions)
 
-`schema_version`; run / session / step IDs; engine `request.id` + `generation` (`engine/protos/proto/envelope.proto:136`); PID / TID; monotonic clock per process + a wall-clock anchor for cross-process alignment. Separate events for: key injected (driver), key received (IME), engine request / response, preedit / selection / effects, candidate list (`(Hanji, canonical-TL)` identity per CLAUDE.md #6), commit call, **text observed by the host** (key-to-commit latency ends here), stale / dropped / cancelled, timeout / crash, trace flush status. Header records build id, dictionary version, settings snapshot, learning-data baseline. Memory samples name metric, PID, unit. Perf runs use the release profile plus the trace feature, and one run measures tracing overhead. Budgets are calibrated per device, not fixed (the iOS 64 MB cap is the one hard ceiling).
+`schema_version`; run / session / step IDs; engine `request.id` + `generation` (`engine/protos/proto/envelope.proto:136`); PID / TID; monotonic clock per process + a wall-clock anchor for cross-process alignment. Separate events for: key injected (driver), key received (IME), engine request / response, preedit / selection / effects, candidate list (`(Hanji, canonical-TL)` identity per AGENTS.md #6), commit call, **text observed by the host** (key-to-commit latency ends here), stale / dropped / cancelled, timeout / crash, trace flush status. Header records build id, dictionary version, settings snapshot, learning-data baseline. Memory samples name metric, PID, unit. Perf runs use the release profile plus the trace feature, and one run measures tracing overhead. Budgets are calibrated per device, not fixed (the iOS 64 MB cap is the one hard ceiling).
 
 ### D3 — Drivers
 
@@ -97,7 +97,7 @@ Scenarios share **intent** (text to type, candidate identity to pick, checkpoint
 
 `make e2e PLATFORM=<p> [SCENARIO=<glob>]` runs driver + analyzer and prints the report path; a `/e2e` project skill tells the agent how to read the report, rerun one scenario, and turn a failure into a bug report (observed failure → bugfix round per Core Principle #4). The skill never opens a round by itself.
 
-## Spikes (gate the platform PRs — `taigi-incidents.md` § spike a platform capability)
+## Spikes (gate the platform PRs — `docs/contributing/known-pitfalls.md` § Tests and diagnosis)
 
 | # | Question | ≤20-line probe | Blocks |
 |---|---|---|---|
@@ -146,7 +146,7 @@ Each platform PR adds its row to `/e2e` and its budgets; PR sizes 200–500 LOC.
 | Headless IME test harness driving key events into an input context | `references/fcitx5/test/testquickphrase.cpp:36-57` (`testfrontend` `keyEvent` + `pushCommitExpectation`) | D3 Linux: same idea, but through a real X11 client so packaging + addon loading are exercised too |
 | Debug-only logging compiled out of release | existing `DebugLogger.swift:3`, `AndroidLoggerBackend.kt:31`, `taigi-windows-platform/src/lib.rs:268` | D2 extends the same compile-time rule to the trace |
 
-Rules: `~/.claude/rules/planning.md` (roadmap + memory, grounded, PR sizing); `diagnosis-discipline.md` (an e2e failure is an observed failure → normal bugfix pre-gate); `code-review-rules.md` §9 (quantitative perf gate adopted here because the USER asked for performance analysis).
+Rules: an e2e failure is an observed failure and goes through the normal bugfix path; a quantitative perf gate is adopted here because the maintainer asked for performance analysis.
 
 ### Deliberately not adopted
 

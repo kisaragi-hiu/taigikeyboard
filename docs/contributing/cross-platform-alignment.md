@@ -1,17 +1,8 @@
----
-paths:
-  - "ios/**/*.swift"
-  - "android/**/*.kt"
-  - "engine/**"
-  - "dictionary/**"
-  - "docs/architecture/behavioral-invariants.md"
----
-
 # Cross-Platform Alignment Rules
 
 Prevent iOS and Android implementations from diverging in ways that make shared-core (Rust) maintenance harder. Every pure-logic candidate lives in Rust; the rules below govern every PR: invariants must stay aligned across iOS / Android / engine, and intentional divergence must be documented.
 
-References: `docs/engine/migration-inventory.csv` for the live Rust / native ownership inventory · `docs/architecture/behavioral-invariants.md` for observable-behavior contracts · `.claude/rules/ios-guidelines.md` / `.claude/rules/android-guidelines.md` for platform idioms.
+References: `docs/engine/migration-inventory.csv` for the live Rust / native ownership inventory · `docs/architecture/behavioral-invariants.md` for observable-behavior contracts · `docs/contributing/ios-guidelines.md` / `docs/contributing/android-guidelines.md` for platform idioms.
 
 ## 1. Refactor rounds are behavior-frozen
 
@@ -52,9 +43,9 @@ Governs every PR that touches a file marked `Shared-Core Candidate` (the residua
 Any change touching a shared-core-candidate file must:
 
 1. Accept only **immutable value inputs** OR inject services through interfaces **already declared** in the shared-core contract (e.g. `EngineSettings`, `LoggerBackend` on Android; `EngineSettingsProvider`, `LoggerBackend` on iOS). Legitimate immutable-context structs, DTO mappers, and batching objects are permitted; they are not banned as "stateful" merely because they carry multiple fields.
-2. Introduce **no new** platform / framework singleton reads inside candidate code. Explicitly forbidden: `SharedSettings.shared`, any `*.shared`, `Application.getInstance()`, `BuildConfig.*`, `android.util.Log`, `OSLog`, `KeyboardKit.*`, `androidx.*`, `UIKit`/`SwiftUI`/`Combine`, `kotlinx.coroutines.*`. See `.claude/rules/ios-shared-core-candidates.md` §1 (iOS-specific platform bans — `SharedSettings.shared`, `*.shared`, `UIKit`, `SwiftUI`, `KeyboardKit`, `Combine`, `OSLog`, `@MainActor`) and `.claude/rules/android-guidelines.md` §1 (Android-specific — `android.*`, `androidx.*`, `kotlinx.coroutines.*`, `java.util.concurrent.*`) for the authoritative per-platform enforcement lists. The list above is the merged set enforced at code review; items like `BuildConfig.*` and `Application.getInstance()` extend the per-platform lists because they surfaced in real violations.
+2. Introduce **no new** platform / framework singleton reads inside candidate code. Explicitly forbidden: `SharedSettings.shared`, any `*.shared`, `Application.getInstance()`, `BuildConfig.*`, `android.util.Log`, `OSLog`, `KeyboardKit.*`, `androidx.*`, `UIKit`/`SwiftUI`/`Combine`, `kotlinx.coroutines.*`. See `docs/contributing/ios-shared-core-candidates.md` §1 (iOS-specific platform bans — `SharedSettings.shared`, `*.shared`, `UIKit`, `SwiftUI`, `KeyboardKit`, `Combine`, `OSLog`, `@MainActor`) and `docs/contributing/android-guidelines.md` §1 (Android-specific — `android.*`, `androidx.*`, `kotlinx.coroutines.*`, `java.util.concurrent.*`) for the authoritative per-platform enforcement lists. The list above is the merged set enforced at code review; items like `BuildConfig.*` and `Application.getInstance()` extend the per-platform lists because they surfaced in real violations.
 3. **Mirror any new heuristic or tunable constant** on the other platform in the same PR, with a `CROSS-PLATFORM INVARIANT` comment citing `<mirror file>:<line>`. §3a drift-detection still applies.
-4. Pass **Codex + `/simplify` pre-implementation review** for any change introducing a new stateful dependency into a candidate file. Pure refactors, constant-tweak bug fixes, and fixes without new state are exempt from the pre-impl review (post-draft review still applies per `~/.claude/rules/round-workflow.md` Codex sandwich). The Codex pass checks correctness + FFI-safety intent; the `/simplify` pass checks reuse, quality, and dead-code before implementation lands. Run both in parallel per `~/.claude/rules/claude-workflow.md` §Subagent Usage.
+4. Get the **design reviewed before implementation** for any change introducing a new stateful dependency into a candidate file — correctness, FFI-safety intent, reuse and dead code. Pure refactors, constant-tweak bug fixes, and fixes without new state need only the normal diff review.
 
 A PR in violation is rejected at review regardless of whether the fix itself is correct. Correct fixes that violate this constraint are rebased to comply.
 
@@ -101,9 +92,8 @@ Treat matching comments as authoritative signal that the original author intende
 
 - Feature planning and bug triage process — owned by user, not code rules
 - Behavioral invariants content — see `docs/architecture/behavioral-invariants.md`
-- Rust FFI design, ownership model, API shape — see `.claude/rules/rust-ffi-safety.md` + `docs/engine/ffi-safety.md`
-- Platform-specific idioms — see `.claude/rules/ios-guidelines.md` (day-to-day), `.claude/rules/ios-architecture.md` (structural), and `.claude/rules/android-guidelines.md`
-- Review checklist mechanics — see `~/.claude/rules/code-review-rules.md`
+- Rust FFI design, ownership model, API shape — see `docs/contributing/rust-ffi-safety.md` + `docs/engine/ffi-safety.md`
+- Platform-specific idioms — see `docs/contributing/ios-guidelines.md` (day-to-day), `docs/contributing/ios-architecture.md` (structural), and `docs/contributing/android-guidelines.md`
 
 ### 4.1 Rust shared-core non-goals (codified)
 

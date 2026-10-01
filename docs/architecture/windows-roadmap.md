@@ -23,7 +23,7 @@ Two consequences shape every decision below:
    five-way classification, used throughout: **identical semantics** · **platform-adapted
    presentation** · **unsupported host capability** · **intentionally deferred** ·
    **unverified until Windows dogfood**. Each delta is named per
-   `.claude/rules/cross-platform-alignment.md` §3.
+   `docs/contributing/cross-platform-alignment.md` §3.
 2. **PR1–PR10 were authored without a Windows machine** and verified on the macOS host
    (§ W13). Since 2026-08-30 a Windows box exists (`ssh win`, MSVC Rust 1.98, no .NET):
    W17 and everything after it is built and smoke-run there; the macOS host keeps the
@@ -351,7 +351,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   gate. Adopted later: `.github/workflows/windows-build.yml` builds the installer on a
   GitHub-hosted runner for `desktop-*` tags + dispatch (memory
   `project_windows_hosted_build.md`); `make windows-check` stays the manual host gate. What `cargo check` cannot catch is listed in
-  `.claude/rules/windows-guidelines.md` § TSF / COM discipline.
+  `docs/contributing/windows-guidelines.md` § TSF / COM discipline.
   **W17 amendment (2026-08-30)**: `windows-reactor-setup`'s build script refuses the
   gnu target (`unsupported target environment: gnu`, spike), while `windows-reactor`
   itself type-checks on it. So the settings crate's build script stages the runtime
@@ -517,7 +517,7 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   on the complete install directory); no
   settings-exe launch from the installer before its payload is fully consumed; a
   certificate-rotation release goes through the download page once;
-  `.claude/rules/windows-guidelines.md` = durable constraints; `windows/updates/README.md`
+  `docs/contributing/windows-guidelines.md` = durable constraints; `windows/updates/README.md`
   = manifest contract only. No duplicated truth between them.
 
 ## Windows-specific acceptance matrix (Codex W15/F14)
@@ -543,7 +543,7 @@ diff) and the W13 gates. Order revised per Codex F12.
 
 | PR | Phase | Scope | Status |
 |---|---|---|---|
-| PR0 | Admin | this roadmap + memory topic + `.claude/rules/windows-guidelines.md` + docs index | direct-to-main |
+| PR0 | Admin | this roadmap + memory topic + `docs/contributing/windows-guidelines.md` + docs index | direct-to-main |
 | PR1a | Proto | `PLATFORM_WINDOWS` + `make build` regen (mechanical) | **Merged** #623 (`b7090482`) |
 | PR1b | i18n + tooling | `macos` → `desktop` namespace rename; `windows` platform + Rust emitter; `release_notes.py` Windows version writer/check; root Makefile `windows-check` / `windows-release` | **Merged** #624 (`d1fc40a5`) |
 | PR2 | Scaffold + core composing | `windows/` workspace + toolchain; `taigi-desktop-core`: settings model + revision, engine bridge (envelope, AppConfig, generation, lexicon install, logger), `ComposingSessionCoordinator` keyed by context token, ComposingManager port (3-phase apply, effects, fetch protocol, commit outcomes), `ComposingKeyIntent` 7-tier table + `KeyEventSnapshot`; engine round-trip tests against `ios/Resources/Dictionaries`. **Locks**: word identity `(Hanji, canonical TL)`, context ownership + handover, engine generation rules, effect ordering + failure semantics, settings revision | **Merged** #625 (`e4367ef6`) + #626 (`e557297a`) |
@@ -580,7 +580,7 @@ which read as "the shortcut is broken". The tray button was the second miss: a
 routes clicks to `OnClick` and never drives `InitMenu`. Both are fixed, and every pane is now
 mounted headlessly against the reactor's `RecordingRuntime` by `winui::pane_planning` — the
 planning layer is platform-independent, so that test catches this whole class before a device
-ever sees it. Rules in `.claude/rules/windows-guidelines.md` § Authored without a Windows
+ever sees it. Rules in `docs/contributing/windows-guidelines.md` § Authored without a Windows
 machine.
 
 Dependencies: PR2 → PR3/PR4 (parallelisable) → PR5a → PR5b → PR6; PR7 → PR8; PR9 needs

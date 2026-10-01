@@ -2,7 +2,7 @@
 //! (`user_frequency.db`, `user_association.db`, `learned_phrases.db`) and the
 //! user's `custom_dictionary.db`, in the directory the platform hands in.
 //!
-//! Engine-owned per `.claude/rules/rust-migration-policy.md` §6; migration
+//! Engine-owned per `docs/contributing/rust-migration-policy.md` §6; migration
 //! plan and status in `docs/architecture/user-data-engine-roadmap.md`.
 //! Moved from `desktop/crates/taigi-desktop-storage` (roadmap P1), itself a
 //! port of `macos/Sources/TaigiInputMethodCore/Storage/` over rusqlite: the

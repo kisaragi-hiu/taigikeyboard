@@ -318,7 +318,7 @@ class ComposingManager(
      * `macos/Sources/TaigiInputMethodCore/Composing/ComposingManager.swift`
      * `fetchCandidates`.
      *
-     * Android divergence (intentional, per `.claude/rules/cross-platform-alignment.md`
+     * Android divergence (intentional, per `docs/contributing/cross-platform-alignment.md`
      * §3): the Apple platforms run the fetch on the main thread and mirror
      * its snapshot; Android runs this function on `Dispatchers.Default`
      * (`CandidateUpdateCoordinator`) so the dictionary scan never blocks a

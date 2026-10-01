@@ -1,10 +1,6 @@
----
-paths: ["android/**/*.kt", "android/**/*.gradle*"]
----
-
 # Android Project Guidelines
 
-Mandatory rules for Android development. Core architecture + Kotlin idioms + DI + DataStore + null/error handling + Gradle. UI / IME-specific patterns / testing / refactor-round checklist live in `.claude/rules/android-ime-patterns.md`.
+Mandatory rules for Android development. Core architecture + Kotlin idioms + DI + DataStore + null/error handling + Gradle. UI / IME-specific patterns / testing / refactor-round checklist live in `docs/contributing/android-ime-patterns.md`.
 
 **Three goals** every rule below serves at least one of:
 
@@ -16,7 +12,7 @@ Each rule is tagged with one or more of `[R]`, `[B]`, `[A]`.
 
 ## 1. Shared-core candidate rules `[R]`
 
-Files marked `// region Shared-Core Candidate` must satisfy ALL criteria below. Mirrors the iOS Shared-Core contract in `.claude/rules/ios-shared-core-candidates.md` — same criteria, Kotlin-translated.
+Files marked `// region Shared-Core Candidate` must satisfy ALL criteria below. Mirrors the iOS Shared-Core contract in `docs/contributing/ios-shared-core-candidates.md` — same criteria, Kotlin-translated.
 
 1. Imports Kotlin stdlib only. Forbidden: `android.*`, `androidx.*`, `kotlinx.coroutines.*`, `java.util.concurrent.*`, `com.squareup.moshi.*`.
 2. No `object` with mutable state, no `companion object` state, no reflection, no Moshi / serialization.
@@ -49,7 +45,7 @@ Engine-layer files that deliberately do **not** qualify begin with `// NOTE: Not
 
 ## 2. Cross-platform invariant discipline — Android syntax `[A]` `[R]`
 
-The **policy** (constants + tests + docs update together, comment format, `INVARIANT_*` test label prefix) lives in `.claude/rules/cross-platform-alignment.md` §3a. This section only captures Kotlin-specific details:
+The **policy** (constants + tests + docs update together, comment format, `INVARIANT_*` test label prefix) lives in `docs/contributing/cross-platform-alignment.md` §3a. This section only captures Kotlin-specific details:
 
 - Comment syntax in Kotlin:
   ```kotlin
@@ -61,7 +57,7 @@ The **policy** (constants + tests + docs update together, comment format, `INVAR
 
 ## 3. Kotlin idioms `[B]`
 
-Generic Kotlin idioms (`val` over `var`, sealed hierarchies, data classes, coroutines) live in the global `~/.claude/rules/kotlin.md`; this section keeps only the project-specific ones.
+Generic Kotlin idioms (`val` over `var`, sealed hierarchies, data classes, coroutines) follow the [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html); this section keeps only the project-specific ones.
 
 - Follow the [Android Keyboard Design Guidelines](https://developer.android.com/develop/ui/views/touch-and-input/creating-input-method) for IME components.
 - `enum class` for pure enums with no associated state (sealed hierarchies and data classes: global `kotlin.md`).
@@ -121,24 +117,21 @@ The four user-data stores (`user_frequency.db`, `user_association.db`, `custom_d
 
 Never open these files with `android.database.sqlite` (or any other SQLite): two SQLite copies in one process lock independently and can corrupt a file both hold (roadmap U2 / U6). A new store or query belongs in the engine.
 
-## 9. Gradle files editable by Claude `[B]`
+## 9. Gradle files are editable `[B]`
 
-`android/build.gradle`, `android/app/build.gradle.kts`, `android/settings.gradle`, and other Android Gradle scripts are **editable by Claude directly** — gradle edits are routine (plugin wiring, dep bumps, lint config).
+`android/build.gradle`, `android/app/build.gradle.kts`, `android/settings.gradle`, and other Android Gradle scripts are **editable by agents directly** — gradle edits are routine (plugin wiring, dep bumps, lint config).
 
 - ✅ Edit gradle files directly.
-- ❌ Still off-limits: `*.xcodeproj/`, `*.pbxproj/`, iOS xcconfig (see `.claude/rules/ios-guidelines.md`).
+- ❌ Still off-limits: `*.xcodeproj/`, `*.pbxproj/`, iOS xcconfig (see `docs/contributing/ios-guidelines.md`).
 - After gradle edits, surface what changed in plain text and remind the user that an Android Studio Gradle sync is needed.
 
 ## 10. References
 
-- `.claude/rules/android-ime-patterns.md` — companion: Compose, IME-specific patterns, testing, refactor-round checklist
-- Companion documents on the iOS side: `.claude/rules/ios-guidelines.md` (day-to-day), `.claude/rules/ios-architecture.md` (structural).
-- Cross-platform behavior contract: `.claude/rules/cross-platform-alignment.md`.
+- `docs/contributing/android-ime-patterns.md` — companion: Compose, IME-specific patterns, testing, refactor-round checklist
+- Companion documents on the iOS side: `docs/contributing/ios-guidelines.md` (day-to-day), `docs/contributing/ios-architecture.md` (structural).
+- Cross-platform behavior contract: `docs/contributing/cross-platform-alignment.md`.
 - Architectural target: `docs/architecture/ios-exemplar.md` (the contract Android aligns toward).
 - Live Rust / native ownership inventory: `docs/engine/migration-inventory.csv`.
 - Invariants to preserve: `docs/architecture/behavioral-invariants.md`.
-- Code review checklist: `~/.claude/rules/code-review-rules.md`.
-- Naming + comment rules (cross-platform): `~/.claude/rules/ai-friendly-code.md`.
-- Security: `.claude/rules/security-rules.md` (logging guards, SQL binding, Android exported-component rules).
-- UI style: `.claude/rules/ui-style-guide.md`.
-- Session workflow tuning: `~/.claude/rules/claude-workflow.md`.
+- Security: `docs/contributing/security-rules.md` (logging guards, SQL binding, Android exported-component rules).
+- UI style: `docs/contributing/ui-style-guide.md`.

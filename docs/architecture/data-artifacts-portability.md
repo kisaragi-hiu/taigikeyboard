@@ -18,7 +18,7 @@ Snapshot of how the data artifacts that back the IME are produced, stored, and c
 | `custom_dictionary.db` (SQLite) | **Shipped in Rust** | Rust `engine/userdata::CustomDictionaryStore` (`custom_dictionary.rs`) |
 | `learned_phrases.db` (SQLite) | **Shipped in Rust** | Rust `engine/userdata::LearnedPhraseStore` (`learned_phrases.rs`; shape in `behavioral-invariants.md` §50) |
 
-Per `.claude/rules/rust-migration-policy.md` §6 (rewritten 2026-09-26), the writable user-data DBs are engine-owned: the platform supplies the directory (`OpenUserData`), the journal mode and the UI, and reaches the stores only through `UserDataRequest` ops (Windows / Linux settings apps also in-process). The engine takes over the files each platform's native store wrote (shape-detecting migration, `<file>.pre-engine` copy, `PRAGMA application_id`; roadmap U7 / U8). The three read-only assets are byte-identical across iOS and Android and are consumed by the Rust crate via `mmap-host`.
+Per `docs/contributing/rust-migration-policy.md` §6 (rewritten 2026-09-26), the writable user-data DBs are engine-owned: the platform supplies the directory (`OpenUserData`), the journal mode and the UI, and reaches the stores only through `UserDataRequest` ops (Windows / Linux settings apps also in-process). The engine takes over the files each platform's native store wrote (shape-detecting migration, `<file>.pre-engine` copy, `PRAGMA application_id`; roadmap U7 / U8). The three read-only assets are byte-identical across iOS and Android and are consumed by the Rust crate via `mmap-host`.
 
 ---
 
@@ -273,7 +273,7 @@ Dictionary updates today: `dictionary.fst` + `dictionary.bin` + `association.bin
 
 1. The two binary artifacts with a header (`dictionary.bin`, `association.bin`) carry a matching `build_ts` — both are the CRC-32 of the same `output/dictionary.csv` (`dictionary/build/common.py::build_id`).
 2. `dictionary.fst` has **no timestamp or version in its bytes** — the format is a raw Burntsushi fst. Today the three artifacts' cohesion relies entirely on the build script producing all three in the same run; readers cannot detect a stale fst paired with fresh bins (see `binary-format.md` §5.1 no-checksum acknowledgement).
-3. User-writable SQLite databases (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`, `learned_phrases.db`) are per-install and must not be shipped as read-only assets. They are engine-owned per `.claude/rules/rust-migration-policy.md` §6 (rewritten 2026-09-26); migration status in `user-data-engine-roadmap.md`.
+3. User-writable SQLite databases (`user_frequency.db`, `user_association.db`, `custom_dictionary.db`, `learned_phrases.db`) are per-install and must not be shipped as read-only assets. They are engine-owned per `docs/contributing/rust-migration-policy.md` §6 (rewritten 2026-09-26); migration status in `user-data-engine-roadmap.md`.
 4. Schema migrations run in the engine on the first open after an app update (`OpenUserData`; roadmap U7); the delivery mechanism does not modify these files directly.
 
 Distribution-channel design (OTA vs app-bundle) is out of scope for this audit.

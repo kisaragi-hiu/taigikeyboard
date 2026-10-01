@@ -1,18 +1,6 @@
----
-paths:
-  - "engine/android-jni/**"
-  - "engine/swift-ffi/**"
-  - "engine/dispatch/**"
-  - "engine/protos/**"
-  - "engine/**/src/api.rs"
-  - "engine/**/src/requests.rs"
-  - "engine/**/src/handle.rs"
-  - "engine/**/ffi*.rs"
----
-
 # Rust FFI Safety
 
-Mandatory rules for the Rust ↔ platform boundary: FFI surface, domain↔proto layering, `unsafe` discipline, opaque-handle pattern, enforcement hooks. Split out from `.claude/rules/rust-best-practices.md` for focus. General Rust hygiene (workspace, errors, crates, tests, versions) stays in the parent file.
+Mandatory rules for the Rust ↔ platform boundary: FFI surface, domain↔proto layering, `unsafe` discipline, opaque-handle pattern, enforcement hooks. Split out from `docs/contributing/rust-best-practices.md` for focus. General Rust hygiene (workspace, errors, crates, tests, versions) stays in the parent file.
 
 **Active window**: every Rust PR touching `swift-ffi/`, `android-jni/`, `engine/dispatch`, `protos/`, or any domain crate's RPC façade.
 
@@ -109,13 +97,13 @@ Both extern fns wrap their bodies in `catch_unwind` per §1. Every `unsafe` bloc
 ## 5. Enforcement hooks `[A]`
 
 - **Spec docs**: `docs/engine/ffi-safety.md` and `docs/engine/rust-core-proto.md` cite this rules file. Rule deviations in those docs require `// JUSTIFICATION:` prose in-line.
-- **Every Rust FFI PR** is reviewed against §§1–4 here plus the `.claude/rules/cross-platform-alignment.md` §1c shared-core-candidate equivalence constraint, then through the standard Codex + `/simplify` pre-impl / Codex post-impl sandwich (mechanics in `~/.claude/rules/round-workflow.md` § Codex review sandwich; run Codex + `/simplify` in parallel per `~/.claude/rules/claude-workflow.md` § Subagent Usage). New `unsafe` blocks (§3) always take the full sandwich; deviations land only with written rationale.
+- **Every Rust FFI PR** is reviewed against §§1–4 here plus the `docs/contributing/cross-platform-alignment.md` §1c shared-core-candidate equivalence constraint, with the design reviewed before implementation and the diff after. New `unsafe` blocks (§3) always take both reviews; deviations land only with written rationale.
 
 ## 6. References
 
-- `.claude/rules/rust-best-practices.md` — parent file: workspace, errors, crates, tests, versions, non-goals
-- `.claude/rules/rust-migration-policy.md` — slice migration policy
-- `.claude/rules/cross-platform-alignment.md` §1c, §4.1 — shared-core-candidate constraint + non-goals
+- `docs/contributing/rust-best-practices.md` — parent file: workspace, errors, crates, tests, versions, non-goals
+- `docs/contributing/rust-migration-policy.md` — slice migration policy
+- `docs/contributing/cross-platform-alignment.md` §1c, §4.1 — shared-core-candidate constraint + non-goals
 - `docs/engine/ffi-safety.md` — technical spec (this file is the policy)
 - `docs/engine/rust-core-proto.md` — Request/Response schema
 - Rustonomicon (https://doc.rust-lang.org/nomicon/) — authoritative `unsafe` reference

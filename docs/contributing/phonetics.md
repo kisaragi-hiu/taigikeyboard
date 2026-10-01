@@ -1,27 +1,12 @@
----
-paths:
-  - "engine/phonetics/**"
-  - "engine/composing/**"
-  - "engine/lexicon/**"
-  - "engine/protos/**"
-  - "knowledge/taigi-phonetics-reference.md"
-  - "taigi-converter/**"
-  - "dictionary/**"
-  - "ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+Phonetics.swift"
-  - "ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+CaseTransform.swift"
-  - "android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/ExternalLookupURLBuilder.kt"
-  - "android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt"
----
-
 # Phonetics Rules
 
 Read before any TL / POJ / TPS schema work, FST key-family design, column design, encoding choice, canonical-form decision, or "is X dead code" audit of phonetic tables.
 
-Project `CLAUDE.md` Core Principle #3 ("Phonetics = authoritative-source-only") binds this.
+Project `AGENTS.md` Core Principle #3 ("Phonetics = authoritative-source-only") binds this.
 
 ## Word identity = (漢字, 羅馬字) pair (Core Principle #6)
 
-A Taiwanese word is identified by the **(Hanji, canonical-TL) combination**, never by either field alone — 一字多音 (`重/tîng` ≠ `重/tāng`) and homophones make both fields necessary. Any key / dedup / group / lookup / accent-or-variant substitution over Taiwanese entries MUST use the `(hanzi, tl)` pair (project-wide: `lexicon`, `ranking`, dictionary `merge`/`merge_csv`/`cleanup`, accent generation). POJ/TPS are alternate renderings of the same TL and add no new identity. Full statement + rationale: project `CLAUDE.md` Core Principle #6.
+A Taiwanese word is identified by the **(Hanji, canonical-TL) combination**, never by either field alone — 一字多音 (`重/tîng` ≠ `重/tāng`) and homophones make both fields necessary. Any key / dedup / group / lookup / accent-or-variant substitution over Taiwanese entries MUST use the `(hanzi, tl)` pair (project-wide: `lexicon`, `ranking`, dictionary `merge`/`merge_csv`/`cleanup`, accent generation). POJ/TPS are alternate renderings of the same TL and add no new identity. Full statement + rationale: project `AGENTS.md` Core Principle #6.
 
 ## Required reading (in order)
 
@@ -33,7 +18,7 @@ A Taiwanese word is identified by the **(Hanji, canonical-TL) combination**, nev
 2. **`engine/phonetics/src/<system>.rs`** — source-of-truth lookup table for each system. e.g. `tps.rs` defines `ZHUYIN_INITIALS / ZHUYIN_VOWELS / ZHUYIN_TONES / ZHUYIN_TONES_ENCODE_SAFE`.
 3. **`knowledge/tps-auto-correct-rules.md`** — if touching TPS (palatalization, nasal, coda-position rules).
 4. **`taigi-converter/src/`** — canonical TL ↔ POJ ↔ TPS converter (git submodule). Plus `dictionary/common/taigi_bridge.py` for the Node-IPC bridge.
-5. `AskUserQuestion` only for user-decision forks (product strategy / naming preference / scope); the reference answers phonetic facts.
+5. Ask the maintainer only for decision forks (product strategy / naming preference / scope); the reference answers phonetic facts.
 
 ## Key TPS facts (often-misremembered)
 
@@ -63,7 +48,7 @@ When auditing phonetic tables (`TL_INITIALS`, `TL_FINALS`, `TONE_NUM_TO_COMBININ
 
 ## Anti-patterns
 
-- Inferring schema from training memory → proposing `AskUserQuestion` options that contradict `knowledge/`.
+- Inferring schema from training memory → proposing options that contradict `knowledge/`.
 - Asking the user a fact that the reference already answers.
 - Treating dictionary/test absence as licence to delete table rows.
 - Conflating TPS with Mandarin bopomofo or with TL/POJ.

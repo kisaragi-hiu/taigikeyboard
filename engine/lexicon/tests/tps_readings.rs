@@ -3,8 +3,8 @@
 //! `lookup_prefix_shortest_first_tps_readings` against an in-memory
 //! `dictionary.fst`-shaped wire set.
 //!
-//! Fixture rule (`.claude/rules/taigi-incidents.md` § Trace before
-//! assert): every fixture that exercises a reading also carries the
+//! Fixture rule (`docs/contributing/known-pitfalls.md` § Tests and
+//! diagnosis): every fixture that exercises a reading also carries the
 //! rival readings sharing its key pattern, and asserts their presence /
 //! ordering explicitly — reading recovery must be an ADDITION with the
 //! user's literal text first, never a replacement.

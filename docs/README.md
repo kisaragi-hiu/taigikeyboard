@@ -9,7 +9,7 @@
 
 - New contributor: build and test setup is in `BUILDING.md`
 - Cross-platform reference for iOS / Android / macOS / Windows / Linux implementation alignment — start at `architecture/system-overview.md`
-- Quick reference for Claude Code, bullet-point style, concise
+- Style guides and per-platform rules: `contributing/README.md`
 
 ---
 
@@ -42,7 +42,7 @@
 | `architecture/system-overview.md` | Five-platform architecture entry point: system context, engine crate graph, build pipeline, keystroke flow + per-platform glue chain | Active |
 | `architecture/behavioral-invariants.md` | Cross-platform behavior contract (every Rust slice must preserve) | Active |
 | `architecture/dogfood-checklist.md` | Real-device acceptance items `Sn` (type X → expect Y, pins `INVARIANT_*`, per-item `Status` line) — read before a dogfood pass | Active |
-| `architecture/incident-log.md` | Dated incident narratives behind the rules in `.claude/rules/taigi-incidents.md` (append-only) | Reference |
+| `architecture/incident-log.md` | Dated incident narratives behind the rules in `docs/contributing/known-pitfalls.md` (append-only) | Reference |
 | `architecture/build-artifacts.md` | What is committed (`dictionaries/`, `fonts/font/`) vs generated (`make build`), why, measured timings, release-rebuild rule | Active |
 | `architecture/pr-number-migration.md` | Resolving pre-2026-09-07 `#NNN` PR numbers (archive repository, numbering restarted at #1) | Reference |
 | `architecture/composing-state-boundary.md` | Composing engine ↔ platform binding contract (§2.2 Effect table, ordering, §11 Android `InputConnection` binding); section numbers frozen | Reference |
@@ -127,6 +127,7 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 | `BUILDING.md` | Contributor build guide: host matrix, prerequisites (`mise.toml`), build + test command per platform, stale-artifact rule, troubleshooting | Active |
 | `roadmap.md` | Forward-looking work items, released-versions index (mobile + desktop trains), closed phases | Active |
 | `CODE_SIGNING_POLICY.md` | Code-signing policy for released binaries (SignPath Foundation requirement) | Active |
+| `contributing/` | Per-platform style guides + cross-cutting rules (phonetics, i18n, cross-platform alignment, known pitfalls); index in `contributing/README.md` | Active |
 
 ---
 

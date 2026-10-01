@@ -345,7 +345,7 @@ pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
 
 /// TPS-mode visual dedupe: collapse candidates sharing `(hanji,
 /// consumed_span)` because the TPS candidate strip hides romanization
-/// (TPS = hanji-first input mode per `.claude/rules/phonetics.md`).
+/// (TPS = hanji-first input mode per `docs/contributing/phonetics.md`).
 /// Two `dict.bin` rows like `灣 / uan` (tone 1) and `灣 / uân` (tone 5)
 /// both index under `tps:ㄨㄢ`, so the build pipeline legitimately
 /// emits both rowids at the same FST key. The pre-sort

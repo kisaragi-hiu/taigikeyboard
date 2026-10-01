@@ -137,6 +137,7 @@ keystore.properties
 .claude/settings.local.json
 .claude/projects/
 .claude/scheduled_tasks.lock
+CLAUDE.local.md
 
 # top-level cloned IME repos only — anchored so it does NOT match docs/references/ or spec/references
 /references/

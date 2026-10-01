@@ -1,14 +1,10 @@
----
-paths: ["ios/**/*.swift"]
----
-
 # iOS Architecture Rules
 
 Mandatory architectural contract for the iOS target. Read before any non-trivial structural change.
 
 iOS is the architectural exemplar; Android matches the shape documented at `docs/architecture/ios-exemplar.md`. The per-slice Rust inventory lives in `docs/engine/migration-inventory.csv`.
 
-**Split note**: Shared-core candidate criteria + marker live in `.claude/rules/ios-shared-core-candidates.md`. Settings-injection wiring lives in `.claude/rules/ios-settings-injection.md`.
+**Split note**: Shared-core candidate criteria + marker live in `docs/contributing/ios-shared-core-candidates.md`. Settings-injection wiring lives in `docs/contributing/ios-settings-injection.md`.
 
 ---
 
@@ -149,22 +145,20 @@ If an Engine-layer file appears to need KeyboardKit, the file is in the **wrong 
 
 Apply to any non-trivial structural change:
 
-- [ ] Any new or moved file in Engine/ passes shared-core criteria (if it claims the marker) — see `.claude/rules/ios-shared-core-candidates.md`
+- [ ] Any new or moved file in Engine/ passes shared-core criteria (if it claims the marker) — see `docs/contributing/ios-shared-core-candidates.md`
 - [ ] No Engine-layer file imports `KeyboardKit` / `UIKit` / `SwiftUI` / `Combine`
-- [ ] No Engine-layer file reads `SharedSettings.shared` / `KeyboardSettings.store` — see `.claude/rules/ios-settings-injection.md`
-- [ ] Settings change sync regression test passes (live-read propagation from app to keyboard) — see `.claude/rules/ios-settings-injection.md` § Change sync regression test
+- [ ] No Engine-layer file reads `SharedSettings.shared` / `KeyboardSettings.store` — see `docs/contributing/ios-settings-injection.md`
+- [ ] Settings change sync regression test passes (live-read propagation from app to keyboard) — see `docs/contributing/ios-settings-injection.md` § Change sync regression test
 - [ ] File names match primary types; no `_` prefix, no numeric folders
 
 ---
 
 ## 6. References
 
-- `.claude/rules/ios-guidelines.md` — day-to-day iOS rules (SourceKit, KeyboardKit, memory mgmt, naming, tests)
-- `.claude/rules/ios-shared-core-candidates.md` — criteria + marker for files eligible for cross-platform extraction
-- `.claude/rules/ios-settings-injection.md` — `EngineSettingsProvider` wiring for live-read settings
-- `.claude/rules/android-guidelines.md` — Android counterpart with shared-core / Kotlin best-practice rules
-- `.claude/rules/cross-platform-alignment.md` — refactor-freeze contract both platforms follow
-- `~/.claude/rules/ai-friendly-code.md` — naming, comments, function design (cross-platform)
-- `~/.claude/rules/code-review-rules.md` — review checklist
+- `docs/contributing/ios-guidelines.md` — day-to-day iOS rules (SourceKit, KeyboardKit, memory mgmt, naming, tests)
+- `docs/contributing/ios-shared-core-candidates.md` — criteria + marker for files eligible for cross-platform extraction
+- `docs/contributing/ios-settings-injection.md` — `EngineSettingsProvider` wiring for live-read settings
+- `docs/contributing/android-guidelines.md` — Android counterpart with shared-core / Kotlin best-practice rules
+- `docs/contributing/cross-platform-alignment.md` — refactor-freeze contract both platforms follow
 - `docs/architecture/ios-exemplar.md` — alignment target for Android
 - `docs/engine/migration-inventory.csv` — authoritative Rust slice inventory + native pending / keep / wont-migrate roster

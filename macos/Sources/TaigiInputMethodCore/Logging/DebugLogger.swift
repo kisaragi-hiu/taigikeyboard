@@ -11,7 +11,7 @@
     private let loggingSubsystem = Bundle.main.bundleIdentifier ?? "TaigiInputMethodTests"
 
     /// Wrapper around `os.Logger` that is a complete no-op in release builds,
-    /// per `.claude/rules/security-rules.md` (release builds emit zero logs).
+    /// per `docs/contributing/security-rules.md` (release builds emit zero logs).
     /// Call sites therefore need no `#if DEBUG` of their own, and `@autoclosure`
     /// keeps the message string from being built at all in release.
     ///

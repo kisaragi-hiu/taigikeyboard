@@ -62,8 +62,7 @@ macos-libs:
 test:
 	cd $(ENGINE) && cargo test --workspace
 
-# Per-crate scoped test for touched-target round workflow
-# (~/.claude/rules/round-workflow.md § Pre-commit quality gates).
+# Per-crate scoped test: run only the crates a change touches.
 # Usage: make test-crate CRATE=phonetics
 test-crate:
 	@if [ -z "$(CRATE)" ]; then echo "Usage: make test-crate CRATE=<name>"; exit 2; fi

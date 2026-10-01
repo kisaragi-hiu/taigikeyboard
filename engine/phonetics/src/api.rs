@@ -1,7 +1,7 @@
 //! High-level Phonetics API for direct in-process callers (the dev
 //! `cli` crate, integration tests, and `phonetics::requests::handle`).
 //! The cross-platform FFI envelope lives in `engine/dispatch` per
-//! `.claude/rules/rust-best-practices.md §3a`; this module never decodes a
+//! `docs/contributing/rust-best-practices.md §3a`; this module never decodes a
 //! top-level `taigi.engine.Request` or owns a panic boundary.
 
 use crate::case_transform::{apply_nasal_marker_case, match_case};

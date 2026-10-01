@@ -35,7 +35,7 @@ pub const CONTINUOUS_DEFAULT_SOURCE_RANK: u8 = 5;
 /// is the cross-platform invariant axis for PR-9.3a + PR-9.3b/c
 /// (`docs/releases/v3.5.8/plan.md` § Phase 9 跨平台 invariant 常數). Platforms MUST NOT
 /// redefine — single source of truth per
-/// `.claude/rules/cross-platform-alignment.md` §3a.
+/// `docs/contributing/cross-platform-alignment.md` §3a.
 pub const BOOST_ALPHA: f32 = 0.1;
 
 /// Saturation ceiling for the Continuous-input `user_freq_boost`.
@@ -54,7 +54,7 @@ pub const MAX_BOOST: f32 = 5.0;
 /// Cross-platform invariant: this fn is the single source of truth
 /// for Continuous-input source ordering. Platform-side ranking code
 /// MUST NOT redefine the table; per
-/// `.claude/rules/cross-platform-alignment.md` §3a.
+/// `docs/contributing/cross-platform-alignment.md` §3a.
 pub fn source_tier_rank(bitmask: u16, is_custom: bool) -> u8 {
     if is_custom {
         return 0;
@@ -210,7 +210,7 @@ pub fn user_freq_boost(count: u32) -> f32 {
 /// the weight decays to `1/e ≈ 0.37` after τ and to `0.5` after
 /// `τ · ln 2 ≈ 20.8 days` for the τ = 30-day default. Named for the
 /// mathematical role rather than "half-life" to keep the formula
-/// honest (`~/.claude/rules/ai-friendly-code.md` naming). 30 days is the right
+/// honest. 30 days is the right
 /// initial shape for an IME: strong over days, meaningful over weeks,
 /// noticeably stale over months. **Dogfood-tunable in 14..=90 days**
 /// (Codex pre-impl S3 Q4a, 2026-05-16) — kept a named constant, not a

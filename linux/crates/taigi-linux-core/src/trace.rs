@@ -54,7 +54,7 @@ pub(crate) fn key(raw: RawKeyEvent, reply: &KeyReply, state: &EngineState) {
 }
 
 /// The list as shown, display order: each cell's `(hanji, displayed
-/// reading)` plus its canonical TL — the identity pair of CLAUDE.md #6.
+/// reading)` plus its canonical TL — the identity pair of AGENTS.md #6.
 fn candidates(state: &EngineState) {
     let items: Vec<String> = (0..)
         .map_while(|cell| state.candidates.resolve(cell, false))

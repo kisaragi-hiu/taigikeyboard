@@ -141,4 +141,4 @@ To inspect a previous release's full dictionary directly:
 - **Cross-platform invariant**: `SOURCE_BITS` + `SOURCE_TIERS` + tier
   denominator in `common/source_bits.py` must mirror the iOS/Android
   `DictionaryBinaryReader.{swift,kt}` and `CandidateProcessor.{swift,kt}`.
-  `.claude/rules/cross-platform-alignment.md` §3a governs drift.
+  `docs/contributing/cross-platform-alignment.md` §3a governs drift.

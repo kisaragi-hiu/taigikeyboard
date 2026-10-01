@@ -1,7 +1,3 @@
----
-paths: ["windows/**"]
----
-
 # Windows Project Guidelines
 
 Mandatory rules for the Windows input method (`windows/`, Rust: TSF DLL + settings exe over the
@@ -9,7 +5,7 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 
 ## Authored without a Windows machine
 
-- The platform was written blind (USER 2026-08-29). Every PR passes `make windows-check`
+- The platform was written blind (developed on macOS; a Windows box is used over ssh). Every PR passes `make windows-check`
   (`windows/Makefile` `check`) on the macOS host: the i18n check, `cargo test` for the
   `HOST_TESTABLE` crates (native), `cargo clippy --workspace --all-targets --target
   x86_64-pc-windows-gnu -- -D warnings` (full graph incl. rusqlite via mingw-w64), `cargo check`
@@ -140,10 +136,9 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 
 - `make windows-release` runs on a Windows host (Git Bash); `windows/scripts/publish-release.sh`
   mirrors the macOS publisher and stages the installer on the same **draft** `desktop-<version>`
-  release in this repo. Nothing reaches a user until USER tests it and publishes by hand, which
+  release in this repo. Nothing reaches a user until the maintainer tests it and publishes by hand, which
   runs the announcement itself (`docs/architecture/desktop-release.md`). Never run any of it
-  without USER's explicit release instruction (`diagnosis-discipline.md` § No unilateral release
-  scope).
+  without the maintainer's explicit release instruction.
 - **Releases ship UNSIGNED** (owner 2026-09-04, no certificate for a year or two):
   `make windows-release RELEASE_FLAGS=--skip-sign`, which passes `--allow-unsigned` down to the
   publisher; the artifact keeps the plain `TaigiKeyboard-<version>.exe` name. What admits a

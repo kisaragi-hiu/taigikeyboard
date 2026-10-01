@@ -53,7 +53,7 @@ features = [
 # cannot be written without `unsafe` — the exported entry points take raw
 # pointers from the host, every TSF call is `unsafe` in the `windows` crate,
 # and the registry API is raw. Every block carries a `// SAFETY:` comment
-# (`.claude/rules/rust-ffi-safety.md` §3); the pure crates keep the forbid.
+# (`docs/contributing/rust-ffi-safety.md` §3); the pure crates keep the forbid.
 [lints.rust]
 unsafe_code = "allow"
 

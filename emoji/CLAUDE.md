@@ -2,9 +2,7 @@
 
 Guidelines for Claude Code in this repo (Python emoji-data pipeline for TaigiKeyboard).
 
-Cross-project process rules (workflow, planning, review, naming, docs, Python) auto-load from
-`~/.claude/rules/` (user-global, from the `configurations` dotfiles repo). Project rules live in
-`.claude/rules/`; personal defaults in `~/.claude/CLAUDE.md`.
+Project rules live in `.claude/rules/`; repository-wide rules in the parent `AGENTS.md`.
 
 ## Project Overview
 

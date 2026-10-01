@@ -1,7 +1,3 @@
----
-paths: ["ios/**/*.swift"]
----
-
 # iOS Project Guidelines
 
 Mandatory rules for iOS development. Read before modifying iOS code.
@@ -13,7 +9,7 @@ Mandatory rules for iOS development. Read before modifying iOS code.
 
 ## KeyboardKit
 
-KeyboardKit 10+ is closed-source, so its API comes from docs, not source. Look it up per `.claude/rules/doc-lookup.md` (Context7 first, then `references/KeyboardKit-Documentation/`).
+KeyboardKit 10+ is closed-source, so its API comes from docs, not source. Look it up per `docs/contributing/doc-lookup.md` (Context7 first, then `references/KeyboardKit-Documentation/`).
 
 ## Memory Management
 
@@ -43,7 +39,7 @@ KeyboardKit 10+ is closed-source, so its API comes from docs, not source. Look i
 
 ## Xcode / pbxproj — user-only, with synced-group exceptions
 
-`*.xcodeproj`, `*.xcworkspace`, and `*.pbxproj` are **user-only**. AI never edits them. The hook at `.claude/hooks/block-project-config.sh` enforces this. Do not work around with code-level hacks; list any Xcode-side step as an action item for the user.
+`*.xcodeproj`, `*.xcworkspace`, and `*.pbxproj` are **maintainer-only**. Agents never edit them. The hook at `.claude/hooks/block-project-config.sh` enforces this. Do not work around with code-level hacks; list any Xcode-side step as an action item for the user.
 
 ### Synchronized groups auto-include new files
 
@@ -83,4 +79,4 @@ for d in ios/Sources/TaigiKeyboard/*/; do
 done
 ```
 
-If drift exists: alert the user. They drag the new folder into Project Navigator as *Create folder references* and delete the orphan group. AI never edits pbxproj directly. Symptom of undetected drift: `xcodebuild` fails with "Cannot find '<Type>' in scope" for types defined under the renamed folder.
+If drift exists: alert the user. They drag the new folder into Project Navigator as *Create folder references* and delete the orphan group. Agents never edit pbxproj directly. Symptom of undetected drift: `xcodebuild` fails with "Cannot find '<Type>' in scope" for types defined under the renamed folder.

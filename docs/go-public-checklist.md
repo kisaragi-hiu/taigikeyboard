@@ -171,7 +171,7 @@ reading through the `taigi-converter` submodule. A clone without it fails ten
 minutes in with a `TypeError` in `dictionary/common/cleanup.py:201` that mentions
 neither node nor submodules — the import failure makes every conversion return an
 error string, which the pipeline then ingests as data. Both entry points now
-refuse to start without it (#4), and `CLAUDE.md`'s bootstrap section leads with
+refuse to start without it (#4), and `AGENTS.md`'s bootstrap section leads with
 it. `make dict` takes about 2 minutes once it can run.
 
 Before the flip, do this from a clean machine with no GitHub credentials

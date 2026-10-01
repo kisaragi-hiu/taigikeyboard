@@ -22,7 +22,7 @@
 //! `LexiconHandle` install, `dictionary.fst` emitting BOTH the toneless
 //! `tps:<tps_notone>` and toned `tps:<tps_num>` families like production
 //! `dictionary/build/create_fst.py:126-141`. Per the fixture-coverage rule
-//! in `.claude/rules/taigi-incidents.md`, every strict prefix of a probed
+//! in `docs/contributing/known-pitfalls.md`, every strict prefix of a probed
 //! key that is itself a production syllable is present as a control row
 //! (之/tsi under ㄐㄧㆵ) and asserted on.
 

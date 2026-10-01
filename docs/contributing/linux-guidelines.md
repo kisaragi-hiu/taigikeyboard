@@ -1,7 +1,3 @@
----
-paths: ["linux/**", "desktop/**"]
----
-
 # Linux Project Guidelines
 
 Mandatory rules for the Linux input method (`linux/`: Fcitx5 addon (primary, C++ over a Rust C ABI)
@@ -10,7 +6,7 @@ record: `docs/architecture/linux-roadmap.md`.
 
 ## Authored without a Linux machine
 
-- The platform was written blind (USER 2026-09-22), like Windows. Every PR passes
+- The platform was written blind (no Linux desktop on the maintainer's machine), like Windows. Every PR passes
   `make linux-check` on the macOS host: `cargo test` in `desktop/` (native), `cargo clippy
   --workspace --all-targets -- -D warnings` in `linux/` (native: `zbus` + gtk4-rs + libadwaita
   from Homebrew), a real cross build of the engine for `x86_64-unknown-linux-gnu` via `cargo zigbuild`
@@ -57,7 +53,7 @@ record: `docs/architecture/linux-roadmap.md`.
 
 ## Settings window (GTK 4 + libadwaita)
 
-- Native widgets only (USER: "use native UI components for the settings UI"): `adw::PreferencesPage` / `Group` /
+- Native widgets only (maintainer: "use native UI components for the settings UI"): `adw::PreferencesPage` / `Group` /
   `ActionRow` / `SwitchRow` / `ComboRow` / `EntryRow` / `ExpanderRow`, `adw::AlertDialog`,
   `adw::Banner`, `adw::Toast`, `gtk::ColumnView`, `gtk::FileDialog`. No custom-drawn cards.
 - Pin the `gtk4` / `libadwaita` crate versions to what the Homebrew and Ubuntu libraries
@@ -73,5 +69,5 @@ record: `docs/architecture/linux-roadmap.md`.
 - `settings.json` = `$XDG_CONFIG_HOME/taigikeyboard/`; databases = `$XDG_DATA_HOME/taigikeyboard/`;
   dictionaries = `${prefix}/share/taigikeyboard/dictionaries` (`TAIGIKEYBOARD_PREFIX` at build,
   `TAIGIKEYBOARD_DATA_DIR` at runtime for a dev tree). Never the working directory.
-- No update check on Linux, manual or automatic, and no build flag for one — the distribution's package manager updates an input method (USER 2026-09-25, roadmap L10). Never link `taigi-desktop-update`; the `update*` keys stay unwritten. Do not re-propose.
-- Release / package / tag actions are USER-gated (`~/.claude/rules/diagnosis-discipline.md`).
+- No update check on Linux, manual or automatic, and no build flag for one — the distribution's package manager updates an input method (maintainer 2026-09-25, roadmap L10). Never link `taigi-desktop-update`; the `update*` keys stay unwritten. Do not re-propose.
+- Release / package / tag actions are the maintainer's call.

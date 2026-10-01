@@ -63,7 +63,7 @@ REPOS=(
   # Pinned to the fcitx5 Ubuntu 24.04 ships; `make -C linux check-cpp`
   # syntax-checks the addon against these headers.
   "fcitx5|git@github.com:fcitx/fcitx5.git|pin:5.1.7:git@github.com:fcitx/fcitx5.git"
-  # The offline authority for KeyboardKit (.claude/rules/doc-lookup.md): a
+  # The offline authority for KeyboardKit (docs/contributing/doc-lookup.md): a
   # published DocC archive, but a real git repo — clone it like any other.
   "KeyboardKit-Documentation|git@github.com:KeyboardKit/KeyboardKit-Documentation.git|"
 )
