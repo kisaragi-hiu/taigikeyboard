@@ -33,7 +33,7 @@ LAYOUT ?= debian
 # the typefaces' OFL and the dictionary's per-source terms. Debian folds them
 # into its one `copyright` file; Fedora also ships the Apache text, which Arch
 # (its `licenses` package) and Debian (common-licenses) already hold.
-LICENSE_TEXTS := ../NOTICE ../THIRD_PARTY_LICENSES.md ../fonts/OFL-1.1.txt ../dictionary/LICENSE
+LICENSE_TEXTS := ../NOTICE ../THIRD_PARTY_LICENSES.md ../assets/fonts/OFL-1.1.txt ../dictionary/LICENSE
 ifeq ($(LAYOUT),debian)
   LIBEXECDIR := $(PREFIX)/libexec
   FONTDIR_TTF := $(PREFIX)/share/fonts/truetype/taigikeyboard
@@ -161,7 +161,7 @@ install: build component install-fcitx5
 	install -Dm755 target/release/taigikeyboard-settings $(DESTDIR)$(PREFIX)/bin/taigikeyboard-settings
 	install -Dm644 target/taigikeyboard.xml $(DESTDIR)$(PREFIX)/share/ibus/component/taigikeyboard.xml
 	install -d $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries
-	install -m644 ../dictionaries/dictionary.fst ../dictionaries/dictionary.bin ../dictionaries/association.bin ../dictionaries/syllables.fst $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries/
+	install -m644 ../assets/dictionaries/dictionary.fst ../assets/dictionaries/dictionary.bin ../assets/dictionaries/association.bin ../assets/dictionaries/syllables.fst $(DESTDIR)$(PREFIX)/share/taigikeyboard/dictionaries/
 	install -Dm644 data/tw.taigikeyboard.Settings.desktop $(DESTDIR)$(PREFIX)/share/applications/tw.taigikeyboard.Settings.desktop
 	for size in 16 22 24 32 48 64 128 256; do \
 	  install -Dm644 data/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png $(DESTDIR)$(PREFIX)/share/icons/hicolor/$${size}x$${size}/apps/taigikeyboard.png || exit 1; \
@@ -169,20 +169,22 @@ install: build component install-fcitx5
 	# The bundled typefaces (the ones macOS and Windows ship), as fontconfig
 	# fallbacks for the Han characters the desktop's fonts lack (roadmap L4);
 	# users pick them in Fcitx5 / IBus (L7).
-	install -Dm644 -t $(DESTDIR)$(FONTDIR_TTF) ../fonts/font/*.ttf
-	install -Dm644 -t $(DESTDIR)$(FONTDIR_OTF) ../fonts/font/*.otf
+	install -Dm644 -t $(DESTDIR)$(FONTDIR_TTF) ../assets/fonts/font/*.ttf
+	install -Dm644 -t $(DESTDIR)$(FONTDIR_OTF) ../assets/fonts/font/*.otf
 ifeq ($(LAYOUT),debian)
 	# Debian Policy §12.5: one `copyright` file, every non-common licence
 	# verbatim; Apache-2.0 is named in the header (common-licenses).
 	install -d $(DESTDIR)$(LICENSEDIR)
 	{ cat packaging/copyright-header; for f in $(LICENSE_TEXTS); do \
-	    printf '\n%s\n%s\n\n' '========================================================================' "$${f#../}"; cat "$$f"; \
+	    name="$${f#../}"; name="$${name#assets/}"; \
+	    printf '\n%s\n%s\n\n' '========================================================================' "$$name"; cat "$$f"; \
 	  done; } > $(DESTDIR)$(LICENSEDIR)/copyright
 else
-	# One file per text, named after its repo path (fonts/OFL-1.1.txt →
-	# fonts-OFL-1.1.txt), so the two `LICENSE`s stay apart.
+	# One file per text, named after its repo path minus `assets/`
+	# (assets/fonts/OFL-1.1.txt → fonts-OFL-1.1.txt), so the two `LICENSE`s
+	# stay apart.
 	for f in $(LICENSE_TEXTS); do \
-	  name="$${f#../}"; install -Dm644 "$$f" "$(DESTDIR)$(LICENSEDIR)/$${name//\//-}" || exit 1; \
+	  name="$${f#../}"; name="$${name#assets/}"; install -Dm644 "$$f" "$(DESTDIR)$(LICENSEDIR)/$${name//\//-}" || exit 1; \
 	done
 endif
 	# A package gets its cache rebuilt by fontconfig's dpkg trigger; a direct

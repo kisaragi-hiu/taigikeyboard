@@ -15,7 +15,7 @@ e2e_sync() {
     # Only what `make -C linux install` reads (the `../` inputs of
     # linux/Makefile, licence texts included) plus the harness. `target/`
     # stays on the VM so the next run builds incrementally.
-    local trees=(engine desktop linux dictionaries i18n fonts symbols tools e2e)
+    local trees=(engine desktop linux assets i18n tools e2e)
     local files=(LICENSE NOTICE THIRD_PARTY_LICENSES.md dictionary/LICENSE)
     $ssh_cmd "$host" "mkdir -p $E2E_REMOTE/src/dictionary"
     # One rsync per tree rather than one `--relative` call: macOS openrsync

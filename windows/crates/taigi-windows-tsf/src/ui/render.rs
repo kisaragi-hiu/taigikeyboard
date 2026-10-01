@@ -37,7 +37,7 @@ use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_UNKNOWN;
 use windows::Win32::System::Threading::WaitForSingleObject;
 
 /// The install directory's font folder — where the installer (PR10) copies the
-/// repo-root `fonts/font/` (macOS `bundle-app.sh:177-207`).
+/// repo-root `assets/fonts/font/` (macOS `bundle-app.sh:177-207`).
 pub const FONTS_DIR_NAME: &str = "Fonts";
 /// The face the UI (index labels) and the `System` choice draw in on
 /// Windows 11 — the same family the WinUI settings window renders in, so

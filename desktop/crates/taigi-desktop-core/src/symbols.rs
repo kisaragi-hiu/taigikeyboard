@@ -5,10 +5,10 @@ use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
-/// `symbols/desktop-symbols.json` at the repository root — the one source
+/// `assets/symbols/desktop-symbols.json` at the repository root — the one source
 /// both desktops read (macOS bundles the file; this crate compiles it in),
 /// so the two pickers cannot drift.
-const BUNDLED_JSON: &str = include_str!("../../../../symbols/desktop-symbols.json");
+const BUNDLED_JSON: &str = include_str!("../../../../assets/symbols/desktop-symbols.json");
 
 /// How the file groups its symbols. The picker shows them as ONE list, in
 /// file order (USER 2026-09-09: a category to pick first "would interrupt the

@@ -339,10 +339,10 @@ mod tests {
     };
 
     /// A typeface every checkout has: the repo-root folder all four platforms
-    /// package (`fonts/font/`).
+    /// package (`assets/fonts/font/`).
     fn bundled_typeface() -> std::path::PathBuf {
         std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../../fonts/font/iansui_regular.ttf")
+            .join("../../../assets/fonts/font/iansui_regular.ttf")
     }
 
     #[test]

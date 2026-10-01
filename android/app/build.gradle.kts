@@ -78,17 +78,17 @@ android {
 
     // The typefaces, from the repo-root directory the other three platforms
     // package out of too. Their names are Android resource names precisely so
-    // this needs no build-time copy or rename; `fonts/font/` merges with this
+    // this needs no build-time copy or rename; `assets/fonts/font/` merges with this
     // module's own res/font/, which keeps `jf_openhuninn.xml` — a font-family
     // declaration, not a typeface — in the module.
-    sourceSets["main"].res.srcDir(file("$rootDir/../fonts"))
+    sourceSets["main"].res.srcDir(file("$rootDir/../assets/fonts"))
 
     // The four dictionary artifacts, from the repo-root directory the other
     // three platforms package out of too. `srcDir` appends, so this module's
     // own assets/ (english_freq.txt, ime/, the two i18n symlinks) is untouched,
     // and an asset key is relative to its source dir — `dictionary.fst` lands at
     // the assets root, exactly where TaigiKeyboardApplication opens it.
-    sourceSets["main"].assets.srcDir(file("$rootDir/../dictionaries"))
+    sourceSets["main"].assets.srcDir(file("$rootDir/../assets/dictionaries"))
 
     buildTypes {
         release {

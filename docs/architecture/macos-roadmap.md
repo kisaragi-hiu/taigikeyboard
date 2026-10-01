@@ -56,7 +56,7 @@ Host app — IMKTextInput client
 ```
 
 Runtime data: `dictionary.fst` / `dictionary.bin` / `association.bin` /
-`syllables.fst` read from the repo-root `dictionaries/` at bundle-assembly time
+`syllables.fst` read from the repo-root `assets/dictionaries/` at bundle-assembly time
 (read-only, fail-fast validated) into `.app/Contents/Resources`; absolute paths
 passed via `lexiconInstall`.
 
@@ -244,7 +244,7 @@ Phase-0 plan and project memory `project_macos_ime.md` (Claude auto-memory).
     associations its decisions record, and the manager
     only reports handshakes through `NextWord/NextWordPort.swift`
     (`EngineNextWord`). iOS and Android reached the v6 association shape too.
-- **D8 Dictionary artifacts** — read from the repo-root `dictionaries/` (read-only)
+- **D8 Dictionary artifacts** — read from the repo-root `assets/dictionaries/` (read-only)
   at bundle time with fail-fast existence/non-empty validation. That directory is
   the single committed copy all four platforms package from; `dictionary/build/deploy.sh`
   writes it.

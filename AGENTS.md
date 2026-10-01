@@ -11,6 +11,7 @@ android/  ios/  macos/  windows/  linux/   # platform apps
 engine/            # Shared Rust engine — Cargo workspace, FFI to every platform
 desktop/           # Rust crates shared by Windows + Linux (taigi-desktop-core / -storage / -update)
 dictionary/        # Dictionary sources + build pipeline + output artifacts
+assets/            # Committed shipped data every platform packages — dictionaries/ (pipeline output), fonts/, symbols/
 docs/              # engine/, architecture/, contributing/, phonetics/ (TL/POJ/TPS reference), ui/, references/, reports/, roadmap.md
 taigi-converter/   # Canonical TL↔POJ↔TPS converter (git submodule)
 tools/             # Dev tooling — test selection, i18n codegen, release/, secret-scan/

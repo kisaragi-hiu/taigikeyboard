@@ -20,7 +20,7 @@ struct SymbolCategory: Decodable, Equatable, Sendable {
     let symbols: [String]
 }
 
-/// The whole table, from `symbols/desktop-symbols.json` — the one source both
+/// The whole table, from `assets/symbols/desktop-symbols.json` — the one source both
 /// desktop platforms read, so the two pickers cannot drift (the file's own
 /// comment says how each platform reaches it).
 struct SymbolTable: Decodable, Equatable, Sendable {

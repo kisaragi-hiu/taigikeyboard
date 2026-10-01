@@ -15,7 +15,7 @@
 
 ## 1. System context
 
-Every platform marshals a proto request to the same engine and renders the proto response. The four read-only data artifacts (`dictionaries/`, committed once) are byte-identical across platforms and memory-mapped by the engine.
+Every platform marshals a proto request to the same engine and renders the proto response. The four read-only data artifacts (`assets/dictionaries/`, committed once) are byte-identical across platforms and memory-mapped by the engine.
 
 ```mermaid
 graph TB
@@ -94,7 +94,7 @@ graph TD
 
 Omitted for readability: **`protos`** (prost-generated message types; every crate depends on it — the true leaf); **`mmap-host`** (the single `unsafe` mmap carve-out, used only by `lexicon`); external crates (`swift-bridge` / `jni` in the adapters, `fst` in `lexicon` + `fst-builder`, `memmap2` in `mmap-host`, `rusqlite` (bundled SQLite) in `userdata`, which only `dispatch/user-data` pulls in — `taigi-desktop-core` reaches the stores only through `dispatch`'s user-data ops, so a build that leaves `dispatch/user-data` off stays C-free; `taigi-desktop-storage` (settings file, fonts, directory) sits beside `desktop-core` with no engine edge of its own); **`build-helpers/fst-builder`** (offline tool producing `dictionary.fst` / `syllables.fst`); **`test-support`** (dev-dependency shared by the engine crates' tests; no engine edge). Layers: **adapters** (`swift-ffi`, `android-jni`, `taigi-desktop-core`) → **use-case** (`dispatch`) → **domain** (`composing`, `lexicon`, `ranking`, `nextword`, `userdata`) → **leaf kernel** (`phonetics`, `protos`, `mmap-host`). `dispatch/src/trace.rs` is the test-build-only JSONL trace behind the `e2e-trace` feature ([`e2e-trace-schema.md`](e2e-trace-schema.md)).
 
-Crates above the graph: `desktop/` = `taigi-desktop-core` (engine bridge, composing coordinator + intent executor, keys, settings model, strings), `taigi-desktop-storage` (settings file + writer, fonts, data directory) and `taigi-desktop-update` (update check, Windows only today); `windows/crates/` = `taigi-windows-tsf` (COM TIP), `taigi-windows-platform` (Win32 helpers), `taigi-windows-settings` (WinUI 3 window), `taigi-windows-update` (installer download + verify); `linux/crates/` = `taigi-linux-core` (session, executor, chrome), `taigi-linux-platform` (XDG paths, key translation, locale, launcher), `taigi-linux-ffi` (Fcitx5 C ABI), `taigikeyboard-ibus`, `taigikeyboard-settings`. Other trees: `e2e/` (end-to-end scenarios, analyzer, drivers), `emoji/` (own `CLAUDE.md`), `symbols/`, `fonts/`, `windows/installer/`, `linux/packaging/`, `macos/updates/`, `tools/release/stage-desktop.sh`.
+Crates above the graph: `desktop/` = `taigi-desktop-core` (engine bridge, composing coordinator + intent executor, keys, settings model, strings), `taigi-desktop-storage` (settings file + writer, fonts, data directory) and `taigi-desktop-update` (update check, Windows only today); `windows/crates/` = `taigi-windows-tsf` (COM TIP), `taigi-windows-platform` (Win32 helpers), `taigi-windows-settings` (WinUI 3 window), `taigi-windows-update` (installer download + verify); `linux/crates/` = `taigi-linux-core` (session, executor, chrome), `taigi-linux-platform` (XDG paths, key translation, locale, launcher), `taigi-linux-ffi` (Fcitx5 C ABI), `taigikeyboard-ibus`, `taigikeyboard-settings`. Other trees: `e2e/` (end-to-end scenarios, analyzer, drivers), `emoji/` (own `CLAUDE.md`), `assets/` (dictionaries, fonts, symbols), `windows/installer/`, `linux/packaging/`, `macos/updates/`, `tools/release/stage-desktop.sh`.
 
 ---
 
@@ -109,7 +109,7 @@ flowchart TD
         src["dictionary/sources/ + supplementary/"] --> pipe["run.sh → per-source normalize (taigi-converter submodule)"]
         pipe --> merge["merge_csv → dictionary.csv"] --> binw["create_dictionary_bin → dictionary.bin"]
         binw --> fstw["create_fst / create_syllables_fst<br/>→ dictionary.fst, syllables.fst"] --> assoc["create_association_bin → association.bin"]
-        assoc --> dep["deploy.sh → dictionaries/ (committed)"]
+        assoc --> dep["deploy.sh → assets/dictionaries/ (committed)"]
     end
     subgraph buildpipe["make build — engine/scripts/*.sh (5 s warm, minutes cold)"]
         direction TB

@@ -164,7 +164,7 @@ class PlatformSelectionTests(SelectorTestCase):
         self.assertIn("python3 tools/i18n/check.py", self.runs(selection, "i18n"))
 
     def test_dictionaries_select_data_crates_and_desktop(self) -> None:
-        selection = self.select("dictionaries/dictionary.bin")
+        selection = self.select("assets/dictionaries/dictionary.bin")
 
         self.assertEqual(selection.engine_crates, ["composing", "lexicon", "dispatch"])
         self.assertEqual(set(selection.commands), {"engine", "desktop"})

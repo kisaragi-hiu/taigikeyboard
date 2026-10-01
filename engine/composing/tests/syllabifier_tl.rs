@@ -4,7 +4,7 @@
 //! Tests use a hermetic `SyllableInventory` built per-case so that the
 //! roadmap's pedagogical examples (`tai → {3}`, `taibak → {3, 6}`,
 //! `khihthau → {4, 8}`) hold without depending on the production
-//! `dictionaries/syllables.fst` (which contains additional
+//! `assets/dictionaries/syllables.fst` (which contains additional
 //! syllables like `ta`, `tha`, `ba` that would expand the result set).
 //! Reuses production `phonetics::canonicalize_syllable` so that test
 //! samples can be authored in either TL or POJ shape.

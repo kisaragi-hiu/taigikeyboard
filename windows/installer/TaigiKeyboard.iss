@@ -11,8 +11,8 @@
 ;   Runtime\*                      (the Windows App Runtime the settings window
 ;                                   runs on — self-contained, roadmap W17;
 ;                                   installed BESIDE the exe)
-;   Dictionaries\*                 (from the repo-root dictionaries)
-;   Fonts\*                        (from the repo-root fonts/font)
+;   Dictionaries\*                 (from the repo-root assets/dictionaries)
+;   Fonts\*                        (from the repo-root assets/fonts/font)
 ;   update-check-task.xml          (the scheduled task's definition)
 ;
 ; What it does that a plain file copy would not (rakukan `rakukan_installer.iss`,
@@ -155,7 +155,7 @@ Source: "{#Dist}\update-check-task.xml"; DestDir: "{app}"; Flags: ignoreversion
 [InstallDelete]
 Type: files; Name: "{autoprograms}\Taigi Keyboard.lnk"
 ; The bundled typefaces were renamed when they moved to the repo-root
-; fonts/font directory (3.6.8). `ignoreversion` only overwrites files it also
+; assets/fonts/font directory (3.6.8). `ignoreversion` only overwrites files it also
 ; ships, so an upgrade from 3.6.7 or earlier would leave the four old-name
 ; copies behind as ~40 MB of dead weight until uninstall.
 Type: files; Name: "{app}\Fonts\GenYoGothic2TW-R.otf"

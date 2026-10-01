@@ -43,7 +43,7 @@
 | `architecture/behavioral-invariants.md` | Cross-platform behavior contract (every Rust slice must preserve) | Active |
 | `architecture/dogfood-checklist.md` | Real-device acceptance items `Sn` (type X → expect Y, pins `INVARIANT_*`, per-item `Status` line) — read before a dogfood pass | Active |
 | `architecture/incident-log.md` | Dated incident narratives behind the rules in `docs/contributing/known-pitfalls.md` (append-only) | Reference |
-| `architecture/build-artifacts.md` | What is committed (`dictionaries/`, `fonts/font/`) vs generated (`make build`), why, measured timings, release-rebuild rule | Active |
+| `architecture/build-artifacts.md` | What is committed (`assets/dictionaries/`, `assets/fonts/font/`) vs generated (`make build`), why, measured timings, release-rebuild rule | Active |
 | `architecture/pr-number-migration.md` | Resolving pre-2026-09-07 `#NNN` PR numbers (archive repository, numbering restarted at #1) | Reference |
 | `architecture/composing-state-boundary.md` | Composing engine ↔ platform binding contract (§2.2 Effect table, ordering, §11 Android `InputConnection` binding); section numbers frozen | Reference |
 | `architecture/nextword-engine-boundary.md` | NextWord engine ↔ platform binding contract (generation, decay, timer, §13 Android binding); section numbers frozen | Reference |

@@ -80,7 +80,7 @@ enum TestFixtures {
     /// `<repo>/fonts/font` — the shared typeface directory every platform
     /// packages from, and the one `bundle-app.sh` copies into the assembled
     /// `.app`'s `ATSApplicationFontsPath`.
-    static let fontDirectory = repositoryRoot.appendingPathComponent("fonts/font")
+    static let fontDirectory = repositoryRoot.appendingPathComponent("assets/fonts/font")
 
     /// A family the running Mac has installed — the premise of every installed-
     /// typeface case, taken from the live list because no family is guaranteed

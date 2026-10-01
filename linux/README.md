@@ -73,7 +73,7 @@ make deb                         # or: the .deb, from the same install layout (t
 
 Then add 台語齒盤 (language `nan`) in `fcitx5-configtool` (Fcitx5) or the desktop's input-source settings (IBus).
 For a development tree, `TAIGIKEYBOARD_DATA_DIR=<repo root>` points the
-engine at the repository's own `dictionaries/` without installing them;
+engine at the repository's own `assets/dictionaries/` without installing them;
 `RUST_LOG=debug` on the engine process logs every key's intent.
 
 User data: `~/.config/taigikeyboard/settings.json`,

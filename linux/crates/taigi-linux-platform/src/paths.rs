@@ -10,7 +10,7 @@
 //! Read-only assets come from the install prefix baked in at build time
 //! (`TAIGIKEYBOARD_PREFIX`, default `/usr`), the way a distribution package
 //! expects; `TAIGIKEYBOARD_DATA_DIR` at runtime points a development tree at
-//! the repository's own `dictionaries/` without installing anything.
+//! the repository's own `assets/dictionaries/` without installing anything.
 //!
 //! Every function takes the environment as a closure so a test can hand in
 //! any combination without mutating the process environment.
@@ -23,7 +23,7 @@ use std::path::{Path, PathBuf};
 pub const APPLICATION_DIRECTORY_NAME: &str = "taigikeyboard";
 
 /// The runtime override for a development tree: a directory holding
-/// `dictionaries/` (the repository root, typically).
+/// `assets/dictionaries/` (the repository root, typically).
 pub const DATA_DIR_OVERRIDE: &str = "TAIGIKEYBOARD_DATA_DIR";
 
 /// The prefix the build was configured for, or `/usr`.

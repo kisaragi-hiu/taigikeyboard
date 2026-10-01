@@ -21,11 +21,11 @@ on:
       - 'engine/**'
       - '!engine/android-jni/**'
       - '!engine/build-helpers/fst-builder/**'
-      - 'dictionaries/**'
+      - 'assets/dictionaries/**'
       - 'i18n/**'
       - 'tools/i18n/**'
-      - 'symbols/**'
-      - 'fonts/font/**'
+      - 'assets/symbols/**'
+      - 'assets/fonts/font/**'
       - '.github/workflows/macos.yml'
   push:
     branches: [main]
@@ -34,11 +34,11 @@ on:
       - 'engine/**'
       - '!engine/android-jni/**'
       - '!engine/build-helpers/fst-builder/**'
-      - 'dictionaries/**'
+      - 'assets/dictionaries/**'
       - 'i18n/**'
       - 'tools/i18n/**'
-      - 'symbols/**'
-      - 'fonts/font/**'
+      - 'assets/symbols/**'
+      - 'assets/fonts/font/**'
       - '.github/workflows/macos.yml'
 
 permissions:

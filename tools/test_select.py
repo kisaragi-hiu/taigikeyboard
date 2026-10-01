@@ -81,7 +81,6 @@ NO_GATE_DIRS = {
     "changelog",
     "corpus",
     "docs",
-    "fonts",
 }
 INVARIANT_PREFIXES = ("docs/", "tools/invariant_labels")
 INVARIANT_SUFFIXES = (".rs", ".kt", ".swift")
@@ -243,6 +242,19 @@ def add_tools_path(path: str, effects: Effects) -> None:
         effects.unmapped.append(path)
 
 
+def add_assets_path(path: str, effects: Effects) -> None:
+    if path.startswith("assets/dictionaries/"):
+        effects.engine_leaf_crates |= {"composing", "lexicon", "dispatch"}
+        effects.platforms.add("desktop")
+    elif path.startswith("assets/symbols/"):
+        effects.platforms |= {"desktop", "windows", "linux", "macos"}
+    elif path.startswith("assets/fonts/"):
+        # Typefaces ship as-is: no build or test gate.
+        pass
+    else:
+        effects.unmapped.append(path)
+
+
 def effects_of(paths: Iterable[str], graph: EngineGraph) -> Effects:
     effects = Effects()
     for path in paths:
@@ -266,17 +278,14 @@ def effects_of(paths: Iterable[str], graph: EngineGraph) -> Effects:
             add_engine_path(path, graph, effects)
         elif top == "dictionary":
             add_dictionary_path(path, effects)
-        elif top == "dictionaries":
-            effects.engine_leaf_crates |= {"composing", "lexicon", "dispatch"}
-            effects.platforms.add("desktop")
+        elif top == "assets":
+            add_assets_path(path, effects)
         elif top == "tools":
             add_tools_path(path, effects)
         elif top == "i18n":
             effects.platforms |= {"i18n", "ios", "android", "macos"}
         elif top == "desktop":
             effects.platforms |= {"desktop", "windows", "linux"}
-        elif top == "symbols":
-            effects.platforms |= {"desktop", "windows", "linux", "macos"}
         elif top == "e2e":
             effects.python.add("e2e")
         elif top == "emoji":

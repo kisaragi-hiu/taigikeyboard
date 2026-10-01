@@ -1,4 +1,4 @@
-//! Integration tests over the production lexicon (`dictionaries/`),
+//! Integration tests over the production lexicon (`assets/dictionaries/`),
 //! installed once per process — never next to a hermetic fixture install.
 
 mod common;

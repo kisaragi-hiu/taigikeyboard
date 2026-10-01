@@ -9,7 +9,7 @@ enum FontRegistration {
     private static let logger = DebugLogger(category: "FontRegistration")
 
     /// File names, not PostScript names — the two stopped matching when the
-    /// typefaces moved to the shared `fonts/font/` directory, whose names follow
+    /// typefaces moved to the shared `assets/fonts/font/` directory, whose names follow
     /// Android's resource-naming rules so all four platforms can read one copy.
     /// Ask `KeyboardFonts` for the PostScript name.
     private static let fontFileNames = [

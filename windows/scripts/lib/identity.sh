@@ -46,8 +46,8 @@ STAGING_DIR="$WINDOWS_DIR/.build/staging"
 # flow deliberately does not: see `tools/release/stage-desktop.sh` on why a fresh
 # target directory trades a locked DLL for an App Control block on this box.
 TARGET_DIR="${CARGO_TARGET_DIR:-$WINDOWS_DIR/target}/$RELEASE_TARGET/release"
-DICTIONARIES_SOURCE_DIR="$REPOSITORY_DIR/dictionaries"
-FONTS_SOURCE_DIR="$REPOSITORY_DIR/fonts/font"
+DICTIONARIES_SOURCE_DIR="$REPOSITORY_DIR/assets/dictionaries"
+FONTS_SOURCE_DIR="$REPOSITORY_DIR/assets/fonts/font"
 INSTALLER_SCRIPT="$WINDOWS_DIR/installer/TaigiKeyboard.iss"
 TASK_DEFINITION="$WINDOWS_DIR/installer/update-check-task.xml"
 

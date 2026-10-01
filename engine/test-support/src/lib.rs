@@ -1,7 +1,7 @@
 //! Helpers shared by the engine crates' integration tests (dev-dependency
 //! only): temp files, the `dictionary.fst` / `dictionary.bin` /
 //! `association.bin` fixture serializers, the per-binary install lock, and
-//! the production artifacts (`dictionaries/`, `dictionary/output/
+//! the production artifacts (`assets/dictionaries/`, `dictionary/output/
 //! dictionary.csv`).
 //!
 //! Only crate-neutral helpers live here. Anything that needs an engine type
