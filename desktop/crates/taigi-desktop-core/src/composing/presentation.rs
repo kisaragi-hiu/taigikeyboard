@@ -193,7 +193,7 @@ mod tests {
     /// the swap forced on under Combined, off under RomanOnly.
     fn settings(mode: CandidateDisplayMode, stored_swap: bool) -> EngineSettings {
         EngineSettings {
-            is_translate_swapped: mode.effective_translate_swapped(stored_swap),
+            is_hanji_first: mode.effective_hanji_first(stored_swap),
             candidate_display_mode: mode,
             ..EngineSettings::default()
         }

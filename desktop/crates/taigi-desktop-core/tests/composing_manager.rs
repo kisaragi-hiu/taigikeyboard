@@ -342,7 +342,7 @@ fn move_caret_and_typing_after_a_nail_keep_the_hanji_first_rendering() {
     let _lock = engine_lock();
     let mut rig = rig();
     rig.settings
-        .edit(|doc| doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, true));
+        .edit(|doc| doc.set_bool(&keys::IS_HANJI_FIRST, true));
     rig.type_text("taigi");
     let tai = rig
         .candidates()
@@ -522,7 +522,7 @@ fn commit_candidate_roman_output_writes_the_romanization_and_alternate_writes_th
     let _lock = engine_lock();
     let mut rig = rig();
     rig.settings
-        .edit(|doc| doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, false));
+        .edit(|doc| doc.set_bool(&keys::IS_HANJI_FIRST, false));
     rig.type_text("taigi");
     let taigi = rig.candidate("台語");
     let (outcome, committed) = rig.commit(&taigi, CandidateScript::Primary);
@@ -564,7 +564,7 @@ fn commit_candidate_with_no_hanji_wrote_romanization_under_every_mode() {
     ] {
         let mut rig = rig();
         rig.settings.edit(|doc| {
-            doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, swapped);
+            doc.set_bool(&keys::IS_HANJI_FIRST, swapped);
             doc.set_choice(&keys::CANDIDATE_DISPLAY_MODE, display_mode);
         });
         rig.type_text("taigi");
@@ -588,7 +588,7 @@ fn commit_candidate_of_a_hanji_wrote_no_romanization_when_the_mode_leads_with_it
     let _lock = engine_lock();
     let mut rig = rig();
     rig.settings
-        .edit(|doc| doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, true));
+        .edit(|doc| doc.set_bool(&keys::IS_HANJI_FIRST, true));
     rig.type_text("taigi");
     let taigi = rig.candidate("台語");
 
@@ -650,7 +650,7 @@ fn enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode() {
     for swapped in [false, true] {
         let mut rig = rig();
         rig.settings
-            .edit(|doc| doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, swapped));
+            .edit(|doc| doc.set_bool(&keys::IS_HANJI_FIRST, swapped));
         rig.type_text("taigi");
         let candidates = rig.candidates();
         assert_eq!(candidates[0].display_text, "taigi", "swapped={swapped}");

@@ -87,7 +87,7 @@ final class NextWordController {
             preceding: preceding,
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
-            translateSwapped: settings.isTranslateSwapped,
+            hanjiFirst: settings.isHanjiFirst,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -126,7 +126,7 @@ final class NextWordController {
             lastChar: lastChar,
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
-            translateSwapped: settings.isTranslateSwapped,
+            hanjiFirst: settings.isHanjiFirst,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -137,7 +137,7 @@ final class NextWordController {
         let result = RustEngineBridge.nextwordResetFull(
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
-            translateSwapped: settings.isTranslateSwapped,
+            hanjiFirst: settings.isHanjiFirst,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -149,7 +149,7 @@ final class NextWordController {
         let result = RustEngineBridge.nextwordClearForNewComposing(
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
-            translateSwapped: settings.isTranslateSwapped,
+            hanjiFirst: settings.isHanjiFirst,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -168,7 +168,7 @@ final class NextWordController {
             roman: roman,
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
-            translateSwapped: settings.isTranslateSwapped,
+            hanjiFirst: settings.isHanjiFirst,
             generation: envelopeGen,
         )
         applyDecideResult(result)
@@ -227,7 +227,7 @@ final class NextWordController {
                     nowMs: nowMs,
                     limit: 30,
                     mode: settings.inputMode,
-                    translateSwapped: settings.isTranslateSwapped,
+                    hanjiFirst: settings.isHanjiFirst,
                     candidateDisplayMode: settings.candidateDisplayMode,
                     hyphenlessRoman: settings.isHyphenlessRomanEnabled,
                     generation: envelope,
@@ -269,7 +269,7 @@ final class NextWordController {
         let synced = RustEngineBridge.nextwordSetIsShowing(
             nowShowing,
             mode: settings.inputMode,
-            translateSwapped: settings.isTranslateSwapped,
+            hanjiFirst: settings.isHanjiFirst,
             generation: envelopeGen,
         )
         cachedIsShowing = synced.isShowing
@@ -318,7 +318,7 @@ final class NextWordController {
         let result = RustEngineBridge.nextwordContextTimeoutFired(
             nowMs: Self.currentTimestampMs,
             mode: settings.inputMode,
-            translateSwapped: settings.isTranslateSwapped,
+            hanjiFirst: settings.isHanjiFirst,
             generation: envelopeGen,
         )
         applyDecideResult(result)

@@ -51,7 +51,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         let baseline = RustEngineBridge.nextwordResetFull(
             nowMs: 0,
             mode: .tl,
-            translateSwapped: false,
+            hanjiFirst: false,
             generation: envelopeGen,
         )
         baselineGen = baseline.currentGeneration
@@ -102,7 +102,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     func testWordSelected_requireRomanModeInSwappedMode_isNoop() {
         let result = wordSelected(
             text: "abc", roman: "abc", nowMs: 0,
-            requireRomanMode: true, translateSwapped: true,
+            requireRomanMode: true, hanjiFirst: true,
         )
         XCTAssertEqual(result.effects, [])
         XCTAssertEqual(result.currentGeneration, baselineGen)
@@ -161,7 +161,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         _ = RustEngineBridge.nextwordSetIsShowing(
             true,
             mode: .tl,
-            translateSwapped: false,
+            hanjiFirst: false,
             generation: envelopeGen,
         )
         let result = clearForNewComposing(nowMs: 100)
@@ -179,7 +179,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         let result = RustEngineBridge.nextwordSetIsShowing(
             true,
             mode: .tl,
-            translateSwapped: false,
+            hanjiFirst: false,
             generation: envelopeGen,
         )
         XCTAssertEqual(result.currentGeneration, baselineGen, "no generation bump")
@@ -205,7 +205,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             nowMs: 1000,
             limit: 10,
             mode: .tl,
-            translateSwapped: false,
+            hanjiFirst: false,
             generation: envelopeGen,
         )
         XCTAssertTrue(result.wasStale)
@@ -220,7 +220,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         nowMs: Int64,
         requireRomanMode: Bool = false,
         triggerPrediction: Bool = true,
-        translateSwapped: Bool = false,
+        hanjiFirst: Bool = false,
     ) -> RustEngineBridge.NextWordDecideResult {
         RustEngineBridge.nextwordWordSelected(
             text: text,
@@ -229,7 +229,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             triggerPrediction: triggerPrediction,
             nowMs: nowMs,
             mode: .tl,
-            translateSwapped: translateSwapped,
+            hanjiFirst: hanjiFirst,
             generation: envelopeGen,
         )
     }
@@ -242,7 +242,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
             lastChar: lastChar,
             nowMs: nowMs,
             mode: .tl,
-            translateSwapped: false,
+            hanjiFirst: false,
             generation: envelopeGen,
         )
     }
@@ -251,7 +251,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         RustEngineBridge.nextwordContextTimeoutFired(
             nowMs: nowMs,
             mode: .tl,
-            translateSwapped: false,
+            hanjiFirst: false,
             generation: envelopeGen,
         )
     }
@@ -260,7 +260,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         RustEngineBridge.nextwordClearForNewComposing(
             nowMs: nowMs,
             mode: .tl,
-            translateSwapped: false,
+            hanjiFirst: false,
             generation: envelopeGen,
         )
     }
@@ -271,7 +271,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         RustEngineBridge.nextwordSetIsShowing(
             false,
             mode: .tl,
-            translateSwapped: false,
+            hanjiFirst: false,
             generation: envelopeGen,
         ).currentGeneration
     }

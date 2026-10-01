@@ -128,7 +128,7 @@ pub(crate) fn filter(
     //     (the hanji), so homophone predictions (`食/tsia̍h` + `𤆬/tsia̍h`,
     //     distinct after the `(hanzi, tl)` merge) read as duplicates.
     //     Collapse by the rendered `text` — under Romanization Only the platform sends
-    //     `is_translate_swapped = false`, so `shape_prediction` already
+    //     `is_hanji_first = false`, so `shape_prediction` already
     //     dropped roman-empty rows and `text` is always the romanization.
     //     After the score sort so first-seen = best-scored; before the
     //     truncation so the limit is filled with distinct cells.
@@ -260,7 +260,7 @@ fn shape_prediction(m: MergedRow, config: &AppConfig) -> Option<EnginePrediction
         roman = phonetics::api::hyphenless_display(&roman);
     }
     // The stored swap, unfolded: a TPS prediction reads it as it always has.
-    if !config.is_translate_swapped && roman.is_empty() {
+    if !config.is_hanji_first && roman.is_empty() {
         return None;
     }
     let text = if roman.is_empty() {
@@ -287,12 +287,12 @@ mod tests {
     use super::*;
     use protos::engine::{CandidateDisplayMode, Platform};
 
-    fn config_tl_mode_translate_swapped(swapped: bool) -> AppConfig {
+    fn config_tl_mode_hanji_first(swapped: bool) -> AppConfig {
         AppConfig {
             input_mode: "tl".to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
-            is_translate_swapped: swapped,
+            is_hanji_first: swapped,
             platform_id: Platform::Ios as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
@@ -307,7 +307,7 @@ mod tests {
             input_mode: "poj".to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
-            is_translate_swapped: false,
+            is_hanji_first: false,
             platform_id: Platform::Ios as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
@@ -320,7 +320,7 @@ mod tests {
     fn config_roman_only_display() -> AppConfig {
         AppConfig {
             candidate_display_mode: CandidateDisplayMode::RomanOnly as i32,
-            ..config_tl_mode_translate_swapped(false)
+            ..config_tl_mode_hanji_first(false)
         }
     }
 
@@ -351,7 +351,7 @@ mod tests {
     #[test]
     fn second_user_row_for_one_prediction_does_not_stack_its_bonus() {
         let state = PersistedState::default();
-        let config = config_tl_mode_translate_swapped(false);
+        let config = config_tl_mode_hanji_first(false);
         let one = filter(
             &state,
             vec![user_row("複", "ho̍k", 5, 1_000)],
@@ -387,7 +387,7 @@ mod tests {
     #[test]
     fn first_user_row_wins_regardless_of_the_later_row_count() {
         let state = PersistedState::default();
-        let config = config_tl_mode_translate_swapped(false);
+        let config = config_tl_mode_hanji_first(false);
         let expected = filter(
             &state,
             vec![user_row("複", "ho̍k", 2, 1_000)],
@@ -419,7 +419,7 @@ mod tests {
     #[test]
     fn a_dict_row_between_two_user_rows_changes_nothing_about_the_cap() {
         let state = PersistedState::default();
-        let config = config_tl_mode_translate_swapped(false);
+        let config = config_tl_mode_hanji_first(false);
         let expected = filter(
             &state,
             vec![user_row("好", "hó", 2, 1_000), dict_row("好", "hó", 7)],
@@ -468,7 +468,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap_err();
         assert!(matches!(err, NextWordError::InvalidSource));
@@ -486,7 +486,7 @@ mod tests {
     #[test]
     fn collapse_still_folds_two_user_variants_of_one_word() {
         let state = PersistedState::default();
-        let config = config_tl_mode_translate_swapped(false);
+        let config = config_tl_mode_hanji_first(false);
         let single = filter(
             &state,
             vec![user_row("台語", "tâi-gí", 3, 1_000)],
@@ -522,7 +522,7 @@ mod tests {
     #[test]
     fn dict_and_user_scores_still_sum_for_one_prediction() {
         let state = PersistedState::default();
-        let config = config_tl_mode_translate_swapped(false);
+        let config = config_tl_mode_hanji_first(false);
         let user_only = filter(
             &state,
             vec![user_row("好", "hó", 5, 1_000)],
@@ -556,7 +556,7 @@ mod tests {
     #[test]
     fn learned_prediction_outranks_any_bundled_prediction() {
         let state = PersistedState::default();
-        let config = config_tl_mode_translate_swapped(true);
+        let config = config_tl_mode_hanji_first(true);
         let now = 1_000_000_000_000;
         let a_year_ago = now - 365 * 24 * 3_600_000;
         let result = filter(
@@ -598,7 +598,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
 
@@ -618,7 +618,7 @@ mod tests {
             4, // mismatch
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert!(result.was_stale);
@@ -637,7 +637,7 @@ mod tests {
             5,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert!(!result.was_stale);
@@ -657,7 +657,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(result.predictions.len(), 1);
@@ -684,7 +684,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(result.predictions.len(), 1);
@@ -705,7 +705,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         );
         assert!(matches!(result, Err(NextWordError::InvalidSource)));
     }
@@ -725,7 +725,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         );
         assert!(matches!(result, Err(NextWordError::InvalidSource)));
     }
@@ -740,7 +740,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false), // not Hanji mode
+            &config_tl_mode_hanji_first(false), // not Hanji mode
         )
         .unwrap();
         assert!(
@@ -758,7 +758,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(true), // Hanji mode
+            &config_tl_mode_hanji_first(true), // Hanji mode
         )
         .unwrap();
         assert_eq!(result.predictions.len(), 1);
@@ -800,7 +800,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(result.predictions.len(), 3);
@@ -822,7 +822,7 @@ mod tests {
             0,
             1_000,
             3,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(result.predictions.len(), 3);
@@ -839,7 +839,7 @@ mod tests {
             0,
             1_000,
             0, // default
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(
@@ -865,7 +865,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(
@@ -897,7 +897,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(result.predictions.len(), 1);
@@ -925,7 +925,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(
@@ -950,7 +950,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(
@@ -975,7 +975,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(
@@ -997,7 +997,7 @@ mod tests {
             0,
             1_000,
             10,
-            &config_tl_mode_translate_swapped(false),
+            &config_tl_mode_hanji_first(false),
         )
         .unwrap();
         assert_eq!(
@@ -1024,15 +1024,7 @@ mod tests {
             )); // separator canonical
             raw.push(dict_row(&hanzi, &format!("tsa{}", i), 1)); // fused raw variant
         }
-        let result = filter(
-            &state,
-            raw,
-            0,
-            1_000,
-            3,
-            &config_tl_mode_translate_swapped(false),
-        )
-        .unwrap();
+        let result = filter(&state, raw, 0, 1_000, 3, &config_tl_mode_hanji_first(false)).unwrap();
         assert_eq!(
             result.predictions.len(),
             3,
@@ -1061,15 +1053,7 @@ mod tests {
         );
         assert_eq!(collapsed.predictions[0].text, "tsia̍h");
 
-        let kept = filter(
-            &state,
-            rows(),
-            0,
-            0,
-            10,
-            &config_tl_mode_translate_swapped(false),
-        )
-        .unwrap();
+        let kept = filter(&state, rows(), 0, 0, 10, &config_tl_mode_hanji_first(false)).unwrap();
         assert_eq!(
             kept.predictions.len(),
             2,
@@ -1090,7 +1074,7 @@ mod tests {
         };
         let tl = AppConfig {
             hyphenless_roman: true,
-            ..config_tl_mode_translate_swapped(false)
+            ..config_tl_mode_hanji_first(false)
         };
         let shaped = filter(&state, rows(), 0, 0, 10, &tl).unwrap();
         assert_eq!(shaped.predictions[0].text, "tâiuân");
@@ -1122,13 +1106,13 @@ mod tests {
             ]
         };
         for swapped in [false, true] {
-            let legacy = config_tl_mode_translate_swapped(swapped);
+            let legacy = config_tl_mode_hanji_first(swapped);
             let expected = filter(&state, rows(), 0, 0, 10, &legacy).unwrap();
             for hyphenless in [false, true] {
                 let tps = AppConfig {
                     input_mode: "tps".to_owned(),
                     hyphenless_roman: hyphenless,
-                    ..config_tl_mode_translate_swapped(swapped)
+                    ..config_tl_mode_hanji_first(swapped)
                 };
                 let shaped = filter(&state, rows(), 0, 0, 10, &tps).unwrap();
                 assert_eq!(

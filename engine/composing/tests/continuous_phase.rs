@@ -855,11 +855,11 @@ fn commit_raw_under_continuous_after_mid_commit_commits_whole_composition() {
 
 #[test]
 fn commit_raw_under_continuous_with_translate_swapped_unchanged() {
-    // F6.A regression: is_translate_swapped is a candidate-display swap that
+    // F6.A regression: is_hanji_first is a candidate-display swap that
     // does not influence the inline pre-edit / Enter-raw contract. Enter
     // commits the same derived display whether swap is on or off.
     let mut config = config_tl();
-    config.is_translate_swapped = true;
+    config.is_hanji_first = true;
     let mut e = Engine::new();
     e.apply(
         Intent::Start {

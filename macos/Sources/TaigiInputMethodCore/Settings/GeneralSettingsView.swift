@@ -40,8 +40,8 @@ struct GeneralSettingsView: View {
     /// picker and the chord are one setting seen from two places. Read raw
     /// on purpose: the picker shows what is stored, and `candidateDisplayMode`
     /// below decides whether that has any effect right now.
-    @AppStorage(SettingsStore.Keys.isTranslateSwapped.name)
-    private var isTranslateSwapped = SettingsStore.Keys.isTranslateSwapped.defaultValue
+    @AppStorage(SettingsStore.Keys.isHanjiFirst.name)
+    private var isHanjiFirst = SettingsStore.Keys.isHanjiFirst.defaultValue
 
     @AppStorage(SettingsStore.Keys.candidateDisplayMode.name)
     private var candidateDisplayMode = SettingsStore.Keys.candidateDisplayMode.defaultValue
@@ -123,7 +123,7 @@ struct GeneralSettingsView: View {
                 // (`allowsSwapToggle`); under Hanji with Romanization both scripts are on
                 // screen and this only picks the punctuation width, as the
                 // shortcut does there.
-                Picker(language.string(.settingsOutputScript), selection: $isTranslateSwapped) {
+                Picker(language.string(.settingsOutputScript), selection: $isHanjiFirst) {
                     Text(language.string(.settingsOutputScriptHanji)).tag(true)
                     Text(language.string(.settingsOutputScriptRoman)).tag(false)
                 }

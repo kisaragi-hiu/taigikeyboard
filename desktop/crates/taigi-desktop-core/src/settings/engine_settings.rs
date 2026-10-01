@@ -74,9 +74,9 @@ impl CandidateDisplayMode {
     /// reads `effective_full_width_punctuation` instead.
     /// `RomanOnly` has no hanji to lead with.
     /// CROSS-PLATFORM INVARIANT — mirrors macOS `EngineSettings.swift`
-    /// `CandidateDisplayMode.effectiveTranslateSwapped`, iOS
+    /// `CandidateDisplayMode.effectiveHanjiFirst`, iOS
     /// `SettingsModels.swift`, Android `CandidateDisplayMode.kt`.
-    pub const fn effective_translate_swapped(self, stored: bool) -> bool {
+    pub const fn effective_hanji_first(self, stored: bool) -> bool {
         matches!(self, Self::Combined) || (stored && self.shows_hanji())
     }
 
@@ -151,7 +151,7 @@ pub struct EngineSettings {
     /// != RomanOnly`, and forced true under `Combined`
     /// (`SettingsDocument::engine_settings`), never the raw document bool —
     /// the raw one stays untouched so leaving either mode restores it.
-    pub is_translate_swapped: bool,
+    pub is_hanji_first: bool,
     /// `CandidateDisplayMode::effective_full_width_punctuation(stored)` —
     /// read by the composing intent executor's `document_punctuation`.
     pub is_full_width_punctuation: bool,
@@ -200,7 +200,7 @@ impl EngineSettings {
         const MODE: CandidateDisplayMode = CandidateDisplayMode::SideBySide;
         Self {
             input_mode: InputMode::Tl,
-            is_translate_swapped: MODE.effective_translate_swapped(STORED_SWAP),
+            is_hanji_first: MODE.effective_hanji_first(STORED_SWAP),
             is_full_width_punctuation: MODE.effective_full_width_punctuation(STORED_SWAP),
             candidate_display_mode: MODE,
             is_literal_roman_candidate_enabled: true,

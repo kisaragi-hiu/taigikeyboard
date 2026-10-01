@@ -522,7 +522,7 @@ public extension RustEngineBridge {
     /// sent as `"tps"` and the engine reads it as Hanji-first itself
     /// (`AppConfig::renders_hanji_first`). `outputBothScripts`
     /// distinguishes hanji-first (no inter-segment space) from
-    /// both-scripts (`hit (彼)` — space wanted); `is_translate_swapped`
+    /// both-scripts (`hit (彼)` — space wanted); `is_hanji_first`
     /// is `true` for both, so the second flag is required.
     ///
     /// Every composing op that renders the composition sends it — under
@@ -542,7 +542,7 @@ public extension RustEngineBridge {
         appConfig(
             mode: settings.inputMode,
             pojMarkers: settings.pojMarkerOptions,
-            isTranslateSwapped: settings.isTranslateSwapped,
+            isHanjiFirst: settings.isHanjiFirst,
             isOutputBothScripts: settings.isOutputBothScripts,
             candidateDisplayMode: settings.candidateDisplayMode,
             isHyphenlessRomanEnabled: settings.isHyphenlessRomanEnabled,

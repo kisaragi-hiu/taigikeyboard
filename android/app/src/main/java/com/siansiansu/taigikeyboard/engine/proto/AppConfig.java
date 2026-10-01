@@ -12,7 +12,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * duplicates that only the engine can collapse consistently for four
  * platforms. Set on the BASE config (every request) — composing AND nextword
  * read it; the other request families ignore it. Platforms keep sending the
- * derived `is_translate_swapped` (and, on mobile, `output_both_scripts`; the
+ * derived `is_hanji_first` (and, on mobile, `output_both_scripts`; the
  * desktop sends only the swap) — both `false` under Romanization Only — so
  * spacing / recording semantics need no new reader.
  *
@@ -39,7 +39,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
  * `"tps"` the engine composes with the TL tables and applies the TPS fold
  * itself (`AppConfig::renders_hanji_first` / `renders_hyphenless` in
- * `engine/protos/src/lib.rs`), so `is_translate_swapped` and
+ * `engine/protos/src/lib.rs`), so `is_hanji_first` and
  * `hyphenless_roman` are the Candidate-Display-projected stored values
  * WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
  * plus the TPS-folded swap / hyphenless) — composing renders both
@@ -178,42 +178,42 @@ public  final class AppConfig extends
     nnDoubletapEnabled_ = false;
   }
 
-  public static final int IS_TRANSLATE_SWAPPED_FIELD_NUMBER = 5;
-  private boolean isTranslateSwapped_;
+  public static final int IS_HANJI_FIRST_FIELD_NUMBER = 5;
+  private boolean isHanjiFirst_;
   /**
    * <pre>
    * Candidate-Display-projected Hanji-first swap, without the TPS fold.
    * </pre>
    *
-   * <code>bool is_translate_swapped = 5;</code>
-   * @return The isTranslateSwapped.
+   * <code>bool is_hanji_first = 5;</code>
+   * @return The isHanjiFirst.
    */
   @java.lang.Override
-  public boolean getIsTranslateSwapped() {
-    return isTranslateSwapped_;
+  public boolean getIsHanjiFirst() {
+    return isHanjiFirst_;
   }
   /**
    * <pre>
    * Candidate-Display-projected Hanji-first swap, without the TPS fold.
    * </pre>
    *
-   * <code>bool is_translate_swapped = 5;</code>
-   * @param value The isTranslateSwapped to set.
+   * <code>bool is_hanji_first = 5;</code>
+   * @param value The isHanjiFirst to set.
    */
-  private void setIsTranslateSwapped(boolean value) {
+  private void setIsHanjiFirst(boolean value) {
 
-    isTranslateSwapped_ = value;
+    isHanjiFirst_ = value;
   }
   /**
    * <pre>
    * Candidate-Display-projected Hanji-first swap, without the TPS fold.
    * </pre>
    *
-   * <code>bool is_translate_swapped = 5;</code>
+   * <code>bool is_hanji_first = 5;</code>
    */
-  private void clearIsTranslateSwapped() {
+  private void clearIsHanjiFirst() {
 
-    isTranslateSwapped_ = false;
+    isHanjiFirst_ = false;
   }
 
   public static final int PLATFORM_ID_FIELD_NUMBER = 7;
@@ -520,7 +520,7 @@ public  final class AppConfig extends
    * duplicates that only the engine can collapse consistently for four
    * platforms. Set on the BASE config (every request) — composing AND nextword
    * read it; the other request families ignore it. Platforms keep sending the
-   * derived `is_translate_swapped` (and, on mobile, `output_both_scripts`; the
+   * derived `is_hanji_first` (and, on mobile, `output_both_scripts`; the
    * desktop sends only the swap) — both `false` under Romanization Only — so
    * spacing / recording semantics need no new reader.
    *
@@ -547,7 +547,7 @@ public  final class AppConfig extends
    * `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
    * `"tps"` the engine composes with the TL tables and applies the TPS fold
    * itself (`AppConfig::renders_hanji_first` / `renders_hyphenless` in
-   * `engine/protos/src/lib.rs`), so `is_translate_swapped` and
+   * `engine/protos/src/lib.rs`), so `is_hanji_first` and
    * `hyphenless_roman` are the Candidate-Display-projected stored values
    * WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
    * plus the TPS-folded swap / hyphenless) — composing renders both
@@ -699,25 +699,25 @@ public  final class AppConfig extends
      * Candidate-Display-projected Hanji-first swap, without the TPS fold.
      * </pre>
      *
-     * <code>bool is_translate_swapped = 5;</code>
-     * @return The isTranslateSwapped.
+     * <code>bool is_hanji_first = 5;</code>
+     * @return The isHanjiFirst.
      */
     @java.lang.Override
-    public boolean getIsTranslateSwapped() {
-      return instance.getIsTranslateSwapped();
+    public boolean getIsHanjiFirst() {
+      return instance.getIsHanjiFirst();
     }
     /**
      * <pre>
      * Candidate-Display-projected Hanji-first swap, without the TPS fold.
      * </pre>
      *
-     * <code>bool is_translate_swapped = 5;</code>
-     * @param value The isTranslateSwapped to set.
+     * <code>bool is_hanji_first = 5;</code>
+     * @param value The isHanjiFirst to set.
      * @return This builder for chaining.
      */
-    public Builder setIsTranslateSwapped(boolean value) {
+    public Builder setIsHanjiFirst(boolean value) {
       copyOnWrite();
-      instance.setIsTranslateSwapped(value);
+      instance.setIsHanjiFirst(value);
       return this;
     }
     /**
@@ -725,12 +725,12 @@ public  final class AppConfig extends
      * Candidate-Display-projected Hanji-first swap, without the TPS fold.
      * </pre>
      *
-     * <code>bool is_translate_swapped = 5;</code>
+     * <code>bool is_hanji_first = 5;</code>
      * @return This builder for chaining.
      */
-    public Builder clearIsTranslateSwapped() {
+    public Builder clearIsHanjiFirst() {
       copyOnWrite();
-      instance.clearIsTranslateSwapped();
+      instance.clearIsHanjiFirst();
       return this;
     }
 
@@ -983,7 +983,7 @@ public  final class AppConfig extends
             "inputMode_",
             "ooDoubletapEnabled_",
             "nnDoubletapEnabled_",
-            "isTranslateSwapped_",
+            "isHanjiFirst_",
             "platformId_",
             "outputBothScripts_",
             "candidateDisplayMode_",

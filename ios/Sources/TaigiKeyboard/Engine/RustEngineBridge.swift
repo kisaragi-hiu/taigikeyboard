@@ -198,7 +198,7 @@ public enum RustEngineBridge {
     static func appConfig(
         mode: InputMode,
         pojMarkers: PojMarkerOptions? = nil,
-        isTranslateSwapped: Bool = false,
+        isHanjiFirst: Bool = false,
         isOutputBothScripts: Bool = false,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         isHyphenlessRomanEnabled: Bool = false,
@@ -214,7 +214,7 @@ public enum RustEngineBridge {
             // Inverted on the wire (proto default = the marker follows the case, §53).
             cfg.forceLowercaseNasalMarker = !pojMarkers.isNasalMarkerUppercaseEnabled
         }
-        cfg.isTranslateSwapped = isTranslateSwapped
+        cfg.isHanjiFirst = isHanjiFirst
         cfg.outputBothScripts = isOutputBothScripts
         cfg.candidateDisplayMode = candidateDisplayMode.engineValue
         cfg.hyphenlessRoman = isHyphenlessRomanEnabled

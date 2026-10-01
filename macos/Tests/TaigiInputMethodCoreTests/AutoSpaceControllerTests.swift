@@ -12,7 +12,7 @@ import XCTest
 ///
 /// Every case also starts roman-first — the direction that earns the space —
 /// though the shipped default is hanji-first (2026-09-18). In BOTH domains,
-/// for the reason on `withTranslateSwapped`: `.standard` here for the shared
+/// for the reason on `withHanjiFirst`: `.standard` here for the shared
 /// coordinator, the scratch store in `makeSession` for the controller. The
 /// Hanji-first cases opt in on top, as they always did.
 @MainActor
@@ -20,7 +20,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         InstalledLexicon.installOnce()
-        setSettingRestoredAtTeardown(SettingsStore.Keys.isTranslateSwapped.name, to: false)
+        setSettingRestoredAtTeardown(SettingsStore.Keys.isHanjiFirst.name, to: false)
     }
 
     // MARK: - Trailing space after a commit
@@ -53,7 +53,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     }
 
     func testSwappedMode_disablesTheSpace() throws {
-        try withTranslateSwapped(true) {
+        try withHanjiFirst(true) {
             let session = try composedSession()
             try session.walkToFirstTwoScriptCell()
 
@@ -70,7 +70,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// document, not the mode (the direction the old mode proxy refused).
     func testReturnOnTheLiteral_isSpacedUnderEveryMode() throws {
         for swapped in [false, true] {
-            try withTranslateSwapped(swapped) {
+            try withHanjiFirst(swapped) {
                 let session = try composedSession()
 
                 _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
@@ -266,7 +266,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// mode. So Hanji mode writing a romanization is spaced — the direction the
     /// old mode-read would have refused (USER 2026-08-25).
     func testAlternateCommitOfARomanization_earnsItsSpace() throws {
-        try withTranslateSwapped(true) {
+        try withHanjiFirst(true) {
             let session = try composedSession { $0.isAutoSpaceEnabled = true }
             let cell = try session.walkToFirstTwoScriptCell()
             session.client.clearWrites()
@@ -284,7 +284,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     func testAlternateCommitOfAHanji_takesNoSpace() throws {
         let session = try composedSession {
             $0.isAutoSpaceEnabled = true
-            $0.storedIsTranslateSwapped = false
+            $0.storedIsHanjiFirst = false
         }
         let cell = try session.walkToFirstTwoScriptCell()
         session.client.clearWrites()
@@ -301,7 +301,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     func testAlternateCommit_withTheToggleOff_takesNoSpace() throws {
         let session = try composedSession {
             $0.isAutoSpaceEnabled = false
-            $0.storedIsTranslateSwapped = true
+            $0.storedIsHanjiFirst = true
         }
         let cell = try session.walkToFirstTwoScriptCell()
         session.client.clearWrites()
@@ -319,7 +319,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// no commit earns a space, and the one that just did would be denied its
     /// own. What the armed script is stored for.
     func testTheSwapFollowsASpaceTheAlternateCommitWrote() throws {
-        try withTranslateSwapped(true) {
+        try withHanjiFirst(true) {
             let session = try composedSession { $0.isAutoSpaceEnabled = true }
             session.client.documentTextForReads = ""
             session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
@@ -344,8 +344,8 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// afterwards. Only Auto-Space itself is re-read live
     /// (`testTheToggleFlippedOffAfterTheCommit_declinesTheSwap`).
     func testTheSwapSurvivesAModeFlipUnderAnAlternateArmedSpace() throws {
-        let session = try withTranslateSwappedSession()
-        session.store.storedIsTranslateSwapped = false
+        let session = try withHanjiFirstSession()
+        session.store.storedIsHanjiFirst = false
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: "?"), client: session.client,
@@ -361,7 +361,7 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// punctuation stays half-width — the word in front of the caret is
     /// romanization, which reads as Latin text.
     func testTheSwapOutranksTheFullWidthMap_afterAnAlternateCommit() throws {
-        let session = try withTranslateSwappedSession()
+        let session = try withHanjiFirstSession()
 
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: ","), client: session.client,
@@ -485,7 +485,7 @@ final class AutoSpaceControllerTests: XCTestCase {
         store.isAutoSpaceEnabled = true
         // And the shipped default is hanji-first; this suite's baseline is
         // roman-first, the direction that earns the space (see the type's note).
-        store.storedIsTranslateSwapped = false
+        store.storedIsHanjiFirst = false
         configure?(store)
         controller.settings = store
         controller.activateServer(client)
@@ -507,12 +507,12 @@ final class AutoSpaceControllerTests: XCTestCase {
     /// auto space is armed — the state both armed-alternate cases start from.
     ///
     /// The swap flag has to outlive the returned session, so it is written
-    /// through `withTranslateSwapped` around the setup only: the assertions
+    /// through `withHanjiFirst` around the setup only: the assertions
     /// that follow are about what was ALREADY committed, and one of them
     /// flips the mode back on purpose.
-    private func withTranslateSwappedSession() throws -> Session {
+    private func withHanjiFirstSession() throws -> Session {
         var made: Session?
-        try withTranslateSwapped(true) {
+        try withHanjiFirst(true) {
             let session = try composedSession { $0.isAutoSpaceEnabled = true }
             session.client.documentTextForReads = ""
             session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)

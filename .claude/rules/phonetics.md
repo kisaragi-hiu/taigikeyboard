@@ -49,7 +49,7 @@ A Taiwanese word is identified by the **(Hanji, canonical-TL) combination**, nev
   - tone 9: `U+02C6 ˆ`
 - **Entering and stopped finals** (tones 4 and 8) use dedicated symbols: `ㆴ ㆵ ㆻ ㆷ`.
 - Multiple position-dependent forms (initial vs coda) — `ㄇ→ㆬ`, `ㄋ→ㄣ`, `ㄅ→ㆴ` etc. See `knowledge/tps-auto-correct-rules.md` Rule 2.
-- **TPS = hanji-first input mode**, equivalent to `is_translate_swapped`-class IMEs. The engine treats `input_mode == "tps"` as effectively swapped (`AppConfig::renders_hanji_first`, `engine/protos/src/lib.rs`). Do NOT propose "TPS displays TL roman".
+- **TPS = hanji-first input mode**, equivalent to `is_hanji_first`-class IMEs. The engine treats `input_mode == "tps"` as effectively swapped (`AppConfig::renders_hanji_first`, `engine/protos/src/lib.rs`). Do NOT propose "TPS displays TL roman".
 
 ## No "dead code" inference from absence
 

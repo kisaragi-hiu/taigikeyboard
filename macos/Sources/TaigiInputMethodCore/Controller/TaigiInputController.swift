@@ -629,7 +629,7 @@ public final class TaigiInputController: IMKInputController {
             // here read as the window vanishing (real device, 2026-08-21).
             // (The Candidate Display picker is the setting that DOES change which
             // candidates exist — see `refetchCandidatesForDisplayModeChange`.)
-            settings.storedIsTranslateSwapped.toggle()
+            settings.storedIsHanjiFirst.toggle()
             rerenderCandidatesForDisplayChange()
         case .cycleCandidateDisplayMode:
             // Never inert: every mode has a next one. Only the setting is

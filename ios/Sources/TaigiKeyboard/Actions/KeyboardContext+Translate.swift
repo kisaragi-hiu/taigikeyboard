@@ -8,8 +8,8 @@ public extension KeyboardContext {
     /// Whether hanji-first mode is active (`true` = hanji, `false` = roman) —
     /// the DERIVED candidate projection (`true` under Hanji with Romanization, `false` under
     /// Romanization Only). Read-only: writers go through `toggleTranslateSwapped()`.
-    var isTranslateSwapped: Bool {
-        SharedSettings.shared.isTranslateSwapped
+    var isHanjiFirst: Bool {
+        SharedSettings.shared.isHanjiFirst
     }
 
     /// Whether the character / symbol layouts type full-width punctuation —
@@ -38,7 +38,7 @@ public extension KeyboardContext {
     func toggleTranslateSwapped() {
         guard candidateDisplayMode.allowsSwapToggle,
               SharedSettings.shared.keyboardLayoutType != .tps else { return }
-        SharedSettings.shared.storedIsTranslateSwapped.toggle()
+        SharedSettings.shared.storedIsHanjiFirst.toggle()
         notifyDisplayChange()
     }
 

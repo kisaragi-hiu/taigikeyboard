@@ -402,44 +402,44 @@ final class SharedSettingsTests: XCTestCase {
     /// while the stored flags keep the user's `true`; leaving the mode
     /// restores the derived values without any write.
     func test_candidateDisplayMode_romanOnly_derivesFalseWithoutOverwritingStoredFlags() {
-        settings.storedIsTranslateSwapped = true
+        settings.storedIsHanjiFirst = true
         settings.storedIsOutputBothScripts = true
 
         settings.candidateDisplayMode = .romanOnly
 
-        XCTAssertFalse(settings.isTranslateSwapped, "derived swap must read false under romanOnly")
+        XCTAssertFalse(settings.isHanjiFirst, "derived swap must read false under romanOnly")
         XCTAssertFalse(settings.isOutputBothScripts, "derived both-scripts must read false under romanOnly")
-        XCTAssertTrue(settings.storedIsTranslateSwapped, "stored swap must survive the mode")
+        XCTAssertTrue(settings.storedIsHanjiFirst, "stored swap must survive the mode")
         XCTAssertTrue(settings.storedIsOutputBothScripts, "stored both-scripts must survive the mode")
         XCTAssertEqual(defaults.object(forKey: "isTranslateSwapped") as? Bool, true, "raw key untouched")
 
         settings.candidateDisplayMode = .sideBySide
 
-        XCTAssertTrue(settings.isTranslateSwapped, "leaving romanOnly restores the derived swap")
+        XCTAssertTrue(settings.isHanjiFirst, "leaving romanOnly restores the derived swap")
         XCTAssertTrue(settings.isOutputBothScripts, "leaving romanOnly restores derived both-scripts")
     }
 
     /// The `snapshot(for:)` render path carries the DERIVED swap, so keycaps
     /// go half-width and the 文/A key reads inactive under `.romanOnly`.
     func test_snapshot_underRomanOnly_carriesDerivedSwap() {
-        settings.storedIsTranslateSwapped = true
+        settings.storedIsHanjiFirst = true
         settings.candidateDisplayMode = .romanOnly
 
-        XCTAssertFalse(settings.snapshot(for: .light).isTranslateSwapped)
+        XCTAssertFalse(settings.snapshot(for: .light).isHanjiFirst)
     }
 
     /// `.combined` projects the pair as swapped (cell leads with hanji, commit
     /// writes hanji) without writing the stored flag; Annotate in Brackets keeps its stored
     /// value; leaving the mode restores the stored pair.
     func test_candidateDisplayMode_combined_projectsSwappedWithoutOverwritingStoredFlags() {
-        settings.storedIsTranslateSwapped = false
+        settings.storedIsHanjiFirst = false
         settings.storedIsOutputBothScripts = false
 
         settings.candidateDisplayMode = .combined
 
-        XCTAssertTrue(settings.isTranslateSwapped, "derived swap must read true under combined")
+        XCTAssertTrue(settings.isHanjiFirst, "derived swap must read true under combined")
         XCTAssertFalse(settings.isOutputBothScripts, "derived both-scripts follows the stored false")
-        XCTAssertFalse(settings.storedIsTranslateSwapped, "stored swap must survive the mode")
+        XCTAssertFalse(settings.storedIsHanjiFirst, "stored swap must survive the mode")
         XCTAssertEqual(defaults.object(forKey: "isTranslateSwapped") as? Bool, false, "raw key untouched")
 
         // Annotate in Brackets stays as stored: the bracket form `Hanji (romanization)` applies under Hanji with Romanization.
@@ -448,7 +448,7 @@ final class SharedSettingsTests: XCTestCase {
 
         settings.candidateDisplayMode = .sideBySide
 
-        XCTAssertFalse(settings.isTranslateSwapped, "leaving combined restores the stored swap")
+        XCTAssertFalse(settings.isHanjiFirst, "leaving combined restores the stored swap")
         XCTAssertTrue(settings.isOutputBothScripts, "leaving combined restores stored both-scripts")
     }
 
@@ -457,8 +457,8 @@ final class SharedSettingsTests: XCTestCase {
     func test_candidateDisplayMode_rules_perMode() {
         XCTAssertEqual(CandidateDisplayMode.allCases.filter(\.allowsSwapToggle), [.sideBySide, .combined])
         XCTAssertEqual(CandidateDisplayMode.allCases.filter { !$0.showsHanji }, [.romanOnly])
-        XCTAssertTrue(CandidateDisplayMode.combined.effectiveTranslateSwapped(stored: false))
-        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveTranslateSwapped(stored: true))
+        XCTAssertTrue(CandidateDisplayMode.combined.effectiveHanjiFirst(stored: false))
+        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveHanjiFirst(stored: true))
         XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveOutputBothScripts(stored: true))
         XCTAssertTrue(CandidateDisplayMode.combined.effectiveOutputBothScripts(stored: true))
         // Punctuation width follows the STORED swap under Hanji–Romanization Pairing / Hanji with Romanization, never under Romanization Only.
@@ -473,12 +473,12 @@ final class SharedSettingsTests: XCTestCase {
     func test_candidateDisplayMode_combined_punctuationWidthFollowsStoredSwap() {
         settings.candidateDisplayMode = .combined
 
-        settings.storedIsTranslateSwapped = false
-        XCTAssertTrue(settings.isTranslateSwapped, "projection stays hanji-first")
+        settings.storedIsHanjiFirst = false
+        XCTAssertTrue(settings.isHanjiFirst, "projection stays hanji-first")
         XCTAssertFalse(settings.isFullWidthPunctuation, "half-width until the key is tapped")
 
-        settings.storedIsTranslateSwapped = true
-        XCTAssertTrue(settings.isTranslateSwapped)
+        settings.storedIsHanjiFirst = true
+        XCTAssertTrue(settings.isHanjiFirst)
         XCTAssertTrue(settings.isFullWidthPunctuation, "full-width after the key is tapped")
 
         settings.candidateDisplayMode = .romanOnly
@@ -488,12 +488,12 @@ final class SharedSettingsTests: XCTestCase {
     /// TPS types Chinese: every page is full-width whatever the stored swap or
     /// display mode says, and the stored swap is untouched for the way back.
     func test_tpsLayout_isAlwaysFullWidthPunctuation() {
-        settings.storedIsTranslateSwapped = false
+        settings.storedIsHanjiFirst = false
         settings.candidateDisplayMode = .romanOnly
         settings.keyboardLayoutType = .tps
 
         XCTAssertTrue(settings.isFullWidthPunctuation, "TPS forces full-width")
-        XCTAssertFalse(settings.storedIsTranslateSwapped, "stored swap untouched")
+        XCTAssertFalse(settings.storedIsHanjiFirst, "stored swap untouched")
 
         settings.keyboardLayoutType = .phahTaigi
         XCTAssertFalse(settings.isFullWidthPunctuation, "leaving TPS restores the derived width")

@@ -90,13 +90,13 @@ pub fn view(
         choice_row(
             strings.resolve(StringKey::SettingsOutputScript),
             OUTPUT_SCRIPTS,
-            document.bool(&keys::IS_TRANSLATE_SWAPPED),
+            document.bool(&keys::IS_HANJI_FIRST),
             document
                 .choice(&keys::CANDIDATE_DISPLAY_MODE)
                 .allows_swap_toggle(),
             |is_hanji: bool| strings.resolve(output_script_label(is_hanji)).to_owned(),
             |is_hanji| match is_hanji {
-                Some(is_hanji) => Message::SetSwitch(keys::IS_TRANSLATE_SWAPPED, is_hanji),
+                Some(is_hanji) => Message::SetSwitch(keys::IS_HANJI_FIRST, is_hanji),
                 None => Message::SetChoice(None),
             },
             context,

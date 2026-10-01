@@ -24,7 +24,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         // the machine's xctest domain holds — a stored value left behind by
         // an earlier run would otherwise flip which script leads every cell
         // here, and a fresh CI runner has none.
-        clearSettingRestoredAtTeardown(SettingsStore.Keys.isTranslateSwapped.name)
+        clearSettingRestoredAtTeardown(SettingsStore.Keys.isHanjiFirst.name)
     }
 
     override func tearDown() {
@@ -188,8 +188,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             "the same candidate, the two scripts",
         )
         XCTAssertEqual(
-            viaSpace.controller.settings.storedIsTranslateSwapped,
-            viaReturn.controller.settings.storedIsTranslateSwapped,
+            viaSpace.controller.settings.storedIsHanjiFirst,
+            viaReturn.controller.settings.storedIsHanjiFirst,
             "neither key moves the output setting — that is the point",
         )
     }
@@ -244,13 +244,13 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// per-word choice, not a toggle wearing a different hat.
     func testSpace_leavesTheOutputSettingAlone() throws {
         let session = try composedSession()
-        let before = session.controller.settings.storedIsTranslateSwapped
+        let before = session.controller.settings.storedIsHanjiFirst
 
         _ = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: " "), client: session.client,
         )
 
-        XCTAssertEqual(session.controller.settings.storedIsTranslateSwapped, before)
+        XCTAssertEqual(session.controller.settings.storedIsHanjiFirst, before)
     }
 
     /// The mirror image, in Hanji mode — the direction the `我ê名` example is
@@ -258,7 +258,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// romanization, and the key is the same key either way.
     func testSwappedMode_ReturnWritesHanjiAndSpaceWritesRomanization() throws {
         try withRestoredSwapSetting {
-            UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isTranslateSwapped.name)
+            UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isHanjiFirst.name)
 
             let viaReturn = try composedSession()
             let cell = try viaReturn.walkToFirstTwoScriptCell()
@@ -317,8 +317,8 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let annotation = try XCTUnwrap(leading.annotation)
         // Side by side, the cell leads with the script the stored swap puts
         // first; Hanji with Romanization orders its cells Hanji-first whatever
-        // is stored (`effectiveTranslateSwapped`).
-        let isHanjiFirst = sideBySideSession.controller.settings.storedIsTranslateSwapped
+        // is stored (`effectiveHanjiFirst`).
+        let isHanjiFirst = sideBySideSession.controller.settings.storedIsHanjiFirst
         let hanji = isHanjiFirst ? leading.text : annotation
         let romanization = isHanjiFirst ? annotation : leading.text
 
@@ -715,7 +715,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// candidate is one cell along.
     func testReturn_onAFreshBar_writesTheTypedLiteral_inEitherMode() throws {
         for swapped in [false, true] {
-            try withSetting(SettingsStore.Keys.isTranslateSwapped.name, to: swapped) {
+            try withSetting(SettingsStore.Keys.isHanjiFirst.name, to: swapped) {
                 let session = try composedSession()
                 let cells = try XCTUnwrap(session.presenter.shownContent).cells
                 XCTAssertEqual(cells[0].text, Self.composition, "swapped=\(swapped)")
@@ -878,7 +878,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// behind would fail unrelated cases on the NEXT run (the
     /// `savedShortcuts` pattern).
     private func withRestoredSwapSetting(_ body: () throws -> Void) rethrows {
-        try withSetting(SettingsStore.Keys.isTranslateSwapped.name, to: nil, body)
+        try withSetting(SettingsStore.Keys.isHanjiFirst.name, to: nil, body)
     }
 
     /// Hanji with Romanization's adjacency: the Hanji is a cell of its own, its romanization the
@@ -907,12 +907,12 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         _ = try session.controller.handle(TestFixtures.arrowKeyDownEvent(.rightArrow), client: session.client)
         let before = try XCTUnwrap(session.presenter.shownContent).cells
         let keptIndex = session.presenter.selectedIndex
-        let swappedBefore = session.controller.settings.storedIsTranslateSwapped
+        let swappedBefore = session.controller.settings.storedIsHanjiFirst
         let callsBefore = session.presenter.calls.count
 
         session.controller.performShortcutAction(.toggleTranslateSwapped)
 
-        XCTAssertEqual(session.controller.settings.storedIsTranslateSwapped, !swappedBefore)
+        XCTAssertEqual(session.controller.settings.storedIsHanjiFirst, !swappedBefore)
         XCTAssertTrue(session.presenter.isShowing, "the bar must stay up across a display-only flip")
         XCTAssertFalse(
             session.presenter.calls.dropFirst(callsBefore)
@@ -965,7 +965,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         // and both go back to whatever they held: `withSetting` is
         // synchronous, and this case has to await.
         clearSettingRestoredAtTeardown(key)
-        setSettingRestoredAtTeardown(SettingsStore.Keys.isTranslateSwapped.name, to: false)
+        setSettingRestoredAtTeardown(SettingsStore.Keys.isHanjiFirst.name, to: false)
         let session = try composedSession()
         let before = try XCTUnwrap(session.presenter.shownContent).cells
         XCTAssertTrue(before.contains { $0.annotation != nil }, "side by side shows both scripts")
@@ -1014,7 +1014,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         // Roman-first like the case above: the leading cell's `text` is the
         // romanization `assertRomanizationFollowsHanji` looks for.
         clearSettingRestoredAtTeardown(key)
-        setSettingRestoredAtTeardown(SettingsStore.Keys.isTranslateSwapped.name, to: false)
+        setSettingRestoredAtTeardown(SettingsStore.Keys.isHanjiFirst.name, to: false)
         let session = try composedSession()
         let before = try XCTUnwrap(session.presenter.shownContent).cells
         XCTAssertTrue(before.contains { $0.annotation != nil }, "side by side shows both scripts")

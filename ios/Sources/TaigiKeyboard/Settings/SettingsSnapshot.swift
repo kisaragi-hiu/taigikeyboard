@@ -7,7 +7,7 @@ struct SettingsSnapshot {
     let inputMode: InputMode
     let fontType: FontType
     let keyboardLayoutType: KeyboardLayoutType
-    let isTranslateSwapped: Bool
+    let isHanjiFirst: Bool
     let isTpsOrMappedToER: Bool
     /// ⁿ becomes ᴺ in capitals (§53): the `nn` key label and the suggestion case transform read it.
     let isNasalMarkerUppercaseEnabled: Bool

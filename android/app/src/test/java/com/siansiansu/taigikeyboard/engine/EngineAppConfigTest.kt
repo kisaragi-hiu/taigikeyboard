@@ -23,7 +23,7 @@ class EngineAppConfigTest {
     fun continuousAppConfig_tpsLayout_sendsTpsWithTheStoredFlags() {
         val settings = StubEngineSettings(
             inputMode = "tps",
-            isTranslateSwapped = false,
+            isHanjiFirst = false,
             isHyphenlessRomanEnabled = true,
             isTpsOrMappedToER = true,
         )
@@ -31,7 +31,7 @@ class EngineAppConfigTest {
         val config = continuousAppConfig(settings)
 
         assertEquals("tps", config.inputMode)
-        assertFalse("the swap goes out unfolded; the engine reads tps as Hanji-first", config.isTranslateSwapped)
+        assertFalse("the swap goes out unfolded; the engine reads tps as Hanji-first", config.isHanjiFirst)
         assertTrue("No Hyphens goes out as stored; the engine exempts tps", config.hyphenlessRoman)
         assertTrue("the or→er dialect switch rides the config", config.tpsOrMapsToEr)
         assertEquals(Platform.PLATFORM_ANDROID, config.platformId)
@@ -43,7 +43,7 @@ class EngineAppConfigTest {
             val settings = StubEngineSettings(
                 inputMode = mode,
                 candidateDisplayMode = CandidateDisplayMode.COMBINED,
-                isTranslateSwapped = true,
+                isHanjiFirst = true,
                 isOutputBothScripts = true,
                 isHyphenlessRomanEnabled = true,
                 pojMarkerOptions = PojMarkerOptions(
@@ -56,7 +56,7 @@ class EngineAppConfigTest {
             val config = continuousAppConfig(settings)
 
             assertEquals(mode, config.inputMode)
-            assertTrue(mode, config.isTranslateSwapped)
+            assertTrue(mode, config.isHanjiFirst)
             assertTrue(mode, config.outputBothScripts)
             assertEquals(mode, ProtoCandidateDisplayMode.CANDIDATE_DISPLAY_MODE_COMBINED, config.candidateDisplayMode)
             assertTrue(mode, config.hyphenlessRoman)
@@ -72,10 +72,10 @@ class EngineAppConfigTest {
     // and `platform_id` is set on every request (nextword rejects it unset).
     @Test
     fun appConfig_unpassedFields_keepTheProtoDefaults() {
-        val config = appConfig("tps", isTranslateSwapped = true)
+        val config = appConfig("tps", isHanjiFirst = true)
 
         assertEquals("tps", config.inputMode)
-        assertTrue(config.isTranslateSwapped)
+        assertTrue(config.isHanjiFirst)
         assertEquals(Platform.PLATFORM_ANDROID, config.platformId)
         assertFalse(config.ooDoubletapEnabled)
         assertFalse(config.nnDoubletapEnabled)

@@ -214,7 +214,7 @@ mod tests {
     fn config(swapped: bool, brackets: bool, display: CandidateDisplayMode) -> AppConfig {
         AppConfig {
             input_mode: "tl".into(),
-            is_translate_swapped: swapped,
+            is_hanji_first: swapped,
             output_both_scripts: brackets,
             candidate_display_mode: display as i32,
             ..AppConfig::default()

@@ -80,7 +80,7 @@ public extension RustEngineBridge {
         roman: String,
         nowMs: Int64,
         mode: InputMode,
-        translateSwapped: Bool,
+        hanjiFirst: Bool,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_UpdateLastSelectedWord()
@@ -91,7 +91,7 @@ public extension RustEngineBridge {
             method: .updateLastSelectedWord(payload),
             op: "nextwordUpdateLastSelectedWord",
             generation: generation,
-            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
+            config: appConfig(mode: mode, isHanjiFirst: hanjiFirst),
         )
     }
 
@@ -103,7 +103,7 @@ public extension RustEngineBridge {
         preceding: [Taigi_Engine_CommittedWord] = [],
         nowMs: Int64,
         mode: InputMode,
-        translateSwapped: Bool,
+        hanjiFirst: Bool,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_WordSelected()
@@ -117,7 +117,7 @@ public extension RustEngineBridge {
             method: .wordSelected(payload),
             op: "nextwordWordSelected",
             generation: generation,
-            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
+            config: appConfig(mode: mode, isHanjiFirst: hanjiFirst),
         )
     }
 
@@ -125,7 +125,7 @@ public extension RustEngineBridge {
         lastChar: String,
         nowMs: Int64,
         mode: InputMode,
-        translateSwapped: Bool,
+        hanjiFirst: Bool,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_Backspace()
@@ -135,14 +135,14 @@ public extension RustEngineBridge {
             method: .backspace(payload),
             op: "nextwordBackspace",
             generation: generation,
-            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
+            config: appConfig(mode: mode, isHanjiFirst: hanjiFirst),
         )
     }
 
     static func nextwordContextTimeoutFired(
         nowMs: Int64,
         mode: InputMode,
-        translateSwapped: Bool,
+        hanjiFirst: Bool,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_ContextTimeoutFired()
@@ -151,14 +151,14 @@ public extension RustEngineBridge {
             method: .contextTimeoutFired(payload),
             op: "nextwordContextTimeoutFired",
             generation: generation,
-            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
+            config: appConfig(mode: mode, isHanjiFirst: hanjiFirst),
         )
     }
 
     static func nextwordClearForNewComposing(
         nowMs: Int64,
         mode: InputMode,
-        translateSwapped: Bool,
+        hanjiFirst: Bool,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_ClearForNewComposing()
@@ -169,14 +169,14 @@ public extension RustEngineBridge {
             method: .clearForNewComposing_p(payload),
             op: "nextwordClearForNewComposing",
             generation: generation,
-            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
+            config: appConfig(mode: mode, isHanjiFirst: hanjiFirst),
         )
     }
 
     static func nextwordResetFull(
         nowMs: Int64,
         mode: InputMode,
-        translateSwapped: Bool,
+        hanjiFirst: Bool,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_ResetAll()
@@ -185,7 +185,7 @@ public extension RustEngineBridge {
             method: .resetAll(payload),
             op: "nextwordResetFull",
             generation: generation,
-            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
+            config: appConfig(mode: mode, isHanjiFirst: hanjiFirst),
         )
     }
 
@@ -197,7 +197,7 @@ public extension RustEngineBridge {
     static func nextwordSetIsShowing(
         _ isShowing: Bool,
         mode: InputMode,
-        translateSwapped: Bool,
+        hanjiFirst: Bool,
         generation: UInt64,
     ) -> NextWordDecideResult {
         var payload = Taigi_Engine_SetPredictionsVisible()
@@ -206,7 +206,7 @@ public extension RustEngineBridge {
             method: .setPredictionsVisible(payload),
             op: "nextwordSetIsShowing",
             generation: generation,
-            config: appConfig(mode: mode, isTranslateSwapped: translateSwapped),
+            config: appConfig(mode: mode, isHanjiFirst: hanjiFirst),
         )
     }
 
@@ -224,7 +224,7 @@ public extension RustEngineBridge {
         nowMs: Int64,
         limit: Int32,
         mode: InputMode,
-        translateSwapped: Bool,
+        hanjiFirst: Bool,
         candidateDisplayMode: CandidateDisplayMode = .sideBySide,
         hyphenlessRoman: Bool = false,
         generation: UInt64,
@@ -245,7 +245,7 @@ public extension RustEngineBridge {
             // MUST pass the live settings here (mirrors Android); every other nextword request leaves the defaults.
             config: appConfig(
                 mode: mode,
-                isTranslateSwapped: translateSwapped,
+                isHanjiFirst: hanjiFirst,
                 candidateDisplayMode: candidateDisplayMode,
                 isHyphenlessRomanEnabled: hyphenlessRoman,
             ),

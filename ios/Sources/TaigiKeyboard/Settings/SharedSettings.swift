@@ -44,7 +44,7 @@ final class SharedSettings {
     /// Hanji-first out of the box (USER 2026-09-18): the hanji is the title,
     /// the romanization the subtitle, and a commit writes the hanji. Same
     /// default on Android, macOS and Windows.
-    private static let isTranslateSwappedKey: SettingsKey<Bool> = .bool("isTranslateSwapped", default: true)
+    private static let isHanjiFirstKey: SettingsKey<Bool> = .bool("isTranslateSwapped", default: true)
     private static let isOutputBothScriptsKey: SettingsKey<Bool> = .bool("outputBothScripts", default: false)
     // Raw string key shared by all four platforms; unknown / malformed → `.sideBySide`.
     private static let candidateDisplayModeKey: SettingsKey<CandidateDisplayMode> = .rawRep("candidateDisplayMode", default: .sideBySide)
@@ -179,11 +179,11 @@ final class SharedSettings {
     /// Raw stored swap flag — the ONLY read-write API. Settings UI, the 文/A
     /// toggle (after its `allowsSwapToggle` guard) and `resetToDefaults` use
     /// this. Everything that *consumes* the swap reads a derived value: the
-    /// candidate projection `isTranslateSwapped` (`EngineSettings` conformance
+    /// candidate projection `isHanjiFirst` (`EngineSettings` conformance
     /// below) or the punctuation width `isFullWidthPunctuation`.
-    var storedIsTranslateSwapped: Bool {
-        get { userDefaults.value(for: Self.isTranslateSwappedKey) }
-        set { userDefaults.set(newValue, for: Self.isTranslateSwappedKey) }
+    var storedIsHanjiFirst: Bool {
+        get { userDefaults.value(for: Self.isHanjiFirstKey) }
+        set { userDefaults.set(newValue, for: Self.isHanjiFirstKey) }
     }
 
     /// Candidate cell rendering mode. Switching to `.romanOnly` leaves the
@@ -283,7 +283,7 @@ final class SharedSettings {
     }
 
     /// Raw stored Annotate in Brackets flag — read-write counterpart of the derived
-    /// `isOutputBothScripts`; same split as `storedIsTranslateSwapped`.
+    /// `isOutputBothScripts`; same split as `storedIsHanjiFirst`.
     var storedIsOutputBothScripts: Bool {
         get { userDefaults.value(for: Self.isOutputBothScriptsKey) }
         set { userDefaults.set(newValue, for: Self.isOutputBothScriptsKey) }
@@ -639,7 +639,7 @@ final class SharedSettings {
             inputMode: inputMode,
             fontType: fontType,
             keyboardLayoutType: keyboardLayoutType,
-            isTranslateSwapped: isTranslateSwapped,
+            isHanjiFirst: isHanjiFirst,
             isTpsOrMappedToER: isTpsOrMappedToER,
             isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
             keyFontSizeScale: appearance.keyFontSizeScale,
@@ -658,7 +658,7 @@ final class SharedSettings {
         isDoubleTapOOEnabled = true
         isDoubleTapNNEnabled = true
         isNasalMarkerUppercaseEnabled = true
-        storedIsTranslateSwapped = true
+        storedIsHanjiFirst = true
         storedIsOutputBothScripts = false
         candidateDisplayMode = .sideBySide
         isLiteralRomanCandidateEnabled = true
@@ -728,9 +728,9 @@ extension SharedSettings: EngineSettings {
 
     /// Effective swap — the rule lives on `CandidateDisplayMode`. Read-only by
     /// design: a `.toggle()` on a derived getter would overwrite the stored
-    /// flag, so writers go through `storedIsTranslateSwapped`.
-    var isTranslateSwapped: Bool {
-        candidateDisplayMode.effectiveTranslateSwapped(stored: storedIsTranslateSwapped)
+    /// flag, so writers go through `storedIsHanjiFirst`.
+    var isHanjiFirst: Bool {
+        candidateDisplayMode.effectiveHanjiFirst(stored: storedIsHanjiFirst)
     }
 
     /// Effective punctuation width — same seam, read by the layout + 文/A icon.
@@ -739,7 +739,7 @@ extension SharedSettings: EngineSettings {
     // CROSS-PLATFORM INVARIANT — mirrors android PrefHelper.isFullWidthPunctuation (isTpsLayout || …).
     var isFullWidthPunctuation: Bool {
         keyboardLayoutType == .tps
-            || candidateDisplayMode.effectiveFullWidthPunctuation(stored: storedIsTranslateSwapped)
+            || candidateDisplayMode.effectiveFullWidthPunctuation(stored: storedIsHanjiFirst)
     }
 
     /// Effective Annotate in Brackets — same seam, same rule owner.

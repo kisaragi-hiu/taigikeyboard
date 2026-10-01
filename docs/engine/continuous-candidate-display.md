@@ -121,7 +121,7 @@ iOS `CandidateCellHelper` ([`CandidateCellHelper.swift:24-57`](../../ios/Sources
 | Mode | `displayTitle` | `displaySubtitle` |
 |---|---|---|
 | Standard | `suggestion.text` (= roman) | `suggestion.subtitle` (= hanji) |
-| `isTranslateSwapped` | `suggestion.subtitle` (= hanji) | `suggestion.text` (= roman) |
+| `isHanjiFirst` | `suggestion.subtitle` (= hanji) | `suggestion.text` (= roman) |
 | `isTPSLayout` | `suggestion.subtitle` (= hanji, or TPS fallback) | `nil` (TPS never shows dual-line) |
 
 Android `TaigiWord.displayText` ([`TaigiWord.kt:38-40`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/TaigiWord.kt)) prioritizes hanji-then-roman for commit; UI render side (in `CandidateStrip.kt`) consults `roman` + `hanzi` fields directly when present.
@@ -360,7 +360,7 @@ TPS-layout interaction (`isTPSLayout = true`):
 - For HANT/MIXED continuous candidates: title shows hanji, no subtitle (single-line, but hanji-primary — correct TPS behavior)
 - For TAILO continuous candidates: `subtitle = nil`, title falls through to TPS conversion of roman — matches lexicon path
 
-`isTranslateSwapped = true`:
+`isHanjiFirst = true`:
 
 - `displayTitle` returns subtitle (= hanji) as primary; `displaySubtitle` returns text (= roman)
 - All three modes render correctly: HANT/MIXED swap; TAILO stays single-line roman
@@ -456,7 +456,7 @@ proto3 additive change — new fields default to empty when absent.
 | Type `taixyz` (continuous fails → lexicon fallback) | Still dual-line; identical to before |
 | Type `peⁿ` (POJ diacritic, continuous defers) | lexicon path dual-line; unchanged |
 | Type `ㄉㄧㄠˊ` (TPS) | Continuous candidates: title shows hanji (TPS-layout rule) |
-| Toggle `isTranslateSwapped` mid-composing | Continuous candidates swap title/subtitle correctly |
+| Toggle `isHanjiFirst` mid-composing | Continuous candidates swap title/subtitle correctly |
 
 ---
 
@@ -506,7 +506,7 @@ For TPS continuous candidates with HANT mode (`hanji = Some("台")`), `Candidate
 
 This means a TAILO continuous candidate (e.g. raw English-leaning entries) under TPS layout displays Bopomofo-converted roman — which is **identical** to lexicon-path TAILO under TPS. Confirm Codex agrees this is correct.
 
-### Q7 — `isTranslateSwapped` × Continuous
+### Q7 — `isHanjiFirst` × Continuous
 
 Lexicon path's swap behavior is well-tested. After Option A, continuous candidates have the same `Suggestion(text:, subtitle:)` shape so swap should "just work". Codex consult: any non-obvious interaction with `consumedBytes` / `syllableCount` decode when the cell title becomes hanji (user-tap path)?
 
@@ -545,7 +545,7 @@ Per [`~/.claude/rules/planning.md`](https://github.com/siansiansu/configurations
 - **No** changes to `engine/ranking` CandidateSortKey **base policy** (display fields don't enter ranking) — see §15.5 for how partial-prefix candidates fit the 8-dim CandidateSortKey (S8 demoted `-coverage` to a weak tiebreak below score/freq)
 - **No** changes to `user_frequency.db` schema (commit key remains `display_text`)
 - **No** custom_dictionary integration (still scheduled for Phase 9.6 — wire fields will naturally flow once custom path emits `RawCandidate`)
-- **No** keyboard-level mode toggle (HanjiMode / TailoMode like MOE) — TaigiKeyboard's `isTranslateSwapped` axis is the deliberate UX differentiator (§11 + §15.1)
+- **No** keyboard-level mode toggle (HanjiMode / TailoMode like MOE) — TaigiKeyboard's `isHanjiFirst` axis is the deliberate UX differentiator (§11 + §15.1)
 
 **Previously out-of-scope, NOW IN SCOPE per §15** (user pivot 2026-05-11 night):
 

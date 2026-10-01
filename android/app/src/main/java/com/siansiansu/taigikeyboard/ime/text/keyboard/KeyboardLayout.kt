@@ -441,10 +441,10 @@ data class KeyboardAppearance(
         /** Confirm-key label per input mode (used by KeyView). Keycap content, not app chrome — not i18n. */
         fun confirmKeyLabel(
             inputMode: String,
-            isTranslateSwapped: Boolean,
+            isHanjiFirst: Boolean,
         ): String =
             when {
-                inputMode == "tps" || isTranslateSwapped -> "選"
+                inputMode == "tps" || isHanjiFirst -> "選"
                 inputMode == "poj" -> "soán"
                 else -> "suán"
             }

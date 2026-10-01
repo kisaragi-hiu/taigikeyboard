@@ -52,7 +52,7 @@ impl engine::AppConfig {
     /// Whether the composition renders Hanji first: the swap, or the TPS
     /// layout (which shows Hanji / Bopomofo, never the romanization).
     pub fn renders_hanji_first(&self) -> bool {
-        self.is_translate_swapped || self.is_tps_layout()
+        self.is_hanji_first || self.is_tps_layout()
     }
 
     /// Whether No Hyphens applies: never on the TPS layout, whose platform
@@ -69,7 +69,7 @@ mod tests {
     fn config(input_mode: &str, swapped: bool, hyphenless: bool) -> AppConfig {
         AppConfig {
             input_mode: input_mode.to_owned(),
-            is_translate_swapped: swapped,
+            is_hanji_first: swapped,
             hyphenless_roman: hyphenless,
             ..AppConfig::default()
         }

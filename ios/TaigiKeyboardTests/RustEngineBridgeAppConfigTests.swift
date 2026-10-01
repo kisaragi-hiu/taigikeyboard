@@ -9,7 +9,7 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
     func testContinuousAppConfig_tpsLayout_sendsTpsWithTheStoredFlags() {
         let settings = StubEngineSettings(
             inputMode: .tps,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isHyphenlessRomanEnabled: true,
             isTpsOrMappedToER: true,
         )
@@ -17,7 +17,7 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
         let config = RustEngineBridge.continuousAppConfig(settings)
 
         XCTAssertEqual(config.inputMode, "tps")
-        XCTAssertFalse(config.isTranslateSwapped, "the swap goes out unfolded; the engine reads tps as Hanji-first")
+        XCTAssertFalse(config.isHanjiFirst, "the swap goes out unfolded; the engine reads tps as Hanji-first")
         XCTAssertTrue(config.hyphenlessRoman, "No Hyphens goes out as stored; the engine exempts tps")
         XCTAssertTrue(config.tpsOrMapsToEr, "the or→er dialect switch rides the config")
         XCTAssertEqual(config.platformID, .ios)
@@ -28,7 +28,7 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
         for (mode, wire) in cases {
             let settings = StubEngineSettings(
                 inputMode: mode,
-                isTranslateSwapped: true,
+                isHanjiFirst: true,
                 isOutputBothScripts: true,
                 candidateDisplayMode: .combined,
                 isHyphenlessRomanEnabled: true,
@@ -42,7 +42,7 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
             let config = RustEngineBridge.continuousAppConfig(settings)
 
             XCTAssertEqual(config.inputMode, wire, "\(mode)")
-            XCTAssertTrue(config.isTranslateSwapped, "\(mode)")
+            XCTAssertTrue(config.isHanjiFirst, "\(mode)")
             XCTAssertTrue(config.outputBothScripts, "\(mode)")
             XCTAssertEqual(config.candidateDisplayMode, .combined, "\(mode)")
             XCTAssertTrue(config.hyphenlessRoman, "\(mode)")
@@ -57,10 +57,10 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
     /// Nextword and case transform pass only what they read; the rest keeps the proto defaults,
     /// and `platform_id` is set on every request (nextword rejects it unset).
     func testAppConfig_unpassedFields_keepTheProtoDefaults() {
-        let config = RustEngineBridge.appConfig(mode: .tps, isTranslateSwapped: true)
+        let config = RustEngineBridge.appConfig(mode: .tps, isHanjiFirst: true)
 
         XCTAssertEqual(config.inputMode, "tps")
-        XCTAssertTrue(config.isTranslateSwapped)
+        XCTAssertTrue(config.isHanjiFirst)
         XCTAssertEqual(config.platformID, .ios)
         XCTAssertFalse(config.ooDoubletapEnabled)
         XCTAssertFalse(config.nnDoubletapEnabled)

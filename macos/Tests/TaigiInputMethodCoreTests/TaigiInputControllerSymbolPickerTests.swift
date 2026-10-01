@@ -299,7 +299,7 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
     /// make of the key that typed it: `()` stays `()` under Hanji-first too.
     func testAPick_bypassesTheFullWidthMap() throws {
         let session = try makeSession()
-        session.controller.settings.storedIsTranslateSwapped = true
+        session.controller.settings.storedIsHanjiFirst = true
         try session.pressPickerChord()
         let asciiParentheses = try XCTUnwrap(TestFixtures.shippedSymbolTable().symbols.firstIndex(of: "()"))
 

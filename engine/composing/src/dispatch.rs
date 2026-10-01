@@ -615,7 +615,7 @@ mod tests {
             input_mode: "tl".to_string(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
-            is_translate_swapped: false,
+            is_hanji_first: false,
             platform_id: 0,
             output_both_scripts: false,
             candidate_display_mode: 0,

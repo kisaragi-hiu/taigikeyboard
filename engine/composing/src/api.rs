@@ -169,11 +169,11 @@ pub struct NailedSegment {
 /// segmented-spacing contract). A single ASCII space joins adjacent
 /// nailed segments (and the nailed prefix ↔ pending tail) **only when
 /// the rendered script is roman-ish**: roman-first, or both-scripts
-/// (`hit (彼)`). Hanji-first (`is_translate_swapped` without
+/// (`hit (彼)`). Hanji-first (`is_hanji_first` without
 /// `output_both_scripts`) and TPS render the hanji/bopomofo as-is with
 /// no inter-segment space. This mirrors the platform
 /// `appendAutoSpaceIfApplicable` predicate so the marked region and the
-/// final-commit auto-space stay consistent. `is_translate_swapped`
+/// final-commit auto-space stay consistent. `is_hanji_first`
 /// alone cannot distinguish hanji-first from both-scripts (both set it
 /// `true`) — hence the `output_both_scripts` AppConfig field
 /// (Codex pre-impl 2026-05-18).
@@ -765,7 +765,7 @@ mod tests {
             input_mode: input_mode.to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
-            is_translate_swapped: swapped,
+            is_hanji_first: swapped,
             platform_id: 0,
             output_both_scripts: both,
             candidate_display_mode: 0,
@@ -784,7 +784,7 @@ mod tests {
     #[test]
     fn hanji_first_has_no_inter_segment_space() {
         let n = [seg("彼"), seg("隻")];
-        // is_translate_swapped without output_both_scripts → hanji-first.
+        // is_hanji_first without output_both_scripts → hanji-first.
         assert_eq!(nailed_prefix(&n, &cfg("tl", true, false)), "彼隻");
     }
 

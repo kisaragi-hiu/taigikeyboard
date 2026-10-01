@@ -1,6 +1,6 @@
 //! R6 — the TPS layout as a real `input_mode = "tps"` renders byte-identically
 //! to the pre-R6 wire, where every platform sent TPS as `"tl"` with the TPS
-//! fold already applied (`is_translate_swapped = true`, `hyphenless_roman =
+//! fold already applied (`is_hanji_first = true`, `hyphenless_roman =
 //! false`: iOS `RustEngineBridge+Composing.swift` / Android
 //! `RustEngineBridge.kt` `continuousAppConfig`). Under `"tps"` the flags are
 //! the stored ones, so every stored combination must match the one legacy
@@ -22,7 +22,7 @@ use crate::common::{req, Fetch};
 fn legacy_wire() -> AppConfig {
     AppConfig {
         input_mode: "tl".into(),
-        is_translate_swapped: true,
+        is_hanji_first: true,
         hyphenless_roman: false,
         ..AppConfig::default()
     }
@@ -35,7 +35,7 @@ fn tps_wires() -> Vec<AppConfig> {
         for hyphenless in [false, true] {
             wires.push(AppConfig {
                 input_mode: "tps".into(),
-                is_translate_swapped: swapped,
+                is_hanji_first: swapped,
                 hyphenless_roman: hyphenless,
                 ..AppConfig::default()
             });
@@ -214,7 +214,7 @@ fn negative_control_the_unfolded_tl_wire_renders_differently() {
     // above would catch a `"tps"` that lost its Hanji-first reading.
     let nail = Some((CommitScript::Lead, "ㄚ"));
     let unfolded = AppConfig {
-        is_translate_swapped: false,
+        is_hanji_first: false,
         ..legacy_wire()
     };
     let responses = session("ㄉㄞˊㄨㄢˊㄌㄤˊ", nail, &unfolded);

@@ -49,7 +49,7 @@ class CandidateOverlayView : FrameLayout {
     // Live suggestions + EFFECTIVE translate-swap / display-mode snapshots fed into the
     // composition (both read off the SmartbarManager cache on show/update).
     private val suggestionsState = mutableStateOf<List<TaigiWord>>(emptyList())
-    private val translateSwappedState = mutableStateOf(false)
+    private val hanjiFirstState = mutableStateOf(false)
     private val fullWidthPunctuationState = mutableStateOf(false)
     private val candidateDisplayModeState = mutableStateOf(CandidateDisplayMode.SIDE_BY_SIDE)
 
@@ -111,7 +111,7 @@ class CandidateOverlayView : FrameLayout {
             KeyboardMaterialTheme {
                 val resetKey by resetTrigger
                 val suggestions = suggestionsState.value
-                val isTranslateSwapped = translateSwappedState.value
+                val isHanjiFirst = hanjiFirstState.value
                 val isFullWidthPunctuation = fullWidthPunctuationState.value
                 val candidateDisplayMode = candidateDisplayModeState.value
                 // Read live each recomposition; recompose is driven by the states above (show/update),
@@ -131,7 +131,7 @@ class CandidateOverlayView : FrameLayout {
                         typeface = typeface,
                         isTPSLayout = isTPSLayout,
                         orMapsToER = prefs.tpsOrMapsToER,
-                        isTranslateSwapped = isTranslateSwapped,
+                        isHanjiFirst = isHanjiFirst,
                         isFullWidthPunctuation = isFullWidthPunctuation,
                         candidateDisplayMode = candidateDisplayMode,
                         resetKey = resetKey,
@@ -182,7 +182,7 @@ class CandidateOverlayView : FrameLayout {
         if (suggestions.isEmpty()) return
 
         suggestionsState.value = suggestions
-        translateSwappedState.value = smartbarManager.getCachedIsTranslateSwapped()
+        hanjiFirstState.value = smartbarManager.getCachedIsHanjiFirst()
         fullWidthPunctuationState.value = smartbarManager.getCachedIsFullWidthPunctuation()
         candidateDisplayModeState.value = prefs.candidateDisplayMode
         surfaceState.value = surface
@@ -229,7 +229,7 @@ class CandidateOverlayView : FrameLayout {
             return
         }
         suggestionsState.value = suggestions
-        translateSwappedState.value = smartbarManager.getCachedIsTranslateSwapped()
+        hanjiFirstState.value = smartbarManager.getCachedIsHanjiFirst()
         fullWidthPunctuationState.value = smartbarManager.getCachedIsFullWidthPunctuation()
         candidateDisplayModeState.value = prefs.candidateDisplayMode
     }

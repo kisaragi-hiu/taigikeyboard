@@ -53,7 +53,7 @@ object PreferenceKeys {
 
     // Keyboard settings
     val INPUT_MODE = stringPreferencesKey("keyboard__input_mode")
-    val IS_TRANSLATE_SWAPPED = booleanPreferencesKey("keyboard__is_translate_swapped")
+    val IS_HANJI_FIRST = booleanPreferencesKey("keyboard__is_translate_swapped")
     val OUTPUT_BOTH_SCRIPTS = booleanPreferencesKey("keyboard__output_both_scripts")
 
     // Raw value = CandidateDisplayMode.storageValue ("sideBySide" / "romanOnly" / "combined").

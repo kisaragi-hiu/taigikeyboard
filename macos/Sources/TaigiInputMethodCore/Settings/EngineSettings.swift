@@ -17,7 +17,7 @@ enum InputMode: String, CaseIterable, Sendable {
 ///
 /// Raw values are the storage contract every platform shares
 /// (`docs/reports/2026-08-30-hanlo-together-mode-research.md` §12) — the same
-/// convention `isTranslateSwapped` follows, so a future
+/// convention `isHanjiFirst` follows, so a future
 /// settings transfer carries one vocabulary.
 /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SettingsModels.swift
 /// `CandidateDisplayMode` and the Android `CandidateDisplayMode.storageValue`.
@@ -66,10 +66,10 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
     /// nextword gates) behaves as today's hanji-first mode
     /// (`behavioral-invariants.md` §42). `.romanOnly` has no Hanji to lead with.
     /// CROSS-PLATFORM INVARIANT — mirrors ios `SettingsModels.swift`
-    /// `CandidateDisplayMode.effectiveTranslateSwapped`, android
+    /// `CandidateDisplayMode.effectiveHanjiFirst`, android
     /// `CandidateDisplayMode.kt`, windows `engine_settings.rs`. Drift causes
     /// silent divergence.
-    func effectiveTranslateSwapped(stored: Bool) -> Bool {
+    func effectiveHanjiFirst(stored: Bool) -> Bool {
         self == .combined || (stored && showsHanji)
     }
 
@@ -102,7 +102,7 @@ struct EngineSettings: Equatable, Sendable {
     /// EFFECTIVE, not stored: under `candidateDisplayMode == .romanOnly` it
     /// reads `false` whatever the user has stored, because a mode that shows
     /// and commits only romanization has no Hanji to lead with. The stored
-    /// value lives on in `UserDefaults` (`SettingsStore.storedIsTranslateSwapped`)
+    /// value lives on in `UserDefaults` (`SettingsStore.storedIsHanjiFirst`)
     /// and comes back the moment the mode returns to `.sideBySide`. Under
     /// `.combined` the swap reads `true` whatever is stored — the Hanji cell
     /// comes first and is the `.primary` commit, the romanization cell beside
@@ -111,10 +111,10 @@ struct EngineSettings: Equatable, Sendable {
     /// value, never the stored one; full-width punctuation reads
     /// `isFullWidthPunctuation` instead.
     /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift
-    /// `isTranslateSwapped` (derived the same way) and the Windows
+    /// `isHanjiFirst` (derived the same way) and the Windows
     /// `document.rs engine_settings()`. Drift changes what a
     /// romanization-only install commits.
-    let isTranslateSwapped: Bool
+    let isHanjiFirst: Bool
 
     /// `CandidateDisplayMode.effectiveFullWidthPunctuation(stored:)` — read by
     /// `TaigiInputController.documentPunctuation` only.
@@ -183,7 +183,7 @@ struct EngineSettings: Equatable, Sendable {
         let mode = CandidateDisplayMode.sideBySide
         return EngineSettings(
             inputMode: .tl,
-            isTranslateSwapped: mode.effectiveTranslateSwapped(stored: storedSwap),
+            isHanjiFirst: mode.effectiveHanjiFirst(stored: storedSwap),
             isFullWidthPunctuation: mode.effectiveFullWidthPunctuation(stored: storedSwap),
             candidateDisplayMode: mode,
             isLiteralRomanCandidateEnabled: true,

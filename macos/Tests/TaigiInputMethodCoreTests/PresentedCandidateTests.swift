@@ -35,7 +35,7 @@ final class PresentedCandidateTests: XCTestCase {
                         cell: CandidateCellContent.cell(for: candidate, settings: settings),
                     )
                 },
-                "\(settings.candidateDisplayMode) swapped=\(settings.isTranslateSwapped)",
+                "\(settings.candidateDisplayMode) swapped=\(settings.isHanjiFirst)",
             )
         }
     }

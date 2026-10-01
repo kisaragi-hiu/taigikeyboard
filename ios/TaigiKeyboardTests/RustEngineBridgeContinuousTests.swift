@@ -24,7 +24,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     private static var nextEnvelopeGen: UInt64 = 200_000
     private var envelopeGen: UInt64 = 0
     private let settings = StubEngineSettings()
-    private let hanjiFirst = StubEngineSettings(isTranslateSwapped: true)
+    private let hanjiFirst = StubEngineSettings(isHanjiFirst: true)
 
     /// The 台 / `tâi` pick over the leading `tai` of the pending buffer.
     private let taiPick = RustEngineBridge.ContinuousPick(
@@ -98,7 +98,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     // INVARIANT_EVERY_COMPOSING_OP_CARRIES_THE_RENDERING_CONFIG (behavioral-invariants.md §54)
     /// The keystroke after a nail re-renders the nailed prefix from the
     /// request's own settings, so every op builds its config from the same
-    /// snapshot. Under Hanji-first (`isTranslateSwapped`, no both-scripts) the
+    /// snapshot. Under Hanji-first (`isHanjiFirst`, no both-scripts) the
     /// prefix has no word-boundary space: `台` + `bak` reads `台bak`, never
     /// `台 bak` (desktop #31 / S37).
     func testAppendAfterNail_HanjiFirst_KeepsPrefixUnspaced() {
@@ -127,7 +127,7 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     /// The TPS layout with the swap stored OFF: the bridge sends `"tps"` and the stored swap, and
     /// the engine reads the layout as Hanji-first itself — the prefix after a nail stays unspaced.
     func testAppendAfterNail_TpsLayoutSwapStoredOff_KeepsPrefixUnspaced() {
-        let tps = StubEngineSettings(inputMode: .tps, isTranslateSwapped: false)
+        let tps = StubEngineSettings(inputMode: .tps, isHanjiFirst: false)
         _ = RustEngineBridge.composingStart(
             "taibak", settings: tps, generation: envelopeGen,
         )

@@ -88,7 +88,7 @@ class SmartbarManager(
     // EFFECTIVE script-flag cache (avoid DataStore async write timing issues). Holds the
     // derived pair (stored AND mode != ROMAN_ONLY) plus the mode itself; every strip /
     // overlay / click / layout reader goes through these, never the stored prefs.
-    private var cachedIsTranslateSwapped: Boolean = false
+    private var cachedIsHanjiFirst: Boolean = false
     private var cachedIsFullWidthPunctuation: Boolean = false
     private var cachedOutputBothScripts: Boolean = false
 
@@ -160,7 +160,7 @@ class SmartbarManager(
             taigikeyboard = taigikeyboard,
             usage = EngineUsageRecorder,
             getCurrentSuggestions = { currentSuggestions },
-            getIsTranslateSwapped = { cachedIsTranslateSwapped },
+            getIsHanjiFirst = { cachedIsHanjiFirst },
             getOutputBothScripts = { cachedOutputBothScripts },
             getComposingManager = { taigikeyboard.textInputManager.getComposingManager() },
             onClearCandidates = { clearCandidates() },
@@ -299,7 +299,7 @@ class SmartbarManager(
 
         private val INITIAL_DISPLAY_PARAMS =
             CandidateDisplayParams(
-                isTranslateSwapped = false,
+                isHanjiFirst = false,
                 candidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
                 fontType = "",
                 layoutType = "",
@@ -531,7 +531,7 @@ class SmartbarManager(
         pushCandidateState(CandidateMode.Taigi(transformedSuggestions))
     }
 
-    fun getCachedIsTranslateSwapped(): Boolean = cachedIsTranslateSwapped
+    fun getCachedIsHanjiFirst(): Boolean = cachedIsHanjiFirst
 
     /** Layout-facing punctuation width, cached beside the candidate projection; feeds the layout / appearance providers. */
     fun getCachedIsFullWidthPunctuation(): Boolean = cachedIsFullWidthPunctuation
@@ -547,11 +547,11 @@ class SmartbarManager(
      */
     fun toggleTranslateSwapped() {
         if (!prefs.candidateDisplayMode.allowsSwapToggle || prefs.isTpsLayout) return
-        prefs.storedIsTranslateSwapped = !prefs.storedIsTranslateSwapped
+        prefs.storedIsHanjiFirst = !prefs.storedIsHanjiFirst
         refreshScriptFlagCache()
         refreshSurfacesForScriptFlags()
 
-        logger.debug(TAG) { "[TRANSLATE] swapped=$cachedIsTranslateSwapped fullWidth=$cachedIsFullWidthPunctuation" }
+        logger.debug(TAG) { "[TRANSLATE] swapped=$cachedIsHanjiFirst fullWidth=$cachedIsFullWidthPunctuation" }
     }
 
     /**
@@ -573,7 +573,7 @@ class SmartbarManager(
     }
 
     private fun refreshScriptFlagCache() {
-        cachedIsTranslateSwapped = prefs.isTranslateSwapped
+        cachedIsHanjiFirst = prefs.isHanjiFirst
         cachedIsFullWidthPunctuation = prefs.isFullWidthPunctuation
         cachedOutputBothScripts = prefs.isOutputBothScripts
     }
@@ -735,7 +735,7 @@ class SmartbarManager(
         // semiTransparentColor attrs.
         val tints = colorSettings.candidateTints
         return CandidateDisplayParams(
-            isTranslateSwapped = cachedIsTranslateSwapped,
+            isHanjiFirst = cachedIsHanjiFirst,
             candidateDisplayMode = prefs.candidateDisplayMode,
             fontType = prefs.fontType,
             layoutType = prefs.keyboardLayoutType,

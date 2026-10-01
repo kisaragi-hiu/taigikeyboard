@@ -323,7 +323,7 @@ fn hanji_first_prefix_has_no_space_before_the_tail() {
     // Same nail under hanji-first (swapped, single script): "珠a", no
     // separator, so the caret after the a is 2 and before it 1.
     let mut config = config("tl");
-    config.is_translate_swapped = true;
+    config.is_hanji_first = true;
     let mut engine = Engine::new();
     engine.apply(
         Intent::Start {

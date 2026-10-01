@@ -19,7 +19,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     // MARK: - Outside a composition (the consumed pass-through)
 
     func testPunctuationOutsideAComposition_insertsTheFullWidthForm() throws {
-        let session = try makeSession(configure: { $0.storedIsTranslateSwapped = true })
+        let session = try makeSession(configure: { $0.storedIsHanjiFirst = true })
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: ","), client: session.client,
@@ -32,7 +32,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     func testAHostChord_isNeverMapped() throws {
         // ⌘. is a host command that inserts nothing; consuming it would eat
         // the shortcut.
-        let session = try makeSession(configure: { $0.storedIsTranslateSwapped = true })
+        let session = try makeSession(configure: { $0.storedIsHanjiFirst = true })
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: ".", modifiers: .command), client: session.client,
@@ -44,7 +44,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
 
     func testRomanFirstMode_passesPunctuationThrough() throws {
         // Opted into: the shipped default is hanji-first (2026-09-18).
-        let session = try makeSession(configure: { $0.storedIsTranslateSwapped = false })
+        let session = try makeSession(configure: { $0.storedIsHanjiFirst = false })
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: ","), client: session.client,
@@ -60,7 +60,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     func testCombinedDisplay_punctuationWidthFollowsTheStoredSwap() throws {
         let halfWidth = try makeSession(configure: {
             $0.candidateDisplayMode = .combined
-            $0.storedIsTranslateSwapped = false
+            $0.storedIsHanjiFirst = false
         })
         XCTAssertFalse(try halfWidth.controller.handle(
             TestFixtures.keyDownEvent(characters: ","), client: halfWidth.client,
@@ -69,7 +69,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
 
         let fullWidth = try makeSession(configure: {
             $0.candidateDisplayMode = .combined
-            $0.storedIsTranslateSwapped = true
+            $0.storedIsHanjiFirst = true
         })
         XCTAssertTrue(try fullWidth.controller.handle(
             TestFixtures.keyDownEvent(characters: ","), client: fullWidth.client,
@@ -81,7 +81,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     func testRomanOnlyDisplay_passesPunctuationThrough() throws {
         let session = try makeSession(configure: {
             $0.candidateDisplayMode = .romanOnly
-            $0.storedIsTranslateSwapped = true
+            $0.storedIsHanjiFirst = true
         })
 
         let handled = try session.controller.handle(
@@ -94,7 +94,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
 
     func testAnUnmappedCharacter_passesThroughEvenWhenActive() throws {
         // Digits are tone markers and must reach the host as themselves.
-        let session = try makeSession(configure: { $0.storedIsTranslateSwapped = true })
+        let session = try makeSession(configure: { $0.storedIsHanjiFirst = true })
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: "5"), client: session.client,
@@ -119,7 +119,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
         session.client.clearWrites()
-        session.store.storedIsTranslateSwapped = true
+        session.store.storedIsHanjiFirst = true
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: ","), client: session.client,
@@ -140,15 +140,15 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     /// left standing because which marks Hanji mode types is a Full-width Punctuation policy
     /// question, not an auto-space one.
     func testPunctuationMidComposition_commitsWithTheFullWidthForm_inOneMutation() throws {
-        // BOTH domains: `withTranslateSwapped` moves the one the shared
+        // BOTH domains: `withHanjiFirst` moves the one the shared
         // coordinator's `ComposingManager` reads (which resolves the commit),
         // `configure` the controller's own store (which the full-width map
         // reads). A case about "the user is in Hanji mode" needs them to agree.
         // Auto-space is OFF by default and is what puts the trailing space in
         // `taigi？ `, so this case turns it on to reach that site.
-        try withTranslateSwapped(true) {
+        try withHanjiFirst(true) {
             let session = try composedSession(configure: {
-                $0.storedIsTranslateSwapped = true
+                $0.storedIsHanjiFirst = true
                 $0.isAutoSpaceEnabled = true
             })
 
@@ -165,7 +165,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         // and auto-space (OFF by default) is turned on to reach that site.
         let session = try composedSession(configure: {
             $0.isAutoSpaceEnabled = true
-            $0.storedIsTranslateSwapped = false
+            $0.storedIsHanjiFirst = false
         })
 
         _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "?"), client: session.client)
@@ -182,7 +182,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     /// stored moves: the next bare key still follows the mode.
     func testControlPunctuationOutsideAComposition_typesTheOtherWidthOnce() throws {
         for (swapped, bare, flipped) in [(true, "，", ","), (false, nil, "，")] {
-            let session = try makeSession(configure: { $0.storedIsTranslateSwapped = swapped })
+            let session = try makeSession(configure: { $0.storedIsHanjiFirst = swapped })
 
             let handledFlip = try session.controller.handle(
                 TestFixtures.keyDownEvent(characters: ",", modifiers: .control, charactersIgnoringModifiers: ","),
@@ -190,7 +190,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
             )
             XCTAssertTrue(handledFlip, "the flip chord is consumed in either width (swapped=\(swapped))")
             XCTAssertEqual(session.client.insertedTexts, [flipped])
-            XCTAssertEqual(session.store.storedIsTranslateSwapped, swapped, "one shot: the mode does not move")
+            XCTAssertEqual(session.store.storedIsHanjiFirst, swapped, "one shot: the mode does not move")
 
             session.client.clearWrites()
             let handledBare = try session.controller.handle(
@@ -204,7 +204,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     /// The key is read under the modifier: `⌃[` arrives as Escape, and in
     /// romanization mode it types `「` rather than cancelling anything.
     func testControlBracket_typesTheFullWidthBracketInRomanFirstMode() throws {
-        let session = try makeSession(configure: { $0.storedIsTranslateSwapped = false })
+        let session = try makeSession(configure: { $0.storedIsHanjiFirst = false })
 
         let handled = try session.controller.handle(
             TestFixtures.keyDownEvent(characters: "\u{1B}", modifiers: .control, charactersIgnoringModifiers: "["),
@@ -222,7 +222,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     func testControlPunctuationMidComposition_commitsWithTheOtherWidth_inOneMutation() throws {
         for (swapped, expected) in [(true, "taigi?"), (false, "taigi？")] {
             let session = try composedSession(configure: {
-                $0.storedIsTranslateSwapped = swapped
+                $0.storedIsHanjiFirst = swapped
                 $0.isAutoSpaceEnabled = false
             })
 
@@ -245,7 +245,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         for (swapped, expected) in [(false, "， "), (true, ", ")] {
             let session = try composedSession(configure: {
                 $0.isAutoSpaceEnabled = true
-                $0.storedIsTranslateSwapped = swapped
+                $0.storedIsHanjiFirst = swapped
             })
             session.client.documentTextForReads = ""
             session.client.selectedRangeToReturn = NSRange(location: 0, length: 0)

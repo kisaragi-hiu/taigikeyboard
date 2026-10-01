@@ -10,7 +10,7 @@ struct CandidateView: View {
     let selectedCandidateIndex: Int
     let onSuggestionTap: (AutocompleteSuggestion) -> Void
     /// Swaps the Hanji / romanization display positions.
-    let isTranslateSwapped: Bool
+    let isHanjiFirst: Bool
     let candidateDisplayMode: CandidateDisplayMode
     let onSettingsTap: () -> Void
     let onLayoutTap: () -> Void
@@ -62,7 +62,7 @@ struct CandidateView: View {
                     suggestions: suggestions,
                     selectedCandidateIndex: selectedCandidateIndex,
                     onSuggestionTap: onSuggestionTap,
-                    isTranslateSwapped: isTranslateSwapped,
+                    isHanjiFirst: isHanjiFirst,
                     candidateDisplayMode: candidateDisplayMode,
                     isTPSLayout: isTPSLayout,
                     orMapsToER: orMapsToER,

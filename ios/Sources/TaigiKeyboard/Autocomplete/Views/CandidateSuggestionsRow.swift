@@ -9,7 +9,7 @@ struct CandidateSuggestionsRow: View {
     let suggestions: [AutocompleteSuggestion]
     let selectedCandidateIndex: Int
     let onSuggestionTap: (AutocompleteSuggestion) -> Void
-    let isTranslateSwapped: Bool
+    let isHanjiFirst: Bool
     let candidateDisplayMode: CandidateDisplayMode
     let isTPSLayout: Bool
     let orMapsToER: Bool
@@ -74,7 +74,7 @@ struct CandidateSuggestionsRow: View {
         // is one line tall).
         let contentHasSubtitles = CandidateCellHelper.contentHasSubtitles(
             suggestions,
-            isTranslateSwapped: isTranslateSwapped,
+            isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
@@ -91,7 +91,7 @@ struct CandidateSuggestionsRow: View {
                     ) { index, suggestion in
                         CandidateButtonView(
                             suggestion: suggestion,
-                            isTranslateSwapped: isTranslateSwapped,
+                            isHanjiFirst: isHanjiFirst,
                             candidateDisplayMode: candidateDisplayMode,
                             contentHasSubtitles: contentHasSubtitles,
                             isTPSLayout: isTPSLayout,

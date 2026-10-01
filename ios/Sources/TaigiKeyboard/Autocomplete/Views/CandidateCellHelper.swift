@@ -20,12 +20,12 @@ enum CandidateCellHelper {
     /// The cell's main title, per display mode: TPS shows hanji (TPS symbols when there is none) and
     /// ignores `candidateDisplayMode`; Romanization Only always shows the engine `roman` (`text`); Hanji with Romanization is
     /// single-script — a split cell shows its own `text`, an un-split row (wire defect) is hanji-led;
-    /// Hanji–Romanization Pairing lets `isTranslateSwapped` pick the roman / hanji order.
+    /// Hanji–Romanization Pairing lets `isHanjiFirst` pick the roman / hanji order.
     // Arm order mirrors Android CandidateStrip.kt / macOS CandidateCellContent:
     // TPS → romanOnly → combined → swapped → default.
     static func displayTitle(
         for suggestion: AutocompleteSuggestion,
-        isTranslateSwapped: Bool,
+        isHanjiFirst: Bool,
         isTPSLayout: Bool,
         orMapsToER: Bool,
         candidateDisplayMode: CandidateDisplayMode,
@@ -56,7 +56,7 @@ enum CandidateCellHelper {
             return suggestion.text
         }
 
-        if isTranslateSwapped, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
+        if isHanjiFirst, let subtitle = suggestion.subtitle, !subtitle.isEmpty {
             return subtitle
         }
 
@@ -68,10 +68,10 @@ enum CandidateCellHelper {
     /// - TPS: no subtitle
     /// - Romanization Only: no subtitle (hanji not shown)
     /// - Hanji with Romanization: no subtitle (split cells are already single-script upstream)
-    /// - default: `isTranslateSwapped` picks whether the subtitle is roman or hanji
+    /// - default: `isHanjiFirst` picks whether the subtitle is roman or hanji
     static func displaySubtitle(
         for suggestion: AutocompleteSuggestion,
-        isTranslateSwapped: Bool,
+        isHanjiFirst: Bool,
         isTPSLayout: Bool,
         candidateDisplayMode: CandidateDisplayMode,
     ) -> String? {
@@ -79,7 +79,7 @@ enum CandidateCellHelper {
         if isTPSLayout || candidateDisplayMode != .sideBySide {
             return nil
         }
-        return isTranslateSwapped ? suggestion.text : suggestion.subtitle
+        return isHanjiFirst ? suggestion.text : suggestion.subtitle
     }
 
     // MARK: - Commit suggestion
@@ -87,10 +87,10 @@ enum CandidateCellHelper {
     /// The suggestion actually committed to the text proxy, resolved from layout / translate state.
     ///
     /// - TPS: prefers hanji; falls back to the TPS-symbol rendering when there is no hanji
-    /// - default: `isTranslateSwapped = true` outputs hanji; otherwise outputs roman
+    /// - default: `isHanjiFirst = true` outputs hanji; otherwise outputs roman
     static func suggestionToHandle(
         for suggestion: AutocompleteSuggestion,
-        isTranslateSwapped: Bool,
+        isHanjiFirst: Bool,
         isTPSLayout: Bool,
         orMapsToER: Bool,
     ) -> AutocompleteSuggestion {
@@ -109,7 +109,7 @@ enum CandidateCellHelper {
             return replacingCommitText(of: suggestion, with: subtitle)
         }
 
-        if isTranslateSwapped,
+        if isHanjiFirst,
            let subtitle = suggestion.subtitle,
            !subtitle.isEmpty
         {
@@ -163,7 +163,7 @@ enum CandidateCellHelper {
         if candidateDisplayMode == .combined {
             let titleText = displayTitle(
                 for: suggestion,
-                isTranslateSwapped: false,
+                isHanjiFirst: false,
                 isTPSLayout: false,
                 orMapsToER: orMapsToER,
                 candidateDisplayMode: .combined,
@@ -190,14 +190,14 @@ enum CandidateCellHelper {
     /// the title).
     static func renderedSubtitle(
         for suggestion: AutocompleteSuggestion,
-        isTranslateSwapped: Bool,
+        isHanjiFirst: Bool,
         isTPSLayout: Bool,
         orMapsToER: Bool,
         candidateDisplayMode: CandidateDisplayMode,
     ) -> String? {
         guard let subtitle = displaySubtitle(
             for: suggestion,
-            isTranslateSwapped: isTranslateSwapped,
+            isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
             candidateDisplayMode: candidateDisplayMode,
         ), !subtitle.isEmpty else {
@@ -205,7 +205,7 @@ enum CandidateCellHelper {
         }
         let title = displayTitle(
             for: suggestion,
-            isTranslateSwapped: isTranslateSwapped,
+            isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
@@ -226,7 +226,7 @@ enum CandidateCellHelper {
     /// (`renderedSubtitle`) so the two predicates cannot drift.
     static func contentHasSubtitles(
         _ suggestions: [AutocompleteSuggestion],
-        isTranslateSwapped: Bool,
+        isHanjiFirst: Bool,
         isTPSLayout: Bool,
         orMapsToER: Bool,
         candidateDisplayMode: CandidateDisplayMode,
@@ -234,7 +234,7 @@ enum CandidateCellHelper {
         suggestions.contains { suggestion in
             renderedSubtitle(
                 for: suggestion,
-                isTranslateSwapped: isTranslateSwapped,
+                isHanjiFirst: isHanjiFirst,
                 isTPSLayout: isTPSLayout,
                 orMapsToER: orMapsToER,
                 candidateDisplayMode: candidateDisplayMode,

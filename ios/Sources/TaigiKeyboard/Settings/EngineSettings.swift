@@ -12,11 +12,11 @@ import Foundation
 /// files can depend on this protocol without pulling platform frameworks.
 protocol EngineSettings {
     var inputMode: InputMode { get }
-    var isTranslateSwapped: Bool { get }
+    var isHanjiFirst: Bool { get }
     /// Output both hanji + roman ("both-scripts"). The continuous-input
     /// §10.2 word-boundary-spacing predicate needs this to tell
     /// hanji-first (no space) from both-scripts (`hit (彼)` — space
-    /// wanted); `isTranslateSwapped` is `true` for both.
+    /// wanted); `isHanjiFirst` is `true` for both.
     // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/EngineSettings.kt:isOutputBothScripts.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
     var isOutputBothScripts: Bool { get }

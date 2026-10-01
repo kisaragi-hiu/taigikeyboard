@@ -24,7 +24,7 @@ fun RustEngineBridge.nextwordWordSelected(
     triggerPrediction: Boolean,
     nowMs: Long,
     inputMode: String,
-    translateSwapped: Boolean,
+    hanjiFirst: Boolean,
     generation: Long,
     preceding: List<com.siansiansu.taigikeyboard.engine.proto.CommittedWord> = emptyList(),
 ): RustEngineBridge.NextWordDecideResult {
@@ -41,7 +41,7 @@ fun RustEngineBridge.nextwordWordSelected(
         methodSetter = { it.wordSelected = payload },
         op = "nextwordWordSelected",
         generation = generation,
-        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
+        config = appConfig(inputMode, isHanjiFirst = hanjiFirst),
     )
 }
 
@@ -50,7 +50,7 @@ fun RustEngineBridge.nextwordBackspace(
     lastChar: String,
     nowMs: Long,
     inputMode: String,
-    translateSwapped: Boolean,
+    hanjiFirst: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.Backspace
@@ -62,14 +62,14 @@ fun RustEngineBridge.nextwordBackspace(
         methodSetter = { it.backspace = payload },
         op = "nextwordBackspace",
         generation = generation,
-        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
+        config = appConfig(inputMode, isHanjiFirst = hanjiFirst),
     )
 }
 
 fun RustEngineBridge.nextwordContextTimeoutFired(
     nowMs: Long,
     inputMode: String,
-    translateSwapped: Boolean,
+    hanjiFirst: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ContextTimeoutFired
@@ -80,7 +80,7 @@ fun RustEngineBridge.nextwordContextTimeoutFired(
         methodSetter = { it.contextTimeoutFired = payload },
         op = "nextwordContextTimeoutFired",
         generation = generation,
-        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
+        config = appConfig(inputMode, isHanjiFirst = hanjiFirst),
     )
 }
 
@@ -88,7 +88,7 @@ fun RustEngineBridge.nextwordContextTimeoutFired(
 fun RustEngineBridge.nextwordClearForNewComposing(
     nowMs: Long,
     inputMode: String,
-    translateSwapped: Boolean,
+    hanjiFirst: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ClearForNewComposing
@@ -99,7 +99,7 @@ fun RustEngineBridge.nextwordClearForNewComposing(
         methodSetter = { it.clearForNewComposing = payload },
         op = "nextwordClearForNewComposing",
         generation = generation,
-        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
+        config = appConfig(inputMode, isHanjiFirst = hanjiFirst),
     )
 }
 
@@ -107,7 +107,7 @@ fun RustEngineBridge.nextwordClearForNewComposing(
 fun RustEngineBridge.nextwordResetFull(
     nowMs: Long,
     inputMode: String,
-    translateSwapped: Boolean,
+    hanjiFirst: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.ResetAll
@@ -118,7 +118,7 @@ fun RustEngineBridge.nextwordResetFull(
         methodSetter = { it.resetAll = payload },
         op = "nextwordResetFull",
         generation = generation,
-        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
+        config = appConfig(inputMode, isHanjiFirst = hanjiFirst),
     )
 }
 
@@ -133,7 +133,7 @@ fun RustEngineBridge.nextwordResetFull(
 fun RustEngineBridge.nextwordSetIsShowing(
     isShowing: Boolean,
     inputMode: String,
-    translateSwapped: Boolean,
+    hanjiFirst: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible
@@ -144,7 +144,7 @@ fun RustEngineBridge.nextwordSetIsShowing(
         methodSetter = { it.setPredictionsVisible = payload },
         op = "nextwordSetIsShowing",
         generation = generation,
-        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
+        config = appConfig(inputMode, isHanjiFirst = hanjiFirst),
     )
 }
 
@@ -158,7 +158,7 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
     roman: String,
     nowMs: Long,
     inputMode: String,
-    translateSwapped: Boolean,
+    hanjiFirst: Boolean,
     generation: Long,
 ): RustEngineBridge.NextWordDecideResult {
     val payload = com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord
@@ -171,7 +171,7 @@ fun RustEngineBridge.nextwordUpdateLastSelectedWord(
         methodSetter = { it.updateLastSelectedWord = payload },
         op = "nextwordUpdateLastSelectedWord",
         generation = generation,
-        config = appConfig(inputMode, isTranslateSwapped = translateSwapped),
+        config = appConfig(inputMode, isHanjiFirst = hanjiFirst),
     )
 }
 
@@ -190,7 +190,7 @@ fun RustEngineBridge.nextwordPredictNext(
     nowMs: Long,
     limit: Int,
     inputMode: String,
-    translateSwapped: Boolean,
+    hanjiFirst: Boolean,
     generation: Long,
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     hyphenlessRoman: Boolean = false,
@@ -213,7 +213,7 @@ fun RustEngineBridge.nextwordPredictNext(
         config =
             appConfig(
                 inputMode,
-                isTranslateSwapped = translateSwapped,
+                isHanjiFirst = hanjiFirst,
                 candidateDisplayMode = candidateDisplayMode,
                 isHyphenlessRomanEnabled = hyphenlessRoman,
             ),

@@ -18,7 +18,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * preprocessing (oo→o͘, nn→ⁿ) read by `phonetics::api::normalize_tone` on the
  * composing path.
  *
- * v3.5.5 added `is_translate_swapped` + `platform_id` for the NextWord
+ * v3.5.5 added `is_hanji_first` + `platform_id` for the NextWord
  * engine (tag 6 `is_association_recording_enabled` retired 2026-09-25 —
  * association recording is always on since the toggle left every UI).
  * `platform_id` originally branched the compound-split separator and the
@@ -28,9 +28,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * v3.5.8 added `output_both_scripts`: the engine's Model B continuous
  * composing-buffer join (`composing::api::nailed_prefix` /
  * `combined_display`) inserts a word-boundary space between nailed
- * segments only when the rendered script is roman-ish. `is_translate_swapped`
+ * segments only when the rendered script is roman-ish. `is_hanji_first`
  * alone cannot distinguish "hanji-first" (no space) from "both-scripts"
- * (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
+ * (`hit (彼)` — space wanted) since both set `is_hanji_first = true`;
  * the separator predicate needs this second flag (continuous-input-ranking
  * §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
  * How a candidate cell renders the (Hanji, romanization) pair. Read by
@@ -41,7 +41,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * normalise through `AppConfig::is_roman_only_display`, never compare the raw
  * i32 at a call site. COMBINED (one label `Hanji romanization`, hanji
  * commits) has NO engine reader — a combined cell is still distinct by
- * (hanji, roman); the platforms send `is_translate_swapped = true` for it.
+ * (hanji, roman); the platforms send `is_hanji_first = true` for it.
  * </pre>
  *
  * Protobuf enum {@code taigi.engine.CandidateDisplayMode}

@@ -33,7 +33,7 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
     private func handed(
         _ candidates: [RustEngineBridge.ContinuousCandidate],
         splitCombinedCells: Bool = false,
-        isTranslateSwapped: Bool = false,
+        isHanjiFirst: Bool = false,
         isTPSLayout: Bool = false,
     ) -> [AutocompleteSuggestion] {
         TaigiAutocompleteService()
@@ -41,7 +41,7 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
             .map {
                 CandidateCellHelper.suggestionToHandle(
                     for: $0,
-                    isTranslateSwapped: isTranslateSwapped,
+                    isHanjiFirst: isHanjiFirst,
                     isTPSLayout: isTPSLayout,
                     orMapsToER: false,
                 )
@@ -66,7 +66,7 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
     /// still carries the candidate's own romanization. The old path parsed the rewritten cell,
     /// which under TPS was the `tlNumericToTPS` rendering of the display romanization (R2d).
     func testRewrittenCell_stillSendsTheCandidateRoman() throws {
-        let swapped = try XCTUnwrap(handed([candidate(roman: "tâi-gí", hanji: "台語")], isTranslateSwapped: true).first)
+        let swapped = try XCTUnwrap(handed([candidate(roman: "tâi-gí", hanji: "台語")], isHanjiFirst: true).first)
         XCTAssertEqual(swapped.text, "台語", "precondition: the swap rewrote the cell")
         let hanjilessTPS = try XCTUnwrap(handed([candidate(roman: "tâi-gí", hanji: nil)], isTPSLayout: true).first)
         XCTAssertNotEqual(hanjilessTPS.text, "tâi-gí", "precondition: TPS rewrote the cell")

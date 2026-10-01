@@ -106,7 +106,7 @@ fn a_nail_then_a_final_pick_report_their_outcomes() {
 fn a_hanji_led_final_pick_writes_the_hanji_and_earns_no_space() {
     // trace: §23 row "Hanji candidate, Hanji-led, brackets OFF".
     let config = AppConfig {
-        is_translate_swapped: true,
+        is_hanji_first: true,
         ..config_tl()
     };
     let handle = continuous("tai", 1, &config);

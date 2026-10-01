@@ -115,7 +115,7 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
         input_mode: settings.input_mode.wire().to_owned(),
         oo_doubletap_enabled: true,
         nn_doubletap_enabled: true,
-        is_translate_swapped: settings.is_translate_swapped,
+        is_hanji_first: settings.is_hanji_first,
         platform_id: DESKTOP_PLATFORM as i32,
         candidate_display_mode: settings.candidate_display_mode.wire() as i32,
         hyphenless_roman: settings.is_hyphenless_roman_enabled,
@@ -161,7 +161,7 @@ mod tests {
         // forwarding — the bridge carries the mode and the swap it was handed,
         // and the engine's only normaliser still reads it as "not roman-only".
         let settings = EngineSettings {
-            is_translate_swapped: true,
+            is_hanji_first: true,
             candidate_display_mode: CandidateDisplayMode::Combined,
             ..EngineSettings::default()
         };
@@ -170,7 +170,7 @@ mod tests {
             continuous.candidate_display_mode,
             WireDisplayMode::Combined as i32
         );
-        assert!(continuous.is_translate_swapped);
+        assert!(continuous.is_hanji_first);
         assert!(!continuous.is_roman_only_display());
     }
 
@@ -209,20 +209,20 @@ mod tests {
     #[test]
     fn app_config_carries_the_swap_flag() {
         let settings = EngineSettings {
-            is_translate_swapped: true,
+            is_hanji_first: true,
             ..EngineSettings::default()
         };
         let swapped = app_config(&settings);
-        assert!(swapped.is_translate_swapped);
+        assert!(swapped.is_hanji_first);
         assert!(
             !swapped.output_both_scripts,
             "desktop has no Annotate in Brackets: the wire field stays at its default"
         );
         let roman_first = EngineSettings {
-            is_translate_swapped: false,
+            is_hanji_first: false,
             ..EngineSettings::default()
         };
-        assert!(!app_config(&roman_first).is_translate_swapped);
+        assert!(!app_config(&roman_first).is_hanji_first);
     }
 
     #[test]

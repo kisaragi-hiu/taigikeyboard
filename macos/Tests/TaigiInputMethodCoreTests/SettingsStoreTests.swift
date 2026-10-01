@@ -42,9 +42,9 @@ final class SettingsStoreTests: XCTestCase {
     /// swap under Hanji–Romanization Pairing follows it.
     func testCurrent_withNothingStored_isHanjiFirst() {
         let current = makeStore().current
-        XCTAssertTrue(current.isTranslateSwapped)
+        XCTAssertTrue(current.isHanjiFirst)
         XCTAssertTrue(current.isFullWidthPunctuation)
-        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isTranslateSwapped.name))
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isHanjiFirst.name))
     }
 
     // INVARIANT_DESKTOP_GENERAL_PANE_OUTPUT_SCRIPT_AND_RESET (behavioral-invariants.md §48)
@@ -55,7 +55,7 @@ final class SettingsStoreTests: XCTestCase {
         let store = makeStore()
         userDefaults.set(InputMode.poj.rawValue, forKey: SettingsStore.Keys.inputMode.name)
         userDefaults.set(ToneInputScheme.telex.rawValue, forKey: SettingsStore.Keys.toneInputScheme.name)
-        userDefaults.set(false, forKey: SettingsStore.Keys.isTranslateSwapped.name)
+        userDefaults.set(false, forKey: SettingsStore.Keys.isHanjiFirst.name)
         userDefaults.set("en", forKey: SettingsStore.Keys.displayLanguage.name)
         userDefaults.set(true, forKey: SettingsStore.Keys.isAutoSpaceEnabled.name)
         userDefaults.set(false, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
@@ -69,8 +69,8 @@ final class SettingsStoreTests: XCTestCase {
 
         XCTAssertEqual(store.inputMode, SettingsStore.Keys.inputMode.defaultValue)
         XCTAssertEqual(store.composingKeyBindings.toneScheme, SettingsStore.Keys.toneInputScheme.defaultValue)
-        XCTAssertTrue(store.storedIsTranslateSwapped, "back to hanji-first")
-        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isTranslateSwapped.name), "removed, not written")
+        XCTAssertTrue(store.storedIsHanjiFirst, "back to hanji-first")
+        XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isHanjiFirst.name), "removed, not written")
         XCTAssertEqual(userDefaults.string(forKey: SettingsStore.Keys.displayLanguage.name), "en", "display language kept")
         XCTAssertEqual(store.isAutoSpaceEnabled, SettingsStore.Keys.isAutoSpaceEnabled.defaultValue)
         XCTAssertEqual(store.isCandidateWindowEnabled, SettingsStore.Keys.isCandidateWindowEnabled.defaultValue)
@@ -83,7 +83,7 @@ final class SettingsStoreTests: XCTestCase {
 
     func testCurrent_readsEveryStoredValue() {
         userDefaults.set(InputMode.poj.rawValue, forKey: SettingsStore.Keys.inputMode.name)
-        userDefaults.set(true, forKey: SettingsStore.Keys.isTranslateSwapped.name)
+        userDefaults.set(true, forKey: SettingsStore.Keys.isHanjiFirst.name)
         // §34/S22 — the default moved ON on 2026-09-03, so a stored `false`
         // has to keep winning: someone who turned Show Typed Text First off stays off.
         userDefaults.set(false, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
@@ -94,7 +94,7 @@ final class SettingsStoreTests: XCTestCase {
             makeStore().current,
             EngineSettings(
                 inputMode: .poj,
-                isTranslateSwapped: true,
+                isHanjiFirst: true,
                 isFullWidthPunctuation: true,
                 candidateDisplayMode: .sideBySide,
                 isLiteralRomanCandidateEnabled: false,
@@ -114,18 +114,18 @@ final class SettingsStoreTests: XCTestCase {
     /// the mode gives their swap straight back.
     func testCurrent_underRomanOnly_derivesTheSwapFalse_andLeavesTheStoredValueAlone() {
         let store = makeStore()
-        store.storedIsTranslateSwapped = true
+        store.storedIsHanjiFirst = true
 
         store.candidateDisplayMode = .romanOnly
 
         XCTAssertEqual(store.current.candidateDisplayMode, .romanOnly)
-        XCTAssertFalse(store.current.isTranslateSwapped)
-        XCTAssertTrue(store.storedIsTranslateSwapped, "the stored swap must survive the mode")
-        XCTAssertEqual(userDefaults.object(forKey: SettingsStore.Keys.isTranslateSwapped.name) as? Bool, true)
+        XCTAssertFalse(store.current.isHanjiFirst)
+        XCTAssertTrue(store.storedIsHanjiFirst, "the stored swap must survive the mode")
+        XCTAssertEqual(userDefaults.object(forKey: SettingsStore.Keys.isHanjiFirst.name) as? Bool, true)
 
         store.candidateDisplayMode = .sideBySide
 
-        XCTAssertTrue(store.current.isTranslateSwapped, "side by side must read the stored swap again")
+        XCTAssertTrue(store.current.isHanjiFirst, "side by side must read the stored swap again")
     }
 
     /// The one platform-side rule of the combined display: the swap reads
@@ -134,21 +134,21 @@ final class SettingsStoreTests: XCTestCase {
     /// gives the user their own swap straight back.
     func testCurrent_underCombined_forcesTheSwapOn_andLeavesTheStoredValueAlone() {
         let store = makeStore()
-        store.storedIsTranslateSwapped = false
+        store.storedIsHanjiFirst = false
 
         store.candidateDisplayMode = .combined
 
         XCTAssertEqual(store.current.candidateDisplayMode, .combined)
-        XCTAssertTrue(store.current.isTranslateSwapped, "combined must lead with — and commit — the Hanji")
-        XCTAssertFalse(store.storedIsTranslateSwapped, "the stored swap must survive the mode")
+        XCTAssertTrue(store.current.isHanjiFirst, "combined must lead with — and commit — the Hanji")
+        XCTAssertFalse(store.storedIsHanjiFirst, "the stored swap must survive the mode")
 
         store.candidateDisplayMode = .romanOnly
 
-        XCTAssertFalse(store.current.isTranslateSwapped, "romanization-only is unchanged by the third mode")
+        XCTAssertFalse(store.current.isHanjiFirst, "romanization-only is unchanged by the third mode")
 
         store.candidateDisplayMode = .sideBySide
 
-        XCTAssertFalse(store.current.isTranslateSwapped, "side by side must read the stored swap again")
+        XCTAssertFalse(store.current.isHanjiFirst, "side by side must read the stored swap again")
     }
 
     func testCandidateDisplayMode_withNothingStored_isSideBySide() {
@@ -256,7 +256,7 @@ final class SettingsStoreTests: XCTestCase {
     /// alignment is invisible from this file alone.
     func testKeys_matchTheIOSSpellings() {
         XCTAssertEqual(SettingsStore.Keys.inputMode.name, "inputMode")
-        XCTAssertEqual(SettingsStore.Keys.isTranslateSwapped.name, "isTranslateSwapped")
+        XCTAssertEqual(SettingsStore.Keys.isHanjiFirst.name, "isTranslateSwapped")
         XCTAssertEqual(SettingsStore.Keys.displayLanguage.name, "displayLanguage")
     }
 
@@ -663,8 +663,8 @@ final class SettingsStoreTests: XCTestCase {
     func testCandidateDisplayMode_rules_perMode() {
         XCTAssertEqual(CandidateDisplayMode.allCases.filter(\.allowsSwapToggle), [.sideBySide, .combined])
         XCTAssertEqual(CandidateDisplayMode.allCases.filter { !$0.showsHanji }, [.romanOnly])
-        XCTAssertTrue(CandidateDisplayMode.combined.effectiveTranslateSwapped(stored: false))
-        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveTranslateSwapped(stored: true))
+        XCTAssertTrue(CandidateDisplayMode.combined.effectiveHanjiFirst(stored: false))
+        XCTAssertFalse(CandidateDisplayMode.romanOnly.effectiveHanjiFirst(stored: true))
         // Punctuation width follows the STORED swap under Hanji–Romanization Pairing / Hanji with Romanization, never under Romanization Only.
         XCTAssertFalse(CandidateDisplayMode.combined.effectiveFullWidthPunctuation(stored: false))
         XCTAssertTrue(CandidateDisplayMode.combined.effectiveFullWidthPunctuation(stored: true))
@@ -677,11 +677,11 @@ final class SettingsStoreTests: XCTestCase {
         let store = makeStore()
         store.candidateDisplayMode = .combined
 
-        store.storedIsTranslateSwapped = false
-        XCTAssertTrue(store.current.isTranslateSwapped, "projection stays hanji-first")
+        store.storedIsHanjiFirst = false
+        XCTAssertTrue(store.current.isHanjiFirst, "projection stays hanji-first")
         XCTAssertFalse(store.current.isFullWidthPunctuation, "half-width until the chord is pressed")
 
-        store.storedIsTranslateSwapped = true
+        store.storedIsHanjiFirst = true
         XCTAssertTrue(store.current.isFullWidthPunctuation, "full-width after the chord is pressed")
 
         store.candidateDisplayMode = .romanOnly

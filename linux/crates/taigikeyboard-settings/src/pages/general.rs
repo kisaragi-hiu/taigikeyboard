@@ -57,9 +57,9 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         context.strings.resolve(StringKey::SettingsOutputScript),
         output_labels,
         OUTPUT_SCRIPTS,
-        context.document.bool(&keys::IS_TRANSLATE_SWAPPED),
-        |is_hanji, document| document.set_bool(&keys::IS_TRANSLATE_SWAPPED, is_hanji),
-        |document| document.bool(&keys::IS_TRANSLATE_SWAPPED),
+        context.document.bool(&keys::IS_HANJI_FIRST),
+        |is_hanji, document| document.set_bool(&keys::IS_HANJI_FIRST, is_hanji),
+        |document| document.bool(&keys::IS_HANJI_FIRST),
     );
     output_row.set_sensitive(allows_swap(context.document));
     context.on_refresh(move |document| output_row.set_sensitive(allows_swap(document)));

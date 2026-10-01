@@ -55,7 +55,7 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
 
         controller.performShortcutAction(.toggleTranslateSwapped)
 
-        XCTAssertEqual(controller.settings.storedIsTranslateSwapped, !defaults.isTranslateSwapped)
+        XCTAssertEqual(controller.settings.storedIsHanjiFirst, !defaults.isHanjiFirst)
     }
 
     /// What happens to the bar follows what the setting invalidates: the
@@ -116,20 +116,20 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
     /// is untouched, so leaving the mode gives the user their swap back, the
     /// presenter is not disturbed, and no flash pretends something happened.
     func testTheTranslateSwap_underRomanOnly_isSilentlyInert() {
-        controller.settings.storedIsTranslateSwapped = true
+        controller.settings.storedIsHanjiFirst = true
         controller.settings.candidateDisplayMode = .romanOnly
         let callsBefore = presenter.calls.count
 
         controller.performShortcutAction(.toggleTranslateSwapped)
 
-        XCTAssertTrue(controller.settings.storedIsTranslateSwapped, "the chord flipped a stored value it must not touch")
-        XCTAssertFalse(controller.settings.current.isTranslateSwapped, "the effective swap stays off under romanization-only")
+        XCTAssertTrue(controller.settings.storedIsHanjiFirst, "the chord flipped a stored value it must not touch")
+        XCTAssertFalse(controller.settings.current.isHanjiFirst, "the effective swap stays off under romanization-only")
         XCTAssertEqual(presenter.calls.count, callsBefore)
         XCTAssertEqual(flashes, [])
 
         controller.settings.candidateDisplayMode = .sideBySide
 
-        XCTAssertTrue(controller.settings.current.isTranslateSwapped, "leaving the mode must give the stored swap back")
+        XCTAssertTrue(controller.settings.current.isHanjiFirst, "leaving the mode must give the stored swap back")
     }
 
     /// Under the combined display each script is its own adjacent cell and
@@ -139,14 +139,14 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
     /// (USER 2026-09-13: "Hanji with Romanization needs an isTranslateSwapped button"), and the
     /// flipped value is what the user gets back on returning to side-by-side.
     func testTheTranslateSwap_underCombined_flipsThePunctuationWidthOnly() {
-        controller.settings.storedIsTranslateSwapped = false
+        controller.settings.storedIsHanjiFirst = false
         controller.settings.candidateDisplayMode = .combined
 
         controller.performShortcutAction(.toggleTranslateSwapped)
 
-        XCTAssertTrue(controller.settings.storedIsTranslateSwapped, "the chord flips the stored swap")
+        XCTAssertTrue(controller.settings.storedIsHanjiFirst, "the chord flips the stored swap")
         XCTAssertTrue(controller.settings.current.isFullWidthPunctuation, "…which is the punctuation width under combined")
-        XCTAssertTrue(controller.settings.current.isTranslateSwapped, "the effective swap stays on under combined")
+        XCTAssertTrue(controller.settings.current.isHanjiFirst, "the effective swap stays on under combined")
         XCTAssertEqual(flashes, [])
 
         controller.performShortcutAction(.toggleTranslateSwapped)
@@ -161,7 +161,7 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
     /// swap is not the cycle's to touch: it is what the user gets back on
     /// returning to side by side.
     func testCycleCandidateDisplayShortcut_advancesThePickerOrder_andAnnouncesIt() {
-        controller.settings.storedIsTranslateSwapped = true
+        controller.settings.storedIsHanjiFirst = true
         XCTAssertEqual(controller.settings.candidateDisplayMode, .sideBySide, "the cycle starts from the default")
 
         controller.performShortcutAction(.cycleCandidateDisplayMode)
@@ -176,7 +176,7 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         XCTAssertEqual(controller.settings.candidateDisplayMode, .sideBySide)
         XCTAssertEqual(flashes, ["漢羅濫", "羅馬字", "漢羅對應"])
 
-        XCTAssertTrue(controller.settings.storedIsTranslateSwapped, "the cycle flipped a stored swap it must not touch")
+        XCTAssertTrue(controller.settings.storedIsHanjiFirst, "the cycle flipped a stored swap it must not touch")
     }
 
     /// The settings doorway is handled before any session is consulted, so

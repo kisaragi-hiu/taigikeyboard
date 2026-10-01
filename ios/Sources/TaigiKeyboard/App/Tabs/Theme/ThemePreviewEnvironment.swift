@@ -61,7 +61,7 @@ final class ThemePreviewEnvironment: KeyboardEnvironment {
             inputMode: inputMode,
             fontType: base.fontType,
             keyboardLayoutType: base.keyboardLayoutType,
-            isTranslateSwapped: base.isTranslateSwapped,
+            isHanjiFirst: base.isHanjiFirst,
             isTpsOrMappedToER: base.isTpsOrMappedToER,
             isNasalMarkerUppercaseEnabled: base.isNasalMarkerUppercaseEnabled,
             keyFontSizeScale: CGFloat(appearance.keyFontSizeScale),

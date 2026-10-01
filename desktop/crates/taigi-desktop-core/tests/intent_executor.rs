@@ -261,7 +261,7 @@ fn a_typed_comma_swaps_an_armed_space_or_is_written_full_width() {
 #[test]
 fn half_width_punctuation_outside_a_composition_is_the_clients() {
     let mut rig = new_rig(true);
-    rig.settings.set_bool(&keys::IS_TRANSLATE_SWAPPED, false);
+    rig.settings.set_bool(&keys::IS_HANJI_FIRST, false);
     rig.surface.can_swap = false;
     assert!(!rig.run(ComposingKeyIntent::PassThrough, &comma()));
     assert_eq!(rig.calls(), ["swap \", \""]);
@@ -288,7 +288,7 @@ fn a_pass_through_key_is_consumed_for_punctuation_or_an_armed_swap() {
     settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true);
     // Hanji-first: full-width punctuation is written by the input method.
     assert!(pass_through_may_consume(&comma(), &settings, false));
-    settings.set_bool(&keys::IS_TRANSLATE_SWAPPED, false);
+    settings.set_bool(&keys::IS_HANJI_FIRST, false);
     // Roman-first: half width is the client's, unless a swap is armed.
     assert!(!pass_through_may_consume(&comma(), &settings, false));
     assert!(pass_through_may_consume(&comma(), &settings, true));

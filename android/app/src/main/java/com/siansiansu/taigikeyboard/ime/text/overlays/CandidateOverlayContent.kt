@@ -114,7 +114,7 @@ fun CandidateOverlayContent(
     typeface: android.graphics.Typeface,
     isTPSLayout: Boolean,
     orMapsToER: Boolean,
-    isTranslateSwapped: Boolean,
+    isHanjiFirst: Boolean,
     /** Lights the 文/A control button — the punctuation width it flips, not the candidate projection above. */
     isFullWidthPunctuation: Boolean,
     candidateDisplayMode: CandidateDisplayMode,
@@ -154,7 +154,7 @@ fun CandidateOverlayContent(
     val primaryPaint = remember(typeface, fontScale) { measurementPaint(typeface, PRIMARY_TEXT_SIZE_SP, displayMetrics) }
     val subtitlePaint = remember(typeface, fontScale) { measurementPaint(typeface, SUBTITLE_TEXT_SIZE_SP, displayMetrics) }
 
-    // Rows do NOT depend on isTranslateSwapped: two-line cell width is max(roman, hanzi) and
+    // Rows do NOT depend on isHanjiFirst: two-line cell width is max(roman, hanzi) and
     // COMBINED single-line titles are swap-invariant, so a swap never reflows. They DO depend
     // on candidateDisplayMode: a mixed cell — marked split cell or the unmarked hanji-led
     // NextWord row (§42 second exception) — measures its rendered single-line title.
@@ -213,7 +213,7 @@ fun CandidateOverlayContent(
                     fontFamily = fontFamily,
                     isTPSLayout = isTPSLayout,
                     orMapsToER = orMapsToER,
-                    isTranslateSwapped = isTranslateSwapped,
+                    isHanjiFirst = isHanjiFirst,
                     candidateDisplayMode = candidateDisplayMode,
                     isClickEnabled = isClickEnabled,
                     onCellClick = { word, index ->
@@ -275,7 +275,7 @@ private fun CandidateRow(
     fontFamily: FontFamily,
     isTPSLayout: Boolean,
     orMapsToER: Boolean,
-    isTranslateSwapped: Boolean,
+    isHanjiFirst: Boolean,
     candidateDisplayMode: CandidateDisplayMode,
     isClickEnabled: Boolean,
     onCellClick: (TaigiWord, Int) -> Unit,
@@ -309,7 +309,7 @@ private fun CandidateRow(
                     fontFamily = fontFamily,
                     isTPSLayout = isTPSLayout,
                     orMapsToER = orMapsToER,
-                    isTranslateSwapped = isTranslateSwapped,
+                    isHanjiFirst = isHanjiFirst,
                     candidateDisplayMode = candidateDisplayMode,
                     onClick = { if (isClickEnabled) onCellClick(item.word, item.originalIndex) },
                 )
@@ -336,7 +336,7 @@ private fun CandidateCell(
     fontFamily: FontFamily,
     isTPSLayout: Boolean,
     orMapsToER: Boolean,
-    isTranslateSwapped: Boolean,
+    isHanjiFirst: Boolean,
     candidateDisplayMode: CandidateDisplayMode,
     onClick: () -> Unit,
 ) {
@@ -390,7 +390,7 @@ private fun CandidateCell(
                     displayRoman = displayRoman,
                     isTPSLayout = isTPSLayout,
                     candidateDisplayMode = candidateDisplayMode,
-                    isTranslateSwapped = isTranslateSwapped,
+                    isHanjiFirst = isHanjiFirst,
                     cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
                 )
 
@@ -596,7 +596,7 @@ private fun measureCellWidth(
                 displayRoman = word.roman,
                 isTPSLayout = false,
                 candidateDisplayMode = candidateDisplayMode,
-                isTranslateSwapped = false,
+                isHanjiFirst = false,
                 cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
             ).title
         return maxOf(minCellWidthPx, (primaryPaint.measureText(title) + cellPaddingPx + 0.5f).toInt())

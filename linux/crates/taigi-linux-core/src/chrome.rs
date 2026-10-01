@@ -187,8 +187,8 @@ pub fn perform_global(
                 return emits;
             }
             if !runtime.update_settings("toggle_translate_swapped", |document| {
-                let swapped = document.bool(&keys::IS_TRANSLATE_SWAPPED);
-                document.set_bool(&keys::IS_TRANSLATE_SWAPPED, !swapped);
+                let swapped = document.bool(&keys::IS_HANJI_FIRST);
+                document.set_bool(&keys::IS_HANJI_FIRST, !swapped);
             }) {
                 return emits;
             }

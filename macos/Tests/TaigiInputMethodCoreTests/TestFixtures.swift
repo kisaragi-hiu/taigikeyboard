@@ -212,7 +212,7 @@ enum TestFixtures {
     ) -> EngineSettings {
         EngineSettings(
             inputMode: inputMode,
-            isTranslateSwapped: swapped,
+            isHanjiFirst: swapped,
             isFullWidthPunctuation: swapped,
             candidateDisplayMode: candidateDisplayMode,
             // §34/S22 ships ON; a case that wants it off writes the real
@@ -436,8 +436,8 @@ extension XCTestCase {
     /// the other. A case that means "the user is in Hanji mode" has to move the
     /// domain BOTH of them read.
     @MainActor
-    func withTranslateSwapped(_ swapped: Bool, _ body: () throws -> Void) rethrows {
-        try withSetting(SettingsStore.Keys.isTranslateSwapped.name, to: swapped, body)
+    func withHanjiFirst(_ swapped: Bool, _ body: () throws -> Void) rethrows {
+        try withSetting(SettingsStore.Keys.isHanjiFirst.name, to: swapped, body)
     }
 }
 
