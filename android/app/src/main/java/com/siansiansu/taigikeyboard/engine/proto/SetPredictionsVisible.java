@@ -7,91 +7,91 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Platform → engine visibility sync. Pushes is_showing back to state
- * after platform rendering of an async predict() result. No effects,
- * no generation bump; just state.is_showing = is_showing.
+ * Platform → engine visibility sync. Pushes the prediction bar's visibility
+ * to state after platform rendering of an async predict() result. No effects,
+ * no generation bump; just state.is_showing = visible.
  * </pre>
  *
- * Protobuf type {@code taigi.engine.SetIsShowing}
+ * Protobuf type {@code taigi.engine.SetPredictionsVisible}
  */
 @com.google.protobuf.Generated
-public  final class SetIsShowing extends
+public  final class SetPredictionsVisible extends
     com.google.protobuf.GeneratedMessageLite<
-        SetIsShowing, SetIsShowing.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.SetIsShowing)
-    SetIsShowingOrBuilder {
-  private SetIsShowing() {
+        SetPredictionsVisible, SetPredictionsVisible.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.SetPredictionsVisible)
+    SetPredictionsVisibleOrBuilder {
+  private SetPredictionsVisible() {
   }
-  public static final int IS_SHOWING_FIELD_NUMBER = 1;
-  private boolean isShowing_;
+  public static final int VISIBLE_FIELD_NUMBER = 1;
+  private boolean visible_;
   /**
-   * <code>bool is_showing = 1;</code>
-   * @return The isShowing.
+   * <code>bool visible = 1;</code>
+   * @return The visible.
    */
   @java.lang.Override
-  public boolean getIsShowing() {
-    return isShowing_;
+  public boolean getVisible() {
+    return visible_;
   }
   /**
-   * <code>bool is_showing = 1;</code>
-   * @param value The isShowing to set.
+   * <code>bool visible = 1;</code>
+   * @param value The visible to set.
    */
-  private void setIsShowing(boolean value) {
+  private void setVisible(boolean value) {
 
-    isShowing_ = value;
+    visible_ = value;
   }
   /**
-   * <code>bool is_showing = 1;</code>
+   * <code>bool visible = 1;</code>
    */
-  private void clearIsShowing() {
+  private void clearVisible() {
 
-    isShowing_ = false;
+    visible_ = false;
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -99,24 +99,24 @@ public  final class SetIsShowing extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -127,59 +127,59 @@ public  final class SetIsShowing extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.SetIsShowing prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
    * <pre>
-   * Platform → engine visibility sync. Pushes is_showing back to state
-   * after platform rendering of an async predict() result. No effects,
-   * no generation bump; just state.is_showing = is_showing.
+   * Platform → engine visibility sync. Pushes the prediction bar's visibility
+   * to state after platform rendering of an async predict() result. No effects,
+   * no generation bump; just state.is_showing = visible.
    * </pre>
    *
-   * Protobuf type {@code taigi.engine.SetIsShowing}
+   * Protobuf type {@code taigi.engine.SetPredictionsVisible}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.SetIsShowing, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.SetIsShowing)
-      com.siansiansu.taigikeyboard.engine.proto.SetIsShowingOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.SetPredictionsVisible)
+      com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisibleOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
 
 
     /**
-     * <code>bool is_showing = 1;</code>
-     * @return The isShowing.
+     * <code>bool visible = 1;</code>
+     * @return The visible.
      */
     @java.lang.Override
-    public boolean getIsShowing() {
-      return instance.getIsShowing();
+    public boolean getVisible() {
+      return instance.getVisible();
     }
     /**
-     * <code>bool is_showing = 1;</code>
-     * @param value The isShowing to set.
+     * <code>bool visible = 1;</code>
+     * @param value The visible to set.
      * @return This builder for chaining.
      */
-    public Builder setIsShowing(boolean value) {
+    public Builder setVisible(boolean value) {
       copyOnWrite();
-      instance.setIsShowing(value);
+      instance.setVisible(value);
       return this;
     }
     /**
-     * <code>bool is_showing = 1;</code>
+     * <code>bool visible = 1;</code>
      * @return This builder for chaining.
      */
-    public Builder clearIsShowing() {
+    public Builder clearVisible() {
       copyOnWrite();
-      instance.clearIsShowing();
+      instance.clearVisible();
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.SetIsShowing)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.SetPredictionsVisible)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -188,14 +188,14 @@ public  final class SetIsShowing extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.SetIsShowing();
+        return new com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible();
       }
       case NEW_BUILDER: {
         return new Builder();
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "isShowing_",
+            "visible_",
           };
           java.lang.String info =
               "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u0007";
@@ -205,13 +205,13 @@ public  final class SetIsShowing extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.SetIsShowing> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.SetIsShowing>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -231,24 +231,24 @@ public  final class SetIsShowing extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.SetIsShowing)
-  private static final com.siansiansu.taigikeyboard.engine.proto.SetIsShowing DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.SetPredictionsVisible)
+  private static final com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible DEFAULT_INSTANCE;
   static {
-    SetIsShowing defaultInstance = new SetIsShowing();
+    SetPredictionsVisible defaultInstance = new SetPredictionsVisible();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      SetIsShowing.class, defaultInstance);
+      SetPredictionsVisible.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.SetIsShowing getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<SetIsShowing> PARSER;
+  private static volatile com.google.protobuf.Parser<SetPredictionsVisible> PARSER;
 
-  public static com.google.protobuf.Parser<SetIsShowing> parser() {
+  public static com.google.protobuf.Parser<SetPredictionsVisible> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

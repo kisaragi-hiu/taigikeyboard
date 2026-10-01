@@ -3,7 +3,7 @@
 //! `RustEngineBridge+NextWord.swift`.
 //!
 //! The desktop learns but does not predict, so the whole read half —
-//! `FilterPredictions`, `SetIsShowing` — has no caller and is not wrapped. `Backspace` and
+//! `FilterPredictions`, `SetPredictionsVisible` — has no caller and is not wrapped. `Backspace` and
 //! `ContextTimeoutFired` are absent too: recording is already fenced by a
 //! strict 10-second window inside the engine (`decide.rs` `should_record_association`), so with
 //! no predictions on screen a fired timeout changes nothing observable.
@@ -14,7 +14,7 @@
 
 use protos::engine::{
     next_word_request, next_word_response, request, response, CommittedWord, DecisionInput,
-    NextWordRequest, ResetFull, UpdateLastSelectedWord, WordSelected,
+    NextWordRequest, ResetAll, UpdateLastSelectedWord, WordSelected,
 };
 
 use super::bridge::{app_config, record_failure, roundtrip};
@@ -77,7 +77,7 @@ pub fn update_last_selected_word(
 /// learned as the predecessor of the first word typed in the next.
 pub fn reset_full(now_ms: i64, settings: &EngineSettings, generation: u64) {
     decide(
-        next_word_request::Method::ResetFull(ResetFull {
+        next_word_request::Method::ResetAll(ResetAll {
             input: Some(DecisionInput { now_ms }),
         }),
         "nextwordResetFull",

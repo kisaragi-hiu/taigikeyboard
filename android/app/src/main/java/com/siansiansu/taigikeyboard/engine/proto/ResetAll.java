@@ -10,15 +10,15 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * Full reset (sentence-end punctuation outside WordSelected, or empty doc).
  * </pre>
  *
- * Protobuf type {@code taigi.engine.ResetFull}
+ * Protobuf type {@code taigi.engine.ResetAll}
  */
 @com.google.protobuf.Generated
-public  final class ResetFull extends
+public  final class ResetAll extends
     com.google.protobuf.GeneratedMessageLite<
-        ResetFull, ResetFull.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.ResetFull)
-    ResetFullOrBuilder {
-  private ResetFull() {
+        ResetAll, ResetAll.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.ResetAll)
+    ResetAllOrBuilder {
+  private ResetAll() {
   }
   private int bitField0_;
   public static final int INPUT_FIELD_NUMBER = 1;
@@ -68,50 +68,50 @@ public  final class ResetFull extends
     bitField0_ = (bitField0_ & ~0x00000001);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -119,24 +119,24 @@ public  final class ResetFull extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -147,7 +147,7 @@ public  final class ResetFull extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.ResetFull prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.ResetAll prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
@@ -156,14 +156,14 @@ public  final class ResetFull extends
    * Full reset (sentence-end punctuation outside WordSelected, or empty doc).
    * </pre>
    *
-   * Protobuf type {@code taigi.engine.ResetFull}
+   * Protobuf type {@code taigi.engine.ResetAll}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.ResetFull, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.ResetFull)
-      com.siansiansu.taigikeyboard.engine.proto.ResetFullOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.ResetFull.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.ResetAll, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.ResetAll)
+      com.siansiansu.taigikeyboard.engine.proto.ResetAllOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.ResetAll.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
@@ -216,7 +216,7 @@ public  final class ResetFull extends
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.ResetFull)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.ResetAll)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -225,7 +225,7 @@ public  final class ResetFull extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.ResetFull();
+        return new com.siansiansu.taigikeyboard.engine.proto.ResetAll();
       }
       case NEW_BUILDER: {
         return new Builder();
@@ -243,13 +243,13 @@ public  final class ResetFull extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.ResetFull> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.ResetAll> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.ResetFull.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.ResetAll.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.ResetFull>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.ResetAll>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -269,24 +269,24 @@ public  final class ResetFull extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.ResetFull)
-  private static final com.siansiansu.taigikeyboard.engine.proto.ResetFull DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.ResetAll)
+  private static final com.siansiansu.taigikeyboard.engine.proto.ResetAll DEFAULT_INSTANCE;
   static {
-    ResetFull defaultInstance = new ResetFull();
+    ResetAll defaultInstance = new ResetAll();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      ResetFull.class, defaultInstance);
+      ResetAll.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.ResetFull getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.ResetAll getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<ResetFull> PARSER;
+  private static volatile com.google.protobuf.Parser<ResetAll> PARSER;
 
-  public static com.google.protobuf.Parser<ResetFull> parser() {
+  public static com.google.protobuf.Parser<ResetAll> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

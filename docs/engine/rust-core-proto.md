@@ -280,7 +280,7 @@ message CaseRequest {
     FullUppercaseToneString full_uppercase_tone_string = 11;
     LowercaseToneChar       lowercase_tone_char        = 12;
     TransformInputCase      transform_input_case       = 20;
-    TransformSuggestion     transform_suggestion       = 22;
+    TransformCandidateCase  transform_candidate_case   = 22;
   }
 }
 
@@ -301,7 +301,7 @@ message CaseResponse {
 - **Mode comes from envelope `AppConfig.input_mode`** (per phonetics convention) — messages don't re-specify mode per call.
 - **`CaseStringResult` defined locally** rather than reusing `phonetics.proto::StringResult`. Avoids cross-module proto coupling so case-transform can evolve independently.
 - **`LetterCase` enum** carries `LETTER_CASE_UNSPECIFIED = 0` per proto3 best practice. Engine maps Unspecified to `Lowercased` as safe-fallback (matches the safe-fallback contract used by other dispatch error paths).
-- **Suggestion skip rules stay platform-side** — iOS uses `additionalInfo` flag-based markers, Android uses numeric `id` markers. Each platform's bridge filters before calling `transform_suggestion(...)`.
+- **Suggestion skip rules stay platform-side** — iOS uses `additionalInfo` flag-based markers, Android uses numeric `id` markers. Each platform's bridge filters before calling `transform_candidate_case(...)`.
 
 ---
 

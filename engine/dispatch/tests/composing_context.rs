@@ -13,7 +13,7 @@ use std::sync::OnceLock;
 use common::{open_user_data, roundtrip, tl_config};
 use protos::engine::{
     composing_request, next_word_request, request, response, CommitContinuous, ComposingRequest,
-    DecisionInput, EnterContinuous, FetchAtPos, NextWordRequest, Reset, ResetFull, Start,
+    DecisionInput, EnterContinuous, FetchAtPos, NextWordRequest, Reset, ResetAll, Start,
     WordSelected,
 };
 use userdata::{AssociationPair, JournalMode, UserDataPaths, UserDataStores};
@@ -127,7 +127,7 @@ fn the_previous_word_reranks_the_candidates() {
     let mut generation = 1;
 
     // No committed word: the context-free order, neither continuation first.
-    nextword(next_word_request::Method::ResetFull(ResetFull {
+    nextword(next_word_request::Method::ResetAll(ResetAll {
         input: Some(DecisionInput { now_ms: NOW_MS }),
     }));
     let baseline = hanji_after_typing(generation, "tse");
@@ -158,7 +158,7 @@ fn the_previous_word_reranks_the_candidates() {
 
     // A sentence end / full reset clears it.
     commit("真", "tsin", NOW_MS);
-    nextword(next_word_request::Method::ResetFull(ResetFull {
+    nextword(next_word_request::Method::ResetAll(ResetAll {
         input: Some(DecisionInput { now_ms: NOW_MS }),
     }));
     generation += 1;

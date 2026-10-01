@@ -47,7 +47,7 @@ impl EngineHandle {
     /// 10 s association window of `decide::committed_context` — for the
     /// composing fetch's context re-rank (§56). Advisory: read as of now,
     /// without the envelope generation check, and only orders candidates;
-    /// a platform that reset its next-word context sends `ResetFull` /
+    /// a platform that reset its next-word context sends `ResetAll` /
     /// `ContextTimeoutFired`, which clear it here too.
     pub fn context_snapshot(&self, now_ms: i64) -> Option<(String, String)> {
         let engine = self

@@ -243,11 +243,11 @@ class NextWordController(
      * remaining text, or unconditionally clear UI when text is empty.
      *
      * Empty path bumps `envelopeGen` (forces engine state drop) + dispatches
-     * `ResetFull` to cancel timer + bump `current_generation`, then forces
+     * `ResetAll` to cancel timer + bump `current_generation`, then forces
      * `onClearCandidates()` regardless of the engine's `clearPredictionsUI`
      * gate. Preserves the pre-Rust unconditional-clear behavior (the engine
      * gate is closed because envelope-mismatch reset wiped `is_showing` to
-     * false before `ResetFull` processed).
+     * false before `ResetAll` processed).
      */
     fun handleBackspaceForNextWord(textBeforeCursor: String) {
         val trimmed = textBeforeCursor.trimEnd()

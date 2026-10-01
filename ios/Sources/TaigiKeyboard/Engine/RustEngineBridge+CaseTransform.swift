@@ -48,12 +48,12 @@ public extension RustEngineBridge {
         mode: InputMode,
         isNasalMarkerUppercaseEnabled: Bool,
     ) -> String {
-        var payload = Taigi_Engine_TransformSuggestion()
+        var payload = Taigi_Engine_TransformCandidateCase()
         payload.originalText = original
         payload.composingText = composing
         payload.letterCase = Taigi_Engine_LetterCase(rawValue: Int(letterCase.rawValue)) ?? .unspecified
         return caseStringDispatch(
-            method: .transformSuggestion(payload),
+            method: .transformCandidateCase(payload),
             op: "transformSuggestionCase",
             mode: mode,
             isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,

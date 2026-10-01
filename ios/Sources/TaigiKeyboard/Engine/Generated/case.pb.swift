@@ -110,12 +110,12 @@ public nonisolated struct Taigi_Engine_CaseRequest: Sendable {
     set {method = .transformInputCase(newValue)}
   }
 
-  public var transformSuggestion: Taigi_Engine_TransformSuggestion {
+  public var transformCandidateCase: Taigi_Engine_TransformCandidateCase {
     get {
-      if case .transformSuggestion(let v)? = method {return v}
-      return Taigi_Engine_TransformSuggestion()
+      if case .transformCandidateCase(let v)? = method {return v}
+      return Taigi_Engine_TransformCandidateCase()
     }
-    set {method = .transformSuggestion(newValue)}
+    set {method = .transformCandidateCase(newValue)}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -127,7 +127,7 @@ public nonisolated struct Taigi_Engine_CaseRequest: Sendable {
     case lowercaseToneChar(Taigi_Engine_LowercaseToneChar)
     /// --- Per-string compound transforms ---
     case transformInputCase(Taigi_Engine_TransformInputCase)
-    case transformSuggestion(Taigi_Engine_TransformSuggestion)
+    case transformCandidateCase(Taigi_Engine_TransformCandidateCase)
 
   }
 
@@ -199,8 +199,7 @@ public nonisolated struct Taigi_Engine_TransformInputCase: Sendable {
   public init() {}
 }
 
-/// `TransformSuggestion` applies the SuggestionCaseTransformer per-word
-/// case transformation:
+/// `TransformCandidateCase` applies the per-candidate case transformation:
 /// - CAPS_LOCKED: full upper
 /// - else with non-empty composing_text: split typed-portion (matchCase to
 ///   composing) + remaining-portion (UPPERCASED → first upper / LOWERCASED → lower)
@@ -210,7 +209,7 @@ public nonisolated struct Taigi_Engine_TransformInputCase: Sendable {
 /// returns the final-form string ready for display. Suggestion skip rules
 /// (iOS `additionalInfo` flags, Android `id` markers) stay platform-side
 /// — only transform-eligible items reach this op.
-public nonisolated struct Taigi_Engine_TransformSuggestion: Sendable {
+public nonisolated struct Taigi_Engine_TransformCandidateCase: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
@@ -275,7 +274,7 @@ nonisolated extension Taigi_Engine_LetterCase: SwiftProtobuf._ProtoNameProviding
 
 nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CaseRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}uppercase_tone_char\0\u{3}full_uppercase_tone_string\0\u{3}lowercase_tone_char\0\u{4}\u{8}transform_input_case\0\u{4}\u{2}transform_suggestion\0\u{b}capitalize_candidate\0\u{c}\u{15}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{a}uppercase_tone_char\0\u{3}full_uppercase_tone_string\0\u{3}lowercase_tone_char\0\u{4}\u{8}transform_input_case\0\u{4}\u{2}transform_candidate_case\0\u{b}capitalize_candidate\0\u{c}\u{15}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -336,16 +335,16 @@ nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProt
         }
       }()
       case 22: try {
-        var v: Taigi_Engine_TransformSuggestion?
+        var v: Taigi_Engine_TransformCandidateCase?
         var hadOneofValue = false
         if let current = self.method {
           hadOneofValue = true
-          if case .transformSuggestion(let m) = current {v = m}
+          if case .transformCandidateCase(let m) = current {v = m}
         }
         try decoder.decodeSingularMessageField(value: &v)
         if let v = v {
           if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.method = .transformSuggestion(v)
+          self.method = .transformCandidateCase(v)
         }
       }()
       default: break
@@ -375,8 +374,8 @@ nonisolated extension Taigi_Engine_CaseRequest: SwiftProtobuf.Message, SwiftProt
       guard case .transformInputCase(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
-    case .transformSuggestion?: try {
-      guard case .transformSuggestion(let v)? = self.method else { preconditionFailure() }
+    case .transformCandidateCase?: try {
+      guard case .transformCandidateCase(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 22)
     }()
     case nil: break
@@ -516,8 +515,8 @@ nonisolated extension Taigi_Engine_TransformInputCase: SwiftProtobuf.Message, Sw
   }
 }
 
-nonisolated extension Taigi_Engine_TransformSuggestion: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  public static let protoMessageName: String = _protobuf_package + ".TransformSuggestion"
+nonisolated extension Taigi_Engine_TransformCandidateCase: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TransformCandidateCase"
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}original_text\0\u{3}composing_text\0\u{3}letter_case\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -547,7 +546,7 @@ nonisolated extension Taigi_Engine_TransformSuggestion: SwiftProtobuf.Message, S
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  public static func ==(lhs: Taigi_Engine_TransformSuggestion, rhs: Taigi_Engine_TransformSuggestion) -> Bool {
+  public static func ==(lhs: Taigi_Engine_TransformCandidateCase, rhs: Taigi_Engine_TransformCandidateCase) -> Bool {
     if lhs.originalText != rhs.originalText {return false}
     if lhs.composingText != rhs.composingText {return false}
     if lhs.letterCase != rhs.letterCase {return false}

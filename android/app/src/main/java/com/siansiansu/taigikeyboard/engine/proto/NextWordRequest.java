@@ -24,9 +24,9 @@ public  final class NextWordRequest extends
     BACKSPACE(11),
     CONTEXT_TIMEOUT_FIRED(12),
     CLEAR_FOR_NEW_COMPOSING(13),
-    RESET_FULL(14),
+    RESET_ALL(14),
     UPDATE_LAST_SELECTED_WORD(15),
-    SET_IS_SHOWING(16),
+    SET_PREDICTIONS_VISIBLE(16),
     FILTER_PREDICTIONS(20),
     PREDICT_NEXT(22),
     METHOD_NOT_SET(0);
@@ -48,9 +48,9 @@ public  final class NextWordRequest extends
         case 11: return BACKSPACE;
         case 12: return CONTEXT_TIMEOUT_FIRED;
         case 13: return CLEAR_FOR_NEW_COMPOSING;
-        case 14: return RESET_FULL;
+        case 14: return RESET_ALL;
         case 15: return UPDATE_LAST_SELECTED_WORD;
-        case 16: return SET_IS_SHOWING;
+        case 16: return SET_PREDICTIONS_VISIBLE;
         case 20: return FILTER_PREDICTIONS;
         case 22: return PREDICT_NEXT;
         case 0: return METHOD_NOT_SET;
@@ -294,40 +294,40 @@ public  final class NextWordRequest extends
     }
   }
 
-  public static final int RESET_FULL_FIELD_NUMBER = 14;
+  public static final int RESET_ALL_FIELD_NUMBER = 14;
   /**
-   * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+   * <code>.taigi.engine.ResetAll reset_all = 14;</code>
    */
   @java.lang.Override
-  public boolean hasResetFull() {
+  public boolean hasResetAll() {
     return methodCase_ == 14;
   }
   /**
-   * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+   * <code>.taigi.engine.ResetAll reset_all = 14;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.ResetFull getResetFull() {
+  public com.siansiansu.taigikeyboard.engine.proto.ResetAll getResetAll() {
     if (methodCase_ == 14) {
-       return (com.siansiansu.taigikeyboard.engine.proto.ResetFull) method_;
+       return (com.siansiansu.taigikeyboard.engine.proto.ResetAll) method_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.ResetFull.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.ResetAll.getDefaultInstance();
   }
   /**
-   * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+   * <code>.taigi.engine.ResetAll reset_all = 14;</code>
    */
-  private void setResetFull(com.siansiansu.taigikeyboard.engine.proto.ResetFull value) {
+  private void setResetAll(com.siansiansu.taigikeyboard.engine.proto.ResetAll value) {
     java.util.Objects.requireNonNull(value);
     method_ = value;
     methodCase_ = 14;
   }
   /**
-   * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+   * <code>.taigi.engine.ResetAll reset_all = 14;</code>
    */
-  private void mergeResetFull(com.siansiansu.taigikeyboard.engine.proto.ResetFull value) {
+  private void mergeResetAll(com.siansiansu.taigikeyboard.engine.proto.ResetAll value) {
     java.util.Objects.requireNonNull(value);
     if (methodCase_ == 14 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.ResetFull.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.ResetFull.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ResetFull) method_)
+        method_ != com.siansiansu.taigikeyboard.engine.proto.ResetAll.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.ResetAll.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ResetAll) method_)
           .mergeFrom(value).buildPartial();
     } else {
       method_ = value;
@@ -335,9 +335,9 @@ public  final class NextWordRequest extends
     methodCase_ = 14;
   }
   /**
-   * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+   * <code>.taigi.engine.ResetAll reset_all = 14;</code>
    */
-  private void clearResetFull() {
+  private void clearResetAll() {
     if (methodCase_ == 14) {
       methodCase_ = 0;
       method_ = null;
@@ -434,24 +434,24 @@ public  final class NextWordRequest extends
     }
   }
 
-  public static final int SET_IS_SHOWING_FIELD_NUMBER = 16;
+  public static final int SET_PREDICTIONS_VISIBLE_FIELD_NUMBER = 16;
   /**
    * <pre>
    * Platform-driven UI visibility update. After the platform renders the
    * result of an async predict() call (or clears it on empty result), it
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
-   * ResetFull paths can correctly emit ClearPredictionsUI when there is
+   * ResetAll paths can correctly emit ClearPredictionsUI when there is
    * UI to clear. Mutates state.is_showing only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
    * </pre>
    *
-   * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+   * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
    */
   @java.lang.Override
-  public boolean hasSetIsShowing() {
+  public boolean hasSetPredictionsVisible() {
     return methodCase_ == 16;
   }
   /**
@@ -460,21 +460,21 @@ public  final class NextWordRequest extends
    * result of an async predict() call (or clears it on empty result), it
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
-   * ResetFull paths can correctly emit ClearPredictionsUI when there is
+   * ResetAll paths can correctly emit ClearPredictionsUI when there is
    * UI to clear. Mutates state.is_showing only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
    * </pre>
    *
-   * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+   * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
    */
   @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.SetIsShowing getSetIsShowing() {
+  public com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible getSetPredictionsVisible() {
     if (methodCase_ == 16) {
-       return (com.siansiansu.taigikeyboard.engine.proto.SetIsShowing) method_;
+       return (com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible) method_;
     }
-    return com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.getDefaultInstance();
+    return com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible.getDefaultInstance();
   }
   /**
    * <pre>
@@ -482,16 +482,16 @@ public  final class NextWordRequest extends
    * result of an async predict() call (or clears it on empty result), it
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
-   * ResetFull paths can correctly emit ClearPredictionsUI when there is
+   * ResetAll paths can correctly emit ClearPredictionsUI when there is
    * UI to clear. Mutates state.is_showing only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
    * </pre>
    *
-   * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+   * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
    */
-  private void setSetIsShowing(com.siansiansu.taigikeyboard.engine.proto.SetIsShowing value) {
+  private void setSetPredictionsVisible(com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible value) {
     java.util.Objects.requireNonNull(value);
     method_ = value;
     methodCase_ = 16;
@@ -502,20 +502,20 @@ public  final class NextWordRequest extends
    * result of an async predict() call (or clears it on empty result), it
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
-   * ResetFull paths can correctly emit ClearPredictionsUI when there is
+   * ResetAll paths can correctly emit ClearPredictionsUI when there is
    * UI to clear. Mutates state.is_showing only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
    * </pre>
    *
-   * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+   * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
    */
-  private void mergeSetIsShowing(com.siansiansu.taigikeyboard.engine.proto.SetIsShowing value) {
+  private void mergeSetPredictionsVisible(com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible value) {
     java.util.Objects.requireNonNull(value);
     if (methodCase_ == 16 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SetIsShowing) method_)
+        method_ != com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible.newBuilder((com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible) method_)
           .mergeFrom(value).buildPartial();
     } else {
       method_ = value;
@@ -528,16 +528,16 @@ public  final class NextWordRequest extends
    * result of an async predict() call (or clears it on empty result), it
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
-   * ResetFull paths can correctly emit ClearPredictionsUI when there is
+   * ResetAll paths can correctly emit ClearPredictionsUI when there is
    * UI to clear. Mutates state.is_showing only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
    * </pre>
    *
-   * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+   * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
    */
-  private void clearSetIsShowing() {
+  private void clearSetPredictionsVisible() {
     if (methodCase_ == 16) {
       methodCase_ = 0;
       method_ = null;
@@ -1030,50 +1030,50 @@ public  final class NextWordRequest extends
     }
 
     /**
-     * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+     * <code>.taigi.engine.ResetAll reset_all = 14;</code>
      */
     @java.lang.Override
-    public boolean hasResetFull() {
-      return instance.hasResetFull();
+    public boolean hasResetAll() {
+      return instance.hasResetAll();
     }
     /**
-     * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+     * <code>.taigi.engine.ResetAll reset_all = 14;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.ResetFull getResetFull() {
-      return instance.getResetFull();
+    public com.siansiansu.taigikeyboard.engine.proto.ResetAll getResetAll() {
+      return instance.getResetAll();
     }
     /**
-     * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+     * <code>.taigi.engine.ResetAll reset_all = 14;</code>
      */
-    public Builder setResetFull(com.siansiansu.taigikeyboard.engine.proto.ResetFull value) {
+    public Builder setResetAll(com.siansiansu.taigikeyboard.engine.proto.ResetAll value) {
       copyOnWrite();
-      instance.setResetFull(value);
+      instance.setResetAll(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+     * <code>.taigi.engine.ResetAll reset_all = 14;</code>
      */
-    public Builder setResetFull(
-        com.siansiansu.taigikeyboard.engine.proto.ResetFull.Builder builderForValue) {
+    public Builder setResetAll(
+        com.siansiansu.taigikeyboard.engine.proto.ResetAll.Builder builderForValue) {
       copyOnWrite();
-      instance.setResetFull(builderForValue.build());
+      instance.setResetAll(builderForValue.build());
       return this;
     }
     /**
-     * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+     * <code>.taigi.engine.ResetAll reset_all = 14;</code>
      */
-    public Builder mergeResetFull(com.siansiansu.taigikeyboard.engine.proto.ResetFull value) {
+    public Builder mergeResetAll(com.siansiansu.taigikeyboard.engine.proto.ResetAll value) {
       copyOnWrite();
-      instance.mergeResetFull(value);
+      instance.mergeResetAll(value);
       return this;
     }
     /**
-     * <code>.taigi.engine.ResetFull reset_full = 14;</code>
+     * <code>.taigi.engine.ResetAll reset_all = 14;</code>
      */
-    public Builder clearResetFull() {
+    public Builder clearResetAll() {
       copyOnWrite();
-      instance.clearResetFull();
+      instance.clearResetAll();
       return this;
     }
 
@@ -1179,18 +1179,18 @@ public  final class NextWordRequest extends
      * result of an async predict() call (or clears it on empty result), it
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
-     * ResetFull paths can correctly emit ClearPredictionsUI when there is
+     * ResetAll paths can correctly emit ClearPredictionsUI when there is
      * UI to clear. Mutates state.is_showing only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
      * </pre>
      *
-     * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+     * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
      */
     @java.lang.Override
-    public boolean hasSetIsShowing() {
-      return instance.hasSetIsShowing();
+    public boolean hasSetPredictionsVisible() {
+      return instance.hasSetPredictionsVisible();
     }
     /**
      * <pre>
@@ -1198,18 +1198,18 @@ public  final class NextWordRequest extends
      * result of an async predict() call (or clears it on empty result), it
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
-     * ResetFull paths can correctly emit ClearPredictionsUI when there is
+     * ResetAll paths can correctly emit ClearPredictionsUI when there is
      * UI to clear. Mutates state.is_showing only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
      * </pre>
      *
-     * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+     * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
      */
     @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.SetIsShowing getSetIsShowing() {
-      return instance.getSetIsShowing();
+    public com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible getSetPredictionsVisible() {
+      return instance.getSetPredictionsVisible();
     }
     /**
      * <pre>
@@ -1217,18 +1217,18 @@ public  final class NextWordRequest extends
      * result of an async predict() call (or clears it on empty result), it
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
-     * ResetFull paths can correctly emit ClearPredictionsUI when there is
+     * ResetAll paths can correctly emit ClearPredictionsUI when there is
      * UI to clear. Mutates state.is_showing only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
      * </pre>
      *
-     * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+     * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
      */
-    public Builder setSetIsShowing(com.siansiansu.taigikeyboard.engine.proto.SetIsShowing value) {
+    public Builder setSetPredictionsVisible(com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible value) {
       copyOnWrite();
-      instance.setSetIsShowing(value);
+      instance.setSetPredictionsVisible(value);
       return this;
     }
     /**
@@ -1237,19 +1237,19 @@ public  final class NextWordRequest extends
      * result of an async predict() call (or clears it on empty result), it
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
-     * ResetFull paths can correctly emit ClearPredictionsUI when there is
+     * ResetAll paths can correctly emit ClearPredictionsUI when there is
      * UI to clear. Mutates state.is_showing only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
      * </pre>
      *
-     * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+     * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
      */
-    public Builder setSetIsShowing(
-        com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.Builder builderForValue) {
+    public Builder setSetPredictionsVisible(
+        com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible.Builder builderForValue) {
       copyOnWrite();
-      instance.setSetIsShowing(builderForValue.build());
+      instance.setSetPredictionsVisible(builderForValue.build());
       return this;
     }
     /**
@@ -1258,18 +1258,18 @@ public  final class NextWordRequest extends
      * result of an async predict() call (or clears it on empty result), it
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
-     * ResetFull paths can correctly emit ClearPredictionsUI when there is
+     * ResetAll paths can correctly emit ClearPredictionsUI when there is
      * UI to clear. Mutates state.is_showing only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
      * </pre>
      *
-     * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+     * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
      */
-    public Builder mergeSetIsShowing(com.siansiansu.taigikeyboard.engine.proto.SetIsShowing value) {
+    public Builder mergeSetPredictionsVisible(com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible value) {
       copyOnWrite();
-      instance.mergeSetIsShowing(value);
+      instance.mergeSetPredictionsVisible(value);
       return this;
     }
     /**
@@ -1278,18 +1278,18 @@ public  final class NextWordRequest extends
      * result of an async predict() call (or clears it on empty result), it
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
-     * ResetFull paths can correctly emit ClearPredictionsUI when there is
+     * ResetAll paths can correctly emit ClearPredictionsUI when there is
      * UI to clear. Mutates state.is_showing only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
      * </pre>
      *
-     * <code>.taigi.engine.SetIsShowing set_is_showing = 16;</code>
+     * <code>.taigi.engine.SetPredictionsVisible set_predictions_visible = 16;</code>
      */
-    public Builder clearSetIsShowing() {
+    public Builder clearSetPredictionsVisible() {
       copyOnWrite();
-      instance.clearSetIsShowing();
+      instance.clearSetPredictionsVisible();
       return this;
     }
 
@@ -1483,9 +1483,9 @@ public  final class NextWordRequest extends
             com.siansiansu.taigikeyboard.engine.proto.Backspace.class,
             com.siansiansu.taigikeyboard.engine.proto.ContextTimeoutFired.class,
             com.siansiansu.taigikeyboard.engine.proto.ClearForNewComposing.class,
-            com.siansiansu.taigikeyboard.engine.proto.ResetFull.class,
+            com.siansiansu.taigikeyboard.engine.proto.ResetAll.class,
             com.siansiansu.taigikeyboard.engine.proto.UpdateLastSelectedWord.class,
-            com.siansiansu.taigikeyboard.engine.proto.SetIsShowing.class,
+            com.siansiansu.taigikeyboard.engine.proto.SetPredictionsVisible.class,
             com.siansiansu.taigikeyboard.engine.proto.FilterPredictions.class,
             com.siansiansu.taigikeyboard.engine.proto.PredictNext.class,
           };

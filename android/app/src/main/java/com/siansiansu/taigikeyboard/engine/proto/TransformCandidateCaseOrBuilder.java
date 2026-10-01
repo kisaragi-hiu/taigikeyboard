@@ -6,8 +6,8 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface TransformSuggestionOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.TransformSuggestion)
+public interface TransformCandidateCaseOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.TransformCandidateCase)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**

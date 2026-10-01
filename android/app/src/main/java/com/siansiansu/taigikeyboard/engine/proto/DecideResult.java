@@ -182,30 +182,30 @@ public  final class DecideResult extends
     currentGeneration_ = 0L;
   }
 
-  public static final int IS_SHOWING_FIELD_NUMBER = 3;
-  private boolean isShowing_;
+  public static final int PREDICTIONS_VISIBLE_FIELD_NUMBER = 3;
+  private boolean predictionsVisible_;
   /**
-   * <code>bool is_showing = 3;</code>
-   * @return The isShowing.
+   * <code>bool predictions_visible = 3;</code>
+   * @return The predictionsVisible.
    */
   @java.lang.Override
-  public boolean getIsShowing() {
-    return isShowing_;
+  public boolean getPredictionsVisible() {
+    return predictionsVisible_;
   }
   /**
-   * <code>bool is_showing = 3;</code>
-   * @param value The isShowing to set.
+   * <code>bool predictions_visible = 3;</code>
+   * @param value The predictionsVisible to set.
    */
-  private void setIsShowing(boolean value) {
+  private void setPredictionsVisible(boolean value) {
 
-    isShowing_ = value;
+    predictionsVisible_ = value;
   }
   /**
-   * <code>bool is_showing = 3;</code>
+   * <code>bool predictions_visible = 3;</code>
    */
-  private void clearIsShowing() {
+  private void clearPredictionsVisible() {
 
-    isShowing_ = false;
+    predictionsVisible_ = false;
   }
 
   public static final int LAST_SELECTED_WORD_FIELD_NUMBER = 4;
@@ -561,30 +561,30 @@ public  final class DecideResult extends
     }
 
     /**
-     * <code>bool is_showing = 3;</code>
-     * @return The isShowing.
+     * <code>bool predictions_visible = 3;</code>
+     * @return The predictionsVisible.
      */
     @java.lang.Override
-    public boolean getIsShowing() {
-      return instance.getIsShowing();
+    public boolean getPredictionsVisible() {
+      return instance.getPredictionsVisible();
     }
     /**
-     * <code>bool is_showing = 3;</code>
-     * @param value The isShowing to set.
+     * <code>bool predictions_visible = 3;</code>
+     * @param value The predictionsVisible to set.
      * @return This builder for chaining.
      */
-    public Builder setIsShowing(boolean value) {
+    public Builder setPredictionsVisible(boolean value) {
       copyOnWrite();
-      instance.setIsShowing(value);
+      instance.setPredictionsVisible(value);
       return this;
     }
     /**
-     * <code>bool is_showing = 3;</code>
+     * <code>bool predictions_visible = 3;</code>
      * @return This builder for chaining.
      */
-    public Builder clearIsShowing() {
+    public Builder clearPredictionsVisible() {
       copyOnWrite();
-      instance.clearIsShowing();
+      instance.clearPredictionsVisible();
       return this;
     }
 
@@ -686,7 +686,7 @@ public  final class DecideResult extends
             "effects_",
             com.siansiansu.taigikeyboard.engine.proto.NextWordEffect.class,
             "currentGeneration_",
-            "isShowing_",
+            "predictionsVisible_",
             "lastSelectedWord_",
           };
           java.lang.String info =

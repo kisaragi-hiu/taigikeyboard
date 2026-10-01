@@ -312,7 +312,7 @@ object RustEngineBridge {
              * `NextWordRequest::ClearForNewComposing(now_ms)`. Platform delegate
              * forwards to `NextWordController.onClearCandidates()` (Android equivalent
              * of iOS `NextWordController.clearDisplay()`); NOT the structurally
-             * distinct `ResetFull` intent.
+             * distinct `ResetAll` intent.
              */
             object NextWordClearForNewComposing : Effect()
         }

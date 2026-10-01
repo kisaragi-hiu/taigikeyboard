@@ -291,7 +291,7 @@ fn commit_preedit_then_insert_external_is_one_effect() {
         commit
             .effects
             .contains(&Effect::NextWordClearForNewComposing),
-        "the engine emits only the clear handshake here; the platform sends ResetFull itself"
+        "the engine emits only the clear handshake here; the platform sends ResetAll itself"
     );
 }
 

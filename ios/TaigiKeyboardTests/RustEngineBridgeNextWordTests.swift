@@ -33,7 +33,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     private static var nextEnvelopeGen: UInt64 = 100_000
     private var envelopeGen: UInt64 = 0
 
-    /// Snapshot of `state.current_generation` after the per-test ResetFull
+    /// Snapshot of `state.current_generation` after the per-test ResetAll
     /// baseline. Tests that previously asserted absolute generation values
     /// (e.g. `==1`, `==2`, `==3`) now assert relative to this baseline so
     /// they stay green across the bump-on-envelope-reset semantic the
@@ -44,7 +44,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         super.setUp()
         Self.nextEnvelopeGen &+= 1
         envelopeGen = Self.nextEnvelopeGen
-        // Baseline: ResetFull lands on a freshly-reset engine state and
+        // Baseline: ResetAll lands on a freshly-reset engine state and
         // bumps `current_generation` by 1. The exact baseline value
         // depends on the prior test's terminal state (envelope-reset is
         // bump-not-zero per PR #198 fix).
@@ -153,7 +153,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         XCTAssertTrue(result.effects.contains(.cancelContextTimeout))
     }
 
-    // MARK: - SetIsShowing → ClearForNewComposing gate
+    // MARK: - SetPredictionsVisible → ClearForNewComposing gate
 
     func testSetIsShowing_thenClearForNewComposing_emitsClearUIEffect() {
         // Pre-fix: bridge had no setter for state.is_showing, so the gate
@@ -265,7 +265,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
         )
     }
 
-    /// Current engine generation, read through `SetIsShowing(false)` — the
+    /// Current engine generation, read through `SetPredictionsVisible(false)` — the
     /// one intent that echoes state without bumping the generation.
     private func currentGen() -> UInt64 {
         RustEngineBridge.nextwordSetIsShowing(

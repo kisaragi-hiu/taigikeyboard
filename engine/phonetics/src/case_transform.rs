@@ -143,7 +143,7 @@ pub fn transform_input_case(text: &str, letter_case: LetterCase, mode: InputMode
 /// and lowering it to the keystroke's case threw those away (user report
 /// 2026-09-19). Every candidate-casing path ends here; only keystrokes
 /// go through [`transform_input_case`]. Under `CapsLocked` the POJ nasal
-/// `ⁿ` stays as-is (no uppercase hook in POJ) — [`transform_suggestion`]
+/// `ⁿ` stays as-is (no uppercase hook in POJ) — [`transform_candidate_case`]
 /// re-cases it afterwards via [`adjust_nasal_marker_case`].
 pub fn raise_case(text: &str, letter_case: LetterCase, mode: InputMode) -> String {
     match letter_case {
@@ -166,17 +166,17 @@ pub fn raise_case(text: &str, letter_case: LetterCase, mode: InputMode) -> Strin
 /// returns the final-form string ready for display. Suggestion skip rules
 /// (iOS `additionalInfo` flags, Android `id` markers) stay platform-side
 /// — only transform-eligible items reach this op.
-pub fn transform_suggestion(
+pub fn transform_candidate_case(
     original_text: &str,
     composing_text: &str,
     letter_case: LetterCase,
     mode: InputMode,
 ) -> String {
-    let inner = transform_suggestion_inner(original_text, composing_text, letter_case, mode);
+    let inner = transform_candidate_case_inner(original_text, composing_text, letter_case, mode);
     adjust_nasal_marker_case(&inner)
 }
 
-fn transform_suggestion_inner(
+fn transform_candidate_case_inner(
     original_text: &str,
     composing_text: &str,
     letter_case: LetterCase,
@@ -216,7 +216,7 @@ fn transform_suggestion_inner(
 ///
 /// Re-homed from the former `case_adjust.rs::adjust_nasal_marker_case`.
 /// Called in-band by `apply_nasal_marker_case` (the last step of
-/// `api::normalize_tone`) AND by `transform_suggestion` (post-process).
+/// `api::normalize_tone`) AND by `transform_candidate_case` (post-process).
 pub fn adjust_nasal_marker_case(text: &str) -> String {
     if !text.contains(NASAL_LOWER) && !text.contains(NASAL_UPPER) {
         return text.to_string();
@@ -506,25 +506,25 @@ mod tests {
     }
 
     // -----------------------------------------------------------------
-    // transform_suggestion
+    // transform_candidate_case
     // -----------------------------------------------------------------
 
     #[test]
-    fn transform_suggestion_split_typed_remaining() {
+    fn transform_candidate_case_split_typed_remaining() {
         // composing has 1 letter "G" upper, original "góa" 3 letters
         // → typed "g" → "G" (matchCase to "G"), remaining "óa" lowered
         assert_eq!(
-            transform_suggestion("góa", "G", LetterCase::Lowercased, InputMode::Poj),
+            transform_candidate_case("góa", "G", LetterCase::Lowercased, InputMode::Poj),
             "Góa"
         );
     }
 
     #[test]
-    fn transform_suggestion_uppercased_remaining_first_upper() {
+    fn transform_candidate_case_uppercased_remaining_first_upper() {
         // composing "G", uppercased mode → typed "g"→"G", remaining "óa"
         // → "Óa" (first remaining upper, rest lower)
         assert_eq!(
-            transform_suggestion("góa", "G", LetterCase::Uppercased, InputMode::Poj),
+            transform_candidate_case("góa", "G", LetterCase::Uppercased, InputMode::Poj),
             "GÓa"
         );
     }
@@ -574,32 +574,32 @@ mod tests {
     }
 
     #[test]
-    fn transform_suggestion_abbreviation_keeps_stored_capitals() {
+    fn transform_candidate_case_abbreviation_keeps_stored_capitals() {
         // `klsi` (4 letters) aligns positionally with `Keng`; lowercase
         // keystrokes must not lower `K` nor the untyped `Su`.
         assert_eq!(
-            transform_suggestion(CUSTOM, "klsi", LetterCase::Lowercased, InputMode::Poj),
+            transform_candidate_case(CUSTOM, "klsi", LetterCase::Lowercased, InputMode::Poj),
             CUSTOM
         );
         // Shift on the first key, keyboard already back to lowercase.
         assert_eq!(
-            transform_suggestion(CUSTOM, "Klsi", LetterCase::Lowercased, InputMode::Poj),
+            transform_candidate_case(CUSTOM, "Klsi", LetterCase::Lowercased, InputMode::Poj),
             CUSTOM
         );
         // Shift still held: the remainder's first letter is raised, the
         // stored `Su` stays.
         assert_eq!(
-            transform_suggestion(CUSTOM, "Klsi", LetterCase::Uppercased, InputMode::Poj),
+            transform_candidate_case(CUSTOM, "Klsi", LetterCase::Uppercased, InputMode::Poj),
             "Keng-Lâm Su-īⁿ"
         );
     }
 
     #[test]
-    fn transform_suggestion_runs_nasal_adjust_post_process() {
+    fn transform_candidate_case_runs_nasal_adjust_post_process() {
         // composing "AN" forces both letters upper → "AN" + nasal marker
         // should auto-promote ⁿ → ᴺ via adjust_nasal_marker_case
         assert_eq!(
-            transform_suggestion("an\u{207F}", "AN", LetterCase::Lowercased, InputMode::Poj),
+            transform_candidate_case("an\u{207F}", "AN", LetterCase::Lowercased, InputMode::Poj),
             "AN\u{1D3A}"
         );
     }

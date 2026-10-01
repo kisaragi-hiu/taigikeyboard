@@ -12,8 +12,8 @@
 
 use phonetics::api::composing_mode;
 use phonetics::case_transform::{
-    full_uppercase_tone_string, lowercase_tone_char, transform_input_case, transform_suggestion,
-    uppercase_tone_char, LetterCase,
+    full_uppercase_tone_string, lowercase_tone_char, transform_candidate_case,
+    transform_input_case, uppercase_tone_char, LetterCase,
 };
 use protos::engine::case_request::Method;
 use protos::engine::{AppConfig, CaseRequest, CaseResponse, CaseStringResult};
@@ -29,7 +29,7 @@ pub(crate) fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseRe
         Method::TransformInputCase(req) => {
             transform_input_case(&req.text, proto_to_letter_case(req.letter_case()), mode)
         }
-        Method::TransformSuggestion(req) => transform_suggestion(
+        Method::TransformCandidateCase(req) => transform_candidate_case(
             &req.original_text,
             &req.composing_text,
             proto_to_letter_case(req.letter_case()),
@@ -68,7 +68,7 @@ fn proto_to_letter_case(proto: protos::engine::LetterCase) -> LetterCase {
 mod tests {
     use super::*;
     use protos::engine::{
-        FullUppercaseToneString, LowercaseToneChar, TransformInputCase, TransformSuggestion,
+        FullUppercaseToneString, LowercaseToneChar, TransformCandidateCase, TransformInputCase,
         UppercaseToneChar,
     };
 
@@ -131,9 +131,9 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_transform_suggestion_caps_lock() {
+    fn dispatch_transform_candidate_case_caps_lock() {
         let req = CaseRequest {
-            method: Some(Method::TransformSuggestion(TransformSuggestion {
+            method: Some(Method::TransformCandidateCase(TransformCandidateCase {
                 original_text: "tâi-gí".to_string(),
                 composing_text: "tai".to_string(),
                 letter_case: protos::engine::LetterCase::CapsLocked as i32,
@@ -147,7 +147,7 @@ mod tests {
     fn dispatch_force_lowercase_nasal_marker_folds_the_capital_marker_on_every_op() {
         // ⁿ becomes ᴺ in capitals OFF (§53): Caps Lock over a POJ nasal suggestion.
         let suggestion = CaseRequest {
-            method: Some(Method::TransformSuggestion(TransformSuggestion {
+            method: Some(Method::TransformCandidateCase(TransformCandidateCase {
                 original_text: "sia\u{207f}".to_string(),
                 composing_text: "si".to_string(),
                 letter_case: protos::engine::LetterCase::CapsLocked as i32,
@@ -190,7 +190,7 @@ mod tests {
                 text: "tsh".to_string(),
                 letter_case,
             }),
-            Method::TransformSuggestion(TransformSuggestion {
+            Method::TransformCandidateCase(TransformCandidateCase {
                 original_text: "tâi-gí".to_string(),
                 composing_text: "tai".to_string(),
                 letter_case,

@@ -68,7 +68,7 @@ extension KeyboardViewController {
                 preceding: preceding,
             )
         case .nextWordClearForNewComposing:
-            // ClearForNewComposing ≠ ResetFull — clearDisplay() sends the
+            // ClearForNewComposing ≠ ResetAll — clearDisplay() sends the
             // matching `nextwordClearForNewComposing` intent. Do NOT route
             // to `resetAndClearUI()` (that maps to `nextwordResetFull`).
             actionHandler?.nextWordController.clearDisplay()

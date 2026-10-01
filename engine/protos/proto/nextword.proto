@@ -43,7 +43,7 @@ message NextWordRequest {
     Backspace            backspace               = 11;
     ContextTimeoutFired  context_timeout_fired   = 12;
     ClearForNewComposing clear_for_new_composing = 13;
-    ResetFull            reset_full              = 14;
+    ResetAll             reset_all               = 14;
     // Android-only Space-path intent (audit §5 #5). iOS wrappers never
     // emit this; Rust engine accepts generically. Mutates
     // last_selected_*/lastSelectionTimeMs without bumping
@@ -55,12 +55,12 @@ message NextWordRequest {
     // result of an async predict() call (or clears it on empty result), it
     // pushes the resulting visibility back to the engine via this intent so
     // subsequent ClearForNewComposing / sentence-end / context-timeout /
-    // ResetFull paths can correctly emit ClearPredictionsUI when there is
+    // ResetAll paths can correctly emit ClearPredictionsUI when there is
     // UI to clear. Mutates state.is_showing only — does NOT bump
     // current_generation (the in-flight query that produced the rendered
     // result already won the race; later intents will bump as usual).
     // Returns DecideResult with empty effects + snapshot of state.
-    SetIsShowing set_is_showing = 16;
+    SetPredictionsVisible set_predictions_visible = 16;
 
     // --- Pure post-query helpers (20s) ---
     // Pure post-query filter+merge+sort+limit — return FilterResult
@@ -117,7 +117,7 @@ message ClearForNewComposing {
 }
 
 // Full reset (sentence-end punctuation outside WordSelected, or empty doc).
-message ResetFull {
+message ResetAll {
   DecisionInput input  = 1;
 }
 
@@ -133,11 +133,11 @@ message UpdateLastSelectedWord {
   DecisionInput input  = 3;
 }
 
-// Platform → engine visibility sync. Pushes is_showing back to state
-// after platform rendering of an async predict() result. No effects,
-// no generation bump; just state.is_showing = is_showing.
-message SetIsShowing {
-  bool is_showing = 1;
+// Platform → engine visibility sync. Pushes the prediction bar's visibility
+// to state after platform rendering of an async predict() result. No effects,
+// no generation bump; just state.is_showing = visible.
+message SetPredictionsVisible {
+  bool visible = 1;
 }
 
 // Engine-side filter+merge+sort+limit step (`PredictNext` expands into
@@ -218,7 +218,7 @@ message NextWordResponse {
 message DecideResult {
   repeated NextWordEffect effects             = 1;  // ordered, executor runs sequentially
   uint64                  current_generation  = 2;
-  bool                    is_showing          = 3;
+  bool                    predictions_visible = 3;
   // Echo of last_selected_word so platform can implement
   // SelectionContextProvider without holding a parallel cache.
   // Empty string == nil (Swift Optional / Kotlin nullable on the bridge side).
