@@ -1,6 +1,6 @@
 //! Pure transition function: `(state, intent, config) → ComposingResponse`.
 //! Pure — no logging, no FFI, no platform types. The dispatcher in
-//! `dispatch.rs` runs this and returns the response to callers.
+//! `requests.rs` runs this and returns the response to callers.
 //!
 //! Effect ordering matters; iOS/Android downstream wrappers consume effects
 //! in proto-list order. `prost` preserves order on `repeated Effect` fields.

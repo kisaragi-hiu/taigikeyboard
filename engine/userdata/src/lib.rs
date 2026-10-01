@@ -23,11 +23,11 @@ mod capacity;
 mod csv;
 mod custom_dictionary;
 mod database;
-mod dispatch;
 mod frequency;
 mod handle;
 mod learned_phrases;
 mod paths;
+mod requests;
 mod stores;
 mod timestamp;
 
@@ -43,12 +43,12 @@ pub use database::{
     immediate_transaction, JournalMode, UserDataDatabase, UserDataDatabaseError,
     TAIGI_APPLICATION_ID,
 };
-pub use dispatch::RequestError;
 pub use frequency::{FrequencyRow, UserFrequencyStore};
 pub use handle::UserDataHandle;
 pub use learned_phrases::{LearnedPhraseRow, LearnedPhraseStore};
 pub use paths::{
     UserDataPaths, ASSOCIATION_FILE, CUSTOM_DICTIONARY_FILE, FREQUENCY_FILE, LEARNED_PHRASES_FILE,
 };
+pub use requests::RequestError;
 pub use stores::{derive_custom_search_keys, UserDataStores};
 pub use timestamp::{unix_seconds_now, utc_timestamp_now};

@@ -123,7 +123,7 @@ struct EngineSettings: Equatable, Sendable {
     /// Whether the candidate window shows both scripts or the romanization
     /// alone. Sent to the engine as `AppConfig.candidate_display_mode`, which
     /// is what collapses same-romanization rows under `.romanOnly`
-    /// (`engine/composing/src/dispatch.rs`, `engine/nextword/src/filter.rs`);
+    /// (`engine/composing/src/requests.rs`, `engine/nextword/src/filter.rs`);
     /// on this side it selects the cell arm and derives the swap above.
     /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift
     /// `candidateDisplayMode`, which defaults it to side-by-side. Drift changes

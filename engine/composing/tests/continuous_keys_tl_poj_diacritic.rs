@@ -38,12 +38,12 @@
 //!   fire on pure ASCII input.
 //!
 //! The hermetic inventory builder mirrors
-//! `engine/composing/tests/build_keys_tl_hyphen.rs:177-214`.
+//! `engine/composing/tests/continuous_keys_tl_hyphen.rs:177-214`.
 
 // Phase 9 Item 9 — POJ-display canonicalize + offset map end-to-end test.
 // Nine cases: NFC 白話字 / NFD canary / chóa / peⁿ / so͘ / so͘+soo siblings / tâi-ōe / mixed combining+digit / ASCII regression / ASCII-only guard.
 
-use composing::dispatch::build_continuous_keys_with_inventory;
+use composing::requests::build_continuous_keys_with_inventory;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::common::{build_inventory, build_poj_inventory};

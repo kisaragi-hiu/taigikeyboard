@@ -178,7 +178,7 @@ mod tests {
     const MAX_SYLLABLES: usize = 8;
 
     /// Hermetic `tps:` family inventory builder. Mirrors the pattern in
-    /// `composing::tests::build_keys_tps` — keys carry the `tps:`
+    /// `composing::tests::continuous_keys_tps` — keys carry the `tps:`
     /// prefix so `SyllableInventory::contains_in(Tps, ..)` finds them.
     /// Each input syllable is recorded in BOTH toneless and the supplied
     /// optional tone-marked form to mirror the build pipeline's

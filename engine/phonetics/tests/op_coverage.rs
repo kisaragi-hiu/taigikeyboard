@@ -4,7 +4,7 @@
 //! coverage for the TPS input adjuster.
 
 use phonetics::api::normalize_tone;
-use phonetics::dispatch::handle;
+use phonetics::requests::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
@@ -15,7 +15,7 @@ use protos::engine::{
 
 // ---------------- helpers ----------------
 //
-// Domain-level tests: drive `phonetics::dispatch::handle` directly and
+// Domain-level tests: drive `phonetics::requests::handle` directly and
 // assert against `Result<PhoneticsResponse>`. Envelope concerns
 // (`taigi.engine.Request` decoding, `Response.id`/`error`/`generation`,
 // panic catching) live in `engine/dispatch/tests/` — exercising them

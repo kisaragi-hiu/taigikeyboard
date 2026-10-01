@@ -34,7 +34,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `user_frequency.db` write keys via `display_text`
  * (= `hanji.unwrap_or(roman)`; under a single-script display the §34
  * literal carries the identity of the same-roman dictionary row it
- * absorbed — `composing::dispatch::adopt_collapsed_dict_identity`);
+ * absorbed — `composing::requests::adopt_collapsed_dict_identity`);
  * `roman` and `hanji` are NEVER read for commit. `roman` is the display romanization for the active
  * input mode — the underlying `DictionaryRecord.tl` by default, or
  * POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when
@@ -633,7 +633,7 @@ public  final class CandidateMessage extends
    * `user_frequency.db` write keys via `display_text`
    * (= `hanji.unwrap_or(roman)`; under a single-script display the §34
    * literal carries the identity of the same-roman dictionary row it
-   * absorbed — `composing::dispatch::adopt_collapsed_dict_identity`);
+   * absorbed — `composing::requests::adopt_collapsed_dict_identity`);
    * `roman` and `hanji` are NEVER read for commit. `roman` is the display romanization for the active
    * input mode — the underlying `DictionaryRecord.tl` by default, or
    * POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when

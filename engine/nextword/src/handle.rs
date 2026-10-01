@@ -19,7 +19,7 @@
 //! reset.
 
 use crate::api::{Engine, Handled, NextWordError};
-use crate::dispatch;
+use crate::requests;
 use once_cell::sync::OnceCell;
 use protos::engine::{AppConfig, NextWordRequest, NextWordResponse};
 use std::sync::Mutex;
@@ -94,7 +94,7 @@ impl EngineHandle {
             engine.reset();
             *last_gen = generation;
         }
-        dispatch::handle(req, &mut engine, config)
+        requests::handle(req, &mut engine, config)
     }
 }
 

@@ -236,7 +236,7 @@ fn record_to_candidate(record: DictionaryRecord, ...) -> RawCandidate {
 ```
 
 ```rust
-// engine/composing/src/dispatch.rs
+// engine/composing/src/requests.rs
 fn raw_to_proto_candidate(c: RawCandidate) -> CandidateMessage {
     CandidateMessage {
         consumed_span_start: c.consumed_span.0,
@@ -423,7 +423,7 @@ proto3 additive change — new fields default to empty when absent.
 | Test | Location | Asserts |
 |---|---|---|
 | `record_to_candidate_populates_roman_and_hanji` | `engine/lexicon/src/continuous/` (mod test) | HANT/TAILO/MIXED records → correct `roman` + `hanji` |
-| `raw_to_proto_candidate_propagates_roman_hanji` | `engine/composing/src/dispatch.rs` (mod test) | All three modes round-trip |
+| `raw_to_proto_candidate_propagates_roman_hanji` | `engine/composing/src/requests.rs` (mod test) | All three modes round-trip |
 | `derive_mode_consistent_with_hanji_presence` | existing (no change) | Verify mode/hanji invariant: `hanji.is_none() ⇔ mode == TAILO` |
 
 ### 8.2 Rust integration tests
@@ -589,7 +589,7 @@ Per [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-plat
 |---|---|---|
 | 1. Proto schema | `engine/protos/proto/composing.proto` + regen `.pb.swift` + `.java` | ~10 + auto-regen |
 | 2. Rust `RawCandidate` + `record_to_candidate` | `engine/lexicon/src/continuous/` | ~20 + 2 new unit tests |
-| 3. Rust `raw_to_proto_candidate` | `engine/composing/src/dispatch.rs` | ~5 + 1 propagation test |
+| 3. Rust `raw_to_proto_candidate` | `engine/composing/src/requests.rs` | ~5 + 1 propagation test |
 | 4. iOS `ContinuousCandidate` + decode | `ios/.../Engine/RustEngineBridge.swift` (struct + `composingFetchDispatch` decode) | ~15 + 1 bridge wire test |
 | 5. iOS `buildContinuousSuggestions` | `ios/.../Autocomplete/Services/TaigiAutocompleteService.swift` | ~5 + 2 service-level tests |
 | 6. Android `ContinuousCandidate` + decode | `android/.../engine/RustEngineBridge.kt` (data class + `composingFetchDispatch` decode) | ~15 + 1 bridge wire test |

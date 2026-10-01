@@ -1,5 +1,5 @@
 //! High-level Phonetics API for direct in-process callers (the dev
-//! `cli` crate, integration tests, and `phonetics::dispatch::handle`).
+//! `cli` crate, integration tests, and `phonetics::requests::handle`).
 //! The cross-platform FFI envelope lives in `engine/dispatch` per
 //! `.claude/rules/rust-best-practices.md §3a`; this module never decodes a
 //! top-level `taigi.engine.Request` or owns a panic boundary.
@@ -17,7 +17,7 @@ use thiserror::Error;
 use unicode_normalization::UnicodeNormalization;
 
 // Keyboard input mode, mirroring the `AppConfig.input_mode` string. The TPS layout composes with
-// the TL tables ([`composing_mode`]); `composing::dispatch` upgrades to `Tps` once
+// the TL tables ([`composing_mode`]); `composing::requests` upgrades to `Tps` once
 // `contains_tps(raw)` fires, so the `Tps` variant mostly circulates inside the engine.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InputMode {
@@ -53,7 +53,7 @@ fn capitalize_first(text: &str) -> String {
 }
 
 /// Translate the proto `AppConfig.input_mode` string into the typed enum.
-/// Unknown / empty / "tl" → `Tl`. Mirrors `phonetics::dispatch::parse_input_mode`.
+/// Unknown / empty / "tl" → `Tl`. Mirrors `phonetics::requests::parse_input_mode`.
 pub fn parse_input_mode(mode: &str) -> InputMode {
     match mode {
         "poj" | "POJ" => InputMode::Poj,

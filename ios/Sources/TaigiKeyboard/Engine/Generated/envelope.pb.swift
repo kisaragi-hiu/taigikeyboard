@@ -156,7 +156,7 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
 /// How a candidate cell renders the (Hanji, romanization) pair. Read by
 /// exactly two engine sites, both display-tier dedupes: the continuous
-/// `FetchAtPos` post-literal pass (`composing::dispatch`) and the NextWord
+/// `FetchAtPos` post-literal pass (`composing::requests`) and the NextWord
 /// prediction pass (`nextword::filter`). `UNSPECIFIED` (proto3 default, every
 /// un-wired build) and any unknown value mean SIDE_BY_SIDE — legacy behaviour;
 /// normalise through `AppConfig::is_roman_only_display`, never compare the raw
@@ -218,7 +218,7 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 /// romanization drops the inter-syllable `-` and writes the neutral-tone marker `--`
 /// as `·` U+00B7 (`tâi-uân` → `tâiuân`, `hōo--guá` → `hōo·guá`). Rendering
 /// only — `phonetics::api::hyphenless_display` is applied to the candidate
-/// `roman` (`composing::dispatch`), the prediction `text`
+/// `roman` (`composing::requests`), the prediction `text`
 /// (`nextword::filter`) and the engine-synthesised compound joiner
 /// (`composing::api::nailed_prefix`); identity fields (`display_text`,
 /// `canonical_tl`, `tl`) and user-typed text keep their hyphens. The engine

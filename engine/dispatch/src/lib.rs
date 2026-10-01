@@ -107,7 +107,7 @@ fn run(bytes: &[u8]) -> Response {
     };
 
     match payload {
-        request::Payload::Phonetics(phon_req) => match phonetics::dispatch::handle(&phon_req) {
+        request::Payload::Phonetics(phon_req) => match phonetics::requests::handle(&phon_req) {
             Ok(phon_resp) => Response {
                 id,
                 error: ErrorCode::Ok as i32,
@@ -139,7 +139,7 @@ fn run(bytes: &[u8]) -> Response {
                 log::warn!("lexicon request missing method (id={id})");
                 return error_response(id, ErrorCode::FailInvariant, generation);
             };
-            match lexicon::dispatch::handle(method) {
+            match lexicon::requests::handle(method) {
                 Ok(lex_resp) => Response {
                     id,
                     error: ErrorCode::Ok as i32,

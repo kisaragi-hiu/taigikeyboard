@@ -1,7 +1,7 @@
 //! Public façade for the nextword crate. Defines `Engine`, `PersistedState`,
 //! `Intent`, and `NextWordError`. Implementation of decide / filter / score
 //! / boost lives in submodules; this module is the stable surface that
-//! `dispatch.rs` and external crates consume.
+//! `requests.rs` and external crates consume.
 
 use protos::engine::{
     AppConfig, CommittedWord, DecideResult, FilterResult, NextWordResponse, RawNextWordPrediction,
@@ -30,7 +30,7 @@ pub(crate) struct PersistedState {
 /// `NextWordIntent` 1:1, plus `UpdateLastSelectedWord` — Android-only when it
 /// was added (audit §5 #5 / Codex v1 P1), now also emitted by iOS's
 /// continuous-input mid-commit handshake and by macOS. Decoded from
-/// `protos::engine::NextWordRequest::method` inside `dispatch::handle`.
+/// `protos::engine::NextWordRequest::method` inside `requests::handle`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum Intent {
     /// Candidate selected — main platform write path; may record an association and predict.

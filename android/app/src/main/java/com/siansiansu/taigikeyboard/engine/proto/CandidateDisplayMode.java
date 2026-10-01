@@ -35,7 +35,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
  * How a candidate cell renders the (Hanji, romanization) pair. Read by
  * exactly two engine sites, both display-tier dedupes: the continuous
- * `FetchAtPos` post-literal pass (`composing::dispatch`) and the NextWord
+ * `FetchAtPos` post-literal pass (`composing::requests`) and the NextWord
  * prediction pass (`nextword::filter`). `UNSPECIFIED` (proto3 default, every
  * un-wired build) and any unknown value mean SIDE_BY_SIDE — legacy behaviour;
  * normalise through `AppConfig::is_roman_only_display`, never compare the raw

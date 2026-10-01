@@ -8,7 +8,7 @@
 //! are compared, over the production lexicon.
 
 use composing::api::Engine;
-use composing::dispatch;
+use composing::requests;
 use protos::engine::composing_request::Method;
 use protos::engine::{
     AppConfig, Append, CandidateMessage, CommitContinuous, CommitScript, ComposingResponse,
@@ -45,11 +45,11 @@ fn tps_wires() -> Vec<AppConfig> {
 }
 
 fn fetch(engine: &mut Engine, config: &AppConfig) -> ComposingResponse {
-    dispatch::apply(Fetch::default().intent(), engine, config)
+    requests::apply(Fetch::default().intent(), engine, config)
 }
 
 fn send(engine: &mut Engine, method: Method, config: &AppConfig) -> ComposingResponse {
-    dispatch::handle(&req(method), engine, config).expect("composing request")
+    requests::handle(&req(method), engine, config).expect("composing request")
 }
 
 fn lead_candidate(response: &ComposingResponse) -> CandidateMessage {

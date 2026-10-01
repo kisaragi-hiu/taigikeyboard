@@ -434,7 +434,7 @@ public extension RustEngineBridge {
     /// Read-only candidate query for the current `Phase::Continuous { raw }`.
     /// Caller MUST share the active composing-session generation — FetchAtPos
     /// is read-only and bumping generation would reset engine state before
-    /// the fetch (`engine/composing/src/dispatch.rs:103-160`).
+    /// the fetch (`engine/composing/src/requests.rs::query`).
     ///
     /// The user's own data is not among the arguments: the engine reads its
     /// stores itself and ranks in the same call

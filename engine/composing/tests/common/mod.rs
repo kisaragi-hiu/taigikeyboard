@@ -19,7 +19,7 @@
 use std::path::{Path, PathBuf};
 
 use composing::api::Engine;
-use composing::{dispatch, Intent, UserRows};
+use composing::{requests, Intent, UserRows};
 use lexicon::{
     CustomEntry, EngineHandle as LexiconHandle, LearnedEntry, LexiconPaths, SyllableInventory,
 };
@@ -472,29 +472,29 @@ pub fn req(method: Method) -> ComposingRequest {
 /// care distinguish that from an empty candidate list).
 pub fn fetch_at_pos_response(config: &AppConfig, raw: &str, fetch: Fetch) -> ComposingResponse {
     let mut engine = continuous_engine(config, raw);
-    dispatch::apply(fetch.intent(), &mut engine, config)
+    requests::apply(fetch.intent(), &mut engine, config)
 }
 
 /// [`fetch_at_pos_response`] for a wire `FetchAtPos`, decoded the way a
-/// platform request is (`dispatch::handle`) — no user rows.
+/// platform request is (`requests::handle`) — no user rows.
 pub fn wire_fetch_at_pos_response(
     config: &AppConfig,
     raw: &str,
     fetch: FetchAtPos,
 ) -> ComposingResponse {
     let mut engine = continuous_engine(config, raw);
-    dispatch::handle(&req(Method::FetchAtPos(fetch)), &mut engine, config).expect("FetchAtPos")
+    requests::handle(&req(Method::FetchAtPos(fetch)), &mut engine, config).expect("FetchAtPos")
 }
 
 fn continuous_engine(config: &AppConfig, raw: &str) -> Engine {
     let mut engine = Engine::new();
-    dispatch::handle(
+    requests::handle(
         &req(Method::Start(Start { text: raw.into() })),
         &mut engine,
         config,
     )
     .expect("Start");
-    dispatch::handle(
+    requests::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
         config,

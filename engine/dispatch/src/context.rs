@@ -4,7 +4,7 @@
 //! The user-learned continuations join in `user_data::with_stores`; before
 //! the stores open, and in a build without them, the bundled ones rank alone.
 
-use composing::dispatch::fetch_at_pos_intent;
+use composing::requests::fetch_at_pos_intent;
 use composing::{EngineHandle as ComposingHandle, PendingSnapshot, UserRows};
 use lexicon::search::AssociationHit;
 use protos::engine::{composing_request, AppConfig, ComposingRequest, ComposingResponse};

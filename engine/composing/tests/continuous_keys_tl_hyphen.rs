@@ -15,7 +15,7 @@
 //!    consumed).
 //! 7. `tai-bak-` — internal `-` consumed, trailing `-` left dangling.
 
-use composing::dispatch::build_continuous_keys_with_inventory;
+use composing::requests::build_continuous_keys_with_inventory;
 
 use crate::common::build_inventory;
 

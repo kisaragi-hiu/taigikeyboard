@@ -4,7 +4,7 @@
 
 use composing::api::{CaretDirection, Phase};
 use composing::CommitScript;
-use composing::{dispatch, Engine, Intent};
+use composing::{requests, Engine, Intent};
 use protos::engine::composing_request::Method;
 use protos::engine::composing_response::Preedit;
 use protos::engine::effect::Kind;
@@ -359,7 +359,7 @@ fn hanji_first_prefix_has_no_space_before_the_tail() {
 fn move_caret_on_the_wire_decodes_left_right_and_treats_unspecified_as_a_no_op() {
     let mut engine = start("ka2");
     let apply = |engine: &mut Engine, direction: i32| {
-        dispatch::handle(
+        requests::handle(
             &req(Method::MoveCaret(MoveCaret { direction })),
             engine,
             &config_tl(),

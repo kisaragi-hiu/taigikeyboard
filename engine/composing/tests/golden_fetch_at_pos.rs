@@ -1,7 +1,7 @@
 //! S0 — golden `FetchAtPos` snapshot harness (v3.5.9 refactor gate).
 //!
 //! Pins the full proto candidate vector that
-//! `composing::dispatch::handle(FetchAtPos)` returns for a representative
+//! `composing::requests::handle(FetchAtPos)` returns for a representative
 //! input matrix, so every later behavior-neutral refactor slice's
 //! acceptance reduces to "empty golden diff". The golden is frozen against
 //! post-v3.5.8 `main` (v3.5.8 already shipped at tag `61df3028`; behavior
@@ -17,12 +17,12 @@
 //!
 //! ## Why this lives in `composing` with its own fixture builders
 //!
-//! `dispatch::handle(FetchAtPos)` resolves candidates through the
+//! `requests::handle(FetchAtPos)` resolves candidates through the
 //! process-global `lexicon::EngineHandle` singleton, NOT injected fixtures.
 //! The only pattern that drives real candidates through it is
 //! `EngineHandle::install(LexiconPaths)` (mirrors
 //! `engine/lexicon/tests/parity.rs`). This file must call BOTH
-//! `composing::dispatch::handle` AND `lexicon::EngineHandle::install`, so
+//! `composing::requests::handle` AND `lexicon::EngineHandle::install`, so
 //! it lives in `composing` (which depends on `lexicon`). The fixture
 //! serializers come from `test-support`; the composing-shaped builders
 //! live in `tests/common/mod.rs`. `parity.rs` passes `""` for `syllables_fst` → inventory `None` →
@@ -461,7 +461,7 @@ fn matrix() -> Vec<Case> {
         // BLOCK: known-valid syllables, not silent-skip degradation.
         case("long_oov_vs_dict", "taigilangkangtanlai", "tl"),
         // v3.5.9 D / C-5 — TPS first-class (post-C-3b). `contains_tps`
-        // in `dispatch::handle` upgrades mode to `InputMode::Tps`
+        // in `requests::handle` upgrades mode to `InputMode::Tps`
         // regardless of the platform-sent `input_mode` string, so the
         // `tl` mode flag here exercises the production auto-detect
         // path. Inventory + dict.fst extended in `build_*_fst` above

@@ -297,7 +297,7 @@ pub(crate) const CUSTOM_EFFECTIVE_FREQ: u32 = 2_000;
 ///   frequency 0, and a custom edge is scored at the
 ///   `CUSTOM_EFFECTIVE_FREQ` proxy — both must use the dictionary
 ///   formula, not the OOV penalty (Codex pre-impl Q2; "never infer
-///   no-dict from freq" invariant, `cost.rs` head + `dispatch.rs`
+///   no-dict from freq" invariant, `cost.rs` head + `requests.rs`
 ///   no-dict branch).
 ///
 /// Two khiin mechanisms, de-conflated by RC0 (see

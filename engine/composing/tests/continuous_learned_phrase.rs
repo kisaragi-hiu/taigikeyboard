@@ -21,7 +21,7 @@
 //! NOT 記起來.
 
 use composing::api::Engine;
-use composing::{dispatch, CommitScript, Intent, Phase};
+use composing::{requests, CommitScript, Intent, Phase};
 use protos::engine::composing_request::Method;
 use protos::engine::{CandidateMessage, CommitContinuous, EnterContinuous, FetchAtPos, Start};
 
@@ -219,11 +219,11 @@ fn commit(cand: &CandidateMessage) -> Intent {
         consumed_bytes: cand.consumed_span_end,
         syllable_count: cand.syllable_count,
     });
-    dispatch::decode_intent(&req(method)).expect("CommitContinuous decodes")
+    requests::decode_intent(&req(method)).expect("CommitContinuous decodes")
 }
 
 fn fetch_candidate(engine: &mut Engine, hanji: &str) -> CandidateMessage {
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::FetchAtPos(FetchAtPos::default())),
         engine,
         &config_tl(),
@@ -253,7 +253,7 @@ fn typed_khinsiann_survives_the_real_fetch_and_commit_path() {
         }),
         Method::EnterContinuous(EnterContinuous {}),
     ] {
-        dispatch::handle(&req(method), &mut engine, &cfg).expect("setup");
+        requests::handle(&req(method), &mut engine, &cfg).expect("setup");
     }
 
     let ki = fetch_candidate(&mut engine, "記");
