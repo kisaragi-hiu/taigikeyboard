@@ -4,15 +4,16 @@
 # touched), drive every scenario through Fcitx5 and IBus, and bring the run
 # back. Usage: run.sh <run-dir> [scenario-id]
 #
-# The VM: TAIGI_E2E_LINUX_HOST (default the macOS UTM guest, memory
-# reference_linux_dogfood_vms). Unreachable → every scenario is `skipped`,
+# The VM: TAIGI_E2E_LINUX_HOST (default `utm-linux`, an ~/.ssh/config alias
+# for the macOS UTM guest — user and address live there, not in the repo).
+# Unreachable → every scenario is `skipped`,
 # never a failure. Needs on the VM: the linux/ build dependencies, Rust,
 # xvfb, xdotool, python3-gi + GTK 3, fcitx5-frontend-gtk3, ibus-gtk3.
 set -euo pipefail
 
 RUN_DIR="${1:?usage: run.sh <run-dir> [scenario-id]}"
 ONLY="${2:-}"
-HOST="${TAIGI_E2E_LINUX_HOST:-binhian@192.168.64.2}"
+HOST="${TAIGI_E2E_LINUX_HOST:-utm-linux}"
 FRAMEWORKS=(fcitx5 ibus)
 source "$(dirname "${BASH_SOURCE[0]}")/remote.sh"
 
