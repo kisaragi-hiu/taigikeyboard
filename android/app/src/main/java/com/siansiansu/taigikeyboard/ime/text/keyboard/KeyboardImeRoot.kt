@@ -32,9 +32,9 @@ import androidx.compose.ui.unit.Dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.core.settings.OneHandedMode
 import com.siansiansu.taigikeyboard.ime.popup.PopupHost
+import com.siansiansu.taigikeyboard.ime.settings.OneHandedMode
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
 import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr

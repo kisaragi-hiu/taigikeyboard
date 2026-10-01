@@ -41,8 +41,8 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.core.SurfaceRect
-import com.siansiansu.taigikeyboard.ime.core.ThemeImageBackground
+import com.siansiansu.taigikeyboard.ime.theme.SurfaceRect
+import com.siansiansu.taigikeyboard.ime.theme.ThemeImageBackground
 import kotlin.math.roundToInt
 
 // The theme editor's photo position control: the drag / pinch surface over the live preview and

@@ -33,15 +33,15 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
-import com.siansiansu.taigikeyboard.ime.core.pressedKeyFillArgb
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyLabelCaseCache
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
 import com.siansiansu.taigikeyboard.ime.text.key.isTpsGlyphWithPopup
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
+import com.siansiansu.taigikeyboard.ime.theme.pressedKeyFillArgb
 import java.util.Locale
 import kotlin.math.min
 

@@ -16,8 +16,8 @@ import com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar
 import com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase
 import com.siansiansu.taigikeyboard.engine.proto.TransformInputCase
 import com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
-import com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions
+import com.siansiansu.taigikeyboard.ime.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
 import com.siansiansu.taigikeyboard.engine.proto.LetterCase as ProtoLetterCase
 
 private const val TAG = "CaseTransformBridge"

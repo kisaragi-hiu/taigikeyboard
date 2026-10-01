@@ -136,7 +136,7 @@ struct EngineSettings: Equatable, Sendable {
     /// `FetchAtPos.literal_roman_candidate_disabled`.
     /// CROSS-PLATFORM INVARIANT — mirrors `isLiteralRomanCandidateEnabled` in
     /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift and
-    /// `literalRomanCandidateEnabled` in android/…/ime/core/PrefHelper.kt,
+    /// `literalRomanCandidateEnabled` in android/…/ime/settings/PrefHelper.kt,
     /// both of which default it ON.
     /// Drift changes which candidate leads the list on a fresh install.
     let isLiteralRomanCandidateEnabled: Bool
@@ -145,7 +145,7 @@ struct EngineSettings: Equatable, Sendable {
     /// `AppConfig.hyphenless_roman` on every request; no TPS layout here.
     /// CROSS-PLATFORM INVARIANT — mirrors `isHyphenlessRomanEnabled` in
     /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift and
-    /// android/…/ime/core/PrefHelper.kt, both OFF.
+    /// android/…/ime/settings/PrefHelper.kt, both OFF.
     let isHyphenlessRomanEnabled: Bool
 
     /// ⁿ becomes ᴺ in capitals (`behavioral-invariants.md` §53) — the POJ nasal marker follows
@@ -154,7 +154,7 @@ struct EngineSettings: Equatable, Sendable {
     /// config.
     /// CROSS-PLATFORM INVARIANT — mirrors `isNasalMarkerUppercaseEnabled` in
     /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift and
-    /// `nasalMarkerUppercaseEnabled` in android/…/ime/core/PrefHelper.kt, all ON.
+    /// `nasalMarkerUppercaseEnabled` in android/…/ime/settings/PrefHelper.kt, all ON.
     let isNasalMarkerUppercaseEnabled: Bool
 
     /// Whether the user's own dictionary contributes candidates. Gates the

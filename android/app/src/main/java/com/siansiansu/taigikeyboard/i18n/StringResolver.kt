@@ -17,7 +17,7 @@ import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.i18n.generated.GeneratedTaigiStrings
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import java.util.Locale
 
 /**

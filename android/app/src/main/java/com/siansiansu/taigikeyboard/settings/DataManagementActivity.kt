@@ -13,7 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.siansiansu.taigikeyboard.i18n.currentStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.generated.dictionaryImportBackupResult
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ui.setTaigiContent
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementScreen
 import com.siansiansu.taigikeyboard.ui.tabs.dictionary.DataManagementViewModel

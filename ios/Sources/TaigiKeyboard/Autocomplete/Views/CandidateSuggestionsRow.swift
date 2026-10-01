@@ -59,7 +59,7 @@ struct CandidateSuggestionsRow: View {
         style.item.subtitleColor = theme.secondaryTextColor
         // Word dividers follow the candidate text like the Taigi grid lines (KK API:
         // Autocomplete.ToolbarStyle.separator / ToolbarSeparatorStyle.color).
-        // CROSS-PLATFORM INVARIANT — mirrors android .../smartbar/SmartbarCandidateStrip.kt EnglishDivider.
+        // CROSS-PLATFORM INVARIANT — mirrors android .../candidates/CandidateStrip.kt EnglishDivider.
         if let lineColor = theme.gridLineColor {
             style.separator.color = lineColor
         }

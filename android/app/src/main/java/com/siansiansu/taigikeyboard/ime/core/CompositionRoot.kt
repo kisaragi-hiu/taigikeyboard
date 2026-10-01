@@ -12,6 +12,10 @@ import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.dictionary.EngineUserDataClient
 import com.siansiansu.taigikeyboard.ime.dictionary.LexiconService
 import com.siansiansu.taigikeyboard.ime.dictionary.UserDataClient
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
+import com.siansiansu.taigikeyboard.ime.theme.ThemeImageCache
+import com.siansiansu.taigikeyboard.ime.theme.ThemeImageStore
+import com.siansiansu.taigikeyboard.ime.theme.UserThemeStore
 
 /**
  * Service-graph composition root.

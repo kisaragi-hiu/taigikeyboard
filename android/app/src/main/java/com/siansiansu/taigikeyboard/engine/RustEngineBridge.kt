@@ -10,8 +10,8 @@ import com.siansiansu.taigikeyboard.engine.proto.Request
 import com.siansiansu.taigikeyboard.engine.proto.Response
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
-import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionarySource
+import com.siansiansu.taigikeyboard.ime.settings.EngineSettings
 import java.util.ArrayDeque
 import java.util.concurrent.atomic.AtomicInteger
 

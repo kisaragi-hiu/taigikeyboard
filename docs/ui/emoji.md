@@ -34,7 +34,7 @@
 | `ime/media/emoji/EmojiPaletteView.kt` | Compose UI: category tab row + `HorizontalPager` + `LazyVerticalGrid` (7 cols); long-press `EmojiVariationsPopup` |
 | `ime/media/emoji/EmojiKeyboardView.kt` | `FrameLayout` host embedding `ComposeView`; async data load on IO; routes taps to `MediaInputManager` |
 | `ime/media/emoji/EmojiPreferences.kt` | DataStore (`emoji_preferences`) — persisted preferred skin tone |
-| `ime/keyboard/EmojiSkinTone.kt` | 6 Fitzpatrick tones (incl. DEFAULT) + codepoint mapping |
+| `ime/media/emoji/EmojiSkinTone.kt` | 6 Fitzpatrick tones (incl. DEFAULT) + codepoint mapping |
 | `ime/media/MediaInputManager.kt` | Media-mode host (ViewFlipper, switch-to-text + backspace buttons, `sendEmojiKeyPress`) |
 
 ---

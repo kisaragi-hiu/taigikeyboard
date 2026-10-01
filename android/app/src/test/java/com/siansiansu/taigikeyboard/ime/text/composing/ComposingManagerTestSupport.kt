@@ -2,8 +2,8 @@
 
 package com.siansiansu.taigikeyboard.ime.text.composing
 
-import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
-import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
+import com.siansiansu.taigikeyboard.ime.settings.EngineSettings
+import com.siansiansu.taigikeyboard.ime.settings.EngineSettingsProvider
 
 /** The manager never reads settings on the paths JVM tests exercise (no engine dispatch). */
 internal object UnusedSettingsProvider : EngineSettingsProvider {

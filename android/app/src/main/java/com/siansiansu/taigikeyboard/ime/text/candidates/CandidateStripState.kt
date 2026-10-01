@@ -1,0 +1,102 @@
+package com.siansiansu.taigikeyboard.ime.text.candidates
+
+import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
+import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
+
+/**
+ * Render-state snapshot for the candidate strip.
+ *
+ * Owned by [SmartbarManager] via [kotlinx.coroutines.flow.MutableStateFlow].
+ * Intentionally render-only — does not replace SmartbarManager fields like
+ * `currentSuggestions`, `hasCandidates`, or NextWord state, which other
+ * subsystems (CandidateClickHandler, CandidateOverlayView) read directly.
+ *
+ * `updateSeq` is a monotonic counter incremented on every push. The Composable
+ * keys `LaunchedEffect` on it so structurally-equal candidate lists still trigger
+ * scroll-to-zero, matching the prior `ListAdapter.submitList` callback semantics.
+ */
+data class CandidateStripState(
+    val mode: CandidateMode,
+    val display: CandidateDisplayParams,
+    val updateSeq: Long,
+)
+
+sealed class CandidateMode {
+    data object Empty : CandidateMode()
+
+    data class Taigi(
+        val items: List<TaigiWord>,
+    ) : CandidateMode()
+
+    data class English(
+        val items: List<TaigiWord>,
+    ) : CandidateMode()
+}
+
+data class CandidateDisplayParams(
+    /** EFFECTIVE translate-swap (already false under roman-only). */
+    val isTranslateSwapped: Boolean,
+    /** Carried explicitly: the swap flag alone cannot tell roman-first from roman-only. */
+    val candidateDisplayMode: CandidateDisplayMode,
+    val fontType: String,
+    val layoutType: String,
+    val orMapsToER: Boolean,
+    val textSizeScale: Float,
+    val candidateTextColor: Int?,
+    val themeTitleColor: Int,
+    val themeSubtitleColor: Int,
+    val themeKeyBgColor: Int,
+    val themePressedHighlightColor: Int,
+    val smartbarHeightPx: Int,
+)
+
+/** Title / optional subtitle of one candidate cell (strip + expanded overlay share it). */
+data class CandidateCellText(
+    val title: String,
+    val subtitle: String?,
+)
+
+/**
+ * True when the cell renders a second line — a non-empty subtitle distinct
+ * from the title. Single spelling shared by the strip's content-level sizing
+ * scan and the per-cell render gate.
+ */
+val CandidateCellText.showsSubtitle: Boolean
+    get() = !subtitle.isNullOrEmpty() && subtitle != title
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift displayTitle / displaySubtitle
+// and the desktop PresentedCandidate one-script cells. Drift causes silent divergence
+// (one platform shows a subtitle under roman-only, or still renders the superseded one-label mixed cell).
+
+/**
+ * Arm order — hanji-less rows are roman regardless of mode; TPS precedes
+ * ROMAN_ONLY / COMBINED so TPS ignores the setting; COMBINED renders ONE
+ * script per cell, no subtitle (the builder already split each candidate
+ * into adjacent Hanji + romanization cells — §42 second exception): the
+ * [cellScript] marker says which script this cell shows, and an unmarked
+ * COMBINED row (a NextWord prediction — not split) renders hanji-led;
+ * swap decides the lead otherwise. `displayRoman` is already TPS-converted
+ * by the caller when relevant.
+ */
+fun candidateCellText(
+    hanzi: String?,
+    displayRoman: String,
+    isTPSLayout: Boolean,
+    candidateDisplayMode: CandidateDisplayMode,
+    isTranslateSwapped: Boolean,
+    cellScript: String?,
+): CandidateCellText =
+    when {
+        hanzi.isNullOrEmpty() -> CandidateCellText(displayRoman, null)
+        isTPSLayout -> CandidateCellText(hanzi, null)
+        candidateDisplayMode == CandidateDisplayMode.ROMAN_ONLY -> CandidateCellText(displayRoman, null)
+        candidateDisplayMode == CandidateDisplayMode.COMBINED ->
+            if (cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN) {
+                CandidateCellText(displayRoman, null)
+            } else {
+                CandidateCellText(hanzi, null)
+            }
+        isTranslateSwapped -> CandidateCellText(hanzi, displayRoman)
+        else -> CandidateCellText(displayRoman, hanzi)
+    }

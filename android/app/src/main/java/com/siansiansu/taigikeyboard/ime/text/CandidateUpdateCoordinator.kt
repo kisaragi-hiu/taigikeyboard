@@ -9,10 +9,10 @@ import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
+import com.siansiansu.taigikeyboard.ime.text.candidates.EnglishAutocompleteService
+import com.siansiansu.taigikeyboard.ime.text.candidates.TaigiAutocompleteService
+import com.siansiansu.taigikeyboard.ime.text.candidates.shouldSplitCombinedCells
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
-import com.siansiansu.taigikeyboard.ime.text.composing.EnglishAutocompleteService
-import com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService
-import com.siansiansu.taigikeyboard.ime.text.composing.shouldSplitCombinedCells
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -47,7 +47,7 @@ class CandidateUpdateCoordinator(
     // input-mode handling), so no recreate-on-mode-change is needed.
     // Protected by serviceLock for thread-safe access.
     private val serviceLock = Any()
-    private var taigiAutocompleteService: com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService? = null
+    private var taigiAutocompleteService: com.siansiansu.taigikeyboard.ime.text.candidates.TaigiAutocompleteService? = null
 
     // English autocomplete service
     private var englishAutocompleteService: EnglishAutocompleteService? = null

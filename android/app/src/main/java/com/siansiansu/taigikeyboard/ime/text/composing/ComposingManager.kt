@@ -28,7 +28,7 @@ import com.siansiansu.taigikeyboard.engine.continuousAppConfig
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
-import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettingsProvider
+import com.siansiansu.taigikeyboard.ime.settings.EngineSettingsProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -375,7 +375,7 @@ class ComposingManager(
      * same-thread `applyTransition` so it is fresh).
      */
     private fun promoteToContinuousIfEligible(
-        settings: com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings,
+        settings: com.siansiansu.taigikeyboard.ime.settings.EngineSettings,
         ic: InputConnection,
         generation: Long,
     ) {

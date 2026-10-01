@@ -49,7 +49,7 @@ User expectation:
 | Path | Trigger | Cell shape | Source code |
 |---|---|---|---|
 | Lexicon (legacy — retired v3.5.8 Item 13) | Continuous returns empty OR `continuousFetcher == nil` | dual-line | iOS `convertToSuggestions` / Android `autocomplete` lexicon branch (both deleted; see §15.4) |
-| Continuous (Phase 7B/8) | `Phase::Continuous` active + non-empty `ContinuousResponse.candidates` | single-line | iOS `buildContinuousSuggestions` ([`TaigiAutocompleteService.swift:273-292`](../../ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift)) / Android `buildContinuousSuggestionsForCandidates` ([`TaigiAutocompleteService.kt:228-253`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/TaigiAutocompleteService.kt)) |
+| Continuous (Phase 7B/8) | `Phase::Continuous` active + non-empty `ContinuousResponse.candidates` | single-line | iOS `buildContinuousSuggestions` ([`TaigiAutocompleteService.swift:273-292`](../../ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift)) / Android `buildContinuousSuggestionsForCandidates` ([`TaigiAutocompleteService.kt:228-253`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/candidates/TaigiAutocompleteService.kt)) |
 
 ### 2.2 Where the roman/hanji split is lost
 
@@ -124,7 +124,7 @@ iOS `CandidateCellHelper` ([`CandidateCellHelper.swift:24-57`](../../ios/Sources
 | `isTranslateSwapped` | `suggestion.subtitle` (= hanji) | `suggestion.text` (= roman) |
 | `isTPSLayout` | `suggestion.subtitle` (= hanji, or TPS fallback) | `nil` (TPS never shows dual-line) |
 
-Android `TaigiWord.displayText` ([`TaigiWord.kt:38-40`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/TaigiWord.kt)) prioritizes hanji-then-roman for commit; UI render side (in `SmartbarCandidateStrip`) consults `roman` + `hanzi` fields directly when present.
+Android `TaigiWord.displayText` ([`TaigiWord.kt:38-40`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/TaigiWord.kt)) prioritizes hanji-then-roman for commit; UI render side (in `CandidateStrip.kt`) consults `roman` + `hanzi` fields directly when present.
 
 **Conclusion**: the existing UI layer is already capable of rendering dual-line — the missing piece is the data carrier (proto + RawCandidate + ContinuousCandidate) splitting the two fields.
 
@@ -147,7 +147,7 @@ if let fetcher = continuousFetcher {
 // fall-through to lexicon path
 ```
 
-Android [`TaigiAutocompleteService.kt:71-77`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/TaigiAutocompleteService.kt) has the same shape. So within one fetch the strip is **all-single-line** or **all-dual-line** — never mixed in slots 1..n.
+Android [`TaigiAutocompleteService.kt:71-77`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/candidates/TaigiAutocompleteService.kt) has the same shape. So within one fetch the strip is **all-single-line** or **all-dual-line** — never mixed in slots 1..n.
 
 ### 3.2 Across keystrokes — toggles
 
@@ -167,7 +167,7 @@ Each toggle flips the strip's cell shape, producing the user-observed "interleav
 Slot-0 (`isComposingText`, lexicon path only) is ALWAYS single-line:
 
 - iOS `createComposingTextSuggestion` (pre-Item-13 — slot-0 cell deleted): `subtitle: nil`
-- Android `createComposingTextCell` ([`TaigiAutocompleteService.kt`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/composing/TaigiAutocompleteService.kt)): `hanzi = null`
+- Android `createComposingTextCell` ([`TaigiAutocompleteService.kt`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/candidates/TaigiAutocompleteService.kt)): `hanzi = null`
 
 This is **correct** — pending preedit has no hanji yet to display. But when slots 1..n switch to dual-line (lexicon path), slot-0's single-line stands out, amplifying the inconsistency.
 
@@ -200,7 +200,7 @@ message CandidateMessage {
 **Why retain `display_text`**:
 
 - Sidechannel used by `commitContinuous(display_text)` ([`engine/composing/src/transition.rs:484-490`](../../engine/composing/src/transition.rs)) for byte-aligned commit
-- `user_frequency.db` write key on both platforms (iOS [`ActionHandler+Suggestions.swift:81-83`](../../ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift) / Android [`CandidateClickHandler.kt:345-349`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/smartbar/CandidateClickHandler.kt))
+- `user_frequency.db` write key on both platforms (iOS [`ActionHandler+Suggestions.swift:81-83`](../../ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift) / Android [`CandidateClickHandler.kt:345-349`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/candidates/CandidateClickHandler.kt))
 - Continues to mean "what the engine considers canonical for commit + frequency tracking" (= `hanji.unwrap_or(roman)`)
 
 The new fields are **display-only** sidechannels. The engine remains authoritative on commit / frequency keys via `display_text`.
@@ -312,7 +312,7 @@ data class ContinuousCandidate(
 ```
 
 ```kotlin
-// android/.../ime/text/composing/TaigiAutocompleteService.kt
+// android/.../ime/text/candidates/TaigiAutocompleteService.kt
 // Post-Item 4 baseline: signature has no `composingText` param and no
 // `createComposingTextCell` insert (slot 0 == candidate[0] per
 // `continuous-input-ranking.md` §10.1.2). The `← was:` markers below show
@@ -446,7 +446,7 @@ proto3 additive change — new fields default to empty when absent.
 
 | Test | Location | Asserts |
 |---|---|---|
-| `Item 6 — HANT candidate emits dual-line carrier` / `TAILO … single-line` / `MIXED … dual-line` | `android/app/src/test/java/com/siansiansu/taigikeyboard/ime/text/composing/ContinuousSuggestionsContractTest.kt` | Android has no separate bridge decode test; the contract test covers wire → `TaigiWord` end to end (HANT → `hanzi != null`, TAILO → single-line) |
+| `Item 6 — HANT candidate emits dual-line carrier` / `TAILO … single-line` / `MIXED … dual-line` | `android/app/src/test/java/com/siansiansu/taigikeyboard/ime/text/candidates/ContinuousSuggestionsContractTest.kt` | Android has no separate bridge decode test; the contract test covers wire → `TaigiWord` end to end (HANT → `hanzi != null`, TAILO → single-line) |
 
 ### 8.5 Acceptance / regression
 
@@ -510,7 +510,7 @@ This means a TAILO continuous candidate (e.g. raw English-leaning entries) under
 
 Lexicon path's swap behavior is well-tested. After Option A, continuous candidates have the same `Suggestion(text:, subtitle:)` shape so swap should "just work". Codex consult: any non-obvious interaction with `consumedBytes` / `syllableCount` decode when the cell title becomes hanji (user-tap path)?
 
-**Pre-analysis**: tap path goes through `additionalInfo["isContinuous"] == "true"` check first (iOS [`ActionHandler+Suggestions.swift:40`](../../ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift) / Android [`CandidateClickHandler.kt:300`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/smartbar/CandidateClickHandler.kt)), reads `consumedBytes` + `syllableCount` from sidechannel, calls `commitContinuous(displayText: sidechannel.displayText, ...)`. Swap affects render only, not tap routing. Should be safe.
+**Pre-analysis**: tap path goes through `additionalInfo["isContinuous"] == "true"` check first (iOS [`ActionHandler+Suggestions.swift:40`](../../ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift) / Android [`CandidateClickHandler.kt:300`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/candidates/CandidateClickHandler.kt)), reads `consumedBytes` + `syllableCount` from sidechannel, calls `commitContinuous(displayText: sidechannel.displayText, ...)`. Swap affects render only, not tap routing. Should be safe.
 
 ### Q8 — Phase 9 sub-PR positioning
 
@@ -591,7 +591,7 @@ Per [`.claude/rules/cross-platform-alignment.md`](../../.claude/rules/cross-plat
 | 4. iOS `ContinuousCandidate` + decode | `ios/.../Engine/RustEngineBridge.swift` (struct + `composingFetchDispatch` decode) | ~15 + 1 bridge wire test |
 | 5. iOS `buildContinuousSuggestions` | `ios/.../Autocomplete/Services/TaigiAutocompleteService.swift` | ~5 + 2 service-level tests |
 | 6. Android `ContinuousCandidate` + decode | `android/.../engine/RustEngineBridge.kt` (data class + `composingFetchDispatch` decode) | ~15 + 1 bridge wire test |
-| 7. Android `buildContinuousSuggestionsForCandidates` | `android/.../ime/text/composing/TaigiAutocompleteService.kt` | ~5 + extend existing `ContinuousSuggestionsContractTest.kt` |
+| 7. Android `buildContinuousSuggestionsForCandidates` | `android/.../ime/text/candidates/TaigiAutocompleteService.kt` | ~5 + extend existing `ContinuousSuggestionsContractTest.kt` |
 | 8. Defensive read fallback | iOS + Android `if roman.isEmpty()` paths | ~6 |
 | 9. Acceptance dogfood + manual `xcframework` rebuild + `assembleDebug` | user-run | — |
 | 10. Roadmap row update | [`docs/releases/v3.5.8/plan.md`](../releases/v3.5.8/plan.md) § Phase 9 | ~3 lines |

@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.engine
 
-import com.siansiansu.taigikeyboard.ime.core.settings.StubEngineSettings
+import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

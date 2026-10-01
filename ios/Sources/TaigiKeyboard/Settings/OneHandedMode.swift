@@ -2,14 +2,14 @@ import Foundation
 
 /// One-handed keyboard mode: the key area narrows to 80% and docks to one edge.
 ///
-/// Mirrors Android `ime/core/settings/OneHandedMode.kt`; [rawValue] is the persisted
+/// Mirrors Android `ime/settings/OneHandedMode.kt`; [rawValue] is the persisted
 /// string, identical on both platforms.
 enum OneHandedMode: String, CaseIterable {
     case off
     case left
     case right
 
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/OneHandedMode.kt
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/OneHandedMode.kt
     // KEY_AREA_FRACTION; KeyboardKit docks the key rows at this share. Drift causes silent divergence.
     static let keyAreaFraction: CGFloat = 0.8
 

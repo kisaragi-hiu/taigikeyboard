@@ -96,7 +96,7 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
     /// mode (`behavioral-invariants.md` §42) while the committed script comes
     /// from each cell's `cellScript` marker, not the pair. `.romanOnly` has no
     /// Hanji to lead with.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/CandidateDisplayMode.kt effectiveTranslateSwapped,
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/CandidateDisplayMode.kt effectiveTranslateSwapped,
     // macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift, desktop/crates/taigi-desktop-core/src/settings/engine_settings.rs.
     // Drift causes silent divergence (one platform commits roman under Hanji with Romanization, or hanji under Romanization Only).
     func effectiveTranslateSwapped(stored: Bool) -> Bool {

@@ -389,7 +389,7 @@ Engine-layer code receives its dependencies via constructor injection from which
 
 ### 9.2 Settings live-read
 
-Android stores settings in DataStore behind `PrefHelper`'s cached `Preferences` snapshot; iOS uses `UserDefaults` / `SharedSettings`. §3 warns about the `val x = prefs.getX()` snapshot anti-pattern. The Android mirror is `ime/core/settings/EngineSettings.kt` + `EngineSettingsProvider.kt`: each field on `EngineSettings` is a `get()` property that re-reads the cache on every access, and `EngineSettingsProvider.current` returns a live view. Rule enforced at PR review:
+Android stores settings in DataStore behind `PrefHelper`'s cached `Preferences` snapshot; iOS uses `UserDefaults` / `SharedSettings`. §3 warns about the `val x = prefs.getX()` snapshot anti-pattern. The Android mirror is `ime/settings/EngineSettings.kt` + `EngineSettingsProvider.kt`: each field on `EngineSettings` is a `get()` property that re-reads the cache on every access, and `EngineSettingsProvider.current` returns a live view. Rule enforced at PR review:
 
 - Inside a shared-core candidate that receives `EngineSettings`, read through the property at the point of decision — never capture into a local `val` at constructor time.
 - A caller that needs multi-field consistency within one operation captures a local copy explicitly.
@@ -402,7 +402,7 @@ Shared-core candidates on Android must not import `kotlinx.coroutines.*`, `Dispa
 - `ViewModel.viewModelScope` — cancelled automatically by AndroidX.
 - `Dispatchers.IO` for DB / file / network; `Dispatchers.Default` for pure CPU.
 - Clock injection: shared-core callers that need the wall clock take `nowMs: Long` as a parameter. No `System.currentTimeMillis()` inside candidate files.
-- Long-running timers (context-timeout, association-timeout) use `kotlinx.coroutines.delay` from the platform wrapper (`ime/text/smartbar/NextWordController.kt`) — a straight port of the iOS `NextWordController` timer pattern. See `nextword-engine-boundary.md` §13 (Android binding).
+- Long-running timers (context-timeout, association-timeout) use `kotlinx.coroutines.delay` from the platform wrapper (`ime/text/nextword/NextWordController.kt`) — a straight port of the iOS `NextWordController` timer pattern. See `nextword-engine-boundary.md` §13 (Android binding).
 
 ### 9.4 InputConnection binding
 
@@ -410,7 +410,7 @@ Shared-core candidates on Android must not import `kotlinx.coroutines.*`, `Dispa
 
 ### 9.5 Package layout
 
-iOS uses `Lexicon/`, `NextWord/`, `Settings/` as sibling trees (§5.1). Android keeps `ime/dictionary/*` plus `ime/core/{logging,settings}/*` and `ime/text/{composing,smartbar}/*`; the trees are not renamed to match iOS because moving files across packages churns every import in the module for no behavioral gain.
+iOS uses `Lexicon/`, `NextWord/`, `Settings/` as sibling trees (§5.1). Android keeps `ime/dictionary/*`, `ime/settings/*`, `ime/theme/*`, `ime/core/logging/*` and `ime/text/{composing,candidates,nextword,overlays,smartbar}/*` (packages regrouped by concern 2026-10-01, R9-2); the trees still do not mirror iOS names one to one.
 
 ---
 

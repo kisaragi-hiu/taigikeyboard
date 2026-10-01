@@ -17,23 +17,23 @@ import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.isTpsToneMark
 import com.siansiansu.taigikeyboard.engine.transformInputCase
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.AutoSpacePunctuation
 import com.siansiansu.taigikeyboard.ime.text.CandidateUpdateCoordinator
 import com.siansiansu.taigikeyboard.ime.text.CapsStateManager
 import com.siansiansu.taigikeyboard.ime.text.CharacterInputPipeline
+import com.siansiansu.taigikeyboard.ime.text.candidates.appendAutoSpaceIfEarned
+import com.siansiansu.taigikeyboard.ime.text.candidates.rawPreeditWritesRomanization
 import com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager
 import com.siansiansu.taigikeyboard.ime.text.composing.clearHostComposingRegion
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyType
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
-import com.siansiansu.taigikeyboard.ime.text.smartbar.appendAutoSpaceIfEarned
-import com.siansiansu.taigikeyboard.ime.text.smartbar.rawPreeditWritesRomanization
 import java.text.BreakIterator
 import java.util.Locale
 

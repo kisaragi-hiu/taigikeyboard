@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 

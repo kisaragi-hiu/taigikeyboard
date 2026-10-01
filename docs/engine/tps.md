@@ -477,7 +477,7 @@ All TPS phonetic logic now lives in Rust and is shared by both platforms via the
 | Composing platform wrapper | `Input/Composing/ComposingManager.swift` (KeyboardKit / Combine) | `ime/text/composing/ComposingManager.kt` |
 | Effect → text-region binding | `Input/Composing/ComposingDelegate.swift` (`UITextDocumentProxy`) | `ime/text/composing/ComposingDelegate.kt` (`InputConnection`) |
 | Keystroke dispatcher | `Input/CharacterInputPipeline.swift` | `ime/text/CharacterInputPipeline.kt` |
-| Layout / candidate UI | `Layout/`, `Autocomplete/Views/` | `ime/text/layout/`, `ime/text/smartbar/` |
+| Layout / candidate UI | `Layout/`, `Autocomplete/Views/` | `ime/text/layout/`, `ime/text/candidates/` |
 
 ---
 

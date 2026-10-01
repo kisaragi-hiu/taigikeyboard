@@ -25,8 +25,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.center
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toOffset
-import com.siansiansu.taigikeyboard.ime.core.SurfaceVector
-import com.siansiansu.taigikeyboard.ime.core.ThemeGradient
+import com.siansiansu.taigikeyboard.ime.theme.SurfaceVector
+import com.siansiansu.taigikeyboard.ime.theme.ThemeGradient
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor

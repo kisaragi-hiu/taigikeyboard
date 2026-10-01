@@ -27,7 +27,7 @@
     </LinearLayout>
 
     <!-- Expanded candidate overlay: starts below the Smartbar, covers the keyboard downward -->
-    <com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateOverlayView
+    <com.siansiansu.taigikeyboard.ime.text.overlays.CandidateOverlayView
         android:id="@+id/candidate_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -35,7 +35,7 @@
         android:visibility="gone" />
 
     <!-- Layout selection overlay: covers keyboard with layout preview cards -->
-    <com.siansiansu.taigikeyboard.ime.text.smartbar.LayoutSelectionOverlayView
+    <com.siansiansu.taigikeyboard.ime.text.overlays.LayoutSelectionOverlayView
         android:id="@+id/layout_selection_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -43,7 +43,7 @@
         android:visibility="gone" />
 
     <!-- Symbol selection overlay: covers keyboard with symbol grid -->
-    <com.siansiansu.taigikeyboard.ime.text.smartbar.SymbolSelectionOverlayView
+    <com.siansiansu.taigikeyboard.ime.text.overlays.SymbolSelectionOverlayView
         android:id="@+id/symbol_selection_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -51,7 +51,7 @@
         android:visibility="gone" />
 
     <!-- Settings selection overlay: covers keyboard with settings toggles -->
-    <com.siansiansu.taigikeyboard.ime.text.smartbar.SettingsSelectionOverlayView
+    <com.siansiansu.taigikeyboard.ime.text.overlays.SettingsSelectionOverlayView
         android:id="@+id/settings_selection_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -60,7 +60,7 @@
         android:visibility="gone" />
 
     <!-- One-handed mode callout: long-press of the toolbar keyboard button; transparent full cover, tap outside closes -->
-    <com.siansiansu.taigikeyboard.ime.text.smartbar.OneHandedMenuOverlayView
+    <com.siansiansu.taigikeyboard.ime.text.overlays.OneHandedMenuOverlayView
         android:id="@+id/one_handed_menu_overlay"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

@@ -7,7 +7,7 @@ import com.siansiansu.taigikeyboard.engine.proto.AppConfig
 import com.siansiansu.taigikeyboard.engine.proto.ComposingRequest
 import com.siansiansu.taigikeyboard.engine.proto.ComposingResponse
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
-import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
+import com.siansiansu.taigikeyboard.ime.settings.EngineSettings
 
 // region Composing slice (10 ops)
 

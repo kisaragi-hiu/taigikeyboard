@@ -4,7 +4,7 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.fullUppercaseToneString
 import com.siansiansu.taigikeyboard.engine.lowercaseToneChar
 import com.siansiansu.taigikeyboard.engine.uppercaseToneChar
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.settings.InputMode
 
 /**
  * R3 mitigation for the case-transform Rust slice — KeyView render-path

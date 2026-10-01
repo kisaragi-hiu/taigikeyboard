@@ -8,11 +8,11 @@ package com.siansiansu.taigikeyboard.ime.text.keyboard
 import android.content.Context
 import android.view.View
 import android.view.inputmethod.InputMethodManager
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.popup.KeyAnchor
 import com.siansiansu.taigikeyboard.ime.popup.buildPopupCells
 import com.siansiansu.taigikeyboard.ime.popup.tpsPopupWithBaseGlyph
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.CapsStateManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 

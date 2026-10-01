@@ -5,8 +5,8 @@ import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.lexiconInstall
 import com.siansiansu.taigikeyboard.engine.userDataOpen
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.dictionary.DictionaryConstants
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.settings.LauncherIconController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

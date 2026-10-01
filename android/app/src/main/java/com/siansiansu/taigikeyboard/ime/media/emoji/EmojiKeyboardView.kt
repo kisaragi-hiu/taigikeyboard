@@ -11,11 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
-import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
+import com.siansiansu.taigikeyboard.ime.theme.ThemeAppearanceCache
+import com.siansiansu.taigikeyboard.ime.theme.isKeyboardNightMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.async
@@ -71,7 +71,7 @@ class EmojiKeyboardView : FrameLayout {
                 KeyboardMaterialTheme {
                     ThemedEmojiColors(themeColors()) {
                         val preferredSkinTone by preferencesManager.getPreferredSkinTone().collectAsState(
-                            initial = com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone.DEFAULT,
+                            initial = com.siansiansu.taigikeyboard.ime.media.emoji.EmojiSkinTone.DEFAULT,
                         )
 
                         EmojiPaletteView(

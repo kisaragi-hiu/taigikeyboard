@@ -63,7 +63,7 @@ Engine `engine/userdata/src/backup.rs` — `BACKUP_VERSION` (write version) + th
 
 ### 3. Settings keys (storage)
 
-iOS `Settings/SharedSettings.swift` (`SettingsKey` definitions + `resetToDefaults()`); Android `ime/core/PrefHelper.kt` (`PreferenceKeys` + `preference(...)` delegates). `git diff` both.
+iOS `Settings/SharedSettings.swift` (`SettingsKey` definitions + `resetToDefaults()`); Android `ime/settings/PrefHelper.kt` (`PreferenceKeys` + `preference(...)` delegates). `git diff` both.
 
 - **Key removed** while a reader still references it → BLOCKING (crash / lost setting). Grep the codebase for the removed key name at `<target>` to confirm no live reader.
 - **Default value flipped** on an existing key → BEHAVIOR-CHANGE. Only default-reliant users (never wrote the key) are affected; users who explicitly set it keep their stored value (the default applies only when the key is absent). The `resetToDefaults()` change does NOT run on upgrade — it fires only on an explicit user reset. Must be in the changelog.

@@ -1,6 +1,7 @@
 package com.siansiansu.taigikeyboard.ime.core
 
 import android.content.Context
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 
 // Reads and tracks app version info for install/last-use preferences
 object AppVersionTracker {

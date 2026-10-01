@@ -2,7 +2,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.engine.transformSuggestion
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.settings.InputMode
 
 /**
  * Thin per-word bridge over `RustEngineBridge.transformSuggestion`.

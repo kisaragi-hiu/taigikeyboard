@@ -1,0 +1,569 @@
+// Persisted keyboard color settings (JSON in DataStore); a null role falls back to the platform theme attr.
+
+package com.siansiansu.taigikeyboard.ime.theme
+
+import org.json.JSONArray
+import org.json.JSONObject
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.sin
+
+/** A point in the unit square of a painted surface (0..1 on both axes; y down). */
+data class UnitPoint(
+    val x: Float,
+    val y: Float,
+)
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeGradient
+// (stops + angle, same degree convention and unit-point math). Drift causes silent divergence.
+
+/**
+ * A linear keyboard-background gradient: >=2 ARGB [stops] from start to end plus
+ * the direction [angle] in degrees, CSS / Figma convention (0 = bottom->top,
+ * 90 = left->right, 180 = top->bottom, clockwise). Built-in gradient themes use
+ * the vertical [DEFAULT_ANGLE].
+ *
+ * ">=2 stops" is enforced at construction ([init] require, [fromJson] null), so
+ * every gradient a render site sees is renderable. Decode is forward-compatible:
+ * an `angle` absent from old JSON reads as [DEFAULT_ANGLE].
+ */
+data class ThemeGradient(
+    val stops: List<Int>,
+    val angle: Float = DEFAULT_ANGLE,
+) {
+    init {
+        require(stops.size >= MINIMUM_STOPS) { "a gradient needs at least $MINIMUM_STOPS stops, got ${stops.size}" }
+    }
+
+    /**
+     * Start / end points for [angle] in the unit square of the painted surface. The CSS
+     * direction vector `(sin θ, -cos θ)` (y down) is normalised by its larger component so
+     * the diagonal presets run corner to corner (135° = top-left -> bottom-right) and the
+     * axis presets run edge to edge (180° = top-centre -> bottom-centre).
+     */
+    fun unitPoints(): Pair<UnitPoint, UnitPoint> {
+        val (dx, dy) = direction(angle)
+        val magnitude = max(abs(dx), abs(dy))
+        val halfX = dx / magnitude / 2
+        val halfY = dy / magnitude / 2
+        return UnitPoint(0.5f - halfX, 0.5f - halfY) to UnitPoint(0.5f + halfX, 0.5f + halfY)
+    }
+
+    companion object {
+        /** Vertical top->bottom, the direction every built-in gradient theme uses. */
+        const val DEFAULT_ANGLE = 180f
+        const val MINIMUM_STOPS = 2
+
+        /**
+         * Spacing of the eight preset directions (↑ → ↓ ← and the diagonals) the editor's
+         * preview drag snaps onto. Mirrors iOS ThemeGradient.presetStep.
+         */
+        const val PRESET_STEP = 45f
+
+        /**
+         * The unit direction vector of [degrees] in screen coordinates (y down): `0` -> (0, -1),
+         * `90` -> (1, 0). Shared by [unitPoints] and the editor's direction overlay.
+         */
+        fun direction(degrees: Float): SurfaceVector {
+            val radians = Math.toRadians(degrees.toDouble())
+            return SurfaceVector(sin(radians).toFloat(), -cos(radians).toFloat())
+        }
+
+        /**
+         * Inverse of [direction]: the angle of a screen-space vector, in `-180..180` (callers
+         * wrap it into `0 until 360` as they see fit).
+         */
+        fun degrees(
+            dx: Float,
+            dy: Float,
+        ): Float = Math.toDegrees(atan2(dx.toDouble(), -dy.toDouble())).toFloat()
+
+        /** How far the end stop is lifted toward white in [seeded]. */
+        private const val SEED_LIGHTEN_FACTOR = 0.45
+
+        /**
+         * The first vertical gradient a user sees when switching a solid background to
+         * Gradient: the solid color running into a lighter tint of itself.
+         */
+        fun seeded(solid: Int): ThemeGradient = ThemeGradient(listOf(solid, lightenedArgb(solid, SEED_LIGHTEN_FACTOR)))
+
+        /** Decodes `{ "stops": [...], "angle"?: n }`; null when fewer than [MINIMUM_STOPS] stops. */
+        fun fromJson(obj: JSONObject): ThemeGradient? {
+            val array = obj.optJSONArray("stops") ?: return null
+            if (array.length() < MINIMUM_STOPS) return null
+            val angle = obj.optDouble("angle", DEFAULT_ANGLE.toDouble()).toFloat()
+            return ThemeGradient(List(array.length()) { array.getInt(it) }, angle)
+        }
+    }
+}
+
+/** A direction in surface space (x right, y down). */
+data class SurfaceVector(
+    val dx: Float,
+    val dy: Float,
+)
+
+/** A rectangle in surface pixels (top-left origin). */
+data class SurfaceRect(
+    val left: Float,
+    val top: Float,
+    val width: Float,
+    val height: Float,
+)
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeImageBackground
+// (same JSON fields, SATURATION, dim range, DEFAULT_DIM, DEFAULT_FOCUS, zoom range). Drift causes silent divergence.
+
+/**
+ * A photo as the keyboard surface: [file] is the JPEG's name inside the app-private
+ * `ThemeImageStore` directory (written by the settings app, read by the IME), [dim] the
+ * opacity of the tone overlay laid over the desaturated photo so keys stay readable
+ * (USER 2026-09-19: "the photo saturation must not be too eye-catching"). The overlay is white when the key text is dark
+ * and black otherwise. [focusX] / [focusY] say which part of the aspect-filled photo stays in
+ * view on each axis: 0 = its left / top edge, 1 = its right / bottom edge, 0.5 = centred (the
+ * default). An alignment, not a focal point, so the crop never exposes a gap and the same
+ * values fit every keyboard aspect (portrait, landscape, tablet). [zoom] scales the aspect-filled
+ * photo further (1 = just covers, the default); zoomed in, both axes overflow and the focus aligns
+ * each. Capped at 2x because the stored JPEG's long edge is bounded (`ThemeImageStore`), so deeper
+ * zoom turns visibly soft.
+ */
+data class ThemeImageBackground(
+    val file: String,
+    /** Opacity of the tone overlay, within [DIM_MIN]..[DIM_MAX] (the editor slider range). */
+    val dim: Float = DEFAULT_DIM,
+    val focusX: Float = DEFAULT_FOCUS,
+    val focusY: Float = DEFAULT_FOCUS,
+    val zoom: Float = DEFAULT_ZOOM,
+) {
+    init {
+        require(file.isNotEmpty()) { "a photo background needs a file name" }
+        require(dim in DIM_MIN..DIM_MAX) { "dim $dim outside $DIM_MIN..$DIM_MAX" }
+        require(focusX in 0f..1f && focusY in 0f..1f) { "focus ($focusX, $focusY) outside 0..1" }
+        require(zoom in ZOOM_MIN..ZOOM_MAX) { "zoom $zoom outside $ZOOM_MIN..$ZOOM_MAX" }
+    }
+
+    /** This photo moved to ([x], [y]), each clamped into 0..1. */
+    fun withFocus(
+        x: Float,
+        y: Float,
+    ): ThemeImageBackground = copy(focusX = x.coerceIn(0f, 1f), focusY = y.coerceIn(0f, 1f))
+
+    /** This photo at [value] zoom, clamped into [ZOOM_MIN]..[ZOOM_MAX]. */
+    fun withZoom(value: Float): ThemeImageBackground = copy(zoom = value.coerceIn(ZOOM_MIN, ZOOM_MAX))
+
+    companion object {
+        /** Saturation multiplier applied to every photo (1 = untouched). */
+        const val SATURATION = 0.7f
+        const val DIM_MIN = 0f
+        const val DIM_MAX = 0.8f
+        const val DIM_STEP = 0.05f
+        const val DEFAULT_DIM = 0f
+        const val DEFAULT_FOCUS = 0.5f
+        const val ZOOM_MIN = 1f
+        const val ZOOM_MAX = 2f
+        const val DEFAULT_ZOOM = 1f
+
+        /**
+         * The rectangle that scales an `imageWidth`×`imageHeight` photo to cover [bounds]
+         * (aspect fill) times [zoom], aligned on each axis by `focusX` / `focusY` (see
+         * [ThemeImageBackground.focusX]) — the photo's drawn frame over the whole keyboard, from
+         * which a panel shows its slice.
+         */
+        fun coverRect(
+            imageWidth: Float,
+            imageHeight: Float,
+            bounds: SurfaceRect,
+            focusX: Float,
+            focusY: Float,
+            zoom: Float,
+        ): SurfaceRect {
+            if (imageWidth <= 0f || imageHeight <= 0f) return bounds
+            val scale = max(bounds.width / imageWidth, bounds.height / imageHeight) * zoom
+            val width = imageWidth * scale
+            val height = imageHeight * scale
+            return SurfaceRect(
+                left = bounds.left + (bounds.width - width) * focusX,
+                top = bounds.top + (bounds.height - height) * focusY,
+                width = width,
+                height = height,
+            )
+        }
+
+        /** Decodes `{ "file": …, "dim"?: n, "focusX"?: n, "focusY"?: n, "zoom"?: n }`; null when the file name is empty. */
+        fun fromJson(obj: JSONObject): ThemeImageBackground? {
+            val file = obj.optString("file")
+            if (file.isEmpty()) return null
+            return ThemeImageBackground(
+                file = file,
+                dim = obj.optDouble("dim", DEFAULT_DIM.toDouble()).toFloat().coerceIn(DIM_MIN, DIM_MAX),
+                focusX = obj.optDouble("focusX", DEFAULT_FOCUS.toDouble()).toFloat().coerceIn(0f, 1f),
+                focusY = obj.optDouble("focusY", DEFAULT_FOCUS.toDouble()).toFloat().coerceIn(0f, 1f),
+                zoom = obj.optDouble("zoom", DEFAULT_ZOOM.toDouble()).toFloat().coerceIn(ZOOM_MIN, ZOOM_MAX),
+            )
+        }
+    }
+}
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeBackground
+// (same `type` discriminator and field names; iOS stores the colour as an RGBA object). Drift causes silent divergence.
+
+/**
+ * What paints the keyboard surface — one field, mutually exclusive cases. The
+ * candidate bar is the same surface: a solid background colours both, a gradient
+ * or photo paints once behind both (the bar goes transparent). A null
+ * [KeyboardColorSettings.background] means "adaptive" (`?keyboard_bgColor`) and
+ * is reserved for the Filled Default head. Rendering lives in `Modifier.themeBackground`
+ * (Compose) and `KeyboardThemeSurfaceController` (View).
+ *
+ * JSON: `{"type":"solid","color":argb}` / `{"type":"gradient","stops":[…],"angle":180}` /
+ * `{"type":"image","file":"<uuid>.jpg","dim":0.35,"focusX":0.5,"focusY":0.5,"zoom":1}`.
+ */
+sealed class ThemeBackground {
+    data class Solid(
+        val color: Int,
+    ) : ThemeBackground()
+
+    data class Gradient(
+        val gradient: ThemeGradient,
+    ) : ThemeBackground()
+
+    data class Image(
+        val image: ThemeImageBackground,
+    ) : ThemeBackground()
+
+    /** The JSON discriminator, also the editor's Solid / Gradient / Photo segmented choice. */
+    enum class Kind(
+        val jsonValue: String,
+    ) {
+        SOLID("solid"),
+        GRADIENT("gradient"),
+        IMAGE("image"),
+    }
+
+    val kind: Kind
+        get() =
+            when (this) {
+                is Solid -> Kind.SOLID
+                is Gradient -> Kind.GRADIENT
+                is Image -> Kind.IMAGE
+            }
+
+    val asGradient: ThemeGradient?
+        get() = (this as? Gradient)?.gradient
+
+    val asImage: ThemeImageBackground?
+        get() = (this as? Image)?.image
+
+    fun toJson(): JSONObject =
+        JSONObject().put("type", kind.jsonValue).apply {
+            when (this@ThemeBackground) {
+                is Solid -> put("color", color)
+                is Gradient -> put("stops", JSONArray(gradient.stops)).put("angle", gradient.angle.toDouble())
+                is Image ->
+                    put("file", image.file)
+                        .put("dim", image.dim.toDouble())
+                        .put("focusX", image.focusX.toDouble())
+                        .put("focusY", image.focusY.toDouble())
+                        .put("zoom", image.zoom.toDouble())
+            }
+        }
+
+    companion object {
+        /** Decodes one background; null for an unknown `type` (a newer build), a non-renderable gradient or an empty photo file. */
+        fun fromJson(obj: JSONObject): ThemeBackground? =
+            when (obj.optString("type")) {
+                Kind.SOLID.jsonValue -> obj.optIntOrNull("color")?.let(::Solid)
+                Kind.GRADIENT.jsonValue -> ThemeGradient.fromJson(obj)?.let(::Gradient)
+                Kind.IMAGE.jsonValue -> ThemeImageBackground.fromJson(obj)?.let(::Image)
+                else -> null
+            }
+    }
+}
+
+/**
+ * A custom keyboard surface together with the tone its photo overlay takes — resolved once
+ * from [KeyboardColorSettings.surface] so no render site can pair a background with the
+ * wrong tone.
+ */
+data class ThemeSurface(
+    val background: ThemeBackground,
+    /** Whether a photo's dim overlay is white (dark key text) rather than black. */
+    val dimsTowardWhite: Boolean,
+)
+
+/**
+ * Custom keyboard color settings.
+ *
+ * Each role is nullable -- null means "use the platform theme attr color".
+ * Stored as JSON in DataStore via colorSettings preference.
+ *
+ * Matches iOS KeyboardColorSettings structure.
+ */
+data class KeyboardColorSettings(
+    /** The keyboard + candidate-bar surface. null = adaptive (`?keyboard_bgColor`). */
+    val background: ThemeBackground? = null,
+    val keyTextColor: Int? = null,
+    val normalKeyFillColor: Int? = null,
+    val specialKeyFillColor: Int? = null,
+    val candidateTextColor: Int? = null,
+    /**
+     * User-picked candidate highlight (the first-candidate selection box). null = auto:
+     * derived from the gradient / key fill in [candidateTints]. Unlike the other roles a
+     * user theme keeps it null until customized — null is palette-derived, not scheme-following.
+     */
+    val candidateHighlightColor: Int? = null,
+) {
+    /**
+     * The background gradient, or null for a solid / photo / adaptive background. Single
+     * source for the candidate-tint derivation and the built-in theme tests.
+     */
+    val backgroundGradient: ThemeGradient?
+        get() = background?.asGradient
+
+    /**
+     * The custom surface to paint, or null for the adaptive default. The photo tone
+     * overlay is white when the key text is dark and black otherwise (the seed's black
+     * text is the fallback, so an unset role reads as "light").
+     */
+    val surface: ThemeSurface?
+        get() = background?.let { ThemeSurface(it, isDarkArgb(keyTextColor ?: UserThemeSeed.KEY_TEXT)) }
+
+    /**
+     * The key fill of a fixed-palette theme: a custom surface, a visible (non-transparent)
+     * key fill and a concrete key text color — every user theme and the Filled gradient
+     * built-ins. The non-gradient candidate states paint from it (key popups via [calloutFill])
+     * so a light palette stays light in system dark mode. null = adaptive (Default families,
+     * transparent-key gradients) → keep the night-qualified attrs.
+     *
+     * CROSS-PLATFORM INVARIANT — mirrors iOS KeyboardColorSettings.fixedKeyFill.
+     * Drift = callout / candidate colors differ per platform under the same theme.
+     */
+    val fixedKeyFill: Int?
+        get() = normalKeyFillColor?.takeIf { background != null && keyTextColor != null && it ushr 24 != 0 }
+
+    /** Whether the keys are see-through (Outlined / Borderless families): a key fill set to clear. */
+    val hasTransparentKeys: Boolean
+        get() = normalKeyFillColor?.let { it ushr 24 == 0 } ?: false
+
+    /**
+     * The key popup fill: [fixedKeyFill], or — for see-through keys over a solid / gradient
+     * surface — the color the keys show, i.e. the background (a gradient's per-channel midpoint,
+     * since the key rows span it). null = no theme color: opaque adaptive keys keep the popup
+     * attrs; see-through keys over the adaptive background paint `?keyboard_bgColor` (USER
+     * 2026-09-28: Outlined / Borderless callouts match the key background in light and dark mode).
+     *
+     * CROSS-PLATFORM INVARIANT — mirrors iOS KeyboardColorSettings.calloutFill.
+     */
+    val calloutFill: Int?
+        get() {
+            fixedKeyFill?.let { return it }
+            if (!hasTransparentKeys || keyTextColor == null) return null
+            return when (val surface = background) {
+                is ThemeBackground.Solid -> surface.color
+                is ThemeBackground.Gradient -> midpointArgb(surface.gradient.stops.first(), surface.gradient.stops.last())
+                is ThemeBackground.Image, null -> null
+            }
+        }
+
+    /**
+     * Candidate first-candidate highlight + pressed tints (`first` = highlight, `second` =
+     * pressed). A user-picked [candidateHighlightColor] wins (pressed = it deepened). Otherwise
+     * a gradient derives both from its first stop (highlight lightened, pressed deepened)
+     * — as does a solid surface under see-through keys (which have no fill to use), and
+     * a fixed palette uses its key fill as the highlight and the deepened fill as pressed.
+     * null = adaptive `key_bgColor` / `semiTransparentColor` attrs.
+     * CROSS-PLATFORM INVARIANT — mirrors iOS `candidateTints`.
+     */
+    val candidateTints: Pair<Int, Int>?
+        get() {
+            candidateHighlightColor?.let { return it to deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR) }
+            val seeThroughSolid = (background as? ThemeBackground.Solid)?.color?.takeIf { hasTransparentKeys }
+            (backgroundGradient?.stops?.first() ?: seeThroughSolid)?.let {
+                return lightenedArgb(it, CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR) to
+                    deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR)
+            }
+            return fixedKeyFill?.let { it to deepenedArgb(it, CANDIDATE_PRESSED_DEEPEN_FACTOR) }
+        }
+
+    /**
+     * The user-theme key fill: one colour for letter and special keys alike
+     * (USER 2026-09-26). Mirrors iOS `keyFillColor`.
+     */
+    fun withKeyFill(color: Int): KeyboardColorSettings = copy(normalKeyFillColor = color, specialKeyFillColor = color)
+
+    /**
+     * Fills every null role from [UserThemeSeed] and folds the special key fill into
+     * the letter fill ([withKeyFill]). Applied when a user theme is decoded
+     * ([UserTheme.fromJson]), so themes saved before the seed or the single key fill
+     * existed match the editor without a migration write. [candidateHighlightColor] passes
+     * through as-is: its null means auto.
+     */
+    fun seededForUserTheme(): KeyboardColorSettings =
+        KeyboardColorSettings(
+            background = background ?: UserThemeSeed.BACKGROUND,
+            keyTextColor = keyTextColor ?: UserThemeSeed.KEY_TEXT,
+            candidateTextColor = candidateTextColor ?: UserThemeSeed.CANDIDATE_TEXT,
+            candidateHighlightColor = candidateHighlightColor,
+        ).withKeyFill(normalKeyFillColor ?: UserThemeSeed.KEY_FILL)
+
+    /** The JSON object form. [toJson] is the string serialization; nested users (e.g. [ThemeAppearance]) embed this directly. */
+    fun toJsonObject(): JSONObject {
+        val json = JSONObject()
+        background?.let { json.put("background", it.toJson()) }
+        keyTextColor?.let { json.put("keyTextColor", it) }
+        normalKeyFillColor?.let { json.put("normalKeyFillColor", it) }
+        specialKeyFillColor?.let { json.put("specialKeyFillColor", it) }
+        candidateTextColor?.let { json.put("candidateTextColor", it) }
+        candidateHighlightColor?.let { json.put("candidateHighlightColor", it) }
+        return json
+    }
+
+    fun toJson(): String = toJsonObject().toString()
+
+    companion object {
+        fun fromJson(json: String): KeyboardColorSettings {
+            if (json.isBlank() || json == "{}") return KeyboardColorSettings()
+            return try {
+                fromJson(JSONObject(json))
+            } catch (e: Exception) {
+                KeyboardColorSettings()
+            }
+        }
+
+        /**
+         * `background` replaced three older keys. Decoding still reads them so a theme
+         * written by an older build keeps its look: `backgroundGradient` (>=2 stops) ->
+         * [ThemeBackground.Gradient] at the vertical default angle, else `backgroundColor`
+         * -> [ThemeBackground.Solid]. `candidateBackgroundColor` is dropped — the candidate
+         * bar is the keyboard surface now (USER 2026-09-19). Encoding writes only `background`.
+         */
+        fun fromJson(obj: JSONObject): KeyboardColorSettings =
+            KeyboardColorSettings(
+                background =
+                    obj.optJSONObject("background")?.let { ThemeBackground.fromJson(it) }
+                        ?: obj.optJSONObject("backgroundGradient")?.let { ThemeGradient.fromJson(it) }?.let { ThemeBackground.Gradient(it) }
+                        ?: obj.optIntOrNull("backgroundColor")?.let { ThemeBackground.Solid(it) },
+                keyTextColor = obj.optIntOrNull("keyTextColor"),
+                normalKeyFillColor = obj.optIntOrNull("normalKeyFillColor"),
+                specialKeyFillColor = obj.optIntOrNull("specialKeyFillColor"),
+                candidateTextColor = obj.optIntOrNull("candidateTextColor"),
+                candidateHighlightColor = obj.optIntOrNull("candidateHighlightColor"),
+            )
+    }
+}
+
+private fun JSONObject.optIntOrNull(key: String): Int? = if (has(key) && !isNull(key)) getInt(key) else null
+
+/**
+ * Perceived luminance below mid-grey (Rec. 601 weighting). Mirrors iOS `CodableColor.isDark`;
+ * used to pick a photo's tone overlay from the key-text colour.
+ */
+fun isDarkArgb(argb: Int): Boolean {
+    val r = (argb shr 16 and 0xFF) / 255.0
+    val g = (argb shr 8 and 0xFF) / 255.0
+    val b = (argb and 0xFF) / 255.0
+    return 0.299 * r + 0.587 * g + 0.114 * b < 0.5
+}
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift UserThemeSeed.
+// Drift = a new custom theme starts from different colors per platform.
+
+/**
+ * The concrete light palette every user theme starts from, so a user theme never
+ * carries a null (scheme-following) role and renders identically in light and dark
+ * mode (USER 2026-09-19). Background is the light keyboard grey; the key fill is
+ * white (USER 2026-09-25) and shared by letter and special keys.
+ * `candidateHighlightColor` stays null (auto, derived from the palette) — see `candidateTints`.
+ */
+object UserThemeSeed {
+    const val SOLID_COLOR = 0xFFD4D5DD.toInt()
+    val BACKGROUND: ThemeBackground = ThemeBackground.Solid(SOLID_COLOR)
+    const val KEY_TEXT = 0xFF000000.toInt()
+    const val KEY_FILL = 0xFFFFFFFF.toInt()
+    const val CANDIDATE_TEXT = 0xFF000000.toInt()
+
+    val colors =
+        KeyboardColorSettings(
+            background = BACKGROUND,
+            keyTextColor = KEY_TEXT,
+            normalKeyFillColor = KEY_FILL,
+            specialKeyFillColor = KEY_FILL,
+            candidateTextColor = CANDIDATE_TEXT,
+        )
+}
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift
+// candidateHighlightLightenFactor / candidatePressedDeepenFactor. Drift causes silent divergence.
+// Factors used to derive the candidate strip's first-candidate highlight + pressed tints from a
+// gradient theme's first stop, so those states match the theme hue instead of a neutral keycap color.
+// The highlight is LIGHTENED toward white (a light tint, lighter than the gradient bar so it stays
+// visible); the pressed state is DEEPENED toward black. A non-gradient theme deepens its
+// fixedKeyFill by the same pressed factor.
+const val CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR = 0.5
+const val CANDIDATE_PRESSED_DEEPEN_FACTOR = 0.65
+
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift
+// keyPressedLightenFactor / keyPressedDeepenFactor / CodableColor.pressedKeyFill. Drift causes silent divergence.
+// A dark key fill is lightened toward white, a light fill deepened toward black, so black and white
+// fills both show press feedback.
+const val KEY_PRESSED_LIGHTEN_FACTOR = 0.25
+const val KEY_PRESSED_DEEPEN_FACTOR = 0.8
+
+/**
+ * Opaque per-channel midpoint of [first] and [second]: each 0-255 byte `(a + b) / 2`, truncated.
+ * Mirrors iOS `CodableColor.midpoint(with:)` byte-for-byte.
+ */
+fun midpointArgb(
+    first: Int,
+    second: Int,
+): Int {
+    fun mid(shift: Int): Int = ((first shr shift and 0xFF) + (second shr shift and 0xFF)) / 2
+    return (0xFF shl 24) or (mid(16) shl 16) or (mid(8) shl 8) or mid(0)
+}
+
+/**
+ * The pressed state of a custom key fill: lightened when dark, deepened when light. null for a
+ * translucent fill (a clear / outlined key keeps its fill when pressed — the derived color is
+ * opaque and would paint a visible key).
+ */
+fun pressedKeyFillArgb(argb: Int): Int? {
+    if (argb ushr 24 != 0xFF) return null
+    return if (isDarkArgb(argb)) {
+        lightenedArgb(argb, KEY_PRESSED_LIGHTEN_FACTOR)
+    } else {
+        deepenedArgb(argb, KEY_PRESSED_DEEPEN_FACTOR)
+    }
+}
+
+/**
+ * Returns an opaque ARGB color lightened toward white by [factor]: each 0-255 RGB component is
+ * lifted by `c + (255 - c) * factor`, truncated toward zero (alpha forced 0xFF). Used to derive the
+ * candidate first-candidate highlight — a light tint of a gradient theme's first stop.
+ */
+fun lightenedArgb(
+    argb: Int,
+    factor: Double,
+): Int {
+    fun lift(c: Int): Int = c + ((255 - c) * factor).toInt()
+    val r = lift(argb shr 16 and 0xFF)
+    val g = lift(argb shr 8 and 0xFF)
+    val b = lift(argb and 0xFF)
+    return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+}
+
+/**
+ * Returns an opaque ARGB color deepened toward black by [factor]: each 0-255 RGB component is
+ * multiplied and truncated toward zero (alpha forced 0xFF). Used to derive the candidate pressed
+ * tint from a gradient theme's first stop.
+ */
+fun deepenedArgb(
+    argb: Int,
+    factor: Double,
+): Int {
+    val r = ((argb shr 16 and 0xFF) * factor).toInt()
+    val g = ((argb shr 8 and 0xFF) * factor).toInt()
+    val b = ((argb and 0xFF) * factor).toInt()
+    return (0xFF shl 24) or (r shl 16) or (g shl 8) or b
+}

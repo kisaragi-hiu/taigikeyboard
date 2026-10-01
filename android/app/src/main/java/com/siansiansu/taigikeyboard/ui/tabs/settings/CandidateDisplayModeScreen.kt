@@ -6,7 +6,7 @@ import androidx.compose.runtime.Composable
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
 import com.siansiansu.taigikeyboard.i18n.stringRes
-import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
+import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 import com.siansiansu.taigikeyboard.ui.components.SelectionListScreen
 
 // Shared mode→label-key pairs, used by CandidateDisplayModeScreen, InputSettingsScreen and the

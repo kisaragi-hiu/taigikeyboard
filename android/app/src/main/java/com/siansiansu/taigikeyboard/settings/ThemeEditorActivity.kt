@@ -5,10 +5,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.core.ThemeAppearance
-import com.siansiansu.taigikeyboard.ime.core.UserTheme
-import com.siansiansu.taigikeyboard.ime.core.UserThemeStore
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
+import com.siansiansu.taigikeyboard.ime.theme.ThemeAppearance
+import com.siansiansu.taigikeyboard.ime.theme.UserTheme
+import com.siansiansu.taigikeyboard.ime.theme.UserThemeStore
 import com.siansiansu.taigikeyboard.ui.setTaigiContent
 import com.siansiansu.taigikeyboard.ui.tabs.theme.ThemeEditorScreen
 import java.util.UUID

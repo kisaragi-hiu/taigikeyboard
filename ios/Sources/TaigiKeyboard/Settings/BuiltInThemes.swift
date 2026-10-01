@@ -63,7 +63,7 @@ enum BuiltInThemes {
     ]
 
     // Neutral key fill + text for gradient themes — a light pair and a dark (Catppuccin Mocha) pair.
-    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/BuiltInThemes.kt LIGHT_KEY_FILL/LIGHT_KEY_TEXT/DARK_KEY_FILL/DARK_KEY_TEXT.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/theme/BuiltInThemes.kt LIGHT_KEY_FILL/LIGHT_KEY_TEXT/DARK_KEY_FILL/DARK_KEY_TEXT.
     // Drift causes silent divergence (iOS/Android theme key colors differ).
     private static let lightKeyFill: UInt32 = 0xFFFFFF
     private static let lightKeyText: UInt32 = 0x1C1C1E

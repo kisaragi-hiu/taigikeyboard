@@ -7,11 +7,16 @@ import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.StringResolver
 import com.siansiansu.taigikeyboard.i18n.buildStringResolver
 import com.siansiansu.taigikeyboard.i18n.generated.StringKey
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.logging.LoggerBackend
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.ime.core.settings.KeyboardToolbarAction
-import com.siansiansu.taigikeyboard.ime.core.settings.OneHandedMode
+import com.siansiansu.taigikeyboard.ime.settings.KeyboardToolbarAction
+import com.siansiansu.taigikeyboard.ime.settings.OneHandedMode
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
+import com.siansiansu.taigikeyboard.ime.text.overlays.CandidateOverlayView
+import com.siansiansu.taigikeyboard.ime.text.overlays.LayoutSelectionOverlayView
+import com.siansiansu.taigikeyboard.ime.text.overlays.OneHandedMenuOverlayView
+import com.siansiansu.taigikeyboard.ime.text.overlays.SettingsSelectionOverlayView
+import com.siansiansu.taigikeyboard.ime.text.overlays.SymbolSelectionOverlayView
 
 /**
  * Manages toolbar UI interactions extracted from SmartbarManager.

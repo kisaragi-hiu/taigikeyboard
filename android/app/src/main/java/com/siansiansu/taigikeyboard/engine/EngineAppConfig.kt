@@ -5,10 +5,10 @@ package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.AppConfig
 import com.siansiansu.taigikeyboard.engine.proto.Platform
-import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
-import com.siansiansu.taigikeyboard.ime.core.settings.EngineSettings
-import com.siansiansu.taigikeyboard.ime.core.settings.InputMode
-import com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions
+import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
+import com.siansiansu.taigikeyboard.ime.settings.EngineSettings
+import com.siansiansu.taigikeyboard.ime.settings.InputMode
+import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
 import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCandidateDisplayMode
 
 /**
