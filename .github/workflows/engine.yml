@@ -102,7 +102,8 @@ jobs:
         run: cargo fmt --all --check --manifest-path engine/Cargo.toml
 
   # engine/Cargo.toml's `rust-version` is a promise to anyone embedding the
-  # engine, and the other workspaces' newer floor (1.95) never exercises it.
+  # engine, and the other workspaces' newer floors (1.93 desktop + linux,
+  # 1.95 windows) never exercise it.
   # Read from the manifest so the check cannot drift from the declaration.
   msrv:
     name: cargo check on the declared rust-version

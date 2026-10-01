@@ -220,6 +220,44 @@ jobs:
           cat "$RUNNER_TEMP/ibus-daemon.log" 2>/dev/null || true
           ls -la "$RUNNER_TEMP" || true
 
+  # linux/Cargo.toml's `rust-version` sits below stable so a distribution
+  # build can use the system rustc; `build` above runs stable and never
+  # exercises it. Read from the manifest, as engine.yml's `msrv` does. Not on
+  # a release: the floor gates changes, not what ships.
+  msrv:
+    name: cargo check on the declared rust-version
+    runs-on: ubuntu-24.04
+    if: github.event_name != 'release'
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgtk-4-dev libadwaita-1-dev pkg-config
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          curl -sSL -o /tmp/protoc.zip \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          sudo unzip -q -o /tmp/protoc.zip -d /usr/local bin/protoc 'include/*'
+
+      - name: Install the declared rust-version (host target only)
+        run: |
+          set -euo pipefail
+          msrv="$(sed -n 's/^rust-version = "\([^"]*\)".*/\1/p' linux/Cargo.toml)"
+          [ -n "$msrv" ] || { echo "::error::no rust-version in linux/Cargo.toml"; exit 1; }
+          rustup toolchain install "$msrv" --profile minimal --no-self-update
+          echo "RUSTUP_TOOLCHAIN=$msrv" >> "$GITHUB_ENV"
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: msrv
+          workspaces: linux -> target
+
+      - name: cargo check --all-targets
+        run: cargo check --manifest-path linux/Cargo.toml --workspace --all-targets --locked
+
   # The Fedora package: the same `make install` layout packed by rpmbuild, in
   # the distribution's own container so rpm's ELF scan writes Fedora's
   # library Requires. `install-check` installs it into a clean container.
