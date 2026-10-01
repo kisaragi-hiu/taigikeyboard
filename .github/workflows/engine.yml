@@ -16,14 +16,14 @@ on:
     paths:
       - 'engine/**'
       - 'dictionary/output/dictionary.csv'
-      - 'dictionaries/**'
+      - 'assets/dictionaries/**'
       - '.github/workflows/engine.yml'
   push:
     branches: [main]
     paths:
       - 'engine/**'
       - 'dictionary/output/dictionary.csv'
-      - 'dictionaries/**'
+      - 'assets/dictionaries/**'
       - '.github/workflows/engine.yml'
 
 permissions:

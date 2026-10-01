@@ -85,7 +85,7 @@ doc:
 	cd $(ENGINE) && cargo doc --no-deps --workspace --document-private-items --exclude android-jni --open
 
 # Full dictionary regeneration: per-source pipeline (run.sh) then aggregate
-# merge + bin + fst + audit + deploy to dictionaries/, which every platform
+# merge + bin + fst + audit + deploy to assets/dictionaries/, which every platform
 # packages (build.sh).
 # The submodule check is here as well as in dictionary/common/taigi_bridge.py
 # because they answer different questions. This one fails in milliseconds before
@@ -324,7 +324,7 @@ help:
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
 	@echo ""
 	@echo "Data and content"
-	@echo "  make dict               Full dictionary regeneration into dictionaries/ (needs taigi-converter)"
+	@echo "  make dict               Full dictionary regeneration into assets/dictionaries/ (needs taigi-converter)"
 	@echo "  make i18n               Regenerate app-UI i18n native resources from i18n/*.json"
 	@echo "  make i18n-test          Run the i18n codegen + production-content unit tests"
 	@echo "  make dogfood            Print continuous-input dogfood test table (TL/POJ/TPS + 漢字)"

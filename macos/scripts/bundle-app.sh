@@ -162,9 +162,9 @@ for localization_dir in "${BUNDLE_NAME_DIRECTORIES[@]}"; do
 done
 
 echo "==> Copying dictionary data"
-# The repo-root `dictionaries`, the one copy of the bytes every platform
+# The repo-root `assets/dictionaries`, the one copy of the bytes every platform
 # packages — nothing to sync, nothing to drift.
-DICTIONARY_SOURCE_DIR="$REPOSITORY_DIR/dictionaries"
+DICTIONARY_SOURCE_DIR="$REPOSITORY_DIR/assets/dictionaries"
 for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
     source_file="$DICTIONARY_SOURCE_DIR/$artifact"
     # Fail here rather than ship a bundle whose input method launches, receives
@@ -177,10 +177,10 @@ for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
 done
 
 echo "==> Copying symbol table"
-# The symbol picker's table, from the repo-root `symbols` — the one copy both
+# The symbol picker's table, from the repo-root `assets/symbols` — the one copy both
 # desktop platforms read (Windows compiles it in). Fail here rather than ship
 # a chord that opens nothing: `SymbolTable.bundled` logs and stays nil.
-SYMBOL_TABLE_FILE="$REPOSITORY_DIR/symbols/desktop-symbols.json"
+SYMBOL_TABLE_FILE="$REPOSITORY_DIR/assets/symbols/desktop-symbols.json"
 if [[ ! -s "$SYMBOL_TABLE_FILE" ]]; then
     echo "error: missing or empty symbol table $SYMBOL_TABLE_FILE" >&2
     exit 1
@@ -190,13 +190,13 @@ cp "$SYMBOL_TABLE_FILE" "$CONTENTS_DIR/Resources/desktop-symbols.json"
 echo "==> Copying fonts"
 # The typefaces the candidate-window font picker offers, laid out under the
 # directory Info.plist's ATSApplicationFontsPath names, which is what AppKit
-# activates at launch. They come from the repo-root `fonts/font`, the one copy
+# activates at launch. They come from the repo-root `assets/fonts/font`, the one copy
 # of the bytes every platform packages — nothing to sync, nothing to drift.
 #
 # The whole directory, deliberately without a list of filenames: which faces
 # exist is `CandidateFontChoice`'s to state, not this script's, and a second
 # roster here is one a new case could be added to only one of.
-FONT_SOURCE_DIR="$REPOSITORY_DIR/fonts/font"
+FONT_SOURCE_DIR="$REPOSITORY_DIR/assets/fonts/font"
 FONT_DESTINATION_DIR="$CONTENTS_DIR/Resources/$APPLICATION_FONTS_PATH"
 FONT_FILES=()
 for candidate in "$FONT_SOURCE_DIR"/*.ttf "$FONT_SOURCE_DIR"/*.otf; do

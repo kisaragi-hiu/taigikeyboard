@@ -354,7 +354,7 @@ github.com/ibus/ibus `main` as fetched 2026-09-22 (the introspection XML and the
   not compiled — `taigi-desktop-storage::settings_file` takes the retry policy from the
   caller). Dictionary artefacts are read from `${prefix}/share/taigikeyboard/dictionaries`
   (`dictionary.fst`, `dictionary.bin`, `association.bin`, `syllables.fst` — the
-  repo-root `dictionaries/` copied at install), `${prefix}` baked at build time from
+  repo-root `assets/dictionaries/` copied at install), `${prefix}` baked at build time from
   `TAIGIKEYBOARD_PREFIX` (default `/usr`); `TAIGIKEYBOARD_DATA_DIR` at runtime overrides
   it for a development tree (`make -C linux run-engine`). The four bundled typefaces go to
   `${prefix}/share/fonts/{truetype,opentype}/taigikeyboard/` as system-wide fallbacks

@@ -1,7 +1,7 @@
 //! Dev-only candidate-dump harness for continuous-input diagnosis.
 //!
 //! Drives the **production** dictionary artifacts
-//! (`dictionaries/{dictionary.fst,dictionary.bin,association.bin,syllables.fst}`)
+//! (`assets/dictionaries/{dictionary.fst,dictionary.bin,association.bin,syllables.fst}`)
 //! through the real `Start → FetchAtPos` pipeline and
 //! prints the full candidate list for one or more inputs. This is the
 //! deterministic, offline replacement for "log what the keyboard showed":
@@ -34,7 +34,7 @@
 //! ```
 //!
 //! Requires the production artifacts to exist (run `make dict` first if
-//! `dictionaries/` is stale — see the stale-artifact gate in `AGENTS.md`).
+//! `assets/dictionaries/` is stale — see the stale-artifact gate in `AGENTS.md`).
 //! Prints `consumed_span`, `syllable_count`, `roman`,
 //! and `hanji` per candidate.
 

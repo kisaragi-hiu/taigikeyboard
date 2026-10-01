@@ -7,7 +7,7 @@ Reads `tools/known_keys_fixture.yaml` (a flat `prefix: min_hits` map),
 queries each against `output/dictionary.fst` via the `fst-builder` Rust
 binary, and exits non-zero if any prefix returns fewer hits than asserted.
 
-Deliberately `output/`, not the committed `dictionaries/`: `build.sh` runs this
+Deliberately `output/`, not the committed `assets/dictionaries/`: `build.sh` runs this
 before `deploy`, so it has to gate the index this build just produced. Querying
 the deployed copy would pass on the previous build's artifacts. That also means
 a standalone run needs `make dict` first — the same requirement

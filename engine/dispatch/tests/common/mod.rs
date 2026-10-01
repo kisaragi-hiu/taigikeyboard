@@ -48,7 +48,7 @@ pub fn open_user_data(directory: &std::path::Path) {
     );
 }
 
-/// Installs the production lexicon (`dictionaries/`) once per test process;
+/// Installs the production lexicon (`assets/dictionaries/`) once per test process;
 /// `false` (callers soft-skip) when the artifacts are absent — run `make dict`.
 // Not every suite in this directory needs the lexicon.
 #[allow(dead_code)]

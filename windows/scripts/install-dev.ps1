@@ -66,8 +66,8 @@ $SettingsExe = Join-Path $TargetDir 'TaigiKeyboardSettings.exe'
 # The one committed copy every platform packages from (#14, `f4e0fb20`);
 # it used to be reached through the iOS bundle's own folder, which no longer
 # exists.
-$DictionariesSource = Join-Path $RepositoryDir 'dictionaries'
-$FontsSource = Join-Path $RepositoryDir 'fonts\font'
+$DictionariesSource = Join-Path $RepositoryDir 'assets\dictionaries'
+$FontsSource = Join-Path $RepositoryDir 'assets\fonts\font'
 # guids.rs: CLSID_TEXT_SERVICE.
 $Clsid = '{32C28A51-8939-4C8F-8F29-037F9FD3CF0A}'
 $ClsidKey = "HKLM:\SOFTWARE\Classes\CLSID\$Clsid"

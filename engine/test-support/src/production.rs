@@ -1,4 +1,4 @@
-//! The production artifacts: the four lexicon files under `dictionaries/`
+//! The production artifacts: the four lexicon files under `assets/dictionaries/`
 //! and the pipeline's `dictionary/output/dictionary.csv`.
 
 use std::path::PathBuf;
@@ -15,10 +15,10 @@ pub struct ProductionArtifacts {
     pub syllables_fst: String,
 }
 
-/// One production artifact under `dictionaries/` (may be absent — run
+/// One production artifact under `assets/dictionaries/` (may be absent — run
 /// `make dict`).
 pub fn production_artifact(name: &str) -> PathBuf {
-    repo_root().join("dictionaries").join(name)
+    repo_root().join("assets").join("dictionaries").join(name)
 }
 
 impl ProductionArtifacts {

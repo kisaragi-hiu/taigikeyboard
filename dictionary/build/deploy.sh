@@ -8,7 +8,7 @@
 #   - output/syllables.fst      (tl:/poj:/tps: tagged-single-FST syllable inventory)
 #   - output/association.bin    (word_association binary)
 # Output — the one committed copy every platform packages from:
-#   - dictionaries/
+#   - assets/dictionaries/
 
 set -e
 
@@ -25,7 +25,7 @@ ARTIFACTS=(dictionary.fst dictionary.bin syllables.fst association.bin)
 # copying at package time), so there is nothing left to fan out to. A missing
 # destination is a moved directory, not a platform to skip.
 DESTINATIONS=(
-    "shared|$REPOSITORY_DIR/dictionaries"
+    "shared|$REPOSITORY_DIR/assets/dictionaries"
 )
 
 echo "=================================================="

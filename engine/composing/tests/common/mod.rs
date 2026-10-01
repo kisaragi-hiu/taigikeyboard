@@ -554,7 +554,7 @@ pub fn cell_with_hanji<'a>(cells: &'a [Cell], hanji: &str) -> &'a Cell {
         .unwrap_or_else(|| panic!("no candidate with hanji {hanji}; got {cells:?}"))
 }
 
-/// Installs the production lexicon (`dictionaries/`) once per test process;
+/// Installs the production lexicon (`assets/dictionaries/`) once per test process;
 /// `false` (callers soft-skip) when the artifacts are absent — run `make dict`.
 pub fn production_lexicon_ready() -> bool {
     static READY: std::sync::OnceLock<bool> = std::sync::OnceLock::new();

@@ -69,7 +69,7 @@ impl Session {
                 config,
                 data: blocker.join("data"),
             }),
-            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../dictionaries"),
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../assets/dictionaries"),
         );
         let state = EngineState {
             capabilities: if can_delete_surrounding {

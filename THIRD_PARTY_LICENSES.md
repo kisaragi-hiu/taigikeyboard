@@ -12,7 +12,7 @@ the one component that is not open source.
 ## Fonts (shipped inside every application package)
 
 All four are licensed under the **SIL Open Font License, Version 1.1**
-(OSI-approved). The licence text is in `fonts/OFL-1.1.txt`, beside the files it covers; the per-font
+(OSI-approved). The licence text is in `assets/fonts/OFL-1.1.txt`, beside the files it covers; the per-font
 copyright lines below were read out of each font's own `name` table.
 
 | Font | File | Copyright / upstream |
@@ -22,7 +22,7 @@ copyright lines below were read out of each font's own `name` table.
 | 源樣黑體 GenYoGothic2 TW | `genyogothic2tw_r.otf` | ButTaiwan (<https://github.com/ButTaiwan/genyo-font>); derived from Adobe Source Han Sans. |
 | 源樣明體 GenYoMin2 TW | `genyomin2tw_r.otf` | ButTaiwan (<https://github.com/ButTaiwan/genyo-font>); derived from Adobe Source Han Serif. |
 
-The four files live once, at `fonts/font/`, and all four platforms package that
+The four files live once, at `assets/fonts/font/`, and all four platforms package that
 one copy. The file names follow Android's resource-naming rules so its `res/`
 merge can read the shared directory unchanged; the PostScript names inside the
 files (`Iansui-Regular`, `jf-openhuninn-2.1`, `GenYoGothic2TW-R`,

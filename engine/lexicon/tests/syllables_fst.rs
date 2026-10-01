@@ -241,7 +241,7 @@ fn poj_family_isolates_divergent_canonicals_from_tl() {
 }
 
 /// v3.5.9 B-1 production-artifact sentinel — open the checked-in
-/// `dictionaries/syllables.fst` and probe one `tl:*` + one
+/// `assets/dictionaries/syllables.fst` and probe one `tl:*` + one
 /// `poj:*` membership, plus a cross-family negative. Codex post-impl
 /// B-1 finding #2: `SyllableInventory::open` only validates FST parse,
 /// so loading an unprefixed pre-B asset would succeed but every

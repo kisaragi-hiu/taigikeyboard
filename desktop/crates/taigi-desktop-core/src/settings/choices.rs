@@ -168,7 +168,7 @@ impl SettingChoice for CandidateSizeChoice {
 /// (`fontType`); the DEFAULT is the desktop's own — a fresh install draws in
 /// the system font (USER 2026-08-23) where iOS starts on Open Huninn.
 /// Roster + file names mirror `macos/.../Candidates/CandidateFontChoice.swift:22-49`;
-/// the files themselves ship from the repo-root `fonts/font/`.
+/// the files themselves ship from the repo-root `assets/fonts/font/`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateFontChoice {
     System,
@@ -194,7 +194,7 @@ impl CandidateFontChoice {
     /// The bundled file under the install dir's `fonts\`, or `None` for the
     /// system face.
     ///
-    /// File names, not PostScript names: the shared `fonts/font/` directory uses
+    /// File names, not PostScript names: the shared `assets/fonts/font/` directory uses
     /// Android's resource-naming rules so every platform reads one copy of the
     /// bytes, and the face names inside the files are unchanged.
     pub fn file_name(self) -> Option<&'static str> {
