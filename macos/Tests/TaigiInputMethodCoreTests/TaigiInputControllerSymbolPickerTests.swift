@@ -25,6 +25,9 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         InstalledLexicon.installOnce()
         suiteName = "TaigiInputControllerSymbolPickerTests.\(UUID().uuidString)"
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        // The mid-composition cases assume the §34 literal at cell 0; Show Typed
+        // Text First ships OFF since 2026-10-02, so it is pinned ON here.
+        setSettingRestoredAtTeardown(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name, to: true)
         savedPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
         KeyboardShortcuts.setShortcut(ShortcutAction.showSymbolPicker.defaultShortcut, for: .showSymbolPicker)
     }

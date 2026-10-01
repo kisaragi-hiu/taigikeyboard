@@ -566,6 +566,7 @@ fn commit_candidate_with_no_hanji_wrote_romanization_under_every_mode() {
         rig.settings.edit(|doc| {
             doc.set_bool(&keys::IS_HANJI_FIRST, swapped);
             doc.set_choice(&keys::CANDIDATE_DISPLAY_MODE, display_mode);
+            doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
         });
         rig.type_text("taigi");
         let literal = rig
@@ -712,6 +713,8 @@ fn enter_on_a_fresh_bar_commits_the_dictionary_word_when_the_literal_row_is_off(
 fn alternate_on_a_single_script_candidate_commits_nothing() {
     let _lock = engine_lock();
     let mut rig = rig();
+    rig.settings
+        .edit(|doc| doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true));
     rig.type_text("tai");
     let candidates = rig.candidates();
     let literal = candidates[0].clone();
