@@ -187,7 +187,7 @@ final class ButtonTextProvider {
             return "選"
         }
 
-        if settings.isTranslateSwapped {
+        if settings.isHanjiFirst {
             return "選"
         }
 

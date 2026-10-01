@@ -56,7 +56,7 @@ struct CandidateCellContent: Equatable, Sendable {
         if settings.candidateDisplayMode == .romanOnly {
             return Self(text: candidate.roman, annotation: nil)
         }
-        return settings.isTranslateSwapped
+        return settings.isHanjiFirst
             ? Self(text: hanji, annotation: candidate.roman)
             : Self(text: candidate.roman, annotation: hanji)
     }

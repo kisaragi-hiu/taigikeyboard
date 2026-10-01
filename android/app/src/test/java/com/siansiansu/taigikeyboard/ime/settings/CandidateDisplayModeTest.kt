@@ -7,7 +7,7 @@ import org.junit.Test
 
 /**
  * Pins the candidate-display-mode storage coercion + the two platform-side derivation
- * rules (`effectiveTranslateSwapped` / `effectiveOutputBothScripts`).
+ * rules (`effectiveHanjiFirst` / `effectiveOutputBothScripts`).
  * `PrefHelper` itself needs a real Android `Context` (DataStore), so the
  * rules are tested at the enum seam it delegates to — same rationale as
  * `EngineSettingsLiveReadTest`.
@@ -41,20 +41,20 @@ class CandidateDisplayModeTest {
      */
     @Test
     fun test_INVARIANT_roman_only_suppresses_stored_script_flags_without_clearing_them() {
-        val storedIsTranslateSwapped = true
+        val storedIsHanjiFirst = true
         val storedOutputBothScripts = true
 
-        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveTranslateSwapped(storedIsTranslateSwapped))
+        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveHanjiFirst(storedIsHanjiFirst))
         assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveOutputBothScripts(storedOutputBothScripts))
 
         // Leaving roman-only restores the stored choice.
-        assertTrue(CandidateDisplayMode.SIDE_BY_SIDE.effectiveTranslateSwapped(storedIsTranslateSwapped))
+        assertTrue(CandidateDisplayMode.SIDE_BY_SIDE.effectiveHanjiFirst(storedIsHanjiFirst))
         assertTrue(CandidateDisplayMode.SIDE_BY_SIDE.effectiveOutputBothScripts(storedOutputBothScripts))
 
         // A stored `false` stays false in every mode but COMBINED's swap (pinned below).
-        assertFalse(CandidateDisplayMode.SIDE_BY_SIDE.effectiveTranslateSwapped(false))
+        assertFalse(CandidateDisplayMode.SIDE_BY_SIDE.effectiveHanjiFirst(false))
         assertFalse(CandidateDisplayMode.SIDE_BY_SIDE.effectiveOutputBothScripts(false))
-        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveTranslateSwapped(false))
+        assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveHanjiFirst(false))
         assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveOutputBothScripts(false))
     }
 
@@ -66,14 +66,14 @@ class CandidateDisplayModeTest {
     @Test
     fun test_INVARIANT_combined_forces_swap_true_and_passes_output_both_through() {
         // stored (swap=false, both=false) → effective (true, false)
-        assertTrue(CandidateDisplayMode.COMBINED.effectiveTranslateSwapped(false))
+        assertTrue(CandidateDisplayMode.COMBINED.effectiveHanjiFirst(false))
         assertFalse(CandidateDisplayMode.COMBINED.effectiveOutputBothScripts(false))
 
         // stored (swap=false, both=true) → effective (true, true)
         assertTrue(CandidateDisplayMode.COMBINED.effectiveOutputBothScripts(true))
 
         // stored swap=true is also true (idempotent projection).
-        assertTrue(CandidateDisplayMode.COMBINED.effectiveTranslateSwapped(true))
+        assertTrue(CandidateDisplayMode.COMBINED.effectiveHanjiFirst(true))
 
         // Back to SIDE_BY_SIDE: the stored `false` swap is what the user sees again.
     }
@@ -97,7 +97,7 @@ class CandidateDisplayModeTest {
     fun test_INVARIANT_punctuation_width_follows_stored_swap_except_roman_only() {
         assertFalse(CandidateDisplayMode.COMBINED.effectiveFullWidthPunctuation(false))
         assertTrue(CandidateDisplayMode.COMBINED.effectiveFullWidthPunctuation(true))
-        assertTrue(CandidateDisplayMode.COMBINED.effectiveTranslateSwapped(false))
+        assertTrue(CandidateDisplayMode.COMBINED.effectiveHanjiFirst(false))
         assertFalse(CandidateDisplayMode.SIDE_BY_SIDE.effectiveFullWidthPunctuation(false))
         assertTrue(CandidateDisplayMode.SIDE_BY_SIDE.effectiveFullWidthPunctuation(true))
         assertFalse(CandidateDisplayMode.ROMAN_ONLY.effectiveFullWidthPunctuation(true))

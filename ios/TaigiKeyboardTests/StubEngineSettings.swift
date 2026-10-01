@@ -4,7 +4,7 @@
 // stored property so a test states exactly the snapshot a request is rendered under.
 struct StubEngineSettings: EngineSettings {
     var inputMode: InputMode = .tl
-    var isTranslateSwapped = false
+    var isHanjiFirst = false
     var isOutputBothScripts = false
     var candidateDisplayMode: CandidateDisplayMode = .sideBySide
     var isLiteralRomanCandidateEnabled = true

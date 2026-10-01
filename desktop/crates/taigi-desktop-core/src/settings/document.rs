@@ -259,16 +259,16 @@ impl SettingsDocument {
     /// The swap comes out DERIVED — the rules live on `CandidateDisplayMode`
     /// (invariants §42). The stored bool is left alone, so switching back to
     /// side-by-side restores it. Every consumer of the swap reads it from
-    /// here, never `bool(&IS_TRANSLATE_SWAPPED)`
+    /// here, never `bool(&IS_HANJI_FIRST)`
     /// directly; the raw read is for the panes and the toggle shortcut that
     /// write it.
     pub fn engine_settings(&self) -> EngineSettings {
         let candidate_display_mode: CandidateDisplayMode =
             self.choice(&keys::CANDIDATE_DISPLAY_MODE);
-        let stored_swap = self.bool(&keys::IS_TRANSLATE_SWAPPED);
+        let stored_swap = self.bool(&keys::IS_HANJI_FIRST);
         EngineSettings {
             input_mode: self.choice(&keys::INPUT_MODE),
-            is_translate_swapped: candidate_display_mode.effective_translate_swapped(stored_swap),
+            is_hanji_first: candidate_display_mode.effective_hanji_first(stored_swap),
             is_full_width_punctuation: candidate_display_mode
                 .effective_full_width_punctuation(stored_swap),
             candidate_display_mode,
@@ -349,7 +349,7 @@ mod tests {
         assert_eq!(doc.engine_settings(), EngineSettings::default());
         // Hanji-first out of the box (USER 2026-09-18), and the punctuation
         // width derived from it under side-by-side follows.
-        assert!(doc.engine_settings().is_translate_swapped);
+        assert!(doc.engine_settings().is_hanji_first);
         assert!(doc.engine_settings().is_full_width_punctuation);
         assert!(!doc.bool(&keys::IS_AUTO_SPACE_ENABLED));
         assert_eq!(doc.string(&keys::DISPLAY_LANGUAGE), "system");
@@ -475,15 +475,15 @@ mod tests {
         // Removed, not written: the swap reads its default (hanji-first)
         // with no key stored.
         let mut doc = SettingsDocument::default();
-        doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, false);
+        doc.set_bool(&keys::IS_HANJI_FIRST, false);
         doc.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true);
         doc.set_raw_string(keys::DISPLAY_LANGUAGE.name, "en");
         doc.set_choice(&keys::CANDIDATE_LAYOUT, CandidateLayout::Vertical);
         doc.set_i64(&keys::UPDATE_NEXT_CHECK_MS, 42);
         doc.reset_general();
-        assert!(!doc.contains(keys::IS_TRANSLATE_SWAPPED.name));
+        assert!(!doc.contains(keys::IS_HANJI_FIRST.name));
         assert!(!doc.contains(keys::IS_AUTO_SPACE_ENABLED.name));
-        assert!(doc.engine_settings().is_translate_swapped);
+        assert!(doc.engine_settings().is_hanji_first);
         assert!(
             doc.contains(keys::DISPLAY_LANGUAGE.name),
             "display language kept"
@@ -498,7 +498,7 @@ mod tests {
         // while `bool(&key)` still answers true; back to sideBySide → true
         // again with no write in between.
         let mut doc = SettingsDocument::default();
-        doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, true);
+        doc.set_bool(&keys::IS_HANJI_FIRST, true);
         doc.set_choice(
             &keys::CANDIDATE_DISPLAY_MODE,
             CandidateDisplayMode::RomanOnly,
@@ -508,17 +508,14 @@ mod tests {
             snapshot.candidate_display_mode,
             CandidateDisplayMode::RomanOnly
         );
-        assert!(!snapshot.is_translate_swapped);
-        assert!(
-            doc.bool(&keys::IS_TRANSLATE_SWAPPED),
-            "stored value untouched"
-        );
+        assert!(!snapshot.is_hanji_first);
+        assert!(doc.bool(&keys::IS_HANJI_FIRST), "stored value untouched");
         let revision = doc.revision;
         doc.set_choice(
             &keys::CANDIDATE_DISPLAY_MODE,
             CandidateDisplayMode::SideBySide,
         );
-        assert!(doc.engine_settings().is_translate_swapped);
+        assert!(doc.engine_settings().is_hanji_first);
         assert_eq!(doc.revision, revision + 1, "only the mode was written");
     }
 
@@ -531,7 +528,7 @@ mod tests {
         // false; back to sideBySide reads the stored false again with no bool
         // written in between.
         let mut doc = SettingsDocument::default();
-        doc.set_bool(&keys::IS_TRANSLATE_SWAPPED, false);
+        doc.set_bool(&keys::IS_HANJI_FIRST, false);
         doc.set_choice(
             &keys::CANDIDATE_DISPLAY_MODE,
             CandidateDisplayMode::Combined,
@@ -541,24 +538,21 @@ mod tests {
             snapshot.candidate_display_mode,
             CandidateDisplayMode::Combined
         );
-        assert!(snapshot.is_translate_swapped);
-        assert!(
-            !doc.bool(&keys::IS_TRANSLATE_SWAPPED),
-            "stored value untouched"
-        );
+        assert!(snapshot.is_hanji_first);
+        assert!(!doc.bool(&keys::IS_HANJI_FIRST), "stored value untouched");
 
         doc.set_choice(
             &keys::CANDIDATE_DISPLAY_MODE,
             CandidateDisplayMode::RomanOnly,
         );
-        assert!(!doc.engine_settings().is_translate_swapped);
+        assert!(!doc.engine_settings().is_hanji_first);
 
         let revision = doc.revision;
         doc.set_choice(
             &keys::CANDIDATE_DISPLAY_MODE,
             CandidateDisplayMode::SideBySide,
         );
-        assert!(!doc.engine_settings().is_translate_swapped);
+        assert!(!doc.engine_settings().is_hanji_first);
         assert_eq!(doc.revision, revision + 1, "only the mode was written");
     }
 
@@ -572,8 +566,8 @@ mod tests {
                 && !RomanOnly.allows_swap_toggle()
         );
         assert!(SideBySide.shows_hanji() && Combined.shows_hanji() && !RomanOnly.shows_hanji());
-        assert!(Combined.effective_translate_swapped(false));
-        assert!(!RomanOnly.effective_translate_swapped(true));
+        assert!(Combined.effective_hanji_first(false));
+        assert!(!RomanOnly.effective_hanji_first(true));
         // Punctuation width follows the STORED swap under side-by-side /
         // combined, never under roman-only.
         assert!(!Combined.effective_full_width_punctuation(false));
@@ -590,14 +584,14 @@ mod tests {
         )
         .unwrap()
         .engine_settings();
-        assert!(half.is_translate_swapped && !half.is_full_width_punctuation);
+        assert!(half.is_hanji_first && !half.is_full_width_punctuation);
 
         let full = SettingsDocument::from_json(
             r#"{"revision": 1, "values": {"candidateDisplayMode": "combined", "isTranslateSwapped": true}}"#,
         )
         .unwrap()
         .engine_settings();
-        assert!(full.is_translate_swapped && full.is_full_width_punctuation);
+        assert!(full.is_hanji_first && full.is_full_width_punctuation);
 
         let roman_only = SettingsDocument::from_json(
             r#"{"revision": 1, "values": {"candidateDisplayMode": "romanOnly", "isTranslateSwapped": true}}"#,
@@ -617,7 +611,7 @@ mod tests {
             doc.choice(&keys::CANDIDATE_DISPLAY_MODE),
             CandidateDisplayMode::SideBySide
         );
-        assert!(doc.engine_settings().is_translate_swapped);
+        assert!(doc.engine_settings().is_hanji_first);
         assert_eq!(
             SettingsDocument::default().choice(&keys::CANDIDATE_DISPLAY_MODE),
             CandidateDisplayMode::SideBySide

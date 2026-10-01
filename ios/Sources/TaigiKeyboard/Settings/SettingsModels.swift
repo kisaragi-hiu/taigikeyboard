@@ -85,7 +85,7 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
     /// tap writes the stored swap — exactly where Hanji is on screen. Under
     /// `.combined` the cells are split per script, so the key only picks the
     /// punctuation width (USER 2026-09-13: "Hanji with Romanization needs an
-    /// isTranslateSwapped button"); `.romanOnly` hides it and the stored swap waits for the way back.
+    /// isHanjiFirst button"); `.romanOnly` hides it and the stored swap waits for the way back.
     var allowsSwapToggle: Bool {
         showsHanji
     }
@@ -96,10 +96,10 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
     /// mode (`behavioral-invariants.md` §42) while the committed script comes
     /// from each cell's `cellScript` marker, not the pair. `.romanOnly` has no
     /// Hanji to lead with.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/CandidateDisplayMode.kt effectiveTranslateSwapped,
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/CandidateDisplayMode.kt effectiveHanjiFirst,
     // macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift, desktop/crates/taigi-desktop-core/src/settings/engine_settings.rs.
     // Drift causes silent divergence (one platform commits roman under Hanji with Romanization, or hanji under Romanization Only).
-    func effectiveTranslateSwapped(stored: Bool) -> Bool {
+    func effectiveHanjiFirst(stored: Bool) -> Bool {
         self == .combined || (stored && showsHanji)
     }
 

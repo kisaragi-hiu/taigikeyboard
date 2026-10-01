@@ -107,7 +107,7 @@ fn decide_word_selected(
     } = selection;
     // Enter commits raw romanization only; skip entirely in Hanji mode. The
     // stored swap, unfolded: a TPS commit reads it as it always has.
-    if require_roman_mode && config.is_translate_swapped {
+    if require_roman_mode && config.is_hanji_first {
         return result_unchanged(state).into();
     }
 
@@ -416,12 +416,12 @@ fn result_unchanged(state: &PersistedState) -> DecideResult {
 mod tests {
     use super::*;
 
-    fn config(platform: Platform, translate_swapped: bool) -> AppConfig {
+    fn config(platform: Platform, hanji_first: bool) -> AppConfig {
         AppConfig {
             input_mode: "tl".to_owned(),
             oo_doubletap_enabled: false,
             nn_doubletap_enabled: false,
-            is_translate_swapped: translate_swapped,
+            is_hanji_first: hanji_first,
             platform_id: platform as i32,
             output_both_scripts: false,
             candidate_display_mode: 0,
@@ -431,8 +431,8 @@ mod tests {
         }
     }
 
-    fn ios_config(translate_swapped: bool) -> AppConfig {
-        config(Platform::Ios, translate_swapped)
+    fn ios_config(hanji_first: bool) -> AppConfig {
+        config(Platform::Ios, hanji_first)
     }
 
     /// [`decide`] without the recorded bigrams.
@@ -1164,7 +1164,7 @@ mod tests {
                 preceding: Vec::new(),
                 now_ms: 1_000,
             },
-            &ios_config(true), // is_translate_swapped = true
+            &ios_config(true), // is_hanji_first = true
         )
         .unwrap();
         assert_eq!(state.current_generation, 5, "no-op must not bump");

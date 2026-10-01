@@ -25,17 +25,17 @@ enum class CandidateDisplayMode(
     COMBINED("combined"),
     ;
 
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped derivation.
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isHanjiFirst derivation.
     // Drift causes silent divergence (one platform commits roman under Hanji with Romanization, or hanji under roman-only).
 
     /**
-     * Effective `isTranslateSwapped` under this mode. COMBINED forces `true`
+     * Effective `isHanjiFirst` under this mode. COMBINED forces `true`
      * — the pair is a compatibility projection of "cell leads with hanji,
      * commit writes hanji" (spec §1), not a claim about the stored flag.
      * ROMAN_ONLY forces `false`. Neither touches storage, so returning to
      * SIDE_BY_SIDE restores the user's stored choice.
      */
-    fun effectiveTranslateSwapped(stored: Boolean): Boolean = this == COMBINED || (stored && showsHanji)
+    fun effectiveHanjiFirst(stored: Boolean): Boolean = this == COMBINED || (stored && showsHanji)
 
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isOutputBothScripts derivation.
     // Drift causes silent divergence (spurious bracket annotation under roman-only).
@@ -54,7 +54,7 @@ enum class CandidateDisplayMode(
      * Whether the 文/A key is shown (bottom row + expanded overlay) and its tap
      * writes the stored swap — exactly where hanji is on screen. Under COMBINED
      * the cells are split per script, so the key only picks the punctuation
-     * width (USER 2026-09-13: "Hanji with Romanization needs the isTranslateSwapped button");
+     * width (USER 2026-09-13: "Hanji with Romanization needs the isHanjiFirst button");
      * ROMAN_ONLY hides it and the stored swap waits for the way back.
      */
     val allowsSwapToggle: Boolean get() = showsHanji
@@ -62,7 +62,7 @@ enum class CandidateDisplayMode(
     /**
      * Whether the character / symbol layouts type full-width punctuation
      * (`，。` over `,.`) for a stored swap flag — the stored flag masked like
-     * Annotate in Brackets, NOT the candidate projection [effectiveTranslateSwapped], which
+     * Annotate in Brackets, NOT the candidate projection [effectiveHanjiFirst], which
      * COMBINED forces on while 文/A still picks the width. TPS has its own JSON.
      * Mirrored on iOS / macOS / Windows beside [effectiveOutputBothScripts].
      */

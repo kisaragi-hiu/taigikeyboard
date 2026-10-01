@@ -21,9 +21,9 @@ class CandidateCellTextTest {
         displayRoman: String = "tâi-gí",
         isTPSLayout: Boolean = false,
         mode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-        isTranslateSwapped: Boolean = false,
+        isHanjiFirst: Boolean = false,
         cellScript: String? = null,
-    ) = candidateCellText(hanzi, displayRoman, isTPSLayout, mode, isTranslateSwapped, cellScript)
+    ) = candidateCellText(hanzi, displayRoman, isTPSLayout, mode, isHanjiFirst, cellScript)
 
     // INVARIANT_CANDIDATE_CELL_SHOWS_BOTH_SCRIPTS (behavioral-invariants.md §42)
     @Test
@@ -42,7 +42,7 @@ class CandidateCellTextTest {
 
     @Test
     fun sideBySide_swapped_hanjiLeads_romanSubtitle() {
-        assertEquals(CandidateCellText("台語", "tâi-gí"), cell(isTranslateSwapped = true))
+        assertEquals(CandidateCellText("台語", "tâi-gí"), cell(isHanjiFirst = true))
     }
 
     @Test
@@ -51,7 +51,7 @@ class CandidateCellTextTest {
         // The derived swap flag is false under roman-only, but even a stale `true` must not leak hanji.
         assertEquals(
             CandidateCellText("tâi-gí", null),
-            cell(mode = CandidateDisplayMode.ROMAN_ONLY, isTranslateSwapped = true),
+            cell(mode = CandidateDisplayMode.ROMAN_ONLY, isHanjiFirst = true),
         )
     }
 
@@ -76,7 +76,7 @@ class CandidateCellTextTest {
             cell(
                 mode = CandidateDisplayMode.COMBINED,
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN,
-                isTranslateSwapped = true,
+                isHanjiFirst = true,
             ),
         )
         assertEquals(
@@ -84,7 +84,7 @@ class CandidateCellTextTest {
             cell(
                 mode = CandidateDisplayMode.COMBINED,
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
-                isTranslateSwapped = true,
+                isHanjiFirst = true,
             ),
         )
     }
@@ -95,7 +95,7 @@ class CandidateCellTextTest {
         assertEquals(CandidateCellText("台語", null), cell(mode = CandidateDisplayMode.COMBINED))
         assertEquals(
             CandidateCellText("台語", null),
-            cell(mode = CandidateDisplayMode.COMBINED, isTranslateSwapped = true),
+            cell(mode = CandidateDisplayMode.COMBINED, isHanjiFirst = true),
         )
     }
 
@@ -116,7 +116,7 @@ class CandidateCellTextTest {
     fun hanjiLessRow_isRomanInEveryMode() {
         for (mode in CandidateDisplayMode.entries) {
             assertEquals(CandidateCellText("tâi-gí", null), cell(hanzi = null, mode = mode))
-            assertEquals(CandidateCellText("tâi-gí", null), cell(hanzi = "", mode = mode, isTranslateSwapped = true))
+            assertEquals(CandidateCellText("tâi-gí", null), cell(hanzi = "", mode = mode, isHanjiFirst = true))
         }
         // A hanji-less roman cell (§34 literal) resolves through the same first arm.
         assertEquals(

@@ -127,7 +127,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertTrue(settings.isDoubleTapOOEnabled)
         XCTAssertTrue(settings.isDoubleTapNNEnabled)
         // Hanji-first out of the box (USER 2026-09-18), on every platform.
-        XCTAssertTrue(settings.isTranslateSwapped)
+        XCTAssertTrue(settings.isHanjiFirst)
         XCTAssertFalse(settings.isOutputBothScripts)
         XCTAssertTrue(settings.isMoeDictEnabled)
         XCTAssertFalse(settings.isITaigiDictEnabled)
@@ -202,7 +202,7 @@ final class SettingsKeyTests: XCTestCase {
         settings.isDoubleTapOOEnabled = false
         settings.isDoubleTapNNEnabled = false
         settings.isNasalMarkerUppercaseEnabled = false
-        settings.storedIsTranslateSwapped = true
+        settings.storedIsHanjiFirst = true
         settings.storedIsOutputBothScripts = true
         settings.isAutoSpaceEnabled = true
         settings.isMoeDictEnabled = false
@@ -240,7 +240,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertTrue(settings.isDoubleTapOOEnabled)
         XCTAssertTrue(settings.isDoubleTapNNEnabled)
         XCTAssertTrue(settings.isNasalMarkerUppercaseEnabled)
-        XCTAssertTrue(settings.isTranslateSwapped, "reset lands on the hanji-first default")
+        XCTAssertTrue(settings.isHanjiFirst, "reset lands on the hanji-first default")
         XCTAssertFalse(settings.isOutputBothScripts)
         XCTAssertFalse(settings.isAutoSpaceEnabled)
         XCTAssertTrue(settings.isLiteralRomanCandidateEnabled)
@@ -371,7 +371,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertFalse(settings.isDoubleTapOOEnabled)
         XCTAssertFalse(settings.isDoubleTapNNEnabled)
         XCTAssertFalse(settings.isNasalMarkerUppercaseEnabled)
-        XCTAssertTrue(settings.isTranslateSwapped)
+        XCTAssertTrue(settings.isHanjiFirst)
         XCTAssertTrue(settings.isOutputBothScripts)
         XCTAssertTrue(settings.isAutoSpaceEnabled)
         XCTAssertFalse(settings.isCustomDictEnabled)

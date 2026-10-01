@@ -29,8 +29,8 @@ const ENGINE_DEFAULTS: EngineSettings = EngineSettings::DEFAULT;
 
 pub const INPUT_MODE: SettingsKey<InputMode> =
     SettingsKey::new("inputMode", ENGINE_DEFAULTS.input_mode);
-pub const IS_TRANSLATE_SWAPPED: SettingsKey<bool> =
-    SettingsKey::new("isTranslateSwapped", ENGINE_DEFAULTS.is_translate_swapped);
+pub const IS_HANJI_FIRST: SettingsKey<bool> =
+    SettingsKey::new("isTranslateSwapped", ENGINE_DEFAULTS.is_hanji_first);
 // RETIRED 2026-09-30: `outputBothScripts` (Annotate in Brackets). No desktop
 // UI ever wrote it; mobile keeps its own key and UI. A hand-edited `true` in an
 // existing `settings.json` is now inert, so the spelling stays reserved.
@@ -245,7 +245,7 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 pub const GENERAL_KEYS: [&str; 8] = [
     INPUT_MODE.name,
     TONE_INPUT_SCHEME.name,
-    IS_TRANSLATE_SWAPPED.name,
+    IS_HANJI_FIRST.name,
     IS_AUTO_SPACE_ENABLED.name,
     IS_CANDIDATE_WINDOW_ENABLED.name,
     IS_LITERAL_ROMAN_CANDIDATE_ENABLED.name,
@@ -300,7 +300,7 @@ mod tests {
         // `moeDictEnabled` is the kautian toggle.
         assert_eq!(IS_KHIIN_ENABLED.name, "khiin");
         assert_eq!(IS_KAUTIAN_ENABLED.name, "moeDictEnabled");
-        assert_eq!(IS_TRANSLATE_SWAPPED.name, "isTranslateSwapped");
+        assert_eq!(IS_HANJI_FIRST.name, "isTranslateSwapped");
         assert_eq!(CANDIDATE_DISPLAY_MODE.name, "candidateDisplayMode");
         assert_eq!(
             CANDIDATE_DISPLAY_MODE.default,

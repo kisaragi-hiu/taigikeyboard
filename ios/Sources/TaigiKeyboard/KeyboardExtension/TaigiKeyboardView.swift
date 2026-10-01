@@ -100,7 +100,7 @@ struct TaigiKeyboardView: View {
             inputMode: p.settings.inputMode,
             isNasalMarkerUppercaseEnabled: p.settings.isNasalMarkerUppercaseEnabled,
         )
-        let isTranslateSwapped = keyboardContext.isTranslateSwapped
+        let isHanjiFirst = keyboardContext.isHanjiFirst
         // Read beside the swap on the same live path: both come from SharedSettings via the
         // KeyboardContext extension, so a mode change re-renders exactly like a swap does.
         let candidateDisplayMode = keyboardContext.candidateDisplayMode
@@ -126,7 +126,7 @@ struct TaigiKeyboardView: View {
             p: p,
             suggestions: suggestions,
             selectedCandidateIndex: selectedCandidateIndex,
-            isTranslateSwapped: isTranslateSwapped,
+            isHanjiFirst: isHanjiFirst,
             candidateDisplayMode: candidateDisplayMode,
             candidateStyle: candidateStyle,
             candidateTheme: theme,
@@ -203,7 +203,7 @@ struct TaigiKeyboardView: View {
         p: RenderProviders,
         suggestions: [AutocompleteSuggestion],
         selectedCandidateIndex: Int,
-        isTranslateSwapped: Bool,
+        isHanjiFirst: Bool,
         candidateDisplayMode: CandidateDisplayMode,
         candidateStyle: CandidateView.Style,
         candidateTheme: CandidateTheme,
@@ -215,7 +215,7 @@ struct TaigiKeyboardView: View {
             p: p,
             suggestions: suggestions,
             selectedCandidateIndex: selectedCandidateIndex,
-            isTranslateSwapped: isTranslateSwapped,
+            isHanjiFirst: isHanjiFirst,
             candidateDisplayMode: candidateDisplayMode,
             candidateStyle: candidateStyle,
             isTPSLayout: isTPSLayout,
@@ -228,7 +228,7 @@ struct TaigiKeyboardView: View {
             suggestions: suggestions,
             selectedCandidateIndex: selectedCandidateIndex,
             onSuggestionTap: onSuggestionTap,
-            isTranslateSwapped: isTranslateSwapped,
+            isHanjiFirst: isHanjiFirst,
             candidateDisplayMode: candidateDisplayMode,
             onTranslateToggle: onTranslateToggle,
             onCandidateDisplayModeChange: onCandidateDisplayModeChange,
@@ -279,7 +279,7 @@ struct TaigiKeyboardView: View {
         p: RenderProviders,
         suggestions: [AutocompleteSuggestion],
         selectedCandidateIndex: Int,
-        isTranslateSwapped: Bool,
+        isHanjiFirst: Bool,
         candidateDisplayMode: CandidateDisplayMode,
         candidateStyle: CandidateView.Style,
         isTPSLayout: Bool,
@@ -342,7 +342,7 @@ struct TaigiKeyboardView: View {
                     suggestions: suggestions,
                     selectedCandidateIndex: selectedCandidateIndex,
                     onSuggestionTap: onSuggestionTap,
-                    isTranslateSwapped: isTranslateSwapped,
+                    isHanjiFirst: isHanjiFirst,
                     candidateDisplayMode: candidateDisplayMode,
                     onSettingsTap: {
                         let wasOpen = panels.isSettingsExpanded

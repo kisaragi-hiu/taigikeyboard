@@ -31,7 +31,7 @@ import com.siansiansu.taigikeyboard.engine.proto.CandidateDisplayMode as ProtoCa
 internal fun appConfig(
     inputMode: String,
     pojMarkers: PojMarkerOptions? = null,
-    isTranslateSwapped: Boolean = false,
+    isHanjiFirst: Boolean = false,
     isOutputBothScripts: Boolean = false,
     candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
     isHyphenlessRomanEnabled: Boolean = false,
@@ -48,7 +48,7 @@ internal fun appConfig(
                 // Inverted on the wire (proto default = the marker follows the case, §53).
                 setForceLowercaseNasalMarker(!pojMarkers.isNasalMarkerUppercaseEnabled)
             }
-        }.setIsTranslateSwapped(isTranslateSwapped)
+        }.setIsHanjiFirst(isHanjiFirst)
         .setOutputBothScripts(isOutputBothScripts)
         .setCandidateDisplayMode(candidateDisplayMode.toProto())
         .setHyphenlessRoman(isHyphenlessRomanEnabled)
@@ -64,7 +64,7 @@ internal fun appConfig(
  * `"tps"` and the engine reads it as Hanji-first itself
  * (`AppConfig::renders_hanji_first`). `outputBothScripts` distinguishes
  * hanji-first (no inter-segment space) from both-scripts (`hit (彼)` — space
- * wanted); `is_translate_swapped` is `true` for both, so the second flag is
+ * wanted); `is_hanji_first` is `true` for both, so the second flag is
  * required. An unknown stored mode composes as TL.
  *
  * Every composing op that renders the composition sends it — under
@@ -84,7 +84,7 @@ internal fun continuousAppConfig(settings: EngineSettings): AppConfig =
     appConfig(
         inputMode = engineInputMode(settings.inputMode, unknownAs = "tl"),
         pojMarkers = settings.pojMarkerOptions,
-        isTranslateSwapped = settings.isTranslateSwapped,
+        isHanjiFirst = settings.isHanjiFirst,
         isOutputBothScripts = settings.isOutputBothScripts,
         candidateDisplayMode = settings.candidateDisplayMode,
         isHyphenlessRomanEnabled = settings.isHyphenlessRomanEnabled,

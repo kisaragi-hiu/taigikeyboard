@@ -315,7 +315,7 @@ fn single(engine: &mut Engine, cfg: &AppConfig, hanji: &str) -> CandidateMessage
 /// the candidate's roman under romanization output, its hanji under Hanji output.
 fn pick(engine: &mut Engine, cfg: &AppConfig, hanji: &str) -> ComposingResponse {
     let c = single(engine, cfg, hanji);
-    let display_text = if cfg.is_translate_swapped {
+    let display_text = if cfg.is_hanji_first {
         c.display_text.clone()
     } else {
         c.roman.clone()
@@ -345,7 +345,7 @@ fn preedit(resp: &ComposingResponse) -> Option<String> {
 
 fn roman_cfg(hyphenless: bool) -> AppConfig {
     AppConfig {
-        is_translate_swapped: false,
+        is_hanji_first: false,
         hyphenless_roman: hyphenless,
         ..config("tl")
     }
@@ -403,7 +403,7 @@ fn two_picks_under_hanji_output_carry_no_separator() {
     let _lock = engine_install_lock();
     install_tng_lai();
     let cfg = AppConfig {
-        is_translate_swapped: true,
+        is_hanji_first: true,
         ..config("tl")
     };
     let mut engine = started("tng--lai", &cfg);

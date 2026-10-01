@@ -41,7 +41,7 @@ final class RustEngineBridgeAppConfigTests: XCTestCase {
     /// prefix by it (§10.2) and the next-word decide table reads it, so the
     /// flag cannot be left to a subset of the requests.
     func testAppConfig_carriesTheSwap() {
-        XCTAssertTrue(RustEngineBridge.appConfig(TestFixtures.settings(swapped: true)).isTranslateSwapped)
-        XCTAssertFalse(RustEngineBridge.appConfig(TestFixtures.settings(swapped: false)).isTranslateSwapped)
+        XCTAssertTrue(RustEngineBridge.appConfig(TestFixtures.settings(swapped: true)).isHanjiFirst)
+        XCTAssertFalse(RustEngineBridge.appConfig(TestFixtures.settings(swapped: false)).isHanjiFirst)
     }
 }

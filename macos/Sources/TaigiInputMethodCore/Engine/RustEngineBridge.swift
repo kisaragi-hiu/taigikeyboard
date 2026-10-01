@@ -195,7 +195,7 @@ enum RustEngineBridge {
         // Rendering the nailed prefix (§10.2) and the next-word decide table,
         // where it suppresses recording for raw-romanization commits
         // (`decide.rs:86`).
-        config.isTranslateSwapped = settings.isTranslateSwapped
+        config.isHanjiFirst = settings.isHanjiFirst
         return config
     }
 }

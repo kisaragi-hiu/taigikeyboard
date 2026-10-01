@@ -6,7 +6,7 @@ import SwiftUI
 
 struct CandidateButtonView: View {
     let suggestion: AutocompleteSuggestion
-    let isTranslateSwapped: Bool
+    let isHanjiFirst: Bool
     let candidateDisplayMode: CandidateDisplayMode
     /// §42: whether ANY cell in the current content renders a subtitle — gates
     /// the invisible subtitle spacer below (computed once per list by the caller).
@@ -27,7 +27,7 @@ struct CandidateButtonView: View {
     private var displayTitle: String {
         CandidateCellHelper.displayTitle(
             for: suggestion,
-            isTranslateSwapped: isTranslateSwapped,
+            isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
@@ -37,7 +37,7 @@ struct CandidateButtonView: View {
     private var displaySubtitle: String? {
         CandidateCellHelper.displaySubtitle(
             for: suggestion,
-            isTranslateSwapped: isTranslateSwapped,
+            isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
             candidateDisplayMode: candidateDisplayMode,
         )
@@ -49,7 +49,7 @@ struct CandidateButtonView: View {
     private var renderedSubtitle: String? {
         CandidateCellHelper.renderedSubtitle(
             for: suggestion,
-            isTranslateSwapped: isTranslateSwapped,
+            isHanjiFirst: isHanjiFirst,
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
             candidateDisplayMode: candidateDisplayMode,
@@ -76,7 +76,7 @@ struct CandidateButtonView: View {
         Button(action: {
             onTap(CandidateCellHelper.suggestionToHandle(
                 for: suggestion,
-                isTranslateSwapped: isTranslateSwapped,
+                isHanjiFirst: isHanjiFirst,
                 isTPSLayout: isTPSLayout,
                 orMapsToER: orMapsToER,
             ))

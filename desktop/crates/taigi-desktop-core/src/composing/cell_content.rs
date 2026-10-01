@@ -59,7 +59,7 @@ impl CandidateCellContent {
                 Self::new(candidate.roman.clone(), None)
             }
             Some(hanji) => {
-                if settings.is_translate_swapped {
+                if settings.is_hanji_first {
                     Self::new(hanji, Some(candidate.roman.clone()))
                 } else {
                     Self::new(candidate.roman.clone(), Some(hanji.to_owned()))
@@ -76,7 +76,7 @@ mod tests {
 
     fn settings(swapped: bool) -> EngineSettings {
         EngineSettings {
-            is_translate_swapped: swapped,
+            is_hanji_first: swapped,
             ..EngineSettings::default()
         }
     }
@@ -114,7 +114,7 @@ mod tests {
         let c = candidate("tâi-gí", Some("台語"), 0);
         for swapped in [false, true] {
             let settings = EngineSettings {
-                is_translate_swapped: swapped,
+                is_hanji_first: swapped,
                 candidate_display_mode: CandidateDisplayMode::RomanOnly,
                 ..EngineSettings::default()
             };

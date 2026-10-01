@@ -36,7 +36,7 @@ sealed class CandidateMode {
 
 data class CandidateDisplayParams(
     /** EFFECTIVE translate-swap (already false under roman-only). */
-    val isTranslateSwapped: Boolean,
+    val isHanjiFirst: Boolean,
     /** Carried explicitly: the swap flag alone cannot tell roman-first from roman-only. */
     val candidateDisplayMode: CandidateDisplayMode,
     val fontType: String,
@@ -84,7 +84,7 @@ fun candidateCellText(
     displayRoman: String,
     isTPSLayout: Boolean,
     candidateDisplayMode: CandidateDisplayMode,
-    isTranslateSwapped: Boolean,
+    isHanjiFirst: Boolean,
     cellScript: String?,
 ): CandidateCellText =
     when {
@@ -97,6 +97,6 @@ fun candidateCellText(
             } else {
                 CandidateCellText(hanzi, null)
             }
-        isTranslateSwapped -> CandidateCellText(hanzi, displayRoman)
+        isHanjiFirst -> CandidateCellText(hanzi, displayRoman)
         else -> CandidateCellText(displayRoman, hanzi)
     }

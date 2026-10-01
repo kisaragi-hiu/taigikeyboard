@@ -37,18 +37,18 @@ interface EngineSettings {
      * Candidate cell rendering mode (Hanji–Romanization Pairing / Romanization Only / Hanji with Romanization). Under
      * [CandidateDisplayMode.ROMAN_ONLY] the two script flags below read
      * `false` regardless of their stored values; under
-     * [CandidateDisplayMode.COMBINED] `isTranslateSwapped` reads `true`.
+     * [CandidateDisplayMode.COMBINED] `isHanjiFirst` reads `true`.
      */
     val candidateDisplayMode: CandidateDisplayMode
 
     /**
      * EFFECTIVE translate-swap: `true` under Hanji with Romanization, else stored AND mode != roman-only. The
      * stored read-write flag lives on the concrete implementation
-     * (`PrefHelper.storedIsTranslateSwapped`); engine / commit readers must
+     * (`PrefHelper.storedIsHanjiFirst`); engine / commit readers must
      * use this derived view. Punctuation width is NOT this flag — the layout
      * reads `PrefHelper.isFullWidthPunctuation` (stored swap, off under roman-only).
      */
-    val isTranslateSwapped: Boolean
+    val isHanjiFirst: Boolean
 
     // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift:isOutputBothScripts.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
@@ -57,7 +57,7 @@ interface EngineSettings {
      * EFFECTIVE output-both-scripts ("both-scripts"): stored flag AND mode
      * != roman-only. The continuous-input §10.2 word-boundary-spacing
      * predicate needs this to tell hanji-first (no inter-segment space)
-     * from both-scripts (`hit (彼)` — space wanted); [isTranslateSwapped]
+     * from both-scripts (`hit (彼)` — space wanted); [isHanjiFirst]
      * is `true` for both.
      */
     val isOutputBothScripts: Boolean

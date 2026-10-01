@@ -43,9 +43,9 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
             name: "inputMode",
             defaultValue: EngineSettings.defaults.inputMode,
         )
-        static let isTranslateSwapped = SettingsKey(
+        static let isHanjiFirst = SettingsKey(
             name: "isTranslateSwapped",
-            defaultValue: EngineSettings.defaults.isTranslateSwapped,
+            defaultValue: EngineSettings.defaults.isHanjiFirst,
         )
         /// Both scripts side by side, or the romanization alone. Stored as the
         /// enum's raw value like `inputMode`; the swap key above is left
@@ -357,10 +357,10 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         // live on `CandidateDisplayMode` (§42). The stored value stays put
         // for the way back to side-by-side.
         let displayMode = candidateDisplayMode
-        let storedSwap = storedIsTranslateSwapped
+        let storedSwap = storedIsHanjiFirst
         return EngineSettings(
             inputMode: inputMode,
-            isTranslateSwapped: displayMode.effectiveTranslateSwapped(stored: storedSwap),
+            isHanjiFirst: displayMode.effectiveHanjiFirst(stored: storedSwap),
             isFullWidthPunctuation: displayMode.effectiveFullWidthPunctuation(stored: storedSwap),
             candidateDisplayMode: displayMode,
             isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
@@ -574,7 +574,7 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         removeStoredValues(
             Keys.inputMode.name,
             Keys.toneInputScheme.name,
-            Keys.isTranslateSwapped.name,
+            Keys.isHanjiFirst.name,
             Keys.isAutoSpaceEnabled.name,
             Keys.isCandidateWindowEnabled.name,
             Keys.isLiteralRomanCandidateEnabled.name,
@@ -691,9 +691,9 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
     /// a swap the romanization-only display has switched off, which is why the
     /// only callers are the writers — the shortcut toggle, the General pane's
     /// Output Script picker (through `@AppStorage` on the same key) and the tests.
-    var storedIsTranslateSwapped: Bool {
-        get { bool(Keys.isTranslateSwapped) }
-        set { userDefaults.set(newValue, forKey: Keys.isTranslateSwapped.name) }
+    var storedIsHanjiFirst: Bool {
+        get { bool(Keys.isHanjiFirst) }
+        set { userDefaults.set(newValue, forKey: Keys.isHanjiFirst.name) }
     }
 
     /// Whether committing a word auto-inserts a trailing space. Read by the

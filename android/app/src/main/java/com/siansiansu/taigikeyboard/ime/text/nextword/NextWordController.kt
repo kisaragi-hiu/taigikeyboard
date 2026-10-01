@@ -99,7 +99,7 @@ class NextWordController(
         val result = RustEngineBridge.nextwordResetFull(
             nowMs = System.currentTimeMillis(),
             inputMode = settings.inputMode.toEngineInputMode(),
-            translateSwapped = settings.isTranslateSwapped,
+            hanjiFirst = settings.isHanjiFirst,
             generation = envelopeGen,
         )
         applyDecideResult(result)
@@ -119,7 +119,7 @@ class NextWordController(
             RustEngineBridge.nextwordClearForNewComposing(
                 System.currentTimeMillis(),
                 settings.inputMode.toEngineInputMode(),
-                settings.isTranslateSwapped,
+                settings.isHanjiFirst,
                 envelopeGen,
             ),
             isUiAlreadyCleared = true,
@@ -139,7 +139,7 @@ class NextWordController(
             RustEngineBridge.nextwordSetIsShowing(
                 showing,
                 inputMode = settings.inputMode.toEngineInputMode(),
-                translateSwapped = settings.isTranslateSwapped,
+                hanjiFirst = settings.isHanjiFirst,
                 generation = envelopeGen,
             ),
         )
@@ -182,7 +182,7 @@ class NextWordController(
                 triggerPrediction = triggerPrediction,
                 nowMs = System.currentTimeMillis(),
                 inputMode = settings.inputMode.toEngineInputMode(),
-                translateSwapped = settings.isTranslateSwapped,
+                hanjiFirst = settings.isHanjiFirst,
                 generation = envelopeGen,
                 preceding = preceding,
             ),
@@ -209,7 +209,7 @@ class NextWordController(
                 triggerPrediction = false,
                 nowMs = System.currentTimeMillis(),
                 inputMode = settings.inputMode.toEngineInputMode(),
-                translateSwapped = settings.isTranslateSwapped,
+                hanjiFirst = settings.isHanjiFirst,
                 generation = envelopeGen,
             ),
         )
@@ -234,7 +234,7 @@ class NextWordController(
                 roman = roman ?: word,
                 nowMs = System.currentTimeMillis(),
                 inputMode = settings.inputMode.toEngineInputMode(),
-                translateSwapped = settings.isTranslateSwapped,
+                hanjiFirst = settings.isHanjiFirst,
                 generation = envelopeGen,
             ),
         )
@@ -262,7 +262,7 @@ class NextWordController(
                 RustEngineBridge.nextwordResetFull(
                     nowMs = nowMs,
                     inputMode = settings.inputMode.toEngineInputMode(),
-                    translateSwapped = settings.isTranslateSwapped,
+                    hanjiFirst = settings.isHanjiFirst,
                     generation = envelopeGen,
                 ),
             )
@@ -275,7 +275,7 @@ class NextWordController(
                 lastChar = lastGrapheme(trimmed),
                 nowMs = nowMs,
                 inputMode = settings.inputMode.toEngineInputMode(),
-                translateSwapped = settings.isTranslateSwapped,
+                hanjiFirst = settings.isHanjiFirst,
                 generation = envelopeGen,
             ),
         )
@@ -358,7 +358,7 @@ class NextWordController(
                         nowMs = nowMs,
                         limit = 30,
                         inputMode = settings.inputMode.toEngineInputMode(),
-                        translateSwapped = settings.isTranslateSwapped,
+                        hanjiFirst = settings.isHanjiFirst,
                         generation = generation,
                         candidateDisplayMode = settings.candidateDisplayMode,
                         hyphenlessRoman = settings.isHyphenlessRomanEnabled,
@@ -401,7 +401,7 @@ class NextWordController(
             RustEngineBridge.nextwordSetIsShowing(
                 nowShowing,
                 inputMode = settings.inputMode.toEngineInputMode(),
-                translateSwapped = settings.isTranslateSwapped,
+                hanjiFirst = settings.isHanjiFirst,
                 generation = envelopeGen,
             ),
         )
@@ -432,7 +432,7 @@ class NextWordController(
             RustEngineBridge.nextwordContextTimeoutFired(
                 nowMs = System.currentTimeMillis(),
                 inputMode = settings.inputMode.toEngineInputMode(),
-                translateSwapped = settings.isTranslateSwapped,
+                hanjiFirst = settings.isHanjiFirst,
                 generation = envelopeGen,
             ),
         )

@@ -38,7 +38,7 @@ final class CandidateCellHelperTests: XCTestCase {
         for swapped in [false, true] {
             let title = CandidateCellHelper.displayTitle(
                 for: dual,
-                isTranslateSwapped: swapped,
+                isHanjiFirst: swapped,
                 isTPSLayout: false,
                 orMapsToER: false,
                 candidateDisplayMode: .romanOnly,
@@ -51,7 +51,7 @@ final class CandidateCellHelperTests: XCTestCase {
         for swapped in [false, true] {
             let subtitle = CandidateCellHelper.displaySubtitle(
                 for: dual,
-                isTranslateSwapped: swapped,
+                isHanjiFirst: swapped,
                 isTPSLayout: false,
                 candidateDisplayMode: .romanOnly,
             )
@@ -62,7 +62,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testDisplayTitle_romanOnly_hanjiLessRow_showsRoman() {
         let title = CandidateCellHelper.displayTitle(
             for: romanOnlyRow,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .romanOnly,
@@ -76,7 +76,7 @@ final class CandidateCellHelperTests: XCTestCase {
         for suggestion in [markedHanjiCell, markedRomanCell, dual] {
             let subtitle = CandidateCellHelper.displaySubtitle(
                 for: suggestion,
-                isTranslateSwapped: false,
+                isHanjiFirst: false,
                 isTPSLayout: false,
                 candidateDisplayMode: .combined,
             )
@@ -89,7 +89,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testDisplayTitle_combined_unsplitRow_isHanjiLed() {
         let title = CandidateCellHelper.displayTitle(
             for: dual,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .combined,
@@ -102,7 +102,7 @@ final class CandidateCellHelperTests: XCTestCase {
     /// Android `test_INVARIANT_combined_marked_cells_are_single_script` +
     /// `combined_unmarkedRow_rendersHanjiLedSingleScript`, and is the property
     /// `measuredCellWidth`'s combined arm relies on when it measures the title
-    /// with a literal `isTranslateSwapped: false`.
+    /// with a literal `isHanjiFirst: false`.
     func testDisplayTitle_combined_ignoresSwapFlag() {
         for swapped in [false, true] {
             let cases: [(AutocompleteSuggestion, String)] = [
@@ -114,7 +114,7 @@ final class CandidateCellHelperTests: XCTestCase {
                 XCTAssertEqual(
                     CandidateCellHelper.displayTitle(
                         for: suggestion,
-                        isTranslateSwapped: swapped,
+                        isHanjiFirst: swapped,
                         isTPSLayout: false,
                         orMapsToER: false,
                         candidateDisplayMode: .combined,
@@ -129,7 +129,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testDisplayTitle_combined_hanjiLessRow_showsRomanAlone() {
         let title = CandidateCellHelper.displayTitle(
             for: romanOnlyRow,
-            isTranslateSwapped: true,
+            isHanjiFirst: true,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .combined,
@@ -140,7 +140,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testTPSLayout_ignoresCombined_showsHanjiOnly() {
         let title = CandidateCellHelper.displayTitle(
             for: dual,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: true,
             orMapsToER: false,
             candidateDisplayMode: .combined,
@@ -213,7 +213,7 @@ final class CandidateCellHelperTests: XCTestCase {
         )
         let handled = CandidateCellHelper.suggestionToHandle(
             for: hostile,
-            isTranslateSwapped: true,
+            isHanjiFirst: true,
             isTPSLayout: false,
             orMapsToER: false,
         )
@@ -230,7 +230,7 @@ final class CandidateCellHelperTests: XCTestCase {
         RustEngineBridge.install()
         let title = CandidateCellHelper.displayTitle(
             for: romanOnlyRow,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: true,
             orMapsToER: false,
             candidateDisplayMode: .sideBySide,
@@ -238,7 +238,7 @@ final class CandidateCellHelperTests: XCTestCase {
         XCTAssertEqual(title, "ㄉㄞˊ", "trace: tâi → tai5 → ㄉ + ㄞ + ˊ")
         let handled = CandidateCellHelper.suggestionToHandle(
             for: romanOnlyRow,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: true,
             orMapsToER: false,
         )
@@ -251,7 +251,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testSuggestionToHandle_markedCell_isNoOp_underTPSLayout() {
         let handled = CandidateCellHelper.suggestionToHandle(
             for: markedRomanCell,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: true,
             orMapsToER: false,
         )
@@ -264,14 +264,14 @@ final class CandidateCellHelperTests: XCTestCase {
     func testTPSLayout_ignoresRomanOnly_showsHanjiOnly() {
         let title = CandidateCellHelper.displayTitle(
             for: dual,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: true,
             orMapsToER: false,
             candidateDisplayMode: .romanOnly,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
             for: dual,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: true,
             candidateDisplayMode: .romanOnly,
         )
@@ -285,14 +285,14 @@ final class CandidateCellHelperTests: XCTestCase {
     func testSideBySide_default_romanTitleHanjiSubtitle() {
         let title = CandidateCellHelper.displayTitle(
             for: dual,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
             for: dual,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: false,
             candidateDisplayMode: .sideBySide,
         )
@@ -303,14 +303,14 @@ final class CandidateCellHelperTests: XCTestCase {
     func testSideBySide_swapped_hanjiTitleRomanSubtitle() {
         let title = CandidateCellHelper.displayTitle(
             for: dual,
-            isTranslateSwapped: true,
+            isHanjiFirst: true,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
             for: dual,
-            isTranslateSwapped: true,
+            isHanjiFirst: true,
             isTPSLayout: false,
             candidateDisplayMode: .sideBySide,
         )
@@ -323,7 +323,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testContentHasSubtitles_sideBySideDualList_isTrue() {
         XCTAssertTrue(CandidateCellHelper.contentHasSubtitles(
             [dual],
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .sideBySide,
@@ -335,7 +335,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testContentHasSubtitles_mixedSideBySideList_isTrue() {
         XCTAssertTrue(CandidateCellHelper.contentHasSubtitles(
             [romanOnlyRow, dual],
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .sideBySide,
@@ -345,7 +345,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testContentHasSubtitles_combinedSplitList_isFalse() {
         XCTAssertFalse(CandidateCellHelper.contentHasSubtitles(
             [markedHanjiCell, markedRomanCell],
-            isTranslateSwapped: true,
+            isHanjiFirst: true,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .combined,
@@ -355,7 +355,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testContentHasSubtitles_romanOnlyList_isFalse() {
         XCTAssertFalse(CandidateCellHelper.contentHasSubtitles(
             [dual, romanOnlyRow],
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .romanOnly,
@@ -368,7 +368,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testContentHasSubtitles_swappedHanjiLessOnlyList_isFalse() {
         XCTAssertFalse(CandidateCellHelper.contentHasSubtitles(
             [romanOnlyRow],
-            isTranslateSwapped: true,
+            isHanjiFirst: true,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .sideBySide,
@@ -378,7 +378,7 @@ final class CandidateCellHelperTests: XCTestCase {
     func testContentHasSubtitles_tpsList_isFalse() {
         XCTAssertFalse(CandidateCellHelper.contentHasSubtitles(
             [dual],
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: true,
             orMapsToER: false,
             candidateDisplayMode: .sideBySide,

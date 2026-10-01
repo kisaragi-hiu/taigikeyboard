@@ -5,7 +5,7 @@ package com.siansiansu.taigikeyboard.ime.settings
 internal data class StubEngineSettings(
     override var inputMode: String = "tl",
     override var candidateDisplayMode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
-    override var isTranslateSwapped: Boolean = false,
+    override var isHanjiFirst: Boolean = false,
     override var isOutputBothScripts: Boolean = false,
     override var isLiteralRomanCandidateEnabled: Boolean = true,
     override var isHyphenlessRomanEnabled: Boolean = false,

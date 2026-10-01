@@ -139,7 +139,7 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// preprocessing (oo→o͘, nn→ⁿ) read by `phonetics::api::normalize_tone` on the
 /// composing path.
 ///
-/// v3.5.5 added `is_translate_swapped` + `platform_id` for the NextWord
+/// v3.5.5 added `is_hanji_first` + `platform_id` for the NextWord
 /// engine (tag 6 `is_association_recording_enabled` retired 2026-09-25 —
 /// association recording is always on since the toggle left every UI).
 /// `platform_id` originally branched the compound-split separator and the
@@ -149,9 +149,9 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// v3.5.8 added `output_both_scripts`: the engine's Model B continuous
 /// composing-buffer join (`composing::api::nailed_prefix` /
 /// `combined_display`) inserts a word-boundary space between nailed
-/// segments only when the rendered script is roman-ish. `is_translate_swapped`
+/// segments only when the rendered script is roman-ish. `is_hanji_first`
 /// alone cannot distinguish "hanji-first" (no space) from "both-scripts"
-/// (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
+/// (`hit (彼)` — space wanted) since both set `is_hanji_first = true`;
 /// the separator predicate needs this second flag (continuous-input-ranking
 /// §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
 /// How a candidate cell renders the (Hanji, romanization) pair. Read by
@@ -162,7 +162,7 @@ public nonisolated enum Taigi_Engine_Platform: SwiftProtobuf.Enum, Swift.CaseIte
 /// normalise through `AppConfig::is_roman_only_display`, never compare the raw
 /// i32 at a call site. COMBINED (one label `Hanji romanization`, hanji
 /// commits) has NO engine reader — a combined cell is still distinct by
-/// (hanji, roman); the platforms send `is_translate_swapped = true` for it.
+/// (hanji, roman); the platforms send `is_hanji_first = true` for it.
 public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
@@ -210,7 +210,7 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 /// duplicates that only the engine can collapse consistently for four
 /// platforms. Set on the BASE config (every request) — composing AND nextword
 /// read it; the other request families ignore it. Platforms keep sending the
-/// derived `is_translate_swapped` (and, on mobile, `output_both_scripts`; the
+/// derived `is_hanji_first` (and, on mobile, `output_both_scripts`; the
 /// desktop sends only the swap) — both `false` under Romanization Only — so
 /// spacing / recording semantics need no new reader.
 ///
@@ -237,7 +237,7 @@ public nonisolated enum Taigi_Engine_CandidateDisplayMode: SwiftProtobuf.Enum, S
 /// `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
 /// `"tps"` the engine composes with the TL tables and applies the TPS fold
 /// itself (`AppConfig::renders_hanji_first` / `renders_hyphenless` in
-/// `engine/protos/src/lib.rs`), so `is_translate_swapped` and
+/// `engine/protos/src/lib.rs`), so `is_hanji_first` and
 /// `hyphenless_roman` are the Candidate-Display-projected stored values
 /// WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
 /// plus the TPS-folded swap / hyphenless) — composing renders both
@@ -257,7 +257,7 @@ public nonisolated struct Taigi_Engine_AppConfig: Sendable {
   public var nnDoubletapEnabled: Bool = false
 
   /// Candidate-Display-projected Hanji-first swap, without the TPS fold.
-  public var isTranslateSwapped: Bool = false
+  public var isHanjiFirst: Bool = false
 
   public var platformID: Taigi_Engine_Platform = .unspecified
 
@@ -466,7 +466,7 @@ nonisolated extension Taigi_Engine_CandidateDisplayMode: SwiftProtobuf._ProtoNam
 
 nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".AppConfig"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_translate_swapped\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{4}\u{2}input_mode\0\u{3}oo_doubletap_enabled\0\u{3}nn_doubletap_enabled\0\u{3}is_hanji_first\0\u{4}\u{2}platform_id\0\u{3}output_both_scripts\0\u{3}candidate_display_mode\0\u{3}hyphenless_roman\0\u{3}force_lowercase_nasal_marker\0\u{3}tps_or_maps_to_er\0\u{b}tone_mode\0\u{b}is_association_recording_enabled\0\u{c}\u{1}\u{1}\u{c}\u{6}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -477,7 +477,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
       case 2: try { try decoder.decodeSingularStringField(value: &self.inputMode) }()
       case 3: try { try decoder.decodeSingularBoolField(value: &self.ooDoubletapEnabled) }()
       case 4: try { try decoder.decodeSingularBoolField(value: &self.nnDoubletapEnabled) }()
-      case 5: try { try decoder.decodeSingularBoolField(value: &self.isTranslateSwapped) }()
+      case 5: try { try decoder.decodeSingularBoolField(value: &self.isHanjiFirst) }()
       case 7: try { try decoder.decodeSingularEnumField(value: &self.platformID) }()
       case 8: try { try decoder.decodeSingularBoolField(value: &self.outputBothScripts) }()
       case 9: try { try decoder.decodeSingularEnumField(value: &self.candidateDisplayMode) }()
@@ -499,8 +499,8 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if self.nnDoubletapEnabled != false {
       try visitor.visitSingularBoolField(value: self.nnDoubletapEnabled, fieldNumber: 4)
     }
-    if self.isTranslateSwapped != false {
-      try visitor.visitSingularBoolField(value: self.isTranslateSwapped, fieldNumber: 5)
+    if self.isHanjiFirst != false {
+      try visitor.visitSingularBoolField(value: self.isHanjiFirst, fieldNumber: 5)
     }
     if self.platformID != .unspecified {
       try visitor.visitSingularEnumField(value: self.platformID, fieldNumber: 7)
@@ -527,7 +527,7 @@ nonisolated extension Taigi_Engine_AppConfig: SwiftProtobuf.Message, SwiftProtob
     if lhs.inputMode != rhs.inputMode {return false}
     if lhs.ooDoubletapEnabled != rhs.ooDoubletapEnabled {return false}
     if lhs.nnDoubletapEnabled != rhs.nnDoubletapEnabled {return false}
-    if lhs.isTranslateSwapped != rhs.isTranslateSwapped {return false}
+    if lhs.isHanjiFirst != rhs.isHanjiFirst {return false}
     if lhs.platformID != rhs.platformID {return false}
     if lhs.outputBothScripts != rhs.outputBothScripts {return false}
     if lhs.candidateDisplayMode != rhs.candidateDisplayMode {return false}

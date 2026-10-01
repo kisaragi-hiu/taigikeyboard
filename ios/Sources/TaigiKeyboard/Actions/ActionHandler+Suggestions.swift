@@ -60,7 +60,7 @@ extension ActionHandler {
         let isNextWordPrediction = suggestion.additionalInfo["isNextWord"] == "true"
 
         if composingManager.isComposing || isNextWordPrediction {
-            let effectiveSwapped = isTPSLayout || settings.isTranslateSwapped
+            let effectiveSwapped = isTPSLayout || settings.isHanjiFirst
 
             // §42 Hanji with Romanization split prediction cells carry a `cellScript` marker
             // (`ActionHandler.predictionSuggestions`) — the marker decides the

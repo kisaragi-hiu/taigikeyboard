@@ -294,13 +294,13 @@ class PrefHelper(
 
     // STORED script flags — the only read-write API (settings UI, 文/A toggle,
     // reset). Engine / commit readers use the EFFECTIVE derived overrides
-    // `isTranslateSwapped` / `isOutputBothScripts` below, which read `false`
+    // `isHanjiFirst` / `isOutputBothScripts` below, which read `false`
     // under CandidateDisplayMode.ROMAN_ONLY (and `true` for the swap under
     // COMBINED) without touching storage, so leaving either mode restores the
     // user's choice; layout readers use `isFullWidthPunctuation`.
     // Hanji-first out of the box (USER 2026-09-18): hanji title, romanization
     // subtitle, commit writes the hanji. Same default on iOS, macOS, Windows.
-    var storedIsTranslateSwapped: Boolean by preference(PreferenceKeys.IS_TRANSLATE_SWAPPED, true)
+    var storedIsHanjiFirst: Boolean by preference(PreferenceKeys.IS_HANJI_FIRST, true)
 
     var storedOutputBothScripts: Boolean by preference(PreferenceKeys.OUTPUT_BOTH_SCRIPTS, false)
 
@@ -547,10 +547,10 @@ class PrefHelper(
     // CandidateDisplayMode). Every engine / commit / layout / auto-space
     // reader goes through these two; only the settings UI and the 文/A
     // toggle touch the `stored*` vars.
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isTranslateSwapped / isOutputBothScripts.
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift isHanjiFirst / isOutputBothScripts.
     // Drift causes silent divergence (hanji-first commits or spurious spaces under roman-only).
-    override val isTranslateSwapped: Boolean
-        get() = candidateDisplayMode.effectiveTranslateSwapped(storedIsTranslateSwapped)
+    override val isHanjiFirst: Boolean
+        get() = candidateDisplayMode.effectiveHanjiFirst(storedIsHanjiFirst)
 
     override val isOutputBothScripts: Boolean
         get() = candidateDisplayMode.effectiveOutputBothScripts(storedOutputBothScripts)
@@ -561,7 +561,7 @@ class PrefHelper(
     // the 文/A active state and the `、` slot; never by the engine.
     // CROSS-PLATFORM INVARIANT — mirrors ios SharedSettings.isFullWidthPunctuation (tps || …).
     val isFullWidthPunctuation: Boolean
-        get() = isTpsLayout || candidateDisplayMode.effectiveFullWidthPunctuation(storedIsTranslateSwapped)
+        get() = isTpsLayout || candidateDisplayMode.effectiveFullWidthPunctuation(storedIsHanjiFirst)
 
     // §34/S22: engine-facing alias for the Android `literalRomanCandidateEnabled`
     // pref (kept un-renamed because the settings UI reads it directly).
@@ -812,7 +812,7 @@ class PrefHelper(
             userThemes?.let { prefs[PreferenceKeys.USER_THEMES] = it }
 
             prefs[PreferenceKeys.INPUT_MODE] = "tl"
-            prefs[PreferenceKeys.IS_TRANSLATE_SWAPPED] = true
+            prefs[PreferenceKeys.IS_HANJI_FIRST] = true
             prefs[PreferenceKeys.OUTPUT_BOTH_SCRIPTS] = false
             prefs[PreferenceKeys.CANDIDATE_DISPLAY_MODE] = CandidateDisplayMode.SIDE_BY_SIDE.storageValue
             prefs[PreferenceKeys.ENABLE_DOUBLE_TAP_OO] = true

@@ -278,7 +278,7 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
 
     // MARK: - v3.5.8 Phase 9 Item 6 — CandidateCellHelper render parity
 
-    /// `isTranslateSwapped = true` on a HANT continuous suggestion
+    /// `isHanjiFirst = true` on a HANT continuous suggestion
     /// swaps the visible title/subtitle through
     /// `CandidateCellHelper.displayTitle / displaySubtitle`. Pins that
     /// dual-line continuous candidates pick up the same swap rule as
@@ -298,14 +298,14 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         let suggestion = service.buildContinuousSuggestions(from: candidates)[0]
         let title = CandidateCellHelper.displayTitle(
             for: suggestion,
-            isTranslateSwapped: true,
+            isHanjiFirst: true,
             isTPSLayout: false,
             orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
             for: suggestion,
-            isTranslateSwapped: true,
+            isHanjiFirst: true,
             isTPSLayout: false,
             candidateDisplayMode: .sideBySide,
         )
@@ -330,14 +330,14 @@ final class TaigiAutocompleteServiceContinuousTests: XCTestCase {
         let suggestion = service.buildContinuousSuggestions(from: candidates)[0]
         let title = CandidateCellHelper.displayTitle(
             for: suggestion,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: true,
             orMapsToER: false,
             candidateDisplayMode: .sideBySide,
         )
         let subtitle = CandidateCellHelper.displaySubtitle(
             for: suggestion,
-            isTranslateSwapped: false,
+            isHanjiFirst: false,
             isTPSLayout: true,
             candidateDisplayMode: .sideBySide,
         )

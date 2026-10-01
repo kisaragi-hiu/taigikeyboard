@@ -56,7 +56,7 @@ enum Platform {
 // preprocessing (oo→o͘, nn→ⁿ) read by `phonetics::api::normalize_tone` on the
 // composing path.
 //
-// v3.5.5 added `is_translate_swapped` + `platform_id` for the NextWord
+// v3.5.5 added `is_hanji_first` + `platform_id` for the NextWord
 // engine (tag 6 `is_association_recording_enabled` retired 2026-09-25 —
 // association recording is always on since the toggle left every UI).
 // `platform_id` originally branched the compound-split separator and the
@@ -66,9 +66,9 @@ enum Platform {
 // v3.5.8 added `output_both_scripts`: the engine's Model B continuous
 // composing-buffer join (`composing::api::nailed_prefix` /
 // `combined_display`) inserts a word-boundary space between nailed
-// segments only when the rendered script is roman-ish. `is_translate_swapped`
+// segments only when the rendered script is roman-ish. `is_hanji_first`
 // alone cannot distinguish "hanji-first" (no space) from "both-scripts"
-// (`hit (彼)` — space wanted) since both set `is_translate_swapped = true`;
+// (`hit (彼)` — space wanted) since both set `is_hanji_first = true`;
 // the separator predicate needs this second flag (continuous-input-ranking
 // §10.2 segmented-spacing contract; Codex pre-impl 2026-05-18).
 // How a candidate cell renders the (Hanji, romanization) pair. Read by
@@ -79,7 +79,7 @@ enum Platform {
 // normalise through `AppConfig::is_roman_only_display`, never compare the raw
 // i32 at a call site. COMBINED (one label `Hanji romanization`, hanji
 // commits) has NO engine reader — a combined cell is still distinct by
-// (hanji, roman); the platforms send `is_translate_swapped = true` for it.
+// (hanji, roman); the platforms send `is_hanji_first = true` for it.
 enum CandidateDisplayMode {
   CANDIDATE_DISPLAY_MODE_UNSPECIFIED  = 0;
   CANDIDATE_DISPLAY_MODE_SIDE_BY_SIDE = 1;
@@ -92,7 +92,7 @@ enum CandidateDisplayMode {
 // duplicates that only the engine can collapse consistently for four
 // platforms. Set on the BASE config (every request) — composing AND nextword
 // read it; the other request families ignore it. Platforms keep sending the
-// derived `is_translate_swapped` (and, on mobile, `output_both_scripts`; the
+// derived `is_hanji_first` (and, on mobile, `output_both_scripts`; the
 // desktop sends only the swap) — both `false` under Romanization Only — so
 // spacing / recording semantics need no new reader.
 //
@@ -119,7 +119,7 @@ enum CandidateDisplayMode {
 // `TlNumericToTps` / `TlDisplayToTps` take as `or_maps_to_er`). Under
 // `"tps"` the engine composes with the TL tables and applies the TPS fold
 // itself (`AppConfig::renders_hanji_first` / `renders_hyphenless` in
-// `engine/protos/src/lib.rs`), so `is_translate_swapped` and
+// `engine/protos/src/lib.rs`), so `is_hanji_first` and
 // `hyphenless_roman` are the Candidate-Display-projected stored values
 // WITHOUT the TPS fold. A platform may still send the pre-R6 wire (`"tl"`
 // plus the TPS-folded swap / hyphenless) — composing renders both
@@ -136,7 +136,7 @@ message AppConfig {
   bool oo_doubletap_enabled = 3;
   bool nn_doubletap_enabled = 4;
   // Candidate-Display-projected Hanji-first swap, without the TPS fold.
-  bool is_translate_swapped = 5;
+  bool is_hanji_first = 5;
   Platform platform_id = 7;
   bool output_both_scripts = 8;
   CandidateDisplayMode candidate_display_mode = 9;

@@ -6,12 +6,12 @@ use protos::engine::{
     UserDataJournal, UserDataRequest,
 };
 
-/// An iOS TL request config; `swapped` is `is_translate_swapped`.
+/// An iOS TL request config; `swapped` is `is_hanji_first`.
 pub fn tl_config(swapped: bool) -> AppConfig {
     AppConfig {
         platform_id: Platform::Ios as i32,
         input_mode: "tl".to_owned(),
-        is_translate_swapped: swapped,
+        is_hanji_first: swapped,
         ..AppConfig::default()
     }
 }

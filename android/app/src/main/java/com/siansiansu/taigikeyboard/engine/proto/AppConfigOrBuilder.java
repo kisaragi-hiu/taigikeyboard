@@ -47,10 +47,10 @@ public interface AppConfigOrBuilder extends
    * Candidate-Display-projected Hanji-first swap, without the TPS fold.
    * </pre>
    *
-   * <code>bool is_translate_swapped = 5;</code>
-   * @return The isTranslateSwapped.
+   * <code>bool is_hanji_first = 5;</code>
+   * @return The isHanjiFirst.
    */
-  boolean getIsTranslateSwapped();
+  boolean getIsHanjiFirst();
 
   /**
    * <code>.taigi.engine.Platform platform_id = 7;</code>

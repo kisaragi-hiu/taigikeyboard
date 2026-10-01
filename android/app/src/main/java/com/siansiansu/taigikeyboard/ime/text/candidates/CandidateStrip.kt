@@ -79,7 +79,7 @@ fun TaigiCandidateStrip(
     // one line instead of reserving the 58/42 split. Subtitle presence never
     // depends on the TPS re-render of `roman`, so `word.roman` suffices here.
     val contentHasSubtitles =
-        remember(items, display.candidateDisplayMode, display.isTranslateSwapped, display.layoutType) {
+        remember(items, display.candidateDisplayMode, display.isHanjiFirst, display.layoutType) {
             items.any { word ->
                 val cell =
                     candidateCellText(
@@ -87,7 +87,7 @@ fun TaigiCandidateStrip(
                         displayRoman = word.roman,
                         isTPSLayout = display.layoutType == "tps",
                         candidateDisplayMode = display.candidateDisplayMode,
-                        isTranslateSwapped = display.isTranslateSwapped,
+                        isHanjiFirst = display.isHanjiFirst,
                         cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
                     )
                 cell.showsSubtitle
@@ -250,7 +250,7 @@ private fun CandidateCell(
             displayRoman = displayRoman,
             isTPSLayout = isTPSLayout,
             candidateDisplayMode = display.candidateDisplayMode,
-            isTranslateSwapped = display.isTranslateSwapped,
+            isHanjiFirst = display.isHanjiFirst,
             cellScript = word.additionalInfo[TaigiWord.MetadataKeys.CELL_SCRIPT],
         )
     val (titleText, subtitleText) = cell

@@ -27,7 +27,7 @@ class CandidateClickHandler(
     private val taigikeyboard: TaigiKeyboard,
     private val usage: UsageRecorder,
     private val getCurrentSuggestions: () -> List<TaigiWord>,
-    private val getIsTranslateSwapped: () -> Boolean,
+    private val getIsHanjiFirst: () -> Boolean,
     private val getOutputBothScripts: () -> Boolean,
     private val getComposingManager: () -> com.siansiansu.taigikeyboard.ime.text.composing.ComposingManager?,
     private val onClearCandidates: () -> Unit,
@@ -78,10 +78,10 @@ class CandidateClickHandler(
             val isEnglishSuggestion = selectedWord.id <= -100
             val isNextWordPrediction = selectedWord.id < 0 && !isEnglishSuggestion
 
-            val cachedIsTranslateSwapped = getIsTranslateSwapped()
+            val cachedIsHanjiFirst = getIsHanjiFirst()
             val cachedOutputBothScripts = getOutputBothScripts()
             val isTPSLayout = prefs.isTpsLayout
-            val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
+            val effectiveSwapped = isTPSLayout || cachedIsHanjiFirst
 
             val resolved =
                 if (isEnglishSuggestion) {
@@ -99,7 +99,7 @@ class CandidateClickHandler(
                 )
                 logger.d(
                     TAG,
-                    "[CLICK] isTranslateSwapped=$cachedIsTranslateSwapped, effectiveSwapped=$effectiveSwapped, outputBothScripts=$cachedOutputBothScripts",
+                    "[CLICK] isHanjiFirst=$cachedIsHanjiFirst, effectiveSwapped=$effectiveSwapped, outputBothScripts=$cachedOutputBothScripts",
                 )
                 logger.d(
                     TAG,
@@ -222,10 +222,10 @@ class CandidateClickHandler(
         }
 
         val isNextWordPred = word.id < 0
-        val cachedIsTranslateSwapped = getIsTranslateSwapped()
+        val cachedIsHanjiFirst = getIsHanjiFirst()
         val cachedOutputBothScripts = getOutputBothScripts()
         val isTPSLayout = prefs.isTpsLayout
-        val effectiveSwapped = isTPSLayout || cachedIsTranslateSwapped
+        val effectiveSwapped = isTPSLayout || cachedIsHanjiFirst
 
         val resolved = resolveTaigiCommit(word, isTPSLayout, effectiveSwapped, cachedOutputBothScripts)
         val textToCommit = resolved.text
