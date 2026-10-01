@@ -125,7 +125,7 @@ the way `windows-build.yml` is the Windows half:
   the expected paths are inside it, that the addon file is the one the
   `.conf` names, and the desktop entry (`desktop-file-validate`). Nothing
   reaches a draft; the build job can only read.
-- `scripts/stage-desktop.sh` (`make desktop-release`) dispatches it on `main`
+- `tools/release/stage-desktop.sh` (`make desktop-release`) dispatches it on `main`
   beside the Windows run, with the staged commit as `source_sha`, and waits;
   the `attach` job (the only one that can write) runs only with a
   `source_sha`, refuses any commit but that one, refuses a published release
@@ -151,7 +151,7 @@ works against the distribution that packages it. The input method checks for
 nothing, manually or automatically; the General pane shows the running version
 and a Download link to taigikeyboard.tw, the panel menu has no Check for Updates row, the
 `update*` settings keys stay unwritten and `taigi-desktop-update` is not linked
-(no TLS stack in the package). The announcement (`scripts/announce-release.sh`)
+(no TLS stack in the package). The announcement (`tools/release/announce-release.sh`)
 still writes `_data/linux_release.json`, `_data/linux_rpm_release.json` and
 `_data/linux_arch_release.json` (version, download URL, `sha256`, release page)
 in the same website commit as the other two — the landing page's Linux

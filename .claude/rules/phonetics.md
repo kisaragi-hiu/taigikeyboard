@@ -4,7 +4,7 @@ paths:
   - "engine/composing/**"
   - "engine/lexicon/**"
   - "engine/protos/**"
-  - "knowledge/taigi-phonetics-reference.md"
+  - "docs/phonetics/taigi-phonetics-reference.md"
   - "taigi-converter/**"
   - "dictionary/**"
   - "ios/Sources/TaigiKeyboard/Engine/RustEngineBridge+Phonetics.swift"

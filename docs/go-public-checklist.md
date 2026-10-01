@@ -360,7 +360,7 @@ None of this depends on the repository being public.
 Two gates therefore fire on their own — the workflow, which no clone can skip,
 and the local hook, which is opt-in per clone and skippable with `--no-verify`.
 
-All three go through `scripts/gitleaks-scan.sh`, which is what keeps their
+All three go through `tools/secret-scan/gitleaks-scan.sh`, which is what keeps their
 coverage rules and exit-code handling identical, and all three read
 `.gitleaks.toml` and `.gitleaksignore` from the repository root.
 When a finding is a false positive, add its fingerprint to `.gitleaksignore` with a

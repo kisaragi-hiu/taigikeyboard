@@ -2,7 +2,7 @@
 # `make e2e PLATFORM=linux-desktop`: drive every scenario inside the REAL
 # logged-in desktop session of each Linux dogfood VM (roadmap PR3c), with the
 # test-mode build swapped into the session's own framework and swapped back
-# afterwards (tools/e2e/linux/desktop.py). Usage: run.sh <run-dir> [scenario-id]
+# afterwards (e2e/drivers/linux/desktop.py). Usage: run.sh <run-dir> [scenario-id]
 #
 #   linux-gnome-ibus  UTM arm64 Ubuntu, GNOME Wayland + IBus   (this Mac)
 #   linux-kde-fcitx5  VirtualBox amd64 Ubuntu, KDE X11 + Fcitx5 (the `win` box)
@@ -28,7 +28,7 @@ start_vbox() { ssh -o ConnectTimeout=5 -o BatchMode=yes win "& $VBOXMANAGE start
 # drive <platform> <framework> <ssh command> <host> <start command>
 drive() {
     local platform=$1 framework=$2 ssh_cmd=$3 host=$4 start=$5
-    local driver_cmd=(python3 "$E2E_REPO_ROOT/tools/e2e/linux/desktop.py" --framework "$framework" --platform "$platform" --out "$RUN_DIR" ${ONLY:+--only "$ONLY"})
+    local driver_cmd=(python3 "$E2E_REPO_ROOT/e2e/drivers/linux/desktop.py" --framework "$framework" --platform "$platform" --out "$RUN_DIR" ${ONLY:+--only "$ONLY"})
     if ! e2e_reachable "$ssh_cmd" "$host"; then
         echo "$platform: $host unreachable, starting the VM"
         if $start; then
@@ -43,8 +43,8 @@ drive() {
     e2e_sync "$ssh_cmd" "$host"
     e2e_build "$ssh_cmd" "$host"
     # The driver restores in its own `finally`; this covers a killed ssh.
-    trap "$ssh_cmd $host python3 $E2E_REMOTE/src/tools/e2e/linux/desktop.py --restore || true" EXIT
-    $ssh_cmd "$host" "cd $E2E_REMOTE && python3 src/tools/e2e/linux/desktop.py --framework $framework --platform $platform \
+    trap "$ssh_cmd $host python3 $E2E_REMOTE/src/e2e/drivers/linux/desktop.py --restore || true" EXIT
+    $ssh_cmd "$host" "cd $E2E_REMOTE && python3 src/e2e/drivers/linux/desktop.py --framework $framework --platform $platform \
         --prefix \$HOME/$E2E_REMOTE/prefix --out \$HOME/$E2E_REMOTE/run ${ONLY:+--only $ONLY}"
     trap - EXIT
     rsync -a -e "$ssh_cmd" "$host:$E2E_REMOTE/run/" "$RUN_DIR/"

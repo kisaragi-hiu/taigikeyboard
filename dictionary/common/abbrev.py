@@ -13,7 +13,7 @@ def remove_diacritics(char: str) -> str:
 
 # TL and POJ initials, longest first so a prefix scan takes `tsh` before
 # `ts` before `t`, `chh` before `ch`, `ng` before `n`
-# (`knowledge/taigi-phonetics-reference.md` §2: TL `ts` / `tsh` ↔ POJ
+# (`docs/phonetics/taigi-phonetics-reference.md` §2: TL `ts` / `tsh` ↔ POJ
 # `ch` / `chh`, the rest shared). One table for both scripts: `ch` never
 # starts a TL syllable, and a traditional-POJ `ts…` spelling reads as the
 # same `ts` unit it would in TL, so the union changes no verdict. Mirror of

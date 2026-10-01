@@ -5,7 +5,7 @@ name: Linux e2e
 # (`make -C linux install E2E=1`) compiled against THAT distribution's
 # libraries and installed into a private prefix, every e2e/scenarios/*.json
 # typed through xdotool into a GTK entry via Fcitx5 and via IBus under Xvfb,
-# then tools/e2e/analyze.py. Each run directory (traces + report.md) is kept
+# then e2e/analyzer/analyze.py. Each run directory (traces + report.md) is kept
 # as the `linux-e2e-<distro>` artifact. The shipped packages are never traced
 # (PR3a); their own install check lives in linux-build.yml.
 #
@@ -46,7 +46,7 @@ jobs:
       # REST API, which is all the build needs.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Install build + e2e dependencies
-        run: bash tools/e2e/linux/ci-deps.sh ${{ matrix.distro }}
+        run: bash e2e/drivers/linux/ci-deps.sh ${{ matrix.distro }}
 
       - name: Install protoc ${{ env.PROTOC_VERSION }}
         run: |
@@ -77,21 +77,21 @@ jobs:
       - name: Drive every scenario (Fcitx5, then IBus)
         run: |
           set -euo pipefail
-          xvfb-run -a dbus-run-session -- python3 tools/e2e/linux/driver.py \
+          xvfb-run -a dbus-run-session -- python3 e2e/drivers/linux/driver.py \
             --framework fcitx5 --prefix "$RUNNER_TEMP/prefix" --out "$RUNNER_TEMP/run"
           # Fedora: ibus-daemon never lists the test engine (only the system
           # xkb engines) — root cause open, USER 2026-09-24 skip + its own
           # round. Recorded as `skipped` so the report still shows it.
           if [ "${{ matrix.distro }}" = fedora ]; then
-            python3 tools/e2e/linux/driver.py --framework ibus --out "$RUNNER_TEMP/run" \
+            python3 e2e/drivers/linux/driver.py --framework ibus --out "$RUNNER_TEMP/run" \
               --skip "Fedora: ibus-daemon does not list the test engine (open issue)"
           else
-            xvfb-run -a dbus-run-session -- python3 tools/e2e/linux/driver.py \
+            xvfb-run -a dbus-run-session -- python3 e2e/drivers/linux/driver.py \
               --framework ibus --prefix "$RUNNER_TEMP/prefix" --out "$RUNNER_TEMP/run"
           fi
 
       - name: Analyze
-        run: python3 tools/e2e/analyze.py --run "$RUNNER_TEMP/run"
+        run: python3 e2e/analyzer/analyze.py --run "$RUNNER_TEMP/run"
 
       - name: Report
         if: always()

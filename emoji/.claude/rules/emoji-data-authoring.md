@@ -32,7 +32,7 @@ Taiwanese romanization is **never invented**. This mirrors the parent repository
 Principle #3.
 
 - For `taigi_keywords`, prefer 漢字 (unambiguous) and only add 羅馬字 (canonical TL) you have
-  verified against `knowledge/taigi-phonetics-reference.md` and the root-level
+  verified against `docs/phonetics/taigi-phonetics-reference.md` and the root-level
   `taigi-converter` submodule.
 - Do NOT guess tone marks or spelling. Leave 羅馬字 out rather than ship a wrong reading.
 - A Taiwanese word's identity is the **(漢字, 羅馬字) pair** — same Hanji, different reading =

@@ -3,9 +3,9 @@
 # clone by `make hooks`, which sets core.hooksPath; a clone that never runs it
 # commits with no local gate, and `--no-verify` skips it. The credential scan also
 # runs in CI (.github/workflows/secrets.yml); the personal-identifier check cannot,
-# because its list is private (scripts/private-denylist-scan.sh).
+# because its list is private (tools/secret-scan/private-denylist-scan.sh).
 #
-# The credential scan is scripts/gitleaks-scan.sh, shared with `make scan-secrets`,
+# The credential scan is tools/secret-scan/gitleaks-scan.sh, shared with `make scan-secrets`,
 # so the entry points cannot drift apart.
 set -uo pipefail
 
@@ -15,7 +15,7 @@ status=0
 if ! command -v gitleaks >/dev/null 2>&1; then
   echo "pre-commit: gitleaks not installed — staged changes were NOT scanned for credentials." >&2
   echo "  brew install gitleaks" >&2
-elif ! "$REPOSITORY_DIR/scripts/gitleaks-scan.sh" --staged; then
+elif ! "$REPOSITORY_DIR/tools/secret-scan/gitleaks-scan.sh" --staged; then
   cat >&2 <<'MSG'
 
 pre-commit: if that was a finding, it is shown redacted above.
@@ -30,6 +30,6 @@ MSG
   status=1
 fi
 
-"$REPOSITORY_DIR/scripts/private-denylist-scan.sh" --staged || status=1
+"$REPOSITORY_DIR/tools/secret-scan/private-denylist-scan.sh" --staged || status=1
 
 exit "$status"

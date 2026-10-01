@@ -8,8 +8,8 @@
 # the org has not forked come from upstream.
 #
 # Usage:
-#   scripts/sync-references.sh              # sync everything
-#   scripts/sync-references.sh librime KeSi # sync only the named dirs
+#   tools/sync-references.sh              # sync everything
+#   tools/sync-references.sh librime KeSi # sync only the named dirs
 #
 # Per-repo behaviour:
 #   missing            -> clone (mozc: shallow; keyboardkit9.9.0, fcitx5: pinned tag)

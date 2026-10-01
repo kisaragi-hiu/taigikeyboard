@@ -128,6 +128,7 @@ One-off snapshots ordered chronologically. Specs cited by engine code (`v358-ref
 | `roadmap.md` | Forward-looking work items, released-versions index (mobile + desktop trains), closed phases | Active |
 | `CODE_SIGNING_POLICY.md` | Code-signing policy for released binaries (SignPath Foundation requirement) | Active |
 | `contributing/` | Per-platform style guides + cross-cutting rules (phonetics, i18n, cross-platform alignment, known pitfalls); index in `contributing/README.md` | Active |
+| `phonetics/` | Authoritative TL / POJ / TPS reference (`taigi-phonetics-reference.md`), TPS auto-correct rules + test checklist | Reference |
 
 ---
 

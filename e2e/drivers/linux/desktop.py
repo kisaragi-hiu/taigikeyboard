@@ -5,7 +5,7 @@ keeps a screenshot per step as evidence (never asserted on).
 
 Runs over ssh on the VM, as the logged-in user:
 
-  python3 tools/e2e/linux/desktop.py --framework ibus --platform linux-gnome-ibus \\
+  python3 e2e/drivers/linux/desktop.py --framework ibus --platform linux-gnome-ibus \\
       --prefix <prefix> --out <run-dir>
 
 The VM's own install and user data are never touched: the framework is

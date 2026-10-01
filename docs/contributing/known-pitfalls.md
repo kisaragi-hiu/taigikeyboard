@@ -24,9 +24,9 @@ Technical rules distilled from past incidents. The dated narratives that produce
 
 ## Phonetics
 
-- Never remove or infer a TL / POJ / TPS rule from dictionary or test absence (`docs/contributing/phonetics.md`). `iri` / `erk` / `eeh` are dialectal finals (`knowledge/taigi-phonetics-reference.md` §3.2.6). TPS has its own tone marks (`engine/phonetics/src/tps.rs::ZHUYIN_TONES`) — not digit tones, not bopomofo.
+- Never remove or infer a TL / POJ / TPS rule from dictionary or test absence (`docs/contributing/phonetics.md`). `iri` / `erk` / `eeh` are dialectal finals (`docs/phonetics/taigi-phonetics-reference.md` §3.2.6). TPS has its own tone marks (`engine/phonetics/src/tps.rs::ZHUYIN_TONES`) — not digit tones, not bopomofo.
 
 ## Privacy
 
-- No personal identifier in any tracked file, commit message, PR or issue: no email address, no account / project / server ID — write "a former work address", "the maintainer's author email". gitleaks' `personal-email` rule (`.gitleaks.toml`) and the maintainer's private denylist (`scripts/private-denylist-scan.sh`) gate commits; neither sees PR bodies or issues, so check those by hand.
+- No personal identifier in any tracked file, commit message, PR or issue: no email address, no account / project / server ID — write "a former work address", "the maintainer's author email". gitleaks' `personal-email` rule (`.gitleaks.toml`) and the maintainer's private denylist (`tools/secret-scan/private-denylist-scan.sh`) gate commits; neither sees PR bodies or issues, so check those by hand.
 - Tooling bound to a personal account (mailbox triage, chat-server triage, OAuth clients, runtime state) lives outside this repository, never under `.claude/`.

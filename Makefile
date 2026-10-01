@@ -129,10 +129,10 @@ ifndef E2E_RUN
 E2E_RUN := $(CURDIR)/e2e/runs/$(shell date +%Y%m%d-%H%M%S)
 endif
 e2e:
-	@test -n "$(PLATFORM)" && test -x tools/e2e/$(PLATFORM)/run.sh \
-	  || { echo "usage: make e2e PLATFORM=<platform with tools/e2e/<platform>/run.sh>" >&2; exit 1; }
-	tools/e2e/$(PLATFORM)/run.sh "$(E2E_RUN)" $(E2E_ONLY)
-	python3 tools/e2e/analyze.py --run "$(E2E_RUN)"
+	@test -n "$(PLATFORM)" && test -x e2e/drivers/$(PLATFORM)/run.sh \
+	  || { echo "usage: make e2e PLATFORM=<platform with e2e/drivers/<platform>/run.sh>" >&2; exit 1; }
+	e2e/drivers/$(PLATFORM)/run.sh "$(E2E_RUN)" $(E2E_ONLY)
+	python3 e2e/analyzer/analyze.py --run "$(E2E_RUN)"
 
 # Cut a macOS release: build, sign, notarize, and stage the package on this
 # version's DRAFT desktop release. The only entry point for one — `macos/Makefile`
@@ -173,21 +173,21 @@ linux-check:
 
 # Stage the THREE desktop installers on this version's draft release: the
 # package here, the Windows installer and the Linux .deb on GitHub-hosted
-# runners (scripts/stage-desktop.sh). The builds cannot share a machine, so
+# runners (tools/release/stage-desktop.sh). The builds cannot share a machine, so
 # this drives the others rather than pretending they are one build. All or
 # none: a draft holding installers from two commits is not something a tag
 # can describe (a patch is a smaller release, not a half: desktop-patch).
 # Nothing it does reaches a user — publishing the draft stays a person's, and
 # that publish announces the release itself.
 desktop-release:
-	bash scripts/stage-desktop.sh
+	bash tools/release/stage-desktop.sh
 
 # A patch release of ONE platform (PLATFORM=macos|windows|linux): its own
 # version, holding only that platform's installers; announcing it leaves the
 # other platforms on the version they have (docs/architecture/desktop-release.md).
 desktop-patch:
 	@test -n "$(PLATFORM)" || { echo "usage: make desktop-patch PLATFORM=macos|windows|linux" >&2; exit 2; }
-	bash scripts/stage-desktop.sh $(PLATFORM)
+	bash tools/release/stage-desktop.sh $(PLATFORM)
 
 # Announce a desktop release a person has already published: prove both
 # installers download anonymously, point the website at them, wait for the live
@@ -195,7 +195,7 @@ desktop-patch:
 # (`.github/workflows/announce-release.yml`); this target is the same script by
 # hand, for a re-run after a failed job or an expired token.
 desktop-announce:
-	bash scripts/announce-release.sh $(RELEASE_FLAGS)
+	bash tools/release/announce-release.sh $(RELEASE_FLAGS)
 
 # Cut a Windows release — on a Windows machine, from Git Bash: release
 # builds, signing, the Inno Setup installer, and staging it on the same draft
@@ -276,7 +276,7 @@ hooks:
 	@echo "✓ core.hooksPath = .githooks — staged changes are now scanned before every commit"
 	@command -v gitleaks >/dev/null 2>&1 || echo "⚠ gitleaks not installed; the hook will pass through until you run: brew install gitleaks"
 
-# Scan for credentials. Both targets are scripts/gitleaks-scan.sh, which is also
+# Scan for credentials. Both targets are tools/secret-scan/gitleaks-scan.sh, which is also
 # what CI runs — the coverage rules, the baseline checks and the exit-code
 # handling live there so the local gate and the CI gate cannot drift apart.
 #
@@ -287,17 +287,17 @@ hooks:
 # to write into .gitleaks-scanned — needed after a gitleaks upgrade, a
 # .gitleaks.toml or .gitleaksignore change, or a history rewrite.
 scan-secrets:
-	./scripts/gitleaks-scan.sh
+	./tools/secret-scan/gitleaks-scan.sh
 
 scan-secrets-full:
-	./scripts/gitleaks-scan.sh --full
+	./tools/secret-scan/gitleaks-scan.sh --full
 
 # Scan every tracked text file for the personal identifiers in the maintainer's
-# private denylist (see scripts/private-denylist-scan.sh; the pre-commit hook runs
+# private denylist (see tools/secret-scan/private-denylist-scan.sh; the pre-commit hook runs
 # the same list over staged additions). Binaries and untracked files are not read.
 # Without the list it checks nothing and passes.
 scan-private:
-	./scripts/private-denylist-scan.sh --tree
+	./tools/secret-scan/private-denylist-scan.sh --tree
 
 # Pull the latest remote-default-branch commit for the taigi-converter submodule
 # into the working tree. Submodules always record a pinned SHA, so review + commit

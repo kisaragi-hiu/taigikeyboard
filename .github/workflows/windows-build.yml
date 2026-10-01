@@ -12,9 +12,9 @@ name: Windows build
 # addition once a certificate exists.
 #
 # It does NOT publish. `windows/scripts/publish-release.sh` stages the installer
-# a release actually ships on, and `scripts/announce-release.sh` announces it.
+# a release actually ships on, and `tools/release/announce-release.sh` announces it.
 on:
-  # How a release stages the Windows installer: `scripts/stage-desktop.sh`
+  # How a release stages the Windows installer: `tools/release/stage-desktop.sh`
   # dispatches this after staging the macOS package, and the run attaches its
   # installer to the same draft. The maintainer's own box is not in the release
   # path — it is a development machine, with a dev install registered in its

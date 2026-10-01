@@ -11,11 +11,11 @@
 #
 # NOTHING HERE REACHES A USER. The release is a draft: no tag, no public
 # download. The maintainer downloads what was staged, tests it, publishes the
-# release by hand, and then `scripts/announce-release.sh` (`make
+# release by hand, and then `tools/release/announce-release.sh` (`make
 # desktop-announce`) tells the website and every installed copy.
 #
 # The release itself — one per desktop version, holding both platforms'
-# installers — is `scripts/lib/desktop-release.sh`. This script owns what only
+# installers — is `tools/release/lib/desktop-release.sh`. This script owns what only
 # macOS can say: that the package is notarized, is this app, and is this
 # version.
 #
@@ -26,8 +26,8 @@ set -euo pipefail
 
 # shellcheck source=lib/bundle-identity.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/bundle-identity.sh"
-# shellcheck source=../../scripts/lib/desktop-release.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/lib/desktop-release.sh"
+# shellcheck source=../../tools/release/lib/desktop-release.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../tools/release/lib/desktop-release.sh"
 
 pkg_path=""
 

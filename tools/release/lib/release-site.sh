@@ -5,7 +5,7 @@
 # caller must define `fail`.
 #
 # The website is not where the releases live — those are in this repository
-# (`scripts/lib/desktop-release.sh`). The two were one repository until
+# (`tools/release/lib/desktop-release.sh`). The two were one repository until
 # 2026-09-09, which is why each name says which it is: a single name for both
 # is how a change of release host silently starts writing `_data/` into the app
 # repository.

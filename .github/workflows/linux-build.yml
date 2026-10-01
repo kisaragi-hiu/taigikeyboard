@@ -10,7 +10,7 @@ name: Linux build
 # distribution containers — and keeps them as the workflow artifacts
 # `linux-deb` / `linux-rpm` / `linux-arch`.
 #
-# On a dispatch from `scripts/stage-desktop.sh` the run attaches the packages
+# On a dispatch from `tools/release/stage-desktop.sh` the run attaches the packages
 # to the `desktop-<version>` draft — the Linux half of a desktop release, the
 # way `windows-build.yml` is the Windows half (docs/architecture/linux-release.md).
 #
@@ -535,7 +535,7 @@ jobs:
               exit 1
           }
           cd target
-          # The names scripts/lib/desktop-release.sh looks for (LINUX_*_ASSET).
+          # The names tools/release/lib/desktop-release.sh looks for (LINUX_*_ASSET).
           for package in "taigikeyboard_${version}_amd64.deb" \
                          "taigikeyboard-${version}-1.x86_64.rpm" \
                          "taigikeyboard-${version}-1-x86_64.pkg.tar.zst"; do

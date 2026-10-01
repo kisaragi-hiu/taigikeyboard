@@ -55,8 +55,8 @@ One entry per incident: what went wrong, the USER's words where they set the rul
 
 ### Authoritative-source-only (AGENTS.md Core Principle #3)
 
-- **2026-04-26 `iri/erk/eeh`** — proposed removing finals absent from the dictionary. USER: "iri/erk/eeh are meaningful; they are special finals". They are dialectal finals per `knowledge/taigi-phonetics-reference.md` §3.2.6.
-- **2026-05-20 TPS schema** — proposed `tps_num = digit-tone` and a "bopomofo" option. USER: "TPS has its own tone notation; it is not typed with digits" / "TPS is not bopomofo". Answer was in `knowledge/taigi-phonetics-reference.md` §5 + `engine/phonetics/src/tps.rs::ZHUYIN_TONES`.
+- **2026-04-26 `iri/erk/eeh`** — proposed removing finals absent from the dictionary. USER: "iri/erk/eeh are meaningful; they are special finals". They are dialectal finals per `docs/phonetics/taigi-phonetics-reference.md` §3.2.6.
+- **2026-05-20 TPS schema** — proposed `tps_num = digit-tone` and a "bopomofo" option. USER: "TPS has its own tone notation; it is not typed with digits" / "TPS is not bopomofo". Answer was in `docs/phonetics/taigi-phonetics-reference.md` §5 + `engine/phonetics/src/tps.rs::ZHUYIN_TONES`.
 
 ## Privacy (`docs/contributing/known-pitfalls.md` § Privacy)
 

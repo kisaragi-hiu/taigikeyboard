@@ -18,12 +18,12 @@ make e2e PLATFORM=linux E2E_RUN=e2e/runs/<name>           # named run dir (defau
 | Platform | Where it runs | Status |
 |---|---|---|
 | `linux` | the macOS UTM guest (`TAIGI_E2E_LINUX_HOST`, default `binhian@192.168.64.2`): test-mode build into `~/taigi-e2e/prefix`, never the VM's own install. CI twin: `.github/workflows/linux-e2e.yml` | available |
-| `linux-desktop` | the REAL logged-in session of both dogfood VMs — UTM GNOME Wayland + IBus (`linux-gnome-ibus`) and the `win` box's VirtualBox KDE X11 + Fcitx5 (`linux-kde-fcitx5`). The session's own framework is pointed at the test build and restored afterwards (`tools/e2e/linux/desktop.py --restore` undoes an interrupted run); keys from a uinput keyboard; `shot-<step>.png` per step in each scenario dir — evidence, never asserted. Powered-off VM → started; unreachable / locked → `skipped` | available |
+| `linux-desktop` | the REAL logged-in session of both dogfood VMs — UTM GNOME Wayland + IBus (`linux-gnome-ibus`) and the `win` box's VirtualBox KDE X11 + Fcitx5 (`linux-kde-fcitx5`). The session's own framework is pointed at the test build and restored afterwards (`e2e/drivers/linux/desktop.py --restore` undoes an interrupted run); keys from a uinput keyboard; `shot-<step>.png` per step in each scenario dir — evidence, never asserted. Powered-off VM → started; unreachable / locked → `skipped` | available |
 | macOS / Windows / Android / iOS | no driver — tested by hand (`e2e-testing-roadmap.md` § PRs) | not planned |
 
 The Linux VM is unreachable → every scenario is `skipped` with the reason (not a failure). The first run compiles the release engine inside the VM (slow); later runs are incremental. One scenario only: `make e2e PLATFORM=linux E2E_ONLY=<scenario-id>`.
 
-To compare against an earlier run: `python3 tools/e2e/analyze.py --run <new> --baseline <old>/report.json`.
+To compare against an earlier run: `python3 e2e/analyzer/analyze.py --run <new> --baseline <old>/report.json`.
 
 ## 2. Read the report
 
@@ -39,8 +39,8 @@ Open `<run>/report.md`. Order of attention:
 
 - A failure is an **observed failure**: report the scenario, the trace excerpt and the first divergent event to the USER. A bugfix round needs root cause + USER approval first (`AGENTS.md` Core Principle #4).
 - Rule out the harness before blaming the IME: a `trace` finding, a timeout on the first key (lexicon load), or a window-focus error point at the driver.
-- Never edit a scenario's expectation to match what the run produced. Expectations come from the `source` the scenario names (USER-quoted dogfood items, `knowledge/`).
+- Never edit a scenario's expectation to match what the run produced. Expectations come from the `source` the scenario names (USER-quoted dogfood items, `docs/phonetics/`).
 
 ## 4. Add a scenario
 
-`e2e/scenarios/<id>.json` — `id` = file name, a `source`, intent-level `settings`, `steps` (`text` / `key` with neutral names `enter` `space` `backspace` `escape` `0`–`9` / `pick` by `tl` [+ `hanji`]), `expect` (`committed`, `first_hanji_candidate` `{tl[, hanji]}` — name a hanji only when the source does). Take sentences from `corpus/README.md` (the `/dogfood` skill greps it). `python3 -m unittest analyze_test` in `tools/e2e/` validates every scenario file.
+`e2e/scenarios/<id>.json` — `id` = file name, a `source`, intent-level `settings`, `steps` (`text` / `key` with neutral names `enter` `space` `backspace` `escape` `0`–`9` / `pick` by `tl` [+ `hanji`]), `expect` (`committed`, `first_hanji_candidate` `{tl[, hanji]}` — name a hanji only when the source does). Take sentences from `corpus/README.md` (the `/dogfood` skill greps it). `python3 -m unittest analyze_test` in `e2e/analyzer/` validates every scenario file.

@@ -50,7 +50,7 @@ jobs:
           GH_TOKEN: ${{ secrets.SITE_CONTENTS_TOKEN }}
         run: |
           if [ -n "${{ inputs.version }}" ]; then
-            bash scripts/announce-release.sh --version "${{ inputs.version }}"
+            bash tools/release/announce-release.sh --version "${{ inputs.version }}"
           else
-            bash scripts/announce-release.sh
+            bash tools/release/announce-release.sh
           fi

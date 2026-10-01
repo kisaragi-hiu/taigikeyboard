@@ -15,11 +15,11 @@
 # That release is a DRAFT until a person publishes it. A draft has no public
 # asset URL and no git tag, so nothing here reaches a user: the maintainer
 # downloads the artifacts from the draft, tests them, and publishes by hand.
-# `scripts/announce-release.sh` is the other half — it runs after that manual
+# `tools/release/announce-release.sh` is the other half — it runs after that manual
 # publish and is what tells the website and every installed copy.
 RELEASE_REPOSITORY="taigikeyboard/taigikeyboard"
 # The platform identity libraries set SHORT_VERSION from their own project file;
-# `scripts/announce-release.sh` has no platform library, and PlistBuddy does not
+# `tools/release/announce-release.sh` has no platform library, and PlistBuddy does not
 # exist on the Windows box, so the fallback reads `windows/Cargo.toml` — the
 # other file `make version-desktop` writes, held equal to the plist by
 # `release_notes.py check-versions --train desktop`.
@@ -133,7 +133,7 @@ _read_release_notes() {
 # Nothing here is public: a draft is visible only to people who can write this
 # repository, and it has no `releases/download/<tag>/<name>` URL for anyone to
 # find. The read-back is therefore authenticated — the anonymous proof is
-# `scripts/announce-release.sh`'s job, after the draft is published.
+# `tools/release/announce-release.sh`'s job, after the draft is published.
 #
 # Alongside the installer goes `<installer>.sha256`, the digest of what was
 # staged: on Windows, where releases are unsigned, it is what a user can check a

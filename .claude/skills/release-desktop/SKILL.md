@@ -247,7 +247,7 @@ cannot tell whether a sentence describes the behavior that shipped.
 make desktop-release
 ```
 
-`scripts/stage-desktop.sh` runs `make macos-release` here — build, sign,
+`tools/release/stage-desktop.sh` runs `make macos-release` here — build, sign,
 notarize, package, put the `.pkg` and its `.sha256` on the **draft**
 `desktop-<target>` — then dispatches `.github/workflows/windows-build.yml` and
 `.github/workflows/linux-build.yml` (with the staged commit as `source_sha`)

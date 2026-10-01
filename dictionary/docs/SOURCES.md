@@ -120,7 +120,7 @@ current-at-release values when cutting a dictionary refresh.
   Han-Lo sources write in romanization (`kap`, `tī`, `hō͘`, …), so they do not
   break the bigram chain. 47 rows, hand-curated 2026-09-28: each hanji is the
   form the 教典 example sentences use for that reading (checked against
-  `knowledge/taigi-phonetics-reference.md` and `output/dictionary.csv`; where
+  `docs/phonetics/taigi-phonetics-reference.md` and `output/dictionary.csv`; where
   the dictionary lists several accepted spellings — 𪜶/怹, 共/給, 閣/擱, 欲/卜,
   咧/塊, 毋/呣, 袂/𣍐, 這/即, 你/汝, 蹛/滯 — the 教典 examples use only the
   first). `ê` is deliberately absent (的 or 个 by context). Loaded by

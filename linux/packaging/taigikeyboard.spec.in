@@ -7,7 +7,7 @@
 Name:           taigikeyboard
 Version:        @VERSION@
 # No %{?dist}: the asset name the release scripts look for is fixed
-# (`scripts/lib/desktop-release.sh` LINUX_RPM_ASSET).
+# (`tools/release/lib/desktop-release.sh` LINUX_RPM_ASSET).
 Release:        1
 Summary:        Taiwanese (Tâi-gí) input method — Fcitx5 addon and IBus engine
 # The dictionary data keeps per-source terms (dictionary/LICENSE).

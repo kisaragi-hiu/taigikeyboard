@@ -265,7 +265,7 @@ pub fn strip_tone_mark(text: &str) -> (String, String) {
 /// (`rewrite_token`), or for the FST inventory build. Do NOT use for
 /// already-canonical TL **literal** user input: the spelling rules rewrite
 /// valid TL — e.g. they collapse the TL special nasal final `eng` [ɛŋ]
-/// (`knowledge/taigi-phonetics-reference.md` §3.2.6) into `ing` [iŋ], so a
+/// (`docs/phonetics/taigi-phonetics-reference.md` §3.2.6) into `ing` [iŋ], so a
 /// user typing `téng` would see `tíng`. The TL-literal search shadow uses
 /// [`TL_ENCODING_RULES`] (encoding only); the literal composing **display**
 /// places the tone mark directly on the typed letters via
@@ -341,7 +341,7 @@ pub const TL_ENCODING_RULES: &[(&str, &str)] =
 /// final into a different valid TL final — `eng→ing` and `ek→ik`. Every other
 /// rule (`ch→ts`, `oa→ua`, `oe→ue`, the glyph/encoding folds) maps a POJ-only
 /// or non-TL spelling onto TL, so it is unambiguous and safe; only `eng`[ɛŋ] /
-/// `ek` collide with a real TL special final (`knowledge/taigi-phonetics-reference.md`
+/// `ek` collide with a real TL special final (`docs/phonetics/taigi-phonetics-reference.md`
 /// §3.2.6) and must be preserved when canonicalizing TL-mode input.
 ///
 /// Used by `api::canonical_tl_form` for `InputMode::Tl`: it must still fold a
@@ -479,7 +479,7 @@ pub fn is_valid_syllable(token: &str) -> bool {
 
 /// Canonical spelling of the nasal final /ɔ̃/ (TL `onn`, POJ `oⁿ`) and the
 /// alternate rendering some writers use for it — POJ `o͘ⁿ`, which reaches the
-/// engine as ASCII `oonn`. `knowledge/taigi-phonetics-reference.md:118` and
+/// engine as ASCII `oonn`. `docs/phonetics/taigi-phonetics-reference.md:118` and
 /// `:304`, plus `taigi-converter/src/tables.js` `POJ_FINAL_SUBS`, fix
 /// `onn`/`oⁿ` as canonical, so `oonn` is an INPUT spelling only and never
 /// appears in a dictionary column.

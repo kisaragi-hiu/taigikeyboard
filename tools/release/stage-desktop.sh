@@ -36,7 +36,7 @@ fail() {
     exit 1
 }
 
-REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 case "$#:${1:-}" in
     0:) PLATFORMS=(macos windows linux) ;;
@@ -66,7 +66,7 @@ git -C "$REPOSITORY_DIR" merge-base --is-ancestor "$SOURCE_COMMIT" FETCH_HEAD ||
 # inherited environment variable.
 SHORT_VERSION=""
 # shellcheck source=lib/desktop-release.sh
-source "$REPOSITORY_DIR/scripts/lib/desktop-release.sh"
+source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
 
 echo "==> Staging $DESKTOP_TAG (${PLATFORMS[*]}) from ${SOURCE_COMMIT:0:7}"
 

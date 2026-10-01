@@ -54,7 +54,7 @@ pub(crate) fn derive_notone(roman: &str) -> String {
 ///
 /// One **leading spelling unit** per syllable: the longest prefix of the
 /// lowercased, diacritic-stripped syllable that is a TL or POJ initial
-/// ([`ABBREV_INITIALS`] — `knowledge/taigi-phonetics-reference.md` §2, so
+/// ([`ABBREV_INITIALS`] — `docs/phonetics/taigi-phonetics-reference.md` §2, so
 /// `ph` / `th` / `kh` / `tsh` / `chh` / `ng` stay whole), or the first
 /// letter when no initial matches (a zero-initial syllable, `âng` → `a`).
 /// This is what TPS has always done with its one-glyph initials (披頭巾
@@ -86,7 +86,7 @@ const SYLLABLE_DELIMITERS: [char; 7] = [' ', '\t', '\n', '\u{0B}', '\u{0C}', '\r
 
 /// TL and POJ initials, longest first so a prefix scan takes `tsh` before
 /// `ts` before `t`, `chh` before `ch`, `ng` before `n`
-/// (`knowledge/taigi-phonetics-reference.md` §2: TL `ts` / `tsh` ↔ POJ
+/// (`docs/phonetics/taigi-phonetics-reference.md` §2: TL `ts` / `tsh` ↔ POJ
 /// `ch` / `chh`, the rest shared). One table for both scripts: `ch` never
 /// starts a TL syllable, and a traditional-POJ `ts…` spelling reads as the
 /// same `ts` unit it would in TL, so the union changes no verdict.

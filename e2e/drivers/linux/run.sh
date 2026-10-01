@@ -19,7 +19,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/remote.sh"
 mkdir -p "$RUN_DIR"
 if ! e2e_reachable ssh "$HOST"; then
     for framework in "${FRAMEWORKS[@]}"; do
-        python3 "$E2E_REPO_ROOT/tools/e2e/linux/driver.py" --framework "$framework" \
+        python3 "$E2E_REPO_ROOT/e2e/drivers/linux/driver.py" --framework "$framework" \
             --out "$RUN_DIR" --skip "Linux VM $HOST unreachable"
     done
     exit 0
@@ -35,7 +35,7 @@ only="\$1"; shift
 [ "\$only" = - ] && only=
 cd "\$HOME/$E2E_REMOTE"
 for framework in "\$@"; do
-    xvfb-run -a dbus-run-session -- python3 src/tools/e2e/linux/driver.py \
+    xvfb-run -a dbus-run-session -- python3 src/e2e/drivers/linux/driver.py \
         --framework "\$framework" --prefix "\$HOME/$E2E_REMOTE/prefix" --out "\$HOME/$E2E_REMOTE/run" \
         \${only:+--only "\$only"}
 done

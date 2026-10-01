@@ -1,4 +1,4 @@
-# Sourced by tools/e2e/linux*/run.sh: put this tree on a Linux VM and build
+# Sourced by e2e/drivers/linux*/run.sh: put this tree on a Linux VM and build
 # the test-mode IME there into ~/$E2E_REMOTE/prefix (the VM's own install is
 # never touched). Each function takes the ssh command (one word-split string,
 # e.g. "ssh -J win -p 2222") and the host.
