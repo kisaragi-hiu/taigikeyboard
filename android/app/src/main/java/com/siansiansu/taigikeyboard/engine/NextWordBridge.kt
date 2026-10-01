@@ -125,7 +125,7 @@ fun RustEngineBridge.nextwordResetAll(
 /**
  * Platform → engine UI visibility sync. Call after rendering an async
  * predict() result (or clearing it on empty result) so the engine's
- * `state.is_showing` stays accurate. Downstream
+ * `state.predictions_visible` stays accurate. Downstream
  * `nextwordClearForNewComposing` / sentence-end / context timeout /
  * `nextwordResetAll` paths gate `ClearPredictionsUI` emission on it.
  * No effects, no `current_generation` bump.

@@ -25,7 +25,7 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | **Suggestion** | A candidate word (text + title + subtitle + metadata) | iOS `Autocomplete.Suggestion` / Android `CandidateAdapter` |
 | **InputType** | Retired 2026-09-30 with the `Search` op: the proto enum, `SearchRequest` and the in-process `SearchInputType` are gone; romanization queries go through `lexicon::search::search`, hanji queries through `search_by_hanzi` | `engine/lexicon/src/search.rs` |
 | **composingTextSuggestion** | Position 0 candidate — always the current composing text | iOS `createComposingTextSuggestion()` |
-| **phraseSuggestion** | Learned phrase candidates inserted at position 1 | Rust `lexicon::assoc_lookup` |
+| **phraseSuggestion** | Learned phrase candidates inserted at position 1 | Rust `lexicon::lookup_associations` |
 | **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `phonetics::KeyFamily::search_key` (`hanzi:` = `phonetics::HANJI_KEY_PREFIX`) |
 
 ### 3. Tone Engine (`engine/tone.md`)
@@ -64,7 +64,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
-| **bigram** | Word-level prediction from association.bin (lookup by previous word) | Rust `lexicon::assoc_lookup` |
+| **bigram** | Word-level prediction from association.bin (lookup by previous word) | Rust `lexicon::lookup_associations` |
 | **userAssociation** | User-learned word associations (`user_association.db`, engine-owned; read by `PredictNext`, written from `nextword::Handled.associations`) | Rust `userdata::UserAssociationStore` |
 | **lastSelectedWord** | Context trigger for next-word prediction | Rust `nextword::PersistedState.last_selected_word` |
 | **decayScoring** | RIME-style decay + dict/user weighting | Rust `nextword::scorer` |

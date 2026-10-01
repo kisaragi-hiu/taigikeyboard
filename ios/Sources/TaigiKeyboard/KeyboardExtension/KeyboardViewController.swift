@@ -241,7 +241,7 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
         // ranking.md` §10.6 external-region-clear = hard abort).
         manager.bumpGeneration()
         // Mirror the composing-slice IME-session bump for the NextWord
-        // engine handle so cross-field state (lastSelectedWord / is_showing /
+        // engine handle so cross-field state (lastSelectedWord / predictions_visible /
         // current_generation) drops on real input-context changes — Codex
         // post-impl P2-2. Android does the equivalent in
         // `NextWordController.resetContext()` invoked from `onStartInputView`.

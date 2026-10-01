@@ -17,7 +17,7 @@ pub use crate::dictionary_filters::{association_bitmask, dictionary_filter_bitma
 use crate::error::LexiconError;
 use crate::handle::EngineHandle;
 use crate::paths::LexiconPaths;
-use crate::search::{self, AssociationHit, LexiconRowOut, SearchParams};
+use crate::search::{self, AssociationHit, SearchParams, SearchRow};
 
 // Validates paths, opens FST/TKDB/TKWA (+ optional syllables.fst), atomically swaps the handle.
 pub fn install(req: InstallRequest) -> Result<InstallResponse, LexiconError> {
@@ -56,7 +56,7 @@ pub fn search_with_sources(
             .ok_or_else(|| LexiconError::Internal("dictionary reader unavailable".into()))?;
         let rows = search::search(&params, prefix_index, dict)?;
         Ok(SearchWithSourcesResponse {
-            rows: rows.into_iter().map(row_out_to_taigi_word).collect(),
+            rows: rows.into_iter().map(search_row_to_taigi_word).collect(),
         })
     })
 }
@@ -80,7 +80,7 @@ pub fn search_by_hanji(req: SearchByHanjiRequest) -> Result<SearchByHanjiRespons
             dict,
         )?;
         Ok(SearchByHanjiResponse {
-            rows: rows.into_iter().map(row_out_to_taigi_word).collect(),
+            rows: rows.into_iter().map(search_row_to_taigi_word).collect(),
         })
     })
 }
@@ -88,23 +88,23 @@ pub fn search_by_hanji(req: SearchByHanjiRequest) -> Result<SearchByHanjiRespons
 // NextWord bigram lookup for the committed word (word key, character-key backoff), source-filtered.
 // Not a wire method: only engine/dispatch calls it (nextword `PredictNext`, the fetch context).
 // `previous_tl` empty → character key only; `enabled_sources_bitmask` `u32::MAX` → no filter.
-pub fn assoc_lookup(
+pub fn lookup_associations(
     previous_word: &str,
     previous_tl: &str,
     limit: u32,
     enabled_sources_bitmask: u32,
 ) -> Result<Vec<AssociationHit>, LexiconError> {
     EngineHandle::with_state(|state| {
-        let assoc = state
+        let reader = state
             .association
             .as_ref()
             .ok_or_else(|| LexiconError::Internal("association reader unavailable".into()))?;
-        search::assoc_lookup(
+        search::lookup_associations(
             previous_word,
             previous_tl,
             limit,
             enabled_sources_bitmask,
-            assoc,
+            reader,
         )
     })
 }
@@ -134,7 +134,7 @@ fn proto_key_family(value: i32) -> KeyFamily {
     }
 }
 
-fn row_out_to_taigi_word(row: LexiconRowOut) -> TaigiWord {
+fn search_row_to_taigi_word(row: SearchRow) -> TaigiWord {
     TaigiWord {
         id: row.id,
         roman: row.roman,

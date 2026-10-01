@@ -133,7 +133,7 @@ fn encode_kautian_subcoll_wire(t: &DictionarySourceToggles) -> u32 {
 
 /// Association-bin filter bitmask: bits 0-8 mask of toggled sources.
 /// Returns the `u32::MAX` sentinel when ALL 9 association sources are on,
-/// the shortcut `api::assoc_lookup` reads as "no filter".
+/// the shortcut `api::lookup_associations` reads as "no filter".
 pub fn association_bitmask(t: &DictionarySourceToggles) -> u32 {
     if all_association_sources_enabled(t) {
         return ASSOC_ALL_ENABLED_SENTINEL;

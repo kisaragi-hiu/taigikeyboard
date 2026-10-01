@@ -120,9 +120,9 @@ fn install_fixture_tps() {
     let rows = fixture_rows();
     let dict_path = write_temp("dictionary-tps.bin", &build_tkdb_v3(&rows));
     let fst_path = build_dictionary_fst_tps(&rows);
-    let assoc_path = write_temp("association-tps.bin", &empty_association_bin());
+    let association_path = write_temp("association-tps.bin", &empty_association_bin());
     let syllables_path = build_syllables_fst_tps(&rows);
-    install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
+    install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
 /// Drive `raw` through `Start → EnterContinuous → FetchAtPos` in TPS mode

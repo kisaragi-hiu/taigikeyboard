@@ -156,7 +156,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
     // MARK: - SetPredictionsVisible → ClearForNewComposing gate
 
     func testSetPredictionsVisible_thenClearForNewComposing_emitsClearUIEffect() {
-        // Pre-fix: bridge had no setter for state.is_showing, so the gate
+        // Pre-fix: bridge had no setter for state.predictions_visible, so the gate
         // never tripped after swap. Guards the v3.5.5 bridge gap fix.
         _ = RustEngineBridge.nextwordSetPredictionsVisible(
             true,
@@ -171,7 +171,7 @@ final class RustEngineBridgeNextWordTests: XCTestCase {
                 sawClear = true
             }
         }
-        XCTAssertTrue(sawClear, "ClearForNewComposing must emit clearPredictionsUI when is_showing=true")
+        XCTAssertTrue(sawClear, "ClearForNewComposing must emit clearPredictionsUI when predictions_visible=true")
     }
 
     func testSetPredictionsVisible_doesNotBumpGeneration() {

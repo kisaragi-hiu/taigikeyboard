@@ -274,7 +274,7 @@ fn tps_er_or_dual_emit_both_glyphs_hit_same_rowid() {
 
 // --- INVARIANT_LEX_ASSOC_BITMASK_FILTER --------------------------------
 
-/// Regression for v3.5.6 fix r3173013233 — `api::assoc_lookup` previously
+/// Regression for v3.5.6 fix r3173013233 — `api::lookup_associations` previously
 /// hardcoded `u32::MAX` instead of plumbing `req.enabled_sources_bitmask`,
 /// which silently disabled the source-toggle filter for bundled bigram
 /// next-word entries. Pin both ends: mask `0` returns nothing, mask
@@ -282,20 +282,22 @@ fn tps_er_or_dual_emit_both_glyphs_hit_same_rowid() {
 /// returns the entry, mask missing the entry's source returns nothing.
 #[test]
 fn invariant_lex_assoc_bitmask_filter_honored() {
-    let assoc_bytes = build_tkwa(2, &[("好", &[(0x0001, 100, "伊", "i1")])]);
-    let assoc_path = write_temp("assoc-bitmask-filter.bin", &assoc_bytes);
-    let reader = AssociationReader::open(&assoc_path).expect("synth assoc opens");
+    let association_bytes = build_tkwa(2, &[("好", &[(0x0001, 100, "伊", "i1")])]);
+    let association_path = write_temp("assoc-bitmask-filter.bin", &association_bytes);
+    let reader = AssociationReader::open(&association_path).expect("synth assoc opens");
 
-    let all = search::assoc_lookup("好", "", 10, u32::MAX, &reader).expect("u32::MAX");
+    let all = search::lookup_associations("好", "", 10, u32::MAX, &reader).expect("u32::MAX");
     assert_eq!(all.len(), 1, "u32::MAX must return the entry");
 
-    let none = search::assoc_lookup("好", "", 10, 0, &reader).expect("mask 0");
+    let none = search::lookup_associations("好", "", 10, 0, &reader).expect("mask 0");
     assert!(none.is_empty(), "mask 0 must filter everything");
 
-    let matching = search::assoc_lookup("好", "", 10, 0x0001, &reader).expect("mask matches bit 0");
+    let matching =
+        search::lookup_associations("好", "", 10, 0x0001, &reader).expect("mask matches bit 0");
     assert_eq!(matching.len(), 1, "matching mask returns entry");
 
-    let mismatching = search::assoc_lookup("好", "", 10, 0x0002, &reader).expect("mask bit 1 only");
+    let mismatching =
+        search::lookup_associations("好", "", 10, 0x0002, &reader).expect("mask bit 1 only");
     assert!(mismatching.is_empty(), "non-matching mask filters entry");
 }
 
@@ -303,18 +305,19 @@ fn invariant_lex_assoc_bitmask_filter_honored() {
 /// disabled, `limit = 1` still returns the next enabled entry instead of
 /// nothing (a word key must not look empty when only its head is filtered).
 #[test]
-fn assoc_lookup_filters_before_limit() {
-    let assoc_bytes = build_tkwa(
+fn lookup_associations_filters_before_limit() {
+    let association_bytes = build_tkwa(
         2,
         &[(
             "好",
             &[(0x0001, 100, "伊", "i1"), (0x0002, 50, "食", "tsiah8")],
         )],
     );
-    let assoc_path = write_temp("assoc-filter-before-limit.bin", &assoc_bytes);
-    let reader = AssociationReader::open(&assoc_path).expect("synth assoc opens");
+    let association_path = write_temp("assoc-filter-before-limit.bin", &association_bytes);
+    let reader = AssociationReader::open(&association_path).expect("synth assoc opens");
 
-    let enabled_second = search::assoc_lookup("好", "", 1, 0x0002, &reader).expect("mask bit 1");
+    let enabled_second =
+        search::lookup_associations("好", "", 1, 0x0002, &reader).expect("mask bit 1");
     let words: Vec<&str> = enabled_second
         .iter()
         .map(|e| e.candidate_word.as_str())
@@ -344,12 +347,12 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
     let fst_path = write_synthetic_fst("api-bitmask.fst", &[("tl:test", 1), ("hanzi:好", 1)]);
     let dict_bytes = synth_dictionary_bin(b"TKDB", &[(0x0001u16, 100, "好", "ho2")]);
     let dict_path = write_temp("api-bitmask-dict.bin", &dict_bytes);
-    let assoc_path = write_temp("api-bitmask-assoc.bin", &synth_association_bin());
+    let association_path = write_temp("api-bitmask-assoc.bin", &synth_association_bin());
 
     let paths = LexiconPaths::validated(
         fst_path.to_str().unwrap(),
         dict_path.to_str().unwrap(),
-        assoc_path.to_str().unwrap(),
+        association_path.to_str().unwrap(),
         "",
         1,
     )
@@ -423,11 +426,11 @@ fn invariant_lex_install_search_serialization_no_panic() {
     let _engine_lock = engine_install_lock();
 
     // Build minimal install fixture once.
-    let (fst_path, dict_path, assoc_path) = build_minimal_install_fixture("serialize");
+    let (fst_path, dict_path, association_path) = build_minimal_install_fixture("serialize");
     let paths = LexiconPaths::validated(
         fst_path.to_str().unwrap(),
         dict_path.to_str().unwrap(),
-        assoc_path.to_str().unwrap(),
+        association_path.to_str().unwrap(),
         "",
         1,
     )
@@ -503,9 +506,9 @@ fn build_minimal_install_fixture(prefix: &str) -> (PathBuf, PathBuf, PathBuf) {
     let fst_path = write_synthetic_fst(&format!("{prefix}.fst"), &[("tl:test", 1)]);
     let dict_bytes = synth_dictionary_bin(b"TKDB", &[(0, 1, "好", "ho2")]);
     let dict_path = write_temp(&format!("{prefix}-dict.bin"), &dict_bytes);
-    let assoc_bytes = synth_association_bin();
-    let assoc_path = write_temp(&format!("{prefix}-assoc.bin"), &assoc_bytes);
-    (fst_path, dict_path, assoc_path)
+    let association_bytes = synth_association_bin();
+    let association_path = write_temp(&format!("{prefix}-assoc.bin"), &association_bytes);
+    (fst_path, dict_path, association_path)
 }
 
 fn synth_association_bin() -> Vec<u8> {
@@ -522,11 +525,12 @@ fn synth_association_bin() -> Vec<u8> {
 #[test]
 fn with_state_admits_a_second_reader_while_one_is_held() {
     let _guard = engine_install_lock();
-    let (fst_path, dict_path, assoc_path) = build_minimal_install_fixture("concurrent-readers");
+    let (fst_path, dict_path, association_path) =
+        build_minimal_install_fixture("concurrent-readers");
     let paths = LexiconPaths::validated(
         fst_path.to_str().unwrap(),
         dict_path.to_str().unwrap(),
-        assoc_path.to_str().unwrap(),
+        association_path.to_str().unwrap(),
         "",
         1,
     )

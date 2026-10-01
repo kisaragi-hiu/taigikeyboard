@@ -32,7 +32,7 @@ pub(crate) fn bundled_continuations(
     limit: usize,
     enabled_sources_bitmask: u32,
 ) -> Vec<AssociationHit> {
-    let lookup = lexicon::api::assoc_lookup(
+    let lookup = lexicon::api::lookup_associations(
         previous_word,
         previous_tl,
         u32::try_from(limit).unwrap_or(u32::MAX),

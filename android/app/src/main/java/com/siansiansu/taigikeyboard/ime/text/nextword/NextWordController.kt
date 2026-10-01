@@ -88,7 +88,7 @@ class NextWordController(
      * state to default BEFORE the subsequent [RustEngineBridge.nextwordResetAll]
      * call processes — which then bumps `current_generation`, emits
      * `CancelContextTimeout` (already cancelled above; idempotent), and
-     * skips `ClearPredictionsUI` because `is_showing` is now false post-reset.
+     * skips `ClearPredictionsUI` because `predictions_visible` is now false post-reset.
      * Net effect matches the pre-Rust `resetContext()` behavior (zero
      * association state, cancel timer, no UI emit).
      */
@@ -127,7 +127,7 @@ class NextWordController(
     }
 
     /**
-     * Direct `is_showing` setter — invoked by [SmartbarManager.updateCandidates]
+     * Direct `predictions_visible` setter — invoked by [SmartbarManager.updateCandidates]
      * after the candidate bar has been rendered with NextWord suggestions.
      * Routes through [RustEngineBridge.nextwordSetPredictionsVisible]; no generation
      * bump per the bridge contract (the prediction round that produced
@@ -248,7 +248,7 @@ class NextWordController(
      * `ResetAll` to cancel timer + bump `current_generation`, then forces
      * `onClearCandidates()` regardless of the engine's `clearPredictionsUI`
      * gate. Preserves the pre-Rust unconditional-clear behavior (the engine
-     * gate is closed because envelope-mismatch reset wiped `is_showing` to
+     * gate is closed because envelope-mismatch reset wiped `predictions_visible` to
      * false before `ResetAll` processed).
      */
     fun handleBackspaceForNextWord(textBeforeCursor: String) {

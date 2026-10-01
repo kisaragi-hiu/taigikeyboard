@@ -280,8 +280,8 @@ fn learned_entry(phrase: LearnedPhraseRow) -> lexicon::LearnedEntry {
 
 fn association_pair(pair: nextword::Association) -> AssociationPair {
     AssociationPair {
-        previous: pair.prev,
-        previous_tl: pair.prev_tl,
+        previous: pair.previous,
+        previous_tl: pair.previous_tl,
         next: pair.next,
         next_tl: pair.next_tl,
     }

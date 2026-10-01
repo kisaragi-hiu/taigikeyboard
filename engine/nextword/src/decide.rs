@@ -182,10 +182,10 @@ fn learn_word(
 ) -> ContextWord {
     // poj→tl is idempotent on TL input — safe for POJ and TPS alike.
     let text_tl = phonetics::api::poj_display_to_tl_display(roman);
-    if let Some((prev, prev_tl)) = previous {
+    if let Some((previous, previous_tl)) = previous {
         associations.push(Association {
-            prev,
-            prev_tl,
+            previous,
+            previous_tl,
             next: text.clone(),
             next_tl: text_tl.clone(),
         });
@@ -245,11 +245,11 @@ fn decide_backspace(state: &mut PersistedState, last_char: String, now_ms: i64) 
 }
 
 fn decide_clear_for_new_composing(state: &mut PersistedState) -> DecideResult {
-    let was_showing = state.is_showing;
-    state.is_showing = false;
+    let was_visible = state.predictions_visible;
+    state.predictions_visible = false;
     state.current_generation = state.current_generation.wrapping_add(1);
 
-    let effects: Vec<NextWordEffect> = if was_showing {
+    let effects: Vec<NextWordEffect> = if was_visible {
         vec![NextWordEffect {
             kind: Some(next_word_effect::Kind::ClearPredictionsUi(
                 ClearPredictionsUi {
@@ -266,7 +266,7 @@ fn decide_clear_for_new_composing(state: &mut PersistedState) -> DecideResult {
 /// Shared reset path used by sentence-end punctuation, context timeout,
 /// and `ResetAll` intents.
 fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
-    let was_showing = state.is_showing;
+    let was_visible = state.predictions_visible;
     let new_generation = state.current_generation.wrapping_add(1);
     *state = PersistedState {
         current_generation: new_generation,
@@ -278,7 +278,7 @@ fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
             CancelContextTimeout {},
         )),
     }];
-    if was_showing {
+    if was_visible {
         effects.push(NextWordEffect {
             kind: Some(next_word_effect::Kind::ClearPredictionsUi(
                 ClearPredictionsUi {
@@ -295,7 +295,7 @@ fn reset_and_clear_predictions(state: &mut PersistedState) -> DecideResult {
 /// completed; subsequent intents will bump as usual. Returns the current
 /// snapshot so the platform receives a consistent value echo.
 fn decide_set_predictions_visible(state: &mut PersistedState, visible: bool) -> DecideResult {
-    state.is_showing = visible;
+    state.predictions_visible = visible;
     snapshot_into_decide_result(state, Vec::new())
 }
 
@@ -362,8 +362,8 @@ pub(crate) fn compound_association_pairs(display_text: &str, roman: &str) -> Vec
         .windows(2)
         .zip(roman_parts.windows(2))
         .map(|(words, romans)| Association {
-            prev: words[0].to_owned(),
-            prev_tl: romans[0].to_owned(),
+            previous: words[0].to_owned(),
+            previous_tl: romans[0].to_owned(),
             next: words[1].to_owned(),
             next_tl: romans[1].to_owned(),
         })
@@ -403,7 +403,7 @@ fn snapshot_into_decide_result(
     DecideResult {
         effects,
         current_generation: state.current_generation,
-        predictions_visible: state.is_showing,
+        predictions_visible: state.predictions_visible,
         last_selected_word: state.last_selected_word.clone().unwrap_or_default(),
     }
 }
@@ -501,7 +501,7 @@ mod tests {
         decided
             .associations
             .iter()
-            .map(|a| format!("{}/{}→{}/{}", a.prev, a.prev_tl, a.next, a.next_tl))
+            .map(|a| format!("{}/{}→{}/{}", a.previous, a.previous_tl, a.next, a.next_tl))
             .collect()
     }
 
@@ -694,7 +694,7 @@ mod tests {
     fn sentence_end_resets_state_and_clears_predictions() {
         let mut state = PersistedState {
             last_selected_word: Some("早安".to_owned()),
-            is_showing: true,
+            predictions_visible: true,
             current_generation: 5,
             ..PersistedState::default()
         };
@@ -712,7 +712,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(state.last_selected_word, None);
-        assert!(!state.is_showing);
+        assert!(!state.predictions_visible);
         assert_eq!(state.current_generation, 6);
         let kinds: Vec<_> = result
             .effects
@@ -734,9 +734,9 @@ mod tests {
     fn compound_pairs_are_sequential() {
         let pairs = compound_association_pairs("a b c", "x y z");
         assert_eq!(pairs.len(), 2);
-        assert_eq!(pairs[0].prev, "a");
+        assert_eq!(pairs[0].previous, "a");
         assert_eq!(pairs[0].next, "b");
-        assert_eq!(pairs[1].prev, "b");
+        assert_eq!(pairs[1].previous, "b");
         assert_eq!(pairs[1].next, "c");
     }
 
@@ -773,8 +773,8 @@ mod tests {
         // every part is a word.
         let pairs = compound_association_pairs("iā sī", "iā sī");
         assert_eq!(pairs.len(), 1);
-        assert_eq!(pairs[0].prev, "iā");
-        assert_eq!(pairs[0].prev_tl, "iā");
+        assert_eq!(pairs[0].previous, "iā");
+        assert_eq!(pairs[0].previous_tl, "iā");
         assert_eq!(pairs[0].next, "sī");
         assert_eq!(pairs[0].next_tl, "sī");
 
@@ -873,7 +873,7 @@ mod tests {
             // A fresh state has no predecessor, so every pair is the compound's.
             let pairs = &result.associations;
             assert_eq!(pairs.len(), 1, "{platform:?}");
-            assert_eq!(pairs[0].prev, "tâi-gí", "{platform:?}");
+            assert_eq!(pairs[0].previous, "tâi-gí", "{platform:?}");
             assert_eq!(pairs[0].next, "khí-puânn", "{platform:?}");
         }
     }
@@ -972,8 +972,8 @@ mod tests {
         assert_eq!(
             next.associations,
             vec![Association {
-                prev: "台".to_owned(),
-                prev_tl: "tâi".to_owned(),
+                previous: "台".to_owned(),
+                previous_tl: "tâi".to_owned(),
                 next: "語".to_owned(),
                 next_tl: "gí".to_owned(),
             }]
@@ -1006,8 +1006,8 @@ mod tests {
         assert_eq!(
             decided.associations,
             vec![Association {
-                prev: "早".to_owned(),
-                prev_tl: "tsá".to_owned(),
+                previous: "早".to_owned(),
+                previous_tl: "tsá".to_owned(),
                 next: "安".to_owned(),
                 next_tl: String::new(),
             }]
@@ -1120,7 +1120,7 @@ mod tests {
         for intent in invalidating {
             let mut state = PersistedState {
                 current_generation: 1,
-                is_showing: true,
+                predictions_visible: true,
                 ..PersistedState::default()
             };
             apply(&mut state, intent.clone(), &ios_config(false)).unwrap();
@@ -1195,8 +1195,8 @@ mod tests {
         assert_eq!(
             result.associations,
             vec![Association {
-                prev: "早".to_owned(),
-                prev_tl: "tsá".to_owned(),
+                previous: "早".to_owned(),
+                previous_tl: "tsá".to_owned(),
                 next: "安".to_owned(),
                 next_tl: "an".to_owned(),
             }],
@@ -1257,7 +1257,7 @@ mod tests {
     fn set_predictions_visible_updates_state_without_bump_or_effects() {
         let mut state = PersistedState {
             current_generation: 9,
-            is_showing: false,
+            predictions_visible: false,
             ..PersistedState::default()
         };
         let result = apply(
@@ -1266,7 +1266,10 @@ mod tests {
             &ios_config(false),
         )
         .unwrap();
-        assert!(state.is_showing, "is_showing flipped to true");
+        assert!(
+            state.predictions_visible,
+            "predictions_visible flipped to true"
+        );
         assert_eq!(state.current_generation, 9, "no generation bump");
         assert!(result.effects.is_empty(), "no effects emitted");
     }
@@ -1274,7 +1277,7 @@ mod tests {
     #[test]
     fn set_predictions_visible_then_clear_for_new_composing_emits_clear() {
         // Regression guard for the v3.5.5 bridge gap fix: pre-fix, platform
-        // had no way to push is_showing=true into the engine, so the
+        // had no way to push predictions_visible=true into the engine, so the
         // ClearForNewComposing → ClearPredictionsUI gate never tripped.
         let mut state = PersistedState::default();
         apply(
@@ -1298,7 +1301,7 @@ mod tests {
     #[test]
     fn clear_for_new_composing_emits_clear_only_when_showing() {
         let mut state = PersistedState {
-            is_showing: true,
+            predictions_visible: true,
             current_generation: 3,
             ..PersistedState::default()
         };
@@ -1308,7 +1311,7 @@ mod tests {
             &ios_config(false),
         )
         .unwrap();
-        assert!(!state.is_showing);
+        assert!(!state.predictions_visible);
         assert_eq!(state.current_generation, 4);
         assert!(matches!(
             result.effects[0].kind,
@@ -1316,7 +1319,7 @@ mod tests {
         ));
 
         // Already not showing → no effect emitted.
-        state.is_showing = false;
+        state.predictions_visible = false;
         let result = apply(
             &mut state,
             Intent::ClearForNewComposing { now_ms: 2_000 },

@@ -133,7 +133,7 @@ mod tests {
     fn envelope_reset_bumps_current_generation_so_in_flight_filter_drops_as_stale() {
         let mut engine = Engine::new();
         engine.state.current_generation = 5;
-        engine.state.is_showing = true;
+        engine.state.predictions_visible = true;
         engine.state.last_selected_word = Some("早安".to_owned());
 
         // Pre-reset: an async predict() round was tagged at gen=5.
@@ -144,7 +144,10 @@ mod tests {
         engine.reset();
 
         assert_eq!(engine.state.current_generation, 6);
-        assert!(!engine.state.is_showing, "is_showing reset");
+        assert!(
+            !engine.state.predictions_visible,
+            "predictions_visible reset"
+        );
         assert_eq!(
             engine.state.last_selected_word, None,
             "last_selected_word reset"

@@ -3,7 +3,7 @@
 //! Owns the prefix index (fst), the bundled binary readers
 //! (`dictionary.bin` + `association.bin`), and the search orchestration
 //! that powers IME autocomplete, Tab3 dictionary lookup, and the
-//! bundled bigram lookup (`api::assoc_lookup`). engine/dispatch calls it for
+//! bundled bigram lookup (`api::lookup_associations`). engine/dispatch calls it for
 //! nextword `PredictNext`; the `nextword` crate never imports `lexicon`.
 //!
 //! Crate is `unsafe_code = "forbid"`. The mmap unsafe carve-out lives

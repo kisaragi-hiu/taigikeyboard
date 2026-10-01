@@ -22,7 +22,7 @@ pub use production::{
     DictionaryCsv, ProductionArtifacts,
 };
 pub use registration::assert_every_test_file_is_declared;
-pub use tkdb::{build_tkdb, build_tkwa, AssocEntry, TkdbRow};
+pub use tkdb::{build_tkdb, build_tkwa, TkdbRow, TkwaEntry};
 
 /// Serializes `lexicon::EngineHandle::install` vs. assertion within ONE test
 /// binary. Each binary is its own process with its own global lexicon

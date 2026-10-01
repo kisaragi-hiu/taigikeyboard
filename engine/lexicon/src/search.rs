@@ -5,7 +5,7 @@
 //! 2. `prefix_index.lookup_prefix` returns insertion-ordered rowids
 //!    (D-12 parity correction toward Android).
 //! 3. Resolve each rowid through `dictionary_reader.record` + filter,
-//!    take `limit`, return `LexiconRowOut`.
+//!    take `limit`, return `SearchRow`.
 //!
 //! TPS dialect er↔or recall: C-3a moved the runtime expansion into the
 //! build pipeline (dual-emit `tps:` keys for the ㄜ and ㄛ glyphs at the
@@ -14,7 +14,7 @@
 use indexmap::IndexSet;
 use phonetics::{abbrev_family_key, KeyFamily, HANJI_KEY_PREFIX};
 
-use crate::association_reader::{word_key, AssocFilter, AssociationReader};
+use crate::association_reader::{word_key, AssociationFilter, AssociationReader};
 use crate::dictionary_reader::{DictionaryReader, DictionaryRecord, Filter};
 use crate::error::LexiconError;
 use crate::prefix_index::PrefixIndex;
@@ -22,7 +22,7 @@ use crate::prefix_index::PrefixIndex;
 /// Public per-row output. Mirrors proto `TaigiWord` but kept Rust-native to
 /// avoid coupling search internals to prost types.
 #[derive(Debug, Clone)]
-pub struct LexiconRowOut {
+pub struct SearchRow {
     // 1-based dictionary rowid.
     pub id: i64,
     pub roman: String,
@@ -33,7 +33,7 @@ pub struct LexiconRowOut {
     pub source_bitmask: Option<u32>,
 }
 
-/// One bundled bigram continuation — what `api::assoc_lookup` returns.
+/// One bundled bigram continuation — what `api::lookup_associations` returns.
 #[derive(Debug, Clone)]
 pub struct AssociationHit {
     // Previous word — the key that was queried.
@@ -60,7 +60,7 @@ pub fn search(
     params: &SearchParams,
     prefix_index: &PrefixIndex,
     dict: &DictionaryReader,
-) -> Result<Vec<LexiconRowOut>, LexiconError> {
+) -> Result<Vec<SearchRow>, LexiconError> {
     if params.limit == 0 {
         return Ok(Vec::new());
     }
@@ -111,7 +111,7 @@ pub fn search_by_hanzi(
     enabled_sources_bitmask: u32,
     prefix_index: &PrefixIndex,
     dict: &DictionaryReader,
-) -> Result<Vec<LexiconRowOut>, LexiconError> {
+) -> Result<Vec<SearchRow>, LexiconError> {
     if query.is_empty() || limit == 0 {
         return Ok(Vec::new());
     }
@@ -142,7 +142,7 @@ fn collect_filtered_sorted(
     dict: &DictionaryReader,
     enabled_sources_bitmask: u32,
     limit: u32,
-) -> Vec<LexiconRowOut> {
+) -> Vec<SearchRow> {
     let filter = Filter::from_enabled_bitmask(enabled_sources_bitmask);
     let mut staged: Vec<(u32, DictionaryRecord)> = Vec::with_capacity(rowids.len());
     for rowid in rowids {
@@ -181,25 +181,25 @@ fn collect_filtered_sorted(
 // merge (behavioral-invariants §24 `INVARIANT_NEXTWORD_WORD_KEY_BACKOFF`).
 // Up to `limit` records, filtered before the cut so disabled top entries
 // never starve the list.
-pub fn assoc_lookup(
+pub fn lookup_associations(
     previous_word: &str,
     previous_tl: &str,
     limit: u32,
     enabled_sources_bitmask: u32,
-    assoc: &AssociationReader,
+    reader: &AssociationReader,
 ) -> Result<Vec<AssociationHit>, LexiconError> {
     let Some(last_character) = previous_word.chars().last() else {
         return Ok(Vec::new());
     };
-    let filter = AssocFilter::from_sources_bitmask(enabled_sources_bitmask);
+    let filter = AssociationFilter::from_sources_bitmask(enabled_sources_bitmask);
     let limit = limit as usize;
     let mut entries = if previous_tl.is_empty() {
         Vec::new()
     } else {
-        assoc.lookup(&word_key(previous_word, previous_tl), limit, &filter)
+        reader.lookup(&word_key(previous_word, previous_tl), limit, &filter)
     };
     if entries.is_empty() {
-        entries = assoc.lookup(&last_character.to_string(), limit, &filter);
+        entries = reader.lookup(&last_character.to_string(), limit, &filter);
     }
     Ok(entries
         .into_iter()
@@ -212,8 +212,8 @@ pub fn assoc_lookup(
         .collect())
 }
 
-fn record_to_row(rowid: u32, record: DictionaryRecord, effective_bitmask: u16) -> LexiconRowOut {
-    LexiconRowOut {
+fn record_to_row(rowid: u32, record: DictionaryRecord, effective_bitmask: u16) -> SearchRow {
+    SearchRow {
         id: rowid as i64,
         roman: record.tl,
         hanji: record.hanzi,
