@@ -10,7 +10,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * v3.5.8 Phase 9.2 — candidate-type discriminator. MOE `VocType`
  * (`VT_HANT` / `VT_TAILO` / `VT_MIXED`) is the cite. Derived in Rust
  * from `DictionaryRecord.hanji` presence + NFKD-normalized Latin-letter
- * detection; see `engine/lexicon/src/continuous/mod.rs::derive_mode`.
+ * detection; see `engine/lexicon/src/continuous/mod.rs::derive_script_kind`.
  *
  * Metadata-only: this field does NOT enter the `CandidateSortKey` tie-break
  * in v3.5.8 (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a — "reserve rank
@@ -22,46 +22,46 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * to display-text sniff" rather than as HANT.
  * </pre>
  *
- * Protobuf enum {@code taigi.engine.CandidateMode}
+ * Protobuf enum {@code taigi.engine.CandidateScriptKind}
  */
 @com.google.protobuf.Generated
-public enum CandidateMode
+public enum CandidateScriptKind
     implements com.google.protobuf.Internal.EnumLite {
   /**
-   * <code>CANDIDATE_MODE_UNSPECIFIED = 0;</code>
+   * <code>CANDIDATE_SCRIPT_KIND_UNSPECIFIED = 0;</code>
    */
-  CANDIDATE_MODE_UNSPECIFIED(0),
+  CANDIDATE_SCRIPT_KIND_UNSPECIFIED(0),
   /**
-   * <code>CANDIDATE_MODE_HANT = 1;</code>
+   * <code>CANDIDATE_SCRIPT_KIND_HANT = 1;</code>
    */
-  CANDIDATE_MODE_HANT(1),
+  CANDIDATE_SCRIPT_KIND_HANT(1),
   /**
-   * <code>CANDIDATE_MODE_TAILO = 2;</code>
+   * <code>CANDIDATE_SCRIPT_KIND_TAILO = 2;</code>
    */
-  CANDIDATE_MODE_TAILO(2),
+  CANDIDATE_SCRIPT_KIND_TAILO(2),
   /**
-   * <code>CANDIDATE_MODE_MIXED = 3;</code>
+   * <code>CANDIDATE_SCRIPT_KIND_MIXED = 3;</code>
    */
-  CANDIDATE_MODE_MIXED(3),
+  CANDIDATE_SCRIPT_KIND_MIXED(3),
   UNRECOGNIZED(-1),
   ;
 
   /**
-   * <code>CANDIDATE_MODE_UNSPECIFIED = 0;</code>
+   * <code>CANDIDATE_SCRIPT_KIND_UNSPECIFIED = 0;</code>
    */
-  public static final int CANDIDATE_MODE_UNSPECIFIED_VALUE = 0;
+  public static final int CANDIDATE_SCRIPT_KIND_UNSPECIFIED_VALUE = 0;
   /**
-   * <code>CANDIDATE_MODE_HANT = 1;</code>
+   * <code>CANDIDATE_SCRIPT_KIND_HANT = 1;</code>
    */
-  public static final int CANDIDATE_MODE_HANT_VALUE = 1;
+  public static final int CANDIDATE_SCRIPT_KIND_HANT_VALUE = 1;
   /**
-   * <code>CANDIDATE_MODE_TAILO = 2;</code>
+   * <code>CANDIDATE_SCRIPT_KIND_TAILO = 2;</code>
    */
-  public static final int CANDIDATE_MODE_TAILO_VALUE = 2;
+  public static final int CANDIDATE_SCRIPT_KIND_TAILO_VALUE = 2;
   /**
-   * <code>CANDIDATE_MODE_MIXED = 3;</code>
+   * <code>CANDIDATE_SCRIPT_KIND_MIXED = 3;</code>
    */
-  public static final int CANDIDATE_MODE_MIXED_VALUE = 3;
+  public static final int CANDIDATE_SCRIPT_KIND_MIXED_VALUE = 3;
 
 
   @java.lang.Override
@@ -78,53 +78,53 @@ public enum CandidateMode
    * @deprecated Use {@link #forNumber(int)} instead.
    */
   @java.lang.Deprecated
-  public static CandidateMode valueOf(int value) {
+  public static CandidateScriptKind valueOf(int value) {
     return forNumber(value);
   }
 
-  public static CandidateMode forNumber(int value) {
+  public static CandidateScriptKind forNumber(int value) {
     switch (value) {
-      case 0: return CANDIDATE_MODE_UNSPECIFIED;
-      case 1: return CANDIDATE_MODE_HANT;
-      case 2: return CANDIDATE_MODE_TAILO;
-      case 3: return CANDIDATE_MODE_MIXED;
+      case 0: return CANDIDATE_SCRIPT_KIND_UNSPECIFIED;
+      case 1: return CANDIDATE_SCRIPT_KIND_HANT;
+      case 2: return CANDIDATE_SCRIPT_KIND_TAILO;
+      case 3: return CANDIDATE_SCRIPT_KIND_MIXED;
       default: return null;
     }
   }
 
-  public static com.google.protobuf.Internal.EnumLiteMap<CandidateMode>
+  public static com.google.protobuf.Internal.EnumLiteMap<CandidateScriptKind>
       internalGetValueMap() {
     return internalValueMap;
   }
   private static final com.google.protobuf.Internal.EnumLiteMap<
-      CandidateMode> internalValueMap =
-        new com.google.protobuf.Internal.EnumLiteMap<CandidateMode>() {
+      CandidateScriptKind> internalValueMap =
+        new com.google.protobuf.Internal.EnumLiteMap<CandidateScriptKind>() {
           @java.lang.Override
-          public CandidateMode findValueByNumber(int number) {
-            return CandidateMode.forNumber(number);
+          public CandidateScriptKind findValueByNumber(int number) {
+            return CandidateScriptKind.forNumber(number);
           }
         };
 
   public static com.google.protobuf.Internal.EnumVerifier
       internalGetVerifier() {
-    return CandidateModeVerifier.INSTANCE;
+    return CandidateScriptKindVerifier.INSTANCE;
   }
 
-  private static final class CandidateModeVerifier implements
+  private static final class CandidateScriptKindVerifier implements
        com.google.protobuf.Internal.EnumVerifier {
           static final com.google.protobuf.Internal.EnumVerifier
-              INSTANCE = new CandidateModeVerifier();
+              INSTANCE = new CandidateScriptKindVerifier();
           @java.lang.Override
           public boolean isInRange(int number) {
-            return CandidateMode.forNumber(number) != null;
+            return CandidateScriptKind.forNumber(number) != null;
           }
         };
 
   private final int value;
 
-  private CandidateMode(int value) {
+  private CandidateScriptKind(int value) {
     this.value = value;
   }
 
-  // @@protoc_insertion_point(enum_scope:taigi.engine.CandidateMode)
+  // @@protoc_insertion_point(enum_scope:taigi.engine.CandidateScriptKind)
 }

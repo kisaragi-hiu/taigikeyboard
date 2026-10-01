@@ -170,7 +170,7 @@ public nonisolated enum Taigi_Engine_CaretDirection: SwiftProtobuf.Enum, Swift.C
 /// v3.5.8 Phase 9.2 — candidate-type discriminator. MOE `VocType`
 /// (`VT_HANT` / `VT_TAILO` / `VT_MIXED`) is the cite. Derived in Rust
 /// from `DictionaryRecord.hanji` presence + NFKD-normalized Latin-letter
-/// detection; see `engine/lexicon/src/continuous/mod.rs::derive_mode`.
+/// detection; see `engine/lexicon/src/continuous/mod.rs::derive_script_kind`.
 ///
 /// Metadata-only: this field does NOT enter the `CandidateSortKey` tie-break
 /// in v3.5.8 (per `docs/releases/v3.5.8/plan.md` § Phase 9 R2 Q3.a — "reserve rank
@@ -180,7 +180,7 @@ public nonisolated enum Taigi_Engine_CaretDirection: SwiftProtobuf.Enum, Swift.C
 /// `UNSPECIFIED = 0` is the proto3 default and never emitted by Rust;
 /// platforms must treat `UNSPECIFIED` as "unknown carrier — fall back
 /// to display-text sniff" rather than as HANT.
-public nonisolated enum Taigi_Engine_CandidateMode: SwiftProtobuf.Enum, Swift.CaseIterable {
+public nonisolated enum Taigi_Engine_CandidateScriptKind: SwiftProtobuf.Enum, Swift.CaseIterable {
   public typealias RawValue = Int
   case unspecified // = 0
   case hant // = 1
@@ -213,7 +213,7 @@ public nonisolated enum Taigi_Engine_CandidateMode: SwiftProtobuf.Enum, Swift.Ca
   }
 
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  public static let allCases: [Taigi_Engine_CandidateMode] = [
+  public static let allCases: [Taigi_Engine_CandidateScriptKind] = [
     .unspecified,
     .hant,
     .tailo,
@@ -818,8 +818,8 @@ public nonisolated struct Taigi_Engine_ContinuousResponse: Sendable {
 /// `engine/lexicon/src/continuous/`); reserved for hanji (0) /
 /// numeric (2) / abbrev (3) when proto-side carriers exist.
 ///
-/// `mode` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
-/// see `CandidateMode` above.
+/// `script_kind` (Phase 9.2) is the MOE-aligned candidate-type discriminator;
+/// see `CandidateScriptKind` above.
 ///
 /// v3.5.8 Phase 9 Item 5 — `roman` + `hanji` are display-only
 /// sidechannels added so platform UI can build dual-line cells
@@ -856,7 +856,7 @@ public nonisolated struct Taigi_Engine_CandidateMessage: Sendable {
 
   public var form: UInt32 = 0
 
-  public var mode: Taigi_Engine_CandidateMode = .unspecified
+  public var scriptKind: Taigi_Engine_CandidateScriptKind = .unspecified
 
   public var roman: String = String()
 
@@ -1147,8 +1147,8 @@ nonisolated extension Taigi_Engine_CaretDirection: SwiftProtobuf._ProtoNameProvi
   public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CARET_DIRECTION_UNSPECIFIED\0\u{1}CARET_DIRECTION_LEFT\0\u{1}CARET_DIRECTION_RIGHT\0")
 }
 
-nonisolated extension Taigi_Engine_CandidateMode: SwiftProtobuf._ProtoNameProviding {
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CANDIDATE_MODE_UNSPECIFIED\0\u{1}CANDIDATE_MODE_HANT\0\u{1}CANDIDATE_MODE_TAILO\0\u{1}CANDIDATE_MODE_MIXED\0")
+nonisolated extension Taigi_Engine_CandidateScriptKind: SwiftProtobuf._ProtoNameProviding {
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\0CANDIDATE_SCRIPT_KIND_UNSPECIFIED\0\u{1}CANDIDATE_SCRIPT_KIND_HANT\0\u{1}CANDIDATE_SCRIPT_KIND_TAILO\0\u{1}CANDIDATE_SCRIPT_KIND_MIXED\0")
 }
 
 nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
@@ -1975,7 +1975,7 @@ nonisolated extension Taigi_Engine_ContinuousResponse: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".CandidateMessage"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}consumed_span_start\0\u{3}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{1}score\0\u{1}form\0\u{1}mode\0\u{1}roman\0\u{1}hanji\0\u{3}canonical_tl\0")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}consumed_span_start\0\u{3}consumed_span_end\0\u{3}syllable_count\0\u{3}display_text\0\u{1}score\0\u{1}form\0\u{3}script_kind\0\u{1}roman\0\u{1}hanji\0\u{3}canonical_tl\0")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1989,7 +1989,7 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
       case 4: try { try decoder.decodeSingularStringField(value: &self.displayText) }()
       case 5: try { try decoder.decodeSingularFloatField(value: &self.score) }()
       case 6: try { try decoder.decodeSingularUInt32Field(value: &self.form) }()
-      case 7: try { try decoder.decodeSingularEnumField(value: &self.mode) }()
+      case 7: try { try decoder.decodeSingularEnumField(value: &self.scriptKind) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.roman) }()
       case 9: try { try decoder.decodeSingularStringField(value: &self._hanji) }()
       case 10: try { try decoder.decodeSingularStringField(value: &self.canonicalTl) }()
@@ -2021,8 +2021,8 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
     if self.form != 0 {
       try visitor.visitSingularUInt32Field(value: self.form, fieldNumber: 6)
     }
-    if self.mode != .unspecified {
-      try visitor.visitSingularEnumField(value: self.mode, fieldNumber: 7)
+    if self.scriptKind != .unspecified {
+      try visitor.visitSingularEnumField(value: self.scriptKind, fieldNumber: 7)
     }
     if !self.roman.isEmpty {
       try visitor.visitSingularStringField(value: self.roman, fieldNumber: 8)
@@ -2043,7 +2043,7 @@ nonisolated extension Taigi_Engine_CandidateMessage: SwiftProtobuf.Message, Swif
     if lhs.displayText != rhs.displayText {return false}
     if lhs.score != rhs.score {return false}
     if lhs.form != rhs.form {return false}
-    if lhs.mode != rhs.mode {return false}
+    if lhs.scriptKind != rhs.scriptKind {return false}
     if lhs.roman != rhs.roman {return false}
     if lhs._hanji != rhs._hanji {return false}
     if lhs.canonicalTl != rhs.canonicalTl {return false}

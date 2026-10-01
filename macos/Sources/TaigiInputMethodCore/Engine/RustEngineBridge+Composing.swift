@@ -377,7 +377,7 @@ extension RustEngineBridge {
             displayText: message.displayText,
             score: message.score,
             form: message.form,
-            mode: CandidateMode.decode(message.mode.rawValue),
+            scriptKind: CandidateScriptKind.decode(message.scriptKind.rawValue),
             roman: message.roman,
             // Absent means "romanization-only candidate", which an empty string
             // would not distinguish from a present-but-blank hanji.

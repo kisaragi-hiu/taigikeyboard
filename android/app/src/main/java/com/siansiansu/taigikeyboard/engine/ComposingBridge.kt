@@ -332,7 +332,7 @@ private inline fun composingFetchDispatch(
                 displayText = msg.displayText,
                 score = msg.score,
                 form = msg.form,
-                mode = RustEngineBridge.CandidateMode.decode(msg.modeValue),
+                scriptKind = RustEngineBridge.CandidateScriptKind.decode(msg.scriptKindValue),
                 roman = roman,
                 hanji = if (msg.hasHanji()) msg.hanji else null,
                 canonicalTl = msg.canonicalTl,

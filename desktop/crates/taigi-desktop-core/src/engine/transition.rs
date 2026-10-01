@@ -106,18 +106,18 @@ impl Effect {
 }
 
 /// MOE-aligned candidate-type discriminator, derived in Rust
-/// (`engine/lexicon/src/continuous/mod.rs::derive_mode`). Read, never recomputed.
+/// (`engine/lexicon/src/continuous/mod.rs::derive_script_kind`). Read, never recomputed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum CandidateMode {
-    /// The wire carried no mode, or one this build does not know. Means
-    /// "ignore mode", never "guess the mode locally".
+pub enum CandidateScriptKind {
+    /// The wire carried no script kind, or one this build does not know. Means
+    /// "ignore it", never "guess it locally".
     Unspecified,
     Hant,
     Tailo,
     Mixed,
 }
 
-impl CandidateMode {
+impl CandidateScriptKind {
     pub fn decode(wire: i32) -> Self {
         match wire {
             1 => Self::Hant,
@@ -142,7 +142,7 @@ pub struct ContinuousCandidate {
     pub display_text: String,
     pub score: f32,
     pub form: u32,
-    pub mode: CandidateMode,
+    pub script_kind: CandidateScriptKind,
     /// Display romanization for the candidate cell — POJ-rendered in POJ
     /// mode. Not an identity key; that is `canonical_tl`.
     pub roman: String,
@@ -163,7 +163,7 @@ impl ContinuousCandidate {
             display_text: message.display_text.clone(),
             score: message.score,
             form: message.form,
-            mode: CandidateMode::decode(message.mode),
+            script_kind: CandidateScriptKind::decode(message.script_kind),
             roman: message.roman.clone(),
             hanji: message.hanji.clone(),
             canonical_tl: message.canonical_tl.clone(),
@@ -223,7 +223,7 @@ pub(crate) mod test_support {
             display_text: hanji.unwrap_or(roman).to_owned(),
             score: 0.0,
             form: 1,
-            mode: CandidateMode::Unspecified,
+            script_kind: CandidateScriptKind::Unspecified,
             roman: roman.to_owned(),
             hanji: hanji.map(str::to_owned),
             canonical_tl: roman.to_owned(),
@@ -307,21 +307,21 @@ mod tests {
             display_text: "tâi".into(),
             roman: "tâi".into(),
             hanji: None,
-            mode: 99,
+            script_kind: 99,
             ..Default::default()
         };
         let candidate = ContinuousCandidate::decode(&message);
         assert!(candidate.is_roman_only());
-        assert_eq!(candidate.mode, CandidateMode::Unspecified);
+        assert_eq!(candidate.script_kind, CandidateScriptKind::Unspecified);
         let with_hanji = ContinuousCandidate::decode(&CandidateMessage {
             hanji: Some(String::new()),
-            mode: 1,
+            script_kind: 1,
             ..message
         });
         assert!(
             !with_hanji.is_roman_only(),
             "an empty hanji is present, not absent"
         );
-        assert_eq!(with_hanji.mode, CandidateMode::Hant);
+        assert_eq!(with_hanji.script_kind, CandidateScriptKind::Hant);
     }
 }

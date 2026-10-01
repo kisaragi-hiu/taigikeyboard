@@ -554,7 +554,7 @@ fn run_case(c: &Case) -> String {
                     cand.consumed_span_end,
                     cand.syllable_count,
                     cand.form,
-                    cand.mode,
+                    cand.script_kind,
                     cand.display_text,
                     cand.roman,
                     hanji,

@@ -22,7 +22,7 @@ final class ActionHandlerContinuousPickTests: XCTestCase {
             displayText: hanji ?? roman,
             score: 0,
             form: 1,
-            mode: hanji == nil ? .tailo : .hant,
+            scriptKind: hanji == nil ? .tailo : .hant,
             roman: roman,
             hanji: hanji,
             canonicalTl: "tâi-gí",
