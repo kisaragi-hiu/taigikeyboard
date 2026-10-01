@@ -486,7 +486,7 @@ private fun String.toEngineInputMode(): String = engineInputMode(this, unknownAs
  * the prediction's identity; a hanji-only prediction lists its Hanji cell
  * alone. Every other mode emits one dual-script word per prediction
  * (`roman = ""` when the engine shaped no subtitle, so the strip renders the
- * hanzi alone).
+ * hanji alone).
  */
 internal fun buildPredictionWords(
     predictions: List<RustEngineBridge.NextWordEnginePrediction>,
@@ -500,7 +500,7 @@ internal fun buildPredictionWords(
 
     return splitIntoSingleScriptCells(
         items = predictions,
-        hanziOf = { it.hanzi },
+        hanjiOf = { it.hanji },
         romanOf = { if (it.subtitle != null) it.text else null },
     ) { prediction, cellScript, ordinal ->
         predictionWord(id = -ordinal - 1, prediction = prediction, cellScript = cellScript)
@@ -521,7 +521,7 @@ private fun predictionWord(
     return TaigiWord(
         id = id,
         roman = if (prediction.subtitle != null) prediction.text else "",
-        hanzi = prediction.hanzi,
+        hanji = prediction.hanji,
         lengthScore = prediction.score.toInt(),
         additionalInfo =
             if (cellScript == null) mapOf(identity) else mapOf(identity, TaigiWord.MetadataKeys.CELL_SCRIPT to cellScript),

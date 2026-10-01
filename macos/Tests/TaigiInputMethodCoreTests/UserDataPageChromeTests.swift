@@ -155,7 +155,7 @@ final class CustomDictionaryPagingTests: XCTestCase {
 
     private func seed(_ model: CustomDictionaryPageModel, count: Int) async {
         for index in 0 ..< count {
-            await model.save(CustomDictionaryRow(roman: "row\(index)", hanzi: "字\(index)"))
+            await model.save(CustomDictionaryRow(roman: "row\(index)", hanji: "字\(index)"))
         }
         await model.load()
     }

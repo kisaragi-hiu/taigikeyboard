@@ -27,7 +27,7 @@ data class CustomDictionaryWord(
     /** Stable across edits: the engine stores an edit under the same id. */
     val id: String = UUID.randomUUID().toString(),
     val roman: String,
-    val hanzi: String,
+    val hanji: String,
 )
 
 data class CustomDictionaryImportResult(
@@ -127,7 +127,7 @@ object EngineUserDataClient : UserDataClient {
             .map(::word)
 
     override suspend fun save(word: CustomDictionaryWord) {
-        val saved = engine("customDictionarySave") { RustEngineBridge.customDictionarySave(word.id, word.roman, word.hanzi) }
+        val saved = engine("customDictionarySave") { RustEngineBridge.customDictionarySave(word.id, word.roman, word.hanji) }
         if (saved.refusal != CustomDictionaryRefusal.CUSTOM_DICTIONARY_REFUSAL_NONE) {
             throw UserDataException.Refused(saved.refusal, saved.detail)
         }
@@ -194,5 +194,5 @@ object EngineUserDataClient : UserDataClient {
         request: () -> T?,
     ): T = withContext(Dispatchers.IO) { request() } ?: throw UserDataException.EngineUnavailable(op)
 
-    private fun word(entry: CustomDictionaryEntry) = CustomDictionaryWord(id = entry.id, roman = entry.roman, hanzi = entry.hanji)
+    private fun word(entry: CustomDictionaryEntry) = CustomDictionaryWord(id = entry.id, roman = entry.roman, hanji = entry.hanji)
 }

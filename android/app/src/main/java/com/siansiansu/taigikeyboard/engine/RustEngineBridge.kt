@@ -94,7 +94,7 @@ object RustEngineBridge {
     data class LexiconRow(
         val id: Long,
         val roman: String,
-        val hanzi: String?,
+        val hanji: String?,
         val lengthScore: Int?,
         val sourceBitmask: UInt?,
     )
@@ -565,7 +565,7 @@ object RustEngineBridge {
     data class NextWordEnginePrediction(
         val text: String,
         val subtitle: String?,
-        val hanzi: String,
+        val hanji: String,
         val tl: String,
         /**
          * Merged score. Android maps to `TaigiWord.lengthScore`. iOS does

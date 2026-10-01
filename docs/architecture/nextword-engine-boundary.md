@@ -97,7 +97,7 @@ Prediction query happens asynchronously on the platform side. The service return
 ```swift
 // Foundation-only, shared-core candidate — new file.
 public struct RawNextWordPrediction: Equatable {
-    public let hanzi: String
+    public let hanji: String
     public let tl: String
     public let score: Double     // merged dict + user signal, opaque to engine
 }

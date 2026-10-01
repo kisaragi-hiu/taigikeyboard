@@ -85,7 +85,7 @@ fun RustEngineBridge.searchWithSources(
 }
 
 /**
- * Dictionary tab hanzi-prefix lookup; `query` must be Hanji.
+ * Dictionary tab hanji-prefix lookup; `query` must be Hanji.
  */
 fun RustEngineBridge.searchByHanji(
     query: String,
@@ -248,7 +248,7 @@ private fun taigiWordToRow(proto: ProtoTaigiWord): RustEngineBridge.LexiconRow =
     RustEngineBridge.LexiconRow(
         id = proto.id,
         roman = proto.roman,
-        hanzi = if (proto.hasHanji()) proto.hanji else null,
+        hanji = if (proto.hasHanji()) proto.hanji else null,
         lengthScore = if (proto.hasLengthScore()) proto.lengthScore else null,
         sourceBitmask = if (proto.hasSourceBitmask()) proto.sourceBitmask.toUInt() else null,
     )

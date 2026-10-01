@@ -66,7 +66,7 @@ class LexiconService(
         }
     }
 
-    /** Search by hanzi prefix (Dictionary tab exploration). */
+    /** Search by hanji prefix (Dictionary tab exploration). */
     override suspend fun searchByHanji(
         input: String,
         inputMode: RustEngineBridge.LexiconInputMode,
@@ -79,18 +79,18 @@ class LexiconService(
         }
 
         return withContext(Dispatchers.IO) {
-            logger.debug(TAG) { "[HANZI-SEARCH] query='$input' limit=$limit" }
+            logger.debug(TAG) { "[HANJI-SEARCH] query='$input' limit=$limit" }
             try {
                 val rows = bridgeSearchByHanjiOrRoman(input, inputMode, limit, filterBitmask, isCJK = true)
                 val results = rowsToSearchResults(rows, inputMode, limit)
                 if (BuildConfig.DEBUG) {
-                    logger.d(TAG, "[HANZI-SEARCH] returned ${results.size} results")
+                    logger.d(TAG, "[HANJI-SEARCH] returned ${results.size} results")
                 }
                 Outcome.Success(results)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                logger.e(TAG, "[HANZI-SEARCH] Query failed", e)
+                logger.e(TAG, "[HANJI-SEARCH] Query failed", e)
                 Outcome.Failure(DictionaryError.QueryExecutionFailed(e.message ?: "Unknown error"))
             }
         }
@@ -134,7 +134,7 @@ class LexiconService(
                     id = row.id.toInt(),
                     roman = roman,
                     tl = row.roman,
-                    hanzi = row.hanzi,
+                    hanji = row.hanji,
                     frequency = row.lengthScore ?: 0,
                     sources = LexiconBitmask.sourcesFromBitmask(bitmask),
                 )

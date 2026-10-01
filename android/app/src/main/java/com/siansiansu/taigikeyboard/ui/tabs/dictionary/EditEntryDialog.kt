@@ -25,9 +25,9 @@ internal fun EditEntryDialog(
     onSave: (CustomDictionaryWord) -> Unit,
 ) {
     var roman by remember(entry) { mutableStateOf(entry?.roman ?: "") }
-    var hanzi by remember(entry) { mutableStateOf(entry?.hanzi ?: "") }
+    var hanji by remember(entry) { mutableStateOf(entry?.hanji ?: "") }
     val isEditing = entry != null
-    val canSave = roman.isNotBlank() && hanzi.isNotBlank()
+    val canSave = roman.isNotBlank() && hanji.isNotBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -47,8 +47,8 @@ internal fun EditEntryDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
-                    value = hanzi,
-                    onValueChange = { hanzi = it },
+                    value = hanji,
+                    onValueChange = { hanji = it },
                     label = { Text(L10n.dictionaryHanziLabel) },
                     placeholder = { Text(L10n.dictionaryHanziPlaceholder) },
                     singleLine = true,
@@ -60,8 +60,8 @@ internal fun EditEntryDialog(
             TextButton(
                 onClick = {
                     val saved =
-                        entry?.copy(roman = roman.trim(), hanzi = hanzi.trim())
-                            ?: CustomDictionaryWord(roman = roman.trim(), hanzi = hanzi.trim())
+                        entry?.copy(roman = roman.trim(), hanji = hanji.trim())
+                            ?: CustomDictionaryWord(roman = roman.trim(), hanji = hanji.trim())
                     onSave(saved)
                 },
                 enabled = canSave,

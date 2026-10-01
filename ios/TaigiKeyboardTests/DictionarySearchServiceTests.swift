@@ -10,7 +10,7 @@ final class DictionarySearchServiceTests: XCTestCase {
     private final class FakeLexicon: LexiconClient, @unchecked Sendable {
         private let rows: [RustEngineBridge.LexiconRow]
         private(set) var romanModes: [RustEngineBridge.LexiconInputMode] = []
-        private(set) var hanziModes: [RustEngineBridge.LexiconInputMode] = []
+        private(set) var hanjiModes: [RustEngineBridge.LexiconInputMode] = []
 
         init(rows: [RustEngineBridge.LexiconRow] = []) {
             self.rows = rows
@@ -41,7 +41,7 @@ final class DictionarySearchServiceTests: XCTestCase {
             limit _: UInt32,
             enabledSourcesBitmask _: UInt32,
         ) -> [RustEngineBridge.LexiconRow] {
-            hanziModes.append(inputMode)
+            hanjiModes.append(inputMode)
             return rows
         }
     }
@@ -100,8 +100,8 @@ final class DictionarySearchServiceTests: XCTestCase {
         }
     }
 
-    private let myWord = CustomDictionaryEntry(roman: "taigi", hanzi: "我的台語")
-    private let kautianRow = RustEngineBridge.LexiconRow(id: 1, roman: "tâi-gí", hanzi: "台語", lengthScore: 10, sourceBitmask: 1)
+    private let myWord = CustomDictionaryEntry(roman: "taigi", hanji: "我的台語")
+    private let kautianRow = RustEngineBridge.LexiconRow(id: 1, roman: "tâi-gí", hanji: "台語", lengthScore: 10, sourceBitmask: 1)
 
     private func makeService(
         settings: StubEngineSettings = StubEngineSettings(),
@@ -137,13 +137,13 @@ final class DictionarySearchServiceTests: XCTestCase {
         XCTAssertEqual(results.count, 2)
     }
 
-    func testAHanjiQuery_takesTheHanziPathAndNeverConsultsTheCustomDictionary() async throws {
+    func testAHanjiQuery_takesTheHanjiPathAndNeverConsultsTheCustomDictionary() async throws {
         let lexicon = FakeLexicon()
-        let userData = FakeUserData(entries: [CustomDictionaryEntry(roman: "taigi", hanzi: "台語")])
+        let userData = FakeUserData(entries: [CustomDictionaryEntry(roman: "taigi", hanji: "台語")])
 
         _ = try await makeService(lexicon: lexicon, userData: userData).search(query: "台語")
 
-        XCTAssertEqual(lexicon.hanziModes.count, 1)
+        XCTAssertEqual(lexicon.hanjiModes.count, 1)
         XCTAssertTrue(lexicon.romanModes.isEmpty)
         XCTAssertEqual(userData.searchCalls, 0)
     }

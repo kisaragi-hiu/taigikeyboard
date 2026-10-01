@@ -197,7 +197,7 @@ struct ExpandedCandidateOverlay: View {
                     },
                 )
 
-                // No 文/A under TPS (always hanzi, always full-width) or Romanization Only
+                // No 文/A under TPS (always hanji, always full-width) or Romanization Only
                 // (always half-width); under Hanji with Romanization it flips punctuation width.
                 if !isTPSLayout, candidateDisplayMode.allowsSwapToggle {
                     ExpandedCandidateControlButton(

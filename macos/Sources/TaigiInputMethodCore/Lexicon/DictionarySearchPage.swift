@@ -115,8 +115,8 @@ struct DictionarySearchResultRow: View {
         HStack(spacing: 8) {
             Text(result.roman)
                 .foregroundStyle(.secondary)
-            if let hanzi = result.hanzi {
-                Text(hanzi)
+            if let hanji = result.hanji {
+                Text(hanji)
             }
             ForEach(badgeKeys, id: \.self) { key in
                 TagBadge(text: language.string(key))

@@ -69,7 +69,7 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
             let matching = filter.isEmpty
                 ? rows
                 : rows.filter {
-                    $0.roman.localizedCaseInsensitiveContains(filter) || $0.hanzi.contains(filter)
+                    $0.roman.localizedCaseInsensitiveContains(filter) || $0.hanji.contains(filter)
                 }
             // Pulled back to the last page that exists, as the engine does.
             let lastPage = max(0, matching.count - 1) / max(1, limit) * limit

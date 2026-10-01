@@ -22,7 +22,7 @@ class DictionarySearchServiceTest {
         private val rows: List<DictionarySearchResult> = emptyList(),
     ) : LexiconClient {
         val romanCalls = mutableListOf<RustEngineBridge.LexiconInputMode>()
-        val hanziCalls = mutableListOf<RustEngineBridge.LexiconInputMode>()
+        val hanjiCalls = mutableListOf<RustEngineBridge.LexiconInputMode>()
 
         override fun isHanji(text: String): Boolean = text.any { it in '一'..'鿿' }
 
@@ -53,7 +53,7 @@ class DictionarySearchServiceTest {
             filterBitmask: UInt,
             limit: Int,
         ): Outcome<List<DictionarySearchResult>, DictionaryError> {
-            hanziCalls += inputMode
+            hanjiCalls += inputMode
             return Outcome.Success(rows)
         }
     }
@@ -96,9 +96,9 @@ class DictionarySearchServiceTest {
         roman: String,
         frequency: Int,
         vararg sources: DictionarySource,
-    ) = DictionarySearchResult(id = id, roman = roman, tl = roman, hanzi = "字", frequency = frequency, sources = sources.toList())
+    ) = DictionarySearchResult(id = id, roman = roman, tl = roman, hanji = "字", frequency = frequency, sources = sources.toList())
 
-    private val myWord = CustomDictionaryWord(roman = "taigi", hanzi = "我的台語")
+    private val myWord = CustomDictionaryWord(roman = "taigi", hanji = "我的台語")
 
     private fun service(
         settings: StubEngineSettings = StubEngineSettings(),
@@ -134,14 +134,14 @@ class DictionarySearchServiceTest {
         }
 
     @Test
-    fun `a Hanji query takes the hanzi path and never consults the custom dictionary`() =
+    fun `a Hanji query takes the hanji path and never consults the custom dictionary`() =
         runTest {
             val lexicon = FakeLexicon()
-            val userData = FakeUserData(listOf(CustomDictionaryWord(roman = "taigi", hanzi = "台語")))
+            val userData = FakeUserData(listOf(CustomDictionaryWord(roman = "taigi", hanji = "台語")))
 
             service(lexicon = lexicon, userData = userData).search("台語")
 
-            assertEquals(1, lexicon.hanziCalls.size)
+            assertEquals(1, lexicon.hanjiCalls.size)
             assertTrue(lexicon.romanCalls.isEmpty())
             assertEquals(0, userData.searchCalls)
         }

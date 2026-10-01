@@ -282,7 +282,7 @@ extension ActionHandler: AutocompleteContextUpdater {
 
         return splitIntoSingleScriptCells(
             predictions,
-            hanji: { $0.hanzi },
+            hanji: { $0.hanji },
             roman: { $0.subtitle != nil ? $0.text : nil },
             sidechannels: predictionIdentity,
         )
@@ -293,7 +293,7 @@ extension ActionHandler: AutocompleteContextUpdater {
     ) -> [String: String] {
         [
             "isNextWord": "true",
-            "hanzi": prediction.hanzi,
+            "hanzi": prediction.hanji,
             // Raw TL sidechannel — NOT the commit string. Consumed only
             // by the association-recording fork in
             // `handleSuggestionSelection` (engine's `pojToTL` needs raw
@@ -307,7 +307,7 @@ extension ActionHandler: AutocompleteContextUpdater {
             // land in the legacy `tl == ""` bucket and 重/tāng could
             // inherit a count learned from 重/tîng.
             "canonicalTl": prediction.tl,
-            "displayText": prediction.hanzi,
+            "displayText": prediction.hanji,
         ]
     }
 

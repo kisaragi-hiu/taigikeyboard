@@ -224,7 +224,7 @@ class CandidateUpdateCoordinator(
                 TaigiWord(
                     id = -100 - index,
                     roman = suggestion.text,
-                    hanzi = null,
+                    hanji = null,
                     lengthScore = null,
                 )
             }

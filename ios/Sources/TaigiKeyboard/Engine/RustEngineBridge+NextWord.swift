@@ -52,7 +52,7 @@ public extension RustEngineBridge {
     struct NextWordEnginePrediction: Equatable {
         public let text: String
         public let subtitle: String?
-        public let hanzi: String
+        public let hanji: String
         public let tl: String
         /// Merged score. iOS does not currently consume this field
         /// (predictions render in array order); Android maps to
@@ -260,7 +260,7 @@ public extension RustEngineBridge {
             NextWordEnginePrediction(
                 text: p.text,
                 subtitle: p.subtitle.isEmpty ? nil : p.subtitle,
-                hanzi: p.hanji,
+                hanji: p.hanji,
                 tl: p.tl,
                 score: p.score,
             )

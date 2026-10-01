@@ -55,7 +55,7 @@ const SECONDARY_OPACITY: f64 = 0.65;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EntryField {
     Roman,
-    Hanzi,
+    Hanji,
 }
 
 #[derive(Clone)]
@@ -92,7 +92,7 @@ pub enum Message {
 struct EditingRow {
     original: CustomDictionaryEntry,
     roman: String,
-    hanzi: String,
+    hanji: String,
 }
 
 #[derive(Default)]
@@ -191,14 +191,14 @@ pub fn update(
             model.editing = Some(EditingRow {
                 original: CustomDictionaryEntry::default(),
                 roman: String::new(),
-                hanzi: String::new(),
+                hanji: String::new(),
             });
         }
         Message::Edit => {
             if let Some(row) = model.listing.selected_row() {
                 model.editing = Some(EditingRow {
                     roman: row.roman.clone(),
-                    hanzi: row.hanji.clone(),
+                    hanji: row.hanji.clone(),
                     original: row.clone(),
                 });
             }
@@ -218,7 +218,7 @@ pub fn update(
             if let Some(editing) = model.editing.as_mut() {
                 match field {
                     EntryField::Roman => editing.roman = text,
-                    EntryField::Hanzi => editing.hanzi = text,
+                    EntryField::Hanji => editing.hanji = text,
                 }
             }
         }
@@ -238,13 +238,13 @@ pub fn update(
             let EditingRow {
                 original,
                 roman,
-                hanzi,
+                hanji,
             } = editing;
             begin_job(
                 model,
                 context,
                 StringKey::DesktopProgressWorking,
-                move || save_entry_job(&original.id, &roman, &hanzi),
+                move || save_entry_job(&original.id, &roman, &hanji),
             );
         }
         Message::Export => export(model, context),
@@ -743,11 +743,11 @@ fn entry_dialog(
                         strings.resolve(StringKey::DictionaryRomanLabel),
                     ),
                 TextBox::new()
-                    .text(editing.hanzi.clone())
+                    .text(editing.hanji.clone())
                     .width(DIALOG_FIELD_WIDTH)
                     .on_text_changed(context.callback(|text| {
                         WindowMessage::CustomDictionary(Message::EntryFieldChanged(
-                            EntryField::Hanzi,
+                            EntryField::Hanji,
                             text,
                         ))
                     }))

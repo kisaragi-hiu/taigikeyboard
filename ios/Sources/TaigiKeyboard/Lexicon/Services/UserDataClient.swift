@@ -115,7 +115,7 @@ struct EngineUserDataClient: UserDataClient {
 
     func save(_ entry: CustomDictionaryEntry) async throws {
         let saved = try await engine("customDictionarySave") {
-            RustEngineBridge.customDictionarySave(id: entry.id, roman: entry.roman, hanzi: entry.hanzi)
+            RustEngineBridge.customDictionarySave(id: entry.id, roman: entry.roman, hanji: entry.hanji)
         }
         if saved.refusal == .full {
             throw CustomDictionaryError.tooManyEntries
@@ -233,6 +233,6 @@ struct EngineUserDataClient: UserDataClient {
 
 extension CustomDictionaryEntry {
     init(_ entry: Taigi_Engine_CustomDictionaryEntry) {
-        self.init(id: entry.id, roman: entry.roman, hanzi: entry.hanji)
+        self.init(id: entry.id, roman: entry.roman, hanji: entry.hanji)
     }
 }

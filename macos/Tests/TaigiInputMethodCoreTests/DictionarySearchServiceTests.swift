@@ -42,33 +42,33 @@ final class DictionarySearchServiceTests: XCTestCase {
 
         XCTAssertFalse(results.isEmpty)
         XCTAssertTrue(
-            results.contains { $0.hanzi == "台語" || $0.hanzi == "臺語" },
-            "a romanization query found no 台語: \(results.map { $0.hanzi ?? $0.roman })",
+            results.contains { $0.hanji == "台語" || $0.hanji == "臺語" },
+            "a romanization query found no 台語: \(results.map { $0.hanji ?? $0.roman })",
         )
     }
 
     /// Hanji go to the other engine entry point. Which one to use is asked of
     /// the engine, not decided by scanning code points here.
-    func testAHanziQuery_findsWords() {
+    func testAHanjiQuery_findsWords() {
         let results = makeService().search("台語")
 
         XCTAssertFalse(results.isEmpty)
-        XCTAssertTrue(results.allSatisfy { $0.hanzi != nil })
+        XCTAssertTrue(results.allSatisfy { $0.hanji != nil })
     }
 
     // MARK: - The user's own dictionary
 
     func testACustomEntry_leadsTheResults() throws {
-        try userData.save(CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"))
+        try userData.save(CustomDictionaryRow(roman: "taigi", hanji: "我的台語"))
 
         let results = makeService().search("taigi")
 
-        XCTAssertEqual(results.first?.hanzi, "我的台語", "the user's own word did not lead")
+        XCTAssertEqual(results.first?.hanji, "我的台語", "the user's own word did not lead")
         XCTAssertEqual(results.first?.sources, [.custom])
     }
 
-    func testACustomEntry_isNotFoundByAHanziQuery() throws {
-        try userData.save(CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"))
+    func testACustomEntry_isNotFoundByAHanjiQuery() throws {
+        try userData.save(CustomDictionaryRow(roman: "taigi", hanji: "我的台語"))
 
         let results = makeService().search("我的台語")
 
@@ -79,7 +79,7 @@ final class DictionarySearchServiceTests: XCTestCase {
     }
 
     func testWithTheCustomDictionaryOff_itsEntriesAreNotSearched() throws {
-        try userData.save(CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"))
+        try userData.save(CustomDictionaryRow(roman: "taigi", hanji: "我的台語"))
 
         let results = makeService(customDict: false).search("taigi")
 
@@ -154,7 +154,7 @@ final class DictionarySearchServiceTests: XCTestCase {
     /// typed it under is whichever script they were in, which is not what
     /// those sites index.
     func testACustomRow_offersNoExternalLookup() throws {
-        try userData.save(CustomDictionaryRow(roman: "gua", hanzi: "我的字"))
+        try userData.save(CustomDictionaryRow(roman: "gua", hanji: "我的字"))
 
         let customRow = try XCTUnwrap(
             makeService().search("gua").first { $0.sources == [.custom] },
@@ -181,10 +181,10 @@ final class DictionarySearchServiceTests: XCTestCase {
     /// The user's own dictionary is not one of the bundled sources, so it
     /// still answers when they are all off.
     func testWithEveryDictionaryOff_theUsersOwnEntriesStillAnswer() throws {
-        try userData.save(CustomDictionaryRow(roman: "taigi", hanzi: "我的台語"))
+        try userData.save(CustomDictionaryRow(roman: "taigi", hanji: "我的台語"))
         let results = makeService(dictionarySources: .allSourcesOff).search("taigi")
 
-        XCTAssertEqual(results.map(\.hanzi), ["我的台語"])
+        XCTAssertEqual(results.map(\.hanji), ["我的台語"])
     }
 
     /// A badge names a dictionary the user has on. A row can reach the list
@@ -211,8 +211,8 @@ final class DictionarySearchServiceTests: XCTestCase {
     /// Rows are identified per list. A single sentinel for every custom row
     /// would make two of the user's own words look like one row to SwiftUI.
     func testEveryResultHasItsOwnIdentity() throws {
-        try userData.save(CustomDictionaryRow(roman: "tai", hanzi: "一"))
-        try userData.save(CustomDictionaryRow(roman: "tai", hanzi: "二"))
+        try userData.save(CustomDictionaryRow(roman: "tai", hanji: "一"))
+        try userData.save(CustomDictionaryRow(roman: "tai", hanji: "二"))
 
         let results = makeService().search("tai")
 

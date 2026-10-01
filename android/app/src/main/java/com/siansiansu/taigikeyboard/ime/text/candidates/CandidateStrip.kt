@@ -83,7 +83,7 @@ fun TaigiCandidateStrip(
             items.any { word ->
                 val cell =
                     candidateCellText(
-                        hanzi = word.hanzi,
+                        hanji = word.hanji,
                         displayRoman = word.roman,
                         isTPSLayout = display.layoutType == "tps",
                         candidateDisplayMode = display.candidateDisplayMode,
@@ -246,7 +246,7 @@ private fun CandidateCell(
         }
     val cell =
         candidateCellText(
-            hanzi = word.hanzi,
+            hanji = word.hanji,
             displayRoman = displayRoman,
             isTPSLayout = isTPSLayout,
             candidateDisplayMode = display.candidateDisplayMode,

@@ -49,7 +49,7 @@ final class DictionarySearchService: @unchecked Sendable {
 
     /// Search the user's enabled dictionaries for `query`.
     ///
-    /// Hanzi queries use the CJK path; roman queries also consult the user's
+    /// Hanji queries use the CJK path; roman queries also consult the user's
     /// custom dictionary. Results are sorted with kautian (MOE) first, then
     /// by frequency; custom-dict hits lead the list. Awaits Trie readiness so
     /// searches arriving during the bootstrap window don't return empty.
@@ -116,7 +116,7 @@ final class DictionarySearchService: @unchecked Sendable {
                 id: Int(row.id),
                 roman: roman,
                 tl: row.roman,
-                hanzi: row.hanzi,
+                hanji: row.hanji,
                 frequency: row.lengthScore.map(Int.init) ?? 0,
                 sources: LexiconBitmask.sources(from: bitmask),
             )
@@ -135,7 +135,7 @@ final class DictionarySearchService: @unchecked Sendable {
                 id: DictionarySearchResult.customDictMarkerId,
                 roman: entry.roman,
                 tl: entry.roman,
-                hanzi: entry.hanzi,
+                hanji: entry.hanji,
                 frequency: Int.max,
                 sources: [.custom],
             )
@@ -164,7 +164,7 @@ final class DictionarySearchService: @unchecked Sendable {
             id: result.id,
             roman: result.roman,
             tl: result.tl,
-            hanzi: result.hanzi,
+            hanji: result.hanji,
             frequency: result.frequency,
             sources: result.sources.filter { enabled.contains($0) },
         )

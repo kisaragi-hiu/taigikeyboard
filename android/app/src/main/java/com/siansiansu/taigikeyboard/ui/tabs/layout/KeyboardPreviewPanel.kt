@@ -210,7 +210,7 @@ private object NoOpKeyEventDispatcher : KeyEventDispatcher {
 
 private data class SampleCandidate(
     val roman: String,
-    val hanzi: String,
+    val hanji: String,
 )
 
 private val sampleCandidates =
@@ -324,7 +324,7 @@ private fun CandidatePreviewRow(
                         textAlign = TextAlign.Center,
                     )
                     Text(
-                        text = candidate.hanzi,
+                        text = candidate.hanji,
                         fontSize = subtitleSizeSp,
                         color = effectiveSubtitleColor,
                         fontFamily = fontFamily,

@@ -65,11 +65,11 @@ class DictionarySearchService(
             when (outcome) {
                 is Outcome.Success -> outcome.value
                 is Outcome.Failure -> {
-                    logger.w(TAG, "[SEARCH] ${if (isCJK) "hanzi" else "roman"} path failed: ${outcome.error}")
+                    logger.w(TAG, "[SEARCH] ${if (isCJK) "hanji" else "roman"} path failed: ${outcome.error}")
                     return emptyList()
                 }
             }
-        logger.debug(TAG) { "[SEARCH] ${if (isCJK) "hanzi" else "roman"} path returned ${systemResults.size} results" }
+        logger.debug(TAG) { "[SEARCH] ${if (isCJK) "hanji" else "roman"} path returned ${systemResults.size} results" }
 
         val customResults = if (isCJK) emptyList() else lookupCustomDictionary(query, limit)
         logger.debug(TAG) { "[SEARCH] custom dictionary returned ${customResults.size} results" }
@@ -98,7 +98,7 @@ class DictionarySearchService(
                         id = DictionarySearchResult.CUSTOM_DICT_MARKER_ID,
                         roman = entry.roman,
                         tl = entry.roman,
-                        hanzi = entry.hanzi,
+                        hanji = entry.hanji,
                         frequency = Int.MAX_VALUE,
                         sources = listOf(DictionarySource.CUSTOM),
                     )

@@ -69,11 +69,11 @@ extension RustEngineBridge {
     }
 
     /// A new word or an edit — the engine keys it by `id` either way.
-    static func customDictionarySave(id: String, roman: String, hanzi: String) -> Taigi_Engine_CustomEntrySaved? {
+    static func customDictionarySave(id: String, roman: String, hanji: String) -> Taigi_Engine_CustomEntrySaved? {
         var save = Taigi_Engine_SaveCustomEntry()
         save.id = id
         save.roman = roman
-        save.hanji = hanzi
+        save.hanji = hanji
         guard case let .customEntrySaved(saved)? = userDataResult(
             .saveCustomEntry(save),
             op: "customDictionarySave",
