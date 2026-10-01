@@ -25,6 +25,10 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         // an earlier run would otherwise flip which script leads every cell
         // here, and a fresh CI runner has none.
         clearSettingRestoredAtTeardown(SettingsStore.Keys.isHanjiFirst.name)
+        // The cell-routing cases here are written around the §34 literal at
+        // cell 0, so Show Typed Text First is pinned ON — it ships OFF since
+        // 2026-10-02; the OFF bar is `…_withTheLiteralRowOff_writesTheDictionaryWord`.
+        setSettingRestoredAtTeardown(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name, to: true)
     }
 
     override func tearDown() {
@@ -710,7 +714,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     // MARK: - §34 literal leads under Show Typed Text First
 
     /// The bar opens on the typed letters — the §34 literal, one script, with
-    /// Show Typed Text First at its shipped ON (USER 2026-09-03) — so Return writes
+    /// Show Typed Text First ON (pinned in `setUp`) — so Return writes
     /// exactly what was typed in either output mode; the dictionary's first
     /// candidate is one cell along.
     func testReturn_onAFreshBar_writesTheTypedLiteral_inEitherMode() throws {

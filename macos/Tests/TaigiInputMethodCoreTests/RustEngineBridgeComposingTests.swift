@@ -214,12 +214,12 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         XCTAssertNil(result.candidates, "no continuous phase must read as nil, not as an empty list")
     }
 
-    /// §34 under the shipped defaults: Show Typed Text First is ON out of the box on
-    /// all four platforms (USER 2026-09-03), so with TL/POJ text composed the
-    /// preedit literal leads the list and Return commits what was typed. The OFF
+    /// §34 under the shipped defaults: Show Typed Text First is OFF out of the box on
+    /// every platform (USER 2026-10-02), so with TL/POJ text composed a
+    /// dictionary candidate leads the list, not the preedit literal. The ON
     /// half is `TaigiInputControllerCandidateTests`, which drives the same
     /// invert through the settings the shipped provider reads.
-    func testFetchAtPos_literalRomanCandidateLeads_underTheShippedDefaults() throws {
+    func testFetchAtPos_literalRomanCandidateIsAbsent_underTheShippedDefaults() throws {
         _ = try compose("taigi")
 
         let shown = try XCTUnwrap(
@@ -227,7 +227,6 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         )
         let leading = try XCTUnwrap(XCTUnwrap(shown.candidates).first)
 
-        XCTAssertEqual(leading.displayText, "taigi", "the preedit literal leads the list")
-        XCTAssertNil(leading.hanji, "the literal carries one script — a commit writes the romanization")
+        XCTAssertNotNil(leading.hanji, "nothing forces the one-script literal to the front")
     }
 }

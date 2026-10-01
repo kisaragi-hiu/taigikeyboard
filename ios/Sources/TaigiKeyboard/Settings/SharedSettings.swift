@@ -50,7 +50,7 @@ final class SharedSettings {
     private static let candidateDisplayModeKey: SettingsKey<CandidateDisplayMode> = .rawRep("candidateDisplayMode", default: .sideBySide)
     private static let isFullAccessEnabledKey: SettingsKey<Bool> = .bool("fullAccessEnabled", default: false)
     private static let isAutoSpaceEnabledKey: SettingsKey<Bool> = .bool("autoSpaceEnabled", default: false)
-    private static let isLiteralRomanCandidateEnabledKey: SettingsKey<Bool> = .bool("literalRomanCandidateEnabled", default: true)
+    private static let isLiteralRomanCandidateEnabledKey: SettingsKey<Bool> = .bool("literalRomanCandidateEnabled", default: false)
     private static let isHyphenlessRomanEnabledKey: SettingsKey<Bool> = .bool("hyphenlessRomanEnabled", default: false)
     private static let isCustomDictEnabledKey: SettingsKey<Bool> = .bool("customDictEnabled", default: true)
 
@@ -289,7 +289,7 @@ final class SharedSettings {
         set { userDefaults.set(newValue, for: Self.isOutputBothScriptsKey) }
     }
 
-    // MARK: - Literal-Roman Candidate (§34/S22, default: on)
+    // MARK: - Literal-Roman Candidate (§34/S22, default: off)
 
     // Show Typed Text First: put the literal roman candidate first while composing in TL/POJ.
     var isLiteralRomanCandidateEnabled: Bool {
@@ -661,7 +661,7 @@ final class SharedSettings {
         storedIsHanjiFirst = true
         storedIsOutputBothScripts = false
         candidateDisplayMode = .sideBySide
-        isLiteralRomanCandidateEnabled = true
+        isLiteralRomanCandidateEnabled = false
         isHyphenlessRomanEnabled = false
         fontType = .keyboardDefault
         isAutoSpaceEnabled = false

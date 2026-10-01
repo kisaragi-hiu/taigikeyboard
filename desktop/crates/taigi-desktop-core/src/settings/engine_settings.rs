@@ -163,7 +163,7 @@ pub struct EngineSettings {
     /// §34/S22 — inverted onto `FetchAtPos.literal_roman_candidate_disabled`.
     /// CROSS-PLATFORM INVARIANT — mirrors `isLiteralRomanCandidateEnabled`
     /// (`ios/.../SharedSettings.swift`) and `literalRomanCandidateEnabled`
-    /// (`android/.../PrefHelper.kt`), both default ON.
+    /// (`android/.../PrefHelper.kt`), both default OFF (USER 2026-10-02).
     pub is_literal_roman_candidate_enabled: bool,
     /// No Hyphens (`behavioral-invariants.md` §49) — `AppConfig.hyphenless_roman`
     /// on the base config; no TPS layout here, so no fold.
@@ -203,7 +203,7 @@ impl EngineSettings {
             is_hanji_first: MODE.effective_hanji_first(STORED_SWAP),
             is_full_width_punctuation: MODE.effective_full_width_punctuation(STORED_SWAP),
             candidate_display_mode: MODE,
-            is_literal_roman_candidate_enabled: true,
+            is_literal_roman_candidate_enabled: false,
             is_hyphenless_roman_enabled: false,
             is_nasal_marker_uppercase_enabled: true,
             is_custom_dict_enabled: true,

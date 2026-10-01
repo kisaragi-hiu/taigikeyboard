@@ -185,7 +185,7 @@ struct EngineSettings: Equatable, Sendable {
             isHanjiFirst: mode.effectiveHanjiFirst(stored: storedSwap),
             isFullWidthPunctuation: mode.effectiveFullWidthPunctuation(stored: storedSwap),
             candidateDisplayMode: mode,
-            isLiteralRomanCandidateEnabled: true,
+            isLiteralRomanCandidateEnabled: false,
             isHyphenlessRomanEnabled: false,
             isNasalMarkerUppercaseEnabled: true,
             isCustomDictEnabled: true,

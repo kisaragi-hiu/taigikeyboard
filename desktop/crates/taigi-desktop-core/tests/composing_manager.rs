@@ -637,7 +637,7 @@ fn commit_candidate_after_the_composition_ended_is_ignored() {
     assert_eq!(committed, None);
 }
 
-/// §34 under the shipped defaults (Show Typed Text First ON): a fresh bar has the
+/// §34 with Show Typed Text First ON (off by default since 2026-10-02): a fresh bar has the
 /// typed literal in slot 0 — one script — so the highlighted-candidate commit
 /// that Enter routes to (`keys/intent.rs` `return_commits_the_candidate_and_shift_return_the_literal`;
 /// the window opens on slot 0) writes exactly what was typed in either output
@@ -649,8 +649,10 @@ fn enter_on_a_fresh_bar_commits_the_typed_literal_in_either_mode() {
     let _lock = engine_lock();
     for swapped in [false, true] {
         let mut rig = rig();
-        rig.settings
-            .edit(|doc| doc.set_bool(&keys::IS_HANJI_FIRST, swapped));
+        rig.settings.edit(|doc| {
+            doc.set_bool(&keys::IS_HANJI_FIRST, swapped);
+            doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
+        });
         rig.type_text("taigi");
         let candidates = rig.candidates();
         assert_eq!(candidates[0].display_text, "taigi", "swapped={swapped}");

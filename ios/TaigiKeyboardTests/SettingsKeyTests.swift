@@ -131,7 +131,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertFalse(settings.isOutputBothScripts)
         XCTAssertTrue(settings.isMoeDictEnabled)
         XCTAssertFalse(settings.isITaigiDictEnabled)
-        XCTAssertTrue(settings.isLiteralRomanCandidateEnabled, "§34/S22 顯示當咧拍的字 ships ON")
+        XCTAssertFalse(settings.isLiteralRomanCandidateEnabled, "§34/S22 Show Typed Text First ships OFF")
         XCTAssertFalse(settings.isHyphenlessRomanEnabled, "無連字符 ships OFF")
         XCTAssertTrue(settings.isNasalMarkerUppercaseEnabled, "ⁿ大本字 ships ON")
     }
@@ -219,7 +219,7 @@ final class SettingsKeyTests: XCTestCase {
         settings.isLkkDictEnabled = false
         settings.isToolbarAutoCollapse = false
         settings.isTpsOrMappedToER = false
-        settings.isLiteralRomanCandidateEnabled = false
+        settings.isLiteralRomanCandidateEnabled = true
         settings.isHyphenlessRomanEnabled = true
         settings.isGlobeKeyEnabled = !DeviceCapabilities.prefersGlobeKeyByDefault
 
@@ -243,7 +243,7 @@ final class SettingsKeyTests: XCTestCase {
         XCTAssertTrue(settings.isHanjiFirst, "reset lands on the hanji-first default")
         XCTAssertFalse(settings.isOutputBothScripts)
         XCTAssertFalse(settings.isAutoSpaceEnabled)
-        XCTAssertTrue(settings.isLiteralRomanCandidateEnabled)
+        XCTAssertFalse(settings.isLiteralRomanCandidateEnabled)
         XCTAssertFalse(settings.isHyphenlessRomanEnabled)
         XCTAssertTrue(settings.isMoeDictEnabled)
         XCTAssertTrue(settings.isNewwordDictEnabled)
