@@ -124,7 +124,7 @@ def _nasal_oo_alias_num(num_value: str) -> str:
 
     The alternate spelling of the nasal final /ɔ̃/ — POJ `o͘ⁿ`, which reaches
     the engine as ASCII `oonn`. Dictionary columns are always canonical
-    (`knowledge/taigi-phonetics-reference.md` §5 fixes `onn`/`oⁿ`), so this
+    (`docs/phonetics/taigi-phonetics-reference.md` §5 fixes `onn`/`oⁿ`), so this
     exists only to index the input spelling.
 
     Splitting on tone digits FIRST is load-bearing. Inside one syllable the

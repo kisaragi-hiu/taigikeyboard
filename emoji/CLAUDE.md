@@ -24,7 +24,7 @@ merges pinned Unicode + CLDR data with a hand overlay of 台語/華語 search ke
 2. **emoji-test.txt is membership authority** — never hand-code base lists. Grouping edge cases
    get a `MIXED_TONE_PATTERNS` entry + a golden test.
 3. **Taigi keywords = authoritative-source-only** — never invent TL/POJ. Verify against the parent
-   repository's `knowledge/taigi-phonetics-reference.md` + `taigi-converter`; use 漢字 when unsure.
+   repository's `docs/phonetics/taigi-phonetics-reference.md` + `taigi-converter`; use 漢字 when unsure.
 4. **Deterministic build** — `dist/emoji.json` byte-stable; drift-guard test fails on stale output.
    Always `make build` after editing data/generator.
 5. **Release scope / version-pin bumps = user-gated** — never raise `MAX_EMOJI_VERSION`, tag, or

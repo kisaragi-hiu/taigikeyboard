@@ -4,7 +4,7 @@ Contract: docs/architecture/e2e-trace-schema.md (trace events, scenario format,
 run layout). Stdlib only, so every driver host can run it.
 
 Usage:
-  python3 tools/e2e/analyze.py --run <run-dir> [--scenarios e2e/scenarios]
+  python3 e2e/analyzer/analyze.py --run <run-dir> [--scenarios e2e/scenarios]
       [--budgets e2e/budgets.json] [--baseline <old report.json>]
 Writes <run-dir>/report.md and <run-dir>/report.json; exit 1 when any
 scenario fails or any bug / perf finding exists.

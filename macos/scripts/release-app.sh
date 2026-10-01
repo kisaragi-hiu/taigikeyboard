@@ -27,8 +27,8 @@ set -euo pipefail
 
 # shellcheck source=lib/bundle-identity.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/bundle-identity.sh"
-# shellcheck source=../../scripts/lib/desktop-release.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/lib/desktop-release.sh"
+# shellcheck source=../../tools/release/lib/desktop-release.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../tools/release/lib/desktop-release.sh"
 
 STAGING_DIR="$DISTRIBUTION_DIR/staging"
 # pkgbuild takes the *contents* of --root and lays them down under

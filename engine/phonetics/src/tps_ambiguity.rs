@@ -15,7 +15,7 @@
 //!
 //! **Membership is deliberately narrow** — only glyph pairs the
 //! auto-correct actually rewrites (dual-form stops + nasals, rules 2/2b
-//! of `knowledge/tps-auto-correct-rules.md`):
+//! of `docs/phonetics/tps-auto-correct-rules.md`):
 //! - NOT the palatalization pairs (`ㄗㄐ` …): palatalization before ㄧ/ㆪ
 //!   is phonologically unconditional, the keystroke rule is always
 //!   correct, and the whole-dictionary replay found zero readings lost

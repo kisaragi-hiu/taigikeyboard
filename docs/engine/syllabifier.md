@@ -48,7 +48,7 @@ Sub-primitives:
 
 **Normalization tables (order is load-bearing):** `NORMALIZE_TO_TL_RULES` = `ch→ts, ou→oo, o͘→oo, ⁿ→nn, oa→ua, oe→ue, eng→ing, ek→ik, oonn→onn` (`oonn` after `oo`). `normalize_to_tl_keep_tl_finals` drops `eng→ing`/`ek→ik` to preserve real TL finals `eng`/`ek`. POJ variants: `NORMALIZE_TO_POJ_RULES` (per-syllable) + `NORMALIZE_TO_POJ_GLYPH_RULES` (whole-buffer glyph-only).
 
-`TL_FINALS` covers the special/dialectal finals (`er`, `erh`, `erk`, `ir*`, `iri`, `irinn`, `ee`, `eeh`, `or`, …) — per `knowledge/taigi-phonetics-reference.md` §3.2.6; do not prune these.
+`TL_FINALS` covers the special/dialectal finals (`er`, `erh`, `erk`, `ir*`, `iri`, `irinn`, `ee`, `eeh`, `or`, …) — per `docs/phonetics/taigi-phonetics-reference.md` §3.2.6; do not prune these.
 
 ---
 
@@ -107,6 +107,6 @@ The inventory does **not** expose `valid_span_endings` / `span_min_syllable_coun
 - `binary-format.md` (`syllables.fst` byte format), `tps.md` (TPS canonicalization), `composing.md` (lattice/walker).
 - `continuous-input-ranking.md`, `continuous-commit-and-display.md` (the pipeline this feeds).
 - `architecture/behavioral-invariants.md` (`INVARIANT_CONTINUOUS_LONGEST_MATCH_PREFIX`, §30 literal-no-fold).
-- `docs/contributing/phonetics.md` + `knowledge/taigi-phonetics-reference.md` (table-contract authority).
+- `docs/contributing/phonetics.md` + `docs/phonetics/taigi-phonetics-reference.md` (table-contract authority).
 
 > Note: `syllabifier/tps.rs` shares the TL inv-driven BFS shape but its TPS-specific coda/tone handling was not line-by-line verified for this doc — read it directly when documenting TPS-specific span behavior.

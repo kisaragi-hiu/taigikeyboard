@@ -27,8 +27,8 @@
 
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/identity.sh"
-# shellcheck source=../../scripts/lib/desktop-release.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/lib/desktop-release.sh"
+# shellcheck source=../../tools/release/lib/desktop-release.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../tools/release/lib/desktop-release.sh"
 
 TIMESTAMP_URL="${TIMESTAMP_URL:-http://timestamp.digicert.com}"
 allow_dirty=false

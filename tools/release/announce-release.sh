@@ -6,7 +6,7 @@
 #
 # This is the second half of the desktop release. The first half
 # (`make macos-release` / `make windows-release`, via
-# `scripts/lib/desktop-release.sh`) stages each platform's installer on a DRAFT
+# `tools/release/lib/desktop-release.sh`) stages each platform's installer on a DRAFT
 # release, which no user can reach. Between the two halves the maintainer
 # downloads what was staged, tests it, and publishes the release by hand.
 # Publishing is what fires `.github/workflows/announce-release.yml`, which runs
@@ -32,7 +32,7 @@ fail() {
     exit 1
 }
 
-REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPOSITORY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 version=""
 while [[ $# -gt 0 ]]; do
@@ -58,12 +58,12 @@ SHORT_VERSION="$version"
     fail "version '$SHORT_VERSION' is not dotted integers — the update manifests reject suffixes"
 
 # shellcheck source=lib/release-site.sh
-source "$REPOSITORY_DIR/scripts/lib/release-site.sh"
+source "$REPOSITORY_DIR/tools/release/lib/release-site.sh"
 # The release object: its tag, its repository, the per-platform asset names and
 # `release_sha256`. Its staging half (`desktop_release_preflight`,
 # `stage_desktop_asset`) is the other script's; nothing here calls it.
 # shellcheck source=lib/desktop-release.sh
-source "$REPOSITORY_DIR/scripts/lib/desktop-release.sh"
+source "$REPOSITORY_DIR/tools/release/lib/desktop-release.sh"
 
 desktop_release_scratch_and_tools
 

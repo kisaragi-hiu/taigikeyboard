@@ -11,9 +11,10 @@ android/  ios/  macos/  windows/  linux/   # platform apps
 engine/            # Shared Rust engine — Cargo workspace, FFI to every platform
 desktop/           # Rust crates shared by Windows + Linux (taigi-desktop-core / -storage / -update)
 dictionary/        # Dictionary sources + build pipeline + output artifacts
-docs/              # engine/, architecture/, contributing/, ui/, references/, reports/, roadmap.md
-knowledge/         # Taiwanese phonetics reference (TL/POJ/TPS)
+docs/              # engine/, architecture/, contributing/, phonetics/ (TL/POJ/TPS reference), ui/, references/, reports/, roadmap.md
 taigi-converter/   # Canonical TL↔POJ↔TPS converter (git submodule)
+tools/             # Dev tooling — test selection, i18n codegen, release/, secret-scan/
+e2e/               # End-to-end typing tests — scenarios/, analyzer/, drivers/
 corpus/            # Real Taiwanese text — taigi-typing (manual-test sentences) + taigi-corpus (opt-in, future LM data); never a build input
 changelog/         # Per-release changelogs — edit only at release time
 references/        # Cloned external IME repos (gitignored)
@@ -24,7 +25,7 @@ emoji/             # Emoji data generator (own instructions file)
 
 1. **Xcode project files are maintainer-only** — agents never edit `.xcodeproj` / `.pbxproj` / `.xcworkspace`. Xcode synchronized groups auto-include new files under most `Sources/TaigiKeyboard/*` subdirs — exceptions in `docs/contributing/ios-guidelines.md`. Android Gradle files are editable.
 2. **Cross-platform alignment** — align on **intended behavior**, not API calls; verify each platform independently; document when the same behavior needs different implementations (`docs/contributing/cross-platform-alignment.md`).
-3. **Phonetics = authoritative-source-only** — never infer TL/POJ/TPS rules from test/dictionary absence; read `knowledge/taigi-phonetics-reference.md` and `taigi-converter/` first (`docs/contributing/phonetics.md`).
+3. **Phonetics = authoritative-source-only** — never infer TL/POJ/TPS rules from test/dictionary absence; read `docs/phonetics/taigi-phonetics-reference.md` and `taigi-converter/` first (`docs/contributing/phonetics.md`).
 4. **Bugfix = root cause first** — reproduce the failure and pin the cause to `file:line` before writing the fix; the PR states both.
 5. **Direction-first over fix-scope** — between two correct fixes prefer consistency and correct architectural direction over the smaller diff; state the trade-off.
 6. **Word identity = (漢字, canonical-TL) pair** — neither alone is a key (`重/tîng` ≠ `重/tāng`). Governs every dedup / lookup / ranking-merge / variant decision project-wide. POJ/TPS are alternate renderings of the same TL reading.

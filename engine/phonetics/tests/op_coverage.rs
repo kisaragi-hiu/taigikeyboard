@@ -654,7 +654,7 @@ fn tps_adjust_continuous_input_huann_hi_keeps_h_initial() {
 
 #[test]
 fn tps_adjust_standalone_nasalized_vowel_plus_h_no_longer_synthesizes_nnh() {
-    // Pin the documented trade-off (knowledge/tps-auto-correct-rules.md
+    // Pin the documented trade-off (docs/phonetics/tps-auto-correct-rules.md
     // Rule 2): TPS auto-correct deliberately does NOT synthesize the
     // nasalized checked final `-nnh` from `<nasalized-vowel> + ㄏ` because
     // it cannot disambiguate from cross-syllable `<nasalized-vowel> + ㄏ-initial`
@@ -674,7 +674,7 @@ fn tps_adjust_pure_vowel_still_triggers_entering_tone_final() {
     // Regression guard: pure-vowel finals are INTENTIONALLY excluded from
     // the boundary set so single-syllable entering-tone input still works
     // (ㄍㄚ + ㄉ → ㄍㄚㆵ for `kat`). Pinning the documented examples from
-    // knowledge/tps-auto-correct-rules.md §Rule 2.
+    // docs/phonetics/tps-auto-correct-rules.md §Rule 2.
     let cases = [
         ("ㄅ", "ㄍㄚ", "ㆴ"),
         ("ㄉ", "ㄍㄚ", "ㆵ"),

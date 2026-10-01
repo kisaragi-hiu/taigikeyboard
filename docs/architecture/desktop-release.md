@@ -14,7 +14,7 @@ A desktop release happens in two halves with a manual test between them, and
 
 | | Runs | Does |
 |---|---|---|
-| Stage all | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and `linux-build.yml` together and waits for both: GitHub-hosted runners build the `.exe` and the `.deb` from the same commit and attach them to the same draft. All three or none, onto a draft it re-creates each run (`scripts/stage-desktop.sh`; the Linux half: `linux-release.md`) |
+| Stage all | `make desktop-release` (this Mac) | Builds, signs, notarizes and stages the `.pkg` here, then dispatches `windows-build.yml` and `linux-build.yml` together and waits for both: GitHub-hosted runners build the `.exe` and the `.deb` from the same commit and attach them to the same draft. All three or none, onto a draft it re-creates each run (`tools/release/stage-desktop.sh`; the Linux half: `linux-release.md`) |
 | Stage a patch | `make desktop-patch PLATFORM=macos\|windows\|linux` (this Mac) | The same run for ONE platform: its installers only, on a draft of their own version. Without macOS, the script creates the empty draft on this commit first, since the hosted attach steps only join one |
 | **Test** | the maintainer | Open the draft's page — a draft is visible in the web UI to anyone who can write the repository — download the three assets, install, use them |
 | **Publish** | the maintainer | **Publish release** on that same page (or `gh release edit desktop-<version> --draft=false`). This is what creates the tag |
@@ -145,9 +145,9 @@ job, so a release is never blocked on it.
 
 | Piece | File |
 |---|---|
-| The release object: preflight, draft, tag alignment, create-or-attach, read-back | `scripts/lib/desktop-release.sh` |
-| The website: anonymous fetches, the one-commit site write, the manifest poll | `scripts/lib/release-site.sh` |
-| The announcement, run by the publish | `scripts/announce-release.sh` + `.github/workflows/announce-release.yml` |
+| The release object: preflight, draft, tag alignment, create-or-attach, read-back | `tools/release/lib/desktop-release.sh` |
+| The website: anonymous fetches, the one-commit site write, the manifest poll | `tools/release/lib/release-site.sh` |
+| The announcement, run by the publish | `tools/release/announce-release.sh` + `.github/workflows/announce-release.yml` |
 | What only a Mac can say about the package | `macos/scripts/publish-release.sh` |
 | What only Windows can say about the installer | `windows/scripts/publish-release.sh` |
 | The Linux package and its attach step | `linux/Makefile` (`deb`), `.github/workflows/linux-build.yml`, `linux-release.md` |

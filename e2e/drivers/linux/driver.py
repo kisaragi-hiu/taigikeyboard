@@ -6,7 +6,7 @@ its own (`make -C linux install E2E=1 PREFIX=<prefix>`; the environment
 below points both frameworks at it, so a system install is never touched),
 inside an X display and a D-Bus session:
 
-  xvfb-run -a dbus-run-session -- python3 tools/e2e/linux/driver.py \\
+  xvfb-run -a dbus-run-session -- python3 e2e/drivers/linux/driver.py \\
       --framework fcitx5 --prefix <prefix> --out <run-dir>
 
 Writes <run-dir>/linux-<framework>/<scenario>/{result.json, trace.jsonl,
@@ -29,7 +29,7 @@ import tempfile
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "analyzer"))
 import analyze
 
 HOST_SCRIPT = Path(__file__).with_name("host.py")

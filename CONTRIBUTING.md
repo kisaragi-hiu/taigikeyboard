@@ -74,7 +74,7 @@ personal account belongs outside this repository, not under `.claude/`.
 ## Phonetics
 
 Never infer a TL / POJ / TPS rule. Read
-[`knowledge/taigi-phonetics-reference.md`](knowledge/taigi-phonetics-reference.md)
+[`docs/phonetics/taigi-phonetics-reference.md`](docs/phonetics/taigi-phonetics-reference.md)
 and check against the `taigi-converter/` submodule, which is the canonical
 converter. A plausible-looking rule that is wrong will silently corrupt the
 dictionary index.

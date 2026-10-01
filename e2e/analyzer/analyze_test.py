@@ -1,4 +1,4 @@
-"""Unit tests for the e2e analyzer (tools/e2e/analyze.py)."""
+"""Unit tests for the e2e analyzer (e2e/analyzer/analyze.py)."""
 
 from __future__ import annotations
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Stage a built Windows installer (roadmap W8) on this version's DRAFT desktop
 # release — one release per desktop version in this repository, holding both
-# platforms' installers (`scripts/lib/desktop-release.sh`).
+# platforms' installers (`tools/release/lib/desktop-release.sh`).
 #
 #   bash windows/scripts/publish-release.sh [--installer <path>] [--allow-unsigned]
 #
 # NOTHING HERE REACHES A USER. The release is a draft: no tag, no public
 # download. The maintainer downloads what was staged, tests it, publishes the
-# release by hand, and then `scripts/announce-release.sh` (`make
+# release by hand, and then `tools/release/announce-release.sh` (`make
 # desktop-announce`) writes `_data/windows_release.json` and waits for the live
 # `appcast/windows.json` — the manifest every installed copy polls
 # (windows/updates/README.md).
@@ -20,8 +20,8 @@
 
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/identity.sh"
-# shellcheck source=../../scripts/lib/desktop-release.sh
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../scripts/lib/desktop-release.sh"
+# shellcheck source=../../tools/release/lib/desktop-release.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../tools/release/lib/desktop-release.sh"
 
 installer_path=""
 allow_unsigned=false
@@ -56,7 +56,7 @@ echo "==> Verifying the installer is publishable"
 [[ "$INSTALLER_NAME" == "$WINDOWS_ASSET" ]] ||
     fail "$INSTALLER_NAME is not the release name for $SHORT_VERSION (a -dirty build is not publishable)"
 # Staging needs a digest and PowerShell's file metadata; the announcement's
-# tools (curl, python3) are `scripts/announce-release.sh`'s problem, and it can
+# tools (curl, python3) are `tools/release/announce-release.sh`'s problem, and it can
 # run on either machine.
 declare -a REQUIRED_TOOLS=(sha256sum powershell.exe)
 [[ "$allow_unsigned" == true ]] || REQUIRED_TOOLS+=(signtool)

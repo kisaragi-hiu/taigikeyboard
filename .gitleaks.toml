@@ -1,5 +1,5 @@
 # Secret-scanning config. Discovered automatically from the repository root by
-# `gitleaks git`, which is how scripts/scan-secrets.sh picks it up without
+# `gitleaks git`, which is how tools/secret-scan/gitleaks-scan.sh picks it up without
 # passing --config.
 #
 # Two rules for anything added to a *rule* allowlist below:

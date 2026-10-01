@@ -19,7 +19,6 @@ on:
       - 'macos/**/*.swift'
       - '.swiftformat'
       - 'e2e/**'
-      - 'tools/e2e/**'
       - 'engine/protos/proto/**'
       - 'engine/scripts/gen-platform-protos.sh'
       - 'android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/**'
@@ -36,7 +35,6 @@ on:
       - 'macos/**/*.swift'
       - '.swiftformat'
       - 'e2e/**'
-      - 'tools/e2e/**'
       - 'engine/protos/proto/**'
       - 'engine/scripts/gen-platform-protos.sh'
       - 'android/app/src/main/java/com/siansiansu/taigikeyboard/engine/proto/**'
@@ -70,7 +68,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Analyzer unit tests (also validate e2e/scenarios)
-        working-directory: tools/e2e
+        working-directory: e2e/analyzer
         run: python3 -m unittest analyze_test
 
   i18n:

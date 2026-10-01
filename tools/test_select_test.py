@@ -188,6 +188,22 @@ class PlatformSelectionTests(SelectorTestCase):
         self.assertEqual(set(selection.commands), {"python", "converter"})
         self.assertEqual(len(selection.commands["python"]), 2)
 
+    def test_tools_shell_scripts_have_no_gate(self) -> None:
+        selection = self.select(
+            "tools/release/stage-desktop.sh", "tools/secret-scan/gitleaks-scan.sh"
+        )
+
+        self.assertEqual(selection.commands, {})
+        self.assertEqual(selection.unmapped, [])
+
+    def test_e2e_analyzer_runs_its_tests_in_place(self) -> None:
+        selection = self.select("e2e/analyzer/analyze.py")
+
+        self.assertEqual(
+            selection.commands["python"],
+            [Command("python3 -m unittest analyze_test", "e2e/analyzer")],
+        )
+
     def test_docs_only_is_admin_lane_plus_invariant_labels(self) -> None:
         selection = self.select(
             "docs/architecture/behavioral-invariants.md", "README.md"

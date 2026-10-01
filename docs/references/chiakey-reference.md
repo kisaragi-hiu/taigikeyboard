@@ -219,7 +219,7 @@ Other page claims, for the record: lexicon layers (base characters, contextual c
 |---|---|
 | Obj-C++ InputMethodKit host + OpenVanilla module loader | Our macOS host is Swift over the Rust engine (`docs/architecture/macos-roadmap.md`); module plug-in system is YAGNI for one engine. |
 | SQLite-resident bigram LM queried at keystroke time | Our lexicon is an FST + mmap binary (`docs/engine/binary-format.md`); ranking is in `engine/ranking`. |
-| Bopomofo reading buffer (`Formosa`) | Phonetics are TL / POJ / TPS from `knowledge/taigi-phonetics-reference.md`; Tekkon is the closer syllable-composer analogue (card #25). |
+| Bopomofo reading buffer (`Formosa`) | Phonetics are TL / POJ / TPS from `docs/phonetics/taigi-phonetics-reference.md`; Tekkon is the closer syllable-composer analogue (card #25). |
 | Separate dictionary repo + OTA lexicon | Dictionary is built in-repo and shipped with the app; changing that is a USER-gated scope decision (§1 lists the design if it is ever opened). |
 | In-app auto-update | `macos-release.md` records "No auto-update" as the current decision. |
 
