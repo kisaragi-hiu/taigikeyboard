@@ -295,7 +295,7 @@ fn result_row(
                         TextBlock::new()
                             .text(result.roman.clone())
                             .opacity(SECONDARY_OPACITY),
-                        TextBlock::new().text_optional(result.hanzi.clone()),
+                        TextBlock::new().text_optional(result.hanji.clone()),
                     )),
                 StackPanel::new()
                     .orientation(Orientation::Horizontal)

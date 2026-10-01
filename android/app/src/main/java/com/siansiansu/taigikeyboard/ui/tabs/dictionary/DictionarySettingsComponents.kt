@@ -107,10 +107,10 @@ internal fun SearchResultRow(
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
             )
-            if (!result.hanzi.isNullOrEmpty()) {
+            if (!result.hanji.isNullOrEmpty()) {
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = result.hanzi,
+                    text = result.hanji,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyLarge,
                 )

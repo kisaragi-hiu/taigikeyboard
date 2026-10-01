@@ -512,13 +512,13 @@ impl CustomDictionaryPage {
             .text(&original.roman)
             .use_markup(false)
             .build();
-        let hanzi = adw::EntryRow::builder()
+        let hanji = adw::EntryRow::builder()
             .title(strings.resolve(StringKey::DictionaryHanziLabel))
             .text(&original.hanji)
             .use_markup(false)
             .build();
         fields.append(&roman);
-        fields.append(&hanzi);
+        fields.append(&hanji);
         dialog.set_extra_child(Some(&fields));
         dialog.add_response("cancel", strings.resolve(StringKey::CommonCancel));
         dialog.add_response("save", strings.resolve(StringKey::CommonSave));
@@ -535,7 +535,7 @@ impl CustomDictionaryPage {
             }
         });
         let weak = Rc::downgrade(self);
-        let (roman_field, hanzi_field) = (roman.clone(), hanzi.clone());
+        let (roman_field, hanji_field) = (roman.clone(), hanji.clone());
         dialog.connect_response(None, move |_, response| {
             if response != "save" {
                 return;
@@ -546,8 +546,8 @@ impl CustomDictionaryPage {
                 return;
             }
             let id = original.id.clone();
-            let hanzi = hanzi_field.text().to_string();
-            page.begin_job(move || save_entry_job(&id, &roman, &hanzi));
+            let hanji = hanji_field.text().to_string();
+            page.begin_job(move || save_entry_job(&id, &roman, &hanji));
         });
         dialog.present(self.shell.window().as_ref());
     }
@@ -665,7 +665,7 @@ impl CustomDictionaryPage {
         let widgets = &self.widgets;
         widgets.entries.set_description(Some(&drawn.count));
         remove_rows(&widgets.list);
-        for (roman, hanzi) in &drawn.rows {
+        for (roman, hanji) in &drawn.rows {
             // Two columns, romanization then Hanji (the Mac's table). Plain labels:
             // user text, never markup.
             let cells = two_columns(
@@ -675,7 +675,7 @@ impl CustomDictionaryPage {
                     .ellipsize(gtk::pango::EllipsizeMode::End)
                     .build(),
                 &gtk::Label::builder()
-                    .label(hanzi)
+                    .label(hanji)
                     .xalign(0.0)
                     .ellipsize(gtk::pango::EllipsizeMode::End)
                     .build(),

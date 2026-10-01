@@ -203,8 +203,8 @@ impl DictionarySearchPage {
             }
         }
         let badges: Vec<&str> = keys.iter().map(|key| self.strings.resolve(*key)).collect();
-        let title = match &result.hanzi {
-            Some(hanzi) => format!("{}  {hanzi}", result.roman),
+        let title = match &result.hanji {
+            Some(hanji) => format!("{}  {hanji}", result.roman),
             None => result.roman.clone(),
         };
         // Dictionary and user text, never markup.

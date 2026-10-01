@@ -103,7 +103,7 @@ private val PageButtonSize = 45.dp
  *
  * Row breaks are computed by [CandidateRowLayout.arrangeRows] from android [Paint] pixel
  * measurement — kept identical to the legacy View so wrapping does not shift. Two-line cell
- * widths are measured as max(roman, hanzi) so toggling translate swaps text without reflowing
+ * widths are measured as max(roman, hanji) so toggling translate swaps text without reflowing
  * the grid; single-line mixed/COMBINED cells measure their rendered title (see [measureCellWidth]).
  *
  * @param resetKey bumped on each overlay show(); re-arms click protection and resets scroll/page.
@@ -154,7 +154,7 @@ fun CandidateOverlayContent(
     val primaryPaint = remember(typeface, fontScale) { measurementPaint(typeface, PRIMARY_TEXT_SIZE_SP, displayMetrics) }
     val subtitlePaint = remember(typeface, fontScale) { measurementPaint(typeface, SUBTITLE_TEXT_SIZE_SP, displayMetrics) }
 
-    // Rows do NOT depend on isHanjiFirst: two-line cell width is max(roman, hanzi) and
+    // Rows do NOT depend on isHanjiFirst: two-line cell width is max(roman, hanji) and
     // COMBINED single-line titles are swap-invariant, so a swap never reflows. They DO depend
     // on candidateDisplayMode: a mixed cell — marked split cell or the unmarked hanji-led
     // NextWord row (§42 second exception) — measures its rendered single-line title.
@@ -241,7 +241,7 @@ fun CandidateOverlayContent(
         ControlPanel(
             modifier = Modifier.align(Alignment.TopEnd),
             colors = colors,
-            // No 文/A under TPS (always hanzi, always full-width) or Romanization Only
+            // No 文/A under TPS (always hanji, always full-width) or Romanization Only
             // (always half-width); under Hanji with Romanization it flips punctuation width.
             showTranslate = !isTPSLayout && candidateDisplayMode.allowsSwapToggle,
             isTranslateActivated = isFullWidthPunctuation,
@@ -386,7 +386,7 @@ private fun CandidateCell(
                 }
             val (primary, subtitle) =
                 candidateCellText(
-                    hanzi = word.hanzi,
+                    hanji = word.hanji,
                     displayRoman = displayRoman,
                     isTPSLayout = isTPSLayout,
                     candidateDisplayMode = candidateDisplayMode,
@@ -579,7 +579,7 @@ private fun measureCellWidth(
 ): Int {
     if (isTPSLayout) {
         val title =
-            if (!word.hanzi.isNullOrEmpty()) word.hanzi else RustEngineBridge.tlDisplayToTps(word.roman, orMapsToER)
+            if (!word.hanji.isNullOrEmpty()) word.hanji else RustEngineBridge.tlDisplayToTps(word.roman, orMapsToER)
         val titleWidth = primaryPaint.measureText(title)
         return maxOf(minCellWidthPx, (titleWidth + cellPaddingPx + 0.5f).toInt())
     }
@@ -592,7 +592,7 @@ private fun measureCellWidth(
     if (candidateDisplayMode == CandidateDisplayMode.COMBINED) {
         val title =
             candidateCellText(
-                hanzi = word.hanzi,
+                hanji = word.hanji,
                 displayRoman = word.roman,
                 isTPSLayout = false,
                 candidateDisplayMode = candidateDisplayMode,
@@ -602,6 +602,6 @@ private fun measureCellWidth(
         return maxOf(minCellWidthPx, (primaryPaint.measureText(title) + cellPaddingPx + 0.5f).toInt())
     }
     val romanWidth = primaryPaint.measureText(word.roman)
-    val hanziWidth = if (!word.hanzi.isNullOrEmpty()) subtitlePaint.measureText(word.hanzi) else 0f
-    return maxOf(minCellWidthPx, (maxOf(romanWidth, hanziWidth) + cellPaddingPx + 0.5f).toInt())
+    val hanjiWidth = if (!word.hanji.isNullOrEmpty()) subtitlePaint.measureText(word.hanji) else 0f
+    return maxOf(minCellWidthPx, (maxOf(romanWidth, hanjiWidth) + cellPaddingPx + 0.5f).toInt())
 }

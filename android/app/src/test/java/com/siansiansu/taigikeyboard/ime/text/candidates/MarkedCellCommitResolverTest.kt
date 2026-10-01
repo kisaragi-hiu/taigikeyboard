@@ -23,7 +23,7 @@ class MarkedCellCommitResolverTest {
             resolveMarkedCellCommit(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
                 roman = "tâi-gí",
-                hanzi = "台語",
+                hanji = "台語",
                 outputBothScripts = false,
             ),
         )
@@ -36,7 +36,7 @@ class MarkedCellCommitResolverTest {
             resolveMarkedCellCommit(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
                 roman = "tâi-gí",
-                hanzi = "台語",
+                hanji = "台語",
                 outputBothScripts = true,
             ),
         )
@@ -50,7 +50,7 @@ class MarkedCellCommitResolverTest {
             resolveMarkedCellCommit(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN,
                 roman = "tâi-gí",
-                hanzi = "台語",
+                hanji = "台語",
                 outputBothScripts = true,
             ),
         )
@@ -59,7 +59,7 @@ class MarkedCellCommitResolverTest {
             resolveMarkedCellCommit(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN,
                 roman = "tâi-gí",
-                hanzi = "台語",
+                hanji = "台語",
                 outputBothScripts = false,
             ),
         )
@@ -73,7 +73,7 @@ class MarkedCellCommitResolverTest {
             resolveMarkedCellCommit(
                 cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI,
                 roman = "",
-                hanzi = "台語",
+                hanji = "台語",
                 outputBothScripts = true,
             ),
         )

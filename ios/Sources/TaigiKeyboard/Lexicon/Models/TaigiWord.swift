@@ -1,4 +1,4 @@
-// Core candidate-word model — id / roman / hanzi / lengthScore / sourceBitmask.
+// Core candidate-word model — id / roman / hanji / lengthScore / sourceBitmask.
 
 import Foundation
 
@@ -8,27 +8,27 @@ import Foundation
 public struct TaigiWord: Equatable {
     let id: Int
     let roman: String
-    let hanzi: String?
+    let hanji: String?
     let lengthScore: Int?
     let sourceBitmask: UInt16?
 
     init(
         id: Int,
         roman: String,
-        hanzi: String?,
+        hanji: String?,
         lengthScore: Int?,
         sourceBitmask: UInt16? = nil,
     ) {
         self.id = id
         self.roman = roman
-        self.hanzi = hanzi
+        self.hanji = hanji
         self.lengthScore = lengthScore
         self.sourceBitmask = sourceBitmask
     }
 
     var displayText: String {
-        if let hanzi, !hanzi.isEmpty {
-            return hanzi
+        if let hanji, !hanji.isEmpty {
+            return hanji
         }
         return roman
     }

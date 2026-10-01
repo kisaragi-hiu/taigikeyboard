@@ -12,12 +12,12 @@ struct CustomDictionaryView: View {
     @State private var showEntryAlert = false
     @State private var editingEntry: CustomDictionaryEntry?
     @State private var romanInput = ""
-    @State private var hanziInput = ""
+    @State private var hanjiInput = ""
     @State private var showDeleteAllAlert = false
     @State private var showClearLearningRecordsAlert = false
     @State private var clearLearningRecordsResult: ClearLearningRecordsResult?
 
-    // Case-insensitive substring match on roman/hanzi; with no query, cap at 100 rows so the list stays smooth.
+    // Case-insensitive substring match on roman/hanji; with no query, cap at 100 rows so the list stays smooth.
     private var filteredEntries: [CustomDictionaryEntry] {
         if filterText.isEmpty {
             return Array(viewModel.entries.prefix(100))
@@ -25,7 +25,7 @@ struct CustomDictionaryView: View {
         let query = filterText.lowercased()
         return viewModel.entries.filter {
             $0.roman.lowercased().contains(query) ||
-                $0.hanzi.lowercased().contains(query)
+                $0.hanji.lowercased().contains(query)
         }
     }
 
@@ -132,11 +132,11 @@ struct CustomDictionaryView: View {
                             Button {
                                 editingEntry = entry
                                 romanInput = entry.roman
-                                hanziInput = entry.hanzi
+                                hanjiInput = entry.hanji
                                 showEntryAlert = true
                             } label: {
                                 HStack {
-                                    Text("\(entry.roman) → \(entry.hanzi)")
+                                    Text("\(entry.roman) → \(entry.hanji)")
                                         .font(AppStyle.bodyFont)
                                         .foregroundColor(.primary)
                                     Spacer()
@@ -173,7 +173,7 @@ struct CustomDictionaryView: View {
                 Button {
                     editingEntry = nil
                     romanInput = ""
-                    hanziInput = ""
+                    hanjiInput = ""
                     showEntryAlert = true
                 } label: {
                     Image(latinSystemName: "plus")
@@ -187,7 +187,7 @@ struct CustomDictionaryView: View {
             TextField(lang.string(.dictionaryRomanPlaceholder), text: $romanInput)
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
-            TextField(lang.string(.dictionaryHanziPlaceholder), text: $hanziInput)
+            TextField(lang.string(.dictionaryHanziPlaceholder), text: $hanjiInput)
             Button(lang.string(.commonCancel), role: .cancel) {
                 editingEntry = nil
             }
@@ -246,13 +246,13 @@ struct CustomDictionaryView: View {
 
     private func saveEntryFromAlert() {
         let trimmedRoman = romanInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedHanzi = hanziInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedRoman.isEmpty, !trimmedHanzi.isEmpty else { return }
+        let trimmedHanji = hanjiInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedRoman.isEmpty, !trimmedHanji.isEmpty else { return }
 
         let entry = if let existing = editingEntry {
-            CustomDictionaryEntry(id: existing.id, roman: trimmedRoman, hanzi: trimmedHanzi)
+            CustomDictionaryEntry(id: existing.id, roman: trimmedRoman, hanji: trimmedHanji)
         } else {
-            CustomDictionaryEntry(roman: trimmedRoman, hanzi: trimmedHanzi)
+            CustomDictionaryEntry(roman: trimmedRoman, hanji: trimmedHanji)
         }
         editingEntry = nil
         Task { await viewModel.save(entry) }

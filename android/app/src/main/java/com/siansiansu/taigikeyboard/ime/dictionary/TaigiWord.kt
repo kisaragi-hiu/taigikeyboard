@@ -8,7 +8,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
  * Data class representing a Taigi word entry
  * @property id Database row ID
  * @property roman Romanized form with tone marks (POJ or TL)
- * @property hanzi Chinese characters representation (nullable)
+ * @property hanji Chinese characters representation (nullable)
  * @property lengthScore Dictionary frequency score used for ranking; higher is more common.
  * @property sourceBitmask u16 source-dictionary bitmask from `dictionary.bin`,
  *   `null` for non-dictionary sources (custom dict, autocomplete, spell-check).
@@ -27,7 +27,7 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 data class TaigiWord(
     val id: Int,
     val roman: String,
-    val hanzi: String?,
+    val hanji: String?,
     val lengthScore: Int?,
     val sourceBitmask: Int? = null,
     /**
@@ -39,10 +39,10 @@ data class TaigiWord(
     val additionalInfo: Map<String, String> = emptyMap(),
 ) {
     /**
-     * Display text prioritizes hanzi over roman
+     * Display text prioritizes hanji over roman
      */
     val displayText: String
-        get() = if (!hanzi.isNullOrEmpty()) hanzi else roman
+        get() = if (!hanji.isNullOrEmpty()) hanji else roman
 
     /**
      * Reserved [additionalInfo] key strings shared between producers
@@ -88,7 +88,7 @@ data class TaigiWord(
          * [CELL_SCRIPT_ROMAN]). Present only on the split cells the builder
          * emits under Hanji with Romanization (`behavioral-invariants.md` §42 second
          * exception); says what the cell SHOWS and COMMITS. Identity fields
-         * (`hanzi`, [DISPLAY_TEXT], [CANONICAL_TL]) stay on both cells so
+         * (`hanji`, [DISPLAY_TEXT], [CANONICAL_TL]) stay on both cells so
          * Word-frequency / NextWord keys are marker-independent.
          */
         const val CELL_SCRIPT = "cellScript"

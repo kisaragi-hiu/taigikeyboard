@@ -17,13 +17,13 @@ import org.junit.Test
  */
 class CandidateCellTextTest {
     private fun cell(
-        hanzi: String? = "台語",
+        hanji: String? = "台語",
         displayRoman: String = "tâi-gí",
         isTPSLayout: Boolean = false,
         mode: CandidateDisplayMode = CandidateDisplayMode.SIDE_BY_SIDE,
         isHanjiFirst: Boolean = false,
         cellScript: String? = null,
-    ) = candidateCellText(hanzi, displayRoman, isTPSLayout, mode, isHanjiFirst, cellScript)
+    ) = candidateCellText(hanji, displayRoman, isTPSLayout, mode, isHanjiFirst, cellScript)
 
     // INVARIANT_CANDIDATE_CELL_SHOWS_BOTH_SCRIPTS (behavioral-invariants.md §42)
     @Test
@@ -58,7 +58,7 @@ class CandidateCellTextTest {
     /**
      * §42 second exception: a marked mixed cell renders ONE script, no
      * subtitle — the split already happened at the builder. The roman cell
-     * keeps its `hanzi` field (identity) but renders roman alone.
+     * keeps its `hanji` field (identity) but renders roman alone.
      */
     @Test
     fun test_INVARIANT_combined_marked_cells_are_single_script() {
@@ -115,13 +115,13 @@ class CandidateCellTextTest {
     @Test
     fun hanjiLessRow_isRomanInEveryMode() {
         for (mode in CandidateDisplayMode.entries) {
-            assertEquals(CandidateCellText("tâi-gí", null), cell(hanzi = null, mode = mode))
-            assertEquals(CandidateCellText("tâi-gí", null), cell(hanzi = "", mode = mode, isHanjiFirst = true))
+            assertEquals(CandidateCellText("tâi-gí", null), cell(hanji = null, mode = mode))
+            assertEquals(CandidateCellText("tâi-gí", null), cell(hanji = "", mode = mode, isHanjiFirst = true))
         }
         // A hanji-less roman cell (§34 literal) resolves through the same first arm.
         assertEquals(
             CandidateCellText("tâi-gí", null),
-            cell(hanzi = null, mode = CandidateDisplayMode.COMBINED, cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN),
+            cell(hanji = null, mode = CandidateDisplayMode.COMBINED, cellScript = TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN),
         )
     }
 }

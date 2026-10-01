@@ -30,7 +30,7 @@ struct DictionaryFilters: Equatable, Sendable {
 struct LexiconRow: Equatable, Sendable {
     let id: Int64
     let roman: String
-    let hanzi: String?
+    let hanji: String?
     let lengthScore: Int32?
     let sourceBitmask: UInt32?
 }
@@ -253,7 +253,7 @@ extension RustEngineBridge {
         let op = "isHanji"
         guard let response = lexiconResponse(.isHanji(payload), op: op) else { return false }
         guard case let .isHanjiResult(result)? = response.result else {
-            recordFailure(op: op, message: "response carried no is-hanzi result")
+            recordFailure(op: op, message: "response carried no is-hanji result")
             return false
         }
         return result.isHanji
@@ -263,7 +263,7 @@ extension RustEngineBridge {
         LexiconRow(
             id: proto.id,
             roman: proto.roman,
-            hanzi: proto.hasHanji ? proto.hanji : nil,
+            hanji: proto.hasHanji ? proto.hanji : nil,
             lengthScore: proto.hasLengthScore ? proto.lengthScore : nil,
             sourceBitmask: proto.hasSourceBitmask ? proto.sourceBitmask : nil,
         )

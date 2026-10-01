@@ -18,27 +18,27 @@ class PredictionWordsBuilderTest {
     private fun prediction(
         text: String,
         subtitle: String?,
-        hanzi: String,
+        hanji: String,
         tl: String = text,
         score: Double = 1.0,
     ) = RustEngineBridge.NextWordEnginePrediction(
         text = text,
         subtitle = subtitle,
-        hanzi = hanzi,
+        hanji = hanji,
         tl = tl,
         score = score,
     )
 
     private val predictions =
         listOf(
-            prediction(text = "tsia̍h", subtitle = "食", hanzi = "食"),
+            prediction(text = "tsia̍h", subtitle = "食", hanji = "食"),
             // Homophones — same roman, different hanji.
-            prediction(text = "tsia̍h", subtitle = "𤆬", hanzi = "𤆬"),
+            prediction(text = "tsia̍h", subtitle = "𤆬", hanji = "𤆬"),
             // Multi-reading Hanji — same hanji, different roman.
-            prediction(text = "tîng", subtitle = "重", hanzi = "重"),
-            prediction(text = "tāng", subtitle = "重", hanzi = "重"),
+            prediction(text = "tîng", subtitle = "重", hanji = "重"),
+            prediction(text = "tāng", subtitle = "重", hanji = "重"),
             // Hanji-only prediction (engine shaped no roman).
-            prediction(text = "去", subtitle = null, hanzi = "去", tl = ""),
+            prediction(text = "去", subtitle = null, hanji = "去", tl = ""),
         )
 
     @Test
@@ -48,9 +48,9 @@ class PredictionWordsBuilderTest {
         assertEquals(predictions.size, words.size)
         assertEquals(listOf(-1, -2, -3, -4, -5), words.map { it.id })
         assertEquals("tsia̍h", words[0].roman)
-        assertEquals("食", words[0].hanzi)
+        assertEquals("食", words[0].hanji)
         assertEquals("", words[4].roman)
-        assertEquals("去", words[4].hanzi)
+        assertEquals("去", words[4].hanji)
         words.forEach { assertNull(it.additionalInfo[MetadataKeys.CELL_SCRIPT]) }
         assertEquals("tāng", words[3].additionalInfo[MetadataKeys.CANONICAL_TL])
     }
@@ -85,12 +85,12 @@ class PredictionWordsBuilderTest {
 
         assertEquals(2, words.size)
         words.forEach {
-            assertEquals("重", it.hanzi)
+            assertEquals("重", it.hanji)
             assertEquals("tāng", it.roman)
             assertEquals("tāng", it.additionalInfo[MetadataKeys.CANONICAL_TL])
             assertEquals("重", it.displayText)
         }
     }
 
-    private fun TaigiWord.displayCellText(): String = if (additionalInfo[MetadataKeys.CELL_SCRIPT] == MetadataKeys.CELL_SCRIPT_ROMAN) roman else hanzi.orEmpty()
+    private fun TaigiWord.displayCellText(): String = if (additionalInfo[MetadataKeys.CELL_SCRIPT] == MetadataKeys.CELL_SCRIPT_ROMAN) roman else hanji.orEmpty()
 }

@@ -11,11 +11,11 @@ struct CustomDictionaryEntry: Identifiable, Equatable, Sendable {
     /// Stable across edits: the engine stores an edit under the same id.
     let id: String
     var roman: String
-    var hanzi: String
+    var hanji: String
 
-    init(id: String = UUID().uuidString, roman: String, hanzi: String) {
+    init(id: String = UUID().uuidString, roman: String, hanji: String) {
         self.id = id
         self.roman = roman
-        self.hanzi = hanzi
+        self.hanji = hanji
     }
 }

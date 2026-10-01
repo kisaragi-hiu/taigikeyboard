@@ -95,7 +95,7 @@ class CandidateClickHandler(
             if (logger.isDebugEnabled) {
                 logger.d(
                     TAG,
-                    "[CLICK] id=${selectedWord.id}, roman='${selectedWord.roman}', hanzi='${selectedWord.hanzi}'",
+                    "[CLICK] id=${selectedWord.id}, roman='${selectedWord.roman}', hanji='${selectedWord.hanji}'",
                 )
                 logger.d(
                     TAG,
@@ -159,7 +159,7 @@ class CandidateClickHandler(
                 resolveMarkedCellCommit(
                     cellScript = cellScript,
                     roman = word.roman,
-                    hanzi = word.hanzi,
+                    hanji = word.hanji,
                     outputBothScripts = outputBothScripts,
                 )
             }?.let { return it }
@@ -168,7 +168,7 @@ class CandidateClickHandler(
         return resolveUnmarkedCommit(
             roman = word.roman,
             bracketRoman = bracketRoman,
-            hanzi = word.hanzi,
+            hanji = word.hanji,
             effectiveSwapped = effectiveSwapped,
             outputBothScripts = outputBothScripts,
         )
@@ -310,12 +310,12 @@ class CandidateClickHandler(
 /**
  * Annotate in Brackets / both-scripts commit form when Hanji leads — the romanization
  * rides in trailing brackets. Single spelling for the four hanji-first
- * commit sites; the roman-first inverse (`roman (hanzi)`) stays inline.
+ * commit sites; the roman-first inverse (`roman (hanji)`) stays inline.
  */
 private fun bracketedCommit(
-    hanzi: String,
+    hanji: String,
     roman: String,
-): String = "$hanzi ($roman)"
+): String = "$hanji ($roman)"
 
 // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Actions/ActionHandler+Suggestions.swift
 // `formatOutputText` and engine/composing/src/commit_text.rs `resolve_commit_text`. Drift causes
@@ -323,7 +323,7 @@ private fun bracketedCommit(
 
 /**
  * Document text + auto-space verdict for an UNMARKED commit — the three
- * sites that build the string from the candidate's own `(roman, hanzi)`
+ * sites that build the string from the candidate's own `(roman, hanji)`
  * pair rather than from a §42 cell marker.
  *
  * The verdict is resolved by the SAME arm that picks the string, never from
@@ -339,26 +339,26 @@ private fun bracketedCommit(
 internal fun resolveUnmarkedCommit(
     roman: String,
     bracketRoman: String,
-    hanzi: String?,
+    hanji: String?,
     effectiveSwapped: Boolean,
     outputBothScripts: Boolean,
 ): ResolvedCommit =
     when {
         // Annotate in Brackets writes the pair, so the romanization IS in the document
         // whichever half leads.
-        outputBothScripts && !hanzi.isNullOrEmpty() ->
+        outputBothScripts && !hanji.isNullOrEmpty() ->
             ResolvedCommit(
                 text =
                     if (effectiveSwapped) {
-                        bracketedCommit(hanzi, bracketRoman)
+                        bracketedCommit(hanji, bracketRoman)
                     } else {
-                        "$bracketRoman ($hanzi)"
+                        "$bracketRoman ($hanji)"
                     },
                 wroteRomanization = true,
             )
 
-        effectiveSwapped && !hanzi.isNullOrEmpty() ->
-            ResolvedCommit(text = hanzi, wroteRomanization = false)
+        effectiveSwapped && !hanji.isNullOrEmpty() ->
+            ResolvedCommit(text = hanji, wroteRomanization = false)
 
         else -> ResolvedCommit(text = roman, wroteRomanization = true)
     }
@@ -404,7 +404,7 @@ private fun appendAutoSpace(
 /**
  * The engine request for a Continuous candidate tap, read off the word's
  * metadata (`TaigiAutocompleteService.kt` `continuousSidechannels`) and its own
- * `roman` / `hanzi` (the candidate's, never rewritten on Android). `null` when
+ * `roman` / `hanji` (the candidate's, never rewritten on Android). `null` when
  * a strict key is missing. Mirrors iOS `ActionHandler.continuousPick(for:)`.
  */
 internal fun continuousPick(word: TaigiWord): RustEngineBridge.ContinuousPick? {
@@ -421,7 +421,7 @@ internal fun continuousPick(word: TaigiWord): RustEngineBridge.ContinuousPick? {
         associationTl = info[TaigiWord.MetadataKeys.CANONICAL_TL] ?: "",
         // §50 — the pick's hanji (identity, not the committed script): the
         // engine learns a composition only when every segment carried one.
-        hanji = word.hanzi?.takeIf { it.isNotEmpty() },
+        hanji = word.hanji?.takeIf { it.isNotEmpty() },
         consumedBytes = consumedBytes,
         syllableCount = syllableCount,
     )
@@ -488,19 +488,19 @@ internal fun shouldAppendAutoSpace(
 internal fun resolveMarkedCellCommit(
     cellScript: String,
     roman: String,
-    hanzi: String?,
+    hanji: String?,
     outputBothScripts: Boolean,
 ): ResolvedCommit? =
     when {
         cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN && roman.isNotEmpty() ->
             ResolvedCommit(text = roman, wroteRomanization = true)
 
-        cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI && !hanzi.isNullOrEmpty() ->
+        cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI && !hanji.isNullOrEmpty() ->
             if (outputBothScripts && roman.isNotEmpty()) {
-                ResolvedCommit(text = bracketedCommit(hanzi, roman), wroteRomanization = true)
+                ResolvedCommit(text = bracketedCommit(hanji, roman), wroteRomanization = true)
             } else {
                 // No roman to bracket → the bare Hanji, never empty brackets.
-                ResolvedCommit(text = hanzi, wroteRomanization = false)
+                ResolvedCommit(text = hanji, wroteRomanization = false)
             }
 
         else -> null

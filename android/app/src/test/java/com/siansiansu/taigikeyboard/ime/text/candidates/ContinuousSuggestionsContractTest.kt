@@ -246,7 +246,7 @@ class ContinuousSuggestionsContractTest {
 
     /**
      * HANT candidate (`hanji = "臺灣"`) renders dual-line: `roman` carries
-     * TL romanization, `hanzi` carries the hanji string. Tap-0 commits
+     * TL romanization, `TaigiWord.hanji` carries the hanji string. Tap-0 commits
      * via the sidechannel `DISPLAY_TEXT` = hanji.
      */
     @Test
@@ -263,12 +263,12 @@ class ContinuousSuggestionsContractTest {
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
         assertEquals("HANT roman = TL romanization", "tâi-uân", result[0].roman)
-        assertEquals("HANT hanzi = hanji string", "臺灣", result[0].hanzi)
+        assertEquals("HANT TaigiWord.hanji = candidate hanji", "臺灣", result[0].hanji)
         assertEquals("臺灣", result[0].additionalInfo[MetadataKeys.DISPLAY_TEXT])
     }
 
     /**
-     * TAILO candidate (`hanji = null`) renders single-line: `hanzi`
+     * TAILO candidate (`hanji = null`) renders single-line: `TaigiWord.hanji`
      * stays null; tap commits the engine's `DISPLAY_TEXT` sidechannel
      * (= roman for TAILO).
      */
@@ -286,7 +286,7 @@ class ContinuousSuggestionsContractTest {
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
         assertEquals("TAILO roman = TL romanization", "tāi", result[0].roman)
-        assertNull("TAILO hanzi = null (no hanji)", result[0].hanzi)
+        assertNull("TAILO TaigiWord.hanji = null (no candidate hanji)", result[0].hanji)
         assertEquals("tāi", result[0].additionalInfo[MetadataKeys.DISPLAY_TEXT])
     }
 
@@ -309,7 +309,7 @@ class ContinuousSuggestionsContractTest {
         )
         val result = buildContinuousSuggestionsForCandidates(candidates)
         assertEquals("MIXED roman = TL romanization", "hip-siòng", result[0].roman)
-        assertEquals("MIXED hanzi = hanji string", "hip相", result[0].hanzi)
+        assertEquals("MIXED TaigiWord.hanji = candidate hanji", "hip相", result[0].hanji)
         assertEquals("hip相", result[0].additionalInfo[MetadataKeys.DISPLAY_TEXT])
     }
 
@@ -321,7 +321,7 @@ class ContinuousSuggestionsContractTest {
      * the spec §4.5 `c.hanji?.takeIf { it.isNotEmpty() }` guard.
      */
     @Test
-    fun `Item 6 — hanji present-empty collapses to null hanzi`() {
+    fun `Item 6 — present-empty candidate hanji collapses to null TaigiWord hanji`() {
         val candidates = listOf(
             cand(
                 consumedSpanEnd = 4,
@@ -335,7 +335,7 @@ class ContinuousSuggestionsContractTest {
         val result = buildContinuousSuggestionsForCandidates(candidates)
         assertNull(
             "present-empty hanji must collapse to null so the cell stays single-line",
-            result[0].hanzi,
+            result[0].hanji,
         )
     }
 
@@ -482,9 +482,9 @@ class ContinuousSuggestionsContractTest {
         val romanCell = result[1]
         assertEquals(MetadataKeys.CELL_SCRIPT_HANJI, hanjiCell.additionalInfo[MetadataKeys.CELL_SCRIPT])
         assertEquals(MetadataKeys.CELL_SCRIPT_ROMAN, romanCell.additionalInfo[MetadataKeys.CELL_SCRIPT])
-        // The roman cell KEEPS hanzi so displayText / word-frequency pair-key stay put (#7).
-        assertEquals("台語", hanjiCell.hanzi)
-        assertEquals("台語", romanCell.hanzi)
+        // The roman cell KEEPS hanji so displayText / word-frequency pair-key stay put (#7).
+        assertEquals("台語", hanjiCell.hanji)
+        assertEquals("台語", romanCell.hanji)
         assertEquals("台語", romanCell.displayText)
         // Identity sidechannels copied verbatim to BOTH cells.
         for (cellInfo in listOf(hanjiCell.additionalInfo, romanCell.additionalInfo)) {
@@ -506,7 +506,7 @@ class ContinuousSuggestionsContractTest {
 
         assertEquals(1, result.size)
         assertEquals(MetadataKeys.CELL_SCRIPT_ROMAN, result[0].additionalInfo[MetadataKeys.CELL_SCRIPT])
-        assertNull(result[0].hanzi)
+        assertNull(result[0].hanji)
     }
 
     @Test
@@ -527,9 +527,9 @@ class ContinuousSuggestionsContractTest {
         // First-seen winner carries the FIRST candidate's sidechannels.
         assertEquals("tâi", result[0].additionalInfo[MetadataKeys.DISPLAY_TEXT])
         assertEquals(MetadataKeys.CELL_SCRIPT_HANJI, result[1].additionalInfo[MetadataKeys.CELL_SCRIPT])
-        assertEquals("台", result[1].hanzi)
+        assertEquals("台", result[1].hanji)
         assertEquals(MetadataKeys.CELL_SCRIPT_HANJI, result[2].additionalInfo[MetadataKeys.CELL_SCRIPT])
-        assertEquals("臺", result[2].hanzi)
+        assertEquals("臺", result[2].hanji)
     }
 
     @Test
@@ -555,7 +555,7 @@ class ContinuousSuggestionsContractTest {
             ),
             result.map { it.additionalInfo[MetadataKeys.CELL_SCRIPT] },
         )
-        assertEquals("重", result[0].hanzi)
+        assertEquals("重", result[0].hanji)
         assertEquals("surviving 漢字 cell is the first-seen reading", "tîng", result[0].additionalInfo[MetadataKeys.CANONICAL_TL])
         assertEquals("the losing reading keeps its own roman cell", listOf("tîng", "tāng"), result.drop(1).map { it.roman })
     }

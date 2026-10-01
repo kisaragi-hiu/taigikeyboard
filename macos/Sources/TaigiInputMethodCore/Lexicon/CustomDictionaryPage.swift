@@ -318,7 +318,7 @@ struct CustomDictionaryPage: View {
                     .foregroundStyle(.secondary)
             }
             TableColumn(language.string(.dictionaryHanziLabel)) { row in
-                Text(row.hanzi)
+                Text(row.hanji)
             }
         }
         .tableStyle(.inset)
@@ -382,7 +382,7 @@ struct CustomDictionaryPage: View {
         UserDataListControls(
             addLabelKey: .dictionaryAddEntry,
             isRemoveEnabled: selectedRow != nil,
-            onAdd: { editing = CustomDictionaryRow(roman: "", hanzi: "") },
+            onAdd: { editing = CustomDictionaryRow(roman: "", hanji: "") },
             onRemove: {
                 guard let selectedRow else { return }
                 Task { await model.delete(selectedRow) }
@@ -444,7 +444,7 @@ struct CustomDictionaryEntrySheet: View {
     @Environment(DisplayLanguageStore.self) private var language
 
     @State private var roman: String
-    @State private var hanzi: String
+    @State private var hanji: String
     private let original: CustomDictionaryRow
     private let onSave: (CustomDictionaryRow) -> Void
 
@@ -452,7 +452,7 @@ struct CustomDictionaryEntrySheet: View {
         original = row
         self.onSave = onSave
         _roman = State(initialValue: row.roman)
-        _hanzi = State(initialValue: row.hanzi)
+        _hanji = State(initialValue: row.hanji)
     }
 
     var body: some View {
@@ -461,7 +461,7 @@ struct CustomDictionaryEntrySheet: View {
                 .font(.headline)
             Form {
                 TextField(language.string(.dictionaryRomanLabel), text: $roman)
-                TextField(language.string(.dictionaryHanziLabel), text: $hanzi)
+                TextField(language.string(.dictionaryHanziLabel), text: $hanji)
             }
             .formStyle(.grouped)
             HStack {
@@ -470,7 +470,7 @@ struct CustomDictionaryEntrySheet: View {
                 Button(language.string(.commonSave)) {
                     var edited = original
                     edited.roman = roman.trimmingCharacters(in: .whitespacesAndNewlines)
-                    edited.hanzi = hanzi.trimmingCharacters(in: .whitespacesAndNewlines)
+                    edited.hanji = hanji.trimmingCharacters(in: .whitespacesAndNewlines)
                     onSave(edited)
                     dismiss()
                 }

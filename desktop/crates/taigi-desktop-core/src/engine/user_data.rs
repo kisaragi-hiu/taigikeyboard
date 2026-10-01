@@ -129,14 +129,14 @@ pub fn list_custom_page(
 pub fn save_custom_entry(
     id: &str,
     roman: &str,
-    hanzi: &str,
+    hanji: &str,
 ) -> Result<CustomDictionaryEntry, UserDataError> {
     let op = "customDictionarySave";
     match page_request(
         user_data_request::Method::SaveCustomEntry(SaveCustomEntry {
             id: (!id.is_empty()).then(|| id.to_owned()),
             roman: roman.to_owned(),
-            hanji: hanzi.to_owned(),
+            hanji: hanji.to_owned(),
         }),
         op,
     )? {

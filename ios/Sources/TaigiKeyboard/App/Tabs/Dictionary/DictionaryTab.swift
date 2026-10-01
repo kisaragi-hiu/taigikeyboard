@@ -300,8 +300,8 @@ struct DictionaryTab: View {
             HStack {
                 Text(result.roman)
                     .foregroundStyle(.primary)
-                if let hanzi = result.hanzi {
-                    Text(hanzi)
+                if let hanji = result.hanji {
+                    Text(hanji)
                         .foregroundStyle(.primary)
                 }
                 ForEach(uniqueTagKeys(for: result), id: \.self) { tagKey in

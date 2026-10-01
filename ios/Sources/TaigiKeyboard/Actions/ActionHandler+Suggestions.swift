@@ -67,11 +67,11 @@ extension ActionHandler {
             // script, exactly as on the Continuous path; identity rides the
             // shared sidechannels, so nothing is parsed back from the cell.
             let roman: String
-            let hanzi: String?
+            let hanji: String?
             let resolved: ResolvedCommit
             if let cellScript = CandidateCellScript.marker(for: suggestion) {
                 roman = suggestion.additionalInfo["tl"] ?? ""
-                hanzi = suggestion.additionalInfo["hanzi"]
+                hanji = suggestion.additionalInfo["hanzi"]
                 resolved = Self.markedCellCommit(
                     cellScript: cellScript,
                     cellText: suggestion.text,
@@ -79,7 +79,7 @@ extension ActionHandler {
                     isOutputBothScripts: settings.isOutputBothScripts,
                 )
             } else {
-                (roman, hanzi) = Self.parseRomanAndHanzi(
+                (roman, hanji) = Self.parseRomanAndHanji(
                     from: suggestion,
                     isNextWord: isNextWordPrediction,
                     isTPSLayout: isTPSLayout,
@@ -87,7 +87,7 @@ extension ActionHandler {
                 )
                 resolved = Self.formatOutputText(
                     roman: roman,
-                    hanzi: hanzi,
+                    hanji: hanji,
                     isTPSLayout: isTPSLayout,
                     effectiveSwapped: effectiveSwapped,
                     isOutputBothScripts: settings.isOutputBothScripts,
@@ -98,7 +98,7 @@ extension ActionHandler {
 
             commitSuggestionText(textToCommit, isNextWord: isNextWordPrediction, suggestion: suggestion)
 
-            let displayText = suggestion.additionalInfo["displayText"] ?? hanzi ?? roman
+            let displayText = suggestion.additionalInfo["displayText"] ?? hanji ?? roman
             // R5 pair-key (#7): canonical-TL reading from the same
             // sidechannel; empty (legacy bucket) for a NextWord prediction
             // that carries no canonical TL.
@@ -106,7 +106,7 @@ extension ActionHandler {
             CompositionRoot.usageRecorder.record(Usage(displayText: displayText, canonicalTl: canonicalTl))
 
             logger.debug("[SELECT] suggestion.text='\(suggestion.text)' subtitle='\(suggestion.subtitle ?? "nil")' additionalInfo=\(suggestion.additionalInfo.description)")
-            logger.debug("[SELECT] parsed roman='\(roman)' hanzi='\(hanzi ?? "nil")' displayText='\(displayText)'")
+            logger.debug("[SELECT] parsed roman='\(roman)' hanji='\(hanji ?? "nil")' displayText='\(displayText)'")
 
             // Romanization mode: auto-space (unless trailing hyphen).
             // TPS mode disables auto-space (effectiveSwapped is true for TPS).
@@ -174,7 +174,7 @@ extension ActionHandler {
     ///
     /// A split cell's `cellScript` marker is authoritative, so the document
     /// string resolves directly from the marker + info fields — never through
-    /// `parseRomanAndHanzi` (whose contract is "derive from the UI-shaped
+    /// `parseRomanAndHanji` (whose contract is "derive from the UI-shaped
     /// suggestion") and never through a new `formatOutputText` arm:
     /// - `"hanji"` cell commits the hanji; Annotate in Brackets ON appends the roman
     ///   sidechannel as `Hanji (romanization)` — today's swapped output. TPS never
@@ -205,7 +205,7 @@ extension ActionHandler {
             return ResolvedCommit(text: cellText, wroteRomanization: false)
         }
         return ResolvedCommit(
-            text: Self.bracketedHanjiCommit(hanzi: cellText, roman: roman),
+            text: Self.bracketedHanjiCommit(hanji: cellText, roman: roman),
             wroteRomanization: true,
         )
     }
@@ -227,30 +227,30 @@ extension ActionHandler {
 
     /// The Annotate in Brackets hanji-led output shape `Hanji (romanization)` — single spelling
     /// shared by `formatOutputText`'s swapped arm and the §42 marked hanji cell.
-    static func bracketedHanjiCommit(hanzi: String, roman: String) -> String {
-        "\(hanzi) (\(roman))"
+    static func bracketedHanjiCommit(hanji: String, roman: String) -> String {
+        "\(hanji) (\(roman))"
     }
 
     /// Extract romanization and Hanji from suggestion based on display mode. The NextWord path
     /// restores the fields that were swapped earlier.
-    static func parseRomanAndHanzi(
+    static func parseRomanAndHanji(
         from suggestion: AutocompleteSuggestion,
         isNextWord: Bool,
         isTPSLayout: Bool,
         effectiveSwapped: Bool,
-    ) -> (roman: String, hanzi: String?) {
+    ) -> (roman: String, hanji: String?) {
         if isNextWord {
             // CROSS-PLATFORM INVARIANT: next-word commit string == UI display string.
             // `suggestion.text` is mode-shaped (POJ in POJ mode, TL otherwise) by
             // `RustEngineBridge.nextwordPredictNext` (Rust shape rule), but `CandidateCellHelper.suggestionToHandle`
             // pre-swaps text↔subtitle in swapped/TPS modes before this handler runs —
             // so we must mirror that swap to recover the mode-shaped roman.
-            // `additionalInfo["hanzi"]` carries hanzi even for hanzi-only predictions
+            // `additionalInfo["hanzi"]` carries hanji even for hanji-only predictions
             // (Case B) where `subtitle == nil`. The raw-TL sidechannel on
             // `additionalInfo["tl"]` is consumed separately at the association call
             // site (see `handleSuggestionSelection`).
             // Mirror: android/.../smartbar/NextWordController.kt:355-363 (TaigiWord.roman).
-            // Swapped/TPS Case B (hanzi-only, no roman): `subtitle == nil` after
+            // Swapped/TPS Case B (hanji-only, no roman): `subtitle == nil` after
             // `suggestionToHandle` (swap gate requires non-empty subtitle). Fall
             // back to `""` so bracket-mode output stays `"Hanji ()"` — matches the
             // pre-fix sidechannel behavior, avoids Hanji duplication.
@@ -290,7 +290,7 @@ extension ActionHandler {
     // `resolve_commit_text` (Continuous taps). Drift changes which commits earn a space.
     static func formatOutputText(
         roman: String,
-        hanzi: String?,
+        hanji: String?,
         isTPSLayout: Bool,
         effectiveSwapped: Bool,
         isOutputBothScripts: Bool,
@@ -302,13 +302,13 @@ extension ActionHandler {
 
         // Annotate in Brackets writes the pair, so the romanization IS in the document
         // whichever half leads.
-        if isOutputBothScripts, let hanzi, !hanzi.isEmpty {
+        if isOutputBothScripts, let hanji, !hanji.isEmpty {
             let text = effectiveSwapped
-                ? Self.bracketedHanjiCommit(hanzi: hanzi, roman: bracketRoman)
-                : "\(bracketRoman) (\(hanzi))"
+                ? Self.bracketedHanjiCommit(hanji: hanji, roman: bracketRoman)
+                : "\(bracketRoman) (\(hanji))"
             return ResolvedCommit(text: text, wroteRomanization: true)
-        } else if effectiveSwapped, let hanzi, !hanzi.isEmpty {
-            return ResolvedCommit(text: hanzi, wroteRomanization: false)
+        } else if effectiveSwapped, let hanji, !hanji.isEmpty {
+            return ResolvedCommit(text: hanji, wroteRomanization: false)
         } else {
             return ResolvedCommit(text: roman, wroteRomanization: true)
         }

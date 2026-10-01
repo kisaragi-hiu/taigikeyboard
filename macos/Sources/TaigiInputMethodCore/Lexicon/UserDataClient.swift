@@ -90,7 +90,7 @@ struct EngineUserDataClient: UserDataClient {
         guard let saved = RustEngineBridge.customDictionarySave(
             id: row.id,
             roman: row.roman,
-            hanzi: row.hanzi,
+            hanji: row.hanji,
         ) else { throw UserDataClientError.engineUnavailable(op: "customDictionarySave") }
         guard saved.refusal == .none else { throw UserDataClientError.refused(detail: saved.detail) }
     }
@@ -154,6 +154,6 @@ struct EngineUserDataClient: UserDataClient {
 
 extension CustomDictionaryRow {
     init(_ entry: Taigi_Engine_CustomDictionaryEntry) {
-        self.init(id: entry.id, roman: entry.roman, hanzi: entry.hanji)
+        self.init(id: entry.id, roman: entry.roman, hanji: entry.hanji)
     }
 }

@@ -8,7 +8,7 @@ struct DictionarySearchResult {
     let id: Int
     let roman: String // Display form (POJ or TL based on user setting)
     let tl: String // Raw TL from database (for external lookup URLs)
-    let hanzi: String?
+    let hanji: String?
     let frequency: Int
     let sources: [DictionarySource]
 

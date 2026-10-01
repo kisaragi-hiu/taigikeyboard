@@ -112,7 +112,7 @@ Platform decode just propagates the single string:
 | Platform | Bridge struct | Build path |
 |---|---|---|
 | iOS | `RustEngineBridge.ContinuousCandidate` ([`RustEngineBridge.swift:513-539`](../../ios/Sources/TaigiKeyboard/Engine/RustEngineBridge.swift)) — has `displayText: String` only | `buildContinuousSuggestions` emits `Suggestion(text: c.displayText, title: c.displayText, subtitle: nil, ...)` |
-| Android | `RustEngineBridge.ContinuousCandidate` ([`RustEngineBridge.kt:635-643`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt)) — has `displayText: String` only | `buildContinuousSuggestionsForCandidates` emits `TaigiWord(roman = c.displayText, hanzi = null, ...)` |
+| Android | `RustEngineBridge.ContinuousCandidate` ([`RustEngineBridge.kt:635-643`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/engine/RustEngineBridge.kt)) — has `displayText: String` only | `buildContinuousSuggestionsForCandidates` emits `TaigiWord(roman = c.displayText, hanji = null, ...)` |
 
 ### 2.3 Cell render rules (already correct — needs both fields)
 
@@ -124,7 +124,7 @@ iOS `CandidateCellHelper` ([`CandidateCellHelper.swift:24-57`](../../ios/Sources
 | `isHanjiFirst` | `suggestion.subtitle` (= hanji) | `suggestion.text` (= roman) |
 | `isTPSLayout` | `suggestion.subtitle` (= hanji, or TPS fallback) | `nil` (TPS never shows dual-line) |
 
-Android `TaigiWord.displayText` ([`TaigiWord.kt:38-40`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/TaigiWord.kt)) prioritizes hanji-then-roman for commit; UI render side (in `CandidateStrip.kt`) consults `roman` + `hanzi` fields directly when present.
+Android `TaigiWord.displayText` ([`TaigiWord.kt:38-40`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/dictionary/TaigiWord.kt)) prioritizes hanji-then-roman for commit; UI render side (in `CandidateStrip.kt`) consults `roman` + `hanji` fields directly when present.
 
 **Conclusion**: the existing UI layer is already capable of rendering dual-line — the missing piece is the data carrier (proto + RawCandidate + ContinuousCandidate) splitting the two fields.
 
@@ -167,7 +167,7 @@ Each toggle flips the strip's cell shape, producing the user-observed "interleav
 Slot-0 (`isComposingText`, lexicon path only) is ALWAYS single-line:
 
 - iOS `createComposingTextSuggestion` (pre-Item-13 — slot-0 cell deleted): `subtitle: nil`
-- Android `createComposingTextCell` ([`TaigiAutocompleteService.kt`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/candidates/TaigiAutocompleteService.kt)): `hanzi = null`
+- Android `createComposingTextCell` ([`TaigiAutocompleteService.kt`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/candidates/TaigiAutocompleteService.kt)): `hanji = null`
 
 This is **correct** — pending preedit has no hanji yet to display. But when slots 1..n switch to dual-line (lexicon path), slot-0's single-line stands out, amplifying the inconsistency.
 
@@ -324,7 +324,7 @@ internal fun buildContinuousSuggestionsForCandidates(
         TaigiWord(
             id = index + 1,
             roman = c.roman,                                       // ← was: c.displayText
-            hanzi = c.hanji?.takeIf { it.isNotEmpty() },           // ← was: null
+            hanji = c.hanji?.takeIf { it.isNotEmpty() },           // ← was: null
             lengthScore = null,
             additionalInfo = mapOf(
                 TaigiWord.MetadataKeys.IS_CONTINUOUS to "true",

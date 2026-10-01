@@ -1,6 +1,6 @@
 // Pins the §42 Hanji with Romanization marked-cell commit resolver (`ActionHandler.markedCellCommit`)
 // and the shared auto-space verdict: a split cell's document text comes from the
-// `cellScript` marker + info fields, never from `parseRomanAndHanzi`; a defective
+// `cellScript` marker + info fields, never from `parseRomanAndHanji`; a defective
 // marker is declined by `CandidateCellScript.marker` so the render guard and the
 // commit resolver fall back to the unmarked path TOGETHER (Android
 // `resolveMarkedCellCommit` parity).

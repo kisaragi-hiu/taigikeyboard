@@ -14,7 +14,7 @@ data class DictionarySearchResult(
     val id: Int,
     val roman: String, // Display form (POJ or TL based on user setting)
     val tl: String, // Raw TL from database (for Chhoe Taigi URL)
-    val hanzi: String?,
+    val hanji: String?,
     val frequency: Int,
     val sources: List<DictionarySource>,
 ) {

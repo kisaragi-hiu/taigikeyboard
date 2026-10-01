@@ -93,13 +93,13 @@ fun RustEngineBridge.customDictionaryList(
 fun RustEngineBridge.customDictionarySave(
     id: String,
     roman: String,
-    hanzi: String,
+    hanji: String,
 ): CustomEntrySaved? {
     val save = SaveCustomEntry
         .newBuilder()
         .setId(id)
         .setRoman(roman)
-        .setHanji(hanzi)
+        .setHanji(hanji)
         .build()
     return userData("customDictionarySave") { setSaveCustomEntry(save) }
         ?.takeIf { it.hasCustomEntrySaved() }

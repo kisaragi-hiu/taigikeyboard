@@ -91,8 +91,8 @@ fn write_outcome(result: Result<(), UserDataError>) -> JobOutcome {
 /// Adds a word (`id` empty — the engine mints one) or edits the one with
 /// `id`: an edit is an edit, not a new entry that happens to replace one.
 /// Both fields are stored trimmed.
-pub fn save_entry_job(id: &str, roman: &str, hanzi: &str) -> JobOutcome {
-    write_outcome(user_data::save_custom_entry(id, roman.trim(), hanzi.trim()).map(|_| ()))
+pub fn save_entry_job(id: &str, roman: &str, hanji: &str) -> JobOutcome {
+    write_outcome(user_data::save_custom_entry(id, roman.trim(), hanji.trim()).map(|_| ()))
 }
 
 pub fn delete_entry_job(id: &str) -> JobOutcome {

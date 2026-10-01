@@ -80,7 +80,7 @@ val CandidateCellText.showsSubtitle: Boolean
  * by the caller when relevant.
  */
 fun candidateCellText(
-    hanzi: String?,
+    hanji: String?,
     displayRoman: String,
     isTPSLayout: Boolean,
     candidateDisplayMode: CandidateDisplayMode,
@@ -88,15 +88,15 @@ fun candidateCellText(
     cellScript: String?,
 ): CandidateCellText =
     when {
-        hanzi.isNullOrEmpty() -> CandidateCellText(displayRoman, null)
-        isTPSLayout -> CandidateCellText(hanzi, null)
+        hanji.isNullOrEmpty() -> CandidateCellText(displayRoman, null)
+        isTPSLayout -> CandidateCellText(hanji, null)
         candidateDisplayMode == CandidateDisplayMode.ROMAN_ONLY -> CandidateCellText(displayRoman, null)
         candidateDisplayMode == CandidateDisplayMode.COMBINED ->
             if (cellScript == TaigiWord.MetadataKeys.CELL_SCRIPT_ROMAN) {
                 CandidateCellText(displayRoman, null)
             } else {
-                CandidateCellText(hanzi, null)
+                CandidateCellText(hanji, null)
             }
-        isHanjiFirst -> CandidateCellText(hanzi, displayRoman)
-        else -> CandidateCellText(displayRoman, hanzi)
+        isHanjiFirst -> CandidateCellText(hanji, displayRoman)
+        else -> CandidateCellText(displayRoman, hanji)
     }

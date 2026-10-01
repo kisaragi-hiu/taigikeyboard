@@ -111,7 +111,7 @@ fun CustomDictionaryScreen(
             val query = filterText.lowercase()
             entries.filter {
                 it.roman.lowercase().contains(query) ||
-                    it.hanzi.lowercase().contains(query)
+                    it.hanji.lowercase().contains(query)
             }
         }
 
@@ -386,7 +386,7 @@ fun CustomDictionaryScreen(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                text = "${entry.roman} → ${entry.hanzi}",
+                                text = "${entry.roman} → ${entry.hanji}",
                                 color = MaterialTheme.colorScheme.onSurface,
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier =

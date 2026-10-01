@@ -53,14 +53,14 @@ extension RustEngineBridge {
     static func customDictionarySave(
         id: String?,
         roman: String,
-        hanzi: String,
+        hanji: String,
     ) -> Taigi_Engine_CustomEntrySaved? {
         var save = Taigi_Engine_SaveCustomEntry()
         if let id {
             save.id = id
         }
         save.roman = roman
-        save.hanji = hanzi
+        save.hanji = hanji
         guard case let .customEntrySaved(saved)? = userDataResult(
             .saveCustomEntry(save),
             op: "customDictionarySave",

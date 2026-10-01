@@ -244,7 +244,7 @@ pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> WireDicti
 pub struct LexiconRow {
     pub id: i64,
     pub roman: String,
-    pub hanzi: Option<String>,
+    pub hanji: Option<String>,
     pub length_score: Option<i32>,
     pub source_bitmask: Option<u32>,
 }
@@ -254,7 +254,7 @@ impl LexiconRow {
         Self {
             id: word.id,
             roman: word.roman,
-            hanzi: word.hanji,
+            hanji: word.hanji,
             length_score: word.length_score,
             source_bitmask: word.source_bitmask,
         }
@@ -389,7 +389,7 @@ mod tests {
         LexiconRow {
             id: index,
             roman: format!("r{index}"),
-            hanzi: None,
+            hanji: None,
             length_score: score,
             source_bitmask: Some(bitmask),
         }

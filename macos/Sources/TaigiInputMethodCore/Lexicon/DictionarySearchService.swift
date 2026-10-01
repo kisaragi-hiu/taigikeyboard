@@ -31,7 +31,7 @@ struct DictionarySearchResult: Equatable, Identifiable, Sendable {
     /// whichever script they were in — a link built from it would query for a
     /// word that is not there, in a form the site does not index.
     let lookupTl: String?
-    let hanzi: String?
+    let hanji: String?
     let sources: [DictionarySource]
 
     var moeURL: URL? {
@@ -131,7 +131,7 @@ struct DictionarySearchService: Sendable {
                 id: .system(row.id),
                 roman: displayRoman(row.roman, settings: settings),
                 lookupTl: row.roman,
-                hanzi: row.hanzi,
+                hanji: row.hanji,
                 // Trimmed to what is switched on, so the badges describe the
                 // dictionaries the user actually has. A row survives the
                 // engine's filter when ANY of its sources is enabled, so a
@@ -206,7 +206,7 @@ struct DictionarySearchService: Sendable {
                     id: .custom(row.id),
                     roman: row.roman,
                     lookupTl: nil,
-                    hanzi: row.hanzi.isEmpty ? nil : row.hanzi,
+                    hanji: row.hanji.isEmpty ? nil : row.hanji,
                     sources: [.custom],
                 )
             }

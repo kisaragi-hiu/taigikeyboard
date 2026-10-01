@@ -17,7 +17,7 @@ public extension RustEngineBridge {
     struct LexiconRow: Equatable {
         public let id: Int64
         public let roman: String
-        public let hanzi: String?
+        public let hanji: String?
         public let lengthScore: Int32?
         public let sourceBitmask: UInt32?
     }
@@ -159,7 +159,7 @@ public extension RustEngineBridge {
         return r.rows.map(taigiWordToRow)
     }
 
-    /// Tab3 hanzi-prefix dictionary lookup.
+    /// Tab3 hanji-prefix dictionary lookup.
     static func lexiconSearchByHanji(
         query: String,
         inputMode: LexiconInputMode,
@@ -262,7 +262,7 @@ public extension RustEngineBridge {
         LexiconRow(
             id: proto.id,
             roman: proto.roman,
-            hanzi: proto.hasHanji ? proto.hanji : nil,
+            hanji: proto.hasHanji ? proto.hanji : nil,
             lengthScore: proto.hasLengthScore ? proto.lengthScore : nil,
             sourceBitmask: proto.hasSourceBitmask ? proto.sourceBitmask : nil,
         )

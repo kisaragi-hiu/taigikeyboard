@@ -1,6 +1,6 @@
 // Taigi autocomplete: turns the engine's span-local continuous candidates into a ranked list.
 // Engine is the sole candidate source since v3.5.8 Item 13 — syllable splitting / prefix / custom
-// dict / hanzi guard all live there, no platform lexicon fallback. The continuous path has no
+// dict / hanji guard all live there, no platform lexicon fallback. The continuous path has no
 // composing-text cell (slot 0 = candidate[0]); the inline pre-edit is that surface.
 
 package com.siansiansu.taigikeyboard.ime.text.candidates
@@ -97,13 +97,13 @@ internal fun shouldSplitCombinedCells(
  * slot-0 model) + §10.3 commit contract, Continuous mode has NO
  * composing-text cell at slot 0. `candidate[0]` is the engine ranker top
  * and the tap commits the document string the engine resolves from
- * `roman` / `hanzi` under the live settings (R5). The inline pre-edit (`setComposingText`) is the only
+ * `roman` / `hanji` under the live settings (R5). The inline pre-edit (`setComposingText`) is the only
  * composing-text surface; Enter commits the pending tail via Item 3.
  *
  * v3.5.8 Phase 9 Item 6: `roman` carries `candidate.roman` (the
  * engine-rendered display romanization — TL, or POJ-display when the
  * input mode is POJ; this builder stays mode-agnostic per Item 13)
- * and `hanzi` carries `candidate.hanji` so [TaigiCandidateStrip] renders
+ * and `TaigiWord.hanji` carries `candidate.hanji` so [TaigiCandidateStrip] renders
  * dual-line cells (roman + hanji) on HANT/MIXED and single-line (roman
  * only) on TAILO.
  *
@@ -111,12 +111,12 @@ internal fun shouldSplitCombinedCells(
  * `additionalInfo[DISPLAY_TEXT]` (= `hanji ?? roman` per
  * `record_to_candidate`) on HANT/MIXED candidates. The tap routes through
  * [com.siansiansu.taigikeyboard.ime.text.candidates.CandidateClickHandler],
- * which sends `roman`/`hanzi` for the engine to resolve the document string
+ * which sends `roman`/`hanji` for the engine to resolve the document string
  * from (R5) and the `DISPLAY_TEXT` sidechannel as
  * `ContinuousPick.canonicalText` — the canonical key for
  * `user_frequency.db` + NextWord, NOT the document commit string.
  *
- * `hanzi` collapses present-empty `candidate.hanji == ""` to `null` via
+ * `TaigiWord.hanji` collapses present-empty `candidate.hanji == ""` to `null` via
  * `takeIf { it.isNotEmpty() }` so a wire defect (producer emitted
  * `Some("")` instead of `None` for a TAILO record) renders as single-line
  * rather than as an empty hanji line. Whitespace-only hanji is passed
@@ -134,7 +134,7 @@ internal fun shouldSplitCombinedCells(
  * hanji-bearing candidate emits TWO adjacent one-script cells — a Hanji cell
  * then a romanization cell — each carrying the SAME identity sidechannels and a
  * [TaigiWord.MetadataKeys.CELL_SCRIPT] marker saying what the cell shows
- * and commits. The roman cell KEEPS `hanzi` so `TaigiWord.displayText` and
+ * and commits. The roman cell KEEPS `hanji` so `TaigiWord.displayText` and
  * the word-frequency `(displayText, canonicalTl)` pair-key stay marker-independent.
  * Hanji-less candidates emit their roman cell alone.
  *
@@ -156,7 +156,7 @@ internal fun buildContinuousSuggestionsForCandidates(
             continuousWord(
                 id = index + 1,
                 candidate = candidate,
-                hanzi = candidate.hanji?.takeIf { it.isNotEmpty() },
+                hanji = candidate.hanji?.takeIf { it.isNotEmpty() },
                 cellScript = null,
             )
         }
@@ -169,13 +169,13 @@ internal fun buildContinuousSuggestionsForCandidates(
     // shared, only the marker decides the shown/committed script).
     return splitIntoSingleScriptCells(
         items = candidates,
-        hanziOf = { it.hanji },
+        hanjiOf = { it.hanji },
         romanOf = { it.roman },
     ) { candidate, cellScript, ordinal ->
         continuousWord(
             id = ordinal + 1,
             candidate = candidate,
-            hanzi = candidate.hanji?.takeIf { it.isNotEmpty() },
+            hanji = candidate.hanji?.takeIf { it.isNotEmpty() },
             cellScript = cellScript,
         )
     }
@@ -185,7 +185,7 @@ internal fun buildContinuousSuggestionsForCandidates(
 // and the desktop PresentedCandidate split. Drift causes silent divergence (cell order or dedupe survivor differs on one platform).
 
 /**
- * The Hanji with Romanization split (§42): each item becomes a Hanji cell (when [hanziOf] is
+ * The Hanji with Romanization split (§42): each item becomes a Hanji cell (when [hanjiOf] is
  * non-empty) then a romanization cell (when [romanOf] is non-null), each script
  * deduped on the text its cell shows, first-seen wins — a one-script cell
  * carries nothing that could tell it from an earlier cell reading the same
@@ -195,7 +195,7 @@ internal fun buildContinuousSuggestionsForCandidates(
  */
 internal fun <T> splitIntoSingleScriptCells(
     items: List<T>,
-    hanziOf: (T) -> String?,
+    hanjiOf: (T) -> String?,
     romanOf: (T) -> String?,
     emit: (item: T, cellScript: String, ordinal: Int) -> TaigiWord,
 ): List<TaigiWord> {
@@ -203,8 +203,8 @@ internal fun <T> splitIntoSingleScriptCells(
     val seenHanjiCells = HashSet<String>()
     val seenRomanCells = HashSet<String>()
     for (item in items) {
-        val hanzi = hanziOf(item)?.takeIf { it.isNotEmpty() }
-        if (hanzi != null && seenHanjiCells.add(hanzi)) {
+        val hanji = hanjiOf(item)?.takeIf { it.isNotEmpty() }
+        if (hanji != null && seenHanjiCells.add(hanji)) {
             result += emit(item, TaigiWord.MetadataKeys.CELL_SCRIPT_HANJI, result.size)
         }
         val roman = romanOf(item)
@@ -227,13 +227,13 @@ internal fun <T> splitIntoSingleScriptCells(
 private fun continuousWord(
     id: Int,
     candidate: RustEngineBridge.ContinuousCandidate,
-    hanzi: String?,
+    hanji: String?,
     cellScript: String?,
 ): TaigiWord =
     TaigiWord(
         id = id,
         roman = candidate.roman,
-        hanzi = hanzi,
+        hanji = hanji,
         lengthScore = null,
         additionalInfo =
             if (cellScript == null) {

@@ -11,13 +11,13 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
     private func prediction(
         text: String,
         subtitle: String?,
-        hanzi: String,
+        hanji: String,
         tl: String? = nil,
     ) -> RustEngineBridge.NextWordEnginePrediction {
         RustEngineBridge.NextWordEnginePrediction(
             text: text,
             subtitle: subtitle,
-            hanzi: hanzi,
+            hanji: hanji,
             tl: tl ?? text,
             score: 1.0,
         )
@@ -25,14 +25,14 @@ final class ActionHandlerPredictionSuggestionsTests: XCTestCase {
 
     private var predictions: [RustEngineBridge.NextWordEnginePrediction] {
         [
-            prediction(text: "tsia̍h", subtitle: "食", hanzi: "食"),
+            prediction(text: "tsia̍h", subtitle: "食", hanji: "食"),
             // Homophones — same roman, different hanji.
-            prediction(text: "tsia̍h", subtitle: "𤆬", hanzi: "𤆬"),
+            prediction(text: "tsia̍h", subtitle: "𤆬", hanji: "𤆬"),
             // Polyphonic Hanji — same hanji, different roman.
-            prediction(text: "tîng", subtitle: "重", hanzi: "重"),
-            prediction(text: "tāng", subtitle: "重", hanzi: "重"),
+            prediction(text: "tîng", subtitle: "重", hanji: "重"),
+            prediction(text: "tāng", subtitle: "重", hanji: "重"),
             // Hanji-only prediction (engine shaped no roman).
-            prediction(text: "去", subtitle: nil, hanzi: "去", tl: ""),
+            prediction(text: "去", subtitle: nil, hanji: "去", tl: ""),
         ]
     }
 
