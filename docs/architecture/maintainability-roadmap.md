@@ -2,7 +2,7 @@
 
 > **Type**: Planning (PR table over the 2026-09-30 audit)
 > **Keywords**: `refactor`, `dead code`, `parity`, `desktop-core`, `userdata`, `commit resolution`, `test selection`, `naming`, `docs drift`
-> **Status**: in progress — R1–R8, R9-1, R9-2, R9-3a, R9-3b, R9-3c, R9 (all), R10-a, R11, A merged; R10-b, R12 remain (#274–#328)
+> **Status**: in progress — R1–R9, R10-a, R11, A merged; R10-b, R12 remain (#274–#328)
 > **Source**: `docs/reports/2026-09-30-audit-all.md` (frozen snapshot on `30a79c16`; §2 findings, §4 draft rounds, Appendices A–F)
 > **Session memory**: project memory `project_maintainability_audit_2026_09_30.md` (Claude auto-memory)
 
