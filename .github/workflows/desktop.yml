@@ -88,3 +88,38 @@ jobs:
           set -euo pipefail
           cargo fmt --all --check --manifest-path windows/Cargo.toml
           cargo fmt --all --check --manifest-path desktop/Cargo.toml
+
+  # desktop/Cargo.toml's `rust-version` sits below stable so a distribution
+  # build can use the system rustc; `test` above runs stable and never
+  # exercises it. Read from the manifest, as engine.yml's `msrv` does.
+  msrv:
+    name: cargo check on the declared rust-version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+
+      - name: Install the declared rust-version (host target only)
+        run: |
+          set -euo pipefail
+          msrv="$(sed -n 's/^rust-version = "\([^"]*\)".*/\1/p' desktop/Cargo.toml)"
+          [ -n "$msrv" ] || { echo "::error::no rust-version in desktop/Cargo.toml"; exit 1; }
+          rustup toolchain install "$msrv" --profile minimal --no-self-update
+          echo "RUSTUP_TOOLCHAIN=$msrv" >> "$GITHUB_ENV"
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: desktop
+          key: msrv
+
+      - name: cargo check --all-targets
+        run: cargo check --manifest-path desktop/Cargo.toml --workspace --all-targets --locked
