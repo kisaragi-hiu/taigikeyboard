@@ -2,7 +2,6 @@ package com.siansiansu.taigikeyboard.ime.theme
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 /**

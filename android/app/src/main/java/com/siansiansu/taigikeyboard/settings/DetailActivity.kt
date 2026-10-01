@@ -7,7 +7,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.core.net.toUri
 import com.siansiansu.taigikeyboard.content.ContentType
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import com.siansiansu.taigikeyboard.ui.setTaigiContent
 import com.siansiansu.taigikeyboard.ui.tabs.home.DetailScreen

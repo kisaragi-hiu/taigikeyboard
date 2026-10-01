@@ -8,7 +8,7 @@ import com.siansiansu.taigikeyboard.engine.proto.DecideResult
 import com.siansiansu.taigikeyboard.engine.proto.DecisionInput
 import com.siansiansu.taigikeyboard.engine.proto.NextWordRequest
 import com.siansiansu.taigikeyboard.engine.proto.NextWordResponse
-import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
+import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
 
 // region Decide intents (6)
 // UpdateLastSelectedWord was originally Android-only (Space-path); v3.5.8

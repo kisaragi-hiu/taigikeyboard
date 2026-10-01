@@ -1,9 +1,9 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.Platform
-import com.siansiansu.taigikeyboard.ime.core.settings.CandidateDisplayMode
-import com.siansiansu.taigikeyboard.ime.core.settings.PojMarkerOptions
-import com.siansiansu.taigikeyboard.ime.core.settings.StubEngineSettings
+import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
+import com.siansiansu.taigikeyboard.ime.settings.PojMarkerOptions
+import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

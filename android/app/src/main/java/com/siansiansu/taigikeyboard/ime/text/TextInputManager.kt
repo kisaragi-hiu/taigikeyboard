@@ -37,7 +37,7 @@ import kotlinx.coroutines.flow.StateFlow
  */
 class TextInputManager(
     private val taigikeyboard: TaigiKeyboard,
-    private val prefs: com.siansiansu.taigikeyboard.ime.core.PrefHelper,
+    private val prefs: com.siansiansu.taigikeyboard.ime.settings.PrefHelper,
 ) : CoroutineScope by MainScope(),
     TaigiKeyboard.EventListener {
     private val osHandler = Handler(Looper.getMainLooper())
@@ -157,7 +157,7 @@ class TextInputManager(
 
     /**
      * Trigger the standard Taigi candidate recompute pipeline.
-     * Used by [com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler]
+     * Used by [com.siansiansu.taigikeyboard.ime.text.candidates.CandidateClickHandler]
      * after a Continuous mid-commit, where the engine emits
      * `PerformAutocomplete` but `DefaultComposingDelegate` treats it as a
      * no-op — the candidate flow has historically been driven from the
@@ -231,31 +231,31 @@ class TextInputManager(
         themeSurface = KeyboardThemeSurfaceController(inputView, scope = this)
 
         val overlayView =
-            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateOverlayView>(
+            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.overlays.CandidateOverlayView>(
                 R.id.candidate_overlay,
             )
         smartbarManager.registerCandidateOverlayView(overlayView)
 
         val layoutOverlay =
-            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.smartbar.LayoutSelectionOverlayView>(
+            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.overlays.LayoutSelectionOverlayView>(
                 R.id.layout_selection_overlay,
             )
         smartbarManager.registerLayoutSelectionOverlayView(layoutOverlay)
 
         val symbolOverlay =
-            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.smartbar.SymbolSelectionOverlayView>(
+            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.overlays.SymbolSelectionOverlayView>(
                 R.id.symbol_selection_overlay,
             )
         smartbarManager.registerSymbolSelectionOverlayView(symbolOverlay)
 
         val settingsOverlay =
-            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.smartbar.SettingsSelectionOverlayView>(
+            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.overlays.SettingsSelectionOverlayView>(
                 R.id.settings_selection_overlay,
             )
         smartbarManager.registerSettingsSelectionOverlayView(settingsOverlay)
 
         val oneHandedMenuOverlay =
-            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.smartbar.OneHandedMenuOverlayView>(
+            inputView.findViewById<com.siansiansu.taigikeyboard.ime.text.overlays.OneHandedMenuOverlayView>(
                 R.id.one_handed_menu_overlay,
             )
         smartbarManager.registerOneHandedMenuOverlayView(oneHandedMenuOverlay)

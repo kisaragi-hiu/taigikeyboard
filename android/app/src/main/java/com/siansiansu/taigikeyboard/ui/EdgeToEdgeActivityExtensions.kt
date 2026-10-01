@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.Composable
 import androidx.core.view.WindowCompat
 import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ui.theme.TaigiKeyboardTheme
 
 // Edge-to-edge display setup and Compose-root scaffold extensions for Activity classes

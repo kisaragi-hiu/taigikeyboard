@@ -4,11 +4,11 @@
 
 package com.siansiansu.taigikeyboard.ime.text
 
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
-import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardAppearance
+import com.siansiansu.taigikeyboard.ime.theme.ThemeAppearanceCache
+import com.siansiansu.taigikeyboard.ime.theme.isKeyboardNightMode
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 
 /**
@@ -59,7 +59,7 @@ internal class KeyboardAppearanceResolver(
     /** The resolved theme colors only — for the View-layer gradient/transparency
      *  apply (KeyboardThemeSurfaceController), which does not need the full
      *  KeyboardAppearance. Shares the same cache as [snapshot]. */
-    fun resolvedColors(): com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings = themeCache.resolve(isKeyboardNightMode(taigikeyboard)).colors
+    fun resolvedColors(): com.siansiansu.taigikeyboard.ime.theme.KeyboardColorSettings = themeCache.resolve(isKeyboardNightMode(taigikeyboard)).colors
 
     private fun resolveTypeface(): android.graphics.Typeface {
         val fontType = prefs.fontType

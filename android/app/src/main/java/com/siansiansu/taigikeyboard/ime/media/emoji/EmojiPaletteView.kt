@@ -66,9 +66,9 @@ private val VariantsTriangleShapeRtl = GenericShape { size, _ ->
 @Composable
 fun EmojiPaletteView(
     fullEmojiMappings: EmojiLayoutDataMap,
-    preferredSkinTone: com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone,
+    preferredSkinTone: com.siansiansu.taigikeyboard.ime.media.emoji.EmojiSkinTone,
     onEmojiClick: (EmojiKeyData) -> Unit,
-    onSkinToneSelected: (com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone) -> Unit,
+    onSkinToneSelected: (com.siansiansu.taigikeyboard.ime.media.emoji.EmojiSkinTone) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var activeCategory by remember { mutableStateOf(EmojiCategory.SMILEYS_EMOTION) }
@@ -172,14 +172,14 @@ private fun EmojiCategoriesTabRow(
 @Composable
 private fun EmojiKey(
     emojiSet: EmojiSet,
-    preferredSkinTone: com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone,
+    preferredSkinTone: com.siansiansu.taigikeyboard.ime.media.emoji.EmojiSkinTone,
     onEmojiClick: (EmojiKeyData) -> Unit,
-    onSkinToneSelected: (com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone) -> Unit,
+    onSkinToneSelected: (com.siansiansu.taigikeyboard.ime.media.emoji.EmojiSkinTone) -> Unit,
 ) {
     val variations = remember(emojiSet) { emojiSet.variations() }
     val hasVariations = remember(emojiSet) { variations.isNotEmpty() }
     val base = remember(emojiSet, preferredSkinTone, hasVariations) {
-        if (hasVariations && preferredSkinTone != com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone.DEFAULT) {
+        if (hasVariations && preferredSkinTone != com.siansiansu.taigikeyboard.ime.media.emoji.EmojiSkinTone.DEFAULT) {
             emojiSet.base(withSkinTone = preferredSkinTone.codePoint)
         } else {
             emojiSet.base()
@@ -248,7 +248,7 @@ private fun EmojiKey(
 @Composable
 private fun EmojiVariationsPopup(
     variations: List<EmojiKeyData>,
-    onEmojiTap: (EmojiKeyData, com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone?) -> Unit,
+    onEmojiTap: (EmojiKeyData, com.siansiansu.taigikeyboard.ime.media.emoji.EmojiSkinTone?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val emojiKeyHeight = 48.dp
@@ -296,14 +296,14 @@ private fun EmojiVariationsPopup(
     }
 }
 
-private fun detectSkinToneFromEmoji(emoji: EmojiKeyData): com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone? {
-    val skinToneCodePoints = com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone
+private fun detectSkinToneFromEmoji(emoji: EmojiKeyData): com.siansiansu.taigikeyboard.ime.media.emoji.EmojiSkinTone? {
+    val skinToneCodePoints = com.siansiansu.taigikeyboard.ime.media.emoji.EmojiSkinTone
         .availableTones()
         .map { it.codePoint }
 
     for (codePoint in emoji.codePoints) {
         if (codePoint in skinToneCodePoints) {
-            return com.siansiansu.taigikeyboard.ime.keyboard.EmojiSkinTone
+            return com.siansiansu.taigikeyboard.ime.media.emoji.EmojiSkinTone
                 .fromCodePoint(codePoint)
         }
     }

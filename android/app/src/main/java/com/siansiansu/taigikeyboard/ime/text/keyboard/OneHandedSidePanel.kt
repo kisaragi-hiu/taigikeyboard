@@ -16,7 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
-import com.siansiansu.taigikeyboard.ime.core.settings.OneHandedMode
+import com.siansiansu.taigikeyboard.ime.settings.OneHandedMode
 
 /** Mirrors iOS `OneHandedSidePanel` (`Overlays/OneHandedModeViews.swift`). */
 @Composable

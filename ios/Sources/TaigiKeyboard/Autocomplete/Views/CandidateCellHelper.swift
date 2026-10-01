@@ -21,7 +21,7 @@ enum CandidateCellHelper {
     /// ignores `candidateDisplayMode`; Romanization Only always shows the engine `roman` (`text`); Hanji with Romanization is
     /// single-script — a split cell shows its own `text`, an un-split row (wire defect) is hanji-led;
     /// Hanji–Romanization Pairing lets `isTranslateSwapped` pick the roman / hanji order.
-    // Arm order mirrors Android SmartbarCandidateStrip.kt / macOS CandidateCellContent:
+    // Arm order mirrors Android CandidateStrip.kt / macOS CandidateCellContent:
     // TPS → romanOnly → combined → swapped → default.
     static func displayTitle(
         for suggestion: AutocompleteSuggestion,
@@ -247,7 +247,7 @@ enum CandidateCellHelper {
     /// TPS fallback for a hanji-less cell: its display romanization (tone
     /// marks) rendered as TPS symbols — what picking it writes (R5 P2, the
     /// engine's `commit_text.rs` Bopomofo).
-    // CROSS-PLATFORM INVARIANT — mirrors android SmartbarCandidateStrip.kt
+    // CROSS-PLATFORM INVARIANT — mirrors android CandidateStrip.kt
     // `tlDisplayToTps(word.roman, …)`. Drift shows one platform a cell its pick does not write.
     private static func tpsFallback(
         for suggestion: AutocompleteSuggestion,

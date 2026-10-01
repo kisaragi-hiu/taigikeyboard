@@ -46,9 +46,9 @@ data class TaigiWord(
 
     /**
      * Reserved [additionalInfo] key strings shared between producers
-     * ([com.siansiansu.taigikeyboard.ime.text.composing.TaigiAutocompleteService])
-     * and consumers ([com.siansiansu.taigikeyboard.ime.text.smartbar.CandidateClickHandler],
-     * [com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarCandidateStrip]).
+     * ([com.siansiansu.taigikeyboard.ime.text.candidates.TaigiAutocompleteService])
+     * and consumers ([com.siansiansu.taigikeyboard.ime.text.candidates.CandidateClickHandler],
+     * [com.siansiansu.taigikeyboard.ime.text.candidates.TaigiCandidateStrip]).
      * Adding a new feature → add a const here, do not sprinkle string literals.
      */
     object MetadataKeys {

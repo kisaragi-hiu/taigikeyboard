@@ -3,8 +3,8 @@ package com.siansiansu.taigikeyboard.ime.dictionary
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
-import com.siansiansu.taigikeyboard.ime.core.settings.StubEngineSettings
-import com.siansiansu.taigikeyboard.ime.core.settings.StubEngineSettingsProvider
+import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettings
+import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettingsProvider
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

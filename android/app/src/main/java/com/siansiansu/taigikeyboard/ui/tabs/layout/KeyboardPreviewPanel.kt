@@ -32,12 +32,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.siansiansu.taigikeyboard.R
-import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
-import com.siansiansu.taigikeyboard.ime.core.ThemeAppearance
-import com.siansiansu.taigikeyboard.ime.core.themeBackground
 import com.siansiansu.taigikeyboard.ime.popup.KeyAnchor
 import com.siansiansu.taigikeyboard.ime.popup.NoOpPopupHost
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.key.KeyVariation
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyBounds
@@ -51,7 +48,10 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardMode
 import com.siansiansu.taigikeyboard.ime.text.keyboard.isLandscape
 import com.siansiansu.taigikeyboard.ime.text.layout.LayoutManager
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardColorSettings
+import com.siansiansu.taigikeyboard.ime.theme.ThemeAppearance
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
+import com.siansiansu.taigikeyboard.ime.theme.themeBackground
 import com.siansiansu.taigikeyboard.ime.theme.withNightModeOff
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 

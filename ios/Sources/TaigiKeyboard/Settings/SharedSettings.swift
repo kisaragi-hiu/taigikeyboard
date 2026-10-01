@@ -169,7 +169,7 @@ final class SharedSettings {
     /// before it (`SIÂᴺ`); off, always `ⁿ`. Reaches the engine through
     /// `pojMarkerOptions` (inverted as `AppConfig.force_lowercase_nasal_marker`)
     /// and the case ops; the `nn` key label reads it off `SettingsSnapshot`.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/PrefHelper.kt:isNasalMarkerUppercaseEnabled (ON).
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/PrefHelper.kt:isNasalMarkerUppercaseEnabled (ON).
     // Drift causes silent divergence (one platform writes ᴺ after a capital, the other ⁿ).
     var isNasalMarkerUppercaseEnabled: Bool {
         get { userDefaults.value(for: Self.isNasalMarkerUppercaseEnabledKey) }

@@ -1,7 +1,7 @@
 package com.siansiansu.taigikeyboard.settings
 
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 
 // Resets settings and user-owned data stores.
 //

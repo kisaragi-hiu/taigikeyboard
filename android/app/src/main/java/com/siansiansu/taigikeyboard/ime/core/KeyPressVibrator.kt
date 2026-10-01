@@ -22,6 +22,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 
 class KeyPressVibrator(
     context: Context,

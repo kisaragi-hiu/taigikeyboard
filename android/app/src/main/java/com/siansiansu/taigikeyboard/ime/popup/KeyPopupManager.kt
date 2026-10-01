@@ -15,11 +15,8 @@ import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.i18n.ProvideDisplayLanguage
-import com.siansiansu.taigikeyboard.ime.core.PrefHelper
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
-import com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache
-import com.siansiansu.taigikeyboard.ime.core.isKeyboardNightMode
-import com.siansiansu.taigikeyboard.ime.core.pressedKeyFillArgb
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.keyboard.AnchorSide
@@ -27,7 +24,10 @@ import com.siansiansu.taigikeyboard.ime.text.keyboard.ExtendedPopupGeometryInput
 import com.siansiansu.taigikeyboard.ime.text.keyboard.KeyboardLayoutSolver
 import com.siansiansu.taigikeyboard.ime.text.keyboard.PopupDimensionsInput
 import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
+import com.siansiansu.taigikeyboard.ime.theme.ThemeAppearanceCache
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
+import com.siansiansu.taigikeyboard.ime.theme.isKeyboardNightMode
+import com.siansiansu.taigikeyboard.ime.theme.pressedKeyFillArgb
 import com.siansiansu.taigikeyboard.typeface.TypefaceLoader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -162,7 +162,7 @@ class KeyPopupManager(
      *    so it does not call `findOrCreateWindowRecomposer` on the popup
      *    window's `PopupDecorView`. That default lookup fails because
      *    PopupDecorView has no `ViewTreeLifecycleOwner` tag (the IME's
-     *    [com.siansiansu.taigikeyboard.ime.lifecycle.LifecycleInputMethodService.installViewTreeOwners]
+     *    [com.siansiansu.taigikeyboard.ime.core.LifecycleInputMethodService.installViewTreeOwners]
      *    only tags the IME decor view, not the popup window's separate
      *    decor view) — historic crash signature
      *    `IllegalStateException: ViewTreeLifecycleOwner not found from
@@ -201,7 +201,7 @@ class KeyPopupManager(
     /**
      * Returns the display params for the current theme / font / screen config,
      * re-resolving only when one of those inputs changed since the last press.
-     * Same shape as [com.siansiansu.taigikeyboard.ime.core.ThemeAppearanceCache].
+     * Same shape as [com.siansiansu.taigikeyboard.ime.theme.ThemeAppearanceCache].
      */
     private fun displayParams(): PopupDisplayParams {
         val config = ime.resources.configuration

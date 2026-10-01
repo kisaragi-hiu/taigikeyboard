@@ -11,7 +11,7 @@ data class KeyData(
 /**
  * A label-driven TPS glyph key carrying long-press variants (code 0 excludes
  * the `，` punctuation key, 65292). Shared by the keycap hint renderer
- * (KeyContent) and the popup base-glyph prepend (PopupCellResolver) so both
+ * (KeyContent) and the popup base-glyph prepend (`tpsPopupWithBaseGlyph`, PopupCells.kt) so both
  * classify "TPS glyph key" identically; each site supplies its own
  * TPS-active check.
  */

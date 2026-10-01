@@ -40,7 +40,7 @@
 | `ime/text/layout/LayoutManager.kt` | `loadExtendedPopups` loads `taigi_{poj,tl}.json` by input mode; merges into `keyData.popup` |
 | `assets/ime/text/characters/extended_popups/taigi_{poj,tl}.json` | Static tone-variation popup tables (18 keys each) |
 | `ime/popup/KeyPopupManager.kt` | `PopupHost` impl: preview + extended `PopupWindow`, motion hit-test, `activeKeyData()` |
-| `ime/popup/PopupCellResolver.kt` | `buildPopupCells` maps `KeyData.popup` → visual cells |
+| `ime/popup/PopupCells.kt` | `buildPopupCells` maps `KeyData.popup` → visual cells |
 
 ---
 

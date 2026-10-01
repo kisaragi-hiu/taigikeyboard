@@ -12,8 +12,8 @@ import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
-import com.siansiansu.taigikeyboard.ime.core.SurfaceRect
-import com.siansiansu.taigikeyboard.ime.core.ThemeImageBackground
+import com.siansiansu.taigikeyboard.ime.theme.SurfaceRect
+import com.siansiansu.taigikeyboard.ime.theme.ThemeImageBackground
 import kotlin.math.roundToInt
 
 /**

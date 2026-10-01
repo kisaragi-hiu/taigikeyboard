@@ -17,7 +17,7 @@ protocol EngineSettings {
     /// §10.2 word-boundary-spacing predicate needs this to tell
     /// hanji-first (no space) from both-scripts (`hit (彼)` — space
     /// wanted); `isTranslateSwapped` is `true` for both.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:isOutputBothScripts.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/EngineSettings.kt:isOutputBothScripts.
     // Drift causes silent divergence (hanji-first spurious word-boundary spaces).
     var isOutputBothScripts: Bool { get }
 
@@ -27,7 +27,7 @@ protocol EngineSettings {
     /// formatter, and the engine `AppConfig` all take the roman-first arms.
     /// The bridge forwards this as `AppConfig.candidate_display_mode` so the
     /// engine collapses same-roman rows for display.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:candidateDisplayMode.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/EngineSettings.kt:candidateDisplayMode.
     // Drift causes silent divergence (one platform still shows hanji / swaps scripts under Romanization Only).
     var candidateDisplayMode: CandidateDisplayMode { get }
 
@@ -35,13 +35,13 @@ protocol EngineSettings {
     /// composing surfaces the preedit literal (`derived_display`) as the
     /// index-0 candidate so mixed-script writing commits the romanization in one tap.
     /// The bridge inverts this into `FetchAtPos.literal_roman_candidate_disabled`.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:isLiteralRomanCandidateEnabled.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/EngineSettings.kt:isLiteralRomanCandidateEnabled.
     // Drift causes silent divergence (one platform shows the §34 candidate, the other does not).
     var isLiteralRomanCandidateEnabled: Bool { get }
 
     /// No Hyphens (`behavioral-invariants.md` §49) as stored. Forwarded verbatim
     /// as `AppConfig.hyphenless_roman`; the engine exempts the TPS layout itself.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/settings/EngineSettings.kt:isHyphenlessRomanEnabled.
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/settings/EngineSettings.kt:isHyphenlessRomanEnabled.
     // Drift causes silent divergence (one platform still shows hyphens).
     var isHyphenlessRomanEnabled: Bool { get }
 

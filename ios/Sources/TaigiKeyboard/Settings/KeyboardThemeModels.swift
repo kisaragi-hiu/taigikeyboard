@@ -120,7 +120,7 @@ struct ThemeAppearance: Codable, Equatable {
     /// This appearance switched to `style`. Filled restores the key fill, shadow and border of
     /// `filledKeys` (the editor's last Filled draft); Outlined / Borderless clear the key fill and
     /// shadow, Outlined drawing the built-in outline and Borderless none.
-    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/ThemeAppearance.kt withKeyStyle.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/theme/ThemeAppearance.kt withKeyStyle.
     func withKeyStyle(_ style: ThemeKeyStyle, filledKeys: ThemeAppearance) -> ThemeAppearance {
         var next = self
         switch style {
@@ -142,7 +142,7 @@ struct ThemeAppearance: Codable, Equatable {
 /// The key-style axis shared by the built-in families and the user-theme editor: Filled keys,
 /// Outlined (see-through keys + outline) or Borderless (see-through keys, no outline). Not
 /// stored — a clear key fill plus the border width encode it (`ThemeAppearance.keyStyle`).
-// CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/ThemeAppearance.kt ThemeKeyStyle.
+// CROSS-PLATFORM INVARIANT — mirrors android .../ime/theme/ThemeAppearance.kt ThemeKeyStyle.
 enum ThemeKeyStyle: CaseIterable {
     case classic // filled keys
     case framed // transparent keys + outline border

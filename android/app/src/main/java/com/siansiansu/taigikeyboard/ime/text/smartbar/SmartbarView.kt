@@ -19,8 +19,10 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
-import com.siansiansu.taigikeyboard.ime.core.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
+import com.siansiansu.taigikeyboard.ime.text.candidates.EnglishCandidateStrip
+import com.siansiansu.taigikeyboard.ime.text.candidates.TaigiCandidateStrip
+import com.siansiansu.taigikeyboard.ime.theme.KeyboardColorSettings
 import com.siansiansu.taigikeyboard.ime.theme.KeyboardMaterialTheme
 import com.siansiansu.taigikeyboard.ime.theme.getColorFromAttr
 

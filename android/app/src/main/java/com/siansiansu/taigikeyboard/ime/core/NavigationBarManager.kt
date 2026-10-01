@@ -4,6 +4,8 @@ import android.content.Context
 import android.view.Window
 import androidx.core.view.WindowCompat
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
+import com.siansiansu.taigikeyboard.ime.theme.ThemeSurface
+import com.siansiansu.taigikeyboard.ime.theme.isKeyboardNightMode
 
 private const val TAG = "NavigationBarManager"
 

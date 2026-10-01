@@ -51,7 +51,7 @@ impl ResolvedCommit {
 }
 
 /// The TPS layout's rendering of a pick's romanization: the Bopomofo its cell
-/// shows (iOS `CandidateCellHelper` / Android `SmartbarCandidateStrip`
+/// shows (iOS `CandidateCellHelper` / Android `CandidateStrip.kt`
 /// `tlDisplayToTps(roman)`).
 #[derive(Clone, Copy)]
 struct Bopomofo {

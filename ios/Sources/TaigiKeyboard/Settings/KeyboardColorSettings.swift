@@ -60,7 +60,7 @@ struct CodableColor: Codable, Equatable {
 /// "≥2 stops" is enforced at construction (`init` precondition, decode error), so
 /// every `ThemeGradient` a render site sees is renderable. Decode is
 /// forward-compatible: an `angle` absent from old JSON reads as `defaultAngle`.
-// CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt ThemeGradient
+// CROSS-PLATFORM INVARIANT — mirrors android .../ime/theme/KeyboardColorSettings.kt ThemeGradient
 // (stops + angle, same degree convention and unit-point math).
 struct ThemeGradient: Codable, Equatable {
     /// Vertical top→bottom, the direction every built-in gradient theme uses.
@@ -176,7 +176,7 @@ struct KeyboardSurfaceSlice: Equatable {
 /// the aspect-filled photo further (1 = just covers, the default); zoomed in, both axes
 /// overflow and `focus` aligns each. Capped at 2× because the stored JPEG's long edge is
 /// `ThemeImageStore.maxLongEdge`, so deeper zoom turns visibly soft.
-// CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt ThemeImageBackground
+// CROSS-PLATFORM INVARIANT — mirrors android .../ime/theme/KeyboardColorSettings.kt ThemeImageBackground
 // (same JSON fields, `saturation`, `dimRange`, `defaultDim`, `defaultFocus`, `zoomRange`). Drift causes silent divergence.
 struct ThemeImageBackground: Codable, Equatable {
     /// Saturation multiplier applied to every photo (1 = untouched).
@@ -271,7 +271,7 @@ struct ThemeImageBackground: Codable, Equatable {
 ///
 /// JSON: `{"type":"solid","color":{…}}` / `{"type":"gradient","stops":[…],"angle":180}` /
 /// `{"type":"image","file":"<uuid>.jpg","dim":0.35,"focusX":0.5,"focusY":0.5,"zoom":1}`.
-// CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt ThemeBackground
+// CROSS-PLATFORM INVARIANT — mirrors android .../ime/theme/KeyboardColorSettings.kt ThemeBackground
 // (same `type` discriminator and field names; Android stores the colour as an ARGB int).
 enum ThemeBackground: Codable, Equatable {
     case solid(CodableColor)
@@ -383,7 +383,7 @@ struct KeyboardColorSettings: Equatable {
     /// built-ins. The non-gradient candidate states paint from it (callouts via `calloutFill`)
     /// so a light palette stays light in system dark mode. nil = adaptive (Default families,
     /// transparent-key gradients) → keep the system colors.
-    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt fixedKeyFill.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/theme/KeyboardColorSettings.kt fixedKeyFill.
     // Drift = callout / candidate colors differ per platform under the same theme.
     var fixedKeyFill: CodableColor? {
         guard background != nil, keyTextColor != nil, let fill = keyFillColor, fill.alpha > 0 else { return nil }
@@ -401,7 +401,7 @@ struct KeyboardColorSettings: Equatable {
     /// keys keep the platform callout colors; see-through keys over the adaptive background
     /// paint the adaptive keyboard background (USER 2026-09-28: Outlined / Borderless callouts
     /// match the key background in light and dark mode).
-    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt calloutFill.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/theme/KeyboardColorSettings.kt calloutFill.
     var calloutFill: CodableColor? {
         if let fill = fixedKeyFill {
             return fill
@@ -422,7 +422,7 @@ struct KeyboardColorSettings: Equatable {
     /// see-through keys (which have no fill to use), and a fixed palette uses its
     /// key fill as the highlight and the deepened fill as pressed. nil = adaptive neutral
     /// fallback in `CandidateView.ItemStyle.resolvedBackgroundColor`.
-    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt candidateTints.
+    // CROSS-PLATFORM INVARIANT — mirrors android .../ime/theme/KeyboardColorSettings.kt candidateTints.
     var candidateTints: (highlight: CodableColor, pressed: CodableColor)? {
         if let custom = candidateHighlightColor {
             return (custom, custom.deepened(by: Self.candidatePressedDeepenFactor))
@@ -453,14 +453,14 @@ struct KeyboardColorSettings: Equatable {
     /// (a light tint of the hue, lighter than the gradient bar so it stays visible);
     /// the pressed state is DEEPENED toward black (a darker press feedback). A
     /// non-gradient theme deepens its `fixedKeyFill` by the same pressed factor.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/KeyboardColorSettings.kt
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/theme/KeyboardColorSettings.kt
     // CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR / CANDIDATE_PRESSED_DEEPEN_FACTOR. Drift causes silent divergence.
     static let candidateHighlightLightenFactor: Double = 0.5
     static let candidatePressedDeepenFactor: Double = 0.65
 
     /// Pressed-key fill factors: a dark fill is lightened toward white, a light fill deepened
     /// toward black, so black and white fills both show press feedback.
-    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/core/KeyboardColorSettings.kt
+    // CROSS-PLATFORM INVARIANT — mirrors android/app/src/main/java/com/siansiansu/taigikeyboard/ime/theme/KeyboardColorSettings.kt
     // KEY_PRESSED_LIGHTEN_FACTOR / KEY_PRESSED_DEEPEN_FACTOR / pressedKeyFillArgb. Drift causes silent divergence.
     static let keyPressedLightenFactor: Double = 0.25
     static let keyPressedDeepenFactor: Double = 0.8
@@ -526,7 +526,7 @@ extension KeyboardColorSettings: Codable {
 /// dark mode (USER 2026-09-19). Background is the light keyboard grey; the key
 /// fill is white (USER 2026-09-25) and shared by letter and special keys.
 /// `candidateHighlightColor` stays nil (auto, derived from the palette) — see `candidateTints`.
-// CROSS-PLATFORM INVARIANT — mirrors android .../ime/core/KeyboardColorSettings.kt UserThemeSeed
+// CROSS-PLATFORM INVARIANT — mirrors android .../ime/theme/KeyboardColorSettings.kt UserThemeSeed
 // Drift = a new custom theme starts from different colors per platform.
 enum UserThemeSeed {
     static let solidColor = CodableColor(hex: 0xD4D5DD)

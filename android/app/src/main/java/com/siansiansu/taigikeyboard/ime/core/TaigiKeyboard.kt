@@ -28,12 +28,15 @@ import com.siansiansu.taigikeyboard.i18n.DisplayLanguage
 import com.siansiansu.taigikeyboard.i18n.StringResolver
 import com.siansiansu.taigikeyboard.i18n.buildStringResolver
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.ime.lifecycle.LifecycleInputMethodService
 import com.siansiansu.taigikeyboard.ime.media.MediaInputManager
+import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
 import com.siansiansu.taigikeyboard.ime.text.key.KeyCode
 import com.siansiansu.taigikeyboard.ime.text.key.KeyData
 import com.siansiansu.taigikeyboard.ime.text.smartbar.SmartbarManager
+import com.siansiansu.taigikeyboard.ime.theme.ThemeId
+import com.siansiansu.taigikeyboard.ime.theme.ThemeSurface
+import com.siansiansu.taigikeyboard.ime.theme.isKeyboardNightMode
 import com.siansiansu.taigikeyboard.ime.theme.withNightModeOff
 import com.siansiansu.taigikeyboard.settings.SettingsMainActivity
 import kotlinx.coroutines.CoroutineScope
@@ -61,7 +64,7 @@ class TaigiKeyboard : LifecycleInputMethodService() {
 
     /**
      * IME-lifecycle coroutine scope cancelled in [onDestroy]. Exposed so
-     * engine wrappers (e.g. [com.siansiansu.taigikeyboard.ime.text.smartbar.NextWordController])
+     * engine wrappers (e.g. [com.siansiansu.taigikeyboard.ime.text.nextword.NextWordController])
      * can launch work that must NOT outlive the input-method service.
      * Marked `internal` to keep the visibility narrow — do not leak the
      * scope outside the app module.

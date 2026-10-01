@@ -1,6 +1,6 @@
 package com.siansiansu.taigikeyboard.ui.tabs.theme
 
-import com.siansiansu.taigikeyboard.ime.core.ThemeId
+import com.siansiansu.taigikeyboard.ime.theme.ThemeId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

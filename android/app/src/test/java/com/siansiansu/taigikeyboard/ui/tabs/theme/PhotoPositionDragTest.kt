@@ -2,7 +2,7 @@ package com.siansiansu.taigikeyboard.ui.tabs.theme
 
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.ui.geometry.Offset
-import com.siansiansu.taigikeyboard.ime.core.ThemeImageBackground
+import com.siansiansu.taigikeyboard.ime.theme.ThemeImageBackground
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
