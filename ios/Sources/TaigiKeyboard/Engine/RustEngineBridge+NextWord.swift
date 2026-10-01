@@ -190,7 +190,7 @@ public extension RustEngineBridge {
     }
 
     /// Platform → engine UI visibility sync. Call after rendering an async
-    /// predict() result so the engine's state.is_showing stays accurate;
+    /// predict() result so the engine's state.predictions_visible stays accurate;
     /// downstream `nextwordClearForNewComposing` / sentence-end / context
     /// timeout / resetFull paths gate `clearPredictionsUI` emission on it.
     /// No effects, no current_generation bump.

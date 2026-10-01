@@ -54,13 +54,13 @@ pub struct AssociationReader {
 
 // Source filter; all_enabled short-circuits the mask comparison.
 #[derive(Debug, Clone, Copy)]
-pub struct AssocFilter {
+pub struct AssociationFilter {
     // True when every source is enabled (the u32::MAX sentinel).
     pub all_enabled: bool,
     pub enabled_mask: u16,
 }
 
-impl AssocFilter {
+impl AssociationFilter {
     /// Every source enabled.
     pub const ALL: Self = Self {
         all_enabled: true,
@@ -145,7 +145,7 @@ impl AssociationReader {
         &self,
         prev_word: &str,
         limit: usize,
-        filter: &AssocFilter,
+        filter: &AssociationFilter,
     ) -> Vec<AssociationEntry> {
         if prev_word.is_empty() || self.key_count == 0 {
             return Vec::new();
@@ -200,7 +200,7 @@ impl AssociationReader {
         &self,
         index: u32,
         limit: usize,
-        filter: &AssocFilter,
+        filter: &AssociationFilter,
         bytes: &[u8],
     ) -> Vec<AssociationEntry> {
         let key_offset = self.key_offset_at(index, bytes);

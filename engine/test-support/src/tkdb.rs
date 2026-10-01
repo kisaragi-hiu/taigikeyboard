@@ -54,15 +54,15 @@ pub fn build_tkdb(magic: &[u8; 4], version: u32, rows: &[TkdbRow<'_>]) -> Vec<u8
 }
 
 /// One TKWA entry: `(bitmask, count, next_word, next_tl)`.
-pub type AssocEntry<'a> = (u16, u32, &'a str, &'a str);
+pub type TkwaEntry<'a> = (u16, u32, &'a str, &'a str);
 
 /// Build a TKWA byte sequence: `version`, then `keys` in the order given
 /// (the caller sorts them by raw UTF-8 bytes — the reader binary-searches).
-pub fn build_tkwa(version: u32, keys: &[(&str, &[AssocEntry<'_>])]) -> Vec<u8> {
+pub fn build_tkwa(version: u32, keys: &[(&str, &[TkwaEntry<'_>])]) -> Vec<u8> {
     let key_section_start = TKWA_HEADER_SIZE + keys.len() * 4;
     let key_sizes: Vec<usize> = keys.iter().map(|(key, _)| 1 + key.len() + 4 + 2).collect();
     let entry_section_start = key_section_start + key_sizes.iter().sum::<usize>();
-    let entry_size = |(_, _, nw, nt): &AssocEntry<'_>| 8 + nw.len() + nt.len();
+    let entry_size = |(_, _, nw, nt): &TkwaEntry<'_>| 8 + nw.len() + nt.len();
 
     let mut out = Vec::new();
     out.extend_from_slice(b"TKWA");

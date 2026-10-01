@@ -16,7 +16,7 @@ pub(crate) struct PersistedState {
     pub last_selected_word: Option<String>,
     pub last_selected_roman: Option<String>,
     pub last_selection_time_ms: i64,
-    pub is_showing: bool,
+    pub predictions_visible: bool,
     /// Monotonic counter bumped on every state-mutating intent (except
     /// `UpdateLastSelectedWord` per audit §5 #5). The platform tags
     /// in-flight prediction queries with the generation at dispatch time;
@@ -60,27 +60,27 @@ pub(crate) enum Intent {
         roman: String,
         now_ms: i64,
     },
-    /// Platform-driven UI visibility sync. Mutates `state.is_showing` only;
+    /// Platform-driven UI visibility sync. Mutates `state.predictions_visible` only;
     /// no effects, no generation bump. Called by the platform after
     /// rendering the result of an async predict() so subsequent clear/reset
     /// paths know whether to emit `ClearPredictionsUI`.
     SetPredictionsVisible { visible: bool },
 }
 
-/// One `prev → next` bigram a commit decided to record, each side the
+/// One `previous → next` bigram a commit decided to record, each side the
 /// `(Hanji, canonical-TL)` pair it was committed as (§40). The engine keeps
 /// it in its own `user_association.db` (`dispatch` crate,
 /// `user_data::handle_nextword`); it never crosses the FFI.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Association {
-    pub prev: String,
-    pub prev_tl: String,
+    pub previous: String,
+    pub previous_tl: String,
     pub next: String,
     pub next_tl: String,
 }
 
 /// A handled request: the response the platform gets, and the bigrams a
-/// decision recorded, in commit order (the `prev → this` pair first, then
+/// decision recorded, in commit order (the `previous → this` pair first, then
 /// a compound's internal pairs).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Handled {

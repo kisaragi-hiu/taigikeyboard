@@ -2,7 +2,7 @@
 //! `$` sentence-start key share one byte-sorted key section; v1 files are
 //! rejected with the rebuild hint (`docs/engine/binary-format.md` §2).
 
-use lexicon::association_reader::{word_key, AssocFilter, AssociationReader, START_KEY};
+use lexicon::association_reader::{word_key, AssociationFilter, AssociationReader, START_KEY};
 use lexicon::LexiconError;
 use test_support::{build_tkwa, write_temp};
 
@@ -37,14 +37,14 @@ fn each_namespace_resolves_to_its_own_entries() {
     let reader = AssociationReader::open(&path).expect("v2 opens");
 
     let openers: Vec<_> = reader
-        .lookup(START_KEY, 10, &AssocFilter::ALL)
+        .lookup(START_KEY, 10, &AssociationFilter::ALL)
         .into_iter()
         .map(|e| e.next_word)
         .collect();
     assert_eq!(openers, ["我", "伊"]);
 
     let by_char: Vec<_> = reader
-        .lookup("好", 10, &AssocFilter::ALL)
+        .lookup("好", 10, &AssociationFilter::ALL)
         .into_iter()
         .map(|e| e.next_word)
         .collect();
@@ -55,7 +55,7 @@ fn each_namespace_resolves_to_its_own_entries() {
     );
 
     let by_word: Vec<_> = reader
-        .lookup(&word_key("好", "hó"), 10, &AssocFilter::ALL)
+        .lookup(&word_key("好", "hó"), 10, &AssociationFilter::ALL)
         .into_iter()
         .map(|e| (e.next_word, e.next_tl, e.count, e.bitmask))
         .collect();
@@ -69,12 +69,14 @@ fn each_namespace_resolves_to_its_own_entries() {
 
     assert!(
         reader
-            .lookup(&word_key("好", "hò"), 10, &AssocFilter::ALL)
+            .lookup(&word_key("好", "hò"), 10, &AssociationFilter::ALL)
             .is_empty(),
         "other reading → no key"
     );
     assert!(
-        reader.lookup("好\u{1}", 10, &AssocFilter::ALL).is_empty(),
+        reader
+            .lookup("好\u{1}", 10, &AssociationFilter::ALL)
+            .is_empty(),
         "prefix of a word key is not a key"
     );
 }

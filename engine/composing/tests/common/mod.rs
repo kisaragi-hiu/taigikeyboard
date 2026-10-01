@@ -311,13 +311,13 @@ pub fn empty_association_bin() -> Vec<u8> {
 pub fn install_lexicon(
     fst_path: &Path,
     dict_path: &Path,
-    assoc_path: &Path,
+    association_path: &Path,
     syllables_path: &Path,
 ) {
     let paths = LexiconPaths::validated(
         fst_path.to_str().unwrap(),
         dict_path.to_str().unwrap(),
-        assoc_path.to_str().unwrap(),
+        association_path.to_str().unwrap(),
         syllables_path.to_str().unwrap(),
         2,
     )

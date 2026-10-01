@@ -144,7 +144,7 @@ One byte-sorted key section holds two kinds of key; the reader needs no special 
 | `hanji\u{1}tl` — display-form TL, `\u{1}` separator (`association_reader::word_key`) | `build/associations.py::compute_word_associations` | corpus continuations (`shared/data/word_bigrams.tsv`, P2 of the bigram LM roadmap), variant hanji folded to the 教典 form via `variants.csv`, top 30 per key, weighted count ≥ 2 | weighted corpus pair count (`taigi_bible_nt` × 0.5, others × 1) |
 | `$` (`association_reader::START_KEY`) | same | sentence openers | same |
 
-`bitmask` is the source flags of the **next** word's dictionary row in every namespace, so `AssocFilter` (§4.3) filters all three alike. v1 files (character keys only) are rejected by the reader with a `v1→v2` rebuild hint — the two artifacts ship in lockstep (`docs/architecture/bigram-lm-roadmap.md` § D3).
+`bitmask` is the source flags of the **next** word's dictionary row in every namespace, so `AssociationFilter` (§4.3) filters all three alike. v1 files (character keys only) are rejected by the reader with a `v1→v2` rebuild hint — the two artifacts ship in lockstep (`docs/architecture/bigram-lm-roadmap.md` § D3).
 
 ### 2.2 Lookup
 
@@ -278,7 +278,7 @@ The same `effective_source_bitmask` is emitted as the candidate's
 `source_bitmask` so a multi-source survivor ranks by its other source's tier,
 not kautian's (DD6 ranking-weight drop).
 
-### 4.3 Filter layers (`engine/lexicon::association_reader::AssocFilter`)
+### 4.3 Filter layers (`engine/lexicon::association_reader::AssociationFilter`)
 
 ```
 if enabled.all_association_sources_enabled                               → accept

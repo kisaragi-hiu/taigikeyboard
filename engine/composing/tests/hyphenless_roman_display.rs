@@ -83,9 +83,9 @@ fn install_fixture() {
     let rows = fixture_rows();
     let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
     let fst_path = build_dictionary_fst(&rows);
-    let assoc_path = write_temp("association.bin", &empty_association_bin());
+    let association_path = write_temp("association.bin", &empty_association_bin());
     let syllables_path = build_syllables_fst(&["tai5", "uan5", "hoo7", "gua2", "so2", "si5"]);
-    install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
+    install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
 fn fetch(raw: &str, input_mode: &str, hyphenless: bool, custom: Vec<CustomEntry>) -> Vec<Cell> {

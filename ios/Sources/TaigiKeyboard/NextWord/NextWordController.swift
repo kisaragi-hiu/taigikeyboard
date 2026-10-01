@@ -34,7 +34,7 @@ final class NextWordController {
 
     // MARK: - Cached state (echoed from Rust)
 
-    /// Mirrors `state.is_showing`. Set locally by `handleQueryResult` after
+    /// Mirrors `state.predictions_visible`. Set locally by `handleQueryResult` after
     /// rendering, then pushed to the engine via `nextwordSetPredictionsVisible` so
     /// downstream clear / reset paths gate `clearPredictionsUI` correctly.
     private var cachedPredictionsVisible: Bool = false
@@ -56,10 +56,10 @@ final class NextWordController {
     func bumpEnvelopeGeneration() {
         envelopeGen &+= 1
         // Cross-field IME-session boundary. Rust engine state will be wiped
-        // on the next bridge call (envelope mismatch sets is_showing=false
+        // on the next bridge call (envelope mismatch sets predictions_visible=false
         // before the request processes), so a follow-up ResetAll /
         // ClearForNewComposing cannot emit ClearPredictionsUI through the
-        // engine's was_showing gate. Force-clear platform-side cached state
+        // engine's was_visible gate. Force-clear platform-side cached state
         // + UI here so cross-field stale suggestions don't linger.
         // Codex post-impl PR #198 r3171935009.
         stopContextTimeoutTimer()
@@ -242,7 +242,7 @@ final class NextWordController {
     /// Render an async prediction query's answer — `nextwordPredictNext` read
     /// the learned rows and added the bundled rows for the word, then merged +
     /// scored + sorted + truncated + dropped on stale generation — then push
-    /// the new `is_showing` value back into engine state via
+    /// the new `predictions_visible` value back into engine state via
     /// `nextwordSetPredictionsVisible` — required so subsequent
     /// `ClearForNewComposing` / sentence-end / context-timeout / `ResetAll`
     /// paths can emit `clearPredictionsUI` when there is UI to clear.

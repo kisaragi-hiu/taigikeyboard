@@ -411,9 +411,9 @@ const FIXTURE_SYLLABLES: &[&str] = &["ki1", "ki3", "khi2", "lai5"];
 fn install(rows: &[Row], syllables: &[&str]) {
     let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(rows));
     let fst_path = build_dictionary_fst(rows);
-    let assoc_path = write_temp("association.bin", &empty_association_bin());
+    let association_path = write_temp("association.bin", &empty_association_bin());
     let syllables_path = build_syllables_fst(syllables);
-    install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
+    install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
 fn learned(hanji: &str, canonical_tl: &str) -> LearnedEntry {

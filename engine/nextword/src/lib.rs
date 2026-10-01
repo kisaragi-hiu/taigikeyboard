@@ -3,7 +3,7 @@
 //! NextWord slice — Intent → Effect state machine for the v3.5.5 Rust core.
 //!
 //! Owns `PersistedState` (last_selected_word/roman, last_selection_time_ms,
-//! is_showing, current_generation). External callers reach the engine
+//! predictions_visible, current_generation). External callers reach the engine
 //! through `dispatch::handle`; the engine itself is held inside a singleton
 //! `Mutex<Engine>` at the FFI boundary (see `nextword::handle::EngineHandle`).
 //!

@@ -107,12 +107,12 @@ fn install_fixture() {
     let rows = fixture_rows();
     let dict_path = write_temp("dictionary.bin", &build_tkdb_v3(&rows));
     let fst_path = build_dictionary_fst(&rows);
-    let assoc_path = write_temp("association.bin", &empty_association_bin());
+    let association_path = write_temp("association.bin", &empty_association_bin());
     // `lai5` is a syllable with no row: the OOV branch.
     let syllables_path = build_syllables_fst(&[
         "jim2", "khi3", "khi2", "khia7", "khiah4", "khiah8", "ah4", "a2", "lai5",
     ]);
-    install_lexicon(&fst_path, &dict_path, &assoc_path, &syllables_path);
+    install_lexicon(&fst_path, &dict_path, &association_path, &syllables_path);
 }
 
 fn fetch(raw: &str, mode: &str, fetch: Fetch) -> Vec<Cell> {
