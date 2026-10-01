@@ -1,0 +1,7 @@
+Improved: Next-word suggestions follow the whole word typed; your picks come first.
+Improved: Continuous-input candidates rank by the previous word.
+Fixed: Punctuation ends the sentence for next-word suggestions.
+Fixed: With every dictionary off, no dictionary candidates appear.
+Fixed: Phonetic Symbols layout: a candidate without Hanji writes its symbols.
+Fixed: The Dictionary tab follows Enable Custom Dictionary.
+Changed: A look customized before themes is kept as a "New Theme".
