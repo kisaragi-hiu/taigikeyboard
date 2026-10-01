@@ -7,9 +7,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Delete one grapheme. Empties → Idle. iOS emits
- * `DeleteBackwardFromDocument`; Android wrapper routes 1-char-empty through
- * `Reset` instead (`composing-slice-plan.md §5b.1`).
+ * Delete one grapheme before the caret. Emptying the composition exits to
+ * Idle with the abort trio; nothing is deleted from the document (the
+ * char only lived in the marked region). Pending empty with segments
+ * nailed → unnails the last one.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.DeleteBackward}
@@ -107,9 +108,10 @@ public  final class DeleteBackward extends
 
   /**
    * <pre>
-   * Delete one grapheme. Empties → Idle. iOS emits
-   * `DeleteBackwardFromDocument`; Android wrapper routes 1-char-empty through
-   * `Reset` instead (`composing-slice-plan.md §5b.1`).
+   * Delete one grapheme before the caret. Emptying the composition exits to
+   * Idle with the abort trio; nothing is deleted from the document (the
+   * char only lived in the marked region). Pending empty with segments
+   * nailed → unnails the last one.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.DeleteBackward}

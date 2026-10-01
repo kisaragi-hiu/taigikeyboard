@@ -42,7 +42,7 @@ fn kinds(resp: &ComposingResponse) -> Vec<&'static str> {
 
 fn caret_of(engine: &Engine) -> usize {
     match engine.snapshot_state().phase {
-        Phase::Composing { caret, .. } | Phase::Continuous { caret, .. } => caret,
+        Phase::Continuous { caret, .. } => caret,
         Phase::Idle => panic!("idle has no caret"),
     }
 }
@@ -190,8 +190,8 @@ fn telex_key_acts_on_the_chunk_before_the_caret() {
 }
 
 #[test]
-fn continuous_keeps_the_caret_on_promotion_resets_it_on_nail_and_never_enters_a_segment() {
-    // "tsua" caret 3 (← once) → EnterContinuous keeps 3.
+fn continuous_keeps_the_caret_on_enter_continuous_resets_it_on_nail_and_never_enters_a_segment() {
+    // "tsua" caret 3 (← once) → the no-op EnterContinuous keeps 3.
     let mut engine = start("tsua");
     move_caret(&mut engine, CaretDirection::Left);
     let resp = engine.apply(Intent::EnterContinuous, &config_tl());

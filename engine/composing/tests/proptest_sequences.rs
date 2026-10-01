@@ -40,12 +40,18 @@ fn arb_char() -> impl Strategy<Value = String> {
     ]
 }
 
+/// [`arb_char`] or the empty string — the edge a composition must never
+/// rest on (a Continuous phase is non-empty in `raw` or `nailed`).
+fn arb_text() -> impl Strategy<Value = String> {
+    prop_oneof![4 => arb_char(), 1 => Just(String::new())]
+}
+
 fn arb_intent() -> impl Strategy<Value = Intent> {
     prop_oneof![
-        arb_char().prop_map(|ch| Intent::Append { ch }),
-        arb_char().prop_map(|text| Intent::Start { text }),
+        arb_text().prop_map(|ch| Intent::Append { ch }),
+        arb_text().prop_map(|text| Intent::Start { text }),
         Just(Intent::AppendHyphen),
-        arb_char().prop_map(|replacement| Intent::ReplaceLast { replacement }),
+        arb_text().prop_map(|replacement| Intent::ReplaceLast { replacement }),
         Just(Intent::DeleteBackward),
         Just(Intent::MoveCaret {
             direction: Some(CaretDirection::Left)
@@ -95,7 +101,9 @@ proptest! {
             }
             match engine.snapshot_state().phase {
                 Phase::Idle => prop_assert_eq!(preedit.caret_utf16, 0),
-                Phase::Composing { raw, caret } | Phase::Continuous { raw, caret, .. } => {
+                Phase::Continuous { raw, caret, nailed } => {
+                    prop_assert!(!raw.is_empty() || !nailed.is_empty());
+                    prop_assert!(resp.is_composing);
                     prop_assert!(caret <= raw.len());
                     prop_assert!(raw.is_char_boundary(caret));
                     prop_assert_eq!(preedit.raw_input, raw);

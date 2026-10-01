@@ -71,16 +71,18 @@ message AppendHyphen {}
 // TPS auto-correct: replace the last raw-input character.
 message ReplaceLast { string replacement = 1; }
 
-// Delete one grapheme. Empties → Idle. iOS emits
-// `DeleteBackwardFromDocument`; Android wrapper routes 1-char-empty through
-// `Reset` instead (`composing-slice-plan.md §5b.1`).
+// Delete one grapheme before the caret. Emptying the composition exits to
+// Idle with the abort trio; nothing is deleted from the document (the
+// char only lived in the marked region). Pending empty with segments
+// nailed → unnails the last one.
 message DeleteBackward {}
 
-// Commit the tone-marked derived form to the document.
+// No-op since R12 (2026-10-01): there is no single-segment phase to commit.
+// Enter is `CommitRaw`.
 message CommitDerived {}
 
-// Commit the literal raw input (bypass tone conversion). Used for
-// Enter-at-index-0 / English passthrough.
+// Enter: commit the whole composition (nailed segments + the derived
+// pending tail, TPS separator markers dropped) to the document.
 message CommitRaw {}
 
 // Commit the supplied platform-resolved suggestion text, atomically
@@ -92,17 +94,15 @@ message SelectSuggestion { string text = 1; }
 // palette, clipboard paste). Idle → behaves as plain insert.
 message CommitPreeditThenInsertExternal { string text = 1; }
 
-// Clear all state (mode switch, teardown). User-initiated; emits
-// `[ClearPreeditWithoutCommit, ResetAutocomplete]` if was composing,
-// `[]` if was Idle.
+// Clear all state (mode switch, teardown). User-initiated; emits the abort
+// trio `[ClearPreeditWithoutCommit, ResetAutocomplete,
+// NextWordClearForNewComposing]` if composing, `[]` if Idle. Nothing reaches
+// the document.
 message Reset {}
 
-// v3.5.8 Phase 6 — transition `Phase::Composing { raw }` → `Phase::Continuous
-// { raw, committed: [] }`. No payload: the buffer is already populated by
-// prior `Start` / `Append` calls. No-op when state is Idle / Continuous or
-// when the existing `Composing.raw` is empty (matches Phase-4 strict
-// precondition pinned at `engine/composing/src/transition.rs:484-490`).
-// Mode comes from `Request.config_snapshot.input_mode`.
+// No-op since R12 (2026-10-01): the first keystroke already composes in
+// `Phase::Continuous`. Still a mutating request, so a stale generation
+// resets the engine.
 message EnterContinuous {}
 
 // v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
@@ -269,12 +269,9 @@ enum CommitOutcome {
   COMMIT_OUTCOME_IGNORED     = 3;  // nothing changed (stale generation, rejected pick)
 }
 
-// v3.5.8 Phase 6 — abort continuous-input. Drops `Phase::Continuous`
-// committed list and pending raw, exits to Idle, and emits the standard
-// abort effect trio (`ClearPreeditWithoutCommit` + `ResetAutocomplete` +
-// `NextWordClearForNewComposing`). Committed segments stay in the
-// document (already inserted via earlier `CommitTextReplacingPreedit`
-// effects).
+// Same as `Reset` since R12 (decodes to it): drops the nailed segments and
+// the pending tail, exits to Idle with the abort trio. Nailed segments were
+// never in the document (Model B), so nothing is written.
 message ResetContinuous {}
 
 // Desktop Telex scheme: one key from `x v y d w q` (tones 1/4 2/8 3 5 7 9 —
@@ -472,7 +469,7 @@ message Effect {
 message UpdatePreedit              { string display = 1; uint32 caret_utf16 = 2; }
 message ClearPreeditWithoutCommit  {}
 message CommitTextReplacingPreedit { string text = 1; }
-message DeleteBackwardFromDocument {}
+message DeleteBackwardFromDocument {}  // never emitted since R12 (2026-10-01)
 message ResetAutocomplete          {}
 message PerformAutocomplete        {}
 message ResetAutocompleteContext   {}

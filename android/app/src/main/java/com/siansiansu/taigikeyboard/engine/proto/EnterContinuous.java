@@ -7,12 +7,9 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * v3.5.8 Phase 6 — transition `Phase::Composing { raw }` → `Phase::Continuous
- * { raw, committed: [] }`. No payload: the buffer is already populated by
- * prior `Start` / `Append` calls. No-op when state is Idle / Continuous or
- * when the existing `Composing.raw` is empty (matches Phase-4 strict
- * precondition pinned at `engine/composing/src/transition.rs:484-490`).
- * Mode comes from `Request.config_snapshot.input_mode`.
+ * No-op since R12 (2026-10-01): the first keystroke already composes in
+ * `Phase::Continuous`. Still a mutating request, so a stale generation
+ * resets the engine.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.EnterContinuous}
@@ -110,12 +107,9 @@ public  final class EnterContinuous extends
 
   /**
    * <pre>
-   * v3.5.8 Phase 6 — transition `Phase::Composing { raw }` → `Phase::Continuous
-   * { raw, committed: [] }`. No payload: the buffer is already populated by
-   * prior `Start` / `Append` calls. No-op when state is Idle / Continuous or
-   * when the existing `Composing.raw` is empty (matches Phase-4 strict
-   * precondition pinned at `engine/composing/src/transition.rs:484-490`).
-   * Mode comes from `Request.config_snapshot.input_mode`.
+   * No-op since R12 (2026-10-01): the first keystroke already composes in
+   * `Phase::Continuous`. Still a mutating request, so a stale generation
+   * resets the engine.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.EnterContinuous}

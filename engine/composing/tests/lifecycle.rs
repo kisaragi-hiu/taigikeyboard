@@ -32,6 +32,25 @@ fn lifecycle_generation_increment_silently_drops_state() {
 }
 
 #[test]
+fn lifecycle_enter_continuous_at_a_new_generation_still_resets() {
+    // `EnterContinuous` is a no-op transition since R12 but stays a mutating
+    // intent: a platform that bumped its generation still gets a fresh engine.
+    let handle = EngineHandle::new();
+    handle.handle(&req_start("abc"), &config_tl(), 1).unwrap();
+    let resp = handle
+        .handle(
+            &ComposingRequest {
+                method: Some(Method::EnterContinuous(EnterContinuous {})),
+            },
+            &config_tl(),
+            2,
+        )
+        .unwrap();
+    assert!(resp.effect.is_empty());
+    assert!(!resp.is_composing, "the stale composition was dropped");
+}
+
+#[test]
 fn lifecycle_generation_mismatch_resets_phase_to_idle() {
     let handle = EngineHandle::new();
     handle.handle(&req_start("abc"), &config_tl(), 1).unwrap();
@@ -73,8 +92,8 @@ fn lifecycle_engine_reset_is_idempotent() {
             1,
         )
         .unwrap();
-    // First Reset emits effects (was composing). Second Reset is idle → noop.
-    assert_eq!(r1.effect.len(), 2);
+    // First Reset emits the abort trio (was composing). Second Reset is idle → noop.
+    assert_eq!(r1.effect.len(), 3);
     assert!(r2.effect.is_empty());
 }
 

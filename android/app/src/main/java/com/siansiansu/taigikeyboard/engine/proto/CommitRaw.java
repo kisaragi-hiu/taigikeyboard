@@ -7,8 +7,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
  * <pre>
- * Commit the literal raw input (bypass tone conversion). Used for
- * Enter-at-index-0 / English passthrough.
+ * Enter: commit the whole composition (nailed segments + the derived
+ * pending tail, TPS separator markers dropped) to the document.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.CommitRaw}
@@ -106,8 +106,8 @@ public  final class CommitRaw extends
 
   /**
    * <pre>
-   * Commit the literal raw input (bypass tone conversion). Used for
-   * Enter-at-index-0 / English passthrough.
+   * Enter: commit the whole composition (nailed segments + the derived
+   * pending tail, TPS separator markers dropped) to the document.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.CommitRaw}

@@ -39,11 +39,11 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
-| **rawInput** | Numeric-tone ASCII preedit (e.g. `gua2`) — drives lexicon search-key | Rust `composing::Phase::Composing { raw }` |
+| **rawInput** | Numeric-tone ASCII preedit (e.g. `gua2`) — drives lexicon search-key | Rust `composing::Phase::Continuous { raw }` (the pending tail) |
 | **composingText** | Derived display text (e.g. `guá`) — Rust applies tone marks per `AppConfig.input_mode` | Rust `composing::derived` |
-| **ComposingState** | `Phase::Idle`, `Phase::Composing { raw, caret }` or `Phase::Continuous { .. }` | Rust `composing::EngineState` |
-| **Intent** | Input intents: 10 text-input (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitDerived / CommitRaw / SelectSuggestion / CommitPreeditThenInsertExternal / Reset), 4 continuous-input (EnterContinuous / FetchAtPos / CommitContinuous / ResetContinuous), 2 desktop editing keys (TelexKey / MoveCaret) | Rust `composing::Intent` |
-| **Effect** | Platform-neutral effect enum (updatePreedit / clearPreeditWithoutCommit / commitTextReplacingPreedit / deleteBackwardFromDocument / resetAutocomplete / performAutocomplete / resetAutocompleteContext) | Rust `composing::transition` |
+| **ComposingState** | `Phase::Idle` or `Phase::Continuous { raw, caret, nailed }` | Rust `composing::EngineState` |
+| **Intent** | Input intents: text input (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / SelectSuggestion / CommitPreeditThenInsertExternal / Reset), continuous input (FetchAtPos / CommitContinuous), desktop editing keys (TelexKey / MoveCaret); `CommitDerived` / `EnterContinuous` are no-ops and wire `ResetContinuous` decodes to `Reset` (R12) | Rust `composing::Intent` |
+| **Effect** | Platform-neutral effect enum (updatePreedit / clearPreeditWithoutCommit / commitTextReplacingPreedit / resetAutocomplete / performAutocomplete / resetAutocompleteContext / nextWord*; `deleteBackwardFromDocument` is never emitted since R12) | Rust `composing::transition` |
 | **commitComposition** | Effect interpreter inserts derived text + clears preedit | iOS `ComposingDelegate.execute(_:)` / Android `ComposingDelegate` |
 | **markedText** | iOS inline composition display via `setMarkedText` | iOS `KeyboardViewController.setMarkedText()` |
 

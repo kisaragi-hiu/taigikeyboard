@@ -4,7 +4,8 @@
 //! - Decoding `EnterContinuous` / `FetchAtPos` / `CommitContinuous` /
 //!   `ResetContinuous` from `ComposingRequest.method` oneof variants.
 //! - `Intent::FetchAtPos` short-circuit behavior in `requests::handle`:
-//!   - Idle / Composing phase → `continuous = None` snapshot.
+//!   - Idle → `continuous = None` snapshot.
+//!   - right after the first keystroke (no `EnterContinuous`) → carrier.
 //!   - `Phase::Continuous` + lexicon NOT installed → `continuous =
 //!     Some(empty)`.
 //! - `EnterContinuous` / `CommitContinuous` / `ResetContinuous` answers
@@ -25,6 +26,35 @@ use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, ResetContinu
 use crate::common::{config_tl, req};
 
 // ---- Decode tests --------------------------------------------------------
+
+#[test]
+fn fetch_at_pos_right_after_the_first_keystroke_answers_candidates() {
+    // R12: a fetch that reaches the engine before the platform's
+    // `EnterContinuous` (iOS async autocomplete) already finds a
+    // composition — before, it saw `Phase::Composing` and answered no
+    // carrier, an empty candidate bar.
+    let mut engine = Engine::new();
+    requests::handle(
+        &req(Method::Start(protos::engine::Start {
+            text: "tsua".into(),
+        })),
+        &mut engine,
+        &config_tl(),
+    )
+    .unwrap();
+    let resp = requests::handle(
+        &req(Method::FetchAtPos(FetchAtPos {
+            now_ms: 0,
+            ..FetchAtPos::default()
+        })),
+        &mut engine,
+        &config_tl(),
+    )
+    .expect("dispatch ok");
+    let carrier = resp.continuous.expect("continuous carrier present");
+    // §34 literal-roman candidate needs no lexicon.
+    assert_eq!(carrier.candidates[0].display_text, "tsua");
+}
 
 #[test]
 fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {

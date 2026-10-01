@@ -7,10 +7,12 @@ use lexicon::{compound_hanji_exists, EngineHandle as LexiconHandle};
 use protos::engine::{AppConfig, ComposingResponse};
 use thiserror::Error;
 
-/// Composition phase. `Idle` means no preedit; `Composing { raw, caret }`
-/// carries the numeric-tone ASCII raw input that the platform-side state used
-/// to shadow; `Continuous { raw, caret, nailed }` is the v3.5.8 multi-segment
-/// state.
+/// Composition phase. `Idle` means no preedit; every composition is
+/// `Continuous { raw, caret, nailed }` (the v3.5.8 multi-segment state) from
+/// its first keystroke — the former single-segment `Composing` phase only
+/// ever lived between that keystroke and the platform's `EnterContinuous`
+/// (removed R12, 2026-10-01). A Continuous phase is never empty in both
+/// `raw` and `nailed`.
 ///
 /// `caret` is the editing position inside the pending `raw`: a UTF-8 byte
 /// offset on a char boundary, `0..=raw.len()`. Every mutator edits there;
@@ -29,10 +31,6 @@ use thiserror::Error;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Phase {
     Idle,
-    Composing {
-        raw: String,
-        caret: usize,
-    },
     Continuous {
         raw: String,
         caret: usize,
@@ -77,8 +75,7 @@ impl Phase {
     /// (POJ doubletap → tone marks → nasal-case adjust; TPS pass-through).
     /// For `Phase::Continuous` this is strictly the pending `raw` tail, not
     /// the original keystroke history nor the nailed prefix; for
-    /// `Phase::Composing` it is the single-segment raw; for `Phase::Idle` it
-    /// is the empty string.
+    /// `Phase::Idle` it is the empty string.
     ///
     /// **Model B (§10):** this is **no longer the composing-buffer surface** —
     /// it is one internal *component* of it. The composing buffer the host
@@ -94,9 +91,7 @@ impl Phase {
     pub fn raw_input(&self, config: &AppConfig) -> String {
         match self {
             Phase::Idle => String::new(),
-            Phase::Composing { raw, .. } | Phase::Continuous { raw, .. } => {
-                crate::derived::derived_display(raw, config)
-            }
+            Phase::Continuous { raw, .. } => crate::derived::derived_display(raw, config),
         }
     }
 
@@ -105,8 +100,6 @@ impl Phase {
     /// §10.2 / §10.4 invariant I1, Model B).
     ///
     /// - `Idle` → empty string.
-    /// - `Composing { raw }` → derived display of `raw` (identity with
-    ///   [`Phase::raw_input`]; no nailed segments exist).
     /// - `Continuous { raw, nailed }` → `Σ nailed[i].display_text`
     ///   concatenated with the derived display of the pending `raw` tail.
     ///   Nailed segments are **not** in the document; they are part of the
@@ -122,7 +115,6 @@ impl Phase {
     pub fn composing_display(&self, config: &AppConfig) -> String {
         match self {
             Phase::Idle => String::new(),
-            Phase::Composing { raw, .. } => crate::derived::derived_display(raw, config),
             Phase::Continuous { raw, nailed, .. } => combined_display(nailed, raw, config),
         }
     }
@@ -508,9 +500,14 @@ impl From<ComposingResponse> for Applied {
     }
 }
 
-/// Mirrors the iOS `ComposingState.Intent` / Android `ComposingState.Intent`
-/// case set 1:1. Decoded from `protos::engine::ComposingRequest::method`
-/// inside `requests::handle`.
+/// What a `ComposingRequest` asks the engine to do. Decoded from
+/// `protos::engine::ComposingRequest::method` inside `requests::handle`.
+/// Wire `ResetContinuous` decodes to [`Intent::Reset`].
+///
+/// `CommitDerived` and `EnterContinuous` are no-ops since R12 (there is no
+/// single-segment phase to commit or promote); they stay decodable for
+/// platforms that still send them. `EnterContinuous` stays a mutating
+/// intent, so a stale generation still resets the engine.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Intent {
     Start {
@@ -596,7 +593,6 @@ pub enum Intent {
         /// The pick's display romanization (`CandidateMessage.roman`).
         roman: String,
     },
-    ResetContinuous,
     /// Desktop Telex scheme — one tone / affricate / hyphen letter applied
     /// to the pending tail (`telex::apply_telex_key`). Unknown keys and
     /// edits that change nothing answer with a no-op.
@@ -661,7 +657,7 @@ impl Engine {
     pub fn pending_raw(&self) -> &str {
         match &self.state.phase {
             Phase::Idle => "",
-            Phase::Composing { raw, .. } | Phase::Continuous { raw, .. } => raw,
+            Phase::Continuous { raw, .. } => raw,
         }
     }
 

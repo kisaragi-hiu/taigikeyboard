@@ -31,24 +31,29 @@ where
 // ---- Enter ---------------------------------------------------------
 
 #[test]
-fn enter_continuous_from_composing_keeps_raw_no_effects() {
+fn start_lands_in_continuous_with_nothing_nailed() {
+    // R12: the first keystroke already composes in Continuous; there is no
+    // single-segment phase for a platform to promote out of.
     let mut e = Engine::new();
-    e.apply(
+    let resp = e.apply(
         Intent::Start {
             text: "tsua".to_string(),
         },
         &config_tl(),
     );
-    let resp = e.apply(Intent::EnterContinuous, &config_tl());
-    assert_kinds(&resp.effect, std::iter::empty());
-    let state = e.snapshot_state();
-    match state.phase {
-        Phase::Continuous { raw, nailed, .. } => {
+    assert_kinds(&resp.effect, ["UpdatePreedit", "PerformAutocomplete"]);
+    assert!(resp.is_composing);
+    match e.snapshot_state().phase {
+        Phase::Continuous { raw, caret, nailed } => {
             assert_eq!(raw, "tsua");
+            assert_eq!(caret, 4);
             assert!(nailed.is_empty());
         }
         other => panic!("expected Continuous, got {other:?}"),
     }
+    // The platforms' follow-up EnterContinuous is a no-op.
+    let resp = e.apply(Intent::EnterContinuous, &config_tl());
+    assert!(resp.effect.is_empty());
     assert!(resp.is_composing);
 }
 
@@ -340,11 +345,14 @@ fn commit_continuous_empty_display_is_noop() {
     assert!(resp.effect.is_empty());
 }
 
-// ---- ResetContinuous ----------------------------------------------
+// ---- Reset under Continuous (also the wire `ResetContinuous`) -----
 
 #[test]
-fn reset_continuous_exits_emits_clear_and_nextword_signal() {
-    let mut e = engine_in_continuous("tsua");
+fn reset_after_a_nail_discards_the_whole_composition() {
+    // Model B (Codex risk (ii)): the nailed segment never reached the
+    // document, so the abort trio clears the whole marked region and the
+    // nailed state goes with it — nothing is written.
+    let mut e = engine_in_continuous("tsuatsua");
     e.apply(
         Intent::CommitContinuous {
             canonical_text: "珠".to_string(),
@@ -357,7 +365,7 @@ fn reset_continuous_exits_emits_clear_and_nextword_signal() {
         },
         &config_tl(),
     );
-    let resp = e.apply(Intent::ResetContinuous, &config_tl());
+    let resp = e.apply(Intent::Reset, &config_tl());
     assert_kinds(
         &resp.effect,
         [
@@ -370,16 +378,7 @@ fn reset_continuous_exits_emits_clear_and_nextword_signal() {
 }
 
 #[test]
-fn reset_continuous_outside_continuous_is_noop() {
-    let mut e = Engine::new();
-    let resp = e.apply(Intent::ResetContinuous, &config_tl());
-    assert!(resp.effect.is_empty());
-}
-
-// ---- Reset (existing Intent) under Continuous ---------------------
-
-#[test]
-fn reset_under_continuous_emits_nextword_clear_in_addition_to_composing_pair() {
+fn reset_under_continuous_emits_the_abort_trio() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(Intent::Reset, &config_tl());
     assert_kinds(
@@ -729,7 +728,7 @@ fn snapshot_under_continuous_raw_input_pending_only_display_text_whole_compositi
 // `docs/engine/continuous-input-ranking.md` §10.3).
 
 #[test]
-fn start_under_continuous_aborts_then_begins_fresh_composing() {
+fn start_under_continuous_aborts_then_begins_fresh_composition() {
     let mut e = engine_in_continuous("tsua");
     let resp = e.apply(
         Intent::Start {
@@ -747,10 +746,11 @@ fn start_under_continuous_aborts_then_begins_fresh_composing() {
             "PerformAutocomplete",
         ],
     );
-    let Phase::Composing { raw, .. } = e.snapshot_state().phase else {
-        panic!("Start under Continuous must land in Composing");
+    let Phase::Continuous { raw, nailed, .. } = e.snapshot_state().phase else {
+        panic!("Start under Continuous must begin a fresh composition");
     };
     assert_eq!(raw, "abc");
+    assert!(nailed.is_empty());
 }
 
 #[test]
@@ -932,28 +932,6 @@ fn full_span_commit_consumes_the_trailing_separator_marker() {
         "final commit must replace the preedit, got {:?}",
         resp.effect
     );
-}
-
-// §41 — the marker must not reach the document from the BARE-`Composing`
-// commit path either. Platforms promote to Continuous after every mutation,
-// so this arm is off the normal UX path, but the engine's contract cannot
-// rest on the phase a caller happens to be in (Codex post-impl BLOCK
-// 2026-08-21 — this arm used to commit `raw` verbatim).
-#[test]
-fn commit_raw_under_bare_composing_tps_hides_the_separator_marker() {
-    let mut e = Engine::new();
-    e.apply(
-        Intent::Start {
-            text: "ㄍㄠ ㄉㄞ ".to_string(),
-        },
-        &config_tl(),
-    );
-    // NO EnterContinuous — commit straight out of `Phase::Composing`.
-    let resp = e.apply(Intent::CommitRaw, &config_tl());
-    let Kind::CommitTextReplacingPreedit(commit) = resp.effect[0].kind.as_ref().unwrap() else {
-        unreachable!();
-    };
-    assert_eq!(commit.text, "ㄍㄠㄉㄞ");
 }
 
 // §41 — the terminal NextWord effect keys the association on the committed
@@ -1265,22 +1243,19 @@ fn commit_raw_with_empty_tail_carries_earlier_nails_as_preceding() {
 // ---- Empty-Continuous invariant guards (Codex finding #2) --------
 
 #[test]
-fn enter_continuous_from_empty_composing_is_noop() {
+fn empty_start_stays_idle() {
+    // A composition is never empty in both pending and nailed: an empty
+    // Start from Idle is a no-op, not a degenerate Continuous { raw: "" }.
     let mut e = Engine::new();
-    e.apply(
+    let resp = e.apply(
         Intent::Start {
             text: String::new(),
         },
         &config_tl(),
     );
-    // Composing { raw: "" } is degenerate but reachable. EnterContinuous must
-    // not transition to Continuous { raw: "", nailed: [] }.
-    let resp = e.apply(Intent::EnterContinuous, &config_tl());
     assert!(resp.effect.is_empty());
-    assert!(matches!(
-        e.snapshot_state().phase,
-        Phase::Composing { .. } | Phase::Idle
-    ));
+    assert!(!resp.is_composing);
+    assert_eq!(e.snapshot_state().phase, Phase::Idle);
 }
 
 #[test]

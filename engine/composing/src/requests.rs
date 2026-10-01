@@ -71,7 +71,8 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             consumed_bytes: m.consumed_bytes as usize,
             syllable_count: clamp_syllable_count(m.syllable_count),
         },
-        Method::ResetContinuous(_) => Intent::ResetContinuous,
+        // Identical to `Reset` since R12: Idle → no-op, Continuous → abort trio.
+        Method::ResetContinuous(_) => Intent::Reset,
         Method::TelexKey(m) => Intent::TelexKey { key: m.key },
         Method::MoveCaret(m) => Intent::MoveCaret {
             direction: match m.direction() {

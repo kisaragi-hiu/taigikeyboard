@@ -17,7 +17,7 @@ final class RustEngineBridgeComposingTests: XCTestCase {
     }
 
     /// Types `text` one character at a time, which is the only way a
-    /// composition ever starts in production: `Append` enters `Phase::Composing`
+    /// composition ever starts in production: `Append` begins the composition
     /// from Idle by itself, and there is no bridge op that seeds a whole buffer.
     @discardableResult
     private func compose(_ text: String) throws -> ComposingTransition {
@@ -60,11 +60,9 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         )
     }
 
-    func testDeleteBackwardToEmpty_underBareComposing_emitsTheDocumentDeleteMacOSIgnores() throws {
-        // Pinning the decode, not the behaviour: this effect only reaches macOS
-        // when a composition was never promoted to the continuous phase, and the
-        // executor deliberately does not act on it. Decoding it wrongly would
-        // hide that the case exists at all.
+    func testDeleteBackwardToEmpty_abortsWithoutTouchingTheDocument() throws {
+        // The first keystroke already composes in the continuous phase, so
+        // backspacing it away is the abort trio — never a document delete.
         _ = try compose("a")
         let transition = try XCTUnwrap(
             RustEngineBridge.composingDeleteBackward(settings: settings, generation: generation),
@@ -73,7 +71,7 @@ final class RustEngineBridgeComposingTests: XCTestCase {
         XCTAssertFalse(transition.isComposing)
         XCTAssertEqual(
             transition.effects,
-            [.clearPreeditWithoutCommit, .resetAutocomplete, .deleteBackwardFromDocument],
+            [.clearPreeditWithoutCommit, .resetAutocomplete, .nextWordClearForNewComposing],
             "the engine's abort trio must arrive whole and in order",
         )
     }
