@@ -85,7 +85,7 @@ public enum CandidateDisplayMode: String, CaseIterable, Codable {
     /// tap writes the stored swap — exactly where Hanji is on screen. Under
     /// `.combined` the cells are split per script, so the key only picks the
     /// punctuation width (USER 2026-09-13: "Hanji with Romanization needs an
-    /// isHanjiFirst button"); `.romanOnly` hides it and the stored swap waits for the way back.
+    /// isTranslateSwapped button"); `.romanOnly` hides it and the stored swap waits for the way back.
     var allowsSwapToggle: Bool {
         showsHanji
     }

@@ -54,7 +54,7 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
     /// Whether the swap shortcut writes the stored swap — exactly where Hanji
     /// is on screen. Under `.combined` the cells are split per script, so the
     /// shortcut only picks the punctuation width (USER 2026-09-13: "Hanji with Romanization needs an
-    /// isHanjiFirst button"); `.romanOnly` leaves it inert and the stored
+    /// isTranslateSwapped button"); `.romanOnly` leaves it inert and the stored
     /// swap waits for the way back.
     var allowsSwapToggle: Bool {
         showsHanji

@@ -211,14 +211,14 @@ In TPS mode, candidates display phonetic symbols instead of romanization, and ou
 
 ### Display Logic
 
-| isTranslateSwapped | Title | Subtitle |
+| isHanjiFirst | Title | Subtitle |
 |-------------------|-------|----------|
 | false (default) | Phonetic symbols | Hanzi |
 | true | Hanzi | Phonetic symbols |
 
 ### Output Logic
 
-| isTranslateSwapped | Tap Candidate Output |
+| isHanjiFirst | Tap Candidate Output |
 |-------------------|---------------------|
 | false (default) | Phonetic symbols |
 | true | Hanzi |
@@ -361,14 +361,14 @@ Phonetic symbols are visually larger than romanization, TPS mode reduces font si
 - `tpsLongCellSecondaryFontSize` - TPS long-word subtitle font
 
 `CandidateCellHelper.swift`:
-- `titleFontSize(isTranslateSwapped:)` - Regular candidate title
-- `subtitleFontSize(isTranslateSwapped:)` - Regular candidate subtitle
-- `longCellTitleFontSize(isTranslateSwapped:)` - Long-word title
-- `longCellSubtitleFontSize(isTranslateSwapped:)` - Long-word subtitle
+- `titleFontSize(isHanjiFirst:)` - Regular candidate title
+- `subtitleFontSize(isHanjiFirst:)` - Regular candidate subtitle
+- `longCellTitleFontSize(isHanjiFirst:)` - Long-word title
+- `longCellSubtitleFontSize(isHanjiFirst:)` - Long-word subtitle
 
 ### Scale Logic
 
-| isTranslateSwapped | Title Scale | Subtitle Scale |
+| isHanjiFirst | Title Scale | Subtitle Scale |
 |-------------------|-------------|----------------|
 | false (default) | Yes (displays phonetic) | No (displays hanzi) |
 | true | No (displays hanzi) | Yes (displays phonetic) |

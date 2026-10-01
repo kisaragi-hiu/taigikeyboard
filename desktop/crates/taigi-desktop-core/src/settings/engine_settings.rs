@@ -61,7 +61,7 @@ impl CandidateDisplayMode {
     /// Whether the swap shortcut writes the stored swap — exactly where hanji
     /// is on screen. Under `Combined` the cells are split per script, so the
     /// shortcut only picks the punctuation width (USER 2026-09-13: "Hanji with Romanization needs an
-    /// isHanjiFirst button"); `RomanOnly` leaves it inert and the stored
+    /// isTranslateSwapped button"); `RomanOnly` leaves it inert and the stored
     /// swap waits for the way back.
     pub fn allows_swap_toggle(self) -> bool {
         self.shows_hanji()

@@ -136,7 +136,7 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
     /// the Hanji cell always comes first, so the candidate projection stays
     /// `true` whatever the chord does — but the chord is NOT inert: it flips
     /// the STORED swap, which is what picks the punctuation width there
-    /// (USER 2026-09-13: "Hanji with Romanization needs an isHanjiFirst button"), and the
+    /// (USER 2026-09-13: "Hanji with Romanization needs an isTranslateSwapped button"), and the
     /// flipped value is what the user gets back on returning to side-by-side.
     func testTheTranslateSwap_underCombined_flipsThePunctuationWidthOnly() {
         controller.settings.storedIsHanjiFirst = false

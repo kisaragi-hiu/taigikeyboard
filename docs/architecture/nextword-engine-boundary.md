@@ -185,7 +185,7 @@ For `wordSelected(text, roman, requireRomanMode, triggerPrediction)`:
 
 | Condition | Outcome effects | newState mutation |
 |---|---|---|
-| `requireRomanMode && settings.isTranslateSwapped` | `[]` | unchanged |
+| `requireRomanMode && settings.isHanjiFirst` | `[]` | unchanged |
 | `text` empty | `[]` | unchanged |
 | `text` is noise punctuation, NOT sentence-end | `[]` | unchanged |
 | `text` is sentence-end punctuation | `[cancelContextTimeout] + [clearPredictionsUI(gen) if isShowing]` | reset to defaults + bump generation |
@@ -251,7 +251,7 @@ The pairs are written in order, one decision in one transaction (`UserAssociatio
 
 ## 7. Settings access — snapshot-per-intent (with live live-read at executor)
 
-`NextWordController` originally read `settingsProvider.current` twice in `process` (for `isTranslateSwapped` and the since-retired `isAssociationRecordingEnabled`) and once in `makePredictions`. Between those reads, a settings change could technically flip the answer — though in practice settings updates during a single `process` call are not observed.
+`NextWordController` originally read `settingsProvider.current` twice in `process` (for `isHanjiFirst` and the since-retired `isAssociationRecordingEnabled`) and once in `makePredictions`. Between those reads, a settings change could technically flip the answer — though in practice settings updates during a single `process` call are not observed.
 
 **Decision**: executor reads `settingsProvider.current` once at the start of `process` and snapshots it into `NextWordDecisionInput.settings`, then passes the value to `decide`. Prediction-filter step gets its own snapshot at query-resolve time (Task boundary). This matches *per-keystroke live* semantics without forcing the engine to query a provider.
 
@@ -268,7 +268,7 @@ Pinned in `engine/nextword` tests (pure) and the platform executor tests (the la
 - `INVARIANT_nextword_sentence_end_resets_context` — `decide(.wordSelected(text: "。", …))` yields `cancelContextTimeout` + clears state + bumps generation.
 - `INVARIANT_nextword_compound_pairs_are_sequential` — for `text = "a b c"`, `compound_association_pairs` returns `[(a, b), (b, c)]` in that order (the split is on whitespace only, never on a hyphen — `split_compound`).
 - `INVARIANT_nextword_no_clock_read_in_engine` — code review gate: `engine/nextword/src` must not read a clock (`SystemTime`, `Instant::now`, `chrono::`); the platform passes `now_ms` in. No test yet.
-- `INVARIANT_nextword_prediction_filter_hides_empty_tl_in_roman_mode` — `filterPredictions` drops entries with empty `tl` when `settings.isTranslateSwapped == false`.
+- `INVARIANT_nextword_prediction_filter_hides_empty_tl_in_roman_mode` — `filterPredictions` drops entries with empty `tl` when `settings.isHanjiFirst == false`.
 - `INVARIANT_nextword_late_prediction_is_discarded` — platform-side integration test: dispatch `queryPredictions(gen=N)`, then fire `contextTimeoutFired` (bumps to N+1), then resolve the query → `setNextWordPredictions` is NOT called.
 - `INVARIANT_nextword_generation_bumps_on_invalidating_intents` — every invalidating intent produces `newState.currentGeneration > state.currentGeneration`.
 - `INVARIANT_nextword_rescheduling_leaks_no_timer` — platform-side: 100 rapid rescheduling intents → exactly one live Timer.
