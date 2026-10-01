@@ -51,7 +51,7 @@ fn assert_preedit_model_b_invariants(engine: &Engine, response: &ComposingRespon
     // raw_input to the raw pending tail rather than the derived accessor.)
     let expected_pending_raw = match &phase {
         Phase::Idle => String::new(),
-        Phase::Composing { raw, .. } | Phase::Continuous { raw, .. } => raw.clone(),
+        Phase::Continuous { raw, .. } => raw.clone(),
     };
     let expected_display = phase.composing_display(&config_tl());
     assert_eq!(

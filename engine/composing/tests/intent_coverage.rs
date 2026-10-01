@@ -130,10 +130,7 @@ fn every_method_decodes_to_its_intent() {
                 roman: "tsu".into(),
             },
         ),
-        (
-            Method::ResetContinuous(ResetContinuous {}),
-            Intent::ResetContinuous,
-        ),
+        (Method::ResetContinuous(ResetContinuous {}), Intent::Reset),
     ];
     for (method, expected) in cases {
         let decoded = requests::decode_intent(&req(method.clone())).expect("method present");

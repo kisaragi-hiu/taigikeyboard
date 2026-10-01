@@ -29,9 +29,9 @@ use protos::engine::effect;
 use protos::engine::AppConfig;
 use protos::engine::{
     ClearPreeditWithoutCommit, CommitOutcome, CommitTextReplacingPreedit, CommittedWord,
-    ComposingResponse, DeleteBackwardFromDocument, Effect, NextWordClearForNewComposing,
-    NextWordUpdateLastSelectedWord, NextWordWordSelected, PerformAutocomplete, ResetAutocomplete,
-    ResetAutocompleteContext, UpdatePreedit,
+    ComposingResponse, Effect, NextWordClearForNewComposing, NextWordUpdateLastSelectedWord,
+    NextWordWordSelected, PerformAutocomplete, ResetAutocomplete, ResetAutocompleteContext,
+    UpdatePreedit,
 };
 
 /// Learned phrases (§50) — the longest composition the final commit turns
@@ -47,17 +47,11 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
         Intent::Start { text } => match &state.phase {
             Phase::Continuous { .. } => start_under_continuous(state, text, config),
             // §21: a leading `--` neutral-tone marker typed from Idle is a document
-            // literal, not composing input (see helper). Composing-phase Start
-            // (non-production) keeps the plain enter-composing behavior.
-            Phase::Idle => enter_composing_or_insert_leading_hyphens(state, text, config),
-            Phase::Composing { .. } => enter_composing(state, text, config),
+            // literal, not composing input (see helper).
+            Phase::Idle => begin_composition_or_insert_leading_hyphens(state, text, config),
         },
         Intent::Append { ch } => match &state.phase {
-            Phase::Idle => enter_composing_or_insert_leading_hyphens(state, ch, config),
-            Phase::Composing { raw, caret } => {
-                let (next, caret) = insert_at_caret(raw, *caret, &ch);
-                step_composing(state, next, caret, config)
-            }
+            Phase::Idle => begin_composition_or_insert_leading_hyphens(state, ch, config),
             Phase::Continuous { .. } => append_continuous(state, ch, config),
         },
         Intent::AppendHyphen => {
@@ -71,23 +65,21 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
         }
         Intent::ReplaceLast { replacement } => replace_last(state, replacement, config),
         Intent::DeleteBackward => delete_backward(state, config),
-        Intent::CommitDerived => match &state.phase {
-            Phase::Continuous { .. } => noop(state, config),
-            _ => commit_derived(state, config),
-        },
+        // No single-segment phase to commit or promote (R12): both are
+        // no-ops kept for platforms that still send them.
+        Intent::CommitDerived | Intent::EnterContinuous => noop(state, config),
         Intent::CommitRaw => commit_raw(state, config),
         Intent::SelectSuggestion { text } => match &state.phase {
             Phase::Continuous { .. } => select_suggestion_under_continuous(state, text, config),
-            _ => select_suggestion(state, text, config),
+            Phase::Idle => noop(state, config),
         },
         Intent::CommitPreeditThenInsertExternal { text } => match &state.phase {
             Phase::Continuous { .. } => {
                 commit_preedit_then_insert_external_under_continuous(state, text, config)
             }
-            _ => commit_preedit_then_insert_external(state, text, config),
+            Phase::Idle => insert_external_when_idle(state, text, config),
         },
         Intent::Reset => reset(state, config),
-        Intent::EnterContinuous => enter_continuous(state, config),
         // FetchAtPos is a read-only query that needs lexicon state; the
         // dispatcher short-circuits before reaching `apply`. Reaching
         // here means a caller bypassed dispatch (test path or future
@@ -113,7 +105,6 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
             };
             return commit_continuous(state, pick, script, &roman, config);
         }
-        Intent::ResetContinuous => reset_continuous(state, config),
         Intent::TelexKey { key } => telex_key(state, &key, config),
         Intent::MoveCaret { direction } => move_caret(state, direction, config),
     };
@@ -130,11 +121,7 @@ fn telex_key(state: &mut EngineState, key: &str, config: &AppConfig) -> Composin
     let mode = phonetics::api::composing_mode(config);
     match &state.phase {
         Phase::Idle => match crate::telex::apply_telex_key("", key, mode) {
-            Some(text) => enter_composing(state, text, config),
-            None => noop(state, config),
-        },
-        Phase::Composing { raw, caret } => match telex_before_caret(raw, *caret, key, mode) {
-            Some((next, caret)) => step_composing(state, next, caret, config),
+            Some(text) => begin_composition(state, text, config),
             None => noop(state, config),
         },
         Phase::Continuous { raw, caret, nailed } => {
@@ -158,7 +145,7 @@ fn move_caret(
 ) -> ComposingResponse {
     let moved = match &mut state.phase {
         Phase::Idle => None,
-        Phase::Composing { raw, caret } | Phase::Continuous { raw, caret, .. } => direction
+        Phase::Continuous { raw, caret, .. } => direction
             .and_then(|direction| step_caret(raw, *caret, direction))
             .map(|next| *caret = next),
     };
@@ -225,9 +212,8 @@ fn step_caret(raw: &str, caret: usize, direction: CaretDirection) -> Option<usiz
 }
 
 /// Build a mid-composition step response (typing / replace-last /
-/// delete-backward non-empty branches, in both `Phase::Composing` and
-/// `Phase::Continuous`): update the preedit + request a fresh autocomplete
-/// query against the new buffer. Under Continuous, `display` is the **whole
+/// delete-backward non-empty branches): update the preedit + request a fresh
+/// autocomplete query against the new buffer. `display` is the **whole
 /// composition** (`Σ nailed.display_text` + pending-tail derived form —
 /// callers build it via [`combined_display`], Model B) while `raw` stays the
 /// still-editable pending tail.
@@ -257,26 +243,19 @@ fn composition_preedit(raw: String, caret: usize, display: String, tail_start: u
     }
 }
 
-/// Enter or update the composing phase.
-fn enter_composing(state: &mut EngineState, raw: String, config: &AppConfig) -> ComposingResponse {
-    let caret = raw.len();
-    step_composing(state, raw, caret, config)
-}
-
-/// One `Phase::Composing` step: the buffer becomes `raw` with the caret at
-/// `caret`, the preedit is re-derived and a fresh fetch requested.
-fn step_composing(
+/// Begin a composition from Idle: the buffer becomes `raw` with nothing
+/// nailed and the caret at its end. Empty `raw` stays Idle (a Continuous
+/// phase is never empty in both `raw` and `nailed`).
+fn begin_composition(
     state: &mut EngineState,
     raw: String,
-    caret: usize,
     config: &AppConfig,
 ) -> ComposingResponse {
-    state.phase = Phase::Composing {
-        raw: raw.clone(),
-        caret,
-    };
-    let display = derived_display(&raw, config);
-    step_response(composition_preedit(raw, caret, display, 0))
+    if raw.is_empty() {
+        return noop(state, config);
+    }
+    let caret = raw.len();
+    step_continuous(state, raw, caret, Vec::new(), config)
 }
 
 /// One `Phase::Continuous` step on the pending tail: `nailed` is untouched,
@@ -301,26 +280,26 @@ fn step_continuous(
 /// typed from `Phase::Idle` (no syllable content yet) is the neutral-tone (khinsiann)
 /// marker `--` (e.g. `--ah` 矣). It is a **document literal**, not composing
 /// input: insert the run verbatim and — if a syllable remainder follows in the
-/// same text — enter composing with the remainder. The underlined preedit then
+/// same text — begin a composition with the remainder. The underlined preedit then
 /// covers only the convertible syllable, matching the candidate strip and the
 /// reference IME (MOE).
 ///
 /// Internal hyphens (typed AFTER syllable content, e.g. the hyphen in `tai-bak`)
-/// never reach this fn — the buffer is already `Phase::Composing`, so they stay
-/// composing-boundary delimiters via the `Append`/`Composing` arm.
+/// never reach this fn — the buffer is already `Phase::Continuous`, so they stay
+/// composing-boundary delimiters via the `Append` Continuous arm.
 ///
 /// Production keystrokes arrive one char at a time, so the common case is
 /// `text == "-"` (remainder empty → pure literal insert, stay Idle). The
 /// split also covers a multi-char `Start { text: "--ah" }` from the engine API
 /// / tests so no old-model entry survives.
-fn enter_composing_or_insert_leading_hyphens(
+fn begin_composition_or_insert_leading_hyphens(
     state: &mut EngineState,
     text: String,
     config: &AppConfig,
 ) -> ComposingResponse {
     let hyphen_len = text.bytes().take_while(|&b| b == b'-').count();
     if hyphen_len == 0 {
-        return enter_composing(state, text, config);
+        return begin_composition(state, text, config);
     }
     let (run, remainder) = text.split_at(hyphen_len);
     if remainder.is_empty() {
@@ -336,7 +315,7 @@ fn enter_composing_or_insert_leading_hyphens(
     // a mixed transition can desync Android's `onUpdateSelection` clear-hook
     // (commit fires before the preedit lands). Engine/proto level is correct
     // and tested; the contract is char-by-char at the platform boundary.
-    let mut resp = enter_composing(state, remainder.to_string(), config);
+    let mut resp = begin_composition(state, remainder.to_string(), config);
     resp.effect
         .insert(0, commit_text_replacing_preedit(run.to_string()));
     resp
@@ -351,12 +330,6 @@ fn replace_last(
     config: &AppConfig,
 ) -> ComposingResponse {
     match &state.phase {
-        Phase::Composing { raw, caret } => {
-            let Some((new_raw, caret)) = replace_before_caret(raw, *caret, &replacement) else {
-                return noop(state, config);
-            };
-            step_composing(state, new_raw, caret, config)
-        }
         Phase::Continuous { raw, caret, nailed } => {
             let Some((new_pending, caret)) = replace_before_caret(raw, *caret, &replacement) else {
                 return noop(state, config);
@@ -374,22 +347,6 @@ fn replace_last(
 
 fn delete_backward(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
     match &state.phase {
-        Phase::Composing { raw, caret } => {
-            let Some((new_raw, caret)) = delete_before_caret(raw, *caret) else {
-                return noop(state, config);
-            };
-            if new_raw.is_empty() {
-                return exit_to_idle(
-                    state,
-                    vec![
-                        clear_preedit_without_commit(),
-                        reset_autocomplete(),
-                        delete_backward_from_document(),
-                    ],
-                );
-            }
-            step_composing(state, new_raw, caret, config)
-        }
         Phase::Continuous { raw, caret, nailed } => {
             delete_backward_continuous(state, raw.clone(), *caret, nailed.clone(), config)
         }
@@ -484,44 +441,13 @@ fn delete_backward_continuous(
     }
 }
 
-fn commit_derived(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
-    let Phase::Composing { raw, .. } = &state.phase else {
-        return noop(state, config);
-    };
-    let display = derived_display(raw, config);
-    if display.is_empty() {
-        return noop(state, config);
-    }
-    exit_to_idle(state, finalize_effects(display))
-}
-
 fn commit_raw(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
     match &state.phase {
-        Phase::Composing { raw, .. } => commit_raw_composing(state, raw.clone(), config),
         Phase::Continuous { raw, nailed, .. } => {
             commit_raw_continuous(state, raw.clone(), nailed.clone(), config)
         }
         Phase::Idle => noop(state, config),
     }
-}
-
-fn commit_raw_composing(
-    state: &mut EngineState,
-    raw: String,
-    config: &AppConfig,
-) -> ComposingResponse {
-    if raw.is_empty() {
-        return noop(state, config);
-    }
-    // §41 — commit the marker-free literal, not the raw buffer. A TPS
-    // buffer's ASCII space is the tone-1 / boundary marker (§31); it lives in
-    // `raw` so the barrier machinery and the tone pin can read it, and must
-    // not reach the document. The Continuous arm below already commits
-    // `combined_display`; this arm has to agree, or the engine's contract
-    // would hold only for the phase the platforms happen to be in (both
-    // promote to Continuous after every mutation, but the engine cannot
-    // depend on that — Codex post-impl BLOCK 2026-08-21).
-    exit_to_idle(state, finalize_effects(strip_tps_separator_markers(&raw)))
 }
 
 /// `Intent::CommitRaw` under `Phase::Continuous` (Enter) — v3.5.8 Phase 9
@@ -589,18 +515,10 @@ fn commit_raw_continuous(
     exit_to_idle(state, effects)
 }
 
-fn select_suggestion(
-    state: &mut EngineState,
-    text: String,
-    config: &AppConfig,
-) -> ComposingResponse {
-    if !matches!(state.phase, Phase::Composing { .. }) {
-        return noop(state, config);
-    }
-    exit_to_idle(state, finalize_effects(text))
-}
-
-fn commit_preedit_then_insert_external(
+/// `Intent::CommitPreeditThenInsertExternal` from Idle — a plain insert
+/// (emoji / paste with nothing composed). `CommitTextReplacingPreedit` is
+/// no-op-on-empty-preedit safe on every platform.
+fn insert_external_when_idle(
     state: &mut EngineState,
     external: String,
     config: &AppConfig,
@@ -608,26 +526,17 @@ fn commit_preedit_then_insert_external(
     if external.is_empty() {
         return noop(state, config);
     }
-    if let Phase::Composing { raw, .. } = &state.phase {
-        let mut combined = derived_display(raw, config);
-        combined.push_str(&external);
-        return exit_to_idle(state, finalize_effects(combined));
-    }
-    // Idle → plain insert. `CommitTextReplacingPreedit` is no-op-on-empty-preedit
-    // safe on both platforms.
     exit_to_idle(state, vec![commit_text_replacing_preedit(external)])
 }
 
-/// User-initiated reset. `Phase::Continuous` adds `NextWordClearForNewComposing`
-/// to the standard Composing reset effect pair so the platform tears down
-/// nextword's continuous-mode candidate strip.
+/// User-initiated reset (also the wire `ResetContinuous`) — **Model B
+/// (Codex risk (ii))**. Nailed segments were never written to the document;
+/// the whole composition lived in one marked region, so the abort trio
+/// clears that **entire** region and dropping the state discards every
+/// nailed segment. Nothing reaches the document. Idle → no-op.
 fn reset(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
     match state.phase {
         Phase::Idle => noop(state, config),
-        Phase::Composing { .. } => exit_to_idle(
-            state,
-            vec![clear_preedit_without_commit(), reset_autocomplete()],
-        ),
         Phase::Continuous { .. } => exit_to_idle(state, abort_continuous_effects()),
     }
 }
@@ -635,10 +544,6 @@ fn reset(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
 pub(crate) fn snapshot(state: &EngineState, config: &AppConfig) -> ComposingResponse {
     let (preedit, is_composing) = match &state.phase {
         Phase::Idle => (Preedit::default(), false),
-        Phase::Composing { raw, caret } => (
-            composition_preedit(raw.clone(), *caret, derived_display(raw, config), 0),
-            true,
-        ),
         // Model B: the composing-buffer surface is the whole composition
         // (Σ nailed.display_text + pending-tail derived form), not the
         // pending tail alone. `raw_input` stays the still-editable tail.
@@ -676,45 +581,12 @@ fn noop(state: &EngineState, config: &AppConfig) -> ComposingResponse {
 
 // ---- Continuous-phase helpers --------------------------------------
 
-/// `Phase::Composing { raw, caret }` → `Phase::Continuous { raw, caret,
-/// nailed: [] }`. Marked text was already derived from the same `raw` and
-/// with no nailed segments the Model B composing surface equals that derived
-/// form, so no preedit refresh is necessary; emit zero effects. The caret
-/// rides along unchanged — a promotion that moved it would leave the host's
-/// caret where the engine's no longer is. Idle / already-Continuous
-/// / empty-raw Composing → noop (the `Continuous { raw: "", nailed: [] }`
-/// state is invalid; entering it from a degenerate empty Composing buffer
-/// would violate the "Continuous is non-empty in at least one of pending /
-/// nailed" invariant — Codex post-impl finding #2).
-fn enter_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
-    let Phase::Composing { raw, caret } = &state.phase else {
-        return noop(state, config);
-    };
-    if raw.is_empty() {
-        return noop(state, config);
-    }
-    let (raw, caret) = (raw.clone(), *caret);
-    let display = derived_display(&raw, config);
-    state.phase = Phase::Continuous {
-        raw: raw.clone(),
-        caret,
-        nailed: Vec::new(),
-    };
-    ComposingResponse {
-        preedit: Some(composition_preedit(raw, caret, display, 0)),
-        effect: Vec::new(),
-        is_composing: true,
-        continuous: None,
-        commit: None,
-    }
-}
-
 /// `Intent::Start { text }` arriving while in `Phase::Continuous`. Codex
 /// post-impl finding #3: silently dropping `text` would lose user input.
 /// Treats the intent as "drop continuous state, then begin a fresh
-/// Composing buffer with `text`". Emits the ResetContinuous effect trio
-/// followed by the regular Composing entry effects; final state is
-/// `Phase::Composing { raw: text }` (or Idle if `text` is empty).
+/// composition with `text`" (no §21 leading-hyphen split here). Emits the
+/// abort trio followed by the regular step effects; final state is
+/// `Phase::Continuous { raw: text, nailed: [] }` (or Idle if `text` is empty).
 fn start_under_continuous(
     state: &mut EngineState,
     text: String,
@@ -723,7 +595,7 @@ fn start_under_continuous(
     // Drop continuous state to Idle first.
     state.phase = Phase::Idle;
     let mut effects = abort_continuous_effects();
-    let resp = enter_composing(state, text, config);
+    let resp = begin_composition(state, text, config);
     effects.extend(resp.effect);
     ComposingResponse {
         effect: effects,
@@ -747,7 +619,7 @@ fn select_suggestion_under_continuous(
     if text.is_empty() {
         // Empty suggestion: drop continuous state without inserting. Mirrors
         // SelectSuggestion-on-Idle being a no-op.
-        return reset_continuous(state, config);
+        return reset(state, config);
     }
     let Phase::Continuous { nailed, .. } = &state.phase else {
         return noop(state, config);
@@ -938,24 +810,9 @@ fn commit_continuous(
     applied
 }
 
-/// Continuous-mode abort — **Model B (Codex risk (ii))**. Nailed segments
-/// were never written to the document; the whole composition (nailed +
-/// pending) lived in one marked region. `ClearPreeditWithoutCommit` clears
-/// that **entire** region, and dropping `state` (exit to Idle) discards all
-/// nailed segments. Nothing reaches the document — abort is a clean discard,
-/// not "keep nailed, drop pending". No `DeleteBackwardFromDocument`.
-fn reset_continuous(state: &mut EngineState, config: &AppConfig) -> ComposingResponse {
-    if !matches!(state.phase, Phase::Continuous { .. }) {
-        return noop(state, config);
-    }
-    exit_to_idle(state, abort_continuous_effects())
-}
-
 /// `Append { ch }` under `Phase::Continuous`. Appends to the pending tail;
 /// nailed segments are untouched. The preedit re-renders the **whole
-/// composition** (Model B). Empty `ch` collapses to noop (mirrors how
-/// Composing's empty `Append` produces a degenerate buffer state — kept
-/// guarded here rather than echoed forward).
+/// composition** (Model B). Empty `ch` collapses to noop.
 fn append_continuous(state: &mut EngineState, ch: String, config: &AppConfig) -> ComposingResponse {
     let Phase::Continuous { raw, caret, nailed } = &state.phase else {
         return noop(state, config);
@@ -994,14 +851,6 @@ fn commit_text_replacing_preedit(text: String) -> Effect {
     }
 }
 
-fn delete_backward_from_document() -> Effect {
-    Effect {
-        kind: Some(effect::Kind::DeleteBackwardFromDocument(
-            DeleteBackwardFromDocument {},
-        )),
-    }
-}
-
 fn reset_autocomplete() -> Effect {
     Effect {
         kind: Some(effect::Kind::ResetAutocomplete(ResetAutocomplete {})),
@@ -1034,8 +883,8 @@ fn abort_continuous_effects() -> Vec<Effect> {
     ]
 }
 
-/// The finalize trio every branch that commits text out of Composing /
-/// Continuous emits, in this order:
+/// The finalize trio every branch that commits text out of a composition
+/// emits, in this order:
 /// commit `text` replacing the preedit, reset autocomplete, reset the
 /// autocomplete context. A caller that also fires a NextWord effect pushes
 /// it after the trio.

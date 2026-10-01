@@ -131,7 +131,9 @@ fn invariant_replace_last_empty_buffer_is_noop() {
 // ---- DeleteBackward ----
 
 #[test]
-fn invariant_delete_backward_to_empty_emits_clear_reset_delete_doc() {
+fn invariant_delete_backward_to_empty_aborts_without_touching_the_document() {
+    // The char only ever lived in the marked region: backspace to empty is
+    // the abort trio, never a document delete.
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "a".into() }, &config_tl());
     let resp = engine.apply(Intent::DeleteBackward, &config_tl());
@@ -141,7 +143,7 @@ fn invariant_delete_backward_to_empty_emits_clear_reset_delete_doc() {
         vec![
             "clearPreeditWithoutCommit",
             "resetAutocomplete",
-            "deleteBackwardFromDocument"
+            "nextWordClearForNewComposing"
         ]
     );
 }
@@ -165,19 +167,13 @@ fn invariant_delete_backward_idle_is_noop() {
 // ---- CommitDerived ----
 
 #[test]
-fn invariant_commit_derived_emits_commit_then_reset_pair() {
+fn invariant_commit_derived_is_noop_while_composing() {
+    // No single-segment phase to commit since R12; Enter is `CommitRaw`.
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "a".into() }, &config_tl());
     let resp = engine.apply(Intent::CommitDerived, &config_tl());
-    assert_eq!(
-        effect_kinds(&resp),
-        vec![
-            "commitTextReplacingPreedit",
-            "resetAutocomplete",
-            "resetAutocompleteContext"
-        ]
-    );
-    assert!(!resp.is_composing);
+    assert!(resp.effect.is_empty());
+    assert!(resp.is_composing);
 }
 
 #[test]
@@ -188,20 +184,6 @@ fn invariant_commit_derived_idle_is_noop() {
 }
 
 // ---- CommitRaw ----
-
-#[test]
-fn invariant_commit_raw_commits_literal_buffer() {
-    let mut engine = Engine::new();
-    engine.apply(
-        Intent::Start {
-            text: "gua2".into(),
-        },
-        &config_tl(),
-    );
-    let resp = engine.apply(Intent::CommitRaw, &config_tl());
-    assert_eq!(commit_text(&resp).as_deref(), Some("gua2"));
-    assert!(!resp.is_composing);
-}
 
 #[test]
 fn invariant_commit_raw_idle_is_noop() {
@@ -279,18 +261,6 @@ fn invariant_reset_idle_is_noop() {
     assert!(resp.effect.is_empty());
 }
 
-#[test]
-fn invariant_reset_composing_emits_clear_and_reset_autocomplete_only() {
-    let mut engine = Engine::new();
-    engine.apply(Intent::Start { text: "a".into() }, &config_tl());
-    let resp = engine.apply(Intent::Reset, &config_tl());
-    assert_eq!(
-        effect_kinds(&resp),
-        vec!["clearPreeditWithoutCommit", "resetAutocomplete"]
-    );
-    assert!(!resp.is_composing);
-}
-
 // ---- Snapshot ----
 
 #[test]
@@ -327,7 +297,7 @@ fn invariant_is_composing_matches_phase_after_every_response() {
     let mut engine = Engine::new();
     let r1 = engine.apply(Intent::Start { text: "a".into() }, &config_tl());
     assert!(r1.is_composing);
-    let r2 = engine.apply(Intent::CommitDerived, &config_tl());
+    let r2 = engine.apply(Intent::CommitRaw, &config_tl());
     assert!(!r2.is_composing);
     let r3 = engine.apply(Intent::Append { ch: "b".into() }, &config_tl());
     assert!(r3.is_composing);
@@ -350,7 +320,7 @@ fn invariant_start_append_append_buffer_grows() {
 fn invariant_commit_then_compose_again_works() {
     let mut engine = Engine::new();
     engine.apply(Intent::Start { text: "a".into() }, &config_tl());
-    engine.apply(Intent::CommitDerived, &config_tl());
+    engine.apply(Intent::CommitRaw, &config_tl());
     let resp = engine.apply(Intent::Start { text: "b".into() }, &config_tl());
     assert_eq!(raw_input(&resp), "b");
 }

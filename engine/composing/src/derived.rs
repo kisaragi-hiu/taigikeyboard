@@ -337,6 +337,15 @@ mod tests {
         assert_eq!(boundaries, vec![0, 1, 2, 3, 3, 4]);
     }
 
+    /// A composition with nothing nailed — what `raw_input` derives from.
+    fn pending(raw: &str) -> Phase {
+        Phase::Continuous {
+            raw: raw.to_string(),
+            caret: raw.len(),
+            nailed: Vec::new(),
+        }
+    }
+
     #[test]
     fn raw_input_idle_is_empty() {
         assert_eq!(Phase::Idle.raw_input(&config_tl()), "");
@@ -344,10 +353,7 @@ mod tests {
 
     #[test]
     fn raw_input_composing_empty_is_empty() {
-        let phase = Phase::Composing {
-            raw: String::new(),
-            caret: 0,
-        };
+        let phase = pending("");
         assert_eq!(phase.raw_input(&config_tl()), "");
     }
 
@@ -358,10 +364,7 @@ mod tests {
         // on the typed letters with NO spelling fold. POJ-style `goa2` keeps
         // `goa` (mark on `a` per TL rule → `goá`), NOT canonicalized to `guá`.
         // `ai3`→`ài`, `li2`→`lí`; hyphens preserved.
-        let phase = Phase::Composing {
-            raw: "goa2-ai3-li2".to_string(),
-            caret: 0,
-        };
+        let phase = pending("goa2-ai3-li2");
         assert_eq!(phase.raw_input(&config_tl()), "go\u{e1}-\u{e0}i-l\u{ed}");
     }
 
@@ -369,10 +372,7 @@ mod tests {
     fn raw_input_composing_tl_preserves_special_final_eng() {
         // Regression for the `téng` bug: the TL special nasal final `eng`
         // [ɛŋ] must NOT be folded to `ing` [iŋ]. `teng2` → `téng`, NOT `tíng`.
-        let phase = Phase::Composing {
-            raw: "teng2".to_string(),
-            caret: 0,
-        };
+        let phase = pending("teng2");
         assert_eq!(phase.raw_input(&config_tl()), "t\u{e9}ng");
     }
 
@@ -384,30 +384,9 @@ mod tests {
         // spelling in POJ mode keeps it: `ting2` → `tíng` (NOT `téng`). POJ-
         // spelled input is likewise verbatim with POJ tone placement:
         // `goa2` → `góa` (mark on `o`), `teng2` → `téng`.
-        assert_eq!(
-            Phase::Composing {
-                raw: "ting2".to_string(),
-                caret: 0,
-            }
-            .raw_input(&config_poj()),
-            "t\u{ed}ng"
-        );
-        assert_eq!(
-            Phase::Composing {
-                raw: "goa2".to_string(),
-                caret: 0,
-            }
-            .raw_input(&config_poj()),
-            "g\u{f3}a"
-        );
-        assert_eq!(
-            Phase::Composing {
-                raw: "teng2".to_string(),
-                caret: 0,
-            }
-            .raw_input(&config_poj()),
-            "t\u{e9}ng"
-        );
+        assert_eq!(pending("ting2").raw_input(&config_poj()), "t\u{ed}ng");
+        assert_eq!(pending("goa2").raw_input(&config_poj()), "g\u{f3}a");
+        assert_eq!(pending("teng2").raw_input(&config_poj()), "t\u{e9}ng");
     }
 
     #[test]
@@ -415,11 +394,7 @@ mod tests {
         // Caps Lock `SIANN5` must read `SIÂᴺ`, not `Siâⁿ` (Discord report
         // 2026-09-14): the preedit is also what a commit writes.
         assert_eq!(
-            Phase::Composing {
-                raw: "SIANN5".to_string(),
-                caret: 0,
-            }
-            .raw_input(&config_poj_doubletap()),
+            pending("SIANN5").raw_input(&config_poj_doubletap()),
             "SI\u{c2}\u{1d3a}"
         );
     }
@@ -435,31 +410,10 @@ mod tests {
             nn_doubletap_enabled: true,
             ..config_poj()
         };
-        assert_eq!(
-            Phase::Composing {
-                raw: "hoonn".to_string(),
-                caret: 0,
-            }
-            .raw_input(&config),
-            "ho\u{0358}\u{207f}"
-        );
-        assert_eq!(
-            Phase::Composing {
-                raw: "hoonnh".to_string(),
-                caret: 0,
-            }
-            .raw_input(&config),
-            "ho\u{0358}\u{207f}h"
-        );
+        assert_eq!(pending("hoonn").raw_input(&config), "ho\u{0358}\u{207f}");
+        assert_eq!(pending("hoonnh").raw_input(&config), "ho\u{0358}\u{207f}h");
         // Canonical spelling unchanged.
-        assert_eq!(
-            Phase::Composing {
-                raw: "honn".to_string(),
-                caret: 0,
-            }
-            .raw_input(&config),
-            "ho\u{207f}"
-        );
+        assert_eq!(pending("honn").raw_input(&config), "ho\u{207f}");
     }
 
     #[test]
@@ -467,19 +421,13 @@ mod tests {
         // §10.2 amendment 2026-05-13 — engine does NOT auto-insert syllable
         // boundaries; if the user typed no hyphens, derived display has no
         // boundary to convert and returns the raw single chunk.
-        let phase = Phase::Composing {
-            raw: "goa2ai3li2".to_string(),
-            caret: 0,
-        };
+        let phase = pending("goa2ai3li2");
         assert_eq!(phase.raw_input(&config_tl()), "goa2ai3li2");
     }
 
     #[test]
     fn raw_input_composing_poj_uses_poj_diacritics() {
-        let phase = Phase::Composing {
-            raw: "goa2".to_string(),
-            caret: 0,
-        };
+        let phase = pending("goa2");
         assert_eq!(phase.raw_input(&config_poj()), "góa");
     }
 
@@ -522,10 +470,7 @@ mod tests {
 
     #[test]
     fn raw_input_tps_glyphs_pass_through_verbatim() {
-        let phase = Phase::Composing {
-            raw: "ㄍㄨㄚˋ".to_string(),
-            caret: 0,
-        };
+        let phase = pending("ㄍㄨㄚˋ");
         assert_eq!(phase.raw_input(&config_tl()), "ㄍㄨㄚˋ");
     }
 
@@ -534,37 +479,25 @@ mod tests {
     // repeated separators all render as the bare glyph run.
     #[test]
     fn raw_input_tps_hides_the_trailing_separator_marker() {
-        let phase = Phase::Composing {
-            raw: "ㄒㄧ ".to_string(),
-            caret: 0,
-        };
+        let phase = pending("ㄒㄧ ");
         assert_eq!(phase.raw_input(&config_tl()), "ㄒㄧ");
     }
 
     #[test]
     fn raw_input_tps_hides_an_interior_separator_marker() {
-        let phase = Phase::Composing {
-            raw: "ㄍㄠ ㄉㄞ".to_string(),
-            caret: 0,
-        };
+        let phase = pending("ㄍㄠ ㄉㄞ");
         assert_eq!(phase.raw_input(&config_tl()), "ㄍㄠㄉㄞ");
     }
 
     #[test]
     fn raw_input_tps_hides_repeated_separator_markers() {
-        let phase = Phase::Composing {
-            raw: "ㄍㄠ  ㄉㄞ ".to_string(),
-            caret: 0,
-        };
+        let phase = pending("ㄍㄠ  ㄉㄞ ");
         assert_eq!(phase.raw_input(&config_tl()), "ㄍㄠㄉㄞ");
     }
 
     #[test]
     fn raw_input_tps_keeps_tone_marks_while_hiding_the_separator() {
-        let phase = Phase::Composing {
-            raw: "ㄉㄞˊ ㆣㄧˋ".to_string(),
-            caret: 0,
-        };
+        let phase = pending("ㄉㄞˊ ㆣㄧˋ");
         assert_eq!(phase.raw_input(&config_tl()), "ㄉㄞˊㆣㄧˋ");
     }
 
@@ -572,10 +505,7 @@ mod tests {
     // hide rule is TPS-only, keyed on the buffer actually carrying TPS.
     #[test]
     fn raw_input_tl_keeps_a_literal_space() {
-        let phase = Phase::Composing {
-            raw: "tai uan".to_string(),
-            caret: 0,
-        };
+        let phase = pending("tai uan");
         assert_eq!(phase.raw_input(&config_tl()), "tai uan");
     }
 }
