@@ -134,9 +134,10 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 
 ## Release
 
-- `make windows-release` runs on a Windows host (Git Bash); `windows/scripts/publish-release.sh`
-  mirrors the macOS publisher and stages the installer on the same **draft** `desktop-<version>`
-  release in this repo. Nothing reaches a user until the maintainer tests it and publishes by hand, which
+- The installer is built and staged by `make desktop-release` / `make desktop-patch` on the Mac,
+  which dispatches the GitHub-hosted `windows-build.yml` onto the same **draft** `desktop-<version>`
+  release; `make windows-release` (a Windows host, Git Bash) is the by-hand path
+  (`docs/architecture/windows-release.md`). Nothing reaches a user until the maintainer tests it and publishes by hand, which
   runs the announcement itself (`docs/architecture/desktop-release.md`). Never run any of it
   without the maintainer's explicit release instruction.
 - **Releases ship UNSIGNED** (owner 2026-09-04, no certificate for a year or two):

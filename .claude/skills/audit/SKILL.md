@@ -39,8 +39,8 @@ Give each agent the scope, its recipe and the § 3 verification rules; ask for `
 
 ## 3. Verification — main session, before anything reaches the report
 
-1. **Callers are searched in every spelling.** Swift: `Type(`, `.init(`, `Type.init(`, `= .init(` at a typed declaration; Kotlin: `Type(`, extension-function calls without the receiver; Rust: `path::fn`, `use` re-exports; plus string op names in bridges (`op: "…"`). A missed `.init(` once broke an iOS build (R3 PR-b).
-2. **Drift is only a finding when observable.** Trace each "iOS does X, Android does Y" to an input a user can type. In the R3 audit 4 of 5 drifts were unreachable (dictionary has no such word, engine never emits the value, the branch is dead); only the Ext-B `𣍐` key split was real (#195). Unreachable drift = dead-code cleanup, not a parity round.
+1. **Callers are searched in every spelling.** Swift: `Type(`, `.init(`, `Type.init(`, `= .init(` at a typed declaration; Kotlin: `Type(`, extension-function calls without the receiver; Rust: `path::fn`, `use` re-exports; plus string op names in bridges (`op: "…"`). A missed `.init(` caller turns a "dead" deletion into a broken build.
+2. **Drift is only a finding when observable.** Trace each "iOS does X, Android does Y" to an input a user can type. Most alleged drifts turn out unreachable (the dictionary has no such word, the engine never emits the value, the branch is dead). Unreachable drift = dead-code cleanup, not a parity round.
 3. **High-severity rows are verified by hand** (grep / Read in the main session) and marked **verified**; the rest carry the agent's `file:line` and "re-grep before quoting".
 4. **LOC estimates exclude generated code** and are marked `~`.
 5. Follow `docs/contributing/cross-platform-alignment.md` §3b: an inline `// matches iOS` / `CROSS-PLATFORM INVARIANT` comment means intended parity — divergence there is a bug candidate, reported as such.

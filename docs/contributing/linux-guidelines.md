@@ -4,9 +4,9 @@ Mandatory rules for the Linux input method (`linux/`: Fcitx5 addon (primary, C++
 + IBus engine (second, pure Rust) + settings window, over `desktop/` + the shared engine). Read before modifying Linux or `desktop/` code. Design
 record: `docs/architecture/linux-roadmap.md`.
 
-## Authored without a Linux machine
+## Host gates prove compilation
 
-- The platform was written blind (no Linux desktop on the maintainer's machine), like Windows. Every PR passes
+- Linux behaviour is observed only in the dogfood VMs and the `/e2e` run, never on the macOS host. Every PR passes
   `make linux-check` on the macOS host: `cargo test` in `desktop/` (native), `cargo clippy
   --workspace --all-targets -- -D warnings` in `linux/` (native: `zbus` + gtk4-rs + libadwaita
   from Homebrew), a real cross build of the engine for `x86_64-unknown-linux-gnu` via `cargo zigbuild`

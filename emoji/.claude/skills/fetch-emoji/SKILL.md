@@ -36,9 +36,9 @@ to decide which version / verify what a version added), never the data pipe.
 
 4. **Fetch + regenerate + verify:**
    ```bash
-   make fetch    # re-pulls data/ from the new pins
-   make build    # regenerate dist/emoji.json
-   make test     # golden specs + drift guard
+   make -C emoji fetch    # re-pulls data/ from the new pins
+   make -C emoji build    # regenerate dist/emoji.json
+   make -C emoji test     # golden specs + drift guard
    ```
 
 5. **Review `git diff`** of `data/` + `dist/emoji.json`. New emoji appear as added lines.

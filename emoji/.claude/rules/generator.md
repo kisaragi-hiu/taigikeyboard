@@ -36,4 +36,4 @@ Read before editing `scripts/generate.py` or `tests/`.
 - **Tests are the spec.** Every grouping edge case (skin tone, mixed-tone, hair, direction,
   keycap, tag flag, FE0F, legacy-family drop) has a golden test. Add one when you touch the
   pipeline. Trace expected values from the real data, do not reverse-rationalize.
-- Lint/format with `ruff` (`make lint`). `make build` regenerates; `make test` runs pytest.
+- Lint/format with `ruff` (`make -C emoji lint`). `make -C emoji build` regenerates; `make -C emoji test` runs pytest.

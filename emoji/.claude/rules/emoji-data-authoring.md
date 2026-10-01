@@ -23,7 +23,7 @@ emoji  action  category  order  taigi_keywords  zh_Hant_keywords  en_keywords  n
 - `exclude` — drop an upstream emoji.
 - Keywords are `|`-separated (terms may contain commas).
 
-After editing: `make build` then `make test`. The drift-guard test fails if committed
+After editing: `make -C emoji build` then `make -C emoji test`. The drift-guard test fails if committed
 `dist/emoji.json` is stale.
 
 ## Taigi keywords — authoritative-source-only
@@ -41,6 +41,6 @@ Principle #3.
 ## Versioning
 
 The pins are documented in `data/SOURCES.md`. Bump `UNICODE_EMOJI_VERSION` + `CLDR_TAG`
-(Makefile) and `MAX_EMOJI_VERSION` + `CLDR_VERSION` (generate.py) together → `make fetch` →
-`make build` → review diff. Full procedure: `fetch-emoji` skill. Release scope/timing is
+(Makefile) and `MAX_EMOJI_VERSION` + `CLDR_VERSION` (generate.py) together → `make -C emoji fetch` →
+`make -C emoji build` → review diff. Full procedure: `fetch-emoji` skill. Release scope/timing is
 user-gated.

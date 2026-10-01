@@ -7,7 +7,7 @@ When adding or modifying UI, check this guide first. Do not introduce new size/c
 
 | Tier | Usage | Android | iOS |
 |------|-------|---------|-----|
-| Page Title (expanded) | Top-level tab main titles (Home / Layout / Dictionary / Settings) | `MaterialTheme.typography.headlineLarge` (34sp), LargeTopAppBar | .navigationBarTitleDisplayMode(.large), 34pt Open Huninn |
+| Page Title (expanded) | Top-level tab main titles (Home / Theme / Layout / Dictionary / Settings) | `MaterialTheme.typography.headlineLarge` (34sp), LargeTopAppBar | .navigationBarTitleDisplayMode(.large), 34pt Open Huninn |
 | Page Title (collapsed) | Top-level tab scrolled | titleLarge (22sp) | inline title (22pt Open Huninn) |
 | Sub-page Title | SetupGuide, Appearance, etc. | TopAppBar (default titleLarge) | .navigationBarTitleDisplayMode(.inline) |
 | Section Header | Card group labels | `MaterialTheme.typography.titleMedium` (18sp), onSurfaceVariant | appFont(size: 18), .secondary |

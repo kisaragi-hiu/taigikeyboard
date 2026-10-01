@@ -26,7 +26,7 @@ merges pinned Unicode + CLDR data with a hand overlay of 台語/華語 search ke
 3. **Taigi keywords = authoritative-source-only** — never invent TL/POJ. Verify against the parent
    repository's `docs/phonetics/taigi-phonetics-reference.md` + `taigi-converter`; use 漢字 when unsure.
 4. **Deterministic build** — `dist/emoji.json` byte-stable; drift-guard test fails on stale output.
-   Always `make build` after editing data/generator.
+   Always `make -C emoji build` after editing data/generator.
 5. **Release scope / version-pin bumps = user-gated** — never raise `MAX_EMOJI_VERSION`, tag, or
    declare "ready to release" without the user's explicit word.
 
@@ -42,10 +42,10 @@ merges pinned Unicode + CLDR data with a hand overlay of 台語/華語 search ke
 
 | Task | Command |
 |---|---|
-| Regenerate `dist/emoji.json` | `make build` |
-| Run tests | `make test` |
-| Lint + format check | `make lint` |
-| Re-pull upstream (version bump only) | `make fetch` |
+| Regenerate `dist/emoji.json` | `make -C emoji build` |
+| Run tests | `make -C emoji test` |
+| Lint + format check | `make -C emoji lint` |
+| Re-pull upstream (version bump only) | `make -C emoji fetch` |
 
 ## App integration (in the parent repository)
 
