@@ -60,8 +60,8 @@ Deliberate structural divergence (e.g., FlorisBoard forces a different ownership
 When the same logical behavior requires different code on each platform — platform-idiomatic API, capability gap, KeyboardKit / FlorisBoard-specific integration — the PR must:
 
 - Name the divergence in the description
-- Classify as **intentional** (platform-specific, keep) or **deferred** (reconcile later)
-- For **deferred** items, open a follow-up tracking task and link it
+- Classify as **intentional** (platform-specific, keep) or **pending** (to reconcile, unscheduled)
+- For **pending** items, open a follow-up tracking task and link it
 
 Silent divergence is the failure mode this rule exists to prevent.
 

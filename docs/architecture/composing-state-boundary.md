@@ -298,7 +298,7 @@ A8-sweep applied the `// region Shared-Core Candidate` header per `docs/contribu
 
 ### 11.10 Live-typing preedit text — Android raw vs iOS derived (A4-impl divergence)
 
-**Status**: deferred divergence, locked 2026-04-20 during A4-impl on branch `phase2/a4-composing-state`. Documents a real shared-core contract divergence so it is not silent per `docs/contributing/cross-platform-alignment.md` §3.
+**Status**: pending divergence, locked 2026-04-20 during A4-impl on branch `phase2/a4-composing-state`. Documents a real shared-core contract divergence so it is not silent per `docs/contributing/cross-platform-alignment.md` §3.
 
 For live-typing intents — `Start` / `Append` / `AppendHyphen` / `ReplaceLast` / non-empty-result `DeleteBackward` — the two platforms emit different `Effect.UpdatePreedit` text content:
 

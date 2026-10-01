@@ -364,7 +364,7 @@ in the generated protos. PR sizing ~600-1000 LOC each (USER chose fewer/larger P
 
 Open items this track produced:
 - `lexicon.proto` documents `DEV` as always-on in three places (`:231`, `:239`, `:500`); the toggle shipped and made that false. The comment lands in the committed generated trees, so correcting it is a regen round touching iOS + Android.
-- **iOS/Android carried two behaviours macOS corrects**, both classified deferred: the all-off toggle state re-enabled every dictionary there (macOS sends a no-sources mask) — **resolved 2026-09-30**, iOS and Android now send the same no-sources mask (`behavioral-invariants.md` §57); and a v2 `.taigi` restore folds POJ→TL over readings already declared canonical TL (macOS folds only v1).
+- **iOS/Android carried two behaviours macOS corrects**, both classified pending: the all-off toggle state re-enabled every dictionary there (macOS sends a no-sources mask) — **resolved 2026-09-30**, iOS and Android now send the same no-sources mask (`behavioral-invariants.md` §57); and a v2 `.taigi` restore folds POJ→TL over readings already declared canonical TL (macOS folds only v1).
 - Custom-dictionary Time Machine policy stayed the plan's default — inside Time Machine's scope, like the other two user databases — and is the USER's to change.
 
 Dependencies: PR10 ⊥ PR11 (parallelizable); PR12 needs PR10+PR11; PR13 needs PR11.
