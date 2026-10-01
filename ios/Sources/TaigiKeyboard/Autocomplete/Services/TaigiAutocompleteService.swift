@@ -221,7 +221,7 @@ class TaigiAutocompleteService: KeyboardKit.AutocompleteService {
     /// defect (producer emitted `Some("")` instead of `None` for a TAILO
     /// record) renders single-line rather than as an empty hanji line.
     /// Whitespace-only hanji is passed through unchanged — engine invariant
-    /// is `hanji = DictionaryRecord.hanzi` (real CJK text). The bridge decode
+    /// is `hanji = DictionaryRecord.hanji` (real CJK text). The bridge decode
     /// layer defends the inverse case (empty `c.roman` → falls back to
     /// `displayText`), so the builder trusts both fields as
     /// non-empty-when-meaningful.

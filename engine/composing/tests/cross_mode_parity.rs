@@ -1,7 +1,7 @@
 //! Cross-mode candidate parity — the SAME Taiwanese word, typed in TL / POJ /
 //! TPS, must surface a CONSISTENT visible-Hanji candidate set: TL and POJ
 //! identical, and neither's Hanji dropped by TPS. This is a *no-missing*
-//! guard on the visible Hanji, NOT a full word-identity (`(hanzi, tl)`) or
+//! guard on the visible Hanji, NOT a full word-identity (`(hanji, tl)`) or
 //! rowid-equality check — TPS is allowed to ADD candidates (see the invariant
 //! below), only never to drop one.
 //!
@@ -109,7 +109,7 @@ fn complete_syllable_hanji_set(input: &str, mode: &str) -> BTreeSet<String> {
 // ---------------------------------------------------------------------------
 
 struct Case {
-    hanzi: String,
+    hanji: String,
     tl_num: String,
     poj_num: String,
     tps_num: String,
@@ -129,7 +129,7 @@ fn sampled_cases() -> Vec<Case> {
     // `lexicon_ready` probes can be absent.
     let csv = test_support::dictionary_csv().expect("dictionary/output/dictionary.csv present");
     let mut filtered: Vec<Case> = Vec::new();
-    for [hanzi, tl, frequency, tl_num, poj_num, tps_num, tps_var] in csv.select([
+    for [hanji, tl, frequency, tl_num, poj_num, tps_num, tps_var] in csv.select([
         "hanzi",
         "tl",
         "frequency",
@@ -155,7 +155,7 @@ fn sampled_cases() -> Vec<Case> {
             continue;
         }
         filtered.push(Case {
-            hanzi: hanzi.to_string(),
+            hanji: hanji.to_string(),
             tl_num: tl_num.to_string(),
             poj_num: poj_num.to_string(),
             tps_num: tps_num.to_string(),
@@ -165,18 +165,18 @@ fn sampled_cases() -> Vec<Case> {
 
     // top-by-freq + stride over the rest (both deterministic). The `tl_num`
     // tie-break keeps the sample stable across dictionary rebuilds when a
-    // hanzi has several equal-frequency readings.
+    // hanji has several equal-frequency readings.
     filtered.sort_by(|a, b| {
         b.frequency
             .cmp(&a.frequency)
-            .then(a.hanzi.cmp(&b.hanzi))
+            .then(a.hanji.cmp(&b.hanji))
             .then(a.tl_num.cmp(&b.tl_num))
     });
     let mut out: Vec<Case> = Vec::new();
     let mut seen: BTreeSet<(String, String)> = BTreeSet::new();
     for (idx, case) in filtered.into_iter().enumerate() {
         let take = idx < TOP_BY_FREQ || idx % STRIDE == 0;
-        if take && seen.insert((case.hanzi.clone(), case.tl_num.clone())) {
+        if take && seen.insert((case.hanji.clone(), case.tl_num.clone())) {
             out.push(case);
         }
     }
@@ -214,7 +214,7 @@ fn cross_mode_candidate_hanji_parity() {
         }
         violations.push(format!(
             "  {} tl_num={:?} poj_num={:?} tps_num={:?}\n     poj\\tl={:?} tl\\poj={:?}  MISSING-from-tps (tl\\tps)={:?}",
-            case.hanzi,
+            case.hanji,
             case.tl_num,
             case.poj_num,
             case.tps_num,
@@ -251,10 +251,10 @@ fn dump_cross_mode_parity() {
         return;
     }
     let words = std::env::var("PARITY_WORDS").unwrap_or_else(|_| "我,水,樹".to_string());
-    // Index the highest-frequency single-syllable row per requested hanzi.
+    // Index the highest-frequency single-syllable row per requested hanji.
     let cases = sampled_cases();
     for want in words.split(',').map(str::trim).filter(|s| !s.is_empty()) {
-        let Some(case) = cases.iter().find(|c| c.hanzi == want) else {
+        let Some(case) = cases.iter().find(|c| c.hanji == want) else {
             println!(
                 "\n==== {want} — not in sampled set (multi-syllable / tone-1 / variant?) ===="
             );

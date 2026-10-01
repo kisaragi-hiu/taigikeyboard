@@ -40,7 +40,7 @@ class ContinuousSuggestionsContractTest {
      * v3.5.8 Phase 9 Item 5 — builds a [RustEngineBridge.ContinuousCandidate]
      * with default `roman`/`hanji` matching the test fixture's `displayText`.
      * Production engine emits `roman` = `DictionaryRecord.tl` and `hanji` =
-     * `DictionaryRecord.hanzi`; the legacy tests here pre-date that split and
+     * `DictionaryRecord.hanji`; the legacy tests here pre-date that split and
      * assert against `displayText` semantics only, so defaulting `roman = displayText`
      * and `hanji = null` keeps their intent intact while letting new Item 5
      * tests override either field explicitly.

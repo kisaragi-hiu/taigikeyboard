@@ -69,7 +69,7 @@ pub enum CustomDictionaryCSVError {
     TooManyRows { limit: usize },
 }
 
-/// The `roman,hanzi` CSV the Custom Dictionary page reads and writes.
+/// The `roman,hanji` CSV the Custom Dictionary page reads and writes.
 pub struct CustomDictionaryCSV;
 
 impl CustomDictionaryCSV {
@@ -82,7 +82,7 @@ impl CustomDictionaryCSV {
                 format!(
                     "{},{}\n",
                     UserDataCSV::escape(&row.roman),
-                    UserDataCSV::escape(&row.hanzi)
+                    UserDataCSV::escape(&row.hanji)
                 )
             })
             .collect()
@@ -155,7 +155,7 @@ mod tests {
             CustomDictionaryCSV::decode(&CustomDictionaryCSV::encode(&rows), LIMIT).unwrap();
         let romans: Vec<&str> = decoded.iter().map(|r| r.roman.as_str()).collect();
         assert_eq!(romans, ["gâu-tsá", "tsia̍h-pá--buē", "say \"hi\""]);
-        assert_eq!(decoded[2].hanzi, "講,好");
+        assert_eq!(decoded[2].hanji, "講,好");
         assert_eq!(
             UserDataCSV::escape(" lead"),
             " lead",
@@ -181,7 +181,7 @@ mod tests {
         );
         let decoded = CustomDictionaryCSV::decode("gua,我\nnonsense\nli,你\n", LIMIT).unwrap();
         assert_eq!(
-            decoded.iter().map(|r| r.hanzi.as_str()).collect::<Vec<_>>(),
+            decoded.iter().map(|r| r.hanji.as_str()).collect::<Vec<_>>(),
             ["我", "你"]
         );
         assert_eq!(

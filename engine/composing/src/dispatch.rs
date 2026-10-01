@@ -9,7 +9,7 @@
 //! syllable inventory) and so it is resolved here in dispatch outside
 //! the pure transition table. After v3.5.9 A2 the candidate-assembly
 //! 6-step seam lives in [`crate::continuous::assemble_candidates`];
-//! dispatch only handles the phase/hanzi guards, the proto →
+//! dispatch only handles the phase/hanji guards, the proto →
 //! domain hoists (`mode`, the source filter from the toggles), and wire encoding.
 //!
 //! The mode-aware key construction lives in `composing::continuous`
@@ -25,7 +25,7 @@
 use crate::api::{CaretDirection, CommitScript, ComposingError, Engine, Intent, Phase, UserRows};
 use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq};
 use lexicon::{
-    classification::is_hanzi, derive_mode, ConsumedSpan, LearnedEntry, RawCandidate,
+    classification::is_hanji, derive_mode, ConsumedSpan, LearnedEntry, RawCandidate,
     SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
 };
 use phonetics::contains_tps;
@@ -170,7 +170,7 @@ pub fn query(intent: &Intent, engine: &Engine, config: &AppConfig) -> ComposingR
 ///
 /// v3.5.9 A2: the candidate-assembly 6-step seam lives in
 /// [`crate::continuous::assemble_candidates`]; this fn does the
-/// phase/hanzi guards and the wire encoding around it.
+/// phase/hanji guards and the wire encoding around it.
 fn handle_fetch_at_pos(
     engine: &Engine,
     now_ms: i64,
@@ -185,14 +185,14 @@ fn handle_fetch_at_pos(
     let Phase::Continuous { raw, .. } = &state.phase else {
         return snapshot;
     };
-    // v3.5.8 Phase 9 Item 11 — hanzi guard (§15.3.E). The only input
+    // v3.5.8 Phase 9 Item 11 — hanji guard (§15.3.E). The only input
     // modes are TL/POJ/TPS romanization; CJK never legitimately enters
     // the composing buffer. When it leaks in (paste, stale selection
     // residue) short-circuit to an empty candidate carrier instead of
     // letting the syllabifier / lexicon scan garbage. Ports the platform
-    // D-8 guard (`LexiconService` Hanzi classification) into the engine
+    // D-8 guard (`LexiconService` Hanji classification) into the engine
     // so the behavior survives the Item 13 platform-fallback retire.
-    if is_hanzi(raw) {
+    if is_hanji(raw) {
         return with_continuous(snapshot, ContinuousResponse::default());
     }
     // v3.5.9 D / C-3b — mode upgrade: the buffer's content, not the
@@ -404,7 +404,7 @@ pub fn build_continuous_keys_with_inventory(
 /// (`learned_edge_key`).
 ///
 /// The same pair learned under two typed separators (`guá-sī` / `guá--sī`)
-/// is two stored rows under `UNIQUE(hanzi, roman)`; only the first in store
+/// is two stored rows under `UNIQUE(hanji, roman)`; only the first in store
 /// order (`learn_count DESC, updated_at DESC` — the form the user composed
 /// most, then most recently) is kept, so a corrected separator wins over the
 /// slip and one slip never displaces a settled phrase.

@@ -35,8 +35,8 @@ fn compound_hanji_exists_contract_matrix() {
             ("hanzi:逐家", 2),
             ("hanzi:查某人", 3),
             ("hanzi:麻煩", 4),
-            // Intentionally points at rowid 5 whose record.hanzi == "好":
-            // exercises the defensive `record.hanzi == Some(hanji)`
+            // Intentionally points at rowid 5 whose record.hanji == "好":
+            // exercises the defensive `record.hanji == Some(hanji)`
             // re-check (wrong-rowid / future index drift).
             ("hanzi:壞", 5),
         ],
@@ -104,7 +104,7 @@ fn compound_hanji_exists_contract_matrix() {
     // nothing (the raw-rowid parity is pinned directly above).
     assert!(!compound_hanji_exists("查", 2, &prefix, &dict));
 
-    // Defensive re-check: key resolves to a record whose hanzi is
+    // Defensive re-check: key resolves to a record whose hanji is
     // "好", not "壞" → rejected despite syllable_count == 2.
     assert!(!compound_hanji_exists("壞", 2, &prefix, &dict));
 }

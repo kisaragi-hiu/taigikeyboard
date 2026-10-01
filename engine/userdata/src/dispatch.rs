@@ -155,10 +155,10 @@ impl UserDataHandle {
                 "an entry needs a romanization".into(),
             ));
         }
-        let hanzi = save.hanji.trim();
+        let hanji = save.hanji.trim();
         let row = match save.id.as_deref() {
-            Some(id) if !id.is_empty() => CustomDictionaryRow::with_id(id, roman, hanzi),
-            _ => CustomDictionaryRow::new(roman, hanzi),
+            Some(id) if !id.is_empty() => CustomDictionaryRow::with_id(id, roman, hanji),
+            _ => CustomDictionaryRow::new(roman, hanji),
         };
         if let Err(error) = dictionary.upsert(&row) {
             return match refusal(&error) {
@@ -300,7 +300,7 @@ fn custom_dictionary_entry(row: &CustomDictionaryRow) -> CustomDictionaryEntry {
     CustomDictionaryEntry {
         id: row.id.clone(),
         roman: row.roman.clone(),
-        hanji: row.hanzi.clone(),
+        hanji: row.hanji.clone(),
         created_at: row.created_at.clone(),
         updated_at: row.updated_at.clone(),
     }
@@ -506,14 +506,14 @@ mod tests {
         handle: &UserDataHandle,
         id: Option<&str>,
         roman: &str,
-        hanzi: &str,
+        hanji: &str,
     ) -> CustomEntrySaved {
         match call(
             handle,
             user_data_request::Method::SaveCustomEntry(SaveCustomEntry {
                 id: id.map(str::to_owned),
                 roman: roman.into(),
-                hanji: hanzi.into(),
+                hanji: hanji.into(),
             }),
         ) {
             user_data_response::Result::CustomEntrySaved(saved) => saved,

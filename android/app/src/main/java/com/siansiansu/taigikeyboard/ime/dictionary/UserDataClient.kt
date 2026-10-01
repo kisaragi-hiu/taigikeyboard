@@ -88,7 +88,7 @@ interface UserDataClient {
 
     suspend fun exportCsv(): ByteArray
 
-    /** A `roman,hanzi` CSV file's bytes, at most [MAX_IMPORT_FILE_BYTES]. */
+    /** A `roman,hanji` CSV file's bytes, at most [MAX_IMPORT_FILE_BYTES]. */
     suspend fun importCsv(csv: ByteArray): CustomDictionaryImportResult
 
     /** Empties what the keyboard learned — counts, bigrams, learned phrases — and leaves the custom dictionary alone. */

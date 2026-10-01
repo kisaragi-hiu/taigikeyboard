@@ -9,7 +9,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * v3.5.8 Phase 9.2 — candidate-type discriminator. MOE `VocType`
  * (`VT_HANT` / `VT_TAILO` / `VT_MIXED`) is the cite. Derived in Rust
- * from `DictionaryRecord.hanzi` presence + NFKD-normalized Latin-letter
+ * from `DictionaryRecord.hanji` presence + NFKD-normalized Latin-letter
  * detection; see `engine/lexicon/src/continuous/mod.rs::derive_mode`.
  *
  * Metadata-only: this field does NOT enter the `CandidateSortKey` tie-break

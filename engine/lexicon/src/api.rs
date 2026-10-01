@@ -72,7 +72,7 @@ pub fn search_by_hanji(req: SearchByHanjiRequest) -> Result<SearchByHanjiRespons
             .dictionary
             .as_ref()
             .ok_or_else(|| LexiconError::Internal("dictionary reader unavailable".into()))?;
-        let rows = search::search_by_hanzi(
+        let rows = search::search_by_hanji(
             &req.query,
             req.limit,
             req.enabled_sources_bitmask,
@@ -112,7 +112,7 @@ pub fn lookup_associations(
 // True when the text contains any CJK Hanji, Extensions A-E included.
 pub fn is_hanji(req: IsHanjiRequest) -> Result<IsHanjiResponse, LexiconError> {
     Ok(IsHanjiResponse {
-        is_hanji: classification::is_hanzi(&req.text),
+        is_hanji: classification::is_hanji(&req.text),
     })
 }
 

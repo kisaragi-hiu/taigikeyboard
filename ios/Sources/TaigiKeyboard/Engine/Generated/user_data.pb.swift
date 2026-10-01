@@ -81,7 +81,7 @@ public nonisolated enum Taigi_Engine_CustomDictionaryRefusal: SwiftProtobuf.Enum
   case fileTooLarge // = 4
   case notUtf8 // = 5
 
-  /// Content, but not one `roman,hanzi` row.
+  /// Content, but not one `roman,hanji` row.
   case noUsableRows // = 6
   case UNRECOGNIZED(Int)
 
@@ -684,7 +684,7 @@ public nonisolated struct Taigi_Engine_CustomEntryDeleted: Sendable {
   public init() {}
 }
 
-/// A `roman,hanzi` CSV file's bytes, as the platform's file picker read them.
+/// A `roman,hanji` CSV file's bytes, as the platform's file picker read them.
 /// Rows already stored (same roman and Hanji) are skipped; the import stops
 /// at the dictionary's cap without failing, so `imported` may be fewer than
 /// the file's rows even with no refusal.
@@ -765,7 +765,7 @@ public nonisolated struct Taigi_Engine_ExportCustomCsv: Sendable {
   public init() {}
 }
 
-/// The whole dictionary as `roman,hanzi` lines, for the platform to save.
+/// The whole dictionary as `roman,hanji` lines, for the platform to save.
 public nonisolated struct Taigi_Engine_CustomCsvExported: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

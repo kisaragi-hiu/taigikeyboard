@@ -3,7 +3,7 @@
 Unified Ideographs + Extensions A–G (through U+3134F) + Compatibility
 Ideographs; `dictionary.csv` carries 44 characters beyond Extension E
 (max U+30E6C), so every consumer must reach Extension G. The engine's
-`lexicon::classification::is_hanzi` still stops at Extension E — a separate
+`lexicon::classification::is_hanji` still stops at Extension E — a separate
 concern recorded in the bigram LM roadmap (P3), not changed here.
 """
 

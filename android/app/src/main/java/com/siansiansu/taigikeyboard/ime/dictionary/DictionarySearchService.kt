@@ -47,7 +47,7 @@ class DictionarySearchService(
         if (query.isEmpty()) return emptyList()
         val settings = settingsProvider.current
         // Kotlin `Char.code` is 16-bit, so an inline CJK range check misses supplementary-plane
-        // codepoints; the engine owns the 6-range classification (INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE).
+        // codepoints; the engine owns the 6-range classification (INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE).
         val isCJK = lexicon.isHanji(query)
         logger.debug(TAG) { "[SEARCH] query='$query' isCJK=$isCJK inputMode=${settings.inputMode}" }
 

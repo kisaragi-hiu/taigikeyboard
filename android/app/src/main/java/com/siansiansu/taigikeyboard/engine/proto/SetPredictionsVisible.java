@@ -9,7 +9,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * Platform → engine visibility sync. Pushes the prediction bar's visibility
  * to state after platform rendering of an async predict() result. No effects,
- * no generation bump; just state.is_showing = visible.
+ * no generation bump; just state.predictions_visible = visible.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.SetPredictionsVisible}
@@ -135,7 +135,7 @@ public  final class SetPredictionsVisible extends
    * <pre>
    * Platform → engine visibility sync. Pushes the prediction bar's visibility
    * to state after platform rendering of an async predict() result. No effects,
-   * no generation bump; just state.is_showing = visible.
+   * no generation bump; just state.predictions_visible = visible.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.SetPredictionsVisible}

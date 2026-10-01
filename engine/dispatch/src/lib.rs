@@ -25,7 +25,7 @@ mod predict;
 pub mod trace;
 mod user_data;
 
-/// The biggest `roman,hanzi` CSV file a custom-dictionary import accepts
+/// The biggest `roman,hanji` CSV file a custom-dictionary import accepts
 /// (`ImportCustomCsv`). Exported so a platform can refuse the file before
 /// reading it, as the engine refuses the bytes; `user_data/with_stores.rs`
 /// asserts it equals the `userdata` crate's own limit.

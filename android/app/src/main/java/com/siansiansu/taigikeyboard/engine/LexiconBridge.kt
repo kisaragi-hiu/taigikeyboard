@@ -179,7 +179,7 @@ internal fun dictionaryTogglesProto(toggles: RustEngineBridge.DictionaryToggles)
 /**
  * Dictionary tab short-circuit predicate. True iff `text` contains any CJK
  * codepoint (Unified + Extensions A-E). See
- * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
+ * `INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`.
  * Engine-side check fixes the pre-v3.5.7 Kotlin `Char.code` (16-bit) miss on Ext B-E.
  */
 fun RustEngineBridge.isHanji(text: String): Boolean {

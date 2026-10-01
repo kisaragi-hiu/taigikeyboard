@@ -1,6 +1,6 @@
 //! `dictionary.bin` v3 — round-trip and bounds tests for the record layout:
 //! `syllable_count` u8 (v2) + `kautian_subtag` u16 (v3) between `tl_len` and
-//! the `hanzi` payload.
+//! the `hanji` payload.
 
 use lexicon::dictionary_reader::DictionaryReader;
 
@@ -25,22 +25,22 @@ fn invariant_lex_v3_round_trip_syllable_count() {
     assert_eq!(r1.syllable_count, 1, "single-syllable");
     assert_eq!(r1.kautian_subtag, 0, "subtag default 0");
     assert_eq!(r1.tl, "tsuá");
-    assert_eq!(r1.hanzi.as_deref(), Some("紙"));
+    assert_eq!(r1.hanji.as_deref(), Some("紙"));
 
     let r2 = reader.record(2).expect("rowid 2");
     assert_eq!(r2.syllable_count, 2, "multi-syllable");
     assert_eq!(r2.tl, "tsu-á");
-    assert_eq!(r2.hanzi.as_deref(), Some("珠仔"));
+    assert_eq!(r2.hanji.as_deref(), Some("珠仔"));
 
     let r3 = reader.record(3).expect("rowid 3");
     assert_eq!(r3.syllable_count, 3);
-    assert!(r3.hanzi.is_none(), "no hanzi → None");
+    assert!(r3.hanji.is_none(), "no hanji → None");
     assert_eq!(r3.tl, "tai-uan-ue");
 }
 
 #[test]
 fn invariant_lex_v3_round_trip_kautian_subtag() {
-    // (bitmask, freq, syllable_count, kautian_subtag, hanzi, tl)
+    // (bitmask, freq, syllable_count, kautian_subtag, hanji, tl)
     // subtag layout: bit 0 = main, bits 1..=10 = accent, bit 11 = name.
     let rows: &[(u16, u32, u8, u16, &str, &str)] = &[
         (0x0001, 100, 1, 0b0000_0000_0001, "詞", "su"), // main only

@@ -9,7 +9,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * <pre>
  * `IsHanjiRequest` is the low-level CJK predicate used by Tab3 search to
  * short-circuit Hanji queries. Tab3 needs the predicate without paying the
- * search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
+ * search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.IsHanjiRequest}
@@ -157,7 +157,7 @@ public  final class IsHanjiRequest extends
    * <pre>
    * `IsHanjiRequest` is the low-level CJK predicate used by Tab3 search to
    * short-circuit Hanji queries. Tab3 needs the predicate without paying the
-   * search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE.
+   * search_key build cost. See INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.IsHanjiRequest}

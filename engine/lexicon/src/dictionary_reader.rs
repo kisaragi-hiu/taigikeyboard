@@ -4,7 +4,7 @@
 //!     Header: "TKDB" (4) || version u32 || count u32 || build_ts u32   (16 bytes)
 //!     Offset table: count × u32 (absolute byte offset to each record)
 //!     Records: bitmask u16 || frequency u32 || hanzi_len u8 || tl_len u8
-//!              || syllable_count u8 || kautian_subtag u16 || hanzi || tl
+//!              || syllable_count u8 || kautian_subtag u16 || hanji || tl
 //!
 //! `syllable_count` is the number of TL syllables in the entry, range 1..=4
 //! (capped by `MAX_SYLLABLES` at builder side). `kautian_subtag` (v3) is the
@@ -68,7 +68,7 @@ pub struct DictionaryRecord {
     // Selection frequency, used for candidate ranking (DESC).
     pub frequency: u32,
     // Optional — some syllables have no corresponding Hanji.
-    pub hanzi: Option<String>,
+    pub hanji: Option<String>,
     pub tl: String,
     // Number of TL syllables in this key (1..=4).
     pub syllable_count: u8,
@@ -234,14 +234,14 @@ impl DictionaryReader {
         if pos + hanzi_len + tl_len > record_end {
             return None;
         }
-        let hanzi = if hanzi_len == 0 {
+        let hanji = if hanzi_len == 0 {
             None
         } else {
             std::str::from_utf8(&bytes[pos..pos + hanzi_len])
                 .ok()
                 .map(str::to_string)
         };
-        if hanzi_len > 0 && hanzi.is_none() {
+        if hanzi_len > 0 && hanji.is_none() {
             return None;
         }
         pos += hanzi_len;
@@ -252,7 +252,7 @@ impl DictionaryReader {
         Some(DictionaryRecord {
             bitmask,
             frequency,
-            hanzi,
+            hanji,
             tl,
             syllable_count,
             kautian_subtag,

@@ -126,7 +126,7 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
   /// pushes the resulting visibility back to the engine via this intent so
   /// subsequent ClearForNewComposing / sentence-end / context-timeout /
   /// ResetAll paths can correctly emit ClearPredictionsUI when there is
-  /// UI to clear. Mutates state.is_showing only — does NOT bump
+  /// UI to clear. Mutates state.predictions_visible only — does NOT bump
   /// current_generation (the in-flight query that produced the rendered
   /// result already won the race; later intents will bump as usual).
   /// Returns DecideResult with empty effects + snapshot of state.
@@ -180,7 +180,7 @@ public nonisolated struct Taigi_Engine_NextWordRequest: Sendable {
     /// pushes the resulting visibility back to the engine via this intent so
     /// subsequent ClearForNewComposing / sentence-end / context-timeout /
     /// ResetAll paths can correctly emit ClearPredictionsUI when there is
-    /// UI to clear. Mutates state.is_showing only — does NOT bump
+    /// UI to clear. Mutates state.predictions_visible only — does NOT bump
     /// current_generation (the in-flight query that produced the rendered
     /// result already won the race; later intents will bump as usual).
     /// Returns DecideResult with empty effects + snapshot of state.
@@ -388,7 +388,7 @@ public nonisolated struct Taigi_Engine_UpdateLastSelectedWord: Sendable {
 
 /// Platform → engine visibility sync. Pushes the prediction bar's visibility
 /// to state after platform rendering of an async predict() result. No effects,
-/// no generation bump; just state.is_showing = visible.
+/// no generation bump; just state.predictions_visible = visible.
 public nonisolated struct Taigi_Engine_SetPredictionsVisible: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

@@ -34,21 +34,21 @@ fn fixture_rows() -> Vec<Row> {
     vec![
         Row {
             toneless_key: "tsiah",
-            hanzi: "食",
+            hanji: "食",
             tl: "tsia̍h",
             syll: 1,
             freq: 9000,
         },
         Row {
             toneless_key: "tsiah",
-            hanzi: "𤆬",
+            hanji: "𤆬",
             tl: "tsia̍h",
             syll: 1,
             freq: 3000,
         },
         Row {
             toneless_key: "tsiah",
-            hanzi: "隻",
+            hanji: "隻",
             tl: "tsiah",
             syll: 1,
             freq: 5000,

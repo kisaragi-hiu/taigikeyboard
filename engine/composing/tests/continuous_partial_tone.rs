@@ -35,21 +35,21 @@ fn fixture_rows() -> Vec<Row> {
         // the LEAST frequent so it can only lead by tone.
         Row {
             toneless_key: "tingsik",
-            hanzi: "程式",
+            hanji: "程式",
             tl: "tîng-sik", // tone 5 + stop coda 4 → tl_num ting5sik4
             syll: 2,
             freq: 1,
         },
         Row {
             toneless_key: "tingsik",
-            hanzi: "等式",
+            hanji: "等式",
             tl: "tíng-sik", // tone 2 → ting2sik4
             syll: 2,
             freq: 100,
         },
         Row {
             toneless_key: "tingsik",
-            hanzi: "中式",
+            hanji: "中式",
             tl: "ting-sik", // tone 1 → ting1sik4
             syll: 2,
             freq: 100,
@@ -57,14 +57,14 @@ fn fixture_rows() -> Vec<Row> {
         // Single-syllable rows the (0, 5) `ting5` span resolves to.
         Row {
             toneless_key: "ting",
-            hanzi: "程",
+            hanji: "程",
             tl: "tîng",
             syll: 1,
             freq: 50,
         },
         Row {
             toneless_key: "ting",
-            hanzi: "等",
+            hanji: "等",
             tl: "tíng",
             syll: 1,
             freq: 80,
@@ -73,14 +73,14 @@ fn fixture_rows() -> Vec<Row> {
         // and second-syllable-free probes.
         Row {
             toneless_key: "tingse",
-            hanzi: "程世",
+            hanji: "程世",
             tl: "tîng-sè",
             syll: 2,
             freq: 10,
         },
         Row {
             toneless_key: "tingse",
-            hanzi: "中西",
+            hanji: "中西",
             tl: "ting-se",
             syll: 2,
             freq: 100,
@@ -88,21 +88,21 @@ fn fixture_rows() -> Vec<Row> {
         // Strict-prefix controls (fixture rule).
         Row {
             toneless_key: "ti",
-            hanzi: "豬",
+            hanji: "豬",
             tl: "ti",
             syll: 1,
             freq: 90,
         },
         Row {
             toneless_key: "tin",
-            hanzi: "鎮",
+            hanji: "鎮",
             tl: "tìn",
             syll: 1,
             freq: 90,
         },
         Row {
             toneless_key: "si",
-            hanzi: "是",
+            hanji: "是",
             tl: "sī",
             syll: 1,
             freq: 900,

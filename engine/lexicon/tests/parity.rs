@@ -119,8 +119,8 @@ fn invariant_lex_fst_rowid_payload_round_trip() {
         "exact match returns both rowids in insertion order"
     );
 
-    let hanzi_hits = index.lookup_prefix("hanzi:好");
-    assert_eq!(hanzi_hits, vec![50]);
+    let hanji_hits = index.lookup_prefix("hanzi:好");
+    assert_eq!(hanji_hits, vec![50]);
 }
 
 // --- INVARIANT_LEX_LOOKUP_ROWIDS_ORDER ---------------------------------
@@ -379,24 +379,24 @@ fn invariant_lex_api_bitmask_plumbing_honored() {
         "search_with_sources with non-matching mask filters entry"
     );
 
-    // search_by_hanzi: same assertions, hanzi-prefix path.
-    let make_by_hanzi = |mask: u32| SearchByHanjiRequest {
+    // search_by_hanji: same assertions, hanji-prefix path.
+    let make_by_hanji = |mask: u32| SearchByHanjiRequest {
         query: "好".to_string(),
         input_mode: protos::engine::InputMode::Tl as i32,
         limit: 10,
         enabled_sources_bitmask: mask,
     };
-    let hit_h = api::search_by_hanji(make_by_hanzi(0x0001)).expect("hit_h");
+    let hit_h = api::search_by_hanji(make_by_hanji(0x0001)).expect("hit_h");
     assert_eq!(
         hit_h.rows.len(),
         1,
-        "search_by_hanzi with matching mask returns entry"
+        "search_by_hanji with matching mask returns entry"
     );
 
-    let miss_h = api::search_by_hanji(make_by_hanzi(0x0002)).expect("miss_h");
+    let miss_h = api::search_by_hanji(make_by_hanji(0x0002)).expect("miss_h");
     assert!(
         miss_h.rows.is_empty(),
-        "search_by_hanzi with non-matching mask filters entry"
+        "search_by_hanji with non-matching mask filters entry"
     );
 }
 
@@ -470,7 +470,7 @@ fn invariant_lex_install_search_serialization_no_panic() {
 fn synth_dictionary_bin(magic: &[u8; 4], rows: &[(u16, u32, &str, &str)]) -> Vec<u8> {
     let rows_v3: Vec<(u16, u32, u8, &str, &str)> = rows
         .iter()
-        .map(|(bm, freq, hanzi, tl)| (*bm, *freq, 1u8, *hanzi, *tl))
+        .map(|(bm, freq, hanji, tl)| (*bm, *freq, 1u8, *hanji, *tl))
         .collect();
     build_tkdb_v3(magic, &rows_v3)
 }
@@ -484,12 +484,12 @@ fn synth_dictionary_bin_with_version(
 ) -> Vec<u8> {
     let dict_rows: Vec<test_support::TkdbRow<'_>> = rows
         .iter()
-        .map(|(bm, freq, hanzi, tl)| test_support::TkdbRow {
+        .map(|(bm, freq, hanji, tl)| test_support::TkdbRow {
             bitmask: *bm,
             frequency: *freq,
             syllable_count: Some(1),
             kautian_subtag: None,
-            hanzi,
+            hanji,
             tl,
         })
         .collect();

@@ -5,7 +5,7 @@ use protos::engine::{
     RawNextWordPrediction, Source,
 };
 
-/// Bundled rows fetched per requested prediction: slack so the `(hanzi, tl)`
+/// Bundled rows fetched per requested prediction: slack so the `(hanji, tl)`
 /// merge with user rows never leaves fewer than `limit` survivors.
 const BUNDLED_OVERFETCH_FACTOR: usize = 2;
 
@@ -85,9 +85,9 @@ mod tests {
         next_word_response, request, response, AppConfig, Platform, Request, Response,
     };
 
-    fn user_row(hanzi: &str, count: i64) -> RawNextWordPrediction {
+    fn user_row(hanji: &str, count: i64) -> RawNextWordPrediction {
         RawNextWordPrediction {
-            hanji: hanzi.to_owned(),
+            hanji: hanji.to_owned(),
             tl: String::new(),
             count,
             last_used_ms: 1,

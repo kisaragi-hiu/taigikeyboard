@@ -20,7 +20,7 @@ const SCHEMA_VERSION: i64 = 1;
 /// lists learned phrases.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LearnedPhraseRow {
-    pub hanzi: String,
+    pub hanji: String,
     pub canonical_tl: String,
     pub learn_count: i64,
 }
@@ -80,14 +80,14 @@ impl LearnedPhraseStore {
         self.database.open_blocking();
     }
 
-    /// Records one phrase a final commit taught: inserts the `(hanzi, canonical
+    /// Records one phrase a final commit taught: inserts the `(hanji, canonical
     /// TL)` pair or bumps its `learn_count`, in one statement on the
-    /// `(hanzi, roman)` unique constraint. A fresh row gets its keys and may
+    /// `(hanji, roman)` unique constraint. A fresh row gets its keys and may
     /// evict past the cap; all in one transaction. Best-effort and off the
     /// keystroke path. The keys are derived before the write lock is taken
     /// (an FFI round-trip has no business holding it).
-    pub fn learn_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        if hanzi.is_empty() || canonical_tl.is_empty() {
+    pub fn learn_phrase(&self, hanji: &str, canonical_tl: &str) {
+        if hanji.is_empty() || canonical_tl.is_empty() {
             return;
         }
         let Some(search_keys) =
@@ -96,7 +96,7 @@ impl LearnedPhraseStore {
             return;
         };
         let limit = self.limit;
-        let hanzi = hanzi.to_owned();
+        let hanji = hanji.to_owned();
         let canonical_tl = canonical_tl.to_owned();
         self.database.write(move |connection| {
             immediate_transaction::<_, rusqlite::Error>(connection, |connection| {
@@ -105,7 +105,7 @@ impl LearnedPhraseStore {
                         "INSERT INTO {TABLE_NAME} (roman, hanzi, learn_count, updated_at)\nVALUES (?, ?, 1, CURRENT_TIMESTAMP)\nON CONFLICT(hanzi, roman) DO UPDATE SET\n    learn_count = MIN(learn_count + 1, {}),\n    updated_at = CURRENT_TIMESTAMP\nRETURNING id, learn_count;",
                         Self::MAX_LEARN_COUNT
                     ),
-                    params![canonical_tl, hanzi],
+                    params![canonical_tl, hanji],
                     |row| Ok((row.get(0)?, row.get(1)?)),
                 )?;
                 // `learn_count` reads 1 only for the row this statement just
@@ -122,11 +122,11 @@ impl LearnedPhraseStore {
 
     /// Bumps a phrase the user just committed as one candidate, so a phrase
     /// that is used stays ahead of the eviction line. No-op for an unknown pair.
-    pub fn touch_phrase(&self, hanzi: &str, canonical_tl: &str) {
-        if hanzi.is_empty() || canonical_tl.is_empty() {
+    pub fn touch_phrase(&self, hanji: &str, canonical_tl: &str) {
+        if hanji.is_empty() || canonical_tl.is_empty() {
             return;
         }
-        let hanzi = hanzi.to_owned();
+        let hanji = hanji.to_owned();
         let canonical_tl = canonical_tl.to_owned();
         self.database.write(move |connection| {
             connection.execute(
@@ -134,7 +134,7 @@ impl LearnedPhraseStore {
                     "UPDATE {TABLE_NAME}\nSET learn_count = MIN(learn_count + 1, {}), updated_at = CURRENT_TIMESTAMP\nWHERE hanzi = ? AND roman = ?;",
                     Self::MAX_LEARN_COUNT
                 ),
-                params![hanzi, canonical_tl],
+                params![hanji, canonical_tl],
             )?;
             Ok(())
         });
@@ -201,7 +201,7 @@ impl LearnedPhraseStore {
 
 fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LearnedPhraseRow> {
     Ok(LearnedPhraseRow {
-        hanzi: row.get(0)?,
+        hanji: row.get(0)?,
         canonical_tl: row.get(1)?,
         learn_count: row.get(2)?,
     })

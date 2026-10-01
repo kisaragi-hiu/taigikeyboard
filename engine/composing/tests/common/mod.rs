@@ -34,14 +34,14 @@ use test_support::{build_tkdb, build_tkwa, fst_entry, write_fst_set, TkdbRow};
 
 const RANK_NEUTRAL_BITMASK: u16 = 1u16 << 11;
 
-/// One dictionary fixture row. Empty `hanzi` ⇒ TAILO (no hanji). `rowid` is
+/// One dictionary fixture row. Empty `hanji` ⇒ TAILO (no hanji). `rowid` is
 /// the 1-based slice index, shared between `dictionary.bin` (offset-table
 /// order) and the `dictionary.fst` keys (`<family>:<key> + 0xFF + rowid_le`).
 /// `toneless_key` feeds only the `tl:` family; TPS-only fixtures leave it
 /// empty because their families derive from `tl`.
 pub struct Row {
     pub toneless_key: &'static str,
-    pub hanzi: &'static str,
+    pub hanji: &'static str,
     pub tl: &'static str,
     pub syll: u8,
     pub freq: u32,
@@ -57,7 +57,7 @@ pub fn build_tkdb_v3(rows: &[Row]) -> Vec<u8> {
             frequency: row.freq,
             syllable_count: Some(row.syll),
             kautian_subtag: Some(0),
-            hanzi: row.hanzi,
+            hanji: row.hanji,
             tl: row.tl,
         })
         .collect();
@@ -76,8 +76,8 @@ pub fn build_dictionary_fst(rows: &[Row]) -> PathBuf {
     for (idx, row) in rows.iter().enumerate() {
         let rowid = (idx + 1) as u32;
         entries.push(fst_entry(b"tl:", row.toneless_key, rowid));
-        if !row.hanzi.is_empty() {
-            entries.push(fst_entry(b"hanzi:", row.hanzi, rowid));
+        if !row.hanji.is_empty() {
+            entries.push(fst_entry(b"hanzi:", row.hanji, rowid));
         }
         if let Some(poj_notone) = derive_poj_notone(row.tl) {
             entries.push(fst_entry(b"poj:", &poj_notone, rowid));

@@ -94,7 +94,7 @@ fn predict_after(
     filter.predictions
 }
 
-fn hanzi_of(predictions: &[EnginePrediction]) -> Vec<&str> {
+fn hanji_of(predictions: &[EnginePrediction]) -> Vec<&str> {
     predictions.iter().map(|p| p.hanji.as_str()).collect()
 }
 
@@ -106,12 +106,12 @@ fn bundled_rows_join_learned_rows_when_sources_enabled() {
         return;
     }
     let predictions = predict("臺台", all_sources(true));
-    let hanzi = hanzi_of(&predictions);
+    let hanji = hanji_of(&predictions);
     assert!(
-        hanzi.contains(&"灣"),
-        "bundled 台→灣 expected, got {hanzi:?}"
+        hanji.contains(&"灣"),
+        "bundled 台→灣 expected, got {hanji:?}"
     );
-    assert!(hanzi.contains(&"𫝛"), "learned row expected, got {hanzi:?}");
+    assert!(hanji.contains(&"𫝛"), "learned row expected, got {hanji:?}");
     assert!(predictions.len() <= 30);
 }
 
@@ -124,10 +124,10 @@ fn supplementary_plane_hanji_is_one_lookup_key() {
         return;
     }
     let predictions = predict("袂𣍐", all_sources(true));
-    let hanzi = hanzi_of(&predictions);
+    let hanji = hanji_of(&predictions);
     assert!(
-        hanzi.contains(&"使"),
-        "bundled 𣍐→使 expected, got {hanzi:?}"
+        hanji.contains(&"使"),
+        "bundled 𣍐→使 expected, got {hanji:?}"
     );
 }
 
@@ -137,7 +137,7 @@ fn disabled_sources_leave_only_learned_rows() {
         return;
     }
     let predictions = predict("台", all_sources(false));
-    assert_eq!(hanzi_of(&predictions), vec!["𫝛"]);
+    assert_eq!(hanji_of(&predictions), vec!["𫝛"]);
 }
 
 // INVARIANT_NEXTWORD_WORD_KEY_BACKOFF: a committed word with a known reading
@@ -179,10 +179,10 @@ fn word_key_emptied_by_source_filter_backs_off() {
         ..all_sources(false)
     };
     let predictions = predict_after("䆀", "bái", taigitv_only);
-    let hanzi = hanzi_of(&predictions);
+    let hanji = hanji_of(&predictions);
     assert!(
-        hanzi.contains(&"球"),
-        "character-key 球 expected, got {hanzi:?}"
+        hanji.contains(&"球"),
+        "character-key 球 expected, got {hanji:?}"
     );
 }
 
@@ -193,6 +193,6 @@ fn word_key_hit_is_not_padded_from_character_key() {
     if !common::production_lexicon_ready() {
         return;
     }
-    let hanzi = hanzi_of(&predict_after("中", "tìng", all_sources(true))).join(",");
-    assert_eq!(hanzi, "阮,伊,眾人");
+    let hanji = hanji_of(&predict_after("中", "tìng", all_sources(true))).join(",");
+    assert_eq!(hanji, "阮,伊,眾人");
 }

@@ -242,7 +242,7 @@ public extension RustEngineBridge {
 
     /// Tab3 short-circuit predicate. True iff `text` contains any CJK
     /// codepoint (Unified + Extensions A-E). See
-    /// `INVARIANT_LEX_INPUT_CLASSIFICATION_HANZI_RANGE`.
+    /// `INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`.
     static func isHanji(_ text: String) -> Bool {
         var payload = Taigi_Engine_IsHanjiRequest()
         payload.text = text

@@ -80,7 +80,7 @@ protocol UserDataClient: Sendable {
     /// Empties the custom dictionary.
     func deleteAll() async throws
     func exportCSV() async throws -> Data
-    /// A `roman,hanzi` CSV file the user picked; a refusal throws `CustomDictionaryError`.
+    /// A `roman,hanji` CSV file the user picked; a refusal throws `CustomDictionaryError`.
     func importCSV(url: URL) async throws -> (imported: Int, skipped: Int)
     /// Empties what the keyboard learned — counts, bigrams, learned phrases —
     /// and leaves the custom dictionary alone.

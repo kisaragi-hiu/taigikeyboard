@@ -442,7 +442,7 @@ public  final class NextWordRequest extends
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
    * ResetAll paths can correctly emit ClearPredictionsUI when there is
-   * UI to clear. Mutates state.is_showing only — does NOT bump
+   * UI to clear. Mutates state.predictions_visible only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
@@ -461,7 +461,7 @@ public  final class NextWordRequest extends
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
    * ResetAll paths can correctly emit ClearPredictionsUI when there is
-   * UI to clear. Mutates state.is_showing only — does NOT bump
+   * UI to clear. Mutates state.predictions_visible only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
@@ -483,7 +483,7 @@ public  final class NextWordRequest extends
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
    * ResetAll paths can correctly emit ClearPredictionsUI when there is
-   * UI to clear. Mutates state.is_showing only — does NOT bump
+   * UI to clear. Mutates state.predictions_visible only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
@@ -503,7 +503,7 @@ public  final class NextWordRequest extends
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
    * ResetAll paths can correctly emit ClearPredictionsUI when there is
-   * UI to clear. Mutates state.is_showing only — does NOT bump
+   * UI to clear. Mutates state.predictions_visible only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
@@ -529,7 +529,7 @@ public  final class NextWordRequest extends
    * pushes the resulting visibility back to the engine via this intent so
    * subsequent ClearForNewComposing / sentence-end / context-timeout /
    * ResetAll paths can correctly emit ClearPredictionsUI when there is
-   * UI to clear. Mutates state.is_showing only — does NOT bump
+   * UI to clear. Mutates state.predictions_visible only — does NOT bump
    * current_generation (the in-flight query that produced the rendered
    * result already won the race; later intents will bump as usual).
    * Returns DecideResult with empty effects + snapshot of state.
@@ -1180,7 +1180,7 @@ public  final class NextWordRequest extends
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
      * ResetAll paths can correctly emit ClearPredictionsUI when there is
-     * UI to clear. Mutates state.is_showing only — does NOT bump
+     * UI to clear. Mutates state.predictions_visible only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
@@ -1199,7 +1199,7 @@ public  final class NextWordRequest extends
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
      * ResetAll paths can correctly emit ClearPredictionsUI when there is
-     * UI to clear. Mutates state.is_showing only — does NOT bump
+     * UI to clear. Mutates state.predictions_visible only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
@@ -1218,7 +1218,7 @@ public  final class NextWordRequest extends
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
      * ResetAll paths can correctly emit ClearPredictionsUI when there is
-     * UI to clear. Mutates state.is_showing only — does NOT bump
+     * UI to clear. Mutates state.predictions_visible only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
@@ -1238,7 +1238,7 @@ public  final class NextWordRequest extends
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
      * ResetAll paths can correctly emit ClearPredictionsUI when there is
-     * UI to clear. Mutates state.is_showing only — does NOT bump
+     * UI to clear. Mutates state.predictions_visible only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
@@ -1259,7 +1259,7 @@ public  final class NextWordRequest extends
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
      * ResetAll paths can correctly emit ClearPredictionsUI when there is
-     * UI to clear. Mutates state.is_showing only — does NOT bump
+     * UI to clear. Mutates state.predictions_visible only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.
@@ -1279,7 +1279,7 @@ public  final class NextWordRequest extends
      * pushes the resulting visibility back to the engine via this intent so
      * subsequent ClearForNewComposing / sentence-end / context-timeout /
      * ResetAll paths can correctly emit ClearPredictionsUI when there is
-     * UI to clear. Mutates state.is_showing only — does NOT bump
+     * UI to clear. Mutates state.predictions_visible only — does NOT bump
      * current_generation (the in-flight query that produced the rendered
      * result already won the race; later intents will bump as usual).
      * Returns DecideResult with empty effects + snapshot of state.

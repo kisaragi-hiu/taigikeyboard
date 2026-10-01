@@ -148,9 +148,9 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
     );
 }
 
-// v3.5.8 Phase 9 Item 11 — hanzi guard ported into the engine.
+// v3.5.8 Phase 9 Item 11 — hanji guard ported into the engine.
 // Spec: `continuous-candidate-display.md` §15.3.E + §15.6
-// (`hanzi_guard_in_engine`) + `continuous-input-ranking.md` §10.7.
+// (`hanji_guard_in_engine`) + `continuous-input-ranking.md` §10.7.
 // §15.6 nominally places this in the `dispatch.rs` mod test, but that
 // module doc routes Engine-dependent / degraded-path checks here next
 // to the sibling `decode_fetch_at_pos_*_returns_empty_carrier` tests.
@@ -163,9 +163,9 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
 // otherwise surface `a`→阿, suppressed only by the guard) needs a
 // hermetic installed `EngineHandle` and belongs to the lexicon-backed
 // layer. This note keeps a guard removal from passing silently.
-// INVARIANT_LEX_HANZI_GUARD (behavioral-invariants.md §14) — the one engine guard.
+// INVARIANT_LEX_HANJI_GUARD (behavioral-invariants.md §14) — the one engine guard.
 #[test]
-fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
+fn decode_fetch_at_pos_hanji_buffer_returns_empty_carrier() {
     // CJK accidentally in the composing buffer (paste / stale
     // selection residue). The only legitimate input modes are
     // TL/POJ/TPS romanization, so the engine must short-circuit to
@@ -206,15 +206,15 @@ fn decode_fetch_at_pos_hanzi_buffer_returns_empty_carrier() {
         .expect("continuous carrier present (guard returns empty, not None)");
     assert!(
         cont.candidates.is_empty(),
-        "hanzi in composing buffer must yield empty candidates, got {:?}",
+        "hanji in composing buffer must yield empty candidates, got {:?}",
         cont.candidates
     );
 }
 
-// `is_hanzi` is `.any()`, so a single stray CJK char anywhere in an
+// `is_hanji` is `.any()`, so a single stray CJK char anywhere in an
 // otherwise-romanized buffer also fails closed. Spec §15.3.E.
 #[test]
-fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
+fn decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier() {
     let mut engine = Engine::new();
     dispatch::handle(
         &req(Method::Start(protos::engine::Start {
@@ -250,7 +250,7 @@ fn decode_fetch_at_pos_mixed_hanzi_buffer_returns_empty_carrier() {
         .expect("continuous carrier present (guard returns empty, not None)");
     assert!(
         cont.candidates.is_empty(),
-        "stray hanzi in mixed buffer must yield empty candidates, got {:?}",
+        "stray hanji in mixed buffer must yield empty candidates, got {:?}",
         cont.candidates
     );
 }

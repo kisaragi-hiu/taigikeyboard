@@ -70,7 +70,7 @@ pub struct CustomDictionaryImportResult {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CustomDictionaryIdentity {
     pub roman: String,
-    pub hanzi: String,
+    pub hanji: String,
 }
 
 /// A word the user added: the romanization exactly as typed (TL or POJ
@@ -84,26 +84,26 @@ pub struct CustomDictionaryRow {
     /// accumulated — a UUID, because editing either column keeps identity.
     pub id: String,
     pub roman: String,
-    pub hanzi: String,
+    pub hanji: String,
     pub created_at: String,
     pub updated_at: String,
 }
 
 impl CustomDictionaryRow {
-    pub fn new(roman: &str, hanzi: &str) -> Self {
+    pub fn new(roman: &str, hanji: &str) -> Self {
         Self::with_id(
             &uuid::Uuid::new_v4().to_string().to_uppercase(),
             roman,
-            hanzi,
+            hanji,
         )
     }
 
-    pub fn with_id(id: &str, roman: &str, hanzi: &str) -> Self {
+    pub fn with_id(id: &str, roman: &str, hanji: &str) -> Self {
         let now = utc_timestamp_now();
         Self {
             id: id.to_owned(),
             roman: roman.to_owned(),
-            hanzi: hanzi.to_owned(),
+            hanji: hanji.to_owned(),
             created_at: now.clone(),
             updated_at: now,
         }
@@ -112,7 +112,7 @@ impl CustomDictionaryRow {
     pub fn identity(&self) -> CustomDictionaryIdentity {
         CustomDictionaryIdentity {
             roman: self.roman.clone(),
-            hanzi: self.hanzi.clone(),
+            hanji: self.hanji.clone(),
         }
     }
 }
@@ -531,7 +531,7 @@ fn row_exists(
     connection
         .query_row(
             &format!("SELECT 1 FROM {TABLE_NAME} WHERE roman = ? AND hanzi = ? LIMIT 1;"),
-            params![identity.roman, identity.hanzi],
+            params![identity.roman, identity.hanji],
             |_| Ok(()),
         )
         .optional()
@@ -549,7 +549,7 @@ fn write_row(
         &format!(
             "INSERT INTO {TABLE_NAME} (id, roman, hanzi, created_at, updated_at)\nVALUES (?, ?, ?, ?, ?)\nON CONFLICT(id) DO UPDATE SET\n    roman = excluded.roman,\n    hanzi = excluded.hanzi,\n    updated_at = excluded.updated_at;"
         ),
-        params![row.id, row.roman, row.hanzi, row.created_at, row.updated_at],
+        params![row.id, row.roman, row.hanji, row.created_at, row.updated_at],
     )?;
     // Replace rather than add: an edited roman must not stay findable under
     // the keys of the roman it replaced.
@@ -608,7 +608,7 @@ fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<CustomDictionaryRow> 
     Ok(CustomDictionaryRow {
         id: row.get(0)?,
         roman: row.get(1)?,
-        hanzi: row.get(2)?,
+        hanji: row.get(2)?,
         created_at: row.get(3)?,
         updated_at: row.get(4)?,
     })

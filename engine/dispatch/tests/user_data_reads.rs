@@ -145,7 +145,7 @@ fn engine_reads_answer_what_the_same_rows_answer() {
             .into_iter()
             .map(|row| lexicon::CustomEntry {
                 roman: row.roman,
-                hanji: (!row.hanzi.is_empty()).then_some(row.hanzi),
+                hanji: (!row.hanji.is_empty()).then_some(row.hanji),
             })
             .collect(),
         learned: stores
@@ -153,7 +153,7 @@ fn engine_reads_answer_what_the_same_rows_answer() {
             .rows_matching(&key, LearnedPhraseStore::KEYSTROKE_LIMIT)
             .into_iter()
             .map(|phrase| lexicon::LearnedEntry {
-                hanji: phrase.hanzi,
+                hanji: phrase.hanji,
                 canonical_tl: phrase.canonical_tl,
             })
             .collect(),
