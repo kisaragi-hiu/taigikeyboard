@@ -106,14 +106,12 @@ message Reset {}
 message EnterContinuous {}
 
 // v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
-// `Phase::Continuous { raw }` (the whole buffer). The engine routes the raw buffer through
-// mode-specific key builders in `composing::dispatch` — TL/POJ via
-// `build_keys_tl` (which since Phase 9 Item 8 includes a hyphen-shadow
-// pre-pass so `tâi-uân` etc. produce the same `tl:<toneless>` keys as
-// `taiuan`), TPS via `build_keys_tps` (Bopomofo span → numeric TL →
-// strip → fused key) — and then hands the resulting `(consumed_span,
-// key)` pairs to `lexicon::fetch_candidates_for_keys`. Emits no
-// effects.
+// `Phase::Continuous { raw }` (the whole buffer). The engine builds the
+// `(consumed_span, key)` pairs with `composing::shadow::build_continuous_keys`
+// — one shadow → lattice path for every mode (the hyphen shadow makes
+// `tâi-uân` produce the same `tl:<toneless>` keys as `taiuan`; TPS keys
+// come from the same lattice) — and hands them to
+// `lexicon::fetch_candidates_for_keys_with_barriers`. Emits no effects.
 //
 // The user's own rows — learned counts, custom-dictionary matches, learned
 // phrases — never ride this message: the engine reads them from its
@@ -342,13 +340,10 @@ message ComposingResponse {
 }
 
 // v3.5.8 Phase 6 — payload for `FetchAtPos` responses. Carries the
-// span-local candidates that `lexicon::fetch_candidates_for_keys`
-// produced (via `composing::continuous::fetch_via_lexicon_inner` for
-// TL/POJ and `composing::continuous::build_keys_tps` for TPS) for the
-// current `Phase::Continuous { raw }`. v3.5.9 D7+D8 (#306) made
-// `fetch_candidates_for_keys` the sole production entry; the legacy
-// `lexicon::fetch_candidates_for_endings` wrapper is `#[doc(hidden)]`
-// test-only.
+// span-local candidates `lexicon::fetch_candidates_for_keys_with_barriers`
+// produced from the `composing::shadow::build_continuous_keys` keys (every
+// mode) for the current `Phase::Continuous { raw }`; the
+// `fetch_candidates_for_endings` helper lives in the lexicon tests only.
 message ContinuousResponse {
   repeated CandidateMessage candidates = 1;
 }
@@ -400,7 +395,7 @@ enum CandidateMode {
 // `user_frequency.db` write keys via `display_text`
 // (= `hanji.unwrap_or(roman)`; under a single-script display the §34
 // literal carries the identity of the same-roman dictionary row it
-// absorbed — `composing::dispatch::adopt_collapsed_dict_identity`);
+// absorbed — `composing::requests::adopt_collapsed_dict_identity`);
 // `roman` and `hanji` are NEVER read for commit. `roman` is the display romanization for the active
 // input mode — the underlying `DictionaryRecord.tl` by default, or
 // POJ-display (`oo`→`o͘`, `nn`→`ⁿ`, …) when

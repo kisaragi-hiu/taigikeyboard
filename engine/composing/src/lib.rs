@@ -3,15 +3,15 @@
 //! Composing slice — Intent → Effect state machine for the v3.5.4 Rust core.
 //!
 //! Owns `Phase::Idle | Composing { raw } | Continuous { .. }`.
-//! External callers reach the engine through `dispatch::handle`; the engine
+//! External callers reach the engine through `requests::handle`; the engine
 //! itself is held inside a singleton `Mutex<Engine>` at the FFI boundary
 //! (see `engine/dispatch::EngineHandle`).
 //!
 //! Spec: `docs/engine/composing.md`.
 
 pub mod api;
-pub mod dispatch;
 pub mod handle;
+pub mod requests;
 pub mod syllabifier;
 
 mod commit_text;

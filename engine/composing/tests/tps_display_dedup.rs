@@ -77,7 +77,7 @@ fn fetch(raw: &str, input_mode: &str) -> Vec<(Option<String>, String)> {
 fn tps_input_collapses_duplicate_hanji() {
     let _lock = engine_install_lock();
     install_fixture();
-    // Raw `ㄨㄢ` (3+3=6 bytes UTF-8). `dispatch::handle` upgrades mode to
+    // Raw `ㄨㄢ` (3+3=6 bytes UTF-8). `requests::handle` upgrades mode to
     // InputMode::Tps via `contains_tps`, so the `input_mode` string only
     // pins the non-Bopomofo path — we still pass "tl" to exercise the
     // production auto-detect.

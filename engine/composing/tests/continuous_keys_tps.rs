@@ -1,6 +1,6 @@
 //! v3.5.9 D / C-3b — TPS continuous first-class behaviour pin.
 //!
-//! Mirror of `build_keys_tl_lattice.rs` for the TPS family. Confirms
+//! Mirror of `continuous_keys_tl_lattice.rs` for the TPS family. Confirms
 //! `build_continuous_keys_with_inventory` (the test seam over the shared
 //! `build_shadow_lattice_with_barriers` + `left_anchored_keys_and_restrictions`
 //! path production runs) emits
@@ -20,7 +20,7 @@
 //! 3. `KeyFamily::for_input_mode(Tps)` emits the `tps:` family prefix matching
 //!    the `tps_notone` axis of the build pipeline.
 
-use composing::dispatch::build_continuous_keys_with_inventory;
+use composing::requests::build_continuous_keys_with_inventory;
 use lexicon::SyllableInventory;
 
 use crate::common::inventory_from_keys;

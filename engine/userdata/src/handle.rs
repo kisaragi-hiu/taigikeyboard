@@ -119,7 +119,7 @@ impl UserDataHandle {
     }
 
     /// The open stores once they have finished opening — for the pages'
-    /// requests (`dispatch.rs::handle_page`), which run off the key path and must
+    /// requests (`requests.rs::handle_page`), which run off the key path and must
     /// not read or edit a custom dictionary still being taken over, re-derived or
     /// seeded by a background open. Waits for that open, or finishes it here.
     fn settled_stores(&self) -> Result<&UserDataStores, RequestError> {

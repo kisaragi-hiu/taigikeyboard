@@ -21,7 +21,7 @@
 | File | Responsibility |
 |------|----------------|
 | `engine/phonetics/src/tone_variations.rs` | `build()` returns POJ + TL tone-variation maps in one `ToneVariationsResult` (init-bulk-pull builder) |
-| `engine/phonetics/src/dispatch.rs` | Routes `Method::GetToneVariations` → `tone_variations::build()` |
+| `engine/phonetics/src/requests.rs` | Routes `Method::GetToneVariations` → `tone_variations::build()` |
 | `engine/protos/proto/phonetics.proto` | `GetToneVariations` request + `ToneVariationsResult` / `ToneVariationList` response |
 
 ### iOS (engine-driven, runtime chain)

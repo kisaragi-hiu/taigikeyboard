@@ -20,7 +20,7 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * romanization drops the inter-syllable `-` and writes the neutral-tone marker `--`
  * as `·` U+00B7 (`tâi-uân` → `tâiuân`, `hōo--guá` → `hōo·guá`). Rendering
  * only — `phonetics::api::hyphenless_display` is applied to the candidate
- * `roman` (`composing::dispatch`), the prediction `text`
+ * `roman` (`composing::requests`), the prediction `text`
  * (`nextword::filter`) and the engine-synthesised compound joiner
  * (`composing::api::nailed_prefix`); identity fields (`display_text`,
  * `canonical_tl`, `tl`) and user-typed text keep their hyphens. The engine
@@ -528,7 +528,7 @@ public  final class AppConfig extends
    * romanization drops the inter-syllable `-` and writes the neutral-tone marker `--`
    * as `·` U+00B7 (`tâi-uân` → `tâiuân`, `hōo--guá` → `hōo·guá`). Rendering
    * only — `phonetics::api::hyphenless_display` is applied to the candidate
-   * `roman` (`composing::dispatch`), the prediction `text`
+   * `roman` (`composing::requests`), the prediction `text`
    * (`nextword::filter`) and the engine-synthesised compound joiner
    * (`composing::api::nailed_prefix`); identity fields (`display_text`,
    * `canonical_tl`, `tl`) and user-typed text keep their hyphens. The engine

@@ -17,7 +17,7 @@
 //! no dictionary row (the all-OOV branch).
 
 use composing::api::Engine;
-use composing::dispatch;
+use composing::requests;
 use protos::engine::composing_request::Method;
 use protos::engine::effect::Kind;
 use protos::engine::CommitScript;
@@ -145,7 +145,7 @@ fn typed_separator_joins_the_all_oov_reading() {
     );
     let cells = fetch("lai-lai", "tl", false);
     // The typed join reads exactly like the §34 literal, which absorbs the
-    // identical bare-roman synth (`dispatch::handle_fetch_at_pos`) — one
+    // identical bare-roman synth (`requests::handle_fetch_at_pos`) — one
     // `lai-lai` cell, no `lai lai` cell.
     assert_eq!(
         cells
@@ -294,14 +294,14 @@ fn started(raw: &str, cfg: &AppConfig) -> Engine {
         Method::Start(Start { text: raw.into() }),
         Method::EnterContinuous(EnterContinuous {}),
     ] {
-        dispatch::handle(&req(method), &mut engine, cfg).expect("setup");
+        requests::handle(&req(method), &mut engine, cfg).expect("setup");
     }
     engine
 }
 
 /// The single-syllable candidate for `hanji`, as the strip lists it.
 fn single(engine: &mut Engine, cfg: &AppConfig, hanji: &str) -> CandidateMessage {
-    let resp = dispatch::handle(&req(Method::FetchAtPos(FetchAtPos::default())), engine, cfg)
+    let resp = requests::handle(&req(Method::FetchAtPos(FetchAtPos::default())), engine, cfg)
         .expect("FetchAtPos");
     let cands = resp.continuous.expect("continuous").candidates;
     cands
@@ -320,7 +320,7 @@ fn pick(engine: &mut Engine, cfg: &AppConfig, hanji: &str) -> ComposingResponse 
     } else {
         c.roman.clone()
     };
-    dispatch::handle(
+    requests::handle(
         &req(Method::CommitContinuous(CommitContinuous {
             script: CommitScript::Roman as i32,
             roman: display_text,
@@ -420,7 +420,7 @@ fn enter_after_the_first_pick_commits_the_typed_tail_as_is() {
     let cfg = roman_cfg(false);
     let mut engine = started("tng--lai", &cfg);
     pick(&mut engine, &cfg, "轉");
-    let resp = dispatch::handle(&req(Method::CommitRaw(CommitRaw {})), &mut engine, &cfg)
+    let resp = requests::handle(&req(Method::CommitRaw(CommitRaw {})), &mut engine, &cfg)
         .expect("CommitRaw");
     assert_eq!(commit_text(&resp).as_deref(), Some("tńg--lai"));
 }
@@ -449,7 +449,7 @@ fn unnail_restores_the_run_and_a_repick_keeps_it() {
     let mut last = None;
     for _ in 0..5 {
         last = Some(
-            dispatch::handle(
+            requests::handle(
                 &req(Method::DeleteBackward(DeleteBackward {})),
                 &mut engine,
                 &cfg,

@@ -442,7 +442,7 @@ The Node `taigi-converter` bridge in `taigi-converter/src/tables.js:68` collapse
 
 This creates a dialect-recall asymmetry: a TPS user typing `ㄛ` for a TL `or`-spelled entry would not find it because the FST key is `ㄜ`-side only. Pre-C-1 the lexicon ran a runtime `key.replace("er", "or")` expansion gated by `SearchRequest.tps_or_mapped_to_er`; C-1 made that ASCII substring branch dead (the TPS key is now Bopomofo, not TL ASCII).
 
-C-3a moves the expansion into the build pipeline: every row whose `tps_num` contains ㄜ gets a parallel `tps:<variant>` key at the same rowid with ㄜ → ㄛ substituted (`tps_num_var` / `tps_notone_var` / `tps_abbrev_var` columns in `dictionary.csv`, emitted by `dictionary/build/create_fst.py`). The substitution is always-on — the lexicon runtime no longer reads `tps_or_mapped_to_er`. The `or_maps_to_er` user setting still drives **rendering** (`engine/phonetics::dispatch::tps_to_tps_*`) so the candidate display matches the user's dialect preference; only lexicon **recall** unifies the two glyphs.
+C-3a moves the expansion into the build pipeline: every row whose `tps_num` contains ㄜ gets a parallel `tps:<variant>` key at the same rowid with ㄜ → ㄛ substituted (`tps_num_var` / `tps_notone_var` / `tps_abbrev_var` columns in `dictionary.csv`, emitted by `dictionary/build/create_fst.py`). The substitution is always-on — the lexicon runtime no longer reads `tps_or_mapped_to_er`. The `or_maps_to_er` user setting still drives **rendering** (`engine/phonetics::requests::tps_to_tps_*`) so the candidate display matches the user's dialect preference; only lexicon **recall** unifies the two glyphs.
 
 | Aspect | Before C-3a | After C-3a |
 |---|---|---|

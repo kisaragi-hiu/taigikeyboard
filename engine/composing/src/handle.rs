@@ -22,7 +22,7 @@
 //! `Append` / `DeleteBackward`.
 
 use crate::api::{Applied, ComposingError, Engine, Intent};
-use crate::dispatch;
+use crate::requests;
 use once_cell::sync::OnceCell;
 use protos::engine::{AppConfig, ComposingRequest, ComposingResponse};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -83,7 +83,7 @@ impl EngineHandle {
         config: &AppConfig,
         generation: u64,
     ) -> Result<Applied, ComposingError> {
-        let intent = dispatch::decode_intent(req)?;
+        let intent = requests::decode_intent(req)?;
         if intent.is_read_only() {
             return Ok(self.query(&intent, config, generation).into());
         }
@@ -105,7 +105,7 @@ impl EngineHandle {
     /// doc).
     pub fn query(&self, intent: &Intent, config: &AppConfig, generation: u64) -> ComposingResponse {
         match self.read_at(generation, Engine::clone) {
-            Some(snapshot) => dispatch::query(intent, &snapshot, config),
+            Some(snapshot) => requests::query(intent, &snapshot, config),
             None => Engine::idle_snapshot(config),
         }
     }

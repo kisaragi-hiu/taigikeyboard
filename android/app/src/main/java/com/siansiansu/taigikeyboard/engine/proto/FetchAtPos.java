@@ -8,14 +8,12 @@ package com.siansiansu.taigikeyboard.engine.proto;
 /**
  * <pre>
  * v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
- * `Phase::Continuous { raw }` (the whole buffer). The engine routes the raw buffer through
- * mode-specific key builders in `composing::dispatch` — TL/POJ via
- * `build_keys_tl` (which since Phase 9 Item 8 includes a hyphen-shadow
- * pre-pass so `tâi-uân` etc. produce the same `tl:&lt;toneless&gt;` keys as
- * `taiuan`), TPS via `build_keys_tps` (Bopomofo span → numeric TL →
- * strip → fused key) — and then hands the resulting `(consumed_span,
- * key)` pairs to `lexicon::fetch_candidates_for_keys`. Emits no
- * effects.
+ * `Phase::Continuous { raw }` (the whole buffer). The engine builds the
+ * `(consumed_span, key)` pairs with `composing::shadow::build_continuous_keys`
+ * — one shadow → lattice path for every mode (the hyphen shadow makes
+ * `tâi-uân` produce the same `tl:&lt;toneless&gt;` keys as `taiuan`; TPS keys
+ * come from the same lattice) — and hands them to
+ * `lexicon::fetch_candidates_for_keys_with_barriers`. Emits no effects.
  *
  * The user's own rows — learned counts, custom-dictionary matches, learned
  * phrases — never ride this message: the engine reads them from its
@@ -298,14 +296,12 @@ public  final class FetchAtPos extends
   /**
    * <pre>
    * v3.5.8 Phase 6 — Pure read: returns the candidate list for the current
-   * `Phase::Continuous { raw }` (the whole buffer). The engine routes the raw buffer through
-   * mode-specific key builders in `composing::dispatch` — TL/POJ via
-   * `build_keys_tl` (which since Phase 9 Item 8 includes a hyphen-shadow
-   * pre-pass so `tâi-uân` etc. produce the same `tl:&lt;toneless&gt;` keys as
-   * `taiuan`), TPS via `build_keys_tps` (Bopomofo span → numeric TL →
-   * strip → fused key) — and then hands the resulting `(consumed_span,
-   * key)` pairs to `lexicon::fetch_candidates_for_keys`. Emits no
-   * effects.
+   * `Phase::Continuous { raw }` (the whole buffer). The engine builds the
+   * `(consumed_span, key)` pairs with `composing::shadow::build_continuous_keys`
+   * — one shadow → lattice path for every mode (the hyphen shadow makes
+   * `tâi-uân` produce the same `tl:&lt;toneless&gt;` keys as `taiuan`; TPS keys
+   * come from the same lattice) — and hands them to
+   * `lexicon::fetch_candidates_for_keys_with_barriers`. Emits no effects.
    *
    * The user's own rows — learned counts, custom-dictionary matches, learned
    * phrases — never ride this message: the engine reads them from its

@@ -2,7 +2,7 @@
 //! `INVARIANT_ROMAN_ONLY_CELLS_COLLAPSE_SAME_ROMAN`). Roman-only cells hide
 //! the hanji, so rows that differ only in hanji — homophones `食/tsia̍h` +
 //! `𤆬/tsia̍h`, and the §34 literal `tsiah` beside dict `隻/tsiah` — are
-//! visible duplicates. `composing::dispatch` collapses them by the RENDERED
+//! visible duplicates. `composing::requests` collapses them by the RENDERED
 //! ROMAN alone AFTER the literal prepend; first-seen wins (top-ranked sorted
 //! row, or the literal). Side-by-side (explicit, proto default `0`, or an
 //! unknown value) keeps every row; TPS ignores the setting.
@@ -14,7 +14,7 @@
 //! slices; an attempt to install a hand-built row with a longer key and a
 //! shorter reading does not surface at all. The span-agnostic key is pinned
 //! on the helper instead
-//! (`composing::dispatch::tests::dedupe_display_roman_collapses_same_roman_across_spans`).
+//! (`composing::requests::tests::dedupe_display_roman_collapses_same_roman_across_spans`).
 //!
 //! Hermetic `LexiconHandle` install comes from `tests/common/mod.rs`.
 

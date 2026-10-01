@@ -215,7 +215,7 @@ fn a_tps_pick_without_hanji_writes_its_bopomofo_and_earns_no_space() {
 
 #[test]
 fn a_commit_naming_no_script_is_ignored() {
-    // trace: `dispatch::commit_script` reads UNSPECIFIED (and an unknown,
+    // trace: `requests::commit_script` reads UNSPECIFIED (and an unknown,
     // newer script) as `None`; `transition::commit_continuous` then resolves
     // nothing — the legacy platform-written path is gone (R5 PR-b2).
     let config = config_tl();

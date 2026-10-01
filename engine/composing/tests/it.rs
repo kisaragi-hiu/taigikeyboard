@@ -8,13 +8,13 @@
 
 mod common;
 
-mod build_keys_tl_hyphen;
-mod build_keys_tl_lattice;
-mod build_keys_tl_poj_diacritic;
-mod build_keys_tps;
 mod composing_caret;
 mod continuous_abbrev;
 mod continuous_explicit_tone;
+mod continuous_keys_tl_hyphen;
+mod continuous_keys_tl_lattice;
+mod continuous_keys_tl_poj_diacritic;
+mod continuous_keys_tps;
 mod continuous_learned_phrase;
 mod continuous_partial_tone;
 mod continuous_phase;

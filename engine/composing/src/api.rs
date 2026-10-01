@@ -1,7 +1,7 @@
 //! Public façade for the composing crate. Defines `Engine`, `EngineState`,
 //! `Phase`, `Intent`, and `ComposingError`. Implementation of state
 //! transitions lives in `transition.rs`; this module is the stable surface
-//! that `dispatch.rs` and external crates consume.
+//! that `requests.rs` and external crates consume.
 
 use lexicon::{compound_hanji_exists, EngineHandle as LexiconHandle};
 use protos::engine::{AppConfig, ComposingResponse};
@@ -510,7 +510,7 @@ impl From<ComposingResponse> for Applied {
 
 /// Mirrors the iOS `ComposingState.Intent` / Android `ComposingState.Intent`
 /// case set 1:1. Decoded from `protos::engine::ComposingRequest::method`
-/// inside `dispatch::handle`.
+/// inside `requests::handle`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Intent {
     Start {
@@ -537,9 +537,9 @@ pub enum Intent {
     /// v3.5.8 Phase 6 — pure read of span-local continuous-input
     /// candidates for the current `Phase::Continuous { raw }` starting
     /// at `position` (always `0` in v3.5.8; non-zero short-circuits
-    /// to an empty candidate list). Resolved by `dispatch::handle`
+    /// to an empty candidate list). Resolved by `requests::handle`
     /// outside the `transition::apply` pure path because the fetch
-    /// needs lexicon state — see `dispatch::handle_fetch_at_pos`.
+    /// needs lexicon state — see `requests::handle_fetch_at_pos`.
     /// `transition.rs` only sees this variant via a defensive snapshot
     /// arm; production callers always go through dispatch.
     ///
@@ -550,7 +550,7 @@ pub enum Intent {
     ///
     /// `enabled_sources_bitmask` is the `dictionary.bin` source filter the
     /// fetch applies, the same as Tab3 browse — resolved from
-    /// `FetchAtPos.toggles` at decode ([`crate::dispatch::fetch_at_pos_intent`]);
+    /// `FetchAtPos.toggles` at decode ([`crate::requests::fetch_at_pos_intent`]);
     /// `u32::MAX` = every source, `0` = none.
     /// §34 / S22 — `literal_roman_candidate_disabled` gates the always-on
     /// preedit-literal roman candidate (index-0 `derived_display` WYSIWYG row
@@ -613,7 +613,7 @@ pub enum Intent {
 }
 
 impl Intent {
-    /// `true` for intents that only read engine state. `dispatch::query`
+    /// `true` for intents that only read engine state. `requests::query`
     /// answers them from `&Engine`; `EngineHandle` runs them against a
     /// clone with its locks released and never lets them reset state on a
     /// generation mismatch (a stale worker-thread fetch must not wipe a
@@ -707,8 +707,8 @@ impl Engine {
     }
 
     /// Idempotent reset. Called from the generation-mismatch path inside
-    /// `dispatch::handle`. NOT public API — external callers always go
-    /// through `dispatch::handle`. The user-initiated `Intent::Reset` path
+    /// `requests::handle`. NOT public API — external callers always go
+    /// through `requests::handle`. The user-initiated `Intent::Reset` path
     /// goes through `apply(Intent::Reset, ...)`, which emits the
     /// `ClearPreeditWithoutCommit + ResetAutocomplete` effects when
     /// composing; this helper is silent (no effects) for the

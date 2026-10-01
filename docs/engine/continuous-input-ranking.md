@@ -59,7 +59,7 @@ User of a Continuous-input IME types whole phrases and expects phrase-level matc
 | Stage | Code | Behavior |
 |---|---|---|
 | Syllabifier BFS | [`engine/composing/src/syllabifier/tl.rs:49-84`](../../engine/composing/src/syllabifier/tl.rs) | For `taiuantaigi`, produces endings `{3, 6, 9, 11}` (cap = 8 syllables) |
-| Key construction | [`engine/composing/src/dispatch.rs:181-207`](../../engine/composing/src/dispatch.rs) `build_keys_tl` | Strips ASCII tone digits + lowercases + prepends `tl:` → 4 fused-toneless keys |
+| Key construction | [`engine/composing/src/shadow.rs`](../../engine/composing/src/shadow.rs) `build_continuous_keys` | Strips ASCII tone digits + lowercases + prepends `tl:` → 4 fused-toneless keys |
 | Span-local FST fetch | [`engine/lexicon/src/continuous/mod.rs`](../../engine/lexicon/src/continuous/mod.rs) `fetch_candidates_for_keys` | `prefix_index.lookup_exact` per key + filter + NaN-safe descending sort |
 | Score formula | [`engine/ranking/src/score.rs:178-181`](../../engine/ranking/src/score.rs) `calculate_continuous_score` | `freq × (1.0 + 0.1 × max(0, syllable_count − 1)) × user_freq_boost` |
 | Mid-commit | [`engine/composing/src/transition.rs:613-679`](../../engine/composing/src/transition.rs) `commit_continuous` | Slices `raw[consumed_bytes..]`, emits 4 effects (commit + preedit + NextWord + autocomplete) |
@@ -133,7 +133,7 @@ This is a **secondary concern** — the formula gap is the dominant problem, and
 
 > **CLOSED by S3 (2026-05-16, shipped v3.5.8)** for the whole-sentence walker path, and for the span-local path by `ContinuousFetchCtx.freq_map` (§2.1 note). The walker's `Σ edge_score` objective now folds in `ranking::decayed_user_weight_delta` (librime `formula_d` wall-clock adaptation, cap-before-decay) multiplicatively, with a McBopomofo epsilon-boost and syllable-aware damping. See the §STATUS 2026-05-16 callout near §7 for the full mechanism and rationale. The literal-`1.0` description below documents the pre-S3 span-local state and the gap evidence chain; it is retained for the audit trail.
 
-At audit time `fetch_via_lexicon` (then in `engine/composing/src/dispatch.rs`) called `fetch_candidates_for_keys` with a `user_freq_boost = 1.0` literal. That literal no longer exists. Today the boost is derived inside the lexicon from the platform-supplied frequency snapshot:
+At audit time `fetch_via_lexicon` (then in `engine/composing/src/requests.rs`) called `fetch_candidates_for_keys` with a `user_freq_boost = 1.0` literal. That literal no longer exists. Today the boost is derived inside the lexicon from the platform-supplied frequency snapshot:
 
 ```rust
 // engine/lexicon/src/continuous/candidate.rs::record_to_candidate

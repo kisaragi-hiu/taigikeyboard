@@ -13,7 +13,7 @@
 //! the key, and 去 / 起 / 矣 are the singles a walker path is built from.
 
 use composing::api::Engine;
-use composing::dispatch;
+use composing::requests;
 use protos::engine::composing_request::Method;
 use protos::engine::CommitScript;
 use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, Start};
@@ -201,7 +201,7 @@ fn boundary_holds_in_the_pending_buffer_after_a_pick() {
     install_fixture();
     let cfg = config("tl");
     let mut engine = Engine::new();
-    dispatch::handle(
+    requests::handle(
         &req(Method::Start(Start {
             text: "jim--khi--ah".into(),
         })),
@@ -209,13 +209,13 @@ fn boundary_holds_in_the_pending_buffer_after_a_pick() {
         &cfg,
     )
     .expect("Start");
-    dispatch::handle(
+    requests::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
         &cfg,
     )
     .expect("EnterContinuous");
-    let first = dispatch::handle(
+    let first = requests::handle(
         &req(Method::FetchAtPos(FetchAtPos::default())),
         &mut engine,
         &cfg,
@@ -228,7 +228,7 @@ fn boundary_holds_in_the_pending_buffer_after_a_pick() {
         .cloned()
         .unwrap_or_else(|| panic!("no 忍; got {cands:?}"));
     assert_eq!(jim.consumed_span_end, 3);
-    dispatch::handle(
+    requests::handle(
         &req(Method::CommitContinuous(CommitContinuous {
             script: CommitScript::Roman as i32,
             roman: jim.roman.clone(),
@@ -242,7 +242,7 @@ fn boundary_holds_in_the_pending_buffer_after_a_pick() {
         &cfg,
     )
     .expect("mid-commit");
-    let second = dispatch::handle(
+    let second = requests::handle(
         &req(Method::FetchAtPos(FetchAtPos::default())),
         &mut engine,
         &cfg,

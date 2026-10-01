@@ -36,7 +36,7 @@
 //! (the S2/S3 `max Σ edge_score` structurally rewarded
 //! over-segmentation; see `cost.rs` and the `docs/releases/v3.5.8/plan.md`
 //! §整句 lattice + walker S5 section). The walker is pure and
-//! shadow-space native; `dispatch::handle_fetch_at_pos` injects the
+//! shadow-space native; `requests::handle_fetch_at_pos` injects the
 //! per-edge content provider and explicitly prepends the synthesized
 //! full-buffer best path at candidate slot 0 (Codex pre-impl S2
 //! Q1/Q1c, 2026-05-16).

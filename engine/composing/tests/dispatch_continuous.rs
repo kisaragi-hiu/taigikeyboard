@@ -3,7 +3,7 @@
 //! Covers:
 //! - Decoding `EnterContinuous` / `FetchAtPos` / `CommitContinuous` /
 //!   `ResetContinuous` from `ComposingRequest.method` oneof variants.
-//! - `Intent::FetchAtPos` short-circuit behavior in `dispatch::handle`:
+//! - `Intent::FetchAtPos` short-circuit behavior in `requests::handle`:
 //!   - Idle / Composing phase → `continuous = None` snapshot.
 //!   - `Phase::Continuous` + lexicon NOT installed → `continuous =
 //!     Some(empty)`.
@@ -17,7 +17,7 @@
 //! dispatch wiring + decode contract.
 
 use composing::api::{Engine, Phase};
-use composing::dispatch;
+use composing::requests;
 use protos::engine::composing_request::Method;
 use protos::engine::CommitScript;
 use protos::engine::{CommitContinuous, EnterContinuous, FetchAtPos, ResetContinuous};
@@ -29,7 +29,7 @@ use crate::common::{config_tl, req};
 #[test]
 fn decode_fetch_at_pos_idle_returns_no_continuous_carrier() {
     let mut engine = Engine::new();
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::FetchAtPos(FetchAtPos {
             now_ms: 0,
             literal_roman_candidate_disabled: false,
@@ -52,7 +52,7 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
     // bare test process (we never call install). FetchAtPos must
     // degrade to an empty candidate carrier — NOT panic.
     let mut engine = Engine::new();
-    dispatch::handle(
+    requests::handle(
         &req(Method::Start(protos::engine::Start {
             text: "tsua".into(),
         })),
@@ -60,14 +60,14 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
         &config_tl(),
     )
     .unwrap();
-    dispatch::handle(
+    requests::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
         &config_tl(),
     )
     .unwrap();
 
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::FetchAtPos(FetchAtPos {
             now_ms: 0,
             // §34/S22: disable the literal-roman prepend so this test isolates
@@ -99,7 +99,7 @@ fn decode_fetch_at_pos_continuous_lexicon_unavailable_returns_empty_carrier() {
 fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
     fn fetch_tsua(disabled: bool) -> Vec<(Option<String>, String)> {
         let mut engine = Engine::new();
-        dispatch::handle(
+        requests::handle(
             &req(Method::Start(protos::engine::Start {
                 text: "tsua".into(),
             })),
@@ -107,13 +107,13 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
             &config_tl(),
         )
         .unwrap();
-        dispatch::handle(
+        requests::handle(
             &req(Method::EnterContinuous(EnterContinuous {})),
             &mut engine,
             &config_tl(),
         )
         .unwrap();
-        let resp = dispatch::handle(
+        let resp = requests::handle(
             &req(Method::FetchAtPos(FetchAtPos {
                 now_ms: 0,
                 literal_roman_candidate_disabled: disabled,
@@ -151,7 +151,7 @@ fn fetch_at_pos_literal_roman_toggle_gates_index0_prepend() {
 // v3.5.8 Phase 9 Item 11 — hanji guard ported into the engine.
 // Spec: `continuous-candidate-display.md` §15.3.E + §15.6
 // (`hanji_guard_in_engine`) + `continuous-input-ranking.md` §10.7.
-// §15.6 nominally places this in the `dispatch.rs` mod test, but that
+// §15.6 nominally places this in the `requests.rs` mod test, but that
 // module doc routes Engine-dependent / degraded-path checks here next
 // to the sibling `decode_fetch_at_pos_*_returns_empty_carrier` tests.
 //
@@ -172,7 +172,7 @@ fn decode_fetch_at_pos_hanji_buffer_returns_empty_carrier() {
     // an empty candidate carrier rather than syllabify garbage —
     // mirroring the platform D-8 guard this round ports inward.
     let mut engine = Engine::new();
-    dispatch::handle(
+    requests::handle(
         &req(Method::Start(protos::engine::Start {
             text: "我好".into(),
         })),
@@ -180,7 +180,7 @@ fn decode_fetch_at_pos_hanji_buffer_returns_empty_carrier() {
         &config_tl(),
     )
     .unwrap();
-    dispatch::handle(
+    requests::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
         &config_tl(),
@@ -191,7 +191,7 @@ fn decode_fetch_at_pos_hanji_buffer_returns_empty_carrier() {
         Phase::Continuous { .. }
     ));
 
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::FetchAtPos(FetchAtPos {
             now_ms: 0,
             literal_roman_candidate_disabled: false,
@@ -216,7 +216,7 @@ fn decode_fetch_at_pos_hanji_buffer_returns_empty_carrier() {
 #[test]
 fn decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier() {
     let mut engine = Engine::new();
-    dispatch::handle(
+    requests::handle(
         &req(Method::Start(protos::engine::Start {
             text: "a好b".into(),
         })),
@@ -224,7 +224,7 @@ fn decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier() {
         &config_tl(),
     )
     .unwrap();
-    dispatch::handle(
+    requests::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
         &config_tl(),
@@ -235,7 +235,7 @@ fn decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier() {
         Phase::Continuous { .. }
     ));
 
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::FetchAtPos(FetchAtPos {
             now_ms: 0,
             literal_roman_candidate_disabled: false,
@@ -264,7 +264,7 @@ fn decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier() {
 #[test]
 fn enter_continuous_response_omits_continuous_carrier() {
     let mut engine = Engine::new();
-    dispatch::handle(
+    requests::handle(
         &req(Method::Start(protos::engine::Start {
             text: "tsua".into(),
         })),
@@ -272,7 +272,7 @@ fn enter_continuous_response_omits_continuous_carrier() {
         &config_tl(),
     )
     .unwrap();
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
         &config_tl(),
@@ -287,7 +287,7 @@ fn enter_continuous_response_omits_continuous_carrier() {
 #[test]
 fn commit_continuous_response_omits_continuous_carrier() {
     let mut engine = Engine::new();
-    dispatch::handle(
+    requests::handle(
         &req(Method::Start(protos::engine::Start {
             text: "tsua".into(),
         })),
@@ -295,13 +295,13 @@ fn commit_continuous_response_omits_continuous_carrier() {
         &config_tl(),
     )
     .unwrap();
-    dispatch::handle(
+    requests::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
         &config_tl(),
     )
     .unwrap();
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::CommitContinuous(CommitContinuous {
             script: CommitScript::Roman as i32,
             roman: "珠".into(),
@@ -324,7 +324,7 @@ fn commit_continuous_response_omits_continuous_carrier() {
 #[test]
 fn reset_continuous_response_omits_continuous_carrier() {
     let mut engine = Engine::new();
-    dispatch::handle(
+    requests::handle(
         &req(Method::Start(protos::engine::Start {
             text: "tsua".into(),
         })),
@@ -332,13 +332,13 @@ fn reset_continuous_response_omits_continuous_carrier() {
         &config_tl(),
     )
     .unwrap();
-    dispatch::handle(
+    requests::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
         &config_tl(),
     )
     .unwrap();
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::ResetContinuous(ResetContinuous {})),
         &mut engine,
         &config_tl(),
@@ -358,13 +358,13 @@ fn reset_continuous_response_omits_continuous_carrier() {
 #[test]
 fn empty_start_then_enter_continuous_stays_idle() {
     let mut engine = Engine::new();
-    dispatch::handle(
+    requests::handle(
         &req(Method::Start(protos::engine::Start { text: "".into() })),
         &mut engine,
         &config_tl(),
     )
     .unwrap();
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::EnterContinuous(EnterContinuous {})),
         &mut engine,
         &config_tl(),

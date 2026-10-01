@@ -8,7 +8,7 @@
 // stays mod-private per the domain↔proto boundary rule in
 // .claude/rules/rust-best-practices.md §3a.
 pub mod api;
-pub mod dispatch;
+pub mod requests;
 
 mod case_tables;
 pub mod case_transform;

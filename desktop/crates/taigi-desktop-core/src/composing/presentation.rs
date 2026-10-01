@@ -80,15 +80,15 @@ pub(crate) fn presentation(
 
 /// Whether `candidates` leads with the §34 literal — the WYSIWYG romanization
 /// the engine prepends at index 0 while Show Typed Text First is on
-/// (`engine/composing/src/dispatch.rs:260-268`). That cell takes no slot key:
+/// (`engine/composing/src/requests.rs::handle_fetch_at_pos`). That cell takes no slot key:
 /// it is what the user is already typing, not an offer to pick (USER
 /// 2026-09-09), so the keys start on the cell after it
 /// (`CandidateIndexLabel::candidate_index_for_key_slot`).
 ///
 /// Read off the setting plus the shape of the leading candidate rather than
-/// re-derived: the literal is roman-only by construction (`dispatch.rs:344`
+/// re-derived: the literal is roman-only by construction (`requests.rs::literal_roman_candidate`
 /// `hanji: None`), and the engine's other gate — the TPS buffer that
-/// suppresses the prepend (`dispatch.rs:331`) — cannot arise on the desktop,
+/// suppresses the prepend (`literal_roman_candidate`) — cannot arise on the desktop,
 /// where the only modes are TL and POJ (`InputMode`). A hanji-bearing lead
 /// means the prepend did not happen, whatever the setting says, and every cell
 /// keeps its key. Port of macOS

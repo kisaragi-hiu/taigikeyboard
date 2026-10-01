@@ -485,7 +485,7 @@ fn clamp_syllable_count(value: u32) -> u8 {
 
 #[cfg(test)]
 mod tests {
-    //! Unit tests for the pure helpers that stayed in dispatch.rs after
+    //! Unit tests for the pure helpers that stayed in requests.rs after
     //! v3.5.9 A2 (`raw_to_proto_candidate`, `clamp_syllable_count`).
     //! Helpers that moved into [`crate::continuous`] carry their tests
     //! into that module verbatim. Dispatch-level integration (decode

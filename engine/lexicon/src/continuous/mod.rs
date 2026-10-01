@@ -224,7 +224,7 @@ pub struct RawCandidate {
     /// `display_text` so platform UI can render dual-line cells
     /// (roman line + hanji line) the same way the legacy lexicon
     /// path does. At this lexicon layer it equals the underlying
-    /// `DictionaryRecord.tl`; `dispatch::handle_fetch_at_pos` then
+    /// `DictionaryRecord.tl`; `requests::handle_fetch_at_pos` then
     /// applies the presentation transforms — per-segment recasing and,
     /// in POJ input mode, a TL→POJ-display rewrite (`oo`→`o͘`,
     /// `nn`→`ⁿ`, …) — before emission. NEVER consulted for the engine
@@ -243,7 +243,7 @@ pub struct RawCandidate {
     /// v3.6.1 R2 — canonical TL romanization, the identity sidechannel
     /// for the `(hanji, canonical-TL)` word-identity pair (Core
     /// Principle #7). Unlike [`roman`] (the DISPLAY romanization that
-    /// `dispatch::handle_fetch_at_pos` recases per typed segment and
+    /// `requests::handle_fetch_at_pos` recases per typed segment and
     /// rewrites TL→POJ in POJ mode), this stays the canonical TL:
     /// `DictionaryRecord.tl` for `dict.bin` hits ([`record_to_candidate`]),
     /// `phonetics::api::canonical_tl_form(roman, mode)` for custom
@@ -377,7 +377,7 @@ pub struct LearnedEntry {
 /// needed.
 pub struct ContinuousFetchCtx<'a> {
     /// `Filter::from_enabled_bitmask` input — production passes the user's
-    /// source filter (`composing::dispatch::fetch_at_pos_intent`,
+    /// source filter (`composing::requests::fetch_at_pos_intent`,
     /// `u32::MAX` = every source); tests narrow it to verify filter behaviour.
     pub enabled_sources_bitmask: u32,
     /// User-selection snapshot keyed by the `(display_text, canonical_tl)`

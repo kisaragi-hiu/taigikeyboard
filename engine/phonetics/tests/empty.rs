@@ -4,7 +4,7 @@
 //! "no special-case for empty input" guarantee — callers never need to
 //! pre-filter.
 
-use phonetics::dispatch::handle;
+use phonetics::requests::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{PhoneticsRequest, PhoneticsResponse, StripTone, TlToPoj};

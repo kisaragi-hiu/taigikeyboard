@@ -1,8 +1,8 @@
 //! The proto decode of every composing method, the §21 leading-hyphen literal
-//! through `dispatch::handle`, and the desktop Telex key path.
+//! through `requests::handle`, and the desktop Telex key path.
 
 use composing::CommitScript;
-use composing::{dispatch, Engine, Intent};
+use composing::{requests, Engine, Intent};
 use protos::engine::composing_request::Method;
 use protos::engine::{
     Append, AppendHyphen, CommitContinuous, CommitDerived, CommitPreeditThenInsertExternal,
@@ -19,7 +19,7 @@ use crate::common::{commit_text, config_tl, req};
 #[test]
 fn intent_start_leading_hyphen_inserts_literal_stays_idle() {
     let mut engine = Engine::new();
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::Start(Start { text: "-".into() })),
         &mut engine,
         &config_tl(),
@@ -34,7 +34,7 @@ fn intent_start_leading_hyphen_inserts_literal_stays_idle() {
 #[test]
 fn intent_append_leading_hyphen_in_idle_inserts_literal() {
     let mut engine = Engine::new();
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::Append(Append { char: "-".into() })),
         &mut engine,
         &config_tl(),
@@ -49,7 +49,7 @@ fn intent_append_leading_hyphen_in_idle_inserts_literal() {
 #[test]
 fn intent_start_leading_hyphens_then_syllable_splits() {
     let mut engine = Engine::new();
-    let resp = dispatch::handle(
+    let resp = requests::handle(
         &req(Method::Start(Start {
             text: "--ah".into(),
         })),
@@ -136,7 +136,7 @@ fn every_method_decodes_to_its_intent() {
         ),
     ];
     for (method, expected) in cases {
-        let decoded = dispatch::decode_intent(&req(method.clone())).expect("method present");
+        let decoded = requests::decode_intent(&req(method.clone())).expect("method present");
         assert_eq!(decoded, expected, "{method:?}");
     }
 }
@@ -144,7 +144,7 @@ fn every_method_decodes_to_its_intent() {
 #[test]
 fn intent_missing_method_returns_error() {
     let mut engine = Engine::new();
-    let result = dispatch::handle(
+    let result = requests::handle(
         &ComposingRequest { method: None },
         &mut engine,
         &config_tl(),
@@ -159,7 +159,7 @@ fn telex(
     key: &str,
     config: &protos::engine::AppConfig,
 ) -> protos::engine::ComposingResponse {
-    dispatch::handle(
+    requests::handle(
         &req(Method::TelexKey(protos::engine::TelexKey {
             key: key.into(),
         })),
@@ -171,7 +171,7 @@ fn telex(
 
 fn append(engine: &mut Engine, text: &str, config: &protos::engine::AppConfig) {
     for ch in text.chars() {
-        dispatch::handle(
+        requests::handle(
             &req(Method::Append(Append {
                 char: ch.to_string(),
             })),
@@ -247,7 +247,7 @@ fn intent_telex_f_appends_a_hyphen() {
 fn intent_telex_under_continuous_edits_only_the_pending_tail() {
     let mut engine = Engine::new();
     append(&mut engine, "tai", &config_tl());
-    dispatch::handle(
+    requests::handle(
         &req(Method::EnterContinuous(protos::engine::EnterContinuous {})),
         &mut engine,
         &config_tl(),
@@ -293,7 +293,7 @@ fn intent_telex_under_continuous_keeps_nailed_segments() {
     // has a non-empty pending tail beside it — `tsu` nailed out of `tsuts`.
     let mut engine = Engine::new();
     append(&mut engine, "tsuts", &config_tl());
-    dispatch::handle(
+    requests::handle(
         &req(Method::EnterContinuous(protos::engine::EnterContinuous {})),
         &mut engine,
         &config_tl(),

@@ -86,7 +86,7 @@ pub(super) fn handle_composing(
         // A stale generation answers the idle snapshot inside `query`.
         let Some(snapshot) = composing.pending_snapshot(generation) else {
             return Ok(composing.query(
-                &composing::dispatch::fetch_at_pos_intent(
+                &composing::requests::fetch_at_pos_intent(
                     sent,
                     UserRows::default(),
                     ContextRanks::new(),
@@ -103,7 +103,7 @@ pub(super) fn handle_composing(
         );
         context = context_ranks(stores, &snapshot, sent.now_ms);
         let answer = composing.query(
-            &composing::dispatch::fetch_at_pos_intent(sent, rows.clone(), context.clone()),
+            &composing::requests::fetch_at_pos_intent(sent, rows.clone(), context.clone()),
             config,
             generation,
         );
@@ -120,7 +120,7 @@ pub(super) fn handle_composing(
     };
     rows.frequency = frequency;
     Ok(composing.query(
-        &composing::dispatch::fetch_at_pos_intent(sent, rows, context),
+        &composing::requests::fetch_at_pos_intent(sent, rows, context),
         config,
         generation,
     ))

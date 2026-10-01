@@ -76,7 +76,7 @@ pub fn derive_custom_query_key(input: &str, input_mode: &str) -> Option<CustomSe
         return None;
     }
     // Effective family mirrors the composing dispatch TPS upgrade
-    // (`composing::dispatch::handle_fetch_at_pos`): raw input carrying TPS
+    // (`composing::requests::handle_fetch_at_pos`): raw input carrying TPS
     // Bopomofo is TPS regardless of the settings mode. The keyboard's TPS
     // layout may arrive as `"tps"` or, on the pre-R6 wire, as `"tl"`; either
     // way a Bopomofo-free query takes the TL family.

@@ -13,14 +13,14 @@
 //! candidate would mis-commit (Codex post-impl 2026-05-16 P1 #1/#2).
 //!
 //! The exhaustive pre-S1 key/offset matrix is pinned by
-//! `build_keys_tl_hyphen.rs` / `build_keys_tl_poj_diacritic.rs`
+//! `continuous_keys_tl_hyphen.rs` / `continuous_keys_tl_poj_diacritic.rs`
 //! (those pass UNCHANGED, which is itself the byte-identical proof).
 //! This file adds the explicit *negative* guard: no emitted span may
 //! start above byte 0. The full DAG (interior + phrase edges +
 //! topological order) is unit-tested in-crate in
 //! `composing/src/lattice/builder.rs`.
 
-use composing::dispatch::build_continuous_keys_with_inventory;
+use composing::requests::build_continuous_keys_with_inventory;
 
 use crate::common::build_inventory;
 

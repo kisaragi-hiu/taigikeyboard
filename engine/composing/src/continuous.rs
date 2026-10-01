@@ -1,6 +1,6 @@
 //! v3.5.9 A2 — `composing::continuous` seam.
 //!
-//! `assemble_candidates` is the named seam between `dispatch::handle_fetch_at_pos`
+//! `assemble_candidates` is the named seam between `requests::handle_fetch_at_pos`
 //! and the lexicon resolution primitives. It owns the 6-step continuous-input
 //! candidate-vector contract (post-A2 reframing; line refs are `main` after
 //! the seam extract — re-grep before relying on numbers):
@@ -329,7 +329,7 @@ fn retain_absent_from(existing: &[RawCandidate], batch: &mut Vec<RawCandidate>) 
 /// recognize when the walker's space-joined synth is a malformed
 /// rendering of an existing full-span dict word, so the dict word's
 /// canonical separator form can take slot 0 instead, and by
-/// `dispatch::first_learned_per_reading` to fold the same learned pair stored
+/// `requests::first_learned_per_reading` to fold the same learned pair stored
 /// under two typed separators.
 pub(crate) fn roman_reading_eq(a: &str, b: &str) -> bool {
     fn is_kept(c: &char) -> bool {
@@ -1007,7 +1007,7 @@ fn fetch_walker_slot0_inner(
 ///
 /// Replaces the inline `let mut candidates = if keys.is_empty() {...} else
 /// {...}` block + POJ presentation pass that lived in
-/// `dispatch::handle_fetch_at_pos` before A2. See module docs for the
+/// `requests::handle_fetch_at_pos` before A2. See module docs for the
 /// 6-step contract and the **D1 fold** lifecycle invariant.
 ///
 /// Inputs come from `handle_fetch_at_pos` (`mode` from `parse_input_mode`
@@ -1550,7 +1550,7 @@ pub(crate) fn assemble_candidates(
     })
     .unwrap_or_default()
     // Step 6 (wrap into `ContinuousResponse` via `raw_to_proto_candidate`
-    // + `with_continuous`) stays in `dispatch::handle_fetch_at_pos`.
+    // + `with_continuous`) stays in `requests::handle_fetch_at_pos`.
 }
 
 #[cfg(test)]
@@ -1569,7 +1569,7 @@ mod tests {
     // `build_shadow_lattice_with_barriers` + `left_anchored_keys_and_restrictions` path
     // (with `tps:` family prefix and Bopomofo tone-mark strip) tested
     // by `composing::shadow`'s tests plus the integration suite
-    // (`engine/composing/tests/build_keys_tps.rs` covers the new
+    // (`engine/composing/tests/continuous_keys_tps.rs` covers the new
     // mode-aware TPS key emission against an inline `tps:` inventory).
 
     // ----- `hoogua` bug — slot-0 separator-insensitive reading match -----

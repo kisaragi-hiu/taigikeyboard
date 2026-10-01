@@ -386,7 +386,7 @@ fn lattice_from_canonical_with_barriers(
 ///   (§52) and by the §55 render for what to write there.
 ///
 /// Single source for `continuous::assemble_candidates` and the
-/// `dispatch::build_continuous_keys_with_inventory` test seam, so the
+/// `requests::build_continuous_keys_with_inventory` test seam, so the
 /// two cannot drift. Empty `final_only` for TL / POJ / English — their
 /// pipeline strips no ambiguity glyph; `barriers` there are the typed
 /// hyphens (§52).
@@ -533,7 +533,7 @@ pub(crate) fn left_anchored_keys_and_restrictions(
     // lattice edge leaves end 2 and the remainder `h8` already carries a
     // typed tone, so it can never grow into a syllable: committing 也 would
     // strand it. Both halves are required; the mid-typing controls
-    // (`iah`, `iakau3`) live in `tests/build_keys_tl_lattice.rs`.
+    // (`iah`, `iakau3`) live in `tests/continuous_keys_tl_lattice.rs`.
     let lowered = shadow.to_ascii_lowercase();
     // §18 recompute is barrier-aware (Codex post-impl 2026-08-19 BLOCK 2):
     // the lattice above was built with barriers, so re-deriving the
