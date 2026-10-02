@@ -37,10 +37,9 @@ MAX_NEXT_WORD_LEN = 3    # phrase associations cap next_word at 3 chars
 
 # --- word namespace (association.bin v2, bigram LM roadmap P3) ---------------
 # Key = `prev_hanji + WORD_KEY_SEPARATOR + prev_tl` (display TL, as the
-# dictionary and the user store carry it); sentence start = the literal `$`.
-# Mirrors `engine/lexicon/src/association_reader.rs` (`word_key`, `START_KEY`).
+# dictionary and the user store carry it).
+# Mirrors `engine/lexicon/src/association_reader.rs` (`word_key`).
 WORD_KEY_SEPARATOR = "\x01"
-START_KEY = "$"
 WORD_TOP_K = 30
 WORD_MIN_COUNT = 2
 # Per-source multipliers over the raw `word_bigrams.tsv` columns (USER
@@ -247,7 +246,7 @@ def compute_word_associations(
     dictionary_csv: Path,
     variants_csv: Path = VARIANTS_CSV,
 ) -> dict[str, list[AssociationEntry]]:
-    """`word_bigrams.tsv` → {word key or `$`: [entries, count DESC, top-K]}.
+    """`word_bigrams.tsv` → {word key: [entries, count DESC, top-K]}.
 
     Both words of a pair are folded to their recommended hanji so variant
     spellings merge; the next word must be a dictionary `(hanzi, tl)` row
@@ -293,10 +292,7 @@ def compute_word_associations(
             if following not in sources_by_word:
                 dropped += 1
                 continue
-            if row["prev_hanji"] == START_KEY:
-                key = START_KEY
-            else:
-                key = word_key(*fold(row["prev_hanji"], row["prev_tl"]))
+            key = word_key(*fold(row["prev_hanji"], row["prev_tl"]))
             accum[(key, following)] += weighted_count({col: int(row[col]) for col in source_columns})
     if dropped:
         log.info("word associations: %d rows whose next word is not a dictionary row dropped", dropped)

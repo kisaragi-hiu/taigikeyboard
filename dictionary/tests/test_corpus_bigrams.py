@@ -59,7 +59,7 @@ class AlignerTests(unittest.TestCase):
     def test_hanji_word_per_syllable_and_sentence_end_from_text_side(self):
         tokens = cb.align_unit("紅嬰仔哭甲一身軀汗。", "Âng-enn-á khàu kah tsi̍t sin-khu kuānn.")
         self.assertEqual([t.hanji for t in tokens if t.kind == "word"], ["紅嬰仔", "哭", "甲", "一", "身軀", "汗"])
-        self.assertEqual(tokens[-1].kind, "end")
+        self.assertEqual(tokens[-1].kind, "break")
 
     def test_khinsiann_mirrored_into_hanji(self):
         tokens = cb.align_unit("伊講的", "i kóng--ê")
@@ -103,13 +103,13 @@ class AlignerTests(unittest.TestCase):
         tokens = cb.align_unit("2.活動e5時間", "2. Oah8-tong7 e5 si5-kan")
         self.assertEqual(kinds(tokens), ["digit", "break", "word", "latin", "word"])
 
-    def test_clause_punctuation_is_a_break_not_an_end(self):
+    def test_clause_punctuation_is_a_break(self):
         tokens = cb.align_unit("好，我去", "hó, guá khì")
         self.assertEqual(kinds(tokens), ["word", "break", "word", "word"])
 
-    def test_text_side_period_ends_even_when_romanization_uses_comma(self):
+    def test_text_side_period_breaks_once_when_romanization_uses_comma(self):
         tokens = cb.align_unit("好。我去", "hó, guá khì")
-        self.assertEqual(kinds(tokens), ["word", "end", "word", "word"])
+        self.assertEqual(kinds(tokens), ["word", "break", "word", "word"])
 
     def test_romanization_period_without_text_punctuation_is_a_break(self):
         self.assertEqual(kinds(cb.align_unit("好 我去", "hó. guá khì")), ["word", "break", "word", "word"])
@@ -138,11 +138,11 @@ class ClassifyTests(unittest.TestCase):
             Token("latin", "tī"),
             Token("word", "ka-kī", "家己"),
             Token("latin", "xyz"),
-            Token("end"),
+            Token("break"),
         ]
         stat = Counter()
         items = cb.classify(tokens, ["gua2", "ti7", "ka1ki7", "xyz1"], LEXICON, stat)
-        self.assertEqual(items, [("我", "gua2"), ("佇", "ti7"), ("家己", "ka1ki7"), None, cb.START_WORD])
+        self.assertEqual(items, [("我", "gua2"), ("佇", "ti7"), ("家己", "ka1ki7"), None, None])
         self.assertEqual(stat["tok:romanized-mapped"], 1)
         self.assertEqual(stat["tok:romanized-oov"], 1)
 
@@ -156,17 +156,13 @@ class ClassifyTests(unittest.TestCase):
 class CountSourceTests(unittest.TestCase):
     """Readings are numeric TL already, so the bridge is an identity pass (node required)."""
 
-    def test_chain_breaks_and_sentence_start(self):
-        # $ 我 好 | (clause) 人 。 $ 好
+    def test_chain_breaks_at_clause_and_sentence_end(self):
+        # 我 好 | (clause) 人 | (sentence end) 好 — no pair crosses a break
         counts = cb.Counts()
         cb.count_source("t", [cb.Unit("我好，人。好", "gua2 ho2, lang5. ho2", "tl")], LEXICON, counts)
         self.assertEqual(
             {pair: dict(sources) for pair, sources in counts.bigrams.items()},
-            {
-                (cb.START_WORD, ("我", "gua2")): {"t": 1},
-                (("我", "gua2"), ("好", "ho2")): {"t": 1},
-                (cb.START_WORD, ("好", "ho2")): {"t": 1},
-            },
+            {(("我", "gua2"), ("好", "ho2")): {"t": 1}},
         )
         self.assertEqual(counts.unigrams[("好", "ho2")]["t"], 2)
         self.assertEqual(counts.stats["t"]["aligned"], 1)
@@ -184,7 +180,7 @@ class OutputTests(unittest.TestCase):
         a, b, c = ("我", "gua2"), ("好", "ho2"), ("人", "lang5")
         counts.bigrams[(a, b)].update({"s1": 2, "s2": 1})
         counts.bigrams[(a, c)]["s1"] = 1  # below MIN_PAIR_COUNT → dropped
-        counts.bigrams[(cb.START_WORD, a)]["s2"] = 3
+        counts.bigrams[(b, a)]["s2"] = 3
         counts.unigrams[a]["s1"] = 3
         counts.unigrams[b]["s2"] = 1
         return counts
@@ -196,7 +192,7 @@ class OutputTests(unittest.TestCase):
             self.assertEqual(written, (2, 2))
             self.assertEqual(
                 bigrams.read_text(encoding="utf-8"),
-                "prev_hanji\tprev_tl\tnext_hanji\tnext_tl\tcount\ts1\ts2\n$\t\t我\tguá\t3\t0\t3\n我\tguá\t好\thó\t3\t2\t1\n",
+                "prev_hanji\tprev_tl\tnext_hanji\tnext_tl\tcount\ts1\ts2\n好\thó\t我\tguá\t3\t0\t3\n我\tguá\t好\thó\t3\t2\t1\n",
             )
             self.assertEqual(
                 unigrams.read_text(encoding="utf-8"),

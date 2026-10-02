@@ -196,3 +196,17 @@ fn word_key_hit_is_not_padded_from_character_key() {
     let hanji = hanji_of(&predict_after("中", "tìng", all_sources(true))).join(",");
     assert_eq!(hanji, "阮,伊,眾人");
 }
+
+// The character backoff looks up the committed word's last character; a word
+// ending in `$` must find no key (association.bin once held `$` sentence
+// openers under that literal).
+#[test]
+fn word_ending_in_dollar_predicts_nothing() {
+    if !common::production_lexicon_ready() {
+        return;
+    }
+    assert_eq!(
+        hanji_of(&predict("US$", all_sources(true))),
+        Vec::<&str>::new()
+    );
+}

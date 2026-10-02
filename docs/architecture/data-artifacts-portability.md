@@ -96,7 +96,7 @@ Read-only next-word bigram/phrase table. Sibling to `dictionary.bin` with a dist
 - **Cohesion contract**: `build_ts` **must match** `dictionary.bin`. Both writers (`dictionary/build/create_dictionary_bin.py` and `dictionary/build/create_association_bin.py`) fill it with `build.common.build_id()` — the CRC-32 of the `output/dictionary.csv` they are both built from — so one build always matches and an unchanged dictionary rebuilds byte-identical. Readers on both platforms expose `buildTimestamp`.
 - **Key offset table**: `key_count × u32` absolute offsets.
 - **Key entry**: `prev_word_len: u8 · prev_word: utf8 · entry_offset: u32 · entry_count: u16`. Keys sorted by UTF-8 byte order for binary search.
-- **Key namespaces (v2)**: one hanji (intra-word pairs from `dictionary.csv`), `hanji\u{1}tl` word keys and the `$` sentence-start key (corpus pairs from `dictionary/shared/data/word_bigrams.tsv`) — `docs/engine/binary-format.md` §2.1a.
+- **Key namespaces (v2)**: one hanji (intra-word pairs from `dictionary.csv`), `hanji\u{1}tl` word keys (corpus pairs from `dictionary/shared/data/word_bigrams.tsv`) — `docs/engine/binary-format.md` §2.1a.
 - **Entry**: `bitmask: u16 · count: u32 · next_word_len: u8 · next_tl_len: u8 · next_word: utf8 · next_tl: utf8`.
 - **Bitmask (9 bits)**: `kautian, taigitv, itaigi, sitbut, taihoa, taijit, kungge, stti, khpoo`. Subset of dictionary.bin bits 0–8. No `is_variant`, no `khiin / dev / lkk`.
 

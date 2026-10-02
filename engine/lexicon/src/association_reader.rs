@@ -4,9 +4,8 @@
 //! prev_word UTF-8 bytes, entry section): `docs/engine/binary-format.md` §2.
 //! Version 2 holds two key namespaces in that one key section (§2.1a):
 //! character keys (one hanji, intra-word pairs) and word keys — `hanji\u{1}tl`
-//! built by [`word_key`] plus the literal [`START_KEY`] for sentence start.
-//! `\u{1}` never occurs inside a hanji or a TL string and `$` is not CJK, so
-//! the namespaces cannot collide and the raw-byte binary search needs no
+//! built by [`word_key`]. `\u{1}` never occurs inside a hanji or a TL string,
+//! so the namespaces cannot collide and the raw-byte binary search needs no
 //! special casing.
 //!
 //! 1-layer source filter, deliberately different from DictionaryReader's
@@ -24,8 +23,6 @@ const HEADER_SIZE: usize = 20;
 const SUPPORTED_VERSION: u32 = 2;
 /// Separator inside a word key: `hanji\u{1}tl`.
 pub const WORD_KEY_SEPARATOR: char = '\u{1}';
-/// Key whose entries are sentence openers.
-pub const START_KEY: &str = "$";
 
 /// The word-namespace key for a committed word, as the writer encodes it
 /// (`dictionary/build/associations.py`): display-form TL, no normalisation.

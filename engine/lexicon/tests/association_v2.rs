@@ -1,22 +1,18 @@
-//! `association.bin` v2: character keys, word keys (`hanji\u{1}tl`) and the
-//! `$` sentence-start key share one byte-sorted key section; v1 files are
-//! rejected with the rebuild hint (`docs/engine/binary-format.md` §2).
+//! `association.bin` v2: character keys and word keys (`hanji\u{1}tl`) share
+//! one byte-sorted key section; v1 files are rejected with the rebuild hint
+//! (`docs/engine/binary-format.md` §2).
 
-use lexicon::association_reader::{word_key, AssociationFilter, AssociationReader, START_KEY};
+use lexicon::association_reader::{word_key, AssociationFilter, AssociationReader};
 use lexicon::LexiconError;
 use test_support::{build_tkwa, write_temp};
 
-/// Keys in raw UTF-8 byte order: `$` (0x24) < `好` (E5 A5 BD) < `好\u{1}hó`
-/// (a prefix sorts before its extension).
+/// Keys in raw UTF-8 byte order: `好` (E5 A5 BD) < `好\u{1}hó` (a prefix
+/// sorts before its extension).
 fn fixture() -> Vec<u8> {
     let word = word_key("好", "hó");
     build_tkwa(
         2,
         &[
-            (
-                START_KEY,
-                &[(0x0001, 900, "我", "guá"), (0x0001, 800, "伊", "i")],
-            ),
             ("好", &[(0x0001, 100, "伊", "i")]),
             (
                 word.as_str(),
@@ -35,13 +31,6 @@ fn word_key_joins_hanji_and_tl_with_u1() {
 fn each_namespace_resolves_to_its_own_entries() {
     let path = write_temp("assoc-v2.bin", &fixture());
     let reader = AssociationReader::open(&path).expect("v2 opens");
-
-    let openers: Vec<_> = reader
-        .lookup(START_KEY, 10, &AssociationFilter::ALL)
-        .into_iter()
-        .map(|e| e.next_word)
-        .collect();
-    assert_eq!(openers, ["我", "伊"]);
 
     let by_char: Vec<_> = reader
         .lookup("好", 10, &AssociationFilter::ALL)

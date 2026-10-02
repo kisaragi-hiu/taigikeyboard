@@ -130,7 +130,8 @@ current-at-release values when cutting a dictionary refresh.
   sources icorpus_hanji, moe_kautian 例句, sinpak_900leku, kok4hau7,
   taigi_bible_nt, kipsupin_2009, nmtl_dadwt, khinhoan_pojbh, plus the
   `mapped` articles of `corpus/taigi-typing`, whose text is never committed).
-  Raw counts per source in the `sources` column; `$` = sentence start; pairs
+  Raw counts in one column per source (`count` = their sum); sentence-end punctuation
+  breaks the pair chain like any other break; pairs
   seen fewer than 2 times are dropped. Regenerate with
   `PYTHONPATH=. python3 -m build.corpus_bigrams` after
   `git submodule update --init --checkout corpus/taigi-corpus`. Not a

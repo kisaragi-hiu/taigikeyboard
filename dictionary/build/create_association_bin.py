@@ -8,7 +8,7 @@ Inputs:  output/dictionary.csv
          supplementary/variants/data/variants.csv
 Output:  output/association.bin
 
-Layout, key namespaces (character keys / `hanji\x01tl` word keys / `$`) and
+Layout, key namespaces (character keys / `hanji\x01tl` word keys) and
 the sort rules: docs/engine/binary-format.md §2. Character groups keep NO
 count tiebreaker (Codex pre-impl review Q6: one would drift the SHA256
 baseline against pre-refactor builds); word groups break ties on
@@ -23,11 +23,13 @@ import struct
 import sys
 
 from build.associations import (
+    WORD_KEY_SEPARATOR,
     AssociationEntry,
     compute_associations,
     compute_word_associations,
 )
 from build.common import BASE_DIR, LOG_DIR, OUTPUT_DIR, build_id
+from common.cjk import is_cjk
 from common.logging_utils import log_header, setup_logging
 from common.source_bits import ASSOC_SOURCE_COLUMNS
 
@@ -72,10 +74,13 @@ def encode_entry(entry: AssociationEntry) -> bytes:
 
 def compute_grouped() -> dict[str, list[AssociationEntry]]:
     """Both namespaces in one dict; character keys and word keys never collide
-    (a character key is one CJK char, a word key contains `\x01`, `$` is neither)."""
+    (a character key is one CJK char, a word key contains `\x01`)."""
     grouped = compute_associations(CSV_FILE)
     words = compute_word_associations(BIGRAMS_TSV, CSV_FILE)
-    assert not grouped.keys() & words.keys(), "character / word key namespaces overlap"
+    # The engine backs off to the committed word's last character as a key, so
+    # a non-CJK character key would answer any word ending in that character.
+    assert all(len(key) == 1 and is_cjk(key) for key in grouped), "character key is not one CJK char"
+    assert all(WORD_KEY_SEPARATOR in key for key in words), "word key lacks the \\x01 separator"
     grouped.update(words)
     return grouped
 

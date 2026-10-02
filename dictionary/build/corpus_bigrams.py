@@ -18,7 +18,7 @@ A token is a dictionary word: (hanji, tl_num). Per source the text side and
 the romanization side are aligned syllable by syllable; anything that is not
 a dictionary word breaks the pair chain. Counts are raw per source (one
 column per source, `count` = their sum); any per-source weighting is P3's
-decision. Sentence start is the pseudo-word `$`.
+decision. Sentence-end punctuation breaks the chain like any other break.
 
 Usage (from dictionary/):
   python3 -m build.corpus_bigrams              # all sources
@@ -56,7 +56,6 @@ BIGRAMS_TSV = SHARED_DATA_DIR / "word_bigrams.tsv"
 UNIGRAMS_TSV = SHARED_DATA_DIR / "word_unigrams.tsv"
 
 Word = tuple[str, str]  # (hanji, tl_num)
-START_WORD: Word = ("$", "")
 # A pair must be seen this often to be written; P3 applies the per-key top-K.
 MIN_PAIR_COUNT = 2
 # Identical sentences beyond this many per source are boilerplate (news
@@ -119,8 +118,8 @@ def hanji_with_khinsiann(chars: list[str], word: str) -> str:
 class Token:
     """One aligned word, or a chain break.
 
-    kind: 'word' (all hanji), 'latin' (all romanized), 'mixed', 'digit',
-    'break' (clause punctuation) or 'end' (sentence punctuation on the text side).
+    kind: 'word' (all hanji), 'latin' (all romanized), 'mixed', 'digit' or
+    'break' (clause punctuation, or sentence punctuation on the text side).
     """
 
     kind: str
@@ -195,8 +194,8 @@ class AlignError(ValueError):
 def align_unit(text: str, romanization: str) -> list[Token]:
     """Pair each romanized word with its hanji (or romanized / mixed form).
 
-    Sentence ends come from the text side (`。！？`), which every source writes;
-    the romanization's own punctuation only marks a clause break.
+    Sentence ends come from the text side (`。！？`), which every source writes,
+    and break the chain like the romanization's own clause punctuation.
     """
     units = hanlo_units(text)
     position = 0
@@ -205,13 +204,13 @@ def align_unit(text: str, romanization: str) -> list[Token]:
     def take_sentence_ends() -> None:
         nonlocal position
         while position < len(units) and units[position][0] == "e":
-            out.append(Token("end"))
+            out.append(Token("break"))
             position += 1
 
     for token in tl_tokens(romanization):
         take_sentence_ends()
         if token.kind == "break":
-            if out and out[-1].kind not in ("end", "break"):
+            if out and out[-1].kind != "break":
                 out.append(token)
             continue
         if token.kind == "digit":
@@ -430,13 +429,10 @@ class Counts:
 
 
 def classify(tokens: list[Token], numeric_words: list[str], lexicon: Lexicon, stat: Counter) -> list[Word | None]:
-    """Aligned tokens → dictionary words; `None` breaks the chain, START_WORD ends a sentence."""
+    """Aligned tokens → dictionary words; `None` breaks the chain."""
     items: list[Word | None] = []
     remaining = iter(numeric_words)
     for token in tokens:
-        if token.kind == "end":
-            items.append(START_WORD)
-            continue
         if token.kind in ("break", "digit"):
             items.append(None)
             continue
@@ -500,10 +496,10 @@ def count_source(name: str, units: Iterable[Unit], lexicon: Lexicon, counts: Cou
             continue
         stat["aligned"] += 1
         readings = [token.word for token in tokens if token.kind in ("word", "latin", "mixed")]
-        previous: Word | None = START_WORD
+        previous: Word | None = None
         for item in classify(tokens, convert_readings(readings, unit.system), lexicon, stat):
-            if item is None or item == START_WORD:
-                previous = item
+            if item is None:
+                previous = None
                 continue
             counts.unigrams[item][name] += 1
             if previous is not None:
@@ -525,15 +521,12 @@ def write_outputs(
     def per_source(sources: Counter) -> list[int]:
         return [sources.get(name, 0) for name in source_columns]
 
-    def display_tl(word: Word) -> str:
-        return "" if word == START_WORD else lexicon.tl_by_word[word]
-
     bigram_rows = [
         [
             previous[0],
-            display_tl(previous),
+            lexicon.tl_by_word[previous],
             following[0],
-            display_tl(following),
+            lexicon.tl_by_word[following],
             sum(sources.values()),
             *per_source(sources),
         ]
@@ -542,7 +535,7 @@ def write_outputs(
     ]
     bigram_rows.sort(key=lambda row: (row[0], row[1], -row[4], row[2], row[3]))
     unigram_rows = [
-        [word[0], display_tl(word), sum(sources.values()), *per_source(sources)]
+        [word[0], lexicon.tl_by_word[word], sum(sources.values()), *per_source(sources)]
         for word, sources in counts.unigrams.items()
     ]
     unigram_rows.sort(key=lambda row: (row[0], row[1], -row[2]))
