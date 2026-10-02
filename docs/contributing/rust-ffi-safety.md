@@ -2,13 +2,14 @@
 
 Mandatory rules for the Rust ↔ platform boundary: the seam as built, panic / thread / error / logging discipline, domain↔proto layering, `unsafe` discipline, the opaque-handle pattern, enforcement hooks and the test contract. Single copy — the former `docs/engine/ffi-safety.md` spec is folded in here. General Rust hygiene (workspace, errors, crates, tests, versions) stays in `docs/contributing/rust-best-practices.md`.
 
-**Active window**: every Rust PR touching `engine/swift-ffi/`, `engine/android-jni/`, `engine/dispatch`, `engine/protos/`, any domain crate's RPC façade, `linux/crates/taigi-linux-ffi/` or a `windows/crates/taigi-windows-tsf/` COM entry.
+**Active window**: every Rust PR touching `engine/swift-ffi/`, `engine/android-jni/`, `engine/dispatch`, `engine/protos/`, any domain crate's RPC façade, `linux/crates/taigi-linux-ffi/`, `macos/crates/taigi-macos-ffi/` or a `windows/crates/taigi-windows-tsf/` COM entry.
 
 ## 1. FFI boundary discipline `[S]`
 
 ### 1.1 The seam as built
 
 - **Engine adapters (iOS, macOS, Android)** — a process-singleton, bytes-in / bytes-out seam. The entry takes only `bytes: &[u8]` and reaches the engine through `EngineHandle::instance()` (`engine/composing/src/handle.rs`); no handle crosses the boundary and there is no shutdown call — the singleton owns its lifetime, and the user-data stores are process-wide in `userdata` (`UserDataHandle`, opened once by `OpenUserData`). Live entry points: `process_request_bytes` / `install_logger_sink` / `set_log_level` / `panic_for_test` / `e2e_trace_open` (`engine/swift-ffi`) and `processRequestBytes` / `registerLogger` / `setLogLevel` / `panicForTest` / `e2eTraceOpen` (`engine/android-jni`). Both call `dispatch::process_request` directly.
+- **macOS desktop shell** — a second bytes seam in the same archive: `desktop_request_bytes` (`macos/crates/taigi-macos-ffi/src/lib.rs`), which links `engine/swift-ffi` as an rlib so macOS ships ONE static library and the engine's statics exist once (`docs/architecture/macos-desktop-core-roadmap.md` D1, D2). Envelope `macos/crates/taigi-macos-ffi/proto/desktop_shell.proto`; its `DesktopResponse.error` is the engine's `ErrorCode` (§1.5). Same rules as the engine adapters: no handle crosses, `catch_unwind`, the §1.4 cap, no `unsafe`.
 - **Linux Fcitx5 addon** — a C ABI over `taigi-linux-core` (`linux/crates/taigi-linux-ffi`, contract `include/taigikeyboard.h`): opaque handles (`TaigiRuntime`, `TaigiEngine`, `TaigiReply`, `TaigiMenu`), each with a matching `*_free`, accessors instead of shared structs. This is the §4 pattern.
 - **Windows TSF DLL** — every COM entry runs through `windows/crates/taigi-windows-tsf/src/com_guard.rs` (`guarded` / `guarded_hresult`), which turns a panic into `E_FAIL` plus one log line.
 

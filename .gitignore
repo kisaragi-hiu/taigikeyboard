@@ -100,6 +100,7 @@ ios/RustEngine/RustTaigi.swift
 ios/RustEngine/SwiftBridgeCore.swift
 macos/RustEngine/RustTaigi.xcframework/
 macos/RustEngine/RustTaigi.swift
+macos/RustEngine/RustTaigiDesktop.swift
 macos/RustEngine/SwiftBridgeCore.swift
 android/app/src/main/jniLibs/**/*.so
 
@@ -146,6 +147,7 @@ CLAUDE.local.md
 windows/target/
 desktop/target/
 linux/target/
+macos/target/
 # `.build/` holds the staged install layout and the installer that
 # windows/scripts/release-app.sh produces — the macOS side's `macos/.build/`,
 # and it must be ignored for the same reason: the script refuses a dirty tree,

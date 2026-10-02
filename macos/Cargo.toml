@@ -1,0 +1,56 @@
+# macOS input method — its own Cargo workspace, like `linux/` and `windows/`:
+# `taigi-macos-ffi` is the one static library the Swift app links. It holds the
+# engine (`../engine/swift-ffi`, linked as an rlib) and, from roadmap P6, the
+# desktop core (`../desktop`) in ONE archive, so the engine's process-wide state
+# exists once (docs/architecture/macos-desktop-core-roadmap.md D1).
+#
+# Version is the desktop release train's (macOS + Windows + Linux share one
+# number); the macOS app's own number is `macos/App/Info.plist`.
+
+[workspace]
+resolver = "2"
+members = ["crates/taigi-macos-ffi"]
+
+[workspace.package]
+version = "3.6.13"
+edition = "2021"
+# The desktop crates' floor (`desktop/Cargo.toml`): this workspace links them from P6.
+rust-version = "1.93"
+license = "Apache-2.0"
+repository = "https://github.com/taigikeyboard/taigikeyboard"
+publish = false
+
+[workspace.dependencies]
+# `default-features = false` on every engine edge: `taigi-macos-ffi` turns
+# `user-data` on itself, the one place the macOS archive's feature set is read.
+swift-ffi = { path = "../engine/swift-ffi", default-features = false }
+dispatch = { path = "../engine/dispatch", default-features = false }
+protos = { path = "../engine/protos" }
+log = "0.4"
+prost = "0.14"
+prost-build = "0.14"
+swift-bridge = "0.1"
+swift-bridge-build = "0.1"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+
+# This profile, not the engine's, governs the shipped archive: restate the
+# engine's (`engine/Cargo.toml`) so the macOS build does not change with the
+# workspace it is built from.
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
+# Every bridge function catches its own panics (docs/contributing/
+# rust-ffi-safety.md §1.2); `abort` would take the host app down instead.
+panic = "unwind"
+
+# Host tools are never shipped: Xcode 27's toolchain leaves a stripped
+# proc-macro dylib unloadable under MACOSX_DEPLOYMENT_TARGET=14.0 (the engine
+# workspace's note on the same setting).
+[profile.release.build-override]
+strip = false
