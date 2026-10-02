@@ -16,6 +16,9 @@ import XCTest
 /// - E4 (P11d) — a format character (Cf). Its next-word cases drive the
 ///   Swift manager, so only the legacy process runs them; the core's are in
 ///   `tests/composing_manager.rs`.
+/// - E5 (P11e) — the next-word gate, per scalar. Its cases drive the Swift
+///   manager, so only the legacy process runs them; the core's are in
+///   `tests/composing_manager.rs`.
 ///
 /// Not here: E2b (P11c) — a plain Escape inside a multi-character event. The
 /// picker's classification is Swift on both back ends, so its pin is
@@ -218,13 +221,59 @@ final class ComposingBackendParityTests: XCTestCase {
         }
     }
 
-    /// E5 (C2) on picked symbols: whether a symbol written outside a
-    /// composition reaches the next-word context. The Mac skips it when a
-    /// grapheme is a letter or whitespace (`Character`), the core when a
-    /// scalar is alphabetic or whitespace (`composing/manager.rs`). Under the
-    /// Mac's own predicate every shipped symbol is forwarded, as under the
-    /// core's (`tests/composing_manager.rs`
-    /// `e5_every_bundled_symbol_reaches_next_word`): the difference never
+    /// E5 (C2), settled P11e: the next-word gate asks every scalar whether it
+    /// is Alphabetic or White_Space, as the core does
+    /// (`composing/manager.rs`); until P11e the Mac asked each grapheme's
+    /// first scalar. The inputs and the reported list are the core's
+    /// (`tests/composing_manager.rs`
+    /// `e5_a_mark_that_is_alphabetic_keeps_the_character_from_next_word`).
+    /// The Swift manager's case, so the legacy process runs it.
+    func testE5_aMarkThatIsAlphabeticKeepsTheCharacterFromNextWord() throws {
+        let nextWord = RecordingNextWordPort()
+        let manager = try TestFixtures.makeComposingManager(
+            nextWord: nextWord, startingGeneration: TestFixtures.generationCounter.next(),
+        )
+
+        // trace: U+0345 / U+093E / `a` / ` ` / U+3000 / `x` are Alphabetic or
+        // White_Space; `。` / `,` / U+0301 / U+0600 are neither. U+0600 is a
+        // Prepend scalar, so `\u{600}a` and `\u{600} ` are one grapheme each,
+        // led by a non-letter.
+        for character in [
+            "。\u{345}", // skipped (until P11e: forwarded)
+            ",\u{93E}", // skipped (until P11e: forwarded)
+            "\u{600}a", // skipped (until P11e: forwarded)
+            "\u{600} ", // skipped (until P11e: forwarded)
+            "。\u{301}", // U+0301 is not Alphabetic: forwarded
+            " \u{301}", // whitespace-led: skipped
+            "\u{3000}", // skipped
+            "x", // skipped
+        ] {
+            manager.noteCharacterTypedOutsideComposition(character)
+        }
+
+        XCTAssertEqual(nextWord.reported, ["。\u{301}"])
+    }
+
+    /// E5 through the one caller it changes: a key event the host types,
+    /// idle (`LegacyComposingBackend`'s pass-through arm). Document text, so
+    /// it reaches the gate; the gate now stops the event carrying an
+    /// Alphabetic scalar.
+    func testE5_anIdleKeyEventCarryingAnAlphabeticMark_isNotReported() throws {
+        let rig = try LegacyRig()
+        defer { rig.release() }
+
+        for text in ["。\u{345}", "\u{600}a", "。\u{301}"] {
+            XCTAssertEqual(rig.press(text)?.handled, false, "\(text.unicodeScalars)")
+        }
+
+        // `∅` first: the claim started a new session, which forgets the context.
+        XCTAssertEqual(rig.nextWord.reported, ["∅", "。\u{301}"])
+    }
+
+    /// E5 on picked symbols: every symbol of the shipped table still reaches
+    /// the next-word context, under the per-scalar gate as under the old
+    /// per-grapheme one, and as under the core's (`tests/composing_manager.rs`
+    /// `e5_every_bundled_symbol_reaches_next_word`): the change never
     /// reaches the picker. The Swift manager's case, so the legacy process
     /// runs it.
     func testE5_everyShippedSymbolReachesNextWord() throws {

@@ -109,13 +109,20 @@ final class ComposingManager {
     /// be sentence-end punctuation, and forwarding it would put an engine
     /// round-trip on every space bar press outside a composition.
     ///
-    /// CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordController
-    /// .noteCharacterTypedOutsideComposition` and Android `NextWordController
-    /// .noteCharacterTypedOutsideComposition` (both gated by the same
-    /// letter / whitespace predicate). Drift causes silent divergence.
+    /// Asked of every scalar, not of each grapheme's first: a punctuation mark
+    /// carrying an Alphabetic combining mark (`。` + U+0345) counts as a
+    /// letter, a non-Alphabetic one (`。` + U+0301) does not.
+    ///
+    /// CROSS-PLATFORM INVARIANT — mirrors the desktop core's
+    /// `ComposingManager::note_character_typed_outside_composition`
+    /// (`desktop/crates/taigi-desktop-core/src/composing/manager.rs`), which
+    /// the core back end runs. Drift causes silent divergence between the two
+    /// desktop back ends.
     func noteCharacterTypedOutsideComposition(_ character: String) {
         guard !character.isEmpty,
-              !character.contains(where: { $0.isLetter || $0.isWhitespace })
+              !character.unicodeScalars.contains(where: {
+                  $0.properties.isAlphabetic || $0.properties.isWhitespace
+              })
         else { return }
         nextWord.wordSelected(
             text: character,
