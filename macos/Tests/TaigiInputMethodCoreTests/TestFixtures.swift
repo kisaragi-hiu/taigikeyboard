@@ -201,8 +201,9 @@ enum TestFixtures {
     /// test double reaches the controller through the callbacks instead — which
     /// is also how the controller learns its client in production.
     static func makeInputController() throws -> TaigiInputController {
-        // The core back end is built from the process's runtime on its first
-        // use, so the runtime and its lexicon are up before any controller.
+        // The core back end sends every request under the process's runtime
+        // (`DesktopCoreRuntime.configured`): up, with its lexicon, before any
+        // controller types.
         InstalledLexicon.installOnce()
         return try XCTUnwrap(
             TaigiInputController(server: nil, delegate: nil, client: nil),

@@ -40,9 +40,10 @@ final class AutoSpaceControllerTests: XCTestCase {
     }
 
     /// The core back end asks the swap's client check before it knows what a
-    /// key will do, which is sound only because an armed space means an idle
-    /// session with no list: every arm follows a commit that ended the
-    /// composition. The next letter starts a composition of its own.
+    /// key will do, and only for an idle session — sound because every arm
+    /// follows a commit that ended the composition: once armed there is no
+    /// list, and the next letter starts a composition of its own rather than
+    /// extending one.
     func testAnArmedSpace_followsACommitThatLeftNothingComposing() throws {
         let session = try composedSession()
         try session.walkToFirstTwoScriptCell()

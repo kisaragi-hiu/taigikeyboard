@@ -119,6 +119,24 @@ final class CoreComposingBackendTests: XCTestCase {
         }
     }
 
+    /// The width-flip chord attaches the glyph it maps to, which is what the
+    /// check is asked for; a composing session commits with the character
+    /// instead of passing it through, so nothing is asked.
+    func testTheSwapCheck_followsTheWidthFlip_andSkipsAComposingSession() throws {
+        let store = try makeScratchSettingsStore()
+        store.isAutoSpaceEnabled = true
+        let flip = KeyEventSnapshot(characters: ",", modifiers: .control, isNamedSpecialKey: false)
+
+        _ = try activatedBackend(composing: false)
+            .key(flip, bindings: .default, in: request(settings: store, armed: true))
+        XCTAssertTrue(isSwapCheckAsked, "⌃, writes an attaching comma")
+
+        isSwapCheckAsked = false
+        _ = try activatedBackend(composing: true)
+            .key(Self.key("?"), bindings: .default, in: request(settings: store, armed: true))
+        XCTAssertFalse(isSwapCheckAsked, "composing: the ? commits with the composition")
+    }
+
     /// The highlight goes whether or not a list is up — the picker commit is
     /// chosen by it, as the legacy back end chooses — the slots only while
     /// one is.

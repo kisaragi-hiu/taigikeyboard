@@ -84,6 +84,7 @@ final class CoreComposingBackend: ComposingBackend {
         bindings _: ComposingKeyBindings,
         in request: ComposingRequest,
     ) -> ComposingKeyReply? {
+        guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_KeyRequest()
         message.token = request.session.value
         message.event = Self.event(key)
@@ -100,6 +101,7 @@ final class CoreComposingBackend: ComposingBackend {
     }
 
     func commitComposition(in request: ComposingRequest) -> [ComposingBackendEffect]? {
+        guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_CommitCompositionRequest()
         message.token = request.session.value
         message.panel = Self.panel(request, swapping: nil)
@@ -107,6 +109,7 @@ final class CoreComposingBackend: ComposingBackend {
     }
 
     func commitForSymbolPicker(in request: ComposingRequest) -> [ComposingBackendEffect]? {
+        guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_CommitForSymbolPickerRequest()
         message.token = request.session.value
         message.panel = Self.panel(request, swapping: nil)
@@ -114,6 +117,7 @@ final class CoreComposingBackend: ComposingBackend {
     }
 
     func insertSymbol(_ symbol: String, in request: ComposingRequest) -> [ComposingBackendEffect]? {
+        guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_InsertSymbolRequest()
         message.token = request.session.value
         message.symbol = symbol
@@ -125,6 +129,7 @@ final class CoreComposingBackend: ComposingBackend {
     /// has no client to clear marked text from, and a refetch never changes
     /// the composition, so the core's is left alone.
     func represent(refetch: Bool, in request: ComposingRequest) -> CandidateListRepresentation? {
+        guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_RepresentRequest()
         message.token = request.session.value
         message.refetch = refetch

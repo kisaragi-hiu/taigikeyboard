@@ -59,8 +59,8 @@ impl Shell {
     /// run under it. A request that is refused, whatever refused it, or
     /// ignored — a token that does not own the engine changes nothing —
     /// leaves the previous snapshot in force. (One that panics leaves its
-    /// own: Swift answers FAIL_INTERNAL with a `Cancel` that carries the
-    /// snapshot it runs under.)
+    /// own: Swift answers FAIL_INTERNAL with a `Cancel` that carries none,
+    /// so the `Cancel` runs under it.)
     pub(crate) fn serve(
         &self,
         request: desktop_request::Request,
