@@ -15,6 +15,7 @@ use super::outcomes::{CandidateCommitOutcome, CandidateFetchOutcome};
 use super::presentation::{leads_with_literal_roman, presentation, PresentedCandidate};
 use crate::engine::{self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, Effect};
 use crate::keys::CaretDirection;
+use crate::platform::DesktopPlatform;
 use crate::settings::{EngineSettings, SettingsProvider};
 
 /// Writes the engine's document effects into the client that is currently
@@ -37,6 +38,8 @@ pub struct ComposingManager {
     /// Where the next-word handshakes go, stamped with `clock`.
     next_word: Box<dyn NextWordPort>,
     clock: Box<dyn Clock>,
+    /// The desktop every engine request names (`AppConfig.platform_id`).
+    platform: DesktopPlatform,
     /// Unique across everything that talks to the engine in this process:
     /// the engine keeps one composition per process and drops it whenever the
     /// generation it is handed changes.
@@ -50,6 +53,7 @@ impl ComposingManager {
         settings: Arc<dyn SettingsProvider>,
         next_word: Box<dyn NextWordPort>,
         clock: Box<dyn Clock>,
+        platform: DesktopPlatform,
         starting_generation: u64,
     ) -> Self {
         Self {
@@ -59,6 +63,7 @@ impl ComposingManager {
             settings,
             next_word,
             clock,
+            platform,
             current_generation: starting_generation,
         }
     }
@@ -131,7 +136,8 @@ impl ComposingManager {
     pub fn append(&mut self, character: &str, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("append");
         let settings = self.current_settings();
-        let transition = engine::append(character, &settings, self.current_generation);
+        let transition =
+            engine::append(character, &settings, self.platform, self.current_generation);
         self.apply(transition, executor);
     }
 
@@ -142,7 +148,7 @@ impl ComposingManager {
     pub fn telex_key(&mut self, key: &str, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("telexKey");
         let settings = self.current_settings();
-        let transition = engine::telex_key(key, &settings, self.current_generation);
+        let transition = engine::telex_key(key, &settings, self.platform, self.current_generation);
         self.apply(transition, executor);
     }
 
@@ -150,7 +156,11 @@ impl ComposingManager {
     /// that empties it.
     pub fn delete_backward(&mut self, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("deleteBackward");
-        let transition = engine::delete_backward(&self.current_settings(), self.current_generation);
+        let transition = engine::delete_backward(
+            &self.current_settings(),
+            self.platform,
+            self.current_generation,
+        );
         self.apply(transition, executor);
     }
 
@@ -164,8 +174,12 @@ impl ComposingManager {
         executor: &mut dyn ComposingEffectExecutor,
     ) {
         log::debug!("moveCaret");
-        let transition =
-            engine::move_caret(direction, &self.current_settings(), self.current_generation);
+        let transition = engine::move_caret(
+            direction,
+            &self.current_settings(),
+            self.platform,
+            self.current_generation,
+        );
         self.apply(transition, executor);
     }
 
@@ -177,7 +191,11 @@ impl ComposingManager {
         executor: &mut dyn ComposingEffectExecutor,
     ) -> Option<String> {
         log::debug!("commitComposition");
-        let transition = engine::commit_raw(&self.current_settings(), self.current_generation);
+        let transition = engine::commit_raw(
+            &self.current_settings(),
+            self.platform,
+            self.current_generation,
+        );
         let committed = Self::committed_text(transition.as_ref());
         self.apply(transition, executor);
         committed
@@ -192,8 +210,12 @@ impl ComposingManager {
     ) -> Option<String> {
         log::debug!("commitCompositionThenInsert");
         let settings = self.current_settings();
-        let transition =
-            engine::commit_preedit_then_insert_external(text, &settings, self.current_generation);
+        let transition = engine::commit_preedit_then_insert_external(
+            text,
+            &settings,
+            self.platform,
+            self.current_generation,
+        );
         let committed = Self::committed_text(transition.as_ref());
         self.apply(transition, executor);
         // The one commit path the engine does not describe to next word: it
@@ -222,9 +244,12 @@ impl ComposingManager {
     /// and ranks with it itself (user-data-engine-roadmap P3b / P5).
     pub fn fetch_candidates(&mut self) -> CandidateFetchOutcome {
         let settings = self.current_settings();
-        let Some(fetched) =
-            engine::fetch_at_pos(&settings, self.current_generation, self.clock.now_ms())
-        else {
+        let Some(fetched) = engine::fetch_at_pos(
+            &settings,
+            self.platform,
+            self.current_generation,
+            self.clock.now_ms(),
+        ) else {
             return CandidateFetchOutcome::Unavailable;
         };
         self.mirror(&fetched.transition);
@@ -284,6 +309,7 @@ impl ComposingManager {
                 syllable_count: candidate.syllable_count,
             },
             &self.current_settings(),
+            self.platform,
             self.current_generation,
         ) else {
             return CandidateCommitOutcome::Unavailable;

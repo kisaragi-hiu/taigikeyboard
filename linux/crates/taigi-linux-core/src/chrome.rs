@@ -21,7 +21,7 @@ use taigi_desktop_core::keys::{
 use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument};
 use taigi_desktop_core::strings::StringKey;
 use taigi_desktop_core::symbols::SymbolTable;
-use taigi_linux_platform::open_settings;
+use taigi_linux_platform::{open_settings, DESKTOP_PLATFORM};
 
 /// The menu row that opens the settings window on the last pane.
 pub const MENU_SETTINGS: &str = "settings";
@@ -48,7 +48,7 @@ pub enum MenuItem {
 /// package manager updates an input method (USER 2026-09-25).
 pub fn menu_items(runtime: &Runtime) -> Vec<MenuItem> {
     let settings = runtime.settings.current();
-    menu_rows(&runtime.strings(), &settings)
+    menu_rows(&runtime.strings(), &settings, DESKTOP_PLATFORM)
         .into_iter()
         .filter_map(|row| match row {
             Some(row) => Some(MenuItem::Action {
@@ -138,7 +138,7 @@ pub fn perform_global(
     action: ShortcutAction,
 ) -> Vec<Emit> {
     let settings = runtime.settings.current();
-    let bindings = ComposingKeyBindings::from_document(&settings);
+    let bindings = ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM);
     let mut emits = Vec::new();
     // The guide comes down BEFORE any other action runs: a switch under an
     // open card would leave a table spelled for the romanization the user

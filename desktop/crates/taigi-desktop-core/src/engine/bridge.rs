@@ -6,6 +6,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use prost::Message;
 use protos::engine::{request, response, AppConfig, ErrorCode, Platform, Request, Response};
 
+use crate::platform::DesktopPlatform;
 use crate::settings::EngineSettings;
 
 static LAST_REQUEST_ID: AtomicU32 = AtomicU32::new(0);
@@ -80,15 +81,16 @@ pub(super) fn record_failure(op: &str, message: &str) {
     log::error!("[{op}] {message}");
 }
 
-/// The platform this build serves: desktop-core is shared by the Windows TSF
-/// DLL and the Linux IMEs, so the compile target tells them apart. Validated
-/// caller identity only — no engine behaviour branches on it (envelope.proto
-/// `Platform`); a macOS host build (tests only) reports Windows.
-const DESKTOP_PLATFORM: Platform = if cfg!(target_os = "linux") {
-    Platform::Linux
-} else {
-    Platform::Windows
-};
+/// The caller identity the engine validates — no engine behaviour branches
+/// on it (envelope.proto `Platform`). Each shell passes its own desktop
+/// (`RustEngineBridge.swift:181` sends `.macos`).
+fn wire_platform(platform: DesktopPlatform) -> Platform {
+    match platform {
+        DesktopPlatform::Windows => Platform::Windows,
+        DesktopPlatform::Linux => Platform::Linux,
+        DesktopPlatform::MacOS => Platform::Macos,
+    }
+}
 
 /// The one config builder. The engine holds no settings of its own; every
 /// request carries the snapshot it should be rendered under. `platform_id` is
@@ -110,13 +112,13 @@ const DESKTOP_PLATFORM: Platform = if cfg!(target_os = "linux") {
 /// for raw-romanization commits (`decide.rs:86`). Sent by every composing op
 /// that renders the composition and by every next-word request, matching iOS
 /// and macOS.
-pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
+pub(super) fn app_config(settings: &EngineSettings, platform: DesktopPlatform) -> AppConfig {
     AppConfig {
         input_mode: settings.input_mode.wire().to_owned(),
         oo_doubletap_enabled: true,
         nn_doubletap_enabled: true,
         is_hanji_first: settings.is_hanji_first,
-        platform_id: DESKTOP_PLATFORM as i32,
+        platform_id: wire_platform(platform) as i32,
         candidate_display_mode: settings.candidate_display_mode.wire() as i32,
         hyphenless_roman: settings.is_hyphenless_roman_enabled,
         force_lowercase_nasal_marker: !settings.is_nasal_marker_uppercase_enabled,
@@ -127,25 +129,36 @@ pub(super) fn app_config(settings: &EngineSettings) -> AppConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::platform::test_support::TEST_PLATFORM;
     use crate::settings::{CandidateDisplayMode, InputMode};
     use protos::engine::CandidateDisplayMode as WireDisplayMode;
 
+    /// The rendering tests below are not about the platform.
+    fn config(settings: &EngineSettings) -> AppConfig {
+        app_config(settings, TEST_PLATFORM)
+    }
+
     #[test]
     fn app_config_carries_platform_and_unconditional_doubletaps() {
-        // trace: RustEngineBridgeAppConfigTests.swift:21 pins `.macos`; here
-        // the build target's desktop — Linux on Linux, Windows elsewhere.
+        // trace: each shell's own desktop — RustEngineBridgeAppConfigTests.swift:21
+        // pins `.macos`; before D6 the build target picked Linux or Windows.
         let settings = EngineSettings {
             input_mode: InputMode::Poj,
             ..EngineSettings::default()
         };
-        let config = app_config(&settings);
-        let expected_platform = if cfg!(target_os = "linux") {
-            Platform::Linux
-        } else {
-            Platform::Windows
-        };
+        for (platform, expected) in [
+            (DesktopPlatform::Windows, Platform::Windows),
+            (DesktopPlatform::Linux, Platform::Linux),
+            (DesktopPlatform::MacOS, Platform::Macos),
+        ] {
+            assert_eq!(
+                app_config(&settings, platform).platform_id,
+                expected as i32,
+                "{platform:?}"
+            );
+        }
+        let config = config(&settings);
         assert_eq!(config.input_mode, "poj");
-        assert_eq!(config.platform_id, expected_platform as i32);
         assert!(config.oo_doubletap_enabled && config.nn_doubletap_enabled);
         assert_eq!(
             config.candidate_display_mode,
@@ -165,7 +178,7 @@ mod tests {
             candidate_display_mode: CandidateDisplayMode::Combined,
             ..EngineSettings::default()
         };
-        let continuous = app_config(&settings);
+        let continuous = config(&settings);
         assert_eq!(
             continuous.candidate_display_mode,
             WireDisplayMode::Combined as i32
@@ -180,7 +193,7 @@ mod tests {
             candidate_display_mode: CandidateDisplayMode::RomanOnly,
             ..EngineSettings::default()
         };
-        assert!(app_config(&settings).is_roman_only_display());
+        assert!(config(&settings).is_roman_only_display());
     }
 
     #[test]
@@ -189,21 +202,21 @@ mod tests {
             is_hyphenless_roman_enabled: true,
             ..EngineSettings::default()
         };
-        assert!(app_config(&settings).hyphenless_roman);
+        assert!(config(&settings).hyphenless_roman);
     }
 
     // INVARIANT_NASAL_MARKER_CASE_FOLLOWS_THE_SWITCH (behavioral-invariants.md §53)
     #[test]
     fn nasal_marker_uppercase_off_forces_the_lowercase_marker_through_the_config() {
         assert!(
-            !app_config(&EngineSettings::default()).force_lowercase_nasal_marker,
+            !config(&EngineSettings::default()).force_lowercase_nasal_marker,
             "ships ON = wire default"
         );
         let settings = EngineSettings {
             is_nasal_marker_uppercase_enabled: false,
             ..EngineSettings::default()
         };
-        assert!(app_config(&settings).force_lowercase_nasal_marker);
+        assert!(config(&settings).force_lowercase_nasal_marker);
     }
 
     #[test]
@@ -212,7 +225,7 @@ mod tests {
             is_hanji_first: true,
             ..EngineSettings::default()
         };
-        let swapped = app_config(&settings);
+        let swapped = config(&settings);
         assert!(swapped.is_hanji_first);
         assert!(
             !swapped.output_both_scripts,
@@ -222,7 +235,7 @@ mod tests {
             is_hanji_first: false,
             ..EngineSettings::default()
         };
-        assert!(!app_config(&roman_first).is_hanji_first);
+        assert!(!config(&roman_first).is_hanji_first);
     }
 
     #[test]

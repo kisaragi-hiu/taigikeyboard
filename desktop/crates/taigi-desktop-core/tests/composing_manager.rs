@@ -17,6 +17,7 @@ use taigi_desktop_core::composing::{
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, ContinuousCandidate, Effect};
 use taigi_desktop_core::keys::CaretDirection;
+use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::{
     keys, CandidateDisplayMode, EngineSettings, SettingsDocument, SettingsProvider,
 };
@@ -196,6 +197,7 @@ fn rig() -> Rig {
         Arc::new(settings.clone()),
         Box::new(handle.clone()),
         Box::new(handle),
+        DesktopPlatform::Windows,
         fresh_generation(),
     );
     Rig {

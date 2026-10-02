@@ -12,14 +12,15 @@ use super::reset_row;
 use crate::winui::cards;
 use crate::winui::window::{Message, ResetScope, SettingsWindow};
 use taigi_desktop_core::keys::shortcut_labels::{
-    caret_chords_label, shifted_slot_keys_label, slot_keys_label, width_flip_chords_label,
-    CANCEL_KEY_LABEL, NAVIGATION_KEYS_LABEL,
+    cancel_key_label, caret_chords_label, navigation_keys_label, shifted_slot_keys_label,
+    slot_keys_label, width_flip_chords_label,
 };
 use taigi_desktop_core::keys::{
     rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
     RecorderTarget, ShortcutAction,
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
+use taigi_windows_platform::DESKTOP_PLATFORM;
 use windows_reactor::*;
 
 /// Upstream's width for the same control (`RecorderCocoa`), so the rows do
@@ -34,7 +35,7 @@ pub fn view(
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
     let document = window.document();
-    let bindings = ComposingKeyBindings::from_document(document);
+    let bindings = ComposingKeyBindings::from_document(document, DESKTOP_PLATFORM);
     View::fragment((
         // Block one: through the candidates.
         //
@@ -57,7 +58,7 @@ pub fn view(
         // bar; its Shift twin sits with the commit rows below.
         fixed_row(
             strings.resolve(StringKey::DesktopShortcutSelectCandidateSlot),
-            slot_keys_label(bindings.slot_key_set()),
+            slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM),
         ),
         // Shown, not recordable: the fixed navigation tier
         // (`ComposingKeyIntent::intent`), read before any binding so a user
@@ -65,7 +66,7 @@ pub fn view(
         // candidates.
         fixed_row(
             strings.resolve(StringKey::DesktopShortcutNavigateCandidates),
-            NAVIGATION_KEYS_LABEL.to_owned(),
+            navigation_keys_label(DESKTOP_PLATFORM).to_owned(),
         ),
         // Shown, not recordable (USER 2026-09-09): the caret inside the
         // composition rides the host's own word-jump chord, and the
@@ -73,7 +74,7 @@ pub fn view(
         // the candidate movers, because moving the caret is what it is.
         fixed_row(
             strings.resolve(StringKey::DesktopShortcutMoveComposingCaret),
-            caret_chords_label(),
+            caret_chords_label(DESKTOP_PLATFORM),
         ),
         // Block two: out of the composition and into the document.
         cards::section_title(strings.resolve(StringKey::DesktopShortcutSectionOutput)),
@@ -90,7 +91,7 @@ pub fn view(
         // record. After the commit rows, because it is one.
         fixed_row(
             strings.resolve(StringKey::DesktopActionCommitAlternateScript),
-            shifted_slot_keys_label(bindings.slot_key_set()),
+            shifted_slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM),
         ),
         // Shown, not recordable (USER 2026-09-20): Ctrl on a punctuation key
         // types it in the other width once, whatever the Hanji/romanization mode would have
@@ -99,7 +100,7 @@ pub fn view(
         // for every key of the map.
         fixed_row(
             strings.resolve(StringKey::DesktopShortcutFlipPunctuationWidth),
-            width_flip_chords_label(),
+            width_flip_chords_label(DESKTOP_PLATFORM),
         ),
         // Shown, not recordable: Escape drops the composition without
         // writing to the document (`ComposingKeyIntent::intent`). Last in
@@ -107,7 +108,7 @@ pub fn view(
         // this is the one way out that writes nothing.
         fixed_row(
             strings.resolve(StringKey::DesktopShortcutCancelComposing),
-            CANCEL_KEY_LABEL.to_owned(),
+            cancel_key_label(DESKTOP_PLATFORM).to_owned(),
         ),
         // Block three: the switches, and the windows a key raises. What these
         // have in common is that none of them needs a composition running —
@@ -158,7 +159,7 @@ fn global_rows(
                         strings,
                         context,
                         RecorderTarget::Global(*action),
-                        action.chord_in(document),
+                        action.chord_in(document, DESKTOP_PLATFORM),
                     ),
                 )
             })
@@ -219,7 +220,7 @@ fn recorder_row(
                     .resolve(StringKey::DesktopShortcutUnbound)
                     .to_owned()
             },
-            ComposingKeyChord::display,
+            |chord| chord.display(DESKTOP_PLATFORM),
         )
     };
     let field = Button::new()

@@ -28,7 +28,7 @@ pub use bindings::ComposingKeyBindings;
 pub use chord::{ChordRejection, ComposingKeyChord};
 pub use input_method_menu::{menu_rows, MenuCommand, MenuRow, MENU};
 pub use intent::{
-    CandidateNavigation, CaretDirection, ComposingKeyIntent, CARET_CHORD_MODIFIERS,
+    caret_chord_modifiers, CandidateNavigation, CaretDirection, ComposingKeyIntent,
     WIDTH_FLIP_MODIFIERS,
 };
 pub use language_mode::LanguageMode;

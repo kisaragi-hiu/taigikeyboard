@@ -7,6 +7,7 @@ use super::action::ComposingAction;
 use super::chord::{ChordRejection, ComposingKeyChord};
 use super::shortcut_actions::{global_rejection, ShortcutAction, ShortcutConflicts};
 use super::snapshot::KeyModifiers;
+use crate::platform::DesktopPlatform;
 use crate::settings::SettingsDocument;
 use crate::strings::StringKey;
 
@@ -44,17 +45,24 @@ impl RecorderTarget {
 
     /// Stores `chord` on this row, emptying whatever else held it — last
     /// writer wins across BOTH registries (`ShortcutConflicts`).
-    pub fn store(self, document: &mut SettingsDocument, chord: Option<&ComposingKeyChord>) {
+    pub fn store(
+        self,
+        document: &mut SettingsDocument,
+        chord: Option<&ComposingKeyChord>,
+        platform: DesktopPlatform,
+    ) {
         match self {
             Self::Global(action) => {
-                action.store_in(document, chord);
-                ShortcutConflicts::resolve_after_global_recording(document, action);
+                action.store_in(document, chord, platform);
+                ShortcutConflicts::resolve_after_global_recording(document, action, platform);
             }
             Self::Composing(action) => {
                 if let Some(chord) = chord {
-                    ShortcutConflicts::resolve_after_composing_recording(document, action, chord);
+                    ShortcutConflicts::resolve_after_composing_recording(
+                        document, action, chord, platform,
+                    );
                 }
-                document.set_composing_chord(action, chord);
+                document.set_composing_chord(action, chord, platform);
             }
         }
     }
@@ -91,7 +99,11 @@ pub enum RecorderOutcome {
 /// (`ShortcutKeyRecorder.swift:403-468`). The slot keys need no refusal of
 /// their own: the shared gate refuses every bare letter, digit and `;`
 /// whichever tone scheme is live (`ComposingKeyChord::make`).
-pub fn evaluate_press(tier: RecorderTier, press: &RecordedPress) -> RecorderOutcome {
+pub fn evaluate_press(
+    tier: RecorderTier,
+    press: &RecordedPress,
+    platform: DesktopPlatform,
+) -> RecorderOutcome {
     // Key repeat is dropped: holding a key would otherwise record it over
     // and over, each time re-running conflict resolution.
     if press.is_repeat {
@@ -115,6 +127,7 @@ pub fn evaluate_press(tier: RecorderTier, press: &RecordedPress) -> RecorderOutc
         press.key.as_deref(),
         press.modifiers,
         press.key_code,
+        platform,
     ) {
         Ok(chord) => chord,
         Err(reason) => return RecorderOutcome::Refused(reason),
@@ -155,6 +168,8 @@ pub fn rejection_message_key(rejection: ChordRejection) -> StringKey {
 mod tests {
     use super::*;
     use crate::keys::ComposingKeyBindings;
+    use crate::platform::test_support::{TEST_PLATFORM as PLATFORM, WINDOWS_AND_LINUX};
+    use crate::platform::DesktopPlatform;
 
     #[test]
     fn the_last_row_to_record_a_chord_is_the_one_that_keeps_it() {
@@ -169,37 +184,43 @@ mod tests {
                 control: true,
                 ..Default::default()
             },
+            PLATFORM,
         )
         .expect("Ctrl+K is a chord");
         let mut document = SettingsDocument::default();
         let global = RecorderTarget::Global(ShortcutAction::ToggleRomanization);
-        global.store(&mut document, Some(&chord));
+        global.store(&mut document, Some(&chord), PLATFORM);
         assert_eq!(
-            ShortcutAction::ToggleRomanization.chord_in(&document),
+            ShortcutAction::ToggleRomanization.chord_in(&document, PLATFORM),
             Some(chord.clone())
         );
 
         let composing = RecorderTarget::Composing(ComposingAction::PageForward);
-        composing.store(&mut document, Some(&chord));
+        composing.store(&mut document, Some(&chord), PLATFORM);
         assert_eq!(
-            ComposingKeyBindings::from_document(&document).chord(ComposingAction::PageForward),
+            ComposingKeyBindings::from_document(&document, PLATFORM)
+                .chord(ComposingAction::PageForward),
             Some(&chord)
         );
         assert_eq!(
-            ShortcutAction::ToggleRomanization.chord_in(&document),
+            ShortcutAction::ToggleRomanization.chord_in(&document, PLATFORM),
             None,
             "the row that had it first gives it up"
         );
 
         // Clearing empties only the row it was pressed on, on either registry.
-        composing.store(&mut document, None);
+        composing.store(&mut document, None, PLATFORM);
         assert_eq!(
-            ComposingKeyBindings::from_document(&document).chord(ComposingAction::PageForward),
+            ComposingKeyBindings::from_document(&document, PLATFORM)
+                .chord(ComposingAction::PageForward),
             None
         );
-        global.store(&mut document, Some(&chord));
-        global.store(&mut document, None);
-        assert_eq!(ShortcutAction::ToggleRomanization.chord_in(&document), None);
+        global.store(&mut document, Some(&chord), PLATFORM);
+        global.store(&mut document, None, PLATFORM);
+        assert_eq!(
+            ShortcutAction::ToggleRomanization.chord_in(&document, PLATFORM),
+            None
+        );
     }
 
     #[test]
@@ -233,11 +254,11 @@ mod tests {
         // modifiers → None. `a` (syllable), `z` (Telex / slot) and `3`
         // (tone / slot) are refused bare under either scheme.
         for tier in [RecorderTier::Composing, RecorderTier::Global] {
-            let outcome = evaluate_press(tier, &press("[", KeyModifiers::NONE));
+            let outcome = evaluate_press(tier, &press("[", KeyModifiers::NONE), PLATFORM);
             assert!(matches!(outcome, RecorderOutcome::Recorded(chord) if chord.key == "["));
             for key in ["a", "z", "q", "3", ";"] {
                 assert_eq!(
-                    evaluate_press(tier, &press(key, KeyModifiers::NONE)),
+                    evaluate_press(tier, &press(key, KeyModifiers::NONE), PLATFORM),
                     RecorderOutcome::Refused(ChordRejection::TypesRomanization),
                     "{tier:?} {key}"
                 );
@@ -249,11 +270,19 @@ mod tests {
     fn the_global_gate_refuses_on_top_of_the_shared_gate() {
         // trace: Ctrl+S alone belongs to the host on the global tier only.
         assert!(matches!(
-            evaluate_press(RecorderTier::Composing, &press("s", KeyModifiers::CONTROL)),
+            evaluate_press(
+                RecorderTier::Composing,
+                &press("s", KeyModifiers::CONTROL),
+                PLATFORM
+            ),
             RecorderOutcome::Recorded(_)
         ));
         assert_eq!(
-            evaluate_press(RecorderTier::Global, &press("s", KeyModifiers::CONTROL)),
+            evaluate_press(
+                RecorderTier::Global,
+                &press("s", KeyModifiers::CONTROL),
+                PLATFORM
+            ),
             RecorderOutcome::Refused(ChordRejection::BelongsToHost)
         );
     }
@@ -263,23 +292,37 @@ mod tests {
         assert_eq!(
             evaluate_press(
                 RecorderTier::Composing,
-                &press("\u{1B}", KeyModifiers::NONE)
+                &press("\u{1B}", KeyModifiers::NONE),
+                PLATFORM
             ),
             RecorderOutcome::Blurred
         );
         assert_eq!(
-            evaluate_press(RecorderTier::Composing, &press("\t", KeyModifiers::NONE)),
+            evaluate_press(
+                RecorderTier::Composing,
+                &press("\t", KeyModifiers::NONE),
+                PLATFORM
+            ),
             RecorderOutcome::Recorded(
-                ComposingKeyChord::make(Some("\t"), KeyModifiers::NONE).expect("bindable")
+                ComposingKeyChord::make(Some("\t"), KeyModifiers::NONE, PLATFORM)
+                    .expect("bindable")
             )
         );
         assert_eq!(
-            evaluate_press(RecorderTier::Composing, &press("\u{8}", KeyModifiers::NONE)),
+            evaluate_press(
+                RecorderTier::Composing,
+                &press("\u{8}", KeyModifiers::NONE),
+                PLATFORM
+            ),
             RecorderOutcome::Ignored
         );
         // Shift+Tab is a chord, recordable (the previous-candidate default).
         assert!(matches!(
-            evaluate_press(RecorderTier::Composing, &press("\t", KeyModifiers::SHIFT)),
+            evaluate_press(
+                RecorderTier::Composing,
+                &press("\t", KeyModifiers::SHIFT),
+                PLATFORM
+            ),
             RecorderOutcome::Recorded(_)
         ));
         let repeat = RecordedPress {
@@ -287,7 +330,7 @@ mod tests {
             ..press("[", KeyModifiers::NONE)
         };
         assert_eq!(
-            evaluate_press(RecorderTier::Composing, &repeat),
+            evaluate_press(RecorderTier::Composing, &repeat, PLATFORM),
             RecorderOutcome::Ignored
         );
         let none = RecordedPress {
@@ -297,7 +340,7 @@ mod tests {
             is_repeat: false,
         };
         assert_eq!(
-            evaluate_press(RecorderTier::Composing, &none),
+            evaluate_press(RecorderTier::Composing, &none, PLATFORM),
             RecorderOutcome::Refused(ChordRejection::NoKey)
         );
     }
@@ -337,9 +380,9 @@ mod tests {
         for (key, modifiers) in [("a", ctrl_alt), ("a", ctrl_shift), ("q", ctrl_alt)] {
             for tier in [RecorderTier::Composing, RecorderTier::Global] {
                 assert_eq!(
-                    evaluate_press(tier, &press(key, modifiers)),
+                    evaluate_press(tier, &press(key, modifiers), PLATFORM),
                     RecorderOutcome::Recorded(
-                        ComposingKeyChord::make(Some(key), modifiers).expect("bindable")
+                        ComposingKeyChord::make(Some(key), modifiers, PLATFORM).expect("bindable")
                     ),
                     "{tier:?} {key} {modifiers:?}"
                 );
@@ -362,7 +405,7 @@ mod tests {
         };
         for tier in [RecorderTier::Composing, RecorderTier::Global] {
             assert_eq!(
-                evaluate_press(tier, &shifted_three),
+                evaluate_press(tier, &shifted_three, PLATFORM),
                 RecorderOutcome::Refused(ChordRejection::TypesRomanization),
                 "{tier:?}"
             );
@@ -373,8 +416,43 @@ mod tests {
             ..shifted_three
         };
         assert!(matches!(
-            evaluate_press(RecorderTier::Composing, &bare_hash),
+            evaluate_press(RecorderTier::Composing, &bare_hash, PLATFORM),
             RecorderOutcome::Recorded(_)
         ));
+    }
+
+    /// The Windows recorder spells a key that types nothing as a private-use
+    /// scalar (`key_translation::named_key_scalar`), and Windows and Linux
+    /// refuse every one as reserved on both tiers (inventory K4); the Mac
+    /// reserves only its nine keys, so ⌃Home records there.
+    #[test]
+    fn a_private_use_key_is_refused_as_reserved_on_windows_and_linux_only() {
+        let control_shift = KeyModifiers::CONTROL.with(KeyModifiers::SHIFT);
+        for platform in WINDOWS_AND_LINUX {
+            for tier in [RecorderTier::Composing, RecorderTier::Global] {
+                for key in ["\u{F700}", "\u{F704}", "\u{F729}", "\u{F72D}"] {
+                    assert_eq!(
+                        evaluate_press(tier, &press(key, control_shift), platform),
+                        RecorderOutcome::Refused(ChordRejection::ReservedKey),
+                        "{key:?} {tier:?} {platform:?}"
+                    );
+                }
+            }
+        }
+        let mac = DesktopPlatform::MacOS;
+        let control_home = press("\u{F729}", KeyModifiers::CONTROL);
+        assert!(matches!(
+            evaluate_press(RecorderTier::Composing, &control_home, mac),
+            RecorderOutcome::Recorded(chord) if chord.key == "\u{F729}"
+        ));
+        assert_eq!(
+            evaluate_press(
+                RecorderTier::Composing,
+                &press("\u{F702}", KeyModifiers::CONTROL),
+                mac
+            ),
+            RecorderOutcome::Refused(ChordRejection::ReservedKey),
+            "the arrows stay reserved on the Mac"
+        );
     }
 }

@@ -14,7 +14,11 @@ use std::sync::{Mutex, OnceLock};
 use protos::engine::CommitOutcome;
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, CommitContinuousArgs, Effect};
+use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::{EngineSettings, InputMode};
+
+/// The round trips are not about the platform; any desktop will do.
+const PLATFORM: DesktopPlatform = DesktopPlatform::Windows;
 
 fn dictionaries_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../../assets/dictionaries")
@@ -45,7 +49,7 @@ fn fresh_generation() -> u64 {
 fn compose(text: &str, settings: &EngineSettings, generation: u64) -> engine::ComposingTransition {
     let mut last = None;
     for character in text.chars() {
-        let step = engine::append(&character.to_string(), settings, generation)
+        let step = engine::append(&character.to_string(), settings, PLATFORM, generation)
             .expect("append round trip");
         last = Some(step);
     }
@@ -80,16 +84,18 @@ fn telex_key_writes_the_tone_and_z_spells_the_mode_affricate() {
     let settings = EngineSettings::default();
     let generation = fresh_generation();
     compose("te", &settings, generation);
-    let toned = engine::telex_key("v", &settings, generation).expect("telex round trip");
+    let toned = engine::telex_key("v", &settings, PLATFORM, generation).expect("telex round trip");
     assert_eq!(toned.raw_input, "te2");
     assert_eq!(toned.display_text, "té");
-    let retoned = engine::telex_key("y", &settings, generation).expect("telex round trip");
+    let retoned =
+        engine::telex_key("y", &settings, PLATFORM, generation).expect("telex round trip");
     assert_eq!(retoned.raw_input, "te3");
     assert_eq!(retoned.display_text, "tè");
     engine::reset(generation);
 
     let generation = fresh_generation();
-    let started = engine::telex_key("z", &settings, generation).expect("telex round trip");
+    let started =
+        engine::telex_key("z", &settings, PLATFORM, generation).expect("telex round trip");
     assert!(started.is_composing, "an idle z starts a composition");
     assert_eq!(started.raw_input, "ts");
     engine::reset(generation);
@@ -99,7 +105,7 @@ fn telex_key_writes_the_tone_and_z_spells_the_mode_affricate() {
         input_mode: InputMode::Poj,
         ..EngineSettings::default()
     };
-    let started = engine::telex_key("z", &poj, generation).expect("telex round trip");
+    let started = engine::telex_key("z", &poj, PLATFORM, generation).expect("telex round trip");
     assert_eq!(started.raw_input, "ch");
     engine::reset(generation);
 }
@@ -111,7 +117,7 @@ fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
     let generation = fresh_generation();
     compose("taigi", &settings, generation);
 
-    let fetch = engine::fetch_at_pos(&settings, generation, 0).expect("fetch round trip");
+    let fetch = engine::fetch_at_pos(&settings, PLATFORM, generation, 0).expect("fetch round trip");
     let candidates = fetch
         .candidates
         .expect("continuous phase answers with a list");
@@ -141,6 +147,7 @@ fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
             syllable_count: taigi.syllable_count,
         },
         &settings,
+        PLATFORM,
         generation,
     )
     .expect("commit round trip");
@@ -169,7 +176,7 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
     let settings = EngineSettings::default();
     let generation = fresh_generation();
     compose("taigi", &settings, generation);
-    let fetch = engine::fetch_at_pos(&settings, generation, 0).expect("fetch");
+    let fetch = engine::fetch_at_pos(&settings, PLATFORM, generation, 0).expect("fetch");
     let candidates = fetch.candidates.expect("continuous");
     let tai = candidates
         .iter()
@@ -188,6 +195,7 @@ fn partial_commit_nails_a_segment_and_stays_composing() {
             syllable_count: tai.syllable_count,
         },
         &settings,
+        PLATFORM,
         generation,
     )
     .expect("commit");
@@ -223,7 +231,7 @@ fn literal_roman_candidate_is_absent_under_the_shipped_defaults() {
     let generation = fresh_generation();
     let settings = EngineSettings::default();
     compose("tai", &settings, generation);
-    let candidates = engine::fetch_at_pos(&settings, generation, 0)
+    let candidates = engine::fetch_at_pos(&settings, PLATFORM, generation, 0)
         .expect("fetch")
         .candidates
         .expect("continuous");
@@ -244,7 +252,7 @@ fn poj_mode_renders_poj_display_and_keeps_canonical_tl() {
         ..EngineSettings::default()
     };
     compose("chiah", &poj, generation);
-    let candidates = engine::fetch_at_pos(&poj, generation, 0)
+    let candidates = engine::fetch_at_pos(&poj, PLATFORM, generation, 0)
         .expect("fetch")
         .candidates
         .expect("continuous");
@@ -267,8 +275,8 @@ fn commit_preedit_then_insert_external_is_one_effect() {
     let settings = EngineSettings::default();
     let generation = fresh_generation();
     compose("gua2", &settings, generation);
-    let commit =
-        engine::commit_preedit_then_insert_external(" ", &settings, generation).expect("commit");
+    let commit = engine::commit_preedit_then_insert_external(" ", &settings, PLATFORM, generation)
+        .expect("commit");
     assert!(!commit.is_composing);
     let commits: Vec<_> = commit
         .effects
@@ -312,7 +320,7 @@ fn all_sources_off_fetches_no_dictionary_candidates() {
     sources.dev = false;
     let generation = fresh_generation();
     compose("taigi", &settings, generation);
-    let candidates = engine::fetch_at_pos(&settings, generation, 0)
+    let candidates = engine::fetch_at_pos(&settings, PLATFORM, generation, 0)
         .expect("fetch round trip")
         .candidates
         .expect("continuous phase answers with a list");

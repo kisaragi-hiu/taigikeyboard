@@ -186,6 +186,7 @@ mod tests {
     use super::*;
     use crate::composing::{EngineNextWord, SystemClock};
     use crate::engine::test_support::candidate;
+    use crate::platform::test_support::TEST_PLATFORM;
     use crate::settings::{keys, SettingsDocument, StaticSettingsProvider};
     use std::sync::Arc;
 
@@ -288,8 +289,11 @@ mod tests {
         document.set_choice(&keys::CANDIDATE_DISPLAY_MODE, mode);
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
-            Box::new(EngineNextWord),
+            Box::new(EngineNextWord {
+                platform: TEST_PLATFORM,
+            }),
             Box::new(SystemClock),
+            TEST_PLATFORM,
             1,
         )
     }
@@ -300,8 +304,11 @@ mod tests {
         document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, enabled);
         ComposingManager::new(
             Arc::new(StaticSettingsProvider::new(document)),
-            Box::new(EngineNextWord),
+            Box::new(EngineNextWord {
+                platform: TEST_PLATFORM,
+            }),
             Box::new(SystemClock),
+            TEST_PLATFORM,
             1,
         )
     }

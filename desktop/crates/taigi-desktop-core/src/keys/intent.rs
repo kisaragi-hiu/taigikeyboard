@@ -5,6 +5,7 @@
 use super::bindings::ComposingKeyBindings;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
 use super::tone_input_scheme::ToneInputScheme;
+use crate::platform::DesktopPlatform;
 
 /// One step of the caret inside the composition (`ComposingKeyIntent::MoveCaret`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -25,18 +26,25 @@ impl CaretDirection {
 }
 
 /// The modifier under which ← / → step the composing caret — the host's
-/// own "jump a word" chord (the Mac's ⌥, `ComposingKeyIntent.swift`
-/// `caretChordModifiers`). The Shortcuts pane draws its read-only row from
-/// this same value, so the row cannot drift from the key the classifier
-/// reads. Alt+←/→ is back / forward in Explorer and the browsers and rides
-/// `WM_SYSKEYDOWN`, so it is not this.
-pub const CARET_CHORD_MODIFIERS: KeyModifiers = KeyModifiers::CONTROL;
+/// own "jump a word" chord: Ctrl on Windows and Linux, ⌥ on the Mac
+/// (`ComposingKeyIntent.swift` `caretChordModifiers`; ⌃← is Mission
+/// Control there). The Shortcuts pane draws its read-only row from this
+/// same value, so the row cannot drift from the key the classifier reads.
+/// Alt+←/→ is back / forward in Explorer and the browsers and rides
+/// `WM_SYSKEYDOWN`, so it is not Windows' chord.
+pub fn caret_chord_modifiers(platform: DesktopPlatform) -> KeyModifiers {
+    match platform {
+        DesktopPlatform::Windows | DesktopPlatform::Linux => KeyModifiers::CONTROL,
+        DesktopPlatform::MacOS => KeyModifiers::ALT,
+    }
+}
 
 /// The modifier that types a punctuation key in the other width, once — the
 /// 新注音 (New Phonetic) / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not recordable,
 /// shown read-only on the Shortcuts pane like the caret chord
 /// (`ComposingKeyIntent.swift` `widthFlipModifiers`); the row is drawn from
-/// this same value the classifier compares against.
+/// this same value the classifier compares against. The same ⌃ on every
+/// desktop, so it takes no platform.
 pub const WIDTH_FLIP_MODIFIERS: KeyModifiers = KeyModifiers::CONTROL;
 
 /// A move in the candidate window. The six physical keys are handed through
@@ -138,14 +146,16 @@ impl ComposingKeyIntent {
         is_composing: bool,
         is_showing_candidates: bool,
         bindings: &ComposingKeyBindings,
+        platform: DesktopPlatform,
     ) -> Self {
         let modifiers = key.modifiers;
 
-        // Tier 0 — the caret inside the composition, on Ctrl+← / Ctrl+→.
-        // Fixed, not recordable, shown read-only on the Shortcuts pane (USER
-        // 2026-09-09). Exactly Ctrl: Ctrl+Shift+← stays the host's
-        // selection, Ctrl+Alt+← its shortcut. Idle, the chord is the host's.
-        if is_composing && modifiers == CARET_CHORD_MODIFIERS {
+        // Tier 0 — the caret inside the composition, on Ctrl+← / Ctrl+→
+        // (⌥ on the Mac). Fixed, not recordable, shown read-only on the
+        // Shortcuts pane (USER 2026-09-09). Exactly the one modifier:
+        // Ctrl+Shift+← stays the host's selection, Ctrl+Alt+← its shortcut.
+        // Idle, the chord is the host's.
+        if is_composing && modifiers == caret_chord_modifiers(platform) {
             if let Some(direction) = CaretDirection::horizontal(key.navigation_key) {
                 return Self::MoveCaret(direction);
             }
@@ -191,7 +201,7 @@ impl ComposingKeyIntent {
         // Tier 4 — what the user put on this key, read before the host-chord
         // guard so a chord they deliberately recorded reaches its action.
         if is_composing {
-            if let Some(action) = bindings.action_for(key) {
+            if let Some(action) = bindings.action_for(key, platform) {
                 if is_showing_candidates || !action.requires_candidates() {
                     return action.intent();
                 }
@@ -393,6 +403,8 @@ impl ComposingKeyIntent {
 mod tests {
     use super::*;
     use crate::keys::{ComposingAction, ComposingKeyChord, KeyModifiers};
+    use crate::platform::test_support::{TEST_PLATFORM as PLATFORM, WINDOWS_AND_LINUX};
+    use crate::platform::DesktopPlatform;
     use std::collections::BTreeMap;
 
     fn classify(
@@ -400,12 +412,7 @@ mod tests {
         is_composing: bool,
         is_showing: bool,
     ) -> ComposingKeyIntent {
-        ComposingKeyIntent::intent(
-            key,
-            is_composing,
-            is_showing,
-            &ComposingKeyBindings::default(),
-        )
+        classify_on(key, is_composing, is_showing, PLATFORM)
     }
 
     fn text(characters: &str) -> KeyEventSnapshot {
@@ -519,34 +526,54 @@ mod tests {
         );
     }
 
+    fn classify_on(
+        key: &KeyEventSnapshot,
+        is_composing: bool,
+        is_showing: bool,
+        platform: DesktopPlatform,
+    ) -> ComposingKeyIntent {
+        ComposingKeyIntent::intent(
+            key,
+            is_composing,
+            is_showing,
+            &ComposingKeyBindings::default(),
+            platform,
+        )
+    }
+
     /// Ctrl+← / Ctrl+→ step the caret inside the composition whether or
     /// not the window is up — the bare arrows stay the window's (USER
     /// 2026-09-09).
     #[test]
     fn control_arrows_move_the_composing_caret_window_up_or_not() {
-        for is_showing_candidates in [true, false] {
-            let left =
-                KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::CONTROL);
-            let right =
-                KeyEventSnapshot::navigation(NavigationKey::RightArrow, KeyModifiers::CONTROL);
-            assert_eq!(
-                classify(&left, true, is_showing_candidates),
-                ComposingKeyIntent::MoveCaret(CaretDirection::Left)
-            );
-            assert_eq!(
-                classify(&right, true, is_showing_candidates),
-                ComposingKeyIntent::MoveCaret(CaretDirection::Right)
-            );
+        for platform in WINDOWS_AND_LINUX {
+            for is_showing_candidates in [true, false] {
+                let left =
+                    KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::CONTROL);
+                let right =
+                    KeyEventSnapshot::navigation(NavigationKey::RightArrow, KeyModifiers::CONTROL);
+                assert_eq!(
+                    classify_on(&left, true, is_showing_candidates, platform),
+                    ComposingKeyIntent::MoveCaret(CaretDirection::Left)
+                );
+                assert_eq!(
+                    classify_on(&right, true, is_showing_candidates, platform),
+                    ComposingKeyIntent::MoveCaret(CaretDirection::Right)
+                );
+            }
         }
     }
 
     #[test]
     fn control_arrow_is_the_hosts_word_jump_when_nothing_is_composing() {
-        let left = KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::CONTROL);
-        assert_eq!(
-            classify(&left, false, false),
-            ComposingKeyIntent::PassThrough
-        );
+        for platform in WINDOWS_AND_LINUX {
+            let left =
+                KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::CONTROL);
+            assert_eq!(
+                classify_on(&left, false, false, platform),
+                ComposingKeyIntent::PassThrough
+            );
+        }
     }
 
     /// Only exactly Ctrl: with Shift it is the host's selection, with Alt or
@@ -567,14 +594,56 @@ mod tests {
             (NavigationKey::UpArrow, KeyModifiers::CONTROL),
             (NavigationKey::PageDown, KeyModifiers::CONTROL),
         ];
-        for (key, modifiers) in cases {
-            let snapshot = KeyEventSnapshot::navigation(key, modifiers);
+        for platform in WINDOWS_AND_LINUX {
+            for (key, modifiers) in cases {
+                let snapshot = KeyEventSnapshot::navigation(key, modifiers);
+                assert_eq!(
+                    classify_on(&snapshot, true, true, platform),
+                    ComposingKeyIntent::CommitThenPassThrough,
+                    "{key:?} under {modifiers:?} on {platform:?}"
+                );
+            }
+        }
+    }
+
+    /// The Mac steps the caret on ⌥← / ⌥→ (`ComposingKeyIntent.swift:199`,
+    /// inventory K1); ⌃← is Mission Control there, so it is a host chord
+    /// that ends the composition like any other. The width flip stays ⌃.
+    #[test]
+    fn the_mac_moves_the_caret_on_option_arrows() {
+        let mac = DesktopPlatform::MacOS;
+        for is_showing_candidates in [true, false] {
+            let left = KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::ALT);
+            let right = KeyEventSnapshot::navigation(NavigationKey::RightArrow, KeyModifiers::ALT);
             assert_eq!(
-                classify(&snapshot, true, true),
-                ComposingKeyIntent::CommitThenPassThrough,
-                "{key:?} under {modifiers:?}"
+                classify_on(&left, true, is_showing_candidates, mac),
+                ComposingKeyIntent::MoveCaret(CaretDirection::Left)
+            );
+            assert_eq!(
+                classify_on(&right, true, is_showing_candidates, mac),
+                ComposingKeyIntent::MoveCaret(CaretDirection::Right)
             );
         }
+        let option_left = KeyEventSnapshot::navigation(NavigationKey::LeftArrow, KeyModifiers::ALT);
+        assert_eq!(
+            classify_on(&option_left, false, false, mac),
+            ComposingKeyIntent::PassThrough,
+            "idle, the chord is the host's"
+        );
+        for modifiers in [
+            KeyModifiers::CONTROL,
+            KeyModifiers::ALT.with(KeyModifiers::SHIFT),
+            KeyModifiers::ALT.with(KeyModifiers::WIN),
+        ] {
+            let snapshot = KeyEventSnapshot::navigation(NavigationKey::LeftArrow, modifiers);
+            assert_eq!(
+                classify_on(&snapshot, true, true, mac),
+                ComposingKeyIntent::CommitThenPassThrough,
+                "{modifiers:?}"
+            );
+        }
+        assert_eq!(caret_chord_modifiers(mac), KeyModifiers::ALT);
+        assert_eq!(WIDTH_FLIP_MODIFIERS, KeyModifiers::CONTROL);
     }
 
     #[test]
@@ -615,34 +684,34 @@ mod tests {
         // telexKey, capital too; idle `v` passes through; idle `z` starts.
         let telex = telex_bindings();
         assert_eq!(
-            ComposingKeyIntent::intent(&text("v"), true, false, &telex),
+            ComposingKeyIntent::intent(&text("v"), true, false, &telex, PLATFORM),
             ComposingKeyIntent::TelexKey("v".into())
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&text("V"), true, false, &telex),
+            ComposingKeyIntent::intent(&text("V"), true, false, &telex, PLATFORM),
             ComposingKeyIntent::TelexKey("V".into())
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&text("f"), true, true, &telex),
+            ComposingKeyIntent::intent(&text("f"), true, true, &telex, PLATFORM),
             ComposingKeyIntent::TelexKey("f".into())
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&text("v"), false, false, &telex),
+            ComposingKeyIntent::intent(&text("v"), false, false, &telex, PLATFORM),
             ComposingKeyIntent::PassThrough,
             "a tone letter has nothing to mark when idle"
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&text("f"), false, false, &telex),
+            ComposingKeyIntent::intent(&text("f"), false, false, &telex, PLATFORM),
             ComposingKeyIntent::PassThrough
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&text("z"), false, false, &telex),
+            ComposingKeyIntent::intent(&text("z"), false, false, &telex, PLATFORM),
             ComposingKeyIntent::TelexKey("z".into()),
             "`z` types an initial, so it starts a composition"
         );
         // A letter neither scheme claims is still text.
         assert_eq!(
-            ComposingKeyIntent::intent(&text("t"), true, false, &telex),
+            ComposingKeyIntent::intent(&text("t"), true, false, &telex, PLATFORM),
             ComposingKeyIntent::Input("t".into())
         );
         // Under Standard the same keys are text (or slots, below).
@@ -656,33 +725,33 @@ mod tests {
     fn under_telex_the_digits_pick_and_the_bare_letters_do_not() {
         let telex = telex_bindings();
         assert_eq!(
-            ComposingKeyIntent::intent(&text("3"), true, true, &telex),
+            ComposingKeyIntent::intent(&text("3"), true, true, &telex, PLATFORM),
             ComposingKeyIntent::SelectCandidateSlot {
                 slot: 2,
                 flip: false
             }
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&text("3"), true, false, &telex),
+            ComposingKeyIntent::intent(&text("3"), true, false, &telex, PLATFORM),
             ComposingKeyIntent::CommitThenInsert("3".into()),
             "with no window a digit is punctuation: commit, then insert"
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&text("3"), false, false, &telex),
+            ComposingKeyIntent::intent(&text("3"), false, false, &telex, PLATFORM),
             ComposingKeyIntent::PassThrough
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&text("q"), true, true, &telex),
+            ComposingKeyIntent::intent(&text("q"), true, true, &telex, PLATFORM),
             ComposingKeyIntent::TelexKey("q".into()),
             "`q` is tone 9, not slot 0"
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&text(";"), true, true, &telex),
+            ComposingKeyIntent::intent(&text(";"), true, true, &telex, PLATFORM),
             ComposingKeyIntent::CommitThenInsert(";".into())
         );
         let control_three = KeyEventSnapshot::chord(Some("\u{1B}"), "3", KeyModifiers::CONTROL);
         assert_eq!(
-            ComposingKeyIntent::intent(&control_three, true, true, &telex),
+            ComposingKeyIntent::intent(&control_three, true, true, &telex, PLATFORM),
             ComposingKeyIntent::CommitThenPassThrough,
             "a chording modifier makes the digit miss"
         );
@@ -730,7 +799,7 @@ mod tests {
         let shift_two =
             KeyEventSnapshot::chord(Some("@"), "@", KeyModifiers::SHIFT).with_key_code(0x32);
         assert_eq!(
-            ComposingKeyIntent::intent(&shift_two, true, true, &telex),
+            ComposingKeyIntent::intent(&shift_two, true, true, &telex, PLATFORM),
             ComposingKeyIntent::SelectCandidateSlot {
                 slot: 1,
                 flip: true
@@ -741,7 +810,7 @@ mod tests {
             ComposingKeyIntent::CommitThenInsert("@".into())
         );
         assert_eq!(
-            ComposingKeyIntent::intent(&shift_w, true, true, &telex),
+            ComposingKeyIntent::intent(&shift_w, true, true, &telex, PLATFORM),
             ComposingKeyIntent::TelexKey("W".into())
         );
         // Shift beside a host chord is the host's, window or not.
@@ -846,12 +915,12 @@ mod tests {
             ("Page backward", "["),
         ] {
             assert_eq!(
-                ComposingKeyIntent::intent(&text(characters), true, false, &window_off),
+                ComposingKeyIntent::intent(&text(characters), true, false, &window_off, PLATFORM),
                 ComposingKeyIntent::Commit,
                 "{name} writes the romanization as typed when there is no window to act on"
             );
             assert_eq!(
-                ComposingKeyIntent::intent(&text(characters), false, false, &window_off),
+                ComposingKeyIntent::intent(&text(characters), false, false, &window_off, PLATFORM),
                 ComposingKeyIntent::PassThrough,
                 "{name} is the host's with no composition, window or not"
             );
@@ -971,7 +1040,7 @@ mod tests {
         let comma = KeyEventSnapshot::chord(None, ",", KeyModifiers::CONTROL);
 
         assert_eq!(
-            ComposingKeyIntent::intent(&comma, true, false, &recorded),
+            ComposingKeyIntent::intent(&comma, true, false, &recorded, PLATFORM),
             ComposingKeyIntent::Commit
         );
         assert_eq!(

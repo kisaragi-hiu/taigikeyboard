@@ -12,6 +12,12 @@
 //! shortcut recorder records, roadmap W5) and [`keyboard_hook`] (the
 //! thread-scoped `WH_KEYBOARD` the recorder listens through, W17-B1).
 
+/// Which desktop the TSF DLL and the settings window are — the one value every
+/// desktop-core rule that differs per desktop is handed
+/// (`docs/architecture/macos-desktop-core-roadmap.md` D6).
+pub const DESKTOP_PLATFORM: taigi_desktop_core::platform::DesktopPlatform =
+    taigi_desktop_core::platform::DesktopPlatform::Windows;
+
 /// What DirectWrite can say about a font file — wanted by the settings
 /// window (to validate an import) and by the DLL (to draw with it).
 pub mod font_file;

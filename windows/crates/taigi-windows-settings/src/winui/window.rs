@@ -31,6 +31,7 @@ use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::{LiveSettings, SettingsWriter, IDLE_REFRESH_INTERVAL};
 use taigi_desktop_update::checker;
 use taigi_windows_platform::keyboard_hook::{Delivery, KeyboardHook};
+use taigi_windows_platform::DESKTOP_PLATFORM;
 use windows_reactor::*;
 
 /// A pane's form, over the window's state. Stateless presentation — the
@@ -326,11 +327,11 @@ impl SettingsWindow {
         let Some(target) = self.recorder.target else {
             return;
         };
-        match evaluate_press(target.tier(), press) {
+        match evaluate_press(target.tier(), press, DESKTOP_PLATFORM) {
             RecorderOutcome::Recorded(chord) => {
                 self.stop_recording();
                 self.settings
-                    .update(|document| target.store(document, Some(&chord)));
+                    .update(|document| target.store(document, Some(&chord), DESKTOP_PLATFORM));
             }
             RecorderOutcome::Refused(reason) => {
                 self.recorder.rejection = Some(reason);
@@ -631,7 +632,7 @@ impl Component for SettingsWindow {
             }
             Message::ClearShortcut(target) => self
                 .settings
-                .update(|document| target.store(document, None)),
+                .update(|document| target.store(document, None, DESKTOP_PLATFORM)),
             Message::CheckForUpdates => self.updates.check_manually(&mut self.settings),
             Message::ActOnOffer => {
                 let Some(manifest) = checker::pending_update(self.document(), INSTALLED_VERSION)

@@ -3,6 +3,7 @@
 
 use super::intent::ComposingKeyIntent;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
+use crate::platform::DesktopPlatform;
 
 /// A key plus its modifiers, as a composing action can be bound to it.
 ///
@@ -10,14 +11,19 @@ use super::snapshot::{KeyEventSnapshot, KeyModifiers};
 /// as a key code: a layout that puts `[` somewhere else should bind the key
 /// that actually types `[`.
 ///
+/// The grammar is per desktop ([`DesktopPlatform`]): which keys are
+/// reserved, how a key is case-folded, the modifier letters of a stored
+/// value and how a chord reads on screen. Every function that builds, reads,
+/// stores or draws a chord takes the platform, so the four agree.
+///
 /// Constructing one is where the typing keys are defended: [`Self::make`]
 /// refuses any chord that would take away a key the user composes with, so a
 /// corrupt settings value cannot produce a binding that swallows the letters
 /// of a syllable — the classifier never has to re-check.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ComposingKeyChord {
-    /// What the key types with no modifiers held, ASCII-lowercased so
-    /// `Shift+[` and `[` cannot be recorded as two chords on one key.
+    /// What the key types with no modifiers held, lowercased (`normalized`)
+    /// so `Shift+[` and `[` cannot be recorded as two chords on one key.
     pub key: String,
     pub modifiers: KeyModifiers,
 }
@@ -61,23 +67,44 @@ pub(crate) const NUMBER_ROW_KEY_CODES: [u16; 9] =
 /// `ComposingKeyChord.swift` `semicolonKeyCode`.
 pub(crate) const SEMICOLON_KEY_CODE: u16 = 0xBA;
 
-/// The AppKit private-use range the Mac spells its arrow keys in. Refused
-/// defensively — a raw value naming one of those scalars is a reserved key
-/// here too — even though chord raw values are NOT portable between the
-/// desktops (see `raw_value`).
+/// The AppKit private-use range the Mac spells its arrow and function keys
+/// in. Windows and Linux reserve all of it: the Windows recorder spells
+/// every key that types nothing — the arrows, Insert, Home, End, the paging
+/// keys, F1–F24 — as one of these scalars so it is refused as reserved
+/// (`taigi-windows-platform` `key_translation::named_key_scalar`).
 const FUNCTION_KEY_RANGE: std::ops::RangeInclusive<u32> = 0xF700..=0xF8FF;
+
+/// What the Mac reserves, as whole keys: the six navigation keys (←, →, ↑,
+/// ↓, Page Up, Page Down), Backspace, Delete and Escape. Every other
+/// function key binds — ⌃Home is a chord there
+/// (`ComposingKeyChord.swift:34-53`).
+const MAC_NEVER_BINDABLE: [&str; 9] = [
+    "\u{F702}",
+    "\u{F703}",
+    "\u{F700}",
+    "\u{F701}",
+    "\u{F72C}",
+    "\u{F72D}",
+    EDITING_KEYS[0],
+    EDITING_KEYS[1],
+    EDITING_KEYS[2],
+];
+
+/// Backspace, Delete and Escape — reserved on every desktop.
+const EDITING_KEYS: [&str; 3] = ["\u{8}", "\u{7F}", "\u{1B}"];
 
 impl ComposingKeyChord {
     /// The chord `key` and `modifiers` name, or why it cannot be one.
     pub fn make(
         raw_key: Option<&str>,
         raw_modifiers: KeyModifiers,
+        platform: DesktopPlatform,
     ) -> Result<Self, ChordRejection> {
         let raw_key = raw_key
             .filter(|key| !key.is_empty())
             .ok_or(ChordRejection::NoKey)?;
-        let key = Self::normalized(raw_key);
-        if Self::is_never_bindable(&key) {
+        let key = Self::normalized(raw_key, platform);
+        if Self::is_never_bindable(&key, platform) {
             return Err(ChordRejection::ReservedKey);
         }
         // Only the four chording modifiers are part of a chord; the snapshot
@@ -102,11 +129,15 @@ impl ComposingKeyChord {
     /// which is handed the unmodified `3`) refusing the same press. Every
     /// other shifted key records as the character it types, which is what its
     /// stored chords already hold. Mirrors `ComposingKeyChord.make(_:)`.
-    pub fn make_from_event(event: &KeyEventSnapshot) -> Result<Self, ChordRejection> {
+    pub fn make_from_event(
+        event: &KeyEventSnapshot,
+        platform: DesktopPlatform,
+    ) -> Result<Self, ChordRejection> {
         Self::make_from_press(
             event.unmodified_characters(),
             event.modifiers,
             event.key_code,
+            platform,
         )
     }
 
@@ -117,6 +148,7 @@ impl ComposingKeyChord {
         key: Option<&str>,
         modifiers: KeyModifiers,
         key_code: Option<u16>,
+        platform: DesktopPlatform,
     ) -> Result<Self, ChordRejection> {
         if modifiers == KeyModifiers::SHIFT
             && key_code.is_some_and(|code| {
@@ -125,39 +157,52 @@ impl ComposingKeyChord {
         {
             return Err(ChordRejection::TypesRomanization);
         }
-        Self::make(key, modifiers)
+        Self::make(key, modifiers, platform)
     }
 
     /// Whether `event` is this chord. Compared on the unmodified characters
     /// for the same reason they are stored: Control rewrites the digits it is
     /// held with, and Alt rewrites much of the keyboard.
-    pub fn matches(&self, event: &KeyEventSnapshot) -> bool {
+    pub fn matches(&self, event: &KeyEventSnapshot, platform: DesktopPlatform) -> bool {
         let Some(characters) = event.unmodified_characters() else {
             return false;
         };
-        Self::normalized(characters) == self.key && event.modifiers == self.modifiers
+        Self::normalized(characters, platform) == self.key && event.modifiers == self.modifiers
     }
 
-    /// The form a key is stored and compared in: ASCII lowercased; the keypad
-    /// Enter (`\u{3}`) and the back tab (`\u{19}`) folded onto Return and Tab
-    /// — the Mac's spellings, kept so the two chord grammars stay one grammar
-    /// even though a shell here never produces either.
-    fn normalized(key: &str) -> String {
+    /// The form a key is stored and compared in: lowercased — ASCII only on
+    /// Windows and Linux, the whole of Unicode on the Mac (Swift
+    /// `lowercased()`, `ComposingKeyChord.swift:176`), so ⌃⇧Ñ stores `ñ`
+    /// there and `Ñ` here; the keypad Enter (`\u{3}`) and the back tab
+    /// (`\u{19}`) folded onto Return and Tab — the Mac's spellings, folded on
+    /// every desktop even though the Windows and Linux shells never produce
+    /// either.
+    fn normalized(key: &str, platform: DesktopPlatform) -> String {
         match key {
             "\u{3}" => "\r".to_owned(),
             "\u{19}" => "\t".to_owned(),
-            other => other.to_ascii_lowercase(),
+            other => match platform {
+                DesktopPlatform::Windows | DesktopPlatform::Linux => other.to_ascii_lowercase(),
+                DesktopPlatform::MacOS => other.to_lowercase(),
+            },
         }
     }
 
-    /// Backspace, Delete, Escape, and the arrow / paging keys (which the Mac
-    /// spells as private-use scalars).
-    fn is_never_bindable(key: &str) -> bool {
-        matches!(key, "\u{8}" | "\u{7F}" | "\u{1B}")
-            || key
-                .chars()
-                .next()
-                .is_some_and(|c| FUNCTION_KEY_RANGE.contains(&(c as u32)))
+    /// Backspace, Delete, Escape and the navigation keys, whatever modifiers
+    /// are held: on Windows and Linux any key starting with a private-use
+    /// function-key scalar ([`FUNCTION_KEY_RANGE`]), on the Mac exactly
+    /// [`MAC_NEVER_BINDABLE`].
+    fn is_never_bindable(key: &str, platform: DesktopPlatform) -> bool {
+        match platform {
+            DesktopPlatform::Windows | DesktopPlatform::Linux => {
+                EDITING_KEYS.contains(&key)
+                    || key
+                        .chars()
+                        .next()
+                        .is_some_and(|c| FUNCTION_KEY_RANGE.contains(&(c as u32)))
+            }
+            DesktopPlatform::MacOS => MAC_NEVER_BINDABLE.contains(&key),
+        }
     }
 
     /// The keys a composition is typed or picked with, under either tone
@@ -171,6 +216,11 @@ impl ComposingKeyChord {
     /// user switches — which is also what lets `ComposingKeyBindings` skip
     /// any pass against the slot tier. Asked of the normalized key, so the
     /// case fold is `normalized`'s.
+    ///
+    /// Read off the first SCALAR; Swift reads the first grapheme, so on the
+    /// Mac a letter carrying a combining mark (`İ` folds to `i̇`) is a typing
+    /// key here and not there — E6 in `macos-desktop-core-roadmap.md`,
+    /// characterised in P5.
     /// CROSS-PLATFORM INVARIANT — mirrors `ComposingKeyChord.swift` `isTypingKey`.
     fn is_typing_key(character: char) -> bool {
         character.is_ascii_alphabetic()
@@ -179,32 +229,27 @@ impl ComposingKeyChord {
             || character == ';'
     }
 
-    /// `"<modifiers>|<scalars>"` — modifier letters in a fixed order (`w`
-    /// win, `c` control, `a` alt, `s` shift), then the key's scalars in hex.
-    /// Hex rather than the character: most bound keys are control characters,
+    /// `"<modifiers>|<scalars>"` — modifier letters in a fixed order
+    /// ([`Self::modifier_letters`]), then the key's scalars in hex. Hex
+    /// rather than the character: most bound keys are control characters,
     /// and a settings file holding a raw `\r` is one editor away from
     /// unreadable.
     ///
-    /// NAMED DIVERGENCE: the macOS letters are `d` command / `c` control / `o`
-    /// option / `s` shift. A chord raw value is platform-LOCAL — the modifiers
-    /// it names exist on one keyboard — so neither platform parses the
-    /// other's, and a future settings transfer must map `d↔w`, `o↔a` itself
+    /// A raw value is platform-LOCAL — the modifiers it names exist on one
+    /// keyboard — so a future settings transfer must map `d↔w`, `o↔a` itself
     /// (or, more honestly, carry only the setting names and let each platform
     /// keep its own chords).
-    pub fn raw_value(&self) -> String {
-        let mut letters = String::new();
-        if self.modifiers.win {
-            letters.push('w');
-        }
-        if self.modifiers.control {
-            letters.push('c');
-        }
-        if self.modifiers.alt {
-            letters.push('a');
-        }
-        if self.modifiers.shift {
-            letters.push('s');
-        }
+    pub fn raw_value(&self, platform: DesktopPlatform) -> String {
+        let [win, control, alt, shift] = Self::modifier_letters(platform);
+        let letters: String = [
+            (self.modifiers.win, win),
+            (self.modifiers.control, control),
+            (self.modifiers.alt, alt),
+            (self.modifiers.shift, shift),
+        ]
+        .into_iter()
+        .filter_map(|(held, letter)| held.then_some(letter))
+        .collect();
         let scalars = self
             .key
             .chars()
@@ -218,13 +263,13 @@ impl ComposingKeyChord {
     /// a hand-edited value cannot install a binding that swallows the letters
     /// of a syllable.
     ///
-    /// NOT the recorder's whole gate: the tier rules — `global_rejection`
-    /// and the composing tier's Ctrl+Alt refusal — live in `evaluate_press`,
+    /// NOT the recorder's whole gate: the global tier's rules
+    /// (`global_rejection`) live in `evaluate_press`,
     /// which a value read from `settings.json` does not pass through. A
     /// hand-edited file can therefore hold a chord the recorder would have
     /// refused; only the UI is gated.
-    pub fn from_raw(raw: &str) -> Option<Self> {
-        Self::translate_raw(raw).and_then(Result::ok)
+    pub fn from_raw(raw: &str, platform: DesktopPlatform) -> Option<Self> {
+        Self::translate_raw(raw, platform).and_then(Result::ok)
     }
 
     /// [`Self::from_raw`] with the gate's refusal kept: `None` for a value
@@ -234,15 +279,23 @@ impl ComposingKeyChord {
     /// the recorder would refuse today and the preserved key would still be
     /// dispatched first (`ShortcutActions.swift` `translation(of:)`). Kept to
     /// the key contract: `ShortcutAction::translation_in` is its only caller.
-    pub(super) fn translate_raw(raw: &str) -> Option<Result<Self, ChordRejection>> {
+    ///
+    /// Swift skips an empty hex field (`c|0041,,0042`) where this refuses the
+    /// whole value — E7 in `macos-desktop-core-roadmap.md`, characterised in
+    /// P5.
+    pub(super) fn translate_raw(
+        raw: &str,
+        platform: DesktopPlatform,
+    ) -> Option<Result<Self, ChordRejection>> {
         let (letters, scalars) = raw.split_once('|')?;
+        let [win, control, alt, shift] = Self::modifier_letters(platform);
         let mut modifiers = KeyModifiers::NONE;
         for letter in letters.chars() {
             match letter {
-                'w' => modifiers.win = true,
-                'c' => modifiers.control = true,
-                'a' => modifiers.alt = true,
-                's' => modifiers.shift = true,
+                _ if letter == win => modifiers.win = true,
+                _ if letter == control => modifiers.control = true,
+                _ if letter == alt => modifiers.alt = true,
+                _ if letter == shift => modifiers.shift = true,
                 _ => return None,
             }
         }
@@ -251,38 +304,79 @@ impl ComposingKeyChord {
             let value = u32::from_str_radix(field, 16).ok()?;
             key.push(char::from_u32(value)?);
         }
-        Some(Self::make(Some(&key), modifiers))
+        Some(Self::make(Some(&key), modifiers, platform))
+    }
+
+    /// The letters a raw value spells `win`, `control`, `alt`, `shift` with,
+    /// in that order: `w c a s` on Windows and Linux, the Mac's `d` command /
+    /// `c` control / `o` option / `s` shift (`ComposingKeyChord.swift:208-240`).
+    fn modifier_letters(platform: DesktopPlatform) -> [char; 4] {
+        match platform {
+            DesktopPlatform::Windows | DesktopPlatform::Linux => ['w', 'c', 'a', 's'],
+            DesktopPlatform::MacOS => ['d', 'c', 'o', 's'],
+        }
     }
 
     /// The modifier names a chord label leads with, in the order the system
-    /// prints them: `Win`, `Ctrl`, `Alt`, `Shift`.
-    pub fn modifier_labels(modifiers: KeyModifiers) -> impl Iterator<Item = String> {
-        [
-            (modifiers.win, "Win"),
-            (modifiers.control, "Ctrl"),
-            (modifiers.alt, "Alt"),
-            (modifiers.shift, "Shift"),
-        ]
-        .into_iter()
-        .filter(|(held, _)| *held)
-        .map(|(_, name)| name.to_owned())
+    /// prints them: `Win`, `Ctrl`, `Alt`, `Shift` on Windows and Linux; the
+    /// Mac's `⌃⌥⇧⌘` (KeyboardShortcuts `ks_symbolicRepresentation`, which
+    /// `ShortcutKeyDisplay` draws with).
+    fn modifier_labels(
+        modifiers: KeyModifiers,
+        platform: DesktopPlatform,
+    ) -> impl Iterator<Item = String> {
+        let labels = match platform {
+            DesktopPlatform::Windows | DesktopPlatform::Linux => [
+                (modifiers.win, "Win"),
+                (modifiers.control, "Ctrl"),
+                (modifiers.alt, "Alt"),
+                (modifiers.shift, "Shift"),
+            ],
+            DesktopPlatform::MacOS => [
+                (modifiers.control, "⌃"),
+                (modifiers.alt, "⌥"),
+                (modifiers.shift, "⇧"),
+                (modifiers.win, "⌘"),
+            ],
+        };
+        labels
+            .into_iter()
+            .filter(|(held, _)| *held)
+            .map(|(_, name)| name.to_owned())
     }
 
-    /// The chord as a keycap label: `Shift+Enter`, `Ctrl+]`, `Space`.
-    pub fn display(&self) -> String {
-        let mut parts: Vec<String> = Self::modifier_labels(self.modifiers).collect();
+    /// What joins a label's modifiers and key: `Ctrl+]` on Windows and Linux,
+    /// `⌃]` on the Mac.
+    fn label_separator(platform: DesktopPlatform) -> &'static str {
+        match platform {
+            DesktopPlatform::Windows | DesktopPlatform::Linux => "+",
+            DesktopPlatform::MacOS => "",
+        }
+    }
+
+    /// The chord as a keycap label: `Shift+Enter`, `Ctrl+]`, `Space` on
+    /// Windows and Linux; `⇧↩`, `⌃]`, `Space` on the Mac
+    /// (`ShortcutKeyDisplay.text(for:)`).
+    pub fn display(&self, platform: DesktopPlatform) -> String {
+        let is_mac = platform == DesktopPlatform::MacOS;
         // A chord WITH modifiers keeps the uppercase keycap legend (`Ctrl+J`);
         // a bare key shows the character it types — an uppercase `Z` on a
         // modifier-less row reads as Shift+Z, a key the row does not hold
         // (USER 2026-08-22; `ShortcutKeyDisplay` in `ShortcutKeyRecorder.swift`).
-        parts.push(match self.key.as_str() {
+        let keycap = match self.key.as_str() {
+            " " => "Space".to_owned(),
+            "\r" if is_mac => "↩".to_owned(),
+            "\t" if is_mac => "⇥".to_owned(),
             "\r" => "Enter".to_owned(),
             "\t" => "Tab".to_owned(),
-            " " => "Space".to_owned(),
             other if self.modifiers.is_empty() => other.to_owned(),
+            other if is_mac => other.to_uppercase(),
             other => other.to_ascii_uppercase(),
-        });
-        parts.join("+")
+        };
+        Self::modifier_labels(self.modifiers, platform)
+            .chain([keycap])
+            .collect::<Vec<_>>()
+            .join(Self::label_separator(platform))
     }
 }
 
@@ -291,247 +385,466 @@ mod tests {
     use super::*;
     use crate::keys::CandidateSlotKeySet;
 
-    fn chord(key: &str, modifiers: KeyModifiers) -> ComposingKeyChord {
-        ComposingKeyChord::make(Some(key), modifiers).expect("bindable")
+    use crate::platform::test_support::WINDOWS_AND_LINUX;
+
+    const ALL_MODIFIERS: KeyModifiers = KeyModifiers::WIN
+        .with(KeyModifiers::CONTROL)
+        .with(KeyModifiers::ALT)
+        .with(KeyModifiers::SHIFT);
+    const MAC: DesktopPlatform = DesktopPlatform::MacOS;
+
+    fn chord_on(
+        key: &str,
+        modifiers: KeyModifiers,
+        platform: DesktopPlatform,
+    ) -> ComposingKeyChord {
+        ComposingKeyChord::make(Some(key), modifiers, platform).expect("bindable")
     }
 
     #[test]
     fn typing_keys_cannot_be_recorded_bare() {
-        // trace: ComposingKeyBindingsTests.swift — every ASCII letter (both
-        // schemes' keys), a capital, the digits, the hyphen and `;`.
-        for key in ('a'..='z')
-            .map(String::from)
-            .chain(["A", "V", "5", "0", "-", ";"].map(String::from))
-        {
-            assert_eq!(
-                ComposingKeyChord::make(Some(&key), KeyModifiers::NONE),
-                Err(ChordRejection::TypesRomanization),
-                "{key}"
-            );
-        }
-        // The Telex keys and the bare slot row are typing keys under one
-        // rule, so a chord recorded under either scheme stays live.
-        for key in crate::keys::ToneInputScheme::TELEX_KEYS
-            .chars()
-            .map(String::from)
-            .chain(CandidateSlotKeySet::BARE_KEY_ROW.map(String::from))
-        {
-            assert_eq!(
-                ComposingKeyChord::make(Some(&key), KeyModifiers::NONE),
-                Err(ChordRejection::TypesRomanization),
-                "{key}"
-            );
+        for platform in WINDOWS_AND_LINUX {
+            // trace: ComposingKeyBindingsTests.swift — every ASCII letter (both
+            // schemes' keys), a capital, the digits, the hyphen and `;`.
+            for key in ('a'..='z')
+                .map(String::from)
+                .chain(["A", "V", "5", "0", "-", ";"].map(String::from))
+            {
+                assert_eq!(
+                    ComposingKeyChord::make(Some(&key), KeyModifiers::NONE, platform),
+                    Err(ChordRejection::TypesRomanization),
+                    "{key}"
+                );
+            }
+            // The Telex keys and the bare slot row are typing keys under one
+            // rule, so a chord recorded under either scheme stays live.
+            for key in crate::keys::ToneInputScheme::TELEX_KEYS
+                .chars()
+                .map(String::from)
+                .chain(CandidateSlotKeySet::BARE_KEY_ROW.map(String::from))
+            {
+                assert_eq!(
+                    ComposingKeyChord::make(Some(&key), KeyModifiers::NONE, platform),
+                    Err(ChordRejection::TypesRomanization),
+                    "{key}"
+                );
+            }
         }
     }
 
     #[test]
     fn punctuation_can_be_recorded_bare_and_capitals_fold() {
-        for key in [",", ".", "'", "/", "[", "]", "`"] {
-            let chord = chord(key, KeyModifiers::NONE);
-            assert_eq!(chord.key, key);
-        }
-        let shifted = chord("Z", KeyModifiers::CONTROL);
-        assert_eq!(shifted.key, "z");
-        assert_eq!(shifted.modifiers, KeyModifiers::CONTROL);
-        assert_eq!(
-            ComposingKeyChord::make(Some("Z"), KeyModifiers::SHIFT),
-            Err(ChordRejection::TypesRomanization),
-            "Shift alone does not make a chord out of a letter"
-        );
-    }
-
-    #[test]
-    fn bare_key_and_its_shifted_twin_do_not_cross_match() {
-        let bare = chord("[", KeyModifiers::NONE);
-        let shifted = chord("{", KeyModifiers::SHIFT);
-        let bare_event = KeyEventSnapshot::text("[", KeyModifiers::NONE);
-        let shifted_event = KeyEventSnapshot::chord(Some("{"), "{", KeyModifiers::SHIFT);
-        assert!(bare.matches(&bare_event));
-        assert!(!bare.matches(&shifted_event));
-        assert!(shifted.matches(&shifted_event));
-        assert!(!shifted.matches(&bare_event));
-    }
-
-    #[test]
-    fn typing_keys_bind_with_a_host_modifier_but_not_shift_alone() {
-        for key in ["a", "v", "z", "3", ";"] {
-            for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT, KeyModifiers::WIN] {
-                assert!(
-                    ComposingKeyChord::make(Some(key), modifiers).is_ok(),
-                    "{key} {modifiers:?}"
-                );
+        for platform in WINDOWS_AND_LINUX {
+            for key in [",", ".", "'", "/", "[", "]", "`"] {
+                let chord = chord_on(key, KeyModifiers::NONE, platform);
+                assert_eq!(chord.key, key);
             }
+            let shifted = chord_on("Z", KeyModifiers::CONTROL, platform);
+            assert_eq!(shifted.key, "z");
+            assert_eq!(shifted.modifiers, KeyModifiers::CONTROL);
             assert_eq!(
-                ComposingKeyChord::make(Some(key), KeyModifiers::SHIFT),
+                ComposingKeyChord::make(Some("Z"), KeyModifiers::SHIFT, platform),
                 Err(ChordRejection::TypesRomanization),
-                "{key}"
+                "Shift alone does not make a chord out of a letter"
             );
         }
     }
 
     #[test]
-    fn reserved_keys_cannot_be_recorded_at_all() {
-        for key in ["\u{1B}", "\u{8}", "\u{7F}", "\u{F702}"] {
-            for modifiers in [
-                KeyModifiers::NONE,
-                KeyModifiers::CONTROL,
-                KeyModifiers::WIN.with(KeyModifiers::SHIFT),
-            ] {
+    fn bare_key_and_its_shifted_twin_do_not_cross_match() {
+        for platform in WINDOWS_AND_LINUX {
+            let bare = chord_on("[", KeyModifiers::NONE, platform);
+            let shifted = chord_on("{", KeyModifiers::SHIFT, platform);
+            let bare_event = KeyEventSnapshot::text("[", KeyModifiers::NONE);
+            let shifted_event = KeyEventSnapshot::chord(Some("{"), "{", KeyModifiers::SHIFT);
+            assert!(bare.matches(&bare_event, platform));
+            assert!(!bare.matches(&shifted_event, platform));
+            assert!(shifted.matches(&shifted_event, platform));
+            assert!(!shifted.matches(&bare_event, platform));
+        }
+    }
+
+    #[test]
+    fn typing_keys_bind_with_a_host_modifier_but_not_shift_alone() {
+        for platform in WINDOWS_AND_LINUX {
+            for key in ["a", "v", "z", "3", ";"] {
+                for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT, KeyModifiers::WIN] {
+                    assert!(
+                        ComposingKeyChord::make(Some(key), modifiers, platform).is_ok(),
+                        "{key} {modifiers:?}"
+                    );
+                }
                 assert_eq!(
-                    ComposingKeyChord::make(Some(key), modifiers),
+                    ComposingKeyChord::make(Some(key), KeyModifiers::SHIFT, platform),
+                    Err(ChordRejection::TypesRomanization),
+                    "{key}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn reserved_keys_cannot_be_recorded_at_all() {
+        for platform in WINDOWS_AND_LINUX {
+            for key in ["\u{1B}", "\u{8}", "\u{7F}", "\u{F702}"] {
+                for modifiers in [
+                    KeyModifiers::NONE,
+                    KeyModifiers::CONTROL,
+                    KeyModifiers::WIN.with(KeyModifiers::SHIFT),
+                ] {
+                    assert_eq!(
+                        ComposingKeyChord::make(Some(key), modifiers, platform),
+                        Err(ChordRejection::ReservedKey),
+                        "{key:?}"
+                    );
+                }
+            }
+            assert_eq!(
+                ComposingKeyChord::make(None, KeyModifiers::NONE, platform),
+                Err(ChordRejection::NoKey)
+            );
+            assert_eq!(
+                ComposingKeyChord::make(Some(""), KeyModifiers::NONE, platform),
+                Err(ChordRejection::NoKey)
+            );
+        }
+    }
+
+    #[test]
+    fn raw_values_round_trip_and_stay_stable() {
+        for platform in WINDOWS_AND_LINUX {
+            // trace: ComposingKeyBindingsTests.swift:163-172 — same shape, Windows
+            // modifier letters (w/c/a/s).
+            for (key, modifiers) in [
+                (" ", KeyModifiers::NONE),
+                ("\r", KeyModifiers::SHIFT),
+                ("[", KeyModifiers::NONE),
+                ("z", KeyModifiers::CONTROL),
+                ("]", ALL_MODIFIERS),
+            ] {
+                let chord = chord_on(key, modifiers, platform);
+                assert_eq!(
+                    ComposingKeyChord::from_raw(&chord.raw_value(platform), platform),
+                    Some(chord)
+                );
+            }
+            assert_eq!(
+                chord_on(" ", KeyModifiers::NONE, platform).raw_value(platform),
+                "|0020"
+            );
+            assert_eq!(
+                chord_on("\r", KeyModifiers::SHIFT, platform).raw_value(platform),
+                "s|000D"
+            );
+            assert_eq!(
+                chord_on("]", KeyModifiers::CONTROL.with(KeyModifiers::ALT), platform)
+                    .raw_value(platform),
+                "ca|005D"
+            );
+        }
+    }
+
+    #[test]
+    fn raw_values_that_would_take_a_typing_key_do_not_parse() {
+        for platform in WINDOWS_AND_LINUX {
+            assert_eq!(
+                ComposingKeyChord::from_raw("|0061", platform),
+                None,
+                "bare a"
+            );
+            assert_eq!(
+                ComposingKeyChord::from_raw("|007A", platform),
+                None,
+                "bare z"
+            );
+            assert_eq!(
+                ComposingKeyChord::from_raw("s|0035", platform),
+                None,
+                "Shift+5"
+            );
+            assert_eq!(
+                ComposingKeyChord::from_raw("c|F702", platform),
+                None,
+                "Ctrl+← is still an arrow"
+            );
+            assert_eq!(ComposingKeyChord::from_raw("garbage", platform), None);
+            assert_eq!(
+                ComposingKeyChord::from_raw("x|0020", platform),
+                None,
+                "unknown modifier letter"
+            );
+            // The launch pass reads the refusal apart from a value the grammar
+            // cannot read.
+            assert_eq!(
+                ComposingKeyChord::translate_raw("|007A", platform),
+                Some(Err(ChordRejection::TypesRomanization))
+            );
+            assert_eq!(
+                ComposingKeyChord::translate_raw("s|0033", platform),
+                Some(Err(ChordRejection::TypesRomanization)),
+                "Shift+3 stored as the 3 it is"
+            );
+            assert_eq!(ComposingKeyChord::translate_raw("garbage", platform), None);
+            assert_eq!(
+                ComposingKeyChord::translate_raw("c|007A", platform),
+                Some(Ok(chord_on("z", KeyModifiers::CONTROL, platform)))
+            );
+        }
+    }
+
+    #[test]
+    fn shifted_number_row_key_is_refused_from_an_event_and_from_the_raw_digit() {
+        for platform in WINDOWS_AND_LINUX {
+            // The key-code path: Shift+3 types `#`, so the characters alone would
+            // slip past the digit rule — `make_from_event` reads the row.
+            let shift_three =
+                KeyEventSnapshot::chord(Some("#"), "#", KeyModifiers::SHIFT).with_key_code(0x33);
+            assert_eq!(
+                ComposingKeyChord::make_from_event(&shift_three, platform),
+                Err(ChordRejection::TypesRomanization)
+            );
+            // The raw path, handed the unmodified `3` with Shift held.
+            assert_eq!(
+                ComposingKeyChord::make(Some("3"), KeyModifiers::SHIFT, platform),
+                Err(ChordRejection::TypesRomanization)
+            );
+            let keypad_three = KeyEventSnapshot::chord(Some("3"), "3", KeyModifiers::SHIFT);
+            assert_eq!(
+                ComposingKeyChord::make_from_event(&keypad_three, platform),
+                Err(ChordRejection::TypesRomanization)
+            );
+            // A `#` reached without the number row (a layout with a `#` key)
+            // still records as `#`.
+            let hash_key = KeyEventSnapshot::chord(Some("#"), "#", KeyModifiers::SHIFT);
+            assert_eq!(
+                ComposingKeyChord::make_from_event(&hash_key, platform),
+                Ok(chord_on("#", KeyModifiers::SHIFT, platform))
+            );
+            // Shift plus a host modifier on the number row is an ordinary chord.
+            let ctrl_shift_three = KeyEventSnapshot::chord(
+                Some("#"),
+                "3",
+                KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
+            )
+            .with_key_code(0x33);
+            assert_eq!(
+                ComposingKeyChord::make_from_event(&ctrl_shift_three, platform),
+                Ok(chord_on(
+                    "3",
+                    KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
+                    platform
+                ))
+            );
+            let ctrl_three = KeyEventSnapshot::chord(Some("\u{1B}"), "3", KeyModifiers::CONTROL);
+            assert!(
+                ComposingKeyChord::make_from_event(&ctrl_three, platform).is_ok(),
+                "Ctrl+3 is an ordinary chord to record"
+            );
+            // Shift+`;` is the ninth slot key's Hanji/romanization chord, refused by its key
+            // code the same way; a `:` reached without that key still records.
+            let shift_semicolon = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT)
+                .with_key_code(SEMICOLON_KEY_CODE);
+            assert_eq!(
+                ComposingKeyChord::make_from_event(&shift_semicolon, platform),
+                Err(ChordRejection::TypesRomanization)
+            );
+            let colon_key = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT);
+            assert_eq!(
+                ComposingKeyChord::make_from_event(&colon_key, platform),
+                Ok(chord_on(":", KeyModifiers::SHIFT, platform))
+            );
+        }
+    }
+
+    #[test]
+    fn keypad_enter_matches_a_return_chord() {
+        for platform in WINDOWS_AND_LINUX {
+            let enter = chord_on("\r", KeyModifiers::NONE, platform);
+            assert!(
+                enter.matches(
+                    &KeyEventSnapshot::text("\u{3}", KeyModifiers::NONE),
+                    platform
+                ),
+                "keypad Enter is Return"
+            );
+            assert!(!enter.matches(&KeyEventSnapshot::text("\r", KeyModifiers::SHIFT), platform));
+        }
+    }
+
+    #[test]
+    fn keypad_enter_and_back_tab_fold_onto_their_key() {
+        for platform in WINDOWS_AND_LINUX {
+            assert_eq!(chord_on("\u{3}", KeyModifiers::NONE, platform).key, "\r");
+            assert_eq!(chord_on("\u{19}", KeyModifiers::SHIFT, platform).key, "\t");
+            assert_eq!(
+                chord_on("\r", KeyModifiers::SHIFT, platform).display(platform),
+                "Shift+Enter"
+            );
+            assert_eq!(
+                chord_on("]", KeyModifiers::CONTROL, platform).display(platform),
+                "Ctrl+]"
+            );
+            assert_eq!(
+                chord_on(" ", KeyModifiers::NONE, platform).display(platform),
+                "Space"
+            );
+            assert_eq!(
+                chord_on("[", KeyModifiers::NONE, platform).display(platform),
+                "["
+            );
+            assert_eq!(
+                chord_on("z", KeyModifiers::CONTROL, platform).display(platform),
+                "Ctrl+Z"
+            );
+        }
+    }
+
+    #[test]
+    fn windows_and_linux_reserve_the_whole_function_key_range_by_its_first_scalar() {
+        // trace: FUNCTION_KEY_RANGE = F700..=F8FF on the first scalar (K4) —
+        // the range's two ends, a key past each end, and a multi-scalar
+        // string that starts inside it.
+        for platform in WINDOWS_AND_LINUX {
+            for key in ["\u{F700}", "\u{F729}", "\u{F8FF}", "\u{F729}x"] {
+                assert_eq!(
+                    ComposingKeyChord::make(Some(key), KeyModifiers::CONTROL, platform),
+                    Err(ChordRejection::ReservedKey),
+                    "{key:?} {platform:?}"
+                );
+            }
+            for key in ["\u{F6FF}", "\u{F900}"] {
+                assert!(
+                    ComposingKeyChord::make(Some(key), KeyModifiers::CONTROL, platform).is_ok(),
+                    "{key:?} {platform:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn windows_and_linux_fold_ascii_only() {
+        // trace: `to_ascii_lowercase` leaves Ñ alone (K6); `to_ascii_uppercase`
+        // leaves ñ alone in the label.
+        for platform in WINDOWS_AND_LINUX {
+            assert_eq!(chord_on("Ñ", KeyModifiers::CONTROL, platform).key, "Ñ");
+            assert_eq!(
+                chord_on("ñ", KeyModifiers::CONTROL, platform).display(platform),
+                "Ctrl+ñ"
+            );
+            let event = KeyEventSnapshot::text("ñ", KeyModifiers::CONTROL);
+            assert!(!chord_on("Ñ", KeyModifiers::CONTROL, platform).matches(&event, platform));
+        }
+    }
+
+    #[test]
+    fn each_desktop_reads_only_its_own_modifier_letters() {
+        // trace: w/c/a/s on Windows and Linux, d/c/o/s on the Mac
+        // (`ComposingKeyChord.swift:208-240`); `c` and `s` are shared.
+        for platform in WINDOWS_AND_LINUX {
+            assert_eq!(ComposingKeyChord::from_raw("d|005D", platform), None);
+            assert_eq!(ComposingKeyChord::from_raw("o|005D", platform), None);
+        }
+        assert_eq!(ComposingKeyChord::from_raw("w|005D", MAC), None);
+        assert_eq!(ComposingKeyChord::from_raw("a|005D", MAC), None);
+        assert_eq!(
+            ComposingKeyChord::from_raw("cs|005D", MAC),
+            ComposingKeyChord::from_raw("cs|005D", DesktopPlatform::Windows),
+        );
+    }
+
+    #[test]
+    fn the_mac_spells_command_d_and_option_o() {
+        // trace: Swift rawValue — `d` command (win), `c` control, `o` option
+        // (alt), `s` shift, in that order, then `%04X` scalars joined by `,`.
+        assert_eq!(
+            chord_on("]", ALL_MODIFIERS, MAC).raw_value(MAC),
+            "dcos|005D"
+        );
+        assert_eq!(
+            chord_on("\r", KeyModifiers::ALT, MAC).raw_value(MAC),
+            "o|000D"
+        );
+        assert_eq!(
+            ComposingKeyChord::from_raw("o|000D", MAC),
+            Some(chord_on("\r", KeyModifiers::ALT, MAC)),
+            "the stored ⌥↩ of inventory K2"
+        );
+        for (key, modifiers) in [
+            (" ", KeyModifiers::NONE),
+            ("\r", KeyModifiers::SHIFT),
+            ("z", KeyModifiers::WIN),
+            ("]", ALL_MODIFIERS),
+        ] {
+            let chord = chord_on(key, modifiers, MAC);
+            assert_eq!(
+                ComposingKeyChord::from_raw(&chord.raw_value(MAC), MAC),
+                Some(chord)
+            );
+        }
+        assert_eq!(ComposingKeyChord::from_raw("|007A", MAC), None, "bare z");
+    }
+
+    #[test]
+    fn the_mac_reserves_nine_whole_keys_and_binds_every_other_function_key() {
+        // trace: Swift `neverBindable` = the six `fixedNavigationKeys`
+        // (F702 F703 F700 F701 F72C F72D) + Backspace, Delete, Escape —
+        // matched as whole strings, so ⌃Home (F729), F1 (F704) and a string
+        // that only starts with an arrow scalar bind
+        // (`CrossTierShortcutConflictTests.swift:113-127`).
+        for key in MAC_NEVER_BINDABLE {
+            for modifiers in [KeyModifiers::NONE, KeyModifiers::CONTROL] {
+                assert_eq!(
+                    ComposingKeyChord::make(Some(key), modifiers, MAC),
                     Err(ChordRejection::ReservedKey),
                     "{key:?}"
                 );
             }
         }
+        assert!(ComposingKeyChord::make(Some("\u{F729}"), KeyModifiers::CONTROL, MAC).is_ok());
+        assert!(ComposingKeyChord::make(Some("\u{F704}"), KeyModifiers::NONE, MAC).is_ok());
+        assert!(ComposingKeyChord::make(Some("\u{F702}x"), KeyModifiers::CONTROL, MAC).is_ok());
+    }
+
+    #[test]
+    fn the_mac_folds_the_whole_of_unicode() {
+        // trace: Swift `lowercased()` / `uppercased()` — ⌃⇧Ñ stores `ñ`
+        // (inventory K6), matches an `Ñ` event, and labels as `⌃Ñ`.
+        let chord = chord_on("Ñ", KeyModifiers::CONTROL, MAC);
+        assert_eq!(chord.key, "ñ");
+        assert!(chord.matches(&KeyEventSnapshot::text("Ñ", KeyModifiers::CONTROL), MAC));
+        assert_eq!(chord.display(MAC), "⌃Ñ");
+        assert_eq!(chord_on("\u{3}", KeyModifiers::NONE, MAC).key, "\r");
+        assert_eq!(chord_on("\u{19}", KeyModifiers::SHIFT, MAC).key, "\t");
         assert_eq!(
-            ComposingKeyChord::make(None, KeyModifiers::NONE),
-            Err(ChordRejection::NoKey)
-        );
-        assert_eq!(
-            ComposingKeyChord::make(Some(""), KeyModifiers::NONE),
-            Err(ChordRejection::NoKey)
+            ComposingKeyChord::make(Some("Z"), KeyModifiers::SHIFT, MAC),
+            Err(ChordRejection::TypesRomanization)
         );
     }
 
     #[test]
-    fn raw_values_round_trip_and_stay_stable() {
-        // trace: ComposingKeyBindingsTests.swift:163-172 — same shape, Windows
-        // modifier letters (w/c/a/s).
-        for (key, modifiers) in [
-            (" ", KeyModifiers::NONE),
-            ("\r", KeyModifiers::SHIFT),
-            ("[", KeyModifiers::NONE),
-            ("z", KeyModifiers::CONTROL),
-            (
-                "]",
-                KeyModifiers::WIN
-                    .with(KeyModifiers::CONTROL)
-                    .with(KeyModifiers::ALT)
-                    .with(KeyModifiers::SHIFT),
-            ),
-        ] {
-            let chord = chord(key, modifiers);
-            assert_eq!(ComposingKeyChord::from_raw(&chord.raw_value()), Some(chord));
+    fn the_mac_labels_in_glyphs_with_no_separator() {
+        // trace: ShortcutKeyDisplay.text(for:) = ks_symbolicRepresentation
+        // (⌃ ⌥ ⇧ ⌘, in that order) + keycap; Space / ↩ / ⇥ by name, a bare
+        // key as typed, uppercased under a modifier.
+        assert_eq!(chord_on("j", ALL_MODIFIERS, MAC).display(MAC), "⌃⌥⇧⌘J");
+        assert_eq!(chord_on("\r", KeyModifiers::SHIFT, MAC).display(MAC), "⇧↩");
+        assert_eq!(chord_on("\t", KeyModifiers::NONE, MAC).display(MAC), "⇥");
+        assert_eq!(chord_on(" ", KeyModifiers::NONE, MAC).display(MAC), "Space");
+        assert_eq!(chord_on("[", KeyModifiers::NONE, MAC).display(MAC), "[");
+        assert_eq!(chord_on("z", KeyModifiers::ALT, MAC).display(MAC), "⌥Z");
+    }
+
+    #[test]
+    fn windows_and_linux_label_every_modifier_by_name() {
+        for platform in WINDOWS_AND_LINUX {
+            assert_eq!(
+                chord_on("j", ALL_MODIFIERS, platform).display(platform),
+                "Win+Ctrl+Alt+Shift+J"
+            );
+            assert_eq!(
+                chord_on("\t", KeyModifiers::NONE, platform).display(platform),
+                "Tab"
+            );
         }
-        assert_eq!(chord(" ", KeyModifiers::NONE).raw_value(), "|0020");
-        assert_eq!(chord("\r", KeyModifiers::SHIFT).raw_value(), "s|000D");
-        assert_eq!(
-            chord("]", KeyModifiers::CONTROL.with(KeyModifiers::ALT)).raw_value(),
-            "ca|005D"
-        );
-    }
-
-    #[test]
-    fn raw_values_that_would_take_a_typing_key_do_not_parse() {
-        assert_eq!(ComposingKeyChord::from_raw("|0061"), None, "bare a");
-        assert_eq!(ComposingKeyChord::from_raw("|007A"), None, "bare z");
-        assert_eq!(ComposingKeyChord::from_raw("s|0035"), None, "Shift+5");
-        assert_eq!(
-            ComposingKeyChord::from_raw("c|F702"),
-            None,
-            "Ctrl+← is still an arrow"
-        );
-        assert_eq!(ComposingKeyChord::from_raw("garbage"), None);
-        assert_eq!(
-            ComposingKeyChord::from_raw("x|0020"),
-            None,
-            "unknown modifier letter"
-        );
-        // The launch pass reads the refusal apart from a value the grammar
-        // cannot read.
-        assert_eq!(
-            ComposingKeyChord::translate_raw("|007A"),
-            Some(Err(ChordRejection::TypesRomanization))
-        );
-        assert_eq!(
-            ComposingKeyChord::translate_raw("s|0033"),
-            Some(Err(ChordRejection::TypesRomanization)),
-            "Shift+3 stored as the 3 it is"
-        );
-        assert_eq!(ComposingKeyChord::translate_raw("garbage"), None);
-        assert_eq!(
-            ComposingKeyChord::translate_raw("c|007A"),
-            Some(Ok(chord("z", KeyModifiers::CONTROL)))
-        );
-    }
-
-    #[test]
-    fn shifted_number_row_key_is_refused_from_an_event_and_from_the_raw_digit() {
-        // The key-code path: Shift+3 types `#`, so the characters alone would
-        // slip past the digit rule — `make_from_event` reads the row.
-        let shift_three =
-            KeyEventSnapshot::chord(Some("#"), "#", KeyModifiers::SHIFT).with_key_code(0x33);
-        assert_eq!(
-            ComposingKeyChord::make_from_event(&shift_three),
-            Err(ChordRejection::TypesRomanization)
-        );
-        // The raw path, handed the unmodified `3` with Shift held.
-        assert_eq!(
-            ComposingKeyChord::make(Some("3"), KeyModifiers::SHIFT),
-            Err(ChordRejection::TypesRomanization)
-        );
-        let keypad_three = KeyEventSnapshot::chord(Some("3"), "3", KeyModifiers::SHIFT);
-        assert_eq!(
-            ComposingKeyChord::make_from_event(&keypad_three),
-            Err(ChordRejection::TypesRomanization)
-        );
-        // A `#` reached without the number row (a layout with a `#` key)
-        // still records as `#`.
-        let hash_key = KeyEventSnapshot::chord(Some("#"), "#", KeyModifiers::SHIFT);
-        assert_eq!(
-            ComposingKeyChord::make_from_event(&hash_key),
-            Ok(chord("#", KeyModifiers::SHIFT))
-        );
-        // Shift plus a host modifier on the number row is an ordinary chord.
-        let ctrl_shift_three = KeyEventSnapshot::chord(
-            Some("#"),
-            "3",
-            KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
-        )
-        .with_key_code(0x33);
-        assert_eq!(
-            ComposingKeyChord::make_from_event(&ctrl_shift_three),
-            Ok(chord("3", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT)))
-        );
-        let ctrl_three = KeyEventSnapshot::chord(Some("\u{1B}"), "3", KeyModifiers::CONTROL);
-        assert!(
-            ComposingKeyChord::make_from_event(&ctrl_three).is_ok(),
-            "Ctrl+3 is an ordinary chord to record"
-        );
-        // Shift+`;` is the ninth slot key's Hanji/romanization chord, refused by its key
-        // code the same way; a `:` reached without that key still records.
-        let shift_semicolon = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT)
-            .with_key_code(SEMICOLON_KEY_CODE);
-        assert_eq!(
-            ComposingKeyChord::make_from_event(&shift_semicolon),
-            Err(ChordRejection::TypesRomanization)
-        );
-        let colon_key = KeyEventSnapshot::chord(Some(":"), ":", KeyModifiers::SHIFT);
-        assert_eq!(
-            ComposingKeyChord::make_from_event(&colon_key),
-            Ok(chord(":", KeyModifiers::SHIFT))
-        );
-    }
-
-    #[test]
-    fn keypad_enter_matches_a_return_chord() {
-        let enter = chord("\r", KeyModifiers::NONE);
-        assert!(
-            enter.matches(&KeyEventSnapshot::text("\u{3}", KeyModifiers::NONE)),
-            "keypad Enter is Return"
-        );
-        assert!(!enter.matches(&KeyEventSnapshot::text("\r", KeyModifiers::SHIFT)));
-    }
-
-    #[test]
-    fn keypad_enter_and_back_tab_fold_onto_their_key() {
-        assert_eq!(chord("\u{3}", KeyModifiers::NONE).key, "\r");
-        assert_eq!(chord("\u{19}", KeyModifiers::SHIFT).key, "\t");
-        assert_eq!(chord("\r", KeyModifiers::SHIFT).display(), "Shift+Enter");
-        assert_eq!(chord("]", KeyModifiers::CONTROL).display(), "Ctrl+]");
-        assert_eq!(chord(" ", KeyModifiers::NONE).display(), "Space");
-        assert_eq!(chord("[", KeyModifiers::NONE).display(), "[");
-        assert_eq!(chord("z", KeyModifiers::CONTROL).display(), "Ctrl+Z");
     }
 }

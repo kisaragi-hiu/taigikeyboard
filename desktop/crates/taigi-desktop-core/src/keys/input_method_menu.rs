@@ -8,6 +8,7 @@
 //! the test below.
 
 use super::ShortcutAction;
+use crate::platform::DesktopPlatform;
 use crate::settings::SettingsDocument;
 use crate::strings::{StringKey, StringResolver};
 
@@ -77,7 +78,11 @@ pub struct MenuRow {
 }
 
 /// [`MENU`], resolved against the strings and the settings as they are now.
-pub fn menu_rows(strings: &StringResolver, settings: &SettingsDocument) -> Vec<Option<MenuRow>> {
+pub fn menu_rows(
+    strings: &StringResolver,
+    settings: &SettingsDocument,
+    platform: DesktopPlatform,
+) -> Vec<Option<MenuRow>> {
     MENU.iter()
         .map(|command| {
             command.map(|command| MenuRow {
@@ -85,8 +90,8 @@ pub fn menu_rows(strings: &StringResolver, settings: &SettingsDocument) -> Vec<O
                 title: strings.resolve(command.title_key()).to_owned(),
                 chord: command
                     .chord_action()
-                    .and_then(|action| action.chord_in(settings))
-                    .map(|chord| chord.display()),
+                    .and_then(|action| action.chord_in(settings, platform))
+                    .map(|chord| chord.display(platform)),
             })
         })
         .collect()
@@ -95,6 +100,7 @@ pub fn menu_rows(strings: &StringResolver, settings: &SettingsDocument) -> Vec<O
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::platform::test_support::TEST_PLATFORM as PLATFORM;
     use crate::strings::DisplayLanguage;
 
     #[test]
@@ -103,7 +109,7 @@ mod tests {
         // the authored Hanji, the default chords.
         let strings = StringResolver::new(DisplayLanguage::Hanji);
         let rows: Vec<Option<(String, Option<String>)>> =
-            menu_rows(&strings, &SettingsDocument::default())
+            menu_rows(&strings, &SettingsDocument::default(), PLATFORM)
                 .into_iter()
                 .map(|row| row.map(|row| (row.title, row.chord)))
                 .collect();
@@ -127,8 +133,8 @@ mod tests {
     fn a_cleared_chord_prints_the_title_alone() {
         let strings = StringResolver::new(DisplayLanguage::Hanji);
         let mut cleared = SettingsDocument::default();
-        ShortcutAction::OpenLastSettingsPane.store_in(&mut cleared, None);
-        let rows = menu_rows(&strings, &cleared);
+        ShortcutAction::OpenLastSettingsPane.store_in(&mut cleared, None, PLATFORM);
+        let rows = menu_rows(&strings, &cleared, PLATFORM);
         let settings = rows[3].as_ref().expect("the settings row");
         assert_eq!(settings.command, MenuCommand::OpenSettings);
         assert_eq!(settings.chord, None);

@@ -22,7 +22,7 @@ use taigi_desktop_core::settings::presentation::{pane_title, PageMessage};
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsDocument, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::{SettingsWriter, IDLE_REFRESH_INTERVAL};
-use taigi_linux_platform::{snapshot, RawKeyEvent};
+use taigi_linux_platform::{snapshot, RawKeyEvent, DESKTOP_PLATFORM};
 
 /// `SettingsPaneLayout` in `SettingsSplitView.swift`: sidebar 215 + detail 545.
 const SIDEBAR_WIDTH: f64 = 215.0;
@@ -215,7 +215,7 @@ impl SettingsWindow {
 
     /// A row's ×: the chord goes, the row shows None.
     pub fn clear_shortcut(self: &Rc<Self>, target: RecorderTarget) {
-        self.update(|document| target.store(document, None));
+        self.update(|document| target.store(document, None, DESKTOP_PLATFORM));
     }
 
     /// Every key reaches the recorder first, in the capture phase, while a
@@ -287,7 +287,7 @@ impl SettingsWindow {
         match recorded {
             Recorded::Store(target, chord) => {
                 *self.recording_field.borrow_mut() = None;
-                self.update(|document| target.store(document, Some(&chord)));
+                self.update(|document| target.store(document, Some(&chord), DESKTOP_PLATFORM));
             }
             Recorded::Nothing => self.refresh_pages(),
         }

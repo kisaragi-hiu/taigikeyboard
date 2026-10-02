@@ -16,6 +16,7 @@ use taigi_desktop_core::engine::{self, Effect};
 use taigi_desktop_core::keys::{
     CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot, KeyModifiers,
 };
+use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::{keys, SettingsDocument, StaticSettingsProvider};
 
 /// One lock, one lexicon install: the engine is one per process.
@@ -113,8 +114,11 @@ fn new_rig(is_auto_space_enabled: bool) -> Rig {
     settings.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
     let manager = ComposingManager::new(
         Arc::new(StaticSettingsProvider::new(settings.clone())),
-        Box::new(EngineNextWord),
+        Box::new(EngineNextWord {
+            platform: DesktopPlatform::Windows,
+        }),
         Box::new(SystemClock),
+        DesktopPlatform::Windows,
         fresh_generation(),
     );
     Rig {
