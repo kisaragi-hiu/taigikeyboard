@@ -45,7 +45,7 @@ python3 tools/release_notes.py check-versions --train desktop --version <target>
 ```
 
 That check is what proves `windows/Cargo.toml`, `desktop/Cargo.toml`,
-`linux/Cargo.toml` and both macOS plist keys carry the same number, so a
+`linux/Cargo.toml`, `macos/Cargo.toml` and both macOS plist keys carry the same number, so a
 half-applied bump stops here instead of shipping desktop platforms on different
 versions. When they disagree, run `make version-desktop <target>` — it writes
 every file in one pass, or none, then refreshes each desktop `Cargo.lock`'s

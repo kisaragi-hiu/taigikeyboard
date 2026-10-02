@@ -63,12 +63,13 @@ Full setup: [`docs/BUILDING.md`](docs/BUILDING.md). **Bootstrap**: clone with `-
 | Linux | `make linux-check` (host gate; `.deb` via `make -C linux deb` — `docs/architecture/linux-release.md`) | included |
 | taigi-converter | — | `npm test` in `taigi-converter/` |
 
-**Stale-artifact gate — run before every iOS/Android build+test** (stale binaries give false-green tests):
+**Stale-artifact gate — run before every iOS / Android / macOS build+test** (stale binaries give false-green tests):
 
 | Diff touches… | Run first |
 |---|---|
 | `engine/` (Rust, `.proto`, `Cargo.toml`) | `make build` |
 | `dictionary/` | `make dict` then `make build` |
+| `desktop/`, `macos/crates/`, `macos/Cargo.*` (the archive macOS links) | `make build` before a macOS build or test |
 | platform-only Swift / Kotlin / docs | nothing |
 
 Details and timings: `docs/architecture/build-artifacts.md`.

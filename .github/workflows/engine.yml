@@ -168,7 +168,8 @@ jobs:
         run: |
           set -euo pipefail
           # Every shipped crate that links `dispatch`; the desktop
-          # workspaces add theirs in their own e2e PRs.
+          # workspaces add theirs in their own e2e PRs (macOS: macos.yml
+          # `native`, which also runs on every engine change).
           for crate in swift-ffi android-jni; do
             if cargo tree -e features -i dispatch -p "$crate" | grep -q 'dispatch feature "e2e-trace"'; then
               echo "::error::$crate enables dispatch/e2e-trace by default"; exit 1

@@ -62,6 +62,8 @@ class EngineGraphTests(SelectorTestCase):
 
 class EngineSelectionTests(SelectorTestCase):
     def test_leaf_source_change_selects_closure_and_desktop_shells(self) -> None:
+        # dispatch reaches the Windows / Linux shells, swift-ffi the macOS
+        # workspace's native gate; neither is a wire-surface change.
         selection = self.select("engine/phonetics/src/tl.rs")
 
         self.assertIn("dispatch", selection.engine_crates)
@@ -78,7 +80,7 @@ class EngineSelectionTests(SelectorTestCase):
         )
         self.assertEqual(
             set(selection.commands),
-            {"engine", "desktop", "windows", "linux", "docs-checks"},
+            {"engine", "desktop", "windows", "linux", "macos-rust", "docs-checks"},
         )
         self.assertEqual(selection.prerequisites, [])
 
@@ -121,7 +123,7 @@ class EngineSelectionTests(SelectorTestCase):
         self.assertEqual(selection.engine_crates, ["swift-ffi"])
         self.assertEqual(
             set(selection.commands),
-            {"engine", "macos", "ios", "android", "docs-checks"},
+            {"engine", "macos-rust", "macos", "ios", "android", "docs-checks"},
         )
 
     def test_engine_build_script_selects_mobile_only(self) -> None:
@@ -149,13 +151,50 @@ class PlatformSelectionTests(SelectorTestCase):
             ["android/gradlew -p android :app:spotlessCheck :app:testDebugUnitTest"],
         )
 
-    def test_desktop_change_selects_both_shells(self) -> None:
+    def test_desktop_change_selects_every_desktop_shell(self) -> None:
         selection = self.select("desktop/crates/taigi-desktop-core/src/lib.rs")
 
         self.assertEqual(
-            set(selection.commands), {"desktop", "windows", "linux", "docs-checks"}
+            set(selection.commands),
+            {"desktop", "windows", "linux", "macos-rust", "macos", "docs-checks"},
         )
         self.assertEqual(self.runs(selection, "desktop"), ["make desktop-check"])
+        # The macOS archive links desktop/: the Swift suite needs a rebuild.
+        self.assertEqual(selection.prerequisites, [test_select.MAKE_BUILD_PREREQUISITE])
+
+    def test_macos_rust_change_selects_both_macos_gates(self) -> None:
+        for path in (
+            "macos/crates/taigi-macos-ffi/src/lib.rs",
+            "macos/crates/taigi-macos-ffi/proto/desktop_shell.proto",
+            "macos/Cargo.toml",
+            "macos/Cargo.lock",
+            "macos/rust-toolchain.toml",
+        ):
+            with self.subTest(path=path):
+                selection = self.select(path)
+
+                # The Rust gate runs first: it needs no rebuilt archive.
+                self.assertEqual(
+                    [p for p in selection.commands if p != "docs-checks"],
+                    ["macos-rust", "macos"],
+                )
+                self.assertEqual(
+                    self.runs(selection, "macos-rust"), ["make macos-rust-check"]
+                )
+                self.assertEqual(self.runs(selection, "macos"), ["make -C macos test"])
+                self.assertEqual(
+                    selection.prerequisites, [test_select.MAKE_BUILD_PREREQUISITE]
+                )
+
+    def test_macos_swift_change_skips_the_rust_gate(self) -> None:
+        selection = self.select("macos/Sources/TaigiInputMethodCore/A.swift")
+
+        self.assertNotIn("macos-rust", selection.commands)
+        self.assertEqual(
+            self.runs(selection, "macos"),
+            ["swiftformat --lint macos", "make -C macos test"],
+        )
+        self.assertEqual(selection.prerequisites, [])
 
     def test_i18n_source_selects_check_and_mobile_macos(self) -> None:
         selection = self.select("i18n/settings.json")
