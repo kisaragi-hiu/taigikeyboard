@@ -18,6 +18,12 @@ A Taiwanese input method for iOS, Android, macOS, Windows, and Linux.
 | macOS / Windows | [taigikeyboard.tw](https://taigikeyboard.tw) |
 | Linux (`.deb`, `.rpm`, Arch; Fcitx5 or IBus) | [GitHub Releases](https://github.com/taigikeyboard/taigikeyboard/releases) |
 
+macOS via [Homebrew](https://brew.sh):
+
+```sh
+brew install --cask taigikeyboard/tap/taigikeyboard
+```
+
 ## Features
 
 - Romanization input in POJ, TL, and TPS
