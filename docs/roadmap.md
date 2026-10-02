@@ -86,7 +86,6 @@ One line each; the linked section holds the design, the measurements and the ope
 | Stale `.proto` comments: `lexicon.proto` still documents `DEV` as always-on (the toggle shipped); `composing.proto` cites a nonexistent `continuous-input-ranking.md` §10.11 | needs a proto regen round (iOS + Android generated trees) | [`architecture/macos-roadmap.md`](architecture/macos-roadmap.md) § Open items this track produced |
 | v2 `.taigi` restore folds POJ→TL over canonical-TL readings (macOS folds v1 only) | verify it still applies now the engine owns the codec | same § |
 | Fedora × IBus e2e skipped (daemon never lists the test component) | own root-cause round | [`architecture/e2e-testing-roadmap.md`](architecture/e2e-testing-roadmap.md) § PR table PR4 |
-| Linux Space (`CommitAlternateScript`) produced no commit in the Xvfb harness | unconfirmed; not a round until reproduced on a real session (S74) | same § Spike results |
 
 **Refactors (USER decisions)**
 
