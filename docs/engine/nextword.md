@@ -100,7 +100,7 @@ Refer to `engine/nextword/src/scorer.rs` for the exact constants — they are th
 
 ### Context Reset
 
-- Input sentence-ending punctuation (。！？)
+- Input sentence-ending punctuation (`。！？.!?`) or a clause mark (`，、；：,;:`)
 - Long idle time (> 30 seconds)
 - Switch input field
 - Backspace to empty

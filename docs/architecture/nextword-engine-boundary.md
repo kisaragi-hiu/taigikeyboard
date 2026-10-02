@@ -187,8 +187,8 @@ For `wordSelected(text, roman, requireRomanMode, triggerPrediction)`:
 |---|---|---|
 | `requireRomanMode && settings.isHanjiFirst` | `[]` | unchanged |
 | `text` empty | `[]` | unchanged |
-| `text` is noise punctuation, NOT sentence-end | `[]` | unchanged |
-| `text` is sentence-end punctuation | `[cancelContextTimeout] + [clearPredictionsUI(gen) if isShowing]` | reset to defaults + bump generation |
+| `text` is noise, NOT a context break (a symbol) | `[]` | unchanged |
+| `text` is sentence-end `。！？.!?` or clause-mark `，、；：,;:` punctuation | `[cancelContextTimeout] + [clearPredictionsUI(gen) if isShowing]` | reset to defaults + bump generation |
 | `shouldRecordAssociation(state, nowMs) && state.lastSelectedWord != nil` (recording is always on — the `is_association_recording_enabled` gate was retired 2026-09-25) | records the `prev → text` pair, then the compound's internal pairs (`Decided.associations` → `Handled.associations`, written by dispatch; formerly the `recordAssociation` / `recordCompoundAssociations` effects, §2.3) | — |
 | Always (for valid text) | append `[rescheduleContextTimeout(30)]` | `lastSelectedWord/Roman = ...`, `lastSelectionTimeMs = nowMs`, bump generation |
 | `triggerPrediction == true` | append `[queryPredictions(textTl, romanTl, newGen)]` | — |
@@ -266,6 +266,7 @@ Pinned in `engine/nextword` tests (pure) and the platform executor tests (the la
 - `INVARIANT_nextword_association_window_strict_lt_10s` — boundary tests: 9_999 → true, 10_000 → false, negative delta → false.
 - `INVARIANT_nextword_backspace_does_not_record` — `decide(.backspace(...))` never records an association (`decide.rs::backspace_records_no_association`: `associations` empty).
 - `INVARIANT_nextword_sentence_end_resets_context` — `decide(.wordSelected(text: "。", …))` yields `cancelContextTimeout` + clears state + bumps generation.
+- `INVARIANT_nextword_clause_mark_breaks_context` — the same reset for every clause mark `，、；：,;:`, as the commit itself and inside `preceding`: no pair learned across it (USER 2026-10-02; `behavioral-invariants.md` §40).
 - `INVARIANT_nextword_compound_pairs_are_sequential` — for `text = "a b c"`, `compound_association_pairs` returns `[(a, b), (b, c)]` in that order (the split is on whitespace only, never on a hyphen — `split_compound`).
 - `INVARIANT_nextword_no_clock_read_in_engine` — code review gate: `engine/nextword/src` must not read a clock (`SystemTime`, `Instant::now`, `chrono::`); the platform passes `now_ms` in. No test yet.
 - `INVARIANT_nextword_prediction_filter_hides_empty_tl_in_roman_mode` — `filterPredictions` drops entries with empty `tl` when `settings.isHanjiFirst == false`.
