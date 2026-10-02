@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+// The macOS desktop-shell seam: what Swift sends through
+// `desktop_request_bytes` (macos/crates/taigi-macos-ffi/src/lib.rs) and what
+// it gets back. Design: docs/architecture/macos-desktop-core-roadmap.md D2 / D3.
+// One request in, one response out; the engine's own requests keep going
+// through `process_request_bytes` and `taigi.engine.Request`.
+package taigi.desktop_shell;
+
+// For `taigi.engine.ErrorCode` — one error vocabulary for both seams
+// (docs/contributing/rust-ffi-safety.md §1.5).
+import "envelope.proto";
+
+message DesktopRequest {
+  // A request with no variant set — including one from a newer Swift side
+  // whose variant this library does not know — is refused with FAIL_INVARIANT.
+  oneof request {
+    VersionRequest version = 1;
+  }
+}
+
+// Asks the library which version it was built as.
+message VersionRequest {}
+
+message DesktopResponse {
+  // OK, or why there is no reply.
+  taigi.engine.ErrorCode error = 1;
+  oneof reply {
+    VersionReply version = 2;
+  }
+}
+
+message VersionReply {
+  // The `taigi-macos-ffi` crate version (`macos/Cargo.toml`).
+  string version = 1;
+}

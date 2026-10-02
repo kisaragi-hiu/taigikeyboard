@@ -1,0 +1,36 @@
+[package]
+name = "taigi-macos-ffi"
+description = "The static library the macOS input method links: the engine's swift-bridge seam plus the desktop shell's, in one archive"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lib]
+# Not `rust_taigi`: that is `swift-ffi`'s library name, which this crate links.
+name = "taigi_macos_ffi"
+crate-type = ["staticlib"]
+
+[features]
+# Forwarded to the engine seam. Release archives build with neither;
+# build-macos-xcframework.sh asserts the trace is absent.
+e2e-trace = ["swift-ffi/e2e-trace"]
+panic-injector = ["swift-ffi/panic-injector"]
+
+[dependencies]
+# The macOS app ships the user-data stores (user-data-engine-roadmap P7b).
+swift-ffi = { workspace = true, features = ["user-data"] }
+dispatch = { workspace = true }
+protos = { workspace = true }
+log = { workspace = true }
+prost = { workspace = true }
+swift-bridge = { workspace = true }
+
+[build-dependencies]
+prost-build = { workspace = true }
+swift-bridge-build = { workspace = true }
+
+[lints]
+workspace = true

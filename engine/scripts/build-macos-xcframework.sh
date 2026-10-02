@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 # Build the universal macOS `RustTaigi.xcframework` (arm64 + x86_64) and stage it,
-# with the swift-bridge generated `RustTaigi.swift` / `SwiftBridgeCore.swift`,
-# into the committed stable path `macos/RustEngine/`.
+# with the swift-bridge generated `RustTaigi.swift` / `RustTaigiDesktop.swift` /
+# `SwiftBridgeCore.swift`, into the stable path `macos/RustEngine/`.
 #
 # The macOS IME (SwiftPM executable, see docs/architecture/macos-roadmap.md D1/D2)
-# consumes the xcframework as a `binaryTarget` named `RustTaigi`; the two Swift
-# wrappers are compiled as sources of the executable target.
+# consumes the xcframework as a `binaryTarget` named `RustTaigi`; the Swift
+# wrappers are compiled as sources of the `RustTaigiSwift` target.
 #
-# `engine/swift-ffi` is shared with iOS; `make build` runs this script and
-# `build-xcframework.sh` together so both platforms' artefacts stay in step.
+# The archive is `macos/crates/taigi-macos-ffi` (its own workspace, `macos/`):
+# the engine's `engine/swift-ffi` bridge, linked as an rlib, plus the desktop
+# shell's bridge, in ONE static library so the engine's process-wide state
+# exists once (docs/architecture/macos-desktop-core-roadmap.md D1).
+# `engine/swift-ffi` is shared with iOS; `make build`
+# runs this script and `build-xcframework.sh` together so both platforms'
+# artefacts stay in step.
 #
 # The swift-bridge post-processing itself lives in
 # scripts/lib/swift-bridge-artifacts.sh, shared with the iOS build.
@@ -17,17 +22,17 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-ENGINE_DIR="$REPO_ROOT/engine"
+MACOS_DIR="$REPO_ROOT/macos"
 
 # Header/modulemap layout + Swift wrapper patching are shared with the iOS
-# build; both platforms link the same swift-ffi crate.
+# build; both platforms link the same swift-ffi bridge.
 source "$SCRIPT_DIR/lib/swift-bridge-artifacts.sh"
 source "$SCRIPT_DIR/lib/e2e-trace-guard.sh"
-# Staging dir is macOS-specific so a concurrent iOS build (target/d9.2-out)
-# cannot race this script's `rm -rf`.
-OUT_DIR="$ENGINE_DIR/target/macos-out"
+# Under the macOS workspace's own target dir, so a concurrent iOS build
+# (engine/target/d9.2-out) cannot race this script's `rm -rf`.
+OUT_DIR="$MACOS_DIR/target/xcframework-out"
 # One `.pkg` serves both Mac architectures, so both are shipped ABIs — declared
-# in engine/rust-toolchain.toml, not installed on the fly. The first is the one
+# in macos/rust-toolchain.toml, not installed on the fly. The first is the one
 # swift-bridge artefacts are taken from; they are source-level and identical
 # across architectures.
 #
@@ -38,7 +43,11 @@ OUT_DIR="$ENGINE_DIR/target/macos-out"
 read -r -a TARGET_TRIPLES <<< "${TAIGI_MACOS_TARGETS:-aarch64-apple-darwin x86_64-apple-darwin}"
 BRIDGE_TRIPLE="${TARGET_TRIPLES[0]}"
 FRAMEWORK_NAME="RustTaigi"
-LIB_NAME="librust_taigi.a"
+# The desktop shell's bridge (`taigi-macos-ffi`'s build.rs), staged into the
+# same `RustTaigi` module beside the engine's.
+DESKTOP_BRIDGE_NAME="RustTaigiDesktop"
+CRATE="taigi-macos-ffi"
+LIB_NAME="libtaigi_macos_ffi.a"
 DEST_DIR="$REPO_ROOT/macos/RustEngine"
 # Matches `.macOS(.v14)` in macos/Package.swift and LSMinimumSystemVersion in
 # macos/App/Info.plist. Set explicitly because rustc's per-target default is
@@ -47,7 +56,7 @@ DEST_DIR="$REPO_ROOT/macos/RustEngine"
 # would have to reconcile two different deployment targets.
 export MACOSX_DEPLOYMENT_TARGET=14.0
 
-cd "$ENGINE_DIR"
+cd "$MACOS_DIR"
 
 # Deterministic clean per invocation, matching the iOS script's model.
 rm -rf "$OUT_DIR"
@@ -56,8 +65,8 @@ mkdir -p "$OUT_DIR"
 THIN_LIBS=()
 BUILT_ARCHS=()
 for triple in "${TARGET_TRIPLES[@]}"; do
-    cargo build --release -p swift-ffi --target "$triple"
-    thin_lib="$ENGINE_DIR/target/$triple/release/$LIB_NAME"
+    cargo build --release -p "$CRATE" --target "$triple"
+    thin_lib="$MACOS_DIR/target/$triple/release/$LIB_NAME"
     # Each archive is checked before lipo rather than after: `lipo -create` is
     # happy to fatten two archives of the same architecture, and the result
     # would then fail the set assertion below with nothing to point at.
@@ -84,12 +93,36 @@ DEVICE_LIB="$OUT_DIR/$LIB_NAME"
 lipo -create "${THIN_LIBS[@]}" -output "$DEVICE_LIB"
 e2e_trace_assert_absent "$DEVICE_LIB"
 
-# Same argv as the build above, so cargo resolves the OUT_DIR of the exact
-# fingerprint that produced the archive for $BRIDGE_TRIPLE. The generated header,
+# Both seams' entry points, in every slice: the engine's comes from swift-ffi
+# through an rlib edge, and is in the archive only because `taigi-macos-ffi`
+# links that crate (`extern crate rust_taigi`). Apple's nm cannot read the
+# bitcode members rustc ships for `compiler_builtins` (built by a newer LLVM)
+# and exits 1 after listing every other member; that one error is expected,
+# any other is not.
+for arch in "${BUILT_ARCHS[@]}"; do
+    nm_stderr="$OUT_DIR/nm-$arch.stderr"
+    archive_symbols="$(nm -gU -arch "$arch" "$DEVICE_LIB" 2> "$nm_stderr")" || true
+    if grep -v 'compiler_builtins-' "$nm_stderr" | grep -q .; then
+        echo "error: nm could not read the $arch slice:" >&2
+        cat "$nm_stderr" >&2
+        exit 1
+    fi
+    for entry in process_request_bytes desktop_request_bytes; do
+        if ! grep -q "__swift_bridge__[$]${entry}\$" <<< "$archive_symbols"; then
+            echo "error: $arch slice does not export $entry" >&2
+            exit 1
+        fi
+    done
+done
+
+# Same argv as the build above, so cargo resolves the OUT_DIRs of the exact
+# fingerprints that produced the archive for $BRIDGE_TRIPLE. The generated header,
 # modulemap and Swift wrappers are a source-level interface, so one architecture
 # is the whole story — building them twice would only give them room to differ.
-BRIDGE_OUT_DIR="$(swift_bridge_find_out_dir "$ENGINE_DIR" \
-    build --release -p swift-ffi --target "$BRIDGE_TRIPLE")"
+BRIDGE_OUT_DIR="$(swift_bridge_find_out_dir "$MACOS_DIR" swift-ffi \
+    build --release -p "$CRATE" --target "$BRIDGE_TRIPLE")"
+DESKTOP_BRIDGE_OUT_DIR="$(swift_bridge_find_out_dir "$MACOS_DIR" "$CRATE" \
+    build --release -p "$CRATE" --target "$BRIDGE_TRIPLE")"
 
 # `set -e` already aborts on a missing file at `cp` time; this loop exists for
 # the cases `cp` accepts — an empty or never-finished swift-bridge output —
@@ -98,7 +131,9 @@ for required in \
     "$BRIDGE_OUT_DIR/SwiftBridgeCore.h" \
     "$BRIDGE_OUT_DIR/SwiftBridgeCore.swift" \
     "$BRIDGE_OUT_DIR/$FRAMEWORK_NAME/$FRAMEWORK_NAME.h" \
-    "$BRIDGE_OUT_DIR/$FRAMEWORK_NAME/$FRAMEWORK_NAME.swift"
+    "$BRIDGE_OUT_DIR/$FRAMEWORK_NAME/$FRAMEWORK_NAME.swift" \
+    "$DESKTOP_BRIDGE_OUT_DIR/$DESKTOP_BRIDGE_NAME/$DESKTOP_BRIDGE_NAME.h" \
+    "$DESKTOP_BRIDGE_OUT_DIR/$DESKTOP_BRIDGE_NAME/$DESKTOP_BRIDGE_NAME.swift"
 do
     if [[ ! -s "$required" ]]; then
         echo "error: missing or empty swift-bridge output: $required" >&2
@@ -107,13 +142,15 @@ do
 done
 
 HEADERS_DIR="$OUT_DIR/Headers"
-swift_bridge_stage_headers "$BRIDGE_OUT_DIR" "$HEADERS_DIR" "$FRAMEWORK_NAME"
+swift_bridge_stage_headers "$BRIDGE_OUT_DIR" "$HEADERS_DIR" "$FRAMEWORK_NAME" \
+    "$DESKTOP_BRIDGE_OUT_DIR" "$DESKTOP_BRIDGE_NAME"
 
 xcodebuild -create-xcframework \
     -library "$DEVICE_LIB" -headers "$HEADERS_DIR" \
     -output "$OUT_DIR/$FRAMEWORK_NAME.xcframework"
 
-swift_bridge_stage_wrappers "$BRIDGE_OUT_DIR" "$OUT_DIR" "$FRAMEWORK_NAME"
+swift_bridge_stage_wrappers "$BRIDGE_OUT_DIR" "$OUT_DIR" "$FRAMEWORK_NAME" \
+    "$DESKTOP_BRIDGE_OUT_DIR" "$DESKTOP_BRIDGE_NAME"
 
 # Verify the xcframework really carries every built architecture before staging
 # it. `-create-xcframework` infers platform from the archive's Mach-O metadata,
@@ -131,20 +168,23 @@ if [[ "$SLICE_COUNT" != "1" || "$SUPPORTED_PLATFORM" != "macos" || "$SUPPORTED_A
     exit 1
 fi
 
-# Stage into the committed path via a sibling temp dir so the previous good
+# Stage into the stable path via a sibling temp dir so the previous good
 # artefacts are only removed once the new ones are fully copied — an aborted
 # copy must not leave `macos/RustEngine/` half-updated.
 STAGE_DIR="$DEST_DIR/.staging"
+WRAPPERS=("$FRAMEWORK_NAME.swift" "$DESKTOP_BRIDGE_NAME.swift" "SwiftBridgeCore.swift")
 rm -rf "$STAGE_DIR"
 mkdir -p "$STAGE_DIR"
 cp -R "$OUT_DIR/$FRAMEWORK_NAME.xcframework" "$STAGE_DIR/$FRAMEWORK_NAME.xcframework"
-cp "$OUT_DIR/$FRAMEWORK_NAME.swift" "$STAGE_DIR/$FRAMEWORK_NAME.swift"
-cp "$OUT_DIR/SwiftBridgeCore.swift" "$STAGE_DIR/SwiftBridgeCore.swift"
+for wrapper in "${WRAPPERS[@]}"; do
+    cp "$OUT_DIR/$wrapper" "$STAGE_DIR/$wrapper"
+done
 
 rm -rf "$DEST_DIR/$FRAMEWORK_NAME.xcframework"
 mv "$STAGE_DIR/$FRAMEWORK_NAME.xcframework" "$DEST_DIR/$FRAMEWORK_NAME.xcframework"
-mv "$STAGE_DIR/$FRAMEWORK_NAME.swift" "$DEST_DIR/$FRAMEWORK_NAME.swift"
-mv "$STAGE_DIR/SwiftBridgeCore.swift" "$DEST_DIR/SwiftBridgeCore.swift"
+for wrapper in "${WRAPPERS[@]}"; do
+    mv "$STAGE_DIR/$wrapper" "$DEST_DIR/$wrapper"
+done
 rmdir "$STAGE_DIR"
 
 echo "ok — macOS $FRAMEWORK_NAME.xcframework ($SUPPORTED_PLATFORM/$SUPPORTED_ARCHS) staged at $DEST_DIR"

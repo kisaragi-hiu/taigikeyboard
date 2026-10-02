@@ -60,8 +60,8 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 40
     env:
-      # Overrides engine/rust-toolchain.toml's target list (iOS / Android /
-      # x86_64 macOS), so only the host target — the one built here — is installed.
+      # Overrides macos/rust-toolchain.toml's target list (both macOS
+      # architectures), so only the host target — the one built here — is installed.
       RUSTUP_TOOLCHAIN: stable
       TAIGI_MACOS_TARGETS: aarch64-apple-darwin
     steps:

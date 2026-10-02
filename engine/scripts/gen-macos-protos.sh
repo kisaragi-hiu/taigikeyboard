@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Generate the macOS-side protobuf bindings for the IME.
+# Generate the macOS-side protobuf bindings for the IME: the engine's protos and
+# the desktop shell's (`macos/crates/taigi-macos-ffi/proto/desktop_shell.proto`,
+# which imports the engine's `envelope.proto`).
 #
 # Output:
 #   macos/Sources/TaigiInputMethodCore/Engine/Generated/*.pb.swift  (SwiftProtobuf)
@@ -18,6 +20,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PROTO_DIR="$REPO_ROOT/engine/protos/proto"
+SHELL_PROTO_DIR="$REPO_ROOT/macos/crates/taigi-macos-ffi/proto"
 SWIFT_OUT="$REPO_ROOT/macos/Sources/TaigiInputMethodCore/Engine/Generated"
 
 if ! command -v protoc >/dev/null 2>&1; then
@@ -42,6 +45,15 @@ protoc \
     --swift_out="$SWIFT_OUT" \
     --swift_opt=Visibility=Public \
     "$PROTO_DIR"/*.proto
+
+# Its own invocation: the engine's files are only on the import path here, so
+# their `.pb.swift` is not written twice.
+protoc \
+    --proto_path="$PROTO_DIR" \
+    --proto_path="$SHELL_PROTO_DIR" \
+    --swift_out="$SWIFT_OUT" \
+    --swift_opt=Visibility=Public \
+    "$SHELL_PROTO_DIR"/*.proto
 
 echo "generated:"
 ls -1 "$SWIFT_OUT"
