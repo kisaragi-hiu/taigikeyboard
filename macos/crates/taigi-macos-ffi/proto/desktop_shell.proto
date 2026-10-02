@@ -26,6 +26,9 @@ message DesktopRequest {
     CommitCompositionRequest commit_composition = 7;
     CancelRequest cancel = 8;
     ReleaseRequest release = 9;
+    CommitForSymbolPickerRequest commit_for_symbol_picker = 11;
+    InsertSymbolRequest insert_symbol = 12;
+    RepresentRequest represent = 13;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -134,8 +137,9 @@ message VersionReply {
 // One session drives the process's one engine at a time; a session is the
 // token Swift mints per input controller and never reuses. Every request
 // below is refused with FAIL_INVARIANT before Configure, and answered with
-// a SessionReply. A request whose token does not own the engine is answered
-// `ignored` and does nothing — except Activate, which takes the engine.
+// a SessionReply. A request whose token does not own the engine — released,
+// or superseded by another Activate — is answered `ignored` and does
+// nothing; except Activate, which takes the engine.
 
 // The session takes the engine (`activateServer`): a session that already
 // holds it keeps its composition, any other one's is dropped. The list is
@@ -167,9 +171,42 @@ message CancelRequest {
   PanelState panel = 2;
 }
 
-// The session gives the engine up (`inputControllerWillClose`, `deinit`).
+// The session gives the engine up (`deactivateServer`,
+// `inputControllerWillClose`). Its token stays valid: the next Activate
+// with it takes the engine again.
 message ReleaseRequest {
   uint64 token = 1;
+}
+
+// The commit the symbol-picker chord runs before the picker opens. With a
+// `selected_index`, that cell — none when no list is on screen, which
+// commits nothing and keeps the composition; without one, the composition
+// as typed with its auto space. Refused with FAIL_INVARIANT without a
+// panel.
+message CommitForSymbolPickerRequest {
+  uint64 token = 1;
+  PanelState panel = 2;
+}
+
+// A symbol the picker wrote: at the caret as one string, or swapped with
+// the auto space a commit left. Refused with FAIL_INVARIANT without a
+// symbol or a panel.
+message InsertSymbolRequest {
+  uint64 token = 1;
+  string symbol = 2;
+  PanelState panel = 3;
+}
+
+// The list on screen again under the settings this request carries, after
+// a switch outside the key path changed them: fetched again (`refetch`) or
+// the same list presented again. The reply's effects say what became of
+// it: none — no list, nothing to do; one CandidatesChanged — repaint the
+// window in place, not anchored again; one CandidatesClosed — the list is
+// gone. Refused with FAIL_INVARIANT without a panel.
+message RepresentRequest {
+  uint64 token = 1;
+  bool refetch = 2;
+  PanelState panel = 3;
 }
 
 // The `NSEvent` fields a key is classified from, as AppKit reports them;
