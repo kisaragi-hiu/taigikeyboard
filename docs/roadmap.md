@@ -62,14 +62,6 @@ Detailed plan archives are added retroactively only when source material exists;
 
 Forward-looking candidates only, NOT items already shipped. None is assigned to a release; scope and timing are the maintainer's call. (v3.5.8-era items that read like candidates but shipped — `whole-sentence lattice + walker`, `continuous compound-hyphen`, `Phase 9 user-freq plumb` — live in [`docs/releases/v3.5.8/plan.md`](releases/v3.5.8/plan.md).)
 
-### Converted-romanization commit — segment + numeric-tone→diacritic on Enter
-
-**Status**: design locked (Option A), NOT implemented, USER-gated — pre-arranged 2026-06-29 at USER request to minimize impl-time effort (USER: "arrange the v3.6.5 items in advance to reduce the implementation effort later"); v3.6.5 shipped 2026-08-28 without it and no later version is assigned. Round still gated on USER UX confirm + Codex pre-impl. **Full design + code seams + Codex prompt**: memory `project_roman_convert_on_commit.md`.
-
-In TL/POJ, Enter should commit the **converted** romanization — multi-syllable segmentation + numeric tone → tone-diacritic (`suann2ting3` → `suán-tìng`), matching PhahTaigi. Today single (`suann2`→`suán`) and hyphenated (`tai5-gi2`→`tâi-gí`) convert; un-hyphenated multi-syllable stays verbatim per §10.2. Requester = Kisaragi Hiu (same person who drove the S22/§34 literal-roman candidate). **Locked design = Option A**: preedit stays verbatim while typing (§10.2 WYSIWYG), Enter commits converted, raw output stays free via tapping the existing verbatim strip-#0 literal candidate (no new UX element). Engine work = deterministic tone-digit pre-segmentation in `phonetics::canonical_tl_form` (digit ends a syllable → no FST inventory needed; fallback verbatim on ambiguous toneless/invalid input). Platform work = Enter commits the composition's `canonical_tl` instead of raw preedit (locate each platform's return-key composition handler at impl). Touches invariants §10.2 / §17 / §34 (S22) / Core Principle #7 — feature round updates them + adds a cross-platform `INVARIANT_*` test in the same PR. Engine-only fix covers iOS+Android; `make build` (no `make dict`).
-
-**Gmail report pass (USER 2026-06-29)**: the dogfood-confirmation pass over the then-open Gmail user-report bugs was completed in 2026-08 (memory `MEMORY.md` § Bug reports: batch of 9 closed — 5 fixed, 4 not reproducible). New reports follow `/bug-triage` per incident (Core Principle #4).
-
 ### Other open items
 
 One line each; the linked section holds the design, the measurements and the open questions. Device dogfood lives in [`architecture/dogfood-checklist.md`](architecture/dogfood-checklist.md) (every pending item marked PASS 2026-10-02).
@@ -114,7 +106,7 @@ One line each; the linked section holds the design, the measurements and the ope
 | GitHub private vulnerability reporting + non-provider secret patterns | not applied (one `gh api` PATCH) | [`go-public-checklist.md`](go-public-checklist.md) §10 |
 | TL / POJ prose proofreading of the app UI | USER, data-only | § Closed phases › App UI i18n |
 
-**Not to re-propose** (USER-closed): TL mode (臺羅模式) tone key commits without a candidate window and mobile predictions after Space (USER 2026-10-02: "remove"); bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
+**Not to re-propose** (USER-closed): converted-romanization commit on Enter (`suann2ting3` → `suán-tìng`), TL mode (臺羅模式) tone key commits without a candidate window, and mobile predictions after Space (USER 2026-10-02: "remove"); bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
 
 ## Per-round gates (process invariants, project-wide)
 
