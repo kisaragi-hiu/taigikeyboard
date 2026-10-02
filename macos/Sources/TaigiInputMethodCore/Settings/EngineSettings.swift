@@ -135,8 +135,8 @@ struct EngineSettings: Equatable, Sendable {
     /// `FetchAtPos.literal_roman_candidate_disabled`.
     /// CROSS-PLATFORM INVARIANT — mirrors `isLiteralRomanCandidateEnabled` in
     /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift and
-    /// `literalRomanCandidateEnabled` in android/…/ime/settings/PrefHelper.kt,
-    /// both of which default it ON.
+    /// `literalRomanCandidateEnabled` in android/…/ime/settings/PrefHelper.kt;
+    /// every platform defaults it OFF (USER 2026-10-02).
     /// Drift changes which candidate leads the list on a fresh install.
     let isLiteralRomanCandidateEnabled: Bool
 
