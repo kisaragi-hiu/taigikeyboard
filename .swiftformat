@@ -16,6 +16,7 @@
 --exclude macos/Sources/TaigiInputMethodCore/Strings/Generated
 --exclude macos/RustEngine
 --exclude macos/.build
+--exclude macos/target
 --exclude ios/build
 --exclude references
 
