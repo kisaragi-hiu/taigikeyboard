@@ -212,7 +212,7 @@ Constraining rules per phase: P1 `docs/contributing/known-pitfalls.md` § Tests 
 
 ## Open USER decisions (ranked, each with a recommendation)
 
-1. **Predictions after Space** (brainstorm §5.3, still open) — recommend a dogfood A/B showing them once P4 lands; today the most common commit key hides everything this roadmap produces.
+1. **Predictions after Space** (brainstorm §5.3) — **closed USER 2026-10-02: removed, not to re-propose.** Space keeps hiding predictions.
 2. **Phase order after P3** — recommend P4 (next-word) before P5 (composing): contained, visible in the strip, and it exercises the data before the walker depends on it.
 3. **Hanji-only sources (P7)** — **decided USER 2026-09-30: not adopted.**
 4. **Clause punctuation** (`，` — gap #10) — recommend: breaks the bundled chain (D1) and keeps today's next-word context rule unchanged in P4; revisit with dogfood.

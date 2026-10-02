@@ -70,19 +70,14 @@ In TL/POJ, Enter should commit the **converted** romanization — multi-syllable
 
 **Gmail report pass (USER 2026-06-29)**: the dogfood-confirmation pass over the then-open Gmail user-report bugs was completed in 2026-08 (memory `MEMORY.md` § Bug reports: batch of 9 closed — 5 fixed, 4 not reproducible). New reports follow `/bug-triage` per incident (Core Principle #4).
 
-### TL mode (臺羅模式) — tone key commits without a candidate window (MOE parity)
-
-**Status**: research only, NOT implemented, **low priority** (USER 2026-09-21: "this feature is neither urgent nor important, and demand is low, so its priority is lower"). Community request: in pure-romanization typing the tone key should write the syllable at once, as the MOE Mac IME's 臺羅模式 does (`tai5` → `tâi`, no Enter, no window). Real on the desktops only — macOS / Windows Space is `.ignored` under Candidate Display = Romanization Only, so every word costs an Enter; mobile Space already commits. Marked text itself stays (rewrite-on-tone rejected). Two options costed — A: desktop Space commits when it has no alternate script (~30 LOC each side); B: a real TL mode (tone key commits, no window, hand-typed hyphens). Open USER decisions (where the mode lives, tone 1/4 ending, mobile parity) + MOE behaviour still to verify on a Mac. Full write-up: [`reports/2026-09-21-taile-mode-tone-commit.md`](reports/2026-09-21-taile-mode-tone-commit.md).
-
 ### Other open items
 
-One line each; the linked section holds the design, the measurements and the open questions. Pending device dogfood is not repeated here — it lives in [`architecture/dogfood-checklist.md`](architecture/dogfood-checklist.md) (user-data device checks, S74 Linux first machine, the macOS batch, S83–S85).
+One line each; the linked section holds the design, the measurements and the open questions. Device dogfood lives in [`architecture/dogfood-checklist.md`](architecture/dogfood-checklist.md) (every pending item marked PASS 2026-10-02).
 
 **Features and research**
 
 | Item | Status | Where |
 |---|---|---|
-| Predictions after Space (mobile): show next-word predictions after a Space commit | open USER decision; recommendation = dogfood A/B | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § Open USER decisions #1 |
 | Smart-suggestion techniques outside the bigram model: 3 zero-query from learned phrases, 5 negative feedback, 6 rule table, 9 emoji, 10 offensive-word filter, 11 privacy gates | brainstorm only | [`reports/2026-09-24-mobile-smart-suggestions-brainstorm.md`](reports/2026-09-24-mobile-smart-suggestions-brainstorm.md) |
 | `$` sentence-start opener for next-word | needs a real sentence-end trigger first | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § D4 |
 | Corpus expansion (P1b): new `taigi-corpus` extractors (iCorpus 漢字版, TGB, …); TAT corpus = USER-only ACLCLP application | never run | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § Corpus expansion |
@@ -119,7 +114,7 @@ One line each; the linked section holds the design, the measurements and the ope
 | GitHub private vulnerability reporting + non-provider secret patterns | not applied (one `gh api` PATCH) | [`go-public-checklist.md`](go-public-checklist.md) §10 |
 | TL / POJ prose proofreading of the app UI | USER, data-only | § Closed phases › App UI i18n |
 
-**Not to re-propose** (USER-closed): bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
+**Not to re-propose** (USER-closed): TL mode (臺羅模式) tone key commits without a candidate window and mobile predictions after Space (USER 2026-10-02: "remove"); bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
 
 ## Per-round gates (process invariants, project-wide)
 
