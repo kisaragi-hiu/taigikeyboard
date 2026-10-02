@@ -116,7 +116,7 @@ struct EngineSettings: Equatable, Sendable {
     let isHanjiFirst: Bool
 
     /// `CandidateDisplayMode.effectiveFullWidthPunctuation(stored:)` — read by
-    /// `TaigiInputController.documentPunctuation` only.
+    /// `FullWidthPunctuation.documentPunctuation(_:isWidthFlip:settings:)` only.
     let isFullWidthPunctuation: Bool
 
     /// Whether the candidate window shows both scripts or the romanization

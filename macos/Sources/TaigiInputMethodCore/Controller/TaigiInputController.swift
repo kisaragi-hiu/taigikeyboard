@@ -44,6 +44,13 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var isCandidateListOnScreen = false
 
+    /// Counts this controller's activations and teardowns, so a replay can
+    /// tell that its reply belongs to a tenure that has since ended — even
+    /// one a client callback ended and began again with the same token
+    /// (`replay`).
+    @MainActor
+    private var tenure = 0
+
     /// Where the candidate bar is shown. Backed by an optional so a test can
     /// substitute a double before the first key event: the shipped bar is an
     /// `NSPanel`, and the default cannot be written as a stored property's
@@ -234,6 +241,7 @@ public final class TaigiInputController: IMKInputController {
     override public func activateServer(_ sender: Any!) {
         Self.logger.debug("activateServer")
         onMainActor(sender) { controller, client in
+            controller.tenure += 1
             controller.lastClient = client
             controller.backend.activate(controller.sessionToken)
             // After the claim, which just cleared the previous session's
@@ -825,7 +833,13 @@ public final class TaigiInputController: IMKInputController {
         // so a client that moved the caret degrades to no swap.
         var caretAfterSwap: Int?
         let writer = ClientEffectExecutor(client: client)
+        let replayTenure = tenure
         for effect in effects {
+            // A client callback can take the focus away mid-replay; what the
+            // reply still holds was meant for a tenure that is over — its
+            // teardown already finished the composition — or for a session
+            // another controller now drives (roadmap D3, stale replies).
+            guard tenure == replayTenure, backend.owns(sessionToken) else { return }
             switch effect {
             case let .setMarkedText(text, caretUTF16):
                 writer.execute(.updatePreedit(text, caretUTF16: caretUTF16))
@@ -1192,6 +1206,7 @@ public final class TaigiInputController: IMKInputController {
     /// session that is going away.
     @MainActor
     private func endSession(_ client: IMKTextInput?) {
+        tenure += 1
         // Owner-guarded, beside the bar's own dismissal in
         // `finishComposition`: a guide belongs to the session that raised it,
         // and goes when that session's focus does.

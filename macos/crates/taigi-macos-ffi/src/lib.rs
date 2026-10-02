@@ -15,6 +15,8 @@
 // the archive would lack the engine's exports.
 extern crate rust_taigi;
 
+#[cfg(test)]
+mod chord_rules;
 mod key_translation;
 mod runtime;
 mod session;

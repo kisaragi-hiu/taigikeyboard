@@ -29,19 +29,7 @@ enum DesktopCoreBridge {
         op: String,
         expected: (Taigi_DesktopShell_DesktopResponse.OneOf_Reply) -> Reply?,
     ) -> Reply? {
-        let requestBytes: [UInt8]
-        do {
-            requestBytes = try Array(envelope(request, settings: settings).serializedData())
-        } catch {
-            recordFailure(op: op, message: "encode failed: \(error)")
-            return nil
-        }
-        guard let response = try? Taigi_DesktopShell_DesktopResponse(
-            serializedBytes: Data(send(requestBytes)),
-        ) else {
-            recordFailure(op: op, message: "response decode failed")
-            return nil
-        }
+        guard let response = response(to: request, settings: settings, op: op) else { return nil }
         guard response.error == .ok else {
             recordFailure(op: op, message: "core returned \(response.error)")
             return nil
@@ -51,6 +39,41 @@ enum DesktopCoreBridge {
             return nil
         }
         return reply
+    }
+
+    /// Encodes one request, sends it and decodes the response, whatever its
+    /// error — for a caller that acts on which error it is (the core back
+    /// end's `FAIL_INTERNAL`, roadmap D4). `nil` — logged here — when the
+    /// request could not be encoded, so nothing was sent. A response that
+    /// does not decode is answered as `FAIL_INTERNAL`: the request was sent
+    /// and may have run, which is that error's meaning.
+    static func response(
+        to request: Taigi_DesktopShell_DesktopRequest.OneOf_Request,
+        settings: Taigi_DesktopShell_SettingsSnapshot?,
+        op: String,
+        transport: ([UInt8]) -> [UInt8] = send,
+    ) -> Taigi_DesktopShell_DesktopResponse? {
+        let requestBytes: [UInt8]
+        do {
+            requestBytes = try Array(envelope(request, settings: settings).serializedData())
+        } catch {
+            recordFailure(op: op, message: "encode failed: \(error)")
+            return nil
+        }
+        guard let response = try? Taigi_DesktopShell_DesktopResponse(
+            serializedBytes: Data(transport(requestBytes)),
+        ) else {
+            recordFailure(op: op, message: "response decode failed")
+            var failed = Taigi_DesktopShell_DesktopResponse()
+            failed.error = .failInternal
+            return failed
+        }
+        return response
+    }
+
+    /// Logs a seam failure.
+    private static func recordFailure(op: String, message: String) {
+        logger.error("[\(op)] \(message)")
     }
 
     /// The request and its settings snapshot in one envelope: they cross
@@ -65,11 +88,6 @@ enum DesktopCoreBridge {
             envelope.settings = settings
         }
         return envelope
-    }
-
-    /// Logs a seam failure.
-    private static func recordFailure(op: String, message: String) {
-        logger.error("[\(op)] \(message)")
     }
 
     private static let logger = DebugLogger(category: "DesktopCoreBridge")

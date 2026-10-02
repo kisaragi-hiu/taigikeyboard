@@ -12,12 +12,13 @@ import Foundation
 /// actions. A back end never touches a client; it records, and the
 /// controller replays (`docs/architecture/macos-desktop-core-roadmap.md` D3,
 /// record-then-replay). Two back ends implement it: `LegacyComposingBackend`
-/// (the Swift key path) and, from P10, one over desktop-core — one back end
-/// per process (`ComposingBackends`): both drive the one process-wide engine.
+/// (the Swift key path) and `CoreComposingBackend` (desktop-core) — one back
+/// end per process (`ComposingBackends`): both drive the one process-wide
+/// engine.
 ///
 /// Every request carries the session's token; one whose token does not own
 /// the engine is answered `nil` and does nothing — the non-owner rule of
-/// `ComposingSessionCoordinator.manager(ownedBy:)`.
+/// `ComposingSessionCoordinator.owns`.
 @MainActor
 protocol ComposingBackend: AnyObject {
     /// Whether `session` drives the engine now.
@@ -30,9 +31,8 @@ protocol ComposingBackend: AnyObject {
     /// holds it keeps its composition. Any list held for a session is dropped:
     /// the window went down with the handover.
     ///
-    /// The shortcut-target registry the controller registers with next
-    /// accepts only `ComposingSessionCoordinator`'s owner, so a back end that
-    /// does not drive the coordinator still has to claim there.
+    /// Claims `ComposingSessionCoordinator` too: the shortcut-target registry
+    /// the controller registers with next accepts only its owner.
     func activate(_ session: ComposingSessionToken)
 
     /// `session` gives the engine up, if it holds it.
@@ -157,11 +157,16 @@ struct CandidateListUpdate: Equatable {
 }
 
 /// The back end this process runs, chosen once from the environment:
-/// `TAIGI_COMPOSING_BACKEND` unset or `legacy` is the Swift key path. A test
-/// run picks one per `swift test` process (D9.1); an unknown name stops the
-/// process rather than silently testing the wrong back end.
+/// `TAIGI_COMPOSING_BACKEND` unset or `legacy` is the Swift key path, `core`
+/// is desktop-core. A test run picks one per `swift test` process (D9.1); an
+/// unknown name stops the process rather than silently testing the wrong
+/// back end.
 enum ComposingBackends {
     static let environmentKey = "TAIGI_COMPOSING_BACKEND"
+
+    /// Whether this process runs the core back end — for a test whose
+    /// expectation differs per back end on an open parity item.
+    static let isCore = ProcessInfo.processInfo.environment[environmentKey] == "core"
 
     @MainActor
     static let shared: any ComposingBackend = make(named: ProcessInfo.processInfo.environment[environmentKey])
@@ -170,9 +175,17 @@ enum ComposingBackends {
     private static func make(named name: String?) -> any ComposingBackend {
         switch name {
         case nil, "legacy":
-            LegacyComposingBackend(coordinator: .shared)
+            // The one place the shipped Swift composition is assembled, which
+            // is why the settings store and the learner's sink are named here
+            // rather than defaulted into `ComposingManager`.
+            LegacyComposingBackend(
+                coordinator: .shared,
+                manager: ComposingManager(settingsProvider: SettingsStore(), nextWord: EngineNextWord()),
+            )
+        case "core":
+            CoreComposingBackend(coordinator: .shared)
         case let .some(name):
-            preconditionFailure("\(environmentKey)=\(name) names no composing back end (known: legacy)")
+            preconditionFailure("\(environmentKey)=\(name) names no composing back end (known: legacy, core)")
         }
     }
 }

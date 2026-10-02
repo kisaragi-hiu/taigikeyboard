@@ -13,6 +13,7 @@ import XCTest
 final class FullWidthPunctuationControllerTests: XCTestCase {
     override func setUp() {
         super.setUp()
+        restoreStandardSettingsAtTeardown()
         InstalledLexicon.installOnce()
         // The armed-space cases commit the §34 literal with Return on a fresh
         // bar; Show Typed Text First ships OFF since 2026-10-02, so it is pinned ON here.
@@ -276,14 +277,15 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     private static let composition = "taigi"
     private static let caretIndex = composition.utf16.count - 1
 
-    /// An activated session under a scratch store carrying the shipped
-    /// defaults — full-width punctuation ON, waiting on the swap.
+    /// An activated session over `.standard` — the domain `withHanjiFirst`
+    /// writes the swap to — carrying the shipped defaults: full-width
+    /// punctuation ON, waiting on the swap.
     private func makeSession(configure: ((SettingsStore) -> Void)? = nil) throws -> Session {
         let client = RecordingTextInputClient()
         client.caretRects = [Self.caretIndex: CGRect(x: 120, y: 400, width: 1, height: 18)]
         let controller = try TestFixtures.makeInputController()
         controller.candidatePresenter = RecordingCandidatePresenter()
-        let store = try makeScratchSettingsStore()
+        let store = SettingsStore()
         configure?(store)
         controller.settings = store
         controller.activateServer(client)

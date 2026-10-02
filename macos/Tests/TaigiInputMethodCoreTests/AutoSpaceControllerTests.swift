@@ -11,14 +11,15 @@ import XCTest
 /// observable surface.
 ///
 /// Every case also starts roman-first — the direction that earns the space —
-/// though the shipped default is hanji-first (2026-09-18). In BOTH domains,
-/// for the reason on `withHanjiFirst`: `.standard` here for the shared
-/// coordinator, the scratch store in `makeSession` for the controller. The
-/// Hanji-first cases opt in on top, as they always did.
+/// though the shipped default is hanji-first (2026-09-18) — written to
+/// `.standard`, the one domain the controller, the legacy back end's engine
+/// settings (`withHanjiFirst`) and the core back end's snapshot all read
+/// here. The Hanji-first cases opt in on top, as they always did.
 @MainActor
 final class AutoSpaceControllerTests: XCTestCase {
     override func setUp() {
         super.setUp()
+        restoreStandardSettingsAtTeardown()
         InstalledLexicon.installOnce()
         setSettingRestoredAtTeardown(SettingsStore.Keys.isHanjiFirst.name, to: false)
         // The literal-commit cases need the §34 literal at cell 0; Show Typed
@@ -36,6 +37,43 @@ final class AutoSpaceControllerTests: XCTestCase {
 
         XCTAssertEqual(session.client.insertedTexts.count, 2, "one commit, one auto space")
         XCTAssertEqual(session.client.insertedTexts.last, " ")
+    }
+
+    /// The core back end asks the swap's client check before it knows what a
+    /// key will do, which is sound only because an armed space means an idle
+    /// session with no list: every arm follows a commit that ended the
+    /// composition. The next letter starts a composition of its own.
+    func testAnArmedSpace_followsACommitThatLeftNothingComposing() throws {
+        let session = try composedSession()
+        try session.walkToFirstTwoScriptCell()
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
+        XCTAssertEqual(session.client.insertedTexts.last, " ", "the space is armed")
+        XCTAssertFalse(session.presenter.isShowing)
+
+        session.client.clearWrites()
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: session.client)
+
+        XCTAssertEqual(session.client.writes, [.setMarkedText("t", selectionLocation: 1)])
+    }
+
+    /// A client callback that takes the focus away mid-replay (roadmap D3,
+    /// stale replies): the deactivation finishes what it can, and the rest
+    /// of the reply — the auto space here — belonged to the tenure that just
+    /// ended. Both back ends, since the replay is the controller's.
+    func testADeactivationDuringTheReplay_dropsTheRestOfTheReply() throws {
+        let session = try composedSession()
+        try session.walkToFirstTwoScriptCell()
+        var hasDeactivated = false
+        session.client.afterInsertText = { [controller = session.controller, client = session.client] _ in
+            guard !hasDeactivated else { return }
+            hasDeactivated = true
+            controller.deactivateServer(client)
+        }
+
+        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
+
+        XCTAssertEqual(session.client.insertedTexts.count, 1, "the commit landed; its auto space did not")
+        XCTAssertNotEqual(session.client.insertedTexts.last, " ")
     }
 
     func testALiteralCommitEndingInAHyphen_earnsNoSpace() throws {
@@ -483,12 +521,13 @@ final class AutoSpaceControllerTests: XCTestCase {
         let controller = try TestFixtures.makeInputController()
         let presenter = RecordingCandidatePresenter()
         controller.candidatePresenter = presenter
-        let store = try makeScratchSettingsStore()
-        // The shipped default is OFF; this suite is about the feature ON.
+        // One domain for the controller and the engine settings the cases
+        // flip with `withHanjiFirst` (`restoreStandardSettingsAtTeardown`).
+        let store = SettingsStore()
+        // The shipped default is OFF; this suite is about the feature ON. The
+        // roman-first baseline is `setUp`'s, so a `withHanjiFirst` around the
+        // session is what the session reads.
         store.isAutoSpaceEnabled = true
-        // And the shipped default is hanji-first; this suite's baseline is
-        // roman-first, the direction that earns the space (see the type's note).
-        store.storedIsHanjiFirst = false
         configure?(store)
         controller.settings = store
         controller.activateServer(client)

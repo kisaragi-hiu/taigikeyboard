@@ -26,6 +26,12 @@ final class DesktopCoreRuntime {
         var systemLocale: String
     }
 
+    /// The runtime `configure` built — one per process, as the core
+    /// configures once. `nil` before that, or when the core refused.
+    /// Unguarded: written once, by the launch's (or a test process's first)
+    /// `configure`, before the input-method server exists to read it.
+    private(set) nonisolated(unsafe) static var configured: DesktopCoreRuntime?
+
     /// The whitelisted settings and their defaults, as the core described
     /// them.
     let settings: [Taigi_DesktopShell_SettingDescriptor]
@@ -58,7 +64,11 @@ final class DesktopCoreRuntime {
                 nil
             }
         }
-        return reply.map { DesktopCoreRuntime(settings: $0.settings, userDefaults: userDefaults) }
+        let runtime = reply.map { DesktopCoreRuntime(settings: $0.settings, userDefaults: userDefaults) }
+        if let runtime {
+            configured = runtime
+        }
+        return runtime
     }
 
     /// Installs the lexicon and opens the user data, once per process; a

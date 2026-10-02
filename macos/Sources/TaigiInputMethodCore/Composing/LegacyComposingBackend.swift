@@ -14,6 +14,10 @@ final class LegacyComposingBackend: ComposingBackend {
 
     private let coordinator: ComposingSessionCoordinator
 
+    /// The one Swift-side mirror of the engine's composition, driven only
+    /// for the session the coordinator says is focused.
+    private let manager: ComposingManager
+
     /// The candidates the last fetch returned and the cells the window shows
     /// for them (`CandidateSource`). The absolute indices the
     /// `CandidatePresenter` seam answers with name PRESENTED cells, so a
@@ -22,31 +26,35 @@ final class LegacyComposingBackend: ComposingBackend {
     /// selection moves through.
     ///
     /// One for the process, like the composition it describes: only the
-    /// session that owns the engine reaches it
-    /// (`ComposingSessionCoordinator.manager(ownedBy:)`), and `activate`
+    /// session that owns the engine reaches it (`owningManager`), and `activate`
     /// drops it with the window on every handover — so a list left behind
     /// by `release` is never read.
     private var source = CandidateSource.empty
 
-    init(coordinator: ComposingSessionCoordinator) {
+    init(coordinator: ComposingSessionCoordinator, manager: ComposingManager) {
         self.coordinator = coordinator
+        self.manager = manager
     }
 
     func owns(_ session: ComposingSessionToken) -> Bool {
-        coordinator.manager(ownedBy: session) != nil
+        coordinator.owns(session)
     }
 
     func isComposing(_ session: ComposingSessionToken) -> Bool {
-        coordinator.manager(ownedBy: session)?.isComposing ?? false
+        owns(session) && manager.isComposing
     }
 
     func activate(_ session: ComposingSessionToken) {
-        coordinator.claim(session)
+        if coordinator.claim(session) {
+            manager.startNewSession()
+        }
         source = .empty
     }
 
     func release(_ session: ComposingSessionToken) {
-        coordinator.release(session)
+        if coordinator.release(session) {
+            manager.startNewSession()
+        }
     }
 
     func key(
@@ -103,7 +111,9 @@ final class LegacyComposingBackend: ComposingBackend {
             // `taigi？ `. The full-width map reading the mode rather than the
             // committed string is a separate approximation, untouched here.
             let isWidthFlip = ComposingKeyIntent.widthFlipCharacter(key) != nil
-            let documentText = documentPunctuation(text, isWidthFlip: isWidthFlip, settings: settings) ?? text
+            let documentText = FullWidthPunctuation.documentPunctuation(
+                text, isWidthFlip: isWidthFlip, settings: settings,
+            ) ?? text
             let insert = AutoSpacePolicy.augmentInsert(
                 documentText,
                 afterComposition: manager.displayText,
@@ -147,7 +157,9 @@ final class LegacyComposingBackend: ComposingBackend {
                 return ComposingKeyReply(handled: false, effects: effects.recorded)
             }
             let isWidthFlip = ComposingKeyIntent.widthFlipCharacter(key) != nil
-            let punctuation = documentPunctuation(typed, isWidthFlip: isWidthFlip, settings: settings)
+            let punctuation = FullWidthPunctuation.documentPunctuation(
+                typed, isWidthFlip: isWidthFlip, settings: settings,
+            )
             if swapAutoSpace(
                 inserting: isWidthFlip ? punctuation ?? typed : typed,
                 in: request, manager: manager, effects,
@@ -278,7 +290,7 @@ final class LegacyComposingBackend: ComposingBackend {
     /// into line with the window first, so nothing below reads a list the
     /// user cannot see.
     private func owningManager(for request: ComposingRequest) -> ComposingManager? {
-        guard let manager = coordinator.manager(ownedBy: request.session) else { return nil }
+        guard coordinator.owns(request.session) else { return nil }
         if !request.panel.isListOnScreen {
             source = .empty
         }
@@ -414,25 +426,6 @@ final class LegacyComposingBackend: ComposingBackend {
     private func closeList(_ effects: EffectRecorder) {
         source = .empty
         effects.record(.candidatesClosed)
-    }
-
-    // MARK: - Full-width punctuation
-
-    /// `FullWidthPunctuation.documentPunctuation` under the mode as it stands
-    /// NOW — read live, like the auto-space gate below, so a swap applies to
-    /// the very next key. `isWidthFlip` is `ComposingKeyIntent.widthFlipCharacter`'s
-    /// verdict on the key that typed `text`.
-    ///
-    /// The EFFECTIVE width (`current`), not the stored swap: a romanization-
-    /// only display writes romanization, and romanization takes half-width
-    /// marks; under Hanji with Romanization the stored swap still picks the width even though the
-    /// candidate projection is forced hanji-first.
-    private func documentPunctuation(_ text: String, isWidthFlip: Bool, settings: SettingsStore) -> String? {
-        FullWidthPunctuation.documentPunctuation(
-            text,
-            isFullWidthMode: settings.current.isFullWidthPunctuation,
-            isWidthFlip: isWidthFlip,
-        )
     }
 
     // MARK: - Auto-space

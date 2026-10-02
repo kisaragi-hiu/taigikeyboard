@@ -1,6 +1,7 @@
 // Decides which input session is allowed to drive the one composing engine.
 
 import Foundation
+import os
 
 /// Identity of one input session.
 ///
@@ -10,9 +11,21 @@ import Foundation
 /// An address-derived token would let that new session inherit the dead one's
 /// ownership — and its half-typed composition — instead of starting clean.
 struct ComposingSessionToken: Hashable, Sendable {
-    /// Only ever compared, never read — which is why a `UUID` is enough and no
-    /// counter, lock or mutable global is needed to hand these out.
-    private let value = UUID()
+    /// What the desktop core knows the session by (`ActivateRequest.token`):
+    /// counted from 1 for the process and never reused. 0 is what an unset
+    /// proto field decodes to, which the core refuses, so it is never minted.
+    let value: UInt64
+
+    init() {
+        value = Self.lastMinted.withLock { last in
+            last += 1
+            return last
+        }
+    }
+
+    /// Minted from the controller's stored-property initializer, which runs
+    /// off the main actor — hence a lock rather than an isolated counter.
+    private static let lastMinted = OSAllocatedUnfairLock<UInt64>(initialState: 0)
 }
 
 /// A session-side endpoint for the user-configurable shortcuts.
@@ -27,30 +40,24 @@ protocol ShortcutActionTarget: AnyObject {
     func performShortcutAction(_ action: ShortcutAction)
 }
 
-/// Hands the single `ComposingManager` to whichever input session is focused.
+/// Which input session is focused — the one that drives the process's one
+/// composing engine, and the one the shortcut hotkeys act through.
 ///
 /// IMK creates one controller per client text session, but the Rust composing
 /// state is one per process (`engine/composing/src/handle.rs:21-56`). Without
 /// an owner, a controller that is still alive in a background app would append
-/// to the composition the user is typing in the foreground one.
+/// to the composition the user is typing in the foreground one. The engine
+/// itself is the back end's (`ComposingBackend`): it claims here beside its
+/// own handover, and starts a fresh engine session when `claim` or `release`
+/// answers that ownership moved.
 ///
 /// Ownership is keyed by a token the controller supplies, never by anything
 /// read from the client — see `ActivateServerClientQueryTests` for why the
 /// client must not be asked anything during activation.
 @MainActor
 final class ComposingSessionCoordinator {
-    /// Process-wide, because the engine state it guards is — and the one place
-    /// the shipped composition is assembled, which is why the settings store
-    /// and the learner's sink are named here rather than defaulted into
-    /// `ComposingManager`.
-    static let shared = ComposingSessionCoordinator(
-        composingManager: ComposingManager(
-            settingsProvider: SettingsStore(),
-            nextWord: EngineNextWord(),
-        ),
-    )
-
-    private let composingManager: ComposingManager
+    /// Process-wide, because the engine state it guards is.
+    static let shared = ComposingSessionCoordinator()
 
     private var currentOwner: ComposingSessionToken?
     private static let logger = DebugLogger(category: "SessionCoordinator")
@@ -72,23 +79,19 @@ final class ComposingSessionCoordinator {
     /// registers Carbon hotkeys in the test runner.
     var shortcutAvailabilityDidChange: ((Bool) -> Void)?
 
-    init(composingManager: ComposingManager) {
-        self.composingManager = composingManager
-    }
-
-    /// Makes `owner` the session that drives the engine, and returns the
-    /// manager it should drive.
+    /// Makes `owner` the session that drives the engine; true when ownership
+    /// moved to it.
     ///
-    /// Taking ownership from another session starts a fresh engine session:
-    /// whatever the previous one was composing belongs to a document this one
-    /// cannot write to. Re-claiming an ownership this session already holds
-    /// leaves the composition alone — an app can be deactivated and reactivated
-    /// (a menu opening, a palette taking focus) with the composition intact.
+    /// Taking ownership from another session is where the back end starts a
+    /// fresh engine session: whatever the previous one was composing belongs
+    /// to a document this one cannot write to. Re-claiming an ownership this
+    /// session already holds answers false and leaves the composition alone —
+    /// an app can be deactivated and reactivated (a menu opening, a palette
+    /// taking focus) with the composition intact.
     @discardableResult
-    func claim(_ owner: ComposingSessionToken) -> ComposingManager {
-        guard currentOwner != owner else { return composingManager }
+    func claim(_ owner: ComposingSessionToken) -> Bool {
+        guard currentOwner != owner else { return false }
         Self.logger.debug("session ownership changed")
-        composingManager.startNewSession()
         currentOwner = owner
         // The outgoing session's endpoint must not receive shortcuts meant for
         // the incoming one. Cleared here rather than left to the new session's
@@ -96,7 +99,7 @@ final class ComposingSessionCoordinator {
         // deactivates the outgoing one — same ordering hazard the candidate
         // panel's owner token exists for.
         clearShortcutTarget()
-        return composingManager
+        return true
     }
 
     /// Makes `target` the endpoint the shortcut hotkeys act through, and turns
@@ -133,16 +136,17 @@ final class ComposingSessionCoordinator {
         shortcutAvailabilityDidChange?(false)
     }
 
-    /// The manager, or `nil` when `owner` is not the focused session.
+    /// Whether `owner` is the focused session.
     ///
-    /// `nil` is the answer that keeps a stale controller from writing into the
+    /// False is the answer that keeps a stale controller from writing into the
     /// live session's composition; callers treat it as "this key is not mine"
     /// and leave the event to the host.
-    func manager(ownedBy owner: ComposingSessionToken) -> ComposingManager? {
-        currentOwner == owner ? composingManager : nil
+    func owns(_ owner: ComposingSessionToken) -> Bool {
+        currentOwner == owner
     }
 
-    /// Gives up ownership when a session ends.
+    /// Gives up ownership when a session ends; true when `owner` held it —
+    /// where the back end starts a fresh engine session.
     ///
     /// Called from `inputControllerWillClose`, which is the only lifecycle hook
     /// every controller is guaranteed to receive — a controller that is torn
@@ -152,11 +156,12 @@ final class ComposingSessionCoordinator {
     /// A session that is no longer the owner has already been superseded by
     /// `claim`, so releasing it must not disturb the composition that took its
     /// place.
-    func release(_ owner: ComposingSessionToken) {
-        guard currentOwner == owner else { return }
+    @discardableResult
+    func release(_ owner: ComposingSessionToken) -> Bool {
+        guard currentOwner == owner else { return false }
         Self.logger.debug("session ownership released")
-        composingManager.startNewSession()
         currentOwner = nil
         clearShortcutTarget()
+        return true
     }
 }

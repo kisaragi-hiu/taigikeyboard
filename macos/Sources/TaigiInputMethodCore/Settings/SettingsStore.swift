@@ -344,7 +344,9 @@ final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
         static let clearedComposingChord = ""
     }
 
-    private let userDefaults: UserDefaults
+    /// The domain this store reads — also what the core back end builds each
+    /// request's settings snapshot from.
+    let userDefaults: UserDefaults
 
     /// The suite is injectable so a test can run against its own domain rather
     /// than the one the user's real settings live in.
