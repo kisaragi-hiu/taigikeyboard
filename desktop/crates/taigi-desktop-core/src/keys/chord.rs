@@ -217,10 +217,10 @@ impl ComposingKeyChord {
     /// any pass against the slot tier. Asked of the normalized key, so the
     /// case fold is `normalized`'s.
     ///
-    /// Read off the first SCALAR; Swift reads the first grapheme, so on the
-    /// Mac a letter carrying a combining mark (`İ` folds to `i̇`) is a typing
-    /// key here and not there — E6 in `macos-desktop-core-roadmap.md`,
-    /// characterised in P5.
+    /// Read off the first SCALAR, so a letter carrying a combining mark (`İ`
+    /// folds to `i̇`) is still the letter it types — E6 in
+    /// `macos-desktop-core-roadmap.md`, settled P11b (the Swift gate reads
+    /// the first scalar too).
     /// CROSS-PLATFORM INVARIANT — mirrors `ComposingKeyChord.swift` `isTypingKey`.
     fn is_typing_key(character: char) -> bool {
         character.is_ascii_alphabetic()
@@ -837,10 +837,9 @@ mod tests {
         assert_eq!(back_tab.display(MAC), "⇧⇥");
     }
 
-    /// Pins the CURRENT core rule — roadmap E6, a real difference. Swift asks
-    /// `isTypingKey` of the first grapheme of the fold (`İ` → `i̇`, not ASCII,
-    /// so it records — `ComposingKeyChord.swift` `isTypingKey`); the core asks
-    /// the first scalar `i` and refuses it.
+    /// Roadmap E6, settled P11b: the gate asks the first scalar of the fold
+    /// (`İ` → `i̇`, first scalar `i`) and refuses it bare — the Swift gate
+    /// (`ComposingKeyChord.swift` `make(key:modifiers:)`) asks the same.
     #[test]
     fn e6_a_fold_that_adds_a_combining_mark_is_a_typing_key_on_the_mac() {
         // trace: str::to_lowercase("İ") = "i\u{307}" (SpecialCasing), first
@@ -857,7 +856,7 @@ mod tests {
         assert_eq!(
             ComposingKeyChord::translate_raw("s|0069,0307", MAC),
             Some(Err(ChordRejection::TypesRomanization)),
-            "the ⇧İ row Swift stores"
+            "a ⇧İ row recorded before P11b"
         );
         // Negative controls, the same on both sides: `Ñ` folds to a
         // non-ASCII `ñ` and binds bare; the Kelvin sign folds to an ASCII

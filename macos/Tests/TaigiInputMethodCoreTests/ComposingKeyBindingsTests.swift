@@ -51,6 +51,31 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertEqual(chord.modifiers, [.shift, .control])
     }
 
+    /// The refusal reads the folded key's first scalar, as desktop-core's
+    /// `is_typing_key` does: `İ` folds to `i̇` and is refused for the `i` it
+    /// types — whether recorded or read back from storage — until a chording
+    /// modifier frees it.
+    func testAFoldThatAddsACombiningMark_isStillATypingKey() throws {
+        // trace: "İ".lowercased() = "i\u{307}" (SpecialCasing); first scalar
+        // "i" is an ASCII letter → typesRomanization without ⌘ / ⌃ / ⌥.
+        for modifiers in [[], .shift] as [NSEvent.ModifierFlags] {
+            XCTAssertEqual(ComposingKeyChord.make(key: "İ", modifiers: modifiers), .failure(.typesRomanization))
+            XCTAssertEqual(
+                try ComposingKeyChord.make(snapshot("İ", modifiers: modifiers)),
+                .failure(.typesRomanization),
+                "the recorder",
+            )
+        }
+        XCTAssertNil(ComposingKeyChord(rawValue: "s|0069,0307"), "a ⇧İ row recorded before the scalar rule")
+        XCTAssertEqual(try chord("İ", .control).key, "i\u{307}")
+        XCTAssertEqual(ComposingKeyChord(rawValue: "c|0069,0307"), try chord("İ", .control))
+
+        // Negative controls: `Ñ` folds to a non-ASCII `ñ` and binds bare; the
+        // Kelvin sign folds to an ASCII `k` and is refused.
+        XCTAssertEqual(try chord("Ñ").key, "ñ")
+        XCTAssertEqual(ComposingKeyChord.make(key: "\u{212A}", modifiers: []), .failure(.typesRomanization))
+    }
+
     /// A bare `` ` `` and ⇧` are two different chords on one key, and each
     /// fires only on its own event.
     func testABareChord_andItsShiftedTwin_doNotCrossMatch() throws {

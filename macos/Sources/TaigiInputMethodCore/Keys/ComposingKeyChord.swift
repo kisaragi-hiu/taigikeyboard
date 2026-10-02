@@ -99,7 +99,7 @@ struct ComposingKeyChord: Hashable, Sendable {
         // Shift alone does not make a chord out of a typing key: ⇧A is still
         // the letter A, and binding it would cost the user their capitals.
         let hasChordingModifier = !modifiers.isDisjoint(with: [.command, .control, .option])
-        if !hasChordingModifier, let first = key.first, isTypingKey(first) {
+        if !hasChordingModifier, let first = key.unicodeScalars.first, isTypingKey(Character(first)) {
             return .failure(.typesRomanization)
         }
         return .success(ComposingKeyChord(key: key, modifiers: modifiers))
@@ -188,6 +188,10 @@ struct ComposingKeyChord: Hashable, Sendable {
     /// switches — which is also what lets `ComposingKeyBindings` skip any
     /// pass against the slot tier. Asked of the normalized key, so the case
     /// fold is `normalized`'s — the same way the reserved-key check reads it.
+    ///
+    /// Asked of the key's first SCALAR, not its first grapheme, as
+    /// desktop-core's `is_typing_key` is: a letter carrying a combining mark
+    /// (`İ` folds to `i̇`, U+0069 U+0307) still types that letter.
     private static func isTypingKey(_ character: Character) -> Bool {
         guard character.isASCII else { return false }
         return character.isLetter
