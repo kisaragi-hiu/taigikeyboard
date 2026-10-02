@@ -19,7 +19,7 @@ import Foundation
 /// auto-space swap is read first and wins: the word in front of the caret is
 /// romanization, and romanization keeps Latin punctuation whatever the mode
 /// would say about a hanji word (`TaigiInputController`'s `.passThrough` arm).
-/// The caller reads the mode (`TaigiInputController.documentPunctuation`),
+/// The caller reads the mode (`documentPunctuation(_:isWidthFlip:settings:)`),
 /// and the mode is a DEFAULT, not a wall: ⌃ on any key of this map types the
 /// other width once (`ComposingKeyIntent.widthFlipCharacter`) — the 新注音 /
 /// Microsoft IME gesture, made symmetric because the case that hurt was a
@@ -63,5 +63,20 @@ enum FullWidthPunctuation {
             return mapped(text)
         }
         return isWidthFlip ? text : nil
+    }
+
+    /// The same under the mode `settings` holds NOW — read live, like the
+    /// auto-space gate, so a swap applies to the very next key. `isWidthFlip`
+    /// is `ComposingKeyIntent.widthFlipCharacter`'s verdict on the key that
+    /// typed `text`. One reading for both back ends: the legacy key path
+    /// writes it, the core back end asks it before a swap's client check.
+    ///
+    /// The EFFECTIVE width (`current`), not the stored swap: a romanization-
+    /// only display writes romanization, and romanization takes half-width
+    /// marks; under Hanji with Romanization the stored swap still picks the
+    /// width even though the candidate projection is forced hanji-first.
+    @MainActor
+    static func documentPunctuation(_ text: String, isWidthFlip: Bool, settings: SettingsStore) -> String? {
+        documentPunctuation(text, isFullWidthMode: settings.current.isFullWidthPunctuation, isWidthFlip: isWidthFlip)
     }
 }

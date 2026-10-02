@@ -53,6 +53,10 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
     /// Every index the caret walk asked about, in order.
     private(set) var caretRectQueries: [Int] = []
 
+    /// Called after each `insertText` is recorded — where a case plays a host
+    /// whose callback re-enters the input method mid-write.
+    var afterInsertText: ((String) -> Void)?
+
     /// The attributes of the most recent marked-text write, which is where the
     /// composition's underline lives.
     private(set) var lastMarkedTextAttributes: [NSAttributedString.Key: Any] = [:]
@@ -84,6 +88,7 @@ final class RecordingTextInputClient: NSObject, IMKTextInput {
         writes.append(.insertText(text))
         insertReplacementRanges.append(replacementRange)
         simulateDocumentMutation(text, replacementRange: replacementRange)
+        afterInsertText?(text)
     }
 
     /// Applies an insert to the simulated document, when one is configured.

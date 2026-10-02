@@ -186,6 +186,12 @@ enum TestFixtures {
         .appendingPathComponent("assets/symbols")
         .appendingPathComponent(SymbolTable.fileName)
 
+    /// `<repo>/macos/crates/taigi-macos-ffi/fixtures/chord_rules.tsv` — the
+    /// chord-rule table the Swift Shortcuts pane and desktop-core are both
+    /// held to (`ChordRulesCrossCheckTests`).
+    static let chordRulesURL = repositoryRoot
+        .appendingPathComponent("macos/crates/taigi-macos-ffi/fixtures/chord_rules.tsv")
+
     /// The shipped symbol table, read the way the app reads it.
     static func shippedSymbolTable() throws -> SymbolTable {
         try SymbolTable.load(from: symbolTableURL)
@@ -195,7 +201,11 @@ enum TestFixtures {
     /// test double reaches the controller through the callbacks instead — which
     /// is also how the controller learns its client in production.
     static func makeInputController() throws -> TaigiInputController {
-        try XCTUnwrap(
+        // The core back end sends every request under the process's runtime
+        // (`DesktopCoreRuntime.configured`): up, with its lexicon, before any
+        // controller types.
+        InstalledLexicon.installOnce()
+        return try XCTUnwrap(
             TaigiInputController(server: nil, delegate: nil, client: nil),
             "could not construct the controller under test",
         )
@@ -277,30 +287,54 @@ enum TestFixtures {
     /// opens the engine's user data: the handle is process-wide, and an open
     /// here would reach every later fetch in the run — so the picks the
     /// engine counts itself (R5) go nowhere here.
+    ///
+    /// Skipped in the core back end's process: a Swift manager there would
+    /// count generations beside the core's coordinator and the two could
+    /// meet (macos-desktop-core-roadmap.md D9.1) — the legacy process runs
+    /// these cases.
     @MainActor
     static func makeComposingManager(
         settingsProvider: EngineSettingsProvider = StubEngineSettingsProvider(),
         nextWord: RecordingNextWordPort = RecordingNextWordPort(),
         startingGeneration: UInt64,
     ) throws -> ComposingManager {
-        ComposingManager(
+        try skipUnderTheCoreBackEnd()
+        return ComposingManager(
             settingsProvider: settingsProvider,
             nextWord: nextWord,
             startingGeneration: startingGeneration,
         )
     }
 
-    /// A coordinator of its own, over in-memory recorders and an unused
-    /// generation.
+    /// Whether this process runs the core back end
+    /// (`TAIGI_COMPOSING_BACKEND=core`, `make -C macos test`'s second run) —
+    /// for a case whose expectation differs per back end on an open parity
+    /// item.
+    static let isCoreBackEnd = ProcessInfo.processInfo.environment[ComposingBackends.environmentKey] == "core"
+
+    /// Skips a case that drives the engine through the Swift key path's own
+    /// generations (`makeComposingManager`, the bridge's composing ops) in
+    /// the core back end's process.
+    static func skipUnderTheCoreBackEnd() throws {
+        try XCTSkipIf(isCoreBackEnd, "drives the engine with Swift generations — run by the legacy process")
+    }
+
+    /// A coordinator of its own.
     ///
     /// Never `ComposingSessionCoordinator.shared`: that one is process-wide,
     /// guards process-wide engine state, and in the shipped app arms the real
     /// Carbon hotkeys through `AppDelegate`'s availability callback.
     @MainActor
-    static func makeCoordinator() throws -> ComposingSessionCoordinator {
-        try ComposingSessionCoordinator(
-            composingManager: makeComposingManager(startingGeneration: generationCounter.next()),
-        )
+    static func makeCoordinator() -> ComposingSessionCoordinator {
+        ComposingSessionCoordinator()
+    }
+
+    /// A legacy back end of its own, over its own coordinator and a manager
+    /// with in-memory recorders and an unused generation.
+    @MainActor
+    static func makeLegacyBackend() throws -> (LegacyComposingBackend, ComposingManager) {
+        let manager = try makeComposingManager(startingGeneration: generationCounter.next())
+        return (LegacyComposingBackend(coordinator: makeCoordinator(), manager: manager), manager)
     }
 
     /// A candidate carrying only the fields a case is asserting on. The engine
@@ -366,6 +400,26 @@ extension XCTestCase {
         let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         addTeardownBlock { userDefaults.removePersistentDomain(forName: suiteName) }
         return SettingsStore(userDefaults: userDefaults)
+    }
+
+    /// Puts the whole of `UserDefaults.standard` back at teardown, as it is
+    /// now — for a suite whose controllers read `.standard` itself, the one
+    /// domain the controller, the legacy back end's engine settings
+    /// (`withSetting`) and the core back end's snapshot then all read, as in
+    /// the shipped app. Called first in `setUp`, so it is the last teardown
+    /// block to run and no `withSetting` value is inside the snapshot.
+    nonisolated func restoreStandardSettingsAtTeardown() {
+        guard let domain = Bundle.main.bundleIdentifier else {
+            return XCTFail("no bundle identifier to name the .standard domain by")
+        }
+        let saved = UserDefaults.standard.persistentDomain(forName: domain)
+        addTeardownBlock {
+            if let saved {
+                UserDefaults.standard.setPersistentDomain(saved, forName: domain)
+            } else {
+                UserDefaults.standard.removePersistentDomain(forName: domain)
+            }
+        }
     }
 
     /// Runs `body` with `key` in `UserDefaults.standard` set to `value` (nil

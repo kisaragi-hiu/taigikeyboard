@@ -118,6 +118,44 @@ final class TaigiInputControllerTests: XCTestCase {
         XCTAssertEqual(client.writes, [])
     }
 
+    /// An app deactivated and activated again (a menu opening, a palette
+    /// taking focus) with no deactivation in between keeps what was typed:
+    /// the session claims the engine it already holds.
+    func testActivatingAgain_keepsTheCompositionRunning() throws {
+        let client = RecordingTextInputClient()
+        let controller = try makeActivatedController(client: client)
+        _ = try controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: client)
+
+        controller.activateServer(client)
+        _ = try controller.handle(TestFixtures.keyDownEvent(characters: "a"), client: client)
+
+        XCTAssertEqual(client.writes.last, .setMarkedText("ta", selectionLocation: 2))
+        XCTAssertTrue(client.insertedTexts.isEmpty)
+    }
+
+    /// Every key reads the settings as the store holds them then — a value
+    /// written, and a value removed, which reads as its default again (the
+    /// core back end: a snapshot without the entry).
+    func testASettingWrittenThenRemoved_isReadOnTheNextKey() throws {
+        let client = RecordingTextInputClient()
+        client.caretRects = [0: CGRect(x: 120, y: 400, width: 1, height: 18)]
+        let controller = try TestFixtures.makeInputController()
+        let presenter = RecordingCandidatePresenter()
+        controller.candidatePresenter = presenter
+        let store = try makeScratchSettingsStore()
+        controller.settings = store
+        controller.activateServer(client)
+        let windowKey = SettingsStore.Keys.isCandidateWindowEnabled.name
+
+        store.userDefaults.set(false, forKey: windowKey)
+        _ = try controller.handle(TestFixtures.keyDownEvent(characters: "t"), client: client)
+        XCTAssertFalse(presenter.isShowing, "written: no window")
+
+        store.userDefaults.removeObject(forKey: windowKey)
+        _ = try controller.handle(TestFixtures.keyDownEvent(characters: "a"), client: client)
+        XCTAssertTrue(presenter.isShowing, "removed: the default, a window")
+    }
+
     /// Keydown only. The mask carried `flagsChanged` while a solo-Shift tap
     /// drove English (ABC); that feature went on 2026-08-26 — there is no English mode
     /// here now, the user switches input sources — and a mask still asking for

@@ -20,7 +20,7 @@ private final class RecordingShortcutTarget: ShortcutActionTarget {
 @MainActor
 final class ShortcutRoutingTests: XCTestCase {
     func testActionReachesTheRegisteredSession() throws {
-        let coordinator = try TestFixtures.makeCoordinator()
+        let coordinator = TestFixtures.makeCoordinator()
         let owner = ComposingSessionToken()
         let target = RecordingShortcutTarget()
         coordinator.claim(owner)
@@ -34,7 +34,7 @@ final class ShortcutRoutingTests: XCTestCase {
     /// A controller whose session was superseded must not receive shortcuts:
     /// it would apply them against a client the user has left.
     func testRegisteringFromASupersededSessionIsIgnored() throws {
-        let coordinator = try TestFixtures.makeCoordinator()
+        let coordinator = TestFixtures.makeCoordinator()
         let stale = ComposingSessionToken()
         let target = RecordingShortcutTarget()
         coordinator.claim(stale)
@@ -51,7 +51,7 @@ final class ShortcutRoutingTests: XCTestCase {
     /// outgoing session's teardown would leave a window where a chord reaches
     /// the app the user just left.
     func testHandoverDropsThePreviousSessionsEndpoint() throws {
-        let coordinator = try TestFixtures.makeCoordinator()
+        let coordinator = TestFixtures.makeCoordinator()
         let first = ComposingSessionToken()
         let target = RecordingShortcutTarget()
         coordinator.claim(first)
@@ -64,7 +64,7 @@ final class ShortcutRoutingTests: XCTestCase {
     }
 
     func testReleaseDropsTheEndpoint() throws {
-        let coordinator = try TestFixtures.makeCoordinator()
+        let coordinator = TestFixtures.makeCoordinator()
         let owner = ComposingSessionToken()
         let target = RecordingShortcutTarget()
         coordinator.claim(owner)
@@ -82,7 +82,7 @@ final class ShortcutRoutingTests: XCTestCase {
     /// the user's choice of input source. Availability tracks whether a Taigi
     /// session is focused, which is the scope the PR5 menu key equivalent had.
     func testHotkeysAreArmedWithASessionAndDisarmedWithout() throws {
-        let coordinator = try TestFixtures.makeCoordinator()
+        let coordinator = TestFixtures.makeCoordinator()
         var availability: [Bool] = []
         coordinator.shortcutAvailabilityDidChange = { availability.append($0) }
         let owner = ComposingSessionToken()
@@ -103,7 +103,7 @@ final class ShortcutRoutingTests: XCTestCase {
     /// deactivates, so A's late release must not disarm the session that has
     /// already taken over.
     func testAppSwitchSequence_leavesTheIncomingSessionArmed() throws {
-        let coordinator = try TestFixtures.makeCoordinator()
+        let coordinator = TestFixtures.makeCoordinator()
         var availability: [Bool] = []
         let sessionA = ComposingSessionToken()
         let sessionB = ComposingSessionToken()
@@ -132,7 +132,7 @@ final class ShortcutRoutingTests: XCTestCase {
     /// the composition changes there, and nothing about the hotkeys should
     /// either — a disarm/rearm pair would be a window where the chord is dead.
     func testReclaimingTheSameSession_leavesTheHotkeysArmed() throws {
-        let coordinator = try TestFixtures.makeCoordinator()
+        let coordinator = TestFixtures.makeCoordinator()
         var availability: [Bool] = []
         let owner = ComposingSessionToken()
         let target = RecordingShortcutTarget()
@@ -151,7 +151,7 @@ final class ShortcutRoutingTests: XCTestCase {
     /// Armed with nothing behind it means the chord is taken from the host for
     /// a command that cannot run, so the next attempt disarms.
     func testATargetThatWentAway_disarmsOnTheNextAction() throws {
-        let coordinator = try TestFixtures.makeCoordinator()
+        let coordinator = TestFixtures.makeCoordinator()
         var availability: [Bool] = []
         let owner = ComposingSessionToken()
         coordinator.claim(owner)
@@ -170,7 +170,7 @@ final class ShortcutRoutingTests: XCTestCase {
     /// the hotkeys would act on — every release would otherwise disarm what a
     /// newly activated session had just armed.
     func testReleasingWithoutAnEndpointAnnouncesNothing() throws {
-        let coordinator = try TestFixtures.makeCoordinator()
+        let coordinator = TestFixtures.makeCoordinator()
         var availability: [Bool] = []
         coordinator.shortcutAvailabilityDidChange = { availability.append($0) }
         let owner = ComposingSessionToken()

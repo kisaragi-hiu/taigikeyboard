@@ -10,8 +10,9 @@ final class RustEngineBridgeComposingTests: XCTestCase {
 
     private var generation: UInt64 = 0
 
-    override func setUp() {
-        super.setUp()
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        try TestFixtures.skipUnderTheCoreBackEnd()
         generation = TestFixtures.generationCounter.next()
         InstalledLexicon.installOnce()
     }

@@ -17,7 +17,7 @@ help:
 	@echo "$(BUNDLE_ID) — macOS input method"
 	@echo ""
 	@echo "  make build      - Build the SwiftPM executable"
-	@echo "  make test       - Run swift test"
+	@echo "  make test       - Run swift test, once per composing back end"
 	@echo "  make bundle     - Assemble and validate the .app"
 	@echo "  make i18n-check - Fail if the generated i18n Swift is stale"
 	@echo "  make install    - Bundle, then deploy to ~/Library/Input Methods"
@@ -43,8 +43,13 @@ i18n-check:
 build: i18n-check
 	swift build --configuration $(CONFIGURATION)
 
+# One `swift test` process per composing back end (docs/architecture/macos-desktop-core-roadmap.md
+# D9.1): both drive the process's one engine, under generation counters of their own. In the core
+# run the cases that drive it through the Swift key path's generations skip themselves
+# (`TestFixtures.skipUnderTheCoreBackEnd`), so the two counters never meet in one process.
 test: i18n-check
-	swift test
+	TAIGI_COMPOSING_BACKEND=legacy swift test
+	TAIGI_COMPOSING_BACKEND=core swift test --skip-build
 
 bundle:
 	bash scripts/bundle-app.sh $(CONFIGURATION)

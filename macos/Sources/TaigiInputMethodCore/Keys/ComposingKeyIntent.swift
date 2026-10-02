@@ -78,6 +78,10 @@ struct KeyEventSnapshot: Sendable {
     /// toggles: a held chord would otherwise open and close the picker on
     /// every repeat. False for a snapshot built without an event.
     let isRepeat: Bool
+    /// `NSEvent.specialKey?.rawValue` — what the desktop core reads a named
+    /// key from (`KeyEvent.special_key`). Nil for a key AppKit has no name
+    /// for, and for a snapshot built without an event.
+    let specialKeyRawValue: UInt32?
 
     init(
         characters: String?,
@@ -87,6 +91,7 @@ struct KeyEventSnapshot: Sendable {
         keyCode: UInt16? = nil,
         navigationKey: NavigationKey? = nil,
         isRepeat: Bool = false,
+        specialKeyRawValue: UInt32? = nil,
     ) {
         self.characters = characters
         self.charactersIgnoringModifiers = charactersIgnoringModifiers ?? characters
@@ -95,6 +100,7 @@ struct KeyEventSnapshot: Sendable {
         self.isNamedSpecialKey = isNamedSpecialKey
         self.navigationKey = navigationKey
         self.isRepeat = isRepeat
+        self.specialKeyRawValue = specialKeyRawValue
     }
 
     init(_ event: NSEvent) {
@@ -109,6 +115,7 @@ struct KeyEventSnapshot: Sendable {
             keyCode: isKeyEvent ? event.keyCode : nil,
             navigationKey: event.specialKey.flatMap(NavigationKey.init),
             isRepeat: isKeyEvent && event.isARepeat,
+            specialKeyRawValue: event.specialKey.flatMap { UInt32(exactly: $0.rawValue) },
         )
     }
 }

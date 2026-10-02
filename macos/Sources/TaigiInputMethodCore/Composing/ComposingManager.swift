@@ -10,8 +10,9 @@ import Foundation
 /// type owns only a mirror of the last answer, which the controller reads to
 /// decide whether a key belongs to the composition or to the host.
 ///
-/// One instance per process, held by `ComposingSessionCoordinator`, which is
-/// where the process-wide engine state it stands for is explained — a second
+/// One instance per process, held by `LegacyComposingBackend` (built in
+/// `ComposingBackends`; the process-wide engine state it stands for is
+/// `ComposingSessionCoordinator`'s to explain) — a second
 /// instance would hand out generations the first one knows nothing about, and
 /// the engine drops its state whenever the generation moves.
 @MainActor

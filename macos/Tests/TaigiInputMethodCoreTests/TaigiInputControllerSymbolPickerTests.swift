@@ -27,7 +27,10 @@ final class TaigiInputControllerSymbolPickerTests: XCTestCase {
         userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
         // The mid-composition cases assume the §34 literal at cell 0; Show Typed
         // Text First ships OFF since 2026-10-02, so it is pinned ON here.
+        // In this suite's domain too, which the controller — and the core back
+        // end's snapshot — reads.
         setSettingRestoredAtTeardown(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name, to: true)
+        userDefaults.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
         savedPickerShortcut = KeyboardShortcuts.getShortcut(for: .showSymbolPicker)
         KeyboardShortcuts.setShortcut(ShortcutAction.showSymbolPicker.defaultShortcut, for: .showSymbolPicker)
     }
