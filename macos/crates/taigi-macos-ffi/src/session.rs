@@ -389,7 +389,7 @@ mod tests {
     use crate::proto::desktop_response::Reply;
     use crate::proto::{KeyEvent, SettingEntry, SettingsSnapshot};
     use crate::runtime::Shell;
-    use crate::test_support::{boolean, engine_shell, key_event, next_token};
+    use crate::test_support::{boolean, engine_shell, key_event, next_token, text};
     use std::collections::HashMap;
 
     // The rest of NSEvent.ModifierFlags / NSEvent.SpecialKey (`key_translation.rs`).
@@ -668,7 +668,7 @@ mod tests {
         assert_eq!(RecordingSurface::new(&no_list()).selected_index(), None);
     }
 
-    // ---- Key: one golden reply per executor arm ----
+    // ---- Key: golden replies for the executor's arms ----
 
     /// trace: TL; `tai5` → engine display "tâi" (tone 5 = circumflex), 3
     /// UTF-16 units against 4 typed — the list anchors on what is on screen.
@@ -688,6 +688,51 @@ mod tests {
         );
         assert_eq!(list.marked_text_length_utf16, 3);
         assert!(!list.cells.is_empty());
+    }
+
+    /// Backspace (AppKit names `\u{7F}` `delete`) mid-composition deletes
+    /// one character and refetches.
+    #[test]
+    fn delete_backward_shortens_the_composition_and_refetches() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("ta");
+        let reply = typist.key(chord("\u{7F}", 0, Some(0x7F)), list(Some(0)));
+        assert!(reply.handled && reply.is_composing);
+        let list = shown_list(&reply);
+        assert_eq!(
+            effects(&reply),
+            vec![
+                marked("t", 1),
+                effect::Effect::CandidatesChanged(list.clone())
+            ]
+        );
+        assert_eq!(list.marked_text_length_utf16, 1);
+    }
+
+    /// trace: Telex keys `vydwxqzf`; `y` after `tai` is the engine's tone 3
+    /// → "tài".
+    #[test]
+    fn a_telex_key_reaches_the_engine_as_a_tone() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![text("toneInputScheme", "telex")]);
+        typist.type_text("tai");
+        let reply = typist.key(typed("y"), list(Some(0)));
+        assert!(reply.handled && reply.is_composing);
+        assert_eq!(effects(&reply)[0], marked("tài", 3));
+        assert_eq!(shown_list(&reply).marked_text_length_utf16, 3);
+    }
+
+    /// Return over a list commits the highlighted cell in its own script —
+    /// a Hanji cell, so no auto space.
+    #[test]
+    fn return_commits_the_highlighted_cell() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        let cells = shown_list(&typist.type_text("ti")).cells;
+        let reply = typist.key(chord("\r", 0, Some(CARRIAGE_RETURN)), list(Some(0)));
+        assert!(reply.handled && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![insert(&cells[0].text), closed()]);
     }
 
     /// trace: Standard tone scheme → bare slot keys `q w d …`; `w` = slot 1,
@@ -868,7 +913,9 @@ mod tests {
     }
 
     /// The window switched off since the last key: the list comes down
-    /// before the key, and the refresh fetches nothing.
+    /// before the key, and the refresh fetches nothing. The two closes are
+    /// the Swift key path's own (`LegacyComposingBackend` `key` preamble and
+    /// `refreshCandidates`) — not a duplicate to fold.
     #[test]
     fn a_switched_off_window_closes_the_list_before_the_key() {
         let (_engine, shell) = engine_shell();
