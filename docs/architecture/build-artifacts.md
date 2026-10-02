@@ -39,17 +39,19 @@ Ignored files survive `git checkout`, so bootstrapping is one pass per machine, 
 
 `make dict` must finish before `make build` when dictionary sources moved.
 
-## Four Cargo workspaces (deliberate)
+## Five Cargo workspaces (deliberate)
 
-`engine/`, `desktop/`, `windows/` and `linux/` are four workspaces, each with its own `Cargo.lock`, `target/` and `rust-toolchain.toml`; the three desktop ones reach the engine crates by path, so each compiles its own copy. A root workspace was spiked on 2026-10-01 and not adopted:
+`engine/`, `desktop/`, `windows/`, `linux/` and `macos/` are five workspaces, each with its own `Cargo.lock`, `target/` and `rust-toolchain.toml`; the four desktop ones reach the engine crates by path, so each compiles its own copy. A root workspace was spiked on 2026-10-01 and not adopted:
 
 - The lockfiles do not conflict: of 272 external crates, 106 appear in two or more workspaces, and the only version differences are multi-version sets every workspace already carries (`syn` 1/2/3, `hashbrown`, `getrandom`), plus the Windows windows-rs two-island lock, which one resolver would keep. Merging is possible.
 - What it would cost: ~140 `cargo` call sites across Makefiles, CI, the release scripts, the Windows box gate and the Linux VM sync; one `rust-toolchain.toml` carrying every platform's targets; the desktop version moving out of `[workspace.package]` (`tools/release_notes.py`); `windows/.cargo/config.toml` (static CRT) silently skipped by a root invocation; and one feature graph across all crates, which can change what `dispatch` and SQLite are built with.
 - A shared `build.target-dir` instead saves less than it seems (each platform target compiles separately anyway) and makes one workspace's `cargo clean` or build lock everyone's.
 
+`macos/` (2026-10-02, `macos-desktop-core-roadmap.md` D1 / D7) was re-checked against this decision and stays separate for three things a root workspace would take away: its release profile governs the shipped archive (`lto`, `strip`, `panic = "unwind"`) independently of whichever workspace it is built from; its engine edges set their own features (`default-features = false` + `user-data`), which one root feature graph would merge with the other shells'; and its toolchain lists only the two darwin targets the archive is built for.
+
 Each workspace declares its own `rust-version`, and CI checks the floor itself, not only stable: engine 1.86 (`msrv` in `.github/workflows/engine.yml`, every engine change); desktop 1.93 (`msrv` in `desktop.yml`, every desktop or engine change) and linux 1.93 (`msrv` in `linux-build.yml`, nightly), kept at the rustc the latest Ubuntu ships so a distribution build can use it (#283); macos 1.93, the floor of the desktop crates it links (`msrv` in `macos.yml`, every macOS, desktop or engine change). Windows stays at 1.95, windows-reactor's floor, and has no floor check: it builds only on the Windows box and the release runner.
 
-Revisit when a fifth workspace appears, or when a shared dependency has to be bumped by hand in more than one lockfile.
+Revisit when a shared dependency has to be bumped by hand in more than one lockfile.
 
 ## A release rebuilds first
 
