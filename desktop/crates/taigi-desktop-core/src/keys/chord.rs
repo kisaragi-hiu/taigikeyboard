@@ -385,7 +385,7 @@ mod tests {
     use super::*;
     use crate::keys::CandidateSlotKeySet;
 
-    use crate::platform::test_support::WINDOWS_AND_LINUX;
+    use crate::platform::test_support::{ALL_PLATFORMS, WINDOWS_AND_LINUX};
 
     const ALL_MODIFIERS: KeyModifiers = KeyModifiers::WIN
         .with(KeyModifiers::CONTROL)
@@ -769,9 +769,14 @@ mod tests {
             Some(chord_on("\r", KeyModifiers::ALT, MAC)),
             "the stored ⌥↩ of inventory K2"
         );
+        // trace: ComposingKeyBindingsTests.swift:124-136 — `Z` under ⇧⌃ is
+        // stored folded, `` ` `` is a chord bare and under ⇧ (not a typing key).
         for (key, modifiers) in [
             (" ", KeyModifiers::NONE),
             ("\r", KeyModifiers::SHIFT),
+            ("`", KeyModifiers::NONE),
+            ("`", KeyModifiers::SHIFT),
+            ("Z", KeyModifiers::SHIFT.with(KeyModifiers::CONTROL)),
             ("z", KeyModifiers::WIN),
             ("]", ALL_MODIFIERS),
         ] {
@@ -781,7 +786,111 @@ mod tests {
                 Some(chord)
             );
         }
-        assert_eq!(ComposingKeyChord::from_raw("|007A", MAC), None, "bare z");
+        // trace: ComposingKeyBindingsTests.swift:138-145.
+        for (key, modifiers, raw) in [
+            (" ", KeyModifiers::NONE, "|0020"),
+            ("\r", KeyModifiers::SHIFT, "s|000D"),
+            (
+                "]",
+                KeyModifiers::CONTROL.with(KeyModifiers::ALT),
+                "co|005D",
+            ),
+        ] {
+            assert_eq!(chord_on(key, modifiers, MAC).raw_value(MAC), raw);
+        }
+        // trace: ComposingKeyBindingsTests.swift:150-156 — bare `a`, ⇧5,
+        // ⌃← (F702 is one of the Mac's nine), garbage, an unknown letter.
+        for raw in ["|0061", "|007A", "s|0035", "c|F702", "garbage", "x|0020"] {
+            assert_eq!(ComposingKeyChord::from_raw(raw, MAC), None, "{raw}");
+        }
+        // trace: ComposingKeyBindingsTests.swift:434-436 — a back tab stored
+        // before the fold reads back as ⇧⇥.
+        assert_eq!(
+            ComposingKeyChord::from_raw("s|0019", MAC),
+            Some(chord_on("\t", KeyModifiers::SHIFT, MAC))
+        );
+    }
+
+    #[test]
+    fn the_mac_matches_exact_modifiers_on_the_unmodified_key() {
+        // trace: ComposingKeyBindingsTests.swift:457-479 — ⌥↩ matches only
+        // ⌥↩; ⌥J arrives as `∆` and matches through the unmodified `j`.
+        let option_return = chord_on("\r", KeyModifiers::ALT, MAC);
+        assert!(option_return.matches(&KeyEventSnapshot::text("\r", KeyModifiers::ALT), MAC));
+        assert!(!option_return.matches(&KeyEventSnapshot::text("\r", KeyModifiers::NONE), MAC));
+        assert!(!option_return.matches(
+            &KeyEventSnapshot::text("\r", KeyModifiers::ALT.with(KeyModifiers::SHIFT)),
+            MAC
+        ));
+        let option_j = chord_on("j", KeyModifiers::ALT, MAC);
+        assert!(option_j.matches(
+            &KeyEventSnapshot::chord(Some("∆"), "j", KeyModifiers::ALT),
+            MAC
+        ));
+        // trace: ComposingKeyBindingsTests.swift:400-431 — the keypad Enter
+        // matches a Return chord and AppKit's back tab a ⇧⇥ one (the folds
+        // themselves: `the_mac_folds_the_whole_of_unicode`).
+        assert!(chord_on("\r", KeyModifiers::NONE, MAC)
+            .matches(&KeyEventSnapshot::text("\u{3}", KeyModifiers::NONE), MAC));
+        let back_tab = chord_on("\t", KeyModifiers::SHIFT, MAC);
+        assert!(back_tab.matches(&KeyEventSnapshot::text("\u{19}", KeyModifiers::SHIFT), MAC));
+        assert_eq!(back_tab.display(MAC), "⇧⇥");
+    }
+
+    /// Pins the CURRENT core rule — roadmap E6, a real difference. Swift asks
+    /// `isTypingKey` of the first grapheme of the fold (`İ` → `i̇`, not ASCII,
+    /// so it records — `ComposingKeyChord.swift` `isTypingKey`); the core asks
+    /// the first scalar `i` and refuses it.
+    #[test]
+    fn e6_a_fold_that_adds_a_combining_mark_is_a_typing_key_on_the_mac() {
+        // trace: str::to_lowercase("İ") = "i\u{307}" (SpecialCasing), first
+        // char 'i' is ASCII alphabetic → TypesRomanization unless a host
+        // modifier is held.
+        for modifiers in [KeyModifiers::NONE, KeyModifiers::SHIFT] {
+            assert_eq!(
+                ComposingKeyChord::make(Some("İ"), modifiers, MAC),
+                Err(ChordRejection::TypesRomanization),
+                "{modifiers:?}"
+            );
+        }
+        assert_eq!(chord_on("İ", KeyModifiers::CONTROL, MAC).key, "i\u{307}");
+        assert_eq!(
+            ComposingKeyChord::translate_raw("s|0069,0307", MAC),
+            Some(Err(ChordRejection::TypesRomanization)),
+            "the ⇧İ row Swift stores"
+        );
+        // Negative controls, the same on both sides: `Ñ` folds to a
+        // non-ASCII `ñ` and binds bare; the Kelvin sign folds to an ASCII
+        // `k` and is refused.
+        assert_eq!(chord_on("Ñ", KeyModifiers::NONE, MAC).key, "ñ");
+        assert_eq!(
+            ComposingKeyChord::make(Some("\u{212A}"), KeyModifiers::NONE, MAC),
+            Err(ChordRejection::TypesRomanization)
+        );
+    }
+
+    /// Pins the CURRENT core rule — roadmap E7, a real difference for
+    /// hand-edited values. Swift's `init?(rawValue:)` splits with
+    /// `split(separator: ",")`, which omits empty fields (`c|0041,,0042` is
+    /// ⌃`ab` there); the core refuses the whole value.
+    #[test]
+    fn e7_a_stored_chord_with_an_empty_hex_field_does_not_parse() {
+        for platform in ALL_PLATFORMS {
+            // trace: `"".split(',')` yields one empty field and
+            // `u32::from_str_radix("", 16)` is an error → `None`.
+            for raw in ["c|0041,,0042", "c|,005D", "c|005D,", "c|"] {
+                assert_eq!(
+                    ComposingKeyChord::translate_raw(raw, platform),
+                    None,
+                    "{raw} {platform:?}"
+                );
+            }
+            assert_eq!(
+                ComposingKeyChord::translate_raw("c|005D", platform),
+                Some(Ok(chord_on("]", KeyModifiers::CONTROL, platform))),
+                "negative control"
+            );
+        }
     }
 
     #[test]
@@ -800,7 +909,13 @@ mod tests {
                 );
             }
         }
-        assert!(ComposingKeyChord::make(Some("\u{F729}"), KeyModifiers::CONTROL, MAC).is_ok());
+        // ⌃Home, ⌃End, ⌃Help (`CrossTierShortcutConflictTests.swift:113-127`).
+        for key in ["\u{F729}", "\u{F72B}", "\u{F746}"] {
+            assert!(
+                ComposingKeyChord::make(Some(key), KeyModifiers::CONTROL, MAC).is_ok(),
+                "{key:?}"
+            );
+        }
         assert!(ComposingKeyChord::make(Some("\u{F704}"), KeyModifiers::NONE, MAC).is_ok());
         assert!(ComposingKeyChord::make(Some("\u{F702}x"), KeyModifiers::CONTROL, MAC).is_ok());
     }
@@ -825,13 +940,23 @@ mod tests {
     fn the_mac_labels_in_glyphs_with_no_separator() {
         // trace: ShortcutKeyDisplay.text(for:) = ks_symbolicRepresentation
         // (⌃ ⌥ ⇧ ⌘, in that order) + keycap; Space / ↩ / ⇥ by name, a bare
-        // key as typed, uppercased under a modifier.
-        assert_eq!(chord_on("j", ALL_MODIFIERS, MAC).display(MAC), "⌃⌥⇧⌘J");
-        assert_eq!(chord_on("\r", KeyModifiers::SHIFT, MAC).display(MAC), "⇧↩");
-        assert_eq!(chord_on("\t", KeyModifiers::NONE, MAC).display(MAC), "⇥");
-        assert_eq!(chord_on(" ", KeyModifiers::NONE, MAC).display(MAC), "Space");
-        assert_eq!(chord_on("[", KeyModifiers::NONE, MAC).display(MAC), "[");
-        assert_eq!(chord_on("z", KeyModifiers::ALT, MAC).display(MAC), "⌥Z");
+        // key as typed, uppercased under a modifier. The last seven rows are
+        // the pane's table, ShortcutSettingsTests.swift:72-90.
+        for (key, modifiers, label) in [
+            ("j", ALL_MODIFIERS, "⌃⌥⇧⌘J"),
+            ("\t", KeyModifiers::NONE, "⇥"),
+            ("[", KeyModifiers::NONE, "["),
+            ("z", KeyModifiers::ALT, "⌥Z"),
+            (" ", KeyModifiers::NONE, "Space"),
+            ("\r", KeyModifiers::NONE, "↩"),
+            ("\r", KeyModifiers::SHIFT, "⇧↩"),
+            ("]", KeyModifiers::NONE, "]"),
+            ("j", KeyModifiers::CONTROL.with(KeyModifiers::ALT), "⌃⌥J"),
+            ("`", KeyModifiers::NONE, "`"),
+            ("Z", KeyModifiers::SHIFT.with(KeyModifiers::CONTROL), "⌃⇧Z"),
+        ] {
+            assert_eq!(chord_on(key, modifiers, MAC).display(MAC), label, "{key:?}");
+        }
     }
 
     #[test]

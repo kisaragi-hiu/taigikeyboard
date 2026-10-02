@@ -73,7 +73,9 @@ impl SymbolPickerIntent {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::keys::{ComposingKeyChord, KeyModifiers, NavigationKey, ToneInputScheme};
+    use crate::keys::{
+        ComposingKeyChord, ComposingKeyIntent, KeyModifiers, NavigationKey, ToneInputScheme,
+    };
     use crate::platform::test_support::TEST_PLATFORM as PLATFORM;
 
     fn intent(key: &KeyEventSnapshot) -> SymbolPickerIntent {
@@ -102,6 +104,29 @@ mod tests {
                 KeyModifiers::CONTROL
             )),
             SymbolPickerIntent::CloseAndPassThrough
+        );
+    }
+
+    /// Pins the CURRENT core rule — roadmap E2b, a real difference. Swift's
+    /// `isPlainEscape` reads the first grapheme
+    /// (`ComposingKeyIntent.swift:446-448`), so `"\u{1B}x"` closes the Mac
+    /// picker; the core's `is_bare_escape` reads the whole string.
+    #[test]
+    fn e2b_an_escape_inside_a_longer_event_does_not_close_the_picker() {
+        let mac = DesktopPlatform::MacOS;
+        let event = text("\u{1B}x");
+        // trace: not `is_bare_escape`; no navigation key; `"\u{1B}x"` is no
+        // slot key; no binding holds it → CloseAndPassThrough.
+        assert!(!event.is_bare_escape());
+        assert_eq!(
+            SymbolPickerIntent::intent(&event, &ComposingKeyBindings::default(), mac),
+            SymbolPickerIntent::CloseAndPassThrough
+        );
+        // Negative control: the composition's own Escape tier reads the first
+        // scalar, as Swift reads the first grapheme — Cancel on both.
+        assert_eq!(
+            ComposingKeyIntent::intent(&event, true, false, &ComposingKeyBindings::default(), mac),
+            ComposingKeyIntent::Cancel
         );
     }
 

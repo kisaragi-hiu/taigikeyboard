@@ -193,6 +193,24 @@ mod tests {
         names.sort();
         names.dedup();
         assert_eq!(names.len(), ComposingAction::ALL.len());
+        // trace: ShortcutSettingsTests.swift:28-41 — the raw values ARE the
+        // stored keys; renaming one drops every chord recorded under it.
+        assert_eq!(
+            ComposingAction::ALL.map(ComposingAction::raw),
+            [
+                "nextCandidate",
+                "previousCandidate",
+                "pageForward",
+                "pageBackward",
+                "confirmHighlighted",
+                "commitLiteral",
+                "commitAlternateScript",
+            ]
+        );
+        assert_eq!(
+            ComposingAction::NextCandidate.settings_key_name(),
+            "composingShortcut.nextCandidate"
+        );
         for action in ComposingAction::ALL {
             assert_eq!(ComposingAction::from_raw(action.raw()), Some(action));
             assert_eq!(

@@ -235,7 +235,9 @@ pub(crate) mod test_support {
 mod tests {
     use super::*;
     use protos::engine::{
-        ClearPreeditWithoutCommit, ComposingResponse, NextWordWordSelected, UpdatePreedit,
+        ClearCandidates, ClearPreeditWithoutCommit, CommitTextReplacingPreedit, ComposingResponse,
+        NextWordClearForNewComposing, NextWordUpdateLastSelectedWord, NextWordWordSelected,
+        RefreshCandidates, ResetCandidateContext, UpdatePreedit,
     };
 
     #[test]
@@ -299,6 +301,76 @@ mod tests {
             "an unset kind is dropped, everything else keeps its order"
         );
         assert!(transition.is_composing);
+    }
+
+    #[test]
+    fn decodes_every_effect_kind_with_its_payload() {
+        // trace: ComposingEffectDecodingTests.swift:14-56 — all nine kinds in
+        // one response, payloads carried, wire order kept; :58-73 — a
+        // `trigger_prediction` of false is carried, not assumed.
+        let wire = |kind| WireEffect { kind: Some(kind) };
+        let response = ComposingResponse {
+            effect: vec![
+                wire(effect::Kind::UpdatePreedit(UpdatePreedit {
+                    display: "tâi".into(),
+                    caret_utf16: 2,
+                })),
+                wire(effect::Kind::ClearPreeditWithoutCommit(
+                    ClearPreeditWithoutCommit {},
+                )),
+                wire(effect::Kind::CommitTextReplacingPreedit(
+                    CommitTextReplacingPreedit {
+                        text: "台語".into(),
+                    },
+                )),
+                wire(effect::Kind::ClearCandidates(ClearCandidates {})),
+                wire(effect::Kind::RefreshCandidates(RefreshCandidates {})),
+                wire(effect::Kind::ResetCandidateContext(
+                    ResetCandidateContext {},
+                )),
+                wire(effect::Kind::NextWordUpdateLastSelectedWord(
+                    NextWordUpdateLastSelectedWord {
+                        text: "台".into(),
+                        roman: "tâi".into(),
+                    },
+                )),
+                wire(effect::Kind::NextWordWordSelected(NextWordWordSelected {
+                    text: "語".into(),
+                    roman: "gí".into(),
+                    trigger_prediction: false,
+                    preceding: vec![],
+                })),
+                wire(effect::Kind::NextWordClearForNewComposing(
+                    NextWordClearForNewComposing {},
+                )),
+            ],
+            ..Default::default()
+        };
+        assert_eq!(
+            ComposingTransition::decode(&response).effects,
+            vec![
+                Effect::UpdatePreedit {
+                    text: "tâi".into(),
+                    caret_utf16: 2,
+                },
+                Effect::ClearPreeditWithoutCommit,
+                Effect::CommitTextReplacingPreedit("台語".into()),
+                Effect::ClearCandidates,
+                Effect::RefreshCandidates,
+                Effect::ResetCandidateContext,
+                Effect::NextWordUpdateLastSelectedWord {
+                    text: "台".into(),
+                    roman: "tâi".into(),
+                },
+                Effect::NextWordWordSelected {
+                    text: "語".into(),
+                    roman: "gí".into(),
+                    trigger_prediction: false,
+                    preceding: vec![],
+                },
+                Effect::NextWordClearForNewComposing,
+            ]
+        );
     }
 
     #[test]

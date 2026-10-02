@@ -405,6 +405,7 @@ mod tests {
     use crate::keys::{ComposingAction, ComposingKeyChord, KeyModifiers};
     use crate::platform::test_support::{TEST_PLATFORM as PLATFORM, WINDOWS_AND_LINUX};
     use crate::platform::DesktopPlatform;
+    use crate::settings::SettingChoice;
     use std::collections::BTreeMap;
 
     fn classify(
@@ -644,6 +645,112 @@ mod tests {
         }
         assert_eq!(caret_chord_modifiers(mac), KeyModifiers::ALT);
         assert_eq!(WIDTH_FLIP_MODIFIERS, KeyModifiers::CONTROL);
+    }
+
+    #[test]
+    fn the_mac_hands_a_chorded_digit_or_slot_key_to_the_host_under_either_scheme() {
+        let mac = DesktopPlatform::MacOS;
+        // trace: ComposingKeyIntentTests.swift:190-212 — ⌃3 arrives as Escape
+        // with `3` unmodified; the fixed tier skips it under a host chord.
+        let control_three = KeyEventSnapshot::chord(Some("\u{1B}"), "3", KeyModifiers::CONTROL);
+        for scheme in ToneInputScheme::ALL {
+            let bindings = ComposingKeyBindings::resolve(&Default::default(), *scheme);
+            for is_showing_candidates in [true, false] {
+                assert_eq!(
+                    ComposingKeyIntent::intent(
+                        &control_three,
+                        true,
+                        is_showing_candidates,
+                        &bindings,
+                        mac
+                    ),
+                    ComposingKeyIntent::CommitThenPassThrough,
+                    "{scheme:?} window up={is_showing_candidates}"
+                );
+            }
+        }
+        // trace: CandidateSlotKeyTests.swift:196-208 — ⌘ (win), ⌃, ⌥ on a
+        // slot key miss the slot: `3` under Telex, `q` under Standard.
+        let telex = telex_bindings();
+        for modifiers in [KeyModifiers::WIN, KeyModifiers::CONTROL, KeyModifiers::ALT] {
+            let three = KeyEventSnapshot::chord(Some("3"), "3", modifiers);
+            assert_eq!(
+                ComposingKeyIntent::intent(&three, true, true, &telex, mac),
+                ComposingKeyIntent::CommitThenPassThrough,
+                "{modifiers:?}3 under Telex"
+            );
+            let q = KeyEventSnapshot::chord(Some("q"), "q", modifiers);
+            assert_eq!(
+                classify_on(&q, true, true, mac),
+                ComposingKeyIntent::CommitThenPassThrough,
+                "{modifiers:?}Q under Standard"
+            );
+        }
+    }
+
+    #[test]
+    fn the_mac_fires_a_bare_bound_key_only_where_its_action_applies() {
+        // trace: ComposingKeyBindingsTests.swift:489-511 — Page Forward on a
+        // bare `'`: the bindings tier wins over document text with the window
+        // up, gives the key back as text with none, and is the host's idle.
+        let mac = DesktopPlatform::MacOS;
+        let mut stored = BTreeMap::new();
+        stored.insert(
+            ComposingAction::PageForward,
+            Some(ComposingKeyChord::make(Some("'"), KeyModifiers::NONE, mac).unwrap()),
+        );
+        let bindings = ComposingKeyBindings::resolve(&stored, ToneInputScheme::Standard);
+        let apostrophe = text("'");
+        assert_eq!(
+            ComposingKeyIntent::intent(&apostrophe, true, true, &bindings, mac),
+            ComposingKeyIntent::Navigate(CandidateNavigation::PageDown)
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&apostrophe, true, false, &bindings, mac),
+            ComposingKeyIntent::CommitThenInsert("'".into())
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&apostrophe, false, false, &bindings, mac),
+            ComposingKeyIntent::PassThrough
+        );
+    }
+
+    /// Pins the CURRENT core rule — roadmap E4, a real difference. Swift
+    /// refuses `CharacterSet.controlCharacters` = Cc + Cf
+    /// (`ComposingKeyIntent.swift:349-351,412,481`), so a key carrying a
+    /// format character is the host's there; the core refuses Cc only.
+    #[test]
+    fn e4_a_format_character_is_text_to_the_core() {
+        let mac = DesktopPlatform::MacOS;
+        // trace: Cf is not `char::is_control` and not in F700..=F8FF →
+        // every scalar is text → tier 7: not romanization (not ASCII
+        // letter / `-`) → CommitThenInsert while composing, PassThrough idle.
+        for characters in [
+            "\u{200B}",
+            "\u{AD}",
+            "\u{FEFF}",
+            "x\u{200D}y",
+            "👩\u{200D}💻",
+        ] {
+            let key = text(characters);
+            assert_eq!(
+                classify_on(&key, true, false, mac),
+                ComposingKeyIntent::CommitThenInsert(characters.into()),
+                "{characters:?}"
+            );
+            assert_eq!(
+                classify_on(&key, false, false, mac),
+                ComposingKeyIntent::PassThrough
+            );
+            assert!(ComposingKeyIntent::is_document_text(&key), "{characters:?}");
+        }
+        // Negative control: a C1 control (NEL, Cc) is the host's on both.
+        let next_line = text("\u{85}");
+        assert_eq!(
+            classify_on(&next_line, true, false, mac),
+            ComposingKeyIntent::CommitThenPassThrough
+        );
+        assert!(!ComposingKeyIntent::is_document_text(&next_line));
     }
 
     #[test]
