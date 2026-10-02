@@ -75,9 +75,10 @@ One line each; the linked section holds the design, the measurements and the ope
 | Item | Status | Where |
 |---|---|---|
 | `lexicon::classification::is_hanji` stops at CJK Extension E; the Python pipeline tests through Extension G | measure callers first, then align | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § Open USER decisions #6 |
-| Stale `.proto` comments: `lexicon.proto` still documents `DEV` as always-on (the toggle shipped); `composing.proto` cites a nonexistent `continuous-input-ranking.md` §10.11 | needs a proto regen round (iOS + Android generated trees) | [`architecture/macos-roadmap.md`](architecture/macos-roadmap.md) § Open items this track produced |
+| Stale `.proto` comments: `lexicon.proto` still documents `DEV` as always-on (the toggle shipped); `composing.proto` cites a nonexistent `continuous-input-ranking.md` §10.11 and (`:426`) describes the iOS commit as `clearMarkedText` + `insertText` | needs a proto regen round (iOS + Android generated trees) | [`architecture/macos-roadmap.md`](architecture/macos-roadmap.md) § Open items this track produced |
 | v2 `.taigi` restore folds POJ→TL over canonical-TL readings (macOS folds v1 only) | verify it still applies now the engine owns the codec | same § |
 | Fedora × IBus e2e skipped (daemon never lists the test component) | own root-cause round | [`architecture/e2e-testing-roadmap.md`](architecture/e2e-testing-roadmap.md) § PR table PR4 |
+| iOS #352: Flutter hosts (Cashew) keep the raw preedit on commit. Root cause proven on device: proxy calls of one turn are merged and applied as inserts → last `setMarkedText` → `unmarkText`, so any same-turn mix of a marked commit and another write breaks (Space, punctuation, auto-space). Fix: one host write per event vs. defer post-commit writes | parked until the current refactor ends (USER 2026-10-03); PR #357 draft, not mergeable as is (Space regresses Notes); fix option not chosen | [PR #357](https://github.com/taigikeyboard/taigikeyboard/pull/357) comments |
 | macOS Custom Dictionary: no confirmation before a destructive command (Windows and Linux confirm) | USER 2026-10-02: add it — own round | [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md) S11 |
 
 **Refactors (USER decisions)**
