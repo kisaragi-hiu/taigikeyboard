@@ -1,7 +1,7 @@
 //! The Dictionary Search page's lookup: the custom dictionary first, then the
 //! engine's dictionaries under the user's source toggles, in the page's
-//! order. One lookup for the Windows and Linux settings windows. Port of
-//! `DictionarySearchService.swift`.
+//! order. One lookup for the Windows and Linux settings windows. Twin of
+//! iOS `DictionarySearchService.swift`.
 
 use super::user_data::search_custom_entries;
 use super::{

@@ -1,7 +1,7 @@
 //! Phonetics slice of the engine bridge: the small conversions the
 //! dictionary pages need (the search keys a custom entry is stored and
 //! looked up under are the engine `userdata`'s own, behind the user-data
-//! ops). Port of `RustEngineBridge+Phonetics.swift`.
+//! ops). Port of iOS `RustEngineBridge+Phonetics.swift`.
 
 use protos::engine::{
     phonetics_request, phonetics_response, request, response, NfdPreprocessForLookup,

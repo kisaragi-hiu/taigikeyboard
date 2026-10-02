@@ -1,7 +1,7 @@
 //! Lexicon slice of the engine bridge: loading the dictionary data and
 //! resolving the user's source toggles into the engine's bitmask, and the
-//! dictionary-search page's two lookups. Port of
-//! `RustEngineBridge+Lexicon.swift` + `Engine/DictionarySource.swift`.
+//! dictionary-search page's two lookups. Port of iOS
+//! `RustEngineBridge+Lexicon.swift`.
 
 use std::collections::BTreeSet;
 
@@ -46,9 +46,8 @@ pub enum DictionarySource {
 }
 
 /// The sources a record's `source_bitmask` names, in bit order — which is
-/// the order the badges are drawn in (`LexiconBitmask.sourceBits`,
-/// `DictionarySource.swift:43-56`). Bit 12 (variant) is a filter, not a
-/// source a record wears a badge for.
+/// the order the badges are drawn in (iOS `LexiconBitmask.swift`). Bit 12
+/// (variant) is a filter, not a source a record wears a badge for.
 const SOURCE_BITS: [(u32, DictionarySource); 12] = [
     (1 << 0, DictionarySource::Kautian),
     (1 << 1, DictionarySource::Taigitv),
@@ -74,9 +73,8 @@ impl DictionarySource {
             .collect()
     }
 
-    /// The badge a search result wears for this source
-    /// (`DictionarySearchPage.swift:160-175`): the three supplements share
-    /// one word, the custom dictionary its pane's name.
+    /// The badge a search result wears for this source: the three
+    /// supplements share one word, the custom dictionary its pane's name.
     pub fn badge_key(self) -> StringKey {
         match self {
             Self::Kautian => StringKey::DictionaryKautianTag,
@@ -239,7 +237,7 @@ pub(crate) fn dictionary_toggles(toggles: &DictionarySourceToggles) -> WireDicti
     }
 }
 
-/// One dictionary record as the search page lists it (macOS `DictionarySearchResult`).
+/// One dictionary record as the Dictionary Search page lists it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LexiconRow {
     pub id: i64,
@@ -291,8 +289,7 @@ fn wire_input_mode(mode: InputMode) -> i32 {
     }
 }
 
-/// The Dictionary Search page's all-source romanization lookup
-/// (`RustEngineBridge+Lexicon.swift:245-264`).
+/// The Dictionary Search page's all-source romanization lookup.
 pub fn search_with_sources(
     input: &str,
     mode: InputMode,
@@ -321,7 +318,7 @@ pub fn search_with_sources(
     }
 }
 
-/// The Dictionary Search page's hanji-prefix lookup (`RustEngineBridge+Lexicon.swift:267-286`).
+/// The Dictionary Search page's hanji-prefix lookup.
 pub fn search_by_hanji(
     query: &str,
     mode: InputMode,
@@ -350,7 +347,7 @@ pub fn search_by_hanji(
     }
 }
 
-/// Whether `text` is a hanji query (`RustEngineBridge+Lexicon.swift:298-309`).
+/// Whether `text` is a hanji query.
 pub fn is_hanji(text: &str) -> bool {
     let op = "isHanji";
     let request = IsHanjiRequest {

@@ -1,6 +1,6 @@
 //! The two web dictionaries a search result can be looked up in — the MOE dictionary and
 //! ChhoeTaigi's Taigi dictionary — and the digit-tone spelling of a TL reading their
-//! query strings take. Port of `ExternalLookupURLBuilder.swift`.
+//! query strings take. Twin of iOS `ExternalLookupURLBuilder.swift`.
 
 use super::phonetics::{nfd_preprocess_for_lookup, strip_tone};
 
@@ -66,7 +66,7 @@ fn percent_encode(value: &str) -> String {
 /// A TL reading in the digit-tone spelling the web dictionaries search by:
 /// lowercased, syllable by syllable (empty syllables kept so the hyphens
 /// survive), the nasal marks as `nn`, the tone as a trailing digit with
-/// tones 1 and 4 omitted (`ExternalLookupURLBuilder.digitToneForm`).
+/// tones 1 and 4 omitted (iOS `ExternalLookupURLBuilder.toTLDigit`).
 pub fn digit_tone_form(tl: &str) -> String {
     tl.to_lowercase()
         .split('-')

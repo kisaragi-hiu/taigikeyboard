@@ -2,8 +2,8 @@
 
 import Foundation
 
-/// The user's dictionary source preferences, in the shape the engine's
-/// `compute_filters` op reads them.
+/// The user's dictionary source preferences, in the shape `FetchAtPos`
+/// carries them.
 ///
 /// Field order mirrors `engine/protos/proto/lexicon.proto::DictionarySourceToggles`
 /// (`:438-455`) so the bridge's assignment reads as a straight transcription.
@@ -12,9 +12,9 @@ import Foundation
 /// `kautian` is on.
 ///
 /// Carried inside `EngineSettings` so one `settingsProvider.current` answers
-/// for both the composing fetch and (from PR13) the dictionary search — reading
-/// the toggles from a second place is what splits the snapshot and lets a
-/// mid-keystroke settings change render half a composition under each rule.
+/// for the whole composing fetch — reading the toggles from a second place is
+/// what splits the snapshot and lets a mid-keystroke settings change render
+/// half a composition under each rule.
 ///
 /// The fields are `var` so a caller that varies one toggle can start from
 /// `.defaults` and say only what differs; the snapshot is still immutable where

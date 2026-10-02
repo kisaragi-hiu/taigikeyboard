@@ -59,10 +59,6 @@ protocol UserDataClient: Sendable {
     /// Empties what the input method learned — counts, bigrams, learned
     /// phrases — and leaves the custom dictionary alone.
     func clearLearningRecords() throws
-    /// The dictionary search's lookup, by the key `query` derives under
-    /// `mode`; empty when there is nothing to find or the engine did not
-    /// answer.
-    func search(query: String, mode: InputMode, limit: Int) -> [CustomDictionaryRow]
 }
 
 /// The shipped client: the engine's user-data ops.
@@ -133,11 +129,6 @@ struct EngineUserDataClient: UserDataClient {
             $0.association = true
             $0.learnedPhrases = true
         }
-    }
-
-    func search(query: String, mode: InputMode, limit: Int) -> [CustomDictionaryRow] {
-        RustEngineBridge.customDictionarySearch(query: query, mode: mode, limit: limit)?
-            .map(CustomDictionaryRow.init) ?? []
     }
 
     /// Empties the stores `select` names; every one is attempted, and the

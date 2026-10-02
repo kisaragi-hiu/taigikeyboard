@@ -96,24 +96,6 @@ extension RustEngineBridge {
         return exported.csv
     }
 
-    /// The entries a dictionary search finds for `query` — by the key the
-    /// query derives under `mode`, the way the keyboard finds them.
-    static func customDictionarySearch(
-        query: String,
-        mode: InputMode,
-        limit: Int,
-    ) -> [Taigi_Engine_CustomDictionaryEntry]? {
-        var search = Taigi_Engine_SearchCustomEntries()
-        search.query = query
-        search.inputMode = mode.rawValue
-        search.limit = UInt32(clamping: limit)
-        guard case let .customEntryMatches(matches)? = userDataResult(
-            .searchCustomEntries(search),
-            op: "customDictionarySearch",
-        ) else { return nil }
-        return matches.entries
-    }
-
     /// `nil` for a failed round-trip, a refusal (a request before the open),
     /// or an answer of the wrong kind — the caller's `case let` rejects the
     /// last, and every one is logged.

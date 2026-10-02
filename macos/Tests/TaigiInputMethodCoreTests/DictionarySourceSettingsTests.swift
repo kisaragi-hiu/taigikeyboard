@@ -1,5 +1,5 @@
-// The 24 dictionary toggles: their stored names, their fresh-install values,
-// and what the engine resolves them to.
+// The 24 dictionary toggles: their stored names and their fresh-install
+// values.
 
 @testable import TaigiInputMethodCore
 import XCTest
