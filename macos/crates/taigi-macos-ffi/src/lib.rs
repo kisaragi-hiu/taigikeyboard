@@ -441,7 +441,15 @@ mod tests {
         );
         assert_eq!(inserted.error, ErrorCode::Ok as i32);
         assert!(
-            matches!(&inserted.reply, Some(desktop_response::Reply::Session(reply)) if reply.effects.len() == 1),
+            matches!(
+                &inserted.reply,
+                Some(desktop_response::Reply::Session(reply))
+                    if reply.effects == [proto::Effect {
+                        effect: Some(proto::effect::Effect::InsertText(proto::InsertText {
+                            text: "，".to_owned(),
+                        })),
+                    }]
+            ),
             "{:?}",
             inserted.reply
         );

@@ -1022,6 +1022,7 @@ mod tests {
         let (_engine, shell) = engine_shell();
         let typist = Typist::activated(shell, auto_space());
         let cells = shown_list(&typist.type_text("ka")).cells;
+        assert_eq!(cells[0].text, "共");
         let reply = typist.commit_for_symbol_picker(list(Some(0)));
         assert!(!reply.handled && !reply.is_composing && !reply.ignored);
         assert_eq!(effects(&reply), vec![insert(&cells[0].text), closed()]);
@@ -1179,9 +1180,12 @@ mod tests {
         let (_engine, shell) = engine_shell();
         let typist = Typist::activated(shell, vec![]);
         let before = shown_list(&typist.type_text("ka"));
-        let reply = typist
-            .with_settings(vec![text("candidateDisplayMode", "romanOnly")])
-            .represent(true, list(Some(0)));
+        let roman_only = typist.with_settings(vec![text("candidateDisplayMode", "romanOnly")]);
+        // Control: presented again without a refetch, the same rows stay —
+        // the collapse happens at fetch time.
+        let repainted = shown_list(&roman_only.represent(false, list(Some(0))));
+        assert_eq!(repainted.cells.len(), before.cells.len());
+        let reply = roman_only.represent(true, list(Some(0)));
         let after = shown_list(&reply);
         assert_eq!(effects(&reply).len(), 1);
         assert!(after.cells.len() < before.cells.len());
