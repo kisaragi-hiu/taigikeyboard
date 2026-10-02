@@ -12,8 +12,8 @@ import Foundation
 /// actions. A back end never touches a client; it records, and the
 /// controller replays (`docs/architecture/macos-desktop-core-roadmap.md` D3,
 /// record-then-replay). Two back ends implement it: `LegacyComposingBackend`
-/// (the Swift key path) and, from P10, one over desktop-core. Each runs in its
-/// own process (`ComposingBackends`): both drive the one process-wide engine.
+/// (the Swift key path) and, from P10, one over desktop-core — one back end
+/// per process (`ComposingBackends`): both drive the one process-wide engine.
 ///
 /// Every request carries the session's token; one whose token does not own
 /// the engine is answered `nil` and does nothing — the non-owner rule of

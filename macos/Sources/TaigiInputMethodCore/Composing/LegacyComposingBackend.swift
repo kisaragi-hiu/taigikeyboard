@@ -24,7 +24,8 @@ final class LegacyComposingBackend: ComposingBackend {
     /// One for the process, like the composition it describes: only the
     /// session that owns the engine reaches it
     /// (`ComposingSessionCoordinator.manager(ownedBy:)`), and `activate`
-    /// drops it with the window on every handover.
+    /// drops it with the window on every handover — so a list left behind
+    /// by `release` is never read.
     private var source = CandidateSource.empty
 
     init(coordinator: ComposingSessionCoordinator) {

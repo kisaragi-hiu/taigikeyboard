@@ -838,10 +838,7 @@ public final class TaigiInputController: IMKInputController {
             case let .swapPrecedingSpace(replacement):
                 // Only ever answered after `canSwapPrecedingSpace` found the
                 // arm and the space still in front of the caret.
-                guard let armedSwap else {
-                    assertionFailure("a swap answered with no arm")
-                    continue
-                }
+                guard let armedSwap else { preconditionFailure("a swap answered with no arm") }
                 client.insertText(replacement, replacementRange: Self.autoSpaceRange(armedAt: armedSwap))
                 caretAfterSwap = armedSwap - 1 + (replacement as NSString).length
             case .armSwap:
