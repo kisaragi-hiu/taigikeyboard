@@ -112,9 +112,23 @@ mod tests {
                 "{letter}"
             );
         }
-        for other in ['a', 't', 'c', '3', '-', ';', 'ｖ'] {
+        for other in ['a', 't', 'c', '3', '-', ';', ' ', 'ｖ', 'ｚ'] {
             assert!(!ToneInputScheme::is_telex_key(other), "{other}");
         }
+        // trace: ToneInputSchemeTests.swift:24-28 — the eight Telex keys are
+        // the eight letters of the Standard slot row: what one scheme types
+        // tones with, the other picks with.
+        let slot_letters: std::collections::BTreeSet<char> = CandidateSlotKeySet::BARE_KEY_ROW
+            .iter()
+            .filter_map(|key| key.chars().next())
+            .filter(char::is_ascii_alphabetic)
+            .collect();
+        assert_eq!(
+            ToneInputScheme::TELEX_KEYS
+                .chars()
+                .collect::<std::collections::BTreeSet<_>>(),
+            slot_letters
+        );
         assert!(ToneInputScheme::starts_composition('z'));
         assert!(ToneInputScheme::starts_composition('Z'));
         assert!(!ToneInputScheme::starts_composition('v'));

@@ -189,6 +189,12 @@ struct Rig {
 }
 
 fn rig() -> Rig {
+    rig_on(DesktopPlatform::Windows)
+}
+
+/// A rig whose requests name `platform` — the ports of macOS's own suites
+/// run on `MacOS`, the `platform_id` macOS sends.
+fn rig_on(platform: DesktopPlatform) -> Rig {
     let memory = Arc::new(Memory::default());
     *memory.now_ms.lock().unwrap() = 1_000;
     let handle = Handle(Arc::clone(&memory));
@@ -197,7 +203,7 @@ fn rig() -> Rig {
         Arc::new(settings.clone()),
         Box::new(handle.clone()),
         Box::new(handle),
-        DesktopPlatform::Windows,
+        platform,
         fresh_generation(),
     );
     Rig {
@@ -813,6 +819,104 @@ fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
     let bun = rig.candidate("文");
     rig.commit(&bun, CandidateScript::Primary);
     assert_eq!(rig.memory.reported(), vec!["∅", "文"]);
+}
+
+// MARK: - macOS ports (`DesktopPlatform::MacOS`)
+
+/// trace: ComposingManagerLearningTests.swift:50-66 — a pair with one half
+/// written in the other script is reported under the identity: each
+/// handshake carries the candidate's display text and canonical TL, whichever
+/// script reached the document.
+#[test]
+fn the_mac_reports_a_pair_written_in_two_scripts_under_its_identity() {
+    let _lock = engine_lock();
+    let mut rig = rig_on(DesktopPlatform::MacOS);
+    rig.type_text("tai5");
+    let tai = rig.candidate("台");
+    rig.commit(&tai, CandidateScript::Primary);
+    rig.type_text("gi2");
+    let gi = rig.candidate("語");
+    rig.commit(&gi, CandidateScript::Alternate);
+    let reported: Vec<(String, String)> = rig
+        .memory
+        .handshakes
+        .lock()
+        .unwrap()
+        .iter()
+        .map(|handshake| match handshake {
+            Handshake::Selected { text, roman, .. } => (text.clone(), roman.clone()),
+            other => panic!("expected a selection, got {other:?}"),
+        })
+        .collect();
+    assert_eq!(
+        reported,
+        vec![
+            (tai.display_text, tai.canonical_tl),
+            (gi.display_text, gi.canonical_tl),
+        ]
+    );
+}
+
+/// trace: ComposingManagerLearningTests.swift:183-201 — another manager's
+/// generation resets the engine underneath this one; the next fetch answers
+/// "not composing" and the mirror follows it.
+#[test]
+fn the_mac_mirror_follows_a_fetch_after_the_engine_was_reset_underneath_it() {
+    let _lock = engine_lock();
+    let mut rig = rig_on(DesktopPlatform::MacOS);
+    rig.type_text("taigi");
+    assert!(rig.manager.is_composing());
+    let mut other = rig_on(DesktopPlatform::MacOS);
+    other.type_text("t");
+    assert_eq!(
+        rig.manager.fetch_candidates(),
+        CandidateFetchOutcome::NotComposing
+    );
+    assert!(!rig.manager.is_composing());
+}
+
+/// trace: RustEngineBridgeComposingTests.swift:115-151 — after a nail,
+/// committing the composition writes what is shown once, nailed prefix
+/// included, never the prefix twice.
+#[test]
+fn the_mac_commits_a_nailed_composition_once() {
+    let _lock = engine_lock();
+    let mut rig = rig_on(DesktopPlatform::MacOS);
+    rig.type_text("taigi");
+    let tai = rig
+        .candidates()
+        .into_iter()
+        .find(|c| c.hanji.as_deref() == Some("台") && c.consumed_span_end == 3)
+        .expect("台 over `tai`");
+    assert_eq!(
+        rig.commit(&tai, CandidateScript::Primary).0,
+        CandidateCommitOutcome::Nailed
+    );
+    let shown = rig.manager.display_text().to_owned();
+    rig.manager.commit_composition(&mut rig.recorder);
+    assert_eq!(rig.recorder.committed(), [shown.as_str()]);
+}
+
+/// Pins the CURRENT core rule — roadmap E5, a real difference. Swift asks
+/// `isLetter` / `isWhitespace` of each grapheme's first scalar
+/// (`ComposingManager.swift:116-118`); the core asks every scalar, so a
+/// non-letter base plus an Other_Alphabetic mark is forwarded only on the Mac.
+#[test]
+fn e5_a_mark_that_is_alphabetic_keeps_the_character_from_next_word() {
+    // No engine call: the manager only hands the character to the port.
+    let rig = rig_on(DesktopPlatform::MacOS);
+    for character in [
+        "。\u{345}", // core: skipped; Swift: forwarded
+        ",\u{93E}",  // core: skipped; Swift: forwarded
+        "。\u{301}", // U+0301 is not Alphabetic: forwarded on both
+        " \u{301}",  // whitespace-led: skipped on both
+        "\u{3000}",  // skipped on both
+        "x",         // skipped on both
+    ] {
+        rig.manager
+            .note_character_typed_outside_composition(character);
+    }
+    assert_eq!(rig.memory.reported(), vec!["。\u{301}"]);
 }
 
 // MARK: - ComposingSessionCoordinatorTests

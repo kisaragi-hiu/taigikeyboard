@@ -520,4 +520,58 @@ mod tests {
             vec![ComposingAction::NextCandidate]
         );
     }
+
+    #[test]
+    fn the_mac_reads_its_own_stored_letters_and_its_keypad_and_back_tab() {
+        // trace: Swift writes `o` for ⌥ (`ComposingKeyChord.swift` rawValue);
+        // an `a` is not a Mac letter, so that row reads as cleared (inventory K2).
+        let mac = DesktopPlatform::MacOS;
+        let mut document = SettingsDocument::default();
+        document.set_raw_string(&ComposingAction::PageForward.settings_key_name(), "o|000D");
+        document.set_raw_string(
+            &ComposingAction::NextCandidate.settings_key_name(),
+            "a|005D",
+        );
+        let bindings = ComposingKeyBindings::from_document(&document, mac);
+        let option_return = ComposingKeyChord::make(Some("\r"), KeyModifiers::ALT, mac).unwrap();
+        assert_eq!(
+            bindings.chord(ComposingAction::PageForward),
+            Some(&option_return)
+        );
+        assert_eq!(bindings.chord(ComposingAction::NextCandidate), None);
+        assert_eq!(
+            bindings.action_for(&KeyEventSnapshot::text("\r", KeyModifiers::ALT), mac),
+            Some(ComposingAction::PageForward)
+        );
+        // trace: ComposingKeyBindingsTests.swift:406-410,424-428 — out of the box the
+        // keypad Enter confirms and AppKit's back tab walks back.
+        let defaults = ComposingKeyBindings::default();
+        assert_eq!(
+            defaults.action_for(&KeyEventSnapshot::text("\u{3}", KeyModifiers::NONE), mac),
+            Some(ComposingAction::ConfirmHighlighted)
+        );
+        assert_eq!(
+            defaults.action_for(&KeyEventSnapshot::text("\u{19}", KeyModifiers::SHIFT), mac),
+            Some(ComposingAction::PreviousCandidate)
+        );
+    }
+
+    #[test]
+    fn actions_holding_names_the_rows_a_recording_would_empty() {
+        // trace: ComposingKeyBindingsTests.swift:438-449 — the row being
+        // recorded is not its own conflict.
+        let bracket = chord("]", KeyModifiers::NONE);
+        let bindings = ComposingKeyBindings::resolve(
+            &stored(&[(ComposingAction::PageForward, Some(bracket.clone()))]),
+            ToneInputScheme::Standard,
+        );
+        assert_eq!(
+            bindings.actions_holding(&bracket, Some(ComposingAction::NextCandidate)),
+            vec![ComposingAction::PageForward]
+        );
+        assert_eq!(
+            bindings.actions_holding(&bracket, Some(ComposingAction::PageForward)),
+            Vec::new()
+        );
+    }
 }

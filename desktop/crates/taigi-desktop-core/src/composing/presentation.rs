@@ -187,7 +187,7 @@ mod tests {
     use crate::composing::{EngineNextWord, SystemClock};
     use crate::engine::test_support::candidate;
     use crate::platform::test_support::TEST_PLATFORM;
-    use crate::settings::{keys, SettingsDocument, StaticSettingsProvider};
+    use crate::settings::{keys, SettingChoice, SettingsDocument, StaticSettingsProvider};
     use std::sync::Arc;
 
     /// The DERIVED snapshot for a mode (`SettingsDocument::engine_settings`):
@@ -251,6 +251,31 @@ mod tests {
             "the empty-hanji duplicate's roman cell is absorbed by guá's"
         );
         assert!(presented.iter().all(|p| p.cell.annotation.is_none()));
+    }
+
+    #[test]
+    fn an_empty_list_presents_nothing_and_combined_ignores_the_raw_swap_flag() {
+        // trace: PresentedCandidateTests.swift:43-52 — no candidates, no
+        // cells, in every mode.
+        for &mode in CandidateDisplayMode::ALL {
+            assert!(
+                presentation(&[], &settings(mode, false)).is_empty(),
+                "{mode:?}"
+            );
+        }
+        // trace: PresentedCandidateTests.swift:79-87 — under Combined the pair
+        // order is the mode's: the Combined arm never reads `is_hanji_first`,
+        // so even an underived snapshot with the flag off presents the same.
+        let list = [candidate("tâi-gí", Some("台語"), 5)];
+        let raw = |is_hanji_first| EngineSettings {
+            is_hanji_first,
+            candidate_display_mode: CandidateDisplayMode::Combined,
+            ..EngineSettings::default()
+        };
+        assert_eq!(
+            presentation(&list, &raw(false)),
+            presentation(&list, &raw(true))
+        );
     }
 
     #[test]
