@@ -193,23 +193,26 @@ final class CoreComposingBackendTests: XCTestCase {
         isListOnScreen: Bool = false,
         armed: Bool = false,
     ) -> ComposingRequest {
-        ComposingRequest(
+        // The client check, standing in for the controller's: answers yes
+        // and notes that it was asked. Spelled out rather than a ternary over
+        // a method reference, which crashes the Swift 6.3 type checker.
+        var swapCheck: (@MainActor () -> Bool)?
+        if armed {
+            swapCheck = { [unowned self] in
+                isSwapCheckAsked = true
+                return true
+            }
+        }
+        return ComposingRequest(
             session: session,
             settings: settings ?? SettingsStore(),
             panel: ComposingPanelState(
                 isListOnScreen: isListOnScreen,
                 selectedIndex: { 2 },
                 indexForKeySlot: { $0 + 10 },
-                canSwapPrecedingSpace: armed ? swapCheck : nil,
+                canSwapPrecedingSpace: swapCheck,
             ),
         )
-    }
-
-    /// The client check, standing in for the controller's: answers yes and
-    /// notes that it was asked.
-    private func swapCheck() -> Bool {
-        isSwapCheckAsked = true
-        return true
     }
 
     private func lastPanel() throws -> Taigi_DesktopShell_PanelState {
