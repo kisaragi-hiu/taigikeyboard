@@ -121,22 +121,24 @@ final class ComposingBackendParityTests: XCTestCase {
     /// E5 (C2) on picked symbols: whether a symbol written outside a
     /// composition reaches the next-word context. The Mac skips it when a
     /// grapheme is a letter or whitespace (`Character`), the core when a
-    /// scalar is alphabetic or whitespace (`char`, `composing/manager.rs`).
-    /// The symbols of the shipped table the two answer differently, by
-    /// back end-independent arithmetic — modelled here with the scalar
-    /// properties of the Swift standard library's Unicode tables, which can
-    /// trail or lead Rust's by a version.
-    func testE5_symbolsTheNotePredicateReadsDifferently() throws {
-        let table = try TestFixtures.shippedSymbolTable()
-        let differing = table.symbols.filter { symbol in
-            let macSkips = symbol.contains { $0.isLetter || $0.isWhitespace }
-            let coreSkips = symbol.unicodeScalars.contains {
-                $0.properties.isAlphabetic || $0.properties.isWhitespace
-            }
-            return macSkips != coreSkips
+    /// scalar is alphabetic or whitespace (`composing/manager.rs`). Under the
+    /// Mac's own predicate every shipped symbol is forwarded, as under the
+    /// core's (`tests/composing_manager.rs`
+    /// `e5_every_bundled_symbol_reaches_next_word`): the difference never
+    /// reaches the picker. The Swift manager's case, so the legacy process
+    /// runs it.
+    func testE5_everyShippedSymbolReachesNextWord() throws {
+        let symbols = try TestFixtures.shippedSymbolTable().symbols
+        let nextWord = RecordingNextWordPort()
+        let manager = try TestFixtures.makeComposingManager(
+            nextWord: nextWord, startingGeneration: TestFixtures.generationCounter.next(),
+        )
+
+        for symbol in symbols {
+            manager.noteCharacterTypedOutsideComposition(symbol)
         }
 
-        XCTAssertEqual(differing, [], "E5: picked symbols the two predicates disagree on")
+        XCTAssertEqual(nextWord.reported, symbols)
     }
 
     // MARK: - Session

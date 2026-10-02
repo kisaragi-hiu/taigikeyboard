@@ -57,23 +57,37 @@ final class AutoSpaceControllerTests: XCTestCase {
     }
 
     /// A client callback that takes the focus away mid-replay (roadmap D3,
-    /// stale replies): the deactivation finishes what it can, and the rest
-    /// of the reply — the auto space here — belonged to the tenure that just
-    /// ended. Both back ends, since the replay is the controller's.
-    func testADeactivationDuringTheReplay_dropsTheRestOfTheReply() throws {
-        let session = try composedSession()
-        try session.walkToFirstTwoScriptCell()
-        var hasDeactivated = false
-        session.client.afterInsertText = { [controller = session.controller, client = session.client] _ in
-            guard !hasDeactivated else { return }
-            hasDeactivated = true
-            controller.deactivateServer(client)
+    /// stale replies): the rest of the reply — the auto space here — belonged
+    /// to a tenure that is over, even when the same session came straight
+    /// back, or to a session another controller now drives. Both back ends,
+    /// since the replay is the controller's.
+    func testAFocusChangeDuringTheReplay_dropsTheRestOfTheReply() throws {
+        let interruptions: [(String, (TaigiInputController, RecordingTextInputClient) -> Void)] = [
+            ("deactivated", { controller, client in controller.deactivateServer(client) }),
+            ("deactivated and back", { controller, client in
+                controller.deactivateServer(client)
+                controller.activateServer(client)
+            }),
+            ("taken over", { _, _ in
+                try? TestFixtures.makeInputController().activateServer(RecordingTextInputClient())
+            }),
+        ]
+        for (name, interrupt) in interruptions {
+            let session = try composedSession()
+            try session.walkToFirstTwoScriptCell()
+            var hasInterrupted = false
+            session.client.afterInsertText = { [controller = session.controller, client = session.client] _ in
+                guard !hasInterrupted else { return }
+                hasInterrupted = true
+                interrupt(controller, client)
+            }
+            defer { session.client.afterInsertText = nil }
+
+            _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
+
+            XCTAssertTrue(hasInterrupted, name)
+            XCTAssertEqual(session.client.insertedTexts.count, 1, "\(name): the commit landed; its auto space did not")
         }
-
-        _ = try session.controller.handle(TestFixtures.keyDownEvent(characters: "\r"), client: session.client)
-
-        XCTAssertEqual(session.client.insertedTexts.count, 1, "the commit landed; its auto space did not")
-        XCTAssertNotEqual(session.client.insertedTexts.last, " ")
     }
 
     func testALiteralCommitEndingInAHyphen_earnsNoSpace() throws {

@@ -21,6 +21,7 @@ use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::{
     keys, CandidateDisplayMode, EngineSettings, SettingsDocument, SettingsProvider,
 };
+use taigi_desktop_core::symbols::SymbolTable;
 
 // MARK: - Fixtures
 
@@ -917,6 +918,21 @@ fn e5_a_mark_that_is_alphabetic_keeps_the_character_from_next_word() {
             .note_character_typed_outside_composition(character);
     }
     assert_eq!(rig.memory.reported(), vec!["。\u{301}"]);
+}
+
+/// E5 on picked symbols: every symbol of the shipped table reaches the
+/// next-word context under the core's predicate, as every one does under
+/// the Mac's (`ComposingBackendParityTests.swift`) — the difference never
+/// reaches the picker.
+#[test]
+fn e5_every_bundled_symbol_reaches_next_word() {
+    let rig = rig_on(DesktopPlatform::MacOS);
+    let table = SymbolTable::bundled().expect("the bundled table parses");
+    let symbols: Vec<&str> = table.symbols().collect();
+    for symbol in &symbols {
+        rig.manager.note_character_typed_outside_composition(symbol);
+    }
+    assert_eq!(rig.memory.reported(), symbols);
 }
 
 // MARK: - ComposingSessionCoordinatorTests

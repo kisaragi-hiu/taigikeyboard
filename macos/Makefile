@@ -48,7 +48,7 @@ build: i18n-check
 # run the cases that drive it through the Swift key path's generations skip themselves
 # (`TestFixtures.skipUnderTheCoreBackEnd`), so the two counters never meet in one process.
 test: i18n-check
-	swift test
+	TAIGI_COMPOSING_BACKEND=legacy swift test
 	TAIGI_COMPOSING_BACKEND=core swift test --skip-build
 
 bundle:
