@@ -7,13 +7,11 @@
 #
 # Tab-separated. A chord is `<modifiers>|<scalars>`: modifier letters d (⌘)
 # c (⌃) o (⌥) s (⇧), then the key's Unicode scalars in hex. `-` is "none".
-# A fourth and fifth column name the core's answer and the open parity item
-# when the two sides differ today (roadmap § Parity decisions).
 #
 #   default  <action>  <chord>
-#   parse    <stored value>  <chord it reads as | refused>  [core  item]
+#   parse    <stored value>  <chord it reads as | refused>
 #   match    <chord>  <event's unmodified characters, hex>  <event modifiers>  <yes | no>
-#   resolve  <stored rows: action=value;… | ->  <every row: action=chord | action=- >  [core  item]
+#   resolve  <stored rows: action=value;… | ->  <every row: action=chord | action=- >
 
 # Every action's shipped chord.
 default	nextCandidate	|0009
@@ -53,9 +51,18 @@ parse	d|001B	refused
 parse	|F702	refused
 parse	cs|F72C	refused
 parse	|F704	|F704
-# E6: a fold that adds a combining mark — the Mac reads the grapheme (not
-# ASCII, so not a typing key), the core the first scalar `i`.
-parse	s|0130	s|0069,0307	refused	E6
+# The gate reads the first scalar, so a typing key carrying a combining mark
+# is still that key: `İ` folds to `i̇`, a decomposed `á`, a keycap `1⃣` (E6,
+# settled P11b). A chording modifier frees them; a precomposed `á` is not a
+# typing key.
+parse	s|0130	refused
+parse	s|0069,0307	refused
+parse	c|0130	c|0069,0307
+parse	|0061,0301	refused
+parse	c|0061,0301	c|0061,0301
+parse	|0031,20E3	refused
+parse	c|0031,20E3	c|0031,20E3
+parse	|00E1	|00E1
 # An empty hex field refuses the whole value (E7, settled P11a).
 parse	c|0041,,0042	refused
 parse	c|,005D	refused
@@ -83,4 +90,5 @@ resolve	commitAlternateScript=|000D	nextCandidate=|0009;previousCandidate=s|0009
 resolve	pageForward=|0009	nextCandidate=-;previousCandidate=s|0009;pageForward=|0009;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
 resolve	nextCandidate=|0061	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
 resolve	commitLiteral=;confirmHighlighted=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
+resolve	nextCandidate=s|0069,0307	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
 resolve	nextCandidate=c|0041,,0042	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020

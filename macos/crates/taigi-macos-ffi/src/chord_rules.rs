@@ -1,8 +1,7 @@
 //! The core's half of the chord-rule cross-check
 //! (`fixtures/chord_rules.tsv`): every row read under the Mac's rules,
 //! against the expectations the Swift Shortcuts pane is held to by
-//! `ChordRulesCrossCheckTests.swift`. A row naming an open parity item
-//! answers with its core column.
+//! `ChordRulesCrossCheckTests.swift`.
 
 use std::collections::BTreeMap;
 
@@ -21,11 +20,6 @@ fn rows() -> impl Iterator<Item = Vec<&'static str>> {
         .lines()
         .filter(|line| !line.is_empty() && !line.starts_with('#'))
         .map(|line| line.split('\t').collect())
-}
-
-/// The core's expectation: the fourth column on a row an open item splits.
-fn expected<'a>(row: &[&'a str], at: usize) -> &'a str {
-    row.get(at + 1).copied().unwrap_or(row[at])
 }
 
 fn action(raw: &str) -> ComposingAction {
@@ -85,7 +79,7 @@ fn the_core_answers_every_row_of_the_mac_chord_table() {
                 row[2],
                 "{row:?}"
             ),
-            "parse" => assert_eq!(chord(row[1]), expected(&row, 2), "{row:?}"),
+            "parse" => assert_eq!(chord(row[1]), row[2], "{row:?}"),
             "match" => {
                 let stored = ComposingKeyChord::from_raw(row[1], DESKTOP_PLATFORM).unwrap();
                 let characters = scalars(row[2]);
@@ -102,7 +96,7 @@ fn the_core_answers_every_row_of_the_mac_chord_table() {
                 };
                 assert_eq!(matches, row[4], "{row:?}");
             }
-            "resolve" => assert_eq!(bindings(row[1]), expected(&row, 2), "{row:?}"),
+            "resolve" => assert_eq!(bindings(row[1]), row[2], "{row:?}"),
             kind => panic!("unknown row kind {kind}"),
         }
     }
