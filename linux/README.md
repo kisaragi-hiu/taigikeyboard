@@ -19,9 +19,9 @@ table: `docs/architecture/linux-roadmap.md`.
 | `data/tw.taigikeyboard.Settings.desktop`, `data/icons/` | launcher entry + hicolor icons | The settings window in the app grid; the icons are generated with the other desktops' by `tools/desktop/make-app-icon.swift`. |
 | `packaging/control.in` | Debian control | `make deb` packs the install layout with dpkg-deb (`docs/architecture/linux-release.md`). |
 
-Behaviour oracle is the macOS input method (`../macos`); the Rust it runs
-on is the Windows port (`../windows`, `../desktop`). Deltas are named in the
-roadmap's divergence table.
+Behaviour oracle is `taigi-desktop-core` and its tests (`../desktop`), shared
+with macOS and Windows; the Windows port (`../windows`) is the shell-code
+precedent. Deltas are named in the roadmap's divergence table.
 
 ## Working without a Linux machine
 

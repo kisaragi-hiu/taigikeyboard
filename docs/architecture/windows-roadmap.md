@@ -5,6 +5,7 @@
 > **Status**: shipped — PR1–PR10 + parity audit merged 2026-08-29 (authored without a Windows machine); W17 WinUI 3 settings window merged 2026-08-31 (A0 #647 / A #648 / B1 #649 / B #650 / C #651); first Windows release **desktop v3.6.7** (2026-09-04, unsigned installer; `changelog/desktop-v3.6.7.md`), then **desktop v3.6.8** (2026-09-11; `changelog/desktop-v3.6.8.md`). Box dogfood since 2026-08-30 (`ssh win`); per-feature `Sn` items in `dogfood-checklist.md`. Release mechanics: `windows-release.md`, `desktop-release.md`.
 > **Session memory**: project memory `project_windows_ime.md` (Claude auto-memory)
 > **Sibling**: `docs/architecture/macos-roadmap.md` — the platform this one mirrors
+> **Oracle rule superseded** (2026-10-03, macOS desktop-core P12): "macOS is the behaviour oracle" below is historical — desktop-core and its tests are now the behaviour oracle for the three desktops (`macos-desktop-core-roadmap.md` D8).
 
 ---
 

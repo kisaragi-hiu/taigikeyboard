@@ -11,8 +11,9 @@ the maintainer's Mac.
 | `crates/taigi-desktop-update` | The update check the Windows settings window runs (Linux has none — the package manager updates it): manifest wire format + `DottedVersion`, check outcome and what it leaves in `settings.json`, `ureq` HTTPS transport (native TLS, OS roots). The only crate here with a network stack; the schedule is `taigi-desktop-core::settings::update_schedule` so the input-method processes never link it. |
 | `crates/taigi-desktop-storage` | The `settings.json` file store (atomic replace, revision), user fonts, the data directory. The user-data stores are the engine's (`../engine/userdata`, `docs/architecture/user-data-engine-roadmap.md`), reached through `taigi-desktop-core::engine::user_data`. |
 
-Behaviour oracle is the macOS input method (`../macos`); ported items cite the
-Swift they mirror. Born as `taigi-windows-{core,storage}` in
+`taigi-desktop-core` and its tests are the behaviour oracle for the three
+desktops — macOS, Windows, Linux (`docs/contributing/windows-guidelines.md`
+§ desktop-core is the behaviour oracle). Born as `taigi-windows-{core,storage}` in
 `docs/architecture/windows-roadmap.md` (W1–W17), moved here for Linux
 (`docs/architecture/linux-roadmap.md` L2).
 

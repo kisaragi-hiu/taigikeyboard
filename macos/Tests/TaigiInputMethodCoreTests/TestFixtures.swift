@@ -306,11 +306,10 @@ enum TestFixtures {
         )
     }
 
-    /// Whether this process runs the core back end
-    /// (`TAIGI_COMPOSING_BACKEND=core`, `make -C macos test`'s second run) —
-    /// for a case whose expectation differs per back end on an open parity
-    /// item.
-    static let isCoreBackEnd = ProcessInfo.processInfo.environment[ComposingBackends.environmentKey] == "core"
+    /// Whether this process runs the core back end (the default;
+    /// `make -C macos test`'s first run) — for a case whose expectation
+    /// differs per back end.
+    static let isCoreBackEnd = ComposingBackends.kind == .core
 
     /// Skips a case that drives the engine through the Swift key path's own
     /// generations (`makeComposingManager`, the bridge's composing ops) in

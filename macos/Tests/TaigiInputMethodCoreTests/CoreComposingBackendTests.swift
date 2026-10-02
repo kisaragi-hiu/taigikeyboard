@@ -15,6 +15,43 @@ final class CoreComposingBackendTests: XCTestCase {
     private var isSwapCheckAsked = false
     private let session = ComposingSessionToken()
 
+    // MARK: - Selection (roadmap P12)
+
+    func testTheCoreBackEnd_isTheDefault() {
+        XCTAssertEqual(ComposingBackends.Kind(named: nil), .core, "unset ships the core")
+        XCTAssertEqual(ComposingBackends.Kind(named: "core"), .core)
+        XCTAssertEqual(ComposingBackends.Kind(named: "legacy"), .legacy)
+    }
+
+    /// A handover starts a fresh engine session under the settings in force
+    /// then, as the legacy session start reads them — not under whatever
+    /// the last request carried (freeze contract item 4).
+    func testActivateAndRelease_carryTheSettingsInForce() throws {
+        restoreStandardSettingsAtTeardown()
+        let runtime = try XCTUnwrap(TestDesktopCore.runtime, "the process's one Configure")
+        let autoSpace = SettingsStore.Keys.isAutoSpaceEnabled.name
+        let backend = CoreComposingBackend(
+            coordinator: TestFixtures.makeCoordinator(),
+            runtime: { runtime },
+            transport: { [unowned self] bytes in
+                if let request = try? Taigi_DesktopShell_DesktopRequest(serializedBytes: Data(bytes)) {
+                    sent.append(request)
+                }
+                return Self.ok()
+            },
+        )
+
+        UserDefaults.standard.set(true, forKey: autoSpace)
+        backend.activate(session)
+        UserDefaults.standard.set(false, forKey: autoSpace)
+        backend.release(session)
+
+        let carried = sent.map { request in
+            request.settings.entries.first { $0.name == autoSpace }?.value.boolean
+        }
+        XCTAssertEqual(carried, [true, false], "each read when it is sent")
+    }
+
     // MARK: - FAIL_INTERNAL (roadmap D4)
 
     func testAnInternalFailure_consumesTheKey_dropsTheCompositionAndCancelsOnce() throws {

@@ -79,13 +79,16 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   `TF_LBI_STYLE_BTN_BUTTON` and `lang_bar::show_popup` builds a Win32 popup — mozc
   (`tip_lang_bar.cc:196-240`) and khiin-rs (`lang_bar_indicator.rs:53-58`) both do exactly this.
 
-## macOS is the behaviour oracle
+## desktop-core is the behaviour oracle
 
-- Key table, modes, auto-space, full-width punctuation, candidate geometry, settings keys and
-  defaults, storage schemas, CSV, update flow all mirror `macos/Sources/TaigiInputMethodCore/**`.
-  A port carries a `// mirrors macos/.../<File>.swift:<line>` comment on the mirrored constant or
-  rule. Drift is a bug unless the roadmap names it as an intentional divergence.
-- Named divergences so far: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch, 外觀 mode is a native pop-up rather than the Mac's drawn thumbnails, the width floor is 600 so `NavigationView` can compact its pane), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
+- **desktop-core and its tests are the behaviour oracle for the three desktops** — macOS, Windows,
+  Linux (`docs/architecture/macos-desktop-core-roadmap.md` D8). A rule lives in
+  `desktop/crates/taigi-desktop-core` once; a platform difference is a `DesktopPlatform` branch
+  with a test per platform, or a named shell divergence. Drift between the desktops is a bug.
+- The `// mirrors macos/.../<File>.swift:<line>` comments already in the Rust are rewritten to
+  state their rule in the roadmap's last phase (P15); a new rule states itself and names its test
+  instead of citing Swift.
+- Named shell divergences so far: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch, 外觀 mode is a native pop-up rather than the Mac's drawn thumbnails, the width floor is 600 so `NavigationView` can compact its pane), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
   hosts run on defaults, Windows toast instead of `UNUserNotification`, no `.taigi` pane (macOS
   retired it too).
 

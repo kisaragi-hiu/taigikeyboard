@@ -5,8 +5,8 @@ import Foundation
 /// Runs every request through the desktop-core session over the shell seam
 /// (`desktop_request_bytes`; docs/architecture/macos-desktop-core-roadmap.md
 /// D3) and answers with the effects the core recorded, for the controller to
-/// replay. Selected with `TAIGI_COMPOSING_BACKEND=core` until the cut-over
-/// (roadmap P12).
+/// replay. The default back end since the cut-over (roadmap P12;
+/// `ComposingBackends`).
 ///
 /// What the core cannot know is asked here before a request is encoded: the
 /// window's selection and slots, and the auto-space swap's client check.
@@ -62,7 +62,7 @@ final class CoreComposingBackend: ComposingBackend {
         var message = Taigi_DesktopShell_ActivateRequest()
         message.token = session.value
         // A session that already held the engine keeps its composition.
-        if case let .reply(_, _, isComposing) = exchange(.activate(message), settings: nil, op: "activate") {
+        if case let .reply(_, _, isComposing) = exchange(.activate(message), settings: lifecycleSnapshot(), op: "activate") {
             isOwnerComposing = isComposing
         } else {
             isOwnerComposing = false
@@ -76,7 +76,7 @@ final class CoreComposingBackend: ComposingBackend {
         isOwnerComposing = false
         var message = Taigi_DesktopShell_ReleaseRequest()
         message.token = session.value
-        _ = exchange(.release(message), settings: nil, op: "release")
+        _ = exchange(.release(message), settings: lifecycleSnapshot(), op: "release")
     }
 
     func key(
@@ -134,7 +134,7 @@ final class CoreComposingBackend: ComposingBackend {
         message.token = request.session.value
         message.refetch = refetch
         message.panel = Self.panel(request, swapping: nil)
-        switch exchange(.represent(message), settings: snapshot(for: request), op: "represent") {
+        switch exchange(.represent(message), settings: snapshot(in: request.settings.userDefaults), op: "represent") {
         case let .reply(_, effects, isComposing):
             isOwnerComposing = isComposing
             switch effects.first {
@@ -174,7 +174,7 @@ final class CoreComposingBackend: ComposingBackend {
         in request: ComposingRequest,
         op: String,
     ) -> (handled: Bool, effects: [ComposingBackendEffect])? {
-        switch exchange(message, settings: snapshot(for: request), op: op) {
+        switch exchange(message, settings: snapshot(in: request.settings.userDefaults), op: op) {
         case let .reply(handled, effects, isComposing):
             isOwnerComposing = isComposing
             return (handled, effects)
@@ -185,15 +185,24 @@ final class CoreComposingBackend: ComposingBackend {
         }
     }
 
-    /// The whitelisted settings as `request`'s store holds them now; `nil`
-    /// — logged — before the runtime exists, which the core would refuse
+    /// The whitelisted settings as `defaults` holds them now; `nil` —
+    /// logged — before the runtime exists, which the core would refuse
     /// anyway.
-    private func snapshot(for request: ComposingRequest) -> Taigi_DesktopShell_SettingsSnapshot? {
+    private func snapshot(in defaults: UserDefaults) -> Taigi_DesktopShell_SettingsSnapshot? {
         guard let runtime = runtime() else {
             Self.logger.error("no desktop-core runtime — the request goes without settings")
             return nil
         }
-        return DesktopCoreRuntime.settingsSnapshot(runtime.settings, in: request.settings.userDefaults)
+        return DesktopCoreRuntime.settingsSnapshot(runtime.settings, in: defaults)
+    }
+
+    /// `Activate` and `Release` carry no request store, yet a handover
+    /// starts a fresh engine session under the settings in force: they read
+    /// the app's one domain (`.standard`, where `SettingsStore()` reads), as
+    /// the legacy key path's session start does (`ComposingBackends`), never
+    /// the last request's.
+    private func lifecycleSnapshot() -> Taigi_DesktopShell_SettingsSnapshot? {
+        snapshot(in: .standard)
     }
 
     /// Classified by whether the engine may have run: a request refused
