@@ -898,21 +898,28 @@ fn the_mac_commits_a_nailed_composition_once() {
     assert_eq!(rig.recorder.committed(), [shown.as_str()]);
 }
 
-/// Pins the CURRENT core rule — roadmap E5, a real difference. Swift asks
-/// `isLetter` / `isWhitespace` of each grapheme's first scalar
-/// (`ComposingManager.swift:116-118`); the core asks every scalar, so a
-/// non-letter base plus an Other_Alphabetic mark is forwarded only on the Mac.
+/// Roadmap E5, settled P11e: the gate asks every scalar, so a non-letter
+/// base plus an Other_Alphabetic mark is skipped. The Mac's Swift manager
+/// asks the same since P11e (until then each grapheme's first scalar); its
+/// side is `ComposingBackendParityTests.testE5_aMarkThatIsAlphabeticKeeps…`,
+/// same inputs, same reported list.
 #[test]
 fn e5_a_mark_that_is_alphabetic_keeps_the_character_from_next_word() {
     // No engine call: the manager only hands the character to the port.
+    // trace: U+0345 / U+093E / `a` / ` ` / U+3000 / `x` are Alphabetic or
+    // White_Space; `。` / `,` / U+0301 / U+0600 are neither. U+0600 is a
+    // Prepend scalar, so `\u{600}a` and `\u{600} ` are one grapheme each, led
+    // by a non-letter.
     let rig = rig_on(DesktopPlatform::MacOS);
     for character in [
-        "。\u{345}", // core: skipped; Swift: forwarded
-        ",\u{93E}",  // core: skipped; Swift: forwarded
-        "。\u{301}", // U+0301 is not Alphabetic: forwarded on both
-        " \u{301}",  // whitespace-led: skipped on both
-        "\u{3000}",  // skipped on both
-        "x",         // skipped on both
+        "。\u{345}", // skipped (Swift until P11e: forwarded)
+        ",\u{93E}",  // skipped (Swift until P11e: forwarded)
+        "\u{600}a",  // skipped (Swift until P11e: forwarded)
+        "\u{600} ",  // skipped (Swift until P11e: forwarded)
+        "。\u{301}", // U+0301 is not Alphabetic: forwarded
+        " \u{301}",  // whitespace-led: skipped
+        "\u{3000}",  // skipped
+        "x",         // skipped
     ] {
         rig.manager
             .note_character_typed_outside_composition(character);
@@ -921,9 +928,9 @@ fn e5_a_mark_that_is_alphabetic_keeps_the_character_from_next_word() {
 }
 
 /// E5 on picked symbols: every symbol of the shipped table reaches the
-/// next-word context under the core's predicate, as every one does under
-/// the Mac's (`ComposingBackendParityTests.swift`) — the difference never
-/// reaches the picker.
+/// next-word context under the per-scalar gate, as every one did under the
+/// Mac's per-grapheme one before P11e (`ComposingBackendParityTests.swift`)
+/// — the change never reached the picker.
 #[test]
 fn e5_every_bundled_symbol_reaches_next_word() {
     let rig = rig_on(DesktopPlatform::MacOS);
