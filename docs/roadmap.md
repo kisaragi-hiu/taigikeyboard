@@ -97,9 +97,10 @@ One line each; the linked section holds the design, the measurements and the ope
 
 | Item | Status | Where |
 |---|---|---|
+| SignPath Foundation code-signing application | rejected 2026-10-02; USER will reapply later — keep `CODE_SIGNING_POLICY.md` + `windows-build.yml` provenance build | [`go-public-checklist.md`](go-public-checklist.md), [`CODE_SIGNING_POLICY.md`](CODE_SIGNING_POLICY.md) |
 | TL / POJ prose proofreading of the app UI | USER, data-only | § Closed phases › App UI i18n |
 
-**Not to re-propose** (USER-closed): `zh-TW` README, dictionary-source licensing follow-up, romanization spelling correction, Windows candidate-window paint latency and UIA exposure (USER 2026-10-02: "remove"); SignPath Foundation code signing (USER 2026-10-02: rejected); converted-romanization commit on Enter (`suann2ting3` → `suán-tìng`), TL mode (臺羅模式) tone key commits without a candidate window, and mobile predictions after Space (USER 2026-10-02: "remove"); bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
+**Not to re-propose** (USER-closed): `zh-TW` README, dictionary-source licensing follow-up, romanization spelling correction, Windows candidate-window paint latency and UIA exposure (USER 2026-10-02: "remove"); converted-romanization commit on Enter (`suann2ting3` → `suán-tìng`), TL mode (臺羅模式) tone key commits without a candidate window, and mobile predictions after Space (USER 2026-10-02: "remove"); bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
 
 ## Per-round gates (process invariants, project-wide)
 

@@ -13,7 +13,8 @@ repository (`docs/architecture/pr-number-migration.md`). Verified 2026-09-13 wit
 licence position was published as recorded below (the maintainer's reading,
 not a grant) and stays the open legal item — also the likely obstacle for the
 SignPath Foundation application submitted 2026-09-07 — rejected (recorded
-2026-10-02).
+2026-10-02); the maintainer will reapply, so the policy file and the hosted
+Windows provenance build stay.
 
 The flip was irreversible in practice: forks, caches and archives keep whatever
 the history contained at that moment. This file is the ordered list of what had
@@ -290,8 +291,11 @@ gh repo edit <owner>/<repo> --visibility public
 ## 10. Turn on GitHub's own scanning
 
 **State 2026-09-13**: `secret_scanning` and `secret_scanning_push_protection`
-enabled; `secret_scanning_non_provider_patterns` disabled (the third `-f` line
-below has not been applied). Secret scanning and push protection come free with
+enabled; `secret_scanning_non_provider_patterns` disabled. Re-checked
+2026-10-02: the third `-f` line below returns 200 but the status stays
+`disabled` — non-provider patterns need a paid GitHub Secret Protection
+licence even on a public repository. Not bought; gitleaks (pre-commit hook +
+`secrets.yml`) covers generic secrets instead. Secret scanning and push protection come free with
 a public repository; on a private one they need a paid GitHub security
 entitlement, which this repository did not have — so §9 is what made them
 available here. Push
