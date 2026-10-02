@@ -1,5 +1,5 @@
 //! The Dictionary Search pane's presentation policy, shared by both
-//! settings windows (`DictionarySearchModel` in `DictionarySearchPage.swift`).
+//! settings windows.
 //! The search itself is `engine::dictionary_search`.
 
 use std::time::Duration;

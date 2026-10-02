@@ -149,12 +149,6 @@ struct SettingsSidebarView: View {
 /// The selected pane's form. Carries no `navigationTitle`: the titlebar takes
 /// its name from `SettingsSplitViewController`, the one place that knows both
 /// the selection and the display language.
-///
-/// The Dictionary Search pane's `EngineSettingsProvider` is not threaded through here.
-/// That pane is unlisted (not released yet, USER 2026-08-21) and nothing else
-/// on this side reads a provider, so carrying one would be three signatures
-/// held open for a caller that does not exist; relisting the pane adds it back
-/// where it is needed.
 struct SettingsDetailView: View {
     /// What the dictionary pages read and write through.
     let userData: any UserDataClient

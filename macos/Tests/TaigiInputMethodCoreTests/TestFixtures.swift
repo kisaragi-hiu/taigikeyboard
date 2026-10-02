@@ -502,8 +502,7 @@ extension [CandidateCellContent] {
 
 extension DictionarySourceToggles {
     /// Every dictionary switched off — the state the wire cannot say with a
-    /// `0`, and so the one both the filter suite and the search suite are
-    /// about.
+    /// `0`, and so the one the all-off fetch test is about.
     ///
     /// Spelled out rather than derived from `.defaults`, because a source added
     /// to the struct must fail to compile here until someone has said which

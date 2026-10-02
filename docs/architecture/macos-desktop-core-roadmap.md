@@ -173,7 +173,7 @@ One phase = one PR. Size counts added and changed lines; a deletion-only diff ma
 | Phase | Type | Content | Est. | Status |
 |---|---|---|---|---|
 | P0 | docs | This roadmap, the inventory report, memory | — | this commit |
-| P1 | refactor (macOS) | Delete the dead Dictionary Search code and what only it kept alive (report S21), with their tests. Independent of the migration; first because it shrinks the bridge the later phases touch | −790 src | Pending |
+| P1 | refactor (macOS) | Delete the dead Dictionary Search code and what only it kept alive (report S21), with their tests. Independent of the migration; first because it shrinks the bridge the later phases touch | −874 / +7 src measured (6 files deleted, 4 trimmed), tests −4 files +1 (est. −790) | Pending |
 | P2 | build | Spike (D1); `macos/Cargo.toml` + `taigi-macos-ffi` with a version request; one archive; staging helper; feature forwarding; release profile; iOS staging verified; Swift smoke test; `rust-ffi-safety.md` §1.1 names the seam | ~400 | Pending |
 | P3 | build | Tooling (D7): toolchain file, test selection, `macos.yml` native job, security workflow, lint, version script, `AGENTS.md` stale-artifact row | ~250 | Pending |
 | P4 | refactor (desktop-core) | `DesktopPlatform` (D6) through the pure rules, `RuntimeParts`, `app_config`, the journal, the chord codec and the labels; Windows, Linux and both settings apps pass theirs | ~450 | Pending |

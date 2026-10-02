@@ -1,7 +1,7 @@
 //! Dictionary Search: a search field, the first five hits, each with its source
-//! badges and a menu to look the reading up in the MOE dictionary or ChhoeTaigi. Port of
-//! `DictionarySearchPage.swift`. Built but UNLISTED, as on macOS (not
-//! released yet, USER 2026-08-21): reached only by `--pane dictionarySearch`.
+//! badges and a menu to look the reading up in the MOE dictionary or ChhoeTaigi. Built
+//! but UNLISTED (not released yet, USER 2026-08-21): reached only by
+//! `--pane dictionarySearch`.
 //! The lookup (`taigi_desktop_core::engine::dictionary_search`) — the
 //! engine's dictionaries and the custom-dictionary query, plus the
 //! dictionaries' first load — runs off the UI thread; the newest query

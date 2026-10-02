@@ -341,8 +341,7 @@ impl SettingsPane {
 
     /// The sidebar row label's i18n key, and the window title
     /// (`SettingsSplitView.swift`, `labelKey`). `None` for the unlisted
-    /// search page, which has no row and no title of its own on macOS
-    /// either; About has a title without a row.
+    /// search page; About has a title without a row.
     pub fn title_key(self) -> Option<crate::strings::StringKey> {
         use crate::strings::StringKey;
         Some(match self {

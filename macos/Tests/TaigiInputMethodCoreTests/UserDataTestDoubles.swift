@@ -58,8 +58,6 @@ final class RecordingNextWordPort: NextWordPort {
 
 /// A custom dictionary held in memory, answering the pages' requests the way
 /// the engine does: newest edit first, a case-insensitive substring filter.
-/// The search matches by romanization prefix — a stand-in for the engine's
-/// key-prefix lookup, which the engine's tests cover.
 final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     private let lock = NSLock()
     private var rows: [CustomDictionaryRow] = []
@@ -107,10 +105,4 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     }
 
     func clearLearningRecords() throws {}
-
-    func search(query: String, mode _: InputMode, limit: Int) -> [CustomDictionaryRow] {
-        lock.withLock {
-            Array(rows.filter { $0.roman.lowercased().hasPrefix(query.lowercased()) }.prefix(limit))
-        }
-    }
 }

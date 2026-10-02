@@ -10,44 +10,6 @@ struct LexiconInstallStats: Equatable {
     let prefixIndexEntryCount: UInt64
 }
 
-/// What one resolve of the user's dictionary toggles answered.
-///
-/// Both halves come from the same round-trip on purpose: the mask decides
-/// which rows the engine returns and the source set decides which badges those
-/// rows are labelled with, and two resolves could straddle a settings change.
-struct DictionaryFilters: Equatable, Sendable {
-    /// The engine's own answer, verbatim.
-    let dictionaryFilterBitmask: UInt32
-    /// The sources the user has switched on, for labelling results.
-    let enabledSources: Set<DictionarySource>
-}
-
-/// One row of a dictionary search.
-///
-/// `lengthScore` is the engine's own ranking term, not a usage count — the
-/// name is deliberately not "frequency", which is what the user's own commit
-/// counts are called everywhere else in this codebase.
-struct LexiconRow: Equatable, Sendable {
-    let id: Int64
-    let roman: String
-    let hanji: String?
-    let lengthScore: Int32?
-    let sourceBitmask: UInt32?
-}
-
-/// The romanization the engine should search in.
-enum LexiconInputMode: Int, Sendable {
-    case tl = 1
-    case poj = 2
-
-    /// Raw values match `Taigi_Engine_InputMode`; a mismatch would search the
-    /// wrong key family rather than fail, which is why the correspondence is
-    /// asserted in one place rather than at each search.
-    var wire: Taigi_Engine_InputMode {
-        Taigi_Engine_InputMode(rawValue: rawValue) ?? .unspecified
-    }
-}
-
 extension RustEngineBridge {
     /// Points the engine at the dictionary data. Sent once per process: the
     /// files are read-only and outlive every composing session.
@@ -82,38 +44,8 @@ extension RustEngineBridge {
         )
     }
 
-    /// Resolves the user's dictionary toggles into the bitmask the engine
-    /// filters candidates by.
-    ///
-    /// The bit layout — including the kautian subcollection region in bits
-    /// 13-25 — belongs to Rust (`engine/lexicon/src/dictionary_filters.rs`),
-    /// and this asks for it rather than reproducing it. No platform keeps a
-    /// mirrored bit-math fallback (`AGENTS.md` § Design principles) —
-    /// the bridge and the engine are built by one `make build`, and a second
-    /// copy of the layout is a second thing to keep in step.
-    ///
-    /// `nil` means the round-trip failed. Callers resolve this ONCE per query
-    /// and pass the answer down: the mask sent to the engine and the source
-    /// set used to label the results have to describe one instant, or a toggle
-    /// changed mid-search shows badges the results were not filtered by.
-    static func lexiconDictionaryFilters(toggles: DictionarySourceToggles) -> DictionaryFilters? {
-        var filters = Taigi_Engine_DictionaryFiltersRequest()
-        filters.toggles = dictionaryTogglesProto(toggles)
-
-        let op = "lexiconDictionaryFilters"
-        guard let response = lexiconResponse(.dictionaryFilters(filters), op: op) else { return nil }
-        guard case let .dictionaryFiltersResult(result)? = response.result else {
-            recordFailure(op: op, message: "response carried no dictionary-filters result")
-            return nil
-        }
-        return DictionaryFilters(
-            dictionaryFilterBitmask: result.dictionaryFilterBitmask,
-            enabledSources: Set(result.enabledSourceCodes.compactMap(dictionarySource(from:))),
-        )
-    }
-
-    /// The user's dictionary toggles on the wire — what `DictionaryFilters`
-    /// and `FetchAtPos` carry; the engine resolves them into its source filter.
+    /// The user's dictionary toggles on the wire — what `FetchAtPos` carries;
+    /// the engine resolves them into its source filter.
     static func dictionaryTogglesProto(_ toggles: DictionarySourceToggles) -> Taigi_Engine_DictionarySourceToggles {
         var togglesProto = Taigi_Engine_DictionarySourceToggles()
         togglesProto.kautian = toggles.kautian
@@ -148,125 +80,6 @@ extension RustEngineBridge {
         subcollProto.nameAppendix = subcollections.nameAppendix
         togglesProto.kautianSubcollections = subcollProto
         return togglesProto
-    }
-
-    /// The engine's own name for a source, mapped to ours.
-    ///
-    /// An explicit switch rather than a raw-value cast: the wire codes are
-    /// stable numbers and `DictionarySource` is string-backed, so any
-    /// correspondence between them is a coincidence waiting to break. An
-    /// unrecognised code is dropped — a newer engine naming a source this
-    /// build has never heard of is not a reason to fail a search.
-    private static func dictionarySource(
-        from code: Taigi_Engine_DictionarySourceCode,
-    ) -> DictionarySource? {
-        switch code {
-        case .dictSourceKautian: .kautian
-        case .dictSourceTaigitv: .taigitv
-        case .dictSourceItaigi: .itaigi
-        case .dictSourceSitbut: .sitbut
-        case .dictSourceTaihoa: .taihoa
-        case .dictSourceTaijit: .taijit
-        case .dictSourceKungge: .kungge
-        case .dictSourceStti: .stti
-        case .dictSourceKhpoo: .khpoo
-        case .dictSourceKhiin: .khiin
-        case .dictSourceLkk: .lkk
-        case .dictSourceDev: .dev
-        case .dictSourceCustom: .custom
-        case .dictSourceUnspecified, .UNRECOGNIZED: nil
-        }
-    }
-
-    /// What a SEARCH sends when the toggles could not be resolved.
-    ///
-    /// Search takes `UInt32.max` as its "filter disabled" sentinel
-    /// (`engine/lexicon/src/dictionary_reader.rs` `Filter::from_enabled_bitmask`)
-    /// and `0` as "nothing enabled". Sending `0` here would be fail-CLOSED — an FFI hiccup would empty the
-    /// dictionary rather than widen it, which is the opposite of what a
-    /// failure should degrade to.
-    static let allSourcesEnabledSearchBitmask = UInt32.max
-
-    /// Searches by romanization.
-    ///
-    /// An empty result and a failed round-trip are the same answer here: a
-    /// search that could not run shows nothing, which is what a search with no
-    /// matches shows too, and there is nothing the user could do differently
-    /// either way.
-    static func lexiconSearchWithSources(
-        input: String,
-        inputMode: LexiconInputMode,
-        limit: UInt32,
-        enabledSourcesBitmask: UInt32,
-    ) -> [LexiconRow] {
-        var payload = Taigi_Engine_SearchWithSourcesRequest()
-        payload.input = input
-        payload.inputMode = inputMode.wire
-        payload.limit = limit
-        payload.enabledSourcesBitmask = enabledSourcesBitmask
-
-        let op = "lexiconSearchWithSources"
-        guard let response = lexiconResponse(.searchWithSources(payload), op: op) else { return [] }
-        guard case let .searchWithSourcesResult(result)? = response.result else {
-            recordFailure(op: op, message: "response carried no search result")
-            return []
-        }
-        return result.rows.map(row(from:))
-    }
-
-    /// Searches by Hanji.
-    static func lexiconSearchByHanji(
-        query: String,
-        inputMode: LexiconInputMode,
-        limit: UInt32,
-        enabledSourcesBitmask: UInt32,
-    ) -> [LexiconRow] {
-        var payload = Taigi_Engine_SearchByHanjiRequest()
-        payload.query = query
-        payload.inputMode = inputMode.wire
-        payload.limit = limit
-        payload.enabledSourcesBitmask = enabledSourcesBitmask
-
-        let op = "lexiconSearchByHanji"
-        guard let response = lexiconResponse(.searchByHanji(payload), op: op) else { return [] }
-        guard case let .searchByHanjiResult(result)? = response.result else {
-            recordFailure(op: op, message: "response carried no search result")
-            return []
-        }
-        return result.rows.map(row(from:))
-    }
-
-    /// Whether `text` contains Hanji, and so which of the two searches to run.
-    ///
-    /// Asked of the engine rather than tested here: the ranges are an
-    /// invariant the three platforms share
-    /// (`INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`), and Android's
-    /// hand-written version had an unreachable clause for exactly this reason —
-    /// its 16-bit character type could not express the extension planes.
-    ///
-    /// `false` on a failed round-trip, which routes a Hanji query down the
-    /// romanization path and finds nothing, rather than failing the search.
-    static func isHanji(_ text: String) -> Bool {
-        var payload = Taigi_Engine_IsHanjiRequest()
-        payload.text = text
-
-        let op = "isHanji"
-        guard let response = lexiconResponse(.isHanji(payload), op: op) else { return false }
-        guard case let .isHanjiResult(result)? = response.result else {
-            recordFailure(op: op, message: "response carried no is-hanji result")
-            return false
-        }
-        return result.isHanji
-    }
-
-    private static func row(from proto: Taigi_Engine_TaigiWord) -> LexiconRow {
-        LexiconRow(
-            id: proto.id,
-            roman: proto.roman,
-            hanji: proto.hasHanji ? proto.hanji : nil,
-            lengthScore: proto.hasLengthScore ? proto.lengthScore : nil,
-            sourceBitmask: proto.hasSourceBitmask ? proto.sourceBitmask : nil,
-        )
     }
 
     private static func lexiconResponse(
