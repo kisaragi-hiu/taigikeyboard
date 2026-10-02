@@ -642,10 +642,9 @@ public nonisolated struct Taigi_DesktopShell_CancelRequest: Sendable {
   fileprivate var _panel: Taigi_DesktopShell_PanelState? = nil
 }
 
-/// The session gives the engine up (`inputControllerWillClose`, `deinit`).
-/// The session is over: its token is retired for good, owner or not, and an
-/// Activate for it is refused with FAIL_INVARIANT. A second Release is
-/// answered `ignored`.
+/// The session gives the engine up (`deactivateServer`,
+/// `inputControllerWillClose`). Its token stays valid: the next Activate
+/// with it takes the engine again.
 public nonisolated struct Taigi_DesktopShell_ReleaseRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -658,9 +657,11 @@ public nonisolated struct Taigi_DesktopShell_ReleaseRequest: Sendable {
   public init() {}
 }
 
-/// The commit the symbol-picker chord runs before the picker opens: the
-/// highlighted cell while the window shows one, otherwise the composition as
-/// typed with its auto space. Refused with FAIL_INVARIANT without a panel.
+/// The commit the symbol-picker chord runs before the picker opens. With a
+/// `selected_index`, that cell — none when no list is on screen, which
+/// commits nothing and keeps the composition; without one, the composition
+/// as typed with its auto space. Refused with FAIL_INVARIANT without a
+/// panel.
 public nonisolated struct Taigi_DesktopShell_CommitForSymbolPickerRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for

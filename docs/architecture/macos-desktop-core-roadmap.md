@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR refactor)
 > **Keywords**: `macOS`, `desktop-core`, `refactor`, `FFI`, `behaviour oracle`, `parity`
-> **Status**: in progress — scope and design decisions taken 2026-10-02 (§ Decisions); P1 merged #342, P2 merged #343, P3 merged #344, P4 merged #345, P5 merged #346, P6 merged #347, P7 merged #349, P8 merged #350, P9 next
+> **Status**: in progress — scope and design decisions taken 2026-10-02 (§ Decisions); P1 merged #342, P2 merged #343, P3 merged #344, P4 merged #345, P5 merged #346, P6 merged #347, P7 merged #349, P8 merged #350, P9 in progress
 > **Source**: `docs/reports/2026-09-30-audit-all.md` §2 ("macOS re-implements what `desktop/crates` already has") and §5.2; measured inventory `docs/reports/2026-10-02-macos-desktop-core-inventory.md` (frozen on `e330cd30`)
 > **Session memory**: project memory `project_macos_desktop_core.md` (Claude auto-memory)
 

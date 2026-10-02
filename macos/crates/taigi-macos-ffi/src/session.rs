@@ -70,14 +70,8 @@ impl Session {
         runtime: &DesktopRuntime,
         request: &KeyRequest,
     ) -> Result<SessionReply, Refusal> {
-        let event = request
-            .event
-            .as_ref()
-            .ok_or(Refusal::Missing("key.event"))?;
-        let panel = request
-            .panel
-            .as_ref()
-            .ok_or(Refusal::Missing("key.panel"))?;
+        let event = required(&request.event, "key.event")?;
+        let panel = required(&request.panel, "key.panel")?;
         self.run_owned(
             runtime,
             request.token,
@@ -117,10 +111,7 @@ impl Session {
         runtime: &DesktopRuntime,
         request: &CommitCompositionRequest,
     ) -> Result<SessionReply, Refusal> {
-        let panel = request
-            .panel
-            .as_ref()
-            .ok_or(Refusal::Missing("commit_composition.panel"))?;
+        let panel = required(&request.panel, "commit_composition.panel")?;
         self.run_owned(runtime, request.token, panel, |manager, _, surface| {
             manager.commit_composition(surface);
             false
@@ -134,10 +125,7 @@ impl Session {
         runtime: &DesktopRuntime,
         request: &CancelRequest,
     ) -> Result<SessionReply, Refusal> {
-        let panel = request
-            .panel
-            .as_ref()
-            .ok_or(Refusal::Missing("cancel.panel"))?;
+        let panel = required(&request.panel, "cancel.panel")?;
         self.run_owned(
             runtime,
             request.token,
@@ -161,10 +149,7 @@ impl Session {
         runtime: &DesktopRuntime,
         request: &CommitForSymbolPickerRequest,
     ) -> Result<SessionReply, Refusal> {
-        let panel = request
-            .panel
-            .as_ref()
-            .ok_or(Refusal::Missing("commit_for_symbol_picker.panel"))?;
+        let panel = required(&request.panel, "commit_for_symbol_picker.panel")?;
         let intent = if panel.selected_index.is_some() {
             ComposingKeyIntent::CommitHighlightedCandidate
         } else {
@@ -193,10 +178,7 @@ impl Session {
         if request.symbol.is_empty() {
             return Err(Refusal::Missing("insert_symbol.symbol"));
         }
-        let panel = request
-            .panel
-            .as_ref()
-            .ok_or(Refusal::Missing("insert_symbol.panel"))?;
+        let panel = required(&request.panel, "insert_symbol.panel")?;
         self.run_owned(runtime, request.token, panel, |manager, _, surface| {
             let settings = runtime.settings.current();
             insert_symbol(&request.symbol, &settings, manager, surface);
@@ -213,15 +195,14 @@ impl Session {
         runtime: &DesktopRuntime,
         request: &RepresentRequest,
     ) -> Result<SessionReply, Refusal> {
-        let panel = request
-            .panel
-            .as_ref()
-            .ok_or(Refusal::Missing("represent.panel"))?;
+        let panel = required(&request.panel, "represent.panel")?;
         self.run_owned(
             runtime,
             request.token,
             panel,
             |manager, candidates, surface| {
+                // Checked here, not left to `list_changed`: an empty list there
+                // records a close, and no list to present is "unchanged".
                 if candidates.is_empty() {
                     return false;
                 }
@@ -279,6 +260,12 @@ impl Session {
         let effects = surface.finish(manager);
         Ok(owner_reply(handled, effects, manager))
     }
+}
+
+/// A field the request cannot run without; proto3 would otherwise read an
+/// unset one as empty and run anyway.
+fn required<'a, T>(field: &'a Option<T>, name: &'static str) -> Result<&'a T, Refusal> {
+    field.as_ref().ok_or(Refusal::Missing(name))
 }
 
 /// The session a request names. 0 is never a token: it is what a request
@@ -1136,6 +1123,8 @@ mod tests {
             ]
         );
         assert_eq!(list.marked_text_length_utf16, 4);
+        // trace: the refetch is for what is left, `hoo` → 予 (hōo) first.
+        assert_eq!(list.cells[0].annotation.as_deref(), Some("hōo"));
     }
 
     // ---- Represent ----
@@ -1365,12 +1354,29 @@ mod tests {
             token: next_token(),
             settings: window_off.clone(),
         };
-        assert!(other.commit_for_symbol_picker(list(Some(0))).ignored);
-        assert!(other.insert_symbol("，", no_list()).ignored);
-        assert!(other.represent(true, no_list()).ignored);
         let snapshot = SettingsSnapshot {
             entries: window_off,
         };
+        // The owner's next request carries no snapshot: it reads whatever
+        // is in force, which must still be its own (window on).
+        let owner_list_is_intact = || {
+            let request = Request::Represent(RepresentRequest {
+                token: owner.token,
+                refetch: true,
+                panel: Some(list(Some(0))),
+            });
+            let Ok(Reply::Session(reply)) = shell.serve(request, None) else {
+                panic!("expected a session reply");
+            };
+            assert!(reply.is_composing);
+            assert_eq!(shown_list(&reply).cells, cells, "the window is still on");
+        };
+        assert!(other.commit_for_symbol_picker(list(Some(0))).ignored);
+        owner_list_is_intact();
+        assert!(other.insert_symbol("，", no_list()).ignored);
+        owner_list_is_intact();
+        assert!(other.represent(true, no_list()).ignored);
+        owner_list_is_intact();
         for request in [
             Request::CommitForSymbolPicker(CommitForSymbolPickerRequest {
                 token: owner.token,
@@ -1391,17 +1397,8 @@ mod tests {
                 shell.serve(request, Some(&snapshot)),
                 Err(Refusal::Missing(_))
             ));
+            owner_list_is_intact();
         }
-        let request = Request::Represent(RepresentRequest {
-            token: owner.token,
-            refetch: true,
-            panel: Some(list(Some(0))),
-        });
-        let Ok(Reply::Session(reply)) = shell.serve(request, None) else {
-            panic!("expected a session reply");
-        };
-        assert!(reply.is_composing);
-        assert_eq!(shown_list(&reply).cells, cells, "the window is still on");
     }
 
     /// Activating again keeps the composition and drops the list: `q` is

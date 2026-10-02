@@ -172,15 +172,17 @@ message CancelRequest {
 }
 
 // The session gives the engine up (`deactivateServer`,
-// `inputControllerWillClose`, `deinit`). Its token stays valid: the next
-// Activate with it takes the engine again.
+// `inputControllerWillClose`). Its token stays valid: the next Activate
+// with it takes the engine again.
 message ReleaseRequest {
   uint64 token = 1;
 }
 
-// The commit the symbol-picker chord runs before the picker opens: the
-// highlighted cell while the window shows one, otherwise the composition as
-// typed with its auto space. Refused with FAIL_INVARIANT without a panel.
+// The commit the symbol-picker chord runs before the picker opens. With a
+// `selected_index`, that cell — none when no list is on screen, which
+// commits nothing and keeps the composition; without one, the composition
+// as typed with its auto space. Refused with FAIL_INVARIANT without a
+// panel.
 message CommitForSymbolPickerRequest {
   uint64 token = 1;
   PanelState panel = 2;
