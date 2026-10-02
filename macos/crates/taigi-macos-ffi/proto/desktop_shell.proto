@@ -12,14 +12,29 @@ package taigi.desktop_shell;
 import "envelope.proto";
 
 message DesktopRequest {
+  // The whole-snapshot settings request of P6, now `settings` below.
+  reserved 3;
+
   // A request with no variant set — including one from a newer Swift side
   // whose variant this library does not know — is refused with FAIL_INVARIANT.
   oneof request {
     VersionRequest version = 1;
     ConfigureRequest configure = 2;
-    SettingsRequest settings = 3;
     PrepareRequest prepare = 4;
+    ActivateRequest activate = 5;
+    KeyRequest key = 6;
+    CommitCompositionRequest commit_composition = 7;
+    CancelRequest cancel = 8;
+    ReleaseRequest release = 9;
   }
+
+  // The key-path settings as they stand for this request, applied before it
+  // runs, so a request and the settings it is read under cross the seam
+  // together. Unset = the last snapshot stays. A snapshot that is refused
+  // refuses the whole request with FAIL_INVARIANT; a request that is
+  // refused for any reason, or answered `ignored`, leaves the previous
+  // snapshot in force.
+  SettingsSnapshot settings = 10;
 }
 
 // Asks the library which version it was built as.
@@ -40,7 +55,7 @@ message ConfigureRequest {
   string system_locale = 4;
 }
 
-// The settings the key path reads — the only names a SettingsRequest may
+// The settings the key path reads — the only names a SettingsSnapshot may
 // carry — with the default each one reads as when absent.
 message ConfigureReply {
   repeated SettingDescriptor settings = 1;
@@ -71,7 +86,7 @@ message SettingValue {
 // name that is not here reads as its default. An unknown or repeated name,
 // an entry without a value, or a value of the wrong kind refuses the whole
 // request with FAIL_INVARIANT and keeps the previous snapshot.
-message SettingsRequest {
+message SettingsSnapshot {
   repeated SettingEntry entries = 1;
 }
 
@@ -79,8 +94,6 @@ message SettingEntry {
   string name = 1;
   SettingValue value = 2;
 }
-
-message SettingsReply {}
 
 // Brings the engine up: installs the lexicon and opens the user data, once
 // per process; a repeat answers the first one's result. Refused with
@@ -98,17 +111,175 @@ message LexiconStats {
 }
 
 message DesktopResponse {
+  // The P6 settings reply.
+  reserved 4;
+
   // OK, or why there is no reply.
   taigi.engine.ErrorCode error = 1;
   oneof reply {
     VersionReply version = 2;
     ConfigureReply configure = 3;
-    SettingsReply settings = 4;
     PrepareReply prepare = 5;
+    SessionReply session = 6;
   }
 }
 
 message VersionReply {
   // The `taigi-macos-ffi` crate version (`macos/Cargo.toml`).
   string version = 1;
+}
+
+// ---- The composing session (roadmap D3) ----
+//
+// One session drives the process's one engine at a time; a session is the
+// token Swift mints per input controller and never reuses. Every request
+// below is refused with FAIL_INVARIANT before Configure, and answered with
+// a SessionReply. A request whose token does not own the engine is answered
+// `ignored` and does nothing — except Activate, which takes the engine.
+
+// The session takes the engine (`activateServer`): a session that already
+// holds it keeps its composition, any other one's is dropped. The list is
+// dropped either way — the window went down with the handover.
+message ActivateRequest {
+  uint64 token = 1;
+}
+
+// One key. Refused with FAIL_INVARIANT without an event or a panel.
+message KeyRequest {
+  uint64 token = 1;
+  KeyEvent event = 2;
+  PanelState panel = 3;
+}
+
+// The lifecycle commit (`commitComposition`, deactivation, close): the
+// composition as typed, no auto space, no list effect. Refused with
+// FAIL_INVARIANT without a panel.
+message CommitCompositionRequest {
+  uint64 token = 1;
+  PanelState panel = 2;
+}
+
+// Drops the composition and the list — what Swift sends after a request
+// answered FAIL_INTERNAL (roadmap D4). Refused with FAIL_INVARIANT without
+// a panel.
+message CancelRequest {
+  uint64 token = 1;
+  PanelState panel = 2;
+}
+
+// The session gives the engine up (`inputControllerWillClose`, `deinit`).
+message ReleaseRequest {
+  uint64 token = 1;
+}
+
+// The `NSEvent` fields a key is classified from, as AppKit reports them;
+// `key_translation.rs` turns them into the core's key event.
+message KeyEvent {
+  // `keyCode` — Carbon's virtual key code.
+  optional uint32 key_code = 1;
+  optional string characters = 2;
+  optional string characters_ignoring_modifiers = 3;
+  // `modifierFlags.rawValue`.
+  uint64 modifier_flags = 4;
+  // `specialKey?.rawValue`; unset for a key AppKit has no name for.
+  optional uint32 special_key = 5;
+}
+
+// What only the candidate window and the client know, asked before the
+// request is sent.
+message PanelState {
+  // The window shows a list. When it does not, the session drops any list
+  // it still holds before the request reads it.
+  bool is_list_on_screen = 1;
+  // The highlighted cell, if the window shows one.
+  optional uint32 selected_index = 2;
+  // Slot → the cell the slot's key addresses on the page shown; a slot not
+  // here addresses none.
+  map<uint32, uint32> slot_indices = 3;
+  // The auto space the last commit left can be swapped now (armed, caret
+  // where the space left it, the space still before it).
+  bool swap_available = 4;
+}
+
+message SessionReply {
+  // The token does not own the engine: nothing was done, `handled` and
+  // `is_composing` are false and there are no effects.
+  bool ignored = 1;
+  // Key only: the key was consumed; false hands it to the client.
+  bool handled = 2;
+  // What Swift does to the client and the window, in order.
+  repeated Effect effects = 3;
+  // The session owns the engine and a composition is running.
+  bool is_composing = 4;
+}
+
+message Effect {
+  oneof effect {
+    SetMarkedText set_marked_text = 1;
+    ClearMarkedText clear_marked_text = 2;
+    InsertText insert_text = 3;
+    SwapPrecedingSpace swap_preceding_space = 4;
+    ArmSwap arm_swap = 5;
+    CandidatesChanged candidates_changed = 6;
+    CandidatesClosed candidates_closed = 7;
+    Navigate navigate = 8;
+  }
+}
+
+// The composition, underlined, with the caret at `caret_utf16`.
+message SetMarkedText {
+  string text = 1;
+  uint32 caret_utf16 = 2;
+}
+
+// The composition ended without writing anything.
+message ClearMarkedText {}
+
+// Written at the insertion point, over the marked region if there is one.
+message InsertText {
+  string text = 1;
+}
+
+// The armed auto space replaced by `replacement`.
+message SwapPrecedingSpace {
+  string replacement = 1;
+}
+
+// Arm the auto-space swap at the caret the writes before it left.
+message ArmSwap {}
+
+// A list to show, anchored at the caret.
+message CandidatesChanged {
+  repeated CandidateCell cells = 1;
+  // The first cell is the literal romanization, which takes no slot key.
+  bool leads_with_literal_roman = 2;
+  // The composition's length on screen — where the caret walk starts.
+  uint32 marked_text_length_utf16 = 3;
+}
+
+message CandidateCell {
+  // The script the cell leads with.
+  string text = 1;
+  // The other script, smaller beside it; unset when there is none.
+  optional string annotation = 2;
+}
+
+message CandidatesClosed {}
+
+// Move the window's selection; the window reads the direction for its
+// layout.
+message Navigate {
+  CandidateNavigation direction = 1;
+}
+
+enum CandidateNavigation {
+  CANDIDATE_NAVIGATION_UNSPECIFIED = 0;
+  CANDIDATE_NAVIGATION_LEFT = 1;
+  CANDIDATE_NAVIGATION_RIGHT = 2;
+  CANDIDATE_NAVIGATION_UP = 3;
+  CANDIDATE_NAVIGATION_DOWN = 4;
+  CANDIDATE_NAVIGATION_PAGE_UP = 5;
+  CANDIDATE_NAVIGATION_PAGE_DOWN = 6;
+  CANDIDATE_NAVIGATION_NEXT_CANDIDATE = 7;
+  CANDIDATE_NAVIGATION_PREVIOUS_CANDIDATE = 8;
 }

@@ -4,14 +4,14 @@ import Foundation
 
 /// The `taigi-desktop-core` runtime this process runs on
 /// (docs/architecture/macos-desktop-core-roadmap.md D3, D5): `configure`
-/// builds it once per process, and every request after that is preceded by
-/// the key-path settings as `UserDefaults` holds them at that moment.
+/// builds it once per process, and every request after that carries the
+/// key-path settings as `UserDefaults` holds them at that moment.
 ///
-/// The settings are rebuilt and pushed before each request rather than
-/// tracked: nothing can go stale between a write and the request that
-/// follows it — a mode a global action just switched included — the same
-/// reason `SettingsStore` caches nothing. Which settings, and their defaults,
-/// is the core's answer to `configure`.
+/// The settings are rebuilt for each request rather than tracked: nothing can
+/// go stale between a write and the request that follows it — a mode a global
+/// action just switched included — the same reason `SettingsStore` caches
+/// nothing. Which settings, and their defaults, is the core's answer to
+/// `configure`.
 final class DesktopCoreRuntime {
     /// What `Configure` carries.
     struct Configuration {
@@ -76,25 +76,23 @@ final class DesktopCoreRuntime {
         }
     }
 
-    /// Every request after `configure` goes through here, the settings
-    /// first. A refused push is logged and the request still goes: the core
-    /// keeps the last snapshot it accepted.
+    /// Every request after `configure` goes through here, carrying the
+    /// settings snapshot. A snapshot the core refuses refuses the request
+    /// with it — logged by the bridge, answered `nil` — and the core keeps
+    /// the last snapshot it accepted. The snapshot is built with the
+    /// readers' own expressions (`storedValue`), so it is refused only when
+    /// the two sides' whitelists disagree.
     private func send<Reply>(
         _ request: Taigi_DesktopShell_DesktopRequest.OneOf_Request,
         op: String,
         expected: (Taigi_DesktopShell_DesktopResponse.OneOf_Reply) -> Reply?,
     ) -> Reply? {
-        _ = DesktopCoreBridge.roundtrip(
-            .settings(Self.settingsSnapshot(settings, in: userDefaults)),
-            op: "settings",
-        ) {
-            if case let .settings(reply) = $0 {
-                reply
-            } else {
-                nil
-            }
-        }
-        return DesktopCoreBridge.roundtrip(request, op: op, expected: expected)
+        DesktopCoreBridge.roundtrip(
+            request,
+            settings: Self.settingsSnapshot(settings, in: userDefaults),
+            op: op,
+            expected: expected,
+        )
     }
 
     /// The whitelisted settings `userDefaults` holds now; a setting it does
@@ -103,8 +101,8 @@ final class DesktopCoreRuntime {
     static func settingsSnapshot(
         _ settings: [Taigi_DesktopShell_SettingDescriptor],
         in userDefaults: UserDefaults,
-    ) -> Taigi_DesktopShell_SettingsRequest {
-        var snapshot = Taigi_DesktopShell_SettingsRequest()
+    ) -> Taigi_DesktopShell_SettingsSnapshot {
+        var snapshot = Taigi_DesktopShell_SettingsSnapshot()
         snapshot.entries = settings.compactMap { descriptor in
             storedValue(of: descriptor, in: userDefaults).map { value in
                 var entry = Taigi_DesktopShell_SettingEntry()

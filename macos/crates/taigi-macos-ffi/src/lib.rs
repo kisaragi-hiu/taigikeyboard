@@ -6,15 +6,18 @@
 //! desktop shell's, `desktop_request_bytes`, defined here. Both are bytes in,
 //! bytes out — protobuf envelopes, no handle crosses, no `unsafe` here
 //! (docs/contributing/rust-ffi-safety.md §1.1). The shell's requests reach
-//! the `taigi-desktop-core` runtime (`runtime.rs`) and the key-path settings
-//! snapshot (`settings.rs`).
+//! the `taigi-desktop-core` runtime (`runtime.rs`), the composing session
+//! (`session.rs`, with `key_translation.rs`) and the key-path settings
+//! snapshot each request may carry (`settings.rs`).
 
 // Links the engine seam into this archive. Nothing here calls into it; without
 // the `extern crate` rustc would not link an rlib this crate never names, and
 // the archive would lack the engine's exports.
 extern crate rust_taigi;
 
+mod key_translation;
 mod runtime;
+mod session;
 mod settings;
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -29,7 +32,7 @@ mod proto {
     include!(concat!(env!("OUT_DIR"), "/taigi.desktop_shell.rs"));
 }
 
-use proto::{desktop_request, desktop_response, DesktopRequest, DesktopResponse, VersionReply};
+use proto::{DesktopRequest, DesktopResponse};
 use runtime::Shell;
 
 /// The one shell the bridge serves (the runtime is a process singleton,
@@ -77,27 +80,17 @@ fn respond(shell: &Shell, bytes: &[u8]) -> DesktopResponse {
             return error_response(ErrorCode::FailParse);
         }
     };
-    let Some(request) = request.request else {
+    // Checked before the snapshot is applied, so a request that cannot run
+    // changes nothing.
+    let DesktopRequest {
+        request: Some(request),
+        settings,
+    } = request
+    else {
         log::warn!("desktop request has no variant");
         return error_response(ErrorCode::FailInvariant);
     };
-    let reply = match request {
-        desktop_request::Request::Version(_) => {
-            Ok(desktop_response::Reply::Version(VersionReply {
-                version: env!("CARGO_PKG_VERSION").to_owned(),
-            }))
-        }
-        desktop_request::Request::Configure(configure) => shell
-            .configure(configure)
-            .map(desktop_response::Reply::Configure),
-        desktop_request::Request::Settings(settings) => shell
-            .settings(&settings)
-            .map(desktop_response::Reply::Settings),
-        desktop_request::Request::Prepare(_) => {
-            shell.prepare().map(desktop_response::Reply::Prepare)
-        }
-    };
-    match reply {
+    match shell.serve(request, settings.as_ref()) {
         Ok(reply) => DesktopResponse {
             error: ErrorCode::Ok as i32,
             reply: Some(reply),
@@ -119,8 +112,73 @@ fn error_response(code: ErrorCode) -> DesktopResponse {
 /// Request builders the unit tests of every module share.
 #[cfg(test)]
 mod test_support {
-    use crate::proto::{setting_value, ConfigureRequest, SettingEntry, SettingValue};
-    use std::path::Path;
+    use crate::proto::{
+        desktop_request, setting_value, ConfigureRequest, KeyEvent, PrepareRequest, SettingEntry,
+        SettingValue, VersionRequest,
+    };
+    use crate::runtime::Shell;
+    use std::path::{Path, PathBuf};
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::{LazyLock, Mutex, MutexGuard, PoisonError};
+
+    /// A key event as AppKit reports one: `characters` typed with
+    /// `modifier_flags` held, the same with none held.
+    pub(crate) fn key_event(
+        characters: &str,
+        modifier_flags: u64,
+        special_key: Option<u32>,
+    ) -> KeyEvent {
+        KeyEvent {
+            key_code: None,
+            characters: Some(characters.to_owned()),
+            characters_ignoring_modifiers: Some(characters.to_owned()),
+            modifier_flags,
+            special_key,
+        }
+    }
+
+    pub(crate) fn version() -> desktop_request::Request {
+        desktop_request::Request::Version(VersionRequest {})
+    }
+
+    /// The dictionaries the app ships, as the repository holds them.
+    pub(crate) fn repository_dictionaries() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../assets/dictionaries")
+    }
+
+    /// The process has one engine, whichever `Shell` drives it: every test
+    /// that reaches it holds this lock, or `cargo test`'s threads would
+    /// interleave their compositions.
+    pub(crate) fn engine_lock() -> MutexGuard<'static, ()> {
+        static ENGINE: Mutex<()> = Mutex::new(());
+        ENGINE.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// A shell configured with the shipped dictionaries (no data directory:
+    /// nothing is learned) and prepared once, with the engine lock held
+    /// for the caller.
+    pub(crate) fn engine_shell() -> (MutexGuard<'static, ()>, &'static Shell) {
+        static SHELL: LazyLock<Shell> = LazyLock::new(|| {
+            let shell = Shell::default();
+            let dictionaries = repository_dictionaries();
+            let configure = configure_request(None, Some(&dictionaries));
+            shell
+                .serve(desktop_request::Request::Configure(configure), None)
+                .expect("configured");
+            shell
+                .serve(desktop_request::Request::Prepare(PrepareRequest {}), None)
+                .expect("prepared");
+            shell
+        });
+        let engine = engine_lock();
+        (engine, &SHELL)
+    }
+
+    /// A token no other test has used — each test starts its own session.
+    pub(crate) fn next_token() -> u64 {
+        static NEXT: AtomicU64 = AtomicU64::new(1);
+        NEXT.fetch_add(1, Ordering::Relaxed)
+    }
 
     pub(crate) fn configure_request(
         data: Option<&Path>,
@@ -154,10 +212,11 @@ mod test_support {
 mod tests {
     use super::*;
     use proto::{
-        PrepareReply, PrepareRequest, SettingEntry, SettingsReply, SettingsRequest, VersionRequest,
+        desktop_request, desktop_response, PrepareReply, PrepareRequest, SettingsSnapshot,
+        VersionReply,
     };
     use std::path::Path;
-    use test_support::{boolean, configure_request};
+    use test_support::{boolean, configure_request, version};
 
     fn decode(bytes: &[u8]) -> DesktopResponse {
         DesktopResponse::decode(bytes).expect("the seam always answers a decodable response")
@@ -169,7 +228,8 @@ mod tests {
 
     fn version_request() -> DesktopRequest {
         DesktopRequest {
-            request: Some(desktop_request::Request::Version(VersionRequest {})),
+            request: Some(version()),
+            settings: None,
         }
     }
 
@@ -217,7 +277,8 @@ mod tests {
     }
 
     /// rust-ffi-safety.md §6 T3 for a stateless request: concurrent calls
-    /// each answer. (No runtime state exists yet to race on.)
+    /// each answer. (The stateful ones: `concurrent_snapshots_all_answer`,
+    /// `session.rs` `concurrent_keys_each_run_under_their_own_snapshot`.)
     #[test]
     fn concurrent_version_requests_all_answer() {
         let request = version_request().encode_to_vec();
@@ -244,7 +305,10 @@ mod tests {
 
     #[test]
     fn request_without_variant_answers_fail_invariant() {
-        let response = send(&DesktopRequest { request: None });
+        let response = send(&DesktopRequest {
+            request: None,
+            settings: None,
+        });
 
         assert_eq!(response.error, ErrorCode::FailInvariant as i32);
         assert_eq!(response.reply, None);
@@ -280,8 +344,17 @@ mod tests {
     // ---- The runtime requests, through the same decode / encode path ----
 
     fn send_to(shell: &Shell, request: desktop_request::Request) -> DesktopResponse {
+        send_with(shell, request, None)
+    }
+
+    fn send_with(
+        shell: &Shell,
+        request: desktop_request::Request,
+        settings: Option<SettingsSnapshot>,
+    ) -> DesktopResponse {
         let bytes = DesktopRequest {
             request: Some(request),
+            settings,
         }
         .encode_to_vec();
         decode(&answer(|| respond(shell, &bytes)))
@@ -293,10 +366,6 @@ mod tests {
 
     fn prepare() -> desktop_request::Request {
         desktop_request::Request::Prepare(PrepareRequest {})
-    }
-
-    fn settings(entries: Vec<SettingEntry>) -> desktop_request::Request {
-        desktop_request::Request::Settings(SettingsRequest { entries })
     }
 
     /// A refused request answers FAIL_INVARIANT with no reply, and the next
@@ -316,27 +385,42 @@ mod tests {
             "{:?}",
             configured.reply
         );
-        let accepted = send_to(&shell, settings(vec![boolean("autoSpaceEnabled", true)]));
+        let snapshot = SettingsSnapshot {
+            entries: vec![boolean("autoSpaceEnabled", true)],
+        };
+        let accepted = send_with(&shell, version(), Some(snapshot));
         assert_eq!(accepted.error, ErrorCode::Ok as i32);
-        assert_eq!(
-            accepted.reply,
-            Some(desktop_response::Reply::Settings(SettingsReply {}))
-        );
+        assert_eq!(accepted.reply, version_reply());
     }
 
-    /// rust-ffi-safety.md §6 T3 on runtime state: Settings from eight
+    /// A snapshot refused at the seam answers FAIL_INVARIANT with no reply.
+    #[test]
+    fn a_refused_snapshot_is_fail_invariant() {
+        let shell = Shell::default();
+        let bad = SettingsSnapshot {
+            entries: vec![boolean("inputMode", true)],
+        };
+        let refused = send_with(&shell, version(), Some(bad));
+        assert_eq!(refused.error, ErrorCode::FailInvariant as i32);
+        assert_eq!(refused.reply, None);
+    }
+
+    /// rust-ffi-safety.md §6 T3 on runtime state: snapshots from eight
     /// threads each answer and leave one whole snapshot. (Not a TSan run.)
     #[test]
-    fn concurrent_settings_requests_all_answer() {
+    fn concurrent_snapshots_all_answer() {
         let shell = Shell::default();
         std::thread::scope(|scope| {
             let workers: Vec<_> = (0..8)
                 .map(|index| {
                     let shell = &shell;
                     scope.spawn(move || {
-                        send_to(
+                        send_with(
                             shell,
-                            settings(vec![boolean("autoSpaceEnabled", index % 2 == 0)]),
+                            version(),
+                            Some(SettingsSnapshot {
+                                entries: vec![boolean("autoSpaceEnabled", index % 2 == 0)],
+                            }),
                         )
                     })
                 })
@@ -348,15 +432,14 @@ mod tests {
         });
     }
 
-    /// The launch bring-up end to end — the only test that drives the
-    /// process-wide engine: the shipped dictionaries install under the
-    /// stamp, the user data opens under the Mac's rollback journal, and a
-    /// second Prepare repeats the first answer without a second install or
-    /// open.
+    /// The launch bring-up end to end: the shipped dictionaries install
+    /// under the stamp, the user data opens under the Mac's rollback
+    /// journal, and a second Prepare repeats the first answer without a
+    /// second install or open.
     #[test]
     fn prepare_installs_the_lexicon_and_opens_the_user_data_once() {
-        let dictionaries =
-            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../assets/dictionaries");
+        let _engine = test_support::engine_lock();
+        let dictionaries = test_support::repository_dictionaries();
         let data = tempfile::tempdir().expect("a temporary data directory");
         let shell = Shell::default();
         assert_eq!(
