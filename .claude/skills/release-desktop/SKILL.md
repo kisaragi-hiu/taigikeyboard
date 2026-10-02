@@ -304,6 +304,16 @@ The website's Linux button stays hidden until `enable_linux_download` is `true`
 in the website's `_config.yml` — that switch is the maintainer's, like the
 publish. It hides the button, not the `.deb`, which is public once published.
 
+**After a release carrying a macOS `.pkg` is published**, the Homebrew cask
+still names the previous one — remind the maintainer to bump it (or do it when
+asked). In `taigikeyboard/homebrew-tap`, `Casks/taigikeyboard.rb` takes the
+published `version` and the `sha256` from the release's
+`TaigiKeyboard-<target>.pkg.sha256`; check with
+`brew audit --cask --strict --online taigikeyboard/tap/taigikeyboard` and
+`brew style taigikeyboard/tap`, then push. Never point it at a draft or the
+in-tree version; a Windows- or Linux-only patch leaves it alone.
+(`docs/architecture/desktop-release.md` § The flow.)
+
 `make desktop-announce` runs the same announcement by hand — for a re-run after
 a failed job, or when its token has expired. Full procedure and rationale:
 `docs/architecture/desktop-release.md`.
@@ -313,6 +323,7 @@ a failed job, or when its token has expired. Full procedure and rationale:
 - Never edit another version's changelog.
 - Never touch `changelog/mobile-v<version>.md` or `changelog/store/**` — that is
   `release-mobile`'s surface, and desktop-only work must never enter a store note.
+- Never bump the Homebrew cask before the release is published.
 - Never publish or un-draft a release, and never push a tag by hand: publishing
   is the manual step this whole flow is shaped around, and it is what creates the
   tag.
