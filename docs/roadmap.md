@@ -20,7 +20,7 @@
 
 | Item | Status | Where |
 |---|---|---|
-| **macOS over desktop-core** — the macOS input method links the shared Rust `taigi-desktop-core` for its key path instead of re-implementing it in Swift (about 4,300 of the ~8,070 duplicate Swift lines measured; candidate-window geometry, the settings backend, global shortcuts and the update flow stay Swift) | P0 (plan + inventory) written 2026-10-02; P1–P15 pending the maintainer's approval | [`architecture/macos-desktop-core-roadmap.md`](architecture/macos-desktop-core-roadmap.md) · inventory [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md) |
+| **macOS over desktop-core** — the macOS input method links the shared Rust `taigi-desktop-core` for its key path instead of re-implementing it in Swift (about 4,300 of the ~8,070 duplicate Swift lines measured; candidate-window geometry, the settings backend, global shortcuts and the update flow stay Swift) | P0–P6 merged 2026-10-02 (#342–#347); P7 next | [`architecture/macos-desktop-core-roadmap.md`](architecture/macos-desktop-core-roadmap.md) · inventory [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md) |
 
 Everything else scoped through 2026-10-01 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
@@ -78,6 +78,7 @@ One line each; the linked section holds the design, the measurements and the ope
 | Stale `.proto` comments: `lexicon.proto` still documents `DEV` as always-on (the toggle shipped); `composing.proto` cites a nonexistent `continuous-input-ranking.md` §10.11 | needs a proto regen round (iOS + Android generated trees) | [`architecture/macos-roadmap.md`](architecture/macos-roadmap.md) § Open items this track produced |
 | v2 `.taigi` restore folds POJ→TL over canonical-TL readings (macOS folds v1 only) | verify it still applies now the engine owns the codec | same § |
 | Fedora × IBus e2e skipped (daemon never lists the test component) | own root-cause round | [`architecture/e2e-testing-roadmap.md`](architecture/e2e-testing-roadmap.md) § PR table PR4 |
+| macOS Custom Dictionary: no confirmation before a destructive command (Windows and Linux confirm) | USER 2026-10-02: add it — own round | [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md) S11 |
 
 **Refactors (USER decisions)**
 
