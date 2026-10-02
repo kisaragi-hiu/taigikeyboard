@@ -2,7 +2,7 @@
 
 > **Type**: Planning (multi-PR refactor)
 > **Keywords**: `macOS`, `desktop-core`, `refactor`, `FFI`, `behaviour oracle`, `parity`
-> **Status**: in progress — scope and design decisions taken 2026-10-02 (§ Decisions); P1 merged #342, P2 merged #343, P3 merged #344, P4 merged #345, P5 merged #346, P6 merged #347, P7 in review
+> **Status**: in progress — scope and design decisions taken 2026-10-02 (§ Decisions); P1 merged #342, P2 merged #343, P3 merged #344, P4 merged #345, P5 merged #346, P6 merged #347, P7 merged #349, P8 next
 > **Source**: `docs/reports/2026-09-30-audit-all.md` §2 ("macOS re-implements what `desktop/crates` already has") and §5.2; measured inventory `docs/reports/2026-10-02-macos-desktop-core-inventory.md` (frozen on `e330cd30`)
 > **Session memory**: project memory `project_macos_desktop_core.md` (Claude auto-memory)
 
@@ -183,7 +183,7 @@ One phase = one PR. Size counts added and changed lines; a deletion-only diff ma
 | P4 | refactor (desktop-core) | `DesktopPlatform` (D6) through the pure rules, `RuntimeParts`, `app_config`, the journal, the chord codec and the labels; Windows, Linux and both settings apps pass theirs | ~450 | Merged #345 `9859405a` |
 | P5 | test (desktop-core) | Port the macOS tests with no Rust equivalent for the key path, under `MacOS`; characterise E4, E5, E6, E7, E2b | ~450 (+559 / −15 measured, tests only) | Merged #346 `824104c6` |
 | P6 | refactor (macOS) | Runtime over the boundary: `Configure` / `Settings` / `Prepare`; launch bring-up moves from `AppDelegate` + bridge to the core. Tests: journal, stamp, defaults, `platform_id`, once-only | ~400 (+1,327 / −302 measured incl. tests; Swift src +235 / −177) | Merged #347 `1fbbb408` |
-| P7 | refactor (macOS, Swift only) | `ComposingBackend` seam — the complete protocol, with the existing key path as its legacy implementation | ~400 moved | Pending |
+| P7 | refactor (macOS, Swift only) | `ComposingBackend` seam — the complete protocol, with the existing key path as its legacy implementation | ~400 moved (controller 1,582 → 1,280; +711 in two new files) | Merged #349 `7249ff42` |
 | P8 | refactor (Rust, additive — not wired) | Session I: `Activate` / `Key` / `CommitComposition` / `Cancel` / `Release`, the recording surface, key translation, envelope errors and size cap; the settings snapshot rides on each request (D5, USER 2026-10-02) instead of its own `Settings` push; native tests | ~500 | Pending |
 | P9 | refactor (Rust, additive — not wired) | Session II: `CommitForSymbolPicker`, `InsertSymbol`, `Represent`, list-visibility reconciliation, stale-token rejection; native tests | ~350 | Pending |
 | P10 | refactor (macOS) | Core back end in Swift; controller suites per back end in separate processes; the integration tests of D9.4; a cross-check that the Shortcuts pane's Swift chord rules and the core's agree on every action and a table of chords. Cases that hit an open E-item are listed, not silently skipped | ~450 | Pending |
