@@ -11,10 +11,13 @@ import XCTest
 /// processes (`make -C macos test`), so each process holds its own back end
 /// to its own column.
 ///
-/// Not reachable here:
-/// - E2b — a plain Escape inside a multi-character event: the Mac's picker
-///   classification stays Swift on both back ends (`SymbolPickerIntent`), and
-///   the composition's Escape tier reads the first character on both.
+/// Settled items keep one expectation here, held by both processes:
+/// - E2 (P11c) — a key event carrying several characters.
+///
+/// Not here: E2b (P11c) — a plain Escape inside a multi-character event. The
+/// picker's classification is Swift on both back ends, so its pin is
+/// `SymbolPickerIntentTests.testAnEscapeInsideALongerEvent_closesAndFallsThrough`;
+/// the composition's Escape tier reads the first character on both.
 @MainActor
 final class ComposingBackendParityTests: XCTestCase {
     override func setUpWithError() throws {
@@ -23,9 +26,9 @@ final class ComposingBackendParityTests: XCTestCase {
         InstalledLexicon.installOnce()
     }
 
-    /// E2 (C3): one key event carrying two characters, mid-composition. The
-    /// Mac classifies it by its first character; the core asks every
-    /// character to qualify (`keys/intent.rs`).
+    /// E2 (C3), settled P11c: one key event carrying two characters,
+    /// mid-composition. Every character has to qualify on both back ends
+    /// (`keys/intent.rs`), so `a.` is document text, not a letter.
     func testE2_aKeyEventCarryingSeveralCharacters() throws {
         let session = try composedSession()
 
@@ -33,13 +36,49 @@ final class ComposingBackendParityTests: XCTestCase {
             TestFixtures.keyDownEvent(characters: "a."), client: session.client,
         )
 
-        if TestFixtures.isCoreBackEnd {
-            XCTAssertTrue(handled)
-            XCTAssertEqual(session.client.insertedTexts, ["taigia."], "E2 core: committed with the event as text")
-        } else {
-            XCTAssertTrue(handled)
-            XCTAssertEqual(session.client.insertedTexts, [], "E2 Mac: `a` leads, so the event composes")
+        XCTAssertTrue(handled)
+        XCTAssertEqual(session.client.insertedTexts, ["taigia."], "committed with the event as text")
+    }
+
+    /// E2 through the commit-then-insert policies: `a.` is not attaching
+    /// punctuation, so Auto-Space puts the space BEFORE it, as for any other
+    /// text (`AutoSpacePolicy.augmentInsert`); and it is not one mapped
+    /// key, so the full-width map leaves it alone while a lone `.` maps.
+    func testE2_aSeveralCharacterEventThroughAutoSpaceAndFullWidth() throws {
+        UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isAutoSpaceEnabled.name)
+        let spaced = try composedSession()
+        _ = try spaced.controller.handle(TestFixtures.keyDownEvent(characters: "a."), client: spaced.client)
+        XCTAssertEqual(spaced.client.insertedTexts, ["taigi a."], "Auto-Space: the space leads non-attaching text")
+
+        UserDefaults.standard.set(false, forKey: SettingsStore.Keys.isAutoSpaceEnabled.name)
+        UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isHanjiFirst.name)
+        let fullWidth = try composedSession()
+        _ = try fullWidth.controller.handle(TestFixtures.keyDownEvent(characters: "a."), client: fullWidth.client)
+        XCTAssertEqual(fullWidth.client.insertedTexts, ["taigia."], "full width maps one key, not `a.`")
+
+        // Positive control: the same session's map is on.
+        let control = try composedSession()
+        _ = try control.controller.handle(TestFixtures.keyDownEvent(characters: "."), client: control.client)
+        XCTAssertEqual(control.client.insertedTexts, ["taigi\u{3002}"])
+    }
+
+    /// E2 under Telex, idle: `vx` is two letters, not a tone key with nothing
+    /// to mark, so it starts a composition on both back ends (until P11c the
+    /// Mac read `v` and passed the event to the host).
+    func testE2_aSeveralLetterEventUnderTelex_startsAComposition() throws {
+        UserDefaults.standard.set(ToneInputScheme.telex.rawValue, forKey: SettingsStore.Keys.toneInputScheme.name)
+        let session = try idleSession()
+
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "vx"), client: session.client,
+        )
+
+        XCTAssertTrue(handled)
+        XCTAssertEqual(session.client.insertedTexts, [])
+        guard case let .setMarkedText(marked, _) = try XCTUnwrap(session.client.writes.last) else {
+            return XCTFail("`vx` should have started a composition — got \(session.client.writes)")
         }
+        XCTAssertEqual(marked, "vx")
     }
 
     /// E4 (K7): a format character (Cf) typed mid-composition. Not text to
@@ -149,6 +188,13 @@ final class ComposingBackendParityTests: XCTestCase {
 
     /// A session over `.standard` that has typed `taigi`.
     private func composedSession() throws -> Session {
+        let session = try idleSession()
+        try session.type("taigi")
+        return session
+    }
+
+    /// An activated session over `.standard` with nothing typed.
+    private func idleSession() throws -> Session {
         let client = RecordingTextInputClient()
         client.caretRects = [4: CGRect(x: 120, y: 400, width: 1, height: 18)]
         let controller = try TestFixtures.makeInputController()
@@ -156,8 +202,6 @@ final class ComposingBackendParityTests: XCTestCase {
         controller.candidatePresenter = presenter
         controller.settings = SettingsStore()
         controller.activateServer(client)
-        let session = Session(controller: controller, client: client, presenter: presenter)
-        try session.type("taigi")
-        return session
+        return Session(controller: controller, client: client, presenter: presenter)
     }
 }

@@ -93,11 +93,13 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
 
     /// The slot a digit `1`…`9` names, counting from zero. `0` names none: the
     /// bar holds nine candidates because nine is what the digits can name
-    /// without one of them meaning "the tenth".
+    /// without one of them meaning "the tenth". Read off the first scalar,
+    /// as the desktop core does (`ComposingKeyIntent::direct_selection_slot`):
+    /// a digit with a combining scalar behind it (`1⃣`) still names its slot.
     private static func digitSlot(_ key: String) -> Int? {
-        guard let character = key.first,
-              character.isASCII,
-              let digit = character.wholeNumberValue,
+        guard let scalar = key.unicodeScalars.first,
+              scalar.isASCII,
+              let digit = Character(scalar).wholeNumberValue,
               (1 ... 9).contains(digit)
         else { return nil }
         return digit - 1

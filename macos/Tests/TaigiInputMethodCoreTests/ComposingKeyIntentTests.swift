@@ -128,6 +128,72 @@ final class ComposingKeyIntentTests: XCTestCase {
         )
     }
 
+    // MARK: - One event carrying several characters (roadmap E2)
+
+    /// A dead key, a custom layout or an input source can hand over several
+    /// characters in one event. Every one of them has to qualify, as the
+    /// desktop core asks (`keys/intent.rs`); until P11c the first character
+    /// decided for the whole event.
+    func testAMultiCharacterEvent_isClassifiedByEveryCharacter() {
+        let standard = ComposingKeyBindings(toneScheme: .standard)
+        let telex = ComposingKeyBindings(toneScheme: .telex)
+        let cases: [(characters: String, bindings: ComposingKeyBindings, composing: ComposingKeyIntent, idle: ComposingKeyIntent)] = [
+            // trace: `.` is not romanization → document text (was `.input`).
+            ("a.", standard, .commitThenInsert("a."), .passThrough),
+            ("a\u{5B57}", standard, .commitThenInsert("a\u{5B57}"), .passThrough),
+            // trace: a digit is a tone only mid-composition under Standard.
+            ("a5", standard, .input("a5"), .passThrough),
+            ("a5", telex, .commitThenInsert("a5"), .passThrough),
+            ("5a", standard, .input("5a"), .passThrough),
+            // trace: a Telex key is a one-character event; `fx` / `vx` / `zx`
+            // are letters (was `.telexKey`, or `.passThrough` idle for `vx`).
+            ("fx", telex, .input("fx"), .input("fx")),
+            ("vx", telex, .input("vx"), .input("vx")),
+            ("zx", telex, .input("zx"), .input("zx")),
+            ("f.", telex, .commitThenInsert("f."), .passThrough),
+            ("z.", telex, .commitThenInsert("z."), .passThrough),
+            // trace: the Escape and Backspace tier reads the first character
+            // on both sides — a control character is a grapheme of its own.
+            ("\u{1B}x", standard, .cancel, .passThrough),
+            ("\u{7F}x", standard, .deleteBackward, .passThrough),
+        ]
+        for testCase in cases {
+            let key = KeyEventSnapshot(characters: testCase.characters, modifiers: [], isNamedSpecialKey: false)
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(for: key, isComposing: true, bindings: testCase.bindings),
+                testCase.composing,
+                "composing \(testCase.characters.debugDescription) under \(testCase.bindings.toneScheme)",
+            )
+            XCTAssertEqual(
+                ComposingKeyIntent.intent(for: key, isComposing: false, bindings: testCase.bindings),
+                testCase.idle,
+                "idle \(testCase.characters.debugDescription) under \(testCase.bindings.toneScheme)",
+            )
+        }
+    }
+
+    /// Negative control: a one-character event reads as it did.
+    func testAOneCharacterEvent_isUnchangedByTheEveryCharacterRule() {
+        let telex = ComposingKeyBindings(toneScheme: .telex)
+        let key = { (characters: String) in
+            KeyEventSnapshot(characters: characters, modifiers: [], isNamedSpecialKey: false)
+        }
+        XCTAssertEqual(ComposingKeyIntent.intent(for: key("a"), isComposing: false), .input("a"))
+        XCTAssertEqual(ComposingKeyIntent.intent(for: key("5"), isComposing: true), .input("5"))
+        XCTAssertEqual(ComposingKeyIntent.intent(for: key("."), isComposing: true), .commitThenInsert("."))
+        XCTAssertEqual(ComposingKeyIntent.intent(for: key("f"), isComposing: true, bindings: telex), .telexKey("f"))
+        XCTAssertEqual(ComposingKeyIntent.intent(for: key("Z"), isComposing: false, bindings: telex), .telexKey("Z"))
+        XCTAssertEqual(ComposingKeyIntent.intent(for: key("v"), isComposing: false, bindings: telex), .passThrough)
+        XCTAssertTrue(ComposingKeyIntent.isPlainEscape(key("\u{1B}")))
+    }
+
+    /// E2b: an Escape with more behind it is not the plain Escape that
+    /// closes the picker or the Telex guide (the core's `is_bare_escape`).
+    func testAnEscapeInsideALongerEvent_isNotAPlainEscape() {
+        let key = KeyEventSnapshot(characters: "\u{1B}x", modifiers: [], isNamedSpecialKey: false)
+        XCTAssertFalse(ComposingKeyIntent.isPlainEscape(key))
+    }
+
     // MARK: - Candidate keys
 
     /// The six keys the window binds, handed through as raw directions — what
@@ -249,6 +315,25 @@ final class ComposingKeyIntentTests: XCTestCase {
         XCTAssertEqual(try telexIntent("3", isShowingCandidates: true), .selectCandidateSlot(2, flip: false))
         XCTAssertEqual(try telexIntent("3"), .commitThenInsert("3"))
         XCTAssertEqual(try telexIntent("3", isComposing: false), .passThrough)
+    }
+
+    /// A digit slot reads the event's first scalar, as the desktop core does
+    /// (`direct_selection_slot`): a digit with a combining scalar behind it
+    /// still picks (until P11c the first grapheme, `1⃣`, was not a digit and
+    /// the event committed as text). `0`, a full-width digit and a chorded
+    /// digit pick nothing.
+    func testTelex_aDigitSlot_readsTheFirstScalar() throws {
+        XCTAssertEqual(try telexIntent("1\u{20E3}", isShowingCandidates: true), .selectCandidateSlot(0, flip: false))
+        XCTAssertEqual(try telexIntent("3\u{301}", isShowingCandidates: true), .selectCandidateSlot(2, flip: false))
+        XCTAssertEqual(try telexIntent("0", isShowingCandidates: true), .commitThenInsert("0"))
+        XCTAssertEqual(try telexIntent("\u{FF11}", isShowingCandidates: true), .commitThenInsert("\u{FF11}"))
+        XCTAssertEqual(
+            ComposingKeyIntent.intent(
+                for: KeyEventSnapshot(characters: "1\u{20E3}", modifiers: .command, isNamedSpecialKey: false),
+                isComposing: true, isShowingCandidates: true, bindings: ComposingKeyBindings(toneScheme: .telex),
+            ),
+            .commitThenPassThrough,
+        )
     }
 
     /// `q` is a tone key under Telex, not the first slot — even with the bar up.

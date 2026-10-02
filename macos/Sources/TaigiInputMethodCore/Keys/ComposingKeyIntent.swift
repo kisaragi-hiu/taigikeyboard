@@ -340,7 +340,7 @@ enum ComposingKeyIntent: Equatable {
             return hostKey(isComposing: isComposing)
         }
 
-        guard let characters = key.characters, let first = characters.first else {
+        guard let characters = key.characters, !characters.isEmpty else {
             return hostKey(isComposing: isComposing)
         }
 
@@ -362,8 +362,14 @@ enum ComposingKeyIntent: Equatable {
         // composition's text. A tone letter or `f` typed outside a
         // composition is document text (like an idle digit): there is no
         // syllable for it to mark. `z` types an initial, so it starts one.
-        if bindings.toneScheme == .telex, ToneInputScheme.isTelexKey(first) {
-            guard isComposing || ToneInputScheme.startsComposition(first) else { return .passThrough }
+        // A Telex key is an event of that one character: `fx` is two letters
+        // the composition takes, `f.` is document text (the desktop core's
+        // rule, `keys/intent.rs`). `isTelexKey` is ASCII-only, so one
+        // `Character` here is one scalar there.
+        if bindings.toneScheme == .telex, characters.count == 1,
+           let character = characters.first, ToneInputScheme.isTelexKey(character)
+        {
+            guard isComposing || ToneInputScheme.startsComposition(character) else { return .passThrough }
             return .telexKey(characters)
         }
         // Under Standard a digit mid-composition is always the tone marker,
@@ -376,7 +382,12 @@ enum ComposingKeyIntent: Equatable {
         // not"). Under Telex the digits ARE the slot keys, taken above while
         // the bar is up; with no bar a digit falls through to the punctuation
         // rule and commits the composition ahead of itself.
-        if isRomanizationCharacter(first) || (isComposing && bindings.toneScheme == .standard && isToneDigit(first)) {
+        //
+        // EVERY character has to qualify, not just the first: an event
+        // carrying `a.` is document text, not a letter with a passenger the
+        // engine cannot parse (the desktop core's rule, `keys/intent.rs`).
+        let digitsAreTones = isComposing && bindings.toneScheme == .standard
+        if characters.allSatisfy({ isRomanizationCharacter($0) || (digitsAreTones && isToneDigit($0)) }) {
             return .input(characters)
         }
         // Everything else printable — space, punctuation, a character from
@@ -449,9 +460,11 @@ enum ComposingKeyIntent: Equatable {
 
     /// True for an Escape with no host chord held — the key that closes
     /// whatever card or list this input method has up (the Telex guide, the
-    /// symbol picker). `⌃3` arrives as Escape too, and is the host's.
+    /// symbol picker). `⌃3` arrives as Escape too, and is the host's. The
+    /// whole event, not its first character: an Escape with more behind it
+    /// is not this key (the desktop core's `is_bare_escape`).
     static func isPlainEscape(_ key: KeyEventSnapshot) -> Bool {
-        key.characters?.first == "\u{1B}" && key.modifiers.isDisjoint(with: hostChords)
+        key.characters == "\u{1B}" && key.modifiers.isDisjoint(with: hostChords)
     }
 
     /// The four chording modifiers — what a recorded chord is made of. Caps

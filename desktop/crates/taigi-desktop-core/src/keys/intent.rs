@@ -251,7 +251,8 @@ impl ComposingKeyIntent {
         // outside a composition is document text (like an idle digit): there
         // is no syllable for it to mark. `z` types an initial, so it starts
         // one. One scalar only, for the same grapheme reason as the
-        // romanization rule below (`ComposingKeyIntent.swift` reads `first`).
+        // romanization rule below; macOS asks the same since P11c (roadmap
+        // E2).
         if bindings.tone_scheme == ToneInputScheme::Telex {
             let mut scalars = characters.chars();
             if let (Some(first), None) = (scalars.next(), scalars.next()) {
@@ -270,10 +271,10 @@ impl ComposingKeyIntent {
         // and commits the composition ahead of itself.
         //
         // The WHOLE string has to be romanization, not just its first scalar:
-        // Swift's `characters.first` is a grapheme, so `a` + a combining mark
-        // reads as one non-ASCII character there and goes to the document.
-        // Rust's first `char` would be the bare `a`, and the engine would be
-        // handed a string it cannot parse (Codex PR2b review).
+        // the first `char` of `a` + a combining mark would be the bare `a`,
+        // and the engine would be handed a string it cannot parse (Codex
+        // PR2b review). The same holds for `a.`, which is document text;
+        // macOS asks every character too since P11c (roadmap E2).
         let digits_are_tones = is_composing && bindings.tone_scheme == ToneInputScheme::Standard;
         let is_romanization = characters.chars().all(|c| {
             Self::is_romanization_character(c) || (digits_are_tones && Self::is_tone_digit(c))
