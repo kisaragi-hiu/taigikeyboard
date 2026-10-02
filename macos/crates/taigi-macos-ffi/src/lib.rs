@@ -393,6 +393,60 @@ mod tests {
         assert_eq!(accepted.reply, version_reply());
     }
 
+    /// The session requests through the seam: a request missing a field it
+    /// cannot run without answers FAIL_INVARIANT with no reply; a complete
+    /// one answers a session reply. (Every refusal: `session.rs`
+    /// `requests_that_cannot_run_are_refused`.)
+    #[test]
+    fn session_requests_answer_through_the_seam() {
+        use proto::{
+            ActivateRequest, CommitForSymbolPickerRequest, InsertSymbolRequest, PanelState,
+            RepresentRequest,
+        };
+        let (_engine, shell) = test_support::engine_shell();
+        let token = test_support::next_token();
+        let panel = Some(PanelState::default());
+        for request in [
+            desktop_request::Request::CommitForSymbolPicker(CommitForSymbolPickerRequest {
+                token,
+                panel: None,
+            }),
+            desktop_request::Request::InsertSymbol(InsertSymbolRequest {
+                token,
+                symbol: String::new(),
+                panel: panel.clone(),
+            }),
+            desktop_request::Request::Represent(RepresentRequest {
+                token: 0,
+                refetch: false,
+                panel: panel.clone(),
+            }),
+        ] {
+            let refused = send_to(shell, request);
+            assert_eq!(refused.error, ErrorCode::FailInvariant as i32);
+            assert_eq!(refused.reply, None);
+        }
+        let activated = send_to(
+            shell,
+            desktop_request::Request::Activate(ActivateRequest { token }),
+        );
+        assert_eq!(activated.error, ErrorCode::Ok as i32);
+        let inserted = send_to(
+            shell,
+            desktop_request::Request::InsertSymbol(InsertSymbolRequest {
+                token,
+                symbol: "，".to_owned(),
+                panel,
+            }),
+        );
+        assert_eq!(inserted.error, ErrorCode::Ok as i32);
+        assert!(
+            matches!(&inserted.reply, Some(desktop_response::Reply::Session(reply)) if reply.effects.len() == 1),
+            "{:?}",
+            inserted.reply
+        );
+    }
+
     /// A snapshot refused at the seam answers FAIL_INVARIANT with no reply.
     #[test]
     fn a_refused_snapshot_is_fail_invariant() {

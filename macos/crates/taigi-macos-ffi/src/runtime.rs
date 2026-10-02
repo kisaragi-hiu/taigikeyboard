@@ -108,6 +108,15 @@ impl Shell {
             Request::Release(release) => session
                 .release(self.runtime()?, &release)
                 .map(Reply::Session),
+            Request::CommitForSymbolPicker(commit) => session
+                .commit_for_symbol_picker(self.runtime()?, &commit)
+                .map(Reply::Session),
+            Request::InsertSymbol(insert) => session
+                .insert_symbol(self.runtime()?, &insert)
+                .map(Reply::Session),
+            Request::Represent(represent) => session
+                .represent(self.runtime()?, &represent)
+                .map(Reply::Session),
         }
     }
 

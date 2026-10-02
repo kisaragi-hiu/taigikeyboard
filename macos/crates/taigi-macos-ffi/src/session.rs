@@ -1,6 +1,7 @@
 //! The composing session behind the seam
 //! (docs/architecture/macos-desktop-core-roadmap.md D3): `Activate` / `Key` /
-//! `CommitComposition` / `Cancel` / `Release` on the process's one
+//! `CommitComposition` / `Cancel` / `CommitForSymbolPicker` /
+//! `InsertSymbol` / `Represent` / `Release` on the process's one
 //! coordinator, answered as the effects Swift replays after the call
 //! returns. It is Swift's `LegacyComposingBackend` re-hosted over
 //! desktop-core's executor (`perform_intent`); the per-key preamble — the
@@ -12,17 +13,20 @@
 //! with each request (`PanelState`) and is read, never kept.
 
 use taigi_desktop_core::composing::{
-    perform_intent, CandidateSource, ComposingEffectExecutor, ComposingManager, ContextToken,
-    IntentSurface,
+    insert_symbol, perform_intent, represent_list, CandidateSource, ComposingEffectExecutor,
+    ComposingManager, ContextToken, IntentSurface,
 };
 use taigi_desktop_core::engine::Effect as EngineEffect;
-use taigi_desktop_core::keys::{CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent};
+use taigi_desktop_core::keys::{
+    CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot,
+};
 use taigi_desktop_core::runtime::DesktopRuntime;
 
 use crate::key_translation;
 use crate::proto::{
     self, effect, ActivateRequest, CancelRequest, CandidateCell, CandidatesChanged,
-    CommitCompositionRequest, Effect, KeyRequest, PanelState, ReleaseRequest, SessionReply,
+    CommitCompositionRequest, CommitForSymbolPickerRequest, Effect, InsertSymbolRequest,
+    KeyRequest, PanelState, ReleaseRequest, RepresentRequest, SessionReply,
 };
 use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 
@@ -31,6 +35,13 @@ use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 /// composition it describes — only the session that owns the engine reaches
 /// it, and `Activate` drops it on every handover, so a list a released
 /// session left behind is never read (`LegacyComposingBackend.source`).
+///
+/// A stale token — one released, or superseded by another `Activate` — is
+/// refused by ownership alone: every request but `Activate` from a token
+/// that does not own the engine is answered `ignored`. `Activate` always
+/// claims, because a stale token is not a dead one: Swift releases on every
+/// `deactivateServer` and claims again with the same token when the field
+/// takes the focus back. A closed controller sends nothing more.
 #[derive(Default)]
 pub(crate) struct Session {
     candidates: CandidateSource,
@@ -135,6 +146,88 @@ impl Session {
                 manager.cancel_composition(surface);
                 candidates.clear();
                 surface.list_closed();
+                false
+            },
+        )
+    }
+
+    /// The commit the symbol-picker chord runs before the picker opens: the
+    /// highlighted cell while the window shows one, the composition as typed
+    /// with its auto space otherwise. Chosen by the highlight, as
+    /// `LegacyComposingBackend.commitForSymbolPicker` chooses (the Linux
+    /// shell asks its list instead, `commit_for_picker`).
+    pub(crate) fn commit_for_symbol_picker(
+        &mut self,
+        runtime: &DesktopRuntime,
+        request: &CommitForSymbolPickerRequest,
+    ) -> Result<SessionReply, Refusal> {
+        let panel = request
+            .panel
+            .as_ref()
+            .ok_or(Refusal::Missing("commit_for_symbol_picker.panel"))?;
+        let intent = if panel.selected_index.is_some() {
+            ComposingKeyIntent::CommitHighlightedCandidate
+        } else {
+            ComposingKeyIntent::Commit
+        };
+        self.run_owned(
+            runtime,
+            request.token,
+            panel,
+            |manager, candidates, surface| {
+                let settings = runtime.settings.current();
+                // No key: neither commit reads one.
+                let key = KeyEventSnapshot::default();
+                perform_intent(&intent, &key, &settings, manager, candidates, surface);
+                false
+            },
+        )
+    }
+
+    /// A symbol the picker wrote (the core's `insert_symbol`).
+    pub(crate) fn insert_symbol(
+        &mut self,
+        runtime: &DesktopRuntime,
+        request: &InsertSymbolRequest,
+    ) -> Result<SessionReply, Refusal> {
+        if request.symbol.is_empty() {
+            return Err(Refusal::Missing("insert_symbol.symbol"));
+        }
+        let panel = request
+            .panel
+            .as_ref()
+            .ok_or(Refusal::Missing("insert_symbol.panel"))?;
+        self.run_owned(runtime, request.token, panel, |manager, _, surface| {
+            let settings = runtime.settings.current();
+            insert_symbol(&request.symbol, &settings, manager, surface);
+            false
+        })
+    }
+
+    /// The list on screen again under the settings this request carries
+    /// (`represent_list`). No list — none held, or the window says none is
+    /// up — records nothing; otherwise the list is shown again, or closed
+    /// when the refetch emptied it.
+    pub(crate) fn represent(
+        &mut self,
+        runtime: &DesktopRuntime,
+        request: &RepresentRequest,
+    ) -> Result<SessionReply, Refusal> {
+        let panel = request
+            .panel
+            .as_ref()
+            .ok_or(Refusal::Missing("represent.panel"))?;
+        self.run_owned(
+            runtime,
+            request.token,
+            panel,
+            |manager, candidates, surface| {
+                if candidates.is_empty() {
+                    return false;
+                }
+                let settings = runtime.settings.current();
+                represent_list(&settings, manager, candidates, request.refetch);
+                surface.list_changed(candidates);
                 false
             },
         )
@@ -538,6 +631,40 @@ mod tests {
         fn release(&self) -> SessionReply {
             self.serve(Request::Release(ReleaseRequest { token: self.token }))
         }
+
+        fn commit_for_symbol_picker(&self, panel: PanelState) -> SessionReply {
+            self.serve(Request::CommitForSymbolPicker(
+                CommitForSymbolPickerRequest {
+                    token: self.token,
+                    panel: Some(panel),
+                },
+            ))
+        }
+
+        fn insert_symbol(&self, symbol: &str, panel: PanelState) -> SessionReply {
+            self.serve(Request::InsertSymbol(InsertSymbolRequest {
+                token: self.token,
+                symbol: symbol.to_owned(),
+                panel: Some(panel),
+            }))
+        }
+
+        fn represent(&self, refetch: bool, panel: PanelState) -> SessionReply {
+            self.serve(Request::Represent(RepresentRequest {
+                token: self.token,
+                refetch,
+                panel: Some(panel),
+            }))
+        }
+
+        /// The same session, its requests carrying `settings` from now on.
+        fn with_settings(&self, settings: Vec<SettingEntry>) -> Self {
+            Self {
+                shell: self.shell,
+                token: self.token,
+                settings,
+            }
+        }
     }
 
     fn auto_space() -> Vec<SettingEntry> {
@@ -897,6 +1024,197 @@ mod tests {
         assert_eq!(effects(&reply), vec![cleared(), closed()]);
     }
 
+    // ---- The symbol picker ----
+
+    /// trace: `ka` → cell 0 = 共 (annotation kā). With the window showing a
+    /// highlight, the picker commits that cell in its own script — a Hanji
+    /// cell earns no auto space (`LegacyComposingBackend.commitForSymbolPicker`
+    /// → `commitPresented`).
+    #[test]
+    fn the_picker_commits_the_highlighted_cell() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        let cells = shown_list(&typist.type_text("ka")).cells;
+        let reply = typist.commit_for_symbol_picker(list(Some(0)));
+        assert!(!reply.handled && !reply.is_composing && !reply.ignored);
+        assert_eq!(effects(&reply), vec![insert(&cells[0].text), closed()]);
+    }
+
+    /// No highlight: the composition as typed, spaced under TL
+    /// (`commitAsTyped`) — what the picker writes after it.
+    #[test]
+    fn the_picker_commits_as_typed_without_a_highlight() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        typist.type_text("g");
+        let reply = typist.commit_for_symbol_picker(list(None));
+        assert!(!reply.handled && !reply.is_composing);
+        assert_eq!(
+            effects(&reply),
+            vec![insert("g"), closed(), insert(" "), arm()]
+        );
+        // Nothing composing (Swift does not send it then): the as-typed
+        // commit writes nothing and closes the list, as `commitAsTyped`.
+        assert_eq!(
+            effects(&typist.commit_for_symbol_picker(no_list())),
+            vec![closed()]
+        );
+    }
+
+    /// A highlight the window reports with no list up: the list is dropped
+    /// first, the highlight resolves to no cell, and nothing is committed —
+    /// the legacy order (`owningManager`, then `commitPresented`).
+    #[test]
+    fn the_picker_commits_nothing_for_a_highlight_without_a_list() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        typist.type_text("ka");
+        let panel = PanelState {
+            selected_index: Some(0),
+            ..no_list()
+        };
+        let reply = typist.commit_for_symbol_picker(panel);
+        assert!(reply.is_composing);
+        assert_eq!(effects(&reply), vec![]);
+    }
+
+    /// The picker's symbol: an attaching mark swaps with the armed space
+    /// and re-arms; with no swap it is written as it is, and a mark that
+    /// does not attach is written even when a swap is armed.
+    #[test]
+    fn a_picked_symbol_swaps_or_is_written_as_picked() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        let swappable = PanelState {
+            swap_available: true,
+            ..no_list()
+        };
+        let swapped = typist.insert_symbol("？", swappable.clone());
+        assert!(!swapped.handled && !swapped.ignored);
+        assert_eq!(
+            effects(&swapped),
+            vec![
+                effect::Effect::SwapPrecedingSpace(proto::SwapPrecedingSpace {
+                    replacement: "？ ".to_owned()
+                }),
+                arm()
+            ]
+        );
+        assert_eq!(
+            effects(&typist.insert_symbol("？", no_list())),
+            vec![insert("？")]
+        );
+        assert_eq!(
+            effects(&typist.insert_symbol("（）", swappable.clone())),
+            vec![insert("（）")]
+        );
+        let no_auto_space = typist.with_settings(vec![]);
+        assert_eq!(
+            effects(&no_auto_space.insert_symbol("？", swappable)),
+            vec![insert("？")]
+        );
+    }
+
+    /// trace: `guahoo` → cell 1 = 我 (guá), one syllable of two: the commit
+    /// nails it and the rest stays composing — the composition shown again
+    /// and the list refetched for it, anchored on the 4-unit `我hoo`
+    /// (`commit_candidate` → `refresh`; legacy `commit` → `refreshCandidates`).
+    #[test]
+    fn the_picker_nails_a_highlighted_segment_and_keeps_composing() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        let cells = shown_list(&typist.type_text("guahoo")).cells;
+        assert_eq!(cells[1].text, "我");
+        let reply = typist.commit_for_symbol_picker(list(Some(1)));
+        assert!(!reply.handled && reply.is_composing);
+        let list = shown_list(&reply);
+        assert_eq!(
+            effects(&reply),
+            vec![
+                marked("我hoo", 4),
+                effect::Effect::CandidatesChanged(list.clone())
+            ]
+        );
+        assert_eq!(list.marked_text_length_utf16, 4);
+    }
+
+    // ---- Represent ----
+
+    /// No list held, or one the window no longer shows: nothing to do.
+    #[test]
+    fn represent_without_a_list_does_nothing() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        for refetch in [false, true] {
+            let reply = typist.represent(refetch, no_list());
+            assert!(!reply.ignored);
+            assert_eq!(effects(&reply), vec![]);
+        }
+        typist.type_text("ka");
+        assert_eq!(effects(&typist.represent(true, no_list())), vec![]);
+        // trace: the reconcile dropped the list, so the next represent with
+        // the window reported up has nothing either.
+        assert_eq!(effects(&typist.represent(false, list(Some(0)))), vec![]);
+    }
+
+    /// trace: `ka` Hanji-first → 共 / kā; after the Hanji/romanization swap
+    /// (`isTranslateSwapped` false) the same list leads with the
+    /// romanization, no refetch; the anchor is the 2-unit composition.
+    #[test]
+    fn represent_presents_the_same_list_under_the_new_settings() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        let before = shown_list(&typist.type_text("ka"));
+        let reply = typist
+            .with_settings(vec![boolean("isTranslateSwapped", false)])
+            .represent(false, list(Some(0)));
+        assert!(reply.is_composing);
+        let after = shown_list(&reply);
+        assert_eq!(effects(&reply).len(), 1);
+        assert_eq!(after.cells.len(), before.cells.len());
+        assert_eq!(
+            after.cells[0],
+            CandidateCell {
+                text: before.cells[0].annotation.clone().expect("a Hanji cell"),
+                annotation: Some(before.cells[0].text.clone()),
+            }
+        );
+        assert_eq!(after.marked_text_length_utf16, 2);
+    }
+
+    /// trace (2026-10-02 dictionaries): Candidate Display → Romanization
+    /// Only refetches `ka`: 123 side-by-side cells collapse to 49
+    /// romanizations, none annotated.
+    #[test]
+    fn represent_refetches_under_the_new_display() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        let before = shown_list(&typist.type_text("ka"));
+        let reply = typist
+            .with_settings(vec![text("candidateDisplayMode", "romanOnly")])
+            .represent(true, list(Some(0)));
+        let after = shown_list(&reply);
+        assert_eq!(effects(&reply).len(), 1);
+        assert!(after.cells.len() < before.cells.len());
+        assert!(after.cells.iter().all(|cell| cell.annotation.is_none()));
+        assert_eq!(after.cells[0].text, "kā");
+    }
+
+    /// The refetch obeys Show Candidate Window: off, the list closes. The
+    /// legacy back end refetches without reading it (inventory C4,
+    /// characterised in P10); this is the core's rule.
+    #[test]
+    fn a_refetch_with_the_window_off_closes_the_list() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("ka");
+        let off = typist.with_settings(vec![boolean("candidateWindowEnabled", false)]);
+        let reply = off.represent(true, list(Some(0)));
+        assert!(reply.is_composing);
+        assert_eq!(effects(&reply), vec![closed()]);
+        assert_eq!(effects(&off.represent(false, list(Some(0)))), vec![]);
+    }
+
     // ---- The panel is the truth about the list ----
 
     /// A list the window no longer shows is dropped before the key is
@@ -995,6 +1313,9 @@ mod tests {
             other.key(typed("q"), no_list()),
             other.commit_composition(),
             other.cancel(),
+            other.commit_for_symbol_picker(list(Some(0))),
+            other.insert_symbol("，", no_list()),
+            other.represent(true, no_list()),
             other.release(),
         ] {
             assert_eq!(reply, SessionReply::ignored());
@@ -1028,6 +1349,59 @@ mod tests {
             !shown_list(&reply).cells.is_empty(),
             "the window is still on"
         );
+    }
+
+    /// The same for the picker's requests: neither an ignored one nor a
+    /// refused one (no panel) puts its snapshot in force, and neither
+    /// touches the owner's composition or list.
+    #[test]
+    fn ignored_and_refused_picker_requests_leave_the_owner_alone() {
+        let (_engine, shell) = engine_shell();
+        let owner = Typist::activated(shell, vec![]);
+        let cells = shown_list(&owner.type_text("ka")).cells;
+        let window_off = vec![boolean("candidateWindowEnabled", false)];
+        let other = Typist {
+            shell,
+            token: next_token(),
+            settings: window_off.clone(),
+        };
+        assert!(other.commit_for_symbol_picker(list(Some(0))).ignored);
+        assert!(other.insert_symbol("，", no_list()).ignored);
+        assert!(other.represent(true, no_list()).ignored);
+        let snapshot = SettingsSnapshot {
+            entries: window_off,
+        };
+        for request in [
+            Request::CommitForSymbolPicker(CommitForSymbolPickerRequest {
+                token: owner.token,
+                panel: None,
+            }),
+            Request::InsertSymbol(InsertSymbolRequest {
+                token: owner.token,
+                symbol: String::new(),
+                panel: Some(no_list()),
+            }),
+            Request::Represent(RepresentRequest {
+                token: owner.token,
+                refetch: true,
+                panel: None,
+            }),
+        ] {
+            assert!(matches!(
+                shell.serve(request, Some(&snapshot)),
+                Err(Refusal::Missing(_))
+            ));
+        }
+        let request = Request::Represent(RepresentRequest {
+            token: owner.token,
+            refetch: true,
+            panel: Some(list(Some(0))),
+        });
+        let Ok(Reply::Session(reply)) = shell.serve(request, None) else {
+            panic!("expected a session reply");
+        };
+        assert!(reply.is_composing);
+        assert_eq!(shown_list(&reply).cells, cells, "the window is still on");
     }
 
     /// Activating again keeps the composition and drops the list: `q` is
@@ -1070,6 +1444,44 @@ mod tests {
         assert!(typist.release().ignored);
     }
 
+    /// The focus leaving (Swift's `deactivateServer` releases) and coming
+    /// back (`activateServer` claims with the same token): while released
+    /// and superseded, every request the token sends is ignored and leaves
+    /// the owner's composition alone; activated again, it owns the engine.
+    #[test]
+    fn a_released_session_activates_again_and_is_ignored_meanwhile() {
+        let (_engine, shell) = engine_shell();
+        let first = Typist::activated(shell, vec![]);
+        first.type_text("ka");
+        first.commit_composition();
+        assert_eq!(first.release(), SessionReply::default());
+        let second = Typist::activated(shell, vec![]);
+        second.type_text("ta");
+        for reply in [
+            first.key(typed("i"), list(Some(0))),
+            first.commit_composition(),
+            first.cancel(),
+            first.commit_for_symbol_picker(list(Some(0))),
+            first.insert_symbol("，", no_list()),
+            first.represent(true, list(Some(0))),
+            first.release(),
+        ] {
+            assert_eq!(reply, SessionReply::ignored());
+        }
+        assert_eq!(
+            effects(&second.key(typed("i"), list(Some(0))))[0],
+            marked("tai", 3)
+        );
+
+        let back = first.activate();
+        assert!(!back.ignored && !back.is_composing);
+        assert!(second.key(typed("i"), no_list()).ignored);
+        assert_eq!(
+            effects(&first.key(typed("a"), no_list()))[0],
+            marked("a", 1)
+        );
+    }
+
     // ---- Refusals and recovery ----
 
     /// Each session request is refused before Configure, and a request
@@ -1099,6 +1511,20 @@ mod tests {
                 panel: panel.clone(),
             }),
             Request::Release(ReleaseRequest { token: 1 }),
+            Request::CommitForSymbolPicker(CommitForSymbolPickerRequest {
+                token: 1,
+                panel: panel.clone(),
+            }),
+            Request::InsertSymbol(InsertSymbolRequest {
+                token: 1,
+                symbol: "，".to_owned(),
+                panel: panel.clone(),
+            }),
+            Request::Represent(RepresentRequest {
+                token: 1,
+                refetch: false,
+                panel: panel.clone(),
+            }),
         ] {
             assert_eq!(
                 unconfigured.serve(request, None),
@@ -1129,6 +1555,36 @@ mod tests {
         assert_eq!(
             missing(Request::Cancel(CancelRequest { token, panel: None })),
             "cancel.panel"
+        );
+        assert_eq!(
+            missing(Request::CommitForSymbolPicker(
+                CommitForSymbolPickerRequest { token, panel: None }
+            )),
+            "commit_for_symbol_picker.panel"
+        );
+        assert_eq!(
+            missing(Request::InsertSymbol(InsertSymbolRequest {
+                token,
+                symbol: String::new(),
+                panel: panel.clone(),
+            })),
+            "insert_symbol.symbol"
+        );
+        assert_eq!(
+            missing(Request::InsertSymbol(InsertSymbolRequest {
+                token,
+                symbol: "，".to_owned(),
+                panel: None,
+            })),
+            "insert_symbol.panel"
+        );
+        assert_eq!(
+            missing(Request::Represent(RepresentRequest {
+                token,
+                refetch: true,
+                panel: None,
+            })),
+            "represent.panel"
         );
     }
 

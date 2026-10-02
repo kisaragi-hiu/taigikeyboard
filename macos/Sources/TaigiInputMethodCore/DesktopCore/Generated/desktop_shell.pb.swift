@@ -193,11 +193,36 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     set {request = .release(newValue)}
   }
 
+  public var commitForSymbolPicker: Taigi_DesktopShell_CommitForSymbolPickerRequest {
+    get {
+      if case .commitForSymbolPicker(let v)? = request {return v}
+      return Taigi_DesktopShell_CommitForSymbolPickerRequest()
+    }
+    set {request = .commitForSymbolPicker(newValue)}
+  }
+
+  public var insertSymbol: Taigi_DesktopShell_InsertSymbolRequest {
+    get {
+      if case .insertSymbol(let v)? = request {return v}
+      return Taigi_DesktopShell_InsertSymbolRequest()
+    }
+    set {request = .insertSymbol(newValue)}
+  }
+
+  public var represent: Taigi_DesktopShell_RepresentRequest {
+    get {
+      if case .represent(let v)? = request {return v}
+      return Taigi_DesktopShell_RepresentRequest()
+    }
+    set {request = .represent(newValue)}
+  }
+
   /// The key-path settings as they stand for this request, applied before it
   /// runs, so a request and the settings it is read under cross the seam
   /// together. Unset = the last snapshot stays. A snapshot that is refused
   /// refuses the whole request with FAIL_INVARIANT; a request that is
-  /// refused for any reason leaves the previous snapshot in force.
+  /// refused for any reason, or answered `ignored`, leaves the previous
+  /// snapshot in force.
   public var settings: Taigi_DesktopShell_SettingsSnapshot {
     get {_settings ?? Taigi_DesktopShell_SettingsSnapshot()}
     set {_settings = newValue}
@@ -220,6 +245,9 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     case commitComposition(Taigi_DesktopShell_CommitCompositionRequest)
     case cancel(Taigi_DesktopShell_CancelRequest)
     case release(Taigi_DesktopShell_ReleaseRequest)
+    case commitForSymbolPicker(Taigi_DesktopShell_CommitForSymbolPickerRequest)
+    case insertSymbol(Taigi_DesktopShell_InsertSymbolRequest)
+    case represent(Taigi_DesktopShell_RepresentRequest)
 
   }
 
@@ -615,6 +643,9 @@ public nonisolated struct Taigi_DesktopShell_CancelRequest: Sendable {
 }
 
 /// The session gives the engine up (`inputControllerWillClose`, `deinit`).
+/// The session is over: its token is retired for good, owner or not, and an
+/// Activate for it is refused with FAIL_INVARIANT. A second Release is
+/// answered `ignored`.
 public nonisolated struct Taigi_DesktopShell_ReleaseRequest: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -625,6 +656,91 @@ public nonisolated struct Taigi_DesktopShell_ReleaseRequest: Sendable {
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public init() {}
+}
+
+/// The commit the symbol-picker chord runs before the picker opens: the
+/// highlighted cell while the window shows one, otherwise the composition as
+/// typed with its auto space. Refused with FAIL_INVARIANT without a panel.
+public nonisolated struct Taigi_DesktopShell_CommitForSymbolPickerRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var token: UInt64 = 0
+
+  public var panel: Taigi_DesktopShell_PanelState {
+    get {_panel ?? Taigi_DesktopShell_PanelState()}
+    set {_panel = newValue}
+  }
+  /// Returns true if `panel` has been explicitly set.
+  public var hasPanel: Bool {self._panel != nil}
+  /// Clears the value of `panel`. Subsequent reads from it will return its default value.
+  public mutating func clearPanel() {self._panel = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _panel: Taigi_DesktopShell_PanelState? = nil
+}
+
+/// A symbol the picker wrote: at the caret as one string, or swapped with
+/// the auto space a commit left. Refused with FAIL_INVARIANT without a
+/// symbol or a panel.
+public nonisolated struct Taigi_DesktopShell_InsertSymbolRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var token: UInt64 = 0
+
+  public var symbol: String = String()
+
+  public var panel: Taigi_DesktopShell_PanelState {
+    get {_panel ?? Taigi_DesktopShell_PanelState()}
+    set {_panel = newValue}
+  }
+  /// Returns true if `panel` has been explicitly set.
+  public var hasPanel: Bool {self._panel != nil}
+  /// Clears the value of `panel`. Subsequent reads from it will return its default value.
+  public mutating func clearPanel() {self._panel = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _panel: Taigi_DesktopShell_PanelState? = nil
+}
+
+/// The list on screen again under the settings this request carries, after
+/// a switch outside the key path changed them: fetched again (`refetch`) or
+/// the same list presented again. The reply's effects say what became of
+/// it: none — no list, nothing to do; one CandidatesChanged — repaint the
+/// window in place, not anchored again; one CandidatesClosed — the list is
+/// gone. Refused with FAIL_INVARIANT without a panel.
+public nonisolated struct Taigi_DesktopShell_RepresentRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var token: UInt64 = 0
+
+  public var refetch: Bool = false
+
+  public var panel: Taigi_DesktopShell_PanelState {
+    get {_panel ?? Taigi_DesktopShell_PanelState()}
+    set {_panel = newValue}
+  }
+  /// Returns true if `panel` has been explicitly set.
+  public var hasPanel: Bool {self._panel != nil}
+  /// Clears the value of `panel`. Subsequent reads from it will return its default value.
+  public mutating func clearPanel() {self._panel = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _panel: Taigi_DesktopShell_PanelState? = nil
 }
 
 /// The `NSEvent` fields a key is classified from, as AppKit reports them;
@@ -977,7 +1093,7 @@ nonisolated extension Taigi_DesktopShell_CandidateNavigation: SwiftProtobuf._Pro
 
 nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1090,6 +1206,45 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
         }
       }()
       case 10: try { try decoder.decodeSingularMessageField(value: &self._settings) }()
+      case 11: try {
+        var v: Taigi_DesktopShell_CommitForSymbolPickerRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .commitForSymbolPicker(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .commitForSymbolPicker(v)
+        }
+      }()
+      case 12: try {
+        var v: Taigi_DesktopShell_InsertSymbolRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .insertSymbol(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .insertSymbol(v)
+        }
+      }()
+      case 13: try {
+        var v: Taigi_DesktopShell_RepresentRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .represent(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .represent(v)
+        }
+      }()
       default: break
       }
     }
@@ -1133,11 +1288,26 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
       guard case .release(let v)? = self.request else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
     }()
-    case nil: break
+    default: break
     }
     try { if let v = self._settings {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
     } }()
+    switch self.request {
+    case .commitForSymbolPicker?: try {
+      guard case .commitForSymbolPicker(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+    }()
+    case .insertSymbol?: try {
+      guard case .insertSymbol(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
+    }()
+    case .represent?: try {
+      guard case .represent(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+    }()
+    default: break
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -1818,6 +1988,133 @@ nonisolated extension Taigi_DesktopShell_ReleaseRequest: SwiftProtobuf.Message, 
 
   public static func ==(lhs: Taigi_DesktopShell_ReleaseRequest, rhs: Taigi_DesktopShell_ReleaseRequest) -> Bool {
     if lhs.token != rhs.token {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_CommitForSymbolPickerRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".CommitForSymbolPickerRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}token\0\u{1}panel\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.token) }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._panel) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.token != 0 {
+      try visitor.visitSingularUInt64Field(value: self.token, fieldNumber: 1)
+    }
+    try { if let v = self._panel {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_CommitForSymbolPickerRequest, rhs: Taigi_DesktopShell_CommitForSymbolPickerRequest) -> Bool {
+    if lhs.token != rhs.token {return false}
+    if lhs._panel != rhs._panel {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_InsertSymbolRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".InsertSymbolRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}token\0\u{1}symbol\0\u{1}panel\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.token) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.symbol) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._panel) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.token != 0 {
+      try visitor.visitSingularUInt64Field(value: self.token, fieldNumber: 1)
+    }
+    if !self.symbol.isEmpty {
+      try visitor.visitSingularStringField(value: self.symbol, fieldNumber: 2)
+    }
+    try { if let v = self._panel {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_InsertSymbolRequest, rhs: Taigi_DesktopShell_InsertSymbolRequest) -> Bool {
+    if lhs.token != rhs.token {return false}
+    if lhs.symbol != rhs.symbol {return false}
+    if lhs._panel != rhs._panel {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_RepresentRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".RepresentRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}token\0\u{1}refetch\0\u{1}panel\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.token) }()
+      case 2: try { try decoder.decodeSingularBoolField(value: &self.refetch) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._panel) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.token != 0 {
+      try visitor.visitSingularUInt64Field(value: self.token, fieldNumber: 1)
+    }
+    if self.refetch != false {
+      try visitor.visitSingularBoolField(value: self.refetch, fieldNumber: 2)
+    }
+    try { if let v = self._panel {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_RepresentRequest, rhs: Taigi_DesktopShell_RepresentRequest) -> Bool {
+    if lhs.token != rhs.token {return false}
+    if lhs.refetch != rhs.refetch {return false}
+    if lhs._panel != rhs._panel {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
