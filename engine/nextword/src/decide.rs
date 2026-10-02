@@ -24,9 +24,13 @@ pub(crate) const ASSOCIATION_TIMEOUT_MS: i64 = 10_000;
 /// `TimeInterval` seconds, Android uses `delay(Long ms)`.
 const CONTEXT_TIMEOUT_MS: u64 = 30_000;
 
-/// Sentence-end punctuation. Common across both platforms (iOS
-/// `NextWordEngine.swift:33`; Android `NextWordEngine.kt:42`).
-const SENTENCE_END_PUNCTUATION: &[char] = &['。', '！', '？', '.', '!', '?'];
+/// Punctuation that ends the context: sentence ends `。！？.!?` and clause
+/// marks `，、；：,;:` (USER 2026-10-02). No pair is learned across either —
+/// the bundled corpus breaks its chain on the same marks
+/// (`dictionary/build/corpus_bigrams.py`).
+const CONTEXT_BREAK_PUNCTUATION: &[char] = &[
+    '。', '！', '？', '.', '!', '?', '，', '、', '；', '：', ',', ';', ':',
+];
 
 /// Apply `intent` against `state`, returning the `DecideResult` and the
 /// bigrams it recorded.
@@ -113,14 +117,14 @@ fn decide_word_selected(
 
     // One commit is one sequence (§40): the last committed word leads it
     // only inside the association window; inside the commit every adjacent
-    // pair is learned, whatever time the nails took. A sentence end inside
-    // it breaks the chain; a clause mark does not.
+    // pair is learned, whatever time the nails took. A sentence end or a
+    // clause mark inside it breaks the chain.
     let mut associations = Vec::new();
     let mut previous = committed_context(state, now_ms);
     let mut preceding_moved_context = false;
     for word in preceding {
         if is_noise_text(&word.text) {
-            if is_sentence_end_punctuation(&word.text) {
+            if breaks_context(&word.text) {
                 previous = None;
                 preceding_moved_context = true;
             }
@@ -135,15 +139,15 @@ fn decide_word_selected(
         preceding_moved_context = true;
     }
 
-    // Noise text never records or predicts. A sentence end resets; a clause
-    // mark keeps the context — the commit's last word when it had preceding
-    // words, else the context as it was.
+    // Noise text never records or predicts. A sentence end or a clause mark
+    // resets; other noise (a symbol) keeps the context — the commit's last
+    // word when it had preceding words, else the context as it was.
     if is_noise_text(&text) {
-        let ends_sentence = is_sentence_end_punctuation(&text);
-        if !ends_sentence && !preceding_moved_context {
+        let breaks = breaks_context(&text);
+        if !breaks && !preceding_moved_context {
             return result_unchanged(state).into();
         }
-        let result = match previous.filter(|_| !ends_sentence) {
+        let result = match previous.filter(|_| !breaks) {
             Some(context) => commit_context(state, context, now_ms, false),
             None => reset_and_clear_predictions(state),
         };
@@ -388,11 +392,12 @@ fn is_word(part: &&str) -> bool {
     part.chars().any(phonetics::is_word_material)
 }
 
-// Whether the first char is sentence-end punctuation; triggers the shared reset path.
-pub(crate) fn is_sentence_end_punctuation(text: &str) -> bool {
+// Whether the first char ends the context (sentence end or clause mark);
+// triggers the shared reset path.
+pub(crate) fn breaks_context(text: &str) -> bool {
     text.chars()
         .next()
-        .map(|c| SENTENCE_END_PUNCTUATION.contains(&c))
+        .map(|c| CONTEXT_BREAK_PUNCTUATION.contains(&c))
         .unwrap_or(false)
 }
 
@@ -505,6 +510,15 @@ mod tests {
             .collect()
     }
 
+    fn effect_kinds(decided: &Decided) -> Vec<Option<next_word_effect::Kind>> {
+        decided
+            .result
+            .effects
+            .iter()
+            .map(|e| e.kind.clone())
+            .collect()
+    }
+
     // INVARIANT_NEXTWORD_COMMIT_SEQUENCE_LEARNING (behavioral-invariants §40):
     // one commit is one sequence — the last committed word leads it inside
     // the 10 s window, every adjacent pair inside it is learned.
@@ -568,10 +582,12 @@ mod tests {
         assert_eq!(pairs(&decided), vec!["好/hó→好/hó", "好/hó→好/hó"]);
     }
 
-    // A sentence end inside the commit breaks the chain there; a clause mark
-    // does not (same rule as single-word commits).
+    // A sentence end or a clause mark inside the commit breaks the chain
+    // there (same rule as single-word commits).
     #[test]
-    fn commit_sentence_end_breaks_chain_clause_mark_does_not() {
+    fn commit_sentence_end_and_clause_mark_both_break_chain() {
+        // trace: 我 (t=0) leads at 1 000 ms → 我→欲; `。` drops it; 食 has no
+        // predecessor; `，` drops it; 飯 has none — one pair.
         let mut state = after_gua();
         let decided = decide(
             &mut state,
@@ -589,12 +605,14 @@ mod tests {
             &ios_config(true),
         )
         .unwrap();
-        assert_eq!(pairs(&decided), vec!["我/guá→欲/beh", "食/tsia̍h→飯/pn̄g"]);
+        assert_eq!(pairs(&decided), vec!["我/guá→欲/beh"]);
+        assert_eq!(state.last_selected_word.as_deref(), Some("飯"));
     }
 
-    // A commit ending in a clause mark leaves its last word as the context.
+    // A commit ending in a clause mark keeps the pairs before it and clears
+    // the context, exactly like one ending in a sentence end.
     #[test]
-    fn commit_ending_in_clause_mark_keeps_last_word_as_context() {
+    fn commit_ending_in_clause_mark_clears_context() {
         let mut state = after_gua();
         let decided = decide(
             &mut state,
@@ -608,17 +626,103 @@ mod tests {
         )
         .unwrap();
         assert_eq!(pairs(&decided), vec!["我/guá→欲/beh", "欲/beh→食/tsia̍h"]);
-        assert_eq!(state.last_selected_word.as_deref(), Some("食"));
-        assert_eq!(state.last_selected_roman.as_deref(), Some("tsia̍h"));
-        // A new context: the old timeout must not clear it, in-flight
-        // predictions for 我 go stale, and a clause mark predicts nothing.
+        assert_eq!(state.last_selected_word, None);
+        assert_eq!(state.last_selected_roman, None);
+        // One reset: in-flight predictions go stale, the timeout is cancelled,
+        // nothing is queried (predictions were not visible).
         assert_eq!(state.current_generation, 1);
-        let kinds: Vec<_> = decided
-            .result
-            .effects
-            .iter()
-            .map(|e| e.kind.clone())
-            .collect();
+        let kinds = effect_kinds(&decided);
+        assert!(matches!(
+            kinds.as_slice(),
+            [Some(next_word_effect::Kind::CancelContextTimeout(_))]
+        ));
+    }
+
+    // INVARIANT_NEXTWORD_CLAUSE_MARK_BREAKS_CONTEXT (behavioral-invariants.md §40)
+    // Every clause mark, full- and half-width, breaks the context in both
+    // places a commit carries one: as the commit itself, and inside
+    // `preceding`.
+    #[test]
+    fn every_clause_mark_breaks_context_alone_and_inside_a_commit() {
+        for mark in ["，", "、", "；", "：", ",", ";", ":"] {
+            // Alone: reset, timeout cancelled, visible strip cleared, no query.
+            let mut state = PersistedState {
+                predictions_visible: true,
+                ..after_gua()
+            };
+            let decided = decide(
+                &mut state,
+                commit(mark, "", Vec::new(), 1_000),
+                &ios_config(false),
+            )
+            .unwrap();
+            assert!(decided.associations.is_empty(), "{mark:?}");
+            assert_eq!(state.last_selected_word, None, "{mark:?}");
+            assert_eq!(state.last_selected_roman, None, "{mark:?}");
+            assert_eq!(state.current_generation, 1, "{mark:?}");
+            let kinds = effect_kinds(&decided);
+            assert!(
+                matches!(
+                    kinds.as_slice(),
+                    [
+                        Some(next_word_effect::Kind::CancelContextTimeout(_)),
+                        Some(next_word_effect::Kind::ClearPredictionsUi(_)),
+                    ]
+                ),
+                "{mark:?}"
+            );
+            // trace: 我 was dropped, so 語 500 ms later pairs with nothing.
+            let next = decide(
+                &mut state,
+                commit("語", "gí", Vec::new(), 1_500),
+                &ios_config(false),
+            )
+            .unwrap();
+            assert!(next.associations.is_empty(), "{mark:?}");
+
+            // Inside a commit: 我→欲, the mark drops 欲, 食 → 飯.
+            let mut state = after_gua();
+            let decided = decide(
+                &mut state,
+                commit(
+                    "飯",
+                    "pn̄g",
+                    vec![
+                        committed("欲", "beh"),
+                        committed(mark, ""),
+                        committed("食", "tsia̍h"),
+                    ],
+                    1_000,
+                ),
+                &ios_config(true),
+            )
+            .unwrap();
+            assert_eq!(
+                pairs(&decided),
+                vec!["我/guá→欲/beh", "食/tsia̍h→飯/pn̄g"],
+                "{mark:?}"
+            );
+        }
+    }
+
+    // Control: noise that is not punctuation (a symbol) still keeps the
+    // context — the commit's last word.
+    #[test]
+    fn commit_ending_in_symbol_keeps_last_word_as_context() {
+        let mut state = after_gua();
+        let decided = decide(
+            &mut state,
+            commit("★", "", vec![committed("欲", "beh")], 1_000),
+            &ios_config(true),
+        )
+        .unwrap();
+        assert_eq!(pairs(&decided), vec!["我/guá→欲/beh"]);
+        assert_eq!(state.last_selected_word.as_deref(), Some("欲"));
+        assert_eq!(state.last_selected_roman.as_deref(), Some("beh"));
+        // A new context: the old timeout must not clear it, in-flight
+        // predictions for 我 go stale, and a symbol predicts nothing.
+        assert_eq!(state.current_generation, 1);
+        let kinds = effect_kinds(&decided);
         assert!(matches!(
             kinds.as_slice(),
             [Some(next_word_effect::Kind::RescheduleContextTimeout(_))]
@@ -947,40 +1051,6 @@ mod tests {
     }
 
     #[test]
-    fn a_comma_between_two_commits_keeps_the_pair() {
-        // trace: `、` is noise but not sentence-end, so `decide_word_selected`
-        // returns unchanged — 台 stays the context; 語 at 1 500 ms is 500 ms
-        // after 台 (< 10 s), so 台 → 語 is recorded; poj→tl is idempotent on
-        // the TL readings.
-        let mut state = PersistedState {
-            last_selected_word: Some("台".to_owned()),
-            last_selected_roman: Some("tâi".to_owned()),
-            last_selection_time_ms: 1_000,
-            ..PersistedState::default()
-        };
-        let word = |text: &str, roman: &str, now_ms| Intent::WordSelected {
-            text: text.to_owned(),
-            roman: roman.to_owned(),
-            require_roman_mode: false,
-            trigger_prediction: false,
-            preceding: Vec::new(),
-            now_ms,
-        };
-        let comma = decide(&mut state, word("、", "", 1_200), &ios_config(false)).unwrap();
-        assert!(comma.associations.is_empty());
-        let next = decide(&mut state, word("語", "gí", 1_500), &ios_config(false)).unwrap();
-        assert_eq!(
-            next.associations,
-            vec![Association {
-                previous: "台".to_owned(),
-                previous_tl: "tâi".to_owned(),
-                next: "語".to_owned(),
-                next_tl: "gí".to_owned(),
-            }]
-        );
-    }
-
-    #[test]
     fn a_hanji_only_commit_pairs_with_an_empty_tl() {
         // trace: the hanji-only suggestion path sends roman "" — poj→tl("")
         // = "", so the pair carries `next_tl: ""` rather than a guessed one.
@@ -1208,7 +1278,7 @@ mod tests {
     // as 多謝！) is still a word: the pair is learned and it becomes the
     // context. Only a selection with no word material that starts with
     // sentence punctuation ends the sentence (`is_noise_text` +
-    // `is_sentence_end_punctuation`). Android used to reset before
+    // `breaks_context`). Android used to reset before
     // sending the selection when the committed text ended this way, dropping
     // the pair (parity fix 2026-09-30); every platform now sends WordSelected
     // alone.

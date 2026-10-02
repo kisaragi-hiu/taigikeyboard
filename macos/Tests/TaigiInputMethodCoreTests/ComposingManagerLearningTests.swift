@@ -116,7 +116,7 @@ final class ComposingManagerLearningTests: XCTestCase {
         manager.noteCharacterTypedOutsideComposition("、")
         let second = try commitWholeBuffer("gi", manager, executing: executor)
 
-        // A comma is noise, so the engine keeps the context across it.
+        // A comma is a clause mark, so the engine ends the context on it.
         XCTAssertEqual(nextWord.reported, [first.displayText, "、", second.displayText])
     }
 

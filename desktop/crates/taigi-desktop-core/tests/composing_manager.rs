@@ -784,7 +784,7 @@ fn a_comma_is_reported_and_a_letter_outside_is_not() {
     rig.type_text("gi2");
     let gi = rig.candidate("語");
     rig.commit(&gi, CandidateScript::Primary);
-    // The engine keeps 台 as context across the comma (noise, `decide.rs`).
+    // The engine ends the context on the comma (a clause mark, `decide.rs`).
     assert_eq!(rig.memory.reported(), vec!["台", ",", "語"]);
 }
 
