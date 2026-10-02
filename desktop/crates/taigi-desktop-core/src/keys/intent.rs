@@ -716,22 +716,25 @@ mod tests {
         );
     }
 
-    /// Pins the CURRENT core rule — roadmap E4, a real difference. Swift
-    /// refuses `CharacterSet.controlCharacters` = Cc + Cf
-    /// (`ComposingKeyIntent.swift:349-351,412,481`), so a key carrying a
-    /// format character is the host's there; the core refuses Cc only.
+    /// Roadmap E4, settled P11d: a format character (Cf) is text; only a
+    /// control character (Cc) is refused. The Swift key path took this rule
+    /// in P11d (it refused `CharacterSet.controlCharacters` = Cc + Cf).
     #[test]
-    fn e4_a_format_character_is_text_to_the_core() {
+    fn e4_a_format_character_is_text() {
         let mac = DesktopPlatform::MacOS;
         // trace: Cf is not `char::is_control` and not in F700..=F8FF →
         // every scalar is text → tier 7: not romanization (not ASCII
         // letter / `-`) → CommitThenInsert while composing, PassThrough idle.
         for characters in [
             "\u{200B}",
+            "\u{200C}",
             "\u{AD}",
             "\u{FEFF}",
+            "\u{2066}",
             "x\u{200D}y",
             "👩\u{200D}💻",
+            // An emoji tag sequence: plane-14 Cf.
+            "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}",
         ] {
             let key = text(characters);
             assert_eq!(
@@ -745,7 +748,7 @@ mod tests {
             );
             assert!(ComposingKeyIntent::is_document_text(&key), "{characters:?}");
         }
-        // Negative control: a C1 control (NEL, Cc) is the host's on both.
+        // Negative control: a C1 control (NEL, Cc) is the host's.
         let next_line = text("\u{85}");
         assert_eq!(
             classify_on(&next_line, true, false, mac),

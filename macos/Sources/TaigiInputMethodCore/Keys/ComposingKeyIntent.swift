@@ -189,10 +189,6 @@ enum ComposingKeyIntent: Equatable {
     /// composition input.
     private static let appKitFunctionKeyRange: ClosedRange<UInt32> = 0xF700 ... 0xF8FF
 
-    /// Hoisted because this runs once per scalar per keystroke and
-    /// `CharacterSet.controlCharacters` materializes a bridged set each access.
-    private static let controlCharacters = CharacterSet.controlCharacters
-
     /// The chords the host owns. Named once because four rules are written
     /// against it — the host-chord guard, the fixed tier's modifier check,
     /// `isDocumentText`, and the Telex guide's Escape
@@ -497,7 +493,10 @@ enum ComposingKeyIntent: Equatable {
         (character.isLetter && character.isASCII) || character == "-"
     }
 
+    /// Not a control character (Cc) and not one of AppKit's function-key
+    /// scalars. A format character (Cf) is typed text, so not
+    /// `CharacterSet.controlCharacters` (Cc + Cf) — the core's rule (`keys/intent.rs`).
     private static func isTextScalar(_ scalar: Unicode.Scalar) -> Bool {
-        !controlCharacters.contains(scalar) && !appKitFunctionKeyRange.contains(scalar.value)
+        scalar.properties.generalCategory != .control && !appKitFunctionKeyRange.contains(scalar.value)
     }
 }

@@ -562,6 +562,32 @@ final class ComposingKeyIntentTests: XCTestCase {
         XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot("")))
     }
 
+    /// A format character (Cf) is text the user typed, isolated or inside a
+    /// longer event — the desktop core's rule (roadmap E4, settled P11d).
+    /// Only a control character (Cc) is a command.
+    func testFormatCharacters_areDocumentText_andControlCharactersAreNot() {
+        // trace: Cf is not Cc and not in F700…F8FF → every scalar is text →
+        // not a romanization character (`x‍` is one non-ASCII grapheme) →
+        // commitThenInsert while composing, passThrough idle.
+        for text in [
+            "\u{200B}", "\u{200C}", "\u{AD}", "\u{FEFF}", "\u{2066}", "x\u{200D}y", "👩\u{200D}💻",
+            "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}", // emoji tag sequence (plane 14 Cf)
+        ] {
+            let key = textSnapshot(text)
+            XCTAssertEqual(ComposingKeyIntent.documentText(of: key), text, "\(text.unicodeScalars)")
+            XCTAssertEqual(ComposingKeyIntent.intent(for: key, isComposing: true), .commitThenInsert(text))
+            XCTAssertEqual(ComposingKeyIntent.intent(for: key, isComposing: false), .passThrough)
+        }
+        // Negative control: C0 and C1 (NEL) stay the host's. (DEL is not
+        // text either, but mid-composition it is Backspace.)
+        for text in ["\u{1}", "\u{85}"] {
+            let key = textSnapshot(text)
+            XCTAssertFalse(ComposingKeyIntent.isDocumentText(key), "\(text.unicodeScalars)")
+            XCTAssertEqual(ComposingKeyIntent.intent(for: key, isComposing: true), .commitThenPassThrough)
+        }
+        XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot("\u{7F}")))
+    }
+
     // MARK: - Width flip
 
     /// ⌃ on a punctuation key types that key in the other width, once. The
