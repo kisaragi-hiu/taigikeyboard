@@ -18,20 +18,20 @@ enum DesktopCoreBridge {
         }
     }
 
-    /// Encodes one request, sends it, and returns the reply `expected` picks
+    /// Encodes one request — with `settings`, the snapshot it runs under,
+    /// when there is one — sends it, and returns the reply `expected` picks
     /// out of an OK response. `nil` — logged here — when the round-trip
     /// failed, the core refused, or it answered OK with another kind of
     /// reply or none.
     static func roundtrip<Reply>(
         _ request: Taigi_DesktopShell_DesktopRequest.OneOf_Request,
+        settings: Taigi_DesktopShell_SettingsSnapshot? = nil,
         op: String,
         expected: (Taigi_DesktopShell_DesktopResponse.OneOf_Reply) -> Reply?,
     ) -> Reply? {
-        var envelope = Taigi_DesktopShell_DesktopRequest()
-        envelope.request = request
         let requestBytes: [UInt8]
         do {
-            requestBytes = try Array(envelope.serializedData())
+            requestBytes = try Array(envelope(request, settings: settings).serializedData())
         } catch {
             recordFailure(op: op, message: "encode failed: \(error)")
             return nil
@@ -51,6 +51,20 @@ enum DesktopCoreBridge {
             return nil
         }
         return reply
+    }
+
+    /// The request and its settings snapshot in one envelope: they cross
+    /// the seam together and the core applies both or neither.
+    static func envelope(
+        _ request: Taigi_DesktopShell_DesktopRequest.OneOf_Request,
+        settings: Taigi_DesktopShell_SettingsSnapshot?,
+    ) -> Taigi_DesktopShell_DesktopRequest {
+        var envelope = Taigi_DesktopShell_DesktopRequest()
+        envelope.request = request
+        if let settings {
+            envelope.settings = settings
+        }
+        return envelope
     }
 
     /// Logs a seam failure.

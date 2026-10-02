@@ -1,0 +1,1166 @@
+//! The composing session behind the seam
+//! (docs/architecture/macos-desktop-core-roadmap.md D3): `Activate` / `Key` /
+//! `CommitComposition` / `Cancel` / `Release` on the process's one
+//! coordinator, answered as the effects Swift replays after the call
+//! returns. It is Swift's `LegacyComposingBackend` re-hosted over
+//! desktop-core's executor (`perform_intent`); the per-key preamble — the
+//! global chords, the Telex guide, the symbol picker — stays in the Swift
+//! controller.
+//!
+//! Record, then replay: [`RecordingSurface`] only records, so no client call
+//! happens while the coordinator is locked. The window's state travels in
+//! with each request (`PanelState`) and is read, never kept.
+
+use taigi_desktop_core::composing::{
+    perform_intent, CandidateSource, ComposingEffectExecutor, ComposingManager, ContextToken,
+    IntentSurface,
+};
+use taigi_desktop_core::engine::Effect as EngineEffect;
+use taigi_desktop_core::keys::{CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent};
+use taigi_desktop_core::runtime::DesktopRuntime;
+
+use crate::key_translation;
+use crate::proto::{
+    self, effect, ActivateRequest, CancelRequest, CandidateCell, CandidatesChanged,
+    CommitCompositionRequest, Effect, KeyRequest, PanelState, ReleaseRequest, SessionReply,
+};
+use crate::runtime::{Refusal, DESKTOP_PLATFORM};
+
+/// What the session keeps between requests: the list the last fetch
+/// returned and the cells shown for it. One per process, like the
+/// composition it describes — only the session that owns the engine reaches
+/// it, and `Activate` drops it on every handover, so a list a released
+/// session left behind is never read (`LegacyComposingBackend.source`).
+#[derive(Default)]
+pub(crate) struct Session {
+    candidates: CandidateSource,
+}
+
+impl Session {
+    /// `token` takes the engine; a token that already holds it keeps its
+    /// composition. The list goes either way: the window went down with the
+    /// handover.
+    pub(crate) fn activate(
+        &mut self,
+        runtime: &DesktopRuntime,
+        request: &ActivateRequest,
+    ) -> Result<SessionReply, Refusal> {
+        let token = token(request.token)?;
+        let mut coordinator = runtime.lock_coordinator();
+        let manager = coordinator.claim(token);
+        self.candidates.clear();
+        Ok(owner_reply(false, Vec::new(), manager))
+    }
+
+    /// One key: classified under the settings in force for this request,
+    /// then run through the core's executor.
+    pub(crate) fn key(
+        &mut self,
+        runtime: &DesktopRuntime,
+        request: &KeyRequest,
+    ) -> Result<SessionReply, Refusal> {
+        let event = request
+            .event
+            .as_ref()
+            .ok_or(Refusal::Missing("key.event"))?;
+        let panel = request
+            .panel
+            .as_ref()
+            .ok_or(Refusal::Missing("key.panel"))?;
+        self.run_owned(
+            runtime,
+            request.token,
+            panel,
+            |manager, candidates, surface| {
+                // One read for the whole key: the window check, the bindings and
+                // the executor see the same settings.
+                let settings = runtime.settings.current();
+                let bindings = ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM);
+                // A window the user switched off since the last key comes down
+                // HERE, before the key is read: a Return classified against a
+                // list still up would pick a candidate the user asked never to
+                // see.
+                if !bindings.is_candidate_window_enabled && !candidates.is_empty() {
+                    candidates.clear();
+                    surface.list_closed();
+                }
+                let key = key_translation::snapshot(event);
+                let intent = ComposingKeyIntent::intent(
+                    &key,
+                    manager.is_composing(),
+                    !candidates.is_empty(),
+                    &bindings,
+                    DESKTOP_PLATFORM,
+                );
+                log::debug!("key.intent {intent:?}");
+                perform_intent(&intent, &key, &settings, manager, candidates, surface)
+            },
+        )
+    }
+
+    /// The lifecycle commit: the composition as typed, no auto space — the
+    /// user did not finish a word there — and no list effect: Swift took the
+    /// window down first, and says so in the panel.
+    pub(crate) fn commit_composition(
+        &mut self,
+        runtime: &DesktopRuntime,
+        request: &CommitCompositionRequest,
+    ) -> Result<SessionReply, Refusal> {
+        let panel = request
+            .panel
+            .as_ref()
+            .ok_or(Refusal::Missing("commit_composition.panel"))?;
+        self.run_owned(runtime, request.token, panel, |manager, _, surface| {
+            manager.commit_composition(surface);
+            false
+        })
+    }
+
+    /// Drops the composition and the list — what Swift sends after a
+    /// request answered FAIL_INTERNAL (roadmap D4).
+    pub(crate) fn cancel(
+        &mut self,
+        runtime: &DesktopRuntime,
+        request: &CancelRequest,
+    ) -> Result<SessionReply, Refusal> {
+        let panel = request
+            .panel
+            .as_ref()
+            .ok_or(Refusal::Missing("cancel.panel"))?;
+        self.run_owned(
+            runtime,
+            request.token,
+            panel,
+            |manager, candidates, surface| {
+                manager.cancel_composition(surface);
+                candidates.clear();
+                surface.list_closed();
+                false
+            },
+        )
+    }
+
+    /// `token` gives the engine up. The list stays until the next
+    /// `Activate` drops it, as `LegacyComposingBackend.release` leaves it.
+    pub(crate) fn release(
+        &mut self,
+        runtime: &DesktopRuntime,
+        request: &ReleaseRequest,
+    ) -> Result<SessionReply, Refusal> {
+        let token = token(request.token)?;
+        let mut coordinator = runtime.lock_coordinator();
+        if coordinator.current_owner() != Some(token) {
+            return Ok(SessionReply::ignored());
+        }
+        coordinator.release(token);
+        Ok(SessionReply::default())
+    }
+
+    /// Runs `work` — which answers `handled` — when `raw_token` owns the
+    /// engine, and replies with what it recorded. The list is brought into
+    /// line with the window first, so nothing in `work` reads a list the
+    /// user cannot see (a list the client gave no caret rectangle for, a
+    /// dismissal outside the key path). A non-owner is answered `ignored`
+    /// and touches nothing.
+    fn run_owned(
+        &mut self,
+        runtime: &DesktopRuntime,
+        raw_token: u64,
+        panel: &PanelState,
+        work: impl FnOnce(
+            &mut ComposingManager,
+            &mut CandidateSource,
+            &mut RecordingSurface<'_>,
+        ) -> bool,
+    ) -> Result<SessionReply, Refusal> {
+        let token = token(raw_token)?;
+        let mut coordinator = runtime.lock_coordinator();
+        let Some(manager) = coordinator.manager(token) else {
+            return Ok(SessionReply::ignored());
+        };
+        if !panel.is_list_on_screen {
+            self.candidates.clear();
+        }
+        let mut surface = RecordingSurface::new(panel);
+        let handled = work(manager, &mut self.candidates, &mut surface);
+        let effects = surface.finish(manager);
+        Ok(owner_reply(handled, effects, manager))
+    }
+}
+
+/// The session a request names. 0 is never a token: it is what a request
+/// that left the field unset decodes to.
+fn token(raw: u64) -> Result<ContextToken, Refusal> {
+    match usize::try_from(raw) {
+        Ok(0) | Err(_) => Err(Refusal::Missing("token")),
+        Ok(token) => Ok(ContextToken(token)),
+    }
+}
+
+impl SessionReply {
+    /// The token does not own the engine: nothing was done.
+    fn ignored() -> Self {
+        Self {
+            ignored: true,
+            ..Self::default()
+        }
+    }
+}
+
+fn owner_reply(handled: bool, effects: Vec<Effect>, manager: &ComposingManager) -> SessionReply {
+    SessionReply {
+        ignored: false,
+        handled,
+        effects,
+        is_composing: manager.is_composing(),
+    }
+}
+
+/// One request's surface for the core's executor: records every effect in
+/// order and answers the window's questions from the panel state Swift sent.
+pub(crate) struct RecordingSurface<'a> {
+    panel: &'a PanelState,
+    effects: Vec<Effect>,
+}
+
+impl<'a> RecordingSurface<'a> {
+    pub(crate) fn new(panel: &'a PanelState) -> Self {
+        Self {
+            panel,
+            effects: Vec::new(),
+        }
+    }
+
+    fn record(&mut self, effect: effect::Effect) {
+        self.effects.push(Effect {
+            effect: Some(effect),
+        });
+    }
+
+    /// The recorded effects, with the list's anchor filled in: a
+    /// `CandidatesChanged` carries the composition's length on screen, which
+    /// the surface cannot read while the executor holds the manager. Every
+    /// arm that refreshes the list does so as its last step
+    /// (`intent_executor.rs` `refresh`), so the display text now is the one
+    /// the list was fetched for.
+    pub(crate) fn finish(mut self, manager: &ComposingManager) -> Vec<Effect> {
+        let length = utf16_len(manager.display_text());
+        let mut lists = 0;
+        for effect in &mut self.effects {
+            if let Some(effect::Effect::CandidatesChanged(list)) = &mut effect.effect {
+                list.marked_text_length_utf16 = length;
+                lists += 1;
+            }
+        }
+        debug_assert!(lists <= 1, "one refresh per request");
+        self.effects
+    }
+}
+
+impl ComposingEffectExecutor for RecordingSurface<'_> {
+    /// The three engine effects that reach a client; the rest no client
+    /// sees (`LegacyComposingBackend` `EffectRecorder.execute`).
+    fn execute(&mut self, effect: &EngineEffect) {
+        match effect {
+            EngineEffect::UpdatePreedit { text, caret_utf16 } => {
+                self.record(effect::Effect::SetMarkedText(proto::SetMarkedText {
+                    text: text.clone(),
+                    caret_utf16: *caret_utf16,
+                }));
+            }
+            EngineEffect::ClearPreeditWithoutCommit => {
+                self.record(effect::Effect::ClearMarkedText(proto::ClearMarkedText {}));
+            }
+            EngineEffect::CommitTextReplacingPreedit(text) => {
+                self.record(effect::Effect::InsertText(proto::InsertText {
+                    text: text.clone(),
+                }));
+            }
+            EngineEffect::ClearCandidates
+            | EngineEffect::RefreshCandidates
+            | EngineEffect::ResetCandidateContext
+            | EngineEffect::NextWordUpdateLastSelectedWord { .. }
+            | EngineEffect::NextWordWordSelected { .. }
+            | EngineEffect::NextWordClearForNewComposing => {}
+        }
+    }
+}
+
+impl IntentSurface for RecordingSurface<'_> {
+    fn insert_external(&mut self, text: &str) {
+        self.record(effect::Effect::InsertText(proto::InsertText {
+            text: text.to_owned(),
+        }));
+    }
+
+    /// Swift made the client checks before the call (`swap_available`);
+    /// it keeps the replacement range and the re-arm arithmetic.
+    fn swap_preceding_space(&mut self, replacement: &str) -> bool {
+        if !self.panel.swap_available {
+            return false;
+        }
+        self.record(effect::Effect::SwapPrecedingSpace(
+            proto::SwapPrecedingSpace {
+                replacement: replacement.to_owned(),
+            },
+        ));
+        true
+    }
+
+    fn arm_swap(&mut self) {
+        self.record(effect::Effect::ArmSwap(proto::ArmSwap {}));
+    }
+
+    /// IMKit's `insertText` reports no failure (roadmap D3).
+    fn has_write_failed(&self) -> bool {
+        false
+    }
+
+    /// An emptied list closes the window, as the Swift key path's
+    /// `refreshCandidates` does for an empty, unavailable or switched-off
+    /// fetch.
+    fn list_changed(&mut self, list: &mut CandidateSource) {
+        if list.is_empty() {
+            self.list_closed();
+            return;
+        }
+        let cells = list
+            .cells()
+            .into_iter()
+            .map(|cell| CandidateCell {
+                text: cell.text,
+                annotation: cell.annotation,
+            })
+            .collect();
+        self.record(effect::Effect::CandidatesChanged(CandidatesChanged {
+            cells,
+            leads_with_literal_roman: list.leads_with_literal_roman(),
+            // Filled in by `finish`.
+            marked_text_length_utf16: 0,
+        }));
+    }
+
+    fn list_closed(&mut self) {
+        self.record(effect::Effect::CandidatesClosed(proto::CandidatesClosed {}));
+    }
+
+    fn selected_index(&self) -> Option<usize> {
+        self.panel.selected_index.map(|index| index as usize)
+    }
+
+    fn index_for_key_slot(&self, slot: usize) -> Option<usize> {
+        let slot = u32::try_from(slot).ok()?;
+        self.panel
+            .slot_indices
+            .get(&slot)
+            .map(|index| *index as usize)
+    }
+
+    /// The window reads the direction for its layout and repaints itself.
+    fn navigate(&mut self, direction: CandidateNavigation) {
+        self.record(effect::Effect::Navigate(proto::Navigate {
+            direction: navigation(direction) as i32,
+        }));
+    }
+}
+
+fn navigation(direction: CandidateNavigation) -> proto::CandidateNavigation {
+    match direction {
+        CandidateNavigation::Left => proto::CandidateNavigation::Left,
+        CandidateNavigation::Right => proto::CandidateNavigation::Right,
+        CandidateNavigation::Up => proto::CandidateNavigation::Up,
+        CandidateNavigation::Down => proto::CandidateNavigation::Down,
+        CandidateNavigation::PageUp => proto::CandidateNavigation::PageUp,
+        CandidateNavigation::PageDown => proto::CandidateNavigation::PageDown,
+        CandidateNavigation::NextCandidate => proto::CandidateNavigation::NextCandidate,
+        CandidateNavigation::PreviousCandidate => proto::CandidateNavigation::PreviousCandidate,
+    }
+}
+
+fn utf16_len(text: &str) -> u32 {
+    text.encode_utf16().count() as u32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::key_translation::{COMMAND, CONTROL, OPTION, SHIFT};
+    use crate::proto::desktop_request::Request;
+    use crate::proto::desktop_response::Reply;
+    use crate::proto::{KeyEvent, SettingEntry, SettingsSnapshot};
+    use crate::runtime::Shell;
+    use crate::test_support::{boolean, engine_shell, key_event, next_token, text};
+    use std::collections::HashMap;
+
+    // The rest of NSEvent.ModifierFlags / NSEvent.SpecialKey (`key_translation.rs`).
+    const NUMERIC_PAD: u64 = 0x200000;
+    const FUNCTION: u64 = 0x800000;
+    const CARRIAGE_RETURN: u32 = 0xD;
+    const LEFT_ARROW: u32 = 0xF702;
+
+    fn typed(characters: &str) -> KeyEvent {
+        chord(characters, 0, None)
+    }
+
+    fn chord(characters: &str, modifier_flags: u64, special_key: Option<u32>) -> KeyEvent {
+        key_event(characters, modifier_flags, special_key)
+    }
+
+    /// No list on screen, nothing highlighted, no swap armed.
+    fn no_list() -> PanelState {
+        PanelState::default()
+    }
+
+    /// A list on screen with `selected` highlighted and the first slots
+    /// addressing the first cells.
+    fn list(selected: Option<u32>) -> PanelState {
+        PanelState {
+            is_list_on_screen: true,
+            selected_index: selected,
+            slot_indices: (0..9).map(|slot| (slot, slot)).collect(),
+            swap_available: false,
+        }
+    }
+
+    fn marked(text: &str, caret_utf16: u32) -> effect::Effect {
+        effect::Effect::SetMarkedText(proto::SetMarkedText {
+            text: text.to_owned(),
+            caret_utf16,
+        })
+    }
+
+    fn insert(text: &str) -> effect::Effect {
+        effect::Effect::InsertText(proto::InsertText {
+            text: text.to_owned(),
+        })
+    }
+
+    fn cleared() -> effect::Effect {
+        effect::Effect::ClearMarkedText(proto::ClearMarkedText {})
+    }
+
+    fn closed() -> effect::Effect {
+        effect::Effect::CandidatesClosed(proto::CandidatesClosed {})
+    }
+
+    fn arm() -> effect::Effect {
+        effect::Effect::ArmSwap(proto::ArmSwap {})
+    }
+
+    fn unwrapped(effects: Vec<Effect>) -> Vec<effect::Effect> {
+        effects
+            .into_iter()
+            .map(|effect| effect.effect.expect("every effect is set"))
+            .collect()
+    }
+
+    fn effects(reply: &SessionReply) -> Vec<effect::Effect> {
+        unwrapped(reply.effects.clone())
+    }
+
+    /// The list a reply showed.
+    fn shown_list(reply: &SessionReply) -> CandidatesChanged {
+        effects(reply)
+            .into_iter()
+            .find_map(|effect| match effect {
+                effect::Effect::CandidatesChanged(list) => Some(list),
+                _ => None,
+            })
+            .unwrap_or_else(|| panic!("no list in {reply:?}"))
+    }
+
+    /// One test's session on the shared engine, every request carrying the
+    /// same snapshot so nothing leaks in from another test.
+    struct Typist<'s> {
+        shell: &'s Shell,
+        token: u64,
+        settings: Vec<SettingEntry>,
+    }
+
+    impl<'s> Typist<'s> {
+        fn activated(shell: &'s Shell, settings: Vec<SettingEntry>) -> Self {
+            let typist = Self {
+                shell,
+                token: next_token(),
+                settings,
+            };
+            typist.activate();
+            typist
+        }
+
+        fn serve(&self, request: Request) -> SessionReply {
+            let snapshot = SettingsSnapshot {
+                entries: self.settings.clone(),
+            };
+            match self.shell.serve(request, Some(&snapshot)) {
+                Ok(Reply::Session(reply)) => reply,
+                other => panic!("expected a session reply, got {other:?}"),
+            }
+        }
+
+        fn activate(&self) -> SessionReply {
+            self.serve(Request::Activate(ActivateRequest { token: self.token }))
+        }
+
+        fn key(&self, event: KeyEvent, panel: PanelState) -> SessionReply {
+            self.serve(Request::Key(KeyRequest {
+                token: self.token,
+                event: Some(event),
+                panel: Some(panel),
+            }))
+        }
+
+        /// Types `text` one letter at a time, the list on screen after the
+        /// first; answers the last key's reply.
+        fn type_text(&self, text: &str) -> SessionReply {
+            let mut reply = None;
+            for (index, letter) in text.chars().enumerate() {
+                let panel = if index == 0 { no_list() } else { list(Some(0)) };
+                reply = Some(self.key(typed(&letter.to_string()), panel));
+            }
+            reply.expect("some text")
+        }
+
+        fn commit_composition(&self) -> SessionReply {
+            self.serve(Request::CommitComposition(CommitCompositionRequest {
+                token: self.token,
+                panel: Some(no_list()),
+            }))
+        }
+
+        fn cancel(&self) -> SessionReply {
+            self.serve(Request::Cancel(CancelRequest {
+                token: self.token,
+                panel: Some(no_list()),
+            }))
+        }
+
+        fn release(&self) -> SessionReply {
+            self.serve(Request::Release(ReleaseRequest { token: self.token }))
+        }
+    }
+
+    fn auto_space() -> Vec<SettingEntry> {
+        vec![boolean("autoSpaceEnabled", true)]
+    }
+
+    // ---- The recording surface, without the engine ----
+
+    fn recorded(
+        panel: &PanelState,
+        run: impl FnOnce(&mut RecordingSurface),
+    ) -> Vec<effect::Effect> {
+        let mut surface = RecordingSurface::new(panel);
+        run(&mut surface);
+        unwrapped(surface.effects)
+    }
+
+    /// The three engine effects a client sees, translated; the rest are
+    /// not recorded.
+    #[test]
+    fn engine_effects_translate_to_client_effects() {
+        let effects = recorded(&no_list(), |surface| {
+            for effect in [
+                EngineEffect::UpdatePreedit {
+                    text: "tâi".to_owned(),
+                    caret_utf16: 2,
+                },
+                EngineEffect::ClearPreeditWithoutCommit,
+                EngineEffect::CommitTextReplacingPreedit("台".to_owned()),
+                EngineEffect::ClearCandidates,
+                EngineEffect::RefreshCandidates,
+                EngineEffect::ResetCandidateContext,
+                EngineEffect::NextWordClearForNewComposing,
+            ] {
+                surface.execute(&effect);
+            }
+        });
+        assert_eq!(effects, vec![marked("tâi", 2), cleared(), insert("台"),]);
+    }
+
+    /// The surface's own effects, and the swap only where Swift said it can.
+    #[test]
+    fn surface_writes_are_recorded_in_order() {
+        let swap = |available| {
+            let panel = PanelState {
+                swap_available: available,
+                ..no_list()
+            };
+            recorded(&panel, |surface| {
+                surface.insert_external("，");
+                let swapped = surface.swap_preceding_space("? ");
+                surface.arm_swap();
+                surface.list_closed();
+                assert_eq!(swapped, available);
+                assert!(!surface.has_write_failed());
+            })
+        };
+        let replacement = effect::Effect::SwapPrecedingSpace(proto::SwapPrecedingSpace {
+            replacement: "? ".to_owned(),
+        });
+        assert_eq!(swap(true), vec![insert("，"), replacement, arm(), closed()]);
+        assert_eq!(swap(false), vec![insert("，"), arm(), closed()]);
+    }
+
+    /// An empty list closes the window.
+    #[test]
+    fn an_emptied_list_closes_the_window() {
+        let effects = recorded(&no_list(), |surface| {
+            surface.list_changed(&mut CandidateSource::default());
+        });
+        assert_eq!(effects, vec![closed()]);
+    }
+
+    #[test]
+    fn every_direction_translates() {
+        let directions = [
+            (CandidateNavigation::Left, proto::CandidateNavigation::Left),
+            (
+                CandidateNavigation::Right,
+                proto::CandidateNavigation::Right,
+            ),
+            (CandidateNavigation::Up, proto::CandidateNavigation::Up),
+            (CandidateNavigation::Down, proto::CandidateNavigation::Down),
+            (
+                CandidateNavigation::PageUp,
+                proto::CandidateNavigation::PageUp,
+            ),
+            (
+                CandidateNavigation::PageDown,
+                proto::CandidateNavigation::PageDown,
+            ),
+            (
+                CandidateNavigation::NextCandidate,
+                proto::CandidateNavigation::NextCandidate,
+            ),
+            (
+                CandidateNavigation::PreviousCandidate,
+                proto::CandidateNavigation::PreviousCandidate,
+            ),
+        ];
+        for (direction, wire) in directions {
+            let effects = recorded(&no_list(), |surface| surface.navigate(direction));
+            assert_eq!(
+                effects,
+                vec![effect::Effect::Navigate(proto::Navigate {
+                    direction: wire as i32
+                })],
+                "{direction:?}"
+            );
+        }
+    }
+
+    /// The window's questions answer from the panel: the highlight, and a
+    /// slot only where the page maps it.
+    #[test]
+    fn the_panel_answers_the_windows_questions() {
+        let panel = PanelState {
+            is_list_on_screen: true,
+            selected_index: Some(4),
+            slot_indices: HashMap::from([(0, 9), (2, 11)]),
+            swap_available: false,
+        };
+        let surface = RecordingSurface::new(&panel);
+        assert_eq!(surface.selected_index(), Some(4));
+        assert_eq!(surface.index_for_key_slot(0), Some(9));
+        assert_eq!(surface.index_for_key_slot(1), None);
+        assert_eq!(surface.index_for_key_slot(2), Some(11));
+        assert_eq!(RecordingSurface::new(&no_list()).selected_index(), None);
+    }
+
+    // ---- Key: golden replies for the executor's arms ----
+
+    /// trace: TL; `tai5` → engine display "tâi" (tone 5 = circumflex), 3
+    /// UTF-16 units against 4 typed — the list anchors on what is on screen.
+    #[test]
+    fn typing_composes_and_anchors_the_list_on_the_marked_text() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        let reply = typist.type_text("tai5");
+        assert!(reply.handled && reply.is_composing && !reply.ignored);
+        let list = shown_list(&reply);
+        assert_eq!(
+            effects(&reply),
+            vec![
+                marked("tâi", 3),
+                effect::Effect::CandidatesChanged(list.clone())
+            ]
+        );
+        assert_eq!(list.marked_text_length_utf16, 3);
+        assert!(!list.cells.is_empty());
+    }
+
+    /// Backspace (AppKit names `\u{7F}` `delete`) mid-composition deletes
+    /// one character and refetches.
+    #[test]
+    fn delete_backward_shortens_the_composition_and_refetches() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("ta");
+        let reply = typist.key(chord("\u{7F}", 0, Some(0x7F)), list(Some(0)));
+        assert!(reply.handled && reply.is_composing);
+        let list = shown_list(&reply);
+        assert_eq!(
+            effects(&reply),
+            vec![
+                marked("t", 1),
+                effect::Effect::CandidatesChanged(list.clone())
+            ]
+        );
+        assert_eq!(list.marked_text_length_utf16, 1);
+    }
+
+    /// trace: Telex keys `vydwxqzf`; `y` after `tai` is the engine's tone 3
+    /// → "tài".
+    #[test]
+    fn a_telex_key_reaches_the_engine_as_a_tone() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![text("toneInputScheme", "telex")]);
+        typist.type_text("tai");
+        let reply = typist.key(typed("y"), list(Some(0)));
+        assert!(reply.handled && reply.is_composing);
+        assert_eq!(effects(&reply)[0], marked("tài", 3));
+        assert_eq!(shown_list(&reply).marked_text_length_utf16, 3);
+    }
+
+    /// Return over a list commits the highlighted cell in its own script —
+    /// a Hanji cell, so no auto space.
+    #[test]
+    fn return_commits_the_highlighted_cell() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        let cells = shown_list(&typist.type_text("ti")).cells;
+        let reply = typist.key(chord("\r", 0, Some(CARRIAGE_RETURN)), list(Some(0)));
+        assert!(reply.handled && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![insert(&cells[0].text), closed()]);
+    }
+
+    /// trace: Standard tone scheme → bare slot keys `q w d …`; `w` = slot 1,
+    /// which the panel maps to cell 1. A Hanji cell earns no auto space.
+    #[test]
+    fn a_slot_key_commits_the_cell_the_panel_maps_it_to() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        let cells = shown_list(&typist.type_text("tai")).cells;
+        let mut panel = list(None);
+        panel.slot_indices = HashMap::from([(1, 1)]);
+        let reply = typist.key(typed("w"), panel);
+        assert!(reply.handled && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![insert(&cells[1].text), closed()]);
+    }
+
+    /// A slot the page leaves empty is consumed and commits nothing.
+    #[test]
+    fn a_slot_key_on_an_empty_slot_is_consumed() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("tai");
+        let mut panel = list(None);
+        panel.slot_indices.clear();
+        let reply = typist.key(typed("q"), panel);
+        assert!(reply.handled && reply.is_composing);
+        assert_eq!(effects(&reply), vec![]);
+    }
+
+    /// trace: Space = the highlighted cell's other script; cell 0 leads
+    /// with Hanji, so its annotation (romanization) is written, which earns
+    /// the auto space and its arm.
+    #[test]
+    fn space_commits_the_other_script_with_its_auto_space() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        let cells = shown_list(&typist.type_text("ka")).cells;
+        let romanization = cells[0].annotation.clone().expect("a Hanji cell");
+        let reply = typist.key(typed(" "), list(Some(0)));
+        assert!(reply.handled && !reply.is_composing);
+        assert_eq!(
+            effects(&reply),
+            vec![insert(&romanization), closed(), insert(" "), arm()]
+        );
+    }
+
+    /// ⇧Return: the composition as typed, spaced under TL.
+    #[test]
+    fn shift_return_commits_as_typed_with_its_auto_space() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        typist.type_text("g");
+        let reply = typist.key(chord("\r", SHIFT, Some(CARRIAGE_RETURN)), list(Some(0)));
+        assert!(reply.handled && !reply.is_composing);
+        assert_eq!(
+            effects(&reply),
+            vec![insert("g"), closed(), insert(" "), arm()]
+        );
+    }
+
+    /// trace: the default display is Hanji-first, whose punctuation is full
+    /// width: `,` mid-composition commits `l` and writes `，` with the auto
+    /// space in one write, then arms; ⌃`,` flips to the half width.
+    #[test]
+    fn punctuation_commits_then_inserts_and_the_width_flip_flips_it() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        typist.type_text("l");
+        let reply = typist.key(typed(","), list(Some(0)));
+        assert!(reply.handled && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![insert("l， "), closed(), arm()]);
+
+        typist.type_text("l");
+        let flipped = typist.key(chord(",", CONTROL, None), list(Some(0)));
+        assert_eq!(effects(&flipped), vec![insert("l, "), closed(), arm()]);
+    }
+
+    /// ⌘ is the host's: the composition is finished, the key handed back.
+    #[test]
+    fn a_host_chord_commits_then_passes_the_key_through() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        typist.type_text("h");
+        let reply = typist.key(chord("a", COMMAND, None), list(Some(0)));
+        assert!(!reply.handled && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![insert("h"), closed()]);
+    }
+
+    /// Outside a composition: an attaching mark swaps with the armed space
+    /// when Swift says it can; otherwise it is written full width; a digit
+    /// goes to the host untouched.
+    #[test]
+    fn pass_through_swaps_maps_or_hands_the_key_back() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        let swappable = PanelState {
+            swap_available: true,
+            ..no_list()
+        };
+        let swapped = typist.key(typed("?"), swappable);
+        assert!(swapped.handled);
+        assert_eq!(
+            effects(&swapped),
+            vec![
+                effect::Effect::SwapPrecedingSpace(proto::SwapPrecedingSpace {
+                    replacement: "? ".to_owned()
+                }),
+                arm()
+            ]
+        );
+
+        let mapped = typist.key(typed("?"), no_list());
+        assert!(mapped.handled);
+        assert_eq!(effects(&mapped), vec![insert("？")]);
+
+        let plain = typist.key(typed("1"), no_list());
+        assert!(!plain.handled && !plain.ignored);
+        assert_eq!(effects(&plain), vec![]);
+    }
+
+    /// ⌥← steps the caret; the list is not refetched. AppKit's `.function`
+    /// and `.numericPad` on an arrow do not make it another key.
+    #[test]
+    fn the_caret_chord_moves_the_caret_without_a_refetch() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("t");
+        let arrow = chord(
+            "\u{F702}",
+            OPTION | FUNCTION | NUMERIC_PAD,
+            Some(LEFT_ARROW),
+        );
+        let reply = typist.key(arrow, list(Some(0)));
+        assert!(reply.handled && reply.is_composing);
+        assert_eq!(effects(&reply), vec![marked("t", 0)]);
+    }
+
+    /// The arrows move the window's selection; nothing else happens.
+    #[test]
+    fn an_arrow_over_the_list_navigates_it() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("t");
+        let arrow = chord("\u{F701}", FUNCTION | NUMERIC_PAD, Some(0xF701));
+        let reply = typist.key(arrow, list(Some(0)));
+        assert!(reply.handled);
+        assert_eq!(
+            effects(&reply),
+            vec![effect::Effect::Navigate(proto::Navigate {
+                direction: proto::CandidateNavigation::Down as i32
+            })]
+        );
+    }
+
+    #[test]
+    fn escape_cancels_the_composition_and_the_list() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("s");
+        let reply = typist.key(typed("\u{1B}"), list(Some(0)));
+        assert!(reply.handled && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![cleared(), closed()]);
+    }
+
+    // ---- The panel is the truth about the list ----
+
+    /// A list the window no longer shows is dropped before the key is
+    /// read: Space then commits the composition as typed with the space
+    /// (CommitThenInsert), not a candidate the user cannot see.
+    #[test]
+    fn a_list_the_window_dropped_is_not_read() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        typist.type_text("ta");
+        let reply = typist.key(typed(" "), no_list());
+        assert!(reply.handled && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![insert("ta "), closed(), arm()]);
+    }
+
+    /// The window switched off since the last key: the list comes down
+    /// before the key, and the refresh fetches nothing. The two closes are
+    /// the Swift key path's own (`LegacyComposingBackend` `key` preamble and
+    /// `refreshCandidates`) — not a duplicate to fold.
+    #[test]
+    fn a_switched_off_window_closes_the_list_before_the_key() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("t");
+        let off = Typist {
+            settings: vec![boolean("candidateWindowEnabled", false)],
+            ..typist
+        };
+        let reply = off.key(typed("a"), list(Some(0)));
+        assert!(reply.handled && reply.is_composing);
+        assert_eq!(effects(&reply), vec![closed(), marked("ta", 2), closed()]);
+    }
+
+    // ---- Lifecycle ----
+
+    /// The lifecycle commit writes the composition as typed — no auto
+    /// space, no list effect.
+    #[test]
+    fn the_lifecycle_commit_writes_the_composition_as_typed() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, auto_space());
+        typist.type_text("tai");
+        let reply = typist.commit_composition();
+        assert!(!reply.handled && !reply.is_composing && !reply.ignored);
+        assert_eq!(effects(&reply), vec![insert("tai")]);
+    }
+
+    /// With the window still reported up, the lifecycle commit keeps the
+    /// list — no list effect; the window, which Swift takes down first,
+    /// is what drops it (`LegacyComposingBackend.commitComposition`).
+    #[test]
+    fn the_lifecycle_commit_leaves_the_list_to_the_window() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("tai");
+        let reply = typist.serve(Request::CommitComposition(CommitCompositionRequest {
+            token: typist.token,
+            panel: Some(list(Some(0))),
+        }));
+        assert_eq!(effects(&reply), vec![insert("tai")]);
+        // trace: the list kept, `q` is still slot 0 — its commit finds no
+        // composition, and the refresh that follows closes the list
+        // (`commit_candidate` → `refresh`); a dropped list would have made
+        // `q` composition text instead.
+        let next = typist.key(typed("q"), list(None));
+        assert!(next.handled && !next.is_composing);
+        assert_eq!(effects(&next), vec![closed()]);
+    }
+
+    #[test]
+    fn cancel_drops_the_composition_and_the_list() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("t");
+        let reply = typist.cancel();
+        assert!(!reply.is_composing && !reply.ignored);
+        assert_eq!(effects(&reply), vec![cleared(), closed()]);
+    }
+
+    // ---- Tokens ----
+
+    /// A token that does not own the engine is answered `ignored` and
+    /// touches nothing — not the owner's composition, not its list (the
+    /// non-owner's "no list on screen" is not reconciled).
+    #[test]
+    fn a_non_owner_is_ignored_and_changes_nothing() {
+        let (_engine, shell) = engine_shell();
+        let owner = Typist::activated(shell, vec![]);
+        let cells = shown_list(&owner.type_text("tai")).cells;
+        let other = Typist {
+            shell,
+            token: next_token(),
+            settings: vec![],
+        };
+        for reply in [
+            other.key(typed("q"), no_list()),
+            other.commit_composition(),
+            other.cancel(),
+            other.release(),
+        ] {
+            assert_eq!(reply, SessionReply::ignored());
+        }
+        let picked = owner.key(typed("q"), list(None));
+        assert_eq!(effects(&picked), vec![insert(&cells[0].text), closed()]);
+    }
+
+    /// An ignored request's snapshot is not put in force either: the
+    /// owner's next request without one still reads its own settings.
+    #[test]
+    fn an_ignored_request_leaves_the_settings_alone() {
+        let (_engine, shell) = engine_shell();
+        let owner = Typist::activated(shell, vec![]);
+        owner.type_text("t");
+        let other = Typist {
+            shell,
+            token: next_token(),
+            settings: vec![boolean("candidateWindowEnabled", false)],
+        };
+        assert!(other.key(typed("a"), no_list()).ignored);
+        let request = Request::Key(KeyRequest {
+            token: owner.token,
+            event: Some(typed("a")),
+            panel: Some(list(Some(0))),
+        });
+        let Ok(Reply::Session(reply)) = shell.serve(request, None) else {
+            panic!("expected a session reply");
+        };
+        assert!(
+            !shown_list(&reply).cells.is_empty(),
+            "the window is still on"
+        );
+    }
+
+    /// Activating again keeps the composition and drops the list: `q` is
+    /// then typed, not a slot.
+    #[test]
+    fn activating_again_keeps_the_composition_and_drops_the_list() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("ta");
+        let again = typist.activate();
+        assert!(again.is_composing && !again.ignored);
+        assert_eq!(effects(&again), vec![]);
+        let reply = typist.key(typed("q"), list(None));
+        assert_eq!(effects(&reply)[0], marked("taq", 3));
+    }
+
+    /// Another session's Activate takes the engine and drops the first
+    /// one's composition; the first is ignored from then on.
+    #[test]
+    fn another_activation_takes_the_engine() {
+        let (_engine, shell) = engine_shell();
+        let first = Typist::activated(shell, vec![]);
+        first.type_text("ta");
+        let second = Typist::activated(shell, vec![]);
+        assert!(!second.activate().is_composing);
+        assert!(first.key(typed("i"), list(Some(0))).ignored);
+        assert!(second.key(typed("i"), no_list()).is_composing);
+    }
+
+    /// Release gives the engine up: the owner's next key is ignored, and
+    /// so is a second release.
+    #[test]
+    fn a_released_session_is_ignored() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("t");
+        let released = typist.release();
+        assert_eq!(released, SessionReply::default());
+        assert!(typist.key(typed("a"), no_list()).ignored);
+        assert!(typist.release().ignored);
+    }
+
+    // ---- Refusals and recovery ----
+
+    /// Each session request is refused before Configure, and a request
+    /// missing what it cannot run without is refused (not read as zero /
+    /// empty): token 0, a key with no event or no panel, a lifecycle
+    /// request with no panel.
+    #[test]
+    fn requests_that_cannot_run_are_refused() {
+        let unconfigured = Shell::default();
+        let panel = Some(no_list());
+        let key = |token, event: Option<KeyEvent>, panel: Option<PanelState>| {
+            Request::Key(KeyRequest {
+                token,
+                event,
+                panel,
+            })
+        };
+        for request in [
+            Request::Activate(ActivateRequest { token: 1 }),
+            key(1, Some(typed("a")), panel.clone()),
+            Request::CommitComposition(CommitCompositionRequest {
+                token: 1,
+                panel: panel.clone(),
+            }),
+            Request::Cancel(CancelRequest {
+                token: 1,
+                panel: panel.clone(),
+            }),
+            Request::Release(ReleaseRequest { token: 1 }),
+        ] {
+            assert_eq!(
+                unconfigured.serve(request, None),
+                Err(Refusal::NotConfigured)
+            );
+        }
+
+        let (_engine, shell) = engine_shell();
+        let token = next_token();
+        let missing = |request| match shell.serve(request, None) {
+            Err(Refusal::Missing(field)) => field,
+            other => panic!("expected a refusal, got {other:?}"),
+        };
+        assert_eq!(
+            missing(Request::Activate(ActivateRequest { token: 0 })),
+            "token"
+        );
+        assert_eq!(missing(key(0, Some(typed("a")), panel.clone())), "token");
+        assert_eq!(missing(key(token, None, panel.clone())), "key.event");
+        assert_eq!(missing(key(token, Some(typed("a")), None)), "key.panel");
+        assert_eq!(
+            missing(Request::CommitComposition(CommitCompositionRequest {
+                token,
+                panel: None
+            })),
+            "commit_composition.panel"
+        );
+        assert_eq!(
+            missing(Request::Cancel(CancelRequest { token, panel: None })),
+            "cancel.panel"
+        );
+    }
+
+    /// rust-ffi-safety.md §6 T3 on the session: eight threads type into one
+    /// session with the window switched on and off. Each request runs under
+    /// the snapshot it carried — a switched-off key never shows a list.
+    #[test]
+    fn concurrent_keys_each_run_under_their_own_snapshot() {
+        let (_engine, shell) = engine_shell();
+        let token = Typist::activated(shell, vec![]).token;
+        std::thread::scope(|scope| {
+            let workers: Vec<_> = (0..8)
+                .map(|index| {
+                    scope.spawn(move || {
+                        let window = index % 2 == 0;
+                        let typist = Typist {
+                            shell,
+                            token,
+                            settings: vec![boolean("candidateWindowEnabled", window)],
+                        };
+                        (window, typist.key(typed("t"), no_list()))
+                    })
+                })
+                .collect();
+            for worker in workers {
+                let (window, reply) = worker.join().expect("no panic escapes");
+                assert!(reply.handled && !reply.ignored);
+                let shows_a_list = effects(&reply)
+                    .iter()
+                    .any(|effect| matches!(effect, effect::Effect::CandidatesChanged(_)));
+                assert!(window || !shows_a_list, "{reply:?}");
+            }
+        });
+    }
+}

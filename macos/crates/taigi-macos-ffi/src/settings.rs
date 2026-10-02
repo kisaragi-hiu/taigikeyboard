@@ -1,4 +1,4 @@
-//! The key-path settings as the Swift side pushes them
+//! The key-path settings as the Swift side sends them with each request
 //! (docs/architecture/macos-desktop-core-roadmap.md D5): the core's
 //! `key_path_settings`, as typed entries, written into a `SettingsDocument`
 //! the runtime reads through [`SnapshotSettings`]. The settings stay in
@@ -17,7 +17,7 @@ use taigi_desktop_core::settings::{SettingsDocument, SettingsProvider};
 
 use crate::proto::{setting_value, SettingDescriptor, SettingEntry, SettingKind, SettingValue};
 
-/// Built once: every `Settings` request is checked against it.
+/// Built once: every snapshot is checked against it.
 static WHITELIST: LazyLock<Vec<KeyPathSetting>> = LazyLock::new(key_path_settings);
 
 fn descriptor(setting: &KeyPathSetting) -> SettingDescriptor {
@@ -62,7 +62,7 @@ pub(crate) fn descriptors() -> Vec<SettingDescriptor> {
     WHITELIST.iter().map(descriptor).collect()
 }
 
-/// Why a `SettingsRequest` was refused; the previous snapshot stays.
+/// Why a `SettingsSnapshot` was refused; the previous snapshot stays.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum SettingsRefusal {
     UnknownName(String),
@@ -71,7 +71,7 @@ pub(crate) enum SettingsRefusal {
     WrongKind(String),
 }
 
-/// The document a whole `SettingsRequest` describes, checked entry by entry
+/// The document a whole `SettingsSnapshot` describes, checked entry by entry
 /// before anything is replaced.
 pub(crate) fn document_from(entries: &[SettingEntry]) -> Result<SettingsDocument, SettingsRefusal> {
     let mut document = SettingsDocument::default();
@@ -96,15 +96,17 @@ pub(crate) fn document_from(entries: &[SettingEntry]) -> Result<SettingsDocument
     Ok(document)
 }
 
-/// The last snapshot Swift pushed; the defaults until the first one.
+/// The last snapshot a request carried; the defaults until the first one.
 #[derive(Default)]
 pub(crate) struct SnapshotSettings {
     document: Mutex<Arc<SettingsDocument>>,
 }
 
 impl SnapshotSettings {
-    pub(crate) fn replace(&self, document: SettingsDocument) {
-        *self.lock() = Arc::new(document);
+    /// Puts `document` in force and hands back the one it replaced — for
+    /// a request that changed nothing to put back.
+    pub(crate) fn replace(&self, document: Arc<SettingsDocument>) -> Arc<SettingsDocument> {
+        std::mem::replace(&mut *self.lock(), document)
     }
 
     /// A poisoned lock is recovered: the value is a whole `Arc`, swapped in
@@ -181,7 +183,7 @@ mod tests {
         assert_eq!(document.engine_settings(), EngineSettings::DEFAULT);
     }
 
-    /// The pushed values reach what the key path reads; a chord in the Mac
+    /// The snapshot's values reach what the key path reads; a chord in the Mac
     /// spelling (`o` = ⌥) parses in the MacOS grammar, and a stored `""`
     /// stays a cleared row rather than the default.
     #[test]
@@ -247,12 +249,14 @@ mod tests {
     #[test]
     fn a_snapshot_replaces_the_last_one() {
         let settings = SnapshotSettings::default();
-        settings.replace(document_from(&[text("inputMode", "poj")]).unwrap());
+        settings.replace(Arc::new(
+            document_from(&[text("inputMode", "poj")]).unwrap(),
+        ));
         assert_eq!(
             settings.current().engine_settings().input_mode,
             InputMode::Poj
         );
-        settings.replace(document_from(&[]).unwrap());
+        settings.replace(Arc::new(document_from(&[]).unwrap()));
         assert_eq!(
             settings.current().engine_settings(),
             EngineSettings::DEFAULT

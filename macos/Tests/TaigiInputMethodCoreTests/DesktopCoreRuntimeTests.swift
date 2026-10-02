@@ -1,4 +1,4 @@
-// The launch bring-up and the settings push over the desktop shell seam
+// The launch bring-up and the settings snapshot over the desktop shell seam
 // (docs/architecture/macos-desktop-core-roadmap.md P6). The journal, the
 // once-only Prepare and the refusals are pinned natively too, in
 // `macos/crates/taigi-macos-ffi`.
@@ -83,6 +83,39 @@ final class DesktopCoreRuntimeTests: XCTestCase {
         XCTAssertNil(mismatched)
     }
 
+    /// A one-entry snapshot.
+    private static func snapshot(_ name: String, boolean: Bool) -> Taigi_DesktopShell_SettingsSnapshot {
+        var entry = Taigi_DesktopShell_SettingEntry()
+        entry.name = name
+        entry.value.boolean = boolean
+        var snapshot = Taigi_DesktopShell_SettingsSnapshot()
+        snapshot.entries = [entry]
+        return snapshot
+    }
+
+    /// The snapshot rides in the request's own envelope — one round trip,
+    /// applied with the request or not at all.
+    func testEnvelope_carriesTheSnapshotWithTheRequest() throws {
+        let snapshot = Self.snapshot(Keys.isAutoSpaceEnabled.name, boolean: true)
+        let envelope = DesktopCoreBridge.envelope(.prepare(.init()), settings: snapshot)
+        XCTAssertEqual(envelope.request, .prepare(.init()))
+        XCTAssertEqual(envelope.settings, snapshot)
+        XCTAssertFalse(DesktopCoreBridge.envelope(.prepare(.init()), settings: nil).hasSettings)
+    }
+
+    /// A snapshot the core refuses refuses its request: no reply.
+    func testRoundtrip_refusedSnapshot_answersNil() {
+        let snapshot = Self.snapshot("notASetting", boolean: true)
+        let version = DesktopCoreBridge.roundtrip(.version(.init()), settings: snapshot, op: "test") {
+            if case let .version(reply) = $0 {
+                reply
+            } else {
+                nil
+            }
+        }
+        XCTAssertNil(version)
+    }
+
     // trace: Info.plist CFBundleVersion is a plain integer string ("30613");
     // the parse is `UInt32.init`, falling back to 1.
     func testDictionaryStamp_isTheBundleVersion() {
@@ -148,12 +181,12 @@ final class DesktopCoreRuntimeTests: XCTestCase {
         for value in stored {
             userDefaults.set(value, forKey: key.name)
             let swift = SettingsStore(userDefaults: userDefaults).current.isLiteralRomanCandidateEnabled
-            let pushed = try snapshotValue(key.name)
-            if case .text = pushed {
-                XCTFail("stored \(value): a boolean pushed as text")
+            let sent = try snapshotValue(key.name)
+            if case .text = sent {
+                XCTFail("stored \(value): a boolean sent as text")
             }
-            let core = if case let .boolean(pushed) = pushed {
-                pushed
+            let core = if case let .boolean(sent) = sent {
+                sent
             } else {
                 key.defaultValue
             }
@@ -185,7 +218,7 @@ final class DesktopCoreRuntimeTests: XCTestCase {
         XCTAssertNil(try snapshotValue(name))
     }
 
-    /// Nothing outside the whitelist is pushed.
+    /// Nothing outside the whitelist is sent.
     func testSnapshot_leavesOtherSettingsOut() throws {
         userDefaults.set("en", forKey: Keys.displayLanguage.name)
         XCTAssertNil(try snapshotValue(Keys.displayLanguage.name))
