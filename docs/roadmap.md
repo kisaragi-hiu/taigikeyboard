@@ -71,7 +71,6 @@ One line each; the linked section holds the design, the measurements and the ope
 | Item | Status | Where |
 |---|---|---|
 | `lexicon::classification::is_hanji` stops at CJK Extension E; the Python pipeline tests through Extension G | measure callers first, then align | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § Open USER decisions #6 |
-| Clause punctuation `，`: reset or keep the next-word context | recommendation recorded, no decision | same § #4 |
 | Stale `.proto` comments: `lexicon.proto` still documents `DEV` as always-on (the toggle shipped); `composing.proto` cites a nonexistent `continuous-input-ranking.md` §10.11 | needs a proto regen round (iOS + Android generated trees) | [`architecture/macos-roadmap.md`](architecture/macos-roadmap.md) § Open items this track produced |
 | v2 `.taigi` restore folds POJ→TL over canonical-TL readings (macOS folds v1 only) | verify it still applies now the engine owns the codec | same § |
 | Fedora × IBus e2e skipped (daemon never lists the test component) | own root-cause round | [`architecture/e2e-testing-roadmap.md`](architecture/e2e-testing-roadmap.md) § PR table PR4 |
