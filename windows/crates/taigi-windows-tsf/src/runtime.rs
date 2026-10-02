@@ -72,7 +72,7 @@ impl Runtime {
             data_directory,
             dictionaries: Box::new(Self::dictionaries_directory),
             dictionary_version: dictionary_version(),
-            system_locale: taigi_windows_platform::system_locale,
+            system_locale: Box::new(taigi_windows_platform::system_locale),
             platform: taigi_windows_platform::DESKTOP_PLATFORM,
         }))
     }

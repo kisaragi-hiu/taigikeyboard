@@ -761,25 +761,29 @@ final class RecordingCandidatePresenter: CandidatePresenter {
     }
 }
 
+/// The test process's one desktop-core runtime — `Configure` is once per
+/// process, so every suite shares it — over the repository's dictionaries
+/// and with no data directory, so nothing a test types is learned.
+enum TestDesktopCore {
+    nonisolated(unsafe) static let runtime = DesktopCoreRuntime.configure(
+        DesktopCoreRuntime.Configuration(
+            dataDirectory: nil,
+            dictionariesDirectory: TestFixtures.dictionaryDirectory,
+            dictionaryStamp: 1,
+            systemLocale: "en-US",
+        ),
+    )
+}
+
 /// Installs the dictionary once for the whole test process, because the engine
 /// holds it process-wide and re-installing per case would re-map ~24MB of data
-/// for no gain.
+/// for no gain. The core's `Prepare` is once-only; a repeat answers the first
+/// result.
 enum InstalledLexicon {
-    private static let lock = NSLock()
-    private nonisolated(unsafe) static var stats: LexiconInstallStats?
-
     @discardableResult
-    static func installOnce() -> LexiconInstallStats? {
-        lock.lock()
-        defer { lock.unlock() }
-        if let stats {
-            return stats
-        }
-        guard let artifacts = try? DictionaryArtifacts(baseURL: TestFixtures.dictionaryDirectory) else {
-            return nil
-        }
-        stats = RustEngineBridge.lexiconInstall(artifacts: artifacts, dictionaryVersion: 1)
-        return stats
+    static func installOnce() -> Taigi_DesktopShell_LexiconStats? {
+        guard let reply = TestDesktopCore.runtime?.prepare(), reply.hasLexicon else { return nil }
+        return reply.lexicon
     }
 }
 

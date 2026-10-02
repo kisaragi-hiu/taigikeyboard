@@ -24,9 +24,13 @@ panic-injector = ["swift-ffi/panic-injector"]
 swift-ffi = { workspace = true, features = ["user-data"] }
 dispatch = { workspace = true }
 protos = { workspace = true }
+taigi-desktop-core = { workspace = true }
 log = { workspace = true }
 prost = { workspace = true }
 swift-bridge = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
 
 [build-dependencies]
 prost-build = { workspace = true }

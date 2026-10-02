@@ -9,7 +9,8 @@
 //! and reads the settings file; the engine opens the user data and the
 //! lexicon loads on the first key an engine CONSUMES
 //! ([`DesktopRuntime::prepare_for_first_key`]), never when the input method
-//! is merely activated.
+//! is merely activated. macOS, whose stores have always opened at launch,
+//! asks for it from `applicationDidFinishLaunching` (inventory C6).
 
 use crate::composing::ComposingSessionCoordinator;
 use crate::dictionary_artifacts::DictionaryArtifacts;
@@ -36,8 +37,10 @@ pub struct RuntimeParts {
     /// The stamp the lexicon is installed under — the shipping crate's
     /// version, so each shell passes its own.
     pub dictionary_version: u32,
-    /// The machine's UI language as a BCP-47 tag, read at every call.
-    pub system_locale: fn() -> String,
+    /// The machine's UI language as a BCP-47 tag, read at every call. A
+    /// closure, so a shell that is handed the tag (macOS `Configure`) holds
+    /// it in its own runtime rather than in a process static.
+    pub system_locale: Box<dyn Fn() -> String + Send + Sync>,
     /// Which desktop this is — the shell's own constant.
     pub platform: DesktopPlatform,
 }
@@ -50,7 +53,7 @@ pub struct DesktopRuntime {
     data_directory: Option<PathBuf>,
     dictionaries: Box<dyn Fn() -> Option<PathBuf> + Send + Sync>,
     dictionary_version: u32,
-    system_locale: fn() -> String,
+    system_locale: Box<dyn Fn() -> String + Send + Sync>,
     platform: DesktopPlatform,
     first_key: OnceLock<FirstKeySetup>,
     /// The one composing engine driver per process, keyed by context token.
@@ -153,7 +156,9 @@ impl DesktopRuntime {
     /// a key merely observed — the classifier decides first): the lexicon
     /// installed from the dictionaries directory, the engine told to open
     /// the user data (it finishes on a thread of its own), and the shortcut
-    /// registries reconciled (`AppDelegate.swift:56-70`). Idempotent.
+    /// registries reconciled where the shell has a settings store (Windows,
+    /// Linux; macOS reconciles its own in Swift). Idempotent. macOS calls
+    /// it at launch rather than on the first key (inventory C6).
     pub fn prepare_for_first_key(&self) -> &FirstKeySetup {
         self.first_key.get_or_init(|| {
             let lexicon = self.install_lexicon();
@@ -256,7 +261,7 @@ mod tests {
             data_directory: None,
             dictionaries: Box::new(|| None),
             dictionary_version: 1,
-            system_locale: || "ja-JP".to_owned(),
+            system_locale: Box::new(|| "ja-JP".to_owned()),
             platform: TEST_PLATFORM,
         })
     }

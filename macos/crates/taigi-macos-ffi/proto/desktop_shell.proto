@@ -16,17 +16,95 @@ message DesktopRequest {
   // whose variant this library does not know — is refused with FAIL_INVARIANT.
   oneof request {
     VersionRequest version = 1;
+    ConfigureRequest configure = 2;
+    SettingsRequest settings = 3;
+    PrepareRequest prepare = 4;
   }
 }
 
 // Asks the library which version it was built as.
 message VersionRequest {}
 
+// Builds the process's one desktop runtime. Once per process: a second
+// Configure is refused with FAIL_INVARIANT and changes nothing.
+message ConfigureRequest {
+  // Where the engine keeps the user's data. Unset = nothing is learned
+  // (Prepare opens no stores).
+  optional string data_directory = 1;
+  // The directory holding the four dictionary files. Unset = Prepare
+  // installs no lexicon.
+  optional string dictionaries_directory = 2;
+  // The stamp the lexicon is installed under (`CFBundleVersion`).
+  uint32 dictionary_stamp = 3;
+  // The machine's UI language as a BCP-47 tag, as of Configure.
+  string system_locale = 4;
+}
+
+// The settings the key path reads — the only names a SettingsRequest may
+// carry — with the default each one reads as when absent.
+message ConfigureReply {
+  repeated SettingDescriptor settings = 1;
+}
+
+message SettingDescriptor {
+  string name = 1;
+  SettingKind kind = 2;
+  // Unset for a composing chord: absent means the action's own chord, and
+  // the stored empty string means the user cleared the row.
+  SettingValue default_value = 3;
+}
+
+enum SettingKind {
+  SETTING_KIND_UNSPECIFIED = 0;
+  SETTING_KIND_BOOLEAN = 1;
+  SETTING_KIND_TEXT = 2;
+}
+
+message SettingValue {
+  oneof value {
+    bool boolean = 1;
+    string text = 2;
+  }
+}
+
+// The whole snapshot of the whitelisted settings, replacing the last one: a
+// name that is not here reads as its default. An unknown or repeated name,
+// an entry without a value, or a value of the wrong kind refuses the whole
+// request with FAIL_INVARIANT and keeps the previous snapshot.
+message SettingsRequest {
+  repeated SettingEntry entries = 1;
+}
+
+message SettingEntry {
+  string name = 1;
+  SettingValue value = 2;
+}
+
+message SettingsReply {}
+
+// Brings the engine up: installs the lexicon and opens the user data, once
+// per process; a repeat answers the first one's result. Refused with
+// FAIL_INVARIANT before Configure.
+message PrepareRequest {}
+
+message PrepareReply {
+  // Unset when no lexicon is installed.
+  LexiconStats lexicon = 1;
+}
+
+message LexiconStats {
+  uint64 dictionary_record_count = 1;
+  uint64 prefix_index_entry_count = 2;
+}
+
 message DesktopResponse {
   // OK, or why there is no reply.
   taigi.engine.ErrorCode error = 1;
   oneof reply {
     VersionReply version = 2;
+    ConfigureReply configure = 3;
+    SettingsReply settings = 4;
+    PrepareReply prepare = 5;
   }
 }
 

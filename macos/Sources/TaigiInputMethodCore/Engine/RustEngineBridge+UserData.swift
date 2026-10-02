@@ -1,28 +1,12 @@
 // User-data slice of the engine bridge: the engine owns the four stores
 // (`docs/architecture/user-data-engine-roadmap.md` P6) and counts the picks
-// itself (R5, `composingCommitContinuous`); this side names the directory and
-// drives the Custom Dictionary page.
+// itself (R5, `composingCommitContinuous`); the desktop core opens them at
+// launch (`DesktopCoreRuntime.prepare`) and this side drives the Custom
+// Dictionary page.
 
 import Foundation
 
 extension RustEngineBridge {
-    /// Opens the engine's stores over `directory` — the four files under the
-    /// names every platform shares, which the engine applies — once per
-    /// process.
-    ///
-    /// Rollback journal, as this input method's own stores always used (U3).
-    /// Answers at once: the engine puts the stores in use before it returns
-    /// (a pick reported meanwhile queues behind the open) and finishes the
-    /// takeover — re-derivation and seeding included — on a thread of its
-    /// own. A store that cannot open ranks neutrally; the engine logs why.
-    static func userDataOpen(directory: URL) {
-        var open = Taigi_Engine_OpenUserData()
-        open.directory = directory.path
-        open.journal = .delete
-        open.inBackground = true
-        _ = userDataResult(.open(open), op: "userDataOpen")
-    }
-
     /// Empties the selected stores in place; `nil` when the engine could not.
     static func userDataReset(_ reset: Taigi_Engine_ResetUserData) -> Taigi_Engine_UserDataReset? {
         guard case let .reset(removed)? = userDataResult(.reset(reset), op: "userDataReset") else {

@@ -118,7 +118,7 @@ impl Runtime {
             data_directory: data,
             dictionaries: Box::new(move || Some(dictionaries.clone())),
             dictionary_version: dictionary_version(),
-            system_locale,
+            system_locale: Box::new(system_locale),
             platform: taigi_linux_platform::DESKTOP_PLATFORM,
         });
         Self {

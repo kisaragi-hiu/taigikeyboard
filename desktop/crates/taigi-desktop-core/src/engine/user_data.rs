@@ -50,7 +50,7 @@ pub fn open(directory: &Path, platform: DesktopPlatform) -> bool {
 }
 
 /// The journal `platform`'s stores have always used: write-ahead logged on
-/// Windows and Linux, rollback on macOS (`RustEngineBridge+UserData.swift:21`).
+/// Windows and Linux, rollback on macOS (inventory S8).
 /// The engine refuses a second open at another journal
 /// (`engine/userdata/src/requests.rs`), so a process never mixes the two.
 fn journal(platform: DesktopPlatform) -> UserDataJournal {
@@ -333,7 +333,7 @@ mod tests {
     #[test]
     fn each_desktop_opens_its_stores_under_its_own_journal() {
         // trace: WAL on Windows and Linux (U3); DELETE on the Mac
-        // (`RustEngineBridge+UserData.swift:21`, inventory S8).
+        // (inventory S8).
         assert_eq!(journal(DesktopPlatform::Windows), UserDataJournal::Wal);
         assert_eq!(journal(DesktopPlatform::Linux), UserDataJournal::Wal);
         assert_eq!(journal(DesktopPlatform::MacOS), UserDataJournal::Delete);
