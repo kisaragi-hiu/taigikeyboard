@@ -332,8 +332,10 @@ enum TestFixtures {
     /// A legacy back end of its own, over its own coordinator and a manager
     /// with in-memory recorders and an unused generation.
     @MainActor
-    static func makeLegacyBackend() throws -> (LegacyComposingBackend, ComposingManager) {
-        let manager = try makeComposingManager(startingGeneration: generationCounter.next())
+    static func makeLegacyBackend(
+        nextWord: RecordingNextWordPort = RecordingNextWordPort(),
+    ) throws -> (LegacyComposingBackend, ComposingManager) {
+        let manager = try makeComposingManager(nextWord: nextWord, startingGeneration: generationCounter.next())
         return (LegacyComposingBackend(coordinator: makeCoordinator(), manager: manager), manager)
     }
 

@@ -935,6 +935,33 @@ fn e5_every_bundled_symbol_reaches_next_word() {
     assert_eq!(rig.memory.reported(), symbols);
 }
 
+/// Roadmap E4, settled P11d: a format character is document text, so the
+/// pass-through path hands it to the next-word gate. An isolated one and an
+/// emoji ZWJ sequence carry no letter or whitespace and are forwarded;
+/// `x‍y` stops on its letter. The Swift manager's side is
+/// `ComposingBackendParityTests.testE4_anIdleFormatCharacterReachesTheNextWordGate`.
+#[test]
+fn e4_a_format_character_reaches_the_next_word_gate() {
+    // No engine call: the manager only hands the character to the port.
+    // trace: U+200B / U+00AD / U+FEFF / U+200D are neither Alphabetic nor
+    // White_Space; neither are 👩 / 💻; `x` is Alphabetic.
+    let rig = rig_on(DesktopPlatform::MacOS);
+    for character in [
+        "\u{200B}",
+        "\u{AD}",
+        "\u{FEFF}",
+        "x\u{200D}y",
+        "👩\u{200D}💻",
+    ] {
+        rig.manager
+            .note_character_typed_outside_composition(character);
+    }
+    assert_eq!(
+        rig.memory.reported(),
+        vec!["\u{200B}", "\u{AD}", "\u{FEFF}", "👩\u{200D}💻"]
+    );
+}
+
 // MARK: - ComposingSessionCoordinatorTests
 
 #[test]
