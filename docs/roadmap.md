@@ -83,6 +83,7 @@ One line each; the linked section holds the design, the measurements and the ope
 | macOS over `desktop-core` (~4,000 Swift lines duplicate `desktop/crates`) | not scheduled | [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md) § Not scheduled |
 | iOS top-level folder renames (`.pbxproj` = USER-only) | not scheduled | same § |
 | Shared Swift package for macOS + iOS (open-source round 10) | not scheduled; USER adds the local package in Xcode | [`reports/2026-09-24-open-source-readiness-and-layout.md`](reports/2026-09-24-open-source-readiness-and-layout.md) § rounds |
+| Residual platform twins: auto-space punctuation set ×4 (iOS / Android / macOS `AutoSpacePunctuation`, desktop `policies/auto_space.rs`), external-lookup digit-tone fold ×4 (`ExternalLookupURLBuilder` ×3 + desktop `engine/external_lookup.rs`), source-bitmask decode ×3–4 (`LexiconBitmask` ×2, macOS `DictionarySource.swift`, desktop `engine/lexicon.rs`), no-op `SuggestionCaseTransformer` ×2 (delete) | after macOS over `desktop-core` lands (removes the macOS copies); re-verify callers first — files confirmed on main 2026-10-02, callers not; one PR | [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md) Appendix B |
 
 **Project and legal (USER)**
 
