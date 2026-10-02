@@ -130,6 +130,7 @@ against the old engine and pass for the wrong reason:
 | `engine/` (Rust, `Cargo.toml`) | the platform's native build from § 4 (`make ios-libs` / `android-libs` / `macos-libs`; `make build` on macOS does all of them) |
 | a `.proto` file | `make protos` first (protoc 36.2), then as above |
 | `dictionary/` | `make dict`, then as above |
+| `desktop/`, `macos/crates/`, `macos/Cargo.*` | `make macos-libs` (or `make build`) before macOS tests — the archive the app links |
 | platform-only Swift / Kotlin, docs | nothing |
 
 Details and timings: [`architecture/build-artifacts.md`](architecture/build-artifacts.md).

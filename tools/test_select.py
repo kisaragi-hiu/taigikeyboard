@@ -17,6 +17,13 @@ which link dispatch; a direct change to the FFI wire surface (protos, dispatch,
 swift-ffi, android-jni, engine/scripts) also selects ios + android + macos
 behind the stale-artifact prerequisite `make build`.
 
+macOS has two gates: `macos-rust` (the macOS Cargo workspace's native tests +
+clippy + fmt) and `macos` (the Swift suite). An input of the archive the app
+links — `macos/crates/**`, the workspace manifest / lockfile / toolchain, and
+`desktop/**` — selects both, behind `make build`; an engine change reaching
+swift-ffi selects `macos-rust`, as one reaching dispatch selects the desktop
+shells.
+
 A path no rule covers is reported as unmapped (exit 2): add its rule here.
 
 Usage:
@@ -41,6 +48,7 @@ PLATFORMS = (
     "desktop",
     "windows",
     "linux",
+    "macos-rust",
     "macos",
     "ios",
     "android",
@@ -71,6 +79,16 @@ IOS_TEST = (
     "-destination 'platform=iOS Simulator,id=F2E02B3E-520A-465D-8696-C7440AA321CA' test"
 )
 MAKE_BUILD_PREREQUISITE = "run `make build` first (stale-artifact gate) — ios / android / macos link the engine binary"
+# The macOS Cargo workspace: the `taigi-macos-ffi` archive the Swift app links.
+MACOS_RUST_PATHS = (
+    "macos/crates/",
+    "macos/Cargo.toml",
+    "macos/Cargo.lock",
+    "macos/rust-toolchain.toml",
+)
+# The engine crate whose closure the macOS archive links (with dispatch and
+# protos, both below it).
+MACOS_LINKED_CRATE = "swift-ffi"
 ADMIN_LANE_NOTE = "no build/test gate (admin lane)"
 
 # Top-level directories whose files need no build or test gate.
@@ -168,6 +186,7 @@ class Effects:
     engine_leaf_crates: set[str] = field(default_factory=set)  # that crate only
     engine_whole: bool = False
     wire_surface: bool = False
+    macos_archive: bool = False  # an input of the archive the Swift app links
     platforms: set[str] = field(default_factory=set)  # whole-platform gates
     python: set[str] = field(default_factory=set)  # PYTHON_SUITES keys
     swift_dirs: set[str] = field(default_factory=set)  # "ios" / "macos"
@@ -285,13 +304,17 @@ def effects_of(paths: Iterable[str], graph: EngineGraph) -> Effects:
         elif top == "i18n":
             effects.platforms |= {"i18n", "ios", "android", "macos"}
         elif top == "desktop":
-            effects.platforms |= {"desktop", "windows", "linux"}
+            effects.platforms |= {"desktop", "windows", "linux", "macos-rust", "macos"}
+            effects.macos_archive = True
         elif top == "e2e":
             effects.python.add("e2e")
         elif top == "emoji":
             effects.python.add("emoji")
         elif top in ("ios", "macos", "android", "windows", "linux"):
             effects.platforms.add(top)
+            if path.startswith(MACOS_RUST_PATHS):
+                effects.platforms.add("macos-rust")
+                effects.macos_archive = True
         else:
             effects.unmapped.append(path)
     return effects
@@ -329,6 +352,7 @@ PLATFORM_COMMANDS = {
     "desktop": [Command("make desktop-check")],
     "windows": [Command("make windows-check")],
     "linux": [Command("make linux-check")],
+    "macos-rust": [Command("make macos-rust-check")],
     "macos": [Command("make -C macos test")],
     "ios": [Command(IOS_TEST)],
     "android": [
@@ -355,9 +379,12 @@ def select(paths: Iterable[str], graph: EngineGraph) -> Selection:
     selected = shipped | effects.engine_leaf_crates
     if DESKTOP_LINKED_CRATE in shipped:
         platforms |= {"desktop", "windows", "linux"}
-    prerequisites = []
+    if MACOS_LINKED_CRATE in shipped:
+        platforms.add("macos-rust")
     if effects.wire_surface:
         platforms |= {"ios", "android", "macos"}
+    prerequisites = []
+    if effects.wire_surface or effects.macos_archive:
         prerequisites.append(MAKE_BUILD_PREREQUISITE)
 
     commands: dict[str, list[Command]] = {}

@@ -55,7 +55,7 @@ VERSION_PATTERN = re.compile(r"^v?(\d+\.\d+\.\d+)$")
 # silently refuses to upgrade.
 MAX_MACOS_VERSION_COMPONENT = 99
 
-# The four files that hold a release train's version number. Everything else
+# The files that hold a release train's version number. Everything else
 # — the two iOS Info.plists, the macOS package name, the update manifests, the
 # Windows binaries' VERSIONINFO, both About screens — derives from one of these
 # at build or publish time.
@@ -66,10 +66,18 @@ WINDOWS_CARGO_FILE = "windows/Cargo.toml"
 # The desktop train's other Cargo workspaces: the crates Windows and Linux share
 # (`desktop/`) carry the same number so a crate never reports a version its
 # installer does not (docs/architecture/linux-roadmap.md L2 / L11), and
-# `linux/` names the `.deb` and its control `Version` (`linux/Makefile`).
+# `linux/` names the `.deb` and its control `Version` (`linux/Makefile`), and
+# `macos/` holds the static library the macOS input method links
+# (docs/architecture/macos-desktop-core-roadmap.md D7).
 DESKTOP_SHARED_CARGO_FILE = "desktop/Cargo.toml"
 LINUX_CARGO_FILE = "linux/Cargo.toml"
-DESKTOP_CARGO_FILES = (WINDOWS_CARGO_FILE, DESKTOP_SHARED_CARGO_FILE, LINUX_CARGO_FILE)
+MACOS_CARGO_FILE = "macos/Cargo.toml"
+DESKTOP_CARGO_FILES = (
+    WINDOWS_CARGO_FILE,
+    DESKTOP_SHARED_CARGO_FILE,
+    LINUX_CARGO_FILE,
+    MACOS_CARGO_FILE,
+)
 # Which files a train owns. A version write touches exactly one train's files
 # and leaves the other train's alone (USER 2026-08-29: mobile and desktop are
 # numbered separately so each can ship on its own cadence).

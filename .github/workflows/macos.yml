@@ -18,6 +18,7 @@ on:
   pull_request:
     paths:
       - 'macos/**'
+      - 'desktop/**'
       - 'engine/**'
       - '!engine/android-jni/**'
       - '!engine/build-helpers/fst-builder/**'
@@ -31,6 +32,7 @@ on:
     branches: [main]
     paths:
       - 'macos/**'
+      - 'desktop/**'
       - 'engine/**'
       - '!engine/android-jni/**'
       - '!engine/build-helpers/fst-builder/**'
@@ -83,12 +85,115 @@ jobs:
           cargo --version && rustc --version && protoc --version
           xcodebuild -version && swift --version
 
+      # The archive builds in the macOS workspace (macos/target), not the engine's.
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
         with:
-          workspaces: engine
+          workspaces: macos
 
       - name: Build the engine xcframework (arm64)
         run: bash engine/scripts/build-macos-xcframework.sh
 
       - name: make -C macos test
         run: make -C macos test
+
+  # The macOS Cargo workspace (`macos/`: the `taigi-macos-ffi` archive) on its
+  # own, gated like desktop.yml gates `desktop/`: native tests, clippy, fmt —
+  # the steps of `make macos-rust-check` — plus the e2e-trace feature-graph
+  # guard. Ubuntu, as for engine.yml and desktop.yml: the crate has no
+  # platform code, and no step here builds the xcframework.
+  native:
+    name: macOS Rust (test, clippy, fmt, trace guard)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # Overrides macos/rust-toolchain.toml's darwin target list.
+      RUSTUP_TOOLCHAIN: stable
+      # The linux-x86_64 zip's, as in engine.yml (the workflow's is the macOS one).
+      PROTOC_SHA256: c4bc672d9d49214dc8cafdceadf4df92182d6ca8e3ec65a56b2d7de5602669b4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+
+      - name: Install the toolchain (host target only)
+        run: |
+          set -euo pipefail
+          rustup toolchain install stable --profile minimal --component rustfmt,clippy --no-self-update
+          cargo --version && rustc --version && protoc --version
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: macos
+
+      - name: cargo test (macos)
+        run: cargo test --manifest-path macos/Cargo.toml --workspace --locked --no-fail-fast
+
+      # Same gate as `make lint`, macOS half.
+      - name: cargo clippy -D warnings (macos)
+        run: cargo clippy --manifest-path macos/Cargo.toml --workspace --all-targets --locked -- -D warnings
+
+      # Plain fmt, never `--all`: `--all` also checks the engine crates (path
+      # dependencies), which engine.yml gates.
+      - name: cargo fmt --check (macos)
+        run: cargo fmt --check --manifest-path macos/Cargo.toml
+
+      # docs/architecture/e2e-trace-schema.md § Test mode only — the macOS
+      # half of engine.yml's `e2e-trace-guard`. The archive's engine edges set
+      # their own features (`default-features = false` + `user-data`), so
+      # swift-ffi's graph there is not the one this archive ships.
+      - name: shipped feature graph has no e2e-trace
+        run: |
+          set -euo pipefail
+          traced() {
+            cargo tree --manifest-path macos/Cargo.toml -e features -i dispatch -p taigi-macos-ffi "$@" \
+              | grep -q 'dispatch feature "e2e-trace"'
+          }
+          if traced; then
+            echo "::error::taigi-macos-ffi enables dispatch/e2e-trace by default"; exit 1
+          fi
+          # Positive control: the grep sees the feature when it IS on.
+          traced --features e2e-trace
+
+  # macos/Cargo.toml's `rust-version` (the floor of the desktop crates it
+  # links); `native` above runs stable and never exercises it. Read from the
+  # manifest, as engine.yml's and desktop.yml's `msrv` do.
+  msrv:
+    name: macOS Rust on the declared rust-version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PROTOC_SHA256: c4bc672d9d49214dc8cafdceadf4df92182d6ca8e3ec65a56b2d7de5602669b4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install protoc ${{ env.PROTOC_VERSION }}
+        run: |
+          set -euo pipefail
+          curl -sSfL -o "$RUNNER_TEMP/protoc.zip" \
+            "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+          echo "${PROTOC_SHA256}  $RUNNER_TEMP/protoc.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/protoc.zip" -d "$RUNNER_TEMP/protoc"
+          echo "$RUNNER_TEMP/protoc/bin" >> "$GITHUB_PATH"
+
+      - name: Install the declared rust-version (host target only)
+        run: |
+          set -euo pipefail
+          msrv="$(sed -n 's/^rust-version = "\([^"]*\)".*/\1/p' macos/Cargo.toml)"
+          [ -n "$msrv" ] || { echo "::error::no rust-version in macos/Cargo.toml"; exit 1; }
+          rustup toolchain install "$msrv" --profile minimal --no-self-update
+          echo "RUSTUP_TOOLCHAIN=$msrv" >> "$GITHUB_ENV"
+
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          workspaces: macos
+          key: msrv
+
+      - name: cargo check --all-targets
+        run: cargo check --manifest-path macos/Cargo.toml --workspace --all-targets --locked

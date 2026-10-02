@@ -14,7 +14,7 @@ export PATH := $(HOME)/.cargo/bin:$(PATH)
         fmt lint hooks scan-secrets scan-secrets-full scan-private \
         i18n i18n-test \
         macos-release desktop-release desktop-patch desktop-announce version-mobile version-desktop \
-        windows-check windows-release desktop-check linux-check \
+        windows-check windows-release desktop-check linux-check macos-rust-check \
         update-submodules
 
 # Every generated artefact at once — platform bindings, then the iOS xcframework,
@@ -164,6 +164,16 @@ windows-check:
 desktop-check:
 	$(MAKE) -C desktop check
 
+# The macOS Cargo workspace (`macos/`: the `taigi-macos-ffi` archive the app
+# links): native tests + clippy + fmt, any host. Here, not in macos/Makefile,
+# which never builds Rust. The Swift suite is `make -C macos test`, after
+# `make build` rebuilt the archive. Plain fmt, never `--all`: `--all` also
+# checks path dependencies, i.e. the engine crates.
+macos-rust-check:
+	cargo test --manifest-path macos/Cargo.toml --workspace --locked
+	cargo clippy --manifest-path macos/Cargo.toml --workspace --all-targets --locked -- -D warnings
+	cargo fmt --check --manifest-path macos/Cargo.toml
+
 # The Linux input method's host gate (docs/architecture/linux-roadmap.md L12):
 # native tests + clippy for `linux/` (zbus + GTK build on macOS), a cross
 # build of the engine for x86_64-unknown-linux-gnu via cargo-zigbuild, fmt,
@@ -244,16 +254,16 @@ version-mobile version-desktop:
 # ---------------------------------------------------------------------------
 # Formatting & lint — apply across all stacks (`fmt`) or check (`lint`).
 # ---------------------------------------------------------------------------
-#   Rust    rustfmt over all four workspaces (fmt); clippy -D warnings over the
-#           engine and desktop-shared crates (lint). The Windows and Linux
-#           workspaces are linted by `make windows-check` / `make linux-check`,
-#           which need their cross targets.
+#   Rust    rustfmt over all five workspaces (fmt); clippy -D warnings over the
+#           engine, desktop-shared and macOS crates (lint). The Windows and
+#           Linux workspaces are linted by `make windows-check` /
+#           `make linux-check`, which need their cross targets.
 #   Swift   SwiftFormat (Nick Lockwood) — config: .swiftformat (version: mise.toml)
 #   Kotlin  Spotless Gradle plugin — wired in android/app/build.gradle.kts
 #           (spotlessCheck doubles as ktlint).
-# CI runs the same checks: engine.yml, checks.yml, android.yml on pull requests;
-# linux-build.yml nightly.
-RUST_WORKSPACES := engine desktop windows linux
+# CI runs the same checks: engine.yml, desktop.yml, macos.yml, checks.yml,
+# android.yml on pull requests; linux-build.yml nightly.
+RUST_WORKSPACES := engine desktop windows linux macos
 
 fmt:
 	for ws in $(RUST_WORKSPACES); do cargo fmt --all --manifest-path $$ws/Cargo.toml || exit 1; done
@@ -264,6 +274,7 @@ lint:
 	for ws in $(RUST_WORKSPACES); do cargo fmt --all --check --manifest-path $$ws/Cargo.toml || exit 1; done
 	cargo clippy --manifest-path $(ENGINE)/Cargo.toml --workspace --all-targets --locked -- -D warnings
 	cargo clippy --manifest-path desktop/Cargo.toml --workspace --all-targets --locked -- -D warnings
+	cargo clippy --manifest-path macos/Cargo.toml --workspace --all-targets --locked -- -D warnings
 	swiftformat --lint ios   # one directory per call: `--lint ios macos` reads macos as --lint's value
 	swiftformat --lint macos
 	cd android && ./gradlew spotlessCheck
@@ -320,6 +331,7 @@ help:
 	@echo "  make macos-libs         Engine xcframework for the macOS input method (macOS host)"
 	@echo "  make build              All four above, in order (macOS host, every toolchain; no tests)"
 	@echo "  make desktop-check      Native gate for the desktop-shared crates (desktop/)"
+	@echo "  make macos-rust-check   Native gate for the macOS Cargo workspace (macos/)"
 	@echo "  make linux-check        Host-side compile + test gate for the Linux input method"
 	@echo "  make windows-check      Host-side compile + test gate for the Windows input method"
 	@echo ""
@@ -333,8 +345,8 @@ help:
 	@echo "  make update-submodules  Pull latest for all submodules (review + commit gitlink bumps)"
 	@echo ""
 	@echo "Quality and hooks"
-	@echo "  make fmt                Apply formatting: rustfmt (4 workspaces) + SwiftFormat + Spotless"
-	@echo "  make lint               Check it: rustfmt + clippy (engine, desktop) + SwiftFormat + Spotless"
+	@echo "  make fmt                Apply formatting: rustfmt (5 workspaces) + SwiftFormat + Spotless"
+	@echo "  make lint               Check it: rustfmt + clippy (engine, desktop, macos) + SwiftFormat + Spotless"
 	@echo "  make hooks              Activate the repo's git hooks in this clone (secret scan on commit)"
 	@echo "  make scan-secrets       Scan for credentials since the last clean full scan"
 	@echo "  make scan-secrets-full  Rescan the whole history and re-baseline .gitleaks-scanned"

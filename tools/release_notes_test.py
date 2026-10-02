@@ -342,6 +342,19 @@ zbus = { version = "5", default-features = false }
 """
 
 
+MACOS_CARGO_FIXTURE = """[workspace]
+resolver = "2"
+members = ["crates/taigi-macos-ffi"]
+
+[workspace.package]
+version = "3.6.6"
+edition = "2021"
+
+[workspace.dependencies]
+prost = "0.14"
+"""
+
+
 PROJECT_FILES = (
     release_notes.ANDROID_GRADLE_FILE,
     release_notes.IOS_PROJECT_FILE,
@@ -349,6 +362,7 @@ PROJECT_FILES = (
     release_notes.WINDOWS_CARGO_FILE,
     release_notes.DESKTOP_SHARED_CARGO_FILE,
     release_notes.LINUX_CARGO_FILE,
+    release_notes.MACOS_CARGO_FILE,
 )
 
 
@@ -367,9 +381,11 @@ class ProjectVersionWriterTests(unittest.TestCase):
         cargo: str = CARGO_FIXTURE,
         desktop_cargo: str = DESKTOP_SHARED_CARGO_FIXTURE,
         linux_cargo: str = LINUX_CARGO_FIXTURE,
+        macos_cargo: str = MACOS_CARGO_FIXTURE,
     ) -> None:
         for relative_path, content in zip(
-            PROJECT_FILES, (gradle, pbxproj, plist, cargo, desktop_cargo, linux_cargo)
+            PROJECT_FILES,
+            (gradle, pbxproj, plist, cargo, desktop_cargo, linux_cargo, macos_cargo),
         ):
             path = self.repo_root / relative_path
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -439,6 +455,7 @@ class ProjectVersionWriterTests(unittest.TestCase):
                 "windows/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
                 "desktop/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
                 "linux/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
+                "macos/Cargo.toml: workspace version 3.6.6 -> 3.7.0",
             ),
         )
 
@@ -451,6 +468,18 @@ class ProjectVersionWriterTests(unittest.TestCase):
 
         with self.assertRaisesRegex(
             release_notes.ReleaseNotesError, "linux/Cargo.toml workspace version is 3.6.5"
+        ):
+            release_notes.check_project_versions(self.repo_root, "3.6.6", "desktop")
+
+    def test_check_refuses_a_macos_workspace_on_another_version(self) -> None:
+        # The archive the macOS app links is a desktop crate like any other: a
+        # bump that skipped it would ship a crate version its installer is not.
+        self.write_tree(
+            macos_cargo=MACOS_CARGO_FIXTURE.replace('version = "3.6.6"', 'version = "3.6.5"')
+        )
+
+        with self.assertRaisesRegex(
+            release_notes.ReleaseNotesError, "macos/Cargo.toml workspace version is 3.6.5"
         ):
             release_notes.check_project_versions(self.repo_root, "3.6.6", "desktop")
 
