@@ -4,9 +4,9 @@ import InputMethodKit
 import KeyboardShortcuts
 
 /// One instance per client text session. Owns no composition of its own — it
-/// claims the process-wide engine while its session is focused, translates key
-/// events into composing intents, and writes the resulting effects into its own
-/// client.
+/// claims the process-wide engine while its session is focused, hands key
+/// events to the `ComposingBackend`, and replays what it answers into its own
+/// client and the candidate window.
 ///
 /// `@objc(TaigiInputController)` pins the Objective-C runtime name that
 /// `InputMethodServerControllerClass` looks up in the bundle's Info.plist.
@@ -23,26 +23,26 @@ public final class TaigiInputController: IMKInputController {
     private let sessionToken = ComposingSessionToken()
 
     /// Whether this controller last left a marked region in its client. Kept
-    /// here rather than read from the manager because the case that needs it is
-    /// exactly the one where the manager no longer speaks for this session — see
+    /// here rather than asked of the back end because the case that needs it is
+    /// exactly the one where the back end no longer speaks for this session — see
     /// `finishComposition(into:)`.
     @MainActor
     private var isMarkedTextVisible = false
 
-    /// The candidates the last fetch returned and the cells the window shows
-    /// for them (`CandidateSource`). The absolute indices the
-    /// `CandidatePresenter` seam answers with name PRESENTED cells, so a
-    /// commit resolves them through `source.resolve`; the selection itself
-    /// lives in the window, which owns the measured page geometry the
-    /// selection moves through.
-    ///
-    /// Per controller rather than process-wide, even though the composition it
-    /// describes is not: a session that is not focused cannot reach the engine
-    /// (`ComposingSessionCoordinator.manager(ownedBy:)` answers nil), so its copy
-    /// is never read again, and a shared one would need the same ownership guard
-    /// the coordinator already provides.
+    /// What runs the key path: the composition, the candidate list, the
+    /// commits. This controller replays what it answers (`replay`).
     @MainActor
-    private var source = CandidateSource.empty
+    private var backend: any ComposingBackend {
+        ComposingBackends.shared
+    }
+
+    /// Whether this session's candidate list is on screen — true once the
+    /// window took a list, false from any dismissal on. Sent with every
+    /// request (`ComposingPanelState.isListOnScreen`): the back end's list is
+    /// only ever the one the user can see, so the arrows and the slot keys
+    /// never reach candidates behind a window that is not up.
+    @MainActor
+    private var isCandidateListOnScreen = false
 
     /// Where the candidate bar is shown. Backed by an optional so a test can
     /// substitute a double before the first key event: the shipped bar is an
@@ -235,7 +235,7 @@ public final class TaigiInputController: IMKInputController {
         Self.logger.debug("activateServer")
         onMainActor(sender) { controller, client in
             controller.lastClient = client
-            ComposingSessionCoordinator.shared.claim(controller.sessionToken)
+            controller.backend.activate(controller.sessionToken)
             // After the claim, which just cleared the previous session's
             // endpoint: this session is the one the shortcut hotkeys should
             // now act through, and registering is what turns them on.
@@ -247,7 +247,7 @@ public final class TaigiInputController: IMKInputController {
             controller.displayModeObservation = controller.settings.observeChanges(
                 of: SettingsStore.Keys.candidateDisplayMode,
                 onMainActor: { [weak controller] in
-                    controller?.refetchCandidatesForDisplayModeChange()
+                    controller?.representCandidates(refetch: true)
                 },
             )
             controller.candidateWindowObservation = controller.settings.observeChanges(
@@ -265,7 +265,7 @@ public final class TaigiInputController: IMKInputController {
             // whether this session's bar survives. Hiding our own window is not
             // a client query, so the activation rule above still holds.
             controller.candidatePresenter.hideForHandover()
-            controller.source = .empty
+            controller.isCandidateListOnScreen = false
             // The picker goes the same way, for the same reason: a list left
             // up by the outgoing session would be picked from by this one.
             controller.symbolPickerPresenter.hideForHandover()
@@ -628,14 +628,14 @@ public final class TaigiInputController: IMKInputController {
             // still the right one — re-rendered, selection kept. Dismissing
             // here read as the window vanishing (real device, 2026-08-21).
             // (The Candidate Display picker is the setting that DOES change which
-            // candidates exist — see `refetchCandidatesForDisplayModeChange`.)
+            // candidates exist — see `representCandidates(refetch:)`.)
             settings.storedIsHanjiFirst.toggle()
-            rerenderCandidatesForDisplayChange()
+            representCandidates(refetch: false)
         case .cycleCandidateDisplayMode:
             // Never inert: every mode has a next one. Only the setting is
             // written here — the open bar is re-fetched by the observation
             // `activateServer` armed on this key, which is the one path the
-            // Appearance pane's write already takes (`refetchCandidatesForDisplayModeChange`).
+            // Appearance pane's write already takes (`representCandidates(refetch:)`).
             // That observation hops to the main actor, so the flash below
             // lands one turn BEFORE the bar changes shape; a second, in-line
             // re-fetch would run the same fetch twice.
@@ -660,34 +660,32 @@ public final class TaigiInputController: IMKInputController {
         }
     }
 
-    /// Re-renders the candidates on screen after a display-only setting flip.
-    ///
-    /// Through `updateCells`, not `presentCandidates`: this runs from the
-    /// Carbon hotkey path, which has no client to ask for a caret rectangle —
-    /// and needs none, because the window is already anchored. The presented
-    /// list is rebuilt through the manager, whose `presentation(for:)` reads
-    /// the live settings the toggle just wrote.
+    /// The list on screen again under the settings just written
+    /// (`ComposingBackend.represent`): re-rendered after the Hanji/romanization
+    /// swap, fetched again (`refetch`) after a Candidate Display change, which
+    /// alters WHICH candidates exist. Repainted through `updateCells`, not
+    /// anchored again: the Carbon hotkey and the settings observation have no
+    /// client to ask for a caret rectangle — and need none, because the
+    /// window is already anchored.
     @MainActor
-    private func rerenderCandidatesForDisplayChange() {
-        guard !source.isEmpty,
-              let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken)
-        else { return }
-        source = CandidateSource(candidates: source.candidates, manager: manager)
-        updateCellsInPlace()
+    private func representCandidates(refetch: Bool) {
+        switch backend.represent(refetch: refetch, in: request(client: nil, armedSwap: nil)) {
+        case nil, .unchanged:
+            break
+        case let .changed(list):
+            candidatePresenter.updateCells(windowContent(list), ownedBy: sessionToken)
+        case .closed:
+            dismissCandidates()
+        }
     }
 
-    @MainActor
-    private func updateCellsInPlace() {
-        candidatePresenter.updateCells(windowContent, ownedBy: sessionToken)
-    }
-
-    /// The current list as the window takes it — read by both the fresh-list
+    /// A list as the window takes it — built the same way for the fresh-list
     /// path and the in-place update, so a repaint can never draw a different
     /// key row than a `show` of the same list would.
     @MainActor
-    private var windowContent: CandidateWindowContent {
+    private func windowContent(_ list: CandidateListUpdate) -> CandidateWindowContent {
         CandidateWindowContent(
-            cells: source.cells,
+            cells: list.cells,
             // The set the user chose — the only keys that pick. A rebind
             // cannot strand a stale hint: reaching the shortcut pane moves
             // focus off the client, and `finishComposition` takes the bar
@@ -696,7 +694,7 @@ public final class TaigiInputController: IMKInputController {
             // The §34 literal is what the user is already typing, not an offer
             // to pick, so it takes no key and the keys start on the cell after
             // it (USER 2026-09-09).
-            leadCellIsUnkeyed: source.leadsWithLiteralRoman,
+            leadCellIsUnkeyed: list.leadsWithLiteralRoman,
         )
     }
 
@@ -706,16 +704,14 @@ public final class TaigiInputController: IMKInputController {
     private func handle(_ key: KeyEventSnapshot, client: IMKTextInput?) -> Bool {
         // Every key gets exactly one chance at the swap: the arm is consumed
         // here — before ANY early return, so an event this session cannot
-        // handle still invalidates it — and only the auto-space paths in the
-        // switch below re-arm it. A key that went anywhere else changed the
-        // document or the caret, and a swap after that would be rewriting text
-        // it never measured.
+        // handle still invalidates it — and only the auto-space paths of the
+        // back end re-arm it (`replay`). A key that went anywhere else changed
+        // the document or the caret, and a swap after that would be rewriting
+        // text it never measured.
         let armedSwap = armedAutoSpaceCaret
         armedAutoSpaceCaret = nil
 
-        guard let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken),
-              let client
-        else { return false }
+        guard backend.owns(sessionToken), let client else { return false }
 
         // The guide goes down on the first key after it came up, before that
         // key is read: it is a card to glance at, not a mode. A plain Escape
@@ -732,8 +728,7 @@ public final class TaigiInputController: IMKInputController {
             }
         }
 
-        let executor = ClientEffectExecutor(client: client)
-        defer { isMarkedTextVisible = manager.isComposing }
+        defer { isMarkedTextVisible = backend.isComposing(sessionToken) }
         // Resolved once per key: every consumer below reads the same value.
         let bindings = settings.composingKeyBindings
 
@@ -749,7 +744,7 @@ public final class TaigiInputController: IMKInputController {
             if isSymbolPickerOpen {
                 dismissSymbolPicker()
             } else {
-                openSymbolPicker(from: manager, client: client, executing: executor, bindings: bindings)
+                openSymbolPicker(client: client, bindings: bindings)
             }
             return true
         }
@@ -762,164 +757,106 @@ public final class TaigiInputController: IMKInputController {
         // clears it again so the contract below sees what it always does.
         if isSymbolPickerOpen {
             armedAutoSpaceCaret = armedSwap
-            if handleSymbolPickerKey(key, bindings: bindings, manager: manager, client: client) {
+            if handleSymbolPickerKey(key, bindings: bindings, client: client) {
                 return true
             }
             armedAutoSpaceCaret = nil
         }
 
-        // A window the user switched off since the last key comes down HERE,
-        // before the key is read: the setting's observer runs on a later
-        // main-actor turn, and a Return classified against a bar still up
-        // would pick a candidate the user asked never to see.
-        if !settings.isCandidateWindowEnabled, !source.isEmpty {
-            dismissCandidates()
+        var handled = false
+        send(client: client, armedSwap: armedSwap) { request in
+            backend.key(key, bindings: bindings, in: request).map { reply in
+                handled = reply.handled
+                return reply.effects
+            }
         }
+        return handled
+    }
 
-        let intent = ComposingKeyIntent.intent(
-            for: key,
-            isComposing: manager.isComposing,
-            isShowingCandidates: !source.isEmpty,
-            bindings: bindings,
-        )
-        Self.logger.debug("key intent \(String(describing: intent))")
-
-        switch intent {
-        case let .input(text):
-            manager.append(text, executing: executor)
-            refreshCandidates(from: manager, client: client)
-        case let .telexKey(key):
-            manager.telexKey(key, executing: executor)
-            refreshCandidates(from: manager, client: client)
-        case .deleteBackward:
-            manager.deleteBackward(executing: executor)
-            refreshCandidates(from: manager, client: client)
-        case let .moveCaret(direction):
-            // No refetch: the text did not change, so the candidates, the
-            // highlight and the page still describe it. The bar stays
-            // anchored where it was — at the end of the marked region.
-            manager.moveCaret(direction, executing: executor)
-        case .commit:
-            commitAsTyped(from: manager, client: client, executing: executor)
-        case .cancel:
-            manager.cancelComposition(executing: executor)
-            dismissCandidates()
-        case let .commitThenInsert(text):
-            // Mapped before the auto-space augmentation so the full-width
-            // character rides the same single mutation as the commit. Both
-            // rewrites CAN fire here: this path commits the preedit as typed,
-            // which is romanization under every mode, while the full-width map
-            // still answers to the output mode — so Hanji mode + Auto-Space gets
-            // `taigi？ `. The full-width map reading the mode rather than the
-            // committed string is a separate approximation, untouched here.
-            let isWidthFlip = ComposingKeyIntent.widthFlipCharacter(key) != nil
-            let documentText = documentPunctuation(text, isWidthFlip: isWidthFlip) ?? text
-            let insert = AutoSpacePolicy.augmentInsert(
-                documentText,
-                afterComposition: manager.displayText,
-                isGateActive: isAutoSpaceGateActive(
-                    wroteRomanization: AutoSpacePolicy.rawPreeditWritesRomanization(
-                        inputMode: settings.inputMode,
-                    ),
-                ),
-            )
-            let committedText = manager.commitComposition(thenInsert: insert.text, executing: executor)
-            dismissCandidates()
-            // Armed only when the engine really wrote the mutation — a commit
-            // it ignored left the document without the space to swap with.
-            if insert.leavesTrailingAutoSpace, committedText != nil {
-                armAutoSpaceSwap(client)
-            }
-        case .commitThenPassThrough:
-            manager.commitComposition(executing: executor)
-            dismissCandidates()
-            return false
-        case .passThrough:
-            // Attaching punctuation typed right after an auto-inserted space
-            // swaps with it (`guá ` + `?` → `guá? `) instead of reaching the
-            // host — one of the two pass-through keys this input method
-            // consumes.
-            //
-            // Read BEFORE the full-width map, and since the Hanji/romanization key that
-            // ordering decides a real case rather than an impossible one: in
-            // Hanji mode Space writes a romanization and arms a space, and the
-            // `?` that follows matches both rules. The swap wins, and should —
-            // the word in front of the caret is romanization, which reads as
-            // Latin text and takes Latin punctuation, whatever the mode would
-            // say about a hanji word. Pinned by
-            // `AutoSpaceControllerTests.testTheSwapFollowsASpaceTheAlternate…`.
-            //
-            // The width-flip chord is the exception to that ordering: the user
-            // named the width, so the swap attaches the glyph they asked for
-            // (`guá ` + `⌃,` in romanization mode → `guá， `).
-            guard let typed = ComposingKeyIntent.documentText(of: key) else { return false }
-            let isWidthFlip = ComposingKeyIntent.widthFlipCharacter(key) != nil
-            let punctuation = documentPunctuation(typed, isWidthFlip: isWidthFlip)
-            if let armedSwap,
-               swapAutoSpace(
-                   inserting: isWidthFlip ? punctuation ?? typed : typed,
-                   armedAt: armedSwap, client: client, manager: manager,
-               )
-            {
-                return true
-            }
-            // Punctuation this input method writes itself — full-width under
-            // the mode, or either width under the flip chord — the other
-            // consumed pass-through key. The host cannot map a key it types
-            // itself (and would read the chord as a shortcut), so the
-            // character is written here instead, and the engine hears about it
-            // the same way it would have below.
-            if let punctuation {
-                client.insertText(punctuation, replacementRange: ClientEffectExecutor.atInsertionPoint)
-                manager.noteCharacterTypedOutsideComposition(punctuation)
-                return true
-            }
-            // The host gets the key either way. Text going into the document
-            // without passing through a composition is still context, though:
-            // a full stop typed here is what ends the sentence the next-word
-            // learning would otherwise carry across.
-            manager.noteCharacterTypedOutsideComposition(typed)
-            return false
-        case .commitHighlightedCandidate:
-            // The window is authoritative for which absolute index its selection
-            // is on. The cell's own script: under Hanji with Romanization that is the Hanji for
-            // a Hanji cell and the romanization for a romanization cell.
-            commitPresented(
-                at: candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
-                flip: false,
-                from: manager, client: client, executing: executor,
-            )
-        case .commitAlternateScript:
-            // The Hanji/romanization key: same candidate the highlight is on, written in the
-            // script the cell does NOT stand for. A candidate that has only one
-            // answers `.ignored` inside the commit, so the key is consumed and
-            // nothing happens — the same answer `⌃7` gets on a page with no
-            // seventh slot.
-            commitPresented(
-                at: candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken),
-                flip: true,
-                from: manager, client: client, executing: executor,
-            )
-        case let .selectCandidateSlot(slot, flip):
-            // A key aimed at one of the empty slots the last page ends with
-            // resolves to no index, and is consumed all the same: `y` is a
-            // slot key while the bar is up, and typing it into the composition
-            // only when the page happens to be short would make a letter land
-            // at random. `flip` is ⇧ on the key: the same cell in its other
-            // script, with Space's "nothing to write" answer for a cell that
-            // has only one.
-            commitPresented(
-                at: candidatePresenter.candidateIndex(forKeySlot: slot, ownedBy: sessionToken),
-                flip: flip,
-                from: manager, client: client, executing: executor,
-            )
-        case let .navigate(direction):
-            // The window interprets the direction for its layout and repaints
-            // itself — nothing comes back, because the window is authoritative
-            // for the selection and the commit paths above ask it.
-            candidatePresenter.navigate(direction, ownedBy: sessionToken)
-        }
+    /// Sends one request made with `client` and replays the answer, with the
+    /// same arm on both sides. False when this session does not own the
+    /// engine — nothing was answered, nothing replayed.
+    @MainActor
+    @discardableResult
+    private func send(
+        client: IMKTextInput,
+        armedSwap: Int?,
+        _ call: (ComposingRequest) -> [ComposingBackendEffect]?,
+    ) -> Bool {
+        guard let effects = call(request(client: client, armedSwap: armedSwap)) else { return false }
+        replay(effects, into: client, armedSwap: armedSwap)
         return true
+    }
+
+    /// A request from this session: its window and, with a client and an arm
+    /// (the one this key consumed on entry, not whatever is stored by now),
+    /// the swap's client check.
+    @MainActor
+    private func request(client: IMKTextInput?, armedSwap: Int?) -> ComposingRequest {
+        var canSwap: (@MainActor () -> Bool)?
+        if let armedSwap, let client {
+            canSwap = { Self.canSwapAutoSpace(armedAt: armedSwap, in: client) }
+        }
+        return ComposingRequest(
+            session: sessionToken,
+            settings: settings,
+            panel: ComposingPanelState(
+                isListOnScreen: isCandidateListOnScreen,
+                selectedIndex: { [unowned self] in
+                    candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken)
+                },
+                indexForKeySlot: { [unowned self] slot in
+                    candidatePresenter.candidateIndex(forKeySlot: slot, ownedBy: sessionToken)
+                },
+                canSwapPrecedingSpace: canSwap,
+            ),
+        )
+    }
+
+    /// Does what the back end answered to a request made with `client`, in
+    /// its order, to the client and the window (a represent has its own,
+    /// `representCandidates`).
+    @MainActor
+    private func replay(_ effects: [ComposingBackendEffect], into client: IMKTextInput, armedSwap: Int?) {
+        // Where a swap in this reply left the caret: the re-arm that follows
+        // it is arithmetic, not another `selectedRange()` query — the
+        // rewrite's end is fully determined by the range just replaced, and
+        // the next swap re-verifies the position against the client anyway,
+        // so a client that moved the caret degrades to no swap.
+        var caretAfterSwap: Int?
+        let writer = ClientEffectExecutor(client: client)
+        for effect in effects {
+            switch effect {
+            case let .setMarkedText(text, caretUTF16):
+                writer.execute(.updatePreedit(text, caretUTF16: caretUTF16))
+            case .clearMarkedText:
+                writer.execute(.clearPreeditWithoutCommit)
+            case let .insertText(text):
+                // One `insertText` at the insertion point — a commit, the
+                // auto space, a mapped punctuation or a symbol alike.
+                writer.execute(.commitTextReplacingPreedit(text))
+            case let .swapPrecedingSpace(replacement):
+                // Only ever answered after `canSwapPrecedingSpace` found the
+                // arm and the space still in front of the caret.
+                guard let armedSwap else { preconditionFailure("a swap answered with no arm") }
+                client.insertText(replacement, replacementRange: Self.autoSpaceRange(armedAt: armedSwap))
+                caretAfterSwap = armedSwap - 1 + (replacement as NSString).length
+            case .armSwap:
+                if let caretAfterSwap {
+                    armedAutoSpaceCaret = caretAfterSwap
+                } else {
+                    armAutoSpaceSwap(client)
+                }
+            case let .candidatesChanged(list):
+                presentCandidates(list, client: client)
+            case .candidatesClosed:
+                dismissCandidates()
+            case let .navigate(direction):
+                // The window interprets the direction for its layout and
+                // repaints itself — it is authoritative for the selection.
+                candidatePresenter.navigate(direction, ownedBy: sessionToken)
+            }
+        }
     }
 
     /// Announces a mode the user just switched into, through the injected
@@ -942,127 +879,12 @@ public final class TaigiInputController: IMKInputController {
 
     // MARK: - Candidates
 
-    /// Commits the cell the window shows at `index` — in the cell's own
-    /// script, or with `flip` the other script of the same candidate (what
-    /// Space asks for). A nil index and one past the list both mean "nothing
-    /// to commit", and the key is consumed either way: letting a Space through
-    /// would drop a stray space into a document whose composition is still
-    /// running, and committing would write a candidate the user cannot see.
-    @MainActor
-    private func commitPresented(
-        at index: Int?,
-        flip: Bool,
-        from manager: ComposingManager,
-        client: IMKTextInput,
-        executing executor: ComposingEffectExecutor,
-    ) {
-        guard let index, let (candidate, script) = source.resolve(cellIndex: index, flip: flip)
-        else { return }
-        commit(candidate, script: script, from: manager, client: client, executing: executor)
-    }
-
-    /// Commits one candidate in `script` — resolved by the caller from the
-    /// cell — and shows whatever the composition became.
-    @MainActor
-    private func commit(
-        _ candidate: ContinuousCandidate,
-        script: CandidateScript,
-        from manager: ComposingManager,
-        client: IMKTextInput,
-        executing executor: ComposingEffectExecutor,
-    ) {
-        let outcome = manager.commitCandidate(candidate, script: script, executing: executor)
-        Self.logger.debug("candidate commit \(String(describing: outcome))")
-        switch outcome {
-        case let .finalized(earnsAutoSpace):
-            dismissCandidates()
-            // Final commit only, mirroring iOS (`ActionHandler+Suggestions.swift:129-133`):
-            // a nailed segment keeps composing more syllables — and writes
-            // nothing to the document under Model B anyway.
-            //
-            // The engine's verdict on what the pick wrote is carried into the
-            // gate rather than re-derived here: spacing is a property of
-            // ROMANIZATION (no trailing `-`), and both the Hanji/romanization
-            // key and a candidate with no Hanji write a script the output mode
-            // alone would name wrong (`AutoSpacePolicy.isGateActive`). So the
-            // answer follows the document — a romanization written in Hanji
-            // mode is spaced, a hanji written in romanization mode is not — and
-            // Auto-Space OFF still means no space anywhere (USER 2026-08-25).
-            if isAutoSpaceGateActive(wroteRomanization: earnsAutoSpace) {
-                appendAutoSpace(client)
-            }
-        case .nailed, .ignored, .unavailable:
-            // Anything short of a finished composition is answered by asking the
-            // engine what it is holding NOW rather than by reading the outcome:
-            // a commit the engine ignored may have been ignored because a
-            // generation change had already reset it to Idle
-            // (`CandidateOutcomes.swift`), and treating that as "nothing
-            // changed" would leave a bar describing a composition that is gone.
-            refreshCandidates(from: manager, client: client)
-        }
-    }
-
-    /// Ends the composition as typed — the romanization with its tone marks —
-    /// and spaces it if the auto-space gate says so. What ⇧Return does, and
-    /// what the symbol picker does to a composition with no highlight to take.
-    @MainActor
-    private func commitAsTyped(
-        from manager: ComposingManager,
-        client: IMKTextInput,
-        executing executor: ComposingEffectExecutor,
-    ) {
-        let committedText = manager.commitComposition(executing: executor)
-        dismissCandidates()
-        guard let committedText,
-              isAutoSpaceGateActive(
-                  wroteRomanization: AutoSpacePolicy.rawPreeditWritesRomanization(inputMode: settings.inputMode),
-              ),
-              AutoSpacePolicy.shouldAppendSpace(afterCommitting: committedText)
-        else { return }
-        appendAutoSpace(client)
-    }
-
-    /// Re-reads the candidates for the composition as it now stands, and shows
-    /// them.
-    @MainActor
-    private func refreshCandidates(from manager: ComposingManager, client: IMKTextInput) {
-        // With the window off nothing is fetched, not merely not shown: a
-        // list kept behind no window would turn `isShowingCandidates` on and
-        // hand Space and the slot keys to candidates the user cannot see.
-        // The composition itself is untouched — the engine still composes
-        // it, and Return writes it as typed (`ComposingKeyIntent`).
-        guard settings.isCandidateWindowEnabled else {
-            dismissCandidates()
-            return
-        }
-        switch manager.fetchCandidates() {
-        case .unavailable:
-            // The QUERY left the engine as it was, but the keystroke before it
-            // did not: the character is already in the buffer and already in the
-            // marked region. Candidates fetched for the previous buffer would
-            // offer spans measured against text that has since changed, and
-            // `CommitContinuous` only checks that a span is consumable — not
-            // that it came from the composition on screen.
-            Self.logger.debug("candidate fetch unavailable — taking the bar down")
-            dismissCandidates()
-        case .notComposing:
-            dismissCandidates()
-        case let .found(fetched):
-            source = CandidateSource(candidates: fetched, manager: manager)
-            if fetched.isEmpty {
-                dismissCandidates()
-            } else {
-                presentCandidates(from: manager, client: client)
-            }
-        }
-    }
-
     /// Puts the list on screen, anchored to the caret. The window selects its
     /// first candidate — a fresh keystroke re-ranks the whole list, so a held
     /// position would sit on an unrelated word.
     @MainActor
-    private func presentCandidates(from manager: ComposingManager, client: IMKTextInput) {
-        guard let caretRect = caretRect(in: client, markedTextLength: manager.displayText.utf16.count)
+    private func presentCandidates(_ list: CandidateListUpdate, client: IMKTextInput) {
+        guard let caretRect = caretRect(in: client, markedTextLength: list.markedTextLengthUTF16)
         else {
             // A client that cannot say where its caret is cannot host a bar that
             // points at it, and one parked in the corner of the screen is worse
@@ -1078,7 +900,7 @@ public final class TaigiInputController: IMKInputController {
         }
 
         candidatePresenter.show(
-            windowContent,
+            windowContent(list),
             anchoredTo: caretRect,
             hostWindowLevel: client.windowLevel(),
             // Feeds the Multicolour accent resolution: when the system has no
@@ -1087,26 +909,7 @@ public final class TaigiInputController: IMKInputController {
             hostBundleIdentifier: client.bundleIdentifier(),
             ownedBy: sessionToken,
         )
-    }
-
-    /// Fetches the candidates again after a Candidate Display change and repaints the
-    /// bar in place. Unlike the swap, this setting changes WHICH candidates
-    /// exist — under Romanization Only the engine collapses same-roman rows (§44) — so a
-    /// repaint of the old fetch would keep the duplicates on screen.
-    /// Through `updateCells`, like the swap: the KVO path has no client to ask
-    /// for a caret rectangle, and the window is already anchored. The bar goes
-    /// down only when the composition is gone or the new list is empty.
-    @MainActor
-    private func refetchCandidatesForDisplayModeChange() {
-        guard !source.isEmpty,
-              let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken)
-        else { return }
-        guard case let .found(fetched) = manager.fetchCandidates(), !fetched.isEmpty else {
-            dismissCandidates()
-            return
-        }
-        source = CandidateSource(candidates: fetched, manager: manager)
-        updateCellsInPlace()
+        isCandidateListOnScreen = true
     }
 
     /// Brings the window into line with the Show Candidate Window setting the General pane (or
@@ -1114,12 +917,10 @@ public final class TaigiInputController: IMKInputController {
     ///
     /// Off takes the list and the window down together (`dismissCandidates`)
     /// and leaves the marked text alone: the user's characters are the
-    /// engine's, and only the presentation was switched off. On fetches for
-    /// the composition as it stands — through `refreshCandidates`, which is
-    /// what a keystroke does, against the client this session last wrote
-    /// to: unlike the display-mode refetch there is no anchored window to
-    /// repaint in place, so the caret has to be asked for. With no client
-    /// to ask, the next keystroke fetches instead. An idle session has
+    /// engine's, and only the presentation was switched off. On waits for the
+    /// next keystroke, which fetches for the composition as it stands: unlike
+    /// the display-mode refetch there is no anchored window to repaint in
+    /// place, so the caret would have to be asked for. An idle session has
     /// nothing to fetch or hide.
     @MainActor
     private func applyCandidateWindowSettingChange() {
@@ -1132,9 +933,11 @@ public final class TaigiInputController: IMKInputController {
         dismissCandidates()
     }
 
+    /// Takes the window down; the back end drops its list on the next
+    /// request (`isCandidateListOnScreen`).
     @MainActor
     private func dismissCandidates() {
-        source = .empty
+        isCandidateListOnScreen = false
         candidatePresenter.hide(ownedBy: sessionToken)
     }
 
@@ -1153,29 +956,18 @@ public final class TaigiInputController: IMKInputController {
     }
 
     /// Ends whatever is composing, then puts the symbol list up over the
-    /// caret. Commit first, as vChewing does
-    /// (`InputHandler_HandleStates.swift:1110`): the picker writes into the
-    /// document, and a composition still marked there would have the symbol
-    /// land inside it. A commit that only NAILED a segment leaves the
-    /// composition running, and the picker waits for a key that ends it.
+    /// caret (`ComposingBackend.commitForSymbolPicker`). A commit that only
+    /// NAILED a segment leaves the composition running, and the picker waits
+    /// for a key that ends it.
     @MainActor
-    private func openSymbolPicker(
-        from manager: ComposingManager,
-        client: IMKTextInput,
-        executing executor: ComposingEffectExecutor,
-        bindings: ComposingKeyBindings,
-    ) {
-        if manager.isComposing {
+    private func openSymbolPicker(client: IMKTextInput, bindings: ComposingKeyBindings) {
+        if backend.isComposing(sessionToken) {
             // The commit moves the caret; whatever it earns re-arms.
             armedAutoSpaceCaret = nil
-            if let highlighted = candidatePresenter.selectedCandidateIndex(ownedBy: sessionToken) {
-                commitPresented(at: highlighted, flip: false, from: manager, client: client, executing: executor)
-            } else {
-                commitAsTyped(from: manager, client: client, executing: executor)
-            }
-            guard !manager.isComposing else { return }
+            send(client: client, armedSwap: nil) { backend.commitForSymbolPicker(in: $0) }
+            guard !backend.isComposing(sessionToken) else { return }
         }
-        presentSymbolPicker(in: client, executing: executor, bindings: bindings)
+        presentSymbolPicker(in: client, bindings: bindings)
     }
 
     /// Shows the whole table anchored to the caret — one list, in file
@@ -1212,11 +1004,7 @@ public final class TaigiInputController: IMKInputController {
     /// picker recorded as open over a window nobody can see would go on
     /// swallowing the slot keys.
     @MainActor
-    private func presentSymbolPicker(
-        in client: IMKTextInput,
-        executing executor: ComposingEffectExecutor,
-        bindings: ComposingKeyBindings,
-    ) {
+    private func presentSymbolPicker(in client: IMKTextInput, bindings: ComposingKeyBindings) {
         // No table, no picker — and nothing marked for one.
         guard let table = symbolTable else { return }
         // The recents lead (`RecentSymbols`), read once: this is the list
@@ -1227,7 +1015,8 @@ public final class TaigiInputController: IMKInputController {
         if selection.location == NSNotFound || selection.length == 0 {
             isSymbolPickerPlaceholderMarked = true
             markedTextLength = Self.symbolPickerPlaceholder.utf16.count
-            executor.execute(.updatePreedit(Self.symbolPickerPlaceholder, caretUTF16: markedTextLength))
+            ClientEffectExecutor(client: client)
+                .execute(.updatePreedit(Self.symbolPickerPlaceholder, caretUTF16: markedTextLength))
         }
         guard let caretRect = caretRect(in: client, markedTextLength: markedTextLength) else {
             dismissSymbolPicker()
@@ -1257,7 +1046,6 @@ public final class TaigiInputController: IMKInputController {
     private func handleSymbolPickerKey(
         _ key: KeyEventSnapshot,
         bindings: ComposingKeyBindings,
-        manager: ComposingManager,
         client: IMKTextInput,
     ) -> Bool {
         switch SymbolPickerIntent.intent(for: key, bindings: bindings) {
@@ -1270,12 +1058,12 @@ public final class TaigiInputController: IMKInputController {
             // as it is on the bar: the key is the picker's while it is up.
             pickSymbolCell(
                 at: symbolPickerPresenter.candidateIndex(forKeySlot: slot, ownedBy: sessionToken),
-                manager: manager, client: client,
+                client: client,
             )
         case .confirm:
             pickSymbolCell(
                 at: symbolPickerPresenter.selectedCandidateIndex(ownedBy: sessionToken),
-                manager: manager, client: client,
+                client: client,
             )
         case .closeAndPassThrough:
             dismissSymbolPicker()
@@ -1288,33 +1076,22 @@ public final class TaigiInputController: IMKInputController {
     /// to the front of the recents, for the next opening. Nil — a slot with
     /// no cell — does nothing, and keeps the picker up.
     @MainActor
-    private func pickSymbolCell(at index: Int?, manager: ComposingManager, client: IMKTextInput) {
+    private func pickSymbolCell(at index: Int?, client: IMKTextInput) {
         guard let index, symbolPickerCells.indices.contains(index) else { return }
         let symbol = symbolPickerCells[index]
         dismissSymbolPicker()
-        insertSymbol(symbol, manager: manager, client: client)
+        insertSymbol(symbol, client: client)
         settings.noteRecentSymbol(symbol)
     }
 
-    /// Writes `symbol` at the caret as one string — so a bracket pair lands
-    /// as both halves, with the caret after the closing one (IMK has no way
-    /// to put it between them, and one rule for both platforms beats a
-    /// TSF-only exception) — and not through the full-width map: what the
-    /// user picked is what they get, `()` included. The one picker key that
-    /// touches the document, so the one that spends the auto-space arm: an
-    /// attaching mark swaps with the space a commit left, as a typed one
-    /// would, and the engine hears about the character either way.
+    /// Writes `symbol` through the back end (`ComposingBackend.insertSymbol`)
+    /// — the one picker key that touches the document, so the one that
+    /// spends the auto-space arm.
     @MainActor
-    private func insertSymbol(_ symbol: String, manager: ComposingManager, client: IMKTextInput) {
+    private func insertSymbol(_ symbol: String, client: IMKTextInput) {
         let armedSwap = armedAutoSpaceCaret
         armedAutoSpaceCaret = nil
-        if let armedSwap,
-           swapAutoSpace(inserting: symbol, armedAt: armedSwap, client: client, manager: manager)
-        {
-            return
-        }
-        client.insertText(symbol, replacementRange: ClientEffectExecutor.atInsertionPoint)
-        manager.noteCharacterTypedOutsideComposition(symbol)
+        send(client: client, armedSwap: armedSwap) { backend.insertSymbol(symbol, in: $0) }
     }
 
     /// Takes the list down and its placeholder with it — from `lastClient`,
@@ -1339,60 +1116,7 @@ public final class TaigiInputController: IMKInputController {
         }
     }
 
-    // MARK: - Full-width punctuation
-
-    /// `FullWidthPunctuation.documentPunctuation` under the mode as it stands
-    /// NOW — read live, like the auto-space gate below, so a swap applies to
-    /// the very next key. `isWidthFlip` is `ComposingKeyIntent.widthFlipCharacter`'s
-    /// verdict on the key that typed `text`.
-    ///
-    /// The EFFECTIVE width (`current`), not the stored swap: a romanization-
-    /// only display writes romanization, and romanization takes half-width
-    /// marks; under Hanji with Romanization the stored swap still picks the width even though the
-    /// candidate projection is forced hanji-first.
-    @MainActor
-    private func documentPunctuation(_ text: String, isWidthFlip: Bool) -> String? {
-        FullWidthPunctuation.documentPunctuation(
-            text,
-            isFullWidthMode: settings.current.isFullWidthPunctuation,
-            isWidthFlip: isWidthFlip,
-        )
-    }
-
     // MARK: - Auto-space
-
-    /// The gate every auto-space site reads — Auto-Space live, so a toggle
-    /// flipped in the settings window applies to the very next commit, and
-    /// `wroteRomanization` from whatever resolved the string this commit wrote.
-    ///
-    /// The verdict is never derived from the output mode here. A candidate
-    /// commit gets it from the engine (`CommitResolution.earns_auto_space`), a
-    /// preedit commit from `rawPreeditWritesRomanization`, and the swap from
-    /// the armed record of the commit that wrote the space.
-    @MainActor
-    private func isAutoSpaceGateActive(wroteRomanization: Bool) -> Bool {
-        AutoSpacePolicy.isGateActive(
-            isAutoSpaceEnabled: settings.isAutoSpaceEnabled,
-            wroteRomanization: wroteRomanization,
-        )
-    }
-
-    /// Writes the trailing auto space after a commit that earned it, and arms
-    /// the punctuation swap on it.
-    ///
-    /// A second document mutation rather than part of the commit's: whether
-    /// the space is earned depends on the text the engine decided to write,
-    /// which is only known once the commit has run.
-    ///
-    /// Called from the explicit commit paths only. The lifecycle commits
-    /// (`finishComposition` on deactivate, close, or a click outside) leave
-    /// the document alone: the user did not finish a word there, and a space
-    /// appearing at the old caret after focus moved on reads as corruption.
-    @MainActor
-    private func appendAutoSpace(_ client: IMKTextInput) {
-        client.insertText(" ", replacementRange: ClientEffectExecutor.atInsertionPoint)
-        armAutoSpaceSwap(client)
-    }
 
     /// Remembers where the caret sits now that the auto space is in front of
     /// it — the position the swap re-checks before it rewrites anything.
@@ -1409,52 +1133,25 @@ public final class TaigiInputController: IMKInputController {
         armedAutoSpaceCaret = caret.location
     }
 
-    /// Replaces the auto space before the caret with `?` + space — the
-    /// smart-punctuation swap (`guá ` + `?` → `guá? `), matching iOS
-    /// (`ActionHandler+KeyActions.swift:132-147`). Answers whether the key was
-    /// consumed.
-    ///
-    /// Three verifications before the rewrite, because `replacementRange` is a
-    /// real edit of committed text: the caret must still be a collapsed
-    /// selection exactly where the space left it, and the character under the
-    /// range must still be a space. Any client that fails one — including one
-    /// that cannot answer a substring query at all — gets the key passed
-    /// through untouched. Re-armed on success, so `?!` chains keep swapping.
+    /// The client half of the smart-punctuation swap (`guá ` + `?` → `guá? `):
+    /// two verifications before the back end may answer a rewrite, because
+    /// `replacementRange` is a real edit of committed text — the caret must
+    /// still be a collapsed selection exactly where the space left it, and
+    /// the character under the range must still be a space. Any client that
+    /// fails one — including one that cannot answer a substring query at
+    /// all — gets the key passed through untouched.
     @MainActor
-    private func swapAutoSpace(
-        inserting characters: String,
-        armedAt armedCaret: Int,
-        client: IMKTextInput,
-        manager: ComposingManager,
-    ) -> Bool {
-        // Auto-Space is re-read against the setting as it stands NOW,
-        // deliberately: switching the feature off invalidates the space it
-        // left behind, and the key maps or passes through instead
-        // (`AutoSpaceControllerTests.testTheToggleFlippedOffAfterTheCommit…`).
-        // The COMMIT's verdict is not re-derived, though — it is the armed
-        // record's. What is in front of the caret is romanization or Hanji as
-        // a matter of history, and a display mode changed since then does not
-        // rewrite it; asking the mode again would refuse to swap a space this
-        // controller had just written.
-        guard AutoSpacePunctuation.isAttaching(characters),
-              settings.isAutoSpaceEnabled
-        else { return false }
+    private static func canSwapAutoSpace(armedAt armedCaret: Int, in client: IMKTextInput) -> Bool {
         let caret = client.selectedRange()
         guard caret.length == 0, caret.location == armedCaret else { return false }
-        let spaceRange = NSRange(location: armedCaret - 1, length: 1)
-        guard let preceding = client.attributedSubstring(from: spaceRange),
-              preceding.string == " "
-        else { return false }
-        client.insertText(characters + " ", replacementRange: spaceRange)
-        // The character still ends the next-word context, exactly as it would
-        // have on the pass-through path it was consumed from.
-        manager.noteCharacterTypedOutsideComposition(characters)
-        // Re-armed by arithmetic rather than another `selectedRange()` query:
-        // the rewrite's end is fully determined by the range just replaced,
-        // and the next swap re-verifies the position against the client
-        // anyway — a client that moved the caret degrades to no swap.
-        armedAutoSpaceCaret = armedCaret + (characters as NSString).length
-        return true
+        guard let preceding = client.attributedSubstring(from: autoSpaceRange(armedAt: armedCaret)) else { return false }
+        return preceding.string == " "
+    }
+
+    /// The auto space in front of an arm: what the swap checks and what it
+    /// replaces.
+    private static func autoSpaceRange(armedAt armedCaret: Int) -> NSRange {
+        NSRange(location: armedCaret - 1, length: 1)
     }
 
     /// Where the composition's last character is drawn, in screen coordinates.
@@ -1500,7 +1197,7 @@ public final class TaigiInputController: IMKInputController {
         // and goes when that session's focus does.
         TelexGuidePanel.shared.hide(ownedBy: sessionToken)
         finishComposition(into: client)
-        ComposingSessionCoordinator.shared.release(sessionToken)
+        backend.release(sessionToken)
         displayModeObservation = nil
         candidateWindowObservation = nil
     }
@@ -1532,12 +1229,10 @@ public final class TaigiInputController: IMKInputController {
         guard let client else { return }
         defer { isMarkedTextVisible = false }
 
-        guard let manager = ComposingSessionCoordinator.shared.manager(ownedBy: sessionToken) else {
-            guard isMarkedTextVisible else { return }
-            ClientEffectExecutor(client: client).execute(.clearPreeditWithoutCommit)
-            return
-        }
-        manager.commitComposition(executing: ClientEffectExecutor(client: client))
+        guard !send(client: client, armedSwap: nil, { backend.commitComposition(in: $0) }),
+              isMarkedTextVisible
+        else { return }
+        ClientEffectExecutor(client: client).execute(.clearPreeditWithoutCommit)
     }
 
     // MARK: - Main-actor assertion
