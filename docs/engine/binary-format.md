@@ -136,15 +136,14 @@ The end of a record is determined by the *next* record's offset (or `data.count`
 
 ### 2.1a Key namespaces (v2)
 
-One byte-sorted key section holds two kinds of key; the reader needs no special casing because `\u{1}` never occurs inside a hanji or TL string and `$` is not CJK, so the namespaces cannot collide:
+One byte-sorted key section holds two kinds of key; the reader needs no special casing because `\u{1}` never occurs inside a hanji or TL string, so the namespaces cannot collide:
 
 | Key | Built by | Entries | `count` |
 |---|---|---|---|
 | one hanji (v1 shape) | `build/associations.py::compute_associations` | intra-word pairs from 2–5-character dictionary words (`dictionary.csv`) | dictionary frequency |
 | `hanji\u{1}tl` — display-form TL, `\u{1}` separator (`association_reader::word_key`) | `build/associations.py::compute_word_associations` | corpus continuations (`shared/data/word_bigrams.tsv`, P2 of the bigram LM roadmap), variant hanji folded to the 教典 form via `variants.csv`, top 30 per key, weighted count ≥ 2 | weighted corpus pair count (`taigi_bible_nt` × 0.5, others × 1) |
-| `$` (`association_reader::START_KEY`) | same | sentence openers | same |
 
-`bitmask` is the source flags of the **next** word's dictionary row in every namespace, so `AssociationFilter` (§4.3) filters all three alike. v1 files (character keys only) are rejected by the reader with a `v1→v2` rebuild hint — the two artifacts ship in lockstep (`docs/architecture/bigram-lm-roadmap.md` § D3).
+`bitmask` is the source flags of the **next** word's dictionary row in every namespace, so `AssociationFilter` (§4.3) filters both alike. v1 files (character keys only) are rejected by the reader with a `v1→v2` rebuild hint — the two artifacts ship in lockstep (`docs/architecture/bigram-lm-roadmap.md` § D3).
 
 ### 2.2 Lookup
 

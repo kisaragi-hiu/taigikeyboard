@@ -25,7 +25,6 @@ sys.path.insert(0, str(BASE_DIR))
 
 from build import create_association_bin as writer  # noqa: E402
 from build.associations import (  # noqa: E402
-    START_KEY,
     WORD_TOP_K,
     compute_associations,
     compute_word_associations,
@@ -142,11 +141,6 @@ class WordAssociationTests(unittest.TestCase):
         ])
         self.assertEqual([e.next_word for e in grouped[word_key("人", "lâng")]], ["个"])
 
-    def test_start_key_is_the_literal_dollar(self) -> None:
-        grouped = self.compute([("$", "", "一", "tsi̍t", 7, 0)])
-        (entry,) = grouped[START_KEY]
-        self.assertEqual((entry.next_word, entry.count), ("一", 7))
-
     def test_bitmask_is_the_next_words_dictionary_flags(self) -> None:
         grouped = self.compute([("人", "lâng", "個", "ê", 2, 0)])
         (entry,) = grouped[word_key("人", "lâng")]
@@ -200,7 +194,7 @@ class WriterTests(unittest.TestCase):
             tmp / "dictionary.csv", tmp / "word_bigrams.tsv", tmp / "variants.csv", tmp / "association.bin",
         )
         write_dictionary(dictionary, [("好", "hó", "kautian"), ("好人", "hó-lâng", "kautian"), ("人", "lâng", "kautian")])
-        write_bigrams(bigrams, [("$", "", "好", "hó", 4, 0), ("好", "hó", "人", "lâng", 3, 0)])
+        write_bigrams(bigrams, [("好", "hó", "人", "lâng", 3, 0)])
         write_variants(variants, [])
         self.output = output
         self.patches = [
@@ -235,7 +229,7 @@ class WriterTests(unittest.TestCase):
         logger = logging.getLogger("test")
         grouped = writer.build(logger)
         keys = self.read_keys()
-        self.assertEqual(keys, ["$", "好", "好\x01hó"])
+        self.assertEqual(keys, ["好", "好\x01hó"])
         self.assertEqual(keys, sorted(keys, key=lambda k: k.encode("utf-8")))
         self.assertEqual([e.next_word for e in grouped["好"]], ["人"], "v1 character pair from 好人")
         writer.verify(logger, grouped)  # exits non-zero on any mismatch

@@ -141,14 +141,7 @@ Engine state machine + decision tables + scoring all live in Rust `engine/nextwo
 
 ### 1. Sentence-start Prediction
 
-Use a special `$` key to query predictions at the beginning of a sentence (no previous word context).
-
-```kotlin
-fun predict(word: String?): List<Prediction> {
-    val query = word ?: "$"  // null indicates sentence start
-    return db.lookup(query)
-}
-```
+Not adopted (USER 2026-10-02); `association.bin` carries no `$` key. librime-predict uses a special `$` key to query predictions at the beginning of a sentence (no previous word context).
 
 ### 2. Continuous Prediction Limit
 
@@ -176,5 +169,5 @@ fun onWordSelected(word: String) {
 |--|-----------------|----------------|
 | Storage | DoubleArray Trie (mmap, read-only) | Burntsushi fst + binary mmap (dict) + SQLite (user) |
 | User learning | None | Yes |
-| Sentence-start | `$` symbol | Not yet |
+| Sentence-start | `$` symbol | Not adopted |
 | Iteration limit | `max_iterations` config | Not yet (timeout only) |
