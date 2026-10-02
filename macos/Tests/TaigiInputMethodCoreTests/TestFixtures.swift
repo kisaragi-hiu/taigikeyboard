@@ -286,17 +286,36 @@ enum TestFixtures {
     /// opens the engine's user data: the handle is process-wide, and an open
     /// here would reach every later fetch in the run — so the picks the
     /// engine counts itself (R5) go nowhere here.
+    ///
+    /// Skipped in the core back end's process: a Swift manager there would
+    /// count generations beside the core's coordinator and the two could
+    /// meet (macos-desktop-core-roadmap.md D9.1) — the legacy process runs
+    /// these cases.
     @MainActor
     static func makeComposingManager(
         settingsProvider: EngineSettingsProvider = StubEngineSettingsProvider(),
         nextWord: RecordingNextWordPort = RecordingNextWordPort(),
         startingGeneration: UInt64,
     ) throws -> ComposingManager {
-        ComposingManager(
+        try skipUnderTheCoreBackEnd()
+        return ComposingManager(
             settingsProvider: settingsProvider,
             nextWord: nextWord,
             startingGeneration: startingGeneration,
         )
+    }
+
+    /// Whether this process runs the core back end
+    /// (`TAIGI_COMPOSING_BACKEND=core`, `make -C macos test`'s second run) —
+    /// for a case whose expectation differs per back end on an open parity
+    /// item.
+    static let isCoreBackEnd = ProcessInfo.processInfo.environment[ComposingBackends.environmentKey] == "core"
+
+    /// Skips a case that drives the engine through the Swift key path's own
+    /// generations (`makeComposingManager`, the bridge's composing ops) in
+    /// the core back end's process.
+    static func skipUnderTheCoreBackEnd() throws {
+        try XCTSkipIf(isCoreBackEnd, "drives the engine with Swift generations — run by the legacy process")
     }
 
     /// A coordinator of its own.
@@ -389,7 +408,9 @@ extension XCTestCase {
     /// the shipped app. Called first in `setUp`, so it is the last teardown
     /// block to run and no `withSetting` value is inside the snapshot.
     nonisolated func restoreStandardSettingsAtTeardown() {
-        guard let domain = Bundle.main.bundleIdentifier else { return }
+        guard let domain = Bundle.main.bundleIdentifier else {
+            return XCTFail("no bundle identifier to name the .standard domain by")
+        }
         let saved = UserDefaults.standard.persistentDomain(forName: domain)
         addTeardownBlock {
             if let saved {

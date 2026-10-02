@@ -29,10 +29,7 @@ fn expected<'a>(row: &[&'a str], at: usize) -> &'a str {
 }
 
 fn action(raw: &str) -> ComposingAction {
-    ComposingAction::ALL
-        .into_iter()
-        .find(|action| action.raw() == raw)
-        .unwrap_or_else(|| panic!("no action {raw}"))
+    ComposingAction::from_raw(raw).unwrap_or_else(|| panic!("no action {raw}"))
 }
 
 fn chord(raw: &str) -> String {

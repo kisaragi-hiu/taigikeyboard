@@ -164,10 +164,6 @@ struct CandidateListUpdate: Equatable {
 enum ComposingBackends {
     static let environmentKey = "TAIGI_COMPOSING_BACKEND"
 
-    /// Whether this process runs the core back end — for a test whose
-    /// expectation differs per back end on an open parity item.
-    static let isCore = ProcessInfo.processInfo.environment[environmentKey] == "core"
-
     @MainActor
     static let shared: any ComposingBackend = make(named: ProcessInfo.processInfo.environment[environmentKey])
 

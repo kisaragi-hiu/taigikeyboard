@@ -11,9 +11,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// receives input.
     private var server: IMKServer?
 
-    /// The desktop-core runtime, configured once at launch.
-    private var desktopCore: DesktopCoreRuntime?
-
     private let logger = DebugLogger(category: "Bootstrap")
 
     func applicationDidFinishLaunching(_: Notification) {
@@ -49,8 +46,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // history — one keystroke ordered as it would be on a fresh install,
         // which is why this runs at launch rather than lazily on the first
         // commit.
-        desktopCore = DesktopCoreRuntime.configure(.launch(bundle: .main))
-        desktopCore?.prepare()
+        // The runtime stays `DesktopCoreRuntime.configured`, which the core
+        // back end sends its requests through.
+        DesktopCoreRuntime.configure(.launch(bundle: .main))?.prepare()
 
         // At launch rather than with the settings window: this is process-wide
         // AppKit configuration, and the menu has to exist before any window of

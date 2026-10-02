@@ -21,10 +21,10 @@ final class AutoSpaceControllerTests: XCTestCase {
         super.setUp()
         restoreStandardSettingsAtTeardown()
         InstalledLexicon.installOnce()
-        setSettingRestoredAtTeardown(SettingsStore.Keys.isHanjiFirst.name, to: false)
+        UserDefaults.standard.set(false, forKey: SettingsStore.Keys.isHanjiFirst.name)
         // The literal-commit cases need the §34 literal at cell 0; Show Typed
         // Text First ships OFF since 2026-10-02, so it is pinned ON here.
-        setSettingRestoredAtTeardown(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name, to: true)
+        UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
     }
 
     // MARK: - Trailing space after a commit

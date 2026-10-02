@@ -35,7 +35,7 @@ final class ComposingBackendParityTests: XCTestCase {
             TestFixtures.keyDownEvent(characters: "a."), client: session.client,
         )
 
-        if ComposingBackends.isCore {
+        if TestFixtures.isCoreBackEnd {
             XCTAssertTrue(handled)
             XCTAssertEqual(session.client.insertedTexts, ["taigia."], "E2 core: committed with the event as text")
         } else {
@@ -54,7 +54,7 @@ final class ComposingBackendParityTests: XCTestCase {
             TestFixtures.keyDownEvent(characters: "\u{200B}"), client: session.client,
         )
 
-        if ComposingBackends.isCore {
+        if TestFixtures.isCoreBackEnd {
             XCTAssertTrue(handled, "E4 core: consumed")
             XCTAssertEqual(session.client.insertedTexts, ["taigi\u{200B}"])
         } else {
@@ -109,7 +109,7 @@ final class ComposingBackendParityTests: XCTestCase {
 
         let represented = backend.represent(refetch: true, in: request())
 
-        if ComposingBackends.isCore {
+        if TestFixtures.isCoreBackEnd {
             XCTAssertEqual(represented, .closed, "C4 core: the window is off, so the list goes")
         } else {
             guard case .changed = represented else {

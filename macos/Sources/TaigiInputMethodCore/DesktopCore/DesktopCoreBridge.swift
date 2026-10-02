@@ -29,7 +29,7 @@ enum DesktopCoreBridge {
         op: String,
         expected: (Taigi_DesktopShell_DesktopResponse.OneOf_Reply) -> Reply?,
     ) -> Reply? {
-        guard let response = response(to: request, settings: settings, op: op) else { return nil }
+        guard case let .success(response) = response(to: request, settings: settings, op: op) else { return nil }
         guard response.error == .ok else {
             recordFailure(op: op, message: "core returned \(response.error)")
             return nil
@@ -41,34 +41,35 @@ enum DesktopCoreBridge {
         return reply
     }
 
+    /// Why a request has no decoded response — logged where it happened.
+    enum SeamFailure: Error {
+        /// The request could not be encoded, so nothing was sent.
+        case notSent
+        /// The request was sent and may have run; its answer did not decode.
+        case undecodable
+    }
+
     /// Encodes one request, sends it and decodes the response, whatever its
-    /// error — for a caller that acts on which error it is (the core back
-    /// end's `FAIL_INTERNAL`, roadmap D4). `nil` — logged here — when the
-    /// request could not be encoded, so nothing was sent. A response that
-    /// does not decode is answered as `FAIL_INTERNAL`: the request was sent
-    /// and may have run, which is that error's meaning.
+    /// error — for a caller that acts on which error it is, or on whether a
+    /// failed request was sent at all (the core back end, roadmap D4).
     static func response(
         to request: Taigi_DesktopShell_DesktopRequest.OneOf_Request,
         settings: Taigi_DesktopShell_SettingsSnapshot?,
         op: String,
         transport: ([UInt8]) -> [UInt8] = send,
-    ) -> Taigi_DesktopShell_DesktopResponse? {
+    ) -> Result<Taigi_DesktopShell_DesktopResponse, SeamFailure> {
         let requestBytes: [UInt8]
         do {
-            requestBytes = try Array(envelope(request, settings: settings).serializedData())
+            requestBytes = try envelope(request, settings: settings).serializedBytes()
         } catch {
             recordFailure(op: op, message: "encode failed: \(error)")
-            return nil
+            return .failure(.notSent)
         }
-        guard let response = try? Taigi_DesktopShell_DesktopResponse(
-            serializedBytes: Data(transport(requestBytes)),
-        ) else {
+        guard let response = try? Taigi_DesktopShell_DesktopResponse(serializedBytes: transport(requestBytes)) else {
             recordFailure(op: op, message: "response decode failed")
-            var failed = Taigi_DesktopShell_DesktopResponse()
-            failed.error = .failInternal
-            return failed
+            return .failure(.undecodable)
         }
-        return response
+        return .success(response)
     }
 
     /// Logs a seam failure.

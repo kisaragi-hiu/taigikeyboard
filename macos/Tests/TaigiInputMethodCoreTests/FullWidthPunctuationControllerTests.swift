@@ -17,7 +17,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
         InstalledLexicon.installOnce()
         // The armed-space cases commit the §34 literal with Return on a fresh
         // bar; Show Typed Text First ships OFF since 2026-10-02, so it is pinned ON here.
-        setSettingRestoredAtTeardown(SettingsStore.Keys.isLiteralRomanCandidateEnabled.name, to: true)
+        UserDefaults.standard.set(true, forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name)
     }
 
     // MARK: - Outside a composition (the consumed pass-through)

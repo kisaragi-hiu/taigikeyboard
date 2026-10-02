@@ -69,10 +69,11 @@ final class CoreComposingBackend: ComposingBackend {
         }
     }
 
+    /// A session that does not own the engine has nothing to give up — in
+    /// the core either, which keeps the same record.
     func release(_ session: ComposingSessionToken) {
-        if coordinator.release(session) {
-            isOwnerComposing = false
-        }
+        guard coordinator.release(session) else { return }
+        isOwnerComposing = false
         var message = Taigi_DesktopShell_ReleaseRequest()
         message.token = session.value
         _ = exchange(.release(message), settings: nil, op: "release")
@@ -88,8 +89,11 @@ final class CoreComposingBackend: ComposingBackend {
         message.event = Self.event(key)
         // A swap is a pass-through key's, and only an idle session passes an
         // attaching character through: composing, it commits with it.
-        let attaching = isComposing(request.session) ? nil : Self.swapCandidate(for: key, settings: request.settings)
-        message.panel = Self.panel(request, swapping: attaching)
+        let isIdle = !isComposing(request.session)
+        message.panel = Self.panel(
+            request,
+            swapping: isIdle ? Self.swapCandidate(for: key, settings: request.settings) : nil,
+        )
         return session(.key(message), in: request, op: "key").map {
             ComposingKeyReply(handled: $0.handled, effects: $0.effects)
         }
@@ -198,9 +202,15 @@ final class CoreComposingBackend: ComposingBackend {
         settings: Taigi_DesktopShell_SettingsSnapshot?,
         op: String,
     ) -> Outcome {
-        guard let response = DesktopCoreBridge.response(
-            to: message, settings: settings, op: op, transport: transport,
-        ) else { return .nothing }
+        let response: Taigi_DesktopShell_DesktopResponse
+        switch DesktopCoreBridge.response(to: message, settings: settings, op: op, transport: transport) {
+        case let .success(decoded):
+            response = decoded
+        case .failure(.notSent):
+            return .nothing
+        case .failure(.undecodable):
+            return .failedInternally
+        }
         switch response.error {
         case .ok:
             guard case let .session(reply) = response.reply else {
@@ -270,9 +280,11 @@ final class CoreComposingBackend: ComposingBackend {
     /// the text a swap would write, and only when a swap can happen: an arm,
     /// an attaching character, Auto-Space on — the legacy order
     /// (`LegacyComposingBackend.swapAutoSpace`).
+    /// `attaching` is evaluated only where a swap is armed and Auto-Space
+    /// is on.
     private static func panel(
         _ request: ComposingRequest,
-        swapping attaching: String?,
+        swapping attaching: @autoclosure () -> String?,
     ) -> Taigi_DesktopShell_PanelState {
         let state = request.panel
         var panel = Taigi_DesktopShell_PanelState()
@@ -288,9 +300,9 @@ final class CoreComposingBackend: ComposingBackend {
             }
         }
         if let canSwapPrecedingSpace = state.canSwapPrecedingSpace,
-           let attaching,
-           AutoSpacePunctuation.isAttaching(attaching),
-           request.settings.isAutoSpaceEnabled
+           request.settings.isAutoSpaceEnabled,
+           let attaching = attaching(),
+           AutoSpacePunctuation.isAttaching(attaching)
         {
             panel.swapAvailable = canSwapPrecedingSpace()
         }
@@ -323,7 +335,7 @@ final class CoreComposingBackend: ComposingBackend {
         case let .candidatesChanged(list):
             .candidatesChanged(CandidateListUpdate(
                 cells: list.cells.map {
-                    CandidateCellContent(text: $0.text, annotation: $0.hasAnnotation ? $0.annotation : nil)
+                    CandidateCellContent(text: $0.text, annotation: $0.annotation)
                 },
                 leadsWithLiteralRoman: list.leadsWithLiteralRoman,
                 markedTextLengthUTF16: Int(list.markedTextLengthUtf16),

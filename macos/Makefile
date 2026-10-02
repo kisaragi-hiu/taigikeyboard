@@ -44,14 +44,12 @@ build: i18n-check
 	swift build --configuration $(CONFIGURATION)
 
 # One `swift test` process per composing back end (docs/architecture/macos-desktop-core-roadmap.md
-# D9.1): both drive the process's one engine, under generation counters of their own. The core run
-# leaves out the suites that drive the engine through the Swift `ComposingManager` — the legacy key
-# path's own machinery, already run by the first — so the two counters never meet in one process.
-LEGACY_ENGINE_SUITES := CandidateSourceTests|ComposingManager|ComposingSessionCoordinatorTests|RustEngineBridgeComposingTests
-
+# D9.1): both drive the process's one engine, under generation counters of their own. In the core
+# run the cases that drive it through the Swift key path's generations skip themselves
+# (`TestFixtures.skipUnderTheCoreBackEnd`), so the two counters never meet in one process.
 test: i18n-check
 	swift test
-	TAIGI_COMPOSING_BACKEND=core swift test --skip-build --skip '$(LEGACY_ENGINE_SUITES)'
+	TAIGI_COMPOSING_BACKEND=core swift test --skip-build
 
 bundle:
 	bash scripts/bundle-app.sh $(CONFIGURATION)
