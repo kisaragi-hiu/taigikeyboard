@@ -3,14 +3,14 @@
 > **Type**: Planning (forward-looking)
 > **Keywords**: `roadmap`, `planning`, `released versions`, `release trains`
 > **Status**: Active
-> **Last updated**: 2026-10-01 (maintainability audit follow-up complete). 2026-09-30: mobile v3.6.10 / v3.6.11 rows; bigram LM closed. 2026-09-26: Active items all merged — collapsed into Closed phases; design bodies frozen in `docs/reports/2026-09-26-shipped-roadmap-design-notes.md`
+> **Last updated**: 2026-10-02 (macOS over desktop-core planned). 2026-10-01: maintainability audit follow-up complete. 2026-09-30: mobile v3.6.10 / v3.6.11 rows; bigram LM closed. 2026-09-26: Active items all merged — collapsed into Closed phases; design bodies frozen in `docs/reports/2026-09-26-shipped-roadmap-design-notes.md`
 
 ---
 
 ## Summary
 
 - **Forward-looking work items only.** Shipped detail lives in `docs/releases/<version>/plan.md` + `changelog/mobile-<version>.md`.
-- **Active**: none; pending dogfood is tracked in `docs/architecture/dogfood-checklist.md`.
+- **Active**: macOS over desktop-core — planned, awaiting the maintainer's approval before any implementation PR. Pending dogfood is tracked in `docs/architecture/dogfood-checklist.md`.
 - **Open candidates**: every unfinished, parked or brainstorm item across the roadmaps and reports is listed once in § Open candidates (unscheduled), with a link to its design; the one design-locked item is the converted-romanization commit.
 - **Release scope / timing / tag is the maintainer's call.**
 
@@ -18,7 +18,11 @@
 
 ## Active / In-flight items
 
-None. Everything scoped through 2026-10-01 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
+| Item | Status | Where |
+|---|---|---|
+| **macOS over desktop-core** — the macOS input method links the shared Rust `taigi-desktop-core` for its key path instead of re-implementing it in Swift (about 4,300 of the ~8,070 duplicate Swift lines measured; candidate-window geometry, the settings backend, global shortcuts and the update flow stay Swift) | P0 (plan + inventory) written 2026-10-02; P1–P15 pending the maintainer's approval | [`architecture/macos-desktop-core-roadmap.md`](architecture/macos-desktop-core-roadmap.md) · inventory [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md) |
+
+Everything else scoped through 2026-10-01 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
 ---
 
@@ -79,8 +83,7 @@ One line each; the linked section holds the design, the measurements and the ope
 
 | Item | Status | Where |
 |---|---|---|
-| macOS over `desktop-core` (~4,000 Swift lines duplicate `desktop/crates`) | not scheduled | [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md) § Not scheduled |
-| iOS top-level folder renames (`.pbxproj` = USER-only) | not scheduled | same § |
+| iOS top-level folder renames (`.pbxproj` = USER-only) | not scheduled | [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md) § Not scheduled |
 | Shared Swift package for macOS + iOS (open-source round 10) | not scheduled; USER adds the local package in Xcode | [`reports/2026-09-24-open-source-readiness-and-layout.md`](reports/2026-09-24-open-source-readiness-and-layout.md) § rounds |
 | Residual platform twins: auto-space punctuation set ×4 (iOS / Android / macOS `AutoSpacePunctuation`, desktop `policies/auto_space.rs`), external-lookup digit-tone fold ×4 (`ExternalLookupURLBuilder` ×3 + desktop `engine/external_lookup.rs`), source-bitmask decode ×3–4 (`LexiconBitmask` ×2, macOS `DictionarySource.swift`, desktop `engine/lexicon.rs`), no-op `SuggestionCaseTransformer` ×2 (delete) | after macOS over `desktop-core` lands (removes the macOS copies); re-verify callers first — files confirmed on main 2026-10-02, callers not; one PR | [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md) Appendix B |
 

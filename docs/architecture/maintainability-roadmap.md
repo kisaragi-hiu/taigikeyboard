@@ -40,7 +40,7 @@ Every PR runs its type's pre-gate: refactor = behaviour-freeze list (`docs/contr
 
 ## Not scheduled (USER decisions)
 
-- **macOS over `desktop-core`** (report §5.2): ~4,000 Swift lines duplicate `desktop/crates`; the report recommends deciding after R3 lands.
+- **macOS over `desktop-core`** (report §5.2): taken up on 2026-10-02 as its own plan — `macos-desktop-core-roadmap.md`, with the measured inventory that replaces the "~4,000 lines" estimate.
 - **Naming batch C** — persisted names (setting keys, DB columns, backup JSON, FST prefix, JNI symbol, package names): frozen per §5.6.
 - **iOS top-level folder renames** (§5.8): `.pbxproj` edits are USER-only.
 
