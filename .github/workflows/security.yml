@@ -105,4 +105,4 @@ jobs:
 
       - name: cargo deny check (macos)
         working-directory: macos
-        run: cargo deny check --config ../engine/deny.toml
+        run: cargo deny --config ../engine/deny.toml check
