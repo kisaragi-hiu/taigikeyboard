@@ -155,6 +155,18 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertNil(ComposingKeyChord(rawValue: "x|0020"), "unknown modifier letter")
     }
 
+    /// A hand-edited value with an empty hex field is refused whole, as
+    /// desktop-core's `translate_raw` refuses it — not read as the fields
+    /// that are left. `rawValue` never writes one.
+    func testRawValues_withAnEmptyHexField_doNotParse() throws {
+        // trace: `split(separator: ",", omittingEmptySubsequences: false)`
+        // keeps the empty field; `UInt32("", radix: 16)` is nil → nil.
+        for raw in ["c|0041,,0042", "c|,005D", "c|005D,", "c|"] {
+            XCTAssertNil(ComposingKeyChord(rawValue: raw), raw)
+        }
+        XCTAssertEqual(ComposingKeyChord(rawValue: "c|005D"), try chord("]", .control), "negative control")
+    }
+
     // MARK: - Defaults
 
     /// The keys a user arriving from the system Zhuyin input method already

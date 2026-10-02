@@ -12,7 +12,7 @@ import XCTest
 /// to its own column.
 ///
 /// Reachable elsewhere or not at all:
-/// - E6, E7 — the chord codec, rows of the chord table
+/// - E6 — the chord codec, a row of the chord table
 ///   (`ChordRulesCrossCheckTests`, `chord_rules.tsv`).
 /// - E2b — a plain Escape inside a multi-character event: the Mac's picker
 ///   classification stays Swift on both back ends (`SymbolPickerIntent`), and

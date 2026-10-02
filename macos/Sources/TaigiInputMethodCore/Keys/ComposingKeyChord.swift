@@ -240,8 +240,11 @@ extension ComposingKeyChord: RawRepresentable {
             }
         }
 
+        // Empty fields kept, so `c|0041,,0042` is refused whole rather than read
+        // as ⌃`ab` — `rawValue` never writes one, and desktop-core's
+        // `translate_raw` refuses the same values.
         var key = ""
-        for field in halves[1].split(separator: ",") {
+        for field in halves[1].split(separator: ",", omittingEmptySubsequences: false) {
             guard let value = UInt32(field, radix: 16),
                   let scalar = UnicodeScalar(value) else { return nil }
             key.unicodeScalars.append(scalar)
