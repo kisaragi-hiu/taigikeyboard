@@ -30,6 +30,13 @@ final class SymbolPickerIntentTests: XCTestCase {
         XCTAssertEqual(intent("\u{1B}", modifiers: .control), .closeAndPassThrough)
     }
 
+    /// E2b: an Escape with more behind it in one event is not the Escape key
+    /// — the picker closes and lets the event through, as the desktop core
+    /// answers (`symbol_picker.rs`). Until P11c the first character closed it.
+    func testAnEscapeInsideALongerEvent_closesAndFallsThrough() {
+        XCTAssertEqual(intent("\u{1B}x"), .closeAndPassThrough)
+    }
+
     func testTheArrowsAndPagingKeys_navigate() {
         XCTAssertEqual(intent("", navigationKey: .leftArrow), .navigate(.left))
         XCTAssertEqual(intent("", navigationKey: .rightArrow), .navigate(.right))
@@ -56,6 +63,17 @@ final class SymbolPickerIntentTests: XCTestCase {
         XCTAssertEqual(intent("1", bindings: telex), .pickSlot(0))
         XCTAssertEqual(intent("9", bindings: telex), .pickSlot(8))
         XCTAssertEqual(intent("q", bindings: telex), .closeAndPassThrough, "a letter is a tone key under Telex")
+    }
+
+    /// A digit slot reads the first scalar (the desktop core's rule, P11c):
+    /// a digit with a combining scalar behind it picks; `0`, a full-width
+    /// digit and a chorded digit do not.
+    func testADigitSlot_readsTheFirstScalar() {
+        let telex = ComposingKeyBindings(toneScheme: .telex)
+        XCTAssertEqual(intent("1\u{20E3}", bindings: telex), .pickSlot(0))
+        XCTAssertEqual(intent("0", bindings: telex), .closeAndPassThrough)
+        XCTAssertEqual(intent("\u{FF11}", bindings: telex), .closeAndPassThrough)
+        XCTAssertEqual(intent("1", modifiers: .command, bindings: telex), .closeAndPassThrough)
     }
 
     /// The user's own rows are honoured: paging on `[` / `]` and ⇥, and

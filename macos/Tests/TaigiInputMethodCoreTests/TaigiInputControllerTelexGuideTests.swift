@@ -162,6 +162,39 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         XCTAssertFalse(session.presenter.isShowing)
     }
 
+    /// E2b: an Escape with more behind it in one event is not the plain
+    /// Escape the guide swallows (the desktop core's `is_bare_escape`). The
+    /// guide goes down and the event goes on to the classifier, whose Escape
+    /// tier reads the first character: the composition is cancelled. Until
+    /// P11c the guide swallowed it and the composition stayed.
+    func testAnEscapeInsideALongerEvent_hidesTheGuide_andCancels() throws {
+        let session = try composedSession()
+        session.controller.performShortcutAction(.showTelexGuide)
+
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\u{1B}x"), client: session.client,
+        )
+
+        XCTAssertTrue(handled, "the cancel consumes the event")
+        XCTAssertFalse(TelexGuidePanel.shared.isShowing)
+        XCTAssertFalse(session.presenter.isShowing, "the composition and its bar are gone")
+        XCTAssertEqual(session.client.insertedTexts, [], "a cancel writes nothing")
+    }
+
+    /// E2b idle: with nothing composing the same event hides the guide and
+    /// reaches the host.
+    func testAnEscapeInsideALongerEvent_whenIdle_hidesTheGuide_andFallsThrough() throws {
+        let session = try makeSession()
+        session.controller.performShortcutAction(.showTelexGuide)
+
+        let handled = try session.controller.handle(
+            TestFixtures.keyDownEvent(characters: "\u{1B}x"), client: session.client,
+        )
+
+        XCTAssertFalse(handled)
+        XCTAssertFalse(TelexGuidePanel.shared.isShowing)
+    }
+
     /// `⌃3` arrives as Escape (`ComposingKeyIntent`): a chord the host owns
     /// takes the guide down like any key but is not swallowed for it.
     func testEscapeUnderAHostChord_hidesTheGuide_andFallsThrough() throws {
