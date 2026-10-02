@@ -73,9 +73,6 @@ One line each; the linked section holds the design, the measurements and the ope
 | Smart-suggestion techniques outside the bigram model: 3 zero-query from learned phrases, 5 negative feedback, 6 rule table, 9 emoji, 10 offensive-word filter, 11 privacy gates | brainstorm only | [`reports/2026-09-24-mobile-smart-suggestions-brainstorm.md`](reports/2026-09-24-mobile-smart-suggestions-brainstorm.md) |
 | `$` sentence-start opener for next-word | needs a real sentence-end trigger first | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § D4 |
 | Corpus expansion (P1b): new `taigi-corpus` extractors (iCorpus 漢字版, TGB, …); TAT corpus = USER-only ACLCLP application | never run | [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md) § Corpus expansion |
-| Taigi romanization spelling correction (edit-distance search over `syllables.fst`) | future reference | [`reports/2026-08-30-hanlo-together-mode-research.md`](reports/2026-08-30-hanlo-together-mode-research.md) §14–§16 |
-| Windows candidate window: frame painted before content | parked; B = in-proc sync paint (~50 LOC), C = renderer process (2–3k LOC) | [`reports/2026-09-11-windows-candidate-window-paint-latency.md`](reports/2026-09-11-windows-candidate-window-paint-latency.md) |
-| Windows candidate window exposed to screen readers (UIA) | deferred, named | [`architecture/windows-roadmap.md`](architecture/windows-roadmap.md) § Windows-specific acceptance matrix |
 
 **Engine gaps and small decisions**
 
@@ -94,18 +91,15 @@ One line each; the linked section holds the design, the measurements and the ope
 | macOS over `desktop-core` (~4,000 Swift lines duplicate `desktop/crates`) | not scheduled | [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md) § Not scheduled |
 | iOS top-level folder renames (`.pbxproj` = USER-only) | not scheduled | same § |
 | Shared Swift package for macOS + iOS (open-source round 10) | not scheduled; USER adds the local package in Xcode | [`reports/2026-09-24-open-source-readiness-and-layout.md`](reports/2026-09-24-open-source-readiness-and-layout.md) § rounds |
-| Optional: `zh-TW` README, xcconfig signing, Android Gradle proto plugin | not scheduled | same § |
+| Optional: xcconfig signing, Android Gradle proto plugin | not scheduled | same § |
 
 **Project and legal (USER)**
 
 | Item | Status | Where |
 |---|---|---|
-| Dictionary licensing: four sources without a licence, ShareAlike compatibility not analysed | published as-is, not settled | [`go-public-checklist.md`](go-public-checklist.md) §4 |
-| SignPath Foundation code-signing application | no verdict recorded | [`go-public-checklist.md`](go-public-checklist.md), [`CODE_SIGNING_POLICY.md`](CODE_SIGNING_POLICY.md) |
-| GitHub private vulnerability reporting + non-provider secret patterns | not applied (one `gh api` PATCH) | [`go-public-checklist.md`](go-public-checklist.md) §10 |
 | TL / POJ prose proofreading of the app UI | USER, data-only | § Closed phases › App UI i18n |
 
-**Not to re-propose** (USER-closed): converted-romanization commit on Enter (`suann2ting3` → `suán-tìng`), TL mode (臺羅模式) tone key commits without a candidate window, and mobile predictions after Space (USER 2026-10-02: "remove"); bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
+**Not to re-propose** (USER-closed): `zh-TW` README, dictionary-source licensing follow-up, romanization spelling correction, Windows candidate-window paint latency and UIA exposure (USER 2026-10-02: "remove"); SignPath Foundation code signing (USER 2026-10-02: rejected); converted-romanization commit on Enter (`suann2ting3` → `suán-tìng`), TL mode (臺羅模式) tone key commits without a candidate window, and mobile predictions after Space (USER 2026-10-02: "remove"); bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
 
 ## Per-round gates (process invariants, project-wide)
 
