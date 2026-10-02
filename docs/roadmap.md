@@ -83,7 +83,6 @@ One line each; the linked section holds the design, the measurements and the ope
 | macOS over `desktop-core` (~4,000 Swift lines duplicate `desktop/crates`) | not scheduled | [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md) § Not scheduled |
 | iOS top-level folder renames (`.pbxproj` = USER-only) | not scheduled | same § |
 | Shared Swift package for macOS + iOS (open-source round 10) | not scheduled; USER adds the local package in Xcode | [`reports/2026-09-24-open-source-readiness-and-layout.md`](reports/2026-09-24-open-source-readiness-and-layout.md) § rounds |
-| Optional: xcconfig signing, Android Gradle proto plugin | not scheduled | same § |
 
 **Project and legal (USER)**
 
@@ -91,7 +90,7 @@ One line each; the linked section holds the design, the measurements and the ope
 |---|---|---|
 | SignPath Foundation code-signing application | rejected 2026-10-02; USER will reapply later — keep `CODE_SIGNING_POLICY.md` + `windows-build.yml` provenance build | [`go-public-checklist.md`](go-public-checklist.md), [`CODE_SIGNING_POLICY.md`](CODE_SIGNING_POLICY.md) |
 
-**Not to re-propose** (USER-closed): `zh-TW` README, dictionary-source licensing follow-up, romanization spelling correction, corpus expansion P1b incl. the TAT application, a full TL / POJ / en / ja proofreading pass of the app UI (fix reported typos per incident instead), `$` sentence-start opener (its `association.bin` data is removed in its own PR), smart-suggestion techniques outside the bigram model (3, 5, 6, 9, 10, 11 incl. the Android `IME_FLAG_NO_PERSONALIZED_LEARNING` gap), Windows candidate-window paint latency and UIA exposure (USER 2026-10-02: "remove"); converted-romanization commit on Enter (`suann2ting3` → `suán-tìng`), TL mode (臺羅模式) tone key commits without a candidate window, and mobile predictions after Space (USER 2026-10-02: "remove"); bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
+**Not to re-propose** (USER-closed): `zh-TW` README, xcconfig signing, Android Gradle proto plugin, dictionary-source licensing follow-up, romanization spelling correction, corpus expansion P1b incl. the TAT application, a full TL / POJ / en / ja proofreading pass of the app UI (fix reported typos per incident instead), `$` sentence-start opener (its `association.bin` data is removed in its own PR), smart-suggestion techniques outside the bigram model (3, 5, 6, 9, 10, 11 incl. the Android `IME_FLAG_NO_PERSONALIZED_LEARNING` gap), Windows candidate-window paint latency and UIA exposure (USER 2026-10-02: "remove"); converted-romanization commit on Enter (`suann2ting3` → `suán-tìng`), TL mode (臺羅模式) tone key commits without a candidate window, and mobile predictions after Space (USER 2026-10-02: "remove"); bigram P6 walker term / P7 hanji-only sources / D7 two-word context; e2e drivers for macOS, Windows, Android, iOS; invariant-label PR2; naming batch C (persisted names stay frozen).
 
 ## Per-round gates (process invariants, project-wide)
 
