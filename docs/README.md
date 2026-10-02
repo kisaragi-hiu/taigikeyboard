@@ -114,6 +114,7 @@ One-off snapshots ordered chronologically. A report stays while live code cites 
 | File | Description | Status |
 |------|-------------|--------|
 | `go-public-checklist.md` | Go-public audit record — repository PUBLIC since 2026-09-07 (flip record, GitHub scanning state), re-run procedure per section, dictionary-licence position still open | Reference |
+| `INSTALL.md` | End-user install and setup per platform and Linux distribution | Active |
 | `BUILDING.md` | Contributor build guide: host matrix, prerequisites (`mise.toml`), build + test command per platform, stale-artifact rule, troubleshooting | Active |
 | `roadmap.md` | Forward-looking work items, released-versions index (mobile + desktop trains), closed phases | Active |
 | `CODE_SIGNING_POLICY.md` | Code-signing policy for released binaries (SignPath Foundation requirement) | Active |
