@@ -58,7 +58,8 @@ Host app — IMKTextInput client
 Runtime data: `dictionary.fst` / `dictionary.bin` / `association.bin` /
 `syllables.fst` read from the repo-root `assets/dictionaries/` at bundle-assembly time
 (read-only, fail-fast validated) into `.app/Contents/Resources`; absolute paths
-passed via `lexiconInstall`.
+passed via `lexiconInstall` (superseded 2026-10-02: the desktop core installs
+the lexicon through `Prepare`, `macos-desktop-core-roadmap.md` P6).
 
 ## Design decisions (D1–D11, grounded in code)
 

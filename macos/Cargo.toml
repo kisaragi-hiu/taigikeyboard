@@ -1,6 +1,6 @@
 # macOS input method — its own Cargo workspace, like `linux/` and `windows/`:
 # `taigi-macos-ffi` is the one static library the Swift app links. It holds the
-# engine (`../engine/swift-ffi`, linked as an rlib) and, from roadmap P6, the
+# engine (`../engine/swift-ffi`, linked as an rlib) and the
 # desktop core (`../desktop`) in ONE archive, so the engine's process-wide state
 # exists once (docs/architecture/macos-desktop-core-roadmap.md D1).
 #
@@ -14,7 +14,7 @@ members = ["crates/taigi-macos-ffi"]
 [workspace.package]
 version = "3.6.13"
 edition = "2021"
-# The desktop crates' floor (`desktop/Cargo.toml`): this workspace links them from P6.
+# The desktop crates' floor (`desktop/Cargo.toml`): this workspace links them.
 rust-version = "1.93"
 license = "Apache-2.0"
 repository = "https://github.com/taigikeyboard/taigikeyboard"
@@ -26,11 +26,13 @@ publish = false
 swift-ffi = { path = "../engine/swift-ffi", default-features = false }
 dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
+taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 log = "0.4"
 prost = "0.14"
 prost-build = "0.14"
 swift-bridge = "0.1"
 swift-bridge-build = "0.1"
+tempfile = "3"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -76,20 +76,6 @@ final class ComposingSessionCoordinator {
         self.composingManager = composingManager
     }
 
-    /// Tells the engine to open the user's data — the counts, bigrams, custom
-    /// dictionary and learned phrases it owns (user-data-engine-roadmap P6).
-    /// Called once at launch: the first composition of a session would
-    /// otherwise rank without the user's history. Returns at once; the engine
-    /// finishes opening — a first launch's takeover of the files this input
-    /// method wrote itself included — on a thread of its own.
-    static func openUserData() {
-        do {
-            try RustEngineBridge.userDataOpen(directory: UserDataDirectory.standard())
-        } catch {
-            logger.error("user data directory unavailable: \(error)")
-        }
-    }
-
     /// Makes `owner` the session that drives the engine, and returns the
     /// manager it should drive.
     ///

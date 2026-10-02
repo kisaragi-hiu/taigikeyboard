@@ -5,25 +5,36 @@
 //! `engine/swift-ffi` (`process_request_bytes` and the logger calls), and the
 //! desktop shell's, `desktop_request_bytes`, defined here. Both are bytes in,
 //! bytes out — protobuf envelopes, no handle crosses, no `unsafe` here
-//! (docs/contributing/rust-ffi-safety.md §1.1).
+//! (docs/contributing/rust-ffi-safety.md §1.1). The shell's requests reach
+//! the `taigi-desktop-core` runtime (`runtime.rs`) and the key-path settings
+//! snapshot (`settings.rs`).
 
 // Links the engine seam into this archive. Nothing here calls into it; without
 // the `extern crate` rustc would not link an rlib this crate never names, and
 // the archive would lack the engine's exports.
 extern crate rust_taigi;
 
+mod runtime;
+mod settings;
+
 use std::panic::{catch_unwind, AssertUnwindSafe};
+use std::sync::LazyLock;
 
 use prost::Message;
 use protos::engine::ErrorCode;
 
 /// prost types for `proto/desktop_shell.proto` (package `taigi.desktop_shell`).
 #[allow(clippy::all, clippy::pedantic)]
-mod shell {
+mod proto {
     include!(concat!(env!("OUT_DIR"), "/taigi.desktop_shell.rs"));
 }
 
-use shell::{desktop_request, desktop_response, DesktopRequest, DesktopResponse, VersionReply};
+use proto::{desktop_request, desktop_response, DesktopRequest, DesktopResponse, VersionReply};
+use runtime::Shell;
+
+/// The one shell the bridge serves (the runtime is a process singleton,
+/// roadmap D2).
+static SHELL: LazyLock<Shell> = LazyLock::new(Shell::default);
 
 // Bridge module. Doc comments live OUTSIDE this block — swift-bridge's parser
 // rejects `///` on the items inside.
@@ -39,7 +50,7 @@ mod ffi {
 }
 
 fn desktop_request_bytes(bytes: &[u8]) -> Vec<u8> {
-    answer(|| respond(bytes))
+    answer(|| respond(&SHELL, bytes))
 }
 
 /// The seam's panic boundary (rust-ffi-safety.md §1.2): a panic in `respond`
@@ -54,7 +65,7 @@ fn answer(respond: impl FnOnce() -> DesktopResponse) -> Vec<u8> {
         .encode_to_vec()
 }
 
-fn respond(bytes: &[u8]) -> DesktopResponse {
+fn respond(shell: &Shell, bytes: &[u8]) -> DesktopResponse {
     // Checked before decoding, as on the engine seam (rust-ffi-safety.md §1.4).
     if dispatch::is_request_too_large(bytes.len()) {
         return error_response(ErrorCode::FailInvariant);
@@ -71,13 +82,30 @@ fn respond(bytes: &[u8]) -> DesktopResponse {
         return error_response(ErrorCode::FailInvariant);
     };
     let reply = match request {
-        desktop_request::Request::Version(_) => desktop_response::Reply::Version(VersionReply {
-            version: env!("CARGO_PKG_VERSION").to_owned(),
-        }),
+        desktop_request::Request::Version(_) => {
+            Ok(desktop_response::Reply::Version(VersionReply {
+                version: env!("CARGO_PKG_VERSION").to_owned(),
+            }))
+        }
+        desktop_request::Request::Configure(configure) => shell
+            .configure(configure)
+            .map(desktop_response::Reply::Configure),
+        desktop_request::Request::Settings(settings) => shell
+            .settings(&settings)
+            .map(desktop_response::Reply::Settings),
+        desktop_request::Request::Prepare(_) => {
+            shell.prepare().map(desktop_response::Reply::Prepare)
+        }
     };
-    DesktopResponse {
-        error: ErrorCode::Ok as i32,
-        reply: Some(reply),
+    match reply {
+        Ok(reply) => DesktopResponse {
+            error: ErrorCode::Ok as i32,
+            reply: Some(reply),
+        },
+        Err(refusal) => {
+            log::warn!("desktop request refused: {refusal:?}");
+            error_response(ErrorCode::FailInvariant)
+        }
     }
 }
 
@@ -88,10 +116,48 @@ fn error_response(code: ErrorCode) -> DesktopResponse {
     }
 }
 
+/// Request builders the unit tests of every module share.
+#[cfg(test)]
+mod test_support {
+    use crate::proto::{setting_value, ConfigureRequest, SettingEntry, SettingValue};
+    use std::path::Path;
+
+    pub(crate) fn configure_request(
+        data: Option<&Path>,
+        dictionaries: Option<&Path>,
+    ) -> ConfigureRequest {
+        ConfigureRequest {
+            data_directory: data.map(|path| path.display().to_string()),
+            dictionaries_directory: dictionaries.map(|path| path.display().to_string()),
+            dictionary_stamp: 30613,
+            system_locale: "zh-Hant-TW".to_owned(),
+        }
+    }
+
+    fn entry(name: &str, value: setting_value::Value) -> SettingEntry {
+        SettingEntry {
+            name: name.to_owned(),
+            value: Some(SettingValue { value: Some(value) }),
+        }
+    }
+
+    pub(crate) fn boolean(name: &str, value: bool) -> SettingEntry {
+        entry(name, setting_value::Value::Boolean(value))
+    }
+
+    pub(crate) fn text(name: &str, value: &str) -> SettingEntry {
+        entry(name, setting_value::Value::Text(value.to_owned()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use shell::VersionRequest;
+    use proto::{
+        PrepareReply, PrepareRequest, SettingEntry, SettingsReply, SettingsRequest, VersionRequest,
+    };
+    use std::path::Path;
+    use test_support::{boolean, configure_request};
 
     fn decode(bytes: &[u8]) -> DesktopResponse {
         DesktopResponse::decode(bytes).expect("the seam always answers a decodable response")
@@ -209,5 +275,126 @@ mod tests {
         let response = decode(&desktop_request_bytes(&over_cap));
         assert_eq!(response.error, ErrorCode::FailInvariant as i32);
         assert_eq!(response.reply, None);
+    }
+
+    // ---- The runtime requests, through the same decode / encode path ----
+
+    fn send_to(shell: &Shell, request: desktop_request::Request) -> DesktopResponse {
+        let bytes = DesktopRequest {
+            request: Some(request),
+        }
+        .encode_to_vec();
+        decode(&answer(|| respond(shell, &bytes)))
+    }
+
+    fn configure(data: Option<&Path>, dictionaries: Option<&Path>) -> desktop_request::Request {
+        desktop_request::Request::Configure(configure_request(data, dictionaries))
+    }
+
+    fn prepare() -> desktop_request::Request {
+        desktop_request::Request::Prepare(PrepareRequest {})
+    }
+
+    fn settings(entries: Vec<SettingEntry>) -> desktop_request::Request {
+        desktop_request::Request::Settings(SettingsRequest { entries })
+    }
+
+    /// A refused request answers FAIL_INVARIANT with no reply, and the next
+    /// valid one is served. (Which requests are refused: `runtime.rs`,
+    /// `settings.rs`.)
+    #[test]
+    fn a_refusal_is_fail_invariant_and_the_next_request_is_served() {
+        let shell = Shell::default();
+        let refused = send_to(&shell, prepare());
+        assert_eq!(refused.error, ErrorCode::FailInvariant as i32);
+        assert_eq!(refused.reply, None);
+
+        let configured = send_to(&shell, configure(None, None));
+        assert_eq!(configured.error, ErrorCode::Ok as i32);
+        assert!(
+            matches!(&configured.reply, Some(desktop_response::Reply::Configure(reply)) if !reply.settings.is_empty()),
+            "{:?}",
+            configured.reply
+        );
+        let accepted = send_to(&shell, settings(vec![boolean("autoSpaceEnabled", true)]));
+        assert_eq!(accepted.error, ErrorCode::Ok as i32);
+        assert_eq!(
+            accepted.reply,
+            Some(desktop_response::Reply::Settings(SettingsReply {}))
+        );
+    }
+
+    /// rust-ffi-safety.md §6 T3 on runtime state: Settings from eight
+    /// threads each answer and leave one whole snapshot. (Not a TSan run.)
+    #[test]
+    fn concurrent_settings_requests_all_answer() {
+        let shell = Shell::default();
+        std::thread::scope(|scope| {
+            let workers: Vec<_> = (0..8)
+                .map(|index| {
+                    let shell = &shell;
+                    scope.spawn(move || {
+                        send_to(
+                            shell,
+                            settings(vec![boolean("autoSpaceEnabled", index % 2 == 0)]),
+                        )
+                    })
+                })
+                .collect();
+            for worker in workers {
+                let response = worker.join().expect("no panic escapes the seam");
+                assert_eq!(response.error, ErrorCode::Ok as i32);
+            }
+        });
+    }
+
+    /// The launch bring-up end to end — the only test that drives the
+    /// process-wide engine: the shipped dictionaries install under the
+    /// stamp, the user data opens under the Mac's rollback journal, and a
+    /// second Prepare repeats the first answer without a second install or
+    /// open.
+    #[test]
+    fn prepare_installs_the_lexicon_and_opens_the_user_data_once() {
+        let dictionaries =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../assets/dictionaries");
+        let data = tempfile::tempdir().expect("a temporary data directory");
+        let shell = Shell::default();
+        assert_eq!(
+            send_to(&shell, configure(Some(data.path()), Some(&dictionaries))).error,
+            ErrorCode::Ok as i32
+        );
+
+        let first = send_to(&shell, prepare());
+        assert_eq!(first.error, ErrorCode::Ok as i32);
+        let Some(desktop_response::Reply::Prepare(PrepareReply {
+            lexicon: Some(stats),
+        })) = first.reply.clone()
+        else {
+            panic!("expected lexicon stats, got {:?}", first.reply);
+        };
+        assert!(stats.dictionary_record_count > 0);
+        assert!(stats.prefix_index_entry_count > 0);
+        assert_eq!(send_to(&shell, prepare()), first, "once-only");
+
+        // A page request queues behind the background open, so its answer
+        // means the stores are open.
+        taigi_desktop_core::engine::user_data::list_custom_entries("", 1, 0)
+            .expect("the user data opened");
+        for store in [
+            "user_frequency.db",
+            "user_association.db",
+            "custom_dictionary.db",
+            "learned_phrases.db",
+        ] {
+            let path = data.path().join(store);
+            let header = std::fs::read(&path).unwrap_or_else(|e| panic!("{store}: {e}"));
+            // SQLite header bytes 18 / 19 (write / read format version):
+            // 1 = rollback journal, 2 = write-ahead log.
+            assert_eq!(&header[18..20], &[1, 1], "{store} is not in DELETE mode");
+            assert!(
+                !data.path().join(format!("{store}-wal")).exists(),
+                "{store} has a write-ahead log"
+            );
+        }
     }
 }

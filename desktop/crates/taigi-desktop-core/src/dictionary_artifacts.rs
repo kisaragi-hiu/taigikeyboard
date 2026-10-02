@@ -1,6 +1,6 @@
 //! The four dictionary files the engine mmaps, located and validated before
-//! the engine is asked to load them. Port of
-//! `macos/Sources/TaigiInputMethodCore/Engine/DictionaryArtifacts.swift`.
+//! the engine is asked to load them. Ported from the macOS Swift original,
+//! which this replaced when macOS moved its bring-up to the core (roadmap P6).
 
 use std::path::{Path, PathBuf};
 
@@ -75,6 +75,12 @@ mod tests {
         assert!(DictionaryArtifacts::locate(&dir).is_ok());
 
         std::fs::write(dir.join("syllables.fst"), b"").unwrap();
+        let err = DictionaryArtifacts::locate(&dir).unwrap_err();
+        assert!(err.to_string().contains("syllables.fst"), "{err}");
+
+        // A missing file, not only an empty one: the engine would accept an
+        // absent syllable inventory and serve no continuous candidates.
+        std::fs::remove_file(dir.join("syllables.fst")).unwrap();
         let err = DictionaryArtifacts::locate(&dir).unwrap_err();
         assert!(err.to_string().contains("syllables.fst"), "{err}");
         let _ = std::fs::remove_dir_all(&dir);

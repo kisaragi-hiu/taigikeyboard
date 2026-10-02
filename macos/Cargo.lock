@@ -724,6 +724,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "taigi-desktop-core"
+version = "3.6.13"
+dependencies = [
+ "dispatch",
+ "log",
+ "prost",
+ "protos",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "taigi-macos-ffi"
 version = "3.6.13"
 dependencies = [
@@ -735,6 +748,8 @@ dependencies = [
  "swift-bridge",
  "swift-bridge-build",
  "swift-ffi",
+ "taigi-desktop-core",
+ "tempfile",
 ]
 
 [[package]]

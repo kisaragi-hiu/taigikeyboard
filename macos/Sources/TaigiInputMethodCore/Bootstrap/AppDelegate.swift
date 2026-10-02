@@ -11,6 +11,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// receives input.
     private var server: IMKServer?
 
+    /// The desktop-core runtime, configured once at launch.
+    private var desktopCore: DesktopCoreRuntime?
+
     private let logger = DebugLogger(category: "Bootstrap")
 
     func applicationDidFinishLaunching(_: Notification) {
@@ -39,12 +42,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // the selected one — the rest of the library is parsed when the settings
         // window asks for the picker's roster.
         CustomFontLibrary.shared.activate(fileName: SettingsStore().storedFontSelection.customFontFile)
-        installLexiconEngine()
-        // Opening is asynchronous, so this only starts it. A composition typed
-        // before it finishes ranks without the user's history — one keystroke
-        // ordered as it would be on a fresh install, which is why this runs at
-        // launch rather than lazily on the first commit.
-        ComposingSessionCoordinator.openUserData()
+        // The desktop core installs the lexicon and starts opening the user
+        // data — at launch, not on the first key as on Windows and Linux
+        // (inventory C6). Opening is asynchronous, so this only starts it. A
+        // composition typed before it finishes ranks without the user's
+        // history — one keystroke ordered as it would be on a fresh install,
+        // which is why this runs at launch rather than lazily on the first
+        // commit.
+        desktopCore = DesktopCoreRuntime.configure(.launch(bundle: .main))
+        desktopCore?.prepare()
 
         // At launch rather than with the settings window: this is process-wide
         // AppKit configuration, and the menu has to exist before any window of
@@ -137,36 +143,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private static func refreshLocalizedChrome() {
         NSApp.mainMenu = MainMenu.make(DisplayLanguageStore.shared)
-    }
-
-    /// Loads the dictionary data the bundle ships with. Failures are logged and
-    /// left alone: an uninstalled engine returns no candidates, which is a
-    /// keyboard that types romanization but suggests nothing — far better than
-    /// refusing to launch and leaving the user with no input method at all.
-    private func installLexiconEngine() {
-        guard let resourceURL = Bundle.main.resourceURL else {
-            logger.error("bundle has no resource directory — lexicon not installed")
-            return
-        }
-        do {
-            let artifacts = try DictionaryArtifacts(baseURL: resourceURL)
-            // The bundle version doubles as the dictionary stamp: the data is
-            // rebuilt and re-bundled by the same release that bumps it.
-            let version = (Bundle.main.infoDictionary?["CFBundleVersion"] as? String)
-                .flatMap(UInt32.init) ?? 1
-            guard let stats = RustEngineBridge.lexiconInstall(
-                artifacts: artifacts,
-                dictionaryVersion: version,
-            ) else {
-                logger.error("lexicon install returned no stats — engine not installed")
-                return
-            }
-            logger.info(
-                "lexicon installed: records=\(stats.dictionaryRecordCount) prefixEntries=\(stats.prefixIndexEntryCount) version=\(version)",
-            )
-        } catch {
-            logger.error("lexicon not installed: \(error)")
-        }
     }
 
     /// True when `bundleURL` sits directly inside an `Input Methods` directory,
