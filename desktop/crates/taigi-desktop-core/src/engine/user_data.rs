@@ -20,19 +20,20 @@ pub use protos::engine::{
 };
 
 use super::bridge::{record_failure, roundtrip};
+use crate::platform::DesktopPlatform;
 use crate::settings::InputMode;
 
 /// Opens the engine's stores over `directory` — the desktop's one-directory
-/// layout, write-ahead logged (U3). Cheap enough for a key path: the engine
-/// puts the stores in use at once (a pick reported meanwhile queues behind
-/// the open) and finishes opening — the first takeover's re-derivation
-/// included — on a thread of its own. `true` once the engine acknowledged
+/// layout, under `platform`'s journal (U3, [`journal`]). Cheap enough for a
+/// key path: the engine puts the stores in use at once (a pick reported
+/// meanwhile queues behind the open) and finishes opening — the first
+/// takeover's re-derivation included — on a thread of its own. `true` once the engine acknowledged
 /// the open; it does not promise that every store is usable yet.
-pub fn open(directory: &Path) -> bool {
+pub fn open(directory: &Path, platform: DesktopPlatform) -> bool {
     let Some(answer) = user_data(
         user_data_request::Method::Open(OpenUserData {
             directory: directory.display().to_string(),
-            journal: UserDataJournal::Wal as i32,
+            journal: journal(platform) as i32,
             in_background: true,
             ..OpenUserData::default()
         }),
@@ -45,6 +46,17 @@ pub fn open(directory: &Path) -> bool {
     } else {
         record_failure("userDataOpen", "response carried no open result");
         false
+    }
+}
+
+/// The journal `platform`'s stores have always used: write-ahead logged on
+/// Windows and Linux, rollback on macOS (`RustEngineBridge+UserData.swift:21`).
+/// The engine refuses a second open at another journal
+/// (`engine/userdata/src/requests.rs`), so a process never mixes the two.
+fn journal(platform: DesktopPlatform) -> UserDataJournal {
+    match platform {
+        DesktopPlatform::Windows | DesktopPlatform::Linux => UserDataJournal::Wal,
+        DesktopPlatform::MacOS => UserDataJournal::Delete,
     }
 }
 
@@ -317,6 +329,15 @@ fn user_data(method: user_data_request::Method, op: &str) -> Option<user_data_re
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn each_desktop_opens_its_stores_under_its_own_journal() {
+        // trace: WAL on Windows and Linux (U3); DELETE on the Mac
+        // (`RustEngineBridge+UserData.swift:21`, inventory S8).
+        assert_eq!(journal(DesktopPlatform::Windows), UserDataJournal::Wal);
+        assert_eq!(journal(DesktopPlatform::Linux), UserDataJournal::Wal);
+        assert_eq!(journal(DesktopPlatform::MacOS), UserDataJournal::Delete);
+    }
 
     /// trace: the import refuses a missing file with the codec's own words
     /// (`could not read the file: …`) before any engine round-trip.

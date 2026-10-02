@@ -3,6 +3,7 @@
 
 use std::path::PathBuf;
 use taigi_desktop_core::engine::user_data;
+use taigi_windows_platform::DESKTOP_PLATFORM;
 
 /// Opens the stores for this process unless the window is read-only (no
 /// `%APPDATA%`: it shows the defaults and writes nothing, so it opens
@@ -19,5 +20,5 @@ pub fn open_at_launch(directory: PathBuf, is_read_only: bool) {
     }
     // A refused open is logged by the bridge; the pages say so on their
     // first request.
-    user_data::open(&directory);
+    user_data::open(&directory, DESKTOP_PLATFORM);
 }

@@ -283,8 +283,11 @@ mod tests {
     /// refused as RESERVED, never as "no key" — the message the user reads.
     fn is_reserved(virtual_key: u16) -> bool {
         let key = named_key_scalar(virtual_key).map(String::from);
-        ComposingKeyChord::make(key.as_deref(), KeyModifiers::default())
-            == Err(ChordRejection::ReservedKey)
+        ComposingKeyChord::make(
+            key.as_deref(),
+            KeyModifiers::default(),
+            crate::DESKTOP_PLATFORM,
+        ) == Err(ChordRejection::ReservedKey)
     }
 
     #[test]

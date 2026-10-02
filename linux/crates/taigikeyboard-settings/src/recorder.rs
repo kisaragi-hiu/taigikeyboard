@@ -11,6 +11,7 @@ use taigi_desktop_core::keys::{
     evaluate_press, ChordRejection, ComposingKeyChord, RecordedPress, RecorderOutcome,
     RecorderTarget,
 };
+use taigi_linux_platform::DESKTOP_PLATFORM;
 
 /// The window's recording state.
 #[derive(Debug, Default)]
@@ -67,7 +68,7 @@ impl Recorder {
         let Some(target) = self.target else {
             return Recorded::Nothing;
         };
-        match evaluate_press(target.tier(), &press) {
+        match evaluate_press(target.tier(), &press, DESKTOP_PLATFORM) {
             RecorderOutcome::Recorded(chord) => {
                 self.stop();
                 Recorded::Store(target, chord)

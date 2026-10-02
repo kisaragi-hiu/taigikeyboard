@@ -223,10 +223,11 @@ impl SettingsDocument {
         &mut self,
         action: crate::keys::ComposingAction,
         chord: Option<&crate::keys::ComposingKeyChord>,
+        platform: crate::platform::DesktopPlatform,
     ) {
         let value = chord.map_or_else(
             || keys::CLEARED_COMPOSING_CHORD.to_owned(),
-            |chord| chord.raw_value(),
+            |chord| chord.raw_value(platform),
         );
         self.set_raw_string(&action.settings_key_name(), &value);
     }

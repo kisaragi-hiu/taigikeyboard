@@ -15,6 +15,7 @@ use crate::composing::ComposingSessionCoordinator;
 use crate::dictionary_artifacts::DictionaryArtifacts;
 use crate::engine::{lexicon_install, user_data, LexiconInstallStats};
 use crate::keys::ShortcutConflicts;
+use crate::platform::DesktopPlatform;
 use crate::settings::{SettingsDocument, SettingsProvider, SettingsStore};
 use crate::strings::{DisplayLanguage, StringResolver};
 use std::path::PathBuf;
@@ -37,6 +38,8 @@ pub struct RuntimeParts {
     pub dictionary_version: u32,
     /// The machine's UI language as a BCP-47 tag, read at every call.
     pub system_locale: fn() -> String,
+    /// Which desktop this is — the shell's own constant.
+    pub platform: DesktopPlatform,
 }
 
 /// One per process: what every engine object of the input method reads,
@@ -48,6 +51,7 @@ pub struct DesktopRuntime {
     dictionaries: Box<dyn Fn() -> Option<PathBuf> + Send + Sync>,
     dictionary_version: u32,
     system_locale: fn() -> String,
+    platform: DesktopPlatform,
     first_key: OnceLock<FirstKeySetup>,
     /// The one composing engine driver per process, keyed by context token.
     /// Held for the length of one key, never across a call back into the
@@ -70,6 +74,7 @@ impl DesktopRuntime {
             dictionaries: parts.dictionaries,
             dictionary_version: parts.dictionary_version,
             system_locale: parts.system_locale,
+            platform: parts.platform,
             first_key: OnceLock::new(),
             coordinator: OnceLock::new(),
         }
@@ -137,7 +142,10 @@ impl DesktopRuntime {
     pub fn coordinator(&self) -> &Mutex<ComposingSessionCoordinator> {
         self.coordinator.get_or_init(|| {
             let settings: Arc<dyn SettingsProvider> = Arc::clone(&self.settings) as _;
-            Mutex::new(ComposingSessionCoordinator::for_desktop(settings))
+            Mutex::new(ComposingSessionCoordinator::for_desktop(
+                settings,
+                self.platform,
+            ))
         })
     }
 
@@ -152,7 +160,7 @@ impl DesktopRuntime {
             if let Some(directory) = &self.data_directory {
                 // The engine puts the stores in use before this returns and
                 // finishes opening on a thread of its own.
-                user_data::open(directory);
+                user_data::open(directory, self.platform);
             }
             self.reconcile_shortcuts();
             FirstKeySetup { lexicon }
@@ -194,8 +202,9 @@ impl DesktopRuntime {
         let Some(store) = &self.settings_store else {
             return;
         };
-        if let Err(error) = store.update_document(&mut ShortcutConflicts::resolve_across_registries)
-        {
+        if let Err(error) = store.update_document(&mut |document| {
+            ShortcutConflicts::resolve_across_registries(document, self.platform)
+        }) {
             log::error!("shortcuts.reconcile_failed error={error}");
         }
     }
@@ -216,6 +225,7 @@ impl DesktopRuntime {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::platform::test_support::TEST_PLATFORM;
     use crate::settings::{keys, StaticSettingsProvider};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -247,6 +257,7 @@ mod tests {
             dictionaries: Box::new(|| None),
             dictionary_version: 1,
             system_locale: || "ja-JP".to_owned(),
+            platform: TEST_PLATFORM,
         })
     }
 

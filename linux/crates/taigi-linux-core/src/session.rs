@@ -26,7 +26,7 @@ use taigi_desktop_core::keys::{
 };
 use taigi_desktop_core::settings::{keys, CandidateLayout, SettingsDocument};
 use taigi_linux_platform::key_translation::state::RELEASE;
-use taigi_linux_platform::{snapshot, RawKeyEvent};
+use taigi_linux_platform::{snapshot, RawKeyEvent, DESKTOP_PLATFORM};
 
 /// `IBUS_CAP_SURROUNDING_TEXT` (ibus `src/ibustypes.h:124`).
 pub const CAP_SURROUNDING_TEXT: u32 = 1 << 5;
@@ -153,8 +153,8 @@ pub fn process_key(
 ) -> KeyReply {
     let settings = runtime.settings.current();
     let mut emits = Vec::new();
-    let bindings = ComposingKeyBindings::from_document(&settings);
-    let global_action = ShortcutAction::matching(snapshot, &settings);
+    let bindings = ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM);
+    let global_action = ShortcutAction::matching(snapshot, &settings, DESKTOP_PLATFORM);
     // A held toggle chord repeats on the wire as presses with no release
     // between them; the repeats are consumed without firing again.
     if let Some(latched) = state.latched_chord {
@@ -214,7 +214,7 @@ pub fn process_key(
     // than a list that is not showing. A key the picker has no use for
     // takes it down and goes on below.
     if state.symbol_picker.is_some() {
-        match SymbolPickerIntent::intent(snapshot, &bindings) {
+        match SymbolPickerIntent::intent(snapshot, &bindings, DESKTOP_PLATFORM) {
             SymbolPickerIntent::Close => {
                 state.symbol_picker = None;
                 present_table(state, &settings, &bindings, &mut emits);
@@ -280,8 +280,13 @@ pub fn process_key(
     }
     let is_composing = self::is_composing(runtime, token);
     let is_showing_candidates = !state.candidates.is_empty();
-    let intent =
-        ComposingKeyIntent::intent(snapshot, is_composing, is_showing_candidates, &bindings);
+    let intent = ComposingKeyIntent::intent(
+        snapshot,
+        is_composing,
+        is_showing_candidates,
+        &bindings,
+        DESKTOP_PLATFORM,
+    );
     log::debug!(
         "key.intent {intent:?} composing={is_composing} candidates={is_showing_candidates}"
     );
@@ -418,7 +423,7 @@ pub fn navigate_from_panel(
     direction: CandidateNavigation,
 ) -> Vec<Emit> {
     let settings = runtime.settings.current();
-    let bindings = ComposingKeyBindings::from_document(&settings);
+    let bindings = ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM);
     // The guide is one page with no highlight; a panel scroll over it must
     // not move the list it covers.
     if state.telex_guide_shown {
@@ -452,7 +457,7 @@ pub fn navigate_from_panel(
 /// commits (`CandidateItemView.swift:47-48`, identical semantics).
 pub fn click_from_panel(runtime: &Runtime, state: &mut EngineState, position: usize) -> Vec<Emit> {
     let settings = runtime.settings.current();
-    let bindings = ComposingKeyBindings::from_document(&settings);
+    let bindings = ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM);
     if state.telex_guide_shown {
         return Vec::new();
     }

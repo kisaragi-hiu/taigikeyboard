@@ -18,6 +18,7 @@ use crate::guids::{
 use crate::wide::to_wide_nul;
 use taigi_desktop_core::keys::{ComposingKeyChord, ShortcutAction};
 use taigi_desktop_core::settings::SettingsDocument;
+use taigi_windows_platform::DESKTOP_PLATFORM;
 use windows::core::GUID;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetKeyboardLayout, VkKeyScanExW, MOD_ALT, MOD_CONTROL, MOD_SHIFT, MOD_WIN,
@@ -133,13 +134,13 @@ impl PreservedKeys {
         }
         self.unregister(keystroke_mgr);
         for (action, guid) in PRESERVED {
-            let Some(chord) = action.chord_in(settings) else {
+            let Some(chord) = action.chord_in(settings, DESKTOP_PLATFORM) else {
                 continue;
             };
             let Some(key) = preserved_key(&chord) else {
                 log::warn!(
                     "preserved_key.no_virtual_key action={action:?} chord={}",
-                    chord.display()
+                    chord.display(DESKTOP_PLATFORM)
                 );
                 continue;
             };

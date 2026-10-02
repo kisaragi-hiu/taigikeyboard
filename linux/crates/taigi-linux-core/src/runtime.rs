@@ -119,6 +119,7 @@ impl Runtime {
             dictionaries: Box::new(move || Some(dictionaries.clone())),
             dictionary_version: dictionary_version(),
             system_locale,
+            platform: taigi_linux_platform::DESKTOP_PLATFORM,
         });
         Self {
             shared,

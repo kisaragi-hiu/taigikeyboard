@@ -15,6 +15,7 @@ use super::action::ComposingAction;
 use super::bindings::ComposingKeyBindings;
 use super::chord::{ChordRejection, ComposingKeyChord};
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
+use crate::platform::DesktopPlatform;
 use crate::settings::{keys, SettingsDocument};
 use crate::strings::StringKey;
 
@@ -50,11 +51,15 @@ impl ShortcutAction {
 
     /// The global action `snapshot` is, if its recorded chord matches — read
     /// before the composing classifier, whether or not a composition runs.
-    pub fn matching(snapshot: &KeyEventSnapshot, settings: &SettingsDocument) -> Option<Self> {
+    pub fn matching(
+        snapshot: &KeyEventSnapshot,
+        settings: &SettingsDocument,
+        platform: DesktopPlatform,
+    ) -> Option<Self> {
         Self::ALL.into_iter().find(|action| {
             action
-                .chord_in(settings)
-                .is_some_and(|chord| chord.matches(snapshot))
+                .chord_in(settings, platform)
+                .is_some_and(|chord| chord.matches(snapshot, platform))
         })
     }
 
@@ -141,6 +146,11 @@ impl ShortcutAction {
     /// menus on: that key is Hanji/Romanization Swap here, and stays (USER 2026-09-09:
     /// "do not change the ` shortcut; it is the consensus among Taigi input methods").
     ///
+    /// Built as the value the gate would produce rather than through it, since
+    /// the gate is per desktop; `defaults_pass_the_gate_on_every_desktop`
+    /// (`keys/action.rs`) pins that it lets each one through unchanged. These are the Windows /
+    /// Linux global tier's own defaults — the Mac's global rows stay in Swift.
+    ///
     /// Changing a default here moves every install that never recorded the row:
     /// nothing writes a default into `settings.json`, so an absent key IS the
     /// default (`chord_in`). No migration flag, unlike the Mac's.
@@ -153,9 +163,10 @@ impl ShortcutAction {
             Self::ShowSymbolPicker => (",", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ShowTelexGuide => ("/", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
         };
-        ComposingKeyChord::make(Some(key), modifiers).unwrap_or_else(|rejection| {
-            panic!("default chord for {self:?} is not bindable: {rejection:?}")
-        })
+        ComposingKeyChord {
+            key: key.to_owned(),
+            modifiers,
+        }
     }
 
     /// The settings key this action's chord is stored under. Absent = the
@@ -177,8 +188,12 @@ impl ShortcutAction {
 
     /// The chord the document holds for this action, or `None` for a cleared
     /// or unparsable row.
-    pub fn chord_in(self, document: &SettingsDocument) -> Option<ComposingKeyChord> {
-        self.translation_in(document).and_then(Result::ok)
+    pub fn chord_in(
+        self,
+        document: &SettingsDocument,
+        platform: DesktopPlatform,
+    ) -> Option<ComposingKeyChord> {
+        self.translation_in(document, platform).and_then(Result::ok)
     }
 
     /// The bridge with its refusal kept: `None` for a cleared, absent-default
@@ -190,18 +205,24 @@ impl ShortcutAction {
     fn translation_in(
         self,
         document: &SettingsDocument,
+        platform: DesktopPlatform,
     ) -> Option<Result<ComposingKeyChord, ChordRejection>> {
         match document.raw_string(&self.settings_key_name()) {
             None => Some(Ok(self.default_chord())),
-            Some(raw) => ComposingKeyChord::translate_raw(raw),
+            Some(raw) => ComposingKeyChord::translate_raw(raw, platform),
         }
     }
 
     /// Records `chord` on this action, or clears the row.
-    pub fn store_in(self, document: &mut SettingsDocument, chord: Option<&ComposingKeyChord>) {
+    pub fn store_in(
+        self,
+        document: &mut SettingsDocument,
+        chord: Option<&ComposingKeyChord>,
+        platform: DesktopPlatform,
+    ) {
         let value = chord.map_or_else(
             || keys::CLEARED_COMPOSING_CHORD.to_owned(),
-            |chord| chord.raw_value(),
+            |chord| chord.raw_value(platform),
         );
         document.set_raw_string(&self.settings_key_name(), &value);
     }
@@ -233,10 +254,9 @@ pub fn global_rejection(chord: &ComposingKeyChord) -> Option<ChordRejection> {
     if modifiers.win {
         return Some(ChordRejection::TakenBySystem);
     }
-    // Ctrl+Alt is allowed HERE and refused on the composing tier
-    // (`evaluate_press`). It is AltGr on layouts that have one, and a
-    // composing binding would take the glyph such a layout types with it —
-    // but a global chord answers only while this Taiwanese TIP is the
+    // Ctrl+Alt is allowed on both tiers (`evaluate_press`). It is AltGr on
+    // layouts that have one, and a binding would take the glyph such a
+    // layout types with it — but a global chord answers only while this Taiwanese TIP is the
     // selected one, both ways it can be reached: as a preserved key
     // registered at activation and unregistered at Deactivate
     // (`preserved_keys.rs`), and as the key sink's fallback for hosts that
@@ -269,14 +289,15 @@ impl ShortcutConflicts {
     pub fn conflicting_global_actions(
         document: &SettingsDocument,
         changed: ShortcutAction,
+        platform: DesktopPlatform,
     ) -> Vec<ShortcutAction> {
-        let Some(recorded) = changed.chord_in(document) else {
+        let Some(recorded) = changed.chord_in(document, platform) else {
             return Vec::new();
         };
         ShortcutAction::ALL
             .into_iter()
             .filter(|other| {
-                *other != changed && other.chord_in(document).as_ref() == Some(&recorded)
+                *other != changed && other.chord_in(document, platform).as_ref() == Some(&recorded)
             })
             .collect()
     }
@@ -284,10 +305,13 @@ impl ShortcutConflicts {
     /// Which global actions hold a chord only because it is their default,
     /// while another global action holds the same chord because the user
     /// recorded it there (the upgrade case).
-    pub fn defaults_shadowed_by_recordings(document: &SettingsDocument) -> Vec<ShortcutAction> {
+    pub fn defaults_shadowed_by_recordings(
+        document: &SettingsDocument,
+        platform: DesktopPlatform,
+    ) -> Vec<ShortcutAction> {
         let held: Vec<(ShortcutAction, Option<ComposingKeyChord>)> = ShortcutAction::ALL
             .into_iter()
-            .map(|action| (action, action.chord_in(document)))
+            .map(|action| (action, action.chord_in(document, platform)))
             .collect();
         let recorded: Vec<&ComposingKeyChord> = held
             .iter()
@@ -309,16 +333,17 @@ impl ShortcutConflicts {
     pub fn resolve_after_global_recording(
         document: &mut SettingsDocument,
         changed: ShortcutAction,
+        platform: DesktopPlatform,
     ) {
-        for loser in Self::conflicting_global_actions(document, changed) {
-            loser.store_in(document, None);
+        for loser in Self::conflicting_global_actions(document, changed, platform) {
+            loser.store_in(document, None, platform);
         }
-        let Some(chord) = changed.chord_in(document) else {
+        let Some(chord) = changed.chord_in(document, platform) else {
             return;
         };
-        let bindings = ComposingKeyBindings::from_document(document);
+        let bindings = ComposingKeyBindings::from_document(document, platform);
         for loser in bindings.actions_holding(&chord, None) {
-            document.set_composing_chord(loser, None);
+            document.set_composing_chord(loser, None, platform);
         }
     }
 
@@ -328,14 +353,15 @@ impl ShortcutConflicts {
         document: &mut SettingsDocument,
         changed: ComposingAction,
         chord: &ComposingKeyChord,
+        platform: DesktopPlatform,
     ) {
-        let bindings = ComposingKeyBindings::from_document(document);
+        let bindings = ComposingKeyBindings::from_document(document, platform);
         for loser in bindings.actions_holding(chord, Some(changed)) {
-            document.set_composing_chord(loser, None);
+            document.set_composing_chord(loser, None, platform);
         }
         for action in ShortcutAction::ALL {
-            if action.chord_in(document).as_ref() == Some(chord) {
-                action.store_in(document, None);
+            if action.chord_in(document, platform).as_ref() == Some(chord) {
+                action.store_in(document, None, platform);
             }
         }
     }
@@ -345,9 +371,9 @@ impl ShortcutConflicts {
     /// tier wins (it is the tier that fires first — a preserved key is
     /// dispatched before the classifier ever runs). A global row left on a
     /// typing key is cleared first. Idempotent.
-    pub fn resolve_across_registries(document: &mut SettingsDocument) {
-        for loser in Self::defaults_shadowed_by_recordings(document) {
-            loser.store_in(document, None);
+    pub fn resolve_across_registries(document: &mut SettingsDocument, platform: DesktopPlatform) {
+        for loser in Self::defaults_shadowed_by_recordings(document, platform) {
+            loser.store_in(document, None, platform);
         }
         // A global row on a key the gate refuses as a typing key — a bare
         // `z` or `q` recorded while the eight non-syllable letters were
@@ -360,14 +386,20 @@ impl ShortcutConflicts {
         // recordable); only the typing-key refusal names an upgrade path.
         // Mirrors `ShortcutActions.swift` `resolveAcrossRegistries`.
         for action in ShortcutAction::ALL {
-            if action.translation_in(document) == Some(Err(ChordRejection::TypesRomanization)) {
-                action.store_in(document, None);
+            if action.translation_in(document, platform)
+                == Some(Err(ChordRejection::TypesRomanization))
+            {
+                action.store_in(document, None, platform);
             }
         }
-        let bindings = ComposingKeyBindings::from_document(document);
+        let bindings = ComposingKeyBindings::from_document(document, platform);
         let held: Vec<(ShortcutAction, ComposingKeyChord)> = ShortcutAction::ALL
             .into_iter()
-            .filter_map(|action| action.chord_in(document).map(|chord| (action, chord)))
+            .filter_map(|action| {
+                action
+                    .chord_in(document, platform)
+                    .map(|chord| (action, chord))
+            })
             .collect();
         for (action, chord) in &held {
             let holders = bindings.actions_holding(chord, None);
@@ -379,9 +411,9 @@ impl ShortcutConflicts {
                 let composing_recording_outranks =
                     global_is_default && *chord != holder.default_chord();
                 if composing_recording_outranks {
-                    action.store_in(document, None);
+                    action.store_in(document, None, platform);
                 } else {
-                    document.set_composing_chord(holder, None);
+                    document.set_composing_chord(holder, None, platform);
                 }
             }
         }
@@ -391,9 +423,10 @@ impl ShortcutConflicts {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::platform::test_support::TEST_PLATFORM as PLATFORM;
 
     fn chord(key: &str, modifiers: KeyModifiers) -> ComposingKeyChord {
-        ComposingKeyChord::make(Some(key), modifiers).unwrap()
+        ComposingKeyChord::make(Some(key), modifiers, PLATFORM).unwrap()
     }
 
     #[test]
@@ -538,7 +571,8 @@ mod tests {
             // `[` is no typing key (every letter is one, under either tone
             // scheme), so a bare chord on it is makeable and the answer is
             // the POLICY's, not the constructor's.
-            ComposingKeyChord::make(Some("["), modifiers).map(|chord| global_rejection(&chord))
+            ComposingKeyChord::make(Some("["), modifiers, PLATFORM)
+                .map(|chord| global_rejection(&chord))
         };
         // shift, control, alt, win → what the policy says
         let expected = [
@@ -569,7 +603,7 @@ mod tests {
         // A syllable letter is the constructor's refusal, before the policy,
         // and only while no host chord is held.
         assert_eq!(
-            ComposingKeyChord::make(Some("s"), KeyModifiers::NONE).map(|_| ()),
+            ComposingKeyChord::make(Some("s"), KeyModifiers::NONE, PLATFORM).map(|_| ()),
             Err(TypesRomanization)
         );
     }
@@ -615,24 +649,36 @@ mod tests {
         // trace: ShortcutActionsTests.swift:182-236.
         let mut doc = SettingsDocument::default();
         let shared = chord("k", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
-        ShortcutAction::OpenLastSettingsPane.store_in(&mut doc, Some(&shared));
-        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&shared));
+        ShortcutAction::OpenLastSettingsPane.store_in(&mut doc, Some(&shared), PLATFORM);
+        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&shared), PLATFORM);
         assert_eq!(
-            ShortcutConflicts::conflicting_global_actions(&doc, ShortcutAction::ToggleRomanization),
+            ShortcutConflicts::conflicting_global_actions(
+                &doc,
+                ShortcutAction::ToggleRomanization,
+                PLATFORM
+            ),
             vec![ShortcutAction::OpenLastSettingsPane]
         );
         ShortcutConflicts::resolve_after_global_recording(
             &mut doc,
             ShortcutAction::ToggleRomanization,
+            PLATFORM,
         );
-        assert_eq!(ShortcutAction::OpenLastSettingsPane.chord_in(&doc), None);
         assert_eq!(
-            ShortcutAction::ToggleRomanization.chord_in(&doc),
+            ShortcutAction::OpenLastSettingsPane.chord_in(&doc, PLATFORM),
+            None
+        );
+        assert_eq!(
+            ShortcutAction::ToggleRomanization.chord_in(&doc, PLATFORM),
             Some(shared)
         );
-        ShortcutAction::ToggleRomanization.store_in(&mut doc, None);
+        ShortcutAction::ToggleRomanization.store_in(&mut doc, None, PLATFORM);
         assert_eq!(
-            ShortcutConflicts::conflicting_global_actions(&doc, ShortcutAction::ToggleRomanization),
+            ShortcutConflicts::conflicting_global_actions(
+                &doc,
+                ShortcutAction::ToggleRomanization,
+                PLATFORM
+            ),
             vec![]
         );
     }
@@ -641,15 +687,18 @@ mod tests {
     fn a_default_gives_way_to_the_same_chord_recorded_elsewhere() {
         let mut doc = SettingsDocument::default();
         let settings_default = ShortcutAction::OpenLastSettingsPane.default_chord();
-        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&settings_default));
+        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&settings_default), PLATFORM);
         assert_eq!(
-            ShortcutConflicts::defaults_shadowed_by_recordings(&doc),
+            ShortcutConflicts::defaults_shadowed_by_recordings(&doc, PLATFORM),
             vec![ShortcutAction::OpenLastSettingsPane]
         );
-        ShortcutConflicts::resolve_across_registries(&mut doc);
-        assert_eq!(ShortcutAction::OpenLastSettingsPane.chord_in(&doc), None);
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(
-            ShortcutAction::ToggleRomanization.chord_in(&doc),
+            ShortcutAction::OpenLastSettingsPane.chord_in(&doc, PLATFORM),
+            None
+        );
+        assert_eq!(
+            ShortcutAction::ToggleRomanization.chord_in(&doc, PLATFORM),
             Some(settings_default)
         );
     }
@@ -660,49 +709,50 @@ mod tests {
         // A global default shadowed by a composing recording: the recording wins.
         let mut doc = SettingsDocument::default();
         let default = ShortcutAction::ToggleRomanization.default_chord();
-        doc.set_composing_chord(ComposingAction::PageForward, Some(&default));
-        ShortcutConflicts::resolve_across_registries(&mut doc);
+        doc.set_composing_chord(ComposingAction::PageForward, Some(&default), PLATFORM);
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(
-            ShortcutAction::ToggleRomanization.chord_in(&doc),
+            ShortcutAction::ToggleRomanization.chord_in(&doc, PLATFORM),
             None,
             "the default gives way"
         );
         assert_eq!(
-            ComposingKeyBindings::from_document(&doc).chord(ComposingAction::PageForward),
+            ComposingKeyBindings::from_document(&doc, PLATFORM).chord(ComposingAction::PageForward),
             Some(&default)
         );
 
         // The mirror image: a global recording on a composing default.
         let mut doc = SettingsDocument::default();
         let shift_tab = chord("\t", KeyModifiers::SHIFT);
-        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&shift_tab));
-        ShortcutConflicts::resolve_across_registries(&mut doc);
+        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&shift_tab), PLATFORM);
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(
-            ComposingKeyBindings::from_document(&doc).chord(ComposingAction::PreviousCandidate),
+            ComposingKeyBindings::from_document(&doc, PLATFORM)
+                .chord(ComposingAction::PreviousCandidate),
             None
         );
         assert_eq!(
-            ShortcutAction::ToggleRomanization.chord_in(&doc),
+            ShortcutAction::ToggleRomanization.chord_in(&doc, PLATFORM),
             Some(shift_tab.clone())
         );
 
         // Recording vs recording: the global tier wins.
         let mut doc = SettingsDocument::default();
         let recorded = chord("f", KeyModifiers::CONTROL.with(KeyModifiers::ALT));
-        doc.set_composing_chord(ComposingAction::PageForward, Some(&recorded));
-        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&recorded));
-        ShortcutConflicts::resolve_across_registries(&mut doc);
+        doc.set_composing_chord(ComposingAction::PageForward, Some(&recorded), PLATFORM);
+        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&recorded), PLATFORM);
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(
-            ShortcutAction::ToggleRomanization.chord_in(&doc),
+            ShortcutAction::ToggleRomanization.chord_in(&doc, PLATFORM),
             Some(recorded)
         );
         assert_eq!(
-            ComposingKeyBindings::from_document(&doc).chord(ComposingAction::PageForward),
+            ComposingKeyBindings::from_document(&doc, PLATFORM).chord(ComposingAction::PageForward),
             None
         );
         // Idempotent.
         let before = doc.clone();
-        ShortcutConflicts::resolve_across_registries(&mut doc);
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(doc.to_json(), before.to_json());
 
         // A global row left on a typing key — a bare `z` recorded before the
@@ -714,11 +764,17 @@ mod tests {
         doc.set_raw_string(&settings_row, "|007A");
         let translate_row = ShortcutAction::ToggleTranslateSwapped.settings_key_name();
         doc.set_raw_string(&translate_row, "s|0033");
-        ShortcutAction::ToggleRomanization
-            .store_in(&mut doc, Some(&chord("z", KeyModifiers::CONTROL)));
-        ShortcutAction::CycleCandidateDisplayMode
-            .store_in(&mut doc, Some(&chord("3", KeyModifiers::CONTROL)));
-        ShortcutConflicts::resolve_across_registries(&mut doc);
+        ShortcutAction::ToggleRomanization.store_in(
+            &mut doc,
+            Some(&chord("z", KeyModifiers::CONTROL)),
+            PLATFORM,
+        );
+        ShortcutAction::CycleCandidateDisplayMode.store_in(
+            &mut doc,
+            Some(&chord("3", KeyModifiers::CONTROL)),
+            PLATFORM,
+        );
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(
             doc.raw_string(&settings_row),
             Some(keys::CLEARED_COMPOSING_CHORD),
@@ -730,37 +786,40 @@ mod tests {
             "Shift+3 cleared"
         );
         assert_eq!(
-            ShortcutAction::ToggleRomanization.chord_in(&doc),
+            ShortcutAction::ToggleRomanization.chord_in(&doc, PLATFORM),
             Some(chord("z", KeyModifiers::CONTROL))
         );
         assert_eq!(
-            ShortcutAction::CycleCandidateDisplayMode.chord_in(&doc),
+            ShortcutAction::CycleCandidateDisplayMode.chord_in(&doc, PLATFORM),
             Some(chord("3", KeyModifiers::CONTROL))
         );
         let before = doc.clone();
-        ShortcutConflicts::resolve_across_registries(&mut doc);
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(doc.to_json(), before.to_json(), "idempotent");
 
         // An uncolliding setup is left alone.
         let mut doc = SettingsDocument::default();
-        ShortcutConflicts::resolve_across_registries(&mut doc);
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
         assert_eq!(doc.revision, 0, "nothing was written");
 
         // Two collisions at once, and a cleared commit row is refilled.
         let mut doc = SettingsDocument::default();
-        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&shift_tab));
-        ShortcutAction::OpenLastSettingsPane
-            .store_in(&mut doc, Some(&chord("]", KeyModifiers::NONE)));
-        ShortcutConflicts::resolve_across_registries(&mut doc);
-        let bindings = ComposingKeyBindings::from_document(&doc);
+        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&shift_tab), PLATFORM);
+        ShortcutAction::OpenLastSettingsPane.store_in(
+            &mut doc,
+            Some(&chord("]", KeyModifiers::NONE)),
+            PLATFORM,
+        );
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
+        let bindings = ComposingKeyBindings::from_document(&doc, PLATFORM);
         assert_eq!(bindings.chord(ComposingAction::PreviousCandidate), None);
         assert_eq!(bindings.chord(ComposingAction::PageForward), None);
         let mut doc = SettingsDocument::default();
         let ctrl_r = chord("r", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
-        doc.set_composing_chord(ComposingAction::CommitLiteral, Some(&ctrl_r));
-        ShortcutAction::OpenLastSettingsPane.store_in(&mut doc, Some(&ctrl_r));
-        ShortcutConflicts::resolve_across_registries(&mut doc);
-        let restored = ComposingKeyBindings::from_document(&doc)
+        doc.set_composing_chord(ComposingAction::CommitLiteral, Some(&ctrl_r), PLATFORM);
+        ShortcutAction::OpenLastSettingsPane.store_in(&mut doc, Some(&ctrl_r), PLATFORM);
+        ShortcutConflicts::resolve_across_registries(&mut doc, PLATFORM);
+        let restored = ComposingKeyBindings::from_document(&doc, PLATFORM)
             .chord(ComposingAction::CommitLiteral)
             .cloned();
         assert!(
@@ -774,16 +833,20 @@ mod tests {
     fn composing_recording_clears_the_global_row_that_held_the_chord() {
         let mut doc = SettingsDocument::default();
         let shared = chord("]", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
-        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&shared));
-        doc.set_composing_chord(ComposingAction::PageForward, Some(&shared));
+        ShortcutAction::ToggleRomanization.store_in(&mut doc, Some(&shared), PLATFORM);
+        doc.set_composing_chord(ComposingAction::PageForward, Some(&shared), PLATFORM);
         ShortcutConflicts::resolve_after_composing_recording(
             &mut doc,
             ComposingAction::PageForward,
             &shared,
+            PLATFORM,
         );
-        assert_eq!(ShortcutAction::ToggleRomanization.chord_in(&doc), None);
         assert_eq!(
-            ComposingKeyBindings::from_document(&doc).chord(ComposingAction::PageForward),
+            ShortcutAction::ToggleRomanization.chord_in(&doc, PLATFORM),
+            None
+        );
+        assert_eq!(
+            ComposingKeyBindings::from_document(&doc, PLATFORM).chord(ComposingAction::PageForward),
             Some(&shared)
         );
     }

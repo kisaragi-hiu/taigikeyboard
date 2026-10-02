@@ -6,7 +6,7 @@
 
 use taigi_desktop_core::engine::user_data;
 use taigi_desktop_storage::created;
-use taigi_linux_platform::UserDirectories;
+use taigi_linux_platform::{UserDirectories, DESKTOP_PLATFORM};
 
 /// Answers the failure the window's banner shows — the data directory
 /// could not be created, or there is no user directory at all — or `None`
@@ -24,6 +24,6 @@ pub fn open_at_launch() -> Option<String> {
     };
     // A refused open is logged by the bridge; the pages mount and say so
     // on their first request, as they did when a store failed to open.
-    user_data::open(&directory);
+    user_data::open(&directory, DESKTOP_PLATFORM);
     None
 }

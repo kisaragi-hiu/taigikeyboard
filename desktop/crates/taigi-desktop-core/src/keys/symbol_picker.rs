@@ -5,6 +5,7 @@ use super::bindings::ComposingKeyBindings;
 use super::intent::CandidateNavigation;
 use super::snapshot::KeyEventSnapshot;
 use super::ComposingAction;
+use crate::platform::DesktopPlatform;
 
 /// The picker's reading of one key event, decided before any window is
 /// asked anything. Its own table rather than a branch of
@@ -38,7 +39,11 @@ impl SymbolPickerIntent {
     /// outcomes differ: there is no other script to commit, so the Hanji/romanization key
     /// confirms like Enter, and the literal-commit key has no literal to
     /// write, so it falls through.
-    pub fn intent(key: &KeyEventSnapshot, bindings: &ComposingKeyBindings) -> Self {
+    pub fn intent(
+        key: &KeyEventSnapshot,
+        bindings: &ComposingKeyBindings,
+        platform: DesktopPlatform,
+    ) -> Self {
         if key.is_bare_escape() {
             return Self::Close;
         }
@@ -51,7 +56,7 @@ impl SymbolPickerIntent {
         if let Some(slot) = bindings.slot_key_set().slot_for_event(key) {
             return Self::PickSlot(slot);
         }
-        match bindings.action_for(key) {
+        match bindings.action_for(key, platform) {
             Some(action) if action.navigation().is_some() => Self::Navigate(
                 action
                     .navigation()
@@ -69,9 +74,10 @@ impl SymbolPickerIntent {
 mod tests {
     use super::*;
     use crate::keys::{ComposingKeyChord, KeyModifiers, NavigationKey, ToneInputScheme};
+    use crate::platform::test_support::TEST_PLATFORM as PLATFORM;
 
     fn intent(key: &KeyEventSnapshot) -> SymbolPickerIntent {
-        SymbolPickerIntent::intent(key, &ComposingKeyBindings::default())
+        SymbolPickerIntent::intent(key, &ComposingKeyBindings::default(), PLATFORM)
     }
 
     fn text(characters: &str) -> KeyEventSnapshot {
@@ -136,11 +142,11 @@ mod tests {
         // one assertion per scheme shows the picker reads it.
         let telex = ComposingKeyBindings::resolve(&Default::default(), ToneInputScheme::Telex);
         assert_eq!(
-            SymbolPickerIntent::intent(&text("1"), &telex),
+            SymbolPickerIntent::intent(&text("1"), &telex, PLATFORM),
             SymbolPickerIntent::PickSlot(0)
         );
         assert_eq!(
-            SymbolPickerIntent::intent(&text("q"), &telex),
+            SymbolPickerIntent::intent(&text("q"), &telex, PLATFORM),
             SymbolPickerIntent::CloseAndPassThrough,
             "a letter is a tone key under Telex"
         );
@@ -173,21 +179,25 @@ mod tests {
 
     #[test]
     fn a_recorded_paging_chord_is_read() {
-        let chord =
-            ComposingKeyChord::make(Some("\r"), KeyModifiers::CONTROL.with(KeyModifiers::SHIFT))
-                .unwrap();
+        let chord = ComposingKeyChord::make(
+            Some("\r"),
+            KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
+            PLATFORM,
+        )
+        .unwrap();
         let mut document = crate::settings::SettingsDocument::default();
-        document.set_composing_chord(ComposingAction::PageForward, Some(&chord));
-        let bindings = ComposingKeyBindings::from_document(&document);
+        document.set_composing_chord(ComposingAction::PageForward, Some(&chord), PLATFORM);
+        let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
         assert_eq!(
             SymbolPickerIntent::intent(
                 &named("\r", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT)),
-                &bindings
+                &bindings,
+                PLATFORM
             ),
             SymbolPickerIntent::Navigate(CandidateNavigation::PageDown)
         );
         assert_eq!(
-            SymbolPickerIntent::intent(&text("]"), &bindings),
+            SymbolPickerIntent::intent(&text("]"), &bindings, PLATFORM),
             SymbolPickerIntent::CloseAndPassThrough
         );
     }

@@ -24,6 +24,7 @@ use crate::wide::{fill_fixed, to_wide_nul};
 use taigi_desktop_core::keys::{menu_rows, LanguageMode, MenuCommand, MENU};
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::StringResolver;
+use taigi_windows_platform::DESKTOP_PLATFORM;
 use windows::core::{Result, PCWSTR};
 use windows::Win32::Foundation::{HWND, POINT};
 use windows::Win32::UI::Input::KeyboardAndMouse::{GetActiveWindow, GetFocus};
@@ -90,7 +91,7 @@ pub fn popup_rows(
     strings: &StringResolver,
     settings: &SettingsDocument,
 ) -> Vec<Option<(u32, String)>> {
-    menu_rows(strings, settings)
+    menu_rows(strings, settings, DESKTOP_PLATFORM)
         .into_iter()
         .enumerate()
         .map(|(index, row)| {
@@ -250,7 +251,7 @@ mod tests {
         }
         assert_eq!(menu_command(0), None, "a dismissed popup");
         let mut cleared = SettingsDocument::default();
-        ShortcutAction::ToggleRomanization.store_in(&mut cleared, None);
+        ShortcutAction::ToggleRomanization.store_in(&mut cleared, None, DESKTOP_PLATFORM);
         let rows = popup_rows(&strings, &cleared);
         assert_eq!(rows[0].as_ref().unwrap().1, "切換台羅/白話字");
         // A plain tray button, whose click reaches `OnClick`. A

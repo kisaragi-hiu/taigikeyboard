@@ -42,6 +42,7 @@ use taigi_desktop_core::keys::{
 use taigi_desktop_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_core::symbols::SymbolTable;
+use taigi_windows_platform::DESKTOP_PLATFORM;
 use windows::core::{Interface, BOOL};
 use windows::Win32::Foundation::{E_UNEXPECTED, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::UI::TextServices::{
@@ -115,7 +116,7 @@ impl TextService_Impl {
         // A chord recorded in the settings window takes effect at the next
         // key, whichever way the file's change was noticed.
         self.sync_preserved_keys(&settings);
-        let global_action = ShortcutAction::matching(&snapshot, &settings);
+        let global_action = ShortcutAction::matching(&snapshot, &settings, DESKTOP_PLATFORM);
 
         // The Telex guide goes down on the first key after it came up,
         // before that key is read: it is a card to glance at, not a mode
@@ -160,7 +161,7 @@ impl TextService_Impl {
 
         // Resolved once per key: the picker and the composing contract below
         // read the same value.
-        let bindings = ComposingKeyBindings::from_document(&settings);
+        let bindings = ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM);
         // With the picker up, every key is the picker's first — read before
         // the composing contract so the slot keys and the arrows reach it
         // rather than a list that is not showing. A key the picker has no
@@ -190,8 +191,13 @@ impl TextService_Impl {
             self.hide_candidates(token);
         }
         let (is_composing, is_showing_candidates) = self.composing_flags(runtime, token);
-        let intent =
-            ComposingKeyIntent::intent(&snapshot, is_composing, is_showing_candidates, &bindings);
+        let intent = ComposingKeyIntent::intent(
+            &snapshot,
+            is_composing,
+            is_showing_candidates,
+            &bindings,
+            DESKTOP_PLATFORM,
+        );
         log::debug!(
             "key.intent {intent:?} composing={is_composing} candidates={is_showing_candidates}"
         );
@@ -357,7 +363,8 @@ impl TextService_Impl {
         let surface = Surface {
             presenter,
             token,
-            slot_key_set: ComposingKeyBindings::from_document(settings).slot_key_set(),
+            slot_key_set: ComposingKeyBindings::from_document(settings, DESKTOP_PLATFORM)
+                .slot_key_set(),
             actions: RefCell::new(Vec::new()),
         };
 
@@ -971,7 +978,7 @@ impl TextService_Impl {
         if phase == KeyPhase::Test {
             return true;
         }
-        match SymbolPickerIntent::intent(snapshot, bindings) {
+        match SymbolPickerIntent::intent(snapshot, bindings, DESKTOP_PLATFORM) {
             SymbolPickerIntent::Close => {
                 self.hide_symbol_picker_of(token);
                 true
@@ -1058,7 +1065,7 @@ impl TextService_Impl {
             self.hide_symbol_picker_of(token);
             return;
         }
-        let bindings = ComposingKeyBindings::from_document(settings);
+        let bindings = ComposingKeyBindings::from_document(settings, DESKTOP_PLATFORM);
         let runtime = Runtime::shared();
         let (is_composing, is_showing) = self.composing_flags(runtime, token);
         if is_composing {
@@ -1215,7 +1222,8 @@ impl TextService_Impl {
             return;
         };
         let settings = runtime.settings.current();
-        let slot_key_set = ComposingKeyBindings::from_document(&settings).slot_key_set();
+        let slot_key_set =
+            ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM).slot_key_set();
         let cells = {
             let mut state = self.state.borrow_mut();
             let Some(entry) = state.contexts.entry_mut(identity) else {

@@ -84,9 +84,11 @@ impl ComposingAction {
         Self::ALL.into_iter().find(|action| action.raw() == raw)
     }
 
-    /// The chord a fresh install has on this action, built through the same
-    /// gate a recorded one goes through. A default the gate refuses is a
-    /// mistake in this file, so it traps rather than shipping "unbound".
+    /// The chord a fresh install has on this action — the same on every
+    /// desktop (`ComposingAction.swift:90-104`). Built as the value the gate
+    /// would produce rather than through it, since the gate is per desktop;
+    /// `defaults_pass_the_gate_on_every_desktop` pins that it lets each one
+    /// through unchanged.
     pub fn default_chord(self) -> ComposingKeyChord {
         let (key, modifiers) = match self {
             Self::NextCandidate => ("\t", KeyModifiers::NONE),
@@ -97,9 +99,10 @@ impl ComposingAction {
             Self::CommitLiteral => ("\r", KeyModifiers::SHIFT),
             Self::CommitAlternateScript => (" ", KeyModifiers::NONE),
         };
-        ComposingKeyChord::make(Some(key), modifiers).unwrap_or_else(|rejection| {
-            panic!("default chord for {self:?} is not bindable: {rejection:?}")
-        })
+        ComposingKeyChord {
+            key: key.to_owned(),
+            modifiers,
+        }
     }
 
     /// Whether this action needs candidates on screen to mean anything. A
@@ -167,6 +170,7 @@ impl ComposingAction {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::platform::test_support::{ALL_PLATFORMS, TEST_PLATFORM as PLATFORM};
 
     #[test]
     fn groups_hold_every_action_exactly_once() {
@@ -201,7 +205,7 @@ mod tests {
     #[test]
     fn defaults_follow_the_system_zhuyin_keyboard() {
         // trace: ComposingKeyBindingsTests.swift:196-215.
-        let chord = |key: &str, m| ComposingKeyChord::make(Some(key), m).unwrap();
+        let chord = |key: &str, m| ComposingKeyChord::make(Some(key), m, PLATFORM).unwrap();
         assert_eq!(
             ComposingAction::NextCandidate.default_chord(),
             chord("\t", KeyModifiers::NONE)
@@ -232,5 +236,27 @@ mod tests {
         );
         assert!(!ComposingAction::CommitLiteral.requires_candidates());
         assert!(ComposingAction::ConfirmHighlighted.requires_candidates());
+    }
+
+    #[test]
+    fn defaults_pass_the_gate_on_every_desktop() {
+        // Both rosters' `default_chord` build the value without the gate;
+        // the gate must hand each one back unchanged on all three desktops.
+        let defaults = ComposingAction::ALL
+            .map(|action| (format!("{action:?}"), action.default_chord()))
+            .into_iter()
+            .chain(
+                crate::keys::ShortcutAction::ALL
+                    .map(|action| (format!("{action:?}"), action.default_chord())),
+            );
+        for (action, chord) in defaults {
+            for platform in ALL_PLATFORMS {
+                assert_eq!(
+                    ComposingKeyChord::make(Some(&chord.key), chord.modifiers, platform),
+                    Ok(chord.clone()),
+                    "{action} on {platform:?}"
+                );
+            }
+        }
     }
 }

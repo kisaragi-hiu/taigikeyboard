@@ -8,6 +8,7 @@ use super::chord::ComposingKeyChord;
 use super::slot_key_set::CandidateSlotKeySet;
 use super::snapshot::KeyEventSnapshot;
 use super::tone_input_scheme::ToneInputScheme;
+use crate::platform::DesktopPlatform;
 use crate::settings::{keys, SettingsDocument};
 
 /// "Resolved" means three things have already happened, so the classifier
@@ -77,12 +78,13 @@ impl ComposingKeyBindings {
     /// The bindings a settings document describes: `composingShortcut.<raw>`
     /// per action (absent = default, `""` = cleared, unparsable = cleared —
     /// silently restoring the default would undo a deliberate clearing) plus
-    /// the tone scheme (`SettingsStore.swift` `composingKeyBindings`).
-    pub fn from_document(document: &SettingsDocument) -> Self {
+    /// the tone scheme (`SettingsStore.swift` `composingKeyBindings`). The
+    /// stored values are read in `platform`'s chord grammar.
+    pub fn from_document(document: &SettingsDocument, platform: DesktopPlatform) -> Self {
         let mut stored = BTreeMap::new();
         for action in ComposingAction::ALL {
             if let Some(raw) = document.raw_string(&action.settings_key_name()) {
-                stored.insert(action, ComposingKeyChord::from_raw(raw));
+                stored.insert(action, ComposingKeyChord::from_raw(raw, platform));
             }
         }
         Self {
@@ -104,11 +106,15 @@ impl ComposingKeyBindings {
 
     /// The action `event` is bound to, if any. Linear over the roster: seven
     /// entries, and a chord-keyed map would need the duplicate handling twice.
-    pub fn action_for(&self, event: &KeyEventSnapshot) -> Option<ComposingAction> {
+    pub fn action_for(
+        &self,
+        event: &KeyEventSnapshot,
+        platform: DesktopPlatform,
+    ) -> Option<ComposingAction> {
         ComposingAction::ALL.into_iter().find(|action| {
             self.chords
                 .get(action)
-                .is_some_and(|chord| chord.matches(event))
+                .is_some_and(|chord| chord.matches(event, platform))
         })
     }
 
@@ -194,10 +200,11 @@ impl ComposingKeyBindings {
 mod tests {
     use super::*;
     use crate::keys::KeyModifiers;
+    use crate::platform::test_support::TEST_PLATFORM as PLATFORM;
     use crate::settings::SettingChoice;
 
     fn chord(key: &str, modifiers: KeyModifiers) -> ComposingKeyChord {
-        ComposingKeyChord::make(Some(key), modifiers).unwrap()
+        ComposingKeyChord::make(Some(key), modifiers, PLATFORM).unwrap()
     }
 
     fn stored(
@@ -456,9 +463,13 @@ mod tests {
         // `testCandidateWindow_shipsOn_andReadsWhatTheGeneralPaneWrites`.
         assert!(ComposingKeyBindings::default().is_candidate_window_enabled);
         let mut document = SettingsDocument::default();
-        assert!(ComposingKeyBindings::from_document(&document).is_candidate_window_enabled);
+        assert!(
+            ComposingKeyBindings::from_document(&document, PLATFORM).is_candidate_window_enabled
+        );
         document.set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false);
-        assert!(!ComposingKeyBindings::from_document(&document).is_candidate_window_enabled);
+        assert!(
+            !ComposingKeyBindings::from_document(&document, PLATFORM).is_candidate_window_enabled
+        );
     }
 
     #[test]
@@ -467,14 +478,14 @@ mod tests {
         document.set_raw_string(&ComposingAction::PageForward.settings_key_name(), "");
         document.set_raw_string(
             &ComposingAction::NextCandidate.settings_key_name(),
-            &chord("]", KeyModifiers::CONTROL).raw_value(),
+            &chord("]", KeyModifiers::CONTROL).raw_value(PLATFORM),
         );
         document.set_raw_string(
             &ComposingAction::PageBackward.settings_key_name(),
             "garbage",
         );
         document.set_choice(&keys::TONE_INPUT_SCHEME, ToneInputScheme::Telex);
-        let bindings = ComposingKeyBindings::from_document(&document);
+        let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
         assert_eq!(
             bindings.chord(ComposingAction::PageForward),
             None,
@@ -498,7 +509,7 @@ mod tests {
         assert_eq!(bindings.slot_key_set(), CandidateSlotKeySet::Digits);
         let event = KeyEventSnapshot::chord(Some("\u{1D}"), "]", KeyModifiers::CONTROL);
         assert_eq!(
-            bindings.action_for(&event),
+            bindings.action_for(&event, PLATFORM),
             Some(ComposingAction::NextCandidate)
         );
         assert_eq!(

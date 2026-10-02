@@ -21,6 +21,7 @@ use taigi_desktop_core::keys::{
 use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::{LiveSettings, SettingsFileStore, SettingsWriter};
+use taigi_linux_platform::DESKTOP_PLATFORM;
 use taigikeyboard_settings::pages::BUILT;
 use taigikeyboard_settings::window::SettingsWindow;
 use taigikeyboard_settings::SIDEBAR;
@@ -50,7 +51,7 @@ fn main() -> ExitCode {
     // every window below; the open seeds the custom dictionary, which the
     // custom-dictionary check empties before it counts.
     assert!(
-        user_data::open(directory.path()),
+        user_data::open(directory.path(), DESKTOP_PLATFORM),
         "the engine opens its stores"
     );
     let writer = SettingsWriter::new(Rc::new(LiveSettings::new(store.clone())));
@@ -216,7 +217,7 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
     window.record_press(0x6b, 45, (1 << 2) | (1 << 3));
     assert_eq!(window.recording().0, None);
     let chord = ShortcutAction::ShowTelexGuide
-        .chord_in(window.writer().borrow().document())
+        .chord_in(window.writer().borrow().document(), DESKTOP_PLATFORM)
         .expect("the row is bound");
     assert_eq!(chord.key, "k");
     assert_eq!(
@@ -225,7 +226,7 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
     );
     window.clear_shortcut(target);
     assert!(ShortcutAction::ShowTelexGuide
-        .chord_in(window.writer().borrow().document())
+        .chord_in(window.writer().borrow().document(), DESKTOP_PLATFORM)
         .is_none());
     let composing = RecorderTarget::Composing(ComposingAction::NextCandidate);
     window.start_recording(composing, None);
@@ -233,7 +234,7 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
     {
         let writer = window.writer();
         let document = writer.borrow();
-        let bindings = ComposingKeyBindings::from_document(document.document());
+        let bindings = ComposingKeyBindings::from_document(document.document(), DESKTOP_PLATFORM);
         assert_eq!(
             bindings
                 .chord(ComposingAction::NextCandidate)
@@ -242,7 +243,7 @@ fn a_recorded_press_binds_the_row(window: &Rc<SettingsWindow>) {
         );
         assert!(
             ShortcutAction::ToggleRomanization
-                .chord_in(document.document())
+                .chord_in(document.document(), DESKTOP_PLATFORM)
                 .is_none(),
             "the global row that held Ctrl+Alt+C is emptied"
         );

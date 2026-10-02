@@ -10,8 +10,8 @@
 use super::PageContext;
 use adw::prelude::*;
 use taigi_desktop_core::keys::shortcut_labels::{
-    caret_chords_label, shifted_slot_keys_label, slot_keys_label, width_flip_chords_label,
-    CANCEL_KEY_LABEL, NAVIGATION_KEYS_LABEL,
+    cancel_key_label, caret_chords_label, navigation_keys_label, shifted_slot_keys_label,
+    slot_keys_label, width_flip_chords_label,
 };
 use taigi_desktop_core::keys::{
     rejection_message_key, ComposingAction, ComposingKeyBindings, ComposingKeyChord,
@@ -19,9 +19,10 @@ use taigi_desktop_core::keys::{
 };
 use taigi_desktop_core::settings::SettingsDocument;
 use taigi_desktop_core::strings::StringKey;
+use taigi_linux_platform::DESKTOP_PLATFORM;
 
 pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {
-    let bindings = ComposingKeyBindings::from_document(context.document);
+    let bindings = ComposingKeyBindings::from_document(context.document, DESKTOP_PLATFORM);
     // Group one: through the candidates. The rows inside each group in
     // their roster's own order.
     let selection = adw::PreferencesGroup::builder()
@@ -40,19 +41,19 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         &mut context,
         &selection,
         StringKey::DesktopShortcutSelectCandidateSlot,
-        slot_keys_label(bindings.slot_key_set()),
+        slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM),
     );
     fixed_row(
         &mut context,
         &selection,
         StringKey::DesktopShortcutNavigateCandidates,
-        NAVIGATION_KEYS_LABEL.to_owned(),
+        navigation_keys_label(DESKTOP_PLATFORM).to_owned(),
     );
     fixed_row(
         &mut context,
         &selection,
         StringKey::DesktopShortcutMoveComposingCaret,
-        caret_chords_label(),
+        caret_chords_label(DESKTOP_PLATFORM),
     );
     page.add(&selection);
 
@@ -71,26 +72,27 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         &mut context,
         &output,
         StringKey::DesktopActionCommitAlternateScript,
-        shifted_slot_keys_label(bindings.slot_key_set()),
+        shifted_slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM),
     );
     fixed_row(
         &mut context,
         &output,
         StringKey::DesktopShortcutFlipPunctuationWidth,
-        width_flip_chords_label(),
+        width_flip_chords_label(DESKTOP_PLATFORM),
     );
     fixed_row(
         &mut context,
         &output,
         StringKey::DesktopShortcutCancelComposing,
-        CANCEL_KEY_LABEL.to_owned(),
+        cancel_key_label(DESKTOP_PLATFORM).to_owned(),
     );
     page.add(&output);
     // The two slot-key rows follow the tone scheme picked on General.
     context.on_refresh(move |document: &SettingsDocument| {
-        let slot_keys = ComposingKeyBindings::from_document(document).slot_key_set();
-        slot_row.set_subtitle(&slot_keys_label(slot_keys));
-        shifted_slot_row.set_subtitle(&shifted_slot_keys_label(slot_keys));
+        let slot_keys =
+            ComposingKeyBindings::from_document(document, DESKTOP_PLATFORM).slot_key_set();
+        slot_row.set_subtitle(&slot_keys_label(slot_keys, DESKTOP_PLATFORM));
+        shifted_slot_row.set_subtitle(&shifted_slot_keys_label(slot_keys, DESKTOP_PLATFORM));
     });
 
     // Group three: the switches, and the lists a key raises — the roster
@@ -164,7 +166,7 @@ fn recorder_row(
                         .resolve(StringKey::DesktopShortcutUnbound)
                         .to_owned()
                 },
-                ComposingKeyChord::display,
+                |chord| chord.display(DESKTOP_PLATFORM),
             )
         };
         field.set_label(&label);
@@ -182,10 +184,12 @@ fn recorder_row(
 
 fn chord_of(target: RecorderTarget, document: &SettingsDocument) -> Option<ComposingKeyChord> {
     match target {
-        RecorderTarget::Global(action) => action.chord_in(document),
-        RecorderTarget::Composing(action) => ComposingKeyBindings::from_document(document)
-            .chord(action)
-            .cloned(),
+        RecorderTarget::Global(action) => action.chord_in(document, DESKTOP_PLATFORM),
+        RecorderTarget::Composing(action) => {
+            ComposingKeyBindings::from_document(document, DESKTOP_PLATFORM)
+                .chord(action)
+                .cloned()
+        }
     }
 }
 
