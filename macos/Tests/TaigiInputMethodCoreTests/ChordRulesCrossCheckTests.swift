@@ -8,7 +8,7 @@ import XCTest
 /// `macos/crates/taigi-macos-ffi/fixtures/chord_rules.tsv` read by the Swift
 /// codec, matcher and resolver the Shortcuts pane uses, against the same
 /// hand-written expectations the core's `chord_rules.rs` meets. A row an open
-/// parity item splits (E6, E7) holds the Mac to its third column and the core
+/// parity item splits (E6) holds the Mac to its third column and the core
 /// to its fourth, so the difference is listed, not skipped. Retired when the
 /// pane reads its rules from the core (roadmap P14).
 @MainActor

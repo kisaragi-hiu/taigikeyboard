@@ -56,8 +56,10 @@ parse	|F704	|F704
 # E6: a fold that adds a combining mark — the Mac reads the grapheme (not
 # ASCII, so not a typing key), the core the first scalar `i`.
 parse	s|0130	s|0069,0307	refused	E6
-# E7: an empty hex field — skipped by the Mac, refused whole by the core.
-parse	c|0041,,0042	c|0061,0062	refused	E7
+# An empty hex field refuses the whole value (E7, settled P11a).
+parse	c|0041,,0042	refused
+parse	c|,005D	refused
+parse	c|005D,	refused
 
 # Matching an event: on its unmodified characters, folded, and on exactly
 # the four chording modifiers.
@@ -81,4 +83,4 @@ resolve	commitAlternateScript=|000D	nextCandidate=|0009;previousCandidate=s|0009
 resolve	pageForward=|0009	nextCandidate=-;previousCandidate=s|0009;pageForward=|0009;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
 resolve	nextCandidate=|0061	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
 resolve	commitLiteral=;confirmHighlighted=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
-resolve	nextCandidate=c|0041,,0042	nextCandidate=c|0061,0062;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020	E7
+resolve	nextCandidate=c|0041,,0042	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020

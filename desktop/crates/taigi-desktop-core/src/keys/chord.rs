@@ -280,9 +280,9 @@ impl ComposingKeyChord {
     /// dispatched first (`ShortcutActions.swift` `translation(of:)`). Kept to
     /// the key contract: `ShortcutAction::translation_in` is its only caller.
     ///
-    /// Swift skips an empty hex field (`c|0041,,0042`) where this refuses the
-    /// whole value — E7 in `macos-desktop-core-roadmap.md`, characterised in
-    /// P5.
+    /// An empty hex field (`c|0041,,0042`) refuses the whole value, as the
+    /// Swift codec does since E7 was settled (`macos-desktop-core-roadmap.md`
+    /// P11a).
     pub(super) fn translate_raw(
         raw: &str,
         platform: DesktopPlatform,
@@ -869,10 +869,10 @@ mod tests {
         );
     }
 
-    /// Pins the CURRENT core rule — roadmap E7, a real difference for
-    /// hand-edited values. Swift's `init?(rawValue:)` splits with
-    /// `split(separator: ",")`, which omits empty fields (`c|0041,,0042` is
-    /// ⌃`ab` there); the core refuses the whole value.
+    /// Roadmap E7, settled P11a: a hand-edited value with an empty hex field
+    /// is refused whole — the Mac's `init?(rawValue:)` keeps empty fields
+    /// too (`ComposingKeyBindingsTests`
+    /// `testRawValues_withAnEmptyHexField_doNotParse`).
     #[test]
     fn e7_a_stored_chord_with_an_empty_hex_field_does_not_parse() {
         for platform in ALL_PLATFORMS {
