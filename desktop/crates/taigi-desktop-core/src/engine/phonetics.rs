@@ -5,7 +5,7 @@
 
 use protos::engine::{
     phonetics_request, phonetics_response, request, response, NfdPreprocessForLookup,
-    PhoneticsRequest, PhoneticsResponse, StripTone, TlToPoj,
+    PhoneticsRequest, PhoneticsResponse, StripTone, TlDisplayToTps, TlToPoj,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -18,6 +18,19 @@ pub fn tl_to_poj(input: &str) -> Option<String> {
             input: input.to_owned(),
         }),
         "tlToPoj",
+    )
+}
+
+/// The TPS spelling of a display-form TL reading — what a Hanji-less
+/// candidate shows under TPS. `or_maps_to_er` is `AppConfig.tps_or_maps_to_er`,
+/// so a cell and its commit spell `or` alike.
+pub fn tl_display_to_tps(text: &str, or_maps_to_er: bool) -> Option<String> {
+    string_result(
+        phonetics_request::Method::TlDisplayToTps(TlDisplayToTps {
+            text: text.to_owned(),
+            or_maps_to_er,
+        }),
+        "tlDisplayToTps",
     )
 }
 

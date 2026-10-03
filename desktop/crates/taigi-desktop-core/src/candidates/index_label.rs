@@ -80,7 +80,7 @@ mod tests {
             CandidateIndexLabel::text_for_slot(9, CandidateSlotKeySet::Digits),
             ""
         );
-        assert_eq!(CandidateIndexLabel::widest_label_forms().len(), 9 * 2);
+        assert_eq!(CandidateIndexLabel::widest_label_forms().len(), 9 * 3);
     }
 
     /// The row a nine-cell page numbers, as a layout would answer it.

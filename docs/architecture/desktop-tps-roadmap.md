@@ -89,7 +89,7 @@ Base rows — the Dachen positions as `rime-moetaigi` adapts them (`moetaigi-tsu
 
 Stop codas `b` ㆴ, `t` ㆵ, `g` ㆻ, `z` ㆷ. Tones `4` ˋ (2), `3` ˪ (3), `6` ˊ (5), `=` ˇ (6) †, `5` ˫ (7), `7` ˙ (8, typed as U+02D9 as on mobile; the engine folds it for lookup, `engine/phonetics/src/tps.rs:262`), Shift+`6` ˆ (9) †; tone 1 and the unmarked tone 4 are Space. `'` types the hyphen † — `-` is taken by ㆭ, and the hyphen is how 輕聲 `--` is written (`engine/phonetics/src/tps.rs:132-134`).
 
-A Shift cell left blank types nothing and is consumed while composing; idle, it passes through.
+A key or Shift layer the table leaves out is not a TPS key and types as in any other mode (`?`, `@`, a capital) — so punctuation with no glyph still reaches the document, full-width while composing.
 
 † = not in `rime-moetaigi`. Mobile types ㄝ ㆨ ˇ from its grid and tone 9 as the digit `9`, which the adjuster turns into ˆ (`ios/Sources/TaigiKeyboard/Layout/TaigiLayouts.swift:83-98`; `engine/phonetics/src/tps_adjust.rs:268-302`); here ˆ has its own key. ㄝ is `ee`, a phoneme of its own, not a spelling of ㆤ `e` (`engine/phonetics/src/tps_ambiguity.rs:23-27`).
 
@@ -170,8 +170,8 @@ The panel is shown only under TPS and persists until the shortcut hides it; whet
 |---|---|---|---|---|---|
 | P0 | docs | This roadmap, the `roadmap.md` row | — | — | In progress |
 | P1 | feat (engine) | D0: `TpsKey` in `composing.proto` and `transition.rs`, tests from the mobile key sequences in `behavioral-invariants.md` §31–§33, §41 | engine; `make build` for the mobile artifacts (additive — mobile sends nothing new) | ~250 | Merged #367 `a5174ed9` |
-| P2a | feat (desktop-core, not reachable) | D2 table, the `TpsKey` bridge call, the D4 sites behind a mode the document cannot yet produce, keypad key codes on Linux and macOS; tests only | desktop-core, Windows, Linux, the macOS Rust seam, `make -C macos test` | ~400 | Pending |
-| P2b | feat (desktop-core, Windows, Linux) | D1 + D3: the variant, the classifier branch, the exhaustive and wildcard matches with their mode labels, i18n scope. Windows and Linux type TPS from the settings picker | as P2a | ~400 | Pending (O1 decided 2026-10-03) |
+| P2a | feat (desktop-core, not reachable) | D2 table (`keys/tps_layout.rs`), the `Keypad` slot set, the `TpsKey` and `TlDisplayToTps` bridge calls, `ComposingManager::tps_key` (answers whether the key was taken), keypad key codes on Linux and macOS; tests only. The D4 sites need the variant and move to P2b | desktop-core, Windows, Linux, the macOS Rust seam, `make -C macos test` | ~400 | In progress |
+| P2b | feat (desktop-core, Windows, Linux) | D1 + D3 + D4: the variant, the classifier branch, the presentation / executor / settings sites, the exhaustive and wildcard matches with their mode labels, i18n scope. Windows and Linux type TPS from the settings picker | as P2a | ~400 | Pending (O1 decided 2026-10-03) |
 | P3 | feat (desktop-core, Windows, Linux) | D5: `next_input_mode`, `ToggleTps`, `lastRomanizationMode`, the Windows preserved key, the menu row | as P2a | ~300 | Pending |
 | P4 | feat (macOS) | The Swift enum and picker, `ToggleTps` in `ShortcutActions.swift`, the mode flash | macOS | ~350 | Pending |
 | P5 | feat (all three) | D6 show-only: the rows in the core, the three windows, `ShowTpsKeyboard`, `tpsKeyboardShown`; the Windows `SendInput` spike | all three | ~500 | Pending |

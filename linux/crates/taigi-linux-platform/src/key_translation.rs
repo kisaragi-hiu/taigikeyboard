@@ -190,13 +190,18 @@ fn is_named_special_keysym(keysym: Keysym) -> bool {
 /// virtual-key codes the shared chord and slot-key tables are written in
 /// (`chord.rs` `NUMBER_ROW_KEY_CODES` / `SEMICOLON_KEY_CODE`): the tables
 /// tell Shift+3 apart from a typed `#` by the KEY, which on Linux is the
-/// hardware keycode — the X keycode, evdev + 8 (`KEY_1` = 2 → 10); other
-/// keys carry no code, as nothing reads one.
+/// hardware keycode — the X keycode, evdev + 8 (`KEY_1` = 2 → 10). The
+/// keypad's `1`…`9` map to `VK_NUMPAD1`…`9`, the TPS slot keys
+/// (`CandidateSlotKeySet::Keypad`); its rows run 7-8-9 / 4-5-6 / 1-2-3 by
+/// keycode (`KEY_KP7` = 71 → 79). Other keys carry no code, as nothing reads one.
 fn virtual_key_code(keycode: u32) -> Option<u16> {
     match keycode {
         10..=18 => Some(0x31 + (keycode - 10) as u16),
         19 => Some(0x30),
         47 => Some(0xBA),
+        79..=81 => Some(0x67 + (keycode - 79) as u16),
+        83..=85 => Some(0x64 + (keycode - 83) as u16),
+        87..=89 => Some(0x61 + (keycode - 87) as u16),
         _ => None,
     }
 }
@@ -324,6 +329,30 @@ mod tests {
             Some(0xBA)
         );
         assert_eq!(press(key::q, 24, 0).unwrap().key_code, None);
+    }
+
+    #[test]
+    fn the_keypad_digits_carry_the_numpad_virtual_key_codes() {
+        // trace: evdev KEY_KP7 8 9 = 71 72 73, KEY_KP4 5 6 = 75 76 77,
+        // KEY_KP1 2 3 = 79 80 81; + 8 → X 79-81 / 83-85 / 87-89 →
+        // VK_NUMPAD7-9 (0x67-0x69), 4-6 (0x64-0x66), 1-3 (0x61-0x63).
+        let keypad = [
+            (key::KP_7, 79, 0x67),
+            (key::KP_8, 80, 0x68),
+            (key::KP_9, 81, 0x69),
+            (key::KP_4, 83, 0x64),
+            (key::KP_5, 84, 0x65),
+            (key::KP_6, 85, 0x66),
+            (key::KP_1, 87, 0x61),
+            (key::KP_2, 88, 0x62),
+            (key::KP_3, 89, 0x63),
+        ];
+        for (keysym, keycode, expected) in keypad {
+            let snapshot = press(keysym, keycode, 0).unwrap();
+            assert_eq!(snapshot.key_code, Some(expected), "{keycode}");
+            let digit = char::from(b'1' + (expected - 0x61) as u8).to_string();
+            assert_eq!(snapshot.characters.as_deref(), Some(digit.as_str()));
+        }
     }
 
     #[test]

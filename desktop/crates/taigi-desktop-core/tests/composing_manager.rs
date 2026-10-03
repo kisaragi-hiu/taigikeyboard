@@ -295,6 +295,23 @@ fn append_shows_the_preedit_and_mirrors_the_engine() {
     assert_eq!(rig.recorder.preedits().last(), Some(&"tâi"));
 }
 
+/// `ㄍㄚ` then Space: the separator is taken and mirrored, hidden from the
+/// preedit; a second Space is not taken and changes nothing on screen.
+#[test]
+fn tps_key_reports_whether_the_engine_took_it() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    assert!(rig.manager.tps_key("ㄍ", &mut rig.recorder));
+    assert!(rig.manager.tps_key("ㄚ", &mut rig.recorder));
+    assert!(rig.manager.tps_key(" ", &mut rig.recorder));
+    assert_eq!(rig.manager.raw_input(), "ㄍㄚ ");
+    assert_eq!(rig.manager.display_text(), "ㄍㄚ");
+    let effects_before = rig.recorder.effects.len();
+    assert!(!rig.manager.tps_key(" ", &mut rig.recorder));
+    assert_eq!(rig.recorder.effects.len(), effects_before);
+    assert_eq!(rig.manager.raw_input(), "ㄍㄚ ");
+}
+
 /// USER's example (2026-09-09): `ka2`, Ctrl+← Ctrl+←, `h` → `kha2`, shown as
 /// `khá` with the caret after the `h`.
 #[test]

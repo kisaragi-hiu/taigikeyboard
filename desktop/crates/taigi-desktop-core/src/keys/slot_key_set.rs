@@ -22,13 +22,22 @@ pub enum CandidateSlotKeySet {
     /// tones and a digit no longer can — so the digit is free to pick the way
     /// the system Zhuyin input method's is.
     Digits,
+    /// The numeric keypad's `1`…`9`, the set under TPS, where every letter,
+    /// digit and most punctuation of the main block types a glyph
+    /// (`tps_layout.rs`). Told apart from the number row by key code.
+    Keypad,
 }
 
+/// `VK_NUMPAD1`…`VK_NUMPAD9`, the codes the shells spell the keypad digits in
+/// (Windows natively; the Linux and macOS key translations map theirs).
+pub(crate) const KEYPAD_KEY_CODES: [u16; 9] =
+    [0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69];
+
 impl CandidateSlotKeySet {
-    /// Both sets, for anything measured against every form a slot can be
+    /// Every set, for anything measured against every form a slot can be
     /// drawn in (`CandidateIndexLabel::widest_label_forms`). Not a
     /// `SettingChoice`: nothing stores a set any more.
-    pub const ALL: [Self; 2] = [Self::BareKeys, Self::Digits];
+    pub const ALL: [Self; 3] = [Self::BareKeys, Self::Digits, Self::Keypad];
 
     /// The keys `BareKeys` puts on slots 0…8, in slot order. Lowercase, as
     /// they are matched and drawn.
@@ -37,7 +46,26 @@ impl CandidateSlotKeySet {
     /// The slot `event` picks under this set, or `None` — the classifier's
     /// question.
     pub fn slot_for_event(self, event: &KeyEventSnapshot) -> Option<usize> {
-        self.slot_for_key(event.unmodified_characters(), event.modifiers)
+        match self {
+            Self::BareKeys | Self::Digits => {
+                self.slot_for_key(event.unmodified_characters(), event.modifiers)
+            }
+            Self::Keypad => Self::keypad_slot(event),
+        }
+    }
+
+    /// A bare keypad digit — the key code says keypad, and the key typed its
+    /// digit: with Num Lock off a Linux keypad key keeps its code but types
+    /// nothing, and must not pick.
+    fn keypad_slot(event: &KeyEventSnapshot) -> Option<usize> {
+        if !event.modifiers.is_empty() {
+            return None;
+        }
+        let slot = KEYPAD_KEY_CODES
+            .iter()
+            .position(|code| Some(*code) == event.key_code)?;
+        (ComposingKeyIntent::direct_selection_slot(event.unmodified_characters()) == Some(slot))
+            .then_some(slot)
     }
 
     /// The slot `key` picks under this set with exactly `modifiers` held.
@@ -45,7 +73,9 @@ impl CandidateSlotKeySet {
     /// keys, so any chording modifier makes the key miss: Shift+Q is the
     /// capital the composition takes as text, and Ctrl+3 is the host's. The
     /// one rule the classifier and the window's labels both read, so a key
-    /// drawn beside a candidate is the key that picks it.
+    /// drawn beside a candidate is the key that picks it. `Keypad` answers
+    /// `None`: a character cannot tell the keypad from the number row, only
+    /// the event's key code can (`slot_for_event`).
     pub fn slot_for_key(self, key: Option<&str>, modifiers: KeyModifiers) -> Option<usize> {
         if !modifiers.is_empty() {
             return None;
@@ -56,6 +86,7 @@ impl CandidateSlotKeySet {
                 Self::BARE_KEY_ROW.iter().position(|bare| *bare == key)
             }
             Self::Digits => ComposingKeyIntent::direct_selection_slot(key),
+            Self::Keypad => None,
         }
     }
 
@@ -87,6 +118,9 @@ impl CandidateSlotKeySet {
                     .iter()
                     .position(|code| *code == key_code)
             }
+            // Under TPS a commit is always the Hanji; there is no other
+            // script to aim at a slot.
+            Self::Keypad => None,
         }
     }
 
@@ -95,7 +129,7 @@ impl CandidateSlotKeySet {
     pub fn label_for_slot(self, slot: usize) -> String {
         match self {
             Self::BareKeys => Self::BARE_KEY_ROW[slot].to_owned(),
-            Self::Digits => (slot + 1).to_string(),
+            Self::Digits | Self::Keypad => (slot + 1).to_string(),
         }
     }
 }
@@ -207,5 +241,44 @@ mod tests {
         assert_eq!(CandidateSlotKeySet::BareKeys.label_for_slot(8), ";");
         assert_eq!(CandidateSlotKeySet::Digits.label_for_slot(0), "1");
         assert_eq!(CandidateSlotKeySet::Digits.label_for_slot(8), "9");
+    }
+
+    #[test]
+    fn keypad_picks_by_keypad_code_and_digit_only() {
+        // trace: KEYPAD_KEY_CODES — VK_NUMPAD3 (0x63) typing `3` is slot 2;
+        // the number row's `3` (0x33) misses; a keypad key typing nothing
+        // (Num Lock off on Linux) misses; Shift never flips.
+        let set = CandidateSlotKeySet::Keypad;
+        let keypad = |digit: &str, code: u16, modifiers| {
+            KeyEventSnapshot::chord(Some(digit), digit, modifiers).with_key_code(code)
+        };
+        assert_eq!(
+            set.slot_for_event(&keypad("3", 0x63, KeyModifiers::NONE)),
+            Some(2)
+        );
+        assert_eq!(
+            set.slot_for_event(&keypad("1", 0x61, KeyModifiers::NONE)),
+            Some(0)
+        );
+        assert_eq!(
+            set.slot_for_event(&keypad("9", 0x69, KeyModifiers::NONE)),
+            Some(8)
+        );
+        assert_eq!(
+            set.slot_for_event(&keypad("3", 0x33, KeyModifiers::NONE)),
+            None
+        );
+        assert_eq!(
+            set.slot_for_event(&keypad("3", 0x63, KeyModifiers::CONTROL)),
+            None
+        );
+        assert_eq!(
+            set.shifted_slot_for_event(&keypad("3", 0x63, KeyModifiers::SHIFT)),
+            None
+        );
+        let num_lock_off = KeyEventSnapshot::named_special(KeyModifiers::NONE).with_key_code(0x63);
+        assert_eq!(set.slot_for_event(&num_lock_off), None);
+        assert_eq!(set.slot_for_key(Some("3"), KeyModifiers::NONE), None);
+        assert_eq!(set.label_for_slot(0), "1");
     }
 }
