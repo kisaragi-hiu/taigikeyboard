@@ -392,6 +392,128 @@ mod tests {
         }
     }
 
+    /// One toggle: its name, reading it, flipping it, and reading its wire
+    /// field.
+    type ToggleField = (
+        &'static str,
+        fn(&DictionarySourceToggles) -> bool,
+        fn(&mut DictionarySourceToggles),
+        fn(&WireDictionarySourceToggles) -> bool,
+    );
+
+    /// Every toggle `dictionary_toggles` copies. A field added to the
+    /// settings fails to compile in the destructure below — give it a row
+    /// there too.
+    fn toggle_fields() -> Vec<ToggleField> {
+        macro_rules! source {
+            ($field:ident) => {
+                (
+                    stringify!($field),
+                    |toggles: &DictionarySourceToggles| toggles.$field,
+                    |toggles: &mut DictionarySourceToggles| toggles.$field = !toggles.$field,
+                    |wire: &WireDictionarySourceToggles| wire.$field,
+                )
+            };
+        }
+        macro_rules! subcollection {
+            ($field:ident) => {
+                (
+                    stringify!($field),
+                    |toggles: &DictionarySourceToggles| toggles.kautian_subcollections.$field,
+                    |toggles: &mut DictionarySourceToggles| {
+                        toggles.kautian_subcollections.$field =
+                            !toggles.kautian_subcollections.$field
+                    },
+                    |wire: &WireDictionarySourceToggles| {
+                        wire.kautian_subcollections
+                            .as_ref()
+                            .is_some_and(|subcollections| subcollections.$field)
+                    },
+                )
+            };
+        }
+        let DictionarySourceToggles {
+            kautian: _,
+            taigitv: _,
+            itaigi: _,
+            sitbut: _,
+            taihoa: _,
+            taijit: _,
+            kungge: _,
+            stti: _,
+            khpoo: _,
+            variant: _,
+            khiin: _,
+            lkk: _,
+            dev: _,
+            kautian_subcollections:
+                crate::settings::KautianSubcollections {
+                    accent_lukang: _,
+                    accent_sansia: _,
+                    accent_taipak: _,
+                    accent_gilan: _,
+                    accent_tainan: _,
+                    accent_kaohsiung: _,
+                    accent_kinmen: _,
+                    accent_makung: _,
+                    accent_sintik: _,
+                    accent_taichung: _,
+                    name_appendix: _,
+                },
+        } = DictionarySourceToggles::DEFAULT;
+        vec![
+            source!(kautian),
+            source!(taigitv),
+            source!(itaigi),
+            source!(sitbut),
+            source!(taihoa),
+            source!(taijit),
+            source!(kungge),
+            source!(stti),
+            source!(khpoo),
+            source!(variant),
+            source!(khiin),
+            source!(lkk),
+            source!(dev),
+            subcollection!(accent_lukang),
+            subcollection!(accent_sansia),
+            subcollection!(accent_taipak),
+            subcollection!(accent_gilan),
+            subcollection!(accent_tainan),
+            subcollection!(accent_kaohsiung),
+            subcollection!(accent_kinmen),
+            subcollection!(accent_makung),
+            subcollection!(accent_sintik),
+            subcollection!(accent_taichung),
+            subcollection!(name_appendix),
+        ]
+    }
+
+    /// The 24 flags are copied field by field, and a swapped or inverted
+    /// pair compiles and filters the wrong dictionary: every wire field
+    /// carries its own toggle's value, at the defaults and with any one
+    /// toggle flipped. A subcollection read from an absent message is off,
+    /// so this also pins that the message is always sent (absent, the engine
+    /// treats every subcollection as on). Ported from the Swift encoder's tests
+    /// (`RustEngineBridgeDictionaryTogglesTests`) when macOS stopped
+    /// encoding the toggles itself (roadmap P13).
+    #[test]
+    fn each_toggle_lands_on_its_own_wire_field() {
+        let fields = toggle_fields();
+        let defaults = DictionarySourceToggles::DEFAULT;
+        let one_flipped = fields.iter().map(|(_, _, flip, _)| {
+            let mut toggles = defaults.clone();
+            flip(&mut toggles);
+            toggles
+        });
+        for toggles in std::iter::once(defaults.clone()).chain(one_flipped) {
+            let wire = dictionary_toggles(&toggles);
+            for (name, read, _, wire_field) in &fields {
+                assert_eq!(wire_field(&wire), read(&toggles), "{name} in {toggles:?}");
+            }
+        }
+    }
+
     #[test]
     fn a_bitmask_decodes_in_bit_order_and_skips_the_non_source_bits() {
         // trace: bits 0 (kautian), 9 (khiin), 11 (lkk), 12 (variant: not a

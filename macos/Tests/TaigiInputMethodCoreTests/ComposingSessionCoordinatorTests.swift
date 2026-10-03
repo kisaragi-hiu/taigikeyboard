@@ -1,12 +1,12 @@
-// Who is allowed to drive the one composing engine, and what a handover costs.
+// Who is allowed to drive the one composing engine.
 
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// Each case builds its own coordinator (and, for what a handover does to
-/// the composition, its own legacy back end): `shared` is process-wide
-/// because the engine state it guards is, and a test that mutated it would
-/// decide what the next test starts from.
+/// Each case builds its own coordinator: `shared` is process-wide because the
+/// engine state it guards is, and a test that mutated it would decide what
+/// the next test starts from. What a handover does to the composition is the
+/// core's (`macos/crates/taigi-macos-ffi/src/session.rs`, tokens tests).
 @MainActor
 final class ComposingSessionCoordinatorTests: XCTestCase {
     func testOnlyTheClaimingSessionCanDriveTheEngine() {
@@ -26,37 +26,6 @@ final class ComposingSessionCoordinatorTests: XCTestCase {
         )
     }
 
-    func testHandover_startsTheNextSessionFromAnIdleEngine() throws {
-        let (backend, manager) = try TestFixtures.makeLegacyBackend()
-        let first = ComposingSessionToken()
-        let second = ComposingSessionToken()
-        backend.activate(first)
-        manager.append("t", executing: RecordingEffectExecutor())
-
-        backend.activate(second)
-
-        XCTAssertFalse(
-            backend.isComposing(second),
-            "what the previous session was composing belongs to a document this one cannot write to",
-        )
-        XCTAssertEqual(manager.rawInput, "")
-    }
-
-    func testReclaimingAnOwnedSession_leavesTheCompositionRunning() throws {
-        let (backend, manager) = try TestFixtures.makeLegacyBackend()
-        let owner = ComposingSessionToken()
-        backend.activate(owner)
-        manager.append("t", executing: RecordingEffectExecutor())
-
-        backend.activate(owner)
-
-        XCTAssertTrue(
-            backend.isComposing(owner),
-            "a menu or palette taking focus and giving it back must not lose what was typed",
-        )
-        XCTAssertEqual(manager.rawInput, "t")
-    }
-
     func testRelease_freesTheEngineForTheNextSession() {
         let coordinator = TestFixtures.makeCoordinator()
         let closing = ComposingSessionToken()
@@ -72,24 +41,6 @@ final class ComposingSessionCoordinatorTests: XCTestCase {
         XCTAssertTrue(
             coordinator.claim(next),
             "the next session must be able to take the engine the closed one held",
-        )
-    }
-
-    func testReleasingASupersededSession_leavesTheLiveOneAlone() throws {
-        let (backend, manager) = try TestFixtures.makeLegacyBackend()
-        let superseded = ComposingSessionToken()
-        let live = ComposingSessionToken()
-        backend.activate(superseded)
-        backend.activate(live)
-        manager.append("t", executing: RecordingEffectExecutor())
-
-        backend.release(superseded)
-
-        XCTAssertTrue(backend.owns(live), "the live session must keep ownership when a dead one closes")
-        XCTAssertEqual(
-            manager.rawInput,
-            "t",
-            "a late teardown callback must not wipe the composition that replaced it",
         )
     }
 

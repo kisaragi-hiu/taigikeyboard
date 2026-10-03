@@ -6,8 +6,8 @@ import SwiftProtobuf
 
 /// Thin wrapper around the single bytes-in / bytes-out FFI function the Rust
 /// shared core exports. Named after the iOS `RustEngineBridge` because it plays
-/// the same role; the typed per-slice surfaces (composing, lexicon, …) arrive
-/// with the slices that need them.
+/// the same role. One typed slice is left, user data (`+UserData`):
+/// desktop-core drives composing, next-word and the lexicon.
 enum RustEngineBridge {
     /// Severity of a record arriving FROM Rust. Mirrors the iOS constants in
     /// `ios/Sources/TaigiKeyboard/Engine/SwiftLoggerSink.swift`.
@@ -91,22 +91,16 @@ enum RustEngineBridge {
     /// because a failed round-trip leaves the engine's state untouched and any
     /// snapshot synthesized here would contradict it.
     ///
-    /// Shared by every slice (composing, lexicon, …): the envelope, the id
-    /// sequence, the error checks, and the failure log are identical for all of
-    /// them, and only the payload case differs.
+    /// The user-data slice is the one macOS still sends itself; desktop-core
+    /// drives composing and next-word. User-data requests carry neither a
+    /// generation nor a config snapshot.
     static func roundtrip(
         payload: Taigi_Engine_Request.OneOf_Payload,
         op: String,
-        generation: UInt64 = 0,
-        config: Taigi_Engine_AppConfig? = nil,
     ) -> Taigi_Engine_Response.OneOf_Payload? {
         var request = Taigi_Engine_Request()
         request.id = nextRequestID()
-        request.generation = generation
         request.payload = payload
-        if let config {
-            request.configSnapshot = config
-        }
 
         let requestBytes: [UInt8]
         do {
@@ -116,7 +110,7 @@ enum RustEngineBridge {
             return nil
         }
 
-        logger.debug("[FFI->] op=\(op) id=\(request.id) generation=\(generation)")
+        logger.debug("[FFI->] op=\(op) id=\(request.id)")
         guard let response = try? Taigi_Engine_Response(
             serializedBytes: Data(processRequest(requestBytes)),
         ) else {
@@ -150,52 +144,5 @@ enum RustEngineBridge {
     /// the failure handling works.
     static func recordFailure(op: String, message: String) {
         logger.error("[\(op)] \(message)")
-    }
-
-    // MARK: - AppConfig
-
-    /// The one `AppConfig` builder. The engine holds no settings of its own;
-    /// every request — each composing op that renders the composition and
-    /// every next-word request — carries the snapshot it should be rendered
-    /// under. Under Model B every composing mutation re-renders a continuous
-    /// composition's nailed prefix, so a nail and the keystroke after it agree
-    /// only if both carry the same swap flag (`composingAppend`,
-    /// `docs/engine/continuous-commit-and-display.md` §10.2); only `Reset`, which
-    /// renders nothing, carries no config at all.
-    ///
-    /// `platform_id` is set on every request, not only the ones that read it.
-    /// The composing engine ignores it; the next-word engine rejects the unset
-    /// value outright (`engine/nextword/src/decide.rs:61`), and a field that is
-    /// populated only on the paths that currently need it is one a later slice
-    /// forgets to set.
-    static func appConfig(_ settings: EngineSettings) -> Taigi_Engine_AppConfig {
-        var config = Taigi_Engine_AppConfig()
-        config.inputMode = settings.inputMode.rawValue
-        // Unconditional here, unlike iOS and Android where both are user
-        // settings: their on-screen keyboards have dedicated `o͘` and `ⁿ` keys,
-        // so folding a double-tapped `oo` / `nn` is a preference. A hardware
-        // keyboard has no such key, so switching the fold off would leave both
-        // graphemes untypable in POJ — not a choice worth offering.
-        config.ooDoubletapEnabled = true
-        config.nnDoubletapEnabled = true
-        config.platformID = .macos
-        // The composing fetch collapses same-romanization rows on it and the
-        // next-word filter reads it too (`engine/nextword/src/filter.rs`).
-        config.candidateDisplayMode = switch settings.candidateDisplayMode {
-        case .sideBySide: .sideBySide
-        case .combined: .combined
-        case .romanOnly: .romanOnly
-        }
-        // The candidate fetch and the next-word filter both shape their
-        // romanization by it (§49).
-        config.hyphenlessRoman = settings.isHyphenlessRomanEnabled
-        // Inverted on the wire (proto default = the marker follows the case,
-        // §53); read by the preedit, the candidates and the case ops.
-        config.forceLowercaseNasalMarker = !settings.isNasalMarkerUppercaseEnabled
-        // Rendering the nailed prefix (§10.2) and the next-word decide table,
-        // where it suppresses recording for raw-romanization commits
-        // (`decide.rs:86`).
-        config.isHanjiFirst = settings.isHanjiFirst
-        return config
     }
 }

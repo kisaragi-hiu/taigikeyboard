@@ -7,10 +7,9 @@ import AppKit
 /// every other call on the seam speaks in.
 ///
 /// Rendered cells rather than candidates: which script a cell leads with
-/// depends on the output settings the engine call uses
-/// (`CandidateCellContent.cell(for:settings:)`), so resolving it on this side
-/// of the seam keeps the settings in one place and makes the window impossible
-/// to render out of step with the snapshot the fetch used.
+/// depends on the output settings the fetch used, and desktop-core resolves
+/// it under the same snapshot (`composing/presentation.rs`), so the window
+/// cannot render out of step with the fetch.
 ///
 /// The whole list rather than one page, unlike the SwiftUI bar this window
 /// replaced: page boundaries are now a function of measured glyph widths
@@ -83,9 +82,9 @@ enum CandidateNavigation: Sendable, Equatable {
 /// which session is allowed to hide it — is the part that has to be pinned by
 /// tests.
 ///
-/// The window is authoritative for the selection. The controller retains the
-/// `ContinuousCandidate` array and maps the absolute indices this seam answers
-/// with back onto it; nothing mirrors the selection into the controller,
+/// The window is authoritative for the selection. desktop-core retains the
+/// candidates and maps the absolute indices this seam answers with back onto
+/// them; nothing mirrors the selection into the controller,
 /// because a mirror is a second copy of the truth that can only ever disagree.
 @MainActor
 protocol CandidatePresenter {

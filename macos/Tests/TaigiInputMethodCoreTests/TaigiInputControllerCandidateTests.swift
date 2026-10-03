@@ -388,12 +388,13 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// snapshot. A bar showing the romanization while the document gets the
     /// hanji is a visible defect, and what keeps them together is that the cell
     /// and the commit resolve the swap setting from the same snapshot
-    /// (`ComposingManager.presentation(for:)` / `commitCandidate`).
+    /// (desktop-core's `composing/presentation.rs` and the commit).
     ///
     /// Under the shipped defaults the two are the same string; the general
     /// rule — the cell leads with the script the commit leads with, whatever
-    /// the output settings — is pinned at the mapping level by
-    /// `CandidateCellContentTests`.
+    /// the output settings — is pinned at the mapping level by desktop-core
+    /// (`tests/composing_manager.rs`
+    /// `the_mac_commits_what_each_cell_shows_and_the_flip_the_other_script`).
     func testBarCellPrimary_isWhatCommittingWrites() throws {
         let session = try composedSession()
         let firstCell = try XCTUnwrap(session.presenter.shownContent).cells[0]

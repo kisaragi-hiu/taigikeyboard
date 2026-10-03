@@ -144,10 +144,9 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
     /// left standing because which marks Hanji mode types is a Full-width Punctuation policy
     /// question, not an auto-space one.
     func testPunctuationMidComposition_commitsWithTheFullWidthForm_inOneMutation() throws {
-        // BOTH domains: `withHanjiFirst` moves the one the shared
-        // coordinator's `ComposingManager` reads (which resolves the commit),
-        // `configure` the controller's own store (which the full-width map
-        // reads). A case about "the user is in Hanji mode" needs them to agree.
+        // BOTH domains: `withHanjiFirst` moves `.standard` (the lifecycle
+        // snapshot), `configure` the controller's own store (what each key
+        // request carries). A case about "the user is in Hanji mode" needs them to agree.
         // Auto-space is OFF by default and is what puts the trailing space in
         // `taigi？ `, so this case turns it on to reach that site.
         try withHanjiFirst(true) {

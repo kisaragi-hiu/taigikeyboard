@@ -5,7 +5,8 @@ import Foundation
 /// One cell as the window renders it — both scripts, in the order the user's
 /// swap setting puts them; or one script alone: the romanization under the
 /// romanization-only display, and either script by itself under Hanji with Romanization,
-/// where a candidate is two adjacent cells (`PresentedCandidate`).
+/// where a candidate is two adjacent cells. desktop-core builds the cells
+/// (`desktop/crates/taigi-desktop-core/src/composing/presentation.rs`).
 ///
 /// A Taigi candidate is a `(Hanji, romanization)` pair (Core Principle #7), and showing
 /// only one of them makes several candidates read identically: two Hanji with
@@ -32,42 +33,5 @@ struct CandidateCellContent: Equatable, Sendable {
     init(text: String, annotation: String?) {
         self.text = text
         self.annotation = (annotation?.isEmpty == false) ? annotation : nil
-    }
-
-    /// The cell for `candidate` under `settings` — the one-cell-per-candidate
-    /// displays. Hanji with Romanization splits a candidate into two cells instead, which
-    /// `PresentedCandidate.presentation(of:settings:)` builds itself.
-    ///
-    /// CROSS-PLATFORM INVARIANT — mirrors
-    /// ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift:150-162
-    /// (primary = romanization, secondary = Hanji) and the swap flip in
-    /// `CandidateCellHelper`. Drift changes which script a candidate leads with.
-    static func cell(for candidate: ContinuousCandidate, settings: EngineSettings) -> Self {
-        guard let hanji = candidate.presentableHanji else {
-            // Romanization-only candidate: there is no second script to show,
-            // in either direction — the same case the engine commits as the
-            // bare romanization.
-            return Self(text: candidate.roman, annotation: nil)
-        }
-        // Before the swap arm, so the swap cannot put Hanji into a cell this
-        // mode says shows none. No annotation on purpose: Space commits the
-        // other script, and with none on offer the engine answers `.ignored`
-        // rather than write Hanji the user never saw.
-        if settings.candidateDisplayMode == .romanOnly {
-            return Self(text: candidate.roman, annotation: nil)
-        }
-        return settings.isHanjiFirst
-            ? Self(text: hanji, annotation: candidate.roman)
-            : Self(text: candidate.roman, annotation: hanji)
-    }
-}
-
-extension ContinuousCandidate {
-    /// The Hanji when this candidate really carries one to show or commit. A
-    /// producer that emitted `""` for "no Hanji" means the same thing as
-    /// omitting it, and no reader may treat the two differently.
-    var presentableHanji: String? {
-        guard let hanji, !hanji.isEmpty else { return nil }
-        return hanji
     }
 }

@@ -127,7 +127,7 @@ struct ComposingKeyChord: Hashable, Sendable {
 
     /// The `;` key, refused under Shift for the same reason as the number
     /// row: it is the ninth slot key, and `⇧;` aims the Hanji/romanization commit at it
-    /// (`CandidateSlotKeySet.shiftedSlot(for:)`) even though a US layout
+    /// (desktop-core's `CandidateSlotKeySet::shifted_slot_for_event`) even though a US layout
     /// types `:` for it.
     static let semicolonKeyCode = UInt16(kVK_ANSI_Semicolon)
 

@@ -11,10 +11,8 @@ import Foundation
 /// wire has them nested too, and because they are only meaningful while
 /// `kautian` is on.
 ///
-/// Carried inside `EngineSettings` so one `settingsProvider.current` answers
-/// for the whole composing fetch — reading the toggles from a second place is
-/// what splits the snapshot and lets a mid-keystroke settings change render
-/// half a composition under each rule.
+/// Carried inside `EngineSettings`, the one snapshot `SettingsStore.current`
+/// answers with.
 ///
 /// The fields are `var` so a caller that varies one toggle can start from
 /// `.defaults` and say only what differs; the snapshot is still immutable where

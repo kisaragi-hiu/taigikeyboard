@@ -1,115 +1,20 @@
-// Which script a cell leads with, and how wide the cell that holds both is.
+// What one cell holds, and how wide the cell that holds both scripts is.
 
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// The display mapping: a candidate is a `(Hanji, romanization)` pair, and the cell
-/// shows both — the swap setting decides which one leads.
+/// A cell shows both scripts of a `(Hanji, romanization)` pair; which one
+/// leads is desktop-core's (`composing/presentation.rs`). These cases are
+/// about the cell itself.
 final class CandidateCellContentTests: XCTestCase {
-    private func candidate(roman: String, hanji: String?) -> ContinuousCandidate {
-        ContinuousCandidate(
-            consumedSpanStart: 0,
-            consumedSpanEnd: 5,
-            syllableCount: 2,
-            displayText: hanji ?? roman,
-            score: 1,
-            form: 0,
-            scriptKind: .unspecified,
-            roman: roman,
-            hanji: hanji,
-            canonicalTl: roman,
-        )
-    }
-
-    private func settings(
-        swapped: Bool,
-        displayMode: CandidateDisplayMode = .sideBySide,
-    ) -> EngineSettings {
-        TestFixtures.settings(
-            swapped: swapped,
-            candidateDisplayMode: displayMode,
-        )
-    }
-
     /// Cells render at whatever metrics their panel was built with; these
     /// tests are about the cell's own behaviour, so they use the shipped
     /// defaults.
     private let metrics = TestFixtures.defaultCandidateMetrics
 
-    // MARK: - Mapping
-
-    func testUnswapped_leadsWithRomanizationAndAnnotatesWithHanji() {
-        let cell = CandidateCellContent.cell(
-            for: candidate(roman: "tâi-gí", hanji: "台語"),
-            settings: settings(swapped: false),
-        )
-
-        XCTAssertEqual(cell.text, "tâi-gí")
-        XCTAssertEqual(cell.annotation, "台語")
-    }
-
-    func testSwapped_leadsWithHanjiAndAnnotatesWithRomanization() {
-        let cell = CandidateCellContent.cell(
-            for: candidate(roman: "tâi-gí", hanji: "台語"),
-            settings: settings(swapped: true),
-        )
-
-        XCTAssertEqual(cell.text, "台語")
-        XCTAssertEqual(cell.annotation, "tâi-gí")
-    }
-
-    /// A romanization-only candidate has no second script in EITHER direction —
-    /// the same case the engine commits as the bare romanization.
-    func testRomanizationOnlyCandidate_hasNoAnnotationInEitherDirection() {
-        for swapped in [false, true] {
-            let cell = CandidateCellContent.cell(
-                for: candidate(roman: "guá", hanji: nil),
-                settings: settings(swapped: swapped),
-            )
-
-            XCTAssertEqual(cell.text, "guá")
-            XCTAssertNil(cell.annotation, "swapped=\(swapped) invented a second script")
-        }
-    }
-
-    /// A producer that emits `""` for "no Hanji" means what omitting it means;
-    /// the layout must not reserve annotation width for the difference.
-    func testEmptyHanji_readsTheSameAsAnAbsentOne() {
-        let cell = CandidateCellContent.cell(
-            for: candidate(roman: "guá", hanji: ""),
-            settings: settings(swapped: false),
-        )
-
-        XCTAssertEqual(cell, CandidateCellContent(text: "guá", annotation: nil))
-    }
-
     func testEmptyAnnotationString_normalizesToNil() {
         XCTAssertNil(CandidateCellContent(text: "guá", annotation: "").annotation)
     }
-
-    // MARK: - Romanization-only display
-
-    /// The romanization-only display shows ONE script whatever direction the
-    /// swap points: the arm sits before the swap so a swapped install cannot
-    /// put Hanji back into a cell this mode says shows none. The swap flag is
-    /// forced here rather than left derived-false by `SettingsStore`, which
-    /// is exactly what makes the arm order the thing under test.
-    func testRomanOnly_leadsWithRomanization_andHasNoAnnotation_inEitherSwapDirection() {
-        for swapped in [false, true] {
-            let cell = CandidateCellContent.cell(
-                for: candidate(roman: "tâi-gí", hanji: "台語"),
-                settings: settings(swapped: swapped, displayMode: .romanOnly),
-            )
-
-            XCTAssertEqual(cell.text, "tâi-gí", "swapped=\(swapped)")
-            XCTAssertNil(cell.annotation, "swapped=\(swapped) put Hanji into a romanization-only cell")
-        }
-    }
-
-    // What each cell commits — its own text on Return, the other script on
-    // Space, nothing under Romanization Only — is asserted end to end against
-    // the engine's resolver: `ComposingManagerCandidateTests`
-    // `testCommitCandidate_writesWhatItsCellShows_andSpaceTheOtherScript`.
 
     // MARK: - Cell reconfiguration
 

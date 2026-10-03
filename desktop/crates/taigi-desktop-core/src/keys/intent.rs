@@ -757,6 +757,89 @@ mod tests {
         assert!(!ComposingKeyIntent::is_document_text(&next_line));
     }
 
+    /// Roadmap E2 (settled P11c): a dead key, a custom layout or an input
+    /// source can hand over several characters in one event, and every one
+    /// of them has to qualify. The Escape and Backspace tier reads the first
+    /// character. Ported from the Swift key path's
+    /// `ComposingKeyIntentTests.testAMultiCharacterEvent_isClassifiedByEveryCharacter`
+    /// when it was deleted (roadmap P13).
+    #[test]
+    fn e2_a_multi_character_event_is_classified_by_every_character() {
+        use ComposingKeyIntent::{Cancel, CommitThenInsert, DeleteBackward, Input, PassThrough};
+        let mac = DesktopPlatform::MacOS;
+        let standard = ComposingKeyBindings::default();
+        let telex = telex_bindings();
+        let cases = [
+            // trace: `.` / `字` are not romanization → document text.
+            ("a.", &standard, CommitThenInsert("a.".into()), PassThrough),
+            (
+                "a字",
+                &standard,
+                CommitThenInsert("a字".into()),
+                PassThrough,
+            ),
+            // trace: a digit is a tone only mid-composition under Standard.
+            ("a5", &standard, Input("a5".into()), PassThrough),
+            ("a5", &telex, CommitThenInsert("a5".into()), PassThrough),
+            ("5a", &standard, Input("5a".into()), PassThrough),
+            // trace: a Telex key is a one-character event; `fx` / `vx` /
+            // `zx` are letters, idle too.
+            ("fx", &telex, Input("fx".into()), Input("fx".into())),
+            ("vx", &telex, Input("vx".into()), Input("vx".into())),
+            ("zx", &telex, Input("zx".into()), Input("zx".into())),
+            ("f.", &telex, CommitThenInsert("f.".into()), PassThrough),
+            ("z.", &telex, CommitThenInsert("z.".into()), PassThrough),
+            // trace: the Escape / Backspace tier reads the first character.
+            ("\u{1B}x", &standard, Cancel, PassThrough),
+            ("\u{7F}x", &standard, DeleteBackward, PassThrough),
+        ];
+        for (characters, bindings, composing, idle) in cases {
+            let key = text(characters);
+            assert_eq!(
+                ComposingKeyIntent::intent(&key, true, false, bindings, mac),
+                composing,
+                "composing {characters:?}"
+            );
+            assert_eq!(
+                ComposingKeyIntent::intent(&key, false, false, bindings, mac),
+                idle,
+                "idle {characters:?}"
+            );
+        }
+    }
+
+    /// A digit slot reads the event's first scalar (`direct_selection_slot`):
+    /// a digit with a combining scalar behind it still picks. `0`, a
+    /// full-width digit and a chorded digit pick nothing. Ported from the
+    /// Swift key path's `testTelex_aDigitSlot_readsTheFirstScalar` (P13).
+    #[test]
+    fn under_telex_a_digit_slot_reads_the_first_scalar() {
+        let mac = DesktopPlatform::MacOS;
+        let telex = telex_bindings();
+        let slot = |slot| ComposingKeyIntent::SelectCandidateSlot { slot, flip: false };
+        // trace: `1⃣` = U+0031 U+20E3 → first scalar `1` → slot 0; `3́` → 2.
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("1\u{20E3}"), true, true, &telex, mac),
+            slot(0)
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("3\u{301}"), true, true, &telex, mac),
+            slot(2)
+        );
+        for characters in ["0", "\u{FF11}"] {
+            assert_eq!(
+                ComposingKeyIntent::intent(&text(characters), true, true, &telex, mac),
+                ComposingKeyIntent::CommitThenInsert(characters.into()),
+                "{characters:?}"
+            );
+        }
+        let command_keycap = KeyEventSnapshot::text("1\u{20E3}", KeyModifiers::WIN);
+        assert_eq!(
+            ComposingKeyIntent::intent(&command_keycap, true, true, &telex, mac),
+            ComposingKeyIntent::CommitThenPassThrough
+        );
+    }
+
     #[test]
     fn navigation_keys_drive_the_window_only_while_it_is_up() {
         let cases = [

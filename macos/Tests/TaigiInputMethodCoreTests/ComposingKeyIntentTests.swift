@@ -1,190 +1,17 @@
-// Executable spec for the input method's key contract.
+// Executable spec for the key predicates the Swift side still reads.
 
 import AppKit
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// Every key classified as anything but `.passThrough` is a key the host never
-/// receives, so this table is also the list of things the user can no longer do
-/// in their app while typing. It is asserted in both composition states because
-/// most keys mean different things in each.
+/// What a key event is to the controller, the symbol picker and the Shortcuts
+/// pane: a plain Escape, a navigation key, document text, the width-flip
+/// chord. What a key means to a composition is desktop-core's
+/// (`keys/intent.rs`).
 final class ComposingKeyIntentTests: XCTestCase {
-    func testRomanizationCharacters_areComposingInput_inBothStates() throws {
-        for characters in ["t", "A", "-"] {
-            let event = try TestFixtures.keyDownEvent(characters: characters)
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: false),
-                .input(characters),
-                "'\(characters)' must be able to start a composition",
-            )
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: true),
-                .input(characters),
-                "'\(characters)' must extend a running composition",
-            )
-        }
-    }
-
-    func testDigits_areToneMarkersOnlyWhileComposing() throws {
-        let event = try TestFixtures.keyDownEvent(characters: "5")
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: true),
-            .input("5"),
-            "a digit typed after romanization is the numeric tone of `tai5`",
-        )
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: false),
-            .passThrough,
-            "a bare digit is a digit — starting a composition with it would make numbers untypable",
-        )
-    }
-
-    func testCompositionControlKeys_belongToTheHostWhenThereIsNoComposition() throws {
-        let cases: [(name: String, characters: String, composing: ComposingKeyIntent)] = [
-            // With no bar up there is no candidate to take, so Return is the
-            // host's paragraph break — after the composition it follows.
-            ("Return", "\r", .commitThenPassThrough),
-            ("Escape", "\u{1B}", .cancel),
-            ("Backspace", "\u{8}", .deleteBackward),
-            ("Delete", "\u{7F}", .deleteBackward),
-            ("Space", " ", .commitThenInsert(" ")),
-            ("Period", ".", .commitThenInsert(".")),
-        ]
-
-        for testCase in cases {
-            let event = try TestFixtures.keyDownEvent(characters: testCase.characters)
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: true),
-                testCase.composing,
-                "\(testCase.name) acts on the composition while one is running",
-            )
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: false),
-                .passThrough,
-                "\(testCase.name) belongs to the host when there is no composition to act on",
-            )
-        }
-    }
-
-    func testHostOwnedEvents_fallThrough_evenMidComposition() throws {
-        let cases: [(name: String, characters: String, modifiers: NSEvent.ModifierFlags)] = [
-            ("Command chord", "s", .command),
-            ("Control chord", "a", .control),
-            ("Option chord", "a", .option),
-            ("Tab", "\t", []),
-            ("Left arrow", "\u{F702}", []),
-            ("F1", "\u{F704}", []),
-            ("Line separator", "\u{2028}", []),
-        ]
-
-        for testCase in cases {
-            let event = try TestFixtures.keyDownEvent(characters: testCase.characters, modifiers: testCase.modifiers)
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: true),
-                .commitThenPassThrough,
-                """
-                \(testCase.name) is the host's even mid-composition, but the composition must be \
-                finished first — the host is about to act on the document it sits in
-                """,
-            )
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: false),
-                .passThrough,
-                "\(testCase.name) with no composition running needs no finishing step",
-            )
-        }
-    }
-
-    func testNonRomanizationLetters_areDocumentTextRatherThanEngineInput() throws {
-        let event = try TestFixtures.keyDownEvent(characters: "字")
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: true),
-            .commitThenInsert("字"),
-            "a character the engine cannot parse ends the composition and goes to the document",
-        )
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: false),
-            .passThrough,
-        )
-    }
-
-    func testEmptyCharacters_fallThrough() throws {
-        XCTAssertEqual(
-            try ComposingKeyIntent.intent(for: KeyEventSnapshot(TestFixtures.keyDownEvent(characters: "")), isComposing: false),
-            .passThrough,
-            "an event carrying no characters has nothing to compose",
-        )
-    }
-
-    func testNonAsciiDigits_areDocumentTextRatherThanTones() throws {
-        let event = try TestFixtures.keyDownEvent(characters: "\u{FF15}") // full-width ５
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: true),
-            .commitThenInsert("\u{FF15}"),
-            "the engine's tone markers are ASCII digits — a full-width numeral is document text",
-        )
-    }
-
-    // MARK: - One event carrying several characters (roadmap E2)
-
-    /// A dead key, a custom layout or an input source can hand over several
-    /// characters in one event. Every one of them has to qualify, as the
-    /// desktop core asks (`keys/intent.rs`); until P11c the first character
-    /// decided for the whole event.
-    func testAMultiCharacterEvent_isClassifiedByEveryCharacter() {
-        let standard = ComposingKeyBindings(toneScheme: .standard)
-        let telex = ComposingKeyBindings(toneScheme: .telex)
-        let cases: [(characters: String, bindings: ComposingKeyBindings, composing: ComposingKeyIntent, idle: ComposingKeyIntent)] = [
-            // trace: `.` is not romanization → document text (was `.input`).
-            ("a.", standard, .commitThenInsert("a."), .passThrough),
-            ("a\u{5B57}", standard, .commitThenInsert("a\u{5B57}"), .passThrough),
-            // trace: a digit is a tone only mid-composition under Standard.
-            ("a5", standard, .input("a5"), .passThrough),
-            ("a5", telex, .commitThenInsert("a5"), .passThrough),
-            ("5a", standard, .input("5a"), .passThrough),
-            // trace: a Telex key is a one-character event; `fx` / `vx` / `zx`
-            // are letters (was `.telexKey`, or `.passThrough` idle for `vx`).
-            ("fx", telex, .input("fx"), .input("fx")),
-            ("vx", telex, .input("vx"), .input("vx")),
-            ("zx", telex, .input("zx"), .input("zx")),
-            ("f.", telex, .commitThenInsert("f."), .passThrough),
-            ("z.", telex, .commitThenInsert("z."), .passThrough),
-            // trace: the Escape and Backspace tier reads the first character
-            // on both sides — a control character is a grapheme of its own.
-            ("\u{1B}x", standard, .cancel, .passThrough),
-            ("\u{7F}x", standard, .deleteBackward, .passThrough),
-        ]
-        for testCase in cases {
-            let key = KeyEventSnapshot(characters: testCase.characters, modifiers: [], isNamedSpecialKey: false)
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: key, isComposing: true, bindings: testCase.bindings),
-                testCase.composing,
-                "composing \(testCase.characters.debugDescription) under \(testCase.bindings.toneScheme)",
-            )
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: key, isComposing: false, bindings: testCase.bindings),
-                testCase.idle,
-                "idle \(testCase.characters.debugDescription) under \(testCase.bindings.toneScheme)",
-            )
-        }
-    }
-
-    /// Negative control: a one-character event reads as it did.
-    func testAOneCharacterEvent_isUnchangedByTheEveryCharacterRule() {
-        let telex = ComposingKeyBindings(toneScheme: .telex)
-        let key = { (characters: String) in
-            KeyEventSnapshot(characters: characters, modifiers: [], isNamedSpecialKey: false)
-        }
-        XCTAssertEqual(ComposingKeyIntent.intent(for: key("a"), isComposing: false), .input("a"))
-        XCTAssertEqual(ComposingKeyIntent.intent(for: key("5"), isComposing: true), .input("5"))
-        XCTAssertEqual(ComposingKeyIntent.intent(for: key("."), isComposing: true), .commitThenInsert("."))
-        XCTAssertEqual(ComposingKeyIntent.intent(for: key("f"), isComposing: true, bindings: telex), .telexKey("f"))
-        XCTAssertEqual(ComposingKeyIntent.intent(for: key("Z"), isComposing: false, bindings: telex), .telexKey("Z"))
-        XCTAssertEqual(ComposingKeyIntent.intent(for: key("v"), isComposing: false, bindings: telex), .passThrough)
-        XCTAssertTrue(ComposingKeyIntent.isPlainEscape(key("\u{1B}")))
+    func testAPlainEscape_isTheEscapeAlone() {
+        XCTAssertTrue(ComposingKeyIntent.isPlainEscape(textSnapshot("\u{1B}")))
+        XCTAssertFalse(ComposingKeyIntent.isPlainEscape(textSnapshot("\u{1B}", modifiers: .control)), "⌃3 is the host's")
     }
 
     /// E2b: an Escape with more behind it is not the plain Escape that
@@ -194,286 +21,9 @@ final class ComposingKeyIntentTests: XCTestCase {
         XCTAssertFalse(ComposingKeyIntent.isPlainEscape(key))
     }
 
-    // MARK: - Candidate keys
-
-    /// The six keys the window binds, handed through as raw directions — what
-    /// each one DOES belongs to the window's layout, not to this table.
-    func testNavigationKeys_driveTheBarWhileItIsUp() {
-        let cases: [(NavigationKey, ComposingKeyIntent)] = [
-            (.leftArrow, .navigate(.left)),
-            (.rightArrow, .navigate(.right)),
-            (.upArrow, .navigate(.up)),
-            (.downArrow, .navigate(.down)),
-            (.pageUp, .navigate(.pageUp)),
-            (.pageDown, .navigate(.pageDown)),
-        ]
-
-        for (key, expected) in cases {
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(
-                    for: navigationSnapshot(key),
-                    isComposing: true,
-                    isShowingCandidates: true,
-                ),
-                expected,
-                "\(key) must drive the candidate bar while it is on screen",
-            )
-        }
-    }
-
-    func testNavigationKeys_belongToTheHostWhenNoBarIsUp() {
-        for key in [NavigationKey.leftArrow, .downArrow, .pageUp] {
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(
-                    for: navigationSnapshot(key),
-                    isComposing: true,
-                    isShowingCandidates: false,
-                ),
-                .commitThenPassThrough,
-                "an arrow with no candidates on screen moves the host's caret, after the "
-                    + "composition has been written where the user typed it",
-            )
-        }
-    }
-
-    func testShiftedArrow_staysTheHostSelectionKey_evenWithTheBarUp() {
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: navigationSnapshot(.leftArrow, modifiers: .shift),
-                isComposing: true,
-                isShowingCandidates: true,
-            ),
-            .commitThenPassThrough,
-            "⇧← extends a selection; binding it to the bar would take that away for no gain",
-        )
-    }
-
-    /// Control rewrites the characters of the digits it is chorded with —
-    /// `⌃3` arrives as `\u{1B}` — and the fixed tier must not read that as
-    /// an Escape and cancel the composition: a Control chord is the host's,
-    /// under either scheme, bar up or not. (The `⌃1`…`⌃9` slot set went with
-    /// the picker that chose it, 2026-09-08.)
-    func testControlDigits_belongToTheHost_underEitherScheme() throws {
-        let controlThree = try TestFixtures.keyDownEvent(
-            characters: "\u{1B}",
-            modifiers: .control,
-            charactersIgnoringModifiers: "3",
-        )
-
-        for scheme in ToneInputScheme.allCases {
-            for isShowingCandidates in [true, false] {
-                XCTAssertEqual(
-                    ComposingKeyIntent.intent(
-                        for: KeyEventSnapshot(controlThree),
-                        isComposing: true,
-                        isShowingCandidates: isShowingCandidates,
-                        bindings: ComposingKeyBindings(toneScheme: scheme),
-                    ),
-                    .commitThenPassThrough,
-                    "⌃3 is the host's shortcut under \(scheme), bar \(isShowingCandidates ? "up" : "down")",
-                )
-            }
-        }
-    }
-
-    // MARK: - Telex
-
-    private func telexIntent(
-        _ characters: String,
-        isComposing: Bool = true,
-        isShowingCandidates: Bool = false,
-    ) throws -> ComposingKeyIntent {
-        try ComposingKeyIntent.intent(
-            for: KeyEventSnapshot(TestFixtures.keyDownEvent(characters: characters)),
-            isComposing: isComposing,
-            isShowingCandidates: isShowingCandidates,
-            bindings: ComposingKeyBindings(toneScheme: .telex),
-        )
-    }
-
-    /// A tone letter mid-composition is the engine's Telex key, in either
-    /// case — `V` carries the same tone as `v`.
-    func testTelex_aToneLetterWhileComposing_isATelexKey() throws {
-        for key in ["v", "y", "d", "w", "x", "q", "f"] {
-            XCTAssertEqual(try telexIntent(key), .telexKey(key), key)
-        }
-        XCTAssertEqual(try telexIntent("V"), .telexKey("V"))
-    }
-
-    /// Idle, a tone letter or `f` has no syllable to mark and passes to the
-    /// host like an idle digit; `z` types an initial, so it starts one.
-    func testTelex_idleKeys_passThroughExceptZ() throws {
-        XCTAssertEqual(try telexIntent("v", isComposing: false), .passThrough)
-        XCTAssertEqual(try telexIntent("f", isComposing: false), .passThrough)
-        XCTAssertEqual(try telexIntent("z", isComposing: false), .telexKey("z"))
-        XCTAssertEqual(try telexIntent("Z", isComposing: false), .telexKey("Z"))
-    }
-
-    /// The digits are the slot keys: with the bar up a digit picks; with no
-    /// bar it is document text that ends the composition, never a tone.
-    func testTelex_aDigit_picksWithTheBarUp_andIsDocumentTextWithout() throws {
-        XCTAssertEqual(try telexIntent("3", isShowingCandidates: true), .selectCandidateSlot(2, flip: false))
-        XCTAssertEqual(try telexIntent("3"), .commitThenInsert("3"))
-        XCTAssertEqual(try telexIntent("3", isComposing: false), .passThrough)
-    }
-
-    /// A digit slot reads the event's first scalar, as the desktop core does
-    /// (`direct_selection_slot`): a digit with a combining scalar behind it
-    /// still picks (until P11c the first grapheme, `1⃣`, was not a digit and
-    /// the event committed as text). `0`, a full-width digit and a chorded
-    /// digit pick nothing.
-    func testTelex_aDigitSlot_readsTheFirstScalar() throws {
-        XCTAssertEqual(try telexIntent("1\u{20E3}", isShowingCandidates: true), .selectCandidateSlot(0, flip: false))
-        XCTAssertEqual(try telexIntent("3\u{301}", isShowingCandidates: true), .selectCandidateSlot(2, flip: false))
-        XCTAssertEqual(try telexIntent("0", isShowingCandidates: true), .commitThenInsert("0"))
-        XCTAssertEqual(try telexIntent("\u{FF11}", isShowingCandidates: true), .commitThenInsert("\u{FF11}"))
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(characters: "1\u{20E3}", modifiers: .command, isNamedSpecialKey: false),
-                isComposing: true, isShowingCandidates: true, bindings: ComposingKeyBindings(toneScheme: .telex),
-            ),
-            .commitThenPassThrough,
-        )
-    }
-
-    /// `q` is a tone key under Telex, not the first slot — even with the bar up.
-    func testTelex_aBareLetter_isNotASlotKey() throws {
-        XCTAssertEqual(try telexIntent("q", isShowingCandidates: true), .telexKey("q"))
-    }
-
-    /// The letters a syllable is spelled with are untouched by the scheme.
-    func testTelex_syllableLetters_areStillInput() throws {
-        for key in ["t", "a", "-", "c"] {
-            XCTAssertEqual(try telexIntent(key), .input(key), key)
-            XCTAssertEqual(try telexIntent(key, isComposing: false), .input(key), key)
-        }
-    }
-
-    /// Under Standard nothing changed: a digit is the tone, `q` picks, and
-    /// `v` is a letter the composition takes.
-    func testStandard_isUnchangedByTheScheme() throws {
-        let standard = ComposingKeyBindings(toneScheme: .standard)
-        func intent(_ characters: String, isShowingCandidates: Bool = false) throws -> ComposingKeyIntent {
-            try ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(TestFixtures.keyDownEvent(characters: characters)),
-                isComposing: true, isShowingCandidates: isShowingCandidates, bindings: standard,
-            )
-        }
-        XCTAssertEqual(try intent("3", isShowingCandidates: true), .input("3"))
-        XCTAssertEqual(try intent("q", isShowingCandidates: true), .selectCandidateSlot(0, flip: false))
-        XCTAssertEqual(try intent("v"), .input("v"))
-        XCTAssertEqual(try intent("z"), .input("z"))
-    }
-
-    /// Space writes the highlighted candidate in the OTHER script — the Hanji/romanization
-    /// key (`ComposingAction.commitAlternateScript`). It walked the candidates
-    /// until 2026-08-25, which every layout's arrows already did.
-    func testSpace_commitsTheOtherScriptOnlyWhileTheBarIsUp() throws {
-        let event = try TestFixtures.keyDownEvent(characters: " ")
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(event),
-                isComposing: true,
-                isShowingCandidates: true,
-            ),
-            .commitAlternateScript,
-        )
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(event),
-                isComposing: true,
-                isShowingCandidates: false,
-            ),
-            .commitThenInsert(" "),
-            "with no bar up there is no candidate to re-render, so Space is the "
-                + "document's space again — which is how a 漢羅 sentence gets its spaces",
-        )
-    }
-
-    /// Return takes the candidate and ⇧Return takes what was typed — the
-    /// Zhuyin pairing, and the reason the literal commit is one of the two
-    /// actions that may never be left unbound.
-    func testReturn_commitsTheCandidate_andShiftReturnTheLiteral() throws {
-        let plain = try TestFixtures.keyDownEvent(characters: "\r")
-        let shifted = try TestFixtures.keyDownEvent(characters: "\r", modifiers: .shift)
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(plain),
-                isComposing: true,
-                isShowingCandidates: true,
-            ),
-            .commitHighlightedCandidate,
-        )
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: KeyEventSnapshot(shifted),
-                isComposing: true,
-                isShowingCandidates: true,
-            ),
-            .commit,
-            "⇧Return is the only key that keeps what was typed rather than what was suggested",
-        )
-    }
-
-    /// With no bar up there is no candidate to take, so Return ends the
-    /// composition whichever action holds it.
-    func testReturn_endsTheCompositionWithNoBarUp() throws {
-        let event = try TestFixtures.keyDownEvent(characters: "\r")
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: true),
-            .commitThenPassThrough,
-            "the host gets its paragraph break, after the text it follows",
-        )
-    }
-
-    /// S33: with the window switched off there is never a candidate to take,
-    /// so every candidate key ends the composition as typed — Return and
-    /// Space alike, and the paging keys with them, so no candidate key is
-    /// ever swallowed. The window is never up in that state, so the "bar up"
-    /// meanings are not reachable and are not asserted.
-    func testCandidateKeys_commitTheTypedText_whenTheWindowIsOff() throws {
-        let windowOff = ComposingKeyBindings(isCandidateWindowEnabled: false)
-        let cases: [(name: String, characters: String)] = [
-            ("Return", "\r"),
-            ("Space", " "),
-            ("Tab", "\t"),
-            ("Page forward", "]"),
-            ("Page backward", "["),
-        ]
-
-        for testCase in cases {
-            let event = try TestFixtures.keyDownEvent(characters: testCase.characters)
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: true, bindings: windowOff),
-                .commit,
-                "\(testCase.name) writes the romanization as typed when there is no window to act on",
-            )
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: KeyEventSnapshot(event), isComposing: false, bindings: windowOff),
-                .passThrough,
-                "\(testCase.name) is the host's with no composition, window or not",
-            )
-        }
-        // The negative control: with the window ON and no bar up, the same
-        // keys keep their shipped meanings (`testReturn_endsTheCompositionWithNoBarUp`).
-        let returnEvent = try TestFixtures.keyDownEvent(characters: "\r")
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: KeyEventSnapshot(returnEvent), isComposing: true),
-            .commitThenPassThrough,
-        )
-        let spaceEvent = try TestFixtures.keyDownEvent(characters: " ")
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: KeyEventSnapshot(spaceEvent), isComposing: true),
-            .commitThenInsert(" "),
-        )
-    }
-
     /// The mapping from AppKit's own key names, which the snapshot is what
-    /// isolates: everything above is asserted against `NavigationKey` directly,
-    /// so without this the six keys could all be extracted as nil.
+    /// isolates: the symbol picker reads `NavigationKey`, so without this the
+    /// six keys could all be extracted as nil.
     func testArrowEvents_areRecognizedAsNavigationKeys() throws {
         let cases: [(String, NavigationKey)] = try [
             (String(XCTUnwrap(UnicodeScalar(NSLeftArrowFunctionKey))), .leftArrow),
@@ -509,13 +59,13 @@ final class ComposingKeyIntentTests: XCTestCase {
     func testIsDocumentText_acceptsPrintableCharactersAndRejectsKeysTheHostActsOn() {
         for text in ["。", "、", "!", "?", " ", "台", "x"] {
             XCTAssertTrue(
-                ComposingKeyIntent.isDocumentText(textSnapshot(text)),
+                isDocumentText(textSnapshot(text)),
                 "'\(text)' is text the host puts into its document",
             )
         }
         for text in ["\u{1B}", "\r", "\u{8}", "\u{7F}"] {
             XCTAssertFalse(
-                ComposingKeyIntent.isDocumentText(textSnapshot(text)),
+                isDocumentText(textSnapshot(text)),
                 "a control character is a command, not document text",
             )
         }
@@ -529,18 +79,18 @@ final class ComposingKeyIntentTests: XCTestCase {
         // design (`testWidthFlipChord…`).
         for modifier in [NSEvent.ModifierFlags.command, .control, .option] {
             XCTAssertFalse(
-                ComposingKeyIntent.isDocumentText(textSnapshot("x", modifiers: modifier)),
+                isDocumentText(textSnapshot("x", modifiers: modifier)),
                 "a chord is a host command however printable its character is",
             )
         }
         for modifier in [NSEvent.ModifierFlags.command, .option] {
             XCTAssertFalse(
-                ComposingKeyIntent.isDocumentText(textSnapshot(".", modifiers: modifier)),
+                isDocumentText(textSnapshot(".", modifiers: modifier)),
                 "a chord is a host command however printable its character is",
             )
         }
         XCTAssertTrue(
-            ComposingKeyIntent.isDocumentText(textSnapshot(".", modifiers: .shift)),
+            isDocumentText(textSnapshot(".", modifiers: .shift)),
             "Shift is how the character was typed, not a command",
         )
     }
@@ -549,50 +99,44 @@ final class ComposingKeyIntentTests: XCTestCase {
         let leftArrow = try String(XCTUnwrap(UnicodeScalar(NSLeftArrowFunctionKey)))
         let functionKey = try String(XCTUnwrap(UnicodeScalar(NSF5FunctionKey)))
 
-        XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot(leftArrow)))
-        XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot(functionKey)))
+        XCTAssertFalse(isDocumentText(textSnapshot(leftArrow)))
+        XCTAssertFalse(isDocumentText(textSnapshot(functionKey)))
         XCTAssertFalse(
-            ComposingKeyIntent.isDocumentText(textSnapshot("\u{2028}", isNamedSpecialKey: true)),
+            isDocumentText(textSnapshot("\u{2028}", isNamedSpecialKey: true)),
             "a line separator is a named key AppKit gives us, not typed text",
         )
     }
 
     func testIsDocumentText_rejectsNothingAtAll() {
-        XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot(nil)))
-        XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot("")))
+        XCTAssertFalse(isDocumentText(textSnapshot(nil)))
+        XCTAssertFalse(isDocumentText(textSnapshot("")))
     }
 
     /// A format character (Cf) is text the user typed, isolated or inside a
     /// longer event — the desktop core's rule (roadmap E4, settled P11d).
     /// Only a control character (Cc) is a command.
     func testFormatCharacters_areDocumentText_andControlCharactersAreNot() {
-        // trace: Cf is not Cc and not in F700…F8FF → every scalar is text →
-        // not a romanization character (`x‍` is one non-ASCII grapheme) →
-        // commitThenInsert while composing, passThrough idle.
+        // trace: Cf is not Cc and not in F700…F8FF → every scalar is text.
         for text in [
             "\u{200B}", "\u{200C}", "\u{AD}", "\u{FEFF}", "\u{2066}", "x\u{200D}y", "👩\u{200D}💻",
             "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}", // emoji tag sequence (plane 14 Cf)
         ] {
             let key = textSnapshot(text)
             XCTAssertEqual(ComposingKeyIntent.documentText(of: key), text, "\(text.unicodeScalars)")
-            XCTAssertEqual(ComposingKeyIntent.intent(for: key, isComposing: true), .commitThenInsert(text))
-            XCTAssertEqual(ComposingKeyIntent.intent(for: key, isComposing: false), .passThrough)
         }
-        // Negative control: C0 and C1 (NEL) stay the host's. (DEL is not
-        // text either, but mid-composition it is Backspace.)
+        // Negative control: C0, C1 (NEL) and DEL are not text.
         for text in ["\u{1}", "\u{85}"] {
             let key = textSnapshot(text)
-            XCTAssertFalse(ComposingKeyIntent.isDocumentText(key), "\(text.unicodeScalars)")
-            XCTAssertEqual(ComposingKeyIntent.intent(for: key, isComposing: true), .commitThenPassThrough)
+            XCTAssertFalse(isDocumentText(key), "\(text.unicodeScalars)")
         }
-        XCTAssertFalse(ComposingKeyIntent.isDocumentText(textSnapshot("\u{7F}")))
+        XCTAssertFalse(isDocumentText(textSnapshot("\u{7F}")))
     }
 
     // MARK: - Width flip
 
     /// ⌃ on a punctuation key types that key in the other width, once. The
-    /// intent carries the key as typed — the controller picks the width — in
-    /// both states, and the key is read under the modifier: `⌃,` arrives as
+    /// predicate answers the key as typed — the width is picked later — and
+    /// the key is read under the modifier: `⌃,` arrives as
     /// `,`, `⌃[` as Escape, `⌃⇧,` as `<`.
     func testWidthFlipChord_typesTheMappedKeyInBothStates() throws {
         // trace: AppKit's `charactersIgnoringModifiers` keeps Shift, so ⌃⇧,
@@ -609,21 +153,12 @@ final class ComposingKeyIntentTests: XCTestCase {
         for (key, expected) in [(comma, ","), (bracket, "["), (angle, "<")] {
             XCTAssertEqual(ComposingKeyIntent.widthFlipCharacter(key), expected.first)
             XCTAssertEqual(ComposingKeyIntent.documentText(of: key), expected)
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: key, isComposing: false),
-                .passThrough,
-            )
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: key, isComposing: true, isShowingCandidates: true),
-                .commitThenInsert(expected),
-            )
         }
         XCTAssertFalse(ComposingKeyIntent.isPlainEscape(bracket), "⌃[ is the flip, not a cancel")
     }
 
     /// Exactly ⌃ on a mapped key: another chording modifier beside it, a key
-    /// the policy does not map, a named key, or a bare key is the host's or the
-    /// ordinary text rule's.
+    /// the policy does not map, or a bare key is no flip.
     func testWidthFlipChord_needsExactlyControlOnAMappedKey() throws {
         let withCommand = try KeyEventSnapshot(TestFixtures.keyDownEvent(
             characters: ",", modifiers: [.control, .command], charactersIgnoringModifiers: ",",
@@ -642,34 +177,13 @@ final class ComposingKeyIntentTests: XCTestCase {
         ))
         for key in [withCommand, withOption, letter, hyphen, quote] {
             XCTAssertNil(ComposingKeyIntent.widthFlipCharacter(key), "\(key)")
-            XCTAssertEqual(ComposingKeyIntent.intent(for: key, isComposing: false), .passThrough)
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(for: key, isComposing: true, isShowingCandidates: true),
-                .commitThenPassThrough,
-            )
         }
         XCTAssertNil(ComposingKeyIntent.widthFlipCharacter(textSnapshot(",")))
     }
 
-    /// A chord the user recorded on ⌃, beats the flip: the row describes a
-    /// default gesture, not a reservation (Codex pre-impl, 2026-09-20).
-    func testWidthFlipChord_yieldsToARecordedBinding() throws {
-        let recorded = ComposingKeyBindings(chords: [
-            .commitLiteral: ComposingKeyChord(key: ",", modifiers: .control),
-        ])
-        let comma = try KeyEventSnapshot(TestFixtures.keyDownEvent(
-            characters: ",", modifiers: .control, charactersIgnoringModifiers: ",",
-        ))
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: comma, isComposing: true, bindings: recorded),
-            .commit,
-        )
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: comma, isComposing: true),
-            .commitThenInsert(","),
-            "unrecorded, the same chord is the flip",
-        )
+    /// Text the host will put into its document, rather than a key it will act on.
+    private func isDocumentText(_ key: KeyEventSnapshot) -> Bool {
+        ComposingKeyIntent.documentText(of: key) != nil
     }
 
     private func textSnapshot(
@@ -681,86 +195,6 @@ final class ComposingKeyIntentTests: XCTestCase {
             characters: characters,
             modifiers: modifiers,
             isNamedSpecialKey: isNamedSpecialKey,
-        )
-    }
-
-    // MARK: - Composing caret
-
-    /// ⌥← / ⌥→ step the caret inside the composition whether or not the bar
-    /// is up — the bare arrows stay the bar's (USER 2026-09-09).
-    func testOptionArrows_moveTheComposingCaret_barUpOrNot() {
-        for isShowingCandidates in [true, false] {
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(
-                    for: navigationSnapshot(.leftArrow, modifiers: .option),
-                    isComposing: true,
-                    isShowingCandidates: isShowingCandidates,
-                ),
-                .moveCaret(.left),
-            )
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(
-                    for: navigationSnapshot(.rightArrow, modifiers: .option),
-                    isComposing: true,
-                    isShowingCandidates: isShowingCandidates,
-                ),
-                .moveCaret(.right),
-            )
-        }
-    }
-
-    /// An arrow always arrives under `.function`, and a keypad arrow under
-    /// `.numericPad` too; neither says which key was pressed.
-    func testOptionArrow_ignoresTheFlagsThatSayHowTheKeyWasReached() {
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: navigationSnapshot(.leftArrow, modifiers: [.option, .function, .numericPad]),
-                isComposing: true,
-            ),
-            .moveCaret(.left),
-        )
-    }
-
-    func testOptionArrow_isTheHostsWordJump_whenNothingIsComposing() {
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(
-                for: navigationSnapshot(.leftArrow, modifiers: .option),
-                isComposing: false,
-            ),
-            .passThrough,
-        )
-    }
-
-    /// Only exactly ⌥: with Shift it is the host's selection, with Command
-    /// its shortcut — and ⌥↑ is not a caret key at all.
-    func testOptionArrow_withAnyOtherChord_orVertical_belongsToTheHost() {
-        for (key, modifiers) in [
-            (NavigationKey.leftArrow, NSEvent.ModifierFlags([.option, .shift])),
-            (.rightArrow, [.option, .command]),
-            (.upArrow, [.option]),
-            (.pageDown, [.option]),
-        ] {
-            XCTAssertEqual(
-                ComposingKeyIntent.intent(
-                    for: navigationSnapshot(key, modifiers: modifiers),
-                    isComposing: true,
-                    isShowingCandidates: true,
-                ),
-                .commitThenPassThrough,
-                "\(key) under \(modifiers.rawValue)",
-            )
-        }
-    }
-
-    private func navigationSnapshot(
-        _ key: NavigationKey,
-        modifiers: NSEvent.ModifierFlags = [],
-    ) -> KeyEventSnapshot {
-        KeyEventSnapshot(
-            characters: nil,
-            modifiers: modifiers,
-            isNamedSpecialKey: true,
-            navigationKey: key,
         )
     }
 }
