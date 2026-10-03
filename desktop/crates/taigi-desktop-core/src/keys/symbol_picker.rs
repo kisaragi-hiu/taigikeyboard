@@ -165,6 +165,38 @@ mod tests {
         );
     }
 
+    /// Under TPS the picker reads the TPS digits (D7): the number row by
+    /// key code and the keypad pick; Shift+`1` and a keypad key with Num
+    /// Lock off do not.
+    #[test]
+    fn under_tps_the_number_row_and_the_keypad_pick() {
+        let mut bindings = ComposingKeyBindings::default();
+        bindings.input_mode = crate::settings::InputMode::Tps;
+        let picker = |key: &KeyEventSnapshot| {
+            SymbolPickerIntent::intent(key, &bindings, crate::platform::DesktopPlatform::Windows)
+        };
+        let coded = |digit: &str, code: u16, modifiers| {
+            KeyEventSnapshot::chord(Some(digit), digit, modifiers).with_key_code(code)
+        };
+        assert_eq!(
+            picker(&coded("3", 0x33, KeyModifiers::NONE)),
+            SymbolPickerIntent::PickSlot(2)
+        );
+        assert_eq!(
+            picker(&coded("3", 0x63, KeyModifiers::NONE)),
+            SymbolPickerIntent::PickSlot(2)
+        );
+        assert_eq!(
+            picker(&coded("!", 0x31, KeyModifiers::SHIFT)),
+            SymbolPickerIntent::CloseAndPassThrough
+        );
+        let num_lock_off = KeyEventSnapshot::named_special(KeyModifiers::NONE).with_key_code(0x63);
+        assert_eq!(
+            picker(&num_lock_off),
+            SymbolPickerIntent::CloseAndPassThrough
+        );
+    }
+
     #[test]
     fn the_slot_keys_follow_the_tone_scheme() {
         assert_eq!(intent(&text("q")), SymbolPickerIntent::PickSlot(0));

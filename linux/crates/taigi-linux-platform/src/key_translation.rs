@@ -192,7 +192,7 @@ fn is_named_special_keysym(keysym: Keysym) -> bool {
 /// tell Shift+3 apart from a typed `#` by the KEY, which on Linux is the
 /// hardware keycode — the X keycode, evdev + 8 (`KEY_1` = 2 → 10). The
 /// keypad maps to `VK_NUMPAD0`…`VK_DIVIDE`: its digits are the TPS slot keys
-/// (`CandidateSlotKeySet::Keypad`) and no keypad key is a TPS layout key
+/// (`CandidateSlotKeySet::TpsDigits`) and no keypad key is a TPS layout key
 /// (`tps_layout.rs`). Its digit rows run 7-8-9 / 4-5-6 / 1-2-3 by keycode
 /// (`KEY_KP7` = 71 → 79). Other keys carry no code, as nothing reads one.
 fn virtual_key_code(keycode: u32) -> Option<u16> {

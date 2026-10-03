@@ -56,17 +56,17 @@ pub fn width_flip_chords_label(platform: DesktopPlatform) -> String {
         .join("  ")
 }
 
-/// The keypad's slot keys under TPS. Named, not drawn as `123456789`: the
-/// number row types glyphs there, and only the keypad picks. A key name
-/// like `Ctrl`, so not translated.
-pub const KEYPAD_SLOT_KEYS_LABEL: &str = "Num 1–9";
+/// The slot keys under TPS, named rather than drawn as `123456789`: the
+/// number row picks only once the window is up (desktop TPS roadmap D7), and
+/// the keypad picks too. A key name like `Ctrl`, so not translated.
+pub const TPS_SLOT_KEYS_LABEL: &str = "1–9, Num 1–9";
 
 /// `qwdfzxvy;` under Standard, `123456789` under Telex: every key of the
 /// live slot set, bare — lowercase because a bare key shows the character
-/// it types. Under TPS, [`KEYPAD_SLOT_KEYS_LABEL`].
+/// it types. Under TPS, [`TPS_SLOT_KEYS_LABEL`].
 pub fn slot_keys_label(slot_keys: CandidateSlotKeySet, platform: DesktopPlatform) -> String {
-    if slot_keys == CandidateSlotKeySet::Keypad {
-        return KEYPAD_SLOT_KEYS_LABEL.to_owned();
+    if slot_keys == CandidateSlotKeySet::TpsDigits {
+        return TPS_SLOT_KEYS_LABEL.to_owned();
     }
     ComposingKeyChord {
         key: slot_keys_run(slot_keys),
@@ -83,7 +83,7 @@ pub fn shifted_slot_keys_label(
     slot_keys: CandidateSlotKeySet,
     platform: DesktopPlatform,
 ) -> Option<String> {
-    if slot_keys == CandidateSlotKeySet::Keypad {
+    if slot_keys == CandidateSlotKeySet::TpsDigits {
         return None;
     }
     Some(
@@ -174,14 +174,14 @@ mod tests {
     }
 
     #[test]
-    fn under_tps_the_keypad_is_named_and_the_shift_row_is_gone() {
+    fn under_tps_the_digits_are_named_and_the_shift_row_is_gone() {
         for platform in WINDOWS_AND_LINUX {
             assert_eq!(
-                slot_keys_label(CandidateSlotKeySet::Keypad, platform),
-                "Num 1–9"
+                slot_keys_label(CandidateSlotKeySet::TpsDigits, platform),
+                "1–9, Num 1–9"
             );
             assert_eq!(
-                shifted_slot_keys_label(CandidateSlotKeySet::Keypad, platform),
+                shifted_slot_keys_label(CandidateSlotKeySet::TpsDigits, platform),
                 None
             );
         }

@@ -22,17 +22,20 @@ pub enum CandidateSlotKeySet {
     /// tones and a digit no longer can — so the digit is free to pick the way
     /// the system Zhuyin input method's is.
     Digits,
-    /// The numeric keypad's `1`…`9`, the set under TPS, where every letter,
-    /// digit and most punctuation of the main block types a glyph
-    /// (`tps_layout.rs`). Told apart from the number row by key code.
-    Keypad,
+    /// `1`…`9` of the number row and of the keypad, the set under TPS. The
+    /// number row types glyphs while the user types (`tps_layout.rs`); it
+    /// picks only once the window is up, which under TPS opens on demand
+    /// (desktop TPS roadmap D7) — the classifier asks this set only then.
+    /// Read by key code, so a layout's other characters on those keys pick
+    /// by position, and Shift+`1` stays the ㆠ it types.
+    TpsDigits,
 }
 
 impl CandidateSlotKeySet {
     /// Every set, for anything measured against every form a slot can be
     /// drawn in (`CandidateIndexLabel::widest_label_forms`). Not a
     /// `SettingChoice`: nothing stores a set any more.
-    pub const ALL: [Self; 3] = [Self::BareKeys, Self::Digits, Self::Keypad];
+    pub const ALL: [Self; 3] = [Self::BareKeys, Self::Digits, Self::TpsDigits];
 
     /// The keys `BareKeys` puts on slots 0…8, in slot order. Lowercase, as
     /// they are matched and drawn.
@@ -45,8 +48,18 @@ impl CandidateSlotKeySet {
             Self::BareKeys | Self::Digits => {
                 self.slot_for_key(event.unmodified_characters(), event.modifiers)
             }
-            Self::Keypad => Self::keypad_slot(event),
+            Self::TpsDigits => Self::number_row_slot(event).or_else(|| Self::keypad_slot(event)),
         }
+    }
+
+    /// A bare number-row `1`…`9`, by key code.
+    fn number_row_slot(event: &KeyEventSnapshot) -> Option<usize> {
+        if !event.modifiers.is_empty() {
+            return None;
+        }
+        NUMBER_ROW_KEY_CODES
+            .iter()
+            .position(|code| Some(*code) == event.key_code)
     }
 
     /// A bare keypad digit — the key code says keypad, and the key typed its
@@ -68,9 +81,9 @@ impl CandidateSlotKeySet {
     /// keys, so any chording modifier makes the key miss: Shift+Q is the
     /// capital the composition takes as text, and Ctrl+3 is the host's. The
     /// one rule the classifier and the window's labels both read, so a key
-    /// drawn beside a candidate is the key that picks it. `Keypad` answers
-    /// `None`: a character cannot tell the keypad from the number row, only
-    /// the event's key code can (`slot_for_event`).
+    /// drawn beside a candidate is the key that picks it. `TpsDigits` answers
+    /// `None`: it reads key codes, which only the event carries
+    /// (`slot_for_event`).
     pub fn slot_for_key(self, key: Option<&str>, modifiers: KeyModifiers) -> Option<usize> {
         if !modifiers.is_empty() {
             return None;
@@ -81,7 +94,7 @@ impl CandidateSlotKeySet {
                 Self::BARE_KEY_ROW.iter().position(|bare| *bare == key)
             }
             Self::Digits => ComposingKeyIntent::direct_selection_slot(key),
-            Self::Keypad => None,
+            Self::TpsDigits => None,
         }
     }
 
@@ -115,7 +128,7 @@ impl CandidateSlotKeySet {
             }
             // Under TPS a commit is always the Hanji; there is no other
             // script to aim at a slot.
-            Self::Keypad => None,
+            Self::TpsDigits => None,
         }
     }
 
@@ -124,7 +137,7 @@ impl CandidateSlotKeySet {
     pub fn label_for_slot(self, slot: usize) -> String {
         match self {
             Self::BareKeys => Self::BARE_KEY_ROW[slot].to_owned(),
-            Self::Digits | Self::Keypad => (slot + 1).to_string(),
+            Self::Digits | Self::TpsDigits => (slot + 1).to_string(),
         }
     }
 }
@@ -239,11 +252,12 @@ mod tests {
     }
 
     #[test]
-    fn keypad_picks_by_keypad_code_and_digit_only() {
+    fn tps_digits_pick_by_number_row_or_keypad_code() {
         // trace: KEYPAD_DIGIT_KEY_CODES — VK_NUMPAD3 (0x63) typing `3` is slot 2;
-        // the number row's `3` (0x33) misses; a keypad key typing nothing
-        // (Num Lock off on Linux) misses; Shift never flips.
-        let set = CandidateSlotKeySet::Keypad;
+        // NUMBER_ROW_KEY_CODES — the number row's `3` (0x33) is slot 2 too,
+        // whatever it types; Shift+`1` (ㆠ) misses; a keypad key typing
+        // nothing (Num Lock off on Linux) misses; Shift never flips.
+        let set = CandidateSlotKeySet::TpsDigits;
         let keypad = |digit: &str, code: u16, modifiers| {
             KeyEventSnapshot::chord(Some(digit), digit, modifiers).with_key_code(code)
         };
@@ -261,6 +275,20 @@ mod tests {
         );
         assert_eq!(
             set.slot_for_event(&keypad("3", 0x33, KeyModifiers::NONE)),
+            Some(2)
+        );
+        assert_eq!(
+            set.slot_for_event(&keypad("\"", 0x33, KeyModifiers::NONE)),
+            Some(2),
+            "by position on any layout"
+        );
+        assert_eq!(
+            set.slot_for_event(&keypad("!", 0x31, KeyModifiers::SHIFT)),
+            None,
+            "Shift+1 types ㆠ"
+        );
+        assert_eq!(
+            set.slot_for_event(&keypad("0", 0x30, KeyModifiers::NONE)),
             None
         );
         assert_eq!(

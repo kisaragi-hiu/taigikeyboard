@@ -447,13 +447,13 @@ final class SettingsStore: @unchecked Sendable {
         choice(Keys.toneInputScheme)
     }
 
-    /// The keys that pick a candidate, as the window labels them: the keypad
-    /// under TPS, whose main block types glyphs; otherwise the tone scheme's.
+    /// The keys that pick a candidate, as the window labels them: the digits
+    /// under TPS, whose window opens on demand; otherwise the tone scheme's.
     /// CROSS-PLATFORM INVARIANT — mirrors desktop-core
     /// `ComposingKeyBindings::slot_key_set`, which decides which key picks;
     /// drift draws a key beside a candidate that does not pick it.
     var candidateSlotKeySet: CandidateSlotKeySet {
-        inputMode == .tps ? .keypad : toneInputScheme.slotKeySet
+        inputMode == .tps ? .tpsDigits : toneInputScheme.slotKeySet
     }
 
     /// Whether the candidate window is shown at all. Read by the controller's

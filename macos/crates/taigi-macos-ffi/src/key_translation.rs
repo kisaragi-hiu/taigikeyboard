@@ -34,7 +34,7 @@ const KEY_CODES: [(u32, u16); 26] = [
     (0x19, 0x39), // 9
     (0x29, 0xBA), // ;
     // The keypad (`kVK_ANSI_Keypad*`): its `1`…`9` are the TPS slot keys
-    // (`CandidateSlotKeySet::Keypad`) and no keypad key is a TPS layout key
+    // (`CandidateSlotKeySet::TpsDigits`) and no keypad key is a TPS layout key
     // (`tps_layout.rs`). `8` and `9` skip 0x5A; `=` has no Windows keypad
     // key and takes `VK_OEM_NEC_EQUAL`.
     (0x52, 0x60),

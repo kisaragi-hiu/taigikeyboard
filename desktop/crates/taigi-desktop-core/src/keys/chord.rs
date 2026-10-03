@@ -60,7 +60,7 @@ pub(crate) const NUMBER_ROW_KEY_CODES: [u16; 9] =
     [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39];
 
 /// `VK_NUMPAD1`…`VK_NUMPAD9`, the keypad digits that pick under TPS
-/// (`CandidateSlotKeySet::Keypad`). Windows fills them natively; the Linux and
+/// (`CandidateSlotKeySet::TpsDigits`). Windows fills them natively; the Linux and
 /// macOS key translations map theirs.
 pub(crate) const KEYPAD_DIGIT_KEY_CODES: [u16; 9] =
     [0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69];

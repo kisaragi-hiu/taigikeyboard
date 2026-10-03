@@ -93,13 +93,17 @@ impl Session {
     }
 
     fn press_with(&mut self, keyval: u32, modifiers: u32) -> (bool, Vec<Emit>) {
+        self.press_key(keyval, 0, modifiers)
+    }
+
+    fn press_key(&mut self, keyval: u32, keycode: u32, modifiers: u32) -> (bool, Vec<Emit>) {
         let reply = process_raw_key(
             &self.runtime,
             self.token,
             &mut self.state,
             RawKeyEvent {
                 keyval,
-                keycode: 0,
+                keycode,
                 state: modifiers,
             },
         );
@@ -360,8 +364,8 @@ fn switch_tps_round_trip_commits_the_glyphs_on_the_next_key() {
     let (_, emits) = session.press_with('p' as u32, CTRL_ALT);
     assert_eq!(
         emits,
-        [Emit::HideLookupTable, Emit::ModeChanged, Emit::AnnounceMode],
-        "the switch commits nothing itself"
+        [Emit::ModeChanged, Emit::AnnounceMode],
+        "the switch commits nothing itself; TPS typing put no table up (D7)"
     );
     let emits = session.press('a' as u32);
     assert_eq!(
@@ -412,5 +416,42 @@ fn switch_into_tps_commits_the_romanization_on_the_next_key() {
                 caret: 1
             }
         ]
+    );
+}
+
+/// Desktop TPS D7 on Linux: typing puts no table up; ↓ opens it; the
+/// number-row `2` (X keycode 11) then picks the second cell; Escape over it
+/// closes it and keeps the glyphs.
+#[test]
+fn tps_opens_the_table_on_demand_and_the_number_row_picks() {
+    const DOWN: u32 = 0xff54;
+    let _serial = serial();
+    let mut session = Session::new(false, false);
+    session.press_with('p' as u32, CTRL_ALT);
+    session.press('e' as u32);
+    let emits = session.press('8' as u32);
+    assert!(
+        !emits
+            .iter()
+            .any(|emit| matches!(emit, Emit::LookupTable(_))),
+        "no table while typing: {emits:?}"
+    );
+    let opened = session.press(DOWN);
+    let [Emit::LookupTable(table)] = opened.as_slice() else {
+        panic!("↓ opens the table: {opened:?}");
+    };
+    let second = table.candidates[1].clone();
+    assert_eq!(session.press(ESCAPE), [Emit::HideLookupTable]);
+    let reopened = session.press(DOWN);
+    assert!(
+        matches!(reopened.as_slice(), [Emit::LookupTable(_)]),
+        "↓ opens it again: {reopened:?}"
+    );
+    let (is_handled, emits) = session.press_key('2' as u32, 11, 0);
+    assert!(is_handled);
+    assert_eq!(
+        emits,
+        [Emit::ClearPreedit, commit(&second), Emit::HideLookupTable],
+        "the number row picks the second cell"
     );
 }
