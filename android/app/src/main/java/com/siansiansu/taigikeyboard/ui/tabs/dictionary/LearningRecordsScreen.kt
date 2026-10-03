@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -49,12 +48,14 @@ import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
+import com.siansiansu.taigikeyboard.ui.components.EmptyListCard
 import com.siansiansu.taigikeyboard.ui.components.FilterSearchBar
 import com.siansiansu.taigikeyboard.ui.components.LoadingRow
-import com.siansiansu.taigikeyboard.ui.components.MenuBook
+import com.siansiansu.taigikeyboard.ui.components.NoticeCard
 import com.siansiansu.taigikeyboard.ui.components.ResultDialog
 import com.siansiansu.taigikeyboard.ui.components.SegmentedChoiceRow
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
+import com.siansiansu.taigikeyboard.ui.components.resultMessage
 
 /** The kinds the phone lists, in picker order: next-word association is mobile-only. */
 private val KINDS =
@@ -184,7 +185,7 @@ fun LearningRecordsScreen(
                             state.isLoading -> SettingsCard { LoadingRow() }
                             // A failed read claims neither "nothing learned yet" nor "no results".
                             state.hasReadFailed -> RetryCard(onRetry = viewModel::retry)
-                            state.total == 0 -> EmptyState()
+                            state.total == 0 -> EmptyListCard(L10n.dictionaryLearningRecordsEmpty)
                             else -> NoticeCard(L10n.dictionaryNoResults)
                         }
                     }
@@ -255,14 +256,9 @@ private fun kindLabel(kind: LearningRecordKind): String =
 private fun messageText(message: LearningRecordsMessage): String =
     when (message) {
         LearningRecordsMessage.Gone -> L10n.dictionaryLearningRecordGone
-        is LearningRecordsMessage.ReadFailed -> withDetail(L10n.dictionaryLearningRecordsReadFailed, message.detail)
-        is LearningRecordsMessage.WriteFailed -> withDetail(L10n.dictionaryLearningRecordsWriteFailed, message.detail)
+        is LearningRecordsMessage.ReadFailed -> resultMessage(L10n.dictionaryLearningRecordsReadFailed, message.detail)
+        is LearningRecordsMessage.WriteFailed -> resultMessage(L10n.dictionaryLearningRecordsWriteFailed, message.detail)
     }
-
-private fun withDetail(
-    title: String,
-    detail: String,
-): String = if (detail.isBlank()) title else "$title\n\n$detail"
 
 /** The word, or `previous → next` for an association. */
 private fun LearningRecord.word(): String = if (kind == LearningRecordKind.LEARNING_RECORD_KIND_ASSOCIATION) "$previousText → $text" else text
@@ -354,44 +350,6 @@ private fun RetryCard(onRetry: () -> Unit) {
                 imageVector = Icons.Default.Refresh,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun NoticeCard(text: String) {
-    SettingsCard {
-        Text(
-            text = text,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-            style = MaterialTheme.typography.bodyLarge,
-        )
-    }
-}
-
-@Composable
-private fun EmptyState() {
-    SettingsCard {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Outlined.MenuBook,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = L10n.dictionaryLearningRecordsEmpty,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.bodyLarge,
             )
         }
     }

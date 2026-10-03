@@ -1,10 +1,6 @@
 package com.siansiansu.taigikeyboard.ime.dictionary
 
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
-import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
-import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
-import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
-import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
 import com.siansiansu.taigikeyboard.ime.core.Outcome
 import com.siansiansu.taigikeyboard.ime.core.logging.NullLoggerBackend
 import com.siansiansu.taigikeyboard.ime.settings.StubEngineSettings
@@ -64,7 +60,7 @@ class DictionarySearchServiceTest {
 
     private class FakeUserData(
         private val words: List<CustomDictionaryWord>,
-    ) : UserDataClient {
+    ) : StubUserDataClient() {
         var searchCalls = 0
 
         override suspend fun search(
@@ -77,37 +73,6 @@ class DictionarySearchServiceTest {
         }
 
         override suspend fun listAll(): List<CustomDictionaryWord> = words
-
-        override suspend fun save(word: CustomDictionaryWord) = error("unused")
-
-        override suspend fun delete(id: String) = error("unused")
-
-        override suspend fun deleteAll() = error("unused")
-
-        override suspend fun exportCsv(): ByteArray = error("unused")
-
-        override suspend fun importCsv(csv: ByteArray): CustomDictionaryImportResult = error("unused")
-
-        override suspend fun clearLearningRecords() = error("unused")
-
-        override suspend fun exportBackup(appVersion: String): ByteArray = error("unused")
-
-        override suspend fun importBackup(backup: ByteArray): BackupImportResult = error("unused")
-
-        override suspend fun listLearningRecords(
-            kind: LearningRecordKind,
-            order: LearningRecordOrder,
-            filter: String,
-            limit: Int,
-            offset: Int,
-        ): LearningRecords = error("unused")
-
-        override suspend fun setLearningRecordCount(
-            record: LearningRecord,
-            count: Long,
-        ): LearningRecord? = error("unused")
-
-        override suspend fun deleteLearningRecord(record: LearningRecord): Boolean = error("unused")
     }
 
     private fun row(

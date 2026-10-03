@@ -88,23 +88,18 @@ class LearningRecordsViewModel internal constructor(
      */
     private var loadJob: Job? = null
 
-    /** What [retry] asks again after a failed read; cleared by any newer request. */
-    private var retryRead: (() -> Unit)? = null
-
     init {
         reload()
     }
 
     fun selectKind(kind: LearningRecordKind) {
         if (kind == _state.value.kind) return
-        _state.update { it.copy(kind = kind, records = emptyList(), total = 0, matchingTotal = 0) }
-        reload()
+        relist { it.copy(kind = kind) }
     }
 
     fun selectOrder(order: LearningRecordOrder) {
         if (order == _state.value.order) return
-        _state.update { it.copy(order = order, records = emptyList()) }
-        reload()
+        relist { it.copy(order = order) }
     }
 
     fun updateFilter(filter: String) {
@@ -119,17 +114,15 @@ class LearningRecordsViewModel internal constructor(
     fun loadMore() {
         val shown = _state.value
         if (loadJob?.isActive == true || shown.hasReadFailed || !shown.canLoadMore) return
-        retryRead = null
         _state.update { it.copy(isLoading = true) }
         loadJob = viewModelScope.launch { appendPage(offset = shown.records.size) }
     }
 
-    /** Asks again for what the last failed read asked for. */
+    /** After a failed read: lists from the first row again, or asks for the next page when rows are shown. */
     fun retry() {
-        val again = retryRead ?: return
-        retryRead = null
+        if (!_state.value.hasReadFailed) return
         _state.update { it.copy(hasReadFailed = false) }
-        again()
+        if (_state.value.records.isEmpty()) reload() else loadMore()
     }
 
     fun setCount(
@@ -163,13 +156,18 @@ class LearningRecordsViewModel internal constructor(
         }
     }
 
+    /** A new kind or order: the rows shown belong to the old one, so the list starts empty. */
+    private fun relist(change: (LearningRecordsState) -> LearningRecordsState) {
+        _state.update { change(it).copy(records = emptyList(), total = 0, matchingTotal = 0) }
+        reload()
+    }
+
     /** Lists the first [rows] rows again, after [settleMillis]. */
     private fun reload(
         settleMillis: Long = 0,
         rows: Int = LEARNING_RECORDS_PAGE_SIZE,
     ) {
         loadJob?.cancel()
-        retryRead = null
         _state.update { it.copy(isLoading = true) }
         loadJob =
             viewModelScope.launch {
@@ -190,7 +188,7 @@ class LearningRecordsViewModel internal constructor(
         val records = mutableListOf<LearningRecord>()
         while (true) {
             val offset = records.size
-            val page = read(asked, offset, minOf(LEARNING_RECORDS_PAGE_SIZE, rows - offset)) { reload(rows = rows) } ?: return
+            val page = read(asked, offset, minOf(LEARNING_RECORDS_PAGE_SIZE, rows - offset)) ?: return
             if (page.offset < offset) records.subList(page.offset, offset).clear()
             records += page.recordsList
             val isDone = page.offset != offset || page.recordsCount == 0 || records.size >= rows || records.size >= page.matchingTotal
@@ -207,7 +205,7 @@ class LearningRecordsViewModel internal constructor(
      */
     private suspend fun appendPage(offset: Int) {
         val asked = _state.value
-        val page = read(asked, offset, LEARNING_RECORDS_PAGE_SIZE) { loadMore() } ?: return
+        val page = read(asked, offset, LEARNING_RECORDS_PAGE_SIZE) ?: return
         if (page.offset != offset) {
             readFromStart(rows = offset)
             return
@@ -215,19 +213,17 @@ class LearningRecordsViewModel internal constructor(
         land(records = asked.records + page.recordsList, page = page)
     }
 
-    /** One engine page, or `null` after the failure is shown and [again] kept for [retry]. */
+    /** One engine page, or `null` after the failure is shown (it waits for [retry]). */
     private suspend fun read(
         asked: LearningRecordsState,
         offset: Int,
         limit: Int,
-        again: () -> Unit,
     ): LearningRecords? =
         try {
             userData.listLearningRecords(asked.kind, asked.order, asked.filter.trim(), limit, offset)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            retryRead = again
             _state.update {
                 it.copy(isLoading = false, hasReadFailed = true, message = LearningRecordsMessage.ReadFailed(e.message.orEmpty()))
             }

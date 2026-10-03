@@ -6,7 +6,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -60,16 +58,18 @@ import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryWord
 import com.siansiansu.taigikeyboard.ime.dictionary.UserDataException
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
 import com.siansiansu.taigikeyboard.ui.components.ConfirmationDialog
+import com.siansiansu.taigikeyboard.ui.components.EmptyListCard
 import com.siansiansu.taigikeyboard.ui.components.FileDownload
 import com.siansiansu.taigikeyboard.ui.components.FileUpload
 import com.siansiansu.taigikeyboard.ui.components.FilterSearchBar
 import com.siansiansu.taigikeyboard.ui.components.LoadingRow
-import com.siansiansu.taigikeyboard.ui.components.MenuBook
+import com.siansiansu.taigikeyboard.ui.components.NoticeCard
 import com.siansiansu.taigikeyboard.ui.components.ResultDialog
 import com.siansiansu.taigikeyboard.ui.components.SettingInfoButton
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.SettingsDivider
 import com.siansiansu.taigikeyboard.ui.components.SwitchRow
+import com.siansiansu.taigikeyboard.ui.components.resultMessage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -336,41 +336,9 @@ fun CustomDictionaryScreen(
                 }
 
                 if (entries.isEmpty()) {
-                    item {
-                        SettingsCard {
-                            Column(
-                                modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 32.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Outlined.MenuBook,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(48.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    text = L10n.dictionaryCustomDictEmpty,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                )
-                            }
-                        }
-                    }
+                    item { EmptyListCard(L10n.dictionaryCustomDictEmpty) }
                 } else if (filterText.isNotEmpty() && filteredEntries.isEmpty()) {
-                    item {
-                        SettingsCard {
-                            Text(
-                                text = L10n.dictionaryNoResults,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                                style = MaterialTheme.typography.bodyLarge,
-                            )
-                        }
-                    }
+                    item { NoticeCard(L10n.dictionaryNoResults) }
                 } else {
                     itemsIndexed(
                         items = filteredEntries,
@@ -472,8 +440,7 @@ fun CustomDictionaryScreen(
                         } catch (e: CancellationException) {
                             throw e
                         } catch (e: Exception) {
-                            val title = stringResolver.resolve(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_FAILED)
-                            e.message?.let { "$title\n\n$it" } ?: title
+                            resultMessage(stringResolver.resolve(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_FAILED), e.message)
                         }
                     showResultDialog = true
                 }

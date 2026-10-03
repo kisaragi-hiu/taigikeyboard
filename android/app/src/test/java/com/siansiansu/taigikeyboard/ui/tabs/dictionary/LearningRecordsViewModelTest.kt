@@ -5,10 +5,7 @@ import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
-import com.siansiansu.taigikeyboard.ime.dictionary.BackupImportResult
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryImportResult
-import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryWord
-import com.siansiansu.taigikeyboard.ime.dictionary.UserDataClient
+import com.siansiansu.taigikeyboard.ime.dictionary.StubUserDataClient
 import com.siansiansu.taigikeyboard.ime.dictionary.UserDataException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -54,7 +51,7 @@ class LearningRecordsViewModelTest {
 
     private class FakeLearningRecords(
         var rows: List<LearningRecord>,
-    ) : UserDataClient {
+    ) : StubUserDataClient() {
         val listCalls = mutableListOf<ListCall>()
 
         /** When set, every list answer waits in [held] until the test completes it. */
@@ -112,30 +109,6 @@ class LearningRecordsViewModelTest {
             writeFailure?.let { throw it }
             return !isRowGone
         }
-
-        override suspend fun listAll(): List<CustomDictionaryWord> = error("unused")
-
-        override suspend fun save(word: CustomDictionaryWord) = error("unused")
-
-        override suspend fun delete(id: String) = error("unused")
-
-        override suspend fun deleteAll() = error("unused")
-
-        override suspend fun exportCsv(): ByteArray = error("unused")
-
-        override suspend fun importCsv(csv: ByteArray): CustomDictionaryImportResult = error("unused")
-
-        override suspend fun clearLearningRecords() = error("unused")
-
-        override suspend fun search(
-            query: String,
-            inputMode: String,
-            limit: Int,
-        ): List<CustomDictionaryWord> = error("unused")
-
-        override suspend fun exportBackup(appVersion: String): ByteArray = error("unused")
-
-        override suspend fun importBackup(backup: ByteArray): BackupImportResult = error("unused")
     }
 
     private fun record(
