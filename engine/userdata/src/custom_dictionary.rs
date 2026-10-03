@@ -515,7 +515,7 @@ impl CustomDictionaryStore {
 }
 
 /// `%` / `_` / `\` in user text, made literal for a `LIKE … ESCAPE '\'`.
-fn escaped_for_like(text: &str) -> String {
+pub(crate) fn escaped_for_like(text: &str) -> String {
     text.replace('\\', "\\\\")
         .replace('%', "\\%")
         .replace('_', "\\_")

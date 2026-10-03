@@ -16,6 +16,16 @@ const SEARCH_KEY_TABLE_NAME: &str = "learned_search_key";
 /// `user_version` — a key-derivation change bumps it and adds a backfill step.
 const SCHEMA_VERSION: i64 = 1;
 
+/// The table as the Learning Records page reads it. A phrase's search keys
+/// go with it.
+pub(crate) const LEARNING_TABLE: crate::learning_records::Table = crate::learning_records::Table {
+    name: TABLE_NAME,
+    identity: &["hanzi", "roman"],
+    count: "learn_count",
+    last_used: "updated_at",
+    delete_dependents: Some(delete_search_keys),
+};
+
 /// One learned phrase with its count, for the tests: no product surface
 /// lists learned phrases.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -28,7 +38,7 @@ pub struct LearnedPhraseRow {
 /// Keeps the phrases final commits taught, answers the exact whole-buffer query on
 /// the keystroke path, and is wiped with the other learning data.
 pub struct LearnedPhraseStore {
-    database: UserDataDatabase,
+    pub(crate) database: UserDataDatabase,
     derive_search_keys: SearchKeyDeriver,
     limit: usize,
 }
@@ -205,6 +215,15 @@ fn decode_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<LearnedPhraseRow> {
         canonical_tl: row.get(1)?,
         learn_count: row.get(2)?,
     })
+}
+
+/// The keys of one phrase, deleted with it.
+fn delete_search_keys(connection: &Connection, phrase_id: i64) -> rusqlite::Result<()> {
+    connection.execute(
+        &format!("DELETE FROM {SEARCH_KEY_TABLE_NAME} WHERE phrase_id = ?;"),
+        params![phrase_id],
+    )?;
+    Ok(())
 }
 
 /// The full cross-mode key bundle for a fresh row. `OR IGNORE` on the

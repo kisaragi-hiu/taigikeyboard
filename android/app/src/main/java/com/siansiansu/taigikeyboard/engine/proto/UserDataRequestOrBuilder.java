@@ -131,5 +131,38 @@ public interface UserDataRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries getSearchCustomEntries();
 
+  /**
+   * <code>.taigi.engine.ListLearningRecords list_learning_records = 12;</code>
+   * @return Whether the listLearningRecords field is set.
+   */
+  boolean hasListLearningRecords();
+  /**
+   * <code>.taigi.engine.ListLearningRecords list_learning_records = 12;</code>
+   * @return The listLearningRecords.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ListLearningRecords getListLearningRecords();
+
+  /**
+   * <code>.taigi.engine.SetLearningRecordCount set_learning_record_count = 13;</code>
+   * @return Whether the setLearningRecordCount field is set.
+   */
+  boolean hasSetLearningRecordCount();
+  /**
+   * <code>.taigi.engine.SetLearningRecordCount set_learning_record_count = 13;</code>
+   * @return The setLearningRecordCount.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.SetLearningRecordCount getSetLearningRecordCount();
+
+  /**
+   * <code>.taigi.engine.DeleteLearningRecord delete_learning_record = 14;</code>
+   * @return Whether the deleteLearningRecord field is set.
+   */
+  boolean hasDeleteLearningRecord();
+  /**
+   * <code>.taigi.engine.DeleteLearningRecord delete_learning_record = 14;</code>
+   * @return The deleteLearningRecord.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DeleteLearningRecord getDeleteLearningRecord();
+
   public com.siansiansu.taigikeyboard.engine.proto.UserDataRequest.MethodCase getMethodCase();
 }

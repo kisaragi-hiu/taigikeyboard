@@ -59,14 +59,14 @@ message SetLearningRecordCount { record, count }                     → Learnin
 message DeleteLearningRecord { record }                              → LearningRecordDeleted { removed }
 ```
 
-- Paging contract = `ListCustomEntries` (`requests.rs:107-139`): the offset is pulled back to the last page that exists. Unlike it, `total`, `matching_total`, the offset clamp and the rows are read in ONE read transaction, `limit` 0 is refused (50 000 rows never travel in one answer), and every order ends in `id` so two pages never share or skip a row at a tie.
+- Paging contract = `ListCustomEntries`: the offset is pulled back to the last page that exists (`engine/userdata/src/paging.rs`, shared). Unlike it, `total`, `matching_total`, the offset clamp and the rows are read in ONE read transaction (the page statement counts both itself: one scan per page), `limit` 0 is refused (50 000 rows never travel in one answer), and every order ends in `id` so two pages never share or skip a row at a tie.
 - **Identity guard.** A mutation carries the whole `LearningRecord` the page listed; the SQL matches `id` AND the row's identity columns (`(word, tl)`; `(hanzi, roman)`; both association pairs). `learned_phrases.id` is a plain `INTEGER PRIMARY KEY`, so a deleted id can be reused — a stale dialog must not edit the phrase that took it. No match (evicted, deleted, reused) answers "no record" / `removed = false`, which the page reports as "this record is gone" and reloads.
-- `SetLearningRecordCount` clamps to `1..=1 000 000` (the learned-phrase ceiling, `learned_phrases.rs:43`) and keeps `last_used` — an edit is not a use. One `UPDATE … SET count = ?` plus the read-back in one transaction.
+- `SetLearningRecordCount` clamps to `1..=1 000 000` (the learned-phrase ceiling, `learned_phrases.rs:43`) and keeps `last_used` — an edit is not a use. One `UPDATE … SET count = ? … RETURNING` statement.
 - **Concurrent keyboard writes**: each process has its own writer queue (`database.rs:358-385`), so the order is the database's commit order — a set overwrites the increments before it, later picks add to it, and a deleted row is learned again on the next pick. No cross-process flush protocol.
 - Deleting a learned phrase deletes its search keys in the same transaction. No `VACUUM` per row.
-- The filter escapes `%` / `_` / `\` as the custom dictionary's does (`custom_dictionary.rs:520-524`); a NULL association TL lists as `''` and the guard matches it with `IS`.
+- The filter escapes `%` / `_` / `\` as the custom dictionary's does (`custom_dictionary.rs:520-524`); a NULL association TL lists as `''` and the guard compares `COALESCE(tl, '')`.
 - Word identity stays the `(Hanji, canonical TL)` pair (Core Principle #6): the row id only addresses a row the page already listed; no lookup, dedup or merge keys on it.
-- Unknown `kind` / `order` values are refused (`FAIL_INVALID_REQUEST`).
+- Unknown `kind` / `order` values are refused (`FAIL_INVARIANT`, as every refused user-data request).
 - Backup format unchanged.
 
 ### Platforms
@@ -84,7 +84,7 @@ Every page: a change of kind, order or filter invalidates a load still in flight
 
 That track has one phase left, P15: rewriting `*.swift` cites in Rust comments plus `system-overview.md` / `AGENTS.md` (`macos-desktop-core-roadmap.md:198`). This work therefore:
 
-- puts the request handling and the page model in **new files** (`engine/userdata/src/learning_records.rs`, `desktop-core/src/settings/learning_records.rs`); the per-store SQL is added to the existing store files (their `database` field is private) as new methods, without moving or rewording any line that carries a Swift cite; the branch is rebased and re-diffed once P15 merges;
+- puts the request handling and the page model in **new files** (`engine/userdata/src/learning_records.rs`, `desktop-core/src/settings/learning_records.rs`); each store file gains only a table descriptor (`LEARNING_TABLE`) beside its schema, without moving or rewording any line that carries a Swift cite; the branch is rebased and re-diffed once P15 merges;
 - adds no `*.swift` cite to any Rust comment;
 - leaves the macOS key path, `taigi-macos-ffi` and `CoreComposingBackend` alone — the macOS page uses the Swift user-data client the Custom Dictionary page already uses (`RustEngineBridge.swift:93-95`: the user-data slice is the one macOS sends itself).
 
@@ -93,7 +93,7 @@ That track has one phase left, P15: rewriting `*.swift` cites in Rust comments p
 | Phase | Scope | Status |
 |---|---|---|
 | P0 | this roadmap | Done |
-| P1 | engine: proto + store methods + `learning_records.rs` + routing; store tests (id reuse, two connections, phrase keys, paging, NULL TL) + dispatch tests; regenerated Android Java / iOS Swift / macOS Swift protos in the same PR | Pending |
+| P1 | engine: proto + store methods + `learning_records.rs` + routing; store tests (id reuse, two connections, phrase keys, paging, NULL TL) + dispatch tests; regenerated Android Java / iOS Swift / macOS Swift protos in the same PR | In review |
 | P2 | i18n keys with every generated output (incl. `ios/Localizable.xcstrings`) + `desktop-core` page model + Linux page; gate = every platform in the keys' scope | Pending |
 | P3 | Windows page | Pending |
 | P4 | macOS page | Pending |

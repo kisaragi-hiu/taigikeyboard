@@ -131,5 +131,38 @@ public interface UserDataResponseOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches getCustomEntryMatches();
 
+  /**
+   * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+   * @return Whether the learningRecords field is set.
+   */
+  boolean hasLearningRecords();
+  /**
+   * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+   * @return The learningRecords.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.LearningRecords getLearningRecords();
+
+  /**
+   * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+   * @return Whether the learningRecordSaved field is set.
+   */
+  boolean hasLearningRecordSaved();
+  /**
+   * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+   * @return The learningRecordSaved.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved getLearningRecordSaved();
+
+  /**
+   * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+   * @return Whether the learningRecordDeleted field is set.
+   */
+  boolean hasLearningRecordDeleted();
+  /**
+   * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+   * @return The learningRecordDeleted.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted getLearningRecordDeleted();
+
   public com.siansiansu.taigikeyboard.engine.proto.UserDataResponse.ResultCase getResultCase();
 }

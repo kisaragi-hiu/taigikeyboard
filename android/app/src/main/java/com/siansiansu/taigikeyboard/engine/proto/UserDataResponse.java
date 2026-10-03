@@ -31,6 +31,9 @@ public  final class UserDataResponse extends
     BACKUP_EXPORTED(9),
     BACKUP_IMPORTED(10),
     CUSTOM_ENTRY_MATCHES(11),
+    LEARNING_RECORDS(12),
+    LEARNING_RECORD_SAVED(13),
+    LEARNING_RECORD_DELETED(14),
     RESULT_NOT_SET(0);
     private final int value;
     private ResultCase(int value) {
@@ -57,6 +60,9 @@ public  final class UserDataResponse extends
         case 9: return BACKUP_EXPORTED;
         case 10: return BACKUP_IMPORTED;
         case 11: return CUSTOM_ENTRY_MATCHES;
+        case 12: return LEARNING_RECORDS;
+        case 13: return LEARNING_RECORD_SAVED;
+        case 14: return LEARNING_RECORD_DELETED;
         case 0: return RESULT_NOT_SET;
         default: return null;
       }
@@ -623,6 +629,156 @@ public  final class UserDataResponse extends
    */
   private void clearCustomEntryMatches() {
     if (resultCase_ == 11) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int LEARNING_RECORDS_FIELD_NUMBER = 12;
+  /**
+   * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+   */
+  @java.lang.Override
+  public boolean hasLearningRecords() {
+    return resultCase_ == 12;
+  }
+  /**
+   * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.LearningRecords getLearningRecords() {
+    if (resultCase_ == 12) {
+       return (com.siansiansu.taigikeyboard.engine.proto.LearningRecords) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.LearningRecords.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+   */
+  private void setLearningRecords(com.siansiansu.taigikeyboard.engine.proto.LearningRecords value) {
+    java.util.Objects.requireNonNull(value);
+    result_ = value;
+    resultCase_ = 12;
+  }
+  /**
+   * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+   */
+  private void mergeLearningRecords(com.siansiansu.taigikeyboard.engine.proto.LearningRecords value) {
+    java.util.Objects.requireNonNull(value);
+    if (resultCase_ == 12 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.LearningRecords.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.LearningRecords.newBuilder((com.siansiansu.taigikeyboard.engine.proto.LearningRecords) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 12;
+  }
+  /**
+   * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+   */
+  private void clearLearningRecords() {
+    if (resultCase_ == 12) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int LEARNING_RECORD_SAVED_FIELD_NUMBER = 13;
+  /**
+   * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+   */
+  @java.lang.Override
+  public boolean hasLearningRecordSaved() {
+    return resultCase_ == 13;
+  }
+  /**
+   * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved getLearningRecordSaved() {
+    if (resultCase_ == 13) {
+       return (com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+   */
+  private void setLearningRecordSaved(com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved value) {
+    java.util.Objects.requireNonNull(value);
+    result_ = value;
+    resultCase_ = 13;
+  }
+  /**
+   * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+   */
+  private void mergeLearningRecordSaved(com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved value) {
+    java.util.Objects.requireNonNull(value);
+    if (resultCase_ == 13 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved.newBuilder((com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 13;
+  }
+  /**
+   * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+   */
+  private void clearLearningRecordSaved() {
+    if (resultCase_ == 13) {
+      resultCase_ = 0;
+      result_ = null;
+    }
+  }
+
+  public static final int LEARNING_RECORD_DELETED_FIELD_NUMBER = 14;
+  /**
+   * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+   */
+  @java.lang.Override
+  public boolean hasLearningRecordDeleted() {
+    return resultCase_ == 14;
+  }
+  /**
+   * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted getLearningRecordDeleted() {
+    if (resultCase_ == 14) {
+       return (com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted) result_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+   */
+  private void setLearningRecordDeleted(com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted value) {
+    java.util.Objects.requireNonNull(value);
+    result_ = value;
+    resultCase_ = 14;
+  }
+  /**
+   * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+   */
+  private void mergeLearningRecordDeleted(com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted value) {
+    java.util.Objects.requireNonNull(value);
+    if (resultCase_ == 14 &&
+        result_ != com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted.getDefaultInstance()) {
+      result_ = com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted.newBuilder((com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted) result_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      result_ = value;
+    }
+    resultCase_ = 14;
+  }
+  /**
+   * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+   */
+  private void clearLearningRecordDeleted() {
+    if (resultCase_ == 14) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -1265,6 +1421,150 @@ public  final class UserDataResponse extends
       return this;
     }
 
+    /**
+     * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+     */
+    @java.lang.Override
+    public boolean hasLearningRecords() {
+      return instance.hasLearningRecords();
+    }
+    /**
+     * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.LearningRecords getLearningRecords() {
+      return instance.getLearningRecords();
+    }
+    /**
+     * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+     */
+    public Builder setLearningRecords(com.siansiansu.taigikeyboard.engine.proto.LearningRecords value) {
+      copyOnWrite();
+      instance.setLearningRecords(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+     */
+    public Builder setLearningRecords(
+        com.siansiansu.taigikeyboard.engine.proto.LearningRecords.Builder builderForValue) {
+      copyOnWrite();
+      instance.setLearningRecords(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+     */
+    public Builder mergeLearningRecords(com.siansiansu.taigikeyboard.engine.proto.LearningRecords value) {
+      copyOnWrite();
+      instance.mergeLearningRecords(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.LearningRecords learning_records = 12;</code>
+     */
+    public Builder clearLearningRecords() {
+      copyOnWrite();
+      instance.clearLearningRecords();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+     */
+    @java.lang.Override
+    public boolean hasLearningRecordSaved() {
+      return instance.hasLearningRecordSaved();
+    }
+    /**
+     * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved getLearningRecordSaved() {
+      return instance.getLearningRecordSaved();
+    }
+    /**
+     * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+     */
+    public Builder setLearningRecordSaved(com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved value) {
+      copyOnWrite();
+      instance.setLearningRecordSaved(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+     */
+    public Builder setLearningRecordSaved(
+        com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved.Builder builderForValue) {
+      copyOnWrite();
+      instance.setLearningRecordSaved(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+     */
+    public Builder mergeLearningRecordSaved(com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved value) {
+      copyOnWrite();
+      instance.mergeLearningRecordSaved(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.LearningRecordSaved learning_record_saved = 13;</code>
+     */
+    public Builder clearLearningRecordSaved() {
+      copyOnWrite();
+      instance.clearLearningRecordSaved();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+     */
+    @java.lang.Override
+    public boolean hasLearningRecordDeleted() {
+      return instance.hasLearningRecordDeleted();
+    }
+    /**
+     * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted getLearningRecordDeleted() {
+      return instance.getLearningRecordDeleted();
+    }
+    /**
+     * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+     */
+    public Builder setLearningRecordDeleted(com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted value) {
+      copyOnWrite();
+      instance.setLearningRecordDeleted(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+     */
+    public Builder setLearningRecordDeleted(
+        com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted.Builder builderForValue) {
+      copyOnWrite();
+      instance.setLearningRecordDeleted(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+     */
+    public Builder mergeLearningRecordDeleted(com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted value) {
+      copyOnWrite();
+      instance.mergeLearningRecordDeleted(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.LearningRecordDeleted learning_record_deleted = 14;</code>
+     */
+    public Builder clearLearningRecordDeleted() {
+      copyOnWrite();
+      instance.clearLearningRecordDeleted();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.UserDataResponse)
   }
   @java.lang.Override
@@ -1294,11 +1594,14 @@ public  final class UserDataResponse extends
             com.siansiansu.taigikeyboard.engine.proto.BackupExported.class,
             com.siansiansu.taigikeyboard.engine.proto.BackupImported.class,
             com.siansiansu.taigikeyboard.engine.proto.CustomEntryMatches.class,
+            com.siansiansu.taigikeyboard.engine.proto.LearningRecords.class,
+            com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved.class,
+            com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted.class,
           };
           java.lang.String info =
-              "\u0000\u000b\u0001\u0000\u0001\u000b\u000b\u0000\u0000\u0000\u0001<\u0000\u0002<" +
+              "\u0000\u000e\u0001\u0000\u0001\u000e\u000e\u0000\u0000\u0000\u0001<\u0000\u0002<" +
               "\u0000\u0003<\u0000\u0004<\u0000\u0005<\u0000\u0006<\u0000\u0007<\u0000\b<\u0000" +
-              "\t<\u0000\n<\u0000\u000b<\u0000";
+              "\t<\u0000\n<\u0000\u000b<\u0000\f<\u0000\r<\u0000\u000e<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {
