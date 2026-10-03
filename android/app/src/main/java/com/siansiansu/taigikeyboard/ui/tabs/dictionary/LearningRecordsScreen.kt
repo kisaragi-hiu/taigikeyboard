@@ -158,12 +158,6 @@ fun LearningRecordsScreen(
                             modifier = Modifier.padding(16.dp),
                         )
                     }
-                    Text(
-                        text = L10n.dictionaryLearningRecordsInfo,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
                     Spacer(Modifier.height(16.dp))
                 }
 
