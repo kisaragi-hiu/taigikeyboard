@@ -159,7 +159,7 @@ macos-release:
 windows-check:
 	$(MAKE) -C windows check
 
-# The desktop-shared crates (`desktop/`: the pure Rust all three desktops
+# The desktop-shared crates (`desktop/`: the pure Rust every desktop
 # link): native tests + clippy + fmt + i18n check, any host.
 desktop-check:
 	$(MAKE) -C desktop check

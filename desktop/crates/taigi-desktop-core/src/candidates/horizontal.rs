@@ -404,7 +404,8 @@ mod tests {
         assert_eq!(layout.target(NextCandidate, 19), None);
 
         // trace: budget 90 → [10, 80] | [30, 30, 30]: a page jump lands under the
-        // highlight; [30, 30, 30] | [10, 80]: 4 (x 10-90) up overlaps 0 and 1 → 1.
+        // highlight; [30, 30, 30] | [10, 80]: 4 (x 10-90) up overlaps 0, 1 and 2
+        // → 1.
         let layout = pack(&[10.0, 80.0, 30.0, 30.0, 30.0]);
         assert_eq!(indices(&layout), [vec![0, 1], vec![2, 3, 4]]);
         assert_eq!(layout.target(PageDown, 1), Some(2));

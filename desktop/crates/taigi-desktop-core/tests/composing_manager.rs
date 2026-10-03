@@ -900,7 +900,8 @@ fn the_mac_commits_a_nailed_composition_once() {
 
 /// Roadmap E5, settled P11e: the gate asks every scalar, so a non-letter
 /// base plus an Other_Alphabetic mark is skipped. macOS runs this manager
-/// since P13; its Swift manager asked each grapheme's first scalar until P11e.
+/// since the P12 cut-over; its Swift manager (deleted in P13) asked each
+/// grapheme's first scalar until P11e.
 #[test]
 fn e5_a_mark_that_is_alphabetic_keeps_the_character_from_next_word() {
     // No engine call: the manager only hands the character to the port.

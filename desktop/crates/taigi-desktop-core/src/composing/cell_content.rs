@@ -50,7 +50,8 @@ impl CandidateCellContent {
 
     /// CROSS-PLATFORM INVARIANT — mirrors
     /// `ios/.../TaigiAutocompleteService.swift` `buildContinuousSuggestions` (primary =
-    /// romanization, secondary = Hanji) and the swap flip; arm order is the
+    /// romanization, secondary = Hanji) and the swap flip in
+    /// `ios/.../CandidateCellHelper.swift` `suggestionToHandle`; arm order is the
     /// same on every platform. Serves Pairing and Romanization Only; Combined's split cells
     /// are built by [`super::presentation`].
     pub fn cell(candidate: &ContinuousCandidate, settings: &EngineSettings) -> Self {

@@ -5,9 +5,10 @@
 //! coordinator, answered as the effects Swift replays after the call
 //! returns: desktop-core's classifier (`ComposingKeyIntent`) and executor
 //! (`perform_intent`), hosted for the macOS controller. The per-key
-//! preamble — the global chords, the Telex guide, the symbol picker — runs
+//! preamble — the Telex guide, the symbol picker — runs
 //! in the Swift controller (`TaigiInputController.swift`) before a key
-//! reaches this seam; the picker's key reading is asked of `key_rules.rs`.
+//! reaches this seam (the global chords never reach it: Carbon hotkeys);
+//! the picker's key reading is asked of `key_rules.rs`.
 //!
 //! Record, then replay: [`RecordingSurface`] only records, so no client call
 //! happens while the coordinator is locked. The window's state travels in

@@ -4,8 +4,8 @@
 //! layouts' navigation state machines, index labels and caret positioning —
 //! the reference for every desktop, pinned by this module's tests. macOS
 //! keeps a Swift twin in `macos/Sources/TaigiInputMethodCore/Candidates/`
-//! (candidate-window geometry stays Swift there; a known difference is
-//! listed in the roadmap rather than fixed on either side). The renderer
+//! (candidate-window geometry stays Swift there; the known differences,
+//! W1–W3, are listed in the roadmap rather than fixed on either side). The renderer
 //! (PR6, Direct2D) draws what these models say and feeds back clicks. Roadmap D4/W4:
 //! the headless model is unit-tested, the window is a renderer only. Each
 //! model owns its scroll offset: the renderer reports wheel / scrollbar

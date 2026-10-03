@@ -172,7 +172,7 @@ pub struct EngineSettings {
     /// on the base config; no TPS layout here, so no fold.
     /// CROSS-PLATFORM INVARIANT — default OFF on every platform; mirrored by
     /// `isHyphenlessRomanEnabled` (`ios/.../SharedSettings.swift`) and
-    /// `hyphenlessRomanEnabled` (`android/.../PrefHelper.kt`). macOS keeps a
+    /// `isHyphenlessRomanEnabled` (`android/.../PrefHelper.kt`). macOS keeps a
     /// Swift twin: `macos/.../EngineSettings.swift` `isHyphenlessRomanEnabled`.
     pub is_hyphenless_roman_enabled: bool,
     /// ⁿ becomes ᴺ in capitals (`behavioral-invariants.md` §53) — the POJ nasal marker follows
@@ -180,7 +180,7 @@ pub struct EngineSettings {
     /// inverted as `AppConfig.force_lowercase_nasal_marker` on the base config.
     /// CROSS-PLATFORM INVARIANT — default ON on every platform; mirrored by
     /// `isNasalMarkerUppercaseEnabled` (`ios/.../SharedSettings.swift`) and
-    /// `nasalMarkerUppercaseEnabled` (`android/.../PrefHelper.kt`). macOS keeps
+    /// `isNasalMarkerUppercaseEnabled` (`android/.../PrefHelper.kt`). macOS keeps
     /// a Swift twin: `macos/.../EngineSettings.swift` `isNasalMarkerUppercaseEnabled`.
     pub is_nasal_marker_uppercase_enabled: bool,
     /// Gates the custom-dictionary lookup itself: off means the engine reads

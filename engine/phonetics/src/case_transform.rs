@@ -5,7 +5,7 @@
 //! Cross-platform canonical for the case-transformation subsystem. Replaces
 //! the former iOS case transformer and tone utilities + the
 //! body of `Autocomplete/Services/SuggestionCaseTransformer.swift`, plus
-//! Android counterparts `dictionary/ToneUtilities.kt` + body of
+//! Android counterparts (tone utilities, removed) + body of
 //! `dictionary/SuggestionCaseTransformer.kt`.
 //!
 //! Tone-letter case tables live in `case_tables` (POJ + TL); this module

@@ -1,8 +1,8 @@
 //! What a key press means to a shortcut-recording field, as a pure decision
 //! — the part of a recording field that is not UI. The settings window feeds
 //! it the press and draws the answer. The macOS field
-//! (`ShortcutKeyRecorder.swift`) asks it through `KeyRules.press` for the
-//! composing tier; its global-tier refusals are a Swift twin
+//! (`ShortcutKeyRecorder.swift`) asks it through `KeyRules.press` for both
+//! tiers, then adds the global tier's own refusals in Swift
 //! (`GlobalShortcutPolicy`).
 
 use super::action::ComposingAction;

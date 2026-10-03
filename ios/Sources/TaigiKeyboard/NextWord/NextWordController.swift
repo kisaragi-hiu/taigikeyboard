@@ -102,7 +102,7 @@ final class NextWordController {
     /// (`engine/nextword/src/decide.rs`).
     ///
     /// CROSS-PLATFORM INVARIANT — mirrors Android
-    /// `TextInputKeyHandler.isContextCharacterOutsideComposition` and desktop-core
+    /// `isContextCharacterOutsideComposition` (`TextInputKeyHandler.kt`) and desktop-core
     /// `ComposingManager::note_character_typed_outside_composition`. Drift causes
     /// silent divergence.
     static func isContextCharacterOutsideComposition(_ character: String) -> Bool {
