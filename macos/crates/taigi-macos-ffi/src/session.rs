@@ -444,7 +444,7 @@ impl IntentSurface for RecordingSurface<'_> {
     }
 }
 
-fn navigation(direction: CandidateNavigation) -> proto::CandidateNavigation {
+pub(crate) fn navigation(direction: CandidateNavigation) -> proto::CandidateNavigation {
     match direction {
         CandidateNavigation::Left => proto::CandidateNavigation::Left,
         CandidateNavigation::Right => proto::CandidateNavigation::Right,

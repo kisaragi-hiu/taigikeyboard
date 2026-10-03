@@ -29,6 +29,10 @@ message DesktopRequest {
     CommitForSymbolPickerRequest commit_for_symbol_picker = 11;
     InsertSymbolRequest insert_symbol = 12;
     RepresentRequest represent = 13;
+    PressRequest press = 14;
+    ChordRequest chord = 15;
+    ComposingShortcutsRequest composing_shortcuts = 16;
+    SymbolPickerKeyRequest symbol_picker_key = 17;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -36,7 +40,8 @@ message DesktopRequest {
   // together. Unset = the last snapshot stays. A snapshot that is refused
   // refuses the whole request with FAIL_INVARIANT; a request that is
   // refused for any reason, or answered `ignored`, leaves the previous
-  // snapshot in force.
+  // snapshot in force. The key rules (P14, below) read the snapshot they
+  // carry for their one answer and never apply it.
   SettingsSnapshot settings = 10;
 }
 
@@ -124,6 +129,10 @@ message DesktopResponse {
     ConfigureReply configure = 3;
     PrepareReply prepare = 5;
     SessionReply session = 6;
+    PressReply press = 7;
+    ChordReply chord = 8;
+    ComposingShortcutsReply composing_shortcuts = 9;
+    SymbolPickerReply symbol_picker = 10;
   }
 }
 
@@ -136,10 +145,10 @@ message VersionReply {
 //
 // One session drives the process's one engine at a time; a session is the
 // token Swift mints per input controller and never reuses. Every request
-// below is refused with FAIL_INVARIANT before Configure, and answered with
-// a SessionReply. A request whose token does not own the engine — released,
-// or superseded by another Activate — is answered `ignored` and does
-// nothing; except Activate, which takes the engine.
+// of this section is refused with FAIL_INVARIANT before Configure, and
+// answered with a SessionReply. A request whose token does not own the
+// engine — released, or superseded by another Activate — is answered
+// `ignored` and does nothing; except Activate, which takes the engine.
 
 // The session takes the engine (`activateServer`): a session that already
 // holds it keeps its composition, any other one's is dropped. The list is
@@ -319,4 +328,142 @@ enum CandidateNavigation {
   CANDIDATE_NAVIGATION_PAGE_DOWN = 6;
   CANDIDATE_NAVIGATION_NEXT_CANDIDATE = 7;
   CANDIDATE_NAVIGATION_PREVIOUS_CANDIDATE = 8;
+}
+
+// ---- The key rules of the Shortcuts pane and the symbol picker (P14) ----
+//
+// desktop-core's chord gate, recorder decision, resolved bindings, fixed-row
+// labels and picker reading, under the Mac's grammar
+// (`DesktopPlatform::MacOS`). Pure: no token, no session, answered before
+// Configure too, and nothing is kept — the key path's settings stay what
+// the last session request carried.
+
+// One key press in a shortcut-recording field (`ShortcutKeyRecorder`).
+// The field's own keys — a repeat, a click — and the global tier's
+// refusals stay Swift's. A press with no event is refused.
+message PressRequest {
+  KeyEvent event = 1;
+}
+
+message PressReply {
+  oneof outcome {
+    // Bound; recording ends.
+    Chord recorded = 1;
+    // Turned down; recording goes on, the reason in place of the prompt.
+    ChordRejection refused = 2;
+    // What the field itself does with the key.
+    RecorderAction action = 3;
+  }
+}
+
+enum RecorderAction {
+  RECORDER_ACTION_UNSPECIFIED = 0;
+  // A bare Escape key (`kVK_Escape`, whatever it types): the field gives up
+  // focus, the row keeps what it had.
+  RECORDER_ACTION_BLUR = 1;
+  // A bare Backspace, Delete or forward Delete: the field blanks, nothing
+  // is recorded (the row's own clear button clears it).
+  RECORDER_ACTION_BLANK = 2;
+}
+
+// The chord a key and modifiers make, through the gate a recorded chord
+// passes (`ComposingKeyChord::make`) — the Carbon bridge's question
+// (`ShortcutConflicts.translation(of:)`). Reads no settings.
+message ChordRequest {
+  // What the key types with no modifier held; unset or empty = no key.
+  optional string key = 1;
+  // `NSEvent.ModifierFlags` raw value; only ⌘ ⌃ ⌥ ⇧ are read.
+  uint64 modifier_flags = 2;
+}
+
+message ChordReply {
+  oneof answer {
+    Chord chord = 1;
+    ChordRejection rejection = 2;
+  }
+}
+
+// A composing chord as desktop-core hands it out.
+message Chord {
+  // The stored form, `<modifiers>|<scalars>` (`raw_value`): what Swift
+  // writes to `UserDefaults`, and the chord's identity — two chords are one
+  // exactly when their raws are.
+  string raw = 1;
+  // How it reads on screen (`display`): `⇧↩`, `⌃]`, `Space`.
+  string display = 2;
+}
+
+// Why a key could not be a chord (`ChordRejection`). The last three are
+// the global tier's, which Swift decides; these requests never answer them.
+enum ChordRejection {
+  CHORD_REJECTION_UNSPECIFIED = 0;
+  CHORD_REJECTION_TYPES_ROMANIZATION = 1;
+  CHORD_REJECTION_RESERVED_KEY = 2;
+  CHORD_REJECTION_NO_KEY = 3;
+  CHORD_REJECTION_TAKEN_BY_SYSTEM = 4;
+  CHORD_REJECTION_NOT_A_GLOBAL_KEY = 5;
+  CHORD_REJECTION_BELONGS_TO_HOST = 6;
+}
+
+// The Shortcuts pane's composing rows, resolved from the settings snapshot
+// this request must carry (`ComposingKeyBindings::from_document`), and its
+// fixed rows. Refused without a snapshot.
+message ComposingShortcutsRequest {}
+
+message ComposingShortcutsReply {
+  // Every composing action, in the roster's order (`ComposingAction::ALL`):
+  // the order a block of the pane draws them in and conflicts list them in.
+  repeated ComposingShortcut actions = 1;
+  // The fixed rows, as the pane prints them (`shortcut_labels`): the live
+  // slot keys bare and behind ⇧, the navigation keys, the caret and
+  // width-flip chords, the cancel key.
+  string slot_keys = 2;
+  string shifted_slot_keys = 3;
+  string navigation_keys = 4;
+  string caret_chords = 5;
+  string width_flip_chords = 6;
+  string cancel_key = 7;
+}
+
+message ComposingShortcut {
+  // `ComposingAction::raw`: `nextCandidate`.
+  string name = 1;
+  // Where its chord is stored: `composingShortcut.<name>`.
+  string settings_key = 2;
+  // Its label, as an i18n key (`i18n_desktop_actionNextCandidate`).
+  string label_key = 3;
+  // Its block on the pane (`ComposingAction::GROUPS`): 0 through the
+  // candidates, 1 out of the composition.
+  uint32 group = 4;
+  // The resolved chord; unset = the row is empty.
+  Chord chord = 5;
+  // What a fresh install has on it.
+  Chord default_chord = 6;
+}
+
+// One key while the symbol picker is up, read under the settings snapshot
+// this request must carry (`SymbolPickerIntent::intent`). Refused without
+// an event or a snapshot.
+message SymbolPickerKeyRequest {
+  KeyEvent event = 1;
+}
+
+message SymbolPickerReply {
+  oneof intent {
+    SymbolPickerAction action = 1;
+    // Move the selection the way the window reads the direction.
+    CandidateNavigation navigate = 2;
+    // Pick the cell the slot-th selection key addresses on the visible page.
+    uint32 pick_slot = 3;
+  }
+}
+
+enum SymbolPickerAction {
+  SYMBOL_PICKER_ACTION_UNSPECIFIED = 0;
+  // Take the picker down and swallow the key.
+  SYMBOL_PICKER_ACTION_CLOSE = 1;
+  // Pick the highlighted cell.
+  SYMBOL_PICKER_ACTION_CONFIRM = 2;
+  // Take the picker down and let the key go on.
+  SYMBOL_PICKER_ACTION_CLOSE_AND_PASS_THROUGH = 3;
 }

@@ -17,6 +17,7 @@ extern crate rust_taigi;
 
 #[cfg(test)]
 mod chord_rules;
+mod key_rules;
 mod key_translation;
 mod runtime;
 mod session;
@@ -242,12 +243,15 @@ mod tests {
         }))
     }
 
+    /// A field number no `DesktopRequest` field has.
+    const UNKNOWN_FIELD: u32 = 99;
+
     /// A Version request padded with one unknown length-delimited field
-    /// (field 15) to exactly `total_len` bytes — still a valid request, which
-    /// the decoder answers like the bare one.
+    /// ([`UNKNOWN_FIELD`]) to exactly `total_len` bytes — still a valid
+    /// request, which the decoder answers like the bare one.
     fn padded_version_request(total_len: usize) -> Vec<u8> {
         let mut bytes = version_request().encode_to_vec();
-        let header_len = bytes.len() + prost::encoding::key_len(15);
+        let header_len = bytes.len() + prost::encoding::key_len(UNKNOWN_FIELD);
         // The payload length's own varint counts toward `total_len`.
         let payload_len = (1..=10)
             .find_map(|varint_len| {
@@ -255,7 +259,11 @@ mod tests {
                 (prost::encoding::encoded_len_varint(len as u64) == varint_len).then_some(len)
             })
             .expect("a length whose varint fits");
-        prost::encoding::encode_key(15, prost::encoding::WireType::LengthDelimited, &mut bytes);
+        prost::encoding::encode_key(
+            UNKNOWN_FIELD,
+            prost::encoding::WireType::LengthDelimited,
+            &mut bytes,
+        );
         prost::encoding::encode_varint(payload_len as u64, &mut bytes);
         bytes.resize(total_len, 0);
         bytes

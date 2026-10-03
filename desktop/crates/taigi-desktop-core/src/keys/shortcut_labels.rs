@@ -151,6 +151,10 @@ mod tests {
             "⇧QWDFZXVY;"
         );
         assert_eq!(
+            slot_keys_label(CandidateSlotKeySet::Digits, mac),
+            "123456789"
+        );
+        assert_eq!(
             shifted_slot_keys_label(CandidateSlotKeySet::Digits, mac),
             "⇧123456789"
         );

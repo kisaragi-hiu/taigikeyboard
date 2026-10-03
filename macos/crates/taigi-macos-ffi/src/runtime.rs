@@ -18,6 +18,7 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 
+use crate::key_rules;
 use crate::proto::{
     desktop_request, desktop_response, ConfigureReply, ConfigureRequest, LexiconStats,
     PrepareReply, SettingsSnapshot, VersionReply,
@@ -60,19 +61,23 @@ impl Shell {
     /// ignored — a token that does not own the engine changes nothing —
     /// leaves the previous snapshot in force. (One that panics leaves its
     /// own: Swift answers FAIL_INTERNAL with a `Cancel` that carries none,
-    /// so the `Cancel` runs under it.)
+    /// so the `Cancel` runs under it.) The key rules (`key_rules.rs`) read the
+    /// snapshot they carry and never put it in force.
     pub(crate) fn serve(
         &self,
         request: desktop_request::Request,
         snapshot: Option<&SettingsSnapshot>,
     ) -> Result<desktop_response::Reply, Refusal> {
         let mut session = self.lock_session();
+        if key_rules::is_key_rule(&request) {
+            return self.dispatch(request, snapshot, &mut session);
+        }
         let previous = snapshot
             .map(|snapshot| settings::document_from(&snapshot.entries))
             .transpose()
             .map_err(Refusal::Settings)?
             .map(|document| self.settings.replace(Arc::new(document)));
-        let reply = self.dispatch(request, &mut session);
+        let reply = self.dispatch(request, snapshot, &mut session);
         let changed_nothing = match &reply {
             Ok(desktop_response::Reply::Session(session)) => session.ignored,
             Ok(_) => false,
@@ -87,6 +92,7 @@ impl Shell {
     fn dispatch(
         &self,
         request: desktop_request::Request,
+        snapshot: Option<&SettingsSnapshot>,
         session: &mut Session,
     ) -> Result<desktop_response::Reply, Refusal> {
         use desktop_request::Request;
@@ -117,6 +123,14 @@ impl Shell {
             Request::Represent(represent) => session
                 .represent(self.runtime()?, &represent)
                 .map(Reply::Session),
+            Request::Press(press) => key_rules::press(&press).map(Reply::Press),
+            Request::Chord(chord) => Ok(Reply::Chord(key_rules::chord(&chord))),
+            Request::ComposingShortcuts(_) => {
+                key_rules::composing_shortcuts(snapshot).map(Reply::ComposingShortcuts)
+            }
+            Request::SymbolPickerKey(key) => {
+                key_rules::symbol_picker_key(&key, snapshot).map(Reply::SymbolPicker)
+            }
         }
     }
 
@@ -290,6 +304,43 @@ mod tests {
             InputMode::DEFAULT,
             "a removed key reads as its default"
         );
+    }
+
+    /// The key rules (P14) are answered before Configure, under the snapshot
+    /// they carry, and leave the one the key path reads as it was — whether
+    /// they answer or refuse.
+    #[test]
+    fn the_key_rules_never_put_their_snapshot_in_force() {
+        use crate::proto::{ComposingShortcutsRequest, SymbolPickerKeyRequest};
+        use crate::test_support::key_event;
+        let shell = Shell::default();
+        shell
+            .serve(version(), Some(&snapshot(vec![text("inputMode", "poj")])))
+            .unwrap();
+        let tl = snapshot(vec![
+            text("inputMode", "tl"),
+            text("toneInputScheme", "telex"),
+        ]);
+        let Ok(desktop_response::Reply::ComposingShortcuts(reply)) = shell.serve(
+            desktop_request::Request::ComposingShortcuts(ComposingShortcutsRequest {}),
+            Some(&tl),
+        ) else {
+            panic!("the pane's rows, before Configure");
+        };
+        assert_eq!(
+            reply.slot_keys, "123456789",
+            "read under the snapshot it carried"
+        );
+        let refused = snapshot(vec![text("inputMode", "tl"), text("notASetting", "")]);
+        assert!(shell
+            .serve(
+                desktop_request::Request::SymbolPickerKey(SymbolPickerKeyRequest {
+                    event: Some(key_event("q", 0, None)),
+                }),
+                Some(&refused),
+            )
+            .is_err());
+        assert_eq!(input_mode(&shell), InputMode::Poj, "the key path's stays");
     }
 
     /// A refused snapshot stops the request before it runs: Configure with

@@ -76,10 +76,19 @@ mod tests {
     use crate::keys::{
         ComposingKeyChord, ComposingKeyIntent, KeyModifiers, NavigationKey, ToneInputScheme,
     };
-    use crate::platform::test_support::TEST_PLATFORM as PLATFORM;
+    use crate::platform::test_support::ALL_PLATFORMS;
 
+    /// The picker's answer under the shipped bindings — the same on every
+    /// desktop, the Mac included (`taigi-macos-ffi` `key_rules.rs` asks it).
     fn intent(key: &KeyEventSnapshot) -> SymbolPickerIntent {
-        SymbolPickerIntent::intent(key, &ComposingKeyBindings::default(), PLATFORM)
+        let answers = ALL_PLATFORMS.map(|platform| {
+            SymbolPickerIntent::intent(key, &ComposingKeyBindings::default(), platform)
+        });
+        assert!(
+            answers.iter().all(|answer| *answer == answers[0]),
+            "{answers:?}"
+        );
+        answers[0]
     }
 
     fn text(characters: &str) -> KeyEventSnapshot {
@@ -168,15 +177,35 @@ mod tests {
         // The set itself is `CandidateSlotKeySet`'s and pinned in `intent.rs`;
         // one assertion per scheme shows the picker reads it.
         let telex = ComposingKeyBindings::resolve(&Default::default(), ToneInputScheme::Telex);
-        assert_eq!(
-            SymbolPickerIntent::intent(&text("1"), &telex, PLATFORM),
-            SymbolPickerIntent::PickSlot(0)
-        );
-        assert_eq!(
-            SymbolPickerIntent::intent(&text("q"), &telex, PLATFORM),
-            SymbolPickerIntent::CloseAndPassThrough,
-            "a letter is a tone key under Telex"
-        );
+        for platform in ALL_PLATFORMS {
+            let under_telex =
+                |key: &KeyEventSnapshot| SymbolPickerIntent::intent(key, &telex, platform);
+            assert_eq!(under_telex(&text("1")), SymbolPickerIntent::PickSlot(0));
+            assert_eq!(under_telex(&text("9")), SymbolPickerIntent::PickSlot(8));
+            // trace: `direct_selection_slot` reads the first scalar, so a
+            // keycap `1` + U+20E3 still names slot 0; `0`, a full-width `１`
+            // and a chorded digit name none.
+            assert_eq!(
+                under_telex(&text("1\u{20E3}")),
+                SymbolPickerIntent::PickSlot(0)
+            );
+            for none in [
+                text("0"),
+                text("\u{FF11}"),
+                KeyEventSnapshot::text("1", KeyModifiers::WIN),
+            ] {
+                assert_eq!(
+                    under_telex(&none),
+                    SymbolPickerIntent::CloseAndPassThrough,
+                    "{platform:?} {none:?}"
+                );
+            }
+            assert_eq!(
+                under_telex(&text("q")),
+                SymbolPickerIntent::CloseAndPassThrough,
+                "a letter is a tone key under Telex"
+            );
+        }
     }
 
     #[test]
@@ -206,27 +235,30 @@ mod tests {
 
     #[test]
     fn a_recorded_paging_chord_is_read() {
-        let chord = ComposingKeyChord::make(
-            Some("\r"),
-            KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
-            PLATFORM,
-        )
-        .unwrap();
-        let mut document = crate::settings::SettingsDocument::default();
-        document.set_composing_chord(ComposingAction::PageForward, Some(&chord), PLATFORM);
-        let bindings = ComposingKeyBindings::from_document(&document, PLATFORM);
-        assert_eq!(
-            SymbolPickerIntent::intent(
-                &named("\r", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT)),
-                &bindings,
-                PLATFORM
-            ),
-            SymbolPickerIntent::Navigate(CandidateNavigation::PageDown)
-        );
-        assert_eq!(
-            SymbolPickerIntent::intent(&text("]"), &bindings, PLATFORM),
-            SymbolPickerIntent::CloseAndPassThrough
-        );
+        for platform in ALL_PLATFORMS {
+            for modifiers in [
+                KeyModifiers::CONTROL.with(KeyModifiers::SHIFT),
+                KeyModifiers::ALT,
+            ] {
+                let chord = ComposingKeyChord::make(Some("\r"), modifiers, platform).unwrap();
+                let mut document = crate::settings::SettingsDocument::default();
+                document.set_composing_chord(ComposingAction::PageForward, Some(&chord), platform);
+                let bindings = ComposingKeyBindings::from_document(&document, platform);
+                assert_eq!(
+                    SymbolPickerIntent::intent(&named("\r", modifiers), &bindings, platform),
+                    SymbolPickerIntent::Navigate(CandidateNavigation::PageDown),
+                    "{platform:?} {modifiers:?}"
+                );
+                assert_eq!(
+                    SymbolPickerIntent::intent(&text("]"), &bindings, platform),
+                    SymbolPickerIntent::CloseAndPassThrough
+                );
+            }
+        }
+        // The Mac spells Option `o` in the stored value.
+        let option_return =
+            ComposingKeyChord::make(Some("\r"), KeyModifiers::ALT, DesktopPlatform::MacOS).unwrap();
+        assert_eq!(option_return.raw_value(DesktopPlatform::MacOS), "o|000D");
     }
 
     #[test]
@@ -247,6 +279,10 @@ mod tests {
         );
         assert_eq!(
             intent(&text("\u{8}")),
+            SymbolPickerIntent::CloseAndPassThrough
+        );
+        assert_eq!(
+            intent(&KeyEventSnapshot::text("s", KeyModifiers::WIN)),
             SymbolPickerIntent::CloseAndPassThrough
         );
     }
