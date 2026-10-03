@@ -128,11 +128,15 @@ class LearningRecordsViewModelTest {
     /** [count] frequency rows, ids 1..count, texts `w1`, `w2`, … */
     private fun frequencyRows(count: Int) = (1..count).map { record(it.toLong(), "w$it") }
 
-    private fun viewModel(client: FakeLearningRecords) = LearningRecordsViewModel(Application(), client)
+    private fun viewModel(
+        client: FakeLearningRecords,
+        kind: LearningRecordKind = frequency,
+    ) = LearningRecordsViewModel(Application(), client, kind)
 
     private val frequency = LearningRecordKind.LEARNING_RECORD_KIND_FREQUENCY
     private val phrase = LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE
     private val mostUsed = LearningRecordOrder.LEARNING_RECORD_ORDER_MOST_USED
+    private val mostRecent = LearningRecordOrder.LEARNING_RECORD_ORDER_MOST_RECENT
 
     @Test
     fun `the page opens on word frequency, most used, one engine page, and appends the next`() =
@@ -163,29 +167,56 @@ class LearningRecordsViewModelTest {
         }
 
     @Test
-    fun `a kind change drops the answer still in flight for the old kind`() =
+    fun `an order change drops the answer still in flight for the old order`() =
         runTest(dispatcher) {
-            val client = FakeLearningRecords(frequencyRows(2) + record(9, "台灣", phrase))
+            val client = FakeLearningRecords(frequencyRows(2))
             client.holdsAnswers = true
             val model = viewModel(client)
             advanceUntilIdle()
 
-            model.selectKind(phrase)
+            model.selectOrder(mostRecent)
             advanceUntilIdle()
-            assertEquals(phrase, client.listCalls.last().kind)
+            assertEquals(mostRecent, client.listCalls.last().order)
 
-            client.held[1].complete(client.page(phrase, "", 100, 0))
+            client.held[1].complete(
+                client
+                    .page(frequency, "", 100, 0)
+                    .toBuilder()
+                    .removeRecords(1)
+                    .setMatchingTotal(1)
+                    .build(),
+            )
             client.held[0].complete(client.page(frequency, "", 100, 0))
             advanceUntilIdle()
 
+            assertEquals(
+                listOf(1L),
+                model.state.value.records
+                    .map { it.id },
+            )
+            assertEquals(mostRecent, model.state.value.order)
+            assertFalse(model.state.value.isLoading)
+        }
+
+    @Test
+    fun `a learned-phrases page lists only its own kind`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(2) + record(9, "台灣", phrase))
+            val model = viewModel(client, phrase)
+            advanceUntilIdle()
+
+            assertEquals(listOf(ListCall(phrase, mostUsed, "", 100, 0)), client.listCalls)
             assertEquals(
                 listOf(9L),
                 model.state.value.records
                     .map { it.id },
             )
-            assertEquals(phrase, model.state.value.kind)
-            assertFalse(model.state.value.isLoading)
         }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun `next-word association is not a phone page`() {
+        viewModel(FakeLearningRecords(emptyList()), LearningRecordKind.LEARNING_RECORD_KIND_ASSOCIATION)
+    }
 
     @Test
     fun `the filter goes to the engine trimmed once typing settles and lists from the first row`() =
@@ -217,10 +248,10 @@ class LearningRecordsViewModelTest {
             val model = viewModel(client)
             advanceUntilIdle()
 
-            model.selectOrder(LearningRecordOrder.LEARNING_RECORD_ORDER_MOST_RECENT)
+            model.selectOrder(mostRecent)
             advanceUntilIdle()
 
-            assertEquals(LearningRecordOrder.LEARNING_RECORD_ORDER_MOST_RECENT, client.listCalls.last().order)
+            assertEquals(mostRecent, client.listCalls.last().order)
             assertEquals(0, client.listCalls.last().offset)
             assertEquals(3, model.state.value.records.size)
         }
@@ -352,9 +383,9 @@ class LearningRecordsViewModelTest {
     fun `a refresh lists what the keyboard learned meanwhile, the loaded range from the first row`() =
         runTest(dispatcher) {
             val client = FakeLearningRecords(frequencyRows(150))
-            val model = viewModel(client)
+            val model = viewModel(client, phrase)
             advanceUntilIdle()
-            model.selectKind(phrase)
+            model.selectOrder(mostRecent)
             advanceUntilIdle()
             model.updateFilter(" w ")
             advanceUntilIdle()
@@ -364,8 +395,8 @@ class LearningRecordsViewModelTest {
             model.refresh()
             advanceUntilIdle()
 
-            // trace: 0 rows listed → one page (100, 0), kind / filter kept; 120 matches → load more stays possible.
-            assertEquals(listOf(ListCall(phrase, mostUsed, "w", 100, 0)), client.listCalls.drop(before))
+            // trace: 0 rows listed → one page (100, 0), kind / order / filter kept; 120 matches → load more stays possible.
+            assertEquals(listOf(ListCall(phrase, mostRecent, "w", 100, 0)), client.listCalls.drop(before))
             assertEquals(100, model.state.value.records.size)
             assertEquals(120, model.state.value.matchingTotal)
         }

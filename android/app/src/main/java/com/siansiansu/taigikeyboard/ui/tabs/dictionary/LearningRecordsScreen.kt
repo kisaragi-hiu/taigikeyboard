@@ -58,14 +58,6 @@ import com.siansiansu.taigikeyboard.ui.components.SegmentedChoiceRow
 import com.siansiansu.taigikeyboard.ui.components.SettingsCard
 import com.siansiansu.taigikeyboard.ui.components.resultMessage
 
-/** The kinds the phone lists, in picker order: next-word association is mobile-only. */
-private val KINDS =
-    listOf(
-        LearningRecordKind.LEARNING_RECORD_KIND_FREQUENCY,
-        LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE,
-        LearningRecordKind.LEARNING_RECORD_KIND_ASSOCIATION,
-    )
-
 /** The orders the picker offers; the first is the default. */
 private val ORDERS =
     listOf(
@@ -104,7 +96,7 @@ fun LearningRecordsScreen(
     }
     // Re-evaluated after every load and query change, so staying at the end still pages on; a
     // failed page waits for the retry row.
-    LaunchedEffect(isNearEnd, state.isLoading, state.hasReadFailed, state.records.size, state.kind, state.order, state.filter) {
+    LaunchedEffect(isNearEnd, state.isLoading, state.hasReadFailed, state.records.size, state.order, state.filter) {
         if (isNearEnd && !state.isLoading && !state.hasReadFailed) viewModel.loadMore()
     }
 
@@ -113,7 +105,7 @@ fun LearningRecordsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = L10n.dictionaryLearningRecords,
+                        text = kindLabel(viewModel.kind),
                         fontWeight = FontWeight.Bold,
                     )
                 },
@@ -143,22 +135,9 @@ fun LearningRecordsScreen(
                         .weight(1f)
                         .padding(horizontal = 20.dp),
             ) {
-                // Kind
-                item {
-                    Spacer(Modifier.height(8.dp))
-                    SettingsCard {
-                        SegmentedChoiceRow(
-                            labels = KINDS.map { kindLabel(it) },
-                            selectedIndex = KINDS.indexOf(state.kind),
-                            onSelect = { viewModel.selectKind(KINDS[it]) },
-                            modifier = Modifier.padding(16.dp),
-                        )
-                    }
-                }
-
                 // Order
                 item {
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = L10n.dictionaryLearningRecordsOrder,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -257,7 +236,6 @@ fun LearningRecordsScreen(
 private fun kindLabel(kind: LearningRecordKind): String =
     when (kind) {
         LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE -> L10n.dictionaryLearningRecordsPhrases
-        LearningRecordKind.LEARNING_RECORD_KIND_ASSOCIATION -> L10n.dictionaryLearningRecordsAssociation
         else -> L10n.dictionaryLearningRecordsFrequency
     }
 
@@ -267,17 +245,6 @@ private fun messageText(message: LearningRecordsMessage): String =
         LearningRecordsMessage.Gone -> L10n.dictionaryLearningRecordGone
         is LearningRecordsMessage.ReadFailed -> resultMessage(L10n.dictionaryLearningRecordsReadFailed, message.detail)
         is LearningRecordsMessage.WriteFailed -> resultMessage(L10n.dictionaryLearningRecordsWriteFailed, message.detail)
-    }
-
-/** The word, or `previous → next` for an association. */
-private fun LearningRecord.word(): String = if (kind == LearningRecordKind.LEARNING_RECORD_KIND_ASSOCIATION) "$previousText → $text" else text
-
-/** The TL reading, or both readings for an association; blank when the store held none. */
-private fun LearningRecord.reading(): String =
-    if (kind == LearningRecordKind.LEARNING_RECORD_KIND_ASSOCIATION && (previousTl.isNotEmpty() || tl.isNotEmpty())) {
-        "$previousTl → $tl"
-    } else {
-        tl
     }
 
 @Composable
@@ -309,14 +276,13 @@ private fun RecordRow(
                     .padding(vertical = 12.dp),
         ) {
             Text(
-                text = record.word(),
+                text = record.text,
                 color = MaterialTheme.colorScheme.onSurface,
                 style = MaterialTheme.typography.bodyLarge,
             )
-            val reading = record.reading()
-            if (reading.isNotEmpty()) {
+            if (record.tl.isNotEmpty()) {
                 Text(
-                    text = reading,
+                    text = record.tl,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -381,11 +347,10 @@ private fun EditCountDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Column {
-                    Text(record.word(), style = MaterialTheme.typography.bodyLarge)
-                    val reading = record.reading()
-                    if (reading.isNotEmpty()) {
+                    Text(record.text, style = MaterialTheme.typography.bodyLarge)
+                    if (record.tl.isNotEmpty()) {
                         Text(
-                            text = reading,
+                            text = record.tl,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                         )

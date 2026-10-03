@@ -2,6 +2,7 @@ package com.siansiansu.taigikeyboard.ui.tabs.dictionary
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
@@ -19,6 +20,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
+
+/** The intent extra (a [LearningRecordKind] name) naming the one kind the page lists. */
+const val LEARNING_RECORDS_KIND_ARG = "learningRecordsKind"
+
+/** Kinds the phone lists; next-word association is not one. */
+private val LEARNING_RECORDS_KINDS =
+    listOf(LearningRecordKind.LEARNING_RECORD_KIND_FREQUENCY, LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE)
 
 /** Rows per engine page. */
 internal const val LEARNING_RECORDS_PAGE_SIZE = 100
@@ -53,13 +61,12 @@ sealed interface LearningRecordsMessage {
 }
 
 data class LearningRecordsState(
-    val kind: LearningRecordKind = LearningRecordKind.LEARNING_RECORD_KIND_FREQUENCY,
     val order: LearningRecordOrder = LearningRecordOrder.LEARNING_RECORD_ORDER_MOST_USED,
     /** The search box as typed; the engine gets it trimmed. */
     val filter: String = "",
     /** The rows loaded so far, from the first. */
     val records: List<LearningRecord> = emptyList(),
-    /** Every row of [kind]. */
+    /** Every row of the page's kind. */
     val total: Int = 0,
     /** The rows [filter] matches — how far loading more can go. */
     val matchingTotal: Int = 0,
@@ -77,8 +84,14 @@ data class LearningRecordsState(
 class LearningRecordsViewModel internal constructor(
     application: Application,
     private val userData: UserDataClient,
+    val kind: LearningRecordKind,
 ) : AndroidViewModel(application) {
-    constructor(application: Application) : this(application, CompositionRoot.shared(application).userData)
+    /** Built by the activity's default factory; the intent extras are [savedState]'s defaults. */
+    constructor(application: Application, savedState: SavedStateHandle) : this(
+        application,
+        CompositionRoot.shared(application).userData,
+        LearningRecordKind.valueOf(requireNotNull(savedState.get<String>(LEARNING_RECORDS_KIND_ARG)) { "no $LEARNING_RECORDS_KIND_ARG extra" }),
+    )
 
     private val _state = MutableStateFlow(LearningRecordsState())
     val state: StateFlow<LearningRecordsState> = _state.asStateFlow()
@@ -87,7 +100,7 @@ class LearningRecordsViewModel internal constructor(
      * The one list request in flight, a filter's settle delay included. A newer
      * request cancels it, and a cancelled request never lands (the client's
      * `withContext` resumes a cancelled caller with `CancellationException`),
-     * so the newest kind / order / filter always wins.
+     * so the newest order / filter always wins.
      */
     private var loadJob: Job? = null
 
@@ -95,17 +108,15 @@ class LearningRecordsViewModel internal constructor(
     private var failedRead = FailedRead.LIST
 
     init {
+        require(kind in LEARNING_RECORDS_KINDS) { "Learning Records cannot list $kind" }
         reload()
-    }
-
-    fun selectKind(kind: LearningRecordKind) {
-        if (kind == _state.value.kind) return
-        relist { it.copy(kind = kind) }
     }
 
     fun selectOrder(order: LearningRecordOrder) {
         if (order == _state.value.order) return
-        relist { it.copy(order = order) }
+        // The rows shown are in the old order, so the list starts empty.
+        _state.update { it.copy(order = order, records = emptyList(), total = 0, matchingTotal = 0) }
+        reload()
     }
 
     fun updateFilter(filter: String) {
@@ -144,7 +155,7 @@ class LearningRecordsViewModel internal constructor(
 
     /**
      * Reads the rows listed so far again from the first, one engine page at a
-     * time, keeping kind, order and filter: the keyboard may have learned,
+     * time, keeping order and filter: the keyboard may have learned,
      * moved or evicted rows since they were read.
      */
     fun refresh() {
@@ -172,12 +183,6 @@ class LearningRecordsViewModel internal constructor(
             if (message != null) _state.update { it.copy(message = message) }
             refresh()
         }
-    }
-
-    /** A new kind or order: the rows shown belong to the old one, so the list starts empty. */
-    private fun relist(change: (LearningRecordsState) -> LearningRecordsState) {
-        _state.update { change(it).copy(records = emptyList(), total = 0, matchingTotal = 0) }
-        reload()
     }
 
     /** Lists the first [rows] rows again, after [settleMillis]. */
@@ -239,7 +244,7 @@ class LearningRecordsViewModel internal constructor(
         whenFailed: FailedRead,
     ): LearningRecords? =
         try {
-            userData.listLearningRecords(asked.kind, asked.order, asked.filter.trim(), limit, offset)
+            userData.listLearningRecords(kind, asked.order, asked.filter.trim(), limit, offset)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
