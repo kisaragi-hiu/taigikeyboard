@@ -49,11 +49,11 @@ const BOTTOM_MARGIN: f32 = 24.0;
 const GLYPH_FONT_SIZE: f32 = 22.0;
 const SHIFT_GLYPH_FONT_SIZE: f32 = 13.0;
 const LABEL_FONT_SIZE: f32 = 11.0;
-/// The glyphs draw in a bundled face that holds every Bopomofo Extended
-/// glyph the layout types (ㆠ–ㆷ): the system face is a fallback chain whose
-/// coverage varies by Windows build, and jf open 粉圓 lacks ㆶ and two tone
-/// marks.
-const GLYPH_FONT: CandidateFontChoice = CandidateFontChoice::GenYoGothic;
+/// The glyphs draw in a bundled face that holds every glyph the layout
+/// types, ㆻ (U+31BB, Unicode 13) included — the system face lacks it (a
+/// tofu box on the dev box, 2026-10-04) and jf open 粉圓 lacks ˪ ˫. Iansui,
+/// whose family name `render.rs` `bundled_family_name` resolves.
+const GLYPH_FONT: CandidateFontChoice = CandidateFontChoice::Iansui;
 
 /// The appearance to draw the panel in as focus and the settings stand now,
 /// or `None` when it should not be up (`SettingsDocument::is_tps_keyboard_wanted`).
