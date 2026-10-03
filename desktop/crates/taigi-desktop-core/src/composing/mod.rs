@@ -23,7 +23,7 @@ pub use intent_executor::{
     insert_symbol, pass_through_may_consume, perform_intent, refresh_list, represent_list,
     IntentSurface,
 };
-pub use manager::{ComposingEffectExecutor, ComposingManager};
+pub use manager::{ComposingEffectExecutor, ComposingManager, TpsKeyOutcome};
 pub use next_word::{EngineNextWord, NextWordPort};
 pub use outcomes::{CandidateCommitOutcome, CandidateFetchOutcome, CandidateListChange};
 pub use presentation::{CandidateSource, PresentedCandidate};

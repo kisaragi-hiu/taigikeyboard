@@ -6,7 +6,7 @@
 
 use super::{
     CandidateCommitOutcome, CandidateListChange, CandidateSource, ComposingEffectExecutor,
-    ComposingManager,
+    ComposingManager, TpsKeyOutcome,
 };
 use crate::keys::{CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot};
 use crate::policies;
@@ -68,20 +68,29 @@ pub fn perform_intent(
             true
         }
         ComposingKeyIntent::TpsKey(key) => {
-            if manager.tps_key(key, surface) {
-                refresh(settings, manager, list, surface);
-                return true;
-            }
-            // A Space the syllable was already closed for (O1, roadmap § D3):
-            // it confirms the highlighted candidate as Zhuyin-family input
-            // methods do, or with no list commits the glyphs as typed — no
-            // space after, TPS takes none.
-            if surface.selected_index().is_some() {
-                let cell = surface.selected_index();
-                commit_candidate(cell, false, settings, manager, list, surface);
-            } else {
-                manager.commit_composition(surface);
-                close_list(list, surface);
+            match manager.tps_key(key, surface) {
+                TpsKeyOutcome::Taken => refresh(settings, manager, list, surface),
+                // A Space after the closed last syllable (O1, roadmap § D3):
+                // it confirms the highlighted candidate as Zhuyin-family input
+                // methods do, or with no list commits the glyphs as typed — no
+                // space after, TPS takes none.
+                TpsKeyOutcome::Refused {
+                    is_caret_at_end: true,
+                } => {
+                    if surface.selected_index().is_some() {
+                        let cell = surface.selected_index();
+                        commit_candidate(cell, false, settings, manager, list, surface);
+                    } else {
+                        manager.commit_composition(surface);
+                        close_list(list, surface);
+                    }
+                }
+                // Refused inside the composition, or the round trip failed:
+                // nothing to type and nothing to commit.
+                TpsKeyOutcome::Refused {
+                    is_caret_at_end: false,
+                }
+                | TpsKeyOutcome::Failed => {}
             }
             true
         }

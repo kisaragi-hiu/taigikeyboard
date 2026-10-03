@@ -488,7 +488,7 @@ fn tps_space_on_a_closed_syllable_confirms_the_highlighted_candidate() {
 }
 
 #[test]
-fn tps_a_shifted_slot_commits_the_cells_own_hanji_never_the_tl() {
+fn tps_a_flipped_slot_commits_the_cells_own_hanji_never_the_tl() {
     let mut rig = new_tps_rig();
     rig.type_tps("ㄏㄛˋ");
     // The surface maps slot 0 to cell 1.
@@ -520,4 +520,17 @@ fn tps_ctrl_comma_writes_the_full_width_mark() {
     let ctrl_comma = KeyEventSnapshot::chord(Some(","), ",", KeyModifiers::CONTROL);
     assert!(rig.run(ComposingKeyIntent::PassThrough, &ctrl_comma));
     assert_eq!(rig.calls(), ["swap \"， \"", "insert \"，\""]);
+}
+
+#[test]
+fn tps_space_on_a_closed_syllable_with_the_window_off_commits_the_glyphs_unspaced() {
+    // trace: with Show Candidate Window off `refresh_list` keeps the list
+    // empty, so no cell is highlighted and O1 takes the raw arm.
+    let mut rig = new_tps_rig();
+    rig.settings
+        .set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false);
+    rig.type_tps("ㄏㄛˋ");
+    assert!(rig.list.is_empty());
+    assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
+    assert_eq!(rig.calls(), ["commit ㄏㄛˋ", "list closed"]);
 }

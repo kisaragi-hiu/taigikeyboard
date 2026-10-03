@@ -55,6 +55,9 @@ pub struct ComposingTransition {
     pub display_text: String,
     pub effects: Vec<Effect>,
     pub is_composing: bool,
+    /// Where the caret sits in `display_text`, as a UTF-16 offset — the end
+    /// unless the user moved it (`MoveCaret`).
+    pub caret_utf16: u32,
 }
 
 impl ComposingTransition {
@@ -65,6 +68,7 @@ impl ComposingTransition {
             display_text: preedit.display_text,
             effects: response.effect.iter().filter_map(Effect::decode).collect(),
             is_composing: response.is_composing,
+            caret_utf16: preedit.caret_utf16,
         }
     }
 }

@@ -278,8 +278,11 @@ impl SettingsDocument {
             is_full_width_punctuation: input_mode == InputMode::Tps
                 || candidate_display_mode.effective_full_width_punctuation(stored_swap),
             candidate_display_mode,
-            is_literal_roman_candidate_enabled: self
-                .bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
+            // Show Typed Text First is a romanization literal: off under TPS,
+            // so the engine never prepends one (a lone tone mark still
+            // composes as TL there) and every TPS cell keeps its key.
+            is_literal_roman_candidate_enabled: input_mode != InputMode::Tps
+                && self.bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
             is_hyphenless_roman_enabled: self.bool(&keys::IS_HYPHENLESS_ROMAN_ENABLED),
             is_nasal_marker_uppercase_enabled: self.bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED),
             is_custom_dict_enabled: self.bool(&keys::IS_CUSTOM_DICT_ENABLED),
@@ -735,5 +738,15 @@ mod tests {
         doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
         assert_eq!(doc.choice(&keys::INPUT_MODE), InputMode::Tps);
         assert!(doc.engine_settings().is_full_width_punctuation);
+    }
+
+    #[test]
+    fn show_typed_text_first_reads_off_under_tps_and_the_stored_value_survives() {
+        let mut doc = SettingsDocument::default();
+        doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
+        assert!(doc.engine_settings().is_literal_roman_candidate_enabled);
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        assert!(!doc.engine_settings().is_literal_roman_candidate_enabled);
+        assert!(doc.bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED));
     }
 }

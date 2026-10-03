@@ -89,17 +89,15 @@ pub(crate) fn presentation(
 ///
 /// Read off the setting plus the shape of the leading candidate rather than
 /// re-derived: the literal is roman-only by construction (`requests.rs::literal_roman_candidate`
-/// `hanji: None`). The engine's other gate is the TPS buffer, which never
-/// gets the prepend (`literal_roman_candidate`): under TPS a hanji-less lead
-/// is a real candidate and keeps its key. A hanji-bearing lead means the
-/// prepend did not happen, whatever the setting says, and every cell keeps
-/// its key.
+/// `hanji: None`). Under TPS the setting reads off
+/// (`SettingsDocument::engine_settings`), so a hanji-less TPS lead keeps its
+/// key. A hanji-bearing lead means the prepend did not happen, whatever the
+/// setting says, and every cell keeps its key.
 pub(crate) fn leads_with_literal_roman(
     candidates: &[ContinuousCandidate],
     settings: &EngineSettings,
 ) -> bool {
-    settings.input_mode != InputMode::Tps
-        && settings.is_literal_roman_candidate_enabled
+    settings.is_literal_roman_candidate_enabled
         && candidates
             .first()
             .is_some_and(|candidate| candidate.nonempty_hanji().is_none())
@@ -458,15 +456,18 @@ mod tests {
     #[test]
     fn under_tps_combined_keeps_one_cell_and_a_hanji_less_lead_keeps_its_key() {
         // trace: `presentation` TPS → one Primary cell per candidate even
-        // under Combined; `leads_with_literal_roman` false under TPS though the
+        // under Combined; `engine_settings` reads Show Typed Text First off
+        // under TPS, so `leads_with_literal_roman` is false though the stored
         // setting is on and the lead has no Hanji.
         let candidates = vec![candidate("ka", None, 0), candidate("ka", Some("家"), 1)];
-        let tps = EngineSettings {
-            input_mode: InputMode::Tps,
-            candidate_display_mode: CandidateDisplayMode::Combined,
-            is_literal_roman_candidate_enabled: true,
-            ..EngineSettings::default()
-        };
+        let mut document = SettingsDocument::default();
+        document.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        document.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::Combined,
+        );
+        document.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
+        let tps = document.engine_settings();
         let presented = presentation(&candidates, &tps);
         assert_eq!(
             texts(&presented),
