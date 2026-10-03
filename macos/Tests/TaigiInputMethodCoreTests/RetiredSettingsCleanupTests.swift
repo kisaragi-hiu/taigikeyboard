@@ -39,8 +39,9 @@ final class RetiredSettingsCleanupTests: XCTestCase {
 
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
-        XCTAssertTrue(
-            SettingsStore(userDefaults: userDefaults).current.isLiteralRomanCandidateEnabled,
+        XCTAssertEqual(
+            userDefaults.object(forKey: SettingsStore.Keys.isLiteralRomanCandidateEnabled.name) as? Bool,
+            true,
             "the sweep must not take a setting the 一般 pane still writes",
         )
     }

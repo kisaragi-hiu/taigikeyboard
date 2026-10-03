@@ -176,11 +176,11 @@ final class DesktopCoreRuntimeTests: XCTestCase {
     /// out, so the core's default applies exactly where the Swift reader's
     /// does (inventory S26).
     func testSnapshot_booleanReadsAsSettingsStoreDoes() throws {
-        let key = Keys.isLiteralRomanCandidateEnabled
+        let key = Keys.isHanjiFirst
         let stored: [Any] = [true, false, 0, 1, 2, 0.0, 1.0, 0.5, "true", "1"]
         for value in stored {
             userDefaults.set(value, forKey: key.name)
-            let swift = SettingsStore(userDefaults: userDefaults).current.isLiteralRomanCandidateEnabled
+            let swift = SettingsStore(userDefaults: userDefaults).storedIsHanjiFirst
             let sent = try snapshotValue(key.name)
             if case .text = sent {
                 XCTFail("stored \(value): a boolean sent as text")

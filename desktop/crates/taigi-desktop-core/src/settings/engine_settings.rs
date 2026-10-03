@@ -1,6 +1,7 @@
-//! The snapshot one engine operation reads. Port of
-//! `macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift` and
-//! `DictionarySourceToggles.swift`; every default matches iOS / Android / macOS.
+//! The snapshot one engine operation reads. Every default matches iOS /
+//! Android and the macOS default table
+//! (`macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift`,
+//! `DictionarySourceToggles.swift`).
 
 use super::choices::SettingChoice;
 
@@ -73,9 +74,9 @@ impl CandidateDisplayMode {
     /// as today's hanji-first mode (invariants §42); full-width punctuation
     /// reads `effective_full_width_punctuation` instead.
     /// `RomanOnly` has no hanji to lead with.
-    /// CROSS-PLATFORM INVARIANT — mirrors macOS `EngineSettings.swift`
-    /// `CandidateDisplayMode.effectiveHanjiFirst`, iOS
-    /// `SettingsModels.swift`, Android `CandidateDisplayMode.kt`.
+    /// CROSS-PLATFORM INVARIANT — mirrors iOS `SettingsModels.swift`
+    /// `CandidateDisplayMode.effectiveHanjiFirst`, Android
+    /// `CandidateDisplayMode.kt`.
     pub const fn effective_hanji_first(self, stored: bool) -> bool {
         matches!(self, Self::Combined) || (stored && self.shows_hanji())
     }
@@ -141,7 +142,8 @@ impl SettingChoice for CandidateDisplayMode {
 ///
 /// A snapshot rather than a set of getters because a single user intent can
 /// issue several engine calls (a commit, then the next-word handshake), and
-/// those calls must agree (`EngineSettings.swift:14-20`).
+/// those calls must agree: reading the settings twice could straddle a change
+/// and render the two halves of one intent under different rules.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct EngineSettings {
     pub input_mode: InputMode,

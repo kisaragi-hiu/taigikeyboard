@@ -1,7 +1,4 @@
-// The settings the engine renders under: their defaults, and the effective
-// snapshot `SettingsStore.current` answers.
-
-import Foundation
+// The settings the engine renders under and their fresh-install defaults.
 
 /// The romanization the user types. macOS ships TL and POJ only — TPS is
 /// deliberately out of scope for this platform (`docs/architecture/macos-roadmap.md`
@@ -61,70 +58,38 @@ enum CandidateDisplayMode: String, CaseIterable, Sendable {
         showsHanji
     }
 
-    /// Effective swap for a stored flag. `.combined` leads with — and commits —
-    /// the Hanji: forcing the swap on is a compatibility projection of that,
-    /// so every reader of the swap (auto-space, full-width punctuation, the
-    /// nextword gates) behaves as today's hanji-first mode
-    /// (`behavioral-invariants.md` §42). `.romanOnly` has no Hanji to lead with.
-    /// CROSS-PLATFORM INVARIANT — mirrors ios `SettingsModels.swift`
-    /// `CandidateDisplayMode.effectiveHanjiFirst`, android
-    /// `CandidateDisplayMode.kt`, windows `engine_settings.rs`. Drift causes
-    /// silent divergence.
-    func effectiveHanjiFirst(stored: Bool) -> Bool {
-        self == .combined || (stored && showsHanji)
-    }
-
     /// Whether a typed punctuation key becomes full-width (`，` for `,`) for a
     /// stored swap flag — the stored flag masked by the display mode, NOT the
-    /// candidate projection above, which `.combined` forces on while the swap
-    /// shortcut still picks the width. Mirrored on ios / android / windows.
+    /// candidate projection (desktop-core `effective_hanji_first`, §42), which
+    /// `.combined` forces on while the swap shortcut still picks the width.
+    /// Mirrored on ios / android / desktop-core.
     func effectiveFullWidthPunctuation(stored: Bool) -> Bool {
         stored && showsHanji
     }
 }
 
-/// Immutable snapshot of everything the engine needs to render a composition.
-///
-/// A snapshot rather than a set of getters because a single user intent can
-/// issue several FFI calls (a commit, then its next-word handshake), and those
-/// calls must agree: reading the settings twice could straddle a change and
-/// render the two halves of one intent under different rules.
-struct EngineSettings: Equatable, Sendable {
+/// What a fresh install composes under: the default table `SettingsStore.Keys`
+/// reads its engine-setting defaults from. Desktop-core reads the settings
+/// themselves, from the snapshot each request carries
+/// (`DesktopCoreRuntime.settingsSnapshot`); `DesktopCoreRuntimeTests` pins its
+/// defaults to these.
+struct EngineSettings: Sendable {
     let inputMode: InputMode
 
-    /// Word-boundary spacing input for the engine's `continuous_word_space`
-    /// predicate (`docs/engine/continuous-commit-and-display.md` §10.2). Carried in
-    /// the snapshot rather than hardcoded at the call sites because iOS's #380
-    /// regression was exactly a call site that stopped passing the live value.
-    /// (Annotate in Brackets — `output_both_scripts` on the wire — is a mobile
-    /// setting; macOS never ships it, so the wire field stays at its default.)
-    ///
-    /// EFFECTIVE, not stored: under `candidateDisplayMode == .romanOnly` it
-    /// reads `false` whatever the user has stored, because a mode that shows
-    /// and commits only romanization has no Hanji to lead with. The stored
-    /// value lives on in `UserDefaults` (`SettingsStore.storedIsHanjiFirst`)
-    /// and comes back the moment the mode returns to `.sideBySide`. Under
-    /// `.combined` the swap reads `true` whatever is stored — the Hanji cell
-    /// comes first and is the `.primary` commit, the romanization cell beside
-    /// it the `.alternate` one (`composing/presentation.rs`). Every reader of "swap"
-    /// — engine `AppConfig`, cell, document text, auto-space — reads THIS
-    /// value, never the stored one; full-width punctuation reads
-    /// `isFullWidthPunctuation` instead.
-    /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift
-    /// `isHanjiFirst` (derived the same way) and the Windows
-    /// `document.rs engine_settings()`. Drift changes what a
-    /// romanization-only install commits.
+    /// The STORED swap (`isTranslateSwapped`): whether a cell leads with — and
+    /// commits — the Hanji. Its readers take it through the display mode
+    /// (§42): desktop-core's `SettingsDocument::engine_settings` for the
+    /// candidate lead, `SettingsStore.isFullWidthPunctuation` for the width.
+    /// CROSS-PLATFORM INVARIANT — defaults ON on every platform (§48): iOS
+    /// `SharedSettings.isHanjiFirstKey`, Android `PrefHelper.storedIsHanjiFirst`,
+    /// desktop-core `EngineSettings::DEFAULT`. Drift changes what a fresh
+    /// install commits.
     let isHanjiFirst: Bool
 
-    /// `CandidateDisplayMode.effectiveFullWidthPunctuation(stored:)` — read by
-    /// `FullWidthPunctuation.documentPunctuation(_:isWidthFlip:settings:)` only.
-    let isFullWidthPunctuation: Bool
-
-    /// Whether the candidate window shows both scripts or the romanization
-    /// alone. Sent to the engine as `AppConfig.candidate_display_mode`, which
-    /// is what collapses same-romanization rows under `.romanOnly`
-    /// (`engine/composing/src/requests.rs`, `engine/nextword/src/filter.rs`);
-    /// on this side it selects the cell arm and derives the swap above.
+    /// How the candidate window renders the pair. Sent to the engine as
+    /// `AppConfig.candidate_display_mode`, which is what collapses
+    /// same-romanization rows under `.romanOnly`
+    /// (`engine/composing/src/requests.rs`, `engine/nextword/src/filter.rs`).
     /// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/EngineSettings.swift
     /// `candidateDisplayMode`, which defaults it to side-by-side. Drift changes
     /// what a fresh install's candidate cells show.
@@ -166,8 +131,7 @@ struct EngineSettings: Equatable, Sendable {
 
     /// Which bundled dictionaries the engine may draw candidates from. Reaches
     /// the engine as `FetchAtPos.toggles`, which it resolves into its source
-    /// filter; desktop-core builds them from the settings snapshot each request
-    /// carries (`DesktopCoreRuntime.settingsSnapshot`).
+    /// filter.
     let dictionarySources: DictionarySourceToggles
 
     /// What a fresh install types with. Every value matches the iOS and Android
@@ -175,23 +139,15 @@ struct EngineSettings: Equatable, Sendable {
     /// gets the same composition and the same candidate order out of the box.
     ///
     /// Hanji-first since 2026-09-18 (USER: "by default Hanji is output first, that is, Hanji is the
-    /// title and romanization is the subtitle"): the stored swap is on, and the two effective
-    /// fields are DERIVED from it under Hanji–Romanization Pairing the way `SettingsStore.current`
-    /// derives them, so the snapshot cannot say one thing about the swap and
-    /// another about the width.
-    static let defaults: EngineSettings = {
-        let storedSwap = true
-        let mode = CandidateDisplayMode.sideBySide
-        return EngineSettings(
-            inputMode: .tl,
-            isHanjiFirst: mode.effectiveHanjiFirst(stored: storedSwap),
-            isFullWidthPunctuation: mode.effectiveFullWidthPunctuation(stored: storedSwap),
-            candidateDisplayMode: mode,
-            isLiteralRomanCandidateEnabled: false,
-            isHyphenlessRomanEnabled: false,
-            isNasalMarkerUppercaseEnabled: true,
-            isCustomDictEnabled: true,
-            dictionarySources: .defaults,
-        )
-    }()
+    /// title and romanization is the subtitle"): the stored swap is on.
+    static let defaults = EngineSettings(
+        inputMode: .tl,
+        isHanjiFirst: true,
+        candidateDisplayMode: .sideBySide,
+        isLiteralRomanCandidateEnabled: false,
+        isHyphenlessRomanEnabled: false,
+        isNasalMarkerUppercaseEnabled: true,
+        isCustomDictEnabled: true,
+        dictionarySources: .defaults,
+    )
 }

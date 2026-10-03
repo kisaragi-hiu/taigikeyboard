@@ -17,7 +17,7 @@ struct SettingsKey<Value: Sendable>: Sendable {
 
 /// Reads and writes the settings the composing engine is driven by.
 ///
-/// Live-read by construction: `current` goes to `UserDefaults` on every access
+/// Live-read by construction: every getter goes to `UserDefaults` on every access
 /// and caches nothing, so a mode switched from the input-source menu applies to
 /// the very next keystroke without anything having to be told about it
 /// (`docs/contributing/ios-settings-injection.md` §3 — a snapshot taken at
@@ -354,59 +354,6 @@ final class SettingsStore: @unchecked Sendable {
         self.userDefaults = userDefaults
     }
 
-    var current: EngineSettings {
-        // The ONE place the stored swap becomes the effective one; the rules
-        // live on `CandidateDisplayMode` (§42). The stored value stays put
-        // for the way back to side-by-side.
-        let displayMode = candidateDisplayMode
-        let storedSwap = storedIsHanjiFirst
-        return EngineSettings(
-            inputMode: inputMode,
-            isHanjiFirst: displayMode.effectiveHanjiFirst(stored: storedSwap),
-            isFullWidthPunctuation: displayMode.effectiveFullWidthPunctuation(stored: storedSwap),
-            candidateDisplayMode: displayMode,
-            isLiteralRomanCandidateEnabled: bool(Keys.isLiteralRomanCandidateEnabled),
-            isHyphenlessRomanEnabled: bool(Keys.isHyphenlessRomanEnabled),
-            isNasalMarkerUppercaseEnabled: bool(Keys.isNasalMarkerUppercaseEnabled),
-            isCustomDictEnabled: bool(Keys.isCustomDictEnabled),
-            dictionarySources: dictionarySources,
-        )
-    }
-
-    /// Read as part of `current` rather than on its own, so the toggles the
-    /// engine filters candidates by and the settings it composes under always
-    /// come from the same instant.
-    private var dictionarySources: DictionarySourceToggles {
-        DictionarySourceToggles(
-            kautian: bool(Keys.isKautianEnabled),
-            taigitv: bool(Keys.isTaigitvEnabled),
-            itaigi: bool(Keys.isItaigiEnabled),
-            sitbut: bool(Keys.isSitbutEnabled),
-            taihoa: bool(Keys.isTaihoaEnabled),
-            taijit: bool(Keys.isTaijitEnabled),
-            kungge: bool(Keys.isKunggeEnabled),
-            stti: bool(Keys.isSttiEnabled),
-            khpoo: bool(Keys.isKhpooEnabled),
-            variant: bool(Keys.isVariantEnabled),
-            khiin: bool(Keys.isKhiinEnabled),
-            lkk: bool(Keys.isLkkEnabled),
-            dev: bool(Keys.isDevEnabled),
-            kautianSubcollections: DictionarySourceToggles.KautianSubcollections(
-                accentLukang: bool(Keys.isKautianAccentLukangEnabled),
-                accentSansia: bool(Keys.isKautianAccentSansiaEnabled),
-                accentTaipak: bool(Keys.isKautianAccentTaipakEnabled),
-                accentGilan: bool(Keys.isKautianAccentGilanEnabled),
-                accentTainan: bool(Keys.isKautianAccentTainanEnabled),
-                accentKaohsiung: bool(Keys.isKautianAccentKaohsiungEnabled),
-                accentKinmen: bool(Keys.isKautianAccentKinmenEnabled),
-                accentMakung: bool(Keys.isKautianAccentMakungEnabled),
-                accentSintik: bool(Keys.isKautianAccentSintikEnabled),
-                accentTaichung: bool(Keys.isKautianAccentTaichungEnabled),
-                nameAppendix: bool(Keys.isKautianNameAppendixEnabled),
-            ),
-        )
-    }
-
     /// A setting stored as the raw value of a `String`-backed enum, read fresh
     /// on every access like the rest of the store so a change in the settings
     /// window applies to the very next keystroke.
@@ -591,7 +538,7 @@ final class SettingsStore: @unchecked Sendable {
     /// Removed rather than written, like `resetAppearanceSettings`.
     ///
     /// The roster is spelled out because each toggle is its own typed key;
-    /// it mirrors `dictionarySources` above and has to keep mirroring it — a
+    /// it mirrors the source keys in `Keys` and has to keep mirroring them — a
     /// source added there and forgotten here is a row this button visibly does
     /// not restore.
     func resetDictionarySources() {
@@ -688,14 +635,23 @@ final class SettingsStore: @unchecked Sendable {
     /// same never-written-reads-as-default rule its readers use.
     ///
     /// `stored` in the name because these are the raw values and NOT what the
-    /// engine composes under: `current` derives the effective swap from it
-    /// and `candidateDisplayMode`. A gate that read these directly would apply
-    /// a swap the romanization-only display has switched off, which is why the
-    /// only callers are the writers — the shortcut toggle, the General pane's
-    /// Output Script picker (through `@AppStorage` on the same key) and the tests.
+    /// engine composes under: desktop-core derives the effective swap from it
+    /// and `candidateDisplayMode` (§42). A gate that read these directly would
+    /// apply a swap the romanization-only display has switched off, which is
+    /// why the callers are the writers — the shortcut toggle, the General
+    /// pane's Output Script picker (through `@AppStorage` on the same key) —
+    /// the width below, and the tests.
     var storedIsHanjiFirst: Bool {
         get { bool(Keys.isHanjiFirst) }
         set { userDefaults.set(newValue, forKey: Keys.isHanjiFirst.name) }
+    }
+
+    /// Whether a typed punctuation key becomes full-width: the stored swap
+    /// masked by the display mode (`CandidateDisplayMode
+    /// .effectiveFullWidthPunctuation(stored:)`, §42). Read by
+    /// `FullWidthPunctuation` on every key.
+    var isFullWidthPunctuation: Bool {
+        candidateDisplayMode.effectiveFullWidthPunctuation(stored: storedIsHanjiFirst)
     }
 
     /// Whether committing a word auto-inserts a trailing space. Read by the

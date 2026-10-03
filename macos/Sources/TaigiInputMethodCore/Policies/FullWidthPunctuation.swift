@@ -71,12 +71,13 @@ enum FullWidthPunctuation {
     /// typed `text`. The core back end asks it before a swap's client check
     /// (`CoreComposingBackend.swapCandidate`).
     ///
-    /// The EFFECTIVE width (`current`), not the stored swap: a romanization-
-    /// only display writes romanization, and romanization takes half-width
-    /// marks; under Hanji with Romanization the stored swap still picks the
-    /// width even though the candidate projection is forced hanji-first.
+    /// The EFFECTIVE width (`SettingsStore.isFullWidthPunctuation`), not the
+    /// stored swap: a romanization-only display writes romanization, and
+    /// romanization takes half-width marks; under Hanji with Romanization the
+    /// stored swap still picks the width even though the candidate projection
+    /// is forced hanji-first.
     @MainActor
     static func documentPunctuation(_ text: String, isWidthFlip: Bool, settings: SettingsStore) -> String? {
-        documentPunctuation(text, isFullWidthMode: settings.current.isFullWidthPunctuation, isWidthFlip: isWidthFlip)
+        documentPunctuation(text, isFullWidthMode: settings.isFullWidthPunctuation, isWidthFlip: isWidthFlip)
     }
 }
