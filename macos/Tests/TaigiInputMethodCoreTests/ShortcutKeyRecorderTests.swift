@@ -42,7 +42,7 @@ final class ShortcutKeyRecorderTests: XCTestCase {
     }
 
     private func chord(_ key: String, _ modifiers: NSEvent.ModifierFlags = []) throws -> ComposingKeyChord {
-        try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
+        try TestFixtures.chord(key, modifiers)
     }
 
     func testABoundRow_showsItsChord() throws {
@@ -146,7 +146,8 @@ final class GlobalShortcutPolicyTests: XCTestCase {
         shortcut: KeyboardShortcuts.Shortcut?,
     ) throws -> RecordedShortcutKey {
         try RecordedShortcutKey(
-            chord: ComposingKeyChord.make(key: character, modifiers: modifiers).get(),
+            chord: TestFixtures.chord(character, modifiers),
+            modifiers: modifiers,
             globalShortcut: shortcut,
         )
     }
@@ -170,12 +171,13 @@ final class GlobalShortcutPolicyTests: XCTestCase {
     }
 
     /// The shared gate still defends the keys a syllable is spelled with —
-    /// this policy never sees them, because `make` refuses first.
+    /// this policy never sees them, because the core refuses the press first.
     func testABareSyllableLetter_neverReachesThePolicy() {
-        switch ComposingKeyChord.make(key: "a", modifiers: []) {
-        case .success: XCTFail("a bare `a` would cost the user the letter")
-        case let .failure(reason): XCTAssertEqual(reason, .typesRomanization)
-        }
+        XCTAssertEqual(
+            KeyRules.press(KeyEventSnapshot(characters: "a", modifiers: [], isNamedSpecialKey: false)),
+            .refused(.typesRomanization),
+            "a bare `a` would cost the user the letter",
+        )
     }
 
     /// Modifier chords were never the broken half, and must stay accepted.
@@ -218,7 +220,11 @@ final class GlobalShortcutPolicyTests: XCTestCase {
                 ShortcutConflicts.composingChord(occupiedBy: shortcut),
                 "\(action)'s default does not cross the registry bridge",
             )
-            let recorded = RecordedShortcutKey(chord: chord, globalShortcut: shortcut)
+            let recorded = RecordedShortcutKey(
+                chord: chord,
+                modifiers: shortcut.modifiers.intersection(ComposingKeyIntent.chordingModifiers),
+                globalShortcut: shortcut,
+            )
 
             XCTAssertNil(GlobalShortcutPolicy.rejection(for: recorded), "\(action) cannot be restored")
         }

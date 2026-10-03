@@ -156,8 +156,12 @@ final class DesktopCoreRuntimeTests: XCTestCase {
             expected[key.name] = .boolean(key.defaultValue)
         }
         // A chord row has no stored default: absent is the action's own chord.
-        for action in ComposingAction.allCases {
-            expected[action.settingsKeyName] = .some(nil)
+        // Spelled out: renaming one would drop every chord stored under it.
+        for action in [
+            "nextCandidate", "previousCandidate", "pageForward", "pageBackward",
+            "confirmHighlighted", "commitLiteral", "commitAlternateScript",
+        ] {
+            expected["composingShortcut.\(action)"] = .some(nil)
         }
 
         let described = try descriptors()
@@ -197,7 +201,7 @@ final class DesktopCoreRuntimeTests: XCTestCase {
     /// Text goes as `string(forKey:)` reads it; a cleared chord row (`""`)
     /// stays distinct from an absent one.
     func testSnapshot_textKeepsAClearedChordApartFromAnAbsentOne() throws {
-        let chord = ComposingAction.pageForward.settingsKeyName
+        let chord = "composingShortcut.pageForward"
         XCTAssertNil(try snapshotValue(chord))
         userDefaults.set("", forKey: chord)
         XCTAssertEqual(try snapshotValue(chord), .text(""))

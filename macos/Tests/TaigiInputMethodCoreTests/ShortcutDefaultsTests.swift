@@ -44,18 +44,19 @@ final class ShortcutDefaultsTests: XCTestCase {
     }
 
     /// The slot keys are not in this comparison because they are not chords
-    /// at all — `ComposingKeyChord.make` refuses every one under either
+    /// at all — the core's gate refuses every one under either
     /// scheme (`CandidateSlotKeyTests.testEverySlotKey_ofEverySet_isRefusedAsAChord`),
     /// so no default can sit on one.
     func testShippedDefaults_holdNoChordInCommon() throws {
-        let composing = ComposingAction.allCases.map(\.defaultChord)
+        let composing = try TestFixtures.composingShortcuts().rows.map(\.defaultChord)
+        XCTAssertEqual(composing.count, 7, "every composing row's default")
         let global = try ShortcutAction.allCases.map { try chord(of: $0) }
         let all = composing + global
 
         XCTAssertEqual(
             Set(all).count,
             all.count,
-            "two tiers ship the same chord: \(all.map(ShortcutKeyDisplay.text(for:)))",
+            "two tiers ship the same chord: \(all.map(\.display))",
         )
     }
 

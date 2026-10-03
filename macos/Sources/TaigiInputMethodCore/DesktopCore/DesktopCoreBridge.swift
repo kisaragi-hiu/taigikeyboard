@@ -93,3 +93,46 @@ enum DesktopCoreBridge {
 
     private static let logger = DebugLogger(category: "DesktopCoreBridge")
 }
+
+// MARK: - Wire forms the requests share
+
+extension Taigi_DesktopShell_KeyEvent {
+    /// The `NSEvent` fields the core translates (`key_translation.rs`).
+    init(_ key: KeyEventSnapshot) {
+        assert(
+            key.specialKeyRawValue != nil || !key.isNamedSpecialKey,
+            "a named key with no raw value would reach the core as text",
+        )
+        self.init()
+        if let keyCode = key.keyCode {
+            self.keyCode = UInt32(keyCode)
+        }
+        if let characters = key.characters {
+            self.characters = characters
+        }
+        if let characters = key.charactersIgnoringModifiers {
+            charactersIgnoringModifiers = characters
+        }
+        modifierFlags = UInt64(key.modifiers.rawValue)
+        if let specialKey = key.specialKeyRawValue {
+            self.specialKey = specialKey
+        }
+    }
+}
+
+extension CandidateNavigation {
+    /// The core's direction, or nil for one this side does not know.
+    init?(_ direction: Taigi_DesktopShell_CandidateNavigation) {
+        switch direction {
+        case .left: self = .left
+        case .right: self = .right
+        case .up: self = .up
+        case .down: self = .down
+        case .pageUp: self = .pageUp
+        case .pageDown: self = .pageDown
+        case .nextCandidate: self = .nextCandidate
+        case .previousCandidate: self = .previousCandidate
+        case .unspecified, .UNRECOGNIZED: return nil
+        }
+    }
+}

@@ -37,9 +37,10 @@ import SwiftUI
 struct ShortcutSettingsView: View {
     @Environment(DisplayLanguageStore.self) private var language
 
-    /// Re-read after every write so the rows repaint together: recording a
-    /// chord can empty the row that had it.
-    @State private var bindings = SettingsStore().composingKeyBindings
+    /// The composing rows and the fixed rows, as desktop-core resolves them
+    /// (`KeyRules`). Re-read after every write so the rows repaint together:
+    /// recording a chord can empty the row that had it.
+    @State private var shortcuts = KeyRules.composingShortcuts(in: SettingsStore().userDefaults) ?? .unavailable
 
     private let store = SettingsStore()
 
@@ -57,8 +58,8 @@ struct ShortcutSettingsView: View {
             // (`ToneInputScheme`), so the two halves of the key contract
             // cannot be set apart. They are shown read-only below.
             Section {
-                ForEach(ComposingAction.groups[0], id: \.self) { action in
-                    recorderRow(action)
+                ForEach(shortcuts.rows(inGroup: 0), id: \.name) { row in
+                    recorderRow(row)
                 }
 
                 // Shown, not recordable (USER 2026-09-20): the bare slot keys
@@ -67,13 +68,13 @@ struct ShortcutSettingsView: View {
                 // — so the row follows it too. First of the fixed rows because
                 // it is the main way through the bar; its ⇧ twin sits with the
                 // commit rows below.
-                fixedRow(.desktopShortcutSelectCandidateSlot, Self.slotKeysLabel(bindings.slotKeySet))
+                fixedRow(.desktopShortcutSelectCandidateSlot, shortcuts.slotKeys)
 
                 // Shown, not recordable: the fixed navigation tier
                 // (desktop-core `keys/intent.rs`), read before any binding so a
                 // user who has mis-bound everything else still has a way
                 // through the candidates.
-                fixedRow(.desktopShortcutNavigateCandidates, Self.navigationKeysLabel)
+                fixedRow(.desktopShortcutNavigateCandidates, shortcuts.navigationKeys)
 
                 // Shown, not recordable (USER 2026-09-09): the caret inside the
                 // composition rides the host's own word-jump chord, and the
@@ -81,35 +82,35 @@ struct ShortcutSettingsView: View {
                 // With the candidate movers, because moving the caret is what
                 // it is — the greyed field is what tells it from the rows that
                 // record.
-                fixedRow(.desktopShortcutMoveComposingCaret, Self.caretChordsLabel)
+                fixedRow(.desktopShortcutMoveComposingCaret, shortcuts.caretChords)
             } header: {
                 Text(language.string(.desktopShortcutSectionCandidateSelection))
             }
 
             // Block two: out of the composition and into the document.
             Section {
-                ForEach(ComposingAction.groups[1], id: \.self) { action in
-                    recorderRow(action)
+                ForEach(shortcuts.rows(inGroup: 1), id: \.name) { row in
+                    recorderRow(row)
                 }
 
                 // Shown, not recordable (USER 2026-09-10): ⇧ on a slot key is
                 // the Hanji/romanization commit aimed at that slot, and the slot keys follow
                 // the tone scheme — so the row follows it too, and there is
                 // nothing to record. After the commit rows, because it is one.
-                fixedRow(.desktopActionCommitAlternateScript, Self.shiftedSlotKeysLabel(bindings.slotKeySet))
+                fixedRow(.desktopActionCommitAlternateScript, shortcuts.shiftedSlotKeys)
 
                 // Shown, not recordable (USER 2026-09-20): ⌃ on a punctuation
                 // key types it in the other width once, whatever the Hanji/romanization
                 // mode would have typed (`ComposingKeyIntent.widthFlipCharacter`).
                 // Here because it writes into the document; three sample
                 // chords, since the row stands for every key of the map.
-                fixedRow(.desktopShortcutFlipPunctuationWidth, Self.widthFlipChordsLabel)
+                fixedRow(.desktopShortcutFlipPunctuationWidth, shortcuts.widthFlipChords)
 
                 // Shown, not recordable: Escape drops the composition without
                 // writing to the document (`keys/intent.rs`). Last
                 // in the block (USER 2026-09-21): every row above it writes
                 // something; this is the one way out that writes nothing.
-                fixedRow(.desktopShortcutCancelComposing, Self.cancelKeyLabel)
+                fixedRow(.desktopShortcutCancelComposing, shortcuts.cancelKey)
             } header: {
                 Text(language.string(.desktopShortcutSectionOutput))
             }
@@ -149,62 +150,6 @@ struct ShortcutSettingsView: View {
         .formStyle(.grouped)
     }
 
-    /// `⌥←  ⌥→`, drawn by the same renderer as the recorder rows so the two
-    /// speak one glyph vocabulary, from the modifier the classifier reads.
-    static let caretChordsLabel = [NSLeftArrowFunctionKey, NSRightArrowFunctionKey]
-        .map { arrow in
-            ShortcutKeyDisplay.text(for: ComposingKeyChord(
-                key: String(UnicodeScalar(arrow)!),
-                modifiers: ComposingKeyIntent.caretChordModifiers,
-            ))
-        }
-        .joined(separator: "  ")
-
-    /// `←  →  ↑  ↓  ⇞  ⇟` — the fixed navigation tier's own key list, drawn
-    /// by the recorder rows' renderer.
-    static let navigationKeysLabel = ComposingKeyChord.fixedNavigationKeys
-        .map { ShortcutKeyDisplay.text(for: ComposingKeyChord(key: $0, modifiers: [])) }
-        .joined(separator: "  ")
-
-    /// `⎋`, drawn by the recorder rows' renderer.
-    static let cancelKeyLabel = ShortcutKeyDisplay.text(for: ComposingKeyChord(key: ComposingKeyChord.cancelKey, modifiers: []))
-
-    /// `⌃,  ⌃.  ⌃;` — three of the keys the width flip reaches, drawn by the
-    /// recorder rows' renderer from the modifier the classifier reads.
-    static let widthFlipChordsLabel = [",", ".", ";"]
-        .map { key in
-            ShortcutKeyDisplay.text(for: ComposingKeyChord(
-                key: key,
-                modifiers: ComposingKeyIntent.widthFlipModifiers,
-            ))
-        }
-        .joined(separator: "  ")
-
-    /// `qwdfzxvy;` under Standard, `123456789` under Telex: every key of the
-    /// live slot set, bare, drawn by the recorder rows' renderer — lowercase
-    /// because a bare key shows the character it types (USER 2026-08-22).
-    static func slotKeysLabel(_ keySet: CandidateSlotKeySet) -> String {
-        ShortcutKeyDisplay.text(for: ComposingKeyChord(key: slotKeys(keySet), modifiers: []))
-    }
-
-    /// `⇧QWDFZXVY;` under Standard, `⇧123456789` under Telex: every key of the
-    /// live slot set behind ONE ⇧, drawn by the recorder rows' renderer.
-    ///
-    /// The whole run rather than the first and last with an ellipsis between
-    /// (USER 2026-09-10): the set is not alphabetical, so `⇧Q … ⇧;` named no
-    /// series a reader could fill in. One ⇧ rather than one per key, because
-    /// repeating it nine times says the modifier nine times and the keys once.
-    static func shiftedSlotKeysLabel(_ keySet: CandidateSlotKeySet) -> String {
-        ShortcutKeyDisplay.text(for: ComposingKeyChord(key: slotKeys(keySet), modifiers: .shift))
-    }
-
-    /// The nine slot keys of `keySet` as one run, in page order.
-    private static func slotKeys(_ keySet: CandidateSlotKeySet) -> String {
-        (0 ..< HorizontalPageLayout.pageSize)
-            .map { keySet.label(forSlot: $0) }
-            .joined()
-    }
-
     /// One global-hotkey row.
     ///
     /// The chord is read back THROUGH the cross-registry bridge rather than
@@ -234,13 +179,13 @@ struct ShortcutSettingsView: View {
         }
     }
 
-    private func recorderRow(_ action: ComposingAction) -> some View {
-        LabeledContent(action.label(language)) {
+    private func recorderRow(_ row: ComposingShortcuts.Row) -> some View {
+        LabeledContent(language.string(row.label)) {
             ShortcutKeyRecorder(
-                chord: bindings.chord(for: action),
+                chord: row.chord,
                 language: language,
             ) { key in
-                record(key?.chord, for: action)
+                record(key?.chord, for: row)
             }
         }
     }
@@ -260,21 +205,21 @@ struct ShortcutSettingsView: View {
         reload()
     }
 
-    /// Writes `chord` to `action`, taking it off whichever row held it.
+    /// Writes `chord` to `row`, taking it off whichever row held it.
     ///
     /// Last writer wins, and the loser's row visibly empties — the same rule
     /// the global recorders use (`ShortcutConflicts`), and the one the System
     /// Settings keyboard pane behaves by.
-    private func record(_ chord: ComposingKeyChord?, for action: ComposingAction) {
+    private func record(_ chord: ComposingKeyChord?, for row: ComposingShortcuts.Row) {
         if let chord {
-            for loser in bindings.actionsHolding(chord, excluding: action) {
+            for loser in shortcuts.rows(holding: chord, excluding: row) {
                 store.setComposingChord(nil, for: loser)
             }
             // And across the seam, same rule: a global shortcut on this key
             // would fire instead of the row just recorded.
             ShortcutConflicts.resolveGlobalRows(after: chord)
         }
-        store.setComposingChord(chord, for: action)
+        store.setComposingChord(chord, for: row)
         reload()
     }
 
@@ -297,15 +242,15 @@ struct ShortcutSettingsView: View {
     /// collision it would quietly empty one of the rows this button had just
     /// restored, so the button would stop meaning "the defaults".
     private func restoreDefaults() {
-        store.resetComposingShortcuts()
+        store.resetComposingShortcuts(shortcuts)
         KeyboardShortcuts.reset(ShortcutAction.allCases.map(\.name))
         reload()
     }
 
-    /// Re-reads the resolved bindings, which is also what puts a commit row's
+    /// Re-reads the resolved rows, which is also what puts a commit row's
     /// default back after the user clears it — when no other row holds that
-    /// key (`ComposingAction.refilledFromDefault`).
+    /// key (desktop-core's `restore_unbound`).
     private func reload() {
-        bindings = store.composingKeyBindings
+        shortcuts = KeyRules.composingShortcuts(in: store.userDefaults) ?? .unavailable
     }
 }

@@ -59,7 +59,7 @@ final class SettingsStoreTests: XCTestCase {
         store.resetGeneralSettings()
 
         XCTAssertEqual(store.inputMode, SettingsStore.Keys.inputMode.defaultValue)
-        XCTAssertEqual(store.composingKeyBindings.toneScheme, SettingsStore.Keys.toneInputScheme.defaultValue)
+        XCTAssertEqual(store.toneInputScheme, SettingsStore.Keys.toneInputScheme.defaultValue)
         XCTAssertTrue(store.storedIsHanjiFirst, "back to hanji-first")
         XCTAssertNil(userDefaults.object(forKey: SettingsStore.Keys.isHanjiFirst.name), "removed, not written")
         XCTAssertEqual(userDefaults.string(forKey: SettingsStore.Keys.displayLanguage.name), "en", "display language kept")
@@ -491,8 +491,23 @@ final class SettingsStoreTests: XCTestCase {
 
     // MARK: - Composing key bindings
 
-    func testComposingKeyBindings_withNothingStored_areTheShippedContract() {
-        XCTAssertEqual(makeStore().composingKeyBindings, .default)
+    /// The rows desktop-core resolves from this suite (`KeyRules`), read back
+    /// through the seam — so these cases hold the stored form and the
+    /// snapshot the core reads it from to each other.
+    private func shortcuts() throws -> ComposingShortcuts {
+        try TestFixtures.composingShortcuts(in: makeStore())
+    }
+
+    private func row(_ name: String) throws -> ComposingShortcuts.Row {
+        try TestFixtures.row(name, in: shortcuts())
+    }
+
+    func testComposingKeyBindings_withNothingStored_areTheShippedContract() throws {
+        let rows = try shortcuts().rows
+        XCTAssertEqual(rows.count, 7)
+        for row in rows {
+            XCTAssertEqual(row.chord, row.defaultChord, row.name)
+        }
     }
 
     func testComposingChords_roundTripThroughTheSuite() throws {
@@ -501,11 +516,11 @@ final class SettingsStoreTests: XCTestCase {
         // and the round trip is the only thing under test.
         let chord = try TestFixtures.chordNoDefaultHolds()
 
-        store.setComposingChord(chord, for: .pageForward)
+        try store.setComposingChord(chord, for: row("pageForward"))
 
-        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .pageForward), chord)
+        XCTAssertEqual(try row("pageForward").chord, chord)
         XCTAssertEqual(
-            userDefaults.string(forKey: ComposingAction.pageForward.settingsKeyName),
+            userDefaults.string(forKey: "composingShortcut.pageForward"),
             chord.rawValue,
             "the stored form is what a later build has to keep reading",
         )
@@ -516,13 +531,13 @@ final class SettingsStoreTests: XCTestCase {
     /// uses.
     func testABarePunctuationChord_roundTripsThroughTheSuite() throws {
         let store = makeStore()
-        let bareBacktick = try ComposingKeyChord.make(key: "`", modifiers: []).get()
+        let bareBacktick = try TestFixtures.chord("`")
 
-        store.setComposingChord(bareBacktick, for: .pageBackward)
+        try store.setComposingChord(bareBacktick, for: row("pageBackward"))
 
-        XCTAssertEqual(makeStore().composingKeyBindings.chord(for: .pageBackward), bareBacktick)
+        XCTAssertEqual(try row("pageBackward").chord, bareBacktick)
         XCTAssertEqual(
-            userDefaults.string(forKey: ComposingAction.pageBackward.settingsKeyName),
+            userDefaults.string(forKey: "composingShortcut.pageBackward"),
             "|0060",
         )
     }
@@ -530,14 +545,14 @@ final class SettingsStoreTests: XCTestCase {
     /// Clearing a row is a stored empty string, not an absent key: an absent
     /// key means "never touched" and reads as the action's default, so the two
     /// cannot be collapsed without undoing the user's clearing on next launch.
-    func testClearedComposingChord_staysClearedAcrossReads() {
+    func testClearedComposingChord_staysClearedAcrossReads() throws {
         let store = makeStore()
 
-        store.setComposingChord(nil, for: .pageForward)
+        try store.setComposingChord(nil, for: row("pageForward"))
 
-        XCTAssertNil(makeStore().composingKeyBindings.chord(for: .pageForward))
+        XCTAssertNil(try row("pageForward").chord)
         XCTAssertEqual(
-            userDefaults.string(forKey: ComposingAction.pageForward.settingsKeyName),
+            userDefaults.string(forKey: "composingShortcut.pageForward"),
             "",
         )
     }
@@ -545,42 +560,39 @@ final class SettingsStoreTests: XCTestCase {
     /// A stored chord the build cannot parse reads as an empty row rather than
     /// as the default: restoring the default would undo a deliberate clearing,
     /// and anything that must stay reachable is put back by the resolver.
-    func testComposingChords_withAnUnparsableStoredValue_readAsCleared() {
-        userDefaults.set("nonsense", forKey: ComposingAction.pageForward.settingsKeyName)
+    func testComposingChords_withAnUnparsableStoredValue_readAsCleared() throws {
+        userDefaults.set("nonsense", forKey: "composingShortcut.pageForward")
 
-        XCTAssertNil(makeStore().composingKeyBindings.chord(for: .pageForward))
+        XCTAssertNil(try row("pageForward").chord)
     }
 
-    /// The General pane writes the scheme's raw value; the bindings read it, and
+    /// The General pane writes the scheme's raw value; the store reads it, and
     /// the slot keys follow.
     func testToneInputScheme_readsWhatTheGeneralPaneWrites() {
         userDefaults.set("telex", forKey: SettingsStore.Keys.toneInputScheme.name)
 
-        let bindings = makeStore().composingKeyBindings
-        XCTAssertEqual(bindings.toneScheme, .telex)
-        XCTAssertEqual(bindings.slotKeySet, .digits)
+        let store = makeStore()
+        XCTAssertEqual(store.toneInputScheme, .telex)
+        XCTAssertEqual(store.toneInputScheme.slotKeySet, .digits)
     }
 
     func testToneInputScheme_withAnUnknownStoredValue_fallsBackToStandard() {
         userDefaults.set("nonsense", forKey: SettingsStore.Keys.toneInputScheme.name)
 
-        let bindings = makeStore().composingKeyBindings
-        XCTAssertEqual(bindings.toneScheme, .standard)
-        XCTAssertEqual(bindings.slotKeySet, .bareKeys)
+        let store = makeStore()
+        XCTAssertEqual(store.toneInputScheme, .standard)
+        XCTAssertEqual(store.toneInputScheme.slotKeySet, .bareKeys)
     }
 
-    /// S33: the window ships ON, and the General pane's toggle reaches both
-    /// readers — the controller's fetch gate and the classifier's bindings.
+    /// S33: the window ships ON, and the General pane's toggle reaches the
+    /// controller's fetch gate. The core's classifier reads the same key from
+    /// the request's snapshot (`DesktopCoreRuntimeTests`).
     func testCandidateWindow_shipsOn_andReadsWhatTheGeneralPaneWrites() {
-        let fresh = makeStore()
-        XCTAssertTrue(fresh.isCandidateWindowEnabled)
-        XCTAssertTrue(fresh.composingKeyBindings.isCandidateWindowEnabled)
+        XCTAssertTrue(makeStore().isCandidateWindowEnabled)
 
         userDefaults.set(false, forKey: SettingsStore.Keys.isCandidateWindowEnabled.name)
 
-        let store = makeStore()
-        XCTAssertFalse(store.isCandidateWindowEnabled)
-        XCTAssertFalse(store.composingKeyBindings.isCandidateWindowEnabled)
+        XCTAssertFalse(makeStore().isCandidateWindowEnabled)
     }
 
     /// The rules the swap shortcut and the punctuation width read live on the enum — pinned once.

@@ -115,7 +115,7 @@ final class CoreComposingBackend {
         guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_KeyRequest()
         message.token = request.session.value
-        message.event = Self.event(key)
+        message.event = Taigi_DesktopShell_KeyEvent(key)
         // A swap is a pass-through key's, and only an idle session passes an
         // attaching character through: composing, it commits with it.
         let isIdle = !isComposing(request.session)
@@ -295,29 +295,6 @@ final class CoreComposingBackend {
 
     // MARK: - Requests
 
-    /// The `NSEvent` fields the core translates (`key_translation.rs`).
-    private static func event(_ key: KeyEventSnapshot) -> Taigi_DesktopShell_KeyEvent {
-        assert(
-            key.specialKeyRawValue != nil || !key.isNamedSpecialKey,
-            "a named key with no raw value would reach the core as text",
-        )
-        var event = Taigi_DesktopShell_KeyEvent()
-        if let keyCode = key.keyCode {
-            event.keyCode = UInt32(keyCode)
-        }
-        if let characters = key.characters {
-            event.characters = characters
-        }
-        if let characters = key.charactersIgnoringModifiers {
-            event.charactersIgnoringModifiers = characters
-        }
-        event.modifierFlags = UInt64(key.modifiers.rawValue)
-        if let specialKey = key.specialKeyRawValue {
-            event.specialKey = specialKey
-        }
-        return event
-    }
-
     /// The window's state, every question asked now, before the request
     /// crosses. The highlight is asked whether or not a list is up — the core's
     /// picker commit reads it; the slots only while one is. The swap's
@@ -385,23 +362,9 @@ final class CoreComposingBackend {
         case .candidatesClosed:
             .candidatesClosed
         case let .navigate(navigate):
-            navigation(navigate.direction).map(ComposingBackendEffect.navigate)
+            CandidateNavigation(navigate.direction).map(ComposingBackendEffect.navigate)
         case nil:
             nil
-        }
-    }
-
-    private static func navigation(_ direction: Taigi_DesktopShell_CandidateNavigation) -> CandidateNavigation? {
-        switch direction {
-        case .left: .left
-        case .right: .right
-        case .up: .up
-        case .down: .down
-        case .pageUp: .pageUp
-        case .pageDown: .pageDown
-        case .nextCandidate: .nextCandidate
-        case .previousCandidate: .previousCandidate
-        case .unspecified, .UNRECOGNIZED: nil
         }
     }
 }

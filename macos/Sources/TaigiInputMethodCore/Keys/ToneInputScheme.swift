@@ -29,3 +29,35 @@ enum ToneInputScheme: String, CaseIterable, Sendable {
         self == .telex ? .digits : .bareKeys
     }
 }
+
+/// Which keys the candidate window draws beside its nine slots.
+///
+/// The window's LABELS only: which key picks which slot is desktop-core's
+/// (`keys/slot_key_set.rs`), and the core reads it from the same tone scheme
+/// (`ToneInputScheme.slotKeySet`), so a key drawn beside a candidate is the
+/// key that picks it — held equal by `CandidateSlotKeyTests`, against the
+/// Shortcuts pane's slot row the core draws. The letters and the digits are
+/// the same keys under both schemes, with the two jobs swapped: whichever
+/// keys type the tones leaves the others free to pick.
+enum CandidateSlotKeySet: CaseIterable, Sendable {
+    /// Nine bare keys, one per slot — `q w d f z x v y ;`: the eight letters
+    /// no TL or POJ syllable spells, and `;`. The set under `standard`
+    /// (USER 2026-08-28).
+    case bareKeys
+    /// Bare `1`…`9`, the set under `telex`, where the letters above type the
+    /// tones.
+    case digits
+
+    /// The keys `bareKeys` puts on slots 0…8, in slot order. Lowercase, as a
+    /// bare key types its lowercase form.
+    static let bareKeyRow = ["q", "w", "d", "f", "z", "x", "v", "y", ";"]
+
+    /// The key this set gives the candidate in `slot`, for the nine slots a
+    /// page holds (`CandidateIndexLabel`, which owns which key is drawn).
+    func label(forSlot slot: Int) -> String {
+        switch self {
+        case .bareKeys: Self.bareKeyRow[slot]
+        case .digits: String(slot + 1)
+        }
+    }
+}

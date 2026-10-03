@@ -21,35 +21,6 @@ final class ComposingKeyIntentTests: XCTestCase {
         XCTAssertFalse(ComposingKeyIntent.isPlainEscape(key))
     }
 
-    /// The mapping from AppKit's own key names, which the snapshot is what
-    /// isolates: the symbol picker reads `NavigationKey`, so without this the
-    /// six keys could all be extracted as nil.
-    func testArrowEvents_areRecognizedAsNavigationKeys() throws {
-        let cases: [(String, NavigationKey)] = try [
-            (String(XCTUnwrap(UnicodeScalar(NSLeftArrowFunctionKey))), .leftArrow),
-            (String(XCTUnwrap(UnicodeScalar(NSRightArrowFunctionKey))), .rightArrow),
-            (String(XCTUnwrap(UnicodeScalar(NSUpArrowFunctionKey))), .upArrow),
-            (String(XCTUnwrap(UnicodeScalar(NSDownArrowFunctionKey))), .downArrow),
-            (String(XCTUnwrap(UnicodeScalar(NSPageUpFunctionKey))), .pageUp),
-            (String(XCTUnwrap(UnicodeScalar(NSPageDownFunctionKey))), .pageDown),
-        ]
-
-        for (characters, expected) in cases {
-            let event = try TestFixtures.keyDownEvent(characters: characters)
-            XCTAssertEqual(KeyEventSnapshot(event).navigationKey, expected)
-        }
-    }
-
-    /// AppKit encodes the arrows in the same private-use range as the function
-    /// keys, and only the ones bound above are navigation.
-    func testFunctionKeyEvents_areNotNavigationKeys() throws {
-        let event = try TestFixtures.keyDownEvent(
-            characters: String(XCTUnwrap(UnicodeScalar(NSF5FunctionKey))),
-        )
-
-        XCTAssertNil(KeyEventSnapshot(event).navigationKey)
-    }
-
     // MARK: - Document text
 
     /// The pass-through path reports document text to the engine so a full stop

@@ -72,7 +72,7 @@ enum RetiredSettingsCleanup {
     /// described a choice this build no longer offers.
     private static let retiredDefaultsNames = [
         // The first shape of the composing-key settings, which described what
-        // a key does rather than which key does a job (`ComposingAction`).
+        // a key does rather than which key does a job (the composing roster).
         // The shape they replaced never shipped in a release, so the only
         // installs that can hold one are builds from main.
         "returnKeyBehavior",
@@ -112,22 +112,22 @@ enum RetiredSettingsCleanup {
     /// Commit Romanization Directly, retired 2026-08-25 when the Hanji/romanization switch was left as the
     /// one place a user chooses which script a commit writes.
     ///
-    /// Their chords are stored under `ComposingAction.settingsKeyName`, which
-    /// only live cases can build — `resetComposingShortcuts` walks `allCases` —
-    /// so a chord recorded on one of these rows is unreachable by every row the
-    /// pane still draws. Kept as raw values and composed through the live
-    /// derivation, so the namespace keeps one owner.
-    private static let retiredComposingActionRawValues = [
-        "commitHanji",
-        "commitRomanization",
+    /// Their chords sit under the roster's `composingShortcut.<name>`
+    /// (desktop-core's `ComposingAction::settings_key_name_for_raw`), and the
+    /// pane resets only the rows the core still has — so a chord recorded on
+    /// one of these rows is unreachable by every row the pane draws. Spelled
+    /// out whole: tombstones in a namespace the core owns.
+    private static let retiredComposingChordNames = [
+        "composingShortcut.commitHanji",
+        "composingShortcut.commitRomanization",
     ]
 
     static func run(userDefaults: UserDefaults = .standard) {
         for name in retiredDefaultsNames {
             userDefaults.removeObject(forKey: name)
         }
-        for rawValue in retiredComposingActionRawValues {
-            userDefaults.removeObject(forKey: ComposingAction.settingsKeyName(rawValue: rawValue))
+        for name in retiredComposingChordNames {
+            userDefaults.removeObject(forKey: name)
         }
         if let pane = userDefaults.string(forKey: SettingsStore.Keys.selectedSettingsPane.name),
            retiredPaneRawValues.contains(pane)

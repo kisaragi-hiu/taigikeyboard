@@ -258,24 +258,48 @@ enum TestFixtures {
         ComposingSessionCoordinator()
     }
 
-    /// A chord no `ComposingAction` ships with, for a case that needs to record
+    /// A chord no composing row ships with, for a case that needs to record
     /// one without the binding resolver dropping it as a duplicate.
     ///
     /// Derived rather than written down: a default added to the roster would
     /// otherwise silently invalidate fixtures that have nothing to do with
     /// defaults.
     static func chordNoDefaultHolds(key: String = "\r") throws -> ComposingKeyChord {
-        let taken = Set(ComposingAction.allCases.map(\.defaultChord))
+        try chord(key, modifiersNoDefaultHolds(key: key))
+    }
+
+    /// The modifiers `chordNoDefaultHolds(key:)` puts on `key` — what a case
+    /// records the same chord on a global row with.
+    static func modifiersNoDefaultHolds(key: String = "\r") throws -> NSEvent.ModifierFlags {
+        let taken = try Set(composingShortcuts().rows.map(\.defaultChord))
         let candidates: [NSEvent.ModifierFlags] = [
             [.control, .option], [.command, .option], [.control, .command],
         ]
         for modifiers in candidates {
-            let chord = try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
-            if !taken.contains(chord) {
-                return chord
+            if try !taken.contains(chord(key, modifiers)) {
+                return modifiers
             }
         }
         throw XCTSkip("every \(key) chord this fixture knows is a default now")
+    }
+
+    /// The chord desktop-core makes of `key` and `modifiers` — how a case
+    /// names one (`KeyRules.chord`).
+    static func chord(_ key: String, _ modifiers: NSEvent.ModifierFlags = []) throws -> ComposingKeyChord {
+        try XCTUnwrap(KeyRules.chord(key: key, modifiers: modifiers)).get()
+    }
+
+    /// The composing rows `store` holds, as desktop-core resolves them —
+    /// after the process's one Configure, whose settings whitelist the
+    /// request is read under.
+    static func composingShortcuts(in store: SettingsStore = SettingsStore()) throws -> ComposingShortcuts {
+        _ = try XCTUnwrap(TestDesktopCore.runtime, "the process's one Configure")
+        return try XCTUnwrap(KeyRules.composingShortcuts(in: store.userDefaults))
+    }
+
+    /// The row named `name` (`nextCandidate`) in `shortcuts`.
+    static func row(_ name: String, in shortcuts: ComposingShortcuts) throws -> ComposingShortcuts.Row {
+        try XCTUnwrap(shortcuts.rows.first { $0.name == name }, name)
     }
 
     /// From `<repo>/macos/Tests/TaigiInputMethodCoreTests/TestFixtures.swift`.
@@ -664,4 +688,16 @@ extension XCTestCase {
         panel.setFrame(NSRect(x: 0, y: 0, width: 320, height: 320), display: false)
         panel.orderFront(nil)
     }
+}
+
+/// One of the six navigation keys, as a case names the key it presses
+/// (`TestFixtures.arrowKeyDownEvent`). What a navigation key means is
+/// desktop-core's (`key_translation.rs` reads AppKit's `specialKey`).
+enum NavigationKey: Sendable, Equatable {
+    case leftArrow
+    case rightArrow
+    case upArrow
+    case downArrow
+    case pageUp
+    case pageDown
 }

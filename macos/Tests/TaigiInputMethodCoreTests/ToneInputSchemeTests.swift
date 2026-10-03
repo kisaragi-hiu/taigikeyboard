@@ -9,13 +9,12 @@ import XCTest
 /// `TELEX_KEYS`).
 final class ToneInputSchemeTests: XCTestCase {
     func testStandard_isTheShippedScheme() {
-        XCTAssertEqual(ComposingKeyBindings.default.toneScheme, .standard)
+        XCTAssertEqual(SettingsStore.Keys.toneInputScheme.defaultValue, .standard)
         XCTAssertEqual(ToneInputScheme.allCases.map(\.rawValue), ["standard", "telex"], "the stored spellings")
     }
 
     func testTheSlotKeySet_followsTheScheme() {
         XCTAssertEqual(ToneInputScheme.standard.slotKeySet, .bareKeys)
         XCTAssertEqual(ToneInputScheme.telex.slotKeySet, .digits)
-        XCTAssertEqual(ComposingKeyBindings(toneScheme: .telex).slotKeySet, .digits)
     }
 }

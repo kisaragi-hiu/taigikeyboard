@@ -2,33 +2,6 @@
 
 import AppKit
 
-/// A key AppKit names that this input method binds to candidate navigation.
-///
-/// Its own type rather than `NSEvent.SpecialKey` because that one is not
-/// `Sendable`, and its own case list rather than raw scalar constants because
-/// recognizing `0xF702` as "left arrow" is data extraction, not key policy — the
-/// policy stays with the classifier that reads it (`SymbolPickerIntent`).
-enum NavigationKey: Sendable, Equatable {
-    case leftArrow
-    case rightArrow
-    case upArrow
-    case downArrow
-    case pageUp
-    case pageDown
-
-    init?(_ specialKey: NSEvent.SpecialKey) {
-        switch specialKey {
-        case .leftArrow: self = .leftArrow
-        case .rightArrow: self = .rightArrow
-        case .upArrow: self = .upArrow
-        case .downArrow: self = .downArrow
-        case .pageUp: self = .pageUp
-        case .pageDown: self = .pageDown
-        default: return nil
-        }
-    }
-}
-
 /// The parts of an `NSEvent` a composing decision is made from.
 ///
 /// A value rather than the event itself so the classification can be reasoned
@@ -45,10 +18,10 @@ struct KeyEventSnapshot: Sendable {
     let charactersIgnoringModifiers: String?
     /// The virtual key code (`NSEvent.keyCode`) — the key's position as the
     /// system reports it, before any layout turns it into a character.
-    /// Carried for the recorder's refusal of a shifted number-row key alone:
-    /// `⇧3` types `#` on a US layout and `charactersIgnoringModifiers` keeps
-    /// Shift, so the number row's codes are the one thing that still says
-    /// which key was pressed (`ComposingKeyChord.make(_:)`). Nil for a
+    /// Carried for the refusal of a shifted number-row key: `⇧3` types `#`
+    /// on a US layout and `charactersIgnoringModifiers` keeps Shift, so the
+    /// number row's codes are the one thing that still says which key was
+    /// pressed (the core reads them, `key_translation.rs`). Nil for a
     /// snapshot built without an event.
     let keyCode: UInt16?
     let modifiers: NSEvent.ModifierFlags
@@ -56,8 +29,6 @@ struct KeyEventSnapshot: Sendable {
     /// name is not recorded: the keys this input method binds are recognized by
     /// their characters, and the rest only need to be told apart from text.
     let isNamedSpecialKey: Bool
-    /// The navigation key this event is, if it is one of the six.
-    let navigationKey: NavigationKey?
     /// Whether this key-down is the keyboard's auto-repeat of a key still
     /// held (`NSEvent.isARepeat`). Read by the symbol-picker chord, which
     /// toggles: a held chord would otherwise open and close the picker on
@@ -74,7 +45,6 @@ struct KeyEventSnapshot: Sendable {
         isNamedSpecialKey: Bool,
         charactersIgnoringModifiers: String? = nil,
         keyCode: UInt16? = nil,
-        navigationKey: NavigationKey? = nil,
         isRepeat: Bool = false,
         specialKeyRawValue: UInt32? = nil,
     ) {
@@ -83,7 +53,6 @@ struct KeyEventSnapshot: Sendable {
         self.keyCode = keyCode
         self.modifiers = modifiers
         self.isNamedSpecialKey = isNamedSpecialKey
-        self.navigationKey = navigationKey
         self.isRepeat = isRepeat
         self.specialKeyRawValue = specialKeyRawValue
     }
@@ -98,7 +67,6 @@ struct KeyEventSnapshot: Sendable {
             isNamedSpecialKey: event.specialKey != nil,
             charactersIgnoringModifiers: event.charactersIgnoringModifiers,
             keyCode: isKeyEvent ? event.keyCode : nil,
-            navigationKey: event.specialKey.flatMap(NavigationKey.init),
             isRepeat: isKeyEvent && event.isARepeat,
             specialKeyRawValue: event.specialKey.flatMap { UInt32(exactly: $0.rawValue) },
         )
@@ -106,9 +74,9 @@ struct KeyEventSnapshot: Sendable {
 }
 
 /// What the Swift side still reads off a key event: the modifier sets and the
-/// text predicates the controller, the symbol picker and the Shortcuts pane
-/// share. What a key means to a composition is desktop-core's
-/// (`desktop/crates/taigi-desktop-core/src/keys/intent.rs`).
+/// text predicates the controller, the core back end and the shortcut recorder
+/// share. What a key means to a composition, to the symbol picker and to the
+/// Shortcuts pane is desktop-core's (`desktop/crates/taigi-desktop-core/src/keys`).
 enum ComposingKeyIntent {
     /// AppKit encodes function and arrow keys as private-use scalars rather
     /// than control characters, so a scalar check alone would let F5 through as
@@ -116,15 +84,10 @@ enum ComposingKeyIntent {
     private static let appKitFunctionKeyRange: ClosedRange<UInt32> = 0xF700 ... 0xF8FF
 
     /// The chords the host owns. Named once because several rules are written
-    /// against it — `documentText`, the symbol picker's plain keys and the
-    /// Telex guide's Escape (`TaigiInputController.handle`) — and a list
-    /// spelled out at each of them is a list that can drift apart.
+    /// against it — `documentText` and the Escape that closes the Telex guide
+    /// or the symbol picker (`isPlainEscape`) — and a list spelled out at each
+    /// of them is a list that can drift apart.
     static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
-
-    /// The modifier under which ← / → step the composing caret. The Shortcuts
-    /// pane draws its read-only row from this value; desktop-core reads the
-    /// same chord (`keys/intent.rs`).
-    static let caretChordModifiers: NSEvent.ModifierFlags = [.option]
 
     /// The text `key` puts into the document, or nil when it is a key the host
     /// acts on. Takes the whole event rather than its characters: `⌘.` and a
@@ -147,7 +110,7 @@ enum ComposingKeyIntent {
 
     /// The modifier that types a punctuation key in the other width, once —
     /// the 新注音 / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not
-    /// recordable, shown read-only on the Shortcuts pane like the caret chord.
+    /// recordable; the Shortcuts pane prints the core's row for it.
     static let widthFlipModifiers: NSEvent.ModifierFlags = [.control]
 
     /// The punctuation key under a width-flip chord, or nil when `key` is not
@@ -180,17 +143,6 @@ enum ComposingKeyIntent {
     /// Lock, the number pad and the function flag say how a key was reached,
     /// not which key it is.
     static let chordingModifiers: NSEvent.ModifierFlags = hostChords.union(.shift)
-
-    /// The numeric tone markers of TL and POJ, which the engine reads as ASCII
-    /// digits. A full-width `５` or another script's numeral is a character the
-    /// engine cannot parse, so it is document text rather than a tone.
-    ///
-    /// Visible to `ComposingKeyChord`, which refuses to bind a bare digit:
-    /// the digits carry tone under Standard and pick candidates under Telex,
-    /// so a chord may not take one away under either.
-    static func isToneDigit(_ character: Character) -> Bool {
-        character.isASCII && character.isNumber
-    }
 
     /// Not a control character (Cc) and not one of AppKit's function-key
     /// scalars. A format character (Cf) is typed text, so not

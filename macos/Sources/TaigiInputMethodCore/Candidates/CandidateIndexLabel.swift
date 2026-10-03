@@ -5,8 +5,8 @@ import Foundation
 /// The key drawn beside a candidate — the one that picks it.
 ///
 /// One place rather than a literal per layout, because the labels are a
-/// contract with the key handler: a slot's label is the key
-/// `CandidateSlotKeySet.slot(for:)` maps to that slot, and every layout
+/// contract with the key handler: a slot's label is the key desktop-core's
+/// slot key set (`keys/slot_key_set.rs`) maps to that slot, and every layout
 /// answers those slots from the positions it draws
 /// (`CandidatePresenter.candidateIndex(forSlot:)`).
 ///

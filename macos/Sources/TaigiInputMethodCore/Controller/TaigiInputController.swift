@@ -698,7 +698,7 @@ public final class TaigiInputController: IMKInputController {
             // cannot strand a stale hint: reaching the shortcut pane moves
             // focus off the client, and `finishComposition` takes the bar
             // down with the session.
-            slotKeySet: settings.composingKeyBindings.slotKeySet,
+            slotKeySet: settings.toneInputScheme.slotKeySet,
             // The §34 literal is what the user is already typing, not an offer
             // to pick, so it takes no key and the keys start on the cell after
             // it (USER 2026-09-09).
@@ -750,7 +750,7 @@ public final class TaigiInputController: IMKInputController {
             if isSymbolPickerOpen {
                 dismissSymbolPicker()
             } else {
-                openSymbolPicker(client: client, bindings: settings.composingKeyBindings)
+                openSymbolPicker(client: client)
             }
             return true
         }
@@ -763,7 +763,7 @@ public final class TaigiInputController: IMKInputController {
         // clears it again so the contract below sees what it always does.
         if isSymbolPickerOpen {
             armedAutoSpaceCaret = armedSwap
-            if handleSymbolPickerKey(key, bindings: settings.composingKeyBindings, client: client) {
+            if handleSymbolPickerKey(key, client: client) {
                 return true
             }
             armedAutoSpaceCaret = nil
@@ -972,14 +972,14 @@ public final class TaigiInputController: IMKInputController {
     /// NAILED a segment leaves the composition running, and the picker waits
     /// for a key that ends it.
     @MainActor
-    private func openSymbolPicker(client: IMKTextInput, bindings: ComposingKeyBindings) {
+    private func openSymbolPicker(client: IMKTextInput) {
         if backend.isComposing(sessionToken) {
             // The commit moves the caret; whatever it earns re-arms.
             armedAutoSpaceCaret = nil
             send(client: client, armedSwap: nil) { backend.commitForSymbolPicker(in: $0) }
             guard !backend.isComposing(sessionToken) else { return }
         }
-        presentSymbolPicker(in: client, bindings: bindings)
+        presentSymbolPicker(in: client)
     }
 
     /// Shows the whole table anchored to the caret — one list, in file
@@ -1016,7 +1016,7 @@ public final class TaigiInputController: IMKInputController {
     /// picker recorded as open over a window nobody can see would go on
     /// swallowing the slot keys.
     @MainActor
-    private func presentSymbolPicker(in client: IMKTextInput, bindings: ComposingKeyBindings) {
+    private func presentSymbolPicker(in client: IMKTextInput) {
         // No table, no picker — and nothing marked for one.
         guard let table = symbolTable else { return }
         // The recents lead (`RecentSymbols`), read once: this is the list
@@ -1037,7 +1037,7 @@ public final class TaigiInputController: IMKInputController {
         symbolPickerPresenter.show(
             CandidateWindowContent(
                 cells: symbolPickerCells.map { CandidateCellContent(text: $0, annotation: nil) },
-                slotKeySet: bindings.slotKeySet,
+                slotKeySet: settings.toneInputScheme.slotKeySet,
                 leadCellIsUnkeyed: false,
             ),
             anchoredTo: caretRect,
@@ -1055,12 +1055,10 @@ public final class TaigiInputController: IMKInputController {
     /// false means the picker has closed and the key goes on through the
     /// composing contract as if the picker had never been there.
     @MainActor
-    private func handleSymbolPickerKey(
-        _ key: KeyEventSnapshot,
-        bindings: ComposingKeyBindings,
-        client: IMKTextInput,
-    ) -> Bool {
-        switch SymbolPickerIntent.intent(for: key, bindings: bindings) {
+    private func handleSymbolPickerKey(_ key: KeyEventSnapshot, client: IMKTextInput) -> Bool {
+        // Read by desktop-core under this session's settings; a seam failure
+        // (logged) takes the picker down and lets the key go on.
+        switch KeyRules.symbolPickerIntent(for: key, in: settings.userDefaults) ?? .closeAndPassThrough {
         case .close:
             dismissSymbolPicker()
         case let .navigate(direction):

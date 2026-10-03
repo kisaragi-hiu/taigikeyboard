@@ -1,7 +1,6 @@
 // The control that records which key runs a shortcut, in either registry.
 
 import AppKit
-import Carbon.HIToolbox
 import KeyboardShortcuts
 import SwiftUI
 
@@ -14,6 +13,9 @@ import SwiftUI
 /// whatever layout happened to be active.
 struct RecordedShortcutKey {
     let chord: ComposingKeyChord
+    /// The four chording modifiers the press was made with — what the
+    /// global tier's policy reads.
+    let modifiers: NSEvent.ModifierFlags
     /// Nil when the press carries no Carbon key code to store. A composing row
     /// does not care; a global row must refuse (`Rejection.notAGlobalKey`).
     let globalShortcut: KeyboardShortcuts.Shortcut?
@@ -24,7 +26,7 @@ struct RecordedShortcutKey {
 /// Named rather than written inline at the row, so the policy is one testable
 /// statement. The composing tier has no extra refusal of its own: everything
 /// it must defend — the typing keys of both tone schemes — is already in the
-/// shared gate (`ComposingKeyChord.make`).
+/// shared gate (desktop-core's, `KeyRules.press`).
 enum GlobalShortcutPolicy {
     /// `@MainActor` because `isTakenBySystem` is (KeyboardShortcuts reads the
     /// system hotkey table through `HotKeyCenter`, a main-actor type; Swift
@@ -42,8 +44,8 @@ enum GlobalShortcutPolicy {
         // library used to be the thing enforcing it — indirectly, by refusing
         // the modifier-less keys we now accept — so stating it is part of
         // owning the recorder. ⌃⌘ and ⌥⌘ are ours to offer; bare ⌘ is not.
-        if key.chord.modifiers.contains(.command),
-           key.chord.modifiers.isDisjoint(with: [.control, .option])
+        if key.modifiers.contains(.command),
+           key.modifiers.isDisjoint(with: [.control, .option])
         {
             return .belongsToHost
         }
@@ -68,7 +70,7 @@ enum GlobalShortcutPolicy {
         // this app's own actions ships on, because a default the app hands out
         // has to be recordable or Reset to Defaults would produce a row the recorder
         // itself rejects.
-        guard !key.chord.modifiers.isDisjoint(with: [.command, .control, .option]) else { return nil }
+        guard !key.modifiers.isDisjoint(with: [.command, .control, .option]) else { return nil }
         guard !isAShippedDefault(shortcut) else { return nil }
         return shortcut.isTakenBySystem ? .takenBySystem : nil
     }
@@ -97,7 +99,7 @@ enum GlobalShortcutPolicy {
 /// Refusing is part of the job. A user who recorded `a` here would have no way
 /// left to type the letter, so the keys a syllable is spelled with are turned
 /// down — beep, and the reason in the placeholder — rather than accepted
-/// (`ComposingKeyChord.make`). What each tier refuses ON TOP of that is
+/// (`KeyRules.press`). What each tier refuses ON TOP of that is
 /// `additionalRejection`'s to say.
 struct ShortcutKeyRecorder: NSViewRepresentable {
     /// The chord as stored, or nil for an empty row.
@@ -287,7 +289,7 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     /// Puts the bound chord on screen — or leaves the field empty, showing the
     /// prompt, when the row has none.
     private func showChord() {
-        super.stringValue = chord.map(ShortcutKeyDisplay.text(for:)) ?? ""
+        super.stringValue = chord?.display ?? ""
         showsCancelButton = !stringValue.isEmpty
     }
 
@@ -419,32 +421,21 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
         // and over, each time re-running conflict resolution.
         guard !event.isARepeat else { return nil }
 
-        // Tab is recorded, not walked: it is the shipped key of Next Candidate
-        // (`ComposingAction.nextCandidate`), and a field that let it move the
-        // focus instead would leave Reset to Defaults — which resets every row — as
-        // the only way to put it back (USER 2026-09-19). Escape and a click
-        // outside the field remain the ways to leave one.
-        let modifiers = event.modifierFlags.intersection([.command, .control, .option, .shift])
-        if modifiers.isEmpty {
-            if [.delete, .deleteForward, .backspace].contains(event.specialKey) {
-                stringValue = ""
-                return nil
-            }
-            if event.keyCode == kVK_Escape {
-                // The way out. While a field has focus it swallows every key,
-                // so a user who opened one by accident needs the key that
-                // cancels everywhere else in the system.
-                blur()
-                return nil
-            }
-        }
-
-        switch ComposingKeyChord.make(KeyEventSnapshot(event)) {
-        case let .success(recorded):
+        // The rest is desktop-core's (`KeyRules.press`): Tab is recorded, not
+        // walked — it is the shipped key of Next Candidate, and a field that
+        // let it move the focus instead would leave Reset to Defaults, which
+        // resets every row, as the only way to put it back (USER 2026-09-19);
+        // the Escape key leaves — while a field has focus it swallows every
+        // key, so a user who opened one by accident needs the key that cancels
+        // everywhere else in the system; a bare Backspace, Delete or forward
+        // Delete blanks the field; everything else goes through the gate.
+        switch KeyRules.press(KeyEventSnapshot(event)) {
+        case let .recorded(recorded)?:
             // Both storage forms are read here, off the one event that carries
             // them: the Carbon key code is gone the moment this returns.
             let key = RecordedShortcutKey(
                 chord: recorded,
+                modifiers: event.modifierFlags.intersection(ComposingKeyIntent.chordingModifiers),
                 globalShortcut: KeyboardShortcuts.Shortcut(event: event),
             )
             if let reason = additionalRejection?(key) {
@@ -455,8 +446,15 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
             chord = recorded
             onRecord?(key)
             blur()
-        case let .failure(reason):
+        case let .refused(reason)?:
             refuse(reason)
+        case .blur?:
+            blur()
+        case .blank?:
+            stringValue = ""
+        case nil:
+            // The seam failed (logged): the key is swallowed, nothing recorded.
+            break
         }
         return nil
     }
@@ -472,48 +470,5 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
     /// down.
     private func blur() {
         window?.makeFirstResponder(nil)
-    }
-}
-
-/// How a recorded chord reads on screen.
-enum ShortcutKeyDisplay {
-    /// The names AppKit has no glyph for, and the glyphs it does. Written out
-    /// rather than resolved from the system because these are the keycap
-    /// legends: they are the same on a keyboard sold anywhere, and translating
-    /// "Space" would name a key the user cannot find.
-    ///
-    /// No ⌤ and no ⇤ among them: `ComposingKeyChord.normalized` folds the
-    /// keypad's Enter onto Return and the back tab onto Tab, so a chord never
-    /// arrives here carrying either.
-    private static let keyNames: [String: String] = [
-        " ": "Space",
-        "\r": "↩",
-        "\t": "⇥",
-        // Never recorded (`ComposingKeyChord` refuses them); drawn for the
-        // fixed rows of the Shortcuts pane — the composing caret, the candidate
-        // navigation keys and the cancel key.
-        String(UnicodeScalar(NSLeftArrowFunctionKey)!): "←",
-        String(UnicodeScalar(NSRightArrowFunctionKey)!): "→",
-        String(UnicodeScalar(NSUpArrowFunctionKey)!): "↑",
-        String(UnicodeScalar(NSDownArrowFunctionKey)!): "↓",
-        String(UnicodeScalar(NSPageUpFunctionKey)!): "⇞",
-        String(UnicodeScalar(NSPageDownFunctionKey)!): "⇟",
-        "\u{1B}": "⎋",
-    ]
-
-    /// The modifiers come from the shortcut library's own renderer rather than
-    /// a second copy of the same four branches: the input-source menu prints
-    /// global chords through `KeyboardShortcuts.Shortcut.description` and
-    /// composing chords through this, side by side in one column, so the two
-    /// have to speak the same glyph vocabulary.
-    ///
-    /// A chord WITH modifiers keeps the uppercase keycap legend the system
-    /// and the global rows print (`⌃⌥J`). A bare key shows the character it
-    /// types: an uppercase `Z` on a modifier-less row reads as ⇧Z, a key the
-    /// row does not hold (USER 2026-08-22).
-    static func text(for chord: ComposingKeyChord) -> String {
-        let keycap = keyNames[chord.key]
-            ?? (chord.modifiers.isEmpty ? chord.key : chord.key.uppercased())
-        return chord.modifiers.ks_symbolicRepresentation + keycap
     }
 }
