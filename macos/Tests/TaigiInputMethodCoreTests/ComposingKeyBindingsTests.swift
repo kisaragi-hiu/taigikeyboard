@@ -511,6 +511,24 @@ final class ComposingKeyBindingsTests: XCTestCase {
         )
     }
 
+    /// E8: a precomposed `é` and `e` + U+0301 are two keys, as desktop-core
+    /// reads them — not one, as Swift's canonical equivalence would. Two rows
+    /// stored on the two spellings both keep their chord (identity is the raw
+    /// value's, and was before E8), and neither matches the other spelling's
+    /// event (E8: `matches` compared `String`s).
+    func testCanonicallyEquivalentKeys_areTwoChords() throws {
+        let precomposed = try XCTUnwrap(ComposingKeyChord(rawValue: "c|00E9"))
+        let decomposed = try XCTUnwrap(ComposingKeyChord(rawValue: "c|0065,0301"))
+        let bindings = ComposingKeyBindings(chords: [.pageForward: precomposed, .pageBackward: decomposed])
+
+        XCTAssertNotEqual(precomposed, decomposed)
+        XCTAssertEqual(Set([precomposed, decomposed]).count, 2)
+        XCTAssertEqual(bindings.chord(for: .pageForward), precomposed, "not taken as a duplicate")
+        XCTAssertEqual(bindings.chord(for: .pageBackward), decomposed)
+        XCTAssertTrue(try precomposed.matches(snapshot("\u{E9}", modifiers: .control)))
+        XCTAssertFalse(try precomposed.matches(snapshot("e\u{301}", modifiers: .control)))
+    }
+
     func testMatching_ignoresTheNonChordingModifiers() throws {
         let space = try chord(" ")
 

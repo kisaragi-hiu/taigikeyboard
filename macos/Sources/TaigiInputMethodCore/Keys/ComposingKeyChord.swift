@@ -142,11 +142,16 @@ struct ComposingKeyChord: Hashable, Sendable {
     /// Whether `event` is this chord. Compared on the unmodified characters for
     /// the same reason they are stored: Control rewrites the digits it is held
     /// with, and Option rewrites most of the keyboard.
+    ///
+    /// Scalar by scalar, not by Swift's canonical equivalence, which reads a
+    /// precomposed `é` and `e` + U+0301 as one key: a chord is its scalars,
+    /// as `==` (the raw value's, `RawRepresentable`) and desktop-core's
+    /// `matches` read it (E8, `macos-desktop-core-roadmap.md`).
     func matches(_ event: KeyEventSnapshot) -> Bool {
         guard let characters = event.charactersIgnoringModifiers ?? event.characters else {
             return false
         }
-        guard Self.normalized(characters) == key else { return false }
+        guard Self.normalized(characters).unicodeScalars.elementsEqual(key.unicodeScalars) else { return false }
         return Self.chordingModifiers(of: event.modifiers) == modifiers
     }
 

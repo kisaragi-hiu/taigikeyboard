@@ -78,6 +78,10 @@ match	c|0061	0041	c	yes
 match	c|0061	0061	cs	no
 match	dc|0031	0031	cd	yes
 match	|0020	0020	o	no
+# E8: a key is its scalars — a precomposed é and e + U+0301 are two keys.
+match	c|00E9	00E9	c	yes
+match	c|00E9	0065,0301	c	no
+match	c|0065,0301	00E9	c	no
 
 # Resolution: absent = the default, empty = cleared, unparsable = cleared;
 # a chord on two rows stays on the one the user recorded; an emptied commit
@@ -92,3 +96,4 @@ resolve	nextCandidate=|0061	nextCandidate=-;previousCandidate=s|0009;pageForward
 resolve	commitLiteral=;confirmHighlighted=	nextCandidate=|0009;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
 resolve	nextCandidate=s|0069,0307	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
 resolve	nextCandidate=c|0041,,0042	nextCandidate=-;previousCandidate=s|0009;pageForward=|005D;pageBackward=|005B;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
+resolve	pageForward=c|00E9;pageBackward=c|0065,0301	nextCandidate=|0009;previousCandidate=s|0009;pageForward=c|00E9;pageBackward=c|0065,0301;confirmHighlighted=|000D;commitLiteral=s|000D;commitAlternateScript=|0020
