@@ -61,6 +61,7 @@ final class CategoriesBottomView: UIView {
     @IBOutlet private weak var collectionView: UICollectionView! {
         didSet {
             collectionView.register(CategoryCell.self, forCellWithReuseIdentifier: "CategoryCell")
+            collectionView.hideScrollEdgeEffects() // TaigiKeyboard: local patch
         }
     }
 
