@@ -4,7 +4,7 @@
 > **Keywords**: `linux`, `IBus`, `D-Bus`, `zbus`, `GTK4`, `libadwaita`, `desktop`, `engine reuse`, `macOS parity`, `Windows parity`
 > **Status**: **implemented — PR0–PR9 all MERGED 2026-09-23 (#140–#151); first-machine dogfood S74 pending (Ubuntu VMs available)**. History: PR0 2026-09-22; **2026-09-23 USER decision: Fcitx5 is the primary frontend, the IBus engine (PR3) is kept as the second** ("option 1, Fcitx5 primary, keep IBus, go") — a Linux VM for dogfood exists from here on, which removes the one reason IBus was chosen first (§ L1). Authored WITHOUT a Linux machine, the way the Windows platform was (`windows-roadmap.md` § W13); verified on the macOS host + a GitHub-hosted Ubuntu runner, dogfooded later.
 > **Session memory**: project memory `project_linux_ime.md` (Claude auto-memory)
-> **Siblings**: `macos-roadmap.md` (behaviour oracle), `windows-roadmap.md` (the blind-authoring precedent and the crates this platform reuses)
+> **Siblings**: `macos-roadmap.md`, `windows-roadmap.md` (the blind-authoring precedent and the crates this platform reuses)
 > **Oracle rule superseded** (2026-10-03, macOS desktop-core P12): "macOS is the behaviour oracle" below is historical — desktop-core and its tests are now the behaviour oracle for the three desktops (`macos-desktop-core-roadmap.md` D8).
 
 ---

@@ -82,9 +82,16 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
 ## desktop-core is the behaviour oracle
 
 - **desktop-core and its tests are the behaviour oracle for the three desktops** — macOS, Windows,
-  Linux (`docs/architecture/macos-desktop-core-roadmap.md` D8). A rule lives in
-  `desktop/crates/taigi-desktop-core` once; a platform difference is a `DesktopPlatform` branch
+  Linux (`docs/architecture/macos-desktop-core-roadmap.md` D8). A rule lives once in the shared
+  crates — `taigi-desktop-core` (key path, settings model, candidates, symbols), with
+  `taigi-desktop-storage` / `taigi-desktop-update` for storage and the update check and
+  `engine/userdata` for the user-data stores; a platform difference is a `DesktopPlatform` branch
   with a test per platform, or a named shell divergence. Drift between the desktops is a bug.
+- macOS keeps some shared behaviour in Swift by design — candidate-window geometry, settings
+  storage in `UserDefaults`, the global shortcuts, the update flow (roadmap § Outside this plan).
+  There the shared crates' tests are the reference for Windows and Linux; a known macOS difference
+  is listed in the roadmap (§ Found while auditing, e.g. candidate metrics) and stays open until
+  decided, rather than being "fixed" on either side.
 - The `// mirrors macos/.../<File>.swift:<line>` comments already in the Rust are rewritten to
   state their rule in the roadmap's last phase (P15); a new rule states itself and names its test
   instead of citing Swift.

@@ -179,8 +179,9 @@ final class ComposingBackendParityTests: XCTestCase {
     /// list is still held. Through the controller this needs a narrow
     /// ordering — the window going off takes the list down
     /// (`applyCandidateWindowSettingChange`), but each setting's observer
-    /// runs as its own task, so a display-mode refetch scheduled between the
-    /// window-off write and that observer's task meets the list — so it is
+    /// runs as its own main-actor task: a display-mode write, then the
+    /// window-off write, and the display-mode refetch runs while the list is
+    /// still up — so it is
     /// asked of the back end itself: the Swift refetch never reads Show
     /// Candidate Window and repaints; the core's (`represent_list`) closes,
     /// which is where the window-off observer leaves the list anyway.
