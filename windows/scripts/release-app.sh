@@ -163,24 +163,13 @@ for binary in "${SERVICE_DLLS[@]}" "$TARGET_DIR/$SETTINGS_EXE"; do
         echo "$imports" >&2
         fail "$(basename "$binary") imports the C runtime — the release must be statically linked (+crt-static)"
     fi
-done
-for dll in "${SERVICE_DLLS[@]}"; do
-    # The four entry points regsvr32 looks for: an export table that lost one
-    # registers nothing, and the failure surfaces on the user's machine. The
-    # 32-bit exports are undecorated too (measured 2026-09-01), so one pattern
-    # reads both.
-    exports="$(dumpbin -nologo -exports "$(windows_path "$dll")" | tr -d '\r')"
-    for symbol in DllGetClassObject DllCanUnloadNow DllRegisterServer DllUnregisterServer; do
-        grep -qE "[[:space:]]$symbol([[:space:]]|=|\$)" <<< "$exports" ||
-            fail "$dll does not export $symbol"
-    done
     # W17: the text service is loaded into every host process and must never
     # pull WinUI / the Windows App Runtime in with it — only the settings exe
     # links them.
-    dll_imports="$(dumpbin -nologo -dependents "$(windows_path "$dll")" | tr -d '\r')"
-    if grep -iqE 'microsoft\.ui\.|windowsappruntime|microsoft\.internal\.frameworkudk' <<< "$dll_imports"; then
-        echo "$dll_imports" >&2
-        fail "$dll imports WinUI / the Windows App Runtime — the text service must not (roadmap W17)"
+    if [[ "$binary" != "$TARGET_DIR/$SETTINGS_EXE" ]] &&
+        grep -iqE 'microsoft\.ui\.|windowsappruntime|microsoft\.internal\.frameworkudk' <<< "$imports"; then
+        echo "$imports" >&2
+        fail "$binary imports WinUI / the Windows App Runtime — the text service must not (roadmap W17)"
     fi
 done
 # WinUI is reached through activatable classes named in an embedded manifest,
@@ -193,6 +182,15 @@ for dll in "${SERVICE_DLLS[@]}"; do
     if grep -aq "$WINUI_MANIFEST_MARKER" "$dll"; then
         fail "$dll carries the WinUI manifest — the text service must not (roadmap W17)"
     fi
+    # The four entry points regsvr32 looks for: an export table that lost one
+    # registers nothing, and the failure surfaces on the user's machine. The
+    # 32-bit exports are undecorated too (measured 2026-09-01), so one pattern
+    # reads both.
+    exports="$(dumpbin -nologo -exports "$(windows_path "$dll")" | tr -d '\r')"
+    for symbol in DllGetClassObject DllCanUnloadNow DllRegisterServer DllUnregisterServer; do
+        grep -qE "[[:space:]]$symbol([[:space:]]|=|\$)" <<< "$exports" ||
+            fail "$dll does not export $symbol"
+    done
 done
 
 echo "==> Staging the install layout"

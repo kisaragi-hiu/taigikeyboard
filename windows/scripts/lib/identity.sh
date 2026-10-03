@@ -20,10 +20,9 @@ PRODUCT_NAME="$APP_NAME"
 SERVICE_DLL="TaigiKeyboard.dll"
 SETTINGS_EXE="TaigiKeyboardSettings.exe"
 RELEASE_TARGET="x86_64-pc-windows-msvc"
-# The 32-bit text service for 32-bit hosts (32-bit Office): cargo builds it
-# as `TaigiKeyboard.dll` too, and staging renames it, because it ships BESIDE
-# the 64-bit one — a text service resolves `Dictionaries\`, `Fonts\` and the
-# settings exe from its own directory (docs/architecture/windows-release.md).
+# The 32-bit text service: cargo builds it as `TaigiKeyboard.dll` too, and
+# staging renames it to ship beside the 64-bit one
+# (docs/architecture/windows-release.md § The 32-bit service).
 SERVICE_DLL_32="TaigiKeyboard32.dll"
 RELEASE_TARGET_32="i686-pc-windows-msvc"
 

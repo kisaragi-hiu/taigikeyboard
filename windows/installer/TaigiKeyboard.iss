@@ -6,11 +6,9 @@
 ;
 ; The staging dir holds what the script ships:
 ;   TaigiKeyboard.dll              (x64 text service, signed)
-;   TaigiKeyboard32.dll            (x86 text service for 32-bit hosts such as
-;                                   32-bit Office, signed; BESIDE the x64 one,
-;                                   because a text service resolves Dictionaries\,
-;                                   Fonts\ and the settings exe from its own
-;                                   directory)
+;   TaigiKeyboard32.dll            (x86 text service for 32-bit hosts, signed;
+;                                   beside the x64 one — windows-release.md
+;                                   § The 32-bit service)
 ;   TaigiKeyboardSettings.exe      (signed)
 ;   Runtime\*                      (the Windows App Runtime the settings window
 ;                                   runs on — self-contained, roadmap W17;
@@ -198,7 +196,7 @@ Filename: "{sys}\taskkill.exe"; Parameters: "/IM {#SettingsExe} /F"; Flags: runh
 ; folder, which only an administrator can write — the same reason the install
 ; side creates it elevated (RegisterUpdateTask).
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""{#TaskName}"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "DeleteTask"
-Filename: "{syswow64}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDll32}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX86"; Check: FileExists(ExpandConstant('{app}\{#ServiceDll32}'))
+Filename: "{syswow64}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDll32}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX86"
 Filename: "{sys}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDll}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX64"
 
 [UninstallDelete]
@@ -571,7 +569,7 @@ begin
   // registration overwrites the same CLSID.
   if FileExists(X64Dll) and not RegisterDll(X64Regsvr32, X64Dll, True) then
     Log('unregister: regsvr32 /u ' + X64Dll + ' failed');
-  if FileExists(X86Dll) and not RegisterDll(X86Regsvr32, X86Dll, True) then
+  if HadX86Dll and not RegisterDll(X86Regsvr32, X86Dll, True) then
     Log('unregister: regsvr32 /u ' + X86Dll + ' failed');
 
   // Only a file Windows will not even RENAME stops the install now, which is a
@@ -656,8 +654,7 @@ end;
 // DLL, so that registration comes off before its files move away underneath it.
 procedure RollBack;
 begin
-  if FileExists(X86Dll) then
-    RegisterDll(X86Regsvr32, X86Dll, True);
+  RegisterDll(X86Regsvr32, X86Dll, True);
   RegisterDll(X64Regsvr32, X64Dll, True);
   RestorePreviousVersion;
 end;

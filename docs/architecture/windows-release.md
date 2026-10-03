@@ -92,7 +92,7 @@ re-derived.
   taigi-windows-tsf` after the x64 build — the DLL only; the 64-bit settings
   exe serves both. The one source change it needed: the i686 `windows` crate
   maps `SetWindowLongPtrW` onto `SetWindowLongW`, whose value is an `i32`, so
-  `ui/window.rs` casts with `as _`. `check-box.sh` builds the same target so a
+  `ui/window.rs` casts with `as _`. `check-box.sh` type-checks the same target so a
   pointer-width mistake fails the box gate rather than a release. The DLL is
   machine `14C`, exports the four entry points undecorated, imports no C
   runtime, and goes through every read-back check the x64 DLL does.
