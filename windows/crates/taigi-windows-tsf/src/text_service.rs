@@ -297,6 +297,11 @@ impl TextService_Impl {
                 log::error!("ui.render_factory_failed error={error} — no candidate window")
             }
         }
+        // A host that activates this service with a document already focused
+        // sends no focus event for it, so the TPS key panel learns here that
+        // this is where the user types (P5 spike on the box: no panel until
+        // the first key otherwise).
+        self.note_tps_keyboard_focus(self.has_focused_document());
 
         // Cosmetic: a tray button that fails to add is logged, not fatal.
         match thread_mgr.cast::<ITfLangBarItemMgr>() {
@@ -514,6 +519,18 @@ impl TextService_Impl {
     /// [`TextService_Impl::presenter`].
     pub(crate) fn telex_guide(&self) -> Option<Rc<RefCell<TelexGuide>>> {
         self.state.borrow().telex_guide.clone()
+    }
+
+    /// Whether a document of this thread has focus, asked of TSF itself —
+    /// `focused_document` only moves on a focus event, and a host may send
+    /// none for the document it activated this service in. The thread
+    /// manager is cloned out of the borrow before the COM call.
+    fn has_focused_document(&self) -> bool {
+        let Some(thread_mgr) = self.state.borrow().thread_mgr.clone() else {
+            return false;
+        };
+        // SAFETY: a plain COM call on an interface this service holds.
+        unsafe { thread_mgr.GetFocus() }.is_ok()
     }
 
     /// The TPS key panel, cloned out for the same reason.
@@ -929,8 +946,7 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
     fn OnSetThreadFocus(&self) -> Result<()> {
         guarded("ITfThreadFocusSink::OnSetThreadFocus", || {
             self.request_settings_refresh();
-            let has_document = self.state.borrow().focused_document != 0;
-            self.note_tps_keyboard_focus(has_document);
+            self.note_tps_keyboard_focus(self.has_focused_document());
             Ok(())
         })
     }
