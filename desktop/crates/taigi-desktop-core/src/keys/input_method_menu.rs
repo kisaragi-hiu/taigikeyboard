@@ -9,7 +9,7 @@
 
 use super::ShortcutAction;
 use crate::platform::DesktopPlatform;
-use crate::settings::{keys, SettingsDocument};
+use crate::settings::SettingsDocument;
 use crate::strings::{StringKey, StringResolver};
 
 /// What a menu row does.
@@ -81,18 +81,18 @@ pub struct MenuRow {
 }
 
 /// [`MENU`], resolved against the strings and the settings as they are now.
-/// A row whose shortcut does nothing under the input mode is left out — under
-/// TPS, Switch Candidate Display — rather than drawn to do nothing.
+/// The same rows under every input mode: Fcitx5 registers its actions once
+/// and re-titles them by position (`linux/fcitx5/src/engine.cpp`
+/// `refreshMenu`), and IBus updates only the root property on a mode change,
+/// so a row that came and went would shift every row after it. A row whose
+/// shortcut is inert under the mode (`ShortcutAction::is_inert_under`) does
+/// nothing when clicked, as its chord does.
 pub fn menu_rows(
     strings: &StringResolver,
     settings: &SettingsDocument,
     platform: DesktopPlatform,
 ) -> Vec<Option<MenuRow>> {
-    let input_mode = settings.choice(&keys::INPUT_MODE);
     MENU.iter()
-        .filter(|command| {
-            !matches!(command, Some(MenuCommand::Shortcut(action)) if action.is_inert_under(input_mode))
-        })
         .map(|command| {
             command.map(|command| MenuRow {
                 command,
@@ -110,6 +110,7 @@ pub fn menu_rows(
 mod tests {
     use super::*;
     use crate::platform::test_support::TEST_PLATFORM as PLATFORM;
+    use crate::settings::SettingChoice;
     use crate::strings::DisplayLanguage;
 
     #[test]
@@ -142,26 +143,21 @@ mod tests {
     }
 
     #[test]
-    fn under_tps_the_candidate_display_row_is_left_out() {
+    fn the_menu_keeps_its_shape_under_every_input_mode() {
+        // Fcitx5 re-titles its registered rows by position: a row that came
+        // and went with the mode would shift the rest (P3 cloud review).
         let strings = StringResolver::new(DisplayLanguage::Hanji);
-        let mut tps = SettingsDocument::default();
-        tps.set_choice(&keys::INPUT_MODE, crate::settings::InputMode::Tps);
-        let commands: Vec<Option<MenuCommand>> = menu_rows(&strings, &tps, PLATFORM)
-            .into_iter()
-            .map(|row| row.map(|row| row.command))
-            .collect();
-        assert_eq!(
-            commands,
-            [
-                Some(MenuCommand::Shortcut(ShortcutAction::ToggleRomanization)),
-                Some(MenuCommand::Shortcut(ShortcutAction::ToggleTps)),
-                None,
-                Some(MenuCommand::OpenSettings),
-                None,
-                Some(MenuCommand::CheckForUpdates),
-                Some(MenuCommand::About),
-            ]
-        );
+        let commands = |mode| -> Vec<Option<MenuCommand>> {
+            let mut document = SettingsDocument::default();
+            document.set_choice(&crate::settings::keys::INPUT_MODE, mode);
+            menu_rows(&strings, &document, PLATFORM)
+                .into_iter()
+                .map(|row| row.map(|row| row.command))
+                .collect()
+        };
+        for mode in crate::settings::InputMode::ALL {
+            assert_eq!(commands(*mode), MENU, "{mode:?}");
+        }
     }
 
     #[test]

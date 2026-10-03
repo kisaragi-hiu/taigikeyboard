@@ -1132,6 +1132,9 @@ fn a_switch_across_tps_leaves_the_composition_behind() {
     assert!(!rig.manager.is_left_by_mode_change(InputMode::Tps));
     rig.settings
         .edit(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tl));
+    // A fetch after the switch mirrors the same composition: it keeps the
+    // mode the composition began in.
+    rig.manager.fetch_candidates();
     assert!(rig.manager.is_left_by_mode_change(InputMode::Tl));
     assert_eq!(
         rig.manager.commit_composition(&mut rig.recorder).as_deref(),

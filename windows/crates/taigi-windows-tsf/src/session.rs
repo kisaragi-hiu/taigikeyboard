@@ -217,7 +217,7 @@ impl TextService_Impl {
                 context,
                 token,
                 identity,
-                &snapshot,
+                &KeyEventSnapshot::default(),
                 &KeyWork::Compose(ComposingKeyIntent::Commit),
                 &settings,
             );

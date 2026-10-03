@@ -391,3 +391,26 @@ fn switch_romanization_keeps_the_composition() {
         "{emits:?}"
     );
 }
+
+/// The other way: a TL composition left under TPS is committed by the first
+/// glyph key, which then starts the TPS composition.
+#[test]
+fn switch_into_tps_commits_the_romanization_on_the_next_key() {
+    let _serial = serial();
+    let mut session = Session::new(false, false);
+    session.type_word("tai");
+    session.press_with('p' as u32, CTRL_ALT);
+    let emits = session.press('e' as u32);
+    // trace, read by running: the commit, then `e` as ㄍ (D2).
+    assert_eq!(
+        emits[..3],
+        [
+            Emit::ClearPreedit,
+            commit("tai"),
+            Emit::Preedit {
+                text: "ㄍ".to_owned(),
+                caret: 1
+            }
+        ]
+    );
+}
