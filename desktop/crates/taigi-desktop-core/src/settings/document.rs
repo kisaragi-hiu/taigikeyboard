@@ -499,7 +499,7 @@ mod tests {
         // while `bool(&key)` still answers true; back to sideBySide → true
         // again with no write in between.
         let mut doc = SettingsDocument::default();
-        doc.set_bool(&keys::IS_HANJI_FIRST, false);
+        doc.set_bool(&keys::IS_HANJI_FIRST, true);
         doc.set_choice(
             &keys::CANDIDATE_DISPLAY_MODE,
             CandidateDisplayMode::RomanOnly,
