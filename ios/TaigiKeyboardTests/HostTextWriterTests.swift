@@ -143,8 +143,10 @@ final class HostTextWriterTests: XCTestCase {
 
     // MARK: - Echo of the keyboard's own commit
 
-    /// Commits `我` over the preedit `gua`, with `你好` after the caret.
+    /// Commits `我` over the preedit `gua` typed after `台語`, with `你好`
+    /// after the caret.
     private func commitGuaAsWo() {
+        proxy.textBeforeCaret = "台語"
         proxy.textAfterCaret = "你好"
         writer.update("gua")
         writer.beginEvent()
@@ -166,6 +168,7 @@ final class HostTextWriterTests: XCTestCase {
         let cases: [(String, TimeInterval, String?, String?)] = [
             ("caret moved elsewhere", 0.06, "你", "你好"),
             ("nothing before the caret", 0.06, nil, "你好"),
+            ("text before the commit edited", 0.06, "中文我", "你好"),
             ("text after the caret edited", 0.06, "台語我", "你"),
             ("callback long after the commit (host never echoed)", 5, "台語我", "你好"),
         ]

@@ -41,9 +41,13 @@ final class HostTextWriter {
     /// until `endEvent()` replaces it with this text.
     private var pendingCommit: String?
 
+    /// The text before the caret when the current marked region was first
+    /// written — the baseline the commit's echo is checked against.
+    private var textBeforeMarkedText: String?
+
     /// What the host should report right after the last marked replacement,
     /// until one text-change callback has been checked against it.
-    private var expectedEcho: (committed: String, textAfterCaret: String?, writtenAt: TimeInterval)?
+    private var expectedEcho: (textBeforeCaret: String, textAfterCaret: String?, writtenAt: TimeInterval)?
 
     init(
         proxy: @escaping () -> UITextDocumentProxy,
@@ -71,16 +75,18 @@ final class HostTextWriter {
     /// commit rather than a real edit. UIKit hosts report `unmarkText()` of
     /// non-empty marked text as a text change; the commit it replaced
     /// (`insertText`) raised none. An echo arrives within
-    /// `commitEchoWindow`, with the commit right before the caret and the
-    /// text after the caret untouched — the before/after match azooKey's
+    /// `commitEchoWindow` and shows exactly the expected document around the
+    /// caret: the text before the marked region plus the commit, and the text
+    /// after the caret untouched — the before/after match azooKey's
     /// `ExpectedEditTracker` makes. Only the first callback after a commit is
-    /// checked, so a host that never echoes (Flutter) leaves nothing behind.
+    /// checked, so a host that never echoes (Flutter) leaves nothing behind;
+    /// any doubt reads as a real edit.
     func isEchoOfOwnCommit() -> Bool {
         guard let expected = expectedEcho else { return false }
         expectedEcho = nil
         guard now() - expected.writtenAt <= Self.commitEchoWindow else { return false }
         let proxy = proxy()
-        return proxy.documentContextBeforeInput?.hasSuffix(expected.committed) == true
+        return (proxy.documentContextBeforeInput ?? "") == expected.textBeforeCaret
             && proxy.documentContextAfterInput == expected.textAfterCaret
     }
 
@@ -92,7 +98,11 @@ final class HostTextWriter {
     /// finalize.
     func update(_ text: String) {
         writeHeldCommitBeforeUnsupportedWrite("update")
-        proxy().setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
+        let proxy = proxy()
+        if !hasMarkedText {
+            textBeforeMarkedText = proxy.documentContextBeforeInput ?? ""
+        }
+        proxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
         hasMarkedText = !text.isEmpty
     }
 
@@ -105,6 +115,7 @@ final class HostTextWriter {
         proxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
         proxy.unmarkText()
         hasMarkedText = false
+        textBeforeMarkedText = nil
     }
 
     /// Commit `text` in place of the marked region, or insert it at the caret
@@ -155,6 +166,10 @@ final class HostTextWriter {
         proxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
         proxy.unmarkText()
         hasMarkedText = false
-        expectedEcho = text.isEmpty ? nil : (text, proxy.documentContextAfterInput, now())
+        expectedEcho = nil
+        if let textBefore = textBeforeMarkedText, !text.isEmpty {
+            expectedEcho = (textBefore + text, proxy.documentContextAfterInput, now())
+        }
+        textBeforeMarkedText = nil
     }
 }
