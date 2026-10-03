@@ -55,7 +55,10 @@ final class LearningRecordsViewModel: ObservableObject {
         self.filterSettle = filterSettle
     }
 
+    /// The first appearance lists from the top; a later one (back from
+    /// another tab) keeps the rows and the place in the list.
     func load() async {
+        guard listedGeneration < 0 else { return }
         await reload().value
     }
 
@@ -183,6 +186,8 @@ final class LearningRecordsViewModel: ObservableObject {
     private func reload(rowCount: Int = Int(pageSize)) -> Task<Void, Never> {
         generation += 1
         let generation = generation
+        // A kind or order change, or a write, overtakes a filter still settling.
+        settleTask?.cancel()
         isLoadingNextPage = false
         nextPageFailed = false
         let (kind, order, filter) = (kind, order, filter)

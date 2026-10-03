@@ -11,7 +11,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
     /// The engine's user-data surface, answering from `rows` with the
     /// engine's paging rule — or, while `isHolding`, parking each list
     /// request until the test resolves it.
-    private final class FakeLearningRecords: UserDataClient, @unchecked Sendable {
+    private final class FakeLearningRecords: UserDataClientStub, @unchecked Sendable {
         struct ListCall: Equatable {
             let kind: Taigi_Engine_LearningRecordKind
             let order: Taigi_Engine_LearningRecordOrder
@@ -67,7 +67,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
             answer.resume(returning: page(for: call))
         }
 
-        func listLearningRecords(
+        override func listLearningRecords(
             kind: Taigi_Engine_LearningRecordKind,
             order: Taigi_Engine_LearningRecordOrder,
             filter: String,
@@ -88,7 +88,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
             }
         }
 
-        func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int64) async throws -> Bool {
+        override func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int64) async throws -> Bool {
             if let failure {
                 throw failure
             }
@@ -99,7 +99,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
             }
         }
 
-        func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) async throws -> Bool {
+        override func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) async throws -> Bool {
             if let failure {
                 throw failure
             }
@@ -128,52 +128,6 @@ final class LearningRecordsViewModelTests: XCTestCase {
             page.matchingTotal = UInt32(matching.count)
             page.offset = UInt32(offset)
             return page
-        }
-
-        func listAll() async throws -> [CustomDictionaryEntry] {
-            XCTFail("unused")
-            return []
-        }
-
-        func save(_: CustomDictionaryEntry) async throws {
-            XCTFail("unused")
-        }
-
-        func delete(id _: String) async throws {
-            XCTFail("unused")
-        }
-
-        func deleteAll() async throws {
-            XCTFail("unused")
-        }
-
-        func exportCSV() async throws -> Data {
-            XCTFail("unused")
-            return Data()
-        }
-
-        func importCSV(url _: URL) async throws -> (imported: Int, skipped: Int) {
-            XCTFail("unused")
-            return (0, 0)
-        }
-
-        func clearLearningRecords() async throws {
-            XCTFail("unused")
-        }
-
-        func search(query _: String, mode _: InputMode, limit _: Int) async -> [CustomDictionaryEntry] {
-            XCTFail("unused")
-            return []
-        }
-
-        func exportBackup(appVersion _: String) async throws -> Data {
-            XCTFail("unused")
-            return Data()
-        }
-
-        func importBackup(url _: URL) async throws -> BackupImportResult {
-            XCTFail("unused")
-            throw CancellationError()
         }
     }
 
@@ -304,6 +258,32 @@ final class LearningRecordsViewModelTests: XCTestCase {
         await viewModel.selectOrder(.mostRecent).value
         XCTAssertEqual(fake.calls.last, .init(kind: .learnedPhrase, order: .mostRecent, filter: "台", limit: 100, offset: 0))
         XCTAssertEqual(fake.calls.map(\.offset), [0, 0, 0, 0])
+    }
+
+    func testALaterAppearance_keepsTheRowsListed() async {
+        let fake = FakeLearningRecords(rows: numberedRows(150))
+        let viewModel = makeViewModel(fake)
+        await viewModel.load()
+        await viewModel.loadNextPage()
+
+        await viewModel.load()
+
+        XCTAssertEqual(viewModel.records.count, 150)
+        XCTAssertEqual(fake.calls.map(\.offset), [0, 100], "no reload from the top")
+    }
+
+    func testAKindChange_overtakesAFilterStillSettling() async {
+        let fake = FakeLearningRecords(rows: [record(1, "台灣"), record(2, "台語", kind: .learnedPhrase)])
+        let viewModel = LearningRecordsViewModel(userData: fake, filterSettle: .seconds(60))
+        await viewModel.load()
+
+        let settling = viewModel.filterChanged("台")
+        await viewModel.selectKind(.learnedPhrase).value
+        await settling.value
+
+        XCTAssertEqual(fake.calls.count, 2, "the settling filter does not reload again")
+        XCTAssertEqual(fake.calls.last?.filter, "台")
+        XCTAssertEqual(viewModel.records.map(\.text), ["台語"])
     }
 
     func testANewerRequestWins_anOlderAnswerIsDropped() async {

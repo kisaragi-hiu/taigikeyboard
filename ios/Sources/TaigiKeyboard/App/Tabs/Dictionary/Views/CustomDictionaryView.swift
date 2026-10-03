@@ -115,15 +115,7 @@ struct CustomDictionaryView: View {
                 // Entry list
                 Section {
                     if viewModel.entries.isEmpty {
-                        VStack(spacing: 16) {
-                            Image(latinSystemName: "book.closed")
-                                .font(AppStyle.appFont(size: 48))
-                                .foregroundColor(.secondary)
-                            Text(lang.string(.dictionaryCustomDictEmpty))
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 32)
+                        DictionaryEmptyState(message: lang.string(.dictionaryCustomDictEmpty))
                     } else if !filterText.isEmpty, filteredEntries.isEmpty {
                         Text(lang.string(.dictionaryNoResults))
                             .foregroundColor(.secondary)

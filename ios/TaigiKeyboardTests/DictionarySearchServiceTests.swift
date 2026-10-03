@@ -46,7 +46,7 @@ final class DictionarySearchServiceTests: XCTestCase {
         }
     }
 
-    private final class FakeUserData: UserDataClient, @unchecked Sendable {
+    private final class FakeUserData: UserDataClientStub, @unchecked Sendable {
         private let entries: [CustomDictionaryEntry]
         private(set) var searchCalls = 0
 
@@ -54,70 +54,13 @@ final class DictionarySearchServiceTests: XCTestCase {
             self.entries = entries
         }
 
-        func search(query: String, mode _: InputMode, limit _: Int) async -> [CustomDictionaryEntry] {
+        override func search(query: String, mode _: InputMode, limit _: Int) async -> [CustomDictionaryEntry] {
             searchCalls += 1
             return entries.filter { $0.roman.hasPrefix(query) }
         }
 
-        func listAll() async throws -> [CustomDictionaryEntry] {
+        override func listAll() async throws -> [CustomDictionaryEntry] {
             entries
-        }
-
-        func save(_: CustomDictionaryEntry) async throws {
-            XCTFail("unused")
-        }
-
-        func delete(id _: String) async throws {
-            XCTFail("unused")
-        }
-
-        func deleteAll() async throws {
-            XCTFail("unused")
-        }
-
-        func exportCSV() async throws -> Data {
-            XCTFail("unused")
-            return Data()
-        }
-
-        func importCSV(url _: URL) async throws -> (imported: Int, skipped: Int) {
-            XCTFail("unused")
-            return (0, 0)
-        }
-
-        func clearLearningRecords() async throws {
-            XCTFail("unused")
-        }
-
-        func exportBackup(appVersion _: String) async throws -> Data {
-            XCTFail("unused")
-            return Data()
-        }
-
-        func importBackup(url _: URL) async throws -> BackupImportResult {
-            XCTFail("unused")
-            throw CancellationError()
-        }
-
-        func listLearningRecords(
-            kind _: Taigi_Engine_LearningRecordKind,
-            order _: Taigi_Engine_LearningRecordOrder,
-            filter _: String,
-            limit _: UInt32,
-            offset _: UInt32,
-        ) async throws -> Taigi_Engine_LearningRecords {
-            XCTFail("unused")
-            return Taigi_Engine_LearningRecords()
-        }
-
-        func setLearningRecordCount(_: Taigi_Engine_LearningRecord, count _: Int64) async throws -> Bool {
-            XCTFail("unused")
-            return false
-        }
-
-        func deleteLearningRecord(_: Taigi_Engine_LearningRecord) async throws -> Bool {
-            XCTFail("unused")
-            return false
         }
     }
 

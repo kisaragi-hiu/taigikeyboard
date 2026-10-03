@@ -10,7 +10,7 @@ struct LearningRecordsView: View {
     @StateObject private var viewModel = LearningRecordsViewModel()
 
     @State private var filterText = ""
-    @State private var showCountAlert = false
+    /// The row the edit-count alert is open for.
     @State private var editingRecord: Taigi_Engine_LearningRecord?
     @State private var countInput = ""
 
@@ -61,15 +61,7 @@ struct LearningRecordsView: View {
                             Text(lang.string(.dictionaryLearningRecordsReadFailed))
                                 .foregroundColor(.secondary)
                         } else if filterText.isEmpty {
-                            VStack(spacing: 16) {
-                                Image(latinSystemName: "book.closed")
-                                    .font(AppStyle.appFont(size: 48))
-                                    .foregroundColor(.secondary)
-                                Text(lang.string(.dictionaryLearningRecordsEmpty))
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 32)
+                            DictionaryEmptyState(message: lang.string(.dictionaryLearningRecordsEmpty))
                         } else {
                             Text(lang.string(.dictionaryNoResults))
                                 .foregroundColor(.secondary)
@@ -96,19 +88,29 @@ struct LearningRecordsView: View {
         }
         .navigationTitle(lang.string(.dictionaryLearningRecords))
         .navigationBarTitleDisplayMode(.large)
-        .alert(lang.string(.dictionaryLearningRecordsEditCount), isPresented: $showCountAlert) {
+        .alert(
+            lang.string(.dictionaryLearningRecordsEditCount),
+            isPresented: Binding(
+                get: { editingRecord != nil },
+                set: {
+                    if !$0 {
+                        editingRecord = nil
+                    }
+                },
+            ),
+            presenting: editingRecord,
+        ) { record in
             TextField(lang.string(.dictionaryLearningRecordsCount), text: $countInput)
                 .keyboardType(.numberPad)
-            Button(lang.string(.commonCancel), role: .cancel) {
-                editingRecord = nil
-            }
+            Button(lang.string(.commonCancel), role: .cancel) {}
             Button(lang.string(.commonSave)) {
-                saveCountFromAlert()
+                guard let count = LearningRecordsViewModel.count(from: countInput) else { return }
+                Task { await viewModel.setCount(record, to: count) }
             }
             .disabled(LearningRecordsViewModel.count(from: countInput) == nil)
-        } message: {
+        } message: { record in
             // Only word frequency's boost stops growing (at count 40).
-            if editingRecord?.kind == .frequency {
+            if record.kind == .frequency {
                 Text(lang.string(.dictionaryLearningRecordsCountCapInfo))
             }
         }
@@ -162,9 +164,8 @@ struct LearningRecordsView: View {
 
     private func recordRow(_ record: Taigi_Engine_LearningRecord) -> some View {
         Button {
-            editingRecord = record
             countInput = String(record.count)
-            showCountAlert = true
+            editingRecord = record
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
@@ -197,14 +198,6 @@ struct LearningRecordsView: View {
                 Image(latinSystemName: "trash")
             }
         }
-    }
-
-    // MARK: - Actions
-
-    private func saveCountFromAlert() {
-        guard let record = editingRecord, let count = LearningRecordsViewModel.count(from: countInput) else { return }
-        editingRecord = nil
-        Task { await viewModel.setCount(record, to: count) }
     }
 }
 
