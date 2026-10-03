@@ -630,7 +630,7 @@ public final class TaigiInputController: IMKInputController {
             // Inert under romanization-only — silently, no flash (USER
             // 2026-09-01, Q11; see `allowsSwapToggle`). Under Hanji with Romanization the chord
             // flips only the punctuation width (`isFullWidthPunctuation`).
-            guard settings.current.candidateDisplayMode.allowsSwapToggle else { return }
+            guard settings.candidateDisplayMode.allowsSwapToggle else { return }
             // The bar STAYS: the SWAP changes how a candidate displays and
             // commits, never which candidates exist, so the list on screen is
             // still the right one — re-rendered, selection kept. Dismissing

@@ -674,4 +674,46 @@ mod tests {
         assert!(!sources.dev);
         assert!(sources.lkk);
     }
+
+    /// A stored value that differs from its default reaches the field
+    /// `engine_settings()` maps it to: a default-on setting switched off reads
+    /// as off, a default-off one switched on reads as on. Ported from the
+    /// macOS `SettingsStore.current` tests (P13b).
+    #[test]
+    fn engine_settings_maps_stored_overrides() {
+        let mut doc = SettingsDocument::default();
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Poj);
+        doc.set_bool(&keys::IS_HANJI_FIRST, false);
+        doc.set_bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED, true);
+        doc.set_bool(&keys::IS_HYPHENLESS_ROMAN_ENABLED, true);
+        doc.set_bool(&keys::IS_NASAL_MARKER_UPPERCASE_ENABLED, false);
+        doc.set_bool(&keys::IS_CUSTOM_DICT_ENABLED, false);
+        doc.set_bool(&keys::IS_KAUTIAN_ENABLED, false);
+        doc.set_bool(&keys::IS_KHIIN_ENABLED, true);
+        doc.set_bool(&keys::IS_KAUTIAN_ACCENT_GILAN_ENABLED, false);
+
+        // trace: stored swap=false under the default SideBySide →
+        // effective_hanji_first(false)=false, effective_full_width_punctuation(false)=false;
+        // every field not set above keeps its default.
+        let expected = EngineSettings {
+            input_mode: InputMode::Poj,
+            is_hanji_first: false,
+            is_full_width_punctuation: false,
+            candidate_display_mode: CandidateDisplayMode::SideBySide,
+            is_literal_roman_candidate_enabled: true,
+            is_hyphenless_roman_enabled: true,
+            is_nasal_marker_uppercase_enabled: false,
+            is_custom_dict_enabled: false,
+            dictionary_sources: DictionarySourceToggles {
+                kautian: false,
+                khiin: true,
+                kautian_subcollections: KautianSubcollections {
+                    accent_gilan: false,
+                    ..KautianSubcollections::DEFAULT
+                },
+                ..DictionarySourceToggles::DEFAULT
+            },
+        };
+        assert_eq!(doc.engine_settings(), expected);
+    }
 }

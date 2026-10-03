@@ -1,73 +1,67 @@
-// Which dictionaries the user has switched on, as one snapshot value.
+// Which dictionaries a fresh install searches.
 
-import Foundation
-
-/// The user's dictionary source preferences, in the shape `FetchAtPos`
+/// The default dictionary source preferences, in the shape `FetchAtPos`
 /// carries them.
 ///
 /// Field order mirrors `engine/protos/proto/lexicon.proto::DictionarySourceToggles`
-/// (`:438-455`) so the bridge's assignment reads as a straight transcription.
+/// and desktop-core's `DictionarySourceToggles` (`settings/engine_settings.rs`).
 /// The 11 kautian subcollection flags are nested rather than flat because the
 /// wire has them nested too, and because they are only meaningful while
 /// `kautian` is on.
 ///
-/// Carried inside `EngineSettings`, the one snapshot `SettingsStore.current`
-/// answers with.
-///
-/// The fields are `var` so a caller that varies one toggle can start from
-/// `.defaults` and say only what differs; the snapshot is still immutable where
-/// it matters, because `EngineSettings` holds this value in a `let`.
-struct DictionarySourceToggles: Equatable, Sendable {
+/// Part of the `EngineSettings.defaults` table: `SettingsStore.Keys` reads each
+/// toggle's default from `.defaults`.
+struct DictionarySourceToggles: Sendable {
     /// 教育部臺灣台語常用詞辭典. Named `kautian` rather than after the iOS
     /// settings key (`moeDictEnabled`) because the engine's vocabulary is what
     /// this value is transcribed into.
-    var kautian: Bool
+    let kautian: Bool
     /// 台語新詞辭庫.
-    var taigitv: Bool
+    let taigitv: Bool
     /// iTaigi 華台對照典.
-    var itaigi: Bool
+    let itaigi: Bool
     /// 台灣植物名彙.
-    var sitbut: Bool
+    let sitbut: Bool
     /// 台華線頂對照典.
-    var taihoa: Bool
+    let taihoa: Bool
     /// 台日大辭典.
-    var taijit: Bool
+    let taijit: Bool
     /// 台語工藝詞庫.
-    var kungge: Bool
+    let kungge: Bool
     /// 學科術語辭典.
-    var stti: Bool
+    let stti: Bool
     /// Accent Variations.
-    var khpoo: Bool
+    let khpoo: Bool
     /// Variant characters.
-    var variant: Bool
+    let variant: Bool
     /// 在來字.
-    var khiin: Bool
+    let khiin: Bool
     /// LKK 漢羅合用建議用字.
-    var lkk: Bool
+    let lkk: Bool
     /// Supplementary Word List.
-    var dev: Bool
+    let dev: Bool
 
     /// Always populated, never absent: the engine reads an absent
     /// subcollection message as "legacy all-on" and skips the gate entirely
     /// (`lexicon.proto:452-454`). macOS ships all eleven toggles, so it must
     /// always ask for the gate to run.
-    var kautianSubcollections: KautianSubcollections
+    let kautianSubcollections: KautianSubcollections
 
     /// The per-subcollection state of the kautian source. Order mirrors
     /// `KautianSubcollectionToggles` (`lexicon.proto`), which is the
     /// `config.yaml` `dialect_columns` order.
-    struct KautianSubcollections: Equatable, Sendable {
-        var accentLukang: Bool
-        var accentSansia: Bool
-        var accentTaipak: Bool
-        var accentGilan: Bool
-        var accentTainan: Bool
-        var accentKaohsiung: Bool
-        var accentKinmen: Bool
-        var accentMakung: Bool
-        var accentSintik: Bool
-        var accentTaichung: Bool
-        var nameAppendix: Bool
+    struct KautianSubcollections: Sendable {
+        let accentLukang: Bool
+        let accentSansia: Bool
+        let accentTaipak: Bool
+        let accentGilan: Bool
+        let accentTainan: Bool
+        let accentKaohsiung: Bool
+        let accentKinmen: Bool
+        let accentMakung: Bool
+        let accentSintik: Bool
+        let accentTaichung: Bool
+        let nameAppendix: Bool
 
         /// CROSS-PLATFORM INVARIANT — every subcollection defaults ON, mirroring
         /// ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:74-84.

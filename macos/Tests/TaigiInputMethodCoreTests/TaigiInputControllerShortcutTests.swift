@@ -51,11 +51,9 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
     /// `UserDefaults.bool(forKey:)` would answer `false` for a key nobody has
     /// written and turn the first press into a no-op.
     func testTranslateSwappedShortcut_flipsTheSettingFromItsDefault() {
-        let defaults = EngineSettings.defaults
-
         controller.performShortcutAction(.toggleTranslateSwapped)
 
-        XCTAssertEqual(controller.settings.storedIsHanjiFirst, !defaults.isHanjiFirst)
+        XCTAssertEqual(controller.settings.storedIsHanjiFirst, !SettingsStore.Keys.isHanjiFirst.defaultValue)
     }
 
     /// What happens to the bar follows what the setting invalidates: the
@@ -123,13 +121,8 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         controller.performShortcutAction(.toggleTranslateSwapped)
 
         XCTAssertTrue(controller.settings.storedIsHanjiFirst, "the chord flipped a stored value it must not touch")
-        XCTAssertFalse(controller.settings.current.isHanjiFirst, "the effective swap stays off under romanization-only")
         XCTAssertEqual(presenter.calls.count, callsBefore)
         XCTAssertEqual(flashes, [])
-
-        controller.settings.candidateDisplayMode = .sideBySide
-
-        XCTAssertTrue(controller.settings.current.isHanjiFirst, "leaving the mode must give the stored swap back")
     }
 
     /// Under the combined display each script is its own adjacent cell and
@@ -145,13 +138,12 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         controller.performShortcutAction(.toggleTranslateSwapped)
 
         XCTAssertTrue(controller.settings.storedIsHanjiFirst, "the chord flips the stored swap")
-        XCTAssertTrue(controller.settings.current.isFullWidthPunctuation, "…which is the punctuation width under combined")
-        XCTAssertTrue(controller.settings.current.isHanjiFirst, "the effective swap stays on under combined")
+        XCTAssertTrue(controller.settings.isFullWidthPunctuation, "…which is the punctuation width under combined")
         XCTAssertEqual(flashes, [])
 
         controller.performShortcutAction(.toggleTranslateSwapped)
 
-        XCTAssertFalse(controller.settings.current.isFullWidthPunctuation, "a second press goes back to half-width")
+        XCTAssertFalse(controller.settings.isFullWidthPunctuation, "a second press goes back to half-width")
     }
 
     /// The cycle walks the Appearance picker's order and comes back round, so three
@@ -183,12 +175,12 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
     /// reaching a session with it must do nothing at all — not change a
     /// setting, and not disturb the composition on screen.
     func testTheSettingsDoorwayAction_isInertAtTheSession() {
-        let settingsBefore = controller.settings.current
+        let settingsBefore = userDefaults.persistentDomain(forName: suiteName) as NSDictionary?
         let callsBefore = presenter.calls.count
 
         controller.performShortcutAction(.openLastSettingsPane)
 
-        XCTAssertEqual(controller.settings.current, settingsBefore)
+        XCTAssertEqual(userDefaults.persistentDomain(forName: suiteName) as NSDictionary?, settingsBefore)
         XCTAssertEqual(presenter.calls.count, callsBefore)
     }
 }

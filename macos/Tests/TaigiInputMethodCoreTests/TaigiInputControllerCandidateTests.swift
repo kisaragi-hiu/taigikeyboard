@@ -321,7 +321,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
         let annotation = try XCTUnwrap(leading.annotation)
         // Side by side, the cell leads with the script the stored swap puts
         // first; Hanji with Romanization orders its cells Hanji-first whatever
-        // is stored (`effectiveHanjiFirst`).
+        // is stored (desktop-core `effective_hanji_first`).
         let isHanjiFirst = sideBySideSession.controller.settings.storedIsHanjiFirst
         let hanji = isHanjiFirst ? leading.text : annotation
         let romanization = isHanjiFirst ? annotation : leading.text

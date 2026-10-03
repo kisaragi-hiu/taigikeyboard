@@ -8,24 +8,6 @@ import XCTest
 /// `defaults read` answers the same way on both platforms and a settings
 /// transfer would have one name per setting rather than two.
 final class DictionarySourceSettingsTests: XCTestCase {
-    private var suiteName = ""
-    private var userDefaults = UserDefaults.standard
-
-    override func setUpWithError() throws {
-        try super.setUpWithError()
-        suiteName = "DictionarySourceSettingsTests.\(UUID().uuidString)"
-        userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-    }
-
-    override func tearDown() {
-        userDefaults.removePersistentDomain(forName: suiteName)
-        super.tearDown()
-    }
-
-    private func makeStore() -> SettingsStore {
-        SettingsStore(userDefaults: userDefaults)
-    }
-
     /// Every key spelling, checked as a set against the iOS ones. A typo here
     /// is invisible at runtime — the store just reads the default forever.
     func testKeyNames_matchTheIosSpellings() {
@@ -82,61 +64,42 @@ final class DictionarySourceSettingsTests: XCTestCase {
     }
 
     func testFreshInstall_readsTheIosDefaultSourceSet() {
-        let sources = makeStore().current.dictionarySources
+        typealias Keys = SettingsStore.Keys
+        let on = [
+            Keys.isKautianEnabled, Keys.isTaigitvEnabled, Keys.isKunggeEnabled, Keys.isSttiEnabled,
+            Keys.isKhpooEnabled, Keys.isLkkEnabled, Keys.isDevEnabled,
+        ]
+        let off = [
+            Keys.isItaigiEnabled, Keys.isSitbutEnabled, Keys.isTaihoaEnabled, Keys.isTaijitEnabled,
+            Keys.isVariantEnabled, Keys.isKhiinEnabled,
+        ]
 
-        XCTAssertTrue(sources.kautian)
-        XCTAssertTrue(sources.taigitv)
-        XCTAssertTrue(sources.kungge)
-        XCTAssertTrue(sources.stti)
-        XCTAssertTrue(sources.khpoo)
-        XCTAssertTrue(sources.lkk)
-        XCTAssertTrue(sources.dev)
-        XCTAssertFalse(sources.itaigi)
-        XCTAssertFalse(sources.sitbut)
-        XCTAssertFalse(sources.taihoa)
-        XCTAssertFalse(sources.taijit)
-        XCTAssertFalse(sources.variant)
-        XCTAssertFalse(sources.khiin)
+        for key in on {
+            XCTAssertTrue(key.defaultValue, key.name)
+        }
+        for key in off {
+            XCTAssertFalse(key.defaultValue, key.name)
+        }
     }
 
     /// Every subcollection ships on: accents are opt-out, not opt-in.
     func testFreshInstall_hasEveryKautianSubcollectionOn() {
-        let subcollections = makeStore().current.dictionarySources.kautianSubcollections
+        typealias Keys = SettingsStore.Keys
+        let subcollections = [
+            Keys.isKautianAccentLukangEnabled, Keys.isKautianAccentSansiaEnabled,
+            Keys.isKautianAccentTaipakEnabled, Keys.isKautianAccentGilanEnabled,
+            Keys.isKautianAccentTainanEnabled, Keys.isKautianAccentKaohsiungEnabled,
+            Keys.isKautianAccentKinmenEnabled, Keys.isKautianAccentMakungEnabled,
+            Keys.isKautianAccentSintikEnabled, Keys.isKautianAccentTaichungEnabled,
+            Keys.isKautianNameAppendixEnabled,
+        ]
 
-        XCTAssertEqual(subcollections, .defaults)
-        XCTAssertTrue(subcollections.accentLukang)
-        XCTAssertTrue(subcollections.nameAppendix)
+        for key in subcollections {
+            XCTAssertTrue(key.defaultValue, key.name)
+        }
     }
 
     func testFreshInstall_hasTheCustomDictionaryOn() {
-        XCTAssertTrue(makeStore().current.isCustomDictEnabled)
-    }
-
-    /// A default-on toggle switched off has to read as off. `UserDefaults`
-    /// answers `false` for a key nobody wrote, so a store reading through
-    /// `bool(forKey:)` could not tell "off" from "untouched".
-    func testStoredOverrides_areRead() {
-        userDefaults.set(false, forKey: SettingsStore.Keys.isKautianEnabled.name)
-        userDefaults.set(true, forKey: SettingsStore.Keys.isKhiinEnabled.name)
-        userDefaults.set(false, forKey: SettingsStore.Keys.isKautianAccentGilanEnabled.name)
-        userDefaults.set(false, forKey: SettingsStore.Keys.isCustomDictEnabled.name)
-
-        let settings = makeStore().current
-
-        XCTAssertFalse(settings.dictionarySources.kautian)
-        XCTAssertTrue(settings.dictionarySources.khiin)
-        XCTAssertFalse(settings.dictionarySources.kautianSubcollections.accentGilan)
-        XCTAssertFalse(settings.isCustomDictEnabled)
-    }
-
-    /// The store caches nothing: a toggle changed from the settings window (or
-    /// `defaults write`) has to reach the very next keystroke.
-    func testAToggleWrittenElsewhere_isSeenByTheNextRead() {
-        let store = makeStore()
-        XCTAssertTrue(store.current.dictionarySources.stti)
-
-        userDefaults.set(false, forKey: SettingsStore.Keys.isSttiEnabled.name)
-
-        XCTAssertFalse(store.current.dictionarySources.stti)
+        XCTAssertTrue(SettingsStore.Keys.isCustomDictEnabled.defaultValue)
     }
 }
