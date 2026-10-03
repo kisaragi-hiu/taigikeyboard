@@ -1,6 +1,6 @@
 # Learning Records page — roadmap
 
-> **Status**: in progress — P0 merged `5bab5b9b`; P1 merged #366 `1716751a`; P2 merged #369 `21f1270a`; P3–P6 in progress. Requested by the maintainer 2026-10-03: "a page where users can view and edit learning records and ranking scores, for mobile and desktop".
+> **Status**: complete — P0 merged `5bab5b9b`; P1 merged #366 `1716751a`; P2 merged #369 `21f1270a`; P3 + P4 merged #370 `7aacb3e2`; P5 + P6 merged #371 `102c6aa8` (2026-10-03). Device dogfood pending. Requested by the maintainer 2026-10-03: "a page where users can view and edit learning records and ranking scores, for mobile and desktop".
 
 A settings page, on all five platforms, that lists what the keyboard has learned from the user, lets them correct one row's count and delete one row. Today the only control is "Delete Learning Records", which empties every learning store at once.
 
@@ -28,11 +28,11 @@ One page, **Learning Records**, with a kind switch:
 |---|---|---|---|
 | Word frequency (the ranking score) | Hanji / word, TL reading, count, last used | count; delete row | all five |
 | Learned phrases | Hanji, TL reading, count | count; delete row | all five |
-| Next-word association | previous word → next word, count | count; delete row | iOS, Android (the desktop predicts no next word, so the rows rank nothing there) |
 
-- **The count is what the user edits.** The engine's boost / decay maths stays where it is. For word frequency only, the edit dialog says that counts above 40 rank the same; the other two kinds make no such promise.
+- **The count is what the user edits.** The engine's boost / decay maths stays where it is. For word frequency only, the edit dialog says that counts above 40 rank the same; learned phrases make no such promise.
 - **Search** filters by Hanji or romanization substring, in SQL, like the Custom Dictionary filter.
 - **Order**: most used first (default) or most recent first — "the word I just picked by mistake" is the row a user comes to delete.
+- **No next-word association.** Planned for mobile, dropped at dogfood (maintainer 2026-10-03: "word-association records are not needed"); the engine kind stays, no page lists it.
 - **No add.** A word the user wants is a custom word; this page corrects what was learned.
 - **"Delete Learning Records" stays where it is** on the Custom Dictionary page. Moving it is a separate decision.
 
@@ -73,8 +73,8 @@ message DeleteLearningRecord { record }                              → Learnin
 
 | Platform | Entry | Page |
 |---|---|---|
-| iOS | Dictionary tab → "Data management", under Custom Dictionary (`DictionaryTab.swift:80-90`) | `LearningRecordsView` + view model over `UserDataClient`; segmented kind picker, list, bottom `SearchBar`, swipe delete, alert edit — the Custom Dictionary idiom, but engine-paged (100 rows, load more at the end) with the filter sent to the engine |
-| Android | Dictionary settings → "Data management" (`DictionarySettingsScreen.kt:137-141`) | `LearningRecordsActivity` / `Screen` / `ViewModel`; `SettingsCard` rows, `FilterSearchBar`, dialog edit; same engine paging as iOS |
+| iOS | Dictionary tab → "Data management": two rows, Word Frequency and Phrases, after Custom Dictionary (maintainer dogfood 2026-10-03: one item per kind, no kind picker) | `LearningRecordsView(kind:)` + view model over `UserDataClient`; order menu row, list, bottom `SearchBar`, swipe delete, alert edit — the Custom Dictionary idiom, but engine-paged (100 rows, load more at the end; re-reads in ≤100-row chunks) with the filter sent to the engine |
+| Android | Dictionary settings → "Data management": the same two rows | `LearningRecordsActivity` (kind as intent extra) / `Screen` / `ViewModel`; order card, `FilterSearchBar`, dialog edit; same engine paging as iOS |
 | macOS | sidebar pane after Custom Dictionary (`SettingsSplitView.swift:13`) | `LearningRecordsPage` on `UserDataPageChrome` (`UserDataFilterField`, `Table`, `UserDataListPager`) |
 | Windows / Linux | sidebar pane after Custom Dictionary (`settings/choices.rs:316`) | shared model `desktop-core/src/settings/learning_records.rs` (reusing the `Listing` paging / settle logic) + one page file per toolkit |
 
@@ -93,7 +93,7 @@ That track completed 2026-10-03 (P15 merged #365); P1 was rebased onto it. This 
 
 ### Strings
 
-16 keys in `i18n/dictionary.json` (`learningRecords*`, `learningRecordGone`); `learningRecordsAssociation` is iOS / Android only. Taigi TL / POJ verified with `taigi-converter` (phonetics-specialist, 2026-10-03). Reused: `searchPlaceholder`, `romanLabel`, `hanziLabel`, `noResults`, `common.delete` / `save` / `cancel`, `desktop.entriesSection`.
+`learningRecords*` + `learningRecordGone` keys in `i18n/dictionary.json`; `learningRecordsAssociation` and `learningRecordsInfo` were deleted at dogfood (#371, #370). Taigi TL / POJ verified with `taigi-converter` (phonetics-specialist, 2026-10-03). Reused: `searchPlaceholder`, `romanLabel`, `hanziLabel`, `noResults`, `common.delete` / `save` / `cancel`, `desktop.entriesSection`.
 
 ## Phases
 
@@ -102,10 +102,10 @@ That track completed 2026-10-03 (P15 merged #365); P1 was rebased onto it. This 
 | P0 | this roadmap | Done |
 | P1 | engine: proto + store methods + `learning_records.rs` + routing; store tests (id reuse, two connections, phrase keys, paging, NULL TL) + dispatch tests; regenerated Android Java / iOS Swift / macOS Swift protos in the same PR | Merged #366 `1716751a` |
 | P2 | i18n keys with every generated output (incl. `ios/Localizable.xcstrings`) + `desktop-core` page model (+ shared `Listing`) + Linux page; gate = every platform in the keys' scope | Merged #369 `21f1270a` |
-| P3 | Windows page + `SettingsPane::SIDEBAR` entry | Pending |
-| P4 | macOS page | Pending |
-| P5 | iOS page | Pending |
-| P6 | Android page | Pending |
+| P3 | Windows page + `SettingsPane::SIDEBAR` entry | Merged #370 `7aacb3e2` |
+| P4 | macOS page | Merged #370 `7aacb3e2` |
+| P5 | iOS page | Merged #371 `102c6aa8` |
+| P6 | Android page | Merged #371 `102c6aa8` |
 
 ## Best practices alignment
 
