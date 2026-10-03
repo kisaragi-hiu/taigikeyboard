@@ -57,9 +57,8 @@ struct LearningRecordsView: View {
                 // Record list
                 Section {
                     if viewModel.records.isEmpty {
-                        if viewModel.lastLoadFailed {
-                            Text(lang.string(.dictionaryLearningRecordsReadFailed))
-                                .foregroundColor(.secondary)
+                        if viewModel.failedRead != nil {
+                            retryRow
                         } else if filterText.isEmpty {
                             DictionaryEmptyState(message: lang.string(.dictionaryLearningRecordsEmpty))
                         } else {
@@ -70,7 +69,9 @@ struct LearningRecordsView: View {
                         ForEach(viewModel.records, id: \.id) { record in
                             recordRow(record)
                         }
-                        if viewModel.hasMoreRows {
+                        if viewModel.failedRead != nil {
+                            retryRow
+                        } else if viewModel.hasMoreRows {
                             nextPageRow
                         }
                     }
@@ -140,25 +141,26 @@ struct LearningRecordsView: View {
     // MARK: - Rows
 
     /// The list end: shown, it asks for the next page — again after every
-    /// load that lands (`pagingKey`). After a failed read it waits for a tap.
-    @ViewBuilder
+    /// load that lands (`pagingKey`).
     private var nextPageRow: some View {
-        if viewModel.nextPageFailed {
-            Button {
-                Task { await viewModel.loadNextPage() }
-            } label: {
-                HStack {
-                    Image(latinSystemName: "arrow.clockwise")
-                    Text(lang.string(.dictionaryLearningRecordsReadFailed))
-                }
-                .foregroundColor(.secondary)
+        ProgressView()
+            .frame(maxWidth: .infinity)
+            .task(id: viewModel.pagingKey) {
+                await viewModel.loadNextPage()
             }
-        } else {
-            ProgressView()
-                .frame(maxWidth: .infinity)
-                .task(id: viewModel.pagingKey) {
-                    await viewModel.loadNextPage()
-                }
+    }
+
+    /// A read failed: nothing is asked again until this is tapped, and the
+    /// tap repeats that read.
+    private var retryRow: some View {
+        Button {
+            Task { await viewModel.retry() }
+        } label: {
+            HStack {
+                Image(latinSystemName: "arrow.clockwise")
+                Text(lang.string(.dictionaryLearningRecordsReadFailed))
+            }
+            .foregroundColor(.secondary)
         }
     }
 

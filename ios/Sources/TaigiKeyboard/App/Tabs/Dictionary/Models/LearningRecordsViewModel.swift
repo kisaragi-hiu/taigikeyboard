@@ -23,12 +23,9 @@ final class LearningRecordsViewModel: ObservableObject {
     @Published private(set) var records: [Taigi_Engine_LearningRecord] = []
     /// Only until the first answer: later loads leave the rows on screen.
     @Published private(set) var isLoading = true
-    /// The latest load of what is asked now failed. With no rows listed the
+    /// The read that failed and waits for `retry()`. With no rows listed the
     /// page says "could not read", never "nothing learned yet".
-    @Published private(set) var lastLoadFailed = false
-    /// The last next-page read failed; the list end offers a retry
-    /// instead of asking again on its own.
-    @Published private(set) var nextPageFailed = false
+    @Published private(set) var failedRead: LearningRecordsRead?
     @Published var notice: LearningRecordsNotice?
     /// The rows the current filter matches — what paging runs up to.
     @Published private(set) var matchingTotal = 0
@@ -55,11 +52,25 @@ final class LearningRecordsViewModel: ObservableObject {
         self.filterSettle = filterSettle
     }
 
-    /// The first appearance lists from the top; a later one (back from
-    /// another tab) keeps the rows and the place in the list.
+    /// The first appearance lists the first page; a later one (back from
+    /// another tab, where the keyboard may have learned more) reads the
+    /// listed rows again, keeping the place in the list.
     func load() async {
-        guard listedGeneration < 0 else { return }
-        await reload().value
+        guard listedGeneration >= 0 else {
+            await reload().value
+            return
+        }
+        await reloadInPlace()
+    }
+
+    /// Repeats the read that failed: the next page, or the listed rows from
+    /// the first (the first page when none is listed).
+    func retry() async {
+        switch failedRead {
+        case .nextPage: await loadNextPage()
+        case .list: await reloadInPlace()
+        case nil: return
+        }
     }
 
     @discardableResult
@@ -111,7 +122,6 @@ final class LearningRecordsViewModel: ObservableObject {
               !isLoadingNextPage
         else { return }
         isLoadingNextPage = true
-        nextPageFailed = false
         let generation = generation
         let offset = UInt32(clamping: records.count)
         do {
@@ -134,10 +144,11 @@ final class LearningRecordsViewModel: ObservableObject {
             let listed = Set(records.map(\.id))
             records += page.records.filter { !listed.contains($0.id) }
             matchingTotal = Int(page.matchingTotal)
+            failedRead = nil
         } catch {
             guard generation == self.generation else { return }
             isLoadingNextPage = false
-            nextPageFailed = true
+            failedRead = .nextPage
             notice = .readFailed(detail: error.localizedDescription)
         }
     }
@@ -189,40 +200,43 @@ final class LearningRecordsViewModel: ObservableObject {
         // A kind or order change, or a write, overtakes a filter still settling.
         settleTask?.cancel()
         isLoadingNextPage = false
-        nextPageFailed = false
         let (kind, order, filter) = (kind, order, filter)
         return Task {
             do {
                 var rows: [Taigi_Engine_LearningRecord] = []
-                var listed = Set<Int64>()
-                var read = 0
                 var matching = 0
-                repeat {
-                    let offset = UInt32(clamping: read)
+                while true {
+                    let offset = rows.count
                     let page = try await userData.listLearningRecords(
                         kind: kind,
                         order: order,
                         filter: filter,
-                        limit: UInt32(clamping: min(Int(Self.pageSize), rowCount - read)),
-                        offset: offset,
+                        limit: UInt32(clamping: min(Int(Self.pageSize), rowCount - offset)),
+                        offset: UInt32(clamping: offset),
                     )
                     guard generation == self.generation else { return }
                     matching = Int(page.matchingTotal)
-                    // Pulled back: the matches shrank under the re-read, and
-                    // what is read so far is all that lines up.
-                    guard page.offset == offset else { break }
-                    // A row the keyboard moved between pages is not listed twice.
-                    rows += page.records.filter { listed.insert($0.id).inserted }
-                    guard !page.records.isEmpty else { break }
-                    read += page.records.count
-                } while read < min(rowCount, matching)
-                records = rows
+                    // Served from an earlier offset (the matches shrank under
+                    // the re-read): it is the last page there is, and it
+                    // overrides the rows read from that offset on.
+                    let served = Int(page.offset)
+                    if served < offset {
+                        rows.removeSubrange(served...)
+                    }
+                    rows += page.records
+                    if served != offset || page.records.isEmpty || rows.count >= min(rowCount, matching) {
+                        break
+                    }
+                }
+                // A row the keyboard moved between pages is not listed twice.
+                var listed = Set<Int64>()
+                records = rows.filter { listed.insert($0.id).inserted }
                 matchingTotal = matching
                 listedGeneration = generation
-                lastLoadFailed = false
+                failedRead = nil
             } catch {
                 guard generation == self.generation else { return }
-                lastLoadFailed = true
+                failedRead = .list
                 // A write's own notice, still up, says more than its reload's.
                 if notice == nil {
                     notice = .readFailed(detail: error.localizedDescription)
@@ -231,6 +245,14 @@ final class LearningRecordsViewModel: ObservableObject {
             isLoading = false
         }
     }
+}
+
+/// A read `LearningRecordsViewModel.retry()` repeats.
+enum LearningRecordsRead {
+    /// The page after the listed rows.
+    case nextPage
+    /// The listed rows, from the first.
+    case list
 }
 
 /// What the page tells the user after a load or a write; the failures
