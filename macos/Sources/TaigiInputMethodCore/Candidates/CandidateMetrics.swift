@@ -93,7 +93,7 @@ struct CandidateMetrics: Equatable, Sendable {
     let candidateAnnotationGap: CGFloat
     /// The digit hint's own size. Text-anchored like the annotation, and half
     /// again upstream's 8pt at the reference size: the digits are what a bare
-    /// `1`…`9` keypress now aims at (`ComposingKeyIntent`), so they have to be
+    /// `1`…`9` keypress now aims at (desktop-core's `keys/intent.rs`), so they have to be
     /// legible at a glance rather than merely present.
     let indexFontSize: CGFloat
     /// Air between the digit's slot and the candidate beside it.

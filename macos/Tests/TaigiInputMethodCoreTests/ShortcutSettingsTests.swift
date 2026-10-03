@@ -23,25 +23,10 @@ final class ShortcutSettingsTests: XCTestCase {
         super.tearDown()
     }
 
-    /// The settings keys the rows write. Renaming an action's raw value would
-    /// silently drop every chord recorded under the old spelling.
-    func testActionRawValues_stayStable() {
-        XCTAssertEqual(
-            ComposingAction.allCases.map(\.rawValue),
-            [
-                "nextCandidate", "previousCandidate", "pageForward", "pageBackward",
-                "confirmHighlighted", "commitLiteral", "commitAlternateScript",
-            ],
-        )
-        XCTAssertEqual(
-            ComposingAction.nextCandidate.settingsKeyName,
-            "composingShortcut.nextCandidate",
-        )
-    }
-
     /// A row whose text is missing in one language reads as an identifier — or
     /// as nothing — for the users who chose that language.
-    func testEveryPaneString_resolvesInEveryDisplayLanguage() {
+    func testEveryPaneString_resolvesInEveryDisplayLanguage() throws {
+        let rows = try TestFixtures.composingShortcuts().rows
         for language in DisplayLanguage.selectableLanguages where language != .system {
             let store = TestFixtures.makeDisplayLanguageStore(language, userDefaults: userDefaults)
             for key in Self.paneStrings {
@@ -49,10 +34,10 @@ final class ShortcutSettingsTests: XCTestCase {
                 XCTAssertFalse(text.isEmpty, "\(key) has nothing to show in \(language)")
                 XCTAssertNotEqual(text, key.rawValue, "\(key) fell back to its own identifier in \(language)")
             }
-            for action in ComposingAction.allCases {
+            for row in rows {
                 XCTAssertFalse(
-                    action.label(store).isEmpty,
-                    "\(action) has no row label in \(language)",
+                    store.string(row.label).isEmpty,
+                    "\(row.name) has no row label in \(language)",
                 )
             }
         }
@@ -60,40 +45,11 @@ final class ShortcutSettingsTests: XCTestCase {
 
     /// Two rows reading alike would leave the user guessing which key they are
     /// about to rebind.
-    func testActionLabels_readDistinctly() {
+    func testActionLabels_readDistinctly() throws {
         let store = TestFixtures.makeDisplayLanguageStore(.hanji, userDefaults: userDefaults)
-        let labels = ComposingAction.allCases.map { $0.label(store) }
+        let labels = try TestFixtures.composingShortcuts().rows.map { store.string($0.label) }
 
         XCTAssertEqual(Set(labels).count, labels.count, "two rows read the same: \(labels)")
-    }
-
-    /// What the recorder button shows. Keycap legends rather than translations:
-    /// these are the names printed on the keyboard.
-    func testRecordedChords_readAsKeycapLegends() throws {
-        let cases: [(String, NSEvent.ModifierFlags, String)] = [
-            (" ", [], "Space"),
-            ("\r", [], "↩"),
-            ("\r", .shift, "⇧↩"),
-            ("]", [], "]"),
-            ("j", [.control, .option], "⌃⌥J"),
-            // A bare key shows the character it types (USER 2026-08-22: an
-            // uppercase letter on a modifier-less row would read as ⇧Z); a
-            // chorded letter prints as the keycap.
-            ("`", [], "`"),
-            ("Z", [.shift, .control], "⌃⇧Z"),
-        ]
-
-        for (key, modifiers, expected) in cases {
-            let chord = try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
-            XCTAssertEqual(ShortcutKeyDisplay.text(for: chord), expected)
-        }
-    }
-
-    /// The read-only caret row is drawn from the classifier's own modifier
-    /// through the recorder rows' renderer — the row cannot say ⌥ while the
-    /// key reads something else (USER 2026-09-09: shown, not recordable).
-    func testCaretChordsLabel_drawsTheOptionArrows() {
-        XCTAssertEqual(ShortcutSettingsView.caretChordsLabel, "⌥←  ⌥→")
     }
 
     /// Every row comes back, whatever state the domain was left in: a chord the
@@ -102,27 +58,31 @@ final class ShortcutSettingsTests: XCTestCase {
     /// than its default.
     func testResetComposingShortcuts_returnsEveryRowToItsDefault() throws {
         let store = SettingsStore(userDefaults: userDefaults)
-        try store.setComposingChord(TestFixtures.chordNoDefaultHolds(), for: .nextCandidate)
-        store.setComposingChord(nil, for: .pageBackward)
-        userDefaults.set("not a chord", forKey: ComposingAction.pageForward.settingsKeyName)
+        let shortcuts = try TestFixtures.composingShortcuts(in: store)
+        try store.setComposingChord(
+            TestFixtures.chordNoDefaultHolds(), for: TestFixtures.row("nextCandidate", in: shortcuts),
+        )
+        try store.setComposingChord(nil, for: TestFixtures.row("pageBackward", in: shortcuts))
+        userDefaults.set("not a chord", forKey: "composingShortcut.pageForward")
 
-        store.resetComposingShortcuts()
+        store.resetComposingShortcuts(shortcuts)
 
-        let bindings = store.composingKeyBindings
-        for action in ComposingAction.allCases {
-            XCTAssertEqual(bindings.chord(for: action), action.defaultChord, "\(action) did not come back")
+        let rows = try TestFixtures.composingShortcuts(in: store).rows
+        XCTAssertEqual(rows.count, 7)
+        for row in rows {
+            XCTAssertEqual(row.chord, row.defaultChord, "\(row.name) did not come back")
         }
     }
 
     /// The tone scheme is the General pane's, not this pane's: the shortcut
     /// reset leaves it where the user put it.
-    func testResetComposingShortcuts_leavesTheToneSchemeAlone() {
+    func testResetComposingShortcuts_leavesTheToneSchemeAlone() throws {
         let store = SettingsStore(userDefaults: userDefaults)
         userDefaults.set(ToneInputScheme.telex.rawValue, forKey: SettingsStore.Keys.toneInputScheme.name)
 
-        store.resetComposingShortcuts()
+        try store.resetComposingShortcuts(TestFixtures.composingShortcuts(in: store))
 
-        XCTAssertEqual(store.composingKeyBindings.toneScheme, .telex)
+        XCTAssertEqual(store.toneInputScheme, .telex)
     }
 
     /// Removed, not written over: a stored default would be indistinguishable
@@ -130,16 +90,17 @@ final class ShortcutSettingsTests: XCTestCase {
     /// an install a later version means to move.
     func testResetComposingShortcuts_leavesNothingStored() throws {
         let store = SettingsStore(userDefaults: userDefaults)
-        try store.setComposingChord(TestFixtures.chordNoDefaultHolds(), for: .nextCandidate)
-        store.setComposingChord(nil, for: .pageBackward)
+        let shortcuts = try TestFixtures.composingShortcuts(in: store)
+        try store.setComposingChord(
+            TestFixtures.chordNoDefaultHolds(), for: TestFixtures.row("nextCandidate", in: shortcuts),
+        )
+        try store.setComposingChord(nil, for: TestFixtures.row("pageBackward", in: shortcuts))
 
-        store.resetComposingShortcuts()
+        store.resetComposingShortcuts(shortcuts)
 
-        for action in ComposingAction.allCases {
-            XCTAssertNil(
-                userDefaults.object(forKey: action.settingsKeyName),
-                "\(action) still has a stored value",
-            )
+        XCTAssertEqual(shortcuts.rows.count, 7)
+        for row in shortcuts.rows {
+            XCTAssertNil(userDefaults.object(forKey: row.settingsKey), "\(row.name) still has a stored value")
         }
     }
 

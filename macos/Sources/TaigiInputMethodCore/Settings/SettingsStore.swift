@@ -314,29 +314,31 @@ final class SettingsStore: @unchecked Sendable {
 
         /// Which keys type a tone, and so which keys pick a candidate
         /// (`ToneInputScheme`). macOS-only: the phone keyboards have a tone
-        /// row of their own and no slot keys, so the default is owned by
-        /// `ComposingKeyBindings` rather than by the shared
-        /// `EngineSettings.defaults`.
+        /// row of their own and no slot keys, so the default is desktop-core's
+        /// (`keys::TONE_INPUT_SCHEME`, held equal by `DesktopCoreRuntimeTests`)
+        /// rather than the shared `EngineSettings.defaults`.
         static let toneInputScheme = SettingsKey(
             name: "toneInputScheme",
-            defaultValue: ComposingKeyBindings.default.toneScheme,
+            defaultValue: ToneInputScheme.standard,
         )
 
         /// Whether the candidate window is shown at all. Off means no fetch
         /// and no window — the user types romanization and Space / Return
         /// write it as typed (USER 2026-09-08: "for users who just want to type"). macOS-only
         /// like `toneInputScheme`: a phone keyboard's candidate bar is the
-        /// keyboard, so the default is owned by `ComposingKeyBindings`
-        /// rather than by the shared `EngineSettings.defaults`.
+        /// keyboard, so the default is desktop-core's
+        /// (`keys::IS_CANDIDATE_WINDOW_ENABLED`) rather than the shared
+        /// `EngineSettings.defaults`.
         static let isCandidateWindowEnabled = SettingsKey(
             name: "candidateWindowEnabled",
-            defaultValue: ComposingKeyBindings.default.isCandidateWindowEnabled,
+            defaultValue: true,
         )
 
-        /// The per-action composing chords are keyed by
-        /// `ComposingAction.settingsKeyName` rather than named here one by one:
-        /// the roster is the source of truth for which of them exist, and a
-        /// second list would be one an action could be added to only one of.
+        /// The per-action composing chords are keyed by the name desktop-core
+        /// gives each row (`ComposingShortcuts.Row.settingsKey`) rather than
+        /// named here one by one: the core's roster is the source of truth for
+        /// which of them exist, and a second list would be one an action could
+        /// be added to only one of.
         ///
         /// An absent key means "never touched" and reads as the action's
         /// default; a stored empty string means the user cleared the row, which
@@ -432,27 +434,9 @@ final class SettingsStore: @unchecked Sendable {
         )
     }
 
-    /// The user's composing key contract, as one snapshot.
-    ///
-    /// Assembled here rather than read piecemeal inside the classifier: one
-    /// keystroke is classified against one assembled value, so nothing goes
-    /// back to `UserDefaults` part-way through deciding what a key meant.
-    var composingKeyBindings: ComposingKeyBindings {
-        var chords: [ComposingAction: ComposingKeyChord?] = [:]
-        for action in ComposingAction.allCases {
-            guard let stored = userDefaults.string(forKey: action.settingsKeyName) else { continue }
-            // A chord the current build cannot parse — a hand-edited value, or
-            // one a later version wrote — reads as an empty row rather than as
-            // "never touched": silently restoring the default would undo a
-            // deliberate clearing, and the resolver puts back anything that
-            // must stay reachable.
-            chords[action] = ComposingKeyChord(rawValue: stored)
-        }
-        return ComposingKeyBindings(
-            chords: chords,
-            toneScheme: choice(Keys.toneInputScheme),
-            isCandidateWindowEnabled: bool(Keys.isCandidateWindowEnabled),
-        )
+    /// Which keys type a tone, and so which keys pick a candidate.
+    var toneInputScheme: ToneInputScheme {
+        choice(Keys.toneInputScheme)
     }
 
     /// Whether the candidate window is shown at all. Read by the controller's
@@ -475,11 +459,11 @@ final class SettingsStore: @unchecked Sendable {
         userDefaults.set(after.symbols, forKey: Keys.recentSymbols.name)
     }
 
-    /// Records `chord` on `action`, or clears the row when it is nil.
-    func setComposingChord(_ chord: ComposingKeyChord?, for action: ComposingAction) {
+    /// Records `chord` on `row`, or clears the row when it is nil.
+    func setComposingChord(_ chord: ComposingKeyChord?, for row: ComposingShortcuts.Row) {
         userDefaults.set(
             chord?.rawValue ?? Keys.clearedComposingChord,
-            forKey: action.settingsKeyName,
+            forKey: row.settingsKey,
         )
     }
 
@@ -491,9 +475,9 @@ final class SettingsStore: @unchecked Sendable {
     /// pin this version's default onto an install that a later version means to
     /// move. The global half of the pane is `KeyboardShortcuts`' own registry and
     /// is restored by its `reset`, which writes each name's initial shortcut back.
-    func resetComposingShortcuts() {
-        for action in ComposingAction.allCases {
-            userDefaults.removeObject(forKey: action.settingsKeyName)
+    func resetComposingShortcuts(_ shortcuts: ComposingShortcuts) {
+        for row in shortcuts.rows {
+            userDefaults.removeObject(forKey: row.settingsKey)
         }
     }
 

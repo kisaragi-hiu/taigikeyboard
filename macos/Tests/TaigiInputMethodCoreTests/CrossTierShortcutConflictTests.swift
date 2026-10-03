@@ -20,11 +20,32 @@ final class CrossTierShortcutConflictTests: XCTestCase {
     }
 
     private func chord(_ key: String, _ modifiers: NSEvent.ModifierFlags = []) throws -> ComposingKeyChord {
-        try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
+        try TestFixtures.chord(key, modifiers)
     }
 
-    /// The keys `ComposingKeyChord.neverBindable` refuses whatever modifiers
-    /// are held, so the bridge must answer nil for them.
+    /// The composing rows `store` holds, as the core resolves them.
+    private func shortcuts(in store: SettingsStore) throws -> ComposingShortcuts {
+        try TestFixtures.composingShortcuts(in: store)
+    }
+
+    /// The chord on the row named `name` in `store`.
+    private func chord(onRow name: String, in store: SettingsStore) throws -> ComposingKeyChord? {
+        try TestFixtures.row(name, in: shortcuts(in: store)).chord
+    }
+
+    /// Records `chord` on the row named `name` in `store`.
+    private func record(_ chord: ComposingKeyChord?, onRow name: String, in store: SettingsStore) throws {
+        try store.setComposingChord(chord, for: TestFixtures.row(name, in: shortcuts(in: store)))
+    }
+
+    /// The scalars of a chord's key, read off its stored form.
+    private func keyScalars(_ chord: ComposingKeyChord?) throws -> [UnicodeScalar] {
+        let fields = try XCTUnwrap(chord?.rawValue.split(separator: "|", omittingEmptySubsequences: false).last)
+        return try fields.split(separator: ",").map { try XCTUnwrap(UInt32($0, radix: 16).flatMap(UnicodeScalar.init)) }
+    }
+
+    /// The keys the core's Mac grammar refuses whatever modifiers are held,
+    /// so the bridge must answer nil for them.
     private static let reservedKeys: Set<KeyboardShortcuts.Key> = [
         .escape, .delete, .deleteForward, .pageUp, .pageDown,
         .leftArrow, .rightArrow, .upArrow, .downArrow,
@@ -49,8 +70,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
             occupiedBy: KeyboardShortcuts.Shortcut(.r, modifiers: [.control, .command]),
         ))
 
-        XCTAssertEqual(chord.key, "r", "the key is the character it types unmodified")
-        XCTAssertEqual(chord.modifiers, [.control, .command])
+        XCTAssertEqual(chord.rawValue, "dc|0072", "the key is the character it types unmodified")
     }
 
     func testTheNamedKeys_bridgeToTheCharactersTheComposingTierStores() throws {
@@ -59,16 +79,17 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         let returnChord = try XCTUnwrap(ShortcutConflicts.composingChord(
             occupiedBy: KeyboardShortcuts.Shortcut(.return, modifiers: [.shift]),
         ))
+        let rows = try shortcuts(in: makeScratchSettingsStore())
         XCTAssertEqual(
             returnChord,
-            ComposingAction.commitLiteral.defaultChord,
+            try TestFixtures.row("commitLiteral", in: rows).defaultChord,
             "⇧↩ commits what was typed",
         )
 
         let tabChord = try XCTUnwrap(ShortcutConflicts.composingChord(
             occupiedBy: KeyboardShortcuts.Shortcut(.tab, modifiers: [.shift]),
         ))
-        XCTAssertEqual(tabChord, ComposingAction.previousCandidate.defaultChord, "⇧⇥ walks back")
+        XCTAssertEqual(tabChord, try TestFixtures.row("previousCandidate", in: rows).defaultChord, "⇧⇥ walks back")
     }
 
     func testTheBacktick_bridges() throws {
@@ -78,8 +99,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
             occupiedBy: KeyboardShortcuts.Shortcut(.backtick),
         ))
 
-        XCTAssertEqual(chord.key, "`")
-        XCTAssertEqual(chord.modifiers, [])
+        XCTAssertEqual(chord.rawValue, "|0060")
     }
 
     func testAKeypadDigit_bridgesToTheSameChordAsTheTopRow() throws {
@@ -89,8 +109,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
             occupiedBy: KeyboardShortcuts.Shortcut(.keypad3, modifiers: [.control]),
         ))
 
-        XCTAssertEqual(chord.key, "3")
-        XCTAssertEqual(chord.modifiers, .control)
+        XCTAssertEqual(chord.rawValue, "c|0033")
     }
 
     func testTheKeypadOperators_bridgeToWhatTheyType() throws {
@@ -106,7 +125,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
             let chord = ShortcutConflicts.composingChord(
                 occupiedBy: KeyboardShortcuts.Shortcut(key, modifiers: [.control]),
             )
-            XCTAssertEqual(chord?.key, character, "keypad \(character)")
+            XCTAssertEqual(try keyScalars(chord), Array(character.unicodeScalars), "keypad \(character)")
         }
     }
 
@@ -120,7 +139,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
                 occupiedBy: KeyboardShortcuts.Shortcut(key, modifiers: [.control]),
             )
             XCTAssertEqual(
-                chord?.key, try String(XCTUnwrap(UnicodeScalar(functionKey))),
+                try keyScalars(chord), try [XCTUnwrap(UnicodeScalar(functionKey))],
                 "the library reports a display glyph for this key",
             )
         }
@@ -143,7 +162,8 @@ final class CrossTierShortcutConflictTests: XCTestCase {
                 XCTAssertNil(chord, "a key no binding can hold must bridge to no conflict")
                 continue
             }
-            let scalar = try XCTUnwrap(chord?.key.unicodeScalars.first, "no bridge for a bindable key")
+            XCTAssertNotNil(chord, "no bridge for a bindable key")
+            let scalar = try XCTUnwrap(keyScalars(chord).first)
             XCTAssertFalse(
                 glyphs.contains(Character(scalar)),
                 "bridged to a display glyph rather than what the key types",
@@ -156,19 +176,19 @@ final class CrossTierShortcutConflictTests: XCTestCase {
             occupiedBy: KeyboardShortcuts.Shortcut(.r, modifiers: [.control, .capsLock, .function]),
         ))
 
-        XCTAssertEqual(chord.modifiers, [.control], "Caps Lock and the function flag are not chords")
+        XCTAssertEqual(chord.rawValue, "c|0072", "Caps Lock and the function flag are not chords")
     }
 
     func testAKeyNoBindingCanHold_bridgesToNoConflict() throws {
         // The invariant the bridge rests on: every chord a composing action
-        // can hold went through `make`, so a chord `make` refuses is one no
-        // binding holds — and answering nil is answering "nothing to clear".
+        // can hold went through the core's gate, so a chord it refuses is one
+        // no binding holds — and answering nil is answering "nothing to clear".
         XCTAssertNil(
             ShortcutConflicts.composingChord(occupiedBy: .init(.leftArrow, modifiers: [.command])),
             "an arrow is reserved whatever modifiers are held",
         )
         XCTAssertEqual(
-            ComposingKeyChord.make(key: "a", modifiers: []),
+            try XCTUnwrap(KeyRules.chord(key: "a", modifiers: [])),
             .failure(.typesRomanization),
             "and the gate that decides this is the recorder's own",
         )
@@ -176,19 +196,19 @@ final class CrossTierShortcutConflictTests: XCTestCase {
 
     // MARK: - The queries, both directions
 
-    func testAGlobalShortcut_isSeenByTheComposingRowHoldingItsChord() {
-        let holders = ShortcutConflicts.composingActionsHolding(
+    func testAGlobalShortcut_isSeenByTheComposingRowHoldingItsChord() throws {
+        let holders = try ShortcutConflicts.composingActionsHolding(
             KeyboardShortcuts.Shortcut(.rightBracket),
-            in: .default,
+            in: shortcuts(in: makeScratchSettingsStore()),
         )
 
-        XCTAssertEqual(holders, [.pageForward])
+        XCTAssertEqual(holders.map(\.name), ["pageForward"])
     }
 
-    func testAComposingChordNoGlobalShortcutHolds_findsNothing() {
-        let holders = ShortcutConflicts.composingActionsHolding(
+    func testAComposingChordNoGlobalShortcutHolds_findsNothing() throws {
+        let holders = try ShortcutConflicts.composingActionsHolding(
             KeyboardShortcuts.Shortcut(.f, modifiers: [.control, .command]),
-            in: .default,
+            in: shortcuts(in: makeScratchSettingsStore()),
         )
 
         XCTAssertEqual(holders, [])
@@ -220,7 +240,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
     // MARK: - Shipped defaults never collide
 
     func testEveryShippedDefault_holdsAChordNoOtherTierShipsWith() throws {
-        let composingDefaults = Set(ComposingAction.allCases.map(\.defaultChord))
+        let composingDefaults = try Set(shortcuts(in: makeScratchSettingsStore()).rows.map(\.defaultChord))
 
         for action in ShortcutAction.allCases {
             let shortcut = try XCTUnwrap(action.defaultShortcut, "\(action) ships unbound")
@@ -244,13 +264,13 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         // The upgrade case: a version gives a global action a default chord the
         // user had already recorded on a composing row. The recording wins.
         let chord = try chord("c", [.control, .command])
-        store.setComposingChord(chord, for: .pageForward)
+        try record(chord, onRow: "pageForward", in: store)
         recordGlobal(.init(.c, modifiers: [.control, .command]), for: .toggleRomanization)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
         XCTAssertNil(KeyboardShortcuts.getShortcut(for: .toggleRomanization), "the default gives way")
-        XCTAssertEqual(store.composingKeyBindings.chord(for: .pageForward), chord, "the recording stays")
+        XCTAssertEqual(try self.chord(onRow: "pageForward", in: store), chord, "the recording stays")
     }
 
     func testALaunchPass_clearsTheComposingDefaultShadowedByAGlobalRecording() throws {
@@ -261,7 +281,7 @@ final class CrossTierShortcutConflictTests: XCTestCase {
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
-        XCTAssertNil(store.composingKeyBindings.chord(for: .previousCandidate), "the default gives way")
+        XCTAssertNil(try chord(onRow: "previousCandidate", in: store), "the default gives way")
         XCTAssertEqual(
             KeyboardShortcuts.getShortcut(for: .toggleRomanization),
             .init(.tab, modifiers: [.shift]),
@@ -274,17 +294,17 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         // Neither stored value carries a timestamp, so the last writer is
         // unknowable. The global tier wins because it is the one that actually
         // dispatches — keeping the composing row would keep a dead key.
-        let chord = try TestFixtures.chordNoDefaultHolds(key: "f")
-        store.setComposingChord(chord, for: .pageForward)
-        recordGlobal(.init(.f, modifiers: chord.modifiers), for: .toggleRomanization)
+        let modifiers = try TestFixtures.modifiersNoDefaultHolds(key: "f")
+        try record(chord("f", modifiers), onRow: "pageForward", in: store)
+        recordGlobal(.init(.f, modifiers: modifiers), for: .toggleRomanization)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
         XCTAssertEqual(
             KeyboardShortcuts.getShortcut(for: .toggleRomanization),
-            .init(.f, modifiers: chord.modifiers),
+            .init(.f, modifiers: modifiers),
         )
-        XCTAssertNil(store.composingKeyBindings.chord(for: .pageForward))
+        XCTAssertNil(try chord(onRow: "pageForward", in: store))
     }
 
     func testALaunchPass_leavesAnUncollidingSetupAlone() throws {
@@ -295,11 +315,10 @@ final class CrossTierShortcutConflictTests: XCTestCase {
             KeyboardShortcuts.getShortcut(for: .toggleRomanization),
             ShortcutAction.toggleRomanization.defaultShortcut,
         )
-        for action in ComposingAction.allCases {
-            XCTAssertEqual(
-                store.composingKeyBindings.chord(for: action), action.defaultChord,
-                "\(action) lost its default",
-            )
+        let rows = try shortcuts(in: store).rows
+        XCTAssertEqual(rows.count, 7)
+        for row in rows {
+            XCTAssertEqual(row.chord, row.defaultChord, "\(row.name) lost its default")
         }
     }
 
@@ -328,21 +347,21 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         // The pass reads the bindings once and then writes through them, so a
         // second launch must find nothing left to do — otherwise the stale
         // snapshot would be eating a row per launch.
-        let chord = try TestFixtures.chordNoDefaultHolds(key: "f")
-        store.setComposingChord(chord, for: .pageForward)
-        recordGlobal(.init(.f, modifiers: chord.modifiers), for: .toggleRomanization)
+        let modifiers = try TestFixtures.modifiersNoDefaultHolds(key: "f")
+        try record(chord("f", modifiers), onRow: "pageForward", in: store)
+        recordGlobal(.init(.f, modifiers: modifiers), for: .toggleRomanization)
         ShortcutConflicts.resolveAcrossRegistries(in: store)
-        let afterFirst = ComposingAction.allCases.map { store.composingKeyBindings.chord(for: $0) }
+        let afterFirst = try shortcuts(in: store).rows
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
         XCTAssertEqual(
-            ComposingAction.allCases.map { store.composingKeyBindings.chord(for: $0) }, afterFirst,
+            try shortcuts(in: store).rows, afterFirst,
             "a second launch changed the composing rows again",
         )
         XCTAssertEqual(
             KeyboardShortcuts.getShortcut(for: .toggleRomanization),
-            .init(.f, modifiers: chord.modifiers),
+            .init(.f, modifiers: modifiers),
         )
     }
 
@@ -355,8 +374,8 @@ final class CrossTierShortcutConflictTests: XCTestCase {
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
-        XCTAssertNil(store.composingKeyBindings.chord(for: .previousCandidate), "⇧⇥ row not cleared")
-        XCTAssertNil(store.composingKeyBindings.chord(for: .pageForward), "] row not cleared")
+        XCTAssertNil(try chord(onRow: "previousCandidate", in: store), "⇧⇥ row not cleared")
+        XCTAssertNil(try chord(onRow: "pageForward", in: store), "] row not cleared")
     }
 
     // MARK: - Commit rows refill after being cleared
@@ -370,16 +389,16 @@ final class CrossTierShortcutConflictTests: XCTestCase {
         // (`RecorderCocoa.swift:403-408`) — so the collision is modelled here
         // on a chord a global shortcut CAN hold.
         let chord = try chord("r", [.control, .command])
-        store.setComposingChord(chord, for: .commitLiteral)
+        try record(chord, onRow: "commitLiteral", in: store)
         recordGlobal(.init(.r, modifiers: [.control, .command]), for: .openLastSettingsPane)
 
         ShortcutConflicts.resolveAcrossRegistries(in: store)
 
-        let restored = store.composingKeyBindings.chord(for: .commitLiteral)
+        let restored = try self.chord(onRow: "commitLiteral", in: store)
         XCTAssertNotNil(restored, "a commit row is refilled when its default is free")
         XCTAssertNotEqual(restored, chord, "and must not be handed the conflicting chord back")
         XCTAssertNotEqual(
-            restored, store.composingKeyBindings.chord(for: .confirmHighlighted),
+            restored, try self.chord(onRow: "confirmHighlighted", in: store),
             "the two commit rows still hold different keys",
         )
     }

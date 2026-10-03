@@ -99,10 +99,16 @@ final class DesktopCoreRuntime {
     ) -> Reply? {
         DesktopCoreBridge.roundtrip(
             request,
-            settings: Self.settingsSnapshot(settings, in: userDefaults),
+            settings: settingsSnapshot(in: userDefaults),
             op: op,
             expected: expected,
         )
+    }
+
+    /// The whitelisted settings as `userDefaults` holds them now — what a
+    /// request carries.
+    func settingsSnapshot(in userDefaults: UserDefaults) -> Taigi_DesktopShell_SettingsSnapshot {
+        Self.settingsSnapshot(settings, in: userDefaults)
     }
 
     /// The whitelisted settings `userDefaults` holds now; a setting it does

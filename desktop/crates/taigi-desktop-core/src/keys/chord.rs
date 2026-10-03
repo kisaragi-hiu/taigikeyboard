@@ -403,7 +403,7 @@ mod tests {
 
     #[test]
     fn typing_keys_cannot_be_recorded_bare() {
-        for platform in WINDOWS_AND_LINUX {
+        for platform in ALL_PLATFORMS {
             // trace: ComposingKeyBindingsTests.swift — every ASCII letter (both
             // schemes' keys), a capital, the digits, the hyphen and `;`.
             for key in ('a'..='z')
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn punctuation_can_be_recorded_bare_and_capitals_fold() {
-        for platform in WINDOWS_AND_LINUX {
+        for platform in ALL_PLATFORMS {
             for key in [",", ".", "'", "/", "[", "]", "`"] {
                 let chord = chord_on(key, KeyModifiers::NONE, platform);
                 assert_eq!(chord.key, key);
@@ -452,7 +452,7 @@ mod tests {
 
     #[test]
     fn bare_key_and_its_shifted_twin_do_not_cross_match() {
-        for platform in WINDOWS_AND_LINUX {
+        for platform in ALL_PLATFORMS {
             let bare = chord_on("[", KeyModifiers::NONE, platform);
             let shifted = chord_on("{", KeyModifiers::SHIFT, platform);
             let bare_event = KeyEventSnapshot::text("[", KeyModifiers::NONE);
@@ -466,7 +466,7 @@ mod tests {
 
     #[test]
     fn typing_keys_bind_with_a_host_modifier_but_not_shift_alone() {
-        for platform in WINDOWS_AND_LINUX {
+        for platform in ALL_PLATFORMS {
             for key in ["a", "v", "z", "3", ";"] {
                 for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT, KeyModifiers::WIN] {
                     assert!(
@@ -485,7 +485,7 @@ mod tests {
 
     #[test]
     fn reserved_keys_cannot_be_recorded_at_all() {
-        for platform in WINDOWS_AND_LINUX {
+        for platform in ALL_PLATFORMS {
             for key in ["\u{1B}", "\u{8}", "\u{7F}", "\u{F702}"] {
                 for modifiers in [
                     KeyModifiers::NONE,
@@ -594,7 +594,7 @@ mod tests {
 
     #[test]
     fn shifted_number_row_key_is_refused_from_an_event_and_from_the_raw_digit() {
-        for platform in WINDOWS_AND_LINUX {
+        for platform in ALL_PLATFORMS {
             // The key-code path: Shift+3 types `#`, so the characters alone would
             // slip past the digit rule — `make_from_event` reads the row.
             let shift_three =

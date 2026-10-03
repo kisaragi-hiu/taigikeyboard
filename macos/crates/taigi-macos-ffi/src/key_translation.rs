@@ -4,14 +4,14 @@
 //! without an event. The constants are AppKit's and Carbon's, checked with a
 //! `swift` probe against the macOS 27 SDK.
 
-use taigi_desktop_core::keys::{KeyEventSnapshot, KeyModifiers, NavigationKey};
+use taigi_desktop_core::keys::{KeyEventSnapshot, KeyModifiers, NavigationKey, RecordedPress};
 
 use crate::proto::KeyEvent;
 
 /// `NSEvent.ModifierFlags` bits, by role (`KeyModifiers`): ⌘ is the host
 /// chord the core calls `win`, ⌥ its `alt`. Caps Lock, the numeric pad,
 /// Help and Fn say how a key was reached, not which key it is, and are
-/// dropped — as `ComposingKeyIntent.swift` drops them.
+/// dropped — as `KeyEventSnapshot.chordingModifiers` drops them.
 pub(crate) const SHIFT: u64 = 1 << 17;
 pub(crate) const CONTROL: u64 = 1 << 18;
 pub(crate) const OPTION: u64 = 1 << 19;
@@ -50,7 +50,41 @@ pub(crate) fn snapshot(event: &KeyEvent) -> KeyEventSnapshot {
     }
 }
 
-fn modifiers(flags: u64) -> KeyModifiers {
+/// `kVK_Escape` — the Escape KEY, which the recorder leaves on whatever the
+/// layout types for it (`ShortcutKeyRecorder.swift` reads the key code).
+pub(crate) const ESCAPE_KEY_CODE: u32 = 0x35;
+
+/// `NSDeleteFunctionKey`, the forward Delete (⌦).
+const FORWARD_DELETE: u32 = 0xF728;
+
+/// The press a shortcut-recording field hands `evaluate_press`: what the
+/// key types with no modifier held, the chording modifiers and the core's
+/// key code. A repeat never gets here — Swift drops it first.
+///
+/// A bare forward Delete is read as Delete (`\u{7F}`), so the core blanks
+/// the field as the Swift recorder does for `.deleteForward`; with a
+/// modifier it stays `F728` and records (⌃⌦, ⇧⌦). Only here: on the key
+/// path ⌦ stays what it is — read as `\u{7F}` it would delete backward
+/// (roadmap D3).
+pub(crate) fn recorded_press(event: &KeyEvent) -> RecordedPress {
+    let modifiers = modifiers(event.modifier_flags);
+    let key = if modifiers.is_empty() && event.special_key == Some(FORWARD_DELETE) {
+        Some("\u{7F}".to_owned())
+    } else {
+        event
+            .characters_ignoring_modifiers
+            .clone()
+            .or_else(|| event.characters.clone())
+    };
+    RecordedPress {
+        key,
+        modifiers,
+        key_code: event.key_code.and_then(core_key_code),
+        is_repeat: false,
+    }
+}
+
+pub(crate) fn modifiers(flags: u64) -> KeyModifiers {
     KeyModifiers {
         shift: flags & SHIFT != 0,
         control: flags & CONTROL != 0,

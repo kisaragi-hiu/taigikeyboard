@@ -18,6 +18,7 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::runtime::{DesktopRuntime, RuntimeParts};
 
+use crate::key_rules;
 use crate::proto::{
     desktop_request, desktop_response, ConfigureReply, ConfigureRequest, LexiconStats,
     PrepareReply, SettingsSnapshot, VersionReply,
@@ -60,12 +61,16 @@ impl Shell {
     /// ignored — a token that does not own the engine changes nothing —
     /// leaves the previous snapshot in force. (One that panics leaves its
     /// own: Swift answers FAIL_INTERNAL with a `Cancel` that carries none,
-    /// so the `Cancel` runs under it.)
+    /// so the `Cancel` runs under it.) The key rules (`key_rules.rs`) read the
+    /// snapshot they carry and never put it in force.
     pub(crate) fn serve(
         &self,
         request: desktop_request::Request,
         snapshot: Option<&SettingsSnapshot>,
     ) -> Result<desktop_response::Reply, Refusal> {
+        if let Some(answer) = key_rules::answer(&request, snapshot) {
+            return answer;
+        }
         let mut session = self.lock_session();
         let previous = snapshot
             .map(|snapshot| settings::document_from(&snapshot.entries))
@@ -117,6 +122,11 @@ impl Shell {
             Request::Represent(represent) => session
                 .represent(self.runtime()?, &represent)
                 .map(Reply::Session),
+            // Answered by `key_rules::answer` before the session is locked.
+            Request::Press(_)
+            | Request::Chord(_)
+            | Request::ComposingShortcuts(_)
+            | Request::SymbolPickerKey(_) => Err(Refusal::Missing("a session request")),
         }
     }
 
@@ -290,6 +300,43 @@ mod tests {
             InputMode::DEFAULT,
             "a removed key reads as its default"
         );
+    }
+
+    /// The key rules (P14) are answered before Configure, under the snapshot
+    /// they carry, and leave the one the key path reads as it was — whether
+    /// they answer or refuse.
+    #[test]
+    fn the_key_rules_never_put_their_snapshot_in_force() {
+        use crate::proto::{ComposingShortcutsRequest, SymbolPickerKeyRequest};
+        use crate::test_support::key_event;
+        let shell = Shell::default();
+        shell
+            .serve(version(), Some(&snapshot(vec![text("inputMode", "poj")])))
+            .unwrap();
+        let tl = snapshot(vec![
+            text("inputMode", "tl"),
+            text("toneInputScheme", "telex"),
+        ]);
+        let Ok(desktop_response::Reply::ComposingShortcuts(reply)) = shell.serve(
+            desktop_request::Request::ComposingShortcuts(ComposingShortcutsRequest {}),
+            Some(&tl),
+        ) else {
+            panic!("the pane's rows, before Configure");
+        };
+        assert_eq!(
+            reply.slot_keys, "123456789",
+            "read under the snapshot it carried"
+        );
+        let refused = snapshot(vec![text("inputMode", "tl"), text("notASetting", "")]);
+        assert!(shell
+            .serve(
+                desktop_request::Request::SymbolPickerKey(SymbolPickerKeyRequest {
+                    event: Some(key_event("q", 0, None)),
+                }),
+                Some(&refused),
+            )
+            .is_err());
+        assert_eq!(input_mode(&shell), InputMode::Poj, "the key path's stays");
     }
 
     /// A refused snapshot stops the request before it runs: Configure with

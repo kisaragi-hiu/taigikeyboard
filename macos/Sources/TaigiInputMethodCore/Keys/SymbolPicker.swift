@@ -1,58 +1,26 @@
-// What a key means while the symbol picker is up. Pure, no IMK.
-
-import AppKit
+// What a key means while the symbol picker is up.
 
 /// The picker's reading of one key event, decided before any window is asked
-/// anything. Its own table rather than a branch of `ComposingKeyIntent`: that
-/// classifier is the contract of a COMPOSITION, and the picker runs with none
-/// — its keys pick from a list the engine never fetched.
+/// anything — by desktop-core (`keys/symbol_picker.rs`, through
+/// `KeyRules.symbolPickerIntent(for:in:)`), in the order the candidate bar
+/// reads keys: the fixed navigation keys, the slot keys of the live tone
+/// scheme, then whatever the user put on the paging and confirm rows. Its own
+/// reading rather than the composition's: the picker runs with no
+/// composition, and its keys pick from a list the engine never fetched.
 enum SymbolPickerIntent: Equatable, Sendable {
     /// Take the picker down and swallow the key. Escape.
     case close
     /// Move the selection the way the window's layout reads `direction`.
     case navigate(CandidateNavigation)
     /// Pick the cell the `slot`-th selection key addresses on the visible
-    /// page — the same keys that pick a candidate (`CandidateSlotKeySet`).
+    /// page — the same keys that pick a candidate.
     case pickSlot(Int)
-    /// Pick the highlighted cell.
+    /// Pick the highlighted cell: the confirm row, and the Hanji/romanization
+    /// row, which has no other script to write here.
     case confirm
     /// Take the picker down and let the key go on to do its job: the picker
     /// is a list to pick from, not a mode, so a letter typed over it starts
-    /// the composition it would have started anyway.
+    /// the composition it would have started anyway. The literal-commit row
+    /// too — there is no literal to write.
     case closeAndPassThrough
-
-    /// Classifies `key` for a picker that is on screen.
-    ///
-    /// Reads the same rules the candidate bar does, in the same order — the
-    /// fixed navigation keys, then the slot keys, then whatever the user put
-    /// on the paging and confirm rows (`ComposingKeyBindings`) — so a user who
-    /// moved paging to ⌥Return pages the picker with it too. Only the
-    /// bar-specific outcomes differ: there is no other script to commit, so
-    /// the Hanji/romanization key confirms like Return, and the literal-commit key has no
-    /// literal to write, so it falls through.
-    static func intent(for key: KeyEventSnapshot, bindings: ComposingKeyBindings) -> SymbolPickerIntent {
-        let modifiers = key.modifiers.intersection(.deviceIndependentFlagsMask)
-        let isPlainKey = modifiers.isDisjoint(with: ComposingKeyIntent.hostChords)
-
-        if ComposingKeyIntent.isPlainEscape(key) {
-            return .close
-        }
-        if isPlainKey, !modifiers.contains(.shift), let navigation = key.navigationKey {
-            return .navigate(CandidateNavigation(navigation))
-        }
-        if let slot = bindings.slotKeySet.slot(for: key) {
-            return .pickSlot(slot)
-        }
-        if let action = bindings.action(for: key) {
-            switch action {
-            case .nextCandidate: return .navigate(.nextCandidate)
-            case .previousCandidate: return .navigate(.previousCandidate)
-            case .pageForward: return .navigate(.pageDown)
-            case .pageBackward: return .navigate(.pageUp)
-            case .confirmHighlighted, .commitAlternateScript: return .confirm
-            case .commitLiteral: return .closeAndPassThrough
-            }
-        }
-        return .closeAndPassThrough
-    }
 }

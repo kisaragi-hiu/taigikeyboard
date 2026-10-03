@@ -1,5 +1,6 @@
 // The candidate slice end to end: keys in, bar content and document text out.
 
+import Carbon.HIToolbox
 import InputMethodKit
 @testable import TaigiInputMethodCore
 import XCTest
@@ -202,6 +203,13 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     /// without walking the highlight there first (USER 2026-09-10). Under
     /// Standard the letter's capital, under Telex the digit's key code —
     /// `⇧2` types `@` on a US layout.
+    /// Carbon's `1`…`9` key codes, in digit order (`6` and `9` sit out of
+    /// numeric order): the key the core reads a shifted digit off.
+    private static let numberRowKeyCodes: [UInt16] = [
+        kVK_ANSI_1, kVK_ANSI_2, kVK_ANSI_3, kVK_ANSI_4, kVK_ANSI_5,
+        kVK_ANSI_6, kVK_ANSI_7, kVK_ANSI_8, kVK_ANSI_9,
+    ].map(UInt16.init)
+
     func testShiftOnASlotKey_writesThatSlotsOtherScript_withoutWalking() throws {
         let keys: [(name: String, scheme: ToneInputScheme, event: (Int) throws -> NSEvent)] = [
             ("⇧letter", .standard, { slot in
@@ -211,7 +219,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
             }),
             ("⇧digit", .telex, { slot in
                 try TestFixtures.keyDownEvent(
-                    characters: "@", modifiers: .shift, keyCode: ComposingKeyChord.numberRowKeyCodes[slot],
+                    characters: "@", modifiers: .shift, keyCode: Self.numberRowKeyCodes[slot],
                 )
             }),
         ]
@@ -598,7 +606,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     }
 
     /// ⇥ walks the bar rather than committing from it, pairing with the ⇧⇥ that
-    /// already walked back (`ComposingAction.nextCandidate`). Space held this
+    /// already walked back (the Next Candidate row's default). Space held this
     /// job until 2026-08-25, when it became the Hanji/romanization key.
     func testTab_walksToTheNextCandidateWithoutCommitting() throws {
         let session = try composedSession()

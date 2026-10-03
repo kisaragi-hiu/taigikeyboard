@@ -67,7 +67,7 @@ final class RetiredSettingsCleanupTests: XCTestCase {
     }
 
     /// The two retired script commits. A chord recorded on either row is
-    /// stored under `ComposingAction.settingsKeyName`, and no row can reach it
+    /// stored under the roster's `composingShortcut.<name>`, and no row can reach it
     /// once the action is gone — so it is cleared rather than left in the
     /// domain for a later action reusing the name to inherit.
     func testChordsRecordedOnTheRetiredScriptCommits_areRemoved() throws {
@@ -109,7 +109,7 @@ final class RetiredSettingsCleanupTests: XCTestCase {
 
         XCTAssertNil(userDefaults.object(forKey: "candidateSlotModifier"))
         XCTAssertEqual(
-            SettingsStore(userDefaults: userDefaults).composingKeyBindings.slotKeySet,
+            SettingsStore(userDefaults: userDefaults).toneInputScheme.slotKeySet,
             .bareKeys,
         )
     }
@@ -121,7 +121,7 @@ final class RetiredSettingsCleanupTests: XCTestCase {
         RetiredSettingsCleanup.run(userDefaults: userDefaults)
 
         XCTAssertEqual(
-            SettingsStore(userDefaults: userDefaults).composingKeyBindings.toneScheme,
+            SettingsStore(userDefaults: userDefaults).toneInputScheme,
             .telex,
         )
     }

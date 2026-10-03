@@ -444,7 +444,7 @@ impl IntentSurface for RecordingSurface<'_> {
     }
 }
 
-fn navigation(direction: CandidateNavigation) -> proto::CandidateNavigation {
+pub(crate) fn navigation(direction: CandidateNavigation) -> proto::CandidateNavigation {
     match direction {
         CandidateNavigation::Left => proto::CandidateNavigation::Left,
         CandidateNavigation::Right => proto::CandidateNavigation::Right,
@@ -469,12 +469,12 @@ mod tests {
     use crate::proto::desktop_response::Reply;
     use crate::proto::{KeyEvent, SettingEntry, SettingsSnapshot};
     use crate::runtime::Shell;
-    use crate::test_support::{boolean, engine_shell, key_event, next_token, text};
+    use crate::test_support::{
+        boolean, engine_shell, key_event, next_token, text, FUNCTION, NUMERIC_PAD,
+    };
     use std::collections::HashMap;
 
-    // The rest of NSEvent.ModifierFlags / NSEvent.SpecialKey (`key_translation.rs`).
-    const NUMERIC_PAD: u64 = 0x200000;
-    const FUNCTION: u64 = 0x800000;
+    // The rest of NSEvent.SpecialKey (`key_translation.rs`).
     const CARRIAGE_RETURN: u32 = 0xD;
     const LEFT_ARROW: u32 = 0xF702;
 

@@ -195,7 +195,7 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         XCTAssertFalse(TelexGuidePanel.shared.isShowing)
     }
 
-    /// `⌃3` arrives as Escape (`ComposingKeyIntent`): a chord the host owns
+    /// `⌃3` arrives as Escape (`KeyEventSnapshot.isPlainEscape`): a chord the host owns
     /// takes the guide down like any key but is not swallowed for it.
     func testEscapeUnderAHostChord_hidesTheGuide_andFallsThrough() throws {
         let session = try makeSession()

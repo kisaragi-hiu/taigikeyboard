@@ -1,7 +1,7 @@
-//! The core's half of the chord-rule cross-check
-//! (`fixtures/chord_rules.tsv`): every row read under the Mac's rules,
-//! against the expectations the Swift Shortcuts pane is held to by
-//! `ChordRulesCrossCheckTests.swift`.
+//! The chord-rule table (`fixtures/chord_rules.tsv`): every row read under the
+//! Mac's rules. The Swift Shortcuts pane reads these rules through the seam
+//! since P14; `ChordRulesCrossCheckTests.swift` holds its `default` and
+//! `resolve` rows to the same hand-written answers.
 
 use std::collections::BTreeMap;
 

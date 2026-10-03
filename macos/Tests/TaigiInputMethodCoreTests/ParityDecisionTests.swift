@@ -17,8 +17,9 @@ import XCTest
 /// - C4 — a refetch with the window off.
 ///
 /// Not here: E2b (P11c) — a plain Escape inside a multi-character event. The
-/// picker's classification is Swift, so its pin is
-/// `SymbolPickerIntentTests.testAnEscapeInsideALongerEvent_closesAndFallsThrough`.
+/// picker reads the core's rule since P14 (`symbol_picker.rs`
+/// `e2b_an_escape_inside_a_longer_event_closes_and_passes_through`); the Telex
+/// guide's is `KeyEventSnapshot.isPlainEscape` (`KeyEventSnapshotTests`).
 @MainActor
 final class ParityDecisionTests: XCTestCase {
     override func setUpWithError() throws {
@@ -133,11 +134,11 @@ final class ParityDecisionTests: XCTestCase {
     /// (`represent_list`) closes, which is where the window-off observer
     /// leaves the list anyway (the Swift key path repainted; accepted, P10).
     func testC4_aRefetchWithTheCandidateWindowOff() throws {
-        let backend = CoreComposingBackend.shared
+        let backend = ComposingBackend.shared
         let session = ComposingSessionToken()
         let store = SettingsStore()
-        backend.activate(session)
-        defer { backend.release(session) }
+        backend.activate(session, settings: store)
+        defer { backend.release(session, settings: store) }
         var isListOnScreen = false
         func request() -> ComposingRequest {
             Self.request(session: session, settings: store, isListOnScreen: isListOnScreen)

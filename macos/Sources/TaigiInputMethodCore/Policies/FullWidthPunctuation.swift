@@ -21,7 +21,7 @@ import Foundation
 /// would say about a hanji word (the key path reads the swap before the map).
 /// The caller reads the mode (`documentPunctuation(_:isWidthFlip:settings:)`),
 /// and the mode is a DEFAULT, not a wall: ⌃ on any key of this map types the
-/// other width once (`ComposingKeyIntent.widthFlipCharacter`) — the 新注音 /
+/// other width once (`KeyEventSnapshot.widthFlipCharacter`) — the 新注音 /
 /// Microsoft IME gesture, made symmetric because the case that hurt was a
 /// half-width comma inside hanji-first text (USER 2026-09-20).
 enum FullWidthPunctuation {
@@ -67,9 +67,9 @@ enum FullWidthPunctuation {
 
     /// The same under the mode `settings` holds NOW — read live, like the
     /// auto-space gate, so a swap applies to the very next key. `isWidthFlip`
-    /// is `ComposingKeyIntent.widthFlipCharacter`'s verdict on the key that
+    /// is `KeyEventSnapshot.widthFlipCharacter`'s verdict on the key that
     /// typed `text`. The core back end asks it before a swap's client check
-    /// (`CoreComposingBackend.swapCandidate`).
+    /// (`ComposingBackend.swapCandidate`).
     ///
     /// The EFFECTIVE width (`SettingsStore.isFullWidthPunctuation`), not the
     /// stored swap: a romanization-only display writes romanization, and

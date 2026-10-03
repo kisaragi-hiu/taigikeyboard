@@ -171,7 +171,7 @@ enum ShortcutAction: CaseIterable, Sendable {
     ///
     /// Named here as well as on the `Name` so `ShortcutAction` stays the one
     /// place that knows everything about an action — and so the composing half
-    /// (`ComposingAction.defaultChord`) has a sibling with the same name.
+    /// (`ComposingShortcuts.Row.defaultChord`) has a sibling with the same name.
     var defaultShortcut: KeyboardShortcuts.Shortcut? {
         name.initialShortcut
     }
@@ -378,29 +378,33 @@ enum ShortcutConflicts {
     /// maps to the same character read as the same chord here, which matches
     /// how the composing tier identifies its keys in the first place.
     ///
-    /// Built through the same gate a binding passes, so a chord the gate
-    /// REFUSES answers nil — and correctly so: every chord a composing action
-    /// can hold went through `make` (the recorder, and `init?(rawValue:)` on
-    /// the way back out of storage), so a chord `make` rejects is one no
-    /// binding can hold, and therefore one nothing can collide with.
+    /// Built through the same gate a binding passes (desktop-core's,
+    /// `KeyRules.chord`), so a chord the gate REFUSES answers nil — and
+    /// correctly so: every chord a composing action can hold went through
+    /// that gate (the recorder, and the core's read of the stored value), so
+    /// a chord it rejects is one no binding can hold, and therefore one
+    /// nothing can collide with.
     ///
-    /// Nil also when the library cannot name the key at all. Either way nil
-    /// means "no conflict found", never "clear something": wrongly emptying a
-    /// row the user can see is worse than leaving an undetectable collision on
-    /// a key neither tier can hold a binding on.
+    /// Nil also when the library cannot name the key at all, or the seam
+    /// failed. Either way nil means "no conflict found", never "clear
+    /// something": wrongly emptying a row the user can see is worse than
+    /// leaving an undetectable collision on a key neither tier can hold a
+    /// binding on.
     @MainActor
     static func composingChord(occupiedBy shortcut: KeyboardShortcuts.Shortcut) -> ComposingKeyChord? {
-        try? translation(of: shortcut).get()
+        guard case let .success(chord)? = translation(of: shortcut) else { return nil }
+        return chord
     }
 
     /// The bridge with its refusal kept: the launch pass reads WHY a global
     /// row failed to translate, because a row on a typing key is one the
     /// recorder would refuse today and Carbon would still dispatch first.
+    /// Nil when the seam failed.
     @MainActor
     static func translation(of shortcut: KeyboardShortcuts.Shortcut)
-        -> Result<ComposingKeyChord, ComposingKeyChord.Rejection>
+        -> Result<ComposingKeyChord, ComposingKeyChord.Rejection>?
     {
-        ComposingKeyChord.make(
+        KeyRules.chord(
             key: shortcut.key.flatMap { namedKeyCharacters[$0] } ?? shortcut.nsMenuItemKeyEquivalent,
             modifiers: shortcut.modifiers,
         )
@@ -421,7 +425,7 @@ enum ShortcutConflicts {
     ///
     /// The reserved keys — the arrows, the paging keys, Escape and the two
     /// deletes — are here too, though no binding can hold one. Translating
-    /// them is what lets the gate RECOGNISE them: fed the glyph, `make` would
+    /// them is what lets the gate RECOGNISE them: fed the glyph, the gate would
     /// happily build a `⎋`-the-character chord that matches nothing; fed the
     /// scalar, it refuses, and the bridge answers nil, which is the honest
     /// "nothing can collide here". Space and the function keys need no row —
@@ -463,16 +467,16 @@ enum ShortcutConflicts {
     ///
     /// The pure half of "a global recording takes the key from the composing
     /// tier". Both halves of the seam are asked the same way the intra-tier
-    /// rules are (`conflictingActions`, `ComposingKeyBindings.actionsHolding`),
+    /// rules are (`conflictingActions`, `ComposingShortcuts.rows(holding:)`),
     /// so the pane resolves every collision by one rule: last writer wins, and
     /// the loser's row empties in front of the user.
     @MainActor
     static func composingActionsHolding(
         _ shortcut: KeyboardShortcuts.Shortcut,
-        in bindings: ComposingKeyBindings,
-    ) -> [ComposingAction] {
+        in shortcuts: ComposingShortcuts,
+    ) -> [ComposingShortcuts.Row] {
         guard let chord = composingChord(occupiedBy: shortcut) else { return [] }
-        return bindings.actionsHolding(chord)
+        return shortcuts.rows(holding: chord)
     }
 
     /// Which global actions hold `chord` — the same question from the other
@@ -487,10 +491,17 @@ enum ShortcutConflicts {
 
     /// A global recording just landed: take the chord off any composing row
     /// that held it.
+    ///
+    /// `shortcuts` are the composing rows as the pane last read them — a
+    /// global recording changes none.
     @MainActor
-    static func resolveComposingRows(after changed: ShortcutAction, in store: SettingsStore) {
+    static func resolveComposingRows(
+        after changed: ShortcutAction,
+        among shortcuts: ComposingShortcuts,
+        in store: SettingsStore,
+    ) {
         guard let shortcut = KeyboardShortcuts.getShortcut(for: changed.name) else { return }
-        for loser in composingActionsHolding(shortcut, in: store.composingKeyBindings) {
+        for loser in composingActionsHolding(shortcut, in: shortcuts) {
             store.setComposingChord(nil, for: loser)
         }
     }
@@ -516,19 +527,26 @@ enum ShortcutConflicts {
     /// fires — Carbon dispatches before the classifier ever runs — so the
     /// alternative would be keeping a composing row that cannot work. A
     /// one-time deterministic tie-break, not a claim about who wrote last.
+    ///
+    /// The comparison is skipped, logged, when the core cannot answer the
+    /// composing rows (`KeyRules`): with no rows there is nothing to compare.
+    /// The typing-key sweep before it needs only the gate, and still runs.
     @MainActor
     static func resolveAcrossRegistries(in store: SettingsStore) {
-        let bindings = store.composingKeyBindings
         // Read once per action, not once per question — the same rule
         // `defaultsShadowedByRecordings` states above, and for the same
         // reason: every read goes to `UserDefaults`, and every bridged chord
         // goes to the keyboard layout.
         let recorded = ShortcutAction.allCases.compactMap { action in
-            KeyboardShortcuts.getShortcut(for: action.name).map { (action: action, shortcut: $0) }
+            KeyboardShortcuts.getShortcut(for: action.name).map {
+                (action: action, shortcut: $0, translation: translation(of: $0))
+            }
         }
-        let held = recorded.compactMap { action, shortcut in
-            composingChord(occupiedBy: shortcut).map { (action: action, shortcut: shortcut, chord: $0) }
-        }
+        let held: [(action: ShortcutAction, shortcut: KeyboardShortcuts.Shortcut, chord: ComposingKeyChord)] =
+            recorded.compactMap { action, shortcut, translation in
+                guard case let .success(chord)? = translation else { return nil }
+                return (action: action, shortcut: shortcut, chord: chord)
+            }
 
         // A global row on a key the gate refuses as a typing key — a bare
         // `z` or `q` recorded while the eight non-syllable letters were
@@ -541,12 +559,13 @@ enum ShortcutConflicts {
         // an upgrade path.
         clear(
             recorded
-                .filter { translation(of: $0.shortcut) == .failure(.typesRomanization) }
+                .filter { $0.translation == .failure(.typesRomanization) }
                 .map(\.action),
         )
 
+        guard let shortcuts = KeyRules.composingShortcuts(in: store.userDefaults) else { return }
         for (action, shortcut, chord) in held {
-            let holders = bindings.actionsHolding(chord)
+            let holders = shortcuts.rows(holding: chord)
             guard !holders.isEmpty else { continue }
 
             let globalIsDefault = shortcut == action.defaultShortcut

@@ -5,7 +5,7 @@ import KeyboardShortcuts
 
 /// One instance per client text session. Owns no composition of its own — it
 /// claims the process-wide engine while its session is focused, hands key
-/// events to the `CoreComposingBackend`, and replays what it answers into its own
+/// events to the `ComposingBackend`, and replays what it answers into its own
 /// client and the candidate window.
 ///
 /// `@objc(TaigiInputController)` pins the Objective-C runtime name that
@@ -32,8 +32,8 @@ public final class TaigiInputController: IMKInputController {
     /// What runs the key path: the composition, the candidate list, the
     /// commits. This controller replays what it answers (`replay`).
     @MainActor
-    private var backend: CoreComposingBackend {
-        CoreComposingBackend.shared
+    private var backend: ComposingBackend {
+        ComposingBackend.shared
     }
 
     /// Whether this session's candidate list is on screen — true once the
@@ -243,7 +243,7 @@ public final class TaigiInputController: IMKInputController {
         onMainActor(sender) { controller, client in
             controller.tenure += 1
             controller.lastClient = client
-            controller.backend.activate(controller.sessionToken)
+            controller.backend.activate(controller.sessionToken, settings: controller.settings)
             // After the claim, which just cleared the previous session's
             // endpoint: this session is the one the shortcut hotkeys should
             // now act through, and registering is what turns them on.
@@ -669,7 +669,7 @@ public final class TaigiInputController: IMKInputController {
     }
 
     /// The list on screen again under the settings just written
-    /// (`CoreComposingBackend.represent`): re-rendered after the Hanji/romanization
+    /// (`ComposingBackend.represent`): re-rendered after the Hanji/romanization
     /// swap, fetched again (`refetch`) after a Candidate Display change, which
     /// alters WHICH candidates exist. Repainted through `updateCells`, not
     /// anchored again: the Carbon hotkey and the settings observation have no
@@ -698,7 +698,7 @@ public final class TaigiInputController: IMKInputController {
             // cannot strand a stale hint: reaching the shortcut pane moves
             // focus off the client, and `finishComposition` takes the bar
             // down with the session.
-            slotKeySet: settings.composingKeyBindings.slotKeySet,
+            slotKeySet: settings.toneInputScheme.slotKeySet,
             // The §34 literal is what the user is already typing, not an offer
             // to pick, so it takes no key and the keys start on the cell after
             // it (USER 2026-09-09).
@@ -726,12 +726,12 @@ public final class TaigiInputController: IMKInputController {
         // ends the guide and nothing else, so a user mid-word who checked the
         // table keeps the composition and its bar; every other key, an Escape
         // under a host chord included (`⌃3` arrives as Escape,
-        // `ComposingKeyIntent`), goes on to do its job. Bare modifier presses
+        // `KeyEventSnapshot.isPlainEscape`), goes on to do its job. Bare modifier presses
         // cannot close it — only `.keyDown` reaches here, and a modifier on
         // its own is a `.flagsChanged`.
         if TelexGuidePanel.shared.isShowing {
             TelexGuidePanel.shared.hideNow()
-            if ComposingKeyIntent.isPlainEscape(key) {
+            if key.isPlainEscape {
                 return true
             }
         }
@@ -750,7 +750,7 @@ public final class TaigiInputController: IMKInputController {
             if isSymbolPickerOpen {
                 dismissSymbolPicker()
             } else {
-                openSymbolPicker(client: client, bindings: settings.composingKeyBindings)
+                openSymbolPicker(client: client)
             }
             return true
         }
@@ -763,7 +763,7 @@ public final class TaigiInputController: IMKInputController {
         // clears it again so the contract below sees what it always does.
         if isSymbolPickerOpen {
             armedAutoSpaceCaret = armedSwap
-            if handleSymbolPickerKey(key, bindings: settings.composingKeyBindings, client: client) {
+            if handleSymbolPickerKey(key, client: client) {
                 return true
             }
             armedAutoSpaceCaret = nil
@@ -787,7 +787,7 @@ public final class TaigiInputController: IMKInputController {
     private func send(
         client: IMKTextInput,
         armedSwap: Int?,
-        _ call: (ComposingRequest) -> [ComposingBackendEffect]?,
+        _ call: (ComposingRequest) -> [ComposingEffect]?,
     ) -> Bool {
         guard let effects = call(request(client: client, armedSwap: armedSwap)) else { return false }
         replay(effects, into: client, armedSwap: armedSwap)
@@ -823,7 +823,7 @@ public final class TaigiInputController: IMKInputController {
     /// its order, to the client and the window (a represent has its own,
     /// `representCandidates`).
     @MainActor
-    private func replay(_ effects: [ComposingBackendEffect], into client: IMKTextInput, armedSwap: Int?) {
+    private func replay(_ effects: [ComposingEffect], into client: IMKTextInput, armedSwap: Int?) {
         // Where a swap in this reply left the caret: the re-arm that follows
         // it is arithmetic, not another `selectedRange()` query — the
         // rewrite's end is fully determined by the range just replaced, and
@@ -963,23 +963,23 @@ public final class TaigiInputController: IMKInputController {
         guard let shortcut = symbolPickerShortcut,
               let keyCode = key.keyCode, Int(keyCode) == shortcut.carbonKeyCode
         else { return false }
-        let chording = ComposingKeyIntent.chordingModifiers
+        let chording = KeyEventSnapshot.chordingModifiers
         return key.modifiers.intersection(chording) == shortcut.modifiers.intersection(chording)
     }
 
     /// Ends whatever is composing, then puts the symbol list up over the
-    /// caret (`CoreComposingBackend.commitForSymbolPicker`). A commit that only
+    /// caret (`ComposingBackend.commitForSymbolPicker`). A commit that only
     /// NAILED a segment leaves the composition running, and the picker waits
     /// for a key that ends it.
     @MainActor
-    private func openSymbolPicker(client: IMKTextInput, bindings: ComposingKeyBindings) {
+    private func openSymbolPicker(client: IMKTextInput) {
         if backend.isComposing(sessionToken) {
             // The commit moves the caret; whatever it earns re-arms.
             armedAutoSpaceCaret = nil
             send(client: client, armedSwap: nil) { backend.commitForSymbolPicker(in: $0) }
             guard !backend.isComposing(sessionToken) else { return }
         }
-        presentSymbolPicker(in: client, bindings: bindings)
+        presentSymbolPicker(in: client)
     }
 
     /// Shows the whole table anchored to the caret — one list, in file
@@ -1016,7 +1016,7 @@ public final class TaigiInputController: IMKInputController {
     /// picker recorded as open over a window nobody can see would go on
     /// swallowing the slot keys.
     @MainActor
-    private func presentSymbolPicker(in client: IMKTextInput, bindings: ComposingKeyBindings) {
+    private func presentSymbolPicker(in client: IMKTextInput) {
         // No table, no picker — and nothing marked for one.
         guard let table = symbolTable else { return }
         // The recents lead (`RecentSymbols`), read once: this is the list
@@ -1037,7 +1037,7 @@ public final class TaigiInputController: IMKInputController {
         symbolPickerPresenter.show(
             CandidateWindowContent(
                 cells: symbolPickerCells.map { CandidateCellContent(text: $0, annotation: nil) },
-                slotKeySet: bindings.slotKeySet,
+                slotKeySet: settings.toneInputScheme.slotKeySet,
                 leadCellIsUnkeyed: false,
             ),
             anchoredTo: caretRect,
@@ -1055,12 +1055,10 @@ public final class TaigiInputController: IMKInputController {
     /// false means the picker has closed and the key goes on through the
     /// composing contract as if the picker had never been there.
     @MainActor
-    private func handleSymbolPickerKey(
-        _ key: KeyEventSnapshot,
-        bindings: ComposingKeyBindings,
-        client: IMKTextInput,
-    ) -> Bool {
-        switch SymbolPickerIntent.intent(for: key, bindings: bindings) {
+    private func handleSymbolPickerKey(_ key: KeyEventSnapshot, client: IMKTextInput) -> Bool {
+        // Read by desktop-core under this session's settings; a seam failure
+        // (logged) takes the picker down and lets the key go on.
+        switch KeyRules.symbolPickerIntent(for: key, in: settings.userDefaults) ?? .closeAndPassThrough {
         case .close:
             dismissSymbolPicker()
         case let .navigate(direction):
@@ -1096,7 +1094,7 @@ public final class TaigiInputController: IMKInputController {
         settings.noteRecentSymbol(symbol)
     }
 
-    /// Writes `symbol` through the back end (`CoreComposingBackend.insertSymbol`)
+    /// Writes `symbol` through the back end (`ComposingBackend.insertSymbol`)
     /// — the one picker key that touches the document, so the one that
     /// spends the auto-space arm.
     @MainActor
@@ -1210,7 +1208,7 @@ public final class TaigiInputController: IMKInputController {
         // and goes when that session's focus does.
         TelexGuidePanel.shared.hide(ownedBy: sessionToken)
         finishComposition(into: client)
-        backend.release(sessionToken)
+        backend.release(sessionToken, settings: settings)
         displayModeObservation = nil
         candidateWindowObservation = nil
     }

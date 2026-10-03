@@ -168,7 +168,9 @@ pub fn rejection_message_key(rejection: ChordRejection) -> StringKey {
 mod tests {
     use super::*;
     use crate::keys::ComposingKeyBindings;
-    use crate::platform::test_support::{TEST_PLATFORM as PLATFORM, WINDOWS_AND_LINUX};
+    use crate::platform::test_support::{
+        ALL_PLATFORMS, TEST_PLATFORM as PLATFORM, WINDOWS_AND_LINUX,
+    };
     use crate::platform::DesktopPlatform;
 
     #[test]
@@ -287,62 +289,58 @@ mod tests {
         );
     }
 
+    /// Every desktop, the Mac included (its recorder's press translation
+    /// feeds this decision, `taigi-macos-ffi` `key_rules.rs`): Escape blurs,
+    /// Backspace / Delete blank, Tab and Shift+Tab record, a repeat is
+    /// swallowed, no key is refused; Shift+Backspace is the reserved key.
     #[test]
     fn escape_delete_and_repeats_end_or_swallow_without_recording() {
-        assert_eq!(
-            evaluate_press(
-                RecorderTier::Composing,
-                &press("\u{1B}", KeyModifiers::NONE),
-                PLATFORM
-            ),
-            RecorderOutcome::Blurred
-        );
-        assert_eq!(
-            evaluate_press(
-                RecorderTier::Composing,
-                &press("\t", KeyModifiers::NONE),
-                PLATFORM
-            ),
-            RecorderOutcome::Recorded(
-                ComposingKeyChord::make(Some("\t"), KeyModifiers::NONE, PLATFORM)
-                    .expect("bindable")
-            )
-        );
-        assert_eq!(
-            evaluate_press(
-                RecorderTier::Composing,
-                &press("\u{8}", KeyModifiers::NONE),
-                PLATFORM
-            ),
-            RecorderOutcome::Ignored
-        );
-        // Shift+Tab is a chord, recordable (the previous-candidate default).
-        assert!(matches!(
-            evaluate_press(
-                RecorderTier::Composing,
-                &press("\t", KeyModifiers::SHIFT),
-                PLATFORM
-            ),
-            RecorderOutcome::Recorded(_)
-        ));
-        let repeat = RecordedPress {
-            is_repeat: true,
-            ..press("[", KeyModifiers::NONE)
-        };
-        assert_eq!(
-            evaluate_press(RecorderTier::Composing, &repeat, PLATFORM),
-            RecorderOutcome::Ignored
-        );
-        let none = RecordedPress {
-            key: None,
-            modifiers: KeyModifiers::CONTROL,
-            key_code: None,
-            is_repeat: false,
-        };
-        assert_eq!(
-            evaluate_press(RecorderTier::Composing, &none, PLATFORM),
-            RecorderOutcome::Refused(ChordRejection::NoKey)
-        );
+        for platform in ALL_PLATFORMS {
+            let composing =
+                |press: &RecordedPress| evaluate_press(RecorderTier::Composing, press, platform);
+            assert_eq!(
+                composing(&press("\u{1B}", KeyModifiers::NONE)),
+                RecorderOutcome::Blurred
+            );
+            assert_eq!(
+                composing(&press("\t", KeyModifiers::NONE)),
+                RecorderOutcome::Recorded(
+                    ComposingKeyChord::make(Some("\t"), KeyModifiers::NONE, platform)
+                        .expect("bindable")
+                )
+            );
+            for blank in ["\u{8}", "\u{7F}"] {
+                assert_eq!(
+                    composing(&press(blank, KeyModifiers::NONE)),
+                    RecorderOutcome::Ignored,
+                    "{blank:?}"
+                );
+            }
+            assert_eq!(
+                composing(&press("\u{7F}", KeyModifiers::SHIFT)),
+                RecorderOutcome::Refused(ChordRejection::ReservedKey)
+            );
+            // Shift+Tab is a chord, recordable (the previous-candidate default).
+            assert!(matches!(
+                composing(&press("\t", KeyModifiers::SHIFT)),
+                RecorderOutcome::Recorded(_)
+            ));
+            let repeat = RecordedPress {
+                is_repeat: true,
+                ..press("[", KeyModifiers::NONE)
+            };
+            assert_eq!(composing(&repeat), RecorderOutcome::Ignored);
+            let none = RecordedPress {
+                key: None,
+                modifiers: KeyModifiers::CONTROL,
+                key_code: None,
+                is_repeat: false,
+            };
+            assert_eq!(
+                composing(&none),
+                RecorderOutcome::Refused(ChordRejection::NoKey)
+            );
+        }
     }
 
     #[test]

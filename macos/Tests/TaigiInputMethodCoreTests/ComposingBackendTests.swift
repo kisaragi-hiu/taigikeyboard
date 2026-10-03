@@ -4,25 +4,27 @@
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// Each case puts its own transport in front of a `CoreComposingBackend` and
+/// Each case puts its own transport in front of a `ComposingBackend` and
 /// its own coordinator, so nothing here reaches the engine. The core's own
 /// answers are covered by the controller suites and by
 /// `macos/crates/taigi-macos-ffi`.
 @MainActor
-final class CoreComposingBackendTests: XCTestCase {
+final class ComposingBackendTests: XCTestCase {
     private var sent: [Taigi_DesktopShell_DesktopRequest] = []
     private var answer: (Taigi_DesktopShell_DesktopRequest) -> [UInt8] = { _ in [] }
     private var isSwapCheckAsked = false
     private let session = ComposingSessionToken()
 
-    /// A handover starts a fresh engine session under the settings in force
-    /// then — not under whatever the last request carried (freeze contract
-    /// item 4).
-    func testActivateAndRelease_carryTheSettingsInForce() throws {
+    /// A handover starts a fresh engine session under the settings of the
+    /// controller's store — read like every other request's, not from the
+    /// app's `.standard` domain and not from the last request (freeze contract
+    /// item 4; USER 2026-10-03, option 1).
+    func testActivateAndRelease_carryTheSettingsOfTheControllersStore() throws {
         restoreStandardSettingsAtTeardown()
+        let store = try makeScratchSettingsStore()
         let runtime = try XCTUnwrap(TestDesktopCore.runtime, "the process's one Configure")
         let autoSpace = SettingsStore.Keys.isAutoSpaceEnabled.name
-        let backend = CoreComposingBackend(
+        let backend = ComposingBackend(
             coordinator: TestFixtures.makeCoordinator(),
             runtime: { runtime },
             transport: { [unowned self] bytes in
@@ -33,15 +35,17 @@ final class CoreComposingBackendTests: XCTestCase {
             },
         )
 
-        UserDefaults.standard.set(true, forKey: autoSpace)
-        backend.activate(session)
         UserDefaults.standard.set(false, forKey: autoSpace)
-        backend.release(session)
+        store.userDefaults.set(true, forKey: autoSpace)
+        backend.activate(session, settings: store)
+        UserDefaults.standard.set(true, forKey: autoSpace)
+        store.userDefaults.set(false, forKey: autoSpace)
+        backend.release(session, settings: store)
 
         let carried = sent.map { request in
             request.settings.entries.first { $0.name == autoSpace }?.value.boolean
         }
-        XCTAssertEqual(carried, [true, false], "each read when it is sent")
+        XCTAssertEqual(carried, [true, false], "each read from the controller's store when it is sent")
     }
 
     // MARK: - FAIL_INTERNAL (roadmap D4)
@@ -195,8 +199,8 @@ final class CoreComposingBackendTests: XCTestCase {
 
     /// A back end whose transport records every request and answers with
     /// `answer`, activated for `session` with a composition running or not.
-    private func activatedBackend(composing: Bool) throws -> CoreComposingBackend {
-        let backend = CoreComposingBackend(
+    private func activatedBackend(composing: Bool) throws -> ComposingBackend {
+        let backend = ComposingBackend(
             coordinator: TestFixtures.makeCoordinator(),
             runtime: { nil },
             transport: { [unowned self] bytes in
@@ -210,7 +214,7 @@ final class CoreComposingBackendTests: XCTestCase {
         var reply = Taigi_DesktopShell_SessionReply()
         reply.isComposing = composing
         answer = { _ in Self.ok(reply) }
-        backend.activate(session)
+        backend.activate(session, settings: SettingsStore())
         XCTAssertEqual(backend.isComposing(session), composing)
         sent = []
         return backend

@@ -180,22 +180,19 @@ final class ShortcutActionsTests: XCTestCase {
 
     /// A slot key is how a user picks the third candidate on screen, and the
     /// classifier reads that tier before it reads any binding — under either
-    /// scheme's set. Asked of the classifier's own slot rule rather than
-    /// reasoned about, so a default moved onto a bare digit fails here.
+    /// scheme's set. The core's gate refuses every slot key of both sets as
+    /// a chord (`CandidateSlotKeyTests.testEverySlotKey_ofEverySet_isRefusedAsAChord`),
+    /// so a default it makes a chord of sits on none — and a default moved
+    /// onto a bare digit fails here.
     func testNoDefault_isASlotKey() throws {
         for action in ShortcutAction.allCases {
             let shortcut = try XCTUnwrap(action.defaultShortcut)
-            let chord = try ComposingKeyChord.make(
+            let made = try XCTUnwrap(KeyRules.chord(
                 key: XCTUnwrap(shortcut.nsMenuItemKeyEquivalent, action.name.rawValue),
                 modifiers: shortcut.modifiers,
-            ).get()
+            ))
 
-            for slotKeySet in CandidateSlotKeySet.allCases {
-                XCTAssertNil(
-                    slotKeySet.slot(forKey: chord.key, heldWith: chord.modifiers),
-                    "\(action.name.rawValue) collides with the \(slotKeySet) slot tier",
-                )
-            }
+            XCTAssertNoThrow(try made.get(), "\(action.name.rawValue) collides with the slot tier")
         }
     }
 
