@@ -88,10 +88,16 @@ pub fn view(
         // Shown, not recordable (USER 2026-09-10): Shift on a slot key is
         // the Hanji/romanization commit aimed at that slot, and the slot keys follow the
         // tone scheme — so the row follows it too, and there is nothing to
-        // record. After the commit rows, because it is one.
-        fixed_row(
-            strings.resolve(StringKey::DesktopActionCommitAlternateScript),
-            shifted_slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM),
+        // record. After the commit rows, because it is one. Not drawn under
+        // TPS, where a commit is always the Hanji.
+        shifted_slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM).map_or_else(
+            View::empty,
+            |keys| {
+                fixed_row(
+                    strings.resolve(StringKey::DesktopActionCommitAlternateScript),
+                    keys,
+                )
+            },
         ),
         // Shown, not recordable (USER 2026-09-20): Ctrl on a punctuation key
         // types it in the other width once, whatever the Hanji/romanization mode would have

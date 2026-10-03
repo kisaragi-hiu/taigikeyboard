@@ -21,7 +21,7 @@ use super::choices::{
 };
 use super::document::SettingsKey;
 use super::engine_settings::{
-    CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode,
+    CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode, Romanization,
 };
 use crate::strings::DisplayLanguage;
 
@@ -29,6 +29,12 @@ const ENGINE_DEFAULTS: EngineSettings = EngineSettings::DEFAULT;
 
 pub const INPUT_MODE: SettingsKey<InputMode> =
     SettingsKey::new("inputMode", ENGINE_DEFAULTS.input_mode);
+/// The romanization TPS was entered from — where Switch TPS returns and
+/// what Switch Romanization leaves TPS away from (desktop TPS roadmap D5).
+/// Written only by `SettingsDocument::switch_input_mode`, only when a
+/// romanization is left for TPS. Desktop-only: mobile has no TPS chord.
+pub const LAST_ROMANIZATION_MODE: SettingsKey<Romanization> =
+    SettingsKey::new("lastRomanizationMode", Romanization::Tl);
 pub const IS_HANJI_FIRST: SettingsKey<bool> =
     SettingsKey::new("isTranslateSwapped", ENGINE_DEFAULTS.is_hanji_first);
 // RETIRED 2026-09-30: `outputBothScripts` (Annotate in Brackets). No desktop
@@ -243,9 +249,11 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 /// draws, same shape as `DICTIONARY_SOURCE_KEYS`. Not the display language
 /// (USER 2026-09-20: the reset must not switch the UI language under the
 /// user), not the update bookkeeping, not the remembered pane. macOS keeps a
-/// Swift twin: `SettingsStore.swift` `resetGeneralSettings`.
-pub const GENERAL_KEYS: [&str; 8] = [
+/// Swift twin: `SettingsStore.swift` `resetGeneralSettings`. The input mode
+/// takes the romanization TPS returns to with it.
+pub const GENERAL_KEYS: [&str; 9] = [
     INPUT_MODE.name,
+    LAST_ROMANIZATION_MODE.name,
     TONE_INPUT_SCHEME.name,
     IS_HANJI_FIRST.name,
     IS_AUTO_SPACE_ENABLED.name,

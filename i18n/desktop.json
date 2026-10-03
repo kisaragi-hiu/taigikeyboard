@@ -101,6 +101,25 @@
         "ja": "台羅／白話字を切り替える"
       }
     },
+    "shortcutToggleTps": {
+      "comment": "Shortcut-recorder row and input-method menu row: the hotkey that switches into Phonetic Symbols (TPS) and back to the romanization last used. TPS is not a romanization, so this is its own row beside the romanization switch. Authored whole, like its siblings.",
+      "scope": {
+        "platforms": [
+          "windows",
+          "linux"
+        ],
+        "surfaces": [
+          "host"
+        ]
+      },
+      "values": {
+        "hanji": "切換方音符號",
+        "tailo": "Tshiat-uānn Hong-im-hû-hō",
+        "poj": "Chhiat-ōaⁿ Hong-im-hû-hō",
+        "en": "Switch Phonetic Symbols",
+        "ja": "方音符号を切り替える"
+      }
+    },
     "shortcutCycleCandidateDisplayMode": {
       "comment": "Shortcut-recorder row: the hotkey that cycles Candidate Display through Hanji–Romanization Pairing → Hanji with Romanization → Romanization Only (the picker order). Authored whole, like its siblings.",
       "scope": {

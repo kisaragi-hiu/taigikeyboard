@@ -37,13 +37,17 @@ use windows::Win32::UI::WindowsAndMessaging::{
     TPM_NONOTIFY, TPM_RETURNCMD,
 };
 
-/// A popup row's command id is its position in the shared list, from 1:
-/// `TPM_RETURNCMD` spells a dismissed menu as 0, so no row may be 0. Never
-/// stored — `show_popup` answers with it and [`menu_command`] reads it
+/// A popup row's command id is its command's position in the shared list,
+/// from 1: `TPM_RETURNCMD` spells a dismissed menu as 0, so no row may be 0.
+/// Never stored — `show_popup` answers with it and [`menu_command`] reads it
 /// straight back, so every row of `keys::MENU` has one and none can print one
-/// command and fire another.
-fn popup_id(index: usize) -> u32 {
-    u32::try_from(index + 1).unwrap_or(u32::MAX)
+/// command and fire another. The position in `MENU`, not in the drawn rows:
+/// `menu_rows` leaves out a row the input mode makes inert.
+fn popup_id(command: MenuCommand) -> u32 {
+    MENU.iter()
+        .position(|row| *row == Some(command))
+        .and_then(|index| u32::try_from(index + 1).ok())
+        .unwrap_or(0)
 }
 
 /// The command a popup id stands for; `None` for 0 (dismissed) or a
@@ -93,14 +97,13 @@ pub fn popup_rows(
 ) -> Vec<Option<(u32, String)>> {
     menu_rows(strings, settings, DESKTOP_PLATFORM)
         .into_iter()
-        .enumerate()
-        .map(|(index, row)| {
+        .map(|row| {
             row.map(|row| {
                 let label = match row.chord {
                     Some(chord) => format!("{}\t{chord}", row.title),
                     None => row.title,
                 };
-                (popup_id(index), label)
+                (popup_id(row.command), label)
             })
         })
         .collect()
@@ -225,6 +228,7 @@ pub fn owned_icon() -> Result<HICON> {
 mod tests {
     use super::*;
     use taigi_desktop_core::keys::ShortcutAction;
+    use taigi_desktop_core::settings::{keys, InputMode};
     use taigi_desktop_core::strings::DisplayLanguage;
 
     #[test]
@@ -254,6 +258,25 @@ mod tests {
         ShortcutAction::ToggleRomanization.store_in(&mut cleared, None, DESKTOP_PLATFORM);
         let rows = popup_rows(&strings, &cleared);
         assert_eq!(rows[0].as_ref().unwrap().1, "切換台羅/白話字");
+        // Under TPS the inert Cycle Candidate Display row is left out, and
+        // every row after it still reads back as its own command — the id
+        // is the command's place in `MENU`, not the drawn row's.
+        let mut tps = SettingsDocument::default();
+        tps.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        let commands: Vec<Option<MenuCommand>> = popup_rows(&strings, &tps)
+            .into_iter()
+            .map(|row| row.map(|(id, _)| menu_command(id).expect("a drawn row's id")))
+            .collect();
+        let expected: Vec<Option<MenuCommand>> = MENU
+            .into_iter()
+            .filter(|command| {
+                *command
+                    != Some(MenuCommand::Shortcut(
+                        ShortcutAction::CycleCandidateDisplayMode,
+                    ))
+            })
+            .collect();
+        assert_eq!(commands, expected);
         // A plain tray button, whose click reaches `OnClick`. A
         // `TF_LBI_STYLE_BTN_MENU` here shows no menu at all in the
         // Windows 8+ taskbar input indicator (module header).

@@ -18,7 +18,7 @@ use taigi_desktop_core::composing::{insert_symbol, represent_list, ContextToken}
 use taigi_desktop_core::keys::{
     menu_rows, telex_guide_rows, ComposingKeyBindings, MenuCommand, ShortcutAction, MENU,
 };
-use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument};
+use taigi_desktop_core::settings::{keys, InputMode, InputModeRequest, SettingsDocument};
 use taigi_desktop_core::strings::StringKey;
 use taigi_desktop_core::symbols::SymbolTable;
 use taigi_linux_platform::{open_settings, DESKTOP_PLATFORM};
@@ -163,24 +163,22 @@ pub fn perform_global(
             open_settings(None);
         }
         ShortcutAction::ToggleRomanization => {
-            if !runtime.update_settings("toggle_romanization", |document| {
-                let next = document
-                    .choice::<InputMode>(&keys::INPUT_MODE)
-                    .toggled_romanization();
-                document.set_choice(&keys::INPUT_MODE, next);
-            }) {
-                return emits;
-            }
-            // The candidates on screen were fetched under the old
-            // romanization; they go with the mode that produced them — then
-            // the label, announced, because the chord fires from anywhere
-            // and a romanization that changed with no notice reads as the
-            // keyboard breaking (USER 2026-08-26).
-            state.clear_list();
-            let settings = runtime.settings.current();
-            session::present_table(state, &settings, &bindings, &mut emits);
-            emits.push(Emit::ModeChanged);
-            emits.push(Emit::AnnounceMode);
+            switch_input_mode(
+                runtime,
+                state,
+                &bindings,
+                InputModeRequest::ToggleRomanization,
+                &mut emits,
+            );
+        }
+        ShortcutAction::ToggleTps => {
+            switch_input_mode(
+                runtime,
+                state,
+                &bindings,
+                InputModeRequest::ToggleTps,
+                &mut emits,
+            );
         }
         ShortcutAction::ToggleTranslateSwapped => {
             // Inert under roman-only (`allows_swap_toggle`): no write.
@@ -232,6 +230,32 @@ pub fn perform_global(
         }
     }
     emits
+}
+
+/// One of the two input-script switches. The candidates on screen were
+/// fetched under the old mode; they go with the mode that produced them —
+/// then the label, announced, because the chord fires from anywhere and a
+/// mode that changed with no notice reads as the keyboard breaking (USER
+/// 2026-08-26). A composition across TPS stays on screen until the next key
+/// commits it (`session::process_key`). The auto-space arm stays: it names a
+/// space in the document, whatever the mode.
+fn switch_input_mode(
+    runtime: &Runtime,
+    state: &mut EngineState,
+    bindings: &ComposingKeyBindings,
+    request: InputModeRequest,
+    emits: &mut Vec<Emit>,
+) {
+    if !runtime.update_settings("switch_input_mode", |document| {
+        document.switch_input_mode(request);
+    }) {
+        return;
+    }
+    let settings = runtime.settings.current();
+    state.clear_list();
+    session::present_table(state, &settings, bindings, emits);
+    emits.push(Emit::ModeChanged);
+    emits.push(Emit::AnnounceMode);
 }
 
 /// The open list for `token` under the settings in force right now:
@@ -520,6 +544,7 @@ mod tests {
             ids,
             [
                 "toggleRomanization",
+                "toggleTps",
                 ShortcutAction::CycleCandidateDisplayMode.raw(),
                 "-",
                 MENU_SETTINGS,
@@ -536,7 +561,7 @@ mod tests {
         assert_eq!(emits, vec![Emit::ModeChanged, Emit::AnnounceMode]);
         assert_eq!(mode_symbol(&runtime).chars().count(), 2);
 
-        // The second row cycles the candidate display mode (`keys::MENU`),
+        // The third row cycles the candidate display mode (`keys::MENU`),
         // which the label's second half names.
         let label_before = mode_label(&runtime);
         let emits = activate_menu(

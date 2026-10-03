@@ -43,7 +43,7 @@ pub fn view(
             document.choice(&keys::INPUT_MODE),
             true,
             |mode: InputMode| strings.resolve(mode.label_key()).to_owned(),
-            |mode| Message::set_choice(mode, &keys::INPUT_MODE),
+            Message::SetInputMode,
             context,
         ),
         // Which keys type a tone is a fact about how the syllable is

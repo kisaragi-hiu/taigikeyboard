@@ -37,7 +37,8 @@ pub use choices::{
 };
 pub use document::{SettingsDocument, SettingsKey};
 pub use engine_settings::{
-    CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode, KautianSubcollections,
+    next_input_mode, CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode,
+    InputModeRequest, KautianSubcollections, Romanization,
 };
 pub use font_selection::{set_stored_font_selection, stored_font_selection, StoredFontSelection};
 

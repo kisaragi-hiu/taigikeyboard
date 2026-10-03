@@ -84,11 +84,13 @@ mod tests {
 
     /// The General pane's keys, the dictionary sources, the display mode,
     /// the custom dictionary switch, one row per composing action — each
-    /// once.
+    /// once. Not the romanization TPS returns to: only a mode switch reads
+    /// it, never a key.
     #[test]
     fn the_key_path_settings_are_the_ones_the_key_path_reads() {
         let mut expected: Vec<String> = keys::GENERAL_KEYS
             .iter()
+            .filter(|name| **name != keys::LAST_ROMANIZATION_MODE.name)
             .chain(&keys::DICTIONARY_SOURCE_KEYS)
             .chain(&[
                 keys::CANDIDATE_DISPLAY_MODE.name,

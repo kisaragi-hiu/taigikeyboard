@@ -40,7 +40,9 @@ use taigi_desktop_core::keys::{
     telex_guide_rows, CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent,
     KeyEventSnapshot, ShortcutAction, SymbolPickerIntent,
 };
-use taigi_desktop_core::settings::{keys, AppearanceMode, InputMode, SettingsDocument};
+use taigi_desktop_core::settings::{
+    keys, AppearanceMode, InputMode, InputModeRequest, SettingsDocument,
+};
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_core::symbols::SymbolTable;
 use taigi_windows_platform::DESKTOP_PLATFORM;
@@ -190,6 +192,38 @@ impl TextService_Impl {
         // user asked never to see.
         if !settings.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED) {
             self.hide_candidates(token);
+        }
+        // A composition a switch across TPS left behind — from a chord, the
+        // tray menu or the settings window — is committed as shown before
+        // this key is read; the key is then the new mode's first
+        // (`commit_composition_left_by_mode_change`, which `perform_intent`
+        // runs first, so the `Commit` here then finds nothing left). Claimed
+        // from the test phase, which runs no session; at delivery a refused
+        // commit hands the key to the host rather than type into the old
+        // buffer.
+        let is_left_by_mode_change = runtime
+            .try_coordinator()
+            .and_then(|coordinator| {
+                coordinator.manager_ref(token).map(|manager| {
+                    manager.is_left_by_mode_change(settings.choice(&keys::INPUT_MODE))
+                })
+            })
+            .unwrap_or(false);
+        if is_left_by_mode_change {
+            if phase == KeyPhase::Test {
+                return BOOL::from(true);
+            }
+            let outcome = self.run_key(
+                context,
+                token,
+                identity,
+                &snapshot,
+                &KeyWork::Compose(ComposingKeyIntent::Commit),
+                &settings,
+            );
+            if outcome != KeyOutcome::Consumed {
+                return BOOL::from(false);
+            }
         }
         let (is_composing, is_showing_candidates) = self.composing_flags(runtime, token);
         let intent = ComposingKeyIntent::intent(
@@ -821,6 +855,37 @@ impl TextService_Impl {
         log::info!("language_mode.switched mode={next:?}");
     }
 
+    /// One of the two input-script switches. The candidates on screen were
+    /// fetched under the old mode; they go with the mode that produced them
+    /// — then the HUD, because the chord fires from anywhere and a mode that
+    /// changed with no notice reads as the keyboard breaking (USER
+    /// 2026-08-26). A composition across TPS stays until the next key
+    /// commits it (`commit_composition_left_by_mode_change`) — no edit
+    /// session is requested here, outside a key. The auto-space arm stays: it
+    /// names a space in the document, whatever the mode.
+    fn switch_input_mode(
+        &self,
+        request: InputModeRequest,
+        identity: usize,
+        token: Option<ContextToken>,
+    ) {
+        let runtime = Runtime::shared();
+        if !runtime.update_settings("switch_input_mode", |document| {
+            document.switch_input_mode(request);
+        }) {
+            return;
+        }
+        let settings = runtime.settings.current();
+        let mode: InputMode = settings.choice(&keys::INPUT_MODE);
+        if let Some(entry) = self.state.borrow_mut().contexts.entry_mut(identity) {
+            entry.state.candidates.clear();
+        }
+        if let Some(token) = token {
+            self.hide_candidates(token);
+        }
+        self.flash_mode_label(runtime, &settings, mode.label_key());
+    }
+
     /// A global shortcut fired (preserved key or the key sink's match).
     /// `identity` is 0 when the host named no context (`OnPreservedKey`).
     pub(crate) fn perform_global(&self, action: ShortcutAction, identity: usize) {
@@ -861,28 +926,10 @@ impl TextService_Impl {
             ShortcutAction::ShowSymbolPicker => {}
             ShortcutAction::OpenLastSettingsPane => settings_launcher::open_settings(),
             ShortcutAction::ToggleRomanization => {
-                if !runtime.update_settings("toggle_romanization", |document| {
-                    let next = document
-                        .choice::<InputMode>(&keys::INPUT_MODE)
-                        .toggled_romanization();
-                    document.set_choice(&keys::INPUT_MODE, next);
-                }) {
-                    return;
-                }
-                // The candidates on screen were fetched under the old
-                // romanization; they go with the mode that produced them —
-                // then the HUD, because the chord fires from anywhere and a
-                // romanization that changed with no notice reads as the
-                // keyboard breaking (USER 2026-08-26).
-                if let Some(entry) = self.state.borrow_mut().contexts.entry_mut(identity) {
-                    entry.state.candidates.clear();
-                }
-                if let Some(token) = token {
-                    self.hide_candidates(token);
-                }
-                let settings = runtime.settings.current();
-                let mode: InputMode = settings.choice(&keys::INPUT_MODE);
-                self.flash_mode_label(runtime, &settings, mode.label_key());
+                self.switch_input_mode(InputModeRequest::ToggleRomanization, identity, token);
+            }
+            ShortcutAction::ToggleTps => {
+                self.switch_input_mode(InputModeRequest::ToggleTps, identity, token);
             }
             ShortcutAction::ToggleTranslateSwapped => {
                 // Inert under roman-only (`allows_swap_toggle`): no write, no

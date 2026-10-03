@@ -9,7 +9,7 @@
 
 use super::ShortcutAction;
 use crate::platform::DesktopPlatform;
-use crate::settings::SettingsDocument;
+use crate::settings::{keys, SettingsDocument};
 use crate::strings::{StringKey, StringResolver};
 
 /// What a menu row does.
@@ -51,13 +51,16 @@ impl MenuCommand {
     }
 }
 
-/// The rows in order; `None` is a separator. The two switches first — not
+/// The rows in order; `None` is a separator. The switches first — the two
+/// input-script switches, then Candidate Display; not
 /// the Hanji/Romanization Swap, whose bare-backtick default the Mac's menu can never
 /// print; not the symbol picker, which needs the caret a click has no hold
 /// of; not the Telex guide (USER 2026-09-20: "hardly anyone uses it") — then the
-/// settings doorway, then the check and About.
-pub const MENU: [Option<MenuCommand>; 7] = [
+/// settings doorway, then the check and About. The Mac's menu gains Switch
+/// TPS in desktop TPS P4.
+pub const MENU: [Option<MenuCommand>; 8] = [
     Some(MenuCommand::Shortcut(ShortcutAction::ToggleRomanization)),
+    Some(MenuCommand::Shortcut(ShortcutAction::ToggleTps)),
     Some(MenuCommand::Shortcut(
         ShortcutAction::CycleCandidateDisplayMode,
     )),
@@ -78,12 +81,18 @@ pub struct MenuRow {
 }
 
 /// [`MENU`], resolved against the strings and the settings as they are now.
+/// A row whose shortcut does nothing under the input mode is left out — under
+/// TPS, Switch Candidate Display — rather than drawn to do nothing.
 pub fn menu_rows(
     strings: &StringResolver,
     settings: &SettingsDocument,
     platform: DesktopPlatform,
 ) -> Vec<Option<MenuRow>> {
+    let input_mode = settings.choice(&keys::INPUT_MODE);
     MENU.iter()
+        .filter(|command| {
+            !matches!(command, Some(MenuCommand::Shortcut(action)) if action.is_inert_under(input_mode))
+        })
         .map(|command| {
             command.map(|command| MenuRow {
                 command,
@@ -107,7 +116,8 @@ mod tests {
     fn the_menu_is_the_same_rows_on_every_desktop() {
         // trace: `MENU` resolved through the Hanji strings over an empty
         // document — the authored Hanji, the default chords. The Mac's
-        // `TaigiInputControllerMenuTests` asserts the same literals.
+        // `TaigiInputControllerMenuTests` asserts the same literals (the
+        // Switch TPS row from desktop TPS P4).
         let strings = StringResolver::new(DisplayLanguage::Hanji);
         let rows: Vec<Option<(String, Option<String>)>> =
             menu_rows(&strings, &SettingsDocument::default(), PLATFORM)
@@ -120,6 +130,7 @@ mod tests {
             rows,
             [
                 row("切換台羅/白話字", Some("Ctrl+Alt+C")),
+                row("切換方音符號", Some("Ctrl+Alt+P")),
                 row("切換候選詞顯示", Some("Ctrl+Alt+H")),
                 None,
                 row("台語齒盤設定", Some("Ctrl+Alt+S")),
@@ -131,12 +142,35 @@ mod tests {
     }
 
     #[test]
+    fn under_tps_the_candidate_display_row_is_left_out() {
+        let strings = StringResolver::new(DisplayLanguage::Hanji);
+        let mut tps = SettingsDocument::default();
+        tps.set_choice(&keys::INPUT_MODE, crate::settings::InputMode::Tps);
+        let commands: Vec<Option<MenuCommand>> = menu_rows(&strings, &tps, PLATFORM)
+            .into_iter()
+            .map(|row| row.map(|row| row.command))
+            .collect();
+        assert_eq!(
+            commands,
+            [
+                Some(MenuCommand::Shortcut(ShortcutAction::ToggleRomanization)),
+                Some(MenuCommand::Shortcut(ShortcutAction::ToggleTps)),
+                None,
+                Some(MenuCommand::OpenSettings),
+                None,
+                Some(MenuCommand::CheckForUpdates),
+                Some(MenuCommand::About),
+            ]
+        );
+    }
+
+    #[test]
     fn a_cleared_chord_prints_the_title_alone() {
         let strings = StringResolver::new(DisplayLanguage::Hanji);
         let mut cleared = SettingsDocument::default();
         ShortcutAction::OpenLastSettingsPane.store_in(&mut cleared, None, PLATFORM);
         let rows = menu_rows(&strings, &cleared, PLATFORM);
-        let settings = rows[3].as_ref().expect("the settings row");
+        let settings = rows[4].as_ref().expect("the settings row");
         assert_eq!(settings.command, MenuCommand::OpenSettings);
         assert_eq!(settings.chord, None);
     }

@@ -15,7 +15,7 @@ use super::presentation::{leads_with_literal_roman, presentation, PresentedCandi
 use crate::engine::{self, CommitContinuousArgs, ComposingTransition, ContinuousCandidate, Effect};
 use crate::keys::CaretDirection;
 use crate::platform::DesktopPlatform;
-use crate::settings::{EngineSettings, SettingsProvider};
+use crate::settings::{EngineSettings, InputMode, SettingsProvider};
 
 /// Writes the engine's document effects into the client that is currently
 /// focused. Learning handshakes never reach it — the manager reports them to
@@ -47,6 +47,11 @@ pub struct ComposingManager {
     /// prefix included. Mirrored because only the engine knows how segments
     /// join, and because the candidate window anchors to what is on screen.
     display_text: String,
+    /// The input mode the composition in flight began under; `None` while
+    /// idle. A switch across TPS changes the raw buffer's alphabet, so the
+    /// composition it leaves behind cannot take the new mode's keys
+    /// (`is_left_by_mode_change`).
+    composition_input_mode: Option<InputMode>,
     settings: Arc<dyn SettingsProvider>,
     /// Where the next-word handshakes go, stamped with `clock`.
     next_word: Box<dyn NextWordPort>,
@@ -73,6 +78,7 @@ impl ComposingManager {
             is_composing: false,
             raw_input: String::new(),
             display_text: String::new(),
+            composition_input_mode: None,
             settings,
             next_word,
             clock,
@@ -99,6 +105,17 @@ impl ComposingManager {
 
     fn current_settings(&self) -> EngineSettings {
         self.settings.current().engine_settings()
+    }
+
+    /// Whether the composition in flight was typed on the other side of TPS
+    /// from `mode`, the mode in force — glyphs under a romanization, or a
+    /// romanization under TPS — after a switch that did not end it. The next
+    /// key commits it first (`commit_composition_left_by_mode_change`).
+    /// `mode` comes from the caller's own settings snapshot, the one the key
+    /// is read under.
+    pub fn is_left_by_mode_change(&self, mode: InputMode) -> bool {
+        self.composition_input_mode
+            .is_some_and(|typed_in| typed_in.crosses_tps(mode))
     }
 
     // MARK: - Session lifecycle
@@ -151,7 +168,7 @@ impl ComposingManager {
         let settings = self.current_settings();
         let transition =
             engine::append(character, &settings, self.platform, self.current_generation);
-        self.apply(transition, executor);
+        self.apply(transition, &settings, executor);
     }
 
     /// Applies one Telex key — a tone letter, `z` or `f` — to the pending
@@ -162,7 +179,7 @@ impl ComposingManager {
         log::debug!("telexKey");
         let settings = self.current_settings();
         let transition = engine::telex_key(key, &settings, self.platform, self.current_generation);
-        self.apply(transition, executor);
+        self.apply(transition, &settings, executor);
     }
 
     /// Types one TPS key — a glyph, a tone mark, the hyphen, or `" "` for the
@@ -188,7 +205,7 @@ impl ComposingManager {
                 is_caret_at_end: transition.caret_utf16 as usize == display_length,
             }
         };
-        self.apply(Some(transition), executor);
+        self.apply(Some(transition), &settings, executor);
         outcome
     }
 
@@ -196,12 +213,9 @@ impl ComposingManager {
     /// that empties it.
     pub fn delete_backward(&mut self, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("deleteBackward");
-        let transition = engine::delete_backward(
-            &self.current_settings(),
-            self.platform,
-            self.current_generation,
-        );
-        self.apply(transition, executor);
+        let settings = self.current_settings();
+        let transition = engine::delete_backward(&settings, self.platform, self.current_generation);
+        self.apply(transition, &settings, executor);
     }
 
     /// Steps the caret inside the pending tail. Not a buffer change: the
@@ -213,13 +227,10 @@ impl ComposingManager {
         executor: &mut dyn ComposingEffectExecutor,
     ) {
         log::debug!("moveCaret");
-        let transition = engine::move_caret(
-            direction,
-            &self.current_settings(),
-            self.platform,
-            self.current_generation,
-        );
-        self.apply(transition, executor);
+        let settings = self.current_settings();
+        let transition =
+            engine::move_caret(direction, &settings, self.platform, self.current_generation);
+        self.apply(transition, &settings, executor);
     }
 
     /// Commits the composition as rendered (`CommitRaw`). Answers the text
@@ -230,13 +241,10 @@ impl ComposingManager {
         executor: &mut dyn ComposingEffectExecutor,
     ) -> Option<String> {
         log::debug!("commitComposition");
-        let transition = engine::commit_raw(
-            &self.current_settings(),
-            self.platform,
-            self.current_generation,
-        );
+        let settings = self.current_settings();
+        let transition = engine::commit_raw(&settings, self.platform, self.current_generation);
         let committed = Self::committed_text(transition.as_ref());
-        self.apply(transition, executor);
+        self.apply(transition, &settings, executor);
         committed
     }
 
@@ -256,7 +264,7 @@ impl ComposingManager {
             self.current_generation,
         );
         let committed = Self::committed_text(transition.as_ref());
-        self.apply(transition, executor);
+        self.apply(transition, &settings, executor);
         // The one commit path the engine does not describe to next word: it
         // emits `NextWordClearForNewComposing` and no `NextWordWordSelected`
         // (`transition.rs:769-780`). If the context were left alone, the NEXT
@@ -272,7 +280,7 @@ impl ComposingManager {
     pub fn cancel_composition(&mut self, executor: &mut dyn ComposingEffectExecutor) {
         log::debug!("cancelComposition");
         let transition = engine::reset(self.current_generation);
-        self.apply(transition, executor);
+        self.apply(transition, &self.current_settings(), executor);
     }
 
     // MARK: - Candidates
@@ -291,7 +299,7 @@ impl ComposingManager {
         ) else {
             return CandidateFetchOutcome::Unavailable;
         };
-        self.mirror(&fetched.transition);
+        self.mirror(&fetched.transition, settings.input_mode);
         match fetched.candidates {
             Some(candidates) => CandidateFetchOutcome::Found(candidates),
             None => CandidateFetchOutcome::NotComposing,
@@ -329,6 +337,7 @@ impl ComposingManager {
         script: CandidateScript,
         executor: &mut dyn ComposingEffectExecutor,
     ) -> CandidateCommitOutcome {
+        let settings = self.current_settings();
         log::debug!(
             "commitCandidate consumedBytes={}",
             candidate.consumed_span_end
@@ -346,14 +355,14 @@ impl ComposingManager {
                 consumed_bytes: candidate.consumed_span_end,
                 syllable_count: candidate.syllable_count,
             },
-            &self.current_settings(),
+            &settings,
             self.platform,
             self.current_generation,
         ) else {
             return CandidateCommitOutcome::Unavailable;
         };
         let outcome = CandidateCommitOutcome::from_resolution(&committed.commit);
-        self.apply(Some(committed.transition), executor);
+        self.apply(Some(committed.transition), &settings, executor);
         outcome
     }
 
@@ -373,15 +382,17 @@ impl ComposingManager {
 
     /// Mirror first, then run the effects in the order the engine listed
     /// them. `None` is a round-trip that never reached the engine: nothing to
-    /// mirror and nothing to perform.
+    /// mirror and nothing to perform. `settings` is the snapshot the request
+    /// ran under, so the mode a composition is recorded as begun in is the
+    /// one its first key was typed in.
     fn apply(
         &mut self,
         transition: Option<ComposingTransition>,
+        settings: &EngineSettings,
         executor: &mut dyn ComposingEffectExecutor,
     ) {
         let Some(transition) = transition else { return };
-        self.mirror(&transition);
-        let settings = self.current_settings();
+        self.mirror(&transition, settings.input_mode);
         for effect in &transition.effects {
             match effect {
                 // Learning handshakes are not document effects; routed here so
@@ -398,7 +409,7 @@ impl ComposingManager {
                         roman,
                         preceding,
                         self.clock.now_ms(),
-                        &settings,
+                        settings,
                         self.current_generation,
                     );
                 }
@@ -407,7 +418,7 @@ impl ComposingManager {
                         text,
                         roman,
                         self.clock.now_ms(),
-                        &settings,
+                        settings,
                         self.current_generation,
                     );
                 }
@@ -428,15 +439,23 @@ impl ComposingManager {
     /// Updates the mirror from an engine answer, without performing anything.
     /// The read paths use this directly: a fetch response still carries the
     /// authoritative composition state.
-    fn mirror(&mut self, transition: &ComposingTransition) {
+    /// `input_mode` is the mode of the snapshot the caller already holds;
+    /// it is recorded only when a composition begins.
+    fn mirror(&mut self, transition: &ComposingTransition, input_mode: InputMode) {
         self.is_composing = transition.is_composing;
         self.raw_input = transition.raw_input.clone();
         self.display_text = transition.display_text.clone();
+        self.composition_input_mode = if transition.is_composing {
+            self.composition_input_mode.or(Some(input_mode))
+        } else {
+            None
+        };
     }
 
     fn clear_mirror(&mut self) {
         self.is_composing = false;
         self.raw_input.clear();
         self.display_text.clear();
+        self.composition_input_mode = None;
     }
 }

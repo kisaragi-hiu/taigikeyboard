@@ -26,7 +26,8 @@ use taigi_desktop_core::keys::{
 };
 use taigi_desktop_core::settings::presentation::{pane_title, PageMessage};
 use taigi_desktop_core::settings::{
-    keys, AppearanceMode, SettingChoice, SettingsDocument, SettingsKey, SettingsPane,
+    keys, AppearanceMode, InputMode, InputModeRequest, SettingChoice, SettingsDocument,
+    SettingsKey, SettingsPane,
 };
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::{LiveSettings, SettingsWriter, IDLE_REFRESH_INTERVAL};
@@ -215,6 +216,9 @@ pub enum Message {
     SelectPane(Option<String>),
     /// `None` when a pop-up cleared its selection: nothing to write.
     SetChoice(Option<SettingsWrite>),
+    /// The Input Script pop-up, through the one mode writer
+    /// (`SettingsDocument::switch_input_mode`); `None` writes nothing.
+    SetInputMode(Option<InputMode>),
     SetSwitch(SettingsKey<bool>, bool),
     Reset(ResetScope),
     CustomDictionary(pages::custom_dictionary::Message),
@@ -592,6 +596,10 @@ impl Component for SettingsWindow {
                 self.settings.update(|document| write.apply(document))
             }
             Message::SetChoice(None) => {}
+            Message::SetInputMode(Some(mode)) => self.settings.update(|document| {
+                document.switch_input_mode(InputModeRequest::Pick(mode));
+            }),
+            Message::SetInputMode(None) => {}
             Message::SetSwitch(key, is_on) => self
                 .settings
                 .update(move |document| document.set_bool(&key, is_on)),

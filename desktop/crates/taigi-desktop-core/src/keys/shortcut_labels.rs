@@ -56,10 +56,18 @@ pub fn width_flip_chords_label(platform: DesktopPlatform) -> String {
         .join("  ")
 }
 
+/// The keypad's slot keys under TPS. Named, not drawn as `123456789`: the
+/// number row types glyphs there, and only the keypad picks. A key name
+/// like `Ctrl`, so not translated.
+pub const KEYPAD_SLOT_KEYS_LABEL: &str = "Num 1–9";
+
 /// `qwdfzxvy;` under Standard, `123456789` under Telex: every key of the
 /// live slot set, bare — lowercase because a bare key shows the character
-/// it types.
+/// it types. Under TPS, [`KEYPAD_SLOT_KEYS_LABEL`].
 pub fn slot_keys_label(slot_keys: CandidateSlotKeySet, platform: DesktopPlatform) -> String {
+    if slot_keys == CandidateSlotKeySet::Keypad {
+        return KEYPAD_SLOT_KEYS_LABEL.to_owned();
+    }
     ComposingKeyChord {
         key: slot_keys_run(slot_keys),
         modifiers: KeyModifiers::NONE,
@@ -69,16 +77,22 @@ pub fn slot_keys_label(slot_keys: CandidateSlotKeySet, platform: DesktopPlatform
 
 /// `Shift+QWDFZXVY;` under Standard, `Shift+123456789` under Telex (the
 /// Mac's `⇧QWDFZXVY;`): every key of the live slot set behind ONE Shift —
-/// the Hanji / romanization commit aimed at a slot.
+/// the Hanji / romanization commit aimed at a slot. `None` under TPS, where
+/// a commit is always the Hanji and the row is not drawn.
 pub fn shifted_slot_keys_label(
     slot_keys: CandidateSlotKeySet,
     platform: DesktopPlatform,
-) -> String {
-    ComposingKeyChord {
-        key: slot_keys_run(slot_keys),
-        modifiers: KeyModifiers::SHIFT,
+) -> Option<String> {
+    if slot_keys == CandidateSlotKeySet::Keypad {
+        return None;
     }
-    .display(platform)
+    Some(
+        ComposingKeyChord {
+            key: slot_keys_run(slot_keys),
+            modifiers: KeyModifiers::SHIFT,
+        }
+        .display(platform),
+    )
 }
 
 /// The nine slot keys of `slot_keys` as one run, in page order.
@@ -127,16 +141,16 @@ mod tests {
                 "qwdfzxvy;"
             );
             assert_eq!(
-                shifted_slot_keys_label(CandidateSlotKeySet::BareKeys, platform),
-                "Shift+QWDFZXVY;"
+                shifted_slot_keys_label(CandidateSlotKeySet::BareKeys, platform).as_deref(),
+                Some("Shift+QWDFZXVY;")
             );
             assert_eq!(
                 slot_keys_label(CandidateSlotKeySet::Digits, platform),
                 "123456789"
             );
             assert_eq!(
-                shifted_slot_keys_label(CandidateSlotKeySet::Digits, platform),
-                "Shift+123456789"
+                shifted_slot_keys_label(CandidateSlotKeySet::Digits, platform).as_deref(),
+                Some("Shift+123456789")
             );
         }
         // trace: the Mac's `display` — one ⇧ ahead of the run, no separator.
@@ -146,16 +160,30 @@ mod tests {
             "qwdfzxvy;"
         );
         assert_eq!(
-            shifted_slot_keys_label(CandidateSlotKeySet::BareKeys, mac),
-            "⇧QWDFZXVY;"
+            shifted_slot_keys_label(CandidateSlotKeySet::BareKeys, mac).as_deref(),
+            Some("⇧QWDFZXVY;")
         );
         assert_eq!(
             slot_keys_label(CandidateSlotKeySet::Digits, mac),
             "123456789"
         );
         assert_eq!(
-            shifted_slot_keys_label(CandidateSlotKeySet::Digits, mac),
-            "⇧123456789"
+            shifted_slot_keys_label(CandidateSlotKeySet::Digits, mac).as_deref(),
+            Some("⇧123456789")
         );
+    }
+
+    #[test]
+    fn under_tps_the_keypad_is_named_and_the_shift_row_is_gone() {
+        for platform in WINDOWS_AND_LINUX {
+            assert_eq!(
+                slot_keys_label(CandidateSlotKeySet::Keypad, platform),
+                "Num 1–9"
+            );
+            assert_eq!(
+                shifted_slot_keys_label(CandidateSlotKeySet::Keypad, platform),
+                None
+            );
+        }
     }
 }
