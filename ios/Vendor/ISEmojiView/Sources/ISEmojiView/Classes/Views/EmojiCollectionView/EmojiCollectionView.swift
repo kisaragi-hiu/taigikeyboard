@@ -288,11 +288,14 @@ extension EmojiCollectionView {
 
         let cellRect = attr.frame
         let cellFrameInSuperView = collectionView.convert(cellRect, to: self)
+        let aboveY = cellFrameInSuperView.origin.y - TopPartSize.height - 10
+        // TaigiKeyboard: local patch — no room above (top rows): mirror the popup below the cell.
+        let isOpeningBelow = aboveY < bounds.minY
         let emojiPopLocation = CGPoint(
             x: cellFrameInSuperView.origin.x - ((TopPartSize.width - BottomPartSize.width) / 2.0) + 5,
-            y: cellFrameInSuperView.origin.y - TopPartSize.height - 10,
+            y: isOpeningBelow ? cellFrameInSuperView.origin.y : aboveY,
         )
-        emojiPopView.move(location: emojiPopLocation, animation: sender.state != .began)
+        emojiPopView.move(location: emojiPopLocation, isOpeningBelow: isOpeningBelow, animation: sender.state != .began)
     }
 
     private func dismissPopView(_ usePopViewEmoji: Bool) {
