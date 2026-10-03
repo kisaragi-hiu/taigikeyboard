@@ -2,7 +2,7 @@
 
 TPS (方音符號, the i18n `en` label "Phonetic Symbols", key `tpsMode`) as a third input mode on macOS, Windows and Linux, typed on a physical keyboard, with an on-screen key panel. iOS and Android have typed TPS since v3.5.x.
 
-Status: P0 on main, P1 merged #367, P2a merged #368, P2b merged #372, P3 merged #373, P4 merged #374, P4b merged #376, P5 in review. No release is assigned; scope and timing are the maintainer's call.
+Status: P0 on main, P1 merged #367, P2a merged #368, P2b merged #372, P3 merged #373, P4 merged #374, P4b merged #376, P5 merged #378. No release is assigned; scope and timing are the maintainer's call.
 
 ## Maintainer decisions (2026-10-03)
 
@@ -204,7 +204,7 @@ The panel is shown only under TPS. On macOS and Windows the user's wish is one s
 | P3 | feat (desktop-core, Windows, Linux) | D5: `next_input_mode`, `ToggleTps`, `lastRomanizationMode`, the Windows preserved key, the menu row; the Shortcuts pane names the keypad slot keys under TPS and drops the Shift + slot row; the Linux menu's Cycle Candidate Display row under TPS; a mode change that crosses TPS commits the composition first (a glyph buffer must not take Latin keys) | as P2a | ~300 | Merged #373 `c4024d66` |
 | P4 | feat (macOS) | The Swift enum and picker, `ToggleTps` in `ShortcutActions.swift`, the mode flash; remove the temporary `"tps"` → TL projection in `taigi-macos-ffi` `settings.rs` `document_from` (P2b); the keyless `Commit` before the key is read; the `SwitchInputMode` seam request; keypad slot labels in the candidate window and the picker; full-width punctuation under TPS | macOS | ~350 | Merged #374 `531dda38` |
 | P4b | feat (desktop-core, all three) | D7: the window on demand under TPS — `OpenCandidates` / `CloseCandidates`, the classifier's TPS branch with a window up, no fetch on a TPS edit, the number row in the TPS slot set, O1's no-list arm, the pane label; shell tests that pin the old always-on list | all three | ~400 | Merged #376 `dba9b703` |
-| P5 | feat (all three) | D6 show-only: the rows in the core, the three windows, `ShowTpsKeyboard` (and its menu row on every desktop), `tpsKeyboardShown`; the Windows `SendInput` spike on a throwaway branch, its result recorded under Reviews | all three | ~500 | In review |
+| P5 | feat (all three) | D6 show-only: the rows in the core, the three windows, `ShowTpsKeyboard` (and its menu row on every desktop), `tpsKeyboardShown`; the Windows `SendInput` spike on a throwaway branch, its result recorded under Reviews | all three | ~500 | Merged #378 `2668df2f` |
 | P6 | feat (macOS, Windows) | D6 click: the macOS session request; the Windows `SendInput` path if its spike passed | macOS, Windows | ~350 | Pending |
 
 Regression surface for TL and POJ, checked in every phase that touches the core: the classifier callers (Windows `session.rs:194`, Linux `session.rs:283`, macOS FFI `session.rs:93`), the executor callers (Windows `session.rs:1394`, Linux `session.rs:512`, macOS FFI `session.rs:101`), slot labels (Windows `session.rs:1225-1238`, Linux `session.rs:544-582`), cell presentation, the literal-lead skip, the punctuation projection, and the mode writers.
