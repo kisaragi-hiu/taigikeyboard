@@ -253,21 +253,110 @@ class LearningRecordsViewModelTest {
         }
 
     @Test
-    fun `a count edit sends the listed row and reloads every loaded row`() =
+    fun `a count edit sends the listed row and reads every loaded row again one engine page at a time`() =
         runTest(dispatcher) {
-            val client = FakeLearningRecords(frequencyRows(150))
+            val client = FakeLearningRecords(frequencyRows(260))
             val model = viewModel(client)
             advanceUntilIdle()
             model.loadMore()
             advanceUntilIdle()
+            model.loadMore()
+            advanceUntilIdle()
+            assertEquals(260, model.state.value.records.size)
             val listed = model.state.value.records[120]
+            val before = client.listCalls.size
 
             model.setCount(listed, 40)
             advanceUntilIdle()
 
             assertEquals(listOf(listed to 40L), client.setCalls)
-            assertEquals(ListCall(frequency, mostUsed, "", 150, 0), client.listCalls.last())
+            // trace: 260 loaded → chunks (100, 0), (100, 100), (60, 200); never one 260-row request.
+            assertEquals(
+                listOf(
+                    ListCall(frequency, mostUsed, "", 100, 0),
+                    ListCall(frequency, mostUsed, "", 100, 100),
+                    ListCall(frequency, mostUsed, "", 60, 200),
+                ),
+                client.listCalls.drop(before),
+            )
+            assertEquals(
+                (1L..260L).toList(),
+                model.state.value.records
+                    .map { it.id },
+            )
             assertNull(model.state.value.message)
+        }
+
+    @Test
+    fun `a re-read after the matches shrank stops at the last matching row`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(250))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            model.loadMore()
+            advanceUntilIdle()
+            model.loadMore()
+            advanceUntilIdle()
+            client.rows = frequencyRows(180)
+            val before = client.listCalls.size
+
+            model.delete(model.state.value.records[0])
+            advanceUntilIdle()
+
+            // trace: chunks (100, 0) → 100 rows; (100, 100) → rows 101..180, 180 matches → done.
+            assertEquals(
+                listOf(ListCall(frequency, mostUsed, "", 100, 0), ListCall(frequency, mostUsed, "", 100, 100)),
+                client.listCalls.drop(before),
+            )
+            assertEquals(
+                (1L..180L).toList(),
+                model.state.value.records
+                    .map { it.id },
+            )
+            assertFalse(model.state.value.canLoadMore)
+        }
+
+    @Test
+    fun `a failed next page waits for a retry, which asks for the same page`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(150))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            client.listFailure = UserDataException.EngineUnavailable("learningRecordsList")
+
+            model.loadMore()
+            advanceUntilIdle()
+            assertTrue(model.state.value.hasReadFailed)
+            assertEquals(100, model.state.value.records.size)
+
+            model.loadMore()
+            advanceUntilIdle()
+            assertEquals("scrolling does not ask again after a failure", 2, client.listCalls.size)
+
+            client.listFailure = null
+            model.retry()
+            advanceUntilIdle()
+
+            assertEquals(ListCall(frequency, mostUsed, "", 100, 100), client.listCalls.last())
+            assertEquals(150, model.state.value.records.size)
+            assertFalse(model.state.value.hasReadFailed)
+        }
+
+    @Test
+    fun `a retry after a failed first read lists from the first row`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(3))
+            client.listFailure = UserDataException.EngineUnavailable("learningRecordsList")
+            val model = viewModel(client)
+            advanceUntilIdle()
+
+            client.listFailure = null
+            model.retry()
+            advanceUntilIdle()
+
+            assertEquals(ListCall(frequency, mostUsed, "", 100, 0), client.listCalls.last())
+            assertEquals(3, model.state.value.records.size)
+            assertFalse(model.state.value.hasReadFailed)
         }
 
     @Test

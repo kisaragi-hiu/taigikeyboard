@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
 import com.siansiansu.taigikeyboard.ime.core.CompositionRoot
 import com.siansiansu.taigikeyboard.ime.dictionary.UserDataClient
 import kotlinx.coroutines.CancellationException
@@ -87,6 +88,9 @@ class LearningRecordsViewModel internal constructor(
      */
     private var loadJob: Job? = null
 
+    /** What [retry] asks again after a failed read; cleared by any newer request. */
+    private var retryRead: (() -> Unit)? = null
+
     init {
         reload()
     }
@@ -108,12 +112,24 @@ class LearningRecordsViewModel internal constructor(
         reload(settleMillis = LEARNING_RECORDS_FILTER_SETTLE_MILLIS)
     }
 
-    /** The next page, when the list has more and no request is in flight. */
+    /**
+     * The next page, when the list has more and no request is in flight. A
+     * failed page waits for [retry]: scrolling never asks again on its own.
+     */
     fun loadMore() {
         val shown = _state.value
-        if (loadJob?.isActive == true || !shown.canLoadMore) return
+        if (loadJob?.isActive == true || shown.hasReadFailed || !shown.canLoadMore) return
+        retryRead = null
         _state.update { it.copy(isLoading = true) }
-        loadJob = viewModelScope.launch { fetch(offset = shown.records.size, limit = LEARNING_RECORDS_PAGE_SIZE) }
+        loadJob = viewModelScope.launch { appendPage(offset = shown.records.size) }
+    }
+
+    /** Asks again for what the last failed read asked for. */
+    fun retry() {
+        val again = retryRead ?: return
+        retryRead = null
+        _state.update { it.copy(hasReadFailed = false) }
+        again()
     }
 
     fun setCount(
@@ -129,8 +145,8 @@ class LearningRecordsViewModel internal constructor(
     }
 
     /**
-     * Runs [request] — `false` when the row was gone — then reloads every row
-     * loaded so far: the row moved, went, or was never there.
+     * Runs [request] — `false` when the row was gone — then reads every row
+     * loaded so far again: the row moved, went, or was never there.
      */
     private fun write(request: suspend () -> Boolean) {
         viewModelScope.launch {
@@ -143,54 +159,89 @@ class LearningRecordsViewModel internal constructor(
                     LearningRecordsMessage.WriteFailed(e.message.orEmpty())
                 }
             if (message != null) _state.update { it.copy(message = message) }
-            reload(limit = maxOf(LEARNING_RECORDS_PAGE_SIZE, _state.value.records.size))
+            reload(rows = maxOf(LEARNING_RECORDS_PAGE_SIZE, _state.value.records.size))
         }
     }
 
-    /** Lists from the first row again, [limit] rows, after [settleMillis]. */
+    /** Lists the first [rows] rows again, after [settleMillis]. */
     private fun reload(
         settleMillis: Long = 0,
-        limit: Int = LEARNING_RECORDS_PAGE_SIZE,
+        rows: Int = LEARNING_RECORDS_PAGE_SIZE,
     ) {
         loadJob?.cancel()
+        retryRead = null
         _state.update { it.copy(isLoading = true) }
         loadJob =
             viewModelScope.launch {
                 delay(settleMillis)
-                fetch(offset = 0, limit = limit)
+                readFromStart(rows)
             }
     }
 
     /**
-     * Lands one page: from the first row it replaces the list, further on it
-     * appends. A later page the engine served from an earlier offset (the
-     * matches shrank under it) would overlap the list, so the loaded rows are
-     * read again instead.
+     * Reads the first [rows] rows, one engine page (at most
+     * [LEARNING_RECORDS_PAGE_SIZE]) at a time, and replaces the list with them
+     * in one go. A chunk the engine served from an earlier offset (the matches
+     * shrank under it) is the last page that exists: it overrides the rows
+     * read from that offset on.
      */
-    private suspend fun fetch(
-        offset: Int,
-        limit: Int,
-    ) {
+    private suspend fun readFromStart(rows: Int) {
         val asked = _state.value
-        val page =
-            try {
-                userData.listLearningRecords(asked.kind, asked.order, asked.filter.trim(), limit, offset)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(isLoading = false, hasReadFailed = true, message = LearningRecordsMessage.ReadFailed(e.message.orEmpty()))
-                }
+        val records = mutableListOf<LearningRecord>()
+        while (true) {
+            val offset = records.size
+            val page = read(asked, offset, minOf(LEARNING_RECORDS_PAGE_SIZE, rows - offset)) { reload(rows = rows) } ?: return
+            if (page.offset < offset) records.subList(page.offset, offset).clear()
+            records += page.recordsList
+            val isDone = page.offset != offset || page.recordsCount == 0 || records.size >= rows || records.size >= page.matchingTotal
+            if (isDone) {
+                land(records = records, page = page)
                 return
             }
-        if (offset > 0 && page.offset != offset) {
-            reload(limit = offset)
+        }
+    }
+
+    /**
+     * Appends the page at [offset]. A page the engine served from an earlier
+     * offset would overlap the list, so the loaded rows are read again instead.
+     */
+    private suspend fun appendPage(offset: Int) {
+        val asked = _state.value
+        val page = read(asked, offset, LEARNING_RECORDS_PAGE_SIZE) { loadMore() } ?: return
+        if (page.offset != offset) {
+            readFromStart(rows = offset)
             return
         }
+        land(records = asked.records + page.recordsList, page = page)
+    }
+
+    /** One engine page, or `null` after the failure is shown and [again] kept for [retry]. */
+    private suspend fun read(
+        asked: LearningRecordsState,
+        offset: Int,
+        limit: Int,
+        again: () -> Unit,
+    ): LearningRecords? =
+        try {
+            userData.listLearningRecords(asked.kind, asked.order, asked.filter.trim(), limit, offset)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            retryRead = again
+            _state.update {
+                it.copy(isLoading = false, hasReadFailed = true, message = LearningRecordsMessage.ReadFailed(e.message.orEmpty()))
+            }
+            null
+        }
+
+    private fun land(
+        records: List<LearningRecord>,
+        page: LearningRecords,
+    ) {
         _state.update {
             it.copy(
                 // A row the keyboard moved between two pages may come twice; it is listed once.
-                records = if (offset == 0) page.recordsList else (it.records + page.recordsList).distinctBy { record -> record.id },
+                records = records.distinctBy { record -> record.id },
                 total = page.total,
                 matchingTotal = page.matchingTotal,
                 isLoading = false,

@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -91,7 +92,11 @@ fun LearningRecordsScreen(
             lastVisible >= layout.totalItemsCount - LOAD_MORE_THRESHOLD
         }
     }
-    LaunchedEffect(isNearEnd) { if (isNearEnd) viewModel.loadMore() }
+    // Re-evaluated after every load and query change, so staying at the end still pages on; a
+    // failed page waits for the retry row.
+    LaunchedEffect(isNearEnd, state.isLoading, state.hasReadFailed, state.records.size, state.kind, state.order, state.filter) {
+        if (isNearEnd && !state.isLoading && !state.hasReadFailed) viewModel.loadMore()
+    }
 
     Scaffold(
         topBar = {
@@ -178,7 +183,7 @@ fun LearningRecordsScreen(
                         when {
                             state.isLoading -> SettingsCard { LoadingRow() }
                             // A failed read claims neither "nothing learned yet" nor "no results".
-                            state.hasReadFailed -> NoticeCard(L10n.dictionaryLearningRecordsReadFailed)
+                            state.hasReadFailed -> RetryCard(onRetry = viewModel::retry)
                             state.total == 0 -> EmptyState()
                             else -> NoticeCard(L10n.dictionaryNoResults)
                         }
@@ -200,8 +205,9 @@ fun LearningRecordsScreen(
                             )
                         }
                     }
-                    if (state.isLoading) {
-                        item { LoadingRow() }
+                    when {
+                        state.isLoading -> item { LoadingRow() }
+                        state.hasReadFailed -> item { RetryCard(onRetry = viewModel::retry) }
                     }
                 }
 
@@ -320,6 +326,33 @@ private fun RecordRow(
             Icon(
                 imageVector = Icons.Default.Delete,
                 contentDescription = L10n.commonDelete,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** A failed read, said in place; tapping it asks again. */
+@Composable
+private fun RetryCard(onRetry: () -> Unit) {
+    SettingsCard {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onRetry)
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = L10n.dictionaryLearningRecordsReadFailed,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
