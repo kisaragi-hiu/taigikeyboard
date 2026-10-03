@@ -342,7 +342,8 @@ const FILETIME_UNIX_EPOCH_MS: i64 = 11_644_473_600_000;
 pub fn utc_offset_seconds_at(unix_ms: i64) -> i64 {
     use windows::Win32::Foundation::{FILETIME, SYSTEMTIME};
     use windows::Win32::System::Time::{
-        FileTimeToSystemTime, SystemTimeToFileTime, SystemTimeToTzSpecificLocalTime,
+        FileTimeToSystemTime, GetDynamicTimeZoneInformation, SystemTimeToFileTime,
+        SystemTimeToTzSpecificLocalTimeEx, DYNAMIC_TIME_ZONE_INFORMATION, TIME_ZONE_ID_INVALID,
     };
     fn ticks(time: FILETIME) -> i64 {
         ((i64::from(time.dwHighDateTime)) << 32) | i64::from(time.dwLowDateTime)
@@ -358,17 +359,25 @@ pub fn utc_offset_seconds_at(unix_ms: i64) -> i64 {
         dwLowDateTime: utc_ticks as u32,
         dwHighDateTime: (utc_ticks >> 32) as u32,
     };
-    let local_ticks = || -> windows::core::Result<i64> {
+    let local_ticks = || -> Option<i64> {
         let mut utc = SYSTEMTIME::default();
         // SAFETY: reads and writes stack structs alive for the call.
-        unsafe { FileTimeToSystemTime(&utc_file_time, &mut utc) }?;
+        unsafe { FileTimeToSystemTime(&utc_file_time, &mut utc) }.ok()?;
+        // The dynamic zone, not the active one: the `Ex` call applies the
+        // daylight rule of `utc`'s own year, where the plain call applies
+        // this year's rule to every date.
+        let mut zone = DYNAMIC_TIME_ZONE_INFORMATION::default();
+        // SAFETY: as above.
+        if unsafe { GetDynamicTimeZoneInformation(&mut zone) } == TIME_ZONE_ID_INVALID {
+            return None;
+        }
         let mut local = SYSTEMTIME::default();
-        // SAFETY: as above; `None` is the active time zone.
-        unsafe { SystemTimeToTzSpecificLocalTime(None, &utc, &mut local) }?;
+        // SAFETY: as above.
+        unsafe { SystemTimeToTzSpecificLocalTimeEx(Some(&zone), &utc, &mut local) }.ok()?;
         let mut local_file_time = FILETIME::default();
         // SAFETY: as above.
-        unsafe { SystemTimeToFileTime(&local, &mut local_file_time) }?;
-        Ok(ticks(local_file_time))
+        unsafe { SystemTimeToFileTime(&local, &mut local_file_time) }.ok()?;
+        Some(ticks(local_file_time))
     };
     local_ticks().map_or(0, |local| (local - utc_ticks) / 10_000_000)
 }
