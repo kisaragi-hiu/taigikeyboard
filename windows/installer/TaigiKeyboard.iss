@@ -619,10 +619,11 @@ end;
 
 // PutBackMovedFiles restores only what it moved, so a payload file the previous
 // version did not have stays behind. The 32-bit service is the one such file
-// that matters: left in place, RestorePreviousVersion would register the NEW
-// 32-bit service beside the OLD 64-bit one — a mixed install that never
-// existed. Renamed before it is discarded, like every file here, because a
-// 32-bit host may already have mapped it.
+// that matters: HadX86Dll keeps this restore from registering it, but left on
+// disk it would read as the previous version's on the NEXT run, and a second
+// failure would then register the new 32-bit service beside the old 64-bit
+// one. Renamed before it is discarded, like every file here, because a 32-bit
+// host may already have mapped it.
 procedure RemoveAddedX86Dll;
 var
   Stale: String;
