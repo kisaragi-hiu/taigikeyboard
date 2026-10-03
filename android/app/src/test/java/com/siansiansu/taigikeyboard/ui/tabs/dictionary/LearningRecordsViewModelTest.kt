@@ -349,6 +349,51 @@ class LearningRecordsViewModelTest {
         }
 
     @Test
+    fun `a refresh lists what the keyboard learned meanwhile, the loaded range from the first row`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(150))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            model.selectKind(phrase)
+            advanceUntilIdle()
+            model.updateFilter(" w ")
+            advanceUntilIdle()
+            client.rows = frequencyRows(150) + (1L..120L).map { record(1000 + it, "w台$it", phrase) }
+            val before = client.listCalls.size
+
+            model.refresh()
+            advanceUntilIdle()
+
+            // trace: 0 rows listed → one page (100, 0), kind / filter kept; 120 matches → load more stays possible.
+            assertEquals(listOf(ListCall(phrase, mostUsed, "w", 100, 0)), client.listCalls.drop(before))
+            assertEquals(100, model.state.value.records.size)
+            assertEquals(120, model.state.value.matchingTotal)
+        }
+
+    @Test
+    fun `a refresh re-reads every loaded row one engine page at a time`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(150))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            model.loadMore()
+            advanceUntilIdle()
+            client.rows = frequencyRows(151)
+            val before = client.listCalls.size
+
+            model.refresh()
+            advanceUntilIdle()
+
+            // trace: 150 loaded → chunks (100, 0), (50, 100); the 151st row waits for load more.
+            assertEquals(
+                listOf(ListCall(frequency, mostUsed, "", 100, 0), ListCall(frequency, mostUsed, "", 50, 100)),
+                client.listCalls.drop(before),
+            )
+            assertEquals(150, model.state.value.records.size)
+            assertEquals(151, model.state.value.matchingTotal)
+        }
+
+    @Test
     fun `a retry after a failed first read lists from the first row`() =
         runTest(dispatcher) {
             val client = FakeLearningRecords(frequencyRows(3))

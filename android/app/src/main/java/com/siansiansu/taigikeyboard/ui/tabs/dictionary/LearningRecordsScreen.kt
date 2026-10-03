@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
 import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
@@ -84,6 +85,14 @@ fun LearningRecordsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var editingRecord by remember { mutableStateOf<LearningRecord?>(null) }
+
+    // Back on the page after typing elsewhere: what the keyboard learned meanwhile is listed. The
+    // first resume is skipped — the view model's init already loads.
+    var hasResumed by remember { mutableStateOf(false) }
+    LifecycleResumeEffect(viewModel) {
+        if (hasResumed) viewModel.refresh() else hasResumed = true
+        onPauseOrDispose {}
+    }
 
     val listState = rememberLazyListState()
     val isNearEnd by remember {

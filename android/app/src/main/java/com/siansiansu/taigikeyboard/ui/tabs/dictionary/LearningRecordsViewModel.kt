@@ -130,7 +130,7 @@ class LearningRecordsViewModel internal constructor(
         _state.update { it.copy(hasReadFailed = false) }
         when (failedRead) {
             FailedRead.NEXT_PAGE -> loadMore()
-            FailedRead.LIST -> reload(rows = maxOf(LEARNING_RECORDS_PAGE_SIZE, _state.value.records.size))
+            FailedRead.LIST -> refresh()
         }
     }
 
@@ -141,6 +141,15 @@ class LearningRecordsViewModel internal constructor(
 
     /** No confirmation, like deleting one custom word: the keyboard learns the row again on the next pick. */
     fun delete(record: LearningRecord) = write { userData.deleteLearningRecord(record) }
+
+    /**
+     * Reads the rows listed so far again from the first, one engine page at a
+     * time, keeping kind, order and filter: the keyboard may have learned,
+     * moved or evicted rows since they were read.
+     */
+    fun refresh() {
+        reload(rows = maxOf(LEARNING_RECORDS_PAGE_SIZE, _state.value.records.size))
+    }
 
     fun dismissMessage() {
         _state.update { it.copy(message = null) }
@@ -161,7 +170,7 @@ class LearningRecordsViewModel internal constructor(
                     LearningRecordsMessage.WriteFailed(e.message.orEmpty())
                 }
             if (message != null) _state.update { it.copy(message = message) }
-            reload(rows = maxOf(LEARNING_RECORDS_PAGE_SIZE, _state.value.records.size))
+            refresh()
         }
     }
 
