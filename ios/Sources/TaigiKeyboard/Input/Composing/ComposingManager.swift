@@ -187,9 +187,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             settings: settingsProvider.current,
             generation: currentGeneration,
         )
-        selfCommitInProgress = true
-        defer { selfCommitInProgress = false }
-        apply(result.transition)
+        performAsSelfCommit { apply(result.transition) }
         return result.outcome
     }
 
@@ -252,9 +250,16 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
 
     // Self-commit variant of `apply`: the `selfCommitInProgress` flag suppresses a redundant generation bump.
     private func applyAsSelfCommit(_ transition: RustEngineBridge.ComposingTransition) {
+        performAsSelfCommit { apply(transition) }
+    }
+
+    /// Runs `body` with `selfCommitInProgress` set — for the IME's own
+    /// document writes, including a commit the platform writes after the
+    /// engine call returned (iOS `HostTextWriter.endEvent`).
+    func performAsSelfCommit(_ body: () -> Void) {
         selfCommitInProgress = true
         defer { selfCommitInProgress = false }
-        apply(transition)
+        body()
     }
 
     private func apply(_ transition: RustEngineBridge.ComposingTransition) {

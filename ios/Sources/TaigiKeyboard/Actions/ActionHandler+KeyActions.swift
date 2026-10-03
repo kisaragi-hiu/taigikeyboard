@@ -45,7 +45,7 @@ extension ActionHandler {
 
         // English mode: insert directly, skip composing
         if settings.inputMode == .english {
-            keyboardContext.textDocumentProxy.insertText(finalChar)
+            hostText.insert(finalChar)
             // Reset single-shift (preserve Caps Lock)
             if keyboardContext.keyboardCase == .uppercased {
                 keyboardContext.keyboardCase = .lowercased
@@ -61,7 +61,7 @@ extension ActionHandler {
             if nextWordController.isShowing {
                 nextWordController.clearDisplay()
             }
-            keyboardContext.textDocumentProxy.insertText(finalChar)
+            hostText.insert(finalChar)
             return true
         }
 
@@ -77,7 +77,7 @@ extension ActionHandler {
                 // Not composing: check NextWord state
                 if finalChar == "-", nextWordController.isShowing {
                     // "-" during NextWord: output directly, keep NextWord suggestions
-                    keyboardContext.textDocumentProxy.insertText("-")
+                    hostText.insert("-")
                     logger.debug("[INPUT] '-' committed in NextWord mode, keeping suggestions")
                 } else {
                     if nextWordController.isShowing {
@@ -141,14 +141,14 @@ extension ActionHandler {
            (proxy.selectedText ?? "").isEmpty,
            proxy.documentContextBeforeInput?.last == " "
         {
-            proxy.deleteBackward()
-            proxy.insertText(char + " ")
+            hostText.deleteBackward()
+            hostText.insert(char + " ")
             // Re-armed on the space the swap just wrote, so `?!` chains keep
             // swapping (`guá? ` + `!` → `guá?! `).
             armAutoSpaceSwap()
             return
         }
-        proxy.insertText(char)
+        hostText.insert(char)
     }
 
     // MARK: - Space
@@ -157,7 +157,7 @@ extension ActionHandler {
     func handleSpaceAction() -> Bool {
         // English mode: insert space directly
         if settings.inputMode == .english {
-            keyboardContext.textDocumentProxy.insertText(" ")
+            hostText.insert(" ")
             return true
         }
 
@@ -182,12 +182,13 @@ extension ActionHandler {
             // `process(triggerPrediction:false)` double-recorded it). Space
             // SUPPRESSES the next-word *display*: clearDisplay() AFTER the
             // commit bumps the NextWord generation so the engine's in-flight
-            // prediction query is dropped stale.
+            // prediction query is dropped stale. The space joins the held
+            // commit, so the host gets one write (`HostTextWriter`, #352).
             composingManager.commitComposition()
-            keyboardContext.textDocumentProxy.insertText(" ")
+            hostText.insert(" ")
             nextWordController.clearDisplay()
         } else {
-            keyboardContext.textDocumentProxy.insertText(" ")
+            hostText.insert(" ")
         }
         return true
     }
@@ -200,7 +201,7 @@ extension ActionHandler {
 
         // English mode: delete directly
         if settings.inputMode == .english {
-            keyboardContext.textDocumentProxy.deleteBackward()
+            hostText.deleteBackward()
             let caseAfter = String(describing: keyboardContext.keyboardCase)
             logger.debug("[AUTOCAP][BACKSPACE] AFTER delete: \(caseAfter)")
             return true
@@ -210,7 +211,7 @@ extension ActionHandler {
         if composingManager.isComposing {
             composingManager.deleteBackward()
         } else {
-            keyboardContext.textDocumentProxy.deleteBackward()
+            hostText.deleteBackward()
             handleBackspaceForNextWord()
         }
 
@@ -239,7 +240,7 @@ extension ActionHandler {
     func handleReturnAction() -> Bool {
         // English mode: insert newline directly
         if settings.inputMode == .english {
-            keyboardContext.textDocumentProxy.insertText("\n")
+            hostText.insert("\n")
             return true
         }
 
@@ -276,7 +277,7 @@ extension ActionHandler {
             )
             return true
         } else {
-            keyboardContext.textDocumentProxy.insertText("\n")
+            hostText.insert("\n")
         }
         return true
     }

@@ -45,7 +45,7 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | **Intent** | Input intents: text input (Start / Append / AppendHyphen / ReplaceLast / DeleteBackward / CommitRaw / SelectCandidate / CommitPreeditThenInsertExternal / Reset), continuous input (FetchAtPos / CommitContinuous), desktop editing keys (TelexKey / MoveCaret); `CommitDerived` / `EnterContinuous` / `ResetContinuous` were removed in R12 (tags 15 / 30 / 33 reserved) | Rust `composing::Intent` |
 | **Effect** | Platform-neutral effect enum (updatePreedit / clearPreeditWithoutCommit / commitTextReplacingPreedit / clearCandidates / refreshCandidates / resetCandidateContext / nextWord*; `deleteBackwardFromDocument` was removed in R12, tag 4 reserved) | Rust `composing::transition` |
 | **commitComposition** | Effect interpreter inserts derived text + clears preedit | iOS `ComposingDelegate.execute(_:)` / Android `ComposingDelegate` |
-| **markedText** | iOS inline composition display via `setMarkedText` | iOS `KeyboardViewController.setMarkedText()` |
+| **markedText** | iOS inline composition display via `setMarkedText` | iOS `HostTextWriter.update(_:)` |
 
 ### 2. Autocomplete (`engine/continuous-candidate-display.md`)
 | Keyword | Definition | Owner |
