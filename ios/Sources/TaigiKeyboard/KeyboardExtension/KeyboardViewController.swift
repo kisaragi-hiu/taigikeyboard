@@ -211,6 +211,15 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     // MARK: - Text Input Change
 
     override func textDidChange(_ textInput: UITextInput?) {
+        // UIKit hosts report our own `unmarkText()` commit as a text change;
+        // the `insertText` commit it replaced raised none. Let the echo pass
+        // unseen — not even KeyboardKit's autocomplete refresh — so the
+        // predictions and NextWord's last word the commit just set up stay.
+        if actionHandler?.hostText.isEchoOfOwnCommit(
+            documentContextBeforeInput: textDocumentProxy.documentContextBeforeInput,
+        ) == true {
+            return
+        }
         super.textDidChange(textInput)
         actionHandler?.nextWordController.resetAndClearUI()
     }

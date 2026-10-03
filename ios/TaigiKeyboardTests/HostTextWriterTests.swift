@@ -140,6 +140,33 @@ final class HostTextWriterTests: XCTestCase {
         XCTAssertTrue(writer.hasMarkedText)
     }
 
+    // MARK: - Echo of the keyboard's own commit
+
+    func testHostTextWriter_echoOfOwnCommit_matchesOnceWhenCommitPrecedesCaret() {
+        writer.update("gua")
+        writer.beginEvent()
+        writer.commit("我")
+        writer.endEvent()
+
+        XCTAssertFalse(writer.isEchoOfOwnCommit(documentContextBeforeInput: nil), "nothing before the caret")
+        XCTAssertFalse(writer.isEchoOfOwnCommit(documentContextBeforeInput: "你"), "caret moved elsewhere")
+        XCTAssertTrue(writer.isEchoOfOwnCommit(documentContextBeforeInput: "台語我"), "the commit's own echo")
+        XCTAssertFalse(writer.isEchoOfOwnCommit(documentContextBeforeInput: "台語我"), "an echo is consumed once")
+    }
+
+    func testHostTextWriter_echoOfOwnCommit_neverMatchesWithoutAMarkedReplacement() {
+        // (step, document text before the caret) — none of these unmarks text.
+        let steps: [(String, () -> Void)] = [
+            ("insert", { self.writer.insert("我") }),
+            ("commit without marked text", { self.writer.commit("我") }),
+            ("clear", { self.writer.update("gua"); self.writer.clear() }),
+        ]
+        for (step, write) in steps {
+            write()
+            XCTAssertFalse(writer.isEchoOfOwnCommit(documentContextBeforeInput: "我"), step)
+        }
+    }
+
     func testHostTextWriter_insertAfterEvent_goesStraightToHost() {
         writer.update("taigi")
         writer.beginEvent()

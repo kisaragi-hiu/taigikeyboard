@@ -33,6 +33,10 @@ final class HostTextWriter {
     /// until `endEvent()` replaces it with this text.
     private(set) var pendingCommit: String?
 
+    /// The text the last marked replacement committed, until the host's
+    /// echo of it (`isEchoOfOwnCommit`) has been seen.
+    private var unechoedCommit: String?
+
     private var isInEvent = false
 
     init(proxy: @escaping () -> UITextDocumentProxy) {
@@ -52,6 +56,20 @@ final class HostTextWriter {
         guard let text = pendingCommit else { return }
         pendingCommit = nil
         replaceMarkedText(with: text)
+    }
+
+    /// Whether a host text-change callback is the echo of the keyboard's own
+    /// commit rather than the user editing. UIKit hosts report `unmarkText()`
+    /// of non-empty marked text as a text change (~50 ms later, observed iOS
+    /// 27); the echo leaves the committed text right before the caret. Seen
+    /// once, the echo is consumed. azooKey matches its own edits the same way
+    /// (`ExpectedEditTracker`), with full before/after snapshots.
+    func isEchoOfOwnCommit(documentContextBeforeInput: String?) -> Bool {
+        guard let committed = unechoedCommit,
+              documentContextBeforeInput?.hasSuffix(committed) == true
+        else { return false }
+        unechoedCommit = nil
+        return true
     }
 
     // MARK: - Composition
@@ -126,5 +144,6 @@ final class HostTextWriter {
         proxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
         proxy.unmarkText()
         hasMarkedText = false
+        unechoedCommit = text.isEmpty ? nil : text
     }
 }
