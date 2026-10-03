@@ -1,6 +1,6 @@
 ---
 name: refactor-reviewer
-description: Read-only behavior-freeze review of a refactor diff. Give it the changed files; checks semantic equivalence, public-signature changes, cross-platform counterparts (iOS↔Android by file name, macOS stores mirroring iOS, Windows/Linux sharing desktop/ crates), dead code and stale comments; returns PASS / NEEDS ATTENTION with file:line issues. Use for refactor rounds; not for feature or bugfix review (use /code-review).
+description: Read-only behavior-freeze review of a refactor diff. Give it the changed files; checks semantic equivalence, public-signature changes, cross-platform counterparts (iOS↔Android by file name, macOS stores mirroring iOS, the three desktops sharing desktop/ crates), dead code and stale comments; returns PASS / NEEDS ATTENTION with file:line issues. Use for refactor rounds; not for feature or bugfix review (use /code-review).
 model: sonnet
 tools: Read, Grep, Glob, Bash
 ---
@@ -9,7 +9,7 @@ You are reviewing refactored code in a cross-platform Taiwanese keyboard project
 
 ## Context
 
-- Locate counterparts: iOS ↔ Android by name (Glob `ios/**/<Name>.swift` ↔ `android/**/<Name>.kt`; the two trees mirror each other); the user-data stores of macOS, Windows and Linux are the engine's (`engine/userdata/`) and mirror iOS; Windows and Linux share the `desktop/` crates
+- Locate counterparts: iOS ↔ Android by name (Glob `ios/**/<Name>.swift` ↔ `android/**/<Name>.kt`; the two trees mirror each other); the user-data stores of macOS, Windows and Linux are the engine's (`engine/userdata/`) and mirror iOS; macOS (through `macos/crates/taigi-macos-ffi`), Windows and Linux share the `desktop/` crates
 - Read `docs/references/keywords.md` for domain terminology
 - The project uses KeyboardKit (iOS) and FlorisBoard (Android)
 

@@ -14,9 +14,10 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   in its own workspace (`make -C desktop test`). These gates prove compilation, not behaviour —
   behaviour is the dogfood run-book's job. Never claim "works on Windows".
 - Put logic in `taigi-desktop-core` (`unsafe_code = forbid`, host-testable, in the `desktop/`
-  workspace shared with Linux — `linux-roadmap.md` L2) whenever it does not need a
+  workspace shared with Linux and macOS — `linux-roadmap.md` L2) whenever it does not need a
   Win32 handle. `taigi-windows-tsf` and `taigi-windows-settings` are thin shells. A change under
-  `desktop/` runs `make -C desktop test` AND `make windows-check`.
+  `desktop/` reaches all three desktops: run `python3 tools/test_select.py --run` (desktop,
+  Windows, Linux and both macOS gates, the macOS ones behind `make build`).
 - Pin UI-framework versions to what has actually run on the Windows box: `windows-reactor` is a
   git dependency pinned to a commit SHA (W17; crates.io has only placeholders) — bump only in its
   own round, built and smoke-run on the box. The settings crate's real gate is `make check-box`
@@ -92,9 +93,9 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   There the shared crates' tests are the reference for Windows and Linux; a known macOS difference
   is listed in the roadmap (§ Found while auditing, e.g. candidate metrics) and stays open until
   decided, rather than being "fixed" on either side.
-- The `// mirrors macos/.../<File>.swift:<line>` comments already in the Rust are rewritten to
-  state their rule in the roadmap's last phase (P15); a new rule states itself and names its test
-  instead of citing Swift.
+- A rule in the Rust states itself and names its test; it does not cite a Swift file as its
+  source. A `*.swift` cite in a Rust comment points at a live Swift twin, a shell port of a macOS
+  view, an iOS counterpart or pinned history.
 - Named shell divergences so far: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch, 外觀 mode is a native pop-up rather than the Mac's drawn thumbnails, the width floor is 600 so `NavigationView` can compact its pane), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
   hosts run on defaults, Windows toast instead of `UNUserNotification`, no `.taigi` pane (macOS
   retired it too).

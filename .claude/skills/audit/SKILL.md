@@ -18,7 +18,7 @@ Worked example of the finished product: `docs/reports/2026-09-24-mobile-smart-su
 |---|---|
 | `engine` | `engine/*/src`, `engine/protos/proto/*.proto`, crate graph (`docs/contributing/rust-best-practices.md` §1a) |
 | `mobile` | `ios/Sources/TaigiKeyboard`, `android/app/src/main/java/.../taigikeyboard`, their bridges (`RustEngineBridge+*.swift`, `engine/*Bridge.kt`) |
-| `desktop` | `macos/Sources`, `desktop/crates`, `windows/`, `linux/` |
+| `desktop` | `macos/Sources`, `macos/crates`, `desktop/crates`, `windows/`, `linux/` |
 | `all` | all of the above + `docs/architecture/*` for drift |
 
 Always exclude generated code from every count and every "caller" match: `*.pb.swift`, `android/.../engine/proto/*.java`, `Strings/Generated/`, `target/`, `build/`.
@@ -29,7 +29,7 @@ Give each agent the scope, its recipe and the § 3 verification rules; ask for `
 
 **R-dead · dead surface.** For every `oneof method` entry in `engine/protos/proto/*.proto`: engine dispatch arm → platform bridge function → **production** callers (outside tests, outside the bridge file, outside generated code). No production caller on any platform = dead. Same walk for proto fields (set by nobody or read by nobody), bridge functions, public Swift/Kotlin types, settings keys still plumbed after their UI was removed, unused parameters.
 
-**R-twin · platform twins.** Diff the same responsibility across twins: iOS↔Android by file name (`ComposingManager`, `NextWordController`, `*Bridge`), iOS user-data stores ↔ the engine's (`engine/userdata`), Windows↔Linux over `desktop/crates`. Flag (a) logic both sides implement that could live once in the engine, (b) twins that already drifted. For every drift, record **whether a user can observe it** (§ 3.2).
+**R-twin · platform twins.** Diff the same responsibility across twins: iOS↔Android by file name (`ComposingManager`, `NextWordController`, `*Bridge`), iOS user-data stores ↔ the engine's (`engine/userdata`), the three desktops over `desktop/crates`, and the areas macOS keeps in Swift beside desktop-core (candidate-window geometry, settings storage, global shortcuts, update flow) ↔ their Windows / Linux twins. Flag (a) logic both sides implement that could live once in the engine, (b) twins that already drifted. For every drift, record **whether a user can observe it** (§ 3.2).
 
 **R-fallback · redundant paths.** `AGENTS.md` § Design principles (no redundant fallback): a second path that re-implements the primary (e.g. a platform mirror of engine bit math), "A fails → B" in data flow, legacy code kept for a caller that no longer exists.
 

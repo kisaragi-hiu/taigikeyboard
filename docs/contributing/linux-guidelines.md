@@ -16,11 +16,12 @@ record: `docs/architecture/linux-roadmap.md`.
   first contract, not behaviour — behaviour is the dogfood run-book's job. Never claim "works
   on Linux".
 - Put logic in `taigi-desktop-core` (`unsafe_code = forbid`, host-testable, shared with
-  Windows) whenever it needs no D-Bus / GTK handle. `taigikeyboard-ibus` and
+  Windows and macOS) whenever it needs no D-Bus / GTK handle. `taigikeyboard-ibus` and
   `taigikeyboard-settings` are thin shells; `taigi-linux-platform` holds the few
   Linux-specific pure pieces (XDG paths, keysym translation, launcher).
-- A change to `desktop/` is a change to BOTH desktops: run `make windows-check` too (the gnu
-  cross-clippy compiles the moved crates through the Windows graph).
+- A change to `desktop/` is a change to all three desktops: `python3 tools/test_select.py --run`
+  selects the desktop, Windows, Linux and both macOS gates (the macOS ones behind `make build`);
+  `make windows-check`'s gnu cross-clippy compiles the crates through the Windows graph.
 
 ## IBus wire discipline
 

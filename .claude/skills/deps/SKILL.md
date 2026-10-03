@@ -1,6 +1,6 @@
 ---
 name: deps
-description: Evaluate which third-party dependencies can be upgraded — Rust crates (engine / desktop / windows / linux workspaces), Android Gradle deps + plugins + wrapper, Swift packages (macOS + iOS), Python (dictionary pipeline, emoji/), mise tools, open Dependabot PRs/alerts. Classifies every candidate SAFE / REVIEW / MAJOR / BLOCKED / USER-ONLY against the repo's standing pins and proposes PR groupings. Use when asked "what can we upgrade", "check outdated packages", "dependency audit". Read-only — never edits manifests or lockfiles, never builds, branches or opens a round. Args: scope `rust` | `android` | `apple` | `python` | `tools` | `all` (default all). App-version upgrade compatibility is /upgrade-check.
+description: Evaluate which third-party dependencies can be upgraded — Rust crates (engine / desktop / windows / linux / macos workspaces), Android Gradle deps + plugins + wrapper, Swift packages (macOS + iOS), Python (dictionary pipeline, emoji/), mise tools, open Dependabot PRs/alerts. Classifies every candidate SAFE / REVIEW / MAJOR / BLOCKED / USER-ONLY against the repo's standing pins and proposes PR groupings. Use when asked "what can we upgrade", "check outdated packages", "dependency audit". Read-only — never edits manifests or lockfiles, never builds, branches or opens a round. Args: scope `rust` | `android` | `apple` | `python` | `tools` | `all` (default all). App-version upgrade compatibility is /upgrade-check.
 disable-model-invocation: false
 ---
 
@@ -43,7 +43,7 @@ Run independent ecosystems in parallel (one message, several Bash calls). Networ
 
 ### rust
 
-Each tracked `Cargo.lock` is its own workspace: `git ls-files '*Cargo.lock'` (engine, desktop, windows, linux).
+Each tracked `Cargo.lock` is its own workspace: `git ls-files '*Cargo.lock'` (engine, desktop, windows, linux, macos).
 
 1. Compatible bumps: `cargo update --manifest-path <ws>/Cargo.toml --dry-run` → every `Updating a vX -> vY` line is SAFE (group per workspace; list only direct deps by name, count transitive).
 2. Majors / out-of-range for **direct** deps: `cargo metadata --manifest-path <ws>/Cargo.toml --format-version 1 --no-deps` → each `dependencies[].req` from crates.io; latest via `curl -s -H 'User-Agent: taigikeyboard-deps' https://crates.io/api/v1/crates/<name> | jq -r .crate.max_stable_version`. Latest outside `req` → REVIEW (0.x minor = breaking in Cargo → MAJOR) / MAJOR.
@@ -99,7 +99,7 @@ Print in the terminal (offer an artifact only if the USER wants to share it):
 1. **One line**: counts per tier + any open security alert.
 2. **Table per ecosystem**, most actionable first: `| Package | Current | Latest | Tier | Why / blocker | Touches |`.
 3. **Re-verified pins**: each BLOCKED row → still holds / no longer holds (with the evidence).
-4. **Suggested PR grouping** — one PR per ecosystem-and-risk (e.g. "rust SAFE lock refresh, 4 workspaces", "android plugin + wrapper", one PR per MAJOR). Size and build gates per group; no release assignment.
+4. **Suggested PR grouping** — one PR per ecosystem-and-risk (e.g. "rust SAFE lock refresh, 5 workspaces", "android plugin + wrapper", one PR per MAJOR). Size and build gates per group; no release assignment.
 5. **Next action**: the single group to start with and the cue to open it.
 
 If a finding changes a standing pin's status, suggest updating `project_dependency_upgrade_audit.md` — do not write memory from inside this skill.
