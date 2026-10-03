@@ -517,13 +517,13 @@ pub fn view(
         list_pager::bar(
             (
                 icon_button(
-                    ADD_GLYPH,
+                    list_pager::ADD_GLYPH,
                     strings.resolve(StringKey::DesktopCustomFontAdd),
                     is_enabled,
                     context.callback(|()| WindowMessage::FontManagement(Message::Add)),
                 ),
                 icon_button(
-                    REMOVE_GLYPH,
+                    list_pager::REMOVE_GLYPH,
                     strings.resolve(StringKey::CommonDelete),
                     can_remove,
                     context.callback(|()| WindowMessage::FontManagement(Message::Remove)),
@@ -572,8 +572,6 @@ fn missing_note(
 /// list inside the pane's scroll view cannot have (`list_pager`).
 const PAGE_SIZE: usize = 10;
 const LIST_HEIGHT: f64 = PAGE_SIZE as f64 * 32.0;
-const ADD_GLYPH: &str = "\u{E710}";
-const REMOVE_GLYPH: &str = "\u{E738}";
 
 #[cfg(test)]
 mod tests {

@@ -1651,28 +1651,6 @@
         "ja": "学習記録"
       }
     },
-    "learningRecordsInfo": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Footnote explaining what the rows are. Says nothing about ranking: only word frequency feeds candidate ranking (see learningRecordsCountCapInfo).",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios",
-          "macos",
-          "windows",
-          "linux"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "台語齒盤對你選 ê 字學著 ê 紀錄佮擺數。",
-        "tailo": "Tâi-gí khí-puânn tuì lí suán ê jī ha̍k--tio̍h ê kì-lio̍k kah pái-sòo.",
-        "poj": "Tâi-gí khí-pôaⁿ tùi lí soán ê jī ha̍k--tio̍h ê kì-lio̍k kah pái-sò͘.",
-        "en": "What the keyboard learned from the words you pick, and how many times.",
-        "ja": "選んだ単語からキーボードが学習した記録と回数です。"
-      }
-    },
     "learningRecordsFrequency": {
       "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). How often each word was picked (the user_frequency store): kind picker segment (desktop); Data management entry row and page title (mobile).",
       "scope": {

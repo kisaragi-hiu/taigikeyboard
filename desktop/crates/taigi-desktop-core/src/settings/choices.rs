@@ -339,13 +339,14 @@ pub enum SettingsPane {
 
 impl SettingsPane {
     /// The panes the Windows sidebar shows, top to bottom (Linux keeps its
-    /// own roster). Learning Records joins with its Windows page.
-    pub const SIDEBAR: [SettingsPane; 6] = [
+    /// own roster).
+    pub const SIDEBAR: [SettingsPane; 7] = [
         Self::General,
         Self::Appearance,
         Self::Shortcuts,
         Self::DictionarySources,
         Self::CustomDictionary,
+        Self::LearningRecords,
         Self::FontManagement,
     ];
 

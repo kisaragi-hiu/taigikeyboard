@@ -3,121 +3,53 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Reads and writes the custom dictionary on behalf of the page.
-///
-/// Rows are fetched one PAGE at a time and replaced on every change rather than
-/// held: this window outlives every visit to the page, and a 30000-row
-/// dictionary kept in a view model would stay in memory for the life of the
-/// input method.
-///
-/// Paged since 2026-08-26. It was a flat `LIMIT 100`, which had two faults a
-/// 17000-entry dictionary showed at once (USER, real device): rows 101 and past
-/// were unreachable by any means but the filter, and a hundred rows in a
-/// fixed-height `Table` inside a `Form` put one scroll view inside another —
-/// the list would not scroll. A page that FITS the table has neither problem:
-/// nothing is nested to scroll, and every row is reachable by paging.
+/// Reads and writes the custom dictionary on behalf of the page, one page of
+/// rows at a time (`UserDataPagedList`).
 @MainActor
 @Observable
 final class CustomDictionaryPageModel {
-    /// How many rows one page holds. Chosen with the table's height rather
-    /// than against it (`CustomDictionaryPage.Metrics`): the point of paging
-    /// here is that a page never needs a scroller of its own.
-    /// `nonisolated` so the table's own height can be derived from it: that
-    /// derivation runs where a view's metrics are declared, outside the actor.
-    nonisolated static let pageSize = 10
-
-    private(set) var rows: [CustomDictionaryRow] = []
-    /// Every entry, for the section header — what the dictionary HOLDS, which
-    /// is not what the current filter matches.
-    private(set) var totalCount = 0
-    /// How many entries the current filter matches; what the pager divides.
-    private(set) var matchCount = 0
-    /// Which page is on screen, zero-based.
-    private(set) var page = 0
+    private(set) var list = UserDataPagedList<CustomDictionaryRow>()
     private(set) var activity: UserDataPageActivity = .idle
-    var filter = ""
+    /// Once changed, makes every load in flight stale at once
+    /// (`UserDataPagedList.invalidate`), not when the settled filter's own
+    /// load starts.
+    var filter = "" {
+        didSet {
+            if oldValue != filter {
+                list.invalidate()
+            }
+        }
+    }
+
     var message: UserDataPageMessage?
 
-    /// How many pages the matches fill — at least one, so an empty dictionary
-    /// still reads as "1 / 1" rather than as a pager with nothing in it.
-    var pageCount: Int {
-        max(1, (matchCount + Self.pageSize - 1) / Self.pageSize)
-    }
-
-    var canPageBackward: Bool {
-        page > 0
-    }
-
-    var canPageForward: Bool {
-        page + 1 < pageCount
-    }
-
     func pageBackward() async {
-        guard canPageBackward else { return }
-        page -= 1
+        guard list.step(by: -1) else { return }
         await load()
     }
 
     func pageForward() async {
-        guard canPageForward else { return }
-        page += 1
+        guard list.step(by: 1) else { return }
         await load()
     }
 
-    /// Which load the rows on screen came from. A query runs off the main
-    /// actor and cannot be cancelled once it is in the engine, so a
-    /// load started under an older filter can still come back after a newer
-    /// one has — and would put rows on screen that do not match what is in the
-    /// box. The newest load wins by number, not by arrival.
-    private var loadGeneration = 0
-
     private let client: any UserDataClient
-
-    /// The page's engine requests, one at a time and off the main actor. A
-    /// queue of its own rather than a detached task per request: a request
-    /// can wait on SQLite — or, right after launch, on the engine finishing
-    /// the takeover of the old files — and that wait must not hold a thread
-    /// of the shared pool the rest of the process runs its tasks on.
-    private static let requests = DispatchQueue(label: "CustomDictionaryPageModel.requests")
 
     init(client: any UserDataClient) {
         self.client = client
     }
 
-    /// Runs one engine request on `requests`: each is a synchronous
-    /// round-trip, and this window must not freeze while it runs.
-    private func run<Value: Sendable>(
-        _ request: @escaping @Sendable (any UserDataClient) throws -> Value,
-    ) async throws -> Value {
-        let client = client
-        return try await withCheckedThrowingContinuation { continuation in
-            Self.requests.async {
-                continuation.resume(with: Result { try request(client) })
-            }
-        }
-    }
-
-    /// Reloads the page on screen. The engine pulls a page the list shrank
-    /// under — a delete on the last page, or a filter that now matches less —
-    /// back to the last one that exists, and says which page it answered.
+    /// Reloads the page on screen.
     func load() async {
-        loadGeneration += 1
-        let generation = loadGeneration
-        let (filter, offset) = (filter, page * Self.pageSize)
+        let load = list.beginLoad()
+        let (filter, offset) = (filter, load.offset)
         do {
-            let listing = try await run {
-                try $0.list(filter: filter, limit: Self.pageSize, offset: offset)
+            let listing = try await UserDataRequests.run(on: client) {
+                try $0.list(filter: filter, limit: UserDataListMetrics.pageSize, offset: offset)
             }
-            guard generation == loadGeneration else { return }
-            page = listing.offset / Self.pageSize
-            matchCount = listing.matchingTotal
-            rows = listing.rows
-            totalCount = listing.total
+            list.land(listing, from: load)
         } catch {
-            // Same guard on the way out: a failure from a load the user has
-            // already typed past must not raise an alert over the list that
-            // replaced it.
-            guard generation == loadGeneration else { return }
+            guard list.isCurrent(load) else { return }
             // Not an empty list: "the dictionary is empty" and "the dictionary
             // could not be read" look identical on screen, and only one of them
             // is worth the user doing something about.
@@ -125,31 +57,30 @@ final class CustomDictionaryPageModel {
         }
     }
 
-    /// Back to page one, then load. What a filter change asks for: the pages
-    /// it had before are pages of a different list.
+    /// Back to page one, then load. What a filter change asks for.
     func loadFirstPage() async {
-        page = 0
+        list.rewind()
         await load()
     }
 
     func save(_ row: CustomDictionaryRow) async {
-        await perform(.desktopProgressWorking) { try await self.run { try $0.save(row) } }
+        await perform(.desktopProgressWorking) { try await UserDataRequests.run(on: self.client) { try $0.save(row) } }
     }
 
     func delete(_ row: CustomDictionaryRow) async {
         let id = row.id
-        await perform(.desktopProgressWorking) { try await self.run { try $0.delete(id: id) } }
+        await perform(.desktopProgressWorking) { try await UserDataRequests.run(on: self.client) { try $0.delete(id: id) } }
     }
 
     func deleteAll() async {
-        await perform(.desktopProgressWorking) { try await self.run { try $0.deleteAll() } }
+        await perform(.desktopProgressWorking) { try await UserDataRequests.run(on: self.client) { try $0.deleteAll() } }
     }
 
     func exportCSV(in window: NSWindow) async {
         guard beginWork(.desktopProgressWorking) else { return }
         defer { activity = .idle }
         do {
-            let csv = try await run { try $0.exportCSV() }
+            let csv = try await UserDataRequests.run(on: client) { try $0.exportCSV() }
             _ = try await UserDataFilePanels.write(
                 csv,
                 suggestedName: UserDataFilePanels.exportFileName(
@@ -179,7 +110,7 @@ final class CustomDictionaryPageModel {
             // Off the main actor: reading and importing up to 5 MB of CSV
             // there would freeze the very window that is showing the progress
             // spinner for it.
-            let result = try await run { try $0.importCSV(at: url) }
+            let result = try await UserDataRequests.run(on: client) { try $0.importCSV(at: url) }
             message = .imported(result.imported, skipped: result.skipped)
             await load()
         } catch {
@@ -202,9 +133,7 @@ final class CustomDictionaryPageModel {
     /// Internal so a test can drive the refusal without racing two real
     /// database writes to reproduce it.
     func beginWork(_ label: StringKey) -> Bool {
-        guard !activity.isWorking else { return false }
-        activity = .working(label)
-        return true
+        activity.begin(label)
     }
 
     /// Empties the three learning stores — counts, bigrams, learned phrases.
@@ -222,7 +151,7 @@ final class CustomDictionaryPageModel {
     /// result off.
     func clearLearningRecords() async {
         do {
-            try await run { try $0.clearLearningRecords() }
+            try await UserDataRequests.run(on: client) { try $0.clearLearningRecords() }
             message = .done(.dictionaryClearLearningRecordsDone)
         } catch {
             message = .failure(.dictionaryClearLearningRecordsFailed, error)
@@ -271,7 +200,7 @@ struct CustomDictionaryPage: View {
                 HStack {
                     Text(language.string(.desktopEntriesSection))
                     Spacer()
-                    Text(countLabel)
+                    Text(model.list.countLabel)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -312,7 +241,7 @@ struct CustomDictionaryPage: View {
     /// height, and one left free to grow inside the form's own scroll view has
     /// no bound at all.
     private var entryTable: some View {
-        Table(model.rows, selection: $selectedRowID) {
+        Table(model.list.rows, selection: $selectedRowID) {
             TableColumn(language.string(.dictionaryRomanLabel)) { row in
                 Text(row.roman)
                     .foregroundStyle(.secondary)
@@ -327,12 +256,12 @@ struct CustomDictionaryPage: View {
         // as settings content, not as a spreadsheet. Selection is unaffected —
         // this governs only the unselected rows' backgrounds.
         .alternatingRowBackgrounds(.disabled)
-        .frame(height: Self.tableHeight)
+        .frame(height: UserDataListMetrics.pagedTableHeight)
         // The empty case as an overlay rather than in place of the table: the
         // filter box above stays reachable, and the columns stay put while a
         // filter is narrowed to nothing and widened again.
         .overlay {
-            if model.rows.isEmpty {
+            if model.list.rows.isEmpty {
                 emptyState
             }
         }
@@ -368,7 +297,7 @@ struct CustomDictionaryPage: View {
     private var emptyState: some View {
         if model.filter.isEmpty {
             UserDataListEmptySymbol(
-                symbolName: Self.emptyStateSymbolName,
+                symbolName: UserDataListMetrics.emptyStateSymbolName,
                 accessibilityLabelKey: .dictionaryCustomDictEmpty,
             )
         } else {
@@ -380,17 +309,16 @@ struct CustomDictionaryPage: View {
     /// The `+` / `−` pair under the table, with the pager at its trailing end.
     private var entryTableControls: some View {
         UserDataListControls(
-            addLabelKey: .dictionaryAddEntry,
+            add: (.dictionaryAddEntry, { editing = CustomDictionaryRow(roman: "", hanji: "") }),
             isRemoveEnabled: selectedRow != nil,
-            onAdd: { editing = CustomDictionaryRow(roman: "", hanji: "") },
             onRemove: {
                 guard let selectedRow else { return }
                 Task { await model.delete(selectedRow) }
             },
         ) {
             UserDataListPager(
-                page: model.page,
-                pageCount: model.pageCount,
+                page: model.list.page,
+                pageCount: model.list.pageCount,
                 onBackward: { Task { await model.pageBackward() } },
                 onForward: { Task { await model.pageForward() } },
             )
@@ -406,31 +334,7 @@ struct CustomDictionaryPage: View {
     }
 
     private func row(for id: CustomDictionaryRow.ID?) -> CustomDictionaryRow? {
-        model.rows.first { $0.id == id }
-    }
-
-    /// An empty tray, not the pane's own book: the book says "dictionary",
-    /// which is the pane the user is already looking at, where what this
-    /// draws has to say "and there is nothing in it" (USER 2026-08-24).
-    static let emptyStateSymbolName = "tray"
-
-    /// Tall enough to read as a list rather than a row or two, short enough
-    /// that the buttons and the CSV actions under it stay on screen at the
-    /// window's floor height. Derived from the page size rather than the page
-    /// size guessed from a height, so a page always shows every row it holds.
-    private static let tableHeight = UserDataListMetrics
-        .tableHeight(rows: CustomDictionaryPageModel.pageSize)
-
-    /// What the dictionary holds — and, while a filter narrows it, how much of
-    /// that the filter matches.
-    ///
-    /// Against the MATCHES, not against the rows on screen: those are one page
-    /// now, so the old comparison read "10 / 17000" on every page of an
-    /// unfiltered list and said nothing about either number.
-    private var countLabel: String {
-        model.matchCount < model.totalCount
-            ? "\(model.matchCount) / \(model.totalCount)"
-            : "\(model.totalCount)"
+        model.list.rows.first { $0.id == id }
     }
 }
 

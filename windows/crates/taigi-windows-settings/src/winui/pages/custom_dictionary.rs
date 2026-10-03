@@ -21,7 +21,10 @@
 //! state is a line of text.
 
 use crate::winui::cards;
-use crate::winui::list_pager::{self, icon_button};
+use crate::winui::list_pager::{
+    self, icon_button, ADD_GLYPH, CONTROL_GAP, EDIT_GLYPH, REMOVE_GLYPH, SECONDARY_OPACITY,
+    TABLE_COLUMN_GAP, TABLE_HEADER_GAP, TABLE_HEADER_INSET, TABLE_HEIGHT,
+};
 use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
 use std::path::Path;
@@ -31,27 +34,12 @@ use taigi_desktop_core::settings::custom_dictionary::{
     fetch, import_job, save_entry_job, Confirm, Listing,
 };
 use taigi_desktop_core::settings::keys;
-use taigi_desktop_core::settings::listing::{
-    JobOutcome, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
-};
+use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
-/// A definite height, not a floor (`Metrics.tableHeight`): the page is
-/// sized from the page size, so a short page keeps the controls under the
-/// table where they were.
-const TABLE_HEIGHT: f64 = 300.0;
 const DIALOG_FIELD_WIDTH: f64 = 320.0;
-/// Between the two columns, and between the small controls under the list.
-const CONTROL_GAP: f64 = 8.0;
-const TABLE_COLUMN_GAP: f64 = 12.0;
-/// The header sits over the list's own item inset.
-const TABLE_HEADER_INSET: f64 = 12.0;
-const TABLE_HEADER_GAP: f64 = 8.0;
-const OVERLAY_RING_SIZE: f64 = 20.0;
-/// WinUI's secondary text, as opacity, so it follows the theme.
-const SECONDARY_OPACITY: f64 = 0.65;
 
 /// Which field of the entry dialog changed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -111,18 +99,16 @@ pub struct CustomDictionaryModel {
     /// dialog does not need it — it is modal and runs on the UI thread,
     /// so no second command can arrive while it is up (the egui page had
     /// to reserve the slot across it because its dialog did not block the
-    /// frame loop).
-    job_generation: Option<u64>,
-    next_job_generation: u64,
+    /// frame loop). `job` is the job it waits on and whether the overlay
+    /// shows.
+    job: JobState,
     /// What the running job is called, for the overlay.
     job_label: Option<StringKey>,
-    /// Whether the running job has lasted long enough to say so.
-    is_busy_shown: bool,
 }
 
 impl CustomDictionaryModel {
     fn is_working(&self) -> bool {
-        self.job_generation.is_some()
+        self.job.is_running()
     }
 }
 
@@ -279,12 +265,10 @@ pub fn update(
             clear_learning_records_job,
         ),
         Message::JobFinished(generation, outcome) => {
-            if model.job_generation != Some(generation) {
+            if !model.job.finish(generation) {
                 return;
             }
-            model.job_generation = None;
             model.job_label = None;
-            model.is_busy_shown = false;
             let JobOutcome {
                 message,
                 is_reload_wanted,
@@ -297,75 +281,43 @@ pub fn update(
             }
         }
         Message::ShowBusy(generation) => {
-            if model.job_generation == Some(generation) {
-                model.is_busy_shown = true;
-            }
+            model.job.show_busy(generation);
         }
         Message::RowsApplied(rows) => model.settled.report(rows),
     }
 }
 
-/// Starts a load of the page on screen. A load has no overlay: the rows
-/// already on screen stay put while it runs.
+/// Starts a load of the page on screen (`list_pager::spawn_load`).
 fn load(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWindow>) {
     let request = model.listing.begin_load();
-    let generation = request.generation;
-    _ = context.spawn_background_with_rejection(
-        move |_| {
-            let outcome =
-                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| fetch(&request)))
-                    .unwrap_or_else(|_| Err(LOAD_DID_NOT_FINISH.to_owned()));
-            WindowMessage::CustomDictionary(Message::Loaded(generation, Box::new(outcome)))
-        },
-        // A thread the runtime would not start is a failure the user sees,
-        // never a load that quietly never lands.
-        WindowMessage::CustomDictionary(Message::Loaded(
-            generation,
-            Box::new(Err("the load could not be started".to_owned())),
-        )),
+    list_pager::spawn_load(
+        context,
+        request.generation,
+        move || fetch(&request),
+        |generation, outcome| WindowMessage::CustomDictionary(Message::Loaded(generation, outcome)),
     );
 }
 
 /// Takes the page's one work slot for `job`, or does nothing because
-/// something else holds it (the macOS model: refused, not queued).
+/// something else holds it (`list_pager::spawn_job`).
 fn begin_job(
     model: &mut CustomDictionaryModel,
     context: &ComponentContext<SettingsWindow>,
     label: StringKey,
     job: impl FnOnce() -> JobOutcome + Send + 'static,
 ) {
-    if model.is_working() {
-        return;
-    }
-    model.next_job_generation = model.next_job_generation.wrapping_add(1);
-    let generation = model.next_job_generation;
-    model.job_generation = Some(generation);
-    model.job_label = Some(label);
-    model.is_busy_shown = false;
-    _ = context.spawn_background_with_rejection(
-        move |_| {
-            // A panicking store call must not leave the slot held for the
-            // life of the window.
-            let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(job))
-                .unwrap_or_else(|_| JobOutcome::did_not_finish::<CustomDictionaryEntry>());
-            WindowMessage::CustomDictionary(Message::JobFinished(generation, Box::new(outcome)))
+    let is_started = list_pager::spawn_job::<CustomDictionaryEntry>(
+        &mut model.job,
+        context,
+        job,
+        |generation, outcome| {
+            WindowMessage::CustomDictionary(Message::JobFinished(generation, outcome))
         },
-        WindowMessage::CustomDictionary(Message::JobFinished(
-            generation,
-            Box::new(JobOutcome {
-                message: Some(PageMessage::failure(
-                    StringKey::DesktopCustomDictWriteFailed,
-                    "the operation could not be started",
-                )),
-                is_reload_wanted: false,
-            }),
-        )),
+        |generation| WindowMessage::CustomDictionary(Message::ShowBusy(generation)),
     );
-    // The overlay waits, so a millisecond-long write does not flash it.
-    _ = context.spawn_background(move |_| {
-        std::thread::sleep(OVERLAY_DELAY);
-        WindowMessage::CustomDictionary(Message::ShowBusy(generation))
-    });
+    if is_started {
+        model.job_label = Some(label);
+    }
 }
 
 fn export(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWindow>) {
@@ -412,11 +364,6 @@ fn write_atomically(path: &Path, contents: &[u8]) -> Result<(), String> {
     })
 }
 
-/// Segoe Fluent Icons: Add, Edit, Remove, and the two chevrons.
-const ADD_GLYPH: &str = "\u{E710}";
-const EDIT_GLYPH: &str = "\u{E70F}";
-const REMOVE_GLYPH: &str = "\u{E738}";
-
 pub fn view(
     window: &SettingsWindow,
     strings: &StringResolver,
@@ -436,7 +383,7 @@ pub fn view(
     }
     // Mutual exclusion is the slot's; the greyed look waits the same
     // 400 ms as the overlay so a millisecond-long write does not flash it.
-    let is_enabled = !model.is_busy_shown;
+    let is_enabled = !model.job.is_busy_shown();
     View::fragment((
         enabled_row,
         cards::section_title_with_count(
@@ -472,7 +419,10 @@ pub fn view(
                 WindowMessage::CustomDictionary(Message::Ask(Confirm::ClearLearningRecords))
             }),
         ),
-        busy_overlay(model, strings),
+        list_pager::busy_overlay(
+            model.job_label.filter(|_| model.job.is_busy_shown()),
+            strings,
+        ),
         dialog(model, strings, context),
     ))
 }
@@ -532,8 +482,16 @@ fn entry_table(
     // narrowed to nothing and widened again. The sentence is only ever there
     // when the list has no rows to press, and a `TextBlock` takes no focus —
     // a background-less `Border` is itself not hit-testable, but its child
-    // still is, so this does not rely on the overlay being transparent.
-    let list = Grid::new().children((list, Border::new().content(empty_state(model, strings))));
+    // still is, so this does not rely on the overlay being transparent. An
+    // empty dictionary is a STATE the + button answers, a filter matching
+    // nothing a RESULT of what the user typed (`CustomDictionaryPage.emptyState`).
+    let list = Grid::new().children((
+        list,
+        Border::new().content(list_pager::empty_state(
+            model.listing.empty_state_key(),
+            strings,
+        )),
+    ));
     // `cards::frame` stacks what it is given, so these three sit in its
     // panel with no spacing of its own — the header and the controls carry
     // their own `TABLE_HEADER_GAP` margins.
@@ -623,49 +581,6 @@ fn csv_row(
                 .on_click(context.callback(|()| WindowMessage::CustomDictionary(Message::Export)))
                 .content(strings.resolve(StringKey::DictionaryExportCSV)),
         ))
-}
-
-/// The job's name over a ring, once it has run long enough to say so.
-fn busy_overlay(model: &CustomDictionaryModel, strings: &StringResolver) -> View {
-    let Some(label) = model.job_label.filter(|_| model.is_busy_shown) else {
-        return View::empty();
-    };
-    cards::frame(
-        StackPanel::new()
-            .orientation(Orientation::Horizontal)
-            .spacing(CONTROL_GAP)
-            .horizontal_alignment(HorizontalAlignment::Center)
-            .children((
-                ProgressRing::new()
-                    .is_active(true)
-                    .width(OVERLAY_RING_SIZE)
-                    .height(OVERLAY_RING_SIZE),
-                TextBlock::new()
-                    .text(strings.resolve(label))
-                    .vertical_alignment(VerticalAlignment::Center),
-            )),
-    )
-}
-
-/// What a list with no rows says. Two different things: an empty dictionary
-/// is a STATE the + button answers, a filter matching nothing is a RESULT
-/// of what the user typed (`CustomDictionaryPage.emptyState`).
-///
-/// Words rather than the Mac's `tray` symbol: Segoe Fluent Icons carries no
-/// empty-container glyph, and a Windows 11 empty state is a line of text —
-/// which also keeps the sentence a screen reader is told from being an
-/// accessibility label bolted onto a picture.
-fn empty_state(model: &CustomDictionaryModel, strings: &StringResolver) -> View {
-    let Some(key) = model.listing.empty_state_key() else {
-        return View::empty();
-    };
-    TextBlock::new()
-        .text(strings.resolve(key))
-        .text_wrapping(TextWrapping::Wrap)
-        .opacity(SECONDARY_OPACITY)
-        .horizontal_alignment(HorizontalAlignment::Center)
-        .vertical_alignment(VerticalAlignment::Center)
-        .into()
 }
 
 /// The one dialog the page can have up. An entry is being edited or a

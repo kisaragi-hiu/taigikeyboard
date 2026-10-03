@@ -250,7 +250,9 @@ mod tests {
     #[test]
     fn only_the_pages_own_job_settles_or_shows_busy() {
         let mut job = JobState::default();
+        assert!(!job.is_running());
         job.start(4);
+        assert!(job.is_running());
         assert!(!job.show_busy(3), "another job's overlay timer");
         assert!(!job.is_busy_shown());
         assert!(job.show_busy(4));
@@ -258,7 +260,33 @@ mod tests {
         assert!(!job.finish(3), "a job a rebuilt page inherited");
         assert!(job.finish(4));
         assert!(!job.is_busy_shown());
+        assert!(!job.is_running());
         assert!(!job.finish(4), "settled once");
+    }
+
+    #[test]
+    fn a_page_owning_its_slot_counts_its_own_generations() {
+        let mut job = JobState::default();
+        let first = job.start_next();
+        assert!(job.is_running());
+        assert!(job.finish(first));
+        let second = job.start_next();
+        assert_ne!(
+            first, second,
+            "a late answer to the first job is not the second's"
+        );
+        assert!(!job.finish(first));
+        assert!(job.finish(second));
+        assert_eq!(
+            JobOutcome::could_not_start::<CustomDictionaryEntry>(),
+            JobOutcome {
+                message: Some(PageMessage::failure(
+                    StringKey::DesktopCustomDictWriteFailed,
+                    "the operation could not be started"
+                )),
+                is_reload_wanted: false,
+            }
+        );
     }
 
     #[test]

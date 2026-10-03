@@ -220,8 +220,6 @@ object L10n {
         @Composable get() = stringRes(StringKey.DICTIONARY_CLEAR_LEARNING_RECORDS_FAILED)
     val dictionaryLearningRecords: String
         @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS)
-    val dictionaryLearningRecordsInfo: String
-        @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_INFO)
     val dictionaryLearningRecordsFrequency: String
         @Composable get() = stringRes(StringKey.DICTIONARY_LEARNING_RECORDS_FREQUENCY)
     val dictionaryLearningRecordsPhrases: String

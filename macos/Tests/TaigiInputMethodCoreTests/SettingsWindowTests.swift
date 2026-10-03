@@ -311,7 +311,7 @@ final class SettingsWindowTests: XCTestCase {
             SettingsPane.allCases.map(\.rawValue),
             [
                 "general", "appearance", "shortcuts", "dictionarySources", "customDictionary",
-                "fontManagement", "about",
+                "learningRecords", "fontManagement", "about",
             ],
         )
     }
@@ -339,7 +339,7 @@ final class SettingsWindowTests: XCTestCase {
         let hanji = makeStore(.hanji)
         XCTAssertEqual(
             SettingsPane.allCases.map { hanji.string($0.labelKey) },
-            ["一般", "外觀", "快速齒", "辭典管理", "自訂詞庫", "字型管理", "關於齒盤"],
+            ["一般", "外觀", "快速齒", "辭典管理", "自訂詞庫", "學習紀錄", "字型管理", "關於齒盤"],
         )
 
         let english = makeStore(.english)
@@ -347,7 +347,7 @@ final class SettingsWindowTests: XCTestCase {
             SettingsPane.allCases.map { english.string($0.labelKey) },
             [
                 "General", "Appearance", "Shortcuts", "Manage Dictionaries", "Custom Dictionary",
-                "Manage Typefaces", "About the Keyboard",
+                "Learning Records", "Manage Typefaces", "About the Keyboard",
             ],
         )
     }

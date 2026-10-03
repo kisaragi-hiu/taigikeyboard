@@ -65,7 +65,7 @@ struct FontManagementPage: View {
     @State private var message: UserDataPageMessage?
 
     /// How many rows one page holds — the table's height, exactly, as Custom Dictionary
-    /// does it (`CustomDictionaryPageModel.pageSize`): a page that fits the
+    /// does it (`UserDataListMetrics.pageSize`): a page that fits the
     /// table never needs a scroller of its own, which a `Table` inside a
     /// `Form` cannot have (`UserDataListPager`). The installed families make
     /// this list a few hundred rows; the search field finds one, the pager
@@ -98,12 +98,11 @@ struct FontManagementPage: View {
                 UserDataFilterField(text: $filter)
                 fontTable(rows: visibleRows, selectedID: visibleSelectedRow?.id)
                 UserDataListControls(
-                    addLabelKey: .desktopCustomFontAdd,
+                    add: (.desktopCustomFontAdd, add),
                     // The VISIBLE selected row: a custom typeface the search
                     // has hidden must not be deletable by a button beside a
                     // table that shows no selection.
                     isRemoveEnabled: visibleSelectedRow?.customFont != nil,
-                    onAdd: add,
                     onRemove: {
                         if let font = visibleSelectedRow?.customFont {
                             remove(font)

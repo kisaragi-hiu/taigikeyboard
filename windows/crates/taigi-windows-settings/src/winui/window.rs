@@ -17,6 +17,7 @@ use crate::winui::pages;
 use crate::winui::pages::custom_dictionary::CustomDictionaryModel;
 use crate::winui::pages::dictionary_search::DictionarySearchModel;
 use crate::winui::pages::font_management::FontManagementModel;
+use crate::winui::pages::learning_records::LearningRecordsModel;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::time::Duration;
@@ -41,7 +42,7 @@ type PageView = fn(&SettingsWindow, &StringResolver, &mut ViewContext<SettingsWi
 /// The panes the sidebar lists, in order, each with the page that draws
 /// it — one table, so a pane cannot be listed without a page or reachable
 /// without a row.
-const PANES: [(SettingsPane, PageView); 6] = [
+const PANES: [(SettingsPane, PageView); 7] = [
     (SettingsPane::General, pages::general::view),
     (SettingsPane::Appearance, pages::appearance::view),
     (SettingsPane::Shortcuts, pages::shortcuts::view),
@@ -53,6 +54,7 @@ const PANES: [(SettingsPane, PageView); 6] = [
         SettingsPane::CustomDictionary,
         pages::custom_dictionary::view,
     ),
+    (SettingsPane::LearningRecords, pages::learning_records::view),
     (SettingsPane::FontManagement, pages::font_management::view),
 ];
 
@@ -216,6 +218,7 @@ pub enum Message {
     SetSwitch(SettingsKey<bool>, bool),
     Reset(ResetScope),
     CustomDictionary(pages::custom_dictionary::Message),
+    LearningRecords(pages::learning_records::Message),
     FontManagement(pages::font_management::Message),
     DictionarySearch(pages::dictionary_search::Message),
     StartRecording(RecorderTarget),
@@ -239,6 +242,7 @@ pub struct SettingsWindow {
     message: Option<PageMessage>,
     updates: UpdateState,
     custom_dictionary: CustomDictionaryModel,
+    learning_records: LearningRecordsModel,
     font_management: FontManagementModel,
     dictionary_search: DictionarySearchModel,
     recorder: Recorder,
@@ -267,6 +271,10 @@ impl SettingsWindow {
 
     pub fn custom_dictionary(&self) -> &CustomDictionaryModel {
         &self.custom_dictionary
+    }
+
+    pub fn learning_records(&self) -> &LearningRecordsModel {
+        &self.learning_records
     }
 
     pub fn font_management(&self) -> &FontManagementModel {
@@ -350,8 +358,9 @@ impl SettingsWindow {
         self.enter_pane(context);
     }
 
-    /// What a pane needs the first time it is shown: Custom Dictionary fetches its
-    /// first page, Manage Typefaces reads the user's font folder. Each once.
+    /// What a pane needs the first time it is shown: Custom Dictionary and
+    /// Learning Records fetch their first page, Manage Typefaces reads the
+    /// user's font folder. Each once.
     ///
     /// Manage Typefaces reads even in a read-only launch: the folder is the user's
     /// own, and a window that cannot WRITE the selection can still say which
@@ -359,6 +368,9 @@ impl SettingsWindow {
     fn enter_pane(&mut self, context: &ComponentContext<Self>) {
         if self.pane == SettingsPane::CustomDictionary && !self.settings.is_read_only() {
             pages::custom_dictionary::ensure_loaded(&mut self.custom_dictionary, context);
+        }
+        if self.pane == SettingsPane::LearningRecords && !self.settings.is_read_only() {
+            pages::learning_records::ensure_loaded(&mut self.learning_records, context);
         }
         if self.pane == SettingsPane::FontManagement {
             pages::font_management::on_enter(&mut self.font_management);
@@ -513,6 +525,7 @@ impl Component for SettingsWindow {
             message: None,
             updates: UpdateState::new(),
             custom_dictionary: CustomDictionaryModel::default(),
+            learning_records: LearningRecordsModel::default(),
             font_management: FontManagementModel::default(),
             dictionary_search: DictionarySearchModel::default(),
             recorder: Recorder::default(),
@@ -610,6 +623,14 @@ impl Component for SettingsWindow {
             Message::CustomDictionary(message) => {
                 pages::custom_dictionary::update(
                     &mut self.custom_dictionary,
+                    message,
+                    &mut self.message,
+                    context,
+                );
+            }
+            Message::LearningRecords(message) => {
+                pages::learning_records::update(
+                    &mut self.learning_records,
                     message,
                     &mut self.message,
                     context,
