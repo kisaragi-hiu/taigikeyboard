@@ -91,6 +91,21 @@ protocol UserDataClient: Sendable {
     func exportBackup(appVersion: String) async throws -> Data
     /// A `.taigi` file the user picked; a refusal throws `BackupError`.
     func importBackup(url: URL) async throws -> BackupImportResult
+    /// One page of what the keyboard learned of `kind`, in `order`, whose
+    /// text or TL holds `filter`; `limit` is at least 1. The answer carries
+    /// the offset the engine really served.
+    func listLearningRecords(
+        kind: Taigi_Engine_LearningRecordKind,
+        order: Taigi_Engine_LearningRecordOrder,
+        filter: String,
+        limit: UInt32,
+        offset: UInt32,
+    ) async throws -> Taigi_Engine_LearningRecords
+    /// Sets the listed `record`'s count; `false` when the row is gone
+    /// (deleted, evicted, or its id taken by another word).
+    func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int64) async throws -> Bool
+    /// Forgets the listed `record`; `false` when the row was already gone.
+    func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) async throws -> Bool
 }
 
 /// The shipped client: the engine's user-data ops, one at a time on a queue
@@ -183,6 +198,28 @@ struct EngineUserDataClient: UserDataClient {
         case .unsupportedVersion: throw BackupError.unsupportedVersion
         default: throw BackupError.unreadable
         }
+    }
+
+    func listLearningRecords(
+        kind: Taigi_Engine_LearningRecordKind,
+        order: Taigi_Engine_LearningRecordOrder,
+        filter: String,
+        limit: UInt32,
+        offset: UInt32,
+    ) async throws -> Taigi_Engine_LearningRecords {
+        try await engine("learningRecordsList") {
+            RustEngineBridge.learningRecordsList(kind: kind, order: order, filter: filter, limit: limit, offset: offset)
+        }
+    }
+
+    func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int64) async throws -> Bool {
+        try await engine("learningRecordSetCount") { RustEngineBridge.learningRecordSetCount(record, count: count) }
+            .hasRecord
+    }
+
+    func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) async throws -> Bool {
+        try await engine("learningRecordDelete") { RustEngineBridge.learningRecordDelete(record) }
+            .removed
     }
 
     /// Empties the stores `request` selects; every one is attempted, and the

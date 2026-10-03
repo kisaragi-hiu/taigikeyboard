@@ -128,6 +128,57 @@ extension RustEngineBridge {
         return matches.entries
     }
 
+    // MARK: - Learning records
+
+    /// One page of `kind` in `order` whose text or TL holds `filter`; the
+    /// engine refuses `limit` 0 and pulls an `offset` past the end back to
+    /// the last page.
+    static func learningRecordsList(
+        kind: Taigi_Engine_LearningRecordKind,
+        order: Taigi_Engine_LearningRecordOrder,
+        filter: String,
+        limit: UInt32,
+        offset: UInt32,
+    ) -> Taigi_Engine_LearningRecords? {
+        var list = Taigi_Engine_ListLearningRecords()
+        list.kind = kind
+        list.order = order
+        list.filter = filter
+        list.limit = limit
+        list.offset = offset
+        guard case let .learningRecords(records)? = userDataResult(
+            .listLearningRecords(list),
+            op: "learningRecordsList",
+        ) else { return nil }
+        return records
+    }
+
+    /// `record` is the row as listed: the engine writes only while that row
+    /// still holds it.
+    static func learningRecordSetCount(
+        _ record: Taigi_Engine_LearningRecord,
+        count: Int64,
+    ) -> Taigi_Engine_LearningRecordSaved? {
+        var set = Taigi_Engine_SetLearningRecordCount()
+        set.record = record
+        set.count = count
+        guard case let .learningRecordSaved(saved)? = userDataResult(
+            .setLearningRecordCount(set),
+            op: "learningRecordSetCount",
+        ) else { return nil }
+        return saved
+    }
+
+    static func learningRecordDelete(_ record: Taigi_Engine_LearningRecord) -> Taigi_Engine_LearningRecordDeleted? {
+        var delete = Taigi_Engine_DeleteLearningRecord()
+        delete.record = record
+        guard case let .learningRecordDeleted(deleted)? = userDataResult(
+            .deleteLearningRecord(delete),
+            op: "learningRecordDelete",
+        ) else { return nil }
+        return deleted
+    }
+
     // MARK: - Backup
 
     /// The `.taigi` backup of what the engine holds, written by `ios` `appVersion`.

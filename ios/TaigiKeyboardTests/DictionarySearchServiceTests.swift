@@ -98,6 +98,27 @@ final class DictionarySearchServiceTests: XCTestCase {
             XCTFail("unused")
             throw CancellationError()
         }
+
+        func listLearningRecords(
+            kind _: Taigi_Engine_LearningRecordKind,
+            order _: Taigi_Engine_LearningRecordOrder,
+            filter _: String,
+            limit _: UInt32,
+            offset _: UInt32,
+        ) async throws -> Taigi_Engine_LearningRecords {
+            XCTFail("unused")
+            return Taigi_Engine_LearningRecords()
+        }
+
+        func setLearningRecordCount(_: Taigi_Engine_LearningRecord, count _: Int64) async throws -> Bool {
+            XCTFail("unused")
+            return false
+        }
+
+        func deleteLearningRecord(_: Taigi_Engine_LearningRecord) async throws -> Bool {
+            XCTFail("unused")
+            return false
+        }
     }
 
     private let myWord = CustomDictionaryEntry(roman: "taigi", hanji: "我的台語")
