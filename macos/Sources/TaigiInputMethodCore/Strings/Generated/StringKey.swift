@@ -33,6 +33,7 @@ enum StringKey: String {
     case desktopShortcutSectionOutput = "i18n_desktop_shortcutSectionOutput"
     case desktopShortcutOpenSettings = "i18n_desktop_shortcutOpenSettings"
     case desktopShortcutToggleRomanization = "i18n_desktop_shortcutToggleRomanization"
+    case desktopShortcutToggleTps = "i18n_desktop_shortcutToggleTps"
     case desktopShortcutCycleCandidateDisplayMode = "i18n_desktop_shortcutCycleCandidateDisplayMode"
     case desktopShortcutShowTelexGuide = "i18n_desktop_shortcutShowTelexGuide"
     case desktopShortcutShowSymbolPicker = "i18n_desktop_shortcutShowSymbolPicker"

@@ -47,6 +47,50 @@ final class TaigiInputControllerShortcutTests: XCTestCase {
         XCTAssertEqual(controller.settings.inputMode, .tl)
     }
 
+    /// Switch TPS goes into TPS and back to the romanization it left — POJ
+    /// here, remembered as `lastRomanizationMode` — flashing each mode.
+    func testTpsShortcut_roundTripsToTheRomanizationLastUsed() {
+        controller.settings.switchInputMode(.pick(.poj))
+
+        controller.performShortcutAction(.toggleTps)
+
+        XCTAssertEqual(controller.settings.inputMode, .tps)
+        XCTAssertEqual(userDefaults.string(forKey: SettingsStore.Keys.lastRomanizationMode.name), "poj")
+
+        controller.performShortcutAction(.toggleTps)
+
+        XCTAssertEqual(controller.settings.inputMode, .poj)
+        XCTAssertEqual(flashes, ["方音符號", "白話字"])
+    }
+
+    /// TPS is not a romanization: Switch Romanization leaves it for the
+    /// romanization NOT last used — Switch TPS already returns to that one.
+    func testRomanizationShortcut_underTps_leavesForTheOtherRomanization() {
+        controller.settings.switchInputMode(.pick(.poj))
+        controller.performShortcutAction(.toggleTps)
+
+        controller.performShortcutAction(.toggleRomanization)
+
+        XCTAssertEqual(controller.settings.inputMode, .tl)
+    }
+
+    /// Under TPS the swap, the Candidate Display cycle and the Telex guide do
+    /// nothing: no write, no flash, no card.
+    func testRomanizationOnlyChords_underTps_areInert() {
+        controller.settings.switchInputMode(.pick(.tps))
+        let storedSwap = controller.settings.storedIsHanjiFirst
+        let displayMode = controller.settings.candidateDisplayMode
+
+        controller.performShortcutAction(.toggleTranslateSwapped)
+        controller.performShortcutAction(.cycleCandidateDisplayMode)
+        controller.performShortcutAction(.showTelexGuide)
+
+        XCTAssertEqual(controller.settings.storedIsHanjiFirst, storedSwap)
+        XCTAssertEqual(controller.settings.candidateDisplayMode, displayMode)
+        XCTAssertNil(TelexGuidePanel.shared.shownInputMode)
+        XCTAssertEqual(flashes, [])
+    }
+
     /// A default-on setting must read as on before it is flipped:
     /// `UserDefaults.bool(forKey:)` would answer `false` for a key nobody has
     /// written and turn the first press into a no-op.

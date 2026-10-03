@@ -65,7 +65,7 @@ final class TaigiInputControllerTelexGuideTests: XCTestCase {
         XCTAssertTrue(tl.contains { $0.contains("tsh") }, "\(tl)")
 
         session.controller.performShortcutAction(.showTelexGuide)
-        session.controller.settings.inputMode = .poj
+        session.controller.settings.switchInputMode(.pick(.poj))
         session.controller.performShortcutAction(.showTelexGuide)
 
         let poj = TelexGuidePanel.meanings(under: .poj, language: language)

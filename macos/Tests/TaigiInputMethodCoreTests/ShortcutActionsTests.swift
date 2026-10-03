@@ -45,12 +45,16 @@ final class ShortcutActionsTests: XCTestCase {
     func testEveryAction_readsAsAWholePhraseInEveryLanguage() {
         XCTAssertEqual(
             labels(),
-            ["切換台羅/白話字", "切換漢字/羅馬字", "切換候選詞顯示", "拍開符號選單", "拍開 Telex 說明", "拍開設定選單"],
+            [
+                "切換台羅/白話字", "切換方音符號", "切換漢字/羅馬字", "切換候選詞顯示", "拍開符號選單", "拍開 Telex 說明",
+                "拍開設定選單",
+            ],
         )
         XCTAssertEqual(
             labels(.japanese),
             [
                 "台羅／白話字を切り替える",
+                "方音符号を切り替える",
                 "漢字／ローマ字を切り替える",
                 "候補の表示を切り替え",
                 "記号メニューを開く",
@@ -128,6 +132,18 @@ final class ShortcutActionsTests: XCTestCase {
         XCTAssertEqual(shadowed, [.toggleRomanization])
     }
 
+    /// The case Switch TPS's ⌃⌘P arrives into: an install that recorded ⌃⌘P
+    /// on another row keeps it there, and the new row gives way.
+    func testTheTpsDefault_givesWayToAnUpgradersRecording() {
+        let recorded = KeyboardShortcuts.Shortcut(.p, modifiers: [.control, .command])
+        let holders: Set<ShortcutAction> = [.cycleCandidateDisplayMode, .toggleTps]
+        let shadowed = ShortcutConflicts.defaultsShadowedByRecordings { action in
+            holders.contains(action) ? recorded : nil
+        }
+
+        XCTAssertEqual(shadowed, [.toggleTps])
+    }
+
     /// Every action on its own default is the fresh-install state, and those
     /// are all different — nothing to resolve.
     func testTheShippedDefaults_shadowNothing() {
@@ -147,12 +163,14 @@ final class ShortcutActionsTests: XCTestCase {
     /// (USER 2026-09-09; why not the backtick is on its `Name`). The Telex
     /// guide is ⌃⌘/ — the key help lives on. Row order since 2026-09-21
     /// (USER): the switches in the General pane's order, the windows used while
-    /// typing, the settings doorway last.
-    func testTheGlobalRoster_isOneDoorwayThreeSwitchesThePickerAndTheGuide() {
+    /// typing, the settings doorway last. Switch TPS sits beside Switch
+    /// Romanization on ⌃⌘P (desktop TPS roadmap D5): both say what is typed.
+    func testTheGlobalRoster_isOneDoorwayFourSwitchesThePickerAndTheGuide() {
         XCTAssertEqual(
             ShortcutAction.allCases.map(\.defaultShortcut),
             [
                 KeyboardShortcuts.Shortcut(.c, modifiers: [.control, .command]),
+                KeyboardShortcuts.Shortcut(.p, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.backtick),
                 KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.comma, modifiers: [.control, .command]),
@@ -160,6 +178,19 @@ final class ShortcutActionsTests: XCTestCase {
                 KeyboardShortcuts.Shortcut(.s, modifiers: [.control, .command]),
             ],
         )
+    }
+
+    /// The same three actions desktop-core's `ShortcutAction::is_inert_under`
+    /// names (its `the_display_switches_and_the_telex_guide_are_inert_under_tps_only`
+    /// test), only under TPS.
+    func testTheInertActions_underTps_matchTheCore() {
+        XCTAssertEqual(
+            ShortcutAction.allCases.filter { $0.isInert(under: .tps) },
+            [.toggleTranslateSwapped, .cycleCandidateDisplayMode, .showTelexGuide],
+        )
+        for mode in [InputMode.tl, .poj] {
+            XCTAssertEqual(ShortcutAction.allCases.filter { $0.isInert(under: mode) }, [], "\(mode)")
+        }
     }
 
     /// The picker is the one row Carbon never fires: a pick writes into the

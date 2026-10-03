@@ -43,6 +43,14 @@ final class SettingsStore: @unchecked Sendable {
             name: "inputMode",
             defaultValue: EngineSettings.defaults.inputMode,
         )
+        /// The romanization Switch TPS returns to: the one last left for
+        /// TPS. Written only by `switchInputMode(_:)`, with the core's answer;
+        /// read only by the core, through that request — `tl` or `poj`, and
+        /// absent reads as TL (desktop-core `keys::LAST_ROMANIZATION_MODE`).
+        static let lastRomanizationMode = SettingsKey(
+            name: "lastRomanizationMode",
+            defaultValue: "",
+        )
         static let isHanjiFirst = SettingsKey(
             name: "isTranslateSwapped",
             defaultValue: EngineSettings.defaults.isHanjiFirst,
@@ -439,6 +447,15 @@ final class SettingsStore: @unchecked Sendable {
         choice(Keys.toneInputScheme)
     }
 
+    /// The keys that pick a candidate, as the window labels them: the keypad
+    /// under TPS, whose main block types glyphs; otherwise the tone scheme's.
+    /// CROSS-PLATFORM INVARIANT — mirrors desktop-core
+    /// `ComposingKeyBindings::slot_key_set`, which decides which key picks;
+    /// drift draws a key beside a candidate that does not pick it.
+    var candidateSlotKeySet: CandidateSlotKeySet {
+        inputMode == .tps ? .keypad : toneInputScheme.slotKeySet
+    }
+
     /// Whether the candidate window is shown at all. Read by the controller's
     /// fetch paths, never by the engine — the composition itself is unchanged.
     var isCandidateWindowEnabled: Bool {
@@ -506,6 +523,7 @@ final class SettingsStore: @unchecked Sendable {
     func resetGeneralSettings() {
         removeStoredValues(
             Keys.inputMode.name,
+            Keys.lastRomanizationMode.name,
             Keys.toneInputScheme.name,
             Keys.isHanjiFirst.name,
             Keys.isAutoSpaceEnabled.name,
@@ -569,8 +587,26 @@ final class SettingsStore: @unchecked Sendable {
     /// The romanization being typed. Written as well as read, which is what
     /// keeps it out of the run of read-only choices above.
     var inputMode: InputMode {
-        get { choice(Keys.inputMode) }
-        set { userDefaults.set(newValue.rawValue, forKey: Keys.inputMode.name) }
+        choice(Keys.inputMode)
+    }
+
+    /// Moves the input mode as `request` asks, through desktop-core's one
+    /// mode writer (`SettingsDocument::switch_input_mode`, asked by
+    /// `KeyRules.switchInputMode`), and stores what it answers — the
+    /// romanization to come back to first, then the mode. Answers the mode
+    /// now in force; nil, writing nothing, when the core gave no answer.
+    @discardableResult
+    func switchInputMode(_ request: InputModeSwitch) -> InputMode? {
+        guard let answer = KeyRules.switchInputMode(
+            request,
+            inputMode: userDefaults.string(forKey: Keys.inputMode.name) ?? "",
+            lastRomanizationMode: userDefaults.string(forKey: Keys.lastRomanizationMode.name) ?? "",
+        ) else { return nil }
+        if let lastRomanizationMode = answer.lastRomanizationMode {
+            userDefaults.set(lastRomanizationMode.rawValue, forKey: Keys.lastRomanizationMode.name)
+        }
+        userDefaults.set(answer.inputMode.rawValue, forKey: Keys.inputMode.name)
+        return answer.inputMode
     }
 
     /// The pane the settings window shows. Written as well as read, because a
@@ -634,8 +670,12 @@ final class SettingsStore: @unchecked Sendable {
     /// masked by the display mode (`CandidateDisplayMode
     /// .effectiveFullWidthPunctuation(stored:)`, §42). Read by
     /// `FullWidthPunctuation` on every key.
+    /// Always on under TPS, whatever the stored swap, as on mobile; the
+    /// stored swap is kept for the way back. Mirrors desktop-core's
+    /// effective value (`SettingsDocument`, desktop TPS roadmap D4).
     var isFullWidthPunctuation: Bool {
-        candidateDisplayMode.effectiveFullWidthPunctuation(stored: storedIsHanjiFirst)
+        inputMode == .tps
+            || candidateDisplayMode.effectiveFullWidthPunctuation(stored: storedIsHanjiFirst)
     }
 
     /// Whether committing a word auto-inserts a trailing space. Read by the

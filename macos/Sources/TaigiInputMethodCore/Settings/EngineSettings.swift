@@ -1,11 +1,35 @@
 // The settings the engine renders under and their fresh-install defaults.
 
-/// The romanization the user types. macOS ships TL and POJ only — TPS is
-/// deliberately out of scope for this platform (`docs/architecture/macos-roadmap.md`
-/// § Goal), which is why this enum has no `tps` case to fall through.
+/// What the user types: one of the two romanizations, or TPS (方音符號) on
+/// the Zhuyin key positions (`docs/architecture/desktop-tps-roadmap.md` D1).
+/// Raw values are desktop-core's `InputMode` spellings, which the key path
+/// reads from the settings snapshot.
 enum InputMode: String, CaseIterable, Sendable {
     case tl
     case poj
+    case tps
+
+    /// The Input Script picker's label for this mode — also what a switch
+    /// flashes, so the HUD names the mode in the words the pane uses.
+    var displayNameKey: StringKey {
+        switch self {
+        case .tl: .settingsTlMode
+        case .poj: .settingsPojMode
+        case .tps: .settingsTpsMode
+        }
+    }
+}
+
+/// What asked for an input-mode change — desktop-core's `InputModeRequest`,
+/// which answers it (`SettingsStore.switchInputMode(_:)`).
+enum InputModeSwitch: Sendable, Equatable {
+    /// The Input Script picker chose this mode.
+    case pick(InputMode)
+    /// Switch Romanization: TL ↔ POJ; from TPS, to the romanization not last
+    /// used.
+    case toggleRomanization
+    /// Switch TPS: into TPS, or back to the romanization last used.
+    case toggleTps
 }
 
 /// How the candidate window renders the `(Hanji, romanization)` pair: both scripts

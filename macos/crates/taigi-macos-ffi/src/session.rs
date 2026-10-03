@@ -23,6 +23,7 @@ use taigi_desktop_core::keys::{
     CandidateNavigation, ComposingKeyBindings, ComposingKeyIntent, KeyEventSnapshot,
 };
 use taigi_desktop_core::runtime::DesktopRuntime;
+use taigi_desktop_core::settings::keys;
 
 use crate::key_translation;
 use crate::proto::{
@@ -90,6 +91,23 @@ impl Session {
                 if !bindings.is_candidate_window_enabled && !candidates.is_empty() {
                     candidates.clear();
                     surface.list_closed();
+                }
+                // A composition a switch across TPS left behind — from a
+                // chord, the input-method menu or the settings window — is
+                // committed as shown before this key is read, which is then
+                // the new mode's first (`commit_composition_left_by_mode_change`,
+                // which `perform_intent` runs first: the `Commit` itself then
+                // finds nothing left). Keyless, as on Windows and Linux.
+                if manager.is_left_by_mode_change(settings.choice(&keys::INPUT_MODE)) {
+                    let no_key = KeyEventSnapshot::default();
+                    perform_intent(
+                        &ComposingKeyIntent::Commit,
+                        &no_key,
+                        &settings,
+                        manager,
+                        candidates,
+                        surface,
+                    );
                 }
                 let key = key_translation::snapshot(event);
                 let intent = ComposingKeyIntent::intent(
@@ -1237,6 +1255,67 @@ mod tests {
         let reply = off.key(typed("a"), list(Some(0)));
         assert!(reply.handled && reply.is_composing);
         assert_eq!(effects(&reply), vec![closed(), marked("ta", 2), closed()]);
+    }
+
+    /// A switch across TPS leaves the composition on screen; the next key
+    /// commits it as shown, then is read as the new mode's first — a TPS
+    /// layout key (`1` = ㄅ, `tps_layout.rs`), not a TL digit.
+    #[test]
+    fn the_first_key_after_a_switch_across_tps_commits_the_composition_first() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("tai");
+        let tps = Typist {
+            settings: vec![text("inputMode", "tps")],
+            ..typist
+        };
+        let reply = tps.key(typed("1"), no_list());
+        assert!(reply.handled && reply.is_composing);
+        // trace: left-behind commit writes the preedit as shown (`tai`) and
+        // closes the list; the keyless `Commit` closes it again with nothing
+        // to write; `1` then starts a glyph composition and fetches.
+        assert_eq!(
+            effects(&reply)[..4],
+            [insert("tai"), closed(), closed(), marked("ㄅ", 1)]
+        );
+    }
+
+    /// The other way: glyphs left behind under TL are written as shown
+    /// before the next key — Space here, which then has nothing to separate
+    /// and passes through as document text.
+    #[test]
+    fn the_first_key_after_leaving_tps_commits_the_glyphs_first() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![text("inputMode", "tps")]);
+        typist.key(typed("e"), no_list());
+        typist.key(typed("8"), list(Some(0)));
+        let tl = Typist {
+            settings: vec![text("inputMode", "tl")],
+            ..typist
+        };
+        let reply = tl.key(typed(" "), no_list());
+        // trace: `ㄍㄚ` written as shown; the keyless `Commit` finds nothing;
+        // an idle Space is not taken, so the host types it.
+        assert!(!reply.handled && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![insert("ㄍㄚ"), closed(), closed()]);
+    }
+
+    /// TL ↔ POJ crosses no TPS: the composition carries on under the new
+    /// romanization, nothing is committed.
+    #[test]
+    fn a_switch_between_romanizations_keeps_the_composition() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![]);
+        typist.type_text("tai");
+        let poj = Typist {
+            settings: vec![text("inputMode", "poj")],
+            ..typist
+        };
+        let reply = poj.key(typed("n"), list(Some(0)));
+        assert!(reply.handled && reply.is_composing);
+        assert!(!effects(&reply)
+            .iter()
+            .any(|effect| matches!(effect, effect::Effect::InsertText(_))));
     }
 
     // ---- Lifecycle ----

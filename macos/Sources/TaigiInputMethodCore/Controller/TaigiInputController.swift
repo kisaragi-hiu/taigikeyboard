@@ -210,6 +210,14 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var candidateWindowObservation: AnyObject?
 
+    /// KVO on the input mode, armed and released with `displayModeObservation`:
+    /// a mode written from outside this session — the General pane, a
+    /// `defaults write` — takes down what was raised under the old one, as
+    /// the switch chords do (`switchInputMode(_:)`). A composition stays on
+    /// screen; across TPS the next key commits it (desktop TPS roadmap D5).
+    @MainActor
+    private var inputModeObservation: AnyObject?
+
     // MARK: - IMK entry points
 
     /// Keydown only — the default, restated rather than left implicit so a
@@ -262,6 +270,12 @@ public final class TaigiInputController: IMKInputController {
                 of: SettingsStore.Keys.isCandidateWindowEnabled,
                 onMainActor: { [weak controller] in
                     controller?.applyCandidateWindowSettingChange()
+                },
+            )
+            controller.inputModeObservation = controller.settings.observeChanges(
+                of: SettingsStore.Keys.inputMode,
+                onMainActor: { [weak controller] in
+                    controller?.dismissPalettes()
                 },
             )
             // Fresh focus types Taigi — and no Shift half-tapped elsewhere may
@@ -337,12 +351,7 @@ public final class TaigiInputController: IMKInputController {
     override public func hidePalettes() {
         Self.logger.debug("hidePalettes")
         onMainActor(nil) { controller, _ in
-            controller.dismissCandidates()
-            // The system is asking for every piece of input-method UI to go;
-            // the guide and the picker are two, and both go without touching
-            // the composition.
-            TelexGuidePanel.shared.hide(ownedBy: controller.sessionToken)
-            controller.dismissSymbolPicker()
+            controller.dismissPalettes()
         }
         super.hidePalettes()
     }
@@ -441,7 +450,7 @@ public final class TaigiInputController: IMKInputController {
             }
 
             // The global shortcuts a click can stand in for (USER 2026-09-19):
-            // the two switches, each under the name the Shortcuts pane gives it,
+            // the three switches, each under the name the Shortcuts pane gives it,
             // so the menu is where a user looks up what they last recorded.
             // Not the Hanji/romanization swap — its default is the bare backtick, which
             // the rule above would never print; not the symbol picker, which
@@ -452,6 +461,11 @@ public final class TaigiInputController: IMKInputController {
                     .toggleRomanization,
                     label: ShortcutAction.toggleRomanization.label(language),
                     selector: #selector(toggleRomanization(_:)),
+                ),
+                shortcutRow(
+                    .toggleTps,
+                    label: ShortcutAction.toggleTps.label(language),
+                    selector: #selector(toggleTps(_:)),
                 ),
                 shortcutRow(
                     .cycleCandidateDisplayMode,
@@ -566,6 +580,11 @@ public final class TaigiInputController: IMKInputController {
     }
 
     @objc
+    private func toggleTps(_: Any!) {
+        performGlobalShortcut(.toggleTps)
+    }
+
+    @objc
     private func cycleCandidateDisplayMode(_: Any!) {
         performGlobalShortcut(.cycleCandidateDisplayMode)
     }
@@ -577,21 +596,38 @@ public final class TaigiInputController: IMKInputController {
         }
     }
 
-    private func switchInputMode(to mode: InputMode) {
-        Self.logger.debug("switch input mode to \(mode.rawValue)")
-        settings.inputMode = mode
+    /// One of the two switch chords, through the core's one mode writer
+    /// (`SettingsStore.switchInputMode(_:)`). A composition across TPS stays
+    /// on screen until the next key commits it (desktop TPS roadmap D5).
+    private func switchInputMode(_ request: InputModeSwitch) {
+        Self.logger.debug("switch input mode \(request)")
+        guard let mode = settings.switchInputMode(request) else { return }
         onMainActor(nil) { controller, _ in
-            // The candidates on screen were fetched under the old
-            // romanization, and the key contract lets Space commit whichever
-            // one is highlighted. They go with the mode that produced them.
-            controller.dismissCandidates()
+            // The candidates on screen were fetched under the old mode, and
+            // the key contract lets Space commit whichever one is
+            // highlighted; the guide and the picker were raised under it too.
+            // They go with the mode that produced them — here, not left to
+            // `inputModeObservation`, whose hop lands after a key already
+            // queued.
+            controller.dismissPalettes()
             // Then the HUD, because the chord fires from anywhere and a
-            // romanization that changed with
+            // mode that changed with
             // no notice reads as the keyboard breaking — the next syllable
             // composes under rules nothing on screen said had changed
             // (USER 2026-08-26).
-            controller.flash(mode == .tl ? .settingsTlMode : .settingsPojMode)
+            controller.flash(mode.displayNameKey)
         }
+    }
+
+    /// Every window this session shows — the list, the guide, the picker —
+    /// taken down without touching the composition: what `hidePalettes` is
+    /// asked for, and what `inputModeObservation` does for a mode written
+    /// outside this session, each window having been raised under the old one.
+    @MainActor
+    private func dismissPalettes() {
+        dismissCandidates()
+        TelexGuidePanel.shared.hide(ownedBy: sessionToken)
+        dismissSymbolPicker()
     }
 
     // MARK: - Shortcut actions
@@ -606,16 +642,23 @@ public final class TaigiInputController: IMKInputController {
     /// fetched again.
     @MainActor
     func performShortcutAction(_ action: ShortcutAction) {
-        // A switch that ran under an open guide would leave a table spelled
-        // for the romanization the user just left. Owner-guarded, so a chord
-        // reaching a session that did not raise the guide leaves it alone.
-        if action != .showTelexGuide {
-            TelexGuidePanel.shared.hide(ownedBy: sessionToken)
+        // Inert under the mode: no write, no flash, and nothing on screen
+        // taken down — first, before the teardown below (Windows and Linux
+        // gate there too).
+        guard !action.isInert(under: settings.inputMode) else { return }
+        // The two mode switches tear down in `switchInputMode(_:)`, once the
+        // write has landed: a switch the core did not answer changes nothing.
+        if action != .toggleRomanization, action != .toggleTps {
+            // An open guide would otherwise stay spelled for the settings it
+            // was raised under. Owner-guarded, so a chord reaching a session
+            // that did not raise the guide leaves it alone.
+            if action != .showTelexGuide {
+                TelexGuidePanel.shared.hide(ownedBy: sessionToken)
+            }
+            // And the picker: a Carbon chord bypasses the key path that
+            // would otherwise take it down.
+            dismissSymbolPicker()
         }
-        // And the picker: a Carbon chord bypasses the key path that would
-        // otherwise take it down, and a romanization switched under an open
-        // list is a list the user is no longer looking at.
-        dismissSymbolPicker()
         switch action {
         case .openLastSettingsPane:
             // Handled process-wide by `ShortcutHotkeys.perform` before any
@@ -625,7 +668,9 @@ public final class TaigiInputController: IMKInputController {
             // silently into "do nothing".
             break
         case .toggleRomanization:
-            switchInputMode(to: settings.inputMode == .tl ? .poj : .tl)
+            switchInputMode(.toggleRomanization)
+        case .toggleTps:
+            switchInputMode(.toggleTps)
         case .toggleTranslateSwapped:
             // Inert under romanization-only — silently, no flash (USER
             // 2026-09-01, Q11; see `allowsSwapToggle`). Under Hanji with Romanization the chord
@@ -698,7 +743,7 @@ public final class TaigiInputController: IMKInputController {
             // cannot strand a stale hint: reaching the shortcut pane moves
             // focus off the client, and `finishComposition` takes the bar
             // down with the session.
-            slotKeySet: settings.toneInputScheme.slotKeySet,
+            slotKeySet: settings.candidateSlotKeySet,
             // The §34 literal is what the user is already typing, not an offer
             // to pick, so it takes no key and the keys start on the cell after
             // it (USER 2026-09-09).
@@ -1037,7 +1082,7 @@ public final class TaigiInputController: IMKInputController {
         symbolPickerPresenter.show(
             CandidateWindowContent(
                 cells: symbolPickerCells.map { CandidateCellContent(text: $0, annotation: nil) },
-                slotKeySet: settings.toneInputScheme.slotKeySet,
+                slotKeySet: settings.candidateSlotKeySet,
                 leadCellIsUnkeyed: false,
             ),
             anchoredTo: caretRect,
@@ -1211,6 +1256,7 @@ public final class TaigiInputController: IMKInputController {
         backend.release(sessionToken, settings: settings)
         displayModeObservation = nil
         candidateWindowObservation = nil
+        inputModeObservation = nil
     }
 
     /// Writes whatever is composing into `client` and leaves it with no marked

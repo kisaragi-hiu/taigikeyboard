@@ -1,7 +1,8 @@
 //! The key rules the Swift Shortcuts pane and symbol picker ask
 //! (docs/architecture/macos-desktop-core-roadmap.md P14): desktop-core's
 //! chord gate, recorder decision, resolved bindings, fixed-row labels and
-//! picker reading, under the Mac's grammar. Pure — no token, no session, no
+//! picker reading, under the Mac's grammar — and the input-mode writer the
+//! Swift settings ask (desktop TPS roadmap D5). Pure — no token, no session, no
 //! runtime: a settings snapshot one of them carries is read for its one
 //! answer and never installed, so the key path keeps what the last session
 //! request carried, a panic here included.
@@ -10,14 +11,16 @@ use taigi_desktop_core::keys::{
     evaluate_press, shortcut_labels, ChordRejection, ComposingAction, ComposingKeyBindings,
     ComposingKeyChord, RecorderOutcome, RecorderTier, SymbolPickerIntent,
 };
-use taigi_desktop_core::settings::SettingsDocument;
+use taigi_desktop_core::settings::{
+    keys, InputMode, InputModeRequest, SettingChoice, SettingsDocument,
+};
 
 use crate::key_translation::{self, ESCAPE_KEY_CODE};
 use crate::proto::{
     chord_reply, desktop_request, desktop_response, press_reply, symbol_picker_reply, Chord,
     ChordReply, ChordRequest, ComposingShortcut, ComposingShortcutsReply, PressReply, PressRequest,
-    RecorderAction, SettingsSnapshot, SymbolPickerAction, SymbolPickerKeyRequest,
-    SymbolPickerReply,
+    RecorderAction, SettingsSnapshot, SwitchInputModeReply, SwitchInputModeRequest,
+    SymbolPickerAction, SymbolPickerKeyRequest, SymbolPickerReply,
 };
 use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 use crate::session::navigation;
@@ -39,6 +42,7 @@ pub(crate) fn answer(
             composing_shortcuts(snapshot).map(Reply::ComposingShortcuts)
         }
         Request::SymbolPickerKey(key) => symbol_picker_key(key, snapshot).map(Reply::SymbolPicker),
+        Request::SwitchInputMode(switch) => switch_input_mode(switch).map(Reply::SwitchInputMode),
         _ => return None,
     })
 }
@@ -110,8 +114,8 @@ fn composing_shortcuts(
     Ok(ComposingShortcutsReply {
         actions,
         slot_keys: shortcut_labels::slot_keys_label(slot_keys, DESKTOP_PLATFORM),
-        // Empty only under TPS, which this seam projects to TL until desktop
-        // TPS P4 (`settings.rs` `document_from`).
+        // Empty under TPS, which has no Shift + slot flip; the pane hides
+        // the row.
         shifted_slot_keys: shortcut_labels::shifted_slot_keys_label(slot_keys, DESKTOP_PLATFORM)
             .unwrap_or_default(),
         navigation_keys: shortcut_labels::navigation_keys_label(DESKTOP_PLATFORM).to_owned(),
@@ -142,6 +146,33 @@ fn symbol_picker_key(
     };
     Ok(SymbolPickerReply {
         intent: Some(intent),
+    })
+}
+
+/// Where `request` moves the stored mode, through the core's one writer
+/// (`SettingsDocument::switch_input_mode`), on a document holding only the
+/// two stored values the request carries.
+fn switch_input_mode(request: &SwitchInputModeRequest) -> Result<SwitchInputModeReply, Refusal> {
+    use crate::proto::switch_input_mode_request::Request as Switch;
+    let switch = match request.request.as_ref() {
+        Some(Switch::Pick(raw)) => InputModeRequest::Pick(
+            InputMode::from_raw(raw).ok_or(Refusal::Missing("switch_input_mode.pick"))?,
+        ),
+        Some(Switch::ToggleRomanization(_)) => InputModeRequest::ToggleRomanization,
+        Some(Switch::ToggleTps(_)) => InputModeRequest::ToggleTps,
+        None => return Err(Refusal::Missing("switch_input_mode.request")),
+    };
+    let last_romanization = keys::LAST_ROMANIZATION_MODE.name;
+    let mut document = SettingsDocument::default();
+    document.set_raw_string(keys::INPUT_MODE.name, &request.input_mode);
+    document.set_raw_string(last_romanization, &request.last_romanization_mode);
+    let before = document.raw_string(last_romanization).map(str::to_owned);
+    let next = document.switch_input_mode(switch);
+    let after = document.raw_string(last_romanization);
+    Ok(SwitchInputModeReply {
+        input_mode: next.raw().to_owned(),
+        last_romanization_mode: (after != before.as_deref())
+            .then(|| after.unwrap_or_default().to_owned()),
     })
 }
 
@@ -518,6 +549,66 @@ mod tests {
                 Some(&SettingsSnapshot::default())
             ),
             Err(Refusal::Missing("event"))
+        );
+    }
+
+    fn switched(
+        input_mode: &str,
+        last_romanization_mode: &str,
+        request: crate::proto::switch_input_mode_request::Request,
+    ) -> Result<(String, Option<String>), Refusal> {
+        switch_input_mode(&SwitchInputModeRequest {
+            input_mode: input_mode.to_owned(),
+            last_romanization_mode: last_romanization_mode.to_owned(),
+            request: Some(request),
+        })
+        .map(|reply| (reply.input_mode, reply.last_romanization_mode))
+    }
+
+    /// The core's writer, answered for the Swift store: a romanization left
+    /// for TPS is handed back to store; every other switch stores only the
+    /// mode. trace: `next_input_mode` (engine_settings.rs) — ToggleTps from a
+    /// romanization → tps; from tps → last; ToggleRomanization from tps →
+    /// last's other; an unknown stored mode reads as tl.
+    #[test]
+    fn a_switch_answers_what_the_core_writer_stores() {
+        use crate::proto::switch_input_mode_request::Request as Switch;
+        let pair = |mode: &str, last: Option<&str>| Ok((mode.to_owned(), last.map(str::to_owned)));
+        assert_eq!(
+            switched("poj", "", Switch::ToggleTps(true)),
+            pair("tps", Some("poj"))
+        );
+        assert_eq!(
+            switched("tps", "poj", Switch::ToggleTps(true)),
+            pair("poj", None)
+        );
+        assert_eq!(
+            switched("tps", "poj", Switch::ToggleRomanization(true)),
+            pair("tl", None)
+        );
+        assert_eq!(
+            switched("tl", "", Switch::ToggleRomanization(true)),
+            pair("poj", None)
+        );
+        assert_eq!(
+            switched("", "", Switch::Pick("tps".to_owned())),
+            pair("tps", Some("tl"))
+        );
+        assert_eq!(
+            switched("tps", "", Switch::ToggleTps(true)),
+            pair("tl", None)
+        );
+        assert_eq!(
+            switched("bopomofo", "", Switch::ToggleTps(true)),
+            pair("tps", Some("tl"))
+        );
+        assert_eq!(
+            switched("tl", "", Switch::Pick("bopomofo".to_owned())),
+            Err(Refusal::Missing("switch_input_mode.pick"))
+        );
+        assert_eq!(
+            switch_input_mode(&SwitchInputModeRequest::default()),
+            Err(Refusal::Missing("switch_input_mode.request"))
         );
     }
 }

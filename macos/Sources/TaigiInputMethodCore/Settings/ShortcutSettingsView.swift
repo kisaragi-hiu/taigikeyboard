@@ -102,7 +102,11 @@ struct ShortcutSettingsView: View {
                 // the Hanji/romanization commit aimed at that slot, and the slot keys follow
                 // the tone scheme — so the row follows it too, and there is
                 // nothing to record. After the commit rows, because it is one.
-                fixedRow(.desktopActionCommitAlternateScript, shortcuts.shiftedSlotKeys)
+                // Not under TPS, which has no such flip: the core answers
+                // no keys for it there.
+                if !shortcuts.shiftedSlotKeys.isEmpty {
+                    fixedRow(.desktopActionCommitAlternateScript, shortcuts.shiftedSlotKeys)
+                }
 
                 // Shown, not recordable (USER 2026-09-20): ⌃ on a punctuation
                 // key types it in the other width once, whatever the Hanji/romanization

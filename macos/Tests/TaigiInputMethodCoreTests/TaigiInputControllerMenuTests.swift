@@ -82,7 +82,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         // The literal oracle for this surface: the copy is the authored Hanji.
         XCTAssertEqual(
             items.map(\.title),
-            ["切換台羅/白話字", "切換候選詞顯示", "", "台語齒盤設定", "", "檢查更新", "關於齒盤"],
+            ["切換台羅/白話字", "切換方音符號", "切換候選詞顯示", "", "台語齒盤設定", "", "檢查更新", "關於齒盤"],
         )
         XCTAssertEqual(items.filter(\.isSeparatorItem).count, 2)
         XCTAssertFalse(try XCTUnwrap(items.first).isSeparatorItem)
@@ -90,8 +90,8 @@ final class TaigiInputControllerMenuTests: XCTestCase {
         XCTAssertEqual(
             items.filter { !$0.isSeparatorItem }.map(\.action),
             [
-                Self.toggleRomanization, Self.cycleCandidateDisplayMode, Self.openSettings, Self.checkForUpdates,
-                Self.showAbout,
+                Self.toggleRomanization, Self.toggleTps, Self.cycleCandidateDisplayMode, Self.openSettings,
+                Self.checkForUpdates, Self.showAbout,
             ],
         )
     }
@@ -114,7 +114,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     func testTheShortcutRows_printTheirDefaultChords() throws {
         let menu = try menu()
 
-        for (action, key) in [(Self.toggleRomanization, "c"), (Self.cycleCandidateDisplayMode, "h")] {
+        for (action, key) in [(Self.toggleRomanization, "c"), (Self.toggleTps, "p"), (Self.cycleCandidateDisplayMode, "h")] {
             let row = try item(action: action, in: menu)
             XCTAssertEqual(row.keyEquivalent, key, "\(action)")
             XCTAssertEqual(row.keyEquivalentModifierMask, [.control, .command], "\(action)")
@@ -234,7 +234,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     /// claim a key. A row that claims one the user cannot see and re-record in
     /// the Shortcuts pane is a key taken from the host that no surface admits to.
     func testOnlyTheShortcutRows_claimAKey() throws {
-        let shortcutRows = [Self.toggleRomanization, Self.cycleCandidateDisplayMode, Self.openSettings]
+        let shortcutRows = [Self.toggleRomanization, Self.toggleTps, Self.cycleCandidateDisplayMode, Self.openSettings]
         for row in try menu().items where !row.keyEquivalent.isEmpty {
             XCTAssertTrue(
                 row.action.map(shortcutRows.contains) ?? false,
@@ -348,6 +348,7 @@ final class TaigiInputControllerMenuTests: XCTestCase {
     private static let checkForUpdates = Selector(("checkForUpdates:"))
     private static let showAbout = Selector(("showAbout:"))
     private static let toggleRomanization = Selector(("toggleRomanization:"))
+    private static let toggleTps = Selector(("toggleTps:"))
     private static let cycleCandidateDisplayMode = Selector(("cycleCandidateDisplayMode:"))
     /// The doorway's command: `showPreferences:` is the selector the system
     /// reserves for it (`IMKInputController.h:165-170`), so the row sends that

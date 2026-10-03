@@ -105,6 +105,7 @@
       "comment": "Shortcut-recorder row and input-method menu row: the hotkey that switches into Phonetic Symbols (TPS) and back to the romanization last used. TPS is not a romanization, so this is its own row beside the romanization switch. Authored whole, like its siblings.",
       "scope": {
         "platforms": [
+          "macos",
           "windows",
           "linux"
         ],
