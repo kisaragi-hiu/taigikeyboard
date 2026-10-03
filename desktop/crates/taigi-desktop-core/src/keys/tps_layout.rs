@@ -116,9 +116,22 @@ pub fn tps_glyph_for_event(event: &KeyEventSnapshot) -> Option<&'static str> {
     } else {
         typed
     };
+    glyph_for_key(key)
+}
+
+/// The glyph the layout assigns to `key`, spelled as in [`KEYS`] — a shifted
+/// letter as its capital, a shifted digit or punctuation key as the
+/// character Shift makes it type.
+pub(super) fn glyph_for_key(key: char) -> Option<&'static str> {
     KEYS.iter()
         .find(|(assigned, _)| *assigned == key)
         .map(|(_, glyph)| *glyph)
+}
+
+/// Every key the layout assigns, as typed (base and Shift layers together).
+#[cfg(test)]
+pub(super) fn assigned_keys() -> impl Iterator<Item = char> {
+    KEYS.iter().map(|(key, _)| *key)
 }
 
 /// Whether `characters` is what a TPS layout key types bare or with Shift —
@@ -126,7 +139,7 @@ pub fn tps_glyph_for_event(event: &KeyEventSnapshot) -> Option<&'static str> {
 pub fn types_a_tps_glyph(characters: &str) -> bool {
     let mut scalars = characters.chars();
     match (scalars.next(), scalars.next()) {
-        (Some(typed), None) => KEYS.iter().any(|(key, _)| *key == typed),
+        (Some(typed), None) => glyph_for_key(typed).is_some(),
         _ => false,
     }
 }

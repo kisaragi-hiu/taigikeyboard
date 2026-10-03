@@ -22,6 +22,11 @@ pub const CHECK_UPDATES_FLAG: &str = "--check-updates";
 /// launch that really opens the window (measured: a cold first open drops
 /// from ~2.5 s to ~1.1 s to painted content).
 pub const PREWARM_FLAG: &str = "--prewarm";
+/// `--tps-keyboard`: show the on-screen TPS key panel, or close it when it
+/// is up, without the settings window (desktop TPS roadmap D6). Linux only:
+/// its panel is a window of the settings app; the Windows and macOS panels
+/// belong to the input method and are never launched.
+pub const TPS_KEYBOARD_FLAG: &str = "--tps-keyboard";
 
 /// The parsed command line, the same for both settings windows.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -36,6 +41,8 @@ pub struct LaunchOptions {
     /// `main` reads this before the other modes, so a launch carrying it
     /// writes no settings, opens no store and reaches no network.
     pub prewarm: bool,
+    /// `--tps-keyboard`: toggle the TPS key panel, no settings window.
+    pub toggles_tps_keyboard: bool,
     /// The first update / prewarm flag in argument order. Only the Windows
     /// window has a behaviour for those; the Linux one refuses the launch
     /// and names this flag.
@@ -65,6 +72,10 @@ impl LaunchOptions {
                 PREWARM_FLAG => {
                     options.prewarm = true;
                     PREWARM_FLAG
+                }
+                TPS_KEYBOARD_FLAG => {
+                    options.toggles_tps_keyboard = true;
+                    continue;
                 }
                 other => {
                     log::warn!("cli.unknown_argument argument={other}");
@@ -162,5 +173,19 @@ mod tests {
         let swallowed = parse(&["--pane", "--prewarm"]);
         assert_eq!(swallowed.first_windows_only_flag, None);
         assert!(!swallowed.prewarm);
+    }
+
+    #[test]
+    fn the_tps_keyboard_flag_asks_for_the_panel_alone() {
+        // trace: the Linux `launcher::toggle_tps_keyboard` spawns
+        // `--tps-keyboard` alone; it is not a Windows-only flag (the Linux
+        // window owns the behaviour).
+        assert_eq!(
+            parse(&["--tps-keyboard"]),
+            LaunchOptions {
+                toggles_tps_keyboard: true,
+                ..LaunchOptions::default()
+            }
+        );
     }
 }

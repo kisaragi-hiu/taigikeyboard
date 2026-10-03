@@ -47,7 +47,7 @@ final class ShortcutActionsTests: XCTestCase {
             labels(),
             [
                 "切換台羅/白話字", "切換方音符號", "切換漢字/羅馬字", "切換候選詞顯示", "拍開符號選單", "拍開 Telex 說明",
-                "拍開設定選單",
+                "拍開方音符號齒盤", "拍開設定選單",
             ],
         )
         XCTAssertEqual(
@@ -59,6 +59,7 @@ final class ShortcutActionsTests: XCTestCase {
                 "候補の表示を切り替え",
                 "記号メニューを開く",
                 "Telex の説明を開く",
+                "方音符号キーボードを開く",
                 "設定メニューを開く",
             ],
         )
@@ -165,6 +166,7 @@ final class ShortcutActionsTests: XCTestCase {
     /// (USER): the switches in the General pane's order, the windows used while
     /// typing, the settings doorway last. Switch TPS sits beside Switch
     /// Romanization on ⌃⌘P (desktop TPS roadmap D5): both say what is typed.
+    /// The TPS key panel is ⌃⌘J, a window used while typing (P5).
     func testTheGlobalRoster_isOneDoorwayFourSwitchesThePickerAndTheGuide() {
         XCTAssertEqual(
             ShortcutAction.allCases.map(\.defaultShortcut),
@@ -175,21 +177,21 @@ final class ShortcutActionsTests: XCTestCase {
                 KeyboardShortcuts.Shortcut(.h, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.comma, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.slash, modifiers: [.control, .command]),
+                KeyboardShortcuts.Shortcut(.j, modifiers: [.control, .command]),
                 KeyboardShortcuts.Shortcut(.s, modifiers: [.control, .command]),
             ],
         )
     }
 
-    /// The same three actions desktop-core's `ShortcutAction::is_inert_under`
-    /// names (its `the_display_switches_and_the_telex_guide_are_inert_under_tps_only`
-    /// test), only under TPS.
-    func testTheInertActions_underTps_matchTheCore() {
+    /// The same actions desktop-core's `ShortcutAction::is_inert_under`
+    /// names (its `the_inert_actions_under_each_mode` test).
+    func testTheInertActions_underEachMode_matchTheCore() {
         XCTAssertEqual(
             ShortcutAction.allCases.filter { $0.isInert(under: .tps) },
             [.toggleTranslateSwapped, .cycleCandidateDisplayMode, .showTelexGuide],
         )
         for mode in [InputMode.tl, .poj] {
-            XCTAssertEqual(ShortcutAction.allCases.filter { $0.isInert(under: mode) }, [], "\(mode)")
+            XCTAssertEqual(ShortcutAction.allCases.filter { $0.isInert(under: mode) }, [.showTpsKeyboard], "\(mode)")
         }
     }
 

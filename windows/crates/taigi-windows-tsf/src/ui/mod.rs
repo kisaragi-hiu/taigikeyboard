@@ -1,4 +1,5 @@
-//! The candidate window, the mode flash and the Telex guide: Win32 popups
+//! The candidate window, the mode flash, the Telex guide and the TPS key
+//! panel: Win32 popups
 //! drawn with Direct2D + DirectWrite over the pure geometry models in
 //! `taigi_desktop_core::candidates` (roadmap W4). The renderer owns NO
 //! composition state: it draws what the models say and reports clicks and
@@ -12,4 +13,5 @@ pub mod presenter;
 pub mod render;
 pub mod telex_guide;
 pub mod theme;
+pub mod tps_keyboard;
 pub mod window;

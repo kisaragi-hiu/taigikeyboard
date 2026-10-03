@@ -35,6 +35,12 @@ pub const INPUT_MODE: SettingsKey<InputMode> =
 /// romanization is left for TPS. Desktop-only: mobile has no TPS chord.
 pub const LAST_ROMANIZATION_MODE: SettingsKey<Romanization> =
     SettingsKey::new("lastRomanizationMode", Romanization::Tl);
+/// Whether the on-screen TPS key panel is up while TPS is typed (desktop TPS
+/// roadmap D6): flipped by Show TPS Keyboard, kept across mode switches so
+/// the panel comes back with TPS. Read by Windows, across host processes;
+/// macOS keeps a Swift twin (`SettingsStore.swift`); the Linux panel is a
+/// window of the settings app and keeps no key.
+pub const TPS_KEYBOARD_SHOWN: SettingsKey<bool> = SettingsKey::new("tpsKeyboardShown", false);
 pub const IS_HANJI_FIRST: SettingsKey<bool> =
     SettingsKey::new("isTranslateSwapped", ENGINE_DEFAULTS.is_hanji_first);
 // RETIRED 2026-09-30: `outputBothScripts` (Annotate in Brackets). No desktop
@@ -250,10 +256,11 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 /// (USER 2026-09-20: the reset must not switch the UI language under the
 /// user), not the update bookkeeping, not the remembered pane. macOS keeps a
 /// Swift twin: `SettingsStore.swift` `resetGeneralSettings`. The input mode
-/// takes the romanization TPS returns to with it.
-pub const GENERAL_KEYS: [&str; 9] = [
+/// takes the romanization TPS returns to and the TPS key panel with it.
+pub const GENERAL_KEYS: [&str; 10] = [
     INPUT_MODE.name,
     LAST_ROMANIZATION_MODE.name,
+    TPS_KEYBOARD_SHOWN.name,
     TONE_INPUT_SCHEME.name,
     IS_HANJI_FIRST.name,
     IS_AUTO_SPACE_ENABLED.name,

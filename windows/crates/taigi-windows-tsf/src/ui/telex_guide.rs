@@ -14,7 +14,9 @@
 
 use super::render::{RenderFactory, Surface};
 use super::theme::{SystemTheme, Theme};
-use super::window::{monitor_at, MonitorArea, PopupWindow, WindowHandler, WindowRef, BASE_DPI};
+use super::window::{
+    frame_in_work_area, monitor_at, MonitorArea, PopupWindow, WindowHandler, WindowRef, BASE_DPI,
+};
 use std::cell::RefCell;
 use std::rc::Rc;
 use taigi_desktop_core::candidates::{FontSpec, TextMeasurer};
@@ -217,18 +219,7 @@ impl TelexGuide {
 /// The card centred in `monitor`'s work area — the hotkey path has no
 /// client, so there is no caret to anchor to (`HUDPanel.noticeFrame`).
 fn centred_frame(monitor: &MonitorArea, size: (f32, f32)) -> RECT {
-    let scale = monitor.dpi / BASE_DPI;
-    let work = monitor.work_area;
-    let px_width = (size.0 * scale).round() as i32;
-    let px_height = (size.1 * scale).round() as i32;
-    let left = (work.left + work.right) / 2 - px_width / 2;
-    let top = (work.top + work.bottom) / 2 - px_height / 2;
-    RECT {
-        left,
-        top,
-        right: left + px_width,
-        bottom: top + px_height,
-    }
+    frame_in_work_area(monitor, size, None)
 }
 
 fn font(size: f32) -> FontSpec {

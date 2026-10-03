@@ -24,8 +24,8 @@ use windows::Win32::Graphics::Dwm::{
     DWMWCP_ROUND,
 };
 use windows::Win32::Graphics::Gdi::{
-    BeginPaint, EndPaint, GetMonitorInfoW, InvalidateRect, MonitorFromPoint, HBRUSH, MONITORINFO,
-    MONITOR_DEFAULTTONEAREST, PAINTSTRUCT,
+    BeginPaint, EndPaint, GetMonitorInfoW, InvalidateRect, MonitorFromPoint, MonitorFromWindow,
+    HBRUSH, HMONITOR, MONITORINFO, MONITOR_DEFAULTTONEAREST, PAINTSTRUCT,
 };
 use windows::Win32::UI::HiDpi::{
     GetDpiForMonitor, GetDpiForWindow, SetThreadDpiAwarenessContext,
@@ -48,6 +48,9 @@ pub const BASE_DPI: f32 = 96.0;
 /// synchronously (W3): "hide, if `wparam` (a context token, 0 = whoever)
 /// still owns you". Handled on the message loop like any other message.
 const WM_HIDE_REQUEST: u32 = WM_APP + 1;
+/// Posted by a focus callback that may not show a window synchronously
+/// (W3): "bring yourself in line with the settings as they are now".
+const WM_SYNC_REQUEST: u32 = WM_APP + 2;
 
 /// What a popup asks its content to do. Coordinates are DIPs.
 pub trait WindowHandler {
@@ -70,6 +73,9 @@ pub trait WindowHandler {
     /// The system theme or accent changed (`WM_SETTINGCHANGE`,
     /// `WM_THEMECHANGED`, `WM_DWMCOLORIZATIONCOLORCHANGED`).
     fn system_theme_changed(&mut self);
+    /// A sync posted by a focus callback: show or hide as the content's
+    /// own source now says. Only the TPS key panel posts one.
+    fn sync_requested(&mut self, _window: &WindowRef) {}
 }
 
 type Handler = Rc<RefCell<dyn WindowHandler>>;
@@ -147,6 +153,17 @@ impl WindowRef {
             unsafe { PostMessageW(Some(self.hwnd), WM_HIDE_REQUEST, WPARAM(token), LPARAM(0)) }
         {
             log::warn!("ui.post_hide_failed error={error}");
+        }
+    }
+
+    /// Queues a sync for the message loop — what a focus callback calls to
+    /// bring a window up (W3), never the show itself.
+    pub fn post_sync_request(&self) {
+        // SAFETY: a posted message to our own window; nothing is borrowed.
+        if let Err(error) =
+            unsafe { PostMessageW(Some(self.hwnd), WM_SYNC_REQUEST, WPARAM(0), LPARAM(0)) }
+        {
+            log::warn!("ui.post_sync_failed error={error}");
         }
     }
 }
@@ -263,28 +280,68 @@ pub fn with_per_monitor_dpi<T>(body: impl FnOnce() -> T) -> T {
 }
 
 pub fn monitor_at(point: POINT) -> Option<MonitorArea> {
+    // SAFETY: a monitor query by point.
     with_per_monitor_dpi(|| {
-        // SAFETY: monitor queries with valid out-structs.
-        unsafe {
-            let monitor = MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST);
-            let mut info = MONITORINFO {
-                cbSize: std::mem::size_of::<MONITORINFO>() as u32,
-                ..Default::default()
-            };
-            if !GetMonitorInfoW(monitor, &mut info).as_bool() {
-                return None;
-            }
-            let (mut dpi_x, mut dpi_y) = (0u32, 0u32);
-            let dpi = match GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &mut dpi_x, &mut dpi_y) {
-                Ok(()) if dpi_x != 0 => dpi_x as f32,
-                _ => BASE_DPI,
-            };
-            Some(MonitorArea {
-                work_area: info.rcWork,
-                dpi,
-            })
-        }
+        monitor_area(unsafe { MonitorFromPoint(point, MONITOR_DEFAULTTONEAREST) })
     })
+}
+
+/// The monitor holding most of `hwnd` — chosen by the window itself, so no
+/// rectangle is read under the host's DPI virtualization.
+pub fn monitor_of_window(hwnd: HWND) -> Option<MonitorArea> {
+    // SAFETY: a monitor query by window.
+    with_per_monitor_dpi(|| {
+        monitor_area(unsafe { MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST) })
+    })
+}
+
+/// `monitor`'s work area and DPI; call under [`with_per_monitor_dpi`].
+fn monitor_area(monitor: HMONITOR) -> Option<MonitorArea> {
+    let mut info = MONITORINFO {
+        cbSize: std::mem::size_of::<MONITORINFO>() as u32,
+        ..Default::default()
+    };
+    // SAFETY: monitor queries with valid out-structs.
+    unsafe {
+        if !GetMonitorInfoW(monitor, &mut info).as_bool() {
+            return None;
+        }
+        let (mut dpi_x, mut dpi_y) = (0u32, 0u32);
+        let dpi = match GetDpiForMonitor(monitor, MDT_EFFECTIVE_DPI, &mut dpi_x, &mut dpi_y) {
+            Ok(()) if dpi_x != 0 => dpi_x as f32,
+            _ => BASE_DPI,
+        };
+        Some(MonitorArea {
+            work_area: info.rcWork,
+            dpi,
+        })
+    }
+}
+
+/// A popup `size` DIPs big, centred across `monitor`'s work area: `bottom_margin`
+/// DIPs above its bottom edge, or centred top to bottom when `None` — the
+/// hotkey cards' placements (Telex guide, TPS key panel), which have no caret
+/// to anchor to.
+pub fn frame_in_work_area(
+    monitor: &MonitorArea,
+    size: (f32, f32),
+    bottom_margin: Option<f32>,
+) -> RECT {
+    let scale = monitor.dpi / BASE_DPI;
+    let work = monitor.work_area;
+    let px_width = (size.0 * scale).round() as i32;
+    let px_height = (size.1 * scale).round() as i32;
+    let left = (work.left + work.right) / 2 - px_width / 2;
+    let top = match bottom_margin {
+        Some(margin) => work.bottom - (margin * scale).round() as i32 - px_height,
+        None => (work.top + work.bottom) / 2 - px_height / 2,
+    };
+    RECT {
+        left,
+        top,
+        right: left + px_width,
+        bottom: top + px_height,
+    }
 }
 
 fn handler_of(hwnd: HWND) -> Option<Handler> {
@@ -461,6 +518,15 @@ fn handle_message(hwnd: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> O
                 Ok(mut handler) => handler.hide_requested(&window, owner),
                 // Busy: re-queued behind whatever is running.
                 Err(_) => window.post_hide_request(owner),
+            }
+            Some(LRESULT(0))
+        }
+        WM_SYNC_REQUEST => {
+            let handler = handler_of(hwnd)?;
+            match handler.try_borrow_mut() {
+                Ok(mut handler) => handler.sync_requested(&window),
+                // Busy: re-queued behind whatever is running.
+                Err(_) => window.post_sync_request(),
             }
             Some(LRESULT(0))
         }

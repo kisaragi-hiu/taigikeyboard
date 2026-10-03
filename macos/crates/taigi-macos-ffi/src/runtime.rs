@@ -127,7 +127,8 @@ impl Shell {
             | Request::Chord(_)
             | Request::ComposingShortcuts(_)
             | Request::SymbolPickerKey(_)
-            | Request::SwitchInputMode(_) => Err(Refusal::Missing("a session request")),
+            | Request::SwitchInputMode(_)
+            | Request::TpsKeyboardRows(_) => Err(Refusal::Missing("a session request")),
         }
     }
 

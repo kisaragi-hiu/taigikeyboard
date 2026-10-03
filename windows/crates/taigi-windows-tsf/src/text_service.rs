@@ -26,13 +26,15 @@ use crate::ui::mode_flash::ModeFlash;
 use crate::ui::presenter::CandidatePresenter;
 use crate::ui::render::RenderFactory;
 use crate::ui::telex_guide::TelexGuide;
-use std::cell::RefCell;
+use crate::ui::tps_keyboard::{TpsKeyboard, TpsKeyboardSource};
+use std::cell::{Cell, RefCell};
 use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::rc::Rc;
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::{
     LanguageMode, MenuCommand, ShiftTapTracker, ShortcutAction, VK_SHIFT_CODE,
 };
+use taigi_desktop_core::settings::keys;
 use windows::core::{Error, IUnknown, Interface, Ref, Result, BOOL, BSTR, GUID};
 use windows::Win32::Foundation::{E_FAIL, E_INVALIDARG, LPARAM, POINT, RECT, WPARAM};
 use windows::Win32::System::Ole::{CONNECT_E_ADVISELIMIT, CONNECT_E_NOCONNECTION};
@@ -133,6 +135,14 @@ pub(crate) struct ServiceState {
     /// The Telex key table the `showTelexGuide` chord toggles; owned by the
     /// context that raised it, like the candidate window.
     pub(crate) telex_guide: Option<Rc<RefCell<TelexGuide>>>,
+    /// The on-screen TPS key panel, up while this activation has keyboard
+    /// focus, TPS is typed and the user asked for it (`ui/tps_keyboard.rs`).
+    pub(crate) tps_keyboard: Option<Rc<RefCell<TpsKeyboard>>>,
+    /// Whether this activation is where the user types, as the latest focus
+    /// event said — shared with the panel's source, so a posted sync reads
+    /// the newest answer, not the one current when it was posted (a quick
+    /// lose-and-regain cannot leave the panel down, nor the reverse).
+    pub(crate) tps_keyboard_focus: Rc<Cell<bool>>,
     /// Whether keys compose Taigi or go to the document as English. Per
     /// activation — one text service instance is one thread manager, which is
     /// one application, so switching to English in a terminal leaves the
@@ -271,12 +281,17 @@ impl TextService_Impl {
                     .borrow_mut()
                     .attach_popup_only(Rc::downgrade(&symbol_picker));
                 let flash = ModeFlash::new(Rc::clone(&factory));
-                let guide = TelexGuide::new(factory);
+                let guide = TelexGuide::new(Rc::clone(&factory));
                 let mut state = self.state.borrow_mut();
+                let tps_keyboard = TpsKeyboard::new(
+                    factory,
+                    tps_keyboard_source(Rc::clone(&state.tps_keyboard_focus)),
+                );
                 state.presenter = Some(presenter);
                 state.symbol_picker = Some(symbol_picker);
                 state.mode_flash = Some(Rc::new(RefCell::new(flash)));
                 state.telex_guide = Some(Rc::new(RefCell::new(guide)));
+                state.tps_keyboard = Some(Rc::new(RefCell::new(tps_keyboard)));
             }
             Err(error) => {
                 log::error!("ui.render_factory_failed error={error} — no candidate window")
@@ -314,7 +329,7 @@ impl TextService_Impl {
         // The windows first (no candidate may outlive its service), then the
         // compositions still open are finished into their documents — they
         // need the contexts and the engine still wired.
-        let (presenter, symbol_picker, flash, guide) = {
+        let (presenter, symbol_picker, flash, guide, tps_keyboard) = {
             let mut state = self.state.borrow_mut();
             // The mode does not outlive the activation that switched it.
             // `activate` sets it too; this end is what a teardown `GetText`
@@ -326,11 +341,13 @@ impl TextService_Impl {
             // The windows are destroyed below; a hide still owed is moot.
             state.is_ui_hide_pending = false;
             state.symbol_picker_cells.clear();
+            state.tps_keyboard_focus.set(false);
             (
                 state.presenter.take(),
                 state.symbol_picker.take(),
                 state.mode_flash.take(),
                 state.telex_guide.take(),
+                state.tps_keyboard.take(),
             )
         };
         if let Some(presenter) = presenter {
@@ -344,6 +361,9 @@ impl TextService_Impl {
         }
         if let Some(guide) = guide {
             guide.borrow_mut().destroy();
+        }
+        if let Some(tps_keyboard) = tps_keyboard {
+            tps_keyboard.borrow_mut().destroy();
         }
         let mut entries = std::mem::take(&mut self.state.borrow_mut().contexts).into_entries();
         self.finish_all_compositions(&mut entries);
@@ -494,6 +514,38 @@ impl TextService_Impl {
     /// [`TextService_Impl::presenter`].
     pub(crate) fn telex_guide(&self) -> Option<Rc<RefCell<TelexGuide>>> {
         self.state.borrow().telex_guide.clone()
+    }
+
+    /// The TPS key panel, cloned out for the same reason.
+    pub(crate) fn tps_keyboard(&self) -> Option<Rc<RefCell<TpsKeyboard>>> {
+        self.state.borrow().tps_keyboard.clone()
+    }
+
+    /// Brings the TPS key panel in line with the settings — after the chord
+    /// or a mode switch. Both come from a key or a click in this activation,
+    /// so it is where the user types.
+    pub(crate) fn sync_tps_keyboard(&self) {
+        self.state.borrow().tps_keyboard_focus.set(true);
+        self.request_tps_keyboard_sync();
+    }
+
+    /// A focus event said whether this activation is where the user types:
+    /// recorded, then a sync posted. The panel follows keyboard focus between
+    /// applications, and only those events move it: going from one document
+    /// to another of the same application keeps it up.
+    pub(crate) fn note_tps_keyboard_focus(&self, is_focused: bool) {
+        let was_focused = self.state.borrow().tps_keyboard_focus.replace(is_focused);
+        if was_focused != is_focused {
+            self.request_tps_keyboard_sync();
+        }
+    }
+
+    /// Posts the panel a sync (`TpsKeyboard::request_sync`); it reads the
+    /// focus flag and the settings when it runs.
+    fn request_tps_keyboard_sync(&self) {
+        if let Some(tps_keyboard) = self.tps_keyboard() {
+            tps_keyboard.borrow().request_sync();
+        }
     }
 
     /// The symbol picker's window, cloned out for the same reason.
@@ -815,6 +867,9 @@ impl ITfThreadMgrEventSink_Impl for TextService_Impl {
             };
             if changed {
                 self.request_ui_hide(None);
+                // No document focused = nowhere to type; any other move
+                // between documents keeps the TPS key panel up.
+                self.note_tps_keyboard_focus(focused != 0);
             }
             Ok(())
         })
@@ -874,6 +929,8 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
     fn OnSetThreadFocus(&self) -> Result<()> {
         guarded("ITfThreadFocusSink::OnSetThreadFocus", || {
             self.request_settings_refresh();
+            let has_document = self.state.borrow().focused_document != 0;
+            self.note_tps_keyboard_focus(has_document);
             Ok(())
         })
     }
@@ -891,6 +948,7 @@ impl ITfThreadFocusSink_Impl for TextService_Impl {
             state.held_toggle_chord = None;
             drop(state);
             self.request_ui_hide(None);
+            self.note_tps_keyboard_focus(false);
             Ok(())
         })
     }
@@ -910,6 +968,7 @@ impl ITfKeyEventSink_Impl for TextService_Impl {
             if fforeground.as_bool() {
                 self.request_settings_refresh();
             }
+            self.note_tps_keyboard_focus(fforeground.as_bool());
             Ok(())
         })
     }
@@ -1193,4 +1252,20 @@ impl Drop for TextService {
             log::warn!("tsf.dropped_while_active");
         }
     }
+}
+
+/// Whether the TPS key panel should be up, read each time it syncs — while
+/// this activation has the keyboard (`focus`), TPS is typed and the user
+/// asked for the panel — and the appearance to draw it in. Holds the focus
+/// flag, not the service, so the panel keeps no service alive.
+fn tps_keyboard_source(focus: Rc<Cell<bool>>) -> TpsKeyboardSource {
+    Box::new(move || {
+        if !focus.get() {
+            return None;
+        }
+        let settings = Runtime::shared().settings.current();
+        settings
+            .is_tps_keyboard_wanted()
+            .then(|| settings.choice(&keys::APPEARANCE_MODE))
+    })
 }

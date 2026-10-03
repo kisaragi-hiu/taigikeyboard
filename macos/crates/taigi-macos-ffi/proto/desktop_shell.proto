@@ -34,6 +34,7 @@ message DesktopRequest {
     ComposingShortcutsRequest composing_shortcuts = 16;
     SymbolPickerKeyRequest symbol_picker_key = 17;
     SwitchInputModeRequest switch_input_mode = 18;
+    TpsKeyboardRowsRequest tps_keyboard_rows = 19;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -135,6 +136,7 @@ message DesktopResponse {
     ComposingShortcutsReply composing_shortcuts = 9;
     SymbolPickerReply symbol_picker = 10;
     SwitchInputModeReply switch_input_mode = 11;
+    TpsKeyboardRowsReply tps_keyboard_rows = 12;
   }
 }
 
@@ -468,6 +470,32 @@ message SwitchInputModeReply {
   // Set when the switch stored a new romanization to come back to — one left
   // for TPS — to store as `lastRomanizationMode`.
   optional string last_romanization_mode = 2;
+}
+
+// The on-screen TPS key panel's rows (desktop TPS roadmap D6), built in the
+// core from the TPS layout table so the Swift panel cannot drift from what
+// the keys type. Pure, no snapshot; never refused.
+message TpsKeyboardRowsRequest {}
+
+message TpsKeyboardRowsReply {
+  // Top to bottom.
+  repeated TpsKeyboardRow rows = 1;
+}
+
+message TpsKeyboardRow {
+  // How far the row starts from the left edge, in key widths (the stagger).
+  float indent = 1;
+  // Left to right.
+  repeated TpsKeyCap caps = 2;
+}
+
+message TpsKeyCap {
+  // The key as its cap is printed (`Q`, `1`, `;`).
+  string label = 1;
+  // What the key types under TPS.
+  string glyph = 2;
+  // What it types with Shift; unset where that layer is not a TPS key.
+  optional string shift_glyph = 3;
 }
 
 // One key while the symbol picker is up, read under the settings snapshot

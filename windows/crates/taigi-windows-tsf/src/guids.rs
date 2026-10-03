@@ -22,6 +22,10 @@ pub const GUID_PRESERVED_KEY_ROMANIZATION: GUID =
 /// Preserved key: TPS ↔ the romanization last used (allocated 2026-10-03,
 /// desktop TPS P3).
 pub const GUID_PRESERVED_KEY_TPS: GUID = GUID::from_u128(0xB07A3818_1679_4AC0_8E4F_A8591785683B);
+/// Preserved key: show / hide the TPS key panel (allocated 2026-10-04,
+/// desktop TPS P5).
+pub const GUID_PRESERVED_KEY_TPS_KEYBOARD: GUID =
+    GUID::from_u128(0x82370B94_C189_4F95_A926_D4B15EF27E18);
 /// Preserved key: cycle Candidate Display (allocated 2026-09-02 for the shortcut).
 pub const GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE: GUID =
     GUID::from_u128(0xD9F5E060_8D5F_4A05_86AF_CF6B2F5F9EB6);

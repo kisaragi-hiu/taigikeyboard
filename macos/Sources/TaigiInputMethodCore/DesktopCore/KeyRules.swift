@@ -148,6 +148,22 @@ enum KeyRules {
         }
     }
 
+    /// The on-screen TPS key panel's rows, built by desktop-core from its TPS
+    /// layout table (desktop TPS roadmap D6) — no Swift copy of the glyphs.
+    /// Reads no snapshot, so it answers before `Configure` too; nil (logged)
+    /// when the bridge gave no reply.
+    static func tpsKeyboardRows() -> [Taigi_DesktopShell_TpsKeyboardRow]? {
+        let request = Taigi_DesktopShell_TpsKeyboardRowsRequest()
+        let reply = DesktopCoreBridge.roundtrip(.tpsKeyboardRows(request), op: "tpsKeyboardRows") {
+            if case let .tpsKeyboardRows(reply) = $0 {
+                reply
+            } else {
+                nil
+            }
+        }
+        return reply?.rows
+    }
+
     /// `reply` read by `decode`: nil when there is no reply (the bridge
     /// logged why) or it holds what this side cannot read (logged here).
     private static func decoded<Reply, Value>(

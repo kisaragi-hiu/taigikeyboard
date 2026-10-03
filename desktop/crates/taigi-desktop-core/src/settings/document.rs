@@ -218,6 +218,18 @@ impl SettingsDocument {
         next
     }
 
+    /// Whether TPS is the input mode in force.
+    pub fn is_typing_tps(&self) -> bool {
+        self.choice::<InputMode>(&keys::INPUT_MODE) == InputMode::Tps
+    }
+
+    /// Whether the on-screen TPS key panel should be up: the user asked for
+    /// it and TPS is being typed (desktop TPS roadmap D6). macOS twin:
+    /// `SettingsStore.isTpsKeyboardWanted`.
+    pub fn is_tps_keyboard_wanted(&self) -> bool {
+        self.is_typing_tps() && self.bool(&keys::TPS_KEYBOARD_SHOWN)
+    }
+
     /// Puts every setting the General pane owns back to shipped state.
     pub fn reset_general(&mut self) {
         for name in keys::GENERAL_KEYS {
@@ -513,6 +525,27 @@ mod tests {
         );
         assert!(doc.contains(keys::CANDIDATE_LAYOUT.name), "外觀's key");
         assert!(doc.contains(keys::UPDATE_NEXT_CHECK_MS.name), "bookkeeping");
+    }
+
+    #[test]
+    fn the_tps_key_panel_is_wanted_under_tps_with_its_key_on_and_reset_clears_it() {
+        // trace: is_tps_keyboard_wanted = mode Tps && tpsKeyboardShown; the
+        // key survives a switch away and back; GENERAL_KEYS removes it.
+        let mut doc = SettingsDocument::default();
+        doc.set_bool(&keys::TPS_KEYBOARD_SHOWN, true);
+        assert!(!doc.is_tps_keyboard_wanted(), "TL: nothing to show");
+        doc.switch_input_mode(InputModeRequest::ToggleTps);
+        assert!(doc.is_tps_keyboard_wanted());
+        doc.switch_input_mode(InputModeRequest::ToggleTps);
+        assert!(!doc.is_tps_keyboard_wanted());
+        assert!(doc.bool(&keys::TPS_KEYBOARD_SHOWN), "kept for the way back");
+        doc.switch_input_mode(InputModeRequest::ToggleTps);
+        doc.set_bool(&keys::TPS_KEYBOARD_SHOWN, false);
+        assert!(!doc.is_tps_keyboard_wanted());
+        doc.set_bool(&keys::TPS_KEYBOARD_SHOWN, true);
+        doc.reset_general();
+        assert!(!doc.contains(keys::TPS_KEYBOARD_SHOWN.name));
+        assert!(!doc.is_tps_keyboard_wanted());
     }
 
     #[test]

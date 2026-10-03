@@ -23,6 +23,7 @@ mod snapshot;
 mod symbol_picker;
 mod telex_guide_rows;
 mod tone_input_scheme;
+mod tps_keyboard_rows;
 mod tps_layout;
 
 pub use action::ComposingAction;
@@ -48,4 +49,5 @@ pub use snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
 pub use symbol_picker::SymbolPickerIntent;
 pub use telex_guide_rows::{telex_guide_rows, TelexGuideRow};
 pub use tone_input_scheme::ToneInputScheme;
+pub use tps_keyboard_rows::{tps_keyboard_rows, TpsKeyCap, TpsKeyboardRow};
 pub use tps_layout::{tps_glyph_for_event, types_a_tps_glyph};

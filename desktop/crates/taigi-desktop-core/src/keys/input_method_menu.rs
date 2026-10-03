@@ -55,15 +55,18 @@ impl MenuCommand {
 /// input-script switches, then Candidate Display; not
 /// the Hanji/Romanization Swap, whose bare-backtick default the Mac's menu can never
 /// print; not the symbol picker, which needs the caret a click has no hold
-/// of; not the Telex guide (USER 2026-09-20: "hardly anyone uses it") — then the
-/// settings doorway, then the check and About. The Mac's menu gains Switch
-/// TPS in desktop TPS P4.
-pub const MENU: [Option<MenuCommand>; 8] = [
+/// of; not the Telex guide (USER 2026-09-20: "hardly anyone uses it") — then
+/// the TPS key panel, which on Linux is a window the user may want to open
+/// with the mouse (desktop TPS roadmap D6) — then the settings doorway, then
+/// the check and About. The Mac's menu gains Switch TPS in desktop TPS P4
+/// and the TPS key panel in P5.
+pub const MENU: [Option<MenuCommand>; 9] = [
     Some(MenuCommand::Shortcut(ShortcutAction::ToggleRomanization)),
     Some(MenuCommand::Shortcut(ShortcutAction::ToggleTps)),
     Some(MenuCommand::Shortcut(
         ShortcutAction::CycleCandidateDisplayMode,
     )),
+    Some(MenuCommand::Shortcut(ShortcutAction::ShowTpsKeyboard)),
     None,
     Some(MenuCommand::OpenSettings),
     None,
@@ -118,7 +121,7 @@ mod tests {
         // trace: `MENU` resolved through the Hanji strings over an empty
         // document — the authored Hanji, the default chords. The Mac's
         // `TaigiInputControllerMenuTests` asserts the same literals (the
-        // Switch TPS row from desktop TPS P4).
+        // Switch TPS row from desktop TPS P4, the TPS key panel from P5).
         let strings = StringResolver::new(DisplayLanguage::Hanji);
         let rows: Vec<Option<(String, Option<String>)>> =
             menu_rows(&strings, &SettingsDocument::default(), PLATFORM)
@@ -133,6 +136,7 @@ mod tests {
                 row("切換台羅/白話字", Some("Ctrl+Alt+C")),
                 row("切換方音符號", Some("Ctrl+Alt+P")),
                 row("切換候選詞顯示", Some("Ctrl+Alt+H")),
+                row("拍開方音符號齒盤", Some("Ctrl+Alt+J")),
                 None,
                 row("台語齒盤設定", Some("Ctrl+Alt+S")),
                 None,
@@ -166,7 +170,7 @@ mod tests {
         let mut cleared = SettingsDocument::default();
         ShortcutAction::OpenLastSettingsPane.store_in(&mut cleared, None, PLATFORM);
         let rows = menu_rows(&strings, &cleared, PLATFORM);
-        let settings = rows[4].as_ref().expect("the settings row");
+        let settings = rows[5].as_ref().expect("the settings row");
         assert_eq!(settings.command, MenuCommand::OpenSettings);
         assert_eq!(settings.chord, None);
     }
