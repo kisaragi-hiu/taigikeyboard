@@ -237,8 +237,13 @@ struct TaigiKeyboardView: View {
             isTPSLayout: isTPSLayout,
             orMapsToER: orMapsToER,
             onSymbolInsert: { [keyboardContext, unowned services] symbol in
-                (services.actionHandler as? ActionHandler)?.beginInputEvent()
-                keyboardContext.textDocumentProxy.insertText(symbol)
+                // Same route as an emoji: the toolbar stays reachable while
+                // composing, so an active preedit commits with the symbol.
+                if let handler = services.actionHandler as? ActionHandler {
+                    handler.insertExternalText(symbol)
+                } else {
+                    keyboardContext.textDocumentProxy.insertText(symbol)
+                }
             },
             onOpenSettingsApp: { [unowned services] in
                 services.actionHandler.handle(.settings)

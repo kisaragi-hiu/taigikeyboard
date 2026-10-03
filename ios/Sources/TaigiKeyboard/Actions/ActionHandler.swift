@@ -22,6 +22,11 @@ public class ActionHandler: StandardKeyboardActionHandler {
     public let composingManager = ComposingManager()
     let nextWordController = NextWordController()
 
+    /// The keyboard's own writes to the host document (issue #352).
+    lazy var hostText = HostTextWriter(proxy: { [unowned self] in
+        keyboardContext.textDocumentProxy
+    })
+
     /// Set when this handler has just written an auto space, so the space now
     /// in front of the caret is known to be OURS — the question the
     /// punctuation swap has to answer before it deletes anything
@@ -35,21 +40,41 @@ public class ActionHandler: StandardKeyboardActionHandler {
     private var isAutoSpaceArmed = false
 
     /// The arm as it stood when the current event began. Every event consumes
-    /// the arm before dispatching (`beginInputEvent`), so a keystroke that
+    /// the arm before dispatching (`performInputEvent`), so a keystroke that
     /// writes anything else to the document leaves nothing for the next
     /// punctuation key to swap with — exactly the desktop's rule that the arm
     /// is taken before any early return and only the auto-space paths put it
     /// back.
     private var wasAutoSpaceArmedAtEventStart = false
 
-    /// Consumes the auto-space arm for one user event.
+    /// Runs one user event — a key, a backspace repeat, a candidate tap, an
+    /// emoji or symbol pick — as one host write.
     ///
-    /// Called at the top of every dispatch — keys, backspace repeats, and
-    /// candidate taps — so an action that does not re-arm disarms by doing
-    /// nothing.
-    func beginInputEvent() {
+    /// Consumes the auto-space arm first, so an action that does not re-arm
+    /// disarms by doing nothing. The host writer holds a commit over the
+    /// marked text until `body` returns and then writes it together with the
+    /// literals that followed it (`HostTextWriter`, issue #352). A call
+    /// nested in a running event joins it, so the arm is read once per event.
+    func performInputEvent(_ body: () -> Void) {
+        guard !hostText.isInEvent else {
+            body()
+            return
+        }
         wasAutoSpaceArmedAtEventStart = isAutoSpaceArmed
         isAutoSpaceArmed = false
+        hostText.beginEvent()
+        defer {
+            // The held commit is the IME's own write: keep `textWillChange`
+            // from reading it as a field switch, as the engine call did.
+            composingManager.performAsSelfCommit { hostText.endEvent() }
+        }
+        body()
+    }
+
+    /// Emoji and symbol-panel picks: commit any live preedit together with
+    /// the picked text (`INVARIANT_composing_external_insert_commits_preedit_atomically`).
+    func insertExternalText(_ text: String) {
+        performInputEvent { composingManager.commitPreeditThenInsertExternal(text) }
     }
 
     /// Re-arms after this handler has written a space the next attaching
@@ -122,8 +147,7 @@ public class ActionHandler: StandardKeyboardActionHandler {
                 if gesture == .repeatPress {
                     TraceContext.with(TraceId.next()) {
                         logger.debug("[INPUT] fn=handle gesture=repeatPress action=\(String(describing: action))")
-                        beginInputEvent()
-                        _ = handleBackspaceAction()
+                        performInputEvent { _ = handleBackspaceAction() }
                     }
                 }
                 return
@@ -139,9 +163,10 @@ public class ActionHandler: StandardKeyboardActionHandler {
             // Every release gets exactly one chance at the swap: the arm is
             // consumed here, before any dispatch — including the ones that
             // fall through to KeyboardKit below, which write to the document
-            // without telling us. Only the auto-space paths put it back.
-            beginInputEvent()
-            handled = handleTaigiSpecificAction(action)
+            // without telling us. Only the auto-space paths put it back. The
+            // event closes before autocomplete and before KeyboardKit's
+            // fall-through, so both start with the host text written.
+            performInputEvent { handled = handleTaigiSpecificAction(action) }
             if handled, !shouldSkipAutocomplete(for: action) {
                 keyboardController?.performAutocomplete()
             }
@@ -187,15 +212,14 @@ public class ActionHandler: StandardKeyboardActionHandler {
     override public func handle(_ suggestion: AutocompleteSuggestion) {
         // A tap is an event like any key: consume the arm first, so a commit
         // that writes no auto space leaves none for the next punctuation key.
-        beginInputEvent()
         // English mode: use KeyboardKit default (auto-deletes typed chars then inserts)
         if settings.inputMode == .english {
-            super.handle(suggestion)
+            performInputEvent { super.handle(suggestion) }
             return
         }
         // Taigi mode: custom handling
         TraceContext.with(TraceId.next()) {
-            handleSuggestionSelection(suggestion)
+            performInputEvent { handleSuggestionSelection(suggestion) }
         }
     }
 

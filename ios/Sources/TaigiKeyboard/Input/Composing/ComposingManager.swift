@@ -187,9 +187,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
             settings: settingsProvider.current,
             generation: currentGeneration,
         )
-        selfCommitInProgress = true
-        defer { selfCommitInProgress = false }
-        apply(result.transition)
+        applyAsSelfCommit(result.transition)
         return result.outcome
     }
 
@@ -250,11 +248,19 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
 
     // MARK: - Apply Transition (three-phase, see boundary doc §2.4)
 
-    // Self-commit variant of `apply`: the `selfCommitInProgress` flag suppresses a redundant generation bump.
+    // `apply` as one of the IME's own writes (`performAsSelfCommit`).
     private func applyAsSelfCommit(_ transition: RustEngineBridge.ComposingTransition) {
+        performAsSelfCommit { apply(transition) }
+    }
+
+    /// Runs `body` with `selfCommitInProgress` set, which keeps the IME's own
+    /// document writes from reading as a field switch — including a commit
+    /// the platform writes after the engine call returned (iOS
+    /// `HostTextWriter.endEvent`).
+    func performAsSelfCommit(_ body: () -> Void) {
         selfCommitInProgress = true
         defer { selfCommitInProgress = false }
-        apply(transition)
+        body()
     }
 
     private func apply(_ transition: RustEngineBridge.ComposingTransition) {

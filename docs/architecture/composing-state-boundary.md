@@ -99,7 +99,7 @@ Android Phase II authors must implement the same Effect enum against `InputConne
 |---|---|---|
 | `updatePreedit(text)` | `setMarkedText(text, selectedRange: end)` | `setComposingText(text, 1)` |
 | `clearPreeditWithoutCommit` | `setMarkedText("", selectedRange: 0) + unmarkText()` | `setComposingText("", 1) + finishComposingText()` — **but** `finishComposingText` on Android commits the current composing region, so the Android binding MUST issue `setComposingText("", 1)` first to zero the region before `finishComposingText`. |
-| `commitTextReplacingPreedit(text)` | `unmarkText()` is implicit; `insertText(text)` replaces the marked range atomically. | `commitText(text, 1)` — Android commits and clears composing region in one call. |
+| `commitTextReplacingPreedit(text)` | Over a marked region: `setMarkedText(text, selectedRange: end) + unmarkText()`, never `insertText` — Flutter hosts before flutter/flutter#191062 insert at the caret and keep the preedit (issue #352). Inside a user event the commit is held and written once together with the literals that follow it (`HostTextWriter`, `behavioral-invariants.md` `INVARIANT_composing_host_commit_one_write_per_event`). No marked region: `insertText(text)`. | `commitText(text, 1)` — Android commits and clears composing region in one call. |
 | `clearCandidates` | engine-side suggestion clear | engine-side suggestion clear |
 | `refreshCandidates` | engine-side query trigger | engine-side query trigger |
 | `resetCandidateContext` | engine-side context clear | engine-side context clear |

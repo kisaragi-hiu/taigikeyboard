@@ -33,8 +33,8 @@ extension KeyboardViewController {
     func cleanupInputState() {
         if let handler = actionHandler {
             handler.composingManager.reset()
+            handler.hostText.clear()
         }
-        clearMarkedText()
         state.autocompleteContext.reset()
     }
 }

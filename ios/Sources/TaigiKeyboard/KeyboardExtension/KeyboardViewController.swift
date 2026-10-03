@@ -211,6 +211,12 @@ class KeyboardViewController: KeyboardInputViewController, ComposingDelegate {
     // MARK: - Text Input Change
 
     override func textDidChange(_ textInput: UITextInput?) {
+        // Our own commit's echo stays unseen — as before #352, when the commit
+        // raised no callback — so neither KeyboardKit's autocomplete refresh
+        // nor the reset below wipes the predictions the commit just set up.
+        if actionHandler?.hostText.isEchoOfOwnCommit() == true {
+            return
+        }
         super.textDidChange(textInput)
         actionHandler?.nextWordController.resetAndClearUI()
     }

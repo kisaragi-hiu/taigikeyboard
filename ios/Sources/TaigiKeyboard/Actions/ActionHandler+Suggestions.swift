@@ -124,7 +124,7 @@ extension ActionHandler {
                 : roman
             nextWordController.process(text: displayText, roman: associationRoman)
         } else {
-            keyboardContext.textDocumentProxy.insertText(suggestion.text)
+            hostText.insert(suggestion.text)
         }
     }
 
@@ -319,7 +319,7 @@ extension ActionHandler {
     /// the knowledge that it is ours can never come apart.
     ///
     /// A commit that earns nothing arms nothing: the event already consumed
-    /// the previous arm (`beginInputEvent`), so the next punctuation key sees
+    /// the previous arm (`performInputEvent`), so the next punctuation key sees
     /// no space of ours to swap.
     func appendAutoSpaceIfEarned(documentText: String, wroteRomanization: Bool) {
         appendAutoSpace(ifEarned: Self.shouldAppendAutoSpace(
@@ -331,7 +331,7 @@ extension ActionHandler {
 
     private func appendAutoSpace(ifEarned isEarned: Bool) {
         guard isEarned else { return }
-        keyboardContext.textDocumentProxy.insertText(" ")
+        hostText.insert(" ")
         armAutoSpaceSwap()
     }
 
@@ -358,7 +358,7 @@ extension ActionHandler {
     /// but ComposingManager only needs the candidate text.
     private func commitSuggestionText(_ text: String, isNextWord: Bool, suggestion _: AutocompleteSuggestion) {
         if isNextWord {
-            keyboardContext.textDocumentProxy.insertText(text)
+            hostText.insert(text)
         } else {
             composingManager.selectCandidate(text: text)
         }

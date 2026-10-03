@@ -9,9 +9,8 @@ extension KeyboardViewController: EmojiServiceDelegate {
     /// leaking a silent `finishComposingText`-equivalent. See
     /// `composing-state-boundary.md` §11.6 (Android mirror: `MediaInputManager`).
     func emojiDidSelect(_ emoji: String) {
-        actionHandler?.beginInputEvent()
-        if let manager = actionHandler?.composingManager {
-            manager.commitPreeditThenInsertExternal(emoji)
+        if let handler = actionHandler {
+            handler.insertExternalText(emoji)
         } else {
             textDocumentProxy.insertText(emoji)
         }
@@ -30,8 +29,7 @@ extension KeyboardViewController: EmojiServiceDelegate {
     /// idle → document backspace + NextWord re-predict.
     func emojiKeyboardShouldDeleteBackward() {
         if let handler = actionHandler {
-            handler.beginInputEvent()
-            _ = handler.handleBackspaceAction()
+            handler.performInputEvent { _ = handler.handleBackspaceAction() }
         } else {
             textDocumentProxy.deleteBackward()
         }
