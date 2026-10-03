@@ -435,7 +435,7 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
             // them: the Carbon key code is gone the moment this returns.
             let key = RecordedShortcutKey(
                 chord: recorded,
-                modifiers: event.modifierFlags.intersection(ComposingKeyIntent.chordingModifiers),
+                modifiers: event.modifierFlags.intersection(KeyEventSnapshot.chordingModifiers),
                 globalShortcut: KeyboardShortcuts.Shortcut(event: event),
             )
             if let reason = additionalRejection?(key) {

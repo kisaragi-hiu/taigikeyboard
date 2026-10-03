@@ -133,7 +133,7 @@ final class ParityDecisionTests: XCTestCase {
     /// (`represent_list`) closes, which is where the window-off observer
     /// leaves the list anyway (the Swift key path repainted; accepted, P10).
     func testC4_aRefetchWithTheCandidateWindowOff() throws {
-        let backend = CoreComposingBackend.shared
+        let backend = ComposingBackend.shared
         let session = ComposingSessionToken()
         let store = SettingsStore()
         backend.activate(session, settings: store)

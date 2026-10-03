@@ -222,7 +222,7 @@ final class GlobalShortcutPolicyTests: XCTestCase {
             )
             let recorded = RecordedShortcutKey(
                 chord: chord,
-                modifiers: shortcut.modifiers.intersection(ComposingKeyIntent.chordingModifiers),
+                modifiers: shortcut.modifiers.intersection(KeyEventSnapshot.chordingModifiers),
                 globalShortcut: shortcut,
             )
 

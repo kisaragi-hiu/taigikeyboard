@@ -4,21 +4,21 @@ import AppKit
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// What a key event is to the controller, the symbol picker and the Shortcuts
-/// pane: a plain Escape, a navigation key, document text, the width-flip
-/// chord. What a key means to a composition is desktop-core's
-/// (`keys/intent.rs`).
-final class ComposingKeyIntentTests: XCTestCase {
+/// What a key event is to the controller and the core back end: a plain
+/// Escape, document text, the width-flip chord. What a key means to a
+/// composition, the symbol picker and the Shortcuts pane is desktop-core's
+/// (`keys/`).
+final class KeyEventSnapshotTests: XCTestCase {
     func testAPlainEscape_isTheEscapeAlone() {
-        XCTAssertTrue(ComposingKeyIntent.isPlainEscape(textSnapshot("\u{1B}")))
-        XCTAssertFalse(ComposingKeyIntent.isPlainEscape(textSnapshot("\u{1B}", modifiers: .control)), "⌃3 is the host's")
+        XCTAssertTrue(textSnapshot("\u{1B}").isPlainEscape)
+        XCTAssertFalse(textSnapshot("\u{1B}", modifiers: .control).isPlainEscape, "⌃3 is the host's")
     }
 
     /// E2b: an Escape with more behind it is not the plain Escape that
     /// closes the picker or the Telex guide (the core's `is_bare_escape`).
     func testAnEscapeInsideALongerEvent_isNotAPlainEscape() {
         let key = KeyEventSnapshot(characters: "\u{1B}x", modifiers: [], isNamedSpecialKey: false)
-        XCTAssertFalse(ComposingKeyIntent.isPlainEscape(key))
+        XCTAssertFalse(key.isPlainEscape)
     }
 
     // MARK: - Document text
@@ -93,7 +93,7 @@ final class ComposingKeyIntentTests: XCTestCase {
             "🏴\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}", // emoji tag sequence (plane 14 Cf)
         ] {
             let key = textSnapshot(text)
-            XCTAssertEqual(ComposingKeyIntent.documentText(of: key), text, "\(text.unicodeScalars)")
+            XCTAssertEqual(key.documentText, text, "\(text.unicodeScalars)")
         }
         // Negative control: C0, C1 (NEL) and DEL are not text.
         for text in ["\u{1}", "\u{85}"] {
@@ -122,10 +122,10 @@ final class ComposingKeyIntentTests: XCTestCase {
             characters: "<", modifiers: [.control, .shift], charactersIgnoringModifiers: "<",
         ))
         for (key, expected) in [(comma, ","), (bracket, "["), (angle, "<")] {
-            XCTAssertEqual(ComposingKeyIntent.widthFlipCharacter(key), expected.first)
-            XCTAssertEqual(ComposingKeyIntent.documentText(of: key), expected)
+            XCTAssertEqual(key.widthFlipCharacter, expected.first)
+            XCTAssertEqual(key.documentText, expected)
         }
-        XCTAssertFalse(ComposingKeyIntent.isPlainEscape(bracket), "⌃[ is the flip, not a cancel")
+        XCTAssertFalse(bracket.isPlainEscape, "⌃[ is the flip, not a cancel")
     }
 
     /// Exactly ⌃ on a mapped key: another chording modifier beside it, a key
@@ -147,14 +147,14 @@ final class ComposingKeyIntentTests: XCTestCase {
             characters: "\"", modifiers: .control, charactersIgnoringModifiers: "\"",
         ))
         for key in [withCommand, withOption, letter, hyphen, quote] {
-            XCTAssertNil(ComposingKeyIntent.widthFlipCharacter(key), "\(key)")
+            XCTAssertNil(key.widthFlipCharacter, "\(key)")
         }
-        XCTAssertNil(ComposingKeyIntent.widthFlipCharacter(textSnapshot(",")))
+        XCTAssertNil(textSnapshot(",").widthFlipCharacter)
     }
 
     /// Text the host will put into its document, rather than a key it will act on.
     private func isDocumentText(_ key: KeyEventSnapshot) -> Bool {
-        ComposingKeyIntent.documentText(of: key) != nil
+        key.documentText != nil
     }
 
     private func textSnapshot(

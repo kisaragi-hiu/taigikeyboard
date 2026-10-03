@@ -24,14 +24,14 @@ import Foundation
 /// The settings travel inside each request, read from the request's own
 /// store, so the core classifies under exactly what the controller reads.
 @MainActor
-final class CoreComposingBackend {
+final class ComposingBackend {
     /// One encoded request in, one encoded response out.
     typealias Transport = ([UInt8]) -> [UInt8]
 
     /// The process's key path.
-    static let shared = CoreComposingBackend(coordinator: .shared)
+    static let shared = ComposingBackend(coordinator: .shared)
 
-    private static let logger = DebugLogger(category: "CoreComposingBackend")
+    private static let logger = DebugLogger(category: "ComposingBackend")
 
     /// Who owns the engine, and the shortcut-target registry the controller
     /// registers with right after `activate` — which accepts only this
@@ -130,7 +130,7 @@ final class CoreComposingBackend {
     /// composition as typed, with no auto space — the user did not finish a
     /// word there — and no list effect: the controller took the window down
     /// first.
-    func commitComposition(in request: ComposingRequest) -> [ComposingBackendEffect]? {
+    func commitComposition(in request: ComposingRequest) -> [ComposingEffect]? {
         guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_CommitCompositionRequest()
         message.token = request.session.value
@@ -141,7 +141,7 @@ final class CoreComposingBackend {
     /// The commit the symbol-picker chord runs before the picker opens: the
     /// highlighted cell while the window shows one, the composition as typed
     /// (with its auto space) otherwise.
-    func commitForSymbolPicker(in request: ComposingRequest) -> [ComposingBackendEffect]? {
+    func commitForSymbolPicker(in request: ComposingRequest) -> [ComposingEffect]? {
         guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_CommitForSymbolPickerRequest()
         message.token = request.session.value
@@ -151,7 +151,7 @@ final class CoreComposingBackend {
 
     /// A symbol the picker wrote: at the caret as one string, or swapped with
     /// the auto space a commit left.
-    func insertSymbol(_ symbol: String, in request: ComposingRequest) -> [ComposingBackendEffect]? {
+    func insertSymbol(_ symbol: String, in request: ComposingRequest) -> [ComposingEffect]? {
         guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_InsertSymbolRequest()
         message.token = request.session.value
@@ -197,7 +197,7 @@ final class CoreComposingBackend {
     /// What became of one request.
     private enum Outcome {
         /// The owner's reply, every effect translated.
-        case reply(handled: Bool, effects: [ComposingBackendEffect], isComposing: Bool)
+        case reply(handled: Bool, effects: [ComposingEffect], isComposing: Bool)
         /// Nothing ran, or the session does not own the engine: nothing to
         /// replay, and the key goes to the host.
         case nothing
@@ -283,7 +283,7 @@ final class CoreComposingBackend {
     /// Cancels the session in the core — once, whatever it answers — and
     /// answers what the controller does to its own side: the marked text the
     /// last reply left, and the list.
-    private func recoverFromInternalFailure(session: ComposingSessionToken) -> [ComposingBackendEffect] {
+    private func recoverFromInternalFailure(session: ComposingSessionToken) -> [ComposingEffect] {
         let wasComposing = isOwnerComposing
         isOwnerComposing = false
         var cancel = Taigi_DesktopShell_CancelRequest()
@@ -332,14 +332,14 @@ final class CoreComposingBackend {
     /// character it types — or, under the width-flip chord, the punctuation
     /// it maps to, which is what the swap writes then.
     private static func swapCandidate(for key: KeyEventSnapshot, settings: SettingsStore) -> String? {
-        guard let typed = ComposingKeyIntent.documentText(of: key) else { return nil }
-        guard ComposingKeyIntent.widthFlipCharacter(key) != nil else { return typed }
+        guard let typed = key.documentText else { return nil }
+        guard key.widthFlipCharacter != nil else { return typed }
         return FullWidthPunctuation.documentPunctuation(typed, isWidthFlip: true, settings: settings) ?? typed
     }
 
     // MARK: - Effects
 
-    private static func effect(_ effect: Taigi_DesktopShell_Effect) -> ComposingBackendEffect? {
+    private static func effect(_ effect: Taigi_DesktopShell_Effect) -> ComposingEffect? {
         switch effect.effect {
         case let .setMarkedText(marked):
             .setMarkedText(marked.text, caretUTF16: Int(marked.caretUtf16))
@@ -362,7 +362,7 @@ final class CoreComposingBackend {
         case .candidatesClosed:
             .candidatesClosed
         case let .navigate(navigate):
-            CandidateNavigation(navigate.direction).map(ComposingBackendEffect.navigate)
+            CandidateNavigation(navigate.direction).map(ComposingEffect.navigate)
         case nil:
             nil
         }

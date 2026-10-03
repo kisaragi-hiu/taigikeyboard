@@ -4,12 +4,12 @@
 @testable import TaigiInputMethodCore
 import XCTest
 
-/// Each case puts its own transport in front of a `CoreComposingBackend` and
+/// Each case puts its own transport in front of a `ComposingBackend` and
 /// its own coordinator, so nothing here reaches the engine. The core's own
 /// answers are covered by the controller suites and by
 /// `macos/crates/taigi-macos-ffi`.
 @MainActor
-final class CoreComposingBackendTests: XCTestCase {
+final class ComposingBackendTests: XCTestCase {
     private var sent: [Taigi_DesktopShell_DesktopRequest] = []
     private var answer: (Taigi_DesktopShell_DesktopRequest) -> [UInt8] = { _ in [] }
     private var isSwapCheckAsked = false
@@ -24,7 +24,7 @@ final class CoreComposingBackendTests: XCTestCase {
         let store = try makeScratchSettingsStore()
         let runtime = try XCTUnwrap(TestDesktopCore.runtime, "the process's one Configure")
         let autoSpace = SettingsStore.Keys.isAutoSpaceEnabled.name
-        let backend = CoreComposingBackend(
+        let backend = ComposingBackend(
             coordinator: TestFixtures.makeCoordinator(),
             runtime: { runtime },
             transport: { [unowned self] bytes in
@@ -199,8 +199,8 @@ final class CoreComposingBackendTests: XCTestCase {
 
     /// A back end whose transport records every request and answers with
     /// `answer`, activated for `session` with a composition running or not.
-    private func activatedBackend(composing: Bool) throws -> CoreComposingBackend {
-        let backend = CoreComposingBackend(
+    private func activatedBackend(composing: Bool) throws -> ComposingBackend {
+        let backend = ComposingBackend(
             coordinator: TestFixtures.makeCoordinator(),
             runtime: { nil },
             transport: { [unowned self] bytes in

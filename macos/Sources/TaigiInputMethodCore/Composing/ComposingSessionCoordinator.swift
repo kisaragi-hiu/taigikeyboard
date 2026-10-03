@@ -47,7 +47,7 @@ protocol ShortcutActionTarget: AnyObject {
 /// state is one per process (`engine/composing/src/handle.rs:21-56`). Without
 /// an owner, a controller that is still alive in a background app would append
 /// to the composition the user is typing in the foreground one. The engine
-/// itself is the core back end's (`CoreComposingBackend`): it claims here
+/// itself is the core back end's (`ComposingBackend`): it claims here
 /// beside its own `Activate` / `Release`, of which the core keeps the same
 /// record.
 ///

@@ -41,11 +41,11 @@ struct ComposingPanelState {
 /// A key's answer: whether it was consumed, and what to replay.
 struct ComposingKeyReply {
     let handled: Bool
-    let effects: [ComposingBackendEffect]
+    let effects: [ComposingEffect]
 }
 
 /// One thing the controller does to its client or its window, in reply order.
-enum ComposingBackendEffect: Equatable {
+enum ComposingEffect: Equatable {
     /// The composition, underlined, with the caret at `caretUTF16`.
     case setMarkedText(String, caretUTF16: Int)
 

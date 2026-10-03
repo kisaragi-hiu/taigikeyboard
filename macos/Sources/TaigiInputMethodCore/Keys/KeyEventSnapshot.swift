@@ -77,7 +77,7 @@ struct KeyEventSnapshot: Sendable {
 /// text predicates the controller, the core back end and the shortcut recorder
 /// share. What a key means to a composition, to the symbol picker and to the
 /// Shortcuts pane is desktop-core's (`desktop/crates/taigi-desktop-core/src/keys`).
-enum ComposingKeyIntent {
+extension KeyEventSnapshot {
     /// AppKit encodes function and arrow keys as private-use scalars rather
     /// than control characters, so a scalar check alone would let F5 through as
     /// composition input.
@@ -89,42 +89,48 @@ enum ComposingKeyIntent {
     /// of them is a list that can drift apart.
     static let hostChords: NSEvent.ModifierFlags = [.command, .control, .option]
 
-    /// The text `key` puts into the document, or nil when it is a key the host
-    /// acts on. Takes the whole event rather than its characters: `⌘.` and a
-    /// typed `.` carry the same character, and one of them is a host command
-    /// that inserts nothing — the chording modifiers tell them apart. The width-flip chord is document text too, and what it types
-    /// is the key under the modifier: `⌃,` arrives with `characters` `,` but
-    /// `⌃[` arrives as Escape, and the bracket is what the user asked for.
-    static func documentText(of key: KeyEventSnapshot) -> String? {
-        if let flipped = widthFlipCharacter(key) {
-            return String(flipped)
-        }
-        guard key.modifiers
-            .intersection(.deviceIndependentFlagsMask)
-            .isDisjoint(with: hostChords)
-        else { return nil }
-        guard !key.isNamedSpecialKey else { return nil }
-        guard let characters = key.characters, !characters.isEmpty else { return nil }
-        return characters.unicodeScalars.allSatisfy(isTextScalar) ? characters : nil
-    }
+    /// The four chording modifiers — what a recorded chord is made of. Caps
+    /// Lock, the number pad and the function flag say how a key was reached,
+    /// not which key it is.
+    static let chordingModifiers: NSEvent.ModifierFlags = hostChords.union(.shift)
 
     /// The modifier that types a punctuation key in the other width, once —
     /// the 新注音 / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not
     /// recordable; the Shortcuts pane prints the core's row for it.
     static let widthFlipModifiers: NSEvent.ModifierFlags = [.control]
 
-    /// The punctuation key under a width-flip chord, or nil when `key` is not
-    /// one: exactly ⌃ among the four chording modifiers, ⇧ allowed since it
+    /// The text this key puts into the document, or nil when it is a key the
+    /// host acts on. Read off the whole event rather than its characters: `⌘.`
+    /// and a typed `.` carry the same character, and one of them is a host
+    /// command that inserts nothing — the chording modifiers tell them apart.
+    /// The width-flip chord is document text too, and what it types is the key
+    /// under the modifier: `⌃,` arrives with `characters` `,` but `⌃[` arrives
+    /// as Escape, and the bracket is what the user asked for.
+    var documentText: String? {
+        if let flipped = widthFlipCharacter {
+            return String(flipped)
+        }
+        guard modifiers
+            .intersection(.deviceIndependentFlagsMask)
+            .isDisjoint(with: Self.hostChords)
+        else { return nil }
+        guard !isNamedSpecialKey else { return nil }
+        guard let characters, !characters.isEmpty else { return nil }
+        return characters.unicodeScalars.allSatisfy(Self.isTextScalar) ? characters : nil
+    }
+
+    /// The punctuation key under a width-flip chord, or nil when this key is
+    /// not one: exactly ⌃ among the four chording modifiers, ⇧ allowed since it
     /// picks the key (`⌃⇧,` is `⌃<`), and the key one `FullWidthPunctuation`
     /// maps. Read off `charactersIgnoringModifiers` because Control rewrites
     /// what some keys type (`⌃[` arrives as Escape). Which width comes out is
     /// the controller's call: the chord means "the other one", and only the
     /// controller knows which one the mode would have typed.
-    static func widthFlipCharacter(_ key: KeyEventSnapshot) -> Character? {
-        let chording = key.modifiers.intersection(chordingModifiers)
-        guard chording.subtracting(.shift) == widthFlipModifiers else { return nil }
-        guard !key.isNamedSpecialKey,
-              let unmodified = key.charactersIgnoringModifiers,
+    var widthFlipCharacter: Character? {
+        let chording = modifiers.intersection(Self.chordingModifiers)
+        guard chording.subtracting(.shift) == Self.widthFlipModifiers else { return nil }
+        guard !isNamedSpecialKey,
+              let unmodified = charactersIgnoringModifiers,
               FullWidthPunctuation.mapped(unmodified) != nil
         else { return nil }
         return unmodified.first
@@ -135,14 +141,9 @@ enum ComposingKeyIntent {
     /// symbol picker). `⌃3` arrives as Escape too, and is the host's. The
     /// whole event, not its first character: an Escape with more behind it
     /// is not this key (the desktop core's `is_bare_escape`).
-    static func isPlainEscape(_ key: KeyEventSnapshot) -> Bool {
-        key.characters == "\u{1B}" && key.modifiers.isDisjoint(with: hostChords)
+    var isPlainEscape: Bool {
+        characters == "\u{1B}" && modifiers.isDisjoint(with: Self.hostChords)
     }
-
-    /// The four chording modifiers — what a recorded chord is made of. Caps
-    /// Lock, the number pad and the function flag say how a key was reached,
-    /// not which key it is.
-    static let chordingModifiers: NSEvent.ModifierFlags = hostChords.union(.shift)
 
     /// Not a control character (Cc) and not one of AppKit's function-key
     /// scalars. A format character (Cf) is typed text, so not

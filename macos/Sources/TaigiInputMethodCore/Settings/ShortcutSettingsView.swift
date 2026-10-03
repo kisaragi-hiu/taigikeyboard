@@ -101,7 +101,7 @@ struct ShortcutSettingsView: View {
 
                 // Shown, not recordable (USER 2026-09-20): ⌃ on a punctuation
                 // key types it in the other width once, whatever the Hanji/romanization
-                // mode would have typed (`ComposingKeyIntent.widthFlipCharacter`).
+                // mode would have typed (`KeyEventSnapshot.widthFlipCharacter`).
                 // Here because it writes into the document; three sample
                 // chords, since the row stands for every key of the map.
                 fixedRow(.desktopShortcutFlipPunctuationWidth, shortcuts.widthFlipChords)

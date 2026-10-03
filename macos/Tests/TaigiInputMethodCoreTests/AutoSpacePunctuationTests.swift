@@ -4,7 +4,7 @@
 import XCTest
 
 /// The Swift roster the core back end reads before it asks the client whether
-/// a swap can happen (`CoreComposingBackend.panel`). desktop-core holds its own
+/// a swap can happen (`ComposingBackend.panel`). desktop-core holds its own
 /// copy (`policies/auto_space.rs`); this keeps the Swift one from drifting.
 final class AutoSpacePunctuationTests: XCTestCase {
     func testAttachingSet_matchesTheCrossPlatformRoster() {
