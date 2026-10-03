@@ -1115,3 +1115,49 @@ fn only_the_claiming_context_can_drive_the_engine_and_handover_starts_idle() {
     assert!(coordinator.manager(b).is_none());
     assert_eq!(coordinator.current_owner(), None);
 }
+
+/// A switch across TPS leaves the composition marked as left behind, and the
+/// commit writes it as shown (trace, 2026-10-03 probe: `commit_raw` writes
+/// the preedit — `ㄍㄚㄅㄚ˫` under TL as under TPS, `tsia̍h-pn̄g` under TPS
+/// as under TL). TL ↔ POJ does not cross TPS: nothing is left behind.
+#[test]
+fn a_switch_across_tps_leaves_the_composition_behind() {
+    let _lock = engine_lock();
+    let mut rig = rig();
+    rig.settings
+        .edit(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tps));
+    for key in ["ㄍ", "ㄚ", " ", "ㄅ", "ㄚ", "˫"] {
+        rig.manager.tps_key(key, &mut rig.recorder);
+    }
+    assert!(!rig.manager.is_left_by_mode_change(InputMode::Tps));
+    rig.settings
+        .edit(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tl));
+    // A fetch after the switch mirrors the same composition: it keeps the
+    // mode the composition began in.
+    rig.manager.fetch_candidates();
+    assert!(rig.manager.is_left_by_mode_change(InputMode::Tl));
+    assert_eq!(
+        rig.manager.commit_composition(&mut rig.recorder).as_deref(),
+        Some("ㄍㄚㄅㄚ˫")
+    );
+    assert!(!rig.manager.is_left_by_mode_change(InputMode::Tl));
+
+    // The other way: a romanization composition under TPS.
+    rig.type_text("tsiah8-png7");
+    rig.settings
+        .edit(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tps));
+    assert!(rig.manager.is_left_by_mode_change(InputMode::Tps));
+    assert_eq!(
+        rig.manager.commit_composition(&mut rig.recorder).as_deref(),
+        Some("tsia\u{30d}h-pn\u{304}g")
+    );
+
+    // Negative control: TL → POJ keeps the composition the new mode's.
+    rig.settings
+        .edit(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tl));
+    rig.type_text("tai5");
+    rig.settings
+        .edit(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Poj));
+    assert!(rig.manager.is_composing());
+    assert!(!rig.manager.is_left_by_mode_change(InputMode::Poj));
+}

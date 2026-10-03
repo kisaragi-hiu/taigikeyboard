@@ -56,6 +56,11 @@ pub fn perform_intent(
     list: &mut CandidateSource,
     surface: &mut impl IntentSurface,
 ) -> bool {
+    // A key path reads the key as idle once this ran (the shells call it
+    // before classifying); the commits that run with no key — the picker's
+    // commit-first, a host's Finalize, the Shift-tap English switch — reach
+    // it only here, and a commit or pick after it finds nothing left.
+    commit_composition_left_by_mode_change(settings, manager, list, surface);
     match intent {
         ComposingKeyIntent::Input(text) => {
             manager.append(text, surface);
@@ -194,6 +199,31 @@ pub fn perform_intent(
             true
         }
     }
+}
+
+/// Ends a composition a switch across TPS left behind
+/// (`ComposingManager::is_left_by_mode_change`): commits it as shown — the
+/// raw commit writes the preedit, whatever the mode now — and closes its
+/// list, so a glyph buffer never
+/// takes a Latin key, nor a romanization buffer a glyph. `perform_intent`
+/// runs it first for whatever reaches it, and every shell sends a keyless
+/// `Commit` through it at the start of a key, before the key is classified
+/// as idle (`ComposingManager::is_left_by_mode_change`); that covers both
+/// switch chords, the menu, the settings window and a restore, without an
+/// edit session outside a key. No auto space: the switch, not a word
+/// boundary, ended it. Answers whether it committed.
+fn commit_composition_left_by_mode_change(
+    settings: &SettingsDocument,
+    manager: &mut ComposingManager,
+    list: &mut CandidateSource,
+    surface: &mut impl IntentSurface,
+) -> bool {
+    if !manager.is_left_by_mode_change(settings.choice(&keys::INPUT_MODE)) {
+        return false;
+    }
+    manager.commit_composition(surface);
+    close_list(list, surface);
+    true
 }
 
 /// A symbol from the symbol picker, written at the caret as one string (so a

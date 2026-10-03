@@ -51,13 +51,16 @@ impl MenuCommand {
     }
 }
 
-/// The rows in order; `None` is a separator. The two switches first — not
+/// The rows in order; `None` is a separator. The switches first — the two
+/// input-script switches, then Candidate Display; not
 /// the Hanji/Romanization Swap, whose bare-backtick default the Mac's menu can never
 /// print; not the symbol picker, which needs the caret a click has no hold
 /// of; not the Telex guide (USER 2026-09-20: "hardly anyone uses it") — then the
-/// settings doorway, then the check and About.
-pub const MENU: [Option<MenuCommand>; 7] = [
+/// settings doorway, then the check and About. The Mac's menu gains Switch
+/// TPS in desktop TPS P4.
+pub const MENU: [Option<MenuCommand>; 8] = [
     Some(MenuCommand::Shortcut(ShortcutAction::ToggleRomanization)),
+    Some(MenuCommand::Shortcut(ShortcutAction::ToggleTps)),
     Some(MenuCommand::Shortcut(
         ShortcutAction::CycleCandidateDisplayMode,
     )),
@@ -78,6 +81,12 @@ pub struct MenuRow {
 }
 
 /// [`MENU`], resolved against the strings and the settings as they are now.
+/// The same rows under every input mode: Fcitx5 registers its actions once
+/// and re-titles them by position (`linux/fcitx5/src/engine.cpp`
+/// `refreshMenu`), and IBus updates only the root property on a mode change,
+/// so a row that came and went would shift every row after it. A row whose
+/// shortcut is inert under the mode (`ShortcutAction::is_inert_under`) does
+/// nothing when clicked, as its chord does.
 pub fn menu_rows(
     strings: &StringResolver,
     settings: &SettingsDocument,
@@ -101,13 +110,15 @@ pub fn menu_rows(
 mod tests {
     use super::*;
     use crate::platform::test_support::TEST_PLATFORM as PLATFORM;
+    use crate::settings::SettingChoice;
     use crate::strings::DisplayLanguage;
 
     #[test]
     fn the_menu_is_the_same_rows_on_every_desktop() {
         // trace: `MENU` resolved through the Hanji strings over an empty
         // document — the authored Hanji, the default chords. The Mac's
-        // `TaigiInputControllerMenuTests` asserts the same literals.
+        // `TaigiInputControllerMenuTests` asserts the same literals (the
+        // Switch TPS row from desktop TPS P4).
         let strings = StringResolver::new(DisplayLanguage::Hanji);
         let rows: Vec<Option<(String, Option<String>)>> =
             menu_rows(&strings, &SettingsDocument::default(), PLATFORM)
@@ -120,6 +131,7 @@ mod tests {
             rows,
             [
                 row("切換台羅/白話字", Some("Ctrl+Alt+C")),
+                row("切換方音符號", Some("Ctrl+Alt+P")),
                 row("切換候選詞顯示", Some("Ctrl+Alt+H")),
                 None,
                 row("台語齒盤設定", Some("Ctrl+Alt+S")),
@@ -131,12 +143,30 @@ mod tests {
     }
 
     #[test]
+    fn the_menu_keeps_its_shape_under_every_input_mode() {
+        // Fcitx5 re-titles its registered rows by position: a row that came
+        // and went with the mode would shift the rest (P3 cloud review).
+        let strings = StringResolver::new(DisplayLanguage::Hanji);
+        let commands = |mode| -> Vec<Option<MenuCommand>> {
+            let mut document = SettingsDocument::default();
+            document.set_choice(&crate::settings::keys::INPUT_MODE, mode);
+            menu_rows(&strings, &document, PLATFORM)
+                .into_iter()
+                .map(|row| row.map(|row| row.command))
+                .collect()
+        };
+        for mode in crate::settings::InputMode::ALL {
+            assert_eq!(commands(*mode), MENU, "{mode:?}");
+        }
+    }
+
+    #[test]
     fn a_cleared_chord_prints_the_title_alone() {
         let strings = StringResolver::new(DisplayLanguage::Hanji);
         let mut cleared = SettingsDocument::default();
         ShortcutAction::OpenLastSettingsPane.store_in(&mut cleared, None, PLATFORM);
         let rows = menu_rows(&strings, &cleared, PLATFORM);
-        let settings = rows[3].as_ref().expect("the settings row");
+        let settings = rows[4].as_ref().expect("the settings row");
         assert_eq!(settings.command, MenuCommand::OpenSettings);
         assert_eq!(settings.chord, None);
     }

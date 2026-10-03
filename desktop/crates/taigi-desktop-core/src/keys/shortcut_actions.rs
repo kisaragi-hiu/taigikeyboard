@@ -26,6 +26,10 @@ use crate::strings::StringKey;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum ShortcutAction {
     ToggleRomanization,
+    /// TPS ↔ the romanization last used (`InputModeRequest::ToggleTps`).
+    /// Its own row, not a third stop on the romanization switch: TPS is
+    /// not a romanization (desktop TPS roadmap U2, D5).
+    ToggleTps,
     ToggleTranslateSwapped,
     /// Steps Candidate Display through its picker order (`CandidateDisplayMode::next`).
     CycleCandidateDisplayMode,
@@ -43,8 +47,9 @@ pub enum ShortcutAction {
 }
 
 impl ShortcutAction {
-    pub const ALL: [ShortcutAction; 6] = [
+    pub const ALL: [ShortcutAction; 7] = [
         Self::ToggleRomanization,
+        Self::ToggleTps,
         Self::ToggleTranslateSwapped,
         Self::CycleCandidateDisplayMode,
         Self::ShowSymbolPicker,
@@ -84,6 +89,7 @@ impl ShortcutAction {
         match self {
             Self::OpenLastSettingsPane => "openLastSettingsPane",
             Self::ToggleRomanization => "toggleRomanization",
+            Self::ToggleTps => "toggleTps",
             Self::ToggleTranslateSwapped => "toggleTranslateSwapped",
             Self::CycleCandidateDisplayMode => "cycleCandidateDisplayMode",
             Self::ShowSymbolPicker => "showSymbolPicker",
@@ -159,6 +165,9 @@ impl ShortcutAction {
     /// fallback — for hosts that bypass preserved keys — cannot match
     /// such a press, because the stored chord names `/` unshifted.
     ///
+    /// `P` for the TPS switch — Phonetic Symbols — is the Mac's ⌃⌘P
+    /// (desktop TPS roadmap D5). Not Ctrl+Alt+T, GNOME's terminal chord.
+    ///
     /// `,` for the symbol picker is the Mac's ⌃⌘, carried over the same way:
     /// the picker is a punctuation menu and the comma is the punctuation key.
     /// Not the bare backtick 新注音 (New Phonetic) / McBopomofo / vChewing open their symbol
@@ -177,6 +186,7 @@ impl ShortcutAction {
         let (key, modifiers) = match self {
             Self::OpenLastSettingsPane => ("s", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ToggleRomanization => ("c", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
+            Self::ToggleTps => ("p", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ToggleTranslateSwapped => ("`", KeyModifiers::NONE),
             Self::CycleCandidateDisplayMode => ("h", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ShowSymbolPicker => (",", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
@@ -198,6 +208,7 @@ impl ShortcutAction {
         match self {
             Self::OpenLastSettingsPane => StringKey::DesktopShortcutOpenSettings,
             Self::ToggleRomanization => StringKey::DesktopShortcutToggleRomanization,
+            Self::ToggleTps => StringKey::DesktopShortcutToggleTps,
             Self::ToggleTranslateSwapped => StringKey::CommonToggleTranslateSwapped,
             Self::CycleCandidateDisplayMode => StringKey::DesktopShortcutCycleCandidateDisplayMode,
             Self::ShowSymbolPicker => StringKey::DesktopShortcutShowSymbolPicker,
@@ -452,7 +463,7 @@ mod tests {
     #[test]
     fn roster_defaults_and_keys() {
         // trace: `default_chord` — the Mac's ⌃⌘ roster as Ctrl+Alt (S, C, H, `,`,
-        // `/`), the bare backtick unchanged; six names, six distinct defaults,
+        // `/`, P), the bare backtick unchanged; seven names, seven distinct defaults,
         // each recordable and clear of the composing defaults.
         let mut names: Vec<_> = ShortcutAction::ALL
             .iter()
@@ -460,7 +471,7 @@ mod tests {
             .collect();
         names.sort();
         names.dedup();
-        assert_eq!(names.len(), 6);
+        assert_eq!(names.len(), 7);
         assert_eq!(
             ShortcutAction::OpenLastSettingsPane.default_chord(),
             chord("s", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
@@ -468,6 +479,10 @@ mod tests {
         assert_eq!(
             ShortcutAction::ToggleRomanization.default_chord(),
             chord("c", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
+        );
+        assert_eq!(
+            ShortcutAction::ToggleTps.default_chord(),
+            chord("p", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
         );
         assert_eq!(
             ShortcutAction::ToggleTranslateSwapped.default_chord(),
@@ -491,7 +506,7 @@ mod tests {
             .collect();
         defaults.sort();
         defaults.dedup();
-        assert_eq!(defaults.len(), 6, "the defaults are all different");
+        assert_eq!(defaults.len(), 7, "the defaults are all different");
         assert_eq!(
             ShortcutAction::ALL
                 .iter()
@@ -522,13 +537,15 @@ mod tests {
     fn roster_order_is_the_pane_order() {
         // `ALL` is the global recorder rows top to bottom
         // (`pages/shortcuts.rs`, under the composing rows) and the Mac's
-        // `allCases`: the three switches in the General pane's order of what
-        // they switch, then the windows used while typing, the settings
-        // window last (USER 2026-09-21).
+        // `allCases`: the switches in the General pane's order of what they
+        // switch — the input script twice, romanization then TPS — then the
+        // windows used while typing, the settings window last (USER
+        // 2026-09-21). The Mac's roster gains Switch TPS in desktop TPS P4.
         assert_eq!(
             ShortcutAction::ALL,
             [
                 ShortcutAction::ToggleRomanization,
+                ShortcutAction::ToggleTps,
                 ShortcutAction::ToggleTranslateSwapped,
                 ShortcutAction::CycleCandidateDisplayMode,
                 ShortcutAction::ShowSymbolPicker,

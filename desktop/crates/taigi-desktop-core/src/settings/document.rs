@@ -19,7 +19,8 @@ use serde_json::Value;
 
 use super::choices::SettingChoice;
 use super::engine_settings::{
-    CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode, KautianSubcollections,
+    next_input_mode, CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode,
+    InputModeRequest, KautianSubcollections,
 };
 use super::keys;
 use crate::strings::DisplayLanguage;
@@ -202,6 +203,19 @@ impl SettingsDocument {
 
     fn bump_revision(&mut self) {
         self.revision = self.revision.saturating_add(1);
+    }
+
+    /// The one writer of the input mode (desktop TPS roadmap D5): moves it as
+    /// `request` asks and, when a romanization is left for TPS, remembers
+    /// that romanization for the way back. Answers the mode now in force.
+    pub fn switch_input_mode(&mut self, request: InputModeRequest) -> InputMode {
+        let current: InputMode = self.choice(&keys::INPUT_MODE);
+        let next = next_input_mode(current, self.choice(&keys::LAST_ROMANIZATION_MODE), request);
+        if let (Some(left), InputMode::Tps) = (current.romanization(), next) {
+            self.set_choice(&keys::LAST_ROMANIZATION_MODE, left);
+        }
+        self.set_choice(&keys::INPUT_MODE, next);
+        next
     }
 
     /// Puts every setting the General pane owns back to shipped state.
@@ -748,5 +762,78 @@ mod tests {
         doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
         assert!(!doc.engine_settings().is_literal_roman_candidate_enabled);
         assert!(doc.bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED));
+    }
+
+    #[test]
+    fn a_poj_round_trip_through_tps_returns_to_poj() {
+        // trace: POJ →Switch TPS→ TPS, remembering POJ →Switch TPS→ POJ;
+        // then →Switch TPS→ TPS →Switch Romanization→ TL (not the POJ last
+        // used — that is Switch TPS's way back).
+        let mut doc = SettingsDocument::default();
+        doc.switch_input_mode(InputModeRequest::Pick(InputMode::Poj));
+        assert!(!doc.contains(keys::LAST_ROMANIZATION_MODE.name));
+        assert_eq!(
+            doc.switch_input_mode(InputModeRequest::ToggleTps),
+            InputMode::Tps
+        );
+        assert_eq!(
+            doc.choice(&keys::LAST_ROMANIZATION_MODE),
+            super::super::Romanization::Poj
+        );
+        assert_eq!(
+            doc.switch_input_mode(InputModeRequest::ToggleTps),
+            InputMode::Poj
+        );
+        doc.switch_input_mode(InputModeRequest::ToggleTps);
+        assert_eq!(
+            doc.switch_input_mode(InputModeRequest::ToggleRomanization),
+            InputMode::Tl
+        );
+        assert_eq!(doc.choice(&keys::INPUT_MODE), InputMode::Tl);
+    }
+
+    #[test]
+    fn tps_with_no_or_a_bad_last_romanization_leaves_as_from_tl() {
+        // trace: a document that reached TPS without a switch (a restored
+        // mobile backup, a hand edit) has no `lastRomanizationMode`, or one
+        // that names TPS — both read as the default TL: Switch TPS → TL,
+        // Switch Romanization → POJ. Picking TPS while in TPS writes no
+        // romanization.
+        for stored in [None, Some("tps")] {
+            let mut doc = SettingsDocument::default();
+            doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+            if let Some(raw) = stored {
+                doc.set_raw_string(keys::LAST_ROMANIZATION_MODE.name, raw);
+            }
+            doc.switch_input_mode(InputModeRequest::Pick(InputMode::Tps));
+            assert_eq!(
+                doc.raw_string(keys::LAST_ROMANIZATION_MODE.name),
+                stored,
+                "{stored:?}"
+            );
+            let mut toggled = doc.clone();
+            assert_eq!(
+                toggled.switch_input_mode(InputModeRequest::ToggleTps),
+                InputMode::Tl
+            );
+            assert_eq!(
+                doc.switch_input_mode(InputModeRequest::ToggleRomanization),
+                InputMode::Poj
+            );
+        }
+    }
+
+    #[test]
+    fn picking_tps_remembers_the_romanization_it_left() {
+        let mut doc = SettingsDocument::default();
+        doc.switch_input_mode(InputModeRequest::Pick(InputMode::Poj));
+        doc.switch_input_mode(InputModeRequest::Pick(InputMode::Tps));
+        assert_eq!(
+            doc.choice(&keys::LAST_ROMANIZATION_MODE),
+            super::super::Romanization::Poj
+        );
+        doc.reset_general();
+        assert!(!doc.contains(keys::LAST_ROMANIZATION_MODE.name));
+        assert!(!doc.contains(keys::INPUT_MODE.name));
     }
 }

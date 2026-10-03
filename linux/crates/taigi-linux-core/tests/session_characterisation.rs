@@ -342,3 +342,75 @@ fn a_refetching_switch_obeys_the_candidate_window_setting() {
     );
     assert!(session.state.candidates.is_empty());
 }
+
+const CTRL_ALT: u32 = state::CONTROL | state::MOD1;
+
+/// Desktop TPS P3: Ctrl+Alt+P enters TPS from TL; a second press returns to
+/// TL with the glyphs still composing, and the next key commits them as
+/// shown before it starts the TL composition. Read by running HEAD
+/// (2026-10-03): `e` ㄍ, `8` ㄚ (D2 table).
+#[test]
+fn switch_tps_round_trip_commits_the_glyphs_on_the_next_key() {
+    let _serial = serial();
+    let mut session = Session::new(false, false);
+    let (_, emits) = session.press_with('p' as u32, CTRL_ALT);
+    assert_eq!(emits, [Emit::ModeChanged, Emit::AnnounceMode]);
+    session.press('e' as u32);
+    session.press('8' as u32);
+    let (_, emits) = session.press_with('p' as u32, CTRL_ALT);
+    assert_eq!(
+        emits,
+        [Emit::HideLookupTable, Emit::ModeChanged, Emit::AnnounceMode],
+        "the switch commits nothing itself"
+    );
+    let emits = session.press('a' as u32);
+    assert_eq!(
+        emits[..3],
+        [
+            Emit::ClearPreedit,
+            commit("ㄍㄚ"),
+            Emit::Preedit {
+                text: "a".to_owned(),
+                caret: 1
+            }
+        ]
+    );
+}
+
+/// Negative control: TL ↔ POJ crosses no TPS, so the composition carries on.
+#[test]
+fn switch_romanization_keeps_the_composition() {
+    let _serial = serial();
+    let mut session = Session::new(false, false);
+    session.press('t' as u32);
+    session.press('a' as u32);
+    session.press_with('c' as u32, CTRL_ALT);
+    let emits = session.press('i' as u32);
+    assert!(
+        matches!(emits.as_slice(), [Emit::Preedit { text, .. }, Emit::LookupTable(_)] if text == "tai"),
+        "{emits:?}"
+    );
+}
+
+/// The other way: a TL composition left under TPS is committed by the first
+/// glyph key, which then starts the TPS composition.
+#[test]
+fn switch_into_tps_commits_the_romanization_on_the_next_key() {
+    let _serial = serial();
+    let mut session = Session::new(false, false);
+    session.type_word("tai");
+    session.press_with('p' as u32, CTRL_ALT);
+    let emits = session.press('e' as u32);
+    // trace, read by running: the commit, then `e` as ㄍ (D2).
+    assert_eq!(
+        emits[..3],
+        [
+            Emit::ClearPreedit,
+            commit("tai"),
+            Emit::Preedit {
+                text: "ㄍ".to_owned(),
+                caret: 1
+            }
+        ]
+    );
+}

@@ -10,18 +10,30 @@ use taigi_desktop_core::keys::ToneInputScheme;
 use taigi_desktop_core::settings::presentation::{
     display_language_label, output_script_label, OUTPUT_SCRIPTS, WEBSITE_URL,
 };
-use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SettingsDocument};
+use taigi_desktop_core::settings::{
+    keys, InputMode, InputModeRequest, SettingChoice, SettingsDocument,
+};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey};
 
 pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> PageContext<'a> {
     // One run of rows, no sub-groups (USER 2026-09-18: "no grouping").
     let group = adw::PreferencesGroup::new();
-    context.choice_row(
+    // Through the one mode writer, which remembers the romanization a pick
+    // of TPS leaves (`SettingsDocument::switch_input_mode`).
+    let input_mode_labels = InputMode::ALL
+        .iter()
+        .map(|mode| context.strings.resolve(mode.label_key()).to_owned())
+        .collect();
+    context.picker_row(
         &group,
-        StringKey::SettingsInputScript,
+        context.strings.resolve(StringKey::SettingsInputScript),
+        input_mode_labels,
         InputMode::ALL,
-        keys::INPUT_MODE,
-        InputMode::label_key,
+        context.document.choice(&keys::INPUT_MODE),
+        |mode, document| {
+            document.switch_input_mode(InputModeRequest::Pick(mode));
+        },
+        |document| document.choice(&keys::INPUT_MODE),
     );
     context.choice_row(
         &group,

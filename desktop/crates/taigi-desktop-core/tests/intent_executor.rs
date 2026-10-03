@@ -565,3 +565,31 @@ fn tps_ctrl_on_a_non_layout_mark_still_flips_to_half_width() {
     assert!(rig.run(ComposingKeyIntent::PassThrough, &ctrl_bracket));
     assert_eq!(rig.calls(), ["insert \"[\""]);
 }
+
+/// A composition a switch across TPS left behind, reached by a commit that
+/// runs with no key (the picker's commit-first, a host's Finalize, the
+/// Shift-tap English switch): written as shown, with no auto space even
+/// though Auto-Space is on and the mode is now TL, and a highlighted cell is
+/// not picked instead (Codex P3 post-impl BLOCK 1 and 2). trace, read by
+/// running: without the guard in `perform_intent` the `Commit` wrote
+/// `ㄍㄚ` then `" "` and armed it, and the highlighted pick wrote 共.
+#[test]
+fn a_keyless_commit_after_a_switch_across_tps_writes_the_glyphs_unspaced() {
+    for (intent, expected) in [
+        (
+            ComposingKeyIntent::Commit,
+            &["commit ㄍㄚ", "list closed", "list closed"][..],
+        ),
+        (
+            ComposingKeyIntent::CommitHighlightedCandidate,
+            &["commit ㄍㄚ", "list closed"][..],
+        ),
+    ] {
+        let mut rig = new_tps_rig();
+        rig.type_tps("ㄍㄚ");
+        rig.surface.selected = Some(0);
+        rig.settings.set_choice(&keys::INPUT_MODE, InputMode::Tl);
+        assert!(rig.run(intent.clone(), &no_key()));
+        assert_eq!(rig.calls(), expected, "{intent:?}");
+    }
+}

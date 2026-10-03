@@ -278,6 +278,7 @@ pub fn process_key(
         emits.push(Emit::HideLookupTable);
         state.is_table_shown = false;
     }
+    commit_left_by_mode_change(runtime, token, state, &settings, &bindings, &mut emits);
     let is_composing = self::is_composing(runtime, token);
     let is_showing_candidates = !state.candidates.is_empty();
     let intent = ComposingKeyIntent::intent(
@@ -412,6 +413,43 @@ pub(crate) fn commit_for_picker(
         settings,
         bindings,
     )
+}
+
+/// The first key after a switch across TPS that left a composition behind
+/// commits it as shown before the key is read: a `Commit` with no key, which
+/// `perform_intent` opens with `commit_composition_left_by_mode_change` and
+/// then finds nothing left to write. Only for an engine a key already built
+/// — with none there is no composition.
+fn commit_left_by_mode_change(
+    runtime: &Runtime,
+    token: ContextToken,
+    state: &mut EngineState,
+    settings: &SettingsDocument,
+    bindings: &ComposingKeyBindings,
+    emits: &mut Vec<Emit>,
+) {
+    let Some(coordinator) = runtime.coordinator_if_built() else {
+        return;
+    };
+    let mut coordinator = coordinator
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let is_left_by_mode_change = coordinator
+        .manager_ref(token)
+        .is_some_and(|manager| manager.is_left_by_mode_change(settings.choice(&keys::INPUT_MODE)));
+    if !is_left_by_mode_change {
+        return;
+    }
+    let mut reply = run_key(
+        &mut coordinator,
+        token,
+        state,
+        &KeyEventSnapshot::default(),
+        ComposingKeyIntent::Commit,
+        settings,
+        bindings,
+    );
+    emits.append(&mut reply.emits);
 }
 
 /// A panel navigation (`PageUp` … `CursorDown`): the same intents the keys

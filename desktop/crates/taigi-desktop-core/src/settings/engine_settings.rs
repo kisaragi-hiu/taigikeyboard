@@ -16,14 +16,19 @@ pub enum InputMode {
 }
 
 impl InputMode {
-    /// What Switch Romanization (`ShortcutAction::ToggleRomanization`)
-    /// switches to: the other romanization. TPS is not a romanization, so the
-    /// switch never enters it (roadmap U2); from TPS it leaves for TL.
-    pub fn toggled_romanization(self) -> Self {
+    /// The romanization this mode is, or `None` for TPS.
+    pub fn romanization(self) -> Option<Romanization> {
         match self {
-            Self::Tl => Self::Poj,
-            Self::Poj | Self::Tps => Self::Tl,
+            Self::Tl => Some(Romanization::Tl),
+            Self::Poj => Some(Romanization::Poj),
+            Self::Tps => None,
         }
+    }
+
+    /// Whether a change from `self` to `other` enters or leaves TPS — where
+    /// the raw buffer changes alphabet, so a composition cannot carry over.
+    pub fn crosses_tps(self, other: Self) -> bool {
+        (self == Self::Tps) != (other == Self::Tps)
     }
 
     /// The `AppConfig.input_mode` wire spelling.
@@ -52,6 +57,71 @@ impl SettingChoice for InputMode {
             Self::Poj => "poj",
             Self::Tps => "tps",
         }
+    }
+}
+
+/// One of the two romanizations — the value Switch TPS returns to
+/// (`keys::LAST_ROMANIZATION_MODE`). Its own type so that TPS cannot be
+/// stored there: a stored `"tps"` is a value this type does not name and
+/// reads as the default.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Romanization {
+    Tl,
+    Poj,
+}
+
+impl Romanization {
+    pub fn input_mode(self) -> InputMode {
+        match self {
+            Self::Tl => InputMode::Tl,
+            Self::Poj => InputMode::Poj,
+        }
+    }
+
+    pub fn other(self) -> Self {
+        match self {
+            Self::Tl => Self::Poj,
+            Self::Poj => Self::Tl,
+        }
+    }
+}
+
+impl SettingChoice for Romanization {
+    const ALL: &'static [Self] = &[Self::Tl, Self::Poj];
+    const DEFAULT: Self = Self::Tl;
+    fn raw(self) -> &'static str {
+        self.input_mode().raw()
+    }
+}
+
+/// What asked for an input-mode change (desktop TPS roadmap D5).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InputModeRequest {
+    /// The settings picker chose this mode.
+    Pick(InputMode),
+    /// Switch Romanization: TL ↔ POJ. TPS is not a romanization (U2), so it
+    /// never enters TPS; from TPS it leaves for the romanization NOT last
+    /// used — the other chord already returns to that one.
+    ToggleRomanization,
+    /// Switch TPS: into TPS, or back to the romanization last used.
+    ToggleTps,
+}
+
+/// The mode `request` moves `current` to. `last_romanization` is the one
+/// TPS was entered from (`keys::LAST_ROMANIZATION_MODE`).
+pub fn next_input_mode(
+    current: InputMode,
+    last_romanization: Romanization,
+    request: InputModeRequest,
+) -> InputMode {
+    match (request, current.romanization()) {
+        (InputModeRequest::Pick(mode), _) => mode,
+        (InputModeRequest::ToggleRomanization, romanization) => romanization
+            .unwrap_or(last_romanization)
+            .other()
+            .input_mode(),
+        (InputModeRequest::ToggleTps, Some(_)) => InputMode::Tps,
+        (InputModeRequest::ToggleTps, None) => last_romanization.input_mode(),
     }
 }
 
@@ -370,9 +440,41 @@ mod tests {
     }
 
     #[test]
-    fn switch_romanization_never_enters_tps_and_leaves_it_for_tl() {
-        assert_eq!(InputMode::Tl.toggled_romanization(), InputMode::Poj);
-        assert_eq!(InputMode::Poj.toggled_romanization(), InputMode::Tl);
-        assert_eq!(InputMode::Tps.toggled_romanization(), InputMode::Tl);
+    fn every_mode_request_from_every_mode_and_last_romanization() {
+        // trace: roadmap D5 — Pick is the pick; Switch Romanization flips
+        // TL ↔ POJ and leaves TPS for the romanization NOT last used; Switch
+        // TPS enters TPS from either romanization and leaves it for the one
+        // last used. `last` is read only under TPS.
+        use InputMode::{Poj, Tl, Tps};
+        use InputModeRequest::{Pick, ToggleRomanization, ToggleTps};
+        let cases = [
+            (Tl, Romanization::Tl, ToggleRomanization, Poj),
+            (Poj, Romanization::Tl, ToggleRomanization, Tl),
+            (Tps, Romanization::Tl, ToggleRomanization, Poj),
+            (Tps, Romanization::Poj, ToggleRomanization, Tl),
+            (Tl, Romanization::Poj, ToggleTps, Tps),
+            (Poj, Romanization::Tl, ToggleTps, Tps),
+            (Tps, Romanization::Tl, ToggleTps, Tl),
+            (Tps, Romanization::Poj, ToggleTps, Poj),
+            (Tl, Romanization::Tl, Pick(Tps), Tps),
+            (Tps, Romanization::Tl, Pick(Tps), Tps),
+            (Tps, Romanization::Tl, Pick(Poj), Poj),
+            (Poj, Romanization::Tl, Pick(Tl), Tl),
+        ];
+        for (current, last, request, expected) in cases {
+            assert_eq!(
+                next_input_mode(current, last, request),
+                expected,
+                "{current:?} last={last:?} {request:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn crossing_tps_is_entering_or_leaving_it() {
+        assert!(InputMode::Tl.crosses_tps(InputMode::Tps));
+        assert!(InputMode::Tps.crosses_tps(InputMode::Poj));
+        assert!(!InputMode::Tl.crosses_tps(InputMode::Poj));
+        assert!(!InputMode::Tps.crosses_tps(InputMode::Tps));
     }
 }

@@ -68,12 +68,15 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
     for action in ComposingAction::GROUPS[1] {
         recorder_row(&mut context, &output, RecorderTarget::Composing(*action));
     }
+    // Not drawn under TPS, where a commit is always the Hanji.
+    let shifted_slot_keys = shifted_slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM);
     let shifted_slot_row = fixed_row(
         &mut context,
         &output,
         StringKey::DesktopActionCommitAlternateScript,
-        shifted_slot_keys_label(bindings.slot_key_set(), DESKTOP_PLATFORM),
+        shifted_slot_keys.clone().unwrap_or_default(),
     );
+    shifted_slot_row.set_visible(shifted_slot_keys.is_some());
     fixed_row(
         &mut context,
         &output,
@@ -87,12 +90,15 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
         cancel_key_label(DESKTOP_PLATFORM).to_owned(),
     );
     page.add(&output);
-    // The two slot-key rows follow the tone scheme picked on General.
+    // The two slot-key rows follow the tone scheme and the input script
+    // picked on General.
     context.on_refresh(move |document: &SettingsDocument| {
         let slot_keys =
             ComposingKeyBindings::from_document(document, DESKTOP_PLATFORM).slot_key_set();
         slot_row.set_subtitle(&slot_keys_label(slot_keys, DESKTOP_PLATFORM));
-        shifted_slot_row.set_subtitle(&shifted_slot_keys_label(slot_keys, DESKTOP_PLATFORM));
+        let shifted_slot_keys = shifted_slot_keys_label(slot_keys, DESKTOP_PLATFORM);
+        shifted_slot_row.set_visible(shifted_slot_keys.is_some());
+        shifted_slot_row.set_subtitle(&shifted_slot_keys.unwrap_or_default());
     });
 
     // Group three: the switches, and the lists a key raises — the roster

@@ -110,7 +110,10 @@ fn composing_shortcuts(
     Ok(ComposingShortcutsReply {
         actions,
         slot_keys: shortcut_labels::slot_keys_label(slot_keys, DESKTOP_PLATFORM),
-        shifted_slot_keys: shortcut_labels::shifted_slot_keys_label(slot_keys, DESKTOP_PLATFORM),
+        // Empty only under TPS, which this seam projects to TL until desktop
+        // TPS P4 (`settings.rs` `document_from`).
+        shifted_slot_keys: shortcut_labels::shifted_slot_keys_label(slot_keys, DESKTOP_PLATFORM)
+            .unwrap_or_default(),
         navigation_keys: shortcut_labels::navigation_keys_label(DESKTOP_PLATFORM).to_owned(),
         caret_chords: shortcut_labels::caret_chords_label(DESKTOP_PLATFORM),
         width_flip_chords: shortcut_labels::width_flip_chords_label(DESKTOP_PLATFORM),

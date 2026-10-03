@@ -14,6 +14,7 @@
 use crate::guids::{
     GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE, GUID_PRESERVED_KEY_ROMANIZATION,
     GUID_PRESERVED_KEY_SETTINGS, GUID_PRESERVED_KEY_SYMBOL_PICKER, GUID_PRESERVED_KEY_TELEX_GUIDE,
+    GUID_PRESERVED_KEY_TPS,
 };
 use crate::wide::to_wide_nul;
 use taigi_desktop_core::keys::{ComposingKeyChord, ShortcutAction};
@@ -29,11 +30,12 @@ use windows::Win32::UI::TextServices::{ITfKeystrokeMgr, TF_PRESERVEDKEY};
 /// In `ShortcutAction::ALL` order, which is what
 /// `every_preserved_key_has_its_own_guid_and_names_its_action` compares
 /// against. Registration order itself carries nothing.
-const PRESERVED: [(ShortcutAction, GUID); 5] = [
+const PRESERVED: [(ShortcutAction, GUID); 6] = [
     (
         ShortcutAction::ToggleRomanization,
         GUID_PRESERVED_KEY_ROMANIZATION,
     ),
+    (ShortcutAction::ToggleTps, GUID_PRESERVED_KEY_TPS),
     (
         ShortcutAction::CycleCandidateDisplayMode,
         GUID_PRESERVED_KEY_CYCLE_CANDIDATE_DISPLAY_MODE,
