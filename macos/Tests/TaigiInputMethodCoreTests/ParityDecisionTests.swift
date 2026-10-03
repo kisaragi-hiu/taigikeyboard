@@ -136,8 +136,8 @@ final class ParityDecisionTests: XCTestCase {
         let backend = CoreComposingBackend.shared
         let session = ComposingSessionToken()
         let store = SettingsStore()
-        backend.activate(session)
-        defer { backend.release(session) }
+        backend.activate(session, settings: store)
+        defer { backend.release(session, settings: store) }
         var isListOnScreen = false
         func request() -> ComposingRequest {
             Self.request(session: session, settings: store, isListOnScreen: isListOnScreen)

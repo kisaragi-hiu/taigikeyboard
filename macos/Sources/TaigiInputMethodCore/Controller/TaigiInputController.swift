@@ -243,7 +243,7 @@ public final class TaigiInputController: IMKInputController {
         onMainActor(sender) { controller, client in
             controller.tenure += 1
             controller.lastClient = client
-            controller.backend.activate(controller.sessionToken)
+            controller.backend.activate(controller.sessionToken, settings: controller.settings)
             // After the claim, which just cleared the previous session's
             // endpoint: this session is the one the shortcut hotkeys should
             // now act through, and registering is what turns them on.
@@ -1210,7 +1210,7 @@ public final class TaigiInputController: IMKInputController {
         // and goes when that session's focus does.
         TelexGuidePanel.shared.hide(ownedBy: sessionToken)
         finishComposition(into: client)
-        backend.release(sessionToken)
+        backend.release(sessionToken, settings: settings)
         displayModeObservation = nil
         candidateWindowObservation = nil
     }

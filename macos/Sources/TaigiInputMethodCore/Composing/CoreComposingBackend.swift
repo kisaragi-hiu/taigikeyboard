@@ -80,12 +80,18 @@ final class CoreComposingBackend {
     /// An `Activate` that takes the engine from another session drops that
     /// session's composition and sends no `ClearMarkedText`: the region is
     /// the outgoing controller's, cleared on its own way out (`endSession`).
-    func activate(_ session: ComposingSessionToken) {
+    ///
+    /// Read under `settings`, the controller's store, like every other
+    /// request: a handover starts a fresh engine session under the settings
+    /// that store holds.
+    func activate(_ session: ComposingSessionToken, settings: SettingsStore) {
         coordinator.claim(session)
         var message = Taigi_DesktopShell_ActivateRequest()
         message.token = session.value
         // A session that already held the engine keeps its composition.
-        if case let .reply(_, _, isComposing) = exchange(.activate(message), settings: lifecycleSnapshot(), op: "activate") {
+        if case let .reply(_, _, isComposing) = exchange(
+            .activate(message), settings: snapshot(in: settings.userDefaults), op: "activate",
+        ) {
             isOwnerComposing = isComposing
         } else {
             isOwnerComposing = false
@@ -95,12 +101,13 @@ final class CoreComposingBackend {
     /// `session` gives the engine up, if it holds it. A session that does not
     /// own the engine has nothing to give up — in the core either, which
     /// keeps the same record.
-    func release(_ session: ComposingSessionToken) {
+    /// Read under `settings`, the controller's store, as `activate` is.
+    func release(_ session: ComposingSessionToken, settings: SettingsStore) {
         guard coordinator.release(session) else { return }
         isOwnerComposing = false
         var message = Taigi_DesktopShell_ReleaseRequest()
         message.token = session.value
-        _ = exchange(.release(message), settings: lifecycleSnapshot(), op: "release")
+        _ = exchange(.release(message), settings: snapshot(in: settings.userDefaults), op: "release")
     }
 
     /// One key, classified by the core under the request's settings snapshot.
@@ -227,14 +234,6 @@ final class CoreComposingBackend {
             return nil
         }
         return DesktopCoreRuntime.settingsSnapshot(runtime.settings, in: defaults)
-    }
-
-    /// `Activate` and `Release` carry no request store, yet a handover
-    /// starts a fresh engine session under the settings in force: they read
-    /// the app's one domain (`.standard`, where `SettingsStore()` reads), never
-    /// the last request's.
-    private func lifecycleSnapshot() -> Taigi_DesktopShell_SettingsSnapshot? {
-        snapshot(in: .standard)
     }
 
     /// Classified by whether the engine may have run: a request refused
