@@ -15,6 +15,8 @@ final class LearningRecordsViewModel: ObservableObject {
     /// The filter reloads once typing pauses this long — the desktop's
     /// `FILTER_SETTLE`, so a word typed letter by letter is one query.
     static let filterSettle: Duration = .milliseconds(200)
+    /// The highest count the engine stores (`engine/userdata` `MAX_COUNT`).
+    static let maxCount: Int64 = 1_000_000
 
     @Published private(set) var kind: Taigi_Engine_LearningRecordKind = .frequency
     @Published private(set) var order: Taigi_Engine_LearningRecordOrder = .mostUsed
@@ -24,18 +26,21 @@ final class LearningRecordsViewModel: ObservableObject {
     /// The latest load of what is asked now failed. With no rows listed the
     /// page says "could not read", never "nothing learned yet".
     @Published private(set) var lastLoadFailed = false
+    /// The last next-page read failed; the list end offers a retry
+    /// instead of asking again on its own.
+    @Published private(set) var nextPageFailed = false
     @Published var notice: LearningRecordsNotice?
-
-    private var filter = ""
     /// The rows the current filter matches — what paging runs up to.
-    private var matchingTotal = 0
-    /// Bumped by every change of what is asked; an answer started under an
-    /// older number is dropped.
-    private var generation = 0
+    @Published private(set) var matchingTotal = 0
     /// The generation the rows on screen answer. The next page is asked
     /// only while it is the current one: rows of an older kind, order or
     /// filter must not get the new query's next page appended.
-    private var listedGeneration = -1
+    @Published private(set) var listedGeneration = -1
+
+    private var filter = ""
+    /// Bumped by every change of what is asked; an answer started under an
+    /// older number is dropped.
+    private var generation = 0
     private var isLoadingNextPage = false
     private var settleTask: Task<Void, Never>?
 
@@ -83,15 +88,27 @@ final class LearningRecordsViewModel: ObservableObject {
         return task
     }
 
-    /// Asks for the next page when `record` is the last row listed and the
-    /// filter matches more.
-    func loadNextPageIfNeeded(after record: Taigi_Engine_LearningRecord) async {
-        guard record == records.last,
-              records.count < matchingTotal,
+    /// The filter matches rows not listed yet.
+    var hasMoreRows: Bool {
+        records.count < matchingTotal
+    }
+
+    /// What the list-end sentinel's `.task(id:)` keys on: it changes after
+    /// every load that lands, so the next page is asked again even when the
+    /// last row kept its id.
+    var pagingKey: [Int] {
+        [listedGeneration, records.count]
+    }
+
+    /// Asks for the next page while the filter matches more and the rows
+    /// listed answer what is asked now.
+    func loadNextPage() async {
+        guard hasMoreRows,
               listedGeneration == generation,
               !isLoadingNextPage
         else { return }
         isLoadingNextPage = true
+        nextPageFailed = false
         let generation = generation
         let offset = UInt32(clamping: records.count)
         do {
@@ -117,6 +134,7 @@ final class LearningRecordsViewModel: ObservableObject {
         } catch {
             guard generation == self.generation else { return }
             isLoadingNextPage = false
+            nextPageFailed = true
             notice = .readFailed(detail: error.localizedDescription)
         }
     }
@@ -129,10 +147,10 @@ final class LearningRecordsViewModel: ObservableObject {
         await write { try await $0.deleteLearningRecord(record) }
     }
 
-    /// The count the edit alert's field holds: a whole number, at least 1
-    /// (the engine clamps the top).
+    /// The count the edit alert's field holds: a whole number in
+    /// `1 ... maxCount`; anything else keeps Save disabled.
     static func count(from text: String) -> Int64? {
-        guard let count = Int64(text.trimmingCharacters(in: .whitespaces)), count >= 1 else {
+        guard let count = Int64(text.trimmingCharacters(in: .whitespaces)), (1 ... maxCount).contains(count) else {
             return nil
         }
         return count
@@ -155,29 +173,46 @@ final class LearningRecordsViewModel: ObservableObject {
 
     /// Reloads as many rows as are listed, so the list keeps its place.
     private func reloadInPlace() async {
-        await reload(limit: max(Self.pageSize, UInt32(clamping: records.count))).value
+        await reload(rowCount: max(Int(Self.pageSize), records.count)).value
     }
 
-    /// Lists `limit` rows from the top for what is asked now; every answer
+    /// Lists `rowCount` rows from the top for what is asked now, in engine
+    /// pages of at most `pageSize`, and shows them in one go; every answer
     /// still in flight is stale from here.
     @discardableResult
-    private func reload(limit: UInt32 = pageSize) -> Task<Void, Never> {
+    private func reload(rowCount: Int = Int(pageSize)) -> Task<Void, Never> {
         generation += 1
         let generation = generation
         isLoadingNextPage = false
+        nextPageFailed = false
         let (kind, order, filter) = (kind, order, filter)
         return Task {
             do {
-                let page = try await userData.listLearningRecords(
-                    kind: kind,
-                    order: order,
-                    filter: filter,
-                    limit: limit,
-                    offset: 0,
-                )
-                guard generation == self.generation else { return }
-                records = page.records
-                matchingTotal = Int(page.matchingTotal)
+                var rows: [Taigi_Engine_LearningRecord] = []
+                var listed = Set<Int64>()
+                var read = 0
+                var matching = 0
+                repeat {
+                    let offset = UInt32(clamping: read)
+                    let page = try await userData.listLearningRecords(
+                        kind: kind,
+                        order: order,
+                        filter: filter,
+                        limit: UInt32(clamping: min(Int(Self.pageSize), rowCount - read)),
+                        offset: offset,
+                    )
+                    guard generation == self.generation else { return }
+                    matching = Int(page.matchingTotal)
+                    // Pulled back: the matches shrank under the re-read, and
+                    // what is read so far is all that lines up.
+                    guard page.offset == offset else { break }
+                    // A row the keyboard moved between pages is not listed twice.
+                    rows += page.records.filter { listed.insert($0.id).inserted }
+                    guard !page.records.isEmpty else { break }
+                    read += page.records.count
+                } while read < min(rowCount, matching)
+                records = rows
+                matchingTotal = matching
                 listedGeneration = generation
                 lastLoadFailed = false
             } catch {

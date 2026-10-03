@@ -77,9 +77,9 @@ struct LearningRecordsView: View {
                     } else {
                         ForEach(viewModel.records, id: \.id) { record in
                             recordRow(record)
-                                .task {
-                                    await viewModel.loadNextPageIfNeeded(after: record)
-                                }
+                        }
+                        if viewModel.hasMoreRows {
+                            nextPageRow
                         }
                     }
                 } header: {
@@ -105,6 +105,7 @@ struct LearningRecordsView: View {
             Button(lang.string(.commonSave)) {
                 saveCountFromAlert()
             }
+            .disabled(LearningRecordsViewModel.count(from: countInput) == nil)
         } message: {
             // Only word frequency's boost stops growing (at count 40).
             if editingRecord?.kind == .frequency {
@@ -134,7 +135,30 @@ struct LearningRecordsView: View {
         }
     }
 
-    // MARK: - Row
+    // MARK: - Rows
+
+    /// The list end: shown, it asks for the next page — again after every
+    /// load that lands (`pagingKey`). After a failed read it waits for a tap.
+    @ViewBuilder
+    private var nextPageRow: some View {
+        if viewModel.nextPageFailed {
+            Button {
+                Task { await viewModel.loadNextPage() }
+            } label: {
+                HStack {
+                    Image(latinSystemName: "arrow.clockwise")
+                    Text(lang.string(.dictionaryLearningRecordsReadFailed))
+                }
+                .foregroundColor(.secondary)
+            }
+        } else {
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .task(id: viewModel.pagingKey) {
+                    await viewModel.loadNextPage()
+                }
+        }
+    }
 
     private func recordRow(_ record: Taigi_Engine_LearningRecord) -> some View {
         Button {

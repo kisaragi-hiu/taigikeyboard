@@ -219,14 +219,12 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.isLoading)
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 100))
 
-        await viewModel.loadNextPageIfNeeded(after: viewModel.records[50])
-        XCTAssertEqual(fake.calls.count, 1, "a row that is not the last asks for nothing")
-
-        await viewModel.loadNextPageIfNeeded(after: viewModel.records.last!)
-        await viewModel.loadNextPageIfNeeded(after: viewModel.records.last!)
+        await viewModel.loadNextPage()
+        await viewModel.loadNextPage()
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 250))
+        XCTAssertFalse(viewModel.hasMoreRows)
 
-        await viewModel.loadNextPageIfNeeded(after: viewModel.records.last!)
+        await viewModel.loadNextPage()
         XCTAssertEqual(fake.calls.map(\.offset), [0, 100, 200], "nothing past the matches")
         XCTAssertEqual(fake.calls.map(\.limit), [100, 100, 100])
     }
@@ -240,10 +238,50 @@ final class LearningRecordsViewModelTests: XCTestCase {
         await viewModel.load()
         fake.rows = Array(fake.rows.prefix(90))
 
-        await viewModel.loadNextPageIfNeeded(after: viewModel.records.last!)
+        await viewModel.loadNextPage()
 
         XCTAssertEqual(fake.calls.map(\.offset), [0, 100, 0])
         XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 90))
+    }
+
+    func testThePagingKey_changesAfterAReloadThatKeepsTheLastRow() async {
+        // trace: 150 rows, 100 listed, tail id 100. A reorder answers the same 100 rows
+        // (the fake ignores order), so the tail row keeps its id — the key must still move.
+        let fake = FakeLearningRecords(rows: numberedRows(150))
+        let viewModel = makeViewModel(fake)
+        await viewModel.load()
+        let before = viewModel.pagingKey
+
+        fake.isHolding = true
+        let reorder = viewModel.selectOrder(.mostRecent)
+        // Asked while the rows answer the old order: nothing is asked.
+        await viewModel.loadNextPage()
+        await waitForParked(1, in: fake)
+        fake.resolve(0)
+        await reorder.value
+        fake.isHolding = false
+
+        XCTAssertEqual(viewModel.records.last?.id, 100)
+        XCTAssertNotEqual(viewModel.pagingKey, before, "the sentinel task re-fires")
+        await viewModel.loadNextPage()
+        XCTAssertEqual(viewModel.records.count, 150)
+        XCTAssertEqual(fake.calls.map(\.offset), [0, 0, 100])
+    }
+
+    func testAFailedNextPage_waitsForARetry() async {
+        let fake = FakeLearningRecords(rows: numberedRows(150))
+        let viewModel = makeViewModel(fake)
+        await viewModel.load()
+
+        fake.failure = FakeLearningRecords.Unreadable()
+        await viewModel.loadNextPage()
+        XCTAssertTrue(viewModel.nextPageFailed)
+        XCTAssertEqual(viewModel.records.count, 100)
+
+        fake.failure = nil
+        await viewModel.loadNextPage()
+        XCTAssertFalse(viewModel.nextPageFailed)
+        XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 150))
     }
 
     // MARK: - Kind / order / filter
@@ -318,7 +356,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
         fake.isHolding = true
 
         let toPhrases = viewModel.selectKind(.learnedPhrase)
-        await viewModel.loadNextPageIfNeeded(after: viewModel.records.last!)
+        await viewModel.loadNextPage()
         await waitForParked(1, in: fake)
         fake.resolve(0)
         await toPhrases.value
@@ -342,6 +380,24 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.notice)
         // trace: the reloads ask for max(100, rows listed) = 100 from the top.
         XCTAssertEqual(fake.calls.map(\.limit), [100, 100, 100])
+    }
+
+    func testAWrite_reReadsTheListedRowsInPagesOfAtMost100() async {
+        // trace: 250 rows listed after offsets 0, 100, 200. The reload re-reads
+        // max(100, 250) = 250 rows as limits 100, 100, 50 from offsets 0, 100, 200.
+        let fake = FakeLearningRecords(rows: numberedRows(250))
+        let viewModel = makeViewModel(fake)
+        await viewModel.load()
+        await viewModel.loadNextPage()
+        await viewModel.loadNextPage()
+
+        await viewModel.setCount(viewModel.records[200], to: 9)
+
+        let reload = fake.calls.dropFirst(3)
+        XCTAssertEqual(reload.map(\.offset), [0, 100, 200])
+        XCTAssertEqual(reload.map(\.limit), [100, 100, 50])
+        XCTAssertEqual(viewModel.records.map(\.id), Array(1 ... 250))
+        XCTAssertEqual(viewModel.records[200].count, 9)
     }
 
     func testARowAlreadyGone_isANoticeAndTheListReloads() async {
@@ -392,7 +448,7 @@ final class LearningRecordsViewModelTests: XCTestCase {
 
     func testCountFromText_isAWholeNumberOfAtLeastOne() {
         let cases: [(String, Int64?)] = [
-            ("12", 12), (" 3 ", 3), ("1", 1), ("1000001", 1_000_001),
+            ("12", 12), (" 3 ", 3), ("1", 1), ("1000000", 1_000_000), ("1000001", nil),
             ("0", nil), ("-1", nil), ("1.5", nil), ("", nil), ("abc", nil),
         ]
         for (text, expected) in cases {
