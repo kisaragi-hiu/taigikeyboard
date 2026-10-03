@@ -273,8 +273,11 @@ var
   MovedFiles: array of TMovedFile;
   FinishedNoteAdded: Boolean;
   UpdateTaskFailed: Boolean;
-  // Whether the version being replaced had a 32-bit service — see
-  // RemoveAddedX86Dll.
+  // Which services the version being replaced had, taken before anything is
+  // moved: a restore registers only those (RestorePreviousVersion), so a
+  // failed FRESH install registers nothing, and a failed upgrade from a
+  // version without the 32-bit service does not register the new one.
+  HadX64Dll: Boolean;
   HadX86Dll: Boolean;
 
 // Delete, or fail that and have Windows delete it at the next restart.
@@ -560,6 +563,7 @@ begin
   // flight when it starts.
   RecoverLegacyLeftovers(X64Dll);
   RecoverStaleFiles(AppDir);
+  HadX64Dll := FileExists(X64Dll);
   HadX86Dll := FileExists(X86Dll);
 
   // Unregister BEFORE moving anything: it stops new activations finding the
@@ -567,7 +571,7 @@ begin
   // about to move. A failure here is logged, not fatal — the move below empties
   // the path anyway, so nothing can be loaded from it, and the new DLL's own
   // registration overwrites the same CLSID.
-  if FileExists(X64Dll) and not RegisterDll(X64Regsvr32, X64Dll, True) then
+  if HadX64Dll and not RegisterDll(X64Regsvr32, X64Dll, True) then
     Log('unregister: regsvr32 /u ' + X64Dll + ' failed');
   if HadX86Dll and not RegisterDll(X86Regsvr32, X86Dll, True) then
     Log('unregister: regsvr32 /u ' + X86Dll + ' failed');
@@ -642,11 +646,13 @@ procedure RestorePreviousVersion;
 begin
   PutBackMovedFiles;
   RemoveAddedX86Dll;
-  // x86 first, as in RegisterEverything. A previous version from before the
-  // 32-bit service shipped has none, so restoring it registers x64 alone.
-  if FileExists(X86Dll) and not RegisterDll(X86Regsvr32, X86Dll, False) then
+  // Only what the previous version had, x86 first as in RegisterEverything.
+  // A file merely being THERE is not enough: after a failed fresh install the
+  // new payload is still on disk (Inno does not roll back past ssPostInstall),
+  // and registering it would leave a half-installed service active.
+  if HadX86Dll and not RegisterDll(X86Regsvr32, X86Dll, False) then
     Log('restore: put ' + X86Dll + ' back but could not register it');
-  if FileExists(X64Dll) and not RegisterDll(X64Regsvr32, X64Dll, False) then
+  if HadX64Dll and not RegisterDll(X64Regsvr32, X64Dll, False) then
     Log('restore: put ' + X64Dll + ' back but could not register it');
 end;
 

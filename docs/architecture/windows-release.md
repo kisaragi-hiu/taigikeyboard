@@ -124,10 +124,12 @@ Registration, measured with `regsvr32` and a registry dump:
   pair is one transaction, and a rollback has to back up and restore both.
   The installer does: `RegisterEverything` and `RestorePreviousVersion`
   register x86 then x64, and every unregister path (`PrepareToInstall`,
-  `RollBack`, `[UninstallRun]`) removes both. A failed upgrade from a version
-  without the 32-bit service removes the new `TaigiKeyboard32.dll` before it
-  re-registers the old x64 one (`RemoveAddedX86Dll`), so no mixed install is
-  left behind.
+  `RollBack`, `[UninstallRun]`) removes both. A restore re-registers only the
+  services the replaced version had (`HadX64Dll` / `HadX86Dll`, taken before
+  anything moves): a failed fresh install registers nothing, and a failed
+  upgrade from a version without the 32-bit service also removes the new
+  `TaigiKeyboard32.dll` (`RemoveAddedX86Dll`), so no mixed install is left
+  behind.
 - **Downgrade to a version without the 32-bit service: uninstall first.** The
   older installer knows nothing of `TaigiKeyboard32.dll`: its `MakeWayForTree`
   moves the file aside with the rest of the payload, but it never unregisters
