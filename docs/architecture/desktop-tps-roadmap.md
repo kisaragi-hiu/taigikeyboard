@@ -2,7 +2,7 @@
 
 TPS (方音符號, the i18n `en` label "Phonetic Symbols", key `tpsMode`) as a third input mode on macOS, Windows and Linux, typed on a physical keyboard, with an on-screen key panel. iOS and Android have typed TPS since v3.5.x.
 
-Status: P0 on main, P1 merged #367. No release is assigned; scope and timing are the maintainer's call.
+Status: P0 on main, P1 merged #367, P2a merged #368. No release is assigned; scope and timing are the maintainer's call.
 
 ## Maintainer decisions (2026-10-03)
 
@@ -172,7 +172,7 @@ The panel is shown only under TPS and persists until the shortcut hides it; whet
 |---|---|---|---|---|---|
 | P0 | docs | This roadmap, the `roadmap.md` row | — | — | In progress |
 | P1 | feat (engine) | D0: `TpsKey` in `composing.proto` and `transition.rs`, tests from the mobile key sequences in `behavioral-invariants.md` §31–§33, §41 | engine; `make build` for the mobile artifacts (additive — mobile sends nothing new) | ~250 | Merged #367 `a5174ed9` |
-| P2a | feat (desktop-core, not reachable) | D2 table (`keys/tps_layout.rs`), the `Keypad` slot set, the `TpsKey` and `TlDisplayToTps` bridge calls, `ComposingManager::tps_key` (answers whether the key was taken), keypad key codes on Linux and macOS; tests only. The D4 sites need the variant and move to P2b | desktop-core, Windows, Linux, the macOS Rust seam, `make -C macos test` | ~400 | In progress |
+| P2a | feat (desktop-core, not reachable) | D2 table (`keys/tps_layout.rs`), the `Keypad` slot set, the `TpsKey` and `TlDisplayToTps` bridge calls, `ComposingManager::tps_key` (answers whether the key was taken), keypad key codes on Linux and macOS; tests only. The D4 sites need the variant and move to P2b | desktop-core, Windows, Linux, the macOS Rust seam, `make -C macos test` | ~400 | Merged #368 `07968d0a` |
 | P2b | feat (desktop-core, Windows, Linux) | D1 + D3 + D4: the variant, the classifier branch, the presentation / executor / settings sites, the exhaustive and wildcard matches with their mode labels, i18n scope. Windows and Linux type TPS from the settings picker. Switch Romanization leaves TPS for TL (`InputMode::toggled_romanization`) until P3 remembers the last romanization; the display switches and the Telex guide are inert under TPS (`ShortcutAction::is_inert_under`) | as P2a | ~550 | In progress |
 | P3 | feat (desktop-core, Windows, Linux) | D5: `next_input_mode`, `ToggleTps`, `lastRomanizationMode`, the Windows preserved key, the menu row; the Shortcuts pane names the keypad slot keys under TPS and drops the Shift + slot row | as P2a | ~300 | Pending |
 | P4 | feat (macOS) | The Swift enum and picker, `ToggleTps` in `ShortcutActions.swift`, the mode flash; remove the temporary `"tps"` → TL projection in `taigi-macos-ffi` `settings.rs` `document_from` (P2b) | macOS | ~350 | Pending |
