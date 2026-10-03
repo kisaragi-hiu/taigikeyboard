@@ -137,7 +137,7 @@ final class FullWidthPunctuationControllerTests: XCTestCase {
 
     /// ⚠ Both rewrites fire here, and they answer to different questions: the
     /// auto space follows what this commit WROTE — the preedit as typed, which
-    /// is romanization on a platform shipping TL and POJ only — while the
+    /// is romanization under TL and POJ — while the
     /// full-width map still follows the output MODE. So Hanji-first gets
     /// `taigi？ `. The map reading the mode rather than the committed string is
     /// the same approximation this round removed from the auto-space gate,

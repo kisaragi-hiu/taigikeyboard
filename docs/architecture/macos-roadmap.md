@@ -13,7 +13,7 @@
 Add macOS (one of the two desktop platforms beside Windows TSF; iOS and Android
 are the mobile pair) to prove the shared Rust engine reuses cleanly behind a
 thin native shell. Native InputMethodKit app
-(IMKServer / IMKInputController — NOT KeyboardKit), TL + POJ only (no TPS),
+(IMKServer / IMKInputController — NOT KeyboardKit), TL + POJ (TPS added later by `desktop-tps-roadmap.md` P4),
 modern SwiftUI settings (macOS 14+), custom-dictionary support, macOS-conventional
 shortcuts.
 

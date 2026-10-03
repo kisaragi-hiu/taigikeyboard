@@ -213,8 +213,10 @@ public final class TaigiInputController: IMKInputController {
     /// KVO on the input mode, armed and released with `displayModeObservation`:
     /// a mode written from outside this session — the General pane, a
     /// `defaults write` — takes down what was raised under the old one, as
-    /// the switch chords do (`switchInputMode(_:)`). A composition stays on
-    /// screen; across TPS the next key commits it (desktop TPS roadmap D5).
+    /// the switch chords do (`switchInputMode(_:)`). The General pane takes
+    /// focus first, which ends the session and commits the composition; a
+    /// `defaults write` leaves it on screen, and across TPS the next key
+    /// commits it (desktop TPS roadmap D5).
     @MainActor
     private var inputModeObservation: AnyObject?
 
@@ -685,7 +687,7 @@ public final class TaigiInputController: IMKInputController {
             settings.storedIsHanjiFirst.toggle()
             representCandidates(refetch: false)
         case .cycleCandidateDisplayMode:
-            // Never inert: every mode has a next one. Only the setting is
+            // Inert only under TPS (gated above). Only the setting is
             // written here — the open bar is re-fetched by the observation
             // `activateServer` armed on this key, which is the one path the
             // Appearance pane's write already takes (`representCandidates(refetch:)`).

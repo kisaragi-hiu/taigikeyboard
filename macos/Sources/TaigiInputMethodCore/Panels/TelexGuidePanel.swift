@@ -106,8 +106,12 @@ final class TelexGuidePanel {
     /// each time: the content follows the mode and the display language, and
     /// a card shown a few times a day is not worth keeping warm.
     func show(inputMode: InputMode, language: DisplayLanguageStore, ownedBy owner: ComposingSessionToken) {
-        // TPS types no Telex keys; its chord is inert there too.
-        guard inputMode != .tps else { return }
+        // TPS types no Telex keys; its chord is inert there too. A guide
+        // still up goes all the same.
+        guard inputMode != .tps else {
+            hideNow()
+            return
+        }
         panel?.orderOut(nil)
         let panel = Self.makePanel(inputMode: inputMode, language: language)
         self.panel = panel

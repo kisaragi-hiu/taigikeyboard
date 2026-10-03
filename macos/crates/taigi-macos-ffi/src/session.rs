@@ -1280,6 +1280,30 @@ mod tests {
         );
     }
 
+    /// A slot key after a switch across TPS picks nothing from the old
+    /// list — even one still reported up: keypad `2` (`kVK_ANSI_Keypad2`)
+    /// commits `tai` as shown, then, with nothing composing, is document text
+    /// the host types.
+    #[test]
+    fn a_keypad_slot_key_after_a_switch_across_tps_picks_nothing() {
+        let (_engine, shell) = engine_shell();
+        let keypad_two = KeyEvent {
+            key_code: Some(0x54),
+            ..chord("2", NUMERIC_PAD, None)
+        };
+        for panel in [no_list(), list(Some(0))] {
+            let typist = Typist::activated(shell, vec![]);
+            typist.type_text("tai");
+            let tps = Typist {
+                settings: vec![text("inputMode", "tps")],
+                ..typist
+            };
+            let reply = tps.key(keypad_two.clone(), panel);
+            assert!(!reply.handled && !reply.is_composing);
+            assert_eq!(effects(&reply), vec![insert("tai"), closed(), closed()]);
+        }
+    }
+
     /// The other way: glyphs left behind under TL are written as shown
     /// before the next key — Space here, which then has nothing to separate
     /// and passes through as document text.
