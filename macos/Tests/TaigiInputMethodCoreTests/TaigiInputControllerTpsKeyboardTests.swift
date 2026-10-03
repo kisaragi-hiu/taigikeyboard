@@ -179,13 +179,26 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
         XCTAssertEqual(session.client.writes.last, .setMarkedText("ㄍ", selectionLocation: 1))
     }
 
-    /// Outside TPS the core types nothing: a click that raced a switch.
+    /// Outside TPS nothing is typed and nothing is taken down: a click that
+    /// raced a switch.
     func testAPress_underARomanization_typesNothing() throws {
         let session = try makeSession(under: .tl)
 
+        // trace: one activation → tenure 1, the live one; only the mode refuses.
         session.controller.typeTpsKeyboardGlyph("ㄍ", generation: 1)
 
         XCTAssertEqual(session.client.writes, [])
+    }
+
+    /// trace: `tps_keyboard_rows` — `E` ㄍ / ㆣ, `Q` ㄆ with no Shift glyph.
+    func testThePressedGlyph_isTheShiftGlyphOnlyWhereTheKeyHasOne() throws {
+        let caps = TpsKeyboardPanel.shared.caps
+        let capE = try XCTUnwrap(caps.first { $0.label == "E" })
+        let capQ = try XCTUnwrap(caps.first { $0.label == "Q" })
+
+        XCTAssertEqual(TpsKeyboardPanel.pressedGlyph(of: capE, isShiftLayer: false), "ㄍ")
+        XCTAssertEqual(TpsKeyboardPanel.pressedGlyph(of: capE, isShiftLayer: true), "ㆣ")
+        XCTAssertEqual(TpsKeyboardPanel.pressedGlyph(of: capQ, isShiftLayer: true), "ㄆ")
     }
 
     // MARK: - Harness

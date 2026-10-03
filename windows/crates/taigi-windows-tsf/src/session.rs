@@ -291,11 +291,12 @@ impl TextService_Impl {
     /// glyph (`ui/tps_keyboard.rs`): typed through the engine's `TpsKey` as
     /// the layout key would be, but whatever the window or the slot keys
     /// would make of that key (`ComposingKeyIntent::tps_keyboard_press`).
-    /// Not taken — the host receives a key no layout gives a character — when this
-    /// context cannot be typed in (read-only, English mode), the mode is
-    /// no longer TPS, or the scan code names no glyph; the test phase
-    /// answers the same, so a refused click is never half delivered. It
-    /// carries its glyph, so nothing is left waiting when it is refused.
+    /// Not taken when this context cannot be typed in (read-only, English
+    /// mode), the mode is no longer TPS, or the scan code names no glyph —
+    /// and a delivery can still hand it on after a TRUE test (a password
+    /// field, focus moving in between). Either way the host receives a key
+    /// no layout gives a character, and the click carries its glyph, so
+    /// nothing is left waiting.
     fn tps_keyboard_click(&self, context: &ITfContext, lparam: LPARAM, phase: KeyPhase) -> bool {
         let Some((token, identity)) = self.token_for(context) else {
             return false;

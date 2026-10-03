@@ -61,6 +61,19 @@ final class TpsKeyboardPanel {
         return cachedRows
     }
 
+    /// What a click on `cap` types: the Shift glyph when the click asks for
+    /// the Shift layer (top half, or Shift held) and the key has one, the
+    /// bare glyph otherwise — `TpsKeyCap::pressed_glyph` in the core, which
+    /// the Windows panel calls.
+    static func pressedGlyph(of cap: Taigi_DesktopShell_TpsKeyCap, isShiftLayer: Bool) -> String {
+        isShiftLayer && cap.hasShiftGlyph ? cap.shiftGlyph : cap.glyph
+    }
+
+    /// The core's caps, row by row (for the tests).
+    var caps: [Taigi_DesktopShell_TpsKeyCap] {
+        rows.flatMap(\.caps)
+    }
+
     /// How many key caps the panel draws (for the tests).
     var capCount: Int {
         rows.reduce(0) { $0 + $1.caps.count }
@@ -220,12 +233,16 @@ private final class TpsKeyCapView: NSView {
         frame.contains(point) ? self : nil
     }
 
-    /// The Shift glyph from the top half (AppKit's y runs up) or with Shift
-    /// held, where the key has one — `TpsKeyCap::pressed_glyph` in the core,
-    /// which the Windows panel calls.
-    override func mouseDown(with event: NSEvent) {
+    /// Taken, so the release comes back to this cap (`mouseUp`).
+    override func mouseDown(with _: NSEvent) {}
+
+    /// Types on the release, over the cap the press began on — as the
+    /// Windows panel does (`WM_LBUTTONUP`); a release dragged off the cap
+    /// types nothing. The half is read where the button comes up.
+    override func mouseUp(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
+        guard bounds.contains(point) else { return }
         let isShiftLayer = point.y >= bounds.midY || event.modifierFlags.contains(.shift)
-        onPress(isShiftLayer && cap.hasShiftGlyph ? cap.shiftGlyph : cap.glyph)
+        onPress(TpsKeyboardPanel.pressedGlyph(of: cap, isShiftLayer: isShiftLayer))
     }
 }

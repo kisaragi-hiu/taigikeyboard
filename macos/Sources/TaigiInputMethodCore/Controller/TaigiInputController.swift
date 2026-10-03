@@ -1208,17 +1208,19 @@ public final class TaigiInputController: IMKInputController {
     /// A mouse path into the composition, so it is checked the way
     /// `macos-roadmap.md` asks of one: the tenure the panel was shown in is
     /// still this one, this session still owns the engine, and its client
-    /// is still alive. The guide and the picker go down first, as for any
-    /// key — and the check runs again after them: clearing the picker's
-    /// placeholder is a client call, which can end this tenure. The
-    /// auto-space arm is spent, since a glyph lands at the caret.
+    /// is still alive — and the mode is still TPS, so a click that raced a
+    /// switch touches nothing (the core refuses it too). The guide and the
+    /// picker go down first, as for any key — and the check runs again after
+    /// them: clearing the picker's placeholder is a client call, which can
+    /// end this tenure. The auto-space arm is spent, since a glyph lands at
+    /// the caret.
     @MainActor
     func typeTpsKeyboardGlyph(_ glyph: String, generation: Int) {
         let liveClient = { [self] () -> IMKTextInput? in
             guard generation == tenure, backend.owns(sessionToken) else { return nil }
             return lastClient
         }
-        guard liveClient() != nil else { return }
+        guard settings.inputMode == .tps, liveClient() != nil else { return }
         armedAutoSpaceCaret = nil
         TelexGuidePanel.shared.hide(ownedBy: sessionToken)
         dismissSymbolPicker()
