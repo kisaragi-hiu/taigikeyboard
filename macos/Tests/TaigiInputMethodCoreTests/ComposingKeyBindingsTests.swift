@@ -517,33 +517,6 @@ final class ComposingKeyBindingsTests: XCTestCase {
         XCTAssertTrue(try space.matches(snapshot(" ", modifiers: [.capsLock, .numericPad])))
     }
 
-    // MARK: - A bare key through the intent tiers
-
-    /// The design promise behind allowing bare punctuation: mid-composition
-    /// the bindings tier is read before document text, so the bound key
-    /// fires its action; everywhere the binding does not apply, the key is
-    /// still the punctuation it types.
-    func testABareBoundKey_firesItsAction_onlyWhereTheActionApplies() throws {
-        let bindings = try ComposingKeyBindings(chords: [.pageForward: chord("'")])
-        let apostrophe = try snapshot("'")
-
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: apostrophe, isComposing: true, isShowingCandidates: true, bindings: bindings),
-            .navigate(.pageDown),
-            "the binding wins over document text while candidates are up",
-        )
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: apostrophe, isComposing: true, bindings: bindings),
-            .commitThenInsert("'"),
-            "an action that needs candidates gives the key back when none are up",
-        )
-        XCTAssertEqual(
-            ComposingKeyIntent.intent(for: apostrophe, isComposing: false, bindings: bindings),
-            .passThrough,
-            "with no composition there is no page to turn — the key is the host's",
-        )
-    }
-
     private func chord(_ key: String, _ modifiers: NSEvent.ModifierFlags = []) throws -> ComposingKeyChord {
         try ComposingKeyChord.make(key: key, modifiers: modifiers).get()
     }

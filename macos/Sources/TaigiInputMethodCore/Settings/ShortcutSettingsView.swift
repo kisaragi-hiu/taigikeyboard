@@ -70,14 +70,14 @@ struct ShortcutSettingsView: View {
                 fixedRow(.desktopShortcutSelectCandidateSlot, Self.slotKeysLabel(bindings.slotKeySet))
 
                 // Shown, not recordable: the fixed navigation tier
-                // (`ComposingKeyIntent.intent`), read before any binding so a
+                // (desktop-core `keys/intent.rs`), read before any binding so a
                 // user who has mis-bound everything else still has a way
                 // through the candidates.
                 fixedRow(.desktopShortcutNavigateCandidates, Self.navigationKeysLabel)
 
                 // Shown, not recordable (USER 2026-09-09): the caret inside the
                 // composition rides the host's own word-jump chord, and the
-                // classifier reads it before any binding (`ComposingKeyIntent`).
+                // classifier reads it before any binding (`keys/intent.rs`).
                 // With the candidate movers, because moving the caret is what
                 // it is — the greyed field is what tells it from the rows that
                 // record.
@@ -106,7 +106,7 @@ struct ShortcutSettingsView: View {
                 fixedRow(.desktopShortcutFlipPunctuationWidth, Self.widthFlipChordsLabel)
 
                 // Shown, not recordable: Escape drops the composition without
-                // writing to the document (`ComposingKeyIntent.intent`). Last
+                // writing to the document (`keys/intent.rs`). Last
                 // in the block (USER 2026-09-21): every row above it writes
                 // something; this is the one way out that writes nothing.
                 fixedRow(.desktopShortcutCancelComposing, Self.cancelKeyLabel)

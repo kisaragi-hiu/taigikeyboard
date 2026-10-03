@@ -1,21 +1,35 @@
-// The key path in desktop-core, behind `ComposingBackend`.
+// The key path: desktop-core over the shell seam.
 
 import Foundation
 
-/// Runs every request through the desktop-core session over the shell seam
+/// Runs one session's key path in desktop-core over the shell seam
 /// (`desktop_request_bytes`; docs/architecture/macos-desktop-core-roadmap.md
-/// D3) and answers with the effects the core recorded, for the controller to
-/// replay. The default back end since the cut-over (roadmap P12;
-/// `ComposingBackends`).
+/// D3): classifies a key, drives the engine, and answers with what the
+/// controller has to do to its client and its candidate window — in order,
+/// as a list it replays after the call returns.
+///
+/// The controller keeps everything that is IMKit or AppKit: the client calls
+/// themselves, the windows, the caret rectangle, the auto-space arm and the
+/// swap's client check, the symbol picker, the Telex guide, the global
+/// actions. The core never touches a client; it records, and the controller
+/// replays (D3, record-then-replay). One per process (`shared`): the engine
+/// it drives is process-wide.
+///
+/// Every request but `activate` is for the session that owns the engine; one
+/// from a session that does not is answered `nil` and does nothing — the
+/// non-owner rule of `ComposingSessionCoordinator.owns`.
 ///
 /// What the core cannot know is asked here before a request is encoded: the
 /// window's selection and slots, and the auto-space swap's client check.
 /// The settings travel inside each request, read from the request's own
 /// store, so the core classifies under exactly what the controller reads.
 @MainActor
-final class CoreComposingBackend: ComposingBackend {
+final class CoreComposingBackend {
     /// One encoded request in, one encoded response out.
     typealias Transport = ([UInt8]) -> [UInt8]
+
+    /// The process's key path.
+    static let shared = CoreComposingBackend(coordinator: .shared)
 
     private static let logger = DebugLogger(category: "CoreComposingBackend")
 
@@ -46,14 +60,23 @@ final class CoreComposingBackend: ComposingBackend {
         self.transport = transport
     }
 
+    /// Whether `session` drives the engine now.
     func owns(_ session: ComposingSessionToken) -> Bool {
         coordinator.owns(session)
     }
 
+    /// Whether `session` owns the engine and a composition is running.
     func isComposing(_ session: ComposingSessionToken) -> Bool {
         owns(session) && isOwnerComposing
     }
 
+    /// `session` takes the engine (`activateServer`); a session that already
+    /// holds it keeps its composition. Any list held for a session is dropped:
+    /// the window went down with the handover.
+    ///
+    /// Claims `ComposingSessionCoordinator` too: the shortcut-target registry
+    /// the controller registers with next accepts only its owner.
+    ///
     /// An `Activate` that takes the engine from another session drops that
     /// session's composition and sends no `ClearMarkedText`: the region is
     /// the outgoing controller's, cleared on its own way out (`endSession`).
@@ -69,8 +92,9 @@ final class CoreComposingBackend: ComposingBackend {
         }
     }
 
-    /// A session that does not own the engine has nothing to give up — in
-    /// the core either, which keeps the same record.
+    /// `session` gives the engine up, if it holds it. A session that does not
+    /// own the engine has nothing to give up — in the core either, which
+    /// keeps the same record.
     func release(_ session: ComposingSessionToken) {
         guard coordinator.release(session) else { return }
         isOwnerComposing = false
@@ -79,11 +103,8 @@ final class CoreComposingBackend: ComposingBackend {
         _ = exchange(.release(message), settings: lifecycleSnapshot(), op: "release")
     }
 
-    func key(
-        _ key: KeyEventSnapshot,
-        bindings _: ComposingKeyBindings,
-        in request: ComposingRequest,
-    ) -> ComposingKeyReply? {
+    /// One key, classified by the core under the request's settings snapshot.
+    func key(_ key: KeyEventSnapshot, in request: ComposingRequest) -> ComposingKeyReply? {
         guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_KeyRequest()
         message.token = request.session.value
@@ -95,11 +116,13 @@ final class CoreComposingBackend: ComposingBackend {
             request,
             swapping: isIdle ? Self.swapCandidate(for: key, settings: request.settings) : nil,
         )
-        return session(.key(message), in: request, op: "key").map {
-            ComposingKeyReply(handled: $0.handled, effects: $0.effects)
-        }
+        return session(.key(message), in: request, op: "key")
     }
 
+    /// The lifecycle commit (`commitComposition`, deactivation, close): the
+    /// composition as typed, with no auto space — the user did not finish a
+    /// word there — and no list effect: the controller took the window down
+    /// first.
     func commitComposition(in request: ComposingRequest) -> [ComposingBackendEffect]? {
         guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_CommitCompositionRequest()
@@ -108,6 +131,9 @@ final class CoreComposingBackend: ComposingBackend {
         return session(.commitComposition(message), in: request, op: "commitComposition")?.effects
     }
 
+    /// The commit the symbol-picker chord runs before the picker opens: the
+    /// highlighted cell while the window shows one, the composition as typed
+    /// (with its auto space) otherwise.
     func commitForSymbolPicker(in request: ComposingRequest) -> [ComposingBackendEffect]? {
         guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_CommitForSymbolPickerRequest()
@@ -116,6 +142,8 @@ final class CoreComposingBackend: ComposingBackend {
         return session(.commitForSymbolPicker(message), in: request, op: "commitForSymbolPicker")?.effects
     }
 
+    /// A symbol the picker wrote: at the caret as one string, or swapped with
+    /// the auto space a commit left.
     func insertSymbol(_ symbol: String, in request: ComposingRequest) -> [ComposingBackendEffect]? {
         guard owns(request.session) else { return nil }
         var message = Taigi_DesktopShell_InsertSymbolRequest()
@@ -125,6 +153,11 @@ final class CoreComposingBackend: ComposingBackend {
         return session(.insertSymbol(message), in: request, op: "insertSymbol")?.effects
     }
 
+    /// The list on screen again under the settings in force now, after a
+    /// switch outside the key path changed them: fetched again (`refetch`,
+    /// Candidate Display) or the same list re-rendered (the Hanji/romanization
+    /// swap). No list on screen, nothing to do.
+    ///
     /// After `FAIL_INTERNAL` the list goes and nothing else: a represent
     /// has no client to clear marked text from, and a refetch never changes
     /// the composition, so the core's is left alone.
@@ -173,15 +206,15 @@ final class CoreComposingBackend: ComposingBackend {
         _ message: Taigi_DesktopShell_DesktopRequest.OneOf_Request,
         in request: ComposingRequest,
         op: String,
-    ) -> (handled: Bool, effects: [ComposingBackendEffect])? {
+    ) -> ComposingKeyReply? {
         switch exchange(message, settings: snapshot(in: request.settings.userDefaults), op: op) {
         case let .reply(handled, effects, isComposing):
             isOwnerComposing = isComposing
-            return (handled, effects)
+            return ComposingKeyReply(handled: handled, effects: effects)
         case .nothing:
             return nil
         case .failedInternally:
-            return (true, recoverFromInternalFailure(session: request.session))
+            return ComposingKeyReply(handled: true, effects: recoverFromInternalFailure(session: request.session))
         }
     }
 
@@ -198,8 +231,7 @@ final class CoreComposingBackend: ComposingBackend {
 
     /// `Activate` and `Release` carry no request store, yet a handover
     /// starts a fresh engine session under the settings in force: they read
-    /// the app's one domain (`.standard`, where `SettingsStore()` reads), as
-    /// the legacy key path's session start does (`ComposingBackends`), never
+    /// the app's one domain (`.standard`, where `SettingsStore()` reads), never
     /// the last request's.
     private func lifecycleSnapshot() -> Taigi_DesktopShell_SettingsSnapshot? {
         snapshot(in: .standard)
@@ -288,14 +320,11 @@ final class CoreComposingBackend: ComposingBackend {
     }
 
     /// The window's state, every question asked now, before the request
-    /// crosses. The highlight is asked whether or not a list is up, as the
-    /// legacy picker commit asks it; the slots only while one is. The swap's
+    /// crosses. The highlight is asked whether or not a list is up — the core's
+    /// picker commit reads it; the slots only while one is. The swap's
     /// client check — two client queries — is asked only for `attaching`,
     /// the text a swap would write, and only when a swap can happen: an arm,
-    /// an attaching character, Auto-Space on — the legacy order
-    /// (`LegacyComposingBackend.swapAutoSpace`).
-    /// `attaching` is evaluated only where a swap is armed and Auto-Space
-    /// is on.
+    /// an attaching character, Auto-Space on.
     private static func panel(
         _ request: ComposingRequest,
         swapping attaching: @autoclosure () -> String?,

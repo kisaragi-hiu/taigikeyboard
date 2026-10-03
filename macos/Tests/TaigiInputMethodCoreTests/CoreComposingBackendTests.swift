@@ -5,9 +5,9 @@
 import XCTest
 
 /// Each case puts its own transport in front of a `CoreComposingBackend` and
-/// its own coordinator, so nothing here reaches the engine — the suite runs
-/// in either `swift test` process. The core's own answers are covered by the
-/// controller suites run against it and by `macos/crates/taigi-macos-ffi`.
+/// its own coordinator, so nothing here reaches the engine. The core's own
+/// answers are covered by the controller suites and by
+/// `macos/crates/taigi-macos-ffi`.
 @MainActor
 final class CoreComposingBackendTests: XCTestCase {
     private var sent: [Taigi_DesktopShell_DesktopRequest] = []
@@ -15,17 +15,9 @@ final class CoreComposingBackendTests: XCTestCase {
     private var isSwapCheckAsked = false
     private let session = ComposingSessionToken()
 
-    // MARK: - Selection (roadmap P12)
-
-    func testTheCoreBackEnd_isTheDefault() {
-        XCTAssertEqual(ComposingBackends.Kind(named: nil), .core, "unset ships the core")
-        XCTAssertEqual(ComposingBackends.Kind(named: "core"), .core)
-        XCTAssertEqual(ComposingBackends.Kind(named: "legacy"), .legacy)
-    }
-
     /// A handover starts a fresh engine session under the settings in force
-    /// then, as the legacy session start reads them — not under whatever
-    /// the last request carried (freeze contract item 4).
+    /// then — not under whatever the last request carried (freeze contract
+    /// item 4).
     func testActivateAndRelease_carryTheSettingsInForce() throws {
         restoreStandardSettingsAtTeardown()
         let runtime = try XCTUnwrap(TestDesktopCore.runtime, "the process's one Configure")
@@ -58,7 +50,7 @@ final class CoreComposingBackendTests: XCTestCase {
         let backend = try activatedBackend(composing: true)
         answer = { Self.isCancel($0) ? Self.ok() : Self.failed(.failInternal) }
 
-        let reply = try XCTUnwrap(backend.key(Self.key("a"), bindings: .default, in: request()))
+        let reply = try XCTUnwrap(backend.key(Self.key("a"), in: request()))
 
         XCTAssertTrue(reply.handled, "the engine may have moved: the host must not type the key again")
         XCTAssertEqual(reply.effects, [.clearMarkedText, .candidatesClosed])
@@ -90,7 +82,7 @@ final class CoreComposingBackendTests: XCTestCase {
             let backend = try activatedBackend(composing: true)
             answer = { Self.isCancel($0) ? Self.ok() : bytes }
 
-            let reply = backend.key(Self.key("a"), bindings: .default, in: request())
+            let reply = backend.key(Self.key("a"), in: request())
 
             XCTAssertEqual(reply?.handled, true, name)
             XCTAssertEqual(reply?.effects, [.clearMarkedText, .candidatesClosed], name)
@@ -117,7 +109,7 @@ final class CoreComposingBackendTests: XCTestCase {
         for error: Taigi_Engine_ErrorCode in [.failInvariant, .failParse] {
             answer = { _ in Self.failed(error) }
 
-            XCTAssertNil(backend.key(Self.key("a"), bindings: .default, in: request()), "\(error)")
+            XCTAssertNil(backend.key(Self.key("a"), in: request()), "\(error)")
             XCTAssertTrue(backend.isComposing(session), "\(error)")
         }
         XCTAssertFalse(sent.contains(where: Self.isCancel))
@@ -129,7 +121,7 @@ final class CoreComposingBackendTests: XCTestCase {
         ignored.ignored = true
         answer = { _ in Self.ok(ignored) }
 
-        XCTAssertNil(backend.key(Self.key("a"), bindings: .default, in: request()))
+        XCTAssertNil(backend.key(Self.key("a"), in: request()))
     }
 
     // MARK: - What travels in
@@ -149,7 +141,7 @@ final class CoreComposingBackendTests: XCTestCase {
             store.isAutoSpaceEnabled = autoSpace
             isSwapCheckAsked = false
 
-            _ = backend.key(Self.key(key), bindings: .default, in: request(settings: store, armed: true))
+            _ = backend.key(Self.key(key), in: request(settings: store, armed: true))
 
             XCTAssertEqual(isSwapCheckAsked, asked, "\(key) with Auto-Space \(autoSpace)")
             XCTAssertEqual(try lastPanel().swapAvailable, asked, "\(key) with Auto-Space \(autoSpace)")
@@ -165,18 +157,17 @@ final class CoreComposingBackendTests: XCTestCase {
         let flip = KeyEventSnapshot(characters: ",", modifiers: .control, isNamedSpecialKey: false)
 
         _ = try activatedBackend(composing: false)
-            .key(flip, bindings: .default, in: request(settings: store, armed: true))
+            .key(flip, in: request(settings: store, armed: true))
         XCTAssertTrue(isSwapCheckAsked, "⌃, writes an attaching comma")
 
         isSwapCheckAsked = false
         _ = try activatedBackend(composing: true)
-            .key(Self.key("?"), bindings: .default, in: request(settings: store, armed: true))
+            .key(Self.key("?"), in: request(settings: store, armed: true))
         XCTAssertFalse(isSwapCheckAsked, "composing: the ? commits with the composition")
     }
 
     /// The highlight goes whether or not a list is up — the picker commit is
-    /// chosen by it, as the legacy back end chooses — the slots only while
-    /// one is.
+    /// chosen by it — the slots only while one is.
     func testThePanel_carriesTheHighlightAlways_andTheSlotsWithAList() throws {
         let backend = try activatedBackend(composing: true)
 
@@ -193,7 +184,7 @@ final class CoreComposingBackendTests: XCTestCase {
         let backend = try activatedBackend(composing: true)
         let up = try KeyEventSnapshot(TestFixtures.arrowKeyDownEvent(.upArrow))
 
-        _ = backend.key(up, bindings: .default, in: request())
+        _ = backend.key(up, in: request())
 
         guard case let .key(key) = sent.last?.request else { return XCTFail("no key request") }
         XCTAssertEqual(key.event.specialKey, UInt32(NSUpArrowFunctionKey))

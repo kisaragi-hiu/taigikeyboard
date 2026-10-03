@@ -10,7 +10,7 @@ import Foundation
 /// as Latin text and keeps Latin punctuation, Hanji output reads as CJK text
 /// and gets CJK punctuation. That mode IS the whole gate — there is no
 /// setting beside it (USER 2026-08-24) — and it was written as the exact
-/// complement of `AutoSpacePolicy.isGateActive`: auto-space served the
+/// complement of the auto-space gate: auto-space served the
 /// roman-first mode, this mapping the hanji-first one.
 ///
 /// Since the Hanji/romanization key (2026-08-25) they can meet. Space commits a romanization
@@ -18,7 +18,7 @@ import Foundation
 /// mode this mapping serves, so a following `?` matches both rules. The
 /// auto-space swap is read first and wins: the word in front of the caret is
 /// romanization, and romanization keeps Latin punctuation whatever the mode
-/// would say about a hanji word (`TaigiInputController`'s `.passThrough` arm).
+/// would say about a hanji word (the key path reads the swap before the map).
 /// The caller reads the mode (`documentPunctuation(_:isWidthFlip:settings:)`),
 /// and the mode is a DEFAULT, not a wall: ⌃ on any key of this map types the
 /// other width once (`ComposingKeyIntent.widthFlipCharacter`) — the 新注音 /
@@ -68,8 +68,8 @@ enum FullWidthPunctuation {
     /// The same under the mode `settings` holds NOW — read live, like the
     /// auto-space gate, so a swap applies to the very next key. `isWidthFlip`
     /// is `ComposingKeyIntent.widthFlipCharacter`'s verdict on the key that
-    /// typed `text`. One reading for both back ends: the legacy key path
-    /// writes it, the core back end asks it before a swap's client check.
+    /// typed `text`. The core back end asks it before a swap's client check
+    /// (`CoreComposingBackend.swapCandidate`).
     ///
     /// The EFFECTIVE width (`current`), not the stored swap: a romanization-
     /// only display writes romanization, and romanization takes half-width

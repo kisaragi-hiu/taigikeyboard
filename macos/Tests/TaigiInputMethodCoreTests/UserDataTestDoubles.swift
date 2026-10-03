@@ -10,52 +10,6 @@
 import Foundation
 @testable import TaigiInputMethodCore
 
-/// One next-word handshake the manager reported. What the engine learns from
-/// it — the window, noise, sentence ends, compounds — is the engine's
-/// (`engine/nextword/src/decide.rs`); when and what the manager reports is
-/// macOS's.
-enum Handshake: Equatable {
-    case selected(text: String, roman: String)
-    case nailed(text: String, roman: String)
-    case forgot
-}
-
-/// Every next-word handshake the manager reported, in order.
-@MainActor
-final class RecordingNextWordPort: NextWordPort {
-    private(set) var handshakes: [Handshake] = []
-
-    nonisolated init() {}
-
-    /// The reported texts in order, `"∅"` for a forgotten context.
-    var reported: [String] {
-        handshakes.map { handshake in
-            switch handshake {
-            case let .selected(text, _), let .nailed(text, _): text
-            case .forgot: "∅"
-            }
-        }
-    }
-
-    func wordSelected(
-        text: String,
-        roman: String,
-        preceding _: [Taigi_Engine_CommittedWord],
-        settings _: EngineSettings,
-        generation _: UInt64,
-    ) {
-        handshakes.append(.selected(text: text, roman: roman))
-    }
-
-    func segmentNailed(text: String, roman: String, settings _: EngineSettings, generation _: UInt64) {
-        handshakes.append(.nailed(text: text, roman: roman))
-    }
-
-    func forgetContext(settings _: EngineSettings, generation _: UInt64) {
-        handshakes.append(.forgot)
-    }
-}
-
 /// A custom dictionary held in memory, answering the pages' requests the way
 /// the engine does: newest edit first, a case-insensitive substring filter.
 final class FakeUserDataClient: UserDataClient, @unchecked Sendable {

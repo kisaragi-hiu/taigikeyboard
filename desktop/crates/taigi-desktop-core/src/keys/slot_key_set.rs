@@ -150,8 +150,17 @@ mod tests {
         // + `testAShiftedDigit_flipsItsSlot_underTelex…` — letters by their
         // capital, `;` and the digits by key code (US layout types `:` / `#`).
         let bare = CandidateSlotKeySet::BareKeys;
+        // Every letter of the row by its capital (the Swift test's full row,
+        // ported when the Swift key path was deleted, roadmap P13).
+        for (slot, key) in CandidateSlotKeySet::BARE_KEY_ROW.iter().enumerate() {
+            if *key == ";" {
+                continue;
+            }
+            let capital = key.to_uppercase();
+            let shifted = KeyEventSnapshot::chord(Some(&capital), &capital, KeyModifiers::SHIFT);
+            assert_eq!(bare.shifted_slot_for_event(&shifted), Some(slot), "{key}");
+        }
         let shift_q = KeyEventSnapshot::chord(Some("Q"), "Q", KeyModifiers::SHIFT);
-        assert_eq!(bare.shifted_slot_for_event(&shift_q), Some(0));
         assert_eq!(
             bare.slot_for_event(&shift_q),
             None,

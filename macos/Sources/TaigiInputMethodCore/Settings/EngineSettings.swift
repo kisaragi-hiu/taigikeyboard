@@ -1,5 +1,5 @@
-// The settings one composing operation reads. The provider that serves them
-// lives in EngineSettingsProvider.swift.
+// The settings the engine renders under: their defaults, and the effective
+// snapshot `SettingsStore.current` answers.
 
 import Foundation
 
@@ -13,7 +13,8 @@ enum InputMode: String, CaseIterable, Sendable {
 
 /// How the candidate window renders the `(Hanji, romanization)` pair: both scripts
 /// side by side (the swap setting decides which leads), each script as its own
-/// adjacent cell (Hanji with Romanization, `PresentedCandidate`), or the romanization alone.
+/// adjacent cell (Hanji with Romanization; desktop-core's
+/// `composing/presentation.rs`), or the romanization alone.
 ///
 /// Raw values are the storage contract every platform shares
 /// (`docs/reports/2026-08-30-hanlo-together-mode-research.md` §12) — the same
@@ -105,7 +106,7 @@ struct EngineSettings: Equatable, Sendable {
     /// and comes back the moment the mode returns to `.sideBySide`. Under
     /// `.combined` the swap reads `true` whatever is stored — the Hanji cell
     /// comes first and is the `.primary` commit, the romanization cell beside
-    /// it the `.alternate` one (`PresentedCandidate`). Every reader of "swap"
+    /// it the `.alternate` one (`composing/presentation.rs`). Every reader of "swap"
     /// — engine `AppConfig`, cell, document text, auto-space — reads THIS
     /// value, never the stored one; full-width punctuation reads
     /// `isFullWidthPunctuation` instead.
@@ -165,7 +166,8 @@ struct EngineSettings: Equatable, Sendable {
 
     /// Which bundled dictionaries the engine may draw candidates from. Reaches
     /// the engine as `FetchAtPos.toggles`, which it resolves into its source
-    /// filter (`RustEngineBridge.dictionaryTogglesProto`).
+    /// filter; desktop-core builds them from the settings snapshot each request
+    /// carries (`DesktopCoreRuntime.settingsSnapshot`).
     let dictionarySources: DictionarySourceToggles
 
     /// What a fresh install types with. Every value matches the iOS and Android

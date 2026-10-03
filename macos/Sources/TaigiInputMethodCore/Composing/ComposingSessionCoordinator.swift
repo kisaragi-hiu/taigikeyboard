@@ -47,9 +47,9 @@ protocol ShortcutActionTarget: AnyObject {
 /// state is one per process (`engine/composing/src/handle.rs:21-56`). Without
 /// an owner, a controller that is still alive in a background app would append
 /// to the composition the user is typing in the foreground one. The engine
-/// itself is the back end's (`ComposingBackend`): it claims here beside its
-/// own handover, and starts a fresh engine session when `claim` or `release`
-/// answers that ownership moved.
+/// itself is the core back end's (`CoreComposingBackend`): it claims here
+/// beside its own `Activate` / `Release`, of which the core keeps the same
+/// record.
 ///
 /// Ownership is keyed by a token the controller supplies, never by anything
 /// read from the client — see `ActivateServerClientQueryTests` for why the
@@ -82,8 +82,8 @@ final class ComposingSessionCoordinator {
     /// Makes `owner` the session that drives the engine; true when ownership
     /// moved to it.
     ///
-    /// Taking ownership from another session is where the back end starts a
-    /// fresh engine session: whatever the previous one was composing belongs
+    /// Taking ownership from another session is where the core back end's
+    /// `Activate` starts a fresh engine session: whatever the previous one was composing belongs
     /// to a document this one cannot write to. Re-claiming an ownership this
     /// session already holds answers false and leaves the composition alone —
     /// an app can be deactivated and reactivated (a menu opening, a palette
@@ -146,7 +146,7 @@ final class ComposingSessionCoordinator {
     }
 
     /// Gives up ownership when a session ends; true when `owner` held it —
-    /// where the back end starts a fresh engine session.
+    /// where the core back end's `Release` gives the engine up too.
     ///
     /// Called from `inputControllerWillClose`, which is the only lifecycle hook
     /// every controller is guaranteed to receive — a controller that is torn

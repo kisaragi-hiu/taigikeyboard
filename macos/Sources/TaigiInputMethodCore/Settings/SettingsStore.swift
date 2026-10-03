@@ -31,7 +31,7 @@ struct SettingsKey<Value: Sendable>: Sendable {
 /// annotation in Foundation while Apple documents the class itself as
 /// thread-safe. Nothing else is stored here, so that one reference is the whole
 /// of what the unchecked promise covers.
-final class SettingsStore: EngineSettingsProvider, @unchecked Sendable {
+final class SettingsStore: @unchecked Sendable {
     /// Key spellings are the iOS ones (`ios/Sources/TaigiKeyboard/Settings/SharedSettings.swift:36-50`).
     /// macOS has its own defaults domain, so this is not shared storage and
     /// carries no binary-compatibility obligation — it is a deliberate

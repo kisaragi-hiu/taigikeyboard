@@ -5,7 +5,7 @@ import KeyboardShortcuts
 
 /// One instance per client text session. Owns no composition of its own — it
 /// claims the process-wide engine while its session is focused, hands key
-/// events to the `ComposingBackend`, and replays what it answers into its own
+/// events to the `CoreComposingBackend`, and replays what it answers into its own
 /// client and the candidate window.
 ///
 /// `@objc(TaigiInputController)` pins the Objective-C runtime name that
@@ -32,8 +32,8 @@ public final class TaigiInputController: IMKInputController {
     /// What runs the key path: the composition, the candidate list, the
     /// commits. This controller replays what it answers (`replay`).
     @MainActor
-    private var backend: any ComposingBackend {
-        ComposingBackends.shared
+    private var backend: CoreComposingBackend {
+        CoreComposingBackend.shared
     }
 
     /// Whether this session's candidate list is on screen — true once the
@@ -669,7 +669,7 @@ public final class TaigiInputController: IMKInputController {
     }
 
     /// The list on screen again under the settings just written
-    /// (`ComposingBackend.represent`): re-rendered after the Hanji/romanization
+    /// (`CoreComposingBackend.represent`): re-rendered after the Hanji/romanization
     /// swap, fetched again (`refetch`) after a Candidate Display change, which
     /// alters WHICH candidates exist. Repainted through `updateCells`, not
     /// anchored again: the Carbon hotkey and the settings observation have no
@@ -737,8 +737,6 @@ public final class TaigiInputController: IMKInputController {
         }
 
         defer { isMarkedTextVisible = backend.isComposing(sessionToken) }
-        // Resolved once per key: every consumer below reads the same value.
-        let bindings = settings.composingKeyBindings
 
         // The picker chord toggles, so it is read before the picker's own
         // keys: with the list up it is the second way out (Escape is the
@@ -752,7 +750,7 @@ public final class TaigiInputController: IMKInputController {
             if isSymbolPickerOpen {
                 dismissSymbolPicker()
             } else {
-                openSymbolPicker(client: client, bindings: bindings)
+                openSymbolPicker(client: client, bindings: settings.composingKeyBindings)
             }
             return true
         }
@@ -765,7 +763,7 @@ public final class TaigiInputController: IMKInputController {
         // clears it again so the contract below sees what it always does.
         if isSymbolPickerOpen {
             armedAutoSpaceCaret = armedSwap
-            if handleSymbolPickerKey(key, bindings: bindings, client: client) {
+            if handleSymbolPickerKey(key, bindings: settings.composingKeyBindings, client: client) {
                 return true
             }
             armedAutoSpaceCaret = nil
@@ -773,7 +771,7 @@ public final class TaigiInputController: IMKInputController {
 
         var handled = false
         send(client: client, armedSwap: armedSwap) { request in
-            backend.key(key, bindings: bindings, in: request).map { reply in
+            backend.key(key, in: request).map { reply in
                 handled = reply.handled
                 return reply.effects
             }
@@ -832,7 +830,7 @@ public final class TaigiInputController: IMKInputController {
         // the next swap re-verifies the position against the client anyway,
         // so a client that moved the caret degrades to no swap.
         var caretAfterSwap: Int?
-        let writer = ClientEffectExecutor(client: client)
+        let writer = ClientWriter(client: client)
         let replayTenure = tenure
         for effect in effects {
             // A client callback can take the focus away mid-replay; what the
@@ -842,13 +840,13 @@ public final class TaigiInputController: IMKInputController {
             guard tenure == replayTenure, backend.owns(sessionToken) else { return }
             switch effect {
             case let .setMarkedText(text, caretUTF16):
-                writer.execute(.updatePreedit(text, caretUTF16: caretUTF16))
+                writer.setMarkedText(text, caretUTF16: caretUTF16)
             case .clearMarkedText:
-                writer.execute(.clearPreeditWithoutCommit)
+                writer.clearMarkedText()
             case let .insertText(text):
                 // One `insertText` at the insertion point — a commit, the
                 // auto space, a mapped punctuation or a symbol alike.
-                writer.execute(.commitTextReplacingPreedit(text))
+                writer.insertText(text)
             case let .swapPrecedingSpace(replacement):
                 // Only ever answered after `canSwapPrecedingSpace` found the
                 // arm and the space still in front of the caret.
@@ -970,7 +968,7 @@ public final class TaigiInputController: IMKInputController {
     }
 
     /// Ends whatever is composing, then puts the symbol list up over the
-    /// caret (`ComposingBackend.commitForSymbolPicker`). A commit that only
+    /// caret (`CoreComposingBackend.commitForSymbolPicker`). A commit that only
     /// NAILED a segment leaves the composition running, and the picker waits
     /// for a key that ends it.
     @MainActor
@@ -1029,8 +1027,8 @@ public final class TaigiInputController: IMKInputController {
         if selection.location == NSNotFound || selection.length == 0 {
             isSymbolPickerPlaceholderMarked = true
             markedTextLength = Self.symbolPickerPlaceholder.utf16.count
-            ClientEffectExecutor(client: client)
-                .execute(.updatePreedit(Self.symbolPickerPlaceholder, caretUTF16: markedTextLength))
+            ClientWriter(client: client)
+                .setMarkedText(Self.symbolPickerPlaceholder, caretUTF16: markedTextLength)
         }
         guard let caretRect = caretRect(in: client, markedTextLength: markedTextLength) else {
             dismissSymbolPicker()
@@ -1098,7 +1096,7 @@ public final class TaigiInputController: IMKInputController {
         settings.noteRecentSymbol(symbol)
     }
 
-    /// Writes `symbol` through the back end (`ComposingBackend.insertSymbol`)
+    /// Writes `symbol` through the back end (`CoreComposingBackend.insertSymbol`)
     /// — the one picker key that touches the document, so the one that
     /// spends the auto-space arm.
     @MainActor
@@ -1126,7 +1124,7 @@ public final class TaigiInputController: IMKInputController {
         guard isSymbolPickerPlaceholderMarked else { return }
         isSymbolPickerPlaceholderMarked = false
         if let client = lastClient {
-            ClientEffectExecutor(client: client).execute(.clearPreeditWithoutCommit)
+            ClientWriter(client: client).clearMarkedText()
         }
     }
 
@@ -1247,7 +1245,7 @@ public final class TaigiInputController: IMKInputController {
         guard !send(client: client, armedSwap: nil, { backend.commitComposition(in: $0) }),
               isMarkedTextVisible
         else { return }
-        ClientEffectExecutor(client: client).execute(.clearPreeditWithoutCommit)
+        ClientWriter(client: client).clearMarkedText()
     }
 
     // MARK: - Main-actor assertion

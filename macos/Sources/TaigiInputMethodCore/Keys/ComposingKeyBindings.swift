@@ -32,39 +32,12 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
     case digits
 
     /// The slot `key` picks under this set, or nil when it picks none — the
-    /// classifier's question.
+    /// symbol picker's question.
     func slot(for key: KeyEventSnapshot) -> Int? {
         slot(
             forKey: key.charactersIgnoringModifiers,
             heldWith: key.modifiers.intersection([.command, .control, .option, .shift]),
         )
-    }
-
-    /// The slot `key` names with exactly ⇧ held — the Hanji/romanization commit aimed at a
-    /// slot (`ComposingKeyIntent.selectCandidateSlot(_:flip:)`), or nil.
-    ///
-    /// Resolved off the key CODE for the digits and `;`, because AppKit's
-    /// `charactersIgnoringModifiers` keeps Shift: `⇧3` reads `#` and `⇧;`
-    /// reads `:`, and only the key's position still says which key was
-    /// pressed — the same reading the recorder refuses those presses by
-    /// (`ComposingKeyChord.make(_:)`). The letters read as their capital,
-    /// which the case fold already handles. ANSI positions, so a layout
-    /// whose `;` or number row sits elsewhere resolves the key at the US
-    /// position instead — the trade the recorder's refusal already makes.
-    func shiftedSlot(for key: KeyEventSnapshot) -> Int? {
-        guard key.modifiers.intersection([.command, .control, .option, .shift]) == .shift else {
-            return nil
-        }
-        switch self {
-        case .bareKeys:
-            if key.keyCode == ComposingKeyChord.semicolonKeyCode {
-                return Self.bareKeyRow.count - 1
-            }
-            return slot(forKey: key.charactersIgnoringModifiers, heldWith: [])
-        case .digits:
-            guard let keyCode = key.keyCode else { return nil }
-            return ComposingKeyChord.numberRowKeyCodes.firstIndex(of: keyCode)
-        }
     }
 
     /// The keys `bareKeys` puts on slots 0…8, in slot order. Lowercase, as
@@ -117,10 +90,11 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
 
 /// The user's composing key contract, resolved and ready to classify against.
 ///
-/// A value passed into `ComposingKeyIntent.intent(for:...)` rather than read
-/// from `UserDefaults` inside it: the classification is the whole key contract
-/// of the input method, and it stays a pure function of its inputs so every
-/// binding combination can be pinned by a test.
+/// A value resolved once from the store (`SettingsStore.composingKeyBindings`)
+/// rather than read from `UserDefaults` key by key, so every binding
+/// combination can be pinned by a test. The symbol picker and the Shortcuts
+/// pane read it; the composition's classifier is desktop-core's, which
+/// resolves the same chords from the settings snapshot (`keys/intent.rs`).
 ///
 /// "Resolved" means three things have already happened, so the classifier can
 /// trust the value it is handed:

@@ -15,11 +15,6 @@ enum TestFixtures {
     static let dictionaryDirectory = repositoryRoot
         .appendingPathComponent("assets/dictionaries")
 
-    /// One counter for the whole test process, so no two suites can hand the
-    /// engine the same generation — spacing per-suite counters apart by hand
-    /// only works until a suite grows past the gap.
-    static let generationCounter = GenerationCounter(startingAt: 1000)
-
     /// The candidate-window metrics a fresh install renders at — what any
     /// suite exercising a cell or its measurement should use, unless the case
     /// is specifically about a non-default size.
@@ -211,30 +206,6 @@ enum TestFixtures {
         )
     }
 
-    /// The shipped defaults with the output and learning flags overridable —
-    /// the only settings any case here varies.
-    static func settings(
-        inputMode: InputMode = .tl,
-        swapped: Bool = false,
-        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        customDict: Bool = true,
-        dictionarySources: DictionarySourceToggles = .defaults,
-    ) -> EngineSettings {
-        EngineSettings(
-            inputMode: inputMode,
-            isHanjiFirst: swapped,
-            isFullWidthPunctuation: swapped,
-            candidateDisplayMode: candidateDisplayMode,
-            // §34/S22 ships ON; a case that wants it off writes the real
-            // setting with `withSetting`, which is the path production reads.
-            isLiteralRomanCandidateEnabled: true,
-            isHyphenlessRomanEnabled: false,
-            isNasalMarkerUppercaseEnabled: true,
-            isCustomDictEnabled: customDict,
-            dictionarySources: dictionarySources,
-        )
-    }
-
     /// An empty directory nothing else in the process is using. Each call gets
     /// its own, so a case that learns something cannot change what the next case
     /// starts from.
@@ -277,47 +248,6 @@ enum TestFixtures {
         return true
     }
 
-    /// A manager whose learning is recorded in memory unless a case supplies
-    /// its own recorder.
-    ///
-    /// The production initializer takes no defaults on purpose — the shipped
-    /// next-word port teaches the user's real data. Defaulting HERE is the
-    /// opposite hazard and the safe one: a case that forgets to say where its
-    /// learning goes gets a recorder that is thrown away. This process never
-    /// opens the engine's user data: the handle is process-wide, and an open
-    /// here would reach every later fetch in the run — so the picks the
-    /// engine counts itself (R5) go nowhere here.
-    ///
-    /// Skipped in the core back end's process: a Swift manager there would
-    /// count generations beside the core's coordinator and the two could
-    /// meet (macos-desktop-core-roadmap.md D9.1) — the legacy process runs
-    /// these cases.
-    @MainActor
-    static func makeComposingManager(
-        settingsProvider: EngineSettingsProvider = StubEngineSettingsProvider(),
-        nextWord: RecordingNextWordPort = RecordingNextWordPort(),
-        startingGeneration: UInt64,
-    ) throws -> ComposingManager {
-        try skipUnderTheCoreBackEnd()
-        return ComposingManager(
-            settingsProvider: settingsProvider,
-            nextWord: nextWord,
-            startingGeneration: startingGeneration,
-        )
-    }
-
-    /// Whether this process runs the core back end (the default;
-    /// `make -C macos test`'s first run) — for a case whose expectation
-    /// differs per back end.
-    static let isCoreBackEnd = ComposingBackends.kind == .core
-
-    /// Skips a case that drives the engine through the Swift key path's own
-    /// generations (`makeComposingManager`, the bridge's composing ops) in
-    /// the core back end's process.
-    static func skipUnderTheCoreBackEnd() throws {
-        try XCTSkipIf(isCoreBackEnd, "drives the engine with Swift generations — run by the legacy process")
-    }
-
     /// A coordinator of its own.
     ///
     /// Never `ComposingSessionCoordinator.shared`: that one is process-wide,
@@ -326,41 +256,6 @@ enum TestFixtures {
     @MainActor
     static func makeCoordinator() -> ComposingSessionCoordinator {
         ComposingSessionCoordinator()
-    }
-
-    /// A legacy back end of its own, over its own coordinator and a manager
-    /// with in-memory recorders and an unused generation.
-    @MainActor
-    static func makeLegacyBackend(
-        nextWord: RecordingNextWordPort = RecordingNextWordPort(),
-    ) throws -> (LegacyComposingBackend, ComposingManager) {
-        let manager = try makeComposingManager(nextWord: nextWord, startingGeneration: generationCounter.next())
-        return (LegacyComposingBackend(coordinator: makeCoordinator(), manager: manager), manager)
-    }
-
-    /// A candidate carrying only the fields a case is asserting on. The engine
-    /// fills ten, and a suite about navigation or rendering should not have to
-    /// name the eight it does not care about.
-    static func candidate(
-        roman: String = "tai",
-        hanji: String? = nil,
-        displayText: String = "",
-        canonicalTl: String = "",
-        consumedSpanEnd: UInt32 = 0,
-        syllableCount: UInt32 = 1,
-    ) -> ContinuousCandidate {
-        ContinuousCandidate(
-            consumedSpanStart: 0,
-            consumedSpanEnd: consumedSpanEnd,
-            syllableCount: syllableCount,
-            displayText: displayText,
-            score: 0,
-            form: 0,
-            scriptKind: .unspecified,
-            roman: roman,
-            hanji: hanji,
-            canonicalTl: canonicalTl,
-        )
     }
 
     /// A chord no `ComposingAction` ships with, for a case that needs to record
@@ -405,9 +300,8 @@ extension XCTestCase {
 
     /// Puts the whole of `UserDefaults.standard` back at teardown, as it is
     /// now — for a suite whose controllers read `.standard` itself, the one
-    /// domain the controller, the legacy back end's engine settings
-    /// (`withSetting`) and the core back end's snapshot then all read, as in
-    /// the shipped app. Called first in `setUp`, so it is the last teardown
+    /// domain the controller and the core back end's snapshots then all
+    /// read, as in the shipped app. Called first in `setUp`, so it is the last teardown
     /// block to run and no `withSetting` value is inside the snapshot.
     nonisolated func restoreStandardSettingsAtTeardown() {
         guard let domain = Bundle.main.bundleIdentifier else {
@@ -427,8 +321,8 @@ extension XCTestCase {
     /// writes nothing), restored afterwards to whatever it held — including
     /// "held nothing", which a bare `removeObject` would turn into a value a
     /// later case never chose. `.standard` rather than a scratch suite because
-    /// the controller and the shared coordinator's engine must read ONE domain
-    /// for these cases to mean anything.
+    /// the controller's requests and the core back end's lifecycle snapshot
+    /// must read ONE domain for these cases to mean anything.
     @MainActor
     func withSetting(_ key: String, to value: Any?, _ body: () throws -> Void) rethrows {
         let saved = UserDefaults.standard.object(forKey: key)
@@ -485,10 +379,10 @@ extension XCTestCase {
     /// Runs `body` with Hanji-first on or off.
     ///
     /// Through `withSetting` rather than a scratch store, for the reason
-    /// spelled out there: the controller reads its own `SettingsStore` while
-    /// the shared coordinator's `ComposingManager` reads another, so a swap
-    /// written to a scratch suite renders the bar one way and gates the commit
-    /// the other. A case that means "the user is in Hanji mode" has to move the
+    /// spelled out there: a key request carries the controller's own
+    /// `SettingsStore` while `Activate` / `Release` read `.standard`, so a swap
+    /// written to a scratch suite starts the session under one setting and
+    /// classifies under the other. A case that means "the user is in Hanji mode" has to move the
     /// domain BOTH of them read.
     @MainActor
     func withHanjiFirst(_ swapped: Bool, _ body: () throws -> Void) rethrows {
@@ -552,120 +446,6 @@ extension [CandidateCellContent] {
 
     var firstTwoScriptCell: CandidateCellContent? {
         firstTwoScriptIndex.map { self[$0] }
-    }
-}
-
-extension DictionarySourceToggles {
-    /// Every dictionary switched off — the state the wire cannot say with a
-    /// `0`, and so the one the all-off fetch test is about.
-    ///
-    /// Spelled out rather than derived from `.defaults`, because a source added
-    /// to the struct must fail to compile here until someone has said which
-    /// side of "off" it belongs on.
-    static let allSourcesOff = DictionarySourceToggles(
-        kautian: false,
-        taigitv: false,
-        itaigi: false,
-        sitbut: false,
-        taihoa: false,
-        taijit: false,
-        kungge: false,
-        stti: false,
-        khpoo: false,
-        variant: false,
-        khiin: false,
-        lkk: false,
-        dev: false,
-        kautianSubcollections: .defaults,
-    )
-}
-
-/// Hands out a generation nobody else is using.
-///
-/// The Rust composing state is one per process, and the engine drops that state
-/// whenever the generation it is handed differs from the last one it saw
-/// (`engine/composing/src/handle.rs:61-66`). A case that runs under its own
-/// generation therefore starts from an idle engine no matter what ran before it.
-final class GenerationCounter: @unchecked Sendable {
-    private let lock = NSLock()
-    private var value: UInt64
-
-    init(startingAt value: UInt64) {
-        self.value = value
-    }
-
-    func next() -> UInt64 {
-        lock.lock()
-        defer { lock.unlock() }
-        value += 1
-        return value
-    }
-}
-
-extension [ComposingTransition.Effect] {
-    /// The texts the engine asked to be written to the document, in order.
-    /// Assertions want the content, and hand-rolling the pattern match at every
-    /// call site buries what each case is actually checking.
-    var committedTexts: [String] {
-        compactMap { effect in
-            if case let .commitTextReplacingPreedit(text) = effect {
-                return text
-            }
-            return nil
-        }
-    }
-
-    /// The compositions the engine asked to be shown, in order — the marked
-    /// region's contents over time.
-    var preeditTexts: [String] {
-        compactMap { effect in
-            if case let .updatePreedit(text, _) = effect {
-                return text
-            }
-            return nil
-        }
-    }
-}
-
-/// Serves fixed settings, so a case can drive the manager under an output mode
-/// the shipped defaults do not use. The `UserDefaults`-backed provider is PR5's;
-/// until it exists this is the only way to reach the other three renderings.
-final class StubEngineSettingsProvider: EngineSettingsProvider {
-    let current: EngineSettings
-
-    init(
-        inputMode: InputMode = .tl,
-        swapped: Bool = false,
-        candidateDisplayMode: CandidateDisplayMode = .sideBySide,
-        customDict: Bool = true,
-        dictionarySources: DictionarySourceToggles = .defaults,
-    ) {
-        current = TestFixtures.settings(
-            inputMode: inputMode,
-            swapped: swapped,
-            candidateDisplayMode: candidateDisplayMode,
-            customDict: customDict,
-            dictionarySources: dictionarySources,
-        )
-    }
-}
-
-/// Collects effects instead of performing them, so a case can assert on what
-/// the host was told without a client.
-@MainActor
-final class RecordingEffectExecutor: ComposingEffectExecutor {
-    private(set) var effects: [ComposingTransition.Effect] = []
-
-    var committedTexts: [String] {
-        effects.committedTexts
-    }
-
-    func execute(_ effect: ComposingTransition.Effect) {
-        effects.append(effect)
-    }
-
-    func clearEffects() {
-        effects.removeAll()
     }
 }
 

@@ -12,9 +12,8 @@ import XCTest
 ///
 /// Every case also starts roman-first — the direction that earns the space —
 /// though the shipped default is hanji-first (2026-09-18) — written to
-/// `.standard`, the one domain the controller, the legacy back end's engine
-/// settings (`withHanjiFirst`) and the core back end's snapshot all read
-/// here. The Hanji-first cases opt in on top, as they always did.
+/// `.standard`, the one domain the controller and the core back end's
+/// snapshots all read here. The Hanji-first cases opt in on top, as they always did.
 @MainActor
 final class AutoSpaceControllerTests: XCTestCase {
     override func setUp() {

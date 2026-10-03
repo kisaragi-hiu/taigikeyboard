@@ -969,6 +969,76 @@ fn e4_a_format_character_reaches_the_next_word_gate() {
     );
 }
 
+/// What a commit writes is the engine's, what a cell shows is the
+/// presentation's, and the two must agree: a cell's own commit writes
+/// exactly the text the cell leads with, under every display, and the
+/// flipped one the other script of the same candidate — its annotation, the
+/// other half of a Hanji with Romanization split, or nothing at all under
+/// Romanization Only, which shows no Hanji to switch to (the composition
+/// then keeps running). Ported from the Swift key path's
+/// `ComposingManagerCandidateTests.testCommitCandidate_writesWhatItsCellShows_andSpaceTheOtherScript`
+/// when it was deleted (roadmap P13).
+#[test]
+fn the_mac_commits_what_each_cell_shows_and_the_flip_the_other_script() {
+    let _lock = engine_lock();
+    for (swapped, display_mode) in [
+        (false, CandidateDisplayMode::SideBySide),
+        (true, CandidateDisplayMode::SideBySide),
+        (true, CandidateDisplayMode::Combined),
+        (false, CandidateDisplayMode::RomanOnly),
+    ] {
+        // Combined splits a Hanji candidate into two cells.
+        let cell_count = if display_mode == CandidateDisplayMode::Combined {
+            2
+        } else {
+            1
+        };
+        for flip in [false, true] {
+            for index in 0..cell_count {
+                // A fresh composition per cell: a refused flip leaves it
+                // running.
+                let mut rig = rig_on(DesktopPlatform::MacOS);
+                rig.settings.edit(|doc| {
+                    doc.set_bool(&keys::IS_HANJI_FIRST, swapped);
+                    doc.set_choice(&keys::CANDIDATE_DISPLAY_MODE, display_mode);
+                });
+                rig.type_text("taigi");
+                let taigi = rig.candidate("台語");
+                let (cells, _) = rig.manager.presentation(std::slice::from_ref(&taigi));
+                let label = format!("swapped={swapped} {display_mode:?} cell={index} flip={flip}");
+                assert_eq!(cells.len(), cell_count, "{label}");
+                let cell = &cells[index];
+                let expected = if !flip {
+                    Some(cell.cell.text.clone())
+                } else if display_mode == CandidateDisplayMode::Combined {
+                    Some(cells[1 - index].cell.text.clone())
+                } else {
+                    cell.cell.annotation.clone()
+                };
+                let script = if flip {
+                    cell.script.flipped()
+                } else {
+                    cell.script
+                };
+
+                let (outcome, _) = rig.commit(&taigi, script);
+
+                // Every write, not only the last: one for a commit, none for
+                // a refusal (typing wrote none).
+                assert_eq!(
+                    rig.recorder.committed(),
+                    expected.as_deref().into_iter().collect::<Vec<_>>(),
+                    "{label}"
+                );
+                if expected.is_none() {
+                    assert_eq!(outcome, CandidateCommitOutcome::Ignored, "{label}");
+                    assert!(rig.manager.is_composing(), "{label}");
+                }
+            }
+        }
+    }
+}
+
 // MARK: - ComposingSessionCoordinatorTests
 
 #[test]

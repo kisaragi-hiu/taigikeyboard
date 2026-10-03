@@ -103,34 +103,6 @@ enum ComposingAction: String, CaseIterable, Sendable {
         }
     }
 
-    /// Whether this action needs candidates on screen to mean anything.
-    ///
-    /// A chord whose action does not apply is not consumed: it falls through to
-    /// whatever the key would otherwise be, so `]` still types a bracket when
-    /// there is no page to turn, and Return still ends a composition with no
-    /// bar up.
-    var requiresCandidates: Bool {
-        switch self {
-        case .commitLiteral: false
-        case .nextCandidate, .previousCandidate, .pageForward, .pageBackward,
-             .confirmHighlighted, .commitAlternateScript: true
-        }
-    }
-
-    /// What this action does, once its chord has been matched and its state
-    /// checked.
-    var intent: ComposingKeyIntent {
-        switch self {
-        case .nextCandidate: .navigate(.nextCandidate)
-        case .previousCandidate: .navigate(.previousCandidate)
-        case .pageForward: .navigate(.pageDown)
-        case .pageBackward: .navigate(.pageUp)
-        case .confirmHighlighted: .commitHighlightedCandidate
-        case .commitLiteral: .commit
-        case .commitAlternateScript: .commitAlternateScript
-        }
-    }
-
     /// The roster split into the blocks the settings pane draws: the keys that
     /// move through the candidates, and the keys that end the composition.
     /// Each is a `Section` of its own there (`ShortcutSettingsView`).

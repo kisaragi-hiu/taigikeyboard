@@ -28,28 +28,4 @@ enum ToneInputScheme: String, CaseIterable, Sendable {
     var slotKeySet: CandidateSlotKeySet {
         self == .telex ? .digits : .bareKeys
     }
-
-    /// Lower-case Telex keys: `x v y d w q` for tones 1/4 2/8 3 5 7 9 (`x` and `v` split
-    /// their pair by the coda, engine-side), `z` for
-    /// the affricate initial (`ts` / `ch`; `zh` then spells `tsh` / `chh`),
-    /// `f` for the hyphen. Mirrors the engine's `composing::telex::TELEX_KEYS`
-    /// — the two lists must name the same keys, or a key classified as Telex
-    /// here would be ignored there.
-    static let telexKeys: Set<Character> = ["v", "y", "d", "w", "x", "q", "z", "f"]
-
-    /// Whether `character` is a Telex key in either case. ASCII only: the
-    /// engine reads the key as an ASCII letter, and a `v` from another script
-    /// is document text.
-    static func isTelexKey(_ character: Character) -> Bool {
-        guard character.isASCII, let folded = character.lowercased().first else { return false }
-        return telexKeys.contains(folded)
-    }
-
-    /// Whether `character` may start a composition on its own. Only `z` /
-    /// `Z`: it types an initial, so it begins a syllable the way any letter
-    /// does. A tone letter or `f` has nothing to attach to when idle, and
-    /// passes to the host like an idle digit.
-    static func startsComposition(_ character: Character) -> Bool {
-        character == "z" || character == "Z"
-    }
 }
