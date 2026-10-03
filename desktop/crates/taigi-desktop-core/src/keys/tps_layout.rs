@@ -9,7 +9,7 @@
 //! key is read as typed, because Windows and Linux hand over the shifted
 //! character (`!`, `^`, `<`) rather than the key's base one.
 
-use super::slot_key_set::KEYPAD_KEY_CODES;
+use super::chord::is_keypad_key_code;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
 
 /// Every key the layout assigns, as `(typed character, glyph)`. A shifted
@@ -90,14 +90,11 @@ const KEYS: &[(char, &str)] = &[
 
 /// The glyph `event` types under TPS, or `None` for a key the layout does not
 /// assign — including any key chorded with Control, Alt or the Windows /
-/// Command key, which stays the host's or a shortcut's, and the keypad digits,
-/// which pick candidates (`CandidateSlotKeySet::Keypad`) though they type the
-/// same characters as the number row.
+/// Command key, which stays the host's or a shortcut's, and every keypad key,
+/// which types the same character as its main-block twin: the digits pick
+/// candidates (`CandidateSlotKeySet::Keypad`), the rest are plain text.
 pub fn tps_glyph_for_event(event: &KeyEventSnapshot) -> Option<&'static str> {
-    if event
-        .key_code
-        .is_some_and(|code| KEYPAD_KEY_CODES.contains(&code))
-    {
+    if event.key_code.is_some_and(is_keypad_key_code) {
         return None;
     }
     let shift = match event.modifiers {
@@ -187,13 +184,25 @@ mod tests {
     }
 
     #[test]
-    fn a_keypad_digit_is_not_a_tps_key_though_the_number_row_one_is() {
-        // trace: number-row `1` (VK 0x31) → ㄅ; keypad `1` (VK_NUMPAD1 0x61)
-        // types the same character and is a slot key, not a glyph.
+    fn a_keypad_key_is_not_a_tps_key_though_its_main_block_twin_is() {
+        // trace: number-row `1` (VK 0x31) → ㄅ; keypad `1` (VK_NUMPAD1 0x61),
+        // `0` (0x60), `.` (VK_DECIMAL 0x6E), `-` (VK_SUBTRACT 0x6D), `/`
+        // (VK_DIVIDE 0x6F), `*` (VK_MULTIPLY 0x6A) and the Mac keypad `=` (0x92)
+        // type the same characters and are not glyph keys.
         let number_row = KeyEventSnapshot::text("1", KeyModifiers::NONE).with_key_code(0x31);
-        let keypad = KeyEventSnapshot::text("1", KeyModifiers::NONE).with_key_code(0x61);
         assert_eq!(tps_glyph_for_event(&number_row), Some("ㄅ"));
-        assert_eq!(tps_glyph_for_event(&keypad), None);
+        for (typed, code) in [
+            ("1", 0x61),
+            ("0", 0x60),
+            (".", 0x6E),
+            ("-", 0x6D),
+            ("/", 0x6F),
+            ("*", 0x6A),
+            ("=", 0x92),
+        ] {
+            let keypad = KeyEventSnapshot::text(typed, KeyModifiers::NONE).with_key_code(code);
+            assert_eq!(tps_glyph_for_event(&keypad), None, "{typed:?}");
+        }
     }
 
     #[test]

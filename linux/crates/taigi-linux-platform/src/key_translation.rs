@@ -191,9 +191,10 @@ fn is_named_special_keysym(keysym: Keysym) -> bool {
 /// (`chord.rs` `NUMBER_ROW_KEY_CODES` / `SEMICOLON_KEY_CODE`): the tables
 /// tell Shift+3 apart from a typed `#` by the KEY, which on Linux is the
 /// hardware keycode — the X keycode, evdev + 8 (`KEY_1` = 2 → 10). The
-/// keypad's `1`…`9` map to `VK_NUMPAD1`…`9`, the TPS slot keys
-/// (`CandidateSlotKeySet::Keypad`); its rows run 7-8-9 / 4-5-6 / 1-2-3 by
-/// keycode (`KEY_KP7` = 71 → 79). Other keys carry no code, as nothing reads one.
+/// keypad maps to `VK_NUMPAD0`…`VK_DIVIDE`: its digits are the TPS slot keys
+/// (`CandidateSlotKeySet::Keypad`) and no keypad key is a TPS layout key
+/// (`tps_layout.rs`). Its digit rows run 7-8-9 / 4-5-6 / 1-2-3 by keycode
+/// (`KEY_KP7` = 71 → 79). Other keys carry no code, as nothing reads one.
 fn virtual_key_code(keycode: u32) -> Option<u16> {
     match keycode {
         10..=18 => Some(0x31 + (keycode - 10) as u16),
@@ -202,6 +203,12 @@ fn virtual_key_code(keycode: u32) -> Option<u16> {
         79..=81 => Some(0x67 + (keycode - 79) as u16),
         83..=85 => Some(0x64 + (keycode - 83) as u16),
         87..=89 => Some(0x61 + (keycode - 87) as u16),
+        90 => Some(0x60),  // KP_0
+        63 => Some(0x6A),  // KP_Multiply
+        86 => Some(0x6B),  // KP_Add
+        82 => Some(0x6D),  // KP_Subtract
+        91 => Some(0x6E),  // KP_Decimal
+        106 => Some(0x6F), // KP_Divide
         _ => None,
     }
 }
@@ -347,6 +354,22 @@ mod tests {
             (key::KP_2, 88, 0x62),
             (key::KP_3, 89, 0x63),
         ];
+        // The rest of the block: evdev KP0 82, KPDOT 83, KPASTERISK 55,
+        // KPMINUS 74, KPPLUS 78, KPSLASH 98; + 8.
+        for (keysym, keycode, expected) in [
+            (key::KP_0, 90, 0x60),
+            (key::KP_Decimal, 91, 0x6E),
+            (key::KP_Multiply, 63, 0x6A),
+            (key::KP_Subtract, 82, 0x6D),
+            (key::KP_Add, 86, 0x6B),
+            (key::KP_Divide, 106, 0x6F),
+        ] {
+            assert_eq!(
+                press(keysym, keycode, 0).unwrap().key_code,
+                Some(expected),
+                "{keycode}"
+            );
+        }
         for (keysym, keycode, expected) in keypad {
             let snapshot = press(keysym, keycode, 0).unwrap();
             assert_eq!(snapshot.key_code, Some(expected), "{keycode}");

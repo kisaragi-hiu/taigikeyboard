@@ -1,6 +1,6 @@
 //! Which keys pick a candidate out of the nine slots.
 
-use super::chord::{NUMBER_ROW_KEY_CODES, SEMICOLON_KEY_CODE};
+use super::chord::{KEYPAD_DIGIT_KEY_CODES, NUMBER_ROW_KEY_CODES, SEMICOLON_KEY_CODE};
 use super::intent::ComposingKeyIntent;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
 
@@ -27,11 +27,6 @@ pub enum CandidateSlotKeySet {
     /// (`tps_layout.rs`). Told apart from the number row by key code.
     Keypad,
 }
-
-/// `VK_NUMPAD1`…`VK_NUMPAD9`, the codes the shells spell the keypad digits in
-/// (Windows natively; the Linux and macOS key translations map theirs).
-pub(crate) const KEYPAD_KEY_CODES: [u16; 9] =
-    [0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69];
 
 impl CandidateSlotKeySet {
     /// Every set, for anything measured against every form a slot can be
@@ -61,7 +56,7 @@ impl CandidateSlotKeySet {
         if !event.modifiers.is_empty() {
             return None;
         }
-        let slot = KEYPAD_KEY_CODES
+        let slot = KEYPAD_DIGIT_KEY_CODES
             .iter()
             .position(|code| Some(*code) == event.key_code)?;
         (ComposingKeyIntent::direct_selection_slot(event.unmodified_characters()) == Some(slot))
@@ -245,7 +240,7 @@ mod tests {
 
     #[test]
     fn keypad_picks_by_keypad_code_and_digit_only() {
-        // trace: KEYPAD_KEY_CODES — VK_NUMPAD3 (0x63) typing `3` is slot 2;
+        // trace: KEYPAD_DIGIT_KEY_CODES — VK_NUMPAD3 (0x63) typing `3` is slot 2;
         // the number row's `3` (0x33) misses; a keypad key typing nothing
         // (Num Lock off on Linux) misses; Shift never flips.
         let set = CandidateSlotKeySet::Keypad;

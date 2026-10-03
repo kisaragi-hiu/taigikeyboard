@@ -89,7 +89,7 @@ Base rows — the Dachen positions as `rime-moetaigi` adapts them (`moetaigi-tsu
 
 Stop codas `b` ㆴ, `t` ㆵ, `g` ㆻ, `z` ㆷ. Tones `4` ˋ (2), `3` ˪ (3), `6` ˊ (5), `=` ˇ (6) †, `5` ˫ (7), `7` ˙ (8, typed as U+02D9 as on mobile; the engine folds it for lookup, `engine/phonetics/src/tps.rs:262`), Shift+`6` ˆ (9) †; tone 1 and the unmarked tone 4 are Space. `'` types the hyphen † — `-` is taken by ㆭ, and the hyphen is how 輕聲 `--` is written (`engine/phonetics/src/tps.rs:132-134`).
 
-A key or Shift layer the table leaves out is not a TPS key and types as in any other mode (`?`, `@`, a capital) — so punctuation with no glyph still reaches the document, full-width while composing.
+A key or Shift layer the table leaves out (`?`, `@`, a capital) and every keypad key are not TPS keys: they are document text — passed through when idle, committing the glyphs ahead of themselves while composing (D3) — so punctuation with no glyph still reaches the document, full width.
 
 † = not in `rime-moetaigi`. Mobile types ㄝ ㆨ ˇ from its grid and tone 9 as the digit `9`, which the adjuster turns into ˆ (`ios/Sources/TaigiKeyboard/Layout/TaigiLayouts.swift:83-98`; `engine/phonetics/src/tps_adjust.rs:268-302`); here ˆ has its own key. ㄝ is `ee`, a phoneme of its own, not a spelling of ㆤ `e` (`engine/phonetics/src/tps_ambiguity.rs:23-27`).
 

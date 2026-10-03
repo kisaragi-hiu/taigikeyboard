@@ -135,6 +135,41 @@ fn tps_key_composes_glyphs_and_space_is_taken_once() {
 }
 
 #[test]
+fn every_layout_glyph_begins_a_composition_the_engine_takes() {
+    // D2's hand check, automated against engine-table drift: each glyph the
+    // layout types, sent alone from idle, is taken and lands in the buffer.
+    // The hyphen alone is §21's document literal, not a composition.
+    use taigi_desktop_core::keys::{tps_glyph_for_event, KeyEventSnapshot, KeyModifiers};
+    let _engine = engine();
+    // The engine composes a TPS buffer by its content (`contains_tps`), so
+    // the default settings serve until the desktop has a TPS mode (P2b).
+    let settings = EngineSettings::default();
+    let keys = ('a'..='z')
+        .chain('0'..='9')
+        .chain(",;/-.=".chars())
+        .map(|key| (key.to_string(), KeyModifiers::NONE))
+        .chain(
+            "!EDRY*IKO>UJ(L<:^"
+                .chars()
+                .map(|key| (key.to_string(), KeyModifiers::SHIFT)),
+        );
+    for (typed, modifiers) in keys {
+        let glyph = tps_glyph_for_event(&KeyEventSnapshot::text(&typed, modifiers))
+            .unwrap_or_else(|| panic!("{typed:?} is a layout key"));
+        let generation = fresh_generation();
+        let taken =
+            engine::tps_key(glyph, &settings, PLATFORM, generation).expect("tps round trip");
+        assert!(!taken.effects.is_empty(), "{typed:?} → {glyph:?} taken");
+        assert!(
+            taken.raw_input.contains(glyph),
+            "{typed:?} → {glyph:?} in {:?}",
+            taken.raw_input
+        );
+        engine::reset(generation);
+    }
+}
+
+#[test]
 fn tl_display_to_tps_spells_a_reading_in_tps() {
     // trace: phonetics `tl_display_to_tps` — `ka` → ㄍㄚ; `kò` (tone 3) →
     // ㄍㄛ˪; `or` follows the flag (ㄜ when it maps to `er`).

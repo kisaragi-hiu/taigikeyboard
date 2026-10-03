@@ -59,6 +59,20 @@ pub enum ChordRejection {
 pub(crate) const NUMBER_ROW_KEY_CODES: [u16; 9] =
     [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39];
 
+/// `VK_NUMPAD1`…`VK_NUMPAD9`, the keypad digits that pick under TPS
+/// (`CandidateSlotKeySet::Keypad`). Windows fills them natively; the Linux and
+/// macOS key translations map theirs.
+pub(crate) const KEYPAD_DIGIT_KEY_CODES: [u16; 9] =
+    [0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69];
+
+/// Whether `code` is any keypad key: `VK_NUMPAD0`…`VK_DIVIDE` (0x60–0x6F),
+/// or `VK_OEM_NEC_EQUAL` (0x92), the code the macOS translation gives the
+/// keypad `=`. A keypad key types the same character as its main-block twin
+/// but is never a TPS layout key (`tps_layout.rs`).
+pub(crate) fn is_keypad_key_code(code: u16) -> bool {
+    (0x60..=0x6F).contains(&code) || code == 0x92
+}
+
 /// `VK_OEM_1`, the `;` key on a US layout — refused under Shift for the same
 /// reason as the number row: it is the ninth slot key, and Shift+`;` aims
 /// the Hanji/romanization commit at it (`CandidateSlotKeySet::shifted_slot_for_event`)
