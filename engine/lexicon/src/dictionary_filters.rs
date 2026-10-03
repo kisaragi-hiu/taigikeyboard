@@ -1,6 +1,6 @@
 //! `dictionary_filters` — single source of truth for the user's dictionary
-//! toggle → bitmask conversion. Replaces `EnabledDictionaries.swift` /
-//! `.kt` (~80 LOC verbatim-mirrored bit math) per audit residue
+//! toggle → bitmask conversion. Replaces the former iOS / Android
+//! `EnabledDictionaries` copies (~80 LOC verbatim-mirrored bit math) per audit residue
 //! 2026-05-04 § A.1 P2.
 //!
 //! Pure logic, no I/O. The dispatch layer wraps `compute_filters` into a

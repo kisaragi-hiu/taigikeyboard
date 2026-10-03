@@ -1,10 +1,10 @@
 //! The engine bridge: the protobuf envelope to `dispatch::process_request`
 //! and the typed per-slice surfaces over it (composing, lexicon, next-word).
 //!
-//! In-process on Windows — no FFI seam — but the SAME envelope contract the
-//! iOS/Android/macOS bridges speak, so the engine is reused unchanged and
-//! every `file:line` in `docs/engine/` applies here too. Port of
-//! `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge*.swift`.
+//! In-process on Windows and Linux, and on macOS behind `taigi-macos-ffi` —
+//! no engine FFI seam — but the SAME envelope contract the iOS/Android
+//! bridges speak, so the engine is reused unchanged and every `file:line` in
+//! `docs/engine/` applies here too.
 
 mod bridge;
 mod composing;

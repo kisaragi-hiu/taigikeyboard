@@ -1,8 +1,8 @@
 //! `Method::GetToneVariations` — init-bulk-pull builder for callout tone
 //! variation tables.
 //!
-//! Mirrors iOS `Callouts/Callouts+TaigiCalloutMaps.swift` `TaigiToneMaps`
-//! `buildToneMap(mode:)` static initializer. Returns POJ + TL maps in one
+//! Owns the callout tone maps formerly built by iOS `buildToneMap(mode:)`
+//! (iOS `Callouts/TaigiCallouts+Maps.swift` now reads them). Returns POJ + TL maps in one
 //! response so platform caches once at engine init (lazy + idempotent).
 //!
 //! Pattern matches khiin-rs `loadSettings → AppConfig` cached snapshot.

@@ -1,7 +1,7 @@
 //! Where this input method keeps what it learns from the user:
 //! `%APPDATA%\TaigiKeyboard` (roaming, so learned rankings follow a domain
 //! profile — the one place Windows offers for per-user data that is not a
-//! cache). Port of `Storage/UserDataDirectory.swift`.
+//! cache). `Storage/UserDataDirectory.swift` is the macOS twin.
 
 use std::path::{Path, PathBuf};
 

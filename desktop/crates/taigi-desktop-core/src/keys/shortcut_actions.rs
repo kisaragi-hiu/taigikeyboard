@@ -1,8 +1,10 @@
 //! The user-configurable GLOBAL shortcuts: which actions exist, their
 //! defaults, the extra refusals a global row has, and how the two
 //! registries — global chords and composing chords — are kept from
-//! colliding. Port of `ShortcutActions.swift` (`ShortcutAction`,
-//! `ShortcutConflicts`) + `GlobalShortcutPolicy` (`ShortcutKeyRecorder.swift:45-92`).
+//! colliding — for Windows and Linux. The Mac's global tier stays in Swift
+//! over `KeyboardShortcuts`, a twin on the same rules: `ShortcutActions.swift`
+//! (`ShortcutAction`, `ShortcutConflicts`) and `GlobalShortcutPolicy`
+//! (`ShortcutKeyRecorder.swift`).
 //!
 //! On the Mac the global tier stores Carbon key codes and needs a bridge to
 //! compare with the composing tier's characters; on Windows both tiers store
@@ -34,8 +36,9 @@ pub enum ShortcutAction {
     /// typing.
     ShowTelexGuide,
     /// Opens the settings window on whichever pane the user left it on. Last
-    /// on the pane (USER 2026-09-21, `ShortcutActions.swift`): the one row
-    /// that leaves the typing session.
+    /// on the pane (USER 2026-09-21): the one row that leaves the typing
+    /// session. The Mac's Swift twin keeps the same order
+    /// (`ShortcutActions.swift` `ShortcutAction`).
     OpenLastSettingsPane,
 }
 
@@ -113,9 +116,11 @@ impl ShortcutAction {
     /// roster: ⌃⌘S → Ctrl+Alt+S for Settings, ⌃⌘C → Ctrl+Alt+C for the
     /// romanization switch, ⌃⌘H → Ctrl+Alt+H for the display-mode cycle. The
     /// letters are the Mac's reasons, unchanged — S for Settings / siat-tīng /
-    /// settei, C for the bottom row a key pressed all day should sit on
-    /// (`ShortcutActions.swift:31-52`), and H for Hàn-Lô (Hanji/romanization), the thing the
-    /// cycle switches. USER 2026-08-31: the chord logic has to match macOS's.
+    /// settei, C for the bottom row a key pressed all day should sit on, and H
+    /// for Hàn-Lô (Hanji/romanization), the thing the cycle switches. USER
+    /// 2026-08-31: the chord logic has to match macOS's, whose Swift twin
+    /// spells out the same reasons (`ShortcutActions.swift`
+    /// `openLastSettingsPane`, `toggleRomanization`).
     ///
     /// Ctrl+Shift is NOT that family and its S and C are both taken —
     /// Ctrl+Shift+S is Save As in Word / Excel / LibreOffice / GIMP / Inkscape
@@ -133,8 +138,8 @@ impl ShortcutAction {
     /// `/` is the key help lives on (`?` is Shift+/, and every app that
     /// answers "which keys do what" answers it there). Not Ctrl+Alt+T, the
     /// mnemonic first reached for — JetBrains binds it to Surround With, and
-    /// a user in an IDE would lose one or the other
-    /// (`ShortcutActions.swift` `showTelexGuide`). On a layout where `/`
+    /// a user in an IDE would lose one or the other (the Swift twin,
+    /// `ShortcutActions.swift` `showTelexGuide`, says the same). On a layout where `/`
     /// itself needs Shift, the preserved key registers with that Shift
     /// OR-ed in (`preserved_key`) and still fires; only the key sink's
     /// fallback — for hosts that bypass preserved keys — cannot match
@@ -200,8 +205,8 @@ impl ShortcutAction {
     /// or unreadable row; `Some(Err)` for a stored value the gate refuses.
     /// The launch pass reads WHY a row fails to translate, because a row on a
     /// typing key is one the recorder would refuse today and the preserved
-    /// key would still be dispatched first (`ShortcutActions.swift`
-    /// `translation(of:)`).
+    /// key would still be dispatched first. macOS keeps a Swift twin:
+    /// `ShortcutActions.swift` `translation(of:)`.
     fn translation_in(
         self,
         document: &SettingsDocument,
@@ -384,7 +389,8 @@ impl ShortcutConflicts {
         // would have refused it; a refusal is not "no conflict". `ReservedKey`
         // rows cannot exist (the arrows and the deletes were never
         // recordable); only the typing-key refusal names an upgrade path.
-        // Mirrors `ShortcutActions.swift` `resolveAcrossRegistries`.
+        // macOS keeps a Swift twin: `ShortcutActions.swift`
+        // `resolveAcrossRegistries`.
         for action in ShortcutAction::ALL {
             if action.translation_in(document, platform)
                 == Some(Err(ChordRejection::TypesRomanization))
@@ -431,7 +437,9 @@ mod tests {
 
     #[test]
     fn roster_defaults_and_keys() {
-        // trace: ShortcutActionsTests.swift:31-160 (Windows chords).
+        // trace: `default_chord` — the Mac's ⌃⌘ roster as Ctrl+Alt (S, C, H, `,`,
+        // `/`), the bare backtick unchanged; six names, six distinct defaults,
+        // each recordable and clear of the composing defaults.
         let mut names: Vec<_> = ShortcutAction::ALL
             .iter()
             .map(|a| a.settings_key_name())
@@ -646,7 +654,8 @@ mod tests {
 
     #[test]
     fn recording_a_chord_another_global_action_holds_reports_and_clears_it() {
-        // trace: ShortcutActionsTests.swift:182-236.
+        // trace: `conflicting_global_actions` reports the other holder;
+        // `resolve_after_global_recording` clears it (last writer wins).
         let mut doc = SettingsDocument::default();
         let shared = chord("k", KeyModifiers::CONTROL.with(KeyModifiers::SHIFT));
         ShortcutAction::OpenLastSettingsPane.store_in(&mut doc, Some(&shared), PLATFORM);
@@ -705,7 +714,8 @@ mod tests {
 
     #[test]
     fn launch_pass_reconciles_the_two_registries() {
-        // trace: CrossTierShortcutConflictTests.swift:264-400.
+        // trace: `resolve_across_registries` — recording beats default; recording
+        // vs recording, the global tier wins; typing-key global rows cleared.
         // A global default shadowed by a composing recording: the recording wins.
         let mut doc = SettingsDocument::default();
         let default = ShortcutAction::ToggleRomanization.default_chord();

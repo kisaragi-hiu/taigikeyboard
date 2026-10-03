@@ -1,9 +1,8 @@
 //! The composing orchestration: one user intent in, the engine mirror
 //! updated and the engine's effects handed to the client that asked.
 //!
-//! Port of `macos/Sources/TaigiInputMethodCore/Composing/*.swift` +
-//! `NextWord/NextWordPort.swift` + `Candidates/{CandidateCellContent,
-//! CandidateScript}.swift`. The TSF shell implements
+//! The one copy the three desktops run; macOS reaches it through
+//! `taigi-macos-ffi`. The TSF shell implements
 //! [`ComposingEffectExecutor`] over an edit session; the engine resolves what
 //! a pick writes and keeps the user's data (it counts the picks itself);
 //! tests record in memory.

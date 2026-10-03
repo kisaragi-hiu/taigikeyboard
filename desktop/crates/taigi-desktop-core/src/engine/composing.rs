@@ -1,8 +1,7 @@
 //! Composing slice of the engine bridge: the intents the desktop sends and
-//! the decoding of what comes back. Port of `RustEngineBridge+Composing.swift`.
+//! the decoding of what comes back.
 //!
-//! This is a subset of the engine's intents, for the reasons that
-//! file documents at length: `AppendHyphen` is an alias for `Append("-")`,
+//! This is a subset of the engine's intents, on purpose: `AppendHyphen` is an alias for `Append("-")`,
 //! `ReplaceLast` is TPS-only, `Start` is unnecessary (`Append` begins the
 //! composition from Idle), `SelectCandidate` double-counts the nailed
 //! prefix under `Phase::Continuous` so the literal commit is `CommitRaw`.
@@ -58,7 +57,7 @@ pub fn append(
 /// types the affricate initial the input mode spells (`composing.proto`
 /// `TelexKey`, `engine/composing/src/telex.rs`). Carries the same config
 /// as `append` (`z` resolves by `input_mode`, the prefix by the spacing
-/// flags). Port of `composingTelexKey` (`RustEngineBridge+Composing.swift`).
+/// flags).
 pub fn telex_key(
     key: &str,
     settings: &EngineSettings,
@@ -94,7 +93,7 @@ pub fn delete_backward(
 /// `UpdatePreedit` carrying the new caret and nothing else — no fetch is
 /// requested. Same config as `append`: the answer re-renders the
 /// composition the way the last keystroke did, so a move never changes the
-/// text on screen (`composingMoveCaret`, `RustEngineBridge+Composing.swift`).
+/// text on screen.
 pub fn move_caret(
     direction: CaretDirection,
     settings: &EngineSettings,
@@ -183,9 +182,8 @@ pub fn fetch_at_pos(
         // §34/S22 — positive platform setting → inverted proto disable gate
         // (the field's own comment carries why), so Show Typed Text First ON leaves the
         // preedit literal leading the list and Enter commits what was typed.
-        // CROSS-PLATFORM INVARIANT — mirrors
-        // `macos/Sources/TaigiInputMethodCore/Engine/RustEngineBridge+Composing.swift`
-        // `composingFetchAtPos`, which inverts the same setting onto the same field.
+        // CROSS-PLATFORM INVARIANT — iOS `ComposingManager.swift` inverts the same
+        // setting onto the same field.
         literal_roman_candidate_disabled: !settings.is_literal_roman_candidate_enabled,
         // The engine reads the user's dictionary only with this setting on.
         custom_dictionary_disabled: !settings.is_custom_dict_enabled,

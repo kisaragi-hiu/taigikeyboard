@@ -36,7 +36,7 @@ pub mod os_out_buffer;
 ///
 /// The UI language list (`GetUserPreferredUILanguages`), NOT the regional
 /// format locale (`GetUserDefaultLocaleName`): the Mac reads
-/// `Locale.preferredLanguages.first` (`DisplayLanguageStore.swift:122-128`),
+/// `Locale.preferredLanguages.first` (`DisplayLanguageStore.systemLanguageSubtag`),
 /// and an English-UI machine set to a Taiwan region must draw English here
 /// too, not Hanji. The format locale is only the fallback for a machine whose
 /// UI-language list cannot be read.
@@ -79,7 +79,7 @@ pub fn system_locale() -> String {
 
 /// Opens `url` in the user's browser; `false` when nothing could handle it
 /// (the settings window then says so rather than doing nothing —
-/// `ExternalLinkButton.swift:775-780`).
+/// `ExternalLinkButton.open()` on the Mac).
 #[cfg(windows)]
 pub fn open_url(url: &str) -> bool {
     use windows::core::PCWSTR;

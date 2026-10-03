@@ -23,7 +23,7 @@ pub fn strings_for(document: &SettingsDocument) -> StringResolver {
 
 /// Opens `url` in the browser, answering the message to show when it
 /// refused: a button that silently does nothing is indistinguishable from
-/// a broken one (`ExternalLinkButton.swift:740-744`).
+/// a broken one (`ExternalLinkButton.open()` on the Mac).
 pub fn open_url(url: &str) -> Option<PageMessage> {
     (!taigi_windows_platform::open_url(url))
         .then(|| PageMessage::failure(StringKey::DesktopOpenURLFailed, url))

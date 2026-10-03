@@ -1,5 +1,5 @@
-//! The expanded grid's geometry: column-spanned rows, pure arithmetic. Port
-//! of `ExpandedGridLayout.swift` (MacishType-derived).
+//! The expanded grid's geometry: column-spanned rows, pure arithmetic
+//! (MacishType-derived; macOS keeps a Swift twin: `ExpandedGridLayout.swift`).
 
 /// One candidate's place in the grid.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -135,7 +135,8 @@ mod tests {
 
     #[test]
     fn compute_quantizes_widths_into_column_spans() {
-        // trace: ExpandedGridLayoutTests.swift:14-34.
+        // trace: 10-pt columns, 6 per row: spans ceil(w / 10) = 1, 2, 3 fill
+        // columns 0-5, so the fourth wraps; 200 clamps to 6 and sits alone.
         assert_eq!(
             shape(&grid(&[10.0, 15.0, 25.0, 10.0])),
             [vec![[0, 0, 1], [1, 1, 2], [2, 3, 3]], vec![[3, 0, 1]]]
@@ -161,7 +162,8 @@ mod tests {
 
     #[test]
     fn vertical_target_lands_on_the_overlapping_cell_and_is_none_at_the_edge() {
-        // trace: ExpandedGridLayoutTests.swift:36-63.
+        // trace: rows [0:c0, 1:c1-2, 2:c3-5] / [3:c0-2, 4:c3-5]: 1 down overlaps
+        // 3, 4 up overlaps 2; spans 4,2 / 1,1,1,3: 5 up overlaps 0 and 1, tiebreak → 1.
         let layout = grid(&[10.0, 15.0, 25.0, 25.0, 25.0]);
         assert_eq!(layout.vertical_target(1, 1), Some(3));
         assert_eq!(layout.vertical_target(4, -1), Some(2));

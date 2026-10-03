@@ -1,7 +1,7 @@
 //! INVARIANT_composing_* parity oracles.
 //!
-//! Sourced from the pre-Rust iOS `ComposingStateTests.swift` and Android
-//! `ComposingStateTest.kt` (both deleted with the migration). These pin
+//! Sourced from the pre-Rust iOS and Android composing-state test suites
+//! (both deleted with the migration). These pin
 //! the behavior the platform state machines deliver pre-deletion (commit 9/10).
 
 use composing::{Engine, Intent};

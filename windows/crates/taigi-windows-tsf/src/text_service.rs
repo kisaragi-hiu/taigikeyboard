@@ -1061,7 +1061,7 @@ impl ITfLangBarItem_Impl for TextService_Impl {
 impl ITfLangBarItemButton_Impl for TextService_Impl {
     /// Both mouse buttons raise the menu — this button has no mode to
     /// toggle, and the Mac opens its menu on a plain click
-    /// (`TaigiInputController.swift:264-329`). The rows are drawn here
+    /// (`TaigiInputController.menu()`). The rows are drawn here
     /// rather than through `InitMenu`: the taskbar input indicator never
     /// drives the TSF menu (`lang_bar`'s module header).
     fn OnClick(&self, _click: TfLBIClick, pt: &POINT, _prcarea: *const RECT) -> Result<()> {

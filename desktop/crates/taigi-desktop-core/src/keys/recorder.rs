@@ -1,7 +1,9 @@
 //! What a key press means to a shortcut-recording field, as a pure decision
-//! — the part of `ShortcutKeyRecorder.swift` (`handle(_:)`,
-//! `GlobalShortcutPolicy`) that is not AppKit. The settings window feeds it
-//! the press and draws the answer.
+//! — the part of a recording field that is not UI. The settings window feeds
+//! it the press and draws the answer. The macOS field
+//! (`ShortcutKeyRecorder.swift`) asks it through `KeyRules.press` for the
+//! composing tier; its global-tier refusals are a Swift twin
+//! (`GlobalShortcutPolicy`).
 
 use super::action::ComposingAction;
 use super::chord::{ChordRejection, ComposingKeyChord};
@@ -12,7 +14,8 @@ use crate::settings::SettingsDocument;
 use crate::strings::StringKey;
 
 /// Which registry the row writes to — what it refuses on top of the shared
-/// gate differs (`ShortcutSettingsView.swift:429-436`).
+/// gate differs. macOS keeps a Swift twin: `ShortcutSettingsView.swift`
+/// `globalRecorderRow`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum RecorderTier {
     /// A composing action: only the shared gate.
@@ -95,10 +98,9 @@ pub enum RecorderOutcome {
     Ignored,
 }
 
-/// The recorder's decision for `press` on a row of `tier`
-/// (`ShortcutKeyRecorder.swift:403-468`). The slot keys need no refusal of
-/// their own: the shared gate refuses every bare letter, digit and `;`
-/// whichever tone scheme is live (`ComposingKeyChord::make`).
+/// The recorder's decision for `press` on a row of `tier`. The slot keys
+/// need no refusal of their own: the shared gate refuses every bare letter,
+/// digit and `;` whichever tone scheme is live (`ComposingKeyChord::make`).
 pub fn evaluate_press(
     tier: RecorderTier,
     press: &RecordedPress,
@@ -149,10 +151,11 @@ pub fn evaluate_press(
     RecorderOutcome::Recorded(chord)
 }
 
-/// The prompt a refusal replaces (`ShortcutKeyRecorder.swift:366-377`). Every
-/// refusal but `NoKey` means the chord already belongs to something — typing,
-/// the input method, the system, or the host app — and to the reader they
-/// all mean "not this key", so one message covers them.
+/// The prompt a refusal replaces. Every refusal but `NoKey` means the chord
+/// already belongs to something — typing, the input method, the system, or
+/// the host app — and to the reader they all mean "not this key", so one
+/// message covers them. macOS keeps a Swift twin: `ShortcutKeyRecorder.swift`
+/// `prompt`.
 pub fn rejection_message_key(rejection: ChordRejection) -> StringKey {
     match rejection {
         ChordRejection::NoKey => StringKey::DesktopShortcutRejectedNoKey,

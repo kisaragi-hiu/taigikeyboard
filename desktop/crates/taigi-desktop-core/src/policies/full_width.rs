@@ -1,9 +1,10 @@
 //! Maps typed half-width punctuation to its full-width form for hanji-first
-//! output. Port of `FullWidthPunctuation.swift`: applied only while the
+//! output, applied only while the
 //! Hanji/Romanization Swap has Hanji coming first (the MOE rule: full-width in Hanji mode, TL mode
 //! half-width); the caller reads the mode, and the auto-space swap is read first
 //! and wins. The mode is a default, not a wall: Ctrl on any key of this map
 //! types the other width once (`ComposingKeyIntent::width_flip_character`).
+//! macOS keeps a Swift twin: `macos/.../Policies/FullWidthPunctuation.swift`.
 
 /// The MOE manual's symbol shortcut table, minus what this input method must keep
 /// half-width: digits (tone markers), the hyphen (syllable separator),
@@ -52,8 +53,8 @@ pub fn full_width_mapped(text: &str) -> Option<String> {
 /// host should write it: the full-width form when the mode types full-width
 /// marks, and under the width-flip chord the OTHER width. A flipped key is
 /// never `None` — the host would read the chord as a shortcut, so even its
-/// half-width form is written by the input method
-/// (`FullWidthPunctuation.swift` `documentPunctuation`).
+/// half-width form is written by the input method. macOS keeps a Swift twin:
+/// `FullWidthPunctuation.swift` `documentPunctuation`.
 pub fn document_punctuation(
     text: &str,
     is_full_width_mode: bool,
@@ -71,8 +72,8 @@ mod tests {
 
     #[test]
     fn the_flip_chord_types_the_other_width_and_the_bare_key_the_modes() {
-        // trace: FullWidthPunctuationTests.swift
-        // `testDocumentPunctuation_flipTypesTheOtherWidthAndTheBareKeyTheModes`.
+        // trace: `document_punctuation` — mode != flip → the mapped form;
+        // mode == flip → the typed text under the flip, `None` without it.
         assert_eq!(
             document_punctuation(",", true, false).as_deref(),
             Some("，")
@@ -90,7 +91,7 @@ mod tests {
 
     #[test]
     fn every_mapped_pair_follows_the_moe_table() {
-        // trace: FullWidthPunctuationTests.swift:13-29.
+        // trace: the 24 rows of `MAP`, the MOE symbol shortcut table.
         for (half, full) in MAP {
             assert_eq!(
                 full_width_mapped(&half.to_string()).as_deref(),

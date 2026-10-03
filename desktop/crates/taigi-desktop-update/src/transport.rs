@@ -1,8 +1,9 @@
 //! The network, behind two traits so the checker and the installation can
 //! be tested without it. The one implementation is `ureq` over the system
-//! TLS stack. Port of `UpdateHTTP` + `UpdateManifest.fetchPublished` +
-//! `UpdatePackageDownload.run`: HTTPS only, 200 only, a size ceiling on
-//! both bodies, timeouts a stalled server cannot stretch.
+//! TLS stack (macOS keeps a Swift twin: `UpdateHTTP` +
+//! `UpdateManifest.fetchPublished` + `UpdatePackageDownload.run`). HTTPS
+//! only, 200 only, a size ceiling on both bodies, timeouts a stalled server
+//! cannot stretch.
 
 use crate::manifest::{ManifestError, UpdateManifest, MAXIMUM_MANIFEST_BYTES};
 use std::io::Write;

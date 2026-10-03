@@ -1,5 +1,5 @@
 //! How a learning table stops growing without bound. Port of
-//! `Storage/LearningCapacity.swift`.
+//! the former Swift `LearningCapacity`.
 
 use rusqlite::{params, Connection};
 use std::sync::Mutex;
@@ -7,7 +7,7 @@ use std::sync::Mutex;
 /// The row cap of one learning table, and the throttle that decides when to
 /// check it. "Least useful" is low count first, then stale — the order the
 /// phones deleted in before the engine owned the stores, kept so every
-/// platform forgets the same rows. Ported from iOS `UserFrequencyPruner.swift`.
+/// platform forgets the same rows.
 pub struct LearningCapacity {
     /// Interpolated into SQL. Every caller passes a literal it owns — no
     /// value from outside the process reaches this (`security-rules.md` § SQL).

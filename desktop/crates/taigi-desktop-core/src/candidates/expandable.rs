@@ -1,7 +1,7 @@
 //! The expandable window's two modes — a packed row that unfolds into a
-//! grid — and its navigation. The decide-half of
-//! `ExpandableCandidatePanel.swift` (`:130-170`, `:280-400`, `:515-531`,
-//! `:740-780`); the unfold's timing and drawing are the renderer's, its
+//! grid — and its navigation; macOS keeps a Swift twin in
+//! `ExpandableCandidatePanel.swift`. The unfold's timing and drawing are
+//! the renderer's, its
 //! geometry (which cell moves where) is computed here.
 
 use super::grid::ExpandedGridLayout;
@@ -37,7 +37,7 @@ pub struct ExpandableGeometryInput {
     pub item_height: f32,
 }
 
-/// The expanded window's size (`ExpandableCandidatePanel.swift:515-531`):
+/// The expanded window's size:
 /// up to 5 rows plus a half-row peek when it scrolls.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ExpandedGeometry {
@@ -87,7 +87,7 @@ pub struct ExpandableListModel {
 impl ExpandableListModel {
     pub const MAX_VISIBLE_ROWS: usize = 5;
     pub const SEPARATOR_HEIGHT: f32 = 1.0;
-    /// `pageSize - pageSize / 3` (`ExpandableCandidatePanel.swift:41-43`).
+    /// Two thirds of a page: `PAGE_SIZE - PAGE_SIZE / 3`.
     pub const EXPANDED_COLUMN_COUNT: usize =
         HorizontalPageLayout::PAGE_SIZE - HorizontalPageLayout::PAGE_SIZE / 3;
     /// The unfold's duration, for the renderer.
@@ -125,7 +125,7 @@ impl ExpandableListModel {
     /// longest candidate fits a full row of columns, and capped by what the
     /// screen leaves once the scroller has its share. Widening the columns
     /// rather than letting a cell span more of them keeps the grid a grid
-    /// (`ExpandableCandidatePanel.swift:156-163`).
+    /// (columns widen, spans stay whole).
     fn resolved_column_width(widths: &[f32], geometry: ExpandableGeometryInput) -> f32 {
         let baseline = HorizontalPageLayout::row_budget(geometry.base_width);
         let budget = geometry.maximum_window_width - geometry.scroller_width;
@@ -347,7 +347,7 @@ impl ExpandableListModel {
     }
 
     /// The grid row at the viewport's top, with the half-row bias
-    /// (`ExpandableCandidatePanel.swift:367`).
+    /// (rounds to the nearest row).
     pub fn scroll_top_row(&self) -> usize {
         ((self.scroll_y.max(0.0) + self.row_height() / 2.0) / self.row_height()).floor() as usize
     }

@@ -1,5 +1,5 @@
 //! Which key picks which candidate, and how that key is written in the
-//! window. Port of `CandidateIndexLabel.swift`.
+//! window. macOS keeps a Swift twin: `CandidateIndexLabel.swift`.
 
 use super::horizontal::HorizontalPageLayout;
 use crate::keys::CandidateSlotKeySet;
@@ -21,7 +21,7 @@ impl CandidateIndexLabel {
     /// while `lead_cell_is_unkeyed` and the row `index_for_slot` numbers
     /// begins with cell 0 — the §34 literal — and 0 otherwise. Hoisted out of
     /// the per-slot lookup because it is invariant across a whole repaint.
-    /// Port of macOS `CandidateIndexLabel.keySlotShift(leadCellIsUnkeyed:indexForSlot:)`.
+    /// macOS keeps a Swift twin: `CandidateIndexLabel.keySlotShift(leadCellIsUnkeyed:indexForSlot:)`.
     pub fn key_slot_shift(
         lead_cell_is_unkeyed: bool,
         index_for_slot: impl Fn(usize) -> Option<usize>,
@@ -31,9 +31,9 @@ impl CandidateIndexLabel {
 
     /// The absolute index the `slot`-th KEY addresses, given the layout's own
     /// `index_for_slot` mapping: the unkeyed §34 literal is skipped and the
-    /// keys shift by one wherever the row they number begins with it. Port of
-    /// macOS `CandidateIndexLabel.candidateIndex(forKeySlot:leadCellIsUnkeyed:indexForSlot:)`,
-    /// which carries the full rationale.
+    /// keys shift by one wherever the row they number begins with it. macOS
+    /// keeps a Swift twin:
+    /// `CandidateIndexLabel.candidateIndex(forKeySlot:leadCellIsUnkeyed:indexForSlot:)`.
     pub fn candidate_index_for_key_slot(
         slot: usize,
         lead_cell_is_unkeyed: bool,
@@ -66,7 +66,7 @@ mod tests {
 
     #[test]
     fn labels_follow_the_set_and_a_tenth_slot_is_blank() {
-        // trace: CandidateIndexLabelTests.swift — bare row under Standard,
+        // trace: `CandidateSlotKeySet::BARE_KEY_ROW` under Standard,
         // digits under Telex, nothing past the ninth.
         let bare: Vec<String> = (0..9)
             .map(|slot| CandidateIndexLabel::text_for_slot(slot, CandidateSlotKeySet::BareKeys))

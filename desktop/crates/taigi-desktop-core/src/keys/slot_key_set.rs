@@ -1,5 +1,4 @@
-//! Which keys pick a candidate out of the nine slots. Port of
-//! `CandidateSlotKeySet` (`ComposingKeyBindings.swift`).
+//! Which keys pick a candidate out of the nine slots.
 
 use super::chord::{NUMBER_ROW_KEY_CODES, SEMICOLON_KEY_CODE};
 use super::intent::ComposingKeyIntent;
@@ -70,8 +69,7 @@ impl CandidateSlotKeySet {
     /// only the key's position still says which key was pressed — the same
     /// reading the recorder refuses those presses by
     /// (`ComposingKeyChord::make_from_press`). The letters read as their
-    /// capital, which the case fold already handles. Port of
-    /// `CandidateSlotKeySet.shiftedSlot(for:)`.
+    /// capital, which the case fold already handles.
     pub fn shifted_slot_for_event(self, event: &KeyEventSnapshot) -> Option<usize> {
         if event.modifiers != KeyModifiers::SHIFT {
             return None;
@@ -127,7 +125,7 @@ mod tests {
 
     #[test]
     fn digits_pick_by_bare_digit_only() {
-        // trace: CandidateSlotKeySet.swift `digitSlot` — `1`…`9` → 0…8, `0`
+        // trace: `slot_for_key` under `Digits` — `1`…`9` → 0…8, `0`
         // names none, any chording modifier misses.
         let set = CandidateSlotKeySet::Digits;
         assert_eq!(set.slot_for_key(Some("1"), KeyModifiers::NONE), Some(0));
@@ -146,12 +144,10 @@ mod tests {
 
     #[test]
     fn shift_on_a_slot_key_names_the_same_slot_for_the_flip() {
-        // trace: CandidateSlotKeyTests.swift `testEveryBareKey_underShift_flipsItsSlot`
-        // + `testAShiftedDigit_flipsItsSlot_underTelex…` — letters by their
-        // capital, `;` and the digits by key code (US layout types `:` / `#`).
+        // trace: `shifted_slot_for_event` — letters by their capital, `;` and
+        // the digits by key code (US layout types `:` / `#`).
         let bare = CandidateSlotKeySet::BareKeys;
-        // Every letter of the row by its capital (the Swift test's full row,
-        // ported when the Swift key path was deleted, roadmap P13).
+        // Every letter of `BARE_KEY_ROW` by its capital.
         for (slot, key) in CandidateSlotKeySet::BARE_KEY_ROW.iter().enumerate() {
             if *key == ";" {
                 continue;

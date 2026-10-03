@@ -1,5 +1,5 @@
 //! The typefaces the user added themselves: where they are kept, what may join
-//! them, and the copy that puts one there. Port of the file half of
+//! them, and the copy that puts one there. The macOS twin is the file half of
 //! `macos/Sources/TaigiInputMethodCore/Storage/CustomFontLibrary.swift`.
 //!
 //! The FILE half only. Whether a copied file is really a typeface — and what

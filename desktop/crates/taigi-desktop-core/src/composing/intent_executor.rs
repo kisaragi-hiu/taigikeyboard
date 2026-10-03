@@ -1,6 +1,5 @@
-//! What one classified key DOES to a composition — the Windows and Linux
-//! input methods run it; it mirrors macOS
-//! `TaigiInputController.handle(_:client:)`'s switch: the engine calls per
+//! What one classified key DOES to a composition — every desktop input
+//! method runs it (macOS through `taigi-macos-ffi`): the engine calls per
 //! [`ComposingKeyIntent`], the candidate commit, the trailing auto space and
 //! its swap (§23), the punctuation this input method writes itself. Each
 //! shell keeps its document and its list window behind [`IntentSurface`].
@@ -120,7 +119,7 @@ pub fn perform_intent(
             // The swap is read before the width for a bare key (the word in
             // front of the caret is romanization, which keeps Latin marks);
             // the width-flip chord named its width, so the swap attaches the
-            // glyph the user asked for (`TaigiInputController.swift`).
+            // glyph the user asked for.
             let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
             let punctuation = document_punctuation(settings, &typed, is_width_flip);
             let swapping = if is_width_flip {

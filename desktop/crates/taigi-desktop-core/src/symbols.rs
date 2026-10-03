@@ -1,13 +1,13 @@
 //! The symbol picker's table: three categories of insertable strings, compiled
-//! in from the shared desktop JSON. Port of macOS `SymbolTable.swift`.
+//! in from the shared desktop JSON. macOS keeps a Swift twin: `SymbolTable.swift`.
 
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
 /// `assets/symbols/desktop-symbols.json` at the repository root — the one source
-/// both desktops read (macOS bundles the file; this crate compiles it in),
-/// so the two pickers cannot drift.
+/// every desktop reads (macOS bundles the file; this crate compiles it in),
+/// so the pickers cannot drift.
 const BUNDLED_JSON: &str = include_str!("../../../../assets/symbols/desktop-symbols.json");
 
 /// How the file groups its symbols. The picker shows them as ONE list, in
@@ -139,7 +139,7 @@ impl SymbolTable {
 /// keys (USER 2026-09-19: "the symbol menu should sort by most recent use"). One page, not
 /// the whole table: past `CAPACITY` a symbol falls back to its file place,
 /// so the brackets stay together and the rest of the list keeps its order.
-/// Port of macOS `RecentSymbols.swift`.
+/// macOS keeps a Swift twin: `RecentSymbols.swift`.
 ///
 /// Pure: what is stored and what is shown are two functions of the same
 /// list. The document keeps the strings themselves
@@ -209,8 +209,8 @@ mod tests {
 
     #[test]
     fn the_bundled_table_is_valid_and_in_menu_order() {
-        // trace: SymbolTableTests.swift — the same file, the same three
-        // categories in the same order.
+        // trace: `assets/symbols/desktop-symbols.json` lists punctuation,
+        // brackets, specialSymbols, in that order.
         let ids: Vec<_> = bundled().categories().iter().map(|c| c.id).collect();
         assert_eq!(
             ids,
@@ -224,7 +224,7 @@ mod tests {
 
     #[test]
     fn the_midline_ellipsis_follows_the_baseline_one() {
-        // trace: SymbolTableTests.swift `testTheMidlineEllipsis_followsTheBaselineOne`.
+        // trace: the JSON's punctuation list puts `⋯` right after `…`.
         let punctuation = &bundled()
             .category(SymbolCategoryId::Punctuation)
             .unwrap()
@@ -323,7 +323,7 @@ mod tests {
 
     #[test]
     fn a_pick_leads_and_the_rest_keeps_file_order() {
-        // trace: RecentSymbolsTests.swift — noting("「」") → ["「」"]; ordered
+        // trace: `noting`/`ordered` — noting("「」") → ["「」"]; ordered
         // → ["「」"] + table minus it; the latest pick leads a re-pick.
         assert_eq!(recents(&[]).ordered(TABLE.into_iter()), TABLE);
         let one = recents(&[]).noting("「」");

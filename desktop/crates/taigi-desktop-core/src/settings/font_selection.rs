@@ -8,10 +8,10 @@
 //! update, so a save can never leave `fontType` naming a custom or installed
 //! typeface with nothing beside it, or a stale companion beside a bundled face.
 //!
-//! Mirrors `StoredFontSelection` in
-//! `macos/Sources/TaigiInputMethodCore/Settings/StoredFontSelection.swift`. What
-//! is NOT here is turning a file name or a family into something drawable:
-//! that needs DirectWrite, and lives with the code that draws.
+//! What is NOT here is turning a file name or a family into something
+//! drawable: that needs DirectWrite, and lives with the code that draws.
+//! macOS keeps a Swift twin: `StoredFontSelection` in
+//! `macos/Sources/TaigiInputMethodCore/Settings/StoredFontSelection.swift`.
 
 use super::choices::{CandidateFontChoice, CandidateFontSelection, SettingChoice};
 use super::document::SettingsDocument;

@@ -5,7 +5,8 @@
 ///
 /// A stored value the type does not name — a hand-edited file, or a choice a
 /// later version removed — reads as the default rather than leaving the
-/// reader with nothing (`SettingsStore.swift:366-370`).
+/// reader with nothing. macOS keeps a Swift twin: `SettingsStore.swift`
+/// `choice(_:)`.
 pub trait SettingChoice: Copy + PartialEq + std::fmt::Debug + 'static {
     /// Every value, in picker order.
     const ALL: &'static [Self];
@@ -19,8 +20,10 @@ pub trait SettingChoice: Copy + PartialEq + std::fmt::Debug + 'static {
     }
 }
 
-/// The candidate window's layout. Order = the Appearance pane's pop-up
-/// (`SettingsStore.swift:236-239`, `CandidateLayout.swift:11-14`).
+/// The candidate window's layout. Order = the Appearance pane's pop-up:
+/// expandable, horizontal, vertical. macOS keeps a Swift twin:
+/// `SettingsStore.swift` `Keys.candidateLayout` and the layout picker in
+/// `AppearanceSettingsView.swift`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateLayout {
     Expandable,
@@ -29,7 +32,7 @@ pub enum CandidateLayout {
 }
 
 impl CandidateLayout {
-    /// The picker row's i18n key (`AppearanceSettingsView.swift:259-263`).
+    /// The picker row's i18n key (the layout picker in `AppearanceSettingsView.swift`).
     pub fn label_key(self) -> crate::strings::StringKey {
         use crate::strings::StringKey;
         match self {
@@ -56,7 +59,7 @@ impl SettingChoice for CandidateLayout {
 /// Light / dark / follow the system. Stored under the name it had when only
 /// the candidate window read it (`candidateAppearanceMode`), like macOS.
 /// Order = the Appearance pane's thumbnail row: light, dark, auto
-/// (`AppearanceSettingsView.swift:106`).
+/// (`AppearanceSettingsView.swift`'s appearance picker).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum AppearanceMode {
     Light,
@@ -65,7 +68,8 @@ pub enum AppearanceMode {
 }
 
 impl AppearanceMode {
-    /// The thumbnail caption's i18n key (`AppearanceMode.swift:35-40`): `Auto` shares the display-language picker's "automatic" word.
+    /// The thumbnail caption's i18n key: `Auto` shares the display-language picker's "automatic" word.
+    /// macOS keeps a Swift twin: `AppearanceMode.swift` `labelKey`.
     pub fn label_key(self) -> crate::strings::StringKey {
         use crate::strings::StringKey;
         match self {
@@ -91,8 +95,8 @@ impl SettingChoice for AppearanceMode {
 /// How big the candidate window renders — one knob for the whole window: the
 /// text, the gaps and the air around them all scale off the candidate font
 /// size (USER 2026-09-23, which merged the separate text-size and window-size
-/// pickers and made the default a step smaller). The point sizes are the
-/// macOS ladder (`CandidateMetrics.swift` `CandidateSizeChoice`).
+/// pickers and made the default a step smaller). macOS keeps a Swift twin:
+/// `CandidateMetrics.swift` `CandidateSizeChoice`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateSizeChoice {
     ExtraSmall,
@@ -116,7 +120,8 @@ impl CandidateSizeChoice {
     }
 
     /// Candidate font size in points.
-    /// CROSS-PLATFORM INVARIANT — mirrors `macos/.../Candidates/CandidateMetrics.swift`
+    /// CROSS-PLATFORM INVARIANT — the ladder is 13 / 15 / 17 / 20 / 23 pt on every
+    /// desktop. macOS keeps a Swift twin: `macos/.../Candidates/CandidateMetrics.swift`
     /// `CandidateSizeChoice.candidateFontSize`.
     pub fn font_size(self) -> f32 {
         match self {
@@ -167,8 +172,9 @@ impl SettingChoice for CandidateSizeChoice {
 /// Which typeface the candidate window draws in. The stored spelling is iOS's
 /// (`fontType`); the DEFAULT is the desktop's own — a fresh install draws in
 /// the system font (USER 2026-08-23) where iOS starts on Open Huninn.
-/// Roster + file names mirror `macos/.../Candidates/CandidateFontChoice.swift:22-49`;
-/// the files themselves ship from the repo-root `assets/fonts/font/`.
+/// The roster is the one the four platforms share; the files themselves ship
+/// from the repo-root `assets/fonts/font/`. macOS keeps a Swift twin:
+/// `macos/.../Candidates/CandidateFontChoice.swift` `CandidateFontChoice`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateFontChoice {
     System,
@@ -179,7 +185,7 @@ pub enum CandidateFontChoice {
 }
 
 impl CandidateFontChoice {
-    /// The picker row's i18n key (`CandidateFontChoice.swift:54-62`).
+    /// The picker row's i18n key (`CandidateFontChoice.swift` `labelKey` is the macOS twin).
     pub fn label_key(self) -> crate::strings::StringKey {
         use crate::strings::StringKey;
         match self {
@@ -231,10 +237,10 @@ pub struct InstalledFontId(pub u32);
 /// one the user added, or a family the OS has installed.
 ///
 /// `CandidateFontChoice` is the roster the four platforms share and stays
-/// exactly that; this is the desktop's extension of it, mirroring
-/// `macos/.../Candidates/CandidateFontSelection.swift`. Two different custom
+/// exactly that; this is the desktop's extension of it. Two different custom
 /// typefaces have to be two different values, or the second would draw in the
-/// first's cached text format and measured widths.
+/// first's cached text format and measured widths. macOS keeps a Swift twin:
+/// `macos/.../Candidates/CandidateFontSelection.swift`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateFontSelection {
     BuiltIn(CandidateFontChoice),
@@ -310,8 +316,8 @@ impl SettingChoice for CandidateFontChoice {
 
 /// The settings window's panes. `SIDEBAR` is what the sidebar lists, in
 /// order; `DictionarySearch` is built but unlisted, and `About` is listed
-/// nowhere but the input-source menu (USER 2026-09-20), exactly as on macOS
-/// (`SettingsSplitView.swift`, `SettingsPane.sidebar`).
+/// nowhere but the input-source menu (USER 2026-09-20). macOS keeps a Swift
+/// twin: `SettingsSplitView.swift` `SettingsPane.sidebar`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum SettingsPane {
     General,
@@ -340,8 +346,8 @@ impl SettingsPane {
     ];
 
     /// The sidebar row label's i18n key, and the window title
-    /// (`SettingsSplitView.swift`, `labelKey`). `None` for the unlisted
-    /// search page; About has a title without a row.
+    /// (`SettingsSplitView.swift` `labelKey` is the macOS twin). `None` for the
+    /// unlisted search page; About has a title without a row.
     pub fn title_key(self) -> Option<crate::strings::StringKey> {
         use crate::strings::StringKey;
         Some(match self {
@@ -360,7 +366,7 @@ impl SettingsPane {
     /// code points in both faces — matching the Mac's symbol per pane:
     /// gearshape → Settings, paintpalette → Color, keyboard →
     /// KeyboardClassic, character.book.closed → Dictionary,
-    /// books.vertical → Library (`SettingsSplitView.swift:36-44`).
+    /// books.vertical → Library (`SettingsSplitView.swift` `SettingsPane.symbolName`).
     pub fn icon_glyph(self) -> &'static str {
         match self {
             Self::General => "\u{E713}",
@@ -441,7 +447,8 @@ mod tests {
 
     #[test]
     fn the_size_ladder_matches_macos_and_climbs() {
-        // trace: CandidateMetricsTests.swift pins [13, 15, 17, 20, 23].
+        // trace: `font_size` arms in `ALL` order = [13, 15, 17, 20, 23];
+        // DEFAULT = Standard → 17. The macOS twin pins the same ladder.
         let sizes: Vec<f32> = CandidateSizeChoice::ALL
             .iter()
             .map(|c| c.font_size())

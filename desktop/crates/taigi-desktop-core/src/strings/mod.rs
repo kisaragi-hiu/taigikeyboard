@@ -2,9 +2,9 @@
 //! formatter the generated accessors call.
 //!
 //! `generated.rs` is written by the repo-root `make i18n` from `i18n/*.json`;
-//! this file is the hand-written half. Resolution mirrors
-//! `macos/Sources/TaigiInputMethodCore/Strings/StringResolver.swift:25-46`:
-//! active language → Hanji → the key's own raw name.
+//! this file is the hand-written half. Resolution runs active language →
+//! Hanji → the key's own raw name. macOS keeps a Swift twin:
+//! `macos/Sources/TaigiInputMethodCore/Strings/StringResolver.swift`.
 
 // Generator output, gated byte-for-byte by tools/i18n/check.py — rustfmt must not touch it.
 #[rustfmt::skip]
@@ -16,8 +16,8 @@ pub use generated::StringKey;
 /// language: it resolves to one of the others through [`DisplayLanguage::resolve_automatic`]
 /// and is never handed to a [`StringResolver`].
 ///
-/// MIRROR: `tools/i18n/i18n_lib.py` `RUST_LANGUAGE_VARIANTS` and
-/// `macos/Sources/TaigiInputMethodCore/Strings/DisplayLanguage.swift:19`.
+/// MIRROR: `tools/i18n/i18n_lib.py` `RUST_LANGUAGE_VARIANTS`. macOS keeps a
+/// Swift twin: `macos/Sources/TaigiInputMethodCore/Strings/DisplayLanguage.swift`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum DisplayLanguage {
     System,
@@ -35,7 +35,7 @@ impl DisplayLanguage {
     /// The picker roster, in picker order — `System` first, then the production
     /// languages in the order iOS / Android / macOS list them.
     /// CROSS-PLATFORM INVARIANT (INVARIANT_DISPLAY_LANGUAGE_PRODUCTION_ROSTER) —
-    /// mirrors `DisplayLanguage.swift:61-65` (`productionLanguages`).
+    /// macOS keeps a Swift twin: `DisplayLanguage.swift` `productionLanguages`.
     pub const PICKER: [DisplayLanguage; 6] = [
         DisplayLanguage::System,
         DisplayLanguage::Hanji,
@@ -59,7 +59,8 @@ impl DisplayLanguage {
     }
 
     /// A stored tag → language. An unknown or removed tag reads as Hanji, the
-    /// base language every key is authored in (`DisplayLanguage.swift:94-96`).
+    /// base language every key is authored in (`DisplayLanguage.swift` `fromTag`
+    /// is the macOS twin).
     pub fn from_tag(tag: &str) -> Self {
         match tag {
             "system" => DisplayLanguage::System,
@@ -74,8 +75,8 @@ impl DisplayLanguage {
 
     /// What `System` means on a machine whose UI language is `system_locale`
     /// (a BCP-47 tag such as `ja-JP`, `en-US`, `zh-TW`): Japanese and English
-    /// by subtag, everything else the base language
-    /// (`DisplayLanguage.swift:74-82`).
+    /// by subtag, everything else the base language (`DisplayLanguage.swift`
+    /// `resolveAutomatic` is the macOS twin).
     pub fn resolve_automatic(system_locale: &str) -> Self {
         let language = system_locale
             .split(['-', '_'])
@@ -90,7 +91,8 @@ impl DisplayLanguage {
     }
 
     /// The language strings are actually drawn in: `self`, unless `self` is
-    /// `System`, which follows the machine (`DisplayLanguage.swift:88`).
+    /// `System`, which follows the machine (`DisplayLanguage.swift`
+    /// `effectiveLanguage` is the macOS twin).
     pub fn effective(self, system_locale: &str) -> Self {
         match self {
             DisplayLanguage::System => Self::resolve_automatic(system_locale),
@@ -117,7 +119,8 @@ impl DisplayLanguage {
 ///
 /// Holds a language rather than reading a setting so every string one screen
 /// draws comes from a single language; a resolver is rebuilt when the setting
-/// changes, not consulted per key (`StringResolver.swift:11-21`).
+/// changes, not consulted per key. macOS keeps a Swift twin:
+/// `StringResolver.swift` `StringResolver`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct StringResolver {
     pub language: DisplayLanguage,
@@ -126,7 +129,8 @@ pub struct StringResolver {
 impl StringResolver {
     /// `System` is not a language strings exist in; a caller must resolve it
     /// through [`DisplayLanguage::effective`] first. Debug builds trap, release
-    /// builds degrade to the base language (`StringResolver.swift:21`).
+    /// builds degrade to the base language (`StringResolver.swift` `init` is the
+    /// macOS twin).
     pub fn new(language: DisplayLanguage) -> Self {
         debug_assert!(
             language != DisplayLanguage::System,

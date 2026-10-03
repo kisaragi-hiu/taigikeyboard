@@ -1,7 +1,7 @@
 //! CustomDictionaryDerivation port.
 //!
-//! Mirrors iOS `Lexicon/Database/CustomDictionaryDerivation.swift`
-//! (`generateNotone`), and owns the index abbreviation face
+//! Owns the custom-dictionary toneless key (`derive_notone`, formerly iOS
+//! `generateNotone`) and the index abbreviation face
 //! ([`derive_abbrev`], one leading spelling unit per syllable) the dictionary
 //! build and the custom-dict search keys share.
 //!

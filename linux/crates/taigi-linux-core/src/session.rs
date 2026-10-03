@@ -454,7 +454,7 @@ pub fn navigate_from_panel(
 }
 
 /// A click on the `position`-th cell of the current page: selects, never
-/// commits (`CandidateItemView.swift:47-48`, identical semantics).
+/// commits (macOS `CandidateItemView.onClick`, identical semantics).
 pub fn click_from_panel(runtime: &Runtime, state: &mut EngineState, position: usize) -> Vec<Emit> {
     let settings = runtime.settings.current();
     let bindings = ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM);

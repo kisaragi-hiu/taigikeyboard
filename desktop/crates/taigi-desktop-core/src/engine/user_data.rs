@@ -5,7 +5,7 @@
 //! `engine::commit_continuous`). Answered only by a shell built with
 //! `dispatch/user-data` (roadmap U11); anywhere else the engine refuses and
 //! these answer `false` (`open`) or `Err(UserDataError::EngineUnavailable)`
-//! (the page ops). Port of
+//! (the page ops). macOS keeps a Swift twin:
 //! `RustEngineBridge+UserData.swift` / `UserDataClient.swift`.
 
 use std::path::Path;
@@ -60,7 +60,7 @@ fn journal(platform: DesktopPlatform) -> UserDataJournal {
     }
 }
 
-// ---- The settings window's pages (roadmap P4; macOS `UserDataClient.swift`) ----
+// ---- The settings window's pages (roadmap P4; macOS twin: `UserDataClient.swift`) ----
 
 /// Why a page's request did nothing. The description is the alert's
 /// diagnostic line, English on purpose (`PageMessage::failure`).

@@ -224,7 +224,7 @@ fn unmodified_state(state: [u8; 256]) -> [u8; 256] {
 
 /// The AppKit private-use scalar for a key that types nothing — the
 /// spelling the shared chord gate reserves (`ComposingKeyChord`'s
-/// `FUNCTION_KEY_RANGE`, `ComposingKeyChord.swift:71`), so an arrow or a
+/// `FUNCTION_KEY_RANGE`, desktop-core `keys/chord.rs`), so an arrow or a
 /// function key is refused as a RESERVED key rather than as no key at all.
 /// Keys with a fixed control character (Return, Tab, Escape, Backspace,
 /// forward Delete) never reach here — they type, and the recorder's rules

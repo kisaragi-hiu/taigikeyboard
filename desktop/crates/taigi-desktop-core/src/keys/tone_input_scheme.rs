@@ -1,5 +1,6 @@
 //! Which keys type a tone — and, by the same choice, which keys pick a
-//! candidate. Port of `ToneInputScheme.swift`.
+//! candidate. macOS keeps a Swift twin for the window labels:
+//! `ToneInputScheme.swift`.
 
 use super::slot_key_set::CandidateSlotKeySet;
 use crate::settings::SettingChoice;
@@ -37,8 +38,8 @@ impl ToneInputScheme {
     /// the affricate initial (`ts` / `ch`; `zh` then spells `tsh` / `chh`),
     /// `f` for the hyphen. Mirrors the engine's `composing::telex::TELEX_KEYS`
     /// — the two lists must name the same keys, or a key classified as Telex
-    /// here would be ignored there. CROSS-PLATFORM INVARIANT — mirrors
-    /// `ToneInputScheme.swift` `telexKeys`.
+    /// here would be ignored there. CROSS-PLATFORM INVARIANT — the one list for
+    /// macOS, Windows and Linux.
     pub const TELEX_KEYS: &'static str = "vydwxqzf";
 
     /// The keys that pick a candidate under this scheme.
@@ -49,7 +50,8 @@ impl ToneInputScheme {
         }
     }
 
-    /// The picker row's i18n key (`GeneralSettingsView.swift`).
+    /// The picker row's i18n key. macOS keeps a Swift twin of the picker:
+    /// `GeneralSettingsView.swift`.
     pub fn label_key(self) -> StringKey {
         match self {
             Self::Standard => StringKey::SettingsToneSchemeStandard,
@@ -90,8 +92,8 @@ mod tests {
 
     #[test]
     fn the_slot_key_set_is_derived_from_the_scheme() {
-        // trace: ToneInputScheme.swift `slotKeySet` — standard → bareKeys,
-        // telex → digits; the default is Standard.
+        // trace: `slot_key_set` — Standard → `BareKeys`, Telex → `Digits`;
+        // `DEFAULT` is Standard.
         assert_eq!(
             ToneInputScheme::Standard.slot_key_set(),
             CandidateSlotKeySet::BareKeys
@@ -115,7 +117,7 @@ mod tests {
         for other in ['a', 't', 'c', '3', '-', ';', ' ', 'ｖ', 'ｚ'] {
             assert!(!ToneInputScheme::is_telex_key(other), "{other}");
         }
-        // trace: ToneInputSchemeTests.swift:24-28 — the eight Telex keys are
+        // trace: `TELEX_KEYS` vs `BARE_KEY_ROW` — the eight Telex keys are
         // the eight letters of the Standard slot row: what one scheme types
         // tones with, the other picks with.
         let slot_letters: std::collections::BTreeSet<char> = CandidateSlotKeySet::BARE_KEY_ROW
@@ -137,8 +139,8 @@ mod tests {
 
     #[test]
     fn raw_values_round_trip_and_are_the_mac_spellings() {
-        // trace: ToneInputScheme.swift `String` raw values — the settings
-        // file speaks one vocabulary on both desktops.
+        // trace: `SettingChoice::raw` — the settings file speaks one
+        // vocabulary on all three desktops (the spellings the Mac stores).
         assert_eq!(ToneInputScheme::Standard.raw(), "standard");
         assert_eq!(ToneInputScheme::Telex.raw(), "telex");
         for scheme in ToneInputScheme::ALL {

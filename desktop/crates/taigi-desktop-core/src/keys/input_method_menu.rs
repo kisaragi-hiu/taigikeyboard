@@ -105,8 +105,9 @@ mod tests {
 
     #[test]
     fn the_menu_is_the_same_rows_on_every_desktop() {
-        // trace: the Mac's TaigiInputControllerMenuTests literal oracle —
-        // the authored Hanji, the default chords.
+        // trace: `MENU` resolved through the Hanji strings over an empty
+        // document — the authored Hanji, the default chords. The Mac's
+        // `TaigiInputControllerMenuTests` asserts the same literals.
         let strings = StringResolver::new(DisplayLanguage::Hanji);
         let rows: Vec<Option<(String, Option<String>)>> =
             menu_rows(&strings, &SettingsDocument::default(), PLATFORM)

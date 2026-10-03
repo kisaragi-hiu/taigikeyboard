@@ -1,5 +1,5 @@
 //! Opens a learning database and serialises every access to it. Port of
-//! `Storage/UserDataDatabase.swift`: one serial worker owns the file — the
+//! the former Swift `UserDataDatabase`: one serial worker owns the file — the
 //! open, every queued write and every `perform` run on it in order, as on
 //! the macOS `DispatchQueue` — while reads answer on the caller's thread
 //! through a second, read-only connection that never waits.
@@ -522,7 +522,7 @@ fn snapshot_before_takeover(
 
 /// `BEGIN IMMEDIATE` … `COMMIT`, rolled back on any error — the body's, or
 /// the commit's own: a failed `COMMIT` leaves the transaction open
-/// (`SQLiteConnection.swift:160`), and every later `BEGIN` on the
+/// (SQLite's documented `COMMIT` failure mode), and every later `BEGIN` on the
 /// connection would fail until something rolls it back.
 pub fn immediate_transaction<T, E: From<rusqlite::Error>>(
     connection: &Connection,

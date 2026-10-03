@@ -174,7 +174,7 @@ impl SettingsWindow {
     }
 
     /// A transient notice: what a page has to tell the user after a job
-    /// (`UserDataPageChrome.swift:19-52`), as a toast.
+    /// (`UserDataPageMessage` in `UserDataPageChrome.swift`), as a toast.
     pub fn toast(&self, title: &str, detail: Option<&str>) {
         let text = match detail {
             Some(detail) => format!("{title} — {detail}"),
@@ -336,7 +336,7 @@ impl SettingsWindow {
     }
 
     /// Opens `url` in the browser; a launcher that refused is logged and
-    /// said in the banner (`ExternalLinkButton.swift:740-744`).
+    /// said in the banner (`ExternalLinkButton.open()` on the Mac).
     pub fn open_url(self: &Rc<Self>, url: &str) {
         let weak = Rc::downgrade(self);
         let url = url.to_owned();

@@ -1,7 +1,8 @@
 //! The rows of the floating Telex key table, spelled for the romanization
-//! in use. Port of the `rows` table in `TelexGuidePanel.swift`; the window
-//! that draws them is `ui/telex_guide.rs` in the TSF crate. Kept here, with
-//! no Win32 in sight, so the table is unit-tested where the panel cannot be.
+//! in use. The window that draws them is `ui/telex_guide.rs` in the TSF
+//! crate. Kept here, with no Win32 in sight, so the table is unit-tested
+//! where the panel cannot be. macOS keeps a Swift twin of the table:
+//! `TelexGuidePanel.swift` `rows`.
 
 use crate::settings::InputMode;
 use crate::strings::{StringKey, StringResolver};
@@ -15,7 +16,7 @@ pub struct TelexGuideRow {
 }
 
 /// What a key does — a string key, so the meaning follows the display
-/// language (`TelexGuidePanel.swift` `Meaning`).
+/// language. `TelexGuidePanel.swift` `Meaning` is the macOS twin.
 #[derive(Clone, Copy)]
 enum Meaning {
     Tone(&'static str),
@@ -46,8 +47,8 @@ impl RowSpec {
 /// `v` each carry a pair split by the coda (`engine/composing/src/telex.rs`):
 /// 1 / 4 and 2 / 8, the open tone on any other syllable, the checked one
 /// after `p t k h`.
-/// CROSS-PLATFORM INVARIANT —
-/// mirrors `TelexGuidePanel.swift` `rows`, row for row.
+/// CROSS-PLATFORM INVARIANT — desktop-core owns this table; macOS keeps a
+/// Swift twin row for row (`TelexGuidePanel.swift` `rows`).
 const ROWS: [RowSpec; 9] = [
     RowSpec::new("x", Meaning::Tone("1 / 4")),
     RowSpec::new("v", Meaning::Tone("2 / 8")),
@@ -105,8 +106,8 @@ mod tests {
 
     #[test]
     fn the_table_is_the_mac_panels_row_for_row() {
-        // trace: TelexGuidePanel.swift `rows` — nine rows, keys in reading
-        // order of the tone they write; the paired keys lead.
+        // trace: `ROWS` — nine rows, keys in reading order of the tone they
+        // write; the paired keys lead.
         let keys: Vec<_> = rows(InputMode::Tl).iter().map(|row| row.key).collect();
         assert_eq!(keys, ["x", "v", "y", "d", "w", "q", "z", "zh", "f"]);
     }

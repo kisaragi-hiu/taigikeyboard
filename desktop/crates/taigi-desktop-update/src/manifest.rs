@@ -1,5 +1,5 @@
-//! The published manifest and the version it names. Port of
-//! `UpdateManifest` / `DottedVersion` (`UpdateChecker.swift:1-120`); the
+//! The published manifest and the version it names — the macOS twin is
+//! `UpdateManifest` / `DottedVersion` in `UpdateChecker.swift`; the
 //! wire format is `windows/updates/README.md` § Wire format — the macOS
 //! manifest's twin but for the file name and ONE added field,
 //! `packageSHA256`, which the Mac has no use for: it pins a downloaded

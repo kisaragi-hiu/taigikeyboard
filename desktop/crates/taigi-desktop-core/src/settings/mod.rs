@@ -4,10 +4,10 @@
 //! Persistence itself (the `settings.json` file, its atomic replace and the
 //! mtime/revision reload) lives in `taigi-desktop-storage`; this module owns
 //! the SHAPE of the document so the TIP and the settings window agree on it.
-//! Key spellings are the iOS ones, as on macOS
-//! (`macos/Sources/TaigiInputMethodCore/Settings/SettingsStore.swift:36-50`),
-//! so `settings.json` speaks the same vocabulary as `defaults read` does on a
-//! Mac and a future settings transfer has one name per setting.
+//! Key spellings are the iOS ones, so `settings.json` speaks the same
+//! vocabulary as `defaults read` does on a Mac and a future settings transfer
+//! has one name per setting. macOS keeps a Swift twin: `SettingsStore.Keys`
+//! (`macos/Sources/TaigiInputMethodCore/Settings/SettingsStore.swift`).
 //!
 //! It also holds what both settings WINDOWS draw from, toolkit-neutral:
 //! `presentation` (labels, links, page notices), `launch` (the command

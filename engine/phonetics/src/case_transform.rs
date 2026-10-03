@@ -3,7 +3,7 @@
 //! adjustment.
 //!
 //! Cross-platform canonical for the case-transformation subsystem. Replaces
-//! iOS `Input/CaseTransformer.swift` + `Input/ToneUtilities.swift` + the
+//! the former iOS case transformer and tone utilities + the
 //! body of `Autocomplete/Services/SuggestionCaseTransformer.swift`, plus
 //! Android counterparts `dictionary/ToneUtilities.kt` + body of
 //! `dictionary/SuggestionCaseTransformer.kt`.

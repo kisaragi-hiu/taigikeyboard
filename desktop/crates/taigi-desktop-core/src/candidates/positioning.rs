@@ -1,8 +1,8 @@
 //! Where the candidate window goes, given a caret and a screen. Pure
-//! geometry, port of `CandidatePanelPositioning.swift` (azooKey-Desktop
-//! derived) — in WINDOWS coordinates: y grows DOWNWARD, `caret` spans the
-//! caret's line (its `y` is the line's top), `visible` is the monitor's work
-//! area. NAMED DELTA from the macOS file, which is written y-up.
+//! geometry (azooKey-Desktop derived) — in WINDOWS coordinates: y grows
+//! DOWNWARD, `caret` spans the caret's line (its `y` is the line's top),
+//! `visible` is the monitor's work area. NAMED DELTA from the macOS Swift
+//! twin, `CandidatePanelPositioning.swift`, which is written y-up.
 
 /// A point in screen space, in device-independent pixels.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]

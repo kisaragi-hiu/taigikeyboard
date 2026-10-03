@@ -1,13 +1,13 @@
 //! Platform-independent core shared by the desktop input methods (Windows
-//! TSF, Linux IBus).
+//! TSF, Linux IBus / Fcitx5, macOS IMKit through `taigi-macos-ffi`).
 //!
 //! Everything an OS handle is not needed for lives here so it can be unit
 //! tested on any host: the settings model the input method and the settings
 //! window share, the protobuf envelope to the shared engine, the composing
-//! orchestration ported from macOS, the key classifier, the candidate window
-//! geometry and the generated UI strings. The shells (`taigi-windows-tsf`,
-//! `taigi-windows-settings`, `taigikeyboard-ibus`, `taigikeyboard-settings`)
-//! are thin adapters over it.
+//! orchestration, the key classifier, the candidate window geometry and the
+//! generated UI strings. The shells (`taigi-windows-tsf`,
+//! `taigi-windows-settings`, `taigikeyboard-ibus`, `taigikeyboard-settings`,
+//! `taigi-macos-ffi`) are thin adapters over it.
 //!
 //! This crate and its tests are the behaviour oracle for the three desktops
 //! — macOS, Windows, Linux (`docs/contributing/windows-guidelines.md`

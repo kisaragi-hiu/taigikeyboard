@@ -2,8 +2,7 @@
 //! candidate it stands for and which of that candidate's scripts it commits.
 //! Under Hanji with Romanization one candidate is TWO adjacent one-script cells (hanji, then
 //! roman), so a window index is a CELL index and never indexes the fetched
-//! list directly. Port of macOS `ComposingManager.presentation(for:)`
-//! (invariants §42).
+//! list directly (invariants §42).
 
 use std::collections::HashSet;
 
@@ -91,8 +90,7 @@ pub(crate) fn presentation(
 /// suppresses the prepend (`literal_roman_candidate`) — cannot arise on the desktop,
 /// where the only modes are TL and POJ (`InputMode`). A hanji-bearing lead
 /// means the prepend did not happen, whatever the setting says, and every cell
-/// keeps its key. Port of macOS
-/// `ComposingManager.leadsWithLiteralRomanCandidate(_:settings:)`.
+/// keeps its key.
 pub(crate) fn leads_with_literal_roman(
     candidates: &[ContinuousCandidate],
     settings: &EngineSettings,
@@ -255,15 +253,15 @@ mod tests {
 
     #[test]
     fn an_empty_list_presents_nothing_and_combined_ignores_the_raw_swap_flag() {
-        // trace: PresentedCandidateTests.swift:43-52 — no candidates, no
-        // cells, in every mode.
+        // trace: `presentation` maps each candidate to its cells — no
+        // candidates, no cells, in every mode.
         for &mode in CandidateDisplayMode::ALL {
             assert!(
                 presentation(&[], &settings(mode, false)).is_empty(),
                 "{mode:?}"
             );
         }
-        // trace: PresentedCandidateTests.swift:79-87 — under Combined the pair
+        // trace: under Combined the pair
         // order is the mode's: the Combined arm never reads `is_hanji_first`,
         // so even an underived snapshot with the flag off presents the same.
         let list = [candidate("tâi-gí", Some("台語"), 5)];

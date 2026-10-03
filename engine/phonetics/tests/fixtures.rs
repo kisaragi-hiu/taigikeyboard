@@ -1,6 +1,6 @@
 //! Cross-source fixture suite. Cases are merged from:
 //! - `taigi-converter/tests/{phonetics,tl,poj,zhuyin,converter}.test.js` (canonical)
-//! - the pre-Rust iOS `TaigiPhoneticsTests.swift` / Android `TaigiPhoneticsTest.kt`
+//! - the pre-Rust iOS / Android phonetics test suites
 //!   (both deleted with the migration)
 //!
 //! Each case is annotated with `// SOURCE:` so a future drift triage can find
@@ -10,7 +10,7 @@
 use phonetics::{normalize_to_tl, strip_tone_mark, to_poj, to_tl};
 
 // MARK: - strip_tone_mark — covers all 7 tones + no-mark + trailing digit.
-// SOURCE: phonetics.test.js, TaigiPhoneticsTests.swift, TaigiPhoneticsTest.kt — identical cases across all three.
+// SOURCE: phonetics.test.js and the former iOS / Android phonetics tests — identical cases across all three.
 
 #[test]
 fn strip_tone_mark_splits_every_tone_mark_and_digit() {
@@ -35,7 +35,7 @@ fn strip_tone_mark_splits_every_tone_mark_and_digit() {
     }
 }
 
-// MARK: - normalize_to_tl. SOURCE: TaigiPhoneticsTests.swift testNormalizeToTL_cases.
+// MARK: - normalize_to_tl. SOURCE: former iOS phonetics tests (`testNormalizeToTL_cases`).
 
 #[test]
 fn normalize_to_tl_cases() {
@@ -64,7 +64,7 @@ fn normalize_to_tl_cases() {
 // `engine/phonetics/src/syllable.rs` `#[cfg(test)] mod tests` (these are
 // `pub(crate)` helpers; integration tests can't reach them).
 
-// MARK: - to_tl. SOURCE: tl.test.js + TaigiPhoneticsTests.swift testToTL_*.
+// MARK: - to_tl. SOURCE: tl.test.js + former iOS phonetics tests (`testToTL_*`).
 
 #[test]
 fn to_tl_all_tones() {
@@ -122,7 +122,7 @@ fn to_tl_complex_iang() {
     assert_eq!(to_tl("k", "iang", "5"), "ki\u{00e2}ng");
 }
 
-// MARK: - to_poj. SOURCE: poj.test.js + TaigiPhoneticsTests.swift testToPOJ_*.
+// MARK: - to_poj. SOURCE: poj.test.js + former iOS phonetics tests (`testToPOJ_*`).
 
 #[test]
 fn to_poj_initial_conversion() {

@@ -1,7 +1,7 @@
 //! The fixed rows of the Shortcuts pane: keys the user cannot rebind, named
-//! in the recorder rows' own spelling so the pane reads as one list
-//! (`ShortcutSettingsView.swift`). Each desktop draws them in its own
-//! spelling ([`ComposingKeyChord::display`]).
+//! in the recorder rows' own spelling so the pane reads as one list. Each
+//! desktop draws them in its own spelling ([`ComposingKeyChord::display`]);
+//! the macOS pane draws these strings in `ShortcutSettingsView.swift`.
 
 use super::chord::ComposingKeyChord;
 use super::intent::{caret_chord_modifiers, WIDTH_FLIP_MODIFIERS};
@@ -10,8 +10,8 @@ use super::snapshot::KeyModifiers;
 use crate::candidates::HorizontalPageLayout;
 use crate::platform::DesktopPlatform;
 
-/// The six keys the fixed navigation tier reads, in the keycap legends
-/// (`navigationKeysLabel`): `←  →  ↑  ↓  PgUp  PgDn`, the Mac's
+/// The six keys the fixed navigation tier reads, in the keycap legends:
+/// `←  →  ↑  ↓  PgUp  PgDn`, the Mac's
 /// `←  →  ↑  ↓  ⇞  ⇟`.
 pub fn navigation_keys_label(platform: DesktopPlatform) -> &'static str {
     match platform {
@@ -20,7 +20,7 @@ pub fn navigation_keys_label(platform: DesktopPlatform) -> &'static str {
     }
 }
 
-/// The cancel key's keycap legend (`cancelKeyLabel`): `Esc`, the Mac's `⎋`.
+/// The cancel key's keycap legend: `Esc`, the Mac's `⎋`.
 pub fn cancel_key_label(platform: DesktopPlatform) -> &'static str {
     match platform {
         DesktopPlatform::Windows | DesktopPlatform::Linux => "Esc",
@@ -29,8 +29,7 @@ pub fn cancel_key_label(platform: DesktopPlatform) -> &'static str {
 }
 
 /// `Ctrl+←  Ctrl+→` (the Mac's `⌥←  ⌥→`), named by the same modifier
-/// labels the recorder rows use, from the modifier the classifier reads
-/// (`caretChordsLabel`).
+/// labels the recorder rows use, from the modifier the classifier reads.
 pub fn caret_chords_label(platform: DesktopPlatform) -> String {
     ["←", "→"]
         .map(|arrow| {
@@ -44,7 +43,7 @@ pub fn caret_chords_label(platform: DesktopPlatform) -> String {
 }
 
 /// `Ctrl+,  Ctrl+.  Ctrl+;` (the Mac's `⌃,  ⌃.  ⌃;`) — three of the keys
-/// the width flip reaches (`widthFlipChordsLabel`).
+/// the width flip reaches.
 pub fn width_flip_chords_label(platform: DesktopPlatform) -> String {
     [",", ".", ";"]
         .map(|key| {
@@ -59,7 +58,7 @@ pub fn width_flip_chords_label(platform: DesktopPlatform) -> String {
 
 /// `qwdfzxvy;` under Standard, `123456789` under Telex: every key of the
 /// live slot set, bare — lowercase because a bare key shows the character
-/// it types (`slotKeysLabel`).
+/// it types.
 pub fn slot_keys_label(slot_keys: CandidateSlotKeySet, platform: DesktopPlatform) -> String {
     ComposingKeyChord {
         key: slot_keys_run(slot_keys),
@@ -70,7 +69,7 @@ pub fn slot_keys_label(slot_keys: CandidateSlotKeySet, platform: DesktopPlatform
 
 /// `Shift+QWDFZXVY;` under Standard, `Shift+123456789` under Telex (the
 /// Mac's `⇧QWDFZXVY;`): every key of the live slot set behind ONE Shift —
-/// the Hanji / romanization commit aimed at a slot (`shiftedSlotKeysLabel`).
+/// the Hanji / romanization commit aimed at a slot.
 pub fn shifted_slot_keys_label(
     slot_keys: CandidateSlotKeySet,
     platform: DesktopPlatform,
@@ -109,8 +108,8 @@ mod tests {
 
     #[test]
     fn the_mac_fixed_rows_read_in_glyphs() {
-        // trace: ShortcutSettingsView.swift:152-180 — caret ⌥ (`caretChordModifiers`),
-        // width flip ⌃, ShortcutKeyDisplay's ⇞ ⇟ ⎋, no separator.
+        // trace: caret ⌥ (`caret_chord_modifiers`), width flip ⌃
+        // (`WIDTH_FLIP_MODIFIERS`), the Mac's ⇞ ⇟ ⎋ legends, no separator.
         let mac = DesktopPlatform::MacOS;
         assert_eq!(caret_chords_label(mac), "⌥←  ⌥→");
         assert_eq!(width_flip_chords_label(mac), "⌃,  ⌃.  ⌃;");
@@ -140,7 +139,7 @@ mod tests {
                 "Shift+123456789"
             );
         }
-        // trace: ShortcutSettingsView.swift:186-199 — one ⇧ ahead of the run.
+        // trace: the Mac's `display` — one ⇧ ahead of the run, no separator.
         let mac = DesktopPlatform::MacOS;
         assert_eq!(
             slot_keys_label(CandidateSlotKeySet::BareKeys, mac),

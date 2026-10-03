@@ -142,7 +142,7 @@ pub fn view(
     ))
 }
 
-/// One row, never two (`GeneralSettingsView.swift:89-117`): a known update
+/// One row, never two (`GeneralSettingsView.swift`'s update rows): a known update
 /// replaces the version-and-check row rather than sitting under it, and its
 /// trailing control is whatever the user's next move is; the note appears
 /// only when something went wrong.

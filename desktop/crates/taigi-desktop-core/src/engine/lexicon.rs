@@ -1,6 +1,6 @@
 //! Lexicon slice of the engine bridge: loading the dictionary data and
 //! resolving the user's source toggles into the engine's bitmask, and the
-//! dictionary-search page's two lookups. Port of iOS
+//! dictionary-search page's two lookups. Twin of iOS
 //! `RustEngineBridge+Lexicon.swift`.
 
 use std::collections::BTreeSet;

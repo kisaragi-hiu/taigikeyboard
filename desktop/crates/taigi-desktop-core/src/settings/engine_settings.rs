@@ -1,5 +1,5 @@
 //! The snapshot one engine operation reads. Every default matches iOS /
-//! Android and the macOS default table
+//! Android. macOS keeps a Swift twin of the default table
 //! (`macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift`,
 //! `DictionarySourceToggles.swift`).
 
@@ -21,7 +21,7 @@ impl InputMode {
     }
 
     /// The picker row's i18n key, as every other choice type carries one
-    /// (`GeneralSettingsView.swift`).
+    /// (the input-script picker in `GeneralSettingsView.swift` is the macOS twin).
     pub fn label_key(self) -> crate::strings::StringKey {
         use crate::strings::StringKey;
         match self {
@@ -115,7 +115,7 @@ impl CandidateDisplayMode {
 
     /// The mode after this one in picker order — what the
     /// `CycleCandidateDisplayMode` shortcut steps to: Pairing → Combined → Romanization Only →
-    /// Pairing. CROSS-PLATFORM INVARIANT — mirrors macOS `CandidateDisplayMode.next`.
+    /// Pairing. CROSS-PLATFORM INVARIANT — macOS keeps a Swift twin: `CandidateDisplayMode.next`.
     pub fn next(self) -> Self {
         match self {
             Self::SideBySide => Self::Combined,
@@ -158,9 +158,10 @@ pub struct EngineSettings {
     /// read by the composing intent executor's `document_punctuation`.
     pub is_full_width_punctuation: bool,
     /// What a candidate cell shows; `AppConfig.candidate_display_mode`.
-    /// CROSS-PLATFORM INVARIANT — mirrors
+    /// CROSS-PLATFORM INVARIANT — every platform defaults to side-by-side.
+    /// macOS keeps a Swift twin:
     /// `macos/Sources/TaigiInputMethodCore/Settings/EngineSettings.swift`
-    /// `candidateDisplayMode`; every platform defaults to side-by-side.
+    /// `candidateDisplayMode`.
     pub candidate_display_mode: CandidateDisplayMode,
     /// §34/S22 — inverted onto `FetchAtPos.literal_roman_candidate_disabled`.
     /// CROSS-PLATFORM INVARIANT — mirrors `isLiteralRomanCandidateEnabled`
@@ -169,27 +170,30 @@ pub struct EngineSettings {
     pub is_literal_roman_candidate_enabled: bool,
     /// No Hyphens (`behavioral-invariants.md` §49) — `AppConfig.hyphenless_roman`
     /// on the base config; no TPS layout here, so no fold.
-    /// CROSS-PLATFORM INVARIANT — mirrors `isHyphenlessRomanEnabled`
-    /// (`macos/.../EngineSettings.swift`, `ios/.../SharedSettings.swift`) and
-    /// `hyphenlessRomanEnabled` (`android/.../PrefHelper.kt`), all OFF.
+    /// CROSS-PLATFORM INVARIANT — default OFF on every platform; mirrored by
+    /// `isHyphenlessRomanEnabled` (`ios/.../SharedSettings.swift`) and
+    /// `hyphenlessRomanEnabled` (`android/.../PrefHelper.kt`). macOS keeps a
+    /// Swift twin: `macos/.../EngineSettings.swift` `isHyphenlessRomanEnabled`.
     pub is_hyphenless_roman_enabled: bool,
     /// ⁿ becomes ᴺ in capitals (`behavioral-invariants.md` §53) — the POJ nasal marker follows
     /// the case of the letters before it (`SIÂᴺ`); off, always `ⁿ`. Sent
     /// inverted as `AppConfig.force_lowercase_nasal_marker` on the base config.
-    /// CROSS-PLATFORM INVARIANT — mirrors `isNasalMarkerUppercaseEnabled`
-    /// (`macos/.../EngineSettings.swift`, `ios/.../SharedSettings.swift`) and
-    /// `nasalMarkerUppercaseEnabled` (`android/.../PrefHelper.kt`), all ON.
+    /// CROSS-PLATFORM INVARIANT — default ON on every platform; mirrored by
+    /// `isNasalMarkerUppercaseEnabled` (`ios/.../SharedSettings.swift`) and
+    /// `nasalMarkerUppercaseEnabled` (`android/.../PrefHelper.kt`). macOS keeps
+    /// a Swift twin: `macos/.../EngineSettings.swift` `isNasalMarkerUppercaseEnabled`.
     pub is_nasal_marker_uppercase_enabled: bool,
     /// Gates the custom-dictionary lookup itself: off means the engine reads
     /// no custom rows (`FetchAtPos.custom_dictionary_disabled`). CROSS-PLATFORM INVARIANT —
-    /// `SharedSettings.swift:51` (ON).
+    /// `SharedSettings.swift` `isCustomDictEnabledKey` (ON).
     pub is_custom_dict_enabled: bool,
     pub dictionary_sources: DictionarySourceToggles,
 }
 
 impl EngineSettings {
-    /// What a fresh install types with. Every value matches the iOS, Android
-    /// and macOS default for the same setting (`EngineSettings.swift:79-88`).
+    /// What a fresh install types with. Every value matches the iOS and Android
+    /// default for the same setting. macOS keeps a Swift twin:
+    /// `EngineSettings.swift` `EngineSettings.defaults`.
     /// A `const` so the settings keys (`keys.rs`) can read their defaults
     /// from it rather than restate them.
     ///
@@ -257,8 +261,9 @@ pub struct DictionarySourceToggles {
 }
 
 impl DictionarySourceToggles {
-    /// CROSS-PLATFORM INVARIANT — mirrors `ios/.../SharedSettings.swift:53-66`
-    /// and `macos/.../DictionarySourceToggles.swift:99-114`.
+    /// CROSS-PLATFORM INVARIANT — mirrors the source-toggle keys in `ios/.../SharedSettings.swift`.
+    /// macOS keeps a Swift twin: `macos/.../DictionarySourceToggles.swift`
+    /// `DictionarySourceToggles.defaults`.
     pub const DEFAULT: Self = Self {
         kautian: true,
         taigitv: true,
@@ -303,7 +308,7 @@ pub struct KautianSubcollections {
 
 impl KautianSubcollections {
     /// CROSS-PLATFORM INVARIANT — every subcollection defaults ON
-    /// (`ios/.../SharedSettings.swift:74-84`).
+    /// (`ios/.../SharedSettings.swift`, the `kautianAccent*` / `kautianNameAppendix` keys).
     pub const DEFAULT: Self = Self {
         accent_lukang: true,
         accent_sansia: true,

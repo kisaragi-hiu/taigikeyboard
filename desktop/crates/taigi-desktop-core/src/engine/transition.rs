@@ -1,6 +1,5 @@
 //! Value types for one composing round-trip: the engine snapshot, the ordered
 //! effects it wants the platform to run, and the continuous candidates.
-//! Port of `macos/Sources/TaigiInputMethodCore/Engine/ComposingTransition.swift`.
 
 use protos::engine::{
     effect, CandidateMessage, CommitResolution, CommittedWord, ComposingResponse,
@@ -192,7 +191,7 @@ impl ContinuousCandidate {
 /// `fetch_at_pos` means the round-trip never reached the engine, whose state
 /// is whatever it already was, while `candidates == None` means the engine
 /// answered and reported that it is not in the continuous phase. Merging
-/// them corrupts state (`ComposingTransition.swift:99-113`).
+/// them corrupts state.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ContinuousFetchResult {
     pub transition: ComposingTransition,
@@ -305,9 +304,9 @@ mod tests {
 
     #[test]
     fn decodes_every_effect_kind_with_its_payload() {
-        // trace: ComposingEffectDecodingTests.swift:14-56 — all nine kinds in
-        // one response, payloads carried, wire order kept; :58-73 — a
-        // `trigger_prediction` of false is carried, not assumed.
+        // trace: all nine wire `effect::Kind`s in one response, payloads
+        // carried, wire order kept; a `trigger_prediction` of false is
+        // carried, not assumed.
         let wire = |kind| WireEffect { kind: Some(kind) };
         let response = ComposingResponse {
             effect: vec![

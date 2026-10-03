@@ -1,5 +1,5 @@
 //! When a committed word earns the auto-space trailing space, as pure
-//! decisions. Port of `AutoSpacePolicy.swift` + `AutoSpacePunctuation.swift`
+//! decisions — the one copy the three desktops run
 //! (behavioural invariant §23, `INVARIANT_AUTO_SPACE_PUNCTUATION_SWAP`).
 
 use crate::settings::InputMode;
@@ -8,7 +8,8 @@ use crate::settings::InputMode;
 /// brackets/quotes are deliberately excluded (they need a LEADING space),
 /// and the ASCII straight quotes because one glyph serves both sides.
 /// CROSS-PLATFORM INVARIANT — mirrors `ios/.../Input/AutoSpacePunctuation.swift`,
-/// `android/.../ime/text/AutoSpacePunctuation.kt`, `macos/.../AutoSpacePunctuation.swift`.
+/// `android/.../ime/text/AutoSpacePunctuation.kt`. macOS keeps a Swift twin:
+/// `macos/.../Policies/AutoSpacePunctuation.swift`.
 const ATTACHING: [char; 19] = [
     '。', '！', '？', '.', '!', '?', '，', ',', '、', '；', ';', '：', ':', ')', '）', ']', '】',
     '」', '』',
@@ -39,8 +40,8 @@ pub fn is_gate_active(is_auto_space_enabled: bool, wrote_romanization: bool) -> 
 /// A `match` over a two-variant enum rather than `true`, so that adding a
 /// non-romanized layout (TPS composes Bopomofo, which takes no spacing)
 /// fails to compile here instead of silently spacing Bopomofo.
-/// CROSS-PLATFORM INVARIANT — mirrors `macos/.../AutoSpacePolicy.swift`
-/// `rawPreeditWritesRomanization(inputMode:)`.
+/// CROSS-PLATFORM INVARIANT — Android mirrors it in `android/.../CandidateClickHandler.kt`
+/// `rawPreeditWritesRomanization(isTPSLayout:)`.
 pub fn raw_preedit_writes_romanization(input_mode: InputMode) -> bool {
     match input_mode {
         InputMode::Tl | InputMode::Poj => true,
@@ -112,7 +113,8 @@ mod tests {
 
     #[test]
     fn attaching_set_matches_the_cross_platform_roster() {
-        // trace: AutoSpacePolicyTests.swift:10-30 — the 19 glyphs.
+        // trace: the 19 glyphs of `ATTACHING`; openers and straight quotes
+        // are outside it.
         for glyph in [
             "。", "！", "？", ".", "!", "?", "，", ",", "、", "；", ";", "：", ":", ")", "）", "]",
             "】", "」", "』",
@@ -129,7 +131,8 @@ mod tests {
 
     #[test]
     fn the_gate_follows_whether_the_commit_wrote_romanization() {
-        // trace: AutoSpacePolicyTests.swift:32-48.
+        // trace: `is_gate_active` = enabled AND wrote_romanization — on only
+        // for (true, true).
         assert!(!is_gate_active(false, true));
         assert!(!is_gate_active(false, false));
         assert!(is_gate_active(true, true));
@@ -138,8 +141,8 @@ mod tests {
 
     #[test]
     fn a_fresh_install_has_the_gate_off_for_romanization() {
-        // trace: AutoSpacePolicyTests — the shipped default is OFF on every
-        // platform (`keys::IS_AUTO_SPACE_ENABLED` says why).
+        // trace: the shipped default is OFF on every platform
+        // (`keys::IS_AUTO_SPACE_ENABLED` says why).
         let document = crate::settings::SettingsDocument::default();
         let enabled = document.bool(&crate::settings::keys::IS_AUTO_SPACE_ENABLED);
         assert!(!is_gate_active(
@@ -157,7 +160,9 @@ mod tests {
 
     #[test]
     fn augment_insert_places_the_space_around_the_character() {
-        // trace: AutoSpacePolicyTests.swift:96-143.
+        // trace: `augment_insert` — attaching → "? " (arms the swap), other →
+        // " (", a typed space passes through but arms it, a trailing hyphen
+        // or the gate off writes the text as is.
         let attaching = augment_insert("?", "guá", true);
         assert_eq!(attaching.text, "? ");
         assert!(attaching.leaves_trailing_auto_space);

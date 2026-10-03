@@ -1,6 +1,5 @@
 //! Turns a user intent into an engine round-trip, mirrors what came back, and
 //! hands the engine's effects to the executor for the client that asked.
-//! Port of `ComposingManager.swift`.
 //!
 //! The engine owns the composition (phase, raw buffer, candidate index); this
 //! owns only a mirror of the last answer, which the controller reads to
@@ -166,8 +165,7 @@ impl ComposingManager {
 
     /// Steps the caret inside the pending tail. Not a buffer change: the
     /// engine asks for no fetch — the candidates on
-    /// screen still describe the same text (`ComposingManager.swift`
-    /// `moveCaret`).
+    /// screen still describe the same text.
     pub fn move_caret(
         &mut self,
         direction: CaretDirection,
@@ -265,8 +263,7 @@ impl ComposingManager {
     /// whether the first cell is the §34 literal, which takes no slot key.
     ///
     /// ONE snapshot for BOTH answers, so the cells and the key row can never
-    /// be resolved against two different instants. Port of macOS
-    /// `ComposingManager.presentation(for:)`.
+    /// be resolved against two different instants.
     pub fn presentation(
         &self,
         candidates: &[ContinuousCandidate],
