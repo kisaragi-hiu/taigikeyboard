@@ -70,6 +70,7 @@ pub fn decode_intent(req: &ComposingRequest) -> Result<Intent, ComposingError> {
             syllable_count: clamp_syllable_count(m.syllable_count),
         },
         Method::TelexKey(m) => Intent::TelexKey { key: m.key },
+        Method::TpsKey(m) => Intent::TpsKey { key: m.key },
         Method::MoveCaret(m) => Intent::MoveCaret {
             direction: match m.direction() {
                 protos::engine::CaretDirection::Left => Some(CaretDirection::Left),

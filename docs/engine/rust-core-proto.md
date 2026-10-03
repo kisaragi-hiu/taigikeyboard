@@ -194,6 +194,7 @@ message ComposingRequest {
     // --- Desktop editing keys (40s) ---
     TelexKey telex_key = 40;
     MoveCaret move_caret = 41;
+    TpsKey tps_key = 42;                                       // one TPS key at the caret: adjust + replace + insert, or the Space separator
   }
 }
 

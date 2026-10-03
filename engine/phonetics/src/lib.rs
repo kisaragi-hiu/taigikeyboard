@@ -54,5 +54,5 @@ pub use tps::{
     tps_notone_or_variant, tps_notone_prefix_boundary_tone, tps_notone_syllable_ends_from_tl,
     tps_num_from_tl, tps_num_syllable_ends_from_tl,
 };
-pub use tps_adjust::defold_coda_to_initial;
+pub use tps_adjust::{adjust as tps_input_adjust, defold_coda_to_initial};
 pub use tps_ambiguity::{tps_ambiguity_family, TpsFamilyMember, TpsGlyphRole};

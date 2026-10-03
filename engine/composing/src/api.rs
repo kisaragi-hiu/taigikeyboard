@@ -591,6 +591,11 @@ pub enum Intent {
     TelexKey {
         key: String,
     },
+    /// One TPS key at the caret — auto-correct, replacement and insertion in
+    /// one step, or the Space separator; see the `TpsKey` proto comment.
+    TpsKey {
+        key: String,
+    },
     /// Desktop caret — step one char inside the pending tail; see the
     /// `MoveCaret` proto comment for the contract (no refetch, edge = no-op).
     /// `None` is a wire direction the engine does not know (unspecified or

@@ -14,8 +14,8 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * page stay. At either edge of the pending tail — the caret never enters a
  * nailed segment — the request is a no-op with no effects. Every mutator
  * then edits at the caret: `Append` inserts there, `DeleteBackward` /
- * `ReplaceLast` act on the character before it, `TelexKey` on the chunk
- * before it. Mobile never sends this, so its caret stays at the end and
+ * `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
+ * the chunk before it. Mobile never sends this, so its caret stays at the end and
  * every mutator behaves as before.
  * </pre>
  *
@@ -164,8 +164,8 @@ public  final class MoveCaret extends
    * page stay. At either edge of the pending tail — the caret never enters a
    * nailed segment — the request is a no-op with no effects. Every mutator
    * then edits at the caret: `Append` inserts there, `DeleteBackward` /
-   * `ReplaceLast` act on the character before it, `TelexKey` on the chunk
-   * before it. Mobile never sends this, so its caret stays at the end and
+   * `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
+   * the chunk before it. Mobile never sends this, so its caret stays at the end and
    * every mutator behaves as before.
    * </pre>
    *
