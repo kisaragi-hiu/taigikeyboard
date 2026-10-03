@@ -38,7 +38,9 @@ Open, the maintainer's call (O1): what Space does once the syllable is closed �
 | `raw_preedit_writes_romanization` matches `Tl \| Poj` exhaustively, so a new variant fails to compile there; its comment names TPS | `policies/auto_space.rs:39-47` |
 | No physical-key → TPS table exists in the repository | — (only reference: `references/rime-moetaigi/rime-moetaigi/moetaigi-tsuim.schema.yaml:70,87`, Dachen positions) |
 | On Windows and Linux a shifted key's `characters_ignoring_modifiers` keeps Shift (`!`, `^`, `<`), and Caps Lock uppercases letters | `windows/crates/taigi-windows-platform/src/key_translation.rs:175-188`; `linux/crates/taigi-linux-platform/src/key_translation.rs:97-105` |
-| `KeyEventSnapshot` cannot tell a keypad digit from a number-row digit | `keys/snapshot.rs:80-100`; `keys/slot_key_set.rs:140-141` |
+| A keypad digit and a number-row digit differ only by `key_code`: Windows fills it for every key; Linux and macOS map only the number row and `;`. The macOS shell proto already carries `key_code` | `windows/crates/taigi-windows-platform/src/key_translation.rs:192-193`; `linux/crates/taigi-linux-platform/src/key_translation.rs:195-202`; `macos/crates/taigi-macos-ffi/src/key_translation.rs:98-103`; `macos/crates/taigi-macos-ffi/proto/desktop_shell.proto:225` |
+| The classifier takes no input mode; it reads `ComposingKeyBindings`, built from the settings document | `keys/intent.rs:144-150`; `keys/bindings.rs:83-94` |
+| `app_config` never sets `tps_or_maps_to_er` | `engine/bridge.rs:115-123` |
 | Windows and Linux settings pickers iterate `InputMode::ALL`; macOS hard-codes two tags | `windows/crates/taigi-windows-settings/src/winui/pages/general.rs:40-47`; `linux/crates/taigikeyboard-settings/src/pages/general.rs:19-25`; `macos/.../Settings/GeneralSettingsView.swift:92-95` |
 | `tpsMode` (方音符號) exists in i18n, scoped to `android`, `ios` | `i18n/settings.json:44-48` |
 | Wildcard matches that would read TPS as TL | `keys/telex_guide_rows.rs:83-86`; `windows/crates/taigi-windows-tsf/src/session.rs:861-864,882-885`; `linux/crates/taigi-linux-core/src/chrome.rs:82-85,99-102,161-164` |
@@ -58,7 +60,7 @@ Why in the engine rather than three wrappers in the desktop core: the desktop ha
 
 ### D1 — `InputMode::Tps`
 
-One new variant, wire and stored spelling `"tps"`, label `SettingsTpsMode` (`tpsMode` gains the three desktop platforms). The four exhaustive matches are compile-forced decisions; the wildcard matches above become exhaustive in the same PR. A document that already stores `"tps"` (a restored mobile backup) starts reading as TPS on all three desktops — on macOS too, since its importer does not filter — so the test at `document.rs:376-386` changes its unknown value to one that stays unknown, and the variant lands together with the classifier branch, never before it.
+One new variant, wire and stored spelling `"tps"`, label `SettingsTpsMode` (`tpsMode` gains the three desktop platforms). The five exhaustive matches (`settings/engine_settings.rs:27-30,38-41`, `policies/auto_space.rs:45-47`, `engine/dictionary_search.rs:100-103`, `engine/lexicon.rs:286-289`) are compile-forced decisions; the wildcard matches above become exhaustive in the same PR. A document that already stores `"tps"` (a restored mobile backup) starts reading as TPS on all three desktops — on macOS too, since its importer does not filter — so the test at `document.rs:376-386` changes its unknown value to one that stays unknown, and the variant lands together with the classifier branch, never before it.
 
 ### D2 — Physical layout (U4)
 
@@ -99,7 +101,7 @@ The table was checked glyph by glyph against `engine/phonetics/src/tps.rs:17-130
 
 ### D3 — Classifier under TPS
 
-One branch at the top of `ComposingKeyIntent::intent`, taken when `input_mode == Tps`, ahead of the slot tier, the composing bindings and the typing tier, so a bound Space (or a chord rebound onto a layout key) cannot intercept:
+One branch at the top of `ComposingKeyIntent::intent`, taken when the bindings say the mode is TPS (`ComposingKeyBindings::from_document` carries it — the classifier's signature and its four callers do not change), ahead of the slot tier, the composing bindings and the typing tier, so a bound Space (or a chord rebound onto a layout key) cannot intercept:
 
 | Key | Idle | Composing |
 |---|---|---|
@@ -108,16 +110,16 @@ One branch at the top of `ComposingKeyIntent::intent`, taken when `input_mode ==
 | Keypad `1`–`9`, no modifier, list showing | — | pick that slot |
 | Keypad digit otherwise | pass through | `CommitThenInsert` |
 | Enter / Shift+Enter / Tab / arrows / `[` `]` / Esc / Backspace / caret chord | unchanged | unchanged |
-| Ctrl + `,` `.` `;` | types the full-width mark | commits, then types the full-width mark |
+| Ctrl + `,` `.` `;` | types the full-width mark — the bare key is a glyph, so under TPS the chord is the punctuation key, not a width flip | commits, then types the full-width mark |
 | Any other printable | pass through | `CommitThenInsert` |
 
 Classifying a key never asks the engine — the Windows Test phase returns before the runtime is prepared (`windows/crates/taigi-windows-tsf/src/session.rs:205-242`) — so "Space is consumed while composing" is the whole test-phase answer.
 
-**O1 — Space on a closed syllable.** Mobile commits the glyphs as typed and writes a document space; nobody types TPS that way on mobile, where a candidate is tapped. On a desktop, Space is the key every Zhuyin-family input method confirms with. Recommended: with a list showing, Space confirms the highlighted candidate (Enter's action); with none, it commits the glyphs as typed, no space after. The alternative is mobile's rule verbatim. Either is one arm in the executor; P2 does not start until this is answered.
+**O1 — Space on a closed syllable.** Mobile commits the glyphs as typed and writes a document space; nobody types TPS that way on mobile, where a candidate is tapped. On a desktop, Space is the key every Zhuyin-family input method confirms with. Recommended: with a list showing, Space confirms the highlighted candidate (Enter's action); with none, it commits the glyphs as typed, no space after. The alternative is mobile's rule verbatim. Either is one arm in the executor; P2b does not start until this is answered.
 
-The keypad needs one new snapshot field, `is_keypad: bool`, filled by each platform's key translation (Windows `VK_NUMPAD1…9`, Linux `KP_1…9`, macOS the numeric-pad flag) and carried in `desktop_shell.proto` `KeyEvent`. With Num Lock off the keypad arrives as navigation keys and behaves as those do today.
+The keypad is read from `key_code`, which Windows already fills; the Linux and macOS key-code tables gain the nine keypad codes. No snapshot field and no proto change. With Num Lock off the keypad arrives as navigation keys and behaves as those do today.
 
-Under TPS these do nothing: Telex keys, the letter and digit slot sets, the Shift + slot script flip, Output the Other Script (its row in the Shortcuts pane stays; its chord never fires under TPS), Toggle Hanji / Romanization (the engine forces Hanji-first), No Hyphens. Full-width punctuation is on regardless of the stored swap, as on mobile (`ios/.../Settings/SharedSettings.swift:737-741`).
+Under TPS these do nothing, and write no setting: the Toggle Hanji / Romanization and Cycle Candidate Display shortcuts (`windows/crates/taigi-windows-tsf/src/session.rs:888-925` and the Linux `chrome.rs` counterparts), the Telex guide shortcut, Telex keys, the letter and digit slot sets, the Shift + slot script flip, Output the Other Script (its row in the Shortcuts pane stays; its chord never fires under TPS), No Hyphens. Full-width punctuation is on regardless of the stored swap, as on mobile (`ios/.../Settings/SharedSettings.swift:737-741`).
 
 ### D4 — What the list and the commit show
 
@@ -134,6 +136,7 @@ Sites in `desktop/crates/taigi-desktop-core/src/` that assume a romanization and
 | `settings/document.rs:267-278` | Full-width punctuation effective value is on |
 | `keys/bindings.rs:96-99` | Slot labels are `1`–`9` |
 | `policies/auto_space.rs:39-47` | `raw_preedit_writes_romanization(Tps) = false` |
+| `engine/bridge.rs:115-123` | `tps_or_maps_to_er = true`, the mobile default (`ios/.../Settings/SharedSettings.swift:88`); the cell's `TlDisplayToTps` call passes the same value, so a cell and its commit agree |
 
 ### D5 — Shortcuts and mode changes (U2)
 
@@ -145,7 +148,7 @@ Sites in `desktop/crates/taigi-desktop-core/src/` that assume a romanization and
 
 `Ctrl+Alt+T` is avoided (GNOME's terminal). Both chords pass `global_rejection` (`keys/shortcut_actions.rs:245-279`) and collide with nothing in the default roster; they are rebindable and go through the existing conflict rules. No list of system shortcuts reserves either, which is not a promise for every desktop environment — the macOS defaults are confirmed on device in P4.
 
-One function in the core, `settings::next_input_mode(current, last_romanization, request)`, answers every mode change — the picker, both shortcuts, reset, restore — and every writer in the five places listed above calls it. The last-used romanization is one new stored key, `lastRomanizationMode`, written only when a romanization is left for TPS; when absent, the mode in use counts, so a POJ user's first round trip returns to POJ. TPS is never stored in it.
+One function in the core, `settings::next_input_mode(current, last_romanization, request)`, answers every mode change — the picker, both shortcuts, reset, restore — and every writer in the five places listed above calls it. The last-used romanization is one new stored key, `lastRomanizationMode`, written only when a romanization is left for TPS; when absent, the mode in use counts, so a POJ user's first round trip returns to POJ. TPS is never stored in it. Both new stored keys join the General reset list (`settings/keys.rs:245-254`); `ShowTpsKeyboard` joins `fires_once_per_press` (`keys/shortcut_actions.rs:97-99`).
 
 ### D6 — On-screen key panel (U3, U6)
 
@@ -157,7 +160,7 @@ Shared in the core, new file `keys/tps_keyboard_rows.rs`: four rows of key caps 
 | Windows | A new `WindowHandler` on `PopupWindow` (`ui/window.rs:174-235`) | Centred like the Telex guide (`ui/telex_guide.rs:217-232`); stays up across keys; hides on focus loss | `SendInput` of the key's real virtual key (down + up), which re-enters through the key sink — W3 holds. **Unverified until its spike passes**; if it does not, Windows ships show-only and this row is amended |
 | Linux | A window of the GTK settings app (`taigikeyboard-settings`), opened by the shortcut and the panel menu | An ordinary window | None — clicking it takes focus, which ends the session (`taigikeyboard-ibus/src/engine.rs:302-326`) |
 
-Windows spike acceptance, on the Windows box, before P6 is scoped: a base key and a Shift-layer key each type their glyph; a click with a physical Shift / Ctrl / Alt / Win held; the synthetic Shift does not trip the Shift-tap English toggle (`taigi-windows-platform/src/key_translation.rs:68-93`); the cold first key (Test, then Deliver with `prepare_for_first_key`); focus moving between click and delivery; an English-mode and a read-only context; `SendInput`'s return count, and an elevated host (UIPI refuses injection upward).
+Windows spike acceptance, on the Windows box, before P6 is scoped: a base key and a Shift-layer key each type their glyph; a click with a physical Shift / Ctrl / Alt / Win held; the synthetic Shift does not trip the Shift-tap English toggle (`taigi-windows-platform/src/key_translation.rs:68-93`); the cold first key (Test, then Deliver with `prepare_for_first_key`); focus moving between click and delivery; an English-mode and a read-only context; a click while the symbol picker or the Telex guide is up; a non-US keyboard layout (the injected key's character depends on the live layout); `SendInput`'s return count, and an elevated host (UIPI refuses injection upward).
 
 The panel is shown only under TPS and persists until the shortcut hides it; whether it is shown is one stored key, `tpsKeyboardShown`.
 
@@ -167,9 +170,10 @@ The panel is shown only under TPS and persists until the shortcut hides it; whet
 |---|---|---|---|---|---|
 | P0 | docs | This roadmap, the `roadmap.md` row | — | — | In progress |
 | P1 | feat (engine) | D0: `TpsKey` in `composing.proto` and `transition.rs`, tests from the mobile key sequences in `behavioral-invariants.md` §31–§33, §41 | engine; `make build` for the mobile artifacts (additive — mobile sends nothing new) | ~250 | Pending |
-| P2 | feat (desktop-core, Windows, Linux) | D1–D4: the variant, the layout table, the classifier branch, the D4 sites, `is_keypad` (filled on Windows and Linux, present and false on macOS), the wildcard matches, i18n scope. Windows and Linux type TPS from the settings picker | desktop-core, Windows, Linux, **and the macOS Rust seam** (`taigi-macos-ffi` compiles against the new snapshot field and intent) | ~500 | Pending — needs O1 |
-| P3 | feat (desktop-core, Windows, Linux) | D5: `next_input_mode`, `ToggleTps`, `lastRomanizationMode`, the Windows preserved key, menu and mode-flash labels | as P2 | ~300 | Pending |
-| P4 | feat (macOS) | The Swift enum and picker, `is_keypad` filled, `ToggleTps` in `ShortcutActions.swift`, the mode flash | macOS | ~350 | Pending |
+| P2a | feat (desktop-core, not reachable) | D2 table, the `TpsKey` bridge call, the D4 sites behind a mode the document cannot yet produce, keypad key codes on Linux and macOS; tests only | desktop-core, Windows, Linux, the macOS Rust seam, `make -C macos test` | ~400 | Pending |
+| P2b | feat (desktop-core, Windows, Linux) | D1 + D3: the variant, the classifier branch, the exhaustive and wildcard matches with their mode labels, i18n scope. Windows and Linux type TPS from the settings picker | as P2a | ~400 | Pending — needs O1 |
+| P3 | feat (desktop-core, Windows, Linux) | D5: `next_input_mode`, `ToggleTps`, `lastRomanizationMode`, the Windows preserved key, the menu row | as P2a | ~300 | Pending |
+| P4 | feat (macOS) | The Swift enum and picker, `ToggleTps` in `ShortcutActions.swift`, the mode flash | macOS | ~350 | Pending |
 | P5 | feat (all three) | D6 show-only: the rows in the core, the three windows, `ShowTpsKeyboard`, `tpsKeyboardShown`; the Windows `SendInput` spike | all three | ~500 | Pending |
 | P6 | feat (macOS, Windows) | D6 click: the macOS session request; the Windows `SendInput` path if its spike passed | macOS, Windows | ~350 | Pending |
 
@@ -177,10 +181,10 @@ Regression surface for TL and POJ, checked in every phase that touches the core:
 
 ### Not disturbing the refactor (U1)
 
-P15 of `macos-desktop-core-roadmap.md` rewrites the `*.swift` cites in Rust comments; the files it edits most are the ones P2 edits (`keys/chord.rs`, `keys/intent.rs`, `settings/keys.rs`, `settings/engine_settings.rs`). So:
+P15 of `macos-desktop-core-roadmap.md` rewrites the `*.swift` cites in Rust comments; the files it edits most are the ones P2a and P2b edit (`keys/chord.rs`, `keys/intent.rs`, `settings/keys.rs`, `settings/engine_settings.rs`). So:
 
 - P0 and P1 (engine) touch nothing P15 concentrates on and can proceed now.
-- P2 onward — every edit to an existing desktop-core, Windows, Linux or macOS file, module registration of the new files included — starts after P15 merges, on a rebase.
+- P2a onward — every edit to an existing desktop-core, Windows, Linux or macOS file, module registration of the new files included — starts after P15 merges, on a rebase.
 - The macOS behaviour-freeze contract is unaffected for TL and POJ: every property it lists is unchanged unless the stored mode is `"tps"`.
 
 ## Best practices alignment
@@ -204,11 +208,13 @@ Deliberately not adopted:
 - **A copy of the tone-mark set in the core** — the engine's separator test is the only one.
 - **An IME-owned GTK window on Linux, or Fcitx5's virtual-keyboard interface** — `linux-roadmap.md:505-506`; a click path there is outside this plan (U6).
 - **An asynchronous edit session from the Windows panel** — breaks W3.
-- **A physical-position (scan code) layout table** — only Windows carries full key codes today; the character table needs no new plumbing beyond `is_keypad`.
+- **A physical-position (scan code) layout table** — only Windows carries full key codes today; the character table needs nine keypad codes and nothing else.
+- **A new `is_keypad` snapshot field** — `key_code` already says it, and a new field touches every snapshot literal and the macOS proto.
+- **The Linux panel as a framework lookup table**, as the Telex guide is drawn — the table is shared with the candidates and is taken down by the next key, so it cannot stay up while typing.
 
 ## Reviews
 
-- P0 pre-implementation, 2026-10-03: `phonetics-specialist` (ㄛ / ㄜ swapped onto the right layers; tone 8 scalar; ㆳ dropped); Codex GO-WITH-CHANGES — raw caret → D0, shifted characters and Caps Lock → D2, Space and keypad rules → D3, presentation sites → D4, one mode-change function and the POJ default → D5, spike acceptance → D6, the macOS seam in P2's gates; all applied.
+- P0 pre-implementation, 2026-10-03: `phonetics-specialist` (ㄛ / ㄜ swapped onto the right layers; tone 8 scalar; ㆳ dropped); Codex GO-WITH-CHANGES — raw caret → D0, shifted characters and Caps Lock → D2, Space and keypad rules → D3, presentation sites → D4, one mode-change function and the POJ default → D5, spike acceptance → D6, the macOS seam in P2a's gates; all applied. Claude cloud session `session_01UteaCLYB9BKdVnyyhzwUEW` GO-WITH-CHANGES — the same caret, Shift-layer and Space findings independently, plus: keypad through `key_code`, the mode through the bindings, `tps_or_maps_to_er`, inert display shortcuts, reset list, P2 split; all applied. Not applied: a key for ㆳ (no engine reading), the Linux lookup-table panel (see above).
 
 ## Dogfood
 

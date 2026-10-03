@@ -21,6 +21,7 @@
 | Item | Status | Where |
 |---|---|---|
 | **macOS over desktop-core** — the macOS input method links the shared Rust `taigi-desktop-core` for its key path instead of re-implementing it in Swift (about 4,300 of the ~8,070 duplicate Swift lines measured; candidate-window geometry, the settings backend, global shortcuts and the update flow stay Swift) | P0–P6 merged 2026-10-02 (#342–#347); P7 next | [`architecture/macos-desktop-core-roadmap.md`](architecture/macos-desktop-core-roadmap.md) · inventory [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md) |
+| **Desktop TPS mode** — 方音符號 as a third input mode on macOS, Windows and Linux: Dachen positions with a Shift layer, its own switch shortcut, keypad candidate picking, an on-screen key panel | P0 plan 2026-10-03; P1 (engine `TpsKey`) next | [`architecture/desktop-tps-roadmap.md`](architecture/desktop-tps-roadmap.md) |
 
 Everything else scoped through 2026-10-01 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
