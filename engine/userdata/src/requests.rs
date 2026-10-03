@@ -10,13 +10,17 @@ use protos::engine::{
     user_data_request, user_data_response, BackupExported, BackupImported, BackupRefusal,
     CustomCsvExported, CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal,
     CustomEntries, CustomEntryDeleted, CustomEntryMatches, CustomEntrySaved, ImportBackup,
-    ImportCustomCsv, ListCustomEntries, RecordUsage, ResetUserData, SaveCustomEntry,
-    SearchCustomEntries, UserDataReset,
+    ImportCustomCsv, LearningRecord, LearningRecordDeleted, LearningRecordKind,
+    LearningRecordOrder, LearningRecordSaved, LearningRecords, ListCustomEntries,
+    ListLearningRecords, RecordUsage, ResetUserData, SaveCustomEntry, SearchCustomEntries,
+    UserDataReset,
 };
 
+use crate::paging::{last_page_offset, saturated_u32};
 use crate::{
-    BackupError, CustomDictionaryCSV, CustomDictionaryCSVError, CustomDictionaryError,
-    CustomDictionaryRow, CustomDictionaryStore, UserDataHandle, UserDataStores,
+    learning_records, BackupError, CustomDictionaryCSV, CustomDictionaryCSVError,
+    CustomDictionaryError, CustomDictionaryRow, CustomDictionaryStore, UserDataHandle,
+    UserDataStores,
 };
 
 /// Why a user-data request did nothing.
@@ -78,6 +82,21 @@ impl UserDataHandle {
             Method::SearchCustomEntries(search) => {
                 Answer::CustomEntryMatches(Self::search_custom_entries(stores, search)?)
             }
+            Method::ListLearningRecords(list) => {
+                Answer::LearningRecords(Self::list_learning_records(stores, list)?)
+            }
+            Method::SetLearningRecordCount(set) => {
+                let (kind, record) = named_learning_record(set.record.as_ref())?;
+                let record = learning_records::set_count(stores, kind, record, set.count)
+                    .map_err(store_error)?;
+                Answer::LearningRecordSaved(LearningRecordSaved { record })
+            }
+            Method::DeleteLearningRecord(delete) => {
+                let (kind, record) = named_learning_record(delete.record.as_ref())?;
+                let removed =
+                    learning_records::delete(stores, kind, record).map_err(store_error)?;
+                Answer::LearningRecordDeleted(LearningRecordDeleted { removed })
+            }
             // Answered by `handle` before a page request is looked at.
             Method::Open(_) | Method::RecordUsage(_) => {
                 return Err(RequestError::Invalid("not a page request"));
@@ -121,19 +140,32 @@ impl UserDataHandle {
             0 => usize::MAX,
             limit => limit as usize,
         };
-        // Pulled back to the last page that exists: the matches can shrink
-        // under the page a platform is on (a delete on the last page).
-        let last_page = matching_total.saturating_sub(1) / limit.max(1) * limit;
-        let offset = (list.offset as usize).min(last_page);
+        let offset = last_page_offset(matching_total, limit, list.offset as usize);
         let entries = dictionary
             .rows(&list.filter, limit, offset)
             .map_err(store_error)?;
         Ok(CustomEntries {
             entries: entries.iter().map(custom_dictionary_entry).collect(),
-            total: u32::try_from(total).unwrap_or(u32::MAX),
-            matching_total: u32::try_from(matching_total).unwrap_or(u32::MAX),
-            offset: u32::try_from(offset).unwrap_or(u32::MAX),
+            total: saturated_u32(total),
+            matching_total: saturated_u32(matching_total),
+            offset: saturated_u32(offset),
         })
+    }
+
+    /// A page of one learning store. Paged always: a store holds up to
+    /// 50 000 rows, which never travel in one answer.
+    fn list_learning_records(
+        stores: &UserDataStores,
+        list: &ListLearningRecords,
+    ) -> Result<LearningRecords, RequestError> {
+        let kind = learning_record_kind(list.kind)?;
+        let order = LearningRecordOrder::try_from(list.order)
+            .map_err(|_| RequestError::Invalid("unknown learning record order"))?;
+        if list.limit == 0 {
+            return Err(RequestError::Invalid("learning records are listed by page"));
+        }
+        learning_records::list(stores, kind, &list.filter, order, list.limit, list.offset)
+            .map_err(store_error)
     }
 
     /// A new word (no `id`) or an edit. What the user can be told is a
@@ -294,6 +326,19 @@ impl UserDataHandle {
         }
         Ok(removed)
     }
+}
+
+fn learning_record_kind(raw: i32) -> Result<LearningRecordKind, RequestError> {
+    LearningRecordKind::try_from(raw)
+        .map_err(|_| RequestError::Invalid("unknown learning record kind"))
+}
+
+/// The record a learning-record mutation names, with its kind.
+fn named_learning_record(
+    record: Option<&LearningRecord>,
+) -> Result<(LearningRecordKind, &LearningRecord), RequestError> {
+    let record = record.ok_or(RequestError::Invalid("no learning record named"))?;
+    Ok((learning_record_kind(record.kind)?, record))
 }
 
 fn custom_dictionary_entry(row: &CustomDictionaryRow) -> CustomDictionaryEntry {
@@ -581,6 +626,44 @@ mod tests {
                 .collect(),
             other => panic!("expected matches, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn a_malformed_learning_records_request_is_refused() {
+        let directory = tempfile::tempdir().unwrap();
+        let handle = UserDataHandle::new();
+        handle.handle(&open_request(directory.path())).unwrap();
+        let refused = |method: user_data_request::Method| {
+            let answer = handle.handle(&UserDataRequest {
+                method: Some(method),
+            });
+            assert!(
+                matches!(answer, Err(RequestError::Invalid(_))),
+                "{answer:?}"
+            );
+        };
+        let list = |kind: i32, limit: u32, order: i32| {
+            user_data_request::Method::ListLearningRecords(ListLearningRecords {
+                kind,
+                limit,
+                order,
+                ..ListLearningRecords::default()
+            })
+        };
+        refused(list(0, 0, 0)); // unpaged
+        refused(list(9, 10, 0)); // no such kind
+        refused(list(0, 10, 9)); // no such order
+        refused(user_data_request::Method::SetLearningRecordCount(
+            protos::engine::SetLearningRecordCount::default(),
+        ));
+        refused(user_data_request::Method::DeleteLearningRecord(
+            protos::engine::DeleteLearningRecord {
+                record: Some(LearningRecord {
+                    kind: 9,
+                    ..LearningRecord::default()
+                }),
+            },
+        ));
     }
 
     #[test]

@@ -528,7 +528,25 @@ pub fn immediate_transaction<T, E: From<rusqlite::Error>>(
     connection: &Connection,
     body: impl FnOnce(&Connection) -> Result<T, E>,
 ) -> Result<T, E> {
-    connection.execute_batch("BEGIN IMMEDIATE;")?;
+    transaction(connection, "BEGIN IMMEDIATE;", body)
+}
+
+/// `BEGIN` … `COMMIT` for a body that only reads: every statement sees one
+/// snapshot, and no write lock is taken from a keyboard that is learning.
+/// Ended as [`immediate_transaction`] ends its own.
+pub fn deferred_transaction<T, E: From<rusqlite::Error>>(
+    connection: &Connection,
+    body: impl FnOnce(&Connection) -> Result<T, E>,
+) -> Result<T, E> {
+    transaction(connection, "BEGIN;", body)
+}
+
+fn transaction<T, E: From<rusqlite::Error>>(
+    connection: &Connection,
+    begin: &str,
+    body: impl FnOnce(&Connection) -> Result<T, E>,
+) -> Result<T, E> {
+    connection.execute_batch(begin)?;
     let result = body(connection).and_then(|value| {
         connection.execute_batch("COMMIT;")?;
         Ok(value)

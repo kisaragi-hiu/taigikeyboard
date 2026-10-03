@@ -27,6 +27,9 @@ message UserDataRequest {
     ExportBackup export_backup = 9;
     ImportBackup import_backup = 10;
     SearchCustomEntries search_custom_entries = 11;
+    ListLearningRecords list_learning_records = 12;
+    SetLearningRecordCount set_learning_record_count = 13;
+    DeleteLearningRecord delete_learning_record = 14;
   }
 }
 
@@ -43,6 +46,9 @@ message UserDataResponse {
     BackupExported backup_exported = 9;
     BackupImported backup_imported = 10;
     CustomEntryMatches custom_entry_matches = 11;
+    LearningRecords learning_records = 12;
+    LearningRecordSaved learning_record_saved = 13;
+    LearningRecordDeleted learning_record_deleted = 14;
   }
 }
 
@@ -285,3 +291,84 @@ message BackupImported {
   uint32 frequency = 3;
   uint32 association = 4;
 }
+
+// ---- The Learning Records pages (learning-records-page-roadmap) ----
+//
+// Every platform's Learning Records page lists what the keyboard learned,
+// corrects one row's count and deletes one row through these; "delete
+// everything" stays `ResetUserData`. Nothing here adds a row: a word the
+// user wants is a custom word.
+
+enum LearningRecordKind {
+  // How often each `(word, TL)` was committed — what ranking boosts.
+  LEARNING_RECORD_KIND_FREQUENCY = 0;
+  // The phrases the user composed segment by segment.
+  LEARNING_RECORD_KIND_LEARNED_PHRASE = 1;
+  // Which word followed which — next-word predictions.
+  LEARNING_RECORD_KIND_ASSOCIATION = 2;
+}
+
+enum LearningRecordOrder {
+  // Largest count first, then most recent.
+  LEARNING_RECORD_ORDER_MOST_USED = 0;
+  // Most recently used first, then largest count.
+  LEARNING_RECORD_ORDER_MOST_RECENT = 1;
+}
+
+// One learned row. `id` is the store's row id: a handle for a row a page
+// already listed, never the word's identity (that is `(text, tl)`, with the
+// previous pair for an association).
+message LearningRecord {
+  LearningRecordKind kind = 1;
+  int64 id = 2;
+  // The word / the phrase's Hanji / the association's next word.
+  string text = 3;
+  // Canonical TL of `text`; may be empty.
+  string tl = 4;
+  // Association only: the word `text` followed, and its TL.
+  string previous_text = 5;
+  string previous_tl = 6;
+  int64 count = 7;
+  // Epoch milliseconds; 0 when the stored time cannot be read.
+  int64 last_used_ms = 8;
+}
+
+// A page of one kind. `filter` matches the text or the TL (either side of
+// an association) as a substring; empty lists everything. `limit` 0 is
+// refused: a store holds up to 50 000 rows.
+message ListLearningRecords {
+  LearningRecordKind kind = 1;
+  string filter = 2;
+  uint32 limit = 3;
+  uint32 offset = 4;
+  LearningRecordOrder order = 5;
+}
+
+// Counted and read in one read transaction.
+message LearningRecords {
+  repeated LearningRecord records = 1;
+  uint32 total = 2;           // every row of the kind
+  uint32 matching_total = 3;  // the rows `filter` matches, for paging
+  // The offset these records start at: the request's, pulled back to the
+  // last page that exists when the matches shrank under it.
+  uint32 offset = 4;
+}
+
+// Sets one row's count, clamped to 1..=1 000 000; the row's last-used time
+// is kept (an edit is not a use). `record` is the row as the page listed
+// it: the write applies only while the row with that `id` still holds that
+// text and TL — a row id can be reused after a delete.
+message SetLearningRecordCount {
+  LearningRecord record = 1;
+  int64 count = 2;
+}
+
+// The row as stored now; absent when it is gone (deleted, evicted, or its
+// id reused by another word).
+message LearningRecordSaved { optional LearningRecord record = 1; }
+
+// Forgets one row, matched as `SetLearningRecordCount` matches it. The
+// keyboard learns it again on the next pick.
+message DeleteLearningRecord { LearningRecord record = 1; }
+
+message LearningRecordDeleted { bool removed = 1; }

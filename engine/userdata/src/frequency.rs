@@ -18,6 +18,15 @@ const ROW_COLUMNS: &str = "word, tl, count, CAST(strftime('%s', last_used) AS IN
 /// counts keep a stable order between two reads.
 const LIST_ORDER: &str = "count DESC, last_used DESC, word ASC, tl ASC";
 
+/// The table as the Learning Records page reads it.
+pub(crate) const LEARNING_TABLE: crate::learning_records::Table = crate::learning_records::Table {
+    name: TABLE_NAME,
+    identity: &["word", "tl"],
+    count: "count",
+    last_used: "last_used",
+    delete_dependents: None,
+};
+
 /// One learned frequency row, as the store hands it over.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct FrequencyRow {
@@ -32,7 +41,7 @@ pub struct FrequencyRow {
 /// hands it counts. A word is the `(Hanji, canonical TL)` PAIR (Core Principle
 /// #7): 重/tîng and 重/tāng are different rows.
 pub struct UserFrequencyStore {
-    database: UserDataDatabase,
+    pub(crate) database: UserDataDatabase,
     capacity: LearningCapacity,
 }
 

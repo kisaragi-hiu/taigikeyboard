@@ -8,13 +8,13 @@
 
 mod common;
 
-use common::{open_user_data, tl_config};
+use common::{open_user_data, tl_config, user_data};
 use std::time::{Duration, Instant};
 
 use protos::engine::{
     composing_request, next_word_request, next_word_response, request, response, user_data_request,
     CommitContinuous, CommitOutcome, CommitScript, ComposingRequest, ComposingResponse,
-    DecisionInput, NextWordRequest, RecordUsage, Response, Start, UserDataRequest, WordSelected,
+    DecisionInput, NextWordRequest, RecordUsage, Response, Start, WordSelected,
 };
 use userdata::{JournalMode, UserDataPaths, UserDataStores};
 
@@ -104,15 +104,6 @@ fn learn_count(reader: &UserDataStores, hanji: &str) -> Option<i64> {
 
 fn roundtrip(generation: u64, payload: request::Payload) -> Response {
     common::roundtrip(tl_config(false), generation, payload)
-}
-
-fn user_data(method: user_data_request::Method) -> Response {
-    roundtrip(
-        0,
-        request::Payload::UserData(UserDataRequest {
-            method: Some(method),
-        }),
-    )
 }
 
 fn record_usage(usage: RecordUsage) -> Response {

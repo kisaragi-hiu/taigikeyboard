@@ -28,20 +28,26 @@ pub fn roundtrip(config: AppConfig, generation: u64, payload: request::Payload) 
         .expect("response decodes")
 }
 
-/// Opens the engine's user data in `directory`, rollback-journaled as on
-/// iOS, and asserts it answered.
-pub fn open_user_data(directory: &std::path::Path) {
-    let opened = roundtrip(
+/// One user-data request under the TL config.
+#[allow(dead_code)]
+pub fn user_data(method: user_data_request::Method) -> Response {
+    roundtrip(
         tl_config(false),
         0,
         request::Payload::UserData(UserDataRequest {
-            method: Some(user_data_request::Method::Open(OpenUserData {
-                directory: directory.display().to_string(),
-                journal: UserDataJournal::Delete as i32,
-                ..OpenUserData::default()
-            })),
+            method: Some(method),
         }),
-    );
+    )
+}
+
+/// Opens the engine's user data in `directory`, rollback-journaled as on
+/// iOS, and asserts it answered.
+pub fn open_user_data(directory: &std::path::Path) {
+    let opened = user_data(user_data_request::Method::Open(OpenUserData {
+        directory: directory.display().to_string(),
+        journal: UserDataJournal::Delete as i32,
+        ..OpenUserData::default()
+    }));
     assert!(
         matches!(opened.payload, Some(response::Payload::UserData(_))),
         "open answered {opened:?}"

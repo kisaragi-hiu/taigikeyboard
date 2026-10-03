@@ -26,6 +26,8 @@ mod database;
 mod frequency;
 mod handle;
 mod learned_phrases;
+mod learning_records;
+mod paging;
 mod paths;
 mod requests;
 mod stores;
@@ -40,8 +42,8 @@ pub use custom_dictionary::{
     CustomDictionaryRow, CustomDictionaryStore, SearchKeyDeriver,
 };
 pub use database::{
-    immediate_transaction, JournalMode, UserDataDatabase, UserDataDatabaseError,
-    TAIGI_APPLICATION_ID,
+    deferred_transaction, immediate_transaction, JournalMode, UserDataDatabase,
+    UserDataDatabaseError, TAIGI_APPLICATION_ID,
 };
 pub use frequency::{FrequencyRow, UserFrequencyStore};
 pub use handle::UserDataHandle;
