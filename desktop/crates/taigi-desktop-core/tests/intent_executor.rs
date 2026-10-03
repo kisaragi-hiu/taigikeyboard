@@ -14,10 +14,10 @@ use taigi_desktop_core::composing::{
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, Effect};
 use taigi_desktop_core::keys::{
-    CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot, KeyModifiers,
+    CandidateNavigation, CaretDirection, ComposingKeyIntent, KeyEventSnapshot, KeyModifiers,
 };
 use taigi_desktop_core::platform::DesktopPlatform;
-use taigi_desktop_core::settings::{keys, SettingsDocument, StaticSettingsProvider};
+use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument, StaticSettingsProvider};
 
 /// One lock, one lexicon install: the engine is one per process.
 fn engine_lock() -> MutexGuard<'static, ()> {
@@ -412,4 +412,156 @@ fn a_switch_re_presents_an_open_list_and_never_opens_one() {
         true
     ));
     assert!(rig.list.is_empty());
+}
+
+// MARK: - TPS (desktop-tps-roadmap.md § D3, O1)
+
+fn new_tps_rig() -> Rig {
+    let engine = engine_lock();
+    let mut settings = SettingsDocument::default();
+    settings.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true);
+    settings.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+    let manager = ComposingManager::new(
+        Arc::new(StaticSettingsProvider::new(settings.clone())),
+        Box::new(EngineNextWord {
+            platform: DesktopPlatform::Windows,
+        }),
+        Box::new(SystemClock),
+        DesktopPlatform::Windows,
+        fresh_generation(),
+    );
+    Rig {
+        _engine: engine,
+        settings,
+        manager,
+        list: CandidateSource::default(),
+        surface: Surface::default(),
+    }
+}
+
+impl Rig {
+    fn type_tps(&mut self, glyphs: &str) {
+        for glyph in glyphs.chars() {
+            let key = glyph.to_string();
+            assert!(self.run(ComposingKeyIntent::TpsKey(key), &no_key()));
+        }
+        self.surface.calls.clear();
+    }
+}
+
+#[test]
+fn tps_space_after_an_open_syllable_is_taken_as_the_separator() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛ");
+    assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
+    assert_eq!(rig.manager.raw_input(), "ㄏㄛ ");
+    assert_eq!(rig.calls(), [format!("list {}", rig.list.len())]);
+}
+
+#[test]
+fn tps_space_on_a_closed_syllable_with_no_highlight_commits_the_glyphs_unspaced() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    rig.surface.selected = None;
+    assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
+    assert_eq!(rig.calls(), ["commit ㄏㄛˋ", "list closed"]);
+}
+
+#[test]
+fn tps_space_on_a_closed_syllable_confirms_the_highlighted_candidate() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    rig.surface.selected = Some(0);
+    let expected = rig
+        .list
+        .resolve(0, false)
+        .expect("a first cell")
+        .0
+        .hanji
+        .clone();
+    assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
+    let expected = expected.expect("the first candidate carries Hanji");
+    assert_eq!(
+        rig.calls(),
+        [format!("commit {expected}"), "list closed".to_owned()]
+    );
+}
+
+#[test]
+fn tps_a_flipped_slot_commits_the_cells_own_hanji_never_the_tl() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    // The surface maps slot 0 to cell 1.
+    let expected = rig
+        .list
+        .resolve(1, false)
+        .expect("a second cell")
+        .0
+        .hanji
+        .clone();
+    let intent = ComposingKeyIntent::SelectCandidateSlot {
+        slot: 0,
+        flip: true,
+    };
+    assert!(rig.run(intent, &no_key()));
+    let expected = expected.expect("the second candidate carries Hanji");
+    assert_eq!(
+        rig.calls(),
+        [format!("commit {expected}"), "list closed".to_owned()]
+    );
+}
+
+#[test]
+fn tps_ctrl_comma_writes_the_full_width_mark() {
+    // trace: under TPS the width is full and the Ctrl chord is no flip, so
+    // `policies::document_punctuation(",", true, false)` → `，`; the swap is
+    // tried first and the surface refuses it.
+    let mut rig = new_tps_rig();
+    let ctrl_comma = KeyEventSnapshot::chord(Some(","), ",", KeyModifiers::CONTROL);
+    assert!(rig.run(ComposingKeyIntent::PassThrough, &ctrl_comma));
+    assert_eq!(rig.calls(), ["swap \"， \"", "insert \"，\""]);
+}
+
+#[test]
+fn tps_space_on_a_closed_syllable_with_the_window_off_commits_the_glyphs_unspaced() {
+    // trace: with Show Candidate Window off `refresh_list` keeps the list
+    // empty, so no cell is highlighted and O1 takes the raw arm.
+    let mut rig = new_tps_rig();
+    rig.settings
+        .set_bool(&keys::IS_CANDIDATE_WINDOW_ENABLED, false);
+    rig.type_tps("ㄏㄛˋ");
+    assert!(rig.list.is_empty());
+    assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
+    assert_eq!(rig.calls(), ["commit ㄏㄛˋ", "list closed"]);
+}
+
+#[test]
+fn tps_space_refused_inside_the_composition_does_nothing() {
+    // trace: caret walked to the start of `ㄏㄛ`; nothing precedes it, so the
+    // engine refuses Space away from the end — no commit, no list call.
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛ");
+    for _ in 0..2 {
+        rig.run(
+            ComposingKeyIntent::MoveCaret(CaretDirection::Left),
+            &no_key(),
+        );
+    }
+    rig.surface.selected = Some(0);
+    rig.surface.calls.clear();
+    assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
+    assert!(rig.calls().is_empty(), "{:?}", rig.calls());
+    assert_eq!(rig.manager.raw_input(), "ㄏㄛ");
+}
+
+#[test]
+fn tps_ctrl_on_a_non_layout_mark_still_flips_to_half_width() {
+    // trace: `[` is no TPS layout key, so its Ctrl chord keeps the flip:
+    // full width under TPS → `policies::document_punctuation("[", true, true)`
+    // = `Some("[")` (full_width.rs: the flip names its width), written by the
+    // input method itself; `[` attaches to nothing, so no swap is tried.
+    let mut rig = new_tps_rig();
+    let ctrl_bracket = KeyEventSnapshot::chord(Some("["), "[", KeyModifiers::CONTROL);
+    assert!(rig.run(ComposingKeyIntent::PassThrough, &ctrl_bracket));
+    assert_eq!(rig.calls(), ["insert \"[\""]);
 }

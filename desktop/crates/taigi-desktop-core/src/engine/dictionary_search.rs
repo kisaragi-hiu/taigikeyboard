@@ -99,7 +99,9 @@ pub fn search(query: &str, settings: &SettingsDocument) -> Vec<DictionarySearchR
 fn display_roman(tl: &str, mode: InputMode) -> String {
     match mode {
         InputMode::Poj => tl_to_poj(tl).unwrap_or_else(|| tl.to_owned()),
-        InputMode::Tl => tl.to_owned(),
+        // TL under TPS, as iOS shows (`DictionarySearchService.swift`); the
+        // search itself still reads the `tps:` family (`wire_input_mode`).
+        InputMode::Tl | InputMode::Tps => tl.to_owned(),
     }
 }
 

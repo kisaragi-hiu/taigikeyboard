@@ -825,6 +825,9 @@ impl TextService_Impl {
     /// `identity` is 0 when the host named no context (`OnPreservedKey`).
     pub(crate) fn perform_global(&self, action: ShortcutAction, identity: usize) {
         let runtime = Runtime::shared();
+        if action.is_inert_under(runtime.settings.current().choice(&keys::INPUT_MODE)) {
+            return;
+        }
         let token = self
             .state
             .borrow_mut()
@@ -859,10 +862,9 @@ impl TextService_Impl {
             ShortcutAction::OpenLastSettingsPane => settings_launcher::open_settings(),
             ShortcutAction::ToggleRomanization => {
                 if !runtime.update_settings("toggle_romanization", |document| {
-                    let next = match document.choice(&keys::INPUT_MODE) {
-                        InputMode::Tl => InputMode::Poj,
-                        _ => InputMode::Tl,
-                    };
+                    let next = document
+                        .choice::<InputMode>(&keys::INPUT_MODE)
+                        .toggled_romanization();
                     document.set_choice(&keys::INPUT_MODE, next);
                 }) {
                     return;
@@ -880,11 +882,7 @@ impl TextService_Impl {
                 }
                 let settings = runtime.settings.current();
                 let mode: InputMode = settings.choice(&keys::INPUT_MODE);
-                let label = match mode {
-                    InputMode::Poj => StringKey::SettingsPojMode,
-                    _ => StringKey::SettingsTlMode,
-                };
-                self.flash_mode_label(runtime, &settings, label);
+                self.flash_mode_label(runtime, &settings, mode.label_key());
             }
             ShortcutAction::ToggleTranslateSwapped => {
                 // Inert under roman-only (`allows_swap_toggle`): no write, no

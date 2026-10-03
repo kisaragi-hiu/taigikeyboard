@@ -81,9 +81,11 @@ pub fn telex_guide_rows(mode: InputMode, strings: &StringResolver) -> Vec<TelexG
             meaning: match row.meaning {
                 Meaning::Tone(tone) => strings.format(StringKey::DesktopTelexGuideTone, &[&tone]),
                 Meaning::Initial { tl, poj } => {
+                    // The guide is not shown under TPS (no Telex keys there);
+                    // a table asked for anyway spells TL.
                     let initial = match mode {
                         InputMode::Poj => poj,
-                        _ => tl,
+                        InputMode::Tl | InputMode::Tps => tl,
                     };
                     strings.format(StringKey::DesktopTelexGuideInitial, &[&initial])
                 }

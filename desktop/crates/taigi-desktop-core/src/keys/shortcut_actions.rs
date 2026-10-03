@@ -18,7 +18,7 @@ use super::bindings::ComposingKeyBindings;
 use super::chord::{ChordRejection, ComposingKeyChord};
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
 use crate::platform::DesktopPlatform;
-use crate::settings::{keys, SettingsDocument};
+use crate::settings::{keys, InputMode, SettingsDocument};
 use crate::strings::StringKey;
 
 /// One user-assignable global action. The list is the single source for the
@@ -51,6 +51,20 @@ impl ShortcutAction {
         Self::ShowTelexGuide,
         Self::OpenLastSettingsPane,
     ];
+
+    /// Whether the action does nothing under `mode`, writing no setting:
+    /// under TPS a cell is the Hanji alone, so the Hanji / romanization swap
+    /// and the display modes have nothing to switch, and there are no Telex
+    /// keys for the guide to show (roadmap § D3).
+    pub fn is_inert_under(self, mode: InputMode) -> bool {
+        mode == InputMode::Tps
+            && matches!(
+                self,
+                Self::ToggleTranslateSwapped
+                    | Self::CycleCandidateDisplayMode
+                    | Self::ShowTelexGuide
+            )
+    }
 
     /// The global action `snapshot` is, if its recorded chord matches — read
     /// before the composing classifier, whether or not a composition runs.
@@ -859,5 +873,23 @@ mod tests {
             ComposingKeyBindings::from_document(&doc, PLATFORM).chord(ComposingAction::PageForward),
             Some(&shared)
         );
+    }
+
+    #[test]
+    fn the_display_switches_and_the_telex_guide_are_inert_under_tps_only() {
+        let inert = [
+            ShortcutAction::ToggleTranslateSwapped,
+            ShortcutAction::CycleCandidateDisplayMode,
+            ShortcutAction::ShowTelexGuide,
+        ];
+        for action in ShortcutAction::ALL {
+            assert_eq!(
+                action.is_inert_under(InputMode::Tps),
+                inert.contains(&action),
+                "{action:?}"
+            );
+            assert!(!action.is_inert_under(InputMode::Tl), "{action:?}");
+            assert!(!action.is_inert_under(InputMode::Poj), "{action:?}");
+        }
     }
 }

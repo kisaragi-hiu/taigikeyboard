@@ -3,8 +3,8 @@
 //! (`composing::commit_text`). macOS keeps a Swift twin of the cell value:
 //! `CandidateCellContent.swift`.
 
-use crate::engine::ContinuousCandidate;
-use crate::settings::{CandidateDisplayMode, EngineSettings};
+use crate::engine::{self, ContinuousCandidate};
+use crate::settings::{CandidateDisplayMode, EngineSettings, InputMode};
 
 /// Which of a candidate's two scripts a commit writes. RELATIVE to the
 /// output settings, never absolute: `Primary` is what Enter writes,
@@ -54,7 +54,20 @@ impl CandidateCellContent {
     /// `ios/.../CandidateCellHelper.swift` `suggestionToHandle`; arm order is the
     /// same on every platform. Serves Pairing and Romanization Only; Combined's split cells
     /// are built by [`super::presentation`].
+    ///
+    /// Under TPS a cell is one script whatever Candidate Display says: the
+    /// Hanji, or for a candidate with none its reading in TPS — as on mobile
+    /// (`ios/.../CandidateCellHelper.swift`), and what the engine's commit
+    /// writes for it.
     pub fn cell(candidate: &ContinuousCandidate, settings: &EngineSettings) -> Self {
+        if settings.input_mode == InputMode::Tps {
+            let text = match candidate.nonempty_hanji() {
+                Some(hanji) => hanji.to_owned(),
+                None => engine::tl_display_to_tps(&candidate.roman, engine::TPS_OR_MAPS_TO_ER)
+                    .unwrap_or_else(|| candidate.roman.clone()),
+            };
+            return Self::new(text, None);
+        }
         match candidate.nonempty_hanji() {
             None => Self::new(candidate.roman.clone(), None),
             Some(_) if settings.candidate_display_mode == CandidateDisplayMode::RomanOnly => {
@@ -126,5 +139,32 @@ mod tests {
         }
         let cell = CandidateCellContent::cell(&c, &settings(false));
         assert_eq!(cell.annotation.as_deref(), Some("台語"));
+    }
+
+    #[test]
+    fn under_tps_a_cell_is_the_hanji_alone_or_the_reading_in_tps() {
+        // trace: `cell` TPS arm — Hanji with no annotation, whatever the
+        // swap and display mode; a Hanji-less `ka` is ㄍㄚ (tl_display_to_tps).
+        let tps = |display| EngineSettings {
+            input_mode: InputMode::Tps,
+            candidate_display_mode: display,
+            ..EngineSettings::default()
+        };
+        let hanji = candidate("ka", Some("家"), 0);
+        for display in [
+            CandidateDisplayMode::SideBySide,
+            CandidateDisplayMode::RomanOnly,
+            CandidateDisplayMode::Combined,
+        ] {
+            assert_eq!(
+                CandidateCellContent::cell(&hanji, &tps(display)),
+                CandidateCellContent::new("家", None)
+            );
+        }
+        let bare = candidate("ka", None, 0);
+        assert_eq!(
+            CandidateCellContent::cell(&bare, &tps(CandidateDisplayMode::SideBySide)),
+            CandidateCellContent::new("ㄍㄚ", None)
+        );
     }
 }

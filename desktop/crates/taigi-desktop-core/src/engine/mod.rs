@@ -31,7 +31,9 @@ pub use nextword::{
     update_last_selected_word as nextword_update_last_selected_word,
     word_selected as nextword_word_selected,
 };
-pub use phonetics::{nfd_preprocess_for_lookup, strip_tone, tl_display_to_tps, tl_to_poj};
+pub use phonetics::{
+    nfd_preprocess_for_lookup, strip_tone, tl_display_to_tps, tl_to_poj, TPS_OR_MAPS_TO_ER,
+};
 pub use transition::{
     CandidateScriptKind, ComposingTransition, ContinuousCandidate, ContinuousCommitResult,
     ContinuousFetchResult, Effect,

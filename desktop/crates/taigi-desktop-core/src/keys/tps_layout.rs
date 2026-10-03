@@ -121,6 +121,16 @@ pub fn tps_glyph_for_event(event: &KeyEventSnapshot) -> Option<&'static str> {
         .map(|(_, glyph)| *glyph)
 }
 
+/// Whether `characters` is what a TPS layout key types bare or with Shift —
+/// the character its Ctrl chord reports (`ComposingKeyIntent::width_flip_character`).
+pub fn types_a_tps_glyph(characters: &str) -> bool {
+    let mut scalars = characters.chars();
+    match (scalars.next(), scalars.next()) {
+        (Some(typed), None) => KEYS.iter().any(|(key, _)| *key == typed),
+        _ => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

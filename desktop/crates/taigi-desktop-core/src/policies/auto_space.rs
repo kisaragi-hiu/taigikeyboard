@@ -38,14 +38,14 @@ pub fn is_gate_active(is_auto_space_enabled: bool, wrote_romanization: bool) -> 
 /// literal-commit chord and the mid-composition punctuation commit, neither
 /// of which goes through a candidate.
 ///
-/// A `match` over a two-variant enum rather than `true`, so that adding a
-/// non-romanized layout (TPS composes Bopomofo, which takes no spacing)
-/// fails to compile here instead of silently spacing Bopomofo.
+/// TPS writes glyphs as typed, which take no spacing. A `match` rather than
+/// `matches!`, so a new input mode has to decide here.
 /// CROSS-PLATFORM INVARIANT — Android mirrors it in `android/.../CandidateClickHandler.kt`
 /// `rawPreeditWritesRomanization(isTPSLayout:)`.
 pub fn raw_preedit_writes_romanization(input_mode: InputMode) -> bool {
     match input_mode {
         InputMode::Tl | InputMode::Poj => true,
+        InputMode::Tps => false,
     }
 }
 
@@ -180,5 +180,12 @@ mod tests {
         assert_eq!(off.text, "?");
         assert!(!off.leaves_trailing_auto_space);
         assert_eq!(augment_insert("", "guá", true).text, "");
+    }
+
+    #[test]
+    fn a_tps_preedit_written_as_typed_is_not_romanization() {
+        assert!(raw_preedit_writes_romanization(InputMode::Tl));
+        assert!(raw_preedit_writes_romanization(InputMode::Poj));
+        assert!(!raw_preedit_writes_romanization(InputMode::Tps));
     }
 }

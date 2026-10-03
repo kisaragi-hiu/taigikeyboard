@@ -8,7 +8,7 @@ use super::slot_key_set::CandidateSlotKeySet;
 use super::snapshot::KeyEventSnapshot;
 use super::tone_input_scheme::ToneInputScheme;
 use crate::platform::DesktopPlatform;
-use crate::settings::{keys, SettingsDocument};
+use crate::settings::{keys, InputMode, SettingChoice, SettingsDocument};
 
 /// "Resolved" means three things have already happened, so the classifier
 /// can trust the value: every chord came through [`ComposingKeyChord::make`];
@@ -23,6 +23,10 @@ pub struct ComposingKeyBindings {
     /// the same contract the chords are: the classifier reads both off one
     /// value, and the slot keys follow from it.
     pub tone_scheme: ToneInputScheme,
+    /// What the keys type. Carried for the same reason: under TPS the letter,
+    /// digit and punctuation keys type glyphs and the keypad picks, and the
+    /// classifier decides that off this one value.
+    pub input_mode: InputMode,
     /// Whether a candidate window exists to act on. Carried here for the
     /// same reason as `tone_scheme`: with the window off, the keys that
     /// would confirm or page a candidate end the composition as typed
@@ -66,9 +70,10 @@ impl ComposingKeyBindings {
         Self {
             chords: resolved,
             tone_scheme,
-            // Resolving is about the chords and the scheme; the window
-            // switch is orthogonal, so it starts as shipped and a caller
-            // with an opinion sets it (`from_document`).
+            // Resolving is about the chords and the scheme; the input mode
+            // and the window switch are orthogonal, so they start as shipped
+            // and a caller with an opinion sets them (`from_document`).
+            input_mode: InputMode::DEFAULT,
             is_candidate_window_enabled: true,
         }
     }
@@ -86,15 +91,20 @@ impl ComposingKeyBindings {
             }
         }
         Self {
+            input_mode: document.choice(&keys::INPUT_MODE),
             is_candidate_window_enabled: document.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED),
             ..Self::resolve(&stored, document.choice(&keys::TONE_INPUT_SCHEME))
         }
     }
 
-    /// The keys that pick a candidate — derived, never stored
+    /// The keys that pick a candidate — derived, never stored: the keypad
+    /// under TPS, whose main block types glyphs; otherwise the tone scheme's
     /// (`ToneInputScheme::slot_key_set`).
     pub fn slot_key_set(&self) -> CandidateSlotKeySet {
-        self.tone_scheme.slot_key_set()
+        match self.input_mode {
+            InputMode::Tps => CandidateSlotKeySet::Keypad,
+            InputMode::Tl | InputMode::Poj => self.tone_scheme.slot_key_set(),
+        }
     }
 
     /// The chord on `action`, or `None` when the row is empty.
@@ -570,5 +580,17 @@ mod tests {
             bindings.actions_holding(&bracket, Some(ComposingAction::PageForward)),
             Vec::new()
         );
+    }
+
+    #[test]
+    fn under_tps_the_keypad_picks_whatever_the_tone_scheme() {
+        let mut document = SettingsDocument::default();
+        document.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        for scheme in ToneInputScheme::ALL {
+            document.set_choice(&keys::TONE_INPUT_SCHEME, *scheme);
+            let bindings = ComposingKeyBindings::from_document(&document, DesktopPlatform::Windows);
+            assert_eq!(bindings.input_mode, InputMode::Tps);
+            assert_eq!(bindings.slot_key_set(), CandidateSlotKeySet::Keypad);
+        }
     }
 }

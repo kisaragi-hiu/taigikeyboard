@@ -24,6 +24,20 @@ pub trait ComposingEffectExecutor {
     fn execute(&mut self, effect: &Effect);
 }
 
+/// What became of one TPS key (`ComposingManager::tps_key`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum TpsKeyOutcome {
+    /// The engine typed it.
+    Taken,
+    /// The engine refused it — only a Space does: the syllable before the
+    /// caret is already closed, or a tone mark or separator sits beside the
+    /// caret, or nothing precedes it. `is_caret_at_end` tells a closed last
+    /// syllable from a refusal inside the composition.
+    Refused { is_caret_at_end: bool },
+    /// The round trip failed; nothing changed.
+    Failed,
+}
+
 pub struct ComposingManager {
     is_composing: bool,
     /// What the user typed, with numeric tones. Once a candidate has been
@@ -152,19 +166,30 @@ impl ComposingManager {
     }
 
     /// Types one TPS key — a glyph, a tone mark, the hyphen, or `" "` for the
-    /// Space separator. Answers whether the engine took it: a Space on a
-    /// closed syllable is not taken, and the caller decides what it does
-    /// instead (`desktop-tps-roadmap.md` § D3). A failed round trip is not
-    /// taken either; it changed nothing.
-    pub fn tps_key(&mut self, key: &str, executor: &mut dyn ComposingEffectExecutor) -> bool {
+    /// Space separator — and answers what became of it, so the caller can
+    /// give a refused Space its own meaning (`desktop-tps-roadmap.md` § D3).
+    pub fn tps_key(
+        &mut self,
+        key: &str,
+        executor: &mut dyn ComposingEffectExecutor,
+    ) -> TpsKeyOutcome {
         log::debug!("tpsKey");
         let settings = self.current_settings();
-        let transition = engine::tps_key(key, &settings, self.platform, self.current_generation);
-        let taken = transition
-            .as_ref()
-            .is_some_and(|transition| !transition.effects.is_empty());
-        self.apply(transition, executor);
-        taken
+        let Some(transition) =
+            engine::tps_key(key, &settings, self.platform, self.current_generation)
+        else {
+            return TpsKeyOutcome::Failed;
+        };
+        let outcome = if !transition.effects.is_empty() {
+            TpsKeyOutcome::Taken
+        } else {
+            let display_length = transition.display_text.encode_utf16().count();
+            TpsKeyOutcome::Refused {
+                is_caret_at_end: transition.caret_utf16 as usize == display_length,
+            }
+        };
+        self.apply(Some(transition), executor);
+        outcome
     }
 
     /// Drops the last character of the raw buffer. Ends the composition when

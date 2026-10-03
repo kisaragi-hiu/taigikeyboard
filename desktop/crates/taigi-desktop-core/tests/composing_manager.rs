@@ -13,14 +13,14 @@ use std::sync::{Arc, Mutex, MutexGuard, OnceLock};
 
 use taigi_desktop_core::composing::{
     CandidateCommitOutcome, CandidateFetchOutcome, CandidateScript, Clock, ComposingEffectExecutor,
-    ComposingManager, ComposingSessionCoordinator, ContextToken, NextWordPort,
+    ComposingManager, ComposingSessionCoordinator, ContextToken, NextWordPort, TpsKeyOutcome,
 };
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, ContinuousCandidate, Effect};
 use taigi_desktop_core::keys::CaretDirection;
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::{
-    keys, CandidateDisplayMode, EngineSettings, SettingsDocument, SettingsProvider,
+    keys, CandidateDisplayMode, EngineSettings, InputMode, SettingsDocument, SettingsProvider,
 };
 use taigi_desktop_core::symbols::SymbolTable;
 
@@ -298,18 +298,41 @@ fn append_shows_the_preedit_and_mirrors_the_engine() {
 /// `ㄍㄚ` then Space: the separator is taken and mirrored, hidden from the
 /// preedit; a second Space is not taken and changes nothing on screen.
 #[test]
-fn tps_key_reports_whether_the_engine_took_it() {
+fn tps_key_reports_what_the_engine_did_with_it() {
     let _lock = engine_lock();
     let mut rig = rig();
-    assert!(rig.manager.tps_key("ㄍ", &mut rig.recorder));
-    assert!(rig.manager.tps_key("ㄚ", &mut rig.recorder));
-    assert!(rig.manager.tps_key(" ", &mut rig.recorder));
+    rig.settings
+        .edit(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tps));
+    let taken = TpsKeyOutcome::Taken;
+    assert_eq!(rig.manager.tps_key("ㄍ", &mut rig.recorder), taken);
+    assert_eq!(rig.manager.tps_key("ㄚ", &mut rig.recorder), taken);
+    assert_eq!(rig.manager.tps_key(" ", &mut rig.recorder), taken);
     assert_eq!(rig.manager.raw_input(), "ㄍㄚ ");
     assert_eq!(rig.manager.display_text(), "ㄍㄚ");
     let effects_before = rig.recorder.effects.len();
-    assert!(!rig.manager.tps_key(" ", &mut rig.recorder));
+    assert_eq!(
+        rig.manager.tps_key(" ", &mut rig.recorder),
+        TpsKeyOutcome::Refused {
+            is_caret_at_end: true
+        }
+    );
     assert_eq!(rig.recorder.effects.len(), effects_before);
     assert_eq!(rig.manager.raw_input(), "ㄍㄚ ");
+    // trace: three steps left walk the raw caret over ` `, ㄚ, ㄍ to the
+    // start; nothing precedes it, so Space is refused there, and the display
+    // caret (0) is not at the end of `ㄍㄚ` (2).
+    rig.manager
+        .move_caret(CaretDirection::Left, &mut rig.recorder);
+    rig.manager
+        .move_caret(CaretDirection::Left, &mut rig.recorder);
+    rig.manager
+        .move_caret(CaretDirection::Left, &mut rig.recorder);
+    assert_eq!(
+        rig.manager.tps_key(" ", &mut rig.recorder),
+        TpsKeyOutcome::Refused {
+            is_caret_at_end: false
+        }
+    );
 }
 
 /// USER's example (2026-09-09): `ka2`, Ctrl+← Ctrl+←, `h` → `kha2`, shown as

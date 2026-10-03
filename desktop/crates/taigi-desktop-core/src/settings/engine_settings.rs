@@ -5,16 +5,27 @@
 
 use super::choices::SettingChoice;
 
-/// The romanization the user types. Desktop ships TL and POJ only — TPS is
-/// out of scope on Windows as on macOS (`docs/architecture/windows-roadmap.md`
-/// § Goal), which is why there is no `Tps` variant to fall through.
+/// What the user types: one of the two romanizations, or TPS (方音符號), which
+/// is not a romanization — its keys type glyphs on the Dachen-based layout
+/// (`keys/tps_layout.rs`, `docs/architecture/desktop-tps-roadmap.md`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum InputMode {
     Tl,
     Poj,
+    Tps,
 }
 
 impl InputMode {
+    /// What Switch Romanization (`ShortcutAction::ToggleRomanization`)
+    /// switches to: the other romanization. TPS is not a romanization, so the
+    /// switch never enters it (roadmap U2); from TPS it leaves for TL.
+    pub fn toggled_romanization(self) -> Self {
+        match self {
+            Self::Tl => Self::Poj,
+            Self::Poj | Self::Tps => Self::Tl,
+        }
+    }
+
     /// The `AppConfig.input_mode` wire spelling.
     pub fn wire(self) -> &'static str {
         self.raw()
@@ -27,17 +38,19 @@ impl InputMode {
         match self {
             Self::Tl => StringKey::SettingsTlMode,
             Self::Poj => StringKey::SettingsPojMode,
+            Self::Tps => StringKey::SettingsTpsMode,
         }
     }
 }
 
 impl SettingChoice for InputMode {
-    const ALL: &'static [Self] = &[Self::Tl, Self::Poj];
+    const ALL: &'static [Self] = &[Self::Tl, Self::Poj, Self::Tps];
     const DEFAULT: Self = Self::Tl;
     fn raw(self) -> &'static str {
         match self {
             Self::Tl => "tl",
             Self::Poj => "poj",
+            Self::Tps => "tps",
         }
     }
 }
@@ -169,7 +182,8 @@ pub struct EngineSettings {
     /// (`android/.../PrefHelper.kt`), both default OFF (USER 2026-10-02).
     pub is_literal_roman_candidate_enabled: bool,
     /// No Hyphens (`behavioral-invariants.md` §49) — `AppConfig.hyphenless_roman`
-    /// on the base config; no TPS layout here, so no fold.
+    /// on the base config, sent as stored: the engine never renders TPS
+    /// hyphenless (`AppConfig::renders_hyphenless`).
     /// CROSS-PLATFORM INVARIANT — default OFF on every platform; mirrored by
     /// `isHyphenlessRomanEnabled` (`ios/.../SharedSettings.swift`) and
     /// `isHyphenlessRomanEnabled` (`android/.../PrefHelper.kt`). macOS keeps a
@@ -353,5 +367,12 @@ mod tests {
                 "{mode:?} steps off the picker order"
             );
         }
+    }
+
+    #[test]
+    fn switch_romanization_never_enters_tps_and_leaves_it_for_tl() {
+        assert_eq!(InputMode::Tl.toggled_romanization(), InputMode::Poj);
+        assert_eq!(InputMode::Poj.toggled_romanization(), InputMode::Tl);
+        assert_eq!(InputMode::Tps.toggled_romanization(), InputMode::Tl);
     }
 }

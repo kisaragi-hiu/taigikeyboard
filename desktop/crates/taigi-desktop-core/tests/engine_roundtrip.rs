@@ -110,13 +110,20 @@ fn telex_key_writes_the_tone_and_z_spells_the_mode_affricate() {
     engine::reset(generation);
 }
 
+fn tps_settings() -> EngineSettings {
+    EngineSettings {
+        input_mode: InputMode::Tps,
+        ..EngineSettings::default()
+    }
+}
+
 #[test]
 fn tps_key_composes_glyphs_and_space_is_taken_once() {
     // trace: engine `TpsKey` — ㄍ ㄚ ㄉ: the adjuster folds ㄉ after ㄚ to ㆵ
     // (`kat` is a valid final); Space after the stop coda is the separator and
     // is hidden from the preedit; a second Space is refused with no effects.
     let _engine = engine();
-    let settings = EngineSettings::default();
+    let settings = tps_settings();
     let generation = fresh_generation();
     for key in ["ㄍ", "ㄚ", "ㄉ"] {
         engine::tps_key(key, &settings, PLATFORM, generation).expect("tps round trip");
@@ -141,9 +148,7 @@ fn every_layout_glyph_begins_a_composition_the_engine_takes() {
     // The hyphen alone is §21's document literal, not a composition.
     use taigi_desktop_core::keys::{tps_glyph_for_event, KeyEventSnapshot, KeyModifiers};
     let _engine = engine();
-    // The engine composes a TPS buffer by its content (`contains_tps`), so
-    // the default settings serve until the desktop has a TPS mode (P2b).
-    let settings = EngineSettings::default();
+    let settings = tps_settings();
     let keys = ('a'..='z')
         .chain('0'..='9')
         .chain(",;/-.=".chars())
