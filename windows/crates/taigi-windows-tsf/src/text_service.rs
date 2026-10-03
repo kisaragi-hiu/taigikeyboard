@@ -297,11 +297,14 @@ impl TextService_Impl {
                 log::error!("ui.render_factory_failed error={error} — no candidate window")
             }
         }
-        // A host that activates this service with a document already focused
-        // sends no focus event for it, so the TPS key panel learns here that
-        // this is where the user types (P5 spike on the box: no panel until
-        // the first key otherwise).
-        self.note_tps_keyboard_focus(self.has_focused_document());
+        // The TPS key panel starts in line with the focus as it stands: a host
+        // that activates this service with a document already focused sends
+        // no focus event for it, and one sent while the sinks were advised
+        // above came before the panel existed, so its sync went nowhere (P5
+        // spike on the box: no panel until the first key otherwise).
+        let has_document = self.has_focused_document();
+        self.state.borrow().tps_keyboard_focus.set(has_document);
+        self.request_tps_keyboard_sync();
 
         // Cosmetic: a tray button that fails to add is logged, not fatal.
         match thread_mgr.cast::<ITfLangBarItemMgr>() {
