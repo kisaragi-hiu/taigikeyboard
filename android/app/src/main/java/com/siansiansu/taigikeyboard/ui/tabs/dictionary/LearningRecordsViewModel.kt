@@ -33,6 +33,9 @@ internal const val LEARNING_RECORDS_FILTER_SETTLE_MILLIS = 200L
  */
 internal const val MAX_LEARNING_RECORD_COUNT = 1_000_000L
 
+/** A read [LearningRecordsViewModel.retry] can repeat: the page after the loaded rows, or the list from the first row. */
+private enum class FailedRead { NEXT_PAGE, LIST }
+
 /** Why the screen shows a dialog. */
 sealed interface LearningRecordsMessage {
     /** The list could not be read; [detail] is why, in the engine's words. */
@@ -88,6 +91,9 @@ class LearningRecordsViewModel internal constructor(
      */
     private var loadJob: Job? = null
 
+    /** Which read [retry] repeats; set by the read that failed. */
+    private var failedRead = FailedRead.LIST
+
     init {
         reload()
     }
@@ -118,11 +124,14 @@ class LearningRecordsViewModel internal constructor(
         loadJob = viewModelScope.launch { appendPage(offset = shown.records.size) }
     }
 
-    /** After a failed read: lists from the first row again, or asks for the next page when rows are shown. */
+    /** Repeats the read that failed: the next page, or the listed rows from the first. */
     fun retry() {
         if (!_state.value.hasReadFailed) return
         _state.update { it.copy(hasReadFailed = false) }
-        if (_state.value.records.isEmpty()) reload() else loadMore()
+        when (failedRead) {
+            FailedRead.NEXT_PAGE -> loadMore()
+            FailedRead.LIST -> reload(rows = maxOf(LEARNING_RECORDS_PAGE_SIZE, _state.value.records.size))
+        }
     }
 
     fun setCount(
@@ -188,7 +197,7 @@ class LearningRecordsViewModel internal constructor(
         val records = mutableListOf<LearningRecord>()
         while (true) {
             val offset = records.size
-            val page = read(asked, offset, minOf(LEARNING_RECORDS_PAGE_SIZE, rows - offset)) ?: return
+            val page = read(asked, offset, minOf(LEARNING_RECORDS_PAGE_SIZE, rows - offset), FailedRead.LIST) ?: return
             if (page.offset < offset) records.subList(page.offset, offset).clear()
             records += page.recordsList
             val isDone = page.offset != offset || page.recordsCount == 0 || records.size >= rows || records.size >= page.matchingTotal
@@ -205,7 +214,7 @@ class LearningRecordsViewModel internal constructor(
      */
     private suspend fun appendPage(offset: Int) {
         val asked = _state.value
-        val page = read(asked, offset, LEARNING_RECORDS_PAGE_SIZE) ?: return
+        val page = read(asked, offset, LEARNING_RECORDS_PAGE_SIZE, FailedRead.NEXT_PAGE) ?: return
         if (page.offset != offset) {
             readFromStart(rows = offset)
             return
@@ -218,12 +227,14 @@ class LearningRecordsViewModel internal constructor(
         asked: LearningRecordsState,
         offset: Int,
         limit: Int,
+        whenFailed: FailedRead,
     ): LearningRecords? =
         try {
             userData.listLearningRecords(asked.kind, asked.order, asked.filter.trim(), limit, offset)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            failedRead = whenFailed
             _state.update {
                 it.copy(isLoading = false, hasReadFailed = true, message = LearningRecordsMessage.ReadFailed(e.message.orEmpty()))
             }

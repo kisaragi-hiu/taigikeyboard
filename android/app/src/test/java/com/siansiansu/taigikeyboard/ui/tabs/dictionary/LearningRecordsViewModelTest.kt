@@ -316,6 +316,39 @@ class LearningRecordsViewModelTest {
         }
 
     @Test
+    fun `a retry after a failed re-read lists the loaded rows again from the first, not the next page`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(250))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            model.loadMore()
+            advanceUntilIdle()
+            client.listFailure = UserDataException.EngineUnavailable("learningRecordsList")
+
+            model.delete(model.state.value.records[0])
+            advanceUntilIdle()
+            assertTrue(model.state.value.hasReadFailed)
+            assertEquals("the stale rows stay shown", 200, model.state.value.records.size)
+
+            client.listFailure = null
+            val before = client.listCalls.size
+            model.retry()
+            advanceUntilIdle()
+
+            // trace: 200 loaded → chunks (100, 0), (100, 100); a next-page retry would ask (100, 200).
+            assertEquals(
+                listOf(ListCall(frequency, mostUsed, "", 100, 0), ListCall(frequency, mostUsed, "", 100, 100)),
+                client.listCalls.drop(before),
+            )
+            assertEquals(
+                (1L..200L).toList(),
+                model.state.value.records
+                    .map { it.id },
+            )
+            assertFalse(model.state.value.hasReadFailed)
+        }
+
+    @Test
     fun `a retry after a failed first read lists from the first row`() =
         runTest(dispatcher) {
             val client = FakeLearningRecords(frequencyRows(3))
