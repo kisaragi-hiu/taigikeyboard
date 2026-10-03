@@ -1,9 +1,10 @@
-# The macOS composing-chord rules, read by both sides: the Swift Shortcuts
-# pane's (`ChordRulesCrossCheckTests.swift`) and desktop-core's under
-# `DesktopPlatform::MacOS` (`src/chord_rules.rs`). Until the pane reads its
-# rules from the core (macos-desktop-core-roadmap.md P14) the two coexist,
-# and this table is what holds them equal. Every expectation is written by
-# hand, never generated from either side.
+# The macOS composing-chord rules: desktop-core under `DesktopPlatform::MacOS`
+# checks every row (`src/chord_rules.rs`); the Swift Shortcuts pane, which
+# reads its rules from the core since P14 (macos-desktop-core-roadmap.md),
+# checks the `default` and `resolve` rows through the seam
+# (`ChordRulesCrossCheckTests.swift`) — the stored form and the settings
+# snapshot. Every expectation is written by hand, never generated from either
+# side.
 #
 # Tab-separated. A chord is `<modifiers>|<scalars>`: modifier letters d (⌘)
 # c (⌃) o (⌥) s (⇧), then the key's Unicode scalars in hex. `-` is "none".

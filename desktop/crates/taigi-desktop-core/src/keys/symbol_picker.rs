@@ -118,10 +118,9 @@ mod tests {
 
     /// Roadmap E2b, settled P11c: `is_bare_escape` reads the whole string,
     /// so `"\u{1B}x"` is not the Escape that closes and swallows: the picker
-    /// closes and passes the event through. Swift's `isPlainEscape`
-    /// reads the whole string too since P11c (before: the first grapheme,
-    /// which swallowed it); pinned there by `SymbolPickerIntentTests`
-    /// `testAnEscapeInsideALongerEvent_closesAndFallsThrough`.
+    /// closes and passes the event through. Swift's `isPlainEscape` (the
+    /// Telex guide) reads the whole string too since P11c (before: the first
+    /// grapheme, which swallowed it); the Mac picker asks this rule since P14.
     #[test]
     fn e2b_an_escape_inside_a_longer_event_closes_and_passes_through() {
         let mac = DesktopPlatform::MacOS;
