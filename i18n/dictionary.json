@@ -1630,7 +1630,7 @@
       }
     },
     "learningRecords": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Page title, sidebar row (desktop) and the entry row under Data management (mobile).",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Page title and sidebar row (desktop).",
       "scope": {
         "platforms": [
           "android",
@@ -1652,7 +1652,7 @@
       }
     },
     "learningRecordsFrequency": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Kind picker segment: how often each word was picked (the user_frequency store).",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). How often each word was picked (the user_frequency store): kind picker segment (desktop); Data management entry row and page title (mobile).",
       "scope": {
         "platforms": [
           "android",
@@ -1674,7 +1674,7 @@
       }
     },
     "learningRecordsPhrases": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Kind picker segment: phrases the user composed segment by segment (the learned_phrases store).",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Phrases the user composed segment by segment (the learned_phrases store): kind picker segment (desktop); Data management entry row and page title (mobile).",
       "scope": {
         "platforms": [
           "android",
@@ -1693,25 +1693,6 @@
         "poj": "Sû-chó͘",
         "en": "Phrases",
         "ja": "フレーズ"
-      }
-    },
-    "learningRecordsAssociation": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Kind picker segment: which word followed which, used for next-word predictions (mobile only; the desktop predicts no next word).",
-      "scope": {
-        "platforms": [
-          "android",
-          "ios"
-        ],
-        "surfaces": [
-          "host"
-        ]
-      },
-      "values": {
-        "hanji": "詞關聯",
-        "tailo": "Sû kuan-liân",
-        "poj": "Sû koan-liân",
-        "en": "Word Association",
-        "ja": "単語連携"
       }
     },
     "learningRecordsCount": {

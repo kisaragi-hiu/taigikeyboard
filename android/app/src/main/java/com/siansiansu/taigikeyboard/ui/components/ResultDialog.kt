@@ -21,3 +21,9 @@ fun ResultDialog(
         },
     )
 }
+
+/** A result dialog's message: [title], then [detail] (the engine's words) after a blank line when there is one. */
+fun resultMessage(
+    title: String,
+    detail: String?,
+): String = if (detail.isNullOrBlank()) title else "$title\n\n$detail"

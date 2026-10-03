@@ -60,7 +60,7 @@ class DictionarySearchServiceTest {
 
     private class FakeUserData(
         private val words: List<CustomDictionaryWord>,
-    ) : UserDataClient {
+    ) : StubUserDataClient() {
         var searchCalls = 0
 
         override suspend fun search(
@@ -73,22 +73,6 @@ class DictionarySearchServiceTest {
         }
 
         override suspend fun listAll(): List<CustomDictionaryWord> = words
-
-        override suspend fun save(word: CustomDictionaryWord) = error("unused")
-
-        override suspend fun delete(id: String) = error("unused")
-
-        override suspend fun deleteAll() = error("unused")
-
-        override suspend fun exportCsv(): ByteArray = error("unused")
-
-        override suspend fun importCsv(csv: ByteArray): CustomDictionaryImportResult = error("unused")
-
-        override suspend fun clearLearningRecords() = error("unused")
-
-        override suspend fun exportBackup(appVersion: String): ByteArray = error("unused")
-
-        override suspend fun importBackup(backup: ByteArray): BackupImportResult = error("unused")
     }
 
     private fun row(

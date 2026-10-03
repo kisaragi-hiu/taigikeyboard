@@ -112,7 +112,6 @@
     <string name="i18n_dictionary_learningRecords">學習紀錄</string>
     <string name="i18n_dictionary_learningRecordsFrequency">詞頻</string>
     <string name="i18n_dictionary_learningRecordsPhrases">詞組</string>
-    <string name="i18n_dictionary_learningRecordsAssociation">詞關聯</string>
     <string name="i18n_dictionary_learningRecordsCount">擺數</string>
     <string name="i18n_dictionary_learningRecordsLastUsed">最後使用</string>
     <string name="i18n_dictionary_learningRecordsOrder">排序</string>

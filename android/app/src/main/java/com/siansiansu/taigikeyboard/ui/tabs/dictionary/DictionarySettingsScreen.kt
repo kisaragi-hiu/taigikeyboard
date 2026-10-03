@@ -32,6 +32,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
 import com.siansiansu.taigikeyboard.i18n.generated.L10n
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ui.components.ActionRow
@@ -53,6 +54,7 @@ private val NESTED_TOGGLE_INDENT = 16.dp
 fun DictionarySettingsScreen(
     prefs: PrefHelper,
     onCustomDictionary: () -> Unit,
+    onLearningRecords: (LearningRecordKind) -> Unit,
     onBackupRestore: () -> Unit,
     searchViewModel: DictionarySearchViewModel? = null,
     resetCounter: Int = 0,
@@ -137,6 +139,18 @@ fun DictionarySettingsScreen(
                     ActionRow(
                         label = L10n.dictionaryCustomDictionary,
                         onClick = onCustomDictionary,
+                        trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    )
+                    SettingsDivider()
+                    ActionRow(
+                        label = L10n.dictionaryLearningRecordsFrequency,
+                        onClick = { onLearningRecords(LearningRecordKind.LEARNING_RECORD_KIND_FREQUENCY) },
+                        trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    )
+                    SettingsDivider()
+                    ActionRow(
+                        label = L10n.dictionaryLearningRecordsPhrases,
+                        onClick = { onLearningRecords(LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE) },
                         trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
                     SettingsDivider()

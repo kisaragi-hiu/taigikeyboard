@@ -13,9 +13,16 @@ import com.siansiansu.taigikeyboard.engine.customDictionaryImportCsv
 import com.siansiansu.taigikeyboard.engine.customDictionaryList
 import com.siansiansu.taigikeyboard.engine.customDictionarySave
 import com.siansiansu.taigikeyboard.engine.customDictionarySearch
+import com.siansiansu.taigikeyboard.engine.learningRecordDelete
+import com.siansiansu.taigikeyboard.engine.learningRecordSetCount
+import com.siansiansu.taigikeyboard.engine.learningRecordsList
 import com.siansiansu.taigikeyboard.engine.proto.BackupRefusal
 import com.siansiansu.taigikeyboard.engine.proto.CustomDictionaryEntry
 import com.siansiansu.taigikeyboard.engine.proto.CustomDictionaryRefusal
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
 import com.siansiansu.taigikeyboard.engine.proto.ResetUserData
 import com.siansiansu.taigikeyboard.engine.userDataReset
 import kotlinx.coroutines.Dispatchers
@@ -109,6 +116,33 @@ interface UserDataClient {
 
     suspend fun importBackup(backup: ByteArray): BackupImportResult
 
+    /**
+     * One page of what the keyboard learned: the rows of [kind] in [order]
+     * whose text or TL holds [filter], [limit] (at least 1) from [offset].
+     * The answer's `offset` is the one served — pulled back to the last page
+     * that exists when the matches shrank under it.
+     */
+    suspend fun listLearningRecords(
+        kind: LearningRecordKind,
+        order: LearningRecordOrder,
+        filter: String,
+        limit: Int,
+        offset: Int,
+    ): LearningRecords
+
+    /**
+     * Sets the listed [record]'s count (the engine clamps it to 1..1 000 000
+     * and keeps the last-used time). The row as stored now, or `null` when it
+     * is gone — deleted, evicted, or its id taken by another word.
+     */
+    suspend fun setLearningRecordCount(
+        record: LearningRecord,
+        count: Long,
+    ): LearningRecord?
+
+    /** Forgets the listed [record]; `false` when it was already gone. */
+    suspend fun deleteLearningRecord(record: LearningRecord): Boolean
+
     companion object {
         /**
          * The largest file an import reads. CROSS-PLATFORM INVARIANT — the
@@ -181,6 +215,24 @@ object EngineUserDataClient : UserDataClient {
             association = imported.association,
         )
     }
+
+    override suspend fun listLearningRecords(
+        kind: LearningRecordKind,
+        order: LearningRecordOrder,
+        filter: String,
+        limit: Int,
+        offset: Int,
+    ): LearningRecords = engine("learningRecordsList") { RustEngineBridge.learningRecordsList(kind, order, filter, limit, offset) }
+
+    override suspend fun setLearningRecordCount(
+        record: LearningRecord,
+        count: Long,
+    ): LearningRecord? =
+        engine("learningRecordSetCount") { RustEngineBridge.learningRecordSetCount(record, count) }
+            .takeIf { it.hasRecord() }
+            ?.record
+
+    override suspend fun deleteLearningRecord(record: LearningRecord): Boolean = engine("learningRecordDelete") { RustEngineBridge.learningRecordDelete(record) }.removed
 
     /** Empties the stores [request] selects; every one is attempted, and the ones that could not be emptied are reported together. */
     private suspend fun reset(request: ResetUserData) {

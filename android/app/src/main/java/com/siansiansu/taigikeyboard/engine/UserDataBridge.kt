@@ -13,16 +13,25 @@ import com.siansiansu.taigikeyboard.engine.proto.CustomEntries
 import com.siansiansu.taigikeyboard.engine.proto.CustomEntryDeleted
 import com.siansiansu.taigikeyboard.engine.proto.CustomEntrySaved
 import com.siansiansu.taigikeyboard.engine.proto.DeleteCustomEntry
+import com.siansiansu.taigikeyboard.engine.proto.DeleteLearningRecord
 import com.siansiansu.taigikeyboard.engine.proto.ExportBackup
 import com.siansiansu.taigikeyboard.engine.proto.ExportCustomCsv
 import com.siansiansu.taigikeyboard.engine.proto.ImportBackup
 import com.siansiansu.taigikeyboard.engine.proto.ImportCustomCsv
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordDeleted
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordSaved
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
 import com.siansiansu.taigikeyboard.engine.proto.ListCustomEntries
+import com.siansiansu.taigikeyboard.engine.proto.ListLearningRecords
 import com.siansiansu.taigikeyboard.engine.proto.OpenUserData
 import com.siansiansu.taigikeyboard.engine.proto.RecordUsage
 import com.siansiansu.taigikeyboard.engine.proto.ResetUserData
 import com.siansiansu.taigikeyboard.engine.proto.SaveCustomEntry
 import com.siansiansu.taigikeyboard.engine.proto.SearchCustomEntries
+import com.siansiansu.taigikeyboard.engine.proto.SetLearningRecordCount
 import com.siansiansu.taigikeyboard.engine.proto.UserDataJournal
 import com.siansiansu.taigikeyboard.engine.proto.UserDataRequest
 import com.siansiansu.taigikeyboard.engine.proto.UserDataReset
@@ -169,6 +178,52 @@ fun RustEngineBridge.backupImport(backup: ByteArray): BackupImported? {
     return userData("backupImport") { setImportBackup(import) }
         ?.takeIf { it.hasBackupImported() }
         ?.backupImported
+}
+
+/**
+ * One page of the learned rows of [kind] in [order] whose text or TL holds
+ * [filter]; [limit] must be at least 1 (the engine refuses 0).
+ */
+fun RustEngineBridge.learningRecordsList(
+    kind: LearningRecordKind,
+    order: LearningRecordOrder,
+    filter: String,
+    limit: Int,
+    offset: Int,
+): LearningRecords? {
+    val list = ListLearningRecords
+        .newBuilder()
+        .setKind(kind)
+        .setOrder(order)
+        .setFilter(filter)
+        .setLimit(limit)
+        .setOffset(offset)
+        .build()
+    return userData("learningRecordsList") { setListLearningRecords(list) }
+        ?.takeIf { it.hasLearningRecords() }
+        ?.learningRecords
+}
+
+/** Sets the listed [record]'s count; the answer carries no record when the row is gone. */
+fun RustEngineBridge.learningRecordSetCount(
+    record: LearningRecord,
+    count: Long,
+): LearningRecordSaved? {
+    val set = SetLearningRecordCount
+        .newBuilder()
+        .setRecord(record)
+        .setCount(count)
+        .build()
+    return userData("learningRecordSetCount") { setSetLearningRecordCount(set) }
+        ?.takeIf { it.hasLearningRecordSaved() }
+        ?.learningRecordSaved
+}
+
+fun RustEngineBridge.learningRecordDelete(record: LearningRecord): LearningRecordDeleted? {
+    val delete = DeleteLearningRecord.newBuilder().setRecord(record).build()
+    return userData("learningRecordDelete") { setDeleteLearningRecord(delete) }
+        ?.takeIf { it.hasLearningRecordDeleted() }
+        ?.learningRecordDeleted
 }
 
 /**

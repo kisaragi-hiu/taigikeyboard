@@ -139,6 +139,9 @@ class SettingsMainActivity : AppCompatActivity() {
                                     onCustomDictionary = {
                                         startActivity(CustomDictionaryActivity.createIntent(this))
                                     },
+                                    onLearningRecords = { kind ->
+                                        startActivity(LearningRecordsActivity.createIntent(this, kind))
+                                    },
                                     onBackupRestore = {
                                         startActivity(DataManagementActivity.createIntent(this))
                                     },

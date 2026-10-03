@@ -112,7 +112,6 @@
     <string name="i18n_dictionary_learningRecords">Learning Records</string>
     <string name="i18n_dictionary_learningRecordsFrequency">Word Frequency</string>
     <string name="i18n_dictionary_learningRecordsPhrases">Phrases</string>
-    <string name="i18n_dictionary_learningRecordsAssociation">Word Association</string>
     <string name="i18n_dictionary_learningRecordsCount">Count</string>
     <string name="i18n_dictionary_learningRecordsLastUsed">Last Used</string>
     <string name="i18n_dictionary_learningRecordsOrder">Sort By</string>

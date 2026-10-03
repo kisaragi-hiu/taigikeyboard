@@ -1460,7 +1460,7 @@
       }
     },
     "i18n_dictionary_learningRecords": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Page title, sidebar row (desktop) and the entry row under Data management (mobile).",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Page title and sidebar row (desktop).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1473,24 +1473,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "学習記録"
-          }
-        }
-      }
-    },
-    "i18n_dictionary_learningRecordsAssociation": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Kind picker segment: which word followed which, used for next-word predictions (mobile only; the desktop predicts no next word).",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Word Association"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "単語連携"
           }
         }
       }
@@ -1568,7 +1550,7 @@
       }
     },
     "i18n_dictionary_learningRecordsFrequency": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Kind picker segment: how often each word was picked (the user_frequency store).",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). How often each word was picked (the user_frequency store): kind picker segment (desktop); Data management entry row and page title (mobile).",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -1658,7 +1640,7 @@
       }
     },
     "i18n_dictionary_learningRecordsPhrases": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Kind picker segment: phrases the user composed segment by segment (the learned_phrases store).",
+      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Phrases the user composed segment by segment (the learned_phrases store): kind picker segment (desktop); Data management entry row and page title (mobile).",
       "extractionState": "manual",
       "localizations": {
         "en": {
