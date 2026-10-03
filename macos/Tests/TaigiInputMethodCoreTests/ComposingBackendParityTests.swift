@@ -176,11 +176,15 @@ final class ComposingBackendParityTests: XCTestCase {
     }
 
     /// C4: Candidate Display changed while the window is switched off and a
-    /// list is still held. Through the controller this cannot happen — the
-    /// window going off takes the list down at once
-    /// (`applyCandidateWindowSettingChange`) — so it is asked of the back
-    /// end itself: the Swift refetch never reads Show Candidate Window and
-    /// repaints; the core's (`represent_list`) closes.
+    /// list is still held. Through the controller this needs a narrow
+    /// ordering — the window going off takes the list down
+    /// (`applyCandidateWindowSettingChange`), but each setting's observer
+    /// runs as its own main-actor task: a display-mode write, then the
+    /// window-off write, and the display-mode refetch runs while the list is
+    /// still up — so it is
+    /// asked of the back end itself: the Swift refetch never reads Show
+    /// Candidate Window and repaints; the core's (`represent_list`) closes,
+    /// which is where the window-off observer leaves the list anyway.
     func testC4_aRefetchWithTheCandidateWindowOff() throws {
         let backend = ComposingBackends.shared
         let session = ComposingSessionToken()

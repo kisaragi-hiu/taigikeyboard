@@ -79,13 +79,23 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   `TF_LBI_STYLE_BTN_BUTTON` and `lang_bar::show_popup` builds a Win32 popup — mozc
   (`tip_lang_bar.cc:196-240`) and khiin-rs (`lang_bar_indicator.rs:53-58`) both do exactly this.
 
-## macOS is the behaviour oracle
+## desktop-core is the behaviour oracle
 
-- Key table, modes, auto-space, full-width punctuation, candidate geometry, settings keys and
-  defaults, storage schemas, CSV, update flow all mirror `macos/Sources/TaigiInputMethodCore/**`.
-  A port carries a `// mirrors macos/.../<File>.swift:<line>` comment on the mirrored constant or
-  rule. Drift is a bug unless the roadmap names it as an intentional divergence.
-- Named divergences so far: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch, 外觀 mode is a native pop-up rather than the Mac's drawn thumbnails, the width floor is 600 so `NavigationView` can compact its pane), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
+- **desktop-core and its tests are the behaviour oracle for the three desktops** — macOS, Windows,
+  Linux (`docs/architecture/macos-desktop-core-roadmap.md` D8). A rule lives once in the shared
+  crates — `taigi-desktop-core` (key path, settings model, candidates, symbols), with
+  `taigi-desktop-storage` / `taigi-desktop-update` for storage and the update check and
+  `engine/userdata` for the user-data stores; a platform difference is a `DesktopPlatform` branch
+  with a test per platform, or a named shell divergence. Drift between the desktops is a bug.
+- macOS keeps some shared behaviour in Swift by design — candidate-window geometry, settings
+  storage in `UserDefaults`, the global shortcuts, the update flow (roadmap § Outside this plan).
+  There the shared crates' tests are the reference for Windows and Linux; a known macOS difference
+  is listed in the roadmap (§ Found while auditing, e.g. candidate metrics) and stays open until
+  decided, rather than being "fixed" on either side.
+- The `// mirrors macos/.../<File>.swift:<line>` comments already in the Rust are rewritten to
+  state their rule in the roadmap's last phase (P15); a new rule states itself and names its test
+  instead of citing Swift.
+- Named shell divergences so far: WinUI 3 chrome (not SwiftUI; window frame not persisted, label click does not toggle a switch, 外觀 mode is a native pop-up rather than the Mac's drawn thumbnails, the width floor is 600 so `NavigationView` can compact its pane), ⌘→Ctrl / ⌃→Alt modifier mapping, AppContainer
   hosts run on defaults, Windows toast instead of `UNUserNotification`, no `.taigi` pane (macOS
   retired it too).
 

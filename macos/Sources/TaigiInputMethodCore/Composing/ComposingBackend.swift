@@ -157,31 +157,52 @@ struct CandidateListUpdate: Equatable {
 }
 
 /// The back end this process runs, chosen once from the environment:
-/// `TAIGI_COMPOSING_BACKEND` unset or `legacy` is the Swift key path, `core`
-/// is desktop-core. A test run picks one per `swift test` process (D9.1); an
-/// unknown name stops the process rather than silently testing the wrong
-/// back end.
+/// `TAIGI_COMPOSING_BACKEND` unset or `core` is desktop-core (the shipped
+/// default since the cut-over, roadmap P12), `legacy` is the Swift key path.
+/// A test run picks one per `swift test` process (D9.1); an unknown name
+/// stops the process rather than silently testing the wrong back end.
+///
+/// `legacy` is temporary — it stays selectable for the second test process
+/// until the Swift key path is deleted (roadmap P13), and goes with it.
 enum ComposingBackends {
+    enum Kind {
+        case core
+        case legacy
+
+        /// The back end `TAIGI_COMPOSING_BACKEND=name` selects.
+        init(named name: String?) {
+            switch name {
+            case nil, "core":
+                self = .core
+            case "legacy":
+                self = .legacy
+            case let .some(name):
+                preconditionFailure("\(environmentKey)=\(name) names no composing back end (known: core, legacy)")
+            }
+        }
+    }
+
     static let environmentKey = "TAIGI_COMPOSING_BACKEND"
 
-    @MainActor
-    static let shared: any ComposingBackend = make(named: ProcessInfo.processInfo.environment[environmentKey])
+    /// The back end this process runs.
+    static let kind = Kind(named: ProcessInfo.processInfo.environment[environmentKey])
 
     @MainActor
-    private static func make(named name: String?) -> any ComposingBackend {
-        switch name {
-        case nil, "legacy":
-            // The one place the shipped Swift composition is assembled, which
-            // is why the settings store and the learner's sink are named here
-            // rather than defaulted into `ComposingManager`.
+    static let shared: any ComposingBackend = make(kind)
+
+    @MainActor
+    private static func make(_ kind: Kind) -> any ComposingBackend {
+        switch kind {
+        case .core:
+            CoreComposingBackend(coordinator: .shared)
+        case .legacy:
+            // The one place the Swift composition is assembled, which is why
+            // the settings store and the learner's sink are named here rather
+            // than defaulted into `ComposingManager`.
             LegacyComposingBackend(
                 coordinator: .shared,
                 manager: ComposingManager(settingsProvider: SettingsStore(), nextWord: EngineNextWord()),
             )
-        case "core":
-            CoreComposingBackend(coordinator: .shared)
-        case let .some(name):
-            preconditionFailure("\(environmentKey)=\(name) names no composing back end (known: legacy, core)")
         }
     }
 }

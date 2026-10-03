@@ -9,10 +9,11 @@
 //! `taigi-windows-settings`, `taigikeyboard-ibus`, `taigikeyboard-settings`)
 //! are thin adapters over it.
 //!
-//! Behaviour oracle is the macOS input method
-//! (`macos/Sources/TaigiInputMethodCore`); ported items cite the Swift they
-//! mirror. Design records: `docs/architecture/windows-roadmap.md` (W1–W17,
-//! where this crate was born) and `linux-roadmap.md` (L2, the move here).
+//! This crate and its tests are the behaviour oracle for the three desktops
+//! — macOS, Windows, Linux (`docs/contributing/windows-guidelines.md`
+//! § desktop-core is the behaviour oracle). Design records:
+//! `docs/architecture/windows-roadmap.md` (W1–W17, where this crate was
+//! born) and `linux-roadmap.md` (L2, the move here).
 
 pub mod candidates;
 pub mod composing;

@@ -46,10 +46,12 @@ build: i18n-check
 # One `swift test` process per composing back end (docs/architecture/macos-desktop-core-roadmap.md
 # D9.1): both drive the process's one engine, under generation counters of their own. In the core
 # run the cases that drive it through the Swift key path's generations skip themselves
-# (`TestFixtures.skipUnderTheCoreBackEnd`), so the two counters never meet in one process.
+# (`TestFixtures.skipUnderTheCoreBackEnd`), so the two counters never meet in one process. The
+# shipped back end (core) runs first; the legacy run is temporary — removed with the Swift key
+# path (roadmap P13).
 test: i18n-check
-	TAIGI_COMPOSING_BACKEND=legacy swift test
-	TAIGI_COMPOSING_BACKEND=core swift test --skip-build
+	TAIGI_COMPOSING_BACKEND=core swift test
+	TAIGI_COMPOSING_BACKEND=legacy swift test --skip-build
 
 bundle:
 	bash scripts/bundle-app.sh $(CONFIGURATION)
