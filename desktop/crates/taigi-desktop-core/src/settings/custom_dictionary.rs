@@ -250,7 +250,9 @@ mod tests {
     #[test]
     fn only_the_pages_own_job_settles_or_shows_busy() {
         let mut job = JobState::default();
+        assert!(!job.is_running());
         job.start(4);
+        assert!(job.is_running());
         assert!(!job.show_busy(3), "another job's overlay timer");
         assert!(!job.is_busy_shown());
         assert!(job.show_busy(4));
@@ -258,6 +260,7 @@ mod tests {
         assert!(!job.finish(3), "a job a rebuilt page inherited");
         assert!(job.finish(4));
         assert!(!job.is_busy_shown());
+        assert!(!job.is_running());
         assert!(!job.finish(4), "settled once");
     }
 

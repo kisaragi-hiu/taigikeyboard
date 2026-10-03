@@ -330,6 +330,54 @@ pub fn local_date() -> String {
     format!("{year:04}-{month:02}-{day:02}")
 }
 
+/// Milliseconds from 1601-01-01 (the `FILETIME` epoch) to 1970-01-01.
+#[cfg(windows)]
+const FILETIME_UNIX_EPOCH_MS: i64 = 11_644_473_600_000;
+
+/// How far east of UTC the user's clock stood at `unix_ms` (milliseconds
+/// since 1970), in seconds — the zone's rule for THAT instant, so a day
+/// under summer time reads as it did then. 0 (UTC) when the instant does
+/// not convert; the host stub answers UTC, as `local_date`'s does.
+#[cfg(windows)]
+pub fn utc_offset_seconds_at(unix_ms: i64) -> i64 {
+    use windows::Win32::Foundation::{FILETIME, SYSTEMTIME};
+    use windows::Win32::System::Time::{
+        FileTimeToSystemTime, SystemTimeToFileTime, SystemTimeToTzSpecificLocalTime,
+    };
+    fn ticks(time: FILETIME) -> i64 {
+        ((i64::from(time.dwHighDateTime)) << 32) | i64::from(time.dwLowDateTime)
+    }
+    let Some(utc_ticks) = unix_ms
+        .checked_add(FILETIME_UNIX_EPOCH_MS)
+        .and_then(|ms| ms.checked_mul(10_000))
+        .filter(|ticks| *ticks >= 0)
+    else {
+        return 0;
+    };
+    let utc_file_time = FILETIME {
+        dwLowDateTime: utc_ticks as u32,
+        dwHighDateTime: (utc_ticks >> 32) as u32,
+    };
+    let local_ticks = || -> windows::core::Result<i64> {
+        let mut utc = SYSTEMTIME::default();
+        // SAFETY: reads and writes stack structs alive for the call.
+        unsafe { FileTimeToSystemTime(&utc_file_time, &mut utc) }?;
+        let mut local = SYSTEMTIME::default();
+        // SAFETY: as above; `None` is the active time zone.
+        unsafe { SystemTimeToTzSpecificLocalTime(None, &utc, &mut local) }?;
+        let mut local_file_time = FILETIME::default();
+        // SAFETY: as above.
+        unsafe { SystemTimeToFileTime(&local, &mut local_file_time) }?;
+        Ok(ticks(local_file_time))
+    };
+    local_ticks().map_or(0, |local| (local - utc_ticks) / 10_000_000)
+}
+
+#[cfg(not(windows))]
+pub fn utc_offset_seconds_at(_unix_ms: i64) -> i64 {
+    0
+}
+
 /// The directory the running executable lives in — the install directory
 /// for the settings window (the DLL resolves its own from its `HMODULE`).
 pub fn executable_directory() -> Option<std::path::PathBuf> {

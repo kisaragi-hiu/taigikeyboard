@@ -99,6 +99,12 @@ impl JobState {
     pub fn is_busy_shown(&self) -> bool {
         self.is_busy_shown
     }
+
+    /// Whether a job this page started has not come back yet — for a shell
+    /// whose page owns its work slot (Windows), what refuses a second job.
+    pub fn is_running(&self) -> bool {
+        self.generation.is_some()
+    }
 }
 
 /// The page of a list on screen and the filter that chose it.

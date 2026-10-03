@@ -32,7 +32,7 @@ use taigi_desktop_core::settings::custom_dictionary::{
 };
 use taigi_desktop_core::settings::keys;
 use taigi_desktop_core::settings::listing::{
-    JobOutcome, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
+    JobOutcome, JobState, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
 };
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
@@ -111,18 +111,17 @@ pub struct CustomDictionaryModel {
     /// dialog does not need it — it is modal and runs on the UI thread,
     /// so no second command can arrive while it is up (the egui page had
     /// to reserve the slot across it because its dialog did not block the
-    /// frame loop).
-    job_generation: Option<u64>,
+    /// frame loop). `job` is the job it waits on and whether the overlay
+    /// shows.
+    job: JobState,
     next_job_generation: u64,
     /// What the running job is called, for the overlay.
     job_label: Option<StringKey>,
-    /// Whether the running job has lasted long enough to say so.
-    is_busy_shown: bool,
 }
 
 impl CustomDictionaryModel {
     fn is_working(&self) -> bool {
-        self.job_generation.is_some()
+        self.job.is_running()
     }
 }
 
@@ -279,12 +278,10 @@ pub fn update(
             clear_learning_records_job,
         ),
         Message::JobFinished(generation, outcome) => {
-            if model.job_generation != Some(generation) {
+            if !model.job.finish(generation) {
                 return;
             }
-            model.job_generation = None;
             model.job_label = None;
-            model.is_busy_shown = false;
             let JobOutcome {
                 message,
                 is_reload_wanted,
@@ -297,9 +294,7 @@ pub fn update(
             }
         }
         Message::ShowBusy(generation) => {
-            if model.job_generation == Some(generation) {
-                model.is_busy_shown = true;
-            }
+            model.job.show_busy(generation);
         }
         Message::RowsApplied(rows) => model.settled.report(rows),
     }
@@ -339,9 +334,8 @@ fn begin_job(
     }
     model.next_job_generation = model.next_job_generation.wrapping_add(1);
     let generation = model.next_job_generation;
-    model.job_generation = Some(generation);
+    model.job.start(generation);
     model.job_label = Some(label);
-    model.is_busy_shown = false;
     _ = context.spawn_background_with_rejection(
         move |_| {
             // A panicking store call must not leave the slot held for the
@@ -436,7 +430,7 @@ pub fn view(
     }
     // Mutual exclusion is the slot's; the greyed look waits the same
     // 400 ms as the overlay so a millisecond-long write does not flash it.
-    let is_enabled = !model.is_busy_shown;
+    let is_enabled = !model.job.is_busy_shown();
     View::fragment((
         enabled_row,
         cards::section_title_with_count(
@@ -627,7 +621,7 @@ fn csv_row(
 
 /// The job's name over a ring, once it has run long enough to say so.
 fn busy_overlay(model: &CustomDictionaryModel, strings: &StringResolver) -> View {
-    let Some(label) = model.job_label.filter(|_| model.is_busy_shown) else {
+    let Some(label) = model.job_label.filter(|_| model.job.is_busy_shown()) else {
         return View::empty();
     };
     cards::frame(
