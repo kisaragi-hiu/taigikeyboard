@@ -1666,6 +1666,8 @@ dependencies = [
  "gtk4",
  "libadwaita",
  "log",
+ "prost",
+ "protos",
  "taigi-desktop-core",
  "taigi-desktop-storage",
  "taigi-linux-platform",

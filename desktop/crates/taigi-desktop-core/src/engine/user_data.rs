@@ -11,12 +11,14 @@
 use std::path::Path;
 
 use protos::engine::{
-    request, response, user_data_request, user_data_response, DeleteCustomEntry, ExportCustomCsv,
-    ImportCustomCsv, ListCustomEntries, OpenUserData, ResetUserData, SaveCustomEntry,
-    SearchCustomEntries, UserDataJournal, UserDataRequest,
+    request, response, user_data_request, user_data_response, DeleteCustomEntry,
+    DeleteLearningRecord, ExportCustomCsv, ImportCustomCsv, ListCustomEntries, ListLearningRecords,
+    OpenUserData, ResetUserData, SaveCustomEntry, SearchCustomEntries, SetLearningRecordCount,
+    UserDataJournal, UserDataRequest,
 };
 pub use protos::engine::{
     CustomCsvImported, CustomDictionaryEntry, CustomDictionaryRefusal, CustomEntries,
+    LearningRecord, LearningRecordKind, LearningRecordOrder,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -106,19 +108,40 @@ pub fn list_custom_entries(
     }
 }
 
-/// The page of the custom dictionary a settings window shows: `page_size`
-/// rows from `page` (zero-based), pulled back to the last page that exists
-/// when the matches shrank under it (a delete on the last page), so the
-/// page asked for is the page shown.
+/// The page of a user-data list a settings window shows: `page_size` rows
+/// from `page` (zero-based), pulled back to the last page that exists when
+/// the matches shrank under it (a delete on the last page), so the page
+/// asked for is the page shown.
 #[derive(Clone, Debug)]
-pub struct CustomDictionaryPage {
+pub struct UserDataPage<Row> {
     pub page: usize,
-    pub rows: Vec<CustomDictionaryEntry>,
-    /// How many entries `filter` matches — what the pager divides.
+    pub rows: Vec<Row>,
+    /// How many rows `filter` matches — what the pager divides.
     pub match_count: usize,
-    /// Every entry, whatever the filter — what the dictionary HOLDS.
+    /// Every row, whatever the filter — what the store HOLDS.
     pub total_count: usize,
 }
+
+impl<Row> UserDataPage<Row> {
+    /// The page the engine served: its `offset`, as a page of `page_size`.
+    fn served(
+        offset: u32,
+        page_size: usize,
+        rows: Vec<Row>,
+        match_count: u32,
+        total_count: u32,
+    ) -> Self {
+        Self {
+            page: offset as usize / page_size.max(1),
+            rows,
+            match_count: match_count as usize,
+            total_count: total_count as usize,
+        }
+    }
+}
+
+pub type CustomDictionaryPage = UserDataPage<CustomDictionaryEntry>;
+pub type LearningRecordPage = UserDataPage<LearningRecord>;
 
 /// One page as the settings windows page it (`CustomDictionaryPageModel`).
 pub fn list_custom_page(
@@ -127,12 +150,13 @@ pub fn list_custom_page(
     page_size: usize,
 ) -> Result<CustomDictionaryPage, UserDataError> {
     let listing = list_custom_entries(filter, page_size, page * page_size)?;
-    Ok(CustomDictionaryPage {
-        page: listing.offset as usize / page_size.max(1),
-        rows: listing.entries,
-        match_count: listing.matching_total as usize,
-        total_count: listing.total as usize,
-    })
+    Ok(CustomDictionaryPage::served(
+        listing.offset,
+        page_size,
+        listing.entries,
+        listing.matching_total,
+        listing.total,
+    ))
 }
 
 /// Adds a word (`id` empty) or edits the one with `id`; answers the stored
@@ -270,6 +294,72 @@ pub fn search_custom_entries(
         op,
     )? {
         user_data_response::Result::CustomEntryMatches(matches) => Ok(matches.entries),
+        _ => Err(other_result(op)),
+    }
+}
+
+/// One page of learned rows of `kind` as the settings windows page them:
+/// `filter` as a substring of a row's words or readings, `page_size` rows
+/// from `page` (zero-based) in `order`.
+pub fn list_learning_page(
+    kind: LearningRecordKind,
+    order: LearningRecordOrder,
+    filter: &str,
+    page: usize,
+    page_size: usize,
+) -> Result<LearningRecordPage, UserDataError> {
+    let op = "learningRecordsList";
+    let page_size = page_size.max(1);
+    match page_request(
+        user_data_request::Method::ListLearningRecords(ListLearningRecords {
+            kind: kind as i32,
+            filter: filter.to_owned(),
+            limit: clamped(page_size),
+            offset: clamped(page * page_size),
+            order: order as i32,
+        }),
+        op,
+    )? {
+        user_data_response::Result::LearningRecords(listed) => Ok(LearningRecordPage::served(
+            listed.offset,
+            page_size,
+            listed.records,
+            listed.matching_total,
+            listed.total,
+        )),
+        _ => Err(other_result(op)),
+    }
+}
+
+/// Sets `record`'s count and answers the row as stored now — `None` when
+/// the row is gone (deleted, evicted, or its id taken by another word).
+pub fn set_learning_record_count(
+    record: LearningRecord,
+    count: i64,
+) -> Result<Option<LearningRecord>, UserDataError> {
+    let op = "learningRecordSetCount";
+    match page_request(
+        user_data_request::Method::SetLearningRecordCount(SetLearningRecordCount {
+            record: Some(record),
+            count,
+        }),
+        op,
+    )? {
+        user_data_response::Result::LearningRecordSaved(saved) => Ok(saved.record),
+        _ => Err(other_result(op)),
+    }
+}
+
+/// Forgets `record`; `false` when it was already gone.
+pub fn delete_learning_record(record: LearningRecord) -> Result<bool, UserDataError> {
+    let op = "learningRecordDelete";
+    match page_request(
+        user_data_request::Method::DeleteLearningRecord(DeleteLearningRecord {
+            record: Some(record),
+        }),
+        op,
+    )? {
+        user_data_response::Result::LearningRecordDeleted(deleted) => Ok(deleted.removed),
         _ => Err(other_result(op)),
     }
 }

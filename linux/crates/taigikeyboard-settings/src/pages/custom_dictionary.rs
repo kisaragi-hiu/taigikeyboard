@@ -18,7 +18,7 @@
 //! selection is the keyboard-reachable way (the Windows shape). The empty
 //! list says so in words.
 
-use super::{icon_button, remove_rows, PageContext};
+use super::{append_pager, busy_indicator, icon_button, remove_rows, table_line, PageContext};
 use crate::jobs;
 use crate::window::{JobSlot, Shell};
 use adw::prelude::*;
@@ -28,10 +28,12 @@ use std::rc::Rc;
 use taigi_desktop_core::engine::user_data::CustomDictionaryEntry;
 use taigi_desktop_core::settings::custom_dictionary::{
     clear_learning_records_job, delete_all_job, delete_entry_job, export_file_name, export_job,
-    import_job, save_entry_job, Confirm, JobOutcome, Listing, LoadLanded, FILTER_SETTLE,
-    LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
+    fetch, import_job, save_entry_job, Confirm, Listing,
 };
 use taigi_desktop_core::settings::keys;
+use taigi_desktop_core::settings::listing::{
+    JobOutcome, JobState, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
+};
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 
@@ -40,8 +42,7 @@ struct State {
     listing: Listing,
     /// The job this page started and still waits on (the slot itself is
     /// the window's, `JobSlot`).
-    job_generation: Option<u64>,
-    is_busy_shown: bool,
+    job: JobState,
 }
 
 /// What `render` draws, taken from the state and released before any
@@ -113,39 +114,21 @@ impl CustomDictionaryPage {
         let entries = adw::PreferencesGroup::builder()
             .title(strings.resolve(StringKey::DesktopEntriesSection))
             .build();
-        // The job's name beside a spinner, once it has run long enough to
-        // say so (`busy_overlay` on Windows, the overlay card on the Mac).
-        let busy = gtk::Spinner::new();
-        let busy_box = gtk::Box::new(gtk::Orientation::Horizontal, 6);
-        busy_box.append(&busy);
-        busy_box.append(&gtk::Label::new(Some(
-            strings.resolve(StringKey::DesktopProgressWorking),
-        )));
-        busy_box.set_visible(false);
+        let (busy, busy_box) = busy_indicator(&strings);
         entries.set_header_suffix(Some(&busy_box));
         let filter = gtk::SearchEntry::new();
         filter.set_placeholder_text(Some(
             strings.resolve(StringKey::DictionarySearchPlaceholder),
         ));
         entries.add(&filter);
-        // The column names over the list (`DictionaryRomanLabel`,
-        // `DictionaryHanziLabel`), in the rows' own two-column grid.
-        let header = two_columns(
-            &gtk::Label::builder()
-                .label(strings.resolve(StringKey::DictionaryRomanLabel))
-                .xalign(0.0)
-                .css_classes(["heading"])
-                .build(),
-            &gtk::Label::builder()
-                .label(strings.resolve(StringKey::DictionaryHanziLabel))
-                .xalign(0.0)
-                .css_classes(["heading"])
-                .build(),
-        );
-        header.set_margin_start(TABLE_INSET);
-        header.set_margin_end(TABLE_INSET);
-        header.set_margin_bottom(6);
-        entries.add(&header);
+        // The column names over the list, in the rows' own two-column grid.
+        entries.add(&table_line(
+            [
+                strings.resolve(StringKey::DictionaryRomanLabel),
+                strings.resolve(StringKey::DictionaryHanziLabel),
+            ],
+            true,
+        ));
         let list = gtk::ListBox::builder()
             .selection_mode(gtk::SelectionMode::Single)
             .css_classes(["boxed-list"])
@@ -178,20 +161,7 @@ impl CustomDictionaryPage {
         verbs.append(&add);
         verbs.append(&edit);
         verbs.append(&delete);
-        let spacer = gtk::Box::builder().hexpand(true).build();
-        verbs.append(&spacer);
-        let previous = icon_button(
-            "go-previous-symbolic",
-            strings.resolve(StringKey::CommonPagePrevious),
-        );
-        let page_label = gtk::Label::new(None);
-        let next = icon_button(
-            "go-next-symbolic",
-            strings.resolve(StringKey::CommonPageNext),
-        );
-        verbs.append(&previous);
-        verbs.append(&page_label);
-        verbs.append(&next);
+        let (previous, page_label, next) = append_pager(&verbs, &strings);
         entries.add(&verbs);
         page.add(&entries);
 
@@ -403,16 +373,10 @@ impl CustomDictionaryPage {
     }
 
     fn step_page(self: &Rc<Self>, delta: isize) {
-        {
-            let mut state = self.state.borrow_mut();
-            let listing = &mut state.listing;
-            let target = listing.page as isize + delta;
-            if target < 0 || target as usize >= listing.page_count() {
-                return;
-            }
-            listing.page = target as usize;
+        let has_stepped = self.state.borrow_mut().listing.step_page(delta);
+        if has_stepped {
+            self.load();
         }
-        self.load();
     }
 
     /// Starts a load of the page on screen. A load has no overlay: the rows
@@ -422,7 +386,7 @@ impl CustomDictionaryPage {
         let generation = request.generation;
         let weak = Rc::downgrade(self);
         jobs::spawn(
-            move || request.fetch(),
+            move || fetch(&request),
             move |outcome| {
                 let Some(page) = weak.upgrade() else { return };
                 let outcome = outcome.unwrap_or_else(|| Err(LOAD_DID_NOT_FINISH.to_owned()));
@@ -448,29 +412,22 @@ impl CustomDictionaryPage {
         let Some(generation) = self.job_slot.take() else {
             return;
         };
-        {
-            let mut state = self.state.borrow_mut();
-            state.job_generation = Some(generation);
-            state.is_busy_shown = false;
-        }
+        self.state.borrow_mut().job.start(generation);
         let weak = Rc::downgrade(self);
         let slot = self.job_slot.clone();
         let shell = self.shell.clone();
         let strings = self.strings;
         jobs::spawn(job, move |outcome| {
             slot.release(generation);
-            let outcome = outcome.unwrap_or_else(JobOutcome::did_not_finish);
+            let outcome =
+                outcome.unwrap_or_else(JobOutcome::did_not_finish::<CustomDictionaryEntry>);
             if let Some(message) = outcome.message {
                 shell.report(&message, &strings);
             }
             let Some(page) = weak.upgrade() else { return };
-            if page.state.borrow().job_generation != Some(generation) {
+            let is_this_pages = page.state.borrow_mut().job.finish(generation);
+            if !is_this_pages {
                 return;
-            }
-            {
-                let mut state = page.state.borrow_mut();
-                state.job_generation = None;
-                state.is_busy_shown = false;
             }
             if outcome.is_reload_wanted {
                 page.load();
@@ -482,8 +439,8 @@ impl CustomDictionaryPage {
         let weak = Rc::downgrade(self);
         glib::timeout_add_local_once(OVERLAY_DELAY, move || {
             let Some(page) = weak.upgrade() else { return };
-            if page.state.borrow().job_generation == Some(generation) {
-                page.state.borrow_mut().is_busy_shown = true;
+            let is_busy = page.state.borrow_mut().job.show_busy(generation);
+            if is_busy {
                 page.render();
             }
         });
@@ -658,7 +615,7 @@ impl CustomDictionaryPage {
                 page_label: format!("{} / {}", listing.page + 1, listing.page_count()),
                 has_previous: listing.page > 0,
                 has_next: listing.page + 1 < listing.page_count(),
-                is_busy: state.is_busy_shown,
+                is_busy: state.job.is_busy_shown(),
                 has_selection: listing.selected_row().is_some(),
             }
         };
@@ -666,24 +623,8 @@ impl CustomDictionaryPage {
         widgets.entries.set_description(Some(&drawn.count));
         remove_rows(&widgets.list);
         for (roman, hanji) in &drawn.rows {
-            // Two columns, romanization then Hanji (the Mac's table). Plain labels:
-            // user text, never markup.
-            let cells = two_columns(
-                &gtk::Label::builder()
-                    .label(roman)
-                    .xalign(0.0)
-                    .ellipsize(gtk::pango::EllipsizeMode::End)
-                    .build(),
-                &gtk::Label::builder()
-                    .label(hanji)
-                    .xalign(0.0)
-                    .ellipsize(gtk::pango::EllipsizeMode::End)
-                    .build(),
-            );
-            cells.set_margin_start(TABLE_INSET);
-            cells.set_margin_end(TABLE_INSET);
-            cells.set_margin_top(ROW_INSET);
-            cells.set_margin_bottom(ROW_INSET);
+            // Two columns, romanization then Hanji (the Mac's table).
+            let cells = table_line([roman.as_str(), hanji.as_str()], false);
             widgets
                 .list
                 .append(&gtk::ListBoxRow::builder().child(&cells).build());
@@ -725,28 +666,14 @@ impl CustomDictionaryPage {
     fn render_verbs(&self) {
         let (is_busy, has_selection) = {
             let state = self.state.borrow();
-            (state.is_busy_shown, state.listing.selected_row().is_some())
+            (
+                state.job.is_busy_shown(),
+                state.listing.selected_row().is_some(),
+            )
         };
         self.widgets.edit.set_sensitive(!is_busy && has_selection);
         self.widgets.delete.set_sensitive(!is_busy && has_selection);
     }
-}
-
-/// The table's horizontal inset and a row's vertical one, the list's own
-/// row metrics (`adw::ActionRow`).
-const TABLE_INSET: i32 = 12;
-const ROW_INSET: i32 = 8;
-
-/// Two equal columns side by side (`Metrics.tableColumns` on the Mac).
-fn two_columns(left: &impl IsA<gtk::Widget>, right: &impl IsA<gtk::Widget>) -> gtk::Box {
-    let columns = gtk::Box::builder()
-        .orientation(gtk::Orientation::Horizontal)
-        .homogeneous(true)
-        .spacing(12)
-        .build();
-    columns.append(left);
-    columns.append(right);
-    columns
 }
 
 /// An activatable row that runs a command (import, export).

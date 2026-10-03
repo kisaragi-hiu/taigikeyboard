@@ -9,6 +9,7 @@ pub mod custom_dictionary;
 pub mod dictionary_search;
 pub mod dictionary_sources;
 pub mod general;
+pub mod learning_records;
 pub mod shortcuts;
 
 use crate::window::{JobSlot, SettingsWindow, Shell};
@@ -21,12 +22,13 @@ use taigi_desktop_core::strings::{StringKey, StringResolver};
 
 /// The panes this crate draws, listed or not (Dictionary Search and About have no
 /// sidebar row, as on the other desktops).
-pub const BUILT: [SettingsPane; 7] = [
+pub const BUILT: [SettingsPane; 8] = [
     SettingsPane::General,
     SettingsPane::Appearance,
     SettingsPane::Shortcuts,
     SettingsPane::DictionarySources,
     SettingsPane::CustomDictionary,
+    SettingsPane::LearningRecords,
     SettingsPane::DictionarySearch,
     SettingsPane::About,
 ];
@@ -37,7 +39,7 @@ type Refresher = Box<dyn Fn(&SettingsDocument)>;
 pub struct Page {
     pub widget: adw::PreferencesPage,
     refreshers: Vec<Refresher>,
-    /// A page's own state object (Custom Dictionary, Dictionary Search), kept for the page's
+    /// A page's own state object (Custom Dictionary, Learning Records, Dictionary Search), kept for the page's
     /// life; its widgets hold it weakly.
     retained: Vec<Rc<dyn Any>>,
     /// Set while `refresh` runs, so a row's notify handler does not write
@@ -284,6 +286,7 @@ pub fn build(
         SettingsPane::Shortcuts => shortcuts::build(context, &widget),
         SettingsPane::DictionarySources => dictionary_sources::build(context, &widget),
         SettingsPane::CustomDictionary => custom_dictionary::build(context, &widget),
+        SettingsPane::LearningRecords => learning_records::build(context, &widget),
         SettingsPane::DictionarySearch => dictionary_search::build(context, &widget),
         SettingsPane::About => about::build(context, &widget),
         other => unreachable!("{other:?} is not in pages::BUILT"),
@@ -297,6 +300,75 @@ pub(crate) fn remove_rows(list: &gtk::ListBox) {
     while let Some(row) = list.row_at_index(0) {
         list.remove(&row);
     }
+}
+
+/// A list table's horizontal inset and a row's vertical one, the list's
+/// own row metrics (`adw::ActionRow`).
+const TABLE_INSET: i32 = 12;
+const ROW_INSET: i32 = 8;
+
+/// One line of a user-data table (Custom Dictionary, Learning Records):
+/// equal columns side by side (`Metrics.tableColumns` on the Mac), inset as
+/// the list's rows are. A heading line is the column names over the list;
+/// a row's cells are plain labels — user text, never markup.
+pub(crate) fn table_line<const N: usize>(texts: [&str; N], is_heading: bool) -> gtk::Box {
+    let line = gtk::Box::builder()
+        .orientation(gtk::Orientation::Horizontal)
+        .homogeneous(true)
+        .spacing(12)
+        .margin_start(TABLE_INSET)
+        .margin_end(TABLE_INSET)
+        .build();
+    for text in texts {
+        let cell = gtk::Label::builder().label(text).xalign(0.0);
+        line.append(&if is_heading {
+            cell.css_classes(["heading"]).build()
+        } else {
+            cell.ellipsize(gtk::pango::EllipsizeMode::End).build()
+        });
+    }
+    if is_heading {
+        line.set_margin_bottom(6);
+    } else {
+        line.set_margin_top(ROW_INSET);
+        line.set_margin_bottom(ROW_INSET);
+    }
+    line
+}
+
+/// The job's name beside a spinner, hidden until a job has run long
+/// enough to say so (`busy_overlay` on Windows, the overlay card on the
+/// Mac); the box goes in a group's header suffix.
+pub(crate) fn busy_indicator(strings: &StringResolver) -> (gtk::Spinner, gtk::Box) {
+    let spinner = gtk::Spinner::new();
+    let indicator = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+    indicator.append(&spinner);
+    indicator.append(&gtk::Label::new(Some(
+        strings.resolve(StringKey::DesktopProgressWorking),
+    )));
+    indicator.set_visible(false);
+    (spinner, indicator)
+}
+
+/// The pager at the end of a verb row: a spacer, then ‹ page › .
+pub(crate) fn append_pager(
+    verbs: &gtk::Box,
+    strings: &StringResolver,
+) -> (gtk::Button, gtk::Label, gtk::Button) {
+    verbs.append(&gtk::Box::builder().hexpand(true).build());
+    let previous = icon_button(
+        "go-previous-symbolic",
+        strings.resolve(StringKey::CommonPagePrevious),
+    );
+    let label = gtk::Label::new(None);
+    let next = icon_button(
+        "go-next-symbolic",
+        strings.resolve(StringKey::CommonPageNext),
+    );
+    verbs.append(&previous);
+    verbs.append(&label);
+    verbs.append(&next);
+    (previous, label, next)
 }
 
 pub(crate) fn icon_button(icon: &str, tooltip: &str) -> gtk::Button {

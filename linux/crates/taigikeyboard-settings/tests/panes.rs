@@ -66,6 +66,7 @@ fn main() -> ExitCode {
     a_recorded_press_binds_the_row(&window);
     the_kautian_expander_switch_writes_its_key(&window);
     the_custom_dictionary_lists_what_the_store_holds(&window);
+    the_learning_records_list_what_the_keyboard_learned(&window);
     the_read_only_window_writes_nothing(&application);
     eprintln!("panes: ok");
     ExitCode::SUCCESS
@@ -346,6 +347,106 @@ fn the_custom_dictionary_lists_what_the_store_holds(window: &Rc<SettingsWindow>)
     );
     assert!(find_first::<gtk::SearchEntry>(search.widget.upcast_ref()).is_some());
     eprintln!("panes: custom dictionary lists the store; search page mounts");
+}
+
+/// One pick, as the IME reports it: the engine counts `(word, tl)`.
+fn record_pick(word: &str, tl: &str) {
+    use prost::Message;
+    use protos::engine::{
+        request, user_data_request, ErrorCode, RecordUsage, Request, Response, UserDataRequest,
+    };
+    let pick = Request {
+        id: 1,
+        payload: Some(request::Payload::UserData(UserDataRequest {
+            method: Some(user_data_request::Method::RecordUsage(RecordUsage {
+                display_text: word.to_owned(),
+                canonical_tl: tl.to_owned(),
+                hanji: Some(word.to_owned()),
+            })),
+        })),
+        ..Request::default()
+    };
+    let answer = Response::decode(dispatch::process_request(&pick.encode_to_vec()).as_slice())
+        .expect("the engine answers");
+    assert_eq!(answer.error, ErrorCode::Ok as i32, "the pick is counted");
+}
+
+/// trace: 食飯 picked twice and 啉茶 once (word frequency, the default
+/// kind, most used first) → rows 食飯 (2), 啉茶 (1); 啉茶 set to 9 → it
+/// leads; 食飯 deleted → one row left (set and delete through the engine;
+/// the page's dialogs are device dogfood); the kind picker → phrases, none.
+/// The engine's list waits behind the queued picks on the same store writer.
+fn the_learning_records_list_what_the_keyboard_learned(window: &Rc<SettingsWindow>) {
+    use taigikeyboard_settings::pages::learning_records::LearningRecordsPage;
+    user_data::clear_learning_records().expect("empty the learning stores");
+    record_pick("食飯", "tsia̍h-pn̄g");
+    record_pick("食飯", "tsia̍h-pn̄g");
+    record_pick("啉茶", "lim-tê");
+    let document = window.writer().borrow().document().clone();
+    let strings =
+        taigikeyboard_settings::presentation::strings_for(window.writer().borrow().document());
+    let page = taigikeyboard_settings::pages::build(
+        SettingsPane::LearningRecords,
+        window,
+        &strings,
+        &document,
+        true,
+        window.job_slot(),
+    );
+    let records = page
+        .state::<LearningRecordsPage>()
+        .expect("the page retains its state");
+    let shown = |records: &LearningRecordsPage| -> Vec<(String, i64)> {
+        records
+            .shown_rows()
+            .into_iter()
+            .map(|row| (row.text, row.count))
+            .collect()
+    };
+    records.reload();
+    pump_until(|| records.shown_rows().len() == 2);
+    assert_eq!(
+        shown(&records),
+        [("食飯".to_owned(), 2), ("啉茶".to_owned(), 1)]
+    );
+    assert!(find_all::<gtk::Label>(page.widget.upcast_ref())
+        .iter()
+        .any(|label| label.label() == "tsia̍h-pn̄g"));
+
+    let tea = records.shown_rows()[1].clone();
+    let stored = user_data::set_learning_record_count(tea, 9).expect("set");
+    assert_eq!(stored.map(|row| row.count), Some(9));
+    records.reload();
+    pump_until(|| {
+        shown(&records)
+            .first()
+            .is_some_and(|(text, _)| text == "啉茶")
+    });
+    assert_eq!(
+        shown(&records),
+        [("啉茶".to_owned(), 9), ("食飯".to_owned(), 2)]
+    );
+
+    let meal = records.shown_rows()[1].clone();
+    assert!(user_data::delete_learning_record(meal.clone()).expect("delete"));
+    assert!(
+        !user_data::delete_learning_record(meal).expect("delete"),
+        "already gone"
+    );
+    records.reload();
+    pump_until(|| records.shown_rows().len() == 1);
+    assert_eq!(shown(&records), [("啉茶".to_owned(), 9)]);
+
+    // The kind picker (the page's first combo row) shows another store from
+    // its first page: no phrase was composed here, so nothing is listed.
+    let kind = find_first::<adw::ComboRow>(page.widget.upcast_ref()).expect("the kind picker");
+    kind.set_selected(1);
+    pump_until(|| records.shown_rows().is_empty());
+    assert!(
+        records.shown_rows().is_empty(),
+        "the phrases store is empty"
+    );
+    eprintln!("panes: learning records list the engine's rows and switch kind");
 }
 
 fn the_read_only_window_writes_nothing(application: &adw::Application) {

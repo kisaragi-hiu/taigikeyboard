@@ -327,6 +327,9 @@ pub enum SettingsPane {
     /// 2026-09-21).
     DictionarySources,
     CustomDictionary,
+    /// What the keyboard learned from the user's picks, after the words they
+    /// added themselves (learning-records-page-roadmap).
+    LearningRecords,
     /// Last in the sidebar (USER 2026-09-08): what the input method draws IN,
     /// after what it draws FROM.
     FontManagement,
@@ -335,7 +338,8 @@ pub enum SettingsPane {
 }
 
 impl SettingsPane {
-    /// The panes the sidebar shows, top to bottom.
+    /// The panes the Windows sidebar shows, top to bottom (Linux keeps its
+    /// own roster). Learning Records joins with its Windows page.
     pub const SIDEBAR: [SettingsPane; 6] = [
         Self::General,
         Self::Appearance,
@@ -355,6 +359,7 @@ impl SettingsPane {
             Self::Appearance => StringKey::DesktopAppearanceTab,
             Self::Shortcuts => StringKey::DesktopShortcutsTab,
             Self::CustomDictionary => StringKey::DictionaryCustomDictionary,
+            Self::LearningRecords => StringKey::DictionaryLearningRecords,
             Self::DictionarySources => StringKey::DesktopDictionarySourcesLink,
             Self::FontManagement => StringKey::DesktopFontManagementTab,
             Self::About => StringKey::HomeAboutKeyboard,
@@ -373,6 +378,8 @@ impl SettingsPane {
             Self::Appearance => "\u{E790}",
             Self::Shortcuts => "\u{E765}",
             Self::CustomDictionary => "\u{E82D}",
+            // History, matching the Mac's `clock.arrow.circlepath`.
+            Self::LearningRecords => "\u{E81C}",
             Self::DictionarySources | Self::DictionarySearch => "\u{E8F1}",
             // Font, the glyph Windows itself puts on a typeface list —
             // matching the Mac's `textformat`.
@@ -389,6 +396,7 @@ impl SettingChoice for SettingsPane {
         Self::Appearance,
         Self::Shortcuts,
         Self::CustomDictionary,
+        Self::LearningRecords,
         Self::DictionarySources,
         Self::FontManagement,
         Self::DictionarySearch,
@@ -401,6 +409,7 @@ impl SettingChoice for SettingsPane {
             Self::Appearance => "appearance",
             Self::Shortcuts => "shortcuts",
             Self::CustomDictionary => "customDictionary",
+            Self::LearningRecords => "learningRecords",
             Self::DictionarySources => "dictionarySources",
             Self::FontManagement => "fontManagement",
             Self::DictionarySearch => "dictionarySearch",

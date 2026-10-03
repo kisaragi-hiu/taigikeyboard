@@ -33,6 +33,8 @@ tempfile = "3"
 # `taigikeyboard-settings` enable `user-data` (the SQLite stores).
 dispatch = { path = "../engine/dispatch", default-features = false }
 protos = { path = "../engine/protos" }
+# The settings tests build engine requests the pages never send (a pick).
+prost = "0.14"
 taigi-desktop-core = { path = "../desktop/crates/taigi-desktop-core" }
 taigi-desktop-storage = { path = "../desktop/crates/taigi-desktop-storage" }
 taigi-linux-platform = { path = "crates/taigi-linux-platform" }

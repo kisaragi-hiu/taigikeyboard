@@ -502,7 +502,8 @@ impl SettingsWindow {
 /// Adwaita 46's symbolic set — every name checked against the theme
 /// Ubuntu 24.04 ships): gearshape → preferences-system, paintpalette →
 /// applications-graphics, keyboard → input-keyboard, books.vertical →
-/// emblem-documents, character.book.closed → x-office-address-book.
+/// emblem-documents, character.book.closed → x-office-address-book,
+/// clock.arrow.circlepath → document-open-recent.
 fn sidebar_icon(pane: SettingsPane) -> &'static str {
     match pane {
         SettingsPane::General => "preferences-system-symbolic",
@@ -510,6 +511,7 @@ fn sidebar_icon(pane: SettingsPane) -> &'static str {
         SettingsPane::Shortcuts => "input-keyboard-symbolic",
         SettingsPane::DictionarySources => "emblem-documents-symbolic",
         SettingsPane::CustomDictionary => "x-office-address-book-symbolic",
+        SettingsPane::LearningRecords => "document-open-recent-symbolic",
         SettingsPane::FontManagement => "preferences-desktop-font-symbolic",
         SettingsPane::DictionarySearch => "edit-find-symbolic",
         SettingsPane::About => "help-about-symbolic",
