@@ -1,7 +1,8 @@
 //! The composing orchestration against the REAL engine and dictionaries, with
-//! in-memory ports and a recording executor — the port of macOS's
+//! in-memory ports and a recording executor. Ported from macOS's
 //! `ComposingManagerTests` / `ComposingManagerCandidateTests` /
-//! `ComposingManagerLearningTests` / `ComposingSessionCoordinatorTests`.
+//! `ComposingManagerLearningTests` / `ComposingSessionCoordinatorTests`,
+//! deleted with the Swift key path (P13); these tests now pin the rules.
 //!
 //! Same singleton discipline as `engine_roundtrip.rs`: one lock, one fresh
 //! generation block per test.

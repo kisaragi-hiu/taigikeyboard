@@ -1,5 +1,6 @@
 //! When a committed word earns the auto-space trailing space, as pure
-//! decisions — the one copy the three desktops run
+//! decisions — the one copy the three desktops run (macOS keeps a Swift twin
+//! of the attaching set, below)
 //! (behavioural invariant §23, `INVARIANT_AUTO_SPACE_PUNCTUATION_SWAP`).
 
 use crate::settings::InputMode;

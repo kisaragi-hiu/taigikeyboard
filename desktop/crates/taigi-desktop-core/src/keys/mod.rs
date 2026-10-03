@@ -2,7 +2,7 @@
 //! of that contract the user chooses. Pure classification — no Win32.
 //!
 //! The rules live here once for the three desktops (macOS reaches them
-//! through `taigi-macos-ffi`; the Swift side keeps only the values it is
+//! through `taigi-macos-ffi`; the Swift side keeps the values it is
 //! handed — `ComposingKeyChord`, `SymbolPickerIntent`). Each shell builds a
 //! [`KeyEventSnapshot`] from its key event (TSF `OnKeyDown`, IBus / Fcitx5,
 //! `taigi-macos-ffi` `key_translation.rs`) and asks

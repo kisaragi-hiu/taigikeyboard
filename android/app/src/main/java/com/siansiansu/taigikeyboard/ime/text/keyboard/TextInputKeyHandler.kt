@@ -632,8 +632,8 @@ internal class TextInputKeyHandler(
  * the engine's call (`engine/nextword/src/decide.rs`).
  *
  * CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordController
- * .isContextCharacterOutsideComposition` and macOS `ComposingManager
- * .noteCharacterTypedOutsideComposition`. Drift causes silent divergence.
+ * .isContextCharacterOutsideComposition` and desktop-core `ComposingManager
+ * ::note_character_typed_outside_composition`. Drift causes silent divergence.
  */
 internal fun isContextCharacterOutsideComposition(char: String): Boolean = char.isNotEmpty() && char.none { it.isLetter() || it.isWhitespace() }
 

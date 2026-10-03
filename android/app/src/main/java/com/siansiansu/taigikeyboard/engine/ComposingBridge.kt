@@ -175,8 +175,8 @@ fun RustEngineBridge.composingReset(generation: Long): RustEngineBridge.Composin
  * The user's own data is not among the arguments: the engine reads its
  * stores itself and ranks in the same call
  * (`docs/architecture/user-data-engine-roadmap.md` P8b). `nowMs` is the
- * clock its recency ranking reads. Mirrors macOS
- * `RustEngineBridge.composingFetchAtPos`.
+ * clock its recency ranking reads. Mirrors desktop-core
+ * `engine::composing::fetch_at_pos`.
  */
 fun RustEngineBridge.composingFetchAtPos(
     // Built once by the caller (`continuousAppConfig`) from
