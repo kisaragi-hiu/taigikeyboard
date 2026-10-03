@@ -21,9 +21,33 @@ final class LearningRecordsPageModel {
     private(set) var activity: UserDataPageActivity = .idle
     /// Word frequency or learned phrases. No next-word association: the
     /// desktop predicts no next word, so those rows rank nothing here.
-    var kind: Taigi_Engine_LearningRecordKind = .frequency
-    var order: Taigi_Engine_LearningRecordOrder = .mostUsed
-    var filter = ""
+    /// Each of the three, once changed, makes every load in flight stale
+    /// at once (`UserDataPagedList.invalidate`) — not when the next load
+    /// starts, which for the filter is after it settles.
+    var kind: Taigi_Engine_LearningRecordKind = .frequency {
+        didSet {
+            if oldValue != kind {
+                list.invalidate()
+            }
+        }
+    }
+
+    var order: Taigi_Engine_LearningRecordOrder = .mostUsed {
+        didSet {
+            if oldValue != order {
+                list.invalidate()
+            }
+        }
+    }
+
+    var filter = "" {
+        didSet {
+            if oldValue != filter {
+                list.invalidate()
+            }
+        }
+    }
+
     var message: UserDataPageMessage?
 
     private let client: any UserDataClient

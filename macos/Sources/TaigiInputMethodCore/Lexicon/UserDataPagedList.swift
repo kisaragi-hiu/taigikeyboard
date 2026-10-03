@@ -80,6 +80,15 @@ struct UserDataPagedList<Row: Sendable> {
         page = 0
     }
 
+    /// Makes every load already started stale, without starting one. What a
+    /// change of filter, kind or order does the moment it happens: the load
+    /// it asks for waits for the filter to settle, and a load of the old list
+    /// that returns in that gap must neither land its rows nor raise its
+    /// failure.
+    mutating func invalidate() {
+        loadGeneration += 1
+    }
+
     /// Starts a load of the page on screen; every load started before it is
     /// stale from here on.
     mutating func beginLoad() -> Load {

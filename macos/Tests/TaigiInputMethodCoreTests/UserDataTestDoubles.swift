@@ -72,6 +72,12 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     /// Set to make every list request fail, as an unreadable store does.
     var failsLearningRecordReads = false
 
+    /// Set to hold every list request in the engine until the test signals
+    /// it — a load still in flight while the page moves on.
+    var learningRecordsListGate: DispatchSemaphore?
+    /// Called as a list request reaches the store, before the gate.
+    var onLearningRecordsListEntered: (@Sendable () -> Void)?
+
     func seedLearningRecords(_ records: [Taigi_Engine_LearningRecord]) {
         lock.withLock { learningRecords = records }
     }
@@ -83,7 +89,9 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
         limit: Int,
         offset: Int,
     ) throws -> UserDataListing<Taigi_Engine_LearningRecord> {
-        try lock.withLock {
+        onLearningRecordsListEntered?()
+        learningRecordsListGate?.wait()
+        return try lock.withLock {
             lastLearningRecordsQuery = (kind, order, filter)
             if failsLearningRecordReads {
                 throw UserDataClientError.engineUnavailable(op: "learningRecordsList")

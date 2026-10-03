@@ -142,6 +142,55 @@ final class LearningRecordsPageTests: XCTestCase {
         }
     }
 
+    /// Starts a load that is held in the store, changes `change`, then lets
+    /// the load return — the filter's own load waits for it to settle, so
+    /// none has started in between.
+    private func returnAnOldLoad(
+        _ model: LearningRecordsPageModel,
+        _ client: FakeUserDataClient,
+        after change: () -> Void,
+    ) async {
+        let gate = DispatchSemaphore(value: 0)
+        let entered = expectation(description: "the old load reached the store")
+        client.learningRecordsListGate = gate
+        client.onLearningRecordsListEntered = { entered.fulfill() }
+        let inFlight = Task { await model.load() }
+        await fulfillment(of: [entered], timeout: 5)
+
+        change()
+        gate.signal()
+        await inFlight.value
+    }
+
+    /// The old list's rows never land once the filter has changed.
+    func testAFilterChange_dropsTheRowsOfALoadAlreadyInFlight() async throws {
+        let (model, client) = makeModel([record(.frequency, id: 1)])
+
+        await returnAnOldLoad(model, client) { model.filter = "nothing" }
+
+        XCTAssertTrue(model.list.rows.isEmpty, "rows of the old filter landed")
+    }
+
+    /// Nor does its failure: the user has moved past that list.
+    func testAFilterChange_dropsTheFailureOfALoadAlreadyInFlight() async throws {
+        let (model, client) = makeModel([])
+        client.failsLearningRecordReads = true
+
+        await returnAnOldLoad(model, client) { model.filter = "nothing" }
+
+        XCTAssertNil(model.message, "the old filter's failure was raised")
+    }
+
+    func testAKindOrOrderChange_dropsALoadAlreadyInFlight() async throws {
+        let (model, client) = makeModel([record(.frequency, id: 1)])
+
+        await returnAnOldLoad(model, client) { model.kind = .learnedPhrase }
+        XCTAssertTrue(model.list.rows.isEmpty)
+
+        await returnAnOldLoad(model, client) { model.order = .mostRecent }
+        XCTAssertTrue(model.list.rows.isEmpty)
+    }
+
     /// The "above 40 ranks the same" note belongs to word frequency alone.
     func testCountNote_isForWordFrequencyOnly() {
         XCTAssertEqual(LearningRecordsPageModel.countNoteKey(for: .frequency), .dictionaryLearningRecordsCountCapInfo)
@@ -170,5 +219,16 @@ final class UserDataPagedListTests: XCTestCase {
         XCTAssertEqual(list.rows, [2])
         XCTAssertFalse(list.isCurrent(older))
         XCTAssertTrue(list.isCurrent(newer))
+    }
+
+    func testInvalidate_makesALoadInFlightStaleWithoutStartingOne() {
+        var list = UserDataPagedList<Int>()
+        let load = list.beginLoad()
+
+        list.invalidate()
+        list.land(UserDataListing(rows: [1], total: 1, matchingTotal: 1, offset: 0), from: load)
+
+        XCTAssertFalse(list.isCurrent(load))
+        XCTAssertTrue(list.rows.isEmpty)
     }
 }

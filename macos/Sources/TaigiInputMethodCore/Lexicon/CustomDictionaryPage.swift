@@ -10,7 +10,17 @@ import UniformTypeIdentifiers
 final class CustomDictionaryPageModel {
     private(set) var list = UserDataPagedList<CustomDictionaryRow>()
     private(set) var activity: UserDataPageActivity = .idle
-    var filter = ""
+    /// Once changed, makes every load in flight stale at once
+    /// (`UserDataPagedList.invalidate`), not when the settled filter's own
+    /// load starts.
+    var filter = "" {
+        didSet {
+            if oldValue != filter {
+                list.invalidate()
+            }
+        }
+    }
+
     var message: UserDataPageMessage?
 
     func pageBackward() async {
