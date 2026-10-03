@@ -1,6 +1,6 @@
 # Learning Records page — roadmap
 
-> **Status**: in progress — P0 merged `5bab5b9b`; P1 #366, P2 in review. Requested by the maintainer 2026-10-03: "a page where users can view and edit learning records and ranking scores, for mobile and desktop".
+> **Status**: in progress — P0 merged `5bab5b9b`; P1 merged #366 `1716751a`; P2 merged #369 `21f1270a`; P3–P6 in progress. Requested by the maintainer 2026-10-03: "a page where users can view and edit learning records and ranking scores, for mobile and desktop".
 
 A settings page, on all five platforms, that lists what the keyboard has learned from the user, lets them correct one row's count and delete one row. Today the only control is "Delete Learning Records", which empties every learning store at once.
 
@@ -100,8 +100,8 @@ That track completed 2026-10-03 (P15 merged #365); P1 was rebased onto it. This 
 | Phase | Scope | Status |
 |---|---|---|
 | P0 | this roadmap | Done |
-| P1 | engine: proto + store methods + `learning_records.rs` + routing; store tests (id reuse, two connections, phrase keys, paging, NULL TL) + dispatch tests; regenerated Android Java / iOS Swift / macOS Swift protos in the same PR | In review |
-| P2 | i18n keys with every generated output (incl. `ios/Localizable.xcstrings`) + `desktop-core` page model (+ shared `Listing`) + Linux page; gate = every platform in the keys' scope | In review |
+| P1 | engine: proto + store methods + `learning_records.rs` + routing; store tests (id reuse, two connections, phrase keys, paging, NULL TL) + dispatch tests; regenerated Android Java / iOS Swift / macOS Swift protos in the same PR | Merged #366 `1716751a` |
+| P2 | i18n keys with every generated output (incl. `ios/Localizable.xcstrings`) + `desktop-core` page model (+ shared `Listing`) + Linux page; gate = every platform in the keys' scope | Merged #369 `21f1270a` |
 | P3 | Windows page + `SettingsPane::SIDEBAR` entry | Pending |
 | P4 | macOS page | Pending |
 | P5 | iOS page | Pending |
