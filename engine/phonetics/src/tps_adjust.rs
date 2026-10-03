@@ -1,10 +1,9 @@
 //! TPSAdjustmentBundle port — collapsed 4-fn TPS keystroke adjustment.
 //!
-//! Mirrors:
-//! - iOS `Input/TPS/TPSInputAdjuster.swift` (4 functions).
-//! - iOS `Input/CharacterInputPipeline.swift` (orchestration: collapsed
-//!   single entry-point landed in commit 1).
-//! - Android `ime/text/CharacterInputPipeline.kt` (commit 1 mirror).
+//! Replaces (this crate owns the rules; platforms are thin callers):
+//! - the removed iOS `TPSInputAdjuster` (4 functions).
+//! - the orchestration in iOS `Input/CharacterInputPipeline.swift` and Android
+//!   `ime/text/CharacterInputPipeline.kt`, both now thin callers of `adjust`.
 //!
 //! Caller (platform) MUST gate by TPS layout. Engine does not gate because
 //! Android `InputMode` (POJ/TL) has no `.tps` case — TPS is a layout, not
@@ -115,7 +114,7 @@ static SYLLABLE_BOUNDARY_CHARS: Lazy<HashSet<char>> = Lazy::new(|| {
 });
 
 // =========================================================================
-// Per-function adjustments (mirror TPSInputAdjuster.swift)
+// Per-function adjustments (one per former `TPSInputAdjuster` step)
 // =========================================================================
 
 /// Returns context-adjusted TPS character for keys with dual initial/final

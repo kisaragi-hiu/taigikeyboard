@@ -1,6 +1,7 @@
 //! What one candidate's cell shows, and which of its scripts a commit asks
-//! for. Port of `CandidateCellContent.swift`, `CandidateScript.swift`; the
-//! document text a commit writes is the engine's (`composing::commit_text`).
+//! for; the document text a commit writes is the engine's
+//! (`composing::commit_text`). macOS keeps a Swift twin of the cell value:
+//! `CandidateCellContent.swift`.
 
 use crate::engine::ContinuousCandidate;
 use crate::settings::{CandidateDisplayMode, EngineSettings};
@@ -48,8 +49,9 @@ impl CandidateCellContent {
     }
 
     /// CROSS-PLATFORM INVARIANT — mirrors
-    /// `ios/.../TaigiAutocompleteService.swift:150-162` (primary =
-    /// romanization, secondary = Hanji) and the swap flip; arm order is the
+    /// `ios/.../TaigiAutocompleteService.swift` `buildContinuousSuggestions` (primary =
+    /// romanization, secondary = Hanji) and the swap flip in
+    /// `ios/.../CandidateCellHelper.swift` `suggestionToHandle`; arm order is the
     /// same on every platform. Serves Pairing and Romanization Only; Combined's split cells
     /// are built by [`super::presentation`].
     pub fn cell(candidate: &ContinuousCandidate, settings: &EngineSettings) -> Self {
@@ -83,8 +85,8 @@ mod tests {
 
     #[test]
     fn the_cell_leads_with_the_script_the_swap_names() {
-        // trace: CandidateCellContentTests.swift — roman-first annotates the
-        // hanji, hanji-first the roman, verbatim.
+        // trace: `cell` — roman-first annotates the hanji, hanji-first the
+        // roman, verbatim.
         let c = candidate("kau--lâng", Some("交--人"), 0);
         assert_eq!(
             CandidateCellContent::cell(&c, &settings(false)),

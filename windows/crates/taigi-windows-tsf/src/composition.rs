@@ -2,11 +2,13 @@
 //! only inside a synchronous edit session. [`CompositionEditor`] is the
 //! `ComposingEffectExecutor` for one session — the engine says WHAT happens
 //! to the document (`Effect`), this says HOW, in TSF terms (rakukan
-//! `on_compose.rs`; khiin `composition_mgr.rs`). Every rule the Mac executor
-//! states (`ClientEffectExecutor.swift`) holds here with TSF spellings:
-//! the preedit lives in the composition until commit; a commit is ONE
-//! `SetText` + selection + `EndComposition`; the selection is placed BEFORE
-//! `EndComposition` (rakukan Fix3: after it the host resets the caret).
+//! `on_compose.rs`; khiin `composition_mgr.rs`). The effect contract is
+//! desktop-core's (`ComposingEffectExecutor`,
+//! `desktop/crates/taigi-desktop-core/src/composing/manager.rs`); the TSF
+//! binding is this file's own: the preedit lives in the composition until
+//! commit; a commit is ONE `SetText` + selection + `EndComposition`; the
+//! selection is placed BEFORE `EndComposition` (rakukan Fix3: after it the
+//! host resets the caret).
 
 use crate::com_out_buffer;
 use crate::edit_session::EditCookie;

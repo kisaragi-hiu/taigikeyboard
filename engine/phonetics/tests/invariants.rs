@@ -1,5 +1,5 @@
 //! INVARIANT_* tests required by the D9 boolean check (`SKILL.md:336`).
-//! Mirrors `TaigiPhoneticsTests.swift` test_INVARIANT_* methods so the iOS
+//! Carries the `test_INVARIANT_*` cases of the removed iOS phonetics tests so the iOS
 //! production fixtures travel intact into the Rust crate.
 
 use phonetics::api::{poj_display_to_tl_display, tl_display_to_poj_display};

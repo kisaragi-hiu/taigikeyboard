@@ -1,5 +1,5 @@
-//! Pure NextWord scoring math. Mirrors iOS `NextWordScorer.swift` /
-//! Android `ime/core/nextword/NextWordScorer.kt`. Constants pinned by
+//! Pure NextWord scoring math; the engine is the single owner (the iOS /
+//! Android `NextWordScorer` copies are gone). Constants pinned by
 //! `behavioral-invariants.md` §§7, 8 — modifying any value here requires
 //! invariant-doc + parity-test updates in the same PR.
 
@@ -31,10 +31,9 @@ pub(crate) const LOW_USAGE_DECAY_FLOOR: f64 = 0.30;
 /// Usage count above which the high-usage floor kicks in.
 pub(crate) const HIGH_USAGE_THRESHOLD: i64 = 3;
 
-/// Hard-coded `ln(2)` literal (3-digit). Constant must match iOS inline
-/// `0.693` literal at `NextWordScorer.swift:62` and Android
-/// `NextWordScorer.kt:46` `LN_2 = 0.693`. Drift over a 1-week window is
-/// ~0.03% — acceptable per the Android scorer doc comment.
+/// Hard-coded `ln(2)` literal (3-digit), kept from the removed iOS /
+/// Android scorers so decay is unchanged. At one half-life (1 week) the
+/// decay is ~0.015% above the exact 0.5 — acceptable.
 pub(crate) const LN_2: f64 = 0.693;
 
 /// Dictionary-layer score: raw count × `DICT_WEIGHT`.

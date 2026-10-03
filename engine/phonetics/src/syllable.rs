@@ -583,8 +583,8 @@ mod tests {
         assert!(is_stop_tone("annh"));
     }
 
-    // MARK: - split_initial_final. SOURCE: TaigiPhoneticsTests.swift +
-    // TaigiPhoneticsTest.kt — both add cases beyond JS.
+    // MARK: - split_initial_final. SOURCE: the former iOS / Android phonetics
+    // tests — both add cases beyond JS.
 
     #[test]
     fn split_initial_final_valid() {

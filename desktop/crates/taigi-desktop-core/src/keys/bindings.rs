@@ -1,5 +1,4 @@
 //! The user's composing key contract, resolved and ready to classify against.
-//! Port of `ComposingKeyBindings` (`ComposingKeyBindings.swift:109-262`).
 
 use std::collections::BTreeMap;
 
@@ -27,8 +26,7 @@ pub struct ComposingKeyBindings {
     /// Whether a candidate window exists to act on. Carried here for the
     /// same reason as `tone_scheme`: with the window off, the keys that
     /// would confirm or page a candidate end the composition as typed
-    /// instead, and the classifier decides that off one value
-    /// (`ComposingKeyBindings.swift` `isCandidateWindowEnabled`).
+    /// instead, and the classifier decides that off one value.
     pub is_candidate_window_enabled: bool,
 }
 
@@ -78,7 +76,7 @@ impl ComposingKeyBindings {
     /// The bindings a settings document describes: `composingShortcut.<raw>`
     /// per action (absent = default, `""` = cleared, unparsable = cleared —
     /// silently restoring the default would undo a deliberate clearing) plus
-    /// the tone scheme (`SettingsStore.swift` `composingKeyBindings`). The
+    /// the tone scheme. The
     /// stored values are read in `platform`'s chord grammar.
     pub fn from_document(document: &SettingsDocument, platform: DesktopPlatform) -> Self {
         let mut stored = BTreeMap::new();
@@ -136,11 +134,10 @@ impl ComposingKeyBindings {
     /// outranks a default that arrives on top of it in an upgrade. Within
     /// each half, roster order is the tiebreak.
     ///
-    /// "On its default" is judged by VALUE, exactly as macOS does
-    /// (`ComposingKeyBindings.swift:212`): a row the user explicitly recorded
+    /// "On its default" is judged by VALUE: a row the user explicitly recorded
     /// back onto its own default reads as untouched here. The store keeps the
     /// distinction (absent vs stored), the resolver deliberately does not —
-    /// same observable behaviour on both desktops.
+    /// same observable behaviour on all three desktops.
     fn remove_duplicates(resolved: &mut BTreeMap<ComposingAction, ComposingKeyChord>) {
         let on_its_default =
             |action: &ComposingAction| resolved.get(action) == Some(&action.default_chord());
@@ -225,7 +222,7 @@ mod tests {
 
     #[test]
     fn a_stored_chord_outranks_a_default_that_arrives_on_top_of_it() {
-        // trace: ComposingKeyBindingsTests.swift:229-249 — both roster orders.
+        // trace: `remove_duplicates` drops the row on its default first — both roster orders.
         let bracket = ComposingAction::PageForward.default_chord();
         let bindings = ComposingKeyBindings::resolve(
             &stored(&[(ComposingAction::NextCandidate, Some(bracket.clone()))]),
@@ -365,7 +362,7 @@ mod tests {
 
     #[test]
     fn commit_rows_are_refilled_only_from_free_defaults_and_may_swap() {
-        // trace: ComposingKeyBindingsTests.swift — every arrangement of the
+        // Every arrangement of the
         // two commit rows over their two chords plus a third row holding one:
         // no chord on two rows, a recorded chord stays on its row, and a
         // commit row is empty only when both defaults are held elsewhere.
@@ -459,8 +456,8 @@ mod tests {
 
     #[test]
     fn candidate_window_ships_on_and_reads_what_the_general_pane_writes() {
-        // trace: SettingsStoreTests.swift
-        // `testCandidateWindow_shipsOn_andReadsWhatTheGeneralPaneWrites`.
+        // trace: S33 — `resolve` ships the window on; `from_document` reads
+        // `IS_CANDIDATE_WINDOW_ENABLED`, the key the General pane writes.
         assert!(ComposingKeyBindings::default().is_candidate_window_enabled);
         let mut document = SettingsDocument::default();
         assert!(
@@ -523,7 +520,7 @@ mod tests {
 
     #[test]
     fn the_mac_reads_its_own_stored_letters_and_its_keypad_and_back_tab() {
-        // trace: Swift writes `o` for ⌥ (`ComposingKeyChord.swift` rawValue);
+        // trace: the Mac's grammar spells ⌥ `o` (`chord.rs` `modifier_letters`);
         // an `a` is not a Mac letter, so that row reads as cleared (inventory K2).
         let mac = DesktopPlatform::MacOS;
         let mut document = SettingsDocument::default();
@@ -543,7 +540,7 @@ mod tests {
             bindings.action_for(&KeyEventSnapshot::text("\r", KeyModifiers::ALT), mac),
             Some(ComposingAction::PageForward)
         );
-        // trace: ComposingKeyBindingsTests.swift:406-410,424-428 — out of the box the
+        // trace: `normalized` folds `\u{3}` → `\r` and `\u{19}` → `\t` — out of the box the
         // keypad Enter confirms and AppKit's back tab walks back.
         let defaults = ComposingKeyBindings::default();
         assert_eq!(
@@ -558,7 +555,7 @@ mod tests {
 
     #[test]
     fn actions_holding_names_the_rows_a_recording_would_empty() {
-        // trace: ComposingKeyBindingsTests.swift:438-449 — the row being
+        // trace: `actions_holding` skips `excluding` — the row being
         // recorded is not its own conflict.
         let bracket = chord("]", KeyModifiers::NONE);
         let bindings = ComposingKeyBindings::resolve(

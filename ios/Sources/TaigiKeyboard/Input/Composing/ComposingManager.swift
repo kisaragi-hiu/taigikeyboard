@@ -136,7 +136,7 @@ public class ComposingManager: ComposingStateProvider, ContinuousCandidateFetche
     /// phrases — and ranks in the same call
     /// (`docs/architecture/user-data-engine-roadmap.md` P7b). `nowMs` is the
     /// clock its recency ranking reads. CROSS-PLATFORM INVARIANT — mirrors
-    /// macOS `ComposingManager.fetchCandidates`.
+    /// desktop-core `ComposingManager::fetch_candidates`.
     ///
     /// Bridge-failure handling distinguishes "engine returned Idle" (legit
     /// reset — a `bumpGeneration` the engine saw first; apply the Idle

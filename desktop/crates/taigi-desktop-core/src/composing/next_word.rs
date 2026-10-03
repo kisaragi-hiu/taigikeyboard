@@ -1,5 +1,4 @@
-//! Where the manager reports commits for next-word learning. Port of
-//! `NextWordPort.swift`.
+//! Where the manager reports commits for next-word learning.
 //!
 //! The engine decides WHAT is worth learning — the 10-second window, how a
 //! compound splits, whether the text is noise (`engine/nextword/src/decide.rs`)

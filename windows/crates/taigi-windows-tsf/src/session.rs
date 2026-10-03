@@ -1,7 +1,8 @@
 //! One key, end to end: snapshot → classifier → engine + document, inside
-//! a synchronous edit session. Port of `TaigiInputController.swift`
-//! `handle(_:client:)` (`:452-597`) and the commit / auto-space paths
-//! (`:618-960`), with the TSF specifics the roadmap fixes: `OnTestKeyDown`
+//! a synchronous edit session — the TSF shell over desktop-core's key path
+//! (`desktop/crates/taigi-desktop-core/src/composing/manager.rs`,
+//! `composing/intent_executor.rs`, `policies/auto_space.rs`), with the TSF
+//! specifics the roadmap fixes: `OnTestKeyDown`
 //! and `OnKeyDown` answer through one classification (terminals skip the
 //! former); the engine is touched only INSIDE the session so a refused
 //! session leaves everything untouched; the runtime comes up on the first

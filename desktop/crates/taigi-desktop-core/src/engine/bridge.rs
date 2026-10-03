@@ -1,5 +1,4 @@
 //! The envelope round-trip and the per-request config snapshot.
-//! Port of `RustEngineBridge.swift:97-187`.
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
@@ -21,7 +20,7 @@ fn next_request_id() -> u32 {
 /// the engine reported success. `None` means the round-trip FAILED rather than
 /// "the engine had nothing to say" — callers must keep the two apart, because
 /// a failed round-trip leaves the engine's state untouched and any snapshot
-/// synthesized here would contradict it (`RustEngineBridge.swift:83-141`).
+/// synthesized here would contradict it.
 ///
 /// Shared by every slice: envelope, id sequence, error checks and failure log
 /// are identical, only the payload case differs.
@@ -83,7 +82,7 @@ pub(super) fn record_failure(op: &str, message: &str) {
 
 /// The caller identity the engine validates — no engine behaviour branches
 /// on it (envelope.proto `Platform`). Each shell passes its own desktop
-/// (`RustEngineBridge.swift:181` sends `.macos`).
+/// (`taigi-macos-ffi` `runtime.rs` passes `DesktopPlatform::MacOS`).
 fn wire_platform(platform: DesktopPlatform) -> Platform {
     match platform {
         DesktopPlatform::Windows => Platform::Windows,
@@ -100,7 +99,7 @@ fn wire_platform(platform: DesktopPlatform) -> Platform {
 /// Both double-tap folds are unconditional here, unlike iOS and Android where
 /// they are user settings: their on-screen keyboards have dedicated `o͘` and
 /// `ⁿ` keys, a hardware keyboard has not, so switching the fold off would
-/// leave both graphemes untypable in POJ (`RustEngineBridge.swift:161-175`).
+/// leave both graphemes untypable in POJ.
 ///
 /// The engine collapses same-roman rows under roman-only
 /// (`candidate_display_mode`), shapes the romanization hyphenless (§49) and
@@ -110,8 +109,8 @@ fn wire_platform(platform: DesktopPlatform) -> Platform {
 /// composition's nailed prefix (`docs/engine/continuous-commit-and-display.md`
 /// §10.2) and feeds the next-word decide table, where it suppresses recording
 /// for raw-romanization commits (`decide.rs:86`). Sent by every composing op
-/// that renders the composition and by every next-word request, matching iOS
-/// and macOS.
+/// that renders the composition and by every next-word request, matching iOS;
+/// macOS sends this same builder's config.
 pub(super) fn app_config(settings: &EngineSettings, platform: DesktopPlatform) -> AppConfig {
     AppConfig {
         input_mode: settings.input_mode.wire().to_owned(),
@@ -140,8 +139,8 @@ mod tests {
 
     #[test]
     fn app_config_carries_platform_and_unconditional_doubletaps() {
-        // trace: each shell's own desktop — RustEngineBridgeAppConfigTests.swift:21
-        // pins `.macos`; before D6 the build target picked Linux or Windows.
+        // trace: `wire_platform` maps each shell's own desktop one to one;
+        // before D6 the build target picked Linux or Windows.
         let settings = EngineSettings {
             input_mode: InputMode::Poj,
             ..EngineSettings::default()

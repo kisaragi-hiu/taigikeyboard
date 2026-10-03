@@ -196,8 +196,8 @@ class NextWordController(
      * sentence-end punctuation — what stops the last word of one sentence
      * being learned as the predecessor of the first word of the next
      * (`decide.rs` sentence-end rule). Whether the character does that, or is
-     * noise that changes nothing, is the engine's call. Mirrors macOS
-     * `EngineNextWord.wordSelected(text: character, roman: "")`.
+     * noise that changes nothing, is the engine's call. Mirrors desktop-core
+     * `ComposingManager::note_character_typed_outside_composition`.
      */
     fun noteCharacterTypedOutsideComposition(char: String) {
         val settings = settingsProvider.current

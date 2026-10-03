@@ -1,6 +1,6 @@
 //! The phrases the user composed segment by segment (§50) — learning data
 //! in its own `learned_phrases.db`, never the custom dictionary's (USER
-//! 2026-09-21). Port of `Storage/LearnedPhraseStore.swift`; SQL
+//! 2026-09-21). Port of the former Swift `LearnedPhraseStore`; SQL
 //! byte-identical.
 
 use crate::custom_dictionary::SearchKeyDeriver;

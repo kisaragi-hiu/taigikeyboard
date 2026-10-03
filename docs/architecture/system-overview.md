@@ -8,7 +8,7 @@
 
 ## Summary
 
-- Five thin platform shells over one shared Rust engine (`engine/` Cargo workspace), reached through a proto bytes-in / bytes-out boundary: **iOS** (Swift + KeyboardKit), **Android** (Kotlin + FlorisBoard-derived IME), **macOS** (Swift, InputMethodKit), **Windows** (Rust, Text Services Framework — its own `windows/` Cargo workspace consuming the engine crates by path), **Linux** (Fcitx5 addon in C++ over a Rust C ABI + IBus engine in pure Rust, GTK 4 / libadwaita settings window — its own `linux/` workspace over the `desktop/` crates Windows shares).
+- Five thin platform shells over one shared Rust engine (`engine/` Cargo workspace), reached through a proto bytes-in / bytes-out boundary: **iOS** (Swift + KeyboardKit), **Android** (Kotlin + FlorisBoard-derived IME), **macOS** (Swift, InputMethodKit — its key path runs in `taigi-desktop-core` through one static library from its own `macos/` workspace, `taigi-macos-ffi`), **Windows** (Rust, Text Services Framework — its own `windows/` Cargo workspace consuming the engine crates by path), **Linux** (Fcitx5 addon in C++ over a Rust C ABI + IBus engine in pure Rust, GTK 4 / libadwaita settings window — its own `linux/` workspace over the `desktop/` crates Windows shares).
 - Two release trains: mobile (iOS + Android, `mobile-x.y.z`) and desktop (macOS + Windows + Linux, `desktop-x.y.z`). Diagrams are drawn from actual code (crate manifests, `Makefile`, build scripts) — keep them in sync when those change.
 
 ---
@@ -25,8 +25,9 @@ graph TB
     subgraph Android["Android — Kotlin"]
         andBridge["engine/RustEngineBridge.kt"]
     end
-    subgraph macOS["macOS — Swift + IMKit"]
-        macBridge["Engine/RustEngineBridge.swift"]
+    subgraph macOS["macOS — Swift + IMKit (macos/ workspace, one taigi-macos-ffi archive)"]
+        macCore["DesktopCore/DesktopCoreBridge.swift → taigi-macos-ffi → taigi-desktop-core"]
+        macBridge["Engine/RustEngineBridge.swift (user-data pages)"]
     end
     subgraph Windows["Windows — Rust + TSF (windows/ workspace)"]
         winBridge["taigi-desktop-core::engine::bridge"]
@@ -35,7 +36,7 @@ graph TB
         linBridge["taigi-linux-core → taigi-desktop-core::engine::bridge"]
     end
     subgraph Engine["Shared Rust engine — engine/ workspace"]
-        ffi["swift-ffi (staticlib, iOS + macOS) · android-jni (cdylib)<br/>lib name = rust_taigi"]
+        ffi["swift-ffi (staticlib iOS · rlib inside taigi-macos-ffi) · android-jni (cdylib)<br/>lib name = rust_taigi"]
         dispatch["dispatch::process_request — sees all domains"]
         domains["composing · lexicon · ranking · nextword · userdata · phonetics"]
         ffi --> dispatch --> domains
@@ -45,6 +46,7 @@ graph TB
     iosBridge -->|proto bytes| ffi
     andBridge -->|proto bytes| ffi
     macBridge -->|proto bytes| ffi
+    macCore -->|"proto bytes (same archive)"| dispatch
     winBridge -->|"proto bytes (in-process path dep)"| dispatch
     linBridge -->|"proto bytes (in-process path dep)"| dispatch
     domains -. mmap read-only .-> artifacts
@@ -56,7 +58,7 @@ User-writable state is four SQLite files, **owned by the engine crate `userdata`
 |---|---|---|---|---|---|
 | iOS | `ios/` keyboard extension (KeyboardKit `ActionHandler`) + host app | `RustEngineBridge+<Area>.swift` → `swift-ffi` | KeyboardKit smartbar + overlays | SwiftUI tabs | Xcode → simulator (`AGENTS.md` § Build & Test) |
 | Android | `android/` `TaigiKeyboard : LifecycleInputMethodService` | `RustEngineBridge.kt` + `<Area>Bridge.kt` → `android-jni` | Compose smartbar | Compose activities | `gradlew :app:testDebugUnitTest` |
-| macOS | `macos/` SwiftPM `TaigiInputMethodCore` (`TaigiInputController : IMKInputController`) | `RustEngineBridge+<Area>.swift` → `swift-ffi` (universal xcframework) | native `NSPanel` candidate window (roadmap D11) | SwiftUI settings window | `make -C macos test` / `install` |
+| macOS | `macos/` SwiftPM `TaigiInputMethodCore` (`TaigiInputController : IMKInputController`) | key path: `DesktopCore/DesktopCoreBridge.swift` → `taigi-macos-ffi` (`desktop_request_bytes`) → `taigi-desktop-core` → `dispatch`; user-data pages: `RustEngineBridge+UserData.swift` → the `swift-ffi` seam in the same archive (universal xcframework) | native `NSPanel` candidate window (roadmap D11) | SwiftUI settings window | `make -C macos test` / `install` |
 | Windows | `windows/crates/taigi-windows-tsf` (COM TIP) over `taigi-desktop-core` / `-storage` / `-platform` / `-settings` / `-update` | `taigi-desktop-core::engine` → `dispatch` (path dep, no FFI) | DirectWrite candidate window (`tsf/src/ui/`) | WinUI 3 settings window | `make windows-check` (host) + box build (`windows-release.md`) |
 | Linux | `linux/fcitx5` (C++ addon) over `taigi-linux-ffi` (C ABI) and `linux/crates/taigikeyboard-ibus` (zbus), both over `taigi-linux-core` → `taigi-desktop-core` / `-storage` | `taigi-desktop-core::engine` → `dispatch` (path dep; the C ABI is the addon's only FFI) | the framework's panel (Fcitx5 input panel / IBus lookup table) | GTK 4 + libadwaita settings window (`taigikeyboard-settings`) | `make linux-check` (host) + `linux-build.yml` (Ubuntu build, ibus smoke, `.deb`; `linux-release.md`) |
 
@@ -64,13 +66,13 @@ User-writable state is four SQLite files, **owned by the engine crate `userdata`
 
 ## 2. Engine crate dependency graph
 
-Thirteen-member Cargo workspace (`engine/Cargo.toml`). Edges point **caller → callee** and flow one way only — the dependency-direction invariant is enforced per `docs/contributing/rust-best-practices.md` §1a. The `desktop/` workspace (the pure crates Windows and Linux share, `linux-roadmap.md` L2) and the `windows/` / `linux/` shell workspaces sit *above* this graph: `taigi-desktop-core` depends on `dispatch` + `protos` by path and is not a member (the engine workspace pins the Apple / Android targets and is the engine's dependency-direction boundary; `desktop/Cargo.toml` is `unsafe_code = "forbid"` too — only the `windows/` / `linux/` shell workspaces override it for COM / C ABI).
+Thirteen-member Cargo workspace (`engine/Cargo.toml`). Edges point **caller → callee** and flow one way only — the dependency-direction invariant is enforced per `docs/contributing/rust-best-practices.md` §1a. The `desktop/` workspace (the pure crates the three desktops share, `linux-roadmap.md` L2, `macos-desktop-core-roadmap.md`) and the `windows/` / `linux/` / `macos/` shell workspaces sit *above* this graph: `taigi-desktop-core` depends on `dispatch` + `protos` by path and is not a member (the engine workspace pins the Apple / Android targets and is the engine's dependency-direction boundary; `desktop/Cargo.toml` is `unsafe_code = "forbid"` too — only the `windows/` / `linux/` shell workspaces override it for COM / C ABI; `macos/` keeps `forbid` — its seam is swift-bridge bytes, no `unsafe`).
 
 ```mermaid
 graph TD
-    swiftffi["swift-ffi<br/>iOS + macOS staticlib"] --> dispatch
+    swiftffi["swift-ffi<br/>iOS staticlib · macOS rlib"] --> dispatch
     androidjni["android-jni<br/>Android cdylib"] --> dispatch
-    wincore["taigi-desktop-core<br/>(desktop/ workspace, shared by windows/ + linux/)"] --> dispatch
+    wincore["taigi-desktop-core<br/>(desktop/ workspace, shared by windows/ + linux/ + macos/)"] --> dispatch
     dispatch --> composing
     dispatch --> lexicon
     dispatch --> nextword
@@ -94,7 +96,7 @@ graph TD
 
 Omitted for readability: **`protos`** (prost-generated message types; every crate depends on it — the true leaf); **`mmap-host`** (the single `unsafe` mmap carve-out, used only by `lexicon`); external crates (`swift-bridge` / `jni` in the adapters, `fst` in `lexicon` + `fst-builder`, `memmap2` in `mmap-host`, `rusqlite` (bundled SQLite) in `userdata`, which only `dispatch/user-data` pulls in — `taigi-desktop-core` reaches the stores only through `dispatch`'s user-data ops, so a build that leaves `dispatch/user-data` off stays C-free; `taigi-desktop-storage` (settings file, fonts, directory) sits beside `desktop-core` with no engine edge of its own); **`build-helpers/fst-builder`** (offline tool producing `dictionary.fst` / `syllables.fst`); **`test-support`** (dev-dependency shared by the engine crates' tests; no engine edge). Layers: **adapters** (`swift-ffi`, `android-jni`, `taigi-desktop-core`) → **use-case** (`dispatch`) → **domain** (`composing`, `lexicon`, `ranking`, `nextword`, `userdata`) → **leaf kernel** (`phonetics`, `protos`, `mmap-host`). `dispatch/src/trace.rs` is the test-build-only JSONL trace behind the `e2e-trace` feature ([`e2e-trace-schema.md`](e2e-trace-schema.md)).
 
-Crates above the graph: `desktop/` = `taigi-desktop-core` (engine bridge, composing coordinator + intent executor, keys, settings model, strings), `taigi-desktop-storage` (settings file + writer, fonts, data directory) and `taigi-desktop-update` (update check, Windows only today); `windows/crates/` = `taigi-windows-tsf` (COM TIP), `taigi-windows-platform` (Win32 helpers), `taigi-windows-settings` (WinUI 3 window), `taigi-windows-update` (installer download + verify); `linux/crates/` = `taigi-linux-core` (session, executor, chrome), `taigi-linux-platform` (XDG paths, key translation, locale, launcher), `taigi-linux-ffi` (Fcitx5 C ABI), `taigikeyboard-ibus`, `taigikeyboard-settings`. Other trees: `e2e/` (end-to-end scenarios, analyzer, drivers), `emoji/` (own `CLAUDE.md`), `assets/` (dictionaries, fonts, symbols), `windows/installer/`, `linux/packaging/`, `macos/updates/`, `tools/release/stage-desktop.sh`.
+Crates above the graph: `desktop/` = `taigi-desktop-core` (engine bridge, composing coordinator + intent executor, keys, settings model, strings), `taigi-desktop-storage` (settings file + writer, fonts, data directory) and `taigi-desktop-update` (update check, Windows only today); `macos/crates/` = `taigi-macos-ffi` (the one static library the Mac links: `swift-ffi` as an rlib plus the desktop shell seam `desktop_request_bytes` over `taigi-desktop-core`); `windows/crates/` = `taigi-windows-tsf` (COM TIP), `taigi-windows-platform` (Win32 helpers), `taigi-windows-settings` (WinUI 3 window), `taigi-windows-update` (installer download + verify); `linux/crates/` = `taigi-linux-core` (session, executor, chrome), `taigi-linux-platform` (XDG paths, key translation, locale, launcher), `taigi-linux-ffi` (Fcitx5 C ABI), `taigikeyboard-ibus`, `taigikeyboard-settings`. Other trees: `e2e/` (end-to-end scenarios, analyzer, drivers), `emoji/` (own `CLAUDE.md`), `assets/` (dictionaries, fonts, symbols), `windows/installer/`, `linux/packaging/`, `macos/updates/`, `tools/release/stage-desktop.sh`.
 
 ---
 
@@ -178,13 +180,13 @@ Engine search ownership on the fetch step: `phonetics::KeyFamily::search_key` (c
 
 | Step | Android | macOS | Windows | Linux |
 |---|---|---|---|---|
-| Input dispatch | `ime/text/TextInputManager.kt`, `CharacterInputPipeline.kt` | `Controller/TaigiInputController.swift` + `ComposingKeyIntent.swift` (key table) | `tsf/src/session.rs::run_key` + `key_translation.rs` → `taigi-desktop-core::composing::perform_intent` (`intent_executor.rs`) | `taigi-linux-core::session` + `taigi-linux-platform::key_translation` → the same `perform_intent` |
-| Composing wrapper | `ime/text/composing/ComposingManager.kt` + `ComposingDelegate.kt` (`InputConnection` binding, `composing-state-boundary.md` §11) | `Composing/ComposingManager.swift` + `ComposingSessionCoordinator.swift` (one owner, generation tokens) + `ClientEffectExecutor.swift` | `taigi-desktop-core::composing` coordinator + `tsf/src/composition.rs` / `edit_session.rs` | `taigi-desktop-core::composing` coordinator + `taigi-linux-core::executor` (effects replayed as IBus / Fcitx5 signals) |
-| Candidate fetch | `ime/text/candidates/TaigiAutocompleteService.kt`; `LexiconService.kt` for the dictionary tab only | `Engine/RustEngineBridge+Lexicon.swift` | `taigi-desktop-core::engine::lexicon` | same as Windows |
+| Input dispatch | `ime/text/TextInputManager.kt`, `CharacterInputPipeline.kt` | `Controller/TaigiInputController.swift` → `Composing/ComposingBackend.swift` → `taigi-macos-ffi` `session.rs` + `key_translation.rs` → the same `perform_intent` | `tsf/src/session.rs::run_key` + `key_translation.rs` → `taigi-desktop-core::composing::perform_intent` (`intent_executor.rs`) | `taigi-linux-core::session` + `taigi-linux-platform::key_translation` → the same `perform_intent` |
+| Composing wrapper | `ime/text/composing/ComposingManager.kt` + `ComposingDelegate.kt` (`InputConnection` binding, `composing-state-boundary.md` §11) | `taigi-desktop-core::composing` coordinator over the shell seam; Swift keeps `ComposingSessionCoordinator.swift` (one owner, session tokens) + `ClientWriter.swift` (writes marked / committed text into the IMK client; `TaigiInputController.replay` replays the recorded effects) | `taigi-desktop-core::composing` coordinator + `tsf/src/composition.rs` / `edit_session.rs` | `taigi-desktop-core::composing` coordinator + `taigi-linux-core::executor` (effects replayed as IBus / Fcitx5 signals) |
+| Candidate fetch | `ime/text/candidates/TaigiAutocompleteService.kt`; `LexiconService.kt` for the dictionary tab only | same as Windows | `taigi-desktop-core::engine::lexicon` | same as Windows |
 | Display | `ime/text/candidates/` (`CandidateStrip.kt`, `CandidateStripState.kt`), `ime/text/overlays/`, `ime/text/smartbar/` (Compose smartbar host) | `Candidates/` (`CandidatePresenter` seam, horizontal / vertical / expandable panels) | `tsf/src/ui/candidate_window.rs`, `candidate_list_element.rs`, `render.rs` | the framework's panel; `taigi-linux-core::selection` pages it |
-| Selection | `ime/text/candidates/CandidateClickHandler.kt` | slot keys (`CandidateSlotKeySet`) + Space | slot keys + Space | slot keys + Space |
-| NextWord glue | `ime/text/nextword/NextWordController.kt` | `NextWord/NextWordPort.swift` (`EngineNextWord`; write-and-rank, no prediction surface — roadmap D7) | `taigi-desktop-core::composing::next_word` + `engine::nextword` (the engine records into `user_association.db`) | same as Windows |
-| Settings | `ime/settings/PrefHelper.kt` (DataStore) + `ime/settings/EngineSettings.kt` | `Settings/SettingsStore.swift` (UserDefaults) | `taigi-desktop-core::settings` (`keys.rs`) + `taigi-desktop-storage::settings_file` | same as Windows; paths from `taigi-linux-platform::paths` (XDG) |
+| Selection | `ime/text/candidates/CandidateClickHandler.kt` | slot keys + Space | slot keys + Space | slot keys + Space |
+| NextWord glue | `ime/text/nextword/NextWordController.kt` | same as Windows (write-and-rank, no prediction surface on any desktop) | `taigi-desktop-core::composing::next_word` + `engine::nextword` (the engine records into `user_association.db`) | same as Windows |
+| Settings | `ime/settings/PrefHelper.kt` (DataStore) + `ime/settings/EngineSettings.kt` | `Settings/SettingsStore.swift` (UserDefaults); each request carries the key-path settings as a snapshot (`taigi-macos-ffi` `settings.rs`) | `taigi-desktop-core::settings` (`keys.rs`) + `taigi-desktop-storage::settings_file` | same as Windows; paths from `taigi-linux-platform::paths` (XDG) |
 
 State machine on every platform: the engine's `composing::api::Phase` is `Idle` / `Composing` / `Continuous` (`engine/composing/src/api.rs`; `Continuous` also holds the nailed segments). Input leaves `Idle`; candidate select / Space / Enter / delete-to-empty return to it; semantics pinned in `behavioral-invariants.md` §13.
 
@@ -193,5 +195,5 @@ State machine on every platform: the engine's `composing::api::Phase` is `Idle` 
 ## 5. Where to read next
 
 - Cross-platform contract: `behavioral-invariants.md` · glue shape (layers, DI, live-read settings): `ios-exemplar.md` (+ §9 Android deviations) · composing / next-word bindings: `composing-state-boundary.md`, `nextword-engine-boundary.md`.
-- Engine wire: `../engine/rust-core-proto.md`, `../contributing/rust-ffi-safety.md` · desktop design records: `macos-roadmap.md`, `windows-roadmap.md`.
+- Engine wire: `../engine/rust-core-proto.md`, `../contributing/rust-ffi-safety.md` · desktop design records: `macos-roadmap.md`, `macos-desktop-core-roadmap.md`, `windows-roadmap.md`.
 - Releasing: `desktop-release.md` (entry), `macos-release.md`, `windows-release.md`, `manual-release-notes.md` · device acceptance: `dogfood-checklist.md`.

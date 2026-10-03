@@ -1,7 +1,8 @@
 //! What a check concludes and what it leaves in `settings.json`, as pure
-//! decisions over the document. Port of `UpdateChecker` — the pending
-//! manifest and the once-per-version announcement gate. The schedule
-//! (`updateNextCheckMs`) is `taigi_desktop_core::settings::update_schedule`.
+//! decisions over the document: the pending manifest and the
+//! once-per-version announcement gate (macOS keeps a Swift twin,
+//! `UpdateChecker`). The schedule (`updateNextCheckMs`) is
+//! `taigi_desktop_core::settings::update_schedule`.
 
 use crate::manifest::{DottedVersion, UpdateManifest};
 use crate::transport::ManifestFetcher;

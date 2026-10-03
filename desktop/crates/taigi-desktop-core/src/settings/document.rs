@@ -4,7 +4,8 @@
 //! Absent means "never touched"; a reset REMOVES keys rather than writing the
 //! defaults over them, so a written-through default cannot be mistaken for a
 //! choice the user made, and a later version's changed default reaches
-//! installs that never chose (`SettingsStore.swift:505-515`).
+//! installs that never chose. macOS keeps a Swift twin: `SettingsStore.swift`
+//! `removeStoredValues`.
 //!
 //! `revision` is the change counter the TIP compares before adopting a
 //! reload (roadmap W10): mtime/size are the cheap detector, the revision is
@@ -97,8 +98,8 @@ impl SettingsDocument {
             .unwrap_or(key.default)
     }
 
-    /// A string-backed choice, or its default when absent or unrecognised
-    /// (`SettingsStore.swift:366-370`).
+    /// A string-backed choice, or its default when absent or unrecognised.
+    /// macOS keeps a Swift twin: `SettingsStore.swift` `choice(_:)`.
     pub fn choice<T: SettingChoice>(&self, key: &SettingsKey<T>) -> T {
         self.values
             .get(key.name)
@@ -171,7 +172,7 @@ impl SettingsDocument {
         self.display_language().effective(system_locale)
     }
 
-    /// The symbol picker's recent picks (`SettingsStore.swift` `recentSymbols`).
+    /// The symbol picker's recent picks (`SettingsStore.swift` `recentSymbols` is the macOS twin).
     pub fn recent_symbols(&self) -> RecentSymbols {
         RecentSymbols::new(self.string_list(&keys::RECENT_SYMBOLS))
     }
@@ -218,7 +219,7 @@ impl SettingsDocument {
     }
 
     /// Records `chord` on `action`, or clears the row when `None`
-    /// (`SettingsStore.swift:437-442`).
+    /// (`SettingsStore.swift` `setComposingChord` is the macOS twin).
     pub fn set_composing_chord(
         &mut self,
         action: crate::keys::ComposingAction,
@@ -233,7 +234,8 @@ impl SettingsDocument {
     }
 
     /// Puts every key the shortcuts pane owns on the composing side back to
-    /// shipped state — removed, not written (`SettingsStore.swift:444-449`).
+    /// shipped state — removed, not written (`SettingsStore.swift`
+    /// `resetComposingShortcuts` is the macOS twin).
     pub fn reset_composing_shortcuts(&mut self) {
         for action in crate::keys::ComposingAction::ALL {
             self.remove(&action.settings_key_name());

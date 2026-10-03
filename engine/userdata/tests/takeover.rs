@@ -82,8 +82,8 @@ fn custom_dictionary(path: &Path) -> CustomDictionaryStore {
 
 // ---------------------------------------------------------------- frequency
 
-/// iOS before R5 — `ios/.../Lexicon/Database/UserFrequencySchema.swift` at
-/// `1677e862^` (`createFrequencyTable`): `word UNIQUE`, no `tl`, stamp 0.
+/// iOS before R5 — `ios/Sources/TaigiKeyboard/Lexicon/Database/UserFrequencySchema.swift`
+/// at `1677e862^` (`createFrequencyTable`): `word UNIQUE`, no `tl`, stamp 0.
 const IOS_FREQUENCY_V1: &str = "
 CREATE TABLE IF NOT EXISTS user_frequency (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -237,7 +237,7 @@ fn a_frequency_file_from_a_later_build_stays_closed_and_untouched() {
 
 // -------------------------------------------------------------- association
 
-/// iOS v5 — `ios/.../NextWord/Repository/NextWordSchema.swift` at
+/// iOS v5 — `ios/Sources/TaigiKeyboard/NextWord/Repository/NextWordSchema.swift` at
 /// `c2b8a581^` (`createTables`): the key lacks `prev_tl`.
 const IOS_ASSOCIATION_V5: &str = "
 CREATE TABLE IF NOT EXISTS user_association (
@@ -567,11 +567,12 @@ fn a_v9_leftover_with_only_learn_count_still_opens() {
     assert!(!columns(&path, "custom_dictionary").contains(&"learn_count".to_owned()));
 }
 
-/// macOS / Windows / Linux v4 — `macos/.../Storage/CustomDictionaryStore.swift`
-/// `applySchema` (the SQL the desktop stores ported byte-identically): no
+/// macOS / Windows / Linux v4 — the former macOS store's `applySchema` (the
+/// SQL the desktop stores ported byte-identically): no
 /// legacy derived columns, keys the engine itself derived, stamp 4.
 /// The phones' first dictionary shape — Android `CustomDictionaryService.kt`
-/// and iOS `CustomDictionaryRepository.swift` at `392d0283` (v3.4.2, the first
+/// and iOS `ios/Sources/TaigiKeyboard/Lexicon/Database/CustomDictionaryRepository.swift`
+/// at `392d0283` (v3.4.2, the first
 /// release with the dictionary): no `roman_num`, no side table. Android
 /// stamped it 3, iOS left `user_version` at 0.
 const CUSTOM_DICTIONARY_BEFORE_ROMAN_NUM: &str = "
@@ -787,7 +788,7 @@ fn the_copy_is_taken_once_and_a_taken_over_file_is_not_copied_again() {
 fn a_learned_phrase_file_keeps_its_rows_and_is_marked() {
     let directory = scratch();
     let path = paths(&directory).learned_phrases;
-    // iOS `LearnedPhraseSchema.swift` / Android `LearnedPhraseService.kt` v1.
+    // iOS / Android learned-phrase schema v1.
     build(
         &path,
         "CREATE TABLE learned_phrases (id INTEGER PRIMARY KEY, roman TEXT NOT NULL, hanzi TEXT NOT NULL,

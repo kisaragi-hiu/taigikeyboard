@@ -1,5 +1,5 @@
 //! The composing actions a user can put on a key of their own choosing; default keys follow the
-//! system Zhuyin IME. Port of `ComposingAction.swift`.
+//! system Zhuyin IME.
 
 use super::chord::ComposingKeyChord;
 use super::intent::{CandidateNavigation, ComposingKeyIntent};
@@ -85,7 +85,7 @@ impl ComposingAction {
     }
 
     /// The chord a fresh install has on this action — the same on every
-    /// desktop (`ComposingAction.swift:90-104`). Built as the value the gate
+    /// desktop. Built as the value the gate
     /// would produce rather than through it, since the gate is per desktop;
     /// `defaults_pass_the_gate_on_every_desktop` pins that it lets each one
     /// through unchanged.
@@ -193,7 +193,7 @@ mod tests {
         names.sort();
         names.dedup();
         assert_eq!(names.len(), ComposingAction::ALL.len());
-        // trace: ShortcutSettingsTests.swift:28-41 — the raw values ARE the
+        // trace: `settings_key_name` = `composingShortcut.<raw>` — the raw values ARE the
         // stored keys; renaming one drops every chord recorded under it.
         assert_eq!(
             ComposingAction::ALL.map(ComposingAction::raw),
@@ -222,7 +222,8 @@ mod tests {
 
     #[test]
     fn defaults_follow_the_system_zhuyin_keyboard() {
-        // trace: ComposingKeyBindingsTests.swift:196-215.
+        // trace: `default_chord` — ⇥ / ⇧⇥ step, Space commits the other script,
+        // ↩ / ⇧↩ commit, `[` / `]` page.
         let chord = |key: &str, m| ComposingKeyChord::make(Some(key), m, PLATFORM).unwrap();
         assert_eq!(
             ComposingAction::NextCandidate.default_chord(),

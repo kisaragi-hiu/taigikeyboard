@@ -65,7 +65,8 @@ pub fn output_script_label(is_hanji: bool) -> StringKey {
     }
 }
 
-/// What a page reports after a job (`UserDataPageChrome.swift:19-52`).
+/// What a page reports after a job (`UserDataPageChrome.swift` `UserDataPageMessage`
+/// is the macOS twin).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum PageMessage {
     Failure { title: StringKey, detail: String },

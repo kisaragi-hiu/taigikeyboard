@@ -1,6 +1,5 @@
 //! What one key event means to a composition. The whole key contract of the
-//! input method in one readable, testable table. Port of
-//! `ComposingKeyIntent.swift:93-413`.
+//! input method in one readable, testable table.
 
 use super::bindings::ComposingKeyBindings;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
@@ -27,8 +26,7 @@ impl CaretDirection {
 
 /// The modifier under which ← / → step the composing caret — the host's
 /// own "jump a word" chord: Ctrl on Windows and Linux, ⌥ on the Mac
-/// (`ComposingKeyIntent.swift` `caretChordModifiers`; ⌃← is Mission
-/// Control there). The Shortcuts pane draws its read-only row from this
+/// (⌃← is Mission Control there). The Shortcuts pane draws its read-only row from this
 /// same value, so the row cannot drift from the key the classifier reads.
 /// Alt+←/→ is back / forward in Explorer and the browsers and rides
 /// `WM_SYSKEYDOWN`, so it is not Windows' chord.
@@ -41,17 +39,17 @@ pub fn caret_chord_modifiers(platform: DesktopPlatform) -> KeyModifiers {
 
 /// The modifier that types a punctuation key in the other width, once — the
 /// 新注音 (New Phonetic) / Microsoft IME gesture (`Ctrl+,` → `，`). Fixed, not recordable,
-/// shown read-only on the Shortcuts pane like the caret chord
-/// (`ComposingKeyIntent.swift` `widthFlipModifiers`); the row is drawn from
-/// this same value the classifier compares against. The same ⌃ on every
+/// shown read-only on the Shortcuts pane like the caret chord; the row is
+/// drawn from this same value the classifier compares against. The same ⌃ on every
 /// desktop, so it takes no platform.
 pub const WIDTH_FLIP_MODIFIERS: KeyModifiers = KeyModifiers::CONTROL;
 
 /// A move in the candidate window. The six physical keys are handed through
 /// raw because what each does depends on the layout (`↓` pages a horizontal
 /// window and walks a vertical list); `NextCandidate` / `PreviousCandidate`
-/// name an OUTCOME — one step along the list in every layout
-/// (`CandidatePresenter.swift:42-53`).
+/// name an OUTCOME — one step along the list in every layout, never a page
+/// jump. The window that reads it keeps that contract; macOS keeps a Swift
+/// twin of the type: `CandidatePresenter.swift` `CandidateNavigation`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateNavigation {
     Left,
@@ -212,7 +210,7 @@ impl ComposingKeyIntent {
                 // Shift+Enter makes. Paging keys included: "any candidate
                 // key commits" is one rule the user can hold. Only while the
                 // window is ON does a candidate key with no window up fall
-                // through to the host below (`ComposingKeyIntent.swift`).
+                // through to the host below.
                 if !bindings.is_candidate_window_enabled {
                     return Self::Commit;
                 }
@@ -223,7 +221,7 @@ impl ComposingKeyIntent {
         // recorded on Ctrl+, still reaches its action; above the host guard,
         // because this is the one Ctrl chord that is this input method's.
         // The session decides the width — the intent carries the key as
-        // typed (`ComposingKeyIntent.swift`).
+        // typed.
         if let Some(flipped) = Self::width_flip_character(key) {
             return Self::composition_or_host(
                 is_composing,
@@ -303,8 +301,8 @@ impl ComposingKeyIntent {
     /// host acts on. The width-flip chord is document text too, and what it
     /// types is the key under the modifier: under Ctrl the layout types
     /// nothing for `,` (`characters` is `None`) and Escape for `[`, and the
-    /// key itself is what the user asked for (`ComposingKeyIntent.swift`
-    /// `documentText(of:)`).
+    /// key itself is what the user asked for. macOS keeps a Swift twin:
+    /// `KeyEventSnapshot.swift` `documentText`.
     pub fn document_text(key: &KeyEventSnapshot) -> Option<String> {
         if let Some(flipped) = Self::width_flip_character(key) {
             return Some(flipped.to_string());
@@ -326,8 +324,8 @@ impl ComposingKeyIntent {
     /// full-width policy maps. Read off the unmodified characters because
     /// Ctrl rewrites what a key types. Which width comes out is the session's
     /// call: the chord means "the other one", and only the session knows
-    /// which one the mode would have typed (`ComposingKeyIntent.swift`
-    /// `widthFlipCharacter`).
+    /// which one the mode would have typed. macOS keeps a Swift twin:
+    /// `KeyEventSnapshot.swift` `widthFlipCharacter`.
     pub fn width_flip_character(key: &KeyEventSnapshot) -> Option<char> {
         let chording = KeyModifiers {
             shift: false,
@@ -454,7 +452,8 @@ mod tests {
 
     #[test]
     fn composition_control_keys_belong_to_the_host_when_there_is_no_composition() {
-        // trace: ComposingKeyIntentTests.swift:47-72.
+        // trace: composing, Return commits and passes on, Escape cancels, the
+        // deletes delete, space and `.` commit then insert; idle, all pass through.
         let cases = [
             ("\r", ComposingKeyIntent::CommitThenPassThrough),
             ("\u{1B}", ComposingKeyIntent::Cancel),
@@ -485,7 +484,7 @@ mod tests {
             KeyEventSnapshot::named_special(KeyModifiers::NONE),
             // A line separator is a NAMED key the platform hands over, not
             // typed text — `U+2028` is Zl, not Cc, so the flag is what
-            // classifies it (`ComposingKeyIntent.swift:271`).
+            // classifies it (tier 6).
             KeyEventSnapshot {
                 is_named_special_key: true,
                 ..KeyEventSnapshot::text("\u{2028}", KeyModifiers::NONE)
@@ -508,7 +507,7 @@ mod tests {
             ComposingKeyIntent::CommitThenInsert("字".into())
         );
         // A letter followed by a combining mark is one grapheme the engine
-        // cannot parse — document text, as on macOS.
+        // cannot parse — document text.
         assert_eq!(
             classify(&text("a\u{301}"), true, false),
             ComposingKeyIntent::CommitThenInsert("a\u{301}".into())
@@ -608,7 +607,7 @@ mod tests {
         }
     }
 
-    /// The Mac steps the caret on ⌥← / ⌥→ (`ComposingKeyIntent.swift:199`,
+    /// The Mac steps the caret on ⌥← / ⌥→ (`caret_chord_modifiers`,
     /// inventory K1); ⌃← is Mission Control there, so it is a host chord
     /// that ends the composition like any other. The width flip stays ⌃.
     #[test]
@@ -651,7 +650,7 @@ mod tests {
     #[test]
     fn the_mac_hands_a_chorded_digit_or_slot_key_to_the_host_under_either_scheme() {
         let mac = DesktopPlatform::MacOS;
-        // trace: ComposingKeyIntentTests.swift:190-212 — ⌃3 arrives as Escape
+        // trace: ⌃3 arrives as Escape
         // with `3` unmodified; the fixed tier skips it under a host chord.
         let control_three = KeyEventSnapshot::chord(Some("\u{1B}"), "3", KeyModifiers::CONTROL);
         for scheme in ToneInputScheme::ALL {
@@ -670,7 +669,7 @@ mod tests {
                 );
             }
         }
-        // trace: CandidateSlotKeyTests.swift:196-208 — ⌘ (win), ⌃, ⌥ on a
+        // trace: `slot_for_event` misses under any host chord — ⌘ (win), ⌃, ⌥ on a
         // slot key miss the slot: `3` under Telex, `q` under Standard.
         let telex = telex_bindings();
         for modifiers in [KeyModifiers::WIN, KeyModifiers::CONTROL, KeyModifiers::ALT] {
@@ -691,7 +690,7 @@ mod tests {
 
     #[test]
     fn the_mac_fires_a_bare_bound_key_only_where_its_action_applies() {
-        // trace: ComposingKeyBindingsTests.swift:489-511 — Page Forward on a
+        // trace: the bindings tier needs a window (`requires_candidates`) — Page Forward on a
         // bare `'`: the bindings tier wins over document text with the window
         // up, gives the key back as text with none, and is the host's idle.
         let mac = DesktopPlatform::MacOS;
@@ -874,8 +873,8 @@ mod tests {
 
     #[test]
     fn under_telex_the_tone_letters_are_the_engines_while_composing() {
-        // trace: ComposingKeyIntentTests.swift (P2) — `v` composing →
-        // telexKey, capital too; idle `v` passes through; idle `z` starts.
+        // trace: tier 7 under Telex (`is_telex_key`) — `v` composing →
+        // `TelexKey`, capital too; idle `v` passes through; idle `z` starts.
         let telex = telex_bindings();
         assert_eq!(
             ComposingKeyIntent::intent(&text("v"), true, false, &telex, PLATFORM),
@@ -958,9 +957,11 @@ mod tests {
 
     #[test]
     fn shift_on_a_slot_key_flips_the_script_only_while_the_window_is_up() {
-        // trace: CandidateSlotKeyTests.swift `testALetter_underCapsLock_stillPicks_andShiftedFlipsTheScript`
-        // + `testAShiftedSlotKey_isItselfWhereverTheBarIsDown` +
-        // `testAShiftedDigit_flipsItsSlot_underTelex_andTypesUnderStandard`.
+        // trace: tier 3 (`shifted_slot_for_event`) — with the window up ⇧ on a
+        // slot key flips that slot; with none the shifted key is what it
+        // types. A shifted digit flips under Telex and stays punctuation under
+        // Standard; under Telex the shifted letter is a tone key. ⇧ beside a
+        // host chord is the host's.
         let shift_w = KeyEventSnapshot::text("W", KeyModifiers::SHIFT);
         assert_eq!(
             classify(&shift_w, true, true),
@@ -1097,8 +1098,8 @@ mod tests {
 
     #[test]
     fn candidate_keys_commit_the_typed_text_when_the_window_is_off() {
-        // trace: ComposingKeyIntentTests.swift
-        // `testCandidateKeys_commitTheTypedText_whenTheWindowIsOff` — S33.
+        // trace: S33 — tier 4 with `is_candidate_window_enabled` off returns
+        // `Commit` for every candidate key mid-composition; idle, the host's.
         let mut window_off = ComposingKeyBindings::default();
         window_off.is_candidate_window_enabled = false;
         for (name, characters) in [
@@ -1220,8 +1221,7 @@ mod tests {
 
     #[test]
     fn width_flip_chord_yields_to_a_recorded_binding() {
-        // trace: ComposingKeyIntentTests.swift
-        // `testWidthFlipChord_yieldsToARecordedBinding`.
+        // trace: tier 4 (bindings) is read before the width flip.
         let mut stored = BTreeMap::new();
         stored.insert(
             ComposingAction::CommitLiteral,

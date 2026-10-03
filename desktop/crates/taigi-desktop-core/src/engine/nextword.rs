@@ -1,6 +1,5 @@
 //! Next-word slice of the engine bridge: the learning intents the desktop
-//! sends, which is three of the engine's eight. Port of
-//! `RustEngineBridge+NextWord.swift`.
+//! sends, which is three of the engine's eight.
 //!
 //! The desktop learns but does not predict, so the whole read half —
 //! `FilterPredictions`, `SetPredictionsVisible` — has no caller and is not wrapped. `Backspace` and

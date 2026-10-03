@@ -1,10 +1,10 @@
-//! The Custom Dictionary pane's model, shared by both settings windows
-//! (`CustomDictionaryPageModel` in `CustomDictionaryPage.swift`): which page
-//! of which filter is on screen and which load put it there, the selection,
-//! the destructive commands that ask first, and what each job answers. The
-//! shells own the widgets, the timers, and the work slot a job runs in —
-//! Windows holds one per page, Linux one per window so an outcome outlives a
-//! page rebuilt under it.
+//! The Custom Dictionary pane's model, shared by both settings windows: which
+//! page of which filter is on screen and which load put it there, the
+//! selection, the destructive commands that ask first, and what each job
+//! answers. The shells own the widgets, the timers, and the work slot a job
+//! runs in — Windows holds one per page, Linux one per window so an outcome
+//! outlives a page rebuilt under it. macOS keeps a Swift twin:
+//! `CustomDictionaryPageModel` in `CustomDictionaryPage.swift`.
 
 use super::presentation::PageMessage;
 use crate::engine::user_data::{
@@ -303,8 +303,8 @@ impl Listing {
 
     /// What the dictionary holds — and, while a filter narrows it, how much
     /// of that the filter matches. Against the counts, not against the
-    /// filter box (`CustomDictionaryPage.swift:countLabel`): a filter that
-    /// matches everything says nothing by saying "17000 / 17000".
+    /// filter box: a filter that matches everything says nothing by saying
+    /// "17000 / 17000". `CustomDictionaryPage.swift` `countLabel` is the macOS twin.
     pub fn count_label(&self) -> String {
         if self.match_count < self.total_count {
             format!("{} / {}", self.match_count, self.total_count)
@@ -316,7 +316,7 @@ impl Listing {
     /// Which sentence the empty list shows, or `None` while there are rows:
     /// an empty dictionary is a STATE the + button answers, a filter
     /// matching nothing is a RESULT of what was typed
-    /// (`CustomDictionaryPage.swift:378-396`).
+    /// (`CustomDictionaryPage.swift` `emptyState` is the macOS twin).
     pub fn empty_state_key(&self) -> Option<StringKey> {
         if !self.rows.is_empty() {
             return None;

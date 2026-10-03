@@ -3,7 +3,7 @@
 /// The four chording modifiers. Caps Lock, Num Lock and the extended-key
 /// flag are deliberately not represented: they say how a key was reached,
 /// not which key it is, so the shell drops them before building a snapshot
-/// (`ComposingKeyChord.swift:22-27`).
+/// (on the Mac, `modifiers` in the macOS FFI's `key_translation.rs`).
 ///
 /// Windows' modifier set differs from the Mac's, and the mapping is by ROLE:
 /// `control` and `alt` and `win` are the chords the host owns (the Mac's
@@ -40,8 +40,8 @@ impl KeyModifiers {
         ..Self::NONE
     };
 
-    /// Whether any of the modifiers the host owns is held — the Mac's
-    /// `hostChords` (`ComposingKeyIntent.swift:141`).
+    /// Whether any of the modifiers the host owns is held. macOS keeps a
+    /// Swift twin: `KeyEventSnapshot.swift` `hostChords`.
     pub fn has_host_chord(self) -> bool {
         self.control || self.alt || self.win
     }
@@ -74,8 +74,7 @@ pub enum NavigationKey {
 }
 
 /// The parts of a key event a composing decision is made from — a value
-/// rather than the event, so the classification can be tested without one
-/// (`ComposingKeyIntent.swift:39-91`).
+/// rather than the event, so the classification can be tested without one.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct KeyEventSnapshot {
     /// What the key typed with the modifiers held. `None` for a key that

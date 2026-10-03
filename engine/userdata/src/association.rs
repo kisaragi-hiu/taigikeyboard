@@ -1,5 +1,5 @@
 //! Which word the user tends to type after which. Port of
-//! `Storage/UserAssociationStore.swift`; SQL byte-identical.
+//! the former Swift `UserAssociationStore`; SQL byte-identical.
 
 use crate::capacity::LearningCapacity;
 use crate::database::{
@@ -51,8 +51,7 @@ pub struct UserAssociationStore {
 }
 
 impl UserAssociationStore {
-    /// Ported from
-    /// `ios/.../NextWord/Services/NextWordService.swift:31-33`.
+    /// The cap every platform ships.
     pub fn shipped_capacity() -> LearningCapacity {
         LearningCapacity::new(
             TABLE_NAME,
@@ -165,8 +164,7 @@ impl UserAssociationStore {
     /// recency, then `id`. The next-word filter keeps only the FIRST row per
     /// predicted `(hanji, tl)`, so this order decides whose evidence counts,
     /// and `ORDER BY` ranks before `LIMIT` truncates. Ported
-    /// from iOS `NextWordRepository.swift` `fetchUserRows` and
-    /// Android `NextWordService.kt` `USER_PREDICT_SQL`.
+    /// from the former iOS `fetchUserRows` / Android `USER_PREDICT_SQL`.
     pub fn rows_following(
         &self,
         previous: &str,
@@ -233,8 +231,7 @@ impl UserAssociationStore {
 /// phones since v6) only re-asserts the `IF NOT EXISTS` DDL; an older one is
 /// migrated, re-created and stamped in ONE immediate transaction, so a file
 /// that says v6 always has the v6 table. Ported from iOS
-/// `NextWordSchema.swift` `ensureTables` and Android `NextWordService.kt`
-/// `ensureUserAssocSchema`.
+/// `ensureTables` and Android `ensureUserAssocSchema` (both removed).
 fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
     if user_version(connection)? >= SCHEMA_VERSION {
         return create_current(connection);

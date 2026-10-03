@@ -1,5 +1,4 @@
 //! One recordable key combination, and the keys a binding may never claim.
-//! Port of `ComposingKeyChord.swift`.
 
 use super::intent::ComposingKeyIntent;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers};
@@ -29,7 +28,8 @@ pub struct ComposingKeyChord {
 }
 
 /// Why a key could not be recorded, so the recorder can say so rather than
-/// silently doing nothing (`ComposingKeyChord.swift` `Rejection`).
+/// silently doing nothing. macOS keeps a Swift twin of the reasons:
+/// `ComposingKeyChord.swift` `Rejection`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ChordRejection {
     /// A letter, a digit, the hyphen or `;` with no Ctrl/Alt/Win held — every
@@ -55,7 +55,7 @@ pub enum ChordRejection {
 /// The number-row virtual-key codes `1`…`9` (`VK_1`…`VK_9` = `0x31`…`0x39`),
 /// in digit order. Positions, so the same nine keys on every layout — on
 /// AZERTY, where the bare row types `& é " …`, Shift+`&` is still the `1`
-/// key. Mirrors `ComposingKeyChord.swift` `numberRowKeyCodes`.
+/// key.
 pub(crate) const NUMBER_ROW_KEY_CODES: [u16; 9] =
     [0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39];
 
@@ -63,8 +63,7 @@ pub(crate) const NUMBER_ROW_KEY_CODES: [u16; 9] =
 /// reason as the number row: it is the ninth slot key, and Shift+`;` aims
 /// the Hanji/romanization commit at it (`CandidateSlotKeySet::shifted_slot_for_event`)
 /// even though the layout types `:` for it. Layout-dependent by Microsoft's
-/// own word, the trade the US-position number row already makes. Mirrors
-/// `ComposingKeyChord.swift` `semicolonKeyCode`.
+/// own word, the trade the US-position number row already makes.
 pub(crate) const SEMICOLON_KEY_CODE: u16 = 0xBA;
 
 /// The AppKit private-use range the Mac spells its arrow and function keys
@@ -76,8 +75,7 @@ const FUNCTION_KEY_RANGE: std::ops::RangeInclusive<u32> = 0xF700..=0xF8FF;
 
 /// What the Mac reserves, as whole keys: the six navigation keys (←, →, ↑,
 /// ↓, Page Up, Page Down), Backspace, Delete and Escape. Every other
-/// function key binds — ⌃Home is a chord there
-/// (`ComposingKeyChord.swift:34-53`).
+/// function key binds — ⌃Home is a chord there.
 const MAC_NEVER_BINDABLE: [&str; 9] = [
     "\u{F702}",
     "\u{F703}",
@@ -128,7 +126,7 @@ impl ComposingKeyChord {
     /// what keeps this path and the settings-file path (`translate_raw`,
     /// which is handed the unmodified `3`) refusing the same press. Every
     /// other shifted key records as the character it types, which is what its
-    /// stored chords already hold. Mirrors `ComposingKeyChord.make(_:)`.
+    /// stored chords already hold.
     pub fn make_from_event(
         event: &KeyEventSnapshot,
         platform: DesktopPlatform,
@@ -171,8 +169,8 @@ impl ComposingKeyChord {
     }
 
     /// The form a key is stored and compared in: lowercased — ASCII only on
-    /// Windows and Linux, the whole of Unicode on the Mac (Swift
-    /// `lowercased()`, `ComposingKeyChord.swift:176`), so ⌃⇧Ñ stores `ñ`
+    /// Windows and Linux, the whole of Unicode on the Mac
+    /// (`str::to_lowercase`), so ⌃⇧Ñ stores `ñ`
     /// there and `Ñ` here; the keypad Enter (`\u{3}`) and the back tab
     /// (`\u{19}`) folded onto Return and Tab — the Mac's spellings, folded on
     /// every desktop even though the Windows and Linux shells never produce
@@ -219,9 +217,8 @@ impl ComposingKeyChord {
     ///
     /// Read off the first SCALAR, so a letter carrying a combining mark (`İ`
     /// folds to `i̇`) is still the letter it types — E6 in
-    /// `macos-desktop-core-roadmap.md`, settled P11b (the Swift gate reads
-    /// the first scalar too).
-    /// CROSS-PLATFORM INVARIANT — mirrors `ComposingKeyChord.swift` `isTypingKey`.
+    /// `macos-desktop-core-roadmap.md`, settled P11b.
+    /// CROSS-PLATFORM INVARIANT — one gate for macOS, Windows and Linux, owned here.
     fn is_typing_key(character: char) -> bool {
         character.is_ascii_alphabetic()
             || ComposingKeyIntent::is_tone_digit(character)
@@ -277,12 +274,12 @@ impl ComposingKeyChord {
     /// naming a chord the gate refuses. The launch pass reads WHY a stored
     /// global row fails to translate, because a row on a typing key is one
     /// the recorder would refuse today and the preserved key would still be
-    /// dispatched first (`ShortcutActions.swift` `translation(of:)`). Kept to
-    /// the key contract: `ShortcutAction::translation_in` is its only caller.
+    /// dispatched first. Kept to the key contract:
+    /// `ShortcutAction::translation_in` is its only caller. macOS keeps a
+    /// Swift twin for its global tier: `ShortcutActions.swift` `translation(of:)`.
     ///
-    /// An empty hex field (`c|0041,,0042`) refuses the whole value, as the
-    /// Swift codec does since E7 was settled (`macos-desktop-core-roadmap.md`
-    /// P11a).
+    /// An empty hex field (`c|0041,,0042`) refuses the whole value on every
+    /// desktop — E7 in `macos-desktop-core-roadmap.md`, settled P11a.
     pub(super) fn translate_raw(
         raw: &str,
         platform: DesktopPlatform,
@@ -309,7 +306,7 @@ impl ComposingKeyChord {
 
     /// The letters a raw value spells `win`, `control`, `alt`, `shift` with,
     /// in that order: `w c a s` on Windows and Linux, the Mac's `d` command /
-    /// `c` control / `o` option / `s` shift (`ComposingKeyChord.swift:208-240`).
+    /// `c` control / `o` option / `s` shift.
     fn modifier_letters(platform: DesktopPlatform) -> [char; 4] {
         match platform {
             DesktopPlatform::Windows | DesktopPlatform::Linux => ['w', 'c', 'a', 's'],
@@ -319,8 +316,8 @@ impl ComposingKeyChord {
 
     /// The modifier names a chord label leads with, in the order the system
     /// prints them: `Win`, `Ctrl`, `Alt`, `Shift` on Windows and Linux; the
-    /// Mac's `⌃⌥⇧⌘` (KeyboardShortcuts `ks_symbolicRepresentation`, which
-    /// `ShortcutKeyDisplay` draws with).
+    /// Mac's `⌃⌥⇧⌘` (the order of KeyboardShortcuts'
+    /// `ks_symbolicRepresentation`).
     fn modifier_labels(
         modifiers: KeyModifiers,
         platform: DesktopPlatform,
@@ -355,14 +352,13 @@ impl ComposingKeyChord {
     }
 
     /// The chord as a keycap label: `Shift+Enter`, `Ctrl+]`, `Space` on
-    /// Windows and Linux; `⇧↩`, `⌃]`, `Space` on the Mac
-    /// (`ShortcutKeyDisplay.text(for:)`).
+    /// Windows and Linux; `⇧↩`, `⌃]`, `Space` on the Mac.
     pub fn display(&self, platform: DesktopPlatform) -> String {
         let is_mac = platform == DesktopPlatform::MacOS;
         // A chord WITH modifiers keeps the uppercase keycap legend (`Ctrl+J`);
         // a bare key shows the character it types — an uppercase `Z` on a
         // modifier-less row reads as Shift+Z, a key the row does not hold
-        // (USER 2026-08-22; `ShortcutKeyDisplay` in `ShortcutKeyRecorder.swift`).
+        // (USER 2026-08-22).
         let keycap = match self.key.as_str() {
             " " => "Space".to_owned(),
             "\r" if is_mac => "↩".to_owned(),
@@ -404,7 +400,7 @@ mod tests {
     #[test]
     fn typing_keys_cannot_be_recorded_bare() {
         for platform in ALL_PLATFORMS {
-            // trace: ComposingKeyBindingsTests.swift — every ASCII letter (both
+            // trace: `is_typing_key` — every ASCII letter (both
             // schemes' keys), a capital, the digits, the hyphen and `;`.
             for key in ('a'..='z')
                 .map(String::from)
@@ -513,8 +509,8 @@ mod tests {
     #[test]
     fn raw_values_round_trip_and_stay_stable() {
         for platform in WINDOWS_AND_LINUX {
-            // trace: ComposingKeyBindingsTests.swift:163-172 — same shape, Windows
-            // modifier letters (w/c/a/s).
+            // trace: `raw_value` with the Windows and Linux modifier letters
+            // (w/c/a/s).
             for (key, modifiers) in [
                 (" ", KeyModifiers::NONE),
                 ("\r", KeyModifiers::SHIFT),
@@ -739,7 +735,7 @@ mod tests {
     #[test]
     fn each_desktop_reads_only_its_own_modifier_letters() {
         // trace: w/c/a/s on Windows and Linux, d/c/o/s on the Mac
-        // (`ComposingKeyChord.swift:208-240`); `c` and `s` are shared.
+        // (`modifier_letters`); `c` and `s` are shared.
         for platform in WINDOWS_AND_LINUX {
             assert_eq!(ComposingKeyChord::from_raw("d|005D", platform), None);
             assert_eq!(ComposingKeyChord::from_raw("o|005D", platform), None);
@@ -754,7 +750,7 @@ mod tests {
 
     #[test]
     fn the_mac_spells_command_d_and_option_o() {
-        // trace: Swift rawValue — `d` command (win), `c` control, `o` option
+        // trace: `raw_value` / `modifier_letters` — `d` command (win), `c` control, `o` option
         // (alt), `s` shift, in that order, then `%04X` scalars joined by `,`.
         assert_eq!(
             chord_on("]", ALL_MODIFIERS, MAC).raw_value(MAC),
@@ -769,7 +765,7 @@ mod tests {
             Some(chord_on("\r", KeyModifiers::ALT, MAC)),
             "the stored ⌥↩ of inventory K2"
         );
-        // trace: ComposingKeyBindingsTests.swift:124-136 — `Z` under ⇧⌃ is
+        // trace: `normalized` + `is_typing_key` — `Z` under ⇧⌃ is
         // stored folded, `` ` `` is a chord bare and under ⇧ (not a typing key).
         for (key, modifiers) in [
             (" ", KeyModifiers::NONE),
@@ -786,7 +782,7 @@ mod tests {
                 Some(chord)
             );
         }
-        // trace: ComposingKeyBindingsTests.swift:138-145.
+        // trace: `raw_value` — the Mac's stored spellings.
         for (key, modifiers, raw) in [
             (" ", KeyModifiers::NONE, "|0020"),
             ("\r", KeyModifiers::SHIFT, "s|000D"),
@@ -798,12 +794,12 @@ mod tests {
         ] {
             assert_eq!(chord_on(key, modifiers, MAC).raw_value(MAC), raw);
         }
-        // trace: ComposingKeyBindingsTests.swift:150-156 — bare `a`, ⇧5,
+        // trace: `translate_raw` through `make` — bare `a`, ⇧5,
         // ⌃← (F702 is one of the Mac's nine), garbage, an unknown letter.
         for raw in ["|0061", "|007A", "s|0035", "c|F702", "garbage", "x|0020"] {
             assert_eq!(ComposingKeyChord::from_raw(raw, MAC), None, "{raw}");
         }
-        // trace: ComposingKeyBindingsTests.swift:434-436 — a back tab stored
+        // trace: `normalized` folds `\u{19}` → `\t` — a back tab stored
         // before the fold reads back as ⇧⇥.
         assert_eq!(
             ComposingKeyChord::from_raw("s|0019", MAC),
@@ -813,8 +809,9 @@ mod tests {
 
     #[test]
     fn the_mac_matches_exact_modifiers_on_the_unmodified_key() {
-        // trace: ComposingKeyBindingsTests.swift:457-479 — ⌥↩ matches only
-        // ⌥↩; ⌥J arrives as `∆` and matches through the unmodified `j`.
+        // trace: `matches` compares the unmodified characters and the exact
+        // modifiers — ⌥↩ matches only ⌥↩; ⌥J arrives as `∆` and matches
+        // through the unmodified `j`.
         let option_return = chord_on("\r", KeyModifiers::ALT, MAC);
         assert!(option_return.matches(&KeyEventSnapshot::text("\r", KeyModifiers::ALT), MAC));
         assert!(!option_return.matches(&KeyEventSnapshot::text("\r", KeyModifiers::NONE), MAC));
@@ -827,9 +824,8 @@ mod tests {
             &KeyEventSnapshot::chord(Some("∆"), "j", KeyModifiers::ALT),
             MAC
         ));
-        // trace: ComposingKeyBindingsTests.swift:400-431 — the keypad Enter
-        // matches a Return chord and AppKit's back tab a ⇧⇥ one (the folds
-        // themselves: `the_mac_folds_the_whole_of_unicode`).
+        // The keypad Enter matches a Return chord and AppKit's back tab a ⇧⇥
+        // one (the folds themselves: `the_mac_folds_the_whole_of_unicode`).
         assert!(chord_on("\r", KeyModifiers::NONE, MAC)
             .matches(&KeyEventSnapshot::text("\u{3}", KeyModifiers::NONE), MAC));
         let back_tab = chord_on("\t", KeyModifiers::SHIFT, MAC);
@@ -838,8 +834,7 @@ mod tests {
     }
 
     /// Roadmap E6, settled P11b: the gate asks the first scalar of the fold
-    /// (`İ` → `i̇`, first scalar `i`) and refuses it bare — the Swift gate
-    /// (`ComposingKeyChord.swift` `make(key:modifiers:)`) asks the same.
+    /// (`İ` → `i̇`, first scalar `i`) and refuses it bare.
     #[test]
     fn e6_a_fold_that_adds_a_combining_mark_is_a_typing_key_on_the_mac() {
         // trace: str::to_lowercase("İ") = "i\u{307}" (SpecialCasing), first
@@ -858,7 +853,7 @@ mod tests {
             Some(Err(ChordRejection::TypesRomanization)),
             "a ⇧İ row recorded before P11b"
         );
-        // Negative controls, the same on both sides: `Ñ` folds to a
+        // Negative controls: `Ñ` folds to a
         // non-ASCII `ñ` and binds bare; the Kelvin sign folds to an ASCII
         // `k` and is refused.
         assert_eq!(chord_on("Ñ", KeyModifiers::NONE, MAC).key, "ñ");
@@ -869,9 +864,7 @@ mod tests {
     }
 
     /// Roadmap E7, settled P11a: a hand-edited value with an empty hex field
-    /// is refused whole — the Mac's `init?(rawValue:)` keeps empty fields
-    /// too (`ComposingKeyBindingsTests`
-    /// `testRawValues_withAnEmptyHexField_doNotParse`).
+    /// is refused whole, on every desktop.
     #[test]
     fn e7_a_stored_chord_with_an_empty_hex_field_does_not_parse() {
         for platform in ALL_PLATFORMS {
@@ -894,11 +887,10 @@ mod tests {
 
     #[test]
     fn the_mac_reserves_nine_whole_keys_and_binds_every_other_function_key() {
-        // trace: Swift `neverBindable` = the six `fixedNavigationKeys`
+        // trace: `MAC_NEVER_BINDABLE` = the six navigation keys
         // (F702 F703 F700 F701 F72C F72D) + Backspace, Delete, Escape —
         // matched as whole strings, so ⌃Home (F729), F1 (F704) and a string
-        // that only starts with an arrow scalar bind
-        // (`CrossTierShortcutConflictTests.swift:113-127`).
+        // that only starts with an arrow scalar bind.
         for key in MAC_NEVER_BINDABLE {
             for modifiers in [KeyModifiers::NONE, KeyModifiers::CONTROL] {
                 assert_eq!(
@@ -908,7 +900,8 @@ mod tests {
                 );
             }
         }
-        // ⌃Home, ⌃End, ⌃Help (`CrossTierShortcutConflictTests.swift:113-127`).
+        // ⌃Home, ⌃End, ⌃Help — the scalars the macOS bridge hands the gate
+        // (`CrossTierShortcutConflictTests.swift` `testHomeEndAndHelp_*`).
         for key in ["\u{F729}", "\u{F72B}", "\u{F746}"] {
             assert!(
                 ComposingKeyChord::make(Some(key), KeyModifiers::CONTROL, MAC).is_ok(),
@@ -921,8 +914,9 @@ mod tests {
 
     #[test]
     fn the_mac_folds_the_whole_of_unicode() {
-        // trace: Swift `lowercased()` / `uppercased()` — ⌃⇧Ñ stores `ñ`
-        // (inventory K6), matches an `Ñ` event, and labels as `⌃Ñ`.
+        // trace: `str::to_lowercase` in `normalized`, `str::to_uppercase` in
+        // `display` — ⌃⇧Ñ stores `ñ` (inventory K6), matches an `Ñ` event,
+        // and labels as `⌃Ñ`.
         let chord = chord_on("Ñ", KeyModifiers::CONTROL, MAC);
         assert_eq!(chord.key, "ñ");
         assert!(chord.matches(&KeyEventSnapshot::text("Ñ", KeyModifiers::CONTROL), MAC));
@@ -937,10 +931,9 @@ mod tests {
 
     #[test]
     fn the_mac_labels_in_glyphs_with_no_separator() {
-        // trace: ShortcutKeyDisplay.text(for:) = ks_symbolicRepresentation
-        // (⌃ ⌥ ⇧ ⌘, in that order) + keycap; Space / ↩ / ⇥ by name, a bare
-        // key as typed, uppercased under a modifier. The last seven rows are
-        // the pane's table, ShortcutSettingsTests.swift:72-90.
+        // trace: `display` = `modifier_labels` (⌃ ⌥ ⇧ ⌘, in that order) +
+        // keycap, no separator; Space / ↩ / ⇥ by name, a bare key as typed,
+        // uppercased under a modifier.
         for (key, modifiers, label) in [
             ("j", ALL_MODIFIERS, "⌃⌥⇧⌘J"),
             ("\t", KeyModifiers::NONE, "⇥"),

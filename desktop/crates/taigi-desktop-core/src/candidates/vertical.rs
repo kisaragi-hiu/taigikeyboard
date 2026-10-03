@@ -1,8 +1,7 @@
 //! The vertical window's width model, selection, scrolling and slot
-//! numbering. The decide-half of `VerticalCandidatePanel.swift`
-//! (`rebuildRows`, `widenForRevealedRows`, scrolling), with the scroll
-//! viewport modelled in points so the renderer only draws and reports
-//! scrolls back.
+//! numbering (macOS keeps a Swift twin in `VerticalCandidatePanel.swift`:
+//! `rebuildRows`, `widenForRevealedRows`, scrolling). The scroll viewport is
+//! modelled in points so the renderer only draws and reports scrolls back.
 //!
 //! Width follows what the viewport has revealed, not the whole list: the
 //! engine sorts low-frequency prefix extensions to the tail, and a long
@@ -16,7 +15,7 @@ use super::MAX_DISPLAY_CANDIDATES;
 use crate::keys::CandidateNavigation;
 
 /// How the renderer's scroller takes its share of the window — from upstream
-/// (`MacishVerticalPanel.swift:283-300`, `VerticalCandidatePanel.swift:286-318`):
+/// (MacishType `MacishVerticalPanel.swift:283-300`):
 /// a legacy scroller gets its own column outside the rows so rounded corners
 /// are not clipped; an overlay scroller floats over a widened trailing inset
 /// so text stays clear. PR6 picks per Windows' "always show scrollbars"
@@ -29,7 +28,7 @@ pub enum ScrollerStyle {
 
 impl ScrollerStyle {
     /// The air between an overlay scroller and the text under it
-    /// (`VerticalCandidatePanel.swift:31`).
+    /// (macOS: `VerticalCandidatePanel.overlayScrollerGap`).
     pub const OVERLAY_GAP: f32 = 2.0;
 }
 
@@ -117,7 +116,7 @@ pub struct VerticalListModel {
     scroll_y: f32,
     /// The container's current height: grows past the natural height when
     /// a page jump needs the anchor row to reach the top, and shrinks back
-    /// as the user scrolls away (`VerticalCandidatePanel.swift:327-350`).
+    /// as the user scrolls away.
     container_height: f32,
 }
 
@@ -345,7 +344,7 @@ impl VerticalListModel {
 
     /// Moves the selection a whole viewport, keeping it at the same visual
     /// row — the highlight stays put while the list moves underneath. Clamps
-    /// into the ends (`VerticalCandidatePanel.swift:165-183`).
+    /// into the ends.
     fn jump_page(&mut self, pages: i32) {
         let visual_offset = self.selected_index.saturating_sub(self.anchor_row);
         let target_anchor = self.anchor_row as i32 + pages * Self::VISIBLE_ROWS as i32;
@@ -376,7 +375,7 @@ impl VerticalListModel {
     /// The renderer scrolled the viewport (wheel, scrollbar) to `offset`:
     /// re-derives the anchor row and lets a container a page jump grew
     /// shrink back toward its natural height
-    /// (`VerticalCandidatePanel.swift:327-338`).
+    /// (macOS: `VerticalCandidatePanel.scrollViewDidScroll`).
     pub fn on_viewport_scrolled(&mut self, offset: f32) {
         self.scroll_y = offset.max(0.0).min(self.max_scroll_y());
         let needed_height = self.scroll_y + self.viewport_height();
@@ -497,7 +496,9 @@ mod tests {
 
     #[test]
     fn width_grows_for_a_long_candidate_and_stays_inside_the_budget() {
-        // trace: CandidateElasticWidthTests.swift:25-59 + rebuildRows:205-232.
+        // trace: budget 640. A base-width row: no overflow, no scroller allowance;
+        // 5,000-wide rows clamp to 640 = rows + the 15 legacy column, or (overlay)
+        // rows run 640 under a trailing pad + (15 + 2 − pad).
         let metrics = metrics();
         let base = metrics.base_width();
         let narrow = model_with(&metrics, &[base], ScrollerStyle::Legacy { width: 15.0 });

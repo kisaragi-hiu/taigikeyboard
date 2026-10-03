@@ -8,8 +8,9 @@ Working instructions for coding agents — and for humans — in this repository
 
 ```
 android/  ios/  macos/  windows/  linux/   # platform apps
+                   # macos/ links one Rust archive, macos/crates/taigi-macos-ffi (engine seam + taigi-desktop-core)
 engine/            # Shared Rust engine — Cargo workspace, FFI to every platform
-desktop/           # Rust crates shared by Windows + Linux (taigi-desktop-core / -storage / -update)
+desktop/           # Rust crates shared by the desktops — taigi-desktop-core (all three), -storage (Windows + Linux), -update (Windows)
 dictionary/        # Dictionary sources + build pipeline + output artifacts
 assets/            # Committed shipped data every platform packages — dictionaries/ (pipeline output), fonts/, symbols/
 docs/              # engine/, architecture/, contributing/, phonetics/ (TL/POJ/TPS reference), ui/, references/, reports/, roadmap.md

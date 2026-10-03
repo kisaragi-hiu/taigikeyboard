@@ -1,5 +1,5 @@
 //! What the two candidate operations answer: a query's three kinds of
-//! nothing, and what a commit actually did. Port of `CandidateOutcomes.swift`.
+//! nothing, and what a commit actually did.
 
 use protos::engine::{CommitOutcome, CommitResolution};
 

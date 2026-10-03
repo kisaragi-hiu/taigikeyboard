@@ -1,7 +1,7 @@
 //! R6 — the TPS layout as a real `input_mode = "tps"` renders byte-identically
 //! to the pre-R6 wire, where every platform sent TPS as `"tl"` with the TPS
 //! fold already applied (`is_hanji_first = true`, `hyphenless_roman =
-//! false`: iOS `RustEngineBridge+Composing.swift` / Android
+//! false`: pre-R6 iOS `RustEngineBridge+Composing.swift` / Android
 //! `RustEngineBridge.kt` `continuousAppConfig`). Under `"tps"` the flags are
 //! the stored ones, so every stored combination must match the one legacy
 //! wire. Whole responses (preedit, candidates, effects, commit resolution)

@@ -1,6 +1,6 @@
 //! How a horizontal candidate window pages: pure width arithmetic, plus the
-//! selection state machine over it. Port of `HorizontalPageLayout.swift`
-//! (packing + navigation, MacishType-derived) and the selection half of
+//! selection state machine over it (packing + navigation MacishType-derived).
+//! macOS keeps a Swift twin: `HorizontalPageLayout.swift` and
 //! `HorizontalCandidatePanel.swift`.
 
 use super::positioning::{Point, Rect};
@@ -213,7 +213,7 @@ impl HorizontalListModel {
 
     /// The width the cells of the visible page fill — a short page keeps
     /// the full budget once the list pages, so the arrow's edge does not
-    /// wander (`HorizontalCandidatePanel.swift:155`).
+    /// wander.
     pub fn content_width(&self) -> f32 {
         let page_width = self.layout.page_width(self.current_page());
         if self.is_paged() {
@@ -224,7 +224,7 @@ impl HorizontalListModel {
     }
 
     /// Single page: the cells; paged: `max(page, budget)` plus the arrow
-    /// column (`HorizontalCandidatePanel.swift:155-158`).
+    /// column.
     pub fn window_width(&self) -> f32 {
         self.content_width()
             + if self.is_paged() {
@@ -345,7 +345,7 @@ mod tests {
 
     #[test]
     fn narrow_items_fill_nine_per_page() {
-        // trace: HorizontalPageLayoutTests.swift:47-59.
+        // trace: 5-pt cells floor to the 10 slot; budget 9 × 10 = 90 → 9, 9, 2.
         let layout = pack(&[5.0; 20]);
         assert_eq!(counts(&layout), [9, 9, 2]);
         assert_eq!(layout.candidate_count(), 20);
@@ -366,7 +366,8 @@ mod tests {
 
     #[test]
     fn chrome_is_reserved_only_once_the_list_pages() {
-        // trace: HorizontalPageLayoutTests.swift:93-112.
+        // trace: one 90 cell fits the 90 budget, no chrome; two spill, so both
+        // repack against 90 − 20 = 70 and each cell caps at 70.
         let single = HorizontalPageLayout::pack_with_chrome(&[90.0], SLOT, 90.0, 20.0);
         assert_eq!(single.pages.len(), 1);
         assert_eq!(single.pages[0][0].width, 90.0);
@@ -402,7 +403,9 @@ mod tests {
         assert_eq!(layout.target(PreviousCandidate, 0), None);
         assert_eq!(layout.target(NextCandidate, 19), None);
 
-        // trace: HorizontalPageLayoutTests.swift:146-171.
+        // trace: budget 90 → [10, 80] | [30, 30, 30]: a page jump lands under the
+        // highlight; [30, 30, 30] | [10, 80]: 4 (x 10-90) up overlaps 0, 1 and 2
+        // → 1.
         let layout = pack(&[10.0, 80.0, 30.0, 30.0, 30.0]);
         assert_eq!(indices(&layout), [vec![0, 1], vec![2, 3, 4]]);
         assert_eq!(layout.target(PageDown, 1), Some(2));
@@ -432,7 +435,7 @@ mod tests {
 
     #[test]
     fn window_width_reserves_the_budget_and_the_arrow_once_the_list_pages() {
-        // trace: HorizontalCandidatePanel.swift:155-158. 20 × 5 → three pages,
+        // trace: budget 9 × 10 = 90 plus the 20 arrow. 20 × 5 → three pages,
         // the last holding 2 cells of 10.
         let mut paged = HorizontalListModel::new(pack(&[5.0; 20]), 20.0, 30.0);
         assert_eq!(paged.content_width(), 90.0);

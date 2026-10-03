@@ -1,6 +1,6 @@
 //! The three learning stores against real SQLite files in temporary
-//! directories. Ported from `macos/Tests/TaigiInputMethodCoreTests/
-//! {LearningStore,LearningCapacity,CustomDictionaryStore}Tests.swift`.
+//! directories. Ported from the former macOS learning-store, capacity and
+//! custom-dictionary store tests.
 
 use crate::common::{pair, paths, scratch};
 use phonetics::api::{derive_custom_query_key, CustomSearchKey};
@@ -71,7 +71,7 @@ fn hanji_of(rows: &[CustomDictionaryRow]) -> Vec<&str> {
 
 #[test]
 fn recording_counts_the_pair_and_reads_back_by_word() {
-    // trace: LearningStoreTests.swift — a word is (Hanji, canonical TL).
+    // A word is (Hanji, canonical TL).
     let directory = scratch();
     let store = frequency_store(&directory, UserFrequencyStore::shipped_capacity());
     store.record("重", "tāng");
@@ -121,7 +121,7 @@ fn a_store_that_is_not_open_answers_none_rather_than_waiting() {
 
 #[test]
 fn recording_past_the_cap_prunes_down_below_it_least_used_first() {
-    // trace: LearningCapacityTests.swift:29-73.
+    // trace: `LearningCapacity` (`capacity.rs`) — prune low count first, then stale.
     let directory = scratch();
     let store = frequency_store(
         &directory,
@@ -199,8 +199,7 @@ fn bigrams_are_keyed_on_both_readings_and_written_in_order() {
 
 #[test]
 fn recording_associations_past_the_cap_prunes_down_below_it() {
-    // trace: LearningCapacityTests.swift:79-100 — a compound commit counts
-    // several rows towards one throttle tick.
+    // A compound commit counts several rows towards one throttle tick.
     let directory = scratch();
     let store = UserAssociationStore::new(
         paths(&directory).association,
@@ -223,7 +222,7 @@ fn recording_associations_past_the_cap_prunes_down_below_it() {
 
 #[test]
 fn an_added_entry_is_found_by_its_key_from_another_romanization_and_by_prefix() {
-    // trace: CustomDictionaryStoreTests.swift:74-107.
+    // trace: `CustomDictionaryStore::rows_matching` (`custom_dictionary.rs`).
     let directory = scratch();
     let store = custom_store(
         &directory,
@@ -256,7 +255,7 @@ fn an_added_entry_is_found_by_its_key_from_another_romanization_and_by_prefix() 
 
 #[test]
 fn editing_the_romanization_drops_the_old_keys_and_deleting_removes_the_entry() {
-    // trace: CustomDictionaryStoreTests.swift:109-135.
+    // trace: `CustomDictionaryStore::upsert` replaces an id's keys; `delete`.
     let directory = scratch();
     let store = custom_store(
         &directory,
@@ -354,7 +353,7 @@ fn listing_pages_filters_and_counts_with_one_predicate() {
 
 #[test]
 fn seeds_land_only_in_an_untouched_dictionary() {
-    // trace: CustomDictionaryStoreTests.swift seed cases.
+    // trace: `CustomDictionaryStore::seed_if_empty` + `seed_entries`.
     let directory = scratch();
     let store = custom_store(
         &directory,
@@ -374,7 +373,7 @@ fn seeds_land_only_in_an_untouched_dictionary() {
 
 #[test]
 fn batch_import_skips_duplicates_stops_at_the_cap_and_refuses_an_oversize_file() {
-    // trace: CustomDictionaryStoreTests.swift import cases.
+    // trace: `CustomDictionaryStore::batch_import` (`custom_dictionary.rs`).
     let directory = scratch();
     let store = custom_store(&directory, stub_deriver(""), 3);
     store
@@ -414,7 +413,7 @@ fn batch_import_skips_duplicates_stops_at_the_cap_and_refuses_an_oversize_file()
 
 #[test]
 fn keys_written_by_an_older_derivation_are_rederived_once() {
-    // trace: CustomDictionaryStoreTests.swift:322-412.
+    // trace: `CustomDictionaryStore::rederive_search_keys_if_needed`.
     let directory = scratch();
     let old_store = custom_store(
         &directory,

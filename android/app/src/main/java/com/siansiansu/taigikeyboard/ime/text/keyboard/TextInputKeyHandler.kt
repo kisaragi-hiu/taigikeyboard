@@ -582,7 +582,7 @@ internal class TextInputKeyHandler(
             // Text going into the document without passing through a
             // composition is still context: a full stop typed here is what
             // ends the sentence the next-word learning would otherwise carry
-            // across (§40; mirrors macOS `noteCharacterTypedOutsideComposition`).
+            // across (§40; mirrors desktop-core `note_character_typed_outside_composition`).
             if (isContextCharacterOutsideComposition(char)) {
                 smartbarManager.noteCharacterTypedOutsideComposition(char)
             }
@@ -632,8 +632,8 @@ internal class TextInputKeyHandler(
  * the engine's call (`engine/nextword/src/decide.rs`).
  *
  * CROSS-PLATFORM INVARIANT — mirrors iOS `NextWordController
- * .isContextCharacterOutsideComposition` and macOS `ComposingManager
- * .noteCharacterTypedOutsideComposition`. Drift causes silent divergence.
+ * .isContextCharacterOutsideComposition` and desktop-core `ComposingManager
+ * ::note_character_typed_outside_composition`. Drift causes silent divergence.
  */
 internal fun isContextCharacterOutsideComposition(char: String): Boolean = char.isNotEmpty() && char.none { it.isLetter() || it.isWhitespace() }
 

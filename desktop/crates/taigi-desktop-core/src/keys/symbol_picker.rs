@@ -1,5 +1,5 @@
-//! What a key means while the symbol picker is up. Port of macOS
-//! `SymbolPicker.swift`.
+//! What a key means while the symbol picker is up. macOS keeps a Swift twin
+//! of the answer's cases: `SymbolPicker.swift` `SymbolPickerIntent`.
 
 use super::bindings::ComposingKeyBindings;
 use super::intent::CandidateNavigation;
@@ -104,7 +104,8 @@ mod tests {
 
     #[test]
     fn escape_closes_but_not_under_a_host_chord() {
-        // trace: SymbolPickerIntentTests.swift `testEscape_closes_butNotUnderAHostChord`.
+        // trace: `is_bare_escape` closes; ⌃3 arrives as Escape under a host
+        // chord, so it is not bare and falls through.
         assert_eq!(intent(&text("\u{1B}")), SymbolPickerIntent::Close);
         assert_eq!(
             intent(&KeyEventSnapshot::chord(
@@ -132,8 +133,8 @@ mod tests {
             SymbolPickerIntent::intent(&event, &ComposingKeyBindings::default(), mac),
             SymbolPickerIntent::CloseAndPassThrough
         );
-        // Negative control: the composition's own Escape tier reads the first
-        // scalar, as Swift reads the first grapheme — Cancel on both.
+        // Negative control: the composition's own Escape tier (tier 2) reads
+        // the first scalar — Cancel.
         assert_eq!(
             ComposingKeyIntent::intent(&event, true, false, &ComposingKeyBindings::default(), mac),
             ComposingKeyIntent::Cancel

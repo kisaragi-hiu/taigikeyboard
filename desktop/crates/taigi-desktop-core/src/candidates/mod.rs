@@ -1,12 +1,12 @@
 //! The candidate window's geometry and navigation, with no window in it.
 //!
-//! Port of the pure half of `macos/Sources/TaigiInputMethodCore/Candidates/`:
-//! metrics, the horizontal page packer, the expanded grid, the three
-//! layouts' navigation state machines, index labels and caret positioning.
-//! The renderer (PR6, Direct2D) draws what these models say and feeds back
-//! clicks; every number here is pinned by the macOS test oracles
-//! (`HorizontalPageLayoutTests`, `ExpandedGridLayoutTests`,
-//! `CandidateMetricsTests`, `CandidatePanelPositioningTests`). Roadmap D4/W4:
+//! Metrics, the horizontal page packer, the expanded grid, the three
+//! layouts' navigation state machines, index labels and caret positioning —
+//! the reference for every desktop, pinned by this module's tests. macOS
+//! keeps a Swift twin in `macos/Sources/TaigiInputMethodCore/Candidates/`
+//! (candidate-window geometry stays Swift there; the known differences,
+//! W1–W3, are listed in the roadmap rather than fixed on either side). The renderer
+//! (PR6, Direct2D) draws what these models say and feeds back clicks. Roadmap D4/W4:
 //! the headless model is unit-tested, the window is a renderer only. Each
 //! model owns its scroll offset: the renderer reports wheel / scrollbar
 //! scrolls back through `on_viewport_scrolled` so slot numbering, paging and
@@ -39,7 +39,7 @@ impl CandidateLayout {
     /// How this layout's cells hold their two scripts: the row-shaped
     /// layouts stack (a cell as wide as both scripts side by side fits far
     /// fewer of them), the column-shaped one keeps them inline
-    /// (`CandidateLayout.swift:20-25`).
+    /// (as macOS's `CandidateLayout.cellArrangement`).
     pub fn cell_arrangement(self) -> CandidateCellArrangement {
         match self {
             Self::Horizontal | Self::Expandable => CandidateCellArrangement::Stacked,
@@ -49,7 +49,7 @@ impl CandidateLayout {
 }
 
 /// Every layout shows at most this many candidates
-/// (`CandidateBasePanel.swift:36`). Enforced by each model's constructor
+/// (macOS: `CandidateBasePanel.maxDisplayCandidates`). Enforced by each model's constructor
 /// (`HorizontalPageLayout::pack`, `VerticalListModel::new`,
 /// `ExpandableListModel::new`), not by the caller.
 pub const MAX_DISPLAY_CANDIDATES: usize = 200;

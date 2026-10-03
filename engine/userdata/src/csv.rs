@@ -1,14 +1,13 @@
 //! Reading and writing the hand-editable CSV of the user's own dictionary.
-//! Port of `Storage/UserDataCSV.swift` + `CustomDictionaryCSV.swift`.
+//! Port of the former Swift `UserDataCSV` + `CustomDictionaryCSV`.
 
 use crate::custom_dictionary::CustomDictionaryRow;
 
 /// The CSV dialect the platforms share. A SINGLE-RECORD dialect, not full
 /// RFC 4180: quoting inside a line is honoured (doubled-quote escape
 /// included), but a record is always one line, because every mirror splits
-/// on newlines before parsing. Ported from iOS
-/// `CSVDocument.swift` (`parseLine` / `escape`) and Android
-/// `DictionaryCsvCodec.kt`.
+/// on newlines before parsing. The engine is the only parser; iOS
+/// `CSVDocument` only wraps the exported text for the file exporter.
 pub struct UserDataCSV;
 
 impl UserDataCSV {
@@ -73,7 +72,7 @@ pub enum CustomDictionaryCSVError {
 pub struct CustomDictionaryCSV;
 
 impl CustomDictionaryCSV {
-    /// Ported from iOS `CustomDictionaryService.swift:90`.
+    /// Largest CSV file an import accepts (5 MiB).
     pub const MAX_FILE_SIZE_BYTES: u64 = 5 * 1024 * 1024;
 
     pub fn encode(rows: &[CustomDictionaryRow]) -> String {
@@ -145,7 +144,8 @@ mod tests {
 
     #[test]
     fn round_trip_keeps_both_columns_and_survives_quotes() {
-        // trace: CustomDictionaryCSVTests.swift:9-39.
+        // trace: `UserDataCSV::escape` quotes only on `,` `"` newline; `parse_line`
+        // undoubles `""` and keeps an unbalanced quote's rest as one field.
         let rows = [
             CustomDictionaryRow::new("gâu-tsá", "𠢕早"),
             CustomDictionaryRow::new("tsia̍h-pá--buē", "食飽未"),
@@ -173,7 +173,8 @@ mod tests {
 
     #[test]
     fn decode_keeps_romanization_only_rows_skips_bad_lines_and_refuses_nothing_usable() {
-        // trace: CustomDictionaryCSVTests.swift:41-72.
+        // trace: `CustomDictionaryCSV::decode` — a row needs a roman, Hanji may be
+        // empty; all-unusable content → `NoUsableRows`; over the limit → `TooManyRows`.
         let decoded = CustomDictionaryCSV::decode("gua,\n,我\n", LIMIT).unwrap();
         assert_eq!(
             decoded.iter().map(|r| r.roman.as_str()).collect::<Vec<_>>(),

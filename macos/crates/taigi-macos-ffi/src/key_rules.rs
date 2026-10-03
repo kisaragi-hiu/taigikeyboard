@@ -46,12 +46,11 @@ pub(crate) fn answer(
 /// One press in a recording field: `evaluate_press` on the composing tier,
 /// the Mac's press translation in front of it (`recorded_press`).
 ///
-/// The Mac recorder leaves on the Escape KEY, not on the ESC character
-/// (`ShortcutKeyRecorder.swift` read `kVK_Escape`): a bare Escape blurs
-/// whatever the layout types for it, and a bare ESC another key types is
-/// refused as the reserved key it is, as the gate refuses it — never the
-/// way out. The core's blanking keys come first, as they did there: an
-/// Escape key a layout reports as Backspace or Delete blanks the field.
+/// The Mac recorder leaves on the Escape KEY (`kVK_Escape`), not on the ESC
+/// character: a bare Escape blurs whatever the layout types for it, and a
+/// bare ESC another key types is refused as the reserved key it is, as the
+/// gate refuses it — never the way out. The core's blanking keys come first:
+/// an Escape key a layout reports as Backspace or Delete blanks the field.
 fn press(request: &PressRequest) -> Result<PressReply, Refusal> {
     let event = request.event.as_ref().ok_or(Refusal::Missing("event"))?;
     let press = key_translation::recorded_press(event);
@@ -256,7 +255,7 @@ mod tests {
 
     /// The Escape KEY blurs whatever the layout types for it; an ESC typed
     /// by another key is refused like the reserved key it is
-    /// (`ShortcutKeyRecorder.swift` read `kVK_Escape`); ⌃[ (ESC under ⌃) is
+    /// (`ESCAPE_KEY_CODE`, `kVK_Escape`); ⌃[ (ESC under ⌃) is
     /// a chord on the reserved key.
     #[test]
     fn the_escape_key_blurs_and_an_escape_character_is_refused() {

@@ -525,7 +525,7 @@ fn entry_table(
         context,
         |rows| WindowMessage::CustomDictionary(Message::RowsApplied(rows)),
     );
-    // OVER the list, not in place of it (`CustomDictionaryPage.swift:363-371`):
+    // OVER the list, not in place of it (`CustomDictionaryPage.swift`'s `.overlay`):
     // the columns and the controls under them stay put while a filter is
     // narrowed to nothing and widened again. The sentence is only ever there
     // when the list has no rows to press, and a `TextBlock` takes no focus —
@@ -647,7 +647,7 @@ fn busy_overlay(model: &CustomDictionaryModel, strings: &StringResolver) -> View
 
 /// What a list with no rows says. Two different things: an empty dictionary
 /// is a STATE the + button answers, a filter matching nothing is a RESULT
-/// of what the user typed (`CustomDictionaryPage.swift:378-396`).
+/// of what the user typed (`CustomDictionaryPage.emptyState`).
 ///
 /// Words rather than the Mac's `tray` symbol: Segoe Fluent Icons carries no
 /// empty-container glyph, and a Windows 11 empty state is a line of text —

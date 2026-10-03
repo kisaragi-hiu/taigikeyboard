@@ -1,9 +1,9 @@
 //! InputNormalizer + ToneRestoration + lookup-NFD ports.
 //!
-//! Mirrors:
-//! - iOS `Lexicon/Trie/InputNormalizer.swift` (`normalize`, `hasToneMarks`,
+//! Ported from (the platform copies are gone; this crate owns the rules):
+//! - iOS `InputNormalizer` (`normalize`, `hasToneMarks`,
 //!   `normalizeSyllable`).
-//! - iOS `Phonetics/ToneRestoration.swift` (`restore`).
+//! - iOS `ToneRestoration` (`restore`).
 //! - iOS / Android `TaigiUnicode.nfdPreprocessed` (lookup-side NFD prep —
 //!   exposed as `taigi_unicode_base_form` for the `engine/ranking` crate
 //!   and the `Method::NfdPreprocessForLookup` op).
@@ -124,10 +124,9 @@ fn trie_key_unicode_form(text: &str) -> String {
 ///    regardless of the canonical combining-class reorder that NFD
 ///    applies when other diacritics sit between `o` and `\u{0358}`.
 ///
-/// CROSS-PLATFORM INVARIANT — byte-exact mirror of iOS
-/// `Lexicon/Utils/TaigiUnicode.swift::nfdPreprocessed` and Android
-/// `ime/dictionary/TaigiUnicode.kt::nfdPreprocessed` until v3.5.3
-/// follow-up (PR #192) removed those platform copies. Production routes
+/// CROSS-PLATFORM INVARIANT — the engine is the single owner; the iOS /
+/// Android `TaigiUnicode.nfdPreprocessed` copies it once mirrored byte-exact
+/// were removed in the v3.5.3 follow-up (PR #192). Production routes
 /// include toneless-key derivation, syllable folding, custom-dictionary
 /// search keys and `Method::NfdPreprocessForLookup` (URL builder
 /// phonetic prep).

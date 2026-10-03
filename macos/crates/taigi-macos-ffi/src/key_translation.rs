@@ -51,7 +51,7 @@ pub(crate) fn snapshot(event: &KeyEvent) -> KeyEventSnapshot {
 }
 
 /// `kVK_Escape` — the Escape KEY, which the recorder leaves on whatever the
-/// layout types for it (`ShortcutKeyRecorder.swift` reads the key code).
+/// layout types for it (`key_rules.rs` `press` reads the key code).
 pub(crate) const ESCAPE_KEY_CODE: u32 = 0x35;
 
 /// `NSDeleteFunctionKey`, the forward Delete (⌦).

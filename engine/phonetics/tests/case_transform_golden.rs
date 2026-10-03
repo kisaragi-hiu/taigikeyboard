@@ -1,7 +1,7 @@
 //! Golden-case integration tests for `phonetics::case_transform`.
 //!
 //! Ports the comprehensive table-driven cases from
-//! the pre-Rust iOS `CaseTransformerTests.swift` and Android
+//! the pre-Rust iOS case-transformer tests and Android
 //! `SuggestionCaseTransformerTest.kt` into Rust; the per-platform
 //! algorithm tests were deleted in the Path G platform rewiring commits.
 //!

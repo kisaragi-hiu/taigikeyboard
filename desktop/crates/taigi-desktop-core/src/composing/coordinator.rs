@@ -1,7 +1,8 @@
 //! Decides which input context is allowed to drive the one composing engine.
-//! Port of `ComposingSessionCoordinator.swift`, keyed by CONTEXT rather than
-//! session: one host process may hold several TSF thread managers /
-//! document managers / contexts (Office, browsers), and the Rust composing
+//! Keyed by CONTEXT rather than session (macOS keeps a session-keyed Swift
+//! twin, `ComposingSessionCoordinator.swift`): one host process may hold
+//! several TSF thread managers / document managers / contexts (Office,
+//! browsers), and the Rust composing
 //! state is one per process (`engine/composing/src/handle.rs:21-56`).
 //! Without an owner, a context still alive in a background window would
 //! append to the composition the user is typing in the foreground one.

@@ -442,9 +442,8 @@ internal fun commitScript(word: TaigiWord): CommitScript =
         else -> CommitScript.COMMIT_SCRIPT_LEAD
     }
 
-// CROSS-PLATFORM INVARIANT — one name on all four platforms: ios
-// `ActionHandler.rawPreeditWritesRomanization`, macOS/Windows
-// `AutoSpacePolicy.rawPreeditWritesRomanization(inputMode:)` /
+// CROSS-PLATFORM INVARIANT — one name on all five platforms: ios
+// `ActionHandler.rawPreeditWritesRomanization`, desktop-core (macOS / Windows / Linux)
 // `policies::raw_preedit_writes_romanization`.
 
 /**

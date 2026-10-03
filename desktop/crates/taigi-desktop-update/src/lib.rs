@@ -2,7 +2,7 @@
 //! distribution's package manager updates an input method): the
 //! published manifest and its version, what a check concludes and leaves in
 //! `settings.json`, and the network behind two traits with a `ureq`
-//! implementation. Port of the macOS `UpdateChecker`; the schedule lives in
+//! implementation (macOS keeps a Swift twin, `UpdateChecker`); the schedule lives in
 //! `taigi_desktop_core::settings::update_schedule` so the input-method
 //! processes can read it without linking this crate's TLS stack.
 //!

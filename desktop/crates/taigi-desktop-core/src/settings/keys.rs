@@ -1,6 +1,6 @@
 //! Every persisted settings key in one place, with the value a fresh install
-//! reads when the key is absent. Port of `SettingsStore.Keys`
-//! (`macos/Sources/TaigiInputMethodCore/Settings/SettingsStore.swift:36-301`).
+//! reads when the key is absent. macOS keeps a Swift twin: `SettingsStore.Keys`
+//! (`macos/Sources/TaigiInputMethodCore/Settings/SettingsStore.swift`).
 //!
 //! Key spellings are macOS's (which are iOS's) so `settings.json` speaks the
 //! same vocabulary — with three NAMED divergences, all intentional:
@@ -84,7 +84,7 @@ const _: () = assert!(!IS_AUTO_SPACE_ENABLED.default);
 // sweep), so a future configurable feature must use a NEW key rather than
 // inherit those values.
 
-// Dictionary sources. Spellings are iOS's verbatim (`SharedSettings.swift:53-66`)
+// Dictionary sources. Spellings are iOS's verbatim (`SharedSettings.swift`'s source keys)
 // — including `khiin`, the one key with no `Enabled` suffix. The constant name
 // is the engine's vocabulary, the string the settings vocabulary.
 const SOURCES: DictionarySourceToggles = ENGINE_DEFAULTS.dictionary_sources;
@@ -110,7 +110,7 @@ pub const IS_KHIIN_ENABLED: SettingsKey<bool> = SettingsKey::new("khiin", SOURCE
 pub const IS_LKK_ENABLED: SettingsKey<bool> = SettingsKey::new("lkkDictEnabled", SOURCES.lkk);
 pub const IS_DEV_ENABLED: SettingsKey<bool> = SettingsKey::new("devDictEnabled", SOURCES.dev);
 
-/// Kautian subcollections (`SharedSettings.swift:74-84`), all default on.
+/// Kautian subcollections (`SharedSettings.swift`'s `kautian*Enabled` keys), all default on.
 const SUBCOLL: super::engine_settings::KautianSubcollections = SOURCES.kautian_subcollections;
 pub const IS_KAUTIAN_ACCENT_LUKANG_ENABLED: SettingsKey<bool> =
     SettingsKey::new("kautianAccentLukangEnabled", SUBCOLL.accent_lukang);
@@ -141,7 +141,7 @@ pub const DISPLAY_LANGUAGE: SettingsKey<&'static str> =
     SettingsKey::new("displayLanguage", DisplayLanguage::DEFAULT_TAG);
 
 /// Update-check bookkeeping. NAMED DIVERGENCE from macOS's
-/// `updateNextCheckDate` (`SettingsStore.swift:201`): Unix milliseconds, because
+/// `updateNextCheckDate` (`SettingsStore.swift`): Unix milliseconds, because
 /// JSON has no date type and the key should say its unit. Absent = distant
 /// past = check now.
 pub const UPDATE_NEXT_CHECK_MS: SettingsKey<i64> = SettingsKey::new("updateNextCheckMs", 0);
@@ -153,10 +153,10 @@ pub const UPDATE_LAST_NOTIFIED_VERSION: SettingsKey<&'static str> =
 pub const UPDATE_PENDING_MANIFEST: SettingsKey<&'static str> =
     SettingsKey::new("updatePendingManifest", "");
 
-/// The symbol picker's last picks, most recent first (`symbols::RecentSymbols`;
-/// mirrors `SettingsStore.swift` `recentSymbols`). Bookkeeping the picker
-/// writes on every pick, like the update keys above: not a choice, so no
-/// reset touches it.
+/// The symbol picker's last picks, most recent first (`symbols::RecentSymbols`).
+/// Bookkeeping the picker writes on every pick, like the update keys above:
+/// not a choice, so no reset touches it. macOS keeps a Swift twin:
+/// `SettingsStore.swift` `recentSymbols`.
 pub const RECENT_SYMBOLS: SettingsKey<&'static [&'static str]> =
     SettingsKey::new("recentSymbols", &[]);
 
@@ -164,9 +164,10 @@ pub const RECENT_SYMBOLS: SettingsKey<&'static [&'static str]> =
 pub const SELECTED_SETTINGS_PANE: SettingsKey<SettingsPane> =
     SettingsKey::new("selectedSettingsPane", SettingsPane::General);
 
-/// Presentation choices the candidate window and settings window read
-/// (`SettingsStore.swift:236-276`). Spellings are iOS's where a matching
-/// iOS setting exists (`fontType`), macOS's otherwise.
+/// Presentation choices the candidate window and settings window read.
+/// Spellings are iOS's where a matching iOS setting exists (`fontType`), the
+/// desktop's own otherwise — the same as the macOS Swift twin's
+/// (`SettingsStore.Keys`, `SettingsStore.swift`).
 pub const CANDIDATE_LAYOUT: SettingsKey<CandidateLayout> =
     SettingsKey::new("candidateLayout", CandidateLayout::Expandable);
 pub const APPEARANCE_MODE: SettingsKey<AppearanceMode> =
@@ -192,8 +193,8 @@ pub const FONT_TYPE: SettingsKey<CandidateFontChoice> =
 ///
 /// Desktop-only, and NOT part of the iOS schema alignment the keys above keep:
 /// a phone keyboard has no font library to name. A file name is local by
-/// nature — a settings transfer carries the preference, never the typeface
-/// (`SettingsStore.swift`'s `customFontFile`).
+/// nature — a settings transfer carries the preference, never the typeface.
+/// macOS keeps a Swift twin: `SettingsStore.swift`'s `customFontFile`.
 pub const CUSTOM_FONT_FILE: SettingsKey<&'static str> = SettingsKey::new("customFontFile", "");
 
 /// Which OS-installed family the candidate window is set in, by the name the
@@ -201,23 +202,24 @@ pub const CUSTOM_FONT_FILE: SettingsKey<&'static str> = SettingsKey::new("custom
 /// `CandidateFontSelection::INSTALLED_RAW`; the same two-key shape as
 /// `customFontFile`, and its own key rather than that one because a family
 /// name is not a file name — `customFontFile` is treated as a path component.
-/// Desktop-only and local like a file name (`SettingsStore.swift`'s
-/// `installedFontFamily`).
+/// Desktop-only and local like a file name. macOS keeps a Swift twin:
+/// `SettingsStore.swift`'s `installedFontFamily`.
 pub const INSTALLED_FONT_FAMILY: SettingsKey<&'static str> =
     SettingsKey::new("installedFontFamily", "");
 
 /// Which keys type a tone, and so which keys pick a candidate
 /// (`ToneInputScheme`). Desktop-only: the phone keyboards have a tone row of
 /// their own and no slot keys, so the default is owned by the key contract
-/// rather than by `EngineSettings` (`SettingsStore.swift` `toneInputScheme`).
+/// rather than by `EngineSettings`. macOS keeps a Swift twin:
+/// `SettingsStore.swift` `toneInputScheme`.
 pub const TONE_INPUT_SCHEME: SettingsKey<crate::keys::ToneInputScheme> =
     SettingsKey::new("toneInputScheme", crate::keys::ToneInputScheme::Standard);
 
 /// Whether the candidate window is shown at all. Off means no fetch and no
 /// window — the user types romanization and Space / Enter write it as typed
 /// (USER 2026-09-08: "for users who just want to type", S33). Desktop-only like
-/// `toneInputScheme`: a phone keyboard's candidate bar is the keyboard
-/// (`SettingsStore.swift` `isCandidateWindowEnabled`).
+/// `toneInputScheme`: a phone keyboard's candidate bar is the keyboard.
+/// macOS keeps a Swift twin: `SettingsStore.swift` `isCandidateWindowEnabled`.
 pub const IS_CANDIDATE_WINDOW_ENABLED: SettingsKey<bool> =
     SettingsKey::new("candidateWindowEnabled", true);
 // Pinned at compile time so a silent flip to OFF is loud.
@@ -240,8 +242,8 @@ pub const CLEARED_COMPOSING_CHORD: &str = "";
 /// The keys the General pane's reset removes — every input setting the pane
 /// draws, same shape as `DICTIONARY_SOURCE_KEYS`. Not the display language
 /// (USER 2026-09-20: the reset must not switch the UI language under the
-/// user), not the update bookkeeping, not the remembered pane
-/// (`SettingsStore.swift resetGeneralSettings`).
+/// user), not the update bookkeeping, not the remembered pane. macOS keeps a
+/// Swift twin: `SettingsStore.swift` `resetGeneralSettings`.
 pub const GENERAL_KEYS: [&str; 8] = [
     INPUT_MODE.name,
     TONE_INPUT_SCHEME.name,
@@ -253,7 +255,8 @@ pub const GENERAL_KEYS: [&str; 8] = [
     IS_NASAL_MARKER_UPPERCASE_ENABLED.name,
 ];
 
-/// The keys the Appearance pane's reset removes (`SettingsStore.swift:457-465`).
+/// The keys the Appearance pane's reset removes (`SettingsStore.swift`
+/// `resetAppearanceSettings` is the macOS twin).
 pub const APPEARANCE_KEYS: [&str; 4] = [
     APPEARANCE_MODE.name,
     CANDIDATE_LAYOUT.name,
@@ -262,7 +265,7 @@ pub const APPEARANCE_KEYS: [&str; 4] = [
 ];
 
 /// The 13 source toggles + 11 subcollection toggles the Dictionary Sources pane's reset
-/// removes (`SettingsStore.swift:476-503`).
+/// removes (`SettingsStore.swift` `resetDictionarySources` is the macOS twin).
 pub const DICTIONARY_SOURCE_KEYS: [&str; 24] = [
     IS_KAUTIAN_ENABLED.name,
     IS_TAIGITV_ENABLED.name,
@@ -296,8 +299,8 @@ mod tests {
 
     #[test]
     fn key_names_are_the_ios_spellings() {
-        // trace: SettingsStore.swift:42-137 — `khiin` has no `Enabled` suffix,
-        // `moeDictEnabled` is the kautian toggle.
+        // trace: iOS `SharedSettings.swift` keys — `khiin` has no `Enabled`
+        // suffix, `moeDictEnabled` is the kautian toggle.
         assert_eq!(IS_KHIIN_ENABLED.name, "khiin");
         assert_eq!(IS_KAUTIAN_ENABLED.name, "moeDictEnabled");
         assert_eq!(IS_HANJI_FIRST.name, "isTranslateSwapped");

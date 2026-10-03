@@ -3,10 +3,12 @@
 //! `CommitComposition` / `Cancel` / `CommitForSymbolPicker` /
 //! `InsertSymbol` / `Represent` / `Release` on the process's one
 //! coordinator, answered as the effects Swift replays after the call
-//! returns. It is Swift's `LegacyComposingBackend` re-hosted over
-//! desktop-core's executor (`perform_intent`); the per-key preamble — the
-//! global chords, the Telex guide, the symbol picker — stays in the Swift
-//! controller.
+//! returns: desktop-core's classifier (`ComposingKeyIntent`) and executor
+//! (`perform_intent`), hosted for the macOS controller. The per-key
+//! preamble — the Telex guide, the symbol picker — runs
+//! in the Swift controller (`TaigiInputController.swift`) before a key
+//! reaches this seam (the global chords never reach it: Carbon hotkeys);
+//! the picker's key reading is asked of `key_rules.rs`.
 //!
 //! Record, then replay: [`RecordingSurface`] only records, so no client call
 //! happens while the coordinator is locked. The window's state travels in
@@ -34,7 +36,7 @@ use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 /// returned and the cells shown for it. One per process, like the
 /// composition it describes — only the session that owns the engine reaches
 /// it, and `Activate` drops it on every handover, so a list a released
-/// session left behind is never read (`LegacyComposingBackend.source`).
+/// session left behind is never read.
 ///
 /// A stale token — one released, or superseded by another `Activate` — is
 /// refused by ownership alone: every request but `Activate` from a token
@@ -141,9 +143,8 @@ impl Session {
 
     /// The commit the symbol-picker chord runs before the picker opens: the
     /// highlighted cell while the window shows one, the composition as typed
-    /// with its auto space otherwise. Chosen by the highlight, as
-    /// `LegacyComposingBackend.commitForSymbolPicker` chooses (the Linux
-    /// shell asks its list instead, `commit_for_picker`).
+    /// with its auto space otherwise. Chosen by the highlight the window
+    /// reports (the Linux shell asks its list instead, `commit_for_picker`).
     pub(crate) fn commit_for_symbol_picker(
         &mut self,
         runtime: &DesktopRuntime,
@@ -214,8 +215,8 @@ impl Session {
         )
     }
 
-    /// `token` gives the engine up. The list stays until the next
-    /// `Activate` drops it, as `LegacyComposingBackend.release` leaves it.
+    /// `token` gives the engine up. The list is left as it is; the next
+    /// `Activate` drops it.
     pub(crate) fn release(
         &mut self,
         runtime: &DesktopRuntime,
@@ -339,7 +340,7 @@ impl<'a> RecordingSurface<'a> {
 
 impl ComposingEffectExecutor for RecordingSurface<'_> {
     /// The three engine effects that reach a client; the rest no client
-    /// sees (`LegacyComposingBackend` `EffectRecorder.execute`).
+    /// sees.
     fn execute(&mut self, effect: &EngineEffect) {
         match effect {
             EngineEffect::UpdatePreedit { text, caret_utf16 } => {
@@ -396,9 +397,8 @@ impl IntentSurface for RecordingSurface<'_> {
         false
     }
 
-    /// An emptied list closes the window, as the Swift key path's
-    /// `refreshCandidates` does for an empty, unavailable or switched-off
-    /// fetch.
+    /// An emptied list closes the window — an empty, unavailable or
+    /// switched-off fetch alike.
     fn list_changed(&mut self, list: &mut CandidateSource) {
         if list.is_empty() {
             self.list_closed();
@@ -1015,8 +1015,7 @@ mod tests {
 
     /// trace: `ka` → cell 0 = 共 (annotation kā). With the window showing a
     /// highlight, the picker commits that cell in its own script — a Hanji
-    /// cell earns no auto space (`LegacyComposingBackend.commitForSymbolPicker`
-    /// → `commitPresented`).
+    /// cell earns no auto space.
     #[test]
     fn the_picker_commits_the_highlighted_cell() {
         let (_engine, shell) = engine_shell();
@@ -1050,8 +1049,7 @@ mod tests {
     }
 
     /// A highlight the window reports with no list up: the list is dropped
-    /// first, the highlight resolves to no cell, and nothing is committed —
-    /// the legacy order (`owningManager`, then `commitPresented`).
+    /// first, so the highlight resolves to no cell, and nothing is committed.
     #[test]
     fn the_picker_commits_nothing_for_a_highlight_without_a_list() {
         let (_engine, shell) = engine_shell();
@@ -1106,7 +1104,7 @@ mod tests {
     /// trace: `guahoo` → cell 1 = 我 (guá), one syllable of two: the commit
     /// nails it and the rest stays composing — the composition shown again
     /// and the list refetched for it, anchored on the 4-unit `我hoo`
-    /// (`commit_candidate` → `refresh`; legacy `commit` → `refreshCandidates`).
+    /// (`commit_candidate` → `refresh`).
     #[test]
     fn the_picker_nails_a_highlighted_segment_and_keeps_composing() {
         let (_engine, shell) = engine_shell();
@@ -1194,8 +1192,8 @@ mod tests {
     }
 
     /// The refetch obeys Show Candidate Window: off, the list closes. The
-    /// legacy back end refetches without reading it (inventory C4,
-    /// characterised in P10); this is the core's rule.
+    /// deleted Swift back end (P13, #361) refetched without reading it
+    /// (inventory C4, characterised in P10); this is the core's rule.
     #[test]
     fn a_refetch_with_the_window_off_closes_the_list() {
         let (_engine, shell) = engine_shell();
@@ -1225,8 +1223,8 @@ mod tests {
 
     /// The window switched off since the last key: the list comes down
     /// before the key, and the refresh fetches nothing. The two closes are
-    /// the Swift key path's own (`LegacyComposingBackend` `key` preamble and
-    /// `refreshCandidates`) — not a duplicate to fold.
+    /// `key`'s window-off check and the executor's refresh, each closing on
+    /// its own — not a duplicate to fold.
     #[test]
     fn a_switched_off_window_closes_the_list_before_the_key() {
         let (_engine, shell) = engine_shell();
@@ -1257,7 +1255,7 @@ mod tests {
 
     /// With the window still reported up, the lifecycle commit keeps the
     /// list — no list effect; the window, which Swift takes down first,
-    /// is what drops it (`LegacyComposingBackend.commitComposition`).
+    /// is what drops it.
     #[test]
     fn the_lifecycle_commit_leaves_the_list_to_the_window() {
         let (_engine, shell) = engine_shell();

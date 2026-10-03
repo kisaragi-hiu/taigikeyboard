@@ -1,7 +1,8 @@
 //! The composing orchestration against the REAL engine and dictionaries, with
-//! in-memory ports and a recording executor — the port of macOS's
+//! in-memory ports and a recording executor. Ported from macOS's
 //! `ComposingManagerTests` / `ComposingManagerCandidateTests` /
-//! `ComposingManagerLearningTests` / `ComposingSessionCoordinatorTests`.
+//! `ComposingManagerLearningTests` / `ComposingSessionCoordinatorTests`,
+//! deleted with the Swift key path (P13); these tests now pin the rules.
 //!
 //! Same singleton discipline as `engine_roundtrip.rs`: one lock, one fresh
 //! generation block per test.
@@ -295,8 +296,7 @@ fn append_shows_the_preedit_and_mirrors_the_engine() {
 }
 
 /// USER's example (2026-09-09): `ka2`, Ctrl+← Ctrl+←, `h` → `kha2`, shown as
-/// `khá` with the caret after the `h` (`ComposingManagerTests.swift`
-/// `testMoveCaret_thenAppend_insertsWhereTheCaretIs`).
+/// `khá` with the caret after the `h`.
 #[test]
 fn move_caret_then_append_inserts_where_the_caret_is() {
     let _lock = engine_lock();
@@ -824,7 +824,7 @@ fn a_new_session_and_a_mid_composition_punctuation_both_forget_the_context() {
 
 // MARK: - macOS ports (`DesktopPlatform::MacOS`)
 
-/// trace: ComposingManagerLearningTests.swift:50-66 — a pair with one half
+/// trace: a pair with one half
 /// written in the other script is reported under the identity: each
 /// handshake carries the candidate's display text and canonical TL, whichever
 /// script reached the document.
@@ -858,7 +858,7 @@ fn the_mac_reports_a_pair_written_in_two_scripts_under_its_identity() {
     );
 }
 
-/// trace: ComposingManagerLearningTests.swift:183-201 — another manager's
+/// trace: another manager's
 /// generation resets the engine underneath this one; the next fetch answers
 /// "not composing" and the mirror follows it.
 #[test]
@@ -876,7 +876,7 @@ fn the_mac_mirror_follows_a_fetch_after_the_engine_was_reset_underneath_it() {
     assert!(!rig.manager.is_composing());
 }
 
-/// trace: RustEngineBridgeComposingTests.swift:115-151 — after a nail,
+/// trace: after a nail,
 /// committing the composition writes what is shown once, nailed prefix
 /// included, never the prefix twice.
 #[test]
@@ -899,10 +899,9 @@ fn the_mac_commits_a_nailed_composition_once() {
 }
 
 /// Roadmap E5, settled P11e: the gate asks every scalar, so a non-letter
-/// base plus an Other_Alphabetic mark is skipped. The Mac's Swift manager
-/// asks the same since P11e (until then each grapheme's first scalar); its
-/// side is `ComposingBackendParityTests.testE5_aMarkThatIsAlphabeticKeeps…`,
-/// same inputs, same reported list.
+/// base plus an Other_Alphabetic mark is skipped. macOS runs this manager
+/// since the P12 cut-over; its Swift manager (deleted in P13) asked each
+/// grapheme's first scalar until P11e.
 #[test]
 fn e5_a_mark_that_is_alphabetic_keeps_the_character_from_next_word() {
     // No engine call: the manager only hands the character to the port.
@@ -929,8 +928,7 @@ fn e5_a_mark_that_is_alphabetic_keeps_the_character_from_next_word() {
 
 /// E5 on picked symbols: every symbol of the shipped table reaches the
 /// next-word context under the per-scalar gate, as every one did under the
-/// Mac's per-grapheme one before P11e (`ComposingBackendParityTests.swift`)
-/// — the change never reached the picker.
+/// Mac's per-grapheme one before P11e — the change never reached the picker.
 #[test]
 fn e5_every_bundled_symbol_reaches_next_word() {
     let rig = rig_on(DesktopPlatform::MacOS);
@@ -945,8 +943,7 @@ fn e5_every_bundled_symbol_reaches_next_word() {
 /// Roadmap E4, settled P11d: a format character is document text, so the
 /// pass-through path hands it to the next-word gate. An isolated one and an
 /// emoji ZWJ sequence carry no letter or whitespace and are forwarded;
-/// `x‍y` stops on its letter. The Swift manager's side is
-/// `ComposingBackendParityTests.testE4_anIdleFormatCharacterReachesTheNextWordGate`.
+/// `x‍y` stops on its letter.
 #[test]
 fn e4_a_format_character_reaches_the_next_word_gate() {
     // No engine call: the manager only hands the character to the port.

@@ -192,7 +192,7 @@ pub enum ResetScope {
     Appearance,
     /// Both shortcut registries at once, and no conflict pass afterwards:
     /// the shipped defaults hold no chord in common
-    /// (`ShortcutSettingsView.swift:578-603`).
+    /// (`ShortcutSettingsView.restoreDefaults`).
     Shortcuts,
     DictionarySources,
 }

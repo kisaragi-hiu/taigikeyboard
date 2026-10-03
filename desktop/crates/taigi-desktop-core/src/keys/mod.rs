@@ -1,10 +1,11 @@
 //! The key contract: what one key event means to a composition, and the part
 //! of that contract the user chooses. Pure classification — no Win32.
 //!
-//! Port of `macos/Sources/TaigiInputMethodCore/Keys/{ComposingKeyIntent,
-//! ComposingAction, ComposingKeyChord, ComposingKeyBindings,
-//! ToneInputScheme}.swift`. The TSF
-//! shell builds a [`KeyEventSnapshot`] from `OnKeyDown` and asks
+//! The rules live here once for the three desktops (macOS reaches them
+//! through `taigi-macos-ffi`; the Swift side keeps the values it is
+//! handed — `ComposingKeyChord`, `SymbolPickerIntent`). Each shell builds a
+//! [`KeyEventSnapshot`] from its key event (TSF `OnKeyDown`, IBus / Fcitx5,
+//! `taigi-macos-ffi` `key_translation.rs`) and asks
 //! [`ComposingKeyIntent::intent`]; nothing in here reads the keyboard.
 
 mod action;

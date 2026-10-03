@@ -214,7 +214,7 @@ public extension RustEngineBridge {
         /// the live Auto-Space setting is the caller's.
         case finalized(earnsAutoSpace: Bool)
 
-        // CROSS-PLATFORM INVARIANT — mirrors macOS `CandidateCommitOutcome.init(_:)`
+        // CROSS-PLATFORM INVARIANT — mirrors desktop-core `CandidateCommitOutcome::from_resolution`
         // and android `RustEngineBridge.ContinuousCommitOutcome.from`.
         init(_ resolution: Taigi_Engine_CommitResolution) {
             switch resolution.outcome {
@@ -408,8 +408,8 @@ public extension RustEngineBridge {
     /// The user's own data is not among the arguments: the engine reads its
     /// stores itself and ranks in the same call
     /// (`docs/architecture/user-data-engine-roadmap.md` P7b). `nowMs` is the
-    /// clock its recency ranking reads. Mirrors macOS
-    /// `RustEngineBridge.composingFetchAtPos`.
+    /// clock its recency ranking reads. Mirrors desktop-core
+    /// `engine::composing::fetch_at_pos`.
     internal static func composingFetchAtPos(
         settings: EngineSettings,
         generation: UInt64,
@@ -445,7 +445,8 @@ public extension RustEngineBridge {
     /// (exit to Idle); anything less nails the segment, writing nothing
     /// (Model B). The engine resolves the document text from the pick's
     /// scripts under `settings` and — with the user data open — counts the
-    /// pick itself (R5). Mirrors macOS `RustEngineBridge.composingCommitContinuous`.
+    /// pick itself (R5). Mirrors desktop-core
+    /// `engine::composing::commit_continuous`.
     internal static func composingCommitContinuous(
         _ pick: ContinuousPick,
         settings: EngineSettings,

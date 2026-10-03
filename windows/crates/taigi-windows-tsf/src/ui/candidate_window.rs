@@ -1,7 +1,7 @@
 //! The candidate window's content: the three layouts over the core models,
 //! drawn with Direct2D. Owns no composition state — the presenter hands it
 //! cells and asks it for absolute indices (the window is authoritative for
-//! the selection, `CandidatePresenter.swift:59-63`).
+//! the selection, as macOS's `CandidatePresenter` protocol states).
 //!
 //! Rendering rules follow the Mac item view (`CandidateItemView.swift`):
 //! index slot · candidate · annotation, inline on one baseline or stacked

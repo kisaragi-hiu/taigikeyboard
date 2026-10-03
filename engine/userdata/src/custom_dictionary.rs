@@ -1,6 +1,6 @@
 //! The words the user added themselves, and the keys that make them findable
-//! from any romanization. Port of `Storage/CustomDictionaryStore.swift` +
-//! `CustomDictionaryRow.swift`; SQL byte-identical.
+//! from any romanization. Port of the former Swift `CustomDictionaryStore`;
+//! SQL byte-identical.
 
 use crate::database::{
     has_column, immediate_transaction, is_taken_over, mark_taken_over, user_version, JournalMode,
@@ -25,8 +25,7 @@ const SCHEMA_VERSION: i64 = 4;
 /// build and stays closed.
 const HIGHEST_KNOWN_VERSION: i64 = 10;
 /// One transaction per this many accepted rows, so a large import never
-/// holds the write lock for its whole run. Ported from
-/// iOS `CustomDictionaryRepository.swift:180`.
+/// holds the write lock for its whole run.
 const IMPORT_CHUNK_SIZE: usize = 500;
 
 /// How a stored roman becomes the keys it is findable under. Injected so a
@@ -77,7 +76,8 @@ pub struct CustomDictionaryIdentity {
 /// display form — nothing here folds it; the engine canonicalises per mode)
 /// and the Hanji it stands for, which may be empty. Timestamps are the stored
 /// `yyyy-MM-dd HH:mm:ss` UTC text. CROSS-PLATFORM INVARIANT — the stored
-/// shape mirrors iOS `CustomDictionaryEntry.swift:11-31` and Android's table.
+/// shape is the engine's; iOS `CustomDictionaryEntry` / macOS
+/// `CustomDictionaryRow` are page views of it.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CustomDictionaryRow {
     /// Stable across edits so the side table can be replaced rather than
@@ -126,15 +126,13 @@ pub struct CustomDictionaryStore {
 }
 
 impl CustomDictionaryStore {
-    /// Ported from iOS
-    /// `CustomDictionaryCapacityPolicy.swift:18` and Android `MAX_ENTRIES`.
+    /// Most entries one dictionary holds, on every platform.
     pub const MAX_ENTRIES: usize = 30_000;
     /// What the keystroke path is handed — the iOS call site's 20.
     pub const KEYSTROKE_LIMIT: usize = 20;
 
     /// What a fresh install can find before the user has added anything.
-    /// Ids included, so the same word is the same row on every platform
-    /// (iOS `CustomDictionaryService.swift:22-25`).
+    /// Ids included, so the same word is the same row on every platform.
     pub fn seed_entries() -> [CustomDictionaryRow; 2] {
         [
             CustomDictionaryRow::with_id("default-gau-tsa", "gâu-tsá", "𠢕早"),
@@ -185,8 +183,7 @@ impl CustomDictionaryStore {
     /// Synchronous and best-effort: a store that is not open answers `[]`
     /// rather than making the keystroke wait. `form IN (?, 'abbrev')` lets
     /// an abbreviation row satisfy a query in the same family; `DISTINCT`
-    /// because one entry owns several side rows. Ported from
-    /// iOS `CustomDictionaryRepository.swift:332-367`.
+    /// because one entry owns several side rows.
     pub fn rows_matching(
         &self,
         query_key: &CustomSearchKey,
@@ -637,7 +634,6 @@ fn apply_schema(connection: &Connection) -> rusqlite::Result<()> {
 /// immediate transaction, as the IME and the settings app open the same
 /// file; every statement in it is idempotent, so two processes both taking
 /// it is harmless.
-/// mirrors macos/.../Storage/CustomDictionaryStore.swift `dropLearnedRowsIfPresent`.
 fn drop_learned_rows_if_present(connection: &Connection) -> rusqlite::Result<()> {
     if !has_column(connection, TABLE_NAME, "origin")?
         && !has_column(connection, TABLE_NAME, "learn_count")?

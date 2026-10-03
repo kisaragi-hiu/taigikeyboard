@@ -1,13 +1,14 @@
 //! Every point value the candidate window's geometry is built from, resolved
-//! once from the size choice and the typeface. Port of
-//! `CandidateMetrics.swift`; the AppKit measurements go through the
+//! once from the size choice and the typeface (macOS keeps a Swift twin:
+//! `CandidateMetrics.swift`); the text measurements go through the
 //! [`TextMeasurer`] the renderer supplies (DirectWrite in PR6, a stub in tests).
 
 use super::index_label::CandidateIndexLabel;
 use crate::composing::CandidateCellContent;
 use crate::settings::{CandidateFontChoice, CandidateFontSelection, CandidateSizeChoice};
 
-/// Where a cell puts the candidate's second script (`CandidateCellArrangement.swift`).
+/// Where a cell puts the candidate's second script. macOS keeps a Swift twin:
+/// `CandidateCellArrangement.swift`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum CandidateCellArrangement {
     /// Annotation beside the candidate, sharing its baseline.
@@ -18,7 +19,7 @@ pub enum CandidateCellArrangement {
 
 /// A face and size to measure in. `System` is the platform UI font — the
 /// index hint always uses it, whatever the candidate typeface
-/// (`CandidateMetrics.swift:126`).
+/// (as macOS's `CandidateMetrics.indexFont`).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FontSpec {
     pub selection: CandidateFontSelection,
@@ -34,7 +35,7 @@ pub trait TextMeasurer {
     fn line_height(&self, font: FontSpec) -> f32;
 }
 
-/// Reference values at 16 pt (`CandidateMetrics.swift:192-211`).
+/// Reference values at 16 pt (the same base values as macOS's `CandidateMetrics`).
 const BASE_CANDIDATE_FONT_SIZE: f32 = 16.0;
 const BASE_ANNOTATION_FONT_SIZE: f32 = 14.0;
 const BASE_CANDIDATE_ANNOTATION_GAP: f32 = 7.0;
@@ -139,7 +140,8 @@ impl CandidateMetrics {
             // diacritics and a fallback glyph all draw outside it — so those
             // are given their own measured line box instead. Bundled
             // selections keep the arithmetic they shipped with, exactly
-            // (`CandidateMetrics.swift`'s inline arm).
+            // (the macOS Swift twin's inline arm, `CandidateMetrics.swift`,
+            // does the same).
             None if font_selection.requires_line_box_measurement() => {
                 (candidate_font_size.max(measurer.line_height(candidate_font)) + vertical_padding)
                     .ceil()
@@ -438,7 +440,7 @@ mod tests {
 
     #[test]
     fn every_step_resolves_the_traced_values() {
-        // The text values follow the macOS trace (CandidateMetricsTests.swift);
+        // The text values are the 16 pt base values times the text scale, rounded;
         // the chrome is the tighter Windows ratio (`CHROME_RATIO` 0.6) times
         // the text scale. trace, scale = size / 16, chrome = 0.6 * scale:
         // 13 — scale .8125: ann 11.375→11, gap 5.6875→6, h 9*.4875=4.39→4,
@@ -511,7 +513,9 @@ mod tests {
 
     #[test]
     fn corner_geometry_matches_macos() {
-        // trace: CandidateMetricsTests.swift:132-203.
+        // trace: an inline window rounds to half its row; a stacked one to a
+        // fixed 16 (inset 4, highlight 12), under half of every step's row;
+        // corner_radius = min(r, shorter side / 2).
         let inline = metrics(S::Standard, Inline);
         assert_eq!(
             inline.tahoe_container_corner_radius(),
@@ -568,7 +572,8 @@ mod tests {
 
     #[test]
     fn width_arithmetic_matches_macos() {
-        // trace: CandidateMetricsTests.swift:220-353.
+        // trace: inline = pad + index + gap + primary + gap + ceil(annotation) +
+        // pad; base = 2 pad + index column + primary floor; stacked = wider line, no gap.
         let m = metrics(S::Standard, Inline);
         let measurer = EmMeasurer;
         assert_eq!(m.measure_annotation(None, &measurer), None);
@@ -650,8 +655,8 @@ mod tests {
     /// whose line boxes fit it. A typeface the user brought has no such
     /// guarantee — tall ascenders, stacked diacritics, a fallback glyph — so
     /// its row is given the measured line box instead, and the bundled
-    /// arithmetic is left exactly as it shipped
-    /// (`CandidateMetrics.swift`'s inline arm).
+    /// arithmetic is left exactly as it shipped (the macOS Swift twin's
+    /// inline arm, `CandidateMetrics.swift`, does the same).
     #[test]
     fn an_inline_row_measures_a_custom_face_and_not_a_bundled_one() {
         use CandidateCellArrangement::Inline;

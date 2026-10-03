@@ -201,8 +201,8 @@ final class RustEngineBridgeContinuousTests: XCTestCase {
     /// The fetch carries the toggles from `settings` and the engine filters by
     /// them; the user's custom dictionary is left out so only `dictionary.bin`
     /// rows carry hanji. Mirrors engine `golden_fetch_at_pos.rs`
-    /// `fetch_at_pos_resolves_the_dictionary_toggles_it_carries` and macOS
-    /// `RustEngineBridgeComposingTests.testFetchAtPos_everyDictionaryOff_offersNoDictionaryCandidates`.
+    /// `fetch_at_pos_resolves_the_dictionary_toggles_it_carries` and desktop-core
+    /// `engine_roundtrip.rs` `all_sources_off_fetches_no_dictionary_candidates`.
     // INVARIANT_DICTIONARIES_ALL_OFF_OFFERS_NO_DICTIONARY_CANDIDATES (behavioral-invariants.md §57)
     func testFetchAtPos_EveryDictionaryOff_OffersNoDictionaryCandidates() {
         var allOff = settings
