@@ -101,6 +101,16 @@ final class SymbolPickerIntentTests: XCTestCase {
         XCTAssertEqual(intent("]", bindings: bindings), .closeAndPassThrough)
     }
 
+    /// E8: a row stored on a precomposed `é` is not read off the decomposed
+    /// spelling of the same letter — scalar identity, as the core's picker.
+    func testARecordedChord_isReadScalarByScalar() throws {
+        let chord = try XCTUnwrap(ComposingKeyChord(rawValue: "c|00E9"))
+        let bindings = ComposingKeyBindings(chords: [.pageForward: chord])
+
+        XCTAssertEqual(intent("\u{E9}", modifiers: .control, bindings: bindings), .navigate(.pageDown))
+        XCTAssertEqual(intent("e\u{301}", modifiers: .control, bindings: bindings), .closeAndPassThrough)
+    }
+
     /// ⇧Return writes the composition as typed; there is none, so the key is
     /// the host's — and so is any letter, which closes the picker on its way
     /// to starting the composition it would have started anyway.
