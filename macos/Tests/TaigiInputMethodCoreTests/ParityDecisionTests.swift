@@ -17,8 +17,9 @@ import XCTest
 /// - C4 — a refetch with the window off.
 ///
 /// Not here: E2b (P11c) — a plain Escape inside a multi-character event. The
-/// picker's classification is Swift, so its pin is
-/// `SymbolPickerIntentTests.testAnEscapeInsideALongerEvent_closesAndFallsThrough`.
+/// picker reads the core's rule since P14 (`symbol_picker.rs`
+/// `e2b_an_escape_inside_a_longer_event_closes_and_passes_through`); the Telex
+/// guide's is `KeyEventSnapshot.isPlainEscape` (`KeyEventSnapshotTests`).
 @MainActor
 final class ParityDecisionTests: XCTestCase {
     override func setUpWithError() throws {

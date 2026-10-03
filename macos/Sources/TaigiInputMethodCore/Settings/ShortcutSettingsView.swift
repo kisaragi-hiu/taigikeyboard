@@ -40,9 +40,14 @@ struct ShortcutSettingsView: View {
     /// The composing rows and the fixed rows, as desktop-core resolves them
     /// (`KeyRules`). Re-read after every write so the rows repaint together:
     /// recording a chord can empty the row that had it.
-    @State private var shortcuts = KeyRules.composingShortcuts(in: SettingsStore().userDefaults) ?? .unavailable
+    @State private var shortcuts = Self.shortcuts(in: SettingsStore())
 
     private let store = SettingsStore()
+
+    /// The rows `store` holds; no rows when the core cannot answer (logged).
+    private static func shortcuts(in store: SettingsStore) -> ComposingShortcuts {
+        KeyRules.composingShortcuts(in: store.userDefaults) ?? .unavailable
+    }
 
     var body: some View {
         Form {
@@ -201,7 +206,7 @@ struct ShortcutSettingsView: View {
         // writer, so a composing row holding the same key empties. Carbon
         // dispatches before the classifier ever runs, so leaving that row would
         // leave a key that reads as bound and does nothing.
-        ShortcutConflicts.resolveComposingRows(after: action, in: store)
+        ShortcutConflicts.resolveComposingRows(after: action, among: shortcuts, in: store)
         reload()
     }
 
@@ -251,6 +256,6 @@ struct ShortcutSettingsView: View {
     /// default back after the user clears it — when no other row holds that
     /// key (desktop-core's `restore_unbound`).
     private func reload() {
-        shortcuts = KeyRules.composingShortcuts(in: store.userDefaults) ?? .unavailable
+        shortcuts = Self.shortcuts(in: store)
     }
 }

@@ -68,16 +68,16 @@ impl Shell {
         request: desktop_request::Request,
         snapshot: Option<&SettingsSnapshot>,
     ) -> Result<desktop_response::Reply, Refusal> {
-        let mut session = self.lock_session();
-        if key_rules::is_key_rule(&request) {
-            return self.dispatch(request, snapshot, &mut session);
+        if let Some(answer) = key_rules::answer(&request, snapshot) {
+            return answer;
         }
+        let mut session = self.lock_session();
         let previous = snapshot
             .map(|snapshot| settings::document_from(&snapshot.entries))
             .transpose()
             .map_err(Refusal::Settings)?
             .map(|document| self.settings.replace(Arc::new(document)));
-        let reply = self.dispatch(request, snapshot, &mut session);
+        let reply = self.dispatch(request, &mut session);
         let changed_nothing = match &reply {
             Ok(desktop_response::Reply::Session(session)) => session.ignored,
             Ok(_) => false,
@@ -92,7 +92,6 @@ impl Shell {
     fn dispatch(
         &self,
         request: desktop_request::Request,
-        snapshot: Option<&SettingsSnapshot>,
         session: &mut Session,
     ) -> Result<desktop_response::Reply, Refusal> {
         use desktop_request::Request;
@@ -123,14 +122,11 @@ impl Shell {
             Request::Represent(represent) => session
                 .represent(self.runtime()?, &represent)
                 .map(Reply::Session),
-            Request::Press(press) => key_rules::press(&press).map(Reply::Press),
-            Request::Chord(chord) => Ok(Reply::Chord(key_rules::chord(&chord))),
-            Request::ComposingShortcuts(_) => {
-                key_rules::composing_shortcuts(snapshot).map(Reply::ComposingShortcuts)
-            }
-            Request::SymbolPickerKey(key) => {
-                key_rules::symbol_picker_key(&key, snapshot).map(Reply::SymbolPicker)
-            }
+            // Answered by `key_rules::answer` before the session is locked.
+            Request::Press(_)
+            | Request::Chord(_)
+            | Request::ComposingShortcuts(_)
+            | Request::SymbolPickerKey(_) => Err(Refusal::Missing("a session request")),
         }
     }
 

@@ -13,9 +13,6 @@ import SwiftUI
 /// whatever layout happened to be active.
 struct RecordedShortcutKey {
     let chord: ComposingKeyChord
-    /// The four chording modifiers the press was made with — what the
-    /// global tier's policy reads.
-    let modifiers: NSEvent.ModifierFlags
     /// Nil when the press carries no Carbon key code to store. A composing row
     /// does not care; a global row must refuse (`Rejection.notAGlobalKey`).
     let globalShortcut: KeyboardShortcuts.Shortcut?
@@ -38,14 +35,15 @@ enum GlobalShortcutPolicy {
         // nothing to store, so it cannot be recorded here even though the
         // shared gate passed it.
         guard let shortcut = key.globalShortcut else { return .notAGlobalKey }
+        let modifiers = shortcut.modifiers
         // ⌘ with nothing but Shift beside it belongs to the application being
         // typed into: that is where a Mac puts its menu commands, and this
         // input method never takes one (`ShortcutActions`, on ⌃⌘S). The
         // library used to be the thing enforcing it — indirectly, by refusing
         // the modifier-less keys we now accept — so stating it is part of
         // owning the recorder. ⌃⌘ and ⌥⌘ are ours to offer; bare ⌘ is not.
-        if key.modifiers.contains(.command),
-           key.modifiers.isDisjoint(with: [.control, .option])
+        if modifiers.contains(.command),
+           modifiers.isDisjoint(with: [.control, .option])
         {
             return .belongsToHost
         }
@@ -70,7 +68,7 @@ enum GlobalShortcutPolicy {
         // this app's own actions ships on, because a default the app hands out
         // has to be recordable or Reset to Defaults would produce a row the recorder
         // itself rejects.
-        guard !key.modifiers.isDisjoint(with: [.command, .control, .option]) else { return nil }
+        guard !modifiers.isDisjoint(with: KeyEventSnapshot.hostChords) else { return nil }
         guard !isAShippedDefault(shortcut) else { return nil }
         return shortcut.isTakenBySystem ? .takenBySystem : nil
     }
@@ -435,7 +433,6 @@ final class ShortcutKeyRecorderField: NSSearchField, NSSearchFieldDelegate {
             // them: the Carbon key code is gone the moment this returns.
             let key = RecordedShortcutKey(
                 chord: recorded,
-                modifiers: event.modifierFlags.intersection(KeyEventSnapshot.chordingModifiers),
                 globalShortcut: KeyboardShortcuts.Shortcut(event: event),
             )
             if let reason = additionalRejection?(key) {

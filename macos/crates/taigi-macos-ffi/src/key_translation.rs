@@ -11,7 +11,7 @@ use crate::proto::KeyEvent;
 /// `NSEvent.ModifierFlags` bits, by role (`KeyModifiers`): ⌘ is the host
 /// chord the core calls `win`, ⌥ its `alt`. Caps Lock, the numeric pad,
 /// Help and Fn say how a key was reached, not which key it is, and are
-/// dropped — as `ComposingKeyIntent.swift` drops them.
+/// dropped — as `KeyEventSnapshot.chordingModifiers` drops them.
 pub(crate) const SHIFT: u64 = 1 << 17;
 pub(crate) const CONTROL: u64 = 1 << 18;
 pub(crate) const OPTION: u64 = 1 << 19;

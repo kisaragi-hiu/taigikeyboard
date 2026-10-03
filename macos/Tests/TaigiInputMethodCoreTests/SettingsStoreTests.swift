@@ -502,12 +502,27 @@ final class SettingsStoreTests: XCTestCase {
         try TestFixtures.row(name, in: shortcuts())
     }
 
-    func testComposingKeyBindings_withNothingStored_areTheShippedContract() throws {
+    func testComposingShortcuts_withNothingStored_areTheShippedContract() throws {
         let rows = try shortcuts().rows
         XCTAssertEqual(rows.count, 7)
         for row in rows {
             XCTAssertEqual(row.chord, row.defaultChord, row.name)
         }
+    }
+
+    /// The pane empties the rows a recording takes a chord from — never the
+    /// row being recorded, which is not its own conflict.
+    func testTheRowsHoldingAChord_leaveOutTheRowBeingRecorded() throws {
+        let rows = try shortcuts()
+        let nextCandidate = try row("nextCandidate")
+        let tab = try XCTUnwrap(nextCandidate.chord)
+
+        XCTAssertEqual(rows.rows(holding: tab).map(\.name), ["nextCandidate"])
+        XCTAssertEqual(rows.rows(holding: tab, excluding: nextCandidate).map(\.name), [])
+        XCTAssertEqual(
+            try rows.rows(holding: tab, excluding: row("pageForward")).map(\.name),
+            ["nextCandidate"],
+        )
     }
 
     func testComposingChords_roundTripThroughTheSuite() throws {

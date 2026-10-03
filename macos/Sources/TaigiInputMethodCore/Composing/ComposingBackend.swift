@@ -233,7 +233,7 @@ final class ComposingBackend {
             Self.logger.error("no desktop-core runtime — the request goes without settings")
             return nil
         }
-        return DesktopCoreRuntime.settingsSnapshot(runtime.settings, in: defaults)
+        return runtime.settingsSnapshot(in: defaults)
     }
 
     /// Classified by whether the engine may have run: a request refused

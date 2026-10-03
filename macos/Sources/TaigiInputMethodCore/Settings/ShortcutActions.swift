@@ -491,11 +491,16 @@ enum ShortcutConflicts {
 
     /// A global recording just landed: take the chord off any composing row
     /// that held it.
+    ///
+    /// `shortcuts` are the composing rows as the pane last read them — a
+    /// global recording changes none.
     @MainActor
-    static func resolveComposingRows(after changed: ShortcutAction, in store: SettingsStore) {
-        guard let shortcut = KeyboardShortcuts.getShortcut(for: changed.name),
-              let shortcuts = KeyRules.composingShortcuts(in: store.userDefaults)
-        else { return }
+    static func resolveComposingRows(
+        after changed: ShortcutAction,
+        among shortcuts: ComposingShortcuts,
+        in store: SettingsStore,
+    ) {
+        guard let shortcut = KeyboardShortcuts.getShortcut(for: changed.name) else { return }
         for loser in composingActionsHolding(shortcut, in: shortcuts) {
             store.setComposingChord(nil, for: loser)
         }
@@ -523,21 +528,25 @@ enum ShortcutConflicts {
     /// alternative would be keeping a composing row that cannot work. A
     /// one-time deterministic tie-break, not a claim about who wrote last.
     ///
-    /// Skipped, logged, when the core cannot answer the composing rows
-    /// (`KeyRules`): with no rows there is nothing to compare.
+    /// The comparison is skipped, logged, when the core cannot answer the
+    /// composing rows (`KeyRules`): with no rows there is nothing to compare.
+    /// The typing-key sweep before it needs only the gate, and still runs.
     @MainActor
     static func resolveAcrossRegistries(in store: SettingsStore) {
-        guard let shortcuts = KeyRules.composingShortcuts(in: store.userDefaults) else { return }
         // Read once per action, not once per question — the same rule
         // `defaultsShadowedByRecordings` states above, and for the same
         // reason: every read goes to `UserDefaults`, and every bridged chord
         // goes to the keyboard layout.
         let recorded = ShortcutAction.allCases.compactMap { action in
-            KeyboardShortcuts.getShortcut(for: action.name).map { (action: action, shortcut: $0) }
+            KeyboardShortcuts.getShortcut(for: action.name).map {
+                (action: action, shortcut: $0, translation: translation(of: $0))
+            }
         }
-        let held = recorded.compactMap { action, shortcut in
-            composingChord(occupiedBy: shortcut).map { (action: action, shortcut: shortcut, chord: $0) }
-        }
+        let held: [(action: ShortcutAction, shortcut: KeyboardShortcuts.Shortcut, chord: ComposingKeyChord)] =
+            recorded.compactMap { action, shortcut, translation in
+                guard case let .success(chord)? = translation else { return nil }
+                return (action: action, shortcut: shortcut, chord: chord)
+            }
 
         // A global row on a key the gate refuses as a typing key — a bare
         // `z` or `q` recorded while the eight non-syllable letters were
@@ -550,10 +559,11 @@ enum ShortcutConflicts {
         // an upgrade path.
         clear(
             recorded
-                .filter { translation(of: $0.shortcut) == .failure(.typesRomanization) }
+                .filter { $0.translation == .failure(.typesRomanization) }
                 .map(\.action),
         )
 
+        guard let shortcuts = KeyRules.composingShortcuts(in: store.userDefaults) else { return }
         for (action, shortcut, chord) in held {
             let holders = shortcuts.rows(holding: chord)
             guard !holders.isEmpty else { continue }

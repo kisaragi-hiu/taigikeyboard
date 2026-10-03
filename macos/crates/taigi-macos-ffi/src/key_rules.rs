@@ -14,8 +14,8 @@ use taigi_desktop_core::settings::SettingsDocument;
 
 use crate::key_translation::{self, ESCAPE_KEY_CODE};
 use crate::proto::{
-    chord_reply, desktop_request, press_reply, symbol_picker_reply, Chord, ChordReply,
-    ChordRequest, ComposingShortcut, ComposingShortcutsReply, PressReply, PressRequest,
+    chord_reply, desktop_request, desktop_response, press_reply, symbol_picker_reply, Chord,
+    ChordReply, ChordRequest, ComposingShortcut, ComposingShortcutsReply, PressReply, PressRequest,
     RecorderAction, SettingsSnapshot, SymbolPickerAction, SymbolPickerKeyRequest,
     SymbolPickerReply,
 };
@@ -23,36 +23,46 @@ use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 use crate::session::navigation;
 use crate::settings;
 
-/// Whether `request` is one of these — answered outside the snapshot the
-/// session requests apply (`Shell::serve`).
-pub(crate) fn is_key_rule(request: &desktop_request::Request) -> bool {
+/// The answer to `request` if it is a key rule, under the snapshot it
+/// carries; `None` for a session request, which `Shell::serve` runs under
+/// the snapshot it puts in force. The one list of the key rules.
+pub(crate) fn answer(
+    request: &desktop_request::Request,
+    snapshot: Option<&SettingsSnapshot>,
+) -> Option<Result<desktop_response::Reply, Refusal>> {
     use desktop_request::Request;
-    matches!(
-        request,
-        Request::Press(_)
-            | Request::Chord(_)
-            | Request::ComposingShortcuts(_)
-            | Request::SymbolPickerKey(_)
-    )
+    use desktop_response::Reply;
+    Some(match request {
+        Request::Press(press) => self::press(press).map(Reply::Press),
+        Request::Chord(chord) => Ok(Reply::Chord(self::chord(chord))),
+        Request::ComposingShortcuts(_) => {
+            composing_shortcuts(snapshot).map(Reply::ComposingShortcuts)
+        }
+        Request::SymbolPickerKey(key) => symbol_picker_key(key, snapshot).map(Reply::SymbolPicker),
+        _ => return None,
+    })
 }
 
 /// One press in a recording field: `evaluate_press` on the composing tier,
 /// the Mac's press translation in front of it (`recorded_press`).
 ///
 /// The Mac recorder leaves on the Escape KEY, not on the ESC character
-/// (`ShortcutKeyRecorder.swift` reads `kVK_Escape`): a bare Escape blurs
+/// (`ShortcutKeyRecorder.swift` read `kVK_Escape`): a bare Escape blurs
 /// whatever the layout types for it, and a bare ESC another key types is
 /// refused as the reserved key it is, as the gate refuses it — never the
-/// way out.
-pub(crate) fn press(request: &PressRequest) -> Result<PressReply, Refusal> {
+/// way out. The core's blanking keys come first, as they did there: an
+/// Escape key a layout reports as Backspace or Delete blanks the field.
+fn press(request: &PressRequest) -> Result<PressReply, Refusal> {
     let event = request.event.as_ref().ok_or(Refusal::Missing("event"))?;
     let press = key_translation::recorded_press(event);
-    let outcome = if press.modifiers.is_empty() && event.key_code == Some(ESCAPE_KEY_CODE) {
-        RecorderOutcome::Blurred
-    } else if press.modifiers.is_empty() && press.key.as_deref() == Some("\u{1B}") {
-        RecorderOutcome::Refused(ChordRejection::ReservedKey)
-    } else {
-        evaluate_press(RecorderTier::Composing, &press, DESKTOP_PLATFORM)
+    let is_bare_escape_key = press.modifiers.is_empty() && event.key_code == Some(ESCAPE_KEY_CODE);
+    let outcome = match evaluate_press(RecorderTier::Composing, &press, DESKTOP_PLATFORM) {
+        RecorderOutcome::Ignored => RecorderOutcome::Ignored,
+        _ if is_bare_escape_key => RecorderOutcome::Blurred,
+        // The core blurs on the ESC character; typed by another key, it is
+        // the reserved key the gate refuses.
+        RecorderOutcome::Blurred => RecorderOutcome::Refused(ChordRejection::ReservedKey),
+        other => other,
     };
     use press_reply::Outcome;
     let outcome = match outcome {
@@ -69,7 +79,7 @@ pub(crate) fn press(request: &PressRequest) -> Result<PressReply, Refusal> {
 }
 
 /// The gate a key and modifiers go through (`ComposingKeyChord::make`).
-pub(crate) fn chord(request: &ChordRequest) -> ChordReply {
+fn chord(request: &ChordRequest) -> ChordReply {
     let modifiers = key_translation::modifiers(request.modifier_flags);
     let answer = match ComposingKeyChord::make(request.key.as_deref(), modifiers, DESKTOP_PLATFORM)
     {
@@ -82,7 +92,7 @@ pub(crate) fn chord(request: &ChordRequest) -> ChordReply {
 }
 
 /// The pane's composing rows, resolved from `snapshot`, and its fixed rows.
-pub(crate) fn composing_shortcuts(
+fn composing_shortcuts(
     snapshot: Option<&SettingsSnapshot>,
 ) -> Result<ComposingShortcutsReply, Refusal> {
     let bindings = bindings(snapshot)?;
@@ -110,7 +120,7 @@ pub(crate) fn composing_shortcuts(
 }
 
 /// One key while the picker is up, read under `snapshot`'s bindings.
-pub(crate) fn symbol_picker_key(
+fn symbol_picker_key(
     request: &SymbolPickerKeyRequest,
     snapshot: Option<&SettingsSnapshot>,
 ) -> Result<SymbolPickerReply, Refusal> {
@@ -121,9 +131,8 @@ pub(crate) fn symbol_picker_key(
     let intent = match SymbolPickerIntent::intent(&key, &bindings, DESKTOP_PLATFORM) {
         SymbolPickerIntent::Close => Intent::Action(SymbolPickerAction::Close as i32),
         SymbolPickerIntent::Navigate(direction) => Intent::Navigate(navigation(direction) as i32),
-        SymbolPickerIntent::PickSlot(slot) => {
-            Intent::PickSlot(u32::try_from(slot).map_err(|_| Refusal::Missing("slot"))?)
-        }
+        // A slot is one of the nine a page holds.
+        SymbolPickerIntent::PickSlot(slot) => Intent::PickSlot(slot as u32),
         SymbolPickerIntent::Confirm => Intent::Action(SymbolPickerAction::Confirm as i32),
         SymbolPickerIntent::CloseAndPassThrough => {
             Intent::Action(SymbolPickerAction::CloseAndPassThrough as i32)
@@ -155,11 +164,10 @@ fn chord_message(chord: &ComposingKeyChord) -> Chord {
 
 /// The pane block `action` is drawn in.
 fn group(action: ComposingAction) -> u32 {
-    let index = ComposingAction::GROUPS
+    ComposingAction::GROUPS
         .iter()
         .position(|group| group.contains(&action))
-        .unwrap_or_default();
-    u32::try_from(index).unwrap_or_default()
+        .map_or(0, |index| index as u32)
 }
 
 fn rejection(reason: ChordRejection) -> crate::proto::ChordRejection {
@@ -181,10 +189,7 @@ mod tests {
     use crate::proto::{CandidateNavigation as WireNavigation, ChordRejection as Wire, KeyEvent};
     use crate::test_support::{key_event, text};
 
-    /// `NSEvent.ModifierFlags` bits that say how a key was reached, not
-    /// which key: Caps Lock, Fn.
-    const CAPS_LOCK: u64 = 1 << 16;
-    const FUNCTION: u64 = 1 << 23;
+    use crate::test_support::{CAPS_LOCK, FUNCTION};
 
     fn press_of(event: KeyEvent) -> press_reply::Outcome {
         press(&PressRequest { event: Some(event) })
@@ -268,6 +273,18 @@ mod tests {
             press_of(with_key_code(key_event("\u{1B}", 0, None), 0x00)),
             refused(Wire::ReservedKey)
         );
+        // The deletes are read first: an Escape key a layout reports as
+        // Delete or forward Delete blanks rather than blurs.
+        for (characters, special_key) in [("\u{7F}", 0x7F), ("\u{F728}", 0xF728)] {
+            assert_eq!(
+                press_of(with_key_code(
+                    key_event(characters, 0, Some(special_key)),
+                    ESCAPE_KEY_CODE
+                )),
+                action(RecorderAction::Blank),
+                "{characters:?}"
+            );
+        }
         assert_eq!(
             press_of(with_key_code(key_event("\u{1B}", CONTROL, None), 0x21)),
             refused(Wire::ReservedKey)

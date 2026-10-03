@@ -606,7 +606,7 @@ final class TaigiInputControllerCandidateTests: XCTestCase {
     }
 
     /// ⇥ walks the bar rather than committing from it, pairing with the ⇧⇥ that
-    /// already walked back (`ComposingAction.nextCandidate`). Space held this
+    /// already walked back (the Next Candidate row's default). Space held this
     /// job until 2026-08-25, when it became the Hanji/romanization key.
     func testTab_walksToTheNextCandidateWithoutCommitting() throws {
         let session = try composedSession()

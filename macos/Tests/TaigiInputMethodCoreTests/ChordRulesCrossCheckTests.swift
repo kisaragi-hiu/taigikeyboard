@@ -28,7 +28,7 @@ final class ChordRulesCrossCheckTests: XCTestCase {
                 XCTAssertEqual(try TestFixtures.row(row[1], in: shipped).defaultChord.rawValue, row[2], "\(row)")
             case "resolve":
                 kinds[row[0], default: 0] += 1
-                XCTAssertEqual(try resolved(row[1]), row[2], "\(row)")
+                XCTAssertEqual(try resolved(row[1], shipped: shipped), row[2], "\(row)")
             case "parse", "match":
                 continue
             default:
@@ -41,12 +41,14 @@ final class ChordRulesCrossCheckTests: XCTestCase {
 
     /// The rows as the core resolves them from a defaults suite holding
     /// `stored`.
-    private func resolved(_ stored: String) throws -> String {
+    private func resolved(_ stored: String, shipped: ComposingShortcuts) throws -> String {
         let store = try makeScratchSettingsStore()
         if stored != "-" {
             for assignment in stored.split(separator: ";") {
                 let parts = assignment.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
-                store.userDefaults.set(String(parts[1]), forKey: "composingShortcut.\(parts[0])")
+                try store.userDefaults.set(
+                    String(parts[1]), forKey: TestFixtures.row(String(parts[0]), in: shipped).settingsKey,
+                )
             }
         }
         return try TestFixtures.composingShortcuts(in: store).rows

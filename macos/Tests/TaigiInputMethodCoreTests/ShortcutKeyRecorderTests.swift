@@ -147,7 +147,6 @@ final class GlobalShortcutPolicyTests: XCTestCase {
     ) throws -> RecordedShortcutKey {
         try RecordedShortcutKey(
             chord: TestFixtures.chord(character, modifiers),
-            modifiers: modifiers,
             globalShortcut: shortcut,
         )
     }
@@ -222,7 +221,6 @@ final class GlobalShortcutPolicyTests: XCTestCase {
             )
             let recorded = RecordedShortcutKey(
                 chord: chord,
-                modifiers: shortcut.modifiers.intersection(KeyEventSnapshot.chordingModifiers),
                 globalShortcut: shortcut,
             )
 

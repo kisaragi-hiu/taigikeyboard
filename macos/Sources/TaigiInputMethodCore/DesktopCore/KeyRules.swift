@@ -2,18 +2,13 @@
 
 import AppKit
 
-/// desktop-core's chord gate, recorder decision, resolved composing bindings,
-/// fixed-row labels and symbol-picker reading, under the Mac's grammar — the
-/// key-rule requests of the shell seam
-/// (`macos/crates/taigi-macos-ffi/src/key_rules.rs`; roadmap P14). What is
-/// AppKit's or the global tier's stays Swift: the recording field, a click,
-/// a held key's repeat, `KeyboardShortcuts` and its policy.
-///
-/// Each answer is nil when the seam fails (logged). `press` and `chord` read
-/// no settings and need no runtime. The pane's rows and the picker's keys are
-/// read under the settings of the defaults they are given, so they need the
-/// runtime's settings whitelist and answer nil before `Configure` — when the
-/// input method types nothing either.
+/// desktop-core's chord gate, recorder decision, resolved composing rows and
+/// symbol-picker reading, under the Mac's grammar — the key-rule requests of
+/// the shell seam (`macos/crates/taigi-macos-ffi/src/key_rules.rs`; roadmap
+/// P14). Each answer is nil when the seam fails or answers what this side
+/// cannot read (logged). `press` and `chord` read no settings; the pane's
+/// rows and the picker's keys are read under the given defaults, through the
+/// runtime's settings whitelist — nil before `Configure`.
 enum KeyRules {
     /// What a key press does to a shortcut-recording field.
     enum Press: Equatable {
@@ -40,24 +35,15 @@ enum KeyRules {
                 nil
             }
         }
-        switch reply?.outcome {
-        case let .recorded(chord)?:
-            return .recorded(ComposingKeyChord(chord))
-        case let .refused(reason)?:
-            if let rejection = ComposingKeyChord.Rejection(reason) {
-                return .refused(rejection)
+        return decoded(reply, op: "press") { reply -> Press? in
+            switch reply.outcome {
+            case let .recorded(chord)?: .recorded(ComposingKeyChord(chord))
+            case let .refused(reason)?: ComposingKeyChord.Rejection(reason).map(Press.refused)
+            case .action(.blur)?: .blur
+            case .action(.blank)?: .blank
+            default: nil
             }
-        case .action(.blur)?:
-            return .blur
-        case .action(.blank)?:
-            return .blank
-        case nil:
-            return nil
-        default:
-            break
         }
-        logger.error("[press] an outcome this side does not know")
-        return nil
     }
 
     /// The chord `key` and `modifiers` make, or why they make none — the gate
@@ -78,20 +64,13 @@ enum KeyRules {
                 nil
             }
         }
-        switch reply?.answer {
-        case let .chord(chord)?:
-            return .success(ComposingKeyChord(chord))
-        case let .rejection(reason)?:
-            if let rejection = ComposingKeyChord.Rejection(reason) {
-                return .failure(rejection)
-            }
-        case nil:
-            if reply == nil {
-                return nil
+        return decoded(reply, op: "chord") { reply -> Result<ComposingKeyChord, ComposingKeyChord.Rejection>? in
+            switch reply.answer {
+            case let .chord(chord)?: .success(ComposingKeyChord(chord))
+            case let .rejection(reason)?: ComposingKeyChord.Rejection(reason).map { .failure($0) }
+            case nil: nil
             }
         }
-        logger.error("[chord] an answer this side does not know")
-        return nil
     }
 
     /// The Shortcuts pane's composing rows as `userDefaults` holds them, and
@@ -109,31 +88,7 @@ enum KeyRules {
                 nil
             }
         }
-        guard let reply else { return nil }
-        var rows: [ComposingShortcuts.Row] = []
-        for action in reply.actions {
-            guard let label = StringKey(rawValue: action.labelKey), action.hasDefaultChord else {
-                logger.error("[composingShortcuts] a row this side cannot draw: \(action.name)")
-                return nil
-            }
-            rows.append(ComposingShortcuts.Row(
-                name: action.name,
-                settingsKey: action.settingsKey,
-                label: label,
-                group: Int(action.group),
-                chord: action.hasChord ? ComposingKeyChord(action.chord) : nil,
-                defaultChord: ComposingKeyChord(action.defaultChord),
-            ))
-        }
-        return ComposingShortcuts(
-            rows: rows,
-            slotKeys: reply.slotKeys,
-            shiftedSlotKeys: reply.shiftedSlotKeys,
-            navigationKeys: reply.navigationKeys,
-            caretChords: reply.caretChords,
-            widthFlipChords: reply.widthFlipChords,
-            cancelKey: reply.cancelKey,
-        )
+        return decoded(reply, op: "composingShortcuts", ComposingShortcuts.init)
     }
 
     /// What `key` means while the symbol picker is up, under the bindings
@@ -149,28 +104,31 @@ enum KeyRules {
                 nil
             }
         }
-        switch reply?.intent {
-        case .action(.close)?:
-            return .close
-        case .action(.confirm)?:
-            return .confirm
-        case .action(.closeAndPassThrough)?:
-            return .closeAndPassThrough
-        case let .navigate(direction)?:
-            if let navigation = CandidateNavigation(direction) {
-                return .navigate(navigation)
+        return decoded(reply, op: "symbolPickerKey") { reply -> SymbolPickerIntent? in
+            switch reply.intent {
+            case .action(.close)?: .close
+            case .action(.confirm)?: .confirm
+            case .action(.closeAndPassThrough)?: .closeAndPassThrough
+            case let .navigate(direction)?: CandidateNavigation(direction).map(SymbolPickerIntent.navigate)
+            case let .pickSlot(slot)?: .pickSlot(Int(slot))
+            default: nil
             }
-        case let .pickSlot(slot)?:
-            return .pickSlot(Int(slot))
-        case nil:
-            if reply == nil {
-                return nil
-            }
-        default:
-            break
         }
-        logger.error("[symbolPickerKey] an intent this side does not know")
-        return nil
+    }
+
+    /// `reply` read by `decode`: nil when there is no reply (the bridge
+    /// logged why) or it holds what this side cannot read (logged here).
+    private static func decoded<Reply, Value>(
+        _ reply: Reply?,
+        op: String,
+        _ decode: (Reply) -> Value?,
+    ) -> Value? {
+        guard let reply else { return nil }
+        guard let value = decode(reply) else {
+            logger.error("[\(op)] an answer this side does not know")
+            return nil
+        }
+        return value
     }
 
     /// The whitelisted settings as `userDefaults` holds them; nil — logged —
@@ -180,6 +138,33 @@ enum KeyRules {
             logger.error("[\(op)] no desktop-core runtime — no settings to read under")
             return nil
         }
-        return DesktopCoreRuntime.settingsSnapshot(runtime.settings, in: userDefaults)
+        return runtime.settingsSnapshot(in: userDefaults)
+    }
+}
+
+extension ComposingShortcuts {
+    /// The core's reply, or nil for a row this side cannot draw.
+    init?(_ reply: Taigi_DesktopShell_ComposingShortcutsReply) {
+        var rows: [Row] = []
+        for action in reply.actions {
+            guard let label = StringKey(rawValue: action.labelKey), action.hasDefaultChord else { return nil }
+            rows.append(Row(
+                name: action.name,
+                settingsKey: action.settingsKey,
+                label: label,
+                group: Int(action.group),
+                chord: action.hasChord ? ComposingKeyChord(action.chord) : nil,
+                defaultChord: ComposingKeyChord(action.defaultChord),
+            ))
+        }
+        self.init(
+            rows: rows,
+            slotKeys: reply.slotKeys,
+            shiftedSlotKeys: reply.shiftedSlotKeys,
+            navigationKeys: reply.navigationKeys,
+            caretChords: reply.caretChords,
+            widthFlipChords: reply.widthFlipChords,
+            cancelKey: reply.cancelKey,
+        )
     }
 }

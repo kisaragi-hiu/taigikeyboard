@@ -124,6 +124,12 @@ mod test_support {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::{LazyLock, Mutex, MutexGuard, PoisonError};
 
+    /// The `NSEvent.ModifierFlags` bits the translation drops — they say how
+    /// a key was reached, not which key (`key_translation.rs`).
+    pub(crate) const CAPS_LOCK: u64 = 1 << 16;
+    pub(crate) const NUMERIC_PAD: u64 = 1 << 21;
+    pub(crate) const FUNCTION: u64 = 1 << 23;
+
     /// A key event as AppKit reports one: `characters` typed with
     /// `modifier_flags` held, the same with none held.
     pub(crate) fn key_event(
