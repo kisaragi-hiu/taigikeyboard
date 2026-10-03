@@ -132,6 +132,62 @@ final class TaigiInputControllerTpsKeyboardTests: XCTestCase {
         XCTAssertTrue(arriving.controller.settings.isTpsKeyboardShown, "focus leaving is not the user's hide")
     }
 
+    // MARK: - Clicks
+
+    /// A click types its glyph into the client of the session showing the
+    /// panel, through the core's `TpsKey` (`a_tps_keyboard_press_types_its_glyph_even_over_an_open_list`).
+    func testAPress_typesTheGlyphIntoTheSessionShowingThePanel() throws {
+        let session = try makeSession(under: .tps)
+        session.controller.performShortcutAction(.showTpsKeyboard)
+
+        TpsKeyboardPanel.shared.press("ㄍ")
+        TpsKeyboardPanel.shared.press("ㄚ")
+
+        XCTAssertEqual(session.client.writes.last, .setMarkedText("ㄍㄚ", selectionLocation: 2))
+    }
+
+    /// The session the panel was handed to types; the one that left it
+    /// types nothing, even called directly.
+    func testAPress_afterAHandover_reachesOnlyTheArrivingSession() throws {
+        userDefaults.set(true, forKey: SettingsStore.Keys.isTpsKeyboardShown.name)
+        let leaving = try makeSession(under: .tps)
+        let arriving = try makeSession(under: .tps)
+        leaving.controller.deactivateServer(leaving.client)
+        leaving.client.clearWrites()
+
+        TpsKeyboardPanel.shared.press("ㄍ")
+        leaving.controller.typeTpsKeyboardGlyph("ㄚ", generation: 1)
+
+        XCTAssertEqual(leaving.client.writes, [])
+        XCTAssertEqual(arriving.client.writes.last, .setMarkedText("ㄍ", selectionLocation: 1))
+    }
+
+    /// A press carrying a tenure that has ended — the panel shown before
+    /// this session went and came back — types nothing.
+    func testAPress_fromAnEndedTenure_typesNothing() throws {
+        let session = try makeSession(under: .tps)
+        session.controller.performShortcutAction(.showTpsKeyboard)
+        session.controller.deactivateServer(session.client)
+        session.controller.activateServer(session.client)
+        session.client.clearWrites()
+
+        // trace: tenure 1 at the first activation, 2 at the teardown, 3 now.
+        session.controller.typeTpsKeyboardGlyph("ㄍ", generation: 1)
+        XCTAssertEqual(session.client.writes, [])
+
+        TpsKeyboardPanel.shared.press("ㄍ")
+        XCTAssertEqual(session.client.writes.last, .setMarkedText("ㄍ", selectionLocation: 1))
+    }
+
+    /// Outside TPS the core types nothing: a click that raced a switch.
+    func testAPress_underARomanization_typesNothing() throws {
+        let session = try makeSession(under: .tl)
+
+        session.controller.typeTpsKeyboardGlyph("ㄍ", generation: 1)
+
+        XCTAssertEqual(session.client.writes, [])
+    }
+
     // MARK: - Harness
 
     private struct Session {

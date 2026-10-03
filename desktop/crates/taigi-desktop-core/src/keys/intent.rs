@@ -5,7 +5,7 @@ use super::action::ComposingAction;
 use super::bindings::ComposingKeyBindings;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
 use super::tone_input_scheme::ToneInputScheme;
-use super::tps_layout::tps_glyph_for_event;
+use super::tps_layout::{is_layout_glyph, tps_glyph_for_event};
 use crate::platform::DesktopPlatform;
 use crate::settings::InputMode;
 
@@ -393,6 +393,18 @@ impl ComposingKeyIntent {
             ));
         }
         None
+    }
+
+    /// A click on a cap of the on-screen TPS key panel (desktop TPS roadmap
+    /// D6): the glyph it names, typed whatever the window or the slot keys
+    /// would make of the physical key — so with the window up a click on
+    /// `1` types ㄅ rather than picking (maintainer, 2026-10-04). `None`
+    /// outside TPS and for anything the layout does not type, the separator
+    /// included: a click never reaches the engine as a key the user did not
+    /// see on a cap.
+    pub fn tps_keyboard_press(glyph: &str, input_mode: InputMode) -> Option<Self> {
+        (input_mode == InputMode::Tps && is_layout_glyph(glyph))
+            .then(|| Self::TpsKey(glyph.to_owned()))
     }
 
     /// True when `key` is text the host will put into its document, rather
@@ -1654,6 +1666,35 @@ mod tests {
             classify(&text("3")),
             ComposingKeyIntent::TpsKey("\u{02ea}".into())
         );
+    }
+
+    #[test]
+    fn a_panel_press_types_its_glyph_only_under_tps() {
+        // trace: KEYS — ㄅ is `1`'s glyph, ㆠ its Shift glyph; " " (the
+        // separator) and "a" are no glyph of the table.
+        assert_eq!(
+            ComposingKeyIntent::tps_keyboard_press("ㄅ", InputMode::Tps),
+            Some(ComposingKeyIntent::TpsKey("ㄅ".into()))
+        );
+        assert_eq!(
+            ComposingKeyIntent::tps_keyboard_press("ㆠ", InputMode::Tps),
+            Some(ComposingKeyIntent::TpsKey("ㆠ".into()))
+        );
+        assert_eq!(
+            ComposingKeyIntent::tps_keyboard_press("ㄅ", InputMode::Tl),
+            None
+        );
+        assert_eq!(
+            ComposingKeyIntent::tps_keyboard_press("ㄅ", InputMode::Poj),
+            None
+        );
+        for not_a_glyph in [" ", "a", "", "ㄅㄚ"] {
+            assert_eq!(
+                ComposingKeyIntent::tps_keyboard_press(not_a_glyph, InputMode::Tps),
+                None,
+                "{not_a_glyph:?}"
+            );
+        }
     }
 
     #[test]

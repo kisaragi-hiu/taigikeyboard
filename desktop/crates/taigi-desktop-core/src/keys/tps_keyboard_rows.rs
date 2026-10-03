@@ -19,6 +19,19 @@ pub struct TpsKeyCap {
     pub shift_glyph: Option<&'static str>,
 }
 
+impl TpsKeyCap {
+    /// What a click on the cap types: the Shift glyph when the click asks
+    /// for the Shift layer (its top half, or a held Shift) and the key has
+    /// one, the bare glyph otherwise — as the cap is drawn, Shift glyph top
+    /// right.
+    pub fn pressed_glyph(&self, is_shift_layer: bool) -> &'static str {
+        match self.shift_glyph {
+            Some(shift_glyph) if is_shift_layer => shift_glyph,
+            _ => self.glyph,
+        }
+    }
+}
+
 /// One row of caps and how far it starts from the left edge, in key widths
 /// — the stagger of a physical keyboard, so the panel reads like the keys
 /// under the user's hands.
@@ -137,6 +150,14 @@ mod tests {
         assert_eq!(cap('Q').shift_glyph, None);
         assert_eq!(cap('\'').glyph, "-");
         assert_eq!(cap('\'').shift_glyph, None);
+    }
+
+    #[test]
+    fn a_press_on_the_shift_layer_types_the_shift_glyph_where_the_key_has_one() {
+        // trace: KEYS — `e` ㄍ / `E` ㆣ; `q` ㄆ has no Shift glyph.
+        assert_eq!(cap('E').pressed_glyph(false), "ㄍ");
+        assert_eq!(cap('E').pressed_glyph(true), "ㆣ");
+        assert_eq!(cap('Q').pressed_glyph(true), "ㄆ");
     }
 
     #[test]

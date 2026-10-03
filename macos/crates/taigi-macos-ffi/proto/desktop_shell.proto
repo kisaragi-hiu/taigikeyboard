@@ -35,6 +35,7 @@ message DesktopRequest {
     SymbolPickerKeyRequest symbol_picker_key = 17;
     SwitchInputModeRequest switch_input_mode = 18;
     TpsKeyboardRowsRequest tps_keyboard_rows = 19;
+    TpsKeyboardPressRequest tps_keyboard_press = 20;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -207,6 +208,18 @@ message CommitForSymbolPickerRequest {
 message InsertSymbolRequest {
   uint64 token = 1;
   string symbol = 2;
+  PanelState panel = 3;
+}
+
+// A click on a cap of the on-screen TPS key panel: `glyph` typed through
+// the same engine intent a layout key reaches (`TpsKey`), whatever the
+// window or the slot keys would make of the physical key (desktop TPS
+// roadmap D6). Answered `handled` false, with no effects, outside TPS or
+// for a glyph the layout does not type. Refused with FAIL_INVARIANT
+// without a glyph or a panel.
+message TpsKeyboardPressRequest {
+  uint64 token = 1;
+  string glyph = 2;
   PanelState panel = 3;
 }
 

@@ -671,7 +671,7 @@ public final class TaigiInputController: IMKInputController {
     private func syncTpsKeyboard() {
         guard backend.owns(sessionToken) else { return }
         if settings.isTpsKeyboardWanted {
-            TpsKeyboardPanel.shared.show(ownedBy: sessionToken)
+            TpsKeyboardPanel.shared.show(ownedBy: sessionToken, target: self, generation: tenure)
         } else {
             TpsKeyboardPanel.shared.hideNow()
         }
@@ -1202,6 +1202,31 @@ public final class TaigiInputController: IMKInputController {
         send(client: client, armedSwap: armedSwap) { backend.insertSymbol(symbol, in: $0) }
     }
 
+    /// A click on a cap of the TPS key panel (desktop TPS roadmap D6): its
+    /// glyph typed as the layout key would type it, through the core's own
+    /// check of the mode and the glyph (`ComposingBackend.tpsKeyboardPress`).
+    /// A mouse path into the composition, so it is checked the way
+    /// `macos-roadmap.md` asks of one: the tenure the panel was shown in is
+    /// still this one, this session still owns the engine, and its client
+    /// is still alive. The guide and the picker go down first, as for any
+    /// key — and the check runs again after them: clearing the picker's
+    /// placeholder is a client call, which can end this tenure. The
+    /// auto-space arm is spent, since a glyph lands at the caret.
+    @MainActor
+    func typeTpsKeyboardGlyph(_ glyph: String, generation: Int) {
+        let liveClient = { [self] () -> IMKTextInput? in
+            guard generation == tenure, backend.owns(sessionToken) else { return nil }
+            return lastClient
+        }
+        guard liveClient() != nil else { return }
+        armedAutoSpaceCaret = nil
+        TelexGuidePanel.shared.hide(ownedBy: sessionToken)
+        dismissSymbolPicker()
+        guard let client = liveClient() else { return }
+        defer { isMarkedTextVisible = backend.isComposing(sessionToken) }
+        send(client: client, armedSwap: nil) { backend.tpsKeyboardPress(glyph, in: $0) }
+    }
+
     /// Takes the list down and its placeholder with it — from `lastClient`,
     /// the client this session marks (`inputControllerWillClose` clears a
     /// leftover region through the same reference). Cleared BEFORE anything
@@ -1387,3 +1412,5 @@ public final class TaigiInputController: IMKInputController {
 /// The method lives in the class body (it needs the private candidate state);
 /// the conformance is stated here where it reads as the contract it is.
 extension TaigiInputController: ShortcutActionTarget {}
+
+extension TaigiInputController: TpsKeyboardTarget {}
