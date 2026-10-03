@@ -6,6 +6,7 @@ pub mod jobs;
 pub mod pages;
 pub mod presentation;
 pub mod recorder;
+pub mod tps_keyboard;
 pub mod user_data;
 pub mod window;
 mod writer;
@@ -14,6 +15,7 @@ use adw::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 use taigi_desktop_core::settings::{keys, SettingsPane};
+use tps_keyboard::PanelSlot;
 use window::SettingsWindow;
 
 /// The application id: one instance per session (`gio::Application`
@@ -27,6 +29,7 @@ pub fn run() -> gtk::glib::ExitCode {
         .flags(gio::ApplicationFlags::HANDLES_COMMAND_LINE)
         .build();
     let window: Rc<RefCell<Option<Rc<SettingsWindow>>>> = Rc::new(RefCell::new(None));
+    let tps_keyboard: PanelSlot = Rc::new(RefCell::new(None));
     application.connect_command_line(move |application, command_line| {
         let arguments: Vec<String> = command_line
             .arguments()
@@ -44,6 +47,16 @@ pub fn run() -> gtk::glib::ExitCode {
                 return gtk::glib::ExitCode::from(2);
             }
         };
+        // The TPS key panel's launch asks for the panel alone (desktop TPS
+        // roadmap D6): handled before the settings window is built, so a
+        // panel opened from the input method never brings the settings up.
+        // The input method sends the flag alone; a `--pane` beside it is
+        // ignored.
+        if launch.toggles_tps_keyboard {
+            gtk::Window::set_default_icon_name("taigikeyboard");
+            tps_keyboard::toggle(application, &tps_keyboard, writer::at_launch());
+            return gtk::glib::ExitCode::SUCCESS;
+        }
         // The first launch builds the window; a later one (the menu row
         // pressed again, another `--pane`) re-activates it on that pane —
         // the Windows single-instance mutex's contract, native here.

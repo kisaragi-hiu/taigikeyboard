@@ -1,6 +1,6 @@
 //! The tray button and its menu — the rows every desktop shares
 //! (`taigi_desktop_core::keys::MENU`, the macOS `TaigiInputController.menu()`):
-//! the two global shortcuts a click can stand in for / separator /
+//! the global shortcuts a click can stand in for / separator /
 //! TaigiKeyboard Settings / separator / Check for Updates, About the Keyboard (roadmap W6). The button sits in the standard input-mode slot
 //! (`GUID_LBI_INPUTMODE`, rakukan `language_bar.rs:21-23`).
 //!

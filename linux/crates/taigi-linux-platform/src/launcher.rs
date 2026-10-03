@@ -6,7 +6,7 @@
 use crate::paths::settings_binary;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use taigi_desktop_core::settings::launch::PANE_FLAG;
+use taigi_desktop_core::settings::launch::{PANE_FLAG, TPS_KEYBOARD_FLAG};
 
 /// Spawns the settings window, on `pane` (the persisted raw spelling of a
 /// `SettingsPane`) or wherever the user left it. Detached: no pipe, no wait —
@@ -23,6 +23,16 @@ pub fn open_settings_at(binary: &Path, pane: Option<&str>) -> bool {
         command.arg(PANE_FLAG).arg(pane);
     }
     spawn_detached(command, "settings")
+}
+
+/// Shows the on-screen TPS key panel, or closes it when it is up: the
+/// settings app is one instance per session, so a second launch reaches the
+/// window already open and toggles it (desktop TPS roadmap D6). `false` when
+/// the binary could not be started.
+pub fn toggle_tps_keyboard() -> bool {
+    let mut command = Command::new(settings_binary());
+    command.arg(TPS_KEYBOARD_FLAG);
+    spawn_detached(command, "tps_keyboard")
 }
 
 /// Opens `url` with the desktop's handler (`xdg-open`, the freedesktop

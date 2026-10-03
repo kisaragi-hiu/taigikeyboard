@@ -51,6 +51,13 @@ final class SettingsStore: @unchecked Sendable {
             name: "lastRomanizationMode",
             defaultValue: "",
         )
+        /// Whether the on-screen TPS key panel is up while TPS is typed:
+        /// flipped by Show TPS Keyboard, kept across mode switches so the
+        /// panel comes back with TPS (desktop-core `keys::TPS_KEYBOARD_SHOWN`).
+        static let isTpsKeyboardShown = SettingsKey(
+            name: "tpsKeyboardShown",
+            defaultValue: false,
+        )
         static let isHanjiFirst = SettingsKey(
             name: "isTranslateSwapped",
             defaultValue: EngineSettings.defaults.isHanjiFirst,
@@ -462,6 +469,19 @@ final class SettingsStore: @unchecked Sendable {
         bool(Keys.isCandidateWindowEnabled)
     }
 
+    /// The user's wish for the TPS key panel, whatever the mode.
+    var isTpsKeyboardShown: Bool {
+        get { bool(Keys.isTpsKeyboardShown) }
+        set { userDefaults.set(newValue, forKey: Keys.isTpsKeyboardShown.name) }
+    }
+
+    /// Whether the TPS key panel should be up: asked for, and TPS is typed.
+    /// CROSS-PLATFORM INVARIANT — mirrors desktop-core
+    /// `SettingsDocument::is_tps_keyboard_wanted`.
+    var isTpsKeyboardWanted: Bool {
+        inputMode == .tps && isTpsKeyboardShown
+    }
+
     /// The symbol picker's recent picks.
     var recentSymbols: RecentSymbols {
         RecentSymbols(stringArray(Keys.recentSymbols))
@@ -524,6 +544,7 @@ final class SettingsStore: @unchecked Sendable {
         removeStoredValues(
             Keys.inputMode.name,
             Keys.lastRomanizationMode.name,
+            Keys.isTpsKeyboardShown.name,
             Keys.toneInputScheme.name,
             Keys.isHanjiFirst.name,
             Keys.isAutoSpaceEnabled.name,

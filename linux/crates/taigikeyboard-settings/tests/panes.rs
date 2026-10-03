@@ -18,11 +18,12 @@ use taigi_desktop_core::engine::user_data;
 use taigi_desktop_core::keys::{
     ComposingAction, ComposingKeyBindings, KeyModifiers, RecorderTarget, ShortcutAction,
 };
-use taigi_desktop_core::settings::{keys, SettingChoice, SettingsPane};
+use taigi_desktop_core::settings::{keys, InputMode, SettingChoice, SettingsPane};
 use taigi_desktop_core::strings::{DisplayLanguage, StringKey, StringResolver};
 use taigi_desktop_storage::{LiveSettings, SettingsFileStore, SettingsWriter};
 use taigi_linux_platform::DESKTOP_PLATFORM;
 use taigikeyboard_settings::pages::BUILT;
+use taigikeyboard_settings::tps_keyboard::{self, PanelSlot, TpsKeyboardWindow};
 use taigikeyboard_settings::window::SettingsWindow;
 use taigikeyboard_settings::SIDEBAR;
 
@@ -68,6 +69,7 @@ fn main() -> ExitCode {
     the_custom_dictionary_lists_what_the_store_holds(&window);
     the_learning_records_list_what_the_keyboard_learned(&window);
     the_read_only_window_writes_nothing(&application);
+    the_tps_key_panel_toggles_and_closes_when_tps_is_left(&application);
     eprintln!("panes: ok");
     ExitCode::SUCCESS
 }
@@ -473,6 +475,39 @@ fn the_read_only_window_writes_nothing(application: &adw::Application) {
         SettingsPane::General.raw()
     );
     eprintln!("panes: read-only window writes nothing");
+}
+
+/// Under TL nothing opens; under TPS the panel opens into the slot, a second
+/// toggle closes it and empties the slot, and a tick after the mode left TPS
+/// closes it too.
+fn the_tps_key_panel_toggles_and_closes_when_tps_is_left(application: &adw::Application) {
+    let directory = tempfile::tempdir().expect("a temp directory");
+    let store = SettingsFileStore::new(directory.path());
+    let writer = || SettingsWriter::new(Rc::new(LiveSettings::new(store.clone())));
+    let slot: PanelSlot = Rc::new(std::cell::RefCell::new(None));
+
+    TpsKeyboardWindow::open(application, &slot, writer());
+    assert!(slot.borrow().is_none(), "nothing to show under TL");
+
+    store
+        .update(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tps))
+        .expect("TPS stored");
+    tps_keyboard::toggle(application, &slot, writer());
+    let panel = slot.borrow().clone().expect("the panel opened under TPS");
+    assert!(panel.tick(), "still TPS: stays up");
+    tps_keyboard::toggle(application, &slot, writer());
+    pump_until(|| slot.borrow().is_none());
+    assert!(slot.borrow().is_none(), "a second toggle closes it");
+
+    tps_keyboard::toggle(application, &slot, writer());
+    let panel = slot.borrow().clone().expect("open again");
+    store
+        .update(|document| document.set_choice(&keys::INPUT_MODE, InputMode::Tl))
+        .expect("TL stored");
+    assert!(!panel.tick(), "TPS left: closed");
+    pump_until(|| slot.borrow().is_none());
+    assert!(slot.borrow().is_none());
+    eprintln!("panes: TPS key panel toggles and follows the mode");
 }
 
 /// Runs the main context until `done` answers true or ten seconds pass —

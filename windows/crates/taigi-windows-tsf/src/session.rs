@@ -108,6 +108,9 @@ impl TextService_Impl {
         let Some(context) = context else {
             return BOOL::from(false);
         };
+        // A key in this activation: it is where the user types, whatever
+        // focus events this host did or did not send (the TPS key panel).
+        self.note_tps_keyboard_focus(true);
         let Some(snapshot) = key_translation::snapshot(wparam, lparam) else {
             return BOOL::from(false);
         };
@@ -883,6 +886,8 @@ impl TextService_Impl {
         if let Some(token) = token {
             self.hide_candidates(token);
         }
+        // The TPS key panel comes and goes with TPS; its stored key stays.
+        self.sync_tps_keyboard();
         self.flash_mode_label(runtime, &settings, mode.label_key());
     }
 
@@ -999,6 +1004,19 @@ impl TextService_Impl {
                 guide
                     .borrow_mut()
                     .toggle(content, anchor, appearance, token);
+            }
+            ShortcutAction::ShowTpsKeyboard => {
+                // The user's wish, stored — every host process reads it at
+                // its next focus — then this one's panel follows. The
+                // composition and its list are not touched; an open symbol
+                // picker came down above, as for every global action.
+                if !runtime.update_settings("toggle_tps_keyboard", |document| {
+                    let shown = document.bool(&keys::TPS_KEYBOARD_SHOWN);
+                    document.set_bool(&keys::TPS_KEYBOARD_SHOWN, !shown);
+                }) {
+                    return;
+                }
+                self.sync_tps_keyboard();
             }
         }
     }

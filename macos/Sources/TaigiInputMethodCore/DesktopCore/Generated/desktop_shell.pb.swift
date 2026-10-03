@@ -405,6 +405,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     set {request = .switchInputMode(newValue)}
   }
 
+  public var tpsKeyboardRows: Taigi_DesktopShell_TpsKeyboardRowsRequest {
+    get {
+      if case .tpsKeyboardRows(let v)? = request {return v}
+      return Taigi_DesktopShell_TpsKeyboardRowsRequest()
+    }
+    set {request = .tpsKeyboardRows(newValue)}
+  }
+
   /// The key-path settings as they stand for this request, applied before it
   /// runs, so a request and the settings it is read under cross the seam
   /// together. Unset = the last snapshot stays. A snapshot that is refused
@@ -442,6 +450,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     case composingShortcuts(Taigi_DesktopShell_ComposingShortcutsRequest)
     case symbolPickerKey(Taigi_DesktopShell_SymbolPickerKeyRequest)
     case switchInputMode(Taigi_DesktopShell_SwitchInputModeRequest)
+    case tpsKeyboardRows(Taigi_DesktopShell_TpsKeyboardRowsRequest)
 
   }
 
@@ -749,6 +758,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     set {reply = .switchInputMode(newValue)}
   }
 
+  public var tpsKeyboardRows: Taigi_DesktopShell_TpsKeyboardRowsReply {
+    get {
+      if case .tpsKeyboardRows(let v)? = reply {return v}
+      return Taigi_DesktopShell_TpsKeyboardRowsReply()
+    }
+    set {reply = .tpsKeyboardRows(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Reply: Equatable, Sendable {
@@ -761,6 +778,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     case composingShortcuts(Taigi_DesktopShell_ComposingShortcutsReply)
     case symbolPicker(Taigi_DesktopShell_SymbolPickerReply)
     case switchInputMode(Taigi_DesktopShell_SwitchInputModeReply)
+    case tpsKeyboardRows(Taigi_DesktopShell_TpsKeyboardRowsReply)
 
   }
 
@@ -1626,8 +1644,8 @@ public nonisolated struct Taigi_DesktopShell_SwitchInputModeReply: Sendable {
   /// The mode now in force, to store as `inputMode`.
   public var inputMode: String = String()
 
-  /// Set when the switch left a romanization for TPS: the one Switch TPS
-  /// comes back to, to store as `lastRomanizationMode`.
+  /// Set when the switch stored a new romanization to come back to — one left
+  /// for TPS — to store as `lastRomanizationMode`.
   public var lastRomanizationMode: String {
     get {_lastRomanizationMode ?? String()}
     set {_lastRomanizationMode = newValue}
@@ -1642,6 +1660,76 @@ public nonisolated struct Taigi_DesktopShell_SwitchInputModeReply: Sendable {
   public init() {}
 
   fileprivate var _lastRomanizationMode: String? = nil
+}
+
+/// The on-screen TPS key panel's rows (desktop TPS roadmap D6), built in the
+/// core from the TPS layout table so the Swift panel cannot drift from what
+/// the keys type. Pure, no snapshot; never refused.
+public nonisolated struct Taigi_DesktopShell_TpsKeyboardRowsRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_TpsKeyboardRowsReply: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Top to bottom.
+  public var rows: [Taigi_DesktopShell_TpsKeyboardRow] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_TpsKeyboardRow: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// How far the row starts from the left edge, in key widths (the stagger).
+  public var indent: Float = 0
+
+  /// Left to right.
+  public var caps: [Taigi_DesktopShell_TpsKeyCap] = []
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_TpsKeyCap: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The key as its cap is printed (`Q`, `1`, `;`).
+  public var label: String = String()
+
+  /// What the key types under TPS.
+  public var glyph: String = String()
+
+  /// What it types with Shift; unset where that layer is not a TPS key.
+  public var shiftGlyph: String {
+    get {_shiftGlyph ?? String()}
+    set {_shiftGlyph = newValue}
+  }
+  /// Returns true if `shiftGlyph` has been explicitly set.
+  public var hasShiftGlyph: Bool {self._shiftGlyph != nil}
+  /// Clears the value of `shiftGlyph`. Subsequent reads from it will return its default value.
+  public mutating func clearShiftGlyph() {self._shiftGlyph = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _shiftGlyph: String? = nil
 }
 
 /// One key while the symbol picker is up, read under the settings snapshot
@@ -1741,7 +1829,7 @@ nonisolated extension Taigi_DesktopShell_SymbolPickerAction: SwiftProtobuf._Prot
 
 nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1958,6 +2046,19 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
           self.request = .switchInputMode(v)
         }
       }()
+      case 19: try {
+        var v: Taigi_DesktopShell_TpsKeyboardRowsRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .tpsKeyboardRows(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .tpsKeyboardRows(v)
+        }
+      }()
       default: break
       }
     }
@@ -2038,6 +2139,10 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
     case .switchInputMode?: try {
       guard case .switchInputMode(let v)? = self.request else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
+    }()
+    case .tpsKeyboardRows?: try {
+      guard case .tpsKeyboardRows(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
     }()
     default: break
     }
@@ -2410,7 +2515,7 @@ nonisolated extension Taigi_DesktopShell_LexiconStats: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2536,6 +2641,19 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
           self.reply = .switchInputMode(v)
         }
       }()
+      case 12: try {
+        var v: Taigi_DesktopShell_TpsKeyboardRowsReply?
+        var hadOneofValue = false
+        if let current = self.reply {
+          hadOneofValue = true
+          if case .tpsKeyboardRows(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.reply = .tpsKeyboardRows(v)
+        }
+      }()
       default: break
       }
     }
@@ -2585,6 +2703,10 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
     case .switchInputMode?: try {
       guard case .switchInputMode(let v)? = self.reply else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+    }()
+    case .tpsKeyboardRows?: try {
+      guard case .tpsKeyboardRows(let v)? = self.reply else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 12)
     }()
     case nil: break
     }
@@ -4011,6 +4133,134 @@ nonisolated extension Taigi_DesktopShell_SwitchInputModeReply: SwiftProtobuf.Mes
   public static func ==(lhs: Taigi_DesktopShell_SwitchInputModeReply, rhs: Taigi_DesktopShell_SwitchInputModeReply) -> Bool {
     if lhs.inputMode != rhs.inputMode {return false}
     if lhs._lastRomanizationMode != rhs._lastRomanizationMode {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_TpsKeyboardRowsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TpsKeyboardRowsRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    // Load everything into unknown fields
+    while try decoder.nextFieldNumber() != nil {}
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_TpsKeyboardRowsRequest, rhs: Taigi_DesktopShell_TpsKeyboardRowsRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_TpsKeyboardRowsReply: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TpsKeyboardRowsReply"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}rows\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.rows) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.rows.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.rows, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_TpsKeyboardRowsReply, rhs: Taigi_DesktopShell_TpsKeyboardRowsReply) -> Bool {
+    if lhs.rows != rhs.rows {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_TpsKeyboardRow: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TpsKeyboardRow"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}indent\0\u{1}caps\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularFloatField(value: &self.indent) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.caps) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if self.indent.bitPattern != 0 {
+      try visitor.visitSingularFloatField(value: self.indent, fieldNumber: 1)
+    }
+    if !self.caps.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.caps, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_TpsKeyboardRow, rhs: Taigi_DesktopShell_TpsKeyboardRow) -> Bool {
+    if lhs.indent != rhs.indent {return false}
+    if lhs.caps != rhs.caps {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_TpsKeyCap: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TpsKeyCap"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}label\0\u{1}glyph\0\u{3}shift_glyph\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.label) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.glyph) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self._shiftGlyph) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.label.isEmpty {
+      try visitor.visitSingularStringField(value: self.label, fieldNumber: 1)
+    }
+    if !self.glyph.isEmpty {
+      try visitor.visitSingularStringField(value: self.glyph, fieldNumber: 2)
+    }
+    try { if let v = self._shiftGlyph {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_TpsKeyCap, rhs: Taigi_DesktopShell_TpsKeyCap) -> Bool {
+    if lhs.label != rhs.label {return false}
+    if lhs.glyph != rhs.glyph {return false}
+    if lhs._shiftGlyph != rhs._shiftGlyph {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

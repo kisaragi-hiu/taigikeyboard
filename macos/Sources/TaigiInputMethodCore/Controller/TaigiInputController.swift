@@ -220,6 +220,12 @@ public final class TaigiInputController: IMKInputController {
     @MainActor
     private var inputModeObservation: AnyObject?
 
+    /// KVO on the TPS key panel's stored wish, armed and released with
+    /// `displayModeObservation`: the chord in another session, or a reset of
+    /// General, takes this session's panel up or down at once.
+    @MainActor
+    private var tpsKeyboardObservation: AnyObject?
+
     // MARK: - IMK entry points
 
     /// Keydown only — the default, restated rather than left implicit so a
@@ -278,6 +284,13 @@ public final class TaigiInputController: IMKInputController {
                 of: SettingsStore.Keys.inputMode,
                 onMainActor: { [weak controller] in
                     controller?.dismissPalettes()
+                    controller?.syncTpsKeyboard()
+                },
+            )
+            controller.tpsKeyboardObservation = controller.settings.observeChanges(
+                of: SettingsStore.Keys.isTpsKeyboardShown,
+                onMainActor: { [weak controller] in
+                    controller?.syncTpsKeyboard()
                 },
             )
             // Fresh focus types Taigi — and no Shift half-tapped elsewhere may
@@ -301,6 +314,9 @@ public final class TaigiInputController: IMKInputController {
             // Whatever space a previous focus left armed was measured against
             // a document this activation may no longer be looking at.
             controller.armedAutoSpaceCaret = nil
+            // The TPS key panel follows the session being typed in: handed
+            // to this one, or taken down if it is not wanted.
+            controller.syncTpsKeyboard()
         }
     }
 
@@ -354,6 +370,7 @@ public final class TaigiInputController: IMKInputController {
         Self.logger.debug("hidePalettes")
         onMainActor(nil) { controller, _ in
             controller.dismissPalettes()
+            TpsKeyboardPanel.shared.hide(ownedBy: controller.sessionToken)
         }
         super.hidePalettes()
     }
@@ -452,8 +469,10 @@ public final class TaigiInputController: IMKInputController {
             }
 
             // The global shortcuts a click can stand in for (USER 2026-09-19):
-            // the three switches, each under the name the Shortcuts pane gives it,
-            // so the menu is where a user looks up what they last recorded.
+            // the switches, each under the name the Shortcuts pane gives it,
+            // so the menu is where a user looks up what they last recorded,
+            // then the TPS key panel (desktop TPS P5; the rows are desktop-core's
+            // `keys::MENU`, the same on the three desktops).
             // Not the Hanji/romanization swap — its default is the bare backtick, which
             // the rule above would never print; not the symbol picker, which
             // needs the caret a click has no hold of; and not the Telex guide
@@ -473,6 +492,11 @@ public final class TaigiInputController: IMKInputController {
                     .cycleCandidateDisplayMode,
                     label: ShortcutAction.cycleCandidateDisplayMode.label(language),
                     selector: #selector(cycleCandidateDisplayMode(_:)),
+                ),
+                shortcutRow(
+                    .showTpsKeyboard,
+                    label: ShortcutAction.showTpsKeyboard.label(language),
+                    selector: #selector(showTpsKeyboard(_:)),
                 ),
             ]
             // One doorway (USER 2026-08-26). There was a row per settings pane
@@ -591,6 +615,11 @@ public final class TaigiInputController: IMKInputController {
         performGlobalShortcut(.cycleCandidateDisplayMode)
     }
 
+    @objc
+    private func showTpsKeyboard(_: Any!) {
+        performGlobalShortcut(.showTpsKeyboard)
+    }
+
     private func performGlobalShortcut(_ action: ShortcutAction) {
         Self.logger.debug("menu shortcut \(action)")
         onMainActor(nil) { _, _ in
@@ -612,6 +641,8 @@ public final class TaigiInputController: IMKInputController {
             // `inputModeObservation`, whose hop lands after a key already
             // queued.
             controller.dismissPalettes()
+            // The TPS key panel comes and goes with TPS; its stored wish stays.
+            controller.syncTpsKeyboard()
             // Then the HUD, because the chord fires from anywhere and a
             // mode that changed with
             // no notice reads as the keyboard breaking — the next syllable
@@ -625,11 +656,25 @@ public final class TaigiInputController: IMKInputController {
     /// taken down without touching the composition: what `hidePalettes` is
     /// asked for, and what `inputModeObservation` does for a mode written
     /// outside this session, each window having been raised under the old one.
+    /// The TPS key panel follows the mode on its own (`syncTpsKeyboard`).
     @MainActor
     private func dismissPalettes() {
         dismissCandidates()
         TelexGuidePanel.shared.hide(ownedBy: sessionToken)
         dismissSymbolPicker()
+    }
+
+    /// The TPS key panel as the settings now say, for this session — only
+    /// while it holds the engine, so a late observation in a session already
+    /// handed over cannot take the panel back (`ComposingSessionCoordinator`).
+    @MainActor
+    private func syncTpsKeyboard() {
+        guard backend.owns(sessionToken) else { return }
+        if settings.isTpsKeyboardWanted {
+            TpsKeyboardPanel.shared.show(ownedBy: sessionToken)
+        } else {
+            TpsKeyboardPanel.shared.hideNow()
+        }
     }
 
     // MARK: - Shortcut actions
@@ -712,6 +757,12 @@ public final class TaigiInputController: IMKInputController {
         case .showSymbolPicker:
             // Matched in `handle`, never fired from here (`firesFromTheKeyPath`).
             break
+        case .showTpsKeyboard:
+            // The wish is stored for every session to read; this one's panel
+            // follows now rather than on the observation's later hop. The
+            // composition and its list are not touched.
+            settings.isTpsKeyboardShown.toggle()
+            syncTpsKeyboard()
         }
     }
 
@@ -1254,11 +1305,13 @@ public final class TaigiInputController: IMKInputController {
         // `finishComposition`: a guide belongs to the session that raised it,
         // and goes when that session's focus does.
         TelexGuidePanel.shared.hide(ownedBy: sessionToken)
+        TpsKeyboardPanel.shared.hide(ownedBy: sessionToken)
         finishComposition(into: client)
         backend.release(sessionToken, settings: settings)
         displayModeObservation = nil
         candidateWindowObservation = nil
         inputModeObservation = nil
+        tpsKeyboardObservation = nil
     }
 
     /// Writes whatever is composing into `client` and leaves it with no marked

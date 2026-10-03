@@ -108,6 +108,14 @@ extension KeyboardShortcuts.Name {
         initial: .init(.slash, modifiers: [.control, .command]),
     )
 
+    /// The on-screen TPS key panel (`TpsKeyboardPanel`), shown or hidden.
+    /// ⌃⌘J — the home-row key beside the TPS switch's hand. Not ⌃⌘K, the
+    /// first pick: Apple Notes binds it (maintainer 2026-10-04).
+    static let showTpsKeyboard = Self(
+        "showTpsKeyboard",
+        initial: .init(.j, modifiers: [.control, .command]),
+    )
+
     /// The symbol picker (USER 2026-09-09): punctuation, bracket pairs and
     /// special symbols in a candidate-style window. `,` because the picker is
     /// a punctuation menu and the comma is the punctuation key — and ⌃⌘ is the
@@ -143,6 +151,8 @@ enum ShortcutAction: CaseIterable, Sendable {
     /// Toggles the floating Telex key table: explains the keyboard rather
     /// than changing what it types, but is read while typing.
     case showTelexGuide
+    /// Shows / hides the on-screen TPS key panel; under TPS only.
+    case showTpsKeyboard
     /// Opens the settings window on whichever pane the user left it on. Last:
     /// the one row that leaves the typing session.
     case openLastSettingsPane
@@ -156,6 +166,7 @@ enum ShortcutAction: CaseIterable, Sendable {
         case .showSymbolPicker: .showSymbolPicker
         case .openLastSettingsPane: .openLastSettingsPane
         case .showTelexGuide: .showTelexGuide
+        case .showTpsKeyboard: .showTpsKeyboard
         }
     }
 
@@ -178,8 +189,8 @@ enum ShortcutAction: CaseIterable, Sendable {
     }
 
     /// Whether this action does nothing under `mode` — the switches and the
-    /// guide that are about a romanization's candidates and keys. No write,
-    /// no flash, nothing taken down.
+    /// guide that are about a romanization's candidates and keys, and the TPS
+    /// key panel outside TPS. No write, no flash, nothing taken down.
     /// CROSS-PLATFORM INVARIANT — mirrors desktop-core
     /// `ShortcutAction::is_inert_under` (`keys/shortcut_actions.rs`), which
     /// Windows and Linux gate on. Drift makes a chord act on one desktop and
@@ -187,6 +198,7 @@ enum ShortcutAction: CaseIterable, Sendable {
     func isInert(under mode: InputMode) -> Bool {
         switch self {
         case .toggleTranslateSwapped, .cycleCandidateDisplayMode, .showTelexGuide: mode == .tps
+        case .showTpsKeyboard: mode != .tps
         case .toggleRomanization, .toggleTps, .showSymbolPicker, .openLastSettingsPane: false
         }
     }
@@ -217,6 +229,7 @@ enum ShortcutAction: CaseIterable, Sendable {
         case .showSymbolPicker: language.string(.desktopShortcutShowSymbolPicker)
         case .openLastSettingsPane: language.string(.desktopShortcutOpenSettings)
         case .showTelexGuide: language.string(.desktopShortcutShowTelexGuide)
+        case .showTpsKeyboard: language.string(.desktopShortcutShowTpsKeyboard)
         }
     }
 }
@@ -287,7 +300,7 @@ enum ShortcutHotkeys {
             // the named panes are reached from the menu bar now.
             openSettings(on: nil, in: SettingsStore())
         case .toggleRomanization, .toggleTps, .toggleTranslateSwapped, .cycleCandidateDisplayMode,
-             .showTelexGuide:
+             .showTelexGuide, .showTpsKeyboard:
             ComposingSessionCoordinator.shared.performShortcutAction(action)
         case .showSymbolPicker:
             // Never registered, so never fires (`firesFromTheKeyPath`).

@@ -2,14 +2,15 @@
 //! (docs/architecture/macos-desktop-core-roadmap.md P14): desktop-core's
 //! chord gate, recorder decision, resolved bindings, fixed-row labels and
 //! picker reading, under the Mac's grammar — and the input-mode writer the
-//! Swift settings ask (desktop TPS roadmap D5). Pure — no token, no session, no
+//! Swift settings ask (desktop TPS roadmap D5), and the TPS key panel's rows
+//! (D6). Pure — no token, no session, no
 //! runtime: a settings snapshot one of them carries is read for its one
 //! answer and never installed, so the key path keeps what the last session
 //! request carried, a panic here included.
 
 use taigi_desktop_core::keys::{
-    evaluate_press, shortcut_labels, ChordRejection, ComposingAction, ComposingKeyBindings,
-    ComposingKeyChord, RecorderOutcome, RecorderTier, SymbolPickerIntent,
+    evaluate_press, shortcut_labels, tps_keyboard_rows, ChordRejection, ComposingAction,
+    ComposingKeyBindings, ComposingKeyChord, RecorderOutcome, RecorderTier, SymbolPickerIntent,
 };
 use taigi_desktop_core::settings::{
     keys, InputMode, InputModeRequest, SettingChoice, SettingsDocument,
@@ -20,7 +21,8 @@ use crate::proto::{
     chord_reply, desktop_request, desktop_response, press_reply, symbol_picker_reply, Chord,
     ChordReply, ChordRequest, ComposingShortcut, ComposingShortcutsReply, PressReply, PressRequest,
     RecorderAction, SettingsSnapshot, SwitchInputModeReply, SwitchInputModeRequest,
-    SymbolPickerAction, SymbolPickerKeyRequest, SymbolPickerReply,
+    SymbolPickerAction, SymbolPickerKeyRequest, SymbolPickerReply, TpsKeyCap, TpsKeyboardRow,
+    TpsKeyboardRowsReply,
 };
 use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 use crate::session::navigation;
@@ -43,6 +45,7 @@ pub(crate) fn answer(
         }
         Request::SymbolPickerKey(key) => symbol_picker_key(key, snapshot).map(Reply::SymbolPicker),
         Request::SwitchInputMode(switch) => switch_input_mode(switch).map(Reply::SwitchInputMode),
+        Request::TpsKeyboardRows(_) => Ok(Reply::TpsKeyboardRows(tps_keyboard_rows_reply())),
         _ => return None,
     })
 }
@@ -174,6 +177,27 @@ fn switch_input_mode(request: &SwitchInputModeRequest) -> Result<SwitchInputMode
         last_romanization_mode: (after != before.as_deref())
             .then(|| after.unwrap_or_default().to_owned()),
     })
+}
+
+/// The core's TPS key panel rows as the proto carries them.
+fn tps_keyboard_rows_reply() -> TpsKeyboardRowsReply {
+    TpsKeyboardRowsReply {
+        rows: tps_keyboard_rows()
+            .into_iter()
+            .map(|row| TpsKeyboardRow {
+                indent: row.indent,
+                caps: row
+                    .caps
+                    .into_iter()
+                    .map(|cap| TpsKeyCap {
+                        label: cap.label.to_string(),
+                        glyph: cap.glyph.to_owned(),
+                        shift_glyph: cap.shift_glyph.map(str::to_owned),
+                    })
+                    .collect(),
+            })
+            .collect(),
+    }
 }
 
 /// The bindings the snapshot describes. A snapshot is required: the last
@@ -610,5 +634,32 @@ mod tests {
             switch_input_mode(&SwitchInputModeRequest::default()),
             Err(Refusal::Missing("switch_input_mode.request"))
         );
+    }
+
+    /// The seam hands Swift the core's rows as they are — trace:
+    /// `tps_keyboard_rows` — 12 caps at indent 0 leading with `1` ㄅ / ㆠ;
+    /// `Q` ㄆ with no Shift glyph; 43 caps in all.
+    #[test]
+    fn the_tps_key_panel_rows_are_the_cores() {
+        use crate::proto::{desktop_request, desktop_response};
+        let Some(Ok(desktop_response::Reply::TpsKeyboardRows(reply))) = answer(
+            &desktop_request::Request::TpsKeyboardRows(Default::default()),
+            None,
+        ) else {
+            panic!("the rows are answered with no snapshot");
+        };
+        assert_eq!(reply.rows.len(), 4);
+        assert_eq!(reply.rows[0].indent, 0.0);
+        assert_eq!(
+            reply.rows[0].caps[0],
+            TpsKeyCap {
+                label: "1".to_owned(),
+                glyph: "ㄅ".to_owned(),
+                shift_glyph: Some("ㆠ".to_owned()),
+            }
+        );
+        assert_eq!(reply.rows[1].caps[0].shift_glyph, None);
+        let count: usize = reply.rows.iter().map(|row| row.caps.len()).sum();
+        assert_eq!(count, 43);
     }
 }

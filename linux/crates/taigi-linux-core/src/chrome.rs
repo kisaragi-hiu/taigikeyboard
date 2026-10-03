@@ -1,7 +1,7 @@
 //! The chrome both shells share (roadmap L6, PR5): the panel menu rows,
 //! the mode label beside the icon, and the global shortcut actions —
 //! romanization / Hanji-romanization / display-mode switches, the Telex guide, the
-//! symbol picker, the settings doorway. Port of the Windows
+//! symbol picker, the TPS key panel's launch, the settings doorway. Port of the Windows
 //! `session.rs::perform_global` + `lang_bar.rs::menu_rows`, with the
 //! HUD and the two floating windows replaced by what a panel can draw:
 //! the guide and the picker are lookup tables, the flash is the mode
@@ -21,7 +21,7 @@ use taigi_desktop_core::keys::{
 use taigi_desktop_core::settings::{keys, InputMode, InputModeRequest, SettingsDocument};
 use taigi_desktop_core::strings::StringKey;
 use taigi_desktop_core::symbols::SymbolTable;
-use taigi_linux_platform::{open_settings, DESKTOP_PLATFORM};
+use taigi_linux_platform::{open_settings, toggle_tps_keyboard, DESKTOP_PLATFORM};
 
 /// The menu row that opens the settings window on the last pane.
 pub const MENU_SETTINGS: &str = "settings";
@@ -227,6 +227,14 @@ pub fn perform_global(
         }
         ShortcutAction::ShowSymbolPicker => {
             toggle_symbol_picker(runtime, token, state, &settings, &bindings, &mut emits);
+        }
+        ShortcutAction::ShowTpsKeyboard => {
+            // A window of the settings app, not of this engine (roadmap
+            // D6, U6): the app's one instance opens it or closes it. The
+            // composition is not touched — the panel is looked at, and its
+            // window taking focus is what would end the session; the guide
+            // and the picker came down above, as for every global action.
+            toggle_tps_keyboard();
         }
     }
     emits
@@ -546,6 +554,7 @@ mod tests {
                 "toggleRomanization",
                 "toggleTps",
                 ShortcutAction::CycleCandidateDisplayMode.raw(),
+                ShortcutAction::ShowTpsKeyboard.raw(),
                 "-",
                 MENU_SETTINGS,
                 "-",
@@ -572,6 +581,23 @@ mod tests {
         );
         assert_eq!(emits, vec![Emit::ModeChanged, Emit::AnnounceMode]);
         assert_ne!(mode_label(&runtime), label_before);
+    }
+
+    #[test]
+    fn the_tps_key_panel_row_does_nothing_outside_tps() {
+        // `ShowTpsKeyboard` is inert under TL / POJ (`is_inert_under`): no
+        // emit, no settings write — and no settings app spawned.
+        let (_directory, runtime) = runtime();
+        let mut engine = EngineState::default();
+        let revision = runtime.settings.current().revision;
+        let emits = activate_menu(
+            &runtime,
+            ContextToken(1),
+            &mut engine,
+            ShortcutAction::ShowTpsKeyboard.raw(),
+        );
+        assert!(emits.is_empty());
+        assert_eq!(runtime.settings.current().revision, revision);
     }
 
     #[test]

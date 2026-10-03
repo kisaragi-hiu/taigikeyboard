@@ -39,6 +39,9 @@ pub enum ShortcutAction {
     /// the keyboard rather than changing what it types, but is read while
     /// typing.
     ShowTelexGuide,
+    /// Shows / hides the on-screen TPS key panel (desktop TPS roadmap D6):
+    /// under TPS only, where the keys type the glyphs it draws.
+    ShowTpsKeyboard,
     /// Opens the settings window on whichever pane the user left it on. Last
     /// on the pane (USER 2026-09-21): the one row that leaves the typing
     /// session. The Mac's Swift twin keeps the same order
@@ -47,28 +50,33 @@ pub enum ShortcutAction {
 }
 
 impl ShortcutAction {
-    pub const ALL: [ShortcutAction; 7] = [
+    pub const ALL: [ShortcutAction; 8] = [
         Self::ToggleRomanization,
         Self::ToggleTps,
         Self::ToggleTranslateSwapped,
         Self::CycleCandidateDisplayMode,
         Self::ShowSymbolPicker,
         Self::ShowTelexGuide,
+        Self::ShowTpsKeyboard,
         Self::OpenLastSettingsPane,
     ];
 
     /// Whether the action does nothing under `mode`, writing no setting:
     /// under TPS a cell is the Hanji alone, so the Hanji / romanization swap
     /// and the display modes have nothing to switch, and there are no Telex
-    /// keys for the guide to show (roadmap § D3).
+    /// keys for the guide to show (roadmap § D3). The TPS key panel is the
+    /// mirror case: nothing to show outside TPS, whose glyphs it draws (D6).
     pub fn is_inert_under(self, mode: InputMode) -> bool {
-        mode == InputMode::Tps
-            && matches!(
-                self,
-                Self::ToggleTranslateSwapped
-                    | Self::CycleCandidateDisplayMode
-                    | Self::ShowTelexGuide
-            )
+        match self {
+            Self::ToggleTranslateSwapped
+            | Self::CycleCandidateDisplayMode
+            | Self::ShowTelexGuide => mode == InputMode::Tps,
+            Self::ShowTpsKeyboard => mode != InputMode::Tps,
+            Self::ToggleRomanization
+            | Self::ToggleTps
+            | Self::ShowSymbolPicker
+            | Self::OpenLastSettingsPane => false,
+        }
     }
 
     /// The global action `snapshot` is, if its recorded chord matches — read
@@ -94,6 +102,7 @@ impl ShortcutAction {
             Self::CycleCandidateDisplayMode => "cycleCandidateDisplayMode",
             Self::ShowSymbolPicker => "showSymbolPicker",
             Self::ShowTelexGuide => "showTelexGuide",
+            Self::ShowTpsKeyboard => "showTpsKeyboard",
         }
     }
 
@@ -114,11 +123,15 @@ impl ShortcutAction {
         self == Self::ShowSymbolPicker
     }
 
-    /// Whether a held chord must fire ONCE: the guide and the picker toggle,
+    /// Whether a held chord must fire ONCE: the guide, the picker and the TPS
+    /// key panel toggle,
     /// so an auto-repeat would flip them back. The switches read as one
     /// press already (a switch repeated is a switch back — left as is).
     pub fn fires_once_per_press(self) -> bool {
-        matches!(self, Self::ShowTelexGuide | Self::ShowSymbolPicker)
+        matches!(
+            self,
+            Self::ShowTelexGuide | Self::ShowSymbolPicker | Self::ShowTpsKeyboard
+        )
     }
 
     /// Whether this action opens the settings window rather than doing
@@ -168,6 +181,10 @@ impl ShortcutAction {
     /// `P` for the TPS switch — Phonetic Symbols — is the Mac's ⌃⌘P
     /// (desktop TPS roadmap D5). Not Ctrl+Alt+T, GNOME's terminal chord.
     ///
+    /// `J` for the TPS key panel is the Mac's ⌃⌘J, the home-row key beside
+    /// the TPS switch's hand. Not ⌃⌘K, the roadmap's first pick: Apple Notes
+    /// binds it (maintainer 2026-10-04).
+    ///
     /// `,` for the symbol picker is the Mac's ⌃⌘, carried over the same way:
     /// the picker is a punctuation menu and the comma is the punctuation key.
     /// Not the bare backtick 新注音 (New Phonetic) / McBopomofo / vChewing open their symbol
@@ -191,6 +208,7 @@ impl ShortcutAction {
             Self::CycleCandidateDisplayMode => ("h", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ShowSymbolPicker => (",", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
             Self::ShowTelexGuide => ("/", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
+            Self::ShowTpsKeyboard => ("j", KeyModifiers::CONTROL.with(KeyModifiers::ALT)),
         };
         ComposingKeyChord {
             key: key.to_owned(),
@@ -213,6 +231,7 @@ impl ShortcutAction {
             Self::CycleCandidateDisplayMode => StringKey::DesktopShortcutCycleCandidateDisplayMode,
             Self::ShowSymbolPicker => StringKey::DesktopShortcutShowSymbolPicker,
             Self::ShowTelexGuide => StringKey::DesktopShortcutShowTelexGuide,
+            Self::ShowTpsKeyboard => StringKey::DesktopShortcutShowTpsKeyboard,
         }
     }
 
@@ -463,7 +482,7 @@ mod tests {
     #[test]
     fn roster_defaults_and_keys() {
         // trace: `default_chord` — the Mac's ⌃⌘ roster as Ctrl+Alt (S, C, H, `,`,
-        // `/`, P), the bare backtick unchanged; seven names, seven distinct defaults,
+        // `/`, P, J), the bare backtick unchanged; eight names, eight distinct defaults,
         // each recordable and clear of the composing defaults.
         let mut names: Vec<_> = ShortcutAction::ALL
             .iter()
@@ -471,7 +490,7 @@ mod tests {
             .collect();
         names.sort();
         names.dedup();
-        assert_eq!(names.len(), 7);
+        assert_eq!(names.len(), 8);
         assert_eq!(
             ShortcutAction::OpenLastSettingsPane.default_chord(),
             chord("s", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
@@ -500,13 +519,17 @@ mod tests {
             ShortcutAction::ShowTelexGuide.default_chord(),
             chord("/", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
         );
+        assert_eq!(
+            ShortcutAction::ShowTpsKeyboard.default_chord(),
+            chord("j", KeyModifiers::CONTROL.with(KeyModifiers::ALT))
+        );
         let mut defaults: Vec<_> = ShortcutAction::ALL
             .iter()
             .map(|a| a.default_chord())
             .collect();
         defaults.sort();
         defaults.dedup();
-        assert_eq!(defaults.len(), 7, "the defaults are all different");
+        assert_eq!(defaults.len(), 8, "the defaults are all different");
         assert_eq!(
             ShortcutAction::ALL
                 .iter()
@@ -540,7 +563,8 @@ mod tests {
         // `allCases`: the switches in the General pane's order of what they
         // switch — the input script twice, romanization then TPS — then the
         // windows used while typing, the settings window last (USER
-        // 2026-09-21). The Mac's roster gains Switch TPS in desktop TPS P4.
+        // 2026-09-21). The Mac's roster gains Switch TPS in desktop TPS P4
+        // and the TPS key panel in P5.
         assert_eq!(
             ShortcutAction::ALL,
             [
@@ -550,6 +574,7 @@ mod tests {
                 ShortcutAction::CycleCandidateDisplayMode,
                 ShortcutAction::ShowSymbolPicker,
                 ShortcutAction::ShowTelexGuide,
+                ShortcutAction::ShowTpsKeyboard,
                 ShortcutAction::OpenLastSettingsPane,
             ]
         );
@@ -574,7 +599,8 @@ mod tests {
             once,
             [
                 ShortcutAction::ShowSymbolPicker,
-                ShortcutAction::ShowTelexGuide
+                ShortcutAction::ShowTelexGuide,
+                ShortcutAction::ShowTpsKeyboard,
             ]
         );
         assert_eq!(
@@ -893,20 +919,27 @@ mod tests {
     }
 
     #[test]
-    fn the_display_switches_and_the_telex_guide_are_inert_under_tps_only() {
-        let inert = [
-            ShortcutAction::ToggleTranslateSwapped,
-            ShortcutAction::CycleCandidateDisplayMode,
-            ShortcutAction::ShowTelexGuide,
-        ];
-        for action in ShortcutAction::ALL {
-            assert_eq!(
-                action.is_inert_under(InputMode::Tps),
-                inert.contains(&action),
-                "{action:?}"
-            );
-            assert!(!action.is_inert_under(InputMode::Tl), "{action:?}");
-            assert!(!action.is_inert_under(InputMode::Poj), "{action:?}");
+    fn the_inert_actions_under_each_mode() {
+        // Under TPS the display switches and the Telex guide (no romanization
+        // to switch, no Telex keys); under a romanization the TPS key panel.
+        // The Swift twin asserts the same lists
+        // (`testTheInertActions_underEachMode_matchTheCore`).
+        let inert = |mode| -> Vec<ShortcutAction> {
+            ShortcutAction::ALL
+                .into_iter()
+                .filter(|action| action.is_inert_under(mode))
+                .collect()
+        };
+        assert_eq!(
+            inert(InputMode::Tps),
+            [
+                ShortcutAction::ToggleTranslateSwapped,
+                ShortcutAction::CycleCandidateDisplayMode,
+                ShortcutAction::ShowTelexGuide,
+            ]
+        );
+        for mode in [InputMode::Tl, InputMode::Poj] {
+            assert_eq!(inert(mode), [ShortcutAction::ShowTpsKeyboard], "{mode:?}");
         }
     }
 }
