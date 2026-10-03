@@ -34,6 +34,15 @@ class EmojiPopView: UIView {
     private var emojisX: CGFloat = 0.0
     private var emojisWidth: CGFloat = 0.0
 
+    // TaigiKeyboard: local patch — a keyboard extension cannot draw above its own view, so a
+    // popup for the top rows opens below the cell instead: stem on top, body underneath.
+    private var isOpeningBelow = false
+
+    /// Top of the body (enlarged emoji + variants) within the popup.
+    private var bodyY: CGFloat {
+        isOpeningBelow ? BottomPartSize.height : 0
+    }
+
     // MARK: - Init functions
 
     init() {
@@ -47,7 +56,7 @@ class EmojiPopView: UIView {
     // MARK: - Override functions
 
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        let result = point.x >= emojisX && point.x <= emojisX + emojisWidth && point.y >= 0 && point.y <= TopPartSize.height
+        let result = point.x >= emojisX && point.x <= emojisX + emojisWidth && point.y >= bodyY && point.y <= bodyY + TopPartSize.height
 
         if !result {
             dismiss()
@@ -58,8 +67,9 @@ class EmojiPopView: UIView {
 
     // MARK: - Internal functions
 
-    func move(location: CGPoint, animation: Bool = true) {
+    func move(location: CGPoint, isOpeningBelow: Bool, animation: Bool = true) {
         locationX = location.x
+        self.isOpeningBelow = isOpeningBelow
         setupUI()
 
         UIView.animate(withDuration: animation ? 0.08 : 0, animations: {
@@ -145,7 +155,7 @@ extension EmojiPopView {
         layer.addSublayer(contentLayer)
 
         emojisView.removeFromSuperview()
-        emojisView = UIView(frame: CGRect(x: emojisX + 8, y: 10, width: CGFloat(emojiArray.count) * EmojiSize.width, height: EmojiSize.height))
+        emojisView = UIView(frame: CGRect(x: emojisX + 8, y: bodyY + 10, width: CGFloat(emojiArray.count) * EmojiSize.width, height: EmojiSize.height))
 
         // add buttons
         emojiButtons = []
@@ -164,7 +174,7 @@ extension EmojiPopView {
         path.addRoundedRect(
             in: CGRect(
                 x: emojisX,
-                y: 0.0,
+                y: bodyY,
                 width: emojisWidth,
                 height: TopPartSize.height,
             ),
@@ -175,7 +185,7 @@ extension EmojiPopView {
         path.addRoundedRect(
             in: CGRect(
                 x: TopPartSize.width / 2.0 - BottomPartSize.width / 2.0,
-                y: TopPartSize.height - 10,
+                y: isOpeningBelow ? 0 : TopPartSize.height - 10,
                 width: BottomPartSize.width,
                 height: BottomPartSize.height + 10,
             ),
