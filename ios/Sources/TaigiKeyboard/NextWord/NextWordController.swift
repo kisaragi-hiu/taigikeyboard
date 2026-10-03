@@ -102,8 +102,8 @@ final class NextWordController {
     /// (`engine/nextword/src/decide.rs`).
     ///
     /// CROSS-PLATFORM INVARIANT — mirrors Android
-    /// `TextInputKeyHandler.isContextCharacterOutsideComposition` and macOS
-    /// `ComposingManager.noteCharacterTypedOutsideComposition`. Drift causes
+    /// `TextInputKeyHandler.isContextCharacterOutsideComposition` and desktop-core
+    /// `ComposingManager::note_character_typed_outside_composition`. Drift causes
     /// silent divergence.
     static func isContextCharacterOutsideComposition(_ character: String) -> Bool {
         !character.isEmpty && !character.contains(where: { $0.isLetter || $0.isWhitespace })
@@ -114,8 +114,8 @@ final class NextWordController {
     /// reading and no prediction so the engine can end the context on
     /// sentence-end punctuation — what stops the last word of one sentence
     /// being learned as the predecessor of the first word of the next
-    /// (`decide.rs` sentence-end rule). Mirrors macOS
-    /// `EngineNextWord.wordSelected(text: character, roman: "")`.
+    /// (`decide.rs` sentence-end rule). Mirrors desktop-core
+    /// `ComposingManager::note_character_typed_outside_composition`.
     func noteCharacterTypedOutsideComposition(_ character: String) {
         process(text: character, roman: "", triggerPrediction: false)
     }

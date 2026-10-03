@@ -314,13 +314,13 @@ class ComposingManager(
      * generation a `bumpGeneration` has since replaced (an Idle snapshot, no
      * carrier), is "no candidates this frame".
      *
-     * CROSS-PLATFORM INVARIANT — mirrors macOS
-     * `macos/Sources/TaigiInputMethodCore/Composing/ComposingManager.swift`
-     * `fetchCandidates`.
+     * CROSS-PLATFORM INVARIANT — mirrors iOS
+     * `ComposingManager.fetchContinuousCandidates` and desktop-core `ComposingManager::fetch_candidates`
+     * (`desktop/crates/taigi-desktop-core/src/composing/manager.rs`).
      *
      * Android divergence (intentional, per `docs/contributing/cross-platform-alignment.md`
-     * §3): the Apple platforms run the fetch on the main thread and mirror
-     * its snapshot; Android runs this function on `Dispatchers.Default`
+     * §3): iOS and desktop-core run the fetch on the key path's thread and
+     * mirror its snapshot; Android runs this function on `Dispatchers.Default`
      * (`CandidateUpdateCoordinator`) so the dictionary scan never blocks a
      * keystroke, and mirrors nothing — `FetchAtPos` is read-only in the
      * engine (no effects, no state change), so there is no transition to

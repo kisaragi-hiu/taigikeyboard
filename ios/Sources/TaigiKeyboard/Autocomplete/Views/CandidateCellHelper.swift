@@ -42,7 +42,7 @@ enum CandidateCellHelper {
         }
 
         // CROSS-PLATFORM INVARIANT — mirrors the desktop split cells (§42 second
-        // exception: macOS/Windows PresentedCandidate) and Android candidateCellText:
+        // exception: desktop-core PresentedCandidate) and Android candidateCellText:
         // under Hanji with Romanization every cell is single-script. Split cells (marked upstream in
         // TaigiAutocompleteService.buildContinuousSuggestions and
         // ActionHandler.predictionSuggestions) carry their script in `text`; an

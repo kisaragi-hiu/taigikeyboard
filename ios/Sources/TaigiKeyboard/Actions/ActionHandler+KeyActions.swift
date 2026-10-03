@@ -109,7 +109,7 @@ extension ActionHandler {
             // Text going into the document without passing through a
             // composition is still context: a full stop typed here is what
             // ends the sentence the next-word learning would otherwise carry
-            // across (§40; mirrors macOS `noteCharacterTypedOutsideComposition`).
+            // across (§40; mirrors desktop-core `note_character_typed_outside_composition`).
             if NextWordController.isContextCharacterOutsideComposition(finalChar) {
                 nextWordController.noteCharacterTypedOutsideComposition(finalChar)
             }
