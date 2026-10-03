@@ -10,21 +10,15 @@
 ## Summary
 
 - **Forward-looking work items only.** Shipped detail lives in `docs/releases/<version>/plan.md` + `changelog/mobile-<version>.md`.
-- **Active**: macOS over desktop-core — planned, awaiting the maintainer's approval before any implementation PR. Pending dogfood is tracked in `docs/architecture/dogfood-checklist.md`.
-- **Open candidates**: every unfinished, parked or brainstorm item across the roadmaps and reports is listed once in § Open candidates (unscheduled), with a link to its design; the one design-locked item is the converted-romanization commit.
+- **Active**: none — every scoped multi-PR plan has merged (see Closed phases). Pending dogfood is tracked in `docs/architecture/dogfood-checklist.md`.
+- **Open candidates**: every unfinished, parked or brainstorm item across the roadmaps and reports is listed once in § Open candidates (unscheduled), with a link to its design.
 - **Release scope / timing / tag is the maintainer's call.**
 
 ---
 
 ## Active / In-flight items
 
-| Item | Status | Where |
-|---|---|---|
-| **macOS over desktop-core** — the macOS input method links the shared Rust `taigi-desktop-core` for its key path instead of re-implementing it in Swift (about 4,300 of the ~8,070 duplicate Swift lines measured; candidate-window geometry, the settings backend, global shortcuts and the update flow stay Swift) | P0–P6 merged 2026-10-02 (#342–#347); P7 next | [`architecture/macos-desktop-core-roadmap.md`](architecture/macos-desktop-core-roadmap.md) · inventory [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md) |
-| **Desktop TPS mode** — 方音符號 as a third input mode on macOS, Windows and Linux: Dachen positions with a Shift layer, its own switch shortcut, keypad candidate picking, an on-screen key panel | P0 plan 2026-10-03; P1 (engine `TpsKey`) next | [`architecture/desktop-tps-roadmap.md`](architecture/desktop-tps-roadmap.md) |
-| **Learning Records page** — view, correct the count of, and delete one learned row (word frequency, phrases) on all five platforms | Complete 2026-10-03: P0 `5bab5b9b`; P1 #366, P2 #369, P3+P4 #370, P5+P6 #371 merged; device dogfood pending | [`architecture/learning-records-page-roadmap.md`](architecture/learning-records-page-roadmap.md) |
-
-Everything else scoped through 2026-10-01 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
+None. Everything scoped through 2026-10-03 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
 ---
 
@@ -80,7 +74,6 @@ One line each; the linked section holds the design, the measurements and the ope
 | Stale `.proto` comments: `lexicon.proto` still documents `DEV` as always-on (the toggle shipped); `composing.proto` cites a nonexistent `continuous-input-ranking.md` §10.11 and (`:426`) describes the iOS commit as `clearMarkedText` + `insertText` | needs a proto regen round (iOS + Android generated trees) | [`architecture/macos-roadmap.md`](architecture/macos-roadmap.md) § Open items this track produced |
 | v2 `.taigi` restore folds POJ→TL over canonical-TL readings (macOS folds v1 only) | verify it still applies now the engine owns the codec | same § |
 | Fedora × IBus e2e skipped (daemon never lists the test component) | own root-cause round | [`architecture/e2e-testing-roadmap.md`](architecture/e2e-testing-roadmap.md) § PR table PR4 |
-| iOS #352: Flutter hosts (Cashew) keep the raw preedit on commit. Root cause proven on device: proxy calls of one turn are merged and applied as inserts → last `setMarkedText` → `unmarkText`, so any same-turn mix of a marked commit and another write breaks (Space, punctuation, auto-space). Fix: one host write per event vs. defer post-commit writes | parked until the current refactor ends (USER 2026-10-03); PR #357 draft, not mergeable as is (Space regresses Notes); fix option not chosen | [PR #357](https://github.com/taigikeyboard/taigikeyboard/pull/357) comments |
 | macOS Custom Dictionary: no confirmation before a destructive command (Windows and Linux confirm) | USER 2026-10-02: add it — own round | [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md) S11 |
 
 **Refactors (USER decisions)**
@@ -89,7 +82,7 @@ One line each; the linked section holds the design, the measurements and the ope
 |---|---|---|
 | iOS top-level folder renames (`.pbxproj` = USER-only) | not scheduled | [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md) § Not scheduled |
 | Shared Swift package for macOS + iOS (open-source round 10) | not scheduled; USER adds the local package in Xcode | [`reports/2026-09-24-open-source-readiness-and-layout.md`](reports/2026-09-24-open-source-readiness-and-layout.md) § rounds |
-| Residual platform twins: auto-space punctuation set ×4 (iOS / Android / macOS `AutoSpacePunctuation`, desktop `policies/auto_space.rs`), external-lookup digit-tone fold ×3 (`ExternalLookupURLBuilder` iOS / Android + desktop `engine/external_lookup.rs`; macOS copy deleted in macOS-over-desktop-core P1), source-bitmask decode ×3 (`LexiconBitmask` ×2, desktop `engine/lexicon.rs`), no-op `SuggestionCaseTransformer` ×2 (delete) | after macOS over `desktop-core` lands (removes the macOS copies); re-verify callers first — files confirmed on main 2026-10-02, callers not; one PR | [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md) Appendix B |
+| Residual platform twins: auto-space punctuation set ×4 (iOS / Android / macOS `AutoSpacePunctuation`, desktop `policies/auto_space.rs`), external-lookup digit-tone fold ×3 (`ExternalLookupURLBuilder` iOS / Android + desktop `engine/external_lookup.rs`; macOS copy deleted in macOS-over-desktop-core P1), source-bitmask decode ×3 (`LexiconBitmask` ×2, desktop `engine/lexicon.rs`), no-op `SuggestionCaseTransformer` ×2 (delete) | unblocked: macOS over `desktop-core` landed 2026-10-03, yet macOS `Policies/AutoSpacePunctuation.swift` is still on main; re-verify callers first — files confirmed on main 2026-10-02, callers not; one PR | [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md) Appendix B |
 
 **Project and legal (USER)**
 
@@ -110,6 +103,11 @@ Apply to every change regardless of release:
 ---
 
 ## Closed phases / shipped audits
+
+- **macOS over desktop-core** — COMPLETE 2026-10-03: P1–P15 MERGED (#342–#365); the macOS key path is `taigi-desktop-core` over `taigi-macos-ffi` (candidate-window geometry, the settings backend, global shortcuts and the update flow stay Swift). Design + PR table: [`architecture/macos-desktop-core-roadmap.md`](architecture/macos-desktop-core-roadmap.md); inventory [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md).
+- **Desktop TPS mode** (方音符號 on macOS, Windows and Linux) — COMPLETE 2026-10-03: P1–P6 MERGED (#367, #368, #372, #373, #374, #376, #378, #381; Dachen layout + Shift layer, Switch Phonetic Symbols, candidate window on demand, on-screen key panel with clicks). Dogfood S89–S93. Design: [`architecture/desktop-tps-roadmap.md`](architecture/desktop-tps-roadmap.md).
+- **Learning Records page** — COMPLETE 2026-10-03: P0 `5bab5b9b`; P1 #366, P2 #369, P3+P4 #370, P5+P6 #371 MERGED (view, correct the count of, and delete one learned row on all five platforms). Design: [`architecture/learning-records-page-roadmap.md`](architecture/learning-records-page-roadmap.md).
+- **iOS #352 Flutter host commit** — #375 `6c9c2465` MERGED 2026-10-03 (one host write per event; draft #357 closed); device dogfood PASS 2026-10-04. Contract: `behavioral-invariants.md` `INVARIANT_composing_host_commit_one_write_per_event`.
 
 - **Maintainability audit follow-up** — COMPLETE 2026-10-01: R1–R12 + docs drift MERGED (#274–#331). PR table: [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md); source audit: [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md).
 - **Bigram language model** — CLOSED 2026-09-30 (USER, after the Android dogfood): P0–P5 MERGED (#267, #268, #270–#272) + the punctuation-context fix #273; P6 not opened, P7 not adopted. `association.bin` v2 word keys shipped in mobile v3.6.11. Design + status: [`architecture/bigram-lm-roadmap.md`](architecture/bigram-lm-roadmap.md).
