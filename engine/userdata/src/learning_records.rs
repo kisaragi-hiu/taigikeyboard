@@ -477,6 +477,9 @@ mod tests {
         stores.learned_phrases.learn_phrase("食飯", "tsia̍h-pn̄g");
         stores.learned_phrases.learn_phrase("啉茶", "lim-tê");
         let key = derive_custom_query_key("tsiahpng", "tl").expect("a key");
+        // `rows_matching` reads on the reader connection: it does not wait
+        // for the queued learns as the page's own requests do.
+        stores.learned_phrases.database.wait_for_queued_writes();
         assert_eq!(stores.learned_phrases.rows_matching(&key, 5).len(), 1);
 
         let rows = all(&stores, PHRASE);
