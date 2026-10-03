@@ -24,16 +24,13 @@ use taigi_desktop_core::engine::user_data::{
 };
 use taigi_desktop_core::settings::learning_records::{
     count_note, delete_job, fetch, last_used_label, order_label, set_count_job, Listing, KINDS,
-    ORDERS,
+    MAX_COUNT, ORDERS,
 };
 use taigi_desktop_core::settings::listing::{
     JobOutcome, JobState, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
 };
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
-
-/// The largest count the field offers; the engine clamps to the same.
-const MAX_COUNT: f64 = 1_000_000.0;
 
 struct State {
     listing: Listing,
@@ -100,10 +97,8 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
 impl LearningRecordsPage {
     fn new(context: &PageContext<'_>, page: &adw::PreferencesPage) -> Rc<Self> {
         let strings = *context.strings;
-        // What the rows are, then which of them and in what order.
-        let pickers = adw::PreferencesGroup::builder()
-            .description(strings.resolve(StringKey::DictionaryLearningRecordsInfo))
-            .build();
+        // Which rows, in what order.
+        let pickers = adw::PreferencesGroup::new();
         let kind_labels: Vec<&str> = KINDS.iter().map(|(_, key)| strings.resolve(*key)).collect();
         let kind = adw::ComboRow::builder()
             .title(strings.resolve(StringKey::DictionaryLearningRecords))
@@ -295,8 +290,7 @@ impl LearningRecordsPage {
         {
             let mut state = self.state.borrow_mut();
             change(&mut state);
-            state.listing.page = 0;
-            state.listing.selected_id = None;
+            state.listing.rewind();
         }
         self.load();
     }
@@ -423,7 +417,7 @@ impl LearningRecordsPage {
             .selection_mode(gtk::SelectionMode::None)
             .css_classes(["boxed-list"])
             .build();
-        let count = adw::SpinRow::with_range(1.0, MAX_COUNT, 1.0);
+        let count = adw::SpinRow::with_range(1.0, MAX_COUNT as f64, 1.0);
         count.set_title(strings.resolve(StringKey::DictionaryLearningRecordsCount));
         count.set_value(record.count.max(1) as f64);
         fields.append(&count);

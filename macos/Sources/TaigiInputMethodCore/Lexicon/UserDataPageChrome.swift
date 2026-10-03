@@ -34,6 +34,14 @@ enum UserDataPageActivity: Equatable, Sendable {
             nil
         }
     }
+
+    /// Takes the page's one work slot for `label`, or answers false because
+    /// something else holds it.
+    mutating func begin(_ label: StringKey) -> Bool {
+        guard !isWorking else { return false }
+        self = .working(label)
+        return true
+    }
 }
 
 /// Something the page has to tell the user about — what happened, never how to
@@ -243,13 +251,19 @@ struct UserDataActionsSection: View {
     }
 }
 
-/// Every number a managed list is drawn to — the tables of Custom Dictionary and custom typefaces
-/// alike, so two lists of the same kind are the same size.
+/// Every number a managed list is drawn to — the tables of Custom Dictionary, Learning Records
+/// and custom typefaces alike, so two lists of the same kind are the same size.
 ///
 /// Approximate by nature: AppKit owns a table's real row metrics. The direction
 /// of the error is what matters — a height derived from a row count comes up a
 /// little short rather than cutting a row off, because the count is the input.
 enum UserDataListMetrics {
+    /// How many rows one page of an engine-paged list holds (Custom
+    /// Dictionary, Learning Records). Chosen with the table's height rather
+    /// than against it (`tableHeight(rows:)`): the point of paging is that a
+    /// page never needs a scroller of its own.
+    static let pageSize = 10
+
     static let tableRowHeight: CGFloat = 24
     static let tableHeaderHeight: CGFloat = 28
 
@@ -258,9 +272,22 @@ enum UserDataListMetrics {
         tableHeaderHeight + CGFloat(rows) * tableRowHeight
     }
 
+    /// An engine-paged list's table: tall enough to read as a list rather
+    /// than a row or two, short enough that the buttons and the actions under
+    /// it stay on screen at the window's floor height. Derived from the page
+    /// size rather than the page size guessed from a height, so a page always
+    /// shows every row it holds.
+    static let pagedTableHeight = tableHeight(rows: pageSize)
+
     /// Large enough that an empty list's symbol reads as a state rather than as
     /// a control the user is meant to press.
     static let emptyStateSymbolSize: CGFloat = 34
+
+    /// What an empty store's list draws: an empty tray, not the pane's own
+    /// icon. The pane icon names the pane the user is already looking at,
+    /// where what this draws has to say "and there is nothing in it" (USER
+    /// 2026-08-24).
+    static let emptyStateSymbolName = "tray"
 }
 
 /// The `n / N` readout and the two arrows a paged list puts at the trailing
@@ -301,8 +328,9 @@ struct UserDataListPager: View {
     }
 }
 
-/// The `+` / `−` pair under an editable list, where macOS puts the add and
-/// remove verbs for one — plus whatever a list wants at the trailing end (a
+/// The `+` / `−` pair under an editable list (or `−` alone under a list
+/// nothing is added to by hand), where macOS puts the add and remove verbs
+/// for one — plus whatever a list wants at the trailing end (a
 /// paged list puts its `UserDataListPager` there; a list that fits needs
 /// nothing).
 ///
@@ -311,20 +339,23 @@ struct UserDataListPager: View {
 struct UserDataListControls<Trailing: View>: View {
     @Environment(DisplayLanguageStore.self) private var language
 
-    /// What the `+` announces to an assistive reader — the list's own verb,
-    /// since "add" alone does not say what is being added.
-    let addLabelKey: StringKey
+    /// The `+`: what it announces to an assistive reader — the list's own
+    /// verb, since "add" alone does not say what is being added — and what
+    /// it does. Nil for a list nothing is added to by hand (Learning
+    /// Records): it draws `−` alone.
+    var add: (labelKey: StringKey, action: () -> Void)?
     let isRemoveEnabled: Bool
-    let onAdd: () -> Void
     let onRemove: () -> Void
     @ViewBuilder let trailing: () -> Trailing
 
     var body: some View {
         HStack(spacing: 4) {
-            Button(action: onAdd) {
-                UserDataListControlGlyph(symbolName: "plus")
+            if let add {
+                Button(action: add.action) {
+                    UserDataListControlGlyph(symbolName: "plus")
+                }
+                .accessibilityLabel(language.string(add.labelKey))
             }
-            .accessibilityLabel(language.string(addLabelKey))
 
             Button(action: onRemove) {
                 UserDataListControlGlyph(symbolName: "minus")
@@ -346,15 +377,13 @@ struct UserDataListControls<Trailing: View>: View {
 
 extension UserDataListControls where Trailing == EmptyView {
     init(
-        addLabelKey: StringKey,
+        add: (labelKey: StringKey, action: () -> Void),
         isRemoveEnabled: Bool,
-        onAdd: @escaping () -> Void,
         onRemove: @escaping () -> Void,
     ) {
         self.init(
-            addLabelKey: addLabelKey,
+            add: add,
             isRemoveEnabled: isRemoveEnabled,
-            onAdd: onAdd,
             onRemove: onRemove,
             trailing: { EmptyView() },
         )

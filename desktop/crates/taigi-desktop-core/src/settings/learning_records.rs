@@ -1,8 +1,9 @@
 //! The Learning Records pane's model, shared by both settings windows:
-//! which kind of learned row and which order are on screen, the list
-//! (`listing.rs`, shared with Custom Dictionary), what each job answers, and
-//! how a row reads. The engine owns the rows and their rules
-//! (`engine/userdata/src/learning_records.rs`); the shells own the widgets.
+//! which kinds and orders there are to pick from, the list (`listing.rs`,
+//! shared with Custom Dictionary), what each job answers, and how a row
+//! reads. The engine owns the rows and their rules
+//! (`engine/userdata/src/learning_records.rs`); the shells own the widgets
+//! and which kind and order are on screen.
 //!
 //! Design: `docs/architecture/learning-records-page-roadmap.md`.
 
@@ -47,6 +48,19 @@ pub const ORDERS: [LearningRecordOrder; 2] = [
     LearningRecordOrder::MostUsed,
     LearningRecordOrder::MostRecent,
 ];
+
+/// The largest count the edit field offers; the engine clamps to the same
+/// (`engine/userdata` `set_count`).
+pub const MAX_COUNT: i64 = 1_000_000;
+
+/// A count field's value as a count the engine takes: a whole number in
+/// `1..=MAX_COUNT`. `None` for no number at all (a cleared field). A typed
+/// fraction rounds.
+pub fn whole_count(value: f64) -> Option<i64> {
+    value
+        .is_finite()
+        .then(|| value.round().clamp(1.0, MAX_COUNT as f64) as i64)
+}
 
 pub fn order_label(order: LearningRecordOrder) -> StringKey {
     match order {
@@ -164,6 +178,17 @@ mod tests {
     }
 
     #[test]
+    fn the_count_field_answers_a_whole_number_inside_the_engines_range() {
+        // trace: round, then clamp to 1..=1_000_000 (`set_count` clamps the
+        // same, `engine/userdata`).
+        assert_eq!(whole_count(25.0), Some(25));
+        assert_eq!(whole_count(2.5), Some(3), "round half away from zero");
+        assert_eq!(whole_count(0.2), Some(1), "never below one");
+        assert_eq!(whole_count(5_000_000.0), Some(1_000_000));
+        assert_eq!(whole_count(f64::NAN), None, "a cleared field");
+    }
+
+    #[test]
     fn only_word_frequency_says_its_count_stops_mattering_at_forty() {
         assert_eq!(
             count_note(LearningRecordKind::Frequency),
@@ -228,6 +253,9 @@ mod tests {
             listing.selected_row().map(|row| row.text.as_str()),
             Some("食飯")
         );
+        listing.page = 1;
+        listing.rewind();
+        assert_eq!((listing.page, listing.selected_id), (0, None));
         let request = listing.begin_load();
         assert_eq!(
             listing.land(request.generation, Err("disk".to_owned())),

@@ -117,7 +117,6 @@ enum class StringKey(
     DICTIONARY_CLEAR_LEARNING_RECORDS_DONE(R.string.i18n_dictionary_clearLearningRecordsDone),
     DICTIONARY_CLEAR_LEARNING_RECORDS_FAILED(R.string.i18n_dictionary_clearLearningRecordsFailed),
     DICTIONARY_LEARNING_RECORDS(R.string.i18n_dictionary_learningRecords),
-    DICTIONARY_LEARNING_RECORDS_INFO(R.string.i18n_dictionary_learningRecordsInfo),
     DICTIONARY_LEARNING_RECORDS_FREQUENCY(R.string.i18n_dictionary_learningRecordsFrequency),
     DICTIONARY_LEARNING_RECORDS_PHRASES(R.string.i18n_dictionary_learningRecordsPhrases),
     DICTIONARY_LEARNING_RECORDS_ASSOCIATION(R.string.i18n_dictionary_learningRecordsAssociation),

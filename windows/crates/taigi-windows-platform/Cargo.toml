@@ -35,6 +35,8 @@ windows = { workspace = true, features = [
     "Win32_System_SystemInformation",
     "Win32_System_SystemServices",
     "Win32_System_Threading",
+    # `utc_offset_seconds_at` (the Learning Records page's last-used day).
+    "Win32_System_Time",
     "Win32_UI_Accessibility",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_Shell",

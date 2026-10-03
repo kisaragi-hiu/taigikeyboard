@@ -1585,24 +1585,6 @@
         }
       }
     },
-    "i18n_dictionary_learningRecordsInfo": {
-      "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Footnote explaining what the rows are. Says nothing about ranking: only word frequency feeds candidate ranking (see learningRecordsCountCapInfo).",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What the keyboard learned from the words you pick, and how many times."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選んだ単語からキーボードが学習した記録と回数です。"
-          }
-        }
-      }
-    },
     "i18n_dictionary_learningRecordsLastUsed": {
       "comment": "Page listing what the keyboard learned from the user's picks (Learning Records). Column header: when the row was last used.",
       "extractionState": "manual",
