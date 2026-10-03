@@ -15,7 +15,10 @@
 //! keyboard learns the row again on the next pick.
 
 use crate::winui::cards;
-use crate::winui::list_pager::{self, icon_button};
+use crate::winui::list_pager::{
+    self, icon_button, CONTROL_GAP, EDIT_GLYPH, REMOVE_GLYPH, SECONDARY_OPACITY, TABLE_COLUMN_GAP,
+    TABLE_HEADER_GAP, TABLE_HEADER_INSET, TABLE_HEIGHT,
+};
 use crate::winui::list_selection::{selectable_list, SettledRows};
 use crate::winui::pages::choice_row;
 use crate::winui::window::{Message as WindowMessage, SettingsWindow};
@@ -23,27 +26,15 @@ use taigi_desktop_core::engine::user_data::{
     LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
 };
 use taigi_desktop_core::settings::learning_records::{
-    count_note, delete_job, fetch, last_used_label, order_label, set_count_job, Listing, KINDS,
-    ORDERS,
+    count_note, delete_job, fetch, last_used_label, order_label, set_count_job, whole_count,
+    Listing, KINDS, MAX_COUNT, ORDERS,
 };
-use taigi_desktop_core::settings::listing::{
-    JobOutcome, JobState, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
-};
+use taigi_desktop_core::settings::listing::{JobOutcome, JobState, LoadLanded, FILTER_SETTLE};
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
 
-/// Custom Dictionary's table height: the page is sized from the page size.
-const TABLE_HEIGHT: f64 = 300.0;
 const DIALOG_FIELD_WIDTH: f64 = 320.0;
-const CONTROL_GAP: f64 = 8.0;
-const TABLE_COLUMN_GAP: f64 = 12.0;
-/// The header sits over the list's own item inset.
-const TABLE_HEADER_INSET: f64 = 12.0;
-const TABLE_HEADER_GAP: f64 = 8.0;
-const OVERLAY_RING_SIZE: f64 = 20.0;
-/// WinUI's secondary text, as opacity, so it follows the theme.
-const SECONDARY_OPACITY: f64 = 0.65;
 /// Reading, word, count, last used: the two texts share most of the line,
 /// the count and the day take what a number and `YYYY-MM-DD` need.
 const TABLE_COLUMNS: [GridLength; 4] = [
@@ -52,8 +43,9 @@ const TABLE_COLUMNS: [GridLength; 4] = [
     GridLength::Star(0.5),
     GridLength::Star(0.8),
 ];
-/// The largest count the field offers; the engine clamps to the same.
-const MAX_COUNT: f64 = 1_000_000.0;
+/// A fetched page and each row's last-used day, read off the UI thread:
+/// the day asks the zone database once per row, not once per render.
+type LoadedPage = (LearningRecordPage, Vec<String>);
 
 #[derive(Clone)]
 pub enum Message {
@@ -65,7 +57,7 @@ pub enum Message {
     FilterSettled(u64),
     /// A page the user stepped to, already clamped by the caller.
     ShowPage(usize),
-    Loaded(u64, Box<Result<LearningRecordPage, String>>),
+    Loaded(u64, Box<Result<LoadedPage, String>>),
     Select(Option<usize>),
     Edit,
     Delete,
@@ -88,6 +80,8 @@ struct EditingCount {
 
 pub struct LearningRecordsModel {
     listing: Listing,
+    /// `listing.rows`' last-used days, index for index; replaced with them.
+    last_used: Vec<String>,
     kind: LearningRecordKind,
     order: LearningRecordOrder,
     is_first_load_requested: bool,
@@ -98,20 +92,19 @@ pub struct LearningRecordsModel {
     /// The page's one work slot: the job it waits on, and whether the
     /// overlay shows.
     job: JobState,
-    next_job_generation: u64,
 }
 
 impl Default for LearningRecordsModel {
     fn default() -> Self {
         Self {
             listing: Listing::default(),
+            last_used: Vec::new(),
             kind: KINDS[0].0,
             order: ORDERS[0],
             is_first_load_requested: false,
             settled: SettledRows::default(),
             editing: None,
             job: JobState::default(),
-            next_job_generation: 0,
         }
     }
 }
@@ -170,8 +163,14 @@ pub fn update(
             load(model, context);
         }
         Message::Loaded(generation, outcome) => {
-            if let LoadLanded::Failed(notice) = model.listing.land(generation, *outcome) {
-                *alert = Some(notice);
+            let (outcome, last_used) = match *outcome {
+                Ok((page, last_used)) => (Ok(page), last_used),
+                Err(detail) => (Err(detail), Vec::new()),
+            };
+            match model.listing.land(generation, outcome) {
+                LoadLanded::Adopted => model.last_used = last_used,
+                LoadLanded::Failed(notice) => *alert = Some(notice),
+                LoadLanded::Stale => {}
             }
         }
         Message::Select(index) => {
@@ -246,18 +245,8 @@ fn show_from_first_page(
     model: &mut LearningRecordsModel,
     context: &ComponentContext<SettingsWindow>,
 ) {
-    model.listing.page = 0;
-    model.listing.selected_id = None;
+    model.listing.rewind();
     load(model, context);
-}
-
-/// The field's value as a count the engine takes: a whole number in
-/// `1..=MAX_COUNT`. `None` for no number at all. The `NumberBox` coerces
-/// to its bounds but not to a whole number, so a typed fraction rounds.
-fn whole_count(value: f64) -> Option<i64> {
-    value
-        .is_finite()
-        .then(|| value.round().clamp(1.0, MAX_COUNT) as i64)
 }
 
 /// The list item's key: the kind and the store's row id — ids are per
@@ -266,71 +255,50 @@ fn row_key(record: &LearningRecord) -> String {
     format!("{}:{}", record.kind, record.id)
 }
 
-/// Starts a load of the page on screen. A load has no overlay: the rows
-/// already on screen stay put while it runs.
+/// Starts a load of the page on screen (`list_pager::spawn_load`), each
+/// row's last-used day read beside it.
 fn load(model: &mut LearningRecordsModel, context: &ComponentContext<SettingsWindow>) {
     let request = model.listing.begin_load();
-    let generation = request.generation;
     let (kind, order) = (model.kind, model.order);
-    _ = context.spawn_background_with_rejection(
-        move |_| {
-            let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                fetch(&request, kind, order)
-            }))
-            .unwrap_or_else(|_| Err(LOAD_DID_NOT_FINISH.to_owned()));
-            WindowMessage::LearningRecords(Message::Loaded(generation, Box::new(outcome)))
+    list_pager::spawn_load(
+        context,
+        request.generation,
+        move || {
+            let page = fetch(&request, kind, order)?;
+            // The day in the user's calendar at the time it was used.
+            let last_used = page
+                .rows
+                .iter()
+                .map(|row| {
+                    last_used_label(
+                        row.last_used_ms,
+                        taigi_windows_platform::utc_offset_seconds_at(row.last_used_ms),
+                    )
+                })
+                .collect();
+            Ok((page, last_used))
         },
-        // A thread the runtime would not start is a failure the user sees,
-        // never a load that quietly never lands.
-        WindowMessage::LearningRecords(Message::Loaded(
-            generation,
-            Box::new(Err("the load could not be started".to_owned())),
-        )),
+        |generation, outcome| WindowMessage::LearningRecords(Message::Loaded(generation, outcome)),
     );
 }
 
 /// Takes the page's one work slot for `job`, or does nothing because
-/// something else holds it (Custom Dictionary's `begin_job`).
+/// something else holds it (`list_pager::spawn_job`).
 fn begin_job(
     model: &mut LearningRecordsModel,
     context: &ComponentContext<SettingsWindow>,
     job: impl FnOnce() -> JobOutcome + Send + 'static,
 ) {
-    if model.job.is_running() {
-        return;
-    }
-    model.next_job_generation = model.next_job_generation.wrapping_add(1);
-    let generation = model.next_job_generation;
-    model.job.start(generation);
-    _ = context.spawn_background_with_rejection(
-        move |_| {
-            // A panicking store call must not leave the slot held for the
-            // life of the window.
-            let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(job))
-                .unwrap_or_else(|_| JobOutcome::did_not_finish::<LearningRecord>());
-            WindowMessage::LearningRecords(Message::JobFinished(generation, Box::new(outcome)))
+    list_pager::spawn_job::<LearningRecord>(
+        &mut model.job,
+        context,
+        job,
+        |generation, outcome| {
+            WindowMessage::LearningRecords(Message::JobFinished(generation, outcome))
         },
-        WindowMessage::LearningRecords(Message::JobFinished(
-            generation,
-            Box::new(JobOutcome {
-                message: Some(PageMessage::failure(
-                    StringKey::DictionaryLearningRecordsWriteFailed,
-                    "the operation could not be started",
-                )),
-                is_reload_wanted: false,
-            }),
-        )),
+        |generation| WindowMessage::LearningRecords(Message::ShowBusy(generation)),
     );
-    // The overlay waits, so a millisecond-long write does not flash it.
-    _ = context.spawn_background(move |_| {
-        std::thread::sleep(OVERLAY_DELAY);
-        WindowMessage::LearningRecords(Message::ShowBusy(generation))
-    });
 }
-
-/// Segoe Fluent Icons: Edit, Remove.
-const EDIT_GLYPH: &str = "\u{E70F}";
-const REMOVE_GLYPH: &str = "\u{E738}";
 
 pub fn view(
     window: &SettingsWindow,
@@ -388,7 +356,13 @@ pub fn view(
                     .callback(|text| WindowMessage::LearningRecords(Message::FilterChanged(text))),
             ),
         record_table(model, strings, context, is_enabled),
-        busy_overlay(model, strings),
+        list_pager::busy_overlay(
+            model
+                .job
+                .is_busy_shown()
+                .then_some(StringKey::DesktopProgressWorking),
+            strings,
+        ),
         count_dialog(model, strings, context),
     ))
 }
@@ -419,13 +393,9 @@ fn record_table(
         .listing
         .rows
         .iter()
-        .map(|row| {
+        .zip(&model.last_used)
+        .map(|(row, last_used)| {
             let key = row_key(row);
-            // The day in the user's calendar at the time it was used.
-            let last_used = last_used_label(
-                row.last_used_ms,
-                taigi_windows_platform::utc_offset_seconds_at(row.last_used_ms),
-            );
             (
                 key.clone(),
                 ListViewItem::new().tag(key).content(table_line([
@@ -436,7 +406,7 @@ fn record_table(
                     TextBlock::new().text(row.text.clone()).into(),
                     TextBlock::new().text(row.count.to_string()).into(),
                     TextBlock::new()
-                        .text(last_used)
+                        .text(last_used.clone())
                         .opacity(SECONDARY_OPACITY)
                         .into(),
                 ])),
@@ -461,7 +431,13 @@ fn record_table(
         |rows| WindowMessage::LearningRecords(Message::RowsApplied(rows)),
     );
     // OVER the list, not in place of it, as on Custom Dictionary.
-    let list = Grid::new().children((list, Border::new().content(empty_state(model, strings))));
+    let list = Grid::new().children((
+        list,
+        Border::new().content(list_pager::empty_state(
+            model.listing.empty_state_key(),
+            strings,
+        )),
+    ));
     let header = |key| -> View {
         TextBlock::new()
             .text(strings.resolve(key))
@@ -509,43 +485,6 @@ fn record_table(
     )))
 }
 
-/// The job's name over a ring, once it has run long enough to say so.
-fn busy_overlay(model: &LearningRecordsModel, strings: &StringResolver) -> View {
-    if !model.job.is_busy_shown() {
-        return View::empty();
-    }
-    cards::frame(
-        StackPanel::new()
-            .orientation(Orientation::Horizontal)
-            .spacing(CONTROL_GAP)
-            .horizontal_alignment(HorizontalAlignment::Center)
-            .children((
-                ProgressRing::new()
-                    .is_active(true)
-                    .width(OVERLAY_RING_SIZE)
-                    .height(OVERLAY_RING_SIZE),
-                TextBlock::new()
-                    .text(strings.resolve(StringKey::DesktopProgressWorking))
-                    .vertical_alignment(VerticalAlignment::Center),
-            )),
-    )
-}
-
-/// What a list with no rows says: nothing learned yet (a STATE) or a filter
-/// matching nothing (a RESULT of what was typed).
-fn empty_state(model: &LearningRecordsModel, strings: &StringResolver) -> View {
-    let Some(key) = model.listing.empty_state_key() else {
-        return View::empty();
-    };
-    TextBlock::new()
-        .text(strings.resolve(key))
-        .text_wrapping(TextWrapping::Wrap)
-        .opacity(SECONDARY_OPACITY)
-        .horizontal_alignment(HorizontalAlignment::Center)
-        .vertical_alignment(VerticalAlignment::Center)
-        .into()
-}
-
 /// Edit one row's count: the word and its reading as the body, a
 /// `NumberBox` for the count, and — for word frequency — the note that
 /// counts past 40 rank the same. Escape is the dialog's own close key.
@@ -589,7 +528,7 @@ fn count_dialog(
                     .width(DIALOG_FIELD_WIDTH),
                 NumberBox::new()
                     .minimum(1.0)
-                    .maximum(MAX_COUNT)
+                    .maximum(MAX_COUNT as f64)
                     .value(editing.count)
                     .width(DIALOG_FIELD_WIDTH)
                     .on_value_changed(context.callback(|count| {
@@ -607,17 +546,6 @@ fn count_dialog(
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn the_count_field_answers_a_whole_number_inside_the_engines_range() {
-        // trace: round, then clamp to 1..=1_000_000 (`set_count` clamps the
-        // same, `engine/userdata`).
-        assert_eq!(whole_count(25.0), Some(25));
-        assert_eq!(whole_count(2.5), Some(3), "round half away from zero");
-        assert_eq!(whole_count(0.2), Some(1), "never below one");
-        assert_eq!(whole_count(5_000_000.0), Some(1_000_000));
-        assert_eq!(whole_count(f64::NAN), None, "a cleared field");
-    }
 
     #[test]
     fn a_row_key_tells_the_two_kinds_apart_at_the_same_id() {

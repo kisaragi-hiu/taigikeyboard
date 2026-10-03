@@ -55,6 +55,18 @@ impl JobOutcome {
             is_reload_wanted: true,
         }
     }
+
+    /// A job on a list of `Row` whose worker the runtime would not start:
+    /// nothing ran, so nothing reloads.
+    pub fn could_not_start<Row: ListedRow>() -> Self {
+        Self {
+            message: Some(PageMessage::failure(
+                Row::WRITE_FAILED,
+                "the operation could not be started",
+            )),
+            is_reload_wanted: false,
+        }
+    }
 }
 
 /// The job a page started and still waits on, and whether its busy
@@ -64,6 +76,8 @@ impl JobOutcome {
 pub struct JobState {
     generation: Option<u64>,
     is_busy_shown: bool,
+    /// The generation `start_next` handed out last.
+    last_generation: u64,
 }
 
 impl JobState {
@@ -72,6 +86,15 @@ impl JobState {
     pub fn start(&mut self, generation: u64) {
         self.generation = Some(generation);
         self.is_busy_shown = false;
+    }
+
+    /// Starts the page's next job under a generation of its own counting —
+    /// for a shell whose page owns its work slot (Windows); the Linux
+    /// window's shared slot hands its generation to `start`.
+    pub fn start_next(&mut self) -> u64 {
+        self.last_generation = self.last_generation.wrapping_add(1);
+        self.start(self.last_generation);
+        self.last_generation
     }
 
     /// The job at `generation` came back. `true` when it is still this
@@ -211,6 +234,13 @@ impl<Row: ListedRow> Listing<Row> {
             }
             Err(detail) => LoadLanded::Failed(PageMessage::failure(Row::READ_FAILED, detail)),
         }
+    }
+
+    /// Back to the first page with nothing selected, the filter kept — for
+    /// another kind or order of the same list.
+    pub fn rewind(&mut self) {
+        self.page = 0;
+        self.selected_id = None;
     }
 
     /// Steps `delta` pages. `false` past either end: nothing to load.

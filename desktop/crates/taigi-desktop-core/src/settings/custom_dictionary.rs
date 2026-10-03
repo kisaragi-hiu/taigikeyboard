@@ -265,6 +265,31 @@ mod tests {
     }
 
     #[test]
+    fn a_page_owning_its_slot_counts_its_own_generations() {
+        let mut job = JobState::default();
+        let first = job.start_next();
+        assert!(job.is_running());
+        assert!(job.finish(first));
+        let second = job.start_next();
+        assert_ne!(
+            first, second,
+            "a late answer to the first job is not the second's"
+        );
+        assert!(!job.finish(first));
+        assert!(job.finish(second));
+        assert_eq!(
+            JobOutcome::could_not_start::<CustomDictionaryEntry>(),
+            JobOutcome {
+                message: Some(PageMessage::failure(
+                    StringKey::DesktopCustomDictWriteFailed,
+                    "the operation could not be started"
+                )),
+                is_reload_wanted: false,
+            }
+        );
+    }
+
+    #[test]
     fn both_destructive_commands_are_confirmed_and_only_one_asks_a_question() {
         assert_eq!(
             Confirm::DeleteAll.title_key(),
