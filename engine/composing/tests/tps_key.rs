@@ -91,6 +91,11 @@ fn space_after_an_open_syllable_is_the_separator() {
     let mut engine = Engine::new();
     type_keys(&mut engine, "ㄍㄚ");
     let resp = tps_key(&mut engine, " ");
+    // Effects are the caller's signal that the key was taken.
+    assert_eq!(
+        common::effect_kinds(&resp.effect),
+        vec!["UpdatePreedit", "RefreshCandidates"]
+    );
     let preedit = resp.preedit.unwrap();
     assert_eq!(preedit.raw_input, "ㄍㄚ ");
     assert_eq!(preedit.display_text, "ㄍㄚ");
@@ -229,6 +234,7 @@ fn tps_key_matches_the_mobile_three_call_path() {
         "ㄇˊㄫ˫",       // syllabic nasals
         "ㄗㄤ9",        // tone 9 from the digit
         "ㄍㄚㄉ  ㄅㄚ", // a second Space changes nothing
+        "ㄍㄚㄉ˙ ㄅ",   // tone 8 closes the syllable
         "ㄏㄧㄫㄉㄧㄅ",
     ] {
         let mut one_step = Engine::new();
@@ -281,4 +287,25 @@ fn leading_hyphen_from_idle_is_a_document_literal() {
     let resp = tps_key(&mut engine, "-");
     assert!(!resp.is_composing);
     assert_eq!(common::commit_text(&resp), Some("-".to_string()));
+}
+
+// trace: "ㄍㄚˋ", caret stepped left to before ˋ — a separator there would part
+// the syllable from its tone mark. "ㄍㄚ ㄙㄚ", caret stepped left to before the
+// separator — a second one beside it adds nothing. Both refuse.
+#[test]
+fn space_before_a_tone_mark_or_a_separator_is_a_no_op() {
+    for (keys, steps_left) in [("ㄍㄚˋ", 1), ("ㄍㄚ ㄙㄚ", 3)] {
+        let mut engine = Engine::new();
+        type_keys(&mut engine, keys);
+        for _ in 0..steps_left {
+            engine.apply(
+                Intent::MoveCaret {
+                    direction: Some(CaretDirection::Left),
+                },
+                &config_tps(),
+            );
+        }
+        assert!(tps_key(&mut engine, " ").effect.is_empty(), "{keys:?}");
+        assert_eq!(raw_of(&engine), keys);
+    }
 }

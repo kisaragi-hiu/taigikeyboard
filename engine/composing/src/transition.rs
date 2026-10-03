@@ -213,13 +213,17 @@ const TPS_SEPARATOR: &str = " ";
 
 /// TPS key on the chunk before the caret; the tail after it rides along.
 /// `None` when the key changes nothing: an empty key, or a separator where
-/// the syllable is already closed (a tone mark or a separator precedes the
-/// caret) or where nothing precedes it.
+/// nothing precedes the caret or where a tone mark or a separator sits on
+/// either side of it (the syllable is already closed, or the separator would
+/// part a syllable from its own tone mark).
 fn tps_key_before_caret(raw: &str, caret: usize, key: &str) -> Option<(String, usize)> {
     let prefix = &raw[..caret];
     if key == TPS_SEPARATOR {
-        let last = prefix.chars().next_back()?;
-        if last == ' ' || phonetics::is_tps_tone_mark(last) {
+        let closes_syllable = |c: char| c == ' ' || phonetics::is_tps_tone_mark(c);
+        if closes_syllable(prefix.chars().next_back()?) {
+            return None;
+        }
+        if raw[caret..].chars().next().is_some_and(closes_syllable) {
             return None;
         }
         return Some(insert_at_caret(raw, caret, key));
@@ -230,6 +234,7 @@ fn tps_key_before_caret(raw: &str, caret: usize, key: &str) -> Option<(String, u
     let (adjusted, replace_last) = phonetics::tps_input_adjust(key, prefix);
     match replace_last {
         Some(replacement) => {
+            // The adjuster replaces the character it read, so one precedes the caret.
             let (raw, caret) = replace_before_caret(raw, caret, &replacement)?;
             Some(insert_at_caret(&raw, caret, &adjusted))
         }

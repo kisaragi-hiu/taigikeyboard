@@ -13,12 +13,18 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * replacement it asks for (`ReplaceLast`) and inserts the adjusted glyph —
  * what a mobile platform does in three calls, without the caller having to
  * know where the caret sits in the raw buffer.
- * Space is the soft syllable separator: inserted when the character before
- * the caret is neither a tone mark nor a separator. Otherwise — the syllable
- * is already closed, or nothing precedes the caret — the request is a no-op
- * with no effects, which is the caller's cue to treat the key as its own.
+ * Space is the soft syllable separator. It is inserted when a character of
+ * the pending tail precedes the caret (nailed segments do not count) and no
+ * tone mark or separator sits on either side of the caret. Otherwise the
+ * request is a no-op.
+ * The signal: an inserted key answers with effects (`UpdatePreedit`,
+ * `RefreshCandidates`); a no-op answers with none, and its preedit is the
+ * unchanged snapshot. That is the caller's cue to treat the Space as its own
+ * — `display_text` cannot tell, since it never shows the separator.
  * Idle + a glyph enters composing; Idle + Space is a no-op.
- * The caller sends this only under `AppConfig.input_mode = "tps"`.
+ * The caller sends this only under `AppConfig.input_mode = "tps"`, and only
+ * a TPS glyph, a tone mark, the digit `9` (tone 9), a hyphen or U+0020 —
+ * anything else would be composed into the raw buffer as typed.
  * </pre>
  *
  * Protobuf type {@code taigi.engine.TpsKey}
@@ -170,12 +176,18 @@ public  final class TpsKey extends
    * replacement it asks for (`ReplaceLast`) and inserts the adjusted glyph —
    * what a mobile platform does in three calls, without the caller having to
    * know where the caret sits in the raw buffer.
-   * Space is the soft syllable separator: inserted when the character before
-   * the caret is neither a tone mark nor a separator. Otherwise — the syllable
-   * is already closed, or nothing precedes the caret — the request is a no-op
-   * with no effects, which is the caller's cue to treat the key as its own.
+   * Space is the soft syllable separator. It is inserted when a character of
+   * the pending tail precedes the caret (nailed segments do not count) and no
+   * tone mark or separator sits on either side of the caret. Otherwise the
+   * request is a no-op.
+   * The signal: an inserted key answers with effects (`UpdatePreedit`,
+   * `RefreshCandidates`); a no-op answers with none, and its preedit is the
+   * unchanged snapshot. That is the caller's cue to treat the Space as its own
+   * — `display_text` cannot tell, since it never shows the separator.
    * Idle + a glyph enters composing; Idle + Space is a no-op.
-   * The caller sends this only under `AppConfig.input_mode = "tps"`.
+   * The caller sends this only under `AppConfig.input_mode = "tps"`, and only
+   * a TPS glyph, a tone mark, the digit `9` (tone 9), a hyphen or U+0020 —
+   * anything else would be composed into the raw buffer as typed.
    * </pre>
    *
    * Protobuf type {@code taigi.engine.TpsKey}

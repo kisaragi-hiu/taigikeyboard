@@ -54,7 +54,7 @@ Open, the maintainer's call (O1): what Space does once the syllable is closed �
 
 ### D0 — One engine intent: `TpsKey`
 
-A new composing intent `TpsKey { key }`, the TPS counterpart of `TelexKey`. In one transition the engine runs `tps_adjust` against the pending text before its own caret, applies the replacement the adjuster asks for, and inserts the glyph. `key = " "` is the separator: inserted when the character before the caret is neither a tone mark nor a space; otherwise the transition is a no-op and the raw buffer comes back unchanged, which is how the caller knows the syllable was already closed.
+A new composing intent `TpsKey { key }`, the TPS counterpart of `TelexKey`. In one transition the engine runs `tps_adjust` against the pending text before its own caret, applies the replacement the adjuster asks for, and inserts the glyph. `key = " "` is the separator: inserted when the character before the caret is neither a tone mark nor a space; otherwise the transition is a no-op that answers with no effects, which is how the caller knows the Space was not taken. With the caret inside the tail, a tone mark or separator after it refuses the Space too, so a syllable is never parted from its own tone mark.
 
 Why in the engine rather than three wrappers in the desktop core: the desktop has a movable composing caret and only the engine knows where it sits in the raw buffer; one mutation renders one preedit instead of two; and the rule is then written once for five platforms. Mobile keeps its three-call path; moving it onto `TpsKey` is outside this plan.
 
@@ -106,7 +106,7 @@ One branch at the top of `ComposingKeyIntent::intent`, taken when the bindings s
 | Key | Idle | Composing |
 |---|---|---|
 | A layout key | `TpsKey(glyph)` — begins the composition | `TpsKey(glyph)` |
-| Space | pass through | `TpsKey(" ")`; when the buffer comes back unchanged the syllable was already closed → O1 |
+| Space | pass through | `TpsKey(" ")`; when it answers with no effects the syllable was already closed → O1 |
 | Keypad `1`–`9`, no modifier, list showing | — | pick that slot |
 | Keypad digit otherwise | pass through | `CommitThenInsert` |
 | Enter / Shift+Enter / Tab / arrows / `[` `]` / Esc / Backspace / caret chord | unchanged | unchanged |
