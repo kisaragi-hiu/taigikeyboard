@@ -17,7 +17,7 @@ pub use protos::engine::CommitScript;
 use protos::engine::{
     composing_request, request, response, Append, CaretDirection as WireCaretDirection,
     CommitContinuous, CommitPreeditThenInsertExternal, CommitRaw, ComposingRequest,
-    ComposingResponse, DeleteBackward, FetchAtPos, MoveCaret, Reset, TelexKey,
+    ComposingResponse, DeleteBackward, FetchAtPos, MoveCaret, Reset, TelexKey, TpsKey,
 };
 
 use crate::keys::CaretDirection;
@@ -69,6 +69,27 @@ pub fn telex_key(
             key: key.to_owned(),
         }),
         "composingTelexKey",
+        generation,
+        Some(app_config(settings, platform)),
+    )
+}
+
+/// Types one TPS key at the caret — a glyph, a tone mark, the hyphen, or
+/// `" "` for the Space separator (`composing.proto` `TpsKey`): the engine
+/// auto-corrects against the pending text before its own caret and inserts,
+/// in one step. A Space it does not take answers with no effects. Same config
+/// as `append`.
+pub fn tps_key(
+    key: &str,
+    settings: &EngineSettings,
+    platform: DesktopPlatform,
+    generation: u64,
+) -> Option<ComposingTransition> {
+    dispatch(
+        composing_request::Method::TpsKey(TpsKey {
+            key: key.to_owned(),
+        }),
+        "composingTpsKey",
         generation,
         Some(app_config(settings, platform)),
     )

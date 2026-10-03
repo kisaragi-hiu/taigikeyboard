@@ -151,6 +151,22 @@ impl ComposingManager {
         self.apply(transition, executor);
     }
 
+    /// Types one TPS key — a glyph, a tone mark, the hyphen, or `" "` for the
+    /// Space separator. Answers whether the engine took it: a Space on a
+    /// closed syllable is not taken, and the caller decides what it does
+    /// instead (`desktop-tps-roadmap.md` § D3). A failed round trip is not
+    /// taken either; it changed nothing.
+    pub fn tps_key(&mut self, key: &str, executor: &mut dyn ComposingEffectExecutor) -> bool {
+        log::debug!("tpsKey");
+        let settings = self.current_settings();
+        let transition = engine::tps_key(key, &settings, self.platform, self.current_generation);
+        let taken = transition
+            .as_ref()
+            .is_some_and(|transition| !transition.effects.is_empty());
+        self.apply(transition, executor);
+        taken
+    }
+
     /// Drops the last character of the raw buffer. Ends the composition when
     /// that empties it.
     pub fn delete_backward(&mut self, executor: &mut dyn ComposingEffectExecutor) {

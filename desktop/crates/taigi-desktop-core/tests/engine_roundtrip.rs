@@ -111,6 +111,85 @@ fn telex_key_writes_the_tone_and_z_spells_the_mode_affricate() {
 }
 
 #[test]
+fn tps_key_composes_glyphs_and_space_is_taken_once() {
+    // trace: engine `TpsKey` — ㄍ ㄚ ㄉ: the adjuster folds ㄉ after ㄚ to ㆵ
+    // (`kat` is a valid final); Space after the stop coda is the separator and
+    // is hidden from the preedit; a second Space is refused with no effects.
+    let _engine = engine();
+    let settings = EngineSettings::default();
+    let generation = fresh_generation();
+    for key in ["ㄍ", "ㄚ", "ㄉ"] {
+        engine::tps_key(key, &settings, PLATFORM, generation).expect("tps round trip");
+    }
+    let separated = engine::tps_key(" ", &settings, PLATFORM, generation).expect("tps round trip");
+    assert_eq!(separated.raw_input, "ㄍㄚㆵ ");
+    assert_eq!(separated.display_text, "ㄍㄚㆵ");
+    assert!(!separated.effects.is_empty(), "the separator is taken");
+    let refused = engine::tps_key(" ", &settings, PLATFORM, generation).expect("tps round trip");
+    assert!(
+        refused.effects.is_empty(),
+        "a closed syllable refuses Space"
+    );
+    assert_eq!(refused.raw_input, "ㄍㄚㆵ ");
+    engine::reset(generation);
+}
+
+#[test]
+fn every_layout_glyph_begins_a_composition_the_engine_takes() {
+    // D2's hand check, automated against engine-table drift: each glyph the
+    // layout types, sent alone from idle, is taken and lands in the buffer.
+    // The hyphen alone is §21's document literal, not a composition.
+    use taigi_desktop_core::keys::{tps_glyph_for_event, KeyEventSnapshot, KeyModifiers};
+    let _engine = engine();
+    // The engine composes a TPS buffer by its content (`contains_tps`), so
+    // the default settings serve until the desktop has a TPS mode (P2b).
+    let settings = EngineSettings::default();
+    let keys = ('a'..='z')
+        .chain('0'..='9')
+        .chain(",;/-.=".chars())
+        .map(|key| (key.to_string(), KeyModifiers::NONE))
+        .chain(
+            "!EDRY*IKO>UJ(L<:^"
+                .chars()
+                .map(|key| (key.to_string(), KeyModifiers::SHIFT)),
+        );
+    for (typed, modifiers) in keys {
+        let glyph = tps_glyph_for_event(&KeyEventSnapshot::text(&typed, modifiers))
+            .unwrap_or_else(|| panic!("{typed:?} is a layout key"));
+        let generation = fresh_generation();
+        let taken =
+            engine::tps_key(glyph, &settings, PLATFORM, generation).expect("tps round trip");
+        assert!(!taken.effects.is_empty(), "{typed:?} → {glyph:?} taken");
+        assert!(
+            taken.raw_input.contains(glyph),
+            "{typed:?} → {glyph:?} in {:?}",
+            taken.raw_input
+        );
+        engine::reset(generation);
+    }
+}
+
+#[test]
+fn tl_display_to_tps_spells_a_reading_in_tps() {
+    // trace: phonetics `tl_display_to_tps` — `ka` → ㄍㄚ; `kò` (tone 3) →
+    // ㄍㄛ˪; `or` follows the flag (ㄜ when it maps to `er`).
+    assert_eq!(
+        engine::tl_display_to_tps("ka", true).as_deref(),
+        Some("ㄍㄚ")
+    );
+    assert_eq!(
+        engine::tl_display_to_tps("kò", true).as_deref(),
+        Some("ㄍㄛ˪")
+    );
+    // trace: tps.rs `to_zhuyin` — vowel `or` is ㄜ, or ㄛ when the flag is off.
+    assert_eq!(engine::tl_display_to_tps("or", true).as_deref(), Some("ㄜ"));
+    assert_eq!(
+        engine::tl_display_to_tps("or", false).as_deref(),
+        Some("ㄛ")
+    );
+}
+
+#[test]
 fn fetch_at_pos_returns_dictionary_candidates_and_commit_finalizes() {
     let _engine = engine();
     let settings = EngineSettings::default();

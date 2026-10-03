@@ -18,11 +18,11 @@ pub(crate) const OPTION: u64 = 1 << 19;
 pub(crate) const COMMAND: u64 = 1 << 20;
 
 /// Carbon's ANSI key codes (`kVK_ANSI_*`, positions on the keyboard) for the
-/// ten keys the core reads a code for — `1`…`9` and `;` (`chord.rs`
+/// keys the core reads a code for — `1`…`9` and `;` (`chord.rs`
 /// `NUMBER_ROW_KEY_CODES` / `SEMICOLON_KEY_CODE`) — each with the code the
 /// core spells it with (the Windows virtual key). `6` and `9` sit out of
 /// numeric order on Carbon's side.
-const KEY_CODES: [(u32, u16); 10] = [
+const KEY_CODES: [(u32, u16); 26] = [
     (0x12, 0x31), // 1
     (0x13, 0x32), // 2
     (0x14, 0x33), // 3
@@ -33,6 +33,26 @@ const KEY_CODES: [(u32, u16); 10] = [
     (0x1C, 0x38), // 8
     (0x19, 0x39), // 9
     (0x29, 0xBA), // ;
+    // The keypad (`kVK_ANSI_Keypad*`): its `1`…`9` are the TPS slot keys
+    // (`CandidateSlotKeySet::Keypad`) and no keypad key is a TPS layout key
+    // (`tps_layout.rs`). `8` and `9` skip 0x5A; `=` has no Windows keypad
+    // key and takes `VK_OEM_NEC_EQUAL`.
+    (0x52, 0x60),
+    (0x43, 0x6A),
+    (0x45, 0x6B),
+    (0x4E, 0x6D),
+    (0x41, 0x6E),
+    (0x4B, 0x6F),
+    (0x51, 0x92),
+    (0x53, 0x61),
+    (0x54, 0x62),
+    (0x55, 0x63),
+    (0x56, 0x64),
+    (0x57, 0x65),
+    (0x58, 0x66),
+    (0x59, 0x67),
+    (0x5B, 0x68),
+    (0x5C, 0x69),
 ];
 
 /// The snapshot the classifier reads off `event`. `special_key` is
@@ -167,6 +187,28 @@ mod tests {
             );
         }
         assert_eq!(core_key_code(0x29), Some(0xBA));
+        // kVK_ANSI_Keypad1…9 = 53 54 55 56 57 58 59 5B 5C → VK_NUMPAD1…9.
+        let keypad = [0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5B, 0x5C];
+        for (index, code) in keypad.into_iter().enumerate() {
+            assert_eq!(
+                core_key_code(code),
+                Some(0x61 + index as u16),
+                "keypad {}",
+                index + 1
+            );
+        }
+        // The rest of the keypad: 0 52, . 41, * 43, + 45, / 4B, - 4E, = 51.
+        for (carbon, core) in [
+            (0x52, 0x60),
+            (0x41, 0x6E),
+            (0x43, 0x6A),
+            (0x45, 0x6B),
+            (0x4B, 0x6F),
+            (0x4E, 0x6D),
+            (0x51, 0x92),
+        ] {
+            assert_eq!(core_key_code(carbon), Some(core), "{carbon:#x}");
+        }
         // kVK_ANSI_0, kVK_ANSI_A, kVK_Return, kVK_ANSI_Quote: no code the core reads.
         for other in [0x1D, 0x00, 0x24, 0x27] {
             assert_eq!(core_key_code(other), None, "{other:#x}");
