@@ -6,7 +6,8 @@
 use super::user_data::search_custom_entries;
 use super::{
     chhoe_url, dictionary_filters, is_hanji, moe_url, search_by_hanji, search_with_sources,
-    tl_to_poj, DictionarySource, LexiconRow, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
+    tl_display_to_tps, tl_to_poj, DictionarySource, LexiconRow, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
+    TPS_OR_MAPS_TO_ER,
 };
 use crate::settings::{keys, InputMode, SettingsDocument};
 
@@ -100,6 +101,8 @@ fn display_roman(tl: &str, mode: InputMode) -> String {
     match mode {
         InputMode::Poj => tl_to_poj(tl).unwrap_or_else(|| tl.to_owned()),
         InputMode::Tl => tl.to_owned(),
+        // The reading as the user types it; TL when the conversion fails.
+        InputMode::Tps => tl_display_to_tps(tl, TPS_OR_MAPS_TO_ER).unwrap_or_else(|| tl.to_owned()),
     }
 }
 

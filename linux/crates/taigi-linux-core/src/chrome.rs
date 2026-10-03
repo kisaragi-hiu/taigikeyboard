@@ -75,14 +75,16 @@ fn menu_id(command: MenuCommand) -> Option<&'static str> {
 
 /// The label the panel shows beside the icon: the romanization and the
 /// candidate display mode, the two states the global chords switch and the
-/// mode flash names on the other desktops (`台羅 · 漢字優先`).
+/// mode flash names on the other desktops (`台羅 · 漢字優先`). TPS alone
+/// under TPS, where the display mode switches nothing.
 pub fn mode_label(runtime: &Runtime) -> String {
     let strings = runtime.strings();
     let settings = runtime.settings.current();
-    let romanization = match settings.choice(&keys::INPUT_MODE) {
-        InputMode::Poj => StringKey::SettingsPojMode,
-        _ => StringKey::SettingsTlMode,
-    };
+    let input_mode: InputMode = settings.choice(&keys::INPUT_MODE);
+    if input_mode == InputMode::Tps {
+        return strings.resolve(input_mode.label_key()).to_owned();
+    }
+    let romanization = input_mode.label_key();
     let display_mode = settings.engine_settings().candidate_display_mode;
     format!(
         "{} · {}",
@@ -94,11 +96,12 @@ pub fn mode_label(runtime: &Runtime) -> String {
 /// The indicator text for a panel that draws at most two characters: GNOME
 /// Shell shows an IBus engine's `InputMode` property symbol in the top bar
 /// only when it is one or two characters long (`js/ui/status/keyboard.js`,
-/// GNOME 46). The romanization alone, as two hanji.
+/// GNOME 46). The input mode alone, as two hanji.
 pub fn mode_symbol(runtime: &Runtime) -> &'static str {
     match runtime.settings.current().choice(&keys::INPUT_MODE) {
+        InputMode::Tl => "台羅",
         InputMode::Poj => "白話",
-        _ => "台羅",
+        InputMode::Tps => "方音",
     }
 }
 
@@ -138,8 +141,11 @@ pub fn perform_global(
     action: ShortcutAction,
 ) -> Vec<Emit> {
     let settings = runtime.settings.current();
-    let bindings = ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM);
     let mut emits = Vec::new();
+    if action.is_inert_under(settings.choice(&keys::INPUT_MODE)) {
+        return emits;
+    }
+    let bindings = ComposingKeyBindings::from_document(&settings, DESKTOP_PLATFORM);
     // The guide comes down BEFORE any other action runs: a switch under an
     // open card would leave a table spelled for the romanization the user
     // just left (`TaigiInputController.performShortcutAction`). The picker
@@ -158,10 +164,9 @@ pub fn perform_global(
         }
         ShortcutAction::ToggleRomanization => {
             if !runtime.update_settings("toggle_romanization", |document| {
-                let next = match document.choice(&keys::INPUT_MODE) {
-                    InputMode::Tl => InputMode::Poj,
-                    _ => InputMode::Tl,
-                };
+                let next = document
+                    .choice::<InputMode>(&keys::INPUT_MODE)
+                    .toggled_romanization();
                 document.set_choice(&keys::INPUT_MODE, next);
             }) {
                 return emits;

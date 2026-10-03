@@ -10,7 +10,7 @@ use super::{
 };
 use crate::keys::{CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot};
 use crate::policies;
-use crate::settings::{keys, SettingsDocument};
+use crate::settings::{keys, InputMode, SettingsDocument};
 
 /// The document and the list window, as the executor reaches them. It is
 /// also the executor the engine's effects are replayed on.
@@ -67,14 +67,32 @@ pub fn perform_intent(
             refresh(settings, manager, list, surface);
             true
         }
+        ComposingKeyIntent::TpsKey(key) => {
+            if manager.tps_key(key, surface) {
+                refresh(settings, manager, list, surface);
+                return true;
+            }
+            // A Space the syllable was already closed for (O1, roadmap § D3):
+            // it confirms the highlighted candidate as Zhuyin-family input
+            // methods do, or with no list commits the glyphs as typed — no
+            // space after, TPS takes none.
+            if surface.selected_index().is_some() {
+                let cell = surface.selected_index();
+                commit_candidate(cell, false, settings, manager, list, surface);
+            } else {
+                manager.commit_composition(surface);
+                close_list(list, surface);
+            }
+            true
+        }
         ComposingKeyIntent::DeleteBackward => {
             manager.delete_backward(surface);
             refresh(settings, manager, list, surface);
             true
         }
         ComposingKeyIntent::Commit => {
-            // The preedit AS TYPED: romanization on a platform shipping TL and
-            // POJ only, whichever script the candidate list led with.
+            // The preedit AS TYPED, whichever script the candidate list led
+            // with: romanization under TL and POJ, glyphs under TPS.
             let committed = manager.commit_composition(surface);
             close_list(list, surface);
             let earns_auto_space = committed.is_some_and(|text| {
@@ -270,7 +288,8 @@ fn close_list(list: &mut CandidateSource, surface: &mut impl IntentSurface) {
 /// Commits the candidate behind cell `cell`, in the cell's own script or
 /// (`flip`) the other one; the engine resolves what that script writes and
 /// whether it earns the auto space. No cell (no list, an index past it)
-/// commits nothing.
+/// commits nothing. Under TPS there is no other script to flip to — the
+/// engine's `Other` would write raw TL — so a flip commits the cell's own.
 fn commit_candidate(
     cell: Option<usize>,
     flip: bool,
@@ -279,6 +298,7 @@ fn commit_candidate(
     list: &mut CandidateSource,
     surface: &mut impl IntentSurface,
 ) {
+    let flip = flip && settings.choice(&keys::INPUT_MODE) != InputMode::Tps;
     let Some((candidate, script)) = cell.and_then(|index| list.resolve(index, flip)) else {
         return;
     };
@@ -352,15 +372,18 @@ fn raw_preedit_wrote_romanization(settings: &SettingsDocument) -> bool {
 }
 
 /// `policies::document_punctuation` under the DERIVED width, so roman-only
-/// stays half-width and combined follows the stored swap.
+/// stays half-width and combined follows the stored swap. Under TPS the bare
+/// `,` `.` `;` type glyphs, so their Ctrl chord is the punctuation key rather
+/// than a width flip, and the width is full as always under TPS.
 fn document_punctuation(
     settings: &SettingsDocument,
     text: &str,
     is_width_flip: bool,
 ) -> Option<String> {
+    let engine_settings = settings.engine_settings();
     policies::document_punctuation(
         text,
-        settings.engine_settings().is_full_width_punctuation,
-        is_width_flip,
+        engine_settings.is_full_width_punctuation,
+        is_width_flip && engine_settings.input_mode != InputMode::Tps,
     )
 }

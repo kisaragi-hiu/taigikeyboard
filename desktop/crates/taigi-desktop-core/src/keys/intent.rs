@@ -4,7 +4,9 @@
 use super::bindings::ComposingKeyBindings;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
 use super::tone_input_scheme::ToneInputScheme;
+use super::tps_layout::tps_glyph_for_event;
 use crate::platform::DesktopPlatform;
+use crate::settings::InputMode;
 
 /// One step of the caret inside the composition (`ComposingKeyIntent::MoveCaret`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -89,6 +91,11 @@ pub enum ComposingKeyIntent {
     /// engine's `TelexKey` intent rather than appended: the engine decides
     /// which tone it writes, or which initial `z` spells in this input mode.
     TelexKey(String),
+    /// One TPS key — a glyph off the layout (`tps_layout.rs`), or `" "` for
+    /// Space mid-composition — handed to the engine's `TpsKey` intent, which
+    /// auto-corrects at its caret and inserts, or refuses a Space on a closed
+    /// syllable.
+    TpsKey(String),
     DeleteBackward,
     /// Finish the composition as rendered (the literal commit).
     Commit,
@@ -181,6 +188,15 @@ impl ComposingKeyIntent {
                 }
             }
         }
+        // TPS — ahead of the slot keys, the bindings and the typing tier, so
+        // neither a binding (Space's included) nor a slot set takes a key the
+        // layout types (`desktop-tps-roadmap.md` § D3). The keypad, which
+        // picks under TPS, is the slot tier's below.
+        if bindings.input_mode == InputMode::Tps {
+            if let Some(intent) = Self::tps_key(key, is_composing) {
+                return intent;
+            }
+        }
         // Tier 3 — the slot keys, read before the user's bindings so no
         // binding can shadow it. Which keys pick follows from the tone scheme
         // (`ToneInputScheme::slot_key_set`); both sets are bare keys, so a
@@ -244,7 +260,15 @@ impl ComposingKeyIntent {
         if !characters.chars().all(Self::is_text_scalar) {
             return Self::host_key(is_composing);
         }
-        // Tier 7 — text. Under Telex the tone letters and `f` are the
+        // Tier 7 — text. Under TPS every key the layout types was taken
+        // above, so the rest is document text.
+        if bindings.input_mode == InputMode::Tps {
+            return Self::composition_or_host(
+                is_composing,
+                Self::CommitThenInsert(characters.to_owned()),
+            );
+        }
+        // Under Telex the tone letters and `f` are the
         // engine's, not the composition's text. A tone letter or `f` typed
         // outside a composition is document text (like an idle digit): there
         // is no syllable for it to mark. `z` types an initial, so it starts
@@ -287,6 +311,23 @@ impl ComposingKeyIntent {
         } else {
             Self::PassThrough
         }
+    }
+
+    /// A layout key types its glyph, idle or composing (a tone mark may begin
+    /// a composition, as on mobile); a bare Space is the separator
+    /// mid-composition and the host's otherwise. `None` sends the key on to
+    /// the tiers every mode shares.
+    fn tps_key(key: &KeyEventSnapshot, is_composing: bool) -> Option<Self> {
+        if let Some(glyph) = tps_glyph_for_event(key) {
+            return Some(Self::TpsKey(glyph.to_owned()));
+        }
+        if key.modifiers.is_empty() && key.characters.as_deref() == Some(" ") {
+            return Some(Self::composition_or_host(
+                is_composing,
+                Self::TpsKey(" ".to_owned()),
+            ));
+        }
+        None
     }
 
     /// True when `key` is text the host will put into its document, rather
@@ -1241,6 +1282,105 @@ mod tests {
             classify(&comma, true, false),
             ComposingKeyIntent::CommitThenInsert(",".into()),
             "unrecorded, the same chord is the flip"
+        );
+    }
+
+    fn tps_bindings() -> ComposingKeyBindings {
+        let mut bindings = ComposingKeyBindings::default();
+        bindings.input_mode = InputMode::Tps;
+        bindings
+    }
+
+    fn classify_tps(
+        key: &KeyEventSnapshot,
+        is_composing: bool,
+        is_showing: bool,
+    ) -> ComposingKeyIntent {
+        ComposingKeyIntent::intent(key, is_composing, is_showing, &tps_bindings(), PLATFORM)
+    }
+
+    fn keypad(digit: &str, code: u16) -> KeyEventSnapshot {
+        KeyEventSnapshot::chord(Some(digit), digit, KeyModifiers::NONE).with_key_code(code)
+    }
+
+    #[test]
+    fn under_tps_a_layout_key_types_its_glyph_idle_or_composing() {
+        // trace: tps_layout — `e` ㄍ, number-row `1` ㄅ, `7` tone 8 U+02D9, `,` ㆰ;
+        // taken ahead of the slot tier, so a list showing changes nothing.
+        let cases = [("e", "ㄍ"), ("1", "ㄅ"), ("7", "\u{02d9}"), (",", "ㆰ")];
+        for (key, glyph) in cases {
+            for (is_composing, is_showing) in [(false, false), (true, false), (true, true)] {
+                assert_eq!(
+                    classify_tps(&text(key), is_composing, is_showing),
+                    ComposingKeyIntent::TpsKey(glyph.into()),
+                    "{key:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn under_tps_space_is_the_separator_mid_composition_and_the_hosts_idle() {
+        // Space's default binding (Output the Other Script) never sees it.
+        assert_eq!(
+            classify_tps(&text(" "), true, true),
+            ComposingKeyIntent::TpsKey(" ".into())
+        );
+        assert_eq!(
+            classify_tps(&text(" "), true, false),
+            ComposingKeyIntent::TpsKey(" ".into())
+        );
+        assert_eq!(
+            classify_tps(&text(" "), false, false),
+            ComposingKeyIntent::PassThrough
+        );
+    }
+
+    #[test]
+    fn under_tps_the_keypad_picks_with_a_list_and_is_text_without_one() {
+        // trace: VK_NUMPAD3 (0x63) → slot 2 with a list; no list → document text.
+        assert_eq!(
+            classify_tps(&keypad("3", 0x63), true, true),
+            ComposingKeyIntent::SelectCandidateSlot {
+                slot: 2,
+                flip: false
+            }
+        );
+        assert_eq!(
+            classify_tps(&keypad("3", 0x63), true, false),
+            ComposingKeyIntent::CommitThenInsert("3".into())
+        );
+        assert_eq!(
+            classify_tps(&keypad("3", 0x63), false, false),
+            ComposingKeyIntent::PassThrough
+        );
+    }
+
+    #[test]
+    fn under_tps_an_unassigned_key_is_document_text_and_the_shared_keys_are_unchanged() {
+        let question = KeyEventSnapshot::text("?", KeyModifiers::SHIFT);
+        assert_eq!(
+            classify_tps(&question, true, false),
+            ComposingKeyIntent::CommitThenInsert("?".into())
+        );
+        assert_eq!(
+            classify_tps(&question, false, false),
+            ComposingKeyIntent::PassThrough
+        );
+        let mut enter = text("\r");
+        enter.is_named_special_key = true;
+        assert_eq!(
+            classify_tps(&enter, true, true),
+            ComposingKeyIntent::CommitHighlightedCandidate
+        );
+        assert_eq!(
+            classify_tps(&text("\u{8}"), true, false),
+            ComposingKeyIntent::DeleteBackward
+        );
+        let ctrl_comma = KeyEventSnapshot::chord(Some(","), ",", KeyModifiers::CONTROL);
+        assert_eq!(
+            classify_tps(&ctrl_comma, true, false),
+            ComposingKeyIntent::CommitThenInsert(",".into())
         );
     }
 }

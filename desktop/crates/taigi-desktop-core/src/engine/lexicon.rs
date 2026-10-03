@@ -286,6 +286,7 @@ fn wire_input_mode(mode: InputMode) -> i32 {
     match mode {
         InputMode::Tl => WireInputMode::Tl as i32,
         InputMode::Poj => WireInputMode::Poj as i32,
+        InputMode::Tps => WireInputMode::Tps as i32,
     }
 }
 

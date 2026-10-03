@@ -453,6 +453,7 @@ mod tests {
         round_trips::<CandidateSizeChoice>();
         round_trips::<CandidateFontChoice>();
         round_trips::<SettingsPane>();
+        round_trips::<crate::settings::InputMode>();
     }
 
     #[test]

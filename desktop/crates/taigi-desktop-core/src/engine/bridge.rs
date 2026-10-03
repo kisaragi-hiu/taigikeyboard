@@ -121,6 +121,7 @@ pub(super) fn app_config(settings: &EngineSettings, platform: DesktopPlatform) -
         candidate_display_mode: settings.candidate_display_mode.wire() as i32,
         hyphenless_roman: settings.is_hyphenless_roman_enabled,
         force_lowercase_nasal_marker: !settings.is_nasal_marker_uppercase_enabled,
+        tps_or_maps_to_er: super::TPS_OR_MAPS_TO_ER,
         ..Default::default()
     }
 }

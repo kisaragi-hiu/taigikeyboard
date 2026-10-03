@@ -9,7 +9,7 @@ use std::collections::HashSet;
 use super::cell_content::{CandidateCellContent, CandidateScript};
 use super::manager::ComposingManager;
 use crate::engine::ContinuousCandidate;
-use crate::settings::{CandidateDisplayMode, EngineSettings};
+use crate::settings::{CandidateDisplayMode, EngineSettings, InputMode};
 
 /// One cell of the window: the candidate it was built from and the script
 /// its own commit (Enter, a slot key) writes; Space writes the flip.
@@ -22,7 +22,8 @@ pub struct PresentedCandidate {
 
 /// The cells for `candidates` under `settings`, in display order: one
 /// `Primary` cell per candidate, except Hanji with Romanization splits a hanji-bearing
-/// candidate into a hanji cell then an `Alternate` roman cell.
+/// candidate into a hanji cell then an `Alternate` roman cell — never under
+/// TPS, where a cell has one script and nothing to split.
 ///
 /// Both scripts dedupe on the TEXT THE CELL SHOWS, first-seen wins: a
 /// one-script cell carries nothing that could tell it from an earlier cell
@@ -36,7 +37,9 @@ pub(crate) fn presentation(
     candidates: &[ContinuousCandidate],
     settings: &EngineSettings,
 ) -> Vec<PresentedCandidate> {
-    if settings.candidate_display_mode != CandidateDisplayMode::Combined {
+    if settings.input_mode == InputMode::Tps
+        || settings.candidate_display_mode != CandidateDisplayMode::Combined
+    {
         return candidates
             .iter()
             .enumerate()
@@ -86,16 +89,17 @@ pub(crate) fn presentation(
 ///
 /// Read off the setting plus the shape of the leading candidate rather than
 /// re-derived: the literal is roman-only by construction (`requests.rs::literal_roman_candidate`
-/// `hanji: None`), and the engine's other gate — the TPS buffer that
-/// suppresses the prepend (`literal_roman_candidate`) — cannot arise on the desktop,
-/// where the only modes are TL and POJ (`InputMode`). A hanji-bearing lead
-/// means the prepend did not happen, whatever the setting says, and every cell
-/// keeps its key.
+/// `hanji: None`). The engine's other gate is the TPS buffer, which never
+/// gets the prepend (`literal_roman_candidate`): under TPS a hanji-less lead
+/// is a real candidate and keeps its key. A hanji-bearing lead means the
+/// prepend did not happen, whatever the setting says, and every cell keeps
+/// its key.
 pub(crate) fn leads_with_literal_roman(
     candidates: &[ContinuousCandidate],
     settings: &EngineSettings,
 ) -> bool {
-    settings.is_literal_roman_candidate_enabled
+    settings.input_mode != InputMode::Tps
+        && settings.is_literal_roman_candidate_enabled
         && candidates
             .first()
             .is_some_and(|candidate| candidate.nonempty_hanji().is_none())
@@ -449,5 +453,28 @@ mod tests {
             source.resolve(1, false),
             Some((&list[0], CandidateScript::Alternate))
         );
+    }
+
+    #[test]
+    fn under_tps_combined_keeps_one_cell_and_a_hanji_less_lead_keeps_its_key() {
+        // trace: `presentation` TPS → one Primary cell per candidate even
+        // under Combined; `leads_with_literal_roman` false under TPS though the
+        // setting is on and the lead has no Hanji.
+        let candidates = vec![candidate("ka", None, 0), candidate("ka", Some("家"), 1)];
+        let tps = EngineSettings {
+            input_mode: InputMode::Tps,
+            candidate_display_mode: CandidateDisplayMode::Combined,
+            is_literal_roman_candidate_enabled: true,
+            ..EngineSettings::default()
+        };
+        let presented = presentation(&candidates, &tps);
+        assert_eq!(
+            texts(&presented),
+            [
+                (0, CandidateScript::Primary, "ㄍㄚ"),
+                (1, CandidateScript::Primary, "家")
+            ]
+        );
+        assert!(!leads_with_literal_roman(&candidates, &tps));
     }
 }

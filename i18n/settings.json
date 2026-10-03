@@ -43,7 +43,7 @@
     },
     "tpsMode": {
       "comment": "Input-mode option: Taiwanese Phonetic Symbols (TPS). Also the iOS smartbar input-mode button a11y label (extension surface). Also the TPS settings section header and the layout page's TPS section header (tpsSettingsSectionTitle / layout.taigiPhonetic merged 2026-09-20).",
-      "scope": { "platforms": ["android", "ios"], "surfaces": ["host", "extension"] },
+      "scope": { "platforms": ["android", "ios", "macos", "windows", "linux"], "surfaces": ["host", "extension"] },
       "values": { "hanji": "方音符號", "tailo": "Hong-im-hû-hō", "poj": "Hong-im-hû-hō", "en": "Phonetic Symbols", "ja": "方音符号" }
     },
     "typingSectionTitle": {

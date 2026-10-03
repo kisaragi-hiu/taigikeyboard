@@ -19,7 +19,7 @@ use serde_json::Value;
 
 use super::choices::SettingChoice;
 use super::engine_settings::{
-    CandidateDisplayMode, DictionarySourceToggles, EngineSettings, KautianSubcollections,
+    CandidateDisplayMode, DictionarySourceToggles, EngineSettings, InputMode, KautianSubcollections,
 };
 use super::keys;
 use crate::strings::DisplayLanguage;
@@ -269,11 +269,14 @@ impl SettingsDocument {
         let candidate_display_mode: CandidateDisplayMode =
             self.choice(&keys::CANDIDATE_DISPLAY_MODE);
         let stored_swap = self.bool(&keys::IS_HANJI_FIRST);
+        let input_mode: InputMode = self.choice(&keys::INPUT_MODE);
         EngineSettings {
-            input_mode: self.choice(&keys::INPUT_MODE),
+            input_mode,
             is_hanji_first: candidate_display_mode.effective_hanji_first(stored_swap),
-            is_full_width_punctuation: candidate_display_mode
-                .effective_full_width_punctuation(stored_swap),
+            // Full width always under TPS, as on mobile
+            // (`ios/.../SharedSettings.swift` `isFullWidthPunctuation`).
+            is_full_width_punctuation: input_mode == InputMode::Tps
+                || candidate_display_mode.effective_full_width_punctuation(stored_swap),
             candidate_display_mode,
             is_literal_roman_candidate_enabled: self
                 .bool(&keys::IS_LITERAL_ROMAN_CANDIDATE_ENABLED),
@@ -378,7 +381,7 @@ mod tests {
     #[test]
     fn unknown_choice_and_wrong_type_read_as_default() {
         let doc = SettingsDocument::from_json(
-            r#"{"revision": 3, "values": {"inputMode": "tps", "autoSpaceEnabled": "yes", "candidateAppearanceMode": "dark"}}"#,
+            r#"{"revision": 3, "values": {"inputMode": "bopomofo", "autoSpaceEnabled": "yes", "candidateAppearanceMode": "dark"}}"#,
         )
         .unwrap();
         assert_eq!(doc.choice(&keys::INPUT_MODE), InputMode::Tl);
@@ -717,5 +720,20 @@ mod tests {
             },
         };
         assert_eq!(doc.engine_settings(), expected);
+    }
+
+    #[test]
+    fn tps_reads_back_and_its_punctuation_is_always_full_width() {
+        // trace: `engine_settings` — Romanization Only derives half width
+        // under TL; under TPS the width is full whatever the display mode.
+        let mut doc = SettingsDocument::default();
+        doc.set_choice(
+            &keys::CANDIDATE_DISPLAY_MODE,
+            CandidateDisplayMode::RomanOnly,
+        );
+        assert!(!doc.engine_settings().is_full_width_punctuation);
+        doc.set_choice(&keys::INPUT_MODE, InputMode::Tps);
+        assert_eq!(doc.choice(&keys::INPUT_MODE), InputMode::Tps);
+        assert!(doc.engine_settings().is_full_width_punctuation);
     }
 }
