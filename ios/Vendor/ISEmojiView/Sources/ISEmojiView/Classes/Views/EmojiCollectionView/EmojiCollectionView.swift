@@ -67,6 +67,7 @@ class EmojiCollectionView: UIView {
     @IBOutlet private weak var collectionView: UICollectionView! {
         didSet {
             collectionView.register(EmojiCollectionCell.self, forCellWithReuseIdentifier: emojiCellReuseIdentifier)
+            collectionView.hideScrollEdgeEffects() // TaigiKeyboard: local patch
         }
     }
 
