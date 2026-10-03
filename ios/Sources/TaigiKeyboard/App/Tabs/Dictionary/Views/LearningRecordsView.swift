@@ -32,7 +32,7 @@ struct LearningRecordsView: View {
                         .frame(maxWidth: .infinity)
                 }
             } else {
-                // Order, and what the rows are
+                // Order
                 Section {
                     Picker(
                         selection: Binding(
@@ -46,8 +46,6 @@ struct LearningRecordsView: View {
                         Text(lang.string(.dictionaryLearningRecordsOrder))
                     }
                     .pickerStyle(.menu)
-                } footer: {
-                    Text(lang.string(.dictionaryLearningRecordsInfo))
                 }
 
                 // Record list
