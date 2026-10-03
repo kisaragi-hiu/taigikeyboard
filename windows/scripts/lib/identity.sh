@@ -20,6 +20,12 @@ PRODUCT_NAME="$APP_NAME"
 SERVICE_DLL="TaigiKeyboard.dll"
 SETTINGS_EXE="TaigiKeyboardSettings.exe"
 RELEASE_TARGET="x86_64-pc-windows-msvc"
+# The 32-bit text service for 32-bit hosts (32-bit Office): cargo builds it
+# as `TaigiKeyboard.dll` too, and staging renames it, because it ships BESIDE
+# the 64-bit one — a text service resolves `Dictionaries\`, `Fonts\` and the
+# settings exe from its own directory (docs/architecture/windows-release.md).
+SERVICE_DLL_32="TaigiKeyboard32.dll"
+RELEASE_TARGET_32="i686-pc-windows-msvc"
 
 # The first `version = "…"` after `[workspace.package]`.
 SHORT_VERSION="$(awk '
@@ -46,6 +52,7 @@ STAGING_DIR="$WINDOWS_DIR/.build/staging"
 # flow deliberately does not: see `tools/release/stage-desktop.sh` on why a fresh
 # target directory trades a locked DLL for an App Control block on this box.
 TARGET_DIR="${CARGO_TARGET_DIR:-$WINDOWS_DIR/target}/$RELEASE_TARGET/release"
+TARGET_DIR_32="${CARGO_TARGET_DIR:-$WINDOWS_DIR/target}/$RELEASE_TARGET_32/release"
 DICTIONARIES_SOURCE_DIR="$REPOSITORY_DIR/assets/dictionaries"
 FONTS_SOURCE_DIR="$REPOSITORY_DIR/assets/fonts/font"
 INSTALLER_SCRIPT="$WINDOWS_DIR/installer/TaigiKeyboard.iss"

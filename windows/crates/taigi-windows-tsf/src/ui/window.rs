@@ -360,7 +360,10 @@ fn handle_message(hwnd: HWND, message: u32, wparam: WPARAM, lparam: LPARAM) -> O
             unsafe {
                 let create = lparam.0 as *const CREATESTRUCTW;
                 if !create.is_null() {
-                    SetWindowLongPtrW(hwnd, GWLP_USERDATA, (*create).lpCreateParams as isize);
+                    // `as _`, not `as isize`: on i686 the `windows` crate maps
+                    // `SetWindowLongPtrW` onto `SetWindowLongW`, whose value
+                    // is an `i32` — pointer-sized on that target too.
+                    SetWindowLongPtrW(hwnd, GWLP_USERDATA, (*create).lpCreateParams as _);
                 }
                 let preference = DWMWCP_ROUND;
                 DwmSetWindowAttribute(

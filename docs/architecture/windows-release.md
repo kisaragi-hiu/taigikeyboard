@@ -63,10 +63,10 @@ that half.
 
 ## Architectures
 
-**x64 only.** A text service is loaded into every process that takes text
-input and the DLL must match THAT process's architecture, so this is two
-separate questions — which machines can install, and which applications the
-input method works in.
+**x64 machines; x64 and 32-bit applications.** A text service is loaded into
+every process that takes text input and the DLL must match THAT process's
+architecture, so this is two separate questions — which machines can install,
+and which applications the input method works in.
 
 `ArchitecturesAllowed=x64os`, so an **Arm64 machine is refused**.
 `x64compatible` — what this used to say — also matches Arm64 Windows 11,
@@ -75,27 +75,37 @@ input method would then do nothing in every Arm64-native application while
 working in emulated ones. For an input method that is indistinguishable from
 broken.
 
-**32-bit applications have no input method**, and that is a deliberate gap
-(USER 2026-09-01: revisit when a user reports it). Everywhere Taiwanese is
-typically typed is 64-bit today — browsers, Notepad, the chat clients. The
-known exception is Office 2016 and earlier, and any Microsoft 365 installed
-before January 2019, which defaulted to 32-bit and stays 32-bit until it is
-reinstalled.
+**32-bit applications get `TaigiKeyboard32.dll`**, the same text service
+built for `i686-pc-windows-msvc`. Everywhere Taiwanese is typically typed is
+64-bit today — browsers, Notepad, the chat clients — except Office: Office
+2016 and earlier, and any Microsoft 365 installed before January 2019,
+defaulted to 32-bit and stays 32-bit until it is reinstalled. It was a
+deliberate gap (USER 2026-09-01: revisit when a user reports it) until a user
+reported that Word could not type (2026-10-04).
 
-### What a 32-bit or Arm64 round would have to know
+### The 32-bit service
 
-Both were investigated on 2026-09-01; this is the measured record, so it does
-not have to be re-derived.
+Measured on 2026-09-01 and again when it shipped, so it does not have to be
+re-derived.
 
-**32-bit** is a working build, not a research problem. `cargo build --release
---target i686-pc-windows-msvc -p taigi-windows-tsf` succeeds after one fix:
-on 32-bit the `windows` crate maps `SetWindowLongPtrW` onto `SetWindowLongW`,
-whose value parameter is an `i32`, not an `isize` (the only error in the whole
-graph, `ui/window.rs`). The resulting DLL is machine `14C`, exports the four
-entry points undecorated, and imports no C runtime. It must be installed
-BESIDE the 64-bit one under its own name, not in an `x86\` subdirectory: a
-service resolves `Dictionaries\`, `Fonts\` and the settings exe from its OWN
-directory (`module::install_directory`).
+- **Build**: `release-app.sh` builds `--target i686-pc-windows-msvc -p
+  taigi-windows-tsf` after the x64 build — the DLL only; the 64-bit settings
+  exe serves both. The one source change it needed: the i686 `windows` crate
+  maps `SetWindowLongPtrW` onto `SetWindowLongW`, whose value is an `i32`, so
+  `ui/window.rs` casts with `as _`. `check-box.sh` builds the same target so a
+  pointer-width mistake fails the box gate rather than a release. The DLL is
+  machine `14C`, exports the four entry points undecorated, imports no C
+  runtime, and goes through every read-back check the x64 DLL does.
+- **Layout**: BESIDE the 64-bit DLL under its own name (mozc ships
+  `mozc_tip32.dll` + `mozc_tip64.dll` the same way,
+  `installer_oss_64bit.wxs:273-277`), not in an `x86\` subdirectory: a service
+  resolves `Dictionaries\`, `Fonts\` and the settings exe from its OWN
+  directory (`module::install_directory`). Staging renames cargo's
+  `TaigiKeyboard.dll`; `build.rs` writes the matching VERSIONINFO
+  `OriginalFilename`.
+- **Not in the dev install**: `install-dev.ps1` registers the 64-bit build
+  tree in place. A 32-bit host is tested with an installer from
+  `release-app.sh --skip-sign --allow-dirty`.
 
 Registration, measured with `regsvr32` and a registry dump:
 
@@ -112,6 +122,22 @@ Registration, measured with `regsvr32` and a registry dump:
   categories from BOTH views while the other's `InprocServer32` stays — an
   input method registered with COM and absent from the language list. The
   pair is one transaction, and a rollback has to back up and restore both.
+  The installer does: `RegisterEverything` and `RestorePreviousVersion`
+  register x86 then x64, and every unregister path (`PrepareToInstall`,
+  `RollBack`, `[UninstallRun]`) removes both. A failed upgrade from a version
+  without the 32-bit service removes the new `TaigiKeyboard32.dll` before it
+  re-registers the old x64 one (`RemoveAddedX86Dll`), so no mixed install is
+  left behind.
+- **Downgrade to a version without the 32-bit service: uninstall first.** The
+  older installer knows nothing of `TaigiKeyboard32.dll`: its `MakeWayForTree`
+  moves the file aside with the rest of the payload, but it never unregisters
+  it, so WOW6432Node keeps a CLSID pointing at a deleted DLL and 32-bit hosts
+  fail to activate it. Uninstalling first (which keeps `%APPDATA%`) leaves
+  nothing for it to miss.
+
+### What an Arm64 round would have to know
+
+Investigated on 2026-09-01; the measured record.
 
 **Arm64** is a research problem. A single CLSID's `InprocServer32` is one
 path, and Arm64-native and x64-emulated processes read the SAME 64-bit
@@ -286,7 +312,7 @@ every process of every user and `regsvr32` writes HKLM. In order:
   into `windows/installer/Messages.iss` — the installer is never edited for
   wording. Tâi-lô / POJ have no Inno base language (the macOS Installer
   cannot show them either); the app itself offers all five.
-- **Files** — `TaigiKeyboard.dll` (+ `x86\TaigiKeyboard.dll` when staged),
+- **Files** — `TaigiKeyboard.dll` and `TaigiKeyboard32.dll` side by side,
   `TaigiKeyboardSettings.exe` with the Windows App Runtime files beside it
   (W17), `Dictionaries\`, `Fonts\`, `update-check-task.xml`.
 - **Registration** — `regsvr32 /s` on the DLL (the DLL's `DllRegisterServer`

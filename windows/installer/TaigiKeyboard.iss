@@ -6,7 +6,11 @@
 ;
 ; The staging dir holds what the script ships:
 ;   TaigiKeyboard.dll              (x64 text service, signed)
-;   x86\TaigiKeyboard.dll          (optional — WOW64 hosts; roadmap: gated)
+;   TaigiKeyboard32.dll            (x86 text service for 32-bit hosts such as
+;                                   32-bit Office, signed; BESIDE the x64 one,
+;                                   because a text service resolves Dictionaries\,
+;                                   Fonts\ and the settings exe from its own
+;                                   directory)
 ;   TaigiKeyboardSettings.exe      (signed)
 ;   Runtime\*                      (the Windows App Runtime the settings window
 ;                                   runs on — self-contained, roadmap W17;
@@ -42,6 +46,7 @@
 #define TaskName "TaigiKeyboard Update Check"
 #define SettingsExe "TaigiKeyboardSettings.exe"
 #define ServiceDll "TaigiKeyboard.dll"
+#define ServiceDll32 "TaigiKeyboard32.dll"
 ; The one Start-menu entry, spelled once for [Icons] and for the two [Code]
 ; sites that localize and un-localize its display name.
 #define ShortcutName "{autoprograms}\" + AppName
@@ -141,7 +146,7 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 
 [Files]
 Source: "{#Dist}\{#ServiceDll}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#Dist}\x86\{#ServiceDll}"; DestDir: "{app}\x86"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#Dist}\{#ServiceDll32}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#Dist}\{#SettingsExe}"; DestDir: "{app}"; Flags: ignoreversion
 ; W17: the Windows App Runtime files sit beside the exe (their loader looks
 ; in the exe's directory); Inno records each and removes them on uninstall.
@@ -193,13 +198,12 @@ Filename: "{sys}\taskkill.exe"; Parameters: "/IM {#SettingsExe} /F"; Flags: runh
 ; folder, which only an administrator can write — the same reason the install
 ; side creates it elevated (RegisterUpdateTask).
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""{#TaskName}"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "DeleteTask"
-Filename: "{syswow64}\regsvr32.exe"; Parameters: "/s /u ""{app}\x86\{#ServiceDll}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX86"; Check: FileExists(ExpandConstant('{app}\x86\{#ServiceDll}'))
+Filename: "{syswow64}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDll32}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX86"; Check: FileExists(ExpandConstant('{app}\{#ServiceDll32}'))
 Filename: "{sys}\regsvr32.exe"; Parameters: "/s /u ""{app}\{#ServiceDll}"""; Flags: runhidden waituntilterminated; RunOnceId: "UnregisterX64"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\Dictionaries"
 Type: filesandordirs; Name: "{app}\Fonts"
-Type: filesandordirs; Name: "{app}\x86"
 ; Stale copies are NOT listed here: they can sit in any subdirectory the
 ; payload has, and an [UninstallDelete] pattern does not recurse. They are
 ; collected in [Code], at usPostUninstall — see DiscardStaleTree.
@@ -271,6 +275,9 @@ var
   MovedFiles: array of TMovedFile;
   FinishedNoteAdded: Boolean;
   UpdateTaskFailed: Boolean;
+  // Whether the version being replaced had a 32-bit service — see
+  // RemoveAddedX86Dll.
+  HadX86Dll: Boolean;
 
 // Delete, or fail that and have Windows delete it at the next restart.
 // Delete, or fail that and have Windows delete it at the next restart.
@@ -527,7 +534,7 @@ end;
 
 function X86Dll: String;
 begin
-  Result := ExpandConstant('{app}\x86\{#ServiceDll}');
+  Result := ExpandConstant('{app}\{#ServiceDll32}');
 end;
 
 procedure StopSettingsWindow;
@@ -554,8 +561,8 @@ begin
   // Leftovers first, so this run's own moves are the only stale copies in
   // flight when it starts.
   RecoverLegacyLeftovers(X64Dll);
-  RecoverLegacyLeftovers(X86Dll);
   RecoverStaleFiles(AppDir);
+  HadX86Dll := FileExists(X86Dll);
 
   // Unregister BEFORE moving anything: it stops new activations finding the
   // old DLL, which shrinks the window in which a host maps a file this is
@@ -608,6 +615,25 @@ begin
   Log(Format('schtasks /Create -> %d', [ResultCode]));
 end;
 
+// PutBackMovedFiles restores only what it moved, so a payload file the previous
+// version did not have stays behind. The 32-bit service is the one such file
+// that matters: left in place, RestorePreviousVersion would register the NEW
+// 32-bit service beside the OLD 64-bit one — a mixed install that never
+// existed. Renamed before it is discarded, like every file here, because a
+// 32-bit host may already have mapped it.
+procedure RemoveAddedX86Dll;
+var
+  Stale: String;
+begin
+  if HadX86Dll or not FileExists(X86Dll) then Exit;
+  if DeleteFile(X86Dll) then Exit;
+  Stale := StaleNameFor(X86Dll);
+  if RenameFile(X86Dll, Stale) then
+    DiscardStale(Stale)
+  else
+    Log('restore: could not remove ' + X86Dll + ', which the previous version did not have');
+end;
+
 // Put the previous version back — the whole of it, not just the DLL. Every file
 // the payload overwrote was moved aside rather than deleted, so restoring is a
 // rename per file, and the previous version's code and its dictionaries and
@@ -617,10 +643,13 @@ end;
 procedure RestorePreviousVersion;
 begin
   PutBackMovedFiles;
-  if FileExists(X64Dll) and not RegisterDll(X64Regsvr32, X64Dll, False) then
-    Log('restore: put ' + X64Dll + ' back but could not register it');
+  RemoveAddedX86Dll;
+  // x86 first, as in RegisterEverything. A previous version from before the
+  // 32-bit service shipped has none, so restoring it registers x64 alone.
   if FileExists(X86Dll) and not RegisterDll(X86Regsvr32, X86Dll, False) then
     Log('restore: put ' + X86Dll + ' back but could not register it');
+  if FileExists(X64Dll) and not RegisterDll(X64Regsvr32, X64Dll, False) then
+    Log('restore: put ' + X64Dll + ' back but could not register it');
 end;
 
 // The ssPostInstall path into it: this run got as far as registering the new
@@ -654,12 +683,20 @@ end;
 // deleting them. The exception then makes Setup report the failure, and the
 // user is left with the previous input method intact and an installer to run
 // again.
+//
+// The 32-bit service registers FIRST. Each architecture writes its own
+// CLSID\InProcServer32 (the 64-bit view and WOW6432Node), but the TSF profile
+// and its categories under HKLM\SOFTWARE\Microsoft\CTF\TIP are ONE shared
+// record that the last registration overwrites — so the 64-bit DLL goes last
+// and the profile's description and icon name it, the copy every 64-bit host
+// and the Settings keyboard list read (docs/architecture/windows-release.md,
+// measured 2026-09-01).
 procedure RegisterEverything;
 begin
+  if not RegisterDll(X86Regsvr32, X86Dll, False) then
+    FailStep('regsvr32 ' + X86Dll);
   if not RegisterDll(X64Regsvr32, X64Dll, False) then
     FailStep('regsvr32 ' + X64Dll);
-  if FileExists(X86Dll) and not RegisterDll(X86Regsvr32, X86Dll, False) then
-    FailStep('regsvr32 ' + X86Dll);
   UpdateTaskFailed := not RegisterUpdateTask;
 end;
 
