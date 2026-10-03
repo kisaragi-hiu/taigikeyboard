@@ -89,9 +89,10 @@ struct GeneralSettingsView: View {
                 // a difference that means something. Input Script / Output Script name
                 // the pair (USER 2026-09-18); mobile keeps Input Mode, whose
                 // picker also holds TPS.
-                Picker(language.string(.settingsInputScript), selection: $inputMode) {
-                    Text(language.string(.settingsTlMode)).tag(InputMode.tl)
-                    Text(language.string(.settingsPojMode)).tag(InputMode.poj)
+                Picker(language.string(.settingsInputScript), selection: inputModeSelection) {
+                    ForEach(InputMode.allCases, id: \.self) { mode in
+                        Text(language.string(mode.displayNameKey)).tag(mode)
+                    }
                 }
 
                 // Which keys type a tone is a fact about how the syllable is
@@ -252,6 +253,17 @@ struct GeneralSettingsView: View {
     /// offer covers that case on its own.
     private func refreshNoticeReachability() async {
         areNoticesBlocked = await NotificationManager.shared.reachability() == .blocked
+    }
+
+    /// The Input Script picker's selection: read through `@AppStorage`, so a
+    /// chord's switch redraws it, and written through the core's one mode
+    /// writer (`SettingsStore.switchInputMode(_:)`), which remembers the
+    /// romanization a pick of TPS leaves.
+    private var inputModeSelection: Binding<InputMode> {
+        Binding(
+            get: { inputMode },
+            set: { SettingsStore().switchInputMode(.pick($0)) },
+        )
     }
 
     /// The picker's selection, read and written through the store rather than through `@AppStorage`

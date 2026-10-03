@@ -33,6 +33,7 @@ message DesktopRequest {
     ChordRequest chord = 15;
     ComposingShortcutsRequest composing_shortcuts = 16;
     SymbolPickerKeyRequest symbol_picker_key = 17;
+    SwitchInputModeRequest switch_input_mode = 18;
   }
 
   // The key-path settings as they stand for this request, applied before it
@@ -133,6 +134,7 @@ message DesktopResponse {
     ChordReply chord = 8;
     ComposingShortcutsReply composing_shortcuts = 9;
     SymbolPickerReply symbol_picker = 10;
+    SwitchInputModeReply switch_input_mode = 11;
   }
 }
 
@@ -439,6 +441,33 @@ message ComposingShortcut {
   Chord chord = 5;
   // What a fresh install has on it.
   Chord default_chord = 6;
+}
+
+// The core's one input-mode writer (`SettingsDocument::switch_input_mode`,
+// desktop TPS roadmap D5) for the Swift settings, which keep the mode in
+// `UserDefaults`: where a pick or a switch chord moves the stored mode. Pure,
+// like the key rules above, and reads no snapshot — the two stored values it
+// needs travel in it. Refused without a request, or with a `pick` that names
+// no mode.
+message SwitchInputModeRequest {
+  // The stored `inputMode` and `lastRomanizationMode`; "" when absent. A
+  // value the core does not know reads as its default, as on every reader.
+  string input_mode = 1;
+  string last_romanization_mode = 2;
+  oneof request {
+    // The Input Script picker's choice: `tl`, `poj` or `tps`.
+    string pick = 3;
+    bool toggle_romanization = 4;
+    bool toggle_tps = 5;
+  }
+}
+
+message SwitchInputModeReply {
+  // The mode now in force, to store as `inputMode`.
+  string input_mode = 1;
+  // Set when the switch stored a new romanization to come back to — one left
+  // for TPS — to store as `lastRomanizationMode`.
+  optional string last_romanization_mode = 2;
 }
 
 // One key while the symbol picker is up, read under the settings snapshot

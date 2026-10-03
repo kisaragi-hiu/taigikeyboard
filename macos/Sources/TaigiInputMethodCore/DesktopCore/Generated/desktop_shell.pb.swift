@@ -397,6 +397,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     set {request = .symbolPickerKey(newValue)}
   }
 
+  public var switchInputMode: Taigi_DesktopShell_SwitchInputModeRequest {
+    get {
+      if case .switchInputMode(let v)? = request {return v}
+      return Taigi_DesktopShell_SwitchInputModeRequest()
+    }
+    set {request = .switchInputMode(newValue)}
+  }
+
   /// The key-path settings as they stand for this request, applied before it
   /// runs, so a request and the settings it is read under cross the seam
   /// together. Unset = the last snapshot stays. A snapshot that is refused
@@ -433,6 +441,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     case chord(Taigi_DesktopShell_ChordRequest)
     case composingShortcuts(Taigi_DesktopShell_ComposingShortcutsRequest)
     case symbolPickerKey(Taigi_DesktopShell_SymbolPickerKeyRequest)
+    case switchInputMode(Taigi_DesktopShell_SwitchInputModeRequest)
 
   }
 
@@ -732,6 +741,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     set {reply = .symbolPicker(newValue)}
   }
 
+  public var switchInputMode: Taigi_DesktopShell_SwitchInputModeReply {
+    get {
+      if case .switchInputMode(let v)? = reply {return v}
+      return Taigi_DesktopShell_SwitchInputModeReply()
+    }
+    set {reply = .switchInputMode(newValue)}
+  }
+
   public var unknownFields = SwiftProtobuf.UnknownStorage()
 
   public nonisolated enum OneOf_Reply: Equatable, Sendable {
@@ -743,6 +760,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopResponse: Sendable {
     case chord(Taigi_DesktopShell_ChordReply)
     case composingShortcuts(Taigi_DesktopShell_ComposingShortcutsReply)
     case symbolPicker(Taigi_DesktopShell_SymbolPickerReply)
+    case switchInputMode(Taigi_DesktopShell_SwitchInputModeReply)
 
   }
 
@@ -1543,6 +1561,89 @@ public nonisolated struct Taigi_DesktopShell_ComposingShortcut: Sendable {
   fileprivate var _defaultChord: Taigi_DesktopShell_Chord? = nil
 }
 
+/// The core's one input-mode writer (`SettingsDocument::switch_input_mode`,
+/// desktop TPS roadmap D5) for the Swift settings, which keep the mode in
+/// `UserDefaults`: where a pick or a switch chord moves the stored mode. Pure,
+/// like the key rules above, and reads no snapshot — the two stored values it
+/// needs travel in it. Refused without a request, or with a `pick` that names
+/// no mode.
+public nonisolated struct Taigi_DesktopShell_SwitchInputModeRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The stored `inputMode` and `lastRomanizationMode`; "" when absent. A
+  /// value the core does not know reads as its default, as on every reader.
+  public var inputMode: String = String()
+
+  public var lastRomanizationMode: String = String()
+
+  public var request: Taigi_DesktopShell_SwitchInputModeRequest.OneOf_Request? = nil
+
+  /// The Input Script picker's choice: `tl`, `poj` or `tps`.
+  public var pick: String {
+    get {
+      if case .pick(let v)? = request {return v}
+      return String()
+    }
+    set {request = .pick(newValue)}
+  }
+
+  public var toggleRomanization: Bool {
+    get {
+      if case .toggleRomanization(let v)? = request {return v}
+      return false
+    }
+    set {request = .toggleRomanization(newValue)}
+  }
+
+  public var toggleTps: Bool {
+    get {
+      if case .toggleTps(let v)? = request {return v}
+      return false
+    }
+    set {request = .toggleTps(newValue)}
+  }
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public nonisolated enum OneOf_Request: Equatable, Sendable {
+    /// The Input Script picker's choice: `tl`, `poj` or `tps`.
+    case pick(String)
+    case toggleRomanization(Bool)
+    case toggleTps(Bool)
+
+  }
+
+  public init() {}
+}
+
+public nonisolated struct Taigi_DesktopShell_SwitchInputModeReply: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// The mode now in force, to store as `inputMode`.
+  public var inputMode: String = String()
+
+  /// Set when the switch left a romanization for TPS: the one Switch TPS
+  /// comes back to, to store as `lastRomanizationMode`.
+  public var lastRomanizationMode: String {
+    get {_lastRomanizationMode ?? String()}
+    set {_lastRomanizationMode = newValue}
+  }
+  /// Returns true if `lastRomanizationMode` has been explicitly set.
+  public var hasLastRomanizationMode: Bool {self._lastRomanizationMode != nil}
+  /// Clears the value of `lastRomanizationMode`. Subsequent reads from it will return its default value.
+  public mutating func clearLastRomanizationMode() {self._lastRomanizationMode = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _lastRomanizationMode: String? = nil
+}
+
 /// One key while the symbol picker is up, read under the settings snapshot
 /// this request must carry (`SymbolPickerIntent::intent`). Refused without
 /// an event or a snapshot.
@@ -1640,7 +1741,7 @@ nonisolated extension Taigi_DesktopShell_SymbolPickerAction: SwiftProtobuf._Prot
 
 nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1844,6 +1945,19 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
           self.request = .symbolPickerKey(v)
         }
       }()
+      case 18: try {
+        var v: Taigi_DesktopShell_SwitchInputModeRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .switchInputMode(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .switchInputMode(v)
+        }
+      }()
       default: break
       }
     }
@@ -1920,6 +2034,10 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
     case .symbolPickerKey?: try {
       guard case .symbolPickerKey(let v)? = self.request else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 17)
+    }()
+    case .switchInputMode?: try {
+      guard case .switchInputMode(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 18)
     }()
     default: break
     }
@@ -2292,7 +2410,7 @@ nonisolated extension Taigi_DesktopShell_LexiconStats: SwiftProtobuf.Message, Sw
 
 nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopResponse"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{c}\u{4}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}error\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}session\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker\0\u{3}switch_input_mode\0\u{c}\u{4}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2405,6 +2523,19 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
           self.reply = .symbolPicker(v)
         }
       }()
+      case 11: try {
+        var v: Taigi_DesktopShell_SwitchInputModeReply?
+        var hadOneofValue = false
+        if let current = self.reply {
+          hadOneofValue = true
+          if case .switchInputMode(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.reply = .switchInputMode(v)
+        }
+      }()
       default: break
       }
     }
@@ -2450,6 +2581,10 @@ nonisolated extension Taigi_DesktopShell_DesktopResponse: SwiftProtobuf.Message,
     case .symbolPicker?: try {
       guard case .symbolPicker(let v)? = self.reply else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+    }()
+    case .switchInputMode?: try {
+      guard case .switchInputMode(let v)? = self.reply else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
     }()
     case nil: break
     }
@@ -3758,6 +3893,124 @@ nonisolated extension Taigi_DesktopShell_ComposingShortcut: SwiftProtobuf.Messag
     if lhs.group != rhs.group {return false}
     if lhs._chord != rhs._chord {return false}
     if lhs._defaultChord != rhs._defaultChord {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_SwitchInputModeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SwitchInputModeRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}input_mode\0\u{3}last_romanization_mode\0\u{1}pick\0\u{3}toggle_romanization\0\u{3}toggle_tps\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.inputMode) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.lastRomanizationMode) }()
+      case 3: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.request != nil {try decoder.handleConflictingOneOf()}
+          self.request = .pick(v)
+        }
+      }()
+      case 4: try {
+        var v: Bool?
+        try decoder.decodeSingularBoolField(value: &v)
+        if let v = v {
+          if self.request != nil {try decoder.handleConflictingOneOf()}
+          self.request = .toggleRomanization(v)
+        }
+      }()
+      case 5: try {
+        var v: Bool?
+        try decoder.decodeSingularBoolField(value: &v)
+        if let v = v {
+          if self.request != nil {try decoder.handleConflictingOneOf()}
+          self.request = .toggleTps(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.inputMode.isEmpty {
+      try visitor.visitSingularStringField(value: self.inputMode, fieldNumber: 1)
+    }
+    if !self.lastRomanizationMode.isEmpty {
+      try visitor.visitSingularStringField(value: self.lastRomanizationMode, fieldNumber: 2)
+    }
+    switch self.request {
+    case .pick?: try {
+      guard case .pick(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 3)
+    }()
+    case .toggleRomanization?: try {
+      guard case .toggleRomanization(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularBoolField(value: v, fieldNumber: 4)
+    }()
+    case .toggleTps?: try {
+      guard case .toggleTps(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularBoolField(value: v, fieldNumber: 5)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_SwitchInputModeRequest, rhs: Taigi_DesktopShell_SwitchInputModeRequest) -> Bool {
+    if lhs.inputMode != rhs.inputMode {return false}
+    if lhs.lastRomanizationMode != rhs.lastRomanizationMode {return false}
+    if lhs.request != rhs.request {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_SwitchInputModeReply: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".SwitchInputModeReply"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{3}input_mode\0\u{3}last_romanization_mode\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.inputMode) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._lastRomanizationMode) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.inputMode.isEmpty {
+      try visitor.visitSingularStringField(value: self.inputMode, fieldNumber: 1)
+    }
+    try { if let v = self._lastRomanizationMode {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_SwitchInputModeReply, rhs: Taigi_DesktopShell_SwitchInputModeReply) -> Bool {
+    if lhs.inputMode != rhs.inputMode {return false}
+    if lhs._lastRomanizationMode != rhs._lastRomanizationMode {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

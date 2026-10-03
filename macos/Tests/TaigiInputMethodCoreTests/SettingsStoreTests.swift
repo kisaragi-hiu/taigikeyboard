@@ -139,7 +139,7 @@ final class SettingsStoreTests: XCTestCase {
         let engineStore = makeStore()
         XCTAssertEqual(engineStore.inputMode, .tl)
 
-        makeStore().inputMode = .poj
+        makeStore().switchInputMode(.pick(.poj))
 
         XCTAssertEqual(engineStore.inputMode, .poj)
     }
@@ -157,8 +157,43 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(store.isAutoSpaceEnabled)
     }
 
+    /// A pick of TPS remembers the romanization it left; a reset forgets it
+    /// with the mode.
+    func testAPickOfTps_remembersTheRomanization_andAResetForgetsBoth() {
+        let store = makeStore()
+        store.switchInputMode(.pick(.poj))
+
+        XCTAssertEqual(store.switchInputMode(.pick(.tps)), .tps)
+        XCTAssertEqual(userDefaults.string(forKey: SettingsStore.Keys.lastRomanizationMode.name), "poj")
+
+        store.resetGeneralSettings()
+
+        XCTAssertEqual(store.inputMode, .tl)
+        XCTAssertNil(userDefaults.string(forKey: SettingsStore.Keys.lastRomanizationMode.name))
+    }
+
+    /// Under TPS punctuation is full width whatever the stored swap, and the
+    /// keypad picks; both come back with the romanization.
+    func testTps_widensPunctuation_andPicksWithTheKeypad() {
+        let store = makeStore()
+        store.storedIsHanjiFirst = false
+        XCTAssertFalse(store.isFullWidthPunctuation)
+        XCTAssertEqual(store.candidateSlotKeySet, .bareKeys)
+
+        store.switchInputMode(.pick(.tps))
+
+        XCTAssertTrue(store.isFullWidthPunctuation)
+        XCTAssertEqual(store.candidateSlotKeySet, .keypad)
+        XCTAssertFalse(store.storedIsHanjiFirst)
+
+        store.switchInputMode(.toggleTps)
+
+        XCTAssertFalse(store.isFullWidthPunctuation)
+        XCTAssertEqual(store.candidateSlotKeySet, .bareKeys)
+    }
+
     func testInputMode_writesTheRawValueOthersCanRead() {
-        makeStore().inputMode = .poj
+        makeStore().switchInputMode(.pick(.poj))
 
         XCTAssertEqual(
             userDefaults.string(forKey: SettingsStore.Keys.inputMode.name),

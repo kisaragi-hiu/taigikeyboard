@@ -13,7 +13,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, LazyLock, Mutex};
 
 use taigi_desktop_core::settings::key_path::{key_path_settings, KeyPathSetting};
-use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument, SettingsProvider};
+use taigi_desktop_core::settings::{SettingsDocument, SettingsProvider};
 
 use crate::proto::{setting_value, SettingDescriptor, SettingEntry, SettingKind, SettingValue};
 
@@ -92,13 +92,6 @@ pub(crate) fn document_from(entries: &[SettingEntry]) -> Result<SettingsDocument
             .ok_or_else(|| SettingsRefusal::MissingValue(name.clone()))?;
         write(setting, value, &mut document)
             .ok_or_else(|| SettingsRefusal::WrongKind(name.clone()))?;
-    }
-    // Temporary, remove with P4 of `docs/architecture/desktop-tps-roadmap.md`:
-    // the macOS settings know TL and POJ only and read a stored `"tps"` (a
-    // restored mobile backup) as TL, so the core types TL too — never TPS keys
-    // under a TL picker. Only this snapshot is projected; storage keeps `"tps"`.
-    if document.choice::<InputMode>(&keys::INPUT_MODE) == InputMode::Tps {
-        document.set_choice(&keys::INPUT_MODE, InputMode::Tl);
     }
     Ok(document)
 }
@@ -270,11 +263,11 @@ mod tests {
         );
     }
 
-    /// Until P4 gives the Swift settings a TPS mode, a stored `"tps"` types
-    /// TL — what the macOS picker shows for it.
+    /// A stored `"tps"` — the picker's, the chord's or a restored mobile
+    /// backup's — types TPS.
     #[test]
-    fn a_stored_tps_reads_as_tl_until_the_mac_has_a_tps_mode() {
+    fn a_stored_tps_reads_as_tps() {
         let document = document_from(&[text("inputMode", "tps")]).unwrap();
-        assert_eq!(document.engine_settings().input_mode, InputMode::Tl);
+        assert_eq!(document.engine_settings().input_mode, InputMode::Tps);
     }
 }

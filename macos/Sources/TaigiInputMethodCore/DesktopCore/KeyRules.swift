@@ -116,6 +116,38 @@ enum KeyRules {
         }
     }
 
+    /// Where `request` moves the stored mode, by desktop-core's one writer,
+    /// given the two stored values it reads (`""` when absent): the mode to
+    /// store, and the romanization to come back to when the switch stored a
+    /// new one. Reads no snapshot, so it answers before `Configure` too.
+    static func switchInputMode(
+        _ request: InputModeSwitch,
+        inputMode: String,
+        lastRomanizationMode: String,
+    ) -> (inputMode: InputMode, lastRomanizationMode: InputMode?)? {
+        var message = Taigi_DesktopShell_SwitchInputModeRequest()
+        message.inputMode = inputMode
+        message.lastRomanizationMode = lastRomanizationMode
+        switch request {
+        case let .pick(mode): message.pick = mode.rawValue
+        case .toggleRomanization: message.toggleRomanization = true
+        case .toggleTps: message.toggleTps = true
+        }
+        let reply = DesktopCoreBridge.roundtrip(.switchInputMode(message), op: "switchInputMode") {
+            if case let .switchInputMode(reply) = $0 {
+                reply
+            } else {
+                nil
+            }
+        }
+        return decoded(reply, op: "switchInputMode") { reply -> (InputMode, InputMode?)? in
+            guard let mode = InputMode(rawValue: reply.inputMode) else { return nil }
+            guard reply.hasLastRomanizationMode else { return (mode, nil) }
+            guard let last = InputMode(rawValue: reply.lastRomanizationMode), last != .tps else { return nil }
+            return (mode, last)
+        }
+    }
+
     /// `reply` read by `decode`: nil when there is no reply (the bridge
     /// logged why) or it holds what this side cannot read (logged here).
     private static func decoded<Reply, Value>(

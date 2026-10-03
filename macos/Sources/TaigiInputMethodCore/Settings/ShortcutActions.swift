@@ -51,6 +51,14 @@ extension KeyboardShortcuts.Name {
         "toggleRomanization",
         initial: .init(.c, modifiers: [.control, .command]),
     )
+    /// Into TPS and back to the romanization last used (desktop TPS roadmap
+    /// D5). Its own chord, not a third stop on the switch above: TPS is not a
+    /// romanization (USER 2026-10-03). P for Phonetic Symbols, in the ⌃⌘
+    /// family; the same letter as Ctrl+Alt+P on Windows and Linux.
+    static let toggleTps = Self(
+        "toggleTps",
+        initial: .init(.p, modifiers: [.control, .command]),
+    )
     /// Bare backtick, the classic Taiwanese-IME function key (USER 2026-08-21):
     /// no TL or POJ syllable is spelled with it, and the hotkey is armed only
     /// while a Taigi session holds the engine, so it takes nothing from other
@@ -125,6 +133,8 @@ extension KeyboardShortcuts.Name {
 /// typing first and the settings window last.
 enum ShortcutAction: CaseIterable, Sendable {
     case toggleRomanization
+    /// Into TPS and back to the romanization last used.
+    case toggleTps
     case toggleTranslateSwapped
     /// Steps the Candidate Display picker one place: Hanji–Romanization Pairing → Hanji with Romanization → Romanization Only → Hanji–Romanization Pairing.
     case cycleCandidateDisplayMode
@@ -140,6 +150,7 @@ enum ShortcutAction: CaseIterable, Sendable {
     var name: KeyboardShortcuts.Name {
         switch self {
         case .toggleRomanization: .toggleRomanization
+        case .toggleTps: .toggleTps
         case .cycleCandidateDisplayMode: .cycleCandidateDisplayMode
         case .toggleTranslateSwapped: .toggleTranslateSwapped
         case .showSymbolPicker: .showSymbolPicker
@@ -166,6 +177,20 @@ enum ShortcutAction: CaseIterable, Sendable {
         self == .showSymbolPicker
     }
 
+    /// Whether this action does nothing under `mode` — the switches and the
+    /// guide that are about a romanization's candidates and keys. No write,
+    /// no flash, nothing taken down.
+    /// CROSS-PLATFORM INVARIANT — mirrors desktop-core
+    /// `ShortcutAction::is_inert_under` (`keys/shortcut_actions.rs`), which
+    /// Windows and Linux gate on. Drift makes a chord act on one desktop and
+    /// not another.
+    func isInert(under mode: InputMode) -> Bool {
+        switch self {
+        case .toggleTranslateSwapped, .cycleCandidateDisplayMode, .showTelexGuide: mode == .tps
+        case .toggleRomanization, .toggleTps, .showSymbolPicker, .openLastSettingsPane: false
+        }
+    }
+
     /// The chord a fresh install has on this action, read back from the
     /// registry the library seeds itself from.
     ///
@@ -186,6 +211,7 @@ enum ShortcutAction: CaseIterable, Sendable {
     func label(_ language: DisplayLanguageStore) -> String {
         switch self {
         case .toggleRomanization: language.string(.desktopShortcutToggleRomanization)
+        case .toggleTps: language.string(.desktopShortcutToggleTps)
         case .cycleCandidateDisplayMode: language.string(.desktopShortcutCycleCandidateDisplayMode)
         case .toggleTranslateSwapped: language.string(.commonToggleTranslateSwapped)
         case .showSymbolPicker: language.string(.desktopShortcutShowSymbolPicker)
@@ -260,7 +286,8 @@ enum ShortcutHotkeys {
             // pane that is belongs to the settings window, not to a chord —
             // the named panes are reached from the menu bar now.
             openSettings(on: nil, in: SettingsStore())
-        case .toggleRomanization, .toggleTranslateSwapped, .cycleCandidateDisplayMode, .showTelexGuide:
+        case .toggleRomanization, .toggleTps, .toggleTranslateSwapped, .cycleCandidateDisplayMode,
+             .showTelexGuide:
             ComposingSessionCoordinator.shared.performShortcutAction(action)
         case .showSymbolPicker:
             // Never registered, so never fires (`firesFromTheKeyPath`).
