@@ -110,7 +110,6 @@
     <string name="i18n_dictionary_clearLearningRecordsDone">学習記録を消去しました</string>
     <string name="i18n_dictionary_clearLearningRecordsFailed">学習記録を消去できませんでした</string>
     <string name="i18n_dictionary_learningRecords">学習記録</string>
-    <string name="i18n_dictionary_learningRecordsInfo">選んだ単語からキーボードが学習した記録と回数です。</string>
     <string name="i18n_dictionary_learningRecordsFrequency">単語頻度</string>
     <string name="i18n_dictionary_learningRecordsPhrases">フレーズ</string>
     <string name="i18n_dictionary_learningRecordsAssociation">単語連携</string>

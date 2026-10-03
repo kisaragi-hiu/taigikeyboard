@@ -305,14 +305,10 @@ pub fn view(
     strings: &StringResolver,
     context: &mut ViewContext<SettingsWindow>,
 ) -> View {
-    let info = TextBlock::new()
-        .text(strings.resolve(StringKey::DictionaryLearningRecordsInfo))
-        .text_wrapping(TextWrapping::Wrap)
-        .opacity(SECONDARY_OPACITY);
     // No user-data directory: the stores never opened, and the banner at
     // the top of the window says so — nothing to list, nothing to write.
     if window.is_read_only() {
-        return info.into();
+        return View::empty();
     }
     let model = window.learning_records();
     // Mutual exclusion is the slot's; the greyed look waits the same
@@ -324,7 +320,6 @@ pub fn view(
         .find(|(kind, _)| *kind == model.kind)
         .unwrap_or(KINDS[0]);
     View::fragment((
-        info,
         choice_row(
             strings.resolve(StringKey::DictionaryLearningRecords),
             &KINDS,

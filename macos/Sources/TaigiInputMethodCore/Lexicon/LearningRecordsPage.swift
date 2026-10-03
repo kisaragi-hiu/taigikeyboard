@@ -171,9 +171,6 @@ struct LearningRecordsPage: View {
                     Text(language.string(.dictionaryLearningRecordsOrderMostRecent))
                         .tag(Taigi_Engine_LearningRecordOrder.mostRecent)
                 }
-            } footer: {
-                Text(language.string(.dictionaryLearningRecordsInfo))
-                    .foregroundStyle(.secondary)
             }
 
             Section {

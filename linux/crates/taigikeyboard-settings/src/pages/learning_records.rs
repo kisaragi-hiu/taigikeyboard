@@ -97,10 +97,8 @@ pub fn build<'a>(mut context: PageContext<'a>, page: &adw::PreferencesPage) -> P
 impl LearningRecordsPage {
     fn new(context: &PageContext<'_>, page: &adw::PreferencesPage) -> Rc<Self> {
         let strings = *context.strings;
-        // What the rows are, then which of them and in what order.
-        let pickers = adw::PreferencesGroup::builder()
-            .description(strings.resolve(StringKey::DictionaryLearningRecordsInfo))
-            .build();
+        // Which rows, in what order.
+        let pickers = adw::PreferencesGroup::new();
         let kind_labels: Vec<&str> = KINDS.iter().map(|(_, key)| strings.resolve(*key)).collect();
         let kind = adw::ComboRow::builder()
             .title(strings.resolve(StringKey::DictionaryLearningRecords))
