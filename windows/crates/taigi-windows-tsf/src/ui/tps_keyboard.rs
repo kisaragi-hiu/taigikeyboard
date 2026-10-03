@@ -16,8 +16,8 @@
 use super::render::{DWriteMeasurer, RenderFactory, Surface};
 use super::theme::{SystemTheme, Theme};
 use super::window::{
-    frame_in_work_area, monitor_at, monitor_of_window, MonitorArea, PopupWindow, WindowHandler,
-    WindowRef, BASE_DPI,
+    frame_in_work_area, monitor_of_window, MonitorArea, PopupWindow, WindowHandler, WindowRef,
+    BASE_DPI,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -25,7 +25,7 @@ use taigi_desktop_core::candidates::{FontSpec, TextMeasurer};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::{tps_keyboard_rows, TpsKeyCap, TpsKeyboardRow};
 use taigi_desktop_core::settings::{AppearanceMode, CandidateFontChoice, CandidateFontSelection};
-use windows::Win32::Foundation::{POINT, RECT};
+use windows::Win32::Foundation::RECT;
 use windows::Win32::Graphics::Direct2D::Common::{D2D1_COLOR_F, D2D_RECT_F, D2D_SIZE_U};
 use windows::Win32::Graphics::Direct2D::{
     ID2D1HwndRenderTarget, ID2D1SolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
@@ -314,20 +314,14 @@ impl WindowHandler for PanelContent {
 
     fn wheel(&mut self, _window: &WindowRef, _delta: f32) {}
 
-    /// The panel moved to a monitor with another scale: placed again at the
-    /// bottom of that monitor at the new DPI.
-    fn dpi_changed(&mut self, window: &WindowRef, dpi: f32, suggested: RECT) {
+    /// The scale moved (another monitor, a new display setting): the surface
+    /// is rebuilt at the new DPI and the panel synced — placed again where it
+    /// belongs when it is wanted, and never brought up by the message alone,
+    /// since every activation holds this window hidden.
+    fn dpi_changed(&mut self, window: &WindowRef, dpi: f32, _suggested: RECT) {
         self.dpi = dpi;
         self.surface = None;
-        let centre = POINT {
-            x: (suggested.left + suggested.right) / 2,
-            y: (suggested.top + suggested.bottom) / 2,
-        };
-        match monitor_at(centre) {
-            Some(monitor) => window.show_at(bottom_frame(&monitor, panel_size(&self.rows))),
-            None if suggested.right > suggested.left => window.show_at(suggested),
-            None => {}
-        }
+        self.sync(window);
     }
 
     fn timer(&mut self, _window: &WindowRef, _id: usize) {}

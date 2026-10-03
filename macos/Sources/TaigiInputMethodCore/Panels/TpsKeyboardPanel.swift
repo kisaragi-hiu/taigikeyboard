@@ -41,19 +41,28 @@ final class TpsKeyboardPanel {
     private static let shiftGlyphFontSize: CGFloat = 13
     private static let labelFontSize: CGFloat = 11
 
-    /// Read once: the layout table is fixed for the life of the process.
-    private lazy var rows: [Taigi_DesktopShell_TpsKeyboardRow] = KeyRules.tpsKeyboardRows() ?? []
+    /// Read once: the layout table is fixed for the life of the process. A
+    /// failed read is not kept, so the next `show` asks again.
+    private var cachedRows: [Taigi_DesktopShell_TpsKeyboardRow] = []
+    private var rows: [Taigi_DesktopShell_TpsKeyboardRow] {
+        if cachedRows.isEmpty {
+            cachedRows = KeyRules.tpsKeyboardRows() ?? []
+        }
+        return cachedRows
+    }
 
     /// How many key caps the panel draws (for the tests).
     var capCount: Int {
         rows.reduce(0) { $0 + $1.caps.count }
     }
 
-    /// Up for `owner`, or kept up and handed to it. Built once and reused —
-    /// its content never changes, and AppKit re-colours it for the appearance.
+    /// Up for `owner`, or kept up and handed to it — placed again each time,
+    /// so a session in an app on another screen takes it there (IMK activates
+    /// the incoming session before the outgoing one goes, so the panel is
+    /// still up at every handover). Built once and reused — its content never
+    /// changes, and AppKit re-colours it for the appearance.
     func show(ownedBy owner: ComposingSessionToken) {
         self.owner = owner
-        guard !isShowing else { return }
         guard !rows.isEmpty else { return }
         let panel = panel ?? Self.makePanel(rows: rows)
         self.panel = panel
@@ -64,7 +73,9 @@ final class TpsKeyboardPanel {
                 y: frame.minY + Self.bottomMargin,
             ))
         }
-        panel.orderFrontRegardless()
+        if !isShowing {
+            panel.orderFrontRegardless()
+        }
     }
 
     /// Takes the panel down only if `owner` raised it. IMK activates the

@@ -232,7 +232,8 @@ pub fn perform_global(
             // A window of the settings app, not of this engine (roadmap
             // D6, U6): the app's one instance opens it or closes it. The
             // composition is not touched — the panel is looked at, and its
-            // window taking focus is what would end the session.
+            // window taking focus is what would end the session; the guide
+            // and the picker came down above, as for every global action.
             toggle_tps_keyboard();
         }
     }

@@ -1008,7 +1008,8 @@ impl TextService_Impl {
             ShortcutAction::ShowTpsKeyboard => {
                 // The user's wish, stored — every host process reads it at
                 // its next focus — then this one's panel follows. The
-                // composition and its list are not touched.
+                // composition and its list are not touched; an open symbol
+                // picker came down above, as for every global action.
                 if !runtime.update_settings("toggle_tps_keyboard", |document| {
                     let shown = document.bool(&keys::TPS_KEYBOARD_SHOWN);
                     document.set_bool(&keys::TPS_KEYBOARD_SHOWN, !shown);
