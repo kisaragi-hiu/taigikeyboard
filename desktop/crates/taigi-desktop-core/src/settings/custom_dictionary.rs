@@ -1,29 +1,17 @@
-//! The Custom Dictionary pane's model, shared by both settings windows: which
-//! page of which filter is on screen and which load put it there, the
-//! selection, the destructive commands that ask first, and what each job
-//! answers. The shells own the widgets, the timers, and the work slot a job
+//! The Custom Dictionary pane's model, shared by both settings windows: the
+//! list (`listing.rs`, shared with Learning Records), the destructive
+//! commands that ask first, and what each job answers. The shells own the widgets, the timers, and the work slot a job
 //! runs in — Windows holds one per page, Linux one per window so an outcome
 //! outlives a page rebuilt under it. macOS keeps a Swift twin:
 //! `CustomDictionaryPageModel` in `CustomDictionaryPage.swift`.
 
+use super::listing::{self, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
 use super::presentation::PageMessage;
 use crate::engine::user_data::{
     self, CustomDictionaryEntry, CustomDictionaryPage, CustomDictionaryRefusal, UserDataError,
 };
 use crate::strings::StringKey;
 use std::path::Path;
-use std::time::Duration;
-
-/// `CustomDictionaryPageModel.pageSize`.
-pub const PAGE_SIZE: usize = 10;
-/// `reloadWhenFilterSettles`: a word typed letter by letter is one query,
-/// not six.
-pub const FILTER_SETTLE: Duration = Duration::from_millis(200);
-/// How long a job may run before the page says so (`overlayDelay`): a
-/// millisecond-long write must not flash a spinner.
-pub const OVERLAY_DELAY: Duration = Duration::from_millis(400);
-/// The detail when a load's worker died before it answered.
-pub const LOAD_DID_NOT_FINISH: &str = "the load did not finish";
 
 /// A command that empties a store, waiting on its confirmation.
 ///
@@ -55,35 +43,13 @@ impl Confirm {
     }
 }
 
-/// What a job hands back.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct JobOutcome {
-    pub message: Option<PageMessage>,
-    /// Whether the list changed and must be reloaded.
-    pub is_reload_wanted: bool,
-}
-
-impl JobOutcome {
-    /// A job whose worker died: said, and the list reloaded in case the
-    /// store changed before it did.
-    pub fn did_not_finish() -> Self {
-        Self {
-            message: Some(PageMessage::failure(
-                StringKey::DesktopCustomDictWriteFailed,
-                "the operation did not finish",
-            )),
-            is_reload_wanted: true,
-        }
-    }
-}
-
 /// A write answers with nothing but its failure, and asks for a reload
 /// either way.
 fn write_outcome(result: Result<(), UserDataError>) -> JobOutcome {
     JobOutcome {
         message: result
             .err()
-            .map(|error| PageMessage::failure(StringKey::DesktopCustomDictWriteFailed, error)),
+            .map(|error| PageMessage::failure(CustomDictionaryEntry::WRITE_FAILED, error)),
         is_reload_wanted: true,
     }
 }
@@ -162,184 +128,37 @@ pub fn export_file_name(local_date: &str) -> String {
     format!("taigi_custom_dictionary_{local_date}.csv")
 }
 
-/// The page of the dictionary on screen and the filter that chose it.
-#[derive(Debug, Default)]
-pub struct Listing {
-    pub rows: Vec<CustomDictionaryEntry>,
-    /// Every entry, for the section header — what the dictionary HOLDS,
-    /// which is not what the current filter matches.
-    pub total_count: usize,
-    /// How many entries the current filter matches; what the pager divides.
-    pub match_count: usize,
-    /// Which page is on screen, zero-based.
-    pub page: usize,
-    /// The row the list has selected, by ID — never by index, which moves
-    /// under a reload.
-    pub selected_id: Option<String>,
-    /// The box as typed; written only through `set_filter`, which also
-    /// makes every load in flight stale.
-    filter: String,
-    /// Which load the rows on screen came from: a load started under an
-    /// older filter can come back after a newer one has, and would put rows
-    /// on screen that do not match the box. The newest wins by number.
-    load_generation: u64,
-}
+/// The dictionary's page on screen (`listing.rs`).
+pub type Listing = listing::Listing<CustomDictionaryEntry>;
 
-/// A load to run off the UI thread.
-#[derive(Debug)]
-pub struct LoadRequest {
-    pub generation: u64,
-    pub filter: String,
-    pub page: usize,
-}
+impl ListedRow for CustomDictionaryEntry {
+    type Id = String;
+    const EMPTY: StringKey = StringKey::DictionaryCustomDictEmpty;
+    const READ_FAILED: StringKey = StringKey::DesktopCustomDictReadFailed;
+    const WRITE_FAILED: StringKey = StringKey::DesktopCustomDictWriteFailed;
 
-impl LoadRequest {
-    /// The page asked for. The engine answers the page it really served —
-    /// pulled back inside the list if the list shrank under it (a delete on
-    /// the last page, a filter that now matches less) — and `land` adopts
-    /// that one.
-    pub fn fetch(&self) -> Result<CustomDictionaryPage, String> {
-        user_data::list_custom_page(&self.filter, self.page, PAGE_SIZE)
-            .map_err(|error| error.to_string())
+    fn id(&self) -> &String {
+        &self.id
     }
 }
 
-/// What a finished load did to the listing.
-#[derive(Debug, PartialEq, Eq)]
-pub enum LoadLanded {
-    /// A newer load or filter has started since; nothing changed.
-    Stale,
-    Adopted,
-    /// Not an empty list: "empty" and "could not be read" look the same on
-    /// screen, and only one is worth doing something about. The rows
-    /// already shown stay; this is the notice to show.
-    Failed(PageMessage),
-}
-
-impl Listing {
-    pub fn filter(&self) -> &str {
-        &self.filter
-    }
-
-    /// The filter box changed. `None` when it did not really; otherwise the
-    /// generation the settle timer carries — the reload waits for the box
-    /// to settle.
-    pub fn set_filter(&mut self, filter: String) -> Option<u64> {
-        if filter == self.filter {
-            return None;
-        }
-        self.filter = filter;
-        Some(self.next_generation())
-    }
-
-    /// The settle timer for `generation` fired. `true` when the box has not
-    /// moved since: the list reloads from the first page.
-    pub fn settle(&mut self, generation: u64) -> bool {
-        if generation != self.load_generation {
-            return false;
-        }
-        self.page = 0;
-        true
-    }
-
-    /// A load of the page on screen starts; every earlier one is now stale.
-    pub fn begin_load(&mut self) -> LoadRequest {
-        LoadRequest {
-            generation: self.next_generation(),
-            filter: self.filter.trim().to_owned(),
-            page: self.page,
-        }
-    }
-
-    /// The load started at `generation` came back.
-    pub fn land(
-        &mut self,
-        generation: u64,
-        outcome: Result<CustomDictionaryPage, String>,
-    ) -> LoadLanded {
-        if generation != self.load_generation {
-            return LoadLanded::Stale;
-        }
-        match outcome {
-            Ok(loaded) => {
-                self.page = loaded.page;
-                self.rows = loaded.rows;
-                self.match_count = loaded.match_count;
-                self.total_count = loaded.total_count;
-                // A selection the new page does not hold is no selection:
-                // the ✎ and − buttons must not act on a row that is not on
-                // screen.
-                if self.selected_index().is_none() {
-                    self.selected_id = None;
-                }
-                LoadLanded::Adopted
-            }
-            Err(detail) => LoadLanded::Failed(PageMessage::failure(
-                StringKey::DesktopCustomDictReadFailed,
-                detail,
-            )),
-        }
-    }
-
-    fn next_generation(&mut self) -> u64 {
-        self.load_generation = self.load_generation.wrapping_add(1);
-        self.load_generation
-    }
-
-    pub fn selected_row(&self) -> Option<&CustomDictionaryEntry> {
-        let id = self.selected_id.as_deref()?;
-        self.rows.iter().find(|row| row.id == id)
-    }
-
-    pub fn selected_index(&self) -> Option<usize> {
-        let id = self.selected_id.as_deref()?;
-        self.rows.iter().position(|row| row.id == id)
-    }
-
-    /// Never fewer than one: an empty list is still page 1 of 1.
-    pub fn page_count(&self) -> usize {
-        self.match_count.div_ceil(PAGE_SIZE).max(1)
-    }
-
-    /// What the dictionary holds — and, while a filter narrows it, how much
-    /// of that the filter matches. Against the counts, not against the
-    /// filter box: a filter that matches everything says nothing by saying
-    /// "17000 / 17000". `CustomDictionaryPage.swift` `countLabel` is the macOS twin.
-    pub fn count_label(&self) -> String {
-        if self.match_count < self.total_count {
-            format!("{} / {}", self.match_count, self.total_count)
-        } else {
-            self.total_count.to_string()
-        }
-    }
-
-    /// Which sentence the empty list shows, or `None` while there are rows:
-    /// an empty dictionary is a STATE the + button answers, a filter
-    /// matching nothing is a RESULT of what was typed
-    /// (`CustomDictionaryPage.swift` `emptyState` is the macOS twin).
-    pub fn empty_state_key(&self) -> Option<StringKey> {
-        if !self.rows.is_empty() {
-            return None;
-        }
-        Some(if self.filter.is_empty() {
-            StringKey::DictionaryCustomDictEmpty
-        } else {
-            StringKey::DictionaryNoResults
-        })
-    }
+/// The dictionary page `request` asks for.
+pub fn fetch(request: &LoadRequest) -> Result<CustomDictionaryPage, String> {
+    user_data::list_custom_page(&request.filter, request.page, PAGE_SIZE)
+        .map_err(|error| error.to_string())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::settings::listing::{JobState, LoadLanded};
 
     fn listing(match_count: usize, total_count: usize, filter: &str) -> Listing {
-        Listing {
-            match_count,
-            total_count,
-            filter: filter.to_owned(),
-            ..Listing::default()
-        }
+        let mut listing = Listing::default();
+        listing.set_filter(filter.to_owned());
+        listing.match_count = match_count;
+        listing.total_count = total_count;
+        listing
     }
 
     fn entry(id: &str) -> CustomDictionaryEntry {
@@ -415,6 +234,31 @@ mod tests {
         for (match_count, pages) in [(0, 1), (10, 1), (11, 2), (25, 3)] {
             assert_eq!(listing(match_count, match_count, "").page_count(), pages);
         }
+    }
+
+    #[test]
+    fn a_step_stays_inside_the_pages_that_exist() {
+        // trace: 25 matches → pages 0, 1, 2.
+        let mut listing = listing(25, 25, "");
+        assert!(!listing.step_page(-1), "before the first page");
+        assert!(listing.step_page(2));
+        assert_eq!(listing.page, 2);
+        assert!(!listing.step_page(1), "past the last page");
+        assert_eq!(listing.page, 2);
+    }
+
+    #[test]
+    fn only_the_pages_own_job_settles_or_shows_busy() {
+        let mut job = JobState::default();
+        job.start(4);
+        assert!(!job.show_busy(3), "another job's overlay timer");
+        assert!(!job.is_busy_shown());
+        assert!(job.show_busy(4));
+        assert!(job.is_busy_shown());
+        assert!(!job.finish(3), "a job a rebuilt page inherited");
+        assert!(job.finish(4));
+        assert!(!job.is_busy_shown());
+        assert!(!job.finish(4), "settled once");
     }
 
     #[test]
@@ -534,7 +378,7 @@ mod tests {
     fn a_blank_filter_is_kept_as_typed_and_reads_as_a_filter() {
         let mut listing = Listing::default();
         listing.set_filter(" ".to_owned());
-        assert_eq!(listing.filter, " ");
+        assert_eq!(listing.filter(), " ");
         assert_eq!(listing.begin_load().filter, "");
         assert_eq!(
             listing.empty_state_key(),
@@ -562,7 +406,15 @@ mod tests {
                 is_reload_wanted: true,
             }
         );
-        assert!(JobOutcome::did_not_finish().is_reload_wanted);
+        let died = JobOutcome::did_not_finish::<CustomDictionaryEntry>();
+        assert!(died.is_reload_wanted);
+        assert_eq!(
+            died.message,
+            Some(PageMessage::failure(
+                StringKey::DesktopCustomDictWriteFailed,
+                "the operation did not finish"
+            ))
+        );
     }
 
     #[test]

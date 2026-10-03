@@ -1,6 +1,6 @@
 # Learning Records page — roadmap
 
-> **Status**: in progress — P0 (this document). Requested by the maintainer 2026-10-03: "a page where users can view and edit learning records and ranking scores, for mobile and desktop".
+> **Status**: in progress — P0 merged `5bab5b9b`; P1 #366, P2 in review. Requested by the maintainer 2026-10-03: "a page where users can view and edit learning records and ranking scores, for mobile and desktop".
 
 A settings page, on all five platforms, that lists what the keyboard has learned from the user, lets them correct one row's count and delete one row. Today the only control is "Delete Learning Records", which empties every learning store at once.
 
@@ -80,13 +80,20 @@ message DeleteLearningRecord { record }                              → Learnin
 
 Every page: a change of kind, order or filter invalidates a load still in flight; "record is gone", "could not read" and "nothing learned yet" are three different states.
 
-### Not colliding with macOS-over-desktop-core
+### Relation to macOS-over-desktop-core
 
-That track has one phase left, P15: rewriting `*.swift` cites in Rust comments plus `system-overview.md` / `AGENTS.md` (`macos-desktop-core-roadmap.md:198`). This work therefore:
+That track completed 2026-10-03 (P15 merged #365); P1 was rebased onto it. This work leaves the macOS key path, `taigi-macos-ffi` and `CoreComposingBackend` alone — the macOS page uses the Swift user-data client the Custom Dictionary page already uses (the user-data slice is the one macOS still sends itself).
 
-- puts the request handling and the page model in **new files** (`engine/userdata/src/learning_records.rs`, `desktop-core/src/settings/learning_records.rs`); each store file gains only a table descriptor (`LEARNING_TABLE`) beside its schema, without moving or rewording any line that carries a Swift cite; the branch is rebased and re-diffed once P15 merges;
-- adds no `*.swift` cite to any Rust comment;
-- leaves the macOS key path, `taigi-macos-ffi` and `CoreComposingBackend` alone — the macOS page uses the Swift user-data client the Custom Dictionary page already uses (`RustEngineBridge.swift:93-95`: the user-data slice is the one macOS sends itself).
+### Desktop shared model (P2)
+
+- `desktop-core/src/settings/listing.rs` — the paged, filtered list (`Listing<Row: ListedRow>`, `LoadRequest`, `JobOutcome`, page size 10, filter settle, overlay delay), lifted out of `custom_dictionary.rs` so Custom Dictionary and Learning Records share it; `custom_dictionary::Listing` is now `Listing<CustomDictionaryEntry>`.
+- `desktop-core/src/settings/learning_records.rs` — kinds (frequency, phrases), orders, labels, the count note, the jobs (a row already gone is a notice, not a failure), the last-used day label.
+- `SettingsPane::LearningRecords` (`learningRecords`) exists from P2; it joins `SettingsPane::SIDEBAR` with the Windows page in P3 (the Windows window asserts its pane table equals that roster). Linux lists it from P2 (its own `SIDEBAR`).
+- Desktop page: kind + order pickers over the Custom Dictionary table shape (filter, 4 columns — reading, word, count, last used — ✎ / − verbs, pager). Edit = count dialog; delete = immediate, as one custom word's delete is.
+
+### Strings
+
+16 keys in `i18n/dictionary.json` (`learningRecords*`, `learningRecordGone`); `learningRecordsAssociation` is iOS / Android only. Taigi TL / POJ verified with `taigi-converter` (phonetics-specialist, 2026-10-03). Reused: `searchPlaceholder`, `romanLabel`, `hanziLabel`, `noResults`, `common.delete` / `save` / `cancel`, `desktop.entriesSection`.
 
 ## Phases
 
@@ -94,8 +101,8 @@ That track has one phase left, P15: rewriting `*.swift` cites in Rust comments p
 |---|---|---|
 | P0 | this roadmap | Done |
 | P1 | engine: proto + store methods + `learning_records.rs` + routing; store tests (id reuse, two connections, phrase keys, paging, NULL TL) + dispatch tests; regenerated Android Java / iOS Swift / macOS Swift protos in the same PR | In review |
-| P2 | i18n keys with every generated output (incl. `ios/Localizable.xcstrings`) + `desktop-core` page model + Linux page; gate = every platform in the keys' scope | Pending |
-| P3 | Windows page | Pending |
+| P2 | i18n keys with every generated output (incl. `ios/Localizable.xcstrings`) + `desktop-core` page model (+ shared `Listing`) + Linux page; gate = every platform in the keys' scope | In review |
+| P3 | Windows page + `SettingsPane::SIDEBAR` entry | Pending |
 | P4 | macOS page | Pending |
 | P5 | iOS page | Pending |
 | P6 | Android page | Pending |

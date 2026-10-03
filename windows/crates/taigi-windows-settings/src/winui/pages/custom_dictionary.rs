@@ -28,10 +28,12 @@ use std::path::Path;
 use taigi_desktop_core::engine::user_data::{CustomDictionaryEntry, CustomDictionaryPage};
 use taigi_desktop_core::settings::custom_dictionary::{
     clear_learning_records_job, delete_all_job, delete_entry_job, export_file_name, export_job,
-    import_job, save_entry_job, Confirm, JobOutcome, Listing, LoadLanded, FILTER_SETTLE,
-    LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
+    fetch, import_job, save_entry_job, Confirm, Listing,
 };
 use taigi_desktop_core::settings::keys;
+use taigi_desktop_core::settings::listing::{
+    JobOutcome, LoadLanded, FILTER_SETTLE, LOAD_DID_NOT_FINISH, OVERLAY_DELAY,
+};
 use taigi_desktop_core::settings::presentation::PageMessage;
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use windows_reactor::*;
@@ -311,7 +313,7 @@ fn load(model: &mut CustomDictionaryModel, context: &ComponentContext<SettingsWi
     _ = context.spawn_background_with_rejection(
         move |_| {
             let outcome =
-                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| request.fetch()))
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| fetch(&request)))
                     .unwrap_or_else(|_| Err(LOAD_DID_NOT_FINISH.to_owned()));
             WindowMessage::CustomDictionary(Message::Loaded(generation, Box::new(outcome)))
         },
@@ -345,7 +347,7 @@ fn begin_job(
             // A panicking store call must not leave the slot held for the
             // life of the window.
             let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(job))
-                .unwrap_or_else(|_| JobOutcome::did_not_finish());
+                .unwrap_or_else(|_| JobOutcome::did_not_finish::<CustomDictionaryEntry>());
             WindowMessage::CustomDictionary(Message::JobFinished(generation, Box::new(outcome)))
         },
         WindowMessage::CustomDictionary(Message::JobFinished(

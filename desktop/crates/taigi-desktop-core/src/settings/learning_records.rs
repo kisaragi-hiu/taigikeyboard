@@ -1,0 +1,256 @@
+//! The Learning Records pane's model, shared by both settings windows:
+//! which kind of learned row and which order are on screen, the list
+//! (`listing.rs`, shared with Custom Dictionary), what each job answers, and
+//! how a row reads. The engine owns the rows and their rules
+//! (`engine/userdata/src/learning_records.rs`); the shells own the widgets.
+//!
+//! Design: `docs/architecture/learning-records-page-roadmap.md`.
+
+use super::listing::{self, JobOutcome, ListedRow, LoadRequest, PAGE_SIZE};
+use super::presentation::PageMessage;
+use crate::engine::user_data::{
+    self, LearningRecord, LearningRecordKind, LearningRecordOrder, LearningRecordPage,
+    UserDataError,
+};
+use crate::strings::StringKey;
+
+/// The learned rows on screen.
+pub type Listing = listing::Listing<LearningRecord>;
+
+impl ListedRow for LearningRecord {
+    type Id = i64;
+    const EMPTY: StringKey = StringKey::DictionaryLearningRecordsEmpty;
+    const READ_FAILED: StringKey = StringKey::DictionaryLearningRecordsReadFailed;
+    const WRITE_FAILED: StringKey = StringKey::DictionaryLearningRecordsWriteFailed;
+
+    fn id(&self) -> &i64 {
+        &self.id
+    }
+}
+
+/// The kinds the desktop lists with their labels, in picker order. No
+/// next-word association: the desktop predicts no next word, so those rows
+/// rank nothing here.
+pub const KINDS: [(LearningRecordKind, StringKey); 2] = [
+    (
+        LearningRecordKind::Frequency,
+        StringKey::DictionaryLearningRecordsFrequency,
+    ),
+    (
+        LearningRecordKind::LearnedPhrase,
+        StringKey::DictionaryLearningRecordsPhrases,
+    ),
+];
+
+/// The orders the picker offers; the first is the default.
+pub const ORDERS: [LearningRecordOrder; 2] = [
+    LearningRecordOrder::MostUsed,
+    LearningRecordOrder::MostRecent,
+];
+
+pub fn order_label(order: LearningRecordOrder) -> StringKey {
+    match order {
+        LearningRecordOrder::MostUsed => StringKey::DictionaryLearningRecordsOrderMostUsed,
+        LearningRecordOrder::MostRecent => StringKey::DictionaryLearningRecordsOrderMostRecent,
+    }
+}
+
+/// The note under the count field. Word frequency's ranking boost stops
+/// growing at count 40 (`engine/ranking/src/score.rs` `MAX_BOOST`); the
+/// other kinds make no such promise, so they say nothing.
+pub fn count_note(kind: LearningRecordKind) -> Option<StringKey> {
+    (kind == LearningRecordKind::Frequency)
+        .then_some(StringKey::DictionaryLearningRecordsCountCapInfo)
+}
+
+/// The page asked for, of `kind` in `order`.
+pub fn fetch(
+    request: &LoadRequest,
+    kind: LearningRecordKind,
+    order: LearningRecordOrder,
+) -> Result<LearningRecordPage, String> {
+    user_data::list_learning_page(kind, order, &request.filter, request.page, PAGE_SIZE)
+        .map_err(|error| error.to_string())
+}
+
+/// Sets `record`'s count.
+pub fn set_count_job(record: LearningRecord, count: i64) -> JobOutcome {
+    applied(user_data::set_learning_record_count(record, count).map(|stored| stored.is_some()))
+}
+
+/// Forgets `record`; the keyboard learns it again on the next pick.
+pub fn delete_job(record: LearningRecord) -> JobOutcome {
+    applied(user_data::delete_learning_record(record))
+}
+
+/// Every write reloads: the row moved, went, or was never there. A row
+/// already gone (deleted elsewhere, evicted, its id taken by another word)
+/// is said, not reported as a failure.
+fn applied(result: Result<bool, UserDataError>) -> JobOutcome {
+    let message = match result {
+        Ok(true) => None,
+        Ok(false) => Some(PageMessage::Done(StringKey::DictionaryLearningRecordGone)),
+        Err(error) => Some(PageMessage::failure(LearningRecord::WRITE_FAILED, error)),
+    };
+    JobOutcome {
+        message,
+        is_reload_wanted: true,
+    }
+}
+
+/// The day a row was last used, `YYYY-MM-DD` in the viewer's calendar —
+/// `utc_offset_seconds` east of UTC, which each shell reads from its own
+/// clock. Empty when the store held no readable time (`last_used_ms` 0).
+pub fn last_used_label(last_used_ms: i64, utc_offset_seconds: i64) -> String {
+    if last_used_ms <= 0 {
+        return String::new();
+    }
+    let local_seconds = last_used_ms.div_euclid(1000) + utc_offset_seconds;
+    let (year, month, day) = civil_date(local_seconds.div_euclid(86_400));
+    format!("{year:04}-{month:02}-{day:02}")
+}
+
+/// The proleptic Gregorian date `days` after 1970-01-01 (Howard Hinnant's
+/// `civil_from_days`).
+fn civil_date(days: i64) -> (i64, u32, u32) {
+    let shifted = days + 719_468;
+    let era = shifted.div_euclid(146_097);
+    let day_of_era = shifted.rem_euclid(146_097);
+    let year_of_era =
+        (day_of_era - day_of_era / 1460 + day_of_era / 36_524 - day_of_era / 146_096) / 365;
+    let day_of_year = day_of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
+    let month_index = (5 * day_of_year + 2) / 153;
+    let day = (day_of_year - (153 * month_index + 2) / 5 + 1) as u32;
+    let month = if month_index < 10 {
+        month_index + 3
+    } else {
+        month_index - 9
+    } as u32;
+    let year = year_of_era + era * 400 + i64::from(month <= 2);
+    (year, month, day)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::user_data::UserDataPage;
+    use crate::settings::listing::LoadLanded;
+
+    fn record(id: i64, text: &str) -> LearningRecord {
+        LearningRecord {
+            id,
+            text: text.to_owned(),
+            tl: "tâi-uân".to_owned(),
+            count: 3,
+            ..LearningRecord::default()
+        }
+    }
+
+    #[test]
+    fn the_desktop_lists_frequency_and_phrases_and_names_both_orders() {
+        assert_eq!(
+            KINDS.map(|(kind, _)| kind),
+            [
+                LearningRecordKind::Frequency,
+                LearningRecordKind::LearnedPhrase
+            ],
+            "no association on the desktop"
+        );
+        assert_eq!(ORDERS[0], LearningRecordOrder::MostUsed, "the default");
+        assert_eq!(
+            order_label(LearningRecordOrder::MostRecent),
+            StringKey::DictionaryLearningRecordsOrderMostRecent
+        );
+    }
+
+    #[test]
+    fn only_word_frequency_says_its_count_stops_mattering_at_forty() {
+        assert_eq!(
+            count_note(LearningRecordKind::Frequency),
+            Some(StringKey::DictionaryLearningRecordsCountCapInfo)
+        );
+        assert_eq!(count_note(LearningRecordKind::LearnedPhrase), None);
+    }
+
+    #[test]
+    fn a_write_reloads_and_says_a_missing_row_without_calling_it_a_failure() {
+        assert_eq!(
+            applied(Ok(true)),
+            JobOutcome {
+                message: None,
+                is_reload_wanted: true
+            }
+        );
+        assert_eq!(
+            applied(Ok(false)).message,
+            Some(PageMessage::Done(StringKey::DictionaryLearningRecordGone))
+        );
+        let failed = applied(Err(UserDataError::EngineUnavailable(
+            "learningRecordDelete",
+        )));
+        assert!(failed.is_reload_wanted);
+        assert!(matches!(
+            failed.message,
+            Some(PageMessage::Failure {
+                title: StringKey::DictionaryLearningRecordsWriteFailed,
+                ..
+            })
+        ));
+        assert_eq!(
+            JobOutcome::did_not_finish::<LearningRecord>().message,
+            Some(PageMessage::failure(
+                StringKey::DictionaryLearningRecordsWriteFailed,
+                "the operation did not finish"
+            ))
+        );
+    }
+
+    #[test]
+    fn the_list_selects_by_row_id_and_names_its_own_empty_state() {
+        let mut listing = Listing::default();
+        assert_eq!(
+            listing.empty_state_key(),
+            Some(StringKey::DictionaryLearningRecordsEmpty)
+        );
+        let request = listing.begin_load();
+        let loaded = UserDataPage {
+            page: 0,
+            rows: vec![record(7, "台灣"), record(9, "食飯")],
+            match_count: 2,
+            total_count: 2,
+        };
+        assert_eq!(
+            listing.land(request.generation, Ok(loaded)),
+            LoadLanded::Adopted
+        );
+        listing.selected_id = Some(9);
+        assert_eq!(
+            listing.selected_row().map(|row| row.text.as_str()),
+            Some("食飯")
+        );
+        let request = listing.begin_load();
+        assert_eq!(
+            listing.land(request.generation, Err("disk".to_owned())),
+            LoadLanded::Failed(PageMessage::failure(
+                StringKey::DictionaryLearningRecordsReadFailed,
+                "disk"
+            ))
+        );
+    }
+
+    #[test]
+    fn the_last_used_day_is_the_viewers_calendar_day() {
+        // trace: 2026-01-01T00:00:00Z = 1767225600 s = day 20454.
+        let new_year = 1_767_225_600_000;
+        assert_eq!(last_used_label(new_year, 0), "2026-01-01");
+        assert_eq!(last_used_label(new_year, 8 * 3600), "2026-01-01", "Taipei");
+        assert_eq!(
+            last_used_label(new_year, -3600),
+            "2025-12-31",
+            "west of UTC"
+        );
+        // trace: 2024-02-29T12:00:00Z = 1709208000 s.
+        assert_eq!(last_used_label(1_709_208_000_000, 0), "2024-02-29");
+        assert_eq!(last_used_label(0, 0), "", "no readable time");
+    }
+}

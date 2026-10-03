@@ -84,10 +84,11 @@ pub fn run() -> gtk::glib::ExitCode {
 /// Manage Typefaces — the framework's panel draws the candidates in its own font,
 /// set in Fcitx5 / IBus, and the bundled typefaces install as system fonts
 /// (roadmap L4, L7).
-pub const SIDEBAR: [SettingsPane; 5] = [
+pub const SIDEBAR: [SettingsPane; 6] = [
     SettingsPane::General,
     SettingsPane::Appearance,
     SettingsPane::Shortcuts,
     SettingsPane::DictionarySources,
     SettingsPane::CustomDictionary,
+    SettingsPane::LearningRecords,
 ];
