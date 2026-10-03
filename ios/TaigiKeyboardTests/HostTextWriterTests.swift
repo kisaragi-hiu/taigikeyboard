@@ -9,12 +9,14 @@ import XCTest
 final class HostTextWriterTests: XCTestCase {
     private var writer: HostTextWriter!
     private var proxy: RecordingTextDocumentProxy!
+    private var clock: TimeInterval = 0
 
     override func setUp() {
         super.setUp()
         let proxy = RecordingTextDocumentProxy()
         self.proxy = proxy
-        writer = HostTextWriter { proxy }
+        clock = 0
+        writer = HostTextWriter(proxy: { proxy }, now: { [unowned self] in clock })
     }
 
     // MARK: - Outside an event
@@ -106,7 +108,6 @@ final class HostTextWriterTests: XCTestCase {
                 "one marked replacement for \(expected)",
             )
             XCTAssertFalse(writer.hasMarkedText)
-            XCTAssertNil(writer.pendingCommit)
         }
     }
 
@@ -142,20 +143,57 @@ final class HostTextWriterTests: XCTestCase {
 
     // MARK: - Echo of the keyboard's own commit
 
-    func testHostTextWriter_echoOfOwnCommit_matchesOnceWhenCommitPrecedesCaret() {
+    /// Commits `我` over the preedit `gua`, with `你好` after the caret.
+    private func commitGuaAsWo() {
+        proxy.textAfterCaret = "你好"
         writer.update("gua")
         writer.beginEvent()
         writer.commit("我")
         writer.endEvent()
+    }
 
-        XCTAssertFalse(writer.isEchoOfOwnCommit(documentContextBeforeInput: nil), "nothing before the caret")
-        XCTAssertFalse(writer.isEchoOfOwnCommit(documentContextBeforeInput: "你"), "caret moved elsewhere")
-        XCTAssertTrue(writer.isEchoOfOwnCommit(documentContextBeforeInput: "台語我"), "the commit's own echo")
-        XCTAssertFalse(writer.isEchoOfOwnCommit(documentContextBeforeInput: "台語我"), "an echo is consumed once")
+    func testHostTextWriter_echoOfOwnCommit_firstCallbackInWindowWithCommitBeforeCaret() {
+        commitGuaAsWo()
+        clock = 0.06
+        proxy.textBeforeCaret = "台語我"
+
+        XCTAssertTrue(writer.isEchoOfOwnCommit(), "the commit's own echo")
+        XCTAssertFalse(writer.isEchoOfOwnCommit(), "an echo is consumed once")
+    }
+
+    func testHostTextWriter_echoOfOwnCommit_rejectsRealEdits() {
+        // (case, seconds after the commit, text before the caret, text after it)
+        let cases: [(String, TimeInterval, String?, String?)] = [
+            ("caret moved elsewhere", 0.06, "你", "你好"),
+            ("nothing before the caret", 0.06, nil, "你好"),
+            ("text after the caret edited", 0.06, "台語我", "你"),
+            ("callback long after the commit (host never echoed)", 5, "台語我", "你好"),
+        ]
+        for (name, elapsed, before, after) in cases {
+            clock = 0
+            commitGuaAsWo()
+            clock = elapsed
+            proxy.textBeforeCaret = before
+            proxy.textAfterCaret = after
+
+            XCTAssertFalse(writer.isEchoOfOwnCommit(), name)
+        }
+    }
+
+    func testHostTextWriter_echoOfOwnCommit_onlyFirstCallbackIsChecked() {
+        // Flutter never echoes: the next callback is a real edit, and a later
+        // one that happens to look like the echo must not be swallowed.
+        commitGuaAsWo()
+        clock = 0.06
+        proxy.textBeforeCaret = "你"
+        XCTAssertFalse(writer.isEchoOfOwnCommit(), "real edit")
+
+        proxy.textBeforeCaret = "台語我"
+        XCTAssertFalse(writer.isEchoOfOwnCommit(), "an echo-like edit after it")
     }
 
     func testHostTextWriter_echoOfOwnCommit_neverMatchesWithoutAMarkedReplacement() {
-        // (step, document text before the caret) — none of these unmarks text.
+        proxy.textBeforeCaret = "我"
         let steps: [(String, () -> Void)] = [
             ("insert", { self.writer.insert("我") }),
             ("commit without marked text", { self.writer.commit("我") }),
@@ -163,7 +201,7 @@ final class HostTextWriterTests: XCTestCase {
         ]
         for (step, write) in steps {
             write()
-            XCTAssertFalse(writer.isEchoOfOwnCommit(documentContextBeforeInput: "我"), step)
+            XCTAssertFalse(writer.isEchoOfOwnCommit(), step)
         }
     }
 
@@ -189,13 +227,15 @@ private final class RecordingTextDocumentProxy: NSObject, UITextDocumentProxy {
     }
 
     var calls: [Call] = []
+    var textBeforeCaret: String?
+    var textAfterCaret: String?
 
     var documentContextBeforeInput: String? {
-        nil
+        textBeforeCaret
     }
 
     var documentContextAfterInput: String? {
-        nil
+        textAfterCaret
     }
 
     var selectedText: String? {

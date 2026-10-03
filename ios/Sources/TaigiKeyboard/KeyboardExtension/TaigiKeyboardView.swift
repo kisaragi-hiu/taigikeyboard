@@ -240,7 +240,7 @@ struct TaigiKeyboardView: View {
                 // Same route as an emoji: the toolbar stays reachable while
                 // composing, so an active preedit commits with the symbol.
                 if let handler = services.actionHandler as? ActionHandler {
-                    handler.performInputEvent { handler.composingManager.commitPreeditThenInsertExternal(symbol) }
+                    handler.insertExternalText(symbol)
                 } else {
                     keyboardContext.textDocumentProxy.insertText(symbol)
                 }

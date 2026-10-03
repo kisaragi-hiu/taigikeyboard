@@ -22,12 +22,10 @@ public class ActionHandler: StandardKeyboardActionHandler {
     public let composingManager = ComposingManager()
     let nextWordController = NextWordController()
 
-    /// Every Taigi-controlled write to the host document (issue #352).
-    lazy var hostText = HostTextWriter { [unowned self] in
+    /// The keyboard's own writes to the host document (issue #352).
+    lazy var hostText = HostTextWriter(proxy: { [unowned self] in
         keyboardContext.textDocumentProxy
-    }
-
-    private var isInInputEvent = false
+    })
 
     /// Set when this handler has just written an auto space, so the space now
     /// in front of the caret is known to be OURS — the question the
@@ -58,21 +56,25 @@ public class ActionHandler: StandardKeyboardActionHandler {
     /// literals that followed it (`HostTextWriter`, issue #352). A call
     /// nested in a running event joins it, so the arm is read once per event.
     func performInputEvent(_ body: () -> Void) {
-        guard !isInInputEvent else {
+        guard !hostText.isInEvent else {
             body()
             return
         }
-        isInInputEvent = true
         wasAutoSpaceArmedAtEventStart = isAutoSpaceArmed
         isAutoSpaceArmed = false
         hostText.beginEvent()
         defer {
-            isInInputEvent = false
             // The held commit is the IME's own write: keep `textWillChange`
             // from reading it as a field switch, as the engine call did.
             composingManager.performAsSelfCommit { hostText.endEvent() }
         }
         body()
+    }
+
+    /// Emoji and symbol-panel picks: commit any live preedit together with
+    /// the picked text (`INVARIANT_composing_external_insert_commits_preedit_atomically`).
+    func insertExternalText(_ text: String) {
+        performInputEvent { composingManager.commitPreeditThenInsertExternal(text) }
     }
 
     /// Re-arms after this handler has written a space the next attaching

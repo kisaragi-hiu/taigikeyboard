@@ -10,7 +10,7 @@ extension KeyboardViewController: EmojiServiceDelegate {
     /// `composing-state-boundary.md` §11.6 (Android mirror: `MediaInputManager`).
     func emojiDidSelect(_ emoji: String) {
         if let handler = actionHandler {
-            handler.performInputEvent { handler.composingManager.commitPreeditThenInsertExternal(emoji) }
+            handler.insertExternalText(emoji)
         } else {
             textDocumentProxy.insertText(emoji)
         }

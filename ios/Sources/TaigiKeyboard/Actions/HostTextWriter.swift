@@ -1,10 +1,12 @@
-// Sole writer of Taigi-controlled host text: the marked composition, commits, literal inserts and deletes.
+// Single writer of the keyboard's own host text: the marked composition, commits, literal inserts and deletes.
 
 import UIKit
 
-/// Every proxy write the keyboard makes on its own behalf goes through here
-/// (KeyboardKit's fall-through actions still write directly, after an event
-/// has finished). Two host behaviours shape it (issue #352):
+/// The keyboard's own proxy writes go through here (KeyboardKit's
+/// fall-through actions, which run after an event has finished, and the
+/// UIResponder text-input overrides still write directly). Two host
+/// behaviours shape it (issue #352, `behavioral-invariants.md`
+/// `INVARIANT_composing_host_commit_one_write_per_event`):
 ///
 /// - A commit over the marked region uses Apple's documented flow — replace
 ///   the marked text, then `unmarkText()` — never `insertText`: Flutter
@@ -12,41 +14,48 @@ import UIKit
 ///   text as committed text.
 /// - Observed on iOS 27 (not documented by Apple): the proxy calls made in one
 ///   main-thread turn reach the host merged — all inserted text, then only the
-///   last `setMarkedText`, then the unmark. A commit followed by a literal in
-///   the same turn therefore lands out of order (UIKit puts the Space before
-///   the word, Flutter duplicates the word). So inside an input event the
+///   last `setMarkedText`, then the unmark. So inside an input event the
 ///   commit is held, the literals written after it are appended to it, and
 ///   `endEvent()` writes the whole thing as one marked replacement.
 final class HostTextWriter {
+    /// How long after a commit the host's `textDidChange` echo of it is
+    /// expected. Observed ~50–70 ms on the iOS 27 simulator.
+    static let commitEchoWindow: TimeInterval = 0.5
+
     private let proxy: () -> UITextDocumentProxy
+    private let now: () -> TimeInterval
     private let logger = DebugLogger(category: "HostTextWriter")
 
     /// A stale `true` only turns the next commit into replace-and-unmark at
-    /// the caret, which inserts the same text; a stale `false` brings #352
-    /// back. So only the writer's own calls clear it — a field switch does
-    /// not: the engine's generation bump already drops the old composition,
-    /// and the field-switch detector is not trusted to fire only on switches.
+    /// the caret (or over the selection), which inserts the same text; a stale
+    /// `false` brings #352 back. So only the writer's own calls clear it — a
+    /// field switch does not: the engine's generation bump already drops the
+    /// old composition, and the field-switch detector is not trusted to fire
+    /// only on switches.
     private(set) var hasMarkedText = false
+
+    private(set) var isInEvent = false
 
     /// The commit made over the marked region during the current event, plus
     /// every literal written after it. The marked region stays on screen
     /// until `endEvent()` replaces it with this text.
-    private(set) var pendingCommit: String?
+    private var pendingCommit: String?
 
-    /// The text the last marked replacement committed, until the host's
-    /// echo of it (`isEchoOfOwnCommit`) has been seen.
-    private var unechoedCommit: String?
+    /// What the host should report right after the last marked replacement,
+    /// until one text-change callback has been checked against it.
+    private var expectedEcho: (committed: String, textAfterCaret: String?, writtenAt: TimeInterval)?
 
-    private var isInEvent = false
-
-    init(proxy: @escaping () -> UITextDocumentProxy) {
+    init(
+        proxy: @escaping () -> UITextDocumentProxy,
+        now: @escaping () -> TimeInterval = { ProcessInfo.processInfo.systemUptime },
+    ) {
         self.proxy = proxy
+        self.now = now
     }
 
     // MARK: - Event scope
 
     func beginEvent() {
-        assert(!isInEvent, "HostTextWriter.beginEvent: event already open")
         isInEvent = true
     }
 
@@ -59,17 +68,20 @@ final class HostTextWriter {
     }
 
     /// Whether a host text-change callback is the echo of the keyboard's own
-    /// commit rather than the user editing. UIKit hosts report `unmarkText()`
-    /// of non-empty marked text as a text change (~50 ms later, observed iOS
-    /// 27); the echo leaves the committed text right before the caret. Seen
-    /// once, the echo is consumed. azooKey matches its own edits the same way
-    /// (`ExpectedEditTracker`), with full before/after snapshots.
-    func isEchoOfOwnCommit(documentContextBeforeInput: String?) -> Bool {
-        guard let committed = unechoedCommit,
-              documentContextBeforeInput?.hasSuffix(committed) == true
-        else { return false }
-        unechoedCommit = nil
-        return true
+    /// commit rather than a real edit. UIKit hosts report `unmarkText()` of
+    /// non-empty marked text as a text change; the commit it replaced
+    /// (`insertText`) raised none. An echo arrives within
+    /// `commitEchoWindow`, with the commit right before the caret and the
+    /// text after the caret untouched — the before/after match azooKey's
+    /// `ExpectedEditTracker` makes. Only the first callback after a commit is
+    /// checked, so a host that never echoes (Flutter) leaves nothing behind.
+    func isEchoOfOwnCommit() -> Bool {
+        guard let expected = expectedEcho else { return false }
+        expectedEcho = nil
+        guard now() - expected.writtenAt <= Self.commitEchoWindow else { return false }
+        let proxy = proxy()
+        return proxy.documentContextBeforeInput?.hasSuffix(expected.committed) == true
+            && proxy.documentContextAfterInput == expected.textAfterCaret
     }
 
     // MARK: - Composition
@@ -127,10 +139,9 @@ final class HostTextWriter {
 
     // MARK: - Private
 
-    /// A held commit only takes trailing inserts: no event commits and then
-    /// re-marks, clears or deletes. Should one start to, writing the commit
-    /// first keeps UIKit hosts correct, but the host merges the two writes
-    /// (see the type comment), so the assertion catches it in tests first.
+    /// A held commit only takes trailing inserts; no event commits and then
+    /// re-marks, clears or deletes. Should one start to, the assertion
+    /// catches it in tests; release writes the commit first.
     private func writeHeldCommitBeforeUnsupportedWrite(_ operation: String) {
         guard let text = pendingCommit else { return }
         assertionFailure("HostTextWriter.\(operation) while a commit is held")
@@ -144,6 +155,6 @@ final class HostTextWriter {
         proxy.setMarkedText(text, selectedRange: NSRange(location: text.utf16.count, length: 0))
         proxy.unmarkText()
         hasMarkedText = false
-        unechoedCommit = text.isEmpty ? nil : text
+        expectedEcho = text.isEmpty ? nil : (text, proxy.documentContextAfterInput, now())
     }
 }
