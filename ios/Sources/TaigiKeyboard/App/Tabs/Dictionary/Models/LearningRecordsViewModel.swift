@@ -1,12 +1,12 @@
 import Foundation
 
-/// ViewModel for `LearningRecordsView`: what the keyboard learned, one kind
-/// at a time, in pages the engine cuts (`docs/architecture/learning-records-page-roadmap.md`).
+/// ViewModel for `LearningRecordsView`: what the keyboard learned of one
+/// kind, in pages the engine cuts
+/// (`docs/architecture/learning-records-page-roadmap.md`).
 ///
-/// The kind, the order and the filter go to the engine; the rows on screen
-/// are its answer. A change of any of the three starts a load from the top
-/// and makes every answer still in flight stale — the newest request wins,
-/// as on the desktop's `Listing`. Form state (the edit alert's field) stays
+/// The order and the filter go to the engine; the rows on screen are its
+/// answer. A change of either starts a load from the top and makes every answer still in
+/// flight stale — the newest request wins, as on the desktop's `Listing`. Form state (the edit alert's field) stays
 /// in the view.
 @MainActor
 final class LearningRecordsViewModel: ObservableObject {
@@ -18,7 +18,6 @@ final class LearningRecordsViewModel: ObservableObject {
     /// The highest count the engine stores (`engine/userdata` `MAX_COUNT`).
     static let maxCount: Int64 = 1_000_000
 
-    @Published private(set) var kind: Taigi_Engine_LearningRecordKind = .frequency
     @Published private(set) var order: Taigi_Engine_LearningRecordOrder = .mostUsed
     @Published private(set) var records: [Taigi_Engine_LearningRecord] = []
     /// Only until the first answer: later loads leave the rows on screen.
@@ -30,8 +29,7 @@ final class LearningRecordsViewModel: ObservableObject {
     /// The rows the current filter matches — what paging runs up to.
     @Published private(set) var matchingTotal = 0
     /// The generation the rows on screen answer. The next page is asked
-    /// only while it is the current one: rows of an older kind, order or
-    /// filter must not get the new query's next page appended.
+    /// only while it is the current one: rows of an older order or filter must not get the new query's next page appended.
     @Published private(set) var listedGeneration = -1
 
     private var filter = ""
@@ -41,13 +39,17 @@ final class LearningRecordsViewModel: ObservableObject {
     private var isLoadingNextPage = false
     private var settleTask: Task<Void, Never>?
 
+    /// Frequency or learned phrases; fixed for the page's life.
+    let kind: Taigi_Engine_LearningRecordKind
     private let userData: any UserDataClient
     private let filterSettle: Duration
 
     init(
+        kind: Taigi_Engine_LearningRecordKind,
         userData: any UserDataClient = CompositionRoot.userData,
         filterSettle: Duration = LearningRecordsViewModel.filterSettle,
     ) {
+        self.kind = kind
         self.userData = userData
         self.filterSettle = filterSettle
     }
@@ -71,12 +73,6 @@ final class LearningRecordsViewModel: ObservableObject {
         case .list: await reloadInPlace()
         case nil: return
         }
-    }
-
-    @discardableResult
-    func selectKind(_ kind: Taigi_Engine_LearningRecordKind) -> Task<Void, Never> {
-        self.kind = kind
-        return reload()
     }
 
     @discardableResult
@@ -197,10 +193,10 @@ final class LearningRecordsViewModel: ObservableObject {
     private func reload(rowCount: Int = Int(pageSize)) -> Task<Void, Never> {
         generation += 1
         let generation = generation
-        // A kind or order change, or a write, overtakes a filter still settling.
+        // An order change, a write or a retry overtakes a filter still settling.
         settleTask?.cancel()
         isLoadingNextPage = false
-        let (kind, order, filter) = (kind, order, filter)
+        let (order, filter) = (order, filter)
         return Task {
             do {
                 var rows: [Taigi_Engine_LearningRecord] = []
@@ -265,17 +261,6 @@ enum LearningRecordsNotice: Equatable {
 }
 
 extension Taigi_Engine_LearningRecord {
-    /// The word; an association reads `previous → next`.
-    var wordLabel: String {
-        kind == .association ? "\(previousText) → \(text)" : text
-    }
-
-    /// The TL reading, paired the same way; empty when none was stored.
-    var readingLabel: String {
-        guard kind == .association, !(previousTl.isEmpty && tl.isEmpty) else { return tl }
-        return "\(previousTl) → \(tl)"
-    }
-
     /// The day the row was last used, in this device's calendar and
     /// locale; empty when the store held no readable time.
     var lastUsedLabel: String {

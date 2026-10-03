@@ -1,18 +1,28 @@
 import SwiftUI
 
-/// Learning Records subpage
-/// What the keyboard learned from the user's picks, one kind at a time:
-/// edit one row's count, swipe to delete one row. No add (a word the user
-/// wants is a custom word) and no wipe — Delete Learning Records stays on
-/// the Custom Dictionary page.
+/// Learning Records subpage — one per kind (word frequency, learned
+/// phrases), each its own Data management row.
+/// What the keyboard learned from the user's picks, in the order picked: edit
+/// one row's count, swipe to delete one row. No add (a word the user wants
+/// is a custom word) and no wipe — Delete Learning Records stays on the
+/// Custom Dictionary page.
 struct LearningRecordsView: View {
     @Environment(DisplayLanguageStore.self) private var lang
-    @StateObject private var viewModel = LearningRecordsViewModel()
+    @StateObject private var viewModel: LearningRecordsViewModel
 
     @State private var filterText = ""
     /// The row the edit-count alert is open for.
     @State private var editingRecord: Taigi_Engine_LearningRecord?
     @State private var countInput = ""
+
+    init(kind: Taigi_Engine_LearningRecordKind) {
+        _viewModel = StateObject(wrappedValue: LearningRecordsViewModel(kind: kind))
+    }
+
+    /// The page title, the list header and the Data management row.
+    private var title: String {
+        lang.string(viewModel.kind == .frequency ? .dictionaryLearningRecordsFrequency : .dictionaryLearningRecordsPhrases)
+    }
 
     var body: some View {
         List {
@@ -22,22 +32,8 @@ struct LearningRecordsView: View {
                         .frame(maxWidth: .infinity)
                 }
             } else {
-                // Which kind, in which order
+                // Order, and what the rows are
                 Section {
-                    Picker(
-                        "",
-                        selection: Binding(
-                            get: { viewModel.kind },
-                            set: { viewModel.selectKind($0) },
-                        ),
-                    ) {
-                        Text(lang.string(.dictionaryLearningRecordsFrequency)).tag(Taigi_Engine_LearningRecordKind.frequency)
-                        Text(lang.string(.dictionaryLearningRecordsPhrases)).tag(Taigi_Engine_LearningRecordKind.learnedPhrase)
-                        Text(lang.string(.dictionaryLearningRecordsAssociation)).tag(Taigi_Engine_LearningRecordKind.association)
-                    }
-                    .pickerStyle(.segmented)
-                    .labelsHidden()
-
                     Picker(
                         selection: Binding(
                             get: { viewModel.order },
@@ -76,7 +72,7 @@ struct LearningRecordsView: View {
                         }
                     }
                 } header: {
-                    Text(lang.string(.dictionaryLearningRecords))
+                    Text(title)
                         .font(AppStyle.sectionHeaderFont)
                 }
             }
@@ -87,7 +83,7 @@ struct LearningRecordsView: View {
         .onChange(of: filterText) { _, text in
             viewModel.filterChanged(text)
         }
-        .navigationTitle(lang.string(.dictionaryLearningRecords))
+        .navigationTitle(title)
         .navigationBarTitleDisplayMode(.large)
         .alert(
             lang.string(.dictionaryLearningRecordsEditCount),
@@ -171,10 +167,10 @@ struct LearningRecordsView: View {
         } label: {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(record.wordLabel)
+                    Text(record.text)
                         .font(AppStyle.bodyFont)
                         .foregroundColor(.primary)
-                    Text(record.readingLabel)
+                    Text(record.tl)
                         .font(AppStyle.captionFont)
                         .foregroundColor(.secondary)
                 }

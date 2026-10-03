@@ -157,8 +157,11 @@ final class LearningRecordsViewModelTests: XCTestCase {
         (1 ... count).map { record(Int64($0), "詞\($0)") }
     }
 
-    private func makeViewModel(_ fake: FakeLearningRecords) -> LearningRecordsViewModel {
-        LearningRecordsViewModel(userData: fake, filterSettle: .zero)
+    private func makeViewModel(
+        _ fake: FakeLearningRecords,
+        kind: Taigi_Engine_LearningRecordKind = .frequency,
+    ) -> LearningRecordsViewModel {
+        LearningRecordsViewModel(kind: kind, userData: fake, filterSettle: .zero)
     }
 
     /// Yields until `count` list requests are parked in `fake`.
@@ -281,19 +284,19 @@ final class LearningRecordsViewModelTests: XCTestCase {
             record(1, "台灣", tl: "tâi-uân"),
             record(2, "食飯", tl: "tsia̍h-pn̄g"),
             record(3, "台語", tl: "tâi-gí", kind: .learnedPhrase),
+            record(4, "食飽", tl: "tsia̍h-pá", kind: .learnedPhrase),
         ])
-        let viewModel = makeViewModel(fake)
+        let viewModel = makeViewModel(fake, kind: .learnedPhrase)
         await viewModel.load()
+        XCTAssertEqual(viewModel.records.map(\.text), ["台語", "食飽"], "the page lists its own kind only")
 
         await viewModel.filterChanged("台").value
-        XCTAssertEqual(viewModel.records.map(\.text), ["台灣"])
-
-        await viewModel.selectKind(.learnedPhrase).value
         XCTAssertEqual(viewModel.records.map(\.text), ["台語"])
 
         await viewModel.selectOrder(.mostRecent).value
+        XCTAssertEqual(fake.calls.first?.order, .mostUsed, "most used first by default")
         XCTAssertEqual(fake.calls.last, .init(kind: .learnedPhrase, order: .mostRecent, filter: "台", limit: 100, offset: 0))
-        XCTAssertEqual(fake.calls.map(\.offset), [0, 0, 0, 0])
+        XCTAssertEqual(fake.calls.map(\.offset), [0, 0, 0])
     }
 
     func testALaterAppearance_reReadsTheListedRowsInPlace() async {
@@ -336,42 +339,38 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertFalse(viewModel.hasMoreRows)
     }
 
-    func testAKindChange_overtakesAFilterStillSettling() async {
-        let fake = FakeLearningRecords(rows: [record(1, "台灣"), record(2, "台語", kind: .learnedPhrase)])
-        let viewModel = LearningRecordsViewModel(userData: fake, filterSettle: .seconds(60))
+    func testAnOrderChange_overtakesAFilterStillSettling() async {
+        let fake = FakeLearningRecords(rows: [record(1, "台灣"), record(2, "食飯")])
+        let viewModel = LearningRecordsViewModel(kind: .frequency, userData: fake, filterSettle: .seconds(60))
         await viewModel.load()
 
         let settling = viewModel.filterChanged("台")
-        await viewModel.selectKind(.learnedPhrase).value
+        await viewModel.selectOrder(.mostRecent).value
         await settling.value
 
         XCTAssertEqual(fake.calls.count, 2, "the settling filter does not reload again")
         XCTAssertEqual(fake.calls.last?.filter, "台")
-        XCTAssertEqual(viewModel.records.map(\.text), ["台語"])
+        XCTAssertEqual(viewModel.records.map(\.text), ["台灣"])
     }
 
     func testANewerRequestWins_anOlderAnswerIsDropped() async {
-        let fake = FakeLearningRecords(rows: [
-            record(1, "台灣"),
-            record(2, "食飯"),
-            record(3, "台語", kind: .learnedPhrase),
-        ])
+        let fake = FakeLearningRecords(rows: [record(1, "台灣"), record(2, "食飯")])
         let viewModel = makeViewModel(fake)
         await viewModel.load()
         fake.isHolding = true
 
-        let toPhrases = viewModel.selectKind(.learnedPhrase)
+        let older = viewModel.filterChanged("台")
         await waitForParked(1, in: fake)
-        let toFrequency = viewModel.selectKind(.frequency)
+        let newer = viewModel.filterChanged("食")
         await waitForParked(2, in: fake)
 
-        // The newer (frequency) answer lands first; the older (phrases) one after it.
+        // The newer (食) answer lands first; the older (台) one after it.
         fake.resolve(1)
-        await toFrequency.value
+        await newer.value
         fake.resolve(0)
-        await toPhrases.value
+        await older.value
 
-        XCTAssertEqual(viewModel.records.map(\.text), ["台灣", "食飯"], "the phrases answer is stale")
+        XCTAssertEqual(viewModel.records.map(\.text), ["食飯"], "the 台 answer is stale")
     }
 
     func testAFilterChange_dropsTheAnswerAlreadyInFlight() async {
@@ -393,20 +392,20 @@ final class LearningRecordsViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.records.map(\.text), ["食飯"])
     }
 
-    func testAKindChange_isNotGivenTheOldListsNextPage() async {
+    func testAnOrderChange_isNotGivenTheOldListsNextPage() async {
         let fake = FakeLearningRecords(rows: numberedRows(150))
         let viewModel = makeViewModel(fake)
         await viewModel.load()
         fake.isHolding = true
 
-        let toPhrases = viewModel.selectKind(.learnedPhrase)
+        let reorder = viewModel.selectOrder(.mostRecent)
         await viewModel.loadNextPage()
         await waitForParked(1, in: fake)
         fake.resolve(0)
-        await toPhrases.value
+        await reorder.value
 
-        XCTAssertEqual(fake.calls.map(\.offset), [0, 0], "no next page while the old kind is listed")
-        XCTAssertTrue(viewModel.records.isEmpty)
+        XCTAssertEqual(fake.calls.map(\.offset), [0, 0], "no next page while the old order is listed")
+        XCTAssertEqual(viewModel.records.count, 100)
     }
 
     // MARK: - Writes
@@ -500,17 +499,8 @@ final class LearningRecordsViewModelTests: XCTestCase {
         }
     }
 
-    func testAnAssociationRow_readsPreviousThenNext() {
-        var association = record(1, "愛", tl: "ài", kind: .association)
-        association.previousText = "我"
-        association.previousTl = "guá"
-        XCTAssertEqual(association.wordLabel, "我 → 愛")
-        XCTAssertEqual(association.readingLabel, "guá → ài")
-
-        let word = record(2, "台灣", tl: "tâi-uân")
-        XCTAssertEqual(word.wordLabel, "台灣")
-        XCTAssertEqual(word.readingLabel, "tâi-uân")
-        XCTAssertEqual(word.lastUsedLabel, "", "no readable time")
+    func testLastUsedLabel_isEmptyWithoutAReadableTime() {
+        XCTAssertEqual(record(1, "台灣", tl: "tâi-uân").lastUsedLabel, "")
     }
 }
 

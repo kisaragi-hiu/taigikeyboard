@@ -112,7 +112,6 @@ enum StringKey: String {
     case dictionaryLearningRecordsInfo = "i18n_dictionary_learningRecordsInfo"
     case dictionaryLearningRecordsFrequency = "i18n_dictionary_learningRecordsFrequency"
     case dictionaryLearningRecordsPhrases = "i18n_dictionary_learningRecordsPhrases"
-    case dictionaryLearningRecordsAssociation = "i18n_dictionary_learningRecordsAssociation"
     case dictionaryLearningRecordsCount = "i18n_dictionary_learningRecordsCount"
     case dictionaryLearningRecordsLastUsed = "i18n_dictionary_learningRecordsLastUsed"
     case dictionaryLearningRecordsOrder = "i18n_dictionary_learningRecordsOrder"

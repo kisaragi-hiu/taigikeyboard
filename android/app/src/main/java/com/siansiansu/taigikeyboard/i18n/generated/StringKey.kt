@@ -120,7 +120,6 @@ enum class StringKey(
     DICTIONARY_LEARNING_RECORDS_INFO(R.string.i18n_dictionary_learningRecordsInfo),
     DICTIONARY_LEARNING_RECORDS_FREQUENCY(R.string.i18n_dictionary_learningRecordsFrequency),
     DICTIONARY_LEARNING_RECORDS_PHRASES(R.string.i18n_dictionary_learningRecordsPhrases),
-    DICTIONARY_LEARNING_RECORDS_ASSOCIATION(R.string.i18n_dictionary_learningRecordsAssociation),
     DICTIONARY_LEARNING_RECORDS_COUNT(R.string.i18n_dictionary_learningRecordsCount),
     DICTIONARY_LEARNING_RECORDS_LAST_USED(R.string.i18n_dictionary_learningRecordsLastUsed),
     DICTIONARY_LEARNING_RECORDS_ORDER(R.string.i18n_dictionary_learningRecordsOrder),

@@ -81,8 +81,11 @@ struct DictionaryTab: View {
                     NavigationLink(destination: CustomDictionaryView()) {
                         Text(lang.string(.dictionaryCustomDictionary))
                     }
-                    NavigationLink(destination: LearningRecordsView()) {
-                        Text(lang.string(.dictionaryLearningRecords))
+                    NavigationLink(destination: LearningRecordsView(kind: .frequency)) {
+                        Text(lang.string(.dictionaryLearningRecordsFrequency))
+                    }
+                    NavigationLink(destination: LearningRecordsView(kind: .learnedPhrase)) {
+                        Text(lang.string(.dictionaryLearningRecordsPhrases))
                     }
                     NavigationLink(destination: DataManagementView()) {
                         Text(lang.string(.dictionaryBackupRestore))
