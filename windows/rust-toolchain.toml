@@ -4,9 +4,10 @@ components = ["rustfmt", "clippy"]
 profile = "minimal"
 # JUSTIFICATION: shipped ABIs + the host check target.
 #   x86_64-pc-windows-msvc  — v1 release target (64-bit hosts).
-#   i686-pc-windows-msvc    — the 32-bit TIP DLL for WOW64 hosts; built now,
-#                             shipped once x64 registration is proven on a real
-#                             machine (docs/architecture/windows-roadmap.md W8).
+#   i686-pc-windows-msvc    — the 32-bit TIP DLL for WOW64 hosts (32-bit
+#                             Office), shipped beside the x64 one as
+#                             TaigiKeyboard32.dll (docs/architecture/
+#                             windows-release.md § The 32-bit service).
 #   aarch64-pc-windows-msvc — Windows on ARM; built, not published without a
 #                             native smoke test (same entry).
 #   x86_64-pc-windows-gnu   — NOT shipped. The macOS host has no MSVC C

@@ -4,8 +4,8 @@
 # the Inno Setup installer, its signature, a SHA-256 — and, with --publish,
 # the website repository's release + manifest. Mirrors
 # macos/scripts/release-app.sh step for step; runs in Git Bash on a Windows
-# machine that has: the Rust MSVC target, Inno Setup 6.5+ (`iscc` on PATH or
-# in its default folder), the Windows SDK (`rc.exe`, `signtool`), Visual
+# machine that has: the Rust MSVC targets (x64 and i686), Inno Setup 6.5+
+# (`iscc` on PATH or in its default folder), the Windows SDK (`rc.exe`, `signtool`), Visual
 # Studio Build Tools (`dumpbin`, beside `link.exe`), PowerShell, Python 3,
 # and `gh`.
 #
@@ -86,8 +86,13 @@ echo "==> Checking the tools"
 for tool in cargo cygpath sha256sum powershell.exe; do
     command -v "$tool" > /dev/null || fail "$tool is not on PATH (Git Bash and PowerShell are prerequisites)"
 done
-rustup target list --installed 2>/dev/null | grep -qx "$RELEASE_TARGET" ||
-    fail "the $RELEASE_TARGET target is not installed (rustup target add $RELEASE_TARGET)"
+# From windows/, so rustup answers for the toolchain rust-toolchain.toml pins
+# there — the one cargo builds with — not for the caller's default.
+installed_targets="$(cd "$WINDOWS_DIR" && rustup target list --installed 2>/dev/null)"
+for target in "$RELEASE_TARGET" "$RELEASE_TARGET_32"; do
+    grep -qx "$target" <<< "$installed_targets" ||
+        fail "the $target target is not installed (rustup target add $target)"
+done
 resolve_iscc() {
     if command -v iscc > /dev/null; then
         command -v iscc
@@ -139,49 +144,69 @@ echo "==> Building the release binaries ($RELEASE_TARGET)"
 [[ -f "$TARGET_DIR/$SERVICE_DLL" ]] || fail "no $SERVICE_DLL in $TARGET_DIR"
 [[ -f "$TARGET_DIR/$SETTINGS_EXE" ]] || fail "no $SETTINGS_EXE in $TARGET_DIR"
 
+echo "==> Building the 32-bit text service ($RELEASE_TARGET_32)"
+# The DLL only: a 32-bit host loads the text service, never the settings
+# window, which the 64-bit exe beside it serves for both.
+(cd "$WINDOWS_DIR" && TAIGI_REQUIRE_RESOURCES=1 cargo build --release --target "$RELEASE_TARGET_32" -p taigi-windows-tsf)
+[[ -f "$TARGET_DIR_32/$SERVICE_DLL" ]] || fail "no $SERVICE_DLL in $TARGET_DIR_32"
+
 echo "==> Reading back what the binaries declare"
 # Proved from the files, not assumed from the compiler directives: the
 # VERSIONINFO the updater pins (taigi-windows-update::verify), and — W14,
 # `+crt-static` — no VC runtime import, or the build fails on a machine
 # without the redistributable.
-require_version_info "$TARGET_DIR/$SERVICE_DLL"
-require_version_info "$TARGET_DIR/$SETTINGS_EXE"
-for binary in "$TARGET_DIR/$SERVICE_DLL" "$TARGET_DIR/$SETTINGS_EXE"; do
+SERVICE_DLLS=("$TARGET_DIR/$SERVICE_DLL" "$TARGET_DIR_32/$SERVICE_DLL")
+for binary in "${SERVICE_DLLS[@]}" "$TARGET_DIR/$SETTINGS_EXE"; do
+    require_version_info "$binary"
     imports="$(dumpbin -nologo -dependents "$(windows_path "$binary")" | tr -d '\r')"
     if grep -iqE 'vcruntime[0-9]*(d)?\.dll|msvcp[0-9]*(d)?\.dll|msvcr[0-9]*(d)?\.dll|msvcrt\.dll|ucrtbase(d)?\.dll|api-ms-win-crt-' <<< "$imports"; then
         echo "$imports" >&2
         fail "$(basename "$binary") imports the C runtime — the release must be statically linked (+crt-static)"
     fi
+    # W17: the text service is loaded into every host process and must never
+    # pull WinUI / the Windows App Runtime in with it — only the settings exe
+    # links them.
+    if [[ "$binary" != "$TARGET_DIR/$SETTINGS_EXE" ]] &&
+        grep -iqE 'microsoft\.ui\.|windowsappruntime|microsoft\.internal\.frameworkudk' <<< "$imports"; then
+        echo "$imports" >&2
+        fail "$binary imports WinUI / the Windows App Runtime — the text service must not (roadmap W17)"
+    fi
 done
-# The four entry points regsvr32 looks for: an export table that lost one
-# registers nothing, and the failure surfaces on the user's machine.
-exports="$(dumpbin -nologo -exports "$(windows_path "$TARGET_DIR/$SERVICE_DLL")" | tr -d '\r')"
-for symbol in DllGetClassObject DllCanUnloadNow DllRegisterServer DllUnregisterServer; do
-    grep -qE "[[:space:]]$symbol([[:space:]]|=|\$)" <<< "$exports" ||
-        fail "$SERVICE_DLL does not export $symbol"
-done
-# W17: the text service is loaded into every host process and must never
-# pull WinUI / the Windows App Runtime in with it — only the settings exe
-# links them.
-dll_imports="$(dumpbin -nologo -dependents "$(windows_path "$TARGET_DIR/$SERVICE_DLL")" | tr -d '\r')"
-if grep -iqE 'microsoft\.ui\.|windowsappruntime|microsoft\.internal\.frameworkudk' <<< "$dll_imports"; then
-    echo "$dll_imports" >&2
-    fail "$SERVICE_DLL imports WinUI / the Windows App Runtime — the text service must not (roadmap W17)"
-fi
 # WinUI is reached through activatable classes named in an embedded manifest,
 # not through static imports (so the check above cannot see it): the exe must
 # carry the setup crate's self-contained manifest, and the DLL must not.
 WINUI_MANIFEST_MARKER="windows-reactor-self-contained"
 grep -aq "$WINUI_MANIFEST_MARKER" "$TARGET_DIR/$SETTINGS_EXE" ||
     fail "$SETTINGS_EXE carries no self-contained Windows App Runtime manifest ($WINUI_MANIFEST_MARKER) — build.rs did not stage the runtime"
-if grep -aq "$WINUI_MANIFEST_MARKER" "$TARGET_DIR/$SERVICE_DLL"; then
-    fail "$SERVICE_DLL carries the WinUI manifest — the text service must not (roadmap W17)"
-fi
+for dll in "${SERVICE_DLLS[@]}"; do
+    if grep -aq "$WINUI_MANIFEST_MARKER" "$dll"; then
+        fail "$dll carries the WinUI manifest — the text service must not (roadmap W17)"
+    fi
+    # The four entry points regsvr32 looks for: an export table that lost one
+    # registers nothing, and the failure surfaces on the user's machine. The
+    # 32-bit exports are undecorated too (measured 2026-09-01), so one pattern
+    # reads both.
+    exports="$(dumpbin -nologo -exports "$(windows_path "$dll")" | tr -d '\r')"
+    for symbol in DllGetClassObject DllCanUnloadNow DllRegisterServer DllUnregisterServer; do
+        grep -qE "[[:space:]]$symbol([[:space:]]|=|\$)" <<< "$exports" ||
+            fail "$dll does not export $symbol"
+    done
+done
 
 echo "==> Staging the install layout"
 rm -rf "$STAGING_DIR"
 mkdir -p "$STAGING_DIR/Dictionaries" "$STAGING_DIR/Fonts" "$DISTRIBUTION_DIR"
 cp "$TARGET_DIR/$SERVICE_DLL" "$TARGET_DIR/$SETTINGS_EXE" "$STAGING_DIR/"
+cp "$TARGET_DIR_32/$SERVICE_DLL" "$STAGING_DIR/$SERVICE_DLL_32"
+# Both services share a file name in their target directories, so the staged
+# copies' PE machine is read back: the x64 build staged as the 32-bit one
+# passes every other check here and fails only in the user's 32-bit host.
+for pair in "$SERVICE_DLL:8664" "$SERVICE_DLL_32:14C"; do
+    staged="$STAGING_DIR/${pair%%:*}"
+    headers="$(dumpbin -nologo -headers "$(windows_path "$staged")" | tr -d '\r')"
+    grep -qE "^[[:space:]]+${pair##*:} machine" <<< "$headers" ||
+        fail "$staged is not built for PE machine ${pair##*:}"
+done
 # The four dictionary artefacts, from this platform's committed copy that
 # `make dict` writes; an empty one would be an engine with no words.
 for artifact in dictionary.fst dictionary.bin association.bin syllables.fst; do
@@ -219,6 +244,7 @@ done < "$RUNTIME_LIST"
 
 [[ "$skip_sign" == true ]] || echo "==> Signing the binaries"
 sign_file "$STAGING_DIR/$SERVICE_DLL"
+sign_file "$STAGING_DIR/$SERVICE_DLL_32"
 sign_file "$STAGING_DIR/$SETTINGS_EXE"
 
 echo "==> Compiling the installer"

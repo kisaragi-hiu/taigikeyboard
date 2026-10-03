@@ -73,7 +73,7 @@ Host app (Notepad / Word / Chrome / …) — one process each, possibly several 
 └────────────────────────────────────────────────────────────────────────────────────┘
 Runtime data: %APPDATA%\TaigiKeyboard\{settings.json, user_frequency.db,
 user_association.db, custom_dictionary.db}; install dir %ProgramFiles%\TaigiKeyboard\
-{TaigiKeyboard.dll (x64), x86\TaigiKeyboard.dll, arm64\TaigiKeyboard.dll,
+{TaigiKeyboard.dll (x64), TaigiKeyboard32.dll (x86, beside it — windows-release.md),
 TaigiKeyboardSettings.exe + the Windows App Runtime files (W17), Dictionaries\*, Fonts\*}.
 ```
 
