@@ -1,7 +1,11 @@
 //! The on-screen TPS key panel (desktop TPS roadmap D6): every key of the
 //! main block with the glyph it types under TPS and its Shift-layer glyph,
 //! up while TPS is typed and the user asked for it (`tpsKeyboardShown`).
-//! Show-only — a click does nothing yet (P6).
+//! A click on a cap types its glyph — the Shift glyph from the cap's top half
+//! or with Shift held — by injecting the one key that names it
+//! (`taigi_windows_platform::tps_keyboard_click`), which the key sink types
+//! (`TextService_Impl::tps_keyboard_click`): a window procedure may not ask
+//! for an edit session (W3).
 //!
 //! One per service activation, owned by no context: the stored key is all
 //! that crosses activations and processes, and only the activation with
@@ -25,11 +29,18 @@ use taigi_desktop_core::candidates::{FontSpec, TextMeasurer};
 use taigi_desktop_core::composing::ContextToken;
 use taigi_desktop_core::keys::{tps_keyboard_rows, TpsKeyCap, TpsKeyboardRow};
 use taigi_desktop_core::settings::{AppearanceMode, CandidateFontChoice, CandidateFontSelection};
+use taigi_windows_platform::tps_keyboard_click::{
+    scan_code_for_glyph, TPS_KEYBOARD_CLICK_VIRTUAL_KEY,
+};
 use windows::Win32::Foundation::RECT;
 use windows::Win32::Graphics::Direct2D::Common::{D2D1_COLOR_F, D2D_RECT_F, D2D_SIZE_U};
 use windows::Win32::Graphics::Direct2D::{
     ID2D1HwndRenderTarget, ID2D1SolidColorBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT,
     D2D1_ROUNDED_RECT,
+};
+use windows::Win32::UI::Input::KeyboardAndMouse::{
+    GetKeyState, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS,
+    KEYEVENTF_KEYUP, VIRTUAL_KEY, VK_SHIFT,
 };
 use windows::Win32::UI::WindowsAndMessaging::GetForegroundWindow;
 use windows_numerics::Vector2;
@@ -254,6 +265,57 @@ fn panel_size(rows: &[TpsKeyboardRow]) -> (f32, f32) {
     (width + 2.0 * PADDING, height.max(0.0) + 2.0 * PADDING)
 }
 
+/// The top left of a cap, in DIPs — where `paint` draws it and `cap_at`
+/// finds it.
+fn cap_origin(row_index: usize, row: &TpsKeyboardRow, cap_index: usize) -> (f32, f32) {
+    let pitch = CAP_SIZE + CAP_GAP;
+    (
+        PADDING + (row.indent + cap_index as f32) * pitch,
+        PADDING + row_index as f32 * pitch,
+    )
+}
+
+/// The cap under `point` (DIPs, the panel's top left at 0, 0), and whether
+/// the point is in its top half — the Shift glyph's, as the cap draws it.
+fn cap_at(rows: &[TpsKeyboardRow], point: (f32, f32)) -> Option<(&TpsKeyCap, bool)> {
+    rows.iter().enumerate().find_map(|(row_index, row)| {
+        row.caps.iter().enumerate().find_map(|(cap_index, cap)| {
+            let (x, y) = cap_origin(row_index, row, cap_index);
+            let is_inside =
+                (x..x + CAP_SIZE).contains(&point.0) && (y..y + CAP_SIZE).contains(&point.1);
+            is_inside.then_some((cap, point.1 < y + CAP_SIZE / 2.0))
+        })
+    })
+}
+
+/// Injects the key that types `glyph` (`tps_keyboard_click`), down then up.
+fn send_click(glyph: &str) {
+    let Some(scan_code) = scan_code_for_glyph(glyph) else {
+        return;
+    };
+    let key = |flags: KEYBD_EVENT_FLAGS| INPUT {
+        r#type: INPUT_KEYBOARD,
+        Anonymous: INPUT_0 {
+            ki: KEYBDINPUT {
+                wVk: VIRTUAL_KEY(TPS_KEYBOARD_CLICK_VIRTUAL_KEY),
+                wScan: scan_code,
+                dwFlags: flags,
+                time: 0,
+                dwExtraInfo: 0,
+            },
+        },
+    };
+    let inputs = [key(KEYBD_EVENT_FLAGS(0)), key(KEYEVENTF_KEYUP)];
+    // SAFETY: two keyboard inputs alive for the call, with the size of one.
+    let sent = unsafe { SendInput(&inputs, std::mem::size_of::<INPUT>() as i32) };
+    if sent as usize != inputs.len() {
+        // Fewer inputs went in than were sent (`SendInput` does not say why):
+        // none means the click typed nothing; one means the key went down
+        // without its release.
+        log::warn!("ui.tps_keyboard_click_short_send sent={sent}");
+    }
+}
+
 /// The monitor the foreground window is on — the application the user is
 /// typing in. `None` while no window is foreground (activation moving).
 fn foreground_monitor() -> Option<MonitorArea> {
@@ -289,16 +351,14 @@ impl WindowHandler for PanelContent {
         }
         let Some(surface) = &self.surface else { return };
         let theme = self.theme;
-        let pitch = CAP_SIZE + CAP_GAP;
         let lost = surface
             .frame(|target, brush| {
                 // SAFETY: drawing on our own target between Begin/EndDraw.
                 unsafe { target.Clear(Some(&theme.background)) };
                 let pen = Pen { target, brush };
                 for (row_index, row) in self.rows.iter().enumerate() {
-                    let y = PADDING + row_index as f32 * pitch;
                     for (cap_index, cap) in row.caps.iter().enumerate() {
-                        let x = PADDING + (row.indent + cap_index as f32) * pitch;
+                        let (x, y) = cap_origin(row_index, row, cap_index);
                         self.draw_cap(&pen, cap, x, y);
                     }
                 }
@@ -309,8 +369,17 @@ impl WindowHandler for PanelContent {
         }
     }
 
-    /// Show-only until the click path lands (desktop TPS roadmap P6).
-    fn click(&mut self, _window: &WindowRef, _point: (f32, f32)) {}
+    /// A click on a cap types its glyph; a click between caps, nothing. The
+    /// window takes no activation (`WM_MOUSEACTIVATE`), so the document
+    /// keeps the keyboard and the injected key reaches its key sink.
+    fn click(&mut self, _window: &WindowRef, point: (f32, f32)) {
+        let Some((cap, is_top_half)) = cap_at(&self.rows, point) else {
+            return;
+        };
+        // SAFETY: a plain query of this thread's keyboard state.
+        let is_shift_held = unsafe { GetKeyState(i32::from(VK_SHIFT.0)) } < 0;
+        send_click(cap.pressed_glyph(is_top_half || is_shift_held));
+    }
 
     fn wheel(&mut self, _window: &WindowRef, _delta: f32) {}
 
@@ -354,6 +423,38 @@ mod tests {
         let (width, height) = panel_size(&tps_keyboard_rows());
         assert_eq!(width, 642.0 + 24.0);
         assert_eq!(height, 210.0 + 24.0);
+    }
+
+    #[test]
+    fn a_point_on_a_cap_names_it_and_its_half() {
+        // trace: pitch 54, padding 12. Row 0 (indent 0): `1` at x 12..60,
+        // y 12..60 — top half above y 36. Row 1 (indent 0.5): `Q` at
+        // x 12 + 27 = 39..87, y 66..114.
+        let rows = tps_keyboard_rows();
+        let label = |point| cap_at(&rows, point).map(|(cap, top)| (cap.label, top));
+        assert_eq!(label((13.0, 13.0)), Some(('1', true)));
+        assert_eq!(label((59.0, 59.0)), Some(('1', false)));
+        assert_eq!(label((66.0, 20.0)), Some(('2', true)));
+        assert_eq!(label((40.0, 70.0)), Some(('Q', true)));
+        assert_eq!(label((40.0, 100.0)), Some(('Q', false)));
+    }
+
+    #[test]
+    fn a_point_in_a_gap_or_the_padding_names_no_cap() {
+        // trace: x 61 is the gap after `1`; y 62 the gap under row 0; row 1
+        // starts half a key in, so x 20 on it is before `Q`; x 700 is past
+        // the widest row.
+        let rows = tps_keyboard_rows();
+        for point in [
+            (5.0, 20.0),
+            (61.0, 20.0),
+            (20.0, 62.0),
+            (20.0, 70.0),
+            (700.0, 20.0),
+        ] {
+            assert!(cap_at(&rows, point).is_none(), "{point:?}");
+        }
+        assert!(cap_at(&rows, (20.0, 400.0)).is_none(), "below the last row");
     }
 
     #[test]

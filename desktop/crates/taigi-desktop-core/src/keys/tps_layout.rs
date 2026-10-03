@@ -128,6 +128,12 @@ pub(super) fn glyph_for_key(key: char) -> Option<&'static str> {
         .map(|(_, glyph)| *glyph)
 }
 
+/// Whether `glyph` is one the layout types — what a click on the on-screen
+/// panel may hand the engine (`ComposingKeyIntent::tps_keyboard_press`).
+pub(super) fn is_layout_glyph(glyph: &str) -> bool {
+    KEYS.iter().any(|(_, assigned)| *assigned == glyph)
+}
+
 /// Every key the layout assigns, as typed (base and Shift layers together).
 #[cfg(test)]
 pub(super) fn assigned_keys() -> impl Iterator<Item = char> {

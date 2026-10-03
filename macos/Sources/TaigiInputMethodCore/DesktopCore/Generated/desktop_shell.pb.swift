@@ -413,6 +413,14 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     set {request = .tpsKeyboardRows(newValue)}
   }
 
+  public var tpsKeyboardPress: Taigi_DesktopShell_TpsKeyboardPressRequest {
+    get {
+      if case .tpsKeyboardPress(let v)? = request {return v}
+      return Taigi_DesktopShell_TpsKeyboardPressRequest()
+    }
+    set {request = .tpsKeyboardPress(newValue)}
+  }
+
   /// The key-path settings as they stand for this request, applied before it
   /// runs, so a request and the settings it is read under cross the seam
   /// together. Unset = the last snapshot stays. A snapshot that is refused
@@ -451,6 +459,7 @@ public nonisolated struct Taigi_DesktopShell_DesktopRequest: Sendable {
     case symbolPickerKey(Taigi_DesktopShell_SymbolPickerKeyRequest)
     case switchInputMode(Taigi_DesktopShell_SwitchInputModeRequest)
     case tpsKeyboardRows(Taigi_DesktopShell_TpsKeyboardRowsRequest)
+    case tpsKeyboardPress(Taigi_DesktopShell_TpsKeyboardPressRequest)
 
   }
 
@@ -953,6 +962,37 @@ public nonisolated struct Taigi_DesktopShell_InsertSymbolRequest: Sendable {
   public var token: UInt64 = 0
 
   public var symbol: String = String()
+
+  public var panel: Taigi_DesktopShell_PanelState {
+    get {_panel ?? Taigi_DesktopShell_PanelState()}
+    set {_panel = newValue}
+  }
+  /// Returns true if `panel` has been explicitly set.
+  public var hasPanel: Bool {self._panel != nil}
+  /// Clears the value of `panel`. Subsequent reads from it will return its default value.
+  public mutating func clearPanel() {self._panel = nil}
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+
+  fileprivate var _panel: Taigi_DesktopShell_PanelState? = nil
+}
+
+/// A click on a cap of the on-screen TPS key panel: `glyph` typed through
+/// the same engine intent a layout key reaches (`TpsKey`), whatever the
+/// window or the slot keys would make of the physical key (desktop TPS
+/// roadmap D6). Answered `handled` false, with no effects, outside TPS or
+/// for a glyph the layout does not type. Refused with FAIL_INVARIANT
+/// without a glyph or a panel.
+public nonisolated struct Taigi_DesktopShell_TpsKeyboardPressRequest: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var token: UInt64 = 0
+
+  public var glyph: String = String()
 
   public var panel: Taigi_DesktopShell_PanelState {
     get {_panel ?? Taigi_DesktopShell_PanelState()}
@@ -1829,7 +1869,7 @@ nonisolated extension Taigi_DesktopShell_SymbolPickerAction: SwiftProtobuf._Prot
 
 nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".DesktopRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{c}\u{3}\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}version\0\u{1}configure\0\u{2}\u{2}prepare\0\u{1}activate\0\u{1}key\0\u{3}commit_composition\0\u{1}cancel\0\u{1}release\0\u{1}settings\0\u{3}commit_for_symbol_picker\0\u{3}insert_symbol\0\u{1}represent\0\u{1}press\0\u{1}chord\0\u{3}composing_shortcuts\0\u{3}symbol_picker_key\0\u{3}switch_input_mode\0\u{3}tps_keyboard_rows\0\u{3}tps_keyboard_press\0\u{c}\u{3}\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -2059,6 +2099,19 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
           self.request = .tpsKeyboardRows(v)
         }
       }()
+      case 20: try {
+        var v: Taigi_DesktopShell_TpsKeyboardPressRequest?
+        var hadOneofValue = false
+        if let current = self.request {
+          hadOneofValue = true
+          if case .tpsKeyboardPress(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.request = .tpsKeyboardPress(v)
+        }
+      }()
       default: break
       }
     }
@@ -2143,6 +2196,10 @@ nonisolated extension Taigi_DesktopShell_DesktopRequest: SwiftProtobuf.Message, 
     case .tpsKeyboardRows?: try {
       guard case .tpsKeyboardRows(let v)? = self.request else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 19)
+    }()
+    case .tpsKeyboardPress?: try {
+      guard case .tpsKeyboardPress(let v)? = self.request else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 20)
     }()
     default: break
     }
@@ -3010,6 +3067,50 @@ nonisolated extension Taigi_DesktopShell_InsertSymbolRequest: SwiftProtobuf.Mess
   public static func ==(lhs: Taigi_DesktopShell_InsertSymbolRequest, rhs: Taigi_DesktopShell_InsertSymbolRequest) -> Bool {
     if lhs.token != rhs.token {return false}
     if lhs.symbol != rhs.symbol {return false}
+    if lhs._panel != rhs._panel {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_DesktopShell_TpsKeyboardPressRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TpsKeyboardPressRequest"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}token\0\u{1}glyph\0\u{1}panel\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularUInt64Field(value: &self.token) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.glyph) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._panel) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if self.token != 0 {
+      try visitor.visitSingularUInt64Field(value: self.token, fieldNumber: 1)
+    }
+    if !self.glyph.isEmpty {
+      try visitor.visitSingularStringField(value: self.glyph, fieldNumber: 2)
+    }
+    try { if let v = self._panel {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_DesktopShell_TpsKeyboardPressRequest, rhs: Taigi_DesktopShell_TpsKeyboardPressRequest) -> Bool {
+    if lhs.token != rhs.token {return false}
+    if lhs.glyph != rhs.glyph {return false}
     if lhs._panel != rhs._panel {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

@@ -45,6 +45,7 @@ use taigi_desktop_core::settings::{
 };
 use taigi_desktop_core::strings::{StringKey, StringResolver};
 use taigi_desktop_core::symbols::SymbolTable;
+use taigi_windows_platform::tps_keyboard_click::{click_intent, TPS_KEYBOARD_CLICK_VIRTUAL_KEY};
 use taigi_windows_platform::DESKTOP_PLATFORM;
 use windows::core::{Interface, BOOL};
 use windows::Win32::Foundation::{E_UNEXPECTED, LPARAM, POINT, RECT, WPARAM};
@@ -108,6 +109,11 @@ impl TextService_Impl {
         let Some(context) = context else {
             return BOOL::from(false);
         };
+        // A click on the TPS key panel: read before the key translation, which
+        // has no character for it and would drop it.
+        if key_translation::virtual_key(wparam) == TPS_KEYBOARD_CLICK_VIRTUAL_KEY {
+            return BOOL::from(self.tps_keyboard_click(context, lparam, phase));
+        }
         // A key in this activation: it is where the user types, whatever
         // focus events this host did or did not send (the TPS key panel).
         self.note_tps_keyboard_focus(true);
@@ -279,6 +285,48 @@ impl TextService_Impl {
             &settings,
         );
         BOOL::from(outcome == KeyOutcome::Consumed)
+    }
+
+    /// A click on the TPS key panel, injected as the key that names its
+    /// glyph (`ui/tps_keyboard.rs`): typed through the engine's `TpsKey` as
+    /// the layout key would be, but whatever the window or the slot keys
+    /// would make of that key (`ComposingKeyIntent::tps_keyboard_press`).
+    /// Not taken when this context cannot be typed in (read-only, English
+    /// mode), the mode is no longer TPS, or the scan code names no glyph —
+    /// and a delivery can still hand it on after a TRUE test (a password
+    /// field, focus moving in between). Either way the host receives a key
+    /// no layout gives a character, and the click carries its glyph, so
+    /// nothing is left waiting.
+    fn tps_keyboard_click(&self, context: &ITfContext, lparam: LPARAM, phase: KeyPhase) -> bool {
+        let Some((token, identity)) = self.token_for(context) else {
+            return false;
+        };
+        if is_read_only(context) || self.state.borrow().language_mode.is_english() {
+            return false;
+        }
+        let runtime = Runtime::shared();
+        let settings = runtime.settings.current();
+        let scan_code = key_translation::scan_code(lparam);
+        let Some(intent) = click_intent(scan_code, settings.choice(&keys::INPUT_MODE)) else {
+            return false;
+        };
+        if phase == KeyPhase::Test {
+            return true;
+        }
+        log::debug!("key.tps_keyboard_click scan_code={scan_code}");
+        // The guide and the picker go down first, as for any key.
+        self.hide_telex_guide_now();
+        self.hide_symbol_picker_of(token);
+        runtime.prepare_for_first_key();
+        let outcome = self.run_key(
+            context,
+            token,
+            identity,
+            &KeyEventSnapshot::default(),
+            &KeyWork::Compose(intent),
+            &settings,
+        );
+        outcome == KeyOutcome::Consumed
     }
 
     /// The open Telex guide's claim on `snapshot`: TRUE from the test phase

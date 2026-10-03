@@ -1,7 +1,7 @@
 //! The composing session behind the seam
 //! (docs/architecture/macos-desktop-core-roadmap.md D3): `Activate` / `Key` /
 //! `CommitComposition` / `Cancel` / `CommitForSymbolPicker` /
-//! `InsertSymbol` / `Represent` / `Release` on the process's one
+//! `InsertSymbol` / `TpsKeyboardPress` / `Represent` / `Release` on the process's one
 //! coordinator, answered as the effects Swift replays after the call
 //! returns: desktop-core's classifier (`ComposingKeyIntent`) and executor
 //! (`perform_intent`), hosted for the macOS controller. The per-key
@@ -30,6 +30,7 @@ use crate::proto::{
     self, effect, ActivateRequest, CancelRequest, CandidateCell, CandidatesChanged,
     CommitCompositionRequest, CommitForSymbolPickerRequest, Effect, InsertSymbolRequest,
     KeyRequest, PanelState, ReleaseRequest, RepresentRequest, SessionReply,
+    TpsKeyboardPressRequest,
 };
 use crate::runtime::{Refusal, DESKTOP_PLATFORM};
 
@@ -203,6 +204,42 @@ impl Session {
             insert_symbol(&request.symbol, &settings, manager, surface);
             false
         })
+    }
+
+    /// A click on a cap of the TPS key panel: its glyph typed through the
+    /// engine's `TpsKey`, as the layout key would type it — but whatever the
+    /// window or the slot keys would make of that key
+    /// (`ComposingKeyIntent::tps_keyboard_press`). Not handled outside TPS
+    /// or for a glyph the layout does not type: the panel may have been
+    /// clicked after a switch Swift has not yet taken it down for.
+    pub(crate) fn tps_keyboard_press(
+        &mut self,
+        runtime: &DesktopRuntime,
+        request: &TpsKeyboardPressRequest,
+    ) -> Result<SessionReply, Refusal> {
+        if request.glyph.is_empty() {
+            return Err(Refusal::Missing("tps_keyboard_press.glyph"));
+        }
+        let panel = required(&request.panel, "tps_keyboard_press.panel")?;
+        self.run_owned(
+            runtime,
+            request.token,
+            panel,
+            |manager, candidates, surface| {
+                let settings = runtime.settings.current();
+                let input_mode = settings.choice(&keys::INPUT_MODE);
+                let Some(intent) =
+                    ComposingKeyIntent::tps_keyboard_press(&request.glyph, input_mode)
+                else {
+                    return false;
+                };
+                // No key: the click names its glyph, and `perform_intent`
+                // commits a composition a switch across TPS left behind
+                // before it types.
+                let no_key = KeyEventSnapshot::default();
+                perform_intent(&intent, &no_key, &settings, manager, candidates, surface)
+            },
+        )
     }
 
     /// The list on screen again under the settings this request carries
@@ -650,6 +687,14 @@ mod tests {
             self.serve(Request::InsertSymbol(InsertSymbolRequest {
                 token: self.token,
                 symbol: symbol.to_owned(),
+                panel: Some(panel),
+            }))
+        }
+
+        fn tps_keyboard_press(&self, glyph: &str, panel: PanelState) -> SessionReply {
+            self.serve(Request::TpsKeyboardPress(TpsKeyboardPressRequest {
+                token: self.token,
+                glyph: glyph.to_owned(),
                 panel: Some(panel),
             }))
         }
@@ -1356,6 +1401,45 @@ mod tests {
         assert_eq!(effects(&reply), vec![insert("ㄍㄚ"), closed(), closed()]);
     }
 
+    /// Desktop TPS D6: a panel click types its glyph as the layout key
+    /// would — and with the window up, a click on the `4` cap types ˋ
+    /// (closing the window, as a glyph key does) rather than picking slot 4.
+    #[test]
+    fn a_tps_keyboard_press_types_its_glyph_even_over_an_open_list() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![text("inputMode", "tps")]);
+        let first = typist.tps_keyboard_press("ㄍ", no_list());
+        assert!(first.handled && first.is_composing);
+        assert_eq!(effects(&first), vec![marked("ㄍ", 1)]);
+        typist.tps_keyboard_press("ㄚ", no_list());
+        let down = chord("\u{F701}", FUNCTION | NUMERIC_PAD, Some(0xF701));
+        assert!(!shown_list(&typist.key(down, no_list())).cells.is_empty());
+        // trace: KEYS `4` = ˋ (U+02CB, tone 2); after ㄚ the adjuster keeps it.
+        let over_list = typist.tps_keyboard_press("\u{02cb}", list(Some(0)));
+        assert!(over_list.handled && over_list.is_composing);
+        assert_eq!(
+            effects(&over_list),
+            vec![marked("ㄍㄚ\u{02cb}", 3), closed()]
+        );
+    }
+
+    /// A press is not handled outside TPS — a click that raced a switch —
+    /// nor for anything the layout does not type, the separator included.
+    #[test]
+    fn a_tps_keyboard_press_outside_tps_or_off_the_layout_does_nothing() {
+        let (_engine, shell) = engine_shell();
+        let tl = Typist::activated(shell, vec![]);
+        let reply = tl.tps_keyboard_press("ㄅ", no_list());
+        assert!(!reply.handled && !reply.ignored && !reply.is_composing);
+        assert_eq!(effects(&reply), vec![]);
+        let tps = tl.with_settings(vec![text("inputMode", "tps")]);
+        for not_a_glyph in [" ", "a", "ㄅㄚ"] {
+            let reply = tps.tps_keyboard_press(not_a_glyph, no_list());
+            assert!(!reply.handled && !reply.is_composing, "{not_a_glyph:?}");
+            assert_eq!(effects(&reply), vec![], "{not_a_glyph:?}");
+        }
+    }
+
     /// TL ↔ POJ crosses no TPS: the composition carries on under the new
     /// romanization, nothing is committed.
     #[test]
@@ -1513,6 +1597,8 @@ mod tests {
         assert!(other.insert_symbol("，", no_list()).ignored);
         owner_list_is_intact();
         assert!(other.represent(true, no_list()).ignored);
+        owner_list_is_intact();
+        assert!(other.tps_keyboard_press("ㄅ", list(Some(0))).ignored);
         owner_list_is_intact();
         for request in [
             Request::CommitForSymbolPicker(CommitForSymbolPickerRequest {
@@ -1719,6 +1805,22 @@ mod tests {
                 panel: None,
             })),
             "represent.panel"
+        );
+        assert_eq!(
+            missing(Request::TpsKeyboardPress(TpsKeyboardPressRequest {
+                token,
+                glyph: String::new(),
+                panel: panel.clone(),
+            })),
+            "tps_keyboard_press.glyph"
+        );
+        assert_eq!(
+            missing(Request::TpsKeyboardPress(TpsKeyboardPressRequest {
+                token,
+                glyph: "ㄅ".to_owned(),
+                panel: None,
+            })),
+            "tps_keyboard_press.panel"
         );
     }
 

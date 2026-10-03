@@ -119,6 +119,9 @@ impl Shell {
             Request::InsertSymbol(insert) => session
                 .insert_symbol(self.runtime()?, &insert)
                 .map(Reply::Session),
+            Request::TpsKeyboardPress(press) => session
+                .tps_keyboard_press(self.runtime()?, &press)
+                .map(Reply::Session),
             Request::Represent(represent) => session
                 .represent(self.runtime()?, &represent)
                 .map(Reply::Session),

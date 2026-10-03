@@ -10,7 +10,8 @@
 //! Two of them are big enough to be their own modules: [`key_translation`]
 //! (one key-down → the snapshot the classifier reads and the press the
 //! shortcut recorder records, roadmap W5) and [`keyboard_hook`] (the
-//! thread-scoped `WH_KEYBOARD` the recorder listens through, W17-B1).
+//! thread-scoped `WH_KEYBOARD` the recorder listens through, W17-B1);
+//! [`tps_keyboard_click`] is pure, the TPS key panel's click encoding.
 
 /// Which desktop the TSF DLL and the settings window are — the one value every
 /// desktop-core rule that differs per desktop is handed
@@ -30,6 +31,8 @@ pub mod keyboard_hook;
 /// cannot be used for a buffer we read back — see the module.
 #[cfg(windows)]
 pub mod os_out_buffer;
+/// The key a click on the TPS key panel is injected as, and the glyph it names.
+pub mod tps_keyboard_click;
 
 /// The user's preferred UI language, e.g. `zh-TW` / `ja-JP` / `en-US`, for
 /// the `system` display language. Empty when the platform cannot say.

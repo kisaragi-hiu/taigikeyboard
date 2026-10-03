@@ -160,6 +160,19 @@ final class ComposingBackend {
         return session(.insertSymbol(message), in: request, op: "insertSymbol")?.effects
     }
 
+    /// A click on a cap of the TPS key panel: `glyph` typed through the
+    /// engine's `TpsKey`, whatever the window would make of the physical
+    /// key. Not handled — no effects — outside TPS or for a glyph the layout
+    /// does not type.
+    func tpsKeyboardPress(_ glyph: String, in request: ComposingRequest) -> [ComposingEffect]? {
+        guard owns(request.session) else { return nil }
+        var message = Taigi_DesktopShell_TpsKeyboardPressRequest()
+        message.token = request.session.value
+        message.glyph = glyph
+        message.panel = Self.panel(request, swapping: nil)
+        return session(.tpsKeyboardPress(message), in: request, op: "tpsKeyboardPress")?.effects
+    }
+
     /// The list on screen again under the settings in force now, after a
     /// switch outside the key path changed them: fetched again (`refetch`,
     /// Candidate Display) or the same list re-rendered (the Hanji/romanization

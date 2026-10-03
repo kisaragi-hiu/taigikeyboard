@@ -21,8 +21,11 @@ enum HUDPanel {
 
     /// A borderless, non-activating floating panel wrapped around `background`,
     /// sized to it. Takes no focus and no clicks: an input-method agent must
-    /// not steal either from the app being typed into.
-    static func makePanel(background: NSVisualEffectView) -> NSPanel {
+    /// not steal either from the app being typed into. `acceptsClicks` lets
+    /// clicks through to the content — the TPS key panel's caps — and still
+    /// takes no focus: the panel becomes key only if a view needs it, and
+    /// none does.
+    static func makePanel(background: NSVisualEffectView, acceptsClicks: Bool = false) -> NSPanel {
         let panel = NSPanel(
             contentRect: NSRect(origin: .zero, size: background.frame.size),
             styleMask: [.borderless, .nonactivatingPanel],
@@ -34,7 +37,8 @@ enum HUDPanel {
         panel.backgroundColor = .clear
         panel.hasShadow = true
         panel.level = .floating
-        panel.ignoresMouseEvents = true
+        panel.ignoresMouseEvents = !acceptsClicks
+        panel.becomesKeyOnlyIfNeeded = true
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isReleasedWhenClosed = false
         return panel
