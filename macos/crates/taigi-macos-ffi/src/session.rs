@@ -1280,6 +1280,38 @@ mod tests {
         );
     }
 
+    /// Desktop TPS D7: typing opens no list; ↓ opens it; the number-row `2`
+    /// (`kVK_ANSI_2`) then picks — over a list the window reports up.
+    #[test]
+    fn under_tps_the_list_opens_on_demand_and_the_number_row_picks() {
+        let (_engine, shell) = engine_shell();
+        let typist = Typist::activated(shell, vec![text("inputMode", "tps")]);
+        typist.key(typed("e"), no_list());
+        let reply = typist.key(typed("8"), no_list());
+        assert_eq!(
+            effects(&reply),
+            vec![marked("ㄍㄚ", 2)],
+            "no list while typing"
+        );
+        let down = chord("\u{F701}", FUNCTION | NUMERIC_PAD, Some(0xF701));
+        let opened = typist.key(down.clone(), no_list());
+        assert!(opened.handled && opened.is_composing);
+        let second = shown_list(&opened).cells[1].text.clone();
+        // Escape closes it and keeps the glyphs; ↓ opens it again.
+        let closed_again = typist.key(typed("\u{1b}"), list(Some(0)));
+        assert!(closed_again.is_composing);
+        assert_eq!(effects(&closed_again), vec![closed()]);
+        let reopened = typist.key(down, no_list());
+        assert_eq!(shown_list(&reopened).cells[1].text, second);
+        let two = KeyEvent {
+            key_code: Some(0x13),
+            ..typed("2")
+        };
+        let picked = typist.key(two, list(Some(0)));
+        assert!(picked.handled && !picked.is_composing);
+        assert_eq!(effects(&picked).first(), Some(&insert(&second)));
+    }
+
     /// A slot key after a switch across TPS picks nothing from the old
     /// list — even one still reported up: keypad `2` (`kVK_ANSI_Keypad2`)
     /// commits `tai` as shown, then, with nothing composing, is document text

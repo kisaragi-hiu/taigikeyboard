@@ -102,7 +102,7 @@ impl ComposingKeyBindings {
     /// (`ToneInputScheme::slot_key_set`).
     pub fn slot_key_set(&self) -> CandidateSlotKeySet {
         match self.input_mode {
-            InputMode::Tps => CandidateSlotKeySet::Keypad,
+            InputMode::Tps => CandidateSlotKeySet::TpsDigits,
             InputMode::Tl | InputMode::Poj => self.tone_scheme.slot_key_set(),
         }
     }
@@ -590,7 +590,7 @@ mod tests {
             document.set_choice(&keys::TONE_INPUT_SCHEME, *scheme);
             let bindings = ComposingKeyBindings::from_document(&document, DesktopPlatform::Windows);
             assert_eq!(bindings.input_mode, InputMode::Tps);
-            assert_eq!(bindings.slot_key_set(), CandidateSlotKeySet::Keypad);
+            assert_eq!(bindings.slot_key_set(), CandidateSlotKeySet::TpsDigits);
         }
     }
 }

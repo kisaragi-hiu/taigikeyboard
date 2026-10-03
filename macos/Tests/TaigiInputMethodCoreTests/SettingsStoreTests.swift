@@ -173,7 +173,7 @@ final class SettingsStoreTests: XCTestCase {
     }
 
     /// Under TPS punctuation is full width whatever the stored swap, and the
-    /// keypad picks; both come back with the romanization.
+    /// digits pick; both come back with the romanization.
     func testTps_widensPunctuation_andPicksWithTheKeypad() {
         let store = makeStore()
         store.storedIsHanjiFirst = false
@@ -183,7 +183,7 @@ final class SettingsStoreTests: XCTestCase {
         store.switchInputMode(.pick(.tps))
 
         XCTAssertTrue(store.isFullWidthPunctuation)
-        XCTAssertEqual(store.candidateSlotKeySet, .keypad)
+        XCTAssertEqual(store.candidateSlotKeySet, .tpsDigits)
         XCTAssertFalse(store.storedIsHanjiFirst)
 
         store.switchInputMode(.toggleTps)

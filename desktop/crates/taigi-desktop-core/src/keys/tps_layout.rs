@@ -92,7 +92,7 @@ const KEYS: &[(char, &str)] = &[
 /// assign — including any key chorded with Control, Alt or the Windows /
 /// Command key, which stays the host's or a shortcut's, and every keypad key,
 /// which types the same character as its main-block twin: the digits pick
-/// candidates (`CandidateSlotKeySet::Keypad`), the rest are plain text.
+/// candidates (`CandidateSlotKeySet::TpsDigits`), the rest are plain text.
 pub fn tps_glyph_for_event(event: &KeyEventSnapshot) -> Option<&'static str> {
     if event.key_code.is_some_and(is_keypad_key_code) {
         return None;

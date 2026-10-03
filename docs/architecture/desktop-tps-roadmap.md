@@ -2,7 +2,7 @@
 
 TPS (方音符號, the i18n `en` label "Phonetic Symbols", key `tpsMode`) as a third input mode on macOS, Windows and Linux, typed on a physical keyboard, with an on-screen key panel. iOS and Android have typed TPS since v3.5.x.
 
-Status: P0 on main, P1 merged #367, P2a merged #368, P2b merged #372, P3 merged #373, P4 in review. No release is assigned; scope and timing are the maintainer's call.
+Status: P0 on main, P1 merged #367, P2a merged #368, P2b merged #372, P3 merged #373, P4 in review, P4b in review (stacked on P4). No release is assigned; scope and timing are the maintainer's call.
 
 ## Maintainer decisions (2026-10-03)
 
@@ -12,11 +12,12 @@ Status: P0 on main, P1 merged #367, P2a merged #368, P2b merged #372, P3 merged 
 | U2 | TPS is not a romanization. Its switch shortcut is its own action and does not join the TL ↔ POJ toggle. |
 | U3 | An on-screen key panel the user can look at or click. |
 | U4 | Physical layout = the system Zhuyin (Dachen) positions, TPS-only glyphs on a Shift layer. |
-| U5 | Candidate picking under TPS = arrows / Tab + Enter, plus the numeric keypad `1`–`9`. |
+| U5 | Candidate picking under TPS = arrows / Tab + Enter, plus the numeric keypad `1`–`9`. **Revised 2026-10-04 by U8.** |
+| U8 | (2026-10-04, after P4 on device: no digit picking without a keypad.) TPS follows the Zhuyin input methods, not the romanizations: the candidate window is hidden while typing and opened on demand, and the number row picks inside it (D7). The preedit stays glyphs (arm A); inline Hanji conversion (arm B) is to be weighed once the TPS feature is complete. TL and POJ keep their always-on list. |
 | U6 | Panel scope: macOS and Windows show it and take clicks; Linux shows it only. |
 | U7 | Review: Codex sandwich plus a Claude cloud session per PR. |
 
-O1 (what Space does once the syllable is closed) — decided 2026-10-03, the recommended arm: see D3.
+O1 (what Space does once the syllable is closed) — decided 2026-10-03, the recommended arm: see D3. Revised by D7: with no window up, Space opens it.
 
 ## Today (grounded in code)
 
@@ -154,6 +155,30 @@ One function in the core, `settings::next_input_mode(current, last_romanization,
 
 **A composition across a switch** (P3). A switch that enters or leaves TPS changes the raw buffer's alphabet, so the composition cannot carry over (a glyph buffer must not take Latin keys). The switch itself leaves the composition on screen and closes its list; the next key commits it as shown and is then read as the new mode's first key (`ComposingManager::is_left_by_mode_change`; each shell's key path sends a keyless `Commit` before the classifier). `perform_intent` opens with the same commit, so the commits that run with no key — the symbol picker's commit-first, a host's Finalize, the Windows Shift-tap — write the composition as shown, with no auto space and no candidate picked. One place covers both chords, the input-method menu, the settings window (focus loss does not commit on Windows, `text_service.rs` `OnSetFocus`) and a restore, and Windows requests no edit session outside a key. The raw commit writes the preedit whatever the mode now (read by running, 2026-10-03), so no mode is pinned for it. TL ↔ POJ crosses no TPS and keeps today's behaviour: the composition carries on. A switch keeps the auto-space arm: it names a space in the document, whatever the mode. The input-method menu keeps the same rows under every mode — Fcitx5 registers its actions once and re-titles them by position, and IBus updates only the root property on a mode change — so Switch Candidate Display stays under TPS and does nothing, as its chord does (P3 cloud review).
 
+### D7 — The candidate window on demand (U8)
+
+The model McBopomofo and vChewing use: Space or ↓ opens the window, and while it is up the number row picks (`references/McBopomofo/Source/KeyHandler.mm:589-625` opens it, `:1948-1962` reads the selection keys; `references/vChewing-macOS/Packages/vChewing_Typewriter/Sources/Typewriter/InputHandler/InputHandler_HandleStates.swift:1175-1193`). Rejected: Ctrl + digit over an always-on list, the `rime-moetaigi` answer (`moetaigi-tsuim.schema.yaml:275-283`), and a ↓ latch over an always-on list (a hidden state, and the macOS ↓ latch was retired 2026-08-28).
+
+Under TPS only; TL and POJ are unchanged. All of it is the core's classifier and executor, so the three shells change only where a test pins the old list.
+
+| State | Key | Does |
+|---|---|---|
+| Typing (no window) | A layout key, Backspace, the caret chord | Edits the glyphs; no fetch, and a window still up closes |
+| Typing | A navigation key (arrows, Page Up / Down) or a key bound to a navigation or paging row (Tab, Shift+Tab, `[` `]` by default) | Opens the window on the first candidate (`OpenCandidates`) |
+| Typing | Space after a closed syllable (the engine refuses the separator, D0) | Opens the window — revises O1's no-list arm |
+| Typing | The keys bound to Confirm and to Commit as Typed (Enter, Shift+Enter) | Commits the glyphs as typed — the user has seen no candidate |
+| Window up | Number row `1`–`9`, keypad `1`–`9` | Picks that slot |
+| Window up | Space, Enter | Confirms the highlighted candidate; Shift+Enter still commits the glyphs as typed |
+| Window up | Arrows, Tab, `[` `]` | Navigate, as today |
+| Window up | Escape | Closes the window; the glyphs stay (`CloseCandidates`). A second Escape cancels, as today |
+| Window up | Backspace, the caret chord | Closes the window, then edits as while typing |
+| Window up | A layout key other than `1`–`9` | Closes the window and types the glyph — composition goes on |
+| Either | Any other printable | As today: commits the glyphs as typed, then the key |
+
+With Show Candidate Window off nothing opens: Space after a closed syllable commits the glyphs as typed (O1's old no-list arm), and a navigation key commits them and goes on to the host (`CommitThenPassThrough`). A fetch that finds nothing leaves the composition up and the window closed.
+
+Slot set: `Keypad` is renamed `TpsDigits` and also matches the bare number row by key code (`NUMBER_ROW_KEY_CODES`), no modifier — Shift+`1` stays ㆠ. The keypad keeps its typed-digit check, so a keypad key with Num Lock off navigates rather than picks. Labels stay `1`–`9`; the Shortcuts pane's slot row under TPS reads `1–9, Num 1–9`. The symbol picker reads the same set, so under TPS its number row picks too. No new state: the list being empty is "typing", non-empty is "window up".
+
 ### D6 — On-screen key panel (U3, U6)
 
 Shared in the core, new file `keys/tps_keyboard_rows.rs`: four rows of key caps built from the D2 table — the physical key's label, its glyph, its Shift glyph — so the panel cannot drift from the layout.
@@ -178,6 +203,7 @@ The panel is shown only under TPS and persists until the shortcut hides it; whet
 | P2b | feat (desktop-core, Windows, Linux) | D1 + D3 + D4: the variant, the classifier branch, the presentation / executor / settings sites, the exhaustive and wildcard matches with their mode labels, i18n scope. Windows and Linux type TPS from the settings picker. Switch Romanization leaves TPS for TL (`InputMode::toggled_romanization`) until P3 remembers the last romanization; the display switches and the Telex guide are inert under TPS (`ShortcutAction::is_inert_under`) | as P2a | ~550 | Merged #372 `4a47c933` |
 | P3 | feat (desktop-core, Windows, Linux) | D5: `next_input_mode`, `ToggleTps`, `lastRomanizationMode`, the Windows preserved key, the menu row; the Shortcuts pane names the keypad slot keys under TPS and drops the Shift + slot row; the Linux menu's Cycle Candidate Display row under TPS; a mode change that crosses TPS commits the composition first (a glyph buffer must not take Latin keys) | as P2a | ~300 | Merged #373 `c4024d66` |
 | P4 | feat (macOS) | The Swift enum and picker, `ToggleTps` in `ShortcutActions.swift`, the mode flash; remove the temporary `"tps"` → TL projection in `taigi-macos-ffi` `settings.rs` `document_from` (P2b); the keyless `Commit` before the key is read; the `SwitchInputMode` seam request; keypad slot labels in the candidate window and the picker; full-width punctuation under TPS | macOS | ~350 | In review |
+| P4b | feat (desktop-core, all three) | D7: the window on demand under TPS — `OpenCandidates` / `CloseCandidates`, the classifier's TPS branch with a window up, no fetch on a TPS edit, the number row in the TPS slot set, O1's no-list arm, the pane label; shell tests that pin the old always-on list | all three | ~400 | In review |
 | P5 | feat (all three) | D6 show-only: the rows in the core, the three windows, `ShowTpsKeyboard`, `tpsKeyboardShown`; the Windows `SendInput` spike | all three | ~500 | Pending |
 | P6 | feat (macOS, Windows) | D6 click: the macOS session request; the Windows `SendInput` path if its spike passed | macOS, Windows | ~350 | Pending |
 
@@ -218,6 +244,8 @@ Deliberately not adopted:
 
 ## Reviews
 
+- P4b post-implementation, 2026-10-04: Codex SHIP-WITH-NITS — test gaps only (picker under TPS, a rebound navigation row with the window off, the caret chord over the window, the picked text in the shell tests); all added. No Windows shell test for D7: the TSF session tests need Windows.
+- P4b pre-implementation, 2026-10-04: Codex GO-WITH-CHANGES — the window setting off keeps the navigation rows from falling into `Commit`; Escape with the window up closes it ahead of tier 2; the keypad keeps its Num Lock check; O1 reads the list, not the highlight; an empty fetch stays composing; the symbol picker follows the slot set; all applied.
 - P0 pre-implementation, 2026-10-03: `phonetics-specialist` (ㄛ / ㄜ swapped onto the right layers; tone 8 scalar; ㆳ dropped); Codex GO-WITH-CHANGES — raw caret → D0, shifted characters and Caps Lock → D2, Space and keypad rules → D3, presentation sites → D4, one mode-change function and the POJ default → D5, spike acceptance → D6, the macOS seam in P2a's gates; all applied. Claude cloud session `session_01UteaCLYB9BKdVnyyhzwUEW` GO-WITH-CHANGES — the same caret, Shift-layer and Space findings independently, plus: keypad through `key_code`, the mode through the bindings, `tps_or_maps_to_er`, inert display shortcuts, reset list, P2 split; all applied. Not applied: a key for ㆳ (no engine reading), the Linux lookup-table panel (see above).
 
 ## Dogfood

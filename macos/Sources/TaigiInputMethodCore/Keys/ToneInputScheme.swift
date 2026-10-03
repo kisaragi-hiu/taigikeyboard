@@ -47,10 +47,11 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
     /// Bare `1`…`9`, the set under `telex`, where the letters above type the
     /// tones.
     case digits
-    /// The keypad's `1`…`9`, the set under TPS, whose main block types
-    /// glyphs (`SettingsStore.candidateSlotKeySet`). Drawn as the digits, as
-    /// desktop-core labels it.
-    case keypad
+    /// `1`…`9` of the number row and the keypad, the set under TPS
+    /// (`SettingsStore.candidateSlotKeySet`). The number row picks only once
+    /// the window is up, which under TPS opens on demand (desktop TPS
+    /// roadmap D7). Drawn as the digits, as desktop-core labels it.
+    case tpsDigits
 
     /// The keys `bareKeys` puts on slots 0…8, in slot order. Lowercase, as a
     /// bare key types its lowercase form.
@@ -61,7 +62,7 @@ enum CandidateSlotKeySet: CaseIterable, Sendable {
     func label(forSlot slot: Int) -> String {
         switch self {
         case .bareKeys: Self.bareKeyRow[slot]
-        case .digits, .keypad: String(slot + 1)
+        case .digits, .tpsDigits: String(slot + 1)
         }
     }
 }

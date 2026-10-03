@@ -74,17 +74,19 @@ pub fn perform_intent(
         }
         ComposingKeyIntent::TpsKey(key) => {
             match manager.tps_key(key, surface) {
-                TpsKeyOutcome::Taken => refresh(settings, manager, list, surface),
-                // A Space after the closed last syllable (O1, roadmap § D3):
-                // it confirms the highlighted candidate as Zhuyin-family input
-                // methods do, or with no list commits the glyphs as typed — no
-                // space after, TPS takes none.
+                // Typing TPS fetches nothing: the window opens on demand
+                // (roadmap § D7), and a key typed over it takes it down.
+                TpsKeyOutcome::Taken => close_open_list(list, surface),
+                // A Space after the closed last syllable (O1, revised by D7):
+                // it opens the window, as Zhuyin input methods do — a window
+                // already up took the Space as its confirm in the classifier.
+                // With the window switched off it commits the glyphs as
+                // typed — no space after, TPS takes none.
                 TpsKeyOutcome::Refused {
                     is_caret_at_end: true,
                 } if key == " " => {
-                    if surface.selected_index().is_some() {
-                        let cell = surface.selected_index();
-                        commit_candidate(cell, false, settings, manager, list, surface);
+                    if settings.bool(&keys::IS_CANDIDATE_WINDOW_ENABLED) {
+                        refresh(settings, manager, list, surface);
                     } else {
                         manager.commit_composition(surface);
                         close_list(list, surface);
@@ -98,7 +100,11 @@ pub fn perform_intent(
         }
         ComposingKeyIntent::DeleteBackward => {
             manager.delete_backward(surface);
-            refresh(settings, manager, list, surface);
+            if is_tps(settings) {
+                close_open_list(list, surface);
+            } else {
+                refresh(settings, manager, list, surface);
+            }
             true
         }
         ComposingKeyIntent::Commit => {
@@ -192,10 +198,23 @@ pub fn perform_intent(
             surface.navigate(*direction);
             true
         }
+        ComposingKeyIntent::OpenCandidates => {
+            // An empty fetch leaves the composition up and the window shut.
+            refresh(settings, manager, list, surface);
+            true
+        }
+        ComposingKeyIntent::CloseCandidates => {
+            close_list(list, surface);
+            true
+        }
         ComposingKeyIntent::MoveCaret(direction) => {
             // No refetch: the text did not change, so the candidates, the
-            // highlight and the page still describe it.
+            // highlight and the page still describe it. Under TPS the window
+            // goes: it is opened for a place to pick, and the caret left it.
             manager.move_caret(*direction, surface);
+            if is_tps(settings) {
+                close_open_list(list, surface);
+            }
             true
         }
     }
@@ -320,6 +339,18 @@ fn refresh(
 fn close_list(list: &mut CandidateSource, surface: &mut impl IntentSurface) {
     list.clear();
     surface.list_closed();
+}
+
+/// `close_list` for a list that may not be up — under TPS typing, where the
+/// window is shut on almost every key and a close each time would be noise.
+fn close_open_list(list: &mut CandidateSource, surface: &mut impl IntentSurface) {
+    if !list.is_empty() {
+        close_list(list, surface);
+    }
+}
+
+fn is_tps(settings: &SettingsDocument) -> bool {
+    settings.choice(&keys::INPUT_MODE) == InputMode::Tps
 }
 
 /// Commits the candidate behind cell `cell`, in the cell's own script or

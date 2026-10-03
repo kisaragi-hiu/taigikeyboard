@@ -111,6 +111,11 @@ pub enum ComposingKeyIntent {
     PassThrough,
     /// Move the candidate window's selection.
     Navigate(CandidateNavigation),
+    /// Fetch the candidates and put the window up on the first one — under
+    /// TPS, where the window opens on demand (desktop TPS roadmap D7).
+    OpenCandidates,
+    /// Take the window down and keep composing — Escape over a TPS window.
+    CloseCandidates,
     /// Step the caret inside the romanization being typed, so the next
     /// character lands there — `ka2`, Ctrl+← Ctrl+←, `h` → `kha2`. The
     /// engine owns the caret (`MoveCaret`); the window, if up, is left
@@ -182,6 +187,11 @@ impl ComposingKeyIntent {
         if !modifiers.has_host_chord() {
             if let Some(first) = key.characters.as_deref().and_then(|s| s.chars().next()) {
                 match first {
+                    // Under TPS the first Escape only closes the window the
+                    // user opened (D7); the next cancels, as everywhere.
+                    '\u{1B}' if is_showing_candidates && bindings.input_mode == InputMode::Tps => {
+                        return Self::CloseCandidates
+                    }
                     '\u{1B}' => return Self::composition_or_host(is_composing, Self::Cancel),
                     '\u{8}' | '\u{7F}' => {
                         return Self::composition_or_host(is_composing, Self::DeleteBackward)
@@ -192,10 +202,12 @@ impl ComposingKeyIntent {
         }
         // TPS — ahead of the slot keys, the bindings and the typing tier, so
         // neither a binding (Space's included) nor a slot set takes a key the
-        // layout types (`desktop-tps-roadmap.md` § D3). The keypad, which
-        // picks under TPS, is the slot tier's below.
+        // layout types (`desktop-tps-roadmap.md` § D3, D7).
         if bindings.input_mode == InputMode::Tps {
-            if let Some(intent) = Self::tps_key(key, is_composing) {
+            let intent =
+                Self::tps_window_key(key, is_composing, is_showing_candidates, bindings, platform)
+                    .or_else(|| Self::tps_key(key, is_composing));
+            if let Some(intent) = intent {
                 return intent;
             }
         }
@@ -319,6 +331,50 @@ impl ComposingKeyIntent {
             Self::CommitThenInsert(characters.to_owned())
         } else {
             Self::PassThrough
+        }
+    }
+
+    /// What a key does to the TPS candidate window, which opens on demand
+    /// (D7), or `None` for a key that types. With the window up the number
+    /// row and the keypad pick and Space confirms. While typing, the keys
+    /// that would move through a window open it — the navigation keys and
+    /// whatever the navigation and paging rows are bound to — and the
+    /// Confirm and Commit as Typed rows commit the glyphs: the user has seen
+    /// no candidate. With the window switched off nothing opens, and a key
+    /// that would have opened it commits and goes on to the host.
+    fn tps_window_key(
+        key: &KeyEventSnapshot,
+        is_composing: bool,
+        is_showing_candidates: bool,
+        bindings: &ComposingKeyBindings,
+        platform: DesktopPlatform,
+    ) -> Option<Self> {
+        if is_showing_candidates {
+            if let Some(slot) = bindings.slot_key_set().slot_for_event(key) {
+                return Some(Self::SelectCandidateSlot { slot, flip: false });
+            }
+            let is_bare_space = key.modifiers.is_empty() && key.characters.as_deref() == Some(" ");
+            return is_bare_space.then_some(Self::CommitHighlightedCandidate);
+        }
+        // A key that types a glyph types it; only the rest can move or commit.
+        if !is_composing || tps_glyph_for_event(key).is_some() {
+            return None;
+        }
+        let open = if bindings.is_candidate_window_enabled {
+            Self::OpenCandidates
+        } else {
+            Self::CommitThenPassThrough
+        };
+        let modifiers = key.modifiers;
+        if key.navigation_key.is_some() && !modifiers.shift && !modifiers.has_host_chord() {
+            return Some(open);
+        }
+        match bindings.action_for(key, platform)? {
+            ComposingAction::ConfirmHighlighted | ComposingAction::CommitLiteral => {
+                Some(Self::Commit)
+            }
+            action if action.navigation().is_some() => Some(open),
+            _ => None,
         }
     }
 
@@ -1309,13 +1365,15 @@ mod tests {
     }
 
     fn keypad(digit: &str, code: u16) -> KeyEventSnapshot {
-        KeyEventSnapshot::chord(Some(digit), digit, KeyModifiers::NONE).with_key_code(code)
+        coded_key(digit, code, KeyModifiers::NONE)
     }
 
     #[test]
     fn under_tps_a_layout_key_types_its_glyph_idle_or_composing() {
         // trace: tps_layout — `e` ㄍ, number-row `1` ㄅ, `7` tone 8 U+02D9, `,` ㆰ;
-        // taken ahead of the slot tier, so a list showing changes nothing.
+        // taken ahead of the slot tier. These events carry no key code, so
+        // even a window up does not read `1` / `7` as the number row (D7,
+        // `under_tps_the_window_picks_with_the_number_row_and_space_confirms`).
         let cases = [("e", "ㄍ"), ("1", "ㄅ"), ("7", "\u{02d9}"), (",", "ㆰ")];
         for (key, glyph) in cases {
             for (is_composing, is_showing) in [(false, false), (true, false), (true, true)] {
@@ -1331,9 +1389,10 @@ mod tests {
     #[test]
     fn under_tps_space_is_the_separator_mid_composition_and_the_hosts_idle() {
         // Space's default binding (Output the Other Script) never sees it.
+        // With the window up it confirms (D7).
         assert_eq!(
             classify_tps(&text(" "), true, true),
-            ComposingKeyIntent::TpsKey(" ".into())
+            ComposingKeyIntent::CommitHighlightedCandidate
         );
         assert_eq!(
             classify_tps(&text(" "), true, false),
@@ -1362,6 +1421,141 @@ mod tests {
         assert_eq!(
             classify_tps(&keypad("3", 0x63), false, false),
             ComposingKeyIntent::PassThrough
+        );
+    }
+
+    /// A key that types `digit` from the key at `code`.
+    fn coded_key(digit: &str, code: u16, modifiers: KeyModifiers) -> KeyEventSnapshot {
+        KeyEventSnapshot::chord(Some(digit), digit, modifiers).with_key_code(code)
+    }
+
+    #[test]
+    fn under_tps_the_window_picks_with_the_number_row_and_space_confirms() {
+        // trace: D7 — window up: bare number-row `3` (0x33) → slot 2; Shift+`1`
+        // (0x31) types ㆠ; `e` still types ㄍ (the executor shuts the window);
+        // Escape closes, a second (no window) cancels.
+        assert_eq!(
+            classify_tps(&coded_key("3", 0x33, KeyModifiers::NONE), true, true),
+            ComposingKeyIntent::SelectCandidateSlot {
+                slot: 2,
+                flip: false
+            }
+        );
+        assert_eq!(
+            classify_tps(&coded_key("3", 0x33, KeyModifiers::NONE), true, false),
+            ComposingKeyIntent::TpsKey("\u{02ea}".into()),
+            "typing: the number row types its glyph"
+        );
+        assert_eq!(
+            classify_tps(&coded_key("!", 0x31, KeyModifiers::SHIFT), true, true),
+            ComposingKeyIntent::TpsKey("ㆠ".into())
+        );
+        assert_eq!(
+            classify_tps(&text("e"), true, true),
+            ComposingKeyIntent::TpsKey("ㄍ".into())
+        );
+        let escape = text("\u{1b}");
+        assert_eq!(
+            classify_tps(&escape, true, true),
+            ComposingKeyIntent::CloseCandidates
+        );
+        assert_eq!(
+            classify_tps(&escape, true, false),
+            ComposingKeyIntent::Cancel
+        );
+        assert_eq!(
+            classify(&escape, true, true),
+            ComposingKeyIntent::Cancel,
+            "TL: Escape cancels with the list up"
+        );
+    }
+
+    #[test]
+    fn under_tps_typing_the_moving_keys_open_the_window_and_enter_commits() {
+        // trace: D7 — no window, composing: ↓ and the keys bound to the
+        // navigation rows (Tab, `]`) open; Enter / Shift+Enter commit the
+        // glyphs; idle, every one is the host's.
+        let down = KeyEventSnapshot::navigation(NavigationKey::DownArrow, KeyModifiers::NONE);
+        let tab = text("\t");
+        let page = text("]");
+        for key in [&down, &tab] {
+            assert_eq!(
+                classify_tps(key, true, false),
+                ComposingKeyIntent::OpenCandidates,
+                "{key:?}"
+            );
+        }
+        assert_eq!(
+            classify_tps(&page, true, false),
+            ComposingKeyIntent::OpenCandidates
+        );
+        let mut enter = text("\r");
+        enter.is_named_special_key = true;
+        let shift_enter = KeyEventSnapshot {
+            modifiers: KeyModifiers::SHIFT,
+            ..enter.clone()
+        };
+        assert_eq!(
+            classify_tps(&enter, true, false),
+            ComposingKeyIntent::Commit
+        );
+        assert_eq!(
+            classify_tps(&shift_enter, true, false),
+            ComposingKeyIntent::Commit
+        );
+        assert_eq!(
+            classify_tps(&shift_enter, true, true),
+            ComposingKeyIntent::Commit,
+            "window up: Shift+Enter still commits as typed"
+        );
+        assert_eq!(
+            classify_tps(&down, false, false),
+            ComposingKeyIntent::PassThrough
+        );
+        assert_eq!(
+            classify_tps(&enter, false, false),
+            ComposingKeyIntent::PassThrough
+        );
+        assert_eq!(
+            classify(&down, true, false),
+            ComposingKeyIntent::CommitThenPassThrough,
+            "TL: no list, ↓ is the host's"
+        );
+    }
+
+    #[test]
+    fn under_tps_with_the_window_off_nothing_opens() {
+        let mut bindings = tps_bindings();
+        bindings.is_candidate_window_enabled = false;
+        let down = KeyEventSnapshot::navigation(NavigationKey::DownArrow, KeyModifiers::NONE);
+        assert_eq!(
+            ComposingKeyIntent::intent(&down, true, false, &bindings, PLATFORM),
+            ComposingKeyIntent::CommitThenPassThrough
+        );
+        assert_eq!(
+            ComposingKeyIntent::intent(&text("]"), true, false, &bindings, PLATFORM),
+            ComposingKeyIntent::CommitThenPassThrough
+        );
+        // A navigation row rebound onto another key follows it.
+        let mut stored = BTreeMap::new();
+        stored.insert(
+            ComposingAction::NextCandidate,
+            Some(ComposingKeyChord {
+                key: "'".into(),
+                modifiers: KeyModifiers::CONTROL,
+            }),
+        );
+        let mut rebound = ComposingKeyBindings::resolve(&stored, ToneInputScheme::Standard);
+        rebound.input_mode = InputMode::Tps;
+        let chord = KeyEventSnapshot::chord(None, "'", KeyModifiers::CONTROL);
+        assert_eq!(
+            ComposingKeyIntent::intent(&chord, true, false, &rebound, PLATFORM),
+            ComposingKeyIntent::OpenCandidates
+        );
+        rebound.is_candidate_window_enabled = false;
+        assert_eq!(
+            ComposingKeyIntent::intent(&chord, true, false, &rebound, PLATFORM),
+            ComposingKeyIntent::CommitThenPassThrough
         );
     }
 
@@ -1397,7 +1591,7 @@ mod tests {
     fn under_tps_shift_space_and_keypad_non_digits_are_document_text() {
         // trace: Shift+Space is no layout key and no bare Space → tier 7 TPS;
         // keypad `.` (VK_DECIMAL 0x6E) is refused by the layout → tier 7; a
-        // Shift+keypad digit is no slot (Keypad has no flip) → tier 7.
+        // Shift+keypad digit is no slot (TpsDigits has no flip) → tier 7.
         let shift_space = KeyEventSnapshot::text(" ", KeyModifiers::SHIFT);
         assert_eq!(
             classify_tps(&shift_space, true, true),
@@ -1446,7 +1640,7 @@ mod tests {
 
     #[test]
     fn under_tps_a_stored_telex_scheme_changes_nothing() {
-        // trace: the TPS branch runs before the Telex tier; slot set = Keypad.
+        // trace: the TPS branch runs before the Telex tier; slot set = TpsDigits.
         let mut bindings = ComposingKeyBindings::resolve(&BTreeMap::new(), ToneInputScheme::Telex);
         bindings.input_mode = InputMode::Tps;
         let classify = |key: &KeyEventSnapshot| {

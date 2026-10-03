@@ -447,6 +447,59 @@ impl Rig {
         }
         self.surface.calls.clear();
     }
+
+    /// ↓ (or a moving key) while typing: the window comes up (D7).
+    fn open_window(&mut self) {
+        assert!(self.run(ComposingKeyIntent::OpenCandidates, &no_key()));
+        assert!(!self.list.is_empty(), "a window to pick from");
+        self.surface.calls.clear();
+    }
+}
+
+/// D7: typing TPS fetches nothing, so no window comes up while the user
+/// types; a key typed over an open window takes it down, the glyph kept.
+#[test]
+fn tps_typing_fetches_nothing_and_shuts_an_open_window() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛ");
+    assert!(rig.list.is_empty());
+    rig.open_window();
+    assert!(rig.run(ComposingKeyIntent::TpsKey("ˋ".to_owned()), &no_key()));
+    assert_eq!(rig.manager.raw_input(), "ㄏㄛˋ");
+    assert!(rig.list.is_empty());
+    assert_eq!(rig.calls(), ["list closed"]);
+}
+
+/// D7: Escape over the window closes it and keeps the glyphs; Backspace
+/// over it closes it and deletes, with no refetch.
+#[test]
+fn tps_closing_or_backspacing_over_the_window_keeps_composing() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    rig.open_window();
+    assert!(rig.run(ComposingKeyIntent::CloseCandidates, &no_key()));
+    assert_eq!(rig.calls(), ["list closed"]);
+    assert_eq!(rig.manager.raw_input(), "ㄏㄛˋ");
+    rig.open_window();
+    assert!(rig.run(ComposingKeyIntent::DeleteBackward, &no_key()));
+    assert_eq!(rig.manager.raw_input(), "ㄏㄛ");
+    assert_eq!(rig.calls(), ["list closed"]);
+    assert!(rig.run(ComposingKeyIntent::DeleteBackward, &no_key()));
+    assert_eq!(rig.calls(), ["list closed"], "no window, nothing more");
+}
+
+/// D7: the caret chord over the window takes it down, nothing refetched.
+#[test]
+fn tps_moving_the_caret_shuts_the_window() {
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛˋ");
+    rig.open_window();
+    assert!(rig.run(
+        ComposingKeyIntent::MoveCaret(CaretDirection::Left),
+        &no_key()
+    ));
+    assert!(rig.list.is_empty());
+    assert_eq!(rig.calls(), ["list closed"]);
 }
 
 #[test]
@@ -455,22 +508,26 @@ fn tps_space_after_an_open_syllable_is_taken_as_the_separator() {
     rig.type_tps("ㄏㄛ");
     assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
     assert_eq!(rig.manager.raw_input(), "ㄏㄛ ");
-    assert_eq!(rig.calls(), [format!("list {}", rig.list.len())]);
+    assert!(rig.calls().is_empty(), "no fetch while typing (D7)");
 }
 
 #[test]
-fn tps_space_on_a_closed_syllable_with_no_highlight_commits_the_glyphs_unspaced() {
+fn tps_space_on_a_closed_syllable_opens_the_window() {
+    // O1 revised by D7: the refused separator puts the window up.
     let mut rig = new_tps_rig();
     rig.type_tps("ㄏㄛˋ");
-    rig.surface.selected = None;
     assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
-    assert_eq!(rig.calls(), ["commit ㄏㄛˋ", "list closed"]);
+    assert!(!rig.list.is_empty());
+    assert_eq!(rig.calls(), [format!("list {}", rig.list.len())]);
+    assert_eq!(rig.manager.raw_input(), "ㄏㄛˋ");
 }
 
 #[test]
-fn tps_space_on_a_closed_syllable_confirms_the_highlighted_candidate() {
+fn tps_with_the_window_up_space_confirms_the_highlighted_candidate() {
+    // The classifier reads Space over the window as the confirm (D7).
     let mut rig = new_tps_rig();
     rig.type_tps("ㄏㄛˋ");
+    rig.open_window();
     rig.surface.selected = Some(0);
     let expected = rig
         .list
@@ -479,7 +536,7 @@ fn tps_space_on_a_closed_syllable_confirms_the_highlighted_candidate() {
         .0
         .hanji
         .clone();
-    assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
+    assert!(rig.run(ComposingKeyIntent::CommitHighlightedCandidate, &no_key()));
     let expected = expected.expect("the first candidate carries Hanji");
     assert_eq!(
         rig.calls(),
@@ -491,6 +548,7 @@ fn tps_space_on_a_closed_syllable_confirms_the_highlighted_candidate() {
 fn tps_a_flipped_slot_commits_the_cells_own_hanji_never_the_tl() {
     let mut rig = new_tps_rig();
     rig.type_tps("ㄏㄛˋ");
+    rig.open_window();
     // The surface maps slot 0 to cell 1.
     let expected = rig
         .list
