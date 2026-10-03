@@ -106,19 +106,13 @@ final class LearningRecordsPageModel {
         await perform { try $0.deleteLearningRecord(record) }
     }
 
-    /// Takes the page's one work slot for `label`, or answers false because
-    /// something else holds it — `CustomDictionaryPageModel.beginWork`.
-    func beginWork(_ label: StringKey) -> Bool {
-        guard !activity.isWorking else { return false }
-        activity = .working(label)
-        return true
-    }
-
     /// Runs one write and reloads, whatever it answered: the row moved, went,
     /// or was never there. A row already gone — deleted elsewhere, evicted,
     /// its id taken by another word — is said, not reported as a failure.
+    /// One write at a time, as on Custom Dictionary
+    /// (`CustomDictionaryPageModel.beginWork`).
     private func perform(_ write: @escaping @Sendable (any UserDataClient) throws -> Bool) async {
-        guard beginWork(.desktopProgressWorking) else { return }
+        guard activity.begin(.desktopProgressWorking) else { return }
         defer { activity = .idle }
         do {
             if try await UserDataRequests.run(on: client, write) == false {

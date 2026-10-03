@@ -34,6 +34,14 @@ enum UserDataPageActivity: Equatable, Sendable {
             nil
         }
     }
+
+    /// Takes the page's one work slot for `label`, or answers false because
+    /// something else holds it.
+    mutating func begin(_ label: StringKey) -> Bool {
+        guard !isWorking else { return false }
+        self = .working(label)
+        return true
+    }
 }
 
 /// Something the page has to tell the user about — what happened, never how to
@@ -331,23 +339,22 @@ struct UserDataListPager: View {
 struct UserDataListControls<Trailing: View>: View {
     @Environment(DisplayLanguageStore.self) private var language
 
-    /// What the `+` announces to an assistive reader — the list's own verb,
-    /// since "add" alone does not say what is being added.
-    var addLabelKey: StringKey?
+    /// The `+`: what it announces to an assistive reader — the list's own
+    /// verb, since "add" alone does not say what is being added — and what
+    /// it does. Nil for a list nothing is added to by hand (Learning
+    /// Records): it draws `−` alone.
+    var add: (labelKey: StringKey, action: () -> Void)?
     let isRemoveEnabled: Bool
-    /// Nil, with `addLabelKey`, for a list nothing is added to by hand
-    /// (Learning Records): it draws `−` alone.
-    var onAdd: (() -> Void)?
     let onRemove: () -> Void
     @ViewBuilder let trailing: () -> Trailing
 
     var body: some View {
         HStack(spacing: 4) {
-            if let onAdd, let addLabelKey {
-                Button(action: onAdd) {
+            if let add {
+                Button(action: add.action) {
                     UserDataListControlGlyph(symbolName: "plus")
                 }
-                .accessibilityLabel(language.string(addLabelKey))
+                .accessibilityLabel(language.string(add.labelKey))
             }
 
             Button(action: onRemove) {
@@ -370,15 +377,13 @@ struct UserDataListControls<Trailing: View>: View {
 
 extension UserDataListControls where Trailing == EmptyView {
     init(
-        addLabelKey: StringKey,
+        add: (labelKey: StringKey, action: () -> Void),
         isRemoveEnabled: Bool,
-        onAdd: @escaping () -> Void,
         onRemove: @escaping () -> Void,
     ) {
         self.init(
-            addLabelKey: addLabelKey,
+            add: add,
             isRemoveEnabled: isRemoveEnabled,
-            onAdd: onAdd,
             onRemove: onRemove,
             trailing: { EmptyView() },
         )

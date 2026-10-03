@@ -58,14 +58,6 @@ struct UserDataPagedList<Row: Sendable> {
         matchCount < totalCount ? "\(matchCount) / \(totalCount)" : "\(totalCount)"
     }
 
-    var canPageBackward: Bool {
-        page > 0
-    }
-
-    var canPageForward: Bool {
-        page + 1 < pageCount
-    }
-
     /// Moves `delta` pages, or answers false because there is no such page.
     mutating func step(by delta: Int) -> Bool {
         let target = page + delta

@@ -182,8 +182,8 @@ final class CustomDictionaryPagingTests: XCTestCase {
         await model.load()
 
         XCTAssertEqual(model.list.pageCount, 1)
-        XCTAssertFalse(model.list.canPageForward)
-        XCTAssertFalse(model.list.canPageBackward)
+        XCTAssertEqual(model.list.page + 1, model.list.pageCount, "the last page")
+        XCTAssertEqual(model.list.page, 0)
     }
 
     func testPagingForward_showsTheNextRowsAndStopsAtTheEnd() async throws {
@@ -197,7 +197,7 @@ final class CustomDictionaryPagingTests: XCTestCase {
         XCTAssertEqual(model.list.page, 1)
         XCTAssertEqual(model.list.rows.count, 2)
         XCTAssertTrue(firstPage.isDisjoint(with: model.list.rows.map(\.id)), "page two repeated page one")
-        XCTAssertFalse(model.list.canPageForward)
+        XCTAssertEqual(model.list.page + 1, model.list.pageCount, "the last page")
 
         await model.pageForward()
 

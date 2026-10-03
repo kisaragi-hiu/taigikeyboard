@@ -39,18 +39,12 @@ final class CustomDictionaryPageModel {
         self.client = client
     }
 
-    private func run<Value: Sendable>(
-        _ request: @escaping @Sendable (any UserDataClient) throws -> Value,
-    ) async throws -> Value {
-        try await UserDataRequests.run(on: client, request)
-    }
-
     /// Reloads the page on screen.
     func load() async {
         let load = list.beginLoad()
         let (filter, offset) = (filter, load.offset)
         do {
-            let listing = try await run {
+            let listing = try await UserDataRequests.run(on: client) {
                 try $0.list(filter: filter, limit: UserDataListMetrics.pageSize, offset: offset)
             }
             list.land(listing, from: load)
@@ -70,23 +64,23 @@ final class CustomDictionaryPageModel {
     }
 
     func save(_ row: CustomDictionaryRow) async {
-        await perform(.desktopProgressWorking) { try await self.run { try $0.save(row) } }
+        await perform(.desktopProgressWorking) { try await UserDataRequests.run(on: self.client) { try $0.save(row) } }
     }
 
     func delete(_ row: CustomDictionaryRow) async {
         let id = row.id
-        await perform(.desktopProgressWorking) { try await self.run { try $0.delete(id: id) } }
+        await perform(.desktopProgressWorking) { try await UserDataRequests.run(on: self.client) { try $0.delete(id: id) } }
     }
 
     func deleteAll() async {
-        await perform(.desktopProgressWorking) { try await self.run { try $0.deleteAll() } }
+        await perform(.desktopProgressWorking) { try await UserDataRequests.run(on: self.client) { try $0.deleteAll() } }
     }
 
     func exportCSV(in window: NSWindow) async {
         guard beginWork(.desktopProgressWorking) else { return }
         defer { activity = .idle }
         do {
-            let csv = try await run { try $0.exportCSV() }
+            let csv = try await UserDataRequests.run(on: client) { try $0.exportCSV() }
             _ = try await UserDataFilePanels.write(
                 csv,
                 suggestedName: UserDataFilePanels.exportFileName(
@@ -116,7 +110,7 @@ final class CustomDictionaryPageModel {
             // Off the main actor: reading and importing up to 5 MB of CSV
             // there would freeze the very window that is showing the progress
             // spinner for it.
-            let result = try await run { try $0.importCSV(at: url) }
+            let result = try await UserDataRequests.run(on: client) { try $0.importCSV(at: url) }
             message = .imported(result.imported, skipped: result.skipped)
             await load()
         } catch {
@@ -139,9 +133,7 @@ final class CustomDictionaryPageModel {
     /// Internal so a test can drive the refusal without racing two real
     /// database writes to reproduce it.
     func beginWork(_ label: StringKey) -> Bool {
-        guard !activity.isWorking else { return false }
-        activity = .working(label)
-        return true
+        activity.begin(label)
     }
 
     /// Empties the three learning stores — counts, bigrams, learned phrases.
@@ -159,7 +151,7 @@ final class CustomDictionaryPageModel {
     /// result off.
     func clearLearningRecords() async {
         do {
-            try await run { try $0.clearLearningRecords() }
+            try await UserDataRequests.run(on: client) { try $0.clearLearningRecords() }
             message = .done(.dictionaryClearLearningRecordsDone)
         } catch {
             message = .failure(.dictionaryClearLearningRecordsFailed, error)
@@ -317,9 +309,8 @@ struct CustomDictionaryPage: View {
     /// The `+` / `−` pair under the table, with the pager at its trailing end.
     private var entryTableControls: some View {
         UserDataListControls(
-            addLabelKey: .dictionaryAddEntry,
+            add: (.dictionaryAddEntry, { editing = CustomDictionaryRow(roman: "", hanji: "") }),
             isRemoveEnabled: selectedRow != nil,
-            onAdd: { editing = CustomDictionaryRow(roman: "", hanji: "") },
             onRemove: {
                 guard let selectedRow else { return }
                 Task { await model.delete(selectedRow) }

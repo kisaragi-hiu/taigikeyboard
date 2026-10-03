@@ -98,12 +98,11 @@ struct FontManagementPage: View {
                 UserDataFilterField(text: $filter)
                 fontTable(rows: visibleRows, selectedID: visibleSelectedRow?.id)
                 UserDataListControls(
-                    addLabelKey: .desktopCustomFontAdd,
+                    add: (.desktopCustomFontAdd, add),
                     // The VISIBLE selected row: a custom typeface the search
                     // has hidden must not be deletable by a button beside a
                     // table that shows no selection.
                     isRemoveEnabled: visibleSelectedRow?.customFont != nil,
-                    onAdd: add,
                     onRemove: {
                         if let font = visibleSelectedRow?.customFont {
                             remove(font)
