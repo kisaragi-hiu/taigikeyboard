@@ -1,0 +1,353 @@
+package com.siansiansu.taigikeyboard.ui.tabs.dictionary
+
+import android.app.Application
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecord
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordKind
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecordOrder
+import com.siansiansu.taigikeyboard.engine.proto.LearningRecords
+import com.siansiansu.taigikeyboard.ime.dictionary.BackupImportResult
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryImportResult
+import com.siansiansu.taigikeyboard.ime.dictionary.CustomDictionaryWord
+import com.siansiansu.taigikeyboard.ime.dictionary.UserDataClient
+import com.siansiansu.taigikeyboard.ime.dictionary.UserDataException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import java.time.ZoneId
+import java.time.ZoneOffset
+
+/**
+ * JVM tests for the Learning Records page's view model. The engine is faked
+ * (no `.so` on the JVM); the fake pages like the engine does — the offset
+ * pulled back to the last page that exists (`engine/userdata/src/paging.rs`).
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+class LearningRecordsViewModelTest {
+    private val dispatcher = StandardTestDispatcher()
+
+    @Before
+    fun setUp() = Dispatchers.setMain(dispatcher)
+
+    @After
+    fun tearDown() = Dispatchers.resetMain()
+
+    private data class ListCall(
+        val kind: LearningRecordKind,
+        val order: LearningRecordOrder,
+        val filter: String,
+        val limit: Int,
+        val offset: Int,
+    )
+
+    private class FakeLearningRecords(
+        var rows: List<LearningRecord>,
+    ) : UserDataClient {
+        val listCalls = mutableListOf<ListCall>()
+
+        /** When set, every list answer waits in [held] until the test completes it. */
+        var holdsAnswers = false
+        val held = mutableListOf<CompletableDeferred<LearningRecords>>()
+        var listFailure: Exception? = null
+
+        val setCalls = mutableListOf<Pair<LearningRecord, Long>>()
+        val deleteCalls = mutableListOf<LearningRecord>()
+        var isRowGone = false
+        var writeFailure: Exception? = null
+
+        override suspend fun listLearningRecords(
+            kind: LearningRecordKind,
+            order: LearningRecordOrder,
+            filter: String,
+            limit: Int,
+            offset: Int,
+        ): LearningRecords {
+            listCalls += ListCall(kind, order, filter, limit, offset)
+            listFailure?.let { throw it }
+            if (holdsAnswers) return CompletableDeferred<LearningRecords>().also { held += it }.await()
+            return page(kind, filter, limit, offset)
+        }
+
+        fun page(
+            kind: LearningRecordKind,
+            filter: String,
+            limit: Int,
+            offset: Int,
+        ): LearningRecords {
+            val ofKind = rows.filter { it.kind == kind }
+            val matching = ofKind.filter { filter.isEmpty() || it.text.contains(filter) || it.tl.contains(filter) }
+            val served = if (offset > 0 && offset >= matching.size) (maxOf(matching.size - 1, 0) / limit) * limit else offset
+            return LearningRecords
+                .newBuilder()
+                .addAllRecords(matching.drop(served).take(limit))
+                .setTotal(ofKind.size)
+                .setMatchingTotal(matching.size)
+                .setOffset(served)
+                .build()
+        }
+
+        override suspend fun setLearningRecordCount(
+            record: LearningRecord,
+            count: Long,
+        ): LearningRecord? {
+            setCalls += record to count
+            writeFailure?.let { throw it }
+            return if (isRowGone) null else record.toBuilder().setCount(count).build()
+        }
+
+        override suspend fun deleteLearningRecord(record: LearningRecord): Boolean {
+            deleteCalls += record
+            writeFailure?.let { throw it }
+            return !isRowGone
+        }
+
+        override suspend fun listAll(): List<CustomDictionaryWord> = error("unused")
+
+        override suspend fun save(word: CustomDictionaryWord) = error("unused")
+
+        override suspend fun delete(id: String) = error("unused")
+
+        override suspend fun deleteAll() = error("unused")
+
+        override suspend fun exportCsv(): ByteArray = error("unused")
+
+        override suspend fun importCsv(csv: ByteArray): CustomDictionaryImportResult = error("unused")
+
+        override suspend fun clearLearningRecords() = error("unused")
+
+        override suspend fun search(
+            query: String,
+            inputMode: String,
+            limit: Int,
+        ): List<CustomDictionaryWord> = error("unused")
+
+        override suspend fun exportBackup(appVersion: String): ByteArray = error("unused")
+
+        override suspend fun importBackup(backup: ByteArray): BackupImportResult = error("unused")
+    }
+
+    private fun record(
+        id: Long,
+        text: String,
+        kind: LearningRecordKind = LearningRecordKind.LEARNING_RECORD_KIND_FREQUENCY,
+    ): LearningRecord =
+        LearningRecord
+            .newBuilder()
+            .setKind(kind)
+            .setId(id)
+            .setText(text)
+            .setTl("tl$id")
+            .setCount(3)
+            .build()
+
+    /** [count] frequency rows, ids 1..count, texts `w1`, `w2`, … */
+    private fun frequencyRows(count: Int) = (1..count).map { record(it.toLong(), "w$it") }
+
+    private fun viewModel(client: FakeLearningRecords) = LearningRecordsViewModel(Application(), client)
+
+    private val frequency = LearningRecordKind.LEARNING_RECORD_KIND_FREQUENCY
+    private val phrase = LearningRecordKind.LEARNING_RECORD_KIND_LEARNED_PHRASE
+    private val mostUsed = LearningRecordOrder.LEARNING_RECORD_ORDER_MOST_USED
+
+    @Test
+    fun `the page opens on word frequency, most used, one engine page, and appends the next`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(150))
+            val model = viewModel(client)
+            advanceUntilIdle()
+
+            assertEquals(listOf(ListCall(frequency, mostUsed, "", 100, 0)), client.listCalls)
+            assertEquals(100, model.state.value.records.size)
+            assertEquals(150, model.state.value.matchingTotal)
+            assertTrue(model.state.value.canLoadMore)
+
+            model.loadMore()
+            advanceUntilIdle()
+
+            assertEquals(ListCall(frequency, mostUsed, "", 100, 100), client.listCalls.last())
+            assertEquals(
+                (1L..150L).toList(),
+                model.state.value.records
+                    .map { it.id },
+            )
+            assertFalse(model.state.value.canLoadMore)
+
+            model.loadMore()
+            advanceUntilIdle()
+            assertEquals("nothing more to ask for", 2, client.listCalls.size)
+        }
+
+    @Test
+    fun `a kind change drops the answer still in flight for the old kind`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(2) + record(9, "台灣", phrase))
+            client.holdsAnswers = true
+            val model = viewModel(client)
+            advanceUntilIdle()
+
+            model.selectKind(phrase)
+            advanceUntilIdle()
+            assertEquals(phrase, client.listCalls.last().kind)
+
+            client.held[1].complete(client.page(phrase, "", 100, 0))
+            client.held[0].complete(client.page(frequency, "", 100, 0))
+            advanceUntilIdle()
+
+            assertEquals(
+                listOf(9L),
+                model.state.value.records
+                    .map { it.id },
+            )
+            assertEquals(phrase, model.state.value.kind)
+            assertFalse(model.state.value.isLoading)
+        }
+
+    @Test
+    fun `the filter goes to the engine trimmed once typing settles and lists from the first row`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(150))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            model.loadMore()
+            advanceUntilIdle()
+
+            model.updateFilter("w")
+            model.updateFilter(" w1 ")
+            advanceTimeBy(LEARNING_RECORDS_FILTER_SETTLE_MILLIS - 1)
+            assertEquals("not before the box settles", 2, client.listCalls.size)
+
+            advanceUntilIdle()
+
+            assertEquals(listOf(ListCall(frequency, mostUsed, "w1", 100, 0)), client.listCalls.drop(2))
+            // trace: "w1" matches w1, w10..w19, w100..w150 = 1 + 10 + 51 = 62 rows.
+            assertEquals(62, model.state.value.matchingTotal)
+            assertEquals(62, model.state.value.records.size)
+            assertEquals(150, model.state.value.total)
+        }
+
+    @Test
+    fun `an order change lists from the first row in the new order`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(3))
+            val model = viewModel(client)
+            advanceUntilIdle()
+
+            model.selectOrder(LearningRecordOrder.LEARNING_RECORD_ORDER_MOST_RECENT)
+            advanceUntilIdle()
+
+            assertEquals(LearningRecordOrder.LEARNING_RECORD_ORDER_MOST_RECENT, client.listCalls.last().order)
+            assertEquals(0, client.listCalls.last().offset)
+            assertEquals(3, model.state.value.records.size)
+        }
+
+    @Test
+    fun `a count edit sends the listed row and reloads every loaded row`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(150))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            model.loadMore()
+            advanceUntilIdle()
+            val listed = model.state.value.records[120]
+
+            model.setCount(listed, 40)
+            advanceUntilIdle()
+
+            assertEquals(listOf(listed to 40L), client.setCalls)
+            assertEquals(ListCall(frequency, mostUsed, "", 150, 0), client.listCalls.last())
+            assertNull(model.state.value.message)
+        }
+
+    @Test
+    fun `a row already gone is said, not reported as a failure, and the list reloads`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(2))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            client.isRowGone = true
+
+            model.delete(model.state.value.records[0])
+            advanceUntilIdle()
+
+            assertEquals(LearningRecordsMessage.Gone, model.state.value.message)
+            assertEquals(2, client.listCalls.size)
+
+            model.dismissMessage()
+            assertNull(model.state.value.message)
+        }
+
+    @Test
+    fun `a failed write carries the engine's words and still reloads`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(2))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            client.writeFailure = UserDataException.EngineUnavailable("learningRecordDelete")
+
+            model.delete(model.state.value.records[0])
+            advanceUntilIdle()
+
+            assertEquals(
+                LearningRecordsMessage.WriteFailed("the engine did not answer learningRecordDelete"),
+                model.state.value.message,
+            )
+            assertEquals(2, client.listCalls.size)
+        }
+
+    @Test
+    fun `a failed read is its own state, neither empty nor no results`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(emptyList())
+            client.listFailure = UserDataException.EngineUnavailable("learningRecordsList")
+            val model = viewModel(client)
+            advanceUntilIdle()
+
+            val state = model.state.value
+            assertEquals(LearningRecordsMessage.ReadFailed("the engine did not answer learningRecordsList"), state.message)
+            assertTrue(state.hasReadFailed)
+            assertFalse(state.isLoading)
+        }
+
+    @Test
+    fun `a later page served from an earlier offset reads the loaded rows again`() =
+        runTest(dispatcher) {
+            val client = FakeLearningRecords(frequencyRows(150))
+            val model = viewModel(client)
+            advanceUntilIdle()
+            client.rows = frequencyRows(90)
+
+            model.loadMore()
+            advanceUntilIdle()
+
+            // trace: offset 100 >= 90 matches → served (89 / 100) * 100 = 0 ≠ 100 → reload 100 rows from 0.
+            assertEquals(ListCall(frequency, mostUsed, "", 100, 0), client.listCalls.last())
+            assertEquals(
+                (1L..90L).toList(),
+                model.state.value.records
+                    .map { it.id },
+            )
+            assertFalse(model.state.value.canLoadMore)
+        }
+
+    @Test
+    fun `the last-used day is the viewer's calendar day`() {
+        // trace: 2026-01-01T00:00:00Z = 1 767 225 600 s.
+        val newYear = 1_767_225_600_000L
+        assertEquals("2026-01-01", learningRecordLastUsedLabel(newYear, ZoneOffset.UTC))
+        assertEquals("2026-01-01", learningRecordLastUsedLabel(newYear, ZoneId.of("Asia/Taipei")))
+        assertEquals("2025-12-31", learningRecordLastUsedLabel(newYear, ZoneOffset.ofHours(-1)))
+        assertEquals("no readable time", "", learningRecordLastUsedLabel(0, ZoneOffset.UTC))
+    }
+}

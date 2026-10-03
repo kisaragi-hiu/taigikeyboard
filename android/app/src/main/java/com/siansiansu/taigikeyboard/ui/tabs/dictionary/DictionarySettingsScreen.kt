@@ -53,6 +53,7 @@ private val NESTED_TOGGLE_INDENT = 16.dp
 fun DictionarySettingsScreen(
     prefs: PrefHelper,
     onCustomDictionary: () -> Unit,
+    onLearningRecords: () -> Unit,
     onBackupRestore: () -> Unit,
     searchViewModel: DictionarySearchViewModel? = null,
     resetCounter: Int = 0,
@@ -137,6 +138,12 @@ fun DictionarySettingsScreen(
                     ActionRow(
                         label = L10n.dictionaryCustomDictionary,
                         onClick = onCustomDictionary,
+                        trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    )
+                    SettingsDivider()
+                    ActionRow(
+                        label = L10n.dictionaryLearningRecords,
+                        onClick = onLearningRecords,
                         trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     )
                     SettingsDivider()
