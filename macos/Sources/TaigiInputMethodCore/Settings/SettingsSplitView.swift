@@ -18,6 +18,10 @@ enum SettingsPane: String, CaseIterable, Identifiable {
     /// 2026-09-21).
     case dictionarySources
     case customDictionary
+    /// What the input method learned from the user's picks, under the
+    /// words they added themselves. `learningRecords` is desktop-core's
+    /// `SettingsPane::raw` for the same pane.
+    case learningRecords
     /// Last (USER 2026-09-08): what the input method draws IN, after what
     /// it draws FROM.
     case fontManagement
@@ -40,6 +44,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: .desktopAppearanceTab
         case .shortcuts: .desktopShortcutsTab
         case .customDictionary: .dictionaryCustomDictionary
+        case .learningRecords: .dictionaryLearningRecords
         case .dictionarySources: .desktopDictionarySourcesLink
         case .fontManagement: .desktopFontManagementTab
         case .about: .homeAboutKeyboard
@@ -54,6 +59,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .appearance: "paintpalette"
         case .shortcuts: "keyboard"
         case .customDictionary: "character.book.closed"
+        case .learningRecords: "clock.arrow.circlepath"
         case .dictionarySources: "books.vertical"
         case .fontManagement: "textformat"
         case .about: "info.circle"
@@ -168,6 +174,8 @@ struct SettingsDetailView: View {
             ShortcutSettingsView()
         case .customDictionary:
             CustomDictionaryPage(client: userData)
+        case .learningRecords:
+            LearningRecordsPage(client: userData)
         case .dictionarySources:
             DictionaryTogglesView()
         case .fontManagement:

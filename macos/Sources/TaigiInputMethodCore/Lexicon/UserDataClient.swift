@@ -2,12 +2,13 @@
 
 import Foundation
 
-/// One page of the custom dictionary, and the two counts the page shows.
-struct CustomDictionaryListing: Equatable, Sendable {
-    let rows: [CustomDictionaryRow]
-    /// Every stored word.
+/// One page of a user-data list — custom words or learning records — and
+/// the two counts the page shows.
+struct UserDataListing<Row: Sendable>: Sendable {
+    let rows: [Row]
+    /// Every stored row.
     let total: Int
-    /// The words the filter matches, for paging.
+    /// The rows the filter matches, for paging.
     let matchingTotal: Int
     /// Where `rows` start: the requested offset, pulled back to the last
     /// page by the engine when the matches shrank under it.
@@ -49,7 +50,7 @@ enum UserDataClientError: Error, Equatable, CustomStringConvertible {
 /// process shares one engine, and an open there would reach every later
 /// fetch in the run.
 protocol UserDataClient: Sendable {
-    func list(filter: String, limit: Int, offset: Int) throws -> CustomDictionaryListing
+    func list(filter: String, limit: Int, offset: Int) throws -> UserDataListing<CustomDictionaryRow>
     func save(_ row: CustomDictionaryRow) throws
     func delete(id: String) throws
     /// Empties the custom dictionary.
@@ -59,6 +60,22 @@ protocol UserDataClient: Sendable {
     /// Empties what the input method learned — counts, bigrams, learned
     /// phrases — and leaves the custom dictionary alone.
     func clearLearningRecords() throws
+
+    /// One page of one learning store, in `order`. The rows are the
+    /// engine's own records, handed back whole by the two writes below: the
+    /// engine applies a write only while the row still holds what was listed.
+    func listLearningRecords(
+        kind: Taigi_Engine_LearningRecordKind,
+        order: Taigi_Engine_LearningRecordOrder,
+        filter: String,
+        limit: Int,
+        offset: Int,
+    ) throws -> UserDataListing<Taigi_Engine_LearningRecord>
+    /// False when the row is gone — deleted, evicted, or its id taken by
+    /// another word since it was listed.
+    func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int) throws -> Bool
+    /// False when the row is gone, as for `setLearningRecordCount`.
+    func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) throws -> Bool
 }
 
 /// The shipped client: the engine's user-data ops.
@@ -68,13 +85,13 @@ struct EngineUserDataClient: UserDataClient {
     /// here too so a huge file is refused before it is read into memory.
     static let maxImportFileBytes = 5 * 1024 * 1024
 
-    func list(filter: String, limit: Int, offset: Int) throws -> CustomDictionaryListing {
+    func list(filter: String, limit: Int, offset: Int) throws -> UserDataListing<CustomDictionaryRow> {
         guard let page = RustEngineBridge.customDictionaryList(
             filter: filter,
             limit: limit,
             offset: offset,
         ) else { throw UserDataClientError.engineUnavailable(op: "customDictionaryList") }
-        return CustomDictionaryListing(
+        return UserDataListing(
             rows: page.entries.map(CustomDictionaryRow.init),
             total: Int(page.total),
             matchingTotal: Int(page.matchingTotal),
@@ -131,6 +148,42 @@ struct EngineUserDataClient: UserDataClient {
         }
     }
 
+    func listLearningRecords(
+        kind: Taigi_Engine_LearningRecordKind,
+        order: Taigi_Engine_LearningRecordOrder,
+        filter: String,
+        limit: Int,
+        offset: Int,
+    ) throws -> UserDataListing<Taigi_Engine_LearningRecord> {
+        guard let page = RustEngineBridge.learningRecordsList(
+            kind: kind,
+            order: order,
+            filter: filter,
+            limit: limit,
+            offset: offset,
+        ) else { throw UserDataClientError.engineUnavailable(op: "learningRecordsList") }
+        return UserDataListing(
+            rows: page.records,
+            total: Int(page.total),
+            matchingTotal: Int(page.matchingTotal),
+            offset: Int(page.offset),
+        )
+    }
+
+    func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int) throws -> Bool {
+        guard let saved = RustEngineBridge.learningRecordSetCount(record, count: count) else {
+            throw UserDataClientError.engineUnavailable(op: "learningRecordSetCount")
+        }
+        return saved.hasRecord
+    }
+
+    func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) throws -> Bool {
+        guard let removed = RustEngineBridge.learningRecordDelete(record) else {
+            throw UserDataClientError.engineUnavailable(op: "learningRecordDelete")
+        }
+        return removed
+    }
+
     /// Empties the stores `select` names; every one is attempted, and the
     /// ones that could not be emptied are reported together.
     private func reset(_ select: (inout Taigi_Engine_ResetUserData) -> Void) throws {
@@ -148,3 +201,8 @@ extension CustomDictionaryRow {
         self.init(id: entry.id, roman: entry.roman, hanji: entry.hanji)
     }
 }
+
+/// A learned row is addressed by the store's row id on the page that listed
+/// it — a table selection, never the word's identity (`(text, tl)`, which the
+/// engine checks on every write).
+extension Taigi_Engine_LearningRecord: Identifiable {}

@@ -16,7 +16,7 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     private let lock = NSLock()
     private var rows: [CustomDictionaryRow] = []
 
-    func list(filter: String, limit: Int, offset: Int) throws -> CustomDictionaryListing {
+    func list(filter: String, limit: Int, offset: Int) throws -> UserDataListing<CustomDictionaryRow> {
         lock.withLock {
             let matching = filter.isEmpty
                 ? rows
@@ -26,7 +26,7 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
             // Pulled back to the last page that exists, as the engine does.
             let lastPage = max(0, matching.count - 1) / max(1, limit) * limit
             let served = min(offset, lastPage)
-            return CustomDictionaryListing(
+            return UserDataListing(
                 rows: Array(matching.dropFirst(served).prefix(limit)),
                 total: rows.count,
                 matchingTotal: matching.count,
@@ -59,4 +59,74 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     }
 
     func clearLearningRecords() throws {}
+
+    // MARK: - Learning records
+
+    private var learningRecords: [Taigi_Engine_LearningRecord] = []
+    /// What the last list request asked for, as `(kind, order, filter)`.
+    private(set) var lastLearningRecordsQuery: (
+        kind: Taigi_Engine_LearningRecordKind,
+        order: Taigi_Engine_LearningRecordOrder,
+        filter: String,
+    )?
+    /// Set to make every list request fail, as an unreadable store does.
+    var failsLearningRecordReads = false
+
+    func seedLearningRecords(_ records: [Taigi_Engine_LearningRecord]) {
+        lock.withLock { learningRecords = records }
+    }
+
+    func listLearningRecords(
+        kind: Taigi_Engine_LearningRecordKind,
+        order: Taigi_Engine_LearningRecordOrder,
+        filter: String,
+        limit: Int,
+        offset: Int,
+    ) throws -> UserDataListing<Taigi_Engine_LearningRecord> {
+        try lock.withLock {
+            lastLearningRecordsQuery = (kind, order, filter)
+            if failsLearningRecordReads {
+                throw UserDataClientError.engineUnavailable(op: "learningRecordsList")
+            }
+            let store = learningRecords.filter { $0.kind == kind }
+            let matching = (filter.isEmpty
+                ? store
+                : store.filter { $0.text.contains(filter) || $0.tl.localizedCaseInsensitiveContains(filter) })
+                .sorted {
+                    order == .mostUsed
+                        ? ($0.count, $0.lastUsedMs) > ($1.count, $1.lastUsedMs)
+                        : $0.lastUsedMs > $1.lastUsedMs
+                }
+            let lastPage = max(0, matching.count - 1) / max(1, limit) * limit
+            let served = min(offset, lastPage)
+            return UserDataListing(
+                rows: Array(matching.dropFirst(served).prefix(limit)),
+                total: store.count,
+                matchingTotal: matching.count,
+                offset: served,
+            )
+        }
+    }
+
+    /// Applies only while the row still holds what was listed, as the engine
+    /// does.
+    func setLearningRecordCount(_ record: Taigi_Engine_LearningRecord, count: Int) throws -> Bool {
+        lock.withLock {
+            guard let index = learningRecords.firstIndex(where: { Self.isSameRow($0, record) }) else { return false }
+            learningRecords[index].count = Int64(count)
+            return true
+        }
+    }
+
+    func deleteLearningRecord(_ record: Taigi_Engine_LearningRecord) throws -> Bool {
+        lock.withLock {
+            guard let index = learningRecords.firstIndex(where: { Self.isSameRow($0, record) }) else { return false }
+            learningRecords.remove(at: index)
+            return true
+        }
+    }
+
+    private static func isSameRow(_ stored: Taigi_Engine_LearningRecord, _ listed: Taigi_Engine_LearningRecord) -> Bool {
+        stored.kind == listed.kind && stored.id == listed.id && stored.text == listed.text && stored.tl == listed.tl
+    }
 }

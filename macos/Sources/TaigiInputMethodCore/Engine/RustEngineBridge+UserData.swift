@@ -2,7 +2,7 @@
 // (`docs/architecture/user-data-engine-roadmap.md` P6) and counts the picks
 // itself (R5, `composingCommitContinuous`); the desktop core opens them at
 // launch (`DesktopCoreRuntime.prepare`) and this side drives the Custom
-// Dictionary page.
+// Dictionary and Learning Records pages.
 
 import Foundation
 
@@ -78,6 +78,55 @@ extension RustEngineBridge {
             op: "customDictionaryExportCSV",
         ) else { return nil }
         return exported.csv
+    }
+
+    // MARK: - Learning records
+
+    static func learningRecordsList(
+        kind: Taigi_Engine_LearningRecordKind,
+        order: Taigi_Engine_LearningRecordOrder,
+        filter: String,
+        limit: Int,
+        offset: Int,
+    ) -> Taigi_Engine_LearningRecords? {
+        var list = Taigi_Engine_ListLearningRecords()
+        list.kind = kind
+        list.order = order
+        list.filter = filter
+        list.limit = UInt32(clamping: limit)
+        list.offset = UInt32(clamping: offset)
+        guard case let .learningRecords(records)? = userDataResult(
+            .listLearningRecords(list),
+            op: "learningRecordsList",
+        ) else { return nil }
+        return records
+    }
+
+    /// `record` is the row as listed; the answer carries no record when the
+    /// row is gone.
+    static func learningRecordSetCount(
+        _ record: Taigi_Engine_LearningRecord,
+        count: Int,
+    ) -> Taigi_Engine_LearningRecordSaved? {
+        var set = Taigi_Engine_SetLearningRecordCount()
+        set.record = record
+        set.count = Int64(count)
+        guard case let .learningRecordSaved(saved)? = userDataResult(
+            .setLearningRecordCount(set),
+            op: "learningRecordSetCount",
+        ) else { return nil }
+        return saved
+    }
+
+    /// False when the row is gone.
+    static func learningRecordDelete(_ record: Taigi_Engine_LearningRecord) -> Bool? {
+        var delete = Taigi_Engine_DeleteLearningRecord()
+        delete.record = record
+        guard case let .learningRecordDeleted(deleted)? = userDataResult(
+            .deleteLearningRecord(delete),
+            op: "learningRecordDelete",
+        ) else { return nil }
+        return deleted.removed
     }
 
     /// `nil` for a failed round-trip, a refusal (a request before the open),

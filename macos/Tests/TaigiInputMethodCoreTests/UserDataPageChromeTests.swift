@@ -99,7 +99,7 @@ final class CustomDictionaryWorkSlotTests: XCTestCase {
     /// nothing about it.
     func testTheEmptyStateSymbol_resolves() {
         XCTAssertNotNil(
-            NSImage(systemSymbolName: CustomDictionaryPage.emptyStateSymbolName, accessibilityDescription: nil),
+            NSImage(systemSymbolName: UserDataListMetrics.emptyStateSymbolName, accessibilityDescription: nil),
         )
     }
 
@@ -165,13 +165,13 @@ final class CustomDictionaryPagingTests: XCTestCase {
     /// reach, which is the bug this replaced.
     func testPageCount_coversTheRemainder() async throws {
         let model = makeModel()
-        let size = CustomDictionaryPageModel.pageSize
+        let size = UserDataListMetrics.pageSize
 
         await seed(model, count: size + 1)
 
-        XCTAssertEqual(model.matchCount, size + 1)
-        XCTAssertEqual(model.pageCount, 2)
-        XCTAssertEqual(model.rows.count, size, "a page holds exactly what the table shows")
+        XCTAssertEqual(model.list.matchCount, size + 1)
+        XCTAssertEqual(model.list.pageCount, 2)
+        XCTAssertEqual(model.list.rows.count, size, "a page holds exactly what the table shows")
     }
 
     /// An empty dictionary still reads as one page, not as a pager with
@@ -181,27 +181,27 @@ final class CustomDictionaryPagingTests: XCTestCase {
 
         await model.load()
 
-        XCTAssertEqual(model.pageCount, 1)
-        XCTAssertFalse(model.canPageForward)
-        XCTAssertFalse(model.canPageBackward)
+        XCTAssertEqual(model.list.pageCount, 1)
+        XCTAssertFalse(model.list.canPageForward)
+        XCTAssertFalse(model.list.canPageBackward)
     }
 
     func testPagingForward_showsTheNextRowsAndStopsAtTheEnd() async throws {
         let model = makeModel()
-        let size = CustomDictionaryPageModel.pageSize
+        let size = UserDataListMetrics.pageSize
         await seed(model, count: size + 2)
-        let firstPage = Set(model.rows.map(\.id))
+        let firstPage = Set(model.list.rows.map(\.id))
 
         await model.pageForward()
 
-        XCTAssertEqual(model.page, 1)
-        XCTAssertEqual(model.rows.count, 2)
-        XCTAssertTrue(firstPage.isDisjoint(with: model.rows.map(\.id)), "page two repeated page one")
-        XCTAssertFalse(model.canPageForward)
+        XCTAssertEqual(model.list.page, 1)
+        XCTAssertEqual(model.list.rows.count, 2)
+        XCTAssertTrue(firstPage.isDisjoint(with: model.list.rows.map(\.id)), "page two repeated page one")
+        XCTAssertFalse(model.list.canPageForward)
 
         await model.pageForward()
 
-        XCTAssertEqual(model.page, 1, "there is nowhere past the last page")
+        XCTAssertEqual(model.list.page, 1, "there is nowhere past the last page")
     }
 
     /// The list can shrink under the page the user is on — a delete on the
@@ -209,27 +209,27 @@ final class CustomDictionaryPagingTests: XCTestCase {
     /// page, so a load that did not would show an empty table with no way back.
     func testAPageThatOutlivesItsRows_isPulledBackIntoTheList() async throws {
         let model = makeModel()
-        let size = CustomDictionaryPageModel.pageSize
+        let size = UserDataListMetrics.pageSize
         await seed(model, count: size + 1)
         await model.pageForward()
-        XCTAssertEqual(model.page, 1)
+        XCTAssertEqual(model.list.page, 1)
 
-        try await model.delete(XCTUnwrap(model.rows.first))
+        try await model.delete(XCTUnwrap(model.list.rows.first))
 
-        XCTAssertEqual(model.page, 0)
-        XCTAssertEqual(model.rows.count, size)
+        XCTAssertEqual(model.list.page, 0)
+        XCTAssertEqual(model.list.rows.count, size)
     }
 
     /// A new filter is a new list, so the pages it had before are pages of
     /// something else.
     func testLoadingAfterAFilterChange_startsAtPageOne() async throws {
         let model = makeModel()
-        await seed(model, count: CustomDictionaryPageModel.pageSize + 1)
+        await seed(model, count: UserDataListMetrics.pageSize + 1)
         await model.pageForward()
 
         model.filter = "row"
         await model.loadFirstPage()
 
-        XCTAssertEqual(model.page, 0)
+        XCTAssertEqual(model.list.page, 0)
     }
 }

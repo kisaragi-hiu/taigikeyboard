@@ -65,7 +65,7 @@ struct FontManagementPage: View {
     @State private var message: UserDataPageMessage?
 
     /// How many rows one page holds — the table's height, exactly, as Custom Dictionary
-    /// does it (`CustomDictionaryPageModel.pageSize`): a page that fits the
+    /// does it (`UserDataListMetrics.pageSize`): a page that fits the
     /// table never needs a scroller of its own, which a `Table` inside a
     /// `Form` cannot have (`UserDataListPager`). The installed families make
     /// this list a few hundred rows; the search field finds one, the pager
