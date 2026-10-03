@@ -14,7 +14,7 @@ use taigi_desktop_core::composing::{
 use taigi_desktop_core::dictionary_artifacts::DictionaryArtifacts;
 use taigi_desktop_core::engine::{self, Effect};
 use taigi_desktop_core::keys::{
-    CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot, KeyModifiers,
+    CandidateNavigation, CaretDirection, ComposingKeyIntent, KeyEventSnapshot, KeyModifiers,
 };
 use taigi_desktop_core::platform::DesktopPlatform;
 use taigi_desktop_core::settings::{keys, InputMode, SettingsDocument, StaticSettingsProvider};
@@ -533,4 +533,35 @@ fn tps_space_on_a_closed_syllable_with_the_window_off_commits_the_glyphs_unspace
     assert!(rig.list.is_empty());
     assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
     assert_eq!(rig.calls(), ["commit ㄏㄛˋ", "list closed"]);
+}
+
+#[test]
+fn tps_space_refused_inside_the_composition_does_nothing() {
+    // trace: caret walked to the start of `ㄏㄛ`; nothing precedes it, so the
+    // engine refuses Space away from the end — no commit, no list call.
+    let mut rig = new_tps_rig();
+    rig.type_tps("ㄏㄛ");
+    for _ in 0..2 {
+        rig.run(
+            ComposingKeyIntent::MoveCaret(CaretDirection::Left),
+            &no_key(),
+        );
+    }
+    rig.surface.selected = Some(0);
+    rig.surface.calls.clear();
+    assert!(rig.run(ComposingKeyIntent::TpsKey(" ".to_owned()), &no_key()));
+    assert!(rig.calls().is_empty(), "{:?}", rig.calls());
+    assert_eq!(rig.manager.raw_input(), "ㄏㄛ");
+}
+
+#[test]
+fn tps_ctrl_on_a_non_layout_mark_still_flips_to_half_width() {
+    // trace: `[` is no TPS layout key, so its Ctrl chord keeps the flip:
+    // full width under TPS → `policies::document_punctuation("[", true, true)`
+    // = `Some("[")` (full_width.rs: the flip names its width), written by the
+    // input method itself; `[` attaches to nothing, so no swap is tried.
+    let mut rig = new_tps_rig();
+    let ctrl_bracket = KeyEventSnapshot::chord(Some("["), "[", KeyModifiers::CONTROL);
+    assert!(rig.run(ComposingKeyIntent::PassThrough, &ctrl_bracket));
+    assert_eq!(rig.calls(), ["insert \"[\""]);
 }

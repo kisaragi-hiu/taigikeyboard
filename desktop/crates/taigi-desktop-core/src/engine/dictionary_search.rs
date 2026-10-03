@@ -6,8 +6,7 @@
 use super::user_data::search_custom_entries;
 use super::{
     chhoe_url, dictionary_filters, is_hanji, moe_url, search_by_hanji, search_with_sources,
-    tl_display_to_tps, tl_to_poj, DictionarySource, LexiconRow, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
-    TPS_OR_MAPS_TO_ER,
+    tl_to_poj, DictionarySource, LexiconRow, ALL_SOURCES_ENABLED_SEARCH_BITMASK,
 };
 use crate::settings::{keys, InputMode, SettingsDocument};
 
@@ -100,9 +99,9 @@ pub fn search(query: &str, settings: &SettingsDocument) -> Vec<DictionarySearchR
 fn display_roman(tl: &str, mode: InputMode) -> String {
     match mode {
         InputMode::Poj => tl_to_poj(tl).unwrap_or_else(|| tl.to_owned()),
-        InputMode::Tl => tl.to_owned(),
-        // The reading as the user types it; TL when the conversion fails.
-        InputMode::Tps => tl_display_to_tps(tl, TPS_OR_MAPS_TO_ER).unwrap_or_else(|| tl.to_owned()),
+        // TL under TPS, as iOS shows (`DictionarySearchService.swift`); the
+        // search itself still reads the `tps:` family (`wire_input_mode`).
+        InputMode::Tl | InputMode::Tps => tl.to_owned(),
     }
 }
 

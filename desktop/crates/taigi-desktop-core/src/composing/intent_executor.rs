@@ -8,7 +8,7 @@ use super::{
     CandidateCommitOutcome, CandidateListChange, CandidateSource, ComposingEffectExecutor,
     ComposingManager, TpsKeyOutcome,
 };
-use crate::keys::{CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot};
+use crate::keys::{types_a_tps_glyph, CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot};
 use crate::policies;
 use crate::settings::{keys, InputMode, SettingsDocument};
 
@@ -76,7 +76,7 @@ pub fn perform_intent(
                 // space after, TPS takes none.
                 TpsKeyOutcome::Refused {
                     is_caret_at_end: true,
-                } => {
+                } if key == " " => {
                     if surface.selected_index().is_some() {
                         let cell = surface.selected_index();
                         commit_candidate(cell, false, settings, manager, list, surface);
@@ -87,10 +87,7 @@ pub fn perform_intent(
                 }
                 // Refused inside the composition, or the round trip failed:
                 // nothing to type and nothing to commit.
-                TpsKeyOutcome::Refused {
-                    is_caret_at_end: false,
-                }
-                | TpsKeyOutcome::Failed => {}
+                TpsKeyOutcome::Refused { .. } | TpsKeyOutcome::Failed => {}
             }
             true
         }
@@ -118,10 +115,11 @@ pub fn perform_intent(
         ComposingKeyIntent::CommitThenInsert(text) => {
             // Mapped before the auto-space augmentation so the full-width
             // character rides the same single mutation as the commit. Both
-            // rewrites CAN fire: this path commits the preedit as typed,
-            // which is romanization under every mode, while the full-width
-            // map still answers to the output MODE — so Hanji-first gets
-            // `taigi？ ` (macOS pins the same pair).
+            // rewrites CAN fire: this path commits the preedit as typed —
+            // romanization under TL and POJ, whichever script the list led
+            // with — while the full-width map still answers to the output
+            // MODE, so Hanji-first gets `taigi？ ` (macOS pins the same pair).
+            // Under TPS the preedit is glyphs and earns no space.
             let is_width_flip = ComposingKeyIntent::width_flip_character(snapshot).is_some();
             let document_text =
                 document_punctuation(settings, text, is_width_flip).unwrap_or_else(|| text.clone());
@@ -381,18 +379,20 @@ fn raw_preedit_wrote_romanization(settings: &SettingsDocument) -> bool {
 }
 
 /// `policies::document_punctuation` under the DERIVED width, so roman-only
-/// stays half-width and combined follows the stored swap. Under TPS the bare
-/// `,` `.` `;` type glyphs, so their Ctrl chord is the punctuation key rather
-/// than a width flip, and the width is full as always under TPS.
+/// stays half-width and combined follows the stored swap. Under TPS a key
+/// whose bare press types a glyph (`,` `.` `;` …) has its Ctrl chord as the
+/// punctuation key, full width as always under TPS; any other key's chord
+/// still flips, so half-width punctuation stays reachable.
 fn document_punctuation(
     settings: &SettingsDocument,
     text: &str,
     is_width_flip: bool,
 ) -> Option<String> {
     let engine_settings = settings.engine_settings();
+    let is_layout_key = engine_settings.input_mode == InputMode::Tps && types_a_tps_glyph(text);
     policies::document_punctuation(
         text,
         engine_settings.is_full_width_punctuation,
-        is_width_flip && engine_settings.input_mode != InputMode::Tps,
+        is_width_flip && !is_layout_key,
     )
 }

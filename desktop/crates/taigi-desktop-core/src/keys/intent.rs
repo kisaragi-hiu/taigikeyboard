@@ -1,6 +1,7 @@
 //! What one key event means to a composition. The whole key contract of the
 //! input method in one readable, testable table.
 
+use super::action::ComposingAction;
 use super::bindings::ComposingKeyBindings;
 use super::snapshot::{KeyEventSnapshot, KeyModifiers, NavigationKey};
 use super::tone_input_scheme::ToneInputScheme;
@@ -139,9 +140,10 @@ impl ComposingKeyIntent {
     ///
     /// `is_composing` changes the meaning of most keys: Return, Escape, Space
     /// and the digits are the composition's while it runs and the host's the
-    /// rest of the time. A bare digit never starts a composition — under
-    /// Standard digits are the numeric tone markers of TL and POJ (`tai5`),
-    /// and under Telex a tone letter has nothing to mark when idle.
+    /// rest of the time. Under TL and POJ a bare digit never starts a
+    /// composition — under Standard digits are the numeric tone markers
+    /// (`tai5`), and under Telex a tone letter has nothing to mark when idle.
+    /// Under TPS every layout key starts one, number-row digits included.
     ///
     /// `is_showing_candidates` is the second state a key turns on: the
     /// arrows, the paging keys, Space and the slot keys belong to the window
@@ -215,7 +217,14 @@ impl ComposingKeyIntent {
         // Tier 4 — what the user put on this key, read before the host-chord
         // guard so a chord they deliberately recorded reaches its action.
         if is_composing {
-            if let Some(action) = bindings.action_for(key, platform) {
+            // Under TPS there is no other script (the engine's `Other` would
+            // write raw TL), so Output the Other Script is inert wherever the
+            // user put it.
+            let action = bindings.action_for(key, platform).filter(|action| {
+                bindings.input_mode != InputMode::Tps
+                    || *action != ComposingAction::CommitAlternateScript
+            });
+            if let Some(action) = action {
                 if is_showing_candidates || !action.requires_candidates() {
                     return action.intent();
                 }
@@ -1381,6 +1390,101 @@ mod tests {
         assert_eq!(
             classify_tps(&ctrl_comma, true, false),
             ComposingKeyIntent::CommitThenInsert(",".into())
+        );
+    }
+
+    #[test]
+    fn under_tps_shift_space_and_keypad_non_digits_are_document_text() {
+        // trace: Shift+Space is no layout key and no bare Space → tier 7 TPS;
+        // keypad `.` (VK_DECIMAL 0x6E) is refused by the layout → tier 7; a
+        // Shift+keypad digit is no slot (Keypad has no flip) → tier 7.
+        let shift_space = KeyEventSnapshot::text(" ", KeyModifiers::SHIFT);
+        assert_eq!(
+            classify_tps(&shift_space, true, true),
+            ComposingKeyIntent::CommitThenInsert(" ".into())
+        );
+        assert_eq!(
+            classify_tps(&shift_space, false, false),
+            ComposingKeyIntent::PassThrough
+        );
+        let keypad_dot = KeyEventSnapshot::text(".", KeyModifiers::NONE).with_key_code(0x6E);
+        assert_eq!(
+            classify_tps(&keypad_dot, true, true),
+            ComposingKeyIntent::CommitThenInsert(".".into())
+        );
+        let shifted_keypad =
+            KeyEventSnapshot::chord(Some("3"), "3", KeyModifiers::SHIFT).with_key_code(0x63);
+        assert_eq!(
+            classify_tps(&shifted_keypad, true, true),
+            ComposingKeyIntent::CommitThenInsert("3".into())
+        );
+    }
+
+    #[test]
+    fn under_tps_paging_tab_and_the_caret_chord_keep_their_meaning() {
+        let mut tab = text("\t");
+        tab.is_named_special_key = true;
+        assert_eq!(
+            classify_tps(&tab, true, true),
+            ComposingKeyIntent::Navigate(CandidateNavigation::NextCandidate)
+        );
+        assert_eq!(
+            classify_tps(&text("]"), true, true),
+            ComposingKeyIntent::Navigate(CandidateNavigation::PageDown)
+        );
+        assert_eq!(
+            classify_tps(&text("["), true, true),
+            ComposingKeyIntent::Navigate(CandidateNavigation::PageUp)
+        );
+        let left =
+            KeyEventSnapshot::navigation(NavigationKey::LeftArrow, caret_chord_modifiers(PLATFORM));
+        assert_eq!(
+            classify_tps(&left, true, false),
+            ComposingKeyIntent::MoveCaret(CaretDirection::Left)
+        );
+    }
+
+    #[test]
+    fn under_tps_a_stored_telex_scheme_changes_nothing() {
+        // trace: the TPS branch runs before the Telex tier; slot set = Keypad.
+        let mut bindings = ComposingKeyBindings::resolve(&BTreeMap::new(), ToneInputScheme::Telex);
+        bindings.input_mode = InputMode::Tps;
+        let classify = |key: &KeyEventSnapshot| {
+            ComposingKeyIntent::intent(key, true, true, &bindings, PLATFORM)
+        };
+        assert_eq!(
+            classify(&text("f")),
+            ComposingKeyIntent::TpsKey("ㄑ".into())
+        );
+        assert_eq!(
+            classify(&text("3")),
+            ComposingKeyIntent::TpsKey("\u{02ea}".into())
+        );
+    }
+
+    #[test]
+    fn under_tps_output_the_other_script_is_inert_wherever_it_is_bound() {
+        // trace: tier 4 filters CommitAlternateScript under TPS; an Alt+Enter
+        // binding then falls to the host-chord guard (commit, pass on).
+        let mut stored = BTreeMap::new();
+        stored.insert(
+            ComposingAction::CommitAlternateScript,
+            Some(ComposingKeyChord {
+                key: "\r".into(),
+                modifiers: KeyModifiers::ALT,
+            }),
+        );
+        let mut bindings = ComposingKeyBindings::resolve(&stored, ToneInputScheme::Standard);
+        let mut alt_enter = KeyEventSnapshot::text("\r", KeyModifiers::ALT);
+        alt_enter.is_named_special_key = true;
+        assert_eq!(
+            ComposingKeyIntent::intent(&alt_enter, true, true, &bindings, PLATFORM),
+            ComposingKeyIntent::CommitAlternateScript
+        );
+        bindings.input_mode = InputMode::Tps;
+        assert_eq!(
+            ComposingKeyIntent::intent(&alt_enter, true, true, &bindings, PLATFORM),
+            ComposingKeyIntent::CommitThenPassThrough
         );
     }
 }
