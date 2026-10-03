@@ -391,7 +391,7 @@ mod tests {
         assert_eq!(doc.display_language(), DisplayLanguage::System);
         assert_eq!(
             doc.choice(&keys::CANDIDATE_LAYOUT),
-            CandidateLayout::Expandable
+            CandidateLayout::Vertical
         );
         assert_eq!(doc.revision, 0);
     }
@@ -442,7 +442,7 @@ mod tests {
     #[test]
     fn reset_removes_keys_rather_than_writing_defaults() {
         let mut doc = SettingsDocument::default();
-        doc.set_choice(&keys::CANDIDATE_LAYOUT, CandidateLayout::Vertical);
+        doc.set_choice(&keys::CANDIDATE_LAYOUT, CandidateLayout::Horizontal);
         doc.set_bool(&keys::IS_KAUTIAN_ENABLED, false);
         doc.set_bool(&keys::IS_AUTO_SPACE_ENABLED, false);
         doc.reset_appearance();
@@ -513,7 +513,7 @@ mod tests {
         doc.set_bool(&keys::IS_HANJI_FIRST, false);
         doc.set_bool(&keys::IS_AUTO_SPACE_ENABLED, true);
         doc.set_raw_string(keys::DISPLAY_LANGUAGE.name, "en");
-        doc.set_choice(&keys::CANDIDATE_LAYOUT, CandidateLayout::Vertical);
+        doc.set_choice(&keys::CANDIDATE_LAYOUT, CandidateLayout::Horizontal);
         doc.set_i64(&keys::UPDATE_NEXT_CHECK_MS, 42);
         doc.reset_general();
         assert!(!doc.contains(keys::IS_HANJI_FIRST.name));

@@ -45,8 +45,8 @@ impl CandidateLayout {
 
 impl SettingChoice for CandidateLayout {
     const ALL: &'static [Self] = &[Self::Expandable, Self::Horizontal, Self::Vertical];
-    /// MacishType's own default, carried by the macOS port (USER 2026-08-28).
-    const DEFAULT: Self = Self::Expandable;
+    /// Vertical on every desktop (USER 2026-10-04).
+    const DEFAULT: Self = Self::Vertical;
     fn raw(self) -> &'static str {
         match self {
             Self::Expandable => "expandable",

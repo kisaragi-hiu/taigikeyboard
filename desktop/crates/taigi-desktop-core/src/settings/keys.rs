@@ -181,7 +181,7 @@ pub const SELECTED_SETTINGS_PANE: SettingsKey<SettingsPane> =
 /// desktop's own otherwise — the same as the macOS Swift twin's
 /// (`SettingsStore.Keys`, `SettingsStore.swift`).
 pub const CANDIDATE_LAYOUT: SettingsKey<CandidateLayout> =
-    SettingsKey::new("candidateLayout", CandidateLayout::Expandable);
+    SettingsKey::new("candidateLayout", CandidateLayout::Vertical);
 pub const APPEARANCE_MODE: SettingsKey<AppearanceMode> =
     SettingsKey::new("candidateAppearanceMode", AppearanceMode::Auto);
 /// The candidate window's one size knob. The stored name keeps the spelling
