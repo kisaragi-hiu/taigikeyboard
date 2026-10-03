@@ -319,7 +319,7 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     set {method = .commitContinuous(newValue)}
   }
 
-  /// --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
+  /// --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
   public var telexKey: Taigi_Engine_TelexKey {
     get {
       if case .telexKey(let v)? = method {return v}
@@ -334,6 +334,14 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
       return Taigi_Engine_MoveCaret()
     }
     set {method = .moveCaret(newValue)}
+  }
+
+  public var tpsKey: Taigi_Engine_TpsKey {
+    get {
+      if case .tpsKey(let v)? = method {return v}
+      return Taigi_Engine_TpsKey()
+    }
+    set {method = .tpsKey(newValue)}
   }
 
   public var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -352,9 +360,10 @@ public nonisolated struct Taigi_Engine_ComposingRequest: Sendable {
     /// --- Continuous-input ops (30s, v3.5.8 Phase 6) ---
     case fetchAtPos(Taigi_Engine_FetchAtPos)
     case commitContinuous(Taigi_Engine_CommitContinuous)
-    /// --- Desktop editing keys (40s: Telex tone keys, composing caret) ---
+    /// --- Desktop editing keys (40s: Telex tone keys, composing caret, TPS keys) ---
     case telexKey(Taigi_Engine_TelexKey)
     case moveCaret(Taigi_Engine_MoveCaret)
+    case tpsKey(Taigi_Engine_TpsKey)
 
   }
 
@@ -685,6 +694,30 @@ public nonisolated struct Taigi_Engine_TelexKey: Sendable {
   public init() {}
 }
 
+/// One TPS key, typed at the caret: a glyph or tone mark, or U+0020 for the
+/// Space key. In a single step the engine runs the TPS auto-correct
+/// (`TpsInputAdjust`) against the pending tail before the caret, applies the
+/// replacement it asks for (`ReplaceLast`) and inserts the adjusted glyph —
+/// what a mobile platform does in three calls, without the caller having to
+/// know where the caret sits in the raw buffer.
+/// Space is the soft syllable separator: inserted when the character before
+/// the caret is neither a tone mark nor a separator. Otherwise — the syllable
+/// is already closed, or nothing precedes the caret — the request is a no-op
+/// with no effects, which is the caller's cue to treat the key as its own.
+/// Idle + a glyph enters composing; Idle + Space is a no-op.
+/// The caller sends this only under `AppConfig.input_mode = "tps"`.
+public nonisolated struct Taigi_Engine_TpsKey: Sendable {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  public var key: String = String()
+
+  public var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  public init() {}
+}
+
 /// Desktop only — step the caret inside the pending tail one Unicode scalar
 /// value left or right (`⌥←` / `⌥→` on macOS, `Ctrl+←` / `Ctrl+→` on Windows). The
 /// buffer does not change, so the response carries `UpdatePreedit` (with the
@@ -692,8 +725,8 @@ public nonisolated struct Taigi_Engine_TelexKey: Sendable {
 /// page stay. At either edge of the pending tail — the caret never enters a
 /// nailed segment — the request is a no-op with no effects. Every mutator
 /// then edits at the caret: `Append` inserts there, `DeleteBackward` /
-/// `ReplaceLast` act on the character before it, `TelexKey` on the chunk
-/// before it. Mobile never sends this, so its caret stays at the end and
+/// `ReplaceLast` act on the character before it, `TelexKey` and `TpsKey` on
+/// the chunk before it. Mobile never sends this, so its caret stays at the end and
 /// every mutator behaves as before.
 public nonisolated struct Taigi_Engine_MoveCaret: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
@@ -1153,7 +1186,7 @@ nonisolated extension Taigi_Engine_CandidateScriptKind: SwiftProtobuf._ProtoName
 
 nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   public static let protoMessageName: String = _protobuf_package + ".ComposingRequest"
-  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{4}\u{2}commit_raw\0\u{3}select_candidate\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{4}\u{c}fetch_at_pos\0\u{3}commit_continuous\0\u{4}\u{8}telex_key\0\u{3}move_caret\0\u{b}set_selected_candidate_index\0\u{b}query_state\0\u{b}commit_derived\0\u{b}enter_continuous\0\u{b}reset_continuous\0\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{f}\u{1}\u{c}\u{1e}\u{1}\u{c}!\u{1}")
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{2}\u{a}start\0\u{1}append\0\u{3}append_hyphen\0\u{3}replace_last\0\u{3}delete_backward\0\u{4}\u{2}commit_raw\0\u{3}select_candidate\0\u{3}commit_preedit_then_insert_external\0\u{1}reset\0\u{4}\u{c}fetch_at_pos\0\u{3}commit_continuous\0\u{4}\u{8}telex_key\0\u{3}move_caret\0\u{3}tps_key\0\u{b}set_selected_candidate_index\0\u{b}query_state\0\u{b}commit_derived\0\u{b}enter_continuous\0\u{b}reset_continuous\0\u{c}\u{14}\u{1}\u{c}\u{15}\u{1}\u{c}\u{f}\u{1}\u{c}\u{1e}\u{1}\u{c}!\u{1}")
 
   public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
     while let fieldNumber = try decoder.nextFieldNumber() {
@@ -1330,6 +1363,19 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
           self.method = .moveCaret(v)
         }
       }()
+      case 42: try {
+        var v: Taigi_Engine_TpsKey?
+        var hadOneofValue = false
+        if let current = self.method {
+          hadOneofValue = true
+          if case .tpsKey(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.method = .tpsKey(v)
+        }
+      }()
       default: break
       }
     }
@@ -1392,6 +1438,10 @@ nonisolated extension Taigi_Engine_ComposingRequest: SwiftProtobuf.Message, Swif
     case .moveCaret?: try {
       guard case .moveCaret(let v)? = self.method else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 41)
+    }()
+    case .tpsKey?: try {
+      guard case .tpsKey(let v)? = self.method else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 42)
     }()
     case nil: break
     }
@@ -1813,6 +1863,36 @@ nonisolated extension Taigi_Engine_TelexKey: SwiftProtobuf.Message, SwiftProtobu
   }
 
   public static func ==(lhs: Taigi_Engine_TelexKey, rhs: Taigi_Engine_TelexKey) -> Bool {
+    if lhs.key != rhs.key {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+nonisolated extension Taigi_Engine_TpsKey: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  public static let protoMessageName: String = _protobuf_package + ".TpsKey"
+  public static let _protobuf_nameMap = SwiftProtobuf._NameMap(bytecode: "\0\u{1}key\0")
+
+  public mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.key) }()
+      default: break
+      }
+    }
+  }
+
+  public func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.key.isEmpty {
+      try visitor.visitSingularStringField(value: self.key, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  public static func ==(lhs: Taigi_Engine_TpsKey, rhs: Taigi_Engine_TpsKey) -> Bool {
     if lhs.key != rhs.key {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true

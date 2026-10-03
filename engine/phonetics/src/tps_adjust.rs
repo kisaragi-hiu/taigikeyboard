@@ -337,7 +337,7 @@ fn palatalization_replacement(incoming: &str, last_raw_char: Option<char>) -> Op
 
 /// Collapse-equivalent of iOS `CharacterInputPipeline.adjust(_, .tps, raw)`.
 /// Returns `(adjusted, replace_last?)`. Caller MUST gate by TPS layout.
-pub(crate) fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>) {
+pub fn adjust(incoming: &str, raw_input: &str) -> (String, Option<String>) {
     let mut adjusted = adjust_tone_nine_digit(incoming, raw_input);
     adjusted = adjust_initial_key(&adjusted, raw_input);
     adjusted = adjust_nasalized_vowel_key(&adjusted, raw_input);

@@ -113,6 +113,7 @@ pub(crate) fn apply(state: &mut EngineState, intent: Intent, config: &AppConfig)
             return commit_continuous(state, pick, script, &roman, config);
         }
         Intent::TelexKey { key } => telex_key(state, &key, config),
+        Intent::TpsKey { key } => tps_key(state, &key, config),
         Intent::MoveCaret { direction } => move_caret(state, direction, config),
     };
     response.into()
@@ -205,6 +206,35 @@ fn telex_before_caret(
     let mut next = prefix;
     next.push_str(&raw[caret..]);
     Some((next, next_caret))
+}
+
+/// The TPS Space key's marker in the raw buffer (§31).
+const TPS_SEPARATOR: &str = " ";
+
+/// TPS key on the chunk before the caret; the tail after it rides along.
+/// `None` when the key changes nothing: an empty key, or a separator where
+/// the syllable is already closed (a tone mark or a separator precedes the
+/// caret) or where nothing precedes it.
+fn tps_key_before_caret(raw: &str, caret: usize, key: &str) -> Option<(String, usize)> {
+    let prefix = &raw[..caret];
+    if key == TPS_SEPARATOR {
+        let last = prefix.chars().next_back()?;
+        if last == ' ' || phonetics::is_tps_tone_mark(last) {
+            return None;
+        }
+        return Some(insert_at_caret(raw, caret, key));
+    }
+    if key.is_empty() {
+        return None;
+    }
+    let (adjusted, replace_last) = phonetics::tps_input_adjust(key, prefix);
+    match replace_last {
+        Some(replacement) => {
+            let (raw, caret) = replace_before_caret(raw, caret, &replacement)?;
+            Some(insert_at_caret(&raw, caret, &adjusted))
+        }
+        None => Some(insert_at_caret(raw, caret, &adjusted)),
+    }
 }
 
 /// `None` at the edge the step would cross.
@@ -326,6 +356,22 @@ fn begin_composition_or_insert_leading_hyphens(
     resp.effect
         .insert(0, commit_text_replacing_preedit(run.to_string()));
     resp
+}
+
+/// `Intent::TpsKey` — see the `TpsKey` proto comment. From Idle a glyph begins
+/// the composition as `Append` does (a leading hyphen stays a document
+/// literal, §21); under Continuous the nailed segments stay untouched.
+fn tps_key(state: &mut EngineState, key: &str, config: &AppConfig) -> ComposingResponse {
+    match &state.phase {
+        Phase::Idle => match tps_key_before_caret("", 0, key) {
+            Some((text, _)) => begin_composition_or_insert_leading_hyphens(state, text, config),
+            None => noop(state, config),
+        },
+        Phase::Continuous { raw, caret, nailed } => match tps_key_before_caret(raw, *caret, key) {
+            Some((next, caret)) => step_continuous(state, next, caret, nailed.clone(), config),
+            None => noop(state, config),
+        },
+    }
 }
 
 /// TPS auto-correct. Under `Phase::Continuous` it edits the
