@@ -2,7 +2,7 @@
 
 TPS (方音符號, the i18n `en` label "TPS") as a third input mode on macOS, Windows and Linux, typed on a physical keyboard, with an on-screen key panel. iOS and Android have typed TPS since v3.5.x.
 
-Status: **P0 (this document)**. No release is assigned; scope and timing are the maintainer's call.
+Status: P0 on main, P1 merged #367. No release is assigned; scope and timing are the maintainer's call.
 
 ## Maintainer decisions (2026-10-03)
 
@@ -16,7 +16,7 @@ Status: **P0 (this document)**. No release is assigned; scope and timing are the
 | U6 | Panel scope: macOS and Windows show it and take clicks; Linux shows it only. |
 | U7 | Review: Codex sandwich plus a Claude cloud session per PR. |
 
-Open, the maintainer's call (O1): what Space does once the syllable is closed — see D3.
+O1 (what Space does once the syllable is closed) — decided 2026-10-03, the recommended arm: see D3.
 
 ## Today (grounded in code)
 
@@ -115,7 +115,7 @@ One branch at the top of `ComposingKeyIntent::intent`, taken when the bindings s
 
 Classifying a key never asks the engine — the Windows Test phase returns before the runtime is prepared (`windows/crates/taigi-windows-tsf/src/session.rs:205-242`) — so "Space is consumed while composing" is the whole test-phase answer.
 
-**O1 — Space on a closed syllable.** Mobile commits the glyphs as typed and writes a document space; nobody types TPS that way on mobile, where a candidate is tapped. On a desktop, Space is the key every Zhuyin-family input method confirms with. Recommended: with a list showing, Space confirms the highlighted candidate (Enter's action); with none, it commits the glyphs as typed, no space after. The alternative is mobile's rule verbatim. Either is one arm in the executor; P2b does not start until this is answered.
+**O1 — Space on a closed syllable.** Mobile commits the glyphs as typed and writes a document space; nobody types TPS that way on mobile, where a candidate is tapped. On a desktop, Space is the key every Zhuyin-family input method confirms with. Recommended: with a list showing, Space confirms the highlighted candidate (Enter's action); with none, it commits the glyphs as typed, no space after. The alternative was mobile's rule verbatim. **Decided 2026-10-03 (maintainer: "follow your recommendation"): the recommended arm** — one arm in the executor, built in P2b.
 
 The keypad is read from `key_code`, which Windows already fills; the Linux and macOS key-code tables gain the nine keypad codes. No snapshot field and no proto change. With Num Lock off the keypad arrives as navigation keys and behaves as those do today.
 
@@ -169,9 +169,9 @@ The panel is shown only under TPS and persists until the shortcut hides it; whet
 | Phase | Type | Scope | Builds / tests | Size | Status |
 |---|---|---|---|---|---|
 | P0 | docs | This roadmap, the `roadmap.md` row | — | — | In progress |
-| P1 | feat (engine) | D0: `TpsKey` in `composing.proto` and `transition.rs`, tests from the mobile key sequences in `behavioral-invariants.md` §31–§33, §41 | engine; `make build` for the mobile artifacts (additive — mobile sends nothing new) | ~250 | Pending |
+| P1 | feat (engine) | D0: `TpsKey` in `composing.proto` and `transition.rs`, tests from the mobile key sequences in `behavioral-invariants.md` §31–§33, §41 | engine; `make build` for the mobile artifacts (additive — mobile sends nothing new) | ~250 | Merged #367 `a5174ed9` |
 | P2a | feat (desktop-core, not reachable) | D2 table, the `TpsKey` bridge call, the D4 sites behind a mode the document cannot yet produce, keypad key codes on Linux and macOS; tests only | desktop-core, Windows, Linux, the macOS Rust seam, `make -C macos test` | ~400 | Pending |
-| P2b | feat (desktop-core, Windows, Linux) | D1 + D3: the variant, the classifier branch, the exhaustive and wildcard matches with their mode labels, i18n scope. Windows and Linux type TPS from the settings picker | as P2a | ~400 | Pending — needs O1 |
+| P2b | feat (desktop-core, Windows, Linux) | D1 + D3: the variant, the classifier branch, the exhaustive and wildcard matches with their mode labels, i18n scope. Windows and Linux type TPS from the settings picker | as P2a | ~400 | Pending (O1 decided 2026-10-03) |
 | P3 | feat (desktop-core, Windows, Linux) | D5: `next_input_mode`, `ToggleTps`, `lastRomanizationMode`, the Windows preserved key, the menu row | as P2a | ~300 | Pending |
 | P4 | feat (macOS) | The Swift enum and picker, `ToggleTps` in `ShortcutActions.swift`, the mode flash | macOS | ~350 | Pending |
 | P5 | feat (all three) | D6 show-only: the rows in the core, the three windows, `ShowTpsKeyboard`, `tpsKeyboardShown`; the Windows `SendInput` spike | all three | ~500 | Pending |
