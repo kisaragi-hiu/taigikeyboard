@@ -109,7 +109,7 @@ pub fn lookup_associations(
     })
 }
 
-// True when the text contains any CJK Hanji, Extensions A-E included.
+// True when the text contains any CJK ideograph in `classification::CJK_RANGES`.
 pub fn is_hanji(req: IsHanjiRequest) -> Result<IsHanjiResponse, LexiconError> {
     Ok(IsHanjiResponse {
         is_hanji: classification::is_hanji(&req.text),

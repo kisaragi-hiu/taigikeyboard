@@ -383,16 +383,16 @@ The prior platform-layer parity tests (iOS `LexiconServiceHanziGuardTests.swift`
 
 ### `INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`
 
-`is_hanji(text)` returns `true` iff `text` contains at least one Unicode codepoint in any of:
+`is_hanji(text)` returns `true` iff `text` contains at least one Unicode codepoint in `lexicon::classification::CJK_RANGES`:
 
 - CJK Unified Ideographs `0x4E00–0x9FFF`
 - CJK Extension A `0x3400–0x4DBF`
-- CJK Extension B `0x20000–0x2A6DF`
-- CJK Extension C `0x2A700–0x2B73F`
-- CJK Extension D `0x2B740–0x2B81F`
-- CJK Extension E `0x2B820–0x2CEAF`
+- `0x20000–0x3134F` — Extensions B–G and I, the Compatibility Ideographs Supplement, and the unassigned gaps between them
+- CJK Compatibility Ideographs `0xF900–0xFAFF`
 
-Extensions F/G/H/I/J are **explicitly excluded** at this slice. Future expansion is a separate behavior change, not part of this parity correction.
+Extension H (`0x31350–0x323AF`) and later stay out. The table equals the dictionary pipeline's `dictionary/common/cjk.py` `CJK_RANGES`; `engine/lexicon/tests/cjk_ranges_parity.rs` parses the Python tuple and fails on any drift.
+
+**2026-10-04**: widened from Unified + Extensions A–E (USER 2026-10-04: "#2 改"). Measured before the change: a lone Extension F/G or Compatibility character (𰣻 U+308FB / ko, 丸 U+2F801 / huân, 嗀 U+FA0D / khak — all `dictionary.csv` rows) read as non-Hanji, so Tab3 search took the romanization path and returned nothing, and the continuous fetch guard let `a𰣻` through to the syllabifier (39 candidates instead of an empty carrier). A mixed query such as `a𰣻` now routes like `a台`: the whole query goes to `search_by_hanji` and the custom dictionary is not consulted. No NFC normalization is applied — a Compatibility codepoint is looked up as itself.
 
 **Tab3 parity correction**: pre-v3.5.7, Android `DictionarySearchViewModel.kt:97` used `query.any { it.code in 0x4E00..0x9FFF || it.code in 0x3400..0x4DBF || it.code in 0x20000..0x2A6DF }`. Kotlin `Char.code` is a 16-bit UTF-16 code unit (0–65535), so the `0x20000..0x2A6DF` clause was unreachable; effective coverage was Unified + A only. v3.5.7 routes both platforms' Tab3 through the canonical Rust 6-range check (`LexiconBridge.isHanji` / `RustEngineBridge.isHanji`).
 
@@ -402,7 +402,9 @@ Removed with `classify_input` / `contains_numeric_tone` (no production caller). 
 
 ### Tests
 
-- **Rust engine unit** — `engine/lexicon/src/classification.rs::tests` covers `HANJI_RANGE` (13 tests).
+- **Rust engine unit** — `engine/lexicon/src/classification.rs::tests` covers the range bounds.
+- **Rust engine prod** — `engine/lexicon/tests/cjk_ranges_parity.rs`: table parity with `cjk.py`, and 𰣻 / U+2F801 / U+FA0D reach their `search_by_hanji` rows.
+- **Continuous guard** — `engine/composing/tests/dispatch_continuous.rs::decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier` (`a好b`, `a𰣻`, `a\u{2F801}`, `a\u{FA0D}`).
 - **iOS / Android** — Tab3 routes through `RustEngineBridge.isHanji` / `LexiconBridge.isHanji`; no platform-side range check.
 
 ---

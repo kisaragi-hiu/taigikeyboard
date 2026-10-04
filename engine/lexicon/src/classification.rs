@@ -11,22 +11,26 @@
 //! `docs/architecture/behavioral-invariants.md` under the umbrella label
 //! `INVARIANT_LEX_INPUT_CLASSIFICATION`.
 
-/// Returns `true` iff `text` contains at least one CJK Unified Ideograph
-/// (Unified block + Extensions A–E).
-///
-/// Range coverage matches the canonical platform set captured by
-/// `INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`. Extensions F/G/H/I/J
-/// are intentionally excluded — including them would be a behavior
-/// expansion beyond the v3.5.7 parity correction scope.
+/// CJK ideograph ranges, inclusive — the same table as the dictionary
+/// pipeline's `dictionary/common/cjk.py` `CJK_RANGES`, kept equal by the
+/// `cjk_ranges_parity` test. `0x20000–0x3134F` spans Extensions B–G and I,
+/// the Compatibility Ideographs Supplement and the unassigned gaps between
+/// them; Extension H (`0x31350–0x323AF`) and later stay out.
+pub const CJK_RANGES: &[(u32, u32)] = &[
+    (0x4E00, 0x9FFF),   // Unified Ideographs
+    (0x3400, 0x4DBF),   // Extension A
+    (0x20000, 0x3134F), // Extensions B–G, I + Compatibility Supplement
+    (0xF900, 0xFAFF),   // Compatibility Ideographs
+];
+
+/// Returns `true` iff `text` contains at least one codepoint in
+/// [`CJK_RANGES`] (`INVARIANT_LEX_INPUT_CLASSIFICATION_HANJI_RANGE`).
 pub fn is_hanji(text: &str) -> bool {
     text.chars().any(|c| {
-        let cp = c as u32;
-        (0x4E00..=0x9FFF).contains(&cp)        // CJK Unified Ideographs
-            || (0x3400..=0x4DBF).contains(&cp)  // Extension A
-            || (0x20000..=0x2A6DF).contains(&cp) // Extension B
-            || (0x2A700..=0x2B73F).contains(&cp) // Extension C
-            || (0x2B740..=0x2B81F).contains(&cp) // Extension D
-            || (0x2B820..=0x2CEAF).contains(&cp) // Extension E
+        let cp = u32::from(c);
+        CJK_RANGES
+            .iter()
+            .any(|&(low, high)| (low..=high).contains(&cp))
     })
 }
 
@@ -68,9 +72,43 @@ mod tests {
         assert!(is_hanji("\u{2CEAF}"));
     }
     #[test]
-    fn is_hanji_extension_f_excluded() {
-        // 0x2CEB0 is the start of Extension F — must NOT match (out of slice scope)
-        assert!(!is_hanji("\u{2CEB0}"));
+    fn is_hanji_extension_f_lower_bound() {
+        assert!(is_hanji("\u{2CEB0}"));
+    }
+    #[test]
+    fn is_hanji_extension_i_lower_bound() {
+        assert!(is_hanji("\u{2EBF0}"));
+    }
+    #[test]
+    fn is_hanji_compatibility_supplement() {
+        // U+2F801 丸 — a `dictionary.csv` row (丸/huân).
+        assert!(is_hanji("\u{2F801}"));
+    }
+    #[test]
+    fn is_hanji_extension_g_dictionary_char() {
+        // U+308FB 𰣻 — a `dictionary.csv` row (𰣻/ko).
+        assert!(is_hanji("\u{308FB}"));
+    }
+    #[test]
+    fn is_hanji_extension_g_upper_bound() {
+        assert!(is_hanji("\u{3134F}"));
+    }
+    #[test]
+    fn is_hanji_extension_h_excluded() {
+        // 0x31350 opens Extension H, past `cjk.py`'s last range.
+        assert!(!is_hanji("\u{31350}"));
+    }
+    #[test]
+    fn is_hanji_compatibility_ideographs_bounds() {
+        assert!(is_hanji("\u{F900}"));
+        assert!(is_hanji("\u{FAFF}"));
+    }
+    #[test]
+    fn is_hanji_around_compatibility_ideographs_no_match() {
+        // 0xF8FF closes the Private Use Area; 0xFB00 opens Alphabetic
+        // Presentation Forms (ﬀ).
+        assert!(!is_hanji("\u{F8FF}"));
+        assert!(!is_hanji("\u{FB00}"));
     }
     #[test]
     fn is_hanji_roman_letters_no_match() {

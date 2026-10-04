@@ -223,41 +223,42 @@ fn decode_fetch_at_pos_hanji_buffer_returns_empty_carrier() {
 }
 
 // `is_hanji` is `.any()`, so a single stray CJK char anywhere in an
-// otherwise-romanized buffer also fails closed. Spec §15.3.E.
+// otherwise-romanized buffer also fails closed — Extension G (𰣻 U+308FB)
+// and both Compatibility blocks (U+2F801, U+FA0D) included. Spec §15.3.E.
 #[test]
 fn decode_fetch_at_pos_mixed_hanji_buffer_returns_empty_carrier() {
-    let mut engine = Engine::new();
-    requests::handle(
-        &req(Method::Start(protos::engine::Start {
-            text: "a好b".into(),
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .unwrap();
-    assert!(matches!(
-        engine.snapshot_state().phase,
-        Phase::Continuous { .. }
-    ));
+    for text in ["a好b", "a\u{308FB}", "a\u{2F801}", "a\u{FA0D}"] {
+        let mut engine = Engine::new();
+        requests::handle(
+            &req(Method::Start(protos::engine::Start { text: text.into() })),
+            &mut engine,
+            &config_tl(),
+        )
+        .unwrap();
+        assert!(matches!(
+            engine.snapshot_state().phase,
+            Phase::Continuous { .. }
+        ));
 
-    let resp = requests::handle(
-        &req(Method::FetchAtPos(FetchAtPos {
-            now_ms: 0,
-            literal_roman_candidate_disabled: false,
-            ..FetchAtPos::default()
-        })),
-        &mut engine,
-        &config_tl(),
-    )
-    .expect("dispatch ok");
-    let cont = resp
-        .continuous
-        .expect("continuous carrier present (guard returns empty, not None)");
-    assert!(
-        cont.candidates.is_empty(),
-        "stray hanji in mixed buffer must yield empty candidates, got {:?}",
-        cont.candidates
-    );
+        let resp = requests::handle(
+            &req(Method::FetchAtPos(FetchAtPos {
+                now_ms: 0,
+                literal_roman_candidate_disabled: false,
+                ..FetchAtPos::default()
+            })),
+            &mut engine,
+            &config_tl(),
+        )
+        .expect("dispatch ok");
+        let cont = resp
+            .continuous
+            .expect("continuous carrier present (guard returns empty, not None)");
+        assert!(
+            cont.candidates.is_empty(),
+            "stray hanji in {text:?} must yield empty candidates, got {:?}",
+            cont.candidates
+        );
+    }
 }
 
 // ---- Optional-presence contract for `ContinuousResponse` -----------------
