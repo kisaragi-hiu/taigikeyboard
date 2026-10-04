@@ -71,7 +71,7 @@ public enum DictionarySourceCode
   DICT_SOURCE_LKK(11),
   /**
    * <pre>
-   * always-on (non-toggleable)
+   * toggleable (`DictionarySourceToggles.dev`)
    * </pre>
    *
    * <code>DICT_SOURCE_DEV = 12;</code>
@@ -138,7 +138,7 @@ public enum DictionarySourceCode
   public static final int DICT_SOURCE_LKK_VALUE = 11;
   /**
    * <pre>
-   * always-on (non-toggleable)
+   * toggleable (`DictionarySourceToggles.dev`)
    * </pre>
    *
    * <code>DICT_SOURCE_DEV = 12;</code>

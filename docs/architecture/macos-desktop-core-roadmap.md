@@ -258,7 +258,7 @@ Rules per phase: P1, P7, P13, P14 — `cross-platform-alignment.md` §1 (behavio
 Each needs its own decision; none is scheduled here.
 
 - The candidate window's slot **labels** are still a Swift table (`CandidateSlotKeySet`, `Keys/ToneInputScheme.swift`), held equal to the core's slot row by `CandidateSlotKeyTests`; carrying the nine labels on `CandidatesChanged` would delete it (P14 pre-review, cloud Q2).
-- macOS asks for **no confirmation before a destructive Custom Dictionary command**; Windows and Linux confirm (report S11). USER 2026-10-02: add the confirmation — its own round, unscheduled (`docs/roadmap.md` § Open candidates).
+- macOS asked for **no confirmation before a destructive Custom Dictionary command**; Windows and Linux confirm (report S11). Resolved by #386 (`c41d01a9`): macOS now confirms both commands too.
 - The font library's stored-name **path-component guard exists only on desktop** (report S16).
 - Candidate metrics differ between macOS and Windows at every size step (report W1–W3) — under the old oracle rule that is drift on Windows.
 

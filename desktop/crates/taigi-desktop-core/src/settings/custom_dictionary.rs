@@ -15,7 +15,7 @@ use std::path::Path;
 
 /// A command that empties a store, waiting on its confirmation.
 ///
-/// Confirmed rather than run on the press (the Mac does not ask): the
+/// Confirmed rather than run on the press, on all three desktops: the
 /// button that runs it is one row among the pane's, so the press is easy
 /// to make by accident, and there is no undo — the ✎ / − verbs act on one
 /// row, these two empty a table.

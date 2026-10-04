@@ -876,8 +876,8 @@ public nonisolated struct Taigi_Engine_ContinuousResponse: Sendable {
 /// (proto3 `optional` distinguishes "TAILO candidate — no hanji
 /// exists" from "wire-frame defect"). See
 /// `docs/engine/continuous-candidate-display.md` §4 for the full
-/// rationale and `docs/engine/continuous-input-ranking.md` §10.11
-/// for the companion ranker dedupe rule.
+/// rationale; the companion `(roman, hanji, consumed_span)` dedupe is
+/// `lexicon::continuous::candidate::dedupe_by_roman_hanji_span`.
 public nonisolated struct Taigi_Engine_CandidateMessage: Sendable {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -935,7 +935,10 @@ public nonisolated struct Taigi_Engine_CandidateMessage: Sendable {
 /// Platform-neutral effects. The wrapper maps document-mutation effects
 /// (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`)
 /// to `setComposingText` / `commitText` (Android) or `setMarkedText` /
-/// `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ClearCandidates` /
+/// `setMarkedText("")` + `unmarkText()` / `setMarkedText(text)` + `unmarkText()`
+/// (iOS `HostTextWriter`; `insertText` only when nothing is marked). An iOS
+/// commit and the literals the same event writes after it reach the host as
+/// one write (`INVARIANT_composing_host_commit_one_write_per_event`). Autocomplete-control effects (`ClearCandidates` /
 /// `RefreshCandidates` / `ResetCandidateContext`) route to the platform
 /// autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
 ///

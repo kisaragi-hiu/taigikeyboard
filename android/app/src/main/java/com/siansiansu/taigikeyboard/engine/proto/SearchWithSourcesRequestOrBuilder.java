@@ -42,7 +42,7 @@ public interface SearchWithSourcesRequestOrBuilder extends
   /**
    * <pre>
    * Source-toggle bitmask filtering Tab3 results. Bit layout encodes
-   * sources(0-8,11) + khiin(9) + dev(10, always set) + variant(12).
+   * sources(0-8,11) + khiin(9) + dev(10, set iff `toggles.dev`) + variant(12).
    * Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
    * api.rs hardcoded `u32::MAX`, which both bypassed source filters
    * AND falsely forced khiin/variant on regardless of user toggles.
