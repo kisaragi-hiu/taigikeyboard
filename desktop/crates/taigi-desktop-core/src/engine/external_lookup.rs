@@ -1,8 +1,9 @@
 //! The two web dictionaries a search result can be looked up in — the MOE dictionary and
-//! ChhoeTaigi's Taigi dictionary — and the digit-tone spelling of a TL reading their
-//! query strings take. Twin of iOS `ExternalLookupURLBuilder.swift`.
+//! ChhoeTaigi's Taigi dictionary. The digit-tone spelling of a TL reading their query
+//! strings take is the engine's (`external_lookup_digit_form`); the URLs are this
+//! platform's. Twin of iOS `ExternalLookupURLBuilder.swift`.
 
-use super::phonetics::{nfd_preprocess_for_lookup, strip_tone};
+use super::phonetics::external_lookup_digit_form;
 
 /// The MOE dictionary's search URL for `tl`, or `None` when the reading spells nothing.
 pub fn moe_url(tl: &str) -> Option<String> {
@@ -30,7 +31,8 @@ fn url(
     reading_parameter: &str,
     tl: &str,
 ) -> Option<String> {
-    let digit_tone = digit_tone_form(tl);
+    // An engine failure looks the reading up as written (logged by the bridge).
+    let digit_tone = external_lookup_digit_form(tl).unwrap_or_else(|| tl.to_owned());
     if digit_tone.is_empty() {
         return None;
     }
@@ -49,7 +51,7 @@ fn url(
 /// everything else (including `+`, `/`, `&`, `=` and non-ASCII) encoded as
 /// UTF-8. Stricter than Foundation's `URLQueryItem` (which leaves `+` and
 /// `/` alone) — the readings this ever carries are letters, digits and
-/// hyphens after `digit_tone_form`, where the two agree.
+/// hyphens after the digit-tone fold, where the two agree.
 fn percent_encode(value: &str) -> String {
     let mut out = String::with_capacity(value.len());
     for byte in value.bytes() {
@@ -63,60 +65,14 @@ fn percent_encode(value: &str) -> String {
     out
 }
 
-/// A TL reading in the digit-tone spelling the web dictionaries search by:
-/// lowercased, syllable by syllable (empty syllables kept so the hyphens
-/// survive), the nasal marks as `nn`, the tone as a trailing digit with
-/// tones 1 and 4 omitted (iOS `ExternalLookupURLBuilder.toTLDigit`).
-pub fn digit_tone_form(tl: &str) -> String {
-    tl.to_lowercase()
-        .split('-')
-        .map(syllable_in_digit_tone)
-        .collect::<Vec<_>>()
-        .join("-")
-}
-
-fn syllable_in_digit_tone(syllable: &str) -> String {
-    if syllable.is_empty() {
-        return String::new();
-    }
-    let with_nasal = syllable.replace(['\u{207F}', '\u{1D3A}'], "nn");
-    if let Some(last) = with_nasal.chars().last().filter(char::is_ascii_digit) {
-        let normalized = nfd_preprocess_for_lookup(&with_nasal).unwrap_or(with_nasal);
-        return if last == '1' || last == '4' {
-            normalized[..normalized.len() - 1].to_owned()
-        } else {
-            normalized
-        };
-    }
-    let Some((bare, tone)) = nfd_preprocess_for_lookup(&with_nasal).and_then(|p| strip_tone(&p))
-    else {
-        return with_nasal;
-    };
-    if tone.is_empty() || tone == "1" || tone == "4" {
-        bare
-    } else {
-        format!("{bare}{tone}")
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn digit_tone_form_omits_tones_one_and_four_and_keeps_hyphens() {
-        // trace: tâi-gí → tai5-gi2; tsia̍h → tsiah8; kau (tone 1) → kau;
-        // ah4 (numeric) → ah; a leading empty syllable keeps its hyphen.
-        assert_eq!(digit_tone_form("Tâi-gí"), "tai5-gi2");
-        assert_eq!(digit_tone_form("tsia̍h"), "tsiah8");
-        assert_eq!(digit_tone_form("kau"), "kau");
-        assert_eq!(digit_tone_form("ah4"), "ah");
-        assert_eq!(digit_tone_form("--ah"), "--ah");
-        assert_eq!(digit_tone_form("tiⁿ"), "tinn");
-    }
-
-    #[test]
-    fn the_two_urls_carry_the_fixed_query_and_the_encoded_reading() {
+    fn the_two_urls_carry_the_fixed_query_and_the_engines_digit_tone_reading() {
+        // trace: engine `external_lookup::digit_tone_form` — Tâi-gí →
+        // tai5-gi2, tsia̍h → tsiah8 (the full table is pinned there).
         assert_eq!(
             moe_url("Tâi-gí").as_deref(),
             Some("https://sutian.moe.edu.tw/zh-hant/tshiau/?lui=tai_su&tsha=tai5-gi2")

@@ -21,7 +21,6 @@ public  final class PhoneticsResponse extends
   public enum ResultCase
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
     STRING_RESULT(10),
-    STRIP_TONE_RESULT(11),
     BOOL_RESULT(13),
     TONE_VARIATIONS_RESULT(14),
     TPS_ADJUST_RESULT(15),
@@ -41,7 +40,6 @@ public  final class PhoneticsResponse extends
     public static ResultCase forNumber(int value) {
       switch (value) {
         case 10: return STRING_RESULT;
-        case 11: return STRIP_TONE_RESULT;
         case 13: return BOOL_RESULT;
         case 14: return TONE_VARIATIONS_RESULT;
         case 15: return TPS_ADJUST_RESULT;
@@ -111,56 +109,6 @@ public  final class PhoneticsResponse extends
    */
   private void clearStringResult() {
     if (resultCase_ == 10) {
-      resultCase_ = 0;
-      result_ = null;
-    }
-  }
-
-  public static final int STRIP_TONE_RESULT_FIELD_NUMBER = 11;
-  /**
-   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-   */
-  @java.lang.Override
-  public boolean hasStripToneResult() {
-    return resultCase_ == 11;
-  }
-  /**
-   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.StripToneResult getStripToneResult() {
-    if (resultCase_ == 11) {
-       return (com.siansiansu.taigikeyboard.engine.proto.StripToneResult) result_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.StripToneResult.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-   */
-  private void setStripToneResult(com.siansiansu.taigikeyboard.engine.proto.StripToneResult value) {
-    java.util.Objects.requireNonNull(value);
-    result_ = value;
-    resultCase_ = 11;
-  }
-  /**
-   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-   */
-  private void mergeStripToneResult(com.siansiansu.taigikeyboard.engine.proto.StripToneResult value) {
-    java.util.Objects.requireNonNull(value);
-    if (resultCase_ == 11 &&
-        result_ != com.siansiansu.taigikeyboard.engine.proto.StripToneResult.getDefaultInstance()) {
-      result_ = com.siansiansu.taigikeyboard.engine.proto.StripToneResult.newBuilder((com.siansiansu.taigikeyboard.engine.proto.StripToneResult) result_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      result_ = value;
-    }
-    resultCase_ = 11;
-  }
-  /**
-   * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-   */
-  private void clearStripToneResult() {
-    if (resultCase_ == 11) {
       resultCase_ = 0;
       result_ = null;
     }
@@ -474,54 +422,6 @@ public  final class PhoneticsResponse extends
     }
 
     /**
-     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-     */
-    @java.lang.Override
-    public boolean hasStripToneResult() {
-      return instance.hasStripToneResult();
-    }
-    /**
-     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.StripToneResult getStripToneResult() {
-      return instance.getStripToneResult();
-    }
-    /**
-     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-     */
-    public Builder setStripToneResult(com.siansiansu.taigikeyboard.engine.proto.StripToneResult value) {
-      copyOnWrite();
-      instance.setStripToneResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-     */
-    public Builder setStripToneResult(
-        com.siansiansu.taigikeyboard.engine.proto.StripToneResult.Builder builderForValue) {
-      copyOnWrite();
-      instance.setStripToneResult(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-     */
-    public Builder mergeStripToneResult(com.siansiansu.taigikeyboard.engine.proto.StripToneResult value) {
-      copyOnWrite();
-      instance.mergeStripToneResult(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.StripToneResult strip_tone_result = 11;</code>
-     */
-    public Builder clearStripToneResult() {
-      copyOnWrite();
-      instance.clearStripToneResult();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.BoolResult bool_result = 13;</code>
      */
     @java.lang.Override
@@ -684,14 +584,13 @@ public  final class PhoneticsResponse extends
             "result_",
             "resultCase_",
             com.siansiansu.taigikeyboard.engine.proto.StringResult.class,
-            com.siansiansu.taigikeyboard.engine.proto.StripToneResult.class,
             com.siansiansu.taigikeyboard.engine.proto.BoolResult.class,
             com.siansiansu.taigikeyboard.engine.proto.ToneVariationsResult.class,
             com.siansiansu.taigikeyboard.engine.proto.TpsAdjustResult.class,
           };
           java.lang.String info =
-              "\u0000\u0005\u0001\u0000\n\u000f\u0005\u0000\u0000\u0000\n<\u0000\u000b<\u0000\r" +
-              "<\u0000\u000e<\u0000\u000f<\u0000";
+              "\u0000\u0004\u0001\u0000\n\u000f\u0004\u0000\u0000\u0000\n<\u0000\r<\u0000\u000e" +
+              "<\u0000\u000f<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

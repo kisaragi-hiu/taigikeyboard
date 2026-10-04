@@ -57,7 +57,7 @@ Engine state machine lives in Rust `engine/composing` (since v3.5.4). Platform s
 | **searchKey** | fst lookup key (`tl:` / `poj:` / `hanzi:` prefix + normalized form) | Rust `phonetics::KeyFamily::search_key` (`hanzi:` = `phonetics::HANJI_KEY_PREFIX`) |
 
 ### 3. Tone Engine (`engine/tone.md`)
-All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge+Phonetics.swift` / `PhoneticsBridge.kt` (`stripTone`, `tlToPoj`, …); preedit tone rendering runs inside composing ops.
+All tone logic lives in Rust `engine/phonetics` (since v3.5.1). Bridge surface: `RustEngineBridge+Phonetics.swift` / `PhoneticsBridge.kt` (`tlToPoj`, `externalLookupDigitForm`, …); preedit tone rendering runs inside composing ops.
 
 | Keyword | Definition | Owner |
 |---------|-----------|-------|
@@ -105,7 +105,7 @@ NextWord state machine lives in Rust `engine/nextword` (since v3.5.5). Platform 
 | **notone** | Toneless romanization for prefix matching (e.g. `"lí hó"` → `"liho"`) | Rust `phonetics` `derive_notone` |
 | **abbrev** | Leading-spelling-unit abbreviation (§46) for quick lookup (e.g. `"lí hó"` → `"lh"`) | Rust `phonetics::derive_abbrev` |
 | **batchImport** | CSV import with deduplication by `roman\|hanzi` key | engine op `ImportCustomCsv` → `CustomDictionaryStore::batch_import` |
-| **customWordMarker** | Custom entries use `id = -2` to distinguish from system dictionary | iOS `DictionarySearchResult.customDictMarkerId`; Android `DictionarySearchResult.CUSTOM_DICT_MARKER_ID`, `SuggestionCaseTransformer.kt` |
+| **customWordMarker** | Custom entries use `id = -2` to distinguish from system dictionary | iOS `DictionarySearchResult.customDictMarkerId`; Android `DictionarySearchResult.CUSTOM_DICT_MARKER_ID` |
 
 ### 8. Diagnostics (`engine/diagnostics.md`)
 | Keyword | Definition | Key Class/Method |

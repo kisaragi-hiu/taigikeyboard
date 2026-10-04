@@ -25,8 +25,6 @@ class CapsStateManager(
     private var hasCapsRecentlyChanged: Boolean = false
     var hasSpaceRecentlyPressed: Boolean = false
 
-    fun getCapsState(): Pair<Boolean, Boolean> = Pair(caps, capsLock)
-
     /**
      * Handle shift key press (single tap / double tap for caps lock).
      */

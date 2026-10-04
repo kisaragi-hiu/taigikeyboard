@@ -30,12 +30,6 @@ final class RustEngineBridgeTests: XCTestCase {
 
     // MARK: - Phonetics core
 
-    func test_op_stripTone_returnsBareAndToneTuple() {
-        let result = RustEngineBridge.stripTone("guá")
-        XCTAssertEqual(result.bare, "gua")
-        XCTAssertEqual(result.tone, "2")
-    }
-
     func test_op_tlToPoj_canonical() {
         XCTAssertEqual(RustEngineBridge.tlToPoj("guá"), "góa")
     }
@@ -58,6 +52,18 @@ final class RustEngineBridgeTests: XCTestCase {
 
     func test_op_isTPSToneMark_letterIsNotToneMark() {
         XCTAssertFalse(RustEngineBridge.isTPSToneMark("a"))
+    }
+
+    // MARK: - Platform text helpers
+
+    /// The engine's attaching set (`phonetics::punctuation`, where the full
+    /// roster is pinned) answers through the bridge the swap reads
+    /// (`ActionHandler.insertNonComposingCharacter`).
+    func test_op_isAttachingPunctuation_closingAttaches_openingDoesNot() {
+        XCTAssertTrue(RustEngineBridge.isAttachingPunctuation("？"))
+        XCTAssertTrue(RustEngineBridge.isAttachingPunctuation("」"))
+        XCTAssertFalse(RustEngineBridge.isAttachingPunctuation("「"))
+        XCTAssertFalse(RustEngineBridge.isAttachingPunctuation("?!"))
     }
 
     // MARK: - Diagnostics (Codex v2 §8 / v3 §7)

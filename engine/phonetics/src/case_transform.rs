@@ -1,12 +1,9 @@
 //! Case-transform module — POJ/TL tone-letter case mapping, candidate
-//! capitalization, per-suggestion case transformation, nasal marker case
-//! adjustment.
+//! raising, nasal marker case adjustment.
 //!
 //! Cross-platform canonical for the case-transformation subsystem. Replaces
-//! the former iOS case transformer and tone utilities + the
-//! body of `Autocomplete/Services/SuggestionCaseTransformer.swift`, plus
-//! Android counterparts (tone utilities, removed) + body of
-//! `dictionary/SuggestionCaseTransformer.kt`.
+//! the former iOS case transformer and tone utilities, plus the Android
+//! tone utilities (removed).
 //!
 //! Tone-letter case tables live in `case_tables` (POJ + TL); this module
 //! never re-implements them.
@@ -143,64 +140,14 @@ pub fn transform_input_case(text: &str, letter_case: LetterCase, mode: InputMode
 /// and lowering it to the keystroke's case threw those away (user report
 /// 2026-09-19). Every candidate-casing path ends here; only keystrokes
 /// go through [`transform_input_case`]. Under `CapsLocked` the POJ nasal
-/// `ⁿ` stays as-is (no uppercase hook in POJ) — [`transform_candidate_case`]
-/// re-cases it afterwards via [`adjust_nasal_marker_case`].
+/// `ⁿ` stays as-is (no uppercase hook in POJ) — the candidate path
+/// (`composing::continuous`) re-cases it afterwards via [`apply_nasal_marker_case`].
 pub fn raise_case(text: &str, letter_case: LetterCase, mode: InputMode) -> String {
     match letter_case {
         LetterCase::CapsLocked => full_uppercase_tone_string(text, mode),
         LetterCase::Uppercased => uppercase_first_letter_in_text(text, mode),
         LetterCase::Lowercased => text.to_string(),
     }
-}
-
-/// Apply the SuggestionCaseTransformer per-word case transformation:
-/// - `CapsLocked`: full upper
-/// - else with non-empty `composing_text`: split typed-portion (matchCase
-///   to composing) + remaining-portion (`Uppercased` → first upper /
-///   `Lowercased` → untouched)
-/// - empty composing: original returned as-is
-///
-/// Raise-only, see [`raise_case`].
-///
-/// Output is post-processed via `adjust_nasal_marker_case` so the engine
-/// returns the final-form string ready for display. Suggestion skip rules
-/// (iOS `additionalInfo` flags, Android `id` markers) stay platform-side
-/// — only transform-eligible items reach this op.
-pub fn transform_candidate_case(
-    original_text: &str,
-    composing_text: &str,
-    letter_case: LetterCase,
-    mode: InputMode,
-) -> String {
-    let inner = transform_candidate_case_inner(original_text, composing_text, letter_case, mode);
-    adjust_nasal_marker_case(&inner)
-}
-
-fn transform_candidate_case_inner(
-    original_text: &str,
-    composing_text: &str,
-    letter_case: LetterCase,
-    mode: InputMode,
-) -> String {
-    if matches!(letter_case, LetterCase::CapsLocked) {
-        return raise_case(original_text, letter_case, mode);
-    }
-
-    let typed_letter_count = count_letters(composing_text);
-    if typed_letter_count == 0 {
-        return original_text.to_string();
-    }
-
-    let original_letter_count = count_letters(original_text);
-    if typed_letter_count >= original_letter_count {
-        return match_case(original_text, composing_text, mode);
-    }
-
-    let (typed_portion, remaining_portion) =
-        split_by_letter_count(original_text, typed_letter_count);
-    let preserved_typed = match_case(&typed_portion, composing_text, mode);
-    let transformed_remaining = raise_case(&remaining_portion, letter_case, mode);
-    preserved_typed + &transformed_remaining
 }
 
 // =========================================================================
@@ -216,7 +163,8 @@ fn transform_candidate_case_inner(
 ///
 /// Re-homed from the former `case_adjust.rs::adjust_nasal_marker_case`.
 /// Called in-band by `apply_nasal_marker_case` (the last step of
-/// `api::normalize_tone`) AND by `transform_candidate_case` (post-process).
+/// `api::normalize_tone`), and through it by the candidate casing in
+/// `composing::continuous`.
 pub fn adjust_nasal_marker_case(text: &str) -> String {
     if !text.contains(NASAL_LOWER) && !text.contains(NASAL_UPPER) {
         return text.to_string();
@@ -268,7 +216,7 @@ pub fn lowercase_nasal_markers(text: &str) -> String {
 }
 
 // =========================================================================
-// Internal helpers (mirror SuggestionCaseTransformer private funcs)
+// Internal helpers
 // =========================================================================
 
 /// Uppercase the literal first character (via `uppercase_tone_char`),
@@ -305,29 +253,6 @@ fn uppercase_first_letter_in_text(text: &str, mode: InputMode) -> String {
         }
     }
     result
-}
-
-fn count_letters(text: &str) -> usize {
-    text.chars().filter(|c| c.is_alphabetic()).count()
-}
-
-/// Split `text` into (first part containing exactly `letter_count` letters,
-/// rest). Non-letter characters in the leading region are kept with the
-/// first part; the split index lands immediately after the Nth letter.
-fn split_by_letter_count(text: &str, letter_count: usize) -> (String, String) {
-    let mut count = 0usize;
-    let mut split_byte_idx = text.len();
-    for (idx, ch) in text.char_indices() {
-        if ch.is_alphabetic() {
-            count += 1;
-            if count == letter_count {
-                split_byte_idx = idx + ch.len_utf8();
-                break;
-            }
-        }
-    }
-    let (first, second) = text.split_at(split_byte_idx);
-    (first.to_string(), second.to_string())
 }
 
 /// Per-letter case matching: the Nth letter of `target` is raised when
@@ -506,30 +431,6 @@ mod tests {
     }
 
     // -----------------------------------------------------------------
-    // transform_candidate_case
-    // -----------------------------------------------------------------
-
-    #[test]
-    fn transform_candidate_case_split_typed_remaining() {
-        // composing has 1 letter "G" upper, original "góa" 3 letters
-        // → typed "g" → "G" (matchCase to "G"), remaining "óa" lowered
-        assert_eq!(
-            transform_candidate_case("góa", "G", LetterCase::Lowercased, InputMode::Poj),
-            "Góa"
-        );
-    }
-
-    #[test]
-    fn transform_candidate_case_uppercased_remaining_first_upper() {
-        // composing "G", uppercased mode → typed "g"→"G", remaining "óa"
-        // → "Óa" (first remaining upper, rest lower)
-        assert_eq!(
-            transform_candidate_case("góa", "G", LetterCase::Uppercased, InputMode::Poj),
-            "GÓa"
-        );
-    }
-
-    // -----------------------------------------------------------------
     // Stored capitals survive (user report 2026-09-19: custom entry
     // `Keng-lâm Su-īⁿ` under abbreviation `klsi`)
     // -----------------------------------------------------------------
@@ -570,37 +471,6 @@ mod tests {
         assert_eq!(
             raise_case(CUSTOM, LetterCase::CapsLocked, InputMode::Poj),
             "KENG-LÂM SU-Īⁿ"
-        );
-    }
-
-    #[test]
-    fn transform_candidate_case_abbreviation_keeps_stored_capitals() {
-        // `klsi` (4 letters) aligns positionally with `Keng`; lowercase
-        // keystrokes must not lower `K` nor the untyped `Su`.
-        assert_eq!(
-            transform_candidate_case(CUSTOM, "klsi", LetterCase::Lowercased, InputMode::Poj),
-            CUSTOM
-        );
-        // Shift on the first key, keyboard already back to lowercase.
-        assert_eq!(
-            transform_candidate_case(CUSTOM, "Klsi", LetterCase::Lowercased, InputMode::Poj),
-            CUSTOM
-        );
-        // Shift still held: the remainder's first letter is raised, the
-        // stored `Su` stays.
-        assert_eq!(
-            transform_candidate_case(CUSTOM, "Klsi", LetterCase::Uppercased, InputMode::Poj),
-            "Keng-Lâm Su-īⁿ"
-        );
-    }
-
-    #[test]
-    fn transform_candidate_case_runs_nasal_adjust_post_process() {
-        // composing "AN" forces both letters upper → "AN" + nasal marker
-        // should auto-promote ⁿ → ᴺ via adjust_nasal_marker_case
-        assert_eq!(
-            transform_candidate_case("an\u{207F}", "AN", LetterCase::Lowercased, InputMode::Poj),
-            "AN\u{1D3A}"
         );
     }
 }

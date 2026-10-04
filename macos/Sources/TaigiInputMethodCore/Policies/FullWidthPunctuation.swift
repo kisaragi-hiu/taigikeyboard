@@ -29,7 +29,7 @@ enum FullWidthPunctuation {
     /// keep half-width: digits are TL/POJ tone markers, the hyphen is the
     /// syllable separator, letters spell the romanization, and the straight
     /// double quote serves as both opening and closing so a one-to-one map
-    /// cannot pick a side (the same reason `AutoSpacePunctuation` excludes it).
+    /// cannot pick a side (the same reason the engine's auto-space attaching set excludes it).
     private static let map: [Character: String] = [
         ",": "，", ".": "。", "?": "？", "!": "！",
         ";": "；", ":": "：",

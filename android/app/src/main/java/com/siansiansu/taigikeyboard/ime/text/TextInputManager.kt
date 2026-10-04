@@ -151,8 +151,6 @@ class TextInputManager(
     val caps: Boolean get() = capsStateManager.caps
     val capsLock: Boolean get() = capsStateManager.capsLock
 
-    fun getCapsState(): Pair<Boolean, Boolean> = capsStateManager.getCapsState()
-
     fun getComposingManager(): ComposingManager? = synchronized(composingLock) { composingManager }
 
     /**

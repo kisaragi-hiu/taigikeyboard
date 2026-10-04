@@ -10,7 +10,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * `TaigiWord` mirrors iOS `Lexicon/Models/TaigiWord.swift` /
  * Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id;
  * `length_score` is the dictionary frequency / length proxy.
- * `source_bitmask` is the `dictionary/common/source_bits.py` bitmask.
+ * `sources` are the dictionaries the record belongs to, in source-bit order
+ * (`dictionary/common/source_bits.py`: kautian … khiin, dev, lkk) — the
+ * order the badges are drawn in. Decoded from the record's effective source
+ * bitmask by the engine (`dictionary_filters::source_codes`); never CUSTOM.
  *
  * Optional fields use proto3 `optional` so platforms can distinguish
  * "field absent" from "scalar default" — important for `length_score`
@@ -28,6 +31,7 @@ public  final class TaigiWord extends
   private TaigiWord() {
     roman_ = "";
     hanji_ = "";
+    sources_ = emptyIntList();
   }
   private int bitField0_;
   public static final int ID_FIELD_NUMBER = 1;
@@ -192,38 +196,137 @@ public  final class TaigiWord extends
     lengthScore_ = 0;
   }
 
-  public static final int SOURCE_BITMASK_FIELD_NUMBER = 5;
-  private int sourceBitmask_;
+  public static final int SOURCES_FIELD_NUMBER = 6;
+  private com.google.protobuf.Internal.IntList sources_;
+  private static final com.google.protobuf.Internal.IntListAdapter.IntConverter<
+      com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode> sources_converter_ =
+          new com.google.protobuf.Internal.IntListAdapter.IntConverter<
+              com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode>() {
+            @java.lang.Override
+            public com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode convert(int from) {
+              com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode result = com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode.forNumber(from);
+              return result == null ? com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode.UNRECOGNIZED : result;
+            }
+          };
   /**
-   * <code>optional uint32 source_bitmask = 5;</code>
-   * @return Whether the sourceBitmask field is set.
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @return A list containing the sources.
    */
   @java.lang.Override
-  public boolean hasSourceBitmask() {
-    return ((bitField0_ & 0x00000004) != 0);
+  public java.util.List<com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode> getSourcesList() {
+    return new com.google.protobuf.Internal.IntListAdapter<
+        com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode>(sources_, sources_converter_);
   }
   /**
-   * <code>optional uint32 source_bitmask = 5;</code>
-   * @return The sourceBitmask.
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @return The count of sources.
    */
   @java.lang.Override
-  public int getSourceBitmask() {
-    return sourceBitmask_;
+  public int getSourcesCount() {
+    return sources_.size();
   }
   /**
-   * <code>optional uint32 source_bitmask = 5;</code>
-   * @param value The sourceBitmask to set.
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @param index The index of the element to return.
+   * @return The sources at the given index.
    */
-  private void setSourceBitmask(int value) {
-    bitField0_ |= 0x00000004;
-    sourceBitmask_ = value;
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode getSources(int index) {
+    com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode result = com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode.forNumber(sources_.getInt(index));
+    return result == null ? com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode.UNRECOGNIZED : result;
   }
   /**
-   * <code>optional uint32 source_bitmask = 5;</code>
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @return A list containing the enum numeric values on the wire for sources.
    */
-  private void clearSourceBitmask() {
-    bitField0_ = (bitField0_ & ~0x00000004);
-    sourceBitmask_ = 0;
+  @java.lang.Override
+  public java.util.List<java.lang.Integer>
+  getSourcesValueList() {
+    return sources_;
+  }
+  /**
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @param index The index of the value to return.
+   * @return The enum numeric value on the wire of sources at the given index.
+   */
+  @java.lang.Override
+  public int getSourcesValue(int index) {
+    return sources_.getInt(index);
+  }
+  private int sourcesMemoizedSerializedSize;
+  private void ensureSourcesIsMutable() {
+    com.google.protobuf.Internal.IntList tmp = sources_;
+    if (!tmp.isModifiable()) {
+      sources_ =
+          com.google.protobuf.GeneratedMessageLite.mutableCopy(tmp);
+    }
+  }
+  /**
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @param index The index to set the value at.
+   * @param value The sources to set.
+   * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+   */
+  private void setSources(
+      int index, com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode value) {
+    java.util.Objects.requireNonNull(value);
+    ensureSourcesIsMutable();
+    sources_.setInt(index, value.getNumber());
+  }
+  /**
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @param value The sources to add.
+   */
+  private void addSources(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode value) {
+    java.util.Objects.requireNonNull(value);
+    ensureSourcesIsMutable();
+    sources_.addInt(value.getNumber());
+  }
+  /**
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @param values The sources to add.
+   * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+   */
+  private void addAllSources(
+      java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode> values) {
+    ensureSourcesIsMutable();
+    for (com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode value : values) {
+      sources_.addInt(value.getNumber());
+    }
+  }
+  /**
+   * `repeated .taigi.engine.DictionarySourceCode sources = 6;`
+   */
+  private void clearSources() {
+    sources_ = emptyIntList();
+  }
+  /**
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @param value The enum numeric value on the wire for sources to set.
+   */
+  private void setSourcesValue(
+      int index, int value) {
+    ensureSourcesIsMutable();
+    sources_.setInt(index, value);
+  }
+  /**
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @param value The enum numeric value on the wire for sources to add.
+   */
+  private void addSourcesValue(int value) {
+    ensureSourcesIsMutable();
+    sources_.addInt(value);
+  }
+  /**
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @param values The enum numeric values on the wire for sources to add.
+   */
+  private void addAllSourcesValue(
+      java.lang.Iterable<java.lang.Integer> values) {
+    ensureSourcesIsMutable();
+    for (int value : values) {
+      sources_.addInt(value);
+    }
   }
 
   public static com.siansiansu.taigikeyboard.engine.proto.TaigiWord parseFrom(
@@ -314,7 +417,10 @@ public  final class TaigiWord extends
    * `TaigiWord` mirrors iOS `Lexicon/Models/TaigiWord.swift` /
    * Android `ime/dictionary/TaigiWord.kt`. `id` is the dictionary row id;
    * `length_score` is the dictionary frequency / length proxy.
-   * `source_bitmask` is the `dictionary/common/source_bits.py` bitmask.
+   * `sources` are the dictionaries the record belongs to, in source-bit order
+   * (`dictionary/common/source_bits.py`: kautian … khiin, dev, lkk) — the
+   * order the badges are drawn in. Decoded from the record's effective source
+   * bitmask by the engine (`dictionary_filters::source_codes`); never CUSTOM.
    *
    * Optional fields use proto3 `optional` so platforms can distinguish
    * "field absent" from "scalar default" — important for `length_score`
@@ -505,38 +611,123 @@ public  final class TaigiWord extends
     }
 
     /**
-     * <code>optional uint32 source_bitmask = 5;</code>
-     * @return Whether the sourceBitmask field is set.
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @return A list containing the sources.
      */
     @java.lang.Override
-    public boolean hasSourceBitmask() {
-      return instance.hasSourceBitmask();
+    public java.util.List<com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode> getSourcesList() {
+      return instance.getSourcesList();
     }
     /**
-     * <code>optional uint32 source_bitmask = 5;</code>
-     * @return The sourceBitmask.
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @return The count of sources.
      */
     @java.lang.Override
-    public int getSourceBitmask() {
-      return instance.getSourceBitmask();
+    public int getSourcesCount() {
+      return instance.getSourcesCount();
     }
     /**
-     * <code>optional uint32 source_bitmask = 5;</code>
-     * @param value The sourceBitmask to set.
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @param index The index of the element to return.
+     * @return The sources at the given index.
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode getSources(int index) {
+      return instance.getSources(index);
+    }
+    /**
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @param index The index to set the value at.
+     * @param value The sources to set.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
      * @return This builder for chaining.
      */
-    public Builder setSourceBitmask(int value) {
+    public Builder setSources(
+        int index, com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode value) {
       copyOnWrite();
-      instance.setSourceBitmask(value);
+      instance.setSources(index, value);
       return this;
     }
     /**
-     * <code>optional uint32 source_bitmask = 5;</code>
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @param value The sources to add.
      * @return This builder for chaining.
      */
-    public Builder clearSourceBitmask() {
+    public Builder addSources(com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode value) {
       copyOnWrite();
-      instance.clearSourceBitmask();
+      instance.addSources(value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @param values The sources to add.
+     * @throws IllegalArgumentException if UNRECOGNIZED is provided.
+     * @return This builder for chaining.
+     */
+    public Builder addAllSources(
+        java.lang.Iterable<? extends com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode> values) {
+      copyOnWrite();
+      instance.addAllSources(values);  return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @return This builder for chaining.
+     */
+    public Builder clearSources() {
+      copyOnWrite();
+      instance.clearSources();
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @return A list containing the enum numeric values on the wire for sources.
+     */
+    @java.lang.Override
+    public java.util.List<java.lang.Integer>
+    getSourcesValueList() {
+      return java.util.Collections.unmodifiableList(
+          instance.getSourcesValueList());
+    }
+    /**
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @param index The index of the value to return.
+     * @return The enum numeric value on the wire of sources at the given index.
+     */
+    @java.lang.Override
+    public int getSourcesValue(int index) {
+      return instance.getSourcesValue(index);
+    }
+    /**
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @param index The index to set the value at.
+     * @param value The enum numeric value on the wire for sources to set.
+     * @return This builder for chaining.
+     */
+    public Builder setSourcesValue(
+        int index, int value) {
+      copyOnWrite();
+      instance.setSourcesValue(index, value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @param value The enum numeric value on the wire for sources to add.
+     * @return This builder for chaining.
+     */
+    public Builder addSourcesValue(int value) {
+      copyOnWrite();
+      instance.addSourcesValue(value);
+      return this;
+    }
+    /**
+     * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+     * @param values The enum numeric values on the wire for sources to add.
+     * @return This builder for chaining.
+     */
+    public Builder addAllSourcesValue(
+        java.lang.Iterable<java.lang.Integer> values) {
+      copyOnWrite();
+      instance.addAllSourcesValue(values);
       return this;
     }
 
@@ -561,11 +752,11 @@ public  final class TaigiWord extends
             "roman_",
             "hanji_",
             "lengthScore_",
-            "sourceBitmask_",
+            "sources_",
           };
           java.lang.String info =
-              "\u0000\u0005\u0000\u0001\u0001\u0005\u0005\u0000\u0000\u0000\u0001\u0002\u0002\u0208" +
-              "\u0003\u1208\u0000\u0004\u1004\u0001\u0005\u100b\u0002";
+              "\u0000\u0005\u0000\u0001\u0001\u0006\u0005\u0000\u0001\u0000\u0001\u0002\u0002\u0208" +
+              "\u0003\u1208\u0000\u0004\u1004\u0001\u0006,";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

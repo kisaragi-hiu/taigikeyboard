@@ -3,9 +3,9 @@ import Foundation
 // Dictionary source enum matching dictionary.csv column names.
 //
 // Used for search-result attribution (which dictionaries a word came from).
-// The bitmask layout is owned by `dictionary/common/source_bits.py` and decoded
-// explicitly by `LexiconBitmask` (which maps each bit position to its
-// `DictionarySource` value), so `allCases` ordering is NOT load-bearing — the
+// The engine decodes each record's source bits into wire `DictionarySourceCode`s
+// (`TaigiWord.sources`), mapped here by `RustEngineBridge.platformDictionarySource`,
+// so `allCases` ordering is NOT load-bearing — the
 // `.custom` case in particular has no `dictionary.bin` bit (UI-only marker for
 // user-added entries).
 //

@@ -12,29 +12,18 @@ public interface PhoneticsRequestOrBuilder extends
 
   /**
    * <pre>
-   * --- Phonetics core (4 ops) ---
+   * --- Phonetics core (2 ops) ---
    * </pre>
    *
-   * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-   * @return Whether the stripTone field is set.
-   */
-  boolean hasStripTone();
-  /**
-   * <pre>
-   * --- Phonetics core (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-   * @return The stripTone.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.StripTone getStripTone();
-
-  /**
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
    * @return Whether the tlToPoj field is set.
    */
   boolean hasTlToPoj();
   /**
+   * <pre>
+   * --- Phonetics core (2 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
    * @return The tlToPoj.
    */
@@ -50,17 +39,6 @@ public interface PhoneticsRequestOrBuilder extends
    * @return The getToneVariations.
    */
   com.siansiansu.taigikeyboard.engine.proto.GetToneVariations getGetToneVariations();
-
-  /**
-   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-   * @return Whether the nfdPreprocessForLookup field is set.
-   */
-  boolean hasNfdPreprocessForLookup();
-  /**
-   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-   * @return The nfdPreprocessForLookup.
-   */
-  com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup getNfdPreprocessForLookup();
 
   /**
    * <pre>
@@ -113,6 +91,36 @@ public interface PhoneticsRequestOrBuilder extends
    * @return The tpsInputAdjust.
    */
   com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust getTpsInputAdjust();
+
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   * @return Whether the isAttachingPunctuation field is set.
+   */
+  boolean hasIsAttachingPunctuation();
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   * @return The isAttachingPunctuation.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation getIsAttachingPunctuation();
+
+  /**
+   * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+   * @return Whether the externalLookupDigitForm field is set.
+   */
+  boolean hasExternalLookupDigitForm();
+  /**
+   * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+   * @return The externalLookupDigitForm.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm getExternalLookupDigitForm();
 
   public com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.MethodCase getMethodCase();
 }

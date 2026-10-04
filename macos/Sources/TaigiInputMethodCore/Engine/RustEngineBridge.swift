@@ -91,9 +91,9 @@ enum RustEngineBridge {
     /// because a failed round-trip leaves the engine's state untouched and any
     /// snapshot synthesized here would contradict it.
     ///
-    /// The user-data slice is the one macOS still sends itself; desktop-core
-    /// drives composing and next-word. User-data requests carry neither a
-    /// generation nor a config snapshot.
+    /// The user-data slice and the attaching-punctuation check are what macOS
+    /// still sends itself; desktop-core drives composing and next-word. These
+    /// requests carry neither a generation nor a config snapshot.
     static func roundtrip(
         payload: Taigi_Engine_Request.OneOf_Payload,
         op: String,

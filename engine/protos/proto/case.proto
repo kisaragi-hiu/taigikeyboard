@@ -5,12 +5,11 @@ package taigi.engine;
 option java_package = "com.siansiansu.taigikeyboard.engine.proto";
 option java_multiple_files = true;
 
-// Case-transform module — POJ/TL tone-letter case mapping, candidate
-// capitalization, per-suggestion case transformation, nasal marker case
-// adjustment. Replaces iOS `Input/CaseTransformer.swift` +
-// `Input/ToneUtilities.swift` + body of `Autocomplete/Services/
-// SuggestionCaseTransformer.swift`, and Android counterparts
-// `dictionary/ToneUtilities.kt` + body of `dictionary/SuggestionCaseTransformer.kt`.
+// Case-transform module — POJ/TL tone-letter case mapping for typed keys,
+// key labels and Caps Lock, with nasal marker case adjustment. Replaces iOS
+// `Input/CaseTransformer.swift` + `Input/ToneUtilities.swift`, and Android
+// `dictionary/ToneUtilities.kt`. (Candidates are cased by the engine itself,
+// from the user's own raw input — `composing::continuous`.)
 //
 // `AppConfig.input_mode` (envelope.proto) carries the per-request POJ/TL
 // mode; messages here do NOT re-specify mode per call — engine reads from
@@ -44,6 +43,11 @@ message CaseRequest {
   // 2026-09-25).
   reserved 21;
   reserved "capitalize_candidate";
+  // Tag 22 was `transform_candidate_case`, the per-suggestion transform of
+  // the platform `SuggestionCaseTransformer`s — a no-op for every candidate
+  // the engine cases itself; removed with them 2026-10-04.
+  reserved 22;
+  reserved "transform_candidate_case";
 
   oneof method {
     // --- Per-char (single grapheme cluster) helpers ---
@@ -53,7 +57,6 @@ message CaseRequest {
 
     // --- Per-string compound transforms ---
     TransformInputCase      transform_input_case       = 20;
-    TransformCandidateCase  transform_candidate_case   = 22;
   }
 }
 
@@ -89,22 +92,6 @@ message LowercaseToneChar { string input = 1; }
 message TransformInputCase {
   string     text        = 1;
   LetterCase letter_case = 2;
-}
-
-// `TransformCandidateCase` applies the per-candidate case transformation:
-// - CAPS_LOCKED: full upper
-// - else with non-empty composing_text: split typed-portion (matchCase to
-//   composing) + remaining-portion (UPPERCASED → first upper / LOWERCASED → lower)
-// - empty composing: original returned as-is
-//
-// Output is post-processed via `adjust_nasal_marker_case` so the engine
-// returns the final-form string ready for display. Suggestion skip rules
-// (iOS `additionalInfo` flags, Android `id` markers) stay platform-side
-// — only transform-eligible items reach this op.
-message TransformCandidateCase {
-  string     original_text  = 1;
-  string     composing_text = 2;
-  LetterCase letter_case    = 3;
 }
 
 // =========================================================================

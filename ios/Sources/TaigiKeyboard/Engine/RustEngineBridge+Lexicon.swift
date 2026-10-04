@@ -19,7 +19,9 @@ public extension RustEngineBridge {
         public let roman: String
         public let hanji: String?
         public let lengthScore: Int32?
-        public let sourceBitmask: UInt32?
+        /// The dictionaries the record belongs to, in the engine's
+        /// (source-bit) order — the order the badges are drawn in.
+        let sources: [DictionarySource]
     }
 
     /// Engine install diagnostic counts, surfaced for dogfood-time
@@ -265,7 +267,7 @@ public extension RustEngineBridge {
             roman: proto.roman,
             hanji: proto.hasHanji ? proto.hanji : nil,
             lengthScore: proto.hasLengthScore ? proto.lengthScore : nil,
-            sourceBitmask: proto.hasSourceBitmask ? proto.sourceBitmask : nil,
+            sources: proto.sources.compactMap(platformDictionarySource(from:)),
         )
     }
 

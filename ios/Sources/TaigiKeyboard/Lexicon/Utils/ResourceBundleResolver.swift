@@ -31,15 +31,15 @@ enum ResourceBundleResolver {
         }
 
         // Fallback for unit tests or unexpected configurations.
-        // `LexiconBitmaskBundleAnchor` is a private class colocated with the
+        // `DictionaryResourceBundleAnchor` is a private class colocated with the
         // dictionary resources in the same bundle, so `Bundle(for:)` resolves
         // to the right asset directory.
         logger.warning("[RESOLVE] Could not locate extension bundle, falling back to Bundle(for:)")
-        return Bundle(for: type(of: LexiconBitmaskBundleAnchor()))
+        return Bundle(for: type(of: DictionaryResourceBundleAnchor()))
     }
 }
 
 /// Anchor class for `Bundle(for:)` — needs to be a class (not an enum), and
 /// must live in the same bundle as the dictionary resources. Stays in this
 /// file to keep the dependency local.
-private final class LexiconBitmaskBundleAnchor {}
+private final class DictionaryResourceBundleAnchor {}

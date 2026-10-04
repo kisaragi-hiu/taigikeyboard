@@ -137,7 +137,7 @@ extension ActionHandler {
         // text before the selection, not an auto-space; the punctuation must
         // replace the selection normally (Codex P2).
         if isAutoSpaceSwapArmed,
-           AutoSpacePunctuation.isAttaching(char),
+           RustEngineBridge.isAttachingPunctuation(char),
            (proxy.selectedText ?? "").isEmpty,
            proxy.documentContextBeforeInput?.last == " "
         {

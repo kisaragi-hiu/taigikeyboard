@@ -4,8 +4,8 @@
 //! ops). Twin of iOS `RustEngineBridge+Phonetics.swift`.
 
 use protos::engine::{
-    phonetics_request, phonetics_response, request, response, NfdPreprocessForLookup,
-    PhoneticsRequest, PhoneticsResponse, StripTone, TlDisplayToTps, TlToPoj,
+    phonetics_request, phonetics_response, request, response, ExternalLookupDigitForm,
+    IsAttachingPunctuation, PhoneticsRequest, PhoneticsResponse, TlDisplayToTps, TlToPoj,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -40,35 +40,39 @@ pub fn tl_display_to_tps(text: &str, or_maps_to_er: bool) -> Option<String> {
     )
 }
 
-/// The syllable without its tone, and the tone digit that was on it.
-pub fn strip_tone(input: &str) -> Option<(String, String)> {
-    let op = "stripTone";
-    let response = phonetics_response(
-        phonetics_request::Method::StripTone(StripTone {
-            input: input.to_owned(),
+/// The digit-tone spelling of a TL reading that the web dictionaries search
+/// by (`tāi-tsì` → `tai7-tsi3`) — the engine's fold, the one every platform
+/// asks.
+pub fn external_lookup_digit_form(reading: &str) -> Option<String> {
+    string_result(
+        phonetics_request::Method::ExternalLookupDigitForm(ExternalLookupDigitForm {
+            reading: reading.to_owned(),
         }),
-        op,
-    )?;
-    match response.result {
-        Some(phonetics_response::Result::StripToneResult(result)) => {
-            Some((result.bare, result.tone))
-        }
-        _ => {
-            record_failure(op, "response carried no strip-tone result");
-            None
-        }
-    }
+        "externalLookupDigitForm",
+    )
 }
 
-/// Taigi-specific Unicode preprocessing before a lookup: the nasal marker
-/// and `o͘` folded to the ASCII spellings the external dictionaries index by.
-pub fn nfd_preprocess_for_lookup(input: &str) -> Option<String> {
-    string_result(
-        phonetics_request::Method::NfdPreprocessForLookup(NfdPreprocessForLookup {
-            input: input.to_owned(),
+/// Whether `text` is a single punctuation character that attaches to the
+/// preceding word under auto-space (`guá ` + `?` → `guá? `) — the engine's
+/// set, the one every platform asks. False when the engine fails: no swap,
+/// the space stays where it is.
+pub fn is_attaching_punctuation(text: &str) -> bool {
+    let op = "isAttachingPunctuation";
+    let Some(response) = phonetics_response(
+        phonetics_request::Method::IsAttachingPunctuation(IsAttachingPunctuation {
+            text: text.to_owned(),
         }),
-        "nfdPreprocessForLookup",
-    )
+        op,
+    ) else {
+        return false;
+    };
+    match response.result {
+        Some(phonetics_response::Result::BoolResult(result)) => result.value,
+        _ => {
+            record_failure(op, "response carried no bool result");
+            false
+        }
+    }
 }
 
 fn string_result(method: phonetics_request::Method, op: &str) -> Option<String> {

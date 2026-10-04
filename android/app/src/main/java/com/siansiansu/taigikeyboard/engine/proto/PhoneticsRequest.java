@@ -20,14 +20,14 @@ public  final class PhoneticsRequest extends
   private java.lang.Object method_;
   public enum MethodCase
       implements com.google.protobuf.AbstractMessageLite.InternalOneOfEnum {
-    STRIP_TONE(11),
     TL_TO_POJ(13),
     GET_TONE_VARIATIONS(18),
-    NFD_PREPROCESS_FOR_LOOKUP(19),
     TL_NUMERIC_TO_TPS(32),
     TL_DISPLAY_TO_TPS(33),
     IS_TPS_TONE_MARK(34),
     TPS_INPUT_ADJUST(35),
+    IS_ATTACHING_PUNCTUATION(40),
+    EXTERNAL_LOOKUP_DIGIT_FORM(41),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -43,14 +43,14 @@ public  final class PhoneticsRequest extends
 
     public static MethodCase forNumber(int value) {
       switch (value) {
-        case 11: return STRIP_TONE;
         case 13: return TL_TO_POJ;
         case 18: return GET_TONE_VARIATIONS;
-        case 19: return NFD_PREPROCESS_FOR_LOOKUP;
         case 32: return TL_NUMERIC_TO_TPS;
         case 33: return TL_DISPLAY_TO_TPS;
         case 34: return IS_TPS_TONE_MARK;
         case 35: return TPS_INPUT_ADJUST;
+        case 40: return IS_ATTACHING_PUNCTUATION;
+        case 41: return EXTERNAL_LOOKUP_DIGIT_FORM;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -72,78 +72,12 @@ public  final class PhoneticsRequest extends
     method_ = null;
   }
 
-  public static final int STRIP_TONE_FIELD_NUMBER = 11;
-  /**
-   * <pre>
-   * --- Phonetics core (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-   */
-  @java.lang.Override
-  public boolean hasStripTone() {
-    return methodCase_ == 11;
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.StripTone getStripTone() {
-    if (methodCase_ == 11) {
-       return (com.siansiansu.taigikeyboard.engine.proto.StripTone) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.StripTone.getDefaultInstance();
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-   */
-  private void setStripTone(com.siansiansu.taigikeyboard.engine.proto.StripTone value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 11;
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-   */
-  private void mergeStripTone(com.siansiansu.taigikeyboard.engine.proto.StripTone value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 11 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.StripTone.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.StripTone.newBuilder((com.siansiansu.taigikeyboard.engine.proto.StripTone) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 11;
-  }
-  /**
-   * <pre>
-   * --- Phonetics core (4 ops) ---
-   * </pre>
-   *
-   * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-   */
-  private void clearStripTone() {
-    if (methodCase_ == 11) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
   public static final int TL_TO_POJ_FIELD_NUMBER = 13;
   /**
+   * <pre>
+   * --- Phonetics core (2 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
    */
   @java.lang.Override
@@ -151,6 +85,10 @@ public  final class PhoneticsRequest extends
     return methodCase_ == 13;
   }
   /**
+   * <pre>
+   * --- Phonetics core (2 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
    */
   @java.lang.Override
@@ -161,6 +99,10 @@ public  final class PhoneticsRequest extends
     return com.siansiansu.taigikeyboard.engine.proto.TlToPoj.getDefaultInstance();
   }
   /**
+   * <pre>
+   * --- Phonetics core (2 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
    */
   private void setTlToPoj(com.siansiansu.taigikeyboard.engine.proto.TlToPoj value) {
@@ -169,6 +111,10 @@ public  final class PhoneticsRequest extends
     methodCase_ = 13;
   }
   /**
+   * <pre>
+   * --- Phonetics core (2 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
    */
   private void mergeTlToPoj(com.siansiansu.taigikeyboard.engine.proto.TlToPoj value) {
@@ -183,6 +129,10 @@ public  final class PhoneticsRequest extends
     methodCase_ = 13;
   }
   /**
+   * <pre>
+   * --- Phonetics core (2 ops) ---
+   * </pre>
+   *
    * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
    */
   private void clearTlToPoj() {
@@ -237,56 +187,6 @@ public  final class PhoneticsRequest extends
    */
   private void clearGetToneVariations() {
     if (methodCase_ == 18) {
-      methodCase_ = 0;
-      method_ = null;
-    }
-  }
-
-  public static final int NFD_PREPROCESS_FOR_LOOKUP_FIELD_NUMBER = 19;
-  /**
-   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-   */
-  @java.lang.Override
-  public boolean hasNfdPreprocessForLookup() {
-    return methodCase_ == 19;
-  }
-  /**
-   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-   */
-  @java.lang.Override
-  public com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup getNfdPreprocessForLookup() {
-    if (methodCase_ == 19) {
-       return (com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup) method_;
-    }
-    return com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.getDefaultInstance();
-  }
-  /**
-   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-   */
-  private void setNfdPreprocessForLookup(com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup value) {
-    java.util.Objects.requireNonNull(value);
-    method_ = value;
-    methodCase_ = 19;
-  }
-  /**
-   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-   */
-  private void mergeNfdPreprocessForLookup(com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup value) {
-    java.util.Objects.requireNonNull(value);
-    if (methodCase_ == 19 &&
-        method_ != com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.getDefaultInstance()) {
-      method_ = com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.newBuilder((com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup) method_)
-          .mergeFrom(value).buildPartial();
-    } else {
-      method_ = value;
-    }
-    methodCase_ = 19;
-  }
-  /**
-   * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-   */
-  private void clearNfdPreprocessForLookup() {
-    if (methodCase_ == 19) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -512,6 +412,126 @@ public  final class PhoneticsRequest extends
     }
   }
 
+  public static final int IS_ATTACHING_PUNCTUATION_FIELD_NUMBER = 40;
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   */
+  @java.lang.Override
+  public boolean hasIsAttachingPunctuation() {
+    return methodCase_ == 40;
+  }
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation getIsAttachingPunctuation() {
+    if (methodCase_ == 40) {
+       return (com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   */
+  private void setIsAttachingPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 40;
+  }
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   */
+  private void mergeIsAttachingPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 40 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.newBuilder((com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 40;
+  }
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   */
+  private void clearIsAttachingPunctuation() {
+    if (methodCase_ == 40) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int EXTERNAL_LOOKUP_DIGIT_FORM_FIELD_NUMBER = 41;
+  /**
+   * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+   */
+  @java.lang.Override
+  public boolean hasExternalLookupDigitForm() {
+    return methodCase_ == 41;
+  }
+  /**
+   * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm getExternalLookupDigitForm() {
+    if (methodCase_ == 41) {
+       return (com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.getDefaultInstance();
+  }
+  /**
+   * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+   */
+  private void setExternalLookupDigitForm(com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 41;
+  }
+  /**
+   * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+   */
+  private void mergeExternalLookupDigitForm(com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 41 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.newBuilder((com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 41;
+  }
+  /**
+   * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+   */
+  private void clearExternalLookupDigitForm() {
+    if (methodCase_ == 41) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
   public static com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
@@ -623,77 +643,9 @@ public  final class PhoneticsRequest extends
 
     /**
      * <pre>
-     * --- Phonetics core (4 ops) ---
+     * --- Phonetics core (2 ops) ---
      * </pre>
      *
-     * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-     */
-    @java.lang.Override
-    public boolean hasStripTone() {
-      return instance.hasStripTone();
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (4 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.StripTone getStripTone() {
-      return instance.getStripTone();
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (4 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-     */
-    public Builder setStripTone(com.siansiansu.taigikeyboard.engine.proto.StripTone value) {
-      copyOnWrite();
-      instance.setStripTone(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (4 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-     */
-    public Builder setStripTone(
-        com.siansiansu.taigikeyboard.engine.proto.StripTone.Builder builderForValue) {
-      copyOnWrite();
-      instance.setStripTone(builderForValue.build());
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (4 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-     */
-    public Builder mergeStripTone(com.siansiansu.taigikeyboard.engine.proto.StripTone value) {
-      copyOnWrite();
-      instance.mergeStripTone(value);
-      return this;
-    }
-    /**
-     * <pre>
-     * --- Phonetics core (4 ops) ---
-     * </pre>
-     *
-     * <code>.taigi.engine.StripTone strip_tone = 11;</code>
-     */
-    public Builder clearStripTone() {
-      copyOnWrite();
-      instance.clearStripTone();
-      return this;
-    }
-
-    /**
      * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
      */
     @java.lang.Override
@@ -701,6 +653,10 @@ public  final class PhoneticsRequest extends
       return instance.hasTlToPoj();
     }
     /**
+     * <pre>
+     * --- Phonetics core (2 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
      */
     @java.lang.Override
@@ -708,6 +664,10 @@ public  final class PhoneticsRequest extends
       return instance.getTlToPoj();
     }
     /**
+     * <pre>
+     * --- Phonetics core (2 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
      */
     public Builder setTlToPoj(com.siansiansu.taigikeyboard.engine.proto.TlToPoj value) {
@@ -716,6 +676,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Phonetics core (2 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
      */
     public Builder setTlToPoj(
@@ -725,6 +689,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Phonetics core (2 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
      */
     public Builder mergeTlToPoj(com.siansiansu.taigikeyboard.engine.proto.TlToPoj value) {
@@ -733,6 +701,10 @@ public  final class PhoneticsRequest extends
       return this;
     }
     /**
+     * <pre>
+     * --- Phonetics core (2 ops) ---
+     * </pre>
+     *
      * <code>.taigi.engine.TlToPoj tl_to_poj = 13;</code>
      */
     public Builder clearTlToPoj() {
@@ -786,54 +758,6 @@ public  final class PhoneticsRequest extends
     public Builder clearGetToneVariations() {
       copyOnWrite();
       instance.clearGetToneVariations();
-      return this;
-    }
-
-    /**
-     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-     */
-    @java.lang.Override
-    public boolean hasNfdPreprocessForLookup() {
-      return instance.hasNfdPreprocessForLookup();
-    }
-    /**
-     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-     */
-    @java.lang.Override
-    public com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup getNfdPreprocessForLookup() {
-      return instance.getNfdPreprocessForLookup();
-    }
-    /**
-     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-     */
-    public Builder setNfdPreprocessForLookup(com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup value) {
-      copyOnWrite();
-      instance.setNfdPreprocessForLookup(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-     */
-    public Builder setNfdPreprocessForLookup(
-        com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.Builder builderForValue) {
-      copyOnWrite();
-      instance.setNfdPreprocessForLookup(builderForValue.build());
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-     */
-    public Builder mergeNfdPreprocessForLookup(com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup value) {
-      copyOnWrite();
-      instance.mergeNfdPreprocessForLookup(value);
-      return this;
-    }
-    /**
-     * <code>.taigi.engine.NfdPreprocessForLookup nfd_preprocess_for_lookup = 19;</code>
-     */
-    public Builder clearNfdPreprocessForLookup() {
-      copyOnWrite();
-      instance.clearNfdPreprocessForLookup();
       return this;
     }
 
@@ -1053,6 +977,126 @@ public  final class PhoneticsRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    @java.lang.Override
+    public boolean hasIsAttachingPunctuation() {
+      return instance.hasIsAttachingPunctuation();
+    }
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation getIsAttachingPunctuation() {
+      return instance.getIsAttachingPunctuation();
+    }
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    public Builder setIsAttachingPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation value) {
+      copyOnWrite();
+      instance.setIsAttachingPunctuation(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    public Builder setIsAttachingPunctuation(
+        com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.Builder builderForValue) {
+      copyOnWrite();
+      instance.setIsAttachingPunctuation(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    public Builder mergeIsAttachingPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation value) {
+      copyOnWrite();
+      instance.mergeIsAttachingPunctuation(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    public Builder clearIsAttachingPunctuation() {
+      copyOnWrite();
+      instance.clearIsAttachingPunctuation();
+      return this;
+    }
+
+    /**
+     * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+     */
+    @java.lang.Override
+    public boolean hasExternalLookupDigitForm() {
+      return instance.hasExternalLookupDigitForm();
+    }
+    /**
+     * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm getExternalLookupDigitForm() {
+      return instance.getExternalLookupDigitForm();
+    }
+    /**
+     * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+     */
+    public Builder setExternalLookupDigitForm(com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm value) {
+      copyOnWrite();
+      instance.setExternalLookupDigitForm(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+     */
+    public Builder setExternalLookupDigitForm(
+        com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.Builder builderForValue) {
+      copyOnWrite();
+      instance.setExternalLookupDigitForm(builderForValue.build());
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+     */
+    public Builder mergeExternalLookupDigitForm(com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm value) {
+      copyOnWrite();
+      instance.mergeExternalLookupDigitForm(value);
+      return this;
+    }
+    /**
+     * <code>.taigi.engine.ExternalLookupDigitForm external_lookup_digit_form = 41;</code>
+     */
+    public Builder clearExternalLookupDigitForm() {
+      copyOnWrite();
+      instance.clearExternalLookupDigitForm();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.PhoneticsRequest)
   }
   @java.lang.Override
@@ -1071,18 +1115,18 @@ public  final class PhoneticsRequest extends
           java.lang.Object[] objects = new java.lang.Object[] {
             "method_",
             "methodCase_",
-            com.siansiansu.taigikeyboard.engine.proto.StripTone.class,
             com.siansiansu.taigikeyboard.engine.proto.TlToPoj.class,
             com.siansiansu.taigikeyboard.engine.proto.GetToneVariations.class,
-            com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup.class,
             com.siansiansu.taigikeyboard.engine.proto.TlNumericToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.class,
             com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.class,
+            com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.class,
+            com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\u000b#\b\u0000\u0000\u0000\u000b<\u0000\r<\u0000\u0012<\u0000" +
-              "\u0013<\u0000 <\u0000!<\u0000\"<\u0000#<\u0000";
+              "\u0000\b\u0001\u0000\r)\b\u0000\u0000\u0000\r<\u0000\u0012<\u0000 <\u0000!<\u0000" +
+              "\"<\u0000#<\u0000(<\u0000)<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

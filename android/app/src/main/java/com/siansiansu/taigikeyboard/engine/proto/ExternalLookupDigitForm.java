@@ -6,108 +6,116 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 /**
- * Protobuf type {@code taigi.engine.StripTone}
+ * <pre>
+ * `ExternalLookupDigitForm` — the digit-tone spelling of a TL reading that
+ * the MOE dictionary and ChhoeTaigi search by: lowercased, split on `-`
+ * only, per syllable the nasal marks as `nn`, POJ `o͘` as `oo`, the tone as
+ * a trailing ASCII digit with tones 1 and 4 omitted, NFC (`tāi-tsì` →
+ * `tai7-tsi3`). Answers `StringResult`; the URL itself is the platform's.
+ * </pre>
+ *
+ * Protobuf type {@code taigi.engine.ExternalLookupDigitForm}
  */
 @com.google.protobuf.Generated
-public  final class StripTone extends
+public  final class ExternalLookupDigitForm extends
     com.google.protobuf.GeneratedMessageLite<
-        StripTone, StripTone.Builder> implements
-    // @@protoc_insertion_point(message_implements:taigi.engine.StripTone)
-    StripToneOrBuilder {
-  private StripTone() {
-    input_ = "";
+        ExternalLookupDigitForm, ExternalLookupDigitForm.Builder> implements
+    // @@protoc_insertion_point(message_implements:taigi.engine.ExternalLookupDigitForm)
+    ExternalLookupDigitFormOrBuilder {
+  private ExternalLookupDigitForm() {
+    reading_ = "";
   }
-  public static final int INPUT_FIELD_NUMBER = 1;
-  private java.lang.String input_;
+  public static final int READING_FIELD_NUMBER = 1;
+  private java.lang.String reading_;
   /**
-   * <code>string input = 1;</code>
-   * @return The input.
+   * <code>string reading = 1;</code>
+   * @return The reading.
    */
   @java.lang.Override
-  public java.lang.String getInput() {
-    return input_;
+  public java.lang.String getReading() {
+    return reading_;
   }
   /**
-   * <code>string input = 1;</code>
-   * @return The bytes for input.
+   * <code>string reading = 1;</code>
+   * @return The bytes for reading.
    */
   @java.lang.Override
   public com.google.protobuf.ByteString
-      getInputBytes() {
-    return com.google.protobuf.ByteString.copyFromUtf8(input_);
+      getReadingBytes() {
+    return com.google.protobuf.ByteString.copyFromUtf8(reading_);
   }
   /**
-   * <code>string input = 1;</code>
-   * @param value The input to set.
+   * <code>string reading = 1;</code>
+   * @param value The reading to set.
    */
-  private void setInput(
+  private void setReading(
       java.lang.String value) {
     java.util.Objects.requireNonNull(value);
 
-    input_ = value;
+    reading_ = value;
   }
   /**
-   * <code>string input = 1;</code>
+   * <code>string reading = 1;</code>
    */
-  private void clearInput() {
+  private void clearReading() {
 
-    input_ = getDefaultInstance().getInput();
+    reading_ = getDefaultInstance().getReading();
   }
   /**
-   * <code>string input = 1;</code>
-   * @param value The bytes for input to set.
+   * <code>string reading = 1;</code>
+   * @param value The bytes for reading to set.
    */
-  private void setInputBytes(
+  private void setReadingBytes(
       com.google.protobuf.ByteString value) {
     checkByteStringIsUtf8(value);
-    input_ = value.toStringUtf8();
+    reading_ = value.toStringUtf8();
 
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseFrom(
       java.nio.ByteBuffer data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseFrom(
       java.nio.ByteBuffer data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseFrom(
       com.google.protobuf.ByteString data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseFrom(
       com.google.protobuf.ByteString data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseFrom(byte[] data)
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseFrom(byte[] data)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseFrom(
       byte[] data,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws com.google.protobuf.InvalidProtocolBufferException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, data, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseFrom(java.io.InputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -115,24 +123,24 @@ public  final class StripTone extends
         DEFAULT_INSTANCE, input, extensionRegistry);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseDelimitedFrom(java.io.InputStream input)
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseDelimitedFrom(java.io.InputStream input)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseDelimitedFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseDelimitedFrom(
       java.io.InputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
     return parseDelimitedFrom(DEFAULT_INSTANCE, input, extensionRegistry);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseFrom(
       com.google.protobuf.CodedInputStream input)
       throws java.io.IOException {
     return com.google.protobuf.GeneratedMessageLite.parseFrom(
         DEFAULT_INSTANCE, input);
   }
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone parseFrom(
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm parseFrom(
       com.google.protobuf.CodedInputStream input,
       com.google.protobuf.ExtensionRegistryLite extensionRegistry)
       throws java.io.IOException {
@@ -143,74 +151,82 @@ public  final class StripTone extends
   public static Builder newBuilder() {
     return (Builder) DEFAULT_INSTANCE.createBuilder();
   }
-  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.StripTone prototype) {
+  public static Builder newBuilder(com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm prototype) {
     return DEFAULT_INSTANCE.createBuilder(prototype);
   }
 
   /**
-   * Protobuf type {@code taigi.engine.StripTone}
+   * <pre>
+   * `ExternalLookupDigitForm` — the digit-tone spelling of a TL reading that
+   * the MOE dictionary and ChhoeTaigi search by: lowercased, split on `-`
+   * only, per syllable the nasal marks as `nn`, POJ `o͘` as `oo`, the tone as
+   * a trailing ASCII digit with tones 1 and 4 omitted, NFC (`tāi-tsì` →
+   * `tai7-tsi3`). Answers `StringResult`; the URL itself is the platform's.
+   * </pre>
+   *
+   * Protobuf type {@code taigi.engine.ExternalLookupDigitForm}
    */
   public static final class Builder extends
       com.google.protobuf.GeneratedMessageLite.Builder<
-        com.siansiansu.taigikeyboard.engine.proto.StripTone, Builder> implements
-      // @@protoc_insertion_point(builder_implements:taigi.engine.StripTone)
-      com.siansiansu.taigikeyboard.engine.proto.StripToneOrBuilder {
-    // Construct using com.siansiansu.taigikeyboard.engine.proto.StripTone.newBuilder()
+        com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm, Builder> implements
+      // @@protoc_insertion_point(builder_implements:taigi.engine.ExternalLookupDigitForm)
+      com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitFormOrBuilder {
+    // Construct using com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.newBuilder()
     private Builder() {
       super(DEFAULT_INSTANCE);
     }
 
 
     /**
-     * <code>string input = 1;</code>
-     * @return The input.
+     * <code>string reading = 1;</code>
+     * @return The reading.
      */
     @java.lang.Override
-    public java.lang.String getInput() {
-      return instance.getInput();
+    public java.lang.String getReading() {
+      return instance.getReading();
     }
     /**
-     * <code>string input = 1;</code>
-     * @return The bytes for input.
+     * <code>string reading = 1;</code>
+     * @return The bytes for reading.
      */
     @java.lang.Override
     public com.google.protobuf.ByteString
-        getInputBytes() {
-      return instance.getInputBytes();
+        getReadingBytes() {
+      return instance.getReadingBytes();
     }
     /**
-     * <code>string input = 1;</code>
-     * @param value The input to set.
+     * <code>string reading = 1;</code>
+     * @param value The reading to set.
      * @return This builder for chaining.
      */
-    public Builder setInput(
+    public Builder setReading(
         java.lang.String value) {
       copyOnWrite();
-      instance.setInput(value);
+      instance.setReading(value);
       return this;
     }
     /**
-     * <code>string input = 1;</code>
+     * <code>string reading = 1;</code>
      * @return This builder for chaining.
      */
-    public Builder clearInput() {
+    public Builder clearReading() {
       copyOnWrite();
-      instance.clearInput();
+      instance.clearReading();
       return this;
     }
     /**
-     * <code>string input = 1;</code>
-     * @param value The bytes for input to set.
+     * <code>string reading = 1;</code>
+     * @param value The bytes for reading to set.
      * @return This builder for chaining.
      */
-    public Builder setInputBytes(
+    public Builder setReadingBytes(
         com.google.protobuf.ByteString value) {
       copyOnWrite();
-      instance.setInputBytes(value);
+      instance.setReadingBytes(value);
       return this;
     }
 
-    // @@protoc_insertion_point(builder_scope:taigi.engine.StripTone)
+    // @@protoc_insertion_point(builder_scope:taigi.engine.ExternalLookupDigitForm)
   }
   @java.lang.Override
   @java.lang.SuppressWarnings({"ThrowNull"})
@@ -219,14 +235,14 @@ public  final class StripTone extends
       java.lang.Object arg0, java.lang.Object arg1) {
     switch (method) {
       case NEW_MUTABLE_INSTANCE: {
-        return new com.siansiansu.taigikeyboard.engine.proto.StripTone();
+        return new com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm();
       }
       case NEW_BUILDER: {
         return new Builder();
       }
       case BUILD_MESSAGE_INFO: {
           java.lang.Object[] objects = new java.lang.Object[] {
-            "input_",
+            "reading_",
           };
           java.lang.String info =
               "\u0000\u0001\u0000\u0000\u0001\u0001\u0001\u0000\u0000\u0000\u0001\u0208";
@@ -236,13 +252,13 @@ public  final class StripTone extends
         return DEFAULT_INSTANCE;
       }
       case GET_PARSER: {
-        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.StripTone> parser = PARSER;
+        com.google.protobuf.Parser<com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm> parser = PARSER;
         if (parser == null) {
-          synchronized (com.siansiansu.taigikeyboard.engine.proto.StripTone.class) {
+          synchronized (com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm.class) {
             parser = PARSER;
             if (parser == null) {
               parser =
-                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.StripTone>(
+                  new DefaultInstanceBasedParser<com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm>(
                       DEFAULT_INSTANCE);
               PARSER = parser;
             }
@@ -262,24 +278,24 @@ public  final class StripTone extends
   }
 
 
-  // @@protoc_insertion_point(class_scope:taigi.engine.StripTone)
-  private static final com.siansiansu.taigikeyboard.engine.proto.StripTone DEFAULT_INSTANCE;
+  // @@protoc_insertion_point(class_scope:taigi.engine.ExternalLookupDigitForm)
+  private static final com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm DEFAULT_INSTANCE;
   static {
-    StripTone defaultInstance = new StripTone();
+    ExternalLookupDigitForm defaultInstance = new ExternalLookupDigitForm();
     // New instances are implicitly immutable so no need to make
     // immutable.
     DEFAULT_INSTANCE = defaultInstance;
     com.google.protobuf.GeneratedMessageLite.registerDefaultInstance(
-      StripTone.class, defaultInstance);
+      ExternalLookupDigitForm.class, defaultInstance);
   }
 
-  public static com.siansiansu.taigikeyboard.engine.proto.StripTone getDefaultInstance() {
+  public static com.siansiansu.taigikeyboard.engine.proto.ExternalLookupDigitForm getDefaultInstance() {
     return DEFAULT_INSTANCE;
   }
 
-  private static volatile com.google.protobuf.Parser<StripTone> PARSER;
+  private static volatile com.google.protobuf.Parser<ExternalLookupDigitForm> PARSER;
 
-  public static com.google.protobuf.Parser<StripTone> parser() {
+  public static com.google.protobuf.Parser<ExternalLookupDigitForm> parser() {
     return DEFAULT_INSTANCE.getParserForType();
   }
 }

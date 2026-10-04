@@ -15,6 +15,7 @@ import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputMethodManager
 import com.siansiansu.taigikeyboard.R
 import com.siansiansu.taigikeyboard.engine.RustEngineBridge
+import com.siansiansu.taigikeyboard.engine.isAttachingPunctuation
 import com.siansiansu.taigikeyboard.engine.isTpsToneMark
 import com.siansiansu.taigikeyboard.engine.transformInputCase
 import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
@@ -22,7 +23,6 @@ import com.siansiansu.taigikeyboard.ime.core.logging.debug
 import com.siansiansu.taigikeyboard.ime.core.logging.tdebug
 import com.siansiansu.taigikeyboard.ime.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
-import com.siansiansu.taigikeyboard.ime.text.AutoSpacePunctuation
 import com.siansiansu.taigikeyboard.ime.text.CandidateUpdateCoordinator
 import com.siansiansu.taigikeyboard.ime.text.CapsStateManager
 import com.siansiansu.taigikeyboard.ime.text.CharacterInputPipeline
@@ -608,7 +608,7 @@ internal class TextInputKeyHandler(
         // text before the selection, not an auto-space; the punctuation must
         // replace the selection normally (Codex P2).
         if (taigikeyboard.isAutoSpaceSwapArmed &&
-            AutoSpacePunctuation.isAttaching(char) &&
+            RustEngineBridge.isAttachingPunctuation(char) &&
             ic.getSelectedText(0).isNullOrEmpty() &&
             ic.getTextBeforeCursor(1, 0)?.toString() == " "
         ) {

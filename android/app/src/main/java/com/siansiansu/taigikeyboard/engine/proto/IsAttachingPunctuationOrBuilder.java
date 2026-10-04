@@ -6,19 +6,19 @@
 package com.siansiansu.taigikeyboard.engine.proto;
 
 @com.google.protobuf.Generated
-public interface NfdPreprocessForLookupOrBuilder extends
-    // @@protoc_insertion_point(interface_extends:taigi.engine.NfdPreprocessForLookup)
+public interface IsAttachingPunctuationOrBuilder extends
+    // @@protoc_insertion_point(interface_extends:taigi.engine.IsAttachingPunctuation)
     com.google.protobuf.MessageLiteOrBuilder {
 
   /**
-   * <code>string input = 1;</code>
-   * @return The input.
+   * <code>string text = 1;</code>
+   * @return The text.
    */
-  java.lang.String getInput();
+  java.lang.String getText();
   /**
-   * <code>string input = 1;</code>
-   * @return The bytes for input.
+   * <code>string text = 1;</code>
+   * @return The bytes for text.
    */
   com.google.protobuf.ByteString
-      getInputBytes();
+      getTextBytes();
 }

@@ -45,34 +45,7 @@ pub enum DictionarySource {
     Custom,
 }
 
-/// The sources a record's `source_bitmask` names, in bit order — which is
-/// the order the badges are drawn in (iOS `LexiconBitmask.swift`). Bit 12
-/// (variant) is a filter, not a source a record wears a badge for.
-const SOURCE_BITS: [(u32, DictionarySource); 12] = [
-    (1 << 0, DictionarySource::Kautian),
-    (1 << 1, DictionarySource::Taigitv),
-    (1 << 2, DictionarySource::Itaigi),
-    (1 << 3, DictionarySource::Sitbut),
-    (1 << 4, DictionarySource::Taihoa),
-    (1 << 5, DictionarySource::Taijit),
-    (1 << 6, DictionarySource::Kungge),
-    (1 << 7, DictionarySource::Stti),
-    (1 << 8, DictionarySource::Khpoo),
-    (1 << 9, DictionarySource::Khiin),
-    (1 << 10, DictionarySource::Dev),
-    (1 << 11, DictionarySource::Lkk),
-];
-
 impl DictionarySource {
-    /// The sources a record belongs to, in bit order.
-    pub fn from_bitmask(bitmask: u32) -> Vec<Self> {
-        SOURCE_BITS
-            .iter()
-            .filter(|(bit, _)| bitmask & bit != 0)
-            .map(|(_, source)| *source)
-            .collect()
-    }
-
     /// The badge a search result wears for this source: the three
     /// supplements share one word, the custom dictionary its pane's name.
     pub fn badge_key(self) -> StringKey {
@@ -244,7 +217,9 @@ pub struct LexiconRow {
     pub roman: String,
     pub hanji: Option<String>,
     pub length_score: Option<i32>,
-    pub source_bitmask: Option<u32>,
+    /// The dictionaries the record belongs to, in the engine's (source-bit)
+    /// order — the order the badges are drawn in.
+    pub sources: Vec<DictionarySource>,
 }
 
 impl LexiconRow {
@@ -254,7 +229,11 @@ impl LexiconRow {
             roman: word.roman,
             hanji: word.hanji,
             length_score: word.length_score,
-            source_bitmask: word.source_bitmask,
+            sources: word
+                .sources
+                .into_iter()
+                .filter_map(DictionarySource::from_code)
+                .collect(),
         }
     }
 
@@ -262,10 +241,7 @@ impl LexiconRow {
     /// records first, then by length score descending, then as the engine
     /// listed them.
     pub fn sorted_for_search(rows: Vec<LexiconRow>) -> Vec<LexiconRow> {
-        let is_kautian = |row: &LexiconRow| {
-            DictionarySource::from_bitmask(row.source_bitmask.unwrap_or(0))
-                .contains(&DictionarySource::Kautian)
-        };
+        let is_kautian = |row: &LexiconRow| row.sources.contains(&DictionarySource::Kautian);
         let mut indexed: Vec<(usize, LexiconRow)> = rows.into_iter().enumerate().collect();
         indexed.sort_by(|(first_index, first), (second_index, second)| {
             is_kautian(second)
@@ -383,13 +359,13 @@ fn lexicon_response(method: lexicon_request::Method, op: &str) -> Option<Lexicon
 mod tests {
     use super::*;
 
-    fn row(index: i64, score: Option<i32>, bitmask: u32) -> LexiconRow {
+    fn row(index: i64, score: Option<i32>, source: DictionarySource) -> LexiconRow {
         LexiconRow {
             id: index,
             roman: format!("r{index}"),
             hanji: None,
             length_score: score,
-            source_bitmask: Some(bitmask),
+            sources: vec![source],
         }
     }
 
@@ -516,18 +492,23 @@ mod tests {
     }
 
     #[test]
-    fn a_bitmask_decodes_in_bit_order_and_skips_the_non_source_bits() {
-        // trace: bits 0 (kautian), 9 (khiin), 11 (lkk), 12 (variant: not a
-        // badge source) → [Kautian, Khiin, Lkk].
+    fn wire_sources_keep_the_engine_order_and_drop_unknown_codes() {
+        // trace: codes 1 (kautian), 10 (khiin), 12 (dev), 11 (lkk) in the
+        // engine's bit order; 0 (unspecified) and 999 (a newer engine's
+        // source) are dropped by `from_code`.
+        let word = TaigiWord {
+            sources: vec![1, 10, 12, 11, 0, 999],
+            ..TaigiWord::default()
+        };
         assert_eq!(
-            DictionarySource::from_bitmask((1 << 0) | (1 << 9) | (1 << 11) | (1 << 12)),
+            LexiconRow::from_wire(word).sources,
             vec![
                 DictionarySource::Kautian,
                 DictionarySource::Khiin,
+                DictionarySource::Dev,
                 DictionarySource::Lkk
             ]
         );
-        assert!(DictionarySource::from_bitmask(0).is_empty());
     }
 
     #[test]
@@ -535,11 +516,11 @@ mod tests {
         // trace: DictionarySearchService.Ordering — kautian beats a higher
         // score; among kautian rows the higher score wins; ties keep order.
         let rows = vec![
-            row(0, Some(9), 1 << 1),
-            row(1, Some(2), 1 << 0),
-            row(2, Some(5), 1 << 0),
-            row(3, Some(5), 1 << 0),
-            row(4, None, 1 << 2),
+            row(0, Some(9), DictionarySource::Taigitv),
+            row(1, Some(2), DictionarySource::Kautian),
+            row(2, Some(5), DictionarySource::Kautian),
+            row(3, Some(5), DictionarySource::Kautian),
+            row(4, None, DictionarySource::Itaigi),
         ];
         let ids: Vec<i64> = LexiconRow::sorted_for_search(rows)
             .into_iter()

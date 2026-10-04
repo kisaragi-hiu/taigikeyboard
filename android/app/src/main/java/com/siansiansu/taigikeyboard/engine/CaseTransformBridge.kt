@@ -1,10 +1,9 @@
 // Case-transform ops — extensions on RustEngineBridge that delegate char/string case handling
 // (including POJ/TL tone-mark case mapping) to Rust `phonetics::case_transform`; iOS counterpart is
-// `RustEngineBridge+CaseTransform.swift`. Single FFI hop per per-char or per-word case operation.
+// `RustEngineBridge+CaseTransform.swift`. Single FFI hop per per-char or per-string case operation.
 // Mode and ⁿ-becomes-ᴺ-in-capitals (§53) are forwarded via the envelope `AppConfig`; case-transform is independent
-// of POJ doubletap preprocessing so the fold fields are left off. Suggestion skip rules
-// (`id < 0 && id != -2` and `id == 0`) stay platform-side — only transform-eligible items reach
-// `transformCandidateCase(...)`. The `LetterCase` indicator lives on `RustEngineBridge.LetterCase`.
+// of POJ doubletap preprocessing so the fold fields are left off. The `LetterCase` indicator lives on
+// `RustEngineBridge.LetterCase`.
 
 package com.siansiansu.taigikeyboard.engine
 
@@ -13,7 +12,6 @@ import com.siansiansu.taigikeyboard.engine.proto.CaseRequest
 import com.siansiansu.taigikeyboard.engine.proto.CaseResponse
 import com.siansiansu.taigikeyboard.engine.proto.FullUppercaseToneString
 import com.siansiansu.taigikeyboard.engine.proto.LowercaseToneChar
-import com.siansiansu.taigikeyboard.engine.proto.TransformCandidateCase
 import com.siansiansu.taigikeyboard.engine.proto.TransformInputCase
 import com.siansiansu.taigikeyboard.engine.proto.UppercaseToneChar
 import com.siansiansu.taigikeyboard.ime.settings.InputMode
@@ -105,35 +103,6 @@ fun RustEngineBridge.transformInputCase(
         mode = mode,
         isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
         fallback = text,
-    )
-}
-
-/**
- * Per-suggestion case transformation. Output is post-processed via
- * engine-side `adjust_nasal_marker_case` (no separate FFI hop needed), or
- * always-lowercase `ⁿ` when "ⁿ becomes ᴺ in capitals" is off (§53).
- * CapsLock uppercases everything; otherwise the candidate is split at the composing length —
- * typed portion matches the typed case, remaining portion is title- or lower-cased.
- */
-fun RustEngineBridge.transformCandidateCase(
-    original: String,
-    composing: String,
-    letterCase: RustEngineBridge.LetterCase,
-    mode: InputMode,
-    isNasalMarkerUppercaseEnabled: Boolean,
-): String {
-    val payload = TransformCandidateCase
-        .newBuilder()
-        .setOriginalText(original)
-        .setComposingText(composing)
-        .setLetterCase(ProtoLetterCase.forNumber(letterCase.protoValue) ?: ProtoLetterCase.LETTER_CASE_UNSPECIFIED)
-        .build()
-    return caseStringDispatch(
-        CaseRequest.newBuilder().setTransformCandidateCase(payload).build(),
-        op = "transformCandidateCase",
-        mode = mode,
-        isNasalMarkerUppercaseEnabled = isNasalMarkerUppercaseEnabled,
-        fallback = original,
     )
 }
 

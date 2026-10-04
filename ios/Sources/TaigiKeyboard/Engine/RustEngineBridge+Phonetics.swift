@@ -14,37 +14,12 @@ import SwiftProtobuf
 /// helpers, so colocation keeps those helpers `private` to one file
 /// instead of widening to `internal`.
 public extension RustEngineBridge {
-    // MARK: Phonetics core (4 ops)
-
-    static func stripTone(_ input: String) -> (bare: String, tone: String) {
-        var payload = Taigi_Engine_StripTone()
-        payload.input = input
-        let resp = dispatch(method: .stripTone(payload), op: "stripTone")
-        guard case let .stripToneResult(r)? = resp?.result else {
-            recordFailure(op: "stripTone", message: "missing result")
-            return (input, "")
-        }
-        return (r.bare, r.tone)
-    }
+    // MARK: Phonetics core (2 ops)
 
     static func tlToPoj(_ input: String) -> String {
         var payload = Taigi_Engine_TlToPoj()
         payload.input = input
         return stringDispatch(method: .tlToPoj(payload), input: input, op: "tlToPoj")
-    }
-
-    /// Replaces platform `TaigiUnicode.nfdPreprocessed(_:)`. Lookup-side
-    /// NFD prep used by `ExternalLookupURLBuilder` before tone stripping.
-    /// It preserves tone diacritics; only nasal markers (ⁿ / ᴺ → "nn") and standalone
-    /// `\u{0358}` → `o` are rewritten.
-    static func nfdPreprocessForLookup(_ input: String) -> String {
-        var payload = Taigi_Engine_NfdPreprocessForLookup()
-        payload.input = input
-        return stringDispatch(
-            method: .nfdPreprocessForLookup(payload),
-            input: input,
-            op: "nfdPreprocessForLookup",
-        )
     }
 
     /// Lazy-init cache for `Method::GetToneVariations`. Swift `static let`
@@ -95,6 +70,31 @@ public extension RustEngineBridge {
         }
         let replace = r.hasReplaceLast && r.replaceLast.present ? r.replaceLast.output : nil
         return (r.adjusted, replace)
+    }
+
+    // MARK: Platform text helpers
+
+    /// Whether `text` is a single punctuation character that attaches to the
+    /// preceding word under auto-space (`guá ` + `?` → `guá? `) — the
+    /// engine's set, the one every platform asks. False when the engine
+    /// fails: no swap, the space stays where it is.
+    static func isAttachingPunctuation(_ text: String) -> Bool {
+        var payload = Taigi_Engine_IsAttachingPunctuation()
+        payload.text = text
+        return boolDispatch(method: .isAttachingPunctuation(payload), op: "isAttachingPunctuation")
+    }
+
+    /// The digit-tone spelling of a TL reading that the web dictionaries
+    /// search by (`tāi-tsì` → `tai7-tsi3`) — the engine's fold, the one every
+    /// platform asks. The reading as written when the engine fails.
+    static func externalLookupDigitForm(_ reading: String) -> String {
+        var payload = Taigi_Engine_ExternalLookupDigitForm()
+        payload.reading = reading
+        return stringDispatch(
+            method: .externalLookupDigitForm(payload),
+            input: reading,
+            op: "externalLookupDigitForm",
+        )
     }
 
     // MARK: Private dispatch (phonetics envelope)

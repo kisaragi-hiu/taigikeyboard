@@ -334,7 +334,7 @@ final class ComposingBackend {
         if let canSwapPrecedingSpace = state.canSwapPrecedingSpace,
            request.settings.isAutoSpaceEnabled,
            let attaching = attaching(),
-           AutoSpacePunctuation.isAttaching(attaching)
+           RustEngineBridge.isAttachingPunctuation(attaching)
         {
             panel.swapAvailable = canSwapPrecedingSpace()
         }

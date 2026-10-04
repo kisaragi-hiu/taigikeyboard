@@ -8,8 +8,8 @@ use phonetics::requests::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
-    AppConfig, BoolResult, GetToneVariations, IsTpsToneMark, NfdPreprocessForLookup,
-    PhoneticsRequest, PhoneticsResponse, StringResult, StripTone, StripToneResult, TlDisplayToTps,
+    AppConfig, BoolResult, ExternalLookupDigitForm, GetToneVariations, IsAttachingPunctuation,
+    IsTpsToneMark, PhoneticsRequest, PhoneticsResponse, StringResult, TlDisplayToTps,
     TlNumericToTps, TlToPoj, ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
 };
 
@@ -47,13 +47,6 @@ fn bool_result(resp: &PhoneticsResponse) -> bool {
         panic!("expected BoolResult");
     };
     *value
-}
-
-fn strip_result(resp: &PhoneticsResponse) -> (String, String) {
-    let PhonResult::StripToneResult(StripToneResult { bare, tone }) = ok_phon(resp) else {
-        panic!("expected StripToneResult");
-    };
-    (bare.clone(), tone.clone())
 }
 
 fn tps_adjust_result(resp: &PhoneticsResponse) -> (String, Option<String>) {
@@ -243,16 +236,6 @@ fn normalize_tone_poj_doubletap_toggles_stay_independent() {
 }
 
 #[test]
-fn strip_tone_returns_bare_and_tone() {
-    let resp = run(Method::StripTone(StripTone {
-        input: "hó".to_string(),
-    }));
-    let (bare, tone) = strip_result(&resp);
-    assert_eq!(bare, "ho");
-    assert_eq!(tone, "2");
-}
-
-#[test]
 fn tl_to_poj_display_round_trip() {
     let resp = run(Method::TlToPoj(TlToPoj {
         input: "hoo".to_string(),
@@ -278,19 +261,20 @@ fn get_tone_variations_returns_both_modes() {
 }
 
 #[test]
-fn nfd_preprocess_for_lookup_collapses_o_dot() {
-    let resp = run(Method::NfdPreprocessForLookup(NfdPreprocessForLookup {
-        input: "ho\u{0358}".to_string(),
-    }));
-    assert_eq!(string_result(&resp), "hoo");
-}
-
-#[test]
-fn nfd_preprocess_for_lookup_substitutes_nasal_marker() {
-    let resp = run(Method::NfdPreprocessForLookup(NfdPreprocessForLookup {
-        input: "sa\u{207f}".to_string(),
-    }));
-    assert_eq!(string_result(&resp), "sann");
+fn external_lookup_digit_form_folds_o_dot_and_nasal_marker() {
+    // trace: per syllable base form (U+0358→o, U+207F→nn), first tone mark
+    // stripped to a digit, tone 1 omitted; the full table is in
+    // `src/external_lookup.rs`.
+    for (reading, expected) in [
+        ("ho\u{0358}\u{0301}", "hoo2"),
+        ("sa\u{207f}", "sann"),
+        ("T\u{e2}i-g\u{ed}", "tai5-gi2"),
+    ] {
+        let resp = run(Method::ExternalLookupDigitForm(ExternalLookupDigitForm {
+            reading: reading.to_string(),
+        }));
+        assert_eq!(string_result(&resp), expected, "{reading:?}");
+    }
 }
 
 // ============================================================
@@ -449,6 +433,24 @@ fn is_tps_tone_mark_false_for_empty() {
         char: String::new(),
     }));
     assert!(!bool_result(&resp));
+}
+
+#[test]
+fn is_attaching_punctuation_answers_through_the_dispatcher() {
+    // trace: `punctuation::ATTACHING` holds `?` and `」`, not the opener `(`;
+    // two characters never attach.
+    for (text, expected) in [
+        ("?", true),
+        ("」", true),
+        ("(", false),
+        ("?!", false),
+        ("", false),
+    ] {
+        let resp = run(Method::IsAttachingPunctuation(IsAttachingPunctuation {
+            text: text.to_string(),
+        }));
+        assert_eq!(bool_result(&resp), expected, "{text:?}");
+    }
 }
 
 // ---- TpsInputAdjust branch coverage (mirrors commit-1 platform fixtures)

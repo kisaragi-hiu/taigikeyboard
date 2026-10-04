@@ -54,7 +54,7 @@ final class FullWidthPunctuationTests: XCTestCase {
     func testTheAmbiguousStraightQuoteAndSpace_neverMap() {
         // The straight double quote opens and closes with the same glyph, so a
         // one-to-one map cannot pick a side — the same reason
-        // `AutoSpacePunctuation` excludes it from the attaching set.
+        // the engine's auto-space attaching set excludes it.
         XCTAssertNil(FullWidthPunctuation.mapped("\""))
         XCTAssertNil(FullWidthPunctuation.mapped(" "))
     }

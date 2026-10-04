@@ -121,7 +121,7 @@ A khiin-rs-style `CMD_SET_CONFIG` (`references/khiin-rs/khiin/src/engine.rs:296`
 
 ## 7. Phonetics slice — AS-IMPLEMENTED (PR #186 + PR #187)
 
-The merged D9.4 shape uses an `oneof method` dispatch, now 8 ops grouped into 2 families (ten ops with no production caller were removed — `NormalizeTone`, `NormalizeToTl`, `RestoreTone`, `ContainsTps` on 2026-09-25; `PojToTl`, `NormalizeInput`, `DeriveNotone`, `DeriveAbbrev`, `DeriveCustomSearchKeys`, `DeriveCustomQueryKey` on 2026-09-30 — tags reserved). Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
+The merged D9.4 shape uses an `oneof method` dispatch, now 8 ops grouped into 3 families (ten ops with no production caller were removed — `NormalizeTone`, `NormalizeToTl`, `RestoreTone`, `ContainsTps` on 2026-09-25; `PojToTl`, `NormalizeInput`, `DeriveNotone`, `DeriveAbbrev`, `DeriveCustomSearchKeys`, `DeriveCustomQueryKey` on 2026-09-30 — tags reserved; `StripTone` and `NfdPreprocessForLookup`, the URL builders' two steps, were folded into `ExternalLookupDigitForm` on 2026-10-04). Canonical source: `engine/protos/proto/phonetics.proto`. Sketch:
 
 ```protobuf
 message PhoneticsRequest {
@@ -130,11 +130,12 @@ message PhoneticsRequest {
   reserved "normalize_tone", "normalize_to_tl", "restore_tone", "contains_tps";
   reserved "poj_to_tl", "normalize_input", "derive_notone", "derive_abbrev",
       "derive_custom_search_keys", "derive_custom_query_key";
+  reserved 11, 19;
+  reserved "strip_tone", "nfd_preprocess_for_lookup";
 
   oneof method {
-    // Phonetics core (4 ops): StripTone, TlToPoj, GetToneVariations,
-    // NfdPreprocessForLookup.
-    StripTone strip_tone = 11;
+    // Phonetics core (2 ops): TlToPoj, GetToneVariations.
+    TlToPoj tl_to_poj = 13;
     // ... (see phonetics.proto for full list)
 
 
@@ -142,14 +143,17 @@ message PhoneticsRequest {
     // IsTpsToneMark, TpsInputAdjust.
     TpsInputAdjust tps_input_adjust = 35;
     // ...
+
+    // Platform text helpers (2 ops): IsAttachingPunctuation,
+    // ExternalLookupDigitForm.
+    ExternalLookupDigitForm external_lookup_digit_form = 41;
   }
 }
 
 message PhoneticsResponse {
-  reserved 12;  // optional_string_result (RestoreTone only)
+  reserved 11, 12, 16;  // strip_tone_result, optional_string_result, custom_search_keys_result
   oneof result {
     StringResult string_result = 10;
-    StripToneResult strip_tone_result = 11;
     BoolResult bool_result = 13;
     ToneVariationsResult tone_variations_result = 14;
     TpsAdjustResult tps_adjust_result = 15;
@@ -158,10 +162,10 @@ message PhoneticsResponse {
 ```
 
 - **Per-op payload type** rather than a flat `string input` — lets each op carry its natural shape (e.g. `TpsInputAdjust` takes `incoming` + `raw_input`; `TlNumericToTps` takes `text` + `or_maps_to_er`).
-- **`oneof result`** with 5 result shapes covers all 8 ops: most ops return `StringResult`; `StripTone` returns the `(bare, tone)` pair; `IsTpsToneMark` uses `BoolResult`; the `CustomSearchKeysResult` arm (tag 16) was reserved with `DeriveCustomQueryKey` on 2026-09-30; the top-level `OptionalStringResult` arm (tag 12) was reserved when `RestoreTone` was removed — the message survives only inside `TpsAdjustResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
+- **`oneof result`** with 4 result shapes covers all 8 ops: most ops return `StringResult`; `IsTpsToneMark` and `IsAttachingPunctuation` use `BoolResult`; the `StripToneResult` arm (tag 11) was reserved with `StripTone` on 2026-10-04; the `CustomSearchKeysResult` arm (tag 16) was reserved with `DeriveCustomQueryKey` on 2026-09-30; the top-level `OptionalStringResult` arm (tag 12) was reserved when `RestoreTone` was removed — the message survives only inside `TpsAdjustResult`; `GetToneVariations` uses `ToneVariationsResult` (callout init-bulk-pull); `TpsInputAdjust` uses `TpsAdjustResult` carrying the adjusted char + optional `replace_last` instruction.
 - Pure, stateless. Every op is a function of its payload alone — `phonetics::requests::handle(req)` takes no `AppConfig` (the settings-reading `NormalizeTone` op was removed 2026-09-25; `phonetics::api::normalize_tone` is now called in-process by `composing::derived`).
 - Replaces both platforms' `PhoneticsConverter.swift` / `TaigiPhonetics.kt` + `InputNormalizer` + `ToneRestoration` + `TPSConverter` + `TPSAdjustmentBundle` entry points.
-- **Two ops were removed mid-flight** (`AdjustNasalMarkerCase`, `NfdPreprocess`): originally callers reverted to platform-side helpers (`ToneUtilities.adjustNasalMarkerCase` / `TaigiUnicode.nfdPreprocessed`) for Android JVM unit-test compatibility. **(Obsolete after the v3.5.3 follow-up, which deleted platform mirrors outright instead of keeping them for JVM tests.)** Path G deleted the platform mirrors + their JVM unit tests; `phonetics::api::normalize_tone` applies `adjust_nasal_marker_case` in-band as part of the normalize pipeline; `Method::NfdPreprocessForLookup` exposes the Rust helper directly. The Rust phonetics crate is now the sole owner of both algorithms.
+- **Two ops were removed mid-flight** (`AdjustNasalMarkerCase`, `NfdPreprocess`): originally callers reverted to platform-side helpers (`ToneUtilities.adjustNasalMarkerCase` / `TaigiUnicode.nfdPreprocessed`) for Android JVM unit-test compatibility. **(Obsolete after the v3.5.3 follow-up, which deleted platform mirrors outright instead of keeping them for JVM tests.)** Path G deleted the platform mirrors + their JVM unit tests; `phonetics::api::normalize_tone` applies `adjust_nasal_marker_case` in-band as part of the normalize pipeline; `Method::ExternalLookupDigitForm` runs the Rust helper inside the whole digit-tone fold (the standalone `NfdPreprocessForLookup` op went with it on 2026-10-04). The Rust phonetics crate is now the sole owner of both algorithms.
 - Thread-safe by construction (no mutable state). The unified `Mutex<Engine>` wrap from `rust-ffi-safety.md` §1.3 keeps the FFI contract uniform across slices.
 
 ---
@@ -269,13 +273,16 @@ message CaseRequest {
   // Tag 21 was `capitalize_candidate` (no production caller; removed 2026-09-25).
   reserved 21;
   reserved "capitalize_candidate";
+  // Tag 22 was `transform_candidate_case` (the platform
+  // `SuggestionCaseTransformer`s' op; removed with them 2026-10-04).
+  reserved 22;
+  reserved "transform_candidate_case";
 
   oneof method {
     UppercaseToneChar       uppercase_tone_char        = 10;
     FullUppercaseToneString full_uppercase_tone_string = 11;
     LowercaseToneChar       lowercase_tone_char        = 12;
     TransformInputCase      transform_input_case       = 20;
-    TransformCandidateCase  transform_candidate_case   = 22;
   }
 }
 
@@ -296,7 +303,7 @@ message CaseResponse {
 - **Mode comes from envelope `AppConfig.input_mode`** (per phonetics convention) — messages don't re-specify mode per call.
 - **`CaseStringResult` defined locally** rather than reusing `phonetics.proto::StringResult`. Avoids cross-module proto coupling so case-transform can evolve independently.
 - **`LetterCase` enum** carries `LETTER_CASE_UNSPECIFIED = 0` per proto3 best practice. Engine maps Unspecified to `Lowercased` as safe-fallback (matches the safe-fallback contract used by other dispatch error paths).
-- **Suggestion skip rules stay platform-side** — iOS uses `additionalInfo` flag-based markers, Android uses numeric `id` markers. Each platform's bridge filters before calling `transform_candidate_case(...)`.
+- **Candidates are not cased over this slice** — the engine cases each continuous candidate from the user's own raw input (`composing::continuous::recase_roman`); the case ops serve keystrokes, key labels and Caps Lock only.
 
 ---
 

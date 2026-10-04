@@ -1,17 +1,14 @@
 //! Golden-case integration tests for `phonetics::case_transform`.
 //!
 //! Ports the comprehensive table-driven cases from
-//! the pre-Rust iOS case-transformer tests and Android
-//! `SuggestionCaseTransformerTest.kt` into Rust; the per-platform
+//! the pre-Rust iOS case-transformer tests into Rust; the per-platform
 //! algorithm tests were deleted in the Path G platform rewiring commits.
 //!
 //! The platform-side tests post-rewire become thin bridge round-trip
 //! tests verifying FFI plumbing, NOT algorithm correctness — that
 //! responsibility lives here.
 
-use phonetics::case_transform::{
-    adjust_nasal_marker_case, transform_candidate_case, transform_input_case, LetterCase,
-};
+use phonetics::case_transform::{adjust_nasal_marker_case, transform_input_case, LetterCase};
 use phonetics::InputMode;
 
 // =========================================================================
@@ -249,94 +246,8 @@ fn poj_o_dot_lowercase() {
 }
 
 // =========================================================================
-// SuggestionCaseTransformer.transform — Android golden cases
+// Nasal marker case adjust
 // =========================================================================
-
-#[test]
-fn suggestion_caps_lock_all_uppercase_poj() {
-    assert_eq!(
-        transform_candidate_case("tâi-gí", "tai", LetterCase::CapsLocked, InputMode::Poj),
-        "TÂI-GÍ"
-    );
-}
-
-#[test]
-fn suggestion_caps_lock_all_uppercase_tl() {
-    assert_eq!(
-        transform_candidate_case("tâi-gí", "tai", LetterCase::CapsLocked, InputMode::Tl),
-        "TÂI-GÍ"
-    );
-}
-
-#[test]
-fn suggestion_caps_capitalize_next_letter_after_typed() {
-    // Typed "Tai" (3 letters) → first 3 of candidate "Tâi-gí" matchCase
-    // → "Tâi"; remaining "-gí" with caps=Uppercased → first LETTER upper
-    // → "-Gí". Final: "Tâi-Gí".
-    assert_eq!(
-        transform_candidate_case("tâi-gí", "Tai", LetterCase::Uppercased, InputMode::Poj),
-        "Tâi-Gí"
-    );
-}
-
-#[test]
-fn suggestion_caps_single_letter_remaining() {
-    // Typed "h" (1 letter) → "h" matchCase → "h"; remaining "ó" with
-    // Uppercased → "Ó" via tone table. Final: "hÓ".
-    assert_eq!(
-        transform_candidate_case("hó", "h", LetterCase::Uppercased, InputMode::Poj),
-        "hÓ"
-    );
-}
-
-#[test]
-fn suggestion_no_caps_lowercase_remainder() {
-    // Typed "Tai" → "Tâi"; remaining "-gí" with Lowercased → "-gí".
-    assert_eq!(
-        transform_candidate_case("tâi-gí", "Tai", LetterCase::Lowercased, InputMode::Poj),
-        "Tâi-gí"
-    );
-}
-
-#[test]
-fn suggestion_match_case_preserves_typed_case() {
-    assert_eq!(
-        transform_candidate_case("tâi-gí", "Tai", LetterCase::Lowercased, InputMode::Poj),
-        "Tâi-gí"
-    );
-}
-
-#[test]
-fn suggestion_match_case_all_typed() {
-    // composing "HO2" has 2 letters; candidate "hó" has 2 letters
-    // (h + ó precomposed); typed >= original → matchCase whole candidate.
-    assert_eq!(
-        transform_candidate_case("hó", "HO2", LetterCase::Lowercased, InputMode::Poj),
-        "HÓ"
-    );
-}
-
-#[test]
-fn suggestion_empty_composing_passthrough() {
-    assert_eq!(
-        transform_candidate_case("tâi-gí", "", LetterCase::Lowercased, InputMode::Poj),
-        "tâi-gí"
-    );
-}
-
-// =========================================================================
-// Nasal marker case adjust — post-process verification through transform_candidate_case
-// =========================================================================
-
-#[test]
-fn suggestion_post_process_nasal_marker_promotes_after_uppercase() {
-    // composing "AN" (2 letters upper) → candidate "an\u{207F}" 2 letters →
-    // matchCase → "AN\u{207F}" → adjust_nasal_marker_case → "AN\u{1D3A}"
-    assert_eq!(
-        transform_candidate_case("an\u{207F}", "AN", LetterCase::Lowercased, InputMode::Poj),
-        "AN\u{1D3A}"
-    );
-}
 
 #[test]
 fn nasal_adjust_direct_call_promotes_lower_after_upper() {
@@ -348,63 +259,15 @@ fn nasal_adjust_direct_call_demotes_upper_after_lower() {
     assert_eq!(adjust_nasal_marker_case("an\u{1D3A}"), "an\u{207F}");
 }
 
-// =========================================================================
-// Additional Android golden cases (Codex mid-slice review gap-fill)
-// =========================================================================
-
-#[test]
-fn suggestion_tl_tone_letter_capitalization() {
-    // SuggestionCaseTransformerTest.kt:128-132 — TL `ôo` doubled-vowel
-    // form must capitalize via TL table to "Ôo".
-    assert_eq!(
-        transform_candidate_case("ôo-peh-sai", "O", LetterCase::Lowercased, InputMode::Tl),
-        "Ôo-peh-sai"
-    );
-}
-
-#[test]
-fn suggestion_digits_not_counted_as_letters() {
-    // SuggestionCaseTransformerTest.kt:163-170 — composing "Ka2" has 2
-    // letters (k, a); digit 2 not counted. Candidate "ká" has 2 letters
-    // (k + ó precomposed). typed >= original → matchCase whole.
-    assert_eq!(
-        transform_candidate_case("ká", "Ka2", LetterCase::Lowercased, InputMode::Poj),
-        "Ká"
-    );
-}
-
-#[test]
-fn suggestion_empty_roman_unchanged() {
-    // SuggestionCaseTransformerTest.kt:172-177 — empty original returns
-    // empty regardless of caps state.
-    assert_eq!(
-        transform_candidate_case("", "tai", LetterCase::CapsLocked, InputMode::Poj),
-        ""
-    );
-}
-
 // INVARIANT_CASE_TRANSFORMER_IS_DETERMINISTIC (behavioral-invariants.md §9)
 #[test]
-fn suggestion_caps_lock_dominates_caps_flag() {
-    // SuggestionCaseTransformerTest.kt:249-258 — when capsLock=true,
-    // the value of caps doesn't matter (both produce identical output).
-    let with_caps_off = transform_candidate_case(
-        "tâi-gí",
-        "T",
-        LetterCase::CapsLocked, // CapsLocked subsumes both caps states
-        InputMode::Poj,
-    );
-    let with_caps_on = transform_candidate_case(
-        "tâi-gí",
-        "T",
-        LetterCase::CapsLocked, // same — there is no "caps + capsLock" combined state in our enum
-        InputMode::Poj,
-    );
-    assert_eq!(
-        with_caps_off, with_caps_on,
-        "CapsLocked must produce deterministic output regardless of caps interpretation"
-    );
-    assert_eq!(with_caps_off, "TÂI-GÍ");
+fn input_caps_lock_is_deterministic() {
+    // trace: CapsLocked → `full_uppercase_tone_string`; `tâi-gí` is no
+    // table key, so the stdlib upper — same output on every call.
+    let first = transform_input_case("tâi-gí", LetterCase::CapsLocked, InputMode::Poj);
+    let second = transform_input_case("tâi-gí", LetterCase::CapsLocked, InputMode::Poj);
+    assert_eq!(first, second);
+    assert_eq!(first, "TÂI-GÍ");
 }
 
 // =========================================================================
