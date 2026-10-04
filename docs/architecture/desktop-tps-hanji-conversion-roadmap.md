@@ -163,11 +163,11 @@ A glyph of an open reading costs less than a TL key does today — no walk. A ke
 - No TL or POJ test expectation changes in any phase — engine goldens, desktop-core tests, the three shells' session tests. A diff that edits one is a finding, not an update.
 - Each phase's PR runs the TL and POJ suites of every touched platform and says so; each dogfood item opens with a TL and a POJ sentence typed as before.
 
-### Arm A is still being worked on in another session (maintainer, 2026-10-05)
+### Baseline
 
-- This plan edits no arm A file: not `desktop-tps-roadmap.md`, not the TPS code. D7 as cited here is `a758ee2d`.
-- No arm B phase starts before that work has merged. H-P1 opens on a rebase and re-reads every Today row and H6's "D7 today" column against the code then; a row that moved is corrected in the phase's PR.
-- D7 and U8 are marked as revised only in H-P5, after arm B is on main.
+- The cites here are `a758ee2d`. The work other sessions had in flight when this was written has merged (#395, #397, 2026-10-05) and touched no file this plan cites; no other session is working in the repository.
+- H-P1 opens on a rebase and re-reads every Today row and H6's "D7 today" column against the code then; a row that moved is corrected in the phase's PR.
+- D7 and U8 in `desktop-tps-roadmap.md` are marked as revised only in H-P5, after arm B is on main.
 
 ## Phases
 
