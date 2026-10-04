@@ -18,7 +18,9 @@
 
 ## Active / In-flight items
 
-None. Everything scoped through 2026-10-03 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
+- **Desktop TPS — Hanji conversion in the preedit** (arm B of U8): design only, H-P0. Under TPS the preedit shows the predicted Hanji and ↓ opens the candidates of the word at the caret; TL and POJ unchanged. Implementation has not started and waits for the maintainer's word. Design: [`architecture/desktop-tps-hanji-conversion-roadmap.md`](architecture/desktop-tps-hanji-conversion-roadmap.md).
+
+Everything else scoped through 2026-10-03 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 
 ---
 
