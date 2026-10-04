@@ -146,6 +146,12 @@ fn clamped_to_work_area(point: POINT) -> POINT {
 /// has been seen to change the menu's state underneath it (mozc's IE 10
 /// note, `tip_lang_bar_menu.cc:308-310`). Alignment and button flags are
 /// left at their defaults, which are all zero.
+///
+/// Tracked under [`window::with_per_monitor_dpi`]: `OnClick`'s point is in
+/// physical pixels, which a DPI-unaware host's context read as 96-DPI ones
+/// (a bitmap-stretched menu in the screen's corner). The host's windows keep
+/// their own context in the modal loop — a window procedure runs in its
+/// window's.
 pub fn show_popup(rows: &[Option<(u32, String)>], point: POINT) -> Option<u32> {
     let owner = popup_owner()?;
     // SAFETY: a menu this call owns; `OwnedMenu` destroys it on every exit,
@@ -172,7 +178,7 @@ pub fn show_popup(rows: &[Option<(u32, String)>], point: POINT) -> Option<u32> {
     // SAFETY: the menu is ours and filled; the owner is a live window of
     // the calling thread. This runs a nested modal message loop — nothing
     // of ours is borrowed across it, the rows are already owned values.
-    let chosen = unsafe {
+    let chosen = window::with_per_monitor_dpi(|| unsafe {
         TrackPopupMenuEx(
             menu.0,
             TPM_NONOTIFY.0 | TPM_RETURNCMD.0,
@@ -181,7 +187,7 @@ pub fn show_popup(rows: &[Option<(u32, String)>], point: POINT) -> Option<u32> {
             owner,
             None,
         )
-    };
+    });
     // `TPM_RETURNCMD` returns the chosen id, or 0 for a menu the user
     // dismissed (and for an error, which is the same nothing to do).
     (chosen.0 > 0).then_some(chosen.0 as u32)

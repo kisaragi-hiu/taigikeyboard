@@ -160,10 +160,13 @@ IMEs under `references/`. "Codex:" records the ANALYSIS-ONLY verdict and what ch
   from the appearance setting or the system theme (read once, re-read on
   `WM_SETTINGCHANGE` / `WM_THEMECHANGED` / `WM_DWMCOLORIZATIONCOLORCHANGED`, never per
   keystroke). Every monitor query runs inside that same DPI scope (`GetDpiForMonitor`
-  answers per the calling thread's awareness), and so does placing the window
+  follows the calling thread's context — measured on Windows 11, while its reference page
+  still describes process awareness), and so do placing the window
   (`SetWindowPos` reads coordinates in the calling thread's context; from the key path
-  that is the host's, and an unaware host scaled the physical frame again),
-  `WM_DPICHANGED` re-anchors to the caret on
+  that is the host's, and an unaware host scaled the physical frame again) and the tray
+  menu (`TrackPopupMenuEx` read `OnClick`'s physical point as 96-DPI coordinates in an
+  unaware host and drew a bitmap-stretched menu in the screen's corner). The scope
+  restores the host's context on drop, unwinding included. `WM_DPICHANGED` re-anchors to the caret on
   the new monitor (the OS's suggested frame only when the caret is on no monitor), and a
   caret rect from a host that is not per-monitor aware is mapped through
   `LogicalToPhysicalPointForPerMonitorDPI` before use. The three layouts, metrics, paging,
