@@ -99,7 +99,7 @@ object BuiltInThemes {
             BaseColor("catppuccin", StringKey.THEME_PALETTE_CATPPUCCIN, 0x1E1E2E to 0x181825, isDarkPalette = true),
         )
 
-    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/BuiltInThemes.swift lightKeyFill/lightKeyText/darkKeyFill/darkKeyText.
+    // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Theme/BuiltInThemes.swift lightKeyFill/lightKeyText/darkKeyFill/darkKeyText.
     // Drift causes silent divergence (iOS/Android theme key colors differ).
     private const val LIGHT_KEY_FILL = 0xFFFFFF
     private const val LIGHT_KEY_TEXT = 0x1C1C1E

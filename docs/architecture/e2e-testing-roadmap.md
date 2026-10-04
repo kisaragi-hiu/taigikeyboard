@@ -23,7 +23,7 @@ USER 2026-09-24: "I need an end-to-end automated test system that lets AI open a
 |---|---|---|
 | Engine choke point | `engine/dispatch/src/lib.rs:34` `process_request` → `run` `:55` | every platform's engine call passes here (iOS/macOS `swift-ffi/src/lib.rs:50`, Android `android-jni/src/lib.rs:35`, Windows/Linux `desktop/crates/taigi-desktop-core/src/engine/bridge.rs:43`) |
 | Engine logging | `log` 0.4; sinks `swift-ffi/src/lib.rs:64-106`, `android-jni/src/lib.rs:85-142` (runtime level, default Warn) | free-text, not structured; runtime-gated, not compile-gated |
-| iOS / macOS logging | `ios/Sources/TaigiKeyboard/DebugLogger.swift:3`, `macos/Sources/TaigiInputMethodCore/Logging/DebugLogger.swift` | `#if DEBUG` `os.Logger`; no-op in release |
+| iOS / macOS logging | `ios/Sources/TaigiKeyboard/Logging/DebugLogger.swift:3`, `macos/Sources/TaigiInputMethodCore/Logging/DebugLogger.swift` | `#if DEBUG` `os.Logger`; no-op in release |
 | Android logging | `AndroidLoggerBackend.kt:31-62`, `TraceContext.kt:16-30` | `BuildConfig.DEBUG` gated |
 | Windows logging | `windows/crates/taigi-windows-platform/src/lib.rs:268-294` | `cfg(debug_assertions)` → `OutputDebugStringW` |
 | Linux logging | `linux/crates/taigikeyboard-ibus/src/main.rs:20` (`env_logger`, `RUST_LOG`), `linux/fcitx5/src/engine.cpp:27-29` (`TAIGI_DEBUG`) | **runtime-gated only — present in release** |
@@ -144,7 +144,7 @@ Each platform PR adds its row to `/e2e` and its budgets; PR sizes 200–500 LOC.
 |---|---|---|
 | Declarative key-sequence scenarios with expectations, one runner | `references/mozc/src/session/session_handler_scenario_test.cc`, `references/mozc/src/data/test/session/scenario/*.txt` | D1 scenario JSON |
 | Headless IME test harness driving key events into an input context | `references/fcitx5/test/testquickphrase.cpp:36-57` (`testfrontend` `keyEvent` + `pushCommitExpectation`) | D3 Linux: same idea, but through a real X11 client so packaging + addon loading are exercised too |
-| Debug-only logging compiled out of release | existing `DebugLogger.swift:3`, `AndroidLoggerBackend.kt:31`, `taigi-windows-platform/src/lib.rs:268` | D2 extends the same compile-time rule to the trace |
+| Debug-only logging compiled out of release | existing `Logging/DebugLogger.swift:3`, `AndroidLoggerBackend.kt:31`, `taigi-windows-platform/src/lib.rs:268` | D2 extends the same compile-time rule to the trace |
 
 Rules: an e2e failure is an observed failure and goes through the normal bugfix path; a quantitative perf gate is adopted here because the maintainer asked for performance analysis.
 

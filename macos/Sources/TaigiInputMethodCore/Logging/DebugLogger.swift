@@ -15,7 +15,7 @@
     /// Call sites therefore need no `#if DEBUG` of their own, and `@autoclosure`
     /// keeps the message string from being built at all in release.
     ///
-    /// Mirrors the iOS `DebugLogger` contract (`ios/Sources/TaigiKeyboard/DebugLogger.swift`)
+    /// Mirrors the iOS `DebugLogger` contract (`ios/Sources/TaigiKeyboard/Logging/DebugLogger.swift`)
     /// minus its trace-id plumbing, which macOS has no caller for.
     /// The `let text = message()` in each method is required, not incidental:
     /// `os.Logger`'s string interpolation takes an *escaping* autoclosure, and

@@ -65,7 +65,7 @@ data class CandidateCellText(
 val CandidateCellText.showsSubtitle: Boolean
     get() = !subtitle.isNullOrEmpty() && subtitle != title
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift displayTitle / displaySubtitle
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/Views/CandidateCellHelper.swift displayTitle / displaySubtitle
 // and the desktop PresentedCandidate one-script cells. Drift causes silent divergence
 // (one platform shows a subtitle under roman-only, or still renders the superseded one-label mixed cell).
 

@@ -111,7 +111,7 @@ override func viewDidLoad() {
 }
 ```
 
-**CompositionRoot** (`Composition/CompositionRoot.swift`) is a plain struct holding the service instances; not a framework. Views reach its pieces via plain init parameters or `@EnvironmentObject`. No `@Environment` magic beyond what SwiftUI already provides.
+**CompositionRoot** (`ServiceGraph/CompositionRoot.swift`) is a plain struct holding the service instances; not a framework. Views reach its pieces via plain init parameters or `@EnvironmentObject`. No `@Environment` magic beyond what SwiftUI already provides.
 
 **What must NOT be in the composition root**:
 - Side-effect initialization (loading `dictionary.bin`, starting Timers) — services own their own lazy load.
@@ -212,12 +212,12 @@ Sources/TaigiKeyboard/
 │   ├── ContentView.swift
 │   └── Tabs/<Feature>/{<Feature>View,<Feature>ViewModel}.swift
 ├── KeyboardExtension/        # Extension-only code (controller, setup)
-├── Composition/              # CompositionRoot (DI, §2)
+├── ServiceGraph/             # CompositionRoot (DI, §2)
 ├── Engine/                   # RustEngineBridge + RustEngineBridge+<Area>.swift (proto FFI)
 ├── Actions/                  # KK ActionHandler seams (platform-side)
-├── Autocomplete/             # Autocomplete service + views + VMs
-├── Callouts/, Emojis/, Layout/, Overlays/, Styling/    # UI only
-├── Logging/                  # Cross-cutting: LoggerBackend
+├── Candidates/               # Autocomplete service + candidate views + VMs
+├── Callouts/, Emojis/, Layout/, Overlays/, Styling/, Theme/    # UI only
+├── Logging/                  # Cross-cutting: LoggerBackend + DebugLogger
 ├── Input/                    # CharacterInputPipeline
 │   └── Composing/            # ComposingManager + ComposingDelegate (PLATFORM executor)
 ├── Lexicon/                  # Models/, Utils/ (shared-core candidates) · Services/ (platform: UserDataClient, DictionarySearchService)
@@ -368,7 +368,7 @@ These previously slipped in and were refactored out. They must not return:
 4. **Direct repository call from a View.** Always a ViewModel in between.
 5. **Singleton resurrection.** If a service is `static let shared` / `companion object INSTANCE`, it must also accept DI; do not reintroduce `shared` where DI defaults have been removed.
 6. **Combine / Flow publishers crossing target boundaries.** Extension and host app each own their own object graph.
-7. **`UIKit` / `SwiftUI` / Android SDK / Compose imports inside `Lexicon/Models/`, surviving `Autocomplete/Services/` shells, or any Foundation-only Lexicon utility file.** (Phonetics, TPS, Composing engine, NextWord engine, and case-transform are all in Rust now.) Enforced by `Foundation`-only import greps + the Rust-side `forbid(unsafe_code)` lint per `docs/contributing/rust-best-practices.md`.
+7. **`UIKit` / `SwiftUI` / Android SDK / Compose imports inside `Lexicon/Models/`, surviving `Candidates/Services/` shells, or any Foundation-only Lexicon utility file.** (Phonetics, TPS, Composing engine, NextWord engine, and case-transform are all in Rust now.) Enforced by `Foundation`-only import greps + the Rust-side `forbid(unsafe_code)` lint per `docs/contributing/rust-best-practices.md`.
 8. **Platform-bound DTOs in engine signatures.** `NextWordService.Prediction` leaking into `filterPredictions` was the Codex finding that motivated `RawNextWordPrediction`. Rule: services map their rows to shared-core DTOs at the service boundary.
 9. **`SharedPreferences` snapshot via `val`.** See §3. Every settings field must be re-read on access.
 

@@ -43,7 +43,7 @@ KeyboardKit 10+ is closed-source, so its API comes from docs, not source. Look i
 
 ### Synchronized groups auto-include new files
 
-`ios/TaigiKeyboard.xcodeproj/project.pbxproj` uses Xcode 16's `PBXFileSystemSynchronizedRootGroup` for nearly all `Sources/TaigiKeyboard/*` subdirectories (`App/`, `Actions/`, `Autocomplete/`, `Callouts/`, `Composition/`, `Emojis/`, `Engine/`, `Input/`, `Layout/`, `Lexicon/`, `Logging/`, `NextWord/`, `Overlays/`, `Settings/`, `Strings/`, `Styling/`). Files dropped under any of these paths are **auto-included** on next build. Do NOT add "user adds X to target" steps when X lives under a synced group. The list above can drift — when in doubt, audit pbxproj live (see "Folder renames" below).
+`ios/TaigiKeyboard.xcodeproj/project.pbxproj` uses Xcode 16's `PBXFileSystemSynchronizedRootGroup` for nearly all `Sources/TaigiKeyboard/*` subdirectories (`App/`, `Actions/`, `Callouts/`, `Candidates/`, `Emojis/`, `Engine/`, `Input/`, `Layout/`, `Lexicon/`, `Logging/`, `NextWord/`, `Overlays/`, `ServiceGraph/`, `Settings/`, `Strings/`, `Styling/`, `Theme/`). Files dropped under any of these paths are **auto-included** on next build. Do NOT add "user adds X to target" steps when X lives under a synced group. The list above can drift — when in doubt, audit pbxproj live (see "Folder renames" below).
 
 ### File DELETION within a synced group is auto-handled — no reminder
 

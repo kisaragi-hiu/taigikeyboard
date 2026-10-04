@@ -70,12 +70,6 @@ One line each; the linked section holds the design, the measurements and the ope
 
 None open.
 
-**Refactors (USER decisions)**
-
-| Item | Status | Where |
-|---|---|---|
-| iOS top-level folder renames (`.pbxproj` = USER-only) | not scheduled | [`architecture/maintainability-roadmap.md`](architecture/maintainability-roadmap.md) § Not scheduled |
-
 **Project and legal (USER)**
 
 | Item | Status | Where |
@@ -96,6 +90,7 @@ Apply to every change regardless of release:
 
 ## Closed phases / shipped audits
 
+- **iOS top-level folder renames** — branch `refactor/ios-folder-renames` (2026-10-04): `Composition/` → `ServiceGraph/`, `Autocomplete/` → `Candidates/`, theme files `Settings/` → `Theme/`, `DebugLogger.swift` → `Logging/`; the maintainer re-pointed the synced groups in Xcode. Source: [`reports/2026-09-30-audit-all.md`](reports/2026-09-30-audit-all.md) Appendix F.
 - **Fedora × IBus e2e** — branch `fix/fedora-ibus-e2e`: the nightly matrix runs all eight cells again. Two stacked causes: Fedora's rpm writes a system registry cache that ibus-daemon's default `--cache auto` takes before reading `IBUS_COMPONENT_PATH` (the driver now passes `--cache none`), and the engine's socket-file lookup skipped an empty `/etc/machine-id` where libibus keeps it (`taigikeyboard-ibus` `bus.rs` now mirrors `ibus_get_local_machine_id`). Detail: [`architecture/e2e-testing-roadmap.md`](architecture/e2e-testing-roadmap.md) § PR table PR4.
 - **Residual platform twins** — branch `refactor/residual-platform-twins` (audit 2026-09-30 Appendix B, callers re-verified 2026-10-04): the engine now owns the auto-space attaching set (`IsAttachingPunctuation`; the iOS / Android / macOS `AutoSpacePunctuation` and desktop-core `ATTACHING` copies are gone, macOS asks the engine directly), the external-lookup digit-tone fold (`ExternalLookupDigitForm`; URL assembly stays per platform; `StripTone` / `NfdPreprocessForLookup` retired) and each search row's sources (`TaigiWord.sources`; `source_bitmask` reserved, `LexiconBitmask` ×2 + desktop `SOURCE_BITS` gone). `SuggestionCaseTransformer` ×2 and the `TransformCandidateCase` op were deleted. Parity-corrections: mobile custom rows `ho͘2` → `hoo2` (+ NFC, ASCII tone digits) in lookup URLs; Android's second NextWord prediction is no longer ALL CAPS under Caps Lock. Found, not changed: mobile `shouldAppendAutoSpace`, macOS `FullWidthPunctuation` vs desktop-core `full_width.rs`, Android lookup URLs encode a space as `+` (iOS / desktop `%20`).
 - **Shared Swift package for macOS + iOS (open-source round 10)** — CLOSED 2026-10-04 by the maintainer, not built; the premise did not survive macOS over desktop-core. Inventory of the 19 same-named Swift files under `ios/Sources` and `macos/Sources`: the 7 `*.pb.swift` are byte-identical generated code that `checks.yml` already diffs; `DisplayLanguage` shares about 80 lines (iOS adds `resolution` for its `.lproj` bundles); every other twin genuinely diverged — `RustEngineBridge` (iOS diagnostics ring + DEBUG assert vs macOS response-id check, release log off), `RustEngineBridge+UserData` and `UserDataClient` (iOS async + typed responses vs macOS sync + paging), `EngineSettings` (iOS protocol vs macOS struct + mode enums), `DebugLogger` (subsystem, trace prefix), `StringResolver` / `DisplayLanguageStore` (`.lproj` + App Group vs generated maps + `SettingsStore`), `StringKey` / `StringResolverFormats` (per-platform i18n key scope). `RustVec+UInt8` and the bridge are also tied to each platform's own Rust archive and swift-bridge glue. macOS references only `envelope` + `user_data` proto types; the other five compile because `envelope.proto` imports them. `AutoSpacePunctuation` stays with "Residual platform twins" above.

@@ -36,7 +36,7 @@ O1 (what Space does once the syllable is closed) — decided 2026-10-03, the rec
 | The desktop classifier types only ASCII letters and `-` (plus tone digits) | `keys/intent.rs:279-281,391-393` |
 | Slot keys are bare letters (Standard) or digits (Telex), taken before any append; composing bindings (Space among them) are tier 4 | `keys/intent.rs:192-220`; `keys/slot_key_set.rs:36,59`; `keys/action.rs:100` |
 | Space is bound to Output the Other Script; under TPS `COMMIT_SCRIPT_OTHER` writes raw TL | `keys/action.rs:100`; `engine/composing/src/commit_text.rs:138-144` |
-| A candidate row's `roman` is TL; mobile shows Hanji only, or `tlDisplayToTPS(roman)` for a Hanji-less row | iOS `Autocomplete/Views/CandidateCellHelper.swift:26-38`; Android `ime/text/candidates/CandidateStripState.kt:89-92` |
+| A candidate row's `roman` is TL; mobile shows Hanji only, or `tlDisplayToTPS(roman)` for a Hanji-less row | iOS `Candidates/Views/CandidateCellHelper.swift:26-38`; Android `ime/text/candidates/CandidateStripState.kt:89-92` |
 | `raw_preedit_writes_romanization` matches `Tl \| Poj` exhaustively, so a new variant fails to compile there; its comment names TPS | `policies/auto_space.rs:39-47` |
 | No physical-key → TPS table exists in the repository | — (only reference: `references/rime-moetaigi/rime-moetaigi/moetaigi-tsuim.schema.yaml:70,87`, Dachen positions) |
 | On Windows and Linux a shifted key's `characters_ignoring_modifiers` keeps Shift (`!`, `^`, `<`), and Caps Lock uppercases letters | `windows/crates/taigi-windows-platform/src/key_translation.rs:175-188`; `linux/crates/taigi-linux-platform/src/key_translation.rs:97-105` |

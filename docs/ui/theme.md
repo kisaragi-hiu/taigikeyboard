@@ -22,7 +22,7 @@ Shipped in v3.6.2 (`changelog/mobile-v3.6.2.md`) as the Theme tab of the main ap
 
 ### Built-in catalog
 
-Three key-style **families** over one shared set of 7 colours (`ios/Sources/TaigiKeyboard/Settings/BuiltInThemes.swift`, Android `ime/theme/BuiltInThemes.kt`):
+Three key-style **families** over one shared set of 7 colours (`ios/Sources/TaigiKeyboard/Theme/BuiltInThemes.swift`, Android `ime/theme/BuiltInThemes.kt`):
 
 | Family | Key rendering |
 |---|---|
@@ -34,7 +34,7 @@ Colours per family: Default (adaptive, follows light/dark), five light-only soft
 
 ### Custom themes
 
-`Create New…` on the custom shelf opens the editor (`App/Tabs/Theme/ThemeEditorView.swift` + `ThemeEditorViewModel.swift`; Android `ui/tabs/theme/ThemeEditorScreen.kt` hosted by `settings/ThemeEditorActivity.kt`). A custom theme captures one `ThemeAppearance` bundle (`Settings/KeyboardThemeModels.swift`, Android `ime/theme/ThemeAppearance.kt`): the background surface + five role colours (`KeyboardColorSettings`), the five size scalars, and `keyShadowIntensity`. Up to `UserThemeStore.maxUserThemes = 5` (`Settings/UserThemeStore.swift`; Android `ime/theme/UserThemeStore.kt` `MAX_USER_THEMES`). A live keyboard preview (`KeyboardPreviewPanel.swift` / `ThemePreviewEnvironment.swift`; Android `ui/tabs/layout/KeyboardPreviewPanel.kt`) is pinned in the editor, always rendered light like the user theme on the keyboard. A chevron bar above it folds the preview away so the settings list gets the whole screen (USER 2026-09-28; both platforms, TalkBack / VoiceOver label Expand Preview / Collapse Preview).
+`Create New…` on the custom shelf opens the editor (`App/Tabs/Theme/ThemeEditorView.swift` + `ThemeEditorViewModel.swift`; Android `ui/tabs/theme/ThemeEditorScreen.kt` hosted by `settings/ThemeEditorActivity.kt`). A custom theme captures one `ThemeAppearance` bundle (`Theme/KeyboardThemeModels.swift`, Android `ime/theme/ThemeAppearance.kt`): the background surface + five role colours (`KeyboardColorSettings`), the five size scalars, and `keyShadowIntensity`. Up to `UserThemeStore.maxUserThemes = 5` (`Theme/UserThemeStore.swift`; Android `ime/theme/UserThemeStore.kt` `MAX_USER_THEMES`). A live keyboard preview (`KeyboardPreviewPanel.swift` / `ThemePreviewEnvironment.swift`; Android `ui/tabs/layout/KeyboardPreviewPanel.kt`) is pinned in the editor, always rendered light like the user theme on the keyboard. A chevron bar above it folds the preview away so the settings list gets the whole screen (USER 2026-09-28; both platforms, TalkBack / VoiceOver label Expand Preview / Collapse Preview).
 
 **Editor order** (USER 2026-09-19, three sections = three surfaces; both platforms): **Background** — segmented Solid / Gradient / Photo, then the solid colour row, or the Start Color / End Color rows (no Direction row — the direction is the pointer on the pinned preview), or the Choose Photo / Change Photo picker row + a Fade slider · **Keys** — Key Fill · Key Text · Key Corner Radius · Key Border Width · Key Shadow · Keyboard Height · Key Font Size · **Candidate Bar** — Candidate Text · Candidate Text Size · Reset to Defaults · pinned preview. The candidate bar has no colour of its own: it is the same surface as the keyboard.
 
@@ -42,7 +42,7 @@ Colours per family: Default (adaptive, follows light/dark), five light-only soft
 
 ### Background surface
 
-`KeyboardColorSettings.background: ThemeBackground?` is the ONE field that paints the keyboard + candidate-bar surface (`Settings/KeyboardColorSettings.swift`; Android `ime/theme/KeyboardColorSettings.kt` sealed `ThemeBackground`). `nil` = adaptive (KeyboardKit's dynamic background, Liquid Glass eligible; Android `?keyboard_bgColor` — the Filled Default head only).
+`KeyboardColorSettings.background: ThemeBackground?` is the ONE field that paints the keyboard + candidate-bar surface (`Theme/KeyboardColorSettings.swift`; Android `ime/theme/KeyboardColorSettings.kt` sealed `ThemeBackground`). `nil` = adaptive (KeyboardKit's dynamic background, Liquid Glass eligible; Android `?keyboard_bgColor` — the Filled Default head only).
 
 | Case | JSON | Render (iOS) | Render (Android) |
 |---|---|---|---|
@@ -58,7 +58,7 @@ Slider range 0…4 in 0.5 steps (`App/Tabs/Theme/ThemeControlRows.swift` `ThemeS
 
 ### Resolution and storage
 
-| Piece | iOS (`Settings/`) | Android (`ime/theme/`) |
+| Piece | iOS (`Theme/`) | Android (`ime/theme/`) |
 |---|---|---|
 | Theme id + selection | `KeyboardThemeModels.swift` `ThemeId` | `ThemeId.kt` |
 | Built-in catalog | `BuiltInThemes.swift` | `BuiltInThemes.kt` |

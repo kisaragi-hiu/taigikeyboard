@@ -4,7 +4,7 @@ paths:
   - "ios/Sources/TaigiKeyboard/Input/Composing/**"
   - "ios/Sources/TaigiKeyboard/Lexicon/Services/**"
   - "ios/Sources/TaigiKeyboard/NextWord/**"
-  - "ios/Sources/TaigiKeyboard/Composition/**"
+  - "ios/Sources/TaigiKeyboard/ServiceGraph/**"
 ---
 
 # iOS Settings Injection

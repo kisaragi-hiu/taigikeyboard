@@ -77,7 +77,7 @@ data class TaigiWord(
          */
         const val CANONICAL_TL = "canonicalTl"
 
-        // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift additionalInfo["cellScript"].
+        // CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift additionalInfo["cellScript"].
         // Drift causes silent divergence (one platform's tap commits the other script).
 
         /**

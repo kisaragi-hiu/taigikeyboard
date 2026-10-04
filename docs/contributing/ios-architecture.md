@@ -22,7 +22,7 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 ┌──────────────────────────────────────────────────────────────┐
 │  Platform Layer       (KeyboardExtension/, Actions/,         │
 │                        Callouts/, Emojis/, Layout/,          │
-│                        Overlays/, Styling/)                  │
+│                        Overlays/, Styling/, Theme/)          │
 │  KeyboardKit-aware extension runtime: view controller,       │
 │  action handler, keyboard views, overlays, styling           │
 │  Imports: KeyboardKit, SwiftUI, UIKit, Adapter, Engine       │
@@ -40,8 +40,8 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
                              │
 ┌──────────────────────────────────────────────────────────────┐
 │  Engine Layer         (Engine/, Input/, Lexicon/,            │
-│                        NextWord/, Composition/, Logging/,    │
-│                        Autocomplete/Services,                │
+│                        NextWord/, ServiceGraph/, Logging/,   │
+│                        Candidates/Services,                  │
 │                        Settings/ pure parts)                 │
 │  Rust FFI bridge (RustEngineBridge + generated protos),      │
 │  input pipeline, next-word glue, DB repositories, engine     │
@@ -55,14 +55,15 @@ iOS code is organized into four layers. Dependencies flow **top-down only** — 
 | Folder                     | Layer    | Notes                                             |
 |----------------------------|----------|---------------------------------------------------|
 | `Engine/`                  | Engine   | `RustEngineBridge*.swift` FFI facade + `Generated/*.pb.swift` protos; Foundation + SwiftProtobuf only. Phonetics / tone logic lives in the Rust engine, not in Swift. |
-| `Composition/`             | Engine   | `CompositionRoot` — production service graph shared by app + extension; Foundation-only |
-| `Logging/`                 | Engine   | `LoggerBackend` (Shared-Core Candidate); `DebugLogger.swift` at the root is the extension-facing wrapper |
+| `ServiceGraph/`            | Engine   | `CompositionRoot` — production service graph shared by app + extension; Foundation-only |
+| `Logging/`                 | Engine   | `LoggerBackend` (Shared-Core Candidate) + `DebugLogger`, the extension-facing wrapper |
 | `Input/`                   | Engine   | Incl. `Composing/` — must be KK-free (see §3)     |
 | `Lexicon/`                 | Engine   | Engine clients only, no SQLite: `LexiconClient`, `UserDataClient`, `DictionarySearchService` (injects `EngineSettingsProvider`). |
 | `NextWord/`                | Engine   | `NextWordController` (injects `EngineSettingsProvider`) |
-| `Autocomplete/Services/`   | Mixed    | `TaigiAutocompleteService.swift` and `EnglishAutocompleteService.swift` inherit `KeyboardKit.AutocompleteService` — unavoidable KK adapter boundary. `AutocompleteProviders.swift` is engine-pure. Treat subclass files as Platform-in-Engine-folder. |
+| `Candidates/Services/`     | Mixed    | `TaigiAutocompleteService.swift` and `EnglishAutocompleteService.swift` inherit `KeyboardKit.AutocompleteService` — unavoidable KK adapter boundary. `AutocompleteProviders.swift` is engine-pure. Treat subclass files as Platform-in-Engine-folder. |
 | `Settings/` (non-UI parts) | Engine   | `EngineSettings`, `EngineSettingsProvider`, etc.  |
-| `Settings/` (UI parts)     | Platform | `KeyboardColorSettings` (UIColor), `CodableColor` |
+| `Settings/` (UI parts)     | Platform | `SharedSettings`, `KeyboardEnvironment`, `DeviceCapabilities` |
+| `Theme/`                   | Platform | Keyboard themes: `KeyboardColorSettings` (UIColor), `CodableColor`, built-in + user themes, theme images |
 | `Actions/`                 | Platform | Hosts KK adapters: `ActionHandler*`, `KeyboardCaseAdapter`, `KeyboardContext+Composing`, `KeyboardContext+Translate` |
 | `KeyboardExtension/`       | Platform | Extension target host: `KeyboardViewController`, `Info.plist`, `FontRegistration`, `zh-Hant.lproj` |
 | `Callouts/`                | Platform |                                                   |

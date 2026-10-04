@@ -68,7 +68,7 @@ class TaigiAutocompleteService(
     }
 }
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift
 // `shouldSplitCombinedCells`. Drift causes silent divergence (one platform still splitting
 // under TPS, or not splitting under Hanji with Romanization).
 
@@ -84,7 +84,7 @@ internal fun shouldSplitCombinedCells(
     isTpsLayout: Boolean,
 ): Boolean = candidateDisplayMode == CandidateDisplayMode.COMBINED && !isTpsLayout
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift buildContinuousSuggestions
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift buildContinuousSuggestions
 // and the desktop PresentedCandidate split. Drift causes silent divergence (one platform still renders the superseded one-label mixed cell).
 
 /**
@@ -181,7 +181,7 @@ internal fun buildContinuousSuggestionsForCandidates(
     }
 }
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift splitIntoSingleScriptCells
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift splitIntoSingleScriptCells
 // and the desktop PresentedCandidate split. Drift causes silent divergence (cell order or dedupe survivor differs on one platform).
 
 /**

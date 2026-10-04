@@ -12,7 +12,7 @@ import Foundation
 /// only one of them makes several candidates read identically: two Hanji with
 /// the same reading, or one Hanji under two readings. iOS and Android have
 /// always shown both — primary text with the other script under it
-/// (`ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateButtonView.swift:65-77`)
+/// (`ios/Sources/TaigiKeyboard/Candidates/Views/CandidateButtonView.swift:65-77`)
 /// — and this is the macOS counterpart, rendered as MacishType's annotation
 /// column rather than a second line because the window is one row tall.
 ///
