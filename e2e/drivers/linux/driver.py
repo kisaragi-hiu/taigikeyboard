@@ -188,7 +188,12 @@ class Session:
             # with the daemon's environment, not this scenario's.
             wait_until(self.fcitx5_owns_its_name, STARTUP_TIMEOUT_S, "fcitx5 to own org.fcitx.Fcitx5")
         else:
-            self.spawn(["ibus-daemon", "--replace", "--panel", "disable", "--config", "disable"])
+            # `--cache none`: read only IBUS_COMPONENT_PATH. The default
+            # `auto` takes a fresh system registry cache first and never
+            # looks at that path (ibus bus/ibusimpl.c:2290-2310) — Fedora's
+            # rpm writes one (/var/cache/ibus/bus/registry, ibus.spec
+            # %transfiletriggerin), so the test engine went unlisted there.
+            self.spawn(["ibus-daemon", "--replace", "--panel", "disable", "--config", "disable", "--cache", "none"])
             try:
                 wait_until(self.ibus_lists_engine, STARTUP_TIMEOUT_S, "ibus-daemon listing the engine")
             except ScenarioError as timeout:

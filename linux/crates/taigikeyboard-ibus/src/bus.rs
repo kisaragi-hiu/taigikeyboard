@@ -109,14 +109,18 @@ fn display_parts(
     Ok((hostname.to_owned(), display_number.to_owned()))
 }
 
-/// `/var/lib/dbus/machine-id`, else `/etc/machine-id`, else the literal
-/// `machine-id` ibus falls back to (`ibus_get_local_machine_id`).
+/// The first of `/var/lib/dbus/machine-id`, `/etc/machine-id` that reads —
+/// even when empty (a container's `/etc/machine-id` often is), the daemon
+/// then names its socket file `-<host>-<display>` — else the literal
+/// `machine-id` (`ibus_get_local_machine_id`, `src/ibusshare.c:47-73`).
 fn machine_id(read: &impl Fn(&Path) -> std::io::Result<String>) -> String {
+    // `g_strstrip`'s set (`g_ascii_isspace`): Rust's ASCII whitespace plus
+    // the vertical tab.
+    let is_glib_space = |c: char| matches!(c, ' ' | '\t' | '\n' | '\x0B' | '\x0C' | '\r');
     ["/var/lib/dbus/machine-id", "/etc/machine-id"]
         .iter()
-        .filter_map(|path| read(Path::new(path)).ok())
-        .map(|contents| contents.trim().to_owned())
-        .find(|id| !id.is_empty())
+        .find_map(|path| read(Path::new(path)).ok())
+        .map(|contents| contents.trim_matches(is_glib_space).to_owned())
         .unwrap_or_else(|| "machine-id".to_owned())
 }
 
@@ -239,6 +243,39 @@ mod tests {
             |_| true
         )
         .is_ok());
+    }
+
+    #[test]
+    fn the_first_readable_machine_id_file_wins_even_when_empty() {
+        // trace: `ibus_get_local_machine_id` keeps the first successful read,
+        // stripped: Fedora image /etc/machine-id "" → socket "-unix-99";
+        // an empty /var/lib/dbus file shadows a populated /etc one;
+        // "\x0Bm1\n" strips to "m1" (g_ascii_isspace); both unreadable →
+        // "machine-id".
+        let run = |present: &[(&str, &str)]| {
+            address_with(
+                env(&[("HOME", "/home/u"), ("DISPLAY", ":99")]),
+                files(present),
+                |_| true,
+            )
+        };
+        assert!(run(&[
+            ("/etc/machine-id", ""),
+            ("/home/u/.config/ibus/bus/-unix-99", SOCKET_FILE),
+        ])
+        .is_ok());
+        assert!(run(&[
+            ("/var/lib/dbus/machine-id", "\n"),
+            ("/etc/machine-id", "abcdef\n"),
+            ("/home/u/.config/ibus/bus/-unix-99", SOCKET_FILE),
+        ])
+        .is_ok());
+        assert!(run(&[
+            ("/etc/machine-id", "\x0Bm1\n"),
+            ("/home/u/.config/ibus/bus/m1-unix-99", SOCKET_FILE),
+        ])
+        .is_ok());
+        assert!(run(&[("/home/u/.config/ibus/bus/machine-id-unix-99", SOCKET_FILE)]).is_ok());
     }
 
     #[test]
