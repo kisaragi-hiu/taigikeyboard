@@ -361,3 +361,106 @@ final class CustomDictionaryPagingTests: XCTestCase {
         XCTAssertEqual(model.list.page, 0)
     }
 }
+
+/// What Custom Dictionary shares with the Windows and Linux pages
+/// (desktop-core `settings/listing.rs`, `settings/custom_dictionary.rs`).
+///
+/// INVARIANT_USER_DATA_LIST_FILTER_RELOAD_SELECTION (§58): the filter goes
+/// to the engine as typed, every write reloads the list whatever it
+/// answered, and the selection is only ever a row on screen.
+@MainActor
+final class CustomDictionaryListParityTests: XCTestCase {
+    private var client = FakeUserDataClient()
+
+    private func makeModel(rows: Int) async -> CustomDictionaryPageModel {
+        client = FakeUserDataClient()
+        let model = CustomDictionaryPageModel(client: client)
+        for index in 0 ..< rows {
+            await model.save(CustomDictionaryRow(roman: "row\(index)", hanji: "字\(index)"))
+        }
+        await model.load()
+        return model
+    }
+
+    func testTheFilter_goesToTheEngineAsTyped() async {
+        let model = await makeModel(rows: 2)
+
+        model.filter = " row1 "
+        await model.loadFirstPage()
+
+        XCTAssertEqual(client.lastCustomFilter, " row1 ", "the engine trims it")
+        XCTAssertEqual(model.list.rows.map(\.roman), ["row1"])
+    }
+
+    /// A write that failed may still have changed the store; the list shows
+    /// what the store holds.
+    func testAFailedWrite_stillReloadsTheList() async {
+        let model = await makeModel(rows: 1)
+        client.failsCustomWritesAfterApplying = true
+
+        await model.save(CustomDictionaryRow(roman: "tsit", hanji: "一"))
+
+        guard case .failure(.desktopCustomDictWriteFailed, _) = model.message else {
+            return XCTFail("expected the write failure, got \(String(describing: model.message))")
+        }
+        XCTAssertEqual(model.list.rows.map(\.roman), ["tsit", "row0"])
+        XCTAssertEqual(model.list.countLabel, "2")
+        XCTAssertEqual(model.activity, .idle)
+    }
+
+    /// The engine commits a large import in chunks: one that fails partway
+    /// has still added the chunks before it.
+    func testAFailedImport_showsTheRowsItCommitted() async {
+        let model = await makeModel(rows: 1)
+        client.rowsToImport = [CustomDictionaryRow(roman: "tsit", hanji: "一")]
+        client.failsCustomWritesAfterApplying = true
+
+        await model.importCSV(at: URL(fileURLWithPath: "/dev/null"))
+
+        guard case .failure(.commonImportFailed, _) = model.message else {
+            return XCTFail("expected the import failure, got \(String(describing: model.message))")
+        }
+        XCTAssertEqual(model.list.rows.map(\.roman), ["tsit", "row0"])
+    }
+
+    /// The one alert shows the last thing that went wrong, as on Windows.
+    func testAFailedWriteWhoseReloadFailsToo_reportsTheRead() async {
+        let model = await makeModel(rows: 1)
+        client.failsCustomWritesAfterApplying = true
+        client.failsCustomReads = true
+
+        await model.delete(CustomDictionaryRow(roman: "x", hanji: ""))
+
+        guard case .failure(.desktopCustomDictReadFailed, _) = model.message else {
+            return XCTFail("expected the read failure, got \(String(describing: model.message))")
+        }
+        XCTAssertEqual(model.activity, .idle)
+    }
+
+    func testASelectionPagedAway_isNotThereOnPagingBack() async throws {
+        let model = await makeModel(rows: UserDataListMetrics.pageSize + 1)
+        let selected = try XCTUnwrap(model.list.rows.first)
+        model.selectedRowID = selected.id
+
+        await model.load()
+        XCTAssertEqual(model.list.selectedRow, selected, "a reload that keeps the row keeps the selection")
+
+        await model.pageForward()
+        XCTAssertNil(model.selectedRowID)
+
+        await model.pageBackward()
+        XCTAssertTrue(model.list.rows.contains(selected))
+        XCTAssertNil(model.list.selectedRow, "− has nothing to act on")
+    }
+
+    func testAFailedLoad_keepsTheSelection() async throws {
+        let model = await makeModel(rows: UserDataListMetrics.pageSize + 1)
+        let selected = try XCTUnwrap(model.list.rows.first)
+        model.selectedRowID = selected.id
+        client.failsCustomReads = true
+
+        await model.pageForward()
+
+        XCTAssertEqual(model.list.selectedRow, selected, "the rows on screen did not change")
+    }
+}

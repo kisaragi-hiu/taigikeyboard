@@ -23,11 +23,15 @@ final class LearningRecordsPageModel {
     /// desktop predicts no next word, so those rows rank nothing here.
     /// Each of the three, once changed, makes every load in flight stale
     /// at once (`UserDataPagedList.invalidate`) — not when the next load
-    /// starts, which for the filter is after it settles.
+    /// starts, which for the filter is after it settles. A new kind or
+    /// order also drops the selection, as desktop-core's `Listing::rewind`
+    /// does: row ids are per store, so the same id in the other store is a
+    /// different word.
     var kind: Taigi_Engine_LearningRecordKind = .frequency {
         didSet {
             if oldValue != kind {
                 list.invalidate()
+                list.selectedID = nil
             }
         }
     }
@@ -36,6 +40,7 @@ final class LearningRecordsPageModel {
         didSet {
             if oldValue != order {
                 list.invalidate()
+                list.selectedID = nil
             }
         }
     }
@@ -49,6 +54,13 @@ final class LearningRecordsPageModel {
     }
 
     var message: UserDataPageMessage?
+
+    /// The table's selection, held by the list so a load drops it once its
+    /// row is off screen (`UserDataPagedList.selectedID`).
+    var selectedRowID: Taigi_Engine_LearningRecord.ID? {
+        get { list.selectedID }
+        set { list.selectedID = newValue }
+    }
 
     private let client: any UserDataClient
 
@@ -147,11 +159,6 @@ struct LearningRecordsPage: View {
     @State private var model: LearningRecordsPageModel
     @State private var editing: Taigi_Engine_LearningRecord?
 
-    /// The table's selection — the row `−` acts on, and the row a double
-    /// click edits. Cleared on a change of kind: row ids are per store, so
-    /// the same id in the other store is a different word.
-    @State private var selectedRowID: Taigi_Engine_LearningRecord.ID?
-
     init(client: any UserDataClient) {
         _model = State(initialValue: LearningRecordsPageModel(client: client))
     }
@@ -198,10 +205,9 @@ struct LearningRecordsPage: View {
         .userDataPageChrome(activity: model.activity, message: $model.message)
     }
 
-    /// Another kind or order: its first page, nothing selected, the filter
-    /// kept.
+    /// Another kind or order: its first page, the filter kept. The model
+    /// has already dropped the selection.
     private func showFromFirstPage() {
-        selectedRowID = nil
         Task { await model.loadFirstPage() }
     }
 
@@ -210,7 +216,7 @@ struct LearningRecordsPage: View {
     /// acts on, and a definite height so the table never scrolls inside the
     /// form.
     private var recordTable: some View {
-        Table(model.list.rows, selection: $selectedRowID) {
+        Table(model.list.rows, selection: $model.selectedRowID) {
             TableColumn(language.string(.dictionaryRomanLabel)) { record in
                 Text(record.tl)
                     .foregroundStyle(.secondary)
@@ -270,9 +276,9 @@ struct LearningRecordsPage: View {
     /// at its trailing end.
     private var recordTableControls: some View {
         UserDataListControls(
-            isRemoveEnabled: selectedRecord != nil,
+            isRemoveEnabled: model.list.selectedRow != nil,
             onRemove: {
-                guard let selectedRecord else { return }
+                guard let selectedRecord = model.list.selectedRow else { return }
                 Task { await model.delete(selectedRecord) }
             },
         ) {
@@ -283,12 +289,6 @@ struct LearningRecordsPage: View {
                 onForward: { Task { await model.pageForward() } },
             )
         }
-    }
-
-    /// The selected row, or nil when the selection names a row the page no
-    /// longer lists.
-    private var selectedRecord: Taigi_Engine_LearningRecord? {
-        record(for: selectedRowID)
     }
 
     private func record(for id: Taigi_Engine_LearningRecord.ID?) -> Taigi_Engine_LearningRecord? {

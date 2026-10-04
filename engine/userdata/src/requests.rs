@@ -595,6 +595,11 @@ mod tests {
         assert_eq!(filtered.entries.len(), 1);
         assert_eq!(filtered.matching_total, 1);
         assert_eq!(filtered.total, seeded + 1, "an edit is not a second word");
+        // INVARIANT_USER_DATA_LIST_FILTER_RELOAD_SELECTION (§58): the box
+        // reaches the engine as typed and the engine trims it.
+        let padded = list(&handle, " 臺 ");
+        assert_eq!(padded.entries, filtered.entries);
+        assert_eq!(padded.matching_total, filtered.matching_total);
 
         assert_eq!(
             save(&handle, None, "  ", "空").refusal(),

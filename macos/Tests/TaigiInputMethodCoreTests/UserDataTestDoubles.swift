@@ -11,17 +11,33 @@ import Foundation
 @testable import TaigiInputMethodCore
 
 /// A custom dictionary held in memory, answering the pages' requests the way
-/// the engine does: newest edit first, a case-insensitive substring filter.
+/// the engine does: newest edit first, a case-insensitive substring filter,
+/// trimmed.
 final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     private let lock = NSLock()
     private var rows: [CustomDictionaryRow] = []
 
+    /// The filter the last list request carried, as the page sent it.
+    private(set) var lastCustomFilter: String?
+    /// Set to make every list request fail, as an unreadable store does.
+    var failsCustomReads = false
+    /// Set to make every write fail AFTER it changed the store, as an import
+    /// whose later chunk failed has already committed the earlier ones.
+    var failsCustomWritesAfterApplying = false
+    /// What `importCSV` adds to the store.
+    var rowsToImport: [CustomDictionaryRow] = []
+
     func list(filter: String, limit: Int, offset: Int) throws -> UserDataListing<CustomDictionaryRow> {
-        lock.withLock {
-            let matching = filter.isEmpty
+        try lock.withLock {
+            lastCustomFilter = filter
+            if failsCustomReads {
+                throw UserDataClientError.engineUnavailable(op: "customDictionaryList")
+            }
+            let trimmed = filter.trimmingCharacters(in: .whitespacesAndNewlines)
+            let matching = trimmed.isEmpty
                 ? rows
                 : rows.filter {
-                    $0.roman.localizedCaseInsensitiveContains(filter) || $0.hanji.contains(filter)
+                    $0.roman.localizedCaseInsensitiveContains(trimmed) || $0.hanji.contains(trimmed)
                 }
             // Pulled back to the last page that exists, as the engine does.
             let lastPage = max(0, matching.count - 1) / max(1, limit) * limit
@@ -36,18 +52,18 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     }
 
     func save(_ row: CustomDictionaryRow) throws {
-        lock.withLock {
+        try applyCustomWrite {
             rows.removeAll { $0.id == row.id }
             rows.insert(row, at: 0)
         }
     }
 
     func delete(id: String) throws {
-        lock.withLock { rows.removeAll { $0.id == id } }
+        try applyCustomWrite { rows.removeAll { $0.id == id } }
     }
 
     func deleteAll() throws {
-        lock.withLock { rows.removeAll() }
+        try applyCustomWrite { rows.removeAll() }
     }
 
     func exportCSV() throws -> Data {
@@ -55,7 +71,18 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
     }
 
     func importCSV(at _: URL) throws -> CustomDictionaryImportResult {
-        CustomDictionaryImportResult(imported: 0, skipped: 0)
+        let imported = lock.withLock { rowsToImport }
+        try applyCustomWrite { rows.insert(contentsOf: imported, at: 0) }
+        return CustomDictionaryImportResult(imported: imported.count, skipped: 0)
+    }
+
+    private func applyCustomWrite(_ write: () -> Void) throws {
+        try lock.withLock {
+            write()
+            if failsCustomWritesAfterApplying {
+                throw UserDataClientError.engineUnavailable(op: "customDictionaryWrite")
+            }
+        }
     }
 
     private var learningRecordClears = 0

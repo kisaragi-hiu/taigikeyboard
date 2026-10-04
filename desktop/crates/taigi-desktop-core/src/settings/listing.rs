@@ -201,10 +201,12 @@ impl<Row: ListedRow> Listing<Row> {
     /// A load of the page on screen starts; every earlier one is now stale.
     /// The engine answers the page it really served — pulled back inside
     /// the list if the list shrank under it — and `land` adopts that one.
+    /// The filter goes as typed: the engine trims it (`userdata`
+    /// `custom_dictionary.rs` / `learning_records.rs`), as for macOS.
     pub fn begin_load(&mut self) -> LoadRequest {
         LoadRequest {
             generation: self.next_generation(),
-            filter: self.filter.trim().to_owned(),
+            filter: self.filter.clone(),
             page: self.page,
         }
     }

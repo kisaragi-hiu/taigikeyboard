@@ -18,7 +18,7 @@ import Foundation
 /// the list would not scroll. A page that FITS the table has neither problem:
 /// nothing is nested to scroll, and every row is reachable by paging
 /// (`UserDataListMetrics.pageSize`).
-struct UserDataPagedList<Row: Sendable> {
+struct UserDataPagedList<Row: Identifiable & Sendable> {
     /// One load of the page on screen: where it reads from, and the number
     /// that tells it apart from every load started after it.
     struct Load {
@@ -34,6 +34,12 @@ struct UserDataPagedList<Row: Sendable> {
     private(set) var matchCount = 0
     /// Which page is on screen, zero-based.
     private(set) var page = 0
+    /// The row the table has selected — the one `−` acts on. Only ever a
+    /// row on screen: a load that lands without it drops it, as
+    /// desktop-core's `Listing::land` does, so paging back or re-filtering
+    /// never brings back a selection the user moved away from
+    /// (`INVARIANT_USER_DATA_LIST_FILTER_RELOAD_SELECTION`, §58).
+    var selectedID: Row.ID?
 
     /// Which load the rows on screen came from. A query runs off the main
     /// actor and cannot be cancelled once it is in the engine, so a load
@@ -105,6 +111,14 @@ struct UserDataPagedList<Row: Sendable> {
         matchCount = listing.matchingTotal
         rows = listing.rows
         totalCount = listing.total
+        if selectedRow == nil {
+            selectedID = nil
+        }
+    }
+
+    /// The selected row, or nil when nothing on screen is selected.
+    var selectedRow: Row? {
+        rows.first { $0.id == selectedID }
     }
 }
 
