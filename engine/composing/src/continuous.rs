@@ -154,8 +154,8 @@ fn synth_consumed_span(
 /// Uppercased, segment `tui` Lowercased). Only alphabetic chars count
 /// (tone digits / hyphens ignored); no alpha → `Lowercased`. This is
 /// the engine-owned continuous casing of Codex pre-impl 2A locus =
-/// candidate construction; the legacy platform `SuggestionCaseTransformer`
-/// is bypassed for continuous candidates so this is the single source.
+/// candidate construction — the single source of candidate casing (the
+/// platform `SuggestionCaseTransformer`s it bypassed were removed 2026-10-04).
 fn raw_segment_letter_case(raw_seg: &str) -> phonetics::case_transform::LetterCase {
     use phonetics::case_transform::LetterCase;
     let mut alphas = raw_seg.chars().filter(|c| c.is_alphabetic());
@@ -1169,9 +1169,9 @@ pub(crate) fn assemble_candidates(
             // to mirror the user's raw input for its consumed span,
             // so the displayed candidate already shows `Hit` /
             // `tui` and tap commits it verbatim (display == commit).
-            // The legacy platform `SuggestionCaseTransformer` is
-            // bypassed for continuous, so this is the single casing
-            // source. Only the presentation `roman` is touched —
+            // This is the single casing source (the platform
+            // `SuggestionCaseTransformer`s were removed 2026-10-04).
+            // Only the presentation `roman` is touched —
             // `display_text` (canonical freq/NextWord key) and
             // `hanji` are deliberately left intact.
             for cand in &mut c {

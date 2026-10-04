@@ -4,13 +4,9 @@ import SwiftProtobuf
 // MARK: - RustEngineBridge Case-Transform surface
 
 /// Case-transform extension for `RustEngineBridge`. Single FFI hop per
-/// per-char or per-word case operation. Mode and ⁿ becomes ᴺ in capitals (§53) are forwarded
+/// typed key. Mode and ⁿ becomes ᴺ in capitals (§53) are forwarded
 /// via the envelope `AppConfig`; the double-tap folds are not (case-transform
 /// is independent of POJ preprocessing).
-///
-/// Suggestion skip rules (`additionalInfo["isComposingText"]` /
-/// `additionalInfo["isNextWord"]`) stay on the platform side — only
-/// transform-eligible items reach `transformCandidateCase(...)`.
 public extension RustEngineBridge {
     // MARK: - Synthesized enum
 
@@ -36,29 +32,6 @@ public extension RustEngineBridge {
         payload.text = text
         payload.letterCase = Taigi_Engine_LetterCase(rawValue: Int(letterCase.rawValue)) ?? .unspecified
         return caseStringDispatch(method: .transformInputCase(payload), op: "transformInputCase", mode: mode, isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled, fallback: text)
-    }
-
-    /// Per-suggestion case transformation. Output is post-processed via
-    /// engine-side `adjustNasalMarkerCase` (no separate FFI hop needed).
-    /// Replaces the body of `SuggestionCaseTransformer.transform` per word.
-    static func transformCandidateCase(
-        original: String,
-        composing: String,
-        letterCase: CaseTransformLetterCase,
-        mode: InputMode,
-        isNasalMarkerUppercaseEnabled: Bool,
-    ) -> String {
-        var payload = Taigi_Engine_TransformCandidateCase()
-        payload.originalText = original
-        payload.composingText = composing
-        payload.letterCase = Taigi_Engine_LetterCase(rawValue: Int(letterCase.rawValue)) ?? .unspecified
-        return caseStringDispatch(
-            method: .transformCandidateCase(payload),
-            op: "transformCandidateCase",
-            mode: mode,
-            isNasalMarkerUppercaseEnabled: isNasalMarkerUppercaseEnabled,
-            fallback: original,
-        )
     }
 
     // MARK: - Private dispatch helper

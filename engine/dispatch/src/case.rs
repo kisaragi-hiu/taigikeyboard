@@ -12,8 +12,8 @@
 
 use phonetics::api::composing_mode;
 use phonetics::case_transform::{
-    full_uppercase_tone_string, lowercase_tone_char, transform_candidate_case,
-    transform_input_case, uppercase_tone_char, LetterCase,
+    full_uppercase_tone_string, lowercase_tone_char, transform_input_case, uppercase_tone_char,
+    LetterCase,
 };
 use protos::engine::case_request::Method;
 use protos::engine::{AppConfig, CaseRequest, CaseResponse, CaseStringResult};
@@ -29,12 +29,6 @@ pub(crate) fn handle(request: &CaseRequest, config: &AppConfig) -> Option<CaseRe
         Method::TransformInputCase(req) => {
             transform_input_case(&req.text, proto_to_letter_case(req.letter_case()), mode)
         }
-        Method::TransformCandidateCase(req) => transform_candidate_case(
-            &req.original_text,
-            &req.composing_text,
-            proto_to_letter_case(req.letter_case()),
-            mode,
-        ),
     };
     // ⁿ becomes ᴺ in capitals OFF (§53): the raise-only ops write `ᴺ` after a capital; fold
     // it back so the platform never receives the capital marker.
@@ -68,7 +62,7 @@ fn proto_to_letter_case(proto: protos::engine::LetterCase) -> LetterCase {
 mod tests {
     use super::*;
     use protos::engine::{
-        FullUppercaseToneString, LowercaseToneChar, TransformCandidateCase, TransformInputCase,
+        FullUppercaseToneString, LowercaseToneChar, TransformInputCase,
         UppercaseToneChar,
     };
 
@@ -131,41 +125,20 @@ mod tests {
     }
 
     #[test]
-    fn dispatch_transform_candidate_case_caps_lock() {
-        let req = CaseRequest {
-            method: Some(Method::TransformCandidateCase(TransformCandidateCase {
-                original_text: "tâi-gí".to_string(),
-                composing_text: "tai".to_string(),
-                letter_case: protos::engine::LetterCase::CapsLocked as i32,
-            })),
-        };
-        let resp = handle(&req, &config_for("poj")).expect("response present");
-        assert_eq!(unwrap_string(resp), "TÂI-GÍ");
-    }
-
-    #[test]
-    fn dispatch_force_lowercase_nasal_marker_folds_the_capital_marker_on_every_op() {
-        // ⁿ becomes ᴺ in capitals OFF (§53): Caps Lock over a POJ nasal suggestion.
-        let suggestion = CaseRequest {
-            method: Some(Method::TransformCandidateCase(TransformCandidateCase {
-                original_text: "sia\u{207f}".to_string(),
-                composing_text: "si".to_string(),
-                letter_case: protos::engine::LetterCase::CapsLocked as i32,
-            })),
-        };
-        let default = handle(&suggestion, &config_for("poj")).expect("response present");
-        assert_eq!(unwrap_string(default), "SIA\u{1d3a}");
-        let lowercase = AppConfig {
-            force_lowercase_nasal_marker: true,
-            ..config_for("poj")
-        };
-        let resp = handle(&suggestion, &lowercase).expect("response present");
-        assert_eq!(unwrap_string(resp), "SIA\u{207f}");
-
+    fn dispatch_force_lowercase_nasal_marker_folds_the_capital_marker() {
+        // ⁿ becomes ᴺ in capitals OFF (§53): the shifted nasal-marker key.
+        // trace: `uppercase_tone_char` maps `ⁿ` → `ᴺ` (mode-independent
+        // shortcut); the OFF fold lowers it back.
         let marker_key = CaseRequest {
             method: Some(Method::UppercaseToneChar(UppercaseToneChar {
                 input: "\u{207f}".to_string(),
             })),
+        };
+        let default = handle(&marker_key, &config_for("poj")).expect("response present");
+        assert_eq!(unwrap_string(default), "\u{1d3a}");
+        let lowercase = AppConfig {
+            force_lowercase_nasal_marker: true,
+            ..config_for("poj")
         };
         let resp = handle(&marker_key, &lowercase).expect("response present");
         assert_eq!(unwrap_string(resp), "\u{207f}");
@@ -188,11 +161,6 @@ mod tests {
             }),
             Method::TransformInputCase(TransformInputCase {
                 text: "tsh".to_string(),
-                letter_case,
-            }),
-            Method::TransformCandidateCase(TransformCandidateCase {
-                original_text: "tâi-gí".to_string(),
-                composing_text: "tai".to_string(),
                 letter_case,
             }),
         ];

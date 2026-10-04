@@ -92,14 +92,7 @@ struct TaigiKeyboardView: View {
         )
         let colors = p.settings.colorSettings
 
-        // Transform candidate case based on keyboardCase
-        let suggestions = SuggestionCaseTransformer.transform(
-            autocompleteContext.suggestions,
-            composingText: composingManager.composingText,
-            keyboardCase: keyboardContext.keyboardCase,
-            inputMode: p.settings.inputMode,
-            isNasalMarkerUppercaseEnabled: p.settings.isNasalMarkerUppercaseEnabled,
-        )
+        let suggestions = autocompleteContext.suggestions
         let isHanjiFirst = keyboardContext.isHanjiFirst
         // Read beside the swap on the same live path: both come from SharedSettings via the
         // KeyboardContext extension, so a mode change re-renders exactly like a swap does.

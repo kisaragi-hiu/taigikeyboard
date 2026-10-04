@@ -11,10 +11,8 @@ import com.siansiansu.taigikeyboard.ime.core.TaigiKeyboard
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceContext
 import com.siansiansu.taigikeyboard.ime.core.logging.TraceId
 import com.siansiansu.taigikeyboard.ime.core.logging.debug
-import com.siansiansu.taigikeyboard.ime.dictionary.SuggestionCaseTransformer
 import com.siansiansu.taigikeyboard.ime.dictionary.TaigiWord
 import com.siansiansu.taigikeyboard.ime.settings.CandidateDisplayMode
-import com.siansiansu.taigikeyboard.ime.settings.InputMode
 import com.siansiansu.taigikeyboard.ime.settings.OneHandedMode
 import com.siansiansu.taigikeyboard.ime.settings.PrefHelper
 import com.siansiansu.taigikeyboard.ime.text.TextInputManager
@@ -490,28 +488,7 @@ class SmartbarManager(
             "[DEBUG] updateCandidates: count=${suggestions.size}, isNextWord=$isNextWord, first='${suggestions.firstOrNull()?.displayText}'"
         }
 
-        val (caps, capsLock) = textInputManager.getCapsState()
-        val composingText = textInputManager.getComposingManager()?.getComposingText() ?: ""
-        val inputMode =
-            when (prefs.inputMode) {
-                "poj" -> InputMode.POJ
-                "tl", "tps" -> InputMode.TL
-                else -> InputMode.POJ
-            }
-
-        val transformedSuggestions =
-            SuggestionCaseTransformer.transform(
-                suggestions = suggestions,
-                composingText = composingText,
-                caps = caps,
-                capsLock = capsLock,
-                inputMode = inputMode,
-                isNasalMarkerUppercaseEnabled = prefs.isNasalMarkerUppercaseEnabled,
-            )
-
-        logger.debug(TAG) { "[CASE] caps=$caps, capsLock=$capsLock, composingText='$composingText'" }
-
-        currentSuggestions = transformedSuggestions
+        currentSuggestions = suggestions
         hasCandidates = true
         nextWordController.setShowingNextWord(isNextWord)
 
@@ -523,12 +500,12 @@ class SmartbarManager(
         }
 
         logger.debug(TAG) {
-            "[DEBUG] updateCandidates completed: count=${transformedSuggestions.size}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}"
+            "[DEBUG] updateCandidates completed: count=${suggestions.size}, containerVisible=${view.candidatesContainer?.visibility == View.VISIBLE}"
         }
 
         updateExpandButtonVisibility()
 
-        pushCandidateState(CandidateMode.Taigi(transformedSuggestions))
+        pushCandidateState(CandidateMode.Taigi(suggestions))
     }
 
     fun getCachedIsHanjiFirst(): Boolean = cachedIsHanjiFirst

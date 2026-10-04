@@ -273,13 +273,16 @@ message CaseRequest {
   // Tag 21 was `capitalize_candidate` (no production caller; removed 2026-09-25).
   reserved 21;
   reserved "capitalize_candidate";
+  // Tag 22 was `transform_candidate_case` (the platform
+  // `SuggestionCaseTransformer`s' op; removed with them 2026-10-04).
+  reserved 22;
+  reserved "transform_candidate_case";
 
   oneof method {
     UppercaseToneChar       uppercase_tone_char        = 10;
     FullUppercaseToneString full_uppercase_tone_string = 11;
     LowercaseToneChar       lowercase_tone_char        = 12;
     TransformInputCase      transform_input_case       = 20;
-    TransformCandidateCase  transform_candidate_case   = 22;
   }
 }
 
@@ -300,7 +303,7 @@ message CaseResponse {
 - **Mode comes from envelope `AppConfig.input_mode`** (per phonetics convention) — messages don't re-specify mode per call.
 - **`CaseStringResult` defined locally** rather than reusing `phonetics.proto::StringResult`. Avoids cross-module proto coupling so case-transform can evolve independently.
 - **`LetterCase` enum** carries `LETTER_CASE_UNSPECIFIED = 0` per proto3 best practice. Engine maps Unspecified to `Lowercased` as safe-fallback (matches the safe-fallback contract used by other dispatch error paths).
-- **Suggestion skip rules stay platform-side** — iOS uses `additionalInfo` flag-based markers, Android uses numeric `id` markers. Each platform's bridge filters before calling `transform_candidate_case(...)`.
+- **Candidates are not cased over this slice** — the engine cases each continuous candidate from the user's own raw input (`composing::continuous::recase_roman`); the case ops serve keystrokes, key labels and Caps Lock only.
 
 ---
 
