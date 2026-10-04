@@ -191,6 +191,24 @@ final class LearningRecordsPageTests: XCTestCase {
         XCTAssertTrue(model.list.rows.isEmpty)
     }
 
+    // INVARIANT_USER_DATA_LIST_FILTER_RELOAD_SELECTION (§58): desktop-core
+    // `Listing::rewind`. Row ids are per store, so the selection goes with
+    // the kind; a new order is a new list.
+    func testAChangeOfKindOrOrder_dropsTheSelection() async throws {
+        let (model, _) = makeModel([record(.frequency, id: 1)])
+        await model.load()
+
+        model.selectedRowID = 1
+        model.kind = .learnedPhrase
+        XCTAssertNil(model.selectedRowID)
+
+        model.kind = .frequency
+        await model.loadFirstPage()
+        model.selectedRowID = 1
+        model.order = .mostRecent
+        XCTAssertNil(model.selectedRowID)
+    }
+
     /// The "above 40 ranks the same" note belongs to word frequency alone.
     func testCountNote_isForWordFrequencyOnly() {
         XCTAssertEqual(LearningRecordsPageModel.countNoteKey(for: .frequency), .dictionaryLearningRecordsCountCapInfo)
@@ -206,29 +224,68 @@ final class LearningRecordsPageTests: XCTestCase {
 }
 
 /// The paged list both user-data pages keep: a load started before another
-/// never lands over it.
+/// never lands over it, and the selection is only ever a row on screen.
 final class UserDataPagedListTests: XCTestCase {
+    /// A row is anything with an identity; the pages' own rows are the
+    /// models' subject.
+    private struct Row: Identifiable, Equatable {
+        let id: Int
+    }
+
+    private func listing(_ ids: [Int], offset: Int = 0) -> UserDataListing<Row> {
+        UserDataListing(rows: ids.map(Row.init), total: 20, matchingTotal: 20, offset: offset)
+    }
+
     func testAnOlderLoad_neverLandsOverANewerOne() {
-        var list = UserDataPagedList<Int>()
+        var list = UserDataPagedList<Row>()
         let older = list.beginLoad()
         let newer = list.beginLoad()
 
-        list.land(UserDataListing(rows: [2], total: 1, matchingTotal: 1, offset: 0), from: newer)
-        list.land(UserDataListing(rows: [1], total: 1, matchingTotal: 1, offset: 0), from: older)
+        list.land(listing([2]), from: newer)
+        list.land(listing([1]), from: older)
 
-        XCTAssertEqual(list.rows, [2])
+        XCTAssertEqual(list.rows, [Row(id: 2)])
         XCTAssertFalse(list.isCurrent(older))
         XCTAssertTrue(list.isCurrent(newer))
     }
 
     func testInvalidate_makesALoadInFlightStaleWithoutStartingOne() {
-        var list = UserDataPagedList<Int>()
+        var list = UserDataPagedList<Row>()
         let load = list.beginLoad()
 
         list.invalidate()
-        list.land(UserDataListing(rows: [1], total: 1, matchingTotal: 1, offset: 0), from: load)
+        list.land(listing([1]), from: load)
 
         XCTAssertFalse(list.isCurrent(load))
         XCTAssertTrue(list.rows.isEmpty)
+    }
+
+    // INVARIANT_USER_DATA_LIST_FILTER_RELOAD_SELECTION (§58): desktop-core
+    // `an_adopted_page_is_the_engines_and_drops_an_off_page_selection`.
+    func testASelection_staysWhileOnScreenAndIsNotRestoredOnceDropped() {
+        var list = UserDataPagedList<Row>()
+        list.land(listing([1, 2]), from: list.beginLoad())
+        list.selectedID = 1
+
+        list.land(listing([2, 1]), from: list.beginLoad())
+        XCTAssertEqual(list.selectedRow, Row(id: 1), "an on-page selection stays, at its new index")
+
+        list.land(listing([3, 4], offset: UserDataListMetrics.pageSize), from: list.beginLoad())
+        XCTAssertNil(list.selectedID, "off the page, nothing is selected")
+
+        list.land(listing([1, 2]), from: list.beginLoad())
+        XCTAssertNil(list.selectedID, "back on its page, it does not come back")
+    }
+
+    func testAStaleLoad_leavesTheSelectionAlone() {
+        var list = UserDataPagedList<Row>()
+        list.land(listing([1, 2]), from: list.beginLoad())
+        list.selectedID = 1
+        let stale = list.beginLoad()
+        list.invalidate()
+
+        list.land(listing([3, 4]), from: stale)
+
+        XCTAssertEqual(list.selectedID, 1)
     }
 }

@@ -344,13 +344,15 @@ mod tests {
         assert_eq!(on_screen(&listing), before);
     }
 
+    // INVARIANT_USER_DATA_LIST_FILTER_RELOAD_SELECTION (§58): the filter
+    // as typed, a reload after every write, a selection only on screen.
     #[test]
-    fn a_load_trims_the_filter_and_asks_for_the_page_on_screen() {
+    fn a_load_sends_the_filter_as_typed_and_asks_for_the_page_on_screen() {
         let mut listing = Listing::default();
         listing.set_filter(" tsia ".to_owned());
         listing.page = 2;
         let request = listing.begin_load();
-        assert_eq!(request.filter, "tsia");
+        assert_eq!(request.filter, " tsia ", "the engine trims it");
         assert_eq!(request.page, 2);
     }
 
@@ -378,6 +380,10 @@ mod tests {
         assert_eq!(listing.selected_index(), Some(1));
         let request = listing.begin_load();
         listing.land(request.generation, Ok(page(1, &["c", "d"], 11, 19)));
+        assert_eq!(listing.selected_id, None);
+        // Back on the page that held it, nothing comes back selected.
+        let request = listing.begin_load();
+        listing.land(request.generation, Ok(page(0, &["b", "a"], 11, 19)));
         assert_eq!(listing.selected_id, None);
     }
 
@@ -407,7 +413,7 @@ mod tests {
         let mut listing = Listing::default();
         listing.set_filter(" ".to_owned());
         assert_eq!(listing.filter(), " ");
-        assert_eq!(listing.begin_load().filter, "");
+        assert_eq!(listing.begin_load().filter, " ");
         assert_eq!(
             listing.empty_state_key(),
             Some(StringKey::DictionaryNoResults)

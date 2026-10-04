@@ -72,6 +72,7 @@
 55. [The separator at every typed boundary is the one the user typed](#55--the-separator-at-every-typed-boundary-is-the-one-the-user-typed)
 56. [The previous word re-ranks the continuous candidates, never the segmentation](#56--the-previous-word-re-ranks-the-continuous-candidates-never-the-segmentation)
 57. [Every dictionary switched off offers no dictionary candidates](#57--every-dictionary-switched-off-offers-no-dictionary-candidates)
+58. [A desktop user-data list sends its filter as typed, reloads after every write, and selects only what is on screen](#58--a-desktop-user-data-list-sends-its-filter-as-typed-reloads-after-every-write-and-selects-only-what-is-on-screen)
 - [Change protocol](#change-protocol) · [Cross-references](#cross-references)
 
 ---
@@ -1320,6 +1321,18 @@ USER 2026-09-30 (maintainability-roadmap R6 P0, "decide for me, follow your reco
 - **Search reads the same mask.** The Dictionary tab search (`SearchWithSources` / `SearchByHanji`) builds its filter from the `DictionaryFilters` mask verbatim, so `0` means "nothing enabled" there too; a failed resolve sends `u32::MAX` (every source) instead.
 
 **Tests**: engine `composing/tests/golden_fetch_at_pos.rs::fetch_at_pos_resolves_the_dictionary_toggles_it_carries` (through the wire decode: no toggles → every source, all off → no hanji with the literal still leading, `lkk` alone → the `lkk`-tagged rows); iOS `RustEngineBridgeContinuousTests.testFetchAtPos_EveryDictionaryOff_OffersNoDictionaryCandidates` (the bridge sends the toggles, the production dictionary answers no hanji); desktop `taigi-desktop-core/tests/engine_roundtrip.rs::all_sources_off_fetches_no_dictionary_candidates`. Android `DictionaryTogglesProtoTest.kt` (the toggles `composingFetchAtPos` sends, all off and with the kautian subcollections — JVM tests cannot load the engine).
+
+## §58 — A desktop user-data list sends its filter as typed, reloads after every write, and selects only what is on screen
+
+### `INVARIANT_USER_DATA_LIST_FILTER_RELOAD_SELECTION`
+
+USER 2026-10-05 (parity correction, macOS-desktop-core inventory S11): the paged Custom Dictionary and Learning Records lists behave the same on macOS (`UserDataPagedList`, `CustomDictionaryPageModel`, `LearningRecordsPageModel`) and on Windows / Linux (desktop-core `settings/listing.rs` `Listing`, `settings/custom_dictionary.rs`).
+
+- **The filter goes as typed; the engine trims it.** The box keeps what the user typed, and the list request carries that text unchanged. `engine/userdata` trims it (`custom_dictionary.rs` `rows` / `count_matching`, `learning_records.rs` `list`), so `" tsit"` and `"tsit"` list the same rows; a box holding only spaces lists everything. Which empty-list message shows is read off the box as typed, so a box of spaces over an empty store reads "no results". desktop-core no longer trims a second time.
+- **Every write reloads, whatever it answered.** Save, delete, delete-all and CSV import reload the list after a failure as after a success: the engine commits a large import 500 rows at a time (`IMPORT_CHUNK_SIZE`), so one that fails partway has still added rows. The failure's alert shows first; a reload that fails too replaces it with the read failure (Windows, macOS — one alert at a time; Linux toasts both). Every editor closes before its write returns, and a reload touches only the list — its rows, counts, page and selection — never an editor or the filter box, so it can lose nothing the user typed.
+- **The selection is a row on screen.** A load that lands without the selected row drops the selection: paging away and back, or a filter that hides the row and then shows it again, leaves nothing selected, so `−` (and ✎ on Windows / Linux) never act on a row chosen before. A stale load or a failed load leaves the selection alone. A new kind or order on Learning Records drops it (`Listing::rewind`); a new filter does not by itself.
+
+**Tests**: engine `userdata/src/requests.rs::the_custom_dictionary_page_adds_edits_filters_and_deletes` (`" 臺 "` = `"臺"`); desktop-core `settings/custom_dictionary.rs` (`a_load_sends_the_filter_as_typed_and_asks_for_the_page_on_screen`, `a_blank_filter_is_kept_as_typed_and_reads_as_a_filter`, `a_write_reports_only_its_failure_and_reloads_either_way`, `an_adopted_page_is_the_engines_and_drops_an_off_page_selection`, `a_failed_load_changes_nothing_on_screen`); macOS `UserDataPageChromeTests.swift` `CustomDictionaryListParityTests`, `LearningRecordsPageTests.swift` (`UserDataPagedListTests`, `testAChangeOfKindOrOrder_dropsTheSelection`). iOS / Android are not covered: their pages filter in memory, untrimmed, with no paging or held selection.
 
 ---
 

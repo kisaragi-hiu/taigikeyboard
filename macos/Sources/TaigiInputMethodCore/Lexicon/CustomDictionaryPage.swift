@@ -50,6 +50,13 @@ final class CustomDictionaryPageModel {
 
     var message: UserDataPageMessage?
 
+    /// The table's selection, held by the list so a load drops it once its
+    /// row is off screen (`UserDataPagedList.selectedID`).
+    var selectedRowID: CustomDictionaryRow.ID? {
+        get { list.selectedID }
+        set { list.selectedID = newValue }
+    }
+
     /// The destructive command the page is asking about, or nil. The dialog's
     /// Cancel, Escape and dismissal all just set this back to nil.
     var confirming: CustomDictionaryConfirmation?
@@ -162,16 +169,24 @@ final class CustomDictionaryPageModel {
             contentTypes: [.commaSeparatedText, .plainText],
             in: window,
         ) else { return }
+        await importCSV(at: url)
+    }
+
+    /// Imports `url` and reloads, whatever the import answered: the engine
+    /// commits a large file in chunks (`IMPORT_CHUNK_SIZE`), so one that
+    /// fails partway has still added rows. The caller holds the work slot;
+    /// internal so a test can drive it without a file panel.
+    func importCSV(at url: URL) async {
         do {
             // Off the main actor: reading and importing up to 5 MB of CSV
             // there would freeze the very window that is showing the progress
             // spinner for it.
             let result = try await UserDataRequests.run(on: client) { try $0.importCSV(at: url) }
             message = .imported(result.imported, skipped: result.skipped)
-            await load()
         } catch {
             message = .failure(.commonImportFailed, error)
         }
+        await load()
     }
 
     /// Takes the page's one work slot for `label`, or answers false because
@@ -201,10 +216,9 @@ final class CustomDictionaryPageModel {
     ///
     /// Reported through the page's own message channel rather than an alert of
     /// its own: two `.alert` modifiers on one chain do not stack, and this was
-    /// the receipt SwiftUI dropped. It is the whole of what the user is told —
-    /// these records have no visible surface, so unlike the custom-dictionary
-    /// clear (whose table simply empties) there is nothing else to read the
-    /// result off.
+    /// the receipt SwiftUI dropped. It is the whole of what this page tells
+    /// the user — unlike the custom-dictionary clear, whose table simply
+    /// empties, nothing on this page changes to read the result off.
     ///
     /// Takes the page's work slot like every other store write, so it cannot
     /// overlap an import or a delete started after its dialog was answered.
@@ -219,15 +233,19 @@ final class CustomDictionaryPageModel {
         }
     }
 
+    /// Runs one write and reloads, whatever it answered, as desktop-core's
+    /// `write_outcome` does: the list on screen is what the store holds even
+    /// after a failure. A reload that fails too replaces the write's alert
+    /// with its own, as on Windows.
     private func perform(_ label: StringKey, _ body: () async throws -> Void) async {
         guard beginWork(label) else { return }
         defer { activity = .idle }
         do {
             try await body()
-            await load()
         } catch {
             message = .failure(.desktopCustomDictWriteFailed, error)
         }
+        await load()
     }
 }
 
@@ -236,10 +254,6 @@ struct CustomDictionaryPage: View {
 
     @State private var model: CustomDictionaryPageModel
     @State private var editing: CustomDictionaryRow?
-
-    /// The table's selection — the row `−` acts on, and the row a double
-    /// click edits.
-    @State private var selectedRowID: CustomDictionaryRow.ID?
     @AppStorage(SettingsStore.Keys.isCustomDictEnabled.name)
     private var isCustomDictEnabled = SettingsStore.Keys.isCustomDictEnabled.defaultValue
 
@@ -319,7 +333,7 @@ struct CustomDictionaryPage: View {
     /// height, and one left free to grow inside the form's own scroll view has
     /// no bound at all.
     private var entryTable: some View {
-        Table(model.list.rows, selection: $selectedRowID) {
+        Table(model.list.rows, selection: $model.selectedRowID) {
             TableColumn(language.string(.dictionaryRomanLabel)) { row in
                 Text(row.roman)
                     .foregroundStyle(.secondary)
@@ -388,9 +402,9 @@ struct CustomDictionaryPage: View {
     private var entryTableControls: some View {
         UserDataListControls(
             add: (.dictionaryAddEntry, { editing = CustomDictionaryRow(roman: "", hanji: "") }),
-            isRemoveEnabled: selectedRow != nil,
+            isRemoveEnabled: model.list.selectedRow != nil,
             onRemove: {
-                guard let selectedRow else { return }
+                guard let selectedRow = model.list.selectedRow else { return }
                 Task { await model.delete(selectedRow) }
             },
         ) {
@@ -411,14 +425,6 @@ struct CustomDictionaryPage: View {
             // A presentation binding is only ever written false.
             set: { _ in model.confirming = nil },
         )
-    }
-
-    /// The selected row, or nil when the selection names a row the list no
-    /// longer holds — filtered away, deleted, or reloaded out from under it.
-    /// Nothing clears the id when that happens, and nothing has to: the ids
-    /// are UUIDs, so a stale one can never match a different entry.
-    private var selectedRow: CustomDictionaryRow? {
-        row(for: selectedRowID)
     }
 
     private func row(for id: CustomDictionaryRow.ID?) -> CustomDictionaryRow? {
