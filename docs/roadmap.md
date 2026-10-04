@@ -74,7 +74,6 @@ One line each; the linked section holds the design, the measurements and the ope
 | Stale `.proto` comments: `lexicon.proto` still documents `DEV` as always-on (the toggle shipped); `composing.proto` cites a nonexistent `continuous-input-ranking.md` §10.11 and (`:426`) describes the iOS commit as `clearMarkedText` + `insertText` | needs a proto regen round (iOS + Android generated trees) | [`architecture/macos-roadmap.md`](architecture/macos-roadmap.md) § Open items this track produced |
 | v2 `.taigi` restore folds POJ→TL over canonical-TL readings (macOS folds v1 only) | verify it still applies now the engine owns the codec | same § |
 | Fedora × IBus e2e skipped (daemon never lists the test component) | own root-cause round | [`architecture/e2e-testing-roadmap.md`](architecture/e2e-testing-roadmap.md) § PR table PR4 |
-| macOS Custom Dictionary: no confirmation before a destructive command (Windows and Linux confirm) | USER 2026-10-02: add it — own round | [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md) S11 |
 
 **Refactors (USER decisions)**
 
@@ -104,6 +103,7 @@ Apply to every change regardless of release:
 
 ## Closed phases / shipped audits
 
+- **macOS Custom Dictionary confirmation** — #386 MERGED: Delete All Custom Words and Delete Learning Records ask first, as on Windows and Linux (inventory S11). The other three S11 divergences (filter trim, reload after a failed write, off-page selection) are listed in the PR, not changed.
 - **macOS over desktop-core** — COMPLETE 2026-10-03: P1–P15 MERGED (#342–#365); the macOS key path is `taigi-desktop-core` over `taigi-macos-ffi` (candidate-window geometry, the settings backend, global shortcuts and the update flow stay Swift). Design + PR table: [`architecture/macos-desktop-core-roadmap.md`](architecture/macos-desktop-core-roadmap.md); inventory [`reports/2026-10-02-macos-desktop-core-inventory.md`](reports/2026-10-02-macos-desktop-core-inventory.md).
 - **Desktop TPS mode** (方音符號 on macOS, Windows and Linux) — COMPLETE 2026-10-03: P1–P6 MERGED (#367, #368, #372, #373, #374, #376, #378, #381; Dachen layout + Shift layer, Switch Phonetic Symbols, candidate window on demand, on-screen key panel with clicks). Dogfood S89–S93. Design: [`architecture/desktop-tps-roadmap.md`](architecture/desktop-tps-roadmap.md).
 - **Learning Records page** — COMPLETE 2026-10-03: P0 `5bab5b9b`; P1 #366, P2 #369, P3+P4 #370, P5+P6 #371 MERGED (view, correct the count of, and delete one learned row on all five platforms). Design: [`architecture/learning-records-page-roadmap.md`](architecture/learning-records-page-roadmap.md).
