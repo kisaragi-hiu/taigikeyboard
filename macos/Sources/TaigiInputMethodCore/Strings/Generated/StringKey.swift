@@ -120,6 +120,7 @@ enum StringKey: String {
     case dictionaryRomanLabel = "i18n_dictionary_romanLabel"
     case dictionaryHanziLabel = "i18n_dictionary_hanziLabel"
     case dictionaryDeleteAll = "i18n_dictionary_deleteAll"
+    case dictionaryDeleteAllMessage = "i18n_dictionary_deleteAllMessage"
     case dictionaryImportCSV = "i18n_dictionary_importCSV"
     case dictionaryExportCSV = "i18n_dictionary_exportCSV"
     case dictionaryImportResult = "i18n_dictionary_importResult"

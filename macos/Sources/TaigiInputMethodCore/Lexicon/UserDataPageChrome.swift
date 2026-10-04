@@ -213,9 +213,8 @@ struct UserDataFilterField: View {
 /// since the frequency / association pages were removed, kept a separate view because the
 /// page it serves is already long enough without three more rows inline.
 ///
-/// The delete acts on the click, with nothing to confirm (USER 2026-08-25):
-/// the step it used to cost is paid on every deliberate use, and exporting to
-/// CSV is the escape hatch that makes the entries recoverable.
+/// `onDelete` asks rather than deletes: the page confirms it first
+/// (`CustomDictionaryConfirmation`).
 struct UserDataActionsSection: View {
     @Environment(DisplayLanguageStore.self) private var language
 

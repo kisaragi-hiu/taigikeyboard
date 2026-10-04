@@ -578,7 +578,7 @@
       }
     },
     "i18n_dictionary_clearLearningRecords": {
-      "comment": "Destructive row at the bottom of the Custom Dictionary page: deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. macOS acts on click (USER 2026-08-25); the other platforms confirm first, with this as the dialog title.",
+      "comment": "Destructive row at the bottom of the Custom Dictionary page: deletes every learning record (word frequency, next-word association, learned phrases) in one go; custom words are kept. Every platform confirms first, with this as the dialog title.",
       "extractionState": "manual",
       "localizations": {
         "en": {
