@@ -170,22 +170,24 @@ pub(crate) fn committed_context(state: &PersistedState, now_ms: i64) -> Option<C
         return None;
     }
     let word = state.last_selected_word.clone()?;
-    let word_tl = phonetics::api::poj_display_to_tl_display(
-        state.last_selected_roman.as_deref().unwrap_or(""),
-    );
+    let word_tl = state.last_selected_roman.clone().unwrap_or_default();
     Some((word, word_tl))
 }
 
 /// One committed word of a sequence: records `previous → word` and the
 /// word's compound pairs; returns the word as the next word's context.
+///
+/// `roman` is learned as sent: the senders already hand over the canonical
+/// TL reading (`WordSelected.roman`, nextword.proto). A POJ → TL fold here
+/// would rewrite real TL finals — `eng` / `ek` read as POJ become `ing` /
+/// `ik` (蔣經國 `tsiúnn-keng-kok` → `tsiúnn-king-kok`).
 fn learn_word(
     previous: Option<ContextWord>,
     text: String,
     roman: &str,
     associations: &mut Vec<Association>,
 ) -> ContextWord {
-    // poj→tl is idempotent on TL input — safe for POJ and TPS alike.
-    let text_tl = phonetics::api::poj_display_to_tl_display(roman);
+    let text_tl = roman.to_owned();
     if let Some((previous, previous_tl)) = previous {
         associations.push(Association {
             previous,
@@ -1272,6 +1274,44 @@ mod tests {
             }],
             "should record bigram within 10 s window"
         );
+    }
+
+    // INVARIANT_NEXTWORD_READING_LEARNED_VERBATIM (behavioral-invariants.md §40)
+    // TL special finals `eng` / `ek` (taigi-phonetics-reference §3.2.6) are
+    // learned as sent; a POJ → TL fold reads them as POJ `ing` / `ik`.
+    // trace: dictionary.csv rows 蔣經國/tsiúnn-keng-kok, 德國簫/tek-kok-siau;
+    // no whitespace in either text → no compound pairs.
+    #[test]
+    fn word_selected_learns_tl_special_finals_verbatim() {
+        let mut state = after_gua();
+        let decided = decide(
+            &mut state,
+            commit(
+                "德國簫",
+                "tek-kok-siau",
+                vec![committed("蔣經國", "tsiúnn-keng-kok")],
+                1_000,
+            ),
+            &ios_config(false),
+        )
+        .unwrap();
+        assert_eq!(
+            pairs(&decided),
+            vec![
+                "我/guá→蔣經國/tsiúnn-keng-kok",
+                "蔣經國/tsiúnn-keng-kok→德國簫/tek-kok-siau",
+            ]
+        );
+        assert_eq!(state.last_selected_roman.as_deref(), Some("tek-kok-siau"));
+
+        // The context reading survives into the next commit's pair.
+        let next = decide(
+            &mut state,
+            commit("人", "lâng", Vec::new(), 2_000),
+            &ios_config(false),
+        )
+        .unwrap();
+        assert_eq!(pairs(&next), vec!["德國簫/tek-kok-siau→人/lâng"]);
     }
 
     // A selected word that ENDS in sentence punctuation (a custom entry such

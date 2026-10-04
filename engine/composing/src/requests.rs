@@ -24,11 +24,11 @@
 
 use crate::api::{CaretDirection, CommitScript, ComposingError, Engine, Intent, Phase, UserRows};
 use crate::continuous::{assemble_candidates, retain_first_by_key, roman_reading_eq};
+use crate::derived::buffer_input_mode;
 use lexicon::{
     classification::is_hanji, derive_script_kind, ConsumedSpan, LearnedEntry, RawCandidate,
     SyllableInventory, COVERAGE_KIND_FULL, FORM_NOTONE,
 };
-use phonetics::contains_tps;
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, CommitScript as WireCommitScript,
     ComposingRequest, ComposingResponse, ContinuousResponse, FetchAtPos,
@@ -207,11 +207,7 @@ fn handle_fetch_at_pos(
     // internally — pre-C-3b had a parallel `is_tps: bool` arg that
     // duplicated this axis (`is_tps = contains_tps(raw)`, dual source
     // of truth). Dropping the bool eliminates split-brain risk.
-    let mode = if contains_tps(raw) {
-        phonetics::InputMode::Tps
-    } else {
-        phonetics::api::composing_mode(config)
-    };
+    let mode = buffer_input_mode(raw, config);
     // Learned phrases (§50): one row per reading, the most-learned
     // separator form first.
     let learned = first_learned_per_reading(&user_rows.learned);

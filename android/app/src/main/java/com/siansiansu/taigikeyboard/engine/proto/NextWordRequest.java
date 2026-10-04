@@ -347,11 +347,8 @@ public  final class NextWordRequest extends
   public static final int UPDATE_LAST_SELECTED_WORD_FIELD_NUMBER = 15;
   /**
    * <pre>
-   * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-   * emit this; Rust engine accepts generically. Mutates
-   * last_selected_*&#47;lastSelectionTimeMs without bumping
-   * current_generation, no timer effects; records only a compound's own
-   * bigrams (no prev→this one).
+   * Continuous nail / unnail handshake — learns nothing and changes no
+   * state (see the message below).
    * </pre>
    *
    * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -362,11 +359,8 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-   * emit this; Rust engine accepts generically. Mutates
-   * last_selected_*&#47;lastSelectionTimeMs without bumping
-   * current_generation, no timer effects; records only a compound's own
-   * bigrams (no prev→this one).
+   * Continuous nail / unnail handshake — learns nothing and changes no
+   * state (see the message below).
    * </pre>
    *
    * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -380,11 +374,8 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-   * emit this; Rust engine accepts generically. Mutates
-   * last_selected_*&#47;lastSelectionTimeMs without bumping
-   * current_generation, no timer effects; records only a compound's own
-   * bigrams (no prev→this one).
+   * Continuous nail / unnail handshake — learns nothing and changes no
+   * state (see the message below).
    * </pre>
    *
    * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -396,11 +387,8 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-   * emit this; Rust engine accepts generically. Mutates
-   * last_selected_*&#47;lastSelectionTimeMs without bumping
-   * current_generation, no timer effects; records only a compound's own
-   * bigrams (no prev→this one).
+   * Continuous nail / unnail handshake — learns nothing and changes no
+   * state (see the message below).
    * </pre>
    *
    * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -418,11 +406,8 @@ public  final class NextWordRequest extends
   }
   /**
    * <pre>
-   * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-   * emit this; Rust engine accepts generically. Mutates
-   * last_selected_*&#47;lastSelectionTimeMs without bumping
-   * current_generation, no timer effects; records only a compound's own
-   * bigrams (no prev→this one).
+   * Continuous nail / unnail handshake — learns nothing and changes no
+   * state (see the message below).
    * </pre>
    *
    * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -1079,11 +1064,8 @@ public  final class NextWordRequest extends
 
     /**
      * <pre>
-     * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-     * emit this; Rust engine accepts generically. Mutates
-     * last_selected_*&#47;lastSelectionTimeMs without bumping
-     * current_generation, no timer effects; records only a compound's own
-     * bigrams (no prev→this one).
+     * Continuous nail / unnail handshake — learns nothing and changes no
+     * state (see the message below).
      * </pre>
      *
      * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -1094,11 +1076,8 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-     * emit this; Rust engine accepts generically. Mutates
-     * last_selected_*&#47;lastSelectionTimeMs without bumping
-     * current_generation, no timer effects; records only a compound's own
-     * bigrams (no prev→this one).
+     * Continuous nail / unnail handshake — learns nothing and changes no
+     * state (see the message below).
      * </pre>
      *
      * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -1109,11 +1088,8 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-     * emit this; Rust engine accepts generically. Mutates
-     * last_selected_*&#47;lastSelectionTimeMs without bumping
-     * current_generation, no timer effects; records only a compound's own
-     * bigrams (no prev→this one).
+     * Continuous nail / unnail handshake — learns nothing and changes no
+     * state (see the message below).
      * </pre>
      *
      * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -1125,11 +1101,8 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-     * emit this; Rust engine accepts generically. Mutates
-     * last_selected_*&#47;lastSelectionTimeMs without bumping
-     * current_generation, no timer effects; records only a compound's own
-     * bigrams (no prev→this one).
+     * Continuous nail / unnail handshake — learns nothing and changes no
+     * state (see the message below).
      * </pre>
      *
      * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -1142,11 +1115,8 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-     * emit this; Rust engine accepts generically. Mutates
-     * last_selected_*&#47;lastSelectionTimeMs without bumping
-     * current_generation, no timer effects; records only a compound's own
-     * bigrams (no prev→this one).
+     * Continuous nail / unnail handshake — learns nothing and changes no
+     * state (see the message below).
      * </pre>
      *
      * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>
@@ -1158,11 +1128,8 @@ public  final class NextWordRequest extends
     }
     /**
      * <pre>
-     * Android-only Space-path intent (audit §5 #5). iOS wrappers never
-     * emit this; Rust engine accepts generically. Mutates
-     * last_selected_*&#47;lastSelectionTimeMs without bumping
-     * current_generation, no timer effects; records only a compound's own
-     * bigrams (no prev→this one).
+     * Continuous nail / unnail handshake — learns nothing and changes no
+     * state (see the message below).
      * </pre>
      *
      * <code>.taigi.engine.UpdateLastSelectedWord update_last_selected_word = 15;</code>

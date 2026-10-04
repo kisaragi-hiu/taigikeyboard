@@ -1,8 +1,14 @@
-//! The `.taigi` backup file — version 2, as iOS and Android have written
-//! it: the custom dictionary, the frequency counts and the learned bigrams
-//! in one JSON document; learned phrases never travel (§50). One codec for
-//! every platform (user-data-engine-roadmap P4b); the file picker and share
-//! sheet stay with the platform.
+//! The `.taigi` backup file: the custom dictionary, the frequency counts and
+//! the learned bigrams in one JSON document; learned phrases never travel
+//! (§50). One codec for every platform (user-data-engine-roadmap P4b); the
+//! file picker and share sheet stay with the platform.
+//!
+//! Versions share one shape and differ in how a restore treats a bigram
+//! reading: 1 and 2 (iOS and Android) may carry POJ, so their readings are
+//! folded POJ → TL; 3 (this codec) writes the readings the store holds and
+//! restores them unchanged — a fold would misread a TL `eng` / `ek` final as
+//! POJ (蔣經國 `tsiúnn-keng-kok` → `king`). An older app still reads a
+//! version-3 file, folding its readings as it always did.
 //!
 //! Reading is lenient, as Android's was: a missing field takes its default,
 //! an unknown one is ignored, only a version below 1 is refused — so an old
@@ -20,7 +26,10 @@ use crate::timestamp::format_rfc3339_utc;
 use crate::{AssociationPair, AssociationRow, CustomDictionaryRow, UserDataStores};
 
 /// The version this codec writes.
-pub const BACKUP_VERSION: i64 = 2;
+pub const BACKUP_VERSION: i64 = 3;
+
+/// The first version whose bigram readings restore unchanged.
+const VERBATIM_READINGS_VERSION: i64 = 3;
 
 #[derive(Serialize, Deserialize, Default)]
 #[serde(default, rename_all = "camelCase")]
@@ -147,8 +156,8 @@ pub fn export_backup(
 /// Restores a `.taigi` file into the stores, merging with what is there:
 /// custom words already stored are skipped and the import fills whatever
 /// room the dictionary has left; counts keep the larger of the two and count
-/// as used now; bigram readings are normalized POJ → TL (older and
-/// cross-platform backups can carry POJ). A custom row missing its
+/// as used now; bigram readings of a version-1 / -2 file are folded POJ →
+/// TL (the phones could write POJ there). A custom row missing its
 /// romanization or its Hanji is skipped, as Android's restore did; a missing
 /// count reads as 1, as Android's did.
 pub fn import_backup(stores: &UserDataStores, bytes: &[u8]) -> Result<BackupImported, BackupError> {
@@ -182,6 +191,14 @@ pub fn import_backup(stores: &UserDataStores, bytes: &[u8]) -> Result<BackupImpo
         )
         .map_err(store_error)?;
 
+    let folds_readings = backup.version < VERBATIM_READINGS_VERSION;
+    let reading = |stored: String| {
+        if folds_readings {
+            phonetics::api::poj_display_to_tl_display(&stored)
+        } else {
+            stored
+        }
+    };
     let association = stores
         .association
         .import_merge(
@@ -191,11 +208,9 @@ pub fn import_backup(stores: &UserDataStores, bytes: &[u8]) -> Result<BackupImpo
                 .map(|entry| AssociationRow {
                     pair: AssociationPair {
                         previous: entry.prev_word,
-                        previous_tl: phonetics::api::poj_display_to_tl_display(
-                            &entry.prev_tl.unwrap_or_default(),
-                        ),
+                        previous_tl: reading(entry.prev_tl.unwrap_or_default()),
                         next: entry.next_word,
-                        next_tl: phonetics::api::poj_display_to_tl_display(&entry.next_tl),
+                        next_tl: reading(entry.next_tl),
                     },
                     count: entry.count.max(1),
                 })
