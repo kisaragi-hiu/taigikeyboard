@@ -6,7 +6,7 @@
 //! - iOS `ToneRestoration` (`restore`).
 //! - iOS / Android `TaigiUnicode.nfdPreprocessed` (lookup-side NFD prep —
 //!   exposed as `taigi_unicode_base_form` for the `engine/ranking` crate
-//!   and the `Method::NfdPreprocessForLookup` op).
+//!   and the external-lookup digit-tone fold, `external_lookup::digit_tone_form`).
 //!
 //! Shares NFD + `COMBINING_TO_TONE_NUM` mechanics across all ports. The
 //! two lookup-NFD helpers (`trie_key_unicode_form` and
@@ -128,8 +128,8 @@ fn trie_key_unicode_form(text: &str) -> String {
 /// Android `TaigiUnicode.nfdPreprocessed` copies it once mirrored byte-exact
 /// were removed in the v3.5.3 follow-up (PR #192). Production routes
 /// include toneless-key derivation, syllable folding, custom-dictionary
-/// search keys and `Method::NfdPreprocessForLookup` (URL builder
-/// phonetic prep).
+/// search keys and `external_lookup::digit_tone_form` (the
+/// `ExternalLookupDigitForm` op behind the lookup URLs).
 ///
 /// Distinct from [`trie_key_unicode_form`] — see module-level docs.
 pub fn taigi_unicode_base_form(input: &str) -> String {
@@ -144,7 +144,7 @@ mod tests {
 
     // taigi_unicode_base_form — moved from engine/ranking/src/nfd.rs in
     // v3.5.3 follow-up (PR #192) — consolidates the helper that backs
-    // both ranking and Method::NfdPreprocessForLookup. Test cases
+    // both ranking and the external-lookup digit-tone fold. Test cases
     // preserved verbatim from the original ranking-side module.
 
     // INVARIANT_POJ_NASAL_TO_NN_SUBSTITUTION (behavioral-invariants.md §2)
@@ -220,8 +220,8 @@ mod tests {
     /// Pin behaviour against URL-builder use case: a tone-marked Taigi
     /// syllable from MOE / Chhoe Taigi keeps its tone diacritics and only
     /// the lookup-style preprocessing (nasal substitution + dot collapse)
-    /// applies. The caller (`ExternalLookupURLBuilder`) feeds the result
-    /// into `Method::StripTone` to peel the diacritic.
+    /// applies. The caller (`external_lookup::digit_tone_form`) feeds the
+    /// result into `strip_tone_mark` to peel the diacritic.
     #[test]
     fn url_builder_pipeline_keeps_tone_diacritic_intact() {
         // "tāi" — NFD `t a U+0304 i`. base_form keeps the macron because

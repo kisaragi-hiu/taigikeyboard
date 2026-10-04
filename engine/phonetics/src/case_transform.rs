@@ -163,7 +163,8 @@ pub fn raise_case(text: &str, letter_case: LetterCase, mode: InputMode) -> Strin
 ///
 /// Re-homed from the former `case_adjust.rs::adjust_nasal_marker_case`.
 /// Called in-band by `apply_nasal_marker_case` (the last step of
-/// `api::normalize_tone`), and so of the candidate casing in `composing::continuous`.
+/// `api::normalize_tone`), and through it by the candidate casing in
+/// `composing::continuous`.
 pub fn adjust_nasal_marker_case(text: &str) -> String {
     if !text.contains(NASAL_LOWER) && !text.contains(NASAL_UPPER) {
         return text.to_string();

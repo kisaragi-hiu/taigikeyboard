@@ -11,18 +11,6 @@ public struct TaigiWord: Equatable {
     let hanji: String?
     let lengthScore: Int?
 
-    init(
-        id: Int,
-        roman: String,
-        hanji: String?,
-        lengthScore: Int?,
-    ) {
-        self.id = id
-        self.roman = roman
-        self.hanji = hanji
-        self.lengthScore = lengthScore
-    }
-
     var displayText: String {
         if let hanji, !hanji.isEmpty {
             return hanji

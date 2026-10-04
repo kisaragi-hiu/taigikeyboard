@@ -281,8 +281,8 @@ pub fn pass_through_may_consume(
         return true;
     }
     is_swap_armed
-        && engine::is_attaching_punctuation(&typed)
         && settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
+        && engine::is_attaching_punctuation(&typed)
 }
 
 /// Re-reads the candidates for the composition as it now stands. With the
@@ -395,8 +395,8 @@ fn swap_auto_space(
     manager: &mut ComposingManager,
     surface: &mut impl IntentSurface,
 ) -> bool {
-    if !engine::is_attaching_punctuation(text)
-        || !settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
+    if !settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
+        || !engine::is_attaching_punctuation(text)
         || !surface.swap_preceding_space(&format!("{text} "))
     {
         return false;

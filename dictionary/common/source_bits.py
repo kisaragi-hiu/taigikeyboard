@@ -8,8 +8,8 @@ rules/cross-platform-alignment.md §3a).
 
 `SOURCE_BITS` + `IS_VARIANT_BIT` (bit-layout owners):
   - engine/lexicon/src/dictionary_reader.rs (binary-reader filter mask)
-  - ios/Sources/TaigiKeyboard/Lexicon/Utils/LexiconBitmask.swift (decoder)
-  - android/.../dictionary/LexiconBitmask.kt (decoder)
+  - engine/lexicon/src/dictionary_filters.rs `SOURCES` (bit -> wire code -> toggle;
+    the per-row `TaigiWord.sources` every platform shows)
 
 `SOURCE_TIERS` + `DEFAULT_TIER_NUMERATOR` + `TIER_DENOMINATOR` (ranking owners):
   - engine/ranking/src/score.rs (`tier_numerator` + `TIER_DENOMINATOR`)

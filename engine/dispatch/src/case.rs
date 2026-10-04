@@ -62,8 +62,7 @@ fn proto_to_letter_case(proto: protos::engine::LetterCase) -> LetterCase {
 mod tests {
     use super::*;
     use protos::engine::{
-        FullUppercaseToneString, LowercaseToneChar, TransformInputCase,
-        UppercaseToneChar,
+        FullUppercaseToneString, LowercaseToneChar, TransformInputCase, UppercaseToneChar,
     };
 
     fn config_for(mode: &str) -> AppConfig {

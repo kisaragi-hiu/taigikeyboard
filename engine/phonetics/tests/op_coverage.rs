@@ -265,7 +265,11 @@ fn external_lookup_digit_form_folds_o_dot_and_nasal_marker() {
     // trace: per syllable base form (U+0358→o, U+207F→nn), first tone mark
     // stripped to a digit, tone 1 omitted; the full table is in
     // `src/external_lookup.rs`.
-    for (reading, expected) in [("ho\u{0358}\u{0301}", "hoo2"), ("sa\u{207f}", "sann"), ("T\u{e2}i-g\u{ed}", "tai5-gi2")] {
+    for (reading, expected) in [
+        ("ho\u{0358}\u{0301}", "hoo2"),
+        ("sa\u{207f}", "sann"),
+        ("T\u{e2}i-g\u{ed}", "tai5-gi2"),
+    ] {
         let resp = run(Method::ExternalLookupDigitForm(ExternalLookupDigitForm {
             reading: reading.to_string(),
         }));
@@ -435,7 +439,13 @@ fn is_tps_tone_mark_false_for_empty() {
 fn is_attaching_punctuation_answers_through_the_dispatcher() {
     // trace: `punctuation::ATTACHING` holds `?` and `」`, not the opener `(`;
     // two characters never attach.
-    for (text, expected) in [("?", true), ("」", true), ("(", false), ("?!", false), ("", false)] {
+    for (text, expected) in [
+        ("?", true),
+        ("」", true),
+        ("(", false),
+        ("?!", false),
+        ("", false),
+    ] {
         let resp = run(Method::IsAttachingPunctuation(IsAttachingPunctuation {
             text: text.to_string(),
         }));

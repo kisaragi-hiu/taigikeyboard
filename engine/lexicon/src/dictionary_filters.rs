@@ -21,10 +21,35 @@ use crate::dictionary_reader::{
     WIRE_KAUTIAN_SUBCOLL_SHIFT,
 };
 use protos::engine::{DictionaryFiltersResponse, DictionarySourceCode, DictionarySourceToggles};
+use DictionarySourceCode as C;
 
 /// `association_bitmask` when every association source is on: the
 /// association reader treats it as "filter disabled".
 const ASSOC_ALL_ENABLED_SENTINEL: u32 = u32::MAX;
+
+/// Each source's record-bitmask bit, wire code and user toggle, in bit order
+/// (layout in the module header) — the one table the filter mask, the
+/// association mask, the enabled codes and the per-row sources all read.
+/// Bit 12 (variant) is a filter, not a source.
+type SourceToggle = fn(&DictionarySourceToggles) -> bool;
+const SOURCES: [(u32, DictionarySourceCode, SourceToggle); 12] = [
+    (1 << 0, C::DictSourceKautian, |t| t.kautian),
+    (1 << 1, C::DictSourceTaigitv, |t| t.taigitv),
+    (1 << 2, C::DictSourceItaigi, |t| t.itaigi),
+    (1 << 3, C::DictSourceSitbut, |t| t.sitbut),
+    (1 << 4, C::DictSourceTaihoa, |t| t.taihoa),
+    (1 << 5, C::DictSourceTaijit, |t| t.taijit),
+    (1 << 6, C::DictSourceKungge, |t| t.kungge),
+    (1 << 7, C::DictSourceStti, |t| t.stti),
+    (1 << 8, C::DictSourceKhpoo, |t| t.khpoo),
+    (1 << 9, C::DictSourceKhiin, |t| t.khiin),
+    (1 << 10, C::DictSourceDev, |t| t.dev),
+    (1 << 11, C::DictSourceLkk, |t| t.lkk),
+];
+
+/// The association bin carries the first nine sources (kautian … khpoo, bits
+/// 0-8).
+const ASSOCIATION_SOURCES: usize = 9;
 
 /// Compute filter bitmasks + enabled-source codes from the user's
 /// 12-toggle preference snapshot.
@@ -42,43 +67,7 @@ pub(crate) fn compute_filters(toggles: &DictionarySourceToggles) -> DictionaryFi
 /// kautian subcollection wire high region (bit 13 active + bits 14..=25 enable
 /// mask) when the subcollection toggles are present.
 pub fn dictionary_filter_bitmask(t: &DictionarySourceToggles) -> u32 {
-    let mut mask: u32 = 0;
-    if t.kautian {
-        mask |= 1 << 0;
-    }
-    if t.taigitv {
-        mask |= 1 << 1;
-    }
-    if t.itaigi {
-        mask |= 1 << 2;
-    }
-    if t.sitbut {
-        mask |= 1 << 3;
-    }
-    if t.taihoa {
-        mask |= 1 << 4;
-    }
-    if t.taijit {
-        mask |= 1 << 5;
-    }
-    if t.kungge {
-        mask |= 1 << 6;
-    }
-    if t.stti {
-        mask |= 1 << 7;
-    }
-    if t.khpoo {
-        mask |= 1 << 8;
-    }
-    if t.khiin {
-        mask |= 1 << 9;
-    }
-    if t.dev {
-        mask |= 1 << 10;
-    }
-    if t.lkk {
-        mask |= 1 << 11;
-    }
+    let mut mask = toggled_bits(&SOURCES, t);
     if t.variant {
         mask |= 1 << 12;
     }
@@ -135,76 +124,31 @@ fn encode_kautian_subcoll_wire(t: &DictionarySourceToggles) -> u32 {
 /// Returns the `u32::MAX` sentinel when ALL 9 association sources are on,
 /// the shortcut `api::lookup_associations` reads as "no filter".
 pub fn association_bitmask(t: &DictionarySourceToggles) -> u32 {
-    if all_association_sources_enabled(t) {
+    let sources = &SOURCES[..ASSOCIATION_SOURCES];
+    if sources.iter().all(|(_, _, is_on)| is_on(t)) {
         return ASSOC_ALL_ENABLED_SENTINEL;
     }
-    let mut mask: u32 = 0;
-    if t.kautian {
-        mask |= 1 << 0;
-    }
-    if t.taigitv {
-        mask |= 1 << 1;
-    }
-    if t.itaigi {
-        mask |= 1 << 2;
-    }
-    if t.sitbut {
-        mask |= 1 << 3;
-    }
-    if t.taihoa {
-        mask |= 1 << 4;
-    }
-    if t.taijit {
-        mask |= 1 << 5;
-    }
-    if t.kungge {
-        mask |= 1 << 6;
-    }
-    if t.stti {
-        mask |= 1 << 7;
-    }
-    if t.khpoo {
-        mask |= 1 << 8;
-    }
-    mask
+    toggled_bits(sources, t)
 }
 
-fn all_association_sources_enabled(t: &DictionarySourceToggles) -> bool {
-    t.kautian
-        && t.taigitv
-        && t.itaigi
-        && t.sitbut
-        && t.taihoa
-        && t.taijit
-        && t.kungge
-        && t.stti
-        && t.khpoo
+/// The bits of the `sources` the user has on.
+fn toggled_bits(
+    sources: &[(u32, DictionarySourceCode, SourceToggle)],
+    t: &DictionarySourceToggles,
+) -> u32 {
+    sources
+        .iter()
+        .filter(|(_, _, is_on)| is_on(t))
+        .fold(0, |mask, (bit, _, _)| mask | bit)
 }
-
-/// The source each record-bitmask bit stands for, in bit order (layout in
-/// the module header). Bit 12 (variant) is a filter, not a source.
-const SOURCE_CODE_BITS: [(u32, DictionarySourceCode); 12] = [
-    (1 << 0, DictionarySourceCode::DictSourceKautian),
-    (1 << 1, DictionarySourceCode::DictSourceTaigitv),
-    (1 << 2, DictionarySourceCode::DictSourceItaigi),
-    (1 << 3, DictionarySourceCode::DictSourceSitbut),
-    (1 << 4, DictionarySourceCode::DictSourceTaihoa),
-    (1 << 5, DictionarySourceCode::DictSourceTaijit),
-    (1 << 6, DictionarySourceCode::DictSourceKungge),
-    (1 << 7, DictionarySourceCode::DictSourceStti),
-    (1 << 8, DictionarySourceCode::DictSourceKhpoo),
-    (1 << 9, DictionarySourceCode::DictSourceKhiin),
-    (1 << 10, DictionarySourceCode::DictSourceDev),
-    (1 << 11, DictionarySourceCode::DictSourceLkk),
-];
 
 /// The sources a record's (effective) bitmask names, in bit order — the
 /// order every platform draws the result badges in (`TaigiWord.sources`).
 pub(crate) fn source_codes(bitmask: u32) -> Vec<DictionarySourceCode> {
-    SOURCE_CODE_BITS
+    SOURCES
         .iter()
-        .filter(|(bit, _)| bitmask & bit != 0)
-        .map(|(_, code)| *code)
+        .filter(|(bit, _, _)| bitmask & bit != 0)
+        .map(|(_, code, _)| *code)
         .collect()
 }
 
@@ -214,46 +158,15 @@ pub(crate) fn source_codes(bitmask: u32) -> Vec<DictionarySourceCode> {
 /// first-when-present so the order stays `[DEV?, CUSTOM, …]`; `variant` is
 /// a filter bit, not a source code.
 fn enabled_source_codes(t: &DictionarySourceToggles) -> Vec<DictionarySourceCode> {
-    use DictionarySourceCode as C;
-    let mut codes = Vec::new();
-    if t.dev {
-        codes.push(C::DictSourceDev);
-    }
-    codes.push(C::DictSourceCustom);
-    if t.kautian {
-        codes.push(C::DictSourceKautian);
-    }
-    if t.taigitv {
-        codes.push(C::DictSourceTaigitv);
-    }
-    if t.itaigi {
-        codes.push(C::DictSourceItaigi);
-    }
-    if t.sitbut {
-        codes.push(C::DictSourceSitbut);
-    }
-    if t.taihoa {
-        codes.push(C::DictSourceTaihoa);
-    }
-    if t.taijit {
-        codes.push(C::DictSourceTaijit);
-    }
-    if t.kungge {
-        codes.push(C::DictSourceKungge);
-    }
-    if t.stti {
-        codes.push(C::DictSourceStti);
-    }
-    if t.khpoo {
-        codes.push(C::DictSourceKhpoo);
-    }
-    if t.khiin {
-        codes.push(C::DictSourceKhiin);
-    }
-    if t.lkk {
-        codes.push(C::DictSourceLkk);
-    }
-    codes
+    let (dev, rest): (Vec<_>, Vec<_>) = SOURCES
+        .iter()
+        .filter(|(_, _, is_on)| is_on(t))
+        .map(|(_, code, _)| *code)
+        .partition(|code| *code == C::DictSourceDev);
+    dev.into_iter()
+        .chain([C::DictSourceCustom])
+        .chain(rest)
+        .collect()
 }
 
 #[cfg(test)]
@@ -505,43 +418,17 @@ mod tests {
         // (variant: a filter, no source) → [KAUTIAN, KHIIN, DEV, LKK]; the
         // old platform decoders (`LexiconBitmask` ×2, desktop
         // `SOURCE_BITS`) answered the same list.
-        use DictionarySourceCode as C;
         let mask = (1 << 0) | (1 << 9) | (1 << 10) | (1 << 11) | (1 << 12);
         assert_eq!(
             source_codes(mask),
-            vec![C::DictSourceKautian, C::DictSourceKhiin, C::DictSourceDev, C::DictSourceLkk]
+            vec![
+                C::DictSourceKautian,
+                C::DictSourceKhiin,
+                C::DictSourceDev,
+                C::DictSourceLkk
+            ]
         );
         assert!(source_codes(0).is_empty());
         assert!(source_codes(1 << 12).is_empty());
-    }
-
-    #[test]
-    fn each_toggle_bit_decodes_back_to_that_toggles_source() {
-        // The record-bit table and the toggle tables must name the same
-        // source for every bit: one toggle on → its filter bit → its code
-        // (`enabled_source_codes` minus the always-on CUSTOM).
-        let toggles: [fn(&mut DictionarySourceToggles); 12] = [
-            |t| t.kautian = true,
-            |t| t.taigitv = true,
-            |t| t.itaigi = true,
-            |t| t.sitbut = true,
-            |t| t.taihoa = true,
-            |t| t.taijit = true,
-            |t| t.kungge = true,
-            |t| t.stti = true,
-            |t| t.khpoo = true,
-            |t| t.khiin = true,
-            |t| t.dev = true,
-            |t| t.lkk = true,
-        ];
-        for set in toggles {
-            let mut t = all_off();
-            set(&mut t);
-            let enabled: Vec<DictionarySourceCode> = enabled_source_codes(&t)
-                .into_iter()
-                .filter(|code| *code != DictionarySourceCode::DictSourceCustom)
-                .collect();
-            assert_eq!(source_codes(dictionary_filter_bitmask(&t)), enabled, "{t:?}");
-        }
     }
 }

@@ -26,15 +26,10 @@ fn syllable_in_digit_tone(syllable: &str) -> String {
     let base = taigi_unicode_base_form(syllable);
     // A syllable typed with its tone digit keeps it — the digit wins over
     // any tone mark also on it.
-    if let Some(digit) = base.chars().last().filter(char::is_ascii_digit) {
-        let bare: String = base[..base.len() - 1].nfc().collect();
-        return if is_omitted_tone(&digit.to_string()) {
-            bare
-        } else {
-            format!("{bare}{digit}")
-        };
-    }
-    let (bare, tone) = strip_tone_mark(&base);
+    let (bare, tone) = match base.chars().last().filter(char::is_ascii_digit) {
+        Some(digit) => (base[..base.len() - 1].nfc().collect(), digit.to_string()),
+        None => strip_tone_mark(&base),
+    };
     if is_omitted_tone(&tone) {
         bare
     } else {
@@ -97,7 +92,11 @@ mod tests {
             // `isNumber` / Android `isDigit` also took `２`).
             ("h\u{F3}\u{FF12}", "ho\u{FF12}2", "mobile h\u{F3}\u{FF12}"),
         ] {
-            assert_eq!(digit_tone_form(reading), expected, "{reading:?} (was {before})");
+            assert_eq!(
+                digit_tone_form(reading),
+                expected,
+                "{reading:?} (was {before})"
+            );
         }
     }
 }
