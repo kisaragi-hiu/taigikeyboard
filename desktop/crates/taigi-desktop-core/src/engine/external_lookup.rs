@@ -115,6 +115,41 @@ mod tests {
         assert_eq!(digit_tone_form("tiⁿ"), "tinn");
     }
 
+    /// Characterization of this per-syllable fold before it moved to the
+    /// engine — the same table iOS `ExternalLookupURLBuilderTests` records.
+    #[test]
+    fn digit_tone_form_characterization() {
+        // trace: diacritic path = nfd_preprocess_for_lookup (ⁿ→nn, NFD,
+        // U+0358→o) then strip_tone (first combining tone mark, bare NFC);
+        // tones 1 / 4 / none omitted.
+        for (reading, expected) in [
+            ("Tâi-gí", "tai5-gi2"),
+            ("tsi\u{30D}t-ê", "tsit8-e5"),
+            ("kiaⁿ", "kiann"),
+            ("kiânn", "kiann5"),
+            ("ho\u{301}\u{358}", "hoo2"),
+            ("ho\u{358}\u{301}", "hoo2"),
+            ("tâí", "taí5"),
+            ("iā sī", "ia sī7"),
+            ("--ah", "--ah"),
+            ("台語", "台語"),
+            ("", ""),
+            // trace: digit path = last char ASCII digit, then
+            // nfd_preprocess_for_lookup (o͘ folded, output NFD), 1 / 4 dropped.
+            ("ah4", "ah"),
+            ("sann1", "sann"),
+            ("TSIT8", "tsit8"),
+            ("ho\u{358}2", "hoo2"),
+            ("t\u{E2}i5", "ta\u{302}i5"),
+            ("ta\u{302}i5", "ta\u{302}i5"),
+            // A full-width digit is not ASCII: the diacritic path.
+            ("ho\u{FF12}", "ho\u{FF12}"),
+            ("h\u{F3}\u{FF12}", "ho\u{FF12}2"),
+        ] {
+            assert_eq!(digit_tone_form(reading), expected, "{reading:?}");
+        }
+    }
+
     #[test]
     fn the_two_urls_carry_the_fixed_query_and_the_encoded_reading() {
         assert_eq!(
