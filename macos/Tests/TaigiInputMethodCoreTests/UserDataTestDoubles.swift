@@ -58,7 +58,16 @@ final class FakeUserDataClient: UserDataClient, @unchecked Sendable {
         CustomDictionaryImportResult(imported: 0, skipped: 0)
     }
 
-    func clearLearningRecords() throws {}
+    private var learningRecordClears = 0
+
+    /// How many times the learning records were emptied.
+    var learningRecordClearCount: Int {
+        lock.withLock { learningRecordClears }
+    }
+
+    func clearLearningRecords() throws {
+        lock.withLock { learningRecordClears += 1 }
+    }
 
     // MARK: - Learning records
 
