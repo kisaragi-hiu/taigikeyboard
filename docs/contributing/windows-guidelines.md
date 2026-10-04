@@ -114,7 +114,9 @@ shared engine). Read before modifying Windows code. Design record: `docs/archite
   post the window's hide (`PostMessage`), then return. The candidate window is shown / hidden
   after the edit session returned, never inside it.
 - Every `HWND` owns nothing: the `PopupWindow` owns the handler box, the window borrows a pointer.
-  Monitor / DPI queries run inside the per-monitor-v2 thread scope (`with_per_monitor_dpi`).
+  Monitor / DPI queries and window placement (`show_at`'s `SetWindowPos`) run inside the
+  per-monitor-v2 thread scope (`with_per_monitor_dpi`): the key path runs on the host's thread,
+  and a DPI-unaware host's context would scale physical pixels a second time.
 - `OnTestKeyDown` and `OnKeyDown` run the same classifier — terminals skip the former.
 - Every `unsafe` block carries a `// SAFETY:` comment (`rust-ffi-safety.md` §3).
 - Verify any Win32/TSF API shape against the `windows` crate metadata (`cargo doc` / the crate
