@@ -3,6 +3,7 @@
 //! transitions lives in `transition.rs`; this module is the stable surface
 //! that `requests.rs` and external crates consume.
 
+pub use crate::conversion::{Conversion, ConvertedSegment};
 use lexicon::{compound_hanji_exists, EngineHandle as LexiconHandle};
 use protos::engine::{AppConfig, ComposingResponse};
 use thiserror::Error;
@@ -20,6 +21,14 @@ use thiserror::Error;
 /// mobile it is always the end. It lives beside `raw` rather than on
 /// `EngineState` so replacing the phase can never leave a stale offset.
 ///
+/// `conversion` is the Hanji conversion of the pending `raw`
+/// ([`crate::conversion`]), kept beside it for the same reason. Only a
+/// mutation whose `AppConfig` asks for one (`hanji_conversion`) on a TPS
+/// buffer stores it, so every TL / POJ and mobile composition carries `None`.
+/// A request that does not ask for it is shown the glyphs even while the
+/// state holds one. It changes what the preedit shows, never what a commit
+/// writes.
+///
 /// **Model B (mainstream-aligned, see `docs/engine/continuous-commit-and-display.md`
 /// §10):** `nailed` segments are **NOT** in the host document. The whole
 /// composition — `Σ nailed[i].display_text` followed by the derived display
@@ -35,6 +44,7 @@ pub enum Phase {
         raw: String,
         caret: usize,
         nailed: Vec<NailedSegment>,
+        conversion: Option<Conversion>,
     },
 }
 
@@ -97,10 +107,12 @@ impl Phase {
 
     /// The composing-buffer surface the host renders in its single
     /// marked / composing region (`docs/engine/continuous-commit-and-display.md`
-    /// §10.2 / §10.4 invariant I1, Model B).
+    /// §10.2 / §10.4 invariant I1, Model B) — except while a Hanji
+    /// `conversion` is shown, when the preedit carries the converted tail
+    /// and this stays the text a commit writes.
     ///
     /// - `Idle` → empty string.
-    /// - `Continuous { raw, nailed }` → `Σ nailed[i].display_text`
+    /// - `Continuous { raw, nailed, .. }` → `Σ nailed[i].display_text`
     ///   concatenated with the derived display of the pending `raw` tail.
     ///   Nailed segments are **not** in the document; they are part of the
     ///   marked region until a hard finalize.
@@ -414,7 +426,9 @@ fn nailed_join(
 /// pending `raw` tail. **Single source of truth** — both
 /// [`Phase::composing_display`] and the `transition.rs` Continuous paths
 /// route through this so the rendered preedit and the hard-finalize commit
-/// can never diverge (Codex post-impl review point).
+/// can never diverge (Codex post-impl review point). The one preedit that
+/// is not this string is a shown Hanji conversion (`transition::phase_preedit`);
+/// every commit still writes this one.
 pub(crate) fn combined_display(nailed: &[NailedSegment], raw: &str, config: &AppConfig) -> String {
     combined_display_with_tail(nailed, raw, config).0
 }
@@ -426,8 +440,21 @@ pub(crate) fn combined_display_with_tail(
     raw: &str,
     config: &AppConfig,
 ) -> (String, usize) {
+    join_nailed_prefix_and_tail(
+        nailed,
+        &crate::derived::derived_display(raw, config),
+        config,
+    )
+}
+
+/// The nailed prefix followed by `derived`, the pending tail as displayed,
+/// plus the byte offset where the tail starts.
+pub(crate) fn join_nailed_prefix_and_tail(
+    nailed: &[NailedSegment],
+    derived: &str,
+    config: &AppConfig,
+) -> (String, usize) {
     let mut s = nailed_prefix(nailed, config);
-    let derived = crate::derived::derived_display(raw, config);
     // §10.2 word boundary between the nailed prefix and the pending
     // tail (the tail is the next word). Same predicate + trailing-`-`
     // suppression as the inter-segment join; a tail that opens with a
@@ -441,7 +468,7 @@ pub(crate) fn combined_display_with_tail(
         s.push(' ');
     }
     let tail_start = s.len();
-    s.push_str(&derived);
+    s.push_str(derived);
     (s, tail_start)
 }
 
@@ -765,6 +792,7 @@ mod tests {
             hyphenless_roman: false,
             force_lowercase_nasal_marker: false,
             tps_or_maps_to_er: false,
+            hanji_conversion: None,
         }
     }
 

@@ -16,6 +16,7 @@ pub mod syllabifier;
 
 mod commit_text;
 mod continuous;
+mod conversion;
 mod derived;
 mod lattice;
 mod shadow;

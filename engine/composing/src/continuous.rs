@@ -137,7 +137,7 @@ pub(crate) struct WalkerSlot0 {
 /// span-local list untouched (pre-S2 behavior). Leading / internal
 /// hyphens fold INTO the consumed prefix
 /// (`shadow_to_raw_end[shadow_len] == raw_len`) and still synth.
-fn synth_consumed_span(
+pub(crate) fn synth_consumed_span(
     shadow_to_raw_end: &[usize],
     shadow_len: usize,
     raw_len: u32,
@@ -457,29 +457,6 @@ fn fetch_via_lexicon_partial_inner_impl(
     out
 }
 
-/// v3.5.9 A2 — slot-0 whole-sentence walker inner. Pre-A2
-/// `fetch_walker_slot0`'s body minus the `LexiconHandle::with_state`
-/// opener, the state `as_ref()?` guards, AND the `build_shadow_lattice_with_barriers`
-/// call (now built ONCE in the seam under **D1 fold** and passed in).
-/// Returns [`WalkerSlot0`] (D3 honest type): `cost` named explicitly;
-/// the seam converts to wire via `score = -(cost as f32)`.
-///
-/// v3.5.9 B-0c — `mode: phonetics::InputMode` replaces the prior
-/// `is_poj: bool` (Codex pre-impl SHOULD 2026-05-21 + 2026-05-20 enum
-/// sweep). `mode` is taken as a parameter rather than re-derived
-/// here so the single-source-of-truth invariant — same `mode` feeds
-/// `build_shadow_lattice_with_barriers` (seam) and `custom_toneless_key` (here) —
-/// cannot be silently broken by a future seam refactor.
-///
-/// Returns `None` when the synth must be suppressed (trailing-hyphen
-/// shadow short of raw, or the walker cannot span the buffer) — caller
-/// leaves the span-local list untouched (pre-S2 behavior preserved).
-///
-/// `continuous_keys` is the seam's single `build_continuous_keys` result
-/// (shadow / lattice / barriers — the per-key vectors are the span-local
-/// fetch's, unused here); `ctx` is the same [`ContinuousFetchCtx`] the
-/// span-local fetch reads (`mode` / `custom` / `freq_map` / `now_ms` /
-/// `enabled_sources_bitmask` + the dictionary readers).
 /// A walker edge's time-decayed user-frequency weight for the
 /// `(display_text, canonical_tl)` pair the platform commits to
 /// `user_frequency.db` (Core Principle #7) — for the custom-edge and
@@ -536,13 +513,17 @@ fn learned_edge_key(canonical_tl: &str, mode: phonetics::InputMode) -> Option<St
     custom_toneless_key(&native, mode)
 }
 
-fn fetch_walker_slot0_inner(
-    raw: &str,
-    raw_len: u32,
+/// The whole-sentence walk over `continuous_keys`' lattice: the minimum-cost
+/// path spanning the shadow, each edge resolved to its custom, dictionary
+/// (with the learned rows competing) or OOV content. `None` when no edge
+/// chain spans the buffer. Shared by the slot-0 synthesis
+/// ([`fetch_walker_slot0_inner`]) and the preedit conversion
+/// (`crate::conversion`), which present the same path differently.
+pub(crate) fn walk_buffer(
     continuous_keys: &crate::shadow::ContinuousKeys,
     inv: &SyllableInventory,
     ctx: &ContinuousFetchCtx<'_>,
-) -> Option<WalkerSlot0> {
+) -> Option<crate::lattice::BestPath> {
     let crate::shadow::ContinuousKeys {
         shadow,
         shadow_to_raw_end,
@@ -569,11 +550,9 @@ fn fetch_walker_slot0_inner(
     // the edge provider's pick is **first-wins** among the eligible
     // (Codex Q6: explicit, not `HashMap` overwrite/iteration).
     //
-    // S6 byte-identity invariant: the SAME `mode` feeds
-    // `build_shadow_lattice_with_barriers` (caller) and `custom_toneless_key` (here);
-    // taking it as a parameter (B-0c: enum sweep — replaces the
-    // pre-B-0c `is_poj: bool` from Codex pre-impl SHOULD 2026-05-21)
-    // makes the contract local — a split-brain (POJ-aware edges,
+    // S6 byte-identity invariant: the SAME `mode` (`ctx.mode`) feeds the
+    // caller's `build_shadow_lattice_with_barriers` and
+    // `custom_toneless_key` here — a split-brain (POJ-aware edges,
     // mode-blind custom keys) would silently drop custom matches in
     // POJ mode.
     let custom_map = edge_key_map(custom, |entry| custom_toneless_key(&entry.roman, mode));
@@ -582,11 +561,6 @@ fn fetch_walker_slot0_inner(
     // edge pick below as a COMPETITOR of the dictionary rows, never as the
     // override the custom map is (Codex 2026-09-20 F5).
     let learned_map = edge_key_map(learned, |entry| learned_edge_key(&entry.canonical_tl, mode));
-    // Codex post-impl S2 P1: suppress the synth when a trailing
-    // hyphen leaves the shadow short of the raw buffer (a
-    // `(0, raw_len)` synth would mis-commit the pending `-`).
-    // Cheap early-out before walking.
-    let consumed_span = synth_consumed_span(shadow_to_raw_end, shadow.len(), raw_len)?;
 
     let path = crate::lattice::walk_best(lattice, shadow.len(), |start, end| {
         // Edges come from the syllabifier-built lattice so they are
@@ -847,10 +821,57 @@ fn fetch_walker_slot0_inner(
         }
     });
 
-    let path = path?;
-    if path.choices.is_empty() {
-        return None;
-    }
+    path.filter(|path| !path.choices.is_empty())
+}
+
+/// v3.5.9 A2 — slot-0 whole-sentence walker inner. Pre-A2
+/// `fetch_walker_slot0`'s body minus the `LexiconHandle::with_state`
+/// opener, the state `as_ref()?` guards, AND the `build_shadow_lattice_with_barriers`
+/// call (now built ONCE in the seam under **D1 fold** and passed in).
+/// Returns [`WalkerSlot0`] (D3 honest type): `cost` named explicitly;
+/// the seam converts to wire via `score = -(cost as f32)`.
+///
+/// v3.5.9 B-0c — `mode: phonetics::InputMode` replaces the prior
+/// `is_poj: bool` (Codex pre-impl SHOULD 2026-05-21 + 2026-05-20 enum
+/// sweep). `mode` is taken as a parameter rather than re-derived
+/// here so the single-source-of-truth invariant — same `mode` feeds
+/// `build_shadow_lattice_with_barriers` (seam) and `custom_toneless_key` (here) —
+/// cannot be silently broken by a future seam refactor.
+///
+/// Returns `None` when the synth must be suppressed (trailing-hyphen
+/// shadow short of raw, or the walker cannot span the buffer) — caller
+/// leaves the span-local list untouched (pre-S2 behavior preserved).
+///
+/// `continuous_keys` is the seam's single `build_continuous_keys` result
+/// (shadow / lattice / barriers — the per-key vectors are the span-local
+/// fetch's, unused here); `ctx` is the same [`ContinuousFetchCtx`] the
+/// span-local fetch reads (`mode` / `custom` / `freq_map` / `now_ms` /
+/// `enabled_sources_bitmask` + the dictionary readers).
+fn fetch_walker_slot0_inner(
+    raw: &str,
+    raw_len: u32,
+    continuous_keys: &crate::shadow::ContinuousKeys,
+    inv: &SyllableInventory,
+    ctx: &ContinuousFetchCtx<'_>,
+) -> Option<WalkerSlot0> {
+    let crate::shadow::ContinuousKeys {
+        shadow,
+        shadow_to_raw_end,
+        barriers,
+        ..
+    } = continuous_keys;
+    let ContinuousFetchCtx {
+        freq_map,
+        now_ms,
+        mode,
+        ..
+    } = *ctx;
+    // Codex post-impl S2 P1: suppress the synth when a trailing
+    // hyphen leaves the shadow short of the raw buffer (a
+    // `(0, raw_len)` synth would mis-commit the pending `-`).
+    // Cheap early-out before walking.
+    let consumed_span = synth_consumed_span(shadow_to_raw_end, shadow.len(), raw_len)?;
+    let path = walk_buffer(continuous_keys, inv, ctx)?;
 
     // v3.5.8 S5 (Codex pre-impl Q2, 2026-05-17) — no-dict carve-out.
     // "No dictionary hit anywhere" is detected via the explicit

@@ -18,7 +18,7 @@
 
 ## Active / In-flight items
 
-- **Desktop TPS — Hanji conversion in the preedit** (arm B of U8): design only, H-P0. Under TPS the preedit shows the predicted Hanji and ↓ opens the candidates of the word at the caret; TL and POJ unchanged. Implementation has not started and waits for the maintainer's word. Design: [`architecture/desktop-tps-hanji-conversion-roadmap.md`](architecture/desktop-tps-hanji-conversion-roadmap.md).
+- **Desktop TPS — Hanji conversion in the preedit** (arm B of U8): H-P1 (engine: conversion state, the walk when a reading closes, the converted preedit) in review; H-P2 to H-P5 pending. Under TPS the preedit shows the predicted Hanji and ↓ opens the candidates of the word at the caret; TL and POJ unchanged. No shell asks for the conversion before H-P4. Design: [`architecture/desktop-tps-hanji-conversion-roadmap.md`](architecture/desktop-tps-hanji-conversion-roadmap.md).
 
 Everything else scoped through 2026-10-03 has merged (see Closed phases). Pending dogfood: `docs/architecture/dogfood-checklist.md`.
 

@@ -51,9 +51,16 @@ pub(crate) fn buffer_input_mode(raw: &str, config: &AppConfig) -> phonetics::Inp
 /// literal word boundary and survives).
 pub(crate) fn strip_tps_separator_markers(raw: &str) -> String {
     if phonetics::api::contains_tps(raw) {
-        return raw.replace(' ', "");
+        return tps_slice_display(raw);
     }
     raw.to_string()
+}
+
+/// A slice of a buffer already known to be TPS, without the separator
+/// markers (§41). The slice need not hold a glyph itself (`- `), which
+/// [`strip_tps_separator_markers`] would read as romanization.
+pub(crate) fn tps_slice_display(tps_slice: &str) -> String {
+    tps_slice.replace(' ', "")
 }
 
 /// Where a caret sitting at raw byte offset `caret` lands inside `display`
@@ -184,6 +191,7 @@ mod tests {
             hyphenless_roman: false,
             force_lowercase_nasal_marker: false,
             tps_or_maps_to_er: false,
+            hanji_conversion: None,
         }
     }
 
@@ -354,6 +362,7 @@ mod tests {
             raw: raw.to_string(),
             caret: raw.len(),
             nailed: Vec::new(),
+            conversion: None,
         }
     }
 
@@ -457,6 +466,7 @@ mod tests {
                 raw_span: (0, 4),
                 syllable_count: 1,
             }],
+            conversion: None,
         };
         assert_eq!(phase.raw_input(&config_tl()), "lí");
     }
@@ -475,6 +485,7 @@ mod tests {
                 raw_span: (0, 4),
                 syllable_count: 1,
             }],
+            conversion: None,
         };
         assert_eq!(phase.raw_input(&config_tl()), "");
     }

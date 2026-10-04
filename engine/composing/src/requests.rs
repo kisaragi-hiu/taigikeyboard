@@ -31,7 +31,7 @@ use lexicon::{
 };
 use protos::engine::{
     composing_request, AppConfig, CandidateMessage, CommitScript as WireCommitScript,
-    ComposingRequest, ComposingResponse, ContinuousResponse, FetchAtPos,
+    ComposingRequest, ComposingResponse, ContinuousResponse, DictionarySourceToggles, FetchAtPos,
 };
 
 /// Decode the proto request into a typed `Intent`. Returns `MissingMethod`
@@ -93,14 +93,17 @@ pub fn fetch_at_pos_intent(
 ) -> Intent {
     Intent::FetchAtPos {
         now_ms: fetch.now_ms,
-        enabled_sources_bitmask: fetch
-            .toggles
-            .as_ref()
-            .map_or(u32::MAX, lexicon::api::dictionary_filter_bitmask),
+        enabled_sources_bitmask: source_filter_bitmask(fetch.toggles.as_ref()),
         literal_roman_candidate_disabled: fetch.literal_roman_candidate_disabled,
         user_rows,
         context,
     }
+}
+
+/// The dictionary source filter `toggles` resolve to: every source when a
+/// request names none, `0` when it turns every dictionary off (§57).
+pub(crate) fn source_filter_bitmask(toggles: Option<&DictionarySourceToggles>) -> u32 {
+    toggles.map_or(u32::MAX, lexicon::api::dictionary_filter_bitmask)
 }
 
 /// Pure dispatch entry: decode the proto request into an `Intent` and
@@ -616,6 +619,7 @@ mod tests {
             hyphenless_roman: false,
             force_lowercase_nasal_marker: false,
             tps_or_maps_to_er: false,
+            hanji_conversion: None,
         }
     }
 

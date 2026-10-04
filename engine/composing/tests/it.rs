@@ -32,6 +32,7 @@ mod raw_input_pending_tail;
 mod roman_only_display_dedup;
 mod syllabifier_tl;
 mod tps_display_dedup;
+mod tps_hanji_conversion;
 mod tps_key;
 mod tps_space_pinned_tone;
 

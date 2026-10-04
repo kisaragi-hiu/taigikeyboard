@@ -47,7 +47,7 @@ mod walker;
 
 pub(crate) use builder::build_lattice_with_barriers;
 pub(crate) use cost::CUSTOM_EFFECTIVE_FREQ;
-pub(crate) use walker::{walk_best, EdgeChoice};
+pub(crate) use walker::{walk_best, BestPath, EdgeChoice};
 
 /// A segmentation lattice over shadow byte offsets. Nodes are byte
 /// offsets in `0..=shadow.len()`; an edge `(start, end)` means
