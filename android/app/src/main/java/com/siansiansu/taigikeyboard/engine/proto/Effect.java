@@ -10,7 +10,10 @@ package com.siansiansu.taigikeyboard.engine.proto;
  * Platform-neutral effects. The wrapper maps document-mutation effects
  * (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`)
  * to `setComposingText` / `commitText` (Android) or `setMarkedText` /
- * `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ClearCandidates` /
+ * `setMarkedText("")` + `unmarkText()` / `setMarkedText(text)` + `unmarkText()`
+ * (iOS `HostTextWriter`; `insertText` only when nothing is marked). An iOS
+ * commit and the literals the same event writes after it reach the host as
+ * one write (`INVARIANT_composing_host_commit_one_write_per_event`). Autocomplete-control effects (`ClearCandidates` /
  * `RefreshCandidates` / `ResetCandidateContext`) route to the platform
  * autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
  *
@@ -629,7 +632,10 @@ public  final class Effect extends
    * Platform-neutral effects. The wrapper maps document-mutation effects
    * (`UpdatePreedit` / `ClearPreeditWithoutCommit` / `CommitTextReplacingPreedit`)
    * to `setComposingText` / `commitText` (Android) or `setMarkedText` /
-   * `clearMarkedText` + `insertText` (iOS). Autocomplete-control effects (`ClearCandidates` /
+   * `setMarkedText("")` + `unmarkText()` / `setMarkedText(text)` + `unmarkText()`
+   * (iOS `HostTextWriter`; `insertText` only when nothing is marked). An iOS
+   * commit and the literals the same event writes after it reach the host as
+   * one write (`INVARIANT_composing_host_commit_one_write_per_event`). Autocomplete-control effects (`ClearCandidates` /
    * `RefreshCandidates` / `ResetCandidateContext`) route to the platform
    * autocomplete subsystem (stays platform-side until v3.5.5 NextWord slice).
    *

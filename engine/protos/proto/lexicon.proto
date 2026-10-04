@@ -83,7 +83,7 @@ message SearchWithSourcesRequest {
   InputMode input_mode           = 2;
   uint32 limit                   = 3;
   // Source-toggle bitmask filtering Tab3 results. Bit layout encodes
-  // sources(0-8,11) + khiin(9) + dev(10, always set) + variant(12).
+  // sources(0-8,11) + khiin(9) + dev(10, set iff `toggles.dev`) + variant(12).
   // Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
   // api.rs hardcoded `u32::MAX`, which both bypassed source filters
   // AND falsely forced khiin/variant on regardless of user toggles.
@@ -134,10 +134,12 @@ message DictionaryFiltersRequest {
 // - `dictionary_filter_bitmask` plumbs straight into
 //   `SearchWithSourcesRequest.enabled_sources_bitmask` /
 //   `SearchByHanjiRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
-//   bit 10 dev (always set), bit 12 variant.
+//   bit 10 dev (set iff `toggles.dev`), bit 12 variant
+//   (`lexicon::dictionary_filters::dictionary_filter_bitmask`).
 // - `enabled_source_codes` lists every `DictionarySourceCode` whose source
-//   the user has toggled on. `DEV` + `CUSTOM` are always present
-//   (non-toggleable). Platforms decode via explicit switch/map into their
+//   the user has toggled on, in the order `[DEV?, CUSTOM, …]`: `DEV` only
+//   when `toggles.dev`; `CUSTOM` is always present (non-toggleable)
+//   (`lexicon::dictionary_filters::enabled_source_codes`). Platforms decode via explicit switch/map into their
 //   `DictionarySource` enum — DO NOT use Swift `rawValue` or Kotlin
 //   `ordinal` since the platform enums lack stable numeric values.
 message DictionaryFiltersResponse {
@@ -300,6 +302,6 @@ enum DictionarySourceCode {
   DICT_SOURCE_KHPOO       = 9;
   DICT_SOURCE_KHIIN       = 10;
   DICT_SOURCE_LKK         = 11;
-  DICT_SOURCE_DEV         = 12;  // always-on (non-toggleable)
+  DICT_SOURCE_DEV         = 12;  // toggleable (`DictionarySourceToggles.dev`)
   DICT_SOURCE_CUSTOM      = 13;  // always-on (non-toggleable)
 }

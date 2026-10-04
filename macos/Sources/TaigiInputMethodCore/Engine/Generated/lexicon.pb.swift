@@ -89,7 +89,7 @@ public nonisolated enum Taigi_Engine_DictionarySourceCode: SwiftProtobuf.Enum, S
   case dictSourceKhiin // = 10
   case dictSourceLkk // = 11
 
-  /// always-on (non-toggleable)
+  /// toggleable (`DictionarySourceToggles.dev`)
   case dictSourceDev // = 12
 
   /// always-on (non-toggleable)
@@ -287,7 +287,7 @@ public nonisolated struct Taigi_Engine_SearchWithSourcesRequest: Sendable {
   public var limit: UInt32 = 0
 
   /// Source-toggle bitmask filtering Tab3 results. Bit layout encodes
-  /// sources(0-8,11) + khiin(9) + dev(10, always set) + variant(12).
+  /// sources(0-8,11) + khiin(9) + dev(10, set iff `toggles.dev`) + variant(12).
   /// Plumbed end-to-end since v3.5.6 fix r3173440126; prior to that,
   /// api.rs hardcoded `u32::MAX`, which both bypassed source filters
   /// AND falsely forced khiin/variant on regardless of user toggles.
@@ -378,10 +378,12 @@ public nonisolated struct Taigi_Engine_DictionaryFiltersRequest: Sendable {
 /// - `dictionary_filter_bitmask` plumbs straight into
 ///   `SearchWithSourcesRequest.enabled_sources_bitmask` /
 ///   `SearchByHanjiRequest`. Layout: bits 0-8 + 11 sources, bit 9 khiin,
-///   bit 10 dev (always set), bit 12 variant.
+///   bit 10 dev (set iff `toggles.dev`), bit 12 variant
+///   (`lexicon::dictionary_filters::dictionary_filter_bitmask`).
 /// - `enabled_source_codes` lists every `DictionarySourceCode` whose source
-///   the user has toggled on. `DEV` + `CUSTOM` are always present
-///   (non-toggleable). Platforms decode via explicit switch/map into their
+///   the user has toggled on, in the order `[DEV?, CUSTOM, …]`: `DEV` only
+///   when `toggles.dev`; `CUSTOM` is always present (non-toggleable)
+///   (`lexicon::dictionary_filters::enabled_source_codes`). Platforms decode via explicit switch/map into their
 ///   `DictionarySource` enum — DO NOT use Swift `rawValue` or Kotlin
 ///   `ordinal` since the platform enums lack stable numeric values.
 public nonisolated struct Taigi_Engine_DictionaryFiltersResponse: Sendable {
