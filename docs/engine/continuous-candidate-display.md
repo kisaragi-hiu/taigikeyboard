@@ -49,7 +49,7 @@ User expectation:
 | Path | Trigger | Cell shape | Source code |
 |---|---|---|---|
 | Lexicon (legacy — retired v3.5.8 Item 13) | Continuous returns empty OR `continuousFetcher == nil` | dual-line | iOS `convertToSuggestions` / Android `autocomplete` lexicon branch (both deleted; see §15.4) |
-| Continuous (Phase 7B/8) | `Phase::Continuous` active + non-empty `ContinuousResponse.candidates` | single-line | iOS `buildContinuousSuggestions` ([`TaigiAutocompleteService.swift:273-292`](../../ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift)) / Android `buildContinuousSuggestionsForCandidates` ([`TaigiAutocompleteService.kt:228-253`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/candidates/TaigiAutocompleteService.kt)) |
+| Continuous (Phase 7B/8) | `Phase::Continuous` active + non-empty `ContinuousResponse.candidates` | single-line | iOS `buildContinuousSuggestions` ([`TaigiAutocompleteService.swift:273-292`](../../ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift)) / Android `buildContinuousSuggestionsForCandidates` ([`TaigiAutocompleteService.kt:228-253`](../../android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/candidates/TaigiAutocompleteService.kt)) |
 
 ### 2.2 Where the roman/hanji split is lost
 
@@ -116,7 +116,7 @@ Platform decode just propagates the single string:
 
 ### 2.3 Cell render rules (already correct — needs both fields)
 
-iOS `CandidateCellHelper` ([`CandidateCellHelper.swift:24-57`](../../ios/Sources/TaigiKeyboard/Autocomplete/Views/CandidateCellHelper.swift)) already handles three modes correctly **provided** `suggestion.text` carries roman and `suggestion.subtitle` carries hanji:
+iOS `CandidateCellHelper` ([`CandidateCellHelper.swift:24-57`](../../ios/Sources/TaigiKeyboard/Candidates/Views/CandidateCellHelper.swift)) already handles three modes correctly **provided** `suggestion.text` carries roman and `suggestion.subtitle` carries hanji:
 
 | Mode | `displayTitle` | `displaySubtitle` |
 |---|---|---|
@@ -272,7 +272,7 @@ public struct ContinuousCandidate: Equatable {
 ```
 
 ```swift
-// ios/Sources/TaigiKeyboard/Autocomplete/Services/TaigiAutocompleteService.swift
+// ios/Sources/TaigiKeyboard/Candidates/Services/TaigiAutocompleteService.swift
 // Post-Item 4 baseline: signature has no `composingText:` param and no
 // `createComposingTextSuggestion` insert (slot 0 == candidate[0] per
 // `continuous-input-ranking.md` §10.1.2). The `← was:` markers below show
@@ -593,7 +593,7 @@ Per [`docs/contributing/cross-platform-alignment.md`](../../docs/contributing/cr
 | 2. Rust `RawCandidate` + `record_to_candidate` | `engine/lexicon/src/continuous/` | ~20 + 2 new unit tests |
 | 3. Rust `raw_to_proto_candidate` | `engine/composing/src/requests.rs` | ~5 + 1 propagation test |
 | 4. iOS `ContinuousCandidate` + decode | `ios/.../Engine/RustEngineBridge.swift` (struct + `composingFetchDispatch` decode) | ~15 + 1 bridge wire test |
-| 5. iOS `buildContinuousSuggestions` | `ios/.../Autocomplete/Services/TaigiAutocompleteService.swift` | ~5 + 2 service-level tests |
+| 5. iOS `buildContinuousSuggestions` | `ios/.../Candidates/Services/TaigiAutocompleteService.swift` | ~5 + 2 service-level tests |
 | 6. Android `ContinuousCandidate` + decode | `android/.../engine/RustEngineBridge.kt` (data class + `composingFetchDispatch` decode) | ~15 + 1 bridge wire test |
 | 7. Android `buildContinuousSuggestionsForCandidates` | `android/.../ime/text/candidates/TaigiAutocompleteService.kt` | ~5 + extend existing `ContinuousSuggestionsContractTest.kt` |
 | 8. Defensive read fallback | iOS + Android `if roman.isEmpty()` paths | ~6 |

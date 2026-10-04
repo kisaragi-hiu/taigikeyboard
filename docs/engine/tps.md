@@ -27,7 +27,7 @@ Since v3.5.1 (PR #186) all TPS conversion + key-level auto-adjust lives in Rust 
 | Bridge — detection | `RustEngineBridge.isTPSToneMark(_)` (the `ContainsTps` op had no production caller and was removed 2026-09-25) |
 | Bridge — TL → TPS | `RustEngineBridge.tlNumericToTPS(_)` / `tlDisplayToTPS(_)` (TPS → TL stays Rust-internal — `phonetics::tps_to_tl` is consumed only by `phonetics::tps_adjust` for syllable validation; C-1 retired the `lexicon::classify_input` consumer and C-3b retired the `composing::continuous` fold; no FFI surface) |
 | Bridge — input adjust | `RustEngineBridge.tpsInputAdjust(incoming:rawInput:)` returning `(adjusted, replaceLast?)` |
-| iOS TPS-aware glue | `Layout/TaigiLayouts.swift` (layout def), `Settings/SharedSettings.swift` (`.tps` type), `Autocomplete/Views/CandidateCellHelper.swift` (candidate TPS display), `Input/CharacterInputPipeline.swift` (calls bridge) |
+| iOS TPS-aware glue | `Layout/TaigiLayouts.swift` (layout def), `Settings/SharedSettings.swift` (`.tps` type), `Candidates/Views/CandidateCellHelper.swift` (candidate TPS display), `Input/CharacterInputPipeline.swift` (calls bridge) |
 | Android TPS-aware glue | `ime/text/CharacterInputPipeline.kt`, `ime/text/TextInputManager.handleTaigiInput()`, layout JSON under `ime/text/characters/tps*.json` |
 
 ---
@@ -477,7 +477,7 @@ All TPS phonetic logic now lives in Rust and is shared by both platforms via the
 | Composing platform wrapper | `Input/Composing/ComposingManager.swift` (KeyboardKit / Combine) | `ime/text/composing/ComposingManager.kt` |
 | Effect → text-region binding | `Input/Composing/ComposingDelegate.swift` (`UITextDocumentProxy`) | `ime/text/composing/ComposingDelegate.kt` (`InputConnection`) |
 | Keystroke dispatcher | `Input/CharacterInputPipeline.swift` | `ime/text/CharacterInputPipeline.kt` |
-| Layout / candidate UI | `Layout/`, `Autocomplete/Views/` | `ime/text/layout/`, `ime/text/candidates/` |
+| Layout / candidate UI | `Layout/`, `Candidates/Views/` | `ime/text/layout/`, `ime/text/candidates/` |
 
 ---
 

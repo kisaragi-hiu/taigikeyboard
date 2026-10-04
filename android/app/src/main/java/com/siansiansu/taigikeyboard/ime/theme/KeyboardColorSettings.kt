@@ -16,7 +16,7 @@ data class UnitPoint(
     val y: Float,
 )
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeGradient
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Theme/KeyboardColorSettings.swift ThemeGradient
 // (stops + angle, same degree convention and unit-point math). Drift causes silent divergence.
 
 /**
@@ -113,7 +113,7 @@ data class SurfaceRect(
     val height: Float,
 )
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeImageBackground
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Theme/KeyboardColorSettings.swift ThemeImageBackground
 // (same JSON fields, SATURATION, dim range, DEFAULT_DIM, DEFAULT_FOCUS, zoom range). Drift causes silent divergence.
 
 /**
@@ -206,7 +206,7 @@ data class ThemeImageBackground(
     }
 }
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift ThemeBackground
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Theme/KeyboardColorSettings.swift ThemeBackground
 // (same `type` discriminator and field names; iOS stores the colour as an RGBA object). Drift causes silent divergence.
 
 /**
@@ -467,7 +467,7 @@ fun isDarkArgb(argb: Int): Boolean {
     return 0.299 * r + 0.587 * g + 0.114 * b < 0.5
 }
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift UserThemeSeed.
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Theme/KeyboardColorSettings.swift UserThemeSeed.
 // Drift = a new custom theme starts from different colors per platform.
 
 /**
@@ -494,7 +494,7 @@ object UserThemeSeed {
         )
 }
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Theme/KeyboardColorSettings.swift
 // candidateHighlightLightenFactor / candidatePressedDeepenFactor. Drift causes silent divergence.
 // Factors used to derive the candidate strip's first-candidate highlight + pressed tints from a
 // gradient theme's first stop, so those states match the theme hue instead of a neutral keycap color.
@@ -504,7 +504,7 @@ object UserThemeSeed {
 const val CANDIDATE_HIGHLIGHT_LIGHTEN_FACTOR = 0.5
 const val CANDIDATE_PRESSED_DEEPEN_FACTOR = 0.65
 
-// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Settings/KeyboardColorSettings.swift
+// CROSS-PLATFORM INVARIANT — mirrors ios/Sources/TaigiKeyboard/Theme/KeyboardColorSettings.swift
 // keyPressedLightenFactor / keyPressedDeepenFactor / CodableColor.pressedKeyFill. Drift causes silent divergence.
 // A dark key fill is lightened toward white, a light fill deepened toward black, so black and white
 // fills both show press feedback.

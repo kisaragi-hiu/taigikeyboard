@@ -167,9 +167,9 @@ The FFI boundary is a single `process_request_bytes` entrypoint per adapter; the
 |---|---|---|
 | Input dispatch | `Actions/ActionHandler.swift` (+ `+KeyActions`, `+CustomActions`): case conversion by `keyboardCase`; punctuation confirms the composition first; letters / digits enter composing | — |
 | Composing wrapper | `Input/Composing/ComposingManager.swift` + `ComposingDelegate.swift` (three-phase apply of the engine `Effect` list onto `UITextDocumentProxy`; `rawInput` / `composingText` snapshot) | `engine/composing` |
-| Candidate fetch | `Autocomplete/Services/TaigiAutocompleteService.swift` — continuous `FetchAtPos` (engine-only since v3.5.8; candidates arrive cased) | `engine/composing` → `engine/lexicon::continuous` (dedup + sort) → `engine/ranking` (score, user weight) |
+| Candidate fetch | `Candidates/Services/TaigiAutocompleteService.swift` — continuous `FetchAtPos` (engine-only since v3.5.8; candidates arrive cased) | `engine/composing` → `engine/lexicon::continuous` (dedup + sort) → `engine/ranking` (score, user weight) |
 | Bridge | `Engine/RustEngineBridge.swift` + `RustEngineBridge+{Composing,Lexicon,Phonetics,CaseTransform,NextWord,UserData}.swift`; `UserDataOpening.swift`, `SwiftLoggerSink.swift`, `RustVec+UInt8.swift` | `engine/dispatch` via `engine/swift-ffi` |
-| Display | KeyboardKit smartbar; `Autocomplete/Views/CandidateButtonView.swift`; overlays `Overlays/{Symbol,Settings,Layout}SelectionOverlay.swift`, `ExpandedCandidateOverlay.swift` | — |
+| Display | KeyboardKit smartbar; `Candidates/Views/CandidateButtonView.swift`; overlays `Overlays/{Symbol,Settings,Layout}SelectionOverlay.swift`, `ExpandedCandidateOverlay.swift` | — |
 | Selection | `Actions/ActionHandler+Suggestions.swift` → `ComposingManager.commitContinuous(…)` → frequency record → NextWord intent | `engine/composing` (`CommitContinuous`) |
 | NextWord glue | `NextWord/NextWordController.swift` (timer, `@MainActor`, generation counter; the engine reads and writes `user_association.db` itself) | `engine/nextword` (`decide`, filter) + `engine/dispatch` `PredictNext` (bundled lookup) via `nextwordPredictNext` |
 | Settings | `Settings/SharedSettings.swift` + `SettingsKey.swift` (live-read `EngineSettingsProvider`) | `AppConfig` per request |

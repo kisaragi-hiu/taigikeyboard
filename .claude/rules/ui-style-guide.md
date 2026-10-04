@@ -2,10 +2,11 @@
 paths:
   - "ios/Sources/TaigiKeyboard/App/**"
   - "ios/Sources/TaigiKeyboard/Styling/**"
+  - "ios/Sources/TaigiKeyboard/Theme/**"
   - "ios/Sources/TaigiKeyboard/KeyboardExtension/**"
   - "ios/Sources/TaigiKeyboard/Layout/**"
   - "ios/Sources/TaigiKeyboard/Overlays/**"
-  - "ios/Sources/TaigiKeyboard/Autocomplete/Views/**"
+  - "ios/Sources/TaigiKeyboard/Candidates/Views/**"
   - "android/app/src/main/java/com/siansiansu/taigikeyboard/ime/theme/**"
   - "android/app/src/main/java/com/siansiansu/taigikeyboard/ime/text/keyboard/**"
   - "android/app/src/main/java/com/siansiansu/taigikeyboard/ime/popup/**"

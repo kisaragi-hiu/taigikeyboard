@@ -14,8 +14,6 @@
 		F312E92A2F9E93B000E53A7F /* SwiftBridgeCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */; };
 		F312E92B2F9E93B000E53A7F /* SwiftBridgeCore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */; };
 		F32651AE2E524AA8002E99A4 /* TaigiKeyboardExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		F361A8A42F8578E500682CC6 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F361A8A32F8578E500682CC6 /* DebugLogger.swift */; };
-		F361A8A52F8578E500682CC6 /* DebugLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = F361A8A32F8578E500682CC6 /* DebugLogger.swift */; };
 		F37672912FDF03EF007F0CF7 /* ISEmojiView in Frameworks */ = {isa = PBXBuildFile; productRef = F37672902FDF03EF007F0CF7 /* ISEmojiView */; };
 		F37672932FDF041B007F0CF7 /* ISEmojiView in Frameworks */ = {isa = PBXBuildFile; productRef = F37672922FDF041B007F0CF7 /* ISEmojiView */; };
 		F37672972FDF06B5007F0CF7 /* emoji.json in Resources */ = {isa = PBXBuildFile; fileRef = F37672962FDF06B5007F0CF7 /* emoji.json */; };
@@ -101,7 +99,6 @@
 		F32651A42E5243C0002E99A4 /* TaigiKeyboard.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TaigiKeyboard.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F32651AC2E524A0F002E99A4 /* TaigiKeyboardExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TaigiKeyboardExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		F34AE2922EEE7CE000859124 /* TaigiKeyboardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TaigiKeyboardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		F361A8A32F8578E500682CC6 /* DebugLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DebugLogger.swift; path = Sources/TaigiKeyboard/DebugLogger.swift; sourceTree = "<group>"; };
 		F37672962FDF06B5007F0CF7 /* emoji.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; name = emoji.json; path = ../emoji/dist/emoji.json; sourceTree = SOURCE_ROOT; };
 		F39D1D532F9E8E550053D307 /* RustTaigi.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = RustTaigi.xcframework; path = RustEngine/RustTaigi.xcframework; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -151,10 +148,10 @@
 			path = Sources/TaigiKeyboard/Actions;
 			sourceTree = "<group>";
 		};
-		2A2882DE2EAF0D2F00AE3C75 /* Autocomplete */ = {
+		2A2882DE2EAF0D2F00AE3C75 /* Candidates */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Autocomplete;
-			path = Sources/TaigiKeyboard/Autocomplete;
+			name = Candidates;
+			path = Sources/TaigiKeyboard/Candidates;
 			sourceTree = "<group>";
 		};
 		2A2882E42EAF0D3D00AE3C75 /* Callouts */ = {
@@ -211,6 +208,12 @@
 			path = Sources/TaigiKeyboard/App;
 			sourceTree = "<group>";
 		};
+		F30EA4A83072989A00A263C8 /* Theme */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			name = Theme;
+			path = Sources/TaigiKeyboard/Theme;
+			sourceTree = "<group>";
+		};
 		F34AE2932EEE7CE000859124 /* TaigiKeyboardTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TaigiKeyboardTests;
@@ -235,10 +238,10 @@
 			path = Resources/Assets;
 			sourceTree = "<group>";
 		};
-		F35E7D5E2F94C2AF008B62C0 /* Composition */ = {
+		F35E7D5E2F94C2AF008B62C0 /* ServiceGraph */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			name = Composition;
-			path = Sources/TaigiKeyboard/Composition;
+			name = ServiceGraph;
+			path = Sources/TaigiKeyboard/ServiceGraph;
 			sourceTree = "<group>";
 		};
 		F361A88B2F85522D00682CC6 /* Overlays */ = {
@@ -303,21 +306,21 @@
 		F3026C0A2E2DFEA8002F7E94 = {
 			isa = PBXGroup;
 			children = (
+				F30EA4A83072989A00A263C8 /* Theme */,
 				F31221012FE77EA100931D4E /* Localizable.xcstrings */,
 				F37672962FDF06B5007F0CF7 /* emoji.json */,
 				F3C05ADF2FABCC1900CB82BE /* Logging */,
 				F312E9292F9E93B000E53A7F /* SwiftBridgeCore.swift */,
 				F312E9262F9E93A300E53A7F /* RustTaigi.swift */,
 				F39D1D4B2F9E8C030053D307 /* Engine */,
-				F35E7D5E2F94C2AF008B62C0 /* Composition */,
+				F35E7D5E2F94C2AF008B62C0 /* ServiceGraph */,
 				F35BA8872F89F134004657F0 /* Assets */,
 				F3E176912F8824050017FB6D /* NextWord */,
-				F361A8A32F8578E500682CC6 /* DebugLogger.swift */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				2A2882BA2EAF0CE100AE3C75 /* KeyboardExtension */,
 				2A2882C02EAF0D0500AE3C75 /* Actions */,
 				2A4FAF492EAF137B006E37A8 /* App */,
-				2A2882DE2EAF0D2F00AE3C75 /* Autocomplete */,
+				2A2882DE2EAF0D2F00AE3C75 /* Candidates */,
 				2A2882E42EAF0D3D00AE3C75 /* Callouts */,
 				2A2882ED2EAF0D7D00AE3C75 /* Emojis */,
 				2A2882F42EAF0D8F00AE3C75 /* Input */,
@@ -367,7 +370,7 @@
 			fileSystemSynchronizedGroups = (
 				2A2882BA2EAF0CE100AE3C75 /* KeyboardExtension */,
 				2A2882C02EAF0D0500AE3C75 /* Actions */,
-				2A2882DE2EAF0D2F00AE3C75 /* Autocomplete */,
+				2A2882DE2EAF0D2F00AE3C75 /* Candidates */,
 				2A2882E42EAF0D3D00AE3C75 /* Callouts */,
 				2A2882ED2EAF0D7D00AE3C75 /* Emojis */,
 				2A2882F42EAF0D8F00AE3C75 /* Input */,
@@ -377,9 +380,10 @@
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
 				2A4FAF492EAF137B006E37A8 /* App */,
+				F30EA4A83072989A00A263C8 /* Theme */,
 				F35436232E5C43680004DFAB /* ../assets/fonts/font */,
 				F35BA8872F89F134004657F0 /* Assets */,
-				F35E7D5E2F94C2AF008B62C0 /* Composition */,
+				F35E7D5E2F94C2AF008B62C0 /* ServiceGraph */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F39D1D4B2F9E8C030053D307 /* Engine */,
 				F3C05ADF2FABCC1900CB82BE /* Logging */,
@@ -410,7 +414,7 @@
 			fileSystemSynchronizedGroups = (
 				2A2882BA2EAF0CE100AE3C75 /* KeyboardExtension */,
 				2A2882C02EAF0D0500AE3C75 /* Actions */,
-				2A2882DE2EAF0D2F00AE3C75 /* Autocomplete */,
+				2A2882DE2EAF0D2F00AE3C75 /* Candidates */,
 				2A2882E42EAF0D3D00AE3C75 /* Callouts */,
 				2A2882ED2EAF0D7D00AE3C75 /* Emojis */,
 				2A2882F42EAF0D8F00AE3C75 /* Input */,
@@ -419,10 +423,11 @@
 				2A2883032EAF0DBE00AE3C75 /* Strings */,
 				2A28831B2EAF0DDE00AE3C75 /* Settings */,
 				2A2883262EAF0E0400AE3C75 /* Styling */,
+				F30EA4A83072989A00A263C8 /* Theme */,
 				F35436232E5C43680004DFAB /* ../assets/fonts/font */,
 				F354362F2E5C437C0004DFAB /* ../assets/dictionaries */,
 				F35BA8872F89F134004657F0 /* Assets */,
-				F35E7D5E2F94C2AF008B62C0 /* Composition */,
+				F35E7D5E2F94C2AF008B62C0 /* ServiceGraph */,
 				F361A88B2F85522D00682CC6 /* Overlays */,
 				F39D1D4B2F9E8C030053D307 /* Engine */,
 				F3C05ADF2FABCC1900CB82BE /* Logging */,
@@ -608,7 +613,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F361A8A42F8578E500682CC6 /* DebugLogger.swift in Sources */,
 				F312E9282F9E93A300E53A7F /* RustTaigi.swift in Sources */,
 				F312E92B2F9E93B000E53A7F /* SwiftBridgeCore.swift in Sources */,
 			);
@@ -618,7 +622,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				F361A8A52F8578E500682CC6 /* DebugLogger.swift in Sources */,
 				F312E9272F9E93A300E53A7F /* RustTaigi.swift in Sources */,
 				F312E92A2F9E93B000E53A7F /* SwiftBridgeCore.swift in Sources */,
 			);
