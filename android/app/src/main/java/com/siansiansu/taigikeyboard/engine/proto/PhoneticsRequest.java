@@ -28,6 +28,7 @@ public  final class PhoneticsRequest extends
     TL_DISPLAY_TO_TPS(33),
     IS_TPS_TONE_MARK(34),
     TPS_INPUT_ADJUST(35),
+    IS_ATTACHING_PUNCTUATION(40),
     METHOD_NOT_SET(0);
     private final int value;
     private MethodCase(int value) {
@@ -51,6 +52,7 @@ public  final class PhoneticsRequest extends
         case 33: return TL_DISPLAY_TO_TPS;
         case 34: return IS_TPS_TONE_MARK;
         case 35: return TPS_INPUT_ADJUST;
+        case 40: return IS_ATTACHING_PUNCTUATION;
         case 0: return METHOD_NOT_SET;
         default: return null;
       }
@@ -507,6 +509,76 @@ public  final class PhoneticsRequest extends
    */
   private void clearTpsInputAdjust() {
     if (methodCase_ == 35) {
+      methodCase_ = 0;
+      method_ = null;
+    }
+  }
+
+  public static final int IS_ATTACHING_PUNCTUATION_FIELD_NUMBER = 40;
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   */
+  @java.lang.Override
+  public boolean hasIsAttachingPunctuation() {
+    return methodCase_ == 40;
+  }
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   */
+  @java.lang.Override
+  public com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation getIsAttachingPunctuation() {
+    if (methodCase_ == 40) {
+       return (com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation) method_;
+    }
+    return com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.getDefaultInstance();
+  }
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   */
+  private void setIsAttachingPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation value) {
+    java.util.Objects.requireNonNull(value);
+    method_ = value;
+    methodCase_ = 40;
+  }
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   */
+  private void mergeIsAttachingPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation value) {
+    java.util.Objects.requireNonNull(value);
+    if (methodCase_ == 40 &&
+        method_ != com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.getDefaultInstance()) {
+      method_ = com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.newBuilder((com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation) method_)
+          .mergeFrom(value).buildPartial();
+    } else {
+      method_ = value;
+    }
+    methodCase_ = 40;
+  }
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   */
+  private void clearIsAttachingPunctuation() {
+    if (methodCase_ == 40) {
       methodCase_ = 0;
       method_ = null;
     }
@@ -1053,6 +1125,78 @@ public  final class PhoneticsRequest extends
       return this;
     }
 
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    @java.lang.Override
+    public boolean hasIsAttachingPunctuation() {
+      return instance.hasIsAttachingPunctuation();
+    }
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    @java.lang.Override
+    public com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation getIsAttachingPunctuation() {
+      return instance.getIsAttachingPunctuation();
+    }
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    public Builder setIsAttachingPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation value) {
+      copyOnWrite();
+      instance.setIsAttachingPunctuation(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    public Builder setIsAttachingPunctuation(
+        com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.Builder builderForValue) {
+      copyOnWrite();
+      instance.setIsAttachingPunctuation(builderForValue.build());
+      return this;
+    }
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    public Builder mergeIsAttachingPunctuation(com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation value) {
+      copyOnWrite();
+      instance.mergeIsAttachingPunctuation(value);
+      return this;
+    }
+    /**
+     * <pre>
+     * --- Platform text helpers (40s) ---
+     * </pre>
+     *
+     * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+     */
+    public Builder clearIsAttachingPunctuation() {
+      copyOnWrite();
+      instance.clearIsAttachingPunctuation();
+      return this;
+    }
+
     // @@protoc_insertion_point(builder_scope:taigi.engine.PhoneticsRequest)
   }
   @java.lang.Override
@@ -1079,10 +1223,11 @@ public  final class PhoneticsRequest extends
             com.siansiansu.taigikeyboard.engine.proto.TlDisplayToTps.class,
             com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark.class,
             com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust.class,
+            com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation.class,
           };
           java.lang.String info =
-              "\u0000\b\u0001\u0000\u000b#\b\u0000\u0000\u0000\u000b<\u0000\r<\u0000\u0012<\u0000" +
-              "\u0013<\u0000 <\u0000!<\u0000\"<\u0000#<\u0000";
+              "\u0000\t\u0001\u0000\u000b(\t\u0000\u0000\u0000\u000b<\u0000\r<\u0000\u0012<\u0000" +
+              "\u0013<\u0000 <\u0000!<\u0000\"<\u0000#<\u0000(<\u0000";
           return newMessageInfo(DEFAULT_INSTANCE, info, objects);
       }
       case GET_DEFAULT_INSTANCE: {

@@ -60,6 +60,18 @@ final class RustEngineBridgeTests: XCTestCase {
         XCTAssertFalse(RustEngineBridge.isTPSToneMark("a"))
     }
 
+    // MARK: - Platform text helpers
+
+    /// The engine's attaching set (`phonetics::punctuation`, where the full
+    /// roster is pinned) answers through the bridge the swap reads
+    /// (`ActionHandler.insertNonComposingCharacter`).
+    func test_op_isAttachingPunctuation_closingAttaches_openingDoesNot() {
+        XCTAssertTrue(RustEngineBridge.isAttachingPunctuation("？"))
+        XCTAssertTrue(RustEngineBridge.isAttachingPunctuation("」"))
+        XCTAssertFalse(RustEngineBridge.isAttachingPunctuation("「"))
+        XCTAssertFalse(RustEngineBridge.isAttachingPunctuation("?!"))
+    }
+
     // MARK: - Diagnostics (Codex v2 §8 / v3 §7)
 
     func test_diagnostics_initialState_isEmpty() {

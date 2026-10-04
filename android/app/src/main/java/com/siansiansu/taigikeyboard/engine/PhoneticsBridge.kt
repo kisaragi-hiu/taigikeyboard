@@ -5,6 +5,7 @@
 package com.siansiansu.taigikeyboard.engine
 
 import com.siansiansu.taigikeyboard.engine.proto.BoolResult
+import com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation
 import com.siansiansu.taigikeyboard.engine.proto.IsTpsToneMark
 import com.siansiansu.taigikeyboard.engine.proto.NfdPreprocessForLookup
 import com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest
@@ -91,6 +92,20 @@ fun RustEngineBridge.tpsInputAdjust(
     val r: TpsAdjustResult = resp.tpsAdjustResult
     val replace = if (r.hasReplaceLast() && r.replaceLast.present) r.replaceLast.output else null
     return TpsAdjustOutcome(r.adjusted, replace)
+}
+
+// endregion
+// region Platform text helpers
+
+/**
+ * Whether [text] is a single punctuation character that attaches to the
+ * preceding word under auto-space (`guá ` + `?` → `guá? `) — the engine's
+ * set, the one every platform asks. False when the engine fails: no swap,
+ * the space stays where it is.
+ */
+fun RustEngineBridge.isAttachingPunctuation(text: String): Boolean {
+    val payload = IsAttachingPunctuation.newBuilder().setText(text).build()
+    return boolDispatch({ it.isAttachingPunctuation = payload }, "isAttachingPunctuation")
 }
 
 // endregion

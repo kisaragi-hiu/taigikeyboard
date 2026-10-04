@@ -97,6 +97,18 @@ public extension RustEngineBridge {
         return (r.adjusted, replace)
     }
 
+    // MARK: Platform text helpers
+
+    /// Whether `text` is a single punctuation character that attaches to the
+    /// preceding word under auto-space (`guá ` + `?` → `guá? `) — the
+    /// engine's set, the one every platform asks. False when the engine
+    /// fails: no swap, the space stays where it is.
+    static func isAttachingPunctuation(_ text: String) -> Bool {
+        var payload = Taigi_Engine_IsAttachingPunctuation()
+        payload.text = text
+        return boolDispatch(method: .isAttachingPunctuation(payload), op: "isAttachingPunctuation")
+    }
+
     // MARK: Private dispatch (phonetics envelope)
 
     /// Phonetics envelope dispatch — encode → FFI roundtrip → decode the

@@ -218,7 +218,7 @@ Sources/TaigiKeyboard/
 ├── Autocomplete/             # Autocomplete service + views + VMs
 ├── Callouts/, Emojis/, Layout/, Overlays/, Styling/    # UI only
 ├── Logging/                  # Cross-cutting: LoggerBackend
-├── Input/                    # CharacterInputPipeline, AutoSpacePunctuation
+├── Input/                    # CharacterInputPipeline
 │   └── Composing/            # ComposingManager + ComposingDelegate (PLATFORM executor)
 ├── Lexicon/                  # Models/, Utils/ (shared-core candidates) · Services/ (platform: UserDataClient, DictionarySearchService)
 ├── NextWord/                 # NextWordController (PLATFORM executor)

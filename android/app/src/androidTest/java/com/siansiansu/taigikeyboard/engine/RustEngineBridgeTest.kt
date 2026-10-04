@@ -59,6 +59,15 @@ class RustEngineBridgeTest {
         assertFalse(RustEngineBridge.isTpsToneMark('a'))
     }
 
+    // The engine's attaching set (`phonetics::punctuation`, full roster pinned
+    // there) through the bridge `TextInputKeyHandler.commitNonComposingCharacter` reads.
+    @Test fun op_isAttachingPunctuation_closingAttaches_openingDoesNot() {
+        assertTrue(RustEngineBridge.isAttachingPunctuation("？"))
+        assertTrue(RustEngineBridge.isAttachingPunctuation("」"))
+        assertFalse(RustEngineBridge.isAttachingPunctuation("「"))
+        assertFalse(RustEngineBridge.isAttachingPunctuation("?!"))
+    }
+
     @Test fun op_tpsInputAdjust_dualForm() {
         val outcome = RustEngineBridge.tpsInputAdjust("ㄇ", "ㄚ")
         assertEquals("ㆬ", outcome.adjusted)

@@ -114,5 +114,24 @@ public interface PhoneticsRequestOrBuilder extends
    */
   com.siansiansu.taigikeyboard.engine.proto.TpsInputAdjust getTpsInputAdjust();
 
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   * @return Whether the isAttachingPunctuation field is set.
+   */
+  boolean hasIsAttachingPunctuation();
+  /**
+   * <pre>
+   * --- Platform text helpers (40s) ---
+   * </pre>
+   *
+   * <code>.taigi.engine.IsAttachingPunctuation is_attaching_punctuation = 40;</code>
+   * @return The isAttachingPunctuation.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.IsAttachingPunctuation getIsAttachingPunctuation();
+
   public com.siansiansu.taigikeyboard.engine.proto.PhoneticsRequest.MethodCase getMethodCase();
 }

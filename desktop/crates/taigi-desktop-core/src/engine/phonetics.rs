@@ -4,8 +4,9 @@
 //! ops). Twin of iOS `RustEngineBridge+Phonetics.swift`.
 
 use protos::engine::{
-    phonetics_request, phonetics_response, request, response, NfdPreprocessForLookup,
-    PhoneticsRequest, PhoneticsResponse, StripTone, TlDisplayToTps, TlToPoj,
+    phonetics_request, phonetics_response, request, response, IsAttachingPunctuation,
+    NfdPreprocessForLookup, PhoneticsRequest, PhoneticsResponse, StripTone, TlDisplayToTps,
+    TlToPoj,
 };
 
 use super::bridge::{record_failure, roundtrip};
@@ -69,6 +70,29 @@ pub fn nfd_preprocess_for_lookup(input: &str) -> Option<String> {
         }),
         "nfdPreprocessForLookup",
     )
+}
+
+/// Whether `text` is a single punctuation character that attaches to the
+/// preceding word under auto-space (`guá ` + `?` → `guá? `) — the engine's
+/// set, the one every platform asks. False when the engine fails: no swap,
+/// the space stays where it is.
+pub fn is_attaching_punctuation(text: &str) -> bool {
+    let op = "isAttachingPunctuation";
+    let Some(response) = phonetics_response(
+        phonetics_request::Method::IsAttachingPunctuation(IsAttachingPunctuation {
+            text: text.to_owned(),
+        }),
+        op,
+    ) else {
+        return false;
+    };
+    match response.result {
+        Some(phonetics_response::Result::BoolResult(result)) => result.value,
+        _ => {
+            record_failure(op, "response carried no bool result");
+            false
+        }
+    }
 }
 
 fn string_result(method: phonetics_request::Method, op: &str) -> Option<String> {

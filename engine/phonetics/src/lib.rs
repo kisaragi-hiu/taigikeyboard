@@ -17,6 +17,7 @@ mod derivation;
 mod key_family;
 mod normalization;
 mod poj;
+mod punctuation;
 mod syllable;
 mod tables;
 mod tl;

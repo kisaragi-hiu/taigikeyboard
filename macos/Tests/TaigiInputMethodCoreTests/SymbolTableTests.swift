@@ -24,7 +24,7 @@ final class SymbolTableTests: XCTestCase {
 
     /// Punctuation and special symbols are single characters, so the
     /// auto-space swap can classify a pick the way it classifies a keystroke
-    /// (`AutoSpacePunctuation.isAttaching` reads one character).
+    /// (`RustEngineBridge.isAttachingPunctuation` reads one character).
     func testEveryPunctuationMark_isOneCharacter() throws {
         let table = try TestFixtures.shippedSymbolTable()
 

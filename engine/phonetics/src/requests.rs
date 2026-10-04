@@ -78,6 +78,11 @@ pub fn handle(req: &PhoneticsRequest) -> Result<PhoneticsResponse, PhoneticsErro
                 replace_last: Some(replace_payload),
             })
         }
+
+        // --- Platform text helpers ---
+        Method::IsAttachingPunctuation(payload) => PhonResult::BoolResult(BoolResult {
+            value: crate::punctuation::is_attaching_punctuation(&payload.text),
+        }),
     };
 
     Ok(PhoneticsResponse {

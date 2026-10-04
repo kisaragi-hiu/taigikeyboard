@@ -8,7 +8,7 @@ use phonetics::requests::handle;
 use protos::engine::phonetics_request::Method;
 use protos::engine::phonetics_response::Result as PhonResult;
 use protos::engine::{
-    AppConfig, BoolResult, GetToneVariations, IsTpsToneMark, NfdPreprocessForLookup,
+    AppConfig, BoolResult, GetToneVariations, IsAttachingPunctuation, IsTpsToneMark, NfdPreprocessForLookup,
     PhoneticsRequest, PhoneticsResponse, StringResult, StripTone, StripToneResult, TlDisplayToTps,
     TlNumericToTps, TlToPoj, ToneVariationsResult, TpsAdjustResult, TpsInputAdjust,
 };
@@ -449,6 +449,18 @@ fn is_tps_tone_mark_false_for_empty() {
         char: String::new(),
     }));
     assert!(!bool_result(&resp));
+}
+
+#[test]
+fn is_attaching_punctuation_answers_through_the_dispatcher() {
+    // trace: `punctuation::ATTACHING` holds `?` and `」`, not the opener `(`;
+    // two characters never attach.
+    for (text, expected) in [("?", true), ("」", true), ("(", false), ("?!", false), ("", false)] {
+        let resp = run(Method::IsAttachingPunctuation(IsAttachingPunctuation {
+            text: text.to_string(),
+        }));
+        assert_eq!(bool_result(&resp), expected, "{text:?}");
+    }
 }
 
 // ---- TpsInputAdjust branch coverage (mirrors commit-1 platform fixtures)

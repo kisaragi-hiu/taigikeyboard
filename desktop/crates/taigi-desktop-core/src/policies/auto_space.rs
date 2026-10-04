@@ -1,29 +1,10 @@
-//! When a committed word earns the auto-space trailing space, as pure
-//! decisions — the one copy the three desktops run (macOS keeps a Swift twin
-//! of the attaching set, below)
-//! (behavioural invariant §23, `INVARIANT_AUTO_SPACE_PUNCTUATION_SWAP`).
+//! When a committed word earns the auto-space trailing space — the one copy
+//! the three desktops run (behavioural invariant §23,
+//! `INVARIANT_AUTO_SPACE_PUNCTUATION_SWAP`). Which punctuation attaches is
+//! the engine's (`engine::is_attaching_punctuation`), as on every platform.
 
+use crate::engine::is_attaching_punctuation;
 use crate::settings::InputMode;
-
-/// Sentence-end + clause separators + CLOSING brackets/quotes. OPENING
-/// brackets/quotes are deliberately excluded (they need a LEADING space),
-/// and the ASCII straight quotes because one glyph serves both sides.
-/// CROSS-PLATFORM INVARIANT — mirrors `ios/.../Input/AutoSpacePunctuation.swift`,
-/// `android/.../ime/text/AutoSpacePunctuation.kt`. macOS keeps a Swift twin:
-/// `macos/.../Policies/AutoSpacePunctuation.swift`.
-const ATTACHING: [char; 19] = [
-    '。', '！', '？', '.', '!', '?', '，', ',', '、', '；', ';', '：', ':', ')', '）', ']', '】',
-    '」', '』',
-];
-
-/// True when `text` is a single attaching-punctuation character.
-pub fn is_attaching_punctuation(text: &str) -> bool {
-    let mut chars = text.chars();
-    match (chars.next(), chars.next()) {
-        (Some(c), None) => ATTACHING.contains(&c),
-        _ => false,
-    }
-}
 
 /// True when this commit earns a trailing space at all — the same gate every
 /// insertion site and the punctuation swap read. `wrote_romanization` comes
@@ -113,21 +94,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn attaching_set_matches_the_cross_platform_roster() {
-        // trace: the 19 glyphs of `ATTACHING`; openers and straight quotes
-        // are outside it.
-        for glyph in [
-            "。", "！", "？", ".", "!", "?", "，", ",", "、", "；", ";", "：", ":", ")", "）", "]",
-            "】", "」", "』",
-        ] {
-            assert!(is_attaching_punctuation(glyph), "{glyph}");
-        }
-        for glyph in ["(", "（", "[", "「", "『", "\"", "'"] {
-            assert!(!is_attaching_punctuation(glyph), "{glyph}");
-        }
-        for text in ["a", "台", " ", "", "?!", "guá?"] {
-            assert!(!is_attaching_punctuation(text), "{text:?}");
-        }
+    fn the_attaching_set_is_the_engines() {
+        // trace: engine `phonetics::punctuation::ATTACHING` holds `？` and
+        // `」`, not the opener `「` or a letter; the full roster is pinned
+        // there.
+        assert!(is_attaching_punctuation("？"));
+        assert!(is_attaching_punctuation("」"));
+        assert!(!is_attaching_punctuation("「"));
+        assert!(!is_attaching_punctuation("a"));
     }
 
     #[test]

@@ -8,6 +8,7 @@ use super::{
     CandidateCommitOutcome, CandidateListChange, CandidateSource, ComposingEffectExecutor,
     ComposingManager, TpsKeyOutcome,
 };
+use crate::engine;
 use crate::keys::{types_a_tps_glyph, CandidateNavigation, ComposingKeyIntent, KeyEventSnapshot};
 use crate::policies;
 use crate::settings::{keys, InputMode, SettingsDocument};
@@ -280,7 +281,7 @@ pub fn pass_through_may_consume(
         return true;
     }
     is_swap_armed
-        && policies::is_attaching_punctuation(&typed)
+        && engine::is_attaching_punctuation(&typed)
         && settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
 }
 
@@ -394,7 +395,7 @@ fn swap_auto_space(
     manager: &mut ComposingManager,
     surface: &mut impl IntentSurface,
 ) -> bool {
-    if !policies::is_attaching_punctuation(text)
+    if !engine::is_attaching_punctuation(text)
         || !settings.bool(&keys::IS_AUTO_SPACE_ENABLED)
         || !surface.swap_preceding_space(&format!("{text} "))
     {
