@@ -51,6 +51,12 @@ pub fn dictionary_csv_path() -> PathBuf {
     repo_root().join("dictionary/output/dictionary.csv")
 }
 
+/// `dictionary/common/cjk.py` — the pipeline's CJK range table, which
+/// `lexicon::classification::CJK_RANGES` mirrors.
+pub fn dictionary_cjk_py_path() -> PathBuf {
+    repo_root().join("dictionary/common/cjk.py")
+}
+
 /// `dictionary.csv`, read once per test process and shared by every test in
 /// it. `None` when the file is absent (lean checkout; the answer is cached
 /// for the process); a read failure panics. The file must not be rebuilt
