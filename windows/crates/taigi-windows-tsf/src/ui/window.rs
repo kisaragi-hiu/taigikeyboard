@@ -1,11 +1,11 @@
 //! A non-activating popup window (`WS_POPUP`, `WS_EX_TOPMOST | TOOLWINDOW |
 //! NOACTIVATE`; khiin `candidate_window.rs:62-64`), created inside a
 //! per-monitor-v2 thread DPI scope (an in-proc DLL must not change the host
-//! process's DPI context, roadmap W4), rounded by DWM with its show / hide
-//! fade forced off (`DWMWA_TRANSITIONS_FORCEDISABLED`), shown with
-//! `SW_SHOWNA` so the host's caret keeps blinking. Messages are forwarded to
-//! a [`WindowHandler`] whose box the [`PopupWindow`] OWNS — the HWND only
-//! borrows a pointer to it, so creation failure, `WM_NCDESTROY` and
+//! process's DPI context, roadmap W4) and placed inside one, rounded by DWM
+//! with its show / hide fade forced off (`DWMWA_TRANSITIONS_FORCEDISABLED`),
+//! shown with `SW_SHOWNA` so the host's caret keeps blinking. Messages are
+//! forwarded to a [`WindowHandler`] whose box the [`PopupWindow`] OWNS — the
+//! HWND only borrows a pointer to it, so creation failure, `WM_NCDESTROY` and
 //! `destroy` cannot free it twice. RULE: a window procedure never calls
 //! `RequestEditSession` (W3).
 
@@ -104,10 +104,15 @@ impl WindowRef {
     }
 
     /// Places the window at `frame` (screen PIXELS) without activating it,
-    /// re-asserts topmost, and shows it if hidden.
+    /// re-asserts topmost, and shows it if hidden. Under the per-monitor-v2
+    /// scope: `SetWindowPos` reads its coordinates in the CALLING thread's DPI
+    /// context, and the key path runs on the host's thread — a DPI-unaware
+    /// host scaled the physical frame a second time (125% put the list 1.25×
+    /// off the caret, enlarged). Window-procedure callers are already in the
+    /// window's context; the nested scope changes nothing for them.
     pub fn show_at(&self, frame: RECT) {
         // SAFETY: our own window; topmost, no activation.
-        unsafe {
+        with_per_monitor_dpi(|| unsafe {
             SetWindowPos(
                 self.hwnd,
                 Some(HWND_TOPMOST),
@@ -120,7 +125,7 @@ impl WindowRef {
             .ok();
             let _ = ShowWindow(self.hwnd, SW_SHOWNA);
             let _ = InvalidateRect(Some(self.hwnd), None, false);
-        }
+        });
     }
 
     pub fn hide(&self) {
@@ -268,7 +273,8 @@ pub struct MonitorArea {
 /// Runs `body` under the per-monitor-v2 thread DPI context, restoring the
 /// host's afterwards. `GetDpiForMonitor` answers according to the CALLING
 /// thread's awareness (a DPI-unaware host would get 96 for every monitor),
-/// so every monitor query goes through here, as the window's creation does.
+/// so every monitor query goes through here, as the window's placement
+/// (`show_at`) does; its creation sets the same context by hand.
 pub fn with_per_monitor_dpi<T>(body: impl FnOnce() -> T) -> T {
     // SAFETY: the context is thread-local and restored before returning.
     let previous =
