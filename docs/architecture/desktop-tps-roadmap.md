@@ -13,7 +13,7 @@ Status: P0 on main, P1 merged #367, P2a merged #368, P2b merged #372, P3 merged 
 | U3 | An on-screen key panel the user can look at or click. |
 | U4 | Physical layout = the system Zhuyin (Dachen) positions, TPS-only glyphs on a Shift layer. |
 | U5 | Candidate picking under TPS = arrows / Tab + Enter, plus the numeric keypad `1`–`9`. **Revised 2026-10-04 by U8.** |
-| U8 | (2026-10-04, after P4 on device: no digit picking without a keypad.) TPS follows the Zhuyin input methods, not the romanizations: the candidate window is hidden while typing and opened on demand, and the number row picks inside it (D7). The preedit stays glyphs (arm A); inline Hanji conversion (arm B) is to be weighed once the TPS feature is complete — planned 2026-10-05 in [`desktop-tps-hanji-conversion-roadmap.md`](desktop-tps-hanji-conversion-roadmap.md), not built. TL and POJ keep their always-on list. |
+| U8 | (2026-10-04, after P4 on device: no digit picking without a keypad.) TPS follows the Zhuyin input methods, not the romanizations: the candidate window is hidden while typing and opened on demand, and the number row picks inside it (D7). The preedit stays glyphs (arm A); inline Hanji conversion (arm B) is to be weighed once the TPS feature is complete. TL and POJ keep their always-on list. |
 | U6 | Panel scope: macOS and Windows show it and take clicks; Linux shows it only. |
 | U9 | (2026-10-04, P6.) A click on a cap types that cap's glyph on both platforms — never "the physical key pressed": with the window up, a click on `1` types ㄅ rather than picking slot 1. |
 | U7 | Review: Codex sandwich plus a Claude cloud session per PR. |

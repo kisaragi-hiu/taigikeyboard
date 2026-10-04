@@ -154,6 +154,21 @@ No display attribute, no IBus / Fcitx5 attribute and no `SetMarkedText` field is
 
 A glyph of an open reading costs less than a TL key does today — no walk. A key that closes a reading costs one walk over the pending tail, inside the key's own request. The new cost is length: a sentence held in the preedit is longer than a TL composition usually gets. The gate is qualitative (`code-review-rules` §9): typing a long sentence shows no visible lag on the three desktops, no keyboard dismiss, no growth in memory. No head auto-commit is planned; if the dogfood finds lag, that is the first answer to weigh (vChewing commits the head past 20 readings).
 
+## Guard rails
+
+### TL and POJ are not affected (maintainer, 2026-10-05)
+
+- The switch (H5) is set only when the stored input mode is TPS. Without it the engine takes none of the new paths.
+- Classifier and executor edits stay inside the TPS branch (`core/keys/intent.rs:206-213`, `:352-396`; `core/composing/intent_executor.rs:76-101`). A shared function gains behaviour only behind the switch or the TPS arm.
+- No TL or POJ test expectation changes in any phase — engine goldens, desktop-core tests, the three shells' session tests. A diff that edits one is a finding, not an update.
+- Each phase's PR runs the TL and POJ suites of every touched platform and says so; each dogfood item opens with a TL and a POJ sentence typed as before.
+
+### Arm A is still being worked on in another session (maintainer, 2026-10-05)
+
+- This plan edits no arm A file: not `desktop-tps-roadmap.md`, not the TPS code. D7 as cited here is `a758ee2d`.
+- No arm B phase starts before that work has merged. H-P1 opens on a rebase and re-reads every Today row and H6's "D7 today" column against the code then; a row that moved is corrected in the phase's PR.
+- D7 and U8 are marked as revised only in H-P5, after arm B is on main.
+
 ## Phases
 
 Sizes are estimates. The engine phases are unreachable until H-P4 sets the switch.
