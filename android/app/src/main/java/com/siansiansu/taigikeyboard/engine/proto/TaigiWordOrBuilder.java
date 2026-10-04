@@ -57,13 +57,31 @@ public interface TaigiWordOrBuilder extends
   int getLengthScore();
 
   /**
-   * <code>optional uint32 source_bitmask = 5;</code>
-   * @return Whether the sourceBitmask field is set.
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @return A list containing the sources.
    */
-  boolean hasSourceBitmask();
+  java.util.List<com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode> getSourcesList();
   /**
-   * <code>optional uint32 source_bitmask = 5;</code>
-   * @return The sourceBitmask.
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @return The count of sources.
    */
-  int getSourceBitmask();
+  int getSourcesCount();
+  /**
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @param index The index of the element to return.
+   * @return The sources at the given index.
+   */
+  com.siansiansu.taigikeyboard.engine.proto.DictionarySourceCode getSources(int index);
+  /**
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @return A list containing the enum numeric values on the wire for sources.
+   */
+  java.util.List<java.lang.Integer>
+  getSourcesValueList();
+  /**
+   * <code>repeated .taigi.engine.DictionarySourceCode sources = 6;</code>
+   * @param index The index of the value to return.
+   * @return The enum numeric value on the wire of sources at the given index.
+   */
+  int getSourcesValue(int index);
 }

@@ -111,14 +111,13 @@ final class DictionarySearchService: @unchecked Sendable {
         return rows.map { row in
             // Engine returns raw `tl`; render to POJ when in POJ mode.
             let roman = inputMode == .poj ? RustEngineBridge.tlToPoj(row.roman) : row.roman
-            let bitmask = row.sourceBitmask ?? 0
             return DictionarySearchResult(
                 id: Int(row.id),
                 roman: roman,
                 tl: row.roman,
                 hanji: row.hanji,
                 frequency: row.lengthScore.map(Int.init) ?? 0,
-                sources: LexiconBitmask.sources(from: bitmask),
+                sources: row.sources,
             )
         }
     }

@@ -251,5 +251,5 @@ private fun taigiWordToRow(proto: ProtoTaigiWord): RustEngineBridge.LexiconRow =
         roman = proto.roman,
         hanji = if (proto.hasHanji()) proto.hanji else null,
         lengthScore = if (proto.hasLengthScore()) proto.lengthScore else null,
-        sourceBitmask = if (proto.hasSourceBitmask()) proto.sourceBitmask.toUInt() else null,
+        sources = proto.sourcesList.mapNotNull(::platformDictionarySource),
     )

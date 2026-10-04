@@ -181,6 +181,33 @@ fn all_association_sources_enabled(t: &DictionarySourceToggles) -> bool {
         && t.khpoo
 }
 
+/// The source each record-bitmask bit stands for, in bit order (layout in
+/// the module header). Bit 12 (variant) is a filter, not a source.
+const SOURCE_CODE_BITS: [(u32, DictionarySourceCode); 12] = [
+    (1 << 0, DictionarySourceCode::DictSourceKautian),
+    (1 << 1, DictionarySourceCode::DictSourceTaigitv),
+    (1 << 2, DictionarySourceCode::DictSourceItaigi),
+    (1 << 3, DictionarySourceCode::DictSourceSitbut),
+    (1 << 4, DictionarySourceCode::DictSourceTaihoa),
+    (1 << 5, DictionarySourceCode::DictSourceTaijit),
+    (1 << 6, DictionarySourceCode::DictSourceKungge),
+    (1 << 7, DictionarySourceCode::DictSourceStti),
+    (1 << 8, DictionarySourceCode::DictSourceKhpoo),
+    (1 << 9, DictionarySourceCode::DictSourceKhiin),
+    (1 << 10, DictionarySourceCode::DictSourceDev),
+    (1 << 11, DictionarySourceCode::DictSourceLkk),
+];
+
+/// The sources a record's (effective) bitmask names, in bit order — the
+/// order every platform draws the result badges in (`TaigiWord.sources`).
+pub(crate) fn source_codes(bitmask: u32) -> Vec<DictionarySourceCode> {
+    SOURCE_CODE_BITS
+        .iter()
+        .filter(|(bit, _)| bitmask & bit != 0)
+        .map(|(_, code)| *code)
+        .collect()
+}
+
 /// `DictionarySourceCode` set the platform should mark as enabled when
 /// retagging Tab3 result badges. `CUSTOM` is non-toggleable and always
 /// present; `DEV` (dictionary-supplement-file source) is gated by the dev toggle and pushed
@@ -469,6 +496,52 @@ mod tests {
                 expected_high,
                 "subtag bit {subtag_bit} should be set",
             );
+        }
+    }
+
+    #[test]
+    fn a_record_bitmask_decodes_to_sources_in_bit_order() {
+        // trace: bits 0 (kautian), 9 (khiin), 10 (dev), 11 (lkk), 12
+        // (variant: a filter, no source) → [KAUTIAN, KHIIN, DEV, LKK]; the
+        // old platform decoders (`LexiconBitmask` ×2, desktop
+        // `SOURCE_BITS`) answered the same list.
+        use DictionarySourceCode as C;
+        let mask = (1 << 0) | (1 << 9) | (1 << 10) | (1 << 11) | (1 << 12);
+        assert_eq!(
+            source_codes(mask),
+            vec![C::DictSourceKautian, C::DictSourceKhiin, C::DictSourceDev, C::DictSourceLkk]
+        );
+        assert!(source_codes(0).is_empty());
+        assert!(source_codes(1 << 12).is_empty());
+    }
+
+    #[test]
+    fn each_toggle_bit_decodes_back_to_that_toggles_source() {
+        // The record-bit table and the toggle tables must name the same
+        // source for every bit: one toggle on → its filter bit → its code
+        // (`enabled_source_codes` minus the always-on CUSTOM).
+        let toggles: [fn(&mut DictionarySourceToggles); 12] = [
+            |t| t.kautian = true,
+            |t| t.taigitv = true,
+            |t| t.itaigi = true,
+            |t| t.sitbut = true,
+            |t| t.taihoa = true,
+            |t| t.taijit = true,
+            |t| t.kungge = true,
+            |t| t.stti = true,
+            |t| t.khpoo = true,
+            |t| t.khiin = true,
+            |t| t.dev = true,
+            |t| t.lkk = true,
+        ];
+        for set in toggles {
+            let mut t = all_off();
+            set(&mut t);
+            let enabled: Vec<DictionarySourceCode> = enabled_source_codes(&t)
+                .into_iter()
+                .filter(|code| *code != DictionarySourceCode::DictSourceCustom)
+                .collect();
+            assert_eq!(source_codes(dictionary_filter_bitmask(&t)), enabled, "{t:?}");
         }
     }
 }

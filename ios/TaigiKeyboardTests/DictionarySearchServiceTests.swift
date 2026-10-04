@@ -65,7 +65,7 @@ final class DictionarySearchServiceTests: XCTestCase {
     }
 
     private let myWord = CustomDictionaryEntry(roman: "taigi", hanji: "我的台語")
-    private let kautianRow = RustEngineBridge.LexiconRow(id: 1, roman: "tâi-gí", hanji: "台語", lengthScore: 10, sourceBitmask: 1)
+    private let kautianRow = RustEngineBridge.LexiconRow(id: 1, roman: "tâi-gí", hanji: "台語", lengthScore: 10, sources: [.kautian])
 
     private func makeService(
         settings: StubEngineSettings = StubEngineSettings(),

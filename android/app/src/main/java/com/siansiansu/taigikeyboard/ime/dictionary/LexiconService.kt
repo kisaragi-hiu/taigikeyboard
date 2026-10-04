@@ -129,14 +129,13 @@ class LexiconService(
                 // The engine returns raw TL; render POJ in POJ mode. TPS keeps the TL reading (as iOS).
                 val roman =
                     if (inputMode == RustEngineBridge.LexiconInputMode.POJ) RustEngineBridge.tlToPoj(row.roman) else row.roman
-                val bitmask = row.sourceBitmask?.toInt() ?: 0
                 DictionarySearchResult(
                     id = row.id.toInt(),
                     roman = roman,
                     tl = row.roman,
                     hanji = row.hanji,
                     frequency = row.lengthScore ?: 0,
-                    sources = LexiconBitmask.sourcesFromBitmask(bitmask),
+                    sources = row.sources,
                 )
             }.take(limit)
 }

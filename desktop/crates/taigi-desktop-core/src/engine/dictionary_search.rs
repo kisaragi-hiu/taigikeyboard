@@ -73,7 +73,7 @@ pub fn search(query: &str, settings: &SettingsDocument) -> Vec<DictionarySearchR
     let system: Vec<DictionarySearchResult> = LexiconRow::sorted_for_search(rows)
         .into_iter()
         .map(|row| {
-            let mut sources = DictionarySource::from_bitmask(row.source_bitmask.unwrap_or(0));
+            let mut sources = row.sources;
             // Badges only for sources the user has on.
             if let Some(filters) = &filters {
                 sources.retain(|source| filters.enabled_sources.contains(source));

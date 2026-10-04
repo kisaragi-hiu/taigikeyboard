@@ -12,7 +12,7 @@ use protos::engine::{
 use crate::classification;
 // The source filter alone, for an engine fetch that carries the toggles
 // itself (`FetchAtPos.toggles`).
-use crate::dictionary_filters::compute_filters;
+use crate::dictionary_filters::{compute_filters, source_codes};
 pub use crate::dictionary_filters::{association_bitmask, dictionary_filter_bitmask};
 use crate::error::LexiconError;
 use crate::handle::EngineHandle;
@@ -140,6 +140,9 @@ fn search_row_to_taigi_word(row: SearchRow) -> TaigiWord {
         roman: row.roman,
         hanji: row.hanji,
         length_score: row.length_score,
-        source_bitmask: row.source_bitmask,
+        sources: source_codes(row.source_bitmask.unwrap_or(0))
+            .into_iter()
+            .map(|code| code as i32)
+            .collect(),
     }
 }

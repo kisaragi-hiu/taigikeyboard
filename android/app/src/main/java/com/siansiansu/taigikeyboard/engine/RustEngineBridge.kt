@@ -96,7 +96,8 @@ object RustEngineBridge {
         val roman: String,
         val hanji: String?,
         val lengthScore: Int?,
-        val sourceBitmask: UInt?,
+        /** The dictionaries the record belongs to, in the engine's (source-bit) order — the badge order. */
+        val sources: List<DictionarySource>,
     )
 
     /** Engine install diagnostic counts (for dogfood logging). */
