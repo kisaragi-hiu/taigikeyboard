@@ -42,7 +42,7 @@ Every PR runs its type's pre-gate: refactor = behaviour-freeze list (`docs/contr
 
 - **macOS over `desktop-core`** (report §5.2): taken up on 2026-10-02 as its own plan — `macos-desktop-core-roadmap.md`, with the measured inventory that replaces the "~4,000 lines" estimate.
 - **Naming batch C** — persisted names (setting keys, DB columns, backup JSON, FST prefix, JNI symbol, package names): frozen per §5.6.
-- **iOS top-level folder renames** (§5.8): `.pbxproj` edits are USER-only.
+- **iOS top-level folder renames** (§5.8): done 2026-10-04, branch `refactor/ios-folder-renames` — the maintainer moved the synced groups in Xcode.
 
 ## Decisions recorded while running
 
